@@ -88,3 +88,5 @@ tests/analysis_tests/**/*.bs.js
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+*.tsbuildinfo

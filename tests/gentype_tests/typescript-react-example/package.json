@@ -5,7 +5,7 @@
     "start": "rescript build -w",
     "build": "rescript",
     "clean": "rescript clean",
-    "tsc": "tsc -p tsconfig.json",
+    "typecheck": "tsc",
     "lint": "biome check src"
   },
   "dependencies": {
@@ -19,6 +19,6 @@
     "@types/node": "^18.15.12",
     "@types/react": "^18.3.19",
     "@types/react-dom": "^18.3.5",
-    "typescript": "^5.2.2"
+    "typescript": "5.5.3"
   }
 }

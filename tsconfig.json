@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "composite": true,
+    "incremental": true
+  },
+  "include": ["./cli/*", "./scripts/*", "./package.json"],
+  "exclude": [
+    "node_modules",
+    "./jscomp/test/**/*",
+    "./jscomp/gentype_tests/**/*"
+  ]
+}

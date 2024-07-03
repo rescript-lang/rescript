@@ -51,7 +51,8 @@
     "format:all": "biome format --write .",
     "checkFormat": "biome format --changed --no-errors-on-unmatched .",
     "checkFormat:all": "biome format .",
-    "coverage": "nyc --timeout=3000 --reporter=html mocha tests/tests/src/*_test.js && open ./coverage/index.html"
+    "coverage": "nyc --timeout=3000 --reporter=html mocha tests/tests/src/*_test.js && open ./coverage/index.html",
+    "typecheck": "tsc"
   },
   "files": [
     "CHANGELOG.md",
@@ -76,8 +77,10 @@
   },
   "devDependencies": {
     "@biomejs/biome": "1.8.3",
+    "@types/node": "^20.14.9",
     "mocha": "10.8.2",
-    "nyc": "15.0.0"
+    "nyc": "15.0.0",
+    "typescript": "5.5.3"
   },
   "workspaces": [
     "tests/dependencies/**",
