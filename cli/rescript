@@ -1,21 +1,22 @@
 #!/usr/bin/env node
+
 //@ts-check
+
 "use strict";
 
-/**
- * This script is supposed to be running in project root directory
- * It matters since we need read .sourcedirs(location)
- * and its content are file/directories with regard to project root
- */
+// This script is supposed to be running in project root directory
+// It matters since we need read .sourcedirs(location)
+// and its content are file/directories with regard to project root
 
-var { bsc_exe, rescript_exe } = require("./bin_path.js");
-var bsb = require("./rescript_bsb.js");
+const tty = require("node:tty");
+const { bsc_exe, rescript_exe } = require("./bin_path.js");
+const bsb = require("./rescript_bsb.js");
 
-var cwd = process.cwd();
+const cwd = process.cwd();
 process.env.BSB_PROJECT_ROOT = cwd;
 
 if (process.env.FORCE_COLOR === undefined) {
-  if (require("tty").isatty(1)) {
+  if (tty.isatty(1)) {
     process.env.FORCE_COLOR = "1";
     process.env.NINJA_ANSI_FORCED = "1";
   }

@@ -1,8 +1,8 @@
-var p = require("child_process");
-var assert = require("assert");
-var { rescript_exe } = require("#cli/bin_path");
+const p = require("node:child_process");
+const assert = require("node:assert");
+const { rescript_exe } = require("#cli/bin_path");
 try {
-  var output = p.spawnSync(`${rescript_exe} build -regen`, {
+  const output = p.spawnSync(`${rescript_exe} build -regen`, {
     shell: true,
     encoding: "utf8",
   });

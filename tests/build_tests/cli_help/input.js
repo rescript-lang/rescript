@@ -4,7 +4,7 @@ const assert = require("assert");
 const path = require("path");
 const { exec, normalizeNewlines } = require("../utils.js");
 
-const rescriptPath = path.join(__dirname, "..", "..", "..", "cli", "rescript")
+const rescriptPath = path.join(__dirname, "..", "..", "..", "cli", "rescript");
 
 const cliHelp =
   "Usage: rescript <options> <subcommand>\n" +
@@ -77,12 +77,20 @@ async function runTest(params, expected) {
   assert.equal(normalizeNewlines(out.stderr), expected.stderr);
   assert.equal(out.status, expected.status);
 }
-  
-async function test() {
-    // Shows build help with --help arg
-  await runTest(["build", "--help"], { stdout: buildHelp, stderr: "", status: 0 });
 
-  await runTest(["build", "-w", "--help"], { stdout: buildHelp, stderr: "", status: 0 });
+async function test() {
+  // Shows build help with --help arg
+  await runTest(["build", "--help"], {
+    stdout: buildHelp,
+    stderr: "",
+    status: 0,
+  });
+
+  await runTest(["build", "-w", "--help"], {
+    stdout: buildHelp,
+    stderr: "",
+    status: 0,
+  });
 
   await runTest(["-w", "--help"], { stdout: cliHelp, stderr: "", status: 0 });
 
@@ -123,7 +131,11 @@ async function test() {
   });
 
   // Shows clean help with --help arg
-  await runTest(["clean", "--help"], { stdout: cleanHelp, stderr: "", status: 0 });
+  await runTest(["clean", "--help"], {
+    stdout: cleanHelp,
+    stderr: "",
+    status: 0,
+  });
 
   // Shows clean help with -h arg
   await runTest(["clean", "-h"], { stdout: cleanHelp, stderr: "", status: 0 });
@@ -136,13 +148,25 @@ async function test() {
   });
 
   // Shows format help with --help arg
-  await runTest(["format", "--help"], { stdout: formatHelp, stderr: "", status: 0 });
+  await runTest(["format", "--help"], {
+    stdout: formatHelp,
+    stderr: "",
+    status: 0,
+  });
 
   // Shows format help with -h arg
-  await runTest(["format", "-h"], { stdout: formatHelp, stderr: "", status: 0 });
+  await runTest(["format", "-h"], {
+    stdout: formatHelp,
+    stderr: "",
+    status: 0,
+  });
 
   // Shows dump help with --help arg
-  await runTest(["dump", "--help"], { stdout: dumpHelp, stderr: "", status: 0 });
+  await runTest(["dump", "--help"], {
+    stdout: dumpHelp,
+    stderr: "",
+    status: 0,
+  });
 
   // Shows dump help with -h arg
   await runTest(["dump", "-h"], { stdout: dumpHelp, stderr: "", status: 0 });

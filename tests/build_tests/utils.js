@@ -1,4 +1,4 @@
-const child_process = require("child_process");
+const child_process = require("node:child_process");
 
 const signals = {
   SIGINT: 2,
@@ -53,7 +53,7 @@ async function exec(command, args, options) {
  * @param {string} s
  */
 function normalizeNewlines(s) {
-  return s.replace(/\r\n/g, '\n');
+  return s.replace(/\r\n/g, "\n");
 }
 
 exports.exec = exec;

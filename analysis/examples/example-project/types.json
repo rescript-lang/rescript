@@ -8,6 +8,6 @@
     }
   ],
   "custom": [
-    {"module": "Belt_HashMapInt", "path": [], "name": "t", "args": 1}
+    { "module": "Belt_HashMapInt", "path": [], "name": "t", "args": 1 }
   ]
 }

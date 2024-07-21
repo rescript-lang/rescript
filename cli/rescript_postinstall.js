@@ -1,6 +1,7 @@
-//@ts-check
-const child_process = require("child_process");
-const fs = require("fs");
+// @ts-check
+
+const child_process = require("node:child_process");
+const fs = require("node:fs");
 
 const { bsc_exe, ninja_exe } = require("./bin_path");
 
@@ -36,7 +37,7 @@ function checkCompiler() {
   }
 }
 
-var ninjaVersion = checkNinja();
-var compilerVersion = checkCompiler();
+const ninjaVersion = checkNinja();
+const compilerVersion = checkCompiler();
 
 console.log(`${compilerVersion} (ninja ${ninjaVersion})`);

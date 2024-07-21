@@ -18,6 +18,10 @@
     "error": true
   },
   "suffix": ".mjs",
-  "bs-dependencies": ["b"],
-  "pinned-dependencies": ["b"]
+  "bs-dependencies": [
+    "b"
+  ],
+  "pinned-dependencies": [
+    "b"
+  ]
 }

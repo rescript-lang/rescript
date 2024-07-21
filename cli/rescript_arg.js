@@ -1,4 +1,5 @@
-//@ts-check
+// @ts-check
+
 class StringBuilder {
   constructor() {
     this.val = "";
@@ -13,10 +14,10 @@ class StringBuilder {
     return this;
   }
 }
-class ArgError extends Error {}
+
+class ArgError extends Error { }
 
 /**
- *
  * @param {string} s
  */
 function bad_arg(s) {
@@ -24,12 +25,21 @@ function bad_arg(s) {
 }
 
 /**
- * @typedef {{val : string}} stringref
- * @typedef {{val : boolean}} boolref
- * @typedef {{kind:"Unit_call",data : ()=>void } | {kind : "Unit_set", data : boolref}} unit_action
- * @typedef {{kind:"String_call",data:(s : string)=>void} | {kind : "String_set",data: stringref}} string_action
- * @typedef {{kind:"Unit",data : unit_action } | {kind:"String", data: string_action}} action
- * @typedef {Array<[string,action,string]>} specs
+ * @typedef {{ val: string }} stringref
+ * @typedef {{ val: boolean }} boolref
+ * @typedef {(
+ *   | { kind: "Unit_call", data: () => void }
+ *   | { kind: "Unit_set", data: boolref }
+ * )} unit_action
+ * @typedef {(
+ *   | { kind: "String_call", data: (s: string) => void }
+ *   | { kind: "String_set", data: stringref }
+ * )} string_action
+ * @typedef {(
+ *   | { kind: "Unit", data: unit_action }
+ *   | { kind: "String", data: string_action}
+ * )} action
+ * @typedef {Array<[string, action, string]>} specs
  * @param {StringBuilder} b
  * @param {string} usage
  * @param {specs} specs
@@ -39,33 +49,32 @@ function usage_b(b, usage, specs) {
   if (specs.length === 0) {
     return;
   }
-  b.add(`\nOptions:\n`);
-  var max_col = 0;
-  for (let [key] of specs) {
+  b.add("\nOptions:\n");
+  let max_col = 0;
+  for (const [key] of specs) {
     if (key.length > max_col) {
       max_col = key.length;
     }
   }
   for (let i = 0; i < specs.length; i++) {
-    let [key, _, doc] = specs[i];
+    const [key, _, doc] = specs[i];
     if (!doc.startsWith("*internal*")) {
       b.add("  ")
         .add(key)
         .add(" ".repeat(max_col - key.length + 2));
       let cur = 0;
-      let doc_length = doc.length;
+      const doc_length = doc.length;
       while (cur < doc_length) {
         if (cur !== 0) {
           b.add("\n").add(" ".repeat(max_col + 4));
         }
-        let i = doc.indexOf("\n", cur);
+        const i = doc.indexOf("\n", cur);
         if (i < 0) {
           b.add(doc.substring(cur));
           break;
-        } else {
-          b.add(doc.substr(cur, i - cur));
-          cur = i + 1;
         }
+        b.add(doc.substring(cur, i - cur));
+        cur = i + 1;
       }
       b.add("\n");
     }
@@ -73,13 +82,16 @@ function usage_b(b, usage, specs) {
 }
 
 /**
- * @typedef { {kind : "Unknown"; data:string} | {kind:"Missing";data:string}} error
+ * @typedef {(
+ *   | { kind: "Unknown", data:string }
+ *   | { kind: "Missing", data:string }
+ * )} error
  * @param {string} usage
  * @param {error} error
  * @param {specs} specs
  */
 function stop_raise(usage, error, specs) {
-  var b = new StringBuilder();
+  const b = new StringBuilder();
   switch (error.kind) {
     case "Unknown":
       if (["-help", "--help", "-h"].includes(error.data)) {
@@ -89,19 +101,20 @@ function stop_raise(usage, error, specs) {
       } else {
         b.add(`Unknown option "${error.data}".\n'`);
       }
+      break;
     case "Missing":
       b.add(`Option "${error.data}" needs an argument.\n'`);
+      break;
   }
   usage_b(b, usage, specs);
   bad_arg(b.val);
 }
 
 /**
- *
  * @param {string} usage
  * @param {Array<string>} argv
  * @param {specs} specs
- * @param {(args:Array<string>)=>void} annofun
+ * @param {(args: Array<string>) => void} annofun
  * @param {number} start
  * @param {number} finish
  */
@@ -114,15 +127,15 @@ function parse_exn(
   // first 3 are [node, rescript, subcommand]
   finish = argv.length,
 ) {
-  var current = start;
-  var list = [];
+  let current = start;
+  const list = [];
   while (current < finish) {
-    let s = argv[current];
+    const s = argv[current];
     ++current;
     if (s !== "" && s[0] === "-") {
-      var out = specs.find(([flag]) => flag === s);
+      const out = specs.find(([flag]) => flag === s);
       if (out !== undefined) {
-        let [_, action] = out;
+        const [_, action] = out;
         switch (action.kind) {
           case "Unit":
             switch (action.data.kind) {
@@ -139,7 +152,7 @@ function parse_exn(
             if (current >= finish) {
               stop_raise(usage, { kind: "Missing", data: s }, specs);
             } else {
-              let arg = argv[current];
+              const arg = argv[current];
               ++current;
               switch (action.data.kind) {
                 case "String_call":

@@ -1,14 +1,16 @@
-//@ts-check
-var arg = require("./rescript_arg.js");
-var dump_usage = `Usage: rescript dump <options> [target]
+// @ts-check
+
+const arg = require("./rescript_arg.js");
+const dump_usage = `Usage: rescript dump <options> [target]
 \`rescript dump\` dumps the information for the target
 `;
-var child_process = require("child_process");
-var path = require("path");
+const child_process = require("node:child_process");
+const path = require("node:path");
+
 /**
  * @type {arg.specs}
  */
-var specs = [];
+const specs = [];
 
 /**
  * @param {string[]} argv
@@ -16,7 +18,7 @@ var specs = [];
  * @param {string} bsc_exe
  */
 function main(argv, rescript_exe, bsc_exe) {
-  var target;
+  let target;
   arg.parse_exn(dump_usage, argv, specs, xs => {
     if (xs.length !== 1) {
       arg.bad_arg(`Expect only one target, ${xs.length} found`);
@@ -24,13 +26,13 @@ function main(argv, rescript_exe, bsc_exe) {
     target = xs[0];
   });
 
-  var { ext } = path.parse(target);
+  const { ext } = path.parse(target);
   if (ext !== ".cmi") {
     console.error("Only .cmi target allowed");
     process.exit(2);
   }
 
-  var output = child_process.spawnSync(rescript_exe, ["build", "--", target], {
+  let output = child_process.spawnSync(rescript_exe, ["build", "--", target], {
     encoding: "utf-8",
   });
   if (output.status !== 0) {

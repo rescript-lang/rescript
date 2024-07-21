@@ -1,16 +1,18 @@
-const fs = require("fs");
-const path = require("path");
-const child_process = require("child_process");
+const fs = require("node:fs");
+const path = require("node:path");
+const child_process = require("node:child_process");
 const { rescript_exe } = require("#cli/bin_path");
 
 const expectedFilePath = path.join(__dirname, "out.expected");
 
 const updateTests = process.argv[2] === "update";
 
+/**
+ * @param {string} output
+ * @return {string}
+ */
 function postProcessErrorOutput(output) {
-  output = output.trimRight();
-  output = output.replace(new RegExp(__dirname, "gi"), ".");
-  return output;
+  return output.trimEnd().replace(new RegExp(__dirname, "gi"), ".");
 }
 
 if (process.platform === "win32") {

@@ -16,9 +16,5 @@
   ],
   "suffix": ".mjs",
   "namespace": true,
-  "bs-dependencies": [
-    "@rescript/react",
-    "a",
-    "b"
-  ]
+  "bs-dependencies": ["@rescript/react", "a", "b"]
 }

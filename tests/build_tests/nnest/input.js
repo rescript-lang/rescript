@@ -1,13 +1,13 @@
 // @ts-check
 
-var p = require("child_process");
-var assert = require("assert");
-var fs = require("fs");
-var path = require("path");
-var { rescript_exe } = require("#cli/bin_path");
+const p = require("node:child_process");
+const assert = require("node:assert");
+const fs = require("node:fs");
+const path = require("node:path");
+const { rescript_exe } = require("#cli/bin_path");
 p.execSync(rescript_exe, { cwd: __dirname });
 
-var content = fs.readFileSync(path.join(__dirname, "src", "demo.js"), "utf8");
+const content = fs.readFileSync(path.join(__dirname, "src", "demo.js"), "utf8");
 
 assert.ok(content.match(/A0_a1_main/g).length === 3);
 assert.ok(content.match(/B0_b1_main/g).length === 3);

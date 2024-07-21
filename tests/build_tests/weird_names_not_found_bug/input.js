@@ -1,8 +1,8 @@
-var cp = require("child_process");
-var assert = require("assert");
-var { rescript_exe } = require("#cli/bin_path");
+const cp = require("node:child_process");
+const assert = require("node:assert");
+const { rescript_exe } = require("#cli/bin_path");
 
-var out = cp.spawnSync(rescript_exe, { encoding: "utf8" });
+const out = cp.spawnSync(rescript_exe, { encoding: "utf8" });
 if (out.stderr !== "") {
   assert.fail(out.stderr);
 }

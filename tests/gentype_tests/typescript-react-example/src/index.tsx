@@ -4,13 +4,13 @@ import App from "./App";
 import * as ImportJsValue from "./ImportJsValue.gen";
 import * as Uncurried from "./Uncurried.gen";
 import "./index.css";
+import * as DocStrings from "./Docstrings.gen";
+import Hooks from "./Hooks.gen";
 import * as MyMath from "./MyMath";
-import * as Types from "./nested/Types.gen";
 import { Universe_Nested2_Nested3_nested3Value } from "./NestedModules.gen";
 import * as Records from "./Records.gen";
+import * as TestPromise from "./TestPromise.gen";
 import * as Variants from "./Variants.gen";
-import Hooks from "./Hooks.gen";
-import * as DocStrings from "./Docstrings.gen";
 import {
   printManyPayloads,
   printVariantWithPayload,
@@ -19,7 +19,7 @@ import {
   testVariantWithPayloads,
   testWithPayload,
 } from "./VariantsWithPayload.gen";
-import * as TestPromise from "./TestPromise.gen";
+import * as Types from "./nested/Types.gen";
 
 const consoleLog = console.log;
 

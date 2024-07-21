@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-"use strict";
+// @ts-check
 
 /*
  * Requires the version matching `rescript` binary to be `npm link`ed in this
@@ -15,9 +15,9 @@
  * playground bundle.
  */
 
-const child_process = require("child_process");
-const fs = require("fs");
-const path = require("path");
+const child_process = require("node:child_process");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const resConfig = require("../rescript.json");
 
@@ -35,23 +35,23 @@ if (!fs.existsSync(PACKAGES_DIR)) {
   fs.mkdirSync(PACKAGES_DIR, { recursive: true });
 }
 
-const config = {
-  cwd: PROJECT_ROOT_DIR,
-  encoding: "utf8",
-  stdio: [0, 1, 2],
-  shell: true,
-};
-
+/**
+ * @param {string} cmd
+ */
 function e(cmd) {
   console.log(`>>>>>> running command: ${cmd}`);
-  child_process.execSync(cmd, config);
-  console.log(`<<<<<<`);
+  child_process.execSync(cmd, {
+    cwd: PROJECT_ROOT_DIR,
+    encoding: "utf8",
+    stdio: [0, 1, 2],
+  });
+  console.log("<<<<<<");
 }
 
-e(`npm install`);
+e("npm install");
 e(`npm link ${RESCRIPT_COMPILER_ROOT_DIR}`);
-e(`npx rescript clean`);
-e(`npx rescript`);
+e("npx rescript clean");
+e("npx rescript");
 
 const packages = resConfig["bs-dependencies"];
 
@@ -63,41 +63,41 @@ function buildCompilerCmij() {
     "node_modules",
     "rescript",
     "lib",
-    "ocaml"
+    "ocaml",
   );
 
   const outputFolder = path.join(PACKAGES_DIR, "compiler-builtins");
 
-  const cmijFile = path.join(outputFolder, `cmij.js`);
+  const cmijFile = path.join(outputFolder, "cmij.js");
 
   if (!fs.existsSync(outputFolder)) {
     fs.mkdirSync(outputFolder, { recursive: true });
   }
 
   e(
-    `find ${rescriptLibOcamlFolder} -name "*.cmi" -or -name "*.cmj" | xargs -n1 basename | xargs js_of_ocaml build-fs -o ${cmijFile} -I ${rescriptLibOcamlFolder}`
+    `find ${rescriptLibOcamlFolder} -name "*.cmi" -or -name "*.cmj" | xargs -n1 basename | xargs js_of_ocaml build-fs -o ${cmijFile} -I ${rescriptLibOcamlFolder}`,
   );
 }
 
 function buildThirdPartyCmijs() {
-  packages.forEach(function installLib(pkg) {
+  for (const pkg of packages) {
     const libOcamlFolder = path.join(
       PROJECT_ROOT_DIR,
       "node_modules",
       pkg,
       "lib",
-      "ocaml"
+      "ocaml",
     );
     const libEs6Folder = path.join(
       PROJECT_ROOT_DIR,
       "node_modules",
       pkg,
       "lib",
-      "es6"
+      "es6",
     );
     const outputFolder = path.join(PACKAGES_DIR, pkg);
 
-    const cmijFile = path.join(outputFolder, `cmij.js`);
+    const cmijFile = path.join(outputFolder, "cmij.js");
 
     if (!fs.existsSync(outputFolder)) {
       fs.mkdirSync(outputFolder, { recursive: true });
@@ -105,9 +105,9 @@ function buildThirdPartyCmijs() {
 
     e(`find ${libEs6Folder} -name '*.js' -exec cp {} ${outputFolder} \\;`);
     e(
-      `find ${libOcamlFolder} -name "*.cmi" -or -name "*.cmj" | xargs -n1 basename | xargs js_of_ocaml build-fs -o ${cmijFile} -I ${libOcamlFolder}`
+      `find ${libOcamlFolder} -name "*.cmi" -or -name "*.cmj" | xargs -n1 basename | xargs js_of_ocaml build-fs -o ${cmijFile} -I ${libOcamlFolder}`,
     );
-  });
+  }
 }
 
 function bundleStdlibJs() {

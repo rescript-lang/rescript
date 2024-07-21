@@ -1,11 +1,11 @@
 // @ts-check
 
-const assert = require("assert");
-const path = require("path");
-const child_process = require("child_process");
+const assert = require("node:assert");
+const path = require("node:path");
+const child_process = require("node:child_process");
 const { normalizeNewlines } = require("../utils.js");
 
-const rescriptPath = path.join(__dirname, "..", "..", "..", "cli", "rescript")
+const rescriptPath = path.join(__dirname, "..", "..", "..", "cli", "rescript");
 
 // Shows compile time for `rescript build` command
 let out = child_process.spawnSync("node", [rescriptPath, "build"], {
@@ -40,5 +40,8 @@ out = child_process.spawnSync("node", [rescriptPath, "build", "-verbose"], {
   cwd: __dirname,
 });
 
-assert.match(normalizeNewlines(out.stdout), /Package stack: test  \nDependency Finished\n/);
+assert.match(
+  normalizeNewlines(out.stdout),
+  /Package stack: test  \nDependency Finished\n/,
+);
 assert.match(normalizeNewlines(out.stdout), /ninja.exe"? -C lib[\\/]bs ?\n/);
