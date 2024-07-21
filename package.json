@@ -47,6 +47,8 @@
     "test": "node scripts/test.js -all",
     "test-bsb": "node scripts/test.js -bsb",
     "test-ocaml": "node scripts/test.js -ounit",
+    "lint": "biome check --changed --no-errors-on-unmatched .",
+    "lint:all": "biome check .",
     "format": "biome format --changed --no-errors-on-unmatched --write .",
     "format:all": "biome format --write .",
     "checkFormat": "biome format --changed --no-errors-on-unmatched .",
@@ -73,13 +75,17 @@
     "./package.json": "./package.json"
   },
   "imports": {
-    "#cli/bin_path": "./cli/bin_path.js"
+    "#cli/bin_path": "./cli/bin_path.js",
+    "#lib/minisocket": "./lib/minisocket.js",
+    "#dev/*": "./lib_dev/*.js"
   },
   "devDependencies": {
     "@biomejs/biome": "1.8.3",
     "@types/node": "^20.14.9",
+    "@types/semver": "^7.5.8",
     "mocha": "10.8.2",
     "nyc": "15.0.0",
+    "semver": "7.6.2",
     "typescript": "5.5.3"
   },
   "workspaces": [

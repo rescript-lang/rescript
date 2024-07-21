@@ -6,7 +6,7 @@
     "build": "rescript",
     "clean": "rescript clean",
     "typecheck": "tsc",
-    "lint": "biome check src"
+    "lint": "biome check --changed --no-errors-on-unmatched ."
   },
   "dependencies": {
     "@rescript/react": "^0.13.1",

@@ -9,14 +9,18 @@
     "strictNullChecks": true,
     "noImplicitAny": true,
     "noEmit": true,
-    "skipLibCheck": true,
-    "composite": true,
-    "incremental": true
+    "skipLibCheck": true
   },
-  "include": ["./cli/*", "./scripts/*", "./package.json"],
+  "include": [
+    "cli/*",
+    "lib/*",
+    "lib_dev/*",
+    "scripts/*",
+    "tests/**/input.js",
+    "package.json"
+  ],
   "exclude": [
-    "node_modules",
-    "./jscomp/test/**/*",
-    "./jscomp/gentype_tests/**/*"
+    "*.res.js",
+    "*.res.mjs",
   ]
 }

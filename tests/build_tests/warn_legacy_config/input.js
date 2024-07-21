@@ -1,5 +1,5 @@
-const { spawnSync } = require("child_process");
-const assert = require("assert");
+const { spawnSync } = require("node:child_process");
+const assert = require("node:assert");
 const { rescript_exe } = require("#cli/bin_path");
 
 const output = spawnSync(rescript_exe, { encoding: "utf8" });

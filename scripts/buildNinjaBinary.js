@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
-const child_process = require("child_process");
-const path = require("path");
+// @ts-check
+
+const child_process = require("node:child_process");
+const path = require("node:path");
 
 const platform = process.platform;
 const ninjaDir = path.join(__dirname, "..", "ninja");
@@ -12,8 +14,8 @@ if (platform === "win32") {
   child_process.execSync(buildCommand, { cwd: ninjaDir });
 } else {
   if (process.platform === "darwin") {
-    process.env["CXXFLAGS"] = "-flto";
+    process.env.CXXFLAGS = "-flto";
   }
   child_process.execSync(buildCommand, { stdio: [0, 1, 2], cwd: ninjaDir });
-  child_process.execSync(`strip ninja`, { stdio: [0, 1, 2], cwd: ninjaDir });
+  child_process.execSync("strip ninja", { stdio: [0, 1, 2], cwd: ninjaDir });
 }

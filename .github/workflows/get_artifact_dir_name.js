@@ -1,5 +1,5 @@
-const fs = require("fs");
-const os = require("os");
+const fs = require("node:fs");
+const os = require("node:os");
 
 const { dirName: artifactDirName } = require("../../cli/bin_path.js");
 

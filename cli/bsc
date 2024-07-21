@@ -1,10 +1,13 @@
 #!/usr/bin/env node
+
+// @ts-check
+
 "use strict";
 
-var child_process = require("child_process");
-var { bsc_exe } = require("./bin_path");
+const child_process = require("child_process");
+const { bsc_exe } = require("./bin_path.js");
 
-var delegate_args = process.argv.slice(2);
+const delegate_args = process.argv.slice(2);
 
 try {
   child_process.execFileSync(bsc_exe, delegate_args, { stdio: "inherit" });
