@@ -287,11 +287,8 @@ jobs:
       - name: Move artifacts
         run: ./scripts/moveArtifacts.sh
 
-      - name: Check artifact list
-        run: node ./scripts/makeArtifactList.js -check
-
-      - name: npm pack (rescript)
-        run: npm pack
+      - name: npm pack (rescript) + check artifact list
+        run: node ./scripts/npmPack.js
 
       - name: Copy JS files to stdlib package
         run: mkdir -p packages/std/lib && cp -R lib/es6 lib/js packages/std/lib
