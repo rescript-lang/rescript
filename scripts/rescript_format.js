@@ -1,5 +1,7 @@
 //@ts-check
+var os = require("os");
 var arg = require("./rescript_arg.js");
+
 var format_usage = `Usage: rescript format <options> [files]
 
 \`rescript format\` formats the current directory
@@ -67,6 +69,27 @@ async function readStdin() {
   return Buffer.concat(chunks).toString("utf8");
 }
 
+const numThreads = os.cpus().length;
+
+/**
+ * Splits an array into smaller chunks of a specified size.
+ *
+ * @template T
+ * @param {T[]} array - The array to split into chunks.
+ * @param {number} chunkSize - The size of each chunk.
+ * @returns {T[][]} - An array of chunks, where each chunk is an array of type T.
+ */
+function chunkArray(array, chunkSize) {
+  /** @type {T[][]} */
+  const result = [];
+
+  for (let i = 0; i < array.length; i += chunkSize) {
+    result.push(array.slice(i, i + chunkSize));
+  }
+
+  return result;
+}
+
 /**
  * @param {string[]} files
  * @param {string} bsc_exe
@@ -74,11 +97,15 @@ async function readStdin() {
  * @param {boolean} checkFormatting
  */
 async function formatFiles(files, bsc_exe, isSupportedFile, checkFormatting) {
-  var incorrectlyFormattedFiles = 0;
+  const supportedFiles = files.filter(isSupportedFile);
+  const batchSize = 4 * os.cpus().length;
+  const batches = chunkArray(supportedFiles, batchSize);
+
+  let incorrectlyFormattedFiles = 0;
   try {
-    const _promises = await Promise.all(
-      files.map(async file => {
-        if (isSupportedFile(file)) {
+    for (const batch of batches) {
+      await Promise.all(
+        batch.map(async file => {
           const flags = checkFormatting
             ? ["-format", file]
             : ["-o", file, "-format", file];
@@ -90,10 +117,9 @@ async function formatFiles(files, bsc_exe, isSupportedFile, checkFormatting) {
               incorrectlyFormattedFiles++;
             }
           }
-        }
-        return null;
-      })
-    );
+        })
+      );
+    }
   } catch (err) {
     console.error(err);
     process.exit(2);
