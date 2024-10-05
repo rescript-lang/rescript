@@ -12,12 +12,19 @@
 
 # 11.1.5 (Unreleased)
 
-- Handle absolute file paths in gentype https://github.com/rescript-lang/rescript-compiler/pull/7111
-- Deprecate JSX 3 https://github.com/rescript-lang/rescript-compiler/pull/7042
-- Deprecate js_cast.res https://github.com/rescript-lang/rescript-compiler/pull/7074
+#### :boom: Breaking Change
+
+- Deprecate JSX 3. https://github.com/rescript-lang/rescript-compiler/pull/7042
+- Deprecate js_cast.res. https://github.com/rescript-lang/rescript-compiler/pull/7074
 - Deprecate top-level `"suffix"` option in `rescript.json`. https://github.com/rescript-lang/rescript-compiler/pull/7056
 
+#### :bug: Bug Fix
+
+- Handle absolute file paths in gentype. https://github.com/rescript-lang/rescript-compiler/pull/7111
+- Fix "rescript format" with many files. https://github.com/rescript-lang/rescript-compiler/pull/7081
+
 #### :house: Internal
+
 - Playground: Bundle and upload stdlib runtime so that the playground can execute functions from Core/Belt/Js. https://github.com/rescript-lang/rescript/pull/7268
 
 # 11.1.4
