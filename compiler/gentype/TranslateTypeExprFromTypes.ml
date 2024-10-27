@@ -222,13 +222,17 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
     {dependencies = []; type_ = EmitType.type_react_element}
   | (["FB"; "option"] | ["option"]), [param_translation] ->
     {param_translation with type_ = Option param_translation.type_}
-  | ( (["Js"; "Undefined"; "t"] | ["Undefined"; "t"] | ["Js"; "undefined"]),
+  | ( ( ["Js"; "Undefined"; "t"]
+      | ["Undefined"; "t"]
+      | ["Js"; "undefined"]
+      | ["Stdlib"; "undefined"] ),
       [param_translation] ) ->
     {param_translation with type_ = Option param_translation.type_}
   | ( ( ["Js"; "Null"; "t"]
       | ["Null"; "t"]
       | ["Js"; "null"]
-      | ["Stdlib"; "Null"; "t"] ),
+      | ["Stdlib"; "Null"; "t"]
+      | ["Stdlib"; "null"] ),
       [param_translation] ) ->
     {param_translation with type_ = Null param_translation.type_}
   | ( ( ["Js"; "Nullable"; "t"]
@@ -236,7 +240,8 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
       | ["Js"; "nullable"]
       | ["Js"; "Null_undefined"; "t"]
       | ["Js"; "null_undefined"]
-      | ["Stdlib"; "Nullable"; "t"] ),
+      | ["Stdlib"; "Nullable"; "t"]
+      | ["Stdlib"; "nullable"] ),
       [param_translation] ) ->
     {param_translation with type_ = Nullable param_translation.type_}
   | ( ( ["Js"; "Promise"; "t"]
