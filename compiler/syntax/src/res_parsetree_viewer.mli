@@ -69,6 +69,7 @@ val is_unary_expression : Parsetree.expression -> bool
 val is_binary_operator : string -> bool
 val is_binary_expression : Parsetree.expression -> bool
 val is_rhs_binary_operator : string -> bool
+val is_equality_operator : string -> bool
 
 val flattenable_operators : string -> string -> bool
 
