@@ -106,7 +106,7 @@ type int_op =
   (* x / y | 0 *)
   | Mod
   (* x  % y *)
-  | Pow
+  | Pow (* x ** y | 0 *)
 
 (* https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_Operators#Bitwise_operators
    {[
