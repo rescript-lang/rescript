@@ -1623,7 +1623,7 @@ let int32_pow ?comment (e1 : t) (e2 : t) : J.expression =
   match (e1.expression_desc, e2.expression_desc) with
   | Number (Int {i = i1}), Number (Int {i = i2}) ->
     to_int32 (int ?comment (Ext_int.int32_pow i1 i2))
-  | _ -> {comment; expression_desc = Bin (Pow, e1, e2)}
+  | _ -> to_int32 (float_pow ?comment e1 e2)
 
 let rec int32_bxor ?comment (e1 : t) (e2 : t) : J.expression =
   match (e1.expression_desc, e2.expression_desc) with
