@@ -250,6 +250,14 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     match args with
     | [e1; e2] -> E.bigint_mod ~checked:!Js_config.check_div_by_zero e1 e2
     | _ -> assert false)
+  | Ppowint -> (
+    match args with
+    | [e1; e2] -> E.int32_pow e1 e2
+    | _ -> assert false)
+  | Ppowfloat -> (
+    match args with
+    | [e1; e2] -> E.float_pow e1 e2
+    | _ -> assert false)
   | Ppowbigint -> (
     match args with
     | [e1; e2] -> E.bigint_op Pow e1 e2
