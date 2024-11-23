@@ -1,0 +1,3 @@
+type date
+
+type regExp

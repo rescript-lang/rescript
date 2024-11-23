@@ -31,7 +31,7 @@ and subsequent uses will continue the search from the previous [`lastIndex`]().
 */
 
 /** The RegExp object. */
-type t
+type t = CoreTypes.regExp
 
 /** The result of a executing a RegExp on a string. */
 type result

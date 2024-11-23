@@ -1,4 +1,4 @@
-type t = Js.Date.t
+type t = Date.t
 
 type format =
   | OnlyDate
