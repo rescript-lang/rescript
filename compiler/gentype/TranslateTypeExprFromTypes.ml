@@ -213,17 +213,24 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
     {dependencies = []; type_ = EmitType.type_react_element}
   | (["FB"; "option"] | ["option"]), [param_translation] ->
     {param_translation with type_ = Option param_translation.type_}
-  | ( (["Js"; "Undefined"; "t"] | ["Undefined"; "t"] | ["Js"; "undefined"]),
+  | ( ( ["Js"; "Undefined"; "t"]
+      | ["Undefined"; "t"]
+      | ["Js"; "undefined"]
+      | ["Pervasives"; "undefined"] ),
       [param_translation] ) ->
     {param_translation with type_ = Option param_translation.type_}
-  | (["Js"; "Null"; "t"] | ["Null"; "t"] | ["Js"; "null"]), [param_translation]
-    ->
+  | ( ( ["Js"; "Null"; "t"]
+      | ["Null"; "t"]
+      | ["Js"; "null"]
+      | ["Pervasives"; "null"] ),
+      [param_translation] ) ->
     {param_translation with type_ = Null param_translation.type_}
   | ( ( ["Js"; "Nullable"; "t"]
       | ["Nullable"; "t"]
       | ["Js"; "nullable"]
       | ["Js"; "Null_undefined"; "t"]
-      | ["Js"; "null_undefined"] ),
+      | ["Js"; "null_undefined"]
+      | ["Pervasives"; "nullable"] ),
       [param_translation] ) ->
     {param_translation with type_ = Nullable param_translation.type_}
   | ( (["Js"; "Promise"; "t"] | ["Promise"; "t"] | ["promise"]),
