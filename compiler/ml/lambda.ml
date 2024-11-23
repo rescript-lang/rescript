@@ -198,6 +198,7 @@ type primitive =
   | Pccall of Primitive.description
   (* Exceptions *)
   | Praise of raise_kind
+  | Passert
   (* object operations *)
   | Pobjcomp of comparison
   | Pobjorder

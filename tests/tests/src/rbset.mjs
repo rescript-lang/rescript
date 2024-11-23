@@ -205,60 +205,105 @@ function singleton(x) {
 }
 
 function unbalanced_left(x) {
-  if (typeof x === "object") {
-    if (x._0 === "Black") {
-      let match = x._1;
-      if (typeof match === "object") {
-        if (match._0 === "Black") {
-          return [
-            balance_left({
-              TAG: "Node",
-              _0: "Red",
-              _1: match._1,
-              _2: match._2,
-              _3: match._3
-            }, x._2, x._3),
-            true
-          ];
-        }
-        let match$1 = match._3;
-        if (typeof match$1 === "object" && match$1._0 === "Black") {
-          return [
-            {
-              TAG: "Node",
-              _0: "Black",
-              _1: match._1,
-              _2: match._2,
-              _3: balance_left({
-                TAG: "Node",
-                _0: "Red",
-                _1: match$1._1,
-                _2: match$1._2,
-                _3: match$1._3
-              }, x._2, x._3)
-            },
-            false
-          ];
-        }
-        
-      }
-      
-    } else {
-      let match$2 = x._1;
-      if (typeof match$2 === "object" && match$2._0 === "Black") {
-        return [
-          balance_left({
+  if (typeof x !== "object") {
+    throw {
+      RE_EXN_ID: "Assert_failure",
+      _1: [
+        "rbset.res",
+        64,
+        9
+      ],
+      Error: new Error()
+    };
+  }
+  if (x._0 === "Black") {
+    let match = x._1;
+    if (typeof match !== "object") {
+      throw {
+        RE_EXN_ID: "Assert_failure",
+        _1: [
+          "rbset.res",
+          64,
+          9
+        ],
+        Error: new Error()
+      };
+    }
+    if (match._0 === "Black") {
+      return [
+        balance_left({
+          TAG: "Node",
+          _0: "Red",
+          _1: match._1,
+          _2: match._2,
+          _3: match._3
+        }, x._2, x._3),
+        true
+      ];
+    }
+    let match$1 = match._3;
+    if (typeof match$1 !== "object") {
+      throw {
+        RE_EXN_ID: "Assert_failure",
+        _1: [
+          "rbset.res",
+          64,
+          9
+        ],
+        Error: new Error()
+      };
+    }
+    if (match$1._0 === "Black") {
+      return [
+        {
+          TAG: "Node",
+          _0: "Black",
+          _1: match._1,
+          _2: match._2,
+          _3: balance_left({
             TAG: "Node",
             _0: "Red",
-            _1: match$2._1,
-            _2: match$2._2,
-            _3: match$2._3
-          }, x._2, x._3),
-          false
-        ];
-      }
-      
+            _1: match$1._1,
+            _2: match$1._2,
+            _3: match$1._3
+          }, x._2, x._3)
+        },
+        false
+      ];
     }
+    throw {
+      RE_EXN_ID: "Assert_failure",
+      _1: [
+        "rbset.res",
+        64,
+        9
+      ],
+      Error: new Error()
+    };
+  }
+  let match$2 = x._1;
+  if (typeof match$2 !== "object") {
+    throw {
+      RE_EXN_ID: "Assert_failure",
+      _1: [
+        "rbset.res",
+        64,
+        9
+      ],
+      Error: new Error()
+    };
+  }
+  if (match$2._0 === "Black") {
+    return [
+      balance_left({
+        TAG: "Node",
+        _0: "Red",
+        _1: match$2._1,
+        _2: match$2._2,
+        _3: match$2._3
+      }, x._2, x._3),
+      false
+    ];
   }
   throw {
     RE_EXN_ID: "Assert_failure",
@@ -272,62 +317,107 @@ function unbalanced_left(x) {
 }
 
 function unbalanced_right(x) {
-  if (typeof x === "object") {
-    if (x._0 === "Black") {
-      let match = x._3;
-      let x$1 = x._2;
-      let a = x._1;
-      if (typeof match === "object") {
-        if (match._0 === "Black") {
-          return [
-            balance_right(a, x$1, {
-              TAG: "Node",
-              _0: "Red",
-              _1: match._1,
-              _2: match._2,
-              _3: match._3
-            }),
-            true
-          ];
-        }
-        let match$1 = match._1;
-        if (typeof match$1 === "object" && match$1._0 === "Black") {
-          return [
-            {
-              TAG: "Node",
-              _0: "Black",
-              _1: balance_right(a, x$1, {
-                TAG: "Node",
-                _0: "Red",
-                _1: match$1._1,
-                _2: match$1._2,
-                _3: match$1._3
-              }),
-              _2: match._2,
-              _3: match._3
-            },
-            false
-          ];
-        }
-        
-      }
-      
-    } else {
-      let match$2 = x._3;
-      if (typeof match$2 === "object" && match$2._0 === "Black") {
-        return [
-          balance_right(x._1, x._2, {
+  if (typeof x !== "object") {
+    throw {
+      RE_EXN_ID: "Assert_failure",
+      _1: [
+        "rbset.res",
+        75,
+        9
+      ],
+      Error: new Error()
+    };
+  }
+  if (x._0 === "Black") {
+    let match = x._3;
+    let x$1 = x._2;
+    let a = x._1;
+    if (typeof match !== "object") {
+      throw {
+        RE_EXN_ID: "Assert_failure",
+        _1: [
+          "rbset.res",
+          75,
+          9
+        ],
+        Error: new Error()
+      };
+    }
+    if (match._0 === "Black") {
+      return [
+        balance_right(a, x$1, {
+          TAG: "Node",
+          _0: "Red",
+          _1: match._1,
+          _2: match._2,
+          _3: match._3
+        }),
+        true
+      ];
+    }
+    let match$1 = match._1;
+    if (typeof match$1 !== "object") {
+      throw {
+        RE_EXN_ID: "Assert_failure",
+        _1: [
+          "rbset.res",
+          75,
+          9
+        ],
+        Error: new Error()
+      };
+    }
+    if (match$1._0 === "Black") {
+      return [
+        {
+          TAG: "Node",
+          _0: "Black",
+          _1: balance_right(a, x$1, {
             TAG: "Node",
             _0: "Red",
-            _1: match$2._1,
-            _2: match$2._2,
-            _3: match$2._3
+            _1: match$1._1,
+            _2: match$1._2,
+            _3: match$1._3
           }),
-          false
-        ];
-      }
-      
+          _2: match._2,
+          _3: match._3
+        },
+        false
+      ];
     }
+    throw {
+      RE_EXN_ID: "Assert_failure",
+      _1: [
+        "rbset.res",
+        75,
+        9
+      ],
+      Error: new Error()
+    };
+  }
+  let match$2 = x._3;
+  if (typeof match$2 !== "object") {
+    throw {
+      RE_EXN_ID: "Assert_failure",
+      _1: [
+        "rbset.res",
+        75,
+        9
+      ],
+      Error: new Error()
+    };
+  }
+  if (match$2._0 === "Black") {
+    return [
+      balance_right(x._1, x._2, {
+        TAG: "Node",
+        _0: "Red",
+        _1: match$2._1,
+        _2: match$2._2,
+        _3: match$2._3
+      }),
+      false
+    ];
   }
   throw {
     RE_EXN_ID: "Assert_failure",

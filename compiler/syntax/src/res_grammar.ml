@@ -149,10 +149,10 @@ let is_atomic_typ_expr_start = function
   | _ -> false
 
 let is_expr_start = function
-  | Token.Assert | At | Await | Backtick | Bang | Codepoint _ | False | Float _
-  | For | Hash | If | Int _ | Lbrace | Lbracket | LessThan | Lident _ | List
-  | Lparen | Minus | MinusDot | Module | Percent | Plus | PlusDot | String _
-  | Switch | True | Try | Uident _ | Underscore (* _ => doThings() *)
+  | Token.At | Await | Backtick | Bang | Codepoint _ | False | Float _ | For
+  | Hash | If | Int _ | Lbrace | Lbracket | LessThan | Lident _ | List | Lparen
+  | Minus | MinusDot | Module | Percent | Plus | PlusDot | String _ | Switch
+  | True | Try | Uident _ | Underscore (* _ => doThings() *)
   | While | Forwardslash | ForwardslashDot | Dict ->
     true
   | _ -> false
@@ -263,11 +263,11 @@ let is_attribute_start = function
 let is_jsx_child_start = is_atomic_expr_start
 
 let is_block_expr_start = function
-  | Token.Assert | At | Await | Backtick | Bang | Codepoint _ | Exception
-  | False | Float _ | For | Forwardslash | ForwardslashDot | Hash | If | Int _
-  | Lbrace | Lbracket | LessThan | Let | Lident _ | List | Lparen | Minus
-  | MinusDot | Module | Open | Percent | Plus | PlusDot | String _ | Switch
-  | True | Try | Uident _ | Underscore | While | Dict ->
+  | Token.At | Await | Backtick | Bang | Codepoint _ | Exception | False
+  | Float _ | For | Forwardslash | ForwardslashDot | Hash | If | Int _ | Lbrace
+  | Lbracket | LessThan | Let | Lident _ | List | Lparen | Minus | MinusDot
+  | Module | Open | Percent | Plus | PlusDot | String _ | Switch | True | Try
+  | Uident _ | Underscore | While | Dict ->
     true
   | _ -> false
 

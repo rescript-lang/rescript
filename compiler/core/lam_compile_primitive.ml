@@ -533,6 +533,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     | _ -> assert false)
   (* only when Lapply -> expand = true*)
   | Praise -> assert false (* handled before here *)
+  | Passert -> assert false
   (* Runtime encoding relevant *)
   | Parraylength -> E.array_length (Ext_list.singleton_exn args)
   | Psetfield (i, field_info) -> (
