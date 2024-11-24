@@ -11,6 +11,7 @@
 > - :nail_care: [Polish]
 
 # 12.0.0-alpha.6 (Unreleased)
+- Fix exponential notation syntax. https://github.com/rescript-lang/rescript/pull/7105
 
 # 12.0.0-alpha.5
 

@@ -209,24 +209,30 @@ let scan_identifier scanner =
 
 let scan_digits scanner ~base =
   if base <= 10 then
-    let rec loop scanner =
+    let rec loop scanner found_digits =
       match scanner.ch with
-      | '0' .. '9' | '_' ->
+      | '0' .. '9' ->
         next scanner;
-        loop scanner
-      | _ -> ()
+        loop scanner true
+      | '_' ->
+        next scanner;
+        loop scanner false
+      | _ -> found_digits
     in
-    loop scanner
+    loop scanner false
   else
-    let rec loop scanner =
+    let rec loop scanner found_digits =
       match scanner.ch with
       (* hex *)
-      | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' | '_' ->
+      | '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' ->
         next scanner;
-        loop scanner
-      | _ -> ()
+        loop scanner true
+      | '_' ->
+        next scanner;
+        loop scanner false
+      | _ -> found_digits
     in
-    loop scanner
+    loop scanner false
 
 (* float: (0…9) { 0…9∣ _ } [. { 0…9∣ _ }] [(e∣ E) [+∣ -] (0…9) { 0…9∣ _ }]   *)
 let scan_number scanner =
@@ -251,25 +257,30 @@ let scan_number scanner =
         8)
     | _ -> 10
   in
-  scan_digits scanner ~base;
+  ignore (scan_digits scanner ~base);
 
   (*  *)
   let is_float =
     if '.' == scanner.ch then (
       next scanner;
-      scan_digits scanner ~base;
+      ignore (scan_digits scanner ~base);
       true)
     else false
   in
 
   (* exponent part *)
   let is_float =
+    let start_pos = position scanner in
     match scanner.ch with
     | 'e' | 'E' | 'p' | 'P' ->
       (match peek scanner with
       | '+' | '-' -> next2 scanner
       | _ -> next scanner);
-      scan_digits scanner ~base;
+      let end_pos = position scanner in
+      let found_digits = scan_digits scanner ~base in
+      if not found_digits then
+        scanner.err ~start_pos ~end_pos
+          (Diagnostics.message "Expected digits after exponential notation.");
       true
     | _ -> is_float
   in
