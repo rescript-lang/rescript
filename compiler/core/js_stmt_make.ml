@@ -303,6 +303,16 @@ let if_ ?comment ?declaration ?else_ (e : J.expression) (then_ : J.block) : t =
         aux ?comment (E.or_ e (E.not pred1)) ifso ifso1
       | ifso1 :: ifso_rest, ifnot1 :: ifnot_rest
         when Js_analyzer.eq_statement ifnot1 ifso1
+             && (match ifso1.statement_desc with
+                | Exp
+                    {
+                      expression_desc =
+                        Bin (Eq, {expression_desc = Var (Id v)}, _);
+                      _;
+                    } ->
+                  let guard_vars = Js_analyzer.free_variables_of_expression e in
+                  not (Set_ident.mem guard_vars v)
+                | _ -> true)
              && Js_analyzer.no_side_effect_expression e ->
         (* here we do agressive optimization, because it can help optimization later,
             move code outside of branch is generally helpful later

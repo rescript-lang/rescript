@@ -13,6 +13,9 @@
 # 12.0.0-alpha.6 (Unreleased)
 - Fix exponential notation syntax. https://github.com/rescript-lang/rescript/pull/7174
 
+#### :bug: Bug fix
+- Fix bug where a ref assignment is moved ouside a conditional. https://github.com/rescript-lang/rescript/pull/7176
+
 # 12.0.0-alpha.5
 
 #### :rocket: New Feature
