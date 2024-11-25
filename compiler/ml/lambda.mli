@@ -183,6 +183,7 @@ type primitive =
   | Pmulint
   | Pdivint of is_safe
   | Pmodint of is_safe
+  | Ppowint
   | Pandint
   | Porint
   | Pxorint
@@ -205,6 +206,7 @@ type primitive =
   | Psubfloat
   | Pmulfloat
   | Pdivfloat
+  | Ppowfloat
   | Pfloatcomp of comparison
   | Pfloatorder
   | Pfloatmin

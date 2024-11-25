@@ -40,7 +40,8 @@ let op_prec (op : Js_op.binop) =
   | Band -> (7, 7, 7)
   | Lsl | Lsr | Asr -> (10, 10, 11)
   | Plus | Minus -> (11, 11, 12)
-  | Mul | Div | Mod | Pow -> (12, 12, 13)
+  | Mul | Div | Mod -> (12, 12, 13)
+  | Pow -> (13, 14, 12)
 
 let op_int_prec (op : Js_op.int_op) =
   match op with
@@ -50,6 +51,7 @@ let op_int_prec (op : Js_op.int_op) =
   | Lsl | Lsr | Asr -> (10, 10, 11)
   | Plus | Minus -> (11, 11, 12)
   | Mul | Div | Mod -> (12, 12, 13)
+  | Pow -> (13, 14, 12)
 
 let op_str (op : Js_op.binop) =
   match op with
@@ -89,6 +91,7 @@ let op_int_str (op : Js_op.int_op) =
   | Mul -> "*"
   | Div -> "/"
   | Mod -> "%"
+  | Pow -> "**"
 
 let str_of_used_stats x =
   match (x : Js_op.used_stats) with
