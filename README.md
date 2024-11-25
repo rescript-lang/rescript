@@ -21,6 +21,9 @@
   <a href="https://twitter.com/intent/follow?screen_name=rescriptlang">
     <img src="https://img.shields.io/twitter/follow/rescriptlang.svg?label=Follow%20@rescriptlang" alt="Follow @rescriptlang" />
   </a>
+  <a href="https://gurubase.io/g/rescript">
+    <img src="https://img.shields.io/badge/Gurubase-Ask%20ReScript%20Guru-006BFF" alt="Ask ReScript Guru" />
+  </a>
 </p>
 
 <h3 align="center">
