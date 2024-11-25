@@ -1,0 +1,30 @@
+
+  Syntax error!
+  tests/parsing/errors/scanner/exponent_notation.res:7:10
+
+  5 │ let x = 1_e_1
+  6 │ 
+  7 │ let x = 1e
+  8 │ 
+  9 │ let x = 1_e_
+
+  Expected digits after exponential notation.
+
+
+  Syntax error!
+  tests/parsing/errors/scanner/exponent_notation.res:9:11
+
+   7 │ let x = 1e
+   8 │ 
+   9 │ let x = 1_e_
+  10 │ 
+  11 │ let x = 1.
+
+  Expected digits after exponential notation.
+
+let x = 1e1
+let x = 1e_1
+let x = 1_e_1
+let x = 1e
+let x = 1_e_
+let x = 1.
