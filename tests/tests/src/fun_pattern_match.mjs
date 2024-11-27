@@ -14,44 +14,102 @@ function f3(param, param$1) {
   let lhs = param.rank;
   let rhs = param$1.rank;
   if (typeof lhs !== "object") {
-    lhs === "Uninitialized";
+    if (lhs === "Uninitialized") {
+      throw {
+        RE_EXN_ID: "Assert_failure",
+        _1: [
+          "fun_pattern_match.res",
+          33,
+          9
+        ],
+        Error: new Error()
+      };
+    }
+    throw {
+      RE_EXN_ID: "Assert_failure",
+      _1: [
+        "fun_pattern_match.res",
+        33,
+        9
+      ],
+      Error: new Error()
+    };
   } else {
     if (typeof rhs === "object") {
       return Primitive_int.compare(lhs._0, rhs._0);
     }
-    rhs === "Uninitialized";
+    if (rhs === "Uninitialized") {
+      throw {
+        RE_EXN_ID: "Assert_failure",
+        _1: [
+          "fun_pattern_match.res",
+          33,
+          9
+        ],
+        Error: new Error()
+      };
+    }
+    throw {
+      RE_EXN_ID: "Assert_failure",
+      _1: [
+        "fun_pattern_match.res",
+        33,
+        9
+      ],
+      Error: new Error()
+    };
   }
-  throw {
-    RE_EXN_ID: "Assert_failure",
-    _1: [
-      "fun_pattern_match.res",
-      33,
-      9
-    ],
-    Error: new Error()
-  };
 }
 
 function f4(param, param$1) {
   let lhs = param.rank;
   let rhs = param$1.rank;
   if (typeof lhs !== "object") {
-    lhs === "Uninitialized";
+    if (lhs === "Uninitialized") {
+      throw {
+        RE_EXN_ID: "Assert_failure",
+        _1: [
+          "fun_pattern_match.res",
+          39,
+          9
+        ],
+        Error: new Error()
+      };
+    }
+    throw {
+      RE_EXN_ID: "Assert_failure",
+      _1: [
+        "fun_pattern_match.res",
+        39,
+        9
+      ],
+      Error: new Error()
+    };
   } else {
     if (typeof rhs === "object") {
       return Primitive_int.compare(lhs._0, rhs._0);
     }
-    rhs === "Uninitialized";
+    if (rhs === "Uninitialized") {
+      throw {
+        RE_EXN_ID: "Assert_failure",
+        _1: [
+          "fun_pattern_match.res",
+          39,
+          9
+        ],
+        Error: new Error()
+      };
+    }
+    throw {
+      RE_EXN_ID: "Assert_failure",
+      _1: [
+        "fun_pattern_match.res",
+        39,
+        9
+      ],
+      Error: new Error()
+    };
   }
-  throw {
-    RE_EXN_ID: "Assert_failure",
-    _1: [
-      "fun_pattern_match.res",
-      39,
-      9
-    ],
-    Error: new Error()
-  };
 }
 
 let x = {

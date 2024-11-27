@@ -16,7 +16,7 @@
     "-bs-no-check-div-by-zero",
     "-bs-cross-module-opt",
     "-unsafe",
-    "-w -3+50",
+    "-w -3+50-21",
     "-warn-error A"
   ]
 }
