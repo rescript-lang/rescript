@@ -10,9 +10,11 @@
 (*                                                                     *)
 (***********************************************************************)
 
+let absname = ref false
+
 let set_abs_input_name sourcefile =
   let sourcefile =
-    if !Location.absname && Filename.is_relative sourcefile then
+    if !absname && Filename.is_relative sourcefile then
       Ext_path.absolute_cwd_path sourcefile
     else sourcefile
   in
@@ -402,7 +404,7 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
       string_optional_set Clflags.preprocessor,
       "*internal* <command>  Pipe sources through preprocessor <command>" );
     ( "-absname",
-      set Location.absname,
+      set absname,
       "*internal* Show absolute filenames in error messages" );
     (* Not used, the build system did the expansion *)
     ( "-bs-no-bin-annot",

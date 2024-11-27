@@ -242,7 +242,7 @@ module ResDriver = struct
       {loc_start = start_pos; Location.loc_end = end_pos; loc_ghost = false}
     in
     let err = {Location.loc; msg; sub = []; if_highlight = ""} in
-    Location.default_error_reporter ~src:(Some src) Format.str_formatter err;
+    Location.report_error ~src:(Some src) Format.str_formatter err;
     Format.flush_str_formatter ()
 
   let parse_implementation ~sourcefile ~for_printer ~src =
@@ -375,7 +375,6 @@ module Compile = struct
   let reset_compiler () =
     warning_infos := [||];
     flush_warning_buffer () |> ignore;
-    Location.reset ();
     Warnings.reset_fatal ();
     Env.reset_cache_toplevel ()
 
