@@ -1675,13 +1675,9 @@ let bigint_comp (cmp : Lam_compat.comparison) ?comment (e0 : t) (e1 : t) =
     not (bool (p1 = p2 && String.equal (normalize v1) (normalize v2)))
   | _ -> bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1
 
-let bigint_div ~checked ?comment (e0 : t) (e1 : t) =
-  if checked then runtime_call Primitive_modules.bigint "div" [e0; e1]
-  else bigint_op ?comment Div e0 e1
+let bigint_div ?comment (e0 : t) (e1 : t) = bigint_op ?comment Div e0 e1
 
-let bigint_mod ~checked ?comment (e0 : t) (e1 : t) =
-  if checked then runtime_call Primitive_modules.bigint "mod_" [e0; e1]
-  else bigint_op ?comment Mod e0 e1
+let bigint_mod ?comment (e0 : t) (e1 : t) = bigint_op ?comment Mod e0 e1
 
 (* TODO -- alpha conversion
     remember to add parens..
