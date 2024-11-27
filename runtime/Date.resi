@@ -5,7 +5,7 @@
 /**
 A type representing a JavaScript date.
 */
-type t = Js.Date.t
+type t = CoreTypes.date
 
 /**
 Time, in milliseconds, since / until the UNIX epoch (January 1, 1970 00:00:00 UTC).

@@ -1,4 +1,4 @@
-type t = Js.Date.t
+type t = Date.t
 
 @val @module("date-fns")
 external dateFormat: (t, string) => string = "format"

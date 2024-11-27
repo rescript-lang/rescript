@@ -81,6 +81,7 @@ lib/es6/BigInt64Array.js
 lib/es6/BigUint64Array.js
 lib/es6/Char.js
 lib/es6/Console.js
+lib/es6/CoreTypes.js
 lib/es6/DataView.js
 lib/es6/Date.js
 lib/es6/Dict.js
@@ -251,6 +252,7 @@ lib/js/BigInt64Array.js
 lib/js/BigUint64Array.js
 lib/js/Char.js
 lib/js/Console.js
+lib/js/CoreTypes.js
 lib/js/DataView.js
 lib/js/Date.js
 lib/js/Dict.js
@@ -658,6 +660,10 @@ lib/ocaml/Console.cmt
 lib/ocaml/Console.cmti
 lib/ocaml/Console.res
 lib/ocaml/Console.resi
+lib/ocaml/CoreTypes.cmi
+lib/ocaml/CoreTypes.cmj
+lib/ocaml/CoreTypes.cmt
+lib/ocaml/CoreTypes.res
 lib/ocaml/DataView.cmi
 lib/ocaml/DataView.cmj
 lib/ocaml/DataView.cmt

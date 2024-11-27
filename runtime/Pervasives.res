@@ -1,15 +1,12 @@
-/**
-   Since [others] depend on this file, its public mli files **should not
-   export types** introduced here, otherwise it would cause 
-   conflicts here.
+/* Core type aliases */
 
-   If the type exported here is also exported in modules from others,
-   you will get a type not equivalent.
-*/
+type date = CoreTypes.date
+type regExp = CoreTypes.regExp
+
+/* Internal */
+
 @deprecated("Do not use. This will be removed in v13")
-external /* Internal */
-
-__unsafe_cast: 'a => 'b = "%identity"
+external __unsafe_cast: 'a => 'b = "%identity"
 
 /* Exceptions */
 
