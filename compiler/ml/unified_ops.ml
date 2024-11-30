@@ -149,6 +149,18 @@ let entries =
         };
     };
     {
+      path = builtin "<<";
+      name = "%lsl";
+      form = Binary;
+      specialization = {
+        int = Plslint;
+        bool = None;
+        float = None;
+        bigint = Some Plslbigint;
+        string = None;
+      };
+    };
+    {
       path = builtin "mod";
       name = "%mod";
       form = Binary;

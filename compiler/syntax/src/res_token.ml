@@ -52,6 +52,7 @@ type t =
   | ColonGreaterThan
   | GreaterThan
   | LessThan
+  | LessThanLessThan
   | LessThanSlash
   | Hash
   | HashEqual
@@ -107,7 +108,7 @@ let precedence = function
   | Equal | EqualEqual | EqualEqualEqual | LessThan | GreaterThan | BangEqual
   | BangEqualEqual | LessEqual | GreaterEqual | BarGreater ->
     5
-  | Plus | PlusDot | Minus | MinusDot | PlusPlus -> 6
+  | Plus | PlusDot | Minus | MinusDot | PlusPlus | LessThanLessThan -> 6
   | Asterisk | AsteriskDot | Forwardslash | ForwardslashDot | Percent -> 7
   | Exponentiation -> 8
   | MinusGreater -> 9
@@ -165,6 +166,7 @@ let to_string = function
   | HashEqual -> "#="
   | GreaterThan -> ">"
   | LessThan -> "<"
+  | LessThanLessThan -> "<<"
   | LessThanSlash -> "</"
   | Asterisk -> "*"
   | AsteriskDot -> "*."

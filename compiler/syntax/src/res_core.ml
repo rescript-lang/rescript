@@ -2166,7 +2166,7 @@ and parse_binary_expr ?(context = OrdinaryExpr) ?a p prec =
        *
        * First case is unary, second is a binary operator.
        * See Scanner.isBinaryOp *)
-      | (Minus | MinusDot | LessThan | Percent)
+      | (Minus | MinusDot | LessThan | Percent | LessThanLessThan)
         when (not
                 (Scanner.is_binary_op p.scanner.src p.start_pos.pos_cnum
                    p.end_pos.pos_cnum))
