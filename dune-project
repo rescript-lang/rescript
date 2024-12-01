@@ -62,3 +62,13 @@
    (= 1.6.9))
   analysis
   dune))
+
+(package
+ (name rescript-lsp)
+ (synopsis "ReScript LSP")
+ (depends
+  (ocaml
+   (>= 4.10))
+  analysis
+  lsp
+  dune))

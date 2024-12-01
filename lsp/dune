@@ -1,0 +1,5 @@
+(executable
+ (name rescriptlsp)
+ (package rescript-lsp)
+ (public_name rescript-lsp)
+ (libraries lsp eio eio_main))
