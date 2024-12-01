@@ -2057,18 +2057,21 @@ and parse_bracket_access p expr start_pos =
         Location.mkloc (Longident.Ldot (Lident "Array", "set")) array_loc
       in
       let end_pos = p.prev_end_pos in
+      (* Adding attribute because the internal representation of arr[idx] is Array.set and we don't have a way to distinguish both when issuing the token on the LSP *)
+      let attr = (Location.mkloc "res.arraySet" array_loc, Parsetree.PStr []) in
       let array_set =
         Ast_helper.Exp.apply ~loc:(mk_loc start_pos end_pos)
-          (Ast_helper.Exp.ident ~loc:array_loc array_set)
+          (Ast_helper.Exp.ident ~loc:array_loc array_set ~attrs:[attr])
           [(Nolabel, expr); (Nolabel, access_expr); (Nolabel, rhs_expr)]
       in
       Parser.eat_breadcrumb p;
       array_set
     | _ ->
       let end_pos = p.prev_end_pos in
+      let attr = (Location.mkloc "res.arrayGet" array_loc, Parsetree.PStr []) in
       let e =
         Ast_helper.Exp.apply ~loc:(mk_loc start_pos end_pos)
-          (Ast_helper.Exp.ident ~loc:array_loc
+          (Ast_helper.Exp.ident ~loc:array_loc ~attrs:[attr]
              (Location.mkloc (Longident.Ldot (Lident "Array", "get")) array_loc))
           [(Nolabel, expr); (Nolabel, access_expr)]
       in

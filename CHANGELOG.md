@@ -13,8 +13,13 @@
 # 12.0.0-alpha.6 (Unreleased)
 - Fix exponential notation syntax. https://github.com/rescript-lang/rescript/pull/7174
 
+
 #### :bug: Bug fix
 - Fix bug where a ref assignment is moved ouside a conditional. https://github.com/rescript-lang/rescript/pull/7176
+
+#### :house: Internal
+
+- Add attribute `res.array{Get,Set}` for `Array.{get, set}`. https://github.com/rescript-lang/rescript-compiler/pull/6343
 
 # 12.0.0-alpha.5
 

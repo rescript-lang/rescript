@@ -66,37 +66,40 @@ let build_dispatch_table =
   [@res.arity 1])
 ;;(module Three)
 ;;((module Three) : (module X_int))
-;;(module Teenager).(0)
+;;((Array.get)[@res.arrayGet ]) (module Teenager) 0
 ;;((module Teenager) |.u age) |.u Js.log
-;;((module Teenager).(0)) |.u Js.log
+;;(((Array.get)[@res.arrayGet ]) (module Teenager) 0) |.u Js.log
 ;;((if ((module Teenager) |.u age) |.u isAdult
     then Js.log {js|has responsibilities|js}
     else Js.log {js|can play in the playground|js})[@res.ternary ])
-;;((if ((module Streets).(0)) |.u isExpensive
+;;((if (((Array.get)[@res.arrayGet ]) (module Streets) 0) |.u isExpensive
     then Js.log {js|big money|js}
     else Js.log {js|affordable|js})[@res.ternary ])
 let () = ((((module Teenager) |.u age) |.u Js.log)[@res.braces ])
-let () = (((module Teenager).(0))[@res.braces ])
+let () = ((((Array.get)[@res.arrayGet ]) (module Teenager) 0)[@res.braces ])
 let () =
   ((if ((module Teenager) |.u age) |.u isAdult
     then Js.log {js|has responsibilities|js}
     else Js.log {js|can play in the playground|js})
   [@res.braces ][@res.ternary ])
 let () =
-  ((if ((module Streets).(0)) |.u isExpensive
+  ((if (((Array.get)[@res.arrayGet ]) (module Streets) 0) |.u isExpensive
     then Js.log {js|big money|js}
     else Js.log {js|affordable|js})
   [@res.braces ][@res.ternary ])
 let () =
   ((let a = 1 in
     let b = 2 in
-    (module Teenager).(0); ((module Teenager) |.u age) |.u Js.log)
+    ((Array.get)[@res.arrayGet ]) (module Teenager) 0;
+    ((module Teenager) |.u age) |.u Js.log)
   [@res.braces ])
 let () =
   ((let a = 1 in
     let b = 2 in
     ((module Teenager) |.u age) |.u Js.log;
-    ((if (((module Teenager).(0)) |.u age) |.u isAdult
+    ((if
+        ((((Array.get)[@res.arrayGet ]) (module Teenager) 0) |.u age) |.u
+          isAdult
       then Js.log {js|has responsibilities|js}
       else Js.log {js|can play in the playground|js})
     [@res.ternary ]))
