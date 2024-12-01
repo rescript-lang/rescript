@@ -1,6 +1,6 @@
 /* Exceptions */
 external raise: exn => 'a = "%raise"
-
+external assert: bool => 'a = "%assert"
 /* Debugging */
 
 external __LOC__: string = "%loc_LOC"

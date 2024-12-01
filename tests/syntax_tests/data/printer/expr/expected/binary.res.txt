@@ -384,7 +384,7 @@ let x =
   }
 
 let x = a && assert(false)
-let x = a && assert(false && assert(true))
+let x = a && assert(false) && assert(true)
 
 let x =
   a && {

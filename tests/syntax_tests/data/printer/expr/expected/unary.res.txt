@@ -24,7 +24,7 @@ let x = -a.bar
 // same as above
 let x = -a.bar
 
-!(assert(x))
+!assert(x)
 assert(!x)
 !(@attr expr)
 //!(arg => doStuffWith(arg))
