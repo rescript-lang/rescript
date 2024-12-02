@@ -379,7 +379,6 @@ and transl_type_aux env policy styp =
   | Ptyp_object (fields, o) ->
     let ty, fields = transl_fields env policy o fields in
     ctyp (Ttyp_object (fields, o)) (newobj ty)
-  | Ptyp_class () -> assert false
   | Ptyp_alias (st, alias) ->
     let cty =
       try

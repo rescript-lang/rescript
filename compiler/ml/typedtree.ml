@@ -314,7 +314,6 @@ and core_type_desc =
   | Ttyp_tuple of core_type list
   | Ttyp_constr of Path.t * Longident.t loc * core_type list
   | Ttyp_object of object_field list * closed_flag
-  | Ttyp_class of unit (* dummy AST node *)
   | Ttyp_alias of core_type * string
   | Ttyp_variant of row_field list * closed_flag * label list option
   | Ttyp_poly of string list * core_type

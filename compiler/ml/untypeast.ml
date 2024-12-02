@@ -519,7 +519,6 @@ let core_type sub ct =
       Ptyp_constr (map_loc sub lid, List.map (sub.typ sub) list)
     | Ttyp_object (list, o) ->
       Ptyp_object (List.map (sub.object_field sub) list, o)
-    | Ttyp_class () -> Ptyp_class ()
     | Ttyp_alias (ct, s) -> Ptyp_alias (sub.typ sub ct, s)
     | Ttyp_variant (list, bool, labels) ->
       Ptyp_variant (List.map (sub.row_field sub) list, bool, labels)

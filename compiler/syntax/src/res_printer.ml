@@ -1766,7 +1766,6 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
     | Ptyp_package package_type ->
       print_package_type ~state ~print_module_keyword_and_parens:true
         package_type cmt_tbl
-    | Ptyp_class _ -> Doc.text "classes are not supported in types"
     | Ptyp_variant (row_fields, closed_flag, labels_opt) ->
       let force_break =
         typ_expr.ptyp_loc.Location.loc_start.pos_lnum

@@ -321,7 +321,6 @@ and core_type1 ctxt f x =
         in
         pp f "@[<hov2><@ %a%a@ > @]" (list core_field_type ~sep:";") l
           field_var o (* Cf #7200 *)
-    | Ptyp_class () -> ()
     | Ptyp_package (lid, cstrs) ->
         let aux f (s, ct) =
           pp f "type %a@ =@ %a" longident_loc s (core_type ctxt) ct  in

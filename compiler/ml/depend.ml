@@ -118,7 +118,6 @@ let rec add_type bv ty =
         | Otag (_, _, t) -> add_type bv t
         | Oinherit t -> add_type bv t)
       fl
-  | Ptyp_class () -> ()
   | Ptyp_alias (t, _) -> add_type bv t
   | Ptyp_variant (fl, _, _) ->
     List.iter

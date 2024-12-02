@@ -107,7 +107,6 @@ module T = struct
       constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
     | Ptyp_object (l, o) ->
       object_ ~loc ~attrs (List.map (object_field sub) l) o
-    | Ptyp_class () -> assert false
     | Ptyp_alias (t, s) -> alias ~loc ~attrs (sub.typ sub t) s
     | Ptyp_variant (rl, b, ll) ->
       variant ~loc ~attrs (List.map (row_field sub) rl) b ll

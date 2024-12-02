@@ -90,7 +90,6 @@ module Typ = struct
         | Ptyp_constr (longident, lst) ->
           Ptyp_constr (longident, List.map loop lst)
         | Ptyp_object (lst, o) -> Ptyp_object (List.map loop_object_field lst, o)
-        | Ptyp_class () -> assert false
         | Ptyp_alias (core_type, string) ->
           check_variable var_names t.ptyp_loc string;
           Ptyp_alias (loop core_type, string)

@@ -95,6 +95,7 @@ and core_type_desc =
     (* < l1:T1; ...; ln:Tn >     (flag = Closed)
        < l1:T1; ...; ln:Tn; .. > (flag = Open)
     *)
+  | Ptyp_class of unit (* dummy AST node *)
   | Ptyp_alias of core_type * string (* T as 'a *)
   | Ptyp_variant of row_field list * closed_flag * label list option
     (* [ `A|`B ]         (flag = Closed; labels = None)
@@ -595,73 +596,3 @@ and module_binding = {
   pmb_loc: Location.t;
 }
 (* X = ME *)
-
-module Legacy = struct
-  let rec expression (e : expression) : Parsetree0.expression =
-    {
-      pexp_desc = expression_desc e.pexp_desc;
-      pexp_loc = e.pexp_loc;
-      pexp_attributes = attributes e.pexp_attributes;
-    }
-
-  and expression_desc (_e : expression_desc) : Parsetree0.expression_desc =
-    assert false
-
-  and expression_option (e : expression option) : Parsetree0.expression option =
-    Option.map expression e
-
-  and attributes (a : attributes) : Parsetree0.attributes = List.map attribute a
-
-  and attribute ((lbl, p) : attribute) : Parsetree0.attribute = (lbl, payload p)
-
-  and payload (p : payload) : Parsetree0.payload =
-    match p with
-    | PStr s -> PStr (structure s)
-    | PPat (p, l) -> PPat (pattern p, expression_option l)
-    | PTyp t -> PTyp (core_type t)
-    | PSig s -> PSig (signature s)
-
-  and structure (s : structure) : Parsetree0.structure =
-    List.map structure_item s
-
-  and structure_item (_i : structure_item) : Parsetree0.structure_item =
-    assert false
-
-  and signature (s : signature) : Parsetree0.signature =
-    List.map signature_item s
-
-  and signature_item (_i : signature_item) : Parsetree0.signature_item =
-    assert false
-
-  and pattern (_p : pattern) : Parsetree0.pattern = assert false
-
-  and core_type (t : core_type) : Parsetree0.core_type =
-    {
-      ptyp_desc = core_type_desc t.ptyp_desc;
-      ptyp_loc = t.ptyp_loc;
-      ptyp_attributes = attributes t.ptyp_attributes;
-    }
-
-  and core_type_desc (d : core_type_desc) : Parsetree0.core_type_desc =
-    match d with
-    | Ptyp_any -> Ptyp_any
-    | Ptyp_var s -> Ptyp_var s
-    | Ptyp_arrow (lbl, t1, t2) -> Ptyp_arrow (lbl, core_type t1, core_type t2)
-    | Ptyp_tuple tl -> Ptyp_tuple (List.map core_type tl)
-    | Ptyp_constr (lid, tl) -> Ptyp_constr (lid, List.map core_type tl)
-    | Ptyp_object (fields, closed) ->
-      Ptyp_object (List.map object_field fields, closed)
-    | Ptyp_alias (t, lid) -> Ptyp_alias (core_type t, lid)
-    | Ptyp_variant (row_fields, closed, labels) ->
-      Ptyp_variant (List.map row_field row_fields, closed, labels)
-    | Ptyp_poly (s, t) -> Ptyp_poly (s, core_type t)
-    | Ptyp_package (lid, tl) ->
-      Ptyp_package (lid, List.map (fun (l, t) -> (l, core_type t)) tl)
-    | Ptyp_extension ext -> Ptyp_extension (extension ext)
-
-  and object_field (_f : object_field) : Parsetree0.object_field = assert false
-
-  and row_field (_f : row_field) : Parsetree0.row_field = assert false
-
-  and extension (_e : extension) : Parsetree0.extension = assert false
-end

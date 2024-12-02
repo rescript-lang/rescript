@@ -179,7 +179,6 @@ let rec core_type i ppf x =
           line i ppf "OTinherit\n";
           core_type (i + 1) ppf ct)
       l
-  | Ttyp_class () -> ()
   | Ttyp_alias (ct, s) ->
     line i ppf "Ttyp_alias \"%s\"\n" s;
     core_type i ppf ct
