@@ -234,3 +234,52 @@ Result.mapError(Ok("abc"), format) // Ok("abc")
 ```
 */
 let mapError: (result<'a, 'b>, 'b => 'c) => result<'a, 'c>
+
+/**
+`all(results)` returns a result of array if all options are Ok, otherwise returns Error.
+## Examples
+```rescript
+Result.all([Ok(1), Ok(2), Ok(3)]) // Ok([1, 2, 3])
+Result.all([Ok(1), Error(1)]) // Error(1)
+```
+*/
+let all: array<result<'a, 'b>> => result<array<'a>, 'b>
+
+/**
+`all2((r1, r2))`. Like `all()`, but with a fixed size tuple of 2
+*/
+let all2: ((result<'r1, 'e>, result<'r2, 'e>)) => result<('r1, 'r2), 'e>
+
+/**
+`all3((r1, r2, r3))`. Like `all()`, but with a fixed size tuple of 2
+*/
+let all3: ((result<'r1, 'e>, result<'r2, 'e>, result<'r3, 'e>)) => result<('r1, 'r2, 'r3), 'e>
+
+/**
+`all4((r1, r2, r3, r4))`. Like `all()`, but with a fixed size tuple of 2
+*/
+let all4: ((result<'r1, 'e>, result<'r2, 'e>, result<'r3, 'e>, result<'r4, 'e>)) => result<
+  ('r1, 'r2, 'r3, 'r4),
+  'e,
+>
+
+/**
+`all5((r1, r2, r3, r4, r5))`. Like `all()`, but with a fixed size tuple of 2
+*/
+let all5: (
+  (result<'r1, 'e>, result<'r2, 'e>, result<'r3, 'e>, result<'r4, 'e>, result<'r5, 'e>)
+) => result<('r1, 'r2, 'r3, 'r4, 'r5), 'e>
+
+/**
+`all6((r1, r2, r3, r4, r5, r6))`. Like `all()`, but with a fixed size tuple of 2
+*/
+let all6: (
+  (
+    result<'r1, 'e>,
+    result<'r2, 'e>,
+    result<'r3, 'e>,
+    result<'r4, 'e>,
+    result<'r5, 'e>,
+    result<'r6, 'e>,
+  )
+) => result<('r1, 'r2, 'r3, 'r4, 'r5, 'r6), 'e>
