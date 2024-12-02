@@ -53,6 +53,7 @@ type key = string
 ## Examples
 
 ```rescript
+let ages = dict{"Maria": 30, "Vinh": 22, "Fred": 49}
 Js.Dict.get(ages, "Vinh") == Some(22)
 Js.Dict.get(ages, "Paul") == None
 ```
@@ -66,6 +67,7 @@ let get: (t<'a>, key) => option<'a>
 ## Examples
 
 ```rescript
+let ages = dict{"Maria": 30, "Vinh": 22, "Fred": 49}
 Js.Dict.unsafeGet(ages, "Fred") == 49
 Js.Dict.unsafeGet(ages, "Paul") // returns undefined
 ```
@@ -82,6 +84,7 @@ the key does not exist, and entry will be created for it.
 ## Examples
 
 ```rescript
+let ages = dict{"Maria": 30, "Vinh": 22, "Fred": 49}
 Js.Dict.set(ages, "Maria", 31)
 Js.log(ages == Js.Dict.fromList(list{("Maria", 31), ("Vinh", 22), ("Fred", 49)}))
 
@@ -98,6 +101,7 @@ Returns all the keys in the dictionary `dict`.
 ## Examples
 
 ```rescript
+let ages = dict{"Maria": 30, "Vinh": 22, "Fred": 49}
 Js.Dict.keys(ages) == ["Maria", "Vinh", "Fred"]
 ```
 */
@@ -115,6 +119,7 @@ Returns an array of key/value pairs in the given dictionary (ES2017).
 ## Examples
 
 ```rescript
+let ages = dict{"Maria": 30, "Vinh": 22, "Fred": 49}
 Js.Dict.entries(ages) == [("Maria", 30), ("Vinh", 22), ("Fred", 49)]
 ```
 */
@@ -126,6 +131,7 @@ Returns the values in the given dictionary (ES2017).
 ## Examples
 
 ```rescript
+let ages = dict{"Maria": 30, "Vinh": 22, "Fred": 49}
 Js.Dict.values(ages) == [30, 22, 49]
 ```
 */
