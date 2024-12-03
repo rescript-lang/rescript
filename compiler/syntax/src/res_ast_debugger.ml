@@ -875,7 +875,6 @@ module SexpAst = struct
             closed_flag flag;
             Sexp.list (map_empty ~f:object_field fields);
           ]
-      | Ptyp_class () -> assert false
       | Ptyp_variant (fields, flag, opt_labels) ->
         Sexp.list
           [

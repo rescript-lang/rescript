@@ -134,23 +134,16 @@ let ppf = Format.err_formatter
 (* Error messages to standard error formatter *)
 
 let anonymous ~(rev_args : string list) =
-  if !Js_config.as_ppx then
-    match rev_args with
-    | [output; input] ->
-      Ppx_apply.apply_lazy ~source:input ~target:output
-        Ppx_entry.rewrite_implementation Ppx_entry.rewrite_signature
-    | _ -> Bsc_args.bad_arg "Wrong format when use -as-ppx"
-  else
-    match rev_args with
-    | [filename] -> process_file filename ppf
-    | [] -> ()
-    | _ ->
-      if !Js_config.syntax_only then
-        Ext_list.rev_iter rev_args (fun filename ->
-            Clflags.reset_dump_state ();
-            Warnings.reset ();
-            process_file filename ppf)
-      else Bsc_args.bad_arg "can not handle multiple files"
+  match rev_args with
+  | [filename] -> process_file filename ppf
+  | [] -> ()
+  | _ ->
+    if !Js_config.syntax_only then
+      Ext_list.rev_iter rev_args (fun filename ->
+          Clflags.reset_dump_state ();
+          Warnings.reset ();
+          process_file filename ppf)
+    else Bsc_args.bad_arg "can not handle multiple files"
 
 let format_file input =
   let ext =
@@ -295,7 +288,6 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
       string_call Js_packages_state.set_package_map,
       "*internal* Set package map, not only set package name but also use it \
        as a namespace" );
-    ("-as-ppx", set Js_config.as_ppx, "*internal*As ppx for editor integration");
     ( "-as-pp",
       unit_call (fun _ ->
           Js_config.as_pp := true;
@@ -408,7 +400,6 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
     ( "-bs-no-bin-annot",
       clear Clflags.binary_annotations,
       "*internal* Disable binary annotations (by default on)" );
-    ("-modules", set Js_config.modules, "*internal* serve similar to ocamldep");
     ( "-short-paths",
       clear Clflags.real_paths,
       "*internal* Shorten paths in types" );

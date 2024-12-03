@@ -269,7 +269,7 @@ and translateCoreType_ ~config ~type_vars_gen
         type_;
       }
     | None -> {dependencies = []; type_ = unknown})
-  | Ttyp_any | Ttyp_class _ -> {dependencies = []; type_ = unknown}
+  | Ttyp_any -> {dependencies = []; type_ = unknown}
 
 and translateCoreTypes_ ~config ~type_vars_gen ~type_env type_exprs :
     translation list =

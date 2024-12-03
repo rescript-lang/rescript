@@ -303,7 +303,6 @@ let typ sub {ctyp_desc; ctyp_env; _} =
   | Ttyp_tuple list -> List.iter (sub.typ sub) list
   | Ttyp_constr (_, _, list) -> List.iter (sub.typ sub) list
   | Ttyp_object (list, _) -> List.iter (sub.object_field sub) list
-  | Ttyp_class () -> ()
   | Ttyp_alias (ct, _) -> sub.typ sub ct
   | Ttyp_variant (list, _, _) -> List.iter (sub.row_field sub) list
   | Ttyp_poly (_, ct) -> sub.typ sub ct

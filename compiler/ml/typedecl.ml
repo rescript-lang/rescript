@@ -158,7 +158,6 @@ let is_fixed_type sd =
   let rec has_row_var sty =
     match sty.ptyp_desc with
     | Ptyp_alias (sty, _) -> has_row_var sty
-    | Ptyp_class _
     | Ptyp_object (_, Open)
     | Ptyp_variant (_, Open, _)
     | Ptyp_variant (_, Closed, Some _) ->

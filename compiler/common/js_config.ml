@@ -56,8 +56,6 @@ let js_stdout = ref true
 let all_module_aliases = ref false
 let no_stdlib = ref false
 let no_export = ref false
-let as_ppx = ref false
-
 let int_of_jsx_version = function
   | Jsx_v4 -> 4
 
@@ -86,4 +84,3 @@ let jsx_mode_of_string = function
 let customize_runtime : string option ref = ref None
 let as_pp = ref false
 let self_stack : string Stack.t = Stack.create ()
-let modules = ref false
