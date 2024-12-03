@@ -745,7 +745,7 @@ Path Js.Dict.u
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, key) => 'a",
-    "documentation": {"kind": "markdown", "value": "\n`Js.Dict.unsafeGet(key)` returns the value if the key exists, otherwise an `undefined` value is returned. Use this only when you are sure the key exists (i.e. when having used the `keys()` function to check that the key is valid).\n\n## Examples\n\n```rescript\nJs.Dict.unsafeGet(ages, \"Fred\") == 49\nJs.Dict.unsafeGet(ages, \"Paul\") // returns undefined\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`Js.Dict.unsafeGet(key)` returns the value if the key exists, otherwise an `undefined` value is returned. Use this only when you are sure the key exists (i.e. when having used the `keys()` function to check that the key is valid).\n\n## Examples\n\n```rescript\nlet ages = dict{\"Maria\": 30, \"Vinh\": 22, \"Fred\": 49}\nJs.Dict.unsafeGet(ages, \"Fred\") == 49\nJs.Dict.unsafeGet(ages, \"Paul\") // returns undefined\n```\n"}
   }, {
     "label": "unsafeDeleteKey",
     "kind": 12,

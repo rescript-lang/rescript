@@ -55,9 +55,9 @@ This is useful for doing runtime reflection on any given value.
 ## Examples
 
 ```rescript
-test("test", String) == true
-test(() => true, Function) == true
-test("test", Boolean) == false
+Js.Types.test("test", String) == true
+Js.Types.test(() => true, Function) == true
+Js.Types.test("test", Boolean) == false
 ```
 */
 let test: ('a, t<'b>) => bool

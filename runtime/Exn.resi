@@ -52,12 +52,13 @@ a value passed to a Promise.catch callback)
 ## Examples
 
 ```rescript
-switch (Js.Exn.unsafeAnyToExn("test")) {
+switch (Js.Exn.anyToExnInternal("test")) {
 | Js.Exn.Error(v) =>
   switch(Js.Exn.message(v)) {
-  | Some(str) => Js.log("We won't end up here")
+  | Some(_) => Js.log("We won't end up here")
   | None => Js.log2("We will land here: ", v)
   }
+| _ => assert(false)
 }
 ```
 */
