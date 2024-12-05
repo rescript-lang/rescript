@@ -9,8 +9,9 @@ let () =
   ((let response = ((fetch {js|/users.json|js})[@res.await ]) in
     let users = ((response.json ())[@res.await ]) in
     let comments =
-      ((((fetch {js|comment.json|js})[@res.await ]).json ())
-      [@res.await ]).(0) in
+      ((Array.get)[@res.arrayGet ])
+        ((((fetch {js|comment.json|js})[@res.await ]).json ())[@res.await ])
+        0 in
     Js.log2 users comments)
   [@res.braces ])
 let () = ((delay 10)[@res.braces ][@res.await ])

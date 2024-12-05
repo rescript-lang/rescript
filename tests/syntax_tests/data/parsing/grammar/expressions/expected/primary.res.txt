@@ -5,11 +5,13 @@ let x = p.Parser.token
 let x = (p.Lang.Parser.token).pos
 ;;lexbuf.lnum <- (lexbuf.lnum + 1)
 ;;(parser.lexbuf).lnum <- ((parser.lexbuf).lnum + 1)
-let x = arr.(0)
-let x = arr.((x : int))
-let x = (arr.(0)).(1)
-let x = (arr.((x : int))).((y : int))
-;;arr.(0) <- (a + b)
+let x = ((Array.get)[@res.arrayGet ]) arr 0
+let x = ((Array.get)[@res.arrayGet ]) arr (x : int)
+let x = ((Array.get)[@res.arrayGet ]) (((Array.get)[@res.arrayGet ]) arr 0) 1
+let x =
+  ((Array.get)[@res.arrayGet ]) (((Array.get)[@res.arrayGet ]) arr (x : int))
+    (y : int)
+;;((Array.set)[@res.arraySet ]) arr 0 (a + b)
 ;;f ()
 ;;(f ()) ()
 ;;f a

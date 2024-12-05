@@ -20,7 +20,7 @@ let async =
     () |.u async;
     async ();
     async.async;
-    { async = (async.(async)) };
+    { async = (((Array.get)[@res.arrayGet ]) async async) };
     (result |.u async) |.u
       (mapAsync ((Function$ (fun a -> doStuff a))[@res.arity 1])))
   [@res.braces ])
