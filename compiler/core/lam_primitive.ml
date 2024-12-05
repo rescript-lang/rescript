@@ -52,6 +52,7 @@ type t =
   | Pjs_object_create of External_arg_spec.obj_params
   (* Exceptions *)
   | Praise
+  | Passert
   (* object primitives *)
   | Pobjcomp of Lam_compat.comparison
   | Pobjorder
@@ -193,7 +194,7 @@ let eq_tag_info (x : Lam_tag_info.t) y = x = y
 
 let eq_primitive_approx (lhs : t) (rhs : t) =
   match lhs with
-  | Pwrap_exn | Praise
+  | Pwrap_exn | Praise | Passert
   (* generic comparison *)
   | Pobjorder | Pobjmin | Pobjmax | Pobjtag | Pobjsize
   (* bool primitives *)

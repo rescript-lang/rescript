@@ -61,22 +61,22 @@ function tst02(s) {
       Error: new Error()
     };
   }
-  if (len === 0) {
-    throw {
-      RE_EXN_ID: "Assert_failure",
-      _1: [
-        "stringmatch_test.res",
-        35,
-        21
-      ],
-      Error: new Error()
-    };
+  if (len !== 0) {
+    if (s === "A") {
+      return 2;
+    } else {
+      return 3;
+    }
   }
-  if (s === "A") {
-    return 2;
-  } else {
-    return 3;
-  }
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "stringmatch_test.res",
+      35,
+      21
+    ],
+    Error: new Error()
+  };
 }
 
 if (tst02("") !== 1) {

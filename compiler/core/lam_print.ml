@@ -86,6 +86,7 @@ let primitive ppf (prim : Lam_primitive.t) =
   | Pjs_call {prim_name} -> fprintf ppf "%s[js]" prim_name
   | Pjs_object_create _ -> fprintf ppf "[js.obj]"
   | Praise -> fprintf ppf "raise"
+  | Passert -> fprintf ppf "assert"
   | Pobjcomp Ceq -> fprintf ppf "=="
   | Pobjcomp Cneq -> fprintf ppf "!="
   | Pobjcomp Clt -> fprintf ppf "<"

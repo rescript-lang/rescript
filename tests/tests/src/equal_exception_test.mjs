@@ -7,18 +7,18 @@ import * as Primitive_exceptions from "rescript/lib/es6/Primitive_exceptions.js"
 let v = "gso";
 
 function is_equal() {
-  if (v.codePointAt(0) === /* 'g' */103) {
-    return;
+  if (v.codePointAt(0) !== /* 'g' */103) {
+    throw {
+      RE_EXN_ID: "Assert_failure",
+      _1: [
+        "equal_exception_test.res",
+        6,
+        2
+      ],
+      Error: new Error()
+    };
   }
-  throw {
-    RE_EXN_ID: "Assert_failure",
-    _1: [
-      "equal_exception_test.res",
-      6,
-      2
-    ],
-    Error: new Error()
-  };
+  
 }
 
 function is_exception() {
