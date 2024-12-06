@@ -4,7 +4,11 @@ module C4C0 = {
   @res.jsxComponentProps
   type props<'T_open, 'T_type> = {@as("open") _open: 'T_open, @as("type") _type: 'T_type}
 
-  let make = ({@as("open") _open, @as("type") _type, _}: props<_, string>) => React.string(_open)
+  let make = (props: props<_, string>) => {
+    let _open = props._open
+    let _type: string = props._type
+    React.string(_open)
+  }
   let make = {
     let \"MangleKeyword$C4C0" = (props: props<_>) => make(props)
 
@@ -27,7 +31,11 @@ module C4A0 = {
   @res.jsxComponentProps
   type props<'T_open, 'T_type> = {@as("open") _open: 'T_open, @as("type") _type: 'T_type}
 
-  let make = ({@as("open") _open, @as("type") _type, _}: props<_, string>) => React.string(_open)
+  let make = (props: props<_, string>) => {
+    let _open = props._open
+    let _type: string = props._type
+    React.string(_open)
+  }
   let make = {
     let \"MangleKeyword$C4A0" = (props: props<_>) => make(props)
 

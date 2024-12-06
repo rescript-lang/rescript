@@ -920,6 +920,61 @@ let vb_match_expr named_arg_list expr =
   in
   aux (List.rev named_arg_list)
 
+let vb_type_annotation ~expr (name, default, pattern, alias, loc, core_type) =
+  let label = get_label name in
+  let pattern_name =
+    match default with
+    | Some _ -> "__" ^ alias
+    | None -> alias
+  in
+  let value_binding =
+    Vb.mk ~loc
+      (match pattern with
+      | {
+       ppat_desc =
+         Ppat_constraint (pattern, ({ptyp_desc = Ptyp_package _} as type_));
+      } ->
+        (* Handle pattern: ~comp as module(Comp: Comp) *)
+        Pat.record
+          [
+            ( {txt = Lident label; loc = Location.none},
+              Pat.constraint_ pattern type_ );
+          ]
+          Closed
+      | _ -> (
+        (* For other cases, use regular variable pattern with type constraint *)
+        let type_ =
+          match pattern with
+          | {ppat_desc = Ppat_constraint (_, type_)} -> Some type_
+          | _ -> core_type
+        in
+        match type_ with
+        | Some type_ ->
+          Pat.constraint_ (Pat.var (Location.mkloc pattern_name loc)) type_
+        | None -> Pat.var (Location.mkloc pattern_name loc)))
+      (match pattern with
+      | {ppat_desc = Ppat_constraint (_, {ptyp_desc = Ptyp_package _})} ->
+        (* For module types, use props directly *)
+        Exp.ident {txt = Lident "props"; loc = Location.none}
+      | _ ->
+        (* For other cases, use props.x form *)
+        Exp.field
+          (Exp.ident {txt = Lident "props"; loc = Location.none})
+          {txt = Lident label; loc = Location.none})
+  in
+  Exp.let_ Nonrecursive [value_binding] expr
+
+let vb_type_annotations_expr named_arg_list expr =
+  let rec aux named_arg_list =
+    match named_arg_list with
+    | [] -> expr
+    | ((name, _, _, _, _, _) as named_arg) :: rest ->
+      let label = get_label name in
+      if label = "ref" then aux rest
+      else vb_type_annotation named_arg ~expr:(aux rest)
+  in
+  aux (List.rev named_arg_list)
+
 let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
   if Jsx_common.has_attr_on_binding binding then (
     check_multiple_components ~config ~loc:pstr_loc;
@@ -1105,6 +1160,8 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
         vb_match_expr named_arg_list expression
       else expression
     in
+    (* add pattern matching for optional prop value and type annotations *)
+    let expression = vb_type_annotations_expr named_arg_list expression in
     (* (ref) => expr *)
     let expression =
       List.fold_left
@@ -1118,11 +1175,11 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
           Exp.fun_ Nolabel None pattern expr)
         expression patterns_with_nolabel
     in
-    (* ({a, b, _}: props<'a, 'b>) *)
+    (* (props: props<'a, 'b>) *)
     let record_pattern =
       match patterns_with_label with
-      | [] -> Pat.any ()
-      | _ -> Pat.record (List.rev patterns_with_label) Open
+      | [] -> Pat.any () (* (_: props<'a, 'b>)*)
+      | _ -> Pat.var @@ Location.mknoloc "props"
     in
     let expression =
       Exp.fun_ Nolabel None

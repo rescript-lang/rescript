@@ -3,8 +3,9 @@
 import * as React from "react";
 
 function make(props) {
+  let foo = props.foo;
   return React.createElement(make, {
-    foo: props.foo
+    foo: foo
   });
 }
 
