@@ -24,6 +24,9 @@
   <a href="https://bsky.app/profile/rescript-lang.org">
     <img src="https://img.shields.io/badge/Bluesky-0285FF?logo=bluesky&logoColor=fff&style=flat" alt="Follow @rescriptlang on Bluesky" />
   </a>
+  <a href="https://gurubase.io/g/rescript">
+    <img src="https://img.shields.io/badge/Gurubase-Ask%20ReScript%20Guru-006BFF" alt="Ask ReScript Guru" />
+  </a>
 </p>
 
 <h3 align="center">
