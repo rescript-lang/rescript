@@ -56,11 +56,25 @@ external fromArray: array<('k, 'v)> => t<'k, 'v> = "Map"
 Turns an iterator in the shape of `('key, 'value)` into a `Map`.
 
 ## Examples
+
 ```rescript
 // Let's pretend we have an interator in the correct shape
-@val external someIterator: Iterator.t<(string, int)> = "someIterator"
+let iterator: Iterator.t<(string, string)> = %raw(`
+  (() => {
+    var map1 = new Map();
 
-let map = Map.fromIterator(someIterator) // Map.t<string, int>
+    map1.set('first', '1');
+    map1.set('second', '2');
+
+    var iterator1 = map1[Symbol.iterator]();
+    return iterator1;
+  })()
+`)
+
+iterator
+->Map.fromIterator
+->Map.size
+->assert_eq(2)
 ```
 */
 @new

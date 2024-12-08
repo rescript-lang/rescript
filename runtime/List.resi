@@ -75,9 +75,12 @@ let head: t<'a> => option<'a>
 ## Examples
 
 ```rescript
-List.headExn(list{1, 2, 3}) // 1
+List.headExn(list{1, 2, 3})->assert_eq(1)
 
-List.headExn(list{}) // Raises an Error
+switch List.headExn(list{}) {
+| exception Not_found => assert(true)
+| _ => assert(false)
+}
 ```
 
 ## Exceptions
@@ -107,9 +110,12 @@ let tail: t<'a> => option<t<'a>>
 ## Examples
 
 ```rescript
-List.tailExn(list{1, 2, 3}) // list{2, 3}
+List.tailExn(list{1, 2, 3})->assert_eq(list{2, 3})
 
-List.tailExn(list{}) // Raises an Error
+switch List.tailExn(list{}) {
+| exception Not_found => assert(true)
+| _ => assert(false)
+}
 ```
 
 ## Exceptions
@@ -155,9 +161,14 @@ let get: (t<'a>, int) => option<'a>
 ```rescript
 let abc = list{"A", "B", "C"}
 
-abc->List.getExn(1) // "B"
+abc
+->List.getExn(1)
+->assert_eq("B")
 
-abc->List.getExn(4) // Raises an Error
+switch abc->List.getExn(4) {
+| exception Not_found => assert(true)
+| _ => assert(false)
+}
 ```
 
 ## Exceptions

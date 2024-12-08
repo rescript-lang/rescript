@@ -37,7 +37,16 @@ See [`Promise.reject`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 ```rescript
 exception TestError(string)
 
-let p = Promise.reject(TestError("some rejected value"))
+TestError("some rejected value")
+->Promise.reject
+->Promise.catch(v => {
+  switch v {
+  | TestError(msg) => assert_eq(msg, "some rejected value")
+  | _ => assert(false)
+  }
+  Promise.resolve()
+})
+->ignore
 ```
 */
 @scope("Promise")
