@@ -2,7 +2,8 @@
 @res.jsxComponentProps
 type props<'a> = {a?: 'a}
 
-let make = ({a: ?__a, _}: props<unit => unit>) => {
+let make = (props: props<unit => unit>) => {
+  let __a: unit => unit = props.a
   let a = switch __a {
   | Some(a) => a
   | None => () => ()
@@ -30,7 +31,8 @@ module Foo = {
   @res.jsxComponentProps
   type props<'callback> = {callback?: 'callback}
 
-  let make = ({callback: ?__callback, _}: props<(string, bool, bool) => unit>) => {
+  let make = (props: props<(string, bool, bool) => unit>) => {
+    let __callback: (string, bool, bool) => unit = props.callback
     let callback = switch __callback {
     | Some(callback) => callback
     | None => (_, _, _) => ()
