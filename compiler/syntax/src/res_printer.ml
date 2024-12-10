@@ -3394,8 +3394,6 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
           Doc.space;
           print_cases ~state cases cmt_tbl;
         ]
-    | Pexp_function cases ->
-      Doc.concat [Doc.text "x => switch x "; print_cases ~state cases cmt_tbl]
     | Pexp_coerce (expr, (), typ) ->
       let doc_expr = print_expression_with_comments ~state expr cmt_tbl in
       let doc_typ = print_typ_expr ~state typ cmt_tbl in

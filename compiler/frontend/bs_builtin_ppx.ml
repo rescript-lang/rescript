@@ -110,9 +110,6 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   | Pexp_constant (Pconst_integer (s, Some 'l')) ->
     {e with pexp_desc = Pexp_constant (Pconst_integer (s, None))}
   (* End rewriting *)
-  | Pexp_function _ ->
-    async_context := false;
-    default_expr_mapper self e
   | _
     when Ast_uncurried.expr_is_uncurried_fun e
          &&

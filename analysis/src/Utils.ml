@@ -85,7 +85,6 @@ let identifyPexp pexp =
   | Parsetree.Pexp_ident _ -> "Pexp_ident"
   | Pexp_constant _ -> "Pexp_constant"
   | Pexp_let _ -> "Pexp_let"
-  | Pexp_function _ -> "Pexp_function"
   | Pexp_fun _ -> "Pexp_fun"
   | Pexp_apply _ -> "Pexp_apply"
   | Pexp_match _ -> "Pexp_match"

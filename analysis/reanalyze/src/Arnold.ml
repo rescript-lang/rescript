@@ -908,7 +908,7 @@ module Compile = struct
         let open Command in
         c +++ ConstrOption Rnone
       | _ -> c)
-    | Texp_function {cases} -> cases |> List.map (case ~ctx) |> Command.nondet
+    | Texp_function {case = case_} -> case ~ctx case_
     | Texp_match (e, casesOk, casesExn, _partial)
       when not
              (casesExn

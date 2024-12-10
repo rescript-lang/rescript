@@ -138,7 +138,6 @@ module Exp : sig
     pattern ->
     expression ->
     expression
-  val function_ : ?loc:loc -> ?attrs:attrs -> case list -> expression
   val apply :
     ?loc:loc ->
     ?attrs:attrs ->

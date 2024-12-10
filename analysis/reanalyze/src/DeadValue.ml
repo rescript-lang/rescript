@@ -156,18 +156,16 @@ let rec collectExpr super self (e : Typedtree.expression) =
           exp_desc =
             Texp_function
               {
-                cases =
-                  [
-                    {
-                      c_lhs = {pat_desc = Tpat_var (etaArg, _)};
-                      c_rhs =
-                        {
-                          exp_desc =
-                            Texp_apply
-                              ({exp_desc = Texp_ident (idArg2, _, _)}, args);
-                        };
-                    };
-                  ];
+                case =
+                  {
+                    c_lhs = {pat_desc = Tpat_var (etaArg, _)};
+                    c_rhs =
+                      {
+                        exp_desc =
+                          Texp_apply
+                            ({exp_desc = Texp_ident (idArg2, _, _)}, args);
+                      };
+                  };
               };
         } )
     when Ident.name idArg = "arg"

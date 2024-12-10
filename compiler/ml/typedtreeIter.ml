@@ -230,7 +230,7 @@ end = struct
     | Texp_let (rec_flag, list, exp) ->
       iter_bindings rec_flag list;
       iter_expression exp
-    | Texp_function {cases; _} -> iter_cases cases
+    | Texp_function {case; _} -> iter_case case
     | Texp_apply (exp, list) ->
       iter_expression exp;
       List.iter

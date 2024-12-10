@@ -549,58 +549,54 @@ type binding =
   | Bind_value of value_binding list
   | Bind_module of Ident.t * string loc * module_expr
 
-let rec push_defaults loc bindings cases partial =
-  match cases with
-  | [
-   {
-     c_lhs = pat;
-     c_guard = None;
-     c_rhs =
-       {exp_desc = Texp_function {arg_label; param; cases; partial}} as exp;
-   };
-  ] ->
-    let cases = push_defaults exp.exp_loc bindings cases partial in
-    [
-      {
-        c_lhs = pat;
-        c_guard = None;
-        c_rhs =
-          {exp with exp_desc = Texp_function {arg_label; param; cases; partial}};
-      };
-    ]
-  | [
-   {
-     c_lhs = pat;
-     c_guard = None;
-     c_rhs =
-       {
-         exp_attributes = [({txt = "#default"}, _)];
-         exp_desc =
-           Texp_let (Nonrecursive, binds, ({exp_desc = Texp_function _} as e2));
-       };
-   };
-  ] ->
+let rec push_defaults loc bindings case partial =
+  match case with
+  | {
+   c_lhs = pat;
+   c_guard = None;
+   c_rhs =
+     {exp_desc = Texp_function {arg_label; arity; param; case; partial}} as exp;
+  } ->
+    let case = push_defaults exp.exp_loc bindings case partial in
+
+    {
+      c_lhs = pat;
+      c_guard = None;
+      c_rhs =
+        {
+          exp with
+          exp_desc = Texp_function {arg_label; arity; param; case; partial};
+        };
+    }
+  | {
+   c_lhs = pat;
+   c_guard = None;
+   c_rhs =
+     {
+       exp_attributes = [({txt = "#default"}, _)];
+       exp_desc =
+         Texp_let (Nonrecursive, binds, ({exp_desc = Texp_function _} as e2));
+     };
+  } ->
     push_defaults loc
       (Bind_value binds :: bindings)
-      [{c_lhs = pat; c_guard = None; c_rhs = e2}]
+      {c_lhs = pat; c_guard = None; c_rhs = e2}
       partial
-  | [
-   {
-     c_lhs = pat;
-     c_guard = None;
-     c_rhs =
-       {
-         exp_attributes = [({txt = "#modulepat"}, _)];
-         exp_desc =
-           Texp_letmodule (id, name, mexpr, ({exp_desc = Texp_function _} as e2));
-       };
-   };
-  ] ->
+  | {
+   c_lhs = pat;
+   c_guard = None;
+   c_rhs =
+     {
+       exp_attributes = [({txt = "#modulepat"}, _)];
+       exp_desc =
+         Texp_letmodule (id, name, mexpr, ({exp_desc = Texp_function _} as e2));
+     };
+  } ->
     push_defaults loc
       (Bind_module (id, name, mexpr) :: bindings)
-      [{c_lhs = pat; c_guard = None; c_rhs = e2}]
+      {c_lhs = pat; c_guard = None; c_rhs = e2}
       partial
-  | [case] ->
+  | case ->
     let exp =
       List.fold_left
         (fun exp binds ->
@@ -614,45 +610,7 @@ let rec push_defaults loc bindings cases partial =
           })
         case.c_rhs bindings
     in
-    [{case with c_rhs = exp}]
-  | {c_lhs = pat; c_rhs = exp; c_guard = _} :: _ when bindings <> [] ->
-    let param = Typecore.name_pattern "param" cases in
-    let name = Ident.name param in
-    let exp =
-      {
-        exp with
-        exp_loc = loc;
-        exp_desc =
-          Texp_match
-            ( {
-                exp with
-                exp_type = pat.pat_type;
-                exp_desc =
-                  Texp_ident
-                    ( Path.Pident param,
-                      mknoloc (Longident.Lident name),
-                      {
-                        val_type = pat.pat_type;
-                        val_kind = Val_reg;
-                        val_attributes = [];
-                        Types.val_loc = Location.none;
-                      } );
-              },
-              cases,
-              [],
-              partial );
-      }
-    in
-    push_defaults loc bindings
-      [
-        {
-          c_lhs = {pat with pat_desc = Tpat_var (param, mknoloc name)};
-          c_guard = None;
-          c_rhs = exp;
-        };
-      ]
-      Total
-  | _ -> cases
+    {case with c_rhs = exp}
 
 (* Assertions *)
 
@@ -716,7 +674,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_constant cst -> Lconst (Const_base cst)
   | Texp_let (rec_flag, pat_expr_list, body) ->
     transl_let rec_flag pat_expr_list (transl_exp body)
-  | Texp_function {arg_label = _; param; cases; partial} ->
+  | Texp_function {arg_label = _; param; case; partial} ->
     let async = has_async_attribute e in
     let directive =
       match extract_directive_for_fn e with
@@ -724,7 +682,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       | Some (directive, _) -> Some directive
     in
     let params, body, return_unit =
-      let pl = push_defaults e.exp_loc [] cases partial in
+      let pl = push_defaults e.exp_loc [] case partial in
       transl_function e.exp_loc partial param pl
     in
     let attr =
@@ -1088,32 +1046,28 @@ and transl_apply ?(inlined = Default_inline)
           sargs)
       : Lambda.lambda)
 
-and transl_function loc partial param cases =
-  match cases with
-  | [
-   {
-     c_lhs = pat;
-     c_guard = None;
-     c_rhs =
-       {
-         exp_desc =
-           Texp_function
-             {arg_label = _; param = param'; cases; partial = partial'};
-       } as exp;
-   };
-  ]
+and transl_function loc partial param case =
+  match case with
+  | {
+   c_lhs = pat;
+   c_guard = None;
+   c_rhs =
+     {
+       exp_desc =
+         Texp_function {arg_label = _; param = param'; case; partial = partial'};
+     } as exp;
+  }
     when Parmatch.inactive ~partial pat && not (exp |> has_async_attribute) ->
     let params, body, return_unit =
-      transl_function exp.exp_loc partial' param' cases
+      transl_function exp.exp_loc partial' param' case
     in
     ( param :: params,
       Matching.for_function loc None (Lvar param) [(pat, body)] partial,
       return_unit )
-  | {c_rhs = {exp_env; exp_type}; _} :: _ ->
+  | {c_rhs = {exp_env; exp_type}; _} ->
     ( [param],
-      Matching.for_function loc None (Lvar param) (transl_cases cases) partial,
+      Matching.for_function loc None (Lvar param) [transl_case case] partial,
       is_base_type exp_env exp_type Predef.path_unit )
-  | _ -> assert false
 
 and transl_let rec_flag pat_expr_list body =
   match rec_flag with

@@ -137,7 +137,6 @@ let iter_expression f e =
     | Pexp_extension _ (* we don't iterate under extension point *)
     | Pexp_ident _ | Pexp_new _ | Pexp_constant _ ->
       ()
-    | Pexp_function pel -> List.iter case pel
     | Pexp_fun (_, eo, _, e, _) ->
       may expr eo;
       expr e
@@ -1917,8 +1916,6 @@ let rec type_approx env sexp =
   | Pexp_fun (p, _, _, e, _arity) ->
     let ty = if is_optional p then type_option (newvar ()) else newvar () in
     newty (Tarrow (p, ty, type_approx env e, Cok))
-  | Pexp_function ({pc_rhs = e} :: _) ->
-    newty (Tarrow (Nolabel, newvar (), type_approx env e, Cok))
   | Pexp_match (_, {pc_rhs = e} :: _) -> type_approx env e
   | Pexp_try (e, _) -> type_approx env e
   | Pexp_tuple l -> newty (Ttuple (List.map (type_approx env) l))
@@ -2374,7 +2371,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
-  | Pexp_fun (l, Some default, spat, sbody, _arity) ->
+  | Pexp_fun (l, Some default, spat, sbody, arity) ->
     assert (is_optional l);
     (* default allowed only with optional argument *)
     let open Ast_helper in
@@ -2412,14 +2409,11 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         [Vb.mk spat smatch]
         sbody
     in
-    type_function ?in_function loc sexp.pexp_attributes env ty_expected l
+    type_function ?in_function ~arity loc sexp.pexp_attributes env ty_expected l
       [Exp.case pat body]
-  | Pexp_fun (l, None, spat, sbody, _arity) ->
-    type_function ?in_function loc sexp.pexp_attributes env ty_expected l
+  | Pexp_fun (l, None, spat, sbody, arity) ->
+    type_function ?in_function ~arity loc sexp.pexp_attributes env ty_expected l
       [Ast_helper.Exp.case spat sbody]
-  | Pexp_function caselist ->
-    type_function ?in_function loc sexp.pexp_attributes env ty_expected Nolabel
-      caselist
   | Pexp_apply (sfunct, sargs) ->
     assert (sargs <> []);
     begin_def ();
@@ -3279,7 +3273,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
   | Pexp_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
 
-and type_function ?in_function loc attrs env ty_expected l caselist =
+and type_function ?in_function ~arity loc attrs env ty_expected l caselist =
   let loc_fun, ty_fun =
     match in_function with
     | Some p -> p
@@ -3312,13 +3306,14 @@ and type_function ?in_function loc attrs env ty_expected l caselist =
     type_cases ~in_function:(loc_fun, ty_fun) env ty_arg ty_res true loc
       caselist
   in
+  let case = List.hd cases in
   if is_optional l && not_function env ty_res then
-    Location.prerr_warning (List.hd cases).c_lhs.pat_loc
+    Location.prerr_warning case.c_lhs.pat_loc
       Warnings.Unerasable_optional_argument;
   let param = name_pattern "param" cases in
   re
     {
-      exp_desc = Texp_function {arg_label = l; param; cases; partial};
+      exp_desc = Texp_function {arg_label = l; arity; param; case; partial};
       exp_loc = loc;
       exp_extra = [];
       exp_type = instance env (newgenty (Tarrow (l, ty_arg, ty_res, Cok)));
@@ -3409,119 +3404,9 @@ and type_label_exp ?type_clash_context create env loc ty_expected
 
 and type_argument ?type_clash_context ?recarg env sarg ty_expected' ty_expected
     =
-  (* ty_expected' may be generic *)
-  let no_labels ty =
-    let ls, tvar = list_labels env ty in
-    (not tvar) && List.for_all (fun x -> x = Nolabel) ls
-  in
-  let rec is_inferred sexp =
-    match sexp.pexp_desc with
-    | Pexp_ident _ | Pexp_apply _ | Pexp_field _ | Pexp_constraint _
-    | Pexp_coerce _ | Pexp_send _ | Pexp_new _ ->
-      true
-    | Pexp_sequence (_, e) | Pexp_open (_, _, e) -> is_inferred e
-    | Pexp_ifthenelse (_, e1, Some e2) -> is_inferred e1 && is_inferred e2
-    | _ -> false
-  in
-  match expand_head env ty_expected' with
-  | {desc = Tarrow (Nolabel, ty_arg, ty_res, _); level = _}
-    when is_inferred sarg ->
-    (* apply optional arguments when expected type is "" *)
-    (* we must be very careful about not breaking the semantics *)
-    let texp = type_exp env sarg in
-    let rec make_args args ty_fun =
-      match (expand_head env ty_fun).desc with
-      | Tarrow (l, ty_arg, ty_fun, _) when is_optional l ->
-        let ty = option_none (instance env ty_arg) sarg.pexp_loc in
-        make_args ((l, Some ty) :: args) ty_fun
-      | Tarrow (Nolabel, _, ty_res', _) ->
-        (List.rev args, ty_fun, no_labels ty_res')
-      | Tvar _ -> (List.rev args, ty_fun, false)
-      | _ -> ([], texp.exp_type, false)
-    in
-    let args, ty_fun', simple_res = make_args [] texp.exp_type in
-    let texp = {texp with exp_type = instance env texp.exp_type}
-    and ty_fun = instance env ty_fun' in
-    if not (simple_res || no_labels ty_res) then (
-      unify_exp env texp ty_expected;
-      texp)
-    else (
-      unify_exp env {texp with exp_type = ty_fun} ty_expected;
-      if args = [] then texp
-      else
-        (* eta-expand to avoid side effects *)
-        let var_pair name ty =
-          let id = Ident.create name in
-          ( {
-              pat_desc = Tpat_var (id, mknoloc name);
-              pat_type = ty;
-              pat_extra = [];
-              pat_attributes = [];
-              pat_loc = Location.none;
-              pat_env = env;
-            },
-            {
-              exp_type = ty;
-              exp_loc = Location.none;
-              exp_env = env;
-              exp_extra = [];
-              exp_attributes = [];
-              exp_desc =
-                Texp_ident
-                  ( Path.Pident id,
-                    mknoloc (Longident.Lident name),
-                    {
-                      val_type = ty;
-                      val_kind = Val_reg;
-                      val_attributes = [];
-                      Types.val_loc = Location.none;
-                    } );
-            } )
-        in
-        let eta_pat, eta_var = var_pair "eta" ty_arg in
-        let func texp =
-          let e =
-            {
-              texp with
-              exp_type = ty_res;
-              exp_desc = Texp_apply (texp, args @ [(Nolabel, Some eta_var)]);
-            }
-          in
-          let cases = [case eta_pat e] in
-          let param = name_pattern "param" cases in
-          {
-            texp with
-            exp_type = ty_fun;
-            exp_desc =
-              Texp_function {arg_label = Nolabel; param; cases; partial = Total};
-          }
-        in
-        Location.prerr_warning texp.exp_loc
-          (Warnings.Eliminated_optional_arguments
-             (List.map (fun (l, _) -> Printtyp.string_of_label l) args));
-        (* let-expand to have side effects *)
-        let let_pat, let_var = var_pair "arg" texp.exp_type in
-        re
-          {
-            texp with
-            exp_type = ty_fun;
-            exp_desc =
-              Texp_let
-                ( Nonrecursive,
-                  [
-                    {
-                      vb_pat = let_pat;
-                      vb_expr = texp;
-                      vb_attributes = [];
-                      vb_loc = Location.none;
-                    };
-                  ],
-                  func let_var );
-          })
-  | _ ->
-    let texp = type_expect ?type_clash_context ?recarg env sarg ty_expected' in
-    unify_exp ?type_clash_context env texp ty_expected;
-    texp
+  let texp = type_expect ?type_clash_context ?recarg env sarg ty_expected' in
+  unify_exp ?type_clash_context env texp ty_expected;
+  texp
 
 and is_automatic_curried_application env funct =
   (* When a curried function is used with uncurried application, treat it as a curried application *)

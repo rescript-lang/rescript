@@ -155,7 +155,7 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   | Texp_let (rec_flag, list, exp) ->
     sub.value_bindings sub (rec_flag, list);
     sub.expr sub exp
-  | Texp_function {cases; _} -> sub.cases sub cases
+  | Texp_function {case; _} -> sub.case sub case
   | Texp_apply (exp, list) ->
     sub.expr sub exp;
     List.iter (fun (_, o) -> Option.iter (sub.expr sub) o) list

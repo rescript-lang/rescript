@@ -233,9 +233,6 @@ and expression i ppf x =
     line i ppf "Pexp_let %a\n" fmt_rec_flag rf;
     list i value_binding ppf l;
     expression i ppf e
-  | Pexp_function l ->
-    line i ppf "Pexp_function\n";
-    list i case ppf l
   | Pexp_fun (l, eo, p, e, arity) ->
     line i ppf "Pexp_fun\n";
     let () =

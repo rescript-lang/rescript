@@ -292,8 +292,8 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
     let case env {Typedtree.c_rhs} = expression env c_rhs in
     Use.join (expression env e) (list case env cases)
   | Texp_override () -> assert false
-  | Texp_function {cases} ->
-    Use.delay (list (case ~scrutinee:Use.empty) env cases)
+  | Texp_function {case = case_} ->
+    Use.delay (list (case ~scrutinee:Use.empty) env [case_])
   | Texp_lazy e -> (
     match Typeopt.classify_lazy_argument e with
     | `Constant_or_function | `Identifier _ | `Float -> expression env e

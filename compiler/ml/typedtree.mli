@@ -132,8 +132,9 @@ and expression_desc =
          *)
   | Texp_function of {
       arg_label: arg_label;
+      arity: int option;
       param: Ident.t;
-      cases: case list;
+      case: case;
       partial: partial;
     }
       (** [Pexp_fun] and [Pexp_function] both translate to [Texp_function].
