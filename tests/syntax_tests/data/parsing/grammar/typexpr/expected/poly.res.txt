@@ -1,12 +1,8 @@
 external getLogger :
-  (unit ->
-     <
-       log: ('a -> unit (a:1)) function$  ;log2: 'a .
-                                                   (int -> int (a:1))
-                                                     function$  ;log3: 
-                                                                   'a 'b .
-                                                                    ('a ->
-                                                                    'b -> int (a:2))
-                                                                    function$
-                                                                     >  (a:1))
-    function$ = "./src/logger.mock.js"
+  unit ->
+    <
+      log: 'a -> unit (a:1)  ;log2: 'a . int -> int (a:1)  ;log3: 'a 'b .
+                                                                    'a ->
+                                                                    'b -> int (a:2)
+                                                                >  (a:1) =
+    "./src/logger.mock.js"

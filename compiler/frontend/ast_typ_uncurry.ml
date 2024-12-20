@@ -66,5 +66,5 @@ let to_uncurry_type loc (mapper : Bs_ast_mapper.mapper)
     | _ -> assert false
   in
   match arity with
-  | Some arity -> Ast_uncurried.uncurried_type ~loc ~arity fn_type
+  | Some arity -> Ast_uncurried.uncurried_type ~arity fn_type
   | None -> assert false

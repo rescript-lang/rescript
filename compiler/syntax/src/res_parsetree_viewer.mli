@@ -3,7 +3,6 @@
    * we restructure the tree into (a, b, c) and its returnType d *)
 val arrow_type :
   ?max_arity:int ->
-  ?attrs:Parsetree.attributes ->
   Parsetree.core_type ->
   Parsetree.attributes
   * (Parsetree.attributes * Asttypes.arg_label * Parsetree.core_type) list

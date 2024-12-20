@@ -120,9 +120,8 @@ let init () =
             Ext_list.flat_map tdcls handle_tdcl);
         signature_gen =
           (fun (tdcls : Parsetree.type_declaration list) _explict_nonrec ->
-            let handle_uncurried_type_tranform ~loc ~arity t =
-              if arity > 0 then Ast_uncurried.uncurried_type ~loc ~arity t
-              else t
+            let handle_uncurried_type_tranform ~arity t =
+              if arity > 0 then Ast_uncurried.uncurried_type ~arity t else t
             in
             let handle_tdcl tdcl =
               let core_type =
@@ -142,8 +141,7 @@ let init () =
                     Ast_comb.single_non_rec_val ?attrs:gentype_attrs pld_name
                       (Ast_compatible.arrow ~arity:None core_type pld_type
                       (*arity will alwys be 1 since these are single param functions*)
-                      |> handle_uncurried_type_tranform ~arity:1
-                           ~loc:pld_name.loc))
+                      |> handle_uncurried_type_tranform ~arity:1))
               | Ptype_variant constructor_declarations ->
                 Ext_list.map constructor_declarations
                   (fun
@@ -170,7 +168,7 @@ let init () =
                       {loc; txt = Ext_string.uncapitalize_ascii con_name}
                       (Ext_list.fold_right pcd_args annotate_type (fun x acc ->
                            Ast_compatible.arrow ~arity:None x acc)
-                      |> handle_uncurried_type_tranform ~arity ~loc))
+                      |> handle_uncurried_type_tranform ~arity))
               | Ptype_open | Ptype_abstract ->
                 Ast_derive_util.not_applicable tdcl.ptype_loc deriving_name;
                 []

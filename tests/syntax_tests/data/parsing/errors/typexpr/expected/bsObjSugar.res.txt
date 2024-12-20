@@ -142,7 +142,7 @@ type nonrec state =
     > 
 type nonrec state = < url: string  ;protocols: [%rescript.typehole ]   > 
 type nonrec state =
-  < send: (string -> [%rescript.typehole ] (a:1)) function$ [@meth ]  > 
+  < send: string -> [%rescript.typehole ] (a:1) [@meth ]  > 
 type nonrec state = < age: [%rescript.typehole ]  ;name: string   > 
 type nonrec state = < age: [%rescript.typehole ] [@set ] ;name: string   > 
 type nonrec state = < age: [%rescript.typehole ]   ;.. > 

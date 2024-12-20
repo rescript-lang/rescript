@@ -78,7 +78,7 @@ and expression_desc =
   | Texp_let of rec_flag * value_binding list * expression
   | Texp_function of {
       arg_label: arg_label;
-      arity: int option;
+      arity: arity;
       param: Ident.t;
       case: case;
       partial: partial;

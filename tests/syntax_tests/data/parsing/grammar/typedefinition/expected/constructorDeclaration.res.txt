@@ -83,11 +83,11 @@ type nonrec (_, 'value) node =
   mutable cachedValue: 'value ;
   parent: (_, 'value) node ;
   root: (root, 'value) node ;
-  updateF: ('value -> 'value (a:1)) function$ ;
+  updateF: 'value -> 'value (a:1) ;
   mutable updatedTime: float } -> (derived, 'value) node 
 type nonrec delta =
-  | Compute of (< blocked_ids: unit   >  -> unit (a:1)) function$ 
+  | Compute of (< blocked_ids: unit   >  -> unit (a:1)) 
 type nonrec queryDelta =
-  | Compute of (< blocked_ids: unit   >  -> unit (a:1)) function$ 
-  | Compute of (< blocked_ids: unit   >  -> unit (a:1)) function$ *
-  (< allowed_ids: unit   >  -> unit (a:1)) function$ 
+  | Compute of (< blocked_ids: unit   >  -> unit (a:1)) 
+  | Compute of (< blocked_ids: unit   >  -> unit (a:1)) *
+  (< allowed_ids: unit   >  -> unit (a:1)) 

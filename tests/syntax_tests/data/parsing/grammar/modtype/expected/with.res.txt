@@ -29,11 +29,8 @@ module type A  =
   (Foo with module X.Bar := Belt.Array and module X.Bar := Belt.Array and
     module X.Bar := Belt.Array)
 module type Printable  =
-  sig
-    type nonrec t
-    val print : (Format.formatter -> t -> unit (a:2)) function$
-  end
+  sig type nonrec t val print : Format.formatter -> t -> unit (a:2) end
 module type Comparable  =
-  sig type nonrec t val compare : (t -> t -> int (a:2)) function$ end
+  sig type nonrec t val compare : t -> t -> int (a:2) end
 module type PrintableComparable  =
   sig include Printable include (Comparable with type  t :=  t) end

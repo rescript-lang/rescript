@@ -5,7 +5,7 @@ module type Signature  =
         type nonrec t =
           | Leaf of string 
           | Node of ASet.t 
-        val compare : (t -> t -> int (a:2)) function$
+        val compare : t -> t -> int (a:2)
       end
     and ASet: (Set.S with type  elt =  A.t)
     and BTree: (Btree.S with type  elt =  A.t)
@@ -14,7 +14,7 @@ module type Signature  =
         type nonrec t =
           | Leaf of string 
           | Node of ASet.t 
-        val compare : (t -> t -> int (a:2)) function$
+        val compare : t -> t -> int (a:2)
       end[@@onFirstAttr ]
     and ASet: (Set.S with type  elt =  A.t)[@@onSecondAttr ]
     module rec A: Btree[@@parsableOnNext ]

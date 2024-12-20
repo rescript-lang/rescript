@@ -454,7 +454,7 @@ let mod_expr_parens mod_expr =
   | _ -> false
 
 let arrow_return_typ_expr typ_expr =
-  match (Ast_uncurried.core_type_remove_function_dollar typ_expr).ptyp_desc with
+  match typ_expr.Parsetree.ptyp_desc with
   | Ptyp_arrow _ -> true
   | _ -> false
 

@@ -122,7 +122,7 @@ let printSignature ~extractor ~signature =
     let reactElement =
       Ctype.newconstr (Pdot (Pident (Ident.create "React"), "element", 0)) []
     in
-    match (Ast_uncurried.remove_function_dollar typ).desc with
+    match typ.desc with
     | Tarrow
         (_, {desc = Tconstr (Path.Pident propsId, typeArgs, _)}, retType, _, _)
       when Ident.name propsId = "props" ->

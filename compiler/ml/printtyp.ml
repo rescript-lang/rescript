@@ -587,7 +587,7 @@ let rec tree_of_typexp sch ty =
         let non_gen = is_non_gen sch ty in
         let name_gen = if non_gen then new_weak_name ty else new_name in
         Otyp_var (non_gen, name_of_type name_gen ty)
-      | Tarrow (l, ty1, ty2, _, _) ->
+      | Tarrow (l, ty1, ty2, _, arity) ->
         let pr_arrow l ty1 ty2 =
           let lab = string_of_label l in
           let t1 =
@@ -599,7 +599,8 @@ let rec tree_of_typexp sch ty =
               | _ -> Otyp_stuff "<hidden>"
             else tree_of_typexp sch ty1
           in
-          Otyp_arrow (lab, t1, tree_of_typexp sch ty2)
+          (* should pass arity here? *)
+          Otyp_arrow (lab, t1, tree_of_typexp sch ty2, arity)
         in
         pr_arrow l ty1 ty2
       | Ttuple tyl -> Otyp_tuple (tree_of_typlist sch tyl)

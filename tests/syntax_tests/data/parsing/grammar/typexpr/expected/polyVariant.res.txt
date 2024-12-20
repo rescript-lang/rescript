@@ -3,13 +3,11 @@ module type Conjunctive  =
   sig
     type nonrec u1 = [ `A  | `B ]
     type nonrec u2 = [ `A  | `B  | `C ]
-    val f : ([< `T of [< u2]&[< u2]&[< u1] ] -> unit (a:1)) function$
-    val g : ([< `S of [< u2]&[< u2]&[< u1] ] -> unit (a:1)) function$
+    val f : [< `T of [< u2]&[< u2]&[< u1] ] -> unit (a:1)
+    val g : [< `S of [< u2]&[< u2]&[< u1] ] -> unit (a:1)
     val g :
-      ([<
-         `Exotic-S+ of [< `Exotic-u2+ ]&[< `Exotic-u2- ]&[< `Exotic-u1+++ ] ]
-         -> unit (a:1))
-        function$
+      [< `Exotic-S+ of [< `Exotic-u2+ ]&[< `Exotic-u2- ]&[< `Exotic-u1+++ ] ]
+        -> unit (a:1)
   end
 type nonrec t = [ s]
 type nonrec t = [ ListStyleType.t]

@@ -981,7 +981,7 @@
   addValueDeclaration +make ImportHookDefault.res:6:0 path:+ImportHookDefault
   addRecordLabelDeclaration name ImportHookDefault.res:2:2 path:+ImportHookDefault.person
   addRecordLabelDeclaration age ImportHookDefault.res:3:2 path:+ImportHookDefault.person
-  addRecordLabelDeclaration person ImportHookDefault.res:8:2 path:+ImportHookDefault.props
+  addRecordLabelDeclaration person ImportHookDefault.res:7:15 path:+ImportHookDefault.props
   addRecordLabelDeclaration children ImportHookDefault.res:9:2 path:+ImportHookDefault.props
   addRecordLabelDeclaration renderMe ImportHookDefault.res:11:5 path:+ImportHookDefault.props
   Scanning ImportHooks.cmt Source:ImportHooks.res
@@ -989,7 +989,7 @@
   addValueDeclaration +foo ImportHooks.res:20:0 path:+ImportHooks
   addRecordLabelDeclaration name ImportHooks.res:3:2 path:+ImportHooks.person
   addRecordLabelDeclaration age ImportHooks.res:4:2 path:+ImportHooks.person
-  addRecordLabelDeclaration person ImportHooks.res:15:2 path:+ImportHooks.props
+  addRecordLabelDeclaration person ImportHooks.res:14:15 path:+ImportHooks.props
   addRecordLabelDeclaration children ImportHooks.res:16:2 path:+ImportHooks.props
   addRecordLabelDeclaration renderMe ImportHooks.res:18:5 path:+ImportHooks.props
   Scanning ImportIndex.cmt Source:ImportIndex.res
@@ -1195,7 +1195,9 @@
   addValueReference OptArg.res:1:4 --> OptArg.res:1:29
   addValueReference OptArg.res:3:4 --> OptArg.res:3:17
   addValueReference OptArg.res:3:4 --> OptArg.res:3:27
+  DeadOptionalArgs.addReferences foo called with optional argNames:x argNamesMaybe: OptArg.res:5:7
   addValueReference OptArg.res:5:7 --> OptArg.res:1:4
+  DeadOptionalArgs.addReferences bar called with optional argNames: argNamesMaybe: OptArg.res:7:7
   addValueReference OptArg.res:7:7 --> OptArg.res:3:4
   addValueReference OptArg.res:9:4 --> OptArg.res:9:20
   addValueReference OptArg.res:9:4 --> OptArg.res:9:26
@@ -1204,20 +1206,25 @@
   addValueReference OptArg.res:9:4 --> OptArg.res:9:23
   addValueReference OptArg.res:9:4 --> OptArg.res:9:29
   addValueReference OptArg.res:9:4 --> OptArg.res:9:35
+  DeadOptionalArgs.addReferences threeArgs called with optional argNames:c, a argNamesMaybe: OptArg.res:11:7
   addValueReference OptArg.res:11:7 --> OptArg.res:9:4
+  DeadOptionalArgs.addReferences threeArgs called with optional argNames:a argNamesMaybe: OptArg.res:12:7
   addValueReference OptArg.res:12:7 --> OptArg.res:9:4
   addValueReference OptArg.res:14:4 --> OptArg.res:14:18
   addValueReference OptArg.res:14:4 --> OptArg.res:14:24
   addValueReference OptArg.res:14:4 --> OptArg.res:14:15
   addValueReference OptArg.res:14:4 --> OptArg.res:14:21
   addValueReference OptArg.res:14:4 --> OptArg.res:14:27
+  DeadOptionalArgs.addReferences twoArgs called with optional argNames: argNamesMaybe: OptArg.res:16:7
   addValueReference OptArg.res:16:12 --> OptArg.res:14:4
   addValueReference OptArg.res:18:4 --> OptArg.res:18:17
   addValueReference OptArg.res:18:4 --> OptArg.res:18:14
   addValueReference OptArg.res:18:4 --> OptArg.res:18:24
+  DeadOptionalArgs.addReferences oneArg called with optional argNames:a argNamesMaybe:a OptArg.res:20:30
   addValueReference OptArg.res:20:4 --> OptArg.res:20:18
   addValueReference OptArg.res:20:4 --> OptArg.res:20:24
   addValueReference OptArg.res:20:4 --> OptArg.res:18:4
+  DeadOptionalArgs.addReferences wrapOneArg called with optional argNames:a argNamesMaybe: OptArg.res:22:7
   addValueReference OptArg.res:22:7 --> OptArg.res:20:4
   addValueReference OptArg.res:24:4 --> OptArg.res:24:19
   addValueReference OptArg.res:24:4 --> OptArg.res:24:25
@@ -1228,15 +1235,20 @@
   addValueReference OptArg.res:24:4 --> OptArg.res:24:28
   addValueReference OptArg.res:24:4 --> OptArg.res:24:34
   addValueReference OptArg.res:24:4 --> OptArg.res:24:40
+  DeadOptionalArgs.addReferences fourArgs called with optional argNames:c, b, a argNamesMaybe:c, b, a OptArg.res:26:44
   addValueReference OptArg.res:26:4 --> OptArg.res:26:20
   addValueReference OptArg.res:26:4 --> OptArg.res:26:26
   addValueReference OptArg.res:26:4 --> OptArg.res:26:32
   addValueReference OptArg.res:26:4 --> OptArg.res:26:38
   addValueReference OptArg.res:26:4 --> OptArg.res:24:4
+  DeadOptionalArgs.addReferences wrapfourArgs called with optional argNames:c, a argNamesMaybe: OptArg.res:28:7
   addValueReference OptArg.res:28:7 --> OptArg.res:26:4
+  DeadOptionalArgs.addReferences wrapfourArgs called with optional argNames:c, b argNamesMaybe: OptArg.res:29:7
   addValueReference OptArg.res:29:7 --> OptArg.res:26:4
   addValueReference OptArg.resi:1:0 --> OptArg.res:1:4
+  OptionalArgs.addFunctionReference OptArg.resi:1:0 OptArg.res:1:4
   addValueReference OptArg.resi:2:0 --> OptArg.res:3:4
+  OptionalArgs.addFunctionReference OptArg.resi:2:0 OptArg.res:3:4
   Scanning OptArg.cmti Source:OptArg.resi
   addValueDeclaration +foo OptArg.resi:1:0 path:OptArg
   addValueDeclaration +bar OptArg.resi:2:0 path:OptArg
@@ -1438,10 +1450,12 @@
   addValueDeclaration +bar TestOptArg.res:5:4 path:+TestOptArg
   addValueDeclaration +notSuppressesOptArgs TestOptArg.res:9:4 path:+TestOptArg
   addValueDeclaration +liveSuppressesOptArgs TestOptArg.res:14:4 path:+TestOptArg
+  DeadOptionalArgs.addReferences OptArg.bar called with optional argNames:z argNamesMaybe: TestOptArg.res:1:7
   addValueReference TestOptArg.res:1:7 --> OptArg.resi:2:0
   addValueReference TestOptArg.res:3:4 --> TestOptArg.res:3:14
   addValueReference TestOptArg.res:3:4 --> TestOptArg.res:3:11
   addValueReference TestOptArg.res:3:4 --> TestOptArg.res:3:17
+  DeadOptionalArgs.addReferences foo called with optional argNames:x argNamesMaybe: TestOptArg.res:5:16
   addValueReference TestOptArg.res:5:4 --> TestOptArg.res:3:4
   addValueReference TestOptArg.res:7:7 --> TestOptArg.res:5:4
   addValueReference TestOptArg.res:9:4 --> TestOptArg.res:9:31
@@ -1451,6 +1465,7 @@
   addValueReference TestOptArg.res:9:4 --> TestOptArg.res:9:34
   addValueReference TestOptArg.res:9:4 --> TestOptArg.res:9:40
   addValueReference TestOptArg.res:9:4 --> TestOptArg.res:9:46
+  DeadOptionalArgs.addReferences notSuppressesOptArgs called with optional argNames: argNamesMaybe: TestOptArg.res:11:8
   addValueReference TestOptArg.res:11:8 --> TestOptArg.res:9:4
   addValueReference TestOptArg.res:14:4 --> TestOptArg.res:14:32
   addValueReference TestOptArg.res:14:4 --> TestOptArg.res:14:38
@@ -1459,6 +1474,7 @@
   addValueReference TestOptArg.res:14:4 --> TestOptArg.res:14:35
   addValueReference TestOptArg.res:14:4 --> TestOptArg.res:14:41
   addValueReference TestOptArg.res:14:4 --> TestOptArg.res:14:47
+  DeadOptionalArgs.addReferences liveSuppressesOptArgs called with optional argNames:x argNamesMaybe: TestOptArg.res:16:8
   addValueReference TestOptArg.res:16:8 --> TestOptArg.res:14:4
   Scanning TestPromise.cmt Source:TestPromise.res
   addValueDeclaration +convert TestPromise.res:14:4 path:+TestPromise
@@ -1667,11 +1683,13 @@
   addTypeReference Unison.res:37:20 --> Unison.res:14:2
   addValueReference Unison.res:37:0 --> Unison.res:26:8
   addTypeReference Unison.res:38:20 --> Unison.res:15:2
+  DeadOptionalArgs.addReferences group called with optional argNames:break argNamesMaybe: Unison.res:38:25
   addTypeReference Unison.res:38:38 --> Unison.res:5:2
   addValueReference Unison.res:38:25 --> Unison.res:17:4
   addTypeReference Unison.res:38:53 --> Unison.res:14:2
   addValueReference Unison.res:38:0 --> Unison.res:26:8
   addTypeReference Unison.res:39:20 --> Unison.res:15:2
+  DeadOptionalArgs.addReferences group called with optional argNames:break argNamesMaybe: Unison.res:39:25
   addTypeReference Unison.res:39:38 --> Unison.res:6:2
   addValueReference Unison.res:39:25 --> Unison.res:17:4
   addTypeReference Unison.res:39:52 --> Unison.res:14:2
@@ -2500,6 +2518,70 @@ File References
   Incorrect Dead Annotation
   DeadTest.res:153:1-28
   deadIncorrect  is annotated @dead but is live
+
+  Warning Unused Argument
+  TestOptArg.res:9:1-65
+  optional argument x of function notSuppressesOptArgs is never used
+
+  Warning Unused Argument
+  TestOptArg.res:9:1-65
+  optional argument y of function notSuppressesOptArgs is never used
+
+  Warning Unused Argument
+  TestOptArg.res:9:1-65
+  optional argument z of function notSuppressesOptArgs is never used
+
+  Warning Redundant Optional Argument
+  TestOptArg.res:3:1-28
+  optional argument x of function foo is always supplied (1 calls)
+
+  Warning Redundant Optional Argument
+  Unison.res:17:1-60
+  optional argument break of function group is always supplied (2 calls)
+
+  Warning Unused Argument
+  OptArg.resi:2:1-50
+  optional argument x of function bar is never used
+
+  Warning Redundant Optional Argument
+  OptArg.res:26:1-70
+  optional argument c of function wrapfourArgs is always supplied (2 calls)
+
+  Warning Unused Argument
+  OptArg.res:24:1-63
+  optional argument d of function fourArgs is never used
+
+  Warning Redundant Optional Argument
+  OptArg.res:20:1-51
+  optional argument a of function wrapOneArg is always supplied (1 calls)
+
+  Warning Unused Argument
+  OptArg.res:14:1-42
+  optional argument a of function twoArgs is never used
+
+  Warning Unused Argument
+  OptArg.res:14:1-42
+  optional argument b of function twoArgs is never used
+
+  Warning Unused Argument
+  OptArg.res:9:1-54
+  optional argument b of function threeArgs is never used
+
+  Warning Redundant Optional Argument
+  OptArg.res:9:1-54
+  optional argument a of function threeArgs is always supplied (2 calls)
+
+  Warning Unused Argument
+  OptArg.res:3:1-38
+  optional argument x of function bar is never used
+
+  Warning Unused Argument
+  OptArg.res:1:1-48
+  optional argument y of function foo is never used
+
+  Warning Unused Argument
+  OptArg.res:1:1-48
+  optional argument z of function foo is never used
 
   Warning Dead Module
   AutoAnnotate.res:0:1
@@ -4167,4 +4249,4 @@ File References
   <-- line 96
   type variant1Object = | @dead("variant1Object.R") R(payload)
   
-  Analysis reported 286 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:21, Warning Dead Type:87, Warning Dead Value:174, Warning Dead Value With Side Effects:1)
+  Analysis reported 302 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:21, Warning Dead Type:87, Warning Dead Value:174, Warning Dead Value With Side Effects:1, Warning Redundant Optional Argument:5, Warning Unused Argument:11)

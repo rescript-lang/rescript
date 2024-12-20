@@ -62,16 +62,16 @@ type nonrec 'a node = {
 type nonrec ('from, 'for) derivedNode =
   {
   mutable value: 'to_ ;
-  updateF: ('from -> 'to_ (a:1)) function$ }
+  updateF: 'from -> 'to_ (a:1) }
 type nonrec ('from, ') derivedNode =
   {
   mutable value: 'to_ ;
-  updateF: ('from -> 'to_ (a:1)) function$ }
+  updateF: 'from -> 'to_ (a:1) }
 type nonrec ('from, ') derivedNode =
   {
   mutable value: 'to_ ;
-  updateF: ('from -> 'to_ (a:1)) function$ }
+  updateF: 'from -> 'to_ (a:1) }
 type nonrec ('from, 'foo) derivedNode =
   {
   mutable value: 'to_ ;
-  updateF: ('from -> 'to_ (a:1)) function$ }
+  updateF: 'from -> 'to_ (a:1) }

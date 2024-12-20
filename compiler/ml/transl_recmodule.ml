@@ -50,7 +50,7 @@ let init_shape modl =
     | [] -> []
     | Sig_value (id, {val_kind = Val_reg; val_type = ty}) :: rem ->
       let is_function t =
-        match (Ast_uncurried.remove_function_dollar t).desc with
+        match t.desc with
         | Tarrow _ -> true
         | _ -> false
       in

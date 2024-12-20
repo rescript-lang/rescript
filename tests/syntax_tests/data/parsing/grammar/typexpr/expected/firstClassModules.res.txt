@@ -2,7 +2,7 @@ type nonrec t = (module Hashmap)
 type nonrec t = (module Hashmap with type key = string)
 type nonrec t = (module Hashmap with type key = string and type value = int)
 type nonrec toValueLikeInstance =
-  ('a t -> (module RxValueLikeInstance.S with type a = 'a) (a:1)) function$
+  'a t -> (module RxValueLikeInstance.S with type a = 'a) (a:1)
 type nonrec 'a t = (module Test with type a = 'a)
 type nonrec t = (module Console) ref
 let (devices : (string, (module DEVICE)) Hastbl.t) = Hashtbl.creat 17

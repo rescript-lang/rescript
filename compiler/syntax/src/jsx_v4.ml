@@ -1309,9 +1309,6 @@ let transform_structure_item ~config item =
       check_multiple_components ~config ~loc:pstr_loc;
       check_string_int_attribute_iter.structure_item
         check_string_int_attribute_iter item;
-      let pval_type =
-        Ast_uncurried.core_type_remove_function_dollar pval_type
-      in
       let core_type_of_attr = Jsx_common.core_type_of_attrs pval_attributes in
       let typ_vars_of_core_type =
         core_type_of_attr
@@ -1414,9 +1411,6 @@ let transform_signature_item ~config item =
     | [] -> [item]
     | [_] ->
       check_multiple_components ~config ~loc:psig_loc;
-      let pval_type =
-        Ast_uncurried.core_type_remove_function_dollar pval_type
-      in
       check_string_int_attribute_iter.signature_item
         check_string_int_attribute_iter item;
       let core_type_of_attr = Jsx_common.core_type_of_attrs pval_attributes in

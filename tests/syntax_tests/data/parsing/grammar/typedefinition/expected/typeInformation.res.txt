@@ -70,8 +70,6 @@ type nonrec t = private
 type nonrec t = {
   x: int ;
   y: int }
-type nonrec callback =
-  (ReactEvent.Mouse.t -> unit (a:1)) function$ as 'callback
-type nonrec callback = (ReactEvent.Mouse.t -> unit as 'u (a:1)) function$
-type nonrec callback =
-  (ReactEvent.Mouse.t -> unit (a:1)) function$ as 'callback
+type nonrec callback = (ReactEvent.Mouse.t -> unit (a:1)) as 'callback
+type nonrec callback = ReactEvent.Mouse.t -> unit as 'u (a:1)
+type nonrec callback = (ReactEvent.Mouse.t -> unit (a:1)) as 'callback

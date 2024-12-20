@@ -268,7 +268,8 @@ let rec translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps
   | Tlink t ->
     translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps
       ~rev_args t
-  | Tarrow (Nolabel, type_expr1, type_expr2, _, _) ->
+  | Tarrow (Nolabel, type_expr1, type_expr2, _, arity)
+    when arity = None || rev_args = [] ->
     let {dependencies; type_} =
       type_expr1 |> fun __x ->
       translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env __x
@@ -279,8 +280,12 @@ let rec translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps
          ~rev_arg_deps:next_rev_deps
          ~rev_args:((Nolabel, type_) :: rev_args)
   | Tarrow
-      (((Labelled lbl | Optional lbl) as label), type_expr1, type_expr2, _, _)
-    -> (
+      ( ((Labelled lbl | Optional lbl) as label),
+        type_expr1,
+        type_expr2,
+        _,
+        arity )
+    when arity = None || rev_args = [] -> (
     match type_expr1 |> remove_option ~label with
     | None ->
       let {dependencies; type_ = type1} =
@@ -312,8 +317,7 @@ let rec translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps
     {dependencies = all_deps; type_ = function_type}
 
 and translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env
-    (type_expr_ : Types.type_expr) =
-  let type_expr = Ast_uncurried.remove_function_dollar type_expr_ in
+    (type_expr : Types.type_expr) =
   match type_expr.desc with
   | Tvar None ->
     let type_name =

@@ -105,12 +105,9 @@ let findFunctionType ~currentFile ~debug ~path ~pos =
 let extractParameters ~signature ~typeStrForParser ~labelPrefixLen =
   match signature with
   | [{Parsetree.psig_desc = Psig_value {pval_type = expr}}]
-    when match
-           (Ast_uncurried.core_type_remove_function_dollar expr).ptyp_desc
-         with
+    when match expr.ptyp_desc with
          | Ptyp_arrow _ -> true
          | _ -> false ->
-    let expr = Ast_uncurried.core_type_remove_function_dollar expr in
     let rec extractParams expr params =
       match expr with
       | {

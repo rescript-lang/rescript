@@ -120,10 +120,7 @@ module T = struct
           | _ -> assert false
         in
         let arity = arity_from_type t_arity in
-        let fun_t =
-          {fun_t with ptyp_desc = Ptyp_arrow (lbl, t1, t2, Some arity)}
-        in
-        {typ0 with ptyp_desc = Ptyp_constr (lid, [fun_t])}
+        {fun_t with ptyp_desc = Ptyp_arrow (lbl, t1, t2, Some arity)}
       | _ -> typ0)
     | Ptyp_object (l, o) ->
       object_ ~loc ~attrs (List.map (object_field sub) l) o

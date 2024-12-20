@@ -1,10 +1,10 @@
 module type MyHash  =
   sig
     include module type of struct include Hashtbl end
-    val replace : (('a, 'b) t -> 'a -> 'b -> unit (a:3)) function$
+    val replace : ('a, 'b) t -> 'a -> 'b -> unit (a:3)
   end
 module type MyHash  =
   sig
     include ((module type of struct include Hashtbl end)[@onModuleTypeOf ])
-    val replace : (('a, 'b) t -> 'a -> 'b -> unit (a:3)) function$
+    val replace : ('a, 'b) t -> 'a -> 'b -> unit (a:3)
   end

@@ -1,9 +1,9 @@
 type nonrec t = unit
-type nonrec t = (unit -> unit (a:1)) function$
-type nonrec t = (unit -> unit -> unit (a:2)) function$
-type nonrec t = (unit -> unit (a:1)) function$
-let f [arity:1](f : (unit -> unit (a:1)) function$) = f ()
-let f [arity:1](f : (unit -> unit (a:1)) function$) = f ()
-let f [arity:1](f : (unit -> unit -> unit (a:2)) function$) = f () ()
-external svg : (unit -> React.element (a:1)) function$ = "svg"
-external thing : (unit -> unit (a:1)) function$ = "svg"
+type nonrec t = unit -> unit (a:1)
+type nonrec t = unit -> unit -> unit (a:2)
+type nonrec t = unit -> unit (a:1)
+let f [arity:1](f : unit -> unit (a:1)) = f ()
+let f [arity:1](f : unit -> unit (a:1)) = f ()
+let f [arity:1](f : unit -> unit -> unit (a:2)) = f () ()
+external svg : unit -> React.element (a:1) = "svg"
+external thing : unit -> unit (a:1) = "svg"

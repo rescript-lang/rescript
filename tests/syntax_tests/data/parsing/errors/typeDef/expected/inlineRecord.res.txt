@@ -45,7 +45,5 @@ type nonrec user =
   address: < street: string  ;country: string   >  }
 let make
   [arity:1](props :
-             <
-               handleClick: (Click.t -> unit (a:1)) function$  ;value: 
-                                                                  string   > )
+             < handleClick: Click.t -> unit (a:1)  ;value: string   > )
   = render props

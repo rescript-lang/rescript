@@ -82,7 +82,8 @@ let print_out_attributes_doc (attrs : Outcometree.out_attribute list) =
 
 let rec collect_arrow_args (out_type : Outcometree.out_type) args =
   match out_type with
-  | Otyp_arrow (label, arg_type, return_type) ->
+  | Otyp_arrow (label, arg_type, return_type, arity)
+    when arity = None || args = [] ->
     let arg = (label, arg_type) in
     collect_arrow_args return_type (arg :: args)
   | _ as return_type -> (List.rev args, return_type)
@@ -147,21 +148,6 @@ let rec print_out_type_doc (out_type : Outcometree.out_type) =
         Doc.text alias_txt;
         Doc.rparen;
       ]
-  | Otyp_constr (Oide_dot (Oide_dot (Oide_ident "Js", "Fn"), "arity0"), [typ])
-    ->
-    (* Compatibility with compiler up to v10.x *)
-    Doc.concat [Doc.text "(. ()) => "; print_out_type_doc typ]
-  | Otyp_constr
-      ( Oide_dot (Oide_dot (Oide_ident "Js", "Fn"), _),
-        [(Otyp_arrow _ as arrow_type)] ) ->
-    (* Compatibility with compiler up to v10.x *)
-    print_out_arrow_type arrow_type
-  | Otyp_constr (Oide_ident "function$", [(Otyp_arrow _ as arrow_type)]) ->
-    (* function$<(int, int) => int> -> (int, int) => int *)
-    print_out_arrow_type arrow_type
-  | Otyp_constr (Oide_ident "function$", [Otyp_var _]) ->
-    (* function$<'a, arity> -> _ => _ *)
-    print_out_type_doc (Otyp_stuff "_ => _")
   | Otyp_constr (out_ident, []) ->
     print_out_ident_doc ~allow_uident:false out_ident
   | Otyp_manifest (typ1, typ2) ->
@@ -295,12 +281,7 @@ and print_out_arrow_type typ =
   let args_doc =
     let needs_parens =
       match typ_args with
-      | [
-       ( _,
-         ( Otyp_tuple _ | Otyp_arrow _
-         | Otyp_constr (Oide_ident "function$", [Otyp_arrow _]) ) );
-      ] ->
-        true
+      | [(_, (Otyp_tuple _ | Otyp_arrow _))] -> true
       (* single argument should not be wrapped *)
       | [("", _)] -> false
       | _ -> true

@@ -10,4 +10,4 @@
 
   Did you forget a `)` here?
 
-;;match x with | (a : (int -> unit (a:1)) function$) -> [%rescript.exprhole ]
+;;match x with | (a : int -> unit (a:1)) -> [%rescript.exprhole ]

@@ -98,20 +98,21 @@ module T = struct
     match desc with
     | Ptyp_any -> any ~loc ~attrs ()
     | Ptyp_var s -> var ~loc ~attrs s
-    | Ptyp_arrow (lab, t1, t2, _) ->
-      arrow ~loc ~attrs lab (sub.typ sub t1) (sub.typ sub t2)
+    | Ptyp_arrow (lab, t1, t2, arity) -> (
+      let typ0 = arrow ~loc ~attrs lab (sub.typ sub t1) (sub.typ sub t2) in
+      match arity with
+      | None -> typ0
+      | Some arity ->
+        let arity_string = "Has_arity" ^ string_of_int arity in
+        let arity_type =
+          Ast_helper0.Typ.variant ~loc
+            [Rtag (Location.mknoloc arity_string, [], true, [])]
+            Closed None
+        in
+        Ast_helper0.Typ.constr ~loc
+          {txt = Lident "function$"; loc}
+          [typ0; arity_type])
     | Ptyp_tuple tyl -> tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
-    | Ptyp_constr
-        ( ({txt = Lident "function$"} as lid),
-          [({ptyp_desc = Ptyp_arrow (_, _, _, Some arity)} as t_arg)] ) ->
-      let encode_arity_string arity = "Has_arity" ^ string_of_int arity in
-      let arity_type ~loc arity =
-        Ast_helper0.Typ.variant ~loc
-          [Rtag ({txt = encode_arity_string arity; loc}, [], true, [])]
-          Closed None
-      in
-      constr ~loc ~attrs (map_loc sub lid)
-        [sub.typ sub t_arg; arity_type ~loc:Location.none arity]
     | Ptyp_constr (lid, tl) ->
       constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
     | Ptyp_object (l, o) ->

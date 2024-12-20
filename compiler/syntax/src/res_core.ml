@@ -4074,7 +4074,7 @@ and parse_poly_type_expr p =
         let t_fun =
           Ast_helper.Typ.arrow ~loc ~arity:None Asttypes.Nolabel typ return_type
         in
-        Ast_uncurried.uncurried_type ~loc ~arity:1 t_fun
+        Ast_uncurried.uncurried_type ~arity:1 t_fun
       | _ -> Ast_helper.Typ.var ~loc:var.loc var.txt)
     | _ -> assert false)
   | _ -> parse_typ_expr p
@@ -4429,7 +4429,7 @@ and parse_es6_arrow_type ~attrs p =
             Ast_helper.Typ.arrow ~loc ~attrs ~arity:None arg_lbl typ t
           in
           if param_num = 1 then
-            (param_num - 1, Ast_uncurried.uncurried_type ~loc ~arity t_arg, 1)
+            (param_num - 1, Ast_uncurried.uncurried_type ~arity t_arg, 1)
           else (param_num - 1, t_arg, arity + 1))
         parameters
         (List.length parameters, return_type, return_type_arity + 1)
@@ -4489,7 +4489,7 @@ and parse_arrow_type_rest ~es6_arrow ~start_pos typ p =
     let arrow_typ =
       Ast_helper.Typ.arrow ~loc ~arity:None Asttypes.Nolabel typ return_type
     in
-    Ast_uncurried.uncurried_type ~loc ~arity:1 arrow_typ
+    Ast_uncurried.uncurried_type ~arity:1 arrow_typ
   | _ -> typ
 
 and parse_typ_expr_region p =
@@ -5098,9 +5098,7 @@ and parse_type_equation_or_constr_decl p =
         let arrow_type =
           Ast_helper.Typ.arrow ~loc ~arity:None Asttypes.Nolabel typ return_type
         in
-        let arrow_type =
-          Ast_uncurried.uncurried_type ~loc ~arity:1 arrow_type
-        in
+        let arrow_type = Ast_uncurried.uncurried_type ~arity:1 arrow_type in
 
         let typ = parse_type_alias p arrow_type in
         (Some typ, Asttypes.Public, Parsetree.Ptype_abstract)

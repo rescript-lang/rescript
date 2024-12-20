@@ -1,12 +1,15 @@
 open Parsetree
 
-let arrow_type ?(max_arity = max_int) ?(attrs = []) ct =
+let arrow_type ?(max_arity = max_int) ct =
   let has_as_attr attrs =
     Ext_list.exists attrs (fun (x, _) -> x.Asttypes.txt = "as")
   in
   let rec process attrs_before acc typ arity =
     match typ with
-    | typ when arity < 0 -> (attrs_before, List.rev acc, typ)
+    | _ when arity < 0 -> (attrs_before, List.rev acc, typ)
+    | {ptyp_desc = Ptyp_arrow (_, _, _, Some _); ptyp_attributes = []}
+      when acc <> [] ->
+      (attrs_before, List.rev acc, typ)
     | {
      ptyp_desc = Ptyp_arrow ((Nolabel as lbl), typ1, typ2, _);
      ptyp_attributes = [];
@@ -51,9 +54,8 @@ let arrow_type ?(max_arity = max_int) ?(attrs = []) ct =
       ptyp_desc = Ptyp_arrow (Nolabel, _typ1, _typ2, _);
       ptyp_attributes = attrs1;
     } as typ ->
-    let attrs = attrs @ attrs1 in
-    process attrs [] {typ with ptyp_attributes = []} max_arity
-  | typ -> process attrs [] typ max_arity
+    process attrs1 [] {typ with ptyp_attributes = []} max_arity
+  | typ -> process [] [] typ max_arity
 
 let functor_type modtype =
   let rec process acc modtype =

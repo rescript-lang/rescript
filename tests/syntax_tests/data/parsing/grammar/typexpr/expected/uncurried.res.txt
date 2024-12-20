@@ -1,25 +1,18 @@
+type nonrec t = {
+  mutable field: float -> int -> bool -> unit (a:3) }
+type nonrec t = float -> int -> bool -> unit (a:3)
 type nonrec t =
-  {
-  mutable field: (float -> int -> bool -> unit (a:3)) function$ }
-type nonrec t = (float -> int -> bool -> unit (a:3)) function$
+  ((float)[@attr ]) ->
+    ((int)[@attr2 ]) -> ((bool)[@attr3 ]) -> ((string)[@attr4 ]) -> unit (a:4)
 type nonrec t =
-  (((float)[@attr ]) ->
-     ((int)[@attr2 ]) -> ((bool)[@attr3 ]) -> ((string)[@attr4 ]) -> unit (a:4))
-    function$
+  ((float ->
+      ((int)[@attr2 ]) ->
+        ((bool -> ((string)[@attr4 ]) -> unit (a:1) (a:1))[@attr3 ]) (a:1) (a:1))
+  [@attr ])
 type nonrec t =
-  (((float ->
-       (((int)[@attr2 ]) ->
-          (((bool -> (((string)[@attr4 ]) -> unit (a:1)) function$ (a:1))
-              function$)[@attr3 ]) (a:1))
-         function$ (a:1))
-      function$)[@attr ])
-type nonrec t =
-  (((float)[@attr ]) ->
-     ((int)[@attr2 ]) -> ((bool)[@attr3 ]) -> ((string)[@attr4 ]) -> unit (a:4))
-    function$
+  ((float)[@attr ]) ->
+    ((int)[@attr2 ]) -> ((bool)[@attr3 ]) -> ((string)[@attr4 ]) -> unit (a:4)
 external setTimeout :
-  ((unit -> unit (a:1)) function$ -> int -> timerId (a:2)) function$ =
-    "setTimeout"[@@val ]
+  (unit -> unit (a:1)) -> int -> timerId (a:2) = "setTimeout"[@@val ]
 external setTimeout :
-  ((unit -> unit (a:1)) function$ -> int -> timerId (a:2)) function$ =
-    "setTimeout"
+  (unit -> unit (a:1)) -> int -> timerId (a:2) = "setTimeout"

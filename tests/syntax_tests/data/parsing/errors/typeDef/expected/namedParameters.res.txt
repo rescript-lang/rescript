@@ -7,4 +7,4 @@
 
   A labeled parameter starts with a `~`. Did you mean: `~stroke`?
 
-type nonrec draw = (stroke:pencil -> unit (a:1)) function$
+type nonrec draw = stroke:pencil -> unit (a:1)

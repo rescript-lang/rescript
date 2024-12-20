@@ -75,7 +75,6 @@ type error =
   | Literal_overflow of string
   | Unknown_literal of string * char
   | Illegal_letrec_pat
-  | Labels_omitted of string list
   | Empty_record_literal
   | Uncurried_arity_mismatch of type_expr * int * int
   | Field_not_optional of string * type_expr
@@ -289,7 +288,6 @@ let extract_concrete_record env ty =
   | _ -> raise Not_found
 
 let extract_concrete_variant env ty =
-  let ty = Ast_uncurried.remove_function_dollar ty in
   match extract_concrete_typedecl env ty with
   | p0, p, {type_kind = Type_variant cstrs} -> (p0, p, cstrs)
   | p0, p, {type_kind = Type_open} -> (p0, p, [])
@@ -725,7 +723,7 @@ let show_extra_help ppf _env trace =
   | _ -> ()
 
 let rec collect_missing_arguments env type1 type2 =
-  match Ast_uncurried.remove_function_dollar type1 with
+  match type1 with
   (* why do we use Ctype.matches here? Please see https://github.com/rescript-lang/rescript-compiler/pull/2554 *)
   | {Types.desc = Tarrow (label, argtype, typ, _, _)}
     when Ctype.matches env typ type2 ->
@@ -1907,12 +1905,9 @@ let rec approx_type env sty =
 let rec type_approx env sexp =
   match sexp.pexp_desc with
   | Pexp_let (_, _, e) -> type_approx env e
-  | Pexp_fun (p, _, _, e, arity) -> (
+  | Pexp_fun (p, _, _, e, arity) ->
     let ty = if is_optional p then type_option (newvar ()) else newvar () in
-    let t = newty (Tarrow (p, ty, type_approx env e, Cok, arity)) in
-    match arity with
-    | None -> t
-    | Some arity -> Ast_uncurried.make_uncurried_type ~env ~arity t)
+    newty (Tarrow (p, ty, type_approx env e, Cok, arity))
   | Pexp_match (_, {pc_rhs = e} :: _) -> type_approx env e
   | Pexp_try (e, _) -> type_approx env e
   | Pexp_tuple l -> newty (Ttuple (List.map (type_approx env) l))
@@ -1945,7 +1940,7 @@ let rec list_labels_aux env visited ls ty_fun =
   if List.memq ty visited then (List.rev ls, false)
   else
     match ty.desc with
-    | Tarrow (l, _, ty_res, _, _) ->
+    | Tarrow (l, _, ty_res, _, arity) when arity = None || visited = [] ->
       list_labels_aux env (ty :: visited) (l :: ls) ty_res
     | _ -> (List.rev ls, is_Tvar ty)
 
@@ -3262,8 +3257,7 @@ and type_function ?in_function ~arity loc attrs env ty_expected_ l caselist =
     | None -> ty_expected_
     | Some arity ->
       let fun_t = newty (Tarrow (l, newvar (), newvar (), Cok, Some arity)) in
-      let uncurried_typ = Ast_uncurried.make_uncurried_type ~env ~arity fun_t in
-      unify_exp_types loc env uncurried_typ ty_expected_;
+      unify_exp_types loc env fun_t ty_expected_;
       fun_t
   in
   let loc_fun, ty_fun =
@@ -3305,11 +3299,6 @@ and type_function ?in_function ~arity loc attrs env ty_expected_ l caselist =
   let param = name_pattern "param" cases in
   let exp_type =
     instance env (newgenty (Tarrow (l, ty_arg, ty_res, Cok, arity)))
-  in
-  let exp_type =
-    match arity with
-    | None -> exp_type
-    | Some arity -> Ast_uncurried.make_uncurried_type ~env ~arity exp_type
   in
   Warnings.restore state;
   re
@@ -3522,26 +3511,18 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
     | Tvar _ when total_app -> true
     | _ -> false
   in
-  let has_uncurried_type funct =
+  let has_arity funct =
     let t = funct.exp_type in
-    let inner_t = Ast_uncurried.remove_function_dollar ~env t in
-    if force_tvar then Some (List.length sargs, inner_t)
+    if force_tvar then Some (List.length sargs)
     else
-      match (Ctype.repr inner_t).desc with
-      | Tarrow (_, _, _, _, Some arity) -> Some (arity, inner_t)
+      match (Ctype.repr t).desc with
+      | Tarrow (_, _, _, _, Some arity) -> Some arity
       | _ -> None
   in
   let force_uncurried_type funct =
-    if force_tvar then
-      let arity = List.length sargs in
-      let uncurried_typ =
-        Ast_uncurried.make_uncurried_type ~env ~arity (newvar ())
-      in
-      unify_exp env funct uncurried_typ
+    if force_tvar then ()
     else if
-      Ast_uncurried.tarrow_to_arity_opt
-        (Ast_uncurried.remove_function_dollar ~env funct.exp_type)
-      = None
+      Ast_uncurried.uncurried_type_get_arity_opt ~env funct.exp_type = None
     then
       raise
         (Error
@@ -3549,22 +3530,22 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
              env,
              Apply_non_function (expand_head env funct.exp_type) ))
   in
-  let extract_uncurried_type funct =
-    let t = funct.exp_type in
-    match has_uncurried_type funct with
-    | Some (arity, t1) ->
+  let get_max_arity funct =
+    match has_arity funct with
+    | Some arity ->
       if List.length sargs > arity then
         raise
           (Error
              ( funct.exp_loc,
                env,
-               Uncurried_arity_mismatch (t, arity, List.length sargs) ));
-      (t1, arity)
-    | None -> (t, max_int)
+               Uncurried_arity_mismatch
+                 (funct.exp_type, arity, List.length sargs) ));
+      arity
+    | None -> max_int
   in
   let update_uncurried_arity ~nargs funct new_t =
-    match has_uncurried_type funct with
-    | Some (arity, _) ->
+    match has_arity funct with
+    | Some arity ->
       let newarity = arity - nargs in
       let fully_applied = newarity <= 0 in
       if total_app && not fully_applied then
@@ -3576,7 +3557,11 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
                  (funct.exp_type, arity, List.length sargs) ));
       let new_t =
         if fully_applied then new_t
-        else Ast_uncurried.make_uncurried_type ~env ~arity:newarity new_t
+        else
+          match new_t.desc with
+          | Tarrow (l, t1, t2, c, _) ->
+            {new_t with desc = Tarrow (l, t1, t2, c, Some newarity)}
+          | _ -> new_t
       in
       (fully_applied, new_t)
     | _ -> (false, new_t)
@@ -3700,25 +3685,8 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
       type_unknown_args max_arity ~args ~top_arity omitted ty_fun0
         sargs (* This is the hot path for non-labeled function*)
   in
-  let () =
-    let ls, tvar = list_labels env funct.exp_type in
-    if not tvar then
-      let labels = Ext_list.filter ls (fun l -> not (is_optional l)) in
-      if
-        Ext_list.same_length labels sargs
-        && List.for_all (fun (l, _) -> l = Nolabel) sargs
-        && List.exists (fun l -> l <> Nolabel) labels
-      then
-        raise
-          (Error
-             ( funct.exp_loc,
-               env,
-               Labels_omitted
-                 (List.map Printtyp.string_of_label
-                    (Ext_list.filter labels (fun x -> x <> Nolabel))) ))
-  in
   if total_app then force_uncurried_type funct;
-  let ty, max_arity = extract_uncurried_type funct in
+  let max_arity = get_max_arity funct in
   let top_arity = if total_app then Some max_arity else None in
   match sargs with
   (* Special case for ignore: avoid discarding warning *)
@@ -3728,7 +3696,7 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
     in
     let exp = type_expect env sarg ty_arg in
     (match (expand_head env exp.exp_type).desc with
-    | Tarrow _ ->
+    | Tarrow _ when not total_app ->
       Location.prerr_warning exp.exp_loc Warnings.Partial_application
     | Tvar _ ->
       Delayed_checks.add_delayed_check (fun () ->
@@ -3737,7 +3705,8 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
     ([(Nolabel, Some exp)], ty_res, false)
   | _ ->
     let targs, ret_t =
-      type_args ?type_clash_context max_arity [] [] ~ty_fun:ty (instance env ty)
+      type_args ?type_clash_context max_arity [] [] ~ty_fun:funct.exp_type
+        (instance env funct.exp_type)
         ~sargs ~top_arity
     in
     let fully_applied, ret_t =
@@ -4273,16 +4242,6 @@ let type_expr ppf typ =
   Printtyp.type_expr ppf typ
 
 let report_error env ppf error =
-  let error =
-    match error with
-    | Expr_type_clash ((t1, s1) :: (t2, s2) :: trace, type_clash_context) ->
-      let s1 = Ast_uncurried.remove_function_dollar s1 in
-      let s2 = Ast_uncurried.remove_function_dollar s2 in
-      let t1 = Ast_uncurried.remove_function_dollar t1 in
-      let t2 = Ast_uncurried.remove_function_dollar t2 in
-      Expr_type_clash ((t1, s1) :: (t2, s2) :: trace, type_clash_context)
-    | _ -> error
-  in
   match error with
   | Polymorphic_label lid ->
     fprintf ppf "@[The record field %a is polymorphic.@ %s@]" longident lid
@@ -4345,23 +4304,6 @@ let report_error env ppf error =
     let arity_a = arity_a |> string_of_int in
     let arity_b = arity_b |> string_of_int in
     report_arity_mismatch ~arity_a ~arity_b ppf
-  | Expr_type_clash
-      ( ( _,
-          {
-            desc =
-              Tconstr
-                (Pdot (Pdot (Pident {name = "Js_OO"}, "Meth", _), a, _), _, _);
-          } )
-        :: ( _,
-             {
-               desc =
-                 Tconstr
-                   (Pdot (Pdot (Pident {name = "Js_OO"}, "Meth", _), b, _), _, _);
-             } )
-        :: _,
-        _ )
-    when a <> b ->
-    fprintf ppf "This method has %s but was expected %s" a b
   | Expr_type_clash (trace, type_clash_context) ->
     (* modified *)
     fprintf ppf "@[<v>";
@@ -4544,16 +4486,6 @@ let report_error env ppf error =
     fprintf ppf "Unknown modifier '%c' for literal %s%c" m n m
   | Illegal_letrec_pat ->
     fprintf ppf "Only variables are allowed as left-hand side of `let rec'"
-  | Labels_omitted [label] ->
-    fprintf ppf
-      "Label ~%s was omitted in the application of this labeled function." label
-  | Labels_omitted labels ->
-    let labels_string =
-      labels |> List.map (fun label -> "~" ^ label) |> String.concat ", "
-    in
-    fprintf ppf
-      "Labels %s were omitted in the application of this labeled function."
-      labels_string
   | Empty_record_literal ->
     fprintf ppf
       "Empty record literal {} should be type annotated or used in a record \

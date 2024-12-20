@@ -35,7 +35,7 @@ let findTypeViaLoc ~full ~debug (loc : Location.t) =
   | _ -> None
 
 let pathFromTypeExpr (t : Types.type_expr) =
-  match (Ast_uncurried.remove_function_dollar t).desc with
+  match t.desc with
   | Tconstr (path, _typeArgs, _)
   | Tlink {desc = Tconstr (path, _typeArgs, _)}
   | Tsubst {desc = Tconstr (path, _typeArgs, _)}
@@ -239,7 +239,7 @@ let rec extractObjectType ~env ~package (t : Types.type_expr) =
 
 let extractFunctionType ~env ~package typ =
   let rec loop ~env acc (t : Types.type_expr) =
-    match (Ast_uncurried.remove_function_dollar t).desc with
+    match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ~env acc t1
     | Tarrow (label, tArg, tRet, _, _) -> loop ~env ((label, tArg) :: acc) tRet
     | Tconstr (path, typeArgs, _) -> (
@@ -276,7 +276,7 @@ let maybeSetTypeArgCtx ?typeArgContextFromTypeManifest ~typeParams ~typeArgs env
 (* TODO(env-stuff) Maybe this could be removed entirely if we can guarantee that we don't have to look up functions from in here. *)
 let extractFunctionType2 ?typeArgContext ~env ~package typ =
   let rec loop ?typeArgContext ~env acc (t : Types.type_expr) =
-    match (Ast_uncurried.remove_function_dollar t).desc with
+    match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ?typeArgContext ~env acc t1
     | Tarrow (label, tArg, tRet, _, _) ->
       loop ?typeArgContext ~env ((label, tArg) :: acc) tRet
@@ -312,7 +312,7 @@ let rec extractType ?(printOpeningDebug = true)
       Printf.printf "[extract_type]--> %s"
         (debugLogTypeArgContext typeArgContext));
   let instantiateType = instantiateType2 in
-  match (Ast_uncurried.remove_function_dollar t).desc with
+  match t.desc with
   | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
     extractType ?typeArgContext ~printOpeningDebug:false ~env ~package t1
   | Tconstr (Path.Pident {name = "option"}, [payloadTypeExpr], _) ->
@@ -894,7 +894,7 @@ let rec resolveNestedPatternPath (typ : innerType) ~env ~full ~nested =
 let getArgs ~env (t : Types.type_expr) ~full =
   let rec getArgsLoop ~env (t : Types.type_expr) ~full ~currentArgumentPosition
       =
-    match (Ast_uncurried.remove_function_dollar t).desc with
+    match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
       getArgsLoop ~full ~env ~currentArgumentPosition t1
     | Tarrow (Labelled l, tArg, tRet, _, _) ->

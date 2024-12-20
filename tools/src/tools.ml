@@ -380,7 +380,7 @@ let path_to_string path =
 
 let valueDetail (typ : Types.type_expr) =
   let rec collectSignatureTypes (typ : Types.type_expr) =
-    match (Ast_uncurried.remove_function_dollar typ).desc with
+    match typ.desc with
     | Tlink t | Tsubst t | Tpoly (t, []) -> collectSignatureTypes t
     | Tconstr (path, ts, _) -> (
       let p = path_to_string path in

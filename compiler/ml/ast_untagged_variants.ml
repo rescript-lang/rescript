@@ -188,7 +188,6 @@ let type_to_instanceof_backed_obj (t : Types.type_expr) =
 
 let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
   let t = !expand_head env t in
-  let t = Tmp_uncurried.remove_function_dollar t in
   match t with
   | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_string ->
     Some StringType

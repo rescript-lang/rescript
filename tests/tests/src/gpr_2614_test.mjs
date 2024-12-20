@@ -17,16 +17,11 @@ function ff() {
   v.l = 2;
 }
 
-let partial_arg = "x";
-
-function h0(param) {
-  let tmp = {
+function h0(extra) {
+  return {
+    "lo-x": "x",
     hi: 2
   };
-  if (partial_arg !== undefined) {
-    tmp["lo-x"] = Primitive_option.valFromOption(partial_arg);
-  }
-  return tmp;
 }
 
 let h1 = {

@@ -8,5 +8,4 @@
 
   An external requires the name of the JS value you're referring to, like "setTimeout".
 
-external setTimeout :
-  ((unit -> unit (a:1)) function$ -> int -> float (a:2)) function$
+external setTimeout : (unit -> unit (a:1)) -> int -> float (a:2)

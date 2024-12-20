@@ -133,7 +133,7 @@ let handle_ffi ~loc ~payload =
       match !is_function with
       | Some arity ->
         let type_ =
-          Ast_uncurried.uncurried_type ~loc
+          Ast_uncurried.uncurried_type
             ~arity:(if arity = 0 then 1 else arity)
             (arrow ~arity)
         in

@@ -13,8 +13,7 @@ let f = ((fun (type t) -> ((fun (type s) ->
   [@attr ]))[@attr ])
 let cancel_and_collect_callbacks :
   'a 'u 'c .
-    (packed_callbacks list ->
-       ('a, 'u, 'c) promise -> packed_callbacks list (a:2))
-      function$
+    packed_callbacks list ->
+      ('a, 'u, 'c) promise -> packed_callbacks list (a:2)
   = fun (type x) ->
   fun [arity:2]callbacks_accumulator -> fun (p : (_, _, c) promise) -> ()

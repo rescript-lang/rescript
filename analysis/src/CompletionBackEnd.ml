@@ -1358,7 +1358,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     in
     (* Find all functions in the module that returns type t *)
     let rec fnReturnsTypeT t =
-      match (Ast_uncurried.remove_function_dollar t).desc with
+      match t.Types.desc with
       | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> fnReturnsTypeT t1
       | Tarrow _ -> (
         match TypeUtils.extractFunctionType ~env ~package:full.package t with

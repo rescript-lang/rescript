@@ -934,11 +934,11 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
     Parsetree.core_type * External_ffi_types.t * Parsetree.attributes * bool =
   let prim_name_with_source = {name = prim_name; source = External} in
   let type_annotation, build_uncurried_type =
-    match Ast_uncurried.core_type_remove_function_dollar type_annotation with
+    match type_annotation with
     | {ptyp_desc = Ptyp_arrow (_, _, _, Some _); _} as t ->
       ( t,
         fun ~arity (x : Parsetree.core_type) ->
-          Ast_uncurried.uncurried_type ~loc ~arity x )
+          Ast_uncurried.uncurried_type ~arity x )
     | _ -> (type_annotation, fun ~arity:_ x -> x)
   in
   let result_type, arg_types_ty =

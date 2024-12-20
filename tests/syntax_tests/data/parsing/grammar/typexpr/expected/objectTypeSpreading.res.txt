@@ -3,10 +3,9 @@ type nonrec u = < a ;u: int   >
 type nonrec v = < v: int  ;a  > 
 type nonrec w = < j: int  ;a ;k: int  ;v  > 
 type nonrec t = < a ;u: int   >  as 'a
-type nonrec t = (< a ;u: int   >  -> unit (a:1)) function$
-type nonrec t = ((< a ;u: int   >  as 'a) -> unit (a:1)) function$
-type nonrec t =
-  (< a ;u: int   >  -> < a ;v: int   >  -> unit (a:2)) function$
+type nonrec t = < a ;u: int   >  -> unit (a:1)
+type nonrec t = (< a ;u: int   >  as 'a) -> unit (a:1)
+type nonrec t = < a ;u: int   >  -> < a ;v: int   >  -> unit (a:2)
 type nonrec user = < name: string   > 
 let (steve : < user ;age: int   > ) =
   [%obj { name = {js|Steve|js}; age = 30 }]

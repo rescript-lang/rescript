@@ -132,7 +132,7 @@ and expression_desc =
          *)
   | Texp_function of {
       arg_label: arg_label;
-      arity: int option;
+      arity: arity;
       param: Ident.t;
       case: case;
       partial: partial;

@@ -14,13 +14,12 @@ module F() = Map
 module F = ((functor () -> Map)[@functorAttr ])
 include functor () -> Map
 include ((functor () -> Map)[@functorAttr ])
-module Make(Cmp:sig type nonrec t val eq : (t -> t -> bool (a:2)) function$
-                end) :
+module Make(Cmp:sig type nonrec t val eq : t -> t -> bool (a:2) end) :
   sig
     type nonrec key = Cmp.t
     type nonrec coll
     val empty : coll
-    val add : (coll -> key -> coll (a:2)) function$
+    val add : coll -> key -> coll (a:2)
   end =
   struct
     open Cmp

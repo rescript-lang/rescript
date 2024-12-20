@@ -1587,9 +1587,6 @@ and print_label_declaration ~state (ld : Parsetree.label_declaration) cmt_tbl =
        ])
 
 and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
-  let parent_attrs =
-    ParsetreeViewer.filter_parsing_attrs typ_expr.ptyp_attributes
-  in
   let print_arrow ~arity typ_expr =
     let max_arity =
       match arity with
@@ -1597,7 +1594,7 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
       | None -> max_int
     in
     let attrs_before, args, return_type =
-      ParsetreeViewer.arrow_type ~max_arity ~attrs:parent_attrs typ_expr
+      ParsetreeViewer.arrow_type ~max_arity typ_expr
     in
     let return_type_needs_parens =
       match return_type.ptyp_desc with
@@ -1620,7 +1617,7 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
       in
       let typ_doc =
         let doc = print_typ_expr ~state n cmt_tbl in
-        match (Ast_uncurried.core_type_remove_function_dollar n).ptyp_desc with
+        match n.ptyp_desc with
         | Ptyp_arrow _ | Ptyp_tuple _ | Ptyp_alias _ -> add_parens doc
         | _ -> doc
       in
@@ -1666,7 +1663,6 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
       Doc.group (Doc.concat [rendered_args; Doc.text " => "; return_doc])
   in
   let rendered_type =
-    let typ_expr = Ast_uncurried.core_type_remove_function_dollar typ_expr in
     match typ_expr.ptyp_desc with
     | Ptyp_any -> Doc.text "_"
     | Ptyp_var var ->
@@ -1680,9 +1676,7 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
          * Is the "as" part of "unit" or "(string, float) => unit". By printing
          * parens we guide the user towards its meaning.*)
         let needs_parens =
-          match
-            (Ast_uncurried.core_type_remove_function_dollar typ).ptyp_desc
-          with
+          match typ.ptyp_desc with
           | Ptyp_arrow _ -> true
           | _ -> false
         in
@@ -1839,9 +1833,7 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
            ])
   in
   let should_print_its_own_attributes =
-    match
-      (Ast_uncurried.core_type_remove_function_dollar typ_expr).ptyp_desc
-    with
+    match typ_expr.ptyp_desc with
     | Ptyp_arrow _ (* es6 arrow types print their own attributes *) -> true
     | _ -> false
   in

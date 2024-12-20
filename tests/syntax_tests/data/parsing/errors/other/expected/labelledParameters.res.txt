@@ -34,4 +34,4 @@
 let f [arity:3]x ?(y= 2)  z = (x + y) + z
 let g [arity:3]~x:((x)[@res.namedArgLoc ])  ?y:(((y)[@res.namedArgLoc ])= 2) 
   ~z:((z)[@res.namedArgLoc ])  = (x + y) + z
-type nonrec f = (x:int -> y:int -> int (a:2)) function$
+type nonrec f = x:int -> y:int -> int (a:2)
