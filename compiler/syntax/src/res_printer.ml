@@ -1588,12 +1588,16 @@ and print_label_declaration ~state (ld : Parsetree.label_declaration) cmt_tbl =
 
 and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
   let parent_attrs =
-    let attrs = ParsetreeViewer.filter_parsing_attrs typ_expr.ptyp_attributes in
-    if Ast_uncurried.core_type_is_uncurried_fun typ_expr then attrs else []
+    ParsetreeViewer.filter_parsing_attrs typ_expr.ptyp_attributes
   in
-  let print_arrow ?(arity = max_int) typ_expr =
+  let print_arrow ~arity typ_expr =
+    let max_arity =
+      match arity with
+      | Some arity -> arity
+      | None -> max_int
+    in
     let attrs_before, args, return_type =
-      ParsetreeViewer.arrow_type ~arity ~attrs:parent_attrs typ_expr
+      ParsetreeViewer.arrow_type ~max_arity ~attrs:parent_attrs typ_expr
     in
     let return_type_needs_parens =
       match return_type.ptyp_desc with
@@ -1616,9 +1620,8 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
       in
       let typ_doc =
         let doc = print_typ_expr ~state n cmt_tbl in
-        match n.ptyp_desc with
+        match (Ast_uncurried.core_type_remove_function_dollar n).ptyp_desc with
         | Ptyp_arrow _ | Ptyp_tuple _ | Ptyp_alias _ -> add_parens doc
-        | _ when Ast_uncurried.core_type_is_uncurried_fun n -> add_parens doc
         | _ -> doc
       in
       Doc.group
@@ -1663,6 +1666,7 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
       Doc.group (Doc.concat [rendered_args; Doc.text " => "; return_doc])
   in
   let rendered_type =
+    let typ_expr = Ast_uncurried.core_type_remove_function_dollar typ_expr in
     match typ_expr.ptyp_desc with
     | Ptyp_any -> Doc.text "_"
     | Ptyp_var var ->
@@ -1676,9 +1680,10 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
          * Is the "as" part of "unit" or "(string, float) => unit". By printing
          * parens we guide the user towards its meaning.*)
         let needs_parens =
-          match typ.ptyp_desc with
+          match
+            (Ast_uncurried.core_type_remove_function_dollar typ).ptyp_desc
+          with
           | Ptyp_arrow _ -> true
-          | _ when Ast_uncurried.core_type_is_uncurried_fun typ -> true
           | _ -> false
         in
         let doc = print_typ_expr ~state typ cmt_tbl in
@@ -1691,12 +1696,7 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
     (* object printings *)
     | Ptyp_object (fields, open_flag) ->
       print_object ~state ~inline:false fields open_flag cmt_tbl
-    | Ptyp_arrow _ -> print_arrow typ_expr
-    | Ptyp_constr _ when Ast_uncurried.core_type_is_uncurried_fun typ_expr ->
-      let arity, t_arg =
-        Ast_uncurried.core_type_extract_uncurried_fun typ_expr
-      in
-      print_arrow ~arity t_arg
+    | Ptyp_arrow (_, _, _, arity) -> print_arrow ~arity typ_expr
     | Ptyp_constr
         (longident_loc, [{ptyp_desc = Ptyp_object (fields, open_flag)}]) ->
       (* for foo<{"a": b}>, when the object is long and needs a line break, we
@@ -1839,9 +1839,9 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
            ])
   in
   let should_print_its_own_attributes =
-    match typ_expr.ptyp_desc with
-    | Ptyp_constr _ when Ast_uncurried.core_type_is_uncurried_fun typ_expr ->
-      true
+    match
+      (Ast_uncurried.core_type_remove_function_dollar typ_expr).ptyp_desc
+    with
     | Ptyp_arrow _ (* es6 arrow types print their own attributes *) -> true
     | _ -> false
   in

@@ -379,11 +379,9 @@ let path_to_string path =
   Buffer.contents buf
 
 let valueDetail (typ : Types.type_expr) =
-  let rec collectSignatureTypes (typ_desc : Types.type_desc) =
-    match typ_desc with
-    | Tlink t | Tsubst t | Tpoly (t, []) -> collectSignatureTypes t.desc
-    | Tconstr (Path.Pident {name = "function$"}, [t], _) ->
-      collectSignatureTypes t.desc
+  let rec collectSignatureTypes (typ : Types.type_expr) =
+    match (Ast_uncurried.remove_function_dollar typ).desc with
+    | Tlink t | Tsubst t | Tpoly (t, []) -> collectSignatureTypes t
     | Tconstr (path, ts, _) -> (
       let p = path_to_string path in
       match ts with
@@ -392,15 +390,15 @@ let valueDetail (typ : Types.type_expr) =
         let ts =
           ts
           |> List.concat_map (fun (t : Types.type_expr) ->
-                 collectSignatureTypes t.desc)
+                 collectSignatureTypes t)
         in
         [{path = p; genericParameters = ts}])
     | Tarrow (_, t1, t2, _, _) ->
-      collectSignatureTypes t1.desc @ collectSignatureTypes t2.desc
+      collectSignatureTypes t1 @ collectSignatureTypes t2
     | Tvar None -> [{path = "_"; genericParameters = []}]
     | _ -> []
   in
-  match collectSignatureTypes typ.desc with
+  match collectSignatureTypes typ with
   | [] -> None
   | ts ->
     let parameters, returnType = splitLast ts in

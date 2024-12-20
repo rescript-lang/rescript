@@ -34,9 +34,8 @@ let findTypeViaLoc ~full ~debug (loc : Location.t) =
   | Some {locType = Typed (_, typExpr, _)} -> Some typExpr
   | _ -> None
 
-let rec pathFromTypeExpr (t : Types.type_expr) =
-  match t.desc with
-  | Tconstr (Pident {name = "function$"}, [t], _) -> pathFromTypeExpr t
+let pathFromTypeExpr (t : Types.type_expr) =
+  match (Ast_uncurried.remove_function_dollar t).desc with
   | Tconstr (path, _typeArgs, _)
   | Tlink {desc = Tconstr (path, _typeArgs, _)}
   | Tsubst {desc = Tconstr (path, _typeArgs, _)}
@@ -238,13 +237,11 @@ let rec extractObjectType ~env ~package (t : Types.type_expr) =
     | _ -> None)
   | _ -> None
 
-let rec extractFunctionType ~env ~package typ =
+let extractFunctionType ~env ~package typ =
   let rec loop ~env acc (t : Types.type_expr) =
-    match t.desc with
+    match (Ast_uncurried.remove_function_dollar t).desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ~env acc t1
     | Tarrow (label, tArg, tRet, _, _) -> loop ~env ((label, tArg) :: acc) tRet
-    | Tconstr (Pident {name = "function$"}, [t], _) ->
-      extractFunctionType ~env ~package t
     | Tconstr (path, typeArgs, _) -> (
       match References.digConstructor ~env ~package path with
       | Some
@@ -277,14 +274,12 @@ let maybeSetTypeArgCtx ?typeArgContextFromTypeManifest ~typeParams ~typeArgs env
     typeArgContext
 
 (* TODO(env-stuff) Maybe this could be removed entirely if we can guarantee that we don't have to look up functions from in here. *)
-let rec extractFunctionType2 ?typeArgContext ~env ~package typ =
+let extractFunctionType2 ?typeArgContext ~env ~package typ =
   let rec loop ?typeArgContext ~env acc (t : Types.type_expr) =
-    match t.desc with
+    match (Ast_uncurried.remove_function_dollar t).desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ?typeArgContext ~env acc t1
     | Tarrow (label, tArg, tRet, _, _) ->
       loop ?typeArgContext ~env ((label, tArg) :: acc) tRet
-    | Tconstr (Pident {name = "function$"}, [t], _) ->
-      extractFunctionType2 ?typeArgContext ~env ~package t
     | Tconstr (path, typeArgs, _) -> (
       match References.digConstructor ~env ~package path with
       | Some
@@ -317,7 +312,7 @@ let rec extractType ?(printOpeningDebug = true)
       Printf.printf "[extract_type]--> %s"
         (debugLogTypeArgContext typeArgContext));
   let instantiateType = instantiateType2 in
-  match t.desc with
+  match (Ast_uncurried.remove_function_dollar t).desc with
   | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
     extractType ?typeArgContext ~printOpeningDebug:false ~env ~package t1
   | Tconstr (Path.Pident {name = "option"}, [payloadTypeExpr], _) ->
@@ -334,13 +329,6 @@ let rec extractType ?(printOpeningDebug = true)
     Some (Tstring env, typeArgContext)
   | Tconstr (Path.Pident {name = "exn"}, [], _) ->
     Some (Texn env, typeArgContext)
-  | Tconstr (Pident {name = "function$"}, [t], _) -> (
-    match extractFunctionType2 ?typeArgContext t ~env ~package with
-    | args, tRet, typeArgContext when args <> [] ->
-      Some
-        ( Tfunction {env; args; typ = t; uncurried = true; returnType = tRet},
-          typeArgContext )
-    | _args, _tRet, _typeArgContext -> None)
   | Tarrow _ -> (
     match extractFunctionType2 ?typeArgContext t ~env ~package with
     | args, tRet, typeArgContext when args <> [] ->
@@ -906,11 +894,8 @@ let rec resolveNestedPatternPath (typ : innerType) ~env ~full ~nested =
 let getArgs ~env (t : Types.type_expr) ~full =
   let rec getArgsLoop ~env (t : Types.type_expr) ~full ~currentArgumentPosition
       =
-    match t.desc with
-    | Tlink t1
-    | Tsubst t1
-    | Tpoly (t1, [])
-    | Tconstr (Pident {name = "function$"}, [t1], _) ->
+    match (Ast_uncurried.remove_function_dollar t).desc with
+    | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
       getArgsLoop ~full ~env ~currentArgumentPosition t1
     | Tarrow (Labelled l, tArg, tRet, _, _) ->
       (SharedTypes.Completable.Labelled l, tArg)

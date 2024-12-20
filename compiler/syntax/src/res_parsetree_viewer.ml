@@ -1,6 +1,6 @@
 open Parsetree
 
-let arrow_type ?(arity = max_int) ?(attrs = []) ct =
+let arrow_type ?(max_arity = max_int) ?(attrs = []) ct =
   let has_as_attr attrs =
     Ext_list.exists attrs (fun (x, _) -> x.Asttypes.txt = "as")
   in
@@ -52,8 +52,8 @@ let arrow_type ?(arity = max_int) ?(attrs = []) ct =
       ptyp_attributes = attrs1;
     } as typ ->
     let attrs = attrs @ attrs1 in
-    process attrs [] {typ with ptyp_attributes = []} arity
-  | typ -> process attrs [] typ arity
+    process attrs [] {typ with ptyp_attributes = []} max_arity
+  | typ -> process attrs [] typ max_arity
 
 let functor_type modtype =
   let rec process acc modtype =

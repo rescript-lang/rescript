@@ -65,28 +65,20 @@ let default_typ_mapper = Bs_ast_mapper.default_mapper.typ
 *)
 
 let typ_mapper (self : Bs_ast_mapper.mapper) (ty : Parsetree.core_type) =
-  match ty with
-  | {
-   ptyp_attributes;
-   ptyp_desc =
-     ( Ptyp_arrow (label, args, body, _)
-     | Ptyp_constr
-         (* function$<...> is re-wrapped around only in case Nothing below *)
-         ( {txt = Lident "function$"},
-           [{ptyp_desc = Ptyp_arrow (label, args, body, _)}] ) );
-   (* let it go without regard label names,
-      it will report error later when the label is not empty
-   *)
-   ptyp_loc = loc;
-  } -> (
-    match fst (Ast_attributes.process_attributes_rev ptyp_attributes) with
+  let loc = ty.ptyp_loc in
+  match (Ast_uncurried.core_type_remove_function_dollar ty).ptyp_desc with
+  | Ptyp_arrow (label, args, body, _)
+  (* let it go without regard label names,
+     it will report error later when the label is not empty
+  *) -> (
+    match fst (Ast_attributes.process_attributes_rev ty.ptyp_attributes) with
     | Meth_callback _ ->
       Ast_typ_uncurry.to_method_callback_type loc self label args body
     | Method _ ->
       (* Treat @meth as making the type uncurried, for backwards compatibility *)
       Ast_typ_uncurry.to_uncurry_type loc self label args body
     | Nothing -> Bs_ast_mapper.default_mapper.typ self ty)
-  | {ptyp_desc = Ptyp_object (methods, closed_flag); ptyp_loc = loc} ->
+  | Ptyp_object (methods, closed_flag) ->
     let ( +> ) attr (typ : Parsetree.core_type) =
       {typ with ptyp_attributes = attr :: typ.ptyp_attributes}
     in

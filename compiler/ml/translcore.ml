@@ -700,7 +700,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     | Some arity ->
       let prim =
         let expanded = Ctype.expand_head e.exp_env e.exp_type in
-        let extracted = Ast_uncurried.type_extract_uncurried_fun expanded in
+        let extracted = Ast_uncurried.remove_function_dollar expanded in
         match (Btype.repr extracted).desc with
         | Tarrow (Nolabel, t, _, _, _) -> (
           match (Ctype.expand_head e.exp_env t).desc with

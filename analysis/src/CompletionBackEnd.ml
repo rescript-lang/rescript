@@ -1358,12 +1358,8 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     in
     (* Find all functions in the module that returns type t *)
     let rec fnReturnsTypeT t =
-      match t.Types.desc with
-      | Tlink t1
-      | Tsubst t1
-      | Tpoly (t1, [])
-      | Tconstr (Pident {name = "function$"}, [t1], _) ->
-        fnReturnsTypeT t1
+      match (Ast_uncurried.remove_function_dollar t).desc with
+      | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> fnReturnsTypeT t1
       | Tarrow _ -> (
         match TypeUtils.extractFunctionType ~env ~package:full.package t with
         | ( (Nolabel, {desc = Tconstr (Path.Pident {name = "t"}, _, _)}) :: _,

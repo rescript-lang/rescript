@@ -1831,6 +1831,7 @@ and walk_row_field (row_field : Parsetree.row_field) t comments =
   | Rinherit _ -> ()
 
 and walk_core_type typ t comments =
+  let typ = Ast_uncurried.core_type_remove_function_dollar typ in
   match typ.Parsetree.ptyp_desc with
   | _ when comments = [] -> ()
   | Ptyp_tuple typexprs ->
@@ -1864,9 +1865,6 @@ and walk_core_type typ t comments =
     attach t.trailing typexpr.ptyp_loc after_typ
   | Ptyp_variant (row_fields, _, _) ->
     walk_list (row_fields |> List.map (fun rf -> RowField rf)) t comments
-  | Ptyp_constr
-      ({txt = Lident "function$"}, [({ptyp_desc = Ptyp_arrow _} as desc)]) ->
-    walk_core_type desc t comments
   | Ptyp_constr (longident, typexprs) ->
     let before_longident, _afterLongident =
       partition_leading_trailing comments longident.loc

@@ -1799,8 +1799,8 @@ let parse_arity env core_type ty =
   match Ast_uncurried.uncurried_type_get_arity_opt ~env ty with
   | Some arity ->
     let from_constructor =
-      match ty.desc with
-      | Tconstr (_, _, _) -> not (Ast_uncurried_utils.type_is_uncurried_fun ty)
+      match (Ast_uncurried.remove_function_dollar ty).desc with
+      | Tconstr (_, _, _) -> true
       | _ -> false
     in
     (arity, from_constructor)

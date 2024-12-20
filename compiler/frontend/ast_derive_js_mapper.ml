@@ -67,7 +67,7 @@ let erase_type_str =
   Str.primitive
     (Val.mk ~prim:["%identity"]
        {loc = noloc; txt = erase_type_lit}
-       (Ast_compatible.arrow ~arity:None any any))
+       (Ast_compatible.arrow ~arity:(Some 1) any any))
 
 let unsafe_index = "_index"
 

@@ -114,6 +114,7 @@ let rec translate_arrow_type ~config ~type_vars_gen
 and translateCoreType_ ~config ~type_vars_gen
     ?(no_function_return_dependencies = false) ~type_env
     (core_type : Typedtree.core_type) =
+  let core_type = Ast_uncurried.tcore_type_remove_function_dollar core_type in
   match core_type.ctyp_desc with
   | Ttyp_alias (ct, _) ->
     ct

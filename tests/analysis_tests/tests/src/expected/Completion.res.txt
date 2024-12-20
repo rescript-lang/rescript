@@ -1822,8 +1822,14 @@ Resolved opens 2 Completion Completion
 ContextPath Value[withCallback](~a)
 ContextPath Value[withCallback]
 Path withCallback
-Found type for function int
-[]
+Found type for function (~b: int) => int
+[{
+    "label": "b",
+    "kind": 4,
+    "tags": [],
+    "detail": "int",
+    "documentation": null
+  }]
 
 Complete src/Completion.res 332:21
 posCursor:[332:21] posNoWhite:[332:20] Found expr:[332:3->332:21]

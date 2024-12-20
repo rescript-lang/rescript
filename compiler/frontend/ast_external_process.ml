@@ -934,17 +934,11 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
     Parsetree.core_type * External_ffi_types.t * Parsetree.attributes * bool =
   let prim_name_with_source = {name = prim_name; source = External} in
   let type_annotation, build_uncurried_type =
-    match type_annotation.ptyp_desc with
-    | Ptyp_constr (({txt = Lident "function$"; _} as lid), [t]) ->
+    match Ast_uncurried.core_type_remove_function_dollar type_annotation with
+    | {ptyp_desc = Ptyp_arrow (_, _, _, Some _); _} as t ->
       ( t,
         fun ~arity (x : Parsetree.core_type) ->
-          let x =
-            match x.ptyp_desc with
-            | Ptyp_arrow (l, t1, t2, _) ->
-              {x with ptyp_desc = Ptyp_arrow (l, t1, t2, arity)}
-            | _ -> x
-          in
-          {x with Parsetree.ptyp_desc = Ptyp_constr (lid, [x])} )
+          Ast_uncurried.uncurried_type ~loc ~arity x )
     | _ -> (type_annotation, fun ~arity:_ x -> x)
   in
   let result_type, arg_types_ty =
@@ -961,10 +955,7 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
     let arity, new_type, spec =
       process_obj loc external_desc prim_name arg_types_ty result_type
     in
-    ( build_uncurried_type ~arity:(Some arity) new_type,
-      spec,
-      unused_attrs,
-      false )
+    (build_uncurried_type ~arity new_type, spec, unused_attrs, false)
   else
     let splice = external_desc.splice in
     let arg_type_specs, new_arg_types_ty, arg_type_specs_length =
@@ -1036,7 +1027,7 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
       check_return_wrapper loc external_desc.return_wrapper result_type
     in
     let fn_type = Ast_core_type.mk_fn_type new_arg_types_ty result_type in
-    ( build_uncurried_type ~arity:(Some (List.length new_arg_types_ty)) fn_type,
+    ( build_uncurried_type ~arity:(List.length new_arg_types_ty) fn_type,
       External_ffi_types.ffi_bs arg_type_specs return_wrapper ffi,
       unused_attrs,
       relative )
