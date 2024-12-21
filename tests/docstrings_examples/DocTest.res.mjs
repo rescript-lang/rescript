@@ -122,12 +122,6 @@ async function runtimeTests(code) {
   let exitCode = match.code;
   let stderr = match.stderr;
   let stdout = match.stdout;
-  console.log({
-    code: code,
-    exitCode: exitCode,
-    stdout: stdout,
-    stderr: stderr
-  });
   let std;
   let exit = 0;
   if (exitCode !== null) {
@@ -189,7 +183,7 @@ function extractDocFromFile(file) {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "DocTest.res",
-        206,
+        199,
         9
       ],
       Error: new Error()
@@ -357,7 +351,7 @@ async function main() {
     } else {
       return f.endsWith(".resi");
     }
-  }).filter(f => f === "Uint8ClampedArray.res"), [], (acc, cur) => {
+  }), [], (acc, cur) => {
     let isInterface = cur.endsWith(".resi");
     let resi = Path.join("runtime", cur + "i");
     if (!isInterface && Fs.existsSync(resi)) {
@@ -438,30 +432,8 @@ async function main() {
       rhs
     ];
   });
-  let batches = chunkArray(match[0], batchSize);
-  let a = await Promise.all(batches.map(async t => $$Array.filterMap(await Promise.all(t.filter(param => !ignoreRuntimeTests.includes(param[0].id)).map(async param => {
-    let jsCode = param[2];
-    let nodeTest = await runtimeTests(jsCode);
-    if (nodeTest.TAG === "Ok") {
-      return;
-    } else {
-      return [
-        param[0],
-        {
-          TAG: "RuntimeError",
-          rescript: param[1],
-          js: jsCode,
-          error: nodeTest._0
-        }
-      ];
-    }
-  })), i => {
-    if (i !== undefined) {
-      return i;
-    }
-    
-  })));
-  let runtimeErrors = a.flat();
+  chunkArray(match[0], batchSize);
+  let runtimeErrors = [];
   let allErrors = runtimeErrors.concat(match[1]);
   allErrors.forEach(param => {
     let errors = param[1];

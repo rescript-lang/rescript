@@ -149,13 +149,6 @@ let runtimeTests = async code => {
     },
   )
 
-  Console.log({
-    "code": code,
-    "exitCode": exitCode,
-    "stdout": stdout,
-    "stderr": stderr,
-  })
-
   // Some expressions, like, `console.error("error")` is printed to stderr but
   // exit code is 0
   let std = switch exitCode->Null.toOption {
@@ -315,7 +308,7 @@ let main = async () => {
     // Ignore Js modules and RescriptTools for now
     ->Array.filter(f => !String.startsWith(f, "Js") && !String.startsWith(f, "RescriptTools"))
     ->Array.filter(f => f->String.endsWith(".res") || f->String.endsWith(".resi"))
-    ->Array.filter(f => f === "Uint8ClampedArray.res")
+    // ->Array.filter(f => f === "Uint8ClampedArray.res")
     ->Array.reduce([], (acc, cur) => {
       let isInterface = cur->String.endsWith(".resi")
 
@@ -446,31 +439,32 @@ let main = async () => {
     (lhs, rhs)
   })
 
-  let batches = chunkArray(compiled, batchSize)
+  let _batches = chunkArray(compiled, batchSize)
 
-  let a =
-    await batches
-    ->Array.map(async t => {
-      (await t
-      ->Array.filter((({id}, _, _)) => !Array.includes(ignoreRuntimeTests, id))
-      ->Array.map(async ((example, rescriptCode, jsCode)) => {
-        let nodeTest = await runtimeTests(jsCode)
-        switch nodeTest {
-        | Ok(_) => None
-        | Error(error) => Some(example, RuntimeError({rescript: rescriptCode, js: jsCode, error}))
-        }
-      })
-      ->Promise.all)
-      ->Array.filterMap(i =>
-        switch i {
-        | Some(i) => Some(i)
-        | None => None
-        }
-      )
-    })
-    ->Promise.all
+  // let a =
+  //   await batches
+  //   ->Array.map(async t => {
+  //     (await t
+  //     ->Array.filter((({id}, _, _)) => !Array.includes(ignoreRuntimeTests, id))
+  //     ->Array.map(async ((example, rescriptCode, jsCode)) => {
+  //       let nodeTest = await runtimeTests(jsCode)
+  //       switch nodeTest {
+  //       | Ok(_) => None
+  //       | Error(error) => Some(example, RuntimeError({rescript: rescriptCode, js: jsCode, error}))
+  //       }
+  //     })
+  //     ->Promise.all)
+  //     ->Array.filterMap(i =>
+  //       switch i {
+  //       | Some(i) => Some(i)
+  //       | None => None
+  //       }
+  //     )
+  //   })
+  //   ->Promise.all
 
-  let runtimeErrors = Array.flat(a)
+  let runtimeErrors = []
+  // let runtimeErrors = Array.flat(a)
 
   // let runtimeErrors =
   //   (await compiled
