@@ -63,16 +63,7 @@ When you run `make test` (from the `tests/analysis_tests` folder), `dune exec --
 
 To use a local version of `rescript-editor-analysis`, the targeted project needs to be compiled with the local compiler.
 
-Update your `package.json`:
-
-```json
-{
-  "dependencies": {
-    "rescript": "../rescript"
-  }
-}
-```
-
+Install your local ReScript with `npm i /path/to/your-local-rescript-repo`.
 Reinstall the dependencies and run `npx rescript` in your project. This ensures the project is compiled with the same compiler version that the `rescript-editor-analysis` will process.
 
 ## Debugging
