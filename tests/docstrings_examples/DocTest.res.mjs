@@ -369,6 +369,8 @@ async function main() {
   }).map(f => getExamples(extractDocFromFile(Path.join("runtime", f)))).flat();
   let batchSize = (Os.cpus().length << 1);
   let chuncks = chunkArray(modules, batchSize);
+  console.log("chuncks length", chuncks.length);
+  console.log("chunck part size", chuncks.map(f => f.length));
   let context = {
     contents: 0
   };

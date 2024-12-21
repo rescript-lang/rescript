@@ -336,8 +336,8 @@ let main = async () => {
   // Console.log2("module length", modules->Array.length)
   let chuncks = modules->chunkArray(batchSize)
 
-  // Console.log2("chuncks length", chuncks->Array.length)
-  // Console.log2("chunck part size", chuncks->Array.map(f => f->Array.length))
+  Console.log2("chuncks length", chuncks->Array.length)
+  Console.log2("chunck part size", chuncks->Array.map(f => f->Array.length))
 
   let context = ref(0)
 
