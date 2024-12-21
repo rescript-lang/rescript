@@ -374,6 +374,8 @@ let main = async () => {
       // Await the next iterator value
       let {value, done} = await asyncIterator->AsyncIterator.next
 
+      Console.log2(value, Array.length(chuncks))
+
       // Exit the while loop if the iterator says it's done
       break := done
 

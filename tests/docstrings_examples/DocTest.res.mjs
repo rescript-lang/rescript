@@ -381,6 +381,7 @@ async function main() {
     while (!$$break) {
       let match = await asyncIterator.next();
       let value = match.value;
+      console.log(value, chuncks.length);
       $$break = match.done;
       if (value !== undefined) {
         let c = chuncks[value];
