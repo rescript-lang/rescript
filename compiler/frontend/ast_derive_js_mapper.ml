@@ -129,9 +129,7 @@ let app1 = Ast_compatible.app1
 
 let app2 = Ast_compatible.app2
 
-let ( ->~ ) a b =
-  Ast_uncurried.uncurried_type ~arity:1
-    (Ast_compatible.arrow ~arity:(Some 1) a b)
+let ( ->~ ) a b = Ast_compatible.arrow ~arity:(Some 1) a b
 
 let raise_when_not_found_ident =
   Longident.Ldot (Lident Primitive_modules.util, "raiseWhenNotFound")
@@ -295,8 +293,7 @@ let init () =
               let pat_from_js = {Asttypes.loc; txt = from_js} in
               let to_js_type result =
                 Ast_comb.single_non_rec_val pat_to_js
-                  (Ast_uncurried.uncurried_type ~arity:1
-                     (Ast_compatible.arrow ~arity:(Some 1) core_type result))
+                  (Ast_compatible.arrow ~arity:(Some 1) core_type result)
               in
               let new_type, new_tdcl =
                 U.new_type_of_type_declaration tdcl ("abs_" ^ name)

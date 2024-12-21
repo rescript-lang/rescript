@@ -24,24 +24,3 @@ let expr_extract_uncurried_fun (expr : Parsetree.expression) =
   match expr.pexp_desc with
   | Pexp_fun (_, _, _, _, Some _) -> expr
   | _ -> assert false
-
-(* Typed AST *)
-
-let tarrow_to_arity (t_arity : Types.type_expr) =
-  match (Ctype.repr t_arity).desc with
-  | Tarrow (_, _, _, _, Some arity) -> arity
-  | Tarrow _ -> assert false
-  | _ ->
-    Format.eprintf "t: %a@." Printtyp.raw_type_expr t_arity;
-    assert false
-
-let tarrow_to_arity_opt (t_arity : Types.type_expr) =
-  match (Ctype.repr t_arity).desc with
-  | Tarrow (_, _, _, _, arity) -> arity
-  | _ -> None
-
-let uncurried_type_get_arity ~env typ =
-  tarrow_to_arity (Ctype.expand_head env typ)
-
-let uncurried_type_get_arity_opt ~env typ =
-  tarrow_to_arity_opt (Ctype.expand_head env typ)

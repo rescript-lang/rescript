@@ -3521,9 +3521,7 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
   in
   let force_uncurried_type funct =
     if force_tvar then ()
-    else if
-      Ast_uncurried.uncurried_type_get_arity_opt ~env funct.exp_type = None
-    then
+    else if Ctype.get_arity env funct.exp_type = None then
       raise
         (Error
            ( funct.exp_loc,

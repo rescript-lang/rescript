@@ -1796,7 +1796,7 @@ let rec arity_from_arrow_type env core_type ty =
   | _ -> 0
 
 let parse_arity env core_type ty =
-  match Ast_uncurried.uncurried_type_get_arity_opt ~env ty with
+  match Ctype.get_arity env ty with
   | Some arity ->
     let from_constructor =
       match ty.desc with

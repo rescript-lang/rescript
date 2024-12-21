@@ -4071,10 +4071,8 @@ and parse_poly_type_expr p =
         let typ = Ast_helper.Typ.var ~loc:var.loc var.txt in
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc typ.Parsetree.ptyp_loc.loc_start p.prev_end_pos in
-        let t_fun =
-          Ast_helper.Typ.arrow ~loc ~arity:None Asttypes.Nolabel typ return_type
-        in
-        Ast_uncurried.uncurried_type ~arity:1 t_fun
+        Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Asttypes.Nolabel typ
+          return_type
       | _ -> Ast_helper.Typ.var ~loc:var.loc var.txt)
     | _ -> assert false)
   | _ -> parse_typ_expr p
@@ -4486,10 +4484,7 @@ and parse_arrow_type_rest ~es6_arrow ~start_pos typ p =
     Parser.next p;
     let return_type = parse_typ_expr ~alias:false p in
     let loc = mk_loc start_pos p.prev_end_pos in
-    let arrow_typ =
-      Ast_helper.Typ.arrow ~loc ~arity:None Asttypes.Nolabel typ return_type
-    in
-    Ast_uncurried.uncurried_type ~arity:1 arrow_typ
+    Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Asttypes.Nolabel typ return_type
   | _ -> typ
 
 and parse_typ_expr_region p =
@@ -5096,10 +5091,9 @@ and parse_type_equation_or_constr_decl p =
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc uident_start_pos p.prev_end_pos in
         let arrow_type =
-          Ast_helper.Typ.arrow ~loc ~arity:None Asttypes.Nolabel typ return_type
+          Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Asttypes.Nolabel typ
+            return_type
         in
-        let arrow_type = Ast_uncurried.uncurried_type ~arity:1 arrow_type in
-
         let typ = parse_type_alias p arrow_type in
         (Some typ, Asttypes.Public, Parsetree.Ptype_abstract)
       | _ -> (Some typ, Asttypes.Public, Parsetree.Ptype_abstract))

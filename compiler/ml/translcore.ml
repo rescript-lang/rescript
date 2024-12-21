@@ -770,10 +770,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
         Ext_list.exists e.exp_attributes (fun ({txt}, _) -> txt = "res.partial")
       in
       if uncurried_partial_app then
-        let arity_opt =
-          Ast_uncurried.uncurried_type_get_arity_opt ~env:funct.exp_env
-            funct.exp_type
-        in
+        let arity_opt = Ctype.get_arity funct.exp_env funct.exp_type in
         match arity_opt with
         | Some arity ->
           let real_args = List.filter (fun (_, x) -> Option.is_some x) oargs in

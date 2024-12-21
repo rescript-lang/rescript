@@ -4280,3 +4280,8 @@ let maybe_pointer_type env typ =
            | _ -> false)
          row.row_fields
   | _ -> true
+
+let get_arity env typ =
+  match (expand_head env typ).desc with
+  | Tarrow (_, _, _, _, arity) -> arity
+  | _ -> None

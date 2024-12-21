@@ -120,9 +120,6 @@ let init () =
             Ext_list.flat_map tdcls handle_tdcl);
         signature_gen =
           (fun (tdcls : Parsetree.type_declaration list) _explict_nonrec ->
-            let handle_uncurried_type_tranform ~arity t =
-              if arity > 0 then Ast_uncurried.uncurried_type ~arity t else t
-            in
             let handle_tdcl tdcl =
               let core_type =
                 Ast_derive_util.core_type_of_type_declaration tdcl
@@ -139,9 +136,9 @@ let init () =
               | Ptype_record label_declarations ->
                 Ext_list.map label_declarations (fun {pld_name; pld_type} ->
                     Ast_comb.single_non_rec_val ?attrs:gentype_attrs pld_name
-                      (Ast_compatible.arrow ~arity:None core_type pld_type
-                      (*arity will alwys be 1 since these are single param functions*)
-                      |> handle_uncurried_type_tranform ~arity:1))
+                      (Ast_compatible.arrow ~arity:(Some 1) core_type
+                         pld_type
+                         (*arity will alwys be 1 since these are single param functions*)))
               | Ptype_variant constructor_declarations ->
                 Ext_list.map constructor_declarations
                   (fun
@@ -164,11 +161,15 @@ let init () =
                       | Some x -> x
                       | None -> core_type
                     in
+                    let add_arity ~arity t =
+                      if arity > 0 then Ast_uncurried.uncurried_type ~arity t
+                      else t
+                    in
                     Ast_comb.single_non_rec_val ?attrs:gentype_attrs
                       {loc; txt = Ext_string.uncapitalize_ascii con_name}
                       (Ext_list.fold_right pcd_args annotate_type (fun x acc ->
                            Ast_compatible.arrow ~arity:None x acc)
-                      |> handle_uncurried_type_tranform ~arity))
+                      |> add_arity ~arity))
               | Ptype_open | Ptype_abstract ->
                 Ast_derive_util.not_applicable tdcl.ptype_loc deriving_name;
                 []
