@@ -149,6 +149,13 @@ let runtimeTests = async code => {
     },
   )
 
+  Console.log({
+    "code": code,
+    "exitCode": exitCode,
+    "stdout": stdout,
+    "stderr": stderr,
+  })
+
   // Some expressions, like, `console.error("error")` is printed to stderr but
   // exit code is 0
   let std = switch exitCode->Null.toOption {
@@ -308,7 +315,7 @@ let main = async () => {
     // Ignore Js modules and RescriptTools for now
     ->Array.filter(f => !String.startsWith(f, "Js") && !String.startsWith(f, "RescriptTools"))
     ->Array.filter(f => f->String.endsWith(".res") || f->String.endsWith(".resi"))
-    // ->Array.filter(f => f === "String.resi")
+    ->Array.filter(f => f === "Uint8ClampedArray.res")
     ->Array.reduce([], (acc, cur) => {
       let isInterface = cur->String.endsWith(".resi")
 

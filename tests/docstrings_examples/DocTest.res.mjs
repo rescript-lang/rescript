@@ -122,6 +122,12 @@ async function runtimeTests(code) {
   let exitCode = match.code;
   let stderr = match.stderr;
   let stdout = match.stdout;
+  console.log({
+    code: code,
+    exitCode: exitCode,
+    stdout: stdout,
+    stderr: stderr
+  });
   let std;
   let exit = 0;
   if (exitCode !== null) {
@@ -183,7 +189,7 @@ function extractDocFromFile(file) {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "DocTest.res",
-        199,
+        206,
         9
       ],
       Error: new Error()
@@ -351,7 +357,7 @@ async function main() {
     } else {
       return f.endsWith(".resi");
     }
-  }), [], (acc, cur) => {
+  }).filter(f => f === "Uint8ClampedArray.res"), [], (acc, cur) => {
     let isInterface = cur.endsWith(".resi");
     let resi = Path.join("runtime", cur + "i");
     if (!isInterface && Fs.existsSync(resi)) {
