@@ -30,7 +30,8 @@ open Parsetree
 
 let default_loc = Location.none
 
-let arrow ?loc ?attrs a b = Ast_helper.Typ.arrow ?loc ?attrs Nolabel a b
+let arrow ?loc ?attrs ~arity a b =
+  Ast_helper.Typ.arrow ?loc ?attrs ~arity Nolabel a b
 
 let apply_simple ?(loc = default_loc) ?(attrs = []) (fn : expression)
     (args : expression list) : expression =
@@ -94,16 +95,16 @@ let apply_labels ?(loc = default_loc) ?(attrs = []) fn
       Pexp_apply (fn, Ext_list.map args (fun (l, a) -> (Asttypes.Labelled l, a)));
   }
 
-let label_arrow ?(loc = default_loc) ?(attrs = []) s a b : core_type =
+let label_arrow ?(loc = default_loc) ?(attrs = []) ~arity s a b : core_type =
   {
-    ptyp_desc = Ptyp_arrow (Asttypes.Labelled s, a, b);
+    ptyp_desc = Ptyp_arrow (Asttypes.Labelled s, a, b, arity);
     ptyp_loc = loc;
     ptyp_attributes = attrs;
   }
 
-let opt_arrow ?(loc = default_loc) ?(attrs = []) s a b : core_type =
+let opt_arrow ?(loc = default_loc) ?(attrs = []) ~arity s a b : core_type =
   {
-    ptyp_desc = Ptyp_arrow (Asttypes.Optional s, a, b);
+    ptyp_desc = Ptyp_arrow (Asttypes.Optional s, a, b, arity);
     ptyp_loc = loc;
     ptyp_attributes = attrs;
   }

@@ -18,9 +18,6 @@ let rec addAnnotationsToTypes_ ~config ~(expr : Typedtree.expression)
       else a_name
     in
     {a_name; a_type} :: next_types1
-  | Texp_construct ({txt = Lident "Function$"}, _, [fun_expr]), _, _ ->
-    (* let uncurried1: function$<_, _> = Function$(x => x |> string_of_int, [`Has_arity1]) *)
-    addAnnotationsToTypes_ ~config ~expr:fun_expr arg_types
   | Texp_apply ({exp_desc = Texp_ident (path, _, _)}, [(_, Some expr1)]), _, _
     -> (
     match path |> TranslateTypeExprFromTypes.path_to_list |> List.rev with

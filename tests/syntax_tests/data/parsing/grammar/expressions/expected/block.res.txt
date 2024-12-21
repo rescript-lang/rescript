@@ -1,11 +1,10 @@
 let b =
   ((let module Array = Belt.Array in
-      ([|1;2|] |.u (Array.map (Function$ (fun [arity:1]x -> x + 1)))) |.u
-        Js.log)
+      ([|1;2|] |.u (Array.map (fun [arity:1]x -> x + 1))) |.u Js.log)
   [@res.braces ])
 let b =
   ((let open Belt.Array in
-      ([|1;2|] |.u (map (Function$ (fun [arity:1]x -> x + 1)))) |.u Js.log)
+      ([|1;2|] |.u (map (fun [arity:1]x -> x + 1))) |.u Js.log)
   [@res.braces ])
 let b = ((let exception QuitEarly  in raise QuitEarly)[@res.braces ])
 let b = ((let a = 1 in let b = 2 in a + b)[@res.braces ])
@@ -21,7 +20,7 @@ let b =
           let a = 1 in
           let b = 2 in
           sideEffect ();
-          (let x = (1 + 2) |.u (Function$ (fun [arity:1]x -> x + 1)) in
+          (let x = (1 + 2) |.u (fun [arity:1]x -> x + 1) in
            raise (Terminate x)))
   [@res.braces ])
 let b = ((f (); g (); h (); (let arr = [|1;2;3|] in ()))[@res.braces ])
@@ -41,48 +40,34 @@ let res =
   [@res.braces ])
 let nestedLet = ((let _ = 1 in ())[@res.braces ])
 let nestedLet = ((let _ = 1 in 2)[@res.braces ])
-let init =
-  Function$
-    (fun [arity:1]() -> ((foo (1 == 1); [%assert 1 == 2])[@res.braces ]))
-let init =
-  Function$
-    (fun [arity:1]() -> (([%assert 1 == 2]; foo (1 == 1); [%assert 1 == 2])
-       [@res.braces ]))
-let f =
-  Function$
-    (fun [arity:1]() -> ((let x = 1 in Function$ (fun [arity:1]_ -> ()))
-       [@res.braces ]))
-let reifyStyle (type a) =
-  Function$
-    (fun [arity:1](x : 'a) ->
-       (((let module Internal =
-            struct
-              type constructor
-              external canvasGradient : constructor = "CanvasGradient"
-              [@@val ]
-              external canvasPattern : constructor = "CanvasPattern"[@@val ]
-              let instanceOf =
-                ([%raw
-                   (({js|function(x,y) {return +(x instanceof y)}|js})
-                     [@res.template ])] : ('a -> constructor -> bool,
-                                            [ `Has_arity2 ]) function$)
-            end in
-            ((if (Js.typeof x) = {js|string|js}
-              then Obj.magic String
-              else
-                if Internal.instanceOf x Internal.canvasGradient
-                then Obj.magic Gradient
-                else
-                  if Internal.instanceOf x Internal.canvasPattern
-                  then Obj.magic Pattern
-                  else
-                    raise
-                      (Invalid_argument
-                         {js|Unknown canvas style kind. Known values are: String, CanvasGradient, CanvasPattern|js})),
-              (Obj.magic x)))
-       [@res.braces ]) : (a style * a)))
-let calc_fps =
-  Function$
-    (fun [arity:2]t0 ->
-       fun t1 -> ((let delta = (t1 -. t0) /. 1000. in 1. /. delta)
-         [@res.braces ]))
+let init [arity:1]() = ((foo (1 == 1); [%assert 1 == 2])[@res.braces ])
+let init [arity:1]() = (([%assert 1 == 2]; foo (1 == 1); [%assert 1 == 2])
+  [@res.braces ])
+let f [arity:1]() = ((let x = 1 in fun [arity:1]_ -> ())[@res.braces ])
+let reifyStyle (type a) [arity:1](x : 'a) =
+  (((let module Internal =
+       struct
+         type constructor
+         external canvasGradient : constructor = "CanvasGradient"[@@val ]
+         external canvasPattern : constructor = "CanvasPattern"[@@val ]
+         let instanceOf =
+           ([%raw
+              (({js|function(x,y) {return +(x instanceof y)}|js})
+                [@res.template ])] : 'a -> constructor -> bool (a:2))
+       end in
+       ((if (Js.typeof x) = {js|string|js}
+         then Obj.magic String
+         else
+           if Internal.instanceOf x Internal.canvasGradient
+           then Obj.magic Gradient
+           else
+             if Internal.instanceOf x Internal.canvasPattern
+             then Obj.magic Pattern
+             else
+               raise
+                 (Invalid_argument
+                    {js|Unknown canvas style kind. Known values are: String, CanvasGradient, CanvasPattern|js})),
+         (Obj.magic x)))
+  [@res.braces ]) : (a style * a))
+let calc_fps [arity:2]t0 t1 =
+  ((let delta = (t1 -. t0) /. 1000. in 1. /. delta)[@res.braces ])

@@ -3,10 +3,9 @@ type nonrec u = < a ;u: int   >
 type nonrec v = < v: int  ;a  > 
 type nonrec w = < j: int  ;a ;k: int  ;v  > 
 type nonrec t = < a ;u: int   >  as 'a
-type nonrec t = (< a ;u: int   >  -> unit, [ `Has_arity1 ]) function$
-type nonrec t = ((< a ;u: int   >  as 'a) -> unit, [ `Has_arity1 ]) function$
-type nonrec t =
-  (< a ;u: int   >  -> < a ;v: int   >  -> unit, [ `Has_arity2 ]) function$
+type nonrec t = < a ;u: int   >  -> unit (a:1)
+type nonrec t = (< a ;u: int   >  as 'a) -> unit (a:1)
+type nonrec t = < a ;u: int   >  -> < a ;v: int   >  -> unit (a:2)
 type nonrec user = < name: string   > 
 let (steve : < user ;age: int   > ) =
   [%obj { name = {js|Steve|js}; age = 30 }]
@@ -15,24 +14,18 @@ let steve =
 let steve =
   ((([%obj { name = {js|Steve|js}; age = 30 }] : < user ;age: int   > ))
   [@res.braces ])
-let printFullUser =
-  Function$ (fun [arity:1](steve : < user ;age: int   > ) -> Js.log steve)
-let printFullUser =
-  Function$
-    (fun [arity:1]~user:(((user : < user ;age: int   > ))[@res.namedArgLoc ])
-       -> Js.log steve)
-let printFullUser =
-  Function$
-    (fun [arity:1]~user:(((user : < user ;age: int   > ))[@res.namedArgLoc ])
-       -> Js.log steve)
-let printFullUser =
-  Function$
-    (fun [arity:1]?user:(((user)[@res.namedArgLoc ])=
-       (steve : < user ;age: int   > )) -> Js.log steve)
+let printFullUser [arity:1](steve : < user ;age: int   > ) = Js.log steve
+let printFullUser
+  [arity:1]~user:(((user : < user ;age: int   > ))[@res.namedArgLoc ])  =
+  Js.log steve
+let printFullUser
+  [arity:1]~user:(((user : < user ;age: int   > ))[@res.namedArgLoc ])  =
+  Js.log steve
+let printFullUser [arity:1]?user:(((user)[@res.namedArgLoc ])=
+  (steve : < user ;age: int   > ))  = Js.log steve
 external steve : < user ;age: int   >  = "steve"[@@val ]
-let makeCeoOf30yearsOld =
-  Function$
-    (fun [arity:1]name -> ([%obj { name; age = 30 }] : < user ;age: int   > ))
+let makeCeoOf30yearsOld [arity:1]name =
+  ([%obj { name; age = 30 }] : < user ;age: int   > )
 type nonrec optionalUser = < user ;age: int   >  option
 type nonrec optionalTupleUser =
   (< user ;age: int   >  * < user ;age: int   > ) option

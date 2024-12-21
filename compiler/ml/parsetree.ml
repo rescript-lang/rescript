@@ -76,7 +76,7 @@ and core_type = {
 and core_type_desc =
   | Ptyp_any (*  _ *)
   | Ptyp_var of string (* 'a *)
-  | Ptyp_arrow of arg_label * core_type * core_type
+  | Ptyp_arrow of arg_label * core_type * core_type * arity
     (* T1 -> T2       Simple
        ~l:T1 -> T2    Labelled
        ?l:T1 -> T2    Optional
@@ -224,8 +224,7 @@ and expression_desc =
     (* let P1 = E1 and ... and Pn = EN in E       (flag = Nonrecursive)
        let rec P1 = E1 and ... and Pn = EN in E   (flag = Recursive)
     *)
-  | Pexp_fun of
-      arg_label * expression option * pattern * expression * int option
+  | Pexp_fun of arg_label * expression option * pattern * expression * arity
     (* fun P -> E1                          (Simple, None)
        fun ~l:P -> E1                       (Labelled l, None)
        fun ?l:P -> E1                       (Optional l, None)

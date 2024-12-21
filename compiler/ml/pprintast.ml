@@ -247,9 +247,9 @@ and core_type ctxt f x =
       (attributes ctxt) x.ptyp_attributes
   end
   else match x.ptyp_desc with
-    | Ptyp_arrow (l, ct1, ct2) ->
-        pp f "@[<2>%a@;->@;%a@]" (* FIXME remove parens later *)
-          (type_with_label ctxt) (l,ct1) (core_type ctxt) ct2
+    | Ptyp_arrow (l, ct1, ct2, a) ->
+        pp f "@[<2>%a@;->@;%a%s@]" (* FIXME remove parens later *)
+          (type_with_label ctxt) (l,ct1) (core_type ctxt) ct2 (match a with | None -> "" | Some n -> " (a:" ^ string_of_int n ^ ")")
     | Ptyp_alias (ct, s) ->
         pp f "@[<2>%a@;as@;'%s@]" (core_type1 ctxt) ct s
     | Ptyp_poly ([], ct) ->
@@ -954,7 +954,7 @@ and binding ctxt f {pvb_pat=p; pvb_expr=x; _} =
       | Pexp_fun (label, eo, p, e, arity) ->
           let arity_str = match arity with
             | None -> ""
-            | Some arity -> "arity:" ^ string_of_int arity
+            | Some arity -> "[arity:" ^ string_of_int arity ^ "]"
           in
           if label=Nolabel then
             pp f "%s%a@ %a" arity_str (simple_pattern ctxt) p pp_print_pexp_function e

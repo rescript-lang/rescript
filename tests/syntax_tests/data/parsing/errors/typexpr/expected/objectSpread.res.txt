@@ -30,4 +30,4 @@ type nonrec u = private {
 type nonrec x =
   | Type of < a ;u: int   >  
 type nonrec u = < a ;u: int  ;v: int   > 
-let f = Function$ (fun [arity:1](x : < a: int  ;b: int   > ) -> ())
+let f [arity:1](x : < a: int  ;b: int   > ) = ()

@@ -2,5 +2,5 @@ module type StandaloneAttribute  =
   sig
     [@@@standaloneAttribute ]
     [@@@standaloneAttribute withPayload]
-    [@@@standaloneAttribute Function$ (fun [arity:1]x -> x)]
+    [@@@standaloneAttribute fun [arity:1]x -> x]
   end

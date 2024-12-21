@@ -33,7 +33,7 @@ let to_method_callback_type loc (mapper : Bs_ast_mapper.mapper)
     (typ : Parsetree.core_type) =
   let first_arg = mapper.typ mapper first_arg in
   let typ = mapper.typ mapper typ in
-  let meth_type = Typ.arrow ~loc label first_arg typ in
+  let meth_type = Typ.arrow ~loc ~arity:None label first_arg typ in
   let arity = Ast_core_type.get_uncurry_arity meth_type in
   match arity with
   | Some n ->
@@ -57,8 +57,14 @@ let to_uncurry_type loc (mapper : Bs_ast_mapper.mapper)
   let first_arg = mapper.typ mapper first_arg in
   let typ = mapper.typ mapper typ in
 
-  let fn_type = Typ.arrow ~loc label first_arg typ in
+  let fn_type = Typ.arrow ~loc ~arity:None label first_arg typ in
   let arity = Ast_core_type.get_uncurry_arity fn_type in
+  let fn_type =
+    match fn_type.ptyp_desc with
+    | Ptyp_arrow (l, t1, t2, _) ->
+      {fn_type with ptyp_desc = Ptyp_arrow (l, t1, t2, arity)}
+    | _ -> assert false
+  in
   match arity with
-  | Some arity -> Ast_uncurried.uncurried_type ~loc ~arity fn_type
+  | Some arity -> Ast_uncurried.uncurried_type ~arity fn_type
   | None -> assert false

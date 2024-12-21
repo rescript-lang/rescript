@@ -21,4 +21,4 @@ let x = a -. b
 let _ = ((Constructor (a, b); `Constructor (a, b))[@res.braces ])
 ;;(library.getBalance account) |.u
     (Promise.Js.catch
-       (Function$ (fun [arity:1]_ -> ((Promise.resolved None)[@res.braces ]))))
+       (fun [arity:1]_ -> ((Promise.resolved None)[@res.braces ])))

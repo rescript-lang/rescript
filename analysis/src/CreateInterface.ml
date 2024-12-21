@@ -118,13 +118,13 @@ let printSignature ~extractor ~signature =
 
   let buf = Buffer.create 10 in
 
-  let rec getComponentType (typ : Types.type_expr) =
+  let getComponentType (typ : Types.type_expr) =
     let reactElement =
       Ctype.newconstr (Pdot (Pident (Ident.create "React"), "element", 0)) []
     in
     match typ.desc with
-    | Tconstr (Pident {name = "function$"}, [typ; _], _) -> getComponentType typ
-    | Tarrow (_, {desc = Tconstr (Path.Pident propsId, typeArgs, _)}, retType, _)
+    | Tarrow
+        (_, {desc = Tconstr (Path.Pident propsId, typeArgs, _)}, retType, _, _)
       when Ident.name propsId = "props" ->
       Some (typeArgs, retType)
     | Tconstr
@@ -173,14 +173,17 @@ let printSignature ~extractor ~signature =
               if labelDecl.ld_optional then Asttypes.Optional lblName
               else Labelled lblName
             in
-            {retType with desc = Tarrow (lbl, propType, mkFunType rest, Cok)}
+            {
+              retType with
+              desc = Tarrow (lbl, propType, mkFunType rest, Cok, None);
+            }
         in
         let funType =
           if List.length labelDecls = 0 (* No props *) then
             let tUnit =
               Ctype.newconstr (Path.Pident (Ident.create "unit")) []
             in
-            {retType with desc = Tarrow (Nolabel, tUnit, retType, Cok)}
+            {retType with desc = Tarrow (Nolabel, tUnit, retType, Cok, None)}
           else mkFunType labelDecls
         in
         sigItemToString

@@ -1,11 +1,8 @@
-let makeSet (type s) =
-  Function$
-    (fun [arity:1]cmp ->
-       ((let module S =
-           (Set.Make)(struct type nonrec t = s
-                             let compare = cmp end) in ((module
-           S) : (module Set.S with type elt = s)))
-       [@res.braces ]))
+let makeSet (type s) [arity:1]cmp =
+  ((let module S = (Set.Make)(struct type nonrec t = s
+                                     let compare = cmp end) in ((module
+      S) : (module Set.S with type elt = s)))
+  [@res.braces ])
 let three = ((module Three) : (module X_int))
 let numbers = [|three;(module Four)|]
 let numbers = (three, (module Four))
@@ -13,52 +10,37 @@ let numbers = [three; (module Four)]
 let numbers = [|three;(module struct let x = 4 end)|]
 let numbers = (three, (module struct let x = 4 end))
 let numbers = [three; (module struct let x = 4 end)]
-let plus =
-  Function$
-    (fun [arity:2]m1 ->
-       fun m2 -> ((((module
-         struct let x = (to_int m1) + (to_int m2) end) : (module X_int)))
-         [@res.braces ]))
-let plus =
-  Function$
-    (fun [arity:2]m1 ->
-       fun m2 -> ((module
-         struct let x = (to_int m1) + (to_int m2) end) : (module X_int)))
+let plus [arity:2]m1 m2 = ((((module
+  struct let x = (to_int m1) + (to_int m2) end) : (module X_int)))
+  [@res.braces ])
+let plus [arity:2]m1 m2 = ((module
+  struct let x = (to_int m1) + (to_int m2) end) : (module X_int))
 let unique_instance = ((module
   struct module Query_handler = Unique
          let this = Unique.create 0 end) : (module Query_handler_instance))
-let build_instance (type a) =
-  Function$
-    (fun [arity:2]((module Q)  : (module Query_handler with type config = a))
-       ->
-       fun config -> ((module
-         struct module Query_handler = Q
-                let this = Q.create config end) : (module
-                                                    Query_handler_instance)))
-let build_instance (type a) =
-  Function$
-    (fun [arity:2]((module Q)  : (module Query_handler with type config = a))
-       ->
-       fun config -> ((((module
-         struct module Query_handler = Q
-                let this = Q.create config end) : (module
-                                                    Query_handler_instance)))
-         [@res.braces ]))
+let build_instance (type a)
+  [arity:2]((module Q)  : (module Query_handler with type config = a)) config
+  = ((module
+  struct module Query_handler = Q
+         let this = Q.create config end) : (module Query_handler_instance))
+let build_instance (type a)
+  [arity:2]((module Q)  : (module Query_handler with type config = a)) config
+  = ((((module
+  struct module Query_handler = Q
+         let this = Q.create config end) : (module Query_handler_instance)))
+  [@res.braces ])
 let unique_instance = build_instance (module Unique) 0
-let build_dispatch_table =
-  Function$
-    (fun [arity:1]handlers ->
-       ((let table = Hashtbl.create (module String) in
-         List.iter handlers
-           ~f:((Function$
-                  (fun
-                     [arity:1](((module I)  :
-                                 (module Query_handler_instance)) as instance)
-                     ->
-                     Hashtbl.set table ~key:((I.Query_handler.name)
-                       [@res.namedArgLoc ]) ~data:((instance)
-                       [@res.namedArgLoc ])))[@res.namedArgLoc ]) table)
-       [@res.braces ]))
+let build_dispatch_table [arity:1]handlers =
+  ((let table = Hashtbl.create (module String) in
+    List.iter handlers
+      ~f:((fun
+             [arity:1](((module I)  : (module Query_handler_instance)) as
+                         instance)
+             ->
+             Hashtbl.set table ~key:((I.Query_handler.name)
+               [@res.namedArgLoc ]) ~data:((instance)[@res.namedArgLoc ]))
+      [@res.namedArgLoc ]) table)
+  [@res.braces ])
 ;;(module Three)
 ;;((module Three) : (module X_int))
 ;;(module Teenager).(0)

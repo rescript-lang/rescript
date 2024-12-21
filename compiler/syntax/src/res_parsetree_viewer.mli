@@ -2,8 +2,7 @@
    * The parsetree contains: a => b => c => d, for printing purposes
    * we restructure the tree into (a, b, c) and its returnType d *)
 val arrow_type :
-  ?arity:int ->
-  ?attrs:Parsetree.attributes ->
+  ?max_arity:int ->
   Parsetree.core_type ->
   Parsetree.attributes
   * (Parsetree.attributes * Asttypes.arg_label * Parsetree.core_type) list
@@ -61,7 +60,7 @@ type fun_param_kind =
 
 val fun_expr :
   Parsetree.expression ->
-  bool * Parsetree.attributes * fun_param_kind list * Parsetree.expression
+  Parsetree.attributes * fun_param_kind list * Parsetree.expression
 
 (* example:
    *  `makeCoordinate({

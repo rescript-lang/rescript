@@ -8,4 +8,4 @@
 
   Did you forget a `]` here?
 
-let xs = x.map (Function$ (fun [arity:1]key -> [|key;(predicates.(key))|]))
+let xs = x.map (fun [arity:1]key -> [|key;(predicates.(key))|])

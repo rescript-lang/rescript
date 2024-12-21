@@ -14,42 +14,30 @@ module F() = Map
 module F = ((functor () -> Map)[@functorAttr ])
 include functor () -> Map
 include ((functor () -> Map)[@functorAttr ])
-module Make(Cmp:sig
-                  type nonrec t
-                  val eq : (t -> t -> bool, [ `Has_arity2 ]) function$
-                end) :
+module Make(Cmp:sig type nonrec t val eq : t -> t -> bool (a:2) end) :
   sig
     type nonrec key = Cmp.t
     type nonrec coll
     val empty : coll
-    val add : (coll -> key -> coll, [ `Has_arity2 ]) function$
+    val add : coll -> key -> coll (a:2)
   end =
   struct
     open Cmp
     type nonrec key = t
     type nonrec coll = key list
     let empty = []
-    let add =
-      Function$
-        (fun [arity:2](y : coll) ->
-           fun (e : key) ->
-             if List.exists (Function$ (fun [arity:1]x -> eq x e)) y
-             then y
-             else e :: y)
+    let add [arity:2](y : coll) (e : key) =
+      if List.exists (fun [arity:1]x -> eq x e) y then y else e :: y
   end 
 module Gen1(P:Primitive)() =
   struct
     type nonrec t = P.t
     type nonrec internal = P.t
-    let inject = Function$ (fun [arity:1]t -> t)
+    let inject [arity:1]t = t
   end
 module DistinctString() : StringBased =
-  struct
-    type nonrec t = string
-    let inject = Function$ (fun [arity:1]t -> t)
-  end 
+  struct type nonrec t = string
+         let inject [arity:1]t = t end 
 module DistinctString() : StringBased =
-  struct
-    type nonrec t = string
-    let inject = Function$ (fun [arity:1]t -> t)
-  end 
+  struct type nonrec t = string
+         let inject [arity:1]t = t end 

@@ -383,7 +383,7 @@ end = struct
     (match ct.ctyp_desc with
     | Ttyp_any -> ()
     | Ttyp_var _ -> ()
-    | Ttyp_arrow (_label, ct1, ct2) ->
+    | Ttyp_arrow (_label, ct1, ct2, _) ->
       iter_core_type ct1;
       iter_core_type ct2
     | Ttyp_tuple list -> List.iter iter_core_type list

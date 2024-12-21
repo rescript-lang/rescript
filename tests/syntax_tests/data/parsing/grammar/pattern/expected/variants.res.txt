@@ -31,24 +31,19 @@ let ((`Instance (component : comp)) : React.t) = i
   | `Instance ({ render; subtree } : Instance.t) -> ()
   | `Instance (comp, tree) -> ()
   | (`Instance (comp : Component.t) : React.t) -> ()
-let f = Function$ (fun [arity:1]`Instance -> i)
-let f = Function$ (fun [arity:1](`Instance as i) -> i)
-let f = Function$ (fun [arity:1](`Instance component) -> i)
-let f = Function$ (fun [arity:1](`Instance component) -> i)
-let f = Function$ (fun [arity:1](`Instance { render; subtree }) -> i)
-let f = Function$ (fun [arity:1](`Instance ({ render; subtree }, inst)) -> i)
-let f =
-  Function$
-    (fun [arity:1](`Instance ({ render; subtree } : Instance.t)) -> i)
-let f =
-  Function$
-    (fun [arity:1](`Instance ({ render; subtree } : Instance.t)) -> i)
-let f = Function$ (fun [arity:1](`Instance (component, tree)) -> i)
-let f = Function$ (fun [arity:1](`Instance (component, tree)) -> i)
-let f = Function$ (fun [arity:1](`Instance : React.t) -> i)
-let f = Function$ (fun [arity:1](`Instance : React.t) -> i)
-let f =
-  Function$ (fun [arity:1](`Instance (comp : Component.t) : React.t) -> ())
+let f [arity:1]`Instance = i
+let f [arity:1](`Instance as i) = i
+let f [arity:1](`Instance component) = i
+let f [arity:1](`Instance component) = i
+let f [arity:1](`Instance { render; subtree }) = i
+let f [arity:1](`Instance ({ render; subtree }, inst)) = i
+let f [arity:1](`Instance ({ render; subtree } : Instance.t)) = i
+let f [arity:1](`Instance ({ render; subtree } : Instance.t)) = i
+let f [arity:1](`Instance (component, tree)) = i
+let f [arity:1](`Instance (component, tree)) = i
+let f [arity:1](`Instance : React.t) = i
+let f [arity:1](`Instance : React.t) = i
+let f [arity:1](`Instance (comp : Component.t) : React.t) = ()
 ;;for `Blue = x to y do () done
 ;;for `Blue as c = x to y do () done
 ;;for `Blue = x to y do () done

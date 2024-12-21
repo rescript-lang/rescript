@@ -9,21 +9,11 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.org/package/rescript">
-    <img src="https://img.shields.io/npm/v/rescript?color=brightgreen&label=npm%20package" alt="Current npm package version." />
-  </a>
-  <a href="https://github.com/rescript-lang/rescript-compiler/actions">
-    <img src="https://github.com//rescript-lang/rescript-compiler/workflows/CI/badge.svg" alt="Current Github Actions workflow status." />
-  </a>
-  <a href="https://github.com/rescript-lang/rescript-compiler/blob/HEAD/LICENSE">
-    <img src="https://img.shields.io/badge/License-LGPL%20v3-blue.svg" alt="ReScript is released under the LGPL license." />
-  </a>
-  <a href="https://x.com/intent/follow?screen_name=rescriptlang">
-    <img src="https://img.shields.io/badge/X-000000?style=flat&logo=x&logoColor=white" alt="Follow @rescriptlang on X" />
-  </a>
-  <a href="https://bsky.app/profile/rescript-lang.org">
-    <img src="https://img.shields.io/badge/Bluesky-0285FF?logo=bluesky&logoColor=fff&style=flat" alt="Follow @rescriptlang on Bluesky" />
-  </a>
+  <a href="https://www.npmjs.org/package/rescript"><img src="https://img.shields.io/npm/v/rescript?color=brightgreen&label=npm%20package" alt="Current npm package version." /></a>
+  <a href="https://github.com/rescript-lang/rescript/actions"><img src="https://github.com//rescript-lang/rescript/workflows/CI/badge.svg" alt="Current Github Actions workflow status." /></a>
+  <a href="https://github.com/rescript-lang/rescript/blob/HEAD/LICENSE"><img src="https://img.shields.io/badge/License-LGPL%20v3-blue.svg" alt="ReScript is released under the LGPL license." /></a>
+  <a href="https://x.com/intent/follow?screen_name=rescriptlang"><img src="https://img.shields.io/badge/X-000000?style=flat&logo=x&logoColor=white" alt="Follow @rescriptlang on X" /></a>
+  <a href="https://bsky.app/profile/rescript-lang.org"><img src="https://img.shields.io/badge/Bluesky-0285FF?logo=bluesky&logoColor=fff&style=flat" alt="Follow @rescriptlang on Bluesky" /></a>
 </p>
 
 <h3 align="center">

@@ -528,7 +528,7 @@ let process_underscore_application args =
       let fun_expr =
         Ast_helper.Exp.fun_ ~loc ~arity:(Some 1) Nolabel None pattern exp_apply
       in
-      Ast_uncurried.uncurried_fun ~loc ~arity:1 fun_expr
+      Ast_uncurried.uncurried_fun ~arity:1 fun_expr
     | None -> exp_apply
   in
   (args, wrap)
@@ -1600,9 +1600,7 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
               expr
           in
           if term_param_num = 1 then
-            ( term_param_num - 1,
-              Ast_uncurried.uncurried_fun ~loc ~arity fun_expr,
-              1 )
+            (term_param_num - 1, Ast_uncurried.uncurried_fun ~arity fun_expr, 1)
           else (term_param_num - 1, fun_expr, arity + 1)
         | TypeParameter {attrs; locs = newtypes; pos = start_pos} ->
           ( term_param_num,
@@ -4073,10 +4071,8 @@ and parse_poly_type_expr p =
         let typ = Ast_helper.Typ.var ~loc:var.loc var.txt in
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc typ.Parsetree.ptyp_loc.loc_start p.prev_end_pos in
-        let t_fun =
-          Ast_helper.Typ.arrow ~loc Asttypes.Nolabel typ return_type
-        in
-        Ast_uncurried.uncurried_type ~loc ~arity:1 t_fun
+        Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Asttypes.Nolabel typ
+          return_type
       | _ -> Ast_helper.Typ.var ~loc:var.loc var.txt)
     | _ -> assert false)
   | _ -> parse_typ_expr p
@@ -4399,7 +4395,7 @@ and parse_es6_arrow_type ~attrs p =
     Parser.expect EqualGreater p;
     let return_type = parse_typ_expr ~alias:false p in
     let loc = mk_loc start_pos p.prev_end_pos in
-    Ast_helper.Typ.arrow ~loc ~attrs arg typ return_type
+    Ast_helper.Typ.arrow ~loc ~attrs ~arity:None arg typ return_type
   | DocComment _ -> assert false
   | _ ->
     let parameters = parse_type_parameters p in
@@ -4427,9 +4423,11 @@ and parse_es6_arrow_type ~attrs p =
               else arity
             | _ -> arity
           in
-          let t_arg = Ast_helper.Typ.arrow ~loc ~attrs arg_lbl typ t in
+          let t_arg =
+            Ast_helper.Typ.arrow ~loc ~attrs ~arity:None arg_lbl typ t
+          in
           if param_num = 1 then
-            (param_num - 1, Ast_uncurried.uncurried_type ~loc ~arity t_arg, 1)
+            (param_num - 1, Ast_uncurried.uncurried_type ~arity t_arg, 1)
           else (param_num - 1, t_arg, arity + 1))
         parameters
         (List.length parameters, return_type, return_type_arity + 1)
@@ -4486,10 +4484,7 @@ and parse_arrow_type_rest ~es6_arrow ~start_pos typ p =
     Parser.next p;
     let return_type = parse_typ_expr ~alias:false p in
     let loc = mk_loc start_pos p.prev_end_pos in
-    let arrow_typ =
-      Ast_helper.Typ.arrow ~loc Asttypes.Nolabel typ return_type
-    in
-    Ast_uncurried.uncurried_type ~loc ~arity:1 arrow_typ
+    Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Asttypes.Nolabel typ return_type
   | _ -> typ
 
 and parse_typ_expr_region p =
@@ -5096,12 +5091,9 @@ and parse_type_equation_or_constr_decl p =
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc uident_start_pos p.prev_end_pos in
         let arrow_type =
-          Ast_helper.Typ.arrow ~loc Asttypes.Nolabel typ return_type
+          Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Asttypes.Nolabel typ
+            return_type
         in
-        let arrow_type =
-          Ast_uncurried.uncurried_type ~loc ~arity:1 arrow_type
-        in
-
         let typ = parse_type_alias p arrow_type in
         (Some typ, Asttypes.Public, Parsetree.Ptype_abstract)
       | _ -> (Some typ, Asttypes.Public, Parsetree.Ptype_abstract))

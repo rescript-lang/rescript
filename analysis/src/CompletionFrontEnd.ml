@@ -1093,7 +1093,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
           (* Ignore list expressions, used in JSX, unit, and more *) ()
         | Pexp_construct (lid, eOpt) -> (
           let lidPath = flattenLidCheckDot lid in
-          if debug && lid.txt <> Lident "Function$" then
+          if debug then
             Printf.printf "Pexp_construct %s:%s %s\n"
               (lidPath |> String.concat "\n")
               (Loc.toString lid.loc)

@@ -99,10 +99,29 @@ module T = struct
     | Ptyp_any -> any ~loc ~attrs ()
     | Ptyp_var s -> var ~loc ~attrs s
     | Ptyp_arrow (lab, t1, t2) ->
-      arrow ~loc ~attrs lab (sub.typ sub t1) (sub.typ sub t2)
+      arrow ~loc ~attrs ~arity:None lab (sub.typ sub t1) (sub.typ sub t2)
     | Ptyp_tuple tyl -> tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
-    | Ptyp_constr (lid, tl) ->
-      constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
+    | Ptyp_constr (lid, tl) -> (
+      let typ0 =
+        constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
+      in
+      match typ0.ptyp_desc with
+      | Ptyp_constr
+          (lid, [({ptyp_desc = Ptyp_arrow (lbl, t1, t2, _)} as fun_t); t_arity])
+        when lid.txt = Lident "function$" ->
+        let decode_arity_string arity_s =
+          int_of_string
+            ((String.sub [@doesNotRaise]) arity_s 9 (String.length arity_s - 9))
+        in
+        let arity_from_type (typ : Parsetree.core_type) =
+          match typ.ptyp_desc with
+          | Ptyp_variant ([Rtag ({txt}, _, _, _)], _, _) ->
+            decode_arity_string txt
+          | _ -> assert false
+        in
+        let arity = arity_from_type t_arity in
+        {fun_t with ptyp_desc = Ptyp_arrow (lbl, t1, t2, Some arity)}
+      | _ -> typ0)
     | Ptyp_object (l, o) ->
       object_ ~loc ~attrs (List.map (object_field sub) l) o
     | Ptyp_class () -> assert false
@@ -321,14 +340,7 @@ module E = struct
         match arg1 with
         | Some ({pexp_desc = Pexp_fun (l, eo, p, e, _)} as e1) ->
           let arity = attributes_to_arity attrs in
-          {
-            e1 with
-            pexp_desc =
-              Pexp_construct
-                ( lid1,
-                  Some {e with pexp_desc = Pexp_fun (l, eo, p, e, Some arity)}
-                );
-          }
+          {e1 with pexp_desc = Pexp_fun (l, eo, p, e, Some arity)}
         | _ -> exp1)
       | _ -> exp1)
     | Pexp_variant (lab, eo) ->

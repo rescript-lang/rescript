@@ -1,88 +1,55 @@
-let f = Function$ (fun [arity:1]x -> x + 1)
-let f = Function$ (fun [arity:1]_ -> Js.log {js|test|js})
-let f = Function$ (fun [arity:1]() -> Js.log {js|unit|js})
-let f = Function$ (fun [arity:1](Reducer (inst, comp)) -> inst.render comp)
-let f = Function$ (fun [arity:1](Instance) -> ())
-let f = Function$ (fun [arity:2]a -> fun b -> a + b)
-let f = Function$ (fun [arity:2]1 -> fun 2 -> ())
-let f = Function$ (fun [arity:1]{js|stringPattern|js} -> ())
-let f =
-  Function$
-    (fun [arity:2]{js|stringPattern|js} -> fun {js|stringPattern|js} -> ())
-let f = Function$ (fun [arity:1]() -> ())
-let f = Function$ (fun [arity:2](a : int) -> fun (b : int) -> a + b)
-let f = Function$ (fun [arity:2]_ -> fun _ -> ())
-let f = Function$ (fun [arity:2][|a;b|] -> fun [|c;d|] -> ((a + b) + c) + d)
-let f = Function$ (fun [arity:1]{ a } -> a + 1)
-let f =
-  Function$ (fun [arity:2]{ a; b } -> fun { c; d } -> ((a + b) + c) + d)
-let f = Function$ (fun [arity:1](a, b) -> a + b)
-let f = Function$ (fun [arity:2](a, b) -> fun (c, d) -> ((a + b) + c) + d)
-let f = Function$ (fun [arity:1]exception Terminate -> ())
-let f =
-  Function$ (fun [arity:2]exception Terminate -> fun exception Exit -> ())
-let f = Function$ (fun [arity:1][] -> ())
-let f = Function$ (fun [arity:1](x::xs) -> x + (xs |.u Belt.List.length))
-let f = Function$ (fun [arity:2](x : int) -> fun (y : int) -> x + y)
-let f =
-  Function$
-    (fun [arity:2]~a:((a)[@res.namedArgLoc ]) ->
-       fun ~b:((b)[@res.namedArgLoc ]) -> a + b)
-let f =
-  Function$
-    (fun [arity:2]~a:((x)[@res.namedArgLoc ]) ->
-       fun ~b:((y)[@res.namedArgLoc ]) -> x + y)
-let f =
-  Function$
-    (fun [arity:2]~a:(((x : int))[@res.namedArgLoc ]) ->
-       fun ~b:(((y : int))[@res.namedArgLoc ]) -> x + y)
-let f =
-  Function$
-    (fun [arity:3]?a:(((a)[@res.namedArgLoc ])= 1) ->
-       fun ?b:(((b)[@res.namedArgLoc ])= 2) -> fun c -> (a + b) + c)
-let f =
-  Function$
-    (fun [arity:3]?a:(((x)[@res.namedArgLoc ])= 1) ->
-       fun ?b:(((y)[@res.namedArgLoc ])= 2) -> fun c -> (x + y) + c)
-let f =
-  Function$
-    (fun [arity:3]?a:((((x : int))[@res.namedArgLoc ])= 1) ->
-       fun ?b:((((y : int))[@res.namedArgLoc ])= 2) -> fun c -> (x + y) + c)
-let f =
-  Function$
-    (fun [arity:3]?a:((a)[@res.namedArgLoc ]) ->
-       fun ?b:((b)[@res.namedArgLoc ]) ->
-         fun c ->
-           match (a, b) with | (Some a, Some b) -> (a + b) + c | _ -> 3)
-let f =
-  Function$
-    (fun [arity:3]?a:((x)[@res.namedArgLoc ]) ->
-       fun ?b:((y)[@res.namedArgLoc ]) ->
-         fun c ->
-           match (x, y) with | (Some a, Some b) -> (a + b) + c | _ -> 3)
-let f =
-  Function$
-    (fun [arity:3]?a:(((x : int option))[@res.namedArgLoc ]) ->
-       fun ?b:(((y : int option))[@res.namedArgLoc ]) ->
-         fun c ->
-           match (x, y) with | (Some a, Some b) -> (a + b) + c | _ -> 3)
-let f = Function$ (fun [arity:2]a -> fun b -> a + b)
-let f = Function$ (fun [arity:1]() -> ())
-let f = Function$ (fun [arity:1]() -> ())
-let f = Function$ (fun [arity:3]a -> fun b -> fun c -> ())
-let f = Function$ (fun [arity:4]a -> fun b -> fun c -> fun d -> ())
-let f = Function$ (fun [arity:3]a -> fun b -> fun c -> ())
-let f =
-  Function$
-    (fun [arity:4]~a:((a)[@res.namedArgLoc ][@attr ]) ->
-       fun b -> fun ~c:((c)[@res.namedArgLoc ][@attr ]) -> fun d -> ())
-let f =
-  Function$
-    (fun [arity:4]~a:((a)[@res.namedArgLoc ][@attr ]) ->
-       fun ((b)[@attrOnB ]) ->
-         fun ~c:((c)[@res.namedArgLoc ][@attr ]) ->
-           fun ((d)[@attrOnD ]) -> ())
-let f = Function$ (fun [arity:1]list -> list ())
+let f [arity:1]x = x + 1
+let f [arity:1]_ = Js.log {js|test|js}
+let f [arity:1]() = Js.log {js|unit|js}
+let f [arity:1](Reducer (inst, comp)) = inst.render comp
+let f [arity:1](Instance) = ()
+let f [arity:2]a b = a + b
+let f [arity:2]1 2 = ()
+let f [arity:1]{js|stringPattern|js} = ()
+let f [arity:2]{js|stringPattern|js} {js|stringPattern|js} = ()
+let f [arity:1]() = ()
+let f [arity:2](a : int) (b : int) = a + b
+let f [arity:2]_ _ = ()
+let f [arity:2][|a;b|] [|c;d|] = ((a + b) + c) + d
+let f [arity:1]{ a } = a + 1
+let f [arity:2]{ a; b } { c; d } = ((a + b) + c) + d
+let f [arity:1](a, b) = a + b
+let f [arity:2](a, b) (c, d) = ((a + b) + c) + d
+let f [arity:1]exception Terminate = ()
+let f [arity:2]exception Terminate exception Exit = ()
+let f [arity:1][] = ()
+let f [arity:1](x::xs) = x + (xs |.u Belt.List.length)
+let f [arity:2](x : int) (y : int) = x + y
+let f [arity:2]~a:((a)[@res.namedArgLoc ])  ~b:((b)[@res.namedArgLoc ])  =
+  a + b
+let f [arity:2]~a:((x)[@res.namedArgLoc ])  ~b:((y)[@res.namedArgLoc ])  =
+  x + y
+let f [arity:2]~a:(((x : int))[@res.namedArgLoc ]) 
+  ~b:(((y : int))[@res.namedArgLoc ])  = x + y
+let f [arity:3]?a:(((a)[@res.namedArgLoc ])= 1) 
+  ?b:(((b)[@res.namedArgLoc ])= 2)  c = (a + b) + c
+let f [arity:3]?a:(((x)[@res.namedArgLoc ])= 1) 
+  ?b:(((y)[@res.namedArgLoc ])= 2)  c = (x + y) + c
+let f [arity:3]?a:((((x : int))[@res.namedArgLoc ])= 1) 
+  ?b:((((y : int))[@res.namedArgLoc ])= 2)  c = (x + y) + c
+let f [arity:3]?a:((a)[@res.namedArgLoc ])  ?b:((b)[@res.namedArgLoc ])  c =
+  match (a, b) with | (Some a, Some b) -> (a + b) + c | _ -> 3
+let f [arity:3]?a:((x)[@res.namedArgLoc ])  ?b:((y)[@res.namedArgLoc ])  c =
+  match (x, y) with | (Some a, Some b) -> (a + b) + c | _ -> 3
+let f [arity:3]?a:(((x : int option))[@res.namedArgLoc ]) 
+  ?b:(((y : int option))[@res.namedArgLoc ])  c =
+  match (x, y) with | (Some a, Some b) -> (a + b) + c | _ -> 3
+let f [arity:2]a b = a + b
+let f [arity:1]() = ()
+let f [arity:1]() = ()
+let f [arity:3]a b c = ()
+let f [arity:4]a b c d = ()
+let f [arity:3]a b c = ()
+let f [arity:4]~a:((a)[@res.namedArgLoc ][@attr ])  b
+  ~c:((c)[@res.namedArgLoc ][@attr ])  d = ()
+let f [arity:4]~a:((a)[@res.namedArgLoc ][@attr ])  ((b)[@attrOnB ])
+  ~c:((c)[@res.namedArgLoc ][@attr ])  ((d)[@attrOnD ]) = ()
+let f [arity:1]list = list ()
 ;;match colour with
   | Red when
       (l = l') ||
@@ -91,33 +58,30 @@ let f = Function$ (fun [arity:1]list -> list ())
       -> (t1, t2)
   | _ -> ()
 let arr =
-  [|(Function$ ((fun [arity:1]_ -> doThings ())));(Function$
-                                                     ((fun [arity:1]_ ->
-                                                         doThings ())));(
-    Function$ ((fun [arity:1]_ -> doThings ())))|]
+  [|((fun [arity:1]_ -> doThings ()));((fun [arity:1]_ -> doThings ()));((
+    fun [arity:1]_ -> doThings ()))|]
 let list =
-  [Function$ ((fun [arity:1]_ -> doThings ()));
-  Function$ ((fun [arity:1]_ -> doThings ()));
-  Function$ ((fun [arity:1]_ -> doThings ()))]
+  [(fun [arity:1]_ -> doThings ());
+  (fun [arity:1]_ -> doThings ());
+  (fun [arity:1]_ -> doThings ())]
 let tuple =
-  ((Function$ (fun [arity:1]_ -> doThings ())),
-    (Function$ (fun [arity:1]_ -> doThings ())),
-    (Function$ (fun [arity:1]_ -> doThings ())))
-;;Function$ (fun [arity:1]_ -> doThings ())
+  ((fun [arity:1]_ -> doThings ()), (fun [arity:1]_ -> doThings ()),
+    (fun [arity:1]_ -> doThings ()))
+;;fun [arity:1]_ -> doThings ()
 let x =
   Constructore
-    ((Function$ (fun [arity:1]_ -> copyChecklistItemCB ())),
-      (Function$ (fun [arity:1]_ -> copyChecklistItemCB ())))
+    ((fun [arity:1]_ -> copyChecklistItemCB ()),
+      (fun [arity:1]_ -> copyChecklistItemCB ()))
 let y =
   `Constructore
-    ((Function$ (fun [arity:1]_ -> copyChecklistItemCB ())),
-      (Function$ (fun [arity:1]_ -> copyChecklistItemCB ())))
-let f = Function$ (fun [arity:1]list -> list + 1)
+    ((fun [arity:1]_ -> copyChecklistItemCB ()),
+      (fun [arity:1]_ -> copyChecklistItemCB ()))
+let f [arity:1]list = list + 1
 let foo = (() : unit)
 type nonrec u = unit
 let un = (() : u)
 type nonrec ('a, 'b) d = ('a * 'b)
-let c = Function$ (fun [arity:1]() -> ((1, 2) : ('a, 'b) d))
-let fn = Function$ (fun [arity:1]f -> f)
-type nonrec f = (int -> unit, [ `Has_arity1 ]) function$
-let a = fn (Function$ (fun [arity:1]_ -> ()) : f)
+let c [arity:1]() = ((1, 2) : ('a, 'b) d)
+let fn [arity:1]f = f
+type nonrec f = int -> unit (a:1)
+let a = fn (fun [arity:1]_ -> () : f)

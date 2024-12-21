@@ -83,7 +83,6 @@ let unary_expr_operand expr =
   match opt_braces with
   | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
   | None -> (
-    let expr = Ast_uncurried.remove_fun expr in
     match expr with
     | {Parsetree.pexp_attributes = attrs}
       when match ParsetreeViewer.filter_parsing_attrs attrs with
@@ -167,7 +166,6 @@ let rhs_binary_expr_operand parent_operator rhs =
   | _ -> false
 
 let flatten_operand_rhs parent_operator rhs =
-  let rhs = Ast_uncurried.remove_fun rhs in
   match rhs.Parsetree.pexp_desc with
   | Parsetree.Pexp_apply
       ( {
@@ -241,7 +239,6 @@ let is_negative_constant constant =
   | _ -> false
 
 let field_expr expr =
-  let expr = Ast_uncurried.remove_fun expr in
   let opt_braces, _ = ParsetreeViewer.process_braces_attr expr in
   match opt_braces with
   | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
@@ -304,7 +301,7 @@ let ternary_operand expr =
       Nothing
     | {pexp_desc = Pexp_constraint _} -> Parenthesized
     | _ when Res_parsetree_viewer.is_fun_newtype expr -> (
-      let _uncurried, _attrsOnArrow, _parameters, return_expr =
+      let _attrsOnArrow, _parameters, return_expr =
         ParsetreeViewer.fun_expr expr
       in
       match return_expr.pexp_desc with
@@ -458,8 +455,7 @@ let mod_expr_parens mod_expr =
 
 let arrow_return_typ_expr typ_expr =
   match typ_expr.Parsetree.ptyp_desc with
-  | Parsetree.Ptyp_arrow _ -> true
-  | _ when Ast_uncurried.core_type_is_uncurried_fun typ_expr -> true
+  | Ptyp_arrow _ -> true
   | _ -> false
 
 let pattern_record_row_rhs (pattern : Parsetree.pattern) =

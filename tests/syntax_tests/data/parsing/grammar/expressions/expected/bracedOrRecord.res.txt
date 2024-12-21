@@ -3,7 +3,7 @@ let r = { a }
 let r = { a = expr }
 let r = { a = expr }
 let r = { a = expr; b = expr2 }
-let r = { f = (Function$ (fun [arity:1]x -> x + b)) }
+let r = { f = (fun [arity:1]x -> x + b) }
 let e = ((a)[@res.braces ])
 let e = ((a)[@res.braces ])
 let e = ((a; b ())[@res.braces ])
@@ -16,18 +16,14 @@ let e = ((a.(0))[@res.braces ])
 let e = ((f b)[@res.braces ])
 let e = (((a.b).c)[@res.braces ])
 let e = ((arr.(x) <- 20)[@res.braces ])
-let e = ((Function$ (fun [arity:1]x -> doStuff config (x + 1)))
-  [@res.braces ])
-let e = ((doStuff config (Function$ (fun [arity:1]x -> x + 1)))
-  [@res.braces ])
-let e = ((if Function$ (fun [arity:1]x -> x + 1) then true else false)
+let e = ((fun [arity:1]x -> doStuff config (x + 1))[@res.braces ])
+let e = ((doStuff config (fun [arity:1]x -> x + 1))[@res.braces ])
+let e = ((if fun [arity:1]x -> x + 1 then true else false)
   [@res.braces ][@res.ternary ])
-let e =
-  ((sideEffect (Function$ (fun [arity:1]x -> x + 1)); logToAnalytics Shady.ml)
+let e = ((sideEffect (fun [arity:1]x -> x + 1); logToAnalytics Shady.ml)
   [@res.braces ])
-let f = ((Function$ (fun [arity:1]event -> (event.target).value))
-  [@res.braces ])
-let f = ((Function$ (fun [arity:1]event -> ((event.target).value : string)))
+let f = ((fun [arity:1]event -> (event.target).value)[@res.braces ])
+let f = ((fun [arity:1]event -> ((event.target).value : string))
   [@res.braces ])
 let x = ((let a = 1 in let b = 2 in a + b)[@res.braces ])
 ;;(([(({js|\n|js} |.u React.string)[@res.braces ])])[@JSX ])

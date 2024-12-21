@@ -15,14 +15,13 @@ let (((1 : int), (2 : int)) : (int * int)) as tup = ()
   | (((1 as p1) : int), ((2 as p2) : int)) as tup -> ()
   | (((1 : int), (2 : int)) : (int * int)) -> ()
   | (((1 : int), (2 : int)) : (int * int)) as tup -> ()
-let f = Function$ (fun [arity:1]x -> ())
-let f = Function$ (fun [arity:1]x -> ())
-let f = Function$ (fun [arity:1](x, y) -> x + y)
-let f = Function$ (fun [arity:1](((x as p1), (y as p2)) as tup) -> x + y)
-let f = Function$ (fun [arity:1]((x, y) : (int * int)) -> ())
-let f = Function$ (fun [arity:1]((x, y) : (int * int)) -> ())
-let f =
-  Function$ (fun [arity:1]((((x, y) as tup1) : (int * int)) as tup) -> ())
+let f [arity:1]x = ()
+let f [arity:1]x = ()
+let f [arity:1](x, y) = x + y
+let f [arity:1](((x as p1), (y as p2)) as tup) = x + y
+let f [arity:1]((x, y) : (int * int)) = ()
+let f [arity:1]((x, y) : (int * int)) = ()
+let f [arity:1]((((x, y) as tup1) : (int * int)) as tup) = ()
 ;;for (x, y) = 0 to 10 do () done
 ;;for (x, y) as tup = 0 to 10 do () done
 ;;for (x, y) = 0 to 10 do () done

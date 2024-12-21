@@ -17,13 +17,13 @@ let _ as _y|_ as _x = 1
   | _ as _x|_ as _x -> ()
   | (_ : unit) -> ()
   | (_ : unit)|(_ : unit) -> ()
-let f = Function$ (fun [arity:1]_ -> ())
-let f = Function$ (fun [arity:1](_ as _x) -> ())
-let f = Function$ (fun [arity:1](_ : unit) -> ())
-let f = Function$ (fun [arity:1](_ : unit) -> ())
-let f = Function$ (fun [arity:1]((_ : unit) as _x) -> ())
-let g = Function$ (fun [arity:2]a -> fun _ -> ())
-let g = Function$ (fun [arity:2]_ -> fun a -> ())
+let f [arity:1]_ = ()
+let f [arity:1](_ as _x) = ()
+let f [arity:1](_ : unit) = ()
+let f [arity:1](_ : unit) = ()
+let f [arity:1]((_ : unit) as _x) = ()
+let g [arity:2]a _ = ()
+let g [arity:2]_ a = ()
 ;;for _ = 0 to 10 do () done
 ;;for _ as _x = 0 to 10 do () done
 ;;for _ = 0 to 10 do () done

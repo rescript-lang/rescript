@@ -110,18 +110,6 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   | Pexp_constant (Pconst_integer (s, Some 'l')) ->
     {e with pexp_desc = Pexp_constant (Pconst_integer (s, None))}
   (* End rewriting *)
-  | _
-    when Ast_uncurried.expr_is_uncurried_fun e
-         &&
-         match
-           Ast_attributes.process_attributes_rev
-             (Ast_uncurried.expr_extract_uncurried_fun e).pexp_attributes
-         with
-         | Meth_callback _, _ -> true
-         | _ -> false ->
-    (* Treat @this (. x, y, z) => ... just like @this (x, y, z) => ... *)
-    let fun_expr = Ast_uncurried.expr_extract_uncurried_fun e in
-    self.expr self fun_expr
   | Pexp_newtype (s, body) ->
     let async = Ast_attributes.has_async_payload e.pexp_attributes <> None in
     let body = Ast_async.add_async_attribute ~async body in

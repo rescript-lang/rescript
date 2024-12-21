@@ -46,8 +46,8 @@ let _ = await !ref
 let _ = await f
 let _ = await %extension
 let _ = await "test"
-let _ = await (a, b) => a + b
-let _ = await async (a, b) => a + b
+let _ = await ((a, b) => a + b)
+let _ = await (async (a, b) => a + b)
 let _ = await (
   switch x {
   | A => ()

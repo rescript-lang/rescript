@@ -9,11 +9,11 @@ let ([|(1 : int);(2 : int)|] : int array) = ()
   | [|1;2|] -> ()
   | [|(1 : int);(2 : int)|] -> ()
   | ([|(1 : int);(2 : int)|] : int) -> ()
-let f = Function$ (fun [arity:1][||] -> ())
-let f = Function$ (fun [arity:1][|x|] -> ())
-let f = Function$ (fun [arity:1][|x;y|] -> x + y)
-let f = Function$ (fun [arity:1]([|x|] : int) -> ())
-let f = Function$ (fun [arity:1]([|x|] : int) -> ())
+let f [arity:1][||] = ()
+let f [arity:1][|x|] = ()
+let f [arity:1][|x;y|] = x + y
+let f [arity:1]([|x|] : int) = ()
+let f [arity:1]([|x|] : int) = ()
 ;;for [||] = 0 to 10 do () done
 ;;for [||] = 0 to 10 do () done
 ;;for [||] = 0 to 10 do () done

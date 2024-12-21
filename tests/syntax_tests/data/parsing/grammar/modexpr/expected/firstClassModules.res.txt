@@ -2,16 +2,11 @@ module Device = (val
   (((let deviceName = parseCmdline () in
      try Hashtbl.find devices deviceName with | Not_found -> exit 2)
   [@res.braces ]) : (module Device)))
-let draw_using_device =
-  Function$
-    (fun [arity:2]device_name ->
-       fun picture ->
-         ((let module Device = (val
-             (Hashtbl.find devices device_name : (module DEVICE))) in
-             Device.draw picture)
-         [@res.braces ]))
+let draw_using_device [arity:2]device_name picture =
+  ((let module Device = (val
+      (Hashtbl.find devices device_name : (module DEVICE))) in
+      Device.draw picture)
+  [@res.braces ])
 module New_three = (val (three : (module X_int)))
-let to_int =
-  Function$
-    (fun [arity:1]m -> ((let module M = (val (m : (module X_int))) in M.x)
-       [@res.braces ]))
+let to_int [arity:1]m = ((let module M = (val (m : (module X_int))) in M.x)
+  [@res.braces ])

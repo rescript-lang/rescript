@@ -13,10 +13,10 @@ let r = { expr with pexp_attributes = [||] }
 let r = { (make () : myRecord) with foo = bar }
 let r = { (make () : myRecord) with foo = bar }
 let r = { x = ?None; y = ?None; z = ?(None : tt) }
-let z = Function$ (fun [arity:1]name -> { name?; x = 3 })
-let z = Function$ (fun [arity:1]name -> { name?; x = 3 })
-let z = Function$ (fun [arity:1]name -> { name; x? })
-let zz = Function$ (fun [arity:1]name -> { name; x? })
+let z [arity:1]name = { name?; x = 3 }
+let z [arity:1]name = { name?; x = 3 }
+let z [arity:1]name = { name; x? }
+let zz [arity:1]name = { name; x? }
 let _ =
   match z with
   | { x? = None; y? = None; z? = (None : tt) } -> 11

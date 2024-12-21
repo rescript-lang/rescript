@@ -674,7 +674,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_constant cst -> Lconst (Const_base cst)
   | Texp_let (rec_flag, pat_expr_list, body) ->
     transl_let rec_flag pat_expr_list (transl_exp body)
-  | Texp_function {arg_label = _; param; case; partial} ->
+  | Texp_function {arg_label = _; arity; param; case; partial} -> (
     let async = has_async_attribute e in
     let directive =
       match extract_directive_for_fn e with
@@ -695,7 +695,23 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       }
     in
     let loc = e.exp_loc in
-    Lfunction {params; body; attr; loc}
+    let lambda = Lfunction {params; body; attr; loc} in
+    match arity with
+    | Some arity ->
+      let prim =
+        let expanded = Ctype.expand_head e.exp_env e.exp_type in
+        match (Btype.repr expanded).desc with
+        | Tarrow (Nolabel, t, _, _, _) -> (
+          match (Ctype.expand_head e.exp_env t).desc with
+          | Tconstr (Pident {name = "unit"}, [], _) -> Pjs_fn_make_unit
+          | _ -> Pjs_fn_make arity)
+        | _ -> Pjs_fn_make arity
+      in
+      Lprim
+        ( prim (* could be replaced with Opaque in the future except arity 0*),
+          [lambda],
+          loc )
+    | None -> lambda)
   | Texp_apply
       ( ({
            exp_desc = Texp_ident (_, _, {val_kind = Val_prim p});
@@ -754,10 +770,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
         Ext_list.exists e.exp_attributes (fun ({txt}, _) -> txt = "res.partial")
       in
       if uncurried_partial_app then
-        let arity_opt =
-          Ast_uncurried.uncurried_type_get_arity_opt ~env:funct.exp_env
-            funct.exp_type
-        in
+        let arity_opt = Ctype.get_arity funct.exp_env funct.exp_type in
         match arity_opt with
         | Some arity ->
           let real_args = List.filter (fun (_, x) -> Option.is_some x) oargs in
@@ -781,27 +794,6 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     with Not_constant -> Lprim (Pmakeblock Blk_tuple, ll, e.exp_loc))
   | Texp_construct ({txt = Lident "false"}, _, []) -> Lconst Const_false
   | Texp_construct ({txt = Lident "true"}, _, []) -> Lconst Const_true
-  | Texp_construct
-      ({txt = Lident "Function$"}, _, [({exp_desc = Texp_function _} as expr)])
-    ->
-    (* ReScript uncurried encoding *)
-    let loc = expr.exp_loc in
-    let lambda = transl_exp expr in
-    let arity =
-      Ast_uncurried.uncurried_type_get_arity ~env:e.exp_env e.exp_type
-    in
-    let prim =
-      match (Ctype.expand_head expr.exp_env expr.exp_type).desc with
-      | Tarrow (Nolabel, t, _, _) -> (
-        match (Ctype.expand_head expr.exp_env t).desc with
-        | Tconstr (Pident {name = "unit"}, [], _) -> Pjs_fn_make_unit
-        | _ -> Pjs_fn_make arity)
-      | _ -> Pjs_fn_make arity
-    in
-    Lprim
-      ( prim (* could be replaced with Opaque in the future except arity 0*),
-        [lambda],
-        loc )
   | Texp_construct (lid, cstr, args) -> (
     let ll = transl_list args in
     if cstr.cstr_inlined <> None then
@@ -1054,7 +1046,14 @@ and transl_function loc partial param case =
    c_rhs =
      {
        exp_desc =
-         Texp_function {arg_label = _; param = param'; case; partial = partial'};
+         Texp_function
+           {
+             arg_label = _;
+             arity = None;
+             param = param';
+             case;
+             partial = partial';
+           };
      } as exp;
   }
     when Parmatch.inactive ~partial pat && not (exp |> has_async_attribute) ->

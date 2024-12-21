@@ -1,10 +1,8 @@
-;;foo (Function$ (fun [arity:1]_ -> bla)) blaz
-;;foo (Function$ (fun [arity:1]_ -> bla)) blaz
-;;foo (Function$ (fun [arity:1]_ -> bla)) blaz
-;;foo (Function$ (fun [arity:1]_ -> bla))
-    (Function$ (fun [arity:1]_ -> blaz))
-;;List.map (Function$ (fun [arity:1]x -> x + 1)) myList
-;;List.reduce (Function$ (fun [arity:2]acc -> fun curr -> acc + curr)) 0
-    myList
+;;foo (fun [arity:1]_ -> bla) blaz
+;;foo (fun [arity:1]_ -> bla) blaz
+;;foo (fun [arity:1]_ -> bla) blaz
+;;foo (fun [arity:1]_ -> bla) (fun [arity:1]_ -> blaz)
+;;List.map (fun [arity:1]x -> x + 1) myList
+;;List.reduce (fun [arity:2]acc -> fun curr -> acc + curr) 0 myList
 let unitUncurried = apply ()
 ;;call ~a:(((((a)[@res.namedArgLoc ]) : int))[@res.namedArgLoc ])

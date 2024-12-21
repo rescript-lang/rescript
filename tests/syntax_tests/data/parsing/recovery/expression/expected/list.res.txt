@@ -30,16 +30,13 @@ let flags =
   ((if reasonFormat
     then
       ((let parts = Utils.split_on_char ' ' flags in
-        let rec loop =
-          Function$
-            (fun [arity:1]items ->
-               ((match items with
-                 | [|{js|-pp|js};_ppFlag;rest|] -> loop rest
-                 | [|x;rest|] ->
-                     ((Belt.Array.concatMany)[@res.spread ])
-                       [|[|x|];(loop rest)|]
-                 | [||] -> [||])
-               [@res.braces ])) in
+        let rec loop [arity:1]items =
+          ((match items with
+            | [|{js|-pp|js};_ppFlag;rest|] -> loop rest
+            | [|x;rest|] ->
+                ((Belt.Array.concatMany)[@res.spread ]) [|[|x|];(loop rest)|]
+            | [||] -> [||])
+          [@res.braces ]) in
         String.concat {js| |js} (loop parts))
       [@res.braces ])
     else flags)

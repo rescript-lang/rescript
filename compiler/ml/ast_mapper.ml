@@ -93,8 +93,8 @@ module T = struct
     match desc with
     | Ptyp_any -> any ~loc ~attrs ()
     | Ptyp_var s -> var ~loc ~attrs s
-    | Ptyp_arrow (lab, t1, t2) ->
-      arrow ~loc ~attrs lab (sub.typ sub t1) (sub.typ sub t2)
+    | Ptyp_arrow (lab, t1, t2, arity) ->
+      arrow ~loc ~attrs ~arity lab (sub.typ sub t1) (sub.typ sub t2)
     | Ptyp_tuple tyl -> tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) ->
       constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)

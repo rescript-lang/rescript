@@ -10,12 +10,12 @@ let _ = ((div ~className:(({js|menu|js})[@res.namedArgLoc ]) ~children:[] ())
   [@JSX ])
 let _ =
   ((div ~className:(({js|menu|js})[@res.namedArgLoc ])
-      ~onClick:((Function$ (fun [arity:1]_ -> Js.log {js|click|js}))
+      ~onClick:((fun [arity:1]_ -> Js.log {js|click|js})
       [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
   [@JSX ])
 let _ =
   ((div ~className:(({js|menu|js})[@res.namedArgLoc ])
-      ~onClick:((Function$ (fun [arity:1]_ -> Js.log {js|click|js}))
+      ~onClick:((fun [arity:1]_ -> Js.log {js|click|js})
       [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
   [@JSX ])
 let _ = ((Navbar.createElement ~children:[] ())[@JSX ])
@@ -82,8 +82,7 @@ let _ =
                 [@JSX ])] ())
   [@JSX ])
 let _ = ((div ~children:child ())[@JSX ])
-let _ = ((Foo.createElement ~children:(Function$ (fun [arity:1]a -> 1)) ())
-  [@JSX ])
+let _ = ((Foo.createElement ~children:(fun [arity:1]a -> 1) ())[@JSX ])
 let _ =
   ((Foo.createElement ~children:((Foo2.createElement ~children:[] ())
       [@JSX ]) ())
@@ -149,30 +148,26 @@ let _ = ((a ~children:[] ())[@JSX ]) > ((b ~children:[] ())[@JSX ])
 let y =
   ((Routes.createElement ~path:((Routes.stateToPath state)
       [@res.namedArgLoc ]) ~isHistorical:((true)[@res.namedArgLoc ])
-      ~onHashChange:((Function$
-                        (fun [arity:3]_oldPath ->
-                           fun _oldUrl ->
-                             fun newUrl ->
-                               updater
-                                 (Function$
-                                    (fun [arity:2]latestComponentBag ->
-                                       fun _ ->
-                                         ((let currentActualPath =
-                                             Routes.hashOfUri newUrl in
-                                           let pathFromState =
-                                             Routes.stateToPath
-                                               latestComponentBag.state in
-                                           ((if
-                                               currentActualPath =
-                                                 pathFromState
-                                             then None
-                                             else
-                                               dispatchEventless
-                                                 (State.UriNavigated
-                                                    currentActualPath)
-                                                 latestComponentBag ())
-                                             [@res.ternary ]))
-                                         [@res.braces ]))) ()))
+      ~onHashChange:((fun [arity:3]_oldPath ->
+                        fun _oldUrl ->
+                          fun newUrl ->
+                            updater
+                              (fun [arity:2]latestComponentBag ->
+                                 fun _ ->
+                                   ((let currentActualPath =
+                                       Routes.hashOfUri newUrl in
+                                     let pathFromState =
+                                       Routes.stateToPath
+                                         latestComponentBag.state in
+                                     ((if currentActualPath = pathFromState
+                                       then None
+                                       else
+                                         dispatchEventless
+                                           (State.UriNavigated
+                                              currentActualPath)
+                                           latestComponentBag ())
+                                       [@res.ternary ]))
+                                   [@res.braces ])) ())
       [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
   [@JSX ])
 let z =
@@ -324,95 +319,85 @@ let _ =
       ~children:[child] ())
   [@JSX ])
 let _ =
-  ((div ~onClick:((Function$ (fun [arity:1]event -> handleChange event))
+  ((div ~onClick:((fun [arity:1]event -> handleChange event)
       [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
   [@JSX ])
 let _ =
   ((div
-      ~onClick:((Function$
-                   (fun [arity:1]eventWithLongIdent ->
-                      handleChange eventWithLongIdent))
+      ~onClick:((fun [arity:1]eventWithLongIdent ->
+                   handleChange eventWithLongIdent)
       [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
   [@JSX ])
 let _ =
   ((div
-      ~onClick:((Function$
-                   (fun [arity:1]event -> ((Js.log event; handleChange event)
-                      [@res.braces ])))[@res.namedArgLoc ][@res.braces ])
+      ~onClick:((fun [arity:1]event -> ((Js.log event; handleChange event)
+                   [@res.braces ]))[@res.namedArgLoc ][@res.braces ])
       ~children:[] ())
   [@JSX ])
 let _ =
   ((StaticDiv.createElement
-      ~onClick:((Function$
-                   (fun [arity:5]foo ->
-                      fun bar ->
-                        fun baz ->
-                          fun lineBreak ->
-                            fun identifier ->
-                              ((doStuff foo bar baz; bar lineBreak identifier)
-                              [@res.braces ])))
-      [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
+      ~onClick:((fun [arity:5]foo ->
+                   fun bar ->
+                     fun baz ->
+                       fun lineBreak ->
+                         fun identifier ->
+                           ((doStuff foo bar baz; bar lineBreak identifier)
+                           [@res.braces ]))[@res.namedArgLoc ][@res.braces ])
+      ~children:[] ())
   [@JSX ])
 let _ =
   ((AttrDiv.createElement
-      ~onClick:((Function$ (fun [arity:1]event -> handleChange event))
+      ~onClick:((fun [arity:1]event -> handleChange event)
       [@res.namedArgLoc ][@res.braces ][@bar ]) ~children:[] ())
   [@JSX ])
 let _ =
   ((AttrDiv.createElement
-      ~onClick:((Function$
-                   (fun [arity:1]eventLongIdentifier ->
-                      handleChange eventLongIdentifier))
+      ~onClick:((fun [arity:1]eventLongIdentifier ->
+                   handleChange eventLongIdentifier)
       [@res.namedArgLoc ][@res.braces ][@bar ]) ~children:[] ())
   [@JSX ])
 let _ =
   ((StaticDivNamed.createElement
-      ~onClick:((Function$
-                   (fun [arity:6]~foo:((foo)[@res.namedArgLoc ]) ->
-                      fun ~bar:((bar)[@res.namedArgLoc ]) ->
-                        fun ~baz:((baz)[@res.namedArgLoc ]) ->
-                          fun ~lineBreak:((lineBreak)[@res.namedArgLoc ]) ->
-                            fun ~identifier:((identifier)[@res.namedArgLoc ])
-                              -> fun () -> bar lineBreak identifier))
+      ~onClick:((fun [arity:6]~foo:((foo)[@res.namedArgLoc ]) ->
+                   fun ~bar:((bar)[@res.namedArgLoc ]) ->
+                     fun ~baz:((baz)[@res.namedArgLoc ]) ->
+                       fun ~lineBreak:((lineBreak)[@res.namedArgLoc ]) ->
+                         fun ~identifier:((identifier)[@res.namedArgLoc ]) ->
+                           fun () -> bar lineBreak identifier)
       [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
   [@JSX ])
 let _ =
   ((div
-      ~onClick:((Function$
-                   (fun [arity:1]e -> (((doStuff (); bar foo)
-                      [@res.braces ]) : event)))
+      ~onClick:((fun [arity:1]e -> (((doStuff (); bar foo)
+                   [@res.braces ]) : event))
       [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
   [@JSX ])
 let _ =
   ((div
-      ~onClick:((Function$
-                   (fun [arity:2]e ->
-                      fun e2 -> (((doStuff (); bar foo)
-                        [@res.braces ]) : event)))
+      ~onClick:((fun [arity:2]e ->
+                   fun e2 -> (((doStuff (); bar foo)[@res.braces ]) : event))
       [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
   [@JSX ])
 let _ =
   ((div
-      ~onClick:((Function$
-                   (fun [arity:5]foo ->
-                      fun bar ->
-                        fun baz ->
-                          fun superLongIdent ->
-                            fun breakLine -> (((doStuff (); bar foo)
-                              [@res.braces ]) : (event * event2 * event3 *
-                                                  event4 * event5))))
+      ~onClick:((fun [arity:5]foo ->
+                   fun bar ->
+                     fun baz ->
+                       fun superLongIdent ->
+                         fun breakLine -> (((doStuff (); bar foo)
+                           [@res.braces ]) : (event * event2 * event3 *
+                                               event4 * event5)))
       [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
   [@JSX ])
 let _ =
   ((div
-      ~onClick:((Function$
-                   (fun [arity:5]foo ->
-                      fun bar ->
-                        fun baz ->
-                          fun superLongIdent ->
-                            fun breakLine ->
-                              (doStuff () : (event * event2 * event3 * event4
-                                              * event5))))
+      ~onClick:((fun [arity:5]foo ->
+                   fun bar ->
+                     fun baz ->
+                       fun superLongIdent ->
+                         fun breakLine ->
+                           (doStuff () : (event * event2 * event3 * event4 *
+                                           event5)))
       [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
   [@JSX ])
 let _ =
@@ -443,80 +428,72 @@ let _ =
 let _ =
   ((Animated.createElement ~initialValue:((0.0)[@res.namedArgLoc ])
       ~value:((value)[@res.namedArgLoc ])
-      ~children:((Function$
-                    (fun [arity:1]value ->
-                       ((div
-                           ~style:((ReactDOMRe.Style.make
-                                      ~width:(({js|20px|js})
-                                      [@res.namedArgLoc ])
-                                      ~height:(({js|20px|js})
-                                      [@res.namedArgLoc ])
-                                      ~borderRadius:(({js|100%|js})
-                                      [@res.namedArgLoc ])
-                                      ~backgroundColor:(({js|red|js})
-                                      [@res.namedArgLoc ]))
-                           [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
-                       [@JSX ])))[@res.braces ]) ())
+      ~children:((fun [arity:1]value ->
+                    ((div
+                        ~style:((ReactDOMRe.Style.make ~width:(({js|20px|js})
+                                   [@res.namedArgLoc ])
+                                   ~height:(({js|20px|js})
+                                   [@res.namedArgLoc ])
+                                   ~borderRadius:(({js|100%|js})
+                                   [@res.namedArgLoc ])
+                                   ~backgroundColor:(({js|red|js})
+                                   [@res.namedArgLoc ]))
+                        [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
+                    [@JSX ]))[@res.braces ]) ())
   [@JSX ])
 let _ =
   ((Animated.createElement ~initialValue:((0.0)[@res.namedArgLoc ])
       ~value:((value)[@res.namedArgLoc ])
-      ~children:((Function$
-                    (fun [arity:1]value ->
-                       (((div
-                            ~style:((ReactDOMRe.Style.make
-                                       ~width:(({js|20px|js})
-                                       [@res.namedArgLoc ])
-                                       ~height:(({js|20px|js})
-                                       [@res.namedArgLoc ])
-                                       ~borderRadius:(({js|100%|js})
-                                       [@res.namedArgLoc ])
-                                       ~backgroundColor:(({js|red|js})
-                                       [@res.namedArgLoc ]))
-                            [@res.namedArgLoc ][@res.braces ]) ~children:[]
-                            ())
-                       [@JSX ]) : ReasonReact.element)))[@res.braces ]) ())
+      ~children:((fun [arity:1]value ->
+                    (((div
+                         ~style:((ReactDOMRe.Style.make
+                                    ~width:(({js|20px|js})
+                                    [@res.namedArgLoc ])
+                                    ~height:(({js|20px|js})
+                                    [@res.namedArgLoc ])
+                                    ~borderRadius:(({js|100%|js})
+                                    [@res.namedArgLoc ])
+                                    ~backgroundColor:(({js|red|js})
+                                    [@res.namedArgLoc ]))
+                         [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
+                    [@JSX ]) : ReasonReact.element))[@res.braces ]) ())
   [@JSX ])
 let _ =
   ((Animated.createElement ~initialValue:((0.0)[@res.namedArgLoc ])
       ~value:((value)[@res.namedArgLoc ])
-      ~children:((Function$
-                    (fun [arity:1]value ->
-                       ((div
-                           ~style:((ReactDOMRe.Style.make
-                                      ~width:(({js|20px|js})
-                                      [@res.namedArgLoc ])
-                                      ~height:(({js|20px|js})
-                                      [@res.namedArgLoc ])
-                                      ~borderRadius:(({js|100%|js})
-                                      [@res.namedArgLoc ])
-                                      ~backgroundColor:(({js|red|js})
-                                      [@res.namedArgLoc ]))
-                           [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
-                       [@res.braces ][@JSX ])))[@res.braces ][@foo ]) ())
+      ~children:((fun [arity:1]value ->
+                    ((div
+                        ~style:((ReactDOMRe.Style.make ~width:(({js|20px|js})
+                                   [@res.namedArgLoc ])
+                                   ~height:(({js|20px|js})
+                                   [@res.namedArgLoc ])
+                                   ~borderRadius:(({js|100%|js})
+                                   [@res.namedArgLoc ])
+                                   ~backgroundColor:(({js|red|js})
+                                   [@res.namedArgLoc ]))
+                        [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
+                    [@res.braces ][@JSX ]))[@res.braces ][@foo ]) ())
   [@JSX ])
 let _ =
   ((Animated.createElement ~initialValue:((0.0)[@res.namedArgLoc ])
       ~value:((value)[@res.namedArgLoc ])
-      ~children:((Function$
-                    (fun [arity:1]value ->
-                       ((let width = {js|20px|js} in
-                         let height = {js|20px|js} in
-                         ((div
-                             ~style:((ReactDOMRe.Style.make ~width:((width)
-                                        [@res.namedArgLoc ])
-                                        ~height:((height)[@res.namedArgLoc ])
-                                        ~borderRadius:(({js|100%|js})
-                                        [@res.namedArgLoc ])
-                                        ~backgroundColor:(({js|red|js})
-                                        [@res.namedArgLoc ]))
-                             [@res.namedArgLoc ][@res.braces ]) ~children:[]
-                             ())
-                           [@JSX ]))
-                       [@res.braces ])))[@res.braces ]) ())
+      ~children:((fun [arity:1]value ->
+                    ((let width = {js|20px|js} in
+                      let height = {js|20px|js} in
+                      ((div
+                          ~style:((ReactDOMRe.Style.make ~width:((width)
+                                     [@res.namedArgLoc ]) ~height:((height)
+                                     [@res.namedArgLoc ])
+                                     ~borderRadius:(({js|100%|js})
+                                     [@res.namedArgLoc ])
+                                     ~backgroundColor:(({js|red|js})
+                                     [@res.namedArgLoc ]))
+                          [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
+                        [@JSX ]))
+                    [@res.braces ]))[@res.braces ]) ())
   [@JSX ])
 let _ =
-  ((div ~callback:((reduce (Function$ (fun [arity:1]() -> not state)))
+  ((div ~callback:((reduce (fun [arity:1]() -> not state))
       [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
   [@JSX ])
 let _ =
@@ -577,22 +554,19 @@ let _ =
       ~children:[((ReasonReact.array
                      (Array.of_list
                         (List.map
-                           (Function$
-                              (fun [arity:1]possibleGradeValue ->
-                                 ((option
-                                     ~key:((string_of_int possibleGradeValue)
-                                     [@res.namedArgLoc ][@res.braces ])
-                                     ~value:((string_of_int
-                                                possibleGradeValue)
-                                     [@res.namedArgLoc ][@res.braces ])
-                                     ~children:[((str
-                                                    (string_of_int
-                                                       possibleGradeValue))
-                                               [@res.braces ])] ())
-                                 [@JSX ])))
+                           (fun [arity:1]possibleGradeValue ->
+                              ((option
+                                  ~key:((string_of_int possibleGradeValue)
+                                  [@res.namedArgLoc ][@res.braces ])
+                                  ~value:((string_of_int possibleGradeValue)
+                                  [@res.namedArgLoc ][@res.braces ])
+                                  ~children:[((str
+                                                 (string_of_int
+                                                    possibleGradeValue))
+                                            [@res.braces ])] ())
+                              [@JSX ]))
                            (List.filter
-                              (Function$
-                                 (fun [arity:1]g -> g <= state.maxGrade))
+                              (fun [arity:1]g -> g <= state.maxGrade)
                               possibleGradeValues))))
                 [@res.braces ])] ())[@JSX ])
 ;;((div ~children:[((Js.log (a <= 10))[@res.braces ])] ())[@JSX ])
@@ -600,9 +574,7 @@ let _ =
       ~children:[((div ~children:[((Js.log (a <= 10))[@res.braces ])] ())
                 [@JSX ])] ())[@JSX ])
 ;;((div
-      ~children:[((div
-                     ~onClick:((Function$
-                                  (fun [arity:1]_ -> Js.log (a <= 10)))
+      ~children:[((div ~onClick:((fun [arity:1]_ -> Js.log (a <= 10))
                      [@res.namedArgLoc ][@res.braces ])
                      ~children:[((div
                                     ~children:[((Js.log (a <= 10))
@@ -610,14 +582,13 @@ let _ =
                                [@JSX ])] ())
                 [@JSX ])] ())[@JSX ])
 ;;((div ~children:element ())[@JSX ])
-;;((div ~children:((Function$ (fun [arity:1]a -> 1))[@res.braces ]) ())
-  [@JSX ])
+;;((div ~children:((fun [arity:1]a -> 1)[@res.braces ]) ())[@JSX ])
 ;;((div ~children:((span ~children:[] ())[@JSX ]) ())[@JSX ])
 ;;((div ~children:[|a|] ())[@JSX ])
 ;;((div ~children:(1, 2) ())[@JSX ])
 ;;((div ~children:((array |.u f)[@res.braces ]) ())[@JSX ])
 ;;(([element])[@JSX ])
-;;(([((Function$ ((fun [arity:1]a -> 1)))[@res.braces ])])[@JSX ])
+;;(([(((fun [arity:1]a -> 1))[@res.braces ])])[@JSX ])
 ;;(([((span ~children:[] ())[@JSX ])])[@JSX ])
 ;;(([[|a|]])[@JSX ])
 ;;(([(1, 2)])[@JSX ])

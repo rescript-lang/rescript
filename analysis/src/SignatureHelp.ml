@@ -104,31 +104,16 @@ let findFunctionType ~currentFile ~debug ~path ~pos =
 (* Extracts all parameters from a parsed function signature *)
 let extractParameters ~signature ~typeStrForParser ~labelPrefixLen =
   match signature with
-  | [
-   ( {
-       Parsetree.psig_desc =
-         Psig_value {pval_type = {ptyp_desc = Ptyp_arrow _} as expr};
-     }
-   | {
-       psig_desc =
-         Psig_value
-           {
-             pval_type =
-               {
-                 ptyp_desc =
-                   Ptyp_constr
-                     ( {txt = Lident "function$"},
-                       [({ptyp_desc = Ptyp_arrow _} as expr); _] );
-               };
-           };
-     } );
-  ] ->
+  | [{Parsetree.psig_desc = Psig_value {pval_type = expr}}]
+    when match expr.ptyp_desc with
+         | Ptyp_arrow _ -> true
+         | _ -> false ->
     let rec extractParams expr params =
       match expr with
       | {
        (* Gotcha: functions with multiple arugments are modelled as a series of single argument functions. *)
        Parsetree.ptyp_desc =
-         Ptyp_arrow (argumentLabel, argumentTypeExpr, nextFunctionExpr);
+         Ptyp_arrow (argumentLabel, argumentTypeExpr, nextFunctionExpr, _);
        ptyp_loc;
       } ->
         let startOffset =

@@ -47,7 +47,6 @@ Path GenericJsx.Elements.props
 
 Complete src/GenericJsxCompletion.res 14:21
 posCursor:[14:21] posNoWhite:[14:20] Found expr:[8:13->23:3]
-posCursor:[14:21] posNoWhite:[14:20] Found expr:[8:14->23:3]
 posCursor:[14:21] posNoWhite:[14:20] Found expr:[9:4->22:10]
 posCursor:[14:21] posNoWhite:[14:20] Found expr:[10:4->22:10]
 posCursor:[14:21] posNoWhite:[14:20] Found expr:[11:4->22:10]
@@ -86,7 +85,6 @@ Path Js.String2.st
 
 Complete src/GenericJsxCompletion.res 20:24
 posCursor:[20:24] posNoWhite:[20:23] Found expr:[8:13->23:3]
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[8:14->23:3]
 posCursor:[20:24] posNoWhite:[20:23] Found expr:[9:4->22:10]
 posCursor:[20:24] posNoWhite:[20:23] Found expr:[10:4->22:10]
 posCursor:[20:24] posNoWhite:[20:23] Found expr:[11:4->22:10]

@@ -90,11 +90,17 @@ val fun_ :
    expression *)
 
 val arrow :
-  ?loc:Location.t -> ?attrs:attrs -> core_type -> core_type -> core_type
+  ?loc:Location.t ->
+  ?attrs:attrs ->
+  arity:Asttypes.arity ->
+  core_type ->
+  core_type ->
+  core_type
 
 val label_arrow :
   ?loc:Location.t ->
   ?attrs:attrs ->
+  arity:Asttypes.arity ->
   string ->
   core_type ->
   core_type ->
@@ -103,6 +109,7 @@ val label_arrow :
 val opt_arrow :
   ?loc:Location.t ->
   ?attrs:attrs ->
+  arity:Asttypes.arity ->
   string ->
   core_type ->
   core_type ->

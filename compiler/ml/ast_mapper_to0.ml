@@ -98,8 +98,20 @@ module T = struct
     match desc with
     | Ptyp_any -> any ~loc ~attrs ()
     | Ptyp_var s -> var ~loc ~attrs s
-    | Ptyp_arrow (lab, t1, t2) ->
-      arrow ~loc ~attrs lab (sub.typ sub t1) (sub.typ sub t2)
+    | Ptyp_arrow (lab, t1, t2, arity) -> (
+      let typ0 = arrow ~loc ~attrs lab (sub.typ sub t1) (sub.typ sub t2) in
+      match arity with
+      | None -> typ0
+      | Some arity ->
+        let arity_string = "Has_arity" ^ string_of_int arity in
+        let arity_type =
+          Ast_helper0.Typ.variant ~loc
+            [Rtag (Location.mknoloc arity_string, [], true, [])]
+            Closed None
+        in
+        Ast_helper0.Typ.constr ~loc
+          {txt = Lident "function$"; loc}
+          [typ0; arity_type])
     | Ptyp_tuple tyl -> tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) ->
       constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
@@ -283,41 +295,38 @@ module E = struct
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
-    | Pexp_fun (lab, def, p, e, _) ->
-      fun_ ~loc ~attrs lab
-        (map_opt (sub.expr sub) def)
-        (sub.pat sub p) (sub.expr sub e)
+    | Pexp_fun (lab, def, p, e, arity) -> (
+      let e =
+        fun_ ~loc ~attrs lab
+          (map_opt (sub.expr sub) def)
+          (sub.pat sub p) (sub.expr sub e)
+      in
+      match arity with
+      | None -> e
+      | Some arity ->
+        let arity_to_attributes arity =
+          [
+            ( Location.mknoloc "res.arity",
+              Parsetree0.PStr
+                [
+                  Ast_helper0.Str.eval
+                    (Ast_helper0.Exp.constant
+                       (Pconst_integer (string_of_int arity, None)));
+                ] );
+          ]
+        in
+        Ast_helper0.Exp.construct
+          ~attrs:(arity_to_attributes arity)
+          (Location.mkloc (Longident.Lident "Function$") e.pexp_loc)
+          (Some e))
     | Pexp_apply (e, l) ->
       apply ~loc ~attrs (sub.expr sub e) (List.map (map_snd (sub.expr sub)) l)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
-    | Pexp_construct (lid, arg) -> (
-      let exp0 =
-        construct ~loc ~attrs (map_loc sub lid) (map_opt (sub.expr sub) arg)
-      in
-      match lid.txt with
-      | Lident "Function$" -> (
-        match arg with
-        | Some {pexp_desc = Pexp_fun (_, _, _, _, Some arity)} ->
-          let arity_to_attributes arity =
-            [
-              ( Location.mknoloc "res.arity",
-                Parsetree0.PStr
-                  [
-                    Ast_helper0.Str.eval
-                      (Ast_helper0.Exp.constant
-                         (Pconst_integer (string_of_int arity, None)));
-                  ] );
-            ]
-          in
-          {
-            exp0 with
-            pexp_attributes = arity_to_attributes arity @ exp0.pexp_attributes;
-          }
-        | _ -> assert false)
-      | _ -> exp0)
+    | Pexp_construct (lid, arg) ->
+      construct ~loc ~attrs (map_loc sub lid) (map_opt (sub.expr sub) arg)
     | Pexp_variant (lab, eo) ->
       variant ~loc ~attrs lab (map_opt (sub.expr sub) eo)
     | Pexp_record (l, eo) ->

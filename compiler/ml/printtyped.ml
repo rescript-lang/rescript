@@ -149,7 +149,7 @@ let rec core_type i ppf x =
   match x.ctyp_desc with
   | Ttyp_any -> line i ppf "Ttyp_any\n"
   | Ttyp_var s -> line i ppf "Ttyp_var %s\n" s
-  | Ttyp_arrow (l, ct1, ct2) ->
+  | Ttyp_arrow (l, ct1, ct2, _) ->
     line i ppf "Ttyp_arrow\n";
     arg_label i ppf l;
     core_type i ppf ct1;
@@ -285,8 +285,11 @@ and expression i ppf x =
     line i ppf "Texp_let %a\n" fmt_rec_flag rf;
     list i value_binding ppf l;
     expression i ppf e
-  | Texp_function {arg_label = p; param; case = case_; partial = _} ->
+  | Texp_function {arg_label = p; arity; param; case = case_; partial = _} ->
     line i ppf "Texp_function\n";
+    (match arity with
+    | Some arity -> line i ppf "arity: %d\n" arity
+    | None -> ());
     line i ppf "%a" Ident.print param;
     arg_label i ppf p;
     case i ppf case_

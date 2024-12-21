@@ -24,3 +24,14 @@ module Arity = {
   let two = (x, y) => x + y
   let n = two(one(1), 5)
 }
+
+@module("react")
+external useState: (unit => 'state) => string = "useState"
+
+let _ = useState(() => 0)
+
+let fpromise = async (promise, _x) => await promise
+module Uncurried = {
+  type f1 = int => string
+  type f2 = (int, int) => string
+}

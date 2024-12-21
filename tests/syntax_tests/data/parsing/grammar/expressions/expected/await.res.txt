@@ -18,20 +18,16 @@ let () = ((((delay 10)[@res.await ]); ((delay 20)[@res.await ]))
   [@res.braces ])
 let forEach = ((Js.Import Belt.List.forEach)[@res.await ][@a ][@b ])
 module M = ((Belt.List)[@res.await ][@a ][@b ])
-let f =
-  Function$
-    (fun [arity:1]() ->
-       ((let module M = ((Belt.List)[@res.await ][@a ][@b ]) in M.forEach)
-       [@res.braces ]))
+let f [arity:1]() =
+  ((let module M = ((Belt.List)[@res.await ][@a ][@b ]) in M.forEach)
+  [@res.braces ])
 let () = ((let module M = ((Belt.List)[@res.await ][@a ][@b ]) in M.forEach)
   [@res.braces ])
 module type BeltList  = module type of Belt.List
-let f =
-  Function$
-    (fun [arity:1]() ->
-       ((let module M = (((Belt.List : BeltList))[@res.await ][@a ][@b ]) in
-           M.forEach)
-       [@res.braces ]))
+let f [arity:1]() =
+  ((let module M = (((Belt.List : BeltList))[@res.await ][@a ][@b ]) in
+      M.forEach)
+  [@res.braces ])
 let () =
   ((let module M = (((Belt.List : BeltList))[@res.await ][@a ][@b ]) in
       M.forEach)

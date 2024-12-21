@@ -1,5 +1,4 @@
 module type A  = [%modTypeExtension ]
 module type B  = [%mod.type.extension ]
 module type C  = [%mod.type.extension.with.args {js|argument|js}]
-module type D  =
-  [%mod.type.extension.with.args Function$ (fun [arity:1]x -> f x)]
+module type D  = [%mod.type.extension.with.args fun [arity:1]x -> f x]

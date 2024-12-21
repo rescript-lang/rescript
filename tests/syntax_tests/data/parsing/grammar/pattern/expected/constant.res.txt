@@ -15,13 +15,12 @@ let ({js|stringPattern|js} : string) as s = ()
 ;;for {js|stringPattern|js} = 0 to 10 do () done
 ;;for {js|stringPattern|js} as s = 0 to 10 do () done
 ;;for {js|stringPattern|js} as s = 0 to 10 do () done
-let f = Function$ (fun [arity:1]{js|stringPattern|js} -> ())
-let f = Function$ (fun [arity:1]({js|stringPattern|js} as s) -> ())
-let f = Function$ (fun [arity:1]({js|stringPattern|js} as s) -> ())
-let f = Function$ (fun [arity:1]({js|stringPattern|js} : string) -> ())
-let f =
-  Function$ (fun [arity:1](({js|stringPattern|js} : string) as s) -> ())
-let f = Function$ (fun [arity:1]({js|stringPattern|js} : string) -> ())
+let f [arity:1]{js|stringPattern|js} = ()
+let f [arity:1]({js|stringPattern|js} as s) = ()
+let f [arity:1]({js|stringPattern|js} as s) = ()
+let f [arity:1]({js|stringPattern|js} : string) = ()
+let f [arity:1](({js|stringPattern|js} : string) as s) = ()
+let f [arity:1]({js|stringPattern|js} : string) = ()
 let 1 = ()
 let 1 as x = ()
 let (1 : int) = ()
@@ -31,11 +30,11 @@ let (1 : int) as x = ()
   | 1 as x -> ()
   | (1 : int) -> ()
   | (1 : int) as x -> ()
-let f = Function$ (fun [arity:1]1 -> ())
-let f = Function$ (fun [arity:1](1 as x) -> ())
-let f = Function$ (fun [arity:1](1 : int) -> ())
-let f = Function$ (fun [arity:1]((1 : int) as x) -> ())
-let f = Function$ (fun [arity:1](1 : int) -> ())
+let f [arity:1]1 = ()
+let f [arity:1](1 as x) = ()
+let f [arity:1](1 : int) = ()
+let f [arity:1]((1 : int) as x) = ()
+let f [arity:1](1 : int) = ()
 ;;for i = 0 to 10 do () done
 ;;for i as x = 0 to 10 do () done
 ;;for i = 0 to 10 do () done
@@ -49,16 +48,13 @@ let f = Function$ (fun [arity:1](1 : int) -> ())
       let patterns = List.rev (List.map filterSpread patterns) in
       makeListPattern loc patterns None
 let _0 = 0x9A
-let print =
-  Function$
-    (fun [arity:2]ppf ->
-       fun i ->
-         match i.stamp with
-         | 0 -> fprintf ppf {js|%s!|js} i.name
-         | (-1) -> fprintf ppf {js|%s#|js} i.name
-         | 1 -> fprintf ppf {js|%s#|js} i.name
-         | (-1.) -> fprintf ppf {js|%s#|js} i.name
-         | 1. -> fprintf ppf {js|%s#|js} i.name)
+let print [arity:2]ppf i =
+  match i.stamp with
+  | 0 -> fprintf ppf {js|%s!|js} i.name
+  | (-1) -> fprintf ppf {js|%s#|js} i.name
+  | 1 -> fprintf ppf {js|%s#|js} i.name
+  | (-1.) -> fprintf ppf {js|%s#|js} i.name
+  | 1. -> fprintf ppf {js|%s#|js} i.name
 let (-1)..(-1.) = x
 ;;match science with
   | (1.12, (-3.13)) -> true

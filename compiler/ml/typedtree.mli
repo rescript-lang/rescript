@@ -132,7 +132,7 @@ and expression_desc =
          *)
   | Texp_function of {
       arg_label: arg_label;
-      arity: int option;
+      arity: arity;
       param: Ident.t;
       case: case;
       partial: partial;
@@ -408,10 +408,8 @@ and with_constraint =
   | Twith_modsubst of Path.t * Longident.t loc
 
 and core_type = {
-  mutable ctyp_desc: core_type_desc;
-      (** mutable because of [Typeclass.declare_method] *)
-  mutable ctyp_type: type_expr;
-      (** mutable because of [Typeclass.declare_method] *)
+  ctyp_desc: core_type_desc;
+  ctyp_type: type_expr;
   ctyp_env: Env.t; (* BINANNOT ADDED *)
   ctyp_loc: Location.t;
   ctyp_attributes: attributes;
@@ -420,7 +418,7 @@ and core_type = {
 and core_type_desc =
   | Ttyp_any
   | Ttyp_var of string
-  | Ttyp_arrow of arg_label * core_type * core_type
+  | Ttyp_arrow of arg_label * core_type * core_type * arity
   | Ttyp_tuple of core_type list
   | Ttyp_constr of Path.t * Longident.t loc * core_type list
   | Ttyp_object of object_field list * closed_flag

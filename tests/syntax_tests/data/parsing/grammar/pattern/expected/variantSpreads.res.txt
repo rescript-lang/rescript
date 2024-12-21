@@ -12,43 +12,31 @@ type nonrec c =
 type nonrec d =
   | ... of b 
   | ... of c 
-let doWithA =
-  Function$
-    (fun [arity:1](a : a) ->
-       ((match a with
-         | One -> Js.log {js|aaa|js}
-         | Two -> Js.log {js|twwwoooo|js}
-         | Three -> Js.log {js|threeeee|js})
-       [@res.braces ]))
-let doWithB =
-  Function$
-    (fun [arity:1](b : b) ->
-       ((match b with
-         | One -> Js.log {js|aaa|js}
-         | _ -> Js.log {js|twwwoooo|js})
-       [@res.braces ]))
-let lookup =
-  Function$
-    (fun [arity:1](b : b) ->
-       match b with
-       | ((#a)[@res.patVariantSpread ]) as a -> doWithA a
-       | Four -> Js.log {js|four|js}
-       | Five -> Js.log {js|five|js})
-let lookup2 =
-  Function$
-    (fun [arity:1](d : d) ->
-       match d with
-       | ((#a)[@res.patVariantSpread ]) as a -> doWithA a
-       | ((#b)[@res.patVariantSpread ]) as b -> doWithB b
-       | Six|Seven -> Js.log {js|Got rest of d|js})
-let lookupOpt =
-  Function$
-    (fun [arity:1](b : b option) ->
-       match b with
-       | Some (((#a)[@res.patVariantSpread ]) as a) -> doWithA a
-       | Some (Four) -> Js.log {js|four|js}
-       | Some (Five) -> Js.log {js|five|js}
-       | None -> Js.log {js|None|js})
+let doWithA [arity:1](a : a) =
+  ((match a with
+    | One -> Js.log {js|aaa|js}
+    | Two -> Js.log {js|twwwoooo|js}
+    | Three -> Js.log {js|threeeee|js})
+  [@res.braces ])
+let doWithB [arity:1](b : b) =
+  ((match b with | One -> Js.log {js|aaa|js} | _ -> Js.log {js|twwwoooo|js})
+  [@res.braces ])
+let lookup [arity:1](b : b) =
+  match b with
+  | ((#a)[@res.patVariantSpread ]) as a -> doWithA a
+  | Four -> Js.log {js|four|js}
+  | Five -> Js.log {js|five|js}
+let lookup2 [arity:1](d : d) =
+  match d with
+  | ((#a)[@res.patVariantSpread ]) as a -> doWithA a
+  | ((#b)[@res.patVariantSpread ]) as b -> doWithB b
+  | Six|Seven -> Js.log {js|Got rest of d|js}
+let lookupOpt [arity:1](b : b option) =
+  match b with
+  | Some (((#a)[@res.patVariantSpread ]) as a) -> doWithA a
+  | Some (Four) -> Js.log {js|four|js}
+  | Some (Five) -> Js.log {js|five|js}
+  | None -> Js.log {js|None|js}
 module Foo =
   struct
     type nonrec zz =
@@ -58,15 +46,11 @@ module Foo =
       | ... of zz 
       | Third 
   end
-let doWithZ =
-  Function$
-    (fun [arity:1](z : Foo.zz) ->
-       match z with
-       | First -> Js.log {js|First|js}
-       | Second -> Js.log {js|Second|js})
-let lookup3 =
-  Function$
-    (fun [arity:1](d : Foo.xx) ->
-       match d with
-       | ((#Foo.zz)[@res.patVariantSpread ]) as z -> Js.log z
-       | Third -> Js.log {js|Third|js})
+let doWithZ [arity:1](z : Foo.zz) =
+  match z with
+  | First -> Js.log {js|First|js}
+  | Second -> Js.log {js|Second|js}
+let lookup3 [arity:1](d : Foo.xx) =
+  match d with
+  | ((#Foo.zz)[@res.patVariantSpread ]) as z -> Js.log z
+  | Third -> Js.log {js|Third|js}

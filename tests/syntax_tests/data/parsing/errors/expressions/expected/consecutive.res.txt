@@ -44,8 +44,8 @@
 
   consecutive expressions on a line must be separated by ';' or a newline
 
-let f = Function$ (fun [arity:2]a -> fun b -> a + 3)
+let f [arity:2]a b = a + 3
 ;;b
-let f = Function$ (fun [arity:2]g -> fun h -> ((a + 3; b)[@res.braces ]))
+let f [arity:2]g h = ((a + 3; b)[@res.braces ])
 let () = ((sideEffect1 (); sideEffect2 ())[@res.braces ])
 let () = ((let open Foo in let exception End  in x ())[@res.braces ])

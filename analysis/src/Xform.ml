@@ -303,10 +303,7 @@ module AddTypeAnnotation = struct
     in
     let rec processFunction ~argNum (e : Parsetree.expression) =
       match e.pexp_desc with
-      | Pexp_fun (argLabel, _, pat, e, _)
-      | Pexp_construct
-          ( {txt = Lident "Function$"},
-            Some {pexp_desc = Pexp_fun (argLabel, _, pat, e, _)} ) ->
+      | Pexp_fun (argLabel, _, pat, e, _) ->
         let isUnlabeledOnlyArg =
           argNum = 1 && argLabel = Nolabel
           &&

@@ -843,7 +843,7 @@ module SexpAst = struct
       match typexpr.ptyp_desc with
       | Ptyp_any -> Sexp.atom "Ptyp_any"
       | Ptyp_var var -> Sexp.list [Sexp.atom "Ptyp_var"; string var]
-      | Ptyp_arrow (arg_lbl, typ1, typ2) ->
+      | Ptyp_arrow (arg_lbl, typ1, typ2, _) ->
         Sexp.list
           [
             Sexp.atom "Ptyp_arrow";

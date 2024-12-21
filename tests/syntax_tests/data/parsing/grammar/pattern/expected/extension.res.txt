@@ -11,14 +11,13 @@ let [%patExt1 ]|[%patExt2 ] = ()
   | [%pat.stuff test] as _x -> ()
   | ([%pat.stuff test] : unit) -> ()
   | [%patExt1 ]|[%patExt2 ] -> ()
-let f = Function$ (fun [arity:1][%patternExtension ] -> ())
-let f = Function$ (fun [arity:1][%pattern.extension ] -> ())
-let f = Function$ (fun [arity:1][%raw {js|x|js}] -> ())
-let f =
-  Function$ (fun [arity:2][%raw {js|x|js}] -> fun [%raw {js|y|js}] -> ())
-let f = Function$ (fun [arity:1]([%raw {js|x|js}] as _y) -> ())
-let f = Function$ (fun [arity:1]([%raw {js|x|js}] : unit) -> ())
-let f = Function$ (fun [arity:1]([%patExt1 ]|[%patExt2 ]) -> ())
+let f [arity:1][%patternExtension ] = ()
+let f [arity:1][%pattern.extension ] = ()
+let f [arity:1][%raw {js|x|js}] = ()
+let f [arity:2][%raw {js|x|js}] [%raw {js|y|js}] = ()
+let f [arity:1]([%raw {js|x|js}] as _y) = ()
+let f [arity:1]([%raw {js|x|js}] : unit) = ()
+let f [arity:1]([%patExt1 ]|[%patExt2 ]) = ()
 ;;for [%ext ] = x to y do () done
 ;;for [%ext1 ]|[%ext2 ] = x to y do () done
 ;;for [%ext ] = x to y do () done

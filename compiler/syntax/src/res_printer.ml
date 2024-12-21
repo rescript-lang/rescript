@@ -1587,13 +1587,14 @@ and print_label_declaration ~state (ld : Parsetree.label_declaration) cmt_tbl =
        ])
 
 and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
-  let parent_attrs =
-    let attrs = ParsetreeViewer.filter_parsing_attrs typ_expr.ptyp_attributes in
-    if Ast_uncurried.core_type_is_uncurried_fun typ_expr then attrs else []
-  in
-  let print_arrow ?(arity = max_int) typ_expr =
+  let print_arrow ~arity typ_expr =
+    let max_arity =
+      match arity with
+      | Some arity -> arity
+      | None -> max_int
+    in
     let attrs_before, args, return_type =
-      ParsetreeViewer.arrow_type ~arity ~attrs:parent_attrs typ_expr
+      ParsetreeViewer.arrow_type ~max_arity typ_expr
     in
     let return_type_needs_parens =
       match return_type.ptyp_desc with
@@ -1618,7 +1619,6 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
         let doc = print_typ_expr ~state n cmt_tbl in
         match n.ptyp_desc with
         | Ptyp_arrow _ | Ptyp_tuple _ | Ptyp_alias _ -> add_parens doc
-        | _ when Ast_uncurried.core_type_is_uncurried_fun n -> add_parens doc
         | _ -> doc
       in
       Doc.group
@@ -1678,7 +1678,6 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
         let needs_parens =
           match typ.ptyp_desc with
           | Ptyp_arrow _ -> true
-          | _ when Ast_uncurried.core_type_is_uncurried_fun typ -> true
           | _ -> false
         in
         let doc = print_typ_expr ~state typ cmt_tbl in
@@ -1691,12 +1690,7 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
     (* object printings *)
     | Ptyp_object (fields, open_flag) ->
       print_object ~state ~inline:false fields open_flag cmt_tbl
-    | Ptyp_arrow _ -> print_arrow typ_expr
-    | Ptyp_constr _ when Ast_uncurried.core_type_is_uncurried_fun typ_expr ->
-      let arity, t_arg =
-        Ast_uncurried.core_type_extract_uncurried_fun typ_expr
-      in
-      print_arrow ~arity t_arg
+    | Ptyp_arrow (_, _, _, arity) -> print_arrow ~arity typ_expr
     | Ptyp_constr
         (longident_loc, [{ptyp_desc = Ptyp_object (fields, open_flag)}]) ->
       (* for foo<{"a": b}>, when the object is long and needs a line break, we
@@ -1840,8 +1834,6 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
   in
   let should_print_its_own_attributes =
     match typ_expr.ptyp_desc with
-    | Ptyp_constr _ when Ast_uncurried.core_type_is_uncurried_fun typ_expr ->
-      true
     | Ptyp_arrow _ (* es6 arrow types print their own attributes *) -> true
     | _ -> false
   in
@@ -1988,9 +1980,7 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
      };
    pvb_expr = {pexp_desc = Pexp_newtype _} as expr;
   } -> (
-    let _uncurried, _attrs, parameters, return_expr =
-      ParsetreeViewer.fun_expr expr
-    in
+    let _attrs, parameters, return_expr = ParsetreeViewer.fun_expr expr in
     let abstract_type =
       match parameters with
       | [NewTypes {locs = vars}] ->
@@ -2703,9 +2693,7 @@ and print_if_chain ~state pexp_attributes ifs else_expr cmt_tbl =
 
 and print_expression ~state (e : Parsetree.expression) cmt_tbl =
   let print_arrow e =
-    let _, attrs_on_arrow, parameters, return_expr =
-      ParsetreeViewer.fun_expr e
-    in
+    let attrs_on_arrow, parameters, return_expr = ParsetreeViewer.fun_expr e in
     let ParsetreeViewer.{async; attributes = attrs} =
       ParsetreeViewer.process_function_attributes attrs_on_arrow
     in
@@ -3447,7 +3435,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
   | _ -> expr_with_await
 
 and print_pexp_fun ~state ~in_callback e cmt_tbl =
-  let _, attrs_on_arrow, parameters, return_expr = ParsetreeViewer.fun_expr e in
+  let attrs_on_arrow, parameters, return_expr = ParsetreeViewer.fun_expr e in
   let ParsetreeViewer.{async; attributes = attrs} =
     ParsetreeViewer.process_function_attributes attrs_on_arrow
   in

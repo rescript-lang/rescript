@@ -43,7 +43,8 @@ let handle_external loc (x : string) : Parsetree.expression =
       str_exp with
       pexp_desc =
         Ast_external_mk.local_external_apply loc ~pval_prim:["#raw_expr"]
-          ~pval_type:(Typ.arrow Nolabel (Typ.any ()) (Typ.any ()))
+          ~pval_type:
+            (Typ.arrow ~arity:(Some 1) Nolabel (Typ.any ()) (Typ.any ()))
           [str_exp];
     }
   in
@@ -68,7 +69,9 @@ let handle_debugger loc (payload : Ast_payload.t) =
   match payload with
   | PStr [] ->
     Ast_external_mk.local_external_apply loc ~pval_prim:["%debugger"]
-      ~pval_type:(Typ.arrow Nolabel (Typ.any ()) (Ast_literal.type_unit ()))
+      ~pval_type:
+        (Typ.arrow ~arity:(Some 1) Nolabel (Typ.any ())
+           (Ast_literal.type_unit ()))
       [Ast_literal.val_unit ~loc ()]
   | _ ->
     Location.raise_errorf ~loc "%%debugger extension doesn't accept arguments"
@@ -92,7 +95,8 @@ let handle_raw ~kind loc payload =
       exp with
       pexp_desc =
         Ast_external_mk.local_external_apply loc ~pval_prim:["#raw_expr"]
-          ~pval_type:(Typ.arrow Nolabel (Typ.any ()) (Typ.any ()))
+          ~pval_type:
+            (Typ.arrow ~arity:(Some 1) Nolabel (Typ.any ()) (Typ.any ()))
           [exp];
       pexp_attributes =
         (match !is_function with
@@ -119,14 +123,17 @@ let handle_ffi ~loc ~payload =
       let any = Ast_helper.Typ.any ~loc:e.pexp_loc () in
       let unit = Ast_literal.type_unit ~loc () in
       let rec arrow ~arity =
-        if arity = 0 then Ast_helper.Typ.arrow ~loc Nolabel unit any
-        else if arity = 1 then Ast_helper.Typ.arrow ~loc Nolabel any any
-        else Ast_helper.Typ.arrow ~loc Nolabel any (arrow ~arity:(arity - 1))
+        if arity = 0 then Ast_helper.Typ.arrow ~arity:None ~loc Nolabel unit any
+        else if arity = 1 then
+          Ast_helper.Typ.arrow ~arity:None ~loc Nolabel any any
+        else
+          Ast_helper.Typ.arrow ~loc ~arity:None Nolabel any
+            (arrow ~arity:(arity - 1))
       in
       match !is_function with
       | Some arity ->
         let type_ =
-          Ast_uncurried.uncurried_type ~loc
+          Ast_uncurried.uncurried_type
             ~arity:(if arity = 0 then 1 else arity)
             (arrow ~arity)
         in
@@ -138,7 +145,8 @@ let handle_ffi ~loc ~payload =
         exp with
         pexp_desc =
           Ast_external_mk.local_external_apply loc ~pval_prim:["#raw_expr"]
-            ~pval_type:(Typ.arrow Nolabel (Typ.any ()) (Typ.any ()))
+            ~pval_type:
+              (Typ.arrow ~arity:(Some 1) Nolabel (Typ.any ()) (Typ.any ()))
             [exp];
         pexp_attributes =
           (match !is_function with
@@ -154,7 +162,8 @@ let handle_raw_structure loc payload =
         exp with
         pexp_desc =
           Ast_external_mk.local_external_apply loc ~pval_prim:["#raw_stmt"]
-            ~pval_type:(Typ.arrow Nolabel (Typ.any ()) (Typ.any ()))
+            ~pval_type:
+              (Typ.arrow ~arity:(Some 1) Nolabel (Typ.any ()) (Typ.any ()))
             [exp];
       }
   | None ->

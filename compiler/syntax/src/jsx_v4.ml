@@ -124,7 +124,9 @@ let merlin_focus = ({loc = Location.none; txt = "merlin.focus"}, PStr [])
 (* Helper method to filter out any attribute that isn't [@react.component] *)
 let other_attrs_pure (loc, _) =
   match loc.txt with
-  | "react.component" | "jsx.component" -> false
+  | "react.component" | "jsx.component" | "react.componentWithProps"
+  | "jsx.componentWithProps" ->
+    false
   | _ -> true
 
 (* Finds the name of the variable the binding is assigned to, otherwise raises Invalid_argument *)
@@ -941,7 +943,7 @@ let vb_match_expr named_arg_list expr =
   aux (List.rev named_arg_list)
 
 let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
-  if Jsx_common.has_attr_on_binding binding then (
+  if Jsx_common.has_attr_on_binding Jsx_common.has_attr binding then (
     check_multiple_components ~config ~loc:pstr_loc;
     let binding = Jsx_common.remove_arity binding in
     let core_type_of_attr =
@@ -1028,8 +1030,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     in
     let full_expression =
       full_expression
-      |> Ast_uncurried.uncurried_fun ~loc:full_expression.pexp_loc
-           ~arity:(if has_forward_ref then 2 else 1)
+      |> Ast_uncurried.uncurried_fun ~arity:(if has_forward_ref then 2 else 1)
     in
     let full_expression =
       match full_module_name with
@@ -1144,7 +1145,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       | _ -> Pat.record (List.rev patterns_with_label) Open
     in
     let expression =
-      Exp.fun_ ~arity:None Nolabel None
+      Exp.fun_ ~arity:(Some 1) Nolabel None
         (Pat.constraint_ record_pattern
            (Typ.constr ~loc:empty_loc
               {txt = Lident "props"; loc = empty_loc}
@@ -1189,6 +1190,109 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
           Some (binding_wrapper full_expression) )
     in
     (Some props_record_type, binding, new_binding))
+  else if Jsx_common.has_attr_on_binding Jsx_common.has_attr_with_props binding
+  then
+    let modified_binding = Jsx_common.remove_arity binding in
+    let modified_binding =
+      {
+        modified_binding with
+        pvb_attributes =
+          modified_binding.pvb_attributes |> List.filter other_attrs_pure;
+      }
+    in
+    let fn_name = get_fn_name modified_binding.pvb_pat in
+    let internal_fn_name = fn_name ^ "$Internal" in
+    let full_module_name =
+      make_module_name file_name config.nested_modules fn_name
+    in
+
+    let is_async =
+      Ext_list.find_first modified_binding.pvb_expr.pexp_attributes
+        Ast_async.is_async
+      |> Option.is_some
+    in
+
+    let make_new_binding ~loc ~full_module_name binding =
+      let props_pattern =
+        match binding.pvb_expr with
+        | {pexp_desc = Pexp_apply (wrapper_expr, [(Nolabel, func_expr)])}
+          when is_forward_ref wrapper_expr ->
+          (* Case when using React.forwardRef *)
+          let rec check_invalid_forward_ref expr =
+            match expr.pexp_desc with
+            | Pexp_fun ((Labelled _ | Optional _), _, _, _, _) ->
+              Location.raise_errorf ~loc:expr.pexp_loc
+                "Components using React.forwardRef cannot use \
+                 @react.componentWithProps. Please use @react.component \
+                 instead."
+            | Pexp_fun (Nolabel, _, _, body, _) ->
+              check_invalid_forward_ref body
+            | _ -> ()
+          in
+          check_invalid_forward_ref func_expr;
+          Pat.var {txt = "props"; loc}
+        | {
+         pexp_desc =
+           Pexp_fun (_, _, {ppat_desc = Ppat_constraint (_, typ)}, _, _);
+        } -> (
+          match typ with
+          | {ptyp_desc = Ptyp_constr ({txt = Lident "props"}, args)} ->
+            (* props<_> *)
+            if List.length args > 0 then
+              Pat.constraint_
+                (Pat.var {txt = "props"; loc})
+                (Typ.constr {txt = Lident "props"; loc} [Typ.any ()])
+              (* props *)
+            else
+              Pat.constraint_
+                (Pat.var {txt = "props"; loc})
+                (Typ.constr {txt = Lident "props"; loc} [])
+          | _ -> Pat.var {txt = "props"; loc})
+        | _ -> Pat.var {txt = "props"; loc}
+      in
+
+      let wrapper_expr =
+        Exp.fun_ ~arity:None Nolabel None props_pattern
+          (Jsx_common.async_component ~async:is_async
+             (Exp.apply
+                (Exp.ident
+                   {
+                     txt =
+                       Lident
+                         (match rec_flag with
+                         | Recursive -> internal_fn_name
+                         | Nonrecursive -> fn_name);
+                     loc;
+                   })
+                [(Nolabel, Exp.ident {txt = Lident "props"; loc})]))
+      in
+
+      let wrapper_expr = Ast_uncurried.uncurried_fun ~arity:1 wrapper_expr in
+
+      let internal_expression =
+        Exp.let_ Nonrecursive
+          [Vb.mk (Pat.var {txt = full_module_name; loc}) wrapper_expr]
+          (Exp.ident {txt = Lident full_module_name; loc})
+      in
+
+      Vb.mk ~attrs:modified_binding.pvb_attributes
+        (Pat.var {txt = fn_name; loc})
+        internal_expression
+    in
+
+    let new_binding =
+      match rec_flag with
+      | Recursive -> None
+      | Nonrecursive ->
+        Some
+          (make_new_binding ~loc:empty_loc ~full_module_name modified_binding)
+    in
+    ( None,
+      {
+        binding with
+        pvb_attributes = binding.pvb_attributes |> List.filter other_attrs_pure;
+      },
+      new_binding )
   else (None, binding, None)
 
 let transform_structure_item ~config item =
@@ -1205,7 +1309,6 @@ let transform_structure_item ~config item =
       check_multiple_components ~config ~loc:pstr_loc;
       check_string_int_attribute_iter.structure_item
         check_string_int_attribute_iter item;
-      let pval_type = Jsx_common.extract_uncurried pval_type in
       let core_type_of_attr = Jsx_common.core_type_of_attrs pval_attributes in
       let typ_vars_of_core_type =
         core_type_of_attr
@@ -1215,13 +1318,13 @@ let transform_structure_item ~config item =
       let rec get_prop_types types
           ({ptyp_loc; ptyp_desc; ptyp_attributes} as full_type) =
         match ptyp_desc with
-        | Ptyp_arrow (name, type_, ({ptyp_desc = Ptyp_arrow _} as rest))
+        | Ptyp_arrow (name, type_, ({ptyp_desc = Ptyp_arrow _} as rest), _)
           when is_labelled name || is_optional name ->
           get_prop_types
             ((name, ptyp_attributes, ptyp_loc, type_) :: types)
             rest
-        | Ptyp_arrow (Nolabel, _type, rest) -> get_prop_types types rest
-        | Ptyp_arrow (name, type_, return_value)
+        | Ptyp_arrow (Nolabel, _type, rest, _) -> get_prop_types types rest
+        | Ptyp_arrow (name, type_, return_value, _)
           when is_labelled name || is_optional name ->
           ( return_value,
             (name, ptyp_attributes, return_value.ptyp_loc, type_) :: types )
@@ -1308,7 +1411,6 @@ let transform_signature_item ~config item =
     | [] -> [item]
     | [_] ->
       check_multiple_components ~config ~loc:psig_loc;
-      let pval_type = Jsx_common.extract_uncurried pval_type in
       check_string_int_attribute_iter.signature_item
         check_string_int_attribute_iter item;
       let core_type_of_attr = Jsx_common.core_type_of_attrs pval_attributes in
@@ -1322,15 +1424,19 @@ let transform_signature_item ~config item =
         | Ptyp_arrow
             ( name,
               ({ptyp_attributes = attrs} as type_),
-              ({ptyp_desc = Ptyp_arrow _} as rest) )
+              ({ptyp_desc = Ptyp_arrow _} as rest),
+              _ )
           when is_optional name || is_labelled name ->
           get_prop_types ((name, attrs, ptyp_loc, type_) :: types) rest
         | Ptyp_arrow
-            (Nolabel, {ptyp_desc = Ptyp_constr ({txt = Lident "unit"}, _)}, rest)
-          ->
+            ( Nolabel,
+              {ptyp_desc = Ptyp_constr ({txt = Lident "unit"}, _)},
+              rest,
+              _ ) ->
           get_prop_types types rest
-        | Ptyp_arrow (Nolabel, _type, rest) -> get_prop_types types rest
-        | Ptyp_arrow (name, ({ptyp_attributes = attrs} as type_), return_value)
+        | Ptyp_arrow (Nolabel, _type, rest, _) -> get_prop_types types rest
+        | Ptyp_arrow
+            (name, ({ptyp_attributes = attrs} as type_), return_value, _)
           when is_optional name || is_labelled name ->
           (return_value, (name, attrs, return_value.ptyp_loc, type_) :: types)
         | _ -> (full_type, types)

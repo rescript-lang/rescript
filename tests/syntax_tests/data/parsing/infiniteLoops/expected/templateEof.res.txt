@@ -20,6 +20,5 @@
 
 ;;et
 ;;foo =
-    (Function$
-       (fun [arity:1]x ->
-          match x with | (("")[@res.template ]) -> [%rescript.exprhole ]))
+    (fun [arity:1]x ->
+       match x with | (("")[@res.template ]) -> [%rescript.exprhole ])

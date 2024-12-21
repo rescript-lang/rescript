@@ -31,24 +31,19 @@ let ((`Instance (component : comp)) : React.t) = i
   | `Instance ({ render; subtree } : Instance.t) -> ()
   | `Instance (comp, tree) -> ()
   | (`Instance (comp : Component.t) : React.t) -> ()
-let f = Function$ (fun [arity:1]`Instance -> i)
-let f = Function$ (fun [arity:1](`Instance as i) -> i)
-let f = Function$ (fun [arity:1](`Instance component) -> i)
-let f = Function$ (fun [arity:1](`Instance component) -> i)
-let f = Function$ (fun [arity:1](`Instance { render; subtree }) -> i)
-let f = Function$ (fun [arity:1](`Instance ({ render; subtree }, inst)) -> i)
-let f =
-  Function$
-    (fun [arity:1](`Instance ({ render; subtree } : Instance.t)) -> i)
-let f =
-  Function$
-    (fun [arity:1](`Instance ({ render; subtree } : Instance.t)) -> i)
-let f = Function$ (fun [arity:1](`Instance (component, tree)) -> i)
-let f = Function$ (fun [arity:1](`Instance (component, tree)) -> i)
-let f = Function$ (fun [arity:1](`Instance : React.t) -> i)
-let f = Function$ (fun [arity:1](`Instance : React.t) -> i)
-let f =
-  Function$ (fun [arity:1](`Instance (comp : Component.t) : React.t) -> ())
+let f [arity:1]`Instance = i
+let f [arity:1](`Instance as i) = i
+let f [arity:1](`Instance component) = i
+let f [arity:1](`Instance component) = i
+let f [arity:1](`Instance { render; subtree }) = i
+let f [arity:1](`Instance ({ render; subtree }, inst)) = i
+let f [arity:1](`Instance ({ render; subtree } : Instance.t)) = i
+let f [arity:1](`Instance ({ render; subtree } : Instance.t)) = i
+let f [arity:1](`Instance (component, tree)) = i
+let f [arity:1](`Instance (component, tree)) = i
+let f [arity:1](`Instance : React.t) = i
+let f [arity:1](`Instance : React.t) = i
+let f [arity:1](`Instance (comp : Component.t) : React.t) = ()
 ;;for `Blue = x to y do () done
 ;;for `Blue as c = x to y do () done
 ;;for `Blue = x to y do () done
@@ -67,22 +62,19 @@ let f =
 ;;for `Point { x; y; z } = x to y do () done
 ;;for `Point { x; y; z } as p = x to y do () done
 ;;match x with | #typeVar -> () | `lowercase -> ()
-let cmp =
-  Function$
-    (fun [arity:2]selectedChoice ->
-       fun value ->
-         match (selectedChoice, value) with
-         | (#a, #a) -> true
-         | [|#b;#b|] -> true
-         | #b::#b::[] -> true
-         | { x = #c; y = #c } -> true
-         | Constructor (#a, #a) -> true
-         | `Constuctor (#a, #a) -> true
-         | #a as x -> true
-         | #a|#b -> true
-         | (#a : typ) -> true
-         | exception #a -> true
-         | _ -> false)
+let cmp [arity:2]selectedChoice value =
+  match (selectedChoice, value) with
+  | (#a, #a) -> true
+  | [|#b;#b|] -> true
+  | #b::#b::[] -> true
+  | { x = #c; y = #c } -> true
+  | Constructor (#a, #a) -> true
+  | `Constuctor (#a, #a) -> true
+  | #a as x -> true
+  | #a|#b -> true
+  | (#a : typ) -> true
+  | exception #a -> true
+  | _ -> false
 ;;match polyVar with
   | `ease-in -> ()
   | `ease-out⛰ -> ()

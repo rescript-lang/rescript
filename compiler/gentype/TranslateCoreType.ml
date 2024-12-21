@@ -52,7 +52,8 @@ let rec translate_arrow_type ~config ~type_vars_gen
     ~no_function_return_dependencies ~type_env ~rev_arg_deps ~rev_args
     (core_type : Typedtree.core_type) =
   match core_type.ctyp_desc with
-  | Ttyp_arrow (Nolabel, core_type1, core_type2) ->
+  | Ttyp_arrow (Nolabel, core_type1, core_type2, arity)
+    when arity = None || rev_args = [] ->
     let {dependencies; type_} =
       core_type1 |> fun __x ->
       translateCoreType_ ~config ~type_vars_gen ~type_env __x
@@ -62,8 +63,9 @@ let rec translate_arrow_type ~config ~type_vars_gen
     |> translate_arrow_type ~config ~type_vars_gen
          ~no_function_return_dependencies ~type_env ~rev_arg_deps:next_rev_deps
          ~rev_args:((Nolabel, type_) :: rev_args)
-  | Ttyp_arrow (((Labelled lbl | Optional lbl) as label), core_type1, core_type2)
-    -> (
+  | Ttyp_arrow
+      (((Labelled lbl | Optional lbl) as label), core_type1, core_type2, arity)
+    when arity = None || rev_args = [] -> (
     let as_label =
       match core_type.ctyp_attributes |> Annotation.get_gentype_as_renaming with
       | Some s -> s

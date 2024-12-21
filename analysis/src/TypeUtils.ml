@@ -10,7 +10,7 @@ let debugLogTypeArgContext {env; typeArgs; typeParams} =
 let rec hasTvar (ty : Types.type_expr) : bool =
   match ty.desc with
   | Tvar _ -> true
-  | Tarrow (_, ty1, ty2, _) -> hasTvar ty1 || hasTvar ty2
+  | Tarrow (_, ty1, ty2, _, _) -> hasTvar ty1 || hasTvar ty2
   | Ttuple tyl -> List.exists hasTvar tyl
   | Tconstr (_, tyl, _) -> List.exists hasTvar tyl
   | Tobject (ty, _) -> hasTvar ty
@@ -34,9 +34,8 @@ let findTypeViaLoc ~full ~debug (loc : Location.t) =
   | Some {locType = Typed (_, typExpr, _)} -> Some typExpr
   | _ -> None
 
-let rec pathFromTypeExpr (t : Types.type_expr) =
+let pathFromTypeExpr (t : Types.type_expr) =
   match t.desc with
-  | Tconstr (Pident {name = "function$"}, [t; _], _) -> pathFromTypeExpr t
   | Tconstr (path, _typeArgs, _)
   | Tlink {desc = Tconstr (path, _typeArgs, _)}
   | Tsubst {desc = Tconstr (path, _typeArgs, _)}
@@ -116,8 +115,8 @@ let instantiateType ~typeParams ~typeArgs (t : Types.type_expr) =
       | Tsubst t -> loop t
       | Tvariant rd -> {t with desc = Tvariant (rowDesc rd)}
       | Tnil -> t
-      | Tarrow (lbl, t1, t2, c) ->
-        {t with desc = Tarrow (lbl, loop t1, loop t2, c)}
+      | Tarrow (lbl, t1, t2, c, arity) ->
+        {t with desc = Tarrow (lbl, loop t1, loop t2, c, arity)}
       | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
       | Tobject (t, r) -> {t with desc = Tobject (loop t, r)}
       | Tfield (n, k, t1, t2) -> {t with desc = Tfield (n, k, loop t1, loop t2)}
@@ -169,8 +168,8 @@ let instantiateType2 ?(typeArgContext : typeArgContext option)
       | Tsubst t -> loop t
       | Tvariant rd -> {t with desc = Tvariant (rowDesc rd)}
       | Tnil -> t
-      | Tarrow (lbl, t1, t2, c) ->
-        {t with desc = Tarrow (lbl, loop t1, loop t2, c)}
+      | Tarrow (lbl, t1, t2, c, arity) ->
+        {t with desc = Tarrow (lbl, loop t1, loop t2, c, arity)}
       | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
       | Tobject (t, r) -> {t with desc = Tobject (loop t, r)}
       | Tfield (n, k, t1, t2) -> {t with desc = Tfield (n, k, loop t1, loop t2)}
@@ -238,13 +237,11 @@ let rec extractObjectType ~env ~package (t : Types.type_expr) =
     | _ -> None)
   | _ -> None
 
-let rec extractFunctionType ~env ~package typ =
+let extractFunctionType ~env ~package typ =
   let rec loop ~env acc (t : Types.type_expr) =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ~env acc t1
-    | Tarrow (label, tArg, tRet, _) -> loop ~env ((label, tArg) :: acc) tRet
-    | Tconstr (Pident {name = "function$"}, [t; _], _) ->
-      extractFunctionType ~env ~package t
+    | Tarrow (label, tArg, tRet, _, _) -> loop ~env ((label, tArg) :: acc) tRet
     | Tconstr (path, typeArgs, _) -> (
       match References.digConstructor ~env ~package path with
       | Some
@@ -277,14 +274,12 @@ let maybeSetTypeArgCtx ?typeArgContextFromTypeManifest ~typeParams ~typeArgs env
     typeArgContext
 
 (* TODO(env-stuff) Maybe this could be removed entirely if we can guarantee that we don't have to look up functions from in here. *)
-let rec extractFunctionType2 ?typeArgContext ~env ~package typ =
+let extractFunctionType2 ?typeArgContext ~env ~package typ =
   let rec loop ?typeArgContext ~env acc (t : Types.type_expr) =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ?typeArgContext ~env acc t1
-    | Tarrow (label, tArg, tRet, _) ->
+    | Tarrow (label, tArg, tRet, _, _) ->
       loop ?typeArgContext ~env ((label, tArg) :: acc) tRet
-    | Tconstr (Pident {name = "function$"}, [t; _], _) ->
-      extractFunctionType2 ?typeArgContext ~env ~package t
     | Tconstr (path, typeArgs, _) -> (
       match References.digConstructor ~env ~package path with
       | Some
@@ -334,13 +329,6 @@ let rec extractType ?(printOpeningDebug = true)
     Some (Tstring env, typeArgContext)
   | Tconstr (Path.Pident {name = "exn"}, [], _) ->
     Some (Texn env, typeArgContext)
-  | Tconstr (Pident {name = "function$"}, [t; _], _) -> (
-    match extractFunctionType2 ?typeArgContext t ~env ~package with
-    | args, tRet, typeArgContext when args <> [] ->
-      Some
-        ( Tfunction {env; args; typ = t; uncurried = true; returnType = tRet},
-          typeArgContext )
-    | _args, _tRet, _typeArgContext -> None)
   | Tarrow _ -> (
     match extractFunctionType2 ?typeArgContext t ~env ~package with
     | args, tRet, typeArgContext when args <> [] ->
@@ -907,17 +895,14 @@ let getArgs ~env (t : Types.type_expr) ~full =
   let rec getArgsLoop ~env (t : Types.type_expr) ~full ~currentArgumentPosition
       =
     match t.desc with
-    | Tlink t1
-    | Tsubst t1
-    | Tpoly (t1, [])
-    | Tconstr (Pident {name = "function$"}, [t1; _], _) ->
+    | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
       getArgsLoop ~full ~env ~currentArgumentPosition t1
-    | Tarrow (Labelled l, tArg, tRet, _) ->
+    | Tarrow (Labelled l, tArg, tRet, _, _) ->
       (SharedTypes.Completable.Labelled l, tArg)
       :: getArgsLoop ~full ~env ~currentArgumentPosition tRet
-    | Tarrow (Optional l, tArg, tRet, _) ->
+    | Tarrow (Optional l, tArg, tRet, _, _) ->
       (Optional l, tArg) :: getArgsLoop ~full ~env ~currentArgumentPosition tRet
-    | Tarrow (Nolabel, tArg, tRet, _) ->
+    | Tarrow (Nolabel, tArg, tRet, _, _) ->
       (Unlabelled {argumentPosition = currentArgumentPosition}, tArg)
       :: getArgsLoop ~full ~env
            ~currentArgumentPosition:(currentArgumentPosition + 1)

@@ -96,7 +96,7 @@ module T = struct
     sub.attributes sub attrs;
     match desc with
     | Ptyp_any | Ptyp_var _ -> ()
-    | Ptyp_arrow (_lab, t1, t2) ->
+    | Ptyp_arrow (_lab, t1, t2, _) ->
       sub.typ sub t1;
       sub.typ sub t2
     | Ptyp_tuple tyl -> List.iter (sub.typ sub) tyl

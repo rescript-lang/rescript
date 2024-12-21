@@ -1,7 +1,5 @@
 ;;(foo ()) / 1
 ;;foo ()
 ;;(1, 2) |.u printTuple
-let f =
-  Function$
-    (fun [arity:1]() -> (((foo ()) / 1; foo (); (1, 2) |.u printTuple)
-       [@res.braces ]))
+let f [arity:1]() = (((foo ()) / 1; foo (); (1, 2) |.u printTuple)
+  [@res.braces ])

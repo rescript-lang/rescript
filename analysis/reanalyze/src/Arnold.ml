@@ -545,7 +545,7 @@ module FindFunctionsCalled = struct
   let findCallees (expression : Typedtree.expression) =
     let isFunction =
       match expression.exp_desc with
-      | Texp_function _ -> true
+      | Texp_function {arity = None} -> true
       | _ -> false
     in
     let callees = ref StringSet.empty in

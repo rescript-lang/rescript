@@ -1010,7 +1010,7 @@ let compute_variance env visited vari ty =
       visited := TypeMap.add ty vari !visited;
       let compute_same = compute_variance_rec vari in
       match ty.desc with
-      | Tarrow (_, ty1, ty2, _) ->
+      | Tarrow (_, ty1, ty2, _, _) ->
         let open Variance in
         let v = conjugate vari in
         let v1 =
@@ -1790,17 +1790,17 @@ let transl_exception env sext =
 
 let rec arity_from_arrow_type env core_type ty =
   match (core_type.ptyp_desc, (Ctype.repr ty).desc) with
-  | Ptyp_arrow (_, _, ct2), Tarrow (_, _, t2, _) ->
+  | Ptyp_arrow (_, _, ct2, _), Tarrow (_, _, t2, _, _) ->
     1 + arity_from_arrow_type env ct2 t2
   | Ptyp_arrow _, _ | _, Tarrow _ -> assert false
   | _ -> 0
 
 let parse_arity env core_type ty =
-  match Ast_uncurried.uncurried_type_get_arity_opt ~env ty with
+  match Ctype.get_arity env ty with
   | Some arity ->
     let from_constructor =
       match ty.desc with
-      | Tconstr (_, _, _) -> not (Ast_uncurried_utils.type_is_uncurried_fun ty)
+      | Tconstr (_, _, _) -> true
       | _ -> false
     in
     (arity, from_constructor)
