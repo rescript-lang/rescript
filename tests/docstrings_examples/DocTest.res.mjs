@@ -62,17 +62,22 @@ let v = values["ignore-runtime-tests"];
 let ignoreRuntimeTests = v !== undefined ? v.split(",").map(s => s.trim()) : [];
 
 async function run(command, args, options) {
-  return await new Promise((resolve, _reject) => {
-    let spawn = Child_process.spawn(command, args, options !== undefined ? Primitive_option.valFromOption(options) : undefined);
-    let stdout = [];
-    let stderr = [];
-    spawn.stdout.on("data", data => {
-      stdout.push(data);
-    });
-    spawn.stderr.on("data", data => {
-      stderr.push(data);
-    });
-    spawn.on("close", code => resolve({
+  let spawn = Child_process.spawn(command, args, options !== undefined ? Primitive_option.valFromOption(options) : undefined);
+  let stdout = [];
+  let stderr = [];
+  spawn.stdout.on("data", data => {
+    stdout.push(data);
+  });
+  spawn.stderr.on("data", data => {
+    stderr.push(data);
+  });
+  return await new Promise((resolve, reject) => {
+    spawn.once("error", (param, param$1) => reject({
+      stdout: stdout,
+      stderr: stderr,
+      code: 1.0
+    }));
+    spawn.once("close", (code, _signal) => resolve({
       stdout: stdout,
       stderr: stderr,
       code: code
@@ -183,7 +188,7 @@ function extractDocFromFile(file) {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "DocTest.res",
-        199,
+        204,
         9
       ],
       Error: new Error()
@@ -381,7 +386,6 @@ async function main() {
     while (!$$break) {
       let match = await asyncIterator.next();
       let value = match.value;
-      console.log(value, chuncks.length);
       $$break = match.done;
       if (value !== undefined) {
         let c = chuncks[value];
@@ -403,6 +407,7 @@ async function main() {
     };
   };
   await processMyAsyncIterator();
+  console.log("Compiation tests finished");
   let compilationResults = result.flat();
   let match = $$Array.reduce(compilationResults, [
     [],

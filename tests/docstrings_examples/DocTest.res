@@ -40,6 +40,8 @@ module Node = {
     @send
     external once: (spawnReturns, string, (Js.Null.t<float>, Js.Null.t<string>) => unit) => unit =
       "once"
+    @send
+    external onceError: (spawnReturns, string, Js.Exn.t => unit) => unit = "once"
   }
 
   module OS = {
@@ -92,17 +94,20 @@ module SpawnAsync = {
     code: Null.t<float>,
   }
   let run = async (~command, ~args, ~options=?) => {
-    await Promise.make((resolve, _reject) => {
-      let spawn = ChildProcess.spawn(command, args, ~options?)
-      let stdout = []
-      let stderr = []
-      spawn.stdout->ChildProcess.on("data", data => {
-        Array.push(stdout, data)
+    let spawn = ChildProcess.spawn(command, args, ~options?)
+    let stdout = []
+    let stderr = []
+    spawn.stdout->ChildProcess.on("data", data => {
+      Array.push(stdout, data)
+    })
+    spawn.stderr->ChildProcess.on("data", data => {
+      Array.push(stderr, data)
+    })
+    await Promise.make((resolve, reject) => {
+      spawn->ChildProcess.once("error", (_, _) => {
+        reject({stdout, stderr, code: Null.make(1.0)})
       })
-      spawn.stderr->ChildProcess.on("data", data => {
-        Array.push(stderr, data)
-      })
-      spawn->ChildProcess.onFromSpawn("close", code => {
+      spawn->ChildProcess.once("close", (code, _signal) => {
         resolve({stdout, stderr, code})
       })
     })
@@ -374,8 +379,6 @@ let main = async () => {
       // Await the next iterator value
       let {value, done} = await asyncIterator->AsyncIterator.next
 
-      Console.log2(value, Array.length(chuncks))
-
       // Exit the while loop if the iterator says it's done
       break := done
 
@@ -401,6 +404,8 @@ let main = async () => {
   }
 
   let () = await processMyAsyncIterator()
+
+  Console.log("Compiation tests finished")
 
   let compilationResults = result->Array.flat
 
