@@ -45,15 +45,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Default is too slow, 256
-      - name: Increase file descriptors limit (macOS only)
-        if: runner.os == 'macOS'
-        run: sudo launchctl limit maxfiles 6000 10000
-
-      - name: Increase max user process (macOS only)
-        if: runner.os == 'macOS'
-        run: sudo launchctl limit maxproc 2000 2000
-
       - name: Restore build cache
         id: build-cache
         uses: actions/cache@v4
@@ -140,6 +131,15 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+
+            # Default is too slow, 256
+      - name: Increase file descriptors limit (macOS only)
+        if: runner.os == 'macOS'
+        run: sudo launchctl limit maxfiles 6000 10000
+
+      - name: Increase max user process (macOS only)
+        if: runner.os == 'macOS'
+        run: sudo launchctl limit maxproc 2000 2000
 
       - name: Use Node.js
         uses: actions/setup-node@v4
