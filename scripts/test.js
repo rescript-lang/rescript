@@ -12,6 +12,7 @@ let ounitTest = false;
 let mochaTest = false;
 let bsbTest = false;
 let formatTest = false;
+let runtimeDocstrings = false;
 
 if (process.argv.includes("-ounit")) {
   ounitTest = true;
@@ -29,11 +30,16 @@ if (process.argv.includes("-format")) {
   formatTest = true;
 }
 
+if (process.argv.includes("-docstrings")) {
+  runtimeDocstrings = true;
+}
+
 if (process.argv.includes("-all")) {
   ounitTest = true;
   mochaTest = true;
   bsbTest = true;
   formatTest = true;
+  runtimeDocstrings = true;
 }
 
 async function runTests() {
@@ -118,6 +124,26 @@ async function runTests() {
 
     if (hasError) {
       process.exit(1);
+    }
+  }
+
+  if (runtimeDocstrings) {
+    if (process.platform === "win32") {
+      console.log(`Skipping docstrings tests on ${process.platform}`);
+    } else {
+      console.log("Running runtime docstrings tests");
+      cp.execSync(`${rescript_exe} build`, {
+        cwd: path.join(__dirname, "..", "tests/docstrings_examples"),
+        stdio: [0, 1, 2],
+      });
+      // Ignore some tests not supported by node v18
+      cp.execSync(
+        `node ${path.join("tests", "docstrings_examples", "DocTest.res.mjs")} --ignore-runtime-tests "Array.toReversed, Array.toSorted, Promise.withResolvers, Set.union, Set.isSupersetOf, Set.isSubsetOf, Set.isDisjointFrom, Set.intersection, Set.symmetricDifference, Set.difference"`,
+        {
+          cwd: path.join(__dirname, ".."),
+          stdio: [0, 1, 2],
+        },
+      );
     }
   }
 }
