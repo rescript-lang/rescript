@@ -326,6 +326,12 @@ jobs:
       - name: Run tests
         run: node scripts/test.js -all
 
+      - name: Docstrins tests
+        if: runner.os == 'macOS'
+        env:
+          UV_THREADPOOL_SIZE: 8
+        run: node tests/docstrings_examples/DocTest.res.mjs --ignore-runtime-tests "Array.toReversed, Array.toSorted, Promise.withResolvers, Set.union, Set.isSupersetOf, Set.isSubsetOf, Set.isDisjointFrom, Set.intersection, Set.symmetricDifference, Set.difference"
+
       - name: Check for diffs in tests folder
         run: git diff --ignore-cr-at-eol --exit-code tests
 
