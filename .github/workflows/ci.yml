@@ -139,7 +139,7 @@ jobs:
 
       - name: Increase max user process (macOS only)
         if: runner.os == 'macOS'
-        run: sudo launchctl limit maxproc 2000 2000
+        run: sudo launchctl limit maxproc 5000 8000
 
       - name: Use Node.js
         uses: actions/setup-node@v4

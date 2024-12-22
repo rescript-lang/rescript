@@ -370,7 +370,7 @@ async function main() {
   let batchSize = (Os.cpus().length << 1);
   let chuncks = chunkArray(modules, batchSize);
   console.log("chuncks length", chuncks.length);
-  console.log("chunck part size", chuncks.map(f => f.length));
+  console.log("chunck part size", $$Array.reduce(chuncks, 0, (acc, cur) => acc + cur.length | 0));
   let context = {
     contents: 0
   };
