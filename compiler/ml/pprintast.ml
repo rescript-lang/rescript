@@ -543,7 +543,7 @@ and expression ctxt f x =
     | Pexp_let _ | Pexp_letmodule _ | Pexp_open _ | Pexp_letexception _
         when ctxt.semi ->
         paren true (expression reset_ctxt) f x
-    | Pexp_fun (l, e0, p, e, arity) ->
+    | Pexp_fun {arg_label=l; default= e0; lhs= p; rhs= e; arity} ->
         let arity_str = match arity with
           | None -> ""
           | Some arity -> "[arity:" ^ string_of_int arity ^ "]"
@@ -951,7 +951,7 @@ and binding ctxt f {pvb_pat=p; pvb_expr=x; _} =
   let rec pp_print_pexp_function f x =
     if x.pexp_attributes <> [] then pp f "=@;%a" (expression ctxt) x
     else match x.pexp_desc with
-      | Pexp_fun (label, eo, p, e, arity) ->
+      | Pexp_fun {arg_label=label; default= eo; lhs= p; rhs= e; arity} ->
           let arity_str = match arity with
             | None -> ""
             | Some arity -> "[arity:" ^ string_of_int arity ^ "]"

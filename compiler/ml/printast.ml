@@ -238,7 +238,7 @@ and expression i ppf x =
     line i ppf "Pexp_let %a\n" fmt_rec_flag rf;
     list i value_binding ppf l;
     expression i ppf e
-  | Pexp_fun (l, eo, p, e, arity) ->
+  | Pexp_fun {arg_label = l; default = eo; lhs = p; rhs = e; arity} ->
     line i ppf "Pexp_fun\n";
     let () =
       match arity with

@@ -2777,11 +2777,12 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
   let printed_expression =
     match e_fun.pexp_desc with
     | Pexp_fun
-        ( Nolabel,
-          None,
-          {ppat_desc = Ppat_var {txt = "__x"}},
-          {pexp_desc = Pexp_apply _},
-          _ ) ->
+        {
+          arg_label = Nolabel;
+          default = None;
+          lhs = {ppat_desc = Ppat_var {txt = "__x"}};
+          rhs = {pexp_desc = Pexp_apply _};
+        } ->
       (* (__x) => f(a, __x, c) -----> f(a, _, c)  *)
       print_expression_with_comments ~state
         (ParsetreeViewer.rewrite_underscore_apply e_fun)

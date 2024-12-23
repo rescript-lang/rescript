@@ -644,17 +644,15 @@ let transform_lowercase_call3 ~config mapper jsx_expr_loc call_expr_loc attrs
 let rec recursively_transform_named_args_for_make expr args newtypes core_type =
   match expr.pexp_desc with
   (* TODO: make this show up with a loc. *)
-  | Pexp_fun (Labelled "key", _, _, _, _) | Pexp_fun (Optional "key", _, _, _, _)
-    ->
+  | Pexp_fun {arg_label = Labelled "key" | Optional "key"} ->
     Jsx_common.raise_error ~loc:expr.pexp_loc
       "Key cannot be accessed inside of a component. Don't worry - you can \
        always key a component from its parent!"
-  | Pexp_fun (Labelled "ref", _, _, _, _) | Pexp_fun (Optional "ref", _, _, _, _)
-    ->
+  | Pexp_fun {arg_label = Labelled "ref" | Optional "ref"} ->
     Jsx_common.raise_error ~loc:expr.pexp_loc
       "Ref cannot be passed as a normal prop. Please use `forwardRef` API \
        instead."
-  | Pexp_fun (arg, default, pattern, expression, _arity)
+  | Pexp_fun {arg_label = arg; default; lhs = pattern; rhs = expression}
     when is_optional arg || is_labelled arg ->
     let () =
       match (is_optional arg, pattern, default) with
@@ -701,21 +699,20 @@ let rec recursively_transform_named_args_for_make expr args newtypes core_type =
       ((arg, default, pattern, alias, pattern.ppat_loc, type_) :: args)
       newtypes core_type
   | Pexp_fun
-      ( Nolabel,
-        _,
-        {ppat_desc = Ppat_construct ({txt = Lident "()"}, _) | Ppat_any},
-        _expression,
-        _arity ) ->
+      {
+        arg_label = Nolabel;
+        lhs = {ppat_desc = Ppat_construct ({txt = Lident "()"}, _) | Ppat_any};
+      } ->
     (args, newtypes, core_type)
   | Pexp_fun
-      ( Nolabel,
-        _,
-        ({
-           ppat_desc =
-             Ppat_var {txt} | Ppat_constraint ({ppat_desc = Ppat_var {txt}}, _);
-         } as pattern),
-        _expression,
-        _arity ) ->
+      {
+        arg_label = Nolabel;
+        lhs =
+          {
+            ppat_desc =
+              Ppat_var {txt} | Ppat_constraint ({ppat_desc = Ppat_var {txt}}, _);
+          } as pattern;
+      } ->
     if txt = "ref" then
       let type_ =
         match pattern with
@@ -727,7 +724,7 @@ let rec recursively_transform_named_args_for_make expr args newtypes core_type =
         newtypes,
         core_type )
     else (args, newtypes, core_type)
-  | Pexp_fun (Nolabel, _, pattern, _expression, _arity) ->
+  | Pexp_fun {arg_label = Nolabel; lhs = pattern} ->
     Location.raise_errorf ~loc:pattern.ppat_loc
       "React: react.component refs only support plain arguments and type \
        annotations."
@@ -827,49 +824,34 @@ let modified_binding ~binding_loc ~binding_pat_loc ~fn_name binding =
     | {
      pexp_desc =
        Pexp_fun
-         ( ((Labelled _ | Optional _) as label),
-           default,
-           pattern,
-           ({pexp_desc = Pexp_fun _} as internal_expression),
-           arity );
+         ({
+            arg_label = Labelled _ | Optional _;
+            rhs = {pexp_desc = Pexp_fun _} as internal_expression;
+          } as f);
     } ->
       let wrap, has_forward_ref, exp =
         spelunk_for_fun_expression internal_expression
       in
       ( wrap,
         has_forward_ref,
-        {
-          expression with
-          pexp_desc = Pexp_fun (label, default, pattern, exp, arity);
-        } )
+        {expression with pexp_desc = Pexp_fun {f with rhs = exp}} )
     (* let make = (()) => ... *)
     (* let make = (_) => ... *)
     | {
      pexp_desc =
        Pexp_fun
-         ( Nolabel,
-           _default,
-           {ppat_desc = Ppat_construct ({txt = Lident "()"}, _) | Ppat_any},
-           _internalExpression,
-           _arity );
+         {
+           arg_label = Nolabel;
+           lhs =
+             {ppat_desc = Ppat_construct ({txt = Lident "()"}, _) | Ppat_any};
+         };
     } ->
       ((fun a -> a), false, expression)
     (* let make = (~prop) => ... *)
-    | {
-     pexp_desc =
-       Pexp_fun
-         ( (Labelled _ | Optional _),
-           _default,
-           _pattern,
-           _internalExpression,
-           _arity );
-    } ->
+    | {pexp_desc = Pexp_fun {arg_label = Labelled _ | Optional _}} ->
       ((fun a -> a), false, expression)
     (* let make = (prop) => ... *)
-    | {
-     pexp_desc =
-       Pexp_fun (_nolabel, _default, pattern, _internalExpression, _arity);
-    } ->
+    | {pexp_desc = Pexp_fun {lhs = pattern}} ->
       if !has_application then ((fun a -> a), false, expression)
       else
         Location.raise_errorf ~loc:pattern.ppat_loc
@@ -1068,15 +1050,18 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       | Pexp_constraint (expr, _) ->
         returned_expression patterns_with_label patterns_with_nolabel expr
       | Pexp_fun
-          ( _arg_label,
-            _default,
-            {ppat_desc = Ppat_construct ({txt = Lident "()"}, _)},
-            expr,
-            _arity ) ->
+          {
+            lhs = {ppat_desc = Ppat_construct ({txt = Lident "()"}, _)};
+            rhs = expr;
+          } ->
         (patterns_with_label, patterns_with_nolabel, expr)
       | Pexp_fun
-          (arg_label, default, ({ppat_loc; ppat_desc} as pattern), expr, _arity)
-        -> (
+          {
+            arg_label;
+            default;
+            lhs = {ppat_loc; ppat_desc} as pattern;
+            rhs = expr;
+          } -> (
         let pattern_without_constraint =
           strip_constraint_unpack ~label:(get_label arg_label) pattern
         in
@@ -1220,21 +1205,19 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
           (* Case when using React.forwardRef *)
           let rec check_invalid_forward_ref expr =
             match expr.pexp_desc with
-            | Pexp_fun ((Labelled _ | Optional _), _, _, _, _) ->
+            | Pexp_fun {arg_label = Labelled _ | Optional _} ->
               Location.raise_errorf ~loc:expr.pexp_loc
                 "Components using React.forwardRef cannot use \
                  @react.componentWithProps. Please use @react.component \
                  instead."
-            | Pexp_fun (Nolabel, _, _, body, _) ->
+            | Pexp_fun {arg_label = Nolabel; rhs = body} ->
               check_invalid_forward_ref body
             | _ -> ()
           in
           check_invalid_forward_ref func_expr;
           Pat.var {txt = "props"; loc}
-        | {
-         pexp_desc =
-           Pexp_fun (_, _, {ppat_desc = Ppat_constraint (_, typ)}, _, _);
-        } -> (
+        | {pexp_desc = Pexp_fun {lhs = {ppat_desc = Ppat_constraint (_, typ)}}}
+          -> (
           match typ with
           | {ptyp_desc = Ptyp_constr ({txt = Lident "props"}, args)} ->
             (* props<_> *)

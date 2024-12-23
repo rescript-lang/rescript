@@ -152,7 +152,8 @@ module Exp = struct
   let constant ?loc ?attrs a = mk ?loc ?attrs (Pexp_constant a)
   let let_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_let (a, b, c))
   let fun_ ?loc ?attrs ~arity a b c d =
-    mk ?loc ?attrs (Pexp_fun (a, b, c, d, arity))
+    mk ?loc ?attrs
+      (Pexp_fun {arg_label = a; default = b; lhs = c; rhs = d; arity})
   let apply ?loc ?attrs a b = mk ?loc ?attrs (Pexp_apply (a, b))
   let match_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_match (a, b))
   let try_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_try (a, b))

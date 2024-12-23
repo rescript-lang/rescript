@@ -213,7 +213,7 @@ and printExprItem expr ~pos ~indentation =
       | None -> ""
       | Some expr -> "," ^ printExprItem expr ~pos ~indentation)
     ^ ")"
-  | Pexp_fun (arg, _maybeDefaultArgExpr, pattern, nextExpr, _) ->
+  | Pexp_fun {arg_label = arg; lhs = pattern; rhs = nextExpr} ->
     "Pexp_fun(\n"
     ^ addIndentation (indentation + 1)
     ^ "arg: "

@@ -12,6 +12,10 @@
 
 # 12.0.0-alpha.7 (Unreleased)
 
+#### :house: Internal
+
+- AST cleanup: use inline record for Pexp_fun. https://github.com/rescript-lang/rescript/pull/7213
+
 # 12.0.0-alpha.6
 
 #### :rocket: New Feature

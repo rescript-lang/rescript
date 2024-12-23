@@ -266,7 +266,14 @@ let fun_expr expr =
   let rec collect attrs_before acc expr =
     match expr with
     | {
-     pexp_desc = Pexp_fun (lbl, default_expr, pattern, return_expr, _);
+     pexp_desc =
+       Pexp_fun
+         {
+           arg_label = lbl;
+           default = default_expr;
+           lhs = pattern;
+           rhs = return_expr;
+         };
      pexp_attributes = [];
     } ->
       let parameter = ([], lbl, default_expr, pattern) in
@@ -281,7 +288,14 @@ let fun_expr expr =
       in
       collect attrs_before (parameter :: acc) return_expr
     | {
-     pexp_desc = Pexp_fun (lbl, default_expr, pattern, return_expr, _);
+     pexp_desc =
+       Pexp_fun
+         {
+           arg_label = lbl;
+           default = default_expr;
+           lhs = pattern;
+           rhs = return_expr;
+         };
      pexp_attributes = [({txt = "bs"}, _)] as attrs;
     } ->
       let parameter = (attrs, lbl, default_expr, pattern) in
@@ -289,11 +303,12 @@ let fun_expr expr =
     | {
      pexp_desc =
        Pexp_fun
-         ( ((Labelled _ | Optional _) as lbl),
-           default_expr,
-           pattern,
-           return_expr,
-           _ );
+         {
+           arg_label = (Labelled _ | Optional _) as lbl;
+           default = default_expr;
+           lhs = pattern;
+           rhs = return_expr;
+         };
      pexp_attributes = attrs;
     } ->
       let parameter = (attrs, lbl, default_expr, pattern) in
@@ -301,10 +316,8 @@ let fun_expr expr =
     | expr -> (attrs_before, List.rev acc, expr)
   in
   match expr with
-  | {
-      pexp_desc = Pexp_fun (Nolabel, _defaultExpr, _pattern, _returnExpr, _);
-      pexp_attributes = attrs;
-    } as expr ->
+  | {pexp_desc = Pexp_fun {arg_label = Nolabel}; pexp_attributes = attrs} as
+    expr ->
     collect attrs [] {expr with pexp_attributes = []}
   | expr -> collect [] [] expr
 
@@ -1412,7 +1425,7 @@ and walk_expression expr t comments =
       in
       attach t.trailing call_expr.pexp_loc after_expr;
       walk_list (arguments |> List.map (fun (_, e) -> ExprArgument e)) t rest
-  | Pexp_fun (_, _, _, _, _) | Pexp_newtype _ -> (
+  | Pexp_fun _ | Pexp_newtype _ -> (
     let _, parameters, return_expr = fun_expr expr in
     let comments =
       visit_list_but_continue_with_remaining_comments ~newline_delimited:false
