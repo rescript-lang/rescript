@@ -33,11 +33,11 @@ _hash_ functions will have different type.
 
 ```rescript
 type t = int
-module I0 = unpack(Belt.Id.hashable(~hash=(a: t) => "&"(a, 0xff_ff), ~eq=(a, b) => a == b))
-let s0: t<_, string, _> = make(~hintSize=40, ~id=module(I0))
+module I0 = unpack(Belt.Id.hashable(~hash=(_: t) => 0xff_ff, ~eq=(a, b) => a == b))
+let s0: Belt.HashMap.t<I0.t, int, I0.identity> = Belt.HashMap.make(~hintSize=40, ~id=module(I0))
 
-module I1 = unpack(Belt.Id.hashable(~hash=(a: t) => "&"(a, 0xff), ~eq=(a, b) => a == b))
-let s1: t<_, string, _> = make(~hintSize=40, ~id=module(I1))
+module I1 = unpack(Belt.Id.hashable(~hash=(_: t) => 0xff, ~eq=(a, b) => a == b))
+let s1: Belt.HashMap.t<I1.t, string, I1.identity> = Belt.HashMap.make(~hintSize=40, ~id=module(I1))
 ```
 
 The invariant must be held: for two elements who are _equal_,
@@ -48,7 +48,7 @@ it would not mix.
 
 ## Examples
 
-```rescript
+```
 let s0: t<int, I0.identity>
 let s1: t<int, I1.identity>
 ```
@@ -59,8 +59,8 @@ We can add elements to the collection:
 
 ```rescript
 let () = {
-  add(s1, 0, "3")
-  add(s1, 1, "3")
+  Belt.HashMap.set(s0, 0, 3)
+  Belt.HashMap.set(s1, 1, "3")
 }
 ```
 
@@ -282,10 +282,19 @@ module IntHash = Belt.Id.MakeHashable({
 })
 
 let s0 = Belt.HashMap.make(~hintSize=10, ~id=module(IntHash))
+
 Belt.HashMap.set(s0, 1, "value1")
 Belt.HashMap.set(s0, 2, "value2")
 
-Belt.HashMap.reduce(s0, "", (acc, key, value) => acc ++ (", " ++ value)) == "value1, value2"
+s0
+->Belt.HashMap.reduce("", (acc, _, value) => acc ++ (", " ++ value))
+->assertEqual(", value1, value2")
+```
+
+## More Examples
+
+```rescript
+Console.log("lol")
 ```
 */
 let reduce: (t<'key, 'value, 'id>, 'c, ('c, 'key, 'value) => 'c) => 'c
