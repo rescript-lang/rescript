@@ -86,17 +86,6 @@ let has_partial_attribute attrs =
       | _ -> false)
     attrs
 
-type function_attributes_info = {async: bool; attributes: Parsetree.attributes}
-
-let process_function_attributes attrs =
-  let rec process async bs acc attrs =
-    match attrs with
-    | [] -> {async; attributes = List.rev acc}
-    | ({Location.txt = "res.async"}, _) :: rest -> process true bs acc rest
-    | attr :: rest -> process async bs (attr :: acc) rest
-  in
-  process false false [] attrs
-
 let has_await_attribute attrs =
   List.exists
     (function

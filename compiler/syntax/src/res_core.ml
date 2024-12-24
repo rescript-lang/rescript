@@ -156,7 +156,6 @@ let jsx_attr = (Location.mknoloc "JSX", Parsetree.PStr [])
 let ternary_attr = (Location.mknoloc "res.ternary", Parsetree.PStr [])
 let if_let_attr = (Location.mknoloc "res.iflet", Parsetree.PStr [])
 let make_await_attr loc = (Location.mkloc "res.await" loc, Parsetree.PStr [])
-let make_async_attr loc = (Location.mkloc "res.async" loc, Parsetree.PStr [])
 let suppress_fragile_match_warning_attr =
   ( Location.mknoloc "warning",
     Parsetree.PStr
@@ -3321,7 +3320,9 @@ and parse_expr_block ?first p =
 and parse_async_arrow_expression ?(arrow_attrs = []) p =
   let start_pos = p.Parser.start_pos in
   Parser.expect (Lident "async") p;
-  let async_attr = make_async_attr (mk_loc start_pos p.prev_end_pos) in
+  let async_attr =
+    Ast_async.make_async_attr (mk_loc start_pos p.prev_end_pos)
+  in
   parse_es6_arrow_expression
     ~arrow_attrs:(async_attr :: arrow_attrs)
     ~arrow_start_pos:(Some start_pos) p
