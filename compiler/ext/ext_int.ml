@@ -34,3 +34,11 @@ let move = 0x1_0000_0000
 let int32_unsigned_to_int (n : int32) : int =
   let i = Int32.to_int n in
   if i < 0 then i + move else i
+
+let rec int32_pow (a : int32) = function
+  | 0l -> 1l
+  | 1l -> a
+  | n ->
+    let b = int32_pow a (Int32.div n 2l) in
+    let b = Int32.mul b b in
+    Int32.mul b (if Int32.rem n 2l = 0l then 1l else a)
