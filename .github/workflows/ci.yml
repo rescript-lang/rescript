@@ -135,7 +135,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: .nvmrc
 
       - name: Get artifact dir name
         run: node .github/workflows/get_artifact_dir_name.js
@@ -401,7 +401,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: .nvmrc
 
       - name: NPM install
         run: npm ci --ignore-scripts
@@ -461,7 +461,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: .nvmrc
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -495,7 +495,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org # Needed to make auth work for publishing
 
       - name: Download artifacts
