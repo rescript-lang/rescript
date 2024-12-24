@@ -1291,7 +1291,7 @@ let transform_structure_item ~config item =
         List.filter Jsx_common.has_attr_with_props pval_attributes )
     with
     | [], [] -> [item]
-    | [], [_] ->
+    | _, [_] ->
       Jsx_common.raise_error ~loc:pstr_loc
         "Components cannot be defined as externals when using \
          @react.componentWithProps. Please use @react.component instead."
