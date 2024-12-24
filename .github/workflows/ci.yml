@@ -167,7 +167,7 @@ jobs:
           key: ${{ env.opam_cache_key }}
 
       - name: Use OCaml ${{matrix.ocaml_compiler}}
-        uses: ocaml/setup-ocaml@v3.1.4
+        uses: ocaml/setup-ocaml@v3.2.2
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         with:
           ocaml-compiler: ${{matrix.ocaml_compiler}}
@@ -244,11 +244,6 @@ jobs:
           fi
         shell: bash
 
-      # see https://github.com/ocaml/setup-ocaml/issues/815
-      - name: "Windows: set SHELLOPTS=igncr"
-        if: runner.os == 'Windows'
-        run: echo "SHELLOPTS=igncr" >>"$GITHUB_ENV"
-          
       - name: Build compiler
         if: runner.os != 'Linux'
         run: opam exec -- dune build --display quiet --profile release
@@ -338,7 +333,7 @@ jobs:
         with:
           path: ./tests/benchmark-cache
           key: syntax-benchmark-v1
- 
+
       - name: Create new benchmark data and comment on alert
         # Do not run for PRs created from other repos as those won't be able to write to the pull request
         if: ${{ matrix.benchmarks && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.repository.full_name) }}
@@ -359,7 +354,7 @@ jobs:
         with:
           path: ./tests/benchmark-cache
           key: syntax-benchmark-v1
-     
+
       - name: Build playground compiler
         if: matrix.build_playground
         run: |
@@ -396,7 +391,7 @@ jobs:
     needs:
       - build-compiler
       - build-rewatch
-  
+
     runs-on: ubuntu-latest
 
     steps:
