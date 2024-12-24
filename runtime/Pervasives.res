@@ -52,6 +52,7 @@ external \"/": ('a, 'a) => 'a = "%div"
 external \"%": ('a, 'a) => 'a = "%mod"
 external mod: ('a, 'a) => 'a = "%mod"
 external \"**": ('a, 'a) => 'a = "%pow"
+external \"^": ('a, 'a) => 'a = "%xor"
 
 /* Comparisons */
 /* Note: Later comparisons will be converted to unified operations too */

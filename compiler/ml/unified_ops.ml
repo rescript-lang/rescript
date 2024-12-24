@@ -172,6 +172,19 @@ let entries =
           float = Some Ppowfloat;
           bigint = Some Ppowbigint;
           string = None;
+        }
+    };
+    {
+      path = builtin "^";
+      name = "%xor";
+      form = Binary;
+      specialization =
+        {
+          int = Pxorint;
+          bool = None;
+          float = None;
+          bigint = Some Pxorbigint;
+          string = None;
         };
     };
   |]
