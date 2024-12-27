@@ -1044,7 +1044,7 @@ let someArray = ["hi", "hello"]
 let reversed = someArray->Array.toReversed
 
 reversed->assertEqual(["hello", "hi"])
-someArray->assertEqual(["h1", "hello"]) // Original unchanged
+someArray->assertEqual(["hi", "hello"]) // Original unchanged
 ```
 */
 @send
