@@ -8,6 +8,7 @@ import * as Path from "path";
 import * as $$Array from "rescript/lib/es6/Array.js";
 import * as $$Error from "rescript/lib/es6/Error.js";
 import * as Belt_List from "rescript/lib/es6/Belt_List.js";
+import * as Nodeutil from "node:util";
 import * as ArrayUtils from "./ArrayUtils.res.mjs";
 import * as Belt_Array from "rescript/lib/es6/Belt_Array.js";
 import * as Pervasives from "rescript/lib/es6/Pervasives.js";
@@ -16,6 +17,19 @@ import * as Primitive_exceptions from "rescript/lib/es6/Primitive_exceptions.js"
 import * as RescriptTools_Docgen from "rescript/lib/es6/RescriptTools_Docgen.js";
 
 let bscBin = Path.join("cli", "bsc");
+
+let parsed = Nodeutil.parseArgs({
+  args: process.argv.slice(2),
+  options: {
+    "ignore-runtime-tests": {
+      type: "string"
+    }
+  }
+});
+
+let v = parsed.values["ignore-runtime-tests"];
+
+let ignoreRuntimeTests = v !== undefined ? v.split(",").map(s => s.trim()) : [];
 
 function getOutput(buffer) {
   return buffer.map(e => e.toString()).join("");
@@ -38,7 +52,7 @@ async function extractDocFromFile(file) {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "DocTest.res",
-        35,
+        48,
         9
       ],
       Error: new Error()
@@ -250,7 +264,7 @@ async function compileExamples(examples) {
   ];
 }
 
-async function runtimeTests(code) {
+async function runTest(code) {
   let match = await SpawnAsync.run("node", [
     "-e",
     code,
@@ -303,10 +317,11 @@ async function runtimeTests(code) {
 
 async function runExamples(compiled) {
   console.log("Running " + compiled.length.toString() + " compiled examples...");
+  let tests = compiled.filter(param => !ignoreRuntimeTests.includes(param[0].id));
   let runtimeErrors = [];
-  await ArrayUtils.forEachAsyncInBatches(compiled, batchSize, async compiled => {
+  await ArrayUtils.forEachAsyncInBatches(tests, batchSize, async compiled => {
     let jsCode = compiled[2];
-    let error = await runtimeTests(jsCode);
+    let error = await runTest(jsCode);
     if (error.TAG === "Ok") {
       return;
     }

@@ -15,6 +15,19 @@ type error =
 
 let bscBin = Path.join(["cli", "bsc"])
 
+let parsed = Util.parseArgs({
+  args: Process.argv->Array.sliceToEnd(~start=2),
+  options: dict{"ignore-runtime-tests": {Util.type_: "string"}},
+})
+
+let ignoreRuntimeTests = switch parsed.values->Dict.get("ignore-runtime-tests") {
+| Some(v) =>
+  v
+  ->String.split(",")
+  ->Array.map(s => s->String.trim)
+| None => []
+}
+
 let getOutput = buffer =>
   buffer
   ->Array.map(e => e->Buffer.toString)
@@ -172,7 +185,7 @@ let compileExamples = async examples => {
   (compiled, compilationErrors)
 }
 
-let runtimeTests = async code => {
+let runTest = async code => {
   let {stdout, stderr, code: exitCode} = await SpawnAsync.run(
     ~command="node",
     ~args=["-e", code, "--input-type", "commonjs"],
@@ -196,11 +209,13 @@ let runtimeTests = async code => {
 let runExamples = async compiled => {
   Console.log(`Running ${compiled->Array.length->Int.toString} compiled examples...`)
 
+  let tests = compiled->Array.filter((({id}, _, _)) => !(ignoreRuntimeTests->Array.includes(id)))
+
   let runtimeErrors = []
-  await compiled->ArrayUtils.forEachAsyncInBatches(~batchSize, async compiled => {
+  await tests->ArrayUtils.forEachAsyncInBatches(~batchSize, async compiled => {
     let (example, rescriptCode, jsCode) = compiled
 
-    switch await runtimeTests(jsCode) {
+    switch await runTest(jsCode) {
     | Ok(_) => ()
     | Error(error) =>
       let runtimeError = RuntimeError({rescript: rescriptCode, js: jsCode, error})

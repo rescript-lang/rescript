@@ -313,7 +313,8 @@ jobs:
         run: node scripts/test.js -all
 
       - name: Docstrings tests
-        run: node tests/docstrings_examples/DocTest.res.mjs
+        # Ignore functions that are not available on Node 18
+        run: node tests/docstrings_examples/DocTest.res.mjs --ignore-runtime-tests "Array.toReversed, Array.toSorted, Promise.withResolvers, Set.union, Set.isSupersetOf, Set.isSubsetOf, Set.isDisjointFrom, Set.intersection, Set.symmetricDifference, Set.difference"
 
       - name: Check for diffs in tests folder
         run: git diff --ignore-cr-at-eol --exit-code tests
