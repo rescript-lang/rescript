@@ -295,7 +295,7 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "array<'a> => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`toReversed(array)` creates a new array with all items from `array` in reversed order.\n\nSee [`Array.toReversed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toReversed) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nlet reversed = someArray->Array.toReversed\n\nreversed->assertEqual([\"hello\", \"hi\"])\nsomeArray->assertEqual([\"h1\", \"hello\"]) // Original unchanged\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`toReversed(array)` creates a new array with all items from `array` in reversed order.\n\nSee [`Array.toReversed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toReversed) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nlet reversed = someArray->Array.toReversed\n\nreversed->assertEqual([\"hello\", \"hi\"])\nsomeArray->assertEqual([\"hi\", \"hello\"]) // Original unchanged\n```\n"}
   }, {
     "label": "copyWithin",
     "kind": 12,
