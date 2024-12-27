@@ -90,9 +90,10 @@ jobs:
             ocaml_compiler: ocaml-variants.5.2.1+options,ocaml-option-static
             upload_binaries: true
             upload_libs: true
-            # Build the playground compiler and run the benchmarks on the fastest runner
+            # Run the slower tasks on the fastest runner only
             build_playground: true
             benchmarks: true
+            docstring_tests: true
           - os: buildjet-2vcpu-ubuntu-2204-arm # ARM
             ocaml_compiler: ocaml-variants.5.2.1+options,ocaml-option-static
             upload_binaries: true
@@ -313,6 +314,7 @@ jobs:
         run: node scripts/test.js -all
 
       - name: Docstrings tests
+        if: matrix.docstring_tests
         # Ignore functions that are not available on Node 18
         run: node tests/docstrings_examples/DocTest.res.mjs --ignore-runtime-tests "Array.toReversed, Array.toSorted, Promise.withResolvers, Set.union, Set.isSupersetOf, Set.isSubsetOf, Set.isDisjointFrom, Set.intersection, Set.symmetricDifference, Set.difference"
 
