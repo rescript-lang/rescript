@@ -16,6 +16,10 @@
 
 - AST cleanup: use inline record for Pexp_fun. https://github.com/rescript-lang/rescript/pull/7213
 
+#### :nail_care: Polish
+
+- Add all standard CSS properties to `JsxDOMStyle`. https://github.com/rescript-lang/rescript/pull/7205
+
 # 12.0.0-alpha.6
 
 #### :rocket: New Feature
