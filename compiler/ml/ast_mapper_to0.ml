@@ -295,7 +295,7 @@ module E = struct
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
-    | Pexp_fun (lab, def, p, e, arity) -> (
+    | Pexp_fun {arg_label = lab; default = def; lhs = p; rhs = e; arity} -> (
       let e =
         fun_ ~loc ~attrs lab
           (map_opt (sub.expr sub) def)

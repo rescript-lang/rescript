@@ -36,7 +36,7 @@ let to_method_callback loc (self : Bs_ast_mapper.mapper) label
     match Ast_attributes.process_attributes_rev body.pexp_attributes with
     | Nothing, attrs -> (
       match body.pexp_desc with
-      | Pexp_fun (arg_label, _, arg, body, _) ->
+      | Pexp_fun {arg_label; lhs = arg; rhs = body} ->
         Bs_syntaxerr.optional_err loc arg_label;
         aux ((arg_label, self.pat self arg, attrs) :: acc) body
       | _ -> (self.expr self body, acc))

@@ -61,7 +61,7 @@ let inlay ~path ~pos ~maxLength ~debug =
            | Pexp_apply _ | Pexp_match _ | Pexp_construct _ | Pexp_ifthenelse _
            | Pexp_array _ | Pexp_ident _ | Pexp_try _ | Pexp_lazy _
            | Pexp_send _ | Pexp_field _ | Pexp_open _
-           | Pexp_fun (_, _, _, _, Some _) );
+           | Pexp_fun {arity = Some _} );
        };
     } ->
       push vb.pvb_pat.ppat_loc Type

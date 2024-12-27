@@ -135,7 +135,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: .nvmrc
 
       - name: Get artifact dir name
         run: node .github/workflows/get_artifact_dir_name.js
@@ -167,7 +167,7 @@ jobs:
           key: ${{ env.opam_cache_key }}
 
       - name: Use OCaml ${{matrix.ocaml_compiler}}
-        uses: ocaml/setup-ocaml@v3.1.4
+        uses: ocaml/setup-ocaml@v3.2.2
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         with:
           ocaml-compiler: ${{matrix.ocaml_compiler}}
@@ -243,11 +243,6 @@ jobs:
             echo "$CYGWIN_ROOT_WRAPPERBIN" >> "$GITHUB_PATH"
           fi
         shell: bash
-
-      # see https://github.com/ocaml/setup-ocaml/issues/815
-      - name: "Windows: set SHELLOPTS=igncr"
-        if: runner.os == 'Windows'
-        run: echo "SHELLOPTS=igncr" >>"$GITHUB_ENV"
 
       - name: Build compiler
         if: runner.os != 'Linux'
@@ -409,7 +404,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: .nvmrc
 
       - name: NPM install
         run: npm ci --ignore-scripts
@@ -469,7 +464,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: .nvmrc
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -503,7 +498,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org # Needed to make auth work for publishing
 
       - name: Download artifacts

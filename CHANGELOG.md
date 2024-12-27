@@ -10,27 +10,38 @@
 > - :house: [Internal]
 > - :nail_care: [Polish]
 
-# 12.0.0-alpha.6 (Unreleased)
-- Fix exponential notation syntax. https://github.com/rescript-lang/rescript/pull/7174
+# 12.0.0-alpha.7 (Unreleased)
+
+#### :house: Internal
+
+- AST cleanup: use inline record for Pexp_fun. https://github.com/rescript-lang/rescript/pull/7213
+
+# 12.0.0-alpha.6
+
+#### :rocket: New Feature
+
 - Add `Option.all` & `Result.all` helpers. https://github.com/rescript-lang/rescript/pull/7181
-- Add `@react.componentWithProps` that explicitly handles the props with shared props: https://github.com/rescript-lang/rescript/pull/7203
+- Add `@react.componentWithProps` for React component functions taking a props record instead of labeled arguments. https://github.com/rescript-lang/rescript/pull/7203
 
 #### :bug: Bug fix
+
+- Fix exponential notation syntax. https://github.com/rescript-lang/rescript/pull/7174
 - Fix bug where a ref assignment is moved ouside a conditional. https://github.com/rescript-lang/rescript/pull/7176
 - Fix nullable to opt conversion. https://github.com/rescript-lang/rescript/pull/7193
 
 #### :house: Internal
+
 - Use latest compiler for tests. https://github.com/rescript-lang/rescript/pull/7186
 - Added infra to modernise AST: theres' Parsetree, Parsetree0 (legacy), and conversion functions to keep compatibility with PPX. https://github.com/rescript-lang/rescript/pull/7185
-- Ast cleanup: remove exp object and exp unreachable. https://github.com/rescript-lang/rescript/pull/7189
-- Ast cleanup: explicit representation for optional record fields in types. https://github.com/rescript-lang/rescript/pull/7190 https://github.com/rescript-lang/rescript/pull/7191
+- AST cleanup: remove exp object and exp unreachable. https://github.com/rescript-lang/rescript/pull/7189
+- AST cleanup: explicit representation for optional record fields in types. https://github.com/rescript-lang/rescript/pull/7190 https://github.com/rescript-lang/rescript/pull/7191
 - AST cleanup: first-class expression and patterns for records with optional fields. https://github.com/rescript-lang/rescript/pull/7192
 - AST cleanup: Represent the arity of uncurried function definitions directly in the AST. https://github.com/rescript-lang/rescript/pull/7197
 - AST cleanup: Remove Pexp_function from the AST. https://github.com/rescript-lang/rescript/pull/7198
 - Remove unused code from Location and Rescript_cpp modules. https://github.com/rescript-lang/rescript/pull/7150
 - Build with OCaml 5.2.1. https://github.com/rescript-lang/rescript-compiler/pull/7201
 - AST cleanup: Remove `Function$` entirely for function definitions. https://github.com/rescript-lang/rescript/pull/7200
-- AST cleanup: store arity in function type https://github.com/rescript-lang/rescript/pull/7195
+- AST cleanup: store arity in function type. https://github.com/rescript-lang/rescript/pull/7195
 - AST cleanup: remove explicit uses of `function$` in preparation for removing the type entirely. https://github.com/rescript-lang/rescript/pull/7206
 - AST cleanup: remove `function$` entirely. https://github.com/rescript-lang/rescript/pull/7208
 

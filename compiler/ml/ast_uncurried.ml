@@ -9,18 +9,18 @@ let uncurried_type ~arity (t_arg : Parsetree.core_type) =
 let uncurried_fun ~arity fun_expr =
   let fun_expr =
     match fun_expr.Parsetree.pexp_desc with
-    | Pexp_fun (l, eo, p, e, _) ->
-      {fun_expr with pexp_desc = Pexp_fun (l, eo, p, e, Some arity)}
+    | Pexp_fun f ->
+      {fun_expr with pexp_desc = Pexp_fun {f with arity = Some arity}}
     | _ -> assert false
   in
   fun_expr
 
 let expr_is_uncurried_fun (expr : Parsetree.expression) =
   match expr.pexp_desc with
-  | Pexp_fun (_, _, _, _, Some _) -> true
+  | Pexp_fun {arity = Some _} -> true
   | _ -> false
 
 let expr_extract_uncurried_fun (expr : Parsetree.expression) =
   match expr.pexp_desc with
-  | Pexp_fun (_, _, _, _, Some _) -> expr
+  | Pexp_fun {arity = Some _} -> expr
   | _ -> assert false

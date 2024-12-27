@@ -136,7 +136,7 @@ let iter_expression f e =
     | Pexp_extension _ (* we don't iterate under extension point *)
     | Pexp_ident _ | Pexp_new _ | Pexp_constant _ ->
       ()
-    | Pexp_fun (_, eo, _, e, _) ->
+    | Pexp_fun {default = eo; rhs = e} ->
       may expr eo;
       expr e
     | Pexp_apply (e, lel) ->
@@ -1905,7 +1905,7 @@ let rec approx_type env sty =
 let rec type_approx env sexp =
   match sexp.pexp_desc with
   | Pexp_let (_, _, e) -> type_approx env e
-  | Pexp_fun (p, _, _, e, arity) ->
+  | Pexp_fun {arg_label = p; rhs = e; arity} ->
     let ty = if is_optional p then type_option (newvar ()) else newvar () in
     newty (Tarrow (p, ty, type_approx env e, Cok, arity))
   | Pexp_match (_, {pc_rhs = e} :: _) -> type_approx env e
@@ -2363,7 +2363,8 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }
-  | Pexp_fun (l, Some default, spat, sbody, arity) ->
+  | Pexp_fun
+      {arg_label = l; default = Some default; lhs = spat; rhs = sbody; arity} ->
     assert (is_optional l);
     (* default allowed only with optional argument *)
     let open Ast_helper in
@@ -2403,7 +2404,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     in
     type_function ?in_function ~arity loc sexp.pexp_attributes env ty_expected l
       [Exp.case pat body]
-  | Pexp_fun (l, None, spat, sbody, arity) ->
+  | Pexp_fun {arg_label = l; default = None; lhs = spat; rhs = sbody; arity} ->
     type_function ?in_function ~arity loc sexp.pexp_attributes env ty_expected l
       [Ast_helper.Exp.case spat sbody]
   | Pexp_apply (sfunct, sargs) ->

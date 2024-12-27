@@ -224,7 +224,13 @@ and expression_desc =
     (* let P1 = E1 and ... and Pn = EN in E       (flag = Nonrecursive)
        let rec P1 = E1 and ... and Pn = EN in E   (flag = Recursive)
     *)
-  | Pexp_fun of arg_label * expression option * pattern * expression * arity
+  | Pexp_fun of {
+      arg_label: arg_label;
+      default: expression option;
+      lhs: pattern;
+      rhs: expression;
+      arity: arity;
+    }
     (* fun P -> E1                          (Simple, None)
        fun ~l:P -> E1                       (Labelled l, None)
        fun ?l:P -> E1                       (Optional l, None)

@@ -143,11 +143,12 @@ let rewrite_underscore_apply expr =
   in
   match expr_fun.pexp_desc with
   | Pexp_fun
-      ( Nolabel,
-        None,
-        {ppat_desc = Ppat_var {txt = "__x"}},
-        ({pexp_desc = Pexp_apply (call_expr, args)} as e),
-        _ ) ->
+      {
+        arg_label = Nolabel;
+        default = None;
+        lhs = {ppat_desc = Ppat_var {txt = "__x"}};
+        rhs = {pexp_desc = Pexp_apply (call_expr, args)} as e;
+      } ->
     let new_args =
       List.map
         (fun arg ->
@@ -189,11 +190,12 @@ let fun_expr expr =
     | {
      pexp_desc =
        Pexp_fun
-         ( Nolabel,
-           None,
-           {ppat_desc = Ppat_var {txt = "__x"}},
-           {pexp_desc = Pexp_apply _},
-           _ );
+         {
+           arg_label = Nolabel;
+           default = None;
+           lhs = {ppat_desc = Ppat_var {txt = "__x"}};
+           rhs = {pexp_desc = Pexp_apply _};
+         };
     } ->
       (attrs_before, List.rev acc, rewrite_underscore_apply expr)
     | {pexp_desc = Pexp_newtype (string_loc, rest); pexp_attributes = attrs} ->
@@ -201,7 +203,15 @@ let fun_expr expr =
       let param = NewTypes {attrs; locs = string_locs} in
       collect ~n_fun attrs_before (param :: acc) return_expr
     | {
-     pexp_desc = Pexp_fun (lbl, default_expr, pattern, return_expr, arity);
+     pexp_desc =
+       Pexp_fun
+         {
+           arg_label = lbl;
+           default = default_expr;
+           lhs = pattern;
+           rhs = return_expr;
+           arity;
+         };
      pexp_attributes = [];
     }
       when arity = None || n_fun = 0 ->
@@ -744,11 +754,12 @@ let is_single_pipe_expr expr =
 let is_underscore_apply_sugar expr =
   match expr.pexp_desc with
   | Pexp_fun
-      ( Nolabel,
-        None,
-        {ppat_desc = Ppat_var {txt = "__x"}},
-        {pexp_desc = Pexp_apply _},
-        _ ) ->
+      {
+        arg_label = Nolabel;
+        default = None;
+        lhs = {ppat_desc = Ppat_var {txt = "__x"}};
+        rhs = {pexp_desc = Pexp_apply _};
+      } ->
     true
   | _ -> false
 

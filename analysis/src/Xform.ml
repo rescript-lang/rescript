@@ -261,7 +261,7 @@ module AddBracesToFn = struct
         | _ -> false
       in
       (match e.pexp_desc with
-      | Pexp_fun (_, _, _, bodyExpr, _)
+      | Pexp_fun {rhs = bodyExpr}
         when Loc.hasPos ~pos bodyExpr.pexp_loc
              && isBracedExpr bodyExpr = false
              && isFunction bodyExpr = false ->
@@ -303,9 +303,9 @@ module AddTypeAnnotation = struct
     in
     let rec processFunction ~argNum (e : Parsetree.expression) =
       match e.pexp_desc with
-      | Pexp_fun (argLabel, _, pat, e, _) ->
+      | Pexp_fun {arg_label; lhs = pat; rhs = e} ->
         let isUnlabeledOnlyArg =
-          argNum = 1 && argLabel = Nolabel
+          argNum = 1 && arg_label = Nolabel
           &&
           match e.pexp_desc with
           | Pexp_fun _ -> false
