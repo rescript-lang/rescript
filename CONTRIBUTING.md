@@ -214,13 +214,7 @@ This is usually the file you want to create to test certain compile behavior wit
 
 The "Playground bundle" is a JS version of the ReScript compiler; including all necessary dependency files (stdlib / belt etc). It is useful for building tools where you want to compile and execute arbitrary ReScript code in the browser.
 
-The ReScript source code is compiled with a tool called [JSOO (js_of_ocaml)](https://ocsigen.org/js_of_ocaml/4.0.0/manual/overview), which uses OCaml bytecode to compile to JavaScript and is part of the bigger OCaml ecosystem.
-
-Install `jsoo` via `opam`:
-
-```sh
-opam install js_of_ocaml.4.0.0
-```
+The ReScript source code is compiled with a tool called [JSOO (js_of_ocaml)](https://ocsigen.org/js_of_ocaml/latest/manual/overview), which uses OCaml bytecode to compile to JavaScript and is part of the bigger OCaml ecosystem.
 
 ### Building the Bundle
 
