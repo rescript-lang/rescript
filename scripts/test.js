@@ -34,12 +34,12 @@ if (process.argv.includes("-docstrings")) {
   runtimeDocstrings = true;
 }
 
-// -all dont include runtimeDocstrings
 if (process.argv.includes("-all")) {
   ounitTest = true;
   mochaTest = true;
   bsbTest = true;
   formatTest = true;
+  runtimeDocstrings = true;
 }
 
 async function runTests() {
@@ -128,27 +128,37 @@ async function runTests() {
   }
 
   if (runtimeDocstrings) {
-    // if (process.platform === "win32") {
-    //   console.log(`Skipping docstrings tests on ${process.platform}`);
-    // } else {
-    console.log("Running runtime docstrings tests");
-    cp.execSync(`${rescript_exe} build`, {
-      cwd: path.join(__dirname, "..", "tests/docstrings_examples"),
-      stdio: [0, 1, 2],
-    });
+    if (process.platform === "win32") {
+      console.log(`Skipping docstrings tests on ${process.platform}`);
+    } else {
+      console.log("Running runtime docstrings tests");
+      cp.execSync(`${rescript_exe} build`, {
+        cwd: path.join(__dirname, "..", "tests/docstrings_examples"),
+        stdio: [0, 1, 2],
+      });
 
-    console.log("Formatting mocha_full_test.res")
-    cp.execSync(`${path.resolve("./cli/rescript")} format ${path.join("tests", "docstrings_examples", "mocha_full_test.res")}`, {
-      cwd: path.join(__dirname, ".."),
-      stdio: [0, 1, 2],
-    })
+      cp.execSync(`node ${path.join("tests", "docstrings_examples", "DocTest.res.mjs")}`, {
+        cwd: path.join(__dirname, ".."),
+        stdio: [0, 1, 2],
+      })
 
-    console.log("Run mocha test")
-    cp.execSync(`npx mocha ${path.join("tests", "docstrings_examples", "mocha_full_test.res.mjs")}`, {
-      cwd: path.join(__dirname, ".."),
-      stdio: [0, 1, 2],
-    });
-    // }
+      cp.execSync(`${rescript_exe} build`, {
+        cwd: path.join(__dirname, "..", "tests/docstrings_examples"),
+        stdio: [0, 1, 2],
+      });
+
+      console.log("Formatting generated_mocha_test.res")
+      cp.execSync(`./cli/rescript format ${path.join("tests", "docstrings_examples", "generated_mocha_test.res")}`, {
+        cwd: path.join(__dirname, ".."),
+        stdio: [0, 1, 2],
+      })
+
+      console.log("Run mocha test")
+      cp.execSync(`npx mocha ${path.join("tests", "docstrings_examples", "generated_mocha_test.res.mjs")}`, {
+        cwd: path.join(__dirname, ".."),
+        stdio: [0, 1, 2],
+      });
+    }
   }
 }
 

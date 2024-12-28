@@ -182,7 +182,7 @@ let main = async () => {
     ->Array.join("\n\n")
 
   let dirname = url->URL.fileURLToPath->Path.dirname
-  let filepath = Path.join([dirname, "mocha_full_test.res"])
+  let filepath = Path.join([dirname, "generated_mocha_test.res"])
   let fileContent = `open Mocha
 @@warning("-32-34-60-37-109-3-44")
 

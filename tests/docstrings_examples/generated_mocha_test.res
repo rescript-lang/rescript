@@ -6981,19 +6981,6 @@ describe("Belt_Map.Int", () => {
   })
 })
 
-describe("Belt_MapString.findFirstBy", () => {
-  test("Belt_MapString.findFirstBy", () => {
-    module Test = {
-      let mapString = Belt.Map.String.fromArray([("1", "one"), ("2", "two"), ("3", "three")])
-
-      mapString
-      ->Belt.Map.String.findFirstBy((k, v) => k == "1" && v == "one")
-      ->assertEqual(Some("1", "one"))
-    }
-    ()
-  })
-})
-
 describe("Belt_MapDict.findFirstBy", () => {
   test("Belt_MapDict.findFirstBy", () => {
     module Test = {
@@ -7018,6 +7005,19 @@ describe("Belt_MapInt.findFirstBy", () => {
       mapInt
       ->Belt.Map.Int.findFirstBy((k, v) => k == 1 && v == "one")
       ->assertEqual(Some(1, "one"))
+    }
+    ()
+  })
+})
+
+describe("Belt_MapString.findFirstBy", () => {
+  test("Belt_MapString.findFirstBy", () => {
+    module Test = {
+      let mapString = Belt.Map.String.fromArray([("1", "one"), ("2", "two"), ("3", "three")])
+
+      mapString
+      ->Belt.Map.String.findFirstBy((k, v) => k == "1" && v == "one")
+      ->assertEqual(Some("1", "one"))
     }
     ()
   })
@@ -7515,65 +7515,6 @@ describe("Belt_MutableSet.fromArray", () => {
   })
 })
 
-describe("Belt_Range.someBy", () => {
-  test("Belt_Range.someBy", () => {
-    module Test = {
-      Belt.Range.someBy(1, 5, ~step=2, i => mod(i, 2) === 0) /* false */
-      Belt.Range.someBy(0, 4, ~step=2, i => mod(i, 2) === 0) /* true */
-    }
-    ()
-  })
-})
-
-describe("Belt_Range.some", () => {
-  test("Belt_Range.some", () => {
-    module Test = {
-      Belt.Range.some(0, 4, i => i > 5) /* false */
-
-      Belt.Range.some(0, 4, i => i > 2) /* true */
-    }
-    ()
-  })
-})
-
-describe("Belt_Range.everyBy", () => {
-  test("Belt_Range.everyBy", () => {
-    module Test = {
-      Belt.Range.everyBy(0, 4, ~step=1, i => mod(i, 2) === 0) /* false */
-
-      Belt.Range.everyBy(0, 4, ~step=2, i => mod(i, 2) === 0) /* true */
-    }
-    ()
-  })
-})
-
-describe("Belt_Range.every", () => {
-  test("Belt_Range.every", () => {
-    module Test = {
-      Belt.Range.every(0, 4, i => i < 5) /* true */
-
-      Belt.Range.every(0, 4, i => i < 4) /* false */
-    }
-    ()
-  })
-})
-
-describe("Belt_Range.forEach", () => {
-  test("Belt_Range.forEach", () => {
-    module Test = {
-      Belt.Range.forEach(0, 4, i => Js.log(i))
-
-      // Prints:
-      // 0
-      // 1
-      // 2
-      // 3
-      // 4
-    }
-    ()
-  })
-})
-
 describe("Belt_Option.cmp", () => {
   test("Belt_Option.cmp", () => {
     module Test = {
@@ -7870,6 +7811,65 @@ describe("Belt_Result.getExn", () => {
       | exception _ => assert(true)
       | _ => assert(false)
       }
+    }
+    ()
+  })
+})
+
+describe("Belt_Range.someBy", () => {
+  test("Belt_Range.someBy", () => {
+    module Test = {
+      Belt.Range.someBy(1, 5, ~step=2, i => mod(i, 2) === 0) /* false */
+      Belt.Range.someBy(0, 4, ~step=2, i => mod(i, 2) === 0) /* true */
+    }
+    ()
+  })
+})
+
+describe("Belt_Range.some", () => {
+  test("Belt_Range.some", () => {
+    module Test = {
+      Belt.Range.some(0, 4, i => i > 5) /* false */
+
+      Belt.Range.some(0, 4, i => i > 2) /* true */
+    }
+    ()
+  })
+})
+
+describe("Belt_Range.everyBy", () => {
+  test("Belt_Range.everyBy", () => {
+    module Test = {
+      Belt.Range.everyBy(0, 4, ~step=1, i => mod(i, 2) === 0) /* false */
+
+      Belt.Range.everyBy(0, 4, ~step=2, i => mod(i, 2) === 0) /* true */
+    }
+    ()
+  })
+})
+
+describe("Belt_Range.every", () => {
+  test("Belt_Range.every", () => {
+    module Test = {
+      Belt.Range.every(0, 4, i => i < 5) /* true */
+
+      Belt.Range.every(0, 4, i => i < 4) /* false */
+    }
+    ()
+  })
+})
+
+describe("Belt_Range.forEach", () => {
+  test("Belt_Range.forEach", () => {
+    module Test = {
+      Belt.Range.forEach(0, 4, i => Js.log(i))
+
+      // Prints:
+      // 0
+      // 1
+      // 2
+      // 3
+      // 4
     }
     ()
   })
@@ -9418,6 +9418,515 @@ describe("Belt_SortArray.strictlySortedLength", () => {
   })
 })
 
+describe("Belt_internalMapString.S.binarySearchBy", () => {
+  test("Belt_internalMapString.S.binarySearchBy", () => {
+    module Test = {
+      Belt.SortArray.binarySearchBy([1, 2, 3, 4, 33, 35, 36], 33, Pervasives.compare) == 4
+
+      lnot(Belt.SortArray.binarySearchBy([1, 3, 5, 7], 4, Pervasives.compare)) == 2
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.S.strictlySortedLength", () => {
+  test("Belt_internalMapString.S.strictlySortedLength", () => {
+    module Test = {
+      Belt.SortArray.strictlySortedLength([1, 2, 3, 4, 3], (x, y) => x < y) == 4
+
+      Belt.SortArray.strictlySortedLength([], (x, y) => x < y) == 0
+
+      Belt.SortArray.strictlySortedLength([1], (x, y) => x < y) == 1
+
+      Belt.SortArray.strictlySortedLength([4, 3, 2, 1], (x, y) => x < y) == -4
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.truncateToLengthUnsafe", () => {
+  test("Belt_internalMapString.A.truncateToLengthUnsafe", () => {
+    module Test = {
+      let arr = ["ant", "bee", "cat", "dog", "elk"]
+
+      Belt.Array.truncateToLengthUnsafe(arr, 3)
+
+      arr == ["ant", "bee", "cat"]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.eq", () => {
+  test("Belt_internalMapString.A.eq", () => {
+    module Test = {
+      Belt.Array.eq([1, 2, 3], [-1, -2, -3], (a, b) => abs(a) == abs(b)) == true
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.cmp", () => {
+  test("Belt_internalMapString.A.cmp", () => {
+    module Test = {
+      Belt.Array.cmp([1, 3, 5], [1, 4, 2], (a, b) => compare(a, b)) == -1
+
+      Belt.Array.cmp([1, 3, 5], [1, 2, 3], (a, b) => compare(a, b)) == 1
+
+      Belt.Array.cmp([1, 3, 5], [1, 3, 5], (a, b) => compare(a, b)) == 0
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.some2", () => {
+  test("Belt_internalMapString.A.some2", () => {
+    module Test = {
+      Belt.Array.some2([0, 2], [1, 0, 3], (a, b) => a > b) == true
+
+      Belt.Array.some2([], [1], (x, y) => x > y) == false
+
+      Belt.Array.some2([2, 3], [1, 4], (x, y) => x > y) == true
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.every2", () => {
+  test("Belt_internalMapString.A.every2", () => {
+    module Test = {
+      Belt.Array.every2([1, 2, 3], [0, 1], (a, b) => a > b) == true
+
+      Belt.Array.every2([], [1], (x, y) => x > y) == true
+
+      Belt.Array.every2([2, 3], [1], (x, y) => x > y) == true
+
+      Belt.Array.every2([0, 1], [5, 0], (x, y) => x > y) == false
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.every", () => {
+  test("Belt_internalMapString.A.every", () => {
+    module Test = {
+      Belt.Array.every([1, 3, 5], x => mod(x, 2) == 1) == true
+
+      Belt.Array.every([1, -3, 5], x => x > 0) == false
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.some", () => {
+  test("Belt_internalMapString.A.some", () => {
+    module Test = {
+      Belt.Array.some([2, 3, 4], x => mod(x, 2) == 1) == true
+
+      Belt.Array.some([-1, -3, -5], x => x > 0) == false
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.joinWith", () => {
+  test("Belt_internalMapString.A.joinWith", () => {
+    module Test = {
+      Belt.Array.joinWith([0, 1], ", ", Js.Int.toString) == "0, 1"
+      Belt.Array.joinWith([], " ", Js.Int.toString) == ""
+      Belt.Array.joinWith([1], " ", Js.Int.toString) == "1"
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.reduceWithIndex", () => {
+  test("Belt_internalMapString.A.reduceWithIndex", () => {
+    module Test = {
+      Belt.Array.reduceWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i) == 16
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.reduceReverse2", () => {
+  test("Belt_internalMapString.A.reduceReverse2", () => {
+    module Test = {
+      Belt.Array.reduceReverse2([1, 2, 3], [1, 2], 0, (acc, x, y) => acc + x + y) == 6
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.reduceReverse", () => {
+  test("Belt_internalMapString.A.reduceReverse", () => {
+    module Test = {
+      Belt.Array.reduceReverse(["a", "b", "c", "d"], "", (a, b) => a ++ b) == "dcba"
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.reduce", () => {
+  test("Belt_internalMapString.A.reduce", () => {
+    module Test = {
+      Belt.Array.reduce([2, 3, 4], 1, (a, b) => a + b) == 10
+
+      Belt.Array.reduce(["a", "b", "c", "d"], "", (a, b) => a ++ b) == "abcd"
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.partition", () => {
+  test("Belt_internalMapString.A.partition", () => {
+    module Test = {
+      Belt.Array.partition([1, 2, 3, 4, 5], x => mod(x, 2) == 0) == ([2, 4], [1, 3, 5])
+
+      Belt.Array.partition([1, 2, 3, 4, 5], x => mod(x, 2) != 0) == ([1, 3, 5], [2, 4])
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.mapWithIndex", () => {
+  test("Belt_internalMapString.A.mapWithIndex", () => {
+    module Test = {
+      Belt.Array.mapWithIndex([1, 2, 3], (i, x) => i + x) == [0 + 1, 1 + 2, 2 + 3]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.forEachWithIndex", () => {
+  test("Belt_internalMapString.A.forEachWithIndex", () => {
+    module Test = {
+      Belt.Array.forEachWithIndex(
+        ["a", "b", "c"],
+        (i, x) => Js.log("Item " ++ Belt.Int.toString(i) ++ " is " ++ x),
+      )
+
+      /*
+  prints:
+  Item 0 is a
+  Item 1 is b
+  Item 2 is cc
+*/
+      let total = ref(0)
+
+      Belt.Array.forEachWithIndex([10, 11, 12, 13], (i, x) => total := total.contents + x + i)
+
+      total.contents == 0 + 10 + 1 + 11 + 2 + 12 + 3 + 13
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.keepMap", () => {
+  test("Belt_internalMapString.A.keepMap", () => {
+    module Test = {
+      Belt.Array.keepMap(
+        [1, 2, 3],
+        x =>
+          if mod(x, 2) == 0 {
+            Some(x)
+          } else {
+            None
+          },
+      ) == [2]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.keepWithIndex", () => {
+  test("Belt_internalMapString.A.keepWithIndex", () => {
+    module Test = {
+      Belt.Array.keepWithIndex([1, 2, 3], (_x, i) => i == 1) == [2]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.getIndexBy", () => {
+  test("Belt_internalMapString.A.getIndexBy", () => {
+    module Test = {
+      Belt.Array.getIndexBy([1, 4, 3, 2], x => mod(x, 2) == 0) == Some(1)
+      Belt.Array.getIndexBy([15, 13, 11], x => mod(x, 2) == 0) == None
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.getBy", () => {
+  test("Belt_internalMapString.A.getBy", () => {
+    module Test = {
+      Belt.Array.getBy([1, 4, 3, 2], x => mod(x, 2) == 0) == Some(4)
+      Belt.Array.getBy([15, 13, 11], x => mod(x, 2) == 0) == None
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.flatMap", () => {
+  test("Belt_internalMapString.A.flatMap", () => {
+    module Test = {
+      Belt.Array.flatMap([1, 2], x => [x + 10, x + 20]) == [11, 21, 12, 22]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.map", () => {
+  test("Belt_internalMapString.A.map", () => {
+    module Test = {
+      Belt.Array.map([1, 2], x => x + 1) == [3, 4]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.forEach", () => {
+  test("Belt_internalMapString.A.forEach", () => {
+    module Test = {
+      Belt.Array.forEach(["a", "b", "c"], x => Js.log("Item: " ++ x))
+
+      /*
+  prints:
+  Item: a
+  Item: b
+  Item: c
+*/
+      let total = ref(0)
+
+      Belt.Array.forEach([1, 2, 3, 4], x => total := total.contents + x)
+
+      total.contents == 1 + 2 + 3 + 4
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.blit", () => {
+  test("Belt_internalMapString.A.blit", () => {
+    module Test = {
+      let v1 = [10, 11, 12, 13, 14, 15, 16, 17]
+      let v2 = [20, 21, 22, 23, 24, 25, 26, 27]
+
+      Belt.Array.blit(~src=v1, ~srcOffset=4, ~dst=v2, ~dstOffset=2, ~len=3)
+      v2 == [20, 21, 14, 15, 16, 25, 26, 27]
+
+      Belt.Array.blit(~src=v1, ~srcOffset=4, ~dst=v1, ~dstOffset=2, ~len=3)
+      v1 == [10, 11, 14, 15, 16, 15, 16, 17]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.fill", () => {
+  test("Belt_internalMapString.A.fill", () => {
+    module Test = {
+      let arr = Belt.Array.makeBy(5, i => i)
+
+      Belt.Array.fill(arr, ~offset=2, ~len=2, 9)
+
+      arr == [0, 1, 9, 9, 4]
+
+      Belt.Array.fill(arr, ~offset=7, ~len=2, 8)
+
+      arr == [0, 1, 9, 9, 4]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.sliceToEnd", () => {
+  test("Belt_internalMapString.A.sliceToEnd", () => {
+    module Test = {
+      Belt.Array.sliceToEnd([10, 11, 12, 13, 14, 15, 16], 2) == [12, 13, 14, 15, 16]
+
+      Belt.Array.sliceToEnd([10, 11, 12, 13, 14, 15, 16], -4) == [13, 14, 15, 16]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.slice", () => {
+  test("Belt_internalMapString.A.slice", () => {
+    module Test = {
+      Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=2, ~len=3) == [12, 13, 14]
+
+      Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=-4, ~len=3) == [13, 14, 15]
+
+      Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=4, ~len=9) == [14, 15, 16]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.concatMany", () => {
+  test("Belt_internalMapString.A.concatMany", () => {
+    module Test = {
+      Belt.Array.concatMany([[1, 2, 3], [4, 5, 6], [7, 8]]) == [1, 2, 3, 4, 5, 6, 7, 8]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.concat", () => {
+  test("Belt_internalMapString.A.concat", () => {
+    module Test = {
+      Belt.Array.concat([1, 2, 3], [4, 5]) == [1, 2, 3, 4, 5]
+
+      Belt.Array.concat([], ["a", "b", "c"]) == ["a", "b", "c"]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.unzip", () => {
+  test("Belt_internalMapString.A.unzip", () => {
+    module Test = {
+      Belt.Array.unzip([(1, 2), (3, 4)]) == ([1, 3], [2, 4])
+
+      Belt.Array.unzip([(1, 2), (3, 4), (5, 6), (7, 8)]) == ([1, 3, 5, 7], [2, 4, 6, 8])
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.zipBy", () => {
+  test("Belt_internalMapString.A.zipBy", () => {
+    module Test = {
+      Belt.Array.zipBy([1, 2, 3], [4, 5], (a, b) => 2 * a + b) == [6, 9]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.zip", () => {
+  test("Belt_internalMapString.A.zip", () => {
+    module Test = {
+      Belt.Array.zip([1, 2], [3, 4, 5]) == [(1, 3), (2, 4)]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.makeBy", () => {
+  test("Belt_internalMapString.A.makeBy", () => {
+    module Test = {
+      Belt.Array.makeBy(5, i => i) == [0, 1, 2, 3, 4]
+
+      Belt.Array.makeBy(5, i => i * i) == [0, 1, 4, 9, 16]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.rangeBy", () => {
+  test("Belt_internalMapString.A.rangeBy", () => {
+    module Test = {
+      Belt.Array.rangeBy(0, 10, ~step=3) == [0, 3, 6, 9]
+
+      Belt.Array.rangeBy(0, 12, ~step=3) == [0, 3, 6, 9, 12]
+
+      Belt.Array.rangeBy(33, 0, ~step=1) == []
+
+      Belt.Array.rangeBy(33, 0, ~step=-1) == []
+
+      Belt.Array.rangeBy(3, 12, ~step=-1) == []
+
+      Belt.Array.rangeBy(3, 3, ~step=0) == []
+
+      Belt.Array.rangeBy(3, 3, ~step=1) == [3]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.range", () => {
+  test("Belt_internalMapString.A.range", () => {
+    module Test = {
+      Belt.Array.range(0, 3) == [0, 1, 2, 3]
+
+      Belt.Array.range(3, 0) == []
+
+      Belt.Array.range(3, 3) == [3]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.makeUninitializedUnsafe", () => {
+  test("Belt_internalMapString.A.makeUninitializedUnsafe", () => {
+    module Test = {
+      let arr = Belt.Array.makeUninitializedUnsafe(5)
+
+      Js.log(Belt.Array.getExn(arr, 0)) // undefined
+
+      Belt.Array.setExn(arr, 0, "example")
+
+      Js.log(Belt.Array.getExn(arr, 0) == "example")
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.makeUninitialized", () => {
+  test("Belt_internalMapString.A.makeUninitialized", () => {
+    module Test = {
+      let arr: array<Js.undefined<string>> = Belt.Array.makeUninitialized(5)
+
+      Belt.Array.getExn(arr, 0) == Js.undefined
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.reverse", () => {
+  test("Belt_internalMapString.A.reverse", () => {
+    module Test = {
+      Belt.Array.reverse([10, 11, 12, 13, 14]) == [14, 13, 12, 11, 10]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.reverseInPlace", () => {
+  test("Belt_internalMapString.A.reverseInPlace", () => {
+    module Test = {
+      let arr = [10, 11, 12, 13, 14]
+
+      let () = Belt.Array.reverseInPlace(arr)
+
+      arr == [14, 13, 12, 11, 10]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.get", () => {
+  test("Belt_internalMapString.A.get", () => {
+    module Test = {
+      Belt.Array.get(["a", "b", "c"], 0) == Some("a")
+      Belt.Array.get(["a", "b", "c"], 3) == None
+      Belt.Array.get(["a", "b", "c"], -1) == None
+    }
+    ()
+  })
+})
+
+describe("Belt_internalMapString.A.length", () => {
+  test("Belt_internalMapString.A.length", () => {
+    module Test = {
+      // Returns 1
+      Belt.Array.length(["test"])
+    }
+    ()
+  })
+})
+
 describe("BigInt.toLocaleString", () => {
   test("BigInt.toLocaleString", () => {
     module Test = {
@@ -9462,489 +9971,6 @@ describe("BigInt.fromStringExn", () => {
       } catch {
       | Exn.Error(_error) => 0n
       }
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.truncateToLengthUnsafe", () => {
-  test("Belt_internalSetString.A.truncateToLengthUnsafe", () => {
-    module Test = {
-      let arr = ["ant", "bee", "cat", "dog", "elk"]
-
-      Belt.Array.truncateToLengthUnsafe(arr, 3)
-
-      arr == ["ant", "bee", "cat"]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.eq", () => {
-  test("Belt_internalSetString.A.eq", () => {
-    module Test = {
-      Belt.Array.eq([1, 2, 3], [-1, -2, -3], (a, b) => abs(a) == abs(b)) == true
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.cmp", () => {
-  test("Belt_internalSetString.A.cmp", () => {
-    module Test = {
-      Belt.Array.cmp([1, 3, 5], [1, 4, 2], (a, b) => compare(a, b)) == -1
-
-      Belt.Array.cmp([1, 3, 5], [1, 2, 3], (a, b) => compare(a, b)) == 1
-
-      Belt.Array.cmp([1, 3, 5], [1, 3, 5], (a, b) => compare(a, b)) == 0
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.some2", () => {
-  test("Belt_internalSetString.A.some2", () => {
-    module Test = {
-      Belt.Array.some2([0, 2], [1, 0, 3], (a, b) => a > b) == true
-
-      Belt.Array.some2([], [1], (x, y) => x > y) == false
-
-      Belt.Array.some2([2, 3], [1, 4], (x, y) => x > y) == true
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.every2", () => {
-  test("Belt_internalSetString.A.every2", () => {
-    module Test = {
-      Belt.Array.every2([1, 2, 3], [0, 1], (a, b) => a > b) == true
-
-      Belt.Array.every2([], [1], (x, y) => x > y) == true
-
-      Belt.Array.every2([2, 3], [1], (x, y) => x > y) == true
-
-      Belt.Array.every2([0, 1], [5, 0], (x, y) => x > y) == false
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.every", () => {
-  test("Belt_internalSetString.A.every", () => {
-    module Test = {
-      Belt.Array.every([1, 3, 5], x => mod(x, 2) == 1) == true
-
-      Belt.Array.every([1, -3, 5], x => x > 0) == false
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.some", () => {
-  test("Belt_internalSetString.A.some", () => {
-    module Test = {
-      Belt.Array.some([2, 3, 4], x => mod(x, 2) == 1) == true
-
-      Belt.Array.some([-1, -3, -5], x => x > 0) == false
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.joinWith", () => {
-  test("Belt_internalSetString.A.joinWith", () => {
-    module Test = {
-      Belt.Array.joinWith([0, 1], ", ", Js.Int.toString) == "0, 1"
-      Belt.Array.joinWith([], " ", Js.Int.toString) == ""
-      Belt.Array.joinWith([1], " ", Js.Int.toString) == "1"
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.reduceWithIndex", () => {
-  test("Belt_internalSetString.A.reduceWithIndex", () => {
-    module Test = {
-      Belt.Array.reduceWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i) == 16
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.reduceReverse2", () => {
-  test("Belt_internalSetString.A.reduceReverse2", () => {
-    module Test = {
-      Belt.Array.reduceReverse2([1, 2, 3], [1, 2], 0, (acc, x, y) => acc + x + y) == 6
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.reduceReverse", () => {
-  test("Belt_internalSetString.A.reduceReverse", () => {
-    module Test = {
-      Belt.Array.reduceReverse(["a", "b", "c", "d"], "", (a, b) => a ++ b) == "dcba"
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.reduce", () => {
-  test("Belt_internalSetString.A.reduce", () => {
-    module Test = {
-      Belt.Array.reduce([2, 3, 4], 1, (a, b) => a + b) == 10
-
-      Belt.Array.reduce(["a", "b", "c", "d"], "", (a, b) => a ++ b) == "abcd"
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.partition", () => {
-  test("Belt_internalSetString.A.partition", () => {
-    module Test = {
-      Belt.Array.partition([1, 2, 3, 4, 5], x => mod(x, 2) == 0) == ([2, 4], [1, 3, 5])
-
-      Belt.Array.partition([1, 2, 3, 4, 5], x => mod(x, 2) != 0) == ([1, 3, 5], [2, 4])
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.mapWithIndex", () => {
-  test("Belt_internalSetString.A.mapWithIndex", () => {
-    module Test = {
-      Belt.Array.mapWithIndex([1, 2, 3], (i, x) => i + x) == [0 + 1, 1 + 2, 2 + 3]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.forEachWithIndex", () => {
-  test("Belt_internalSetString.A.forEachWithIndex", () => {
-    module Test = {
-      Belt.Array.forEachWithIndex(
-        ["a", "b", "c"],
-        (i, x) => Js.log("Item " ++ Belt.Int.toString(i) ++ " is " ++ x),
-      )
-
-      /*
-  prints:
-  Item 0 is a
-  Item 1 is b
-  Item 2 is cc
-*/
-      let total = ref(0)
-
-      Belt.Array.forEachWithIndex([10, 11, 12, 13], (i, x) => total := total.contents + x + i)
-
-      total.contents == 0 + 10 + 1 + 11 + 2 + 12 + 3 + 13
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.keepMap", () => {
-  test("Belt_internalSetString.A.keepMap", () => {
-    module Test = {
-      Belt.Array.keepMap(
-        [1, 2, 3],
-        x =>
-          if mod(x, 2) == 0 {
-            Some(x)
-          } else {
-            None
-          },
-      ) == [2]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.keepWithIndex", () => {
-  test("Belt_internalSetString.A.keepWithIndex", () => {
-    module Test = {
-      Belt.Array.keepWithIndex([1, 2, 3], (_x, i) => i == 1) == [2]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.getIndexBy", () => {
-  test("Belt_internalSetString.A.getIndexBy", () => {
-    module Test = {
-      Belt.Array.getIndexBy([1, 4, 3, 2], x => mod(x, 2) == 0) == Some(1)
-      Belt.Array.getIndexBy([15, 13, 11], x => mod(x, 2) == 0) == None
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.getBy", () => {
-  test("Belt_internalSetString.A.getBy", () => {
-    module Test = {
-      Belt.Array.getBy([1, 4, 3, 2], x => mod(x, 2) == 0) == Some(4)
-      Belt.Array.getBy([15, 13, 11], x => mod(x, 2) == 0) == None
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.flatMap", () => {
-  test("Belt_internalSetString.A.flatMap", () => {
-    module Test = {
-      Belt.Array.flatMap([1, 2], x => [x + 10, x + 20]) == [11, 21, 12, 22]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.map", () => {
-  test("Belt_internalSetString.A.map", () => {
-    module Test = {
-      Belt.Array.map([1, 2], x => x + 1) == [3, 4]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.forEach", () => {
-  test("Belt_internalSetString.A.forEach", () => {
-    module Test = {
-      Belt.Array.forEach(["a", "b", "c"], x => Js.log("Item: " ++ x))
-
-      /*
-  prints:
-  Item: a
-  Item: b
-  Item: c
-*/
-      let total = ref(0)
-
-      Belt.Array.forEach([1, 2, 3, 4], x => total := total.contents + x)
-
-      total.contents == 1 + 2 + 3 + 4
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.blit", () => {
-  test("Belt_internalSetString.A.blit", () => {
-    module Test = {
-      let v1 = [10, 11, 12, 13, 14, 15, 16, 17]
-      let v2 = [20, 21, 22, 23, 24, 25, 26, 27]
-
-      Belt.Array.blit(~src=v1, ~srcOffset=4, ~dst=v2, ~dstOffset=2, ~len=3)
-      v2 == [20, 21, 14, 15, 16, 25, 26, 27]
-
-      Belt.Array.blit(~src=v1, ~srcOffset=4, ~dst=v1, ~dstOffset=2, ~len=3)
-      v1 == [10, 11, 14, 15, 16, 15, 16, 17]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.fill", () => {
-  test("Belt_internalSetString.A.fill", () => {
-    module Test = {
-      let arr = Belt.Array.makeBy(5, i => i)
-
-      Belt.Array.fill(arr, ~offset=2, ~len=2, 9)
-
-      arr == [0, 1, 9, 9, 4]
-
-      Belt.Array.fill(arr, ~offset=7, ~len=2, 8)
-
-      arr == [0, 1, 9, 9, 4]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.sliceToEnd", () => {
-  test("Belt_internalSetString.A.sliceToEnd", () => {
-    module Test = {
-      Belt.Array.sliceToEnd([10, 11, 12, 13, 14, 15, 16], 2) == [12, 13, 14, 15, 16]
-
-      Belt.Array.sliceToEnd([10, 11, 12, 13, 14, 15, 16], -4) == [13, 14, 15, 16]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.slice", () => {
-  test("Belt_internalSetString.A.slice", () => {
-    module Test = {
-      Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=2, ~len=3) == [12, 13, 14]
-
-      Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=-4, ~len=3) == [13, 14, 15]
-
-      Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=4, ~len=9) == [14, 15, 16]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.concatMany", () => {
-  test("Belt_internalSetString.A.concatMany", () => {
-    module Test = {
-      Belt.Array.concatMany([[1, 2, 3], [4, 5, 6], [7, 8]]) == [1, 2, 3, 4, 5, 6, 7, 8]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.concat", () => {
-  test("Belt_internalSetString.A.concat", () => {
-    module Test = {
-      Belt.Array.concat([1, 2, 3], [4, 5]) == [1, 2, 3, 4, 5]
-
-      Belt.Array.concat([], ["a", "b", "c"]) == ["a", "b", "c"]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.unzip", () => {
-  test("Belt_internalSetString.A.unzip", () => {
-    module Test = {
-      Belt.Array.unzip([(1, 2), (3, 4)]) == ([1, 3], [2, 4])
-
-      Belt.Array.unzip([(1, 2), (3, 4), (5, 6), (7, 8)]) == ([1, 3, 5, 7], [2, 4, 6, 8])
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.zipBy", () => {
-  test("Belt_internalSetString.A.zipBy", () => {
-    module Test = {
-      Belt.Array.zipBy([1, 2, 3], [4, 5], (a, b) => 2 * a + b) == [6, 9]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.zip", () => {
-  test("Belt_internalSetString.A.zip", () => {
-    module Test = {
-      Belt.Array.zip([1, 2], [3, 4, 5]) == [(1, 3), (2, 4)]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.makeBy", () => {
-  test("Belt_internalSetString.A.makeBy", () => {
-    module Test = {
-      Belt.Array.makeBy(5, i => i) == [0, 1, 2, 3, 4]
-
-      Belt.Array.makeBy(5, i => i * i) == [0, 1, 4, 9, 16]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.rangeBy", () => {
-  test("Belt_internalSetString.A.rangeBy", () => {
-    module Test = {
-      Belt.Array.rangeBy(0, 10, ~step=3) == [0, 3, 6, 9]
-
-      Belt.Array.rangeBy(0, 12, ~step=3) == [0, 3, 6, 9, 12]
-
-      Belt.Array.rangeBy(33, 0, ~step=1) == []
-
-      Belt.Array.rangeBy(33, 0, ~step=-1) == []
-
-      Belt.Array.rangeBy(3, 12, ~step=-1) == []
-
-      Belt.Array.rangeBy(3, 3, ~step=0) == []
-
-      Belt.Array.rangeBy(3, 3, ~step=1) == [3]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.range", () => {
-  test("Belt_internalSetString.A.range", () => {
-    module Test = {
-      Belt.Array.range(0, 3) == [0, 1, 2, 3]
-
-      Belt.Array.range(3, 0) == []
-
-      Belt.Array.range(3, 3) == [3]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.makeUninitializedUnsafe", () => {
-  test("Belt_internalSetString.A.makeUninitializedUnsafe", () => {
-    module Test = {
-      let arr = Belt.Array.makeUninitializedUnsafe(5)
-
-      Js.log(Belt.Array.getExn(arr, 0)) // undefined
-
-      Belt.Array.setExn(arr, 0, "example")
-
-      Js.log(Belt.Array.getExn(arr, 0) == "example")
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.makeUninitialized", () => {
-  test("Belt_internalSetString.A.makeUninitialized", () => {
-    module Test = {
-      let arr: array<Js.undefined<string>> = Belt.Array.makeUninitialized(5)
-
-      Belt.Array.getExn(arr, 0) == Js.undefined
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.reverse", () => {
-  test("Belt_internalSetString.A.reverse", () => {
-    module Test = {
-      Belt.Array.reverse([10, 11, 12, 13, 14]) == [14, 13, 12, 11, 10]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.reverseInPlace", () => {
-  test("Belt_internalSetString.A.reverseInPlace", () => {
-    module Test = {
-      let arr = [10, 11, 12, 13, 14]
-
-      let () = Belt.Array.reverseInPlace(arr)
-
-      arr == [14, 13, 12, 11, 10]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.get", () => {
-  test("Belt_internalSetString.A.get", () => {
-    module Test = {
-      Belt.Array.get(["a", "b", "c"], 0) == Some("a")
-      Belt.Array.get(["a", "b", "c"], 3) == None
-      Belt.Array.get(["a", "b", "c"], -1) == None
-    }
-    ()
-  })
-})
-
-describe("Belt_internalSetString.A.length", () => {
-  test("Belt_internalSetString.A.length", () => {
-    module Test = {
-      // Returns 1
-      Belt.Array.length(["test"])
     }
     ()
   })
@@ -10459,515 +10485,6 @@ describe("Belt_internalMapInt.A.length", () => {
   })
 })
 
-describe("Belt_internalMapString.S.binarySearchBy", () => {
-  test("Belt_internalMapString.S.binarySearchBy", () => {
-    module Test = {
-      Belt.SortArray.binarySearchBy([1, 2, 3, 4, 33, 35, 36], 33, Pervasives.compare) == 4
-
-      lnot(Belt.SortArray.binarySearchBy([1, 3, 5, 7], 4, Pervasives.compare)) == 2
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.S.strictlySortedLength", () => {
-  test("Belt_internalMapString.S.strictlySortedLength", () => {
-    module Test = {
-      Belt.SortArray.strictlySortedLength([1, 2, 3, 4, 3], (x, y) => x < y) == 4
-
-      Belt.SortArray.strictlySortedLength([], (x, y) => x < y) == 0
-
-      Belt.SortArray.strictlySortedLength([1], (x, y) => x < y) == 1
-
-      Belt.SortArray.strictlySortedLength([4, 3, 2, 1], (x, y) => x < y) == -4
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.truncateToLengthUnsafe", () => {
-  test("Belt_internalMapString.A.truncateToLengthUnsafe", () => {
-    module Test = {
-      let arr = ["ant", "bee", "cat", "dog", "elk"]
-
-      Belt.Array.truncateToLengthUnsafe(arr, 3)
-
-      arr == ["ant", "bee", "cat"]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.eq", () => {
-  test("Belt_internalMapString.A.eq", () => {
-    module Test = {
-      Belt.Array.eq([1, 2, 3], [-1, -2, -3], (a, b) => abs(a) == abs(b)) == true
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.cmp", () => {
-  test("Belt_internalMapString.A.cmp", () => {
-    module Test = {
-      Belt.Array.cmp([1, 3, 5], [1, 4, 2], (a, b) => compare(a, b)) == -1
-
-      Belt.Array.cmp([1, 3, 5], [1, 2, 3], (a, b) => compare(a, b)) == 1
-
-      Belt.Array.cmp([1, 3, 5], [1, 3, 5], (a, b) => compare(a, b)) == 0
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.some2", () => {
-  test("Belt_internalMapString.A.some2", () => {
-    module Test = {
-      Belt.Array.some2([0, 2], [1, 0, 3], (a, b) => a > b) == true
-
-      Belt.Array.some2([], [1], (x, y) => x > y) == false
-
-      Belt.Array.some2([2, 3], [1, 4], (x, y) => x > y) == true
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.every2", () => {
-  test("Belt_internalMapString.A.every2", () => {
-    module Test = {
-      Belt.Array.every2([1, 2, 3], [0, 1], (a, b) => a > b) == true
-
-      Belt.Array.every2([], [1], (x, y) => x > y) == true
-
-      Belt.Array.every2([2, 3], [1], (x, y) => x > y) == true
-
-      Belt.Array.every2([0, 1], [5, 0], (x, y) => x > y) == false
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.every", () => {
-  test("Belt_internalMapString.A.every", () => {
-    module Test = {
-      Belt.Array.every([1, 3, 5], x => mod(x, 2) == 1) == true
-
-      Belt.Array.every([1, -3, 5], x => x > 0) == false
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.some", () => {
-  test("Belt_internalMapString.A.some", () => {
-    module Test = {
-      Belt.Array.some([2, 3, 4], x => mod(x, 2) == 1) == true
-
-      Belt.Array.some([-1, -3, -5], x => x > 0) == false
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.joinWith", () => {
-  test("Belt_internalMapString.A.joinWith", () => {
-    module Test = {
-      Belt.Array.joinWith([0, 1], ", ", Js.Int.toString) == "0, 1"
-      Belt.Array.joinWith([], " ", Js.Int.toString) == ""
-      Belt.Array.joinWith([1], " ", Js.Int.toString) == "1"
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.reduceWithIndex", () => {
-  test("Belt_internalMapString.A.reduceWithIndex", () => {
-    module Test = {
-      Belt.Array.reduceWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i) == 16
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.reduceReverse2", () => {
-  test("Belt_internalMapString.A.reduceReverse2", () => {
-    module Test = {
-      Belt.Array.reduceReverse2([1, 2, 3], [1, 2], 0, (acc, x, y) => acc + x + y) == 6
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.reduceReverse", () => {
-  test("Belt_internalMapString.A.reduceReverse", () => {
-    module Test = {
-      Belt.Array.reduceReverse(["a", "b", "c", "d"], "", (a, b) => a ++ b) == "dcba"
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.reduce", () => {
-  test("Belt_internalMapString.A.reduce", () => {
-    module Test = {
-      Belt.Array.reduce([2, 3, 4], 1, (a, b) => a + b) == 10
-
-      Belt.Array.reduce(["a", "b", "c", "d"], "", (a, b) => a ++ b) == "abcd"
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.partition", () => {
-  test("Belt_internalMapString.A.partition", () => {
-    module Test = {
-      Belt.Array.partition([1, 2, 3, 4, 5], x => mod(x, 2) == 0) == ([2, 4], [1, 3, 5])
-
-      Belt.Array.partition([1, 2, 3, 4, 5], x => mod(x, 2) != 0) == ([1, 3, 5], [2, 4])
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.mapWithIndex", () => {
-  test("Belt_internalMapString.A.mapWithIndex", () => {
-    module Test = {
-      Belt.Array.mapWithIndex([1, 2, 3], (i, x) => i + x) == [0 + 1, 1 + 2, 2 + 3]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.forEachWithIndex", () => {
-  test("Belt_internalMapString.A.forEachWithIndex", () => {
-    module Test = {
-      Belt.Array.forEachWithIndex(
-        ["a", "b", "c"],
-        (i, x) => Js.log("Item " ++ Belt.Int.toString(i) ++ " is " ++ x),
-      )
-
-      /*
-  prints:
-  Item 0 is a
-  Item 1 is b
-  Item 2 is cc
-*/
-      let total = ref(0)
-
-      Belt.Array.forEachWithIndex([10, 11, 12, 13], (i, x) => total := total.contents + x + i)
-
-      total.contents == 0 + 10 + 1 + 11 + 2 + 12 + 3 + 13
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.keepMap", () => {
-  test("Belt_internalMapString.A.keepMap", () => {
-    module Test = {
-      Belt.Array.keepMap(
-        [1, 2, 3],
-        x =>
-          if mod(x, 2) == 0 {
-            Some(x)
-          } else {
-            None
-          },
-      ) == [2]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.keepWithIndex", () => {
-  test("Belt_internalMapString.A.keepWithIndex", () => {
-    module Test = {
-      Belt.Array.keepWithIndex([1, 2, 3], (_x, i) => i == 1) == [2]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.getIndexBy", () => {
-  test("Belt_internalMapString.A.getIndexBy", () => {
-    module Test = {
-      Belt.Array.getIndexBy([1, 4, 3, 2], x => mod(x, 2) == 0) == Some(1)
-      Belt.Array.getIndexBy([15, 13, 11], x => mod(x, 2) == 0) == None
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.getBy", () => {
-  test("Belt_internalMapString.A.getBy", () => {
-    module Test = {
-      Belt.Array.getBy([1, 4, 3, 2], x => mod(x, 2) == 0) == Some(4)
-      Belt.Array.getBy([15, 13, 11], x => mod(x, 2) == 0) == None
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.flatMap", () => {
-  test("Belt_internalMapString.A.flatMap", () => {
-    module Test = {
-      Belt.Array.flatMap([1, 2], x => [x + 10, x + 20]) == [11, 21, 12, 22]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.map", () => {
-  test("Belt_internalMapString.A.map", () => {
-    module Test = {
-      Belt.Array.map([1, 2], x => x + 1) == [3, 4]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.forEach", () => {
-  test("Belt_internalMapString.A.forEach", () => {
-    module Test = {
-      Belt.Array.forEach(["a", "b", "c"], x => Js.log("Item: " ++ x))
-
-      /*
-  prints:
-  Item: a
-  Item: b
-  Item: c
-*/
-      let total = ref(0)
-
-      Belt.Array.forEach([1, 2, 3, 4], x => total := total.contents + x)
-
-      total.contents == 1 + 2 + 3 + 4
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.blit", () => {
-  test("Belt_internalMapString.A.blit", () => {
-    module Test = {
-      let v1 = [10, 11, 12, 13, 14, 15, 16, 17]
-      let v2 = [20, 21, 22, 23, 24, 25, 26, 27]
-
-      Belt.Array.blit(~src=v1, ~srcOffset=4, ~dst=v2, ~dstOffset=2, ~len=3)
-      v2 == [20, 21, 14, 15, 16, 25, 26, 27]
-
-      Belt.Array.blit(~src=v1, ~srcOffset=4, ~dst=v1, ~dstOffset=2, ~len=3)
-      v1 == [10, 11, 14, 15, 16, 15, 16, 17]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.fill", () => {
-  test("Belt_internalMapString.A.fill", () => {
-    module Test = {
-      let arr = Belt.Array.makeBy(5, i => i)
-
-      Belt.Array.fill(arr, ~offset=2, ~len=2, 9)
-
-      arr == [0, 1, 9, 9, 4]
-
-      Belt.Array.fill(arr, ~offset=7, ~len=2, 8)
-
-      arr == [0, 1, 9, 9, 4]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.sliceToEnd", () => {
-  test("Belt_internalMapString.A.sliceToEnd", () => {
-    module Test = {
-      Belt.Array.sliceToEnd([10, 11, 12, 13, 14, 15, 16], 2) == [12, 13, 14, 15, 16]
-
-      Belt.Array.sliceToEnd([10, 11, 12, 13, 14, 15, 16], -4) == [13, 14, 15, 16]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.slice", () => {
-  test("Belt_internalMapString.A.slice", () => {
-    module Test = {
-      Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=2, ~len=3) == [12, 13, 14]
-
-      Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=-4, ~len=3) == [13, 14, 15]
-
-      Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=4, ~len=9) == [14, 15, 16]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.concatMany", () => {
-  test("Belt_internalMapString.A.concatMany", () => {
-    module Test = {
-      Belt.Array.concatMany([[1, 2, 3], [4, 5, 6], [7, 8]]) == [1, 2, 3, 4, 5, 6, 7, 8]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.concat", () => {
-  test("Belt_internalMapString.A.concat", () => {
-    module Test = {
-      Belt.Array.concat([1, 2, 3], [4, 5]) == [1, 2, 3, 4, 5]
-
-      Belt.Array.concat([], ["a", "b", "c"]) == ["a", "b", "c"]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.unzip", () => {
-  test("Belt_internalMapString.A.unzip", () => {
-    module Test = {
-      Belt.Array.unzip([(1, 2), (3, 4)]) == ([1, 3], [2, 4])
-
-      Belt.Array.unzip([(1, 2), (3, 4), (5, 6), (7, 8)]) == ([1, 3, 5, 7], [2, 4, 6, 8])
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.zipBy", () => {
-  test("Belt_internalMapString.A.zipBy", () => {
-    module Test = {
-      Belt.Array.zipBy([1, 2, 3], [4, 5], (a, b) => 2 * a + b) == [6, 9]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.zip", () => {
-  test("Belt_internalMapString.A.zip", () => {
-    module Test = {
-      Belt.Array.zip([1, 2], [3, 4, 5]) == [(1, 3), (2, 4)]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.makeBy", () => {
-  test("Belt_internalMapString.A.makeBy", () => {
-    module Test = {
-      Belt.Array.makeBy(5, i => i) == [0, 1, 2, 3, 4]
-
-      Belt.Array.makeBy(5, i => i * i) == [0, 1, 4, 9, 16]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.rangeBy", () => {
-  test("Belt_internalMapString.A.rangeBy", () => {
-    module Test = {
-      Belt.Array.rangeBy(0, 10, ~step=3) == [0, 3, 6, 9]
-
-      Belt.Array.rangeBy(0, 12, ~step=3) == [0, 3, 6, 9, 12]
-
-      Belt.Array.rangeBy(33, 0, ~step=1) == []
-
-      Belt.Array.rangeBy(33, 0, ~step=-1) == []
-
-      Belt.Array.rangeBy(3, 12, ~step=-1) == []
-
-      Belt.Array.rangeBy(3, 3, ~step=0) == []
-
-      Belt.Array.rangeBy(3, 3, ~step=1) == [3]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.range", () => {
-  test("Belt_internalMapString.A.range", () => {
-    module Test = {
-      Belt.Array.range(0, 3) == [0, 1, 2, 3]
-
-      Belt.Array.range(3, 0) == []
-
-      Belt.Array.range(3, 3) == [3]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.makeUninitializedUnsafe", () => {
-  test("Belt_internalMapString.A.makeUninitializedUnsafe", () => {
-    module Test = {
-      let arr = Belt.Array.makeUninitializedUnsafe(5)
-
-      Js.log(Belt.Array.getExn(arr, 0)) // undefined
-
-      Belt.Array.setExn(arr, 0, "example")
-
-      Js.log(Belt.Array.getExn(arr, 0) == "example")
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.makeUninitialized", () => {
-  test("Belt_internalMapString.A.makeUninitialized", () => {
-    module Test = {
-      let arr: array<Js.undefined<string>> = Belt.Array.makeUninitialized(5)
-
-      Belt.Array.getExn(arr, 0) == Js.undefined
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.reverse", () => {
-  test("Belt_internalMapString.A.reverse", () => {
-    module Test = {
-      Belt.Array.reverse([10, 11, 12, 13, 14]) == [14, 13, 12, 11, 10]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.reverseInPlace", () => {
-  test("Belt_internalMapString.A.reverseInPlace", () => {
-    module Test = {
-      let arr = [10, 11, 12, 13, 14]
-
-      let () = Belt.Array.reverseInPlace(arr)
-
-      arr == [14, 13, 12, 11, 10]
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.get", () => {
-  test("Belt_internalMapString.A.get", () => {
-    module Test = {
-      Belt.Array.get(["a", "b", "c"], 0) == Some("a")
-      Belt.Array.get(["a", "b", "c"], 3) == None
-      Belt.Array.get(["a", "b", "c"], -1) == None
-    }
-    ()
-  })
-})
-
-describe("Belt_internalMapString.A.length", () => {
-  test("Belt_internalMapString.A.length", () => {
-    module Test = {
-      // Returns 1
-      Belt.Array.length(["test"])
-    }
-    ()
-  })
-})
-
 describe("Belt_internalSetInt.A.truncateToLengthUnsafe", () => {
   test("Belt_internalSetInt.A.truncateToLengthUnsafe", () => {
     module Test = {
@@ -11443,6 +10960,489 @@ describe("Belt_internalSetInt.A.get", () => {
 
 describe("Belt_internalSetInt.A.length", () => {
   test("Belt_internalSetInt.A.length", () => {
+    module Test = {
+      // Returns 1
+      Belt.Array.length(["test"])
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.truncateToLengthUnsafe", () => {
+  test("Belt_internalSetString.A.truncateToLengthUnsafe", () => {
+    module Test = {
+      let arr = ["ant", "bee", "cat", "dog", "elk"]
+
+      Belt.Array.truncateToLengthUnsafe(arr, 3)
+
+      arr == ["ant", "bee", "cat"]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.eq", () => {
+  test("Belt_internalSetString.A.eq", () => {
+    module Test = {
+      Belt.Array.eq([1, 2, 3], [-1, -2, -3], (a, b) => abs(a) == abs(b)) == true
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.cmp", () => {
+  test("Belt_internalSetString.A.cmp", () => {
+    module Test = {
+      Belt.Array.cmp([1, 3, 5], [1, 4, 2], (a, b) => compare(a, b)) == -1
+
+      Belt.Array.cmp([1, 3, 5], [1, 2, 3], (a, b) => compare(a, b)) == 1
+
+      Belt.Array.cmp([1, 3, 5], [1, 3, 5], (a, b) => compare(a, b)) == 0
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.some2", () => {
+  test("Belt_internalSetString.A.some2", () => {
+    module Test = {
+      Belt.Array.some2([0, 2], [1, 0, 3], (a, b) => a > b) == true
+
+      Belt.Array.some2([], [1], (x, y) => x > y) == false
+
+      Belt.Array.some2([2, 3], [1, 4], (x, y) => x > y) == true
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.every2", () => {
+  test("Belt_internalSetString.A.every2", () => {
+    module Test = {
+      Belt.Array.every2([1, 2, 3], [0, 1], (a, b) => a > b) == true
+
+      Belt.Array.every2([], [1], (x, y) => x > y) == true
+
+      Belt.Array.every2([2, 3], [1], (x, y) => x > y) == true
+
+      Belt.Array.every2([0, 1], [5, 0], (x, y) => x > y) == false
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.every", () => {
+  test("Belt_internalSetString.A.every", () => {
+    module Test = {
+      Belt.Array.every([1, 3, 5], x => mod(x, 2) == 1) == true
+
+      Belt.Array.every([1, -3, 5], x => x > 0) == false
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.some", () => {
+  test("Belt_internalSetString.A.some", () => {
+    module Test = {
+      Belt.Array.some([2, 3, 4], x => mod(x, 2) == 1) == true
+
+      Belt.Array.some([-1, -3, -5], x => x > 0) == false
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.joinWith", () => {
+  test("Belt_internalSetString.A.joinWith", () => {
+    module Test = {
+      Belt.Array.joinWith([0, 1], ", ", Js.Int.toString) == "0, 1"
+      Belt.Array.joinWith([], " ", Js.Int.toString) == ""
+      Belt.Array.joinWith([1], " ", Js.Int.toString) == "1"
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.reduceWithIndex", () => {
+  test("Belt_internalSetString.A.reduceWithIndex", () => {
+    module Test = {
+      Belt.Array.reduceWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i) == 16
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.reduceReverse2", () => {
+  test("Belt_internalSetString.A.reduceReverse2", () => {
+    module Test = {
+      Belt.Array.reduceReverse2([1, 2, 3], [1, 2], 0, (acc, x, y) => acc + x + y) == 6
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.reduceReverse", () => {
+  test("Belt_internalSetString.A.reduceReverse", () => {
+    module Test = {
+      Belt.Array.reduceReverse(["a", "b", "c", "d"], "", (a, b) => a ++ b) == "dcba"
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.reduce", () => {
+  test("Belt_internalSetString.A.reduce", () => {
+    module Test = {
+      Belt.Array.reduce([2, 3, 4], 1, (a, b) => a + b) == 10
+
+      Belt.Array.reduce(["a", "b", "c", "d"], "", (a, b) => a ++ b) == "abcd"
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.partition", () => {
+  test("Belt_internalSetString.A.partition", () => {
+    module Test = {
+      Belt.Array.partition([1, 2, 3, 4, 5], x => mod(x, 2) == 0) == ([2, 4], [1, 3, 5])
+
+      Belt.Array.partition([1, 2, 3, 4, 5], x => mod(x, 2) != 0) == ([1, 3, 5], [2, 4])
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.mapWithIndex", () => {
+  test("Belt_internalSetString.A.mapWithIndex", () => {
+    module Test = {
+      Belt.Array.mapWithIndex([1, 2, 3], (i, x) => i + x) == [0 + 1, 1 + 2, 2 + 3]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.forEachWithIndex", () => {
+  test("Belt_internalSetString.A.forEachWithIndex", () => {
+    module Test = {
+      Belt.Array.forEachWithIndex(
+        ["a", "b", "c"],
+        (i, x) => Js.log("Item " ++ Belt.Int.toString(i) ++ " is " ++ x),
+      )
+
+      /*
+  prints:
+  Item 0 is a
+  Item 1 is b
+  Item 2 is cc
+*/
+      let total = ref(0)
+
+      Belt.Array.forEachWithIndex([10, 11, 12, 13], (i, x) => total := total.contents + x + i)
+
+      total.contents == 0 + 10 + 1 + 11 + 2 + 12 + 3 + 13
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.keepMap", () => {
+  test("Belt_internalSetString.A.keepMap", () => {
+    module Test = {
+      Belt.Array.keepMap(
+        [1, 2, 3],
+        x =>
+          if mod(x, 2) == 0 {
+            Some(x)
+          } else {
+            None
+          },
+      ) == [2]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.keepWithIndex", () => {
+  test("Belt_internalSetString.A.keepWithIndex", () => {
+    module Test = {
+      Belt.Array.keepWithIndex([1, 2, 3], (_x, i) => i == 1) == [2]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.getIndexBy", () => {
+  test("Belt_internalSetString.A.getIndexBy", () => {
+    module Test = {
+      Belt.Array.getIndexBy([1, 4, 3, 2], x => mod(x, 2) == 0) == Some(1)
+      Belt.Array.getIndexBy([15, 13, 11], x => mod(x, 2) == 0) == None
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.getBy", () => {
+  test("Belt_internalSetString.A.getBy", () => {
+    module Test = {
+      Belt.Array.getBy([1, 4, 3, 2], x => mod(x, 2) == 0) == Some(4)
+      Belt.Array.getBy([15, 13, 11], x => mod(x, 2) == 0) == None
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.flatMap", () => {
+  test("Belt_internalSetString.A.flatMap", () => {
+    module Test = {
+      Belt.Array.flatMap([1, 2], x => [x + 10, x + 20]) == [11, 21, 12, 22]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.map", () => {
+  test("Belt_internalSetString.A.map", () => {
+    module Test = {
+      Belt.Array.map([1, 2], x => x + 1) == [3, 4]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.forEach", () => {
+  test("Belt_internalSetString.A.forEach", () => {
+    module Test = {
+      Belt.Array.forEach(["a", "b", "c"], x => Js.log("Item: " ++ x))
+
+      /*
+  prints:
+  Item: a
+  Item: b
+  Item: c
+*/
+      let total = ref(0)
+
+      Belt.Array.forEach([1, 2, 3, 4], x => total := total.contents + x)
+
+      total.contents == 1 + 2 + 3 + 4
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.blit", () => {
+  test("Belt_internalSetString.A.blit", () => {
+    module Test = {
+      let v1 = [10, 11, 12, 13, 14, 15, 16, 17]
+      let v2 = [20, 21, 22, 23, 24, 25, 26, 27]
+
+      Belt.Array.blit(~src=v1, ~srcOffset=4, ~dst=v2, ~dstOffset=2, ~len=3)
+      v2 == [20, 21, 14, 15, 16, 25, 26, 27]
+
+      Belt.Array.blit(~src=v1, ~srcOffset=4, ~dst=v1, ~dstOffset=2, ~len=3)
+      v1 == [10, 11, 14, 15, 16, 15, 16, 17]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.fill", () => {
+  test("Belt_internalSetString.A.fill", () => {
+    module Test = {
+      let arr = Belt.Array.makeBy(5, i => i)
+
+      Belt.Array.fill(arr, ~offset=2, ~len=2, 9)
+
+      arr == [0, 1, 9, 9, 4]
+
+      Belt.Array.fill(arr, ~offset=7, ~len=2, 8)
+
+      arr == [0, 1, 9, 9, 4]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.sliceToEnd", () => {
+  test("Belt_internalSetString.A.sliceToEnd", () => {
+    module Test = {
+      Belt.Array.sliceToEnd([10, 11, 12, 13, 14, 15, 16], 2) == [12, 13, 14, 15, 16]
+
+      Belt.Array.sliceToEnd([10, 11, 12, 13, 14, 15, 16], -4) == [13, 14, 15, 16]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.slice", () => {
+  test("Belt_internalSetString.A.slice", () => {
+    module Test = {
+      Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=2, ~len=3) == [12, 13, 14]
+
+      Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=-4, ~len=3) == [13, 14, 15]
+
+      Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=4, ~len=9) == [14, 15, 16]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.concatMany", () => {
+  test("Belt_internalSetString.A.concatMany", () => {
+    module Test = {
+      Belt.Array.concatMany([[1, 2, 3], [4, 5, 6], [7, 8]]) == [1, 2, 3, 4, 5, 6, 7, 8]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.concat", () => {
+  test("Belt_internalSetString.A.concat", () => {
+    module Test = {
+      Belt.Array.concat([1, 2, 3], [4, 5]) == [1, 2, 3, 4, 5]
+
+      Belt.Array.concat([], ["a", "b", "c"]) == ["a", "b", "c"]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.unzip", () => {
+  test("Belt_internalSetString.A.unzip", () => {
+    module Test = {
+      Belt.Array.unzip([(1, 2), (3, 4)]) == ([1, 3], [2, 4])
+
+      Belt.Array.unzip([(1, 2), (3, 4), (5, 6), (7, 8)]) == ([1, 3, 5, 7], [2, 4, 6, 8])
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.zipBy", () => {
+  test("Belt_internalSetString.A.zipBy", () => {
+    module Test = {
+      Belt.Array.zipBy([1, 2, 3], [4, 5], (a, b) => 2 * a + b) == [6, 9]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.zip", () => {
+  test("Belt_internalSetString.A.zip", () => {
+    module Test = {
+      Belt.Array.zip([1, 2], [3, 4, 5]) == [(1, 3), (2, 4)]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.makeBy", () => {
+  test("Belt_internalSetString.A.makeBy", () => {
+    module Test = {
+      Belt.Array.makeBy(5, i => i) == [0, 1, 2, 3, 4]
+
+      Belt.Array.makeBy(5, i => i * i) == [0, 1, 4, 9, 16]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.rangeBy", () => {
+  test("Belt_internalSetString.A.rangeBy", () => {
+    module Test = {
+      Belt.Array.rangeBy(0, 10, ~step=3) == [0, 3, 6, 9]
+
+      Belt.Array.rangeBy(0, 12, ~step=3) == [0, 3, 6, 9, 12]
+
+      Belt.Array.rangeBy(33, 0, ~step=1) == []
+
+      Belt.Array.rangeBy(33, 0, ~step=-1) == []
+
+      Belt.Array.rangeBy(3, 12, ~step=-1) == []
+
+      Belt.Array.rangeBy(3, 3, ~step=0) == []
+
+      Belt.Array.rangeBy(3, 3, ~step=1) == [3]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.range", () => {
+  test("Belt_internalSetString.A.range", () => {
+    module Test = {
+      Belt.Array.range(0, 3) == [0, 1, 2, 3]
+
+      Belt.Array.range(3, 0) == []
+
+      Belt.Array.range(3, 3) == [3]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.makeUninitializedUnsafe", () => {
+  test("Belt_internalSetString.A.makeUninitializedUnsafe", () => {
+    module Test = {
+      let arr = Belt.Array.makeUninitializedUnsafe(5)
+
+      Js.log(Belt.Array.getExn(arr, 0)) // undefined
+
+      Belt.Array.setExn(arr, 0, "example")
+
+      Js.log(Belt.Array.getExn(arr, 0) == "example")
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.makeUninitialized", () => {
+  test("Belt_internalSetString.A.makeUninitialized", () => {
+    module Test = {
+      let arr: array<Js.undefined<string>> = Belt.Array.makeUninitialized(5)
+
+      Belt.Array.getExn(arr, 0) == Js.undefined
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.reverse", () => {
+  test("Belt_internalSetString.A.reverse", () => {
+    module Test = {
+      Belt.Array.reverse([10, 11, 12, 13, 14]) == [14, 13, 12, 11, 10]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.reverseInPlace", () => {
+  test("Belt_internalSetString.A.reverseInPlace", () => {
+    module Test = {
+      let arr = [10, 11, 12, 13, 14]
+
+      let () = Belt.Array.reverseInPlace(arr)
+
+      arr == [14, 13, 12, 11, 10]
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.get", () => {
+  test("Belt_internalSetString.A.get", () => {
+    module Test = {
+      Belt.Array.get(["a", "b", "c"], 0) == Some("a")
+      Belt.Array.get(["a", "b", "c"], 3) == None
+      Belt.Array.get(["a", "b", "c"], -1) == None
+    }
+    ()
+  })
+})
+
+describe("Belt_internalSetString.A.length", () => {
+  test("Belt_internalSetString.A.length", () => {
     module Test = {
       // Returns 1
       Belt.Array.length(["test"])
@@ -11988,6 +11988,208 @@ describe("Console.assert_", () => {
     module Test = {
       Console.assert_(false, "Hello World!")
       Console.assert_(42 == 42, "The answer")
+    }
+    ()
+  })
+})
+
+describe("Dict.mapValues", () => {
+  test("Dict.mapValues", () => {
+    module Test = {
+      let dict = Dict.fromArray([("key1", 1), ("key2", 2)])
+
+      dict->Dict.mapValues(v => v + 10)->Dict.toArray // [("key1", 11), ("key2", 12)]
+      dict->Dict.mapValues(v => Int.toString(v))->Dict.toArray // [("key1", "1"), ("key2", "2")]
+    }
+    ()
+  })
+})
+
+describe("Dict.forEachWithKey", () => {
+  test("Dict.forEachWithKey", () => {
+    module Test = {
+      let dict = Dict.fromArray([("key1", "value1"), ("key2", "value2")])
+
+      dict->Dict.forEachWithKey(
+        (value, key) => {
+          Console.log2(value, key)
+        },
+      )
+    }
+    ()
+  })
+})
+
+describe("Dict.forEach", () => {
+  test("Dict.forEach", () => {
+    module Test = {
+      let dict = Dict.fromArray([("key1", "value1"), ("key2", "value2")])
+
+      dict->Dict.forEach(
+        value => {
+          Console.log(value)
+        },
+      )
+    }
+    ()
+  })
+})
+
+describe("Dict.copy", () => {
+  test("Dict.copy", () => {
+    module Test = {
+      let dict = Dict.fromArray([("key1", "value1"), ("key2", "value2")])
+      let dict2 = dict->Dict.copy
+
+      // Both log `["key1", "key2"]` here.
+      Console.log2(dict->Dict.keysToArray, dict2->Dict.keysToArray)
+    }
+    ()
+  })
+})
+
+describe("Dict.assign", () => {
+  test("Dict.assign", () => {
+    module Test = {
+      let dict1 = Dict.make()
+      dict1->Dict.set("firstKey", 1)
+      Console.log(dict1->Dict.keysToArray) // Logs `["firstKey"]`
+
+      let dict2 = Dict.make()
+      dict2->Dict.set("someKey", 2)
+      dict2->Dict.set("someKey2", 3)
+
+      let dict1 = dict1->Dict.assign(dict2)
+
+      Console.log(dict1->Dict.keysToArray) // Logs `["firstKey", "someKey", "someKey2"]`
+    }
+    ()
+  })
+})
+
+describe("Dict.valuesToArray", () => {
+  test("Dict.valuesToArray", () => {
+    module Test = {
+      let dict = Dict.make()
+      dict->Dict.set("someKey", 1)
+      dict->Dict.set("someKey2", 2)
+      let values = dict->Dict.valuesToArray
+      Console.log(values) // Logs `[1, 2]` to the console
+    }
+    ()
+  })
+})
+
+describe("Dict.keysToArray", () => {
+  test("Dict.keysToArray", () => {
+    module Test = {
+      let dict = Dict.make()
+      dict->Dict.set("someKey", 1)
+      dict->Dict.set("someKey2", 2)
+      let keys = dict->Dict.keysToArray
+      Console.log(keys) // Logs `["someKey", "someKey2"]` to the console
+    }
+    ()
+  })
+})
+
+describe("Dict.toArray", () => {
+  test("Dict.toArray", () => {
+    module Test = {
+      let dict = Dict.make()
+      dict->Dict.set("someKey", 1)
+      dict->Dict.set("someKey2", 2)
+      let asArray = dict->Dict.toArray
+      Console.log(asArray) // Logs `[["someKey", 1], ["someKey2", 2]]` to the console
+    }
+    ()
+  })
+})
+
+describe("Dict.fromIterator", () => {
+  test("Dict.fromIterator", () => {
+    module Test = {
+      let iterator: Iterator.t<(string, int)> = %raw(`
+  (() => {
+    var map1 = new Map();
+    map1.set('first', 1);
+    map1.set('second', 2);
+    var iterator1 = map1[Symbol.iterator]();
+    return iterator1;
+  })()
+`)
+      iterator
+      ->Dict.fromIterator
+      ->Dict.valuesToArray
+      ->assertEqual([1, 2])
+    }
+    ()
+  })
+})
+
+describe("Dict.fromArray", () => {
+  test("Dict.fromArray", () => {
+    module Test = {
+      let dict = Dict.fromArray([("key1", "value1"), ("key2", "value2")])
+    }
+    ()
+  })
+})
+
+describe("Dict.make", () => {
+  test("Dict.make", () => {
+    module Test = {
+      let dict1: dict<int> = Dict.make() // You can annotate the type of the values of your dict yourself if you want
+
+      let dict2 = Dict.make() // Or you can let ReScript infer it via usage.
+      dict2->Dict.set("someKey", 12)
+    }
+    ()
+  })
+})
+
+describe("Dict.delete", () => {
+  test("Dict.delete", () => {
+    module Test = {
+      let dict = Dict.fromArray([("someKey", "someValue")])
+
+      dict->Dict.delete("someKey")
+    }
+    ()
+  })
+})
+
+describe("Dict.set", () => {
+  test("Dict.set", () => {
+    module Test = {
+      let dict = Dict.make()
+
+      dict->Dict.set("someKey", "someValue")
+    }
+    ()
+  })
+})
+
+describe("Dict.get", () => {
+  test("Dict.get", () => {
+    module Test = {
+      let dict = Dict.fromArray([("someKey", "someValue")])
+
+      switch dict->Dict.get("someKey") {
+      | None => Console.log("Nope, didn't have the key.")
+      | Some(value) => Console.log(value)
+      }
+    }
+    ()
+  })
+})
+
+describe("Dict.getUnsafe", () => {
+  test("Dict.getUnsafe", () => {
+    module Test = {
+      let dict = Dict.fromArray([("key1", "value1"), ("key2", "value2")])
+      let value = dict->Dict.getUnsafe("key1")
+      Console.log(value) // value1
     }
     ()
   })
@@ -12964,208 +13166,6 @@ describe("Date.make", () => {
   test("Date.make", () => {
     module Test = {
       Date.make()
-    }
-    ()
-  })
-})
-
-describe("Dict.mapValues", () => {
-  test("Dict.mapValues", () => {
-    module Test = {
-      let dict = Dict.fromArray([("key1", 1), ("key2", 2)])
-
-      dict->Dict.mapValues(v => v + 10)->Dict.toArray // [("key1", 11), ("key2", 12)]
-      dict->Dict.mapValues(v => Int.toString(v))->Dict.toArray // [("key1", "1"), ("key2", "2")]
-    }
-    ()
-  })
-})
-
-describe("Dict.forEachWithKey", () => {
-  test("Dict.forEachWithKey", () => {
-    module Test = {
-      let dict = Dict.fromArray([("key1", "value1"), ("key2", "value2")])
-
-      dict->Dict.forEachWithKey(
-        (value, key) => {
-          Console.log2(value, key)
-        },
-      )
-    }
-    ()
-  })
-})
-
-describe("Dict.forEach", () => {
-  test("Dict.forEach", () => {
-    module Test = {
-      let dict = Dict.fromArray([("key1", "value1"), ("key2", "value2")])
-
-      dict->Dict.forEach(
-        value => {
-          Console.log(value)
-        },
-      )
-    }
-    ()
-  })
-})
-
-describe("Dict.copy", () => {
-  test("Dict.copy", () => {
-    module Test = {
-      let dict = Dict.fromArray([("key1", "value1"), ("key2", "value2")])
-      let dict2 = dict->Dict.copy
-
-      // Both log `["key1", "key2"]` here.
-      Console.log2(dict->Dict.keysToArray, dict2->Dict.keysToArray)
-    }
-    ()
-  })
-})
-
-describe("Dict.assign", () => {
-  test("Dict.assign", () => {
-    module Test = {
-      let dict1 = Dict.make()
-      dict1->Dict.set("firstKey", 1)
-      Console.log(dict1->Dict.keysToArray) // Logs `["firstKey"]`
-
-      let dict2 = Dict.make()
-      dict2->Dict.set("someKey", 2)
-      dict2->Dict.set("someKey2", 3)
-
-      let dict1 = dict1->Dict.assign(dict2)
-
-      Console.log(dict1->Dict.keysToArray) // Logs `["firstKey", "someKey", "someKey2"]`
-    }
-    ()
-  })
-})
-
-describe("Dict.valuesToArray", () => {
-  test("Dict.valuesToArray", () => {
-    module Test = {
-      let dict = Dict.make()
-      dict->Dict.set("someKey", 1)
-      dict->Dict.set("someKey2", 2)
-      let values = dict->Dict.valuesToArray
-      Console.log(values) // Logs `[1, 2]` to the console
-    }
-    ()
-  })
-})
-
-describe("Dict.keysToArray", () => {
-  test("Dict.keysToArray", () => {
-    module Test = {
-      let dict = Dict.make()
-      dict->Dict.set("someKey", 1)
-      dict->Dict.set("someKey2", 2)
-      let keys = dict->Dict.keysToArray
-      Console.log(keys) // Logs `["someKey", "someKey2"]` to the console
-    }
-    ()
-  })
-})
-
-describe("Dict.toArray", () => {
-  test("Dict.toArray", () => {
-    module Test = {
-      let dict = Dict.make()
-      dict->Dict.set("someKey", 1)
-      dict->Dict.set("someKey2", 2)
-      let asArray = dict->Dict.toArray
-      Console.log(asArray) // Logs `[["someKey", 1], ["someKey2", 2]]` to the console
-    }
-    ()
-  })
-})
-
-describe("Dict.fromIterator", () => {
-  test("Dict.fromIterator", () => {
-    module Test = {
-      let iterator: Iterator.t<(string, int)> = %raw(`
-  (() => {
-    var map1 = new Map();
-    map1.set('first', 1);
-    map1.set('second', 2);
-    var iterator1 = map1[Symbol.iterator]();
-    return iterator1;
-  })()
-`)
-      iterator
-      ->Dict.fromIterator
-      ->Dict.valuesToArray
-      ->assertEqual([1, 2])
-    }
-    ()
-  })
-})
-
-describe("Dict.fromArray", () => {
-  test("Dict.fromArray", () => {
-    module Test = {
-      let dict = Dict.fromArray([("key1", "value1"), ("key2", "value2")])
-    }
-    ()
-  })
-})
-
-describe("Dict.make", () => {
-  test("Dict.make", () => {
-    module Test = {
-      let dict1: dict<int> = Dict.make() // You can annotate the type of the values of your dict yourself if you want
-
-      let dict2 = Dict.make() // Or you can let ReScript infer it via usage.
-      dict2->Dict.set("someKey", 12)
-    }
-    ()
-  })
-})
-
-describe("Dict.delete", () => {
-  test("Dict.delete", () => {
-    module Test = {
-      let dict = Dict.fromArray([("someKey", "someValue")])
-
-      dict->Dict.delete("someKey")
-    }
-    ()
-  })
-})
-
-describe("Dict.set", () => {
-  test("Dict.set", () => {
-    module Test = {
-      let dict = Dict.make()
-
-      dict->Dict.set("someKey", "someValue")
-    }
-    ()
-  })
-})
-
-describe("Dict.get", () => {
-  test("Dict.get", () => {
-    module Test = {
-      let dict = Dict.fromArray([("someKey", "someValue")])
-
-      switch dict->Dict.get("someKey") {
-      | None => Console.log("Nope, didn't have the key.")
-      | Some(value) => Console.log(value)
-      }
-    }
-    ()
-  })
-})
-
-describe("Dict.getUnsafe", () => {
-  test("Dict.getUnsafe", () => {
-    module Test = {
-      let dict = Dict.fromArray([("key1", "value1"), ("key2", "value2")])
-      let value = dict->Dict.getUnsafe("key1")
-      Console.log(value) // value1
     }
     ()
   })
@@ -14696,156 +14696,6 @@ describe("Map.make", () => {
   })
 })
 
-describe("Null.flatMap", () => {
-  test("Null.flatMap", () => {
-    module Test = {
-      let addIfAboveOne = value =>
-        if value > 1 {
-          Null.make(value + 1)
-        } else {
-          Null.null
-        }
-
-      Null.flatMap(Null.make(2), addIfAboveOne) // Null.make(3)
-      Null.flatMap(Null.make(-4), addIfAboveOne) // null
-      Null.flatMap(Null.null, addIfAboveOne) // null
-    }
-    ()
-  })
-})
-
-describe("Null.mapOr", () => {
-  test("Null.mapOr", () => {
-    module Test = {
-      let someValue = Null.make(3)
-      someValue->Null.mapOr(0, x => x + 5) // 8
-
-      let noneValue = Null.null
-      noneValue->Null.mapOr(0, x => x + 5) // 0
-    }
-    ()
-  })
-})
-
-describe("Null.map", () => {
-  test("Null.map", () => {
-    module Test = {
-      Null.map(Null.make(3), x => x * x) // Null.make(9)
-      Null.map(Null.null, x => x * x) // null
-    }
-    ()
-  })
-})
-
-describe("Null.forEach", () => {
-  test("Null.forEach", () => {
-    module Test = {
-      Null.forEach(Null.make("thing"), x => Console.log(x)) // logs "thing"
-      Null.forEach(Null.null, x => Console.log(x)) // logs nothing
-    }
-    ()
-  })
-})
-
-describe("Null.getUnsafe", () => {
-  test("Null.getUnsafe", () => {
-    module Test = {
-      Null.getUnsafe(Null.make(3)) == 3
-      Null.getUnsafe(Null.null) // Raises an error
-    }
-    ()
-  })
-})
-
-describe("Null.getExn", () => {
-  test("Null.getExn", () => {
-    module Test = {
-      Null.getExn(Null.make(3))->assertEqual(3)
-
-      switch Null.getExn(%raw("'ReScript'")) {
-      | exception Invalid_argument(_) => assert(false)
-      | value => assertEqual(value, "ReScript")
-      }
-
-      switch Null.getExn(%raw("null")) {
-      | exception Invalid_argument(_) => assert(true)
-      | _ => assert(false)
-      }
-    }
-    ()
-  })
-})
-
-describe("Null.getOr", () => {
-  test("Null.getOr", () => {
-    module Test = {
-      Null.getOr(Null.null, "Banana") // Banana
-      Null.getOr(Null.make("Apple"), "Banana") // Apple
-
-      let greet = (firstName: option<string>) =>
-        "Greetings " ++ firstName->Option.getOr("Anonymous")
-
-      Null.make("Jane")->Null.toOption->greet // "Greetings Jane"
-      Null.null->Null.toOption->greet // "Greetings Anonymous"
-    }
-    ()
-  })
-})
-
-describe("Null.fromOption", () => {
-  test("Null.fromOption", () => {
-    module Test = {
-      let optString: option<string> = None
-      let asNull = optString->Null.fromOption // Null.t<string>
-      Console.log(asNull == Null.null) // Logs `true` to the console.
-    }
-    ()
-  })
-})
-
-describe("Null.toOption", () => {
-  test("Null.toOption", () => {
-    module Test = {
-      let nullStr = Null.make("Hello")
-
-      switch nullStr->Null.toOption {
-      | Some(str) => Console.log2("Got string:", str)
-      | None => Console.log("Didn't have a value.")
-      }
-    }
-    ()
-  })
-})
-
-describe("Null.make", () => {
-  test("Null.make", () => {
-    module Test = {
-      let myStr = "Hello"
-      let asNullValue = myStr->Null.make // The compiler now thinks this can be `string` or `null`.
-    }
-    ()
-  })
-})
-
-describe("Null.null", () => {
-  test("Null.null", () => {
-    module Test = {
-      Console.log(null) // Logs `null` to the console.
-    }
-    ()
-  })
-})
-
-describe("Null.asNullable", () => {
-  test("Null.asNullable", () => {
-    module Test = {
-      let nullValue = Null.make("Hello")
-      let asNullable = nullValue->Null.asNullable // Nullable.t<string>
-    }
-    ()
-  })
-})
-
 describe("List.sort", () => {
   test("List.sort", () => {
     module Test = {
@@ -15504,6 +15354,186 @@ describe("List.length", () => {
   })
 })
 
+describe("Nullable.flatMap", () => {
+  test("Nullable.flatMap", () => {
+    module Test = {
+      let addIfAboveOne = value =>
+        if value > 1 {
+          Nullable.make(value + 1)
+        } else {
+          Nullable.null
+        }
+
+      Nullable.flatMap(Nullable.make(2), addIfAboveOne) // Nullable.make(3)
+      Nullable.flatMap(Nullable.make(-4), addIfAboveOne) // undefined
+      Nullable.flatMap(Nullable.null, addIfAboveOne) // undefined
+    }
+    ()
+  })
+})
+
+describe("Nullable.mapOr", () => {
+  test("Nullable.mapOr", () => {
+    module Test = {
+      let someValue = Nullable.make(3)
+      someValue->Nullable.mapOr(0, x => x + 5) // 8
+
+      let noneValue = Nullable.null
+      noneValue->Nullable.mapOr(0, x => x + 5) // 0
+    }
+    ()
+  })
+})
+
+describe("Nullable.map", () => {
+  test("Nullable.map", () => {
+    module Test = {
+      Nullable.map(Nullable.make(3), x => x * x) // Nullable.make(9)
+      Nullable.map(undefined, x => x * x) // undefined
+    }
+    ()
+  })
+})
+
+describe("Nullable.forEach", () => {
+  test("Nullable.forEach", () => {
+    module Test = {
+      Nullable.forEach(Nullable.make("thing"), x => Console.log(x)) // logs "thing"
+      Nullable.forEach(Nullable.null, x => Console.log(x)) // returns ()
+      Nullable.forEach(undefined, x => Console.log(x)) // returns ()
+    }
+    ()
+  })
+})
+
+describe("Nullable.getUnsafe", () => {
+  test("Nullable.getUnsafe", () => {
+    module Test = {
+      Nullable.getUnsafe(Nullable.make(3)) == 3
+      Nullable.getUnsafe(Nullable.null) // Raises an error
+    }
+    ()
+  })
+})
+
+describe("Nullable.getExn", () => {
+  test("Nullable.getExn", () => {
+    module Test = {
+      switch Nullable.getExn(%raw("'Hello'")) {
+      | exception Invalid_argument(_) => assert(false)
+      | value => assertEqual(value, "Hello")
+      }
+
+      switch Nullable.getExn(%raw("null")) {
+      | exception Invalid_argument(_) => assert(true)
+      | _ => assert(false)
+      }
+
+      switch Nullable.getExn(%raw("undefined")) {
+      | exception Invalid_argument(_) => assert(true)
+      | _ => assert(false)
+      }
+    }
+    ()
+  })
+})
+
+describe("Nullable.getOr", () => {
+  test("Nullable.getOr", () => {
+    module Test = {
+      Nullable.getOr(Nullable.null, "Banana") // Banana
+      Nullable.getOr(Nullable.make("Apple"), "Banana") // Apple
+
+      let greet = (firstName: option<string>) =>
+        "Greetings " ++ firstName->Option.getOr("Anonymous")
+
+      Nullable.make("Jane")->Nullable.toOption->greet // "Greetings Jane"
+      Nullable.null->Nullable.toOption->greet // "Greetings Anonymous"
+    }
+    ()
+  })
+})
+
+describe("Nullable.fromOption", () => {
+  test("Nullable.fromOption", () => {
+    module Test = {
+      let optString = Some("Hello")
+      let asNullable = optString->Nullable.fromOption // Nullable.t<string>
+    }
+    ()
+  })
+})
+
+describe("Nullable.toOption", () => {
+  test("Nullable.toOption", () => {
+    module Test = {
+      let nullableString = Nullable.make("Hello")
+
+      switch nullableString->Nullable.toOption {
+      | Some(str) => Console.log2("Got string:", str)
+      | None => Console.log("Didn't have a value.")
+      }
+    }
+    ()
+  })
+})
+
+describe("Nullable.make", () => {
+  test("Nullable.make", () => {
+    module Test = {
+      let myStr = "Hello"
+      let asNullable = myStr->Nullable.make
+
+      // Can't do the below because we're now forced to check for nullability
+      // myStr == asNullable
+
+      // Need to do this
+      switch asNullable->Nullable.toOption {
+      | Some(value) if value == myStr => Console.log("Yay, values matched!")
+      | _ => Console.log("Values did not match.")
+      }
+    }
+    ()
+  })
+})
+
+describe("Nullable.isNullable", () => {
+  test("Nullable.isNullable", () => {
+    module Test = {
+      let myStr = "Hello"
+      let asNullable = myStr->Nullable.make
+
+      // Can't do the below because we're now forced to check for nullability
+      // myStr == asNullable
+
+      // Check if asNullable is not null or undefined
+      switch asNullable->Nullable.isNullable {
+      | true => assert(false)
+      | false => assert(true)
+      }
+    }
+    ()
+  })
+})
+
+describe("Nullable.undefined", () => {
+  test("Nullable.undefined", () => {
+    module Test = {
+      Console.log(undefined) // Logs `undefined` to the console.
+    }
+    ()
+  })
+})
+
+describe("Nullable.null", () => {
+  test("Nullable.null", () => {
+    module Test = {
+      Console.log(Nullable.null) // Logs `null` to the console.
+    }
+    ()
+  })
+})
+
 describe("Math.Int.random", () => {
   test("Math.Int.random", () => {
     module Test = {
@@ -16096,82 +16126,78 @@ describe("Math.abs", () => {
   })
 })
 
-describe("Nullable.flatMap", () => {
-  test("Nullable.flatMap", () => {
+describe("Null.flatMap", () => {
+  test("Null.flatMap", () => {
     module Test = {
       let addIfAboveOne = value =>
         if value > 1 {
-          Nullable.make(value + 1)
+          Null.make(value + 1)
         } else {
-          Nullable.null
+          Null.null
         }
 
-      Nullable.flatMap(Nullable.make(2), addIfAboveOne) // Nullable.make(3)
-      Nullable.flatMap(Nullable.make(-4), addIfAboveOne) // undefined
-      Nullable.flatMap(Nullable.null, addIfAboveOne) // undefined
+      Null.flatMap(Null.make(2), addIfAboveOne) // Null.make(3)
+      Null.flatMap(Null.make(-4), addIfAboveOne) // null
+      Null.flatMap(Null.null, addIfAboveOne) // null
     }
     ()
   })
 })
 
-describe("Nullable.mapOr", () => {
-  test("Nullable.mapOr", () => {
+describe("Null.mapOr", () => {
+  test("Null.mapOr", () => {
     module Test = {
-      let someValue = Nullable.make(3)
-      someValue->Nullable.mapOr(0, x => x + 5) // 8
+      let someValue = Null.make(3)
+      someValue->Null.mapOr(0, x => x + 5) // 8
 
-      let noneValue = Nullable.null
-      noneValue->Nullable.mapOr(0, x => x + 5) // 0
+      let noneValue = Null.null
+      noneValue->Null.mapOr(0, x => x + 5) // 0
     }
     ()
   })
 })
 
-describe("Nullable.map", () => {
-  test("Nullable.map", () => {
+describe("Null.map", () => {
+  test("Null.map", () => {
     module Test = {
-      Nullable.map(Nullable.make(3), x => x * x) // Nullable.make(9)
-      Nullable.map(undefined, x => x * x) // undefined
+      Null.map(Null.make(3), x => x * x) // Null.make(9)
+      Null.map(Null.null, x => x * x) // null
     }
     ()
   })
 })
 
-describe("Nullable.forEach", () => {
-  test("Nullable.forEach", () => {
+describe("Null.forEach", () => {
+  test("Null.forEach", () => {
     module Test = {
-      Nullable.forEach(Nullable.make("thing"), x => Console.log(x)) // logs "thing"
-      Nullable.forEach(Nullable.null, x => Console.log(x)) // returns ()
-      Nullable.forEach(undefined, x => Console.log(x)) // returns ()
+      Null.forEach(Null.make("thing"), x => Console.log(x)) // logs "thing"
+      Null.forEach(Null.null, x => Console.log(x)) // logs nothing
     }
     ()
   })
 })
 
-describe("Nullable.getUnsafe", () => {
-  test("Nullable.getUnsafe", () => {
+describe("Null.getUnsafe", () => {
+  test("Null.getUnsafe", () => {
     module Test = {
-      Nullable.getUnsafe(Nullable.make(3)) == 3
-      Nullable.getUnsafe(Nullable.null) // Raises an error
+      Null.getUnsafe(Null.make(3)) == 3
+      Null.getUnsafe(Null.null) // Raises an error
     }
     ()
   })
 })
 
-describe("Nullable.getExn", () => {
-  test("Nullable.getExn", () => {
+describe("Null.getExn", () => {
+  test("Null.getExn", () => {
     module Test = {
-      switch Nullable.getExn(%raw("'Hello'")) {
+      Null.getExn(Null.make(3))->assertEqual(3)
+
+      switch Null.getExn(%raw("'ReScript'")) {
       | exception Invalid_argument(_) => assert(false)
-      | value => assertEqual(value, "Hello")
+      | value => assertEqual(value, "ReScript")
       }
 
-      switch Nullable.getExn(%raw("null")) {
-      | exception Invalid_argument(_) => assert(true)
-      | _ => assert(false)
-      }
-
-      switch Nullable.getExn(%raw("undefined")) {
+      switch Null.getExn(%raw("null")) {
       | exception Invalid_argument(_) => assert(true)
       | _ => assert(false)
       }
@@ -16180,38 +16206,39 @@ describe("Nullable.getExn", () => {
   })
 })
 
-describe("Nullable.getOr", () => {
-  test("Nullable.getOr", () => {
+describe("Null.getOr", () => {
+  test("Null.getOr", () => {
     module Test = {
-      Nullable.getOr(Nullable.null, "Banana") // Banana
-      Nullable.getOr(Nullable.make("Apple"), "Banana") // Apple
+      Null.getOr(Null.null, "Banana") // Banana
+      Null.getOr(Null.make("Apple"), "Banana") // Apple
 
       let greet = (firstName: option<string>) =>
         "Greetings " ++ firstName->Option.getOr("Anonymous")
 
-      Nullable.make("Jane")->Nullable.toOption->greet // "Greetings Jane"
-      Nullable.null->Nullable.toOption->greet // "Greetings Anonymous"
+      Null.make("Jane")->Null.toOption->greet // "Greetings Jane"
+      Null.null->Null.toOption->greet // "Greetings Anonymous"
     }
     ()
   })
 })
 
-describe("Nullable.fromOption", () => {
-  test("Nullable.fromOption", () => {
+describe("Null.fromOption", () => {
+  test("Null.fromOption", () => {
     module Test = {
-      let optString = Some("Hello")
-      let asNullable = optString->Nullable.fromOption // Nullable.t<string>
+      let optString: option<string> = None
+      let asNull = optString->Null.fromOption // Null.t<string>
+      Console.log(asNull == Null.null) // Logs `true` to the console.
     }
     ()
   })
 })
 
-describe("Nullable.toOption", () => {
-  test("Nullable.toOption", () => {
+describe("Null.toOption", () => {
+  test("Null.toOption", () => {
     module Test = {
-      let nullableString = Nullable.make("Hello")
+      let nullStr = Null.make("Hello")
 
-      switch nullableString->Nullable.toOption {
+      switch nullStr->Null.toOption {
       | Some(str) => Console.log2("Got string:", str)
       | None => Console.log("Didn't have a value.")
       }
@@ -16220,57 +16247,30 @@ describe("Nullable.toOption", () => {
   })
 })
 
-describe("Nullable.make", () => {
-  test("Nullable.make", () => {
+describe("Null.make", () => {
+  test("Null.make", () => {
     module Test = {
       let myStr = "Hello"
-      let asNullable = myStr->Nullable.make
-
-      // Can't do the below because we're now forced to check for nullability
-      // myStr == asNullable
-
-      // Need to do this
-      switch asNullable->Nullable.toOption {
-      | Some(value) if value == myStr => Console.log("Yay, values matched!")
-      | _ => Console.log("Values did not match.")
-      }
+      let asNullValue = myStr->Null.make // The compiler now thinks this can be `string` or `null`.
     }
     ()
   })
 })
 
-describe("Nullable.isNullable", () => {
-  test("Nullable.isNullable", () => {
+describe("Null.null", () => {
+  test("Null.null", () => {
     module Test = {
-      let myStr = "Hello"
-      let asNullable = myStr->Nullable.make
-
-      // Can't do the below because we're now forced to check for nullability
-      // myStr == asNullable
-
-      // Check if asNullable is not null or undefined
-      switch asNullable->Nullable.isNullable {
-      | true => assert(false)
-      | false => assert(true)
-      }
+      Console.log(null) // Logs `null` to the console.
     }
     ()
   })
 })
 
-describe("Nullable.undefined", () => {
-  test("Nullable.undefined", () => {
+describe("Null.asNullable", () => {
+  test("Null.asNullable", () => {
     module Test = {
-      Console.log(undefined) // Logs `undefined` to the console.
-    }
-    ()
-  })
-})
-
-describe("Nullable.null", () => {
-  test("Nullable.null", () => {
-    module Test = {
-      Console.log(Nullable.null) // Logs `null` to the console.
+      let nullValue = Null.make("Hello")
+      let asNullable = nullValue->Null.asNullable // Nullable.t<string>
     }
     ()
   })
@@ -16483,6 +16483,186 @@ describe("Object.make", () => {
   })
 })
 
+describe("Option.all", () => {
+  test("Option.all", () => {
+    module Test = {
+      Option.all([Some(1), Some(2), Some(3)]) // Some([1, 2, 3])
+      Option.all([Some(1), None]) // None
+    }
+    ()
+  })
+})
+
+describe("Option.compare", () => {
+  test("Option.compare", () => {
+    module Test = {
+      let clockCompare = (a, b) => Int.compare(mod(a, 12), mod(b, 12))
+
+      Option.compare(Some(3), Some(15), clockCompare) // 0.
+      Option.compare(Some(3), Some(14), clockCompare) // 1.
+      Option.compare(Some(2), Some(15), clockCompare) // (-1.)
+      Option.compare(None, Some(15), clockCompare) // (-1.)
+      Option.compare(Some(14), None, clockCompare) // 1.
+      Option.compare(None, None, clockCompare) // 0.
+    }
+    ()
+  })
+})
+
+describe("Option.equal", () => {
+  test("Option.equal", () => {
+    module Test = {
+      let clockEqual = (a, b) => mod(a, 12) == mod(b, 12)
+
+      open Option
+
+      equal(Some(3), Some(15), clockEqual) // true
+      equal(Some(3), None, clockEqual) // false
+      equal(None, Some(3), clockEqual) // false
+      equal(None, None, clockEqual) // true
+    }
+    ()
+  })
+})
+
+describe("Option.isNone", () => {
+  test("Option.isNone", () => {
+    module Test = {
+      Option.isNone(None) // true
+      Option.isNone(Some(1)) // false
+    }
+    ()
+  })
+})
+
+describe("Option.isSome", () => {
+  test("Option.isSome", () => {
+    module Test = {
+      Option.isSome(None) // false
+      Option.isSome(Some(1)) // true
+    }
+    ()
+  })
+})
+
+describe("Option.orElse", () => {
+  test("Option.orElse", () => {
+    module Test = {
+      Option.orElse(Some(1812), Some(1066)) == Some(1812)
+      Option.orElse(None, Some(1066)) == Some(1066)
+      Option.orElse(None, None) == None
+    }
+    ()
+  })
+})
+
+describe("Option.getOr", () => {
+  test("Option.getOr", () => {
+    module Test = {
+      Option.getOr(None, "Banana") // Banana
+      Option.getOr(Some("Apple"), "Banana") // Apple
+
+      let greet = (firstName: option<string>) =>
+        "Greetings " ++ firstName->Option.getOr("Anonymous")
+
+      Some("Jane")->greet // "Greetings Jane"
+      None->greet // "Greetings Anonymous"
+    }
+    ()
+  })
+})
+
+describe("Option.flatMap", () => {
+  test("Option.flatMap", () => {
+    module Test = {
+      let addIfAboveOne = value =>
+        if value > 1 {
+          Some(value + 1)
+        } else {
+          None
+        }
+
+      Option.flatMap(Some(2), addIfAboveOne) // Some(3)
+      Option.flatMap(Some(-4), addIfAboveOne) // None
+      Option.flatMap(None, addIfAboveOne) // None
+    }
+    ()
+  })
+})
+
+describe("Option.map", () => {
+  test("Option.map", () => {
+    module Test = {
+      Option.map(Some(3), x => x * x) // Some(9)
+      Option.map(None, x => x * x) // None
+    }
+    ()
+  })
+})
+
+describe("Option.mapOr", () => {
+  test("Option.mapOr", () => {
+    module Test = {
+      let someValue = Some(3)
+      someValue->Option.mapOr(0, x => x + 5) // 8
+
+      let noneValue = None
+      noneValue->Option.mapOr(0, x => x + 5) // 0
+    }
+    ()
+  })
+})
+
+describe("Option.getUnsafe", () => {
+  test("Option.getUnsafe", () => {
+    module Test = {
+      Option.getUnsafe(Some(3)) == 3
+      Option.getUnsafe((None: option<int>)) // Returns `undefined`, which is not a valid `int`
+    }
+    ()
+  })
+})
+
+describe("Option.getExn", () => {
+  test("Option.getExn", () => {
+    module Test = {
+      Option.getExn(Some(3))->assertEqual(3)
+
+      switch Option.getExn(None) {
+      | exception _ => assert(true)
+      | _ => assert(false)
+      }
+
+      switch Option.getExn(None, ~message="was None!") {
+      | exception _ => assert(true) // Raises an Error with the message "was None!"
+      | _ => assert(false)
+      }
+    }
+    ()
+  })
+})
+
+describe("Option.forEach", () => {
+  test("Option.forEach", () => {
+    module Test = {
+      Option.forEach(Some("thing"), x => Console.log(x)) // logs "thing"
+      Option.forEach(None, x => Console.log(x)) // returns ()
+    }
+    ()
+  })
+})
+
+describe("Option.filter", () => {
+  test("Option.filter", () => {
+    module Test = {
+      Option.filter(Some(10), x => x > 5) // Some(10)
+      Option.filter(Some(4), x => x > 5) // None
+      Option.filter(None, x => x > 5) // None
+    }
+    ()
+  })
+})
+
 describe("Pervasives.assertEqual", () => {
   test("Pervasives.assertEqual", () => {
     module Test = {
@@ -16669,181 +16849,306 @@ describe("Pervasives.setTimeout", () => {
   })
 })
 
-describe("Option.all", () => {
-  test("Option.all", () => {
+describe("Promise.allSettled", () => {
+  test("Promise.allSettled", () => {
     module Test = {
-      Option.all([Some(1), Some(2), Some(3)]) // Some([1, 2, 3])
-      Option.all([Some(1), None]) // None
+      open Promise
+
+      exception TestError(string)
+
+      let promises = [resolve(1), resolve(2), reject(TestError("some rejected promise"))]
+
+      allSettled(promises)
+      ->then(
+        results => {
+          results->Array.forEach(
+            result => {
+              switch result {
+              | Fulfilled({value: num}) => Console.log2("Number: ", num)
+              | Rejected({reason}) => Console.log(reason)
+              }
+            },
+          )
+
+          resolve()
+        },
+      )
+      ->ignore
     }
     ()
   })
 })
 
-describe("Option.compare", () => {
-  test("Option.compare", () => {
+describe("Promise.all", () => {
+  test("Promise.all", () => {
     module Test = {
-      let clockCompare = (a, b) => Int.compare(mod(a, 12), mod(b, 12))
+      open Promise
+      let promises = [resolve(1), resolve(2), resolve(3)]
 
-      Option.compare(Some(3), Some(15), clockCompare) // 0.
-      Option.compare(Some(3), Some(14), clockCompare) // 1.
-      Option.compare(Some(2), Some(15), clockCompare) // (-1.)
-      Option.compare(None, Some(15), clockCompare) // (-1.)
-      Option.compare(Some(14), None, clockCompare) // 1.
-      Option.compare(None, None, clockCompare) // 0.
+      all(promises)
+      ->then(
+        results => {
+          results->Array.forEach(
+            num => {
+              Console.log2("Number: ", num)
+            },
+          )
+
+          resolve()
+        },
+      )
+      ->ignore
     }
     ()
   })
 })
 
-describe("Option.equal", () => {
-  test("Option.equal", () => {
+describe("Promise.any", () => {
+  test("Promise.any", () => {
     module Test = {
-      let clockEqual = (a, b) => mod(a, 12) == mod(b, 12)
-
-      open Option
-
-      equal(Some(3), Some(15), clockEqual) // true
-      equal(Some(3), None, clockEqual) // false
-      equal(None, Some(3), clockEqual) // false
-      equal(None, None, clockEqual) // true
-    }
-    ()
-  })
-})
-
-describe("Option.isNone", () => {
-  test("Option.isNone", () => {
-    module Test = {
-      Option.isNone(None) // true
-      Option.isNone(Some(1)) // false
-    }
-    ()
-  })
-})
-
-describe("Option.isSome", () => {
-  test("Option.isSome", () => {
-    module Test = {
-      Option.isSome(None) // false
-      Option.isSome(Some(1)) // true
-    }
-    ()
-  })
-})
-
-describe("Option.orElse", () => {
-  test("Option.orElse", () => {
-    module Test = {
-      Option.orElse(Some(1812), Some(1066)) == Some(1812)
-      Option.orElse(None, Some(1066)) == Some(1066)
-      Option.orElse(None, None) == None
-    }
-    ()
-  })
-})
-
-describe("Option.getOr", () => {
-  test("Option.getOr", () => {
-    module Test = {
-      Option.getOr(None, "Banana") // Banana
-      Option.getOr(Some("Apple"), "Banana") // Apple
-
-      let greet = (firstName: option<string>) =>
-        "Greetings " ++ firstName->Option.getOr("Anonymous")
-
-      Some("Jane")->greet // "Greetings Jane"
-      None->greet // "Greetings Anonymous"
-    }
-    ()
-  })
-})
-
-describe("Option.flatMap", () => {
-  test("Option.flatMap", () => {
-    module Test = {
-      let addIfAboveOne = value =>
-        if value > 1 {
-          Some(value + 1)
-        } else {
-          None
-        }
-
-      Option.flatMap(Some(2), addIfAboveOne) // Some(3)
-      Option.flatMap(Some(-4), addIfAboveOne) // None
-      Option.flatMap(None, addIfAboveOne) // None
-    }
-    ()
-  })
-})
-
-describe("Option.map", () => {
-  test("Option.map", () => {
-    module Test = {
-      Option.map(Some(3), x => x * x) // Some(9)
-      Option.map(None, x => x * x) // None
-    }
-    ()
-  })
-})
-
-describe("Option.mapOr", () => {
-  test("Option.mapOr", () => {
-    module Test = {
-      let someValue = Some(3)
-      someValue->Option.mapOr(0, x => x + 5) // 8
-
-      let noneValue = None
-      noneValue->Option.mapOr(0, x => x + 5) // 0
-    }
-    ()
-  })
-})
-
-describe("Option.getUnsafe", () => {
-  test("Option.getUnsafe", () => {
-    module Test = {
-      Option.getUnsafe(Some(3)) == 3
-      Option.getUnsafe((None: option<int>)) // Returns `undefined`, which is not a valid `int`
-    }
-    ()
-  })
-})
-
-describe("Option.getExn", () => {
-  test("Option.getExn", () => {
-    module Test = {
-      Option.getExn(Some(3))->assertEqual(3)
-
-      switch Option.getExn(None) {
-      | exception _ => assert(true)
-      | _ => assert(false)
+      open Promise
+      let racer = (ms, name) => {
+        Promise.make(
+          (resolve, _) => {
+            setTimeout(
+              () => {
+                resolve(name)
+              },
+              ms,
+            )->ignore
+          },
+        )
       }
 
-      switch Option.getExn(None, ~message="was None!") {
-      | exception _ => assert(true) // Raises an Error with the message "was None!"
-      | _ => assert(false)
+      let promises = [racer(1000, "Turtle"), racer(500, "Hare"), racer(100, "Eagle")]
+
+      any(promises)->then(
+        winner => {
+          Console.log("The winner is " ++ winner)
+          resolve()
+        },
+      )
+    }
+    ()
+  })
+})
+
+describe("Promise.race", () => {
+  test("Promise.race", () => {
+    module Test = {
+      open Promise
+      let racer = (ms, name) => {
+        Promise.make(
+          (resolve, _) => {
+            setTimeout(
+              () => {
+                resolve(name)
+              },
+              ms,
+            )->ignore
+          },
+        )
       }
+
+      let promises = [racer(1000, "Turtle"), racer(500, "Hare"), racer(100, "Eagle")]
+
+      race(promises)->then(
+        winner => {
+          Console.log("The winner is " ++ winner)
+          resolve()
+        },
+      )
     }
     ()
   })
 })
 
-describe("Option.forEach", () => {
-  test("Option.forEach", () => {
+describe("Promise.finally", () => {
+  test("Promise.finally", () => {
     module Test = {
-      Option.forEach(Some("thing"), x => Console.log(x)) // logs "thing"
-      Option.forEach(None, x => Console.log(x)) // returns ()
+      open Promise
+      exception SomeError(string)
+      let isDone = ref(false)
+
+      resolve(5)
+      ->then(
+        _ => {
+          reject(SomeError("test"))
+        },
+      )
+      ->then(
+        v => {
+          Console.log2("final result", v)
+          resolve()
+        },
+      )
+      ->catch(
+        _ => {
+          Console.log("Error handled")
+          resolve()
+        },
+      )
+      ->finally(
+        () => {
+          Console.log("finally")
+          isDone := true
+        },
+      )
+      ->then(
+        () => {
+          Console.log2("isDone:", isDone.contents)
+          resolve()
+        },
+      )
+      ->ignore
     }
     ()
   })
 })
 
-describe("Option.filter", () => {
-  test("Option.filter", () => {
+describe("Promise.thenResolve", () => {
+  test("Promise.thenResolve", () => {
     module Test = {
-      Option.filter(Some(10), x => x > 5) // Some(10)
-      Option.filter(Some(4), x => x > 5) // None
-      Option.filter(None, x => x > 5) // None
+      open Promise
+      resolve("Anna")
+      ->thenResolve(
+        str => {
+          "Hello " ++ str
+        },
+      )
+      ->thenResolve(
+        str => {
+          Console.log(str)
+        },
+      )
+      ->ignore // Ignore needed for side-effects
+    }
+    ()
+  })
+})
+
+describe("Promise.then", () => {
+  test("Promise.then", () => {
+    module Test = {
+      open Promise
+      resolve(5)
+      ->then(
+        num => {
+          resolve(num + 5)
+        },
+      )
+      ->then(
+        num => {
+          Console.log2("Your lucky number is: ", num)
+          resolve()
+        },
+      )
+      ->ignore
+    }
+    ()
+  })
+})
+
+describe("Promise.catch", () => {
+  test("Promise.catch", () => {
+    module Test = {
+      open Promise
+
+      exception SomeError(string)
+
+      reject(SomeError("this is an error"))
+      ->then(
+        _ => {
+          Ok("This result will never be returned")->resolve
+        },
+      )
+      ->catch(
+        e => {
+          let msg = switch e {
+          | SomeError(msg) => "ReScript error occurred: " ++ msg
+          | Exn.Error(obj) =>
+            switch Exn.message(obj) {
+            | Some(msg) => "JS exception occurred: " ++ msg
+            | None => "Some other JS value has been thrown"
+            }
+          | _ => "Unexpected error occurred"
+          }
+
+          Error(msg)->resolve
+        },
+      )
+      ->then(
+        result => {
+          switch result {
+          | Ok(r) => Console.log2("Operation successful: ", r)
+          | Error(msg) => Console.log2("Operation failed: ", msg)
+          }->resolve
+        },
+      )
+      ->ignore // Ignore needed for side-effects
+    }
+    ()
+  })
+})
+
+describe("Promise.make", () => {
+  test("Promise.make", () => {
+    module Test = {
+      open Promise
+
+      let n = 4
+      Promise.make(
+        (resolve, reject) => {
+          if n < 5 {
+            resolve("success")
+          } else {
+            reject("failed")
+          }
+        },
+      )
+      ->then(
+        str => {
+          Console.log(str)->resolve
+        },
+      )
+      ->catch(
+        _ => {
+          Console.log("Error occurred")
+          resolve()
+        },
+      )
+      ->ignore
+    }
+    ()
+  })
+})
+
+describe("Promise.reject", () => {
+  test("Promise.reject", () => {
+    module Test = {
+      exception TestError(string)
+
+      TestError("some rejected value")
+      ->Promise.reject
+      ->Promise.catch(
+        v => {
+          switch v {
+          | TestError(msg) => assertEqual(msg, "some rejected value")
+          | _ => assert(false)
+          }
+          Promise.resolve()
+        },
+      )
+      ->ignore
+    }
+    ()
+  })
+})
+
+describe("Promise.resolve", () => {
+  test("Promise.resolve", () => {
+    module Test = {
+      let p = Promise.resolve(5) // promise<int>
     }
     ()
   })
@@ -17202,311 +17507,6 @@ describe("Result.mapOr", () => {
 
       let error = Error("Invalid data")
       Result.mapOr(error, 0, x => x / 2) == 0
-    }
-    ()
-  })
-})
-
-describe("Promise.allSettled", () => {
-  test("Promise.allSettled", () => {
-    module Test = {
-      open Promise
-
-      exception TestError(string)
-
-      let promises = [resolve(1), resolve(2), reject(TestError("some rejected promise"))]
-
-      allSettled(promises)
-      ->then(
-        results => {
-          results->Array.forEach(
-            result => {
-              switch result {
-              | Fulfilled({value: num}) => Console.log2("Number: ", num)
-              | Rejected({reason}) => Console.log(reason)
-              }
-            },
-          )
-
-          resolve()
-        },
-      )
-      ->ignore
-    }
-    ()
-  })
-})
-
-describe("Promise.all", () => {
-  test("Promise.all", () => {
-    module Test = {
-      open Promise
-      let promises = [resolve(1), resolve(2), resolve(3)]
-
-      all(promises)
-      ->then(
-        results => {
-          results->Array.forEach(
-            num => {
-              Console.log2("Number: ", num)
-            },
-          )
-
-          resolve()
-        },
-      )
-      ->ignore
-    }
-    ()
-  })
-})
-
-describe("Promise.any", () => {
-  test("Promise.any", () => {
-    module Test = {
-      open Promise
-      let racer = (ms, name) => {
-        Promise.make(
-          (resolve, _) => {
-            setTimeout(
-              () => {
-                resolve(name)
-              },
-              ms,
-            )->ignore
-          },
-        )
-      }
-
-      let promises = [racer(1000, "Turtle"), racer(500, "Hare"), racer(100, "Eagle")]
-
-      any(promises)->then(
-        winner => {
-          Console.log("The winner is " ++ winner)
-          resolve()
-        },
-      )
-    }
-    ()
-  })
-})
-
-describe("Promise.race", () => {
-  test("Promise.race", () => {
-    module Test = {
-      open Promise
-      let racer = (ms, name) => {
-        Promise.make(
-          (resolve, _) => {
-            setTimeout(
-              () => {
-                resolve(name)
-              },
-              ms,
-            )->ignore
-          },
-        )
-      }
-
-      let promises = [racer(1000, "Turtle"), racer(500, "Hare"), racer(100, "Eagle")]
-
-      race(promises)->then(
-        winner => {
-          Console.log("The winner is " ++ winner)
-          resolve()
-        },
-      )
-    }
-    ()
-  })
-})
-
-describe("Promise.finally", () => {
-  test("Promise.finally", () => {
-    module Test = {
-      open Promise
-      exception SomeError(string)
-      let isDone = ref(false)
-
-      resolve(5)
-      ->then(
-        _ => {
-          reject(SomeError("test"))
-        },
-      )
-      ->then(
-        v => {
-          Console.log2("final result", v)
-          resolve()
-        },
-      )
-      ->catch(
-        _ => {
-          Console.log("Error handled")
-          resolve()
-        },
-      )
-      ->finally(
-        () => {
-          Console.log("finally")
-          isDone := true
-        },
-      )
-      ->then(
-        () => {
-          Console.log2("isDone:", isDone.contents)
-          resolve()
-        },
-      )
-      ->ignore
-    }
-    ()
-  })
-})
-
-describe("Promise.thenResolve", () => {
-  test("Promise.thenResolve", () => {
-    module Test = {
-      open Promise
-      resolve("Anna")
-      ->thenResolve(
-        str => {
-          "Hello " ++ str
-        },
-      )
-      ->thenResolve(
-        str => {
-          Console.log(str)
-        },
-      )
-      ->ignore // Ignore needed for side-effects
-    }
-    ()
-  })
-})
-
-describe("Promise.then", () => {
-  test("Promise.then", () => {
-    module Test = {
-      open Promise
-      resolve(5)
-      ->then(
-        num => {
-          resolve(num + 5)
-        },
-      )
-      ->then(
-        num => {
-          Console.log2("Your lucky number is: ", num)
-          resolve()
-        },
-      )
-      ->ignore
-    }
-    ()
-  })
-})
-
-describe("Promise.catch", () => {
-  test("Promise.catch", () => {
-    module Test = {
-      open Promise
-
-      exception SomeError(string)
-
-      reject(SomeError("this is an error"))
-      ->then(
-        _ => {
-          Ok("This result will never be returned")->resolve
-        },
-      )
-      ->catch(
-        e => {
-          let msg = switch e {
-          | SomeError(msg) => "ReScript error occurred: " ++ msg
-          | Exn.Error(obj) =>
-            switch Exn.message(obj) {
-            | Some(msg) => "JS exception occurred: " ++ msg
-            | None => "Some other JS value has been thrown"
-            }
-          | _ => "Unexpected error occurred"
-          }
-
-          Error(msg)->resolve
-        },
-      )
-      ->then(
-        result => {
-          switch result {
-          | Ok(r) => Console.log2("Operation successful: ", r)
-          | Error(msg) => Console.log2("Operation failed: ", msg)
-          }->resolve
-        },
-      )
-      ->ignore // Ignore needed for side-effects
-    }
-    ()
-  })
-})
-
-describe("Promise.make", () => {
-  test("Promise.make", () => {
-    module Test = {
-      open Promise
-
-      let n = 4
-      Promise.make(
-        (resolve, reject) => {
-          if n < 5 {
-            resolve("success")
-          } else {
-            reject("failed")
-          }
-        },
-      )
-      ->then(
-        str => {
-          Console.log(str)->resolve
-        },
-      )
-      ->catch(
-        _ => {
-          Console.log("Error occurred")
-          resolve()
-        },
-      )
-      ->ignore
-    }
-    ()
-  })
-})
-
-describe("Promise.reject", () => {
-  test("Promise.reject", () => {
-    module Test = {
-      exception TestError(string)
-
-      TestError("some rejected value")
-      ->Promise.reject
-      ->Promise.catch(
-        v => {
-          switch v {
-          | TestError(msg) => assertEqual(msg, "some rejected value")
-          | _ => assert(false)
-          }
-          Promise.resolve()
-        },
-      )
-      ->ignore
-    }
-    ()
-  })
-})
-
-describe("Promise.resolve", () => {
-  test("Promise.resolve", () => {
-    module Test = {
-      let p = Promise.resolve(5) // promise<int>
     }
     ()
   })

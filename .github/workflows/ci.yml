@@ -93,7 +93,6 @@ jobs:
             # Run the slower tasks on the fastest runner only
             build_playground: true
             benchmarks: true
-            # docstring_tests: true
           - os: buildjet-2vcpu-ubuntu-2204-arm # ARM
             ocaml_compiler: ocaml-variants.5.2.1+options,ocaml-option-static
             upload_binaries: true
@@ -312,10 +311,6 @@ jobs:
 
       - name: Run tests
         run: node scripts/test.js -all
-
-      - name: Docstrings tests
-        # if: matrix.docstring_tests
-        run: node scripts/test.js -docstrings
 
       - name: Check for diffs in tests folder
         run: git diff --ignore-cr-at-eol --exit-code tests
