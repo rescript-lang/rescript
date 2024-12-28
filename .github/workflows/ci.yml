@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [master, 11.0_release, doc-tests-fix]
+    branches: [master, 11.0_release]
     # See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
