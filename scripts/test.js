@@ -136,12 +136,13 @@ async function runTests() {
       cwd: path.join(__dirname, "..", "tests/docstrings_examples"),
       stdio: [0, 1, 2],
     });
+    const file = path.join("tests", "docstrings_examples", "mocha_full_test.res")
     // Format file
-    cp.execSync("./cli/rescript format tests/docstrings_examples/mocha_full_test.res", {
+    cp.execSync(`${path.resolve("./cli/rescript")} format ${file}`, {
       cwd: path.join(__dirname, ".."),
       stdio: [0, 1, 2],
     })
-    cp.execSync(`npx mocha tests/docstrings_examples/mocha_full_test.res.mjs`, {
+    cp.execSync(`npx mocha ${file}`, {
       cwd: path.join(__dirname, ".."),
       stdio: [0, 1, 2],
     });
