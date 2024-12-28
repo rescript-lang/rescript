@@ -224,7 +224,7 @@ async function main() {
     }
   }).join("\n\n");
   let dirname = Path.dirname(Url.fileURLToPath(import.meta.url));
-  let filepath = Path.join(dirname, "mocha_full_test.res");
+  let filepath = Path.join(dirname, "generated_mocha_test.res");
   let fileContent = "open Mocha\n@@warning(\"-32-34-60-37-109-3-44\")\n\n" + testsContent;
   return await Promises.writeFile(filepath, fileContent);
 }

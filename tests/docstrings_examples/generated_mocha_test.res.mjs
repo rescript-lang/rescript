@@ -3365,9 +3365,9 @@ Mocha.describe("Belt.Result.getExn", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          2737,
-          13
+          "generated_mocha_test.res",
+          2698,
+          7
         ],
         Error: new Error()
       };
@@ -3473,9 +3473,9 @@ Mocha.describe("Belt.Option.getExn", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          2891,
-          13
+          "generated_mocha_test.res",
+          2851,
+          7
         ],
         Error: new Error()
       };
@@ -6916,9 +6916,9 @@ Mocha.describe("Belt.List.getExn", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          5213,
-          13
+          "generated_mocha_test.res",
+          5127,
+          7
         ],
         Error: new Error()
       };
@@ -6993,9 +6993,9 @@ Mocha.describe("Belt.List.tailExn", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          5252,
-          13
+          "generated_mocha_test.res",
+          5165,
+          7
         ],
         Error: new Error()
       };
@@ -7044,9 +7044,9 @@ Mocha.describe("Belt.List.headExn", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          5278,
-          13
+          "generated_mocha_test.res",
+          5190,
+          7
         ],
         Error: new Error()
       };
@@ -9500,9 +9500,9 @@ Mocha.describe("Belt_List.getExn", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          6599,
-          13
+          "generated_mocha_test.res",
+          6471,
+          7
         ],
         Error: new Error()
       };
@@ -9577,9 +9577,9 @@ Mocha.describe("Belt_List.tailExn", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          6638,
-          13
+          "generated_mocha_test.res",
+          6509,
+          7
         ],
         Error: new Error()
       };
@@ -9628,9 +9628,9 @@ Mocha.describe("Belt_List.headExn", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          6664,
-          13
+          "generated_mocha_test.res",
+          6534,
+          7
         ],
         Error: new Error()
       };
@@ -10173,35 +10173,6 @@ Mocha.describe("Belt_Map.Int", () => {
   Mocha.test("Belt_Map.Int", () => {});
 });
 
-Mocha.describe("Belt_MapString.findFirstBy", () => {
-  Mocha.test("Belt_MapString.findFirstBy", () => {
-    let mapString = Belt_MapString.fromArray([
-      [
-        "1",
-        "one"
-      ],
-      [
-        "2",
-        "two"
-      ],
-      [
-        "3",
-        "three"
-      ]
-    ]);
-    Pervasives.assertEqual(Belt_MapString.findFirstBy(mapString, (k, v) => {
-      if (k === "1") {
-        return v === "one";
-      } else {
-        return false;
-      }
-    }), [
-      "1",
-      "one"
-    ]);
-  });
-});
-
 Mocha.describe("Belt_MapDict.findFirstBy", () => {
   Mocha.test("Belt_MapDict.findFirstBy", () => {
     let cmp = Primitive_object.compare;
@@ -10257,6 +10228,35 @@ Mocha.describe("Belt_MapInt.findFirstBy", () => {
       }
     }), [
       1,
+      "one"
+    ]);
+  });
+});
+
+Mocha.describe("Belt_MapString.findFirstBy", () => {
+  Mocha.test("Belt_MapString.findFirstBy", () => {
+    let mapString = Belt_MapString.fromArray([
+      [
+        "1",
+        "one"
+      ],
+      [
+        "2",
+        "two"
+      ],
+      [
+        "3",
+        "three"
+      ]
+    ]);
+    Pervasives.assertEqual(Belt_MapString.findFirstBy(mapString, (k, v) => {
+      if (k === "1") {
+        return v === "one";
+      } else {
+        return false;
+      }
+    }), [
+      "1",
       "one"
     ]);
   });
@@ -10797,42 +10797,6 @@ Mocha.describe("Belt_MutableSet.fromArray", () => {
   });
 });
 
-Mocha.describe("Belt_Range.someBy", () => {
-  Mocha.test("Belt_Range.someBy", () => {
-    Belt_Range.someBy(1, 5, 2, i => i % 2 === 0);
-    Belt_Range.someBy(0, 4, 2, i => i % 2 === 0);
-  });
-});
-
-Mocha.describe("Belt_Range.some", () => {
-  Mocha.test("Belt_Range.some", () => {
-    Belt_Range.some(0, 4, i => i > 5);
-    Belt_Range.some(0, 4, i => i > 2);
-  });
-});
-
-Mocha.describe("Belt_Range.everyBy", () => {
-  Mocha.test("Belt_Range.everyBy", () => {
-    Belt_Range.everyBy(0, 4, 1, i => i % 2 === 0);
-    Belt_Range.everyBy(0, 4, 2, i => i % 2 === 0);
-  });
-});
-
-Mocha.describe("Belt_Range.every", () => {
-  Mocha.test("Belt_Range.every", () => {
-    Belt_Range.every(0, 4, i => i < 5);
-    Belt_Range.every(0, 4, i => i < 4);
-  });
-});
-
-Mocha.describe("Belt_Range.forEach", () => {
-  Mocha.test("Belt_Range.forEach", () => {
-    Belt_Range.forEach(0, 4, i => {
-      console.log(i);
-    });
-  });
-});
-
 Mocha.describe("Belt_Option.cmp", () => {
   Mocha.test("Belt_Option.cmp", () => {
     let clockCompare = (a, b) => Primitive_int.compare(a % 12, b % 12);
@@ -10930,9 +10894,9 @@ Mocha.describe("Belt_Option.getExn", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          7724,
-          13
+          "generated_mocha_test.res",
+          7531,
+          7
         ],
         Error: new Error()
       };
@@ -11133,14 +11097,50 @@ Mocha.describe("Belt_Result.getExn", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          7871,
-          13
+          "generated_mocha_test.res",
+          7678,
+          7
         ],
         Error: new Error()
       };
     }
     
+  });
+});
+
+Mocha.describe("Belt_Range.someBy", () => {
+  Mocha.test("Belt_Range.someBy", () => {
+    Belt_Range.someBy(1, 5, 2, i => i % 2 === 0);
+    Belt_Range.someBy(0, 4, 2, i => i % 2 === 0);
+  });
+});
+
+Mocha.describe("Belt_Range.some", () => {
+  Mocha.test("Belt_Range.some", () => {
+    Belt_Range.some(0, 4, i => i > 5);
+    Belt_Range.some(0, 4, i => i > 2);
+  });
+});
+
+Mocha.describe("Belt_Range.everyBy", () => {
+  Mocha.test("Belt_Range.everyBy", () => {
+    Belt_Range.everyBy(0, 4, 1, i => i % 2 === 0);
+    Belt_Range.everyBy(0, 4, 2, i => i % 2 === 0);
+  });
+});
+
+Mocha.describe("Belt_Range.every", () => {
+  Mocha.test("Belt_Range.every", () => {
+    Belt_Range.every(0, 4, i => i < 5);
+    Belt_Range.every(0, 4, i => i < 4);
+  });
+});
+
+Mocha.describe("Belt_Range.forEach", () => {
+  Mocha.test("Belt_Range.forEach", () => {
+    Belt_Range.forEach(0, 4, i => {
+      console.log(i);
+    });
   });
 });
 
@@ -12866,39 +12866,48 @@ Mocha.describe("Belt_SortArray.strictlySortedLength", () => {
   });
 });
 
-Mocha.describe("BigInt.toLocaleString", () => {
-  Mocha.test("BigInt.toLocaleString", () => {
-    console.log((123n).toString());
+Mocha.describe("Belt_internalMapString.S.binarySearchBy", () => {
+  Mocha.test("Belt_internalMapString.S.binarySearchBy", () => {
+    Belt_SortArray.binarySearchBy([
+      1,
+      2,
+      3,
+      4,
+      33,
+      35,
+      36
+    ], 33, Primitive_int.compare) === 4;
+    Pervasives.lnot(Belt_SortArray.binarySearchBy([
+      1,
+      3,
+      5,
+      7
+    ], 4, Primitive_int.compare)) === 2;
   });
 });
 
-Mocha.describe("BigInt.toString", () => {
-  Mocha.test("BigInt.toString", () => {
-    console.log((123n).toString());
+Mocha.describe("Belt_internalMapString.S.strictlySortedLength", () => {
+  Mocha.test("Belt_internalMapString.S.strictlySortedLength", () => {
+    Belt_SortArray.strictlySortedLength([
+      1,
+      2,
+      3,
+      4,
+      3
+    ], (x, y) => x < y) === 4;
+    Belt_SortArray.strictlySortedLength([], Primitive_object.lessthan) === 0;
+    Belt_SortArray.strictlySortedLength([1], (x, y) => x < y) === 1;
+    Belt_SortArray.strictlySortedLength([
+      4,
+      3,
+      2,
+      1
+    ], (x, y) => x < y) === -4;
   });
 });
 
-Mocha.describe("BigInt.fromStringExn", () => {
-  Mocha.test("BigInt.fromStringExn", () => {
-    BigInt("123");
-    BigInt("");
-    BigInt("0x11");
-    BigInt("0b11");
-    BigInt("0o11");
-    try {
-      BigInt("a");
-    } catch (raw__error) {
-      let _error = Primitive_exceptions.internalToException(raw__error);
-      if (_error.RE_EXN_ID !== Exn.$$Error) {
-        throw _error;
-      }
-      
-    }
-  });
-});
-
-Mocha.describe("Belt_internalSetString.A.truncateToLengthUnsafe", () => {
-  Mocha.test("Belt_internalSetString.A.truncateToLengthUnsafe", () => {
+Mocha.describe("Belt_internalMapString.A.truncateToLengthUnsafe", () => {
+  Mocha.test("Belt_internalMapString.A.truncateToLengthUnsafe", () => {
     let arr = [
       "ant",
       "bee",
@@ -12915,8 +12924,8 @@ Mocha.describe("Belt_internalSetString.A.truncateToLengthUnsafe", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.eq", () => {
-  Mocha.test("Belt_internalSetString.A.eq", () => {
+Mocha.describe("Belt_internalMapString.A.eq", () => {
+  Mocha.test("Belt_internalMapString.A.eq", () => {
     Belt_Array.eq([
       1,
       2,
@@ -12929,8 +12938,8 @@ Mocha.describe("Belt_internalSetString.A.eq", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.cmp", () => {
-  Mocha.test("Belt_internalSetString.A.cmp", () => {
+Mocha.describe("Belt_internalMapString.A.cmp", () => {
+  Mocha.test("Belt_internalMapString.A.cmp", () => {
     Belt_Array.cmp([
       1,
       3,
@@ -12961,8 +12970,8 @@ Mocha.describe("Belt_internalSetString.A.cmp", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.some2", () => {
-  Mocha.test("Belt_internalSetString.A.some2", () => {
+Mocha.describe("Belt_internalMapString.A.some2", () => {
+  Mocha.test("Belt_internalMapString.A.some2", () => {
     Belt_Array.some2([
       0,
       2
@@ -12982,8 +12991,8 @@ Mocha.describe("Belt_internalSetString.A.some2", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.every2", () => {
-  Mocha.test("Belt_internalSetString.A.every2", () => {
+Mocha.describe("Belt_internalMapString.A.every2", () => {
+  Mocha.test("Belt_internalMapString.A.every2", () => {
     Belt_Array.every2([
       1,
       2,
@@ -13007,8 +13016,8 @@ Mocha.describe("Belt_internalSetString.A.every2", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.every", () => {
-  Mocha.test("Belt_internalSetString.A.every", () => {
+Mocha.describe("Belt_internalMapString.A.every", () => {
+  Mocha.test("Belt_internalMapString.A.every", () => {
     Belt_Array.every([
       1,
       3,
@@ -13022,8 +13031,8 @@ Mocha.describe("Belt_internalSetString.A.every", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.some", () => {
-  Mocha.test("Belt_internalSetString.A.some", () => {
+Mocha.describe("Belt_internalMapString.A.some", () => {
+  Mocha.test("Belt_internalMapString.A.some", () => {
     Belt_Array.some([
       2,
       3,
@@ -13037,8 +13046,8 @@ Mocha.describe("Belt_internalSetString.A.some", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.joinWith", () => {
-  Mocha.test("Belt_internalSetString.A.joinWith", () => {
+Mocha.describe("Belt_internalMapString.A.joinWith", () => {
+  Mocha.test("Belt_internalMapString.A.joinWith", () => {
     Belt_Array.joinWith([
       0,
       1
@@ -13048,8 +13057,8 @@ Mocha.describe("Belt_internalSetString.A.joinWith", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.reduceWithIndex", () => {
-  Mocha.test("Belt_internalSetString.A.reduceWithIndex", () => {
+Mocha.describe("Belt_internalMapString.A.reduceWithIndex", () => {
+  Mocha.test("Belt_internalMapString.A.reduceWithIndex", () => {
     Belt_Array.reduceWithIndex([
       1,
       2,
@@ -13059,8 +13068,8 @@ Mocha.describe("Belt_internalSetString.A.reduceWithIndex", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.reduceReverse2", () => {
-  Mocha.test("Belt_internalSetString.A.reduceReverse2", () => {
+Mocha.describe("Belt_internalMapString.A.reduceReverse2", () => {
+  Mocha.test("Belt_internalMapString.A.reduceReverse2", () => {
     Belt_Array.reduceReverse2([
       1,
       2,
@@ -13072,8 +13081,8 @@ Mocha.describe("Belt_internalSetString.A.reduceReverse2", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.reduceReverse", () => {
-  Mocha.test("Belt_internalSetString.A.reduceReverse", () => {
+Mocha.describe("Belt_internalMapString.A.reduceReverse", () => {
+  Mocha.test("Belt_internalMapString.A.reduceReverse", () => {
     Belt_Array.reduceReverse([
       "a",
       "b",
@@ -13083,8 +13092,8 @@ Mocha.describe("Belt_internalSetString.A.reduceReverse", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.reduce", () => {
-  Mocha.test("Belt_internalSetString.A.reduce", () => {
+Mocha.describe("Belt_internalMapString.A.reduce", () => {
+  Mocha.test("Belt_internalMapString.A.reduce", () => {
     Belt_Array.reduce([
       2,
       3,
@@ -13099,8 +13108,8 @@ Mocha.describe("Belt_internalSetString.A.reduce", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.partition", () => {
-  Mocha.test("Belt_internalSetString.A.partition", () => {
+Mocha.describe("Belt_internalMapString.A.partition", () => {
+  Mocha.test("Belt_internalMapString.A.partition", () => {
     Primitive_object.equal(Belt_Array.partition([
       1,
       2,
@@ -13138,8 +13147,8 @@ Mocha.describe("Belt_internalSetString.A.partition", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.mapWithIndex", () => {
-  Mocha.test("Belt_internalSetString.A.mapWithIndex", () => {
+Mocha.describe("Belt_internalMapString.A.mapWithIndex", () => {
+  Mocha.test("Belt_internalMapString.A.mapWithIndex", () => {
     Primitive_object.equal(Belt_Array.mapWithIndex([
       1,
       2,
@@ -13152,8 +13161,8 @@ Mocha.describe("Belt_internalSetString.A.mapWithIndex", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.forEachWithIndex", () => {
-  Mocha.test("Belt_internalSetString.A.forEachWithIndex", () => {
+Mocha.describe("Belt_internalMapString.A.forEachWithIndex", () => {
+  Mocha.test("Belt_internalMapString.A.forEachWithIndex", () => {
     Belt_Array.forEachWithIndex([
       "a",
       "b",
@@ -13175,8 +13184,8 @@ Mocha.describe("Belt_internalSetString.A.forEachWithIndex", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.keepMap", () => {
-  Mocha.test("Belt_internalSetString.A.keepMap", () => {
+Mocha.describe("Belt_internalMapString.A.keepMap", () => {
+  Mocha.test("Belt_internalMapString.A.keepMap", () => {
     Primitive_object.equal(Belt_Array.keepMap([
       1,
       2,
@@ -13190,8 +13199,8 @@ Mocha.describe("Belt_internalSetString.A.keepMap", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.keepWithIndex", () => {
-  Mocha.test("Belt_internalSetString.A.keepWithIndex", () => {
+Mocha.describe("Belt_internalMapString.A.keepWithIndex", () => {
+  Mocha.test("Belt_internalMapString.A.keepWithIndex", () => {
     Primitive_object.equal(Belt_Array.keepWithIndex([
       1,
       2,
@@ -13200,8 +13209,8 @@ Mocha.describe("Belt_internalSetString.A.keepWithIndex", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.getIndexBy", () => {
-  Mocha.test("Belt_internalSetString.A.getIndexBy", () => {
+Mocha.describe("Belt_internalMapString.A.getIndexBy", () => {
+  Mocha.test("Belt_internalMapString.A.getIndexBy", () => {
     Primitive_object.equal(Belt_Array.getIndexBy([
       1,
       4,
@@ -13216,8 +13225,8 @@ Mocha.describe("Belt_internalSetString.A.getIndexBy", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.getBy", () => {
-  Mocha.test("Belt_internalSetString.A.getBy", () => {
+Mocha.describe("Belt_internalMapString.A.getBy", () => {
+  Mocha.test("Belt_internalMapString.A.getBy", () => {
     Primitive_object.equal(Belt_Array.getBy([
       1,
       4,
@@ -13232,8 +13241,8 @@ Mocha.describe("Belt_internalSetString.A.getBy", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.flatMap", () => {
-  Mocha.test("Belt_internalSetString.A.flatMap", () => {
+Mocha.describe("Belt_internalMapString.A.flatMap", () => {
+  Mocha.test("Belt_internalMapString.A.flatMap", () => {
     Primitive_object.equal(Belt_Array.flatMap([
       1,
       2
@@ -13249,8 +13258,8 @@ Mocha.describe("Belt_internalSetString.A.flatMap", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.map", () => {
-  Mocha.test("Belt_internalSetString.A.map", () => {
+Mocha.describe("Belt_internalMapString.A.map", () => {
+  Mocha.test("Belt_internalMapString.A.map", () => {
     Primitive_object.equal(Belt_Array.map([
       1,
       2
@@ -13261,8 +13270,8 @@ Mocha.describe("Belt_internalSetString.A.map", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.forEach", () => {
-  Mocha.test("Belt_internalSetString.A.forEach", () => {
+Mocha.describe("Belt_internalMapString.A.forEach", () => {
+  Mocha.test("Belt_internalMapString.A.forEach", () => {
     Belt_Array.forEach([
       "a",
       "b",
@@ -13284,8 +13293,8 @@ Mocha.describe("Belt_internalSetString.A.forEach", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.blit", () => {
-  Mocha.test("Belt_internalSetString.A.blit", () => {
+Mocha.describe("Belt_internalMapString.A.blit", () => {
+  Mocha.test("Belt_internalMapString.A.blit", () => {
     let v1 = [
       10,
       11,
@@ -13331,8 +13340,8 @@ Mocha.describe("Belt_internalSetString.A.blit", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.fill", () => {
-  Mocha.test("Belt_internalSetString.A.fill", () => {
+Mocha.describe("Belt_internalMapString.A.fill", () => {
+  Mocha.test("Belt_internalMapString.A.fill", () => {
     let arr = Belt_Array.makeBy(5, i => i);
     Belt_Array.fill(arr, 2, 2, 9);
     Primitive_object.equal(arr, [
@@ -13353,8 +13362,8 @@ Mocha.describe("Belt_internalSetString.A.fill", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.sliceToEnd", () => {
-  Mocha.test("Belt_internalSetString.A.sliceToEnd", () => {
+Mocha.describe("Belt_internalMapString.A.sliceToEnd", () => {
+  Mocha.test("Belt_internalMapString.A.sliceToEnd", () => {
     Primitive_object.equal(Belt_Array.sliceToEnd([
       10,
       11,
@@ -13387,8 +13396,8 @@ Mocha.describe("Belt_internalSetString.A.sliceToEnd", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.slice", () => {
-  Mocha.test("Belt_internalSetString.A.slice", () => {
+Mocha.describe("Belt_internalMapString.A.slice", () => {
+  Mocha.test("Belt_internalMapString.A.slice", () => {
     Primitive_object.equal(Belt_Array.slice([
       10,
       11,
@@ -13431,8 +13440,8 @@ Mocha.describe("Belt_internalSetString.A.slice", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.concatMany", () => {
-  Mocha.test("Belt_internalSetString.A.concatMany", () => {
+Mocha.describe("Belt_internalMapString.A.concatMany", () => {
+  Mocha.test("Belt_internalMapString.A.concatMany", () => {
     Primitive_object.equal(Belt_Array.concatMany([
       [
         1,
@@ -13461,8 +13470,8 @@ Mocha.describe("Belt_internalSetString.A.concatMany", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.concat", () => {
-  Mocha.test("Belt_internalSetString.A.concat", () => {
+Mocha.describe("Belt_internalMapString.A.concat", () => {
+  Mocha.test("Belt_internalMapString.A.concat", () => {
     Primitive_object.equal(Belt_Array.concat([
       1,
       2,
@@ -13489,8 +13498,8 @@ Mocha.describe("Belt_internalSetString.A.concat", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.unzip", () => {
-  Mocha.test("Belt_internalSetString.A.unzip", () => {
+Mocha.describe("Belt_internalMapString.A.unzip", () => {
+  Mocha.test("Belt_internalMapString.A.unzip", () => {
     Primitive_object.equal(Belt_Array.unzip([
       [
         1,
@@ -13544,8 +13553,8 @@ Mocha.describe("Belt_internalSetString.A.unzip", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.zipBy", () => {
-  Mocha.test("Belt_internalSetString.A.zipBy", () => {
+Mocha.describe("Belt_internalMapString.A.zipBy", () => {
+  Mocha.test("Belt_internalMapString.A.zipBy", () => {
     Primitive_object.equal(Belt_Array.zipBy([
       1,
       2,
@@ -13560,8 +13569,8 @@ Mocha.describe("Belt_internalSetString.A.zipBy", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.zip", () => {
-  Mocha.test("Belt_internalSetString.A.zip", () => {
+Mocha.describe("Belt_internalMapString.A.zip", () => {
+  Mocha.test("Belt_internalMapString.A.zip", () => {
     Primitive_object.equal(Belt_Array.zip([
       1,
       2
@@ -13582,8 +13591,8 @@ Mocha.describe("Belt_internalSetString.A.zip", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.makeBy", () => {
-  Mocha.test("Belt_internalSetString.A.makeBy", () => {
+Mocha.describe("Belt_internalMapString.A.makeBy", () => {
+  Mocha.test("Belt_internalMapString.A.makeBy", () => {
     Primitive_object.equal(Belt_Array.makeBy(5, i => i), [
       0,
       1,
@@ -13601,8 +13610,8 @@ Mocha.describe("Belt_internalSetString.A.makeBy", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.rangeBy", () => {
-  Mocha.test("Belt_internalSetString.A.rangeBy", () => {
+Mocha.describe("Belt_internalMapString.A.rangeBy", () => {
+  Mocha.test("Belt_internalMapString.A.rangeBy", () => {
     Primitive_object.equal(Belt_Array.rangeBy(0, 10, 3), [
       0,
       3,
@@ -13624,8 +13633,8 @@ Mocha.describe("Belt_internalSetString.A.rangeBy", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.range", () => {
-  Mocha.test("Belt_internalSetString.A.range", () => {
+Mocha.describe("Belt_internalMapString.A.range", () => {
+  Mocha.test("Belt_internalMapString.A.range", () => {
     Primitive_object.equal(Belt_Array.range(0, 3), [
       0,
       1,
@@ -13637,8 +13646,8 @@ Mocha.describe("Belt_internalSetString.A.range", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.makeUninitializedUnsafe", () => {
-  Mocha.test("Belt_internalSetString.A.makeUninitializedUnsafe", () => {
+Mocha.describe("Belt_internalMapString.A.makeUninitializedUnsafe", () => {
+  Mocha.test("Belt_internalMapString.A.makeUninitializedUnsafe", () => {
     let arr = new Array(5);
     console.log(Belt_Array.getExn(arr, 0));
     Belt_Array.setExn(arr, 0, "example");
@@ -13646,15 +13655,15 @@ Mocha.describe("Belt_internalSetString.A.makeUninitializedUnsafe", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.makeUninitialized", () => {
-  Mocha.test("Belt_internalSetString.A.makeUninitialized", () => {
+Mocha.describe("Belt_internalMapString.A.makeUninitialized", () => {
+  Mocha.test("Belt_internalMapString.A.makeUninitialized", () => {
     let arr = new Array(5);
     Belt_Array.getExn(arr, 0) === undefined;
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.reverse", () => {
-  Mocha.test("Belt_internalSetString.A.reverse", () => {
+Mocha.describe("Belt_internalMapString.A.reverse", () => {
+  Mocha.test("Belt_internalMapString.A.reverse", () => {
     Primitive_object.equal(Belt_Array.reverse([
       10,
       11,
@@ -13671,8 +13680,8 @@ Mocha.describe("Belt_internalSetString.A.reverse", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.reverseInPlace", () => {
-  Mocha.test("Belt_internalSetString.A.reverseInPlace", () => {
+Mocha.describe("Belt_internalMapString.A.reverseInPlace", () => {
+  Mocha.test("Belt_internalMapString.A.reverseInPlace", () => {
     let arr = [
       10,
       11,
@@ -13691,8 +13700,8 @@ Mocha.describe("Belt_internalSetString.A.reverseInPlace", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.get", () => {
-  Mocha.test("Belt_internalSetString.A.get", () => {
+Mocha.describe("Belt_internalMapString.A.get", () => {
+  Mocha.test("Belt_internalMapString.A.get", () => {
     Primitive_object.equal(Belt_Array.get([
       "a",
       "b",
@@ -13711,8 +13720,39 @@ Mocha.describe("Belt_internalSetString.A.get", () => {
   });
 });
 
-Mocha.describe("Belt_internalSetString.A.length", () => {
-  Mocha.test("Belt_internalSetString.A.length", () => {});
+Mocha.describe("Belt_internalMapString.A.length", () => {
+  Mocha.test("Belt_internalMapString.A.length", () => {});
+});
+
+Mocha.describe("BigInt.toLocaleString", () => {
+  Mocha.test("BigInt.toLocaleString", () => {
+    console.log((123n).toString());
+  });
+});
+
+Mocha.describe("BigInt.toString", () => {
+  Mocha.test("BigInt.toString", () => {
+    console.log((123n).toString());
+  });
+});
+
+Mocha.describe("BigInt.fromStringExn", () => {
+  Mocha.test("BigInt.fromStringExn", () => {
+    BigInt("123");
+    BigInt("");
+    BigInt("0x11");
+    BigInt("0b11");
+    BigInt("0o11");
+    try {
+      BigInt("a");
+    } catch (raw__error) {
+      let _error = Primitive_exceptions.internalToException(raw__error);
+      if (_error.RE_EXN_ID !== Exn.$$Error) {
+        throw _error;
+      }
+      
+    }
+  });
 });
 
 Mocha.describe("Belt_internalMapInt.S.binarySearchBy", () => {
@@ -14573,864 +14613,6 @@ Mocha.describe("Belt_internalMapInt.A.length", () => {
   Mocha.test("Belt_internalMapInt.A.length", () => {});
 });
 
-Mocha.describe("Belt_internalMapString.S.binarySearchBy", () => {
-  Mocha.test("Belt_internalMapString.S.binarySearchBy", () => {
-    Belt_SortArray.binarySearchBy([
-      1,
-      2,
-      3,
-      4,
-      33,
-      35,
-      36
-    ], 33, Primitive_int.compare) === 4;
-    Pervasives.lnot(Belt_SortArray.binarySearchBy([
-      1,
-      3,
-      5,
-      7
-    ], 4, Primitive_int.compare)) === 2;
-  });
-});
-
-Mocha.describe("Belt_internalMapString.S.strictlySortedLength", () => {
-  Mocha.test("Belt_internalMapString.S.strictlySortedLength", () => {
-    Belt_SortArray.strictlySortedLength([
-      1,
-      2,
-      3,
-      4,
-      3
-    ], (x, y) => x < y) === 4;
-    Belt_SortArray.strictlySortedLength([], Primitive_object.lessthan) === 0;
-    Belt_SortArray.strictlySortedLength([1], (x, y) => x < y) === 1;
-    Belt_SortArray.strictlySortedLength([
-      4,
-      3,
-      2,
-      1
-    ], (x, y) => x < y) === -4;
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.truncateToLengthUnsafe", () => {
-  Mocha.test("Belt_internalMapString.A.truncateToLengthUnsafe", () => {
-    let arr = [
-      "ant",
-      "bee",
-      "cat",
-      "dog",
-      "elk"
-    ];
-    arr.length = 3;
-    Primitive_object.equal(arr, [
-      "ant",
-      "bee",
-      "cat"
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.eq", () => {
-  Mocha.test("Belt_internalMapString.A.eq", () => {
-    Belt_Array.eq([
-      1,
-      2,
-      3
-    ], [
-      -1,
-      -2,
-      -3
-    ], (a, b) => Pervasives.abs(a) === Pervasives.abs(b)) === true;
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.cmp", () => {
-  Mocha.test("Belt_internalMapString.A.cmp", () => {
-    Belt_Array.cmp([
-      1,
-      3,
-      5
-    ], [
-      1,
-      4,
-      2
-    ], Primitive_int.compare) === -1;
-    Belt_Array.cmp([
-      1,
-      3,
-      5
-    ], [
-      1,
-      2,
-      3
-    ], Primitive_int.compare) === 1;
-    Belt_Array.cmp([
-      1,
-      3,
-      5
-    ], [
-      1,
-      3,
-      5
-    ], Primitive_int.compare) === 0;
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.some2", () => {
-  Mocha.test("Belt_internalMapString.A.some2", () => {
-    Belt_Array.some2([
-      0,
-      2
-    ], [
-      1,
-      0,
-      3
-    ], (a, b) => a > b) === true;
-    Belt_Array.some2([], [1], (x, y) => x > y) === false;
-    Belt_Array.some2([
-      2,
-      3
-    ], [
-      1,
-      4
-    ], (x, y) => x > y) === true;
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.every2", () => {
-  Mocha.test("Belt_internalMapString.A.every2", () => {
-    Belt_Array.every2([
-      1,
-      2,
-      3
-    ], [
-      0,
-      1
-    ], (a, b) => a > b) === true;
-    Belt_Array.every2([], [1], (x, y) => x > y) === true;
-    Belt_Array.every2([
-      2,
-      3
-    ], [1], (x, y) => x > y) === true;
-    Belt_Array.every2([
-      0,
-      1
-    ], [
-      5,
-      0
-    ], (x, y) => x > y) === false;
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.every", () => {
-  Mocha.test("Belt_internalMapString.A.every", () => {
-    Belt_Array.every([
-      1,
-      3,
-      5
-    ], x => x % 2 === 1) === true;
-    Belt_Array.every([
-      1,
-      -3,
-      5
-    ], x => x > 0) === false;
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.some", () => {
-  Mocha.test("Belt_internalMapString.A.some", () => {
-    Belt_Array.some([
-      2,
-      3,
-      4
-    ], x => x % 2 === 1) === true;
-    Belt_Array.some([
-      -1,
-      -3,
-      -5
-    ], x => x > 0) === false;
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.joinWith", () => {
-  Mocha.test("Belt_internalMapString.A.joinWith", () => {
-    Belt_Array.joinWith([
-      0,
-      1
-    ], ", ", prim => prim.toString()) === "0, 1";
-    Belt_Array.joinWith([], " ", prim => prim.toString()) === "";
-    Belt_Array.joinWith([1], " ", prim => prim.toString()) === "1";
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.reduceWithIndex", () => {
-  Mocha.test("Belt_internalMapString.A.reduceWithIndex", () => {
-    Belt_Array.reduceWithIndex([
-      1,
-      2,
-      3,
-      4
-    ], 0, (acc, x, i) => (acc + x | 0) + i | 0) === 16;
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.reduceReverse2", () => {
-  Mocha.test("Belt_internalMapString.A.reduceReverse2", () => {
-    Belt_Array.reduceReverse2([
-      1,
-      2,
-      3
-    ], [
-      1,
-      2
-    ], 0, (acc, x, y) => (acc + x | 0) + y | 0) === 6;
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.reduceReverse", () => {
-  Mocha.test("Belt_internalMapString.A.reduceReverse", () => {
-    Belt_Array.reduceReverse([
-      "a",
-      "b",
-      "c",
-      "d"
-    ], "", (a, b) => a + b) === "dcba";
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.reduce", () => {
-  Mocha.test("Belt_internalMapString.A.reduce", () => {
-    Belt_Array.reduce([
-      2,
-      3,
-      4
-    ], 1, (a, b) => a + b | 0) === 10;
-    Belt_Array.reduce([
-      "a",
-      "b",
-      "c",
-      "d"
-    ], "", (a, b) => a + b) === "abcd";
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.partition", () => {
-  Mocha.test("Belt_internalMapString.A.partition", () => {
-    Primitive_object.equal(Belt_Array.partition([
-      1,
-      2,
-      3,
-      4,
-      5
-    ], x => x % 2 === 0), [
-      [
-        2,
-        4
-      ],
-      [
-        1,
-        3,
-        5
-      ]
-    ]);
-    Primitive_object.equal(Belt_Array.partition([
-      1,
-      2,
-      3,
-      4,
-      5
-    ], x => x % 2 !== 0), [
-      [
-        1,
-        3,
-        5
-      ],
-      [
-        2,
-        4
-      ]
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.mapWithIndex", () => {
-  Mocha.test("Belt_internalMapString.A.mapWithIndex", () => {
-    Primitive_object.equal(Belt_Array.mapWithIndex([
-      1,
-      2,
-      3
-    ], (i, x) => i + x | 0), [
-      1,
-      3,
-      5
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.forEachWithIndex", () => {
-  Mocha.test("Belt_internalMapString.A.forEachWithIndex", () => {
-    Belt_Array.forEachWithIndex([
-      "a",
-      "b",
-      "c"
-    ], (i, x) => {
-      console.log("Item " + String(i) + " is " + x);
-    });
-    let total = {
-      contents: 0
-    };
-    Belt_Array.forEachWithIndex([
-      10,
-      11,
-      12,
-      13
-    ], (i, x) => {
-      total.contents = (total.contents + x | 0) + i | 0;
-    });
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.keepMap", () => {
-  Mocha.test("Belt_internalMapString.A.keepMap", () => {
-    Primitive_object.equal(Belt_Array.keepMap([
-      1,
-      2,
-      3
-    ], x => {
-      if (x % 2 === 0) {
-        return x;
-      }
-      
-    }), [2]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.keepWithIndex", () => {
-  Mocha.test("Belt_internalMapString.A.keepWithIndex", () => {
-    Primitive_object.equal(Belt_Array.keepWithIndex([
-      1,
-      2,
-      3
-    ], (_x, i) => i === 1), [2]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.getIndexBy", () => {
-  Mocha.test("Belt_internalMapString.A.getIndexBy", () => {
-    Primitive_object.equal(Belt_Array.getIndexBy([
-      1,
-      4,
-      3,
-      2
-    ], x => x % 2 === 0), 1);
-    Belt_Array.getIndexBy([
-      15,
-      13,
-      11
-    ], x => x % 2 === 0) === undefined;
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.getBy", () => {
-  Mocha.test("Belt_internalMapString.A.getBy", () => {
-    Primitive_object.equal(Belt_Array.getBy([
-      1,
-      4,
-      3,
-      2
-    ], x => x % 2 === 0), 4);
-    Belt_Array.getBy([
-      15,
-      13,
-      11
-    ], x => x % 2 === 0) === undefined;
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.flatMap", () => {
-  Mocha.test("Belt_internalMapString.A.flatMap", () => {
-    Primitive_object.equal(Belt_Array.flatMap([
-      1,
-      2
-    ], x => [
-      x + 10 | 0,
-      x + 20 | 0
-    ]), [
-      11,
-      21,
-      12,
-      22
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.map", () => {
-  Mocha.test("Belt_internalMapString.A.map", () => {
-    Primitive_object.equal(Belt_Array.map([
-      1,
-      2
-    ], x => x + 1 | 0), [
-      3,
-      4
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.forEach", () => {
-  Mocha.test("Belt_internalMapString.A.forEach", () => {
-    Belt_Array.forEach([
-      "a",
-      "b",
-      "c"
-    ], x => {
-      console.log("Item: " + x);
-    });
-    let total = {
-      contents: 0
-    };
-    Belt_Array.forEach([
-      1,
-      2,
-      3,
-      4
-    ], x => {
-      total.contents = total.contents + x | 0;
-    });
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.blit", () => {
-  Mocha.test("Belt_internalMapString.A.blit", () => {
-    let v1 = [
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16,
-      17
-    ];
-    let v2 = [
-      20,
-      21,
-      22,
-      23,
-      24,
-      25,
-      26,
-      27
-    ];
-    Belt_Array.blit(v1, 4, v2, 2, 3);
-    Primitive_object.equal(v2, [
-      20,
-      21,
-      14,
-      15,
-      16,
-      25,
-      26,
-      27
-    ]);
-    Belt_Array.blit(v1, 4, v1, 2, 3);
-    Primitive_object.equal(v1, [
-      10,
-      11,
-      14,
-      15,
-      16,
-      15,
-      16,
-      17
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.fill", () => {
-  Mocha.test("Belt_internalMapString.A.fill", () => {
-    let arr = Belt_Array.makeBy(5, i => i);
-    Belt_Array.fill(arr, 2, 2, 9);
-    Primitive_object.equal(arr, [
-      0,
-      1,
-      9,
-      9,
-      4
-    ]);
-    Belt_Array.fill(arr, 7, 2, 8);
-    Primitive_object.equal(arr, [
-      0,
-      1,
-      9,
-      9,
-      4
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.sliceToEnd", () => {
-  Mocha.test("Belt_internalMapString.A.sliceToEnd", () => {
-    Primitive_object.equal(Belt_Array.sliceToEnd([
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16
-    ], 2), [
-      12,
-      13,
-      14,
-      15,
-      16
-    ]);
-    Primitive_object.equal(Belt_Array.sliceToEnd([
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16
-    ], -4), [
-      13,
-      14,
-      15,
-      16
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.slice", () => {
-  Mocha.test("Belt_internalMapString.A.slice", () => {
-    Primitive_object.equal(Belt_Array.slice([
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16
-    ], 2, 3), [
-      12,
-      13,
-      14
-    ]);
-    Primitive_object.equal(Belt_Array.slice([
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16
-    ], -4, 3), [
-      13,
-      14,
-      15
-    ]);
-    Primitive_object.equal(Belt_Array.slice([
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16
-    ], 4, 9), [
-      14,
-      15,
-      16
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.concatMany", () => {
-  Mocha.test("Belt_internalMapString.A.concatMany", () => {
-    Primitive_object.equal(Belt_Array.concatMany([
-      [
-        1,
-        2,
-        3
-      ],
-      [
-        4,
-        5,
-        6
-      ],
-      [
-        7,
-        8
-      ]
-    ]), [
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.concat", () => {
-  Mocha.test("Belt_internalMapString.A.concat", () => {
-    Primitive_object.equal(Belt_Array.concat([
-      1,
-      2,
-      3
-    ], [
-      4,
-      5
-    ]), [
-      1,
-      2,
-      3,
-      4,
-      5
-    ]);
-    Primitive_object.equal(Belt_Array.concat([], [
-      "a",
-      "b",
-      "c"
-    ]), [
-      "a",
-      "b",
-      "c"
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.unzip", () => {
-  Mocha.test("Belt_internalMapString.A.unzip", () => {
-    Primitive_object.equal(Belt_Array.unzip([
-      [
-        1,
-        2
-      ],
-      [
-        3,
-        4
-      ]
-    ]), [
-      [
-        1,
-        3
-      ],
-      [
-        2,
-        4
-      ]
-    ]);
-    Primitive_object.equal(Belt_Array.unzip([
-      [
-        1,
-        2
-      ],
-      [
-        3,
-        4
-      ],
-      [
-        5,
-        6
-      ],
-      [
-        7,
-        8
-      ]
-    ]), [
-      [
-        1,
-        3,
-        5,
-        7
-      ],
-      [
-        2,
-        4,
-        6,
-        8
-      ]
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.zipBy", () => {
-  Mocha.test("Belt_internalMapString.A.zipBy", () => {
-    Primitive_object.equal(Belt_Array.zipBy([
-      1,
-      2,
-      3
-    ], [
-      4,
-      5
-    ], (a, b) => (a << 1) + b | 0), [
-      6,
-      9
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.zip", () => {
-  Mocha.test("Belt_internalMapString.A.zip", () => {
-    Primitive_object.equal(Belt_Array.zip([
-      1,
-      2
-    ], [
-      3,
-      4,
-      5
-    ]), [
-      [
-        1,
-        3
-      ],
-      [
-        2,
-        4
-      ]
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.makeBy", () => {
-  Mocha.test("Belt_internalMapString.A.makeBy", () => {
-    Primitive_object.equal(Belt_Array.makeBy(5, i => i), [
-      0,
-      1,
-      2,
-      3,
-      4
-    ]);
-    Primitive_object.equal(Belt_Array.makeBy(5, i => Math.imul(i, i)), [
-      0,
-      1,
-      4,
-      9,
-      16
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.rangeBy", () => {
-  Mocha.test("Belt_internalMapString.A.rangeBy", () => {
-    Primitive_object.equal(Belt_Array.rangeBy(0, 10, 3), [
-      0,
-      3,
-      6,
-      9
-    ]);
-    Primitive_object.equal(Belt_Array.rangeBy(0, 12, 3), [
-      0,
-      3,
-      6,
-      9,
-      12
-    ]);
-    Primitive_object.equal(Belt_Array.rangeBy(33, 0, 1), []);
-    Primitive_object.equal(Belt_Array.rangeBy(33, 0, -1), []);
-    Primitive_object.equal(Belt_Array.rangeBy(3, 12, -1), []);
-    Primitive_object.equal(Belt_Array.rangeBy(3, 3, 0), []);
-    Primitive_object.equal(Belt_Array.rangeBy(3, 3, 1), [3]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.range", () => {
-  Mocha.test("Belt_internalMapString.A.range", () => {
-    Primitive_object.equal(Belt_Array.range(0, 3), [
-      0,
-      1,
-      2,
-      3
-    ]);
-    Primitive_object.equal(Belt_Array.range(3, 0), []);
-    Primitive_object.equal(Belt_Array.range(3, 3), [3]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.makeUninitializedUnsafe", () => {
-  Mocha.test("Belt_internalMapString.A.makeUninitializedUnsafe", () => {
-    let arr = new Array(5);
-    console.log(Belt_Array.getExn(arr, 0));
-    Belt_Array.setExn(arr, 0, "example");
-    console.log(Belt_Array.getExn(arr, 0) === "example");
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.makeUninitialized", () => {
-  Mocha.test("Belt_internalMapString.A.makeUninitialized", () => {
-    let arr = new Array(5);
-    Belt_Array.getExn(arr, 0) === undefined;
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.reverse", () => {
-  Mocha.test("Belt_internalMapString.A.reverse", () => {
-    Primitive_object.equal(Belt_Array.reverse([
-      10,
-      11,
-      12,
-      13,
-      14
-    ]), [
-      14,
-      13,
-      12,
-      11,
-      10
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.reverseInPlace", () => {
-  Mocha.test("Belt_internalMapString.A.reverseInPlace", () => {
-    let arr = [
-      10,
-      11,
-      12,
-      13,
-      14
-    ];
-    Belt_Array.reverseInPlace(arr);
-    Primitive_object.equal(arr, [
-      14,
-      13,
-      12,
-      11,
-      10
-    ]);
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.get", () => {
-  Mocha.test("Belt_internalMapString.A.get", () => {
-    Primitive_object.equal(Belt_Array.get([
-      "a",
-      "b",
-      "c"
-    ], 0), "a");
-    Belt_Array.get([
-      "a",
-      "b",
-      "c"
-    ], 3) === undefined;
-    Belt_Array.get([
-      "a",
-      "b",
-      "c"
-    ], -1) === undefined;
-  });
-});
-
-Mocha.describe("Belt_internalMapString.A.length", () => {
-  Mocha.test("Belt_internalMapString.A.length", () => {});
-});
-
 Mocha.describe("Belt_internalSetInt.A.truncateToLengthUnsafe", () => {
   Mocha.test("Belt_internalSetInt.A.truncateToLengthUnsafe", () => {
     let arr = [
@@ -16249,6 +15431,824 @@ Mocha.describe("Belt_internalSetInt.A.length", () => {
   Mocha.test("Belt_internalSetInt.A.length", () => {});
 });
 
+Mocha.describe("Belt_internalSetString.A.truncateToLengthUnsafe", () => {
+  Mocha.test("Belt_internalSetString.A.truncateToLengthUnsafe", () => {
+    let arr = [
+      "ant",
+      "bee",
+      "cat",
+      "dog",
+      "elk"
+    ];
+    arr.length = 3;
+    Primitive_object.equal(arr, [
+      "ant",
+      "bee",
+      "cat"
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.eq", () => {
+  Mocha.test("Belt_internalSetString.A.eq", () => {
+    Belt_Array.eq([
+      1,
+      2,
+      3
+    ], [
+      -1,
+      -2,
+      -3
+    ], (a, b) => Pervasives.abs(a) === Pervasives.abs(b)) === true;
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.cmp", () => {
+  Mocha.test("Belt_internalSetString.A.cmp", () => {
+    Belt_Array.cmp([
+      1,
+      3,
+      5
+    ], [
+      1,
+      4,
+      2
+    ], Primitive_int.compare) === -1;
+    Belt_Array.cmp([
+      1,
+      3,
+      5
+    ], [
+      1,
+      2,
+      3
+    ], Primitive_int.compare) === 1;
+    Belt_Array.cmp([
+      1,
+      3,
+      5
+    ], [
+      1,
+      3,
+      5
+    ], Primitive_int.compare) === 0;
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.some2", () => {
+  Mocha.test("Belt_internalSetString.A.some2", () => {
+    Belt_Array.some2([
+      0,
+      2
+    ], [
+      1,
+      0,
+      3
+    ], (a, b) => a > b) === true;
+    Belt_Array.some2([], [1], (x, y) => x > y) === false;
+    Belt_Array.some2([
+      2,
+      3
+    ], [
+      1,
+      4
+    ], (x, y) => x > y) === true;
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.every2", () => {
+  Mocha.test("Belt_internalSetString.A.every2", () => {
+    Belt_Array.every2([
+      1,
+      2,
+      3
+    ], [
+      0,
+      1
+    ], (a, b) => a > b) === true;
+    Belt_Array.every2([], [1], (x, y) => x > y) === true;
+    Belt_Array.every2([
+      2,
+      3
+    ], [1], (x, y) => x > y) === true;
+    Belt_Array.every2([
+      0,
+      1
+    ], [
+      5,
+      0
+    ], (x, y) => x > y) === false;
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.every", () => {
+  Mocha.test("Belt_internalSetString.A.every", () => {
+    Belt_Array.every([
+      1,
+      3,
+      5
+    ], x => x % 2 === 1) === true;
+    Belt_Array.every([
+      1,
+      -3,
+      5
+    ], x => x > 0) === false;
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.some", () => {
+  Mocha.test("Belt_internalSetString.A.some", () => {
+    Belt_Array.some([
+      2,
+      3,
+      4
+    ], x => x % 2 === 1) === true;
+    Belt_Array.some([
+      -1,
+      -3,
+      -5
+    ], x => x > 0) === false;
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.joinWith", () => {
+  Mocha.test("Belt_internalSetString.A.joinWith", () => {
+    Belt_Array.joinWith([
+      0,
+      1
+    ], ", ", prim => prim.toString()) === "0, 1";
+    Belt_Array.joinWith([], " ", prim => prim.toString()) === "";
+    Belt_Array.joinWith([1], " ", prim => prim.toString()) === "1";
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.reduceWithIndex", () => {
+  Mocha.test("Belt_internalSetString.A.reduceWithIndex", () => {
+    Belt_Array.reduceWithIndex([
+      1,
+      2,
+      3,
+      4
+    ], 0, (acc, x, i) => (acc + x | 0) + i | 0) === 16;
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.reduceReverse2", () => {
+  Mocha.test("Belt_internalSetString.A.reduceReverse2", () => {
+    Belt_Array.reduceReverse2([
+      1,
+      2,
+      3
+    ], [
+      1,
+      2
+    ], 0, (acc, x, y) => (acc + x | 0) + y | 0) === 6;
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.reduceReverse", () => {
+  Mocha.test("Belt_internalSetString.A.reduceReverse", () => {
+    Belt_Array.reduceReverse([
+      "a",
+      "b",
+      "c",
+      "d"
+    ], "", (a, b) => a + b) === "dcba";
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.reduce", () => {
+  Mocha.test("Belt_internalSetString.A.reduce", () => {
+    Belt_Array.reduce([
+      2,
+      3,
+      4
+    ], 1, (a, b) => a + b | 0) === 10;
+    Belt_Array.reduce([
+      "a",
+      "b",
+      "c",
+      "d"
+    ], "", (a, b) => a + b) === "abcd";
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.partition", () => {
+  Mocha.test("Belt_internalSetString.A.partition", () => {
+    Primitive_object.equal(Belt_Array.partition([
+      1,
+      2,
+      3,
+      4,
+      5
+    ], x => x % 2 === 0), [
+      [
+        2,
+        4
+      ],
+      [
+        1,
+        3,
+        5
+      ]
+    ]);
+    Primitive_object.equal(Belt_Array.partition([
+      1,
+      2,
+      3,
+      4,
+      5
+    ], x => x % 2 !== 0), [
+      [
+        1,
+        3,
+        5
+      ],
+      [
+        2,
+        4
+      ]
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.mapWithIndex", () => {
+  Mocha.test("Belt_internalSetString.A.mapWithIndex", () => {
+    Primitive_object.equal(Belt_Array.mapWithIndex([
+      1,
+      2,
+      3
+    ], (i, x) => i + x | 0), [
+      1,
+      3,
+      5
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.forEachWithIndex", () => {
+  Mocha.test("Belt_internalSetString.A.forEachWithIndex", () => {
+    Belt_Array.forEachWithIndex([
+      "a",
+      "b",
+      "c"
+    ], (i, x) => {
+      console.log("Item " + String(i) + " is " + x);
+    });
+    let total = {
+      contents: 0
+    };
+    Belt_Array.forEachWithIndex([
+      10,
+      11,
+      12,
+      13
+    ], (i, x) => {
+      total.contents = (total.contents + x | 0) + i | 0;
+    });
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.keepMap", () => {
+  Mocha.test("Belt_internalSetString.A.keepMap", () => {
+    Primitive_object.equal(Belt_Array.keepMap([
+      1,
+      2,
+      3
+    ], x => {
+      if (x % 2 === 0) {
+        return x;
+      }
+      
+    }), [2]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.keepWithIndex", () => {
+  Mocha.test("Belt_internalSetString.A.keepWithIndex", () => {
+    Primitive_object.equal(Belt_Array.keepWithIndex([
+      1,
+      2,
+      3
+    ], (_x, i) => i === 1), [2]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.getIndexBy", () => {
+  Mocha.test("Belt_internalSetString.A.getIndexBy", () => {
+    Primitive_object.equal(Belt_Array.getIndexBy([
+      1,
+      4,
+      3,
+      2
+    ], x => x % 2 === 0), 1);
+    Belt_Array.getIndexBy([
+      15,
+      13,
+      11
+    ], x => x % 2 === 0) === undefined;
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.getBy", () => {
+  Mocha.test("Belt_internalSetString.A.getBy", () => {
+    Primitive_object.equal(Belt_Array.getBy([
+      1,
+      4,
+      3,
+      2
+    ], x => x % 2 === 0), 4);
+    Belt_Array.getBy([
+      15,
+      13,
+      11
+    ], x => x % 2 === 0) === undefined;
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.flatMap", () => {
+  Mocha.test("Belt_internalSetString.A.flatMap", () => {
+    Primitive_object.equal(Belt_Array.flatMap([
+      1,
+      2
+    ], x => [
+      x + 10 | 0,
+      x + 20 | 0
+    ]), [
+      11,
+      21,
+      12,
+      22
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.map", () => {
+  Mocha.test("Belt_internalSetString.A.map", () => {
+    Primitive_object.equal(Belt_Array.map([
+      1,
+      2
+    ], x => x + 1 | 0), [
+      3,
+      4
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.forEach", () => {
+  Mocha.test("Belt_internalSetString.A.forEach", () => {
+    Belt_Array.forEach([
+      "a",
+      "b",
+      "c"
+    ], x => {
+      console.log("Item: " + x);
+    });
+    let total = {
+      contents: 0
+    };
+    Belt_Array.forEach([
+      1,
+      2,
+      3,
+      4
+    ], x => {
+      total.contents = total.contents + x | 0;
+    });
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.blit", () => {
+  Mocha.test("Belt_internalSetString.A.blit", () => {
+    let v1 = [
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17
+    ];
+    let v2 = [
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27
+    ];
+    Belt_Array.blit(v1, 4, v2, 2, 3);
+    Primitive_object.equal(v2, [
+      20,
+      21,
+      14,
+      15,
+      16,
+      25,
+      26,
+      27
+    ]);
+    Belt_Array.blit(v1, 4, v1, 2, 3);
+    Primitive_object.equal(v1, [
+      10,
+      11,
+      14,
+      15,
+      16,
+      15,
+      16,
+      17
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.fill", () => {
+  Mocha.test("Belt_internalSetString.A.fill", () => {
+    let arr = Belt_Array.makeBy(5, i => i);
+    Belt_Array.fill(arr, 2, 2, 9);
+    Primitive_object.equal(arr, [
+      0,
+      1,
+      9,
+      9,
+      4
+    ]);
+    Belt_Array.fill(arr, 7, 2, 8);
+    Primitive_object.equal(arr, [
+      0,
+      1,
+      9,
+      9,
+      4
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.sliceToEnd", () => {
+  Mocha.test("Belt_internalSetString.A.sliceToEnd", () => {
+    Primitive_object.equal(Belt_Array.sliceToEnd([
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ], 2), [
+      12,
+      13,
+      14,
+      15,
+      16
+    ]);
+    Primitive_object.equal(Belt_Array.sliceToEnd([
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ], -4), [
+      13,
+      14,
+      15,
+      16
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.slice", () => {
+  Mocha.test("Belt_internalSetString.A.slice", () => {
+    Primitive_object.equal(Belt_Array.slice([
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ], 2, 3), [
+      12,
+      13,
+      14
+    ]);
+    Primitive_object.equal(Belt_Array.slice([
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ], -4, 3), [
+      13,
+      14,
+      15
+    ]);
+    Primitive_object.equal(Belt_Array.slice([
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ], 4, 9), [
+      14,
+      15,
+      16
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.concatMany", () => {
+  Mocha.test("Belt_internalSetString.A.concatMany", () => {
+    Primitive_object.equal(Belt_Array.concatMany([
+      [
+        1,
+        2,
+        3
+      ],
+      [
+        4,
+        5,
+        6
+      ],
+      [
+        7,
+        8
+      ]
+    ]), [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.concat", () => {
+  Mocha.test("Belt_internalSetString.A.concat", () => {
+    Primitive_object.equal(Belt_Array.concat([
+      1,
+      2,
+      3
+    ], [
+      4,
+      5
+    ]), [
+      1,
+      2,
+      3,
+      4,
+      5
+    ]);
+    Primitive_object.equal(Belt_Array.concat([], [
+      "a",
+      "b",
+      "c"
+    ]), [
+      "a",
+      "b",
+      "c"
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.unzip", () => {
+  Mocha.test("Belt_internalSetString.A.unzip", () => {
+    Primitive_object.equal(Belt_Array.unzip([
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        4
+      ]
+    ]), [
+      [
+        1,
+        3
+      ],
+      [
+        2,
+        4
+      ]
+    ]);
+    Primitive_object.equal(Belt_Array.unzip([
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        5,
+        6
+      ],
+      [
+        7,
+        8
+      ]
+    ]), [
+      [
+        1,
+        3,
+        5,
+        7
+      ],
+      [
+        2,
+        4,
+        6,
+        8
+      ]
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.zipBy", () => {
+  Mocha.test("Belt_internalSetString.A.zipBy", () => {
+    Primitive_object.equal(Belt_Array.zipBy([
+      1,
+      2,
+      3
+    ], [
+      4,
+      5
+    ], (a, b) => (a << 1) + b | 0), [
+      6,
+      9
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.zip", () => {
+  Mocha.test("Belt_internalSetString.A.zip", () => {
+    Primitive_object.equal(Belt_Array.zip([
+      1,
+      2
+    ], [
+      3,
+      4,
+      5
+    ]), [
+      [
+        1,
+        3
+      ],
+      [
+        2,
+        4
+      ]
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.makeBy", () => {
+  Mocha.test("Belt_internalSetString.A.makeBy", () => {
+    Primitive_object.equal(Belt_Array.makeBy(5, i => i), [
+      0,
+      1,
+      2,
+      3,
+      4
+    ]);
+    Primitive_object.equal(Belt_Array.makeBy(5, i => Math.imul(i, i)), [
+      0,
+      1,
+      4,
+      9,
+      16
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.rangeBy", () => {
+  Mocha.test("Belt_internalSetString.A.rangeBy", () => {
+    Primitive_object.equal(Belt_Array.rangeBy(0, 10, 3), [
+      0,
+      3,
+      6,
+      9
+    ]);
+    Primitive_object.equal(Belt_Array.rangeBy(0, 12, 3), [
+      0,
+      3,
+      6,
+      9,
+      12
+    ]);
+    Primitive_object.equal(Belt_Array.rangeBy(33, 0, 1), []);
+    Primitive_object.equal(Belt_Array.rangeBy(33, 0, -1), []);
+    Primitive_object.equal(Belt_Array.rangeBy(3, 12, -1), []);
+    Primitive_object.equal(Belt_Array.rangeBy(3, 3, 0), []);
+    Primitive_object.equal(Belt_Array.rangeBy(3, 3, 1), [3]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.range", () => {
+  Mocha.test("Belt_internalSetString.A.range", () => {
+    Primitive_object.equal(Belt_Array.range(0, 3), [
+      0,
+      1,
+      2,
+      3
+    ]);
+    Primitive_object.equal(Belt_Array.range(3, 0), []);
+    Primitive_object.equal(Belt_Array.range(3, 3), [3]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.makeUninitializedUnsafe", () => {
+  Mocha.test("Belt_internalSetString.A.makeUninitializedUnsafe", () => {
+    let arr = new Array(5);
+    console.log(Belt_Array.getExn(arr, 0));
+    Belt_Array.setExn(arr, 0, "example");
+    console.log(Belt_Array.getExn(arr, 0) === "example");
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.makeUninitialized", () => {
+  Mocha.test("Belt_internalSetString.A.makeUninitialized", () => {
+    let arr = new Array(5);
+    Belt_Array.getExn(arr, 0) === undefined;
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.reverse", () => {
+  Mocha.test("Belt_internalSetString.A.reverse", () => {
+    Primitive_object.equal(Belt_Array.reverse([
+      10,
+      11,
+      12,
+      13,
+      14
+    ]), [
+      14,
+      13,
+      12,
+      11,
+      10
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.reverseInPlace", () => {
+  Mocha.test("Belt_internalSetString.A.reverseInPlace", () => {
+    let arr = [
+      10,
+      11,
+      12,
+      13,
+      14
+    ];
+    Belt_Array.reverseInPlace(arr);
+    Primitive_object.equal(arr, [
+      14,
+      13,
+      12,
+      11,
+      10
+    ]);
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.get", () => {
+  Mocha.test("Belt_internalSetString.A.get", () => {
+    Primitive_object.equal(Belt_Array.get([
+      "a",
+      "b",
+      "c"
+    ], 0), "a");
+    Belt_Array.get([
+      "a",
+      "b",
+      "c"
+    ], 3) === undefined;
+    Belt_Array.get([
+      "a",
+      "b",
+      "c"
+    ], -1) === undefined;
+  });
+});
+
+Mocha.describe("Belt_internalSetString.A.length", () => {
+  Mocha.test("Belt_internalSetString.A.length", () => {});
+});
+
 Mocha.describe("Console.warnMany", () => {
   Mocha.test("Console.warnMany", () => {
     console.warn("Hello", "World");
@@ -16827,6 +16827,206 @@ Mocha.describe("Console.assert_", () => {
   });
 });
 
+Mocha.describe("Dict.mapValues", () => {
+  Mocha.test("Dict.mapValues", () => {
+    let dict = Object.fromEntries([
+      [
+        "key1",
+        1
+      ],
+      [
+        "key2",
+        2
+      ]
+    ]);
+    Object.entries(Dict.mapValues(dict, v => v + 10 | 0));
+    Object.entries(Dict.mapValues(dict, v => v.toString()));
+  });
+});
+
+Mocha.describe("Dict.forEachWithKey", () => {
+  Mocha.test("Dict.forEachWithKey", () => {
+    let dict = Object.fromEntries([
+      [
+        "key1",
+        "value1"
+      ],
+      [
+        "key2",
+        "value2"
+      ]
+    ]);
+    Dict.forEachWithKey(dict, (value, key) => {
+      console.log(value, key);
+    });
+  });
+});
+
+Mocha.describe("Dict.forEach", () => {
+  Mocha.test("Dict.forEach", () => {
+    let dict = Object.fromEntries([
+      [
+        "key1",
+        "value1"
+      ],
+      [
+        "key2",
+        "value2"
+      ]
+    ]);
+    Dict.forEach(dict, value => {
+      console.log(value);
+    });
+  });
+});
+
+Mocha.describe("Dict.copy", () => {
+  Mocha.test("Dict.copy", () => {
+    let dict = Object.fromEntries([
+      [
+        "key1",
+        "value1"
+      ],
+      [
+        "key2",
+        "value2"
+      ]
+    ]);
+    let dict2 = Object.assign({}, dict);
+    console.log(Object.keys(dict), Object.keys(dict2));
+  });
+});
+
+Mocha.describe("Dict.assign", () => {
+  Mocha.test("Dict.assign", () => {
+    let dict1 = {};
+    dict1["firstKey"] = 1;
+    console.log(Object.keys(dict1));
+    let dict2 = {};
+    dict2["someKey"] = 2;
+    dict2["someKey2"] = 3;
+    let dict1$1 = Object.assign(dict1, dict2);
+    console.log(Object.keys(dict1$1));
+  });
+});
+
+Mocha.describe("Dict.valuesToArray", () => {
+  Mocha.test("Dict.valuesToArray", () => {
+    let dict = {};
+    dict["someKey"] = 1;
+    dict["someKey2"] = 2;
+    let values = Object.values(dict);
+    console.log(values);
+  });
+});
+
+Mocha.describe("Dict.keysToArray", () => {
+  Mocha.test("Dict.keysToArray", () => {
+    let dict = {};
+    dict["someKey"] = 1;
+    dict["someKey2"] = 2;
+    let keys = Object.keys(dict);
+    console.log(keys);
+  });
+});
+
+Mocha.describe("Dict.toArray", () => {
+  Mocha.test("Dict.toArray", () => {
+    let dict = {};
+    dict["someKey"] = 1;
+    dict["someKey2"] = 2;
+    let asArray = Object.entries(dict);
+    console.log(asArray);
+  });
+});
+
+Mocha.describe("Dict.fromIterator", () => {
+  Mocha.test("Dict.fromIterator", () => {
+    let iterator = ((() => {
+    var map1 = new Map();
+    map1.set('first', 1);
+    map1.set('second', 2);
+    var iterator1 = map1[Symbol.iterator]();
+    return iterator1;
+  })());
+    Pervasives.assertEqual(Object.values(Object.fromEntries(iterator)), [
+      1,
+      2
+    ]);
+  });
+});
+
+Mocha.describe("Dict.fromArray", () => {
+  Mocha.test("Dict.fromArray", () => {
+    Object.fromEntries([
+      [
+        "key1",
+        "value1"
+      ],
+      [
+        "key2",
+        "value2"
+      ]
+    ]);
+  });
+});
+
+Mocha.describe("Dict.make", () => {
+  Mocha.test("Dict.make", () => {
+    let dict2 = {};
+    dict2["someKey"] = 12;
+  });
+});
+
+Mocha.describe("Dict.delete", () => {
+  Mocha.test("Dict.delete", () => {
+    let dict = Object.fromEntries([[
+        "someKey",
+        "someValue"
+      ]]);
+    Dict.$$delete(dict, "someKey");
+  });
+});
+
+Mocha.describe("Dict.set", () => {
+  Mocha.test("Dict.set", () => {
+    let dict = {};
+    dict["someKey"] = "someValue";
+  });
+});
+
+Mocha.describe("Dict.get", () => {
+  Mocha.test("Dict.get", () => {
+    let dict = Object.fromEntries([[
+        "someKey",
+        "someValue"
+      ]]);
+    let value = dict["someKey"];
+    if (value !== undefined) {
+      console.log(value);
+    } else {
+      console.log("Nope, didn't have the key.");
+    }
+  });
+});
+
+Mocha.describe("Dict.getUnsafe", () => {
+  Mocha.test("Dict.getUnsafe", () => {
+    let dict = Object.fromEntries([
+      [
+        "key1",
+        "value1"
+      ],
+      [
+        "key2",
+        "value2"
+      ]
+    ]);
+    let value = dict["key1"];
+    console.log(value);
+  });
+});
+
 Mocha.describe("Date.UTC.makeWithYMDHMSM", () => {
   Mocha.test("Date.UTC.makeWithYMDHMSM", () => {
     console.log(Date.UTC(2023, 1, 20, 16, 40, 0, 0));
@@ -17360,206 +17560,6 @@ Mocha.describe("Date.make", () => {
   });
 });
 
-Mocha.describe("Dict.mapValues", () => {
-  Mocha.test("Dict.mapValues", () => {
-    let dict = Object.fromEntries([
-      [
-        "key1",
-        1
-      ],
-      [
-        "key2",
-        2
-      ]
-    ]);
-    Object.entries(Dict.mapValues(dict, v => v + 10 | 0));
-    Object.entries(Dict.mapValues(dict, v => v.toString()));
-  });
-});
-
-Mocha.describe("Dict.forEachWithKey", () => {
-  Mocha.test("Dict.forEachWithKey", () => {
-    let dict = Object.fromEntries([
-      [
-        "key1",
-        "value1"
-      ],
-      [
-        "key2",
-        "value2"
-      ]
-    ]);
-    Dict.forEachWithKey(dict, (value, key) => {
-      console.log(value, key);
-    });
-  });
-});
-
-Mocha.describe("Dict.forEach", () => {
-  Mocha.test("Dict.forEach", () => {
-    let dict = Object.fromEntries([
-      [
-        "key1",
-        "value1"
-      ],
-      [
-        "key2",
-        "value2"
-      ]
-    ]);
-    Dict.forEach(dict, value => {
-      console.log(value);
-    });
-  });
-});
-
-Mocha.describe("Dict.copy", () => {
-  Mocha.test("Dict.copy", () => {
-    let dict = Object.fromEntries([
-      [
-        "key1",
-        "value1"
-      ],
-      [
-        "key2",
-        "value2"
-      ]
-    ]);
-    let dict2 = Object.assign({}, dict);
-    console.log(Object.keys(dict), Object.keys(dict2));
-  });
-});
-
-Mocha.describe("Dict.assign", () => {
-  Mocha.test("Dict.assign", () => {
-    let dict1 = {};
-    dict1["firstKey"] = 1;
-    console.log(Object.keys(dict1));
-    let dict2 = {};
-    dict2["someKey"] = 2;
-    dict2["someKey2"] = 3;
-    let dict1$1 = Object.assign(dict1, dict2);
-    console.log(Object.keys(dict1$1));
-  });
-});
-
-Mocha.describe("Dict.valuesToArray", () => {
-  Mocha.test("Dict.valuesToArray", () => {
-    let dict = {};
-    dict["someKey"] = 1;
-    dict["someKey2"] = 2;
-    let values = Object.values(dict);
-    console.log(values);
-  });
-});
-
-Mocha.describe("Dict.keysToArray", () => {
-  Mocha.test("Dict.keysToArray", () => {
-    let dict = {};
-    dict["someKey"] = 1;
-    dict["someKey2"] = 2;
-    let keys = Object.keys(dict);
-    console.log(keys);
-  });
-});
-
-Mocha.describe("Dict.toArray", () => {
-  Mocha.test("Dict.toArray", () => {
-    let dict = {};
-    dict["someKey"] = 1;
-    dict["someKey2"] = 2;
-    let asArray = Object.entries(dict);
-    console.log(asArray);
-  });
-});
-
-Mocha.describe("Dict.fromIterator", () => {
-  Mocha.test("Dict.fromIterator", () => {
-    let iterator = ((() => {
-    var map1 = new Map();
-    map1.set('first', 1);
-    map1.set('second', 2);
-    var iterator1 = map1[Symbol.iterator]();
-    return iterator1;
-  })());
-    Pervasives.assertEqual(Object.values(Object.fromEntries(iterator)), [
-      1,
-      2
-    ]);
-  });
-});
-
-Mocha.describe("Dict.fromArray", () => {
-  Mocha.test("Dict.fromArray", () => {
-    Object.fromEntries([
-      [
-        "key1",
-        "value1"
-      ],
-      [
-        "key2",
-        "value2"
-      ]
-    ]);
-  });
-});
-
-Mocha.describe("Dict.make", () => {
-  Mocha.test("Dict.make", () => {
-    let dict2 = {};
-    dict2["someKey"] = 12;
-  });
-});
-
-Mocha.describe("Dict.delete", () => {
-  Mocha.test("Dict.delete", () => {
-    let dict = Object.fromEntries([[
-        "someKey",
-        "someValue"
-      ]]);
-    Dict.$$delete(dict, "someKey");
-  });
-});
-
-Mocha.describe("Dict.set", () => {
-  Mocha.test("Dict.set", () => {
-    let dict = {};
-    dict["someKey"] = "someValue";
-  });
-});
-
-Mocha.describe("Dict.get", () => {
-  Mocha.test("Dict.get", () => {
-    let dict = Object.fromEntries([[
-        "someKey",
-        "someValue"
-      ]]);
-    let value = dict["someKey"];
-    if (value !== undefined) {
-      console.log(value);
-    } else {
-      console.log("Nope, didn't have the key.");
-    }
-  });
-});
-
-Mocha.describe("Dict.getUnsafe", () => {
-  Mocha.test("Dict.getUnsafe", () => {
-    let dict = Object.fromEntries([
-      [
-        "key1",
-        "value1"
-      ],
-      [
-        "key2",
-        "value2"
-      ]
-    ]);
-    let value = dict["key1"];
-    console.log(value);
-  });
-});
-
 Mocha.describe("Error.panic", () => {
   Mocha.test("Error.panic", () => {
     try {
@@ -17573,9 +17573,9 @@ Mocha.describe("Error.panic", () => {
             throw {
               RE_EXN_ID: "Assert_failure",
               _1: [
-                "mocha_full_test.res",
-                13182,
-                21
+                "generated_mocha_test.res",
+                12931,
+                15
               ],
               Error: new Error()
             };
@@ -17585,9 +17585,9 @@ Mocha.describe("Error.panic", () => {
           throw {
             RE_EXN_ID: "Assert_failure",
             _1: [
-              "mocha_full_test.res",
-              13183,
-              18
+              "generated_mocha_test.res",
+              12932,
+              12
             ],
             Error: new Error()
           };
@@ -17596,9 +17596,9 @@ Mocha.describe("Error.panic", () => {
         throw {
           RE_EXN_ID: "Assert_failure",
           _1: [
-            "mocha_full_test.res",
-            13185,
-            13
+            "generated_mocha_test.res",
+            12934,
+            7
           ],
           Error: new Error()
         };
@@ -18199,9 +18199,9 @@ Mocha.describe("JSON.stringifyAnyWithFilterAndIndent", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          14064,
-          13
+          "generated_mocha_test.res",
+          13810,
+          7
         ],
         Error: new Error()
       };
@@ -18243,9 +18243,9 @@ Mocha.describe("JSON.stringifyAnyWithFilter", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          14088,
-          13
+          "generated_mocha_test.res",
+          13834,
+          7
         ],
         Error: new Error()
       };
@@ -18292,9 +18292,9 @@ Mocha.describe("JSON.stringifyAnyWithReplacerAndIndent", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          14122,
-          13
+          "generated_mocha_test.res",
+          13868,
+          7
         ],
         Error: new Error()
       };
@@ -18341,9 +18341,9 @@ Mocha.describe("JSON.stringifyAnyWithReplacer", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          14156,
-          13
+          "generated_mocha_test.res",
+          13902,
+          7
         ],
         Error: new Error()
       };
@@ -18382,9 +18382,9 @@ Mocha.describe("JSON.stringifyAnyWithIndent", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          14185,
-          13
+          "generated_mocha_test.res",
+          13931,
+          7
         ],
         Error: new Error()
       };
@@ -18437,9 +18437,9 @@ Mocha.describe("JSON.stringifyAny", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          14241,
-          13
+          "generated_mocha_test.res",
+          13986,
+          7
         ],
         Error: new Error()
       };
@@ -18827,145 +18827,6 @@ Mocha.describe("Map.make", () => {
     let map = new Map();
     map.set("lang", "ReScript");
   });
-});
-
-Mocha.describe("Null.flatMap", () => {
-  Mocha.test("Null.flatMap", () => {
-    let addIfAboveOne = value => {
-      if (value > 1) {
-        return value + 1 | 0;
-      } else {
-        return null;
-      }
-    };
-    Null.flatMap(2, addIfAboveOne);
-    Null.flatMap(-4, addIfAboveOne);
-    Null.flatMap(null, addIfAboveOne);
-  });
-});
-
-Mocha.describe("Null.mapOr", () => {
-  Mocha.test("Null.mapOr", () => {
-    Null.mapOr(3, 0, x => x + 5 | 0);
-    Null.mapOr(null, 0, x => x + 5 | 0);
-  });
-});
-
-Mocha.describe("Null.map", () => {
-  Mocha.test("Null.map", () => {
-    Null.map(3, x => Math.imul(x, x));
-    Null.map(null, x => Math.imul(x, x));
-  });
-});
-
-Mocha.describe("Null.forEach", () => {
-  Mocha.test("Null.forEach", () => {
-    Null.forEach("thing", x => {
-      console.log(x);
-    });
-    Null.forEach(null, x => {
-      console.log(x);
-    });
-  });
-});
-
-Mocha.describe("Null.getUnsafe", () => {
-  Mocha.test("Null.getUnsafe", () => {});
-});
-
-Mocha.describe("Null.getExn", () => {
-  Mocha.test("Null.getExn", () => {
-    Pervasives.assertEqual(Null.getExn(3), 3);
-    let exit = 0;
-    let value;
-    try {
-      value = Null.getExn('ReScript');
-      exit = 1;
-    } catch (raw_exn) {
-      let exn = Primitive_exceptions.internalToException(raw_exn);
-      if (exn.RE_EXN_ID === "Invalid_argument") {
-        throw {
-          RE_EXN_ID: "Assert_failure",
-          _1: [
-            "mocha_full_test.res",
-            14766,
-            41
-          ],
-          Error: new Error()
-        };
-      }
-      throw exn;
-    }
-    if (exit === 1) {
-      Pervasives.assertEqual(value, "ReScript");
-    }
-    let exit$1 = 0;
-    let val;
-    try {
-      val = Null.getExn(null);
-      exit$1 = 1;
-    } catch (raw_exn$1) {
-      let exn$1 = Primitive_exceptions.internalToException(raw_exn$1);
-      if (exn$1.RE_EXN_ID !== "Invalid_argument") {
-        throw exn$1;
-      }
-      
-    }
-    if (exit$1 === 1) {
-      throw {
-        RE_EXN_ID: "Assert_failure",
-        _1: [
-          "mocha_full_test.res",
-          14772,
-          13
-        ],
-        Error: new Error()
-      };
-    }
-    
-  });
-});
-
-Mocha.describe("Null.getOr", () => {
-  Mocha.test("Null.getOr", () => {
-    Null.getOr(null, "Banana");
-    Null.getOr("Apple", "Banana");
-    let greet = firstName => "Greetings " + Option.getOr(firstName, "Anonymous");
-    greet(Primitive_option.fromNull("Jane"));
-    greet(undefined);
-  });
-});
-
-Mocha.describe("Null.fromOption", () => {
-  Mocha.test("Null.fromOption", () => {
-    let asNull = Null.fromOption(undefined);
-    console.log(asNull === null);
-  });
-});
-
-Mocha.describe("Null.toOption", () => {
-  Mocha.test("Null.toOption", () => {
-    let nullStr = "Hello";
-    if (nullStr !== null) {
-      console.log("Got string:", nullStr);
-    } else {
-      console.log("Didn't have a value.");
-    }
-  });
-});
-
-Mocha.describe("Null.make", () => {
-  Mocha.test("Null.make", () => {});
-});
-
-Mocha.describe("Null.null", () => {
-  Mocha.test("Null.null", () => {
-    console.log(null);
-  });
-});
-
-Mocha.describe("Null.asNullable", () => {
-  Mocha.test("Null.asNullable", () => {});
 });
 
 Mocha.describe("List.sort", () => {
@@ -20338,9 +20199,9 @@ Mocha.describe("List.getExn", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          15409,
-          13
+          "generated_mocha_test.res",
+          14986,
+          7
         ],
         Error: new Error()
       };
@@ -20419,9 +20280,9 @@ Mocha.describe("List.tailExn", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          15447,
-          13
+          "generated_mocha_test.res",
+          15024,
+          7
         ],
         Error: new Error()
       };
@@ -20474,9 +20335,9 @@ Mocha.describe("List.headExn", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          15472,
-          13
+          "generated_mocha_test.res",
+          15049,
+          7
         ],
         Error: new Error()
       };
@@ -20528,6 +20389,195 @@ Mocha.describe("List.length", () => {
         }
       }
     });
+  });
+});
+
+Mocha.describe("Nullable.flatMap", () => {
+  Mocha.test("Nullable.flatMap", () => {
+    let addIfAboveOne = value => {
+      if (value > 1) {
+        return value + 1 | 0;
+      } else {
+        return null;
+      }
+    };
+    Nullable.flatMap(2, addIfAboveOne);
+    Nullable.flatMap(-4, addIfAboveOne);
+    Nullable.flatMap(null, addIfAboveOne);
+  });
+});
+
+Mocha.describe("Nullable.mapOr", () => {
+  Mocha.test("Nullable.mapOr", () => {
+    Nullable.mapOr(3, 0, x => x + 5 | 0);
+    Nullable.mapOr(null, 0, x => x + 5 | 0);
+  });
+});
+
+Mocha.describe("Nullable.map", () => {
+  Mocha.test("Nullable.map", () => {
+    Nullable.map(3, x => Math.imul(x, x));
+    Nullable.map(undefined, x => Math.imul(x, x));
+  });
+});
+
+Mocha.describe("Nullable.forEach", () => {
+  Mocha.test("Nullable.forEach", () => {
+    Nullable.forEach("thing", x => {
+      console.log(x);
+    });
+    Nullable.forEach(null, x => {
+      console.log(x);
+    });
+    Nullable.forEach(undefined, x => {
+      console.log(x);
+    });
+  });
+});
+
+Mocha.describe("Nullable.getUnsafe", () => {
+  Mocha.test("Nullable.getUnsafe", () => {});
+});
+
+Mocha.describe("Nullable.getExn", () => {
+  Mocha.test("Nullable.getExn", () => {
+    let exit = 0;
+    let value;
+    try {
+      value = Nullable.getExn('Hello');
+      exit = 1;
+    } catch (raw_exn) {
+      let exn = Primitive_exceptions.internalToException(raw_exn);
+      if (exn.RE_EXN_ID === "Invalid_argument") {
+        throw {
+          RE_EXN_ID: "Assert_failure",
+          _1: [
+            "generated_mocha_test.res",
+            15150,
+            35
+          ],
+          Error: new Error()
+        };
+      }
+      throw exn;
+    }
+    if (exit === 1) {
+      Pervasives.assertEqual(value, "Hello");
+    }
+    let exit$1 = 0;
+    let val;
+    try {
+      val = Nullable.getExn(null);
+      exit$1 = 1;
+    } catch (raw_exn$1) {
+      let exn$1 = Primitive_exceptions.internalToException(raw_exn$1);
+      if (exn$1.RE_EXN_ID !== "Invalid_argument") {
+        throw exn$1;
+      }
+      
+    }
+    if (exit$1 === 1) {
+      throw {
+        RE_EXN_ID: "Assert_failure",
+        _1: [
+          "generated_mocha_test.res",
+          15156,
+          7
+        ],
+        Error: new Error()
+      };
+    }
+    let exit$2 = 0;
+    let val$1;
+    try {
+      val$1 = Nullable.getExn(undefined);
+      exit$2 = 1;
+    } catch (raw_exn$2) {
+      let exn$2 = Primitive_exceptions.internalToException(raw_exn$2);
+      if (exn$2.RE_EXN_ID !== "Invalid_argument") {
+        throw exn$2;
+      }
+      
+    }
+    if (exit$2 === 1) {
+      throw {
+        RE_EXN_ID: "Assert_failure",
+        _1: [
+          "generated_mocha_test.res",
+          15161,
+          7
+        ],
+        Error: new Error()
+      };
+    }
+    
+  });
+});
+
+Mocha.describe("Nullable.getOr", () => {
+  Mocha.test("Nullable.getOr", () => {
+    Nullable.getOr(null, "Banana");
+    Nullable.getOr("Apple", "Banana");
+    let greet = firstName => "Greetings " + Option.getOr(firstName, "Anonymous");
+    greet(Primitive_option.fromNullable("Jane"));
+    greet(undefined);
+  });
+});
+
+Mocha.describe("Nullable.fromOption", () => {
+  Mocha.test("Nullable.fromOption", () => {
+    Nullable.fromOption("Hello");
+  });
+});
+
+Mocha.describe("Nullable.toOption", () => {
+  Mocha.test("Nullable.toOption", () => {
+    let nullableString = "Hello";
+    if (nullableString == null) {
+      console.log("Didn't have a value.");
+    } else {
+      console.log("Got string:", nullableString);
+    }
+  });
+});
+
+Mocha.describe("Nullable.make", () => {
+  Mocha.test("Nullable.make", () => {
+    let myStr = "Hello";
+    if ((myStr == null) || myStr !== myStr) {
+      console.log("Values did not match.");
+    } else {
+      console.log("Yay, values matched!");
+    }
+  });
+});
+
+Mocha.describe("Nullable.isNullable", () => {
+  Mocha.test("Nullable.isNullable", () => {
+    if ("Hello" == null) {
+      throw {
+        RE_EXN_ID: "Assert_failure",
+        _1: [
+          "generated_mocha_test.res",
+          15238,
+          10
+        ],
+        Error: new Error()
+      };
+    }
+    
+  });
+});
+
+Mocha.describe("Nullable.undefined", () => {
+  Mocha.test("Nullable.undefined", () => {
+    console.log(undefined);
+  });
+});
+
+Mocha.describe("Nullable.null", () => {
+  Mocha.test("Nullable.null", () => {
+    console.log(null);
   });
 });
 
@@ -20937,8 +20987,8 @@ Mocha.describe("Math.abs", () => {
   });
 });
 
-Mocha.describe("Nullable.flatMap", () => {
-  Mocha.test("Nullable.flatMap", () => {
+Mocha.describe("Null.flatMap", () => {
+  Mocha.test("Null.flatMap", () => {
     let addIfAboveOne = value => {
       if (value > 1) {
         return value + 1 | 0;
@@ -20946,50 +20996,48 @@ Mocha.describe("Nullable.flatMap", () => {
         return null;
       }
     };
-    Nullable.flatMap(2, addIfAboveOne);
-    Nullable.flatMap(-4, addIfAboveOne);
-    Nullable.flatMap(null, addIfAboveOne);
+    Null.flatMap(2, addIfAboveOne);
+    Null.flatMap(-4, addIfAboveOne);
+    Null.flatMap(null, addIfAboveOne);
   });
 });
 
-Mocha.describe("Nullable.mapOr", () => {
-  Mocha.test("Nullable.mapOr", () => {
-    Nullable.mapOr(3, 0, x => x + 5 | 0);
-    Nullable.mapOr(null, 0, x => x + 5 | 0);
+Mocha.describe("Null.mapOr", () => {
+  Mocha.test("Null.mapOr", () => {
+    Null.mapOr(3, 0, x => x + 5 | 0);
+    Null.mapOr(null, 0, x => x + 5 | 0);
   });
 });
 
-Mocha.describe("Nullable.map", () => {
-  Mocha.test("Nullable.map", () => {
-    Nullable.map(3, x => Math.imul(x, x));
-    Nullable.map(undefined, x => Math.imul(x, x));
+Mocha.describe("Null.map", () => {
+  Mocha.test("Null.map", () => {
+    Null.map(3, x => Math.imul(x, x));
+    Null.map(null, x => Math.imul(x, x));
   });
 });
 
-Mocha.describe("Nullable.forEach", () => {
-  Mocha.test("Nullable.forEach", () => {
-    Nullable.forEach("thing", x => {
+Mocha.describe("Null.forEach", () => {
+  Mocha.test("Null.forEach", () => {
+    Null.forEach("thing", x => {
       console.log(x);
     });
-    Nullable.forEach(null, x => {
-      console.log(x);
-    });
-    Nullable.forEach(undefined, x => {
+    Null.forEach(null, x => {
       console.log(x);
     });
   });
 });
 
-Mocha.describe("Nullable.getUnsafe", () => {
-  Mocha.test("Nullable.getUnsafe", () => {});
+Mocha.describe("Null.getUnsafe", () => {
+  Mocha.test("Null.getUnsafe", () => {});
 });
 
-Mocha.describe("Nullable.getExn", () => {
-  Mocha.test("Nullable.getExn", () => {
+Mocha.describe("Null.getExn", () => {
+  Mocha.test("Null.getExn", () => {
+    Pervasives.assertEqual(Null.getExn(3), 3);
     let exit = 0;
     let value;
     try {
-      value = Nullable.getExn('Hello');
+      value = Null.getExn('ReScript');
       exit = 1;
     } catch (raw_exn) {
       let exn = Primitive_exceptions.internalToException(raw_exn);
@@ -20997,9 +21045,9 @@ Mocha.describe("Nullable.getExn", () => {
         throw {
           RE_EXN_ID: "Assert_failure",
           _1: [
-            "mocha_full_test.res",
-            16165,
-            41
+            "generated_mocha_test.res",
+            15923,
+            35
           ],
           Error: new Error()
         };
@@ -21007,12 +21055,12 @@ Mocha.describe("Nullable.getExn", () => {
       throw exn;
     }
     if (exit === 1) {
-      Pervasives.assertEqual(value, "Hello");
+      Pervasives.assertEqual(value, "ReScript");
     }
     let exit$1 = 0;
     let val;
     try {
-      val = Nullable.getExn(null);
+      val = Null.getExn(null);
       exit$1 = 1;
     } catch (raw_exn$1) {
       let exn$1 = Primitive_exceptions.internalToException(raw_exn$1);
@@ -21025,32 +21073,9 @@ Mocha.describe("Nullable.getExn", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          16171,
-          13
-        ],
-        Error: new Error()
-      };
-    }
-    let exit$2 = 0;
-    let val$1;
-    try {
-      val$1 = Nullable.getExn(undefined);
-      exit$2 = 1;
-    } catch (raw_exn$2) {
-      let exn$2 = Primitive_exceptions.internalToException(raw_exn$2);
-      if (exn$2.RE_EXN_ID !== "Invalid_argument") {
-        throw exn$2;
-      }
-      
-    }
-    if (exit$2 === 1) {
-      throw {
-        RE_EXN_ID: "Assert_failure",
-        _1: [
-          "mocha_full_test.res",
-          16176,
-          13
+          "generated_mocha_test.res",
+          15929,
+          7
         ],
         Error: new Error()
       };
@@ -21059,71 +21084,46 @@ Mocha.describe("Nullable.getExn", () => {
   });
 });
 
-Mocha.describe("Nullable.getOr", () => {
-  Mocha.test("Nullable.getOr", () => {
-    Nullable.getOr(null, "Banana");
-    Nullable.getOr("Apple", "Banana");
+Mocha.describe("Null.getOr", () => {
+  Mocha.test("Null.getOr", () => {
+    Null.getOr(null, "Banana");
+    Null.getOr("Apple", "Banana");
     let greet = firstName => "Greetings " + Option.getOr(firstName, "Anonymous");
-    greet(Primitive_option.fromNullable("Jane"));
+    greet(Primitive_option.fromNull("Jane"));
     greet(undefined);
   });
 });
 
-Mocha.describe("Nullable.fromOption", () => {
-  Mocha.test("Nullable.fromOption", () => {
-    Nullable.fromOption("Hello");
+Mocha.describe("Null.fromOption", () => {
+  Mocha.test("Null.fromOption", () => {
+    let asNull = Null.fromOption(undefined);
+    console.log(asNull === null);
   });
 });
 
-Mocha.describe("Nullable.toOption", () => {
-  Mocha.test("Nullable.toOption", () => {
-    let nullableString = "Hello";
-    if (nullableString == null) {
+Mocha.describe("Null.toOption", () => {
+  Mocha.test("Null.toOption", () => {
+    let nullStr = "Hello";
+    if (nullStr !== null) {
+      console.log("Got string:", nullStr);
+    } else {
       console.log("Didn't have a value.");
-    } else {
-      console.log("Got string:", nullableString);
     }
   });
 });
 
-Mocha.describe("Nullable.make", () => {
-  Mocha.test("Nullable.make", () => {
-    let myStr = "Hello";
-    if ((myStr == null) || myStr !== myStr) {
-      console.log("Values did not match.");
-    } else {
-      console.log("Yay, values matched!");
-    }
-  });
+Mocha.describe("Null.make", () => {
+  Mocha.test("Null.make", () => {});
 });
 
-Mocha.describe("Nullable.isNullable", () => {
-  Mocha.test("Nullable.isNullable", () => {
-    if ("Hello" == null) {
-      throw {
-        RE_EXN_ID: "Assert_failure",
-        _1: [
-          "mocha_full_test.res",
-          16253,
-          16
-        ],
-        Error: new Error()
-      };
-    }
-    
-  });
-});
-
-Mocha.describe("Nullable.undefined", () => {
-  Mocha.test("Nullable.undefined", () => {
-    console.log(undefined);
-  });
-});
-
-Mocha.describe("Nullable.null", () => {
-  Mocha.test("Nullable.null", () => {
+Mocha.describe("Null.null", () => {
+  Mocha.test("Null.null", () => {
     console.log(null);
   });
+});
+
+Mocha.describe("Null.asNullable", () => {
+  Mocha.test("Null.asNullable", () => {});
 });
 
 Mocha.describe("Object.isExtensible", () => {
@@ -21180,9 +21180,9 @@ Mocha.describe("Object.freeze", () => {
         throw {
           RE_EXN_ID: "Assert_failure",
           _1: [
-            "mocha_full_test.res",
-            16326,
-            13
+            "generated_mocha_test.res",
+            16053,
+            7
           ],
           Error: new Error()
         };
@@ -21207,9 +21207,9 @@ Mocha.describe("Object.preventExtensions", () => {
         throw {
           RE_EXN_ID: "Assert_failure",
           _1: [
-            "mocha_full_test.res",
-            16343,
-            13
+            "generated_mocha_test.res",
+            16070,
+            7
           ],
           Error: new Error()
         };
@@ -21235,9 +21235,9 @@ Mocha.describe("Object.seal", () => {
         throw {
           RE_EXN_ID: "Assert_failure",
           _1: [
-            "mocha_full_test.res",
-            16361,
-            13
+            "generated_mocha_test.res",
+            16088,
+            7
           ],
           Error: new Error()
         };
@@ -21394,107 +21394,6 @@ Mocha.describe("Object.make", () => {
   });
 });
 
-Mocha.describe("Pervasives.assertEqual", () => {
-  Mocha.test("Pervasives.assertEqual", () => {
-    Pervasives.assertEqual(List.tailExn({
-      hd: 1,
-      tl: {
-        hd: 2,
-        tl: /* [] */0
-      }
-    }), {
-      hd: 2,
-      tl: /* [] */0
-    });
-  });
-});
-
-Mocha.describe("Pervasives.import", () => {
-  Mocha.test("Pervasives.import", () => {});
-});
-
-Mocha.describe("Pervasives.decodeURIComponent", () => {
-  Mocha.test("Pervasives.decodeURIComponent", () => {
-    console.log(decodeURIComponent("array%3D%5BsomeValue%5D"));
-  });
-});
-
-Mocha.describe("Pervasives.encodeURIComponent", () => {
-  Mocha.test("Pervasives.encodeURIComponent", () => {
-    console.log(encodeURIComponent("array=[someValue]"));
-  });
-});
-
-Mocha.describe("Pervasives.decodeURI", () => {
-  Mocha.test("Pervasives.decodeURI", () => {
-    console.log(decodeURI("https://rescript-lang.org?array=%5BsomeValue%5D"));
-  });
-});
-
-Mocha.describe("Pervasives.encodeURI", () => {
-  Mocha.test("Pervasives.encodeURI", () => {
-    console.log(encodeURI("https://rescript-lang.org?array=[someValue]"));
-  });
-});
-
-Mocha.describe("Pervasives.clearInterval", () => {
-  Mocha.test("Pervasives.clearInterval", () => {
-    let intervalId = setInterval(() => {
-      console.log("This prints in 100 ms");
-    }, 100);
-    setTimeout(() => {
-      clearInterval(intervalId);
-    }, 500);
-  });
-});
-
-Mocha.describe("Pervasives.setIntervalFloat", () => {
-  Mocha.test("Pervasives.setIntervalFloat", () => {
-    let intervalId = setInterval(() => {
-      console.log("This prints every 200 ms");
-    }, 200);
-    setTimeout(() => {
-      clearInterval(intervalId);
-    }, 500.0);
-  });
-});
-
-Mocha.describe("Pervasives.setInterval", () => {
-  Mocha.test("Pervasives.setInterval", () => {
-    let intervalId = setInterval(() => {
-      console.log("This prints every 200 ms.");
-    }, 200);
-    setTimeout(() => {
-      clearInterval(intervalId);
-    }, 500);
-  });
-});
-
-Mocha.describe("Pervasives.clearTimeout", () => {
-  Mocha.test("Pervasives.clearTimeout", () => {
-    let timeoutId = setTimeout(() => {
-      console.log("This prints in 2 seconds.");
-    }, 2000);
-    clearTimeout(timeoutId);
-  });
-});
-
-Mocha.describe("Pervasives.setTimeoutFloat", () => {
-  Mocha.test("Pervasives.setTimeoutFloat", () => {
-    setTimeout(() => {
-      console.log("This prints in 200 ms.");
-    }, 200);
-  });
-});
-
-Mocha.describe("Pervasives.setTimeout", () => {
-  Mocha.test("Pervasives.setTimeout", () => {
-    setTimeout(() => {
-      console.log("This prints in 200 ms.");
-    }, 200);
-  });
-});
-
 Mocha.describe("Option.all", () => {
   Mocha.test("Option.all", () => {
     Option.all([
@@ -21610,9 +21509,9 @@ Mocha.describe("Option.getExn", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          16819,
-          13
+          "generated_mocha_test.res",
+          16360,
+          7
         ],
         Error: new Error()
       };
@@ -21629,9 +21528,9 @@ Mocha.describe("Option.getExn", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          16824,
-          13
+          "generated_mocha_test.res",
+          16365,
+          7
         ],
         Error: new Error()
       };
@@ -21656,6 +21555,300 @@ Mocha.describe("Option.filter", () => {
     Option.filter(10, x => x > 5);
     Option.filter(4, x => x > 5);
     Option.filter(undefined, x => x > 5);
+  });
+});
+
+Mocha.describe("Pervasives.assertEqual", () => {
+  Mocha.test("Pervasives.assertEqual", () => {
+    Pervasives.assertEqual(List.tailExn({
+      hd: 1,
+      tl: {
+        hd: 2,
+        tl: /* [] */0
+      }
+    }), {
+      hd: 2,
+      tl: /* [] */0
+    });
+  });
+});
+
+Mocha.describe("Pervasives.import", () => {
+  Mocha.test("Pervasives.import", () => {});
+});
+
+Mocha.describe("Pervasives.decodeURIComponent", () => {
+  Mocha.test("Pervasives.decodeURIComponent", () => {
+    console.log(decodeURIComponent("array%3D%5BsomeValue%5D"));
+  });
+});
+
+Mocha.describe("Pervasives.encodeURIComponent", () => {
+  Mocha.test("Pervasives.encodeURIComponent", () => {
+    console.log(encodeURIComponent("array=[someValue]"));
+  });
+});
+
+Mocha.describe("Pervasives.decodeURI", () => {
+  Mocha.test("Pervasives.decodeURI", () => {
+    console.log(decodeURI("https://rescript-lang.org?array=%5BsomeValue%5D"));
+  });
+});
+
+Mocha.describe("Pervasives.encodeURI", () => {
+  Mocha.test("Pervasives.encodeURI", () => {
+    console.log(encodeURI("https://rescript-lang.org?array=[someValue]"));
+  });
+});
+
+Mocha.describe("Pervasives.clearInterval", () => {
+  Mocha.test("Pervasives.clearInterval", () => {
+    let intervalId = setInterval(() => {
+      console.log("This prints in 100 ms");
+    }, 100);
+    setTimeout(() => {
+      clearInterval(intervalId);
+    }, 500);
+  });
+});
+
+Mocha.describe("Pervasives.setIntervalFloat", () => {
+  Mocha.test("Pervasives.setIntervalFloat", () => {
+    let intervalId = setInterval(() => {
+      console.log("This prints every 200 ms");
+    }, 200);
+    setTimeout(() => {
+      clearInterval(intervalId);
+    }, 500.0);
+  });
+});
+
+Mocha.describe("Pervasives.setInterval", () => {
+  Mocha.test("Pervasives.setInterval", () => {
+    let intervalId = setInterval(() => {
+      console.log("This prints every 200 ms.");
+    }, 200);
+    setTimeout(() => {
+      clearInterval(intervalId);
+    }, 500);
+  });
+});
+
+Mocha.describe("Pervasives.clearTimeout", () => {
+  Mocha.test("Pervasives.clearTimeout", () => {
+    let timeoutId = setTimeout(() => {
+      console.log("This prints in 2 seconds.");
+    }, 2000);
+    clearTimeout(timeoutId);
+  });
+});
+
+Mocha.describe("Pervasives.setTimeoutFloat", () => {
+  Mocha.test("Pervasives.setTimeoutFloat", () => {
+    setTimeout(() => {
+      console.log("This prints in 200 ms.");
+    }, 200);
+  });
+});
+
+Mocha.describe("Pervasives.setTimeout", () => {
+  Mocha.test("Pervasives.setTimeout", () => {
+    setTimeout(() => {
+      console.log("This prints in 200 ms.");
+    }, 200);
+  });
+});
+
+Mocha.describe("Promise.allSettled", () => {
+  Mocha.test("Promise.allSettled", () => {
+    let TestError = /* @__PURE__ */Primitive_exceptions.create("TestError");
+    let promises = [
+      Promise.resolve(1),
+      Promise.resolve(2),
+      Promise.reject({
+        RE_EXN_ID: TestError,
+        _1: "some rejected promise"
+      })
+    ];
+    Promise.allSettled(promises).then(results => {
+      results.forEach(result => {
+        if (result.status === "fulfilled") {
+          console.log("Number: ", result.value);
+          return;
+        }
+        console.log(result.reason);
+      });
+      return Promise.resolve();
+    });
+  });
+});
+
+Mocha.describe("Promise.all", () => {
+  Mocha.test("Promise.all", () => {
+    let promises = [
+      Promise.resolve(1),
+      Promise.resolve(2),
+      Promise.resolve(3)
+    ];
+    Promise.all(promises).then(results => {
+      results.forEach(num => {
+        console.log("Number: ", num);
+      });
+      return Promise.resolve();
+    });
+  });
+});
+
+Mocha.describe("Promise.any", () => {
+  Mocha.test("Promise.any", () => {
+    let racer = (ms, name) => new Promise((resolve, param) => {
+      setTimeout(() => resolve(name), ms);
+    });
+    let promises = [
+      racer(1000, "Turtle"),
+      racer(500, "Hare"),
+      racer(100, "Eagle")
+    ];
+    Promise.any(promises).then(winner => {
+      console.log("The winner is " + winner);
+      return Promise.resolve();
+    });
+  });
+});
+
+Mocha.describe("Promise.race", () => {
+  Mocha.test("Promise.race", () => {
+    let racer = (ms, name) => new Promise((resolve, param) => {
+      setTimeout(() => resolve(name), ms);
+    });
+    let promises = [
+      racer(1000, "Turtle"),
+      racer(500, "Hare"),
+      racer(100, "Eagle")
+    ];
+    Promise.race(promises).then(winner => {
+      console.log("The winner is " + winner);
+      return Promise.resolve();
+    });
+  });
+});
+
+Mocha.describe("Promise.finally", () => {
+  Mocha.test("Promise.finally", () => {
+    let SomeError = /* @__PURE__ */Primitive_exceptions.create("SomeError");
+    let isDone = {
+      contents: false
+    };
+    $$Promise.$$catch(Promise.resolve(5).then(param => Promise.reject({
+      RE_EXN_ID: SomeError,
+      _1: "test"
+    })).then(v => {
+      console.log("final result", v);
+      return Promise.resolve();
+    }), param => {
+      console.log("Error handled");
+      return Promise.resolve();
+    }).finally(() => {
+      console.log("finally");
+      isDone.contents = true;
+    }).then(() => {
+      console.log("isDone:", isDone.contents);
+      return Promise.resolve();
+    });
+  });
+});
+
+Mocha.describe("Promise.thenResolve", () => {
+  Mocha.test("Promise.thenResolve", () => {
+    Promise.resolve("Anna").then(str => "Hello " + str).then(str => {
+      console.log(str);
+    });
+  });
+});
+
+Mocha.describe("Promise.then", () => {
+  Mocha.test("Promise.then", () => {
+    Promise.resolve(5).then(num => Promise.resolve(num + 5 | 0)).then(num => {
+      console.log("Your lucky number is: ", num);
+      return Promise.resolve();
+    });
+  });
+});
+
+Mocha.describe("Promise.catch", () => {
+  Mocha.test("Promise.catch", () => {
+    let SomeError = /* @__PURE__ */Primitive_exceptions.create("SomeError");
+    $$Promise.$$catch(Promise.reject({
+      RE_EXN_ID: SomeError,
+      _1: "this is an error"
+    }).then(param => Promise.resolve({
+      TAG: "Ok",
+      _0: "This result will never be returned"
+    })), e => {
+      let msg;
+      if (e.RE_EXN_ID === SomeError) {
+        msg = "ReScript error occurred: " + e._1;
+      } else if (e.RE_EXN_ID === Exn.$$Error) {
+        let msg$1 = e._1.message;
+        msg = msg$1 !== undefined ? "JS exception occurred: " + msg$1 : "Some other JS value has been thrown";
+      } else {
+        msg = "Unexpected error occurred";
+      }
+      return Promise.resolve({
+        TAG: "Error",
+        _0: msg
+      });
+    }).then(result => {
+      let tmp;
+      if (result.TAG === "Ok") {
+        console.log("Operation successful: ", result._0);
+        tmp = undefined;
+      } else {
+        console.log("Operation failed: ", result._0);
+        tmp = undefined;
+      }
+      return Promise.resolve(tmp);
+    });
+  });
+});
+
+Mocha.describe("Promise.make", () => {
+  Mocha.test("Promise.make", () => {
+    $$Promise.$$catch(new Promise((resolve, reject) => resolve("success")).then(str => Promise.resolve((console.log(str), undefined))), param => {
+      console.log("Error occurred");
+      return Promise.resolve();
+    });
+  });
+});
+
+Mocha.describe("Promise.reject", () => {
+  Mocha.test("Promise.reject", () => {
+    let TestError = /* @__PURE__ */Primitive_exceptions.create("TestError");
+    $$Promise.$$catch(Promise.reject({
+      RE_EXN_ID: TestError,
+      _1: "some rejected value"
+    }), v => {
+      if (v.RE_EXN_ID === TestError) {
+        Pervasives.assertEqual(v._1, "some rejected value");
+      } else {
+        throw {
+          RE_EXN_ID: "Assert_failure",
+          _1: [
+            "generated_mocha_test.res",
+            16787,
+            9
+          ],
+          Error: new Error()
+        };
+      }
+      return Promise.resolve();
+    });
+  });
+});
+
+Mocha.describe("Promise.resolve", () => {
+  Mocha.test("Promise.resolve", () => {
+    Promise.resolve(5);
   });
 });
 
@@ -22027,199 +22220,6 @@ Mocha.describe("Result.mapOr", () => {
       TAG: "Error",
       _0: "Invalid data"
     }, 0, x => x / 2 | 0) === 0;
-  });
-});
-
-Mocha.describe("Promise.allSettled", () => {
-  Mocha.test("Promise.allSettled", () => {
-    let TestError = /* @__PURE__ */Primitive_exceptions.create("TestError");
-    let promises = [
-      Promise.resolve(1),
-      Promise.resolve(2),
-      Promise.reject({
-        RE_EXN_ID: TestError,
-        _1: "some rejected promise"
-      })
-    ];
-    Promise.allSettled(promises).then(results => {
-      results.forEach(result => {
-        if (result.status === "fulfilled") {
-          console.log("Number: ", result.value);
-          return;
-        }
-        console.log(result.reason);
-      });
-      return Promise.resolve();
-    });
-  });
-});
-
-Mocha.describe("Promise.all", () => {
-  Mocha.test("Promise.all", () => {
-    let promises = [
-      Promise.resolve(1),
-      Promise.resolve(2),
-      Promise.resolve(3)
-    ];
-    Promise.all(promises).then(results => {
-      results.forEach(num => {
-        console.log("Number: ", num);
-      });
-      return Promise.resolve();
-    });
-  });
-});
-
-Mocha.describe("Promise.any", () => {
-  Mocha.test("Promise.any", () => {
-    let racer = (ms, name) => new Promise((resolve, param) => {
-      setTimeout(() => resolve(name), ms);
-    });
-    let promises = [
-      racer(1000, "Turtle"),
-      racer(500, "Hare"),
-      racer(100, "Eagle")
-    ];
-    Promise.any(promises).then(winner => {
-      console.log("The winner is " + winner);
-      return Promise.resolve();
-    });
-  });
-});
-
-Mocha.describe("Promise.race", () => {
-  Mocha.test("Promise.race", () => {
-    let racer = (ms, name) => new Promise((resolve, param) => {
-      setTimeout(() => resolve(name), ms);
-    });
-    let promises = [
-      racer(1000, "Turtle"),
-      racer(500, "Hare"),
-      racer(100, "Eagle")
-    ];
-    Promise.race(promises).then(winner => {
-      console.log("The winner is " + winner);
-      return Promise.resolve();
-    });
-  });
-});
-
-Mocha.describe("Promise.finally", () => {
-  Mocha.test("Promise.finally", () => {
-    let SomeError = /* @__PURE__ */Primitive_exceptions.create("SomeError");
-    let isDone = {
-      contents: false
-    };
-    $$Promise.$$catch(Promise.resolve(5).then(param => Promise.reject({
-      RE_EXN_ID: SomeError,
-      _1: "test"
-    })).then(v => {
-      console.log("final result", v);
-      return Promise.resolve();
-    }), param => {
-      console.log("Error handled");
-      return Promise.resolve();
-    }).finally(() => {
-      console.log("finally");
-      isDone.contents = true;
-    }).then(() => {
-      console.log("isDone:", isDone.contents);
-      return Promise.resolve();
-    });
-  });
-});
-
-Mocha.describe("Promise.thenResolve", () => {
-  Mocha.test("Promise.thenResolve", () => {
-    Promise.resolve("Anna").then(str => "Hello " + str).then(str => {
-      console.log(str);
-    });
-  });
-});
-
-Mocha.describe("Promise.then", () => {
-  Mocha.test("Promise.then", () => {
-    Promise.resolve(5).then(num => Promise.resolve(num + 5 | 0)).then(num => {
-      console.log("Your lucky number is: ", num);
-      return Promise.resolve();
-    });
-  });
-});
-
-Mocha.describe("Promise.catch", () => {
-  Mocha.test("Promise.catch", () => {
-    let SomeError = /* @__PURE__ */Primitive_exceptions.create("SomeError");
-    $$Promise.$$catch(Promise.reject({
-      RE_EXN_ID: SomeError,
-      _1: "this is an error"
-    }).then(param => Promise.resolve({
-      TAG: "Ok",
-      _0: "This result will never be returned"
-    })), e => {
-      let msg;
-      if (e.RE_EXN_ID === SomeError) {
-        msg = "ReScript error occurred: " + e._1;
-      } else if (e.RE_EXN_ID === Exn.$$Error) {
-        let msg$1 = e._1.message;
-        msg = msg$1 !== undefined ? "JS exception occurred: " + msg$1 : "Some other JS value has been thrown";
-      } else {
-        msg = "Unexpected error occurred";
-      }
-      return Promise.resolve({
-        TAG: "Error",
-        _0: msg
-      });
-    }).then(result => {
-      let tmp;
-      if (result.TAG === "Ok") {
-        console.log("Operation successful: ", result._0);
-        tmp = undefined;
-      } else {
-        console.log("Operation failed: ", result._0);
-        tmp = undefined;
-      }
-      return Promise.resolve(tmp);
-    });
-  });
-});
-
-Mocha.describe("Promise.make", () => {
-  Mocha.test("Promise.make", () => {
-    $$Promise.$$catch(new Promise((resolve, reject) => resolve("success")).then(str => Promise.resolve((console.log(str), undefined))), param => {
-      console.log("Error occurred");
-      return Promise.resolve();
-    });
-  });
-});
-
-Mocha.describe("Promise.reject", () => {
-  Mocha.test("Promise.reject", () => {
-    let TestError = /* @__PURE__ */Primitive_exceptions.create("TestError");
-    $$Promise.$$catch(Promise.reject({
-      RE_EXN_ID: TestError,
-      _1: "some rejected value"
-    }), v => {
-      if (v.RE_EXN_ID === TestError) {
-        Pervasives.assertEqual(v._1, "some rejected value");
-      } else {
-        throw {
-          RE_EXN_ID: "Assert_failure",
-          _1: [
-            "mocha_full_test.res",
-            17495,
-            17
-          ],
-          Error: new Error()
-        };
-      }
-      return Promise.resolve();
-    });
-  });
-});
-
-Mocha.describe("Promise.resolve", () => {
-  Mocha.test("Promise.resolve", () => {
-    Promise.resolve(5);
   });
 });
 
@@ -22606,9 +22606,9 @@ Mocha.describe("String.normalize", () => {
       throw {
         RE_EXN_ID: "Assert_failure",
         _1: [
-          "mocha_full_test.res",
-          18018,
-          6
+          "generated_mocha_test.res",
+          17658,
+          0
         ],
         Error: new Error()
       };
