@@ -14,6 +14,7 @@ import * as ArrayUtils from "./ArrayUtils.res.mjs";
 import * as Belt_Array from "rescript/lib/es6/Belt_Array.js";
 import * as Pervasives from "rescript/lib/es6/Pervasives.js";
 import * as SpawnAsync from "./SpawnAsync.res.mjs";
+import * as Primitive_object from "rescript/lib/es6/Primitive_object.js";
 import * as Promises from "node:fs/promises";
 import * as Primitive_exceptions from "rescript/lib/es6/Primitive_exceptions.js";
 import * as RescriptTools_Docgen from "rescript/lib/es6/RescriptTools_Docgen.js";
@@ -216,7 +217,7 @@ async function extractExamples() {
 async function main() {
   let examples = await extractExamples();
   examples.sort((a, b) => {
-    if (a.id.length > b.id.length) {
+    if (Primitive_object.greaterthan(a.id, b.id)) {
       return Ordering.fromInt(1);
     } else {
       return Ordering.fromInt(-1);
