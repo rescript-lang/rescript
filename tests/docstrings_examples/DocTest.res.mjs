@@ -3,33 +3,32 @@
 import * as Fs from "fs";
 import * as Os from "os";
 import * as Exn from "rescript/lib/es6/Exn.js";
+import * as Url from "url";
 import * as List from "rescript/lib/es6/List.js";
 import * as Path from "path";
 import * as $$Array from "rescript/lib/es6/Array.js";
 import * as $$Error from "rescript/lib/es6/Error.js";
 import * as Belt_List from "rescript/lib/es6/Belt_List.js";
-import * as Nodeutil from "node:util";
 import * as ArrayUtils from "./ArrayUtils.res.mjs";
 import * as Belt_Array from "rescript/lib/es6/Belt_Array.js";
 import * as Pervasives from "rescript/lib/es6/Pervasives.js";
 import * as SpawnAsync from "./SpawnAsync.res.mjs";
+import * as Promises from "node:fs/promises";
 import * as Primitive_exceptions from "rescript/lib/es6/Primitive_exceptions.js";
 import * as RescriptTools_Docgen from "rescript/lib/es6/RescriptTools_Docgen.js";
 
-let bscBin = Path.join("cli", "bsc");
-
-let parsed = Nodeutil.parseArgs({
-  args: process.argv.slice(2),
-  options: {
-    "ignore-runtime-tests": {
-      type: "string"
-    }
-  }
-});
-
-let v = parsed.values["ignore-runtime-tests"];
-
-let ignoreRuntimeTests = v !== undefined ? v.split(",").map(s => s.trim()) : [];
+let ignoreRuntimeTests = [
+  "Array.toReversed",
+  "Array.toSorted",
+  "Promise.withResolvers",
+  "Set.union",
+  "Set.isSupersetOf",
+  "Set.isSubsetOf",
+  "Set.isDisjointFrom",
+  "Set.intersection",
+  "Set.symmetricDifference",
+  "Set.difference"
+];
 
 function getOutput(buffer) {
   return buffer.map(e => e.toString()).join("");
@@ -52,7 +51,7 @@ async function extractDocFromFile(file) {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "DocTest.res",
-        48,
+        43,
         9
       ],
       Error: new Error()
@@ -213,174 +212,23 @@ async function extractExamples() {
   return examples;
 }
 
-async function compileTest(code) {
-  let args = [
-    "-w",
-    "-3-109-44",
-    "-e",
-    code
-  ];
-  let match = await SpawnAsync.run(bscBin, args, undefined);
-  let stderr = match.stderr;
-  if (stderr.length > 0) {
-    return {
-      TAG: "Error",
-      _0: getOutput(stderr)
-    };
-  } else {
-    return {
-      TAG: "Ok",
-      _0: getOutput(match.stdout)
-    };
-  }
-}
-
-async function compileExamples(examples) {
-  console.log("Compiling " + examples.length.toString() + " examples from docstrings...");
-  let compiled = [];
-  let compilationErrors = [];
-  await ArrayUtils.forEachAsyncInBatches(examples, batchSize, async example => {
-    let rescriptCode = getCodeBlocks(example);
-    let jsCode = await compileTest(rescriptCode);
-    if (jsCode.TAG === "Ok") {
-      compiled.push([
-        example,
-        rescriptCode,
-        jsCode._0
-      ]);
-      return;
-    }
-    compilationErrors.push([
-      example,
-      {
-        TAG: "ReScriptError",
-        _0: jsCode._0
-      }
-    ]);
-  });
-  return [
-    compiled,
-    compilationErrors
-  ];
-}
-
-async function runTest(code) {
-  let match = await SpawnAsync.run("node", [
-    "-e",
-    code,
-    "--input-type",
-    "commonjs"
-  ], {
-    cwd: process.cwd(),
-    timeout: 2000
-  });
-  let exitCode = match.code;
-  let stderr = match.stderr;
-  let stdout = match.stdout;
-  let std;
-  let exit = 0;
-  if (exitCode !== null) {
-    if (exitCode === 0.0 && stderr.length > 0) {
-      std = {
-        TAG: "Ok",
-        _0: stderr
-      };
-    } else if (exitCode === 0.0) {
-      std = {
-        TAG: "Ok",
-        _0: stdout
-      };
-    } else {
-      exit = 1;
-    }
-  } else {
-    exit = 1;
-  }
-  if (exit === 1) {
-    std = {
-      TAG: "Error",
-      _0: stderr.length > 0 ? stderr : stdout
-    };
-  }
-  if (std.TAG === "Ok") {
-    return {
-      TAG: "Ok",
-      _0: getOutput(std._0)
-    };
-  } else {
-    return {
-      TAG: "Error",
-      _0: getOutput(std._0)
-    };
-  }
-}
-
-async function runExamples(compiled) {
-  console.log("Running " + compiled.length.toString() + " compiled examples...");
-  let tests = compiled.filter(param => !ignoreRuntimeTests.includes(param[0].id));
-  let runtimeErrors = [];
-  await ArrayUtils.forEachAsyncInBatches(tests, batchSize, async compiled => {
-    let jsCode = compiled[2];
-    let error = await runTest(jsCode);
-    if (error.TAG === "Ok") {
-      return;
-    }
-    let runtimeError_0 = compiled[1];
-    let runtimeError_2 = error._0;
-    let runtimeError = {
-      TAG: "RuntimeError",
-      rescript: runtimeError_0,
-      js: jsCode,
-      error: runtimeError_2
-    };
-    runtimeErrors.push([
-      compiled[0],
-      runtimeError
-    ]);
-  });
-  return runtimeErrors;
-}
-
-function indentOutputCode(code) {
-  let indent = " ".repeat(2);
-  return code.split("\n").map(s => indent + s).join("\n");
-}
-
-function printErrors(errors) {
-  errors.forEach(param => {
-    let errors = param[1];
-    let example = param[0];
-    let cyan = s => "\x1b[36m" + s + "\x1b[0m";
-    let other = example.kind;
-    let kind = other === "moduleAlias" ? "module alias" : other;
-    let a;
-    if (errors.TAG === "ReScriptError") {
-      let err = errors._0.split("\n").filter((param, i) => i !== 2).join("\n");
-      a = "\x1B[1;31merror\x1B[0m: failed to compile examples from " + kind + " " + cyan(example.id) + "\n" + err;
-    } else {
-      let indent = " ".repeat(2);
-      a = "\x1B[1;31mruntime error\x1B[0m: failed to run examples from " + kind + " " + cyan(example.id) + "\n\n" + indent + "\x1b[36mReScript\x1b[0m\n\n" + indentOutputCode(errors.rescript) + "\n\n" + indent + "\x1b[36mCompiled Js\x1b[0m\n\n" + indentOutputCode(errors.js) + "\n\n" + indent + "\x1B[1;31mstacktrace\x1B[0m\n\n" + indentOutputCode(errors.error) + "\n";
-    }
-    process.stderr.write(a);
-  });
-}
-
 async function main() {
   let examples = await extractExamples();
-  let match = await compileExamples(examples);
-  let runtimeErrors = await runExamples(match[0]);
-  let allErrors = runtimeErrors.concat(match[1]);
-  if (allErrors.length > 0) {
-    printErrors(allErrors);
-    return 1;
-  } else {
-    console.log("All examples passed successfully");
-    return 0;
-  }
+  let testsContent = $$Array.filterMap(examples, example => {
+    let codeExamples = getCodeBlocks(example);
+    let ignore = ignoreRuntimeTests.includes(example.id);
+    if (codeExamples.length === 0 || ignore) {
+      return;
+    } else {
+      return "describe(\"" + example.id + "\", () => {\n  test(\"" + example.id + "\", () => {\n    module Test = {\n      " + codeExamples + "\n    }\n    ()\n  })\n})";
+    }
+  }).join("\n\n");
+  let dirname = Path.dirname(Url.fileURLToPath(import.meta.url));
+  let filepath = Path.join(dirname, "mocha_full_test.res");
+  let fileContent = "open Mocha\n@@warning(\"-32-34-60-37-109-3-44\")\n\n" + testsContent;
+  return await Promises.writeFile(filepath, fileContent);
 }
 
-let exitCode = await main();
+await main();
 
-process.exit(exitCode);
-
-/* bscBin Not a pure module */
+/* batchSize Not a pure module */

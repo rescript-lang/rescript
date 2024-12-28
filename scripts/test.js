@@ -34,12 +34,12 @@ if (process.argv.includes("-docstrings")) {
   runtimeDocstrings = true;
 }
 
+// -all dont include runtimeDocstrings
 if (process.argv.includes("-all")) {
   ounitTest = true;
   mochaTest = true;
   bsbTest = true;
   formatTest = true;
-  runtimeDocstrings = true;
 }
 
 async function runTests() {
@@ -136,14 +136,15 @@ async function runTests() {
         cwd: path.join(__dirname, "..", "tests/docstrings_examples"),
         stdio: [0, 1, 2],
       });
-      // Ignore some tests not supported by node v18
-      // cp.execSync(
-      //   `node ${path.join("tests", "docstrings_examples", "DocTest.res.mjs")} --ignore-runtime-tests "Array.toReversed, Array.toSorted, Promise.withResolvers, Set.union, Set.isSupersetOf, Set.isSubsetOf, Set.isDisjointFrom, Set.intersection, Set.symmetricDifference, Set.difference"`,
-      //   {
-      //     cwd: path.join(__dirname, ".."),
-      //     stdio: [0, 1, 2],
-      //   },
-      // );
+      // Format file
+      cp.execSync("./cli/rescript format tests/docstrings_examples/mocha_full_test.res", {
+        cwd: path.join(__dirname, ".."),
+        stdio: [0, 1, 2],
+      })
+      cp.execSync(`npx mocha tests/docstrings_examples/mocha_full_test.res.mjs`, {
+        cwd: path.join(__dirname, ".."),
+        stdio: [0, 1, 2],
+      });
     }
   }
 }

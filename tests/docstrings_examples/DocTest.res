@@ -9,24 +9,19 @@ type example = {
   docstrings: array<string>,
 }
 
-type error =
-  | ReScriptError(string)
-  | RuntimeError({rescript: string, js: string, error: string})
-
-let bscBin = Path.join(["cli", "bsc"])
-
-let parsed = Util.parseArgs({
-  args: Process.argv->Array.sliceToEnd(~start=2),
-  options: dict{"ignore-runtime-tests": {Util.type_: "string"}},
-})
-
-let ignoreRuntimeTests = switch parsed.values->Dict.get("ignore-runtime-tests") {
-| Some(v) =>
-  v
-  ->String.split(",")
-  ->Array.map(s => s->String.trim)
-| None => []
-}
+// Ignore some tests not supported by node v18
+let ignoreRuntimeTests = [
+  "Array.toReversed",
+  "Array.toSorted",
+  "Promise.withResolvers",
+  "Set.union",
+  "Set.isSupersetOf",
+  "Set.isSubsetOf",
+  "Set.isDisjointFrom",
+  "Set.intersection",
+  "Set.symmetricDifference",
+  "Set.difference",
+]
 
 let getOutput = buffer =>
   buffer
@@ -158,142 +153,42 @@ let extractExamples = async () => {
   examples
 }
 
-let compileTest = async (~code) => {
-  // NOTE: warnings argument (-w) should be before eval (-e) argument
-  let args = ["-w", "-3-109-44", "-e", code]
-  let {stderr, stdout} = await SpawnAsync.run(~command=bscBin, ~args)
-
-  stderr->Array.length > 0 ? Error(stderr->getOutput) : Ok(stdout->getOutput)
-}
-
-let compileExamples = async examples => {
-  Console.log(`Compiling ${examples->Array.length->Int.toString} examples from docstrings...`)
-
-  let compiled = []
-  let compilationErrors = []
-
-  await examples->ArrayUtils.forEachAsyncInBatches(~batchSize, async example => {
-    // let id = example.id->String.replaceAll(".", "__")
-    let rescriptCode = example->getCodeBlocks
-
-    switch await compileTest(~code=rescriptCode) {
-    | Ok(jsCode) => compiled->Array.push((example, rescriptCode, jsCode))
-    | Error(err) => compilationErrors->Array.push((example, ReScriptError(err)))
-    }
-  })
-
-  (compiled, compilationErrors)
-}
-
-let runTest = async code => {
-  let {stdout, stderr, code: exitCode} = await SpawnAsync.run(
-    ~command="node",
-    ~args=["-e", code, "--input-type", "commonjs"],
-    ~options={cwd: Process.cwd(), timeout: 2000},
-  )
-
-  // Some expressions, like `console.error("error")` are printed to stderr,
-  // but exit code is 0
-  let std = switch exitCode->Null.toOption {
-  | Some(exitCode) if exitCode == 0.0 && Array.length(stderr) > 0 => stderr->Ok
-  | Some(exitCode) if exitCode == 0.0 => stdout->Ok
-  | None | Some(_) => Error(Array.length(stderr) > 0 ? stderr : stdout)
-  }
-
-  switch std {
-  | Ok(buf) => Ok(buf->getOutput)
-  | Error(buf) => Error(buf->getOutput)
-  }
-}
-
-let runExamples = async compiled => {
-  Console.log(`Running ${compiled->Array.length->Int.toString} compiled examples...`)
-
-  let tests = compiled->Array.filter((({id}, _, _)) => !(ignoreRuntimeTests->Array.includes(id)))
-
-  let runtimeErrors = []
-  await tests->ArrayUtils.forEachAsyncInBatches(~batchSize, async compiled => {
-    let (example, rescriptCode, jsCode) = compiled
-
-    switch await runTest(jsCode) {
-    | Ok(_) => ()
-    | Error(error) =>
-      let runtimeError = RuntimeError({rescript: rescriptCode, js: jsCode, error})
-      runtimeErrors->Array.push((example, runtimeError))
-    }
-  })
-
-  runtimeErrors
-}
-
-let indentOutputCode = code => {
-  let indent = String.repeat(" ", 2)
-
-  code
-  ->String.split("\n")
-  ->Array.map(s => `${indent}${s}`)
-  ->Array.join("\n")
-}
-
-let printErrors = errors => {
-  errors->Array.forEach(((example, errors)) => {
-    let red = s => `\x1B[1;31m${s}\x1B[0m`
-    let cyan = s => `\x1b[36m${s}\x1b[0m`
-    let kind = switch example.kind {
-    | "moduleAlias" => "module alias"
-    | other => other
-    }
-
-    let a = switch errors {
-    | ReScriptError(error) =>
-      let err =
-        error
-        ->String.split("\n")
-        // Drop line of filename
-        ->Array.filterWithIndex((_, i) => i !== 2)
-        ->Array.join("\n")
-
-      `${"error"->red}: failed to compile examples from ${kind} ${example.id->cyan}
-${err}`
-    | RuntimeError({rescript, js, error}) =>
-      let indent = String.repeat(" ", 2)
-
-      `${"runtime error"->red}: failed to run examples from ${kind} ${example.id->cyan}
-
-${indent}${"ReScript"->cyan}
-
-${rescript->indentOutputCode}
-
-${indent}${"Compiled Js"->cyan}
-
-${js->indentOutputCode}
-
-${indent}${"stacktrace"->red}
-
-${error->indentOutputCode}
-`
-    }
-
-    Process.stderrWrite(a)
-  })
-}
-
 let main = async () => {
   let examples = await extractExamples()
-  let (compiled, compilationErrors) = await compileExamples(examples)
-  let runtimeErrors = await runExamples(compiled)
+  let testsContent =
+    examples
+    ->Array.filterMap(example => {
+      let codeExamples = getCodeBlocks(example)
 
-  let allErrors = Array.concat(runtimeErrors, compilationErrors)
+      let ignore = Array.includes(ignoreRuntimeTests, example.id)
 
-  if allErrors->Array.length > 0 {
-    printErrors(allErrors)
-    1
-  } else {
-    Console.log("All examples passed successfully")
-    0
-  }
+      switch String.length(codeExamples) == 0 {
+      | true => None
+      | false =>
+        ignore
+          ? None
+          : Some(
+              `describe("${example.id}", () => {
+  test("${example.id}", () => {
+    module Test = {
+      ${codeExamples}
+    }
+    ()
+  })
+})`,
+            )
+      }
+    })
+    ->Array.join("\n\n")
+
+  let dirname = url->URL.fileURLToPath->Path.dirname
+  let filepath = Path.join([dirname, "mocha_full_test.res"])
+  let fileContent = `open Mocha
+@@warning("-32-34-60-37-109-3-44")
+
+${testsContent}`
+
+  await Fs.writeFile(filepath, fileContent)
 }
 
-let exitCode = await main()
-
-Process.exit(exitCode)
+let () = await main()

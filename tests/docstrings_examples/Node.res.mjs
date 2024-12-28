@@ -15,6 +15,8 @@ let OS = {};
 
 let Util = {};
 
+let URL = {};
+
 export {
   Path,
   Process,
@@ -23,5 +25,6 @@ export {
   ChildProcess,
   OS,
   Util,
+  URL,
 }
 /* No side effect */

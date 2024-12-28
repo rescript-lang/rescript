@@ -1,6 +1,7 @@
 module Path = {
   @module("path") external join2: (string, string) => string = "join"
   @module("path") @variadic external join: array<string> => string = "join"
+  @module("path") external dirname: string => string = "dirname"
 }
 
 module Process = {
@@ -63,3 +64,9 @@ module Util = {
   }
   @module("node:util") external parseArgs: config => parsed = "parseArgs"
 }
+
+module URL = {
+  @module("url") external fileURLToPath: string => string = "fileURLToPath"
+}
+
+@val @scope(("import", "meta")) external url: string = "url"
