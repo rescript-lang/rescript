@@ -155,6 +155,9 @@ let extractExamples = async () => {
 
 let main = async () => {
   let examples = await extractExamples()
+  examples->Array.sort((a, b) =>
+    String.length(a.id) > String.length(b.id) ? Ordering.fromInt(1) : Ordering.fromInt(-1)
+  )
   let testsContent =
     examples
     ->Array.filterMap(example => {

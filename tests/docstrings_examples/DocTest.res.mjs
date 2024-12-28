@@ -8,6 +8,7 @@ import * as List from "rescript/lib/es6/List.js";
 import * as Path from "path";
 import * as $$Array from "rescript/lib/es6/Array.js";
 import * as $$Error from "rescript/lib/es6/Error.js";
+import * as Ordering from "rescript/lib/es6/Ordering.js";
 import * as Belt_List from "rescript/lib/es6/Belt_List.js";
 import * as ArrayUtils from "./ArrayUtils.res.mjs";
 import * as Belt_Array from "rescript/lib/es6/Belt_Array.js";
@@ -214,6 +215,13 @@ async function extractExamples() {
 
 async function main() {
   let examples = await extractExamples();
+  examples.sort((a, b) => {
+    if (a.id.length > b.id.length) {
+      return Ordering.fromInt(1);
+    } else {
+      return Ordering.fromInt(-1);
+    }
+  });
   let testsContent = $$Array.filterMap(examples, example => {
     let codeExamples = getCodeBlocks(example);
     let ignore = ignoreRuntimeTests.includes(example.id);
