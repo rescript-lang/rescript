@@ -13,8 +13,6 @@ let ChildProcess = {};
 
 let OS = {};
 
-let Util = {};
-
 let URL = {};
 
 export {
@@ -24,7 +22,6 @@ export {
   Buffer,
   ChildProcess,
   OS,
-  Util,
   URL,
 }
 /* No side effect */
