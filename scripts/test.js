@@ -128,24 +128,24 @@ async function runTests() {
   }
 
   if (runtimeDocstrings) {
-    if (process.platform === "win32") {
-      console.log(`Skipping docstrings tests on ${process.platform}`);
-    } else {
-      console.log("Running runtime docstrings tests");
-      cp.execSync(`${rescript_exe} build`, {
-        cwd: path.join(__dirname, "..", "tests/docstrings_examples"),
-        stdio: [0, 1, 2],
-      });
-      // Format file
-      cp.execSync("./cli/rescript format tests/docstrings_examples/mocha_full_test.res", {
-        cwd: path.join(__dirname, ".."),
-        stdio: [0, 1, 2],
-      })
-      cp.execSync(`npx mocha tests/docstrings_examples/mocha_full_test.res.mjs`, {
-        cwd: path.join(__dirname, ".."),
-        stdio: [0, 1, 2],
-      });
-    }
+    // if (process.platform === "win32") {
+    //   console.log(`Skipping docstrings tests on ${process.platform}`);
+    // } else {
+    console.log("Running runtime docstrings tests");
+    cp.execSync(`${rescript_exe} build`, {
+      cwd: path.join(__dirname, "..", "tests/docstrings_examples"),
+      stdio: [0, 1, 2],
+    });
+    // Format file
+    cp.execSync("./cli/rescript format tests/docstrings_examples/mocha_full_test.res", {
+      cwd: path.join(__dirname, ".."),
+      stdio: [0, 1, 2],
+    })
+    cp.execSync(`npx mocha tests/docstrings_examples/mocha_full_test.res.mjs`, {
+      cwd: path.join(__dirname, ".."),
+      stdio: [0, 1, 2],
+    });
+    // }
   }
 }
 
