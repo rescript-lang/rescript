@@ -30,3 +30,5 @@ case "$(uname -s)" in
     echo "Code formatting checks skipped for this platform."
 esac
 
+echo "Biome format check"
+npm run checkFormat
