@@ -3,34 +3,41 @@
 import * as Fs from "fs";
 import * as Os from "os";
 import * as Exn from "rescript/lib/es6/Exn.js";
+import * as Int from "rescript/lib/es6/Int.js";
 import * as Url from "url";
+import * as Dict from "rescript/lib/es6/Dict.js";
 import * as List from "rescript/lib/es6/List.js";
 import * as Path from "path";
 import * as $$Array from "rescript/lib/es6/Array.js";
 import * as $$Error from "rescript/lib/es6/Error.js";
-import * as Ordering from "rescript/lib/es6/Ordering.js";
+import * as Option from "rescript/lib/es6/Option.js";
 import * as Belt_List from "rescript/lib/es6/Belt_List.js";
 import * as ArrayUtils from "./ArrayUtils.res.mjs";
 import * as Belt_Array from "rescript/lib/es6/Belt_Array.js";
 import * as Pervasives from "rescript/lib/es6/Pervasives.js";
 import * as SpawnAsync from "./SpawnAsync.res.mjs";
-import * as Primitive_object from "rescript/lib/es6/Primitive_object.js";
+import * as Primitive_string from "rescript/lib/es6/Primitive_string.js";
 import * as Promises from "node:fs/promises";
 import * as Primitive_exceptions from "rescript/lib/es6/Primitive_exceptions.js";
 import * as RescriptTools_Docgen from "rescript/lib/es6/RescriptTools_Docgen.js";
 
-let ignoreRuntimeTests = [
-  "Array.toReversed",
-  "Array.toSorted",
-  "Promise.withResolvers",
-  "Set.union",
-  "Set.isSupersetOf",
-  "Set.isSubsetOf",
-  "Set.isDisjointFrom",
-  "Set.intersection",
-  "Set.symmetricDifference",
-  "Set.difference"
-];
+let nodeVersion = Option.getExn(Int.fromString(Option.getExn(process.version.replace("v", "").split(".")[0], "Failed to find major version of Node"), undefined), "Failed to convert node version to Int");
+
+let ignoreRuntimeTests = [[
+    18,
+    [
+      "Array.toReversed",
+      "Array.toSorted",
+      "Promise.withResolvers",
+      "Set.union",
+      "Set.isSupersetOf",
+      "Set.isSubsetOf",
+      "Set.isDisjointFrom",
+      "Set.intersection",
+      "Set.symmetricDifference",
+      "Set.difference"
+    ]
+  ]];
 
 function getOutput(buffer) {
   return buffer.map(e => e.toString()).join("");
@@ -53,7 +60,7 @@ async function extractDocFromFile(file) {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "DocTest.res",
-        43,
+        58,
         9
       ],
       Error: new Error()
@@ -216,28 +223,48 @@ async function extractExamples() {
 
 async function main() {
   let examples = await extractExamples();
-  examples.sort((a, b) => {
-    if (Primitive_object.greaterthan(a.id, b.id)) {
-      return Ordering.fromInt(1);
-    } else {
-      return Ordering.fromInt(-1);
-    }
+  examples.sort((a, b) => Primitive_string.compare(a.id, b.id));
+  let dict = {};
+  examples.forEach(cur => {
+    let modulePath = cur.id.split(".");
+    let id = modulePath.slice(0, modulePath.length - 1 | 0).join(".");
+    let p = dict[id];
+    let previous = p !== undefined ? p : [];
+    dict[id] = [cur].concat(previous);
   });
-  let testsContent = $$Array.filterMap(examples, example => {
-    let codeExamples = getCodeBlocks(example);
-    let ignore = ignoreRuntimeTests.includes(example.id);
-    if (codeExamples.length === 0 || ignore) {
+  let output = [];
+  Dict.forEachWithKey(dict, (examples, key) => {
+    let codeExamples = $$Array.filterMap(examples, example => {
+      let ignoreExample = Option.isSome(ignoreRuntimeTests.find(param => {
+        if (nodeVersion === param[0]) {
+          return param[1].includes(example.id);
+        } else {
+          return false;
+        }
+      }));
+      if (ignoreExample) {
+        console.warn("Ignoring " + example.id + " tests. Not supported by Node " + nodeVersion.toString());
+        return;
+      }
+      let code = getCodeBlocks(example);
+      if (code.length === 0) {
+        return;
+      } else {
+        return "test(\"" + Option.getExn(example.id.split(".").at(-1), undefined) + "\", () => {\n  module Test = {\n    " + code + "\n  }\n  ()\n})";
+      }
+    });
+    if (codeExamples.length <= 0) {
       return;
-    } else {
-      return "describe(\"" + example.id + "\", () => {\n  test(\"" + example.id + "\", () => {\n    module Test = {\n      " + codeExamples + "\n    }\n    ()\n  })\n})";
     }
-  }).join("\n\n");
+    let content = "describe(\"" + key + "\", () => {\n" + codeExamples.join("\n") + "\n })";
+    output.push(content);
+  });
   let dirname = Path.dirname(Url.fileURLToPath(import.meta.url));
   let filepath = Path.join(dirname, "generated_mocha_test.res");
-  let fileContent = "open Mocha\n@@warning(\"-32-34-60-37-109-3-44\")\n\n" + testsContent;
+  let fileContent = "open Mocha\n@@warning(\"-32-34-60-37-109-3-44\")\n\n" + output.join("\n");
   return await Promises.writeFile(filepath, fileContent);
 }
 
 await main();
 
-/* batchSize Not a pure module */
+/* nodeVersion Not a pure module */

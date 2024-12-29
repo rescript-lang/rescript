@@ -5,6 +5,7 @@ module Path = {
 
 module Process = {
   @scope("process") external cwd: unit => string = "cwd"
+  @scope("process") @val external version: string = "version"
 }
 
 module Fs = {

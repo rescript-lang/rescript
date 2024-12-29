@@ -137,16 +137,19 @@ async function runTests() {
         stdio: [0, 1, 2],
       });
 
+      // Generate rescript file with all tests `generated_mocha_test.res`
       cp.execSync(`node ${path.join("tests", "docstrings_examples", "DocTest.res.mjs")}`, {
         cwd: path.join(__dirname, ".."),
         stdio: [0, 1, 2],
       })
 
+      // Build again to check if generated_mocha_test.res has syntax or type erros
       cp.execSync(`${rescript_exe} build`, {
         cwd: path.join(__dirname, "..", "tests/docstrings_examples"),
         stdio: [0, 1, 2],
       });
 
+      // Format generated_mocha_test.res
       console.log("Formatting generated_mocha_test.res")
       cp.execSync(`./cli/rescript format ${path.join("tests", "docstrings_examples", "generated_mocha_test.res")}`, {
         cwd: path.join(__dirname, ".."),
