@@ -52,7 +52,7 @@ let findTypeConstructors (tel : Types.type_expr list) =
     | Tconstr (path, args, _) ->
       addPath path;
       args |> List.iter loop
-    | Tarrow (_, te1, te2, _) ->
+    | Tarrow (_, te1, te2, _, _) ->
       loop te1;
       loop te2
     | Ttuple tel -> tel |> List.iter loop

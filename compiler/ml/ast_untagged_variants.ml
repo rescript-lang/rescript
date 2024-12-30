@@ -199,8 +199,6 @@ let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
     Some BigintType
   | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bool ->
     Some BooleanType
-  | {desc = Tconstr _} as t when Ast_uncurried_utils.type_is_uncurried_fun t ->
-    Some FunctionType
   | {desc = Tarrow _} -> Some FunctionType
   | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_string ->
     Some StringType

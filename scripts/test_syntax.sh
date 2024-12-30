@@ -54,7 +54,7 @@ warningYellow='\033[0;33m'
 successGreen='\033[0;32m'
 reset='\033[0m'
 
-git diff --ignore-cr-at-eol $(find tests -name expected) >temp/diff.txt
+git diff --ignore-cr-at-eol $(find syntax_tests -name expected) >temp/diff.txt
 diff=$(cat temp/diff.txt)
 if [[ $diff = "" ]]; then
   printf "${successGreen}✅ No unstaged tests difference.${reset}\n"

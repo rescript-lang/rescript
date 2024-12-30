@@ -1129,7 +1129,6 @@ Path res
 
 Complete src/CompletionPattern.res 227:25
 posCursor:[227:25] posNoWhite:[227:24] Found expr:[223:11->231:1]
-posCursor:[227:25] posNoWhite:[227:24] Found expr:[223:12->231:1]
 posCursor:[227:25] posNoWhite:[227:24] Found expr:[226:4->227:28]
 posCursor:[227:25] posNoWhite:[227:24] Found pattern:[227:18->227:27]
 Completable: Cpattern Value[r]->recordBody

@@ -270,7 +270,7 @@ module Int: {
 
   ```rescript
   Math.Int.sign(3) // 1
-  Math.Int.sign(-3) // 1
+  Math.Int.sign(-3) // -1
   Math.Int.sign(0) // 0
   ```
   */

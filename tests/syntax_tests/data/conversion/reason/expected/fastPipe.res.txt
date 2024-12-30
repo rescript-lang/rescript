@@ -7,7 +7,7 @@ Element.querySelectorAll(selector, element)
 
 let x = @attr ((@attr2 a)->f(b)->c(d))
 
-5->(doStuff(3, _, 7))
+5->doStuff(3, _, 7)
 
 (event->target)["value"]
 

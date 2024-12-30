@@ -33,11 +33,12 @@ function f(x) {
 function f2(x) {
   let v = 0;
   let y;
-  v = 1;
   if (x.TAG === "A") {
+    v = 1;
     let z = 33;
     y = z + 3 | 0;
   } else {
+    v = 1;
     let z$1 = 33;
     y = z$1 + 4 | 0;
   }
@@ -47,8 +48,13 @@ function f2(x) {
 function f3(x) {
   let v = 0;
   let y;
-  v = 1;
-  y = x.TAG === "A" ? 3 : 4;
+  if (x.TAG === "A") {
+    v = 1;
+    y = 3;
+  } else {
+    v = 1;
+    y = 4;
+  }
   return y + 32 | 0;
 }
 

@@ -168,23 +168,25 @@ let arrow_type ct =
   let rec process attrs_before acc typ =
     match typ with
     | {
-     ptyp_desc = Ptyp_arrow ((Nolabel as lbl), typ1, typ2);
+     ptyp_desc = Ptyp_arrow ((Nolabel as lbl), typ1, typ2, _);
      ptyp_attributes = [];
     } ->
       let arg = ([], lbl, typ1) in
       process attrs_before (arg :: acc) typ2
     | {
-     ptyp_desc = Ptyp_arrow ((Nolabel as lbl), typ1, typ2);
+     ptyp_desc = Ptyp_arrow ((Nolabel as lbl), typ1, typ2, _);
      ptyp_attributes = [({txt = "bs"}, _)] as attrs;
     } ->
       let arg = (attrs, lbl, typ1) in
       process attrs_before (arg :: acc) typ2
-    | {ptyp_desc = Ptyp_arrow (Nolabel, _typ1, _typ2); ptyp_attributes = _attrs}
-      as return_type ->
+    | {
+        ptyp_desc = Ptyp_arrow (Nolabel, _typ1, _typ2, _);
+        ptyp_attributes = _attrs;
+      } as return_type ->
       let args = List.rev acc in
       (attrs_before, args, return_type)
     | {
-     ptyp_desc = Ptyp_arrow (((Labelled _ | Optional _) as lbl), typ1, typ2);
+     ptyp_desc = Ptyp_arrow (((Labelled _ | Optional _) as lbl), typ1, typ2, _);
      ptyp_attributes = attrs;
     } ->
       let arg = (attrs, lbl, typ1) in
@@ -192,8 +194,8 @@ let arrow_type ct =
     | typ -> (attrs_before, List.rev acc, typ)
   in
   match ct with
-  | {ptyp_desc = Ptyp_arrow (Nolabel, _typ1, _typ2); ptyp_attributes = attrs} as
-    typ ->
+  | {ptyp_desc = Ptyp_arrow (Nolabel, _typ1, _typ2, _); ptyp_attributes = attrs}
+    as typ ->
     process attrs [] {typ with ptyp_attributes = []}
   | typ -> process [] [] typ
 
@@ -264,7 +266,14 @@ let fun_expr expr =
   let rec collect attrs_before acc expr =
     match expr with
     | {
-     pexp_desc = Pexp_fun (lbl, default_expr, pattern, return_expr);
+     pexp_desc =
+       Pexp_fun
+         {
+           arg_label = lbl;
+           default = default_expr;
+           lhs = pattern;
+           rhs = return_expr;
+         };
      pexp_attributes = [];
     } ->
       let parameter = ([], lbl, default_expr, pattern) in
@@ -279,7 +288,14 @@ let fun_expr expr =
       in
       collect attrs_before (parameter :: acc) return_expr
     | {
-     pexp_desc = Pexp_fun (lbl, default_expr, pattern, return_expr);
+     pexp_desc =
+       Pexp_fun
+         {
+           arg_label = lbl;
+           default = default_expr;
+           lhs = pattern;
+           rhs = return_expr;
+         };
      pexp_attributes = [({txt = "bs"}, _)] as attrs;
     } ->
       let parameter = (attrs, lbl, default_expr, pattern) in
@@ -287,7 +303,12 @@ let fun_expr expr =
     | {
      pexp_desc =
        Pexp_fun
-         (((Labelled _ | Optional _) as lbl), default_expr, pattern, return_expr);
+         {
+           arg_label = (Labelled _ | Optional _) as lbl;
+           default = default_expr;
+           lhs = pattern;
+           rhs = return_expr;
+         };
      pexp_attributes = attrs;
     } ->
       let parameter = (attrs, lbl, default_expr, pattern) in
@@ -295,10 +316,8 @@ let fun_expr expr =
     | expr -> (attrs_before, List.rev acc, expr)
   in
   match expr with
-  | {
-      pexp_desc = Pexp_fun (Nolabel, _defaultExpr, _pattern, _returnExpr);
-      pexp_attributes = attrs;
-    } as expr ->
+  | {pexp_desc = Pexp_fun {arg_label = Nolabel}; pexp_attributes = attrs} as
+    expr ->
     collect attrs [] {expr with pexp_attributes = []}
   | expr -> collect [] [] expr
 
@@ -947,7 +966,7 @@ and walk_expression expr t comments =
         PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_record (rows, _)}, [])}]
       ) ->
     walk_list
-      (rows |> List.map (fun (li, e) -> ExprRecordRow (li, e)))
+      (rows |> List.map (fun (li, e, _) -> ExprRecordRow (li, e)))
       t comments
   | Pexp_extension extension -> walk_extension extension t comments
   | Pexp_letexception (extension_constructor, expr2) ->
@@ -1067,7 +1086,7 @@ and walk_expression expr t comments =
           rest
       in
       walk_list
-        (rows |> List.map (fun (li, e) -> ExprRecordRow (li, e)))
+        (rows |> List.map (fun (li, e, _) -> ExprRecordRow (li, e)))
         t comments
   | Pexp_field (expr, longident) ->
     let leading, inside, trailing = partition_by_loc comments expr.pexp_loc in
@@ -1406,7 +1425,7 @@ and walk_expression expr t comments =
       in
       attach t.trailing call_expr.pexp_loc after_expr;
       walk_list (arguments |> List.map (fun (_, e) -> ExprArgument e)) t rest
-  | Pexp_fun (_, _, _, _) | Pexp_newtype _ -> (
+  | Pexp_fun _ | Pexp_newtype _ -> (
     let _, parameters, return_expr = fun_expr expr in
     let comments =
       visit_list_but_continue_with_remaining_comments ~newline_delimited:false
@@ -1447,8 +1466,6 @@ and walk_expression expr t comments =
         attach t.leading expr.pexp_loc leading;
         walk_expression expr t inside;
         attach t.trailing expr.pexp_loc trailing
-    | Pexp_construct ({txt = Longident.Lident "Function$"}, Some return_expr) ->
-      walk_expression return_expr t comments
     | _ ->
       if is_block_expr return_expr then walk_expression return_expr t comments
       else
@@ -1755,7 +1772,7 @@ and walk_pattern pat t comments =
   | Ppat_type _ -> ()
   | Ppat_record (record_rows, _) ->
     walk_list
-      (record_rows |> List.map (fun (li, p) -> PatternRecordRow (li, p)))
+      (record_rows |> List.map (fun (li, p, _) -> PatternRecordRow (li, p)))
       t comments
   | Ppat_or _ ->
     walk_list
@@ -1860,9 +1877,6 @@ and walk_core_type typ t comments =
     attach t.trailing typexpr.ptyp_loc after_typ
   | Ptyp_variant (row_fields, _, _) ->
     walk_list (row_fields |> List.map (fun rf -> RowField rf)) t comments
-  | Ptyp_constr
-      ({txt = Lident "function$"}, [({ptyp_desc = Ptyp_arrow _} as desc); _]) ->
-    walk_core_type desc t comments
   | Ptyp_constr (longident, typexprs) ->
     let before_longident, _afterLongident =
       partition_leading_trailing comments longident.loc

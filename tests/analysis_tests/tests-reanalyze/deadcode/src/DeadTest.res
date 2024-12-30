@@ -95,32 +95,9 @@ and bar = () => foo()
 
 let withDefaultValue = (~paramWithDefault=3, y) => paramWithDefault + y
 
-external unsafe_string1: (bytes, int, int) => Digest.t = "caml_md5_string"
-
-module Ext_buffer: {
-  external unsafe_string2: (bytes, int, int) => Digest.t = "caml_md5_string"
-} = {
-  external unsafe_string2: (bytes, int, int) => Digest.t = "caml_md5_string"
-}
-
 let () = Js.log(DeadRT.Root("xzz"))
 
 module type LocalDynamicallyLoadedComponent2 = module type of DynamicallyLoadedComponent
-
-module LazyDynamicallyLoadedComponent2 = {
-  let reasonResource: JSResource.t<
-    module(LocalDynamicallyLoadedComponent2),
-  > = JSResource.jSResource("DynamicallyLoadedComponent.bs")
-  let makeProps = DynamicallyLoadedComponent.makeProps
-  let make = props =>
-    React.createElement(
-      {
-        module Comp = unpack(BootloaderResource.read(reasonResource))
-        Comp.make
-      },
-      props,
-    )
-}
 
 module Chat = {}
 
@@ -132,8 +109,7 @@ let zzz = {
 
 let () = Js.log(<DynamicallyLoadedComponent s="" />)
 
-let second = 1L
-let minute = Int64.mul(60L, second)
+let second = 1
 
 let deadRef = ref(12)
 

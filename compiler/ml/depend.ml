@@ -105,7 +105,7 @@ let rec add_type bv ty =
   match ty.ptyp_desc with
   | Ptyp_any -> ()
   | Ptyp_var _ -> ()
-  | Ptyp_arrow (_, t1, t2) ->
+  | Ptyp_arrow (_, t1, t2, _) ->
     add_type bv t1;
     add_type bv t2
   | Ptyp_tuple tl -> List.iter (add_type bv) tl
@@ -118,7 +118,6 @@ let rec add_type bv ty =
         | Otag (_, _, t) -> add_type bv t
         | Oinherit t -> add_type bv t)
       fl
-  | Ptyp_class () -> ()
   | Ptyp_alias (t, _) -> add_type bv t
   | Ptyp_variant (fl, _, _) ->
     List.iter
@@ -186,7 +185,7 @@ let rec add_pattern bv pat =
     add_opt add_pattern bv op
   | Ppat_record (pl, _) ->
     List.iter
-      (fun (lbl, p) ->
+      (fun (lbl, p, _) ->
         add bv lbl;
         add_pattern bv p)
       pl
@@ -219,10 +218,9 @@ let rec add_expr bv exp =
   | Pexp_let (rf, pel, e) ->
     let bv = add_bindings rf bv pel in
     add_expr bv e
-  | Pexp_fun (_, opte, p, e) ->
+  | Pexp_fun {default = opte; lhs = p; rhs = e} ->
     add_opt add_expr bv opte;
     add_expr (add_pattern bv p) e
-  | Pexp_function pel -> add_cases bv pel
   | Pexp_apply (e, el) ->
     add_expr bv e;
     List.iter (fun (_, e) -> add_expr bv e) el
@@ -239,7 +237,7 @@ let rec add_expr bv exp =
   | Pexp_variant (_, opte) -> add_opt add_expr bv opte
   | Pexp_record (lblel, opte) ->
     List.iter
-      (fun (lbl, e) ->
+      (fun (lbl, e, _) ->
         add bv lbl;
         add_expr bv e)
       lblel;
@@ -285,7 +283,6 @@ let rec add_expr bv exp =
   | Pexp_poly (e, t) ->
     add_expr bv e;
     add_opt add_type bv t
-  | Pexp_object () -> ()
   | Pexp_newtype (_, e) -> add_expr bv e
   | Pexp_pack m -> add_module bv m
   | Pexp_open (_ovf, m, e) ->
@@ -298,7 +295,6 @@ let rec add_expr bv exp =
     | Pstr_eval ({pexp_desc = Pexp_construct (c, None)}, _) -> add bv c
     | _ -> handle_extension e)
   | Pexp_extension e -> handle_extension e
-  | Pexp_unreachable -> ()
 
 and add_cases bv cases = List.iter (add_case bv) cases
 

@@ -83,7 +83,8 @@ and pattern_desc =
             See {!Types.row_desc} for an explanation of the last parameter.
          *)
   | Tpat_record of
-      (Longident.t loc * label_description * pattern) list * closed_flag
+      (Longident.t loc * label_description * pattern * bool (* optional *)) list
+      * closed_flag
       (** { l1=P1; ...; ln=Pn }     (flag = Closed)
             { l1=P1; ...; ln=Pn; _}   (flag = Open)
 
@@ -131,8 +132,9 @@ and expression_desc =
          *)
   | Texp_function of {
       arg_label: arg_label;
+      arity: arity;
       param: Ident.t;
-      cases: case list;
+      case: case;
       partial: partial;
     }
       (** [Pexp_fun] and [Pexp_function] both translate to [Texp_function].
@@ -180,7 +182,11 @@ and expression_desc =
          *)
   | Texp_variant of label * expression option
   | Texp_record of {
-      fields: (Types.label_description * record_label_definition) array;
+      fields:
+        (Types.label_description
+        * record_label_definition
+        * bool (* optional *))
+        array;
       representation: Types.record_representation;
       extended_expression: expression option;
     }
@@ -218,9 +224,7 @@ and expression_desc =
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression
   | Texp_lazy of expression
-  | Texp_object of unit
   | Texp_pack of module_expr
-  | Texp_unreachable
   | Texp_extension_constructor of Longident.t loc * Path.t
 
 and meth = Tmeth_name of string
@@ -404,10 +408,8 @@ and with_constraint =
   | Twith_modsubst of Path.t * Longident.t loc
 
 and core_type = {
-  mutable ctyp_desc: core_type_desc;
-      (** mutable because of [Typeclass.declare_method] *)
-  mutable ctyp_type: type_expr;
-      (** mutable because of [Typeclass.declare_method] *)
+  ctyp_desc: core_type_desc;
+  ctyp_type: type_expr;
   ctyp_env: Env.t; (* BINANNOT ADDED *)
   ctyp_loc: Location.t;
   ctyp_attributes: attributes;
@@ -416,11 +418,10 @@ and core_type = {
 and core_type_desc =
   | Ttyp_any
   | Ttyp_var of string
-  | Ttyp_arrow of arg_label * core_type * core_type
+  | Ttyp_arrow of arg_label * core_type * core_type * arity
   | Ttyp_tuple of core_type list
   | Ttyp_constr of Path.t * Longident.t loc * core_type list
   | Ttyp_object of object_field list * closed_flag
-  | Ttyp_class of unit (* dummy AST node *)
   | Ttyp_alias of core_type * string
   | Ttyp_variant of row_field list * closed_flag * label list option
   | Ttyp_poly of string list * core_type
@@ -474,6 +475,7 @@ and label_declaration = {
   ld_id: Ident.t;
   ld_name: string loc;
   ld_mutable: mutable_flag;
+  ld_optional: bool;
   ld_type: core_type;
   ld_loc: Location.t;
   ld_attributes: attributes;

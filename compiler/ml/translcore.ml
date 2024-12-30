@@ -24,7 +24,7 @@ open Typedtree
 open Typeopt
 open Lambda
 
-type error = Unknown_builtin_primitive of string | Unreachable_reached
+type error = Unknown_builtin_primitive of string
 
 exception Error of Location.t * error
 
@@ -392,10 +392,11 @@ let primitives_table =
       ("#undefined", Pundefined);
       ("#typeof", Ptypeof);
       ("#is_nullable", Pisnullable);
-      ("#null_to_opt", Pnullable_to_opt);
-      ("#nullable_to_opt", Pnull_to_opt);
+      ("#null_to_opt", Pnull_to_opt);
+      ("#nullable_to_opt", Pnullable_to_opt);
       ("#undefined_to_opt", Pundefined_to_opt);
       ("#makemutablelist", Pmakelist Mutable);
+      ("#import", Pimport);
       (* FIXME: Deprecated *)
       ("%obj_field", Parrayrefu);
     |]
@@ -548,58 +549,54 @@ type binding =
   | Bind_value of value_binding list
   | Bind_module of Ident.t * string loc * module_expr
 
-let rec push_defaults loc bindings cases partial =
-  match cases with
-  | [
-   {
-     c_lhs = pat;
-     c_guard = None;
-     c_rhs =
-       {exp_desc = Texp_function {arg_label; param; cases; partial}} as exp;
-   };
-  ] ->
-    let cases = push_defaults exp.exp_loc bindings cases partial in
-    [
-      {
-        c_lhs = pat;
-        c_guard = None;
-        c_rhs =
-          {exp with exp_desc = Texp_function {arg_label; param; cases; partial}};
-      };
-    ]
-  | [
-   {
-     c_lhs = pat;
-     c_guard = None;
-     c_rhs =
-       {
-         exp_attributes = [({txt = "#default"}, _)];
-         exp_desc =
-           Texp_let (Nonrecursive, binds, ({exp_desc = Texp_function _} as e2));
-       };
-   };
-  ] ->
+let rec push_defaults loc bindings case partial =
+  match case with
+  | {
+   c_lhs = pat;
+   c_guard = None;
+   c_rhs =
+     {exp_desc = Texp_function {arg_label; arity; param; case; partial}} as exp;
+  } ->
+    let case = push_defaults exp.exp_loc bindings case partial in
+
+    {
+      c_lhs = pat;
+      c_guard = None;
+      c_rhs =
+        {
+          exp with
+          exp_desc = Texp_function {arg_label; arity; param; case; partial};
+        };
+    }
+  | {
+   c_lhs = pat;
+   c_guard = None;
+   c_rhs =
+     {
+       exp_attributes = [({txt = "#default"}, _)];
+       exp_desc =
+         Texp_let (Nonrecursive, binds, ({exp_desc = Texp_function _} as e2));
+     };
+  } ->
     push_defaults loc
       (Bind_value binds :: bindings)
-      [{c_lhs = pat; c_guard = None; c_rhs = e2}]
+      {c_lhs = pat; c_guard = None; c_rhs = e2}
       partial
-  | [
-   {
-     c_lhs = pat;
-     c_guard = None;
-     c_rhs =
-       {
-         exp_attributes = [({txt = "#modulepat"}, _)];
-         exp_desc =
-           Texp_letmodule (id, name, mexpr, ({exp_desc = Texp_function _} as e2));
-       };
-   };
-  ] ->
+  | {
+   c_lhs = pat;
+   c_guard = None;
+   c_rhs =
+     {
+       exp_attributes = [({txt = "#modulepat"}, _)];
+       exp_desc =
+         Texp_letmodule (id, name, mexpr, ({exp_desc = Texp_function _} as e2));
+     };
+  } ->
     push_defaults loc
       (Bind_module (id, name, mexpr) :: bindings)
-      [{c_lhs = pat; c_guard = None; c_rhs = e2}]
+      {c_lhs = pat; c_guard = None; c_rhs = e2}
       partial
-  | [case] ->
+  | case ->
     let exp =
       List.fold_left
         (fun exp binds ->
@@ -613,45 +610,7 @@ let rec push_defaults loc bindings cases partial =
           })
         case.c_rhs bindings
     in
-    [{case with c_rhs = exp}]
-  | {c_lhs = pat; c_rhs = exp; c_guard = _} :: _ when bindings <> [] ->
-    let param = Typecore.name_pattern "param" cases in
-    let name = Ident.name param in
-    let exp =
-      {
-        exp with
-        exp_loc = loc;
-        exp_desc =
-          Texp_match
-            ( {
-                exp with
-                exp_type = pat.pat_type;
-                exp_desc =
-                  Texp_ident
-                    ( Path.Pident param,
-                      mknoloc (Longident.Lident name),
-                      {
-                        val_type = pat.pat_type;
-                        val_kind = Val_reg;
-                        val_attributes = [];
-                        Types.val_loc = Location.none;
-                      } );
-              },
-              cases,
-              [],
-              partial );
-      }
-    in
-    push_defaults loc bindings
-      [
-        {
-          c_lhs = {pat with pat_desc = Tpat_var (param, mknoloc name)};
-          c_guard = None;
-          c_rhs = exp;
-        };
-      ]
-      Total
-  | _ -> cases
+    {case with c_rhs = exp}
 
 (* Assertions *)
 
@@ -715,7 +674,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_constant cst -> Lconst (Const_base cst)
   | Texp_let (rec_flag, pat_expr_list, body) ->
     transl_let rec_flag pat_expr_list (transl_exp body)
-  | Texp_function {arg_label = _; param; cases; partial} ->
+  | Texp_function {arg_label = _; arity; param; case; partial} -> (
     let async = has_async_attribute e in
     let directive =
       match extract_directive_for_fn e with
@@ -723,7 +682,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       | Some (directive, _) -> Some directive
     in
     let params, body, return_unit =
-      let pl = push_defaults e.exp_loc [] cases partial in
+      let pl = push_defaults e.exp_loc [] case partial in
       transl_function e.exp_loc partial param pl
     in
     let attr =
@@ -736,7 +695,23 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       }
     in
     let loc = e.exp_loc in
-    Lfunction {params; body; attr; loc}
+    let lambda = Lfunction {params; body; attr; loc} in
+    match arity with
+    | Some arity ->
+      let prim =
+        let expanded = Ctype.expand_head e.exp_env e.exp_type in
+        match (Btype.repr expanded).desc with
+        | Tarrow (Nolabel, t, _, _, _) -> (
+          match (Ctype.expand_head e.exp_env t).desc with
+          | Tconstr (Pident {name = "unit"}, [], _) -> Pjs_fn_make_unit
+          | _ -> Pjs_fn_make arity)
+        | _ -> Pjs_fn_make arity
+      in
+      Lprim
+        ( prim (* could be replaced with Opaque in the future except arity 0*),
+          [lambda],
+          loc )
+    | None -> lambda)
   | Texp_apply
       ( ({
            exp_desc = Texp_ident (_, _, {val_kind = Val_prim p});
@@ -795,10 +770,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
         Ext_list.exists e.exp_attributes (fun ({txt}, _) -> txt = "res.partial")
       in
       if uncurried_partial_app then
-        let arity_opt =
-          Ast_uncurried.uncurried_type_get_arity_opt ~env:funct.exp_env
-            funct.exp_type
-        in
+        let arity_opt = Ctype.get_arity funct.exp_env funct.exp_type in
         match arity_opt with
         | Some arity ->
           let real_args = List.filter (fun (_, x) -> Option.is_some x) oargs in
@@ -822,25 +794,6 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     with Not_constant -> Lprim (Pmakeblock Blk_tuple, ll, e.exp_loc))
   | Texp_construct ({txt = Lident "false"}, _, []) -> Lconst Const_false
   | Texp_construct ({txt = Lident "true"}, _, []) -> Lconst Const_true
-  | Texp_construct ({txt = Lident "Function$"}, _, [expr]) ->
-    (* ReScript uncurried encoding *)
-    let loc = expr.exp_loc in
-    let lambda = transl_exp expr in
-    let arity =
-      Ast_uncurried.uncurried_type_get_arity ~env:e.exp_env e.exp_type
-    in
-    let prim =
-      match (Ctype.expand_head expr.exp_env expr.exp_type).desc with
-      | Tarrow (Nolabel, t, _, _) -> (
-        match (Ctype.expand_head expr.exp_env t).desc with
-        | Tconstr (Pident {name = "unit"}, [], _) -> Pjs_fn_make_unit
-        | _ -> Pjs_fn_make arity)
-      | _ -> Pjs_fn_make arity
-    in
-    Lprim
-      ( prim (* could be replaced with Opaque in the future except arity 0*),
-        [lambda],
-        loc )
   | Texp_construct (lid, cstr, args) -> (
     let ll = transl_list args in
     if cstr.cstr_inlined <> None then
@@ -922,7 +875,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     let targ = transl_exp arg in
     match lbl.lbl_repres with
     | Record_float_unused -> assert false
-    | Record_regular | Record_optional_labels _ ->
+    | Record_regular ->
       Lprim (Pfield (lbl.lbl_pos, Lambda.fld_record lbl), [targ], e.exp_loc)
     | Record_inlined _ ->
       Lprim
@@ -937,8 +890,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     let access =
       match lbl.lbl_repres with
       | Record_float_unused -> assert false
-      | Record_regular | Record_optional_labels _ ->
-        Psetfield (lbl.lbl_pos, Lambda.fld_record_set lbl)
+      | Record_regular -> Psetfield (lbl.lbl_pos, Lambda.fld_record_set lbl)
       | Record_inlined _ ->
         Psetfield (lbl.lbl_pos, Lambda.fld_record_inline_set lbl)
       | Record_unboxed _ -> assert false
@@ -985,8 +937,6 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
        optimize the translation just as Lazy.lazy_from_val would
        do *)
     Lprim (Pmakeblock Blk_lazy_general, [transl_exp e], e.exp_loc)
-  | Texp_object () -> assert false
-  | Texp_unreachable -> raise (Error (e.exp_loc, Unreachable_reached))
 
 and transl_list expr_list = List.map transl_exp expr_list
 
@@ -998,11 +948,7 @@ and transl_guard guard rhs =
 
 and transl_case {c_lhs; c_guard; c_rhs} = (c_lhs, transl_guard c_guard c_rhs)
 
-and transl_cases cases =
-  let cases =
-    Ext_list.filter cases (fun c -> c.c_rhs.exp_desc <> Texp_unreachable)
-  in
-  List.map transl_case cases
+and transl_cases cases = List.map transl_case cases
 
 and transl_case_try {c_lhs; c_guard; c_rhs} =
   match c_lhs.pat_desc with
@@ -1013,11 +959,7 @@ and transl_case_try {c_lhs; c_guard; c_rhs} =
       (fun () -> Hashtbl.remove try_ids id)
   | _ -> (c_lhs, transl_guard c_guard c_rhs)
 
-and transl_cases_try cases =
-  let cases =
-    Ext_list.filter cases (fun c -> c.c_rhs.exp_desc <> Texp_unreachable)
-  in
-  List.map transl_case_try cases
+and transl_cases_try cases = List.map transl_case_try cases
 
 and transl_apply ?(inlined = Default_inline)
     ?(uncurried_partial_application = None) lam sargs loc =
@@ -1096,32 +1038,35 @@ and transl_apply ?(inlined = Default_inline)
           sargs)
       : Lambda.lambda)
 
-and transl_function loc partial param cases =
-  match cases with
-  | [
-   {
-     c_lhs = pat;
-     c_guard = None;
-     c_rhs =
-       {
-         exp_desc =
-           Texp_function
-             {arg_label = _; param = param'; cases; partial = partial'};
-       } as exp;
-   };
-  ]
+and transl_function loc partial param case =
+  match case with
+  | {
+   c_lhs = pat;
+   c_guard = None;
+   c_rhs =
+     {
+       exp_desc =
+         Texp_function
+           {
+             arg_label = _;
+             arity = None;
+             param = param';
+             case;
+             partial = partial';
+           };
+     } as exp;
+  }
     when Parmatch.inactive ~partial pat && not (exp |> has_async_attribute) ->
     let params, body, return_unit =
-      transl_function exp.exp_loc partial' param' cases
+      transl_function exp.exp_loc partial' param' case
     in
     ( param :: params,
       Matching.for_function loc None (Lvar param) [(pat, body)] partial,
       return_unit )
-  | {c_rhs = {exp_env; exp_type}; _} :: _ ->
+  | {c_rhs = {exp_env; exp_type}; _} ->
     ( [param],
-      Matching.for_function loc None (Lvar param) (transl_cases cases) partial,
+      Matching.for_function loc None (Lvar param) [transl_case case] partial,
       is_base_type exp_env exp_type Predef.path_unit )
-  | _ -> assert false
 
 and transl_let rec_flag pat_expr_list body =
   match rec_flag with
@@ -1153,7 +1098,8 @@ and transl_let rec_flag pat_expr_list body =
 
 and transl_record loc env fields repres opt_init_expr =
   match (opt_init_expr, repres, fields) with
-  | None, Record_unboxed _, [|({lbl_name; lbl_loc}, Overridden (_, expr))|] ->
+  | None, Record_unboxed _, [|({lbl_name; lbl_loc}, Overridden (_, expr), _)|]
+    ->
     (* ReScript uncurried encoding *)
     let loc = lbl_loc in
     let lambda = transl_exp expr in
@@ -1168,6 +1114,9 @@ and transl_record loc env fields repres opt_init_expr =
     else lambda
   | _ -> (
     let size = Array.length fields in
+    let optional =
+      Ext_array.exists fields (fun (ld, _, _) -> ld.lbl_optional)
+    in
     (* Determine if there are "enough" fields (only relevant if this is a
        functional-style record update *)
     let no_init =
@@ -1176,12 +1125,7 @@ and transl_record loc env fields repres opt_init_expr =
       | _ -> false
     in
     if
-      no_init
-      || size < 20
-         &&
-         match repres with
-         | Record_optional_labels _ -> false
-         | _ -> true
+      no_init || (size < 20 && not optional)
       (* TODO: More strategies
          3 + 2 * List.length lbl_expr_list >= size (density)
       *)
@@ -1191,14 +1135,13 @@ and transl_record loc env fields repres opt_init_expr =
       let init_id = Ident.create "init" in
       let lv =
         Array.mapi
-          (fun i (lbl, definition) ->
+          (fun i (lbl, definition, _) ->
             match definition with
             | Kept _ ->
               let access =
                 match repres with
                 | Record_float_unused -> assert false
-                | Record_regular | Record_optional_labels _ ->
-                  Pfield (i, Lambda.fld_record lbl)
+                | Record_regular -> Pfield (i, Lambda.fld_record lbl)
                 | Record_inlined _ -> Pfield (i, Lambda.fld_record_inline lbl)
                 | Record_unboxed _ -> assert false
                 | Record_extension ->
@@ -1210,7 +1153,7 @@ and transl_record loc env fields repres opt_init_expr =
       in
       let ll = Array.to_list lv in
       let mut =
-        if Array.exists (fun (lbl, _) -> lbl.lbl_mut = Mutable) fields then
+        if Array.exists (fun (lbl, _, _) -> lbl.lbl_mut = Mutable) fields then
           Mutable
         else Immutable
       in
@@ -1221,16 +1164,12 @@ and transl_record loc env fields repres opt_init_expr =
           match repres with
           | Record_float_unused -> assert false
           | Record_regular ->
-            Lconst
-              (Const_block (Lambda.blk_record fields mut Record_regular, cl))
-          | Record_optional_labels _ ->
-            Lconst
-              (Const_block (Lambda.blk_record fields mut Record_optional, cl))
-          | Record_inlined {tag; name; num_nonconsts; optional_labels; attrs} ->
+            Lconst (Const_block (Lambda.blk_record fields mut, cl))
+          | Record_inlined {tag; name; num_nonconsts; attrs} ->
             Lconst
               (Const_block
-                 ( Lambda.blk_record_inlined fields name num_nonconsts
-                     optional_labels ~tag ~attrs mut,
+                 ( Lambda.blk_record_inlined fields name num_nonconsts ~tag
+                     ~attrs mut,
                    cl ))
           | Record_unboxed _ ->
             Lconst
@@ -1241,19 +1180,13 @@ and transl_record loc env fields repres opt_init_expr =
         with Not_constant -> (
           match repres with
           | Record_regular ->
-            Lprim
-              (Pmakeblock (Lambda.blk_record fields mut Record_regular), ll, loc)
-          | Record_optional_labels _ ->
-            Lprim
-              ( Pmakeblock (Lambda.blk_record fields mut Record_optional),
-                ll,
-                loc )
+            Lprim (Pmakeblock (Lambda.blk_record fields mut), ll, loc)
           | Record_float_unused -> assert false
-          | Record_inlined {tag; name; num_nonconsts; optional_labels; attrs} ->
+          | Record_inlined {tag; name; num_nonconsts; attrs} ->
             Lprim
               ( Pmakeblock
-                  (Lambda.blk_record_inlined fields name num_nonconsts
-                     optional_labels ~tag ~attrs mut),
+                  (Lambda.blk_record_inlined fields name num_nonconsts ~tag
+                     ~attrs mut),
                 ll,
                 loc )
           | Record_unboxed _ -> (
@@ -1262,7 +1195,7 @@ and transl_record loc env fields repres opt_init_expr =
             | _ -> assert false)
           | Record_extension ->
             let path =
-              let label, _ = fields.(0) in
+              let label, _, _ = fields.(0) in
               match label.lbl_res.desc with
               | Tconstr (p, _, _) -> p
               | _ -> assert false
@@ -1279,14 +1212,14 @@ and transl_record loc env fields repres opt_init_expr =
       (* Take a shallow copy of the init record, then mutate the fields
          of the copy *)
       let copy_id = Ident.create "newrecord" in
-      let update_field cont (lbl, definition) =
+      let update_field cont (lbl, definition, _opt) =
         match definition with
         | Kept _type -> cont
         | Overridden (_lid, expr) ->
           let upd =
             match repres with
             | Record_float_unused -> assert false
-            | Record_regular | Record_optional_labels _ ->
+            | Record_regular ->
               Psetfield (lbl.lbl_pos, Lambda.fld_record_set lbl)
             | Record_inlined _ ->
               Psetfield (lbl.lbl_pos, Lambda.fld_record_inline_set lbl)
@@ -1342,7 +1275,6 @@ open Format
 let report_error ppf = function
   | Unknown_builtin_primitive prim_name ->
     fprintf ppf "Unknown builtin primitive \"%s\"" prim_name
-  | Unreachable_reached -> fprintf ppf "Unreachable expression was reached"
 
 let () =
   Location.register_error_of_exn (function

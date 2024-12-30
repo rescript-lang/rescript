@@ -473,7 +473,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
         ?contextPath p
     | Ppat_record (fields, _) ->
       fields
-      |> List.iter (fun (fname, p) ->
+      |> List.iter (fun (fname, p, _) ->
              match fname with
              | {Location.txt = Longident.Lident fname} ->
                scopePattern
@@ -879,7 +879,8 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                  Pstr_eval
                    ( {
                        pexp_desc =
-                         Pexp_record (({txt = Lident "from"}, fromExpr) :: _, _);
+                         Pexp_record
+                           (({txt = Lident "from"}, fromExpr, _) :: _, _);
                      },
                      _ );
              };
@@ -1092,7 +1093,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
           (* Ignore list expressions, used in JSX, unit, and more *) ()
         | Pexp_construct (lid, eOpt) -> (
           let lidPath = flattenLidCheckDot lid in
-          if debug && lid.txt <> Lident "Function$" then
+          if debug then
             Printf.printf "Pexp_construct %s:%s %s\n"
               (lidPath |> String.concat "\n")
               (Loc.toString lid.loc)
@@ -1317,7 +1318,8 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
             match exprToContextPath lhs with
             | Some contextPath -> setResult (Cpath (CPObj (contextPath, label)))
             | None -> ())
-        | Pexp_fun (lbl, defaultExpOpt, pat, e) ->
+        | Pexp_fun
+            {arg_label = lbl; default = defaultExpOpt; lhs = pat; rhs = e} ->
           let oldScope = !scope in
           (match (!processingFun, !currentCtxPath) with
           | None, Some ctxPath -> processingFun := Some (ctxPath, 0)

@@ -3,11 +3,8 @@ let a = 1[@@onFirstBinding ]
 let a = 1[@@onFirstBinding ]
 and b = 2[@@onSecondBinding ]
 let f : type t. t foo =
-  ((Function$
-      (fun sideEffect ->
-         ((let module M = struct exception E of t  end in
-             sideEffect (); ((Function$ ((fun x -> M.E x)))[@res.arity 1]))
-         [@res.braces ])))
-  [@res.arity 1])
-let f : type t x u. (t * x * y) list = ((Function$ (fun l -> f l))
-  [@res.arity 1])
+  fun [arity:1]sideEffect ->
+    ((let module M = struct exception E of t  end in
+        sideEffect (); (fun [arity:1]x -> M.E x))
+    [@res.braces ])
+let f : type t x u. (t * x * y) list = fun [arity:1]l -> f l

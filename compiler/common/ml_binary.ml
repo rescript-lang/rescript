@@ -24,29 +24,33 @@
 
 type _ kind = Ml : Parsetree.structure kind | Mli : Parsetree.signature kind
 
-(** [read_ast kind ic] assume [ic] channel is 
-    in the right position *)
-let read_ast (type t) (kind : t kind) ic : t =
-  let magic =
-    match kind with
-    | Ml -> Config.ast_impl_magic_number
-    | Mli -> Config.ast_intf_magic_number
-  in
-  let buffer = really_input_string ic (String.length magic) in
-  assert (buffer = magic);
-  (* already checked by apply_rewriter *)
-  Location.set_input_name (input_value ic);
-  input_value ic
+type ast0 = Impl of Parsetree0.structure | Intf of Parsetree0.signature
 
-let write_ast (type t) (kind : t kind) (fname : string) (pt : t) oc =
-  let magic =
-    match kind with
-    | Ml -> Config.ast_impl_magic_number
-    | Mli -> Config.ast_intf_magic_number
-  in
-  output_string oc magic;
-  output_value oc fname;
-  output_value oc pt
+let magic_of_ast0 : ast0 -> string = function
+  | Impl _ -> Config.ast_impl_magic_number
+  | Intf _ -> Config.ast_intf_magic_number
+
+let to_ast0 : type a. a kind -> a -> ast0 =
+ fun kind ast ->
+  match kind with
+  | Ml ->
+    Impl
+      (Ast_mapper_to0.default_mapper.structure Ast_mapper_to0.default_mapper ast)
+  | Mli ->
+    Intf
+      (Ast_mapper_to0.default_mapper.signature Ast_mapper_to0.default_mapper ast)
+
+let ast0_to_structure : ast0 -> Parsetree.structure = function
+  | Impl str0 ->
+    Ast_mapper_from0.default_mapper.structure Ast_mapper_from0.default_mapper
+      str0
+  | Intf _ -> assert false
+
+let ast0_to_signature : ast0 -> Parsetree.signature = function
+  | Impl _ -> assert false
+  | Intf sig0 ->
+    Ast_mapper_from0.default_mapper.signature Ast_mapper_from0.default_mapper
+      sig0
 
 let magic_of_kind : type a. a kind -> string = function
   | Ml -> Config.ast_impl_magic_number

@@ -68,6 +68,10 @@ function idx(v) {
   eq("File \"ast_abstract_test.res\", line 29, characters 18-25", xFromJs(v), v);
 }
 
+let x0 = "a";
+
+let x1 = "b";
+
 idx("a");
 
 idx("b");
@@ -75,10 +79,6 @@ idx("b");
 idx("c");
 
 Mt.from_pair_suites("Ast_abstract_test", suites.contents);
-
-let x0 = "a";
-
-let x1 = "b";
 
 export {
   suites,

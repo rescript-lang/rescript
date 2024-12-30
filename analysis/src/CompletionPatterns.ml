@@ -112,7 +112,7 @@ and traversePattern (pat : Parsetree.pattern) ~patternPath ~locHasCursor
     let fieldWithCursor = ref None in
     let fieldWithPatHole = ref None in
     fields
-    |> List.iter (fun (fname, f) ->
+    |> List.iter (fun (fname, f, _) ->
            match
              ( fname.Location.txt,
                f.Parsetree.ppat_loc
@@ -125,7 +125,7 @@ and traversePattern (pat : Parsetree.pattern) ~patternPath ~locHasCursor
            | _ -> ());
     let seenFields =
       fields
-      |> List.filter_map (fun (fieldName, _f) ->
+      |> List.filter_map (fun (fieldName, _f, _) ->
              match fieldName with
              | {Location.txt = Longident.Lident fieldName} -> Some fieldName
              | _ -> None)

@@ -130,8 +130,6 @@ let record_representation i ppf =
   function
   | Record_regular -> line i ppf "Record_regular\n"
   | Record_float_unused -> assert false
-  | Record_optional_labels lbls ->
-    line i ppf "Record_optional_labels %s\n" (lbls |> String.concat ", ")
   | Record_unboxed b -> line i ppf "Record_unboxed %b\n" b
   | Record_inlined {tag = i} -> line i ppf "Record_inlined %d\n" i
   | Record_extension -> line i ppf "Record_extension\n"
@@ -151,7 +149,7 @@ let rec core_type i ppf x =
   match x.ctyp_desc with
   | Ttyp_any -> line i ppf "Ttyp_any\n"
   | Ttyp_var s -> line i ppf "Ttyp_var %s\n" s
-  | Ttyp_arrow (l, ct1, ct2) ->
+  | Ttyp_arrow (l, ct1, ct2, _) ->
     line i ppf "Ttyp_arrow\n";
     arg_label i ppf l;
     core_type i ppf ct1;
@@ -179,7 +177,6 @@ let rec core_type i ppf x =
           line i ppf "OTinherit\n";
           core_type (i + 1) ppf ct)
       l
-  | Ttyp_class () -> ()
   | Ttyp_alias (ct, s) ->
     line i ppf "Ttyp_alias \"%s\"\n" s;
     core_type i ppf ct
@@ -288,11 +285,14 @@ and expression i ppf x =
     line i ppf "Texp_let %a\n" fmt_rec_flag rf;
     list i value_binding ppf l;
     expression i ppf e
-  | Texp_function {arg_label = p; param; cases; partial = _} ->
+  | Texp_function {arg_label = p; arity; param; case = case_; partial = _} ->
     line i ppf "Texp_function\n";
+    (match arity with
+    | Some arity -> line i ppf "arity: %d\n" arity
+    | None -> ());
     line i ppf "%a" Ident.print param;
     arg_label i ppf p;
-    list i case ppf cases
+    case i ppf case_
   | Texp_apply (e, l) ->
     line i ppf "Texp_apply\n";
     expression i ppf e;
@@ -373,11 +373,9 @@ and expression i ppf x =
   | Texp_lazy e ->
     line i ppf "Texp_lazy";
     expression i ppf e
-  | Texp_object () -> ()
   | Texp_pack me ->
     line i ppf "Texp_pack";
     module_expr i ppf me
-  | Texp_unreachable -> line i ppf "Texp_unreachable"
   | Texp_extension_constructor (li, _) ->
     line i ppf "Texp_extension_constructor %a" fmt_longident li
 
@@ -639,8 +637,8 @@ and label_decl i ppf
   line (i + 1) ppf "%a" fmt_ident ld_id;
   core_type (i + 1) ppf ld_type
 
-and longident_x_pattern i ppf (li, _, p) =
-  line i ppf "%a\n" fmt_longident li;
+and longident_x_pattern i ppf (li, _, p, opt) =
+  line i ppf "%a%s\n" fmt_longident li (if opt then "?" else "");
   pattern (i + 1) ppf p
 
 and case i ppf {c_lhs; c_guard; c_rhs} =
@@ -660,10 +658,10 @@ and value_binding i ppf x =
   expression (i + 1) ppf x.vb_expr
 
 and record_field i ppf = function
-  | _, Overridden (li, e) ->
-    line i ppf "%a\n" fmt_longident li;
+  | _, Overridden (li, e), opt ->
+    line i ppf "%a%s\n" fmt_longident li (if opt then "?" else "");
     expression (i + 1) ppf e
-  | _, Kept _ -> line i ppf "<kept>"
+  | _, Kept _, _ -> line i ppf "<kept>"
 
 and label_x_expression i ppf (l, e) =
   line i ppf "<arg>\n";

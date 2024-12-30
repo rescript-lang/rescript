@@ -158,7 +158,8 @@ let all_coherent column =
           _ ) ->
         false)
     | Tpat_tuple l1, Tpat_tuple l2 -> List.length l1 = List.length l2
-    | Tpat_record ((_, lbl1, _) :: _, _), Tpat_record ((_, lbl2, _) :: _, _) ->
+    | ( Tpat_record ((_, lbl1, _, _) :: _, _),
+        Tpat_record ((_, lbl2, _, _) :: _, _) ) ->
       Array.length lbl1.lbl_all = Array.length lbl2.lbl_all
     | Tpat_any, _
     | _, Tpat_any
@@ -269,9 +270,9 @@ let records_args l1 l2 =
   let rec combine r1 r2 l1 l2 =
     match (l1, l2) with
     | [], [] -> (List.rev r1, List.rev r2)
-    | [], (_, _, p2) :: rem2 -> combine (omega :: r1) (p2 :: r2) [] rem2
-    | (_, _, p1) :: rem1, [] -> combine (p1 :: r1) (omega :: r2) rem1 []
-    | (_, lbl1, p1) :: rem1, (_, lbl2, p2) :: rem2 ->
+    | [], (_, _, p2, _) :: rem2 -> combine (omega :: r1) (p2 :: r2) [] rem2
+    | (_, _, p1, _) :: rem1, [] -> combine (p1 :: r1) (omega :: r2) rem1 []
+    | (_, lbl1, p1, _) :: rem1, (_, lbl2, p2, _) :: rem2 ->
       if lbl1.lbl_pos < lbl2.lbl_pos then
         combine (p1 :: r1) (omega :: r2) rem1 l2
       else if lbl1.lbl_pos > lbl2.lbl_pos then
@@ -407,12 +408,12 @@ let rec pretty_val ppf v =
     | Tpat_record (lvs, _) -> (
       let filtered_lvs =
         Ext_list.filter lvs (function
-          | _, _, {pat_desc = Tpat_any} -> false (* do not show lbl=_ *)
+          | _, _, {pat_desc = Tpat_any}, _ -> false (* do not show lbl=_ *)
           | _ -> true)
       in
       match filtered_lvs with
       | [] -> fprintf ppf "_"
-      | (_, _lbl, _) :: _q ->
+      | (_, _lbl, _, _) :: _q ->
         let elision_mark _ = () in
         fprintf ppf "@[{%a%t}@]" pretty_lvals filtered_lvs elision_mark)
     | Tpat_array vs -> fprintf ppf "@[[%a]@]" (pretty_vals ",") vs
@@ -451,8 +452,8 @@ and pretty_vals sep ppf = function
 
 and pretty_lvals ppf = function
   | [] -> ()
-  | [(_, lbl, v)] -> fprintf ppf "%s: %a" lbl.lbl_name pretty_val v
-  | (_, lbl, v) :: rest ->
+  | [(_, lbl, v, _)] -> fprintf ppf "%s: %a" lbl.lbl_name pretty_val v
+  | (_, lbl, v, _) :: rest ->
     fprintf ppf "%s: %a,@ %a" lbl.lbl_name pretty_val v pretty_lvals rest
 
 let top_pretty ppf v = fprintf ppf "@[%a@]@?" pretty_val v
@@ -508,28 +509,29 @@ let record_arg p =
 
 (* Raise Not_found when pos is not present in arg *)
 let get_field pos arg =
-  let _, _, p = List.find (fun (_, lbl, _) -> pos = lbl.lbl_pos) arg in
+  let _, _, p, _ = List.find (fun (_, lbl, _, _) -> pos = lbl.lbl_pos) arg in
   p
 
 let extract_fields omegas arg =
   List.map
-    (fun (_, lbl, _) -> try get_field lbl.lbl_pos arg with Not_found -> omega)
+    (fun (_, lbl, _, _) ->
+      try get_field lbl.lbl_pos arg with Not_found -> omega)
     omegas
 
 let all_record_args lbls =
   match lbls with
-  | (_, {lbl_all}, _) :: _ ->
+  | (_, {lbl_all}, _, opt) :: _ ->
     let t =
       Array.map
-        (fun lbl -> (mknoloc (Longident.Lident "?temp?"), lbl, omega))
+        (fun lbl -> (mknoloc (Longident.Lident "?temp?"), lbl, omega, opt))
         lbl_all
     in
     List.iter
-      (fun ((id, lbl, pat) as x) ->
+      (fun ((id, lbl, pat, o) as x) ->
         let lbl_is_optional () =
           match lbl.lbl_repres with
-          | Record_optional_labels labels -> List.mem lbl.lbl_name labels
-          | _ -> false
+          | Record_inlined _ -> false
+          | _ -> lbl.lbl_optional
         in
         let x =
           match pat.pat_desc with
@@ -538,7 +540,7 @@ let all_record_args lbls =
                 _,
                 [({pat_desc = Tpat_constant _} as c)] )
             when lbl_is_optional () ->
-            (id, lbl, c)
+            (id, lbl, c, o)
           | Tpat_construct
               ( {txt = Longident.Ldot (Longident.Lident "*predef*", "Some")},
                 _,
@@ -555,7 +557,7 @@ let all_record_args lbls =
               when Ast_untagged_variants.is_nullary_variant cstr.cd_args ->
               let _, tag = Ast_untagged_variants.get_cstr_loc_tag cstr in
               if Ast_untagged_variants.tag_can_be_undefined tag then x
-              else (id, lbl, pat_construct)
+              else (id, lbl, pat_construct, o)
             | Some cstr -> (
               match
                 Ast_untagged_variants.get_block_type ~env:pat.pat_env cstr
@@ -564,7 +566,7 @@ let all_record_args lbls =
                 when not
                        (Ast_untagged_variants.block_type_can_be_undefined
                           block_type) ->
-                (id, lbl, pat_construct)
+                (id, lbl, pat_construct, o)
               | _ -> x))
           | _ -> x
         in
@@ -617,7 +619,8 @@ let rec normalize_pat q =
   | Tpat_record (largs, closed) ->
     make_pat
       (Tpat_record
-         (List.map (fun (lid, lbl, _) -> (lid, lbl, omega)) largs, closed))
+         ( List.map (fun (lid, lbl, _, opt) -> (lid, lbl, omega, opt)) largs,
+           closed ))
       q.pat_type q.pat_env
   | Tpat_lazy _ -> make_pat (Tpat_lazy omega) q.pat_type q.pat_env
   | Tpat_or _ -> fatal_error "Parmatch.normalize_pat"
@@ -640,11 +643,11 @@ let discr_pat q pss =
     | (({pat_desc = Tpat_record (largs, closed)} as p) :: _) :: pss ->
       let new_omegas =
         List.fold_right
-          (fun (lid, lbl, _) r ->
+          (fun (lid, lbl, _, opt) r ->
             try
               let _ = get_field lbl.lbl_pos r in
               r
-            with Not_found -> (lid, lbl, omega) :: r)
+            with Not_found -> (lid, lbl, omega, opt) :: r)
           largs (record_arg acc)
       in
       acc_pat
@@ -680,15 +683,15 @@ let do_set_args erase_mutable q r =
     make_pat
       (Tpat_record
          ( List.map2
-             (fun (lid, lbl, _) arg ->
+             (fun (lid, lbl, _, opt) arg ->
                if
                  erase_mutable
                  &&
                  match lbl.lbl_mut with
                  | Mutable -> true
                  | Immutable -> false
-               then (lid, lbl, omega)
-               else (lid, lbl, arg))
+               then (lid, lbl, omega, opt)
+               else (lid, lbl, arg, opt))
              omegas args,
            closed ))
       q.pat_type q.pat_env
@@ -981,7 +984,8 @@ let pats_of_type ?(always = false) env ty =
         let labels = snd (Env.find_type_descrs path env) in
         let fields =
           List.map
-            (fun ld -> (mknoloc (Longident.Lident "?pat_of_label?"), ld, omega))
+            (fun ld ->
+              (mknoloc (Longident.Lident "?pat_of_label?"), ld, omega, false))
             labels
         in
         [make_pat (Tpat_record (fields, Closed)) ty env]
@@ -1187,7 +1191,7 @@ let rec has_instance p =
   | Tpat_or (p1, p2, _) -> has_instance p1 || has_instance p2
   | Tpat_construct (_, _, ps) | Tpat_tuple ps | Tpat_array ps ->
     has_instances ps
-  | Tpat_record (lps, _) -> has_instances (List.map (fun (_, _, x) -> x) lps)
+  | Tpat_record (lps, _) -> has_instances (List.map (fun (_, _, x, _) -> x) lps)
   | Tpat_lazy p -> has_instance p
 
 and has_instances = function
@@ -1861,11 +1865,14 @@ and record_lubs l1 l2 =
     match (l1, l2) with
     | [], _ -> l2
     | _, [] -> l1
-    | (lid1, lbl1, p1) :: rem1, (lid2, lbl2, p2) :: rem2 ->
-      if lbl1.lbl_pos < lbl2.lbl_pos then (lid1, lbl1, p1) :: lub_rec rem1 l2
+    | (lid1, lbl1, p1, o1) :: rem1, (lid2, lbl2, p2, o2) :: rem2 ->
+      if lbl1.lbl_pos < lbl2.lbl_pos then
+        (lid1, lbl1, p1, o1) :: lub_rec rem1 l2
       else if lbl2.lbl_pos < lbl1.lbl_pos then
-        (lid2, lbl2, p2) :: lub_rec l1 rem2
-      else (lid1, lbl1, lub p1 p2) :: lub_rec rem1 rem2
+        (lid2, lbl2, p2, o2) :: lub_rec l1 rem2
+      else
+        let o = if o1 = o2 then o1 else raise Empty in
+        (lid1, lbl1, lub p1 p2, o) :: lub_rec rem1 rem2
   in
   lub_rec l1 l2
 
@@ -2003,10 +2010,10 @@ module Conv = struct
       | Tpat_record (subpatterns, _closed_flag) ->
         let fields =
           List.map
-            (fun (_, lbl, p) ->
+            (fun (_, lbl, p, optional) ->
               let id = fresh lbl.lbl_name in
               Hashtbl.add labels id lbl;
-              (mknoloc (Longident.Lident id), loop p))
+              (mknoloc (Longident.Lident id), loop p, optional))
             subpatterns
         in
         mkpat (Ppat_record (fields, Open))
@@ -2139,7 +2146,7 @@ let rec collect_paths_from_pat r p =
   | Tpat_construct (_, {cstr_tag = Cstr_extension _}, ps) ->
     List.fold_left collect_paths_from_pat r ps
   | Tpat_record (lps, _) ->
-    List.fold_left (fun r (_, _, p) -> collect_paths_from_pat r p) r lps
+    List.fold_left (fun r (_, _, p, _) -> collect_paths_from_pat r p) r lps
   | Tpat_variant (_, Some p, _) | Tpat_alias (p, _, _) ->
     collect_paths_from_pat r p
   | Tpat_or (p1, p2, _) ->
@@ -2179,64 +2186,54 @@ let do_check_fragile_gadt = do_check_fragile_param exhaust_gadt
 (********************************)
 
 let check_unused pred casel =
-  if
-    Warnings.is_active Warnings.Unused_match
-    || List.exists (fun c -> c.c_rhs.exp_desc = Texp_unreachable) casel
-  then
+  if Warnings.is_active Warnings.Unused_match then
     let rec do_rec pref = function
       | [] -> ()
-      | {c_lhs = q; c_guard; c_rhs} :: rem ->
+      | {c_lhs = q; c_guard} :: rem ->
         let qs = [q] in
         (try
            let pss = get_mins le_pats (Ext_list.filter pref (compats qs)) in
            (* First look for redundant or partially redundant patterns *)
            let r = every_satisfiables (make_rows pss) (make_row qs) in
-           let refute = c_rhs.exp_desc = Texp_unreachable in
            (* Do not warn for unused [pat -> .] *)
-           if r = Unused && refute then ()
-           else
-             let r =
-               (* Do not refine if there are no other lines *)
-               let skip =
-                 r = Unused
-                 || ((not refute) && pref = [])
-                 || not (refute || Warnings.is_active Warnings.Unreachable_case)
-               in
-               if skip then r
-               else
-                 (* Then look for empty patterns *)
-                 let sfs = satisfiables pss qs in
-                 if sfs = [] then Unused
-                 else
-                   let sfs =
-                     List.map
-                       (function
-                         | [u] -> u
-                         | _ -> assert false)
-                       sfs
-                   in
-                   let u = orify_many sfs in
-                   (*Format.eprintf "%a@." pretty_val u;*)
-                   let pattern, constrs, labels = Conv.conv u in
-                   let pattern =
-                     {pattern with Parsetree.ppat_loc = q.pat_loc}
-                   in
-                   match pred refute constrs labels pattern with
-                   | None when not refute ->
-                     Location.prerr_warning q.pat_loc Warnings.Unreachable_case;
-                     Used
-                   | _ -> r
+           let r =
+             (* Do not refine if there are no other lines *)
+             let skip =
+               r = Unused || pref = []
+               || not (Warnings.is_active Warnings.Unreachable_case)
              in
-             match r with
-             | Unused -> Location.prerr_warning q.pat_loc Warnings.Unused_match
-             | Upartial ps ->
-               ps
-               |> List.filter (fun p ->
-                      not
-                        (Variant_type_spread.is_pat_from_variant_spread_attr p))
-               |> List.iter (fun p ->
-                      Location.prerr_warning p.pat_loc Warnings.Unused_pat)
-             | Used -> ()
+             if skip then r
+             else
+               (* Then look for empty patterns *)
+               let sfs = satisfiables pss qs in
+               if sfs = [] then Unused
+               else
+                 let sfs =
+                   List.map
+                     (function
+                       | [u] -> u
+                       | _ -> assert false)
+                     sfs
+                 in
+                 let u = orify_many sfs in
+                 (*Format.eprintf "%a@." pretty_val u;*)
+                 let pattern, constrs, labels = Conv.conv u in
+                 let pattern = {pattern with Parsetree.ppat_loc = q.pat_loc} in
+                 match pred constrs labels pattern with
+                 | None ->
+                   Location.prerr_warning q.pat_loc Warnings.Unreachable_case;
+                   Used
+                 | _ -> r
+           in
+           match r with
+           | Unused -> Location.prerr_warning q.pat_loc Warnings.Unused_match
+           | Upartial ps ->
+             ps
+             |> List.filter (fun p ->
+                    not (Variant_type_spread.is_pat_from_variant_spread_attr p))
+             |> List.iter (fun p ->
+                    Location.prerr_warning p.pat_loc Warnings.Unused_pat)
+           | Used -> ()
          with Empty | Not_found | NoGuard -> assert false);
 
         if c_guard <> None then do_rec pref rem else do_rec ([q] :: pref) rem
@@ -2268,7 +2265,9 @@ let inactive ~partial pat =
         List.for_all (fun p -> loop p) ps
       | Tpat_alias (p, _, _) | Tpat_variant (_, Some p, _) -> loop p
       | Tpat_record (ldps, _) ->
-        List.for_all (fun (_, lbl, p) -> lbl.lbl_mut = Immutable && loop p) ldps
+        List.for_all
+          (fun (_, lbl, p, _) -> lbl.lbl_mut = Immutable && loop p)
+          ldps
       | Tpat_or (p, q, _) -> loop p && loop q
     in
     loop pat

@@ -63,11 +63,11 @@ type props<'name> = {key?: string, name?: string}
 let name = None
 
 let ok = {name: ?optionMap(name, x => x)}
-let bad = {name: ?name->optionMap(x => x)}
+let bad = {name: ?(name->optionMap(x => x))}
 
 let identity = x => x
 
 let name1 = Some("ReScript")
 
 let ok1 = {name: ?identity(name1)}
-let bad1 = {name: ?name1->identity}
+let bad1 = {name: ?(name1->identity)}

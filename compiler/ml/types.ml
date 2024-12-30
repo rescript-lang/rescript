@@ -23,7 +23,7 @@ type type_expr = {mutable desc: type_desc; mutable level: int; id: int}
 
 and type_desc =
   | Tvar of string option
-  | Tarrow of arg_label * type_expr * type_expr * commutable
+  | Tarrow of arg_label * type_expr * type_expr * commutable * arity
   | Ttuple of type_expr list
   | Tconstr of Path.t * type_expr list * abbrev_memo ref
   | Tobject of type_expr * (Path.t * type_expr list) option ref
@@ -153,15 +153,14 @@ and record_representation =
       tag: int;
       name: string;
       num_nonconsts: int;
-      optional_labels: string list;
       attrs: Parsetree.attributes;
     }
   | Record_extension (* Inlined record under extension *)
-  | Record_optional_labels of string list (* List of optional labels *)
 
 and label_declaration = {
   ld_id: Ident.t;
   ld_mutable: mutable_flag;
+  ld_optional: bool;
   ld_type: type_expr;
   ld_loc: Location.t;
   ld_attributes: Parsetree.attributes;
@@ -297,6 +296,7 @@ type label_description = {
   lbl_res: type_expr; (* Type of the result *)
   lbl_arg: type_expr; (* Type of the argument *)
   lbl_mut: mutable_flag; (* Is this a mutable field? *)
+  lbl_optional: bool; (* Is this an optional field? *)
   lbl_pos: int; (* Position in block *)
   mutable lbl_all: label_description array;
       (* All the labels in this type. This is mutable only because of a specific feature related to dicts, and should not be mutated elsewhere. *)
@@ -309,16 +309,10 @@ let same_record_representation x y =
   match x with
   | Record_regular -> y = Record_regular
   | Record_float_unused -> y = Record_float_unused
-  | Record_optional_labels lbls -> (
-    match y with
-    | Record_optional_labels lbls2 -> lbls = lbls2
-    | _ -> false)
-  | Record_inlined {tag; name; num_nonconsts; optional_labels} -> (
+  | Record_inlined {tag; name; num_nonconsts} -> (
     match y with
     | Record_inlined y ->
-      tag = y.tag && name = y.name
-      && num_nonconsts = y.num_nonconsts
-      && optional_labels = y.optional_labels
+      tag = y.tag && name = y.name && num_nonconsts = y.num_nonconsts
     | _ -> false)
   | Record_extension -> y = Record_extension
   | Record_unboxed x -> (

@@ -15,10 +15,6 @@
 
 open Lexing
 
-let absname = ref false
-(* This reference should be in Clflags, but it would create an additional
-   dependency and make bootstrapping Camlp4 more difficult. *)
-
 type t = Warnings.loc = {
   loc_start: position;
   loc_end: position;
@@ -31,71 +27,17 @@ let in_file name =
 
 let none = in_file "_none_"
 
-let curr lexbuf =
-  {
-    loc_start = lexbuf.lex_start_p;
-    loc_end = lexbuf.lex_curr_p;
-    loc_ghost = false;
-  }
-
-let init lexbuf fname =
-  lexbuf.lex_curr_p <-
-    {pos_fname = fname; pos_lnum = 1; pos_bol = 0; pos_cnum = 0}
-
-let symbol_rloc () =
-  {
-    loc_start = Parsing.symbol_start_pos ();
-    loc_end = Parsing.symbol_end_pos ();
-    loc_ghost = false;
-  }
-
-let symbol_gloc () =
-  {
-    loc_start = Parsing.symbol_start_pos ();
-    loc_end = Parsing.symbol_end_pos ();
-    loc_ghost = true;
-  }
-
-let rhs_loc n =
-  {
-    loc_start = Parsing.rhs_start_pos n;
-    loc_end = Parsing.rhs_end_pos n;
-    loc_ghost = false;
-  }
-
 let input_name = ref "_none_"
-let input_lexbuf = ref (None : lexbuf option)
 let set_input_name name = if name <> "" then input_name := name
 (* Terminal info *)
-
-let num_loc_lines = ref 0 (* number of lines already printed after input *)
 
 (* Print the location in some way or another *)
 
 open Format
 
-let absolute_path s =
-  (* This function could go into Filename *)
-  let open Filename in
-  let s = if is_relative s then concat (Sys.getcwd ()) s else s in
-  (* Now simplify . and .. components *)
-  let rec aux s =
-    let base = basename s in
-    let dir = dirname s in
-    if dir = s then dir
-    else if base = current_dir_name then aux dir
-    else if base = parent_dir_name then dirname (aux dir)
-    else concat (aux dir) base
-  in
-  aux s
-
-let show_filename file =
-  let file = if file = "_none_" then !input_name else file in
-  if !absname then absolute_path file else file
+let show_filename file = if file = "_none_" then !input_name else file
 
 let print_filename ppf file = Format.fprintf ppf "%s" (show_filename file)
-
-let reset () = num_loc_lines := 0
 
 (* return file, line, char from the given position *)
 let get_pos_info pos = (pos.pos_fname, pos.pos_lnum, pos.pos_cnum - pos.pos_bol)
@@ -206,21 +148,6 @@ let print ?(src = None) ~message_kind intro ppf (loc : t) =
     | Sys_error _ ->
       ())
 
-let error_prefix = "Error"
-
-let print_error_prefix ppf =
-  setup_colors ();
-  fprintf ppf "@{<error>%s@}" error_prefix
-
-let print_compact ppf loc =
-  let file, line, startchar = get_pos_info loc.loc_start in
-  let endchar = loc.loc_end.pos_cnum - loc.loc_start.pos_cnum + startchar in
-  fprintf ppf "%a:%i" print_filename file line;
-  if startchar >= 0 then fprintf ppf ",%i--%i" startchar endchar
-
-let print_error intro ppf loc =
-  fprintf ppf "%a%t:" (print ~message_kind:`error intro) loc print_error_prefix
-
 let default_warning_printer loc ppf w =
   match Warnings.report w with
   | `Inactive -> ()
@@ -240,10 +167,6 @@ let print_warning loc ppf w = !warning_printer loc ppf w
 
 let formatter_for_warnings = ref err_formatter
 let prerr_warning loc w = print_warning loc !formatter_for_warnings w
-
-let echo_eof () =
-  print_newline ();
-  incr num_loc_lines
 
 type 'a loc = {txt: 'a; loc: t}
 

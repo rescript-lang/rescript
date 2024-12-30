@@ -3,9 +3,8 @@ open GenTypeCommon
 let rec addAnnotationsToTypes_ ~config ~(expr : Typedtree.expression)
     (arg_types : arg_type list) =
   match (expr.exp_desc, expr.exp_type.desc, arg_types) with
-  | ( Texp_function {arg_label; param; cases = [{c_rhs}]},
-      _,
-      {a_type} :: next_types ) ->
+  | Texp_function {arg_label; param; case = {c_rhs}}, _, {a_type} :: next_types
+    ->
     let next_types1 =
       next_types |> addAnnotationsToTypes_ ~config ~expr:c_rhs
     in
@@ -19,9 +18,6 @@ let rec addAnnotationsToTypes_ ~config ~(expr : Typedtree.expression)
       else a_name
     in
     {a_name; a_type} :: next_types1
-  | Texp_construct ({txt = Lident "Function$"}, _, [fun_expr]), _, _ ->
-    (* let uncurried1: function$<_, _> = Function$(x => x |> string_of_int, [`Has_arity1]) *)
-    addAnnotationsToTypes_ ~config ~expr:fun_expr arg_types
   | Texp_apply ({exp_desc = Texp_ident (path, _, _)}, [(_, Some expr1)]), _, _
     -> (
     match path |> TranslateTypeExprFromTypes.path_to_list |> List.rev with
@@ -51,7 +47,7 @@ and add_annotations_to_fields ~config (expr : Typedtree.expression)
     (fields : fields) (arg_types : arg_type list) =
   match (expr.exp_desc, fields, arg_types) with
   | _, [], _ -> ([], arg_types |> add_annotations_to_types ~config ~expr)
-  | Texp_function {cases = [{c_rhs}]}, field :: next_fields, _ ->
+  | Texp_function {case = {c_rhs}}, field :: next_fields, _ ->
     let next_fields1, types1 =
       add_annotations_to_fields ~config c_rhs next_fields arg_types
     in

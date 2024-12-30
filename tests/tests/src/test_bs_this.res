@@ -2,11 +2,12 @@ let uux_this: @this ({"length": int}, int, int) => int = @this (o, x, y) => o["l
 
 let even = @this (o, x) => x + o
 
-let bark = () => @this
-(o: 'self, x, y) => {
-  Js.log((o["length"], o["x"], o["y"], x, y))
-  x + y
-}
+let bark = () =>
+  @this
+  (o: 'self, x, y) => {
+    Js.log((o["length"], o["x"], o["y"], x, y))
+    x + y
+  }
 
 let js_obj: 'self = {
   "bark": @this

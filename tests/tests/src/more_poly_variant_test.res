@@ -1,10 +1,11 @@
 type rec vlist<'a> = [#Nil | #Cons('a, vlist<'a>)]
 
-let rec map = (f): (vlist<'a> => vlist<'b>) => x =>
-  switch x {
-  | #Nil => #Nil
-  | #Cons(a, l) => #Cons(f(a), map(f)(l))
-  }
+let rec map = (f): (vlist<'a> => vlist<'b>) =>
+  x =>
+    switch x {
+    | #Nil => #Nil
+    | #Cons(a, l) => #Cons(f(a), map(f)(l))
+    }
 
 let split_cases = x =>
   switch x {

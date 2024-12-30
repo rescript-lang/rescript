@@ -39,4 +39,4 @@ val arrow_return_typ_expr : Parsetree.core_type -> bool
 
 val pattern_record_row_rhs : Parsetree.pattern -> bool
 
-val expr_record_row_rhs : Parsetree.expression -> kind
+val expr_record_row_rhs : optional:bool -> Parsetree.expression -> kind

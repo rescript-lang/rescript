@@ -97,14 +97,14 @@ let print_taginfo ppf = function
     fprintf ppf "%s/%i" name num_nonconst
   | Blk_poly_var name -> fprintf ppf "`%s" name
   | Blk_record {fields = ss} ->
-    fprintf ppf "[%s]" (String.concat ";" (Array.to_list ss))
+    fprintf ppf "[%s]" (String.concat ";" (List.map fst (Array.to_list ss)))
   | Blk_module ss -> fprintf ppf "[%s]" (String.concat ";" ss)
   | Blk_some -> fprintf ppf "some"
   | Blk_some_not_nested -> fprintf ppf "some_not_nested"
   | Blk_lazy_general -> fprintf ppf "lazy_general"
   | Blk_module_export _ -> fprintf ppf "module/exports"
   | Blk_record_inlined {fields = ss} ->
-    fprintf ppf "[%s]" (String.concat ";" (Array.to_list ss))
+    fprintf ppf "[%s]" (String.concat ";" (List.map fst (Array.to_list ss)))
 
 let primitive ppf = function
   | Pidentity -> fprintf ppf "id"

@@ -178,6 +178,7 @@ let expand_dummy_constructor_args (sdecl_list : Parsetree.type_declaration list)
                                           pld_mutable = l.ld_mutable;
                                           pld_loc = l.ld_loc;
                                           pld_attributes = [];
+                                          pld_optional = l.ld_optional;
                                           pld_type =
                                             {
                                               ptyp_desc = Ptyp_any;

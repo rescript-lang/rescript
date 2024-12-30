@@ -27,8 +27,10 @@
 *)
 type _ kind = Ml : Parsetree.structure kind | Mli : Parsetree.signature kind
 
-val read_ast : 'a kind -> in_channel -> 'a
-
-val write_ast : 'a kind -> string -> 'a -> out_channel -> unit
+type ast0 = Impl of Parsetree0.structure | Intf of Parsetree0.signature
 
 val magic_of_kind : 'a kind -> string
+val magic_of_ast0 : ast0 -> string
+val to_ast0 : 'a kind -> 'a -> ast0
+val ast0_to_structure : ast0 -> Parsetree.structure
+val ast0_to_signature : ast0 -> Parsetree.signature

@@ -253,3 +253,53 @@ Option.compare(None, None, clockCompare) // 0.
 ```
 */
 let compare: (option<'a>, option<'b>, ('a, 'b) => Ordering.t) => Ordering.t
+
+/**
+`all(options)` returns an option of array if all options are Some, otherwise returns None.
+
+## Examples
+
+```rescript
+Option.all([Some(1), Some(2), Some(3)]) // Some([1, 2, 3])
+Option.all([Some(1), None]) // None
+```
+*/
+let all: array<option<'a>> => option<array<'a>>
+
+/**
+`all2((o1, o2))`. Like `all()`, but with a fixed size tuple of 2
+*/
+let all2: ((option<'a>, option<'b>)) => option<('a, 'b)>
+
+/**
+`all3((o1, o2, o3))`. Like `all()`, but with a fixed size tuple of 2
+*/
+let all3: ((option<'a>, option<'b>, option<'c>)) => option<('a, 'b, 'c)>
+
+/**
+`all4((o1, o2, o3, o4))`. Like `all()`, but with a fixed size tuple of 2
+*/
+let all4: ((option<'a>, option<'b>, option<'c>, option<'d>)) => option<('a, 'b, 'c, 'd)>
+
+/**
+`all5((o1, o2, o3, o4, o5))`. Like `all()`, but with a fixed size tuple of 2
+*/
+let all5: ((option<'a>, option<'b>, option<'c>, option<'d>, option<'e>)) => option<(
+  'a,
+  'b,
+  'c,
+  'd,
+  'e,
+)>
+
+/**
+`all6((o1, o2, o3, o4, o5, o6))`. Like `all()`, but with a fixed size tuple of 2
+*/
+let all6: ((option<'a>, option<'b>, option<'c>, option<'d>, option<'e>, option<'f>)) => option<(
+  'a,
+  'b,
+  'c,
+  'd,
+  'e,
+  'f,
+)>

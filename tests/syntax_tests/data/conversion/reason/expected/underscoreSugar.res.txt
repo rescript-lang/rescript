@@ -1,1 +1,1 @@
-let photo = (Array.get(_, 0))(filterNone(pricedRoom["room"]["photos"]))
+let photo = Array.get(_, 0)(filterNone(pricedRoom["room"]["photos"]))

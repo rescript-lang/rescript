@@ -28,7 +28,7 @@ The rescript-compiler git repo is very large because, prior to tooling improveme
 If you are only interested in the latest master commit, you can perform a shallow clone instead as follows:
 
 ```sh
-git clone --depth 1 https://github.com/rescript-lang/rescript-compiler.git
+git clone --depth 1 https://github.com/rescript-lang/rescript.git
 ```
 
 This will only consume less than 50MB.
@@ -47,7 +47,7 @@ Make sure you have [opam](https://opam.ocaml.org/doc/Install.html) installed on 
 opam init
 
 # Any recent OCaml version works as a development compiler
-opam switch create 5.2.0 # can also create local switch with opam switch create
+opam switch create 5.2.1 # can also create local switch with opam switch create
 
 # Install dev dependencies from OPAM
 opam install . --deps-only --with-test --with-dev-setup -y
@@ -214,13 +214,7 @@ This is usually the file you want to create to test certain compile behavior wit
 
 The "Playground bundle" is a JS version of the ReScript compiler; including all necessary dependency files (stdlib / belt etc). It is useful for building tools where you want to compile and execute arbitrary ReScript code in the browser.
 
-The ReScript source code is compiled with a tool called [JSOO (js_of_ocaml)](https://ocsigen.org/js_of_ocaml/4.0.0/manual/overview), which uses OCaml bytecode to compile to JavaScript and is part of the bigger OCaml ecosystem.
-
-Install `jsoo` via `opam`:
-
-```sh
-opam install js_of_ocaml.4.0.0
-```
+The ReScript source code is compiled with a tool called [JSOO (js_of_ocaml)](https://ocsigen.org/js_of_ocaml/latest/manual/overview), which uses OCaml bytecode to compile to JavaScript and is part of the bigger OCaml ecosystem.
 
 ### Building the Bundle
 

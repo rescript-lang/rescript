@@ -15,8 +15,6 @@
 
 type loc_kind = Loc_FILE | Loc_LINE | Loc_MODULE | Loc_LOC | Loc_POS
 
-type record_repr = Record_regular | Record_optional
-
 type tag_info =
   | Blk_constructor of {
       name: string;
@@ -28,17 +26,15 @@ type tag_info =
       name: string;
       num_nonconst: int;
       tag: int;
-      optional_labels: string list;
-      fields: string array;
+      fields: (string * bool (* optional *)) array;
       mutable_flag: Asttypes.mutable_flag;
       attrs: Parsetree.attributes;
     }
   | Blk_tuple
   | Blk_poly_var of string
   | Blk_record of {
-      fields: string array;
+      fields: (string * bool (* optional *)) array;
       mutable_flag: Asttypes.mutable_flag;
-      record_repr: record_repr;
     }
   | Blk_module of string list
   | Blk_module_export of Ident.t list
@@ -88,40 +84,35 @@ let find_name (attr : Parsetree.attribute) =
     Some s
   | _ -> None
 
-let blk_record (fields : (label * _) array) mut record_repr =
+let blk_record (fields : (label * _ * _) array) mut =
   let all_labels_info =
-    Ext_array.map fields (fun (lbl, _) ->
-        Ext_list.find_def lbl.lbl_attributes find_name lbl.lbl_name)
+    Ext_array.map fields (fun (lbl, _, _) ->
+        ( Ext_list.find_def lbl.lbl_attributes find_name lbl.lbl_name,
+          lbl.lbl_optional ))
   in
-  Blk_record {fields = all_labels_info; mutable_flag = mut; record_repr}
+  Blk_record {fields = all_labels_info; mutable_flag = mut}
 
 let blk_record_ext fields mutable_flag =
   let all_labels_info =
     Array.map
-      (fun ((lbl : label), _) ->
+      (fun ((lbl : label), _, _) ->
         Ext_list.find_def lbl.Types.lbl_attributes find_name lbl.lbl_name)
       fields
   in
   Blk_record_ext {fields = all_labels_info; mutable_flag}
 
-let blk_record_inlined fields name num_nonconst optional_labels ~tag ~attrs
-    mutable_flag =
+let blk_record_inlined fields name num_nonconst ~tag ~attrs mutable_flag =
   let fields =
     Array.map
-      (fun ((lbl : label), _) ->
-        Ext_list.find_def lbl.lbl_attributes find_name lbl.lbl_name)
+      (fun ((lbl : label), _, _) ->
+        ( Ext_list.find_def lbl.lbl_attributes find_name lbl.lbl_name,
+          lbl.lbl_optional ))
       fields
   in
-  Blk_record_inlined
-    {fields; name; num_nonconst; tag; mutable_flag; optional_labels; attrs}
+  Blk_record_inlined {fields; name; num_nonconst; tag; mutable_flag; attrs}
 
 let ref_tag_info : tag_info =
-  Blk_record
-    {
-      fields = [|"contents"|];
-      mutable_flag = Mutable;
-      record_repr = Record_regular;
-    }
+  Blk_record {fields = [|("contents", false)|]; mutable_flag = Mutable}
 
 type field_dbg_info =
   | Fld_record of {name: string; mutable_flag: Asttypes.mutable_flag}

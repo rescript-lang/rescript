@@ -34,7 +34,6 @@ Path x
 
 Complete src/Destructuring.res 11:13
 posCursor:[11:13] posNoWhite:[11:11] Found expr:[10:8->14:1]
-posCursor:[11:13] posNoWhite:[11:11] Found expr:[10:9->14:1]
 posCursor:[11:13] posNoWhite:[11:11] Found expr:[11:2->13:6]
 posCursor:[11:13] posNoWhite:[11:11] Found pattern:[11:6->11:14]
 Completable: Cpattern Value[x]->recordBody
@@ -51,7 +50,6 @@ Path x
 
 Complete src/Destructuring.res 17:10
 posCursor:[17:10] posNoWhite:[17:9] Found expr:[16:9->20:1]
-posCursor:[17:10] posNoWhite:[17:9] Found expr:[16:10->20:1]
 posCursor:[17:10] posNoWhite:[17:9] Found expr:[17:5->19:11]
 posCursor:[17:10] posNoWhite:[17:9] Found pattern:[17:9->17:11]
 Completable: Cpattern Value[x]->recordBody

@@ -2,11 +2,11 @@
 
 module V4C = {
   @res.jsxComponentProps
-  type props = {}
+  type props<'a, 'b> = {a: 'a, b: 'b}
 
-  let make = (type a, _: props) => (~a, ~b, _) => ReactDOM.createDOMElementVariadic("div", [])
+  let make = (type a, {a, b, _}: props<_, _>) => ReactDOM.createDOMElementVariadic("div", [])
   let make = {
-    let \"TypeConstraint$V4C" = props => make(props)
+    let \"TypeConstraint$V4C" = (props: props<_>) => make(props)
 
     \"TypeConstraint$V4C"
   }
@@ -16,11 +16,11 @@ module V4C = {
 
 module V4A = {
   @res.jsxComponentProps
-  type props = {}
+  type props<'a, 'b> = {a: 'a, b: 'b}
 
-  let make = (type a, _: props) => (~a, ~b, _) => ReactDOM.jsx("div", {})
+  let make = (type a, {a, b, _}: props<_, _>) => ReactDOM.jsx("div", {})
   let make = {
-    let \"TypeConstraint$V4A" = props => make(props)
+    let \"TypeConstraint$V4A" = (props: props<_>) => make(props)
 
     \"TypeConstraint$V4A"
   }

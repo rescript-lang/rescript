@@ -54,7 +54,8 @@ module Typ = struct
 
   let any ?loc ?attrs () = mk ?loc ?attrs Ptyp_any
   let var ?loc ?attrs a = mk ?loc ?attrs (Ptyp_var a)
-  let arrow ?loc ?attrs a b c = mk ?loc ?attrs (Ptyp_arrow (a, b, c))
+  let arrow ?loc ?attrs ~arity a b c =
+    mk ?loc ?attrs (Ptyp_arrow (a, b, c, arity))
   let tuple ?loc ?attrs a = mk ?loc ?attrs (Ptyp_tuple a)
   let constr ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_constr (a, b))
   let object_ ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_object (a, b))
@@ -81,8 +82,8 @@ module Typ = struct
         | Ptyp_var x ->
           check_variable var_names t.ptyp_loc x;
           Ptyp_var x
-        | Ptyp_arrow (label, core_type, core_type') ->
-          Ptyp_arrow (label, loop core_type, loop core_type')
+        | Ptyp_arrow (label, core_type, core_type', a) ->
+          Ptyp_arrow (label, loop core_type, loop core_type', a)
         | Ptyp_tuple lst -> Ptyp_tuple (List.map loop lst)
         | Ptyp_constr ({txt = Longident.Lident s}, []) when List.mem s var_names
           ->
@@ -90,7 +91,6 @@ module Typ = struct
         | Ptyp_constr (longident, lst) ->
           Ptyp_constr (longident, List.map loop lst)
         | Ptyp_object (lst, o) -> Ptyp_object (List.map loop_object_field lst, o)
-        | Ptyp_class () -> assert false
         | Ptyp_alias (core_type, string) ->
           check_variable var_names t.ptyp_loc string;
           Ptyp_alias (loop core_type, string)
@@ -151,8 +151,9 @@ module Exp = struct
   let ident ?loc ?attrs a = mk ?loc ?attrs (Pexp_ident a)
   let constant ?loc ?attrs a = mk ?loc ?attrs (Pexp_constant a)
   let let_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_let (a, b, c))
-  let fun_ ?loc ?attrs a b c d = mk ?loc ?attrs (Pexp_fun (a, b, c, d))
-  let function_ ?loc ?attrs a = mk ?loc ?attrs (Pexp_function a)
+  let fun_ ?loc ?attrs ~arity a b c d =
+    mk ?loc ?attrs
+      (Pexp_fun {arg_label = a; default = b; lhs = c; rhs = d; arity})
   let apply ?loc ?attrs a b = mk ?loc ?attrs (Pexp_apply (a, b))
   let match_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_match (a, b))
   let try_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_try (a, b))
@@ -182,7 +183,6 @@ module Exp = struct
   let pack ?loc ?attrs a = mk ?loc ?attrs (Pexp_pack a)
   let open_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_open (a, b, c))
   let extension ?loc ?attrs a = mk ?loc ?attrs (Pexp_extension a)
-  let unreachable ?loc ?attrs () = mk ?loc ?attrs Pexp_unreachable
 
   let case lhs ?guard rhs = {pc_lhs = lhs; pc_guard = guard; pc_rhs = rhs}
 end
@@ -321,10 +321,12 @@ module Type = struct
       pcd_attributes = attrs;
     }
 
-  let field ?(loc = !default_loc) ?(attrs = []) ?(mut = Immutable) name typ =
+  let field ?(loc = !default_loc) ?(attrs = []) ?(mut = Immutable)
+      ?(optional = false) name typ =
     {
       pld_name = name;
       pld_mutable = mut;
+      pld_optional = optional;
       pld_type = typ;
       pld_loc = loc;
       pld_attributes = attrs;

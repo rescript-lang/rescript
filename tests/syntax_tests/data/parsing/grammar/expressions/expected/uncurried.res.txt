@@ -1,30 +1,15 @@
-let f = ((Function$ (fun a -> fun b -> a + b))[@res.arity 2])
-let f = ((Function$ (fun a -> fun b -> a + b))[@res.arity 2])
-let f = ((Function$ (fun a -> fun b -> fun c -> fun d -> ((a + b) + c) + d))
-  [@res.arity 4])
+let f [arity:2]a b = a + b
+let f [arity:2]a b = a + b
+let f [arity:4]a b c d = ((a + b) + c) + d
 let f =
-  ((Function$
-      ((fun a ->
-          ((Function$
-              ((fun b ->
-                  ((Function$
-                      ((fun c -> ((Function$ ((fun d -> ())[@attr4 ]))
-                          [@res.arity 1]))
-                      [@attr3 ]))
-                  [@res.arity 1]))
-              [@attr2 ]))
-          [@res.arity 1]))
-      [@attr ]))
-  [@res.arity 1])
-let f =
-  ((Function$
-      (fun ((a)[@attr ]) ->
-         fun ((b)[@attr2 ]) -> fun ((c)[@attr3 ]) -> fun ((d)[@attr4 ]) -> ()))
-  [@res.arity 4])
-let f =
-  ((Function$
-      (fun ((a)[@attr ]) ->
-         fun ((b)[@attr2 ]) -> fun ((c)[@attr3 ]) -> fun ((d)[@attr4 ]) -> ()))
-  [@res.arity 4])
+  ((fun [arity:1]a ->
+      ((fun [arity:1]b ->
+          ((fun [arity:1]c -> ((fun [arity:1]d -> ())[@attr4 ]))[@attr3 ]))
+      [@attr2 ]))
+  [@attr ])
+let f [arity:4]((a)[@attr ]) ((b)[@attr2 ]) ((c)[@attr3 ]) ((d)[@attr4 ]) =
+  ()
+let f [arity:4]((a)[@attr ]) ((b)[@attr2 ]) ((c)[@attr3 ]) ((d)[@attr4 ]) =
+  ()
 ;;add 1 2
 ;;add 2 3 4 5 6 7 8 9 10

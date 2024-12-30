@@ -558,10 +558,8 @@ module SexpAst = struct
             Sexp.list (map_empty ~f:value_binding vbs);
             expression expr;
           ]
-      | Pexp_function cases ->
-        Sexp.list
-          [Sexp.atom "Pexp_function"; Sexp.list (map_empty ~f:case cases)]
-      | Pexp_fun (arg_lbl, expr_opt, pat, expr) ->
+      | Pexp_fun
+          {arg_label = arg_lbl; default = expr_opt; lhs = pat; rhs = expr} ->
         Sexp.list
           [
             Sexp.atom "Pexp_fun";
@@ -624,7 +622,7 @@ module SexpAst = struct
             Sexp.atom "Pexp_record";
             Sexp.list
               (map_empty
-                 ~f:(fun (longident_loc, expr) ->
+                 ~f:(fun (longident_loc, expr, _) ->
                    Sexp.list
                      [longident longident_loc.Asttypes.txt; expression expr])
                  rows);
@@ -702,7 +700,6 @@ module SexpAst = struct
       | Pexp_assert expr -> Sexp.list [Sexp.atom "Pexp_assert"; expression expr]
       | Pexp_lazy expr -> Sexp.list [Sexp.atom "Pexp_lazy"; expression expr]
       | Pexp_poly _ -> Sexp.list [Sexp.atom "Pexp_poly"]
-      | Pexp_object _ -> Sexp.list [Sexp.atom "Pexp_object"]
       | Pexp_newtype (lbl, expr) ->
         Sexp.list
           [Sexp.atom "Pexp_newtype"; string lbl.Asttypes.txt; expression expr]
@@ -718,7 +715,6 @@ module SexpAst = struct
           ]
       | Pexp_extension ext ->
         Sexp.list [Sexp.atom "Pexp_extension"; extension ext]
-      | Pexp_unreachable -> Sexp.atom "Pexp_unreachable"
     in
     Sexp.list [Sexp.atom "expression"; desc]
 
@@ -776,7 +772,7 @@ module SexpAst = struct
             closed_flag flag;
             Sexp.list
               (map_empty
-                 ~f:(fun (longident_loc, p) ->
+                 ~f:(fun (longident_loc, p, _) ->
                    Sexp.list [longident longident_loc.Location.txt; pattern p])
                  rows);
           ]
@@ -848,7 +844,7 @@ module SexpAst = struct
       match typexpr.ptyp_desc with
       | Ptyp_any -> Sexp.atom "Ptyp_any"
       | Ptyp_var var -> Sexp.list [Sexp.atom "Ptyp_var"; string var]
-      | Ptyp_arrow (arg_lbl, typ1, typ2) ->
+      | Ptyp_arrow (arg_lbl, typ1, typ2, _) ->
         Sexp.list
           [
             Sexp.atom "Ptyp_arrow";
@@ -875,7 +871,6 @@ module SexpAst = struct
             closed_flag flag;
             Sexp.list (map_empty ~f:object_field fields);
           ]
-      | Ptyp_class () -> assert false
       | Ptyp_variant (fields, flag, opt_labels) ->
         Sexp.list
           [

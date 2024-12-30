@@ -232,8 +232,6 @@ let rec block_last_is_return_throw_or_continue (x : J.block) =
 *)
 let if_ ?comment ?declaration ?else_ (e : J.expression) (then_ : J.block) : t =
   let declared = ref false in
-  let common_prefix_blocks = ref [] in
-  let add_prefix b = common_prefix_blocks := b :: !common_prefix_blocks in
   let rec aux ?comment (e : J.expression) (ifso : J.block) (ifnot : J.block) : t
       =
     match (e.expression_desc, ifnot) with
@@ -301,14 +299,6 @@ let if_ ?comment ?declaration ?else_ (e : J.expression) (then_ : J.block) : t =
       | _, [{statement_desc = If (pred1, ifso1, ifnot1)}]
         when Js_analyzer.eq_block ifso ifnot1 ->
         aux ?comment (E.or_ e (E.not pred1)) ifso ifso1
-      | ifso1 :: ifso_rest, ifnot1 :: ifnot_rest
-        when Js_analyzer.eq_statement ifnot1 ifso1
-             && Js_analyzer.no_side_effect_expression e ->
-        (* here we do agressive optimization, because it can help optimization later,
-            move code outside of branch is generally helpful later
-        *)
-        add_prefix ifso1;
-        aux ?comment e ifso_rest ifnot_rest
       | _ -> {statement_desc = If (e, ifso, ifnot); comment})
   in
   let if_block =
@@ -317,12 +307,9 @@ let if_ ?comment ?declaration ?else_ (e : J.expression) (then_ : J.block) : t =
       | None -> []
       | Some v -> v)
   in
-  let prefix = !common_prefix_blocks in
   match (!declared, declaration) with
-  | true, _ | _, None ->
-    if prefix = [] then if_block else block (List.rev_append prefix [if_block])
-  | false, Some (kind, id) ->
-    block (declare_variable ~kind id :: List.rev_append prefix [if_block])
+  | true, _ | _, None -> if_block
+  | false, Some (kind, id) -> block (declare_variable ~kind id :: [if_block])
 
 let assign ?comment id e : t =
   {statement_desc = J.Exp (E.assign (E.var id) e); comment}

@@ -22,8 +22,8 @@ let substitute_types ~type_map (t : Types.type_expr) =
       | Tsubst t -> {t with desc = Tsubst (loop t)}
       | Tvariant rd -> {t with desc = Tvariant (row_desc rd)}
       | Tnil -> t
-      | Tarrow (lbl, t1, t2, c) ->
-        {t with desc = Tarrow (lbl, loop t1, loop t2, c)}
+      | Tarrow (lbl, t1, t2, c, arity) ->
+        {t with desc = Tarrow (lbl, loop t1, loop t2, c, arity)}
       | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
       | Tobject (t, r) -> {t with desc = Tobject (loop t, r)}
       | Tfield (n, k, t1, t2) -> {t with desc = Tfield (n, k, loop t1, loop t2)}

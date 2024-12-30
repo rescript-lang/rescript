@@ -76,7 +76,7 @@ and core_type = {
 and core_type_desc =
   | Ptyp_any (*  _ *)
   | Ptyp_var of string (* 'a *)
-  | Ptyp_arrow of arg_label * core_type * core_type
+  | Ptyp_arrow of arg_label * core_type * core_type * arity
     (* T1 -> T2       Simple
        ~l:T1 -> T2    Labelled
        ?l:T1 -> T2    Optional
@@ -95,7 +95,6 @@ and core_type_desc =
     (* < l1:T1; ...; ln:Tn >     (flag = Closed)
        < l1:T1; ...; ln:Tn; .. > (flag = Open)
     *)
-  | Ptyp_class of unit (* dummy AST node *)
   | Ptyp_alias of core_type * string (* T as 'a *)
   | Ptyp_variant of row_field list * closed_flag * label list option
     (* [ `A|`B ]         (flag = Closed; labels = None)
@@ -184,7 +183,8 @@ and pattern_desc =
     (* `A             (None)
        `A P           (Some P)
     *)
-  | Ppat_record of (Longident.t loc * pattern) list * closed_flag
+  | Ppat_record of
+      (Longident.t loc * pattern * bool (* optional *)) list * closed_flag
     (* { l1=P1; ...; ln=Pn }     (flag = Closed)
        { l1=P1; ...; ln=Pn; _}   (flag = Open)
 
@@ -224,8 +224,13 @@ and expression_desc =
     (* let P1 = E1 and ... and Pn = EN in E       (flag = Nonrecursive)
        let rec P1 = E1 and ... and Pn = EN in E   (flag = Recursive)
     *)
-  | Pexp_function of case list (* function P1 -> E1 | ... | Pn -> En *)
-  | Pexp_fun of arg_label * expression option * pattern * expression
+  | Pexp_fun of {
+      arg_label: arg_label;
+      default: expression option;
+      lhs: pattern;
+      rhs: expression;
+      arity: arity;
+    }
     (* fun P -> E1                          (Simple, None)
        fun ~l:P -> E1                       (Labelled l, None)
        fun ?l:P -> E1                       (Optional l, None)
@@ -261,7 +266,9 @@ and expression_desc =
     (* `A             (None)
        `A E           (Some E)
     *)
-  | Pexp_record of (Longident.t loc * expression) list * expression option
+  | Pexp_record of
+      (Longident.t loc * expression * bool (* optional *)) list
+      * expression option
     (* { l1=P1; ...; ln=Pn }     (None)
        { E0 with l1=P1; ...; ln=Pn }   (Some E0)
 
@@ -301,7 +308,6 @@ and expression_desc =
 
        Can only be used as the expression under Cfk_concrete
        for methods (not values). *)
-  | Pexp_object of unit (* dummy AST node *)
   | Pexp_newtype of string loc * expression (* fun (type t) -> E *)
   | Pexp_pack of module_expr
     (* (module ME)
@@ -312,8 +318,8 @@ and expression_desc =
     (* M.(E)
        let open M in E
        let! open M in E *)
-  | Pexp_extension of extension (* [%id] *)
-  | Pexp_unreachable
+  | Pexp_extension of extension
+(* [%id] *)
 (* . *)
 
 and case = {
@@ -370,6 +376,7 @@ and type_kind =
 and label_declaration = {
   pld_name: string loc;
   pld_mutable: mutable_flag;
+  pld_optional: bool;
   pld_type: core_type;
   pld_loc: Location.t;
   pld_attributes: attributes; (* l : T [@id1] [@id2] *)

@@ -1,31 +1,36 @@
 open Parsetree
 
-let arrow_type ?(arity = max_int) ?(attrs = []) ct =
+let arrow_type ?(max_arity = max_int) ct =
   let has_as_attr attrs =
     Ext_list.exists attrs (fun (x, _) -> x.Asttypes.txt = "as")
   in
   let rec process attrs_before acc typ arity =
     match typ with
-    | typ when arity < 0 -> (attrs_before, List.rev acc, typ)
+    | _ when arity < 0 -> (attrs_before, List.rev acc, typ)
+    | {ptyp_desc = Ptyp_arrow (_, _, _, Some _); ptyp_attributes = []}
+      when acc <> [] ->
+      (attrs_before, List.rev acc, typ)
     | {
-     ptyp_desc = Ptyp_arrow ((Nolabel as lbl), typ1, typ2);
+     ptyp_desc = Ptyp_arrow ((Nolabel as lbl), typ1, typ2, _);
      ptyp_attributes = [];
     } ->
       let arg = ([], lbl, typ1) in
       process attrs_before (arg :: acc) typ2 (arity - 1)
     | {
-     ptyp_desc = Ptyp_arrow (Nolabel, _typ1, _typ2);
+     ptyp_desc = Ptyp_arrow (Nolabel, _typ1, _typ2, _);
      ptyp_attributes = [({txt = "bs"}, _)];
     } ->
       (* stop here, the uncurried attribute always indicates the beginning of an arrow function
          * e.g. `(. int) => (. int)` instead of `(. int, . int)` *)
       (attrs_before, List.rev acc, typ)
-    | {ptyp_desc = Ptyp_arrow (Nolabel, _typ1, _typ2); ptyp_attributes = _attrs}
-      as return_type ->
+    | {
+        ptyp_desc = Ptyp_arrow (Nolabel, _typ1, _typ2, _);
+        ptyp_attributes = _attrs;
+      } as return_type ->
       let args = List.rev acc in
       (attrs_before, args, return_type)
     | {
-     ptyp_desc = Ptyp_arrow (((Labelled _ | Optional _) as lbl), typ1, typ2);
+     ptyp_desc = Ptyp_arrow (((Labelled _ | Optional _) as lbl), typ1, typ2, _);
      ptyp_attributes = attrs;
     } ->
       (* Res_core.parse_es6_arrow_type has a workaround that removed an extra arity for the function if the
@@ -45,11 +50,12 @@ let arrow_type ?(arity = max_int) ?(attrs = []) ct =
     | typ -> (attrs_before, List.rev acc, typ)
   in
   match ct with
-  | {ptyp_desc = Ptyp_arrow (Nolabel, _typ1, _typ2); ptyp_attributes = attrs1}
-    as typ ->
-    let attrs = attrs @ attrs1 in
-    process attrs [] {typ with ptyp_attributes = []} arity
-  | typ -> process attrs [] typ arity
+  | {
+      ptyp_desc = Ptyp_arrow (Nolabel, _typ1, _typ2, _);
+      ptyp_attributes = attrs1;
+    } as typ ->
+    process attrs1 [] {typ with ptyp_attributes = []} max_arity
+  | typ -> process [] [] typ max_arity
 
 let functor_type modtype =
   let rec process acc modtype =
@@ -137,10 +143,12 @@ let rewrite_underscore_apply expr =
   in
   match expr_fun.pexp_desc with
   | Pexp_fun
-      ( Nolabel,
-        None,
-        {ppat_desc = Ppat_var {txt = "__x"}},
-        ({pexp_desc = Pexp_apply (call_expr, args)} as e) ) ->
+      {
+        arg_label = Nolabel;
+        default = None;
+        lhs = {ppat_desc = Ppat_var {txt = "__x"}};
+        rhs = {pexp_desc = Pexp_apply (call_expr, args)} as e;
+      } ->
     let new_args =
       List.map
         (fun arg ->
@@ -177,47 +185,52 @@ let fun_expr expr =
       collect_new_types (string_loc :: acc) return_expr
     | return_expr -> (List.rev acc, return_expr)
   in
-  let rec collect ~uncurried ~n_fun attrs_before acc expr =
+  let rec collect ~n_fun attrs_before acc expr =
     match expr with
     | {
      pexp_desc =
        Pexp_fun
-         ( Nolabel,
-           None,
-           {ppat_desc = Ppat_var {txt = "__x"}},
-           {pexp_desc = Pexp_apply _} );
+         {
+           arg_label = Nolabel;
+           default = None;
+           lhs = {ppat_desc = Ppat_var {txt = "__x"}};
+           rhs = {pexp_desc = Pexp_apply _};
+         };
     } ->
-      (uncurried, attrs_before, List.rev acc, rewrite_underscore_apply expr)
+      (attrs_before, List.rev acc, rewrite_underscore_apply expr)
     | {pexp_desc = Pexp_newtype (string_loc, rest); pexp_attributes = attrs} ->
       let string_locs, return_expr = collect_new_types [string_loc] rest in
       let param = NewTypes {attrs; locs = string_locs} in
-      collect ~uncurried ~n_fun attrs_before (param :: acc) return_expr
+      collect ~n_fun attrs_before (param :: acc) return_expr
     | {
-     pexp_desc = Pexp_fun (lbl, default_expr, pattern, return_expr);
+     pexp_desc =
+       Pexp_fun
+         {
+           arg_label = lbl;
+           default = default_expr;
+           lhs = pattern;
+           rhs = return_expr;
+           arity;
+         };
      pexp_attributes = [];
-    } ->
+    }
+      when arity = None || n_fun = 0 ->
       let parameter =
         Parameter {attrs = []; lbl; default_expr; pat = pattern}
       in
-      collect ~uncurried ~n_fun:(n_fun + 1) attrs_before (parameter :: acc)
-        return_expr
+      collect ~n_fun:(n_fun + 1) attrs_before (parameter :: acc) return_expr
     (* If a fun has an attribute, then it stops here and makes currying.
        i.e attributes outside of (...), uncurried `(.)` and `async` make currying *)
-    | {pexp_desc = Pexp_fun _} -> (uncurried, attrs_before, List.rev acc, expr)
+    | {pexp_desc = Pexp_fun _} -> (attrs_before, List.rev acc, expr)
     | expr when n_fun = 0 && Ast_uncurried.expr_is_uncurried_fun expr ->
       let expr = Ast_uncurried.expr_extract_uncurried_fun expr in
-      collect ~uncurried:true ~n_fun attrs_before acc expr
-    | expr -> (uncurried, attrs_before, List.rev acc, expr)
+      collect ~n_fun attrs_before acc expr
+    | expr -> (attrs_before, List.rev acc, expr)
   in
   match expr with
   | {pexp_desc = Pexp_fun _ | Pexp_newtype _} ->
-    collect ~uncurried:false ~n_fun:0 expr.pexp_attributes []
-      {expr with pexp_attributes = []}
-  | _ when Ast_uncurried.expr_is_uncurried_fun expr ->
-    let expr = Ast_uncurried.expr_extract_uncurried_fun expr in
-    collect ~uncurried:true ~n_fun:0 expr.pexp_attributes []
-      {expr with pexp_attributes = []}
-  | _ -> collect ~uncurried:false ~n_fun:0 [] [] expr
+    collect ~n_fun:0 expr.pexp_attributes [] {expr with pexp_attributes = []}
+  | _ -> collect ~n_fun:0 [] [] expr
 
 let process_braces_attr expr =
   match expr.pexp_attributes with
@@ -231,10 +244,10 @@ let filter_parsing_attrs attrs =
       match attr with
       | ( {
             Location.txt =
-              ( "res.arity" | "res.braces" | "ns.braces" | "res.iflet"
-              | "res.namedArgLoc" | "res.optional" | "res.ternary" | "res.async"
-              | "res.await" | "res.template" | "res.taggedTemplate"
-              | "res.patVariantSpread" | "res.dictPattern" );
+              ( "res.braces" | "ns.braces" | "res.iflet" | "res.namedArgLoc"
+              | "res.ternary" | "res.async" | "res.await" | "res.template"
+              | "res.taggedTemplate" | "res.patVariantSpread"
+              | "res.dictPattern" );
           },
           _ ) ->
         false
@@ -376,20 +389,14 @@ let is_if_let_expr expr =
     true
   | _ -> false
 
-let rec has_optional_attribute attrs =
-  match attrs with
-  | [] -> false
-  | ({Location.txt = "ns.optional" | "res.optional"}, _) :: _ -> true
-  | _ :: attrs -> has_optional_attribute attrs
-
 let has_attributes attrs =
   List.exists
     (fun attr ->
       match attr with
       | ( {
             Location.txt =
-              ( "res.arity" | "res.braces" | "ns.braces" | "res.iflet"
-              | "res.ternary" | "res.async" | "res.await" | "res.template" );
+              ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
+              | "res.async" | "res.await" | "res.template" );
           },
           _ ) ->
         false
@@ -572,8 +579,8 @@ let is_printable_attribute attr =
   match attr with
   | ( {
         Location.txt =
-          ( "res.arity" | "res.iflet" | "res.braces" | "ns.braces" | "JSX"
-          | "res.async" | "res.await" | "res.template" | "res.ternary" );
+          ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.async"
+          | "res.await" | "res.template" | "res.ternary" );
       },
       _ ) ->
     false
@@ -747,10 +754,12 @@ let is_single_pipe_expr expr =
 let is_underscore_apply_sugar expr =
   match expr.pexp_desc with
   | Pexp_fun
-      ( Nolabel,
-        None,
-        {ppat_desc = Ppat_var {txt = "__x"}},
-        {pexp_desc = Pexp_apply _} ) ->
+      {
+        arg_label = Nolabel;
+        default = None;
+        lhs = {ppat_desc = Ppat_var {txt = "__x"}};
+        rhs = {pexp_desc = Pexp_apply _};
+      } ->
     true
   | _ -> false
 

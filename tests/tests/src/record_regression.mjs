@@ -55,7 +55,8 @@ newrecord$4.aa = undefined;
 
 function setAA(ao) {
   return {
-    aa: ao
+    aa: ao,
+    bb: undefined
   };
 }
 

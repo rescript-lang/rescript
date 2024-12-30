@@ -41,7 +41,6 @@ let command ~path =
   let rec exprKind (exp : Parsetree.expression) =
     match exp.pexp_desc with
     | Pexp_fun _ -> Function
-    | Pexp_function _ -> Function
     | Pexp_constraint (e, _) -> exprKind e
     | Pexp_constant (Pconst_string _) -> String
     | Pexp_constant (Pconst_float _ | Pconst_integer _) -> Number
