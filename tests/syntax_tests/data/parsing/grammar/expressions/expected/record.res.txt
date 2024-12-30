@@ -12,41 +12,30 @@ let r = { expr with pexp_attributes = [||]; pexp_loc = loc }
 let r = { expr with pexp_attributes = [||] }
 let r = { (make () : myRecord) with foo = bar }
 let r = { (make () : myRecord) with foo = bar }
-let r =
-  {
-    x = ((None)[@res.optional ]);
-    y = ((None)[@res.optional ]);
-    z = (((None : tt))[@res.optional ])
-  }
-let z = ((Function$ (fun name -> { name = ((name)[@res.optional ]); x = 3 }))
-  [@res.arity 1])
-let z = ((Function$ (fun name -> { name = ((name)[@res.optional ]); x = 3 }))
-  [@res.arity 1])
-let z = ((Function$ (fun name -> { name; x = ((x)[@res.optional ]) }))
-  [@res.arity 1])
-let zz = ((Function$ (fun name -> { name; x = ((x)[@res.optional ]) }))
-  [@res.arity 1])
+let r = { x = ?None; y = ?None; z = ?(None : tt) }
+let z [arity:1]name = { name?; x = 3 }
+let z [arity:1]name = { name?; x = 3 }
+let z [arity:1]name = { name; x? }
+let zz [arity:1]name = { name; x? }
 let _ =
   match z with
-  | { x = ((None)[@res.optional ]); y = ((None)[@res.optional ]);
-      z = (((None : tt))[@res.optional ]) } -> 11
-  | { name = ((name)[@res.optional ]); x = 3 } -> 42
-  | { name = ((name)[@res.optional ]); x = 3 } -> 4242
-  | { x = ((None)[@res.optional ]); y = ((None)[@res.optional ]);
-      z = (((None : tt))[@res.optional ]) } -> 11
-  | { name = ((name)[@res.optional ]); x = 3 } -> 42
-  | { name = ((name)[@res.optional ]); x = 3 } -> 4242
+  | { x? = None; y? = None; z? = (None : tt) } -> 11
+  | { name?; x = 3 } -> 42
+  | { name?; x = 3 } -> 4242
+  | { x? = None; y? = None; z? = (None : tt) } -> 11
+  | { name?; x = 3 } -> 42
+  | { name?; x = 3 } -> 4242
 type nonrec tt = {
   x: int ;
   y: string [@ns.opttinal ]}
 type nonrec ttt = {
   x: int ;
-  y: string [@res.optional ]}
+  y?: string }
 type nonrec multipleWithAttrs = {
   x: int ;
-  y: string [@res.optional ][@attr ]}
+  y?: string [@attr ]}
 type nonrec singleWithAttrs = {
-  y: string [@res.optional ][@attr ]}
+  y?: string [@attr ]}
 type nonrec inlineWithAttrs =
   | A of {
   value: string [@as {js|VALUE|js}]} 

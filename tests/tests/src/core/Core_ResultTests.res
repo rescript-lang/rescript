@@ -30,3 +30,13 @@ Test.run(
   eq,
   Error(15),
 )
+
+Test.run(__POS_OF__("all"), Result.all([]), eq, Ok([]))
+Test.run(__POS_OF__("all"), Result.all([Ok(1), Ok(2), Ok(3)]), eq, Ok([1, 2, 3]))
+Test.run(__POS_OF__("all"), Result.all([Ok(1), Error(2)]), eq, Error(2))
+Test.run(__POS_OF__("all"), Result.all2((Ok(1), Ok(2))), eq, Ok((1, 2)))
+Test.run(__POS_OF__("all"), Result.all2((Ok(1), Error(2))), eq, Error(2))
+Test.run(__POS_OF__("all"), Result.all3((Ok(1), Ok(2), Ok(3))), eq, Ok((1, 2, 3)))
+Test.run(__POS_OF__("all"), Result.all3((Ok(1), Error(2), Ok(3))), eq, Error(2))
+Test.run(__POS_OF__("all"), Result.all4((Ok(1), Ok(2), Ok(3), Ok(4))), eq, Ok((1, 2, 3, 4)))
+Test.run(__POS_OF__("all"), Result.all4((Ok(1), Error(2), Ok(3), Ok(4))), eq, Error(2))

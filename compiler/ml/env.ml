@@ -1035,10 +1035,6 @@ let rec lookup_module_descr_aux ?loc lid env =
 and lookup_module_descr ?loc lid env =
   let ((p, comps) as res) = lookup_module_descr_aux ?loc lid env in
   mark_module_used env (Path.last p) comps.loc;
-  (*
-  Format.printf "USE module %s at %a@." (Path.last p)
-    Location.print comps.loc;
-*)
   report_deprecated ?loc p comps.deprecated;
   res
 

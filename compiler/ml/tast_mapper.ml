@@ -59,6 +59,7 @@ type mapper = {
 let id x = x
 let tuple2 f1 f2 (x, y) = (f1 x, f2 y)
 let tuple3 f1 f2 f3 (x, y, z) = (f1 x, f2 y, f3 z)
+let tuple4 f1 f2 f3 f4 (x, y, z, w) = (f1 x, f2 y, f3 z, f4 w)
 let opt f = function
   | None -> None
   | Some x -> Some (f x)
@@ -173,7 +174,7 @@ let pat sub x =
       Tpat_construct (loc, cd, List.map (sub.pat sub) l)
     | Tpat_variant (l, po, rd) -> Tpat_variant (l, opt (sub.pat sub) po, rd)
     | Tpat_record (l, closed) ->
-      Tpat_record (List.map (tuple3 id id (sub.pat sub)) l, closed)
+      Tpat_record (List.map (tuple4 id id (sub.pat sub) id) l, closed)
     | Tpat_array l -> Tpat_array (List.map (sub.pat sub) l)
     | Tpat_or (p1, p2, rd) -> Tpat_or (sub.pat sub p1, sub.pat sub p2, rd)
     | Tpat_alias (p, id, s) -> Tpat_alias (sub.pat sub p, id, s)
@@ -198,8 +199,8 @@ let expr sub x =
     | Texp_let (rec_flag, list, exp) ->
       let rec_flag, list = sub.value_bindings sub (rec_flag, list) in
       Texp_let (rec_flag, list, sub.expr sub exp)
-    | Texp_function {arg_label; param; cases; partial} ->
-      Texp_function {arg_label; param; cases = sub.cases sub cases; partial}
+    | Texp_function {arg_label; arity; param; case; partial} ->
+      Texp_function {arg_label; arity; param; case = sub.case sub case; partial}
     | Texp_apply (exp, list) ->
       Texp_apply
         (sub.expr sub exp, List.map (tuple2 id (opt (sub.expr sub))) list)
@@ -215,9 +216,9 @@ let expr sub x =
       let fields =
         Array.map
           (function
-            | label, Kept t -> (label, Kept t)
-            | label, Overridden (lid, exp) ->
-              (label, Overridden (lid, sub.expr sub exp)))
+            | label, Kept t, o -> (label, Kept t, o)
+            | label, Overridden (lid, exp), o ->
+              (label, Overridden (lid, sub.expr sub exp), o))
           fields
       in
       Texp_record
@@ -250,9 +251,7 @@ let expr sub x =
       Texp_letexception (sub.extension_constructor sub cd, sub.expr sub exp)
     | Texp_assert exp -> Texp_assert (sub.expr sub exp)
     | Texp_lazy exp -> Texp_lazy (sub.expr sub exp)
-    | Texp_object () -> Texp_object ()
     | Texp_pack mexpr -> Texp_pack (sub.module_expr sub mexpr)
-    | Texp_unreachable -> Texp_unreachable
     | Texp_extension_constructor _ as e -> e
   in
   {x with exp_extra; exp_desc; exp_env}
@@ -363,14 +362,13 @@ let typ sub x =
   let ctyp_desc =
     match x.ctyp_desc with
     | (Ttyp_any | Ttyp_var _) as d -> d
-    | Ttyp_arrow (label, ct1, ct2) ->
-      Ttyp_arrow (label, sub.typ sub ct1, sub.typ sub ct2)
+    | Ttyp_arrow (label, ct1, ct2, arity) ->
+      Ttyp_arrow (label, sub.typ sub ct1, sub.typ sub ct2, arity)
     | Ttyp_tuple list -> Ttyp_tuple (List.map (sub.typ sub) list)
     | Ttyp_constr (path, lid, list) ->
       Ttyp_constr (path, lid, List.map (sub.typ sub) list)
     | Ttyp_object (list, closed) ->
       Ttyp_object (List.map (sub.object_field sub) list, closed)
-    | Ttyp_class () -> Ttyp_class ()
     | Ttyp_alias (ct, s) -> Ttyp_alias (sub.typ sub ct, s)
     | Ttyp_variant (list, closed, labels) ->
       Ttyp_variant (List.map (sub.row_field sub) list, closed, labels)

@@ -226,7 +226,8 @@ let command ~debug ~emitter ~path =
       Ast_iterator.default_iterator.pat iterator p
     | Ppat_record (cases, _) ->
       cases
-      |> List.iter (fun (label, _) -> emitter |> emitRecordLabel ~label ~debug);
+      |> List.iter (fun (label, _, _) ->
+             emitter |> emitRecordLabel ~label ~debug);
       Ast_iterator.default_iterator.pat iterator p
     | Ppat_construct (name, _) ->
       emitter |> emitVariant ~name ~debug;
@@ -309,7 +310,7 @@ let command ~debug ~emitter ~path =
       Ast_iterator.default_iterator.expr iterator e
     | Pexp_record (cases, _) ->
       cases
-      |> List.filter_map (fun ((label : Longident.t Location.loc), _) ->
+      |> List.filter_map (fun ((label : Longident.t Location.loc), _, _) ->
              match label.txt with
              | Longident.Lident s when not (Utils.isFirstCharUppercase s) ->
                Some label

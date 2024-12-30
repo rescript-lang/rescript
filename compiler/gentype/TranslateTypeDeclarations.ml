@@ -1,8 +1,7 @@
 open GenTypeCommon
 
 type declaration_kind =
-  | RecordDeclarationFromTypes of
-      Types.label_declaration list * Types.record_representation
+  | RecordDeclarationFromTypes of Types.label_declaration list
   | GeneralDeclaration of Typedtree.core_type option
   | GeneralDeclarationFromTypes of Types.type_expr option
       (** As the above, but from Types not Typedtree *)
@@ -86,16 +85,12 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     in
     {CodeItem.import_types; export_from_type_declaration}
   in
-  let translate_label_declarations ?(inline = false) ~record_representation
-      label_declarations =
-    let is_optional l =
-      match record_representation with
-      | Types.Record_optional_labels lbls -> List.mem l lbls
-      | _ -> false
-    in
+  let translate_label_declarations ?(inline = false) label_declarations =
     let field_translations =
       label_declarations
-      |> List.map (fun {Types.ld_id; ld_mutable; ld_type; ld_attributes} ->
+      |> List.map
+           (fun
+             {Types.ld_id; ld_mutable; ld_optional; ld_type; ld_attributes} ->
              let name =
                rename_record_field ~attributes:ld_attributes
                  ~name:(ld_id |> Ident.name)
@@ -107,6 +102,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
              in
              ( name,
                mutability,
+               ld_optional,
                ld_type
                |> TranslateTypeExprFromTypes.translate_type_expr_from_types
                     ~config ~type_env,
@@ -114,7 +110,8 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     in
     let dependencies =
       field_translations
-      |> List.map (fun (_, _, {TranslateTypeExprFromTypes.dependencies}, _) ->
+      |> List.map
+           (fun (_, _, _, {TranslateTypeExprFromTypes.dependencies}, _) ->
              dependencies)
       |> List.concat
     in
@@ -122,10 +119,15 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
       field_translations
       |> List.map
            (fun
-             (name, mutable_, {TranslateTypeExprFromTypes.type_}, doc_string) ->
+             ( name,
+               mutable_,
+               optional_,
+               {TranslateTypeExprFromTypes.type_},
+               doc_string )
+           ->
              let optional, type1 =
                match type_ with
-               | Option type1 when is_optional name -> (Optional, type1)
+               | Option type1 when optional_ -> (Optional, type1)
                | _ -> (Mandatory, type_)
              in
              {mutable_; name_js = name; optional; type_ = type1; doc_string})
@@ -216,10 +218,9 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
     in
     {translation with type_} |> handle_general_declaration
     |> return_type_declaration
-  | RecordDeclarationFromTypes (label_declarations, record_representation), None
-    ->
+  | RecordDeclarationFromTypes label_declarations, None ->
     let {TranslateTypeExprFromTypes.dependencies; type_} =
-      label_declarations |> translate_label_declarations ~record_representation
+      label_declarations |> translate_label_declarations
     in
     let import_types =
       dependencies
@@ -250,8 +251,7 @@ let traslate_declaration_kind ~config ~loc ~output_file_relative ~resolver
                | Cstr_record label_declarations ->
                  [
                    label_declarations
-                   |> translate_label_declarations ~inline:true
-                        ~record_representation:Types.Record_regular;
+                   |> translate_label_declarations ~inline:true;
                  ]
              in
              let arg_types =
@@ -334,8 +334,8 @@ let translate_type_declaration ~config ~output_file_relative ~resolver ~type_env
   in
   let declaration_kind =
     match typ_type.type_kind with
-    | Type_record (label_declarations, record_representation) ->
-      RecordDeclarationFromTypes (label_declarations, record_representation)
+    | Type_record (label_declarations, _) ->
+      RecordDeclarationFromTypes label_declarations
     | Type_variant constructor_declarations ->
       VariantDeclarationFromTypes constructor_declarations
     | Type_abstract -> GeneralDeclaration typ_manifest

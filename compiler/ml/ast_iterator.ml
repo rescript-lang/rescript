@@ -96,7 +96,7 @@ module T = struct
     sub.attributes sub attrs;
     match desc with
     | Ptyp_any | Ptyp_var _ -> ()
-    | Ptyp_arrow (_lab, t1, t2) ->
+    | Ptyp_arrow (_lab, t1, t2, _) ->
       sub.typ sub t1;
       sub.typ sub t2
     | Ptyp_tuple tyl -> List.iter (sub.typ sub) tyl
@@ -104,7 +104,6 @@ module T = struct
       iter_loc sub lid;
       List.iter (sub.typ sub) tl
     | Ptyp_object (ol, _o) -> List.iter (object_field sub) ol
-    | Ptyp_class () -> ()
     | Ptyp_alias (t, _) -> sub.typ sub t
     | Ptyp_variant (rl, _b, _ll) -> List.iter (row_field sub) rl
     | Ptyp_poly (_, t) -> sub.typ sub t
@@ -283,11 +282,10 @@ module E = struct
     | Pexp_let (_r, vbs, e) ->
       List.iter (sub.value_binding sub) vbs;
       sub.expr sub e
-    | Pexp_fun (_lab, def, p, e) ->
+    | Pexp_fun {default = def; lhs = p; rhs = e} ->
       iter_opt (sub.expr sub) def;
       sub.pat sub p;
       sub.expr sub e
-    | Pexp_function pel -> sub.cases sub pel
     | Pexp_apply (e, l) ->
       sub.expr sub e;
       List.iter (iter_snd (sub.expr sub)) l
@@ -303,7 +301,7 @@ module E = struct
       iter_opt (sub.expr sub) arg
     | Pexp_variant (_lab, eo) -> iter_opt (sub.expr sub) eo
     | Pexp_record (l, eo) ->
-      List.iter (iter_tuple (iter_loc sub) (sub.expr sub)) l;
+      List.iter (iter_tuple3 (iter_loc sub) (sub.expr sub) (fun _ -> ())) l;
       iter_opt (sub.expr sub) eo
     | Pexp_field (e, lid) ->
       sub.expr sub e;
@@ -353,14 +351,12 @@ module E = struct
     | Pexp_poly (e, t) ->
       sub.expr sub e;
       iter_opt (sub.typ sub) t
-    | Pexp_object () -> ()
     | Pexp_newtype (_s, e) -> sub.expr sub e
     | Pexp_pack me -> sub.module_expr sub me
     | Pexp_open (_ovf, lid, e) ->
       iter_loc sub lid;
       sub.expr sub e
     | Pexp_extension x -> sub.extension sub x
-    | Pexp_unreachable -> ()
 end
 
 module P = struct
@@ -383,7 +379,7 @@ module P = struct
       iter_opt (sub.pat sub) p
     | Ppat_variant (_l, p) -> iter_opt (sub.pat sub) p
     | Ppat_record (lpl, _cf) ->
-      List.iter (iter_tuple (iter_loc sub) (sub.pat sub)) lpl
+      List.iter (iter_tuple3 (iter_loc sub) (sub.pat sub) (fun _ -> ())) lpl
     | Ppat_array pl -> List.iter (sub.pat sub) pl
     | Ppat_or (p1, p2) ->
       sub.pat sub p1;

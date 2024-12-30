@@ -91,8 +91,6 @@ val no_stdlib : bool ref
 
 val no_export : bool ref
 
-val as_ppx : bool ref
-
 val int_of_jsx_version : jsx_version -> int
 
 val string_of_jsx_module : jsx_module -> string
@@ -110,5 +108,3 @@ val customize_runtime : string option ref
 val as_pp : bool ref
 
 val self_stack : string Stack.t
-
-val modules : bool ref

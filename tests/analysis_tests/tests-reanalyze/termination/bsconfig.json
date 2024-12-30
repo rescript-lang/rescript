@@ -5,8 +5,6 @@
     "unsuppress": []
   },
   "name": "arnold",
-  "bsc-flags": ["-bs-super-errors"],
-  "jsx": { "version": 3 },
   "bs-dependencies": [],
   "sources": [
     {
@@ -15,7 +13,7 @@
     }
   ],
   "package-specs": {
-    "module": "es6",
+    "module": "esmodule",
     "in-source": true
   },
   "suffix": ".bs.js"

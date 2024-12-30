@@ -36,7 +36,8 @@ external a : ?low:int -> hi:int -> a
 low: a -> int option [@@return undefined_to_opt]
 lowSet : a -> int -> unit
 */
-let h0 = a(~hi=2, ~low="x")
+let h0 =
+  a(~hi=2, ~low="x", ...)
 
 let h1 = a(~hi=2, ~low="x", ())
 

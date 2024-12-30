@@ -90,6 +90,16 @@ Path CompletionSupport.TestComponent.make
       "filePath": "src/CompletionJsxProps.res"
     }
   }, {
+    "label": "TypeConstraint",
+    "kind": 9,
+    "tags": [],
+    "detail": "module TypeConstraint",
+    "documentation": null,
+    "data": {
+      "modulePath": "TypeConstraint",
+      "filePath": "src/CompletionJsxProps.res"
+    }
+  }, {
     "label": "TypeDefinition",
     "kind": 9,
     "tags": [],

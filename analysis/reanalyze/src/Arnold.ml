@@ -545,7 +545,7 @@ module FindFunctionsCalled = struct
   let findCallees (expression : Typedtree.expression) =
     let isFunction =
       match expression.exp_desc with
-      | Texp_function _ -> true
+      | Texp_function {arity = None} -> true
       | _ -> false
     in
     let callees = ref StringSet.empty in
@@ -908,7 +908,7 @@ module Compile = struct
         let open Command in
         c +++ ConstrOption Rnone
       | _ -> c)
-    | Texp_function {cases} -> cases |> List.map (case ~ctx) |> Command.nondet
+    | Texp_function {case = case_} -> case ~ctx case_
     | Texp_match (e, casesOk, casesExn, _partial)
       when not
              (casesExn
@@ -947,7 +947,8 @@ module Compile = struct
          |> List.map
               (fun
                 ( _desc,
-                  (recordLabelDefinition : Typedtree.record_label_definition) )
+                  (recordLabelDefinition : Typedtree.record_label_definition),
+                  _ )
               ->
                 match recordLabelDefinition with
                 | Kept _typeExpr -> None
@@ -995,14 +996,8 @@ module Compile = struct
     | Texp_lazy _ ->
       notImplemented "Texp_lazy";
       assert false
-    | Texp_object _ ->
-      notImplemented "Texp_letmodule";
-      assert false
     | Texp_pack _ ->
       notImplemented "Texp_pack";
-      assert false
-    | Texp_unreachable ->
-      notImplemented "Texp_unreachable";
       assert false
     | Texp_extension_constructor _ when true ->
       notImplemented "Texp_extension_constructor";

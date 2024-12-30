@@ -55,4 +55,4 @@ type nonrec t = [< `x [@a ]]
 type nonrec t =
   [< `a of ((int * int) * int) [@one ] | ((int)[@two ])
   | `b of string [@three ]> `w `x `y]
-let f = ((Function$ (fun (x : [ `b ]) -> x))[@res.arity 1])
+let f [arity:1](x : [ `b ]) = x

@@ -61,7 +61,7 @@ and type_desc =
   | Tvar of string option
       (** [Tvar (Some "a")] ==> ['a] or ['_a]
       [Tvar None]       ==> [_] *)
-  | Tarrow of arg_label * type_expr * type_expr * commutable
+  | Tarrow of arg_label * type_expr * type_expr * commutable * arity
       (** [Tarrow (Nolabel,      e1, e2, c)] ==> [e1    -> e2]
       [Tarrow (Labelled "l", e1, e2, c)] ==> [l:e1  -> e2]
       [Tarrow (Optional "l", e1, e2, c)] ==> [?l:e1 -> e2]
@@ -281,15 +281,14 @@ and record_representation =
       tag: int;
       name: string;
       num_nonconsts: int;
-      optional_labels: string list;
       attrs: Parsetree.attributes;
     }
   | Record_extension (* Inlined record under extension *)
-  | Record_optional_labels of string list (* List of optional labels *)
 
 and label_declaration = {
   ld_id: Ident.t;
   ld_mutable: mutable_flag;
+  ld_optional: bool;
   ld_type: type_expr;
   ld_loc: Location.t;
   ld_attributes: Parsetree.attributes;
@@ -422,6 +421,7 @@ type label_description = {
   lbl_res: type_expr; (* Type of the result *)
   lbl_arg: type_expr; (* Type of the argument *)
   lbl_mut: mutable_flag; (* Is this a mutable field? *)
+  lbl_optional: bool; (* Is this an optional field? *)
   lbl_pos: int; (* Position in block *)
   mutable lbl_all: label_description array;
   (* All the labels in this type. This is mutable only because of a specific feature related to dicts, and should not be mutated elsewhere. *)

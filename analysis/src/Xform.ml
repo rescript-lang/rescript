@@ -78,10 +78,10 @@ module IfThenElse = struct
       | None -> None
       | Some patList -> Some (mkPat (Ppat_tuple patList)))
     | Pexp_record (items, None) -> (
-      let itemToPat (x, e) =
+      let itemToPat (x, e, o) =
         match expToPat e with
         | None -> None
-        | Some p -> Some (x, p)
+        | Some p -> Some (x, p, o)
       in
       match listToPat ~itemToPat items with
       | None -> None
@@ -261,7 +261,7 @@ module AddBracesToFn = struct
         | _ -> false
       in
       (match e.pexp_desc with
-      | Pexp_fun (_, _, _, bodyExpr)
+      | Pexp_fun {rhs = bodyExpr}
         when Loc.hasPos ~pos bodyExpr.pexp_loc
              && isBracedExpr bodyExpr = false
              && isFunction bodyExpr = false ->
@@ -303,12 +303,9 @@ module AddTypeAnnotation = struct
     in
     let rec processFunction ~argNum (e : Parsetree.expression) =
       match e.pexp_desc with
-      | Pexp_fun (argLabel, _, pat, e)
-      | Pexp_construct
-          ( {txt = Lident "Function$"},
-            Some {pexp_desc = Pexp_fun (argLabel, _, pat, e)} ) ->
+      | Pexp_fun {arg_label; lhs = pat; rhs = e} ->
         let isUnlabeledOnlyArg =
-          argNum = 1 && argLabel = Nolabel
+          argNum = 1 && arg_label = Nolabel
           &&
           match e.pexp_desc with
           | Pexp_fun _ -> false

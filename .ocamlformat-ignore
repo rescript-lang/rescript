@@ -1,6 +1,5 @@
 compiler/js_parser/**
 compiler/ml/cmt_format.ml
-compiler/ml/pprintast.ml
 compiler/core/js_name_of_module_id.ml
 compiler/core/js_pass_debug.ml
 compiler/core/lam_util.ml

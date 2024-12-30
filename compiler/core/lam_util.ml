@@ -198,7 +198,7 @@ let field_flatten_get
       | Fld_record {name} ->
         let found = ref None in
         for i = 0 to Array.length fields - 1 do
-          if fields.(i) = name then found := Ext_list.nth_opt ls i done;
+          if fst(fields.(i)) = name then found := Ext_list.nth_opt ls i done;
         (match !found with
         | Some c -> Lam.const c
         | None  -> lam())

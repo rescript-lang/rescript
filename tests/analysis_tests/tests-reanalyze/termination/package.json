@@ -3,6 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "devDependencies": {
-    "rescript": "^10.1.2"
+    "rescript": "file:../../../.."
   }
 }

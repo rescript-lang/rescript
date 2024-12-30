@@ -147,6 +147,7 @@ type type_mismatch =
   | Variance
   | Field_type of Ident.t
   | Field_mutable of Ident.t
+  | Field_optional of Ident.t
   | Field_arity of Ident.t
   | Field_names of int * string * string
   | Field_missing of bool * Ident.t
@@ -168,6 +169,8 @@ let report_type_mismatch0 first second decl ppf err =
   | Field_type s -> pr "The types for field %s are not equal" (Ident.name s)
   | Field_mutable s ->
     pr "The mutability of field %s is different" (Ident.name s)
+  | Field_optional s ->
+    pr "The optional attribute of field %s is different" (Ident.name s)
   | Field_arity s -> pr "The arities for field %s differ" (Ident.name s)
   | Field_names (n, name1, name2) ->
     pr "Fields number %i have different names, %s and %s" n name1 name2
@@ -175,21 +178,8 @@ let report_type_mismatch0 first second decl ppf err =
     pr "The field %s is only present in %s %s" (Ident.name s)
       (if b then second else first)
       decl
-  | Record_representation (rep1, rep2) -> (
-    let default () = pr "Their internal representations differ" in
-    match (rep1, rep2) with
-    | Record_optional_labels lbls1, Record_optional_labels lbls2 -> (
-      let only_in_lhs =
-        Ext_list.find_first lbls1 (fun l -> not (Ext_list.mem_string lbls2 l))
-      in
-      let only_in_rhs =
-        Ext_list.find_first lbls2 (fun l -> not (Ext_list.mem_string lbls1 l))
-      in
-      match (only_in_lhs, only_in_rhs) with
-      | Some l, _ -> pr "@optional label %s only in %s" l second
-      | _, Some l -> pr "@optional label %s only in %s" l first
-      | None, None -> default ())
-    | _ -> default ())
+  | Record_representation (_rep1, _rep2) ->
+    pr "Their internal representations differ"
   | Unboxed_representation b ->
     pr "Their internal representations differ:@ %s %s %s"
       (if b then second else first)
@@ -280,6 +270,7 @@ and compare_records ~loc env params1_ params2_ n_
       if Ident.name ld1.ld_id <> Ident.name ld2.ld_id then
         [Field_names (n, ld1.ld_id.name, ld2.ld_id.name)]
       else if ld1.ld_mutable <> ld2.ld_mutable then [Field_mutable ld1.ld_id]
+      else if ld1.ld_optional <> ld2.ld_optional then [Field_optional ld1.ld_id]
       else (
         Builtin_attributes.check_deprecated_mutable_inclusion ~def:ld1.ld_loc
           ~use:ld2.ld_loc loc ld1.ld_attributes ld2.ld_attributes

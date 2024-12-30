@@ -23,7 +23,6 @@ Path Js.String2.st
 
 Complete src/CompletionJsx.res 13:21
 posCursor:[13:21] posNoWhite:[13:20] Found expr:[8:13->33:3]
-posCursor:[13:21] posNoWhite:[13:20] Found expr:[8:14->33:3]
 posCursor:[13:21] posNoWhite:[13:20] Found expr:[9:4->32:10]
 posCursor:[13:21] posNoWhite:[13:20] Found expr:[10:4->32:10]
 posCursor:[13:21] posNoWhite:[13:20] Found expr:[11:4->32:10]
@@ -61,7 +60,6 @@ Path Js.String2.st
 
 Complete src/CompletionJsx.res 18:24
 posCursor:[18:24] posNoWhite:[18:23] Found expr:[8:13->33:3]
-posCursor:[18:24] posNoWhite:[18:23] Found expr:[8:14->33:3]
 posCursor:[18:24] posNoWhite:[18:23] Found expr:[9:4->32:10]
 posCursor:[18:24] posNoWhite:[18:23] Found expr:[10:4->32:10]
 posCursor:[18:24] posNoWhite:[18:23] Found expr:[11:4->32:10]
@@ -106,7 +104,6 @@ Path Js.String2.st
 
 Complete src/CompletionJsx.res 20:27
 posCursor:[20:27] posNoWhite:[20:26] Found expr:[8:13->33:3]
-posCursor:[20:27] posNoWhite:[20:26] Found expr:[8:14->33:3]
 posCursor:[20:27] posNoWhite:[20:26] Found expr:[9:4->32:10]
 posCursor:[20:27] posNoWhite:[20:26] Found expr:[10:4->32:10]
 posCursor:[20:27] posNoWhite:[20:26] Found expr:[11:4->32:10]
@@ -150,7 +147,6 @@ Path Js.String2.st
 
 Complete src/CompletionJsx.res 22:44
 posCursor:[22:44] posNoWhite:[22:43] Found expr:[8:13->33:3]
-posCursor:[22:44] posNoWhite:[22:43] Found expr:[8:14->33:3]
 posCursor:[22:44] posNoWhite:[22:43] Found expr:[9:4->32:10]
 posCursor:[22:44] posNoWhite:[22:43] Found expr:[10:4->32:10]
 posCursor:[22:44] posNoWhite:[22:43] Found expr:[11:4->32:10]
@@ -196,7 +192,6 @@ Path Js.String2.st
 
 Complete src/CompletionJsx.res 24:19
 posCursor:[24:19] posNoWhite:[24:18] Found expr:[8:13->33:3]
-posCursor:[24:19] posNoWhite:[24:18] Found expr:[8:14->33:3]
 posCursor:[24:19] posNoWhite:[24:18] Found expr:[9:4->32:10]
 posCursor:[24:19] posNoWhite:[24:18] Found expr:[10:4->32:10]
 posCursor:[24:19] posNoWhite:[24:18] Found expr:[11:4->32:10]
@@ -277,7 +272,6 @@ Path Belt.Int.
 
 Complete src/CompletionJsx.res 26:14
 posCursor:[26:14] posNoWhite:[26:13] Found expr:[8:13->33:3]
-posCursor:[26:14] posNoWhite:[26:13] Found expr:[8:14->33:3]
 posCursor:[26:14] posNoWhite:[26:13] Found expr:[9:4->32:10]
 posCursor:[26:14] posNoWhite:[26:13] Found expr:[10:4->32:10]
 posCursor:[26:14] posNoWhite:[26:13] Found expr:[11:4->32:10]
@@ -357,7 +351,6 @@ Path Belt.Int.
 
 Complete src/CompletionJsx.res 28:20
 posCursor:[28:20] posNoWhite:[28:19] Found expr:[8:13->33:3]
-posCursor:[28:20] posNoWhite:[28:19] Found expr:[8:14->33:3]
 posCursor:[28:20] posNoWhite:[28:19] Found expr:[9:4->32:10]
 posCursor:[28:20] posNoWhite:[28:19] Found expr:[10:4->32:10]
 posCursor:[28:20] posNoWhite:[28:19] Found expr:[11:4->32:10]
@@ -396,7 +389,6 @@ Path Js.Array2.a
 
 Complete src/CompletionJsx.res 30:12
 posCursor:[30:12] posNoWhite:[30:11] Found expr:[8:13->33:3]
-posCursor:[30:12] posNoWhite:[30:11] Found expr:[8:14->33:3]
 posCursor:[30:12] posNoWhite:[30:11] Found expr:[9:4->32:10]
 posCursor:[30:12] posNoWhite:[30:11] Found expr:[10:4->32:10]
 posCursor:[30:12] posNoWhite:[30:11] Found expr:[11:4->32:10]

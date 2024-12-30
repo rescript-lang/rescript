@@ -375,7 +375,6 @@ module Compile = struct
   let reset_compiler () =
     warning_infos := [||];
     flush_warning_buffer () |> ignore;
-    Location.reset ();
     Warnings.reset_fatal ();
     Env.reset_cache_toplevel ()
 

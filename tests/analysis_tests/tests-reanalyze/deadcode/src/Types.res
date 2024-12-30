@@ -57,9 +57,6 @@ type opaqueVariant =
   | B
 
 @genType
-let stringT: String.t = "a"
-
-@genType
 let jsStringT: Js.String.t = "a"
 
 @genType
@@ -147,13 +144,13 @@ type date = Js.Date.t
 let currentTime = Js.Date.make()
 
 @genType
-type i64A = Int64.t
+type i64A = int
 
 @genType
-type i64B = int64
+type i64B = int
 
 @genType
-let i64Const: i64B = 34L
+let i64Const: i64B = 34
 
 @genType
 let optFunction = Some(() => 3)

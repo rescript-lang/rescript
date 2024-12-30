@@ -22,12 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-val at_bol : Lexing.lexbuf -> bool
-
-val eof_check : Lexing.lexbuf -> unit
-
-val init : unit -> unit
-
 (* Methods below are used for cpp, they are not needed by the compiler patches*)
 val remove_directive_built_in_value : string -> unit
 

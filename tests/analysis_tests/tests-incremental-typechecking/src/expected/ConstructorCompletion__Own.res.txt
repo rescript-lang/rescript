@@ -4,7 +4,6 @@ Pexp_construct WithVariant
 One:[4:8->4:23] [4:23->4:25]
 Completable: Cexpression CTypeAtPos()->variantPayload::One($0)
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 Pervasives
 ContextPath CTypeAtPos()
 [{
     "label": "{}",

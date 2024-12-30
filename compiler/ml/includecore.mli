@@ -29,6 +29,7 @@ type type_mismatch =
   | Variance
   | Field_type of Ident.t
   | Field_mutable of Ident.t
+  | Field_optional of Ident.t
   | Field_arity of Ident.t
   | Field_names of int * string * string
   | Field_missing of bool * Ident.t

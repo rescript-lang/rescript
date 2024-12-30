@@ -119,7 +119,6 @@ newText:
 
 Xform src/Xform.res 48:21
 posCursor:[48:21] posNoWhite:[48:19] Found expr:[48:15->48:25]
-posCursor:[48:21] posNoWhite:[48:19] Found expr:[48:15->48:25]
 Completable: Cpath Value[name]
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[name]

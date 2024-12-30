@@ -55,7 +55,13 @@ module Typ : sig
   val any : ?loc:loc -> ?attrs:attrs -> unit -> core_type
   val var : ?loc:loc -> ?attrs:attrs -> string -> core_type
   val arrow :
-    ?loc:loc -> ?attrs:attrs -> arg_label -> core_type -> core_type -> core_type
+    ?loc:loc ->
+    ?attrs:attrs ->
+    arity:arity ->
+    arg_label ->
+    core_type ->
+    core_type ->
+    core_type
   val tuple : ?loc:loc -> ?attrs:attrs -> core_type list -> core_type
   val constr : ?loc:loc -> ?attrs:attrs -> lid -> core_type list -> core_type
   val object_ :
@@ -99,7 +105,11 @@ module Pat : sig
   val construct : ?loc:loc -> ?attrs:attrs -> lid -> pattern option -> pattern
   val variant : ?loc:loc -> ?attrs:attrs -> label -> pattern option -> pattern
   val record :
-    ?loc:loc -> ?attrs:attrs -> (lid * pattern) list -> closed_flag -> pattern
+    ?loc:loc ->
+    ?attrs:attrs ->
+    (lid * pattern * bool) list ->
+    closed_flag ->
+    pattern
   val array : ?loc:loc -> ?attrs:attrs -> pattern list -> pattern
   val or_ : ?loc:loc -> ?attrs:attrs -> pattern -> pattern -> pattern
   val constraint_ : ?loc:loc -> ?attrs:attrs -> pattern -> core_type -> pattern
@@ -128,12 +138,12 @@ module Exp : sig
   val fun_ :
     ?loc:loc ->
     ?attrs:attrs ->
+    arity:int option ->
     arg_label ->
     expression option ->
     pattern ->
     expression ->
     expression
-  val function_ : ?loc:loc -> ?attrs:attrs -> case list -> expression
   val apply :
     ?loc:loc ->
     ?attrs:attrs ->
@@ -150,7 +160,7 @@ module Exp : sig
   val record :
     ?loc:loc ->
     ?attrs:attrs ->
-    (lid * expression) list ->
+    (lid * expression * bool) list ->
     expression option ->
     expression
   val field : ?loc:loc -> ?attrs:attrs -> expression -> lid -> expression
@@ -202,7 +212,6 @@ module Exp : sig
   val open_ :
     ?loc:loc -> ?attrs:attrs -> override_flag -> lid -> expression -> expression
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> expression
-  val unreachable : ?loc:loc -> ?attrs:attrs -> unit -> expression
 
   val case : pattern -> ?guard:expression -> expression -> case
 end
@@ -242,6 +251,7 @@ module Type : sig
     ?loc:loc ->
     ?attrs:attrs ->
     ?mut:mutable_flag ->
+    ?optional:bool ->
     str ->
     core_type ->
     label_declaration

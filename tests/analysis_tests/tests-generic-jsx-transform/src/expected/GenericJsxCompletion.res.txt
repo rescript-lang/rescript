@@ -3,7 +3,6 @@ posCursor:[0:8] posNoWhite:[0:6] Found expr:[0:4->0:7]
 JSX <div:[0:4->0:7] > _children:None
 Completable: Cjsx([div], "", [])
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 Pervasives
 Path GenericJsx.Elements.props
 [{
     "label": "testing",
@@ -30,7 +29,6 @@ posCursor:[3:17] posNoWhite:[3:16] Found expr:[3:4->3:18]
 JSX <div:[3:4->3:7] testing[3:8->3:15]=...[3:16->3:18]> _children:None
 Completable: Cexpression CJsxPropValue [div] testing->recordBody
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 Pervasives
 ContextPath CJsxPropValue [div] testing
 Path GenericJsx.Elements.props
 [{
@@ -49,7 +47,6 @@ Path GenericJsx.Elements.props
 
 Complete src/GenericJsxCompletion.res 14:21
 posCursor:[14:21] posNoWhite:[14:20] Found expr:[8:13->23:3]
-posCursor:[14:21] posNoWhite:[14:20] Found expr:[8:14->23:3]
 posCursor:[14:21] posNoWhite:[14:20] Found expr:[9:4->22:10]
 posCursor:[14:21] posNoWhite:[14:20] Found expr:[10:4->22:10]
 posCursor:[14:21] posNoWhite:[14:20] Found expr:[11:4->22:10]
@@ -59,7 +56,6 @@ posCursor:[14:21] posNoWhite:[14:20] Found expr:[14:7->22:10]
 posCursor:[14:21] posNoWhite:[14:20] Found expr:[14:7->14:21]
 Completable: Cpath Value[someString]->st <<jsx>>
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 Pervasives
 ContextPath Value[someString]->st <<jsx>>
 ContextPath Value[someString]
 Path someString
@@ -89,7 +85,6 @@ Path Js.String2.st
 
 Complete src/GenericJsxCompletion.res 20:24
 posCursor:[20:24] posNoWhite:[20:23] Found expr:[8:13->23:3]
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[8:14->23:3]
 posCursor:[20:24] posNoWhite:[20:23] Found expr:[9:4->22:10]
 posCursor:[20:24] posNoWhite:[20:23] Found expr:[10:4->22:10]
 posCursor:[20:24] posNoWhite:[20:23] Found expr:[11:4->22:10]
@@ -108,7 +103,7 @@ posCursor:[20:24] posNoWhite:[20:23] Found expr:[20:10->20:24]
 Completable: Cpath Value[someString]->st <<jsx>>
 Raw opens: 1 GenericJsx.place holder
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 2 Pervasives GenericJsx
+Resolved opens 1 GenericJsx
 ContextPath Value[someString]->st <<jsx>>
 ContextPath Value[someString]
 Path someString

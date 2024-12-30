@@ -34,9 +34,8 @@ let lam_extension_id loc (head : Lam.t) =
 let lazy_block_info : Lam_tag_info.t =
   Blk_record
     {
-      fields = [|Literals.lazy_done; Literals.lazy_val|];
+      fields = [|(Literals.lazy_done, false); (Literals.lazy_val, false)|];
       mutable_flag = Mutable;
-      record_repr = Record_regular;
     }
 
 (** A conservative approach to avoid packing exceptions

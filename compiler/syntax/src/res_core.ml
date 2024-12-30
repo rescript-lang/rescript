@@ -155,17 +155,8 @@ end
 let jsx_attr = (Location.mknoloc "JSX", Parsetree.PStr [])
 let ternary_attr = (Location.mknoloc "res.ternary", Parsetree.PStr [])
 let if_let_attr = (Location.mknoloc "res.iflet", Parsetree.PStr [])
-let optional_attr = (Location.mknoloc "res.optional", Parsetree.PStr [])
 let make_await_attr loc = (Location.mkloc "res.await" loc, Parsetree.PStr [])
 let make_async_attr loc = (Location.mkloc "res.async" loc, Parsetree.PStr [])
-
-let make_expression_optional ~optional (e : Parsetree.expression) =
-  if optional then {e with pexp_attributes = optional_attr :: e.pexp_attributes}
-  else e
-let make_pattern_optional ~optional (p : Parsetree.pattern) =
-  if optional then {p with ppat_attributes = optional_attr :: p.ppat_attributes}
-  else p
-
 let suppress_fragile_match_warning_attr =
   ( Location.mknoloc "warning",
     Parsetree.PStr
@@ -215,7 +206,7 @@ type labelled_parameter =
 
 type record_pattern_item =
   | PatUnderscore
-  | PatField of (Ast_helper.lid * Parsetree.pattern)
+  | PatField of (Ast_helper.lid * Parsetree.pattern * bool (* optional *))
 
 type context = OrdinaryExpr | TernaryTrueBranchExpr | WhenExpr
 
@@ -534,8 +525,10 @@ let process_underscore_application args =
           (Ppat_var (Location.mkloc hidden_var loc))
           ~loc:Location.none
       in
-      let fun_expr = Ast_helper.Exp.fun_ ~loc Nolabel None pattern exp_apply in
-      Ast_uncurried.uncurried_fun ~loc ~arity:1 fun_expr
+      let fun_expr =
+        Ast_helper.Exp.fun_ ~loc ~arity:(Some 1) Nolabel None pattern exp_apply
+      in
+      Ast_uncurried.uncurried_fun ~arity:1 fun_expr
     | None -> exp_apply
   in
   (args, wrap)
@@ -1255,18 +1248,19 @@ and parse_optional_label p =
  *)
 and parse_record_pattern_row_field ~attrs p =
   let label = parse_value_path p in
-  let pattern =
+  let pattern, optional =
     match p.Parser.token with
     | Colon ->
       Parser.next p;
       let optional = parse_optional_label p in
       let pat = parse_pattern p in
-      make_pattern_optional ~optional pat
+      (pat, optional)
     | _ ->
-      Ast_helper.Pat.var ~loc:label.loc ~attrs
-        (Location.mkloc (Longident.last label.txt) label.loc)
+      ( Ast_helper.Pat.var ~loc:label.loc ~attrs
+          (Location.mkloc (Longident.last label.txt) label.loc),
+        false )
   in
-  (label, pattern)
+  (label, pattern, optional)
 
 (* TODO: there are better representations than PatField|Underscore ? *)
 and parse_record_pattern_row p =
@@ -1281,8 +1275,8 @@ and parse_record_pattern_row p =
     Parser.next p;
     match p.token with
     | Uident _ | Lident _ ->
-      let lid, pat = parse_record_pattern_row_field ~attrs p in
-      Some (false, PatField (lid, make_pattern_optional ~optional:true pat))
+      let lid, pat, _ = parse_record_pattern_row_field ~attrs p in
+      Some (false, PatField (lid, pat, true))
     | _ -> None)
   | Underscore ->
     Parser.next p;
@@ -1309,7 +1303,7 @@ and parse_record_pattern ~attrs p =
         match field with
         | PatField field ->
           (if has_spread then
-             let _, pattern = field in
+             let _, pattern, _ = field in
              Parser.err ~start_pos:pattern.Parsetree.ppat_loc.loc_start p
                (Diagnostics.message ErrorMessages.record_pattern_spread));
           (field :: fields, flag)
@@ -1409,7 +1403,7 @@ and parse_dict_pattern_row p =
     Parser.expect Colon p;
     let optional = parse_optional_label p in
     let pat = parse_pattern p in
-    Some (fieldName, make_pattern_optional ~optional pat)
+    Some (fieldName, pat, optional)
   | _ -> None
 
 and parse_dict_pattern ~start_pos ~attrs (p : Parser.t) =
@@ -1602,12 +1596,11 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
             {attrs; label = lbl; expr = default_expr; pat; pos = start_pos} ->
           let loc = mk_loc start_pos end_pos in
           let fun_expr =
-            Ast_helper.Exp.fun_ ~loc ~attrs lbl default_expr pat expr
+            Ast_helper.Exp.fun_ ~loc ~attrs ~arity:None lbl default_expr pat
+              expr
           in
           if term_param_num = 1 then
-            ( term_param_num - 1,
-              Ast_uncurried.uncurried_fun ~loc ~arity fun_expr,
-              1 )
+            (term_param_num - 1, Ast_uncurried.uncurried_fun ~arity fun_expr, 1)
           else (term_param_num - 1, fun_expr, arity + 1)
         | TypeParameter {attrs; locs = newtypes; pos = start_pos} ->
           ( term_param_num,
@@ -2415,13 +2408,13 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
       let arrow1 =
         Ast_helper.Exp.fun_
           ~loc:(mk_loc expr.pexp_loc.loc_start body.pexp_loc.loc_end)
-          Asttypes.Nolabel None pat
+          ~arity:None Asttypes.Nolabel None pat
           (Ast_helper.Exp.constraint_ body typ)
       in
       let arrow2 =
         Ast_helper.Exp.fun_
           ~loc:(mk_loc expr.pexp_loc.loc_start body.pexp_loc.loc_end)
-          Asttypes.Nolabel None
+          ~arity:None Asttypes.Nolabel None
           (Ast_helper.Pat.constraint_ pat typ)
           body
       in
@@ -2894,7 +2887,8 @@ and parse_braced_or_record_expr p =
       let field_expr = parse_expr p in
       Parser.optional p Comma |> ignore;
       let expr =
-        parse_record_expr_with_string_keys ~start_pos (field, field_expr) p
+        parse_record_expr_with_string_keys ~start_pos (field, field_expr, false)
+          p
       in
       Parser.expect Rbrace p;
       expr
@@ -2963,7 +2957,9 @@ and parse_braced_or_record_expr p =
           | _ -> value_or_constructor
         in
         let expr =
-          parse_record_expr ~start_pos [(path_ident, value_or_constructor)] p
+          parse_record_expr ~start_pos
+            [(path_ident, value_or_constructor, false)]
+            p
         in
         Parser.expect Rbrace p;
         expr
@@ -2971,16 +2967,15 @@ and parse_braced_or_record_expr p =
         Parser.next p;
         let optional = parse_optional_label p in
         let field_expr = parse_expr p in
-        let field_expr = make_expression_optional ~optional field_expr in
         match p.token with
         | Rbrace ->
           Parser.next p;
           let loc = mk_loc start_pos p.prev_end_pos in
-          Ast_helper.Exp.record ~loc [(path_ident, field_expr)] None
+          Ast_helper.Exp.record ~loc [(path_ident, field_expr, optional)] None
         | _ ->
           Parser.expect Comma p;
           let expr =
-            parse_record_expr ~start_pos [(path_ident, field_expr)] p
+            parse_record_expr ~start_pos [(path_ident, field_expr, optional)] p
           in
           Parser.expect Rbrace p;
           expr)
@@ -2989,14 +2984,18 @@ and parse_braced_or_record_expr p =
         if p.prev_end_pos.pos_lnum < p.start_pos.pos_lnum then (
           Parser.expect Comma p;
           let expr =
-            parse_record_expr ~start_pos [(path_ident, value_or_constructor)] p
+            parse_record_expr ~start_pos
+              [(path_ident, value_or_constructor, false)]
+              p
           in
           Parser.expect Rbrace p;
           expr)
         else (
           Parser.expect Colon p;
           let expr =
-            parse_record_expr ~start_pos [(path_ident, value_or_constructor)] p
+            parse_record_expr ~start_pos
+              [(path_ident, value_or_constructor, false)]
+              p
           in
           Parser.expect Rbrace p;
           expr)
@@ -3121,8 +3120,8 @@ and parse_record_expr_row_with_string_key p =
     | Colon ->
       Parser.next p;
       let field_expr = parse_expr p in
-      Some (field, field_expr)
-    | _ -> Some (field, Ast_helper.Exp.ident ~loc:field.loc field))
+      Some (field, field_expr, false)
+    | _ -> Some (field, Ast_helper.Exp.ident ~loc:field.loc field, false))
   | _ -> None
 
 and parse_record_expr_row p =
@@ -3143,8 +3142,7 @@ and parse_record_expr_row p =
       Parser.next p;
       let optional = parse_optional_label p in
       let field_expr = parse_expr p in
-      let field_expr = make_expression_optional ~optional field_expr in
-      Some (field, field_expr)
+      Some (field, field_expr, optional)
     | _ ->
       let value = Ast_helper.Exp.ident ~loc:field.loc ~attrs field in
       let value =
@@ -3152,7 +3150,7 @@ and parse_record_expr_row p =
         | Uident _ -> remove_module_name_from_punned_field_value value
         | _ -> value
       in
-      Some (field, value))
+      Some (field, value, false))
   | Question -> (
     Parser.next p;
     match p.Parser.token with
@@ -3165,7 +3163,7 @@ and parse_record_expr_row p =
         | Uident _ -> remove_module_name_from_punned_field_value value
         | _ -> value
       in
-      Some (field, make_expression_optional ~optional:true value)
+      Some (field, value, true)
     | _ -> None)
   | _ -> None
 
@@ -3201,7 +3199,7 @@ and parse_record_expr ~start_pos ?(spread = None) rows p =
     parse_comma_delimited_region ~grammar:Grammar.RecordRows ~closing:Rbrace
       ~f:parse_record_expr_row p
   in
-  let rows = List.concat [rows; exprs] in
+  let rows = rows @ exprs in
   let () =
     match rows with
     | [] ->
@@ -4073,10 +4071,8 @@ and parse_poly_type_expr p =
         let typ = Ast_helper.Typ.var ~loc:var.loc var.txt in
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc typ.Parsetree.ptyp_loc.loc_start p.prev_end_pos in
-        let t_fun =
-          Ast_helper.Typ.arrow ~loc Asttypes.Nolabel typ return_type
-        in
-        Ast_uncurried.uncurried_type ~loc ~arity:1 t_fun
+        Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Asttypes.Nolabel typ
+          return_type
       | _ -> Ast_helper.Typ.var ~loc:var.loc var.txt)
     | _ -> assert false)
   | _ -> parse_typ_expr p
@@ -4399,7 +4395,7 @@ and parse_es6_arrow_type ~attrs p =
     Parser.expect EqualGreater p;
     let return_type = parse_typ_expr ~alias:false p in
     let loc = mk_loc start_pos p.prev_end_pos in
-    Ast_helper.Typ.arrow ~loc ~attrs arg typ return_type
+    Ast_helper.Typ.arrow ~loc ~attrs ~arity:None arg typ return_type
   | DocComment _ -> assert false
   | _ ->
     let parameters = parse_type_parameters p in
@@ -4427,9 +4423,11 @@ and parse_es6_arrow_type ~attrs p =
               else arity
             | _ -> arity
           in
-          let t_arg = Ast_helper.Typ.arrow ~loc ~attrs arg_lbl typ t in
+          let t_arg =
+            Ast_helper.Typ.arrow ~loc ~attrs ~arity:None arg_lbl typ t
+          in
           if param_num = 1 then
-            (param_num - 1, Ast_uncurried.uncurried_type ~loc ~arity t_arg, 1)
+            (param_num - 1, Ast_uncurried.uncurried_type ~arity t_arg, 1)
           else (param_num - 1, t_arg, arity + 1))
         parameters
         (List.length parameters, return_type, return_type_arity + 1)
@@ -4486,10 +4484,7 @@ and parse_arrow_type_rest ~es6_arrow ~start_pos typ p =
     Parser.next p;
     let return_type = parse_typ_expr ~alias:false p in
     let loc = mk_loc start_pos p.prev_end_pos in
-    let arrow_typ =
-      Ast_helper.Typ.arrow ~loc Asttypes.Nolabel typ return_type
-    in
-    Ast_uncurried.uncurried_type ~loc ~arity:1 arrow_typ
+    Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Asttypes.Nolabel typ return_type
   | _ -> typ
 
 and parse_typ_expr_region p =
@@ -4613,7 +4608,7 @@ and parse_field_declaration p =
       Ast_helper.Typ.constr ~loc:name.loc {name with txt = Lident name.txt} []
   in
   let loc = mk_loc start_pos typ.ptyp_loc.loc_end in
-  (optional, Ast_helper.Type.field ~attrs ~loc ~mut name typ)
+  Ast_helper.Type.field ~attrs ~loc ~mut ~optional name typ
 
 and parse_field_declaration_region ?found_object_field p =
   let start_pos = p.Parser.start_pos in
@@ -4652,8 +4647,7 @@ and parse_field_declaration_region ?found_object_field p =
           []
     in
     let loc = mk_loc start_pos typ.ptyp_loc.loc_end in
-    let attrs = if optional then optional_attr :: attrs else attrs in
-    Some (Ast_helper.Type.field ~attrs ~loc ~mut name typ)
+    Some (Ast_helper.Type.field ~attrs ~loc ~mut ~optional name typ)
   | _ ->
     if attrs <> [] then
       Parser.err ~start_pos p
@@ -4828,10 +4822,7 @@ and parse_constr_decl_args p =
                   ~closing:Rbrace ~f:parse_field_declaration_region p
               | attrs ->
                 let first =
-                  let optional, field = parse_field_declaration p in
-                  let attrs =
-                    if optional then optional_attr :: attrs else attrs
-                  in
+                  let field = parse_field_declaration p in
                   {field with Parsetree.pld_attributes = attrs}
                 in
                 if p.token = Rbrace then [first]
@@ -5100,12 +5091,9 @@ and parse_type_equation_or_constr_decl p =
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc uident_start_pos p.prev_end_pos in
         let arrow_type =
-          Ast_helper.Typ.arrow ~loc Asttypes.Nolabel typ return_type
+          Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Asttypes.Nolabel typ
+            return_type
         in
-        let arrow_type =
-          Ast_uncurried.uncurried_type ~loc ~arity:1 arrow_type
-        in
-
         let typ = parse_type_alias p arrow_type in
         (Some typ, Asttypes.Public, Parsetree.Ptype_abstract)
       | _ -> (Some typ, Asttypes.Public, Parsetree.Ptype_abstract))
@@ -5259,8 +5247,7 @@ and parse_record_or_object_decl p =
             ~closing:Rbrace ~f:parse_field_declaration_region p
         | attr :: _ as attrs ->
           let first =
-            let optional, field = parse_field_declaration p in
-            let attrs = if optional then optional_attr :: attrs else attrs in
+            let field = parse_field_declaration p in
             Parser.optional p Comma |> ignore;
             {
               field with

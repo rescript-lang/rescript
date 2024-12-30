@@ -34,25 +34,21 @@ let ((Instance (component : comp)) : React.t) = i
   | Instance (comp, tree) -> ()
   | React.Instance (comp, tree) -> ()
   | (Instance (comp : Component.t) : React.t) -> ()
-let f = ((Function$ (fun (Instance) -> i))[@res.arity 1])
-let f = ((Function$ (fun (Instance as i) -> i))[@res.arity 1])
-let f = ((Function$ (fun (React.Instance) -> i))[@res.arity 1])
-let f = ((Function$ (fun (React.Instance as x) -> i))[@res.arity 1])
-let f = ((Function$ (fun (Instance component) -> i))[@res.arity 1])
-let f = ((Function$ (fun (Instance component) -> i))[@res.arity 1])
-let f = ((Function$ (fun (Instance { render; subtree }) -> i))[@res.arity 1])
-let f = ((Function$ (fun (Instance ({ render; subtree }, inst)) -> i))
-  [@res.arity 1])
-let f = ((Function$ (fun (Instance ({ render; subtree } : Instance.t)) -> i))
-  [@res.arity 1])
-let f = ((Function$ (fun (Instance ({ render; subtree } : Instance.t)) -> i))
-  [@res.arity 1])
-let f = ((Function$ (fun (Instance (component, tree)) -> i))[@res.arity 1])
-let f = ((Function$ (fun (Instance (component, tree)) -> i))[@res.arity 1])
-let f = ((Function$ (fun (Instance : React.t) -> i))[@res.arity 1])
-let f = ((Function$ (fun (Instance : React.t) -> i))[@res.arity 1])
-let f = ((Function$ (fun (Instance (comp : Component.t) : React.t) -> ()))
-  [@res.arity 1])
+let f [arity:1](Instance) = i
+let f [arity:1](Instance as i) = i
+let f [arity:1](React.Instance) = i
+let f [arity:1](React.Instance as x) = i
+let f [arity:1](Instance component) = i
+let f [arity:1](Instance component) = i
+let f [arity:1](Instance { render; subtree }) = i
+let f [arity:1](Instance ({ render; subtree }, inst)) = i
+let f [arity:1](Instance ({ render; subtree } : Instance.t)) = i
+let f [arity:1](Instance ({ render; subtree } : Instance.t)) = i
+let f [arity:1](Instance (component, tree)) = i
+let f [arity:1](Instance (component, tree)) = i
+let f [arity:1](Instance : React.t) = i
+let f [arity:1](Instance : React.t) = i
+let f [arity:1](Instance (comp : Component.t) : React.t) = ()
 ;;for Blue = x to y do () done
 ;;for Blue as c = x to y do () done
 ;;for Blue = x to y do () done

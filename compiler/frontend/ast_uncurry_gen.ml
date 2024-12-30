@@ -36,7 +36,7 @@ let to_method_callback loc (self : Bs_ast_mapper.mapper) label
     match Ast_attributes.process_attributes_rev body.pexp_attributes with
     | Nothing, attrs -> (
       match body.pexp_desc with
-      | Pexp_fun (arg_label, _, arg, body) ->
+      | Pexp_fun {arg_label; lhs = arg; rhs = body} ->
         Bs_syntaxerr.optional_err loc arg_label;
         aux ((arg_label, self.pat self arg, attrs) :: acc) body
       | _ -> (self.expr self body, acc))
@@ -45,7 +45,7 @@ let to_method_callback loc (self : Bs_ast_mapper.mapper) label
   let result, rev_extra_args = aux [(label, self_pat, [])] body in
   let body =
     Ext_list.fold_left rev_extra_args result (fun e (label, p, attrs) ->
-        Ast_helper.Exp.fun_ ~loc ~attrs label None p e)
+        Ast_helper.Exp.fun_ ~loc ~attrs ~arity:None label None p e)
   in
   let arity = List.length rev_extra_args in
   let arity_s = string_of_int arity in
@@ -57,7 +57,9 @@ let to_method_callback loc (self : Bs_ast_mapper.mapper) label
         ( Nolabel,
           Exp.constraint_ ~loc
             (Exp.record ~loc
-               [({loc; txt = Ast_literal.Lid.hidden_field arity_s}, body)]
+               [
+                 ({loc; txt = Ast_literal.Lid.hidden_field arity_s}, body, false);
+               ]
                None)
             (Typ.constr ~loc
                {

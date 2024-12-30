@@ -24,11 +24,13 @@
 (* Note: some of the functions here should go to Ast_mapper instead,
    which would encapsulate the "binary AST" protocol. *)
 
-let write_ast (type a) (kind : a Ml_binary.kind) fn (ast : a) =
+let write_ast fn (ast0 : Ml_binary.ast0) =
   let oc = open_out_bin fn in
-  output_string oc (Ml_binary.magic_of_kind kind);
+  output_string oc (Ml_binary.magic_of_ast0 ast0);
   output_value oc (!Location.input_name : string);
-  output_value oc (ast : a);
+  (match ast0 with
+  | Ml_binary.Impl ast -> output_value oc (ast : Parsetree0.structure)
+  | Ml_binary.Intf ast -> output_value oc (ast : Parsetree0.signature));
   close_out oc
 
 let temp_ppx_file () =
@@ -53,17 +55,20 @@ let apply_rewriter kind fn_in ppx =
   fn_out
 
 (* This is a fatal error, no need to protect it *)
-let read_ast (type a) (kind : a Ml_binary.kind) fn : a =
+let read_ast (type a) (kind : a Ml_binary.kind) fn : Ml_binary.ast0 =
   let ic = open_in_bin fn in
   let magic = Ml_binary.magic_of_kind kind in
   let buffer = really_input_string ic (String.length magic) in
   assert (buffer = magic);
   (* already checked by apply_rewriter *)
   Location.set_input_name @@ (input_value ic : string);
-  let ast = (input_value ic : a) in
+  let ast0 =
+    match kind with
+    | Ml_binary.Ml -> Ml_binary.Impl (input_value ic : Parsetree0.structure)
+    | Ml_binary.Mli -> Ml_binary.Intf (input_value ic : Parsetree0.signature)
+  in
   close_in ic;
-
-  ast
+  ast0
 
 (** [ppxs] are a stack, 
     [-ppx1 -ppx2  -ppx3]
@@ -71,7 +76,8 @@ let read_ast (type a) (kind : a Ml_binary.kind) fn : a =
     [fold_right] happens to process the first one *)
 let rewrite kind ppxs ast =
   let fn_in = temp_ppx_file () in
-  write_ast kind fn_in ast;
+  let ast0 = Ml_binary.to_ast0 kind ast in
+  write_ast fn_in ast0;
   let temp_files =
     List.fold_right
       (fun ppx fns ->
@@ -93,7 +99,7 @@ let apply_rewriters_str ?(restore = true) ~tool_name ast =
   | ppxs ->
     ast
     |> Ast_mapper.add_ppx_context_str ~tool_name
-    |> rewrite Ml ppxs
+    |> rewrite Ml ppxs |> Ml_binary.ast0_to_structure
     |> Ast_mapper.drop_ppx_context_str ~restore
 
 let apply_rewriters_sig ?(restore = true) ~tool_name ast =
@@ -102,7 +108,7 @@ let apply_rewriters_sig ?(restore = true) ~tool_name ast =
   | ppxs ->
     ast
     |> Ast_mapper.add_ppx_context_sig ~tool_name
-    |> rewrite Mli ppxs
+    |> rewrite Mli ppxs |> Ml_binary.ast0_to_signature
     |> Ast_mapper.drop_ppx_context_sig ~restore
 
 let apply_rewriters ?restore ~tool_name (type a) (kind : a Ml_binary.kind)

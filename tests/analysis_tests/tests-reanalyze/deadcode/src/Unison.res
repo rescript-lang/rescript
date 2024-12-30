@@ -34,7 +34,7 @@ let rec toString = (~width, stack) =>
   | Empty => ""
   }
 
-toString(~width=80, Empty)
-toString(~width=80, Cons(group(~break=Never, "abc"), Empty))
-toString(~width=80, Cons(group(~break=Always, "d"), Empty))
+toString(~width=80, Empty)->ignore
+toString(~width=80, Cons(group(~break=Never, "abc"), Empty))->ignore
+toString(~width=80, Cons(group(~break=Always, "d"), Empty))->ignore
 

@@ -122,8 +122,13 @@ let rec core_type i ppf x =
   match x.ptyp_desc with
   | Ptyp_any -> line i ppf "Ptyp_any\n"
   | Ptyp_var s -> line i ppf "Ptyp_var %s\n" s
-  | Ptyp_arrow (l, ct1, ct2) ->
+  | Ptyp_arrow (l, ct1, ct2, a) ->
     line i ppf "Ptyp_arrow\n";
+    let () =
+      match a with
+      | None -> ()
+      | Some n -> line i ppf "arity = %d\n" n
+    in
     arg_label i ppf l;
     core_type i ppf ct1;
     core_type i ppf ct2
@@ -150,7 +155,6 @@ let rec core_type i ppf x =
           line i ppf "Oinherit\n";
           core_type (i + 1) ppf ct)
       l
-  | Ptyp_class () -> ()
   | Ptyp_alias (ct, s) ->
     line i ppf "Ptyp_alias \"%s\"\n" s;
     core_type i ppf ct
@@ -234,11 +238,13 @@ and expression i ppf x =
     line i ppf "Pexp_let %a\n" fmt_rec_flag rf;
     list i value_binding ppf l;
     expression i ppf e
-  | Pexp_function l ->
-    line i ppf "Pexp_function\n";
-    list i case ppf l
-  | Pexp_fun (l, eo, p, e) ->
+  | Pexp_fun {arg_label = l; default = eo; lhs = p; rhs = e; arity} ->
     line i ppf "Pexp_fun\n";
+    let () =
+      match arity with
+      | None -> ()
+      | Some arity -> line i ppf "arity:%d\n" arity
+    in
     arg_label i ppf l;
     option i expression ppf eo;
     pattern i ppf p;
@@ -335,7 +341,6 @@ and expression i ppf x =
     line i ppf "Pexp_poly\n";
     expression i ppf e;
     option i core_type ppf cto
-  | Pexp_object () -> ()
   | Pexp_newtype (s, e) ->
     line i ppf "Pexp_newtype \"%s\"\n" s.txt;
     expression i ppf e
@@ -348,7 +353,6 @@ and expression i ppf x =
   | Pexp_extension (s, arg) ->
     line i ppf "Pexp_extension \"%s\"\n" s.txt;
     payload i ppf arg
-  | Pexp_unreachable -> line i ppf "Pexp_unreachable"
 
 and value_description i ppf x =
   line i ppf "value_description %a %a\n" fmt_string_loc x.pval_name fmt_location
@@ -640,8 +644,8 @@ and label_decl i ppf {pld_name; pld_mutable; pld_type; pld_loc; pld_attributes}
   line (i + 1) ppf "%a" fmt_string_loc pld_name;
   core_type (i + 1) ppf pld_type
 
-and longident_x_pattern i ppf (li, p) =
-  line i ppf "%a\n" fmt_longident_loc li;
+and longident_x_pattern i ppf (li, p, opt) =
+  line i ppf "%a%s\n" fmt_longident_loc li (if opt then "?" else "");
   pattern (i + 1) ppf p
 
 and case i ppf {pc_lhs; pc_guard; pc_rhs} =
@@ -664,8 +668,8 @@ and string_x_expression i ppf (s, e) =
   line i ppf "<override> %a\n" fmt_string_loc s;
   expression (i + 1) ppf e
 
-and longident_x_expression i ppf (li, e) =
-  line i ppf "%a\n" fmt_longident_loc li;
+and longident_x_expression i ppf (li, e, opt) =
+  line i ppf "%a%s\n" fmt_longident_loc li (if opt then "?" else "");
   expression (i + 1) ppf e
 
 and label_x_expression i ppf (l, e) =

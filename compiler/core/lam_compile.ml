@@ -425,9 +425,9 @@ let compile output_prefix =
                  S.exp
                    (Js_of_lam_block.set_field
                       (match tag_info with
-                      | Blk_record {fields = xs} -> Fld_record_set xs.(i)
+                      | Blk_record {fields = xs} -> Fld_record_set (fst xs.(i))
                       | Blk_record_inlined xs ->
-                        Fld_record_inline_set xs.fields.(i)
+                        Fld_record_inline_set (fst xs.fields.(i))
                       | Blk_constructor p -> (
                         let is_cons = p.name = Literals.cons in
                         match (is_cons, i) with

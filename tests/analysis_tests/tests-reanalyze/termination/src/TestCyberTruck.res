@@ -2,7 +2,7 @@
 
 // A progress function will eventually terminate
 let progress = {
-  let counter = ref(Random.int(100))
+  let counter = ref((100))
   () => {
     if counter.contents < 0 {
       assert false
@@ -151,8 +151,8 @@ module Parser = {
     }
 
   let next = p => {
-    p.token = Random.bool() ? Eof : Int(Random.int(1000))
-    p.position = {lnum: Random.int(1000), cnum: Random.int(80)}
+    p.token = true ? Eof : Int((1000))
+    p.position = {lnum: (1000), cnum: (80)}
   }
 
   let err = (p, s) => p.errors = list{s, ...p.errors}
@@ -214,16 +214,16 @@ and parseExpression = (~x=4, p: Parser.t) =>
   }
 
 @progress
-and parseListExpression = p => parseList(p, ~f=parseExpression)
+and parseListExpression = p => parseList(p, ~f=(x => parseExpression(x)))
 
 @progress
-and parseListExpression2 = p => parseList(p, ~f=parseExpression(~x=7))
+and parseListExpression2 = p => parseList(p, ~f=parseExpression(~x=7, ...))
 
 @progress
 and parseListIntTailRecursive = p => {
   let rec loop = (p: Parser.t, l) =>
     if p.token == Asterisk {
-      List.rev(l)
+      l
     } else {
       loop(p, list{parseInt(p), ...l})
     }
@@ -297,7 +297,7 @@ module ParserWihtOptionals = {
         list{}
       } else {
         switch f(p) {
-        | None => List.rev(nodes)
+        | None => nodes
         | Some(item) => loop(list{item, ...nodes})
         }
       }

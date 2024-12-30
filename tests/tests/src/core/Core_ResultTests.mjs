@@ -84,6 +84,239 @@ Test.run([
   _0: 15
 });
 
+Test.run([
+  [
+    "Core_ResultTests.res",
+    34,
+    20,
+    25
+  ],
+  "all"
+], Result.all([]), eq, {
+  TAG: "Ok",
+  _0: []
+});
+
+Test.run([
+  [
+    "Core_ResultTests.res",
+    35,
+    20,
+    25
+  ],
+  "all"
+], Result.all([
+  {
+    TAG: "Ok",
+    _0: 1
+  },
+  {
+    TAG: "Ok",
+    _0: 2
+  },
+  {
+    TAG: "Ok",
+    _0: 3
+  }
+]), eq, {
+  TAG: "Ok",
+  _0: [
+    1,
+    2,
+    3
+  ]
+});
+
+Test.run([
+  [
+    "Core_ResultTests.res",
+    36,
+    20,
+    25
+  ],
+  "all"
+], Result.all([
+  {
+    TAG: "Ok",
+    _0: 1
+  },
+  {
+    TAG: "Error",
+    _0: 2
+  }
+]), eq, {
+  TAG: "Error",
+  _0: 2
+});
+
+Test.run([
+  [
+    "Core_ResultTests.res",
+    37,
+    20,
+    25
+  ],
+  "all"
+], Result.all2([
+  {
+    TAG: "Ok",
+    _0: 1
+  },
+  {
+    TAG: "Ok",
+    _0: 2
+  }
+]), eq, {
+  TAG: "Ok",
+  _0: [
+    1,
+    2
+  ]
+});
+
+Test.run([
+  [
+    "Core_ResultTests.res",
+    38,
+    20,
+    25
+  ],
+  "all"
+], Result.all2([
+  {
+    TAG: "Ok",
+    _0: 1
+  },
+  {
+    TAG: "Error",
+    _0: 2
+  }
+]), eq, {
+  TAG: "Error",
+  _0: 2
+});
+
+Test.run([
+  [
+    "Core_ResultTests.res",
+    39,
+    20,
+    25
+  ],
+  "all"
+], Result.all3([
+  {
+    TAG: "Ok",
+    _0: 1
+  },
+  {
+    TAG: "Ok",
+    _0: 2
+  },
+  {
+    TAG: "Ok",
+    _0: 3
+  }
+]), eq, {
+  TAG: "Ok",
+  _0: [
+    1,
+    2,
+    3
+  ]
+});
+
+Test.run([
+  [
+    "Core_ResultTests.res",
+    40,
+    20,
+    25
+  ],
+  "all"
+], Result.all3([
+  {
+    TAG: "Ok",
+    _0: 1
+  },
+  {
+    TAG: "Error",
+    _0: 2
+  },
+  {
+    TAG: "Ok",
+    _0: 3
+  }
+]), eq, {
+  TAG: "Error",
+  _0: 2
+});
+
+Test.run([
+  [
+    "Core_ResultTests.res",
+    41,
+    20,
+    25
+  ],
+  "all"
+], Result.all4([
+  {
+    TAG: "Ok",
+    _0: 1
+  },
+  {
+    TAG: "Ok",
+    _0: 2
+  },
+  {
+    TAG: "Ok",
+    _0: 3
+  },
+  {
+    TAG: "Ok",
+    _0: 4
+  }
+]), eq, {
+  TAG: "Ok",
+  _0: [
+    1,
+    2,
+    3,
+    4
+  ]
+});
+
+Test.run([
+  [
+    "Core_ResultTests.res",
+    42,
+    20,
+    25
+  ],
+  "all"
+], Result.all4([
+  {
+    TAG: "Ok",
+    _0: 1
+  },
+  {
+    TAG: "Error",
+    _0: 2
+  },
+  {
+    TAG: "Ok",
+    _0: 3
+  },
+  {
+    TAG: "Ok",
+    _0: 4
+  }
+]), eq, {
+  TAG: "Error",
+  _0: 2
+});
+
 export {
   eq,
   forEachIfOkCallFunction,

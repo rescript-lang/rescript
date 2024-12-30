@@ -22,25 +22,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type pp_error = Unterminated_if | Unterminated_else
-
-exception Pp_error of pp_error * Location.t
-
 type directive_value =
   | Dir_bool of bool
   | Dir_float of float
   | Dir_int of int
   | Dir_string of string
   | Dir_null
-
-let prepare_pp_error loc = function
-  | Unterminated_if -> Location.errorf ~loc "#if not terminated"
-  | Unterminated_else -> Location.errorf ~loc "#else not terminated"
-
-let () =
-  Location.register_error_of_exn (function
-    | Pp_error (err, loc) -> Some (prepare_pp_error loc err)
-    | _ -> None)
 
 let directive_built_in_values = Hashtbl.create 51
 
@@ -117,38 +104,3 @@ let define_key_value key v =
            try Dir_float (float_of_string v) with _ -> Dir_string v)));
     true)
   else false
-
-type dir_conditional = Dir_if_true | Dir_out
-
-(* let string_of_dir_conditional (x : dir_conditional) = *)
-(*   match x with  *)
-(*   | Dir_if_true -> "Dir_if_true" *)
-(*   | Dir_if_false -> "Dir_if_false" *)
-(*   | Dir_out -> "Dir_out" *)
-
-let if_then_else = ref Dir_out
-
-(* store the token after hash, [# token]
-   when we see `#if` we do the processing immediately
-   when we see #method, we produce `HASH` token and save `method`
-   token so that the next lexing produce the right one.
-*)
-let sharp_look_ahead = ref None
-
-let update_if_then_else v =
-  (* Format.fprintf Format.err_formatter "@[update %s \n@]@." (string_of_dir_conditional v); *)
-  if_then_else := v
-
-let at_bol lexbuf =
-  let pos = Lexing.lexeme_start_p lexbuf in
-  pos.pos_cnum = pos.pos_bol
-
-let eof_check lexbuf =
-  if !if_then_else <> Dir_out then
-    if !if_then_else = Dir_if_true then
-      raise (Pp_error (Unterminated_if, Location.curr lexbuf))
-    else raise (Pp_error (Unterminated_else, Location.curr lexbuf))
-
-let init () =
-  sharp_look_ahead := None;
-  update_if_then_else Dir_out

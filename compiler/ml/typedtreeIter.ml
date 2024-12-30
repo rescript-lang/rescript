@@ -199,7 +199,7 @@ end = struct
       | None -> ()
       | Some pat -> iter_pattern pat)
     | Tpat_record (list, _closed) ->
-      List.iter (fun (_, _, pat) -> iter_pattern pat) list
+      List.iter (fun (_, _, pat, _) -> iter_pattern pat) list
     | Tpat_array list -> List.iter iter_pattern list
     | Tpat_or (p1, p2, _) ->
       iter_pattern p1;
@@ -230,7 +230,7 @@ end = struct
     | Texp_let (rec_flag, list, exp) ->
       iter_bindings rec_flag list;
       iter_expression exp
-    | Texp_function {cases; _} -> iter_cases cases
+    | Texp_function {case; _} -> iter_case case
     | Texp_apply (exp, list) ->
       iter_expression exp;
       List.iter
@@ -255,8 +255,8 @@ end = struct
     | Texp_record {fields; extended_expression; _} -> (
       Array.iter
         (function
-          | _, Kept _ -> ()
-          | _, Overridden (_, exp) -> iter_expression exp)
+          | _, Kept _, _ -> ()
+          | _, Overridden (_, exp), _ -> iter_expression exp)
         fields;
       match extended_expression with
       | None -> ()
@@ -296,9 +296,7 @@ end = struct
       iter_expression exp
     | Texp_assert exp -> iter_expression exp
     | Texp_lazy exp -> iter_expression exp
-    | Texp_object () -> ()
     | Texp_pack mexpr -> iter_module_expr mexpr
-    | Texp_unreachable -> ()
     | Texp_extension_constructor _ -> ());
     Iter.leave_expression exp
 
@@ -385,13 +383,12 @@ end = struct
     (match ct.ctyp_desc with
     | Ttyp_any -> ()
     | Ttyp_var _ -> ()
-    | Ttyp_arrow (_label, ct1, ct2) ->
+    | Ttyp_arrow (_label, ct1, ct2, _) ->
       iter_core_type ct1;
       iter_core_type ct2
     | Ttyp_tuple list -> List.iter iter_core_type list
     | Ttyp_constr (_path, _, list) -> List.iter iter_core_type list
     | Ttyp_object (list, _o) -> List.iter iter_object_field list
-    | Ttyp_class () -> ()
     | Ttyp_alias (ct, _s) -> iter_core_type ct
     | Ttyp_variant (list, _bool, _labels) -> List.iter iter_row_field list
     | Ttyp_poly (_list, ct) -> iter_core_type ct

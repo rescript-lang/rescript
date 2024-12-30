@@ -699,7 +699,7 @@ let rec generalize_expansive env var_level visited ty =
           else generalize_expansive env var_level visited t)
         variance tyl
     | Tpackage (_, _, tyl) -> List.iter (generalize_structure var_level) tyl
-    | Tarrow (_, t1, t2, _) ->
+    | Tarrow (_, t1, t2, _, _) ->
       generalize_structure var_level t1;
       generalize_expansive env var_level visited t2
     | _ -> iter_type_expr (generalize_expansive env var_level visited) ty)
@@ -1894,7 +1894,7 @@ let rec mcomp type_pairs env t1 t2 =
             TypePairs.add type_pairs (t1', t2') ();
             match (t1'.desc, t2'.desc) with
             | Tvar _, Tvar _ -> assert false
-            | Tarrow (l1, t1, u1, _), Tarrow (l2, t2, u2, _)
+            | Tarrow (l1, t1, u1, _, _), Tarrow (l2, t2, u2, _, _)
               when Asttypes.same_arg_label l1 l2
                    || not (is_optional l1 || is_optional l2) ->
               mcomp type_pairs env t1 t2;
@@ -2046,6 +2046,7 @@ and mcomp_record_description type_pairs env =
       if
         Ident.name l1.ld_id = Ident.name l2.ld_id
         && l1.ld_mutable = l2.ld_mutable
+        && l1.ld_optional = l2.ld_optional
       then iter xs ys
       else raise (Unify [])
     | [], [] -> ()
@@ -2298,7 +2299,7 @@ and unify3 env t1 t1' t2 t2' =
   | Tfield _, Tfield _ ->
     (* special case for GADTs *)
     unify_fields env t1' t2'
-  | Tconstr (Pident {name = "function$"}, [t_fun; _], _), Tarrow _ ->
+  | Tconstr (Pident {name = "function$"}, [t_fun], _), Tarrow _ ->
     (* subtype: an uncurried function is cast to a curried one *)
     unify2 env t_fun t2
   | _ -> (
@@ -2309,10 +2310,11 @@ and unify3 env t1 t1' t2 t2' =
     | Pattern -> add_type_equality t1' t2');
     try
       (match (d1, d2) with
-      | Tarrow (l1, t1, u1, c1), Tarrow (l2, t2, u2, c2)
-        when Asttypes.same_arg_label l1 l2
-             || (!umode = Pattern && not (is_optional l1 || is_optional l2))
-        -> (
+      | Tarrow (l1, t1, u1, c1, a1), Tarrow (l2, t2, u2, c2, a2)
+        when a1 = a2
+             && (Asttypes.same_arg_label l1 l2
+                || (!umode = Pattern && not (is_optional l1 || is_optional l2))
+                ) -> (
         unify env t1 t2;
         unify env u1 u2;
         match (commu_repr c1, commu_repr c2) with
@@ -2757,16 +2759,16 @@ let expand_head_trace env t =
    (2) the original label is not optional
 *)
 
-let filter_arrow env t l =
+let filter_arrow ~env ~arity t l =
   let t = expand_head_trace env t in
   match t.desc with
   | Tvar _ ->
     let lv = t.level in
     let t1 = newvar2 lv and t2 = newvar2 lv in
-    let t' = newty2 lv (Tarrow (l, t1, t2, Cok)) in
+    let t' = newty2 lv (Tarrow (l, t1, t2, Cok, arity)) in
     link_type t t';
     (t1, t2)
-  | Tarrow (l', t1, t2, _) when Asttypes.same_arg_label l l' -> (t1, t2)
+  | Tarrow (l', t1, t2, _, _) when Asttypes.same_arg_label l l' -> (t1, t2)
   | _ -> raise (Unify [])
 
 (* Used by [filter_method]. *)
@@ -2880,7 +2882,7 @@ let rec moregen inst_nongen type_pairs env t1 t2 =
               | Tvar _, _ when may_instantiate inst_nongen t1' ->
                 moregen_occur env t1'.level t2;
                 link_type t1' t2
-              | Tarrow (l1, t1, u1, _), Tarrow (l2, t2, u2, _)
+              | Tarrow (l1, t1, u1, _, _), Tarrow (l2, t2, u2, _, _)
                 when Asttypes.same_arg_label l1 l2 ->
                 moregen inst_nongen type_pairs env t1 t2;
                 moregen inst_nongen type_pairs env u1 u2
@@ -3150,7 +3152,7 @@ let rec eqtype rename type_pairs subst env t1 t2 =
                   if List.exists (fun (_, t) -> t == t2') !subst then
                     raise (Unify []);
                   subst := (t1', t2') :: !subst)
-              | Tarrow (l1, t1, u1, _), Tarrow (l2, t2, u2, _)
+              | Tarrow (l1, t1, u1, _, _), Tarrow (l2, t2, u2, _, _)
                 when Asttypes.same_arg_label l1 l2 ->
                 eqtype rename type_pairs subst env t1 t2;
                 eqtype rename type_pairs subst env u1 u2
@@ -3363,14 +3365,14 @@ let rec build_subtype env visited loops posi level t =
         (t', Equiv)
       with Not_found -> (t, Unchanged)
     else (t, Unchanged)
-  | Tarrow (l, t1, t2, _) ->
+  | Tarrow (l, t1, t2, _, a) ->
     if memq_warn t visited then (t, Unchanged)
     else
       let visited = t :: visited in
       let t1', c1 = build_subtype env visited loops (not posi) level t1 in
       let t2', c2 = build_subtype env visited loops posi level t2 in
       let c = max c1 c2 in
-      if c > Unchanged then (newty (Tarrow (l, t1', t2', Cok)), c)
+      if c > Unchanged then (newty (Tarrow (l, t1', t2', Cok, a)), c)
       else (t, Unchanged)
   | Ttuple tlist ->
     if memq_warn t visited then (t, Unchanged)
@@ -3564,7 +3566,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
       TypePairs.add subtypes (t1, t2) ();
       match (t1.desc, t2.desc) with
       | Tvar _, _ | _, Tvar _ -> (trace, t1, t2, !univar_pairs) :: cstrs
-      | Tarrow (l1, t1, u1, _), Tarrow (l2, t2, u2, _)
+      | Tarrow (l1, t1, u1, _, _), Tarrow (l2, t2, u2, _, _)
         when Asttypes.same_arg_label l1 l2 ->
         let cstrs = subtype_rec env ((t2, t1) :: trace) t2 t1 cstrs in
         subtype_rec env ((u1, u2) :: trace) u1 u2 cstrs
@@ -3721,8 +3723,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
             (_, _, {type_kind = Type_record (fields2, repr2)}) ) ->
           let same_repr =
             match (repr1, repr2) with
-            | ( (Record_regular | Record_optional_labels _),
-                (Record_regular | Record_optional_labels _) ) ->
+            | Record_regular, Record_regular ->
               true (* handled in the fields checks *)
             | Record_unboxed b1, Record_unboxed b2 -> b1 = b2
             | Record_inlined _, Record_inlined _ -> repr1 = repr2
@@ -3731,7 +3732,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
           in
           if same_repr then
             let violation, tl1, tl2 =
-              Record_coercion.check_record_fields ~repr1 ~repr2 fields1 fields2
+              Record_coercion.check_record_fields fields1 fields2
             in
             if violation then (trace, t1, t2, !univar_pairs) :: cstrs
             else subtype_list env trace tl1 tl2 cstrs
@@ -3918,7 +3919,7 @@ let unalias ty =
 (* Return the arity (as for curried functions) of the given type. *)
 let rec arity ty =
   match (repr ty).desc with
-  | Tarrow (_, _t1, t2, _) -> 1 + arity t2
+  | Tarrow (_, _t1, t2, _, _) -> 1 + arity t2
   | _ -> 0
 
 (* Check whether an abbreviation expands to itself. *)
@@ -4279,3 +4280,8 @@ let maybe_pointer_type env typ =
            | _ -> false)
          row.row_fields
   | _ -> true
+
+let get_arity env typ =
+  match (expand_head env typ).desc with
+  | Tarrow (_, _, _, _, arity) -> arity
+  | _ -> None

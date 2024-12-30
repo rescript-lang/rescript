@@ -104,3 +104,53 @@ let compare = (a, b, cmp) =>
   | (Some(_), None) => Ordering.greater
   | (None, None) => Ordering.equal
   }
+
+let all = options => {
+  let acc = []
+  let hasNone = ref(false)
+  let index = ref(0)
+  while hasNone.contents == false && index.contents < options->Array.length {
+    switch options->Array.getUnsafe(index.contents) {
+    | None => hasNone.contents = true
+    | Some(value) =>
+      acc->Array.push(value)
+      index.contents = index.contents + 1
+    }
+  }
+  hasNone.contents ? None : Some(acc)
+}
+
+let all2 = ((a, b)) => {
+  switch (a, b) {
+  | (Some(a), Some(b)) => Some((a, b))
+  | _ => None
+  }
+}
+
+let all3 = ((a, b, c)) => {
+  switch (a, b, c) {
+  | (Some(a), Some(b), Some(c)) => Some((a, b, c))
+  | _ => None
+  }
+}
+
+let all4 = ((a, b, c, d)) => {
+  switch (a, b, c, d) {
+  | (Some(a), Some(b), Some(c), Some(d)) => Some((a, b, c, d))
+  | _ => None
+  }
+}
+
+let all5 = ((a, b, c, d, e)) => {
+  switch (a, b, c, d, e) {
+  | (Some(a), Some(b), Some(c), Some(d), Some(e)) => Some((a, b, c, d, e))
+  | _ => None
+  }
+}
+
+let all6 = ((a, b, c, d, e, f)) => {
+  switch (a, b, c, d, e, f) {
+  | (Some(a), Some(b), Some(c), Some(d), Some(e), Some(f)) => Some((a, b, c, d, e, f))
+  | _ => None
+  }
+}

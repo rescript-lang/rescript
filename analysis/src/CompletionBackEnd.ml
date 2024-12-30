@@ -898,7 +898,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         | [] -> tRet
         | (label, tArg) :: rest ->
           let restType = reconstructFunctionType rest tRet in
-          {typ with desc = Tarrow (label, tArg, restType, Cok)}
+          {typ with desc = Tarrow (label, tArg, restType, Cok, None)}
       in
       let rec processApply args labels =
         match (args, labels) with
@@ -1359,11 +1359,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     (* Find all functions in the module that returns type t *)
     let rec fnReturnsTypeT t =
       match t.Types.desc with
-      | Tlink t1
-      | Tsubst t1
-      | Tpoly (t1, [])
-      | Tconstr (Pident {name = "function$"}, [t1; _], _) ->
-        fnReturnsTypeT t1
+      | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> fnReturnsTypeT t1
       | Tarrow _ -> (
         match TypeUtils.extractFunctionType ~env ~package:full.package t with
         | ( (Nolabel, {desc = Tconstr (Path.Pident {name = "t"}, _, _)}) :: _,

@@ -131,7 +131,7 @@ let pat sub {pat_extra; pat_desc; pat_env; _} =
   | Tpat_tuple l -> List.iter (sub.pat sub) l
   | Tpat_construct (_, _, l) -> List.iter (sub.pat sub) l
   | Tpat_variant (_, po, _) -> Option.iter (sub.pat sub) po
-  | Tpat_record (l, _) -> List.iter (fun (_, _, i) -> sub.pat sub i) l
+  | Tpat_record (l, _) -> List.iter (fun (_, _, i, _) -> sub.pat sub i) l
   | Tpat_array l -> List.iter (sub.pat sub) l
   | Tpat_or (p1, p2, _) ->
     sub.pat sub p1;
@@ -155,7 +155,7 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   | Texp_let (rec_flag, list, exp) ->
     sub.value_bindings sub (rec_flag, list);
     sub.expr sub exp
-  | Texp_function {cases; _} -> sub.cases sub cases
+  | Texp_function {case; _} -> sub.case sub case
   | Texp_apply (exp, list) ->
     sub.expr sub exp;
     List.iter (fun (_, o) -> Option.iter (sub.expr sub) o) list
@@ -172,8 +172,8 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   | Texp_record {fields; extended_expression; _} ->
     Array.iter
       (function
-        | _, Kept _ -> ()
-        | _, Overridden (_, exp) -> sub.expr sub exp)
+        | _, Kept _, _ -> ()
+        | _, Overridden (_, exp), _ -> sub.expr sub exp)
       fields;
     Option.iter (sub.expr sub) extended_expression
   | Texp_field (exp, _, _) -> sub.expr sub exp
@@ -210,9 +210,7 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
     sub.expr sub exp
   | Texp_assert exp -> sub.expr sub exp
   | Texp_lazy exp -> sub.expr sub exp
-  | Texp_object _ -> ()
   | Texp_pack mexpr -> sub.module_expr sub mexpr
-  | Texp_unreachable -> ()
   | Texp_extension_constructor _ -> ()
 
 let package_type sub {pack_fields; _} =
@@ -297,13 +295,12 @@ let typ sub {ctyp_desc; ctyp_env; _} =
   match ctyp_desc with
   | Ttyp_any -> ()
   | Ttyp_var _ -> ()
-  | Ttyp_arrow (_, ct1, ct2) ->
+  | Ttyp_arrow (_, ct1, ct2, _) ->
     sub.typ sub ct1;
     sub.typ sub ct2
   | Ttyp_tuple list -> List.iter (sub.typ sub) list
   | Ttyp_constr (_, _, list) -> List.iter (sub.typ sub) list
   | Ttyp_object (list, _) -> List.iter (sub.object_field sub) list
-  | Ttyp_class () -> ()
   | Ttyp_alias (ct, _) -> sub.typ sub ct
   | Ttyp_variant (list, _, _) -> List.iter (sub.row_field sub) list
   | Ttyp_poly (_, ct) -> sub.typ sub ct
