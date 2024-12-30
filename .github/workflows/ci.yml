@@ -90,7 +90,7 @@ jobs:
             ocaml_compiler: ocaml-variants.5.2.1+options,ocaml-option-static
             upload_binaries: true
             upload_libs: true
-            # Run the slower tasks on the fastest runner only
+            # Build the playground compiler and run the benchmarks on the fastest runner
             build_playground: true
             benchmarks: true
           - os: buildjet-2vcpu-ubuntu-2204-arm # ARM
