@@ -165,13 +165,12 @@ let extractExamples = async () => {
     examples->Array.pushMany(doc->getExamples)
   })
 
+  examples->Array.sort((a, b) => String.compare(a.id, b.id))
   examples
 }
 
 let main = async () => {
   let examples = await extractExamples()
-
-  examples->Array.sort((a, b) => String.compare(a.id, b.id))
 
   let dict = dict{}
 
@@ -194,31 +193,30 @@ let main = async () => {
   let output = []
 
   dict->Dict.forEachWithKey((examples, key) => {
-    let codeExamples = examples->Array.filterMap(example => {
-      let ignoreExample = Array.find(
-        ignoreRuntimeTests,
-        ((version, tests)) => {
-          nodeVersion === version && Array.includes(tests, example.id)
-        },
-      )->Option.isSome
+    examples->Array.sort((a, b) => String.compare(a.name, b.name))
 
-      switch ignoreExample {
-      | true =>
+    let codeExamples = examples->Array.filterMap(example => {
+      let ignoreExample =
+        ignoreRuntimeTests->Array.some(
+          ((version, tests)) => nodeVersion === version && tests->Array.includes(example.id),
+        )
+
+      if ignoreExample {
         Console.warn(
           `Ignoring ${example.id} tests. Not supported by Node ${nodeVersion->Int.toString}`,
         )
         None
-      | false =>
+      } else {
         let code = getCodeBlocks(example)
 
-        switch String.length(code) === 0 {
-        | true => None
-        | false =>
+        if code->String.length === 0 {
+          None
+        } else {
           // Let's add the examples inside a Test module because some examples
           // have type definitions that are not supported inside a block.
           // Also add unit type `()`
           Some(
-            `test("${example.id->String.split(".")->Array.at(-1)->Option.getExn}", () => {
+            `test("${example.name}", () => {
   module Test = {
     ${code}
   }
@@ -229,13 +227,11 @@ let main = async () => {
       }
     })
 
-    switch Array.length(codeExamples) > 0 {
-    | true =>
+    if codeExamples->Array.length > 0 {
       let content = `describe("${key}", () => {
 ${codeExamples->Array.join("\n")}
  })`
       output->Array.push(content)
-    | false => ()
     }
   })
 

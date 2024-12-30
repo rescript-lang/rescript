@@ -218,12 +218,12 @@ async function extractExamples() {
     let doc = await extractDocFromFile(Path.join("runtime", f));
     examples.push(...getExamples(doc));
   });
+  examples.sort((a, b) => Primitive_string.compare(a.id, b.id));
   return examples;
 }
 
 async function main() {
   let examples = await extractExamples();
-  examples.sort((a, b) => Primitive_string.compare(a.id, b.id));
   let dict = {};
   examples.forEach(cur => {
     let modulePath = cur.id.split(".");
@@ -234,14 +234,15 @@ async function main() {
   });
   let output = [];
   Dict.forEachWithKey(dict, (examples, key) => {
+    examples.sort((a, b) => Primitive_string.compare(a.name, b.name));
     let codeExamples = $$Array.filterMap(examples, example => {
-      let ignoreExample = Option.isSome(ignoreRuntimeTests.find(param => {
+      let ignoreExample = ignoreRuntimeTests.some(param => {
         if (nodeVersion === param[0]) {
           return param[1].includes(example.id);
         } else {
           return false;
         }
-      }));
+      });
       if (ignoreExample) {
         console.warn("Ignoring " + example.id + " tests. Not supported by Node " + nodeVersion.toString());
         return;
@@ -250,7 +251,7 @@ async function main() {
       if (code.length === 0) {
         return;
       } else {
-        return "test(\"" + Option.getExn(example.id.split(".").at(-1), undefined) + "\", () => {\n  module Test = {\n    " + code + "\n  }\n  ()\n})";
+        return "test(\"" + example.name + "\", () => {\n  module Test = {\n    " + code + "\n  }\n  ()\n})";
       }
     });
     if (codeExamples.length <= 0) {
