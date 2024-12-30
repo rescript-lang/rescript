@@ -38,11 +38,6 @@ if (process.argv.includes("-all")) {
 
 async function runTests() {
   if (formatTest) {
-    cp.execSync("npm run checkFormat", {
-      cwd: path.join(__dirname, ".."),
-      stdio: [0, 1, 2],
-    });
-
     cp.execSync("bash scripts/format_check.sh", {
       cwd: path.join(__dirname, ".."),
       stdio: [0, 1, 2],
