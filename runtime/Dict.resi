@@ -95,11 +95,21 @@ external fromArray: array<(string, 'a)> => dict<'a> = "Object.fromEntries"
 `fromIterator(entries)` creates a new dictionary from the provided iterator of key/value pairs.
 
 ## Examples
-```rescript
-// Pretend we have an iterator of the correct shape
-@val external someIterator: Iterator.t<(string, int)> = "someIterator"
 
-let dict = Dict.fromIterator(someIterator) // dict<int>
+```rescript
+let iterator: Iterator.t<(string, int)> = %raw(`
+  (() => {
+    var map1 = new Map();
+    map1.set('first', 1);
+    map1.set('second', 2);
+    var iterator1 = map1[Symbol.iterator]();
+    return iterator1;
+  })()
+`)
+iterator
+->Dict.fromIterator
+->Dict.valuesToArray
+->assertEqual([1, 2])
 ```
 */
 @val

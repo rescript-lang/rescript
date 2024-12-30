@@ -105,8 +105,17 @@ let getWithDefault: (t<'a>, 'a) => 'a
 `getExn(value)` raises an exception if `null`, otherwise returns the value.
 
 ```rescript
-Null.getExn(Null.make(3)) // 3
-Null.getExn(Null.null) /* Raises an Error */
+Null.getExn(Null.make(3))->assertEqual(3)
+
+switch Null.getExn(%raw("'ReScript'")) {
+| exception Invalid_argument(_) => assert(false)
+| value => assertEqual(value, "ReScript")
+}
+
+switch Null.getExn(%raw("null")) {
+| exception Invalid_argument(_) => assert(true)
+| _ => assert(false)
+}
 ```
 
 ## Exceptions

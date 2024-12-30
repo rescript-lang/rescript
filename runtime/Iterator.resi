@@ -29,11 +29,17 @@ Returns the next value of the iterator, if any.
 See [iterator protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols) on MDN.
 
 ## Examples
-```rescript
-@val external someIterator: Iterator.t<int> = "someIterator"
 
-// Pulls out the next value of the iterator
-let {Iterator.done, value} = someIterator->Iterator.next
+```rescript
+let iterator: Iterator.t<string> = %raw(`
+  (() => {
+    var array1 = ['a'];
+    var iterator1 = array1[Symbol.iterator]();
+    return iterator1
+  })()
+`)
+(iterator->Iterator.next).done->assertEqual(false)
+(iterator->Iterator.next).done->assertEqual(true)
 ```
 */
 @send
@@ -88,14 +94,22 @@ See [iterator protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript
 
 ## Examples
 ```rescript
-@val external someIterator: Iterator.t<int> = "someIterator"
-
-someIterator->Iterator.forEach(value =>
-  switch value {
-  | Some(value) if value > 10 => Console.log("More than 10!")
-  | _ => ()
+let iterator: Iterator.t<string> = %raw(`
+  (() => {
+    var array1 = ['a', 'b', 'c'];
+    var iterator1 = array1[Symbol.iterator]();
+    return iterator1
+  })()
+`)
+iterator->Iterator.forEach(v => {
+  switch v {
+  | Some("a" | "b" | "c") => assert(true)
+  | other =>
+    other
+    ->Option.isNone
+    ->assertEqual(true)
   }
-)
+})
 ```
 */
 let forEach: (t<'a>, option<'a> => unit) => unit
