@@ -3,8 +3,8 @@
     [@attr ])
 let x = (match z with | _ -> false) z
 let x = ((match z with | _ -> false)[@attr ]) z
-let x = (assert z) z
-let x = ((assert z)[@attr ]) z
+let x = assert z z
+let x = ((assert z z)[@attr ])
 let x = (try sideEffect () with | _ -> f ()) z
 let x = ((try sideEffect () with | _ -> f ())[@attr ]) z
 let x = for i = 0 to 10 do () done z

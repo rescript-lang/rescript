@@ -259,6 +259,7 @@ let primitives_table =
       ("%obj_get_field", Parrayrefu);
       ("%obj_set_field", Parraysetu);
       ("%raise", Praise Raise_regular);
+      ("%assert", Passert);
       (* bool primitives *)
       ("%sequand", Psequand);
       ("%sequor", Psequor);

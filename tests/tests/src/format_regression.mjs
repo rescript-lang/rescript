@@ -51,14 +51,46 @@ function format_pp_token(param, param$1, param$2) {
 
 function advance_loop(state) {
   while (true) {
-    let match = peek_queue(state.pp_queue);
-    let size = match.elem_size;
-    let size$1 = int_of_size(size);
-    if (size$1 < 0 && (state.pp_right_total - state.pp_left_total | 0) < state.pp_space_left) {
+    throw {
+      RE_EXN_ID: "Assert_failure",
+      _1: [
+        "format_regression.res",
+        10,
+        22
+      ],
+      Error: new Error()
+    };
+    throw {
+      RE_EXN_ID: "Assert_failure",
+      _1: [
+        "format_regression.res",
+        11,
+        23
+      ],
+      Error: new Error()
+    };
+    if (size < 0 && (state.pp_right_total - state.pp_left_total | 0) < state.pp_space_left) {
       return;
     }
-    take_queue(state.pp_queue);
-    format_pp_token(state, size$1 < 0 ? 1000000010 : size$1, match.token);
+    throw {
+      RE_EXN_ID: "Assert_failure",
+      _1: [
+        "format_regression.res",
+        12,
+        22
+      ],
+      Error: new Error()
+    };
+    size < 0;
+    throw {
+      RE_EXN_ID: "Assert_failure",
+      _1: [
+        "format_regression.res",
+        13,
+        35
+      ],
+      Error: new Error()
+    };
     state.pp_left_total = match.length + state.pp_left_total | 0;
     continue;
   };
