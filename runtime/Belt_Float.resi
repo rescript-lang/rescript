@@ -77,7 +77,7 @@ Can be opened in a module to avoid dot-notation (`+.`), however this yields a sh
 
 ```rescript
 open Belt.Float
-Js.log(2.0 + 2.0 === 4.0) /* true */
+assertEqual(2.0 + 2.0, 4.0)
 ```
 */
 external \"+": (float, float) => float = "%addfloat"
@@ -90,7 +90,7 @@ Can be opened in a module to avoid dot-notation (`-.`), however this yields a sh
 
 ```rescript
 open Belt.Float
-Js.log(2.0 - 1.0 === 1.0) /* true */
+assertEqual(2.0 - 1.0, 1.0)
 ```
 */
 external \"-": (float, float) => float = "%subfloat"
@@ -103,7 +103,7 @@ Can be opened in a module to avoid dot-notation (`*.`), however this yields a sh
 
 ```rescript
 open Belt.Float
-Js.log(2.0 * 2.0 === 4.0) /* true */
+assertEqual(2.0 * 2.0, 4.0)
 ```
 */
 external \"*": (float, float) => float = "%mulfloat"
@@ -116,7 +116,7 @@ Can be opened in a module to avoid dot-notation (`/.`), however this yields a sh
 
 ```rescript
 open Belt.Float
-Js.log(4.0 / 2.0 === 2.0) /* true */
+assertEqual(4.0 / 2.0, 2.0)
 ```
 */
 external \"/": (float, float) => float = "%divfloat"

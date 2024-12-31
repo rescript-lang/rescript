@@ -55,11 +55,21 @@ external fromArray: array<'a> => t<'a> = "Set"
 Turns an iterator into a `Set`.
 
 ## Examples
+
 ```rescript
 // Let's pretend we have an interator
-@val external someIterator: Iterator.t<int> = "someIterator"
+let iterator: Iterator.t<string> = %raw(`
+  (() => {
+    var array1 = ['a', 'b', 'c'];
+    var iterator1 = array1[Symbol.iterator]();
+    return iterator1
+  })()
+`)
 
-let set = Set.fromIterator(someIterator) // Set.t<int>
+iterator
+->Set.fromIterator
+->Set.size
+->assertEqual(3)
 ```
 */
 @new
