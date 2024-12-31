@@ -4,7 +4,9 @@ module C0 = {
   @res.jsxComponentProps
   type props<'priority, 'text> = {priority: 'priority, text?: 'text}
 
-  let make = ({priority: _, text: ?__text, _}: props<_, _>) => {
+  let make = (props: props<_, _>) => {
+    let _ = props.priority
+    let __text = props.text
     let text = switch __text {
     | Some(text) => text
     | None => "Test"
@@ -23,7 +25,9 @@ module C1 = {
   @res.jsxComponentProps
   type props<'priority, 'text> = {priority: 'priority, text?: 'text}
 
-  let make = ({priority: p, text: ?__text, _}: props<_, _>) => {
+  let make = (props: props<_, _>) => {
+    let p = props.priority
+    let __text = props.text
     let text = switch __text {
     | Some(text) => text
     | None => "Test"
@@ -42,7 +46,8 @@ module C2 = {
   @res.jsxComponentProps
   type props<'foo> = {foo?: 'foo}
 
-  let make = ({foo: ?__bar, _}: props<_>) => {
+  let make = (props: props<_>) => {
+    let __bar = props.foo
     let bar = switch __bar {
     | Some(foo) => foo
     | None => ""
@@ -61,7 +66,10 @@ module C3 = {
   @res.jsxComponentProps
   type props<'foo, 'a, 'b> = {foo?: 'foo, a?: 'a, b: 'b}
 
-  let make = ({foo: ?__bar, a: ?__a, b, _}: props<_, _, _>) => {
+  let make = (props: props<_, _, _>) => {
+    let __bar = props.foo
+    let __a = props.a
+    let b = props.b
     let bar = switch __bar {
     | Some(foo) => foo
     | None => ""
@@ -86,7 +94,9 @@ module C4 = {
   @res.jsxComponentProps
   type props<'a, 'x> = {a: 'a, x?: 'x}
 
-  let make = ({a: b, x: ?__x, _}: props<_, _>) => {
+  let make = (props: props<_, _>) => {
+    let b = props.a
+    let __x = props.x
     let x = switch __x {
     | Some(x) => x
     | None => true
@@ -105,7 +115,9 @@ module C5 = {
   @res.jsxComponentProps
   type props<'a, 'z> = {a: 'a, z?: 'z}
 
-  let make = ({a: (x, y), z: ?__z, _}: props<_, _>) => {
+  let make = (props: props<_, _>) => {
+    let a = props.a
+    let __z = props.z
     let z = switch __z {
     | Some(z) => z
     | None => 3
@@ -130,7 +142,11 @@ module C6 = {
   @res.jsxComponentProps
   type props<'comp, 'x> = {comp: 'comp, x: 'x}
 
-  let make = ({comp: module(Comp: Comp), x: (a, b), _}: props<_, _>) => React.jsx(Comp.make, {})
+  let make = (props: props<_, _>) => {
+    let {comp: module(Comp: Comp)} = props
+    let x = props.x
+    React.jsx(Comp.make, {})
+  }
   let make = {
     let \"AliasProps$C6" = (props: props<_>) => make(props)
 

@@ -7,8 +7,14 @@ module User = {
   @res.jsxComponentProps
   type props<'doctor> = {doctor: 'doctor}
 
-  let make = ({doctor, _}: props<_>) => {
-    ReactDOM.jsx("h1", {id: "h1", children: ?ReactDOM.someElement({React.string(format(doctor))})})
+  let make = (props: props<_>) => {
+    let doctor = props.doctor
+    {
+      ReactDOM.jsx(
+        "h1",
+        {id: "h1", children: ?ReactDOM.someElement({React.string(format(doctor))})},
+      )
+    }
   }
   let make = {
     let \"OptimizeAutomaticMode$User" = (props: props<_>) => make(props)
