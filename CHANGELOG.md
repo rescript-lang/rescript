@@ -33,6 +33,7 @@
 - Fix bug where a ref assignment is moved ouside a conditional. https://github.com/rescript-lang/rescript/pull/7176
 - Fix nullable to opt conversion. https://github.com/rescript-lang/rescript/pull/7193
 - Raise error when defining external React components with `@react.componentWithProps`. https://github.com/rescript-lang/rescript/pull/7217
+- Fix formatter handling of wildcard in pattern matching records with no fields specified. https://github.com/rescript-lang/rescript/pull/7224
 
 #### :house: Internal
 
