@@ -146,7 +146,7 @@ let f = async (type a, ()) => {
 }
 
 let attr1 = @a async x => x + 1
-let attr2 = @a async (type a b c, x) => 3
-let attr3 = @a (type a, type b c, x) => 3
-let attr4 = @a (type a, @b type b c, x) => 3
-let attr5: int => promise<int> = @a @b async (type a b c, x: a) => x
+let attr2 = @a async (type a, ()) => (type b c, x) => 3
+let attr3 = @a (type a, ()) => async (type b c, x) => 3
+let attr4 = @a (type a, ()) => @b async (type b c, x) => 3
+let attr5: int => promise<int> = @a @b async (type a b c, ()) => (x: a) => x

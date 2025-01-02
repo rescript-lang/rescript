@@ -187,7 +187,8 @@ let fun_expr expr =
          };
     } ->
       (attrs_before, List.rev acc, rewrite_underscore_apply expr)
-    | {pexp_desc = Pexp_newtype (string_loc, rest); pexp_attributes = attrs} ->
+    | {pexp_desc = Pexp_newtype (string_loc, rest); pexp_attributes = attrs}
+      when n_fun = 0 ->
       let string_locs, return_expr = collect_new_types [string_loc] rest in
       let param = NewTypes {attrs; locs = string_locs} in
       collect ~n_fun attrs_before (param :: acc) return_expr

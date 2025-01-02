@@ -33,11 +33,16 @@ let ex2 = ((3)[@res.await ]) ** ((4)[@res.await ])
 let ex3 = ((foo |.u (bar ~arg:((arg)[@res.namedArgLoc ])))[@res.await ])
 let ex4 = (((foo.bar).baz)[@res.await ])
 let attr1 = ((fun [arity:1]x -> x + 1)[@res.async ][@a ])
-let attr2 = ((fun (type a) -> fun (type b) -> fun (type c) ->
-  fun [arity:1]x -> 3)[@res.async ][@a ])
-let attr3 = ((fun (type a) -> ((fun (type b) -> fun (type c) ->
-  fun [arity:1]x -> 3)[@res.async ]))[@a ])
-let attr4 = ((fun (type a) -> ((fun (type b) -> fun (type c) ->
-  fun [arity:1]x -> 3)[@res.async ][@b ]))[@a ])
+let attr2 = ((fun (type a) ->
+  fun [arity:1]() -> fun (type b) -> fun (type c) -> fun [arity:1]x -> 3)
+  [@res.async ][@a ])
+let attr3 = ((fun (type a) ->
+  fun [arity:1]() -> ((fun (type b) -> fun (type c) -> fun [arity:1]x -> 3)
+    [@res.async ]))
+  [@a ])
+let attr4 = ((fun (type a) ->
+  fun [arity:1]() -> ((fun (type b) -> fun (type c) -> fun [arity:1]x -> 3)
+    [@res.async ][@b ]))
+  [@a ])
 let (attr5 : int) = ((fun (type a) -> fun (type b) -> fun (type c) ->
-  fun [arity:1](x : a) -> x)[@res.async ][@a ][@b ])
+  fun [arity:1]() -> fun [arity:1](x : a) -> x)[@res.async ][@a ][@b ])

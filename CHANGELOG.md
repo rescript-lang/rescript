@@ -49,7 +49,6 @@
 - AST cleanup: store arity in function type. https://github.com/rescript-lang/rescript/pull/7195
 - AST cleanup: remove explicit uses of `function$` in preparation for removing the type entirely. https://github.com/rescript-lang/rescript/pull/7206
 - AST cleanup: remove `function$` entirely. https://github.com/rescript-lang/rescript/pull/7208
-- AST cleanup: use inline record for Pexp_fun. https://github.com/rescript-lang/rescript/pull/7213
 
 # 12.0.0-alpha.5
 

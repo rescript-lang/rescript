@@ -1731,7 +1731,12 @@ and parse_parameter_list p =
       ~f:parse_parameter ~closing:Rparen p
   in
   Parser.expect Rparen p;
-  parameters
+  let has_term_parameter =
+    Ext_list.exists parameters (function
+      | TermParameter _ -> true
+      | _ -> false)
+  in
+  (has_term_parameter, parameters)
 
 (* parameters ::=
  *   | _
@@ -1742,6 +1747,22 @@ and parse_parameter_list p =
  *)
 and parse_parameters p =
   let start_pos = p.Parser.start_pos in
+  let unit_term_parameter () =
+    let loc = mk_loc start_pos p.Parser.prev_end_pos in
+    let unit_pattern =
+      Ast_helper.Pat.construct ~loc
+        (Location.mkloc (Longident.Lident "()") loc)
+        None
+    in
+    TermParameter
+      {
+        attrs = [];
+        label = Asttypes.Nolabel;
+        expr = None;
+        pat = unit_pattern;
+        pos = start_pos;
+      }
+  in
   match p.Parser.token with
   | Lident ident ->
     Parser.next p;
@@ -1769,56 +1790,12 @@ and parse_parameters p =
           pos = start_pos;
         };
     ]
-  | Lparen -> (
+  | Lparen ->
     Parser.next p;
-    match p.Parser.token with
-    | Rparen ->
-      Parser.next p;
-      let loc = mk_loc start_pos p.Parser.prev_end_pos in
-      let unit_pattern =
-        Ast_helper.Pat.construct ~loc
-          (Location.mkloc (Longident.Lident "()") loc)
-          None
-      in
-      [
-        TermParameter
-          {
-            attrs = [];
-            label = Asttypes.Nolabel;
-            expr = None;
-            pat = unit_pattern;
-            pos = start_pos;
-          };
-      ]
-    | Dot -> (
-      Parser.next p;
-      match p.token with
-      | Rparen ->
-        Parser.next p;
-        let loc = mk_loc start_pos p.Parser.prev_end_pos in
-        let unit_pattern =
-          Ast_helper.Pat.construct ~loc
-            (Location.mkloc (Longident.Lident "()") loc)
-            None
-        in
-        [
-          TermParameter
-            {
-              attrs = [];
-              label = Asttypes.Nolabel;
-              expr = None;
-              pat = unit_pattern;
-              pos = start_pos;
-            };
-        ]
-      | _ -> (
-        match parse_parameter_list p with
-        | TermParameter p :: rest ->
-          TermParameter {p with pos = start_pos} :: rest
-        | TypeParameter p :: rest ->
-          TypeParameter {p with pos = start_pos} :: rest
-        | parameters -> parameters))
-    | _ -> parse_parameter_list p)
+    ignore (Parser.optional p Dot);
+    let has_term_parameter, parameters = parse_parameter_list p in
+    if has_term_parameter then parameters
+    else parameters @ [unit_term_parameter ()]
   | token ->
     Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
     []
