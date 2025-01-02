@@ -2420,6 +2420,8 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
           Doc.soft_line;
           Doc.rbrace;
         ]
+    | Ppat_record ([], Open) ->
+      Doc.concat [Doc.lbrace; Doc.text "_"; Doc.rbrace]
     | Ppat_record (rows, open_flag) ->
       Doc.group
         (Doc.concat
