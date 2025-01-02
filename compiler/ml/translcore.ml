@@ -652,9 +652,6 @@ let rec cut n l =
 
 let try_ids = Hashtbl.create 8
 
-let has_async_attribute exp =
-  exp.exp_attributes |> List.exists (fun ({txt}, _payload) -> txt = "res.async")
-
 let extract_directive_for_fn exp =
   exp.exp_attributes
   |> List.find_map (fun ({txt}, payload) ->
@@ -675,7 +672,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_let (rec_flag, pat_expr_list, body) ->
     transl_let rec_flag pat_expr_list (transl_exp body)
   | Texp_function {arg_label = _; arity; param; case; partial} -> (
-    let async = has_async_attribute e in
+    let async = Ast_async.has_async_payload e.exp_attributes in
     let directive =
       match extract_directive_for_fn e with
       | None -> None
@@ -1056,7 +1053,8 @@ and transl_function loc partial param case =
            };
      } as exp;
   }
-    when Parmatch.inactive ~partial pat && not (exp |> has_async_attribute) ->
+    when Parmatch.inactive ~partial pat
+         && not (Ast_async.has_async_payload exp.exp_attributes) ->
     let params, body, return_unit =
       transl_function exp.exp_loc partial' param' case
     in

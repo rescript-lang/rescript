@@ -1,5 +1,27 @@
-let is_async : Parsetree.attribute -> bool =
- fun ({txt}, _) -> txt = "async" || txt = "res.async"
+let is_async : Parsetree.attribute -> bool = fun ({txt}, _) -> txt = "res.async"
+
+let has_async_payload attrs = Ext_list.exists attrs is_async
+
+let make_async_attr loc = (Location.mkloc "res.async" loc, Parsetree.PStr [])
+
+let add_async_attribute ~async (body : Parsetree.expression) =
+  if async then
+    {
+      body with
+      pexp_attributes =
+        ({txt = "res.async"; loc = Location.none}, PStr [])
+        :: body.pexp_attributes;
+    }
+  else body
+
+let extract_async_attribute attrs =
+  let rec process async acc attrs =
+    match attrs with
+    | [] -> (async, List.rev acc)
+    | ({Location.txt = "res.async"}, _) :: rest -> process true acc rest
+    | attr :: rest -> process async (attr :: acc) rest
+  in
+  process false [] attrs
 
 let add_promise_type ?(loc = Location.none) ~async
     (result : Parsetree.expression) =
@@ -10,33 +32,6 @@ let add_promise_type ?(loc = Location.none) ~async
     in
     Ast_helper.Exp.apply ~loc unsafe_async [(Nolabel, result)]
   else result
-
-let add_async_attribute ~async (body : Parsetree.expression) =
-  if async then
-    match body.pexp_desc with
-    | Pexp_construct (x, Some e) when Ast_uncurried.expr_is_uncurried_fun body
-      ->
-      {
-        body with
-        pexp_desc =
-          Pexp_construct
-            ( x,
-              Some
-                {
-                  e with
-                  pexp_attributes =
-                    ({txt = "res.async"; loc = Location.none}, PStr [])
-                    :: e.pexp_attributes;
-                } );
-      }
-    | _ ->
-      {
-        body with
-        pexp_attributes =
-          ({txt = "res.async"; loc = Location.none}, PStr [])
-          :: body.pexp_attributes;
-      }
-  else body
 
 let rec add_promise_to_result ~loc (e : Parsetree.expression) =
   match e.pexp_desc with

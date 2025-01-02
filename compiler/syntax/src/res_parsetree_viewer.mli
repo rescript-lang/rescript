@@ -19,12 +19,6 @@ val process_partial_app_attribute :
 
 val has_partial_attribute : Parsetree.attributes -> bool
 
-type function_attributes_info = {async: bool; attributes: Parsetree.attributes}
-
-(* determines whether a function is async and/or uncurried based on the given attributes *)
-val process_function_attributes :
-  Parsetree.attributes -> function_attributes_info
-
 val has_await_attribute : Parsetree.attributes -> bool
 val has_res_pat_variant_spread_attribute : Parsetree.attributes -> bool
 val has_dict_pattern_attribute : Parsetree.attributes -> bool

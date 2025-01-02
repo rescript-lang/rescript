@@ -122,3 +122,9 @@ type t2 = (. int, string) => bool
 let f = async (type a, ()) => {
   await Js.Promise.resolve(())
 }
+
+let attr1 = @a async x => x+1
+let attr2 =  @a async (type a) => (type b c, x) => 3
+let attr3 =  @a  (type a) => async (type b c, x) => 3
+let attr4 =  @a  (type a) => @b async (type b c, x) => 3
+let attr5 : int => promise<int> =  @a @b async (type a, type b c) => (x:a) => x
