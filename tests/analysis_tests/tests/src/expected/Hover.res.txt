@@ -112,6 +112,22 @@ ContextPath Value[x1].content.""
 ContextPath Value[x1].content
 ContextPath Value[x1]
 Path x1
+ContextPath Value[x1]->content
+ContextPath Value[x1]
+Path x1
+CPPipe pathFromEnv: found:true
+Path Hover.content
+ContextPath Value[x1].content->
+ContextPath Value[x1].content
+ContextPath Value[x1]
+Path x1
+ContextPath Value[x1]->content
+ContextPath Value[x1]
+Path x1
+CPPipe pathFromEnv: found:true
+Path Hover.content
+CPPipe pathFromEnv: found:true
+Path Hover.
 [{
     "label": "age",
     "kind": 5,
@@ -129,6 +145,22 @@ ContextPath Value[x2].content.""
 ContextPath Value[x2].content
 ContextPath Value[x2]
 Path x2
+ContextPath Value[x2]->content
+ContextPath Value[x2]
+Path x2
+CPPipe pathFromEnv: found:true
+Path Hover.content
+ContextPath Value[x2].content->
+ContextPath Value[x2].content
+ContextPath Value[x2]
+Path x2
+ContextPath Value[x2]->content
+ContextPath Value[x2]
+Path x2
+CPPipe pathFromEnv: found:true
+Path Hover.content
+CPPipe pathFromEnv: found:true
+Path Hover.
 [{
     "label": "age",
     "kind": 5,
@@ -146,6 +178,22 @@ ContextPath Value[y1].content.""
 ContextPath Value[y1].content
 ContextPath Value[y1]
 Path y1
+ContextPath Value[y1]->content
+ContextPath Value[y1]
+Path y1
+CPPipe pathFromEnv: found:true
+Path Hover.content
+ContextPath Value[y1].content->
+ContextPath Value[y1].content
+ContextPath Value[y1]
+Path y1
+ContextPath Value[y1]->content
+ContextPath Value[y1]
+Path y1
+CPPipe pathFromEnv: found:true
+Path Hover.content
+CPPipe pathFromEnv: found:true
+Path Hover.
 [{
     "label": "age",
     "kind": 5,
@@ -163,6 +211,22 @@ ContextPath Value[y2].content.""
 ContextPath Value[y2].content
 ContextPath Value[y2]
 Path y2
+ContextPath Value[y2]->content
+ContextPath Value[y2]
+Path y2
+CPPipe pathFromEnv: found:true
+Path Hover.content
+ContextPath Value[y2].content->
+ContextPath Value[y2].content
+ContextPath Value[y2]
+Path y2
+ContextPath Value[y2]->content
+ContextPath Value[y2]
+Path y2
+CPPipe pathFromEnv: found:true
+Path Hover.content
+CPPipe pathFromEnv: found:true
+Path Hover.
 [{
     "label": "age",
     "kind": 5,
@@ -203,6 +267,11 @@ Package opens Pervasives.JsxModules.place holder
 ContextPath Value[x].someField
 ContextPath Value[x]
 Path x
+ContextPath Value[x]->someField
+ContextPath Value[x]
+Path x
+CPPipe pathFromEnv: found:true
+Path Hover.someField
 Package opens Pervasives.JsxModules.place holder
 {"contents": {"kind": "markdown", "value": " Mighty fine field here. \n\n```rescript\nbool\n```"}}
 

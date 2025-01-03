@@ -1,0 +1,689 @@
+Complete src/DotPipeCompletionSpec.res 15:5
+posCursor:[15:5] posNoWhite:[15:4] Found expr:[15:3->15:5]
+Pexp_field [15:3->15:4] _:[18:0->15:5]
+Completable: Cpath Value[n].""
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[n].""
+ContextPath Value[n]
+Path n
+ContextPath Value[n]->
+ContextPath Value[n]
+Path n
+CPPipe pathFromEnv:SomeModule found:true
+Path SomeModule.
+[{
+    "label": "name",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype t = {name: string}\n```"}
+  }, {
+    "label": "->SomeModule.withUnlabelledArgumentNotFirst",
+    "kind": 12,
+    "tags": [],
+    "detail": "(~name: string=?, t) => unit",
+    "documentation": null,
+    "sortText": "withUnlabelledArgumentNotFirst",
+    "insertText": "->SomeModule.withUnlabelledArgumentNotFirst",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 15, "character": 4}, "end": {"line": 15, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->SomeModule.getName",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null,
+    "sortText": "getName",
+    "insertText": "->SomeModule.getName",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 15, "character": 4}, "end": {"line": 15, "character": 5}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/DotPipeCompletionSpec.res 44:6
+posCursor:[44:6] posNoWhite:[44:5] Found expr:[44:3->44:6]
+Pexp_field [44:3->44:5] _:[47:0->44:6]
+Completable: Cpath Value[nn].""
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[nn].""
+ContextPath Value[nn]
+Path nn
+ContextPath Value[nn]->
+ContextPath Value[nn]
+Path nn
+CPPipe pathFromEnv:SomeOtherModule found:true
+Path SomeOtherModule.
+Path DotPipeCompletionSpec.CompleteFromThisToo.
+Path DotPipeCompletionSpec.SomeOtherModule.
+[{
+    "label": "nname",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"}
+  }, {
+    "label": "->SomeOtherModule.getNName",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null,
+    "sortText": "getNName",
+    "insertText": "->SomeOtherModule.getNName",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->SomeOtherModule.getNName2",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => string",
+    "documentation": null,
+    "sortText": "getNName2",
+    "insertText": "->SomeOtherModule.getNName2",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->CompleteFromThisToo.a",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => string",
+    "documentation": null,
+    "sortText": "a",
+    "insertText": "->CompleteFromThisToo.a",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->SomeOtherModule.getNName",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null,
+    "sortText": "getNName",
+    "insertText": "->SomeOtherModule.getNName",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->SomeOtherModule.getNName2",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => string",
+    "documentation": null,
+    "sortText": "getNName2",
+    "insertText": "->SomeOtherModule.getNName2",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/DotPipeCompletionSpec.res 62:5
+posCursor:[62:5] posNoWhite:[62:4] Found expr:[62:3->62:5]
+Pexp_field [62:3->62:4] _:[65:0->62:5]
+Completable: Cpath Value[a].""
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[a].""
+ContextPath Value[a]
+Path a
+ContextPath Value[a]->
+ContextPath Value[a]
+Path a
+CPPipe pathFromEnv:A found:true
+Path A.
+Path B.
+[{
+    "label": "->A.withA",
+    "kind": 12,
+    "tags": [],
+    "detail": "a => unit",
+    "documentation": null,
+    "sortText": "withA",
+    "insertText": "->A.withA",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 62, "character": 4}, "end": {"line": 62, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->B.b",
+    "kind": 12,
+    "tags": [],
+    "detail": "A.a => int",
+    "documentation": null,
+    "sortText": "b",
+    "insertText": "->B.b",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 62, "character": 4}, "end": {"line": 62, "character": 5}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/DotPipeCompletionSpec.res 67:6
+posCursor:[67:6] posNoWhite:[67:5] Found expr:[67:3->67:6]
+Pexp_field [67:3->67:5] _:[70:0->67:6]
+Completable: Cpath Value[xx].""
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[xx].""
+ContextPath Value[xx]
+Path xx
+ContextPath Value[xx]->
+ContextPath Value[xx]
+Path xx
+CPPipe pathFromEnv:CompletionFromModule.SomeModule found:false
+Path CompletionFromModule.SomeModule.
+[{
+    "label": "name",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype t = {name: string}\n```"}
+  }, {
+    "label": "->CompletionFromModule.SomeModule.getName",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null,
+    "sortText": "getName",
+    "insertText": "->CompletionFromModule.SomeModule.getName",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 67, "character": 5}, "end": {"line": 67, "character": 6}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/DotPipeCompletionSpec.res 75:9
+posCursor:[75:9] posNoWhite:[75:8] Found expr:[75:3->75:9]
+Pexp_field [75:3->75:7] u:[75:8->75:9]
+Completable: Cpath Value[ffff].u
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[ffff].u
+ContextPath Value[ffff]
+Path ffff
+ContextPath Value[ffff]->u
+ContextPath Value[ffff]
+Path ffff
+Path Js.Array2.u
+[{
+    "label": "->Js.Array2.unshiftMany",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, array<'a>) => int",
+    "documentation": {"kind": "markdown", "value": "\nAdds the elements in the second array argument at the beginning of the first\narray argument, returning the new number of elements in the array. *This\nfunction modifies the original array.* See\n[`Array.unshift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift)\non MDN.\n\n## Examples\n\n```rescript\nlet arr = [\"d\", \"e\"]\nJs.Array2.unshiftMany(arr, [\"a\", \"b\", \"c\"]) == 5\narr == [\"a\", \"b\", \"c\", \"d\", \"e\"]\n```\n"},
+    "sortText": "unshiftMany",
+    "insertText": "->Js.Array2.unshiftMany",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Js.Array2.unshift",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, 'a) => int",
+    "documentation": {"kind": "markdown", "value": "\nAdds the given element to the array, returning the new number of elements in\nthe array. *This function modifies the original array.* See\n[`Array.unshift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift)\non MDN.\n\n## Examples\n\n```rescript\nlet arr = [\"b\", \"c\", \"d\"]\nJs.Array2.unshift(arr, \"a\") == 4\narr == [\"a\", \"b\", \"c\", \"d\"]\n```\n"},
+    "sortText": "unshift",
+    "insertText": "->Js.Array2.unshift",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Js.Array2.unsafe_get",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, int) => 'a",
+    "documentation": {"kind": "markdown", "value": "\nReturns the value at the given position in the array if the position is in\nbounds; returns the JavaScript value `undefined` otherwise.\n\n## Examples\n\n```rescript\nlet arr = [100, 101, 102, 103]\nJs.Array2.unsafe_get(arr, 3) == 103\nJs.Array2.unsafe_get(arr, 4) // returns undefined\n```\n"},
+    "sortText": "unsafe_get",
+    "insertText": "->Js.Array2.unsafe_get",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Js.Array2.unsafe_set",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, int, 'a) => unit",
+    "documentation": {"kind": "markdown", "value": "\nSets the value at the given position in the array if the position is in bounds.\nIf the index is out of bounds, well, “here there be dragons.“\n\n*This function modifies the original array.*\n\n## Examples\n\n```rescript\nlet arr = [100, 101, 102, 103]\nJs.Array2.unsafe_set(arr, 3, 99)\n// result is [100, 101, 102, 99];\n\nJs.Array2.unsafe_set(arr, 4, 88)\n// result is [100, 101, 102, 99, 88]\n\nJs.Array2.unsafe_set(arr, 6, 77)\n// result is [100, 101, 102, 99, 88, <1 empty item>, 77]\n\nJs.Array2.unsafe_set(arr, -1, 66)\n// you don't want to know.\n```\n"},
+    "sortText": "unsafe_set",
+    "insertText": "->Js.Array2.unsafe_set",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/DotPipeCompletionSpec.res 80:7
+posCursor:[80:7] posNoWhite:[80:6] Found expr:[80:3->80:7]
+Pexp_field [80:3->80:6] _:[84:0->80:7]
+Completable: Cpath Value[nnn].""
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[nnn].""
+ContextPath Value[nnn]
+Path nnn
+ContextPath Value[nnn]->
+ContextPath Value[nnn]
+Path nnn
+CPPipe pathFromEnv: found:true
+Path DotPipeCompletionSpec.
+Path DotPipeCompletionSpec.SomeOtherModule.
+[{
+    "label": "nname",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"}
+  }, {
+    "label": "->doWithTypeOutsideModule",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => string",
+    "documentation": null,
+    "sortText": "doWithTypeOutsideModule",
+    "insertText": "->doWithTypeOutsideModule",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 80, "character": 6}, "end": {"line": 80, "character": 7}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->SomeOtherModule.getNName",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null,
+    "sortText": "getNName",
+    "insertText": "->SomeOtherModule.getNName",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 80, "character": 6}, "end": {"line": 80, "character": 7}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->SomeOtherModule.getNName2",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => string",
+    "documentation": null,
+    "sortText": "getNName2",
+    "insertText": "->SomeOtherModule.getNName2",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 80, "character": 6}, "end": {"line": 80, "character": 7}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/DotPipeCompletionSpec.res 86:43
+posCursor:[86:43] posNoWhite:[86:42] Found expr:[86:3->86:43]
+posCursor:[86:43] posNoWhite:[86:42] Found expr:[86:9->86:43]
+Pexp_field [86:9->86:38] filt:[86:39->86:43]
+Completable: Cpath Value[Js, Array2, filter](Nolabel).filt
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[Js, Array2, filter](Nolabel).filt
+ContextPath Value[Js, Array2, filter](Nolabel)
+ContextPath Value[Js, Array2, filter]
+Path Js.Array2.filter
+ContextPath Value[Js, Array2, filter](Nolabel, Nolabel)->filt
+ContextPath Value[Js, Array2, filter](Nolabel, Nolabel)
+ContextPath Value[Js, Array2, filter]
+Path Js.Array2.filter
+Path Js.Array2.filt
+[{
+    "label": "->Js.Array2.filter",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, 'a => bool) => t<'a>",
+    "documentation": {"kind": "markdown", "value": "\nApplies the given predicate function (the second argument) to each element in\nthe array; the result is an array of those elements for which the predicate\nfunction returned `true`. See\n[`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter)\non MDN.\n\n## Examples\n\n```rescript\nlet nonEmpty = s => s != \"\"\nJs.Array2.filter([\"abc\", \"\", \"\", \"def\", \"ghi\"], nonEmpty) == [\"abc\", \"def\", \"ghi\"]\n```\n"},
+    "sortText": "filter",
+    "insertText": "->Js.Array2.filter",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 86, "character": 38}, "end": {"line": 86, "character": 39}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Js.Array2.filteri",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t<'a>, ('a, int) => bool) => t<'a>",
+    "documentation": {"kind": "markdown", "value": "\nEach element of the given array are passed to the predicate function. The\nreturn value is an array of all those elements for which the predicate function\nreturned `true`.\n\nSee\n[`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter)\non MDN.\n\n## Examples\n\n```rescript\n// keep only positive elements at odd indices\nlet positiveOddElement = (item, index) => mod(index, 2) == 1 && item > 0\n\nJs.Array2.filteri([6, 3, 5, 8, 7, -4, 1], positiveOddElement) == [3, 8]\n```\n"},
+    "sortText": "filteri",
+    "insertText": "->Js.Array2.filteri",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 86, "character": 38}, "end": {"line": 86, "character": 39}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/DotPipeCompletionSpec.res 89:70
+posCursor:[89:70] posNoWhite:[89:69] Found expr:[89:3->89:70]
+posCursor:[89:70] posNoWhite:[89:69] Found expr:[89:40->89:70]
+Pexp_field [89:40->89:63] includ:[89:64->89:70]
+Completable: Cpath Value[Js, Array2, joinWith](Nolabel).includ
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[Js, Array2, joinWith](Nolabel).includ
+ContextPath Value[Js, Array2, joinWith](Nolabel)
+ContextPath Value[Js, Array2, joinWith]
+Path Js.Array2.joinWith
+ContextPath Value[Js, Array2, joinWith](Nolabel, Nolabel)->includ
+ContextPath Value[Js, Array2, joinWith](Nolabel, Nolabel)
+ContextPath Value[Js, Array2, joinWith]
+Path Js.Array2.joinWith
+Path Js.String2.includ
+[{
+    "label": "->Js.String2.includesFrom",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, t, int) => bool",
+    "documentation": {"kind": "markdown", "value": "\nES2015: `includes(str, searchValue start)` returns `true` if `searchValue` is\nfound anywhere within `str` starting at character number `start` (where 0 is\nthe first character), `false` otherwise.\n\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.includesFrom(\"programmer\", \"gram\", 1) == true\nJs.String2.includesFrom(\"programmer\", \"gram\", 4) == false\nJs.String2.includesFrom(`대한민국`, `한`, 1) == true\n```\n"},
+    "sortText": "includesFrom",
+    "insertText": "->Js.String2.includesFrom",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 89, "character": 63}, "end": {"line": 89, "character": 64}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Js.String2.includes",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, t) => bool",
+    "documentation": {"kind": "markdown", "value": "\nES2015: `includes(str, searchValue)` returns `true` if `searchValue` is found\nanywhere within `str`, false otherwise.\n\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.includes(\"programmer\", \"gram\") == true\nJs.String2.includes(\"programmer\", \"er\") == true\nJs.String2.includes(\"programmer\", \"pro\") == true\nJs.String2.includes(\"programmer.dat\", \"xyz\") == false\n```\n"},
+    "sortText": "includes",
+    "insertText": "->Js.String2.includes",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 89, "character": 63}, "end": {"line": 89, "character": 64}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/DotPipeCompletionSpec.res 94:40
+posCursor:[94:40] posNoWhite:[94:39] Found expr:[94:3->94:40]
+posCursor:[94:40] posNoWhite:[94:39] Found expr:[94:8->94:40]
+Pexp_field [94:8->94:30] toUpperCa:[94:31->94:40]
+Completable: Cpath Value[Js, String2, toLowerCase].toUpperCa
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[Js, String2, toLowerCase].toUpperCa
+ContextPath Value[Js, String2, toLowerCase]
+Path Js.String2.toLowerCase
+ContextPath Value[Js, String2, toLowerCase](Nolabel)->toUpperCa
+ContextPath Value[Js, String2, toLowerCase](Nolabel)
+ContextPath Value[Js, String2, toLowerCase]
+Path Js.String2.toLowerCase
+Path Js.String2.toUpperCa
+[{
+    "label": "->Js.String2.toUpperCase",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => t",
+    "documentation": {"kind": "markdown", "value": "\n`toUpperCase(str)` converts `str` to upper case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\nexpand the number of letters in the result; for example the German ß\ncapitalizes to two Ses in a row.\n\nSee [`String.toUpperCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toUpperCase)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.toUpperCase(\"abc\") == \"ABC\"\nJs.String2.toUpperCase(`Straße`) == `STRASSE`\nJs.String2.toUpperCase(`πς`) == `ΠΣ`\n```\n"},
+    "sortText": "toUpperCase",
+    "insertText": "->Js.String2.toUpperCase",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 94, "character": 30}, "end": {"line": 94, "character": 31}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/DotPipeCompletionSpec.res 97:63
+posCursor:[97:63] posNoWhite:[97:62] Found expr:[97:3->97:63]
+posCursor:[97:63] posNoWhite:[97:62] Found expr:[97:32->97:63]
+Pexp_field [97:32->97:54] toLowerC:[97:55->97:63]
+Completable: Cpath Value[Js, String2, toUpperCase].toLowerC
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[Js, String2, toUpperCase].toLowerC
+ContextPath Value[Js, String2, toUpperCase]
+Path Js.String2.toUpperCase
+ContextPath Value[Js, String2, toUpperCase](Nolabel)->toLowerC
+ContextPath Value[Js, String2, toUpperCase](Nolabel)
+ContextPath Value[Js, String2, toUpperCase]
+Path Js.String2.toUpperCase
+Path Js.String2.toLowerC
+[{
+    "label": "->Js.String2.toLowerCase",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => t",
+    "documentation": {"kind": "markdown", "value": "\n`toLowerCase(str)` converts `str` to lower case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\ngive different results depending upon context, for example with the Greek\nletter sigma, which has two different lower case forms; one when it is the last\ncharacter in a string and another when it is not.\n\nSee [`String.toLowerCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.toLowerCase(\"ABC\") == \"abc\"\nJs.String2.toLowerCase(`ΣΠ`) == `σπ`\nJs.String2.toLowerCase(`ΠΣ`) == `πς`\n```\n"},
+    "sortText": "toLowerCase",
+    "insertText": "->Js.String2.toLowerCase",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 97, "character": 54}, "end": {"line": 97, "character": 55}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/DotPipeCompletionSpec.res 101:7
+posCursor:[101:7] posNoWhite:[101:6] Found expr:[100:9->104:1]
+posCursor:[101:7] posNoWhite:[101:6] Found expr:[101:5->103:3]
+Pexp_field [101:5->101:6] t:[103:2->103:3]
+Completable: Cpath Value[t].""
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[t].""
+ContextPath Value[t]
+Path t
+ContextPath Value[t]->
+ContextPath Value[t]
+Path t
+CPPipe pathFromEnv: found:true
+Path DotPipeCompletionSpec.
+Path DotPipeCompletionSpec.SomeOtherModule.
+[{
+    "label": "nname",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"}
+  }, {
+    "label": "->doWithTypeOutsideModule",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => string",
+    "documentation": null,
+    "sortText": "doWithTypeOutsideModule",
+    "insertText": "->doWithTypeOutsideModule",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 101, "character": 6}, "end": {"line": 101, "character": 7}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->SomeOtherModule.getNName",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null,
+    "sortText": "getNName",
+    "insertText": "->SomeOtherModule.getNName",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 101, "character": 6}, "end": {"line": 101, "character": 7}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->SomeOtherModule.getNName2",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => string",
+    "documentation": null,
+    "sortText": "getNName2",
+    "insertText": "->SomeOtherModule.getNName2",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 101, "character": 6}, "end": {"line": 101, "character": 7}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/DotPipeCompletionSpec.res 108:27
+XXX Not found!
+Completable: Cpath Module[Dot]
+Package opens Pervasives.JsxModules.place holder
+ContextPath Module[Dot]
+Path Dot
+[{
+    "label": "DotPipeCompletionSpec",
+    "kind": 9,
+    "tags": [],
+    "detail": "module DotPipeCompletionSpec",
+    "documentation": null,
+    "data": {
+      "modulePath": "DotPipeCompletionSpec",
+      "filePath": "src/DotPipeCompletionSpec.res"
+    }
+  }]
+
+Complete src/DotPipeCompletionSpec.res 111:39
+posCursor:[111:39] posNoWhite:[111:38] Found expr:[111:24->111:40]
+posCursor:[111:39] posNoWhite:[111:38] Found expr:[111:25->111:39]
+Pexp_construct CompletionPipe:[111:25->111:39] None
+Completable: Cpath Value[CompletionPipe]
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[CompletionPipe]
+Path CompletionPipe
+[{
+    "label": "CompletionPipeChain",
+    "kind": 9,
+    "tags": [],
+    "detail": "module CompletionPipeChain",
+    "documentation": null,
+    "data": {
+      "modulePath": "CompletionPipeChain",
+      "filePath": "src/DotPipeCompletionSpec.res"
+    }
+  }, {
+    "label": "CompletionPipeProperty",
+    "kind": 9,
+    "tags": [],
+    "detail": "module CompletionPipeProperty",
+    "documentation": null,
+    "data": {
+      "modulePath": "CompletionPipeProperty",
+      "filePath": "src/DotPipeCompletionSpec.res"
+    }
+  }, {
+    "label": "CompletionPipeSubmodules",
+    "kind": 9,
+    "tags": [],
+    "detail": "module CompletionPipeSubmodules",
+    "documentation": null,
+    "data": {
+      "modulePath": "CompletionPipeSubmodules",
+      "filePath": "src/DotPipeCompletionSpec.res"
+    }
+  }]
+
+Complete src/DotPipeCompletionSpec.res 114:44
+posCursor:[114:44] posNoWhite:[114:43] Found expr:[114:24->114:45]
+posCursor:[114:44] posNoWhite:[114:43] Found expr:[114:41->114:44]
+Pexp_construct Dot:[114:41->114:44] None
+Completable: Cpath Value[Dot]
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[Dot]
+Path Dot
+[{
+    "label": "DotPipeCompletionSpec",
+    "kind": 9,
+    "tags": [],
+    "detail": "module DotPipeCompletionSpec",
+    "documentation": null,
+    "data": {
+      "modulePath": "DotPipeCompletionSpec",
+      "filePath": "src/DotPipeCompletionSpec.res"
+    }
+  }]
+
+Complete src/DotPipeCompletionSpec.res 122:11
+posCursor:[122:11] posNoWhite:[122:10] Found expr:[122:3->122:11]
+Pexp_field [122:3->122:10] _:[128:0->122:11]
+Completable: Cpath Value[someObj].""
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[someObj].""
+ContextPath Value[someObj]
+Path someObj
+ContextPath Value[someObj]->
+ContextPath Value[someObj]
+Path someObj
+[{
+    "label": "[\"age\"]",
+    "kind": 4,
+    "tags": [],
+    "detail": "{\"age\": int, \"name\": string}",
+    "documentation": null,
+    "insertText": "[\"age\"]",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 122, "character": 10}, "end": {"line": 122, "character": 11}},
+      "newText": ""
+      }]
+  }, {
+    "label": "[\"name\"]",
+    "kind": 4,
+    "tags": [],
+    "detail": "{\"age\": int, \"name\": string}",
+    "documentation": null,
+    "insertText": "[\"name\"]",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 122, "character": 10}, "end": {"line": 122, "character": 11}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/DotPipeCompletionSpec.res 125:13
+posCursor:[125:13] posNoWhite:[125:12] Found expr:[125:3->125:13]
+Pexp_field [125:3->125:10] na:[125:11->125:13]
+Completable: Cpath Value[someObj].na
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[someObj].na
+ContextPath Value[someObj]
+Path someObj
+ContextPath Value[someObj]->na
+ContextPath Value[someObj]
+Path someObj
+[{
+    "label": "[\"name\"]",
+    "kind": 4,
+    "tags": [],
+    "detail": "{\"age\": int, \"name\": string}",
+    "documentation": null,
+    "insertText": "[\"name\"]",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 125, "character": 10}, "end": {"line": 125, "character": 11}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/DotPipeCompletionSpec.res 144:10
+posCursor:[144:10] posNoWhite:[144:9] Found expr:[144:3->144:10]
+Pexp_field [144:3->144:9] _:[147:0->144:10]
+Completable: Cpath Value[button].""
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[button].""
+ContextPath Value[button]
+Path button
+ContextPath Value[button]->
+ContextPath Value[button]
+Path button
+CPPipe pathFromEnv:DOMAPI found:true
+Path DOMAPI.
+Path DotPipeCompletionSpec.HTMLButtonElement.
+[{
+    "label": "disabled",
+    "kind": 5,
+    "tags": [],
+    "detail": "bool",
+    "documentation": {"kind": "markdown", "value": "```rescript\ndisabled: bool\n```\n\n```rescript\ntype htmlButtonElement = {mutable disabled: bool}\n```"}
+  }, {
+    "label": "->HTMLButtonElement.checkValidity",
+    "kind": 12,
+    "tags": [],
+    "detail": "DOMAPI.htmlButtonElement => bool",
+    "documentation": null,
+    "sortText": "checkValidity",
+    "insertText": "->HTMLButtonElement.checkValidity",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 144, "character": 9}, "end": {"line": 144, "character": 10}},
+      "newText": ""
+      }]
+  }]
+

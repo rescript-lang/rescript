@@ -5,8 +5,6 @@ Package opens Pervasives.JsxModules.place holder
 ContextPath Value[ax]->
 ContextPath Value[ax]
 Path ax
-CPPipe env:CompletePrioritize2
-CPPipe type path:Test.t
 CPPipe pathFromEnv:Test found:true
 Path Test.
 [{

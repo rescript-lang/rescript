@@ -1,19 +1,17 @@
-Complete src/CompletePrioritize1.res 5:6
-posCursor:[5:6] posNoWhite:[5:5] Found expr:[5:3->0:-1]
+Complete src/CompletePrioritize1.res 6:6
+posCursor:[6:6] posNoWhite:[6:5] Found expr:[6:3->0:-1]
 Completable: Cpath Value[a]->
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[a]->
 ContextPath Value[a]
 Path a
-CPPipe env:CompletePrioritize1
-CPPipe type path:Test.t
 CPPipe pathFromEnv:Test found:true
 Path Test.
 [{
-    "label": "Test.add",
+    "label": "Test.name",
     "kind": 12,
     "tags": [],
-    "detail": "float => float",
+    "detail": "t => int",
     "documentation": null
   }]
 

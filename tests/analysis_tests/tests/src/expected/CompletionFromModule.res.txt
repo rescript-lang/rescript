@@ -1,0 +1,167 @@
+Complete src/CompletionFromModule.res 10:5
+posCursor:[10:5] posNoWhite:[10:4] Found expr:[10:3->10:5]
+Pexp_field [10:3->10:4] _:[13:0->10:5]
+Completable: Cpath Value[n].""
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[n].""
+ContextPath Value[n]
+Path n
+ContextPath Value[n]->
+ContextPath Value[n]
+Path n
+CPPipe pathFromEnv:SomeModule found:true
+Path SomeModule.
+[{
+    "label": "name",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype t = {name: string}\n```"}
+  }, {
+    "label": "->SomeModule.getName",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null,
+    "sortText": "getName",
+    "insertText": "->SomeModule.getName",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 10, "character": 4}, "end": {"line": 10, "character": 5}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/CompletionFromModule.res 30:6
+posCursor:[30:6] posNoWhite:[30:5] Found expr:[30:3->30:6]
+Pexp_field [30:3->30:5] _:[36:0->30:6]
+Completable: Cpath Value[nn].""
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[nn].""
+ContextPath Value[nn]
+Path nn
+ContextPath Value[nn]->
+ContextPath Value[nn]
+Path nn
+CPPipe pathFromEnv:SomeOtherModule found:true
+Path SomeOtherModule.
+Path CompletionFromModule.SomeOtherModule.
+[{
+    "label": "nname",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"}
+  }, {
+    "label": "->SomeOtherModule.getNName",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null,
+    "sortText": "getNName",
+    "insertText": "->SomeOtherModule.getNName",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 30, "character": 5}, "end": {"line": 30, "character": 6}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->SomeOtherModule.getNName2",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => string",
+    "documentation": null,
+    "sortText": "getNName2",
+    "insertText": "->SomeOtherModule.getNName2",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 30, "character": 5}, "end": {"line": 30, "character": 6}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->SomeOtherModule.getNName",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null,
+    "sortText": "getNName",
+    "insertText": "->SomeOtherModule.getNName",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 30, "character": 5}, "end": {"line": 30, "character": 6}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->SomeOtherModule.getNName2",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => string",
+    "documentation": null,
+    "sortText": "getNName2",
+    "insertText": "->SomeOtherModule.getNName2",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 30, "character": 5}, "end": {"line": 30, "character": 6}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/CompletionFromModule.res 33:32
+XXX Not found!
+Completable: Cpath Module[SomeOthe]
+Package opens Pervasives.JsxModules.place holder
+ContextPath Module[SomeOthe]
+Path SomeOthe
+[{
+    "label": "SomeOtherModule",
+    "kind": 9,
+    "tags": [],
+    "detail": "module SomeOtherModule",
+    "documentation": null
+  }]
+
+Complete src/CompletionFromModule.res 38:8
+posCursor:[38:8] posNoWhite:[38:7] Found expr:[38:3->0:-1]
+Completable: Cpath Value[nnn]->
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[nnn]->
+ContextPath Value[nnn]
+Path nnn
+CPPipe pathFromEnv: found:true
+Path CompletionFromModule.
+Path CompletionFromModule.SomeOtherModule.
+[{
+    "label": "SomeOtherModule.getNName",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null
+  }, {
+    "label": "SomeOtherModule.getNName2",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => string",
+    "documentation": null
+  }]
+
+Complete src/CompletionFromModule.res 42:8
+posCursor:[42:8] posNoWhite:[42:7] Found expr:[42:3->0:-1]
+Completable: Cpath Value[nnn]->
+Raw opens: 1 SomeOtherModule.place holder
+Package opens Pervasives.JsxModules.place holder
+Resolved opens 1 CompletionFromModule.res
+ContextPath Value[nnn]->
+ContextPath Value[nnn]
+Path nnn
+CPPipe pathFromEnv: found:true
+Path CompletionFromModule.
+Path CompletionFromModule.SomeOtherModule.
+[{
+    "label": "getNName",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null
+  }, {
+    "label": "getNName2",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => string",
+    "documentation": null
+  }]
+

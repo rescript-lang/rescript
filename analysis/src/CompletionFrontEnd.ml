@@ -224,19 +224,32 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
       (CPId {path = Utils.flattenLongIdent txt; completionContext = Value; loc})
   | Pexp_field (e1, {txt = Lident name}) -> (
     match exprToContextPath e1 with
-    | Some contextPath -> Some (CPField (contextPath, name))
+    | Some contextPath ->
+      Some
+        (CPField
+           {
+             contextPath;
+             fieldName = name;
+             posOfDot = None;
+             exprLoc = e1.pexp_loc;
+           })
     | _ -> None)
-  | Pexp_field (_, {loc; txt = Ldot (lid, name)}) ->
+  | Pexp_field (e1, {loc; txt = Ldot (lid, name)}) ->
     (* Case x.M.field ignore the x part *)
     Some
       (CPField
-         ( CPId
-             {
-               path = Utils.flattenLongIdent lid;
-               completionContext = Module;
-               loc;
-             },
-           name ))
+         {
+           contextPath =
+             CPId
+               {
+                 path = Utils.flattenLongIdent lid;
+                 completionContext = Module;
+                 loc;
+               };
+           fieldName = name;
+           posOfDot = None;
+           exprLoc = e1.pexp_loc;
+         })
   | Pexp_send (e1, {txt}) -> (
     match exprToContextPath e1 with
     | None -> None
@@ -327,6 +340,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
       Some text.[offsetNoWhite]
     else None
   in
+  let posOfDot = Pos.posOfDot text ~pos:posCursor ~offset in
   let charAtCursor =
     if offset < String.length text then text.[offset] else '\n'
   in
@@ -942,6 +956,32 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
            setResult
              (Completable.CdecoratorPayload
                 (JsxConfig {nested = List.rev nested; prefix})))
+       | _ -> ()
+     else if id.txt = "editor.completeFrom" then
+       match payload with
+       | PStr
+           [
+             {
+               pstr_desc =
+                 Pstr_eval
+                   ( {
+                       pexp_loc;
+                       pexp_desc = Pexp_construct ({txt = path; loc}, None);
+                     },
+                     _ );
+             };
+           ]
+         when locHasCursor pexp_loc ->
+         if Debug.verbose () then
+           print_endline "[decoratorCompletion] Found @editor.completeFrom";
+         setResult
+           (Completable.Cpath
+              (CPId
+                 {
+                   path = Utils.flattenLongIdent path;
+                   completionContext = Module;
+                   loc;
+                 }))
        | _ -> ());
     Ast_iterator.default_iterator.attribute iterator (id, payload)
   in
@@ -1011,6 +1051,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
             (Cpath
                (CPPipe
                   {
+                    synthetic = false;
                     contextPath = pipe;
                     id;
                     lhsLoc = lhs.pexp_loc;
@@ -1021,7 +1062,14 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
       | Some (pipe, lhsLoc) ->
         setResult
           (Cpath
-             (CPPipe {contextPath = pipe; id; lhsLoc; inJsx = !inJsxContext}));
+             (CPPipe
+                {
+                  synthetic = false;
+                  contextPath = pipe;
+                  id;
+                  lhsLoc;
+                  inJsx = !inJsxContext;
+                }));
         true
     in
     typedCompletionExpr expr;
@@ -1093,7 +1141,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
           (* Ignore list expressions, used in JSX, unit, and more *) ()
         | Pexp_construct (lid, eOpt) -> (
           let lidPath = flattenLidCheckDot lid in
-          if debug then
+          if debug && lid.txt <> Lident "Function$" then
             Printf.printf "Pexp_construct %s:%s %s\n"
               (lidPath |> String.concat "\n")
               (Loc.toString lid.loc)
@@ -1131,29 +1179,52 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
             | Lident name -> (
               match exprToContextPath e with
               | Some contextPath ->
-                let contextPath = Completable.CPField (contextPath, name) in
+                let contextPath =
+                  Completable.CPField
+                    {
+                      contextPath;
+                      fieldName = name;
+                      posOfDot;
+                      exprLoc = e.pexp_loc;
+                    }
+                in
                 setResult (Cpath contextPath)
               | None -> ())
             | Ldot (id, name) ->
               (* Case x.M.field ignore the x part *)
               let contextPath =
                 Completable.CPField
-                  ( CPId
-                      {
-                        loc = fieldName.loc;
-                        path = Utils.flattenLongIdent id;
-                        completionContext = Module;
-                      },
-                    if blankAfterCursor = Some '.' then
-                      (* x.M. field  --->  M. *) ""
-                    else if name = "_" then ""
-                    else name )
+                  {
+                    contextPath =
+                      CPId
+                        {
+                          loc = fieldName.loc;
+                          path = Utils.flattenLongIdent id;
+                          completionContext = Module;
+                        };
+                    fieldName =
+                      (if blankAfterCursor = Some '.' then
+                         (* x.M. field  --->  M. *) ""
+                       else if name = "_" then ""
+                       else name);
+                    posOfDot;
+                    exprLoc = e.pexp_loc;
+                  }
               in
               setResult (Cpath contextPath)
             | Lapply _ -> ()
           else if Loc.end_ e.pexp_loc = posBeforeCursor then
             match exprToContextPath e with
-            | Some contextPath -> setResult (Cpath (CPField (contextPath, "")))
+            | Some contextPath ->
+              setResult
+                (Cpath
+                   (CPField
+                      {
+                        contextPath;
+                        fieldName = "";
+                        posOfDot;
+                        exprLoc = e.pexp_loc;
+                      }))
             | None -> ())
         | Pexp_apply ({pexp_desc = Pexp_ident compName}, args)
           when Res_parsetree_viewer.is_jsx_expression expr ->

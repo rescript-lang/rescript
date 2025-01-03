@@ -40,6 +40,8 @@ let insertTextFormatToInt f =
   match f with
   | Snippet -> 2
 
+type textEdit = {range: range; newText: string}
+
 type completionItem = {
   label: string;
   kind: int;
@@ -51,6 +53,7 @@ type completionItem = {
   insertText: string option;
   documentation: markupContent option;
   data: (string * string) list option;
+  additionalTextEdits: textEdit list option;
 }
 
 type location = {uri: string; range: range}
@@ -61,8 +64,6 @@ type documentSymbolItem = {
   children: documentSymbolItem list;
 }
 type renameFile = {oldUri: string; newUri: string}
-type textEdit = {range: range; newText: string}
-
 type diagnostic = {range: range; message: string; severity: int}
 
 type optionalVersionedTextDocumentIdentifier = {
@@ -103,6 +104,14 @@ let stringifyRange r =
   Printf.sprintf {|{"start": %s, "end": %s}|}
     (stringifyPosition r.start)
     (stringifyPosition r.end_)
+
+let stringifyTextEdit (te : textEdit) =
+  Printf.sprintf
+    {|{
+      "range": %s,
+      "newText": %s
+      }|}
+    (stringifyRange te.range) (wrapInQuotes te.newText)
 
 let stringifyMarkupContent (m : markupContent) =
   Printf.sprintf {|{"kind": %s, "value": %s}|} (wrapInQuotes m.kind)
@@ -156,6 +165,11 @@ let stringifyCompletionItem c =
             (fields
             |> List.map (fun (key, value) -> (key, Some (wrapInQuotes value)))
             |> stringifyObject ~indentation:2) );
+      ( "additionalTextEdits",
+        match c.additionalTextEdits with
+        | Some additionalTextEdits ->
+          Some (additionalTextEdits |> List.map stringifyTextEdit |> array)
+        | None -> None );
     ]
 
 let stringifyHover value =
@@ -214,13 +228,6 @@ let stringifyRenameFile {oldUri; newUri} =
   "newUri": %s
 }|}
     (wrapInQuotes oldUri) (wrapInQuotes newUri)
-
-let stringifyTextEdit (te : textEdit) =
-  Printf.sprintf {|{
-  "range": %s,
-  "newText": %s
-  }|}
-    (stringifyRange te.range) (wrapInQuotes te.newText)
 
 let stringifyoptionalVersionedTextDocumentIdentifier td =
   Printf.sprintf {|{
@@ -282,7 +289,7 @@ let stringifyCodeAction ca =
     (wrapInQuotes (codeActionKindToString ca.codeActionKind))
     (ca.edit |> stringifyCodeActionEdit)
 
-let stringifyHint hint =
+let stringifyHint (hint : inlayHint) =
   Printf.sprintf
     {|{
     "position": %s,

@@ -1,27 +1,26 @@
 Complete src/CompletionInferValues.res 15:43
 posCursor:[15:43] posNoWhite:[15:42] Found expr:[15:33->15:43]
-Completable: Cpath Value[aliased]->f
+Completable: Cpath Value[aliased]->t
 Package opens Pervasives.JsxModules.place holder
-ContextPath Value[aliased]->f
+ContextPath Value[aliased]->t
 ContextPath Value[aliased]
 Path aliased
 ContextPath Value[x]
 Path x
 ContextPath int
-CPPipe env:CompletionInferValues
-Path Belt.Int.f
+Path Belt.Int.t
 [{
-    "label": "Belt.Int.fromString",
+    "label": "Belt.Int.toString",
     "kind": 12,
     "tags": [],
-    "detail": "string => option<int>",
-    "documentation": {"kind": "markdown", "value": "\nConverts a given `string` to an `int`. Returns `Some(int)` when the input is a number, `None` otherwise.\n\n## Examples\n\n```rescript\nJs.log(Belt.Int.fromString(\"1\") === Some(1)) /* true */\n```\n"}
+    "detail": "int => string",
+    "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `string`. Uses the JavaScript `String` constructor under the hood.\n\n## Examples\n\n```rescript\nJs.log(Belt.Int.toString(1) === \"1\") /* true */\n```\n"}
   }, {
-    "label": "Belt.Int.fromFloat",
+    "label": "Belt.Int.toFloat",
     "kind": 12,
     "tags": [],
-    "detail": "float => int",
-    "documentation": {"kind": "markdown", "value": "\nConverts a given `float` to an `int`.\n\n## Examples\n\n```rescript\nJs.log(Belt.Int.fromFloat(1.0) === 1) /* true */\n```\n"}
+    "detail": "int => float",
+    "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `float`.\n\n## Examples\n\n```rescript\nJs.log(Belt.Int.toFloat(1) === 1.0) /* true */\n```\n"}
   }]
 
 Complete src/CompletionInferValues.res 18:30
@@ -35,6 +34,14 @@ Path x
 ContextPath Value[getSomeRecord](Nolabel)
 ContextPath Value[getSomeRecord]
 Path getSomeRecord
+ContextPath Value[x]->
+ContextPath Value[x]
+Path x
+ContextPath Value[getSomeRecord](Nolabel)
+ContextPath Value[getSomeRecord]
+Path getSomeRecord
+CPPipe pathFromEnv: found:true
+Path CompletionInferValues.
 [{
     "label": "name",
     "kind": 5,
@@ -62,6 +69,16 @@ Path x
 ContextPath Value[getSomeRecord](Nolabel)
 ContextPath Value[getSomeRecord]
 Path getSomeRecord
+ContextPath Value[aliased]->
+ContextPath Value[aliased]
+Path aliased
+ContextPath Value[x]
+Path x
+ContextPath Value[getSomeRecord](Nolabel)
+ContextPath Value[getSomeRecord]
+Path getSomeRecord
+CPPipe pathFromEnv: found:true
+Path CompletionInferValues.
 [{
     "label": "name",
     "kind": 5,
@@ -93,6 +110,15 @@ ContextPath CArgument CArgument Value[someFnWithCallback]($0)(~someRecord)
 ContextPath CArgument Value[someFnWithCallback]($0)
 ContextPath Value[someFnWithCallback]
 Path someFnWithCallback
+ContextPath Value[someRecord]->
+ContextPath Value[someRecord]
+Path someRecord
+ContextPath CArgument CArgument Value[someFnWithCallback]($0)(~someRecord)
+ContextPath CArgument Value[someFnWithCallback]($0)
+ContextPath Value[someFnWithCallback]
+Path someFnWithCallback
+CPPipe pathFromEnv: found:true
+Path CompletionInferValues.
 [{
     "label": "name",
     "kind": 5,
@@ -126,6 +152,17 @@ ContextPath Value[aliasedFn]
 Path aliasedFn
 ContextPath Value[someFnWithCallback]
 Path someFnWithCallback
+ContextPath Value[someRecord]->
+ContextPath Value[someRecord]
+Path someRecord
+ContextPath CArgument CArgument Value[aliasedFn]($0)(~someRecord)
+ContextPath CArgument Value[aliasedFn]($0)
+ContextPath Value[aliasedFn]
+Path aliasedFn
+ContextPath Value[someFnWithCallback]
+Path someFnWithCallback
+CPPipe pathFromEnv: found:true
+Path CompletionInferValues.
 [{
     "label": "name",
     "kind": 5,
@@ -154,8 +191,6 @@ ContextPath CArgument CArgument Value[reactEventFn]($0)($0)
 ContextPath CArgument Value[reactEventFn]($0)
 ContextPath Value[reactEventFn]
 Path reactEventFn
-CPPipe env:CompletionInferValues
-CPPipe type path:ReactEvent.Mouse.t
 CPPipe pathFromEnv:ReactEvent.Mouse found:false
 Path ReactEvent.Mouse.pr
 [{
@@ -180,8 +215,6 @@ ContextPath CArgument CJsxPropValue [div] onMouseEnter($0)
 ContextPath CJsxPropValue [div] onMouseEnter
 Path ReactDOM.domProps
 Path JsxDOM.domProps
-CPPipe env:CompletionInferValues
-CPPipe type path:JsxEvent.Mouse.t
 CPPipe pathFromEnv:JsxEvent.Mouse found:false
 Path JsxEvent.Mouse.pr
 [{
@@ -205,8 +238,6 @@ Path event
 ContextPath CArgument CJsxPropValue [Div] onMouseEnter($0)
 ContextPath CJsxPropValue [Div] onMouseEnter
 Path Div.make
-CPPipe env:CompletionInferValues envFromCompletionItem:CompletionInferValues.Div
-CPPipe type path:JsxEvent.Mouse.t
 CPPipe pathFromEnv:JsxEvent.Mouse found:false
 Path JsxEvent.Mouse.pr
 [{
@@ -231,7 +262,6 @@ Path btn
 ContextPath Value[JsxEvent, Mouse, button](Nolabel)
 ContextPath Value[JsxEvent, Mouse, button]
 Path JsxEvent.Mouse.button
-CPPipe env:CompletionInferValues envFromCompletionItem:JsxEvent.Mouse
 Path Belt.Int.t
 [{
     "label": "Belt.Int.toString",
@@ -261,7 +291,6 @@ Path btn
 ContextPath Value[Belt, Int, toString](Nolabel)
 ContextPath Value[Belt, Int, toString]
 Path Belt.Int.toString
-CPPipe env:CompletionInferValues envFromCompletionItem:Belt_Int
 Path Js.String2.spl
 [{
     "label": "Js.String2.splitAtMost",
@@ -303,7 +332,6 @@ Path btn
 ContextPath Value[Js, String2, split](Nolabel, Nolabel)
 ContextPath Value[Js, String2, split]
 Path Js.String2.split
-CPPipe env:CompletionInferValues envFromCompletionItem:Js_string2
 Path Js.Array2.ma
 [{
     "label": "Js.Array2.mapi",
@@ -319,33 +347,9 @@ Path Js.Array2.ma
     "documentation": {"kind": "markdown", "value": "\nApplies the function (the second argument) to each item in the array, returning\na new array. The result array does not have to have elements of the same type\nas the input array. See\n[`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map)\non MDN.\n\n## Examples\n\n```rescript\nJs.Array2.map([12, 4, 8], x => x * x) == [144, 16, 64]\nJs.Array2.map([\"animal\", \"vegetable\", \"mineral\"], Js.String.length) == [6, 9, 7]\n```\n"}
   }]
 
-Complete src/CompletionInferValues.res 56:52
-posCursor:[56:52] posNoWhite:[56:51] Found expr:[56:50->56:52]
-Pexp_field [56:50->56:51] _:[59:0->56:52]
-Completable: Cpath Value[x].""
-Package opens Pervasives.JsxModules.place holder
-ContextPath Value[x].""
-ContextPath Value[x]
-Path x
-ContextPath Type[someRecord]
-Path someRecord
-[{
-    "label": "name",
-    "kind": 5,
-    "tags": [],
-    "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
-  }, {
-    "label": "age",
-    "kind": 5,
-    "tags": [],
-    "detail": "int",
-    "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
-  }]
-
-Complete src/CompletionInferValues.res 78:78
-posCursor:[78:78] posNoWhite:[78:77] Found expr:[78:70->78:78]
-Pexp_field [78:70->78:77] _:[125:0->78:78]
+Complete src/CompletionInferValues.res 75:78
+posCursor:[75:78] posNoWhite:[75:77] Found expr:[75:70->75:78]
+Pexp_field [75:70->75:77] _:[118:0->75:78]
 Completable: Cpath Value[srecord].""
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[srecord].""
@@ -356,6 +360,16 @@ ContextPath Value[x]
 Path x
 ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
+ContextPath Value[srecord]->
+ContextPath Value[srecord]
+Path srecord
+ContextPath CPatternPath(Value[x])->recordField(srecord)
+ContextPath Value[x]
+Path x
+ContextPath Type[someRecordWithNestedStuff]
+Path someRecordWithNestedStuff
+CPPipe pathFromEnv: found:true
+Path CompletionInferValues.
 [{
     "label": "name",
     "kind": 5,
@@ -370,9 +384,9 @@ Path someRecordWithNestedStuff
     "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
   }]
 
-Complete src/CompletionInferValues.res 82:86
-posCursor:[82:86] posNoWhite:[82:85] Found expr:[82:78->82:86]
-Pexp_field [82:78->82:85] _:[125:0->82:86]
+Complete src/CompletionInferValues.res 79:86
+posCursor:[79:86] posNoWhite:[79:85] Found expr:[79:78->79:86]
+Pexp_field [79:78->79:85] _:[118:0->79:86]
 Completable: Cpath Value[aliased].""
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[aliased].""
@@ -383,6 +397,16 @@ ContextPath Value[x]
 Path x
 ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
+ContextPath Value[aliased]->
+ContextPath Value[aliased]
+Path aliased
+ContextPath CPatternPath(Value[x])->recordField(nested)
+ContextPath Value[x]
+Path x
+ContextPath Type[someRecordWithNestedStuff]
+Path someRecordWithNestedStuff
+CPPipe pathFromEnv: found:true
+Path CompletionInferValues.
 [{
     "label": "someRecord",
     "kind": 5,
@@ -391,9 +415,9 @@ Path someRecordWithNestedStuff
     "documentation": {"kind": "markdown", "value": "```rescript\nsomeRecord: someRecord\n```\n\n```rescript\ntype someNestedRecord = {someRecord: someRecord}\n```"}
   }]
 
-Complete src/CompletionInferValues.res 86:103
-posCursor:[86:103] posNoWhite:[86:102] Found expr:[86:92->86:103]
-Pexp_field [86:92->86:102] _:[125:0->86:103]
+Complete src/CompletionInferValues.res 83:103
+posCursor:[83:103] posNoWhite:[83:102] Found expr:[83:92->83:103]
+Pexp_field [83:92->83:102] _:[118:0->83:103]
 Completable: Cpath Value[someRecord].""
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[someRecord].""
@@ -404,6 +428,16 @@ ContextPath Value[x]
 Path x
 ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
+ContextPath Value[someRecord]->
+ContextPath Value[someRecord]
+Path someRecord
+ContextPath CPatternPath(Value[x])->recordField(nested)->recordField(someRecord)
+ContextPath Value[x]
+Path x
+ContextPath Type[someRecordWithNestedStuff]
+Path someRecordWithNestedStuff
+CPPipe pathFromEnv: found:true
+Path CompletionInferValues.
 [{
     "label": "name",
     "kind": 5,
@@ -418,8 +452,8 @@ Path someRecordWithNestedStuff
     "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
   }]
 
-Complete src/CompletionInferValues.res 90:81
-posCursor:[90:81] posNoWhite:[90:80] Found expr:[90:69->90:81]
+Complete src/CompletionInferValues.res 87:81
+posCursor:[87:81] posNoWhite:[87:80] Found expr:[87:69->87:81]
 Completable: Cpath Value[things]->slic
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[things]->slic
@@ -430,7 +464,6 @@ ContextPath Value[x]
 Path x
 ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
-CPPipe env:CompletionInferValues
 Path Js.String2.slic
 [{
     "label": "Js.String2.sliceToEnd",
@@ -446,8 +479,8 @@ Path Js.String2.slic
     "documentation": {"kind": "markdown", "value": "\n`slice(str, from:n1, to_:n2)` returns the substring of `str` starting at\ncharacter `n1` up to but not including `n2`.\n- If either `n1` or `n2` is negative, then it is evaluated as `length(str - n1)` or `length(str - n2)`.\n- If `n2` is greater than the length of `str`, then it is treated as `length(str)`.\n- If `n1` is greater than `n2`, slice returns the empty string.\n\nSee [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nJs.String2.slice(\"abcdefg\", ~from=2, ~to_=5) == \"cde\"\nJs.String2.slice(\"abcdefg\", ~from=2, ~to_=9) == \"cdefg\"\nJs.String2.slice(\"abcdefg\", ~from=-4, ~to_=-2) == \"de\"\nJs.String2.slice(\"abcdefg\", ~from=5, ~to_=1) == \"\"\n```\n"}
   }]
 
-Complete src/CompletionInferValues.res 94:82
-posCursor:[94:82] posNoWhite:[94:81] Found expr:[94:70->94:82]
+Complete src/CompletionInferValues.res 91:82
+posCursor:[91:82] posNoWhite:[91:81] Found expr:[91:70->91:82]
 Completable: Cpath Value[someInt]->toS
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[someInt]->toS
@@ -458,7 +491,6 @@ ContextPath Value[x]
 Path x
 ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
-CPPipe env:CompletionInferValues
 Path Belt.Int.toS
 [{
     "label": "Belt.Int.toString",
@@ -468,8 +500,8 @@ Path Belt.Int.toS
     "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `string`. Uses the JavaScript `String` constructor under the hood.\n\n## Examples\n\n```rescript\nJs.log(Belt.Int.toString(1) === \"1\") /* true */\n```\n"}
   }]
 
-Complete src/CompletionInferValues.res 98:109
-posCursor:[98:109] posNoWhite:[98:108] Found expr:[98:97->98:109]
+Complete src/CompletionInferValues.res 95:109
+posCursor:[95:109] posNoWhite:[95:108] Found expr:[95:97->95:109]
 Completable: Cpath Value[someInt]->toS
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[someInt]->toS
@@ -483,7 +515,6 @@ ContextPath Value[x]
 Path x
 ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
-CPPipe env:CompletionInferValues
 Path Belt.Int.toS
 [{
     "label": "Belt.Int.toString",
@@ -493,9 +524,9 @@ Path Belt.Int.toS
     "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `string`. Uses the JavaScript `String` constructor under the hood.\n\n## Examples\n\n```rescript\nJs.log(Belt.Int.toString(1) === \"1\") /* true */\n```\n"}
   }]
 
-Complete src/CompletionInferValues.res 102:102
-posCursor:[102:102] posNoWhite:[102:101] Found expr:[102:57->102:102]
-posCursor:[102:102] posNoWhite:[102:101] Found expr:[102:90->102:102]
+Complete src/CompletionInferValues.res 99:102
+posCursor:[99:102] posNoWhite:[99:101] Found expr:[99:57->99:102]
+posCursor:[99:102] posNoWhite:[99:101] Found expr:[99:90->99:102]
 Completable: Cpath Value[someInt]->toS
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[someInt]->toS
@@ -509,7 +540,6 @@ ContextPath Value[x]
 Path x
 ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
-CPPipe env:CompletionInferValues
 Path Belt.Int.toS
 [{
     "label": "Belt.Int.toString",
@@ -519,8 +549,8 @@ Path Belt.Int.toS
     "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `string`. Uses the JavaScript `String` constructor under the hood.\n\n## Examples\n\n```rescript\nJs.log(Belt.Int.toString(1) === \"1\") /* true */\n```\n"}
   }]
 
-Complete src/CompletionInferValues.res 106:88
-posCursor:[106:88] posNoWhite:[106:87] Found expr:[106:79->106:88]
+Complete src/CompletionInferValues.res 103:88
+posCursor:[103:88] posNoWhite:[103:87] Found expr:[103:79->103:88]
 Completable: Cpath Value[str]->slic
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[str]->slic
@@ -531,7 +561,6 @@ ContextPath Value[x]
 Path x
 ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
-CPPipe env:CompletionInferValues
 Path Js.String2.slic
 [{
     "label": "Js.String2.sliceToEnd",
@@ -547,8 +576,8 @@ Path Js.String2.slic
     "documentation": {"kind": "markdown", "value": "\n`slice(str, from:n1, to_:n2)` returns the substring of `str` starting at\ncharacter `n1` up to but not including `n2`.\n- If either `n1` or `n2` is negative, then it is evaluated as `length(str - n1)` or `length(str - n2)`.\n- If `n2` is greater than the length of `str`, then it is treated as `length(str)`.\n- If `n1` is greater than `n2`, slice returns the empty string.\n\nSee [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nJs.String2.slice(\"abcdefg\", ~from=2, ~to_=5) == \"cde\"\nJs.String2.slice(\"abcdefg\", ~from=2, ~to_=9) == \"cdefg\"\nJs.String2.slice(\"abcdefg\", ~from=-4, ~to_=-2) == \"de\"\nJs.String2.slice(\"abcdefg\", ~from=5, ~to_=1) == \"\"\n```\n"}
   }]
 
-Complete src/CompletionInferValues.res 110:89
-posCursor:[110:89] posNoWhite:[110:88] Found expr:[110:80->110:89]
+Complete src/CompletionInferValues.res 107:89
+posCursor:[107:89] posNoWhite:[107:88] Found expr:[107:80->107:89]
 Completable: Cpath Value[str]->slic
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[str]->slic
@@ -559,7 +588,6 @@ ContextPath Value[x]
 Path x
 ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
-CPPipe env:CompletionInferValues
 Path Js.String2.slic
 [{
     "label": "Js.String2.sliceToEnd",
@@ -575,8 +603,8 @@ Path Js.String2.slic
     "documentation": {"kind": "markdown", "value": "\n`slice(str, from:n1, to_:n2)` returns the substring of `str` starting at\ncharacter `n1` up to but not including `n2`.\n- If either `n1` or `n2` is negative, then it is evaluated as `length(str - n1)` or `length(str - n2)`.\n- If `n2` is greater than the length of `str`, then it is treated as `length(str)`.\n- If `n1` is greater than `n2`, slice returns the empty string.\n\nSee [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nJs.String2.slice(\"abcdefg\", ~from=2, ~to_=5) == \"cde\"\nJs.String2.slice(\"abcdefg\", ~from=2, ~to_=9) == \"cdefg\"\nJs.String2.slice(\"abcdefg\", ~from=-4, ~to_=-2) == \"de\"\nJs.String2.slice(\"abcdefg\", ~from=5, ~to_=1) == \"\"\n```\n"}
   }]
 
-Complete src/CompletionInferValues.res 114:80
-posCursor:[114:80] posNoWhite:[114:79] Found expr:[114:70->114:80]
+Complete src/CompletionInferValues.res 111:80
+posCursor:[111:80] posNoWhite:[111:79] Found expr:[111:70->111:80]
 Completable: Cpath Value[name]->slic
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[name]->slic
@@ -587,7 +615,6 @@ ContextPath Value[x]
 Path x
 ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
-CPPipe env:CompletionInferValues
 Path Js.String2.slic
 [{
     "label": "Js.String2.sliceToEnd",
@@ -603,36 +630,8 @@ Path Js.String2.slic
     "documentation": {"kind": "markdown", "value": "\n`slice(str, from:n1, to_:n2)` returns the substring of `str` starting at\ncharacter `n1` up to but not including `n2`.\n- If either `n1` or `n2` is negative, then it is evaluated as `length(str - n1)` or `length(str - n2)`.\n- If `n2` is greater than the length of `str`, then it is treated as `length(str)`.\n- If `n1` is greater than `n2`, slice returns the empty string.\n\nSee [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nJs.String2.slice(\"abcdefg\", ~from=2, ~to_=5) == \"cde\"\nJs.String2.slice(\"abcdefg\", ~from=2, ~to_=9) == \"cdefg\"\nJs.String2.slice(\"abcdefg\", ~from=-4, ~to_=-2) == \"de\"\nJs.String2.slice(\"abcdefg\", ~from=5, ~to_=1) == \"\"\n```\n"}
   }]
 
-Complete src/CompletionInferValues.res 118:67
-posCursor:[118:67] posNoWhite:[118:66] Found expr:[118:60->118:67]
-Pexp_field [118:60->118:65] s:[118:66->118:67]
-Completable: Cpath Value[inner].s
-Package opens Pervasives.JsxModules.place holder
-ContextPath Value[inner].s
-ContextPath Value[inner]
-Path inner
-ContextPath CPatternPath(Value[x])->array
-ContextPath Value[x]
-Path x
-ContextPath array<Type[otherNestedRecord]>
-ContextPath Type[otherNestedRecord]
-Path otherNestedRecord
-[{
-    "label": "someRecord",
-    "kind": 5,
-    "tags": [],
-    "detail": "someRecord",
-    "documentation": {"kind": "markdown", "value": "```rescript\nsomeRecord: someRecord\n```\n\n```rescript\ntype otherNestedRecord = {someRecord: someRecord, someTuple: (someVariant, int, somePolyVariant), optRecord: option<someRecord>}\n```"}
-  }, {
-    "label": "someTuple",
-    "kind": 5,
-    "tags": [],
-    "detail": "(someVariant, int, somePolyVariant)",
-    "documentation": {"kind": "markdown", "value": "```rescript\nsomeTuple: (someVariant, int, somePolyVariant)\n```\n\n```rescript\ntype otherNestedRecord = {someRecord: someRecord, someTuple: (someVariant, int, somePolyVariant), optRecord: option<someRecord>}\n```"}
-  }]
-
-Complete src/CompletionInferValues.res 122:53
-posCursor:[122:53] posNoWhite:[122:52] Found expr:[122:46->122:53]
+Complete src/CompletionInferValues.res 115:53
+posCursor:[115:53] posNoWhite:[115:52] Found expr:[115:46->115:53]
 Completable: Cpath Value[v]->toSt
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[v]->toSt
@@ -641,7 +640,6 @@ Path v
 ContextPath Value[x]
 Path x
 ContextPath int
-CPPipe env:CompletionInferValues
 Path Belt.Int.toSt
 [{
     "label": "Belt.Int.toString",
@@ -651,12 +649,12 @@ Path Belt.Int.toSt
     "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `string`. Uses the JavaScript `String` constructor under the hood.\n\n## Examples\n\n```rescript\nJs.log(Belt.Int.toString(1) === \"1\") /* true */\n```\n"}
   }]
 
-Complete src/CompletionInferValues.res 130:26
-posCursor:[130:26] posNoWhite:[130:25] Found expr:[130:3->130:37]
-Pexp_apply ...[130:3->130:23] (...[130:24->130:36])
-posCursor:[130:26] posNoWhite:[130:25] Found expr:[130:24->130:36]
-posCursor:[130:26] posNoWhite:[130:25] Found pattern:[130:25->130:27]
-posCursor:[130:26] posNoWhite:[130:25] Found pattern:[130:25->130:27]
+Complete src/CompletionInferValues.res 123:26
+posCursor:[123:26] posNoWhite:[123:25] Found expr:[123:3->123:37]
+Pexp_apply ...[123:3->123:23] (...[123:24->123:36])
+posCursor:[123:26] posNoWhite:[123:25] Found expr:[123:24->123:36]
+posCursor:[123:26] posNoWhite:[123:25] Found pattern:[123:25->123:27]
+posCursor:[123:26] posNoWhite:[123:25] Found pattern:[123:25->123:27]
 Completable: Cpattern CArgument CArgument Value[fnWithRecordCallback]($0)($0)->recordBody
 Package opens Pervasives.JsxModules.place holder
 ContextPath CArgument CArgument Value[fnWithRecordCallback]($0)($0)
@@ -677,12 +675,12 @@ Path fnWithRecordCallback
     "documentation": {"kind": "markdown", "value": "```rescript\nage: int\n```\n\n```rescript\ntype someRecord = {name: string, age: int}\n```"}
   }]
 
-Complete src/CompletionInferValues.res 137:30
-posCursor:[137:30] posNoWhite:[137:29] Found expr:[137:3->137:33]
-Pexp_apply ...[137:3->137:6] (~cb137:8->137:10=...[137:11->137:32])
-posCursor:[137:30] posNoWhite:[137:29] Found expr:[137:11->137:32]
-posCursor:[137:30] posNoWhite:[137:29] Found expr:[137:24->0:-1]
-posCursor:[137:30] posNoWhite:[137:29] Found expr:[137:24->0:-1]
+Complete src/CompletionInferValues.res 130:30
+posCursor:[130:30] posNoWhite:[130:29] Found expr:[130:3->130:33]
+Pexp_apply ...[130:3->130:6] (~cb130:8->130:10=...[130:11->130:32])
+posCursor:[130:30] posNoWhite:[130:29] Found expr:[130:11->130:32]
+posCursor:[130:30] posNoWhite:[130:29] Found expr:[130:24->0:-1]
+posCursor:[130:30] posNoWhite:[130:29] Found expr:[130:24->0:-1]
 Completable: Cpath Value[root]->
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[root]->
@@ -693,8 +691,6 @@ ContextPath CArgument CArgument Value[fn2](~cb)($0)
 ContextPath CArgument Value[fn2](~cb)
 ContextPath Value[fn2]
 Path fn2
-CPPipe env:CompletionInferValues
-CPPipe type path:ReactDOM.Client.Root.t
 CPPipe pathFromEnv:ReactDOM.Client.Root found:false
 Path ReactDOM.Client.Root.
 [{
@@ -711,12 +707,12 @@ Path ReactDOM.Client.Root.
     "documentation": null
   }]
 
-Complete src/CompletionInferValues.res 146:30
-posCursor:[146:30] posNoWhite:[146:29] Found expr:[146:3->146:33]
-Pexp_apply ...[146:3->146:6] (~cb146:8->146:10=...[146:11->146:32])
-posCursor:[146:30] posNoWhite:[146:29] Found expr:[146:11->146:32]
-posCursor:[146:30] posNoWhite:[146:29] Found expr:[146:24->0:-1]
-posCursor:[146:30] posNoWhite:[146:29] Found expr:[146:24->0:-1]
+Complete src/CompletionInferValues.res 139:30
+posCursor:[139:30] posNoWhite:[139:29] Found expr:[139:3->139:33]
+Pexp_apply ...[139:3->139:6] (~cb139:8->139:10=...[139:11->139:32])
+posCursor:[139:30] posNoWhite:[139:29] Found expr:[139:11->139:32]
+posCursor:[139:30] posNoWhite:[139:29] Found expr:[139:24->0:-1]
+posCursor:[139:30] posNoWhite:[139:29] Found expr:[139:24->0:-1]
 Completable: Cpath Value[root]->
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[root]->
@@ -727,8 +723,6 @@ ContextPath CArgument CArgument Value[fn3](~cb)($0)
 ContextPath CArgument Value[fn3](~cb)
 ContextPath Value[fn3]
 Path fn3
-CPPipe env:CompletionInferValues
-CPPipe type path:CompletionSupport.Test.t
 CPPipe pathFromEnv:CompletionSupport.Test found:false
 Path CompletionSupport.Test.
 [{
@@ -743,15 +737,9 @@ Path CompletionSupport.Test.
     "tags": [],
     "detail": "t => t",
     "documentation": null
-  }, {
-    "label": "CompletionSupport.Test.make",
-    "kind": 12,
-    "tags": [],
-    "detail": "int => t",
-    "documentation": null
   }]
 
-Complete src/CompletionInferValues.res 150:47
+Complete src/CompletionInferValues.res 143:47
 XXX Not found!
 Completable: Cpattern Value[Belt, Int, toString](Nolabel)
 Package opens Pervasives.JsxModules.place holder
@@ -769,7 +757,7 @@ Path Belt.Int.toString
     "insertTextFormat": 2
   }]
 
-Complete src/CompletionInferValues.res 154:70
+Complete src/CompletionInferValues.res 147:70
 XXX Not found!
 Completable: Cpattern Value[Js, String2, split](Nolabel, Nolabel)
 Package opens Pervasives.JsxModules.place holder
@@ -787,12 +775,12 @@ Path Js.String2.split
     "insertTextFormat": 2
   }]
 
-Complete src/CompletionInferValues.res 158:105
-posCursor:[158:105] posNoWhite:[158:104] Found expr:[158:18->158:110]
-Pexp_apply ...[158:18->158:49] (~prepare158:51->158:58=...[158:59->158:72], ~render158:74->158:80=...[158:81->158:106], ...[158:107->158:109])
-posCursor:[158:105] posNoWhite:[158:104] Found expr:[158:81->158:106]
-posCursor:[158:105] posNoWhite:[158:104] Found expr:[158:97->158:105]
-Pexp_field [158:97->158:104] _:[158:105->158:105]
+Complete src/CompletionInferValues.res 151:105
+posCursor:[151:105] posNoWhite:[151:104] Found expr:[151:18->151:110]
+Pexp_apply ...[151:18->151:49] (~prepare151:51->151:58=...[151:59->151:72], ~render151:74->151:80=...[151:81->151:106], ...[151:107->151:109])
+posCursor:[151:105] posNoWhite:[151:104] Found expr:[151:81->151:106]
+posCursor:[151:105] posNoWhite:[151:104] Found expr:[151:97->151:105]
+Pexp_field [151:97->151:104] _:[151:105->151:105]
 Completable: Cpath Value[support].""
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[support].""
@@ -803,6 +791,16 @@ ContextPath CArgument CArgument Value[CompletionSupport2, makeRenderer](~render)
 ContextPath CArgument Value[CompletionSupport2, makeRenderer](~render)
 ContextPath Value[CompletionSupport2, makeRenderer]
 Path CompletionSupport2.makeRenderer
+ContextPath Value[support]->
+ContextPath Value[support]
+Path support
+ContextPath CPatternPath(CArgument CArgument Value[CompletionSupport2, makeRenderer](~render)($0))->recordField(support)
+ContextPath CArgument CArgument Value[CompletionSupport2, makeRenderer](~render)($0)
+ContextPath CArgument Value[CompletionSupport2, makeRenderer](~render)
+ContextPath Value[CompletionSupport2, makeRenderer]
+Path CompletionSupport2.makeRenderer
+CPPipe pathFromEnv:CompletionSupport.Nested found:false
+Path CompletionSupport.Nested.
 [{
     "label": "root",
     "kind": 5,
@@ -811,12 +809,12 @@ Path CompletionSupport2.makeRenderer
     "documentation": {"kind": "markdown", "value": "```rescript\nroot: ReactDOM.Client.Root.t\n```\n\n```rescript\ntype config = {root: ReactDOM.Client.Root.t}\n```"}
   }]
 
-Complete src/CompletionInferValues.res 162:110
-posCursor:[162:110] posNoWhite:[162:109] Found expr:[162:18->162:115]
-Pexp_apply ...[162:18->162:49] (~prepare162:51->162:58=...[162:59->162:72], ~render162:74->162:80=...[162:81->162:111], ...[162:112->162:114])
-posCursor:[162:110] posNoWhite:[162:109] Found expr:[162:81->162:111]
-posCursor:[162:110] posNoWhite:[162:109] Found expr:[162:104->0:-1]
-posCursor:[162:110] posNoWhite:[162:109] Found expr:[162:104->0:-1]
+Complete src/CompletionInferValues.res 155:110
+posCursor:[155:110] posNoWhite:[155:109] Found expr:[155:18->155:115]
+Pexp_apply ...[155:18->155:49] (~prepare155:51->155:58=...[155:59->155:72], ~render155:74->155:80=...[155:81->155:111], ...[155:112->155:114])
+posCursor:[155:110] posNoWhite:[155:109] Found expr:[155:81->155:111]
+posCursor:[155:110] posNoWhite:[155:109] Found expr:[155:104->0:-1]
+posCursor:[155:110] posNoWhite:[155:109] Found expr:[155:104->0:-1]
 Completable: Cpath Value[root]->
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[root]->
@@ -827,8 +825,6 @@ ContextPath CArgument CArgument Value[CompletionSupport2, makeRenderer](~render)
 ContextPath CArgument Value[CompletionSupport2, makeRenderer](~render)
 ContextPath Value[CompletionSupport2, makeRenderer]
 Path CompletionSupport2.makeRenderer
-CPPipe env:CompletionInferValues envFromCompletionItem:CompletionSupport2.Internal
-CPPipe type path:ReactDOM.Client.Root.t
 CPPipe pathFromEnv:ReactDOM.Client.Root found:false
 Path ReactDOM.Client.Root.
 [{
@@ -845,10 +841,10 @@ Path ReactDOM.Client.Root.
     "documentation": null
   }]
 
-Hover src/CompletionInferValues.res 167:27
+Hover src/CompletionInferValues.res 160:27
 Nothing at that position. Now trying to use completion.
-posCursor:[167:27] posNoWhite:[167:26] Found expr:[167:25->167:28]
-Pexp_ident res:[167:25->167:28]
+posCursor:[160:27] posNoWhite:[160:26] Found expr:[160:25->160:28]
+Pexp_ident res:[160:25->160:28]
 Completable: Cpath Value[res]
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[res]

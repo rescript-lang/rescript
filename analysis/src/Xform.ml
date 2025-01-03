@@ -2,15 +2,6 @@
 
 let isBracedExpr = Res_parsetree_viewer.is_braced_expr
 
-let mkPosition (pos : Pos.t) =
-  let line, character = pos in
-  {Protocol.line; character}
-
-let rangeOfLoc (loc : Location.t) =
-  let start = loc |> Loc.start |> mkPosition in
-  let end_ = loc |> Loc.end_ |> mkPosition in
-  {Protocol.start; end_}
-
 let extractTypeFromExpr expr ~debug ~path ~currentFile ~full ~pos =
   match
     expr.Parsetree.pexp_loc
@@ -144,7 +135,7 @@ module IfThenElse = struct
     match !changed with
     | None -> ()
     | Some newExpr ->
-      let range = rangeOfLoc newExpr.pexp_loc in
+      let range = Loc.rangeOfLoc newExpr.pexp_loc in
       let newText = printExpr ~range newExpr in
       let codeAction =
         CodeActions.make ~title:"Replace with switch" ~kind:RefactorRewrite
@@ -161,7 +152,7 @@ module ModuleToFile = struct
       | Pstr_module
           {pmb_loc; pmb_name; pmb_expr = {pmod_desc = Pmod_structure structure}}
         when structure_item.pstr_loc |> Loc.hasPos ~pos ->
-        let range = rangeOfLoc structure_item.pstr_loc in
+        let range = Loc.rangeOfLoc structure_item.pstr_loc in
         let newTextInCurrentFile = "" in
         let textForExtractedFile =
           printStandaloneStructure ~loc:pmb_loc structure
@@ -280,7 +271,7 @@ module AddBracesToFn = struct
     match !changed with
     | None -> ()
     | Some newStructureItem ->
-      let range = rangeOfLoc newStructureItem.pstr_loc in
+      let range = Loc.rangeOfLoc newStructureItem.pstr_loc in
       let newText = printStructureItem ~range newStructureItem in
       let codeAction =
         CodeActions.make ~title:"Add braces to function" ~kind:RefactorRewrite
@@ -346,10 +337,10 @@ module AddTypeAnnotation = struct
           let range, newText =
             match annotation with
             | Plain ->
-              ( rangeOfLoc {locItem.loc with loc_start = locItem.loc.loc_end},
+              ( Loc.rangeOfLoc {locItem.loc with loc_start = locItem.loc.loc_end},
                 ": " ^ (typ |> Shared.typeToString) )
             | WithParens ->
-              ( rangeOfLoc locItem.loc,
+              ( Loc.rangeOfLoc locItem.loc,
                 "(" ^ name ^ ": " ^ (typ |> Shared.typeToString) ^ ")" )
           in
           let codeAction =
@@ -436,7 +427,7 @@ module ExpandCatchAllForVariants = struct
                    | Args _ | InlineRecord _ -> "(_)")
             |> String.concat " | "
           in
-          let range = rangeOfLoc catchAllCase.pc_lhs.ppat_loc in
+          let range = Loc.rangeOfLoc catchAllCase.pc_lhs.ppat_loc in
           let codeAction =
             CodeActions.make ~title:"Expand catch-all" ~kind:RefactorRewrite
               ~uri:path ~newText ~range
@@ -460,7 +451,7 @@ module ExpandCatchAllForVariants = struct
                    | _ -> "(_)")
             |> String.concat " | "
           in
-          let range = rangeOfLoc catchAllCase.pc_lhs.ppat_loc in
+          let range = Loc.rangeOfLoc catchAllCase.pc_lhs.ppat_loc in
           let codeAction =
             CodeActions.make ~title:"Expand catch-all" ~kind:RefactorRewrite
               ~uri:path ~newText ~range
@@ -529,7 +520,7 @@ module ExpandCatchAllForVariants = struct
             let newText =
               if hasNoneCase then newText else newText ^ " | None"
             in
-            let range = rangeOfLoc catchAllCase.pc_lhs.ppat_loc in
+            let range = Loc.rangeOfLoc catchAllCase.pc_lhs.ppat_loc in
             let codeAction =
               CodeActions.make ~title:"Expand catch-all" ~kind:RefactorRewrite
                 ~uri:path ~newText ~range
@@ -624,7 +615,7 @@ module ExhaustiveSwitch = struct
         match exhaustiveSwitch with
         | None -> ()
         | Some cases ->
-          let range = rangeOfLoc expr.pexp_loc in
+          let range = Loc.rangeOfLoc expr.pexp_loc in
           let newText =
             printExpr ~range {expr with pexp_desc = Pexp_match (expr, cases)}
           in
@@ -649,7 +640,7 @@ module ExhaustiveSwitch = struct
         match exhaustiveSwitch with
         | None -> ()
         | Some cases ->
-          let range = rangeOfLoc switchExpr.pexp_loc in
+          let range = Loc.rangeOfLoc switchExpr.pexp_loc in
           let newText =
             printExpr ~range
               {switchExpr with pexp_desc = Pexp_match (completionExpr, cases)}
@@ -749,7 +740,7 @@ module AddDocTemplate = struct
 
         match newSignatureItem with
         | Some signatureItem ->
-          let range = rangeOfLoc signatureItem.psig_loc in
+          let range = Loc.rangeOfLoc signatureItem.psig_loc in
           let newText = printSignatureItem ~range signatureItem in
           let codeAction =
             CodeActions.make ~title:"Add Documentation template"
@@ -834,7 +825,7 @@ module AddDocTemplate = struct
 
         match newStructureItem with
         | Some structureItem ->
-          let range = rangeOfLoc structureItem.pstr_loc in
+          let range = Loc.rangeOfLoc structureItem.pstr_loc in
           let newText = printStructureItem ~range structureItem in
           let codeAction =
             CodeActions.make ~title:"Add Documentation template"
