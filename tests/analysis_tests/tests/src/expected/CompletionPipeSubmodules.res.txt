@@ -1,56 +1,45 @@
-Complete src/CompletionPipeSubmodules.res 12:20
-posCursor:[12:20] posNoWhite:[12:19] Found expr:[12:11->20:8]
+Complete src/CompletionPipeSubmodules.res 13:20
+posCursor:[13:20] posNoWhite:[13:19] Found expr:[13:11->21:8]
 Completable: Cpath Value[A, B1, xx]->
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[A, B1, xx]->
 ContextPath Value[A, B1, xx]
 Path A.B1.xx
-CPPipe env:CompletionPipeSubmodules envFromCompletionItem:CompletionPipeSubmodules.A.B1
-CPPipe type path:b1
 CPPipe pathFromEnv:A.B1 found:true
 Path A.B1.
 [{
-    "label": "A.B1.xx",
+    "label": "A.B1.d",
     "kind": 12,
     "tags": [],
-    "detail": "b1",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype b1 = B1\n```"}
-  }, {
-    "label": "A.B1.B1",
-    "kind": 4,
-    "tags": [],
-    "detail": "B1",
-    "documentation": {"kind": "markdown", "value": "```rescript\nB1\n```\n\n```rescript\ntype b1 = B1\n```"}
+    "detail": "b1 => string",
+    "documentation": null
   }]
 
-Complete src/CompletionPipeSubmodules.res 16:18
-posCursor:[16:18] posNoWhite:[16:17] Found expr:[16:11->20:8]
+Complete src/CompletionPipeSubmodules.res 17:18
+posCursor:[17:18] posNoWhite:[17:17] Found expr:[17:11->21:8]
 Completable: Cpath Value[A, x].v->
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[A, x].v->
 ContextPath Value[A, x].v
 ContextPath Value[A, x]
 Path A.x
-CPPipe env:CompletionPipeSubmodules envFromCompletionItem:CompletionPipeSubmodules.A
-CPPipe type path:B1.b1
+ContextPath Value[A, x]->v
+ContextPath Value[A, x]
+Path A.x
+CPPipe pathFromEnv:A found:true
+Path A.v
 CPPipe pathFromEnv:A.B1 found:true
 Path A.B1.
 [{
-    "label": "A.B1.xx",
+    "label": "A.B1.d",
     "kind": 12,
     "tags": [],
-    "detail": "b1",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype b1 = B1\n```"}
-  }, {
-    "label": "A.B1.B1",
-    "kind": 4,
-    "tags": [],
-    "detail": "B1",
-    "documentation": {"kind": "markdown", "value": "```rescript\nB1\n```\n\n```rescript\ntype b1 = B1\n```"}
+    "detail": "b1 => string",
+    "documentation": null
   }]
 
-Complete src/CompletionPipeSubmodules.res 38:20
-posCursor:[38:20] posNoWhite:[38:19] Found expr:[38:11->0:-1]
+Complete src/CompletionPipeSubmodules.res 41:20
+posCursor:[41:20] posNoWhite:[41:19] Found expr:[41:11->0:-1]
 Completable: Cpath Value[E, e].v.v->
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[E, e].v.v->
@@ -58,20 +47,34 @@ ContextPath Value[E, e].v.v
 ContextPath Value[E, e].v
 ContextPath Value[E, e]
 Path E.e
-CPPipe env:CompletionPipeSubmodules envFromCompletionItem:CompletionPipeSubmodules.D
-CPPipe type path:C.t
+ContextPath Value[E, e]->v
+ContextPath Value[E, e]
+Path E.e
+CPPipe pathFromEnv:E found:true
+Path E.v
+ContextPath Value[E, e].v->v
+ContextPath Value[E, e].v
+ContextPath Value[E, e]
+Path E.e
+ContextPath Value[E, e]->v
+ContextPath Value[E, e]
+Path E.e
+CPPipe pathFromEnv:E found:true
+Path E.v
+CPPipe pathFromEnv:D found:true
+Path D.v
 CPPipe pathFromEnv:C found:false
 Path C.
 [{
-    "label": "C.C",
-    "kind": 4,
+    "label": "C.do",
+    "kind": 12,
     "tags": [],
-    "detail": "C",
-    "documentation": {"kind": "markdown", "value": "```rescript\nC\n```\n\n```rescript\ntype t = C\n```"}
+    "detail": "t => string",
+    "documentation": null
   }]
 
-Complete src/CompletionPipeSubmodules.res 42:21
-posCursor:[42:21] posNoWhite:[42:20] Found expr:[42:11->0:-1]
+Complete src/CompletionPipeSubmodules.res 45:21
+posCursor:[45:21] posNoWhite:[45:20] Found expr:[45:11->0:-1]
 Completable: Cpath Value[E, e].v.v2->
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[E, e].v.v2->
@@ -79,15 +82,29 @@ ContextPath Value[E, e].v.v2
 ContextPath Value[E, e].v
 ContextPath Value[E, e]
 Path E.e
-CPPipe env:CompletionPipeSubmodules envFromCompletionItem:CompletionPipeSubmodules.D
-CPPipe type path:C2.t2
+ContextPath Value[E, e]->v
+ContextPath Value[E, e]
+Path E.e
+CPPipe pathFromEnv:E found:true
+Path E.v
+ContextPath Value[E, e].v->v2
+ContextPath Value[E, e].v
+ContextPath Value[E, e]
+Path E.e
+ContextPath Value[E, e]->v
+ContextPath Value[E, e]
+Path E.e
+CPPipe pathFromEnv:E found:true
+Path E.v
+CPPipe pathFromEnv:D found:true
+Path D.v2
 CPPipe pathFromEnv:D.C2 found:true
 Path D.C2.
 [{
-    "label": "D.C2.C2",
-    "kind": 4,
+    "label": "D.C2.do",
+    "kind": 12,
     "tags": [],
-    "detail": "C2",
-    "documentation": {"kind": "markdown", "value": "```rescript\nC2\n```\n\n```rescript\ntype t2 = C2\n```"}
+    "detail": "t2 => string",
+    "documentation": null
   }]
 

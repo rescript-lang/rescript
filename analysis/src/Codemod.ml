@@ -41,7 +41,7 @@ let transform ~path ~pos ~debug ~typ ~hint =
         if debug then print_endline "Found no result";
         exit 1
       | Some switchExpr ->
-        printExpr ~range:(Xform.rangeOfLoc switchExpr.pexp_loc) switchExpr)
+        printExpr ~range:(Loc.rangeOfLoc switchExpr.pexp_loc) switchExpr)
     | _ ->
       if debug then print_endline "Mismatch in expected structure";
       exit 1)

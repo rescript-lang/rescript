@@ -1,0 +1,41 @@
+Complete src/CompletionMultipleEditorCompleteFrom.res 19:5
+posCursor:[19:5] posNoWhite:[19:4] Found expr:[19:3->19:5]
+Pexp_field [19:3->19:4] _:[22:0->19:5]
+Completable: Cpath Value[a].""
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[a].""
+ContextPath Value[a]
+Path a
+ContextPath Value[a]->
+ContextPath Value[a]
+Path a
+CPPipe pathFromEnv:A found:true
+Path A.
+Path B.
+Path C.
+[{
+    "label": "->B.b",
+    "kind": 12,
+    "tags": [],
+    "detail": "A.a => int",
+    "documentation": null,
+    "sortText": "b",
+    "insertText": "->B.b",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 19, "character": 4}, "end": {"line": 19, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->C.c",
+    "kind": 12,
+    "tags": [],
+    "detail": "A.a => char",
+    "documentation": null,
+    "sortText": "c",
+    "insertText": "->C.c",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 19, "character": 4}, "end": {"line": 19, "character": 5}},
+      "newText": ""
+      }]
+  }]
+

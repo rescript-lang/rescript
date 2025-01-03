@@ -433,8 +433,6 @@ Package opens Pervasives.JsxModules.place holder
 ContextPath Value[thisGetsBrokenLoc]->a <<jsx>>
 ContextPath Value[thisGetsBrokenLoc]
 Path thisGetsBrokenLoc
-CPPipe env:CompletionFunctionArguments
-CPPipe type path:JsxEvent.Mouse.t
 CPPipe pathFromEnv:JsxEvent.Mouse found:false
 Path JsxEvent.Mouse.a
 [{
@@ -457,8 +455,6 @@ Package opens Pervasives.JsxModules.place holder
 ContextPath Value[reassignedWorks]->a <<jsx>>
 ContextPath Value[reassignedWorks]
 Path reassignedWorks
-CPPipe env:CompletionFunctionArguments
-CPPipe type path:JsxEvent.Mouse.t
 CPPipe pathFromEnv:JsxEvent.Mouse found:false
 Path JsxEvent.Mouse.a
 [{
@@ -479,8 +475,6 @@ Package opens Pervasives.JsxModules.place holder
 ContextPath Value[fineModuleVal]->
 ContextPath Value[fineModuleVal]
 Path fineModuleVal
-CPPipe env:CompletionFunctionArguments
-CPPipe type path:FineModule.t
 CPPipe pathFromEnv:FineModule found:true
 Path FineModule.
 [{

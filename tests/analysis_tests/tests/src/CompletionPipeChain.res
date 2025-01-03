@@ -103,3 +103,12 @@ let r = %re("/t/g")
 
 // r->la
 //      ^com
+
+module Xyz = {
+  type xx = One
+  let do = (_: xx) => ""
+}
+
+let xx = Xyz.One
+// xx->
+//     ^com

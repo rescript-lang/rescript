@@ -2,11 +2,12 @@ module A = {
   module B1 = {
     type b1 = B1
     let xx = B1
+    let d = (_: b1) => ""
   }
   module B2 = {
     let yy = 20
   }
-  type t = {v: B1.b1}
+  type t2 = {v: B1.b1}
   let x = {v: B1.B1}
 }
 
@@ -20,11 +21,13 @@ module A = {
 
 module C = {
   type t = C
+  let do = (_: t) => ""
 }
 
 module D = {
   module C2 = {
     type t2 = C2
+    let do = (_: t2) => ""
   }
 
   type d = {v: C.t, v2: C2.t2}

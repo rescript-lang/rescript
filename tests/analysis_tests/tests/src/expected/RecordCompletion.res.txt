@@ -6,7 +6,11 @@ ContextPath Value[t].n->m
 ContextPath Value[t].n
 ContextPath Value[t]
 Path t
-CPPipe env:RecordCompletion
+ContextPath Value[t]->n
+ContextPath Value[t]
+Path t
+CPPipe pathFromEnv: found:true
+Path RecordCompletion.n
 Path Js.Array2.m
 [{
     "label": "Js.Array2.mapi",
@@ -31,7 +35,22 @@ ContextPath Value[t2].n2.n
 ContextPath Value[t2].n2
 ContextPath Value[t2]
 Path t2
-CPPipe env:RecordCompletion
+ContextPath Value[t2]->n2
+ContextPath Value[t2]
+Path t2
+CPPipe pathFromEnv: found:true
+Path RecordCompletion.n2
+ContextPath Value[t2].n2->n
+ContextPath Value[t2].n2
+ContextPath Value[t2]
+Path t2
+ContextPath Value[t2]->n2
+ContextPath Value[t2]
+Path t2
+CPPipe pathFromEnv: found:true
+Path RecordCompletion.n2
+CPPipe pathFromEnv: found:true
+Path RecordCompletion.n
 Path Js.Array2.m
 [{
     "label": "Js.Array2.mapi",

@@ -1,0 +1,63 @@
+Complete src/CompletionPipeProperty.res 21:17
+posCursor:[21:17] posNoWhite:[21:16] Found expr:[21:3->21:17]
+Pexp_field [21:3->21:16] _:[23:0->21:17]
+Completable: Cpath Value[sprite].anchor.""
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[sprite].anchor.""
+ContextPath Value[sprite].anchor
+ContextPath Value[sprite]
+Path sprite
+ContextPath Value[sprite]->anchor
+ContextPath Value[sprite]
+Path sprite
+CPPipe pathFromEnv:Sprite found:true
+Path Sprite.anchor
+ContextPath Value[sprite].anchor->
+ContextPath Value[sprite].anchor
+ContextPath Value[sprite]
+Path sprite
+ContextPath Value[sprite]->anchor
+ContextPath Value[sprite]
+Path sprite
+CPPipe pathFromEnv:Sprite found:true
+Path Sprite.anchor
+CPPipe pathFromEnv:ObservablePoint found:true
+Path ObservablePoint.
+[{
+    "label": "x",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nx: int\n```\n\n```rescript\ntype op = {mutable x: int, mutable y: int}\n```"}
+  }, {
+    "label": "y",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\ny: int\n```\n\n```rescript\ntype op = {mutable x: int, mutable y: int}\n```"}
+  }, {
+    "label": "->ObservablePoint.setBoth",
+    "kind": 12,
+    "tags": [],
+    "detail": "(op, float) => unit",
+    "documentation": null,
+    "sortText": "setBoth",
+    "insertText": "->ObservablePoint.setBoth",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 21, "character": 16}, "end": {"line": 21, "character": 17}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->ObservablePoint.set",
+    "kind": 12,
+    "tags": [],
+    "detail": "(op, float, float) => unit",
+    "documentation": null,
+    "sortText": "set",
+    "insertText": "->ObservablePoint.set",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 21, "character": 16}, "end": {"line": 21, "character": 17}},
+      "newText": ""
+      }]
+  }]
+

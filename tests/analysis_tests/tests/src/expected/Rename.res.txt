@@ -6,15 +6,15 @@ Rename src/Rename.res 0:4 y
   "uri": "Rename.res"
   },
   "edits": [{
-  "range": {"start": {"line": 0, "character": 4}, "end": {"line": 0, "character": 5}},
-  "newText": "y"
-  }, {
-  "range": {"start": {"line": 3, "character": 8}, "end": {"line": 3, "character": 9}},
-  "newText": "y"
-  }, {
-  "range": {"start": {"line": 7, "character": 8}, "end": {"line": 7, "character": 9}},
-  "newText": "y"
-  }]
+      "range": {"start": {"line": 0, "character": 4}, "end": {"line": 0, "character": 5}},
+      "newText": "y"
+      }, {
+      "range": {"start": {"line": 3, "character": 8}, "end": {"line": 3, "character": 9}},
+      "newText": "y"
+      }, {
+      "range": {"start": {"line": 7, "character": 8}, "end": {"line": 7, "character": 9}},
+      "newText": "y"
+      }]
   }
 ]
 
@@ -26,12 +26,12 @@ Rename src/Rename.res 9:19 yy
   "uri": "Rename.res"
   },
   "edits": [{
-  "range": {"start": {"line": 9, "character": 11}, "end": {"line": 9, "character": 14}},
-  "newText": "yy"
-  }, {
-  "range": {"start": {"line": 9, "character": 19}, "end": {"line": 9, "character": 21}},
-  "newText": "yy"
-  }]
+      "range": {"start": {"line": 9, "character": 11}, "end": {"line": 9, "character": 14}},
+      "newText": "yy"
+      }, {
+      "range": {"start": {"line": 9, "character": 19}, "end": {"line": 9, "character": 21}},
+      "newText": "yy"
+      }]
   }
 ]
 
