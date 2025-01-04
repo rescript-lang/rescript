@@ -823,32 +823,20 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
   match contextPath with
   | CPString ->
     if Debug.verbose () then print_endline "[ctx_path]--> CPString";
-    [
-      Completion.create "dummy" ~env
-        ~kind:(Completion.Value (Ctype.newconstr Predef.path_string []));
-    ]
+    [Completion.create "dummy" ~env ~kind:(Completion.Value Predef.type_string)]
   | CPBool ->
     if Debug.verbose () then print_endline "[ctx_path]--> CPBool";
-    [
-      Completion.create "dummy" ~env
-        ~kind:(Completion.Value (Ctype.newconstr Predef.path_bool []));
-    ]
+    [Completion.create "dummy" ~env ~kind:(Completion.Value Predef.type_bool)]
   | CPInt ->
     if Debug.verbose () then print_endline "[ctx_path]--> CPInt";
-    [
-      Completion.create "dummy" ~env
-        ~kind:(Completion.Value (Ctype.newconstr Predef.path_int []));
-    ]
+    [Completion.create "dummy" ~env ~kind:(Completion.Value Predef.type_int)]
   | CPFloat ->
     if Debug.verbose () then print_endline "[ctx_path]--> CPFloat";
-    [
-      Completion.create "dummy" ~env
-        ~kind:(Completion.Value (Ctype.newconstr Predef.path_float []));
-    ]
+    [Completion.create "dummy" ~env ~kind:(Completion.Value Predef.type_float)]
   | CPArray None ->
     if Debug.verbose () then print_endline "[ctx_path]--> CPArray (no payload)";
     [
-      Completion.create "dummy" ~env
+      Completion.create "array" ~env
         ~kind:(Completion.Value (Ctype.newconstr Predef.path_array []));
     ]
   | CPArray (Some cp) -> (
@@ -1340,14 +1328,8 @@ let getOpens ~debug ~rawOpens ~package ~env =
   if debug && packageOpens <> [] then
     Printf.printf "%s\n"
       ("Package opens "
-      ^ String.concat " "
-          (packageOpens
-          |> List.map (fun p ->
-                 p
-                 |> List.map (fun name ->
-                        (* Unify formatting between curried and uncurried *)
-                        if name = "PervasivesU" then "Pervasives" else name)
-                 |> pathToString)));
+      ^ String.concat " " (packageOpens |> List.map (fun p -> p |> pathToString))
+      );
   let resolvedOpens =
     resolveOpens ~env (List.rev (rawOpens @ packageOpens)) ~package
   in
@@ -1357,16 +1339,8 @@ let getOpens ~debug ~rawOpens ~package ~env =
       ^ string_of_int (List.length resolvedOpens)
       ^ " "
       ^ String.concat " "
-          (resolvedOpens
-          |> List.map (fun (e : QueryEnv.t) ->
-                 let name = Uri.toString e.file.uri in
-
-                 (* Unify formatting between curried and uncurried *)
-                 if
-                   name = "pervasives.res" || name = "pervasives.resi"
-                   || name = "pervasivesU.res" || name = "pervasivesU.resi"
-                 then "pervasives"
-                 else name)));
+          (resolvedOpens |> List.map (fun (e : QueryEnv.t) -> e.file.moduleName))
+      );
   (* Last open takes priority *)
   List.rev resolvedOpens
 
@@ -1417,11 +1391,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     (* Find all functions in the module that returns type t *)
     let rec fnReturnsTypeT t =
       match t.Types.desc with
-      | Tlink t1
-      | Tsubst t1
-      | Tpoly (t1, [])
-      | Tconstr (Pident {name = "function$"}, [t1; _], _) ->
-        fnReturnsTypeT t1
+      | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> fnReturnsTypeT t1
       | Tarrow _ -> (
         match TypeUtils.extractFunctionType ~env ~package:full.package t with
         | ( (Nolabel, {desc = Tconstr (Path.Pident {name = "t"}, _, _)}) :: _,
@@ -1756,8 +1726,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     if prefix = "" then
       [
         create "\"\"" ~includesSnippets:true ~insertText:"\"$0\"" ~sortText:"A"
-          ~kind:(Value (Ctype.newconstr Predef.path_string []))
-          ~env;
+          ~kind:(Value Predef.type_string) ~env;
       ]
     else []
   | Tfunction {env; typ; args; returnType} when prefix = "" && mode = Expression
@@ -1875,9 +1844,6 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
     let keyLabels =
       if Utils.startsWith "key" prefix then [mkLabel ("key", "string")] else []
     in
-    (* We always try to look up completion from the actual domProps type first.
-       This works in JSXv4. For JSXv3, we have a backup hardcoded list of dom
-       labels we can use for completion. *)
     let pathToElementProps = TypeUtils.pathToElementProps package in
     if Debug.verbose () then
       Printf.printf

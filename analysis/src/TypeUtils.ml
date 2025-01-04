@@ -42,7 +42,6 @@ let findTypeViaLoc ~full ~debug (loc : Location.t) =
 
 let rec pathFromTypeExpr (t : Types.type_expr) =
   match t.desc with
-  | Tconstr (Pident {name = "function$"}, [t; _], _) -> pathFromTypeExpr t
   | Tconstr (path, _typeArgs, _)
   | Tlink {desc = Tconstr (path, _typeArgs, _)}
   | Tsubst {desc = Tconstr (path, _typeArgs, _)}
@@ -268,8 +267,6 @@ let rec extractFunctionTypeWithEnv ~env ~package typ =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ~env acc t1
     | Tarrow (label, tArg, tRet, _, _) -> loop ~env ((label, tArg) :: acc) tRet
-    | Tconstr (Pident {name = "function$"}, [t; _], _) ->
-      extractFunctionTypeWithEnv ~env ~package t
     | Tconstr (path, typeArgs, _) -> (
       match References.digConstructor ~env ~package path with
       | Some
@@ -309,8 +306,6 @@ let rec extractFunctionType2 ?typeArgContext ~env ~package typ =
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ?typeArgContext ~env acc t1
     | Tarrow (label, tArg, tRet, _, _) ->
       loop ?typeArgContext ~env ((label, tArg) :: acc) tRet
-    | Tconstr (Pident {name = "function$"}, [t; _], _) ->
-      extractFunctionType2 ?typeArgContext ~env ~package t
     | Tconstr (path, typeArgs, _) -> (
       match References.digConstructor ~env ~package path with
       | Some
@@ -360,13 +355,6 @@ let rec extractType ?(printOpeningDebug = true)
     Some (Tstring env, typeArgContext)
   | Tconstr (Path.Pident {name = "exn"}, [], _) ->
     Some (Texn env, typeArgContext)
-  | Tconstr (Pident {name = "function$"}, [t; _], _) -> (
-    match extractFunctionType2 ?typeArgContext t ~env ~package with
-    | args, tRet, typeArgContext when args <> [] ->
-      Some
-        ( Tfunction {env; args; typ = t; uncurried = true; returnType = tRet},
-          typeArgContext )
-    | _args, _tRet, _typeArgContext -> None)
   | Tarrow _ -> (
     match extractFunctionType2 ?typeArgContext t ~env ~package with
     | args, tRet, typeArgContext when args <> [] ->
@@ -890,10 +878,7 @@ let getArgs ~env (t : Types.type_expr) ~full =
   let rec getArgsLoop ~env (t : Types.type_expr) ~full ~currentArgumentPosition
       =
     match t.desc with
-    | Tlink t1
-    | Tsubst t1
-    | Tpoly (t1, [])
-    | Tconstr (Pident {name = "function$"}, [t1; _], _) ->
+    | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
       getArgsLoop ~full ~env ~currentArgumentPosition t1
     | Tarrow (Labelled l, tArg, tRet, _, _) ->
       (SharedTypes.Completable.Labelled l, tArg)
@@ -1184,8 +1169,6 @@ let rec findRootTypeId ~full ~env (t : Types.type_expr) =
   let debug = false in
   match t.desc with
   | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> findRootTypeId ~full ~env t1
-  | Tconstr (Pident {name = "function$"}, [t; _], _) ->
-    findRootTypeId ~full ~env t
   | Tconstr (path, _, _) -> (
     (* We have a path. Try to dig to its declaration *)
     if debug then
