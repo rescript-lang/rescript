@@ -130,7 +130,7 @@ posCursor:[12:29] posNoWhite:[12:28] Found expr:[12:3->0:-1]
 Completable: Cpath Value[CompletionFromModule, nnn]->
 Raw opens: 1 CompletionFromModule.SomeOtherModule.place holder
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionFromModule.res
+Resolved opens 1 CompletionFromModule
 ContextPath Value[CompletionFromModule, nnn]->
 ContextPath Value[CompletionFromModule, nnn]
 Path CompletionFromModule.nnn

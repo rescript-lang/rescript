@@ -40,7 +40,7 @@ let findTypeViaLoc ~full ~debug (loc : Location.t) =
   | Some {locType = Typed (_, typExpr, _)} -> Some typExpr
   | _ -> None
 
-let rec pathFromTypeExpr (t : Types.type_expr) =
+let pathFromTypeExpr (t : Types.type_expr) =
   match t.desc with
   | Tconstr (path, _typeArgs, _)
   | Tlink {desc = Tconstr (path, _typeArgs, _)}
@@ -262,7 +262,7 @@ let extractFunctionType ~env ~package typ =
   in
   loop ~env [] typ
 
-let rec extractFunctionTypeWithEnv ~env ~package typ =
+let extractFunctionTypeWithEnv ~env ~package typ =
   let rec loop ~env acc (t : Types.type_expr) =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ~env acc t1
@@ -300,7 +300,7 @@ let maybeSetTypeArgCtx ?typeArgContextFromTypeManifest ~typeParams ~typeArgs env
     typeArgContext
 
 (* TODO(env-stuff) Maybe this could be removed entirely if we can guarantee that we don't have to look up functions from in here. *)
-let rec extractFunctionType2 ?typeArgContext ~env ~package typ =
+let extractFunctionType2 ?typeArgContext ~env ~package typ =
   let rec loop ?typeArgContext ~env acc (t : Types.type_expr) =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ?typeArgContext ~env acc t1

@@ -1234,7 +1234,7 @@ Pexp_apply ...[313:3->313:35] (...[313:36->313:37])
 Completable: Cexpression CArgument Value[CompletionSupport, makeTestHidden]($0)
 Raw opens: 1 CompletionSupport.place holder
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionSupport.res
+Resolved opens 1 CompletionSupport
 ContextPath CArgument Value[CompletionSupport, makeTestHidden]($0)
 ContextPath Value[CompletionSupport, makeTestHidden]
 Path CompletionSupport.makeTestHidden
@@ -1254,7 +1254,7 @@ Pexp_apply ...[321:3->321:10] (...[321:11->321:12])
 Completable: Cexpression CArgument Value[mkStuff]($0)
 Raw opens: 1 CompletionSupport.place holder
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionSupport.res
+Resolved opens 1 CompletionSupport
 ContextPath CArgument Value[mkStuff]($0)
 ContextPath Value[mkStuff]
 Path mkStuff
@@ -1290,7 +1290,7 @@ Pexp_apply ...[352:3->352:23] (...[352:24->352:25])
 Completable: Cexpression CArgument Value[tArgCompletionTestFn]($0)
 Raw opens: 1 CompletionSupport.place holder
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionSupport.res
+Resolved opens 1 CompletionSupport
 ContextPath CArgument Value[tArgCompletionTestFn]($0)
 ContextPath Value[tArgCompletionTestFn]
 Path tArgCompletionTestFn
@@ -1326,7 +1326,7 @@ Pexp_apply ...[357:3->357:30] (~tVal357:32->357:36=...__ghost__[0:-1->0:-1])
 Completable: Cexpression CArgument Value[labeledTArgCompletionTestFn](~tVal)
 Raw opens: 1 CompletionSupport.place holder
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionSupport.res
+Resolved opens 1 CompletionSupport
 ContextPath CArgument Value[labeledTArgCompletionTestFn](~tVal)
 ContextPath Value[labeledTArgCompletionTestFn]
 Path labeledTArgCompletionTestFn
@@ -1363,7 +1363,7 @@ Pexp_field [362:10->362:17] _:[362:19->362:18]
 Completable: Cpath Value[someTyp].""
 Raw opens: 1 CompletionSupport.place holder
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionSupport.res
+Resolved opens 1 CompletionSupport
 ContextPath Value[someTyp].""
 ContextPath Value[someTyp]
 Path someTyp
@@ -1386,7 +1386,7 @@ Pexp_apply ...[380:13->380:17] (...[380:18->386:1])
 Completable: Cexpression CArgument Value[hook]($0)->recordBody
 Raw opens: 1 CompletionSupport.place holder
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionSupport.res
+Resolved opens 1 CompletionSupport
 ContextPath CArgument Value[hook]($0)
 ContextPath Value[hook]
 Path hook
@@ -1404,7 +1404,7 @@ Pexp_apply ...[380:13->380:17] (...[380:18->386:1])
 Completable: Cexpression CArgument Value[hook]($0)=ope->recordBody
 Raw opens: 1 CompletionSupport.place holder
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionSupport.res
+Resolved opens 1 CompletionSupport
 ContextPath CArgument Value[hook]($0)
 ContextPath Value[hook]
 Path hook
@@ -1423,7 +1423,7 @@ Pexp_field [388:10->388:17] _:[388:19->388:18]
 Completable: Cpath Value[someTyp].""
 Raw opens: 1 CompletionSupport.place holder
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionSupport.res
+Resolved opens 1 CompletionSupport
 ContextPath Value[someTyp].""
 ContextPath Value[someTyp]
 Path someTyp

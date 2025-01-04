@@ -9,7 +9,7 @@ Pexp_field [26:7->26:28] _:[30:2->26:29]
 Completable: Cpath Value[merge](Nolabel, Nolabel).""
 Raw opens: 1 Rxjs.place holder
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 Rxjs.res
+Resolved opens 1 Rxjs
 ContextPath Value[merge](Nolabel, Nolabel).""
 ContextPath Value[merge](Nolabel, Nolabel)
 ContextPath Value[merge]

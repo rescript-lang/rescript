@@ -144,7 +144,7 @@ posCursor:[42:8] posNoWhite:[42:7] Found expr:[42:3->0:-1]
 Completable: Cpath Value[nnn]->
 Raw opens: 1 SomeOtherModule.place holder
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionFromModule.res
+Resolved opens 1 CompletionFromModule
 ContextPath Value[nnn]->
 ContextPath Value[nnn]
 Path nnn
