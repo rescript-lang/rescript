@@ -453,13 +453,11 @@ See also [Unicode technical report #15](https://unicode.org/reports/tr15/) for d
 ## Examples
 
 ```rescript
-let string1 = "\uFB00"
-let string2 = "\u0066\u0066"
-Console.log(string1 === string2) // false
+let string1 = "\u00F1"
+let string2 = "\u006E\u0303"
 
-let normalizeString1 = String.normalize(string1)
-let normalizeString2 = String.normalize(string2)
-assert(normalizeString1 === normalizeString2)
+assert(string1 != string2) // true
+assertEqual(String.normalize(string1), String.normalize(string2))
 ```
 */
 @send

@@ -219,37 +219,37 @@ Path Belt.Int.
     "kind": 12,
     "tags": [],
     "detail": "(int, int) => int",
-    "documentation": {"kind": "markdown", "value": "\nMultiplication of two `int` values. Same as the multiplication from `Pervasives`.\n\n## Examples\n\n```rescript\nopen Belt.Int\nJs.log(2 * 2 === 4) /* true */\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\nMultiplication of two `int` values. Same as the multiplication from `Pervasives`.\n\n## Examples\n\n```rescript\nopen Belt.Int\nassertEqual(2 * 2, 4)\n```\n"}
   }, {
     "label": "Belt.Int./",
     "kind": 12,
     "tags": [],
     "detail": "(int, int) => int",
-    "documentation": {"kind": "markdown", "value": "\nDivision of two `int` values. Same as the division from `Pervasives`.\n\n## Examples\n\n```rescript\nopen Belt.Int\nJs.log(4 / 2 === 2); /* true */\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\nDivision of two `int` values. Same as the division from `Pervasives`.\n\n## Examples\n\n```rescript\nopen Belt.Int\nassertEqual(4 / 2, 2)\n```\n"}
   }, {
     "label": "Belt.Int.toString",
     "kind": 12,
     "tags": [],
     "detail": "int => string",
-    "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `string`. Uses the JavaScript `String` constructor under the hood.\n\n## Examples\n\n```rescript\nJs.log(Belt.Int.toString(1) === \"1\") /* true */\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `string`. Uses the JavaScript `String` constructor under the hood.\n\n## Examples\n\n```rescript\nBelt.Int.toString(1)->assertEqual(\"1\")\n```\n"}
   }, {
     "label": "Belt.Int.toFloat",
     "kind": 12,
     "tags": [],
     "detail": "int => float",
-    "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `float`.\n\n## Examples\n\n```rescript\nJs.log(Belt.Int.toFloat(1) === 1.0) /* true */\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `float`.\n\n## Examples\n\n```rescript\nBelt.Int.toFloat(1)->assertEqual(1.0)\n```\n"}
   }, {
     "label": "Belt.Int.-",
     "kind": 12,
     "tags": [],
     "detail": "(int, int) => int",
-    "documentation": {"kind": "markdown", "value": "\nSubtraction of two `int` values. Same as the subtraction from `Pervasives`.\n\n## Examples\n\n```rescript\nopen Belt.Int\nJs.log(2 - 1 === 1) /* true */\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\nSubtraction of two `int` values. Same as the subtraction from `Pervasives`.\n\n## Examples\n\n```rescript\nopen Belt.Int\nassertEqual(2 - 1, 1)\n```\n"}
   }, {
     "label": "Belt.Int.+",
     "kind": 12,
     "tags": [],
     "detail": "(int, int) => int",
-    "documentation": {"kind": "markdown", "value": "\nAddition of two `int` values. Same as the addition from `Pervasives`.\n\n## Examples\n\n```rescript\nopen Belt.Int\nJs.log(2 + 2 === 4) /* true */\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\nAddition of two `int` values. Same as the addition from `Pervasives`.\n\n## Examples\n\n```rescript\nopen Belt.Int\nassertEqual(2 + 2, 4)\n```\n"}
   }]
 
 Complete src/CompletionJsx.res 26:14
@@ -285,37 +285,37 @@ Path Belt.Int.
     "kind": 12,
     "tags": [],
     "detail": "(int, int) => int",
-    "documentation": {"kind": "markdown", "value": "\nMultiplication of two `int` values. Same as the multiplication from `Pervasives`.\n\n## Examples\n\n```rescript\nopen Belt.Int\nJs.log(2 * 2 === 4) /* true */\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\nMultiplication of two `int` values. Same as the multiplication from `Pervasives`.\n\n## Examples\n\n```rescript\nopen Belt.Int\nassertEqual(2 * 2, 4)\n```\n"}
   }, {
     "label": "Belt.Int./",
     "kind": 12,
     "tags": [],
     "detail": "(int, int) => int",
-    "documentation": {"kind": "markdown", "value": "\nDivision of two `int` values. Same as the division from `Pervasives`.\n\n## Examples\n\n```rescript\nopen Belt.Int\nJs.log(4 / 2 === 2); /* true */\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\nDivision of two `int` values. Same as the division from `Pervasives`.\n\n## Examples\n\n```rescript\nopen Belt.Int\nassertEqual(4 / 2, 2)\n```\n"}
   }, {
     "label": "Belt.Int.toString",
     "kind": 12,
     "tags": [],
     "detail": "int => string",
-    "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `string`. Uses the JavaScript `String` constructor under the hood.\n\n## Examples\n\n```rescript\nJs.log(Belt.Int.toString(1) === \"1\") /* true */\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `string`. Uses the JavaScript `String` constructor under the hood.\n\n## Examples\n\n```rescript\nBelt.Int.toString(1)->assertEqual(\"1\")\n```\n"}
   }, {
     "label": "Belt.Int.toFloat",
     "kind": 12,
     "tags": [],
     "detail": "int => float",
-    "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `float`.\n\n## Examples\n\n```rescript\nJs.log(Belt.Int.toFloat(1) === 1.0) /* true */\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `float`.\n\n## Examples\n\n```rescript\nBelt.Int.toFloat(1)->assertEqual(1.0)\n```\n"}
   }, {
     "label": "Belt.Int.-",
     "kind": 12,
     "tags": [],
     "detail": "(int, int) => int",
-    "documentation": {"kind": "markdown", "value": "\nSubtraction of two `int` values. Same as the subtraction from `Pervasives`.\n\n## Examples\n\n```rescript\nopen Belt.Int\nJs.log(2 - 1 === 1) /* true */\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\nSubtraction of two `int` values. Same as the subtraction from `Pervasives`.\n\n## Examples\n\n```rescript\nopen Belt.Int\nassertEqual(2 - 1, 1)\n```\n"}
   }, {
     "label": "Belt.Int.+",
     "kind": 12,
     "tags": [],
     "detail": "(int, int) => int",
-    "documentation": {"kind": "markdown", "value": "\nAddition of two `int` values. Same as the addition from `Pervasives`.\n\n## Examples\n\n```rescript\nopen Belt.Int\nJs.log(2 + 2 === 4) /* true */\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\nAddition of two `int` values. Same as the addition from `Pervasives`.\n\n## Examples\n\n```rescript\nopen Belt.Int\nassertEqual(2 + 2, 4)\n```\n"}
   }]
 
 Complete src/CompletionJsx.res 28:20

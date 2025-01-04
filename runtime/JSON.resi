@@ -297,7 +297,7 @@ JSON.stringifyWithFilterAndIndent(json, ["foo", "someNumber"], 2)
 external stringifyWithFilterAndIndent: (t, array<string>, int) => string = "JSON.stringify"
 
 /** 
-`stringifyAny(any, ~replacer=?, ~space=?)` 
+`stringifyAny(any, ~replacer=?, ~space=?)`
 
 Converts any type to a JSON string.
 The replacer describes how the value should be transformed. It is a function which receives a key and a value.
@@ -306,6 +306,7 @@ If the value contains circular references or `BigInt`s, the function will throw 
 If you want to stringify a JSON object, use `JSON.stringify` instead.
 
 ## Examples
+
 ```rescript
 let dict = Dict.fromArray([
   ("foo", JSON.Encode.string("bar")),
@@ -313,18 +314,24 @@ let dict = Dict.fromArray([
   ("someNumber", JSON.Encode.int(42)),
 ])
 
-JSON.stringifyAny(dict)
-// {"foo":"bar","hello":"world","someNumber":42}
+dict
+->JSON.stringifyAny
+->Option.getUnsafe
+->assertEqual(`{"foo":"bar","hello":"world","someNumber":42}`)
 
-JSON.stringifyAny(dict, ~space=2)
-// {
-//   "foo": "bar",
-//   "hello": "world",
-//   "someNumber": 42
-// }
+dict
+->JSON.stringifyAny(~space=2)
+->Option.getUnsafe
+->assertEqual(`{
+  "foo": "bar",
+  "hello": "world",
+  "someNumber": 42
+}`)
 
-JSON.stringifyAny(dict, ~replacer=Keys(["foo", "someNumber"]))
-// {"foo":"bar","someNumber":42}
+dict
+->JSON.stringifyAny(~replacer=Keys(["foo", "someNumber"]))
+->Option.getUnsafe
+->assertEqual(`{"foo":"bar","someNumber":42}`)
 
 let replacer = JSON.Replacer((_, value) => {
   let decodedValue = value->JSON.Decode.string
@@ -335,17 +342,22 @@ let replacer = JSON.Replacer((_, value) => {
   }
 })
 
-JSON.stringifyAny(dict, ~replacer)
-// {"foo":"BAR","hello":"WORLD","someNumber":42}
+dict
+->JSON.stringifyAny(~replacer)
+->Option.getUnsafe
+->assertEqual(`{"foo":"BAR","hello":"WORLD","someNumber":42}`)
 
 JSON.stringifyAny(() => "hello world")
-// None
+->assertEqual(None)
 
-BigInt.fromInt(0)->JSON.stringifyAny
-// exception
+// Raise a exception
+switch BigInt.fromInt(0)->JSON.stringifyAny {
+| exception _ => assert(true)
+| _ => assert(false)
+}
 ```
 
-## Exceptions 
+## Exceptions
 
 - Raises a TypeError if the value contains circular references.
 - Raises a TypeError if the value contains `BigInt`s.
@@ -356,7 +368,7 @@ external stringifyAny: ('a, ~replacer: replacer=?, ~space: int=?) => option<stri
   "JSON.stringify"
 
 /** 
-`stringifyAnyWithIndent(any, indentation)` 
+`stringifyAnyWithIndent(any, indentation)`
 
 Converts any type to a JSON string. The output will be indented.
 Stringifying a function or `undefined` will return `None`.
@@ -364,6 +376,7 @@ If the value contains circular references or `BigInt`s, the function will throw 
 If you want to stringify a JSON object, use `JSON.stringifyWithIndent` instead.
 
 ## Examples
+
 ```rescript
 let dict = Dict.fromArray([
   ("foo", JSON.Encode.string("bar")),
@@ -371,18 +384,21 @@ let dict = Dict.fromArray([
   ("someNumber", JSON.Encode.int(42)),
 ])
 
-JSON.stringifyAnyWithIndent(dict, 2)
-// {
-//   "foo": "bar",
-//   "hello": "world",
-//   "someNumber": 42
-// }
+dict
+->JSON.stringifyAnyWithIndent(2)
+->Option.getUnsafe
+->assertEqual(`{
+  "foo": "bar",
+  "hello": "world",
+  "someNumber": 42
+}`)
 
-JSON.stringifyAny(() => "hello world")
-// None
+JSON.stringifyAny(() => "hello world")->assertEqual(None)
 
-BigInt.fromInt(0)->JSON.stringifyAny
-// exception
+switch BigInt.fromInt(0)->JSON.stringifyAny {
+| exception _ => assert(true)
+| _ => assert(false)
+}
 ```
 
 ## Exceptions 
@@ -421,17 +437,20 @@ let replacer = (_, value) => {
   }
 }
 
-JSON.stringifyAnyWithReplacer(dict, replacer)
-// {"foo":"BAR","hello":"WORLD","someNumber":42}
+dict
+->JSON.stringifyAnyWithReplacer(replacer)
+->Option.getUnsafe
+->assertEqual(`{"foo":"BAR","hello":"WORLD","someNumber":42}`)
 
-JSON.stringifyAny(() => "hello world")
-// None
+JSON.stringifyAny(() => "hello world")->assertEqual(None)
 
-BigInt.fromInt(0)->JSON.stringifyAny
-// exception
+switch BigInt.fromInt(0)->JSON.stringifyAny {
+| exception _ => assert(true)
+| _ => assert(false)
+}
 ```
 
-## Exceptions 
+## Exceptions
 
 - Raises a TypeError if the value contains circular references.
 - Raises a TypeError if the value contains `BigInt`s.
@@ -442,7 +461,7 @@ BigInt.fromInt(0)->JSON.stringifyAny
 external stringifyAnyWithReplacer: ('a, (string, t) => t) => option<string> = "JSON.stringify"
 
 /** 
-`stringifyAnyWithReplacerAndIndent(json, replacer, indentation)` 
+`stringifyAnyWithReplacerAndIndent(json, replacer, indentation)`
 
 Converts any type to a JSON string. The output will be indented.
 The replacer describes how the value should be transformed. It is a function which receives a key and a value.
@@ -451,6 +470,7 @@ If the value contains circular references or `BigInt`s, the function will throw 
 If you want to stringify a JSON object, use `JSON.stringifyWithReplacerAndIndent` instead.
 
 ## Examples
+
 ```rescript
 let dict = Dict.fromArray([
   ("foo", JSON.Encode.string("bar")),
@@ -467,18 +487,17 @@ let replacer = (_, value) => {
   }
 }
 
-JSON.stringifyAnyWithReplacerAndIndent(dict, replacer, 2)
-// {
-//   "foo": "BAR",
-//   "hello": "WORLD",
-//   "someNumber": 42
-// }
+dict
+->JSON.stringifyAnyWithReplacer(replacer)
+->Option.getUnsafe
+->assertEqual(`{"foo":"BAR","hello":"WORLD","someNumber":42}`)
 
-JSON.stringifyAny(() => "hello world")
-// None
+JSON.stringifyAny(() => "hello world")->assertEqual(None)
 
-BigInt.fromInt(0)->JSON.stringifyAny
-// exception
+switch BigInt.fromInt(0)->JSON.stringifyAny {
+| exception _ => assert(true)
+| _ => assert(false)
+}
 ```
 
 ## Exceptions 
@@ -493,7 +512,7 @@ external stringifyAnyWithReplacerAndIndent: ('a, (string, t) => t, int) => optio
   "JSON.stringify"
 
 /** 
-`stringifyAnyWithFilter(json, filter)` 
+`stringifyAnyWithFilter(json, filter)`
 
 Converts any type to a JSON string.
 The filter is an array of keys, which should be included in the output.
@@ -502,6 +521,7 @@ If the value contains circular references or `BigInt`s, the function will throw 
 If you want to stringify a JSON object, use `JSON.stringifyWithFilter` instead.
 
 ## Examples
+
 ```rescript
 let dict = Dict.fromArray([
   ("foo", JSON.Encode.string("bar")),
@@ -509,17 +529,19 @@ let dict = Dict.fromArray([
   ("someNumber", JSON.Encode.int(42)),
 ])
 
-JSON.stringifyAnyWithFilter(dict, ["foo", "someNumber"])
-// {"foo": "bar","someNumber": 42}
+dict
+->JSON.stringifyAnyWithFilter(["foo", "someNumber"])
+->assertEqual(`{"foo":"bar","someNumber":42}`)
 
-JSON.stringifyAny(() => "hello world")
-// None
+JSON.stringifyAny(() => "hello world")->assertEqual(None)
 
-BigInt.fromInt(0)->JSON.stringifyAny
-// exception
+switch BigInt.fromInt(0)->JSON.stringifyAny {
+| exception _ => assert(true)
+| _ => assert(false)
+}
 ```
 
-## Exceptions 
+## Exceptions
 
 - Raises a TypeError if the value contains circular references.
 - Raises a TypeError if the value contains `BigInt`s.
@@ -530,7 +552,7 @@ BigInt.fromInt(0)->JSON.stringifyAny
 external stringifyAnyWithFilter: ('a, array<string>) => string = "JSON.stringify"
 
 /** 
-`stringifyAnyWithFilterAndIndent(json, filter, indentation)` 
+`stringifyAnyWithFilterAndIndent(json, filter, indentation)`
 
 Converts any type to a JSON string. The output will be indented.
 The filter is an array of keys, which should be included in the output.
@@ -539,6 +561,7 @@ If the value contains circular references or `BigInt`s, the function will throw 
 If you want to stringify a JSON object, use `JSON.stringifyWithFilterAndIndent` instead.
 
 ## Examples
+
 ```rescript
 let dict = Dict.fromArray([
   ("foo", JSON.Encode.string("bar")),
@@ -546,17 +569,31 @@ let dict = Dict.fromArray([
   ("someNumber", JSON.Encode.int(42)),
 ])
 
-JSON.stringifyAnyWithFilterAndIndent(dict, ["foo", "someNumber"], 2)
-// {
-//   "foo": "bar",
-//   "someNumber": 42
-// }
+dict
+->JSON.stringifyAny
+->Option.getUnsafe
+->assertEqual(`{"foo":"bar","hello":"world","someNumber":42}`)
 
-JSON.stringifyAny(() => "hello world")
-// None
+dict
+->JSON.stringifyAny(~space=2)
+->Option.getUnsafe
+->assertEqual(`{
+  "foo": "bar",
+  "hello": "world",
+  "someNumber": 42
+}`)
 
-BigInt.fromInt(0)->JSON.stringifyAny
-// exception
+dict
+->JSON.stringifyAny(~replacer=Keys(["foo", "someNumber"]))
+->Option.getUnsafe
+->assertEqual(`{"foo":"bar","someNumber":42}`)
+
+JSON.stringifyAny(() => "hello world")->assertEqual(None)
+
+switch BigInt.fromInt(0)->JSON.stringifyAny {
+| exception _ => assert(true)
+| _ => assert(false)
+}
 ```
 
 ## Exceptions 

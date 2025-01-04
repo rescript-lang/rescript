@@ -131,7 +131,9 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let s0 = Belt.Map.fromArray(~id=module(IntCmp), [(4, "4"), (1, "1"), (2, "2"), (3, "")])
 
-Belt.Map.findFirstBy(s0, (k, v) => k == 4) /* (4, "4") */
+s0
+->Belt.Map.findFirstBy((k, _) => k == 4)
+->assertEqual(Some(4, "4"))
 ```
 */
 let findFirstBy: (t<'k, 'v, 'id>, ('k, 'v) => bool) => option<('k, 'v)>

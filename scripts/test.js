@@ -12,6 +12,7 @@ let ounitTest = false;
 let mochaTest = false;
 let bsbTest = false;
 let formatTest = false;
+let runtimeDocstrings = false;
 
 if (process.argv.includes("-ounit")) {
   ounitTest = true;
@@ -29,11 +30,16 @@ if (process.argv.includes("-format")) {
   formatTest = true;
 }
 
+if (process.argv.includes("-docstrings")) {
+  runtimeDocstrings = true;
+}
+
 if (process.argv.includes("-all")) {
   ounitTest = true;
   mochaTest = true;
   bsbTest = true;
   formatTest = true;
+  runtimeDocstrings = true;
 }
 
 async function runTests() {
@@ -118,6 +124,62 @@ async function runTests() {
 
     if (hasError) {
       process.exit(1);
+    }
+  }
+
+  if (runtimeDocstrings) {
+    if (process.platform === "win32") {
+      console.log(`Skipping docstrings tests on ${process.platform}`);
+    } else {
+      console.log("Running runtime docstrings tests");
+
+      const generated_mocha_test_res = path.join(
+        "tests",
+        "docstring_tests",
+        "generated_mocha_test.res",
+      );
+
+      // Remove `generated_mocha_test.res` if file exists
+      if (fs.existsSync(generated_mocha_test_res)) {
+        console.log(`Removing ${generated_mocha_test_res}`);
+        fs.unlinkSync(generated_mocha_test_res);
+      }
+
+      cp.execSync(`${rescript_exe} build`, {
+        cwd: path.join(__dirname, "..", "tests/docstring_tests"),
+        stdio: [0, 1, 2],
+      });
+
+      // Generate rescript file with all tests `generated_mocha_test.res`
+      cp.execSync(
+        `node ${path.join("tests", "docstring_tests", "DocTest.res.mjs")}`,
+        {
+          cwd: path.join(__dirname, ".."),
+          stdio: [0, 1, 2],
+        },
+      );
+
+      // Build again to check if generated_mocha_test.res has syntax or type erros
+      cp.execSync(`${rescript_exe} build`, {
+        cwd: path.join(__dirname, "..", "tests/docstring_tests"),
+        stdio: [0, 1, 2],
+      });
+
+      // Format generated_mocha_test.res
+      console.log("Formatting generated_mocha_test.res");
+      cp.execSync(`./cli/rescript format ${generated_mocha_test_res}`, {
+        cwd: path.join(__dirname, ".."),
+        stdio: [0, 1, 2],
+      });
+
+      console.log("Run mocha test");
+      cp.execSync(
+        `npx mocha ${path.join("tests", "docstring_tests", "generated_mocha_test.res.mjs")}`,
+        {
+          cwd: path.join(__dirname, ".."),
+          stdio: [0, 1, 2],
+        },
+      );
     }
   }
 }

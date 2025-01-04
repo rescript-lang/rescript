@@ -48,18 +48,6 @@ that potentially is either exn, a JS error, or any other JS value really (e.g. f
 a value passed to a Promise.catch callback)
 
 **IMPORTANT**: This is an internal API and may be changed / removed any time in the future.
-
-## Examples
-
-```rescript
-switch (Js.Exn.unsafeAnyToExn("test")) {
-| Js.Exn.Error(v) =>
-  switch(Js.Exn.message(v)) {
-  | Some(str) => Js.log("We won't end up here")
-  | None => Js.log2("We will land here: ", v)
-  }
-}
-```
 */
 external anyToExnInternal: 'a => exn = "%wrap_exn"
 

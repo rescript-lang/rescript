@@ -186,7 +186,14 @@ See [ECMAScript Language Specification](https://tc39.es/ecma262/multipage/fundam
 let point = {"x": 1, "y": 2}
 point->Object.set("x", -7) // succeeds
 point->Object.seal->ignore
-point->Object.set("z", 9) // fails
+
+try {
+  point->Object.set("z", 9) // fails
+} catch {
+| Exn.Error(_) => assert(true)
+| _ => assert(false)
+}
+
 point->Object.set("x", 13) // succeeds
 ```
 */
@@ -204,7 +211,12 @@ See [ECMAScript Language Specification](https://tc39.es/ecma262/multipage/fundam
 let obj = {"a": 1}
 obj->Object.set("b", 2) // succeeds
 obj->Object.preventExtensions->ignore
-obj->Object.set("c", 3) // fails
+try {
+  obj->Object.set("c", 3) // fails
+} catch {
+| Exn.Error(_) => assert(true)
+| _ => assert(false)
+}
 ```
 */
 @val
@@ -219,11 +231,17 @@ See [ECMAScript Language Specification](https://tc39.es/ecma262/multipage/fundam
 
 ## Examples
 
- ```rescript
+```rescript
 let obj = {"a": 1}
 obj->Object.set("a", 2) // succeeds
 obj->Object.freeze->ignore
-obj->Object.set("a", 3) // fails
+
+try {
+  obj->Object.set("a", 3) // fails
+} catch {
+| Exn.Error(_) => assert(true)
+| _ => assert(false)
+}
 ```
 */
 @val

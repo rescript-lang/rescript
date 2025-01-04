@@ -24,6 +24,7 @@ let Pervasives$1 = {
   int_of_string_opt: Pervasives.int_of_string_opt,
   $at: Pervasives.$at,
   panic: Pervasives.panic,
+  assertEqual: Pervasives.assertEqual,
   length: Belt_List.length,
   size: Belt_List.size,
   head: Belt_List.head,

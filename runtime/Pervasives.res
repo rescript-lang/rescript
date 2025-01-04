@@ -337,11 +337,12 @@ type timeoutId = Js_global.timeoutId
 See [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.
 
 ## Examples
+
 ```rescript
-// Log to the console after 2 seconds (2000 milliseconds).
+// Log to the console after 200 milliseconds.
 let timeoutId = setTimeout(() => {
-  Console.log("This prints in 2 seconds.")
-}, 2000)
+  Console.log("This prints in 200 ms.")
+}, 200)
 ```
 */
 @val
@@ -355,11 +356,12 @@ The same as `setTimeout`, but allows you to pass a `float` instead of an `int` f
 See [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.
 
 ## Examples
+
 ```rescript
-// Log to the console after 2 seconds (2000 milliseconds).
+// Log to the console after 200 milliseconds.
 let timeoutId = setTimeoutFloat(() => {
-  Console.log("This prints in 2 seconds.")
-}, 2000.)
+  Console.log("This prints in 200 ms.")
+}, 200.)
 ```
 */
 @val
@@ -371,6 +373,7 @@ external setTimeoutFloat: (unit => unit, float) => timeoutId = "setTimeout"
 See [`clearTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/clearTimeout) on MDN.
 
 ## Examples
+
 ```rescript
 let timeoutId = setTimeout(() => {
   Console.log("This prints in 2 seconds.")
@@ -396,11 +399,16 @@ type intervalId = Js_global.intervalId
 See [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.
 
 ## Examples
+
 ```rescript
-// Log to the console ever 2 seconds (2000 milliseconds).
+// Log to the console ever 200 ms (200 milliseconds).
 let intervalId = setInterval(() => {
-  Console.log("This prints every 2 seconds.")
-}, 2000)
+  Console.log("This prints every 200 ms.")
+}, 200)
+
+let timeoutId = setTimeout(() => {
+  clearInterval(intervalId)
+}, 500)
 ```
 */
 @val
@@ -414,11 +422,17 @@ The same as `setInterval`, but allows you to pass a `float` instead of an `int` 
 See [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.
 
 ## Examples
+
 ```rescript
-// Log to the console ever 2 seconds (2000 milliseconds).
+// Log to the console ever 2 seconds (200 milliseconds).
 let intervalId = setIntervalFloat(() => {
-  Console.log("This prints every 2 seconds.")
-}, 2000.)
+  Console.log("This prints every 200 ms")
+}, 200.)
+
+// Stop the interval after 500 ms
+let timeoutId = setTimeoutFloat(() => {
+  clearInterval(intervalId)
+}, 500.0)
 ```
 */
 @val
@@ -430,15 +444,16 @@ external setIntervalFloat: (unit => unit, float) => intervalId = "setInterval"
 See [`clearInterval`](https://developer.mozilla.org/en-US/docs/Web/API/clearInterval) on MDN.
 
 ## Examples
+
 ```rescript
 let intervalId = setInterval(() => {
-  Console.log("This prints in 2 seconds.")
-}, 2000)
+  Console.log("This prints in 100 ms")
+}, 100)
 
-// Stop the interval after 10 seconds
+// Stop the interval after 500 ms
 let timeoutId = setTimeout(() => {
   clearInterval(intervalId)
-}, 10000)
+}, 500)
 ```
 */
 @val
@@ -564,3 +579,20 @@ type undefined<+'a> = Js.undefined<'a>
 type nullable<+'a> = Js.nullable<'a>
 
 let panic = Error.panic
+
+/**
+`assertEqual(a, b)` check if `a` is equal `b`. If not raise a panic exception
+
+## Examples
+
+```rescript
+list{1, 2}
+->List.tailExn
+->assertEqual(list{2})
+```
+*/
+let assertEqual = (a, b) => {
+  if a != b {
+    assert(false)
+  }
+}
