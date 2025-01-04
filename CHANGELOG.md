@@ -15,6 +15,7 @@
 #### :house: Internal
 
 - AST cleanup: use inline record for Pexp_fun. https://github.com/rescript-lang/rescript/pull/7213
+- Add support for "dot completion everywhere" (Ported from https://github.com/rescript-lang/rescript-vscode/pull/1054). https://github.com/rescript-lang/rescript/pull/7226
 
 #### :nail_care: Polish
 
