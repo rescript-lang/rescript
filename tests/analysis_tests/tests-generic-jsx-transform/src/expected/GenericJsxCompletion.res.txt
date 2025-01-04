@@ -102,7 +102,7 @@ posCursor:[20:24] posNoWhite:[20:23] Found expr:[20:10->20:24]
 Completable: Cpath Value[someString]->st <<jsx>>
 Raw opens: 1 GenericJsx.place holder
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 GenericJsx.res
+Resolved opens 1 GenericJsx
 ContextPath Value[someString]->st <<jsx>>
 ContextPath Value[someString]
 Path someString
