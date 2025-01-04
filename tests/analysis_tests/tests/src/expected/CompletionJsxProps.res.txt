@@ -80,6 +80,16 @@ Path CompletionSupport.TestComponent.make
       "filePath": "src/CompletionJsxProps.res"
     }
   }, {
+    "label": "TypeArgCtx",
+    "kind": 9,
+    "tags": [],
+    "detail": "module TypeArgCtx",
+    "documentation": null,
+    "data": {
+      "modulePath": "TypeArgCtx",
+      "filePath": "src/CompletionJsxProps.res"
+    }
+  }, {
     "label": "TypeAtPosCompletion",
     "kind": 9,
     "tags": [],

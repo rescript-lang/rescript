@@ -646,7 +646,7 @@ let rec resolveNested ?typeArgContext ~env ~full ~nested ?ctx
         Toption (env, ExtractedType typ) ) ->
       if Debug.verbose () then
         print_endline "[nested]--> moving into option Some";
-      typ |> resolveNested ~env ~full ~nested
+      typ |> resolveNested ?typeArgContext ~env ~full ~nested
     | ( NVariantPayload {constructorName = "Some"; itemNum = 0},
         Toption (env, TypeExpr typ) ) ->
       if Debug.verbose () then
@@ -706,7 +706,8 @@ let rec resolveNested ?typeArgContext ~env ~full ~nested ?ctx
       | Some {args = InlineRecord fields} when itemNum = 0 ->
         if Debug.verbose () then
           print_endline "[nested]--> found constructor (inline record)";
-        TinlineRecord {env; fields} |> resolveNested ~env ~full ~nested
+        TinlineRecord {env; fields}
+        |> resolveNested ?typeArgContext ~env ~full ~nested
       | _ -> None)
     | ( NPolyvariantPayload {constructorName; itemNum},
         Tpolyvariant {env; constructors} ) -> (
@@ -725,7 +726,7 @@ let rec resolveNested ?typeArgContext ~env ~full ~nested ?ctx
           |> Utils.Option.flatMap (fun (typ, typeArgContext) ->
                  typ |> resolveNested ?typeArgContext ~env ~full ~nested)))
     | NArray, Tarray (env, ExtractedType typ) ->
-      typ |> resolveNested ~env ~full ~nested
+      typ |> resolveNested ?typeArgContext ~env ~full ~nested
     | NArray, Tarray (env, TypeExpr typ) ->
       typ
       |> extractType ~env ~package:full.package

@@ -1,0 +1,19 @@
+Complete src/TypeArgCtx.res 7:36
+posCursor:[7:36] posNoWhite:[7:35] Found pattern:[7:26->7:39]
+Ppat_construct Ok:[7:26->7:28]
+posCursor:[7:36] posNoWhite:[7:35] Found pattern:[7:29->7:38]
+Completable: Cpattern Value[catchResult]->variantPayload::Ok($0), recordField(value)
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[catchResult]
+Path catchResult
+[{
+    "label": "{}",
+    "kind": 22,
+    "tags": [],
+    "detail": "someTyp",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype someTyp = {test: bool}\n```"},
+    "sortText": "A",
+    "insertText": "{$0}",
+    "insertTextFormat": 2
+  }]
+

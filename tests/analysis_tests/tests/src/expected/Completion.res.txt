@@ -2097,6 +2097,16 @@ Path T
       "filePath": "src/Completion.res"
     }
   }, {
+    "label": "TypeArgCtx",
+    "kind": 9,
+    "tags": [],
+    "detail": "module TypeArgCtx",
+    "documentation": null,
+    "data": {
+      "modulePath": "TypeArgCtx",
+      "filePath": "src/Completion.res"
+    }
+  }, {
     "label": "TypeAtPosCompletion",
     "kind": 9,
     "tags": [],
