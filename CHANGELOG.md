@@ -12,6 +12,10 @@
 
 # 12.0.0-alpha.8 (Unreleased)
 
+#### :bug: Bug fix
+
+- Editor: Fix issue where pipe completions would not trigger with generic type arguments. https://github.com/rescript-lang/rescript/pull/7231
+
 # 12.0.0-alpha.7
 
 #### :bug: Bug fix

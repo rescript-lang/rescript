@@ -16,6 +16,12 @@ See main CONTRIBUTING.md's repo structure. Additionally, `examples/` is a conven
 dune exec -- rescript-editor-analysis --help
 ```
 
+Add verbose logging via:
+
+```shell
+dune exec -- rescript-editor-analysis debug-dump verbose test
+```
+
 ## History
 
 This project is based on a fork of [Reason Language Server](https://github.com/jaredly/reason-language-server).
