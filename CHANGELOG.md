@@ -10,7 +10,7 @@
 > - :house: [Internal]
 > - :nail_care: [Polish]
 
-# 12.0.0-alpha.7 (Unreleased)
+# 12.0.0-alpha.7
 
 #### :bug: Bug fix
 
@@ -23,7 +23,7 @@
 #### :house: Internal
 
 - AST cleanup: use inline record for Pexp_fun. https://github.com/rescript-lang/rescript/pull/7213
-- Add support for "dot completion everywhere" (Ported from https://github.com/rescript-lang/rescript-vscode/pull/1054). https://github.com/rescript-lang/rescript/pull/7226
+- Add support for "dot completion everywhere" (ported from https://github.com/rescript-lang/rescript-vscode/pull/1054). https://github.com/rescript-lang/rescript/pull/7226
 - Add assertions to stdlib docstring examples. Extract examples into Mocha tests, compile and run the tests in CI. https://github.com/rescript-lang/rescript/pull/7219
 
 # 12.0.0-alpha.6
