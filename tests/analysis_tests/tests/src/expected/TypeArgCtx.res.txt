@@ -6,14 +6,9 @@ Completable: Cpattern Value[catchResult]->variantPayload::Ok($0), recordField(va
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[catchResult]
 Path catchResult
-[{
-    "label": "{}",
-    "kind": 22,
-    "tags": [],
-    "detail": "someTyp",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype someTyp = {test: bool}\n```"},
-    "sortText": "A",
-    "insertText": "{$0}",
-    "insertTextFormat": 2
-  }]
+Completable: Cpath Value[Ok]
+Package opens Pervasives.JsxModules.place holder
+ContextPath Value[Ok]
+Path Ok
+[]
 
