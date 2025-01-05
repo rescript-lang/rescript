@@ -270,7 +270,7 @@ let extractFunctionTypeWithEnv ~env ~package typ =
     | Tconstr (path, typeArgs, _) -> (
       match References.digConstructor ~env ~package path with
       | Some
-          ( env,
+          ( _env,
             {
               item = {decl = {type_manifest = Some t1; type_params = typeParams}};
             } ) ->
@@ -1168,6 +1168,9 @@ let transformCompletionToPipeCompletion ?(synthetic = false) ~env ?posOfDot
     unique id `SomeFile.SomeModule.x`.*)
 let rec findRootTypeId ~full ~env (t : Types.type_expr) =
   let debug = false in
+  (* Printf.printf "processing:\n%s \n\n" (PrintType.printExpr t);
+     Printtyp.raw_type_expr Format.std_formatter t;
+     print_endline(""); *)
   match t.desc with
   | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> findRootTypeId ~full ~env t1
   | Tconstr (path, _, _) -> (
