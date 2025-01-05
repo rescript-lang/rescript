@@ -1107,6 +1107,8 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
       if expr.pexp_loc |> Loc.hasPos ~pos:posNoWhite && !result = None then (
         setFound ();
         match expr.pexp_desc with
+        | Pexp_extension ({txt = "obj"}, PStr [str_item]) ->
+          Ast_iterator.default_iterator.structure_item iterator str_item
         | Pexp_extension ({txt}, _) -> setResult (CextensionNode txt)
         | Pexp_constant _ -> setResult Cnone
         | Pexp_ident lid ->

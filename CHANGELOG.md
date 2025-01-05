@@ -16,6 +16,7 @@
 
 - Editor: Fix issue where pipe completions would not trigger with generic type arguments. https://github.com/rescript-lang/rescript/pull/7231
 - Fix leftover assert false in code for `null != undefined`. https://github.com/rescript-lang/rescript/pull/7232
+- Editor: Fix issue where completions would not show up inside of object bodies.
 
 # 12.0.0-alpha.7
 
