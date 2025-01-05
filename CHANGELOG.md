@@ -23,6 +23,7 @@
 - Handle absolute file paths in gentype. https://github.com/rescript-lang/rescript-compiler/pull/7111
 - Fix "rescript format" with many files. https://github.com/rescript-lang/rescript-compiler/pull/7081
 - Fix exponential notation syntax. https://github.com/rescript-lang/rescript/pull/7174
+- Fix formatter handling of wildcard in pattern matching records with no fields specified. https://github.com/rescript-lang/rescript/pull/7224
 
 #### :house: Internal
 
