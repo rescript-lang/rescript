@@ -1752,9 +1752,7 @@ let neq_null_undefined_boolean ?comment (a : t) (b : t) =
     true_
   | Null, Null | Undefined _, Undefined _ -> false_
   | Null, Undefined _ | Undefined _, Null -> true_
-  | _ ->
-    let _ = assert false in
-    {expression_desc = Bin (NotEqEq, a, b); comment}
+  | _ -> {expression_desc = Bin (NotEqEq, a, b); comment}
 
 let make_exception (s : string) =
   pure_runtime_call Primitive_modules.exceptions Literals.create [str s]
