@@ -50,22 +50,6 @@ let raise_error_multiple_component ~loc =
     "Only one component definition is allowed for each module. Move to a \
      submodule or other file if necessary."
 
-let remove_arity binding =
-  let rec remove_arity_record expr =
-    match expr.pexp_desc with
-    | _ when Ast_uncurried.expr_is_uncurried_fun expr ->
-      Ast_uncurried.expr_extract_uncurried_fun expr
-    | Pexp_newtype (label, e) ->
-      {expr with pexp_desc = Pexp_newtype (label, remove_arity_record e)}
-    | Pexp_apply (forward_ref, [(label, e)]) ->
-      {
-        expr with
-        pexp_desc = Pexp_apply (forward_ref, [(label, remove_arity_record e)]);
-      }
-    | _ -> expr
-  in
-  {binding with pvb_expr = remove_arity_record binding.pvb_expr}
-
 let async_component ~async expr =
   if async then
     let open Ast_helper in

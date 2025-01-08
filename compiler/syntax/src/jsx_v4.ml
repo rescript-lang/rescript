@@ -927,7 +927,6 @@ let vb_match_expr named_arg_list expr =
 let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
   if Jsx_common.has_attr_on_binding Jsx_common.has_attr binding then (
     check_multiple_components ~config ~loc:pstr_loc;
-    let binding = Jsx_common.remove_arity binding in
     let core_type_of_attr =
       Jsx_common.core_type_of_attrs binding.pvb_attributes
     in
@@ -1173,12 +1172,10 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     (Some props_record_type, binding, new_binding))
   else if Jsx_common.has_attr_on_binding Jsx_common.has_attr_with_props binding
   then
-    let modified_binding = Jsx_common.remove_arity binding in
     let modified_binding =
       {
-        modified_binding with
-        pvb_attributes =
-          modified_binding.pvb_attributes |> List.filter other_attrs_pure;
+        binding with
+        pvb_attributes = binding.pvb_attributes |> List.filter other_attrs_pure;
       }
     in
     let fn_name = get_fn_name modified_binding.pvb_pat in
