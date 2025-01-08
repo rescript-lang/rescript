@@ -111,8 +111,6 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
     {e with pexp_desc = Pexp_constant (Pconst_integer (s, None))}
   (* End rewriting *)
   | Pexp_newtype (s, body) ->
-    let async = Ast_async.has_async_payload e.pexp_attributes in
-    let body = Ast_async.add_async_attribute ~async body in
     let res = self.expr self body in
     {e with pexp_desc = Pexp_newtype (s, res)}
   | Pexp_fun {arg_label = label; lhs = pat; rhs = body} -> (
