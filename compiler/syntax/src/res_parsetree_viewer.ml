@@ -166,32 +166,8 @@ type fun_param_kind =
   | NewTypes of {attrs: Parsetree.attributes; locs: string Asttypes.loc list}
 
 let fun_expr expr =
-  (* Turns (type t, type u, type z) into "type t u z" *)
-  let rec collect_new_types acc return_expr =
-    match return_expr with
-    | {pexp_desc = Pexp_newtype (string_loc, return_expr); pexp_attributes = []}
-      ->
-      collect_new_types (string_loc :: acc) return_expr
-    | return_expr -> (List.rev acc, return_expr)
-  in
-  let rec collect ~n_fun ~params expr =
+  let rec collect_params ~n_fun ~params expr =
     match expr with
-    | {
-     pexp_desc =
-       Pexp_fun
-         {
-           arg_label = Nolabel;
-           default = None;
-           lhs = {ppat_desc = Ppat_var {txt = "__x"}};
-           rhs = {pexp_desc = Pexp_apply _};
-         };
-    } ->
-      (List.rev params, rewrite_underscore_apply expr)
-    | {pexp_desc = Pexp_newtype (string_loc, rest); pexp_attributes = attrs}
-      when n_fun = 0 ->
-      let string_locs, return_expr = collect_new_types [string_loc] rest in
-      let param = NewTypes {attrs; locs = string_locs} in
-      collect ~n_fun ~params:(param :: params) return_expr
     | {
      pexp_desc =
        Pexp_fun
@@ -202,23 +178,28 @@ let fun_expr expr =
            rhs = return_expr;
            arity;
          };
-     pexp_attributes = [];
+     pexp_attributes = attrs;
     }
       when arity = None || n_fun = 0 ->
-      let parameter =
-        Parameter {attrs = []; lbl; default_expr; pat = pattern}
-      in
-      collect ~n_fun:(n_fun + 1) ~params:(parameter :: params) return_expr
+      let parameter = Parameter {attrs; lbl; default_expr; pat = pattern} in
+      collect_params ~n_fun:(n_fun + 1) ~params:(parameter :: params) return_expr
     (* If a fun has an attribute, then it stops here and makes currying.
        i.e attributes outside of (...), uncurried `(.)` and `async` make currying *)
-    | {pexp_desc = Pexp_fun _} -> (List.rev params, expr)
-    | expr when n_fun = 0 && Ast_uncurried.expr_is_uncurried_fun expr ->
-      let expr = Ast_uncurried.expr_extract_uncurried_fun expr in
-      collect ~n_fun ~params expr
-    | expr -> (List.rev params, expr)
+    | _ -> (List.rev params, expr)
+  in
+  (* Turns (type t, type u, type z) into "type t u z" *)
+  let rec collect_new_types acc return_expr =
+    match return_expr with
+    | {pexp_desc = Pexp_newtype (string_loc, return_expr)} ->
+      collect_new_types (string_loc :: acc) return_expr
+    | return_expr -> (List.rev acc, return_expr)
   in
   match expr with
-  | _ -> collect ~n_fun:0 ~params:[] {expr with pexp_attributes = []}
+  | {pexp_desc = Pexp_newtype (string_loc, rest)} ->
+    let string_locs, return_expr = collect_new_types [string_loc] rest in
+    let param = NewTypes {attrs = []; locs = string_locs} in
+    collect_params ~n_fun:0 ~params:[param] return_expr
+  | _ -> collect_params ~n_fun:0 ~params:[] {expr with pexp_attributes = []}
 
 let process_braces_attr expr =
   match expr.pexp_attributes with
