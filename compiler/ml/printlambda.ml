@@ -125,6 +125,7 @@ let primitive ppf = function
   | Plazyforce -> fprintf ppf "force"
   | Pccall p -> fprintf ppf "%s" p.prim_name
   | Praise k -> fprintf ppf "%s" (Lambda.raise_kind k)
+  | Passert -> fprintf ppf "assert"
   | Pobjcomp Ceq -> fprintf ppf "=="
   | Pobjcomp Cneq -> fprintf ppf "!="
   | Pobjcomp Clt -> fprintf ppf "<"

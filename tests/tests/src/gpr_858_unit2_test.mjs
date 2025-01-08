@@ -15,18 +15,18 @@ for (let i = 1; i <= 2; ++i) {
       };
       return;
     }
-    if (i === n) {
-      return;
+    if (i !== n) {
+      throw {
+        RE_EXN_ID: "Assert_failure",
+        _1: [
+          "gpr_858_unit2_test.res",
+          6,
+          13
+        ],
+        Error: new Error()
+      };
     }
-    throw {
-      RE_EXN_ID: "Assert_failure",
-      _1: [
-        "gpr_858_unit2_test.res",
-        6,
-        13
-      ],
-      Error: new Error()
-    };
+    
   };
   f(0, i);
 }

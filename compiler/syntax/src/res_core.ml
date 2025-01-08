@@ -2140,15 +2140,9 @@ and parse_unary_expr p =
  * If you have `a + b`, `a` and `b` both represent
  * the operands of the binary expression with opeartor `+` *)
 and parse_operand_expr ~context p =
-  let start_pos = p.Parser.start_pos in
   let attrs = ref (parse_attributes p) in
   let expr =
     match p.Parser.token with
-    | Assert ->
-      Parser.next p;
-      let expr = parse_expr p in
-      let loc = mk_loc start_pos p.prev_end_pos in
-      Ast_helper.Exp.assert_ ~loc expr
     | Lident "async"
     (* we need to be careful when we're in a ternary true branch:
        `condition ? ternary-true-branch : false-branch`

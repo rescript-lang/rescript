@@ -536,7 +536,6 @@ try {
   };
 } catch (raw_exn) {
   let exn = Primitive_exceptions.internalToException(raw_exn);
-  let exit = 0;
   if (exn.RE_EXN_ID === Cycle) {
     let match = exn._1;
     if (match && match.hd === "go") {
@@ -548,20 +547,40 @@ try {
           if (!(match$3 && !(match$3.hd !== "go" || match$3.tl))) {
             exit = 1;
           }
-          
         } else {
-          exit = 1;
+          throw {
+            RE_EXN_ID: "Assert_failure",
+            _1: [
+              "topsort_test.res",
+              154,
+              7
+            ],
+            Error: new Error()
+          };
         }
       } else {
-        exit = 1;
+        throw {
+          RE_EXN_ID: "Assert_failure",
+          _1: [
+            "topsort_test.res",
+            154,
+            7
+          ],
+          Error: new Error()
+        };
       }
     } else {
-      exit = 1;
+      throw {
+        RE_EXN_ID: "Assert_failure",
+        _1: [
+          "topsort_test.res",
+          154,
+          7
+        ],
+        Error: new Error()
+      };
     }
   } else {
-    exit = 1;
-  }
-  if (exit === 1) {
     throw {
       RE_EXN_ID: "Assert_failure",
       _1: [
@@ -572,7 +591,6 @@ try {
       Error: new Error()
     };
   }
-  
 }
 
 let String_set;
