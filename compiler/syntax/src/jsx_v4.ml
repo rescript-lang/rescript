@@ -1125,7 +1125,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       | _ -> Pat.record (List.rev patterns_with_label) Open
     in
     let expression =
-      Exp.fun_ ~arity:(Some 1) Nolabel None
+      Exp.fun_ ~arity:(Some 1) ~async:is_async Nolabel None
         (Pat.constraint_ record_pattern
            (Typ.constr ~loc:empty_loc
               {txt = Lident "props"; loc = empty_loc}
@@ -1140,7 +1140,6 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
                 | _ -> [Typ.any ()]))))
         expression
     in
-    let expression = Ast_async.add_async_attribute ~async:is_async expression in
     let expression =
       (* Add new tupes (type a,b,c) to make's definition *)
       newtypes

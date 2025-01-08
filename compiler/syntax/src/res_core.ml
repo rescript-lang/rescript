@@ -1537,7 +1537,7 @@ and parse_ternary_expr left_operand p =
   | _ -> left_operand
 
 and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
-    ?context ?term_parameters p =
+    ?context ?term_parameters ~async p =
   let start_pos = p.Parser.start_pos in
   Parser.leave_breadcrumb p Grammar.Es6ArrowExpr;
   (* Parsing function parameters and attributes:
@@ -1609,7 +1609,9 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
       term_parameters body
   in
   let arrow_expr =
-    Ast_uncurried.uncurried_fun ~arity:(List.length term_parameters) arrow_expr
+    Ast_uncurried.uncurried_fun
+      ~arity:(List.length term_parameters)
+      ~async arrow_expr
   in
   let arrow_expr =
     match type_param_opt with
@@ -2159,7 +2161,7 @@ and parse_operand_expr ~context p =
       then
         let arrow_attrs = !attrs in
         let () = attrs := [] in
-        parse_es6_arrow_expression ~arrow_attrs ~context p
+        parse_es6_arrow_expression ~async:false ~arrow_attrs ~context p
       else parse_unary_expr p
   in
   (* let endPos = p.Parser.prevEndPos in *)
@@ -3000,7 +3002,7 @@ and parse_braced_or_record_expr p =
         let loc = mk_loc start_pos ident_end_pos in
         let ident = Location.mkloc (Longident.last path_ident.txt) loc in
         let a =
-          parse_es6_arrow_expression
+          parse_es6_arrow_expression ~async:false
             ~term_parameters:
               [
                 {
@@ -3303,8 +3305,8 @@ and parse_expr_block ?first p =
 and parse_async_arrow_expression ?(arrow_attrs = []) p =
   let start_pos = p.Parser.start_pos in
   Parser.expect (Lident "async") p;
-  Ast_async.add_async_attribute ~async:true
-    (parse_es6_arrow_expression ~arrow_attrs ~arrow_start_pos:(Some start_pos) p)
+  parse_es6_arrow_expression ~async:true ~arrow_attrs
+    ~arrow_start_pos:(Some start_pos) p
 
 and parse_await_expression p =
   let await_loc = mk_loc p.Parser.start_pos p.end_pos in

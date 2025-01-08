@@ -4,18 +4,6 @@ let rec dig_async_payload_from_function (expr : Parsetree.expression) =
   | Pexp_newtype (_, body) -> dig_async_payload_from_function body
   | _ -> false
 
-let add_async_attribute ~async (body : Parsetree.expression) =
-  if async then
-    let rec add_to_fun (exp : Parsetree.expression) =
-      match exp.pexp_desc with
-      | Pexp_newtype (txt, e) ->
-        {exp with pexp_desc = Pexp_newtype (txt, add_to_fun e)}
-      | Pexp_fun f -> {exp with pexp_desc = Pexp_fun {f with async}}
-      | _ -> exp
-    in
-    add_to_fun body
-  else body
-
 let add_promise_type ?(loc = Location.none) ~async
     (result : Parsetree.expression) =
   if async then
