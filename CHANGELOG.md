@@ -17,6 +17,11 @@
 - Editor: Fix issue where pipe completions would not trigger with generic type arguments. https://github.com/rescript-lang/rescript/pull/7231
 - Fix leftover assert false in code for `null != undefined`. https://github.com/rescript-lang/rescript/pull/7232
 
+#### :house: Internal
+
+- AST cleanup: Prepare for ast async cleanup: Refactor code for "@res.async" payload handling and clean up handling of type and term parameters, so that now each `=>` in a function definition corresponds to a function. https://github.com/rescript-lang/rescript/pull/7223
+
+
 # 12.0.0-alpha.7
 
 #### :bug: Bug fix
