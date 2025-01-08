@@ -1597,25 +1597,19 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
   Parser.eat_breadcrumb p;
   let end_pos = p.prev_end_pos in
   let type_param_opt, term_parameters = parameters in
-  let _paramNum, arrow_expr =
+  let arrow_expr =
     List.fold_right
-      (fun parameter (term_param_num, expr) ->
+      (fun parameter expr ->
         let {attrs; p_label = lbl; expr = default_expr; pat; p_pos = start_pos}
             =
           parameter
         in
         let loc = mk_loc start_pos end_pos in
-        let fun_expr =
-          Ast_helper.Exp.fun_ ~loc ~attrs ~arity:None lbl default_expr pat expr
-        in
-        if term_param_num = 1 then
-          ( term_param_num - 1,
-            Ast_uncurried.uncurried_fun
-              ~arity:(List.length term_parameters)
-              fun_expr )
-        else (term_param_num - 1, fun_expr))
-      term_parameters
-      (List.length term_parameters, body)
+        Ast_helper.Exp.fun_ ~loc ~attrs ~arity:None lbl default_expr pat expr)
+      term_parameters body
+  in
+  let arrow_expr =
+    Ast_uncurried.uncurried_fun ~arity:(List.length term_parameters) arrow_expr
   in
   let arrow_expr =
     match type_param_opt with
