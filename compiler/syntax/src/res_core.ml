@@ -182,25 +182,52 @@ type typ_def_or_ext =
     }
   | TypeExt of Parsetree.type_extension
 
-type labelled_parameter =
-  | TermParameter of {
-      attrs: Parsetree.attributes;
-      label: Asttypes.arg_label;
-      expr: Parsetree.expression option;
-      pat: Parsetree.pattern;
-      pos: Lexing.position;
-    }
-  | TypeParameter of {
-      attrs: Parsetree.attributes;
-      locs: string Location.loc list;
-      pos: Lexing.position;
-    }
+type fundef_type_param = {
+  attrs: Parsetree.attributes;
+  locs: string Location.loc list;
+  p_pos: Lexing.position;
+}
+
+type fundef_term_param = {
+  attrs: Parsetree.attributes;
+  p_label: Asttypes.arg_label;
+  expr: Parsetree.expression option;
+  pat: Parsetree.pattern;
+  p_pos: Lexing.position;
+}
+
+(* Single parameter of a function definition  (type a b, x, ~y) *)
+type fundef_parameter =
+  | TermParameter of fundef_term_param
+  | TypeParameter of fundef_type_param
 
 type record_pattern_item =
   | PatUnderscore
   | PatField of (Ast_helper.lid * Parsetree.pattern * bool (* optional *))
 
 type context = OrdinaryExpr | TernaryTrueBranchExpr | WhenExpr
+
+(* Extracts type and term parameters from a list of function definition parameters, combining all type parameters into one *)
+let rec extract_fundef_params ~(type_acc : fundef_type_param option)
+    ~(term_acc : fundef_term_param list) (params : fundef_parameter list) :
+    fundef_type_param option * fundef_term_param list =
+  match params with
+  | TermParameter tp :: rest ->
+    extract_fundef_params ~type_acc ~term_acc:(tp :: term_acc) rest
+  | TypeParameter tp :: rest ->
+    let type_acc =
+      match type_acc with
+      | Some tpa ->
+        Some
+          {
+            attrs = tpa.attrs @ tp.attrs;
+            locs = tpa.locs @ tp.locs;
+            p_pos = tpa.p_pos;
+          }
+      | None -> Some tp
+    in
+    extract_fundef_params ~type_acc ~term_acc rest
+  | [] -> (type_acc, List.rev term_acc)
 
 let get_closing_token = function
   | Token.Lparen -> Token.Rparen
@@ -1510,7 +1537,7 @@ and parse_ternary_expr left_operand p =
   | _ -> left_operand
 
 and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
-    ?context ?parameters p =
+    ?context ?term_parameters p =
   let start_pos = p.Parser.start_pos in
   Parser.leave_breadcrumb p Grammar.Es6ArrowExpr;
   (* Parsing function parameters and attributes:
@@ -1520,8 +1547,8 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
      2. Attributes inside `(...)` are added to the arguments regardless of whether
      labeled, optional or nolabeled *)
   let parameters =
-    match parameters with
-    | Some params -> params
+    match term_parameters with
+    | Some params -> (None, params)
     | None -> parse_parameters p
   in
   let parameters =
@@ -1532,15 +1559,23 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
       | None -> pos
     in
     match parameters with
-    | TermParameter p :: rest ->
-      TermParameter
-        {p with attrs = update_attrs p.attrs; pos = update_pos p.pos}
-      :: rest
-    | TypeParameter p :: rest ->
-      TypeParameter
-        {p with attrs = update_attrs p.attrs; pos = update_pos p.pos}
-      :: rest
-    | [] -> parameters
+    | None, termp :: rest ->
+      ( None,
+        {
+          termp with
+          attrs = update_attrs termp.attrs;
+          p_pos = update_pos termp.p_pos;
+        }
+        :: rest )
+    | Some (tpa : fundef_type_param), term_params ->
+      ( Some
+          {
+            tpa with
+            attrs = update_attrs tpa.attrs;
+            p_pos = update_pos tpa.p_pos;
+          },
+        term_params )
+    | _ -> parameters
   in
   let return_type =
     match p.Parser.token with
@@ -1561,32 +1596,32 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
   in
   Parser.eat_breadcrumb p;
   let end_pos = p.prev_end_pos in
-  let term_parameters =
-    parameters
-    |> List.filter (function
-         | TermParameter _ -> true
-         | TypeParameter _ -> false)
-  in
-  let _paramNum, arrow_expr, _arity =
+  let type_param_opt, term_parameters = parameters in
+  let _paramNum, arrow_expr =
     List.fold_right
-      (fun parameter (term_param_num, expr, arity) ->
-        match parameter with
-        | TermParameter
-            {attrs; label = lbl; expr = default_expr; pat; pos = start_pos} ->
-          let loc = mk_loc start_pos end_pos in
-          let fun_expr =
-            Ast_helper.Exp.fun_ ~loc ~attrs ~arity:None lbl default_expr pat
-              expr
-          in
-          if term_param_num = 1 then
-            (term_param_num - 1, Ast_uncurried.uncurried_fun ~arity fun_expr, 1)
-          else (term_param_num - 1, fun_expr, arity + 1)
-        | TypeParameter {attrs; locs = newtypes; pos = start_pos} ->
-          ( term_param_num,
-            make_newtypes ~attrs ~loc:(mk_loc start_pos end_pos) newtypes expr,
-            arity ))
-      parameters
-      (List.length term_parameters, body, 1)
+      (fun parameter (term_param_num, expr) ->
+        let {attrs; p_label = lbl; expr = default_expr; pat; p_pos = start_pos}
+            =
+          parameter
+        in
+        let loc = mk_loc start_pos end_pos in
+        let fun_expr =
+          Ast_helper.Exp.fun_ ~loc ~attrs ~arity:None lbl default_expr pat expr
+        in
+        if term_param_num = 1 then
+          ( term_param_num - 1,
+            Ast_uncurried.uncurried_fun
+              ~arity:(List.length term_parameters)
+              fun_expr )
+        else (term_param_num - 1, fun_expr))
+      term_parameters
+      (List.length term_parameters, body)
+  in
+  let arrow_expr =
+    match type_param_opt with
+    | None -> arrow_expr
+    | Some {attrs; locs = newtypes; p_pos = start_pos} ->
+      make_newtypes ~attrs ~loc:(mk_loc start_pos end_pos) newtypes arrow_expr
   in
   {arrow_expr with pexp_loc = {arrow_expr.pexp_loc with loc_start = start_pos}}
 
@@ -1620,7 +1655,7 @@ and parse_parameter p =
     if p.Parser.token = Typ then (
       Parser.next p;
       let lidents = parse_lident_list p in
-      Some (TypeParameter {attrs; locs = lidents; pos = start_pos}))
+      Some (TypeParameter {attrs; locs = lidents; p_pos = start_pos}))
     else
       let attrs, lbl, pat =
         match p.Parser.token with
@@ -1694,15 +1729,17 @@ and parse_parameter p =
           Parser.next p;
           Some
             (TermParameter
-               {attrs; label = lbl; expr = None; pat; pos = start_pos})
+               {attrs; p_label = lbl; expr = None; pat; p_pos = start_pos})
         | _ ->
           let expr = parse_constrained_or_coerced_expr p in
           Some
             (TermParameter
-               {attrs; label = lbl; expr = Some expr; pat; pos = start_pos}))
+               {attrs; p_label = lbl; expr = Some expr; pat; p_pos = start_pos})
+        )
       | _ ->
         Some
-          (TermParameter {attrs; label = lbl; expr = None; pat; pos = start_pos})
+          (TermParameter
+             {attrs; p_label = lbl; expr = None; pat; p_pos = start_pos})
   else None
 
 and parse_parameter_list p =
@@ -1711,12 +1748,7 @@ and parse_parameter_list p =
       ~f:parse_parameter ~closing:Rparen p
   in
   Parser.expect Rparen p;
-  let has_term_parameter =
-    Ext_list.exists parameters (function
-      | TermParameter _ -> true
-      | _ -> false)
-  in
-  (has_term_parameter, parameters)
+  extract_fundef_params ~type_acc:None ~term_acc:[] parameters
 
 (* parameters ::=
  *   | _
@@ -1725,7 +1757,7 @@ and parse_parameter_list p =
  *   | (.)
  *   | ( parameter {, parameter} [,] )
  *)
-and parse_parameters p =
+and parse_parameters p : fundef_type_param option * fundef_term_param list =
   let start_pos = p.Parser.start_pos in
   let unit_term_parameter () =
     let loc = mk_loc start_pos p.Parser.prev_end_pos in
@@ -1734,51 +1766,52 @@ and parse_parameters p =
         (Location.mkloc (Longident.Lident "()") loc)
         None
     in
-    TermParameter
-      {
-        attrs = [];
-        label = Asttypes.Nolabel;
-        expr = None;
-        pat = unit_pattern;
-        pos = start_pos;
-      }
+    {
+      attrs = [];
+      p_label = Asttypes.Nolabel;
+      expr = None;
+      pat = unit_pattern;
+      p_pos = start_pos;
+    }
   in
   match p.Parser.token with
   | Lident ident ->
     Parser.next p;
     let loc = mk_loc start_pos p.Parser.prev_end_pos in
-    [
-      TermParameter
+    ( None,
+      [
         {
           attrs = [];
-          label = Asttypes.Nolabel;
+          p_label = Asttypes.Nolabel;
           expr = None;
           pat = Ast_helper.Pat.var ~loc (Location.mkloc ident loc);
-          pos = start_pos;
+          p_pos = start_pos;
         };
-    ]
+      ] )
   | Underscore ->
     Parser.next p;
     let loc = mk_loc start_pos p.Parser.prev_end_pos in
-    [
-      TermParameter
+    ( None,
+      [
         {
           attrs = [];
-          label = Asttypes.Nolabel;
+          p_label = Asttypes.Nolabel;
           expr = None;
           pat = Ast_helper.Pat.any ~loc ();
-          pos = start_pos;
+          p_pos = start_pos;
         };
-    ]
+      ] )
   | Lparen ->
     Parser.next p;
     ignore (Parser.optional p Dot);
-    let has_term_parameter, parameters = parse_parameter_list p in
-    if has_term_parameter then parameters
-    else parameters @ [unit_term_parameter ()]
+    let type_params, term_params = parse_parameter_list p in
+    let term_params =
+      if term_params <> [] then term_params else [unit_term_parameter ()]
+    in
+    (type_params, term_params)
   | token ->
     Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
-    []
+    (None, [])
 
 and parse_coerced_expr ~(expr : Parsetree.expression) p =
   Parser.expect ColonGreaterThan p;
@@ -2974,16 +3007,15 @@ and parse_braced_or_record_expr p =
         let ident = Location.mkloc (Longident.last path_ident.txt) loc in
         let a =
           parse_es6_arrow_expression
-            ~parameters:
+            ~term_parameters:
               [
-                TermParameter
-                  {
-                    attrs = [];
-                    label = Asttypes.Nolabel;
-                    expr = None;
-                    pat = Ast_helper.Pat.var ~loc:ident.loc ident;
-                    pos = start_pos;
-                  };
+                {
+                  attrs = [];
+                  p_label = Asttypes.Nolabel;
+                  expr = None;
+                  pat = Ast_helper.Pat.var ~loc:ident.loc ident;
+                  p_pos = start_pos;
+                };
               ]
             p
         in

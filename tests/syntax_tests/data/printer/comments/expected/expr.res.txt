@@ -227,8 +227,11 @@ let f = (
 ) => /* c7 */ ()
 
 let multiply = (type /* c-2 */ t /* c-1 */, /* c0 */ m1 /* c1 */, /* c2 */ m2 /* c3 */) => ()
-let multiply = (type /* c-4 */ t /* c-3 */, /* c0 */ m1 /* c1 */) =>
-  (type /* c-2 */ s /* c-1 */, /* c2 */ m2 /* c3 */) => ()
+let multiply = (
+  type /* c-4 */ t /* c-3 */ s,
+  /* c0 */ m1 /* c1 */,
+  /* c-2 */ /* c-1 */ /* c2 */ m2 /* c3 */,
+) => ()
 
 f(
   // a

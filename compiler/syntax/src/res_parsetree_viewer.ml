@@ -86,17 +86,6 @@ let has_partial_attribute attrs =
       | _ -> false)
     attrs
 
-type function_attributes_info = {async: bool; attributes: Parsetree.attributes}
-
-let process_function_attributes attrs =
-  let rec process async acc attrs =
-    match attrs with
-    | [] -> {async; attributes = List.rev acc}
-    | ({Location.txt = "res.async"}, _) :: rest -> process true acc rest
-    | attr :: rest -> process async (attr :: acc) rest
-  in
-  process false [] attrs
-
 let has_await_attribute attrs =
   List.exists
     (function
@@ -198,7 +187,8 @@ let fun_expr expr =
          };
     } ->
       (List.rev params, rewrite_underscore_apply expr)
-    | {pexp_desc = Pexp_newtype (string_loc, rest); pexp_attributes = attrs} ->
+    | {pexp_desc = Pexp_newtype (string_loc, rest); pexp_attributes = attrs}
+      when n_fun = 0 ->
       let string_locs, return_expr = collect_new_types [string_loc] rest in
       let param = NewTypes {attrs; locs = string_locs} in
       collect ~n_fun ~params:(param :: params) return_expr

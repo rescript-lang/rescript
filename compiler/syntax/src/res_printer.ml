@@ -2697,9 +2697,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
   let print_arrow e =
     let parameters, return_expr = ParsetreeViewer.fun_expr e in
     let attrs_on_arrow = e.pexp_attributes in
-    let ParsetreeViewer.{async; attributes = attrs} =
-      ParsetreeViewer.process_function_attributes attrs_on_arrow
-    in
+    let async, attrs = Ast_async.extract_async_attribute attrs_on_arrow in
     let return_expr, typ_constraint =
       match return_expr.pexp_desc with
       | Pexp_constraint (expr, typ) ->
@@ -3441,9 +3439,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
 and print_pexp_fun ~state ~in_callback e cmt_tbl =
   let parameters, return_expr = ParsetreeViewer.fun_expr e in
   let attrs_on_arrow = e.pexp_attributes in
-  let ParsetreeViewer.{async; attributes = attrs} =
-    ParsetreeViewer.process_function_attributes attrs_on_arrow
-  in
+  let async, attrs = Ast_async.extract_async_attribute attrs_on_arrow in
   let return_expr, typ_constraint =
     match return_expr.pexp_desc with
     | Pexp_constraint (expr, typ) ->
