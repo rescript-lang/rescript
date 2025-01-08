@@ -7,13 +7,6 @@ module ResPrinter = Res_printer
 module Scanner = Res_scanner
 module Parser = Res_parser
 
-module LoopProgress = struct
-  let list_rest list =
-    match list with
-    | [] -> assert false
-    | _ :: rest -> rest
-end
-
 let mk_loc start_loc end_loc =
   Location.{loc_start = start_loc; loc_end = end_loc; loc_ghost = false}
 
@@ -1548,19 +1541,6 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
         {p with attrs = update_attrs p.attrs; pos = update_pos p.pos}
       :: rest
     | [] -> parameters
-  in
-  let parameters =
-    (* Propagate any dots from type parameters to the first term *)
-    let rec loop ~dot_in_type params =
-      match params with
-      | (TypeParameter _ as p) :: _ ->
-        let rest = LoopProgress.list_rest params in
-        (* Tell termination checker about progress *)
-        p :: loop ~dot_in_type rest
-      | (TermParameter _ as p) :: rest -> p :: rest
-      | [] -> []
-    in
-    loop ~dot_in_type:false parameters
   in
   let return_type =
     match p.Parser.token with
@@ -5749,7 +5729,7 @@ and parse_structure_item_region p =
            ~loc:(mk_loc p.start_pos p.prev_end_pos)
            ~attrs expr)
     | _ -> None)
-[@@progress Parser.next, Parser.expect, LoopProgress.list_rest]
+[@@progress Parser.next, Parser.expect]
 
 (* include-statement ::= include module-expr *)
 and parse_include_statement ~attrs p =
@@ -6402,7 +6382,7 @@ and parse_signature_item_region p =
         (Diagnostics.message (ErrorMessages.attribute_without_node attr));
       Some Recover.default_signature_item
     | _ -> None)
-[@@progress Parser.next, Parser.expect, LoopProgress.list_rest]
+[@@progress Parser.next, Parser.expect]
 
 (* module rec module-name :  module-type  { and module-name:  module-type } *)
 and parse_rec_module_spec ~attrs ~start_pos p =
