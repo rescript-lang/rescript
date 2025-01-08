@@ -555,7 +555,8 @@ let rec push_defaults loc bindings case partial =
    c_lhs = pat;
    c_guard = None;
    c_rhs =
-     {exp_desc = Texp_function {arg_label; arity; param; case; partial}} as exp;
+     {exp_desc = Texp_function {arg_label; arity; param; case; partial; async}}
+     as exp;
   } ->
     let case = push_defaults exp.exp_loc bindings case partial in
 
@@ -565,7 +566,8 @@ let rec push_defaults loc bindings case partial =
       c_rhs =
         {
           exp with
-          exp_desc = Texp_function {arg_label; arity; param; case; partial};
+          exp_desc =
+            Texp_function {arg_label; arity; param; case; partial; async};
         };
     }
   | {
@@ -671,8 +673,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_constant cst -> Lconst (Const_base cst)
   | Texp_let (rec_flag, pat_expr_list, body) ->
     transl_let rec_flag pat_expr_list (transl_exp body)
-  | Texp_function {arg_label = _; arity; param; case; partial} -> (
-    let async = Ast_async.has_async_payload e.exp_attributes in
+  | Texp_function {arg_label = _; arity; param; case; partial; async} -> (
     let directive =
       match extract_directive_for_fn e with
       | None -> None
@@ -1050,11 +1051,11 @@ and transl_function loc partial param case =
              param = param';
              case;
              partial = partial';
+             async;
            };
      } as exp;
   }
-    when Parmatch.inactive ~partial pat
-         && not (Ast_async.has_async_payload exp.exp_attributes) ->
+    when Parmatch.inactive ~partial pat && not async ->
     let params, body, return_unit =
       transl_function exp.exp_loc partial' param' case
     in

@@ -136,6 +136,7 @@ and expression_desc =
       param: Ident.t;
       case: case;
       partial: partial;
+      async: bool;
     }
       (** [Pexp_fun] and [Pexp_function] both translate to [Texp_function].
             See {!Parsetree} for more details.

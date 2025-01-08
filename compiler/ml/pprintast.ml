@@ -605,14 +605,15 @@ and expression ctxt f x =
     | (Pexp_let _ | Pexp_letmodule _ | Pexp_open _ | Pexp_letexception _)
       when ctxt.semi ->
       paren true (expression reset_ctxt) f x
-    | Pexp_fun {arg_label = l; default = e0; lhs = p; rhs = e; arity} ->
+    | Pexp_fun {arg_label = l; default = e0; lhs = p; rhs = e; arity; async} ->
       let arity_str =
         match arity with
         | None -> ""
         | Some arity -> "[arity:" ^ string_of_int arity ^ "]"
       in
-      pp f "@[<2>fun@;%s%a->@;%a@]" arity_str (label_exp ctxt) (l, e0, p)
-        (expression ctxt) e
+      let async_str = if async then "async " else "" in
+      pp f "@[<2>%sfun@;%s%a->@;%a@]" async_str arity_str (label_exp ctxt)
+        (l, e0, p) (expression ctxt) e
     | Pexp_match (e, l) ->
       pp f "@[<hv0>@[<hv0>@[<2>match %a@]@ with@]%a@]" (expression reset_ctxt) e
         (case_list ctxt) l

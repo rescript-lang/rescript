@@ -36,16 +36,16 @@ let to_method_callback loc (self : Bs_ast_mapper.mapper) label
     match Ast_attributes.process_attributes_rev body.pexp_attributes with
     | Nothing, attrs -> (
       match body.pexp_desc with
-      | Pexp_fun {arg_label; lhs = arg; rhs = body} ->
+      | Pexp_fun {arg_label; lhs = arg; rhs = body; async} ->
         Bs_syntaxerr.optional_err loc arg_label;
-        aux ((arg_label, self.pat self arg, attrs) :: acc) body
+        aux ((arg_label, self.pat self arg, attrs, async) :: acc) body
       | _ -> (self.expr self body, acc))
     | _, _ -> (self.expr self body, acc)
   in
-  let result, rev_extra_args = aux [(label, self_pat, [])] body in
+  let result, rev_extra_args = aux [(label, self_pat, [], false)] body in
   let body =
-    Ext_list.fold_left rev_extra_args result (fun e (label, p, attrs) ->
-        Ast_helper.Exp.fun_ ~loc ~attrs ~arity:None label None p e)
+    Ext_list.fold_left rev_extra_args result (fun e (label, p, attrs, async) ->
+        Ast_helper.Exp.fun_ ~loc ~attrs ~arity:None ~async label None p e)
   in
   let arity = List.length rev_extra_args in
   let arity_s = string_of_int arity in

@@ -113,8 +113,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   | Pexp_newtype (s, body) ->
     let res = self.expr self body in
     {e with pexp_desc = Pexp_newtype (s, res)}
-  | Pexp_fun {arg_label = label; lhs = pat; rhs = body} -> (
-    let async = Ast_async.has_async_payload e.pexp_attributes in
+  | Pexp_fun {arg_label = label; lhs = pat; rhs = body; async} -> (
     match Ast_attributes.process_attributes_rev e.pexp_attributes with
     | Nothing, _ ->
       (* Handle @async x => y => ... is in async context *)

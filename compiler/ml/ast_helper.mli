@@ -138,6 +138,7 @@ module Exp : sig
   val fun_ :
     ?loc:loc ->
     ?attrs:attrs ->
+    ?async:bool ->
     arity:int option ->
     arg_label ->
     expression option ->

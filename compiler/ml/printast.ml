@@ -238,8 +238,9 @@ and expression i ppf x =
     line i ppf "Pexp_let %a\n" fmt_rec_flag rf;
     list i value_binding ppf l;
     expression i ppf e
-  | Pexp_fun {arg_label = l; default = eo; lhs = p; rhs = e; arity} ->
+  | Pexp_fun {arg_label = l; default = eo; lhs = p; rhs = e; arity; async} ->
     line i ppf "Pexp_fun\n";
+    let () = if async then line i ppf "async\n" in
     let () =
       match arity with
       | None -> ()

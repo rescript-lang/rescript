@@ -82,6 +82,7 @@ and expression_desc =
       param: Ident.t;
       case: case;
       partial: partial;
+      async: bool;
     }
   | Texp_apply of expression * (arg_label * expression option) list
   | Texp_match of expression * case list * case list * partial

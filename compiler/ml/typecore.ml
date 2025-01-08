@@ -2364,7 +2364,14 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         exp_env = env;
       }
   | Pexp_fun
-      {arg_label = l; default = Some default; lhs = spat; rhs = sbody; arity} ->
+      {
+        arg_label = l;
+        default = Some default;
+        lhs = spat;
+        rhs = sbody;
+        arity;
+        async;
+      } ->
     assert (is_optional l);
     (* default allowed only with optional argument *)
     let open Ast_helper in
@@ -2402,10 +2409,13 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         [Vb.mk spat smatch]
         sbody
     in
-    type_function ?in_function ~arity loc sexp.pexp_attributes env ty_expected l
+    type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
+      ty_expected l
       [Exp.case pat body]
-  | Pexp_fun {arg_label = l; default = None; lhs = spat; rhs = sbody; arity} ->
-    type_function ?in_function ~arity loc sexp.pexp_attributes env ty_expected l
+  | Pexp_fun
+      {arg_label = l; default = None; lhs = spat; rhs = sbody; arity; async} ->
+    type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
+      ty_expected l
       [Ast_helper.Exp.case spat sbody]
   | Pexp_apply (sfunct, sargs) ->
     assert (sargs <> []);
@@ -3246,7 +3256,8 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
   | Pexp_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
 
-and type_function ?in_function ~arity loc attrs env ty_expected_ l caselist =
+and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
+    caselist =
   let state = Warnings.backup () in
   (* Disable Unerasable_optional_argument for uncurried functions *)
   let unerasable_optional_argument =
@@ -3304,7 +3315,8 @@ and type_function ?in_function ~arity loc attrs env ty_expected_ l caselist =
   Warnings.restore state;
   re
     {
-      exp_desc = Texp_function {arg_label = l; arity; param; case; partial};
+      exp_desc =
+        Texp_function {arg_label = l; arity; param; case; partial; async};
       exp_loc = loc;
       exp_extra = [];
       exp_type;

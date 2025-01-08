@@ -230,6 +230,7 @@ and expression_desc =
       lhs: pattern;
       rhs: expression;
       arity: arity;
+      async: bool;
     }
     (* fun P -> E1                          (Simple, None)
        fun ~l:P -> E1                       (Labelled l, None)

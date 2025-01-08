@@ -199,8 +199,9 @@ let expr sub x =
     | Texp_let (rec_flag, list, exp) ->
       let rec_flag, list = sub.value_bindings sub (rec_flag, list) in
       Texp_let (rec_flag, list, sub.expr sub exp)
-    | Texp_function {arg_label; arity; param; case; partial} ->
-      Texp_function {arg_label; arity; param; case = sub.case sub case; partial}
+    | Texp_function {arg_label; arity; param; case; partial; async} ->
+      Texp_function
+        {arg_label; arity; param; case = sub.case sub case; partial; async}
     | Texp_apply (exp, list) ->
       Texp_apply
         (sub.expr sub exp, List.map (tuple2 id (opt (sub.expr sub))) list)

@@ -41,6 +41,16 @@ async function fpromise(promise, _x) {
 
 let Uncurried = {};
 
+async function async_succ(x) {
+  return x + 1 | 0;
+}
+
+async function async_foo(x, y) {
+  let a = async_succ(x);
+  let b = async_succ(y);
+  return await a + await b | 0;
+}
+
 let a = "A";
 
 let b = "B";
@@ -55,4 +65,6 @@ exports.OptionalFields = OptionalFields;
 exports.Arity = Arity;
 exports.fpromise = fpromise;
 exports.Uncurried = Uncurried;
+exports.async_succ = async_succ;
+exports.async_foo = async_foo;
 /*  Not a pure module */

@@ -35,3 +35,10 @@ module Uncurried = {
   type f1 = int => string
   type f2 = (int, int) => string
 }
+
+let async_succ = async x => x + 1
+let async_foo = async (x, y) => {
+  let a: promise<int> = async_succ(x)
+  let b: promise<int> = async_succ(y)
+  (await a) + (await b)
+}

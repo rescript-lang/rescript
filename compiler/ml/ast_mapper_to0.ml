@@ -295,7 +295,13 @@ module E = struct
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
-    | Pexp_fun {arg_label = lab; default = def; lhs = p; rhs = e; arity} -> (
+    | Pexp_fun {arg_label = lab; default = def; lhs = p; rhs = e; arity; async}
+      -> (
+      let attrs =
+        if async then
+          ({txt = "res.async"; loc = Location.none}, Pt.PStr []) :: attrs
+        else attrs
+      in
       let e =
         fun_ ~loc ~attrs lab
           (map_opt (sub.expr sub) def)
