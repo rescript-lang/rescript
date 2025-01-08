@@ -166,7 +166,7 @@ type fun_param_kind =
   | NewTypes of {attrs: Parsetree.attributes; locs: string Asttypes.loc list}
 
 let fun_expr expr_ =
-  let async = Ast_async.has_async_payload expr_.pexp_attributes in
+  let async = Ast_async.dig_async_payload_from_function expr_ in
   let rec collect_params ~n_fun ~params expr =
     match expr with
     | {

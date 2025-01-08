@@ -1,6 +1,12 @@
 let has_async_payload attrs =
   Ext_list.exists attrs (fun ({Location.txt}, _) -> txt = "res.async")
 
+let rec dig_async_payload_from_function (expr : Parsetree.expression) =
+  match expr.pexp_desc with
+  | Pexp_fun _ -> has_async_payload expr.pexp_attributes
+  | Pexp_newtype (_, body) -> dig_async_payload_from_function body
+  | _ -> false
+
 let add_async_attribute ~async (body : Parsetree.expression) =
   let add (exp : Parsetree.expression) =
     if has_async_payload exp.pexp_attributes then exp
@@ -20,7 +26,7 @@ let add_async_attribute ~async (body : Parsetree.expression) =
       | Pexp_fun _ -> add exp
       | _ -> exp
     in
-    add (add_to_fun body)
+    add_to_fun body
   else body
 
 let add_promise_type ?(loc = Location.none) ~async
