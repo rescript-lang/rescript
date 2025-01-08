@@ -955,10 +955,8 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       modified_binding ~binding_loc ~binding_pat_loc ~fn_name binding
     in
     let is_async =
-      Ext_list.find_first binding.pvb_expr.pexp_attributes Ast_async.is_async
-      |> Option.is_some
+      Ast_async.has_async_payload binding.pvb_expr.pexp_attributes
     in
-    (* do stuff here! *)
     let named_arg_list, newtypes, _typeConstraints =
       recursively_transform_named_args_for_make
         (modified_binding_old binding)
@@ -1192,9 +1190,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     in
 
     let is_async =
-      Ext_list.find_first modified_binding.pvb_expr.pexp_attributes
-        Ast_async.is_async
-      |> Option.is_some
+      Ast_async.has_async_payload modified_binding.pvb_expr.pexp_attributes
     in
 
     let make_new_binding ~loc ~full_module_name binding =

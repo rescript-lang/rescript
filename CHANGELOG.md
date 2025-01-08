@@ -20,7 +20,7 @@
 #### :house: Internal
 
 - AST cleanup: Prepare for ast async cleanup: Refactor code for "@res.async" payload handling and clean up handling of type and term parameters, so that now each `=>` in a function definition corresponds to a function. https://github.com/rescript-lang/rescript/pull/7223
-
+- AST: always put type parameters first in function definitions. https://github.com/rescript-lang/rescript/pull/7233
 
 # 12.0.0-alpha.7
 

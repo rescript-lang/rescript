@@ -53,7 +53,7 @@ type fun_param_kind =
   | NewTypes of {attrs: Parsetree.attributes; locs: string Asttypes.loc list}
 
 val fun_expr :
-  Parsetree.expression -> fun_param_kind list * Parsetree.expression
+  Parsetree.expression -> bool * fun_param_kind list * Parsetree.expression
 
 (* example:
    *  `makeCoordinate({

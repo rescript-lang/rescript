@@ -3303,12 +3303,8 @@ and parse_expr_block ?first p =
 and parse_async_arrow_expression ?(arrow_attrs = []) p =
   let start_pos = p.Parser.start_pos in
   Parser.expect (Lident "async") p;
-  let async_attr =
-    Ast_async.make_async_attr (mk_loc start_pos p.prev_end_pos)
-  in
-  parse_es6_arrow_expression
-    ~arrow_attrs:(async_attr :: arrow_attrs)
-    ~arrow_start_pos:(Some start_pos) p
+  Ast_async.add_async_attribute ~async:true
+    (parse_es6_arrow_expression ~arrow_attrs ~arrow_start_pos:(Some start_pos) p)
 
 and parse_await_expression p =
   let await_loc = mk_loc p.Parser.start_pos p.end_pos in

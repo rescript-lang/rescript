@@ -1,8 +1,5 @@
-let is_async : Parsetree.attribute -> bool = fun ({txt}, _) -> txt = "res.async"
-
-let has_async_payload attrs = Ext_list.exists attrs is_async
-
-let make_async_attr loc = (Location.mkloc "res.async" loc, Parsetree.PStr [])
+let has_async_payload attrs =
+  Ext_list.exists attrs (fun ({Location.txt}, _) -> txt = "res.async")
 
 let add_async_attribute ~async (body : Parsetree.expression) =
   if async then
@@ -13,15 +10,6 @@ let add_async_attribute ~async (body : Parsetree.expression) =
         :: body.pexp_attributes;
     }
   else body
-
-let extract_async_attribute attrs =
-  let rec process async acc attrs =
-    match attrs with
-    | [] -> (async, List.rev acc)
-    | ({Location.txt = "res.async"}, _) :: rest -> process true acc rest
-    | attr :: rest -> process async (attr :: acc) rest
-  in
-  process false [] attrs
 
 let add_promise_type ?(loc = Location.none) ~async
     (result : Parsetree.expression) =

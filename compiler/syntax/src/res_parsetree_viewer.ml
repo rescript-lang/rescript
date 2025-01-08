@@ -165,7 +165,8 @@ type fun_param_kind =
     }
   | NewTypes of {attrs: Parsetree.attributes; locs: string Asttypes.loc list}
 
-let fun_expr expr =
+let fun_expr expr_ =
+  let async = Ast_async.has_async_payload expr_.pexp_attributes in
   let rec collect_params ~n_fun ~params expr =
     match expr with
     | {
@@ -182,10 +183,9 @@ let fun_expr expr =
     }
       when arity = None || n_fun = 0 ->
       let parameter = Parameter {attrs; lbl; default_expr; pat = pattern} in
-      collect_params ~n_fun:(n_fun + 1) ~params:(parameter :: params) return_expr
-    (* If a fun has an attribute, then it stops here and makes currying.
-       i.e attributes outside of (...), uncurried `(.)` and `async` make currying *)
-    | _ -> (List.rev params, expr)
+      collect_params ~n_fun:(n_fun + 1) ~params:(parameter :: params)
+        return_expr
+    | _ -> (async, List.rev params, expr)
   in
   (* Turns (type t, type u, type z) into "type t u z" *)
   let rec collect_new_types acc return_expr =
@@ -194,12 +194,12 @@ let fun_expr expr =
       collect_new_types (string_loc :: acc) return_expr
     | return_expr -> (List.rev acc, return_expr)
   in
-  match expr with
+  match expr_ with
   | {pexp_desc = Pexp_newtype (string_loc, rest)} ->
     let string_locs, return_expr = collect_new_types [string_loc] rest in
     let param = NewTypes {attrs = []; locs = string_locs} in
     collect_params ~n_fun:0 ~params:[param] return_expr
-  | _ -> collect_params ~n_fun:0 ~params:[] {expr with pexp_attributes = []}
+  | _ -> collect_params ~n_fun:0 ~params:[] {expr_ with pexp_attributes = []}
 
 let process_braces_attr expr =
   match expr.pexp_attributes with

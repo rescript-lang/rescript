@@ -1980,7 +1980,7 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
      };
    pvb_expr = {pexp_desc = Pexp_newtype _} as expr;
   } -> (
-    let parameters, return_expr = ParsetreeViewer.fun_expr expr in
+    let _, parameters, return_expr = ParsetreeViewer.fun_expr expr in
     let abstract_type =
       match parameters with
       | [NewTypes {locs = vars}] ->
@@ -2695,9 +2695,8 @@ and print_if_chain ~state pexp_attributes ifs else_expr cmt_tbl =
 
 and print_expression ~state (e : Parsetree.expression) cmt_tbl =
   let print_arrow e =
-    let parameters, return_expr = ParsetreeViewer.fun_expr e in
+    let async, parameters, return_expr = ParsetreeViewer.fun_expr e in
     let attrs_on_arrow = e.pexp_attributes in
-    let async, attrs = Ast_async.extract_async_attribute attrs_on_arrow in
     let return_expr, typ_constraint =
       match return_expr.pexp_desc with
       | Pexp_constraint (expr, typ) ->
@@ -2760,7 +2759,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         Doc.concat [Doc.text ": "; typ_doc]
       | _ -> Doc.nil
     in
-    let attrs = print_attributes ~state attrs cmt_tbl in
+    let attrs = print_attributes ~state attrs_on_arrow cmt_tbl in
     Doc.group
       (Doc.concat
          [
@@ -3437,9 +3436,8 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
   | _ -> expr_with_await
 
 and print_pexp_fun ~state ~in_callback e cmt_tbl =
-  let parameters, return_expr = ParsetreeViewer.fun_expr e in
+  let async, parameters, return_expr = ParsetreeViewer.fun_expr e in
   let attrs_on_arrow = e.pexp_attributes in
-  let async, attrs = Ast_async.extract_async_attribute attrs_on_arrow in
   let return_expr, typ_constraint =
     match return_expr.pexp_desc with
     | Pexp_constraint (expr, typ) ->
@@ -3505,7 +3503,7 @@ and print_pexp_fun ~state ~in_callback e cmt_tbl =
   in
   Doc.concat
     [
-      print_attributes ~state attrs cmt_tbl;
+      print_attributes ~state attrs_on_arrow cmt_tbl;
       parameters_doc;
       typ_constraint_doc;
       Doc.text " =>";
