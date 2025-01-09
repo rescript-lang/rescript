@@ -73,7 +73,7 @@ function getExamples(param) {
     while (true) {
       let acc = _acc;
       let items = _items;
-      if (!items) {
+      if (items === 0) {
         return acc;
       }
       let match = items.hd;
@@ -158,7 +158,7 @@ function getCodeBlocks(example) {
     while (true) {
       let acc = _acc;
       let lines = _lines;
-      if (!lines) {
+      if (lines === 0) {
         return Pervasives.panic("Failed to find end of code block for " + example.kind + ": " + example.id);
       }
       let hd = lines.hd;
@@ -177,7 +177,7 @@ function getCodeBlocks(example) {
     while (true) {
       let acc = _acc;
       let lines = _lines;
-      if (!lines) {
+      if (lines === 0) {
         return acc;
       }
       let rest = lines.tl;

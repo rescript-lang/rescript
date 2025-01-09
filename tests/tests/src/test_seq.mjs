@@ -13,7 +13,7 @@ let Stop = /* @__PURE__ */Primitive_exceptions.create("Test_seq.Stop");
 function assoc3(x, _l) {
   while (true) {
     let l = _l;
-    if (l) {
+    if (l !== 0) {
       let match = l.hd;
       if (Primitive_object.equal(match[0], x)) {
         return match[1];

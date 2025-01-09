@@ -157,7 +157,7 @@ function list_length(_accu, _param) {
   while (true) {
     let param = _param;
     let accu = _accu;
-    if (!param) {
+    if (param === 0) {
       return accu;
     }
     _param = param.tl;
@@ -167,7 +167,7 @@ function list_length(_accu, _param) {
 }
 
 function of_list(param) {
-  if (!param) {
+  if (param === 0) {
     return [];
   }
   let hd = param.hd;
@@ -178,7 +178,7 @@ function of_list(param) {
   while (true) {
     let param$1 = _param;
     let i = _i;
-    if (!param$1) {
+    if (param$1 === 0) {
       return a;
     }
     a[i] = param$1.hd;

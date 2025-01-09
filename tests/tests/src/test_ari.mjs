@@ -32,7 +32,7 @@ function length_aux(_len, _x) {
   while (true) {
     let x = _x;
     let len = _len;
-    if (!x) {
+    if (x === 0) {
       return len;
     }
     _x = x.tl;

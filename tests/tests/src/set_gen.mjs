@@ -438,7 +438,7 @@ function of_sorted_list(l) {
           l
         ];
       case 1 :
-        if (l) {
+        if (l !== 0) {
           return [
             {
               TAG: "Node",
@@ -452,9 +452,9 @@ function of_sorted_list(l) {
         }
         break;
       case 2 :
-        if (l) {
+        if (l !== 0) {
           let match = l.tl;
-          if (match) {
+          if (match !== 0) {
             return [
               {
                 TAG: "Node",
@@ -476,11 +476,11 @@ function of_sorted_list(l) {
         }
         break;
       case 3 :
-        if (l) {
+        if (l !== 0) {
           let match$1 = l.tl;
-          if (match$1) {
+          if (match$1 !== 0) {
             let match$2 = match$1.tl;
-            if (match$2) {
+            if (match$2 !== 0) {
               return [
                 {
                   TAG: "Node",
@@ -513,7 +513,7 @@ function of_sorted_list(l) {
     let nl = n / 2 | 0;
     let match$3 = sub(nl, l);
     let l$1 = match$3[1];
-    if (l$1) {
+    if (l$1 !== 0) {
       let match$4 = sub((n - nl | 0) - 1 | 0, l$1.tl);
       return [
         create(match$3[0], l$1.hd, match$4[0]),

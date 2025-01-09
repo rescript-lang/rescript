@@ -2245,7 +2245,8 @@ let combine_constructor sw_names loc arg ex_pat cstr partial ctx def
           let arg =
             if Datarepr.constructor_has_optional_shape cstr then
               Lprim (Pis_not_none, [arg], loc)
-            else arg
+            else
+              Lprim (Pjscomp Cneq, [arg; Lconst (Const_base (Const_int 0))], loc)
           in
           Lifthenelse (arg, act2, act1)
         | 2, 0, [(i1, act1); (_, act2)], []

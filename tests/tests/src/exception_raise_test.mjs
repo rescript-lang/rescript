@@ -38,15 +38,15 @@ function appf(g, x) {
       }
     }
     let match = exn._1;
-    if (!match) {
+    if (match === 0) {
       return 4;
     }
     let match$1 = match.tl;
-    if (!match$1) {
+    if (match$1 === 0) {
       return 4;
     }
     let match$2 = match$1.tl;
-    if (match$2) {
+    if (match$2 !== 0) {
       return match$2.hd;
     } else {
       return 4;

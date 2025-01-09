@@ -2098,7 +2098,7 @@ function check_collisions(collid, all_collids, state) {
   while (true) {
     let acc = _acc;
     let cs = _cs;
-    if (!cs) {
+    if (cs === 0) {
       return acc;
     }
     let h = cs.hd;
@@ -2421,7 +2421,7 @@ let Director = {
 function mem_loc(checkloc, _loclist) {
   while (true) {
     let loclist = _loclist;
-    if (!loclist) {
+    if (loclist === 0) {
       return false;
     }
     if (Primitive_object.equal(checkloc, loclist.hd[1])) {
@@ -2433,7 +2433,7 @@ function mem_loc(checkloc, _loclist) {
 }
 
 function convert_list(lst) {
-  if (!lst) {
+  if (lst === 0) {
     return /* [] */0;
   }
   let h = lst.hd;
@@ -2485,7 +2485,7 @@ function choose_sblock_typ(typ) {
 function avoid_overlap(_lst, currentLst) {
   while (true) {
     let lst = _lst;
-    if (!lst) {
+    if (lst === 0) {
       return /* [] */0;
     }
     let t = lst.tl;
@@ -2504,7 +2504,7 @@ function avoid_overlap(_lst, currentLst) {
 function trim_edges(_lst, blockw, blockh) {
   while (true) {
     let lst = _lst;
-    if (!lst) {
+    if (lst === 0) {
       return /* [] */0;
     }
     let t = lst.tl;
@@ -2545,7 +2545,7 @@ function generate_coins(_block_coord) {
   while (true) {
     let block_coord = _block_coord;
     let place_coin = int(2);
-    if (!block_coord) {
+    if (block_coord === 0) {
       return /* [] */0;
     }
     let t = block_coord.tl;
@@ -3037,7 +3037,7 @@ function generate_block_enemies(_block_coord) {
     let block_coord = _block_coord;
     let place_enemy = int(20);
     let enemy_typ = int(3);
-    if (!block_coord) {
+    if (block_coord === 0) {
       return /* [] */0;
     }
     let t = block_coord.tl;
@@ -3149,7 +3149,7 @@ function generate_ground(blockw, blockh, _inc, _acc) {
 }
 
 function convert_to_block_obj(lst, context) {
-  if (!lst) {
+  if (lst === 0) {
     return /* [] */0;
   }
   let h = lst.hd;
@@ -3165,7 +3165,7 @@ function convert_to_block_obj(lst, context) {
 }
 
 function convert_to_enemy_obj(lst, context) {
-  if (!lst) {
+  if (lst === 0) {
     return /* [] */0;
   }
   let h = lst.hd;
@@ -3181,7 +3181,7 @@ function convert_to_enemy_obj(lst, context) {
 }
 
 function convert_to_coin_obj(lst, context) {
-  if (!lst) {
+  if (lst === 0) {
     return /* [] */0;
   }
   let ob = spawn({
