@@ -17,12 +17,12 @@ let tLocalVar = false
 // let _ = someFn(~isOff=)
 //                       ^com
 
-let _ = @res.partial someFn(
+let _ = someFn(
   ~isOn={
     // switch someFn(~isOn=)
     //                     ^com
     true
-  },
+  }, ...
 )
 
 let someOtherFn = (includeName, age, includeAge) => {

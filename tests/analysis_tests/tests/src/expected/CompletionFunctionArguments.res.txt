@@ -66,8 +66,8 @@ Path someFn
   }]
 
 Complete src/CompletionFunctionArguments.res 21:27
-posCursor:[21:27] posNoWhite:[21:26] Found expr:[19:21->25:1]
-Pexp_apply ...[19:21->19:27] (~isOn20:3->20:7=...[21:7->23:8])
+posCursor:[21:27] posNoWhite:[21:26] Found expr:[19:8->25:1]
+Pexp_apply ...[19:8->19:14] (~isOn20:3->20:7=...[21:7->23:8])
 posCursor:[21:27] posNoWhite:[21:26] Found expr:[21:7->23:8]
 posCursor:[21:27] posNoWhite:[21:26] Found expr:[21:7->21:28]
 posCursor:[21:27] posNoWhite:[21:26] Found expr:[21:14->21:28]
