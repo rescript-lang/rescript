@@ -1799,7 +1799,7 @@ let rec is_nonexpansive exp =
     List.for_all (fun vb -> is_nonexpansive vb.vb_expr) pat_exp_list
     && is_nonexpansive body
   | Texp_function _ -> true
-  | Texp_apply (e, (_, None) :: el) ->
+  | Texp_apply {funct = e; args = (_, None) :: el} ->
     is_nonexpansive e && List.for_all is_nonexpansive_opt (List.map snd el)
   | Texp_match (e, cases, [], _) ->
     is_nonexpansive e
@@ -1834,12 +1834,15 @@ let rec is_nonexpansive exp =
      or the relaxed value restriction. See GPR#1142 *)
   | Texp_assert exp -> is_nonexpansive exp
   | Texp_apply
-      ( {
-          exp_desc =
-            Texp_ident
-              (_, _, {val_kind = Val_prim {Primitive.prim_name = "%raise"}});
-        },
-        [(Nolabel, Some e)] ) ->
+      {
+        funct =
+          {
+            exp_desc =
+              Texp_ident
+                (_, _, {val_kind = Val_prim {Primitive.prim_name = "%raise"}});
+          };
+        args = [(Nolabel, Some e)];
+      } ->
     is_nonexpansive e
   | _ -> false
 
@@ -2443,7 +2446,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     let mk_apply funct args =
       rue
         {
-          exp_desc = Texp_apply (funct, args);
+          exp_desc = Texp_apply {funct; args};
           exp_loc = loc;
           exp_extra = [];
           exp_type = ty_res;

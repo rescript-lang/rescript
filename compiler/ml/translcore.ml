@@ -711,11 +711,14 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
           loc )
     | None -> lambda)
   | Texp_apply
-      ( ({
-           exp_desc = Texp_ident (_, _, {val_kind = Val_prim p});
-           exp_type = prim_type;
-         } as funct),
-        oargs )
+      {
+        funct =
+          {
+            exp_desc = Texp_ident (_, _, {val_kind = Val_prim p});
+            exp_type = prim_type;
+          } as funct;
+        args = oargs;
+      }
     when List.length oargs >= p.prim_arity
          && List.for_all (fun (_, arg) -> arg <> None) oargs -> (
     let args, args' = cut p.prim_arity oargs in
@@ -757,7 +760,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       | Plazyforce, [a] -> wrap (Matching.inline_lazy_force a e.exp_loc)
       | Plazyforce, _ -> assert false
       | _ -> wrap (Lprim (prim, argl, e.exp_loc))))
-  | Texp_apply (funct, oargs) ->
+  | Texp_apply {funct; args = oargs} ->
     let inlined, funct =
       Translattribute.get_and_remove_inlined_attribute funct
     in

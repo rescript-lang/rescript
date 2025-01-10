@@ -84,7 +84,10 @@ and expression_desc =
       partial: partial;
       async: bool;
     }
-  | Texp_apply of expression * (arg_label * expression option) list
+  | Texp_apply of {
+      funct: expression;
+      args: (arg_label * expression option) list;
+    }
   | Texp_match of expression * case list * case list * partial
   | Texp_try of expression * case list
   | Texp_tuple of expression list

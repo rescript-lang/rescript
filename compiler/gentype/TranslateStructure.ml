@@ -18,8 +18,10 @@ let rec addAnnotationsToTypes_ ~config ~(expr : Typedtree.expression)
       else a_name
     in
     {a_name; a_type} :: next_types1
-  | Texp_apply ({exp_desc = Texp_ident (path, _, _)}, [(_, Some expr1)]), _, _
-    -> (
+  | ( Texp_apply
+        {funct = {exp_desc = Texp_ident (path, _, _)}; args = [(_, Some expr1)]},
+      _,
+      _ ) -> (
     match path |> TranslateTypeExprFromTypes.path_to_list |> List.rev with
     | ["Js"; "Internal"; fn_mk]
       when (* Uncurried function definition uses Js.Internal.fn_mkX(...) *)

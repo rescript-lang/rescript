@@ -534,7 +534,7 @@ module FindFunctionsCalled = struct
     let super = Tast_mapper.default in
     let expr (self : Tast_mapper.mapper) (e : Typedtree.expression) =
       (match e.exp_desc with
-      | Texp_apply ({exp_desc = Texp_ident (callee, _, _)}, _args) ->
+      | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)}} ->
         let functionName = Path.name callee in
         callees := !callees |> StringSet.add functionName
       | _ -> ());
@@ -577,7 +577,10 @@ module ExtendFunctionTable = struct
         } ->
       Some (path, loc)
     | Some
-        {exp_desc = Texp_apply ({exp_desc = Texp_ident (path, {loc}, _)}, args)}
+        {
+          exp_desc =
+            Texp_apply {funct = {exp_desc = Texp_ident (path, {loc}, _)}; args};
+        }
       when kindOpt <> None ->
       let checkArg ((argLabel : Asttypes.arg_label), _argOpt) =
         match (argLabel, kindOpt) with
@@ -617,7 +620,7 @@ module ExtendFunctionTable = struct
                             calls a progress function"
                            functionName printPos id_pos;
                      })))
-      | Texp_apply ({exp_desc = Texp_ident (callee, _, _)}, args)
+      | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)}; args}
         when callee |> FunctionTable.isInFunctionInTable ~functionTable ->
         let functionName = Path.name callee in
         args
@@ -665,7 +668,8 @@ module CheckExpressionWellFormed = struct
       | Texp_ident (path, {loc}, _) ->
         checkIdent ~path ~loc;
         e
-      | Texp_apply ({exp_desc = Texp_ident (functionPath, _, _)}, args) ->
+      | Texp_apply {funct = {exp_desc = Texp_ident (functionPath, _, _)}; args}
+        ->
         let functionName = Path.name functionPath in
         args
         |> List.iter (fun ((argLabel : Asttypes.arg_label), argOpt) ->
@@ -739,8 +743,10 @@ module Compile = struct
     match expr.exp_desc with
     | Texp_ident _ -> Command.nothing
     | Texp_apply
-        (({exp_desc = Texp_ident (calleeToRename, l, vd)} as expr), argsToExtend)
-      -> (
+        {
+          funct = {exp_desc = Texp_ident (calleeToRename, l, vd)} as expr;
+          args = argsToExtend;
+        } -> (
       let callee, args =
         match
           Hashtbl.find_opt ctx.innerRecursiveFunctions
@@ -844,7 +850,8 @@ module Compile = struct
              and create a function call with the appropriate arguments *)
           assert false
         | None -> expr |> expression ~ctx |> evalArgs ~args ~ctx)
-    | Texp_apply (expr, args) -> expr |> expression ~ctx |> evalArgs ~args ~ctx
+    | Texp_apply {funct = expr; args} ->
+      expr |> expression ~ctx |> evalArgs ~args ~ctx
     | Texp_let
         ( Recursive,
           [{vb_pat = {pat_desc = Tpat_var (id, _); pat_loc}; vb_expr}],

@@ -201,7 +201,8 @@ let rec classify_expression : Typedtree.expression -> sd =
   | Texp_pack _ | Texp_function _ | Texp_lazy _ | Texp_extension_constructor _
     ->
     Static
-  | Texp_apply ({exp_desc = Texp_ident (_, _, vd)}, _) when is_ref vd -> Static
+  | Texp_apply {funct = {exp_desc = Texp_ident (_, _, vd)}} when is_ref vd ->
+    Static
   | Texp_apply _ | Texp_match _ | Texp_ifthenelse _ | Texp_send _ | Texp_field _
   | Texp_assert _ | Texp_try _ | Texp_override _ ->
     Dynamic
@@ -235,10 +236,11 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
   | Texp_constant _ -> Use.empty
   | Texp_new _ -> assert false
   | Texp_instvar _ -> Use.empty
-  | Texp_apply ({exp_desc = Texp_ident (_, _, vd)}, [(_, Some arg)])
+  | Texp_apply
+      {funct = {exp_desc = Texp_ident (_, _, vd)}; args = [(_, Some arg)]}
     when is_ref vd ->
     Use.guard (expression env arg)
-  | Texp_apply (e, args) ->
+  | Texp_apply {funct = e; args} ->
     let arg env (_, eo) = option expression env eo in
     Use.(join (inspect (expression env e)) (inspect (list arg env args)))
   | Texp_tuple exprs -> Use.guard (list expression env exprs)

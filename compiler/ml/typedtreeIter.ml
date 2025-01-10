@@ -231,7 +231,7 @@ end = struct
       iter_bindings rec_flag list;
       iter_expression exp
     | Texp_function {case; _} -> iter_case case
-    | Texp_apply (exp, list) ->
+    | Texp_apply {funct = exp; args = list} ->
       iter_expression exp;
       List.iter
         (fun (_label, expo) ->
