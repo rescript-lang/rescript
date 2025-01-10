@@ -221,7 +221,7 @@ let rec add_expr bv exp =
   | Pexp_fun {default = opte; lhs = p; rhs = e} ->
     add_opt add_expr bv opte;
     add_expr (add_pattern bv p) e
-  | Pexp_apply (e, el) ->
+  | Pexp_apply {funct = e; args = el} ->
     add_expr bv e;
     List.iter (fun (_, e) -> add_expr bv e) el
   | Pexp_match (e, pel) ->

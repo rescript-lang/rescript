@@ -286,7 +286,7 @@ module E = struct
       iter_opt (sub.expr sub) def;
       sub.pat sub p;
       sub.expr sub e
-    | Pexp_apply (e, l) ->
+    | Pexp_apply {funct = e; args = l} ->
       sub.expr sub e;
       List.iter (iter_snd (sub.expr sub)) l
     | Pexp_match (e, pel) ->

@@ -64,7 +64,7 @@ let sane_property_name_check loc s =
 (* match fn as *)
 let view_as_app (fn : exp) (s : string list) : app_pattern option =
   match fn.pexp_desc with
-  | Pexp_apply ({pexp_desc = Pexp_ident {txt = Lident op; _}}, args)
+  | Pexp_apply {funct = {pexp_desc = Pexp_ident {txt = Lident op; _}}; args}
     when Ext_list.has_string s op ->
     Some {op; loc = fn.pexp_loc; args = check_and_discard args}
   | _ -> None
@@ -88,10 +88,10 @@ let app_exp_mapper (e : exp) (self : Bs_ast_mapper.mapper) : exp =
       {f with pexp_desc = Pexp_variant (label, Some a); pexp_loc = e.pexp_loc}
     | Pexp_construct (ctor, None) ->
       {f with pexp_desc = Pexp_construct (ctor, Some a); pexp_loc = e.pexp_loc}
-    | Pexp_apply (fn1, args) ->
+    | Pexp_apply {funct = fn1; args} ->
       Bs_ast_invariant.warn_discarded_unused_attributes fn1.pexp_attributes;
       {
-        pexp_desc = Pexp_apply (fn1, (Nolabel, a) :: args);
+        pexp_desc = Pexp_apply {funct = fn1; args = (Nolabel, a) :: args};
         pexp_loc = e.pexp_loc;
         pexp_attributes = e.pexp_attributes @ f.pexp_attributes;
       }
@@ -107,12 +107,16 @@ let app_exp_mapper (e : exp) (self : Bs_ast_mapper.mapper) : exp =
                          fn with
                          pexp_desc = Pexp_construct (ctor, Some bounded_obj_arg);
                        }
-                     | Pexp_apply (fn, args) ->
+                     | Pexp_apply {funct = fn; args} ->
                        Bs_ast_invariant.warn_discarded_unused_attributes
                          fn.pexp_attributes;
                        {
                          Parsetree.pexp_desc =
-                           Pexp_apply (fn, (Nolabel, bounded_obj_arg) :: args);
+                           Pexp_apply
+                             {
+                               funct = fn;
+                               args = (Nolabel, bounded_obj_arg) :: args;
+                             };
                          pexp_attributes = [];
                          pexp_loc = fn.pexp_loc;
                        }

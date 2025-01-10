@@ -325,7 +325,7 @@ module E = struct
           ~attrs:(arity_to_attributes arity)
           (Location.mkloc (Longident.Lident "Function$") e.pexp_loc)
           (Some e))
-    | Pexp_apply (e, l) ->
+    | Pexp_apply {funct = e; args = l} ->
       apply ~loc ~attrs (sub.expr sub e) (List.map (map_snd (sub.expr sub)) l)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)

@@ -139,7 +139,7 @@ let iter_expression f e =
     | Pexp_fun {default = eo; rhs = e} ->
       may expr eo;
       expr e
-    | Pexp_apply (e, lel) ->
+    | Pexp_apply {funct = e; args = lel} ->
       expr e;
       List.iter (fun (_, e) -> expr e) lel
     | Pexp_let (_, pel, e) ->
@@ -2417,7 +2417,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
       ty_expected l
       [Ast_helper.Exp.case spat sbody]
-  | Pexp_apply (sfunct, sargs) ->
+  | Pexp_apply {funct = sfunct; args = sargs} ->
     assert (sargs <> []);
     begin_def ();
     (* one more level for non-returning functions *)

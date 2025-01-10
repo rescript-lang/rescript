@@ -327,7 +327,7 @@ let rec is_block_expr expr =
   | Pexp_letmodule _ | Pexp_letexception _ | Pexp_let _ | Pexp_open _
   | Pexp_sequence _ ->
     true
-  | Pexp_apply (call_expr, _) when is_block_expr call_expr -> true
+  | Pexp_apply {funct = call_expr} when is_block_expr call_expr -> true
   | Pexp_constraint (expr, _) when is_block_expr expr -> true
   | Pexp_field (expr, _) when is_block_expr expr -> true
   | Pexp_setfield (expr, _, _) when is_block_expr expr -> true
@@ -1314,33 +1314,40 @@ and walk_expression expr t comments =
     walk_list (cases |> List.map (fun case -> Case case)) t rest
     (* unary expression: todo use parsetreeviewer *)
   | Pexp_apply
-      ( {
-          pexp_desc =
-            Pexp_ident
-              {
-                txt =
-                  Longident.Lident ("~+" | "~+." | "~-" | "~-." | "not" | "!");
-              };
-        },
-        [(Nolabel, arg_expr)] ) ->
+      {
+        funct =
+          {
+            pexp_desc =
+              Pexp_ident
+                {
+                  txt =
+                    Longident.Lident ("~+" | "~+." | "~-" | "~-." | "not" | "!");
+                };
+          };
+        args = [(Nolabel, arg_expr)];
+      } ->
     let before, inside, after = partition_by_loc comments arg_expr.pexp_loc in
     attach t.leading arg_expr.pexp_loc before;
     walk_expression arg_expr t inside;
     attach t.trailing arg_expr.pexp_loc after
   (* binary expression *)
   | Pexp_apply
-      ( {
-          pexp_desc =
-            Pexp_ident
-              {
-                txt =
-                  Longident.Lident
-                    ( ":=" | "||" | "&&" | "=" | "==" | "<" | ">" | "!=" | "!=="
-                    | "<=" | ">=" | "|>" | "+" | "+." | "-" | "-." | "++" | "^"
-                    | "*" | "*." | "/" | "/." | "**" | "|." | "|.u" | "<>" );
-              };
-        },
-        [(Nolabel, operand1); (Nolabel, operand2)] ) ->
+      {
+        funct =
+          {
+            pexp_desc =
+              Pexp_ident
+                {
+                  txt =
+                    Longident.Lident
+                      ( ":=" | "||" | "&&" | "=" | "==" | "<" | ">" | "!="
+                      | "!==" | "<=" | ">=" | "|>" | "+" | "+." | "-" | "-."
+                      | "++" | "^" | "*" | "*." | "/" | "/." | "**" | "|."
+                      | "|.u" | "<>" );
+                };
+          };
+        args = [(Nolabel, operand1); (Nolabel, operand2)];
+      } ->
     let before, inside, after = partition_by_loc comments operand1.pexp_loc in
     attach t.leading operand1.pexp_loc before;
     walk_expression operand1 t inside;
@@ -1354,25 +1361,43 @@ and walk_expression expr t comments =
     (* (List.concat [inside; after]); *)
     attach t.trailing operand2.pexp_loc after
   | Pexp_apply
-      ( {pexp_desc = Pexp_ident {txt = Longident.Ldot (Lident "Array", "get")}},
-        [(Nolabel, parent_expr); (Nolabel, member_expr)] ) ->
+      {
+        funct =
+          {
+            pexp_desc = Pexp_ident {txt = Longident.Ldot (Lident "Array", "get")};
+          };
+        args = [(Nolabel, parent_expr); (Nolabel, member_expr)];
+      } ->
     walk_list [Expression parent_expr; Expression member_expr] t comments
   | Pexp_apply
-      ( {pexp_desc = Pexp_ident {txt = Longident.Ldot (Lident "Array", "set")}},
-        [(Nolabel, parent_expr); (Nolabel, member_expr); (Nolabel, target_expr)]
-      ) ->
+      {
+        funct =
+          {
+            pexp_desc = Pexp_ident {txt = Longident.Ldot (Lident "Array", "set")};
+          };
+        args =
+          [
+            (Nolabel, parent_expr);
+            (Nolabel, member_expr);
+            (Nolabel, target_expr);
+          ];
+      } ->
     walk_list
       [Expression parent_expr; Expression member_expr; Expression target_expr]
       t comments
   | Pexp_apply
-      ( {
-          pexp_desc =
-            Pexp_ident {txt = Longident.Ldot (Lident "Primitive_dict", "make")};
-        },
-        [(Nolabel, key_values)] )
+      {
+        funct =
+          {
+            pexp_desc =
+              Pexp_ident
+                {txt = Longident.Ldot (Lident "Primitive_dict", "make")};
+          };
+        args = [(Nolabel, key_values)];
+      }
     when Res_parsetree_viewer.is_tuple_array key_values ->
     walk_list [Expression key_values] t comments
-  | Pexp_apply (call_expr, arguments) ->
+  | Pexp_apply {funct = call_expr; args = arguments} ->
     let before, inside, after = partition_by_loc comments call_expr.pexp_loc in
     let after =
       if is_block_expr call_expr then (

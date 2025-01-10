@@ -51,20 +51,27 @@ let to_method_callback loc (self : Bs_ast_mapper.mapper) label
   let arity_s = string_of_int arity in
   Stack.pop Js_config.self_stack |> ignore;
   Parsetree.Pexp_apply
-    ( Exp.ident ~loc
-        {loc; txt = Ldot (Ast_literal.Lid.js_oo, "unsafe_to_method")},
-      [
-        ( Nolabel,
-          Exp.constraint_ ~loc
-            (Exp.record ~loc
-               [
-                 ({loc; txt = Ast_literal.Lid.hidden_field arity_s}, body, false);
-               ]
-               None)
-            (Typ.constr ~loc
-               {
-                 loc;
-                 txt = Ldot (Ast_literal.Lid.js_meth_callback, "arity" ^ arity_s);
-               }
-               [Typ.any ~loc ()]) );
-      ] )
+    {
+      funct =
+        Exp.ident ~loc
+          {loc; txt = Ldot (Ast_literal.Lid.js_oo, "unsafe_to_method")};
+      args =
+        [
+          ( Nolabel,
+            Exp.constraint_ ~loc
+              (Exp.record ~loc
+                 [
+                   ( {loc; txt = Ast_literal.Lid.hidden_field arity_s},
+                     body,
+                     false );
+                 ]
+                 None)
+              (Typ.constr ~loc
+                 {
+                   loc;
+                   txt =
+                     Ldot (Ast_literal.Lid.js_meth_callback, "arity" ^ arity_s);
+                 }
+                 [Typ.any ~loc ()]) );
+        ];
+    }

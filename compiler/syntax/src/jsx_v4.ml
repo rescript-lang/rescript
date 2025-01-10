@@ -791,10 +791,8 @@ let modified_binding_old binding =
       (* here's where we spelunk! *)
       spelunk_for_fun_expression return_expression
     (* let make = React.forwardRef((~prop) => ...) *)
-    | {
-     pexp_desc =
-       Pexp_apply (_wrapperExpression, [(Nolabel, inner_function_expression)]);
-    } ->
+    | {pexp_desc = Pexp_apply {args = [(Nolabel, inner_function_expression)]}}
+      ->
       spelunk_for_fun_expression inner_function_expression
     | {
      pexp_desc = Pexp_sequence (_wrapperExpression, inner_function_expression);
@@ -871,7 +869,8 @@ let modified_binding ~binding_loc ~binding_pat_loc ~fn_name binding =
     (* let make = React.forwardRef((~prop) => ...) *)
     | {
      pexp_desc =
-       Pexp_apply (wrapper_expression, [(Nolabel, internal_expression)]);
+       Pexp_apply
+         {funct = wrapper_expression; args = [(Nolabel, internal_expression)]};
     } ->
       let () = has_application := true in
       let _, _, exp = spelunk_for_fun_expression internal_expression in
@@ -1190,7 +1189,10 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     let make_new_binding ~loc ~full_module_name binding =
       let props_pattern =
         match binding.pvb_expr with
-        | {pexp_desc = Pexp_apply (wrapper_expr, [(Nolabel, func_expr)])}
+        | {
+         pexp_desc =
+           Pexp_apply {funct = wrapper_expr; args = [(Nolabel, func_expr)]};
+        }
           when is_forward_ref wrapper_expr ->
           (* Case when using React.forwardRef *)
           let rec check_invalid_forward_ref expr =
@@ -1505,7 +1507,7 @@ let expr ~config mapper expression =
   match expression with
   (* Does the function application have the @JSX attribute? *)
   | {
-   pexp_desc = Pexp_apply (call_expression, call_arguments);
+   pexp_desc = Pexp_apply {funct = call_expression; args = call_arguments};
    pexp_attributes;
    pexp_loc;
   } -> (

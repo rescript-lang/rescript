@@ -570,7 +570,7 @@ module SexpAst = struct
             pattern pat;
             expression expr;
           ]
-      | Pexp_apply (expr, args) ->
+      | Pexp_apply {funct = expr; args} ->
         Sexp.list
           [
             Sexp.atom "Pexp_apply";

@@ -250,7 +250,7 @@ and expression i ppf x =
     option i expression ppf eo;
     pattern i ppf p;
     expression i ppf e
-  | Pexp_apply (e, l) ->
+  | Pexp_apply {funct = e; args = l} ->
     line i ppf "Pexp_apply\n";
     expression i ppf e;
     list i label_x_expression ppf l
