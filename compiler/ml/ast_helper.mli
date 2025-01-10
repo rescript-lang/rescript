@@ -192,7 +192,6 @@ module Exp : sig
   val constraint_ :
     ?loc:loc -> ?attrs:attrs -> expression -> core_type -> expression
   val send : ?loc:loc -> ?attrs:attrs -> expression -> str -> expression
-  val new_ : ?loc:loc -> ?attrs:attrs -> lid -> expression
   val setinstvar : ?loc:loc -> ?attrs:attrs -> str -> expression -> expression
   val override :
     ?loc:loc -> ?attrs:attrs -> (str * expression) list -> expression

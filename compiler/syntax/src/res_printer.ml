@@ -3390,7 +3390,6 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         Doc.concat [Doc.text "\""; member_doc; Doc.text "\""]
       in
       Doc.group (Doc.concat [parent_doc; Doc.lbracket; member; Doc.rbracket])
-    | Pexp_new _ -> Doc.text "Pexp_new not implemented in printer"
     | Pexp_setinstvar _ -> Doc.text "Pexp_setinstvar not implemented in printer"
     | Pexp_override _ -> Doc.text "Pexp_override not implemented in printer"
     | Pexp_poly _ -> Doc.text "Pexp_poly not implemented in printer"

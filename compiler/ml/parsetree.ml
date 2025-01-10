@@ -291,7 +291,6 @@ and expression_desc =
     (* (E :> T)        (None, T)
          *)
   | Pexp_send of expression * label loc (*  E # m *)
-  | Pexp_new of Longident.t loc (* new M.c *)
   | Pexp_setinstvar of label loc * expression (* x <- 2 *)
   | Pexp_override of (label loc * expression) list
     (* {< x1 = E1; ...; Xn = En >} *)

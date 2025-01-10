@@ -333,7 +333,6 @@ module E = struct
       sub.expr sub e;
       sub.typ sub t
     | Pexp_send (e, _s) -> sub.expr sub e
-    | Pexp_new lid -> iter_loc sub lid
     | Pexp_setinstvar (s, e) ->
       iter_loc sub s;
       sub.expr sub e

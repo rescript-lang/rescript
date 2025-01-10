@@ -94,8 +94,6 @@ let emit_external_warnings : iterator =
       (fun self ({pexp_loc = loc} as a) ->
         match a.pexp_desc with
         | Pexp_constant const -> check_constant loc const
-        | Pexp_new _ ->
-          Location.raise_errorf ~loc "OCaml style objects are not supported"
         | Pexp_variant (s, None) when Ext_string.is_valid_hash_number s -> (
           try ignore (Ext_string.hash_number_as_i32_exn s : int32)
           with _ ->

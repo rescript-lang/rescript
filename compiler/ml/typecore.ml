@@ -134,7 +134,7 @@ let iter_expression f e =
     f e;
     match e.pexp_desc with
     | Pexp_extension _ (* we don't iterate under extension point *)
-    | Pexp_ident _ | Pexp_new _ | Pexp_constant _ ->
+    | Pexp_ident _ | Pexp_constant _ ->
       ()
     | Pexp_fun {default = eo; rhs = e} ->
       may expr eo;
@@ -3034,7 +3034,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         (Error
            (e.pexp_loc, env, Undefined_method (obj.exp_type, met, valid_methods)))
     )
-  | Pexp_new _ | Pexp_setinstvar _ | Pexp_override _ -> assert false
+  | Pexp_setinstvar _ | Pexp_override _ -> assert false
   | Pexp_letmodule (name, smodl, sbody) ->
     let ty = newvar () in
     (* remember original level *)
