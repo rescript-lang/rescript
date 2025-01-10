@@ -333,9 +333,6 @@ module E = struct
       sub.expr sub e;
       sub.typ sub t
     | Pexp_send (e, _s) -> sub.expr sub e
-    | Pexp_setinstvar (s, e) ->
-      iter_loc sub s;
-      sub.expr sub e
     | Pexp_override sel ->
       List.iter (iter_tuple (iter_loc sub) (sub.expr sub)) sel
     | Pexp_letmodule (s, me, e) ->

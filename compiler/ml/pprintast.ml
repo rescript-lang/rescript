@@ -702,8 +702,6 @@ and expression ctxt f x =
       in
       let lst = sequence_helper [] x in
       pp f "@[<hv>%a@]" (list (expression (under_semi ctxt)) ~sep:";@;") lst
-    | Pexp_setinstvar (s, e) ->
-      pp f "@[<hov2>%s@ <-@ %a@]" s.txt (expression ctxt) e
     | Pexp_override l ->
       (* FIXME *)
       let string_x_expression f (s, e) =

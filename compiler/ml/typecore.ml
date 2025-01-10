@@ -158,7 +158,6 @@ let iter_expression f e =
     | Pexp_poly (e, _)
     | Pexp_lazy e
     | Pexp_assert e
-    | Pexp_setinstvar (_, e)
     | Pexp_send (e, _)
     | Pexp_constraint (e, _)
     | Pexp_coerce (e, _, _)
@@ -3034,7 +3033,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         (Error
            (e.pexp_loc, env, Undefined_method (obj.exp_type, met, valid_methods)))
     )
-  | Pexp_setinstvar _ | Pexp_override _ -> assert false
+  | Pexp_override _ -> assert false
   | Pexp_letmodule (name, smodl, sbody) ->
     let ty = newvar () in
     (* remember original level *)

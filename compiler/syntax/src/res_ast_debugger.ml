@@ -679,7 +679,6 @@ module SexpAst = struct
       | Pexp_coerce (expr, (), typexpr) ->
         Sexp.list [Sexp.atom "Pexp_coerce"; expression expr; core_type typexpr]
       | Pexp_send _ -> Sexp.list [Sexp.atom "Pexp_send"]
-      | Pexp_setinstvar _ -> Sexp.list [Sexp.atom "Pexp_setinstvar"]
       | Pexp_override _ -> Sexp.list [Sexp.atom "Pexp_override"]
       | Pexp_letmodule (mod_name, mod_expr, expr) ->
         Sexp.list
