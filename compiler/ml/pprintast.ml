@@ -631,7 +631,7 @@ and expression ctxt f x =
       (*   rec_flag rf *)
       pp f "@[<2>%a in@;<1 -2>%a@]" (bindings reset_ctxt) (rf, l)
         (expression ctxt) e
-    | Pexp_apply {funct = e; args = l} -> (
+    | Pexp_apply {funct = e; args = l; partial} -> (
       if not (sugar_expr ctxt f x) then
         match view_fixity_of_exp e with
         | `Infix s -> (
@@ -667,14 +667,15 @@ and expression ctxt f x =
               (list (label_x_expression_param ctxt))
               l)
         | _ ->
-          pp f "@[<hov2>%a@]"
+          let partial_str = if partial then " ..." else "" in
+          pp f "@[<hov2>%a%s@]"
             (fun f (e, l) ->
               pp f "%a@ %a" (expression2 ctxt) e
                 (list (label_x_expression_param reset_ctxt))
                 l)
               (* reset here only because [function,match,try,sequence]
                  are lower priority *)
-            (e, l))
+            (e, l) partial_str)
     | Pexp_construct (li, Some eo) when not (is_simple_construct (view_expr x))
       -> (
       (* Not efficient FIXME*)

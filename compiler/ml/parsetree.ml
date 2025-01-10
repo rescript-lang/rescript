@@ -242,7 +242,11 @@ and expression_desc =
        - "fun P1 P2 .. Pn -> E1" is represented as nested Pexp_fun.
        - "let f P = E" is represented using Pexp_fun.
     *)
-  | Pexp_apply of {funct: expression; args: (arg_label * expression) list}
+  | Pexp_apply of {
+      funct: expression;
+      args: (arg_label * expression) list;
+      partial: bool;
+    }
     (* E0 ~l1:E1 ... ~ln:En
        li can be empty (non labeled argument) or start with '?'
        (optional argument).

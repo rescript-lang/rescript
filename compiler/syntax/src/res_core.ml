@@ -2221,11 +2221,12 @@ and parse_binary_expr ?(context = OrdinaryExpr) ?a p prec =
       let loc = mk_loc a.Parsetree.pexp_loc.loc_start b.pexp_loc.loc_end in
       let expr =
         match (token, b.pexp_desc) with
-        | BarGreater, Pexp_apply {funct = fun_expr; args} ->
+        | BarGreater, Pexp_apply {funct = fun_expr; args; partial} ->
           {
             b with
             pexp_desc =
-              Pexp_apply {funct = fun_expr; args = args @ [(Nolabel, a)]};
+              Pexp_apply
+                {funct = fun_expr; args = args @ [(Nolabel, a)]; partial};
           }
         | BarGreater, _ -> Ast_helper.Exp.apply ~loc b [(Nolabel, a)]
         | _ ->
@@ -3682,11 +3683,7 @@ and parse_call_expr p fun_expr =
     parse_comma_delimited_region ~grammar:Grammar.ArgumentList ~closing:Rparen
       ~f:parse_argument p
   in
-  let res_partial_attr =
-    let loc = mk_loc start_pos p.prev_end_pos in
-    (Location.mkloc "res.partial" loc, Parsetree.PStr [])
-  in
-  let is_partial =
+  let partial =
     match p.token with
     | DotDotDot when args <> [] ->
       Parser.next p;
@@ -3708,45 +3705,6 @@ and parse_call_expr p fun_expr =
               None;
         };
       ]
-    | [
-     {
-       label = Nolabel;
-       expr =
-         {
-           pexp_desc = Pexp_construct ({txt = Longident.Lident "()"}, None);
-           pexp_loc = loc;
-           pexp_attributes = [];
-         } as expr;
-     };
-    ]
-      when (not loc.loc_ghost) && p.mode = ParseForTypeChecker && not is_partial
-      ->
-      (*  Since there is no syntax space for arity zero vs arity one,
-       *  we expand
-       *    `fn(. ())` into
-       *    `fn(. {let __res_unit = (); __res_unit})`
-       *  when the parsetree is intended for type checking
-       *
-       *  Note:
-       *    `fn(.)` is treated as zero arity application.
-       *  The invisible unit expression here has loc_ghost === true
-       *
-       *  Related: https://github.com/rescript-lang/syntax/issues/138
-       *)
-      [
-        {
-          label = Nolabel;
-          expr =
-            Ast_helper.Exp.let_ Asttypes.Nonrecursive
-              [
-                Ast_helper.Vb.mk
-                  (Ast_helper.Pat.var (Location.mknoloc "__res_unit"))
-                  expr;
-              ]
-              (Ast_helper.Exp.ident
-                 (Location.mknoloc (Longident.Lident "__res_unit")));
-        };
-      ]
     | args -> args
   in
   let loc = {fun_expr.pexp_loc with loc_end = p.prev_end_pos} in
@@ -3761,9 +3719,13 @@ and parse_call_expr p fun_expr =
   let apply =
     Ext_list.fold_left args fun_expr (fun call_body args ->
         let args, wrap = process_underscore_application args in
+        let res_partial_attr =
+          let loc = mk_loc start_pos p.prev_end_pos in
+          (Location.mkloc "res.partial" loc, Parsetree.PStr [])
+        in
         let exp =
-          let attrs = if is_partial then [res_partial_attr] else [] in
-          Ast_helper.Exp.apply ~loc ~attrs call_body args
+          let attrs = if partial then [res_partial_attr] else [] in
+          Ast_helper.Exp.apply ~loc ~attrs ~partial call_body args
         in
         wrap exp)
   in

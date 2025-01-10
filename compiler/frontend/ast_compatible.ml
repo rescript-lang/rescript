@@ -40,14 +40,19 @@ let apply_simple ?(loc = default_loc) ?(attrs = []) (fn : expression)
     pexp_attributes = attrs;
     pexp_desc =
       Pexp_apply
-        {funct = fn; args = Ext_list.map args (fun x -> (Asttypes.Nolabel, x))};
+        {
+          funct = fn;
+          args = Ext_list.map args (fun x -> (Asttypes.Nolabel, x));
+          partial = false;
+        };
   }
 
 let app1 ?(loc = default_loc) ?(attrs = []) fn arg1 : expression =
   {
     pexp_loc = loc;
     pexp_attributes = attrs;
-    pexp_desc = Pexp_apply {funct = fn; args = [(Nolabel, arg1)]};
+    pexp_desc =
+      Pexp_apply {funct = fn; args = [(Nolabel, arg1)]; partial = false};
   }
 
 let app2 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 : expression =
@@ -55,7 +60,8 @@ let app2 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 : expression =
     pexp_loc = loc;
     pexp_attributes = attrs;
     pexp_desc =
-      Pexp_apply {funct = fn; args = [(Nolabel, arg1); (Nolabel, arg2)]};
+      Pexp_apply
+        {funct = fn; args = [(Nolabel, arg1); (Nolabel, arg2)]; partial = false};
   }
 
 let app3 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 arg3 : expression =
@@ -64,7 +70,11 @@ let app3 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 arg3 : expression =
     pexp_attributes = attrs;
     pexp_desc =
       Pexp_apply
-        {funct = fn; args = [(Nolabel, arg1); (Nolabel, arg2); (Nolabel, arg3)]};
+        {
+          funct = fn;
+          args = [(Nolabel, arg1); (Nolabel, arg2); (Nolabel, arg3)];
+          partial = false;
+        };
   }
 
 let fun_ ?(loc = default_loc) ?(attrs = []) ?(async = false) ~arity pat exp =
@@ -108,6 +118,7 @@ let apply_labels ?(loc = default_loc) ?(attrs = []) fn
         {
           funct = fn;
           args = Ext_list.map args (fun (l, a) -> (Asttypes.Labelled l, a));
+          partial = false;
         };
   }
 

@@ -250,8 +250,9 @@ and expression i ppf x =
     option i expression ppf eo;
     pattern i ppf p;
     expression i ppf e
-  | Pexp_apply {funct = e; args = l} ->
+  | Pexp_apply {funct = e; args = l; partial} ->
     line i ppf "Pexp_apply\n";
+    if partial then line i ppf "partial\n";
     expression i ppf e;
     list i label_x_expression ppf l
   | Pexp_match (e, l) ->

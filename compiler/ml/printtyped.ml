@@ -295,7 +295,8 @@ and expression i ppf x =
     line i ppf "%a" Ident.print param;
     arg_label i ppf p;
     case i ppf case_
-  | Texp_apply {funct = e; args = l} ->
+  | Texp_apply {funct = e; args = l; partial} ->
+    if partial then line i ppf "partial\n";
     line i ppf "Texp_apply\n";
     expression i ppf e;
     list i label_x_expression ppf l

@@ -151,6 +151,7 @@ and expression_desc =
   | Texp_apply of {
       funct: expression;
       args: (arg_label * expression option) list;
+      partial: bool;
     }
       (** E0 ~l1:E1 ... ~ln:En
 

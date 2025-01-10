@@ -4264,14 +4264,14 @@ and print_pexp_apply ~state expr cmt_tbl =
   | Pexp_apply {funct = {pexp_desc = Pexp_ident lident}; args}
     when ParsetreeViewer.is_jsx_expression expr ->
     print_jsx_expression ~state lident args cmt_tbl
-  | Pexp_apply {funct = call_expr; args} ->
+  | Pexp_apply {funct = call_expr; args; partial} ->
     let args =
       List.map
         (fun (lbl, arg) -> (lbl, ParsetreeViewer.rewrite_underscore_apply arg))
         args
     in
     let attrs = expr.pexp_attributes in
-    let partial, attrs = ParsetreeViewer.process_partial_app_attribute attrs in
+    let _, attrs = ParsetreeViewer.process_partial_app_attribute attrs in
     let args =
       if partial then
         let dummy = Ast_helper.Exp.constant ~attrs (Ast_helper.Const.int 0) in

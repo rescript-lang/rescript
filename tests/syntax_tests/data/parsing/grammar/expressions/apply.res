@@ -9,3 +9,5 @@ List.reduce((acc, curr) => acc + curr, 0, myList)
 let unitUncurried = apply(.)
 
 call(~a: int)
+
+call_partial(3, ...)

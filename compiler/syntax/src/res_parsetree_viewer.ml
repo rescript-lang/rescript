@@ -146,7 +146,11 @@ let rewrite_underscore_apply expr =
           | arg -> arg)
         args
     in
-    {e with pexp_desc = Pexp_apply {funct = call_expr; args = new_args}}
+    {
+      e with
+      pexp_desc =
+        Pexp_apply {funct = call_expr; args = new_args; partial = false};
+    }
   | _ -> expr
 
 type fun_param_kind =

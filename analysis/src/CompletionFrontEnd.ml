@@ -262,12 +262,14 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
             pexp_loc;
             pexp_attributes;
           };
-        args = [(_, lhs); (_, {pexp_desc = Pexp_apply {funct = d; args}})];
+        args =
+          [(_, lhs); (_, {pexp_desc = Pexp_apply {funct = d; args; partial}})];
       } ->
     (* Transform away pipe with apply call *)
     exprToContextPath
       {
-        pexp_desc = Pexp_apply {funct = d; args = (Nolabel, lhs) :: args};
+        pexp_desc =
+          Pexp_apply {funct = d; args = (Nolabel, lhs) :: args; partial};
         pexp_loc;
         pexp_attributes;
       }
@@ -278,6 +280,7 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
           [
             (_, lhs); (_, {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes});
           ];
+        partial;
       } ->
     (* Transform away pipe with identifier *)
     exprToContextPath
@@ -287,6 +290,7 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
             {
               funct = {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes};
               args = [(Nolabel, lhs)];
+              partial;
             };
         pexp_loc;
         pexp_attributes;

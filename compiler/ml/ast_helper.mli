@@ -148,6 +148,7 @@ module Exp : sig
   val apply :
     ?loc:loc ->
     ?attrs:attrs ->
+    ?partial:bool ->
     expression ->
     (arg_label * expression) list ->
     expression

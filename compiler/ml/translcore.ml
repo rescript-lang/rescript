@@ -760,17 +760,14 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       | Plazyforce, [a] -> wrap (Matching.inline_lazy_force a e.exp_loc)
       | Plazyforce, _ -> assert false
       | _ -> wrap (Lprim (prim, argl, e.exp_loc))))
-  | Texp_apply {funct; args = oargs} ->
+  | Texp_apply {funct; args = oargs; partial} ->
     let inlined, funct =
       Translattribute.get_and_remove_inlined_attribute funct
     in
     let uncurried_partial_application =
       (* In case of partial application foo(args, ...) when some args are missing,
          get the arity *)
-      let uncurried_partial_app =
-        Ext_list.exists e.exp_attributes (fun ({txt}, _) -> txt = "res.partial")
-      in
-      if uncurried_partial_app then
+      if partial then
         let arity_opt = Ctype.get_arity funct.exp_env funct.exp_type in
         match arity_opt with
         | Some arity ->

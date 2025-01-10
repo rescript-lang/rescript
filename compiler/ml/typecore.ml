@@ -2420,7 +2420,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
       ty_expected l
       [Ast_helper.Exp.case spat sbody]
-  | Pexp_apply {funct = sfunct; args = sargs} ->
+  | Pexp_apply {funct = sfunct; args = sargs; partial} ->
     assert (sargs <> []);
     begin_def ();
     (* one more level for non-returning functions *)
@@ -2429,11 +2429,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     end_def ();
     wrap_trace_gadt_instances env (lower_args env []) ty;
     begin_def ();
-    let total_app =
-      not
-      @@ Ext_list.exists sexp.pexp_attributes (fun ({txt}, _) ->
-             txt = "res.partial")
-    in
+    let total_app = not partial in
     let type_clash_context = type_clash_context_from_function sexp sfunct in
     let args, ty_res, fully_applied =
       match translate_unified_ops env funct sargs with
@@ -2446,7 +2442,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     let mk_apply funct args =
       rue
         {
-          exp_desc = Texp_apply {funct; args};
+          exp_desc = Texp_apply {funct; args; partial};
           exp_loc = loc;
           exp_extra = [];
           exp_type = ty_res;
