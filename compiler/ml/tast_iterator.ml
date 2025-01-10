@@ -144,7 +144,6 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
     | Texp_constraint cty -> sub.typ sub cty
     | Texp_coerce ((), cty2) -> sub.typ sub cty2
     | Texp_newtype _ -> ()
-    | Texp_poly cto -> Option.iter (sub.typ sub) cto
     | Texp_open (_, _, _, _) -> ()
   in
   List.iter (fun (e, _, _) -> extra e) exp_extra;
@@ -198,10 +197,7 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   | Texp_send (exp, _, expo) ->
     sub.expr sub exp;
     Option.iter (sub.expr sub) expo
-  | Texp_new _ -> ()
   | Texp_instvar _ -> ()
-  | Texp_setinstvar _ -> ()
-  | Texp_override _ -> ()
   | Texp_letmodule (_, _, mexpr, exp) ->
     sub.module_expr sub mexpr;
     sub.expr sub exp

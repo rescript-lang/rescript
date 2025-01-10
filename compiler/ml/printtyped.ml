@@ -259,10 +259,6 @@ and expression_extra i ppf x attrs =
   | Texp_open (ovf, m, _, _) ->
     line i ppf "Texp_open %a \"%a\"\n" fmt_override_flag ovf fmt_path m;
     attributes i ppf attrs
-  | Texp_poly cto ->
-    line i ppf "Texp_poly\n";
-    attributes i ppf attrs;
-    option i core_type ppf cto
   | Texp_newtype s ->
     line i ppf "Texp_newtype \"%s\"\n" s;
     attributes i ppf attrs
@@ -360,7 +356,6 @@ and expression i ppf x =
     line i ppf "Texp_send \"%s\"\n" s;
     expression i ppf e;
     option i expression ppf eo
-  | Texp_new _ | Texp_setinstvar _ | Texp_override _ -> ()
   | Texp_letmodule (s, _, me, e) ->
     line i ppf "Texp_letmodule \"%a\"\n" fmt_ident s;
     module_expr i ppf me;

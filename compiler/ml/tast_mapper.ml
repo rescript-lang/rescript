@@ -189,7 +189,6 @@ let expr sub x =
     | Texp_open (ovf, path, loc, env) ->
       Texp_open (ovf, path, loc, sub.env sub env)
     | Texp_newtype _ as d -> d
-    | Texp_poly cto -> Texp_poly (opt (sub.typ sub) cto)
   in
   let exp_extra = List.map (tuple3 extra id id) x.exp_extra in
   let exp_env = sub.env sub x.exp_env in
@@ -244,8 +243,7 @@ let expr sub x =
         (id, p, sub.expr sub exp1, sub.expr sub exp2, dir, sub.expr sub exp3)
     | Texp_send (exp, meth, expo) ->
       Texp_send (sub.expr sub exp, meth, opt (sub.expr sub) expo)
-    | (Texp_new _ | Texp_instvar _) as d -> d
-    | Texp_setinstvar _ | Texp_override _ -> assert false
+    | Texp_instvar _ as d -> d
     | Texp_letmodule (id, s, mexpr, exp) ->
       Texp_letmodule (id, s, sub.module_expr sub mexpr, sub.expr sub exp)
     | Texp_letexception (cd, exp) ->

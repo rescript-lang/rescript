@@ -1820,7 +1820,6 @@ let rec is_nonexpansive exp =
   | Texp_ifthenelse (_cond, ifso, ifnot) ->
     is_nonexpansive ifso && is_nonexpansive_opt ifnot
   | Texp_sequence (_e1, e2) -> is_nonexpansive e2 (* PR#4354 *)
-  | Texp_new _ -> assert false
   (* Note: nonexpansive only means no _observable_ side effects *)
   | Texp_lazy e -> is_nonexpansive e
   | Texp_letmodule (_, _, mexp, e) ->

@@ -911,8 +911,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_send (expr, Tmeth_name nm, _) ->
     let obj = transl_exp expr in
     Lsend (nm, obj, e.exp_loc)
-  | Texp_new _ | Texp_instvar _ | Texp_setinstvar _ | Texp_override _ ->
-    assert false
+  | Texp_instvar _ -> assert false
   | Texp_letmodule (id, _loc, modl, body) ->
     let defining_expr = !transl_module Tcoerce_none None modl in
     Llet (Strict, Pgenval, id, defining_expr, transl_exp body)

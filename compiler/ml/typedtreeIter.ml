@@ -221,7 +221,6 @@ end = struct
           | Texp_constraint ct -> iter_core_type ct
           | Texp_coerce ((), cty2) -> iter_core_type cty2
           | Texp_open _ -> ()
-          | Texp_poly cto -> option iter_core_type cto
           | Texp_newtype _ -> ()))
       exp.exp_extra;
     (match exp.exp_desc with
@@ -287,7 +286,7 @@ end = struct
       match expo with
       | None -> ()
       | Some exp -> iter_expression exp)
-    | Texp_new _ | Texp_instvar _ | Texp_setinstvar _ | Texp_override _ -> ()
+    | Texp_instvar _ -> ()
     | Texp_letmodule (_id, _, mexpr, exp) ->
       iter_module_expr mexpr;
       iter_expression exp

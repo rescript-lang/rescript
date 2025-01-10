@@ -975,17 +975,8 @@ module Compile = struct
     | Texp_send _ ->
       notImplemented "Texp_send";
       assert false
-    | Texp_new _ ->
-      notImplemented "Texp_new";
-      assert false
     | Texp_instvar _ ->
       notImplemented "Texp_instvar";
-      assert false
-    | Texp_setinstvar _ ->
-      notImplemented "Texp_setinstvar";
-      assert false
-    | Texp_override _ ->
-      notImplemented "Texp_override";
       assert false
     | Texp_letmodule _ ->
       notImplemented "Texp_letmodule";

@@ -69,7 +69,6 @@ and exp_extra =
   | Texp_constraint of core_type
   | Texp_coerce of unit * core_type
   | Texp_open of override_flag * Path.t * Longident.t loc * Env.t
-  | Texp_poly of core_type option
   | Texp_newtype of string
 
 and expression_desc =
@@ -115,10 +114,7 @@ and expression_desc =
       * direction_flag
       * expression
   | Texp_send of expression * meth * expression option
-  | Texp_new of unit
   | Texp_instvar of unit
-  | Texp_setinstvar of unit
-  | Texp_override of unit
   | Texp_letmodule of Ident.t * string loc * module_expr * expression
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression

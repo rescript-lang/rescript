@@ -24,7 +24,7 @@
 - AST cleanup: Prepare for ast async cleanup: Refactor code for "@res.async" payload handling and clean up handling of type and term parameters, so that now each `=>` in a function definition corresponds to a function. https://github.com/rescript-lang/rescript/pull/7223
 - AST: always put type parameters first in function definitions. https://github.com/rescript-lang/rescript/pull/7233
 - AST cleanup: Remove `@res.async` attribute from the internal representation, and add a flag to untyped and typed ASTs instead. https://github.com/rescript-lang/rescript/pull/7234
-- AST cleanup: Remove `expression_desc.Pexp_new`, `expression_desc.Pexp_setinstvar`, `expression_desc.Pexp_override` & `expression_desc.Pexp_poly` from the untyped typed AST as it is unused. https://github.com/rescript-lang/rescript/pull/7239
+- AST cleanup: Remove `expression_desc.Pexp_new`, `expression_desc.Pexp_setinstvar`, `expression_desc.Pexp_override`, `expression_desc.Pexp_poly`, `exp_extra.Texp_poly`, `expression_desc.Texp_new`, `expression_desc.Texp_setinstvar` & `expression_desc.Texp_override` from AST as it is unused. https://github.com/rescript-lang/rescript/pull/7239
 
 # 12.0.0-alpha.7
 

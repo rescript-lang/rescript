@@ -117,7 +117,6 @@ and exp_extra =
       (** let open[!] M in    [Texp_open (!, P, M, env)]
                                 where [env] is the environment after opening [P]
          *)
-  | Texp_poly of core_type option  (** Used for method bodies. *)
   | Texp_newtype of string  (** fun (type t) ->  *)
 
 and expression_desc =
@@ -217,10 +216,7 @@ and expression_desc =
       * direction_flag
       * expression
   | Texp_send of expression * meth * expression option
-  | Texp_new of unit
   | Texp_instvar of unit
-  | Texp_setinstvar of unit
-  | Texp_override of unit
   | Texp_letmodule of Ident.t * string loc * module_expr * expression
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression
