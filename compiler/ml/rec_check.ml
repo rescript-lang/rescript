@@ -195,9 +195,9 @@ let rec classify_expression : Typedtree.expression -> sd =
   | Texp_sequence (_, e)
   | Texp_letexception (_, e) ->
     classify_expression e
-  | Texp_ident _ | Texp_for _ | Texp_constant _ | Texp_instvar _ | Texp_tuple _
-  | Texp_array _ | Texp_construct _ | Texp_variant _ | Texp_record _
-  | Texp_setfield _ | Texp_while _ | Texp_pack _ | Texp_function _ | Texp_lazy _
+  | Texp_ident _ | Texp_for _ | Texp_constant _ | Texp_tuple _ | Texp_array _
+  | Texp_construct _ | Texp_variant _ | Texp_record _ | Texp_setfield _
+  | Texp_while _ | Texp_pack _ | Texp_function _ | Texp_lazy _
   | Texp_extension_constructor _ ->
     Static
   | Texp_apply ({exp_desc = Texp_ident (_, _, vd)}, _) when is_ref vd -> Static
@@ -232,7 +232,6 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
            for inclusion in another value *)
         (discard (expression env e3)))
   | Texp_constant _ -> Use.empty
-  | Texp_instvar _ -> Use.empty
   | Texp_apply ({exp_desc = Texp_ident (_, _, vd)}, [(_, Some arg)])
     when is_ref vd ->
     Use.guard (expression env arg)

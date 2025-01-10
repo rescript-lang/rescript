@@ -286,7 +286,6 @@ end = struct
       match expo with
       | None -> ()
       | Some exp -> iter_expression exp)
-    | Texp_instvar _ -> ()
     | Texp_letmodule (_id, _, mexpr, exp) ->
       iter_module_expr mexpr;
       iter_expression exp

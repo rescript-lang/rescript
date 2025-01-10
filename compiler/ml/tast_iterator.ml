@@ -197,7 +197,6 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   | Texp_send (exp, _, expo) ->
     sub.expr sub exp;
     Option.iter (sub.expr sub) expo
-  | Texp_instvar _ -> ()
   | Texp_letmodule (_, _, mexpr, exp) ->
     sub.module_expr sub mexpr;
     sub.expr sub exp

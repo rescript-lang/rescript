@@ -975,9 +975,6 @@ module Compile = struct
     | Texp_send _ ->
       notImplemented "Texp_send";
       assert false
-    | Texp_instvar _ ->
-      notImplemented "Texp_instvar";
-      assert false
     | Texp_letmodule _ ->
       notImplemented "Texp_letmodule";
       assert false

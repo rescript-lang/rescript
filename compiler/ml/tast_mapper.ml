@@ -243,7 +243,6 @@ let expr sub x =
         (id, p, sub.expr sub exp1, sub.expr sub exp2, dir, sub.expr sub exp3)
     | Texp_send (exp, meth, expo) ->
       Texp_send (sub.expr sub exp, meth, opt (sub.expr sub) expo)
-    | Texp_instvar _ as d -> d
     | Texp_letmodule (id, s, mexpr, exp) ->
       Texp_letmodule (id, s, sub.module_expr sub mexpr, sub.expr sub exp)
     | Texp_letexception (cd, exp) ->

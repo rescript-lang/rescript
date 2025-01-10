@@ -275,7 +275,6 @@ and expression i ppf x =
   in
   match x.exp_desc with
   | Texp_ident (li, _, _) -> line i ppf "Texp_ident %a\n" fmt_path li
-  | Texp_instvar () -> assert false
   | Texp_constant c -> line i ppf "Texp_constant %a\n" fmt_constant c
   | Texp_let (rf, l, e) ->
     line i ppf "Texp_let %a\n" fmt_rec_flag rf;

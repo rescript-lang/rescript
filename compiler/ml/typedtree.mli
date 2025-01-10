@@ -216,7 +216,6 @@ and expression_desc =
       * direction_flag
       * expression
   | Texp_send of expression * meth * expression option
-  | Texp_instvar of unit
   | Texp_letmodule of Ident.t * string loc * module_expr * expression
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression
