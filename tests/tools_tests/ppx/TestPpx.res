@@ -42,3 +42,6 @@ let async_foo = async (x, y) => {
   let b: promise<int> = async_succ(y)
   (await a) + (await b)
 }
+
+let add = (x, y) => x + y
+let partial_add = add(3, ...)

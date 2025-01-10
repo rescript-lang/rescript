@@ -3719,14 +3719,7 @@ and parse_call_expr p fun_expr =
   let apply =
     Ext_list.fold_left args fun_expr (fun call_body args ->
         let args, wrap = process_underscore_application args in
-        let res_partial_attr =
-          let loc = mk_loc start_pos p.prev_end_pos in
-          (Location.mkloc "res.partial" loc, Parsetree.PStr [])
-        in
-        let exp =
-          let attrs = if partial then [res_partial_attr] else [] in
-          Ast_helper.Exp.apply ~loc ~attrs ~partial call_body args
-        in
+        let exp = Ast_helper.Exp.apply ~loc ~partial call_body args in
         wrap exp)
   in
 

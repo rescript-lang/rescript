@@ -4271,7 +4271,6 @@ and print_pexp_apply ~state expr cmt_tbl =
         args
     in
     let attrs = expr.pexp_attributes in
-    let _, attrs = ParsetreeViewer.process_partial_app_attribute attrs in
     let args =
       if partial then
         let dummy = Ast_helper.Exp.constant ~attrs (Ast_helper.Const.int 0) in

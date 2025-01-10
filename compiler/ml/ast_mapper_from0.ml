@@ -310,7 +310,18 @@ module E = struct
         (sub.pat sub p) (sub.expr sub e)
     | Pexp_function _ -> assert false
     | Pexp_apply (e, l) ->
-      apply ~loc ~attrs (sub.expr sub e) (List.map (map_snd (sub.expr sub)) l)
+      let process_partial_app_attribute attrs =
+        let rec process partial_app acc attrs =
+          match attrs with
+          | [] -> (partial_app, List.rev acc)
+          | ({Location.txt = "res.partial"}, _) :: rest -> process true acc rest
+          | attr :: rest -> process partial_app (attr :: acc) rest
+        in
+        process false [] attrs
+      in
+      let partial, attrs = process_partial_app_attribute attrs in
+      apply ~loc ~attrs ~partial (sub.expr sub e)
+        (List.map (map_snd (sub.expr sub)) l)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)

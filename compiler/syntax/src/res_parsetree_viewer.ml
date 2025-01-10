@@ -70,15 +70,6 @@ let functor_type modtype =
   in
   process [] modtype
 
-let process_partial_app_attribute attrs =
-  let rec process partial_app acc attrs =
-    match attrs with
-    | [] -> (partial_app, List.rev acc)
-    | ({Location.txt = "res.partial"}, _) :: rest -> process true acc rest
-    | attr :: rest -> process partial_app (attr :: acc) rest
-  in
-  process false [] attrs
-
 let has_await_attribute attrs =
   List.exists
     (function
