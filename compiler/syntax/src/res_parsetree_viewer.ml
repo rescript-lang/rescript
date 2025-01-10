@@ -79,13 +79,6 @@ let process_partial_app_attribute attrs =
   in
   process false [] attrs
 
-let has_partial_attribute attrs =
-  List.exists
-    (function
-      | {Location.txt = "res.partial"}, _ -> true
-      | _ -> false)
-    attrs
-
 let has_await_attribute attrs =
   List.exists
     (function

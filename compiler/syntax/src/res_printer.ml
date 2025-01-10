@@ -4274,13 +4274,7 @@ and print_pexp_apply ~state expr cmt_tbl =
     let partial, attrs = ParsetreeViewer.process_partial_app_attribute attrs in
     let args =
       if partial then
-        let loc =
-          {Asttypes.txt = "res.partial"; Asttypes.loc = expr.pexp_loc}
-        in
-        let attr = (loc, Parsetree.PTyp (Ast_helper.Typ.any ())) in
-        let dummy =
-          Ast_helper.Exp.constant ~attrs:[attr] (Ast_helper.Const.int 0)
-        in
+        let dummy = Ast_helper.Exp.constant ~attrs (Ast_helper.Const.int 0) in
         args @ [(Asttypes.Labelled "...", dummy)]
       else args
     in
@@ -4293,14 +4287,16 @@ and print_pexp_apply ~state expr cmt_tbl =
     in
     if ParsetreeViewer.requires_special_callback_printing_first_arg args then
       let args_doc =
-        print_arguments_with_callback_in_first_position ~state args cmt_tbl
+        print_arguments_with_callback_in_first_position ~state ~partial args
+          cmt_tbl
       in
       Doc.concat
         [print_attributes ~state attrs cmt_tbl; call_expr_doc; args_doc]
     else if ParsetreeViewer.requires_special_callback_printing_last_arg args
     then
       let args_doc =
-        print_arguments_with_callback_in_last_position ~state args cmt_tbl
+        print_arguments_with_callback_in_last_position ~state ~partial args
+          cmt_tbl
       in
       (*
        * Fixes the following layout (the `[` and `]` should break):
@@ -4663,7 +4659,8 @@ and print_jsx_name {txt = lident} =
     let segments = flatten [] lident in
     Doc.join ~sep:Doc.dot segments
 
-and print_arguments_with_callback_in_first_position ~state args cmt_tbl =
+and print_arguments_with_callback_in_first_position ~state ~partial args cmt_tbl
+    =
   (* Because the same subtree gets printed twice, we need to copy the cmt_tbl.
    * consumed comments need to be marked not-consumed and reprinted…
    * Cheng's different comment algorithm will solve this. *)
@@ -4723,7 +4720,9 @@ and print_arguments_with_callback_in_first_position ~state args cmt_tbl =
    *   arg3,
    * )
    *)
-  let break_all_args = lazy (print_arguments ~state args cmt_tbl_copy) in
+  let break_all_args =
+    lazy (print_arguments ~state ~partial args cmt_tbl_copy)
+  in
 
   (* Sometimes one of the non-callback arguments will break.
    * There might be a single line comment in there, or a multiline string etc.
@@ -4746,7 +4745,8 @@ and print_arguments_with_callback_in_first_position ~state args cmt_tbl =
   else
     Doc.custom_layout [Lazy.force fits_on_one_line; Lazy.force break_all_args]
 
-and print_arguments_with_callback_in_last_position ~state args cmt_tbl =
+and print_arguments_with_callback_in_last_position ~state ~partial args cmt_tbl
+    =
   (* Because the same subtree gets printed twice, we need to copy the cmt_tbl.
    * consumed comments need to be marked not-consumed and reprinted…
    * Cheng's different comment algorithm will solve this. *)
@@ -4820,7 +4820,9 @@ and print_arguments_with_callback_in_last_position ~state args cmt_tbl =
    *   (param1, parm2) => doStuff(param1, parm2)
    * )
    *)
-  let break_all_args = lazy (print_arguments ~state args cmt_tbl_copy2) in
+  let break_all_args =
+    lazy (print_arguments ~state ~partial args cmt_tbl_copy2)
+  in
 
   (* Sometimes one of the non-callback arguments will break.
    * There might be a single line comment in there, or a multiline string etc.
@@ -4848,7 +4850,7 @@ and print_arguments_with_callback_in_last_position ~state args cmt_tbl =
         Lazy.force break_all_args;
       ]
 
-and print_arguments ~state ?(partial = false)
+and print_arguments ~state ~partial
     (args : (Asttypes.arg_label * Parsetree.expression) list) cmt_tbl =
   match args with
   | [
@@ -4878,16 +4880,8 @@ and print_arguments ~state ?(partial = false)
     Doc.concat [Doc.lparen; arg_doc; Doc.rparen]
   | args ->
     (* Avoid printing trailing comma when there is ... in function application *)
-    let has_partial_attr, printed_args =
-      List.fold_right
-        (fun arg (flag, acc) ->
-          let _, expr = arg in
-          let has_partial_attr =
-            ParsetreeViewer.has_partial_attribute expr.Parsetree.pexp_attributes
-          in
-          let doc = print_argument ~state arg cmt_tbl in
-          (flag || has_partial_attr, doc :: acc))
-        args (false, [])
+    let printed_args =
+      List.map (fun arg -> print_argument ~state arg cmt_tbl) args
     in
     Doc.group
       (Doc.concat
@@ -4899,7 +4893,7 @@ and print_arguments ~state ?(partial = false)
                   Doc.soft_line;
                   Doc.join ~sep:(Doc.concat [Doc.comma; Doc.line]) printed_args;
                 ]);
-           (if partial || has_partial_attr then Doc.nil else Doc.trailing_comma);
+           (if partial then Doc.nil else Doc.trailing_comma);
            Doc.soft_line;
            Doc.rparen;
          ])

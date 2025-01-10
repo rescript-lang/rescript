@@ -17,8 +17,6 @@ val functor_type :
 val process_partial_app_attribute :
   Parsetree.attributes -> bool * Parsetree.attributes
 
-val has_partial_attribute : Parsetree.attributes -> bool
-
 val has_await_attribute : Parsetree.attributes -> bool
 val has_res_pat_variant_spread_attribute : Parsetree.attributes -> bool
 val has_dict_pattern_attribute : Parsetree.attributes -> bool
