@@ -107,7 +107,6 @@ let identifyPexp pexp =
   | Pexp_letexception _ -> "Pexp_letexception"
   | Pexp_assert _ -> "Pexp_assert"
   | Pexp_lazy _ -> "Pexp_lazy"
-  | Pexp_poly _ -> "Pexp_poly"
   | Pexp_newtype _ -> "Pexp_newtype"
   | Pexp_pack _ -> "Pexp_pack"
   | Pexp_extension _ -> "Pexp_extension"

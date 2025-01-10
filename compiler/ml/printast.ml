@@ -331,10 +331,6 @@ and expression i ppf x =
   | Pexp_lazy e ->
     line i ppf "Pexp_lazy\n";
     expression i ppf e
-  | Pexp_poly (e, cto) ->
-    line i ppf "Pexp_poly\n";
-    expression i ppf e;
-    option i core_type ppf cto
   | Pexp_newtype (s, e) ->
     line i ppf "Pexp_newtype \"%s\"\n" s.txt;
     expression i ppf e

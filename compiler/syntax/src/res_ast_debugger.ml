@@ -696,7 +696,6 @@ module SexpAst = struct
           ]
       | Pexp_assert expr -> Sexp.list [Sexp.atom "Pexp_assert"; expression expr]
       | Pexp_lazy expr -> Sexp.list [Sexp.atom "Pexp_lazy"; expression expr]
-      | Pexp_poly _ -> Sexp.list [Sexp.atom "Pexp_poly"]
       | Pexp_newtype (lbl, expr) ->
         Sexp.list
           [Sexp.atom "Pexp_newtype"; string lbl.Asttypes.txt; expression expr]

@@ -300,11 +300,6 @@ and expression_desc =
        Note: "assert false" is treated in a special way by the
        type-checker. *)
   | Pexp_lazy of expression (* lazy E *)
-  | Pexp_poly of expression * core_type option
-    (* Used for method bodies.
-
-       Can only be used as the expression under Cfk_concrete
-       for methods (not values). *)
   | Pexp_newtype of string loc * expression (* fun (type t) -> E *)
   | Pexp_pack of module_expr
     (* (module ME)

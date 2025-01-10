@@ -202,8 +202,6 @@ module Exp : sig
     expression
   val assert_ : ?loc:loc -> ?attrs:attrs -> expression -> expression
   val lazy_ : ?loc:loc -> ?attrs:attrs -> expression -> expression
-  val poly :
-    ?loc:loc -> ?attrs:attrs -> expression -> core_type option -> expression
   val newtype : ?loc:loc -> ?attrs:attrs -> str -> expression -> expression
   val pack : ?loc:loc -> ?attrs:attrs -> module_expr -> expression
   val open_ :

@@ -342,9 +342,6 @@ module E = struct
       sub.expr sub e
     | Pexp_assert e -> sub.expr sub e
     | Pexp_lazy e -> sub.expr sub e
-    | Pexp_poly (e, t) ->
-      sub.expr sub e;
-      iter_opt (sub.typ sub) t
     | Pexp_newtype (_s, e) -> sub.expr sub e
     | Pexp_pack me -> sub.module_expr sub me
     | Pexp_open (_ovf, lid, e) ->

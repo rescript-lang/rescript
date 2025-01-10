@@ -155,7 +155,6 @@ let iter_expression f e =
       List.iter (fun (_, e, _) -> expr e) iel
     | Pexp_open (_, _, e)
     | Pexp_newtype (_, e)
-    | Pexp_poly (e, _)
     | Pexp_lazy e
     | Pexp_assert e
     | Pexp_send (e, _)
@@ -3106,42 +3105,6 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         exp_type = instance env ty_expected;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
-      }
-  | Pexp_poly (sbody, sty) ->
-    let ty, cty =
-      match sty with
-      | None -> (repr ty_expected, None)
-      | Some sty ->
-        let sty = Ast_helper.Typ.force_poly sty in
-        let cty = Typetexp.transl_simple_type env false sty in
-        (repr cty.ctyp_type, Some cty)
-    in
-    if sty <> None then
-      unify_exp_types loc env (instance env ty) (instance env ty_expected);
-    let exp =
-      match (expand_head env ty).desc with
-      | Tpoly (ty', []) ->
-        let exp = type_expect env sbody ty' in
-        {exp with exp_type = instance env ty}
-      | Tpoly (ty', tl) ->
-        (* One more level to generalize locally *)
-        begin_def ();
-        let vars, ty'' = instance_poly true tl ty' in
-        let exp = type_expect env sbody ty'' in
-        end_def ();
-        check_univars env false "method" exp ty_expected vars;
-        {exp with exp_type = instance env ty}
-      | Tvar _ ->
-        let exp = type_exp env sbody in
-        let exp = {exp with exp_type = newty (Tpoly (exp.exp_type, []))} in
-        unify_exp env exp ty;
-        exp
-      | _ -> assert false
-    in
-    re
-      {
-        exp with
-        exp_extra = (Texp_poly cty, loc, sexp.pexp_attributes) :: exp.exp_extra;
       }
   | Pexp_newtype ({txt = name}, sbody) ->
     let ty = newvar () in

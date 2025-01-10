@@ -3390,7 +3390,6 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         Doc.concat [Doc.text "\""; member_doc; Doc.text "\""]
       in
       Doc.group (Doc.concat [parent_doc; Doc.lbracket; member; Doc.rbracket])
-    | Pexp_poly _ -> Doc.text "Pexp_poly not implemented in printer"
   in
   let expr_with_await =
     if ParsetreeViewer.has_await_attribute e.pexp_attributes then

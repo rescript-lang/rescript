@@ -277,9 +277,6 @@ let rec add_expr bv exp =
   | Pexp_letexception (_, e) -> add_expr bv e
   | Pexp_assert e -> add_expr bv e
   | Pexp_lazy e -> add_expr bv e
-  | Pexp_poly (e, t) ->
-    add_expr bv e;
-    add_opt add_type bv t
   | Pexp_newtype (_, e) -> add_expr bv e
   | Pexp_pack m -> add_module bv m
   | Pexp_open (_ovf, m, e) ->

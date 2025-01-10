@@ -711,12 +711,6 @@ and expression ctxt f x =
         cd (expression ctxt) e
     | Pexp_assert e -> pp f "@[<hov2>assert@ %a@]" (simple_expr ctxt) e
     | Pexp_lazy e -> pp f "@[<hov2>lazy@ %a@]" (simple_expr ctxt) e
-    (* Pexp_poly: impossible but we should print it anyway, rather than
-       assert false *)
-    | Pexp_poly (e, None) -> pp f "@[<hov2>!poly!@ %a@]" (simple_expr ctxt) e
-    | Pexp_poly (e, Some ct) ->
-      pp f "@[<hov2>(!poly!@ %a@ : %a)@]" (simple_expr ctxt) e (core_type ctxt)
-        ct
     | Pexp_open (ovf, lid, e) ->
       pp f "@[<2>let open%s %a in@;%a@]" (override ovf) longident_loc lid
         (expression ctxt) e
