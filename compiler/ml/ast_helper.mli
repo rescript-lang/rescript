@@ -192,8 +192,6 @@ module Exp : sig
   val constraint_ :
     ?loc:loc -> ?attrs:attrs -> expression -> core_type -> expression
   val send : ?loc:loc -> ?attrs:attrs -> expression -> str -> expression
-  val override :
-    ?loc:loc -> ?attrs:attrs -> (str * expression) list -> expression
   val letmodule :
     ?loc:loc -> ?attrs:attrs -> str -> module_expr -> expression -> expression
   val letexception :

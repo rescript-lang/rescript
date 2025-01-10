@@ -176,7 +176,6 @@ let iter_expression f e =
       expr e1;
       expr e2;
       expr e3
-    | Pexp_override sel -> List.iter (fun (_, e) -> expr e) sel
     | Pexp_letmodule (_, me, e) ->
       expr e;
       module_expr me
@@ -3033,7 +3032,6 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         (Error
            (e.pexp_loc, env, Undefined_method (obj.exp_type, met, valid_methods)))
     )
-  | Pexp_override _ -> assert false
   | Pexp_letmodule (name, smodl, sbody) ->
     let ty = newvar () in
     (* remember original level *)

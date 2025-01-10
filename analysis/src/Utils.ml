@@ -103,7 +103,6 @@ let identifyPexp pexp =
   | Pexp_constraint _ -> "Pexp_constraint"
   | Pexp_coerce _ -> "Pexp_coerce"
   | Pexp_send _ -> "Pexp_send"
-  | Pexp_override _ -> "Pexp_override"
   | Pexp_letmodule _ -> "Pexp_letmodule"
   | Pexp_letexception _ -> "Pexp_letexception"
   | Pexp_assert _ -> "Pexp_assert"

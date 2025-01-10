@@ -291,8 +291,6 @@ and expression_desc =
     (* (E :> T)        (None, T)
          *)
   | Pexp_send of expression * label loc (*  E # m *)
-  | Pexp_override of (label loc * expression) list
-    (* {< x1 = E1; ...; Xn = En >} *)
   | Pexp_letmodule of string loc * module_expr * expression
     (* let module M = ME in E *)
   | Pexp_letexception of extension_constructor * expression

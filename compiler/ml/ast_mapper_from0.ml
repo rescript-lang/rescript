@@ -379,9 +379,8 @@ module E = struct
     | Pexp_new _ -> failwith "Pexp_new is no longer present in ReScript"
     | Pexp_setinstvar _ ->
       failwith "Pexp_setinstvar is no longer present in ReScript"
-    | Pexp_override sel ->
-      override ~loc ~attrs
-        (List.map (map_tuple (map_loc sub) (sub.expr sub)) sel)
+    | Pexp_override _ ->
+      failwith "Pexp_override is no longer present in ReScript"
     | Pexp_letmodule (s, me, e) ->
       letmodule ~loc ~attrs (map_loc sub s) (sub.module_expr sub me)
         (sub.expr sub e)
