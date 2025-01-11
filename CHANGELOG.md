@@ -27,6 +27,7 @@
 - AST cleanup: Remove `expression_desc.Pexp_new`, `expression_desc.Pexp_setinstvar`, `expression_desc.Pexp_override`, `expression_desc.Pexp_poly`, `exp_extra.Texp_poly`, `expression_desc.Texp_new`, `expression_desc.Texp_setinstvar`, `expression_desc.Texp_override` & `expression_desc.Texp_instvar` from AST as it is unused. https://github.com/rescript-lang/rescript/pull/7239
 - AST cleanup: Remove `@res.partial` attribute from the internal representation, and add a flag to untyped and typed ASTs instead. https://github.com/rescript-lang/rescript/pull/7238 https://github.com/rescript-lang/rescript/pull/7240
 - AST cleanup: Remove `structure_item_desc.Pstr_class`, `signature_item_desc.Psig_class`, `structure_item_desc.Pstr_class_type`, `signature_item_desc.Psig_class_type`, `structure_item_desc.Tstr_class`, `structure_item_desc.Tstr_class_type`, `signature_item_desc.Tsig_class`, `signature_item_desc.Tsig_class_type` from AST as it is unused. https://github.com/rescript-lang/rescript/pull/7242
+- AST cleanup: remove "|." and rename "|." to "->" in the internal representation for the pipe operator. https://github.com/rescript-lang/rescript/pull/7244
 
 # 12.0.0-alpha.7
 
