@@ -12,18 +12,6 @@
 
 
   Syntax error!
-  syntax_tests/data/parsing/errors/typeDef/inlineRecord.res:14:5-10
-
-  12 ┆ name: string,
-  13 ┆ address: {
-  14 ┆   street: string,
-  15 ┆   country: string,
-  16 ┆ }
-
-  An inline record type declaration is only allowed in a variant constructor's declaration
-
-
-  Syntax error!
   syntax_tests/data/parsing/errors/typeDef/inlineRecord.res:19:21-31
 
   17 │ }
@@ -39,10 +27,13 @@ type nonrec entity =
   | Student of {
   name: string ;
   reportCard: < passing: bool  ;score: int   >  } 
-type nonrec user =
+type user.address = {
+  street: string ;
+  country: string }[@@inlineRecordDefinition ]
+and user =
   {
   name: string ;
-  address: < street: string  ;country: string   >  }
+  address: ((user.address)[@inlineRecordReference ]) }
 let make
   [arity:1](props :
              < handleClick: Click.t -> unit (a:1)  ;value: string   > )
