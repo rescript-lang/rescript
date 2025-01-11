@@ -179,7 +179,6 @@ module SexpAst = struct
           [Sexp.atom "Pstr_modtype"; module_type_declaration mod_typ_decl]
       | Pstr_open open_desc ->
         Sexp.list [Sexp.atom "Pstr_open"; open_description open_desc]
-      | Pstr_class_type _ -> Sexp.atom "Pstr_class_type"
       | Pstr_include id ->
         Sexp.list [Sexp.atom "Pstr_include"; include_declaration id]
       | Pstr_attribute attr ->

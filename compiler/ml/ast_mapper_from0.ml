@@ -284,7 +284,8 @@ module M = struct
     | Pstr_modtype x -> modtype ~loc (sub.module_type_declaration sub x)
     | Pstr_open x -> open_ ~loc (sub.open_description sub x)
     | Pstr_class () -> failwith "Pstr_class is no longer present in ReScript"
-    | Pstr_class_type () -> {pstr_loc = loc; pstr_desc = Pstr_class_type ()}
+    | Pstr_class_type () ->
+      failwith "Pstr_class_type is no longer present in ReScript"
     | Pstr_include x -> include_ ~loc (sub.include_declaration sub x)
     | Pstr_extension (x, attrs) ->
       extension ~loc (sub.extension sub x) ~attrs:(sub.attributes sub attrs)

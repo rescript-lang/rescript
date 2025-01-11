@@ -614,7 +614,6 @@ and print_structure_item ~state (si : Parsetree.structure_item) cmt_tbl =
     print_exception_def ~state extension_constructor cmt_tbl
   | Pstr_typext type_extension ->
     print_type_extension ~state type_extension cmt_tbl
-  | Pstr_class_type _ -> Doc.nil
 
 and print_type_extension ~state (te : Parsetree.type_extension) cmt_tbl =
   let prefix = Doc.text "type " in

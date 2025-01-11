@@ -577,7 +577,6 @@ and structure_item_desc =
     (* module rec X1 = ME1 and ... and Xn = MEn *)
   | Pstr_modtype of module_type_declaration (* module type S = MT *)
   | Pstr_open of open_description (* open X *)
-  | Pstr_class_type of unit (* Dummy AST node *)
   | Pstr_include of include_declaration (* include ME *)
   | Pstr_attribute of attribute (* [@@@id] *)
   | Pstr_extension of extension * attributes

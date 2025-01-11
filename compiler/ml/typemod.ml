@@ -1565,7 +1565,6 @@ and type_structure ?(toplevel = false) funct_body anchor env sstr scope =
     | Pstr_open sod ->
       let _path, newenv, od = type_open ~toplevel env sod in
       (Tstr_open od, [], newenv)
-    | Pstr_class_type () -> assert false
     | Pstr_include sincl ->
       let smodl = sincl.pincl_mod in
       let modl =

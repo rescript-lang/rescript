@@ -1114,7 +1114,6 @@ and structure_item ctxt f x =
           pp_print_space f ();
           pp f "@ =@ %a" (module_type ctxt) mt)
       md (item_attributes ctxt) attrs
-  | Pstr_class_type () -> ()
   | Pstr_primitive vd ->
     pp f "@[<hov2>external@ %a@ :@ %a@]%a" protect_ident vd.pval_name.txt
       (value_description ctxt) vd (item_attributes ctxt) vd.pval_attributes
