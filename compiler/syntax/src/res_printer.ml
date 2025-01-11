@@ -973,7 +973,6 @@ and print_signature_item ~state (si : Parsetree.signature_item) cmt_tbl =
         Doc.concat
           [print_extension ~state ~at_module_lvl:true extension cmt_tbl];
       ]
-  | Psig_class_type _ -> Doc.nil
 
 and print_rec_module_declarations ~state module_declarations cmt_tbl =
   print_listi

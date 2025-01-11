@@ -907,7 +907,6 @@ and signature_item ctxt f x : unit =
           pp_print_space f ();
           pp f "@ =@ %a" (module_type ctxt) mt)
       md (item_attributes ctxt) attrs
-  | Psig_class_type () -> ()
   | Psig_recmodule decls ->
     let rec string_x_module_type_list f ?(first = true) l =
       match l with

@@ -385,7 +385,6 @@ and add_sig_item (bv, m) item =
     add_names s;
     let add = StringMap.fold StringMap.add m' in
     (add bv, add m)
-  | Psig_class_type () -> (bv, m)
   | Psig_attribute _ -> (bv, m)
   | Psig_extension (e, _) ->
     handle_extension e;

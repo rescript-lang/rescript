@@ -490,7 +490,6 @@ and signature_item i ppf x =
     line i ppf "Psig_include\n";
     module_type i ppf incl.pincl_mod;
     attributes i ppf incl.pincl_attributes
-  | Psig_class_type () -> ()
   | Psig_extension ((s, arg), attrs) ->
     line i ppf "Psig_extension \"%s\"\n" s.txt;
     attributes i ppf attrs;

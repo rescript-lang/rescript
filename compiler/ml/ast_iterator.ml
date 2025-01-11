@@ -216,7 +216,6 @@ module MT = struct
     | Psig_modtype x -> sub.module_type_declaration sub x
     | Psig_open x -> sub.open_description sub x
     | Psig_include x -> sub.include_description sub x
-    | Psig_class_type () -> ()
     | Psig_extension (x, attrs) ->
       sub.extension sub x;
       sub.attributes sub attrs
