@@ -519,8 +519,7 @@ and signature_to_module_runtime_representation ~config ~type_vars_gen ~type_env
                }
              in
              (dependencies, [field])
-           | Types.Sig_type _ | Types.Sig_typext _ | Types.Sig_modtype _
-           | Types.Sig_class _ | Types.Sig_class_type _ ->
+           | Types.Sig_type _ | Types.Sig_typext _ | Types.Sig_modtype _ ->
              ([], []))
   in
   let dependencies, fields =

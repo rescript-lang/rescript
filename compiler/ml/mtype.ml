@@ -89,11 +89,7 @@ and strengthen_sig ~aliasable env sg p pos =
     in
     Sig_modtype (id, newdecl)
     :: strengthen_sig ~aliasable (Env.add_modtype id decl env) rem p pos
-    (* Need to add the module type in case it is manifest *)
-  | (Sig_class _ as sigelt) :: rem ->
-    sigelt :: strengthen_sig ~aliasable env rem p (pos + 1)
-  | (Sig_class_type _ as sigelt) :: rem ->
-    sigelt :: strengthen_sig ~aliasable env rem p pos
+(* Need to add the module type in case it is manifest *)
 
 and strengthen_decl ~aliasable env md p =
   match md.md_type with
@@ -160,9 +156,7 @@ let nondep_supertype env mid mty =
                 {mtd_type = None; mtd_loc = Location.none; mtd_attributes = []}
               )
             :: rem'
-          | _ -> raise Not_found))
-      | Sig_class () -> assert false
-      | Sig_class_type () -> assert false)
+          | _ -> raise Not_found)))
   and nondep_modtype_decl env mtd =
     {mtd with mtd_type = Misc.may_map (nondep_mty env Strict) mtd.mtd_type}
   in
@@ -229,8 +223,7 @@ and type_paths_sig env p pos sg =
         p (pos + 1) rem
   | Sig_modtype (id, decl) :: rem ->
     type_paths_sig (Env.add_modtype id decl env) p pos rem
-  | (Sig_typext _ | Sig_class _) :: rem -> type_paths_sig env p (pos + 1) rem
-  | Sig_class_type _ :: rem -> type_paths_sig env p pos rem
+  | Sig_typext _ :: rem -> type_paths_sig env p (pos + 1) rem
 
 let rec no_code_needed env mty =
   match scrape env mty with
@@ -252,9 +245,8 @@ and no_code_needed_sig env sg =
     && no_code_needed_sig
          (Env.add_module_declaration ~check:false id md env)
          rem
-  | (Sig_type _ | Sig_modtype _ | Sig_class_type _) :: rem ->
-    no_code_needed_sig env rem
-  | (Sig_typext _ | Sig_class _) :: _ -> false
+  | (Sig_type _ | Sig_modtype _) :: rem -> no_code_needed_sig env rem
+  | Sig_typext _ :: _ -> false
 
 (* Check whether a module type may return types *)
 
@@ -286,8 +278,7 @@ and contains_type_item env = function
        is kept local to expressions. *)
     raise Exit
   | Sig_module (_, {md_type = mty}, _) -> contains_type env mty
-  | Sig_value _ | Sig_type _ | Sig_typext _ | Sig_class _ | Sig_class_type _ ->
-    ()
+  | Sig_value _ | Sig_type _ | Sig_typext _ -> ()
 
 let contains_type env mty =
   try

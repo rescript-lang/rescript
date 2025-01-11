@@ -39,7 +39,6 @@ and type_desc =
 and row_desc = {
   row_fields: (label * row_field) list;
   row_more: type_expr;
-  row_bound: unit;
   row_closed: bool;
   row_fixed: bool;
   row_name: (Path.t * type_expr list) option;
@@ -226,8 +225,6 @@ and signature_item =
   | Sig_typext of Ident.t * extension_constructor * ext_status
   | Sig_module of Ident.t * module_declaration * rec_status
   | Sig_modtype of Ident.t * modtype_declaration
-  | Sig_class of unit
-  | Sig_class_type of unit (* Dummy AST node *)
 
 and module_declaration = {
   md_type: module_type;

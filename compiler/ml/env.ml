@@ -1490,8 +1490,6 @@ let rec prefix_idents root pos sub = function
       prefix_idents root pos (Subst.add_modtype id (Mty_ident p) sub) rem
     in
     (p :: pl, final_sub)
-  | Sig_class _ :: _ -> assert false
-  | Sig_class_type _ :: _ -> assert false
 
 let prefix_idents root sub sg =
   if sub = Subst.identity then (
@@ -1587,9 +1585,7 @@ and components_of_module_maker (env, sub, path, mty) =
           let decl' = Subst.modtype_declaration sub decl in
           c.comp_modtypes <-
             Tbl.add (Ident.name id) (decl', nopos) c.comp_modtypes;
-          env := store_modtype id decl !env
-        | Sig_class () -> assert false
-        | Sig_class_type () -> assert false)
+          env := store_modtype id decl !env)
       sg pl;
     Some (Structure_comps c)
   | Mty_functor (param, ty_arg, ty_res) ->
@@ -1833,8 +1829,6 @@ let add_item comp env =
   | Sig_typext (id, ext, _) -> add_extension ~check:false id ext env
   | Sig_module (id, md, _) -> add_module_declaration ~check:false id md env
   | Sig_modtype (id, decl) -> add_modtype id decl env
-  | Sig_class () -> env
-  | Sig_class_type () -> env
 
 let rec add_signature sg env =
   match sg with

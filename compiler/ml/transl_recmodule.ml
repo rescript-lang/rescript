@@ -90,8 +90,6 @@ let init_shape modl =
            rem
     | Sig_modtype (id, minfo) :: rem ->
       init_shape_struct (Env.add_modtype id minfo env) rem
-    | Sig_class _ :: _ -> assert false
-    | Sig_class_type _ :: rem -> init_shape_struct env rem
   in
   try
     Some

@@ -422,7 +422,6 @@ and transl_type_aux env policy styp =
            {
              row_fields = [(l, f)];
              row_more = newvar ();
-             row_bound = ();
              row_closed = true;
              row_fixed = false;
              row_name = None;
@@ -509,7 +508,6 @@ and transl_type_aux env policy styp =
       {
         row_fields = List.rev fields;
         row_more = newvar ();
-        row_bound = ();
         row_closed = closed = Closed;
         row_fixed = false;
         row_name = !name;

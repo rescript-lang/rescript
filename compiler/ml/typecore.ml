@@ -363,7 +363,7 @@ let finalize_variant pat =
     (* Force check of well-formedness   WHY? *)
     (* unify_pat pat.pat_env pat
        (newty(Tvariant{row_fields=[]; row_more=newvar(); row_closed=false;
-                       row_bound=(); row_fixed=false; row_name=None})); *))
+                       row_fixed=false; row_name=None})); *))
   | _ -> ()
 
 let rec iter_pattern f p =
@@ -474,7 +474,6 @@ let rec build_as_type env p =
          {
            row_fields = [(l, Rpresent ty)];
            row_more = newvar ();
-           row_bound = ();
            row_name = None;
            row_fixed = false;
            row_closed = false;
@@ -553,7 +552,6 @@ let build_or_pat env loc lid =
     {
       row_fields = List.rev fields;
       row_more = newvar ();
-      row_bound = ();
       row_closed = false;
       row_fixed = false;
       row_name = Some (path, tyl);
@@ -1429,7 +1427,6 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     let row =
       {
         row_fields = [(l, Reither (sarg = None, arg_type, true, ref None))];
-        row_bound = ();
         row_closed = false;
         row_more = newvar ();
         row_fixed = false;
@@ -2124,7 +2121,6 @@ let check_absent_variant env =
           {
             row_fields = [(s, Reither (arg = None, ty_arg, true, ref None))];
             row_more = newvar ();
-            row_bound = ();
             row_closed = false;
             row_fixed = false;
             row_name = None;
@@ -2559,7 +2555,6 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
                  {
                    row_fields = [(l, Rpresent arg_type)];
                    row_more = newvar ();
-                   row_bound = ();
                    row_closed = false;
                    row_fixed = false;
                    row_name = None;

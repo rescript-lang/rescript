@@ -933,7 +933,6 @@ let rec copy ?env ?partial ?keep_names ty =
                       {
                         row_fields = Ext_list.filter row.row_fields not_reither;
                         row_more = more';
-                        row_bound = ();
                         row_closed = false;
                         row_fixed = false;
                         row_name = None;
@@ -1722,7 +1721,6 @@ let mkvariant fields closed =
          row_fields = fields;
          row_closed = closed;
          row_more = newvar ();
-         row_bound = ();
          row_fixed = false;
          row_name = None;
        })
@@ -2554,7 +2552,6 @@ and unify_row env row1 row2 =
       {
         row_fields = [];
         row_more = more;
-        row_bound = ();
         row_closed = closed;
         row_fixed = fixed;
         row_name = name;
@@ -3486,7 +3483,6 @@ let rec build_subtype env visited loops posi level t =
         {
           row_fields = List.map fst fields;
           row_more = newvar ();
-          row_bound = ();
           row_closed = posi;
           row_fixed = false;
           row_name = (if c > Unchanged then None else row.row_name);
