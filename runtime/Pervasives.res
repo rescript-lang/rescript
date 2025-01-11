@@ -51,6 +51,7 @@ external \"*": ('a, 'a) => 'a = "%mul"
 external \"/": ('a, 'a) => 'a = "%div"
 external \"%": ('a, 'a) => 'a = "%mod"
 external mod: ('a, 'a) => 'a = "%mod"
+external \"**": ('a, 'a) => 'a = "%pow"
 
 /* Comparisons */
 /* Note: Later comparisons will be converted to unified operations too */
@@ -113,9 +114,6 @@ external \"+.": (float, float) => float = "%addfloat"
 external \"-.": (float, float) => float = "%subfloat"
 external \"*.": (float, float) => float = "%mulfloat"
 external \"/.": (float, float) => float = "%divfloat"
-
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
-external \"**": (float, float) => float = "pow"
 
 @deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
 external exp: float => float = "exp"
