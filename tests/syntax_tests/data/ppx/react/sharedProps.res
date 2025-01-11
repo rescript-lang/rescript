@@ -40,6 +40,11 @@ module V4C8 = {
   external make: (~x: string, ~y: string) => React.element = "default"
 }
 
+module V4C9 = {
+  @react.component(:sharedProps)
+  let make = (~x: string, ~y: int) => React.string(x ++ y)
+}
+
 @@jsxConfig({version:4, mode: "automatic"})
 
 module V4A1 = {
@@ -80,4 +85,9 @@ module V4A7 = {
 module V4A8 = {
   @react.component(:sharedProps)
   external make: (~x: string, ~y: string) => React.element = "default"
+}
+
+module V4A9 = {
+  @react.component(:sharedProps)
+  let make = (~x: string, ~y: int) => React.string(x ++ y)
 }

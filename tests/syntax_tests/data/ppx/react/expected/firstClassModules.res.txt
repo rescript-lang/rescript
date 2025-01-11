@@ -13,15 +13,12 @@ module Select = {
     items: 'items,
   }
 
-  let make = (
-    type a key,
-    {model: module(T: T with type t = a and type key = key), selected, onChange, items, _}: props<
-      _,
-      option<key>,
-      option<key> => unit,
-      array<a>,
-    >,
-  ) => {
+  let make = (type a key, props: props<_, option<key>, option<key> => unit, array<a>>) => {
+    let {model: module(T: T with type t = a and type key = key)} = props
+    let selected: option<key> = props.selected
+    let onChange: option<key> => unit = props.onChange
+    let items: array<a> = props.items
+
     let _ = (model, selected, onChange, items)
     ReactDOM.createDOMElementVariadic("div", [])
   }
@@ -29,6 +26,29 @@ module Select = {
     let \"FirstClassModules$Select" = (props: props<_>) => make(props)
 
     \"FirstClassModules$Select"
+  }
+}
+
+module C6 = {
+  module type Comp = {
+    let xx: int
+    @res.jsxComponentProps
+    type props = {}
+
+    let make: React.componentLike<props, React.element>
+  }
+  @res.jsxComponentProps
+  type props<'comp, 'x> = {comp: 'comp, x: 'x}
+
+  let make = (props: props<_, _>) => {
+    let {comp: module(Comp: Comp)} = props
+    let x = props.x
+    Comp.xx
+  }
+  let make = {
+    let \"FirstClassModules$C6" = (props: props<_>) => make(props)
+
+    \"FirstClassModules$C6"
   }
 }
 
