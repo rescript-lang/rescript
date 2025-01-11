@@ -352,7 +352,8 @@ let has_attributes attrs =
       | ( {
             Location.txt =
               ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.await" | "res.template" );
+              | "res.await" | "res.template" | "res.inlineRecordReference"
+              | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
@@ -547,7 +548,8 @@ let is_printable_attribute attr =
   | ( {
         Location.txt =
           ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.await"
-          | "res.template" | "res.ternary" );
+          | "res.template" | "res.ternary" | "res.inlineRecordReference"
+          | "res.inlineRecordDefinition" );
       },
       _ ) ->
     false

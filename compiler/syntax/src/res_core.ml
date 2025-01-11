@@ -134,11 +134,15 @@ module ErrorMessages = struct
 
   let forbidden_inline_record_declaration =
     "An inline record type declaration is only allowed in a variant \
-     constructor's declaration"
+     constructor's declaration or nested inside of a record type declaration"
 
   let poly_var_int_with_suffix number =
     "A numeric polymorphic variant cannot be followed by a letter. Did you \
      mean `#" ^ number ^ "`?"
+
+  let multiple_inline_record_definitions_at_same_path =
+    "Only one inline record definition is allowed per record field. This \
+     defines more than one inline record."
 end
 
 module InExternal = struct
@@ -4071,7 +4075,22 @@ and parse_atomic_typ_expr ?current_type_name_path ?inline_types ~attrs p =
     | Lbracket -> parse_polymorphic_variant_type ~attrs p
     | Uident _ | Lident _ ->
       let constr = parse_value_path p in
-      let args = parse_type_constructor_args ~constr_name:constr p in
+      let args =
+        parse_type_constructor_args ?inline_types ?current_type_name_path
+          ~constr_name:constr p
+      in
+      let number_of_inline_records_in_args =
+        args
+        |> List.filter (fun (c : Parsetree.core_type) ->
+               c.ptyp_attributes
+               |> List.exists (fun (({txt}, _) : Parsetree.attribute) ->
+                      txt = "res.inlineRecordReference"))
+        |> List.length
+      in
+      if number_of_inline_records_in_args > 1 then
+        Parser.err ~start_pos ~end_pos:p.prev_end_pos p
+          (Diagnostics.message
+             ErrorMessages.multiple_inline_record_definitions_at_same_path);
       Ast_helper.Typ.constr
         ~loc:(mk_loc start_pos p.prev_end_pos)
         ~attrs constr args
@@ -4178,7 +4197,7 @@ and parse_record_or_object_type ?current_type_name_path ?inline_types ~attrs p =
 
     let lid = Location.mkloc (Longident.Lident inline_type_name) loc in
     Ast_helper.Typ.constr
-      ~attrs:[(Location.mknoloc "inlineRecordReference", PStr [])]
+      ~attrs:[(Location.mknoloc "res.inlineRecordReference", PStr [])]
       ~loc lid []
   | _ ->
     let () =
@@ -4447,15 +4466,17 @@ and parse_tuple_type ~attrs ~first ~start_pos p =
   let tuple_loc = mk_loc start_pos p.prev_end_pos in
   Ast_helper.Typ.tuple ~attrs ~loc:tuple_loc typexprs
 
-and parse_type_constructor_arg_region p =
-  if Grammar.is_typ_expr_start p.Parser.token then Some (parse_typ_expr p)
+and parse_type_constructor_arg_region ?inline_types ?current_type_name_path p =
+  if Grammar.is_typ_expr_start p.Parser.token then
+    Some (parse_typ_expr ?inline_types ?current_type_name_path p)
   else if p.token = LessThan then (
     Parser.next p;
-    parse_type_constructor_arg_region p)
+    parse_type_constructor_arg_region ?inline_types ?current_type_name_path p)
   else None
 
 (* Js.Nullable.value<'a> *)
-and parse_type_constructor_args ~constr_name p =
+and parse_type_constructor_args ?inline_types ?current_type_name_path
+    ~constr_name p =
   let opening = p.Parser.token in
   let opening_start_pos = p.start_pos in
   match opening with
@@ -4465,7 +4486,11 @@ and parse_type_constructor_args ~constr_name p =
     let type_args =
       (* TODO: change Grammar.TypExprList to TypArgList!!! Why did I wrote this? *)
       parse_comma_delimited_region ~grammar:Grammar.TypExprList
-        ~closing:GreaterThan ~f:parse_type_constructor_arg_region p
+        ~closing:GreaterThan
+        ~f:
+          (parse_type_constructor_arg_region ?inline_types
+             ?current_type_name_path)
+        p
     in
     let () =
       match p.token with
@@ -5563,7 +5588,7 @@ and parse_type_definition_or_extension ~attrs p =
       !inline_types
       |> List.map (fun (inline_type_name, loc, kind) ->
              Ast_helper.Type.mk
-               ~attrs:[(Location.mknoloc "inlineRecordDefinition", PStr [])]
+               ~attrs:[(Location.mknoloc "res.inlineRecordDefinition", PStr [])]
                ~loc ~kind
                {name with txt = inline_type_name})
     in
