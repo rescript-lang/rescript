@@ -6,6 +6,12 @@ let options = {
     name: "test",
     superExtra: {
       age: 2222
+    },
+    otherExtra: {
+      test: true,
+      anotherInlined: {
+        record: true
+      }
     }
   }
 };
