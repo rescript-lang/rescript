@@ -524,7 +524,7 @@ let _ =
       ())
   [@JSX ])
 let _ =
-  ((X.createElement ~y:((z |. (Belt.Option.getWithDefault {js||js}))
+  ((X.createElement ~y:((z -> (Belt.Option.getWithDefault {js||js}))
       [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
   [@JSX ])
 let _ =
@@ -533,10 +533,10 @@ let _ =
   [@JSX ])
 let _ =
   ((div
-      ~children:[(((let left = limit |. Int.toString in
+      ~children:[(((let left = limit -> Int.toString in
                     (((((({js||js})[@res.template ]) ^ left)[@res.template ])
                         ^ (({js| characters left|js})[@res.template ]))
-                      [@res.template ]) |. React.string))
+                      [@res.template ]) -> React.string))
                 [@res.braces ])] ())
   [@JSX ])
 let _ =
@@ -586,13 +586,13 @@ let _ =
 ;;((div ~children:((span ~children:[] ())[@JSX ]) ())[@JSX ])
 ;;((div ~children:[|a|] ())[@JSX ])
 ;;((div ~children:(1, 2) ())[@JSX ])
-;;((div ~children:((array |. f)[@res.braces ]) ())[@JSX ])
+;;((div ~children:((array -> f)[@res.braces ]) ())[@JSX ])
 ;;(([element])[@JSX ])
 ;;(([(((fun [arity:1]a -> 1))[@res.braces ])])[@JSX ])
 ;;(([((span ~children:[] ())[@JSX ])])[@JSX ])
 ;;(([[|a|]])[@JSX ])
 ;;(([(1, 2)])[@JSX ])
-;;(([((array |. f)[@res.braces ])])[@JSX ])
+;;(([((array -> f)[@res.braces ])])[@JSX ])
 let _ =
   ((A.createElement ~x:(({js|y|js})[@res.namedArgLoc ]) ~_spreadProps:((str)
       [@res.namedArgLoc ]) ~children:[] ())

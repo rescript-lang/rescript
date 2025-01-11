@@ -3664,7 +3664,6 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
   let print_binary_operator ~inline_rhs operator =
     let operator_txt =
       match operator with
-      | "|." -> "->"
       | "^" -> "++"
       | "=" -> "=="
       | "==" -> "==="
@@ -3673,12 +3672,12 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
       | txt -> txt
     in
     let spacing_before_operator =
-      if operator = "|." then Doc.soft_line
+      if operator = "->" then Doc.soft_line
       else if operator = "|>" then Doc.line
       else Doc.space
     in
     let spacing_after_operator =
-      if operator = "|." then Doc.nil
+      if operator = "->" then Doc.nil
       else if operator = "|>" then Doc.space
       else if inline_rhs then Doc.space
       else Doc.line
@@ -3749,7 +3748,7 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
                   ]
               else
                 match operator with
-                | "|." when is_multiline ->
+                | "->" when is_multiline ->
                   (* If the pipe-chain is written over multiple lines, break automatically
                    * `let x = a->b->c -> same line, break when line-width exceeded
                    * `let x = a->
@@ -3855,7 +3854,7 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
       {
         funct =
           {
-            pexp_desc = Pexp_ident {txt = Longident.Lident (("|." | "|>") as op)};
+            pexp_desc = Pexp_ident {txt = Longident.Lident (("->" | "|>") as op)};
           };
         args = [(Nolabel, lhs); (Nolabel, rhs)];
       }
@@ -3873,8 +3872,8 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
            print_attributes ~state expr.pexp_attributes cmt_tbl;
            lhs_doc;
            (match (lhs_has_comment_below, op) with
-           | true, "|." -> Doc.concat [Doc.soft_line; Doc.text "->"]
-           | false, "|." -> Doc.text "->"
+           | true, "->" -> Doc.concat [Doc.soft_line; Doc.text "->"]
+           | false, "->" -> Doc.text "->"
            | true, "|>" -> Doc.concat [Doc.line; Doc.text "|> "]
            | false, "|>" -> Doc.text " |> "
            | _ -> Doc.nil);

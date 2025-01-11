@@ -274,7 +274,7 @@ let operator_precedence operator =
   | "+" | "+." | "-" | "-." | "^" -> 5
   | "*" | "*." | "/" | "/." | "%" -> 6
   | "**" -> 7
-  | "#" | "##" | "|." -> 8
+  | "#" | "##" | "->" -> 8
   | _ -> 0
 
 let is_unary_operator operator =
@@ -297,7 +297,7 @@ let is_unary_expression expr =
 let is_binary_operator operator =
   match operator with
   | ":=" | "||" | "&&" | "=" | "==" | "<" | ">" | "!=" | "!==" | "<=" | ">="
-  | "|>" | "+" | "+." | "-" | "-." | "^" | "*" | "*." | "/" | "/." | "**" | "|."
+  | "|>" | "+" | "+." | "-" | "-." | "^" | "*" | "*." | "/" | "/." | "**" | "->"
   | "<>" | "%" ->
     true
   | _ -> false
@@ -714,7 +714,7 @@ let is_single_pipe_expr expr =
     match expr.pexp_desc with
     | Pexp_apply
         {
-          funct = {pexp_desc = Pexp_ident {txt = Longident.Lident ("|." | "|>")}};
+          funct = {pexp_desc = Pexp_ident {txt = Longident.Lident ("->" | "|>")}};
           args = [(Nolabel, _operand1); (Nolabel, _operand2)];
         } ->
       true
@@ -723,7 +723,7 @@ let is_single_pipe_expr expr =
   match expr.pexp_desc with
   | Pexp_apply
       {
-        funct = {pexp_desc = Pexp_ident {txt = Longident.Lident ("|." | "|>")}};
+        funct = {pexp_desc = Pexp_ident {txt = Longident.Lident ("->" | "|>")}};
         args = [(Nolabel, operand1); (Nolabel, _operand2)];
       }
     when not (is_pipe_expr operand1) ->

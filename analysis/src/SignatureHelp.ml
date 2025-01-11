@@ -365,7 +365,7 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
          pexp_desc =
            Pexp_apply
              {
-               funct = {pexp_desc = Pexp_ident {txt = Lident "|."}};
+               funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};
                args =
                  [
                    _;

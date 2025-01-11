@@ -192,7 +192,7 @@ let flatten_operand_rhs parent_operator rhs =
 
 let binary_operator_inside_await_needs_parens operator =
   ParsetreeViewer.operator_precedence operator
-  < ParsetreeViewer.operator_precedence "|."
+  < ParsetreeViewer.operator_precedence "->"
 
 let lazy_or_assert_or_await_expr_rhs ?(in_await = false) expr =
   let opt_braces, _ = ParsetreeViewer.process_braces_attr expr in

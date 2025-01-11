@@ -1,4 +1,4 @@
-;;a |. (f b)
+;;a -> (f b)
 ;;{js|string1|js} ^ {js|string2|js}
 ;;a <> b
 ;;a != b

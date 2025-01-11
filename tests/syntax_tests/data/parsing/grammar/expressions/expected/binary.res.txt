@@ -1,5 +1,5 @@
-;;node := (if newBalance == 2 then avl |. (rotateRight node) else node)
-;;node := ((if newBalance == 2 then avl |. (rotateRight node) else node)
+;;node := (if newBalance == 2 then avl -> (rotateRight node) else node)
+;;node := ((if newBalance == 2 then avl -> (rotateRight node) else node)
     [@attr ])
 let x = (match z with | _ -> false) z
 let x = ((match z with | _ -> false)[@attr ]) z
@@ -19,6 +19,6 @@ let x = a -. b
 ;;Constructor (a, b)
 ;;`Constructor (a, b)
 let _ = ((Constructor (a, b); `Constructor (a, b))[@res.braces ])
-;;(library.getBalance account) |.
+;;(library.getBalance account) ->
     (Promise.Js.catch
        (fun [arity:1]_ -> ((Promise.resolved None)[@res.braces ])))

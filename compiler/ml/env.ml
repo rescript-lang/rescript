@@ -1624,7 +1624,7 @@ and check_value_name name loc =
   (* Note: we could also check here general validity of the
      identifier, to protect against bad identifiers forged by -pp or
      -ppx preprocessors. *)
-  if name = "|." then raise (Error (Illegal_value_name (loc, name)))
+  if name = "->" then raise (Error (Illegal_value_name (loc, name)))
   else if String.length name > 0 && name.[0] = '#' then
     for i = 1 to String.length name - 1 do
       if name.[i] = '#' then raise (Error (Illegal_value_name (loc, name)))

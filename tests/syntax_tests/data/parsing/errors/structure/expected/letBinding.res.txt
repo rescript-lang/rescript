@@ -100,8 +100,8 @@
 let rightResource =
   (ur.resources).find
     (fun [arity:1]r -> r.account_id == ((connection.left).account).id)
-let x = ((let field = p |. parseFieldDeclaration in field)[@res.braces ])
-let t = ((let (_, _, token) = scanner |. scan in token)[@res.braces ])
+let x = ((let field = p -> parseFieldDeclaration in field)[@res.braces ])
+let t = ((let (_, _, token) = scanner -> scan in token)[@res.braces ])
 let (keyTable : int Belt.Map.String.t) = [%rescript.exprhole ]
 let foo = [%rescript.exprhole ]
 let (x : int) = string = y

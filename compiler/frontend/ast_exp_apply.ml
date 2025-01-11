@@ -69,11 +69,11 @@ let view_as_app (fn : exp) (s : string list) : app_pattern option =
     Some {op; loc = fn.pexp_loc; args = check_and_discard args}
   | _ -> None
 
-let infix_ops = ["|."; "#="; "##"]
+let infix_ops = ["->"; "#="; "##"]
 
 let app_exp_mapper (e : exp) (self : Bs_ast_mapper.mapper) : exp =
   match view_as_app e infix_ops with
-  | Some {op = "|."; args = [a_; f_]; loc} -> (
+  | Some {op = "->"; args = [a_; f_]; loc} -> (
     (*
         a |. f
         a |. f b c [@bs]  --> f a b c [@bs]
@@ -193,7 +193,7 @@ let app_exp_mapper (e : exp) (self : Bs_ast_mapper.mapper) : exp =
           } ->
         gen_assignment obj name name_loc
       | _ -> Location.raise_errorf ~loc "invalid #= assignment"))
-  | Some {op = "|."; loc} ->
+  | Some {op = "->"; loc} ->
     Location.raise_errorf ~loc
       "invalid |. syntax, it can only be used as binary operator"
   | Some {op = "##"; loc} ->
