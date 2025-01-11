@@ -204,7 +204,6 @@ let iter_expression f e =
     | Pstr_include {pincl_mod = me} | Pstr_module {pmb_expr = me} ->
       module_expr me
     | Pstr_recmodule l -> List.iter (fun x -> module_expr x.pmb_expr) l
-    | Pstr_class () -> ()
   in
 
   expr e

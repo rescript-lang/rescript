@@ -261,7 +261,6 @@ module M = struct
     | Pstr_recmodule l -> List.iter (sub.module_binding sub) l
     | Pstr_modtype x -> sub.module_type_declaration sub x
     | Pstr_open x -> sub.open_description sub x
-    | Pstr_class () -> ()
     | Pstr_class_type () -> ()
     | Pstr_include x -> sub.include_declaration sub x
     | Pstr_extension (x, attrs) ->

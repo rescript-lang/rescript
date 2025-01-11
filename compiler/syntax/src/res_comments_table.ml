@@ -436,7 +436,7 @@ and walk_structure_item si t comments =
   | Pstr_exception extension_constructor ->
     walk_extension_constructor extension_constructor t comments
   | Pstr_typext type_extension -> walk_type_extension type_extension t comments
-  | Pstr_class_type _ | Pstr_class _ -> ()
+  | Pstr_class_type _ -> ()
 
 and walk_value_description vd t comments =
   let leading, trailing =

@@ -471,7 +471,6 @@ and add_struct_item (bv, m) item : _ StringMap.t * _ StringMap.t =
     | Some mty -> add_modtype bv mty);
     (bv, m)
   | Pstr_open od -> (open_module bv od.popen_lid.txt, m)
-  | Pstr_class () -> (bv, m)
   | Pstr_class_type () -> (bv, m)
   | Pstr_include incl ->
     let (Node (s, m')) = add_module_binding bv incl.pincl_mod in
