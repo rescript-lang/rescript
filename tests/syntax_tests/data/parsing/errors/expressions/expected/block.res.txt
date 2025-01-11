@@ -74,15 +74,14 @@ let findThreadByIdLinearScan [arity:2]~threads:((threads)[@res.namedArgLoc ])
                    otherPersonIDWhichIsAlsoThreadID
                | Group { id } -> id
                | Unknown { id } ->
-                   (unknown.id |.u Js.String.make) |.u FBID.ofStringUnsafe in
+                   (unknown.id |. Js.String.make) |. FBID.ofStringUnsafe in
              thisId == id)
            [@res.braces ])))
   [@res.braces ])
-let x = ((loop 0 (Nil |.u (push doc)))[@res.braces ])
+let x = ((loop 0 (Nil |. (push doc)))[@res.braces ])
 ;;match stack with
   | Empty -> [%rescript.exprhole ]
   | Cons (doc, rest) -> ()
-  | Join (doc1, doc2) ->
-      (buffer |.u (Buffer.add_string indentation); loop ())
+  | Join (doc1, doc2) -> (buffer |. (Buffer.add_string indentation); loop ())
 let pipeline =
   match scheduler with | Some -> [%rescript.exprhole ] | None -> ()

@@ -10,11 +10,11 @@ let fetch2 =
   [@res.braces ])
 let async =
   ((let f = async () in
-    () |.u async;
+    () |. async;
     async ();
     async.async;
     { async = (async.(async)) };
-    (result |.u async) |.u (mapAsync (fun [arity:1]a -> doStuff a)))
+    (result |. async) |. (mapAsync (fun [arity:1]a -> doStuff a)))
   [@res.braces ])
 let f =
   ((if isPositive
@@ -25,7 +25,7 @@ let foo = async ~a:((34)[@res.namedArgLoc ])
 let bar async [arity:1]~a:((a)[@res.namedArgLoc ])  = a + 1
 let ex1 = ((3)[@res.await ]) + ((4)[@res.await ])
 let ex2 = ((3)[@res.await ]) ** ((4)[@res.await ])
-let ex3 = ((foo |.u (bar ~arg:((arg)[@res.namedArgLoc ])))[@res.await ])
+let ex3 = ((foo |. (bar ~arg:((arg)[@res.namedArgLoc ])))[@res.await ])
 let ex4 = (((foo.bar).baz)[@res.await ])
 let attr1 = ((async fun [arity:1]x -> x + 1)[@a ])
 let attr2 = ((fun (type a) ->

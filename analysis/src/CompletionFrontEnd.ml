@@ -218,7 +218,7 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
          (match exprs with
          | [] -> None
          | exp :: _ -> exprToContextPath exp))
-  | Pexp_ident {txt = Lident ("|." | "|.u")} -> None
+  | Pexp_ident {txt = Lident "|."} -> None
   | Pexp_ident {txt; loc} ->
     Some
       (CPId {path = Utils.flattenLongIdent txt; completionContext = Value; loc})
@@ -258,7 +258,7 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
       {
         funct =
           {
-            pexp_desc = Pexp_ident {txt = Lident ("|." | "|.u")};
+            pexp_desc = Pexp_ident {txt = Lident "|."};
             pexp_loc;
             pexp_attributes;
           };
@@ -275,7 +275,7 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
       }
   | Pexp_apply
       {
-        funct = {pexp_desc = Pexp_ident {txt = Lident ("|." | "|.u")}};
+        funct = {pexp_desc = Pexp_ident {txt = Lident "|."}};
         args =
           [
             (_, lhs); (_, {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes});
@@ -328,7 +328,7 @@ let completePipeChain (exp : Parsetree.expression) =
      Example: someArray->Js.Array2.map(v => v + 2)-> *)
   | Pexp_apply
       {
-        funct = {pexp_desc = Pexp_ident {txt = Lident ("|." | "|.u")}};
+        funct = {pexp_desc = Pexp_ident {txt = Lident "|."}};
         args = [_; (_, {pexp_desc = Pexp_apply {funct = d}})];
       } ->
     exprToContextPath exp |> Option.map (fun ctxPath -> (ctxPath, d.pexp_loc))
@@ -336,7 +336,7 @@ let completePipeChain (exp : Parsetree.expression) =
        Example: someArray->filterAllTheGoodStuff-> *)
   | Pexp_apply
       {
-        funct = {pexp_desc = Pexp_ident {txt = Lident ("|." | "|.u")}};
+        funct = {pexp_desc = Pexp_ident {txt = Lident "|."}};
         args = [_; (_, {pexp_desc = Pexp_ident _; pexp_loc})];
       } ->
     exprToContextPath exp |> Option.map (fun ctxPath -> (ctxPath, pexp_loc))
@@ -1113,8 +1113,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
       resetCurrentCtxPath oldCtxPath
     | Pexp_apply
         {
-          funct =
-            {pexp_desc = Pexp_ident {txt = Lident ("|." | "|.u"); loc = opLoc}};
+          funct = {pexp_desc = Pexp_ident {txt = Lident "|."; loc = opLoc}};
           args =
             [
               (_, lhs);
@@ -1292,7 +1291,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
           else iterateJsxProps ~iterator jsxProps
         | Pexp_apply
             {
-              funct = {pexp_desc = Pexp_ident {txt = Lident ("|." | "|.u")}};
+              funct = {pexp_desc = Pexp_ident {txt = Lident "|."}};
               args =
                 [
                   (_, lhs);
@@ -1304,11 +1303,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
           setPipeResult ~lhs ~id |> ignore
         | Pexp_apply
             {
-              funct =
-                {
-                  pexp_desc =
-                    Pexp_ident {txt = Lident ("|." | "|.u"); loc = opLoc};
-                };
+              funct = {pexp_desc = Pexp_ident {txt = Lident "|."; loc = opLoc}};
               args = [(_, lhs); _];
             }
           when Loc.end_ opLoc = posCursor ->
@@ -1316,7 +1311,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
           setPipeResult ~lhs ~id:"" |> ignore
         | Pexp_apply
             {
-              funct = {pexp_desc = Pexp_ident {txt = Lident ("|." | "|.u")}};
+              funct = {pexp_desc = Pexp_ident {txt = Lident "|."}};
               args = [_; (_, {pexp_desc = Pexp_apply {funct = funExpr; args}})];
             }
           when (* Normally named arg completion fires when the cursor is right after the expression.
@@ -1352,7 +1347,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
           | Some argCompletable -> setResult argCompletable)
         | Pexp_apply
             {
-              funct = {pexp_desc = Pexp_ident {txt = Lident ("|." | "|.u")}};
+              funct = {pexp_desc = Pexp_ident {txt = Lident "|."}};
               args = [_; _];
             } ->
           (* Ignore any other pipe. *)

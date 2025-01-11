@@ -27,7 +27,7 @@
                      | Some videoContainerRect ->
                          let newChapter =
                            ({ startTime = (percent *. duration) } : Video.chapter) in
-                         { a; b } |.u onChange
+                         { a; b } |. onChange
                      | _ -> ())
                    [@res.braces ]))[@res.namedArgLoc ][@res.braces ])
       ~children:[] ())[@JSX ])

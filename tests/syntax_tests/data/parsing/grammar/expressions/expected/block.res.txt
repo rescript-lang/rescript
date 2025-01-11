@@ -1,10 +1,10 @@
 let b =
   ((let module Array = Belt.Array in
-      ([|1;2|] |.u (Array.map (fun [arity:1]x -> x + 1))) |.u Js.log)
+      ([|1;2|] |. (Array.map (fun [arity:1]x -> x + 1))) |. Js.log)
   [@res.braces ])
 let b =
   ((let open Belt.Array in
-      ([|1;2|] |.u (map (fun [arity:1]x -> x + 1))) |.u Js.log)
+      ([|1;2|] |. (map (fun [arity:1]x -> x + 1))) |. Js.log)
   [@res.braces ])
 let b = ((let exception QuitEarly  in raise QuitEarly)[@res.braces ])
 let b = ((let a = 1 in let b = 2 in a + b)[@res.braces ])
@@ -20,7 +20,7 @@ let b =
           let a = 1 in
           let b = 2 in
           sideEffect ();
-          (let x = (1 + 2) |.u (fun [arity:1]x -> x + 1) in
+          (let x = (1 + 2) |. (fun [arity:1]x -> x + 1) in
            raise (Terminate x)))
   [@res.braces ])
 let b = ((f (); g (); h (); (let arr = [|1;2;3|] in ()))[@res.braces ])

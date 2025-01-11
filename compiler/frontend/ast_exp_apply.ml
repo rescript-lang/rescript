@@ -69,11 +69,11 @@ let view_as_app (fn : exp) (s : string list) : app_pattern option =
     Some {op; loc = fn.pexp_loc; args = check_and_discard args}
   | _ -> None
 
-let infix_ops = ["|."; "|.u"; "#="; "##"]
+let infix_ops = ["|."; "#="; "##"]
 
 let app_exp_mapper (e : exp) (self : Bs_ast_mapper.mapper) : exp =
   match view_as_app e infix_ops with
-  | Some {op = "|." | "|.u"; args = [a_; f_]; loc} -> (
+  | Some {op = "|."; args = [a_; f_]; loc} -> (
     (*
         a |. f
         a |. f b c [@bs]  --> f a b c [@bs]

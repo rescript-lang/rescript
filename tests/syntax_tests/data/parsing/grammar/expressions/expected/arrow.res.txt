@@ -18,7 +18,7 @@ let f [arity:2](a, b) (c, d) = ((a + b) + c) + d
 let f [arity:1]exception Terminate = ()
 let f [arity:2]exception Terminate exception Exit = ()
 let f [arity:1][] = ()
-let f [arity:1](x::xs) = x + (xs |.u Belt.List.length)
+let f [arity:1](x::xs) = x + (xs |. Belt.List.length)
 let f [arity:2](x : int) (y : int) = x + y
 let f [arity:2]~a:((a)[@res.namedArgLoc ])  ~b:((b)[@res.namedArgLoc ])  =
   a + b
