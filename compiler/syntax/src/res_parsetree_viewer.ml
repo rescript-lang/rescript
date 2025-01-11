@@ -70,22 +70,6 @@ let functor_type modtype =
   in
   process [] modtype
 
-let process_partial_app_attribute attrs =
-  let rec process partial_app acc attrs =
-    match attrs with
-    | [] -> (partial_app, List.rev acc)
-    | ({Location.txt = "res.partial"}, _) :: rest -> process true acc rest
-    | attr :: rest -> process partial_app (attr :: acc) rest
-  in
-  process false [] attrs
-
-let has_partial_attribute attrs =
-  List.exists
-    (function
-      | {Location.txt = "res.partial"}, _ -> true
-      | _ -> false)
-    attrs
-
 let has_await_attribute attrs =
   List.exists
     (function
@@ -136,7 +120,7 @@ let rewrite_underscore_apply expr =
         arg_label = Nolabel;
         default = None;
         lhs = {ppat_desc = Ppat_var {txt = "__x"}};
-        rhs = {pexp_desc = Pexp_apply (call_expr, args)} as e;
+        rhs = {pexp_desc = Pexp_apply {funct = call_expr; args}} as e;
       } ->
     let new_args =
       List.map
@@ -153,7 +137,11 @@ let rewrite_underscore_apply expr =
           | arg -> arg)
         args
     in
-    {e with pexp_desc = Pexp_apply (call_expr, new_args)}
+    {
+      e with
+      pexp_desc =
+        Pexp_apply {funct = call_expr; args = new_args; partial = false};
+    }
   | _ -> expr
 
 type fun_param_kind =
@@ -297,8 +285,10 @@ let is_unary_operator operator =
 let is_unary_expression expr =
   match expr.pexp_desc with
   | Pexp_apply
-      ( {pexp_desc = Pexp_ident {txt = Longident.Lident operator}},
-        [(Nolabel, _arg)] )
+      {
+        funct = {pexp_desc = Pexp_ident {txt = Longident.Lident operator}};
+        args = [(Nolabel, _arg)];
+      }
     when is_unary_operator operator ->
     true
   | _ -> false
@@ -315,11 +305,14 @@ let is_binary_operator operator =
 let is_binary_expression expr =
   match expr.pexp_desc with
   | Pexp_apply
-      ( {
-          pexp_desc =
-            Pexp_ident {txt = Longident.Lident operator; loc = operator_loc};
-        },
-        [(Nolabel, _operand1); (Nolabel, _operand2)] )
+      {
+        funct =
+          {
+            pexp_desc =
+              Pexp_ident {txt = Longident.Lident operator; loc = operator_loc};
+          };
+        args = [(Nolabel, _operand1); (Nolabel, _operand2)];
+      }
     when is_binary_operator operator
          && not (operator_loc.loc_ghost && operator = "^")
          (* template literal *) ->
@@ -386,8 +379,15 @@ let has_attributes attrs =
 let is_array_access expr =
   match expr.pexp_desc with
   | Pexp_apply
-      ( {pexp_desc = Pexp_ident {txt = Longident.Ldot (Lident "Array", "get")}},
-        [(Nolabel, _parentExpr); (Nolabel, _memberExpr)] ) ->
+      {
+        funct =
+          {
+            pexp_desc =
+              Pexp_ident
+                {txt = Longident.Ldot (Longident.Lident "Array", "get")};
+          };
+        args = [(Nolabel, _parentExpr); (Nolabel, _memberExpr)];
+      } ->
     true
   | _ -> false
 
@@ -516,8 +516,10 @@ let should_indent_binary_expr expr =
     | {
      pexp_desc =
        Pexp_apply
-         ( {pexp_desc = Pexp_ident {txt = Longident.Lident sub_operator}},
-           [(Nolabel, _lhs); (Nolabel, _rhs)] );
+         {
+           funct = {pexp_desc = Pexp_ident {txt = Longident.Lident sub_operator}};
+           args = [(Nolabel, _lhs); (Nolabel, _rhs)];
+         };
     }
       when is_binary_operator sub_operator ->
       flattenable_operators operator sub_operator
@@ -527,8 +529,10 @@ let should_indent_binary_expr expr =
   | {
    pexp_desc =
      Pexp_apply
-       ( {pexp_desc = Pexp_ident {txt = Longident.Lident operator}},
-         [(Nolabel, lhs); (Nolabel, _rhs)] );
+       {
+         funct = {pexp_desc = Pexp_ident {txt = Longident.Lident operator}};
+         args = [(Nolabel, lhs); (Nolabel, _rhs)];
+       };
   }
     when is_binary_operator operator ->
     is_equality_operator operator
@@ -638,8 +642,10 @@ let has_tagged_template_literal_attr attrs =
 let is_template_literal expr =
   match expr.pexp_desc with
   | Pexp_apply
-      ( {pexp_desc = Pexp_ident {txt = Longident.Lident "^"}},
-        [(Nolabel, _); (Nolabel, _)] )
+      {
+        funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "^"}};
+        args = [(Nolabel, _); (Nolabel, _)];
+      }
     when has_template_literal_attr expr.pexp_attributes ->
     true
   | Pexp_constant (Pconst_string (_, Some "")) -> true
@@ -707,15 +713,26 @@ let is_single_pipe_expr expr =
   let is_pipe_expr expr =
     match expr.pexp_desc with
     | Pexp_apply
-        ( {pexp_desc = Pexp_ident {txt = Longident.Lident ("|." | "|.u" | "|>")}},
-          [(Nolabel, _operand1); (Nolabel, _operand2)] ) ->
+        {
+          funct =
+            {
+              pexp_desc =
+                Pexp_ident {txt = Longident.Lident ("|." | "|.u" | "|>")};
+            };
+          args = [(Nolabel, _operand1); (Nolabel, _operand2)];
+        } ->
       true
     | _ -> false
   in
   match expr.pexp_desc with
   | Pexp_apply
-      ( {pexp_desc = Pexp_ident {txt = Longident.Lident ("|." | "|.u" | "|>")}},
-        [(Nolabel, operand1); (Nolabel, _operand2)] )
+      {
+        funct =
+          {
+            pexp_desc = Pexp_ident {txt = Longident.Lident ("|." | "|.u" | "|>")};
+          };
+        args = [(Nolabel, operand1); (Nolabel, _operand2)];
+      }
     when not (is_pipe_expr operand1) ->
     true
   | _ -> false

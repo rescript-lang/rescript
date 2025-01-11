@@ -247,7 +247,7 @@ let command ~debug ~emitter ~path =
                ~posEnd:(Some (Loc.end_ loc))
                ~lid ~debug;
       Ast_iterator.default_iterator.expr iterator e
-    | Pexp_apply ({pexp_desc = Pexp_ident lident; pexp_loc}, args)
+    | Pexp_apply {funct = {pexp_desc = Pexp_ident lident; pexp_loc}; args}
       when Res_parsetree_viewer.is_jsx_expression e ->
       (*
          Angled brackets:
@@ -299,11 +299,14 @@ let command ~debug ~emitter ~path =
 
       args |> List.iter (fun (_lbl, arg) -> iterator.expr iterator arg)
     | Pexp_apply
-        ( {
-            pexp_desc =
-              Pexp_ident {txt = Longident.Lident (("<" | ">") as op); loc};
-          },
-          [_; _] ) ->
+        {
+          funct =
+            {
+              pexp_desc =
+                Pexp_ident {txt = Longident.Lident (("<" | ">") as op); loc};
+            };
+          args = [_; _];
+        } ->
       if debug then
         Printf.printf "Binary operator %s %s\n" op (Loc.toString loc);
       emitter |> emitFromLoc ~loc ~type_:Operator;

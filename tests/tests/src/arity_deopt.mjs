@@ -41,13 +41,13 @@ function f3(x) {
   return (y, z) => (x + y | 0) + z | 0;
 }
 
-eq("File \"arity_deopt.res\", line 50, characters 6-13", 6, 6);
+eq("File \"arity_deopt.res\", line 50, characters 5-12", 6, 6);
 
-eq("File \"arity_deopt.res\", line 51, characters 6-13", 6, 6);
+eq("File \"arity_deopt.res\", line 51, characters 5-12", 6, 6);
 
-eq("File \"arity_deopt.res\", line 52, characters 6-13", 6, 6);
+eq("File \"arity_deopt.res\", line 52, characters 5-12", 6, 6);
 
-eq("File \"arity_deopt.res\", line 53, characters 6-13", 6, 6);
+eq("File \"arity_deopt.res\", line 53, characters 5-12", 6, 6);
 
 Mt.from_pair_suites("Arity_deopt", suites.contents);
 

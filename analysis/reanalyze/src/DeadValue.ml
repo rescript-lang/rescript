@@ -126,13 +126,16 @@ let rec collectExpr super self (e : Typedtree.expression) =
       ValueReferences.add locTo.loc_start Location.none.loc_start)
     else addValueReference ~addFileReference:true ~locFrom ~locTo
   | Texp_apply
-      ( {
-          exp_desc =
-            Texp_ident
-              (path, _, {Types.val_loc = {loc_ghost = false; _} as locTo});
-          exp_type;
-        },
-        args ) ->
+      {
+        funct =
+          {
+            exp_desc =
+              Texp_ident
+                (path, _, {Types.val_loc = {loc_ghost = false; _} as locTo});
+            exp_type;
+          };
+        args;
+      } ->
     args
     |> processOptionalArgs ~expType:exp_type
          ~locFrom:(locFrom : Location.t)
@@ -163,7 +166,10 @@ let rec collectExpr super self (e : Typedtree.expression) =
                       {
                         exp_desc =
                           Texp_apply
-                            ({exp_desc = Texp_ident (idArg2, _, _)}, args);
+                            {
+                              funct = {exp_desc = Texp_ident (idArg2, _, _)};
+                              args;
+                            };
                       };
                   };
               };

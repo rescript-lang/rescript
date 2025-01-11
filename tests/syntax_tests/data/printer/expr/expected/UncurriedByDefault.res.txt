@@ -170,10 +170,9 @@ let fn = (
   provikingMultilineFormattingaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 }
 
-let partial =
-  fn(
-    ~hello=1,
-    ~moreGoesHere=1,
-    ~provikingMultilineFormattingaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa=1,
-    ...
-  )
+let partial = fn(
+  ~hello=1,
+  ~moreGoesHere=1,
+  ~provikingMultilineFormattingaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa=1,
+  ...
+)

@@ -201,9 +201,13 @@ let expr sub x =
     | Texp_function {arg_label; arity; param; case; partial; async} ->
       Texp_function
         {arg_label; arity; param; case = sub.case sub case; partial; async}
-    | Texp_apply (exp, list) ->
+    | Texp_apply {funct = exp; args = list; partial} ->
       Texp_apply
-        (sub.expr sub exp, List.map (tuple2 id (opt (sub.expr sub))) list)
+        {
+          funct = sub.expr sub exp;
+          args = List.map (tuple2 id (opt (sub.expr sub))) list;
+          partial;
+        }
     | Texp_match (exp, cases, exn_cases, p) ->
       Texp_match
         (sub.expr sub exp, sub.cases sub cases, sub.cases sub exn_cases, p)

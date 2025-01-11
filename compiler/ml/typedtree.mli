@@ -147,7 +147,11 @@ and expression_desc =
               [Partial] if the pattern match is partial
               [Total] otherwise.
          *)
-  | Texp_apply of expression * (arg_label * expression option) list
+  | Texp_apply of {
+      funct: expression;
+      args: (arg_label * expression option) list;
+      partial: bool;
+    }
       (** E0 ~l1:E1 ... ~ln:En
 
             The expression can be None if the expression is abstracted over

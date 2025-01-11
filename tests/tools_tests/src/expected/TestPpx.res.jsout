@@ -51,6 +51,14 @@ async function async_foo(x, y) {
   return await a + await b | 0;
 }
 
+function add(x, y) {
+  return x + y | 0;
+}
+
+function partial_add(extra) {
+  return 3 + extra | 0;
+}
+
 let a = "A";
 
 let b = "B";
@@ -67,4 +75,6 @@ exports.fpromise = fpromise;
 exports.Uncurried = Uncurried;
 exports.async_succ = async_succ;
 exports.async_foo = async_foo;
+exports.add = add;
+exports.partial_add = partial_add;
 /*  Not a pure module */

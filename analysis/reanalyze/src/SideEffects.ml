@@ -26,7 +26,7 @@ let rec exprNoSideEffects (expr : Typedtree.expression) =
   | Texp_ident _ | Texp_constant _ -> true
   | Texp_construct (_, _, el) -> el |> List.for_all exprNoSideEffects
   | Texp_function _ -> true
-  | Texp_apply ({exp_desc = Texp_ident (path, _, _)}, args)
+  | Texp_apply {funct = {exp_desc = Texp_ident (path, _, _)}; args}
     when path |> pathIsWhitelistedForSideEffects ->
     args |> List.for_all (fun (_, eo) -> eo |> exprOptNoSideEffects)
   | Texp_apply _ -> false

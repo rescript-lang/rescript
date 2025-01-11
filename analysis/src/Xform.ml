@@ -88,11 +88,15 @@ module IfThenElse = struct
             ( {
                 pexp_desc =
                   Pexp_apply
-                    ( {
-                        pexp_desc =
-                          Pexp_ident {txt = Lident (("=" | "<>") as op)};
-                      },
-                      [(Nolabel, arg1); (Nolabel, arg2)] );
+                    {
+                      funct =
+                        {
+                          pexp_desc =
+                            Pexp_ident
+                              {txt = Longident.Lident (("=" | "<>") as op)};
+                        };
+                      args = [(Nolabel, arg1); (Nolabel, arg2)];
+                    };
               },
               e1,
               Some e2 )

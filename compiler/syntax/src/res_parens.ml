@@ -152,12 +152,15 @@ let sub_binary_expr_operand parent_operator child_operator =
 let rhs_binary_expr_operand parent_operator rhs =
   match rhs.Parsetree.pexp_desc with
   | Parsetree.Pexp_apply
-      ( {
-          pexp_attributes = [];
-          pexp_desc =
-            Pexp_ident {txt = Longident.Lident operator; loc = operator_loc};
-        },
-        [(_, _left); (_, _right)] )
+      {
+        funct =
+          {
+            pexp_attributes = [];
+            pexp_desc =
+              Pexp_ident {txt = Longident.Lident operator; loc = operator_loc};
+          };
+        args = [(_, _left); (_, _right)];
+      }
     when ParsetreeViewer.is_binary_operator operator
          && not (operator_loc.loc_ghost && operator = "^") ->
     let prec_parent = ParsetreeViewer.operator_precedence parent_operator in
@@ -168,11 +171,14 @@ let rhs_binary_expr_operand parent_operator rhs =
 let flatten_operand_rhs parent_operator rhs =
   match rhs.Parsetree.pexp_desc with
   | Parsetree.Pexp_apply
-      ( {
-          pexp_desc =
-            Pexp_ident {txt = Longident.Lident operator; loc = operator_loc};
-        },
-        [(_, _left); (_, _right)] )
+      {
+        funct =
+          {
+            pexp_desc =
+              Pexp_ident {txt = Longident.Lident operator; loc = operator_loc};
+          };
+        args = [(_, _left); (_, _right)];
+      }
     when ParsetreeViewer.is_binary_operator operator
          && not (operator_loc.loc_ghost && operator = "^") ->
     let prec_parent = ParsetreeViewer.operator_precedence parent_operator in
@@ -201,7 +207,8 @@ let lazy_or_assert_or_await_expr_rhs ?(in_await = false) expr =
       Parenthesized
     | {
      pexp_desc =
-       Pexp_apply ({pexp_desc = Pexp_ident {txt = Longident.Lident operator}}, _);
+       Pexp_apply
+         {funct = {pexp_desc = Pexp_ident {txt = Longident.Lident operator}}};
     }
       when ParsetreeViewer.is_binary_expression expr ->
       if in_await && not (binary_operator_inside_await_needs_parens operator)

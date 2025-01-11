@@ -1,5 +1,4 @@
-let foo [arity:1]~a:((a)[@res.namedArgLoc ])  =
-  (a (let __res_unit = () in __res_unit)) +. 1.
+let foo [arity:1]~a:((a)[@res.namedArgLoc ])  = (a ()) +. 1.
 let a [arity:1]() = 2
 let bar = foo ~a:((a)[@res.namedArgLoc ])
 let comparisonResult =
@@ -9,4 +8,4 @@ let comparisonResult =
     (elementProps ~onClick:((fun [arity:1]_ -> Js.log {js|hello world|js})
        [@res.namedArgLoc ]))
 ;;resolve ()
-;;resolve (let __res_unit = () in __res_unit)
+;;resolve ()

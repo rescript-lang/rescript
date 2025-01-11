@@ -364,16 +364,20 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
         | {
          pexp_desc =
            Pexp_apply
-             ( {pexp_desc = Pexp_ident {txt = Lident ("|." | "|.u")}},
-               [
-                 _;
-                 ( _,
-                   {
-                     pexp_desc =
-                       Pexp_apply (({pexp_desc = Pexp_ident _} as exp), args);
-                     pexp_loc;
-                   } );
-               ] );
+             {
+               funct = {pexp_desc = Pexp_ident {txt = Lident ("|." | "|.u")}};
+               args =
+                 [
+                   _;
+                   ( _,
+                     {
+                       pexp_desc =
+                         Pexp_apply
+                           {funct = {pexp_desc = Pexp_ident _} as exp; args};
+                       pexp_loc;
+                     } );
+                 ];
+             };
         }
           when locHasCursor pexp_loc ->
           let argAtCursor, extractedArgs =
@@ -383,7 +387,8 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
             (exp.pexp_loc, `FunctionCall (argAtCursor, exp, extractedArgs))
         (* Look for applying idents, like someIdent(...) *)
         | {
-         pexp_desc = Pexp_apply (({pexp_desc = Pexp_ident _} as exp), args);
+         pexp_desc =
+           Pexp_apply {funct = {pexp_desc = Pexp_ident _} as exp; args};
          pexp_loc;
         }
           when locHasCursor pexp_loc ->

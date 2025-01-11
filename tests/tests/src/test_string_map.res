@@ -13,12 +13,12 @@ include (
     let assertion_test = () => {
       let m = ref(StringMap.empty)
       let count = 1000000
-      (timing("building", ...))(_ =>
+      timing("building", ...)(_ =>
         for i in 0 to count {
           m := m.contents->StringMap.set(Js.Int.toString(i), Js.Int.toString(i))
         }
       )
-      (timing("querying", ...))(_ =>
+      timing("querying", ...)(_ =>
         for i in 0 to count {
           m.contents->StringMap.get(Js.Int.toString(i))->ignore
         }
