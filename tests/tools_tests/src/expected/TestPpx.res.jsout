@@ -59,6 +59,17 @@ function partial_add(extra) {
   return 3 + extra | 0;
 }
 
+function plus(x, y) {
+  return x + y | 0;
+}
+
+let z = 3;
+
+let Pipe = {
+  plus: plus,
+  z: z
+};
+
 let a = "A";
 
 let b = "B";
@@ -77,4 +88,5 @@ exports.async_succ = async_succ;
 exports.async_foo = async_foo;
 exports.add = add;
 exports.partial_add = partial_add;
+exports.Pipe = Pipe;
 /*  Not a pure module */

@@ -45,3 +45,8 @@ let async_foo = async (x, y) => {
 
 let add = (x, y) => x + y
 let partial_add = add(3, ...)
+
+module Pipe = {
+  let plus = (x, y) => x + y
+  let z = 1->plus(2)
+}
