@@ -183,7 +183,7 @@ let pat sub x =
 let expr sub x =
   let extra = function
     | Texp_constraint cty -> Texp_constraint (sub.typ sub cty)
-    | Texp_coerce ((), cty2) -> Texp_coerce ((), sub.typ sub cty2)
+    | Texp_coerce cty2 -> Texp_coerce (sub.typ sub cty2)
     | Texp_open (ovf, path, loc, env) ->
       Texp_open (ovf, path, loc, sub.env sub env)
     | Texp_newtype _ as d -> d

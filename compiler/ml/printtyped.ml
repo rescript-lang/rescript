@@ -252,7 +252,7 @@ and expression_extra i ppf x attrs =
     line i ppf "Texp_constraint\n";
     attributes i ppf attrs;
     core_type i ppf ct
-  | Texp_coerce ((), cto2) ->
+  | Texp_coerce cto2 ->
     line i ppf "Texp_coerce\n";
     attributes i ppf attrs;
     core_type i ppf cto2

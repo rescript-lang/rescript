@@ -2974,7 +2974,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         exp_attributes = arg.exp_attributes;
         exp_env = env;
         exp_extra =
-          (Texp_coerce ((), cty'), loc, sexp.pexp_attributes) :: arg.exp_extra;
+          (Texp_coerce cty', loc, sexp.pexp_attributes) :: arg.exp_extra;
       }
   | Pexp_send (e, {txt = met}) -> (
     let obj = type_exp env e in
