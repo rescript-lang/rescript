@@ -5495,12 +5495,12 @@ and parse_type_extension ~params ~attrs ~name p =
   let constructors = loop p [first] in
   Ast_helper.Te.mk ~attrs ~params ~priv name constructors
 
-and parse_type_definitions ?current_type_name_path ?inline_types ~attrs ~name
+and parse_type_definitions ~current_type_name_path ~inline_types ~attrs ~name
     ~params ~start_pos p =
   let type_def =
     let manifest, priv, kind =
-      parse_type_equation_and_representation ?current_type_name_path
-        ?inline_types p
+      parse_type_equation_and_representation ~current_type_name_path
+        ~inline_types p
     in
     let cstrs = parse_type_constraints p in
     let loc = mk_loc start_pos p.prev_end_pos in

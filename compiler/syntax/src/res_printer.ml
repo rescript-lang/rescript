@@ -1624,11 +1624,11 @@ and print_label_declaration ?inline_record_definitions ~state
              {ptyp_desc = Ptyp_constr ({txt = Lident constr_name}, _)} ) -> (
            let record_definition =
              inline_record_definitions
-             |> List.find (fun (r : Parsetree.type_declaration) ->
+             |> List.find_opt (fun (r : Parsetree.type_declaration) ->
                     r.ptype_name.txt = constr_name)
            in
-           match record_definition.ptype_kind with
-           | Ptype_record lds ->
+           match record_definition with
+           | Some {ptype_kind = Ptype_record lds} ->
              print_record_declaration ~inline_record_definitions ~state lds
                cmt_tbl
            | _ -> assert false)
