@@ -614,7 +614,6 @@ and print_structure_item ~state (si : Parsetree.structure_item) cmt_tbl =
     print_exception_def ~state extension_constructor cmt_tbl
   | Pstr_typext type_extension ->
     print_type_extension ~state type_extension cmt_tbl
-  | Pstr_class _ | Pstr_class_type _ -> Doc.nil
 
 and print_type_extension ~state (te : Parsetree.type_extension) cmt_tbl =
   let prefix = Doc.text "type " in
@@ -974,7 +973,6 @@ and print_signature_item ~state (si : Parsetree.signature_item) cmt_tbl =
         Doc.concat
           [print_extension ~state ~at_module_lvl:true extension cmt_tbl];
       ]
-  | Psig_class _ | Psig_class_type _ -> Doc.nil
 
 and print_rec_module_declarations ~state module_declarations cmt_tbl =
   print_listi

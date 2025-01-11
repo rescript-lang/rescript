@@ -490,8 +490,6 @@ and signature_item i ppf x =
     line i ppf "Psig_include\n";
     module_type i ppf incl.pincl_mod;
     attributes i ppf incl.pincl_attributes
-  | Psig_class () -> ()
-  | Psig_class_type () -> ()
   | Psig_extension ((s, arg), attrs) ->
     line i ppf "Psig_extension \"%s\"\n" s.txt;
     attributes i ppf attrs;
@@ -586,8 +584,6 @@ and structure_item i ppf x =
     line i ppf "Pstr_open %a %a\n" fmt_override_flag od.popen_override
       fmt_longident_loc od.popen_lid;
     attributes i ppf od.popen_attributes
-  | Pstr_class () -> ()
-  | Pstr_class_type () -> ()
   | Pstr_include incl ->
     line i ppf "Pstr_include";
     attributes i ppf incl.pincl_attributes;

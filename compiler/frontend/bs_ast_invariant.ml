@@ -86,9 +86,6 @@ let emit_external_warnings : iterator =
               [{ptype_kind = Ptype_variant ({pcd_res = Some _} :: _)}] ) ->
           Location.raise_errorf ~loc:str_item.pstr_loc
             "GADT has to be recursive types, please try `type rec'"
-        | Pstr_class _ ->
-          Location.raise_errorf ~loc:str_item.pstr_loc
-            "OCaml style classes are not supported"
         | _ -> super.structure_item self str_item);
     expr =
       (fun self ({pexp_loc = loc} as a) ->

@@ -436,7 +436,6 @@ and walk_structure_item si t comments =
   | Pstr_exception extension_constructor ->
     walk_extension_constructor extension_constructor t comments
   | Pstr_typext type_extension -> walk_type_extension type_extension t comments
-  | Pstr_class_type _ | Pstr_class _ -> ()
 
 and walk_value_description vd t comments =
   let leading, trailing =
@@ -545,7 +544,6 @@ and walk_signature_item (si : Parsetree.signature_item) t comments =
     walk_include_description include_description t comments
   | Psig_attribute attribute -> walk_attribute attribute t comments
   | Psig_extension (extension, _) -> walk_extension extension t comments
-  | Psig_class _ | Psig_class_type _ -> ()
 
 and walk_include_description id t comments =
   let before, inside, after = partition_by_loc comments id.pincl_mod.pmty_loc in

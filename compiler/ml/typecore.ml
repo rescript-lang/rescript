@@ -197,14 +197,11 @@ let iter_expression f e =
     | Pstr_eval (e, _) -> expr e
     | Pstr_value (_, pel) -> List.iter binding pel
     | Pstr_primitive _ | Pstr_type _ | Pstr_typext _ | Pstr_exception _
-    | Pstr_modtype _ | Pstr_open _
-    | Pstr_class_type ()
-    | Pstr_attribute _ | Pstr_extension _ ->
+    | Pstr_modtype _ | Pstr_open _ | Pstr_attribute _ | Pstr_extension _ ->
       ()
     | Pstr_include {pincl_mod = me} | Pstr_module {pmb_expr = me} ->
       module_expr me
     | Pstr_recmodule l -> List.iter (fun x -> module_expr x.pmb_expr) l
-    | Pstr_class () -> ()
   in
 
   expr e
@@ -1853,8 +1850,7 @@ and is_nonexpansive_mod mexp =
       (fun item ->
         match item.str_desc with
         | Tstr_eval _ | Tstr_primitive _ | Tstr_type _ | Tstr_modtype _
-        | Tstr_open _
-        | Tstr_class_type () ->
+        | Tstr_open _ ->
           true
         | Tstr_value (_, pat_exp_list) ->
           List.for_all (fun vb -> is_nonexpansive vb.vb_expr) pat_exp_list
@@ -1873,7 +1869,6 @@ and is_nonexpansive_mod mexp =
               | {ext_kind = Text_decl _} -> false
               | {ext_kind = Text_rebind _} -> true)
             te.tyext_constructors
-        | Tstr_class () -> assert false (* impossible *)
         | Tstr_attribute _ -> true)
       str.str_items
   | Tmod_apply _ -> false

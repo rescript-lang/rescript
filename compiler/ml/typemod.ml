@@ -573,8 +573,6 @@ and approx_sig env ssg =
       in
       let newenv = Env.add_signature sg env in
       sg @ approx_sig newenv srem
-    | Psig_class_type () -> assert false
-    | Psig_class () -> assert false
     | _ -> approx_sig env srem)
 
 and approx_modtype_info env sinfo =
@@ -870,8 +868,6 @@ and transl_signature env sg =
         in
         let trem, rem, final_env = transl_sig newenv srem in
         (mksig (Tsig_include incl) env loc :: trem, sg @ rem, final_env)
-      | Psig_class _ -> assert false
-      | Psig_class_type _ -> assert false
       | Psig_attribute x ->
         Builtin_attributes.warning_attribute x;
         let trem, rem, final_env = transl_sig env srem in
@@ -1567,8 +1563,6 @@ and type_structure ?(toplevel = false) funct_body anchor env sstr scope =
     | Pstr_open sod ->
       let _path, newenv, od = type_open ~toplevel env sod in
       (Tstr_open od, [], newenv)
-    | Pstr_class () -> assert false
-    | Pstr_class_type () -> assert false
     | Pstr_include sincl ->
       let smodl = sincl.pincl_mod in
       let modl =

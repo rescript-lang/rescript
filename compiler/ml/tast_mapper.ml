@@ -99,8 +99,6 @@ let structure_item sub {str_desc; str_loc; str_env} =
     | Tstr_recmodule list ->
       Tstr_recmodule (List.map (sub.module_binding sub) list)
     | Tstr_modtype x -> Tstr_modtype (sub.module_type_declaration sub x)
-    | Tstr_class () -> Tstr_class ()
-    | Tstr_class_type () -> Tstr_class_type ()
     | Tstr_include incl ->
       Tstr_include (include_infos (sub.module_expr sub) incl)
     | (Tstr_open _ | Tstr_attribute _) as d -> d
@@ -283,9 +281,7 @@ let signature_item sub x =
     | Tsig_modtype x -> Tsig_modtype (sub.module_type_declaration sub x)
     | Tsig_include incl ->
       Tsig_include (include_infos (sub.module_type sub) incl)
-    | (Tsig_class_type _ | Tsig_class _ | Tsig_open _ | Tsig_attribute _) as d
-      ->
-      d
+    | (Tsig_open _ | Tsig_attribute _) as d -> d
   in
   {x with sig_desc; sig_env}
 

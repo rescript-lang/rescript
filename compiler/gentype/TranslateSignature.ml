@@ -156,12 +156,6 @@ and translate_signature_item ~config ~output_file_relative ~resolver ~type_env
   | {Typedtree.sig_desc = Typedtree.Tsig_include _} ->
     log_not_implemented ("Tsig_include " ^ __LOC__);
     Translation.empty
-  | {Typedtree.sig_desc = Typedtree.Tsig_class _} ->
-    log_not_implemented ("Tsig_class " ^ __LOC__);
-    Translation.empty
-  | {Typedtree.sig_desc = Typedtree.Tsig_class_type _} ->
-    log_not_implemented ("Tsig_class_type " ^ __LOC__);
-    Translation.empty
   | {Typedtree.sig_desc = Typedtree.Tsig_attribute _} ->
     log_not_implemented ("Tsig_attribute " ^ __LOC__);
     Translation.empty

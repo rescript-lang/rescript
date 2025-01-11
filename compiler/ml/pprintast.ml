@@ -883,7 +883,6 @@ and signature_item ctxt f x : unit =
       (value_description ctxt) vd (item_attributes ctxt) vd.pval_attributes
   | Psig_typext te -> type_extension ctxt f te
   | Psig_exception ed -> exception_declaration ctxt f ed
-  | Psig_class () -> ()
   | Psig_module
       ({pmd_type = {pmty_desc = Pmty_alias alias; pmty_attributes = []; _}; _}
        as pmd) ->
@@ -908,7 +907,6 @@ and signature_item ctxt f x : unit =
           pp_print_space f ();
           pp f "@ =@ %a" (module_type ctxt) mt)
       md (item_attributes ctxt) attrs
-  | Psig_class_type () -> ()
   | Psig_recmodule decls ->
     let rec string_x_module_type_list f ?(first = true) l =
       match l with
@@ -1115,8 +1113,6 @@ and structure_item ctxt f x =
           pp_print_space f ();
           pp f "@ =@ %a" (module_type ctxt) mt)
       md (item_attributes ctxt) attrs
-  | Pstr_class () -> ()
-  | Pstr_class_type () -> ()
   | Pstr_primitive vd ->
     pp f "@[<hov2>external@ %a@ :@ %a@]%a" protect_ident vd.pval_name.txt
       (value_description ctxt) vd (item_attributes ctxt) vd.pval_attributes

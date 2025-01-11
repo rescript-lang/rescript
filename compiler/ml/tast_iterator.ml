@@ -69,8 +69,6 @@ let structure_item sub {str_desc; str_env; _} =
   | Tstr_module mb -> sub.module_binding sub mb
   | Tstr_recmodule list -> List.iter (sub.module_binding sub) list
   | Tstr_modtype x -> sub.module_type_declaration sub x
-  | Tstr_class _ -> ()
-  | Tstr_class_type () -> ()
   | Tstr_include incl -> include_infos (sub.module_expr sub) incl
   | Tstr_open _ -> ()
   | Tstr_attribute _ -> ()
@@ -226,8 +224,6 @@ let signature_item sub {sig_desc; sig_env; _} =
   | Tsig_recmodule list -> List.iter (sub.module_declaration sub) list
   | Tsig_modtype x -> sub.module_type_declaration sub x
   | Tsig_include incl -> include_infos (sub.module_type sub) incl
-  | Tsig_class () -> ()
-  | Tsig_class_type () -> ()
   | Tsig_open _od -> ()
   | Tsig_attribute _ -> ()
 

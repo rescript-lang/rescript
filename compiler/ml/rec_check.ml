@@ -356,8 +356,6 @@ and structure_item : Env.env -> Typedtree.structure_item -> Env.env * Use.t =
   | Tstr_exception _ -> (Env.empty, Use.empty)
   | Tstr_modtype _ -> (Env.empty, Use.empty)
   | Tstr_open _ -> (Env.empty, Use.empty)
-  | Tstr_class () -> (Env.empty, Use.empty)
-  | Tstr_class_type _ -> (Env.empty, Use.empty)
   | Tstr_include inc ->
     (* This is a kind of projection.  There's no need to add
        anything to the environment because everything is used in

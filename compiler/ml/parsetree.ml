@@ -476,8 +476,6 @@ and signature_item_desc =
        module type S *)
   | Psig_open of open_description (* open X *)
   | Psig_include of include_description (* include MT *)
-  | Psig_class of unit (* Dummy AST node *)
-  | Psig_class_type of unit (* Dummy AST node *)
   | Psig_attribute of attribute (* [@@@id] *)
   | Psig_extension of extension * attributes
 (* [%%id] *)
@@ -578,8 +576,6 @@ and structure_item_desc =
     (* module rec X1 = ME1 and ... and Xn = MEn *)
   | Pstr_modtype of module_type_declaration (* module type S = MT *)
   | Pstr_open of open_description (* open X *)
-  | Pstr_class of unit (* Dummy AST node *)
-  | Pstr_class_type of unit (* Dummy AST node *)
   | Pstr_include of include_declaration (* include ME *)
   | Pstr_attribute of attribute (* [@@@id] *)
   | Pstr_extension of extension * attributes

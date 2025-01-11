@@ -118,8 +118,6 @@ end = struct
     | Tstr_recmodule list -> List.iter iter_module_binding list
     | Tstr_modtype mtd -> iter_module_type_declaration mtd
     | Tstr_open _ -> ()
-    | Tstr_class () -> ()
-    | Tstr_class_type () -> ()
     | Tstr_include incl -> iter_module_expr incl.incl_mod
     | Tstr_attribute _ -> ());
     Iter.leave_structure_item item
@@ -321,8 +319,6 @@ end = struct
     | Tsig_modtype mtd -> iter_module_type_declaration mtd
     | Tsig_open _ -> ()
     | Tsig_include incl -> iter_module_type incl.incl_mod
-    | Tsig_class () -> ()
-    | Tsig_class_type () -> ()
     | Tsig_attribute _ -> ());
     Iter.leave_signature_item item
 
