@@ -545,7 +545,7 @@ and walk_signature_item (si : Parsetree.signature_item) t comments =
     walk_include_description include_description t comments
   | Psig_attribute attribute -> walk_attribute attribute t comments
   | Psig_extension (extension, _) -> walk_extension extension t comments
-  | Psig_class _ | Psig_class_type _ -> ()
+  | Psig_class_type _ -> ()
 
 and walk_include_description id t comments =
   let before, inside, after = partition_by_loc comments id.pincl_mod.pmty_loc in

@@ -883,7 +883,6 @@ and signature_item ctxt f x : unit =
       (value_description ctxt) vd (item_attributes ctxt) vd.pval_attributes
   | Psig_typext te -> type_extension ctxt f te
   | Psig_exception ed -> exception_declaration ctxt f ed
-  | Psig_class () -> ()
   | Psig_module
       ({pmd_type = {pmty_desc = Pmty_alias alias; pmty_attributes = []; _}; _}
        as pmd) ->

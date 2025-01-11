@@ -476,7 +476,6 @@ and signature_item_desc =
        module type S *)
   | Psig_open of open_description (* open X *)
   | Psig_include of include_description (* include MT *)
-  | Psig_class of unit (* Dummy AST node *)
   | Psig_class_type of unit (* Dummy AST node *)
   | Psig_attribute of attribute (* [@@@id] *)
   | Psig_extension of extension * attributes

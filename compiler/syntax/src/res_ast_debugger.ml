@@ -360,7 +360,6 @@ module SexpAst = struct
         Sexp.list [Sexp.atom "Psig_open"; open_description open_desc]
       | Psig_include incl_decl ->
         Sexp.list [Sexp.atom "Psig_include"; include_description incl_decl]
-      | Psig_class _ -> Sexp.list [Sexp.atom "Psig_class"]
       | Psig_class_type _ -> Sexp.list [Sexp.atom "Psig_class_type"]
       | Psig_attribute attr ->
         Sexp.list [Sexp.atom "Psig_attribute"; attribute attr]
