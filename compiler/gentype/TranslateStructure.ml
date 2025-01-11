@@ -352,12 +352,6 @@ and translate_structure_item ~config ~output_file_relative ~resolver ~type_env
   | {str_desc = Tstr_open _} ->
     log_not_implemented ("Tstr_open " ^ __LOC__);
     Translation.empty
-  | {str_desc = Tstr_class _} ->
-    log_not_implemented ("Tstr_class " ^ __LOC__);
-    Translation.empty
-  | {str_desc = Tstr_class_type _} ->
-    log_not_implemented ("Tstr_class_type " ^ __LOC__);
-    Translation.empty
   | {str_desc = Tstr_attribute _} ->
     log_not_implemented ("Tstr_attribute " ^ __LOC__);
     Translation.empty

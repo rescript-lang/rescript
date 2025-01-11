@@ -1850,8 +1850,7 @@ and is_nonexpansive_mod mexp =
       (fun item ->
         match item.str_desc with
         | Tstr_eval _ | Tstr_primitive _ | Tstr_type _ | Tstr_modtype _
-        | Tstr_open _
-        | Tstr_class_type () ->
+        | Tstr_open _ ->
           true
         | Tstr_value (_, pat_exp_list) ->
           List.for_all (fun vb -> is_nonexpansive vb.vb_expr) pat_exp_list
@@ -1870,7 +1869,6 @@ and is_nonexpansive_mod mexp =
               | {ext_kind = Text_decl _} -> false
               | {ext_kind = Text_rebind _} -> true)
             te.tyext_constructors
-        | Tstr_class () -> assert false (* impossible *)
         | Tstr_attribute _ -> true)
       str.str_items
   | Tmod_apply _ -> false

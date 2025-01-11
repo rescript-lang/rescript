@@ -222,7 +222,7 @@ and signature_item_check_annotation ~check_annotation
     module_type_declaration
     |> module_type_declaration_check_annotation ~check_annotation
   | Tsig_typext _ | Tsig_exception _ | Tsig_recmodule _ | Tsig_open _
-  | Tsig_include _ | Tsig_class _ | Tsig_class_type _ ->
+  | Tsig_include _ ->
     false
 
 and signature_check_annotation ~check_annotation
@@ -258,9 +258,7 @@ let rec structure_item_check_annotation ~check_annotation
     |> module_type_declaration_check_annotation ~check_annotation
   | Tstr_attribute attribute ->
     [attribute] |> check_annotation ~loc:structure_item.str_loc
-  | Tstr_eval _ | Tstr_typext _ | Tstr_exception _ | Tstr_open _ | Tstr_class _
-  | Tstr_class_type _ ->
-    false
+  | Tstr_eval _ | Tstr_typext _ | Tstr_exception _ | Tstr_open _ -> false
 
 and module_expr_check_annotation ~check_annotation
     (module_expr : Typedtree.module_expr) =

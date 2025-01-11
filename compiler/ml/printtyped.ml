@@ -499,8 +499,6 @@ and signature_item i ppf x =
     line i ppf "Tsig_include\n";
     attributes i ppf incl.incl_attributes;
     module_type i ppf incl.incl_mod
-  | Tsig_class () -> ()
-  | Tsig_class_type () -> ()
   | Tsig_attribute (s, arg) ->
     line i ppf "Tsig_attribute \"%s\"\n" s.txt;
     Printast.payload i ppf arg
@@ -595,8 +593,6 @@ and structure_item i ppf x =
     line i ppf "Tstr_open %a %a\n" fmt_override_flag od.open_override fmt_path
       od.open_path;
     attributes i ppf od.open_attributes
-  | Tstr_class () -> ()
-  | Tstr_class_type () -> ()
   | Tstr_include incl ->
     line i ppf "Tstr_include";
     attributes i ppf incl.incl_attributes;

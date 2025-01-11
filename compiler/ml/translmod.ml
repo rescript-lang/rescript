@@ -474,8 +474,8 @@ and transl_structure loc fields cc rootpath final_env = function
             transl_module Tcoerce_none None modl,
             body ),
         size )
-    | Tstr_class _ | Tstr_primitive _ | Tstr_type _ | Tstr_modtype _
-    | Tstr_open _ | Tstr_class_type _ | Tstr_attribute _ ->
+    | Tstr_primitive _ | Tstr_type _ | Tstr_modtype _ | Tstr_open _
+    | Tstr_attribute _ ->
       transl_structure loc fields cc rootpath final_env rem)
 
 (* Update forward declaration in Translcore *)
