@@ -4427,35 +4427,46 @@ and print_jsx_fragment ~state expr cmt_tbl =
 and print_jsx_children ~state (children_expr : Parsetree.expression) ~sep
     cmt_tbl =
   match children_expr.pexp_desc with
-  | Pexp_construct ({txt = Longident.Lident "::"}, _) ->
+  | Pexp_construct ({loc; txt = Longident.Lident "::"}, _) ->
     let children, _ = ParsetreeViewer.collect_list_expressions children_expr in
-    Doc.group
-      (Doc.join ~sep
-         (List.map
-            (fun (expr : Parsetree.expression) ->
-              let leading_line_comment_present =
-                has_leading_line_comment cmt_tbl expr.pexp_loc
-              in
-              let expr_doc =
-                print_expression_with_comments ~state expr cmt_tbl
-              in
-              let add_parens_or_braces expr_doc =
-                (* {(20: int)} make sure that we also protect the expression inside *)
-                let inner_doc =
-                  if Parens.braced_expr expr then add_parens expr_doc
-                  else expr_doc
-                in
-                if leading_line_comment_present then add_braces inner_doc
-                else Doc.concat [Doc.lbrace; inner_doc; Doc.rbrace]
-              in
-              match Parens.jsx_child_expr expr with
-              | Nothing -> expr_doc
-              | Parenthesized -> add_parens_or_braces expr_doc
-              | Braced braces_loc ->
-                print_comments
-                  (add_parens_or_braces expr_doc)
-                  cmt_tbl braces_loc)
-            children))
+    let print_expr (expr : Parsetree.expression) =
+      let leading_line_comment_present =
+        has_leading_line_comment cmt_tbl expr.pexp_loc
+      in
+      let expr_doc = print_expression_with_comments ~state expr cmt_tbl in
+      let add_parens_or_braces expr_doc =
+        (* {(20: int)} make sure that we also protect the expression inside *)
+        let inner_doc =
+          if Parens.braced_expr expr then add_parens expr_doc else expr_doc
+        in
+        if leading_line_comment_present then add_braces inner_doc
+        else Doc.concat [Doc.lbrace; inner_doc; Doc.rbrace]
+      in
+      match Parens.jsx_child_expr expr with
+      | Nothing -> expr_doc
+      | Parenthesized -> add_parens_or_braces expr_doc
+      | Braced braces_loc ->
+        print_comments (add_parens_or_braces expr_doc) cmt_tbl braces_loc
+    in
+    let rec loop prev acc exprs =
+      match exprs with
+      | [] -> List.rev acc
+      | ({Parsetree.pexp_loc = current_loc} as expr) :: tails ->
+        let docs =
+          if current_loc.loc_start.pos_lnum - prev.Warnings.loc_end.pos_lnum > 1
+          then
+            let expr = print_expr expr in
+            let acc = Doc.concat [Doc.hard_line; expr] :: acc in
+            acc
+          else
+            let expr = print_expr expr in
+            let acc = expr :: acc in
+            acc
+        in
+        loop current_loc docs tails
+    in
+    let docs = loop loc [] children in
+    Doc.group (Doc.join ~sep docs)
   | _ ->
     let leading_line_comment_present =
       has_leading_line_comment cmt_tbl children_expr.pexp_loc
