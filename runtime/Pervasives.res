@@ -50,6 +50,7 @@ external \"-": ('a, 'a) => 'a = "%sub"
 external \"*": ('a, 'a) => 'a = "%mul"
 external \"/": ('a, 'a) => 'a = "%div"
 external \"%": ('a, 'a) => 'a = "%mod"
+external \"<<": ('a, 'a) => 'a = "%lsl"
 external mod: ('a, 'a) => 'a = "%mod"
 
 /* Comparisons */
