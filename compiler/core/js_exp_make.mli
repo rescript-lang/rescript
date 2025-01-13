@@ -285,9 +285,9 @@ val bigint_op : ?comment:string -> Js_op.binop -> t -> t -> t
 
 val bigint_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
 
-val bigint_div : checked:bool -> ?comment:string -> t -> t -> t
+val bigint_div : ?comment:string -> t -> t -> t
 
-val bigint_mod : checked:bool -> ?comment:string -> t -> t -> t
+val bigint_mod : ?comment:string -> t -> t -> t
 
 val js_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
 
