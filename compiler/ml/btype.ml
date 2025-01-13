@@ -404,7 +404,6 @@ let copy_row f fixed row keep more =
   {
     row_fields = fields;
     row_more = more;
-    row_bound = ();
     row_fixed = row.row_fixed && fixed;
     row_closed = row.row_closed;
     row_name = name;

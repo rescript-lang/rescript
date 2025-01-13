@@ -39,7 +39,6 @@ and type_desc =
 and row_desc = {
   row_fields: (label * row_field) list;
   row_more: type_expr;
-  row_bound: unit;
   row_closed: bool;
   row_fixed: bool;
   row_name: (Path.t * type_expr list) option;
