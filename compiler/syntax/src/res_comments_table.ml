@@ -263,19 +263,21 @@ let fun_expr expr =
        Pexp_fun
          {
            arg_label = lbl;
+           label_loc;
            default = default_expr;
            lhs = pattern;
            rhs = return_expr;
          };
      pexp_attributes = [];
     } ->
-      let parameter = ([], lbl, default_expr, pattern) in
+      let parameter = ([], lbl, label_loc, default_expr, pattern) in
       collect attrs_before (parameter :: acc) return_expr
     | {pexp_desc = Pexp_newtype (string_loc, rest); pexp_attributes = attrs} ->
       let var, return_expr = collect_new_types [string_loc] rest in
       let parameter =
         ( attrs,
           Asttypes.Nolabel,
+          Location.none,
           None,
           Ast_helper.Pat.var ~loc:string_loc.loc var )
       in
@@ -285,26 +287,28 @@ let fun_expr expr =
        Pexp_fun
          {
            arg_label = lbl;
+           label_loc;
            default = default_expr;
            lhs = pattern;
            rhs = return_expr;
          };
      pexp_attributes = [({txt = "bs"}, _)] as attrs;
     } ->
-      let parameter = (attrs, lbl, default_expr, pattern) in
+      let parameter = (attrs, lbl, label_loc, default_expr, pattern) in
       collect attrs_before (parameter :: acc) return_expr
     | {
      pexp_desc =
        Pexp_fun
          {
            arg_label = (Labelled _ | Optional _) as lbl;
+           label_loc;
            default = default_expr;
            lhs = pattern;
            rhs = return_expr;
          };
      pexp_attributes = attrs;
     } ->
-      let parameter = (attrs, lbl, default_expr, pattern) in
+      let parameter = (attrs, lbl, label_loc, default_expr, pattern) in
       collect attrs_before (parameter :: acc) return_expr
     | expr -> (attrs_before, List.rev acc, expr)
   in
@@ -1446,13 +1450,11 @@ and walk_expression expr t comments =
     let comments =
       visit_list_but_continue_with_remaining_comments ~newline_delimited:false
         ~walk_node:walk_expr_pararameter
-        ~get_loc:(fun (_attrs, _argLbl, expr_opt, pattern) ->
+        ~get_loc:(fun (_attrs, _argLbl, label_loc, expr_opt, pattern) ->
           let open Parsetree in
           let start_pos =
-            match pattern.ppat_attributes with
-            | ({Location.txt = "res.namedArgLoc"; loc}, _) :: _attrs ->
-              loc.loc_start
-            | _ -> pattern.ppat_loc.loc_start
+            if label_loc <> Location.none then label_loc.loc_start
+            else pattern.ppat_loc.loc_start
           in
           match expr_opt with
           | None -> {pattern.ppat_loc with loc_start = start_pos}
@@ -1493,7 +1495,8 @@ and walk_expression expr t comments =
         attach t.trailing return_expr.pexp_loc trailing)
   | _ -> ()
 
-and walk_expr_pararameter (_attrs, _argLbl, expr_opt, pattern) t comments =
+and walk_expr_pararameter (_attrs, _argLbl, _label_loc, expr_opt, pattern) t
+    comments =
   let leading, inside, trailing = partition_by_loc comments pattern.ppat_loc in
   attach t.leading pattern.ppat_loc leading;
   walk_pattern pattern t inside;

@@ -5184,7 +5184,7 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
                     cmt_tbl lbl.Asttypes.loc)
                 lbls);
          ])
-  | Parameter {attrs; lbl; default_expr; pat = pattern} ->
+  | Parameter {attrs; lbl; lbl_loc; default_expr; pat = pattern} ->
     let attrs = print_attributes ~state attrs cmt_tbl in
     (* =defaultValue *)
     let default_expr_doc =
@@ -5246,22 +5246,8 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
     in
     let cmt_loc =
       match default_expr with
-      | None -> (
-        match pattern.ppat_attributes with
-        | ({Location.txt = "res.namedArgLoc"; loc}, _) :: _ ->
-          {loc with loc_end = pattern.ppat_loc.loc_end}
-        | _ -> pattern.ppat_loc)
-      | Some expr ->
-        let start_pos =
-          match pattern.ppat_attributes with
-          | ({Location.txt = "res.namedArgLoc"; loc}, _) :: _ -> loc.loc_start
-          | _ -> pattern.ppat_loc.loc_start
-        in
-        {
-          pattern.ppat_loc with
-          loc_start = start_pos;
-          loc_end = expr.pexp_loc.loc_end;
-        }
+      | None -> {lbl_loc with loc_end = pattern.ppat_loc.loc_end}
+      | Some expr -> {lbl_loc with loc_end = expr.pexp_loc.loc_end}
     in
     print_comments doc cmt_tbl cmt_loc
 

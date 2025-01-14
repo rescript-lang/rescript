@@ -63,8 +63,7 @@
 
   Looks like there might be an expression missing here
 
-let findThreadByIdLinearScan [arity:2]~threads:((threads)[@res.namedArgLoc ])
-   ~id:((id)[@res.namedArgLoc ])  =
+let findThreadByIdLinearScan [arity:2]~threads  ~id  =
   ((Js.Array2.findi ThreadsModel.threads
       (fun [arity:2]thread ->
          fun i ->
