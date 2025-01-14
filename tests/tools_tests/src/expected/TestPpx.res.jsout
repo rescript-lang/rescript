@@ -82,6 +82,10 @@ let neq = false;
 
 let neq2 = false;
 
+let eq = true;
+
+let eq2 = true;
+
 exports.a = a;
 exports.b = b;
 exports.M = M;
@@ -98,4 +102,6 @@ exports.Pipe = Pipe;
 exports.concat = concat;
 exports.neq = neq;
 exports.neq2 = neq2;
+exports.eq = eq;
+exports.eq2 = eq2;
 /*  Not a pure module */

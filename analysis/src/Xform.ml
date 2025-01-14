@@ -93,7 +93,7 @@ module IfThenElse = struct
                         {
                           pexp_desc =
                             Pexp_ident
-                              {txt = Longident.Lident (("=" | "<>") as op)};
+                              {txt = Longident.Lident (("==" | "!=") as op)};
                         };
                       args = [(Nolabel, arg1); (Nolabel, arg2)];
                     };
@@ -101,7 +101,7 @@ module IfThenElse = struct
               e1,
               Some e2 )
           when Loc.hasPos ~pos e.pexp_loc -> (
-          let e1, e2 = if op = "=" then (e1, e2) else (e2, e1) in
+          let e1, e2 = if op = "==" then (e1, e2) else (e2, e1) in
           let mkMatch ~arg ~pat =
             let cases =
               [

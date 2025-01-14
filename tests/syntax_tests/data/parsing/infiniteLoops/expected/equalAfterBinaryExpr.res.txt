@@ -11,15 +11,15 @@
   Did you mean `==` here?
 
 let rec _addLoop [arity:2]rbt currentNode =
-  ((if (Some currentNode) == (rbt -> root)
+  ((if (Some currentNode) === (rbt -> root)
     then currentNode.color <- Black
     else
-      if (currentNode.parent -> castNotOption).color == Black
+      if (currentNode.parent -> castNotOption).color === Black
       then ()
       else
         if
           (((let uncle = uncleOf currentNode in
-             ((!==) uncle None) && ((uncle -> castNotOption).color == Red)))
+             ((!==) uncle None) && ((uncle -> castNotOption).color === Red)))
           [@res.braces ])
         then
           ((currentNode.parent -> castNotOption).color <- Black;
@@ -50,12 +50,12 @@ let rec _addLoop [arity:2]rbt currentNode =
            else rotateLeft rbt ((grandParentOf currentNode) -> castNotOption)))
   [@res.braces ])
 let removeNode [arity:2]rbt node =
-  ((if nodeToRemove.color == Black
+  ((if nodeToRemove.color === Black
     then
-      (if successor.color == Red
+      (if successor.color === Red
        then
          (successor.color <- Black;
-          if successor.parent == None then rbt -> (rootSet (Some successor)))
+          if successor.parent === None then rbt -> (rootSet (Some successor)))
        else
          (let break = ref false in
           let successorRef = ref successor in
@@ -68,7 +68,7 @@ let removeNode [arity:2]rbt node =
                 let sibling = siblingOf successor in
                 (if
                    ((!==) sibling None) &&
-                     ((sibling -> castNotOption).color == Red)
+                     ((sibling -> castNotOption).color === Red)
                  then
                    (successorParent.color <- Red;
                     (sibling -> castNotOption).color <- Black;
@@ -78,31 +78,31 @@ let removeNode [arity:2]rbt node =
                  (let sibling = siblingOf successor in
                   let siblingNN = sibling -> castNotOption in
                   if
-                    (successorParent.color == Black) &&
-                      ((sibling == None) ||
-                         (((siblingNN.color == Black) &&
-                             ((siblingNN.left == None) ||
-                                ((siblingNN.left -> castNotOption).color ==
+                    (successorParent.color === Black) &&
+                      ((sibling === None) ||
+                         (((siblingNN.color === Black) &&
+                             ((siblingNN.left === None) ||
+                                ((siblingNN.left -> castNotOption).color ===
                                    Black)))
                             &&
-                            ((siblingNN.right == None) ||
-                               ((siblingNN.right -> castNotOption).color ==
+                            ((siblingNN.right === None) ||
+                               ((siblingNN.right -> castNotOption).color ===
                                   Black))))
                   then
                     (if (!==) sibling None then siblingNN.color <- Red;
                      successorRef.contents <- successorParent)
                   else
                     if
-                      (successorParent.color == Red) &&
-                        ((sibling == None) ||
-                           (((siblingNN.color == Black) &&
-                               ((siblingNN.left == None) ||
-                                  ((siblingNN.left -> castNotOption).color ==
-                                     Black)))
+                      (successorParent.color === Red) &&
+                        ((sibling === None) ||
+                           (((siblingNN.color === Black) &&
+                               ((siblingNN.left === None) ||
+                                  ((siblingNN.left -> castNotOption).color
+                                     === Black)))
                               &&
-                              ((siblingNN.right == None) ||
-                                 ((siblingNN.right -> castNotOption).color ==
-                                    Black))))
+                              ((siblingNN.right === None) ||
+                                 ((siblingNN.right -> castNotOption).color
+                                    === Black))))
                     then
                       (if (!==) sibling None then siblingNN.color <- Red;
                        successorParent.color <- Black;
@@ -110,17 +110,17 @@ let removeNode [arity:2]rbt node =
                     else
                       if
                         ((!==) sibling None) &&
-                          ((sibling -> castNotOption).color == Black)
+                          ((sibling -> castNotOption).color === Black)
                       then
                         (let sibling = sibling -> castNotOption in
                          if
                            (((isLeft successor) &&
-                               ((sibling.right == None) ||
-                                  ((sibling.right -> castNotOption).color ==
+                               ((sibling.right === None) ||
+                                  ((sibling.right -> castNotOption).color ===
                                      Black)))
                               && ((!==) sibling.left None))
                              &&
-                             ((sibling.left -> castNotOption).color == Red)
+                             ((sibling.left -> castNotOption).color === Red)
                          then
                            (sibling.color <- Red;
                             (sibling.left -> castNotOption).color <- Black;
@@ -128,12 +128,13 @@ let removeNode [arity:2]rbt node =
                          else
                            if
                              (((not (isLeft successor)) &&
-                                 ((sibling.left == None) ||
-                                    ((sibling.left -> castNotOption).color ==
-                                       Black)))
+                                 ((sibling.left === None) ||
+                                    ((sibling.left -> castNotOption).color
+                                       === Black)))
                                 && ((!==) sibling.right None))
                                &&
-                               ((sibling.right -> castNotOption).color == Red)
+                               ((sibling.right -> castNotOption).color ===
+                                  Red)
                            then
                              (sibling.color <- Red;
                               (sibling.right -> castNotOption).color <- Black;
@@ -152,5 +153,5 @@ let removeNode [arity:2]rbt node =
                             rotateLeft rbt successorParent))))
             done));
     if isLeaf successor
-    then (if (rbt -> root) == (Some successor) then (rbt -> root) = None))
+    then (if (rbt -> root) === (Some successor) then (rbt -> root) = None))
   [@res.braces ])

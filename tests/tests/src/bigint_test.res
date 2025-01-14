@@ -5,7 +5,7 @@ let approx = (loc, x, y) => Mt_global.collect_approx(test_id, suites, loc, x, y)
 let bigint_compare = (x: bigint, y) => Pervasives.compare(x, y)
 let generic_compare = Pervasives.compare
 let bigint_equal = (x: bigint, y) => x == y
-let generic_equal = \"="
+let generic_equal = \"=="
 let bigint_notequal = (x: bigint, y) => x != y
 let generic_notequal = \"!="
 let bigint_lessthan = (x: bigint, y) => x < y

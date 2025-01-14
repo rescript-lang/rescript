@@ -270,7 +270,7 @@ let operator_precedence operator =
   | ":=" -> 1
   | "||" -> 2
   | "&&" -> 3
-  | "=" | "==" | "<" | ">" | "!=" | "<>" | "!==" | "<=" | ">=" | "|>" -> 4
+  | "==" | "===" | "<" | ">" | "!=" | "<>" | "!==" | "<=" | ">=" | "|>" -> 4
   | "+" | "+." | "-" | "-." | "++" -> 5
   | "*" | "*." | "/" | "/." | "%" -> 6
   | "**" -> 7
@@ -296,7 +296,7 @@ let is_unary_expression expr =
 (* TODO: tweak this to check for ghost ^ as template literal *)
 let is_binary_operator operator =
   match operator with
-  | ":=" | "||" | "&&" | "=" | "==" | "<" | ">" | "!=" | "!==" | "<=" | ">="
+  | ":=" | "||" | "&&" | "==" | "===" | "<" | ">" | "!=" | "!==" | "<=" | ">="
   | "|>" | "+" | "+." | "-" | "-." | "++" | "*" | "*." | "/" | "/." | "**"
   | "->" | "<>" | "%" ->
     true
@@ -321,7 +321,7 @@ let is_binary_expression expr =
 
 let is_equality_operator operator =
   match operator with
-  | "=" | "==" | "!=" | "!==" -> true
+  | "==" | "===" | "!=" | "!==" -> true
   | _ -> false
 
 let is_rhs_binary_operator operator =

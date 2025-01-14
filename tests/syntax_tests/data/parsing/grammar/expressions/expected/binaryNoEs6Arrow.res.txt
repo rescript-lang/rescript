@@ -1,25 +1,25 @@
-;;if (color == Black) && ((sibling == None) || (parent == None)) then ()
+;;if (color === Black) && ((sibling === None) || (parent === None)) then ()
 ;;if
-    ((color == Black) && ((!==) color Red)) &&
-      ((sibling == None) || (parent == None))
+    ((color === Black) && ((!==) color Red)) &&
+      ((sibling === None) || (parent === None))
   then ()
-;;match (color == Black) && ((sibling == None) || (parent == None)) with
+;;match (color === Black) && ((sibling === None) || (parent === None)) with
   | _ -> ()
-;;match ((color == Black) && ((!==) color Red)) &&
-          ((sibling == None) || (parent == None))
+;;match ((color === Black) && ((!==) color Red)) &&
+          ((sibling === None) || (parent === None))
   with
   | _ -> ()
-;;try (color == Black) && ((sibling == None) || (parent == None))
+;;try (color === Black) && ((sibling === None) || (parent === None))
   with | _ -> ()
 ;;try
-    ((color == Black) && (color == Red)) &&
-      ((sibling == None) || (parent == None))
+    ((color === Black) && (color === Red)) &&
+      ((sibling === None) || (parent === None))
   with | _ -> ()
-;;while (color == Black) && ((sibling == None) || (parent == None)) do ()
+;;while (color === Black) && ((sibling === None) || (parent === None)) do ()
     done
 ;;while
-    ((color == Black) && (color == Red)) &&
-      ((sibling == None) || (parent == None))
+    ((color === Black) && (color === Red)) &&
+      ((sibling === None) || (parent === None))
     do () done
 ;;((div
       ~onClick:((fun [arity:1]event ->

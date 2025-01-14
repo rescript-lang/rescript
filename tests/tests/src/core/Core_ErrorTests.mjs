@@ -3,6 +3,7 @@
 import * as Exn from "rescript/lib/es6/Exn.js";
 import * as Test from "./Test.mjs";
 import * as Pervasives from "rescript/lib/es6/Pervasives.js";
+import * as Primitive_object from "rescript/lib/es6/Primitive_object.js";
 import * as Primitive_exceptions from "rescript/lib/es6/Primitive_exceptions.js";
 
 function panicTest() {
@@ -25,7 +26,7 @@ function panicTest() {
       43
     ],
     "Should resolve test"
-  ], caught, (prim0, prim1) => prim0 === prim1, "Panic! uh oh");
+  ], caught, Primitive_object.equal, "Panic! uh oh");
 }
 
 panicTest();

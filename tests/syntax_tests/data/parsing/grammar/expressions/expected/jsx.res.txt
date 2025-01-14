@@ -159,7 +159,7 @@ let y =
                                      let pathFromState =
                                        Routes.stateToPath
                                          latestComponentBag.state in
-                                     ((if currentActualPath = pathFromState
+                                     ((if currentActualPath == pathFromState
                                        then None
                                        else
                                          dispatchEventless
@@ -220,7 +220,7 @@ let icon =
   [@JSX ])
 let _ =
   ((MessengerSharedPhotosAlbumViewPhotoReact.createElement
-      ?ref:((if foo#bar == baz
+      ?ref:((if foo#bar === baz
              then Some (foooooooooooooooooooooooo setRefChild)
              else None)[@res.namedArgLoc ][@res.ternary ])
       ~key:((node#legacy_attachment_id)[@res.namedArgLoc ]) ~children:[] ())

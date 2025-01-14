@@ -75,7 +75,7 @@ let findThreadByIdLinearScan [arity:2]~threads:((threads)[@res.namedArgLoc ])
                | Group { id } -> id
                | Unknown { id } ->
                    (unknown.id -> Js.String.make) -> FBID.ofStringUnsafe in
-             thisId == id)
+             thisId === id)
            [@res.braces ])))
   [@res.braces ])
 let x = ((loop 0 (Nil -> (push doc)))[@res.braces ])

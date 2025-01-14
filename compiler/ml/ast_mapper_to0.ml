@@ -336,6 +336,12 @@ module E = struct
         | ( Pexp_ident ({txt = Longident.Lident "!=="} as lid),
             [(Nolabel, _); (Nolabel, _)] ) ->
           {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "!="}}
+        | ( Pexp_ident ({txt = Longident.Lident "==="} as lid),
+            [(Nolabel, _); (Nolabel, _)] ) ->
+          {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "=="}}
+        | ( Pexp_ident ({txt = Longident.Lident "=="} as lid),
+            [(Nolabel, _); (Nolabel, _)] ) ->
+          {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "="}}
         | _ -> e
       in
       let attrs =

@@ -40,8 +40,8 @@ let res =
   [@res.braces ])
 let nestedLet = ((let _ = 1 in ())[@res.braces ])
 let nestedLet = ((let _ = 1 in 2)[@res.braces ])
-let init [arity:1]() = ((foo (1 == 1); [%assert 1 == 2])[@res.braces ])
-let init [arity:1]() = (([%assert 1 == 2]; foo (1 == 1); [%assert 1 == 2])
+let init [arity:1]() = ((foo (1 === 1); [%assert 1 === 2])[@res.braces ])
+let init [arity:1]() = (([%assert 1 === 2]; foo (1 === 1); [%assert 1 === 2])
   [@res.braces ])
 let f [arity:1]() = ((let x = 1 in fun [arity:1]_ -> ())[@res.braces ])
 let reifyStyle (type a) [arity:1](x : 'a) =
@@ -55,7 +55,7 @@ let reifyStyle (type a) [arity:1](x : 'a) =
               (({js|function(x,y) {return +(x instanceof y)}|js})
                 [@res.template ])] : 'a -> constructor -> bool (a:2))
        end in
-       ((if (Js.typeof x) = {js|string|js}
+       ((if (Js.typeof x) == {js|string|js}
          then Obj.magic String
          else
            if Internal.instanceOf x Internal.canvasGradient

@@ -396,8 +396,6 @@ let make_infix_operator (p : Parser.t) token start_pos end_pos =
       Parser.err ~start_pos ~end_pos p
         (Diagnostics.message "Did you mean `==` here?");
       "=")
-    else if token = Token.EqualEqual then "="
-    else if token = Token.EqualEqualEqual then "=="
     else Token.to_string token
   in
   let loc = mk_loc start_pos end_pos in

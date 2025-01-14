@@ -3662,12 +3662,6 @@ and print_unary_expression ~state expr cmt_tbl =
 
 and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
   let print_binary_operator ~inline_rhs operator =
-    let operator_txt =
-      match operator with
-      | "=" -> "=="
-      | "==" -> "==="
-      | txt -> txt
-    in
     let spacing_before_operator =
       if operator = "->" then Doc.soft_line
       else if operator = "|>" then Doc.line
@@ -3680,7 +3674,7 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
       else Doc.line
     in
     Doc.concat
-      [spacing_before_operator; Doc.text operator_txt; spacing_after_operator]
+      [spacing_before_operator; Doc.text operator; spacing_after_operator]
   in
   let print_operand ~is_lhs ~is_multiline expr parent_operator =
     let rec flatten ~is_lhs ~is_multiline expr parent_operator =

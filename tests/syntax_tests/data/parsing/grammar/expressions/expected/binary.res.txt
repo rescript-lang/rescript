@@ -1,5 +1,5 @@
-;;node := (if newBalance == 2 then avl -> (rotateRight node) else node)
-;;node := ((if newBalance == 2 then avl -> (rotateRight node) else node)
+;;node := (if newBalance === 2 then avl -> (rotateRight node) else node)
+;;node := ((if newBalance === 2 then avl -> (rotateRight node) else node)
     [@attr ])
 let x = (match z with | _ -> false) z
 let x = ((match z with | _ -> false)[@attr ]) z
@@ -13,7 +13,7 @@ let x = while condition do () done z
 let x = ((while condition do () done)[@attr ]) z
 let x = (a + (-1)) + (-2)
 let x = (a + (((-1))[@attr ])) + (((-2))[@attr ])
-let x = (a % a) = 0
+let x = (a % a) == 0
 let x = a - b
 let x = a -. b
 ;;Constructor (a, b)

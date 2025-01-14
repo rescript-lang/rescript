@@ -144,7 +144,7 @@ include
                 createNode ~value:((Js.Internal.raw_expr {js|0|js})
                   [@res.namedArgLoc ]) ~color:((Black)[@res.namedArgLoc ])
                   ~height:((0.)[@res.namedArgLoc ]) in
-              let isLeaf = Js.Internal.fn_mk1 (fun [arity:1]x -> x == leaf) in
+              let isLeaf = Js.Internal.fn_mk1 (fun [arity:1]x -> x === leaf) in
               (leaf, isLeaf)
           | Some successor ->
               (successor, (Js.Internal.fn_mk1 (fun [arity:1]_ -> false))) in
@@ -156,12 +156,12 @@ include
              leftOrRightSet parent ~node:((nodeToRemove)[@res.namedArgLoc ])
                (Some successor));
         updateSumRecursive rbt successor;
-        if (colorGet nodeToRemove) == Black
+        if (colorGet nodeToRemove) === Black
         then
-          (if (colorGet successor) == Red
+          (if (colorGet successor) === Red
            then
              (colorSet successor Black;
-              if (parentGet successor) == None
+              if (parentGet successor) === None
               then rootSet rbt (Some successor))
            else
              (let break = ref false in
@@ -175,7 +175,7 @@ include
                     let sibling = siblingOf successor in
                     (if
                        ((!==) sibling None) &&
-                         ((colorGet (castNotOption sibling)) == Red)
+                         ((colorGet (castNotOption sibling)) === Red)
                      then
                        (colorSet successorParent Red;
                         colorSet (castNotOption sibling) Black;
@@ -185,35 +185,35 @@ include
                      (let sibling = siblingOf successor in
                       let siblingNN = castNotOption sibling in
                       if
-                        ((colorGet successorParent) == Black) &&
-                          ((sibling == None) ||
-                             ((((colorGet siblingNN) == Black) &&
-                                 (((leftGet siblingNN) == None) ||
+                        ((colorGet successorParent) === Black) &&
+                          ((sibling === None) ||
+                             ((((colorGet siblingNN) === Black) &&
+                                 (((leftGet siblingNN) === None) ||
                                     ((colorGet
                                         (castNotOption (leftGet siblingNN)))
-                                       == Black)))
+                                       === Black)))
                                 &&
-                                (((rightGet siblingNN) == None) ||
+                                (((rightGet siblingNN) === None) ||
                                    ((colorGet
                                        (castNotOption (rightGet siblingNN)))
-                                      == Black))))
+                                      === Black))))
                       then
                         (if (!==) sibling None then colorSet siblingNN Red;
                          successorRef.contents <- successorParent)
                       else
                         if
-                          ((colorGet successorParent) == Red) &&
-                            ((sibling == None) ||
-                               ((((colorGet siblingNN) == Black) &&
-                                   (((leftGet siblingNN) == None) ||
+                          ((colorGet successorParent) === Red) &&
+                            ((sibling === None) ||
+                               ((((colorGet siblingNN) === Black) &&
+                                   (((leftGet siblingNN) === None) ||
                                       ((colorGet
                                           (castNotOption (leftGet siblingNN)))
-                                         == Black)))
+                                         === Black)))
                                   &&
-                                  (((rightGet siblingNN) == None) ||
+                                  (((rightGet siblingNN) === None) ||
                                      ((colorGet
                                          (castNotOption (rightGet siblingNN)))
-                                        == Black))))
+                                        === Black))))
                         then
                           (if (!==) sibling None then colorSet siblingNN Red;
                            colorSet successorParent Black;
@@ -221,19 +221,19 @@ include
                         else
                           if
                             ((!==) sibling None) &&
-                              ((colorGet (castNotOption sibling)) == Black)
+                              ((colorGet (castNotOption sibling)) === Black)
                           then
                             (let sibling = castNotOption sibling in
                              if
                                (((isLeft successor) &&
-                                   (((rightGet sibling) == None) ||
+                                   (((rightGet sibling) === None) ||
                                       ((colorGet
                                           (castNotOption (rightGet sibling)))
-                                         == Black)))
+                                         === Black)))
                                   && ((!==) (leftGet sibling) None))
                                  &&
                                  ((colorGet (castNotOption (leftGet sibling)))
-                                    == Red)
+                                    === Red)
                              then
                                (colorSet sibling Red;
                                 colorSet (castNotOption (leftGet sibling))
@@ -242,15 +242,15 @@ include
                              else
                                if
                                  (((not (isLeft successor)) &&
-                                     (((leftGet sibling) == None) ||
+                                     (((leftGet sibling) === None) ||
                                         ((colorGet
                                             (castNotOption (leftGet sibling)))
-                                           == Black)))
+                                           === Black)))
                                     && ((!==) (rightGet sibling) None))
                                    &&
                                    ((colorGet
                                        (castNotOption (rightGet sibling)))
-                                      == Red)
+                                      === Red)
                                then
                                  (colorSet sibling Red;
                                   colorSet (castNotOption (rightGet sibling))
@@ -273,7 +273,7 @@ include
                 done));
         if Js.Internal.fn_run1 isLeaf successor
         then
-          (if (rootGet rbt) == (Some successor) then rootSet rbt None;
+          (if (rootGet rbt) === (Some successor) then rootSet rbt None;
            (match parentGet successor with
             | None -> ()
             | Some parent ->
@@ -293,7 +293,7 @@ include
           | None -> None
           | Some node ->
               let cmp = Js.Internal.fn_run1 cb (valueGet node) in
-              if cmp == 0
+              if cmp === 0
               then Some node
               else
                 if cmp < 0
@@ -310,7 +310,7 @@ include
       match node with
       | None -> 0.
       | Some n ->
-          if (lhs == None) && (rhs == None)
+          if (lhs === None) && (rhs === None)
           then sumGet n
           else
             if
@@ -384,7 +384,7 @@ include
         | Some parent ->
             leftSpine +.
               (sumLeftSpine parent
-                 ~fromRightChild:(((rightGet parent) == (Some node))
+                 ~fromRightChild:(((rightGet parent) === (Some node))
                  [@res.namedArgLoc ])))
       [@res.braces ])
     let getY [arity:1]node =

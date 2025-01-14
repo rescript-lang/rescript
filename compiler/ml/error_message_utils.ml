@@ -204,7 +204,7 @@ let type_clash_context_from_function sexp sfunct =
   in
   match sfunct.Parsetree.pexp_desc with
   | Pexp_ident
-      {txt = Lident ("=" | "==" | "<>" | "!=" | ">" | ">=" | "<" | "<=")} ->
+      {txt = Lident ("==" | "===" | "!=" | "!==" | ">" | ">=" | "<" | "<=")} ->
     Some ComparisonOperator
   | Pexp_ident {txt = Lident "++"} -> Some StringConcat
   | Pexp_ident {txt = Lident (("/." | "*." | "+." | "-.") as operator)} ->

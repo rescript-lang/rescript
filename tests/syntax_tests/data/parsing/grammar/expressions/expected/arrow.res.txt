@@ -52,9 +52,9 @@ let f [arity:4]~a:((a)[@res.namedArgLoc ][@attr ])  ((b)[@attrOnB ])
 let f [arity:1]list = list ()
 ;;match colour with
   | Red when
-      (l = l') ||
+      (l == l') ||
         (Clflags.classic.contents &&
-           ((l = Nolabel) && (not (is_optional l'))))
+           ((l == Nolabel) && (not (is_optional l'))))
       -> (t1, t2)
   | _ -> ()
 let arr =

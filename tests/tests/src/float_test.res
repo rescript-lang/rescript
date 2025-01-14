@@ -12,7 +12,7 @@ let from_pairs = ps =>
 let float_compare = (x: float, y) => Pervasives.compare(x, y)
 let generic_compare = Pervasives.compare
 let float_equal = (x: float, y) => x == y
-let generic_equal = \"="
+let generic_equal = \"=="
 let float_notequal = (x: float, y) => x != y
 let generic_notequal = \"!="
 let float_lessthan = (x: float, y) => x < y
