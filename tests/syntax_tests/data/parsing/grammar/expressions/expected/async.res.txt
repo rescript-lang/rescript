@@ -22,7 +22,7 @@ let f =
     else (async fun [arity:2]c -> fun d -> (c - d : int)))
   [@res.ternary ])
 let foo = async ~a:((34)[@res.namedArgLoc ])
-let bar async [arity:1]~a:((a)[@res.namedArgLoc ])  = a + 1
+let bar async [arity:1]~a  = a + 1
 let ex1 = ((3)[@res.await ]) + ((4)[@res.await ])
 let ex2 = ((3)[@res.await ]) ** ((4)[@res.await ])
 let ex3 = ((foo -> (bar ~arg:((arg)[@res.namedArgLoc ])))[@res.await ])

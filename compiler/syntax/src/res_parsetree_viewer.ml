@@ -143,6 +143,7 @@ type fun_param_kind =
   | Parameter of {
       attrs: Parsetree.attributes;
       lbl: Asttypes.arg_label;
+      lbl_loc: Location.t;
       default_expr: Parsetree.expression option;
       pat: Parsetree.pattern;
     }
@@ -157,6 +158,7 @@ let fun_expr expr_ =
        Pexp_fun
          {
            arg_label = lbl;
+           label_loc;
            default = default_expr;
            lhs = pattern;
            rhs = return_expr;
@@ -165,7 +167,9 @@ let fun_expr expr_ =
      pexp_attributes = attrs;
     }
       when arity = None || n_fun = 0 ->
-      let parameter = Parameter {attrs; lbl; default_expr; pat = pattern} in
+      let parameter =
+        Parameter {attrs; lbl; lbl_loc = label_loc; default_expr; pat = pattern}
+      in
       collect_params ~n_fun:(n_fun + 1) ~params:(parameter :: params)
         return_expr
     | _ -> (async, List.rev params, expr)

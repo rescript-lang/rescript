@@ -303,7 +303,7 @@ include
         | None -> None
         | Some node -> Some (valueGet node))
       [@res.braces ])
-    let make [arity:1]~compare:((compare)[@res.namedArgLoc ])  =
+    let make [arity:1]~compare  =
       t ~size:((0)[@res.namedArgLoc ]) ~root:((None)[@res.namedArgLoc ])
         ~compare:((compare)[@res.namedArgLoc ])
     let rec heightOfInterval [arity:4]rbt node lhs rhs =
@@ -355,7 +355,7 @@ include
       match firstVisibleNode node offset with
       | None -> maxNode node
       | first -> first
-    let firstVisible [arity:2]rbt ~offset:((offset)[@res.namedArgLoc ])  =
+    let firstVisible [arity:2]rbt ~offset  =
       match firstVisibleNode (rootGet rbt) offset with
       | None -> None
       | Some node -> Some (valueGet node)
@@ -370,8 +370,7 @@ include
       match rightGet node with
       | None -> firstRightParent node
       | Some right -> Some (leftmost right)
-    let rec sumLeftSpine [arity:2]node
-      ~fromRightChild:((fromRightChild)[@res.namedArgLoc ])  =
+    let rec sumLeftSpine [arity:2]node ~fromRightChild  =
       ((let leftSpine =
           match leftGet node with
           | None -> heightGet node
@@ -402,8 +401,7 @@ include
         | None -> None
         | Some node -> find node callback)
       [@res.braces ])
-    let rec iterate [arity:4]~inclusive:((inclusive)[@res.namedArgLoc ]) 
-      firstNode lastNode ~callback:((callback)[@res.namedArgLoc ])  =
+    let rec iterate [arity:4]~inclusive  firstNode lastNode ~callback  =
       match firstNode with
       | None -> ()
       | Some node ->
@@ -414,9 +412,8 @@ include
               iterate ~inclusive:((inclusive)[@res.namedArgLoc ])
                 (nextNode node) lastNode ~callback:((callback)
                 [@res.namedArgLoc ])))
-    let rec iterateWithY [arity:5]?y:((y)[@res.namedArgLoc ]) 
-      ~inclusive:((inclusive)[@res.namedArgLoc ])  firstNode lastNode
-      ~callback:((callback)[@res.namedArgLoc ])  =
+    let rec iterateWithY [arity:5]?y  ~inclusive  firstNode lastNode
+      ~callback  =
       match firstNode with
       | None -> ()
       | Some node ->
@@ -428,13 +425,13 @@ include
               iterateWithY ~y:((y +. (heightGet node))[@res.namedArgLoc ])
                 ~inclusive:((inclusive)[@res.namedArgLoc ]) (nextNode node)
                 lastNode ~callback:((callback)[@res.namedArgLoc ])))
-    let rec updateSum [arity:2]node ~delta:((delta)[@res.namedArgLoc ])  =
+    let rec updateSum [arity:2]node ~delta  =
       match node with
       | None -> ()
       | Some node ->
           (sumSet node ((sumGet node) +. delta);
            updateSum (parentGet node) ~delta:((delta)[@res.namedArgLoc ]))
-    let setHeight [arity:3]rbt value ~height:((height)[@res.namedArgLoc ])  =
+    let setHeight [arity:3]rbt value ~height  =
       match _findNode rbt (rootGet rbt) value with
       | None -> ()
       | Some node ->

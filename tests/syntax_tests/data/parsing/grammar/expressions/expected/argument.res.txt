@@ -1,4 +1,4 @@
-let foo [arity:1]~a:((a)[@res.namedArgLoc ])  = (a ()) +. 1.
+let foo [arity:1]~a  = (a ()) +. 1.
 let a [arity:1]() = 2
 let bar = foo ~a:((a)[@res.namedArgLoc ])
 let comparisonResult =
