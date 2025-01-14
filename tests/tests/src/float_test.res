@@ -14,7 +14,7 @@ let generic_compare = Pervasives.compare
 let float_equal = (x: float, y) => x == y
 let generic_equal = \"="
 let float_notequal = (x: float, y) => x != y
-let generic_notequal = \"<>"
+let generic_notequal = \"!="
 let float_lessthan = (x: float, y) => x < y
 let generic_lessthan = \"<"
 let float_greaterthan = (x: float, y) => x > y

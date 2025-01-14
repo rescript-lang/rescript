@@ -78,6 +78,10 @@ let b = "B";
 
 let vv = 10;
 
+let neq = false;
+
+let neq2 = false;
+
 exports.a = a;
 exports.b = b;
 exports.M = M;
@@ -92,4 +96,6 @@ exports.add = add;
 exports.partial_add = partial_add;
 exports.Pipe = Pipe;
 exports.concat = concat;
+exports.neq = neq;
+exports.neq2 = neq2;
 /*  Not a pure module */

@@ -3666,8 +3666,6 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
       match operator with
       | "=" -> "=="
       | "==" -> "==="
-      | "<>" -> "!="
-      | "!=" -> "!=="
       | txt -> txt
     in
     let spacing_before_operator =

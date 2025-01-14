@@ -52,3 +52,6 @@ module Pipe = {
 }
 
 let concat = "a" ++ "b"
+
+let neq = 3 != 3
+let neq2 = 3 !== 3

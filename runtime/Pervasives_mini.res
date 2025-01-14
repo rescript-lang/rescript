@@ -35,7 +35,7 @@ external mod: (int, int) => int = "%modint"
 /* Note: Later comparisons will be converted to unified operations too */
 
 external \"=": ('a, 'a) => bool = "%equal"
-external \"<>": ('a, 'a) => bool = "%notequal"
+external \"!=": ('a, 'a) => bool = "%notequal"
 external \"<": ('a, 'a) => bool = "%lessthan"
 external \">": ('a, 'a) => bool = "%greaterthan"
 external \"<=": ('a, 'a) => bool = "%lessequal"
@@ -44,7 +44,7 @@ external compare: ('a, 'a) => int = "%compare"
 external min: ('a, 'a) => 'a = "%min"
 external max: ('a, 'a) => 'a = "%max"
 external \"==": ('a, 'a) => bool = "%eq"
-external \"!=": ('a, 'a) => bool = "%noteq"
+external \"!==": ('a, 'a) => bool = "%noteq"
 
 /* Boolean operations */
 

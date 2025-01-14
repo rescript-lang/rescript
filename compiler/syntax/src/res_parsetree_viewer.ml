@@ -321,7 +321,7 @@ let is_binary_expression expr =
 
 let is_equality_operator operator =
   match operator with
-  | "=" | "==" | "<>" | "!=" -> true
+  | "=" | "==" | "!=" | "!==" -> true
   | _ -> false
 
 let is_rhs_binary_operator operator =

@@ -391,9 +391,7 @@ let build_longident words =
 
 let make_infix_operator (p : Parser.t) token start_pos end_pos =
   let stringified_token =
-    if token = Token.BangEqual then "<>"
-    else if token = Token.BangEqualEqual then "!="
-    else if token = Token.Equal then (
+    if token = Token.Equal then (
       (* TODO: could have a totally different meaning like x->fooSet(y)*)
       Parser.err ~start_pos ~end_pos p
         (Diagnostics.message "Did you mean `==` here?");

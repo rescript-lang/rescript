@@ -1,11 +1,11 @@
 ;;if (color == Black) && ((sibling == None) || (parent == None)) then ()
 ;;if
-    ((color == Black) && (color != Red)) &&
+    ((color == Black) && ((!==) color Red)) &&
       ((sibling == None) || (parent == None))
   then ()
 ;;match (color == Black) && ((sibling == None) || (parent == None)) with
   | _ -> ()
-;;match ((color == Black) && (color != Red)) &&
+;;match ((color == Black) && ((!==) color Red)) &&
           ((sibling == None) || (parent == None))
   with
   | _ -> ()

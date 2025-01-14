@@ -120,7 +120,8 @@ include
         ;;{js||js}
         ;;{js|BS:6.0.1\x84\x95\xa6\xbe\0\0\0\x13\0\0\0\x07\0\0\0\x14\0\0\0\x13\xb0\xa0\xa0A\x91@@A\x98\xa0'compare@|js}
       end
-    let has [arity:2]rbt value = (_findNode rbt (rootGet rbt) value) != None
+    let has [arity:2]rbt value =
+      (!==) (_findNode rbt (rootGet rbt) value) None
     let rec minNode [arity:1]node = [%rescript.exprhole ]
     let findMin [arity:1]rbt = [%rescript.exprhole ]
     let removeNode [arity:2]rbt node =
@@ -173,7 +174,7 @@ include
                 | Some successorParent ->
                     let sibling = siblingOf successor in
                     (if
-                       (sibling != None) &&
+                       ((!==) sibling None) &&
                          ((colorGet (castNotOption sibling)) == Red)
                      then
                        (colorSet successorParent Red;
@@ -197,7 +198,7 @@ include
                                        (castNotOption (rightGet siblingNN)))
                                       == Black))))
                       then
-                        (if sibling != None then colorSet siblingNN Red;
+                        (if (!==) sibling None then colorSet siblingNN Red;
                          successorRef.contents <- successorParent)
                       else
                         if
@@ -214,12 +215,12 @@ include
                                          (castNotOption (rightGet siblingNN)))
                                         == Black))))
                         then
-                          (if sibling != None then colorSet siblingNN Red;
+                          (if (!==) sibling None then colorSet siblingNN Red;
                            colorSet successorParent Black;
                            break.contents <- true)
                         else
                           if
-                            (sibling != None) &&
+                            ((!==) sibling None) &&
                               ((colorGet (castNotOption sibling)) == Black)
                           then
                             (let sibling = castNotOption sibling in
@@ -229,7 +230,7 @@ include
                                       ((colorGet
                                           (castNotOption (rightGet sibling)))
                                          == Black)))
-                                  && ((leftGet sibling) != None))
+                                  && ((!==) (leftGet sibling) None))
                                  &&
                                  ((colorGet (castNotOption (leftGet sibling)))
                                     == Red)
@@ -245,7 +246,7 @@ include
                                         ((colorGet
                                             (castNotOption (leftGet sibling)))
                                            == Black)))
-                                    && ((rightGet sibling) != None))
+                                    && ((!==) (rightGet sibling) None))
                                    &&
                                    ((colorGet
                                        (castNotOption (rightGet sibling)))
@@ -313,14 +314,14 @@ include
           then sumGet n
           else
             if
-              (lhs != None) &&
+              ((!==) lhs None) &&
                 ((Js.Internal.fn_run2 (compareGet rbt) (valueGet n)
                     (castNotOption lhs))
                    < 0)
             then heightOfInterval rbt (rightGet n) lhs rhs
             else
               if
-                (rhs != None) &&
+                ((!==) rhs None) &&
                   ((Js.Internal.fn_run2 (compareGet rbt) (valueGet n)
                       (castNotOption rhs))
                      > 0)
@@ -407,7 +408,7 @@ include
       | None -> ()
       | Some node ->
           (if inclusive then Js.Internal.fn_run1 callback node;
-           if firstNode != lastNode
+           if (!==) firstNode lastNode
            then
              (if not inclusive then Js.Internal.fn_run1 callback node;
               iterate ~inclusive:((inclusive)[@res.namedArgLoc ])
@@ -421,7 +422,7 @@ include
       | Some node ->
           let y = match y with | None -> getY node | Some y -> y in
           (if inclusive then Js.Internal.fn_run2 callback node y;
-           if firstNode != lastNode
+           if (!==) firstNode lastNode
            then
              (if not inclusive then Js.Internal.fn_run2 callback node y;
               iterateWithY ~y:((y +. (heightGet node))[@res.namedArgLoc ])

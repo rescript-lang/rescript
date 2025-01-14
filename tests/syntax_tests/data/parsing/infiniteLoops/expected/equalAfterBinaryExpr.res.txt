@@ -19,7 +19,7 @@ let rec _addLoop [arity:2]rbt currentNode =
       else
         if
           (((let uncle = uncleOf currentNode in
-             (uncle != None) && ((uncle -> castNotOption).color == Red)))
+             ((!==) uncle None) && ((uncle -> castNotOption).color == Red)))
           [@res.braces ])
         then
           ((currentNode.parent -> castNotOption).color <- Black;
@@ -67,7 +67,7 @@ let removeNode [arity:2]rbt node =
             | Some successorParent ->
                 let sibling = siblingOf successor in
                 (if
-                   (sibling != None) &&
+                   ((!==) sibling None) &&
                      ((sibling -> castNotOption).color == Red)
                  then
                    (successorParent.color <- Red;
@@ -89,7 +89,7 @@ let removeNode [arity:2]rbt node =
                                ((siblingNN.right -> castNotOption).color ==
                                   Black))))
                   then
-                    (if sibling != None then siblingNN.color <- Red;
+                    (if (!==) sibling None then siblingNN.color <- Red;
                      successorRef.contents <- successorParent)
                   else
                     if
@@ -104,12 +104,12 @@ let removeNode [arity:2]rbt node =
                                  ((siblingNN.right -> castNotOption).color ==
                                     Black))))
                     then
-                      (if sibling != None then siblingNN.color <- Red;
+                      (if (!==) sibling None then siblingNN.color <- Red;
                        successorParent.color <- Black;
                        break.contents <- true)
                     else
                       if
-                        (sibling != None) &&
+                        ((!==) sibling None) &&
                           ((sibling -> castNotOption).color == Black)
                       then
                         (let sibling = sibling -> castNotOption in
@@ -118,7 +118,7 @@ let removeNode [arity:2]rbt node =
                                ((sibling.right == None) ||
                                   ((sibling.right -> castNotOption).color ==
                                      Black)))
-                              && (sibling.left != None))
+                              && ((!==) sibling.left None))
                              &&
                              ((sibling.left -> castNotOption).color == Red)
                          then
@@ -131,7 +131,7 @@ let removeNode [arity:2]rbt node =
                                  ((sibling.left == None) ||
                                     ((sibling.left -> castNotOption).color ==
                                        Black)))
-                                && (sibling.right != None))
+                                && ((!==) sibling.right None))
                                &&
                                ((sibling.right -> castNotOption).color == Red)
                            then
