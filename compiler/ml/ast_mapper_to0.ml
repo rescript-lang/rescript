@@ -321,12 +321,20 @@ module E = struct
           ~attrs:(arity_to_attributes arity)
           (Location.mkloc (Longident.Lident "Function$") e.pexp_loc)
           (Some e))
-    | Pexp_apply {funct = e; args = l; partial} ->
+    | Pexp_apply {funct = e; args; partial} ->
+      let e =
+        match (e.pexp_desc, args) with
+        | ( Pexp_ident ({txt = Longident.Lident "->"} as lid),
+            [(Nolabel, _); (Nolabel, _)] ) ->
+          {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "|."}}
+        | _ -> e
+      in
       let attrs =
         if partial then (Location.mknoloc "res.partial", Pt.PStr []) :: attrs
         else []
       in
-      apply ~loc ~attrs (sub.expr sub e) (List.map (map_snd (sub.expr sub)) l)
+      apply ~loc ~attrs (sub.expr sub e)
+        (List.map (map_snd (sub.expr sub)) args)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)

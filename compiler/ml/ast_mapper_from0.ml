@@ -311,6 +311,13 @@ module E = struct
         (sub.pat sub p) (sub.expr sub e)
     | Pexp_function _ -> assert false
     | Pexp_apply (e, l) ->
+      let e =
+        match (e.pexp_desc, l) with
+        | ( Pexp_ident ({txt = Longident.Lident "|."} as lid),
+            [(Nolabel, _); (Nolabel, _)] ) ->
+          {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "->"}}
+        | _ -> e
+      in
       let process_partial_app_attribute attrs =
         let rec process partial_app acc attrs =
           match attrs with
