@@ -534,8 +534,9 @@ let _ =
 let _ =
   ((div
       ~children:[(((let left = limit -> Int.toString in
-                    (((((({js||js})[@res.template ]) ^ left)[@res.template ])
-                        ^ (({js| characters left|js})[@res.template ]))
+                    (((((({js||js})[@res.template ]) ++ left)
+                        [@res.template ]) ++ (({js| characters left|js})
+                        [@res.template ]))
                       [@res.template ]) -> React.string))
                 [@res.braces ])] ())
   [@JSX ])

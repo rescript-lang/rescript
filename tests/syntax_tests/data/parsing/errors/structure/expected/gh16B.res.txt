@@ -16,15 +16,15 @@ let wss = Server.make { port = 82 }
 let address = wss -> Server.address
 let log [arity:1]msg =
   Js.log
-    (((((({js|> Server: |js})[@res.template ]) ^ msg)[@res.template ]) ^
+    (((((({js|> Server: |js})[@res.template ]) ++ msg)[@res.template ]) ++
         (({js||js})[@res.template ]))[@res.template ])
 ;;log
-    (((((((((((((({js|Running on: |js})[@res.template ]) ^ address.address)
-                [@res.template ]) ^ (({js|:|js})[@res.template ]))
-              [@res.template ]) ^ (address.port -> string_of_int))
-            [@res.template ]) ^ (({js| (|js})[@res.template ]))
-          [@res.template ]) ^ address.family)
-        [@res.template ]) ^ (({js|)|js})[@res.template ]))[@res.template ])
+    (((((((((((((({js|Running on: |js})[@res.template ]) ++ address.address)
+                [@res.template ]) ++ (({js|:|js})[@res.template ]))
+              [@res.template ]) ++ (address.port -> string_of_int))
+            [@res.template ]) ++ (({js| (|js})[@res.template ]))
+          [@res.template ]) ++ address.family)
+        [@res.template ]) ++ (({js|)|js})[@res.template ]))[@res.template ])
 module ClientSet =
   struct
     module T =

@@ -162,7 +162,7 @@ let rhs_binary_expr_operand parent_operator rhs =
         args = [(_, _left); (_, _right)];
       }
     when ParsetreeViewer.is_binary_operator operator
-         && not (operator_loc.loc_ghost && operator = "^") ->
+         && not (operator_loc.loc_ghost && operator = "++") ->
     let prec_parent = ParsetreeViewer.operator_precedence parent_operator in
     let prec_child = ParsetreeViewer.operator_precedence operator in
     prec_parent == prec_child
@@ -180,7 +180,7 @@ let flatten_operand_rhs parent_operator rhs =
         args = [(_, _left); (_, _right)];
       }
     when ParsetreeViewer.is_binary_operator operator
-         && not (operator_loc.loc_ghost && operator = "^") ->
+         && not (operator_loc.loc_ghost && operator = "++") ->
     let prec_parent = ParsetreeViewer.operator_precedence parent_operator in
     let prec_child = ParsetreeViewer.operator_precedence operator in
     prec_parent >= prec_child || rhs.pexp_attributes <> []

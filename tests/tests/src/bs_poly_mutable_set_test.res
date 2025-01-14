@@ -111,7 +111,7 @@ let \"=~" = N.eq
 let () = {
   let aa = f(I.randomRange(0, 100))
   let bb = f(I.randomRange(40, 120))
-  let cc = \"++"(aa, bb)
+  let cc = aa ++ bb
   b(__LOC__, \"=~"(cc, f(I.randomRange(0, 120))))
 
   b(

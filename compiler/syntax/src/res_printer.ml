@@ -3557,7 +3557,7 @@ and print_template_literal ~state expr cmt_tbl =
     match expr.pexp_desc with
     | Pexp_apply
         {
-          funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "^"}};
+          funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "++"}};
           args = [(Nolabel, arg1); (Nolabel, arg2)];
         } ->
       let lhs = walk_expr arg1 in
@@ -3664,7 +3664,6 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
   let print_binary_operator ~inline_rhs operator =
     let operator_txt =
       match operator with
-      | "^" -> "++"
       | "=" -> "=="
       | "==" -> "==="
       | "<>" -> "!="
@@ -3800,7 +3799,7 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
         match expr.pexp_desc with
         | Pexp_apply
             {
-              funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "^"; loc}};
+              funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "++"; loc}};
               args = [(Nolabel, _); (Nolabel, _)];
             }
           when loc.loc_ghost ->

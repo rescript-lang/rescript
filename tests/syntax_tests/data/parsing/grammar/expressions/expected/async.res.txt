@@ -1,6 +1,6 @@
 let greetUser async [arity:1]userId =
   ((let name = ((getUserName userId)[@res.await ]) in
-    ({js|Hello |js} ^ name) ^ {js|!|js})
+    ({js|Hello |js} ++ name) ++ {js|!|js})
   [@res.braces ])
 ;;async fun [arity:1]() -> 123
 let fetch = ((async fun [arity:1]url -> browserFetch url)[@res.braces ])

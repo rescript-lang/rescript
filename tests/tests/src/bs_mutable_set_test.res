@@ -117,7 +117,7 @@ include (
     let () = {
       let aa = f(I.randomRange(0, 100))
       let bb = f(I.randomRange(40, 120))
-      let cc = \"++"(aa, bb)
+      let cc = aa ++ bb
       b(__LOC__, \"=~"(cc, f(I.randomRange(0, 120))))
 
       b(
@@ -170,7 +170,7 @@ let () = {
 }
 
 let () = {
-  let u = \"++"(I.randomRange(30, 100), I.randomRange(40, 120))
+  let u = I.randomRange(30, 100) ++ I.randomRange(40, 120)
   let v = N.make()
   N.mergeMany(v, u)
   eq(__LOC__, N.size(v), 91)
@@ -178,7 +178,7 @@ let () = {
 }
 
 let () = {
-  let u = \"++"(I.randomRange(0, 100_000), I.randomRange(0, 100))
+  let u = I.randomRange(0, 100_000) ++ I.randomRange(0, 100)
   let v = N.fromArray(u)
   eq(__LOC__, N.size(v), 100_001)
   let u = I.randomRange(50_000, 80_000)
@@ -265,7 +265,7 @@ let \"=~" = N.eq
 let () = {
   let aa = f(I.randomRange(0, 100))
   let bb = f(I.randomRange(40, 120))
-  let cc = \"++"(aa, bb)
+  let cc = aa ++ bb
   b(__LOC__, \"=~"(cc, f(I.randomRange(0, 120))))
 
   b(

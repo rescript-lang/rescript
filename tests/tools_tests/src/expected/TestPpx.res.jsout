@@ -70,6 +70,8 @@ let Pipe = {
   z: z
 };
 
+let concat = "ab";
+
 let a = "A";
 
 let b = "B";
@@ -89,4 +91,5 @@ exports.async_foo = async_foo;
 exports.add = add;
 exports.partial_add = partial_add;
 exports.Pipe = Pipe;
+exports.concat = concat;
 /*  Not a pure module */

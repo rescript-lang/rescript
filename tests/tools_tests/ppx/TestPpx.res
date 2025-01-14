@@ -50,3 +50,5 @@ module Pipe = {
   let plus = (x, y) => x + y
   let z = 1->plus(2)
 }
+
+let concat = "a" ++ "b"

@@ -78,7 +78,7 @@ external \"/.": (float, float) => float = "%divfloat"
 
 /* String operations */
 
-external \"^": (string, string) => string = "%string_concat"
+external \"++": (string, string) => string = "%string_concat"
 
 /* Unit operations */
 
