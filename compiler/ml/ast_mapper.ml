@@ -274,9 +274,17 @@ module E = struct
     | Pexp_constant x -> constant ~loc ~attrs x
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
-    | Pexp_fun {arg_label = lab; default = def; lhs = p; rhs = e; arity; async}
-      ->
-      fun_ ~loc ~attrs ~arity ~async lab
+    | Pexp_fun
+        {
+          arg_label = lab;
+          label_loc;
+          default = def;
+          lhs = p;
+          rhs = e;
+          arity;
+          async;
+        } ->
+      fun_ ~loc ~attrs ~label_loc ~arity ~async lab
         (map_opt (sub.expr sub) def)
         (sub.pat sub p) (sub.expr sub e)
     | Pexp_apply {funct = e; args = l; partial} ->

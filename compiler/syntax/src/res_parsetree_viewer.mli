@@ -42,6 +42,7 @@ type fun_param_kind =
   | Parameter of {
       attrs: Parsetree.attributes;
       lbl: Asttypes.arg_label;
+      lbl_loc: Location.t;
       default_expr: Parsetree.expression option;
       pat: Parsetree.pattern;
     }
