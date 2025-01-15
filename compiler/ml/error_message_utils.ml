@@ -55,6 +55,7 @@ let error_expected_type_text ppf type_clash_context =
       operator
   | Some FunctionReturn ->
     fprintf ppf "But this function is expecting you to return:"
+  | Some StringConcat -> fprintf ppf "But string concatenation is expecting:"
   | _ -> fprintf ppf "But it's expected to have type:"
 
 let is_record_type ~extract_concrete_typedecl ~env ty =
