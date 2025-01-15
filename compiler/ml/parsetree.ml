@@ -226,6 +226,7 @@ and expression_desc =
     *)
   | Pexp_fun of {
       arg_label: arg_label;
+      label_loc: Location.t;
       default: expression option;
       lhs: pattern;
       rhs: expression;

@@ -20,24 +20,17 @@ let f [arity:2]exception Terminate exception Exit = ()
 let f [arity:1][] = ()
 let f [arity:1](x::xs) = x + (xs -> Belt.List.length)
 let f [arity:2](x : int) (y : int) = x + y
-let f [arity:2]~a:((a)[@res.namedArgLoc ])  ~b:((b)[@res.namedArgLoc ])  =
-  a + b
-let f [arity:2]~a:((x)[@res.namedArgLoc ])  ~b:((y)[@res.namedArgLoc ])  =
-  x + y
-let f [arity:2]~a:(((x : int))[@res.namedArgLoc ]) 
-  ~b:(((y : int))[@res.namedArgLoc ])  = x + y
-let f [arity:3]?a:(((a)[@res.namedArgLoc ])= 1) 
-  ?b:(((b)[@res.namedArgLoc ])= 2)  c = (a + b) + c
-let f [arity:3]?a:(((x)[@res.namedArgLoc ])= 1) 
-  ?b:(((y)[@res.namedArgLoc ])= 2)  c = (x + y) + c
-let f [arity:3]?a:((((x : int))[@res.namedArgLoc ])= 1) 
-  ?b:((((y : int))[@res.namedArgLoc ])= 2)  c = (x + y) + c
-let f [arity:3]?a:((a)[@res.namedArgLoc ])  ?b:((b)[@res.namedArgLoc ])  c =
+let f [arity:2]~a  ~b  = a + b
+let f [arity:2]~a:x  ~b:y  = x + y
+let f [arity:2]~a:(x : int)  ~b:(y : int)  = x + y
+let f [arity:3]?(a= 1)  ?(b= 2)  c = (a + b) + c
+let f [arity:3]?a:(x= 1)  ?b:(y= 2)  c = (x + y) + c
+let f [arity:3]?a:((x : int)= 1)  ?b:((y : int)= 2)  c = (x + y) + c
+let f [arity:3]?a  ?b  c =
   match (a, b) with | (Some a, Some b) -> (a + b) + c | _ -> 3
-let f [arity:3]?a:((x)[@res.namedArgLoc ])  ?b:((y)[@res.namedArgLoc ])  c =
+let f [arity:3]?a:x  ?b:y  c =
   match (x, y) with | (Some a, Some b) -> (a + b) + c | _ -> 3
-let f [arity:3]?a:(((x : int option))[@res.namedArgLoc ]) 
-  ?b:(((y : int option))[@res.namedArgLoc ])  c =
+let f [arity:3]?a:(x : int option)  ?b:(y : int option)  c =
   match (x, y) with | (Some a, Some b) -> (a + b) + c | _ -> 3
 let f [arity:2]a b = a + b
 let f [arity:1]() = ()
@@ -45,10 +38,9 @@ let f [arity:1]() = ()
 let f [arity:3]a b c = ()
 let f [arity:4]a b c d = ()
 let f [arity:3]a b c = ()
-let f [arity:4]~a:((a)[@res.namedArgLoc ][@attr ])  b
-  ~c:((c)[@res.namedArgLoc ][@attr ])  d = ()
-let f [arity:4]~a:((a)[@res.namedArgLoc ][@attr ])  ((b)[@attrOnB ])
-  ~c:((c)[@res.namedArgLoc ][@attr ])  ((d)[@attrOnD ]) = ()
+let f [arity:4]~a:((a)[@attr ])  b ~c:((c)[@attr ])  d = ()
+let f [arity:4]~a:((a)[@attr ])  ((b)[@attrOnB ]) ~c:((c)[@attr ]) 
+  ((d)[@attrOnD ]) = ()
 let f [arity:1]list = list ()
 ;;match colour with
   | Red when

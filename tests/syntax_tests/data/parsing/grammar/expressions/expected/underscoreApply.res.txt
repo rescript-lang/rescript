@@ -5,11 +5,10 @@ let l =
   (fun [arity:1]i -> i + 1) -> (fun [arity:1]__x -> List.map __x [1; 2; 3])
 let x [arity:1]__x = List.length __x
 let nested [arity:1]x [arity:1]__x = List.length __x
-let incr [arity:1]~v:((v)[@res.namedArgLoc ])  = v + 1
+let incr [arity:1]~v  = v + 1
 let l1 = List.length (List.map (fun [arity:1]__x -> incr ~v:__x) [1; 2; 3])
 let l2 = List.length (List.map (fun [arity:1]__x -> incr ~v:__x) [1; 2; 3])
-let optParam [arity:2]?v:((v)[@res.namedArgLoc ])  () =
-  ((if v == None then 0 else 1)[@res.ternary ])
+let optParam [arity:2]?v  () = ((if v == None then 0 else 1)[@res.ternary ])
 let l1 =
   List.length
     (List.map (fun [arity:1]__x -> optParam ?v:__x ()) [Some 1; None; Some 2])

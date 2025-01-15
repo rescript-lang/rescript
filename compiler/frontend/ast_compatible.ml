@@ -85,6 +85,7 @@ let fun_ ?(loc = default_loc) ?(attrs = []) ?(async = false) ~arity pat exp =
       Pexp_fun
         {
           arg_label = Nolabel;
+          label_loc = Location.none;
           default = None;
           lhs = pat;
           rhs = exp;

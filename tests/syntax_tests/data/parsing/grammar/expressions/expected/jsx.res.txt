@@ -358,11 +358,11 @@ let _ =
   [@JSX ])
 let _ =
   ((StaticDivNamed.createElement
-      ~onClick:((fun [arity:6]~foo:((foo)[@res.namedArgLoc ]) ->
-                   fun ~bar:((bar)[@res.namedArgLoc ]) ->
-                     fun ~baz:((baz)[@res.namedArgLoc ]) ->
-                       fun ~lineBreak:((lineBreak)[@res.namedArgLoc ]) ->
-                         fun ~identifier:((identifier)[@res.namedArgLoc ]) ->
+      ~onClick:((fun [arity:6]~foo ->
+                   fun ~bar ->
+                     fun ~baz ->
+                       fun ~lineBreak ->
+                         fun ~identifier ->
                            fun () -> bar lineBreak identifier)
       [@res.namedArgLoc ][@res.braces ]) ~children:[] ())
   [@JSX ])
