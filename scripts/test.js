@@ -2,6 +2,7 @@
 const cp = require("child_process");
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
 const { rescript_exe } = require("#cli/bin_path");
 
 const duneBinDir = require("./dune").duneBinDir;
@@ -125,6 +126,8 @@ async function runTests() {
   if (runtimeDocstrings) {
     if (process.platform === "win32") {
       console.log(`Skipping docstrings tests on ${process.platform}`);
+    } else if (process.platform === "darwin" && os.release().startsWith("22")) {
+      console.log("Skipping docstrings tests on macOS 13")
     } else {
       console.log("Running runtime docstrings tests");
 
