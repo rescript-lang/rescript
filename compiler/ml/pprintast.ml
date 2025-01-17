@@ -298,10 +298,10 @@ and core_type ctxt f x =
       (attributes ctxt) x.ptyp_attributes
   else
     match x.ptyp_desc with
-    | Ptyp_arrow (l, ct1, ct2, a) ->
+    | Ptyp_arrow {lbl = l; arg; ret; arity} ->
       pp f "@[<2>%a@;->@;%a%s@]" (* FIXME remove parens later *)
-        (type_with_label ctxt) (l, ct1) (core_type ctxt) ct2
-        (match a with
+        (type_with_label ctxt) (l, arg) (core_type ctxt) ret
+        (match arity with
         | None -> ""
         | Some n -> " (a:" ^ string_of_int n ^ ")")
     | Ptyp_alias (ct, s) -> pp f "@[<2>%a@;as@;'%s@]" (core_type1 ctxt) ct s

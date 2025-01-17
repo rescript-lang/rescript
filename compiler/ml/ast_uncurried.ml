@@ -2,8 +2,8 @@
 
 let uncurried_type ~arity (t_arg : Parsetree.core_type) =
   match t_arg.ptyp_desc with
-  | Ptyp_arrow (l, t1, t2, _) ->
-    {t_arg with ptyp_desc = Ptyp_arrow (l, t1, t2, Some arity)}
+  | Ptyp_arrow arr ->
+    {t_arg with ptyp_desc = Ptyp_arrow {arr with arity = Some arity}}
   | _ -> assert false
 
 let uncurried_fun ?(async = false) ~arity fun_expr =

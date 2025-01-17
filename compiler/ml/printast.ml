@@ -122,16 +122,16 @@ let rec core_type i ppf x =
   match x.ptyp_desc with
   | Ptyp_any -> line i ppf "Ptyp_any\n"
   | Ptyp_var s -> line i ppf "Ptyp_var %s\n" s
-  | Ptyp_arrow (l, ct1, ct2, a) ->
+  | Ptyp_arrow {lbl; arg; ret; arity} ->
     line i ppf "Ptyp_arrow\n";
     let () =
-      match a with
+      match arity with
       | None -> ()
       | Some n -> line i ppf "arity = %d\n" n
     in
-    arg_label i ppf l;
-    core_type i ppf ct1;
-    core_type i ppf ct2
+    arg_label i ppf lbl;
+    core_type i ppf arg;
+    core_type i ppf ret
   | Ptyp_tuple l ->
     line i ppf "Ptyp_tuple\n";
     list i core_type ppf l

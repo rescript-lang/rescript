@@ -22,9 +22,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-[@@@warning "+9"]
-(* record pattern match complete checker*)
-
 let rec variant_can_unwrap_aux (row_fields : Parsetree.row_field list) : bool =
   match row_fields with
   | [] -> true
@@ -68,7 +65,7 @@ let spec_of_ptyp (nolabel : bool) (ptyp : Parsetree.core_type) :
     | _ -> Bs_syntaxerr.err ptyp.ptyp_loc Invalid_bs_unwrap_type)
   | `Nothing -> (
     match ptyp_desc with
-    | Ptyp_constr ({txt = Lident "unit"; _}, []) ->
+    | Ptyp_constr ({txt = Lident "unit"}, []) ->
       if nolabel then Extern_unit else Nothing
     | _ -> Nothing)
 
@@ -257,7 +254,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                   {
                     pstr_desc =
                       Pstr_eval
-                        ({pexp_loc; pexp_desc = Pexp_record (fields, _); _}, _);
+                        ({pexp_loc; pexp_desc = Pexp_record (fields, _)}, _);
                     _;
                   };
                 ] -> (
@@ -270,10 +267,10 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                        Longident.t Location.loc * Parsetree.expression * bool)
                    ->
                      match (l, exp.pexp_desc) with
-                     | ( {txt = Lident "from"; _},
+                     | ( {txt = Lident "from"},
                          Pexp_constant (Pconst_string (s, _)) ) ->
                        from_name := Some s
-                     | {txt = Lident "with"; _}, Pexp_record (fields, _) ->
+                     | {txt = Lident "with"}, Pexp_record (fields, _) ->
                        with_ := Some fields
                      | _ -> ());
               match (!from_name, !with_) with
@@ -395,7 +392,7 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
           | "return" -> (
             let actions = Ast_payload.ident_or_record_as_config loc payload in
             match actions with
-            | [({txt; _}, None)] ->
+            | [({txt}, None)] ->
               {st with return_wrapper = return_wrapper loc txt}
             | _ -> Bs_syntaxerr.err loc Not_supported_directive_in_bs_return)
           | _ -> raise_notrace Not_handled_external_attribute
@@ -467,7 +464,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
             match arg_label with
             | Nolabel -> (
               match ty.ptyp_desc with
-              | Ptyp_constr ({txt = Lident "unit"; _}, []) ->
+              | Ptyp_constr ({txt = Lident "unit"}, []) ->
                 ( External_arg_spec.empty_kind Extern_unit,
                   param_type :: arg_types,
                   result_types )
@@ -550,7 +547,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
               | Nothing ->
                 let for_sure_not_nested =
                   match ty.ptyp_desc with
-                  | Ptyp_constr ({txt = Lident txt; _}, []) ->
+                  | Ptyp_constr ({txt = Lident txt}, []) ->
                     Ast_core_type.is_builtin_rank0_type txt
                   | _ -> false
                 in
@@ -643,7 +640,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@set_index (arity of 3)"
-  | {set_index = true; _} ->
+  | {set_index = true} ->
     Bs_syntaxerr.err loc
       (Conflict_ffi_attribute "Attribute found that conflicts with %@set_index")
   | {
@@ -669,7 +666,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
       Location.raise_errorf ~loc
         "Ill defined attribute %@get_index (arity expected 2 : while %d)"
         arg_type_specs_length
-  | {get_index = true; _} ->
+  | {get_index = true} ->
     Bs_syntaxerr.err loc
       (Conflict_ffi_attribute "Attribute found that conflicts with %@get_index")
   | {
@@ -702,7 +699,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
       Location.raise_errorf ~loc
         "Incorrect FFI attribute found: (%@new should not carry a payload here)"
     )
-  | {module_as_val = Some _; get_index; val_send; _} ->
+  | {module_as_val = Some _; get_index; val_send} ->
     let reason =
       match (get_index, val_send) with
       | true, _ ->
@@ -770,7 +767,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
       Js_var {name; external_module_name; scopes}
       (*FIXME: splice is not supported here *)
     else Js_call {splice; name; external_module_name; scopes; tagged_template}
-  | {call_name = Some _; _} ->
+  | {call_name = Some _} ->
     Bs_syntaxerr.err loc
       (Conflict_ffi_attribute "Attribute found that conflicts with %@val")
   | {
@@ -797,7 +794,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
                ]}
       *)
     Js_var {name; external_module_name; scopes}
-  | {val_name = Some _; _} ->
+  | {val_name = Some _} ->
     Bs_syntaxerr.err loc
       (Conflict_ffi_attribute "Attribute found that conflicts with %@val")
   | {
@@ -855,7 +852,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
       Location.raise_errorf ~loc
         "Ill defined attribute %@send(first argument can't be const)"
     | _ :: _ -> Js_send {splice; name; js_send_scopes = scopes})
-  | {val_send = Some _; _} ->
+  | {val_send = Some _} ->
     Location.raise_errorf ~loc
       "You used a FFI attribute that can't be used with %@send"
   | {
@@ -876,7 +873,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
    tagged_template = _;
   } ->
     Js_new {name; external_module_name; splice; scopes}
-  | {new_name = Some _; _} ->
+  | {new_name = Some _} ->
     Bs_syntaxerr.err loc
       (Conflict_ffi_attribute "Attribute found that conflicts with %@new")
   | {
@@ -901,7 +898,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@set (two args required)"
-  | {set_name = Some _; _} ->
+  | {set_name = Some _} ->
     Location.raise_errorf ~loc "conflict attributes found with %@set"
   | {
    get_name = Some {name; source = _};
@@ -925,7 +922,7 @@ let external_desc_of_non_obj (loc : Location.t) (st : external_desc)
     else
       Location.raise_errorf ~loc
         "Ill defined attribute %@get (only one argument)"
-  | {get_name = Some _; _} ->
+  | {get_name = Some _} ->
     Location.raise_errorf ~loc "Attribute found that conflicts with %@get"
 
 (** Note that the passed [type_annotation] is already processed by visitor pattern before*)
@@ -935,8 +932,8 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
   let prim_name_with_source = {name = prim_name; source = External} in
   let type_annotation, build_uncurried_type =
     match type_annotation with
-    | {ptyp_desc = Ptyp_arrow (_, _, _, Some _); _} as t ->
-      ( t,
+    | {ptyp_desc = Ptyp_arrow {arity = Some _}} ->
+      ( type_annotation,
         fun ~arity (x : Parsetree.core_type) ->
           Ast_uncurried.uncurried_type ~arity x )
     | _ -> (type_annotation, fun ~arity:_ x -> x)
@@ -978,7 +975,7 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
                  Location.raise_errorf ~loc
                    "%@variadic expect the last type to be an array";
                match ty.ptyp_desc with
-               | Ptyp_constr ({txt = Lident "array"; _}, [_]) -> ()
+               | Ptyp_constr ({txt = Lident "array"}, [_]) -> ()
                | _ ->
                  Location.raise_errorf ~loc
                    "%@variadic expect the last type to be an array"));

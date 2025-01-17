@@ -29,6 +29,7 @@
 - AST cleanup: Remove `structure_item_desc.Pstr_class`, `signature_item_desc.Psig_class`, `structure_item_desc.Pstr_class_type`, `signature_item_desc.Psig_class_type`, `structure_item_desc.Tstr_class`, `structure_item_desc.Tstr_class_type`, `signature_item_desc.Tsig_class`, `signature_item_desc.Tsig_class_type` from AST as it is unused. https://github.com/rescript-lang/rescript/pull/7242
 - AST cleanup: remove "|." and rename "|." to "->" in the internal representation for the pipe operator. https://github.com/rescript-lang/rescript/pull/7244
 - AST cleanup: represent concatenation (`++`) and (dis)equality operators (`==`, `===`, `!=`, `!==`) just like in the syntax. https://github.com/rescript-lang/rescript/pull/7248
+- AST cleanup: use inline record for `Ptyp_arrow`. https://github.com/rescript-lang/rescript/pull/7250
 
 # 12.0.0-alpha.7
 

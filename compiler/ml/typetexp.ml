@@ -327,17 +327,17 @@ and transl_type_aux env policy styp =
           v)
     in
     ctyp (Ttyp_var name) ty
-  | Ptyp_arrow (l, st1, st2, arity) ->
+  | Ptyp_arrow {lbl; arg = st1; ret = st2; arity} ->
     let cty1 = transl_type env policy st1 in
     let cty2 = transl_type env policy st2 in
     let ty1 = cty1.ctyp_type in
     let ty1 =
-      if Btype.is_optional l then
+      if Btype.is_optional lbl then
         newty (Tconstr (Predef.path_option, [ty1], ref Mnil))
       else ty1
     in
-    let ty = newty (Tarrow (l, ty1, cty2.ctyp_type, Cok, arity)) in
-    ctyp (Ttyp_arrow (l, cty1, cty2, arity)) ty
+    let ty = newty (Tarrow (lbl, ty1, cty2.ctyp_type, Cok, arity)) in
+    ctyp (Ttyp_arrow (lbl, cty1, cty2, arity)) ty
   | Ptyp_tuple stl ->
     assert (List.length stl >= 2);
     let ctys = List.map (transl_type env policy) stl in

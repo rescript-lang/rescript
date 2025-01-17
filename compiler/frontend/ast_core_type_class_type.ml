@@ -67,7 +67,7 @@ let default_typ_mapper = Bs_ast_mapper.default_mapper.typ
 let typ_mapper (self : Bs_ast_mapper.mapper) (ty : Parsetree.core_type) =
   let loc = ty.ptyp_loc in
   match ty.ptyp_desc with
-  | Ptyp_arrow (label, args, body, _)
+  | Ptyp_arrow {lbl = label; arg = args; ret = body}
   (* let it go without regard label names,
      it will report error later when the label is not empty
   *) -> (

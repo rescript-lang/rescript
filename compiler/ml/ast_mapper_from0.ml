@@ -106,8 +106,7 @@ module T = struct
         constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
       in
       match typ0.ptyp_desc with
-      | Ptyp_constr
-          (lid, [({ptyp_desc = Ptyp_arrow (lbl, t1, t2, _)} as fun_t); t_arity])
+      | Ptyp_constr (lid, [({ptyp_desc = Ptyp_arrow arr} as fun_t); t_arity])
         when lid.txt = Lident "function$" ->
         let decode_arity_string arity_s =
           int_of_string
@@ -120,7 +119,7 @@ module T = struct
           | _ -> assert false
         in
         let arity = arity_from_type t_arity in
-        {fun_t with ptyp_desc = Ptyp_arrow (lbl, t1, t2, Some arity)}
+        {fun_t with ptyp_desc = Ptyp_arrow {arr with arity = Some arity}}
       | _ -> typ0)
     | Ptyp_object (l, o) ->
       object_ ~loc ~attrs (List.map (object_field sub) l) o

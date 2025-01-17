@@ -1688,7 +1688,7 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
     (* object printings *)
     | Ptyp_object (fields, open_flag) ->
       print_object ~state ~inline:false fields open_flag cmt_tbl
-    | Ptyp_arrow (_, _, _, arity) -> print_arrow ~arity typ_expr
+    | Ptyp_arrow {arity} -> print_arrow ~arity typ_expr
     | Ptyp_constr
         (longident_loc, [{ptyp_desc = Ptyp_object (fields, open_flag)}]) ->
       (* for foo<{"a": b}>, when the object is long and needs a line break, we

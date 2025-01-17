@@ -98,8 +98,8 @@ module T = struct
     match desc with
     | Ptyp_any -> any ~loc ~attrs ()
     | Ptyp_var s -> var ~loc ~attrs s
-    | Ptyp_arrow (lab, t1, t2, arity) -> (
-      let typ0 = arrow ~loc ~attrs lab (sub.typ sub t1) (sub.typ sub t2) in
+    | Ptyp_arrow {lbl; arg; ret; arity} -> (
+      let typ0 = arrow ~loc ~attrs lbl (sub.typ sub arg) (sub.typ sub ret) in
       match arity with
       | None -> typ0
       | Some arity ->
