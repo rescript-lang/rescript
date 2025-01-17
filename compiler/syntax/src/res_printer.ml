@@ -1606,7 +1606,7 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
     in
     match args with
     | [] -> Doc.nil
-    | [([], Nolabel, n)] ->
+    | [([], Nolabel, _, n)] ->
       let has_attrs_before = not (attrs_before = []) in
       let attrs =
         if has_attrs_before then
@@ -1931,7 +1931,7 @@ and print_object_field ~state (field : Parsetree.object_field) cmt_tbl =
 (* es6 arrow type arg
  * type t = (~foo: string, ~bar: float=?, unit) => unit
  * i.e. ~foo: string, ~bar: float *)
-and print_type_parameter ~state (attrs, lbl, typ) cmt_tbl =
+and print_type_parameter ~state (attrs, lbl, lbl_loc, typ) cmt_tbl =
   (* Converting .ml code to .res requires processing uncurried attributes *)
   let attrs = print_attributes ~state attrs cmt_tbl in
   let label =
@@ -1947,13 +1947,13 @@ and print_type_parameter ~state (attrs, lbl, typ) cmt_tbl =
     | Asttypes.Nolabel | Labelled _ -> Doc.nil
     | Optional _lbl -> Doc.text "=?"
   in
-  let loc, typ =
+  let typ =
     match typ.ptyp_attributes with
-    | ({Location.txt = "res.namedArgLoc"; loc}, _) :: attrs ->
-      ( {loc with loc_end = typ.ptyp_loc.loc_end},
-        {typ with ptyp_attributes = attrs} )
-    | _ -> (typ.ptyp_loc, typ)
+    | ({Location.txt = "res.namedArgLoc"}, _) :: attrs ->
+      {typ with ptyp_attributes = attrs}
+    | _ -> typ
   in
+  let loc = {lbl_loc with loc_end = typ.ptyp_loc.loc_end} in
   let doc =
     Doc.group
       (Doc.concat

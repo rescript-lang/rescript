@@ -50,7 +50,7 @@ module External = {
     props<
       module(T with type t = 'a and type key = 'key),
       option<'key>,
-      (option<'key> => unit),
+      option<'key> => unit,
       array<'a>,
     >,
     React.element,

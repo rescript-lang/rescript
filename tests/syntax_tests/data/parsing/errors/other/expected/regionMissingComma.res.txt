@@ -23,8 +23,7 @@
   Did you forget a `,` here?
 
 external make :
-  ?style:((ReactDOMRe.Style.t)[@res.namedArgLoc ]) ->
-    ?image:((bool)[@res.namedArgLoc ]) -> React.element (a:2) =
+  ?style:ReactDOMRe.Style.t -> ?image:bool -> React.element (a:2) =
     "ModalContent"
 type nonrec 'extraInfo student =
   {
