@@ -11,10 +11,10 @@ let arrow_type ?(max_arity = max_int) ct =
       when acc <> [] ->
       (attrs_before, List.rev acc, typ)
     | {
-     ptyp_desc = Ptyp_arrow {lbl = Nolabel as lbl; arg; ret};
+     ptyp_desc = Ptyp_arrow {lbl = Nolabel as lbl; lbl_loc; arg; ret};
      ptyp_attributes = [];
     } ->
-      let arg = ([], lbl, arg) in
+      let arg = ([], lbl, lbl_loc, arg) in
       process attrs_before (arg :: acc) ret (arity - 1)
     | {
      ptyp_desc = Ptyp_arrow {lbl = Nolabel};
@@ -28,7 +28,8 @@ let arrow_type ?(max_arity = max_int) ct =
       let args = List.rev acc in
       (attrs_before, args, return_type)
     | {
-     ptyp_desc = Ptyp_arrow {lbl = (Labelled _ | Optional _) as lbl; arg; ret};
+     ptyp_desc =
+       Ptyp_arrow {lbl = (Labelled _ | Optional _) as lbl; lbl_loc; arg; ret};
      ptyp_attributes = attrs;
     } ->
       (* Res_core.parse_es6_arrow_type has a workaround that removed an extra arity for the function if the
@@ -43,7 +44,7 @@ let arrow_type ?(max_arity = max_int) ct =
           arity
         | _ -> arity - 1
       in
-      let arg = (attrs, lbl, arg) in
+      let arg = (attrs, lbl, lbl_loc, arg) in
       process attrs_before (arg :: acc) ret arity
     | typ -> (attrs_before, List.rev acc, typ)
   in

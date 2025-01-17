@@ -126,14 +126,17 @@ let apply_labels ?(loc = default_loc) ?(attrs = []) fn
 let label_arrow ?(loc = default_loc) ?(attrs = []) ~arity s arg ret : core_type
     =
   {
-    ptyp_desc = Ptyp_arrow {lbl = Labelled s; arg; ret; arity};
+    ptyp_desc =
+      Ptyp_arrow {lbl = Labelled s; lbl_loc = Location.none; arg; ret; arity};
     ptyp_loc = loc;
     ptyp_attributes = attrs;
   }
 
 let opt_arrow ?(loc = default_loc) ?(attrs = []) ~arity s arg ret : core_type =
   {
-    ptyp_desc = Ptyp_arrow {lbl = Asttypes.Optional s; arg; ret; arity};
+    ptyp_desc =
+      Ptyp_arrow
+        {lbl = Asttypes.Optional s; lbl_loc = Location.none; arg; ret; arity};
     ptyp_loc = loc;
     ptyp_attributes = attrs;
   }

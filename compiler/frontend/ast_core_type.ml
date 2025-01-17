@@ -142,7 +142,15 @@ let mk_fn_type (new_arg_types_ty : param_type list) (result : t) : t =
     Ext_list.fold_right new_arg_types_ty result
       (fun {label; ty; attr; loc} acc ->
         {
-          ptyp_desc = Ptyp_arrow {lbl = label; arg = ty; ret = acc; arity = None};
+          ptyp_desc =
+            Ptyp_arrow
+              {
+                lbl = label;
+                lbl_loc = Location.none;
+                arg = ty;
+                ret = acc;
+                arity = None;
+              };
           ptyp_loc = loc;
           ptyp_attributes = attr;
         })

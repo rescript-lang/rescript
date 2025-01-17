@@ -171,6 +171,7 @@ type argument = {label: Asttypes.arg_label; expr: Parsetree.expression}
 type type_parameter = {
   attrs: Ast_helper.attrs;
   label: Asttypes.arg_label;
+  label_loc: Location.t;
   typ: Parsetree.core_type;
   start_pos: Lexing.position;
 }
@@ -4261,20 +4262,15 @@ and parse_type_parameter p =
     | Tilde -> (
       Parser.next p;
       let name, loc = parse_lident p in
-      let lbl_loc_attr =
-        (Location.mkloc "res.namedArgLoc" loc, Parsetree.PStr [])
-      in
       Parser.expect ~grammar:Grammar.TypeExpression Colon p;
-      let typ =
-        let typ = parse_typ_expr p in
-        {typ with ptyp_attributes = lbl_loc_attr :: typ.ptyp_attributes}
-      in
+      let typ = parse_typ_expr p in
       match p.Parser.token with
       | Equal ->
         Parser.next p;
         Parser.expect Question p;
-        Some {attrs; label = Optional name; typ; start_pos}
-      | _ -> Some {attrs; label = Labelled name; typ; start_pos})
+        Some {attrs; label = Optional name; label_loc = loc; typ; start_pos}
+      | _ ->
+        Some {attrs; label = Labelled name; label_loc = loc; typ; start_pos})
     | Lident _ -> (
       let name, loc = parse_lident p in
       match p.token with
@@ -4292,8 +4288,9 @@ and parse_type_parameter p =
         | Equal ->
           Parser.next p;
           Parser.expect Question p;
-          Some {attrs; label = Optional name; typ; start_pos}
-        | _ -> Some {attrs; label = Labelled name; typ; start_pos})
+          Some {attrs; label = Optional name; label_loc = loc; typ; start_pos}
+        | _ ->
+          Some {attrs; label = Labelled name; label_loc = loc; typ; start_pos})
       | _ ->
         let constr = Location.mkloc (Longident.Lident name) loc in
         let args = parse_type_constructor_args ~constr_name:constr p in
@@ -4305,13 +4302,27 @@ and parse_type_parameter p =
 
         let typ = parse_arrow_type_rest ~es6_arrow:true ~start_pos typ p in
         let typ = parse_type_alias p typ in
-        Some {attrs = []; label = Nolabel; typ; start_pos})
+        Some
+          {
+            attrs = [];
+            label = Nolabel;
+            label_loc = Location.none;
+            typ;
+            start_pos;
+          })
     | _ ->
       let typ = parse_typ_expr p in
       let typ_with_attributes =
         {typ with ptyp_attributes = List.concat [attrs; typ.ptyp_attributes]}
       in
-      Some {attrs = []; label = Nolabel; typ = typ_with_attributes; start_pos}
+      Some
+        {
+          attrs = [];
+          label = Nolabel;
+          label_loc = Location.none;
+          typ = typ_with_attributes;
+          start_pos;
+        }
   else None
 
 (* (int, ~x:string, float) *)
@@ -4324,7 +4335,7 @@ and parse_type_parameters p =
     let loc = mk_loc start_pos p.prev_end_pos in
     let unit_constr = Location.mkloc (Longident.Lident "unit") loc in
     let typ = Ast_helper.Typ.constr unit_constr [] in
-    [{attrs = []; label = Nolabel; typ; start_pos}]
+    [{attrs = []; label = Nolabel; label_loc = Location.none; typ; start_pos}]
   | _ ->
     let params =
       parse_comma_delimited_region ~grammar:Grammar.TypeParameters
@@ -4368,7 +4379,8 @@ and parse_es6_arrow_type ~attrs p =
     let return_type_arity = 0 in
     let _paramNum, typ, _arity =
       List.fold_right
-        (fun {attrs; label = arg_lbl; typ; start_pos} (param_num, t, arity) ->
+        (fun {attrs; label = arg_lbl; label_loc; typ; start_pos}
+             (param_num, t, arity) ->
           let loc = mk_loc start_pos end_pos in
           let arity =
             (* Workaround for ~lbl: @as(json`false`) _, which changes the arity *)
@@ -4387,7 +4399,8 @@ and parse_es6_arrow_type ~attrs p =
             | _ -> arity
           in
           let t_arg =
-            Ast_helper.Typ.arrow ~loc ~attrs ~arity:None arg_lbl typ t
+            Ast_helper.Typ.arrow ~loc ~label_loc ~attrs ~arity:None arg_lbl typ
+              t
           in
           if param_num = 1 then
             (param_num - 1, Ast_uncurried.uncurried_type ~arity t_arg, 1)
