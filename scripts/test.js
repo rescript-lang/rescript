@@ -127,6 +127,7 @@ async function runTests() {
     if (process.platform === "win32") {
       console.log(`Skipping docstrings tests on ${process.platform}`);
     } else if (process.platform === "darwin" && os.release().startsWith("22")) {
+      // Workaround for intermittent hangs in CI
       console.log("Skipping docstrings tests on macOS 13")
     } else {
       console.log("Running runtime docstrings tests");
