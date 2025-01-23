@@ -201,10 +201,9 @@ let filter_parsing_attrs attrs =
       match attr with
       | ( {
             Location.txt =
-              ( "res.braces" | "ns.braces" | "res.iflet" | "res.namedArgLoc"
-              | "res.ternary" | "res.await" | "res.template"
-              | "res.taggedTemplate" | "res.patVariantSpread"
-              | "res.dictPattern" );
+              ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
+              | "res.await" | "res.template" | "res.taggedTemplate"
+              | "res.patVariantSpread" | "res.dictPattern" );
           },
           _ ) ->
         false
@@ -287,7 +286,7 @@ let is_unary_expression expr =
   | Pexp_apply
       {
         funct = {pexp_desc = Pexp_ident {txt = Longident.Lident operator}};
-        args = [(Nolabel, _arg)];
+        args = [(Nolbl, _arg)];
       }
     when is_unary_operator operator ->
     true
@@ -311,7 +310,7 @@ let is_binary_expression expr =
             pexp_desc =
               Pexp_ident {txt = Longident.Lident operator; loc = operator_loc};
           };
-        args = [(Nolabel, _operand1); (Nolabel, _operand2)];
+        args = [(Nolbl, _operand1); (Nolbl, _operand2)];
       }
     when is_binary_operator operator
          && not (operator_loc.loc_ghost && operator = "++")
@@ -386,7 +385,7 @@ let is_array_access expr =
               Pexp_ident
                 {txt = Longident.Ldot (Longident.Lident "Array", "get")};
           };
-        args = [(Nolabel, _parentExpr); (Nolabel, _memberExpr)];
+        args = [(Nolbl, _parentExpr); (Nolbl, _memberExpr)];
       } ->
     true
   | _ -> false
@@ -518,7 +517,7 @@ let should_indent_binary_expr expr =
        Pexp_apply
          {
            funct = {pexp_desc = Pexp_ident {txt = Longident.Lident sub_operator}};
-           args = [(Nolabel, _lhs); (Nolabel, _rhs)];
+           args = [(Nolbl, _lhs); (Nolbl, _rhs)];
          };
     }
       when is_binary_operator sub_operator ->
@@ -531,7 +530,7 @@ let should_indent_binary_expr expr =
      Pexp_apply
        {
          funct = {pexp_desc = Pexp_ident {txt = Longident.Lident operator}};
-         args = [(Nolabel, lhs); (Nolabel, _rhs)];
+         args = [(Nolbl, lhs); (Nolbl, _rhs)];
        };
   }
     when is_binary_operator operator ->
@@ -644,7 +643,7 @@ let is_template_literal expr =
   | Pexp_apply
       {
         funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "++"}};
-        args = [(Nolabel, _); (Nolabel, _)];
+        args = [(Nolbl, _); (Nolbl, _)];
       }
     when has_template_literal_attr expr.pexp_attributes ->
     true
@@ -715,7 +714,7 @@ let is_single_pipe_expr expr =
     | Pexp_apply
         {
           funct = {pexp_desc = Pexp_ident {txt = Longident.Lident ("->" | "|>")}};
-          args = [(Nolabel, _operand1); (Nolabel, _operand2)];
+          args = [(Nolbl, _operand1); (Nolbl, _operand2)];
         } ->
       true
     | _ -> false
@@ -724,7 +723,7 @@ let is_single_pipe_expr expr =
   | Pexp_apply
       {
         funct = {pexp_desc = Pexp_ident {txt = Longident.Lident ("->" | "|>")}};
-        args = [(Nolabel, operand1); (Nolabel, _operand2)];
+        args = [(Nolbl, operand1); (Nolbl, _operand2)];
       }
     when not (is_pipe_expr operand1) ->
     true

@@ -117,6 +117,12 @@ module SexpAst = struct
     | Labelled txt -> Sexp.list [Sexp.atom "Labelled"; string txt]
     | Optional txt -> Sexp.list [Sexp.atom "Optional"; string txt]
 
+  let arg_label_loc lbl =
+    match lbl with
+    | Asttypes.Nolbl -> Sexp.atom "Nolabel"
+    | Lbl {txt} -> Sexp.list [Sexp.atom "Labelled"; string txt]
+    | Opt {txt} -> Sexp.list [Sexp.atom "Optional"; string txt]
+
   let constant c =
     let sexpr =
       match c with
@@ -574,7 +580,7 @@ module SexpAst = struct
             Sexp.list
               (map_empty
                  ~f:(fun (arg_lbl, expr) ->
-                   Sexp.list [arg_label arg_lbl; expression expr])
+                   Sexp.list [arg_label_loc arg_lbl; expression expr])
                  args);
           ]
       | Pexp_match (expr, cases) ->

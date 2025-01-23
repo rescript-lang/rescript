@@ -268,8 +268,7 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
     (* Transform away pipe with apply call *)
     exprToContextPath
       {
-        pexp_desc =
-          Pexp_apply {funct = d; args = (Nolabel, lhs) :: args; partial};
+        pexp_desc = Pexp_apply {funct = d; args = (Nolbl, lhs) :: args; partial};
         pexp_loc;
         pexp_attributes;
       }
@@ -289,7 +288,7 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
           Pexp_apply
             {
               funct = {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes};
-              args = [(Nolabel, lhs)];
+              args = [(Nolbl, lhs)];
               partial;
             };
         pexp_loc;
@@ -298,7 +297,11 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
   | Pexp_apply {funct = e1; args} -> (
     match exprToContextPath e1 with
     | None -> None
-    | Some contexPath -> Some (CPApply (contexPath, args |> List.map fst)))
+    | Some contexPath ->
+      Some
+        (CPApply
+           (contexPath, args |> List.map fst |> List.map Asttypes.to_arg_label))
+    )
   | Pexp_tuple exprs ->
     let exprsAsContextPaths = exprs |> List.filter_map exprToContextPath in
     if List.length exprs = List.length exprsAsContextPaths then

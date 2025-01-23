@@ -3391,7 +3391,7 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
           unify env lhs_type Predef.type_int;
           Predef.type_int
       in
-      let targs = [(lhs_label, Some lhs)] in
+      let targs = [(to_arg_label lhs_label, Some lhs)] in
       Some (targs, result_type)
     | ( Some {form = Binary; specialization},
         [(lhs_label, lhs_expr); (rhs_label, rhs_expr)] ) ->
@@ -3449,7 +3449,9 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
             let rhs = type_expect env rhs_expr Predef.type_int in
             (lhs, rhs, Predef.type_int))
       in
-      let targs = [(lhs_label, Some lhs); (rhs_label, Some rhs)] in
+      let targs =
+        [(to_arg_label lhs_label, Some lhs); (to_arg_label rhs_label, Some rhs)]
+      in
       Some (targs, result_type)
     | _ -> None)
   | _ -> None
@@ -3549,12 +3551,13 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
             omitted t2 []
         | _ -> collect_args ()
       else collect_args ()
-    | [(Nolabel, {pexp_desc = Pexp_construct ({txt = Lident "()"}, None)})]
+    | [(Nolbl, {pexp_desc = Pexp_construct ({txt = Lident "()"}, None)})]
       when total_app && omitted = [] && args <> []
            && List.length args = List.length !ignored ->
       (* foo(. ) treated as empty application if all args are optional (hence ignored) *)
       type_unknown_args max_arity ~args ~top_arity:None omitted ty_fun []
     | (l1, sarg1) :: sargl ->
+      let l1 = to_arg_label l1 in
       let ty1, ty2 =
         let ty_fun = expand_head env ty_fun in
         let arity_ok = List.length args < max_arity in
@@ -3613,20 +3616,20 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
       let sargs, omitted, arg =
         match extract_label name sargs with
         | None ->
-          if optional && (total_app || label_assoc Nolabel sargs) then (
+          if optional && (total_app || label_assoc Nolbl sargs) then (
             ignored := (l, ty, lv) :: !ignored;
             ( sargs,
               omitted,
               Some (fun () -> option_none (instance env ty) Location.none) ))
           else (sargs, (l, ty, lv) :: omitted, None)
         | Some (l', sarg0, sargs) ->
-          if (not optional) && is_optional l' then
+          if (not optional) && is_optional_loc l' then
             Location.prerr_warning sarg0.pexp_loc
               (Warnings.Nonoptional_label (Printtyp.string_of_label l));
           ( sargs,
             omitted,
             Some
-              (if (not optional) || is_optional l' then fun () ->
+              (if (not optional) || is_optional_loc l' then fun () ->
                  type_argument
                    ?type_clash_context:
                      (type_clash_context_for_function_argument
@@ -3649,7 +3652,7 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
   let top_arity = if total_app then Some max_arity else None in
   match sargs with
   (* Special case for ignore: avoid discarding warning *)
-  | [(Nolabel, sarg)] when is_ignore ~env ~arity:top_arity funct ->
+  | [(Nolbl, sarg)] when is_ignore ~env ~arity:top_arity funct ->
     let ty_arg, ty_res =
       filter_arrow ~env ~arity:top_arity (instance env funct.exp_type) Nolabel
     in

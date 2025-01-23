@@ -115,6 +115,11 @@ let arg_label i ppf = function
   | Optional s -> line i ppf "Optional \"%s\"\n" s
   | Labelled s -> line i ppf "Labelled \"%s\"\n" s
 
+let arg_label_loc i ppf = function
+  | Nolbl -> line i ppf "Nolabel\n"
+  | Opt {txt = s} -> line i ppf "Optional \"%s\"\n" s
+  | Lbl {txt = s} -> line i ppf "Labelled \"%s\"\n" s
+
 let rec core_type i ppf x =
   line i ppf "core_type %a\n" fmt_location x.ptyp_loc;
   attributes i ppf x.ptyp_attributes;
@@ -657,7 +662,7 @@ and longident_x_expression i ppf (li, e, opt) =
 
 and label_x_expression i ppf (l, e) =
   line i ppf "<arg>\n";
-  arg_label i ppf l;
+  arg_label_loc i ppf l;
   expression (i + 1) ppf e
 
 and label_x_bool_x_core_type_list i ppf x =

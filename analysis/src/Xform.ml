@@ -95,7 +95,7 @@ module IfThenElse = struct
                             Pexp_ident
                               {txt = Longident.Lident (("==" | "!=") as op)};
                         };
-                      args = [(Nolabel, arg1); (Nolabel, arg2)];
+                      args = [(Nolbl, arg1); (Nolbl, arg2)];
                     };
               },
               e1,

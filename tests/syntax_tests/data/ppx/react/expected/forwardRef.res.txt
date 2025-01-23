@@ -21,7 +21,7 @@ module V4C = {
             ~props={
               type_: "text",
               ?className,
-              ref: ?(Js.Nullable.toOption(ref)->Belt.Option.map(React.Ref.domRef)),
+              ref: ?{Js.Nullable.toOption(ref)->Belt.Option.map(React.Ref.domRef)},
             },
             [],
           ),
@@ -78,7 +78,7 @@ module V4CUncurried = {
             ~props={
               type_: "text",
               ?className,
-              ref: ?(Js.Nullable.toOption(ref)->Belt.Option.map(React.Ref.domRef)),
+              ref: ?{Js.Nullable.toOption(ref)->Belt.Option.map(React.Ref.domRef)},
             },
             [],
           ),
@@ -135,7 +135,7 @@ module V4A = {
               {
                 type_: "text",
                 ?className,
-                ref: ?(Js.Nullable.toOption(ref)->Belt.Option.map(ReactDOM.Ref.domRef)),
+                ref: ?{Js.Nullable.toOption(ref)->Belt.Option.map(ReactDOM.Ref.domRef)},
               },
             ),
             children,
@@ -189,7 +189,7 @@ module V4AUncurried = {
               {
                 type_: "text",
                 ?className,
-                ref: ?(Js.Nullable.toOption(ref)->Belt.Option.map(ReactDOM.Ref.domRef)),
+                ref: ?{Js.Nullable.toOption(ref)->Belt.Option.map(ReactDOM.Ref.domRef)},
               },
             ),
             children,

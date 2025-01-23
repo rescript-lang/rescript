@@ -35,6 +35,6 @@ module ClientSet =
                                        (b -> Client.getUniqueId))
                                    [@res.braces ])
                                end)
-    let empty = Belt.Set.make ~id:(((module T))[@res.namedArgLoc ])
+    let empty = Belt.Set.make ~id:(module T)
   end
 ;;Js.log {js|test|js}

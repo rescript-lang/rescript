@@ -152,7 +152,7 @@ module Exp : sig
     ?attrs:attrs ->
     ?partial:bool ->
     expression ->
-    (arg_label * expression) list ->
+    (arg_label_loc * expression) list ->
     expression
   val match_ : ?loc:loc -> ?attrs:attrs -> expression -> case list -> expression
   val try_ : ?loc:loc -> ?attrs:attrs -> expression -> case list -> expression
