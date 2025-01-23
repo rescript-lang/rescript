@@ -523,7 +523,7 @@ and sugar_expr ctxt f e =
           funct = {pexp_desc = Pexp_ident {txt = id; _}; pexp_attributes = []; _};
           args;
         }
-      when List.for_all (fun (lab, _) -> lab = Nolabel) args -> (
+      when List.for_all (fun (lab, _) -> lab = Nolbl) args -> (
       let print_indexop a path_prefix assign left right print_index indices
           rem_args =
         let print_path ppf = function
@@ -636,7 +636,7 @@ and expression ctxt f x =
         match view_fixity_of_exp e with
         | `Infix s -> (
           match l with
-          | [((Nolabel, _) as arg1); ((Nolabel, _) as arg2)] ->
+          | [((Nolbl, _) as arg1); ((Nolbl, _) as arg2)] ->
             (* FIXME associativity label_x_expression_param *)
             pp f "@[<2>%a@;%s@;%a@]"
               (label_x_expression_param reset_ctxt)
@@ -661,7 +661,7 @@ and expression ctxt f x =
             else s
           in
           match l with
-          | [(Nolabel, x)] -> pp f "@[<2>%s@;%a@]" s (simple_expr ctxt) x
+          | [(Nolbl, x)] -> pp f "@[<2>%s@;%a@]" s (simple_expr ctxt) x
           | _ ->
             pp f "@[<2>%a %a@]" (simple_expr ctxt) e
               (list (label_x_expression_param ctxt))
@@ -1281,11 +1281,11 @@ and label_x_expression_param ctxt f (l, e) =
     | _ -> None
   in
   match l with
-  | Nolabel -> expression2 ctxt f e (* level 2*)
-  | Optional str ->
+  | Nolbl -> expression2 ctxt f e (* level 2*)
+  | Opt {txt = str} ->
     if Some str = simple_name then pp f "?%s" str
     else pp f "?%s:%a" str (simple_expr ctxt) e
-  | Labelled lbl ->
+  | Lbl {txt = lbl} ->
     if Some lbl = simple_name then pp f "~%s" lbl
     else pp f "~%s:%a" lbl (simple_expr ctxt) e
 

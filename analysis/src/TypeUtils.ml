@@ -941,7 +941,7 @@ module Codegen = struct
   let mkFailWithExp () =
     Ast_helper.Exp.apply
       (Ast_helper.Exp.ident {txt = Lident "failwith"; loc = Location.none})
-      [(Nolabel, Ast_helper.Exp.constant (Pconst_string ("TODO", None)))]
+      [(Nolbl, Ast_helper.Exp.constant (Pconst_string ("TODO", None)))]
 
   let mkConstructPat ?payload name =
     Ast_helper.Pat.construct

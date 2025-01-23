@@ -103,9 +103,9 @@ val partition_printable_attributes :
   Parsetree.attributes -> Parsetree.attributes * Parsetree.attributes
 
 val requires_special_callback_printing_last_arg :
-  (Asttypes.arg_label * Parsetree.expression) list -> bool
+  (Asttypes.arg_label_loc * Parsetree.expression) list -> bool
 val requires_special_callback_printing_first_arg :
-  (Asttypes.arg_label * Parsetree.expression) list -> bool
+  (Asttypes.arg_label_loc * Parsetree.expression) list -> bool
 
 val mod_expr_apply :
   Parsetree.module_expr -> Parsetree.module_expr list * Parsetree.module_expr

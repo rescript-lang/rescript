@@ -141,9 +141,8 @@ include
           match successor with
           | None ->
               let leaf =
-                createNode ~value:((Js.Internal.raw_expr {js|0|js})
-                  [@res.namedArgLoc ]) ~color:((Black)[@res.namedArgLoc ])
-                  ~height:((0.)[@res.namedArgLoc ]) in
+                createNode ~value:(Js.Internal.raw_expr {js|0|js})
+                  ~color:Black ~height:0. in
               let isLeaf = Js.Internal.fn_mk1 (fun [arity:1]x -> x === leaf) in
               (leaf, isLeaf)
           | Some successor ->
@@ -153,8 +152,7 @@ include
         (match nodeParent with
          | None -> ()
          | Some parent ->
-             leftOrRightSet parent ~node:((nodeToRemove)[@res.namedArgLoc ])
-               (Some successor));
+             leftOrRightSet parent ~node:nodeToRemove (Some successor));
         updateSumRecursive rbt successor;
         if (colorGet nodeToRemove) === Black
         then
@@ -276,9 +274,7 @@ include
           (if (rootGet rbt) === (Some successor) then rootSet rbt None;
            (match parentGet successor with
             | None -> ()
-            | Some parent ->
-                leftOrRightSet parent ~node:((successor)[@res.namedArgLoc ])
-                  None)))
+            | Some parent -> leftOrRightSet parent ~node:successor None)))
       [@res.braces ])
     let remove [arity:2]rbt value =
       match _findNode rbt (rootGet rbt) value with
@@ -303,9 +299,7 @@ include
         | None -> None
         | Some node -> Some (valueGet node))
       [@res.braces ])
-    let make [arity:1]~compare  =
-      t ~size:((0)[@res.namedArgLoc ]) ~root:((None)[@res.namedArgLoc ])
-        ~compare:((compare)[@res.namedArgLoc ])
+    let make [arity:1]~compare  = t ~size:0 ~root:None ~compare
     let rec heightOfInterval [arity:4]rbt node lhs rhs =
       match node with
       | None -> 0.
@@ -383,12 +377,10 @@ include
         | Some parent ->
             leftSpine +.
               (sumLeftSpine parent
-                 ~fromRightChild:(((rightGet parent) === (Some node))
-                 [@res.namedArgLoc ])))
+                 ~fromRightChild:((rightGet parent) === (Some node))))
       [@res.braces ])
     let getY [arity:1]node =
-      (sumLeftSpine node ~fromRightChild:((true)[@res.namedArgLoc ])) -.
-        (heightGet node)
+      (sumLeftSpine node ~fromRightChild:true) -. (heightGet node)
     let linearSearch [arity:2]rbt callback =
       ((let rec find [arity:2]node callback =
           if Js.Internal.fn_run1 callback (valueGet node)
@@ -409,9 +401,7 @@ include
            if (!==) firstNode lastNode
            then
              (if not inclusive then Js.Internal.fn_run1 callback node;
-              iterate ~inclusive:((inclusive)[@res.namedArgLoc ])
-                (nextNode node) lastNode ~callback:((callback)
-                [@res.namedArgLoc ])))
+              iterate ~inclusive (nextNode node) lastNode ~callback))
     let rec iterateWithY [arity:5]?y  ~inclusive  firstNode lastNode
       ~callback  =
       match firstNode with
@@ -422,22 +412,20 @@ include
            if (!==) firstNode lastNode
            then
              (if not inclusive then Js.Internal.fn_run2 callback node y;
-              iterateWithY ~y:((y +. (heightGet node))[@res.namedArgLoc ])
-                ~inclusive:((inclusive)[@res.namedArgLoc ]) (nextNode node)
-                lastNode ~callback:((callback)[@res.namedArgLoc ])))
+              iterateWithY ~y:(y +. (heightGet node)) ~inclusive
+                (nextNode node) lastNode ~callback))
     let rec updateSum [arity:2]node ~delta  =
       match node with
       | None -> ()
       | Some node ->
           (sumSet node ((sumGet node) +. delta);
-           updateSum (parentGet node) ~delta:((delta)[@res.namedArgLoc ]))
+           updateSum (parentGet node) ~delta)
     let setHeight [arity:3]rbt value ~height  =
       match _findNode rbt (rootGet rbt) value with
       | None -> ()
       | Some node ->
           let delta = height -. (heightGet node) in
-          (heightSet node height;
-           updateSum (Some node) ~delta:((delta)[@res.namedArgLoc ]))
+          (heightSet node height; updateSum (Some node) ~delta)
     type nonrec 'value oldNewVisibleNodes =
       {
       mutable old: 'value array ;
