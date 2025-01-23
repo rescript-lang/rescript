@@ -325,22 +325,22 @@ module E = struct
       let e =
         match (e.pexp_desc, args) with
         | ( Pexp_ident ({txt = Longident.Lident "->"} as lid),
-            [(Nolabel, _); (Nolabel, _)] ) ->
+            [(Nolabel, _, _); (Nolabel, _, _)] ) ->
           {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "|."}}
         | ( Pexp_ident ({txt = Longident.Lident "++"} as lid),
-            [(Nolabel, _); (Nolabel, _)] ) ->
+            [(Nolabel, _, _); (Nolabel, _, _)] ) ->
           {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "^"}}
         | ( Pexp_ident ({txt = Longident.Lident "!="} as lid),
-            [(Nolabel, _); (Nolabel, _)] ) ->
+            [(Nolabel, _, _); (Nolabel, _, _)] ) ->
           {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "<>"}}
         | ( Pexp_ident ({txt = Longident.Lident "!=="} as lid),
-            [(Nolabel, _); (Nolabel, _)] ) ->
+            [(Nolabel, _, _); (Nolabel, _, _)] ) ->
           {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "!="}}
         | ( Pexp_ident ({txt = Longident.Lident "==="} as lid),
-            [(Nolabel, _); (Nolabel, _)] ) ->
+            [(Nolabel, _, _); (Nolabel, _, _)] ) ->
           {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "=="}}
         | ( Pexp_ident ({txt = Longident.Lident "=="} as lid),
-            [(Nolabel, _); (Nolabel, _)] ) ->
+            [(Nolabel, _, _); (Nolabel, _, _)] ) ->
           {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "="}}
         | _ -> e
       in
@@ -349,7 +349,7 @@ module E = struct
         else []
       in
       apply ~loc ~attrs (sub.expr sub e)
-        (List.map (map_snd (sub.expr sub)) args)
+        (List.map (fun (lbl, _, e) -> (lbl, sub.expr sub e)) args)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)

@@ -45,7 +45,7 @@ let bound (e : exp) (cb : exp -> _) =
 let default_expr_mapper = Bs_ast_mapper.default_mapper.expr
 
 let check_and_discard (args : Ast_compatible.args) =
-  Ext_list.map args (fun (label, x) ->
+  Ext_list.map args (fun (label, _, x) ->
       Bs_syntaxerr.err_if_label x.pexp_loc label;
       x)
 
@@ -92,7 +92,8 @@ let app_exp_mapper (e : exp) (self : Bs_ast_mapper.mapper) : exp =
       Bs_ast_invariant.warn_discarded_unused_attributes fn1.pexp_attributes;
       {
         pexp_desc =
-          Pexp_apply {funct = fn1; args = (Nolabel, a) :: args; partial};
+          Pexp_apply
+            {funct = fn1; args = (Nolabel, Location.none, a) :: args; partial};
         pexp_loc = e.pexp_loc;
         pexp_attributes = e.pexp_attributes @ f.pexp_attributes;
       }
@@ -116,7 +117,9 @@ let app_exp_mapper (e : exp) (self : Bs_ast_mapper.mapper) : exp =
                            Pexp_apply
                              {
                                funct = fn;
-                               args = (Nolabel, bounded_obj_arg) :: args;
+                               args =
+                                 (Nolabel, Location.none, bounded_obj_arg)
+                                 :: args;
                                partial = false;
                              };
                          pexp_attributes = [];
@@ -170,7 +173,7 @@ let app_exp_mapper (e : exp) (self : Bs_ast_mapper.mapper) : exp =
       let arg = self.expr self arg in
       let fn = Exp.send ~loc obj {txt = name ^ Literals.setter_suffix; loc} in
       Exp.constraint_ ~loc
-        (Exp.apply ~loc fn [(Nolabel, arg)])
+        (Exp.apply ~loc fn [(Nolabel, Location.none, arg)])
         (Ast_literal.type_unit ~loc ())
     in
     match obj.pexp_desc with

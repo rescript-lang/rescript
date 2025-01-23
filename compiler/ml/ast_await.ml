@@ -7,7 +7,7 @@ let create_await_expression (e : Parsetree.expression) =
     Ast_helper.Exp.ident ~loc
       {txt = Ldot (Lident Primitive_modules.promise, "unsafe_await"); loc}
   in
-  Ast_helper.Exp.apply ~loc unsafe_await [(Nolabel, e)]
+  Ast_helper.Exp.apply ~loc unsafe_await [(Nolabel, Location.none, e)]
 
 (* Transform `@res.await M` to unpack(@res.await Js.import(module(M: __M0__))) *)
 let create_await_module_expression ~module_type_lid (e : Parsetree.module_expr)
@@ -30,6 +30,7 @@ let create_await_module_expression ~module_type_lid (e : Parsetree.module_expr)
                  })
               [
                 ( Nolabel,
+                  Location.none,
                   Exp.constraint_ ~loc:e.pmod_loc
                     (Exp.pack ~loc:e.pmod_loc
                        {

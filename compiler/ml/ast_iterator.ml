@@ -62,7 +62,7 @@ type iterator = {
     tree. *)
 
 let iter_fst f (x, _) = f x
-let iter_snd f (_, y) = f y
+let iter_snd f (_, _, y) = f y
 let iter_tuple f1 f2 (x, y) =
   f1 x;
   f2 y

@@ -1320,7 +1320,7 @@ and walk_expression expr t comments =
                     Longident.Lident ("~+" | "~+." | "~-" | "~-." | "not" | "!");
                 };
           };
-        args = [(Nolabel, arg_expr)];
+        args = [(Nolabel, _, arg_expr)];
       } ->
     let before, inside, after = partition_by_loc comments arg_expr.pexp_loc in
     attach t.leading arg_expr.pexp_loc before;
@@ -1342,7 +1342,7 @@ and walk_expression expr t comments =
                       | "<>" );
                 };
           };
-        args = [(Nolabel, operand1); (Nolabel, operand2)];
+        args = [(Nolabel, _, operand1); (Nolabel, _, operand2)];
       } ->
     let before, inside, after = partition_by_loc comments operand1.pexp_loc in
     attach t.leading operand1.pexp_loc before;
@@ -1362,7 +1362,7 @@ and walk_expression expr t comments =
           {
             pexp_desc = Pexp_ident {txt = Longident.Ldot (Lident "Array", "get")};
           };
-        args = [(Nolabel, parent_expr); (Nolabel, member_expr)];
+        args = [(Nolabel, _, parent_expr); (Nolabel, _, member_expr)];
       } ->
     walk_list [Expression parent_expr; Expression member_expr] t comments
   | Pexp_apply
@@ -1373,9 +1373,9 @@ and walk_expression expr t comments =
           };
         args =
           [
-            (Nolabel, parent_expr);
-            (Nolabel, member_expr);
-            (Nolabel, target_expr);
+            (Nolabel, _, parent_expr);
+            (Nolabel, _, member_expr);
+            (Nolabel, _, target_expr);
           ];
       } ->
     walk_list
@@ -1389,7 +1389,7 @@ and walk_expression expr t comments =
               Pexp_ident
                 {txt = Longident.Ldot (Lident "Primitive_dict", "make")};
           };
-        args = [(Nolabel, key_values)];
+        args = [(Nolabel, _, key_values)];
       }
     when Res_parsetree_viewer.is_tuple_array key_values ->
     walk_list [Expression key_values] t comments
@@ -1410,7 +1410,7 @@ and walk_expression expr t comments =
     if ParsetreeViewer.is_jsx_expression expr then (
       let props =
         arguments
-        |> List.filter (fun (label, _) ->
+        |> List.filter (fun (label, _, _) ->
                match label with
                | Asttypes.Labelled "children" -> false
                | Asttypes.Nolabel -> false
@@ -1418,13 +1418,13 @@ and walk_expression expr t comments =
       in
       let maybe_children =
         arguments
-        |> List.find_opt (fun (label, _) ->
+        |> List.find_opt (fun (label, _, _) ->
                label = Asttypes.Labelled "children")
       in
       match maybe_children with
       (* There is no need to deal with this situation as the children cannot be NONE *)
       | None -> ()
-      | Some (_, children) ->
+      | Some (_, _, children) ->
         let leading, inside, _ = partition_by_loc after children.pexp_loc in
         if props = [] then
           (* All comments inside a tag are trailing comments of the tag if there are no props
@@ -1438,14 +1438,16 @@ and walk_expression expr t comments =
           in
           attach t.trailing call_expr.pexp_loc after_expr
         else
-          walk_list (props |> List.map (fun (_, e) -> ExprArgument e)) t leading;
+          walk_list
+            (props |> List.map (fun (_, _, e) -> ExprArgument e))
+            t leading;
         walk_expression children t inside)
     else
       let after_expr, rest =
         partition_adjacent_trailing call_expr.pexp_loc after
       in
       attach t.trailing call_expr.pexp_loc after_expr;
-      walk_list (arguments |> List.map (fun (_, e) -> ExprArgument e)) t rest
+      walk_list (arguments |> List.map (fun (_, _, e) -> ExprArgument e)) t rest
   | Pexp_fun _ | Pexp_newtype _ -> (
     let _, parameters, return_expr = fun_expr expr in
     let comments =

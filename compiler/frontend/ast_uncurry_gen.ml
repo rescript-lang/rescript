@@ -58,6 +58,7 @@ let to_method_callback loc (self : Bs_ast_mapper.mapper) label
       args =
         [
           ( Nolabel,
+            Location.none,
             Exp.constraint_ ~loc
               (Exp.record ~loc
                  [

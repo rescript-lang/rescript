@@ -263,13 +263,17 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
             pexp_attributes;
           };
         args =
-          [(_, lhs); (_, {pexp_desc = Pexp_apply {funct = d; args; partial}})];
+          [
+            (_, _, lhs);
+            (_, _, {pexp_desc = Pexp_apply {funct = d; args; partial}});
+          ];
       } ->
     (* Transform away pipe with apply call *)
     exprToContextPath
       {
         pexp_desc =
-          Pexp_apply {funct = d; args = (Nolabel, lhs) :: args; partial};
+          Pexp_apply
+            {funct = d; args = (Nolabel, Location.none, lhs) :: args; partial};
         pexp_loc;
         pexp_attributes;
       }
@@ -278,7 +282,8 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
         funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};
         args =
           [
-            (_, lhs); (_, {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes});
+            (_, _, lhs);
+            (_, _, {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes});
           ];
         partial;
       } ->
@@ -289,7 +294,7 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
           Pexp_apply
             {
               funct = {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes};
-              args = [(Nolabel, lhs)];
+              args = [(Nolabel, Location.none, lhs)];
               partial;
             };
         pexp_loc;
@@ -298,7 +303,8 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
   | Pexp_apply {funct = e1; args} -> (
     match exprToContextPath e1 with
     | None -> None
-    | Some contexPath -> Some (CPApply (contexPath, args |> List.map fst)))
+    | Some contexPath ->
+      Some (CPApply (contexPath, args |> List.map (fun (l, _, _) -> l))))
   | Pexp_tuple exprs ->
     let exprsAsContextPaths = exprs |> List.filter_map exprToContextPath in
     if List.length exprs = List.length exprsAsContextPaths then
@@ -329,7 +335,7 @@ let completePipeChain (exp : Parsetree.expression) =
   | Pexp_apply
       {
         funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};
-        args = [_; (_, {pexp_desc = Pexp_apply {funct = d}})];
+        args = [_; (_, _, {pexp_desc = Pexp_apply {funct = d}})];
       } ->
     exprToContextPath exp |> Option.map (fun ctxPath -> (ctxPath, d.pexp_loc))
     (* When the left side of the pipe we're completing is an identifier application.
@@ -337,7 +343,7 @@ let completePipeChain (exp : Parsetree.expression) =
   | Pexp_apply
       {
         funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};
-        args = [_; (_, {pexp_desc = Pexp_ident _; pexp_loc})];
+        args = [_; (_, _, {pexp_desc = Pexp_ident _; pexp_loc})];
       } ->
     exprToContextPath exp |> Option.map (fun ctxPath -> (ctxPath, pexp_loc))
   | _ -> None
@@ -1116,8 +1122,10 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
           funct = {pexp_desc = Pexp_ident {txt = Lident "->"; loc = opLoc}};
           args =
             [
-              (_, lhs);
-              (_, {pexp_desc = Pexp_extension _; pexp_loc = {loc_ghost = true}});
+              (_, _, lhs);
+              ( _,
+                _,
+                {pexp_desc = Pexp_extension _; pexp_loc = {loc_ghost = true}} );
             ];
         }
       when opLoc |> Loc.hasPos ~pos:posBeforeCursor ->
@@ -1294,8 +1302,10 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
               funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};
               args =
                 [
-                  (_, lhs);
-                  (_, {pexp_desc = Pexp_ident {txt = Longident.Lident id; loc}});
+                  (_, _, lhs);
+                  ( _,
+                    _,
+                    {pexp_desc = Pexp_ident {txt = Longident.Lident id; loc}} );
                 ];
             }
           when loc |> Loc.hasPos ~pos:posBeforeCursor ->
@@ -1304,7 +1314,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
         | Pexp_apply
             {
               funct = {pexp_desc = Pexp_ident {txt = Lident "->"; loc = opLoc}};
-              args = [(_, lhs); _];
+              args = [(_, _, lhs); _];
             }
           when Loc.end_ opLoc = posCursor ->
           if Debug.verbose () then print_endline "[expr_iter] Case foo->";
@@ -1312,7 +1322,8 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
         | Pexp_apply
             {
               funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};
-              args = [_; (_, {pexp_desc = Pexp_apply {funct = funExpr; args}})];
+              args =
+                [_; (_, _, {pexp_desc = Pexp_apply {funct = funExpr; args}})];
             }
           when (* Normally named arg completion fires when the cursor is right after the expression.
                   E.g in foo(~<---there

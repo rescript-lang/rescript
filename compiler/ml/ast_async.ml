@@ -11,7 +11,7 @@ let add_promise_type ?(loc = Location.none) ~async
       Ast_helper.Exp.ident ~loc
         {txt = Ldot (Lident Primitive_modules.promise, "unsafe_async"); loc}
     in
-    Ast_helper.Exp.apply ~loc unsafe_async [(Nolabel, result)]
+    Ast_helper.Exp.apply ~loc unsafe_async [(Nolabel, Location.none, result)]
   else result
 
 let rec add_promise_to_result ~loc (e : Parsetree.expression) =

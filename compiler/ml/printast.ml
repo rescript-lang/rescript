@@ -655,7 +655,7 @@ and longident_x_expression i ppf (li, e, opt) =
   line i ppf "%a%s\n" fmt_longident_loc li (if opt then "?" else "");
   expression (i + 1) ppf e
 
-and label_x_expression i ppf (l, e) =
+and label_x_expression i ppf (l, _loc, e) =
   line i ppf "<arg>\n";
   arg_label i ppf l;
   expression (i + 1) ppf e

@@ -63,7 +63,7 @@ type mapper = {
 
 let id x = x
 let map_fst f (x, y) = (f x, y)
-let map_snd f (x, y) = (x, f y)
+let map_3rd f (x, y, z) = (x, y, f z)
 let map_tuple f1 f2 (x, y) = (f1 x, f2 y)
 let map_tuple3 f1 f2 f3 (x, y, z) = (f1 x, f2 y, f3 z)
 let map_opt f = function
@@ -290,7 +290,7 @@ module E = struct
         (sub.pat sub p) (sub.expr sub e)
     | Pexp_apply {funct = e; args = l; partial} ->
       apply ~loc ~attrs ~partial (sub.expr sub e)
-        (List.map (map_snd (sub.expr sub)) l)
+        (List.map (map_3rd (sub.expr sub)) l)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)

@@ -266,7 +266,7 @@ let command ~debug ~emitter ~path =
 
       let posOfGreatherthanAfterProps =
         let rec loop = function
-          | (Asttypes.Labelled "children", {Parsetree.pexp_loc}) :: _ ->
+          | (Asttypes.Labelled "children", _, {Parsetree.pexp_loc}) :: _ ->
             Loc.start pexp_loc
           | _ :: args -> loop args
           | [] -> (* should not happen *) (-1, -1)
@@ -297,7 +297,7 @@ let command ~debug ~emitter ~path =
            emitter (* <foo> ... </foo> <-- *)
            |> emitJsxTag ~debug ~name:">" ~pos:posOfFinalGreatherthan));
 
-      args |> List.iter (fun (_lbl, arg) -> iterator.expr iterator arg)
+      args |> List.iter (fun (_lbl, _, arg) -> iterator.expr iterator arg)
     | Pexp_apply
         {
           funct =

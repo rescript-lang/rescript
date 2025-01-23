@@ -3150,11 +3150,11 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
       | extension ->
         print_extension ~state ~at_module_lvl:false extension cmt_tbl)
     | Pexp_apply
-        {funct = e; args = [(Nolabel, {pexp_desc = Pexp_array sub_lists})]}
+        {funct = e; args = [(Nolabel, _, {pexp_desc = Pexp_array sub_lists})]}
       when ParsetreeViewer.is_spread_belt_array_concat e ->
       print_belt_array_concat_apply ~state sub_lists cmt_tbl
     | Pexp_apply
-        {funct = e; args = [(Nolabel, {pexp_desc = Pexp_array sub_lists})]}
+        {funct = e; args = [(Nolabel, _, {pexp_desc = Pexp_array sub_lists})]}
       when ParsetreeViewer.is_spread_belt_list_concat e ->
       print_belt_list_concat_apply ~state sub_lists cmt_tbl
     | Pexp_apply {funct = call_expr; args} ->
@@ -3558,7 +3558,7 @@ and print_template_literal ~state expr cmt_tbl =
     | Pexp_apply
         {
           funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "++"}};
-          args = [(Nolabel, arg1); (Nolabel, arg2)];
+          args = [(Nolabel, _, arg1); (Nolabel, _, arg2)];
         } ->
       let lhs = walk_expr arg1 in
       let rhs = walk_expr arg2 in
@@ -3589,8 +3589,8 @@ and print_tagged_template_literal ~state call_expr args cmt_tbl =
   let strings_list, values_list =
     match args with
     | [
-     (_, {Parsetree.pexp_desc = Pexp_array strings});
-     (_, {Parsetree.pexp_desc = Pexp_array values});
+     (_, _, {Parsetree.pexp_desc = Pexp_array strings});
+     (_, _, {Parsetree.pexp_desc = Pexp_array values});
     ] ->
       (strings, values)
     | _ -> assert false
@@ -3647,7 +3647,7 @@ and print_unary_expression ~state expr cmt_tbl =
   | Pexp_apply
       {
         funct = {pexp_desc = Pexp_ident {txt = Longident.Lident operator}};
-        args = [(Nolabel, operand)];
+        args = [(Nolabel, _, operand)];
       } ->
     let printed_operand =
       let doc = print_expression_with_comments ~state operand cmt_tbl in
@@ -3685,7 +3685,7 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
            Pexp_apply
              {
                funct = {pexp_desc = Pexp_ident {txt = Longident.Lident operator}};
-               args = [(_, left); (_, right)];
+               args = [(_, _, left); (_, _, right)];
              };
         } ->
           if
@@ -3792,7 +3792,7 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
         | Pexp_apply
             {
               funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "++"; loc}};
-              args = [(Nolabel, _); (Nolabel, _)];
+              args = [(Nolabel, _, _); (Nolabel, _, _)];
             }
           when loc.loc_ghost ->
           let doc = print_template_literal ~state expr cmt_tbl in
@@ -3806,7 +3806,7 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
         | Pexp_apply
             {
               funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "#="}};
-              args = [(Nolabel, lhs); (Nolabel, rhs)];
+              args = [(Nolabel, _, lhs); (Nolabel, _, rhs)];
             } ->
           let rhs_doc = print_expression_with_comments ~state rhs cmt_tbl in
           let lhs_doc = print_expression_with_comments ~state lhs cmt_tbl in
@@ -3847,7 +3847,7 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
           {
             pexp_desc = Pexp_ident {txt = Longident.Lident (("->" | "|>") as op)};
           };
-        args = [(Nolabel, lhs); (Nolabel, rhs)];
+        args = [(Nolabel, _, lhs); (Nolabel, _, rhs)];
       }
     when not
            (ParsetreeViewer.is_binary_expression lhs
@@ -3873,7 +3873,7 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
   | Pexp_apply
       {
         funct = {pexp_desc = Pexp_ident {txt = Longident.Lident operator}};
-        args = [(Nolabel, lhs); (Nolabel, rhs)];
+        args = [(Nolabel, _, lhs); (Nolabel, _, rhs)];
       } ->
     let is_multiline =
       lhs.pexp_loc.loc_start.pos_lnum < rhs.pexp_loc.loc_start.pos_lnum
@@ -4045,7 +4045,7 @@ and print_pexp_apply ~state expr cmt_tbl =
   | Pexp_apply
       {
         funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "##"}};
-        args = [(Nolabel, parent_expr); (Nolabel, member_expr)];
+        args = [(Nolabel, _, parent_expr); (Nolabel, _, member_expr)];
       } ->
     let parent_doc =
       let doc = print_expression_with_comments ~state parent_expr cmt_tbl in
@@ -4077,7 +4077,7 @@ and print_pexp_apply ~state expr cmt_tbl =
   | Pexp_apply
       {
         funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "#="}};
-        args = [(Nolabel, lhs); (Nolabel, rhs)];
+        args = [(Nolabel, _, lhs); (Nolabel, _, rhs)];
       } -> (
     let rhs_doc =
       let doc = print_expression_with_comments ~state rhs cmt_tbl in
@@ -4114,7 +4114,7 @@ and print_pexp_apply ~state expr cmt_tbl =
               Pexp_ident
                 {txt = Longident.Ldot (Lident "Primitive_dict", "make")};
           };
-        args = [(Nolabel, key_values)];
+        args = [(Nolabel, _, key_values)];
       }
     when Res_parsetree_viewer.is_tuple_array key_values ->
     Doc.concat
@@ -4129,7 +4129,7 @@ and print_pexp_apply ~state expr cmt_tbl =
           {
             pexp_desc = Pexp_ident {txt = Longident.Ldot (Lident "Array", "get")};
           };
-        args = [(Nolabel, parent_expr); (Nolabel, member_expr)];
+        args = [(Nolabel, _, parent_expr); (Nolabel, _, member_expr)];
       }
     when not (ParsetreeViewer.is_rewritten_underscore_apply_sugar parent_expr)
     ->
@@ -4176,9 +4176,9 @@ and print_pexp_apply ~state expr cmt_tbl =
           };
         args =
           [
-            (Nolabel, parent_expr);
-            (Nolabel, member_expr);
-            (Nolabel, target_expr);
+            (Nolabel, _, parent_expr);
+            (Nolabel, _, member_expr);
+            (Nolabel, _, target_expr);
           ];
       } ->
     let member =
@@ -4250,7 +4250,8 @@ and print_pexp_apply ~state expr cmt_tbl =
   | Pexp_apply {funct = call_expr; args; partial} ->
     let args =
       List.map
-        (fun (lbl, arg) -> (lbl, ParsetreeViewer.rewrite_underscore_apply arg))
+        (fun (lbl, _, arg) ->
+          (lbl, ParsetreeViewer.rewrite_underscore_apply arg))
         args
     in
     let attrs = expr.pexp_attributes in
@@ -4509,8 +4510,9 @@ and print_jsx_props ~state args cmt_tbl : Doc.t * Parsetree.expression option =
     match args with
     | [] -> (Doc.nil, None)
     | [
-     (Asttypes.Labelled "children", children);
+     (Asttypes.Labelled "children", _, children);
      ( Asttypes.Nolabel,
+       _,
        {
          Parsetree.pexp_desc =
            Pexp_construct ({txt = Longident.Lident "()"}, None);
@@ -4518,10 +4520,11 @@ and print_jsx_props ~state args cmt_tbl : Doc.t * Parsetree.expression option =
     ] ->
       let doc = if is_self_closing children then Doc.line else Doc.nil in
       (doc, Some children)
-    | ((_, expr) as last_prop)
+    | ((_, lbl_loc, expr) as last_prop)
       :: [
-           (Asttypes.Labelled "children", children);
+           (Asttypes.Labelled "children", _, children);
            ( Asttypes.Nolabel,
+             _,
              {
                Parsetree.pexp_desc =
                  Pexp_construct ({txt = Longident.Lident "()"}, None);
@@ -4530,6 +4533,7 @@ and print_jsx_props ~state args cmt_tbl : Doc.t * Parsetree.expression option =
       let loc =
         match expr.Parsetree.pexp_attributes with
         | ({Location.txt = "res.namedArgLoc"; loc}, _) :: _attrs ->
+          let _ = assert (loc = lbl_loc) in
           {loc with loc_end = expr.pexp_loc.loc_end}
         | _ -> expr.pexp_loc
       in
@@ -4563,12 +4567,14 @@ and print_jsx_props ~state args cmt_tbl : Doc.t * Parsetree.expression option =
 and print_jsx_prop ~state arg cmt_tbl =
   match arg with
   | ( ((Asttypes.Labelled lbl_txt | Optional lbl_txt) as lbl),
+      lbl_loc,
       {
         Parsetree.pexp_attributes =
           [({Location.txt = "res.namedArgLoc"; loc = arg_loc}, _)];
         pexp_desc = Pexp_ident {txt = Longident.Lident ident};
       } )
     when lbl_txt = ident (* jsx punning *) -> (
+    let () = assert (arg_loc = lbl_loc) in
     match lbl with
     | Nolabel -> Doc.nil
     | Labelled _lbl -> print_comments (print_ident_like ident) cmt_tbl arg_loc
@@ -4576,6 +4582,7 @@ and print_jsx_prop ~state arg cmt_tbl =
       let doc = Doc.concat [Doc.question; print_ident_like ident] in
       print_comments doc cmt_tbl arg_loc)
   | ( ((Asttypes.Labelled lbl_txt | Optional lbl_txt) as lbl),
+      _,
       {
         Parsetree.pexp_attributes = [];
         pexp_desc = Pexp_ident {txt = Longident.Lident ident};
@@ -4585,13 +4592,14 @@ and print_jsx_prop ~state arg cmt_tbl =
     | Nolabel -> Doc.nil
     | Labelled _lbl -> print_ident_like ident
     | Optional _lbl -> Doc.concat [Doc.question; print_ident_like ident])
-  | Asttypes.Labelled "_spreadProps", expr ->
+  | Asttypes.Labelled "_spreadProps", _, expr ->
     let doc = print_expression_with_comments ~state expr cmt_tbl in
     Doc.concat [Doc.lbrace; Doc.dotdotdot; doc; Doc.rbrace]
-  | lbl, expr ->
+  | lbl, lbl_loc, expr ->
     let arg_loc, expr =
       match expr.pexp_attributes with
       | ({Location.txt = "res.namedArgLoc"; loc}, _) :: attrs ->
+        assert (loc = lbl_loc);
         (loc, {expr with pexp_attributes = attrs})
       | _ -> (Location.none, expr)
     in

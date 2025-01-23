@@ -898,7 +898,9 @@ type arg = {label: label; exp: Parsetree.expression}
 let extractExpApplyArgs ~args =
   let rec processArgs ~acc args =
     match args with
-    | (((Asttypes.Labelled s | Optional s) as label), (e : Parsetree.expression))
+    | ( ((Asttypes.Labelled s | Optional s) as label),
+        _,
+        (e : Parsetree.expression) )
       :: rest -> (
       let namedArgLoc =
         e.pexp_attributes
@@ -919,7 +921,7 @@ let extractExpApplyArgs ~args =
         in
         processArgs ~acc:({label = Some labelled; exp = e} :: acc) rest
       | None -> processArgs ~acc rest)
-    | (Asttypes.Nolabel, (e : Parsetree.expression)) :: rest ->
+    | (Asttypes.Nolabel, _, (e : Parsetree.expression)) :: rest ->
       if e.pexp_loc.loc_ghost then processArgs ~acc rest
       else processArgs ~acc:({label = None; exp = e} :: acc) rest
     | [] -> List.rev acc

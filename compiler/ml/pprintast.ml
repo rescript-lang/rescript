@@ -523,7 +523,7 @@ and sugar_expr ctxt f e =
           funct = {pexp_desc = Pexp_ident {txt = id; _}; pexp_attributes = []; _};
           args;
         }
-      when List.for_all (fun (lab, _) -> lab = Nolabel) args -> (
+      when List.for_all (fun (lab, _, _) -> lab = Nolabel) args -> (
       let print_indexop a path_prefix assign left right print_index indices
           rem_args =
         let print_path ppf = function
@@ -544,7 +544,7 @@ and sugar_expr ctxt f e =
           true
         | _ -> false
       in
-      match (id, List.map snd args) with
+      match (id, List.map (fun (_, _, e) -> e) args) with
       | Lident "!", [e] ->
         pp f "@[<hov>!%a@]" (simple_expr ctxt) e;
         true
@@ -636,7 +636,7 @@ and expression ctxt f x =
         match view_fixity_of_exp e with
         | `Infix s -> (
           match l with
-          | [((Nolabel, _) as arg1); ((Nolabel, _) as arg2)] ->
+          | [((Nolabel, _, _) as arg1); ((Nolabel, _, _) as arg2)] ->
             (* FIXME associativity label_x_expression_param *)
             pp f "@[<2>%a@;%s@;%a@]"
               (label_x_expression_param reset_ctxt)
@@ -655,13 +655,13 @@ and expression ctxt f x =
               match l with
               (* See #7200: avoid turning (~- 1) into (- 1) which is
                  parsed as an int literal *)
-              | [(_, {pexp_desc = Pexp_constant _})] -> false
+              | [(_, _, {pexp_desc = Pexp_constant _})] -> false
               | _ -> true
             then String.sub s 1 (String.length s - 1)
             else s
           in
           match l with
-          | [(Nolabel, x)] -> pp f "@[<2>%s@;%a@]" s (simple_expr ctxt) x
+          | [(Nolabel, _, x)] -> pp f "@[<2>%s@;%a@]" s (simple_expr ctxt) x
           | _ ->
             pp f "@[<2>%a %a@]" (simple_expr ctxt) e
               (list (label_x_expression_param ctxt))
@@ -1273,7 +1273,7 @@ and case_list ctxt f l : unit =
   in
   list aux f l ~sep:""
 
-and label_x_expression_param ctxt f (l, e) =
+and label_x_expression_param ctxt f (l, _, e) =
   let simple_name =
     match e with
     | {pexp_desc = Pexp_ident {txt = Lident l; _}; pexp_attributes = []} ->

@@ -46,6 +46,7 @@ let handle_extension e (self : Bs_ast_mapper.mapper)
       (Exp.ident ~loc {txt = Longident.parse "Js.Exn.raiseError"; loc})
       [
         ( Nolabel,
+          Location.none,
           Exp.constant ~loc
             (Pconst_string
                ( (pretext

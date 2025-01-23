@@ -349,7 +349,7 @@ module E = struct
       in
       let partial, attrs = process_partial_app_attribute attrs in
       apply ~loc ~attrs ~partial (sub.expr sub e)
-        (List.map (map_snd (sub.expr sub)) l)
+        (List.map (fun (lbl, e) -> (lbl, Location.none, sub.expr sub e)) l)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)

@@ -223,7 +223,7 @@ let rec add_expr bv exp =
     add_expr (add_pattern bv p) e
   | Pexp_apply {funct = e; args = el} ->
     add_expr bv e;
-    List.iter (fun (_, e) -> add_expr bv e) el
+    List.iter (fun (_, _, e) -> add_expr bv e) el
   | Pexp_match (e, pel) ->
     add_expr bv e;
     add_cases bv pel

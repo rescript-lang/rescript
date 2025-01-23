@@ -137,4 +137,4 @@ type object_field = Parsetree.object_field
 val object_field :
   Asttypes.label Asttypes.loc -> attributes -> core_type -> object_field
 
-type args = (Asttypes.arg_label * Parsetree.expression) list
+type args = (Asttypes.arg_label * Location.t * Parsetree.expression) list

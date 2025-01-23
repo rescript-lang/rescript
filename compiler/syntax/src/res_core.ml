@@ -166,7 +166,11 @@ let tagged_template_literal_attr =
 
 let spread_attr = (Location.mknoloc "res.spread", Parsetree.PStr [])
 
-type argument = {label: Asttypes.arg_label; expr: Parsetree.expression}
+type argument = {
+  label: Asttypes.arg_label;
+  lbl_loc: Location.t;
+  expr: Parsetree.expression;
+}
 
 type type_parameter = {
   attrs: Ast_helper.attrs;
@@ -427,14 +431,14 @@ let make_unary_expr start_pos token_end token operand =
       ~loc:(mk_loc start_pos operand.Parsetree.pexp_loc.loc_end)
       (Ast_helper.Exp.ident ~loc:token_loc
          (Location.mkloc (Longident.Lident operator) token_loc))
-      [(Nolabel, operand)]
+      [(Nolabel, Location.none, operand)]
   | Token.Bang, _ ->
     let token_loc = mk_loc start_pos token_end in
     Ast_helper.Exp.apply
       ~loc:(mk_loc start_pos operand.Parsetree.pexp_loc.loc_end)
       (Ast_helper.Exp.ident ~loc:token_loc
          (Location.mkloc (Longident.Lident "not") token_loc))
-      [(Nolabel, operand)]
+      [(Nolabel, Location.none, operand)]
   | _ -> operand
 
 let make_list_expression loc seq ext_opt =
@@ -522,13 +526,13 @@ let wrap_type_annotation ~loc newtypes core_type body =
 let process_underscore_application args =
   let exp_question = ref None in
   let hidden_var = "__x" in
-  let check_arg ((lab, exp) as arg) =
+  let check_arg ((lab, _, exp) as arg) =
     match exp.Parsetree.pexp_desc with
     | Pexp_ident ({txt = Lident "_"} as id) ->
       let new_id = Location.mkloc (Longident.Lident hidden_var) id.loc in
       let new_exp = Ast_helper.Exp.mk (Pexp_ident new_id) ~loc:exp.pexp_loc in
       exp_question := Some new_exp;
-      (lab, new_exp)
+      (lab, Location.none, new_exp)
     | _ -> arg
   in
   let args = List.map check_arg args in
@@ -2033,7 +2037,7 @@ and parse_bracket_access p expr start_pos =
       Ast_helper.Exp.apply ~loc
         (Ast_helper.Exp.ident ~loc:operator_loc
            (Location.mkloc (Longident.Lident "#=") operator_loc))
-        [(Nolabel, e); (Nolabel, rhs_expr)]
+        [(Nolabel, Location.none, e); (Nolabel, Location.none, rhs_expr)]
     | _ -> e)
   | _ -> (
     let access_expr = parse_constrained_or_coerced_expr p in
@@ -2060,7 +2064,11 @@ and parse_bracket_access p expr start_pos =
       let array_set =
         Ast_helper.Exp.apply ~loc:(mk_loc start_pos end_pos)
           (Ast_helper.Exp.ident ~loc:array_loc array_set)
-          [(Nolabel, expr); (Nolabel, access_expr); (Nolabel, rhs_expr)]
+          [
+            (Nolabel, Location.none, expr);
+            (Nolabel, Location.none, access_expr);
+            (Nolabel, Location.none, rhs_expr);
+          ]
       in
       Parser.eat_breadcrumb p;
       array_set
@@ -2070,7 +2078,9 @@ and parse_bracket_access p expr start_pos =
         Ast_helper.Exp.apply ~loc:(mk_loc start_pos end_pos)
           (Ast_helper.Exp.ident ~loc:array_loc
              (Location.mkloc (Longident.Ldot (Lident "Array", "get")) array_loc))
-          [(Nolabel, expr); (Nolabel, access_expr)]
+          [
+            (Nolabel, Location.none, expr); (Nolabel, Location.none, access_expr);
+          ]
       in
       parse_primary_expr ~operand:e p)
 
@@ -2248,13 +2258,18 @@ and parse_binary_expr ?(context = OrdinaryExpr) ?a p prec =
             b with
             pexp_desc =
               Pexp_apply
-                {funct = fun_expr; args = args @ [(Nolabel, a)]; partial};
+                {
+                  funct = fun_expr;
+                  args = args @ [(Nolabel, Location.none, a)];
+                  partial;
+                };
           }
-        | BarGreater, _ -> Ast_helper.Exp.apply ~loc b [(Nolabel, a)]
+        | BarGreater, _ ->
+          Ast_helper.Exp.apply ~loc b [(Nolabel, Location.none, a)]
         | _ ->
           Ast_helper.Exp.apply ~loc
             (make_infix_operator p token start_pos end_pos)
-            [(Nolabel, a); (Nolabel, b)]
+            [(Nolabel, Location.none, a); (Nolabel, Location.none, b)]
       in
       Parser.eat_breadcrumb p;
       loop expr)
@@ -2346,7 +2361,10 @@ and parse_template_expr ?prefix p =
     Ast_helper.Exp.apply
       ~attrs:[tagged_template_literal_attr]
       ~loc:lident_loc.loc ident
-      [(Nolabel, strings_array); (Nolabel, values_array)]
+      [
+        (Nolabel, Location.none, strings_array);
+        (Nolabel, Location.none, values_array);
+      ]
   in
 
   let hidden_operator =
@@ -2356,7 +2374,7 @@ and parse_template_expr ?prefix p =
   let concat (e1 : Parsetree.expression) (e2 : Parsetree.expression) =
     let loc = mk_loc e1.pexp_loc.loc_start e2.pexp_loc.loc_end in
     Ast_helper.Exp.apply ~attrs:[template_literal_attr] ~loc hidden_operator
-      [(Nolabel, e1); (Nolabel, e2)]
+      [(Nolabel, Location.none, e1); (Nolabel, Location.none, e2)]
   in
   let gen_interpolated_string () =
     let subparts =
@@ -2705,8 +2723,9 @@ and parse_jsx_opening_or_self_closing_element ~start_pos p =
        [
          jsx_props;
          [
-           (Asttypes.Labelled "children", children);
+           (Asttypes.Labelled "children", Location.none, children);
            ( Asttypes.Nolabel,
+             Location.none,
              Ast_helper.Exp.construct
                (Location.mknoloc (Longident.Lident "()"))
                None );
@@ -2775,6 +2794,7 @@ and parse_jsx_prop p =
     if optional then
       Some
         ( Asttypes.Optional name,
+          loc,
           Ast_helper.Exp.ident ~attrs:[prop_loc_attr] ~loc
             (Location.mkloc (Longident.Lident name) loc) )
     else
@@ -2791,7 +2811,7 @@ and parse_jsx_prop p =
         let label =
           if optional then Asttypes.Optional name else Asttypes.Labelled name
         in
-        Some (label, attr_expr)
+        Some (label, loc, attr_expr)
       | _ ->
         let attr_expr =
           Ast_helper.Exp.ident ~loc ~attrs:[prop_loc_attr]
@@ -2800,7 +2820,7 @@ and parse_jsx_prop p =
         let label =
           if optional then Asttypes.Optional name else Asttypes.Labelled name
         in
-        Some (label, attr_expr))
+        Some (label, loc, attr_expr))
   (* {...props} *)
   | Lbrace -> (
     Scanner.pop_mode p.scanner Jsx;
@@ -2823,7 +2843,7 @@ and parse_jsx_prop p =
       | Rbrace ->
         Parser.next p;
         Scanner.set_jsx_mode p.scanner;
-        Some (label, attr_expr)
+        Some (label, loc, attr_expr)
       | _ -> None)
     | _ -> None)
   | _ -> None
@@ -3628,7 +3648,8 @@ and parse_argument p : argument option =
             (Location.mknoloc (Longident.Lident "()"))
             None
         in
-        Some {label = Asttypes.Nolabel; expr = unit_expr}
+        Some
+          {label = Asttypes.Nolabel; lbl_loc = Location.none; expr = unit_expr}
       | _ -> parse_argument2 p)
     | _ -> parse_argument2 p
   else None
@@ -3642,7 +3663,7 @@ and parse_argument2 p : argument option =
     let expr =
       Ast_helper.Exp.ident ~loc (Location.mkloc (Longident.Lident "_") loc)
     in
-    Some {label = Nolabel; expr}
+    Some {label = Nolabel; lbl_loc = Location.none; expr}
   | Tilde -> (
     Parser.next p;
     (* TODO: nesting of pattern matches not intuitive for error recovery *)
@@ -3662,7 +3683,7 @@ and parse_argument2 p : argument option =
       match p.Parser.token with
       | Question ->
         Parser.next p;
-        Some {label = Optional ident; expr = ident_expr}
+        Some {label = Optional ident; lbl_loc = loc; expr = ident_expr}
       | Equal ->
         Parser.next p;
         let label =
@@ -3683,7 +3704,7 @@ and parse_argument2 p : argument option =
             let expr = parse_constrained_or_coerced_expr p in
             {expr with pexp_attributes = prop_loc_attr :: expr.pexp_attributes}
         in
-        Some {label; expr}
+        Some {label; lbl_loc = loc; expr}
       | Colon ->
         Parser.next p;
         let typ = parse_typ_expr p in
@@ -3691,12 +3712,23 @@ and parse_argument2 p : argument option =
         let expr =
           Ast_helper.Exp.constraint_ ~attrs:[prop_loc_attr] ~loc ident_expr typ
         in
-        Some {label = Labelled ident; expr}
-      | _ -> Some {label = Labelled ident; expr = ident_expr})
+        Some {label = Labelled ident; lbl_loc = loc; expr}
+      | _ -> Some {label = Labelled ident; lbl_loc = loc; expr = ident_expr})
     | t ->
       Parser.err p (Diagnostics.lident t);
-      Some {label = Nolabel; expr = Recover.default_expr ()})
-  | _ -> Some {label = Nolabel; expr = parse_constrained_or_coerced_expr p}
+      Some
+        {
+          label = Nolabel;
+          lbl_loc = Location.none;
+          expr = Recover.default_expr ();
+        })
+  | _ ->
+    Some
+      {
+        label = Nolabel;
+        lbl_loc = Location.none;
+        expr = parse_constrained_or_coerced_expr p;
+      }
 
 and parse_call_expr p fun_expr =
   Parser.expect Lparen p;
@@ -3722,6 +3754,7 @@ and parse_call_expr p fun_expr =
       [
         {
           label = Nolabel;
+          lbl_loc = Location.none;
           expr =
             Ast_helper.Exp.construct ~loc
               (Location.mkloc (Longident.Lident "()") loc)
@@ -3733,9 +3766,11 @@ and parse_call_expr p fun_expr =
   let loc = {fun_expr.pexp_loc with loc_end = p.prev_end_pos} in
   let args =
     match args with
-    | {label = lbl; expr} :: args ->
-      let group (grp, acc) {label = lbl; expr} = ((lbl, expr) :: grp, acc) in
-      let grp, acc = List.fold_left group ([(lbl, expr)], []) args in
+    | {label = lbl; lbl_loc; expr} :: args ->
+      let group (grp, acc) {label = lbl; lbl_loc; expr} =
+        ((lbl, lbl_loc, expr) :: grp, acc)
+      in
+      let grp, acc = List.fold_left group ([(lbl, lbl_loc, expr)], []) args in
       List.rev (List.rev grp :: acc)
     | [] -> []
   in
@@ -3924,7 +3959,7 @@ and parse_list_expr ~start_pos p =
             (Longident.Ldot
                (Longident.Ldot (Longident.Lident "Belt", "List"), "concatMany"))
             loc))
-      [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc list_exprs)]
+      [(Asttypes.Nolabel, Location.none, Ast_helper.Exp.array ~loc list_exprs)]
 
 and parse_dict_expr ~start_pos p =
   let rows =
@@ -3953,7 +3988,11 @@ and parse_dict_expr ~start_pos p =
        (Location.mkloc
           (Longident.Ldot (Longident.Lident Primitive_modules.dict, "make"))
           loc))
-    [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc key_value_pairs)]
+    [
+      ( Asttypes.Nolabel,
+        Location.none,
+        Ast_helper.Exp.array ~loc key_value_pairs );
+    ]
 
 and parse_array_exp p =
   let start_pos = p.Parser.start_pos in
@@ -4008,7 +4047,7 @@ and parse_array_exp p =
             (Longident.Ldot
                (Longident.Ldot (Longident.Lident "Belt", "Array"), "concatMany"))
             loc))
-      [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc list_exprs)]
+      [(Asttypes.Nolabel, Location.none, Ast_helper.Exp.array ~loc list_exprs)]
 
 (* TODO: check attributes in the case of poly type vars,
  * might be context dependend: parseFieldDeclaration (see ocaml) *)

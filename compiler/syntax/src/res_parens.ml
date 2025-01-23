@@ -159,7 +159,7 @@ let rhs_binary_expr_operand parent_operator rhs =
             pexp_desc =
               Pexp_ident {txt = Longident.Lident operator; loc = operator_loc};
           };
-        args = [(_, _left); (_, _right)];
+        args = [(_, _, _left); (_, _, _right)];
       }
     when ParsetreeViewer.is_binary_operator operator
          && not (operator_loc.loc_ghost && operator = "++") ->
@@ -177,7 +177,7 @@ let flatten_operand_rhs parent_operator rhs =
             pexp_desc =
               Pexp_ident {txt = Longident.Lident operator; loc = operator_loc};
           };
-        args = [(_, _left); (_, _right)];
+        args = [(_, _, _left); (_, _, _right)];
       }
     when ParsetreeViewer.is_binary_operator operator
          && not (operator_loc.loc_ghost && operator = "++") ->

@@ -251,7 +251,7 @@ and expression_desc =
     *)
   | Pexp_apply of {
       funct: expression;
-      args: (arg_label * expression) list;
+      args: (arg_label * Location.t * expression) list;
       partial: bool;
     }
     (* E0 ~l1:E1 ... ~ln:En

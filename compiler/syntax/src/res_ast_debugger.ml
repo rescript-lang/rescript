@@ -573,7 +573,7 @@ module SexpAst = struct
             expression expr;
             Sexp.list
               (map_empty
-                 ~f:(fun (arg_lbl, expr) ->
+                 ~f:(fun (arg_lbl, _, expr) ->
                    Sexp.list [arg_label arg_lbl; expression expr])
                  args);
           ]

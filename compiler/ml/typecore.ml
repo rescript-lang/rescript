@@ -141,7 +141,7 @@ let iter_expression f e =
       expr e
     | Pexp_apply {funct = e; args = lel} ->
       expr e;
-      List.iter (fun (_, e) -> expr e) lel
+      List.iter (fun (_, _, e) -> expr e) lel
     | Pexp_let (_, pel, e) ->
       expr e;
       List.iter binding pel
@@ -3368,7 +3368,7 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
   | Texp_ident (path, _, _) -> (
     let entry = Hashtbl.find_opt Unified_ops.index_by_path (Path.name path) in
     match (entry, sargs) with
-    | Some {form = Unary; specialization}, [(lhs_label, lhs_expr)] ->
+    | Some {form = Unary; specialization}, [(lhs_label, _, lhs_expr)] ->
       let lhs = type_exp env lhs_expr in
       let lhs_type = expand_head env lhs.exp_type in
       let result_type =
@@ -3394,7 +3394,7 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
       let targs = [(lhs_label, Some lhs)] in
       Some (targs, result_type)
     | ( Some {form = Binary; specialization},
-        [(lhs_label, lhs_expr); (rhs_label, rhs_expr)] ) ->
+        [(lhs_label, _, lhs_expr); (rhs_label, _, rhs_expr)] ) ->
       let lhs = type_exp env lhs_expr in
       let lhs_type = expand_head env lhs.exp_type in
       let rhs = type_exp env rhs_expr in
@@ -3549,12 +3549,12 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
             omitted t2 []
         | _ -> collect_args ()
       else collect_args ()
-    | [(Nolabel, {pexp_desc = Pexp_construct ({txt = Lident "()"}, None)})]
+    | [(Nolabel, _, {pexp_desc = Pexp_construct ({txt = Lident "()"}, None)})]
       when total_app && omitted = [] && args <> []
            && List.length args = List.length !ignored ->
       (* foo(. ) treated as empty application if all args are optional (hence ignored) *)
       type_unknown_args max_arity ~args ~top_arity:None omitted ty_fun []
-    | (l1, sarg1) :: sargl ->
+    | (l1, _, sarg1) :: sargl ->
       let ty1, ty2 =
         let ty_fun = expand_head env ty_fun in
         let arity_ok = List.length args < max_arity in
@@ -3649,7 +3649,7 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
   let top_arity = if total_app then Some max_arity else None in
   match sargs with
   (* Special case for ignore: avoid discarding warning *)
-  | [(Nolabel, sarg)] when is_ignore ~env ~arity:top_arity funct ->
+  | [(Nolabel, _, sarg)] when is_ignore ~env ~arity:top_arity funct ->
     let ty_arg, ty_res =
       filter_arrow ~env ~arity:top_arity (instance env funct.exp_type) Nolabel
     in

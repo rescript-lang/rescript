@@ -371,6 +371,7 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
                  [
                    _;
                    ( _,
+                     _,
                      {
                        pexp_desc =
                          Pexp_apply

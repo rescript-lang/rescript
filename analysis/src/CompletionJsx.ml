@@ -465,20 +465,22 @@ let extractJsxProps ~(compName : Longident.t Location.loc) ~args =
   in
   let rec processProps ~acc args =
     match args with
-    | (Asttypes.Labelled "children", {Parsetree.pexp_loc}) :: _ ->
+    | (Asttypes.Labelled "children", _, {Parsetree.pexp_loc}) :: _ ->
       {
         compName;
         props = List.rev acc;
         childrenStart =
           (if pexp_loc.loc_ghost then None else Some (Loc.start pexp_loc));
       }
-    | ((Labelled s | Optional s), (eProp : Parsetree.expression)) :: rest -> (
+    | ((Labelled s | Optional s), lbl_loc, (eProp : Parsetree.expression))
+      :: rest -> (
       let namedArgLoc =
         eProp.pexp_attributes
         |> List.find_opt (fun ({Asttypes.txt}, _) -> txt = "res.namedArgLoc")
       in
       match namedArgLoc with
       | Some ({loc}, _) ->
+        assert (loc = lbl_loc);
         processProps
           ~acc:
             ({
