@@ -46,6 +46,5 @@ module Error3 =
     type nonrec observation =
       {
       observed: int ;
-      onStep:
-        currentValue:((unit)[@res.namedArgLoc ]) -> [%rescript.typehole ] }
+      onStep: currentValue:unit -> [%rescript.typehole ] }
   end

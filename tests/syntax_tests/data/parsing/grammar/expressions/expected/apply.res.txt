@@ -5,5 +5,5 @@
 ;;List.map (fun [arity:1]x -> x + 1) myList
 ;;List.reduce (fun [arity:2]acc -> fun curr -> acc + curr) 0 myList
 let unitUncurried = apply ()
-;;call ~a:(((((a)[@res.namedArgLoc ]) : int))[@res.namedArgLoc ])
+;;call ~a:(a : int)
 ;;call_partial 3 ...

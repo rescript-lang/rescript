@@ -42,7 +42,7 @@ let apply_simple ?(loc = default_loc) ?(attrs = []) (fn : expression)
       Pexp_apply
         {
           funct = fn;
-          args = Ext_list.map args (fun x -> (Asttypes.Nolabel, x));
+          args = Ext_list.map args (fun x -> (Asttypes.Nolbl, x));
           partial = false;
         };
   }
@@ -51,8 +51,7 @@ let app1 ?(loc = default_loc) ?(attrs = []) fn arg1 : expression =
   {
     pexp_loc = loc;
     pexp_attributes = attrs;
-    pexp_desc =
-      Pexp_apply {funct = fn; args = [(Nolabel, arg1)]; partial = false};
+    pexp_desc = Pexp_apply {funct = fn; args = [(Nolbl, arg1)]; partial = false};
   }
 
 let app2 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 : expression =
@@ -61,7 +60,7 @@ let app2 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 : expression =
     pexp_attributes = attrs;
     pexp_desc =
       Pexp_apply
-        {funct = fn; args = [(Nolabel, arg1); (Nolabel, arg2)]; partial = false};
+        {funct = fn; args = [(Nolbl, arg1); (Nolbl, arg2)]; partial = false};
   }
 
 let app3 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 arg3 : expression =
@@ -72,7 +71,7 @@ let app3 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 arg3 : expression =
       Pexp_apply
         {
           funct = fn;
-          args = [(Nolabel, arg1); (Nolabel, arg2); (Nolabel, arg3)];
+          args = [(Nolbl, arg1); (Nolbl, arg2); (Nolbl, arg3)];
           partial = false;
         };
   }
@@ -118,7 +117,9 @@ let apply_labels ?(loc = default_loc) ?(attrs = []) fn
       Pexp_apply
         {
           funct = fn;
-          args = Ext_list.map args (fun (l, a) -> (Asttypes.Labelled l, a));
+          args =
+            Ext_list.map args (fun (l, a) ->
+                (Asttypes.Lbl {txt = l; loc = Location.none}, a));
           partial = false;
         };
   }
@@ -167,4 +168,4 @@ type object_field = Parsetree.object_field
 
 let object_field l attrs ty = Parsetree.Otag (l, attrs, ty)
 
-type args = (Asttypes.arg_label * Parsetree.expression) list
+type args = (Asttypes.arg_label_loc * Parsetree.expression) list

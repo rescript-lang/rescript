@@ -57,7 +57,7 @@ let to_method_callback loc (self : Bs_ast_mapper.mapper) label
           {loc; txt = Ldot (Ast_literal.Lid.js_oo, "unsafe_to_method")};
       args =
         [
-          ( Nolabel,
+          ( Nolbl,
             Exp.constraint_ ~loc
               (Exp.record ~loc
                  [

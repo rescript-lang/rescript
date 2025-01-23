@@ -63,3 +63,31 @@ let same_arg_label (x : arg_label) y =
     match y with
     | Optional s0 -> s = s0
     | _ -> false)
+
+type arg_label_loc =
+  | Nolbl
+  | Lbl of string loc (*  label:T -> ... *)
+  | Opt of string loc (* ?label:T -> ... *)
+
+let to_arg_label_loc ?(loc = Location.none) lbl =
+  match lbl with
+  | Nolabel -> Nolbl
+  | Labelled s -> Lbl {loc; txt = s}
+  | Optional s -> Opt {loc; txt = s}
+
+let to_arg_label = function
+  | Nolbl -> Nolabel
+  | Lbl {txt} -> Labelled txt
+  | Opt {txt} -> Optional txt
+
+let same_arg_label_loc (x : arg_label_loc) y =
+  match x with
+  | Nolbl -> y = Nolbl
+  | Lbl {txt = s} -> (
+    match y with
+    | Lbl {txt = s0} -> s = s0
+    | _ -> false)
+  | Opt {txt = s} -> (
+    match y with
+    | Opt {txt = s0} -> s = s0
+    | _ -> false)

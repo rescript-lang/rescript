@@ -33,13 +33,11 @@ let unique_instance = build_instance (module Unique) 0
 let build_dispatch_table [arity:1]handlers =
   ((let table = Hashtbl.create (module String) in
     List.iter handlers
-      ~f:((fun
-             [arity:1](((module I)  : (module Query_handler_instance)) as
-                         instance)
-             ->
-             Hashtbl.set table ~key:((I.Query_handler.name)
-               [@res.namedArgLoc ]) ~data:((instance)[@res.namedArgLoc ]))
-      [@res.namedArgLoc ]) table)
+      ~f:(fun
+            [arity:1](((module I)  : (module Query_handler_instance)) as
+                        instance)
+            -> Hashtbl.set table ~key:I.Query_handler.name ~data:instance)
+      table)
   [@res.braces ])
 ;;(module Three)
 ;;((module Three) : (module X_int))

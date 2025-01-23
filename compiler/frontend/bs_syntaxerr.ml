@@ -109,5 +109,5 @@ let optional_err loc (lbl : Asttypes.arg_label) =
   | Optional _ -> raise (Error (loc, Optional_in_uncurried_bs_attribute))
   | _ -> ()
 
-let err_if_label loc (lbl : Asttypes.arg_label) =
-  if lbl <> Nolabel then raise (Error (loc, Misplaced_label_syntax))
+let err_if_label loc (lbl : Asttypes.arg_label_loc) =
+  if lbl <> Nolbl then raise (Error (loc, Misplaced_label_syntax))

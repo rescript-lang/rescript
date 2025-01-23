@@ -898,20 +898,18 @@ type arg = {label: label; exp: Parsetree.expression}
 let extractExpApplyArgs ~args =
   let rec processArgs ~acc args =
     match args with
-    | (((Asttypes.Labelled s | Optional s) as label), (e : Parsetree.expression))
+    | ( ((Asttypes.Lbl {txt = s; loc} | Opt {txt = s; loc}) as label),
+        (e : Parsetree.expression) )
       :: rest -> (
-      let namedArgLoc =
-        e.pexp_attributes
-        |> List.find_opt (fun ({Asttypes.txt}, _) -> txt = "res.namedArgLoc")
-      in
+      let namedArgLoc = if loc = Location.none then None else Some loc in
       match namedArgLoc with
-      | Some ({loc}, _) ->
+      | Some loc ->
         let labelled =
           {
             name = s;
             opt =
               (match label with
-              | Optional _ -> true
+              | Opt _ -> true
               | _ -> false);
             posStart = Loc.start loc;
             posEnd = Loc.end_ loc;
@@ -919,7 +917,7 @@ let extractExpApplyArgs ~args =
         in
         processArgs ~acc:({label = Some labelled; exp = e} :: acc) rest
       | None -> processArgs ~acc rest)
-    | (Asttypes.Nolabel, (e : Parsetree.expression)) :: rest ->
+    | (Nolbl, (e : Parsetree.expression)) :: rest ->
       if e.pexp_loc.loc_ghost then processArgs ~acc rest
       else processArgs ~acc:({label = None; exp = e} :: acc) rest
     | [] -> List.rev acc
