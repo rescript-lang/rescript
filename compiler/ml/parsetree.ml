@@ -230,8 +230,7 @@ and expression_desc =
        let rec P1 = E1 and ... and Pn = EN in E   (flag = Recursive)
     *)
   | Pexp_fun of {
-      arg_label: arg_label;
-      label_loc: Location.t;
+      arg_label: arg_label_loc;
       default: expression option;
       lhs: pattern;
       rhs: expression;

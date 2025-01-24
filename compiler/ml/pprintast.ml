@@ -494,10 +494,10 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
 
 and label_exp ctxt f (l, opt, p) =
   match l with
-  | Nolabel ->
+  | Nolbl ->
     (* single case pattern parens needed here *)
     pp f "%a@ " (simple_pattern ctxt) p
-  | Optional rest -> (
+  | Opt {txt = rest} -> (
     match p with
     | {ppat_desc = Ppat_var {txt; _}; ppat_attributes = []} when txt = rest -> (
       match opt with
@@ -508,7 +508,7 @@ and label_exp ctxt f (l, opt, p) =
       | Some o ->
         pp f "?%s:(%a=@;%a)@;" rest (pattern1 ctxt) p (expression ctxt) o
       | None -> pp f "?%s:%a@;" rest (simple_pattern ctxt) p))
-  | Labelled l -> (
+  | Lbl {txt = l} -> (
     match p with
     | {ppat_desc = Ppat_var {txt; _}; ppat_attributes = []} when txt = l ->
       pp f "~%s@;" l
@@ -988,7 +988,7 @@ and binding ctxt f {pvb_pat = p; pvb_expr = x; _} =
           | Some arity -> "[arity:" ^ string_of_int arity ^ "]"
         in
         let async_str = if async then "async " else "" in
-        if label = Nolabel then
+        if label = Nolbl then
           pp f "%s%s%a@ %a" async_str arity_str (simple_pattern ctxt) p
             pp_print_pexp_function e
         else

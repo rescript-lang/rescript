@@ -305,6 +305,7 @@ module E = struct
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
     | Pexp_fun (lab, def, p, e) ->
+      let lab = Asttypes.to_arg_label_loc lab in
       let async = Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.async") in
       fun_ ~loc ~attrs ~async ~arity:None lab
         (map_opt (sub.expr sub) def)

@@ -2770,7 +2770,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
     match e_fun.pexp_desc with
     | Pexp_fun
         {
-          arg_label = Nolabel;
+          arg_label = Nolbl;
           default = None;
           lhs = {ppat_desc = Ppat_var {txt = "__x"}};
           rhs = {pexp_desc = Pexp_apply _};
@@ -5041,7 +5041,7 @@ and print_expr_fun_parameters ~state ~in_callback ~async ~has_constraint
    ParsetreeViewer.Parameter
      {
        attrs = [];
-       lbl = Asttypes.Nolabel;
+       lbl = Nolbl;
        default_expr = None;
        pat = {Parsetree.ppat_desc = Ppat_any; ppat_loc};
      };
@@ -5056,7 +5056,7 @@ and print_expr_fun_parameters ~state ~in_callback ~async ~has_constraint
    ParsetreeViewer.Parameter
      {
        attrs = [];
-       lbl = Asttypes.Nolabel;
+       lbl = Nolbl;
        default_expr = None;
        pat =
          {
@@ -5082,7 +5082,7 @@ and print_expr_fun_parameters ~state ~in_callback ~async ~has_constraint
    ParsetreeViewer.Parameter
      {
        attrs = [];
-       lbl = Asttypes.Nolabel;
+       lbl = Nolbl;
        default_expr = None;
        pat =
          {ppat_desc = Ppat_construct ({txt = Longident.Lident "()"; loc}, None)};
@@ -5148,7 +5148,7 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
                     cmt_tbl lbl.Asttypes.loc)
                 lbls);
          ])
-  | Parameter {attrs; lbl; lbl_loc; default_expr; pat = pattern} ->
+  | Parameter {attrs; lbl; default_expr; pat = pattern} ->
     let attrs = print_attributes ~state attrs cmt_tbl in
     (* =defaultValue *)
     let default_expr_doc =
@@ -5162,8 +5162,8 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
      * ~from                   ->  punning *)
     let label_with_pattern =
       match (lbl, pattern) with
-      | Asttypes.Nolabel, pattern -> print_pattern ~state pattern cmt_tbl
-      | ( (Asttypes.Labelled lbl | Optional lbl),
+      | Nolbl, pattern -> print_pattern ~state pattern cmt_tbl
+      | ( (Lbl {txt = lbl} | Opt {txt = lbl}),
           {ppat_desc = Ppat_var string_loc; ppat_attributes} )
         when lbl = string_loc.txt ->
         (* ~d *)
@@ -5173,7 +5173,7 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
             Doc.text "~";
             print_ident_like lbl;
           ]
-      | ( (Asttypes.Labelled lbl | Optional lbl),
+      | ( (Lbl {txt = lbl} | Opt {txt = lbl}),
           {
             ppat_desc = Ppat_constraint ({ppat_desc = Ppat_var {txt}}, typ);
             ppat_attributes;
@@ -5188,7 +5188,7 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
             Doc.text ": ";
             print_typ_expr ~state typ cmt_tbl;
           ]
-      | (Asttypes.Labelled lbl | Optional lbl), pattern ->
+      | (Lbl {txt = lbl} | Opt {txt = lbl}), pattern ->
         (* ~b as c *)
         Doc.concat
           [
@@ -5200,7 +5200,7 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
     in
     let optional_label_suffix =
       match (lbl, default_expr) with
-      | Asttypes.Optional _, None -> Doc.text "=?"
+      | Opt _, None -> Doc.text "=?"
       | _ -> Doc.nil
     in
     let doc =
@@ -5208,6 +5208,7 @@ and print_exp_fun_parameter ~state parameter cmt_tbl =
         (Doc.concat
            [attrs; label_with_pattern; default_expr_doc; optional_label_suffix])
     in
+    let lbl_loc = Asttypes.get_lbl_loc lbl in
     let cmt_loc =
       match default_expr with
       | None -> {lbl_loc with loc_end = pattern.ppat_loc.loc_end}

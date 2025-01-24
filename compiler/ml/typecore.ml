@@ -1898,6 +1898,7 @@ let rec type_approx env sexp =
   match sexp.pexp_desc with
   | Pexp_let (_, _, e) -> type_approx env e
   | Pexp_fun {arg_label = p; rhs = e; arity} ->
+    let p = Asttypes.to_arg_label p in
     let ty = if is_optional p then type_option (newvar ()) else newvar () in
     newty (Tarrow (p, ty, type_approx env e, Cok, arity))
   | Pexp_match (_, {pc_rhs = e} :: _) -> type_approx env e
@@ -2363,6 +2364,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         arity;
         async;
       } ->
+    let l = Asttypes.to_arg_label l in
     assert (is_optional l);
     (* default allowed only with optional argument *)
     let open Ast_helper in
@@ -2405,6 +2407,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
       [Exp.case pat body]
   | Pexp_fun
       {arg_label = l; default = None; lhs = spat; rhs = sbody; arity; async} ->
+    let l = Asttypes.to_arg_label l in
     type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
       ty_expected l
       [Ast_helper.Exp.case spat sbody]

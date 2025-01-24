@@ -112,7 +112,7 @@ let rewrite_underscore_apply expr =
   match expr_fun.pexp_desc with
   | Pexp_fun
       {
-        arg_label = Nolabel;
+        arg_label = Nolbl;
         default = None;
         lhs = {ppat_desc = Ppat_var {txt = "__x"}};
         rhs = {pexp_desc = Pexp_apply {funct = call_expr; args}} as e;
@@ -142,8 +142,7 @@ let rewrite_underscore_apply expr =
 type fun_param_kind =
   | Parameter of {
       attrs: Parsetree.attributes;
-      lbl: Asttypes.arg_label;
-      lbl_loc: Location.t;
+      lbl: Asttypes.arg_label_loc;
       default_expr: Parsetree.expression option;
       pat: Parsetree.pattern;
     }
@@ -158,7 +157,6 @@ let fun_expr expr_ =
        Pexp_fun
          {
            arg_label = lbl;
-           label_loc;
            default = default_expr;
            lhs = pattern;
            rhs = return_expr;
@@ -167,9 +165,7 @@ let fun_expr expr_ =
      pexp_attributes = attrs;
     }
       when arity = None || n_fun = 0 ->
-      let parameter =
-        Parameter {attrs; lbl; lbl_loc = label_loc; default_expr; pat = pattern}
-      in
+      let parameter = Parameter {attrs; lbl; default_expr; pat = pattern} in
       collect_params ~n_fun:(n_fun + 1) ~params:(parameter :: params)
         return_expr
     | _ -> (async, List.rev params, expr)
@@ -458,7 +454,7 @@ let collect_ternary_parts expr =
 
 let parameters_should_hug parameters =
   match parameters with
-  | [Parameter {attrs = []; lbl = Asttypes.Nolabel; default_expr = None; pat}]
+  | [Parameter {attrs = []; lbl = Nolbl; default_expr = None; pat}]
     when is_huggable_pattern pat ->
     true
   | _ -> false
@@ -732,7 +728,7 @@ let is_underscore_apply_sugar expr =
   match expr.pexp_desc with
   | Pexp_fun
       {
-        arg_label = Nolabel;
+        arg_label = Nolbl;
         default = None;
         lhs = {ppat_desc = Ppat_var {txt = "__x"}};
         rhs = {pexp_desc = Pexp_apply _};

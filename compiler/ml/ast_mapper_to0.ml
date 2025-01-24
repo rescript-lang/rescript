@@ -294,6 +294,7 @@ module E = struct
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
     | Pexp_fun {arg_label = lab; default = def; lhs = p; rhs = e; arity; async}
       -> (
+      let lab = Asttypes.to_arg_label lab in
       let attrs =
         if async then
           ({txt = "res.async"; loc = Location.none}, Pt.PStr []) :: attrs

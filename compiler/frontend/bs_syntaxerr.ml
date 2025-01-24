@@ -104,9 +104,9 @@ let () =
 
 let err loc error = raise (Error (loc, error))
 
-let optional_err loc (lbl : Asttypes.arg_label) =
+let optional_err loc (lbl : Asttypes.arg_label_loc) =
   match lbl with
-  | Optional _ -> raise (Error (loc, Optional_in_uncurried_bs_attribute))
+  | Opt _ -> raise (Error (loc, Optional_in_uncurried_bs_attribute))
   | _ -> ()
 
 let err_if_label loc (lbl : Asttypes.arg_label_loc) =

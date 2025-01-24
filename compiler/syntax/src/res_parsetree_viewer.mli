@@ -41,8 +41,7 @@ val collect_list_expressions :
 type fun_param_kind =
   | Parameter of {
       attrs: Parsetree.attributes;
-      lbl: Asttypes.arg_label;
-      lbl_loc: Location.t;
+      lbl: Asttypes.arg_label_loc;
       default_expr: Parsetree.expression option;
       pat: Parsetree.pattern;
     }
