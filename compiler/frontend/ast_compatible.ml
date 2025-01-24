@@ -31,7 +31,7 @@ open Parsetree
 let default_loc = Location.none
 
 let arrow ?loc ?attrs ~arity a b =
-  Ast_helper.Typ.arrow ?loc ?attrs ~arity Nolabel a b
+  Ast_helper.Typ.arrow ?loc ?attrs ~arity Nolbl a b
 
 let apply_simple ?(loc = default_loc) ?(attrs = []) (fn : expression)
     (args : expression list) : expression =
@@ -124,20 +124,20 @@ let apply_labels ?(loc = default_loc) ?(attrs = []) fn
         };
   }
 
-let label_arrow ?(loc = default_loc) ?(attrs = []) ~arity s arg ret : core_type
-    =
+let label_arrow ?(loc = default_loc) ?(attrs = []) ~arity txt arg ret :
+    core_type =
   {
     ptyp_desc =
-      Ptyp_arrow {lbl = Labelled s; lbl_loc = Location.none; arg; ret; arity};
+      Ptyp_arrow {lbl = Asttypes.Lbl {txt; loc = default_loc}; arg; ret; arity};
     ptyp_loc = loc;
     ptyp_attributes = attrs;
   }
 
-let opt_arrow ?(loc = default_loc) ?(attrs = []) ~arity s arg ret : core_type =
+let opt_arrow ?(loc = default_loc) ?(attrs = []) ~arity txt arg ret : core_type
+    =
   {
     ptyp_desc =
-      Ptyp_arrow
-        {lbl = Asttypes.Optional s; lbl_loc = Location.none; arg; ret; arity};
+      Ptyp_arrow {lbl = Asttypes.Opt {txt; loc = default_loc}; arg; ret; arity};
     ptyp_loc = loc;
     ptyp_attributes = attrs;
   }

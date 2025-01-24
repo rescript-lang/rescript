@@ -57,9 +57,8 @@ module Typ : sig
   val arrow :
     ?loc:loc ->
     ?attrs:attrs ->
-    ?label_loc:loc ->
     arity:arity ->
-    arg_label ->
+    arg_label_loc ->
     core_type ->
     core_type ->
     core_type

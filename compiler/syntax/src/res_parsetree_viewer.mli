@@ -5,11 +5,7 @@ val arrow_type :
   ?max_arity:int ->
   Parsetree.core_type ->
   Parsetree.attributes
-  * (Parsetree.attributes
-    * Asttypes.arg_label
-    * Location.t
-    * Parsetree.core_type)
-    list
+  * (Parsetree.attributes * Asttypes.arg_label_loc * Parsetree.core_type) list
   * Parsetree.core_type
 
 val functor_type :
