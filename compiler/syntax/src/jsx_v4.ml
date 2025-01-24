@@ -1326,15 +1326,12 @@ let transform_structure_item ~config item =
       let rec get_prop_types types
           ({ptyp_loc; ptyp_desc; ptyp_attributes} as full_type) =
         match ptyp_desc with
-        | Ptyp_arrow
-            {lbl = name; lbl_loc; arg; ret = {ptyp_desc = Ptyp_arrow _} as typ2}
-          when is_labelled0 name || is_optional0 name ->
-          let name = to_arg_label_loc ~loc:lbl_loc name in
+        | Ptyp_arrow {lbl = name; arg; ret = {ptyp_desc = Ptyp_arrow _} as typ2}
+          when is_labelled name || is_optional name ->
           get_prop_types ((name, ptyp_attributes, ptyp_loc, arg) :: types) typ2
-        | Ptyp_arrow {lbl = Nolabel; ret} -> get_prop_types types ret
-        | Ptyp_arrow {lbl = name; lbl_loc; arg; ret = return_value}
-          when is_labelled0 name || is_optional0 name ->
-          let name = to_arg_label_loc ~loc:lbl_loc name in
+        | Ptyp_arrow {lbl = Nolbl; ret} -> get_prop_types types ret
+        | Ptyp_arrow {lbl = name; arg; ret = return_value}
+          when is_labelled name || is_optional name ->
           ( return_value,
             (name, ptyp_attributes, return_value.ptyp_loc, arg) :: types )
         | _ -> (full_type, types)
@@ -1433,30 +1430,26 @@ let transform_signature_item ~config item =
         | Ptyp_arrow
             {
               lbl;
-              lbl_loc;
               arg = {ptyp_attributes = attrs} as type_;
               ret = {ptyp_desc = Ptyp_arrow _} as rest;
             }
-          when is_optional0 lbl || is_labelled0 lbl ->
-          let lbl = to_arg_label_loc ~loc:lbl_loc lbl in
+          when is_optional lbl || is_labelled lbl ->
           get_prop_types ((lbl, attrs, ptyp_loc, type_) :: types) rest
         | Ptyp_arrow
             {
-              lbl = Nolabel;
+              lbl = Nolbl;
               arg = {ptyp_desc = Ptyp_constr ({txt = Lident "unit"}, _)};
               ret = rest;
             } ->
           get_prop_types types rest
-        | Ptyp_arrow {lbl = Nolabel; ret = rest} -> get_prop_types types rest
+        | Ptyp_arrow {lbl = Nolbl; ret = rest} -> get_prop_types types rest
         | Ptyp_arrow
             {
               lbl = name;
-              lbl_loc;
               arg = {ptyp_attributes = attrs} as type_;
               ret = return_value;
             }
-          when is_optional0 name || is_labelled0 name ->
-          let name = to_arg_label_loc ~loc:lbl_loc name in
+          when is_optional name || is_labelled name ->
           (return_value, (name, attrs, return_value.ptyp_loc, type_) :: types)
         | _ -> (full_type, types)
       in

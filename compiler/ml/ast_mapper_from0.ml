@@ -99,6 +99,7 @@ module T = struct
     | Ptyp_any -> any ~loc ~attrs ()
     | Ptyp_var s -> var ~loc ~attrs s
     | Ptyp_arrow (lab, t1, t2) ->
+      let lab = Asttypes.to_arg_label_loc lab in
       arrow ~loc ~attrs ~arity:None lab (sub.typ sub t1) (sub.typ sub t2)
     | Ptyp_tuple tyl -> tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) -> (

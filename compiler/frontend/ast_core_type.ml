@@ -131,7 +131,7 @@ let get_curry_arity (ty : t) =
 let is_arity_one ty = get_curry_arity ty = 1
 
 type param_type = {
-  label: Asttypes.arg_label;
+  label: Asttypes.arg_label_loc;
   ty: Parsetree.core_type;
   attr: Parsetree.attributes;
   loc: loc;
@@ -142,15 +142,7 @@ let mk_fn_type (new_arg_types_ty : param_type list) (result : t) : t =
     Ext_list.fold_right new_arg_types_ty result
       (fun {label; ty; attr; loc} acc ->
         {
-          ptyp_desc =
-            Ptyp_arrow
-              {
-                lbl = label;
-                lbl_loc = Location.none;
-                arg = ty;
-                ret = acc;
-                arity = None;
-              };
+          ptyp_desc = Ptyp_arrow {lbl = label; arg = ty; ret = acc; arity = None};
           ptyp_loc = loc;
           ptyp_attributes = attr;
         })
@@ -179,5 +171,5 @@ let list_of_arrow (ty : t) : t * param_type list =
 let add_last_obj (ty : t) (obj : t) =
   let result, params = list_of_arrow ty in
   mk_fn_type
-    (params @ [{label = Nolabel; ty = obj; attr = []; loc = obj.ptyp_loc}])
+    (params @ [{label = Nolbl; ty = obj; attr = []; loc = obj.ptyp_loc}])
     result
