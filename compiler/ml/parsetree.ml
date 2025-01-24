@@ -77,8 +77,7 @@ and core_type_desc =
   | Ptyp_any (*  _ *)
   | Ptyp_var of string (* 'a *)
   | Ptyp_arrow of {
-      lbl: arg_label;
-      lbl_loc: Location.t;
+      lbl: arg_label_loc;
       arg: core_type;
       ret: core_type;
       arity: arity;

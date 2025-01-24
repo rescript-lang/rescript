@@ -168,28 +168,27 @@ let arrow_type ct =
   let rec process attrs_before acc typ =
     match typ with
     | {
-     ptyp_desc = Ptyp_arrow {lbl = Nolabel as lbl; lbl_loc; arg; ret};
+     ptyp_desc = Ptyp_arrow {lbl = Nolbl as lbl; arg; ret};
      ptyp_attributes = [];
     } ->
-      let arg = ([], lbl, lbl_loc, arg) in
+      let arg = ([], lbl, arg) in
       process attrs_before (arg :: acc) ret
     | {
-     ptyp_desc = Ptyp_arrow {lbl = Nolabel as lbl; lbl_loc; arg; ret};
+     ptyp_desc = Ptyp_arrow {lbl = Nolbl as lbl; arg; ret};
      ptyp_attributes = [({txt = "bs"}, _)] as attrs;
     } ->
-      let arg = (attrs, lbl, lbl_loc, arg) in
+      let arg = (attrs, lbl, arg) in
       process attrs_before (arg :: acc) ret
-    | {ptyp_desc = Ptyp_arrow {lbl = Nolabel}} as return_type ->
+    | {ptyp_desc = Ptyp_arrow {lbl = Nolbl}} as return_type ->
       let args = List.rev acc in
       (attrs_before, args, return_type)
-    | {ptyp_desc = Ptyp_arrow {lbl; lbl_loc; arg; ret}; ptyp_attributes = attrs}
-      ->
-      let arg = (attrs, lbl, lbl_loc, arg) in
+    | {ptyp_desc = Ptyp_arrow {lbl; arg; ret}; ptyp_attributes = attrs} ->
+      let arg = (attrs, lbl, arg) in
       process attrs_before (arg :: acc) ret
     | typ -> (attrs_before, List.rev acc, typ)
   in
   match ct with
-  | {ptyp_desc = Ptyp_arrow {lbl = Nolabel}; ptyp_attributes = attrs} as typ ->
+  | {ptyp_desc = Ptyp_arrow {lbl = Nolbl}; ptyp_attributes = attrs} as typ ->
     process attrs [] {typ with ptyp_attributes = []}
   | typ -> process [] [] typ
 
@@ -1946,14 +1945,15 @@ and walk_object_field field t comments =
 
 and walk_type_parameters type_parameters t comments =
   visit_list_but_continue_with_remaining_comments
-    ~get_loc:(fun (_, _, lbl_loc, typexpr) ->
+    ~get_loc:(fun (_, lbl, typexpr) ->
+      let lbl_loc = Asttypes.get_lbl_loc lbl in
       if lbl_loc <> Location.none then
         {lbl_loc with loc_end = typexpr.Parsetree.ptyp_loc.loc_end}
       else typexpr.ptyp_loc)
     ~walk_node:walk_type_parameter ~newline_delimited:false type_parameters t
     comments
 
-and walk_type_parameter (_attrs, _lbl, _lbl_loc, typexpr) t comments =
+and walk_type_parameter (_attrs, _lbl, typexpr) t comments =
   let before_typ, inside_typ, after_typ =
     partition_by_loc comments typexpr.ptyp_loc
   in

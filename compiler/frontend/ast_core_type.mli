@@ -48,7 +48,7 @@ val get_uncurry_arity : t -> int option
 *)
 
 type param_type = {
-  label: Asttypes.arg_label;
+  label: Asttypes.arg_label_loc;
   ty: t;
   attr: Parsetree.attributes;
   loc: Location.t;

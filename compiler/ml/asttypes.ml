@@ -91,3 +91,7 @@ let same_arg_label_loc (x : arg_label_loc) y =
     match y with
     | Opt {txt = s0} -> s = s0
     | _ -> false)
+
+let get_lbl_loc = function
+  | Nolbl -> Location.none
+  | Lbl {loc} | Opt {loc} -> loc

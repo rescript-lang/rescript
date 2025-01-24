@@ -99,6 +99,7 @@ module T = struct
     | Ptyp_any -> any ~loc ~attrs ()
     | Ptyp_var s -> var ~loc ~attrs s
     | Ptyp_arrow {lbl; arg; ret; arity} -> (
+      let lbl = Asttypes.to_arg_label lbl in
       let typ0 = arrow ~loc ~attrs lbl (sub.typ sub arg) (sub.typ sub ret) in
       match arity with
       | None -> typ0

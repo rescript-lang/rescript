@@ -134,7 +134,7 @@ let rec core_type i ppf x =
       | None -> ()
       | Some n -> line i ppf "arity = %d\n" n
     in
-    arg_label i ppf lbl;
+    arg_label_loc i ppf lbl;
     core_type i ppf arg;
     core_type i ppf ret
   | Ptyp_tuple l ->

@@ -462,7 +462,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
           let ty = param_type.ty in
           let new_arg_label, new_arg_types, output_tys =
             match arg_label with
-            | Nolabel -> (
+            | Nolbl -> (
               match ty.ptyp_desc with
               | Ptyp_constr ({txt = Lident "unit"}, []) ->
                 ( External_arg_spec.empty_kind Extern_unit,
@@ -471,7 +471,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
               | _ ->
                 Location.raise_errorf ~loc
                   "expect label, optional, or unit here")
-            | Labelled label -> (
+            | Lbl {txt = label} -> (
               let field_name =
                 match
                   Ast_attributes.iter_process_bs_string_as param_type.attr
@@ -530,7 +530,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
               | Unwrap ->
                 Location.raise_errorf ~loc
                   "%@obj label %s does not support %@unwrap arguments" label)
-            | Optional label -> (
+            | Opt {txt = label} -> (
               let field_name =
                 match
                   Ast_attributes.iter_process_bs_string_as param_type.attr
@@ -964,10 +964,10 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
           let ty = param_type.ty in
           (if i = 0 && splice then
              match arg_label with
-             | Optional _ ->
+             | Opt _ ->
                Location.raise_errorf ~loc
                  "%@variadic expect the last type to be a non optional"
-             | Labelled _ | Nolabel -> (
+             | Lbl _ | Nolbl -> (
                if ty.ptyp_desc = Ptyp_any then
                  Location.raise_errorf ~loc
                    "%@variadic expect the last type to be an array";
@@ -983,7 +983,7 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
                 arg_type,
                 new_arg_types ) =
             match arg_label with
-            | Optional s -> (
+            | Opt {txt = s} -> (
               let arg_type = get_opt_arg_type ~nolabel:false ty in
               match arg_type with
               | Poly_var _ ->
@@ -993,14 +993,14 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
                    label %s"
                   s
               | _ -> (Arg_optional, arg_type, param_type :: arg_types))
-            | Labelled _ -> (
+            | Lbl _ -> (
               let arg_type = refine_arg_type ~nolabel:false ty in
               ( Arg_label,
                 arg_type,
                 match arg_type with
                 | Arg_cst _ -> arg_types
                 | _ -> param_type :: arg_types ))
-            | Nolabel -> (
+            | Nolbl -> (
               let arg_type = refine_arg_type ~nolabel:true ty in
               ( Arg_empty,
                 arg_type,

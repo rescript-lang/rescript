@@ -287,9 +287,9 @@ let string_quot f x = pp f "`%s" x
 
 let rec type_with_label ctxt f (label, c) =
   match label with
-  | Nolabel -> core_type1 ctxt f c (* otherwise parenthesize *)
-  | Labelled s -> pp f "%s:%a" s (core_type1 ctxt) c
-  | Optional s -> pp f "?%s:%a" s (core_type1 ctxt) c
+  | Nolbl -> core_type1 ctxt f c (* otherwise parenthesize *)
+  | Lbl {txt = s} -> pp f "%s:%a" s (core_type1 ctxt) c
+  | Opt {txt = s} -> pp f "?%s:%a" s (core_type1 ctxt) c
 
 and core_type ctxt f x =
   if x.ptyp_attributes <> [] then

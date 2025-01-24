@@ -130,7 +130,7 @@ let extractParameters ~signature ~typeStrForParser ~labelPrefixLen =
         (* The AST locations does not account for "=?" of optional arguments, so add that to the offset here if needed. *)
         let endOffset =
           match argumentLabel with
-          | Asttypes.Optional _ -> endOffset + 2
+          | Asttypes.Opt _ -> endOffset + 2
           | _ -> endOffset
         in
         extractParams nextFunctionExpr
@@ -474,6 +474,7 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
                     parameters =
                       parameters
                       |> List.map (fun (argLabel, start, end_) ->
+                             let argLabel = Asttypes.to_arg_label argLabel in
                              let paramArgCount = !paramUnlabelledArgCount in
                              paramUnlabelledArgCount := paramArgCount + 1;
                              let unlabelledArgCount = ref 0 in

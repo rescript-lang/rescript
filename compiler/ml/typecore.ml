@@ -1879,6 +1879,7 @@ and is_nonexpansive_opt = function
 let rec approx_type env sty =
   match sty.ptyp_desc with
   | Ptyp_arrow {lbl = p; ret = sty; arity} ->
+    let p = Asttypes.to_arg_label p in
     let ty1 = if is_optional p then type_option (newvar ()) else newvar () in
     newty (Tarrow (p, ty1, approx_type env sty, Cok, arity))
   | Ptyp_tuple args -> newty (Ttuple (List.map (approx_type env) args))
