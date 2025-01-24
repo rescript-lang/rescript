@@ -4553,7 +4553,10 @@ and print_jsx_props ~state args cmt_tbl : Doc.t * Parsetree.expression option =
 and print_jsx_prop ~state arg cmt_tbl =
   match arg with
   | ( ((Asttypes.Lbl {txt = lbl_txt} | Opt {txt = lbl_txt}) as lbl),
-      {pexp_desc = Pexp_ident {txt = Longident.Lident ident}} )
+      {
+        pexp_attributes = [];
+        pexp_desc = Pexp_ident {txt = Longident.Lident ident};
+      } )
     when lbl_txt = ident (* jsx punning *) -> (
     match lbl with
     | Nolbl -> Doc.nil
@@ -4878,7 +4881,10 @@ and print_argument ~state (arg_lbl, arg) cmt_tbl =
   match (arg_lbl, arg) with
   (* ~a (punned)*)
   | ( Lbl {txt = lbl; loc = l0},
-      {pexp_desc = Pexp_ident {txt = Longident.Lident name}} )
+      {
+        pexp_attributes = [];
+        pexp_desc = Pexp_ident {txt = Longident.Lident name};
+      } )
     when lbl = name && not (ParsetreeViewer.is_braced_expr arg) ->
     let loc = {l0 with loc_end = arg.pexp_loc.loc_end} in
     let doc = Doc.concat [Doc.tilde; print_ident_like lbl] in
@@ -4890,6 +4896,7 @@ and print_argument ~state (arg_lbl, arg) cmt_tbl =
           Pexp_constraint
             ( ({pexp_desc = Pexp_ident {txt = Longident.Lident name}} as arg_expr),
               typ );
+        pexp_attributes = [];
       } )
     when lbl = name && not (ParsetreeViewer.is_braced_expr arg_expr) ->
     let loc = {l0 with loc_end = arg.pexp_loc.loc_end} in
@@ -4904,7 +4911,11 @@ and print_argument ~state (arg_lbl, arg) cmt_tbl =
     in
     print_comments doc cmt_tbl loc
   (* ~a? (optional lbl punned)*)
-  | Opt {txt = lbl; loc}, {pexp_desc = Pexp_ident {txt = Longident.Lident name}}
+  | ( Opt {txt = lbl; loc},
+      {
+        pexp_desc = Pexp_ident {txt = Longident.Lident name};
+        pexp_attributes = [];
+      } )
     when lbl = name ->
     let doc = Doc.concat [Doc.tilde; print_ident_like lbl; Doc.question] in
     print_comments doc cmt_tbl loc

@@ -51,7 +51,7 @@ let x =
 let x = <div className="container" className2="container2" className3="container3" onClick />
 
 let nav =
-  <Nav isMobile fullScreen={!isMobile ? false : isOpen}>
+  <Nav isMobile={isMobile} fullScreen={!isMobile ? false : isOpen}>
     <NavContent>
       <WidescreenMenu
         menuItems={props.items} trial={props.trial} user={props.user} viewer={props.viewer}
@@ -60,14 +60,14 @@ let nav =
   </Nav>
 
 let nav2 =
-  <Nav isMobile fullScreen={!isMobile ? false : isOpen}>
+  <Nav isMobile={isMobile} fullScreen={!isMobile ? false : isOpen}>
     <NavContent>
       {switch isMobile {
       | true =>
         <MobileMenu
           handleOpenToggle={_ => setOpen(open_ => !open_)}
           menuItems={props.items}
-          isOpen
+          isOpen={isOpen}
           forceOpen={_ => setOpen(true)}
           forceClose={_ => setOpen(false)}
           user={props.user}
@@ -82,13 +82,13 @@ let nav2 =
   </Nav>
 
 let nav3 =
-  <Nav isMobile fullScreen={!isMobile ? false : isOpen}>
+  <Nav isMobile={isMobile} fullScreen={!isMobile ? false : isOpen}>
     <NavContent>
       {isMobile
         ? <MobileMenu
             handleOpenToggle={_ => setOpen(open_ => !open_)}
             menuItems={props.items}
-            isOpen
+            isOpen={isOpen}
             forceOpen={_ => setOpen(true)}
             forceClose={_ => setOpen(false)}
             user={props.user}
@@ -102,7 +102,7 @@ let nav3 =
 let avatarSection =
   <>
     <div style={{"zIndex": "1", "opacity": opacityUser}}>
-      <Avatar user size={45} />
+      <Avatar user={user} size={45} />
     </div>
     {user.email !== viewer.email
       ? <div
