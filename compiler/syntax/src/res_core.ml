@@ -190,8 +190,7 @@ type fundef_type_param = {
 
 type fundef_term_param = {
   attrs: Parsetree.attributes;
-  p_label: Asttypes.arg_label;
-  lbl_loc: Location.t;
+  p_label: Asttypes.arg_label_loc;
   expr: Parsetree.expression option;
   pat: Parsetree.pattern;
   p_pos: Lexing.position;
@@ -540,7 +539,7 @@ let process_underscore_application args =
           ~loc:Location.none
       in
       let fun_expr =
-        Ast_helper.Exp.fun_ ~loc ~arity:(Some 1) Nolabel None pattern exp_apply
+        Ast_helper.Exp.fun_ ~loc ~arity:(Some 1) Nolbl None pattern exp_apply
       in
       Ast_uncurried.uncurried_fun ~arity:1 fun_expr
     | None -> exp_apply
@@ -1595,19 +1594,12 @@ and parse_es6_arrow_expression ?(arrow_attrs = []) ?(arrow_start_pos = None)
   let arrow_expr =
     List.fold_right
       (fun parameter expr ->
-        let {
-          attrs;
-          p_label = lbl;
-          lbl_loc;
-          expr = default_expr;
-          pat;
-          p_pos = start_pos;
-        } =
+        let {attrs; p_label = lbl; expr = default_expr; pat; p_pos = start_pos}
+            =
           parameter
         in
         let loc = mk_loc start_pos end_pos in
-        Ast_helper.Exp.fun_ ~loc ~attrs ~label_loc:lbl_loc ~arity:None lbl
-          default_expr pat expr)
+        Ast_helper.Exp.fun_ ~loc ~attrs ~arity:None lbl default_expr pat expr)
       term_parameters body
   in
   let arrow_expr =
@@ -1664,7 +1656,7 @@ and parse_parameter p =
           | Comma | Equal | Rparen ->
             let loc = mk_loc start_pos p.prev_end_pos in
             ( [],
-              Asttypes.Labelled lbl_name,
+              Asttypes.Lbl {txt = lbl_name; loc = lbl_loc},
               lbl_loc,
               Ast_helper.Pat.var ~attrs ~loc (Location.mkloc lbl_name loc) )
           | Colon ->
@@ -1677,26 +1669,26 @@ and parse_parameter p =
               let loc = mk_loc start_pos p.prev_end_pos in
               Ast_helper.Pat.constraint_ ~attrs ~loc pat typ
             in
-            ([], Asttypes.Labelled lbl_name, lbl_loc, pat)
+            ([], Asttypes.Lbl {txt = lbl_name; loc = lbl_loc}, lbl_loc, pat)
           | As ->
             Parser.next p;
             let pat =
               let pat = parse_constrained_pattern p in
               {pat with ppat_attributes = attrs @ pat.ppat_attributes}
             in
-            ([], Asttypes.Labelled lbl_name, lbl_loc, pat)
+            ([], Asttypes.Lbl {txt = lbl_name; loc = lbl_loc}, lbl_loc, pat)
           | t ->
             Parser.err p (Diagnostics.unexpected t p.breadcrumbs);
             let loc = mk_loc start_pos p.prev_end_pos in
             ( [],
-              Asttypes.Labelled lbl_name,
+              Asttypes.Lbl {txt = lbl_name; loc = lbl_loc},
               lbl_loc,
               Ast_helper.Pat.var ~attrs ~loc (Location.mkloc lbl_name loc) ))
         | _ ->
           let pattern = parse_constrained_pattern p in
           let attrs = List.concat [pattern.ppat_attributes; attrs] in
           ( [],
-            Asttypes.Nolabel,
+            Asttypes.Nolbl,
             Location.none,
             {pattern with ppat_attributes = attrs} )
       in
@@ -1705,8 +1697,8 @@ and parse_parameter p =
         Parser.next p;
         let lbl =
           match lbl with
-          | Asttypes.Labelled lbl_name -> Asttypes.Optional lbl_name
-          | Asttypes.Nolabel ->
+          | Asttypes.Lbl lbl_name -> Asttypes.Opt lbl_name
+          | Asttypes.Nolbl ->
             let lbl_name =
               match pat.ppat_desc with
               | Ppat_var var -> var.txt
@@ -1715,7 +1707,7 @@ and parse_parameter p =
             Parser.err ~start_pos ~end_pos:p.prev_end_pos p
               (Diagnostics.message
                  (ErrorMessages.missing_tilde_labeled_parameter lbl_name));
-            Asttypes.Optional lbl_name
+            Asttypes.Opt {txt = lbl_name; loc = lbl_loc}
           | lbl -> lbl
         in
         match p.Parser.token with
@@ -1723,37 +1715,17 @@ and parse_parameter p =
           Parser.next p;
           Some
             (TermParameter
-               {
-                 attrs;
-                 p_label = lbl;
-                 lbl_loc;
-                 expr = None;
-                 pat;
-                 p_pos = start_pos;
-               })
+               {attrs; p_label = lbl; expr = None; pat; p_pos = start_pos})
         | _ ->
           let expr = parse_constrained_or_coerced_expr p in
           Some
             (TermParameter
-               {
-                 attrs;
-                 p_label = lbl;
-                 lbl_loc;
-                 expr = Some expr;
-                 pat;
-                 p_pos = start_pos;
-               }))
+               {attrs; p_label = lbl; expr = Some expr; pat; p_pos = start_pos})
+        )
       | _ ->
         Some
           (TermParameter
-             {
-               attrs;
-               p_label = lbl;
-               lbl_loc;
-               expr = None;
-               pat;
-               p_pos = start_pos;
-             })
+             {attrs; p_label = lbl; expr = None; pat; p_pos = start_pos})
   else None
 
 and parse_parameter_list p =
@@ -1782,8 +1754,7 @@ and parse_parameters p : fundef_type_param option * fundef_term_param list =
     in
     {
       attrs = [];
-      p_label = Asttypes.Nolabel;
-      lbl_loc = Location.none;
+      p_label = Asttypes.Nolbl;
       expr = None;
       pat = unit_pattern;
       p_pos = start_pos;
@@ -1797,8 +1768,7 @@ and parse_parameters p : fundef_type_param option * fundef_term_param list =
       [
         {
           attrs = [];
-          p_label = Asttypes.Nolabel;
-          lbl_loc = Location.none;
+          p_label = Asttypes.Nolbl;
           expr = None;
           pat = Ast_helper.Pat.var ~loc (Location.mkloc ident loc);
           p_pos = start_pos;
@@ -1811,8 +1781,7 @@ and parse_parameters p : fundef_type_param option * fundef_term_param list =
       [
         {
           attrs = [];
-          p_label = Asttypes.Nolabel;
-          lbl_loc = Location.none;
+          p_label = Asttypes.Nolbl;
           expr = None;
           pat = Ast_helper.Pat.any ~loc ();
           p_pos = start_pos;
@@ -2418,13 +2387,13 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
       let arrow1 =
         Ast_helper.Exp.fun_
           ~loc:(mk_loc expr.pexp_loc.loc_start body.pexp_loc.loc_end)
-          ~arity:None Asttypes.Nolabel None pat
+          ~arity:None Asttypes.Nolbl None pat
           (Ast_helper.Exp.constraint_ body typ)
       in
       let arrow2 =
         Ast_helper.Exp.fun_
           ~loc:(mk_loc expr.pexp_loc.loc_start body.pexp_loc.loc_end)
-          ~arity:None Asttypes.Nolabel None
+          ~arity:None Asttypes.Nolbl None
           (Ast_helper.Pat.constraint_ pat typ)
           body
       in
@@ -3021,8 +2990,7 @@ and parse_braced_or_record_expr p =
               [
                 {
                   attrs = [];
-                  p_label = Asttypes.Nolabel;
-                  lbl_loc = Location.none;
+                  p_label = Nolbl;
                   expr = None;
                   pat = Ast_helper.Pat.var ~loc:ident.loc ident;
                   p_pos = start_pos;

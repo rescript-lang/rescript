@@ -82,15 +82,7 @@ let fun_ ?(loc = default_loc) ?(attrs = []) ?(async = false) ~arity pat exp =
     pexp_attributes = attrs;
     pexp_desc =
       Pexp_fun
-        {
-          arg_label = Nolabel;
-          label_loc = Location.none;
-          default = None;
-          lhs = pat;
-          rhs = exp;
-          arity;
-          async;
-        };
+        {arg_label = Nolbl; default = None; lhs = pat; rhs = exp; arity; async};
   }
 
 let const_exp_string ?(loc = default_loc) ?(attrs = []) ?delimiter (s : string)
