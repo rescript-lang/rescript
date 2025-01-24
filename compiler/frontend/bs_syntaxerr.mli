@@ -54,6 +54,6 @@ type error =
 
 val err : Location.t -> error -> 'a
 
-val optional_err : Location.t -> Asttypes.arg_label -> unit
+val optional_err : Location.t -> Asttypes.arg_label_loc -> unit
 
 val err_if_label : Location.t -> Asttypes.arg_label_loc -> unit

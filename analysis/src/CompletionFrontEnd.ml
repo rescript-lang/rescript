@@ -1437,7 +1437,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
             | Some (ctxPath, currentUnlabelledCount) ->
               (processingFun :=
                  match lbl with
-                 | Nolabel -> Some (ctxPath, currentUnlabelledCount + 1)
+                 | Nolbl -> Some (ctxPath, currentUnlabelledCount + 1)
                  | _ -> Some (ctxPath, currentUnlabelledCount));
               if Debug.verbose () then
                 print_endline "[expr_iter] Completing for argument value";
@@ -1447,10 +1447,10 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                      functionContextPath = ctxPath;
                      argumentLabel =
                        (match lbl with
-                       | Nolabel ->
+                       | Nolbl ->
                          Unlabelled {argumentPosition = currentUnlabelledCount}
-                       | Optional name -> Optional name
-                       | Labelled name -> Labelled name);
+                       | Opt {txt = name} -> Optional name
+                       | Lbl {txt = name} -> Labelled name);
                    })
           in
           (match defaultExpOpt with

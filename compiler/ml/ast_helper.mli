@@ -139,9 +139,8 @@ module Exp : sig
     ?loc:loc ->
     ?attrs:attrs ->
     ?async:bool ->
-    ?label_loc:loc ->
     arity:int option ->
-    arg_label ->
+    arg_label_loc ->
     expression option ->
     pattern ->
     expression ->

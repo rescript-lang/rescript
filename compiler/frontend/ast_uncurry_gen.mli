@@ -25,7 +25,7 @@
 val to_method_callback :
   Location.t ->
   Bs_ast_mapper.mapper ->
-  Asttypes.arg_label ->
+  Asttypes.arg_label_loc ->
   Parsetree.pattern ->
   Parsetree.expression ->
   Parsetree.expression_desc

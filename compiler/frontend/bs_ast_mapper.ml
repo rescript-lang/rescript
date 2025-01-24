@@ -311,17 +311,9 @@ module E = struct
            sub vbs)
         (sub.expr sub e)
     (* #end *)
-    | Pexp_fun
-        {
-          arg_label = lab;
-          label_loc;
-          default = def;
-          lhs = p;
-          rhs = e;
-          arity;
-          async;
-        } ->
-      fun_ ~loc ~attrs ~label_loc ~arity ~async lab
+    | Pexp_fun {arg_label = lab; default = def; lhs = p; rhs = e; arity; async}
+      ->
+      fun_ ~loc ~attrs ~arity ~async lab
         (map_opt (sub.expr sub) def)
         (sub.pat sub p) (sub.expr sub e)
     | Pexp_apply {funct = e; args = l; partial} ->
