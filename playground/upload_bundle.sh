@@ -45,3 +45,13 @@ do
 
   curl --ftp-create-dirs -T "${SOURCE}/cmij.js" --ssl --netrc-file $NETRC_FILE "${TARGET}/cmij.js"
 done
+
+# we now upload the bundled stdlib runtime files
+
+DIR="compiler-builtins/stdlib"
+SOURCE="${SCRIPT_DIR}/packages/${DIR}"
+TARGET="ftp://${KEYCDN_SRV}/v${VERSION}/${DIR}"
+
+echo "Uploading '$SOURCE/*.js' to '$TARGET/*.js'..."
+
+curl --ftp-create-dirs -T "${SOURCE}/*.js" --ssl --netrc-file $NETRC_FILE "${TARGET}/"
