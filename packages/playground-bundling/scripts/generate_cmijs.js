@@ -108,5 +108,10 @@ function buildThirdPartyCmijs() {
   });
 }
 
+function bundleStdlibJs() {
+  e("npm run bundle");
+}
+
 buildCompilerCmij();
 buildThirdPartyCmijs();
+bundleStdlibJs();
