@@ -218,9 +218,9 @@ and printExprItem expr ~pos ~indentation =
     ^ addIndentation (indentation + 1)
     ^ "arg: "
     ^ (match arg with
-      | Nolbl -> "Nolabel"
-      | Lbl {txt = name} -> "Labelled(" ^ name ^ ")"
-      | Opt {txt = name} -> "Optional(" ^ name ^ ")")
+      | Nolabel -> "Nolabel"
+      | Labelled {txt = name} -> "Labelled(" ^ name ^ ")"
+      | Optional {txt = name} -> "Optional(" ^ name ^ ")")
     ^ ",\n"
     ^ addIndentation (indentation + 2)
     ^ "pattern: "

@@ -268,7 +268,8 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
     (* Transform away pipe with apply call *)
     exprToContextPath
       {
-        pexp_desc = Pexp_apply {funct = d; args = (Nolbl, lhs) :: args; partial};
+        pexp_desc =
+          Pexp_apply {funct = d; args = (Nolabel, lhs) :: args; partial};
         pexp_loc;
         pexp_attributes;
       }
@@ -288,7 +289,7 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
           Pexp_apply
             {
               funct = {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes};
-              args = [(Nolbl, lhs)];
+              args = [(Nolabel, lhs)];
               partial;
             };
         pexp_loc;
@@ -1437,7 +1438,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
             | Some (ctxPath, currentUnlabelledCount) ->
               (processingFun :=
                  match lbl with
-                 | Nolbl -> Some (ctxPath, currentUnlabelledCount + 1)
+                 | Nolabel -> Some (ctxPath, currentUnlabelledCount + 1)
                  | _ -> Some (ctxPath, currentUnlabelledCount));
               if Debug.verbose () then
                 print_endline "[expr_iter] Completing for argument value";
@@ -1447,10 +1448,10 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                      functionContextPath = ctxPath;
                      argumentLabel =
                        (match lbl with
-                       | Nolbl ->
+                       | Nolabel ->
                          Unlabelled {argumentPosition = currentUnlabelledCount}
-                       | Opt {txt = name} -> Optional name
-                       | Lbl {txt = name} -> Labelled name);
+                       | Optional {txt = name} -> Optional name
+                       | Labelled {txt = name} -> Labelled name);
                    })
           in
           (match defaultExpOpt with

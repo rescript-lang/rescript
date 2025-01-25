@@ -130,7 +130,7 @@ let extractParameters ~signature ~typeStrForParser ~labelPrefixLen =
         (* The AST locations does not account for "=?" of optional arguments, so add that to the offset here if needed. *)
         let endOffset =
           match argumentLabel with
-          | Asttypes.Opt _ -> endOffset + 2
+          | Asttypes.Optional _ -> endOffset + 2
           | _ -> endOffset
         in
         extractParams nextFunctionExpr
@@ -154,14 +154,15 @@ let findActiveParameter ~argAtCursor ~args =
     (* If a function only has one, unlabelled argument, we can safely assume that's active whenever we're in the signature help for that function,
        even if we technically didn't find anything at the cursor (which we don't for empty expressions). *)
     match args with
-    | [(Asttypes.Nolabel, _)] -> Some 0
+    | [((Nolabel : Asttypes.arg_label), _)] -> Some 0
     | _ -> None)
   | Some (Unlabelled unlabelledArgumentIndex) ->
     let index = ref 0 in
     args
     |> List.find_map (fun (label, _) ->
            match label with
-           | Asttypes.Nolabel when !index = unlabelledArgumentIndex ->
+           | (Nolabel : Asttypes.arg_label)
+             when !index = unlabelledArgumentIndex ->
              Some !index
            | _ ->
              index := !index + 1;
@@ -169,10 +170,9 @@ let findActiveParameter ~argAtCursor ~args =
   | Some (Labelled name) ->
     let index = ref 0 in
     args
-    |> List.find_map (fun (label, _) ->
+    |> List.find_map (fun ((label : Asttypes.arg_label), _) ->
            match label with
-           | (Asttypes.Labelled labelName | Optional labelName)
-             when labelName = name ->
+           | (Labelled labelName | Optional labelName) when labelName = name ->
              Some !index
            | _ ->
              index := !index + 1;
@@ -483,7 +483,8 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
                                documentation =
                                  (match
                                     args
-                                    |> List.find_opt (fun (lbl, _) ->
+                                    |> List.find_opt
+                                         (fun ((lbl : Asttypes.arg_label), _) ->
                                            let argCount = !unlabelledArgCount in
                                            unlabelledArgCount := argCount + 1;
                                            match (lbl, argLabel) with

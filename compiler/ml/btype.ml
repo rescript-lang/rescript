@@ -593,23 +593,23 @@ let forget_abbrev mem path =
 (**********************************)
 
 let is_optional = function
-  | Optional _ -> true
+  | (Optional _ : arg_label) -> true
   | _ -> false
 
 let is_optional_loc = function
-  | Opt _ -> true
+  | Optional _ -> true
   | _ -> false
 
 let label_name = function
-  | Nolabel -> ""
+  | (Nolabel : arg_label) -> ""
   | Labelled s | Optional s -> s
 
 let label_loc_name = function
-  | Nolbl -> ""
-  | Lbl {txt} | Opt {txt} -> txt
+  | (Nolabel : arg_label_loc) -> ""
+  | Labelled {txt} | Optional {txt} -> txt
 
 let prefixed_label_name = function
-  | Nolabel -> ""
+  | (Nolabel : arg_label) -> ""
   | Labelled s -> "~" ^ s
   | Optional s -> "?" ^ s
 

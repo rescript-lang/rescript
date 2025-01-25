@@ -327,22 +327,22 @@ module E = struct
       let e =
         match (e.pexp_desc, args) with
         | ( Pexp_ident ({txt = Longident.Lident "->"} as lid),
-            [(Nolbl, _); (Nolbl, _)] ) ->
+            [(Nolabel, _); (Nolabel, _)] ) ->
           {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "|."}}
         | ( Pexp_ident ({txt = Longident.Lident "++"} as lid),
-            [(Nolbl, _); (Nolbl, _)] ) ->
+            [(Nolabel, _); (Nolabel, _)] ) ->
           {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "^"}}
         | ( Pexp_ident ({txt = Longident.Lident "!="} as lid),
-            [(Nolbl, _); (Nolbl, _)] ) ->
+            [(Nolabel, _); (Nolabel, _)] ) ->
           {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "<>"}}
         | ( Pexp_ident ({txt = Longident.Lident "!=="} as lid),
-            [(Nolbl, _); (Nolbl, _)] ) ->
+            [(Nolabel, _); (Nolabel, _)] ) ->
           {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "!="}}
         | ( Pexp_ident ({txt = Longident.Lident "==="} as lid),
-            [(Nolbl, _); (Nolbl, _)] ) ->
+            [(Nolabel, _); (Nolabel, _)] ) ->
           {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "=="}}
         | ( Pexp_ident ({txt = Longident.Lident "=="} as lid),
-            [(Nolbl, _); (Nolbl, _)] ) ->
+            [(Nolabel, _); (Nolabel, _)] ) ->
           {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "="}}
         | _ -> e
       in

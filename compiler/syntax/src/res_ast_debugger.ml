@@ -111,11 +111,11 @@ module SexpAst = struct
     | Contravariant -> Sexp.atom "Contravariant"
     | Invariant -> Sexp.atom "Invariant"
 
-  let arg_label_loc lbl =
+  let arg_label_loc (lbl : Asttypes.arg_label_loc) =
     match lbl with
-    | Asttypes.Nolbl -> Sexp.atom "Nolabel"
-    | Lbl {txt} -> Sexp.list [Sexp.atom "Labelled"; string txt]
-    | Opt {txt} -> Sexp.list [Sexp.atom "Optional"; string txt]
+    | Nolabel -> Sexp.atom "Nolabel"
+    | Labelled {txt} -> Sexp.list [Sexp.atom "Labelled"; string txt]
+    | Optional {txt} -> Sexp.list [Sexp.atom "Optional"; string txt]
 
   let constant c =
     let sexpr =

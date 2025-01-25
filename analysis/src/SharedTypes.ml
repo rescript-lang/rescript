@@ -692,7 +692,7 @@ module Completable = struct
       contextPathToString cp ^ "("
       ^ (labels
         |> List.map (function
-             | Asttypes.Nolabel -> "Nolabel"
+             | (Nolabel : Asttypes.arg_label) -> "Nolabel"
              | Labelled s -> "~" ^ s
              | Optional s -> "?" ^ s)
         |> String.concat ", ")
@@ -898,7 +898,7 @@ type arg = {label: label; exp: Parsetree.expression}
 let extractExpApplyArgs ~args =
   let rec processArgs ~acc args =
     match args with
-    | ( ((Asttypes.Lbl {txt = s; loc} | Opt {txt = s; loc}) as label),
+    | ( ((Asttypes.Labelled {txt = s; loc} | Optional {txt = s; loc}) as label),
         (e : Parsetree.expression) )
       :: rest -> (
       let namedArgLoc = if loc = Location.none then None else Some loc in
@@ -909,7 +909,7 @@ let extractExpApplyArgs ~args =
             name = s;
             opt =
               (match label with
-              | Opt _ -> true
+              | Optional _ -> true
               | _ -> false);
             posStart = Loc.start loc;
             posEnd = Loc.end_ loc;
@@ -917,7 +917,7 @@ let extractExpApplyArgs ~args =
         in
         processArgs ~acc:({label = Some labelled; exp = e} :: acc) rest
       | None -> processArgs ~acc rest)
-    | (Nolbl, (e : Parsetree.expression)) :: rest ->
+    | (Nolabel, (e : Parsetree.expression)) :: rest ->
       if e.pexp_loc.loc_ghost then processArgs ~acc rest
       else processArgs ~acc:({label = None; exp = e} :: acc) rest
     | [] -> List.rev acc

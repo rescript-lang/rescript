@@ -112,9 +112,9 @@ let string i ppf s = line i ppf "\"%s\"\n" s
 let string_loc i ppf s = line i ppf "%a\n" fmt_string_loc s
 
 let arg_label_loc i ppf = function
-  | Nolbl -> line i ppf "Nolabel\n"
-  | Opt {txt = s} -> line i ppf "Optional \"%s\"\n" s
-  | Lbl {txt = s} -> line i ppf "Labelled \"%s\"\n" s
+  | Nolabel -> line i ppf "Nolabel\n"
+  | Optional {txt = s} -> line i ppf "Optional \"%s\"\n" s
+  | Labelled {txt = s} -> line i ppf "Labelled \"%s\"\n" s
 
 let rec core_type i ppf x =
   line i ppf "core_type %a\n" fmt_location x.ptyp_loc;

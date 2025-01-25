@@ -266,7 +266,7 @@ let command ~debug ~emitter ~path =
 
       let posOfGreatherthanAfterProps =
         let rec loop = function
-          | (Asttypes.Lbl {txt = "children"}, {Parsetree.pexp_loc}) :: _ ->
+          | (Asttypes.Labelled {txt = "children"}, {Parsetree.pexp_loc}) :: _ ->
             Loc.start pexp_loc
           | _ :: args -> loop args
           | [] -> (* should not happen *) (-1, -1)

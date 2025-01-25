@@ -941,7 +941,7 @@ module Codegen = struct
   let mkFailWithExp () =
     Ast_helper.Exp.apply
       (Ast_helper.Exp.ident {txt = Lident "failwith"; loc = Location.none})
-      [(Nolbl, Ast_helper.Exp.constant (Pconst_string ("TODO", None)))]
+      [(Nolabel, Ast_helper.Exp.constant (Pconst_string ("TODO", None)))]
 
   let mkConstructPat ?payload name =
     Ast_helper.Pat.construct
@@ -1123,7 +1123,7 @@ let getFirstFnUnlabelledArgType ~env ~full t =
   in
   let rec findFirstUnlabelledArgType labels =
     match labels with
-    | (Asttypes.Nolabel, t) :: _ -> Some t
+    | ((Nolabel : Asttypes.arg_label), t) :: _ -> Some t
     | _ :: rest -> findFirstUnlabelledArgType rest
     | [] -> None
   in

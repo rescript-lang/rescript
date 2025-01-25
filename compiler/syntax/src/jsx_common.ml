@@ -59,5 +59,5 @@ let async_component ~async expr =
            loc = Location.none;
            txt = Ldot (Lident "JsxPPXReactSupport", "asyncComponent");
          })
-      [(Nolbl, expr)]
+      [(Nolabel, expr)]
   else expr

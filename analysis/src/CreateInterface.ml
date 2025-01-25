@@ -169,8 +169,8 @@ let printSignature ~extractor ~signature =
                 labelDecl.ld_type
             in
             let lblName = labelDecl.ld_id |> Ident.name in
-            let lbl =
-              if labelDecl.ld_optional then Asttypes.Optional lblName
+            let lbl : Asttypes.arg_label =
+              if labelDecl.ld_optional then Optional lblName
               else Labelled lblName
             in
             {

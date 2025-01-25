@@ -952,7 +952,9 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
           (* compute the application of the first label, then the next ones *)
           let args = processApply args [label] in
           processApply args nextLabels
-        | (Asttypes.Nolabel, _) :: nextArgs, [Asttypes.Nolabel] -> nextArgs
+        | ( ((Nolabel : Asttypes.arg_label), _) :: nextArgs,
+            [(Nolabel : Asttypes.arg_label)] ) ->
+          nextArgs
         | ((Labelled _, _) as arg) :: nextArgs, [Nolabel] ->
           arg :: processApply nextArgs labels
         | (Optional _, _) :: nextArgs, [Nolabel] -> processApply nextArgs labels

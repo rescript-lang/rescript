@@ -761,7 +761,7 @@ module Compile = struct
           let argsFromKind =
             innerFunctionDefinition.kind
             |> List.map (fun (entry : Kind.entry) ->
-                   ( Asttypes.Labelled entry.label,
+                   ( (Asttypes.Labelled entry.label : Asttypes.arg_label),
                      Some
                        {
                          expr with
@@ -785,7 +785,7 @@ module Compile = struct
             args
             |> List.find_opt (fun arg ->
                    match arg with
-                   | Asttypes.Labelled s, Some _ -> s = label
+                   | (Labelled s : Asttypes.arg_label), Some _ -> s = label
                    | _ -> false)
           in
           let argOpt =

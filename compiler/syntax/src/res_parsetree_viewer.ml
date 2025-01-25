@@ -11,24 +11,24 @@ let arrow_type ?(max_arity = max_int) ct =
       when acc <> [] ->
       (attrs_before, List.rev acc, typ)
     | {
-     ptyp_desc = Ptyp_arrow {lbl = Nolbl as lbl; arg; ret};
+     ptyp_desc = Ptyp_arrow {lbl = Nolabel as lbl; arg; ret};
      ptyp_attributes = [];
     } ->
       let arg = ([], lbl, arg) in
       process attrs_before (arg :: acc) ret (arity - 1)
     | {
-     ptyp_desc = Ptyp_arrow {lbl = Nolbl};
+     ptyp_desc = Ptyp_arrow {lbl = Nolabel};
      ptyp_attributes = [({txt = "bs"}, _)];
     } ->
       (* stop here, the uncurried attribute always indicates the beginning of an arrow function
          * e.g. `(. int) => (. int)` instead of `(. int, . int)` *)
       (attrs_before, List.rev acc, typ)
-    | {ptyp_desc = Ptyp_arrow {lbl = Nolbl}; ptyp_attributes = _attrs} as
+    | {ptyp_desc = Ptyp_arrow {lbl = Nolabel}; ptyp_attributes = _attrs} as
       return_type ->
       let args = List.rev acc in
       (attrs_before, args, return_type)
     | {
-     ptyp_desc = Ptyp_arrow {lbl = (Lbl _ | Opt _) as lbl; arg; ret};
+     ptyp_desc = Ptyp_arrow {lbl = (Labelled _ | Optional _) as lbl; arg; ret};
      ptyp_attributes = attrs;
     } ->
       (* Res_core.parse_es6_arrow_type has a workaround that removed an extra arity for the function if the
@@ -48,7 +48,7 @@ let arrow_type ?(max_arity = max_int) ct =
     | typ -> (attrs_before, List.rev acc, typ)
   in
   match ct with
-  | {ptyp_desc = Ptyp_arrow {lbl = Nolbl}; ptyp_attributes = attrs1} as typ ->
+  | {ptyp_desc = Ptyp_arrow {lbl = Nolabel}; ptyp_attributes = attrs1} as typ ->
     process attrs1 [] {typ with ptyp_attributes = []} max_arity
   | typ -> process [] [] typ max_arity
 
@@ -112,7 +112,7 @@ let rewrite_underscore_apply expr =
   match expr_fun.pexp_desc with
   | Pexp_fun
       {
-        arg_label = Nolbl;
+        arg_label = Nolabel;
         default = None;
         lhs = {ppat_desc = Ppat_var {txt = "__x"}};
         rhs = {pexp_desc = Pexp_apply {funct = call_expr; args}} as e;
@@ -281,7 +281,7 @@ let is_unary_expression expr =
   | Pexp_apply
       {
         funct = {pexp_desc = Pexp_ident {txt = Longident.Lident operator}};
-        args = [(Nolbl, _arg)];
+        args = [(Nolabel, _arg)];
       }
     when is_unary_operator operator ->
     true
@@ -305,7 +305,7 @@ let is_binary_expression expr =
             pexp_desc =
               Pexp_ident {txt = Longident.Lident operator; loc = operator_loc};
           };
-        args = [(Nolbl, _operand1); (Nolbl, _operand2)];
+        args = [(Nolabel, _operand1); (Nolabel, _operand2)];
       }
     when is_binary_operator operator
          && not (operator_loc.loc_ghost && operator = "++")
@@ -380,7 +380,7 @@ let is_array_access expr =
               Pexp_ident
                 {txt = Longident.Ldot (Longident.Lident "Array", "get")};
           };
-        args = [(Nolbl, _parentExpr); (Nolbl, _memberExpr)];
+        args = [(Nolabel, _parentExpr); (Nolabel, _memberExpr)];
       } ->
     true
   | _ -> false
@@ -454,7 +454,7 @@ let collect_ternary_parts expr =
 
 let parameters_should_hug parameters =
   match parameters with
-  | [Parameter {attrs = []; lbl = Nolbl; default_expr = None; pat}]
+  | [Parameter {attrs = []; lbl = Nolabel; default_expr = None; pat}]
     when is_huggable_pattern pat ->
     true
   | _ -> false
@@ -512,7 +512,7 @@ let should_indent_binary_expr expr =
        Pexp_apply
          {
            funct = {pexp_desc = Pexp_ident {txt = Longident.Lident sub_operator}};
-           args = [(Nolbl, _lhs); (Nolbl, _rhs)];
+           args = [(Nolabel, _lhs); (Nolabel, _rhs)];
          };
     }
       when is_binary_operator sub_operator ->
@@ -525,7 +525,7 @@ let should_indent_binary_expr expr =
      Pexp_apply
        {
          funct = {pexp_desc = Pexp_ident {txt = Longident.Lident operator}};
-         args = [(Nolbl, lhs); (Nolbl, _rhs)];
+         args = [(Nolabel, lhs); (Nolabel, _rhs)];
        };
   }
     when is_binary_operator operator ->
@@ -638,7 +638,7 @@ let is_template_literal expr =
   | Pexp_apply
       {
         funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "++"}};
-        args = [(Nolbl, _); (Nolbl, _)];
+        args = [(Nolabel, _); (Nolabel, _)];
       }
     when has_template_literal_attr expr.pexp_attributes ->
     true
@@ -709,7 +709,7 @@ let is_single_pipe_expr expr =
     | Pexp_apply
         {
           funct = {pexp_desc = Pexp_ident {txt = Longident.Lident ("->" | "|>")}};
-          args = [(Nolbl, _operand1); (Nolbl, _operand2)];
+          args = [(Nolabel, _operand1); (Nolabel, _operand2)];
         } ->
       true
     | _ -> false
@@ -718,7 +718,7 @@ let is_single_pipe_expr expr =
   | Pexp_apply
       {
         funct = {pexp_desc = Pexp_ident {txt = Longident.Lident ("->" | "|>")}};
-        args = [(Nolbl, operand1); (Nolbl, _operand2)];
+        args = [(Nolabel, operand1); (Nolabel, _operand2)];
       }
     when not (is_pipe_expr operand1) ->
     true
@@ -728,7 +728,7 @@ let is_underscore_apply_sugar expr =
   match expr.pexp_desc with
   | Pexp_fun
       {
-        arg_label = Nolbl;
+        arg_label = Nolabel;
         default = None;
         lhs = {ppat_desc = Ppat_var {txt = "__x"}};
         rhs = {pexp_desc = Pexp_apply _};

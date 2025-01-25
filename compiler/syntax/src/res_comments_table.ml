@@ -168,18 +168,18 @@ let arrow_type ct =
   let rec process attrs_before acc typ =
     match typ with
     | {
-     ptyp_desc = Ptyp_arrow {lbl = Nolbl as lbl; arg; ret};
+     ptyp_desc = Ptyp_arrow {lbl = Nolabel as lbl; arg; ret};
      ptyp_attributes = [];
     } ->
       let arg = ([], lbl, arg) in
       process attrs_before (arg :: acc) ret
     | {
-     ptyp_desc = Ptyp_arrow {lbl = Nolbl as lbl; arg; ret};
+     ptyp_desc = Ptyp_arrow {lbl = Nolabel as lbl; arg; ret};
      ptyp_attributes = [({txt = "bs"}, _)] as attrs;
     } ->
       let arg = (attrs, lbl, arg) in
       process attrs_before (arg :: acc) ret
-    | {ptyp_desc = Ptyp_arrow {lbl = Nolbl}} as return_type ->
+    | {ptyp_desc = Ptyp_arrow {lbl = Nolabel}} as return_type ->
       let args = List.rev acc in
       (attrs_before, args, return_type)
     | {ptyp_desc = Ptyp_arrow {lbl; arg; ret}; ptyp_attributes = attrs} ->
@@ -188,7 +188,7 @@ let arrow_type ct =
     | typ -> (attrs_before, List.rev acc, typ)
   in
   match ct with
-  | {ptyp_desc = Ptyp_arrow {lbl = Nolbl}; ptyp_attributes = attrs} as typ ->
+  | {ptyp_desc = Ptyp_arrow {lbl = Nolabel}; ptyp_attributes = attrs} as typ ->
     process attrs [] {typ with ptyp_attributes = []}
   | typ -> process [] [] typ
 
@@ -274,7 +274,10 @@ let fun_expr expr =
     | {pexp_desc = Pexp_newtype (string_loc, rest); pexp_attributes = attrs} ->
       let var, return_expr = collect_new_types [string_loc] rest in
       let parameter =
-        (attrs, Asttypes.Nolbl, None, Ast_helper.Pat.var ~loc:string_loc.loc var)
+        ( attrs,
+          (Nolabel : Asttypes.arg_label_loc),
+          None,
+          Ast_helper.Pat.var ~loc:string_loc.loc var )
       in
       collect attrs_before (parameter :: acc) return_expr
     | {
@@ -294,7 +297,7 @@ let fun_expr expr =
      pexp_desc =
        Pexp_fun
          {
-           arg_label = (Lbl _ | Opt _) as lbl;
+           arg_label = (Labelled _ | Optional _) as lbl;
            default = default_expr;
            lhs = pattern;
            rhs = return_expr;
@@ -306,8 +309,8 @@ let fun_expr expr =
     | expr -> (attrs_before, List.rev acc, expr)
   in
   match expr with
-  | {pexp_desc = Pexp_fun {arg_label = Nolbl}; pexp_attributes = attrs} as expr
-    ->
+  | {pexp_desc = Pexp_fun {arg_label = Nolabel}; pexp_attributes = attrs} as
+    expr ->
     collect attrs [] {expr with pexp_attributes = []}
   | expr -> collect [] [] expr
 
@@ -1308,7 +1311,7 @@ and walk_expression expr t comments =
                     Longident.Lident ("~+" | "~+." | "~-" | "~-." | "not" | "!");
                 };
           };
-        args = [(Nolbl, arg_expr)];
+        args = [(Nolabel, arg_expr)];
       } ->
     let before, inside, after = partition_by_loc comments arg_expr.pexp_loc in
     attach t.leading arg_expr.pexp_loc before;
@@ -1330,7 +1333,7 @@ and walk_expression expr t comments =
                       | "<>" );
                 };
           };
-        args = [(Nolbl, operand1); (Nolbl, operand2)];
+        args = [(Nolabel, operand1); (Nolabel, operand2)];
       } ->
     let before, inside, after = partition_by_loc comments operand1.pexp_loc in
     attach t.leading operand1.pexp_loc before;
@@ -1350,7 +1353,7 @@ and walk_expression expr t comments =
           {
             pexp_desc = Pexp_ident {txt = Longident.Ldot (Lident "Array", "get")};
           };
-        args = [(Nolbl, parent_expr); (Nolbl, member_expr)];
+        args = [(Nolabel, parent_expr); (Nolabel, member_expr)];
       } ->
     walk_list [Expression parent_expr; Expression member_expr] t comments
   | Pexp_apply
@@ -1360,7 +1363,11 @@ and walk_expression expr t comments =
             pexp_desc = Pexp_ident {txt = Longident.Ldot (Lident "Array", "set")};
           };
         args =
-          [(Nolbl, parent_expr); (Nolbl, member_expr); (Nolbl, target_expr)];
+          [
+            (Nolabel, parent_expr);
+            (Nolabel, member_expr);
+            (Nolabel, target_expr);
+          ];
       } ->
     walk_list
       [Expression parent_expr; Expression member_expr; Expression target_expr]
@@ -1373,7 +1380,7 @@ and walk_expression expr t comments =
               Pexp_ident
                 {txt = Longident.Ldot (Lident "Primitive_dict", "make")};
           };
-        args = [(Nolbl, key_values)];
+        args = [(Nolabel, key_values)];
       }
     when Res_parsetree_viewer.is_tuple_array key_values ->
     walk_list [Expression key_values] t comments
@@ -1394,17 +1401,17 @@ and walk_expression expr t comments =
     if ParsetreeViewer.is_jsx_expression expr then (
       let props =
         arguments
-        |> List.filter (fun (label, _) ->
+        |> List.filter (fun ((label : Asttypes.arg_label_loc), _) ->
                match label with
-               | Asttypes.Lbl {txt = "children"} -> false
-               | Asttypes.Nolbl -> false
+               | Labelled {txt = "children"} -> false
+               | Nolabel -> false
                | _ -> true)
       in
       let maybe_children =
         arguments
-        |> List.find_opt (fun (label, _) ->
+        |> List.find_opt (fun ((label : Asttypes.arg_label_loc), _) ->
                match label with
-               | Asttypes.Lbl {txt = "children"} -> true
+               | Labelled {txt = "children"} -> true
                | _ -> false)
       in
       match maybe_children with
@@ -1426,10 +1433,10 @@ and walk_expression expr t comments =
         else
           walk_list
             (props
-            |> List.map (fun (lbl, expr) ->
+            |> List.map (fun ((lbl : Asttypes.arg_label_loc), expr) ->
                    let loc =
                      match lbl with
-                     | Asttypes.Lbl {loc} | Opt {loc} ->
+                     | Labelled {loc} | Optional {loc} ->
                        {loc with loc_end = expr.Parsetree.pexp_loc.loc_end}
                      | _ -> expr.pexp_loc
                    in
@@ -1443,10 +1450,10 @@ and walk_expression expr t comments =
       attach t.trailing call_expr.pexp_loc after_expr;
       walk_list
         (arguments
-        |> List.map (fun (lbl, expr) ->
+        |> List.map (fun ((lbl : Asttypes.arg_label_loc), expr) ->
                let loc =
                  match lbl with
-                 | Asttypes.Lbl {loc} | Opt {loc} ->
+                 | Labelled {loc} | Optional {loc} ->
                    {loc with loc_end = expr.Parsetree.pexp_loc.loc_end}
                  | _ -> expr.pexp_loc
                in
