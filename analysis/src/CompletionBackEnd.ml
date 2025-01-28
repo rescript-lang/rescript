@@ -952,7 +952,8 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
           (* compute the application of the first label, then the next ones *)
           let args = processApply args [label] in
           processApply args nextLabels
-        | (Asttypes.Nolabel, _) :: nextArgs, [Asttypes.Nolabel] -> nextArgs
+        | (Asttypes.Noloc.Nolabel, _) :: nextArgs, [Asttypes.Noloc.Nolabel] ->
+          nextArgs
         | ((Labelled _, _) as arg) :: nextArgs, [Nolabel] ->
           arg :: processApply nextArgs labels
         | (Optional _, _) :: nextArgs, [Nolabel] -> processApply nextArgs labels
@@ -1007,9 +1008,9 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
             synthetic = true;
             contextPath =
               (match cp with
-              | CPApply (c, args) -> CPApply (c, args @ [Asttypes.Nolabel])
+              | CPApply (c, args) -> CPApply (c, args @ [Asttypes.Noloc.Nolabel])
               | CPId _ when TypeUtils.isFunctionType ~env ~package typ ->
-                CPApply (cp, [Asttypes.Nolabel])
+                CPApply (cp, [Asttypes.Noloc.Nolabel])
               | _ -> cp);
             id = fieldName;
             inJsx = false;

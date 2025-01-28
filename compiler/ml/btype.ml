@@ -593,7 +593,7 @@ let forget_abbrev mem path =
 (**********************************)
 
 let is_optional = function
-  | Optional _ -> true
+  | Noloc.Optional _ -> true
   | _ -> false
 
 let is_optional_loc = function
@@ -601,7 +601,7 @@ let is_optional_loc = function
   | _ -> false
 
 let label_name = function
-  | Nolabel -> ""
+  | Noloc.Nolabel -> ""
   | Labelled s | Optional s -> s
 
 let label_loc_name = function
@@ -609,11 +609,11 @@ let label_loc_name = function
   | Lbl {txt} | Opt {txt} -> txt
 
 let prefixed_label_name = function
-  | Nolabel -> ""
+  | Noloc.Nolabel -> ""
   | Labelled s -> "~" ^ s
   | Optional s -> "?" ^ s
 
-type sargs = (Asttypes.arg_label_loc * Parsetree.expression) list
+type sargs = (Asttypes.arg_label * Parsetree.expression) list
 
 let rec extract_label_aux hd l = function
   | [] -> None
@@ -622,13 +622,13 @@ let rec extract_label_aux hd l = function
     else extract_label_aux (p :: hd) l ls
 
 let extract_label l (ls : sargs) :
-    (arg_label_loc * Parsetree.expression * sargs) option =
+    (arg_label * Parsetree.expression * sargs) option =
   extract_label_aux [] l ls
 
 let rec label_assoc x (args : sargs) =
   match args with
   | [] -> false
-  | (a, _) :: l -> Asttypes.same_arg_label_loc a x || label_assoc x l
+  | (a, _) :: l -> Asttypes.same_arg_label a x || label_assoc x l
 
 (**********************************)
 (*  Utilities for backtracking    *)

@@ -299,8 +299,7 @@ let rec exprToContextPathInner (e : Parsetree.expression) =
     | None -> None
     | Some contexPath ->
       Some
-        (CPApply
-           (contexPath, args |> List.map fst |> List.map Asttypes.to_arg_label))
+        (CPApply (contexPath, args |> List.map fst |> List.map Asttypes.to_noloc))
     )
   | Pexp_tuple exprs ->
     let exprsAsContextPaths = exprs |> List.filter_map exprToContextPath in

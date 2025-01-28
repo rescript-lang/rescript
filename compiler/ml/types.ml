@@ -23,7 +23,7 @@ type type_expr = {mutable desc: type_desc; mutable level: int; id: int}
 
 and type_desc =
   | Tvar of string option
-  | Tarrow of arg_label * type_expr * type_expr * commutable * arity
+  | Tarrow of Noloc.arg_label * type_expr * type_expr * commutable * arity
   | Ttuple of type_expr list
   | Tconstr of Path.t * type_expr list * abbrev_memo ref
   | Tobject of type_expr * (Path.t * type_expr list) option ref

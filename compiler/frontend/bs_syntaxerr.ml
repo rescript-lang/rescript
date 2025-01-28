@@ -104,10 +104,10 @@ let () =
 
 let err loc error = raise (Error (loc, error))
 
-let optional_err loc (lbl : Asttypes.arg_label_loc) =
+let optional_err loc (lbl : Asttypes.arg_label) =
   match lbl with
   | Opt _ -> raise (Error (loc, Optional_in_uncurried_bs_attribute))
   | _ -> ()
 
-let err_if_label loc (lbl : Asttypes.arg_label_loc) =
+let err_if_label loc (lbl : Asttypes.arg_label) =
   if lbl <> Nolbl then raise (Error (loc, Misplaced_label_syntax))

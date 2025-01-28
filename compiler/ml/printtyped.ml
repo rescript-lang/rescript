@@ -121,7 +121,7 @@ let option i f ppf x =
 let longident i ppf li = line i ppf "%a\n" fmt_longident li
 let string i ppf s = line i ppf "\"%s\"\n" s
 let arg_label i ppf = function
-  | Nolabel -> line i ppf "Nolabel\n"
+  | Noloc.Nolabel -> line i ppf "Nolabel\n"
   | Optional s -> line i ppf "Optional \"%s\"\n" s
   | Labelled s -> line i ppf "Labelled \"%s\"\n" s
 

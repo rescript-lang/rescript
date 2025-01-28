@@ -76,12 +76,7 @@ and core_type = {
 and core_type_desc =
   | Ptyp_any (*  _ *)
   | Ptyp_var of string (* 'a *)
-  | Ptyp_arrow of {
-      lbl: arg_label_loc;
-      arg: core_type;
-      ret: core_type;
-      arity: arity;
-    }
+  | Ptyp_arrow of {lbl: arg_label; arg: core_type; ret: core_type; arity: arity}
     (* T1 -> T2       Simple
        ~l:T1 -> T2    Labelled
        ?l:T1 -> T2    Optional
@@ -230,7 +225,7 @@ and expression_desc =
        let rec P1 = E1 and ... and Pn = EN in E   (flag = Recursive)
     *)
   | Pexp_fun of {
-      arg_label: arg_label_loc;
+      arg_label: arg_label;
       default: expression option;
       lhs: pattern;
       rhs: expression;
@@ -249,7 +244,7 @@ and expression_desc =
     *)
   | Pexp_apply of {
       funct: expression;
-      args: (arg_label_loc * expression) list;
+      args: (arg_label * expression) list;
       partial: bool;
     }
     (* E0 ~l1:E1 ... ~ln:En

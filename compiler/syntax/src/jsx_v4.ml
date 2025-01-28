@@ -750,12 +750,8 @@ let rec recursively_transform_named_args_for_make expr args newtypes core_type =
 
 let arg_to_type types
     ((name, default, {ppat_attributes = attrs}, _alias, loc, type_) :
-      arg_label_loc
-      * expression option
-      * pattern
-      * label
-      * 'loc
-      * core_type option) =
+      arg_label * expression option * pattern * label * 'loc * core_type option)
+    =
   match (type_, name, default) with
   | Some type_, name, _ when is_optional name ->
     (true, get_label name, attrs, loc, type_) :: types

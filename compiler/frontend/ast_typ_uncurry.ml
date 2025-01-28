@@ -24,12 +24,12 @@
 
 type typ = Parsetree.core_type
 type 'a cxt = Ast_helper.loc -> Bs_ast_mapper.mapper -> 'a
-type uncurry_type_gen = (Asttypes.arg_label_loc -> typ -> typ -> typ) cxt
+type uncurry_type_gen = (Asttypes.arg_label -> typ -> typ -> typ) cxt
 
 module Typ = Ast_helper.Typ
 
 let to_method_callback_type loc (mapper : Bs_ast_mapper.mapper)
-    (label : Asttypes.arg_label_loc) (first_arg : Parsetree.core_type)
+    (label : Asttypes.arg_label) (first_arg : Parsetree.core_type)
     (typ : Parsetree.core_type) =
   let first_arg = mapper.typ mapper first_arg in
   let typ = mapper.typ mapper typ in
@@ -46,7 +46,7 @@ let to_method_callback_type loc (mapper : Bs_ast_mapper.mapper)
   | None -> assert false
 
 let to_uncurry_type loc (mapper : Bs_ast_mapper.mapper)
-    (label : Asttypes.arg_label_loc) (first_arg : Parsetree.core_type)
+    (label : Asttypes.arg_label) (first_arg : Parsetree.core_type)
     (typ : Parsetree.core_type) =
   (* no need to error for optional here,
      since we can not make it

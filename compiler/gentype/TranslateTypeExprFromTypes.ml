@@ -2,7 +2,7 @@ open GenTypeCommon
 
 type translation = {dependencies: dep list; type_: type_}
 
-let rec remove_option ~(label : Asttypes.arg_label)
+let rec remove_option ~(label : Asttypes.Noloc.arg_label)
     (type_expr : Types.type_expr) =
   match (type_expr.desc, label) with
   | Tconstr (Path.Pident id, [t], _), Optional lbl when Ident.name id = "option"

@@ -142,7 +142,7 @@ let rewrite_underscore_apply expr =
 type fun_param_kind =
   | Parameter of {
       attrs: Parsetree.attributes;
-      lbl: Asttypes.arg_label_loc;
+      lbl: Asttypes.arg_label;
       default_expr: Parsetree.expression option;
       pat: Parsetree.pattern;
     }

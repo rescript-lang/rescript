@@ -166,11 +166,11 @@ let tagged_template_literal_attr =
 
 let spread_attr = (Location.mknoloc "res.spread", Parsetree.PStr [])
 
-type argument = {label: Asttypes.arg_label_loc; expr: Parsetree.expression}
+type argument = {label: Asttypes.arg_label; expr: Parsetree.expression}
 
 type type_parameter = {
   attrs: Ast_helper.attrs;
-  label: Asttypes.arg_label_loc;
+  label: Asttypes.arg_label;
   typ: Parsetree.core_type;
   start_pos: Lexing.position;
 }
@@ -190,7 +190,7 @@ type fundef_type_param = {
 
 type fundef_term_param = {
   attrs: Parsetree.attributes;
-  p_label: Asttypes.arg_label_loc;
+  p_label: Asttypes.arg_label;
   expr: Parsetree.expression option;
   pat: Parsetree.pattern;
   p_pos: Lexing.position;

@@ -4,7 +4,7 @@ let ident l = l |> List.map str |> String.concat "."
 
 type path = string list
 
-type typedFnArg = Asttypes.arg_label * Types.type_expr
+type typedFnArg = Asttypes.Noloc.arg_label * Types.type_expr
 
 let pathToString (path : path) = path |> String.concat "."
 
@@ -605,7 +605,7 @@ module Completable = struct
     | CPFloat
     | CPBool
     | CPOption of contextPath
-    | CPApply of contextPath * Asttypes.arg_label list
+    | CPApply of contextPath * Asttypes.Noloc.arg_label list
     | CPId of {
         path: string list;
         completionContext: completionContext;
@@ -692,7 +692,7 @@ module Completable = struct
       contextPathToString cp ^ "("
       ^ (labels
         |> List.map (function
-             | Asttypes.Nolabel -> "Nolabel"
+             | Asttypes.Noloc.Nolabel -> "Nolabel"
              | Labelled s -> "~" ^ s
              | Optional s -> "?" ^ s)
         |> String.concat ", ")

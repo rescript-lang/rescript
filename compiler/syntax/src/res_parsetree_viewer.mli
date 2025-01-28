@@ -5,7 +5,7 @@ val arrow_type :
   ?max_arity:int ->
   Parsetree.core_type ->
   Parsetree.attributes
-  * (Parsetree.attributes * Asttypes.arg_label_loc * Parsetree.core_type) list
+  * (Parsetree.attributes * Asttypes.arg_label * Parsetree.core_type) list
   * Parsetree.core_type
 
 val functor_type :
@@ -41,7 +41,7 @@ val collect_list_expressions :
 type fun_param_kind =
   | Parameter of {
       attrs: Parsetree.attributes;
-      lbl: Asttypes.arg_label_loc;
+      lbl: Asttypes.arg_label;
       default_expr: Parsetree.expression option;
       pat: Parsetree.pattern;
     }
@@ -98,9 +98,9 @@ val partition_printable_attributes :
   Parsetree.attributes -> Parsetree.attributes * Parsetree.attributes
 
 val requires_special_callback_printing_last_arg :
-  (Asttypes.arg_label_loc * Parsetree.expression) list -> bool
+  (Asttypes.arg_label * Parsetree.expression) list -> bool
 val requires_special_callback_printing_first_arg :
-  (Asttypes.arg_label_loc * Parsetree.expression) list -> bool
+  (Asttypes.arg_label * Parsetree.expression) list -> bool
 
 val mod_expr_apply :
   Parsetree.module_expr -> Parsetree.module_expr list * Parsetree.module_expr

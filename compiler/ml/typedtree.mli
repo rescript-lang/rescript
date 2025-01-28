@@ -129,7 +129,7 @@ and expression_desc =
             let rec P1 = E1 and ... and Pn = EN in E   (flag = Recursive)
          *)
   | Texp_function of {
-      arg_label: arg_label;
+      arg_label: Noloc.arg_label;
       arity: arity;
       param: Ident.t;
       case: case;
@@ -148,7 +148,7 @@ and expression_desc =
          *)
   | Texp_apply of {
       funct: expression;
-      args: (arg_label * expression option) list;
+      args: (Noloc.arg_label * expression option) list;
       partial: bool;
     }
       (** E0 ~l1:E1 ... ~ln:En
@@ -413,7 +413,7 @@ and core_type = {
 and core_type_desc =
   | Ttyp_any
   | Ttyp_var of string
-  | Ttyp_arrow of arg_label * core_type * core_type * arity
+  | Ttyp_arrow of Noloc.arg_label * core_type * core_type * arity
   | Ttyp_tuple of core_type list
   | Ttyp_constr of Path.t * Longident.t loc * core_type list
   | Ttyp_object of object_field list * closed_flag

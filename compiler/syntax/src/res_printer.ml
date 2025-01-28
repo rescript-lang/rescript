@@ -4816,7 +4816,7 @@ and print_arguments_with_callback_in_last_position ~state ~partial args cmt_tbl
       ]
 
 and print_arguments ~state ~partial
-    (args : (Asttypes.arg_label_loc * Parsetree.expression) list) cmt_tbl =
+    (args : (Asttypes.arg_label * Parsetree.expression) list) cmt_tbl =
   match args with
   | [
    ( Nolbl,

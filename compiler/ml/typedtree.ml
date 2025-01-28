@@ -76,7 +76,7 @@ and expression_desc =
   | Texp_constant of constant
   | Texp_let of rec_flag * value_binding list * expression
   | Texp_function of {
-      arg_label: arg_label;
+      arg_label: Noloc.arg_label;
       arity: arity;
       param: Ident.t;
       case: case;
@@ -85,7 +85,7 @@ and expression_desc =
     }
   | Texp_apply of {
       funct: expression;
-      args: (arg_label * expression option) list;
+      args: (Noloc.arg_label * expression option) list;
       partial: bool;
     }
   | Texp_match of expression * case list * case list * partial
@@ -307,7 +307,7 @@ and core_type = {
 and core_type_desc =
   | Ttyp_any
   | Ttyp_var of string
-  | Ttyp_arrow of arg_label * core_type * core_type * arity
+  | Ttyp_arrow of Noloc.arg_label * core_type * core_type * arity
   | Ttyp_tuple of core_type list
   | Ttyp_constr of Path.t * Longident.t loc * core_type list
   | Ttyp_object of object_field list * closed_flag

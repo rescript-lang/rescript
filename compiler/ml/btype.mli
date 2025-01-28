@@ -180,21 +180,21 @@ val forget_abbrev : abbrev_memo ref -> Path.t -> unit
 
 (**** Utilities for labels ****)
 
-val is_optional : arg_label -> bool
-val is_optional_loc : arg_label_loc -> bool
-val label_name : arg_label -> label
-val label_loc_name : arg_label_loc -> label
+val is_optional : Noloc.arg_label -> bool
+val is_optional_loc : arg_label -> bool
+val label_name : Noloc.arg_label -> label
+val label_loc_name : arg_label -> label
 
 (* Returns the label name with first character '?' or '~' as appropriate. *)
-val prefixed_label_name : arg_label -> label
+val prefixed_label_name : Noloc.arg_label -> label
 
-type sargs = (arg_label_loc * Parsetree.expression) list
+type sargs = (arg_label * Parsetree.expression) list
 
 val extract_label :
-  label -> sargs -> (arg_label_loc * Parsetree.expression * sargs) option
+  label -> sargs -> (arg_label * Parsetree.expression * sargs) option
 (* actual label, value, new list with the same order *)
 
-val label_assoc : arg_label_loc -> sargs -> bool
+val label_assoc : arg_label -> sargs -> bool
 (**** Utilities for backtracking ****)
 
 type snapshot

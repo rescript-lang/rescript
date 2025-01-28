@@ -40,7 +40,7 @@ type typ = Parsetree.core_type
 type 'a cxt = Ast_helper.loc -> Bs_ast_mapper.mapper -> 'a
 
 type uncurry_type_gen =
-  (Asttypes.arg_label_loc ->
+  (Asttypes.arg_label ->
   (* label for error checking *)
   typ ->
   (* First arg *)

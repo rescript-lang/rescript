@@ -160,4 +160,4 @@ type object_field = Parsetree.object_field
 
 let object_field l attrs ty = Parsetree.Otag (l, attrs, ty)
 
-type args = (Asttypes.arg_label_loc * Parsetree.expression) list
+type args = (Asttypes.arg_label * Parsetree.expression) list

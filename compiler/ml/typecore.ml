@@ -34,7 +34,7 @@ type error =
   | Orpat_vars of Ident.t * Ident.t list
   | Expr_type_clash of (type_expr * type_expr) list * type_clash_context option
   | Apply_non_function of type_expr
-  | Apply_wrong_label of arg_label * type_expr
+  | Apply_wrong_label of Noloc.arg_label * type_expr
   | Label_multiply_defined of {
       label: string;
       jsx_component_info: jsx_prop_error_info option;
@@ -52,7 +52,7 @@ type error =
   | Private_label of Longident.t * type_expr
   | Not_subtype of (type_expr * type_expr) list * (type_expr * type_expr) list
   | Too_many_arguments of bool * type_expr
-  | Abstract_wrong_label of arg_label * type_expr
+  | Abstract_wrong_label of Noloc.arg_label * type_expr
   | Scoping_let_module of string * type_expr
   | Not_a_variant_type of Longident.t
   | Incoherent_label_order
@@ -740,7 +740,8 @@ let print_expr_type_clash ?type_clash_context env trace ppf =
       ~pp_sep:(fun ppf _ -> fprintf ppf ",@ ")
       (fun ppf (label, argtype) ->
         match label with
-        | Asttypes.Nolabel -> fprintf ppf "@[%a@]" Printtyp.type_expr argtype
+        | Asttypes.Noloc.Nolabel ->
+          fprintf ppf "@[%a@]" Printtyp.type_expr argtype
         | Labelled label ->
           fprintf ppf "@[(~%s: %a)@]" label Printtyp.type_expr argtype
         | Optional label ->
@@ -1879,7 +1880,7 @@ and is_nonexpansive_opt = function
 let rec approx_type env sty =
   match sty.ptyp_desc with
   | Ptyp_arrow {lbl = p; ret = sty; arity} ->
-    let p = Asttypes.to_arg_label p in
+    let p = Asttypes.to_noloc p in
     let ty1 = if is_optional p then type_option (newvar ()) else newvar () in
     newty (Tarrow (p, ty1, approx_type env sty, Cok, arity))
   | Ptyp_tuple args -> newty (Ttuple (List.map (approx_type env) args))
@@ -1898,7 +1899,7 @@ let rec type_approx env sexp =
   match sexp.pexp_desc with
   | Pexp_let (_, _, e) -> type_approx env e
   | Pexp_fun {arg_label = p; rhs = e; arity} ->
-    let p = Asttypes.to_arg_label p in
+    let p = Asttypes.to_noloc p in
     let ty = if is_optional p then type_option (newvar ()) else newvar () in
     newty (Tarrow (p, ty, type_approx env e, Cok, arity))
   | Pexp_match (_, {pc_rhs = e} :: _) -> type_approx env e
@@ -2237,9 +2238,9 @@ let not_function env ty =
   ls = [] && not tvar
 
 type lazy_args =
-  (Asttypes.arg_label * (unit -> Typedtree.expression) option) list
+  (Asttypes.Noloc.arg_label * (unit -> Typedtree.expression) option) list
 
-type targs = (Asttypes.arg_label * Typedtree.expression option) list
+type targs = (Asttypes.Noloc.arg_label * Typedtree.expression option) list
 let rec type_exp ?recarg env sexp =
   (* We now delegate everything to type_expect *)
   type_expect ?recarg env sexp (newvar ())
@@ -2364,7 +2365,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         arity;
         async;
       } ->
-    let l = Asttypes.to_arg_label l in
+    let l = Asttypes.to_noloc l in
     assert (is_optional l);
     (* default allowed only with optional argument *)
     let open Ast_helper in
@@ -2407,7 +2408,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
       [Exp.case pat body]
   | Pexp_fun
       {arg_label = l; default = None; lhs = spat; rhs = sbody; arity; async} ->
-    let l = Asttypes.to_arg_label l in
+    let l = Asttypes.to_noloc l in
     type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
       ty_expected l
       [Ast_helper.Exp.case spat sbody]
@@ -3395,7 +3396,7 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
           unify env lhs_type Predef.type_int;
           Predef.type_int
       in
-      let targs = [(to_arg_label lhs_label, Some lhs)] in
+      let targs = [(to_noloc lhs_label, Some lhs)] in
       Some (targs, result_type)
     | ( Some {form = Binary; specialization},
         [(lhs_label, lhs_expr); (rhs_label, rhs_expr)] ) ->
@@ -3454,7 +3455,7 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
             (lhs, rhs, Predef.type_int))
       in
       let targs =
-        [(to_arg_label lhs_label, Some lhs); (to_arg_label rhs_label, Some rhs)]
+        [(to_noloc lhs_label, Some lhs); (to_noloc rhs_label, Some rhs)]
       in
       Some (targs, result_type)
     | _ -> None)
@@ -3546,9 +3547,9 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
       if List.length args < max_arity && total_app then
         match (expand_head env ty_fun).desc with
         | Tarrow (Optional l, t1, t2, _, _) ->
-          ignored := (Optional l, t1, ty_fun.level) :: !ignored;
+          ignored := (Noloc.Optional l, t1, ty_fun.level) :: !ignored;
           let arg =
-            ( Optional l,
+            ( Noloc.Optional l,
               Some (fun () -> option_none (instance env t1) Location.none) )
           in
           type_unknown_args max_arity ~args:(arg :: args) ~top_arity:None
@@ -3561,7 +3562,7 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
       (* foo(. ) treated as empty application if all args are optional (hence ignored) *)
       type_unknown_args max_arity ~args ~top_arity:None omitted ty_fun []
     | (l1, sarg1) :: sargl ->
-      let l1 = to_arg_label l1 in
+      let l1 = to_noloc l1 in
       let ty1, ty2 =
         let ty_fun = expand_head env ty_fun in
         let arity_ok = List.length args < max_arity in
@@ -3573,8 +3574,8 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
           unify env ty_fun
             (newty (Tarrow (l1, t1, t2, Clink (ref Cunknown), top_arity)));
           (t1, t2)
-        | Tarrow (l, t1, t2, _, _) when Asttypes.same_arg_label l l1 && arity_ok
-          ->
+        | Tarrow (l, t1, t2, _, _)
+          when Asttypes.Noloc.same_arg_label l l1 && arity_ok ->
           (t1, t2)
         | td -> (
           let ty_fun =
@@ -4297,7 +4298,7 @@ let report_error env ppf error =
         "It is not a function.")
   | Apply_wrong_label (l, ty) ->
     let print_label ppf = function
-      | Nolabel -> fprintf ppf "without label"
+      | Noloc.Nolabel -> fprintf ppf "without label"
       | l -> fprintf ppf "with label %s" (prefixed_label_name l)
     in
     fprintf ppf
@@ -4376,7 +4377,7 @@ let report_error env ppf error =
       fprintf ppf "the expected type is@ %a@]" type_expr ty)
   | Abstract_wrong_label (l, ty) ->
     let label_mark = function
-      | Nolabel -> "but its first argument is not labelled"
+      | Noloc.Nolabel -> "but its first argument is not labelled"
       | l ->
         sprintf "but its first argument is labelled %s" (prefixed_label_name l)
     in

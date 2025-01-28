@@ -104,7 +104,7 @@ let processOptionalArgs ~expType ~(locFrom : Location.t) ~locTo ~path args =
              | None -> Some false
            in
            match lbl with
-           | Asttypes.Optional s when not locFrom.loc_ghost ->
+           | Asttypes.Noloc.Optional s when not locFrom.loc_ghost ->
              if argIsSupplied <> Some false then supplied := s :: !supplied;
              if argIsSupplied = None then suppliedMaybe := s :: !suppliedMaybe
            | _ -> ());

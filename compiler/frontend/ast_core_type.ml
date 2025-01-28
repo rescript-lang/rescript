@@ -131,7 +131,7 @@ let get_curry_arity (ty : t) =
 let is_arity_one ty = get_curry_arity ty = 1
 
 type param_type = {
-  label: Asttypes.arg_label_loc;
+  label: Asttypes.arg_label;
   ty: Parsetree.core_type;
   attr: Parsetree.attributes;
   loc: loc;

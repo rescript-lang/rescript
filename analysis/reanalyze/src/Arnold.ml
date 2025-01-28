@@ -582,7 +582,7 @@ module ExtendFunctionTable = struct
             Texp_apply {funct = {exp_desc = Texp_ident (path, {loc}, _)}; args};
         }
       when kindOpt <> None ->
-      let checkArg ((argLabel : Asttypes.arg_label), _argOpt) =
+      let checkArg ((argLabel : Asttypes.Noloc.arg_label), _argOpt) =
         match (argLabel, kindOpt) with
         | (Labelled l | Optional l), Some kind ->
           kind |> List.for_all (fun {Kind.label} -> label <> l)
@@ -624,7 +624,7 @@ module ExtendFunctionTable = struct
         when callee |> FunctionTable.isInFunctionInTable ~functionTable ->
         let functionName = Path.name callee in
         args
-        |> List.iter (fun ((argLabel : Asttypes.arg_label), argOpt) ->
+        |> List.iter (fun ((argLabel : Asttypes.Noloc.arg_label), argOpt) ->
                match (argLabel, argOpt |> extractLabelledArgument) with
                | Labelled label, Some (path, loc)
                  when path |> FunctionTable.isInFunctionInTable ~functionTable
@@ -672,7 +672,7 @@ module CheckExpressionWellFormed = struct
         ->
         let functionName = Path.name functionPath in
         args
-        |> List.iter (fun ((argLabel : Asttypes.arg_label), argOpt) ->
+        |> List.iter (fun ((argLabel : Asttypes.Noloc.arg_label), argOpt) ->
                match argOpt |> ExtendFunctionTable.extractLabelledArgument with
                | Some (path, loc) -> (
                  match argLabel with
@@ -761,7 +761,7 @@ module Compile = struct
           let argsFromKind =
             innerFunctionDefinition.kind
             |> List.map (fun (entry : Kind.entry) ->
-                   ( Asttypes.Labelled entry.label,
+                   ( Asttypes.Noloc.Labelled entry.label,
                      Some
                        {
                          expr with
@@ -785,7 +785,7 @@ module Compile = struct
             args
             |> List.find_opt (fun arg ->
                    match arg with
-                   | Asttypes.Labelled s, Some _ -> s = label
+                   | Asttypes.Noloc.Labelled s, Some _ -> s = label
                    | _ -> false)
           in
           let argOpt =

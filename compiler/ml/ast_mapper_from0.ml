@@ -99,7 +99,7 @@ module T = struct
     | Ptyp_any -> any ~loc ~attrs ()
     | Ptyp_var s -> var ~loc ~attrs s
     | Ptyp_arrow (lab, t1, t2) ->
-      let lab = Asttypes.to_arg_label_loc lab in
+      let lab = Asttypes.to_arg_label lab in
       arrow ~loc ~attrs ~arity:None lab (sub.typ sub t1) (sub.typ sub t2)
     | Ptyp_tuple tyl -> tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) -> (
@@ -305,7 +305,7 @@ module E = struct
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
     | Pexp_fun (lab, def, p, e) ->
-      let lab = Asttypes.to_arg_label_loc lab in
+      let lab = Asttypes.to_arg_label lab in
       let async = Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.async") in
       fun_ ~loc ~attrs ~async ~arity:None lab
         (map_opt (sub.expr sub) def)
@@ -352,7 +352,7 @@ module E = struct
       let partial, attrs = process_partial_app_attribute attrs in
       apply ~loc ~attrs ~partial (sub.expr sub e)
         (List.map
-           (fun (lbl, e) -> (Asttypes.to_arg_label_loc lbl, sub.expr sub e))
+           (fun (lbl, e) -> (Asttypes.to_arg_label lbl, sub.expr sub e))
            l)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)

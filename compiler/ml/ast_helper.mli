@@ -58,7 +58,7 @@ module Typ : sig
     ?loc:loc ->
     ?attrs:attrs ->
     arity:arity ->
-    arg_label_loc ->
+    arg_label ->
     core_type ->
     core_type ->
     core_type
@@ -140,7 +140,7 @@ module Exp : sig
     ?attrs:attrs ->
     ?async:bool ->
     arity:int option ->
-    arg_label_loc ->
+    arg_label ->
     expression option ->
     pattern ->
     expression ->
@@ -150,7 +150,7 @@ module Exp : sig
     ?attrs:attrs ->
     ?partial:bool ->
     expression ->
-    (arg_label_loc * expression) list ->
+    (arg_label * expression) list ->
     expression
   val match_ : ?loc:loc -> ?attrs:attrs -> expression -> case list -> expression
   val try_ : ?loc:loc -> ?attrs:attrs -> expression -> case list -> expression

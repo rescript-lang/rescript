@@ -99,7 +99,7 @@ module T = struct
     | Ptyp_any -> any ~loc ~attrs ()
     | Ptyp_var s -> var ~loc ~attrs s
     | Ptyp_arrow {lbl; arg; ret; arity} -> (
-      let lbl = Asttypes.to_arg_label lbl in
+      let lbl = Asttypes.to_noloc lbl in
       let typ0 = arrow ~loc ~attrs lbl (sub.typ sub arg) (sub.typ sub ret) in
       match arity with
       | None -> typ0
@@ -294,7 +294,7 @@ module E = struct
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
     | Pexp_fun {arg_label = lab; default = def; lhs = p; rhs = e; arity; async}
       -> (
-      let lab = Asttypes.to_arg_label lab in
+      let lab = Asttypes.to_noloc lab in
       let attrs =
         if async then
           ({txt = "res.async"; loc = Location.none}, Pt.PStr []) :: attrs
@@ -352,7 +352,7 @@ module E = struct
       in
       apply ~loc ~attrs (sub.expr sub e)
         (List.map
-           (fun (lbl, e) -> (Asttypes.to_arg_label lbl, sub.expr sub e))
+           (fun (lbl, e) -> (Asttypes.to_noloc lbl, sub.expr sub e))
            args)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)

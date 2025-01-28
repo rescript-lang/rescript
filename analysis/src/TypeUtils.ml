@@ -1123,7 +1123,7 @@ let getFirstFnUnlabelledArgType ~env ~full t =
   in
   let rec findFirstUnlabelledArgType labels =
     match labels with
-    | (Asttypes.Nolabel, t) :: _ -> Some t
+    | (Asttypes.Noloc.Nolabel, t) :: _ -> Some t
     | _ :: rest -> findFirstUnlabelledArgType rest
     | [] -> None
   in
