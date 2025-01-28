@@ -4463,6 +4463,23 @@ and print_jsx_children ~state (children_expr : Parsetree.expression) ~sep
             let acc = expr :: acc in
             acc
         in
+        (* adjust for braces when we forward the current_loc to the recursion *)
+        let current_loc =
+          match expr with
+          | {Parsetree.pexp_loc = loc}
+            when loc.loc_start.pos_lnum == loc.loc_end.pos_lnum ->
+            current_loc
+          | _ when ParsetreeViewer.is_braced_expr expr ->
+            {
+              current_loc with
+              loc_end =
+                {
+                  current_loc.loc_end with
+                  pos_lnum = current_loc.loc_end.pos_lnum + 1;
+                };
+            }
+          | _ -> current_loc
+        in
         loop current_loc docs tails
     in
     let docs = loop loc [] children in
