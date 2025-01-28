@@ -32,6 +32,10 @@
 - AST cleanup: use inline record for `Ptyp_arrow`. https://github.com/rescript-lang/rescript/pull/7250
 - Playground: Bundle stdlib runtime so that the playground can execute functions from Core/Belt/Js. (#7255)
 
+#### :nail_care: Polish
+
+- Rewatch 1.0.10. https://github.com/rescript-lang/rescript/pull/7259
+
 # 12.0.0-alpha.7
 
 #### :bug: Bug fix
