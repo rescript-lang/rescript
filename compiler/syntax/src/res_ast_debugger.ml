@@ -113,9 +113,9 @@ module SexpAst = struct
 
   let arg_label_loc lbl =
     match lbl with
-    | Asttypes.Nolbl -> Sexp.atom "Nolabel"
-    | Lbl {txt} -> Sexp.list [Sexp.atom "Labelled"; string txt]
-    | Opt {txt} -> Sexp.list [Sexp.atom "Optional"; string txt]
+    | Asttypes.Nolabel -> Sexp.atom "Nolabel"
+    | Labelled {txt} -> Sexp.list [Sexp.atom "Labelled"; string txt]
+    | Optional {txt} -> Sexp.list [Sexp.atom "Optional"; string txt]
 
   let constant c =
     let sexpr =

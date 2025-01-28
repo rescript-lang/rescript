@@ -48,9 +48,9 @@ type 'a loc = 'a Location.loc = {txt: 'a; loc: Location.t}
 type variance = Covariant | Contravariant | Invariant
 
 type arg_label =
-  | Nolbl (* x => ...*)
-  | Lbl of string loc (*  ~label => ... *)
-  | Opt of string loc (* ~(label=e) => ... *)
+  | Nolabel (* x => ...*)
+  | Labelled of string loc (*  ~label => ... *)
+  | Optional of string loc (* ~(label=e) => ... *)
 
 module Noloc = struct
   type arg_label =
@@ -73,27 +73,27 @@ end
 
 let to_arg_label ?(loc = Location.none) lbl =
   match lbl with
-  | Noloc.Nolabel -> Nolbl
-  | Labelled s -> Lbl {loc; txt = s}
-  | Optional s -> Opt {loc; txt = s}
+  | Noloc.Nolabel -> Nolabel
+  | Labelled s -> Labelled {loc; txt = s}
+  | Optional s -> Optional {loc; txt = s}
 
 let to_noloc = function
-  | Nolbl -> Noloc.Nolabel
-  | Lbl {txt} -> Labelled txt
-  | Opt {txt} -> Optional txt
+  | Nolabel -> Noloc.Nolabel
+  | Labelled {txt} -> Labelled txt
+  | Optional {txt} -> Optional txt
 
 let same_arg_label (x : arg_label) y =
   match x with
-  | Nolbl -> y = Nolbl
-  | Lbl {txt = s} -> (
+  | Nolabel -> y = Nolabel
+  | Labelled {txt = s} -> (
     match y with
-    | Lbl {txt = s0} -> s = s0
+    | Labelled {txt = s0} -> s = s0
     | _ -> false)
-  | Opt {txt = s} -> (
+  | Optional {txt = s} -> (
     match y with
-    | Opt {txt = s0} -> s = s0
+    | Optional {txt = s0} -> s = s0
     | _ -> false)
 
 let get_lbl_loc = function
-  | Nolbl -> Location.none
-  | Lbl {loc} | Opt {loc} -> loc
+  | Nolabel -> Location.none
+  | Labelled {loc} | Optional {loc} -> loc

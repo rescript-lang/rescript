@@ -106,7 +106,7 @@ let typ_mapper (self : Bs_ast_mapper.mapper) (ty : Parsetree.core_type) =
                 | Meth_callback attr, attrs -> (attrs, attr +> ty)
               in
               Ast_compatible.object_field name attrs
-                (Ast_typ_uncurry.to_uncurry_type loc self Nolbl core_type
+                (Ast_typ_uncurry.to_uncurry_type loc self Nolabel core_type
                    (Ast_literal.type_unit ~loc ()))
             in
             let not_getter_setter ty =

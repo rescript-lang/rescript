@@ -31,7 +31,7 @@ open Parsetree
 let default_loc = Location.none
 
 let arrow ?loc ?attrs ~arity a b =
-  Ast_helper.Typ.arrow ?loc ?attrs ~arity Nolbl a b
+  Ast_helper.Typ.arrow ?loc ?attrs ~arity Nolabel a b
 
 let apply_simple ?(loc = default_loc) ?(attrs = []) (fn : expression)
     (args : expression list) : expression =
@@ -42,7 +42,7 @@ let apply_simple ?(loc = default_loc) ?(attrs = []) (fn : expression)
       Pexp_apply
         {
           funct = fn;
-          args = Ext_list.map args (fun x -> (Asttypes.Nolbl, x));
+          args = Ext_list.map args (fun x -> (Asttypes.Nolabel, x));
           partial = false;
         };
   }
@@ -51,7 +51,8 @@ let app1 ?(loc = default_loc) ?(attrs = []) fn arg1 : expression =
   {
     pexp_loc = loc;
     pexp_attributes = attrs;
-    pexp_desc = Pexp_apply {funct = fn; args = [(Nolbl, arg1)]; partial = false};
+    pexp_desc =
+      Pexp_apply {funct = fn; args = [(Nolabel, arg1)]; partial = false};
   }
 
 let app2 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 : expression =
@@ -60,7 +61,7 @@ let app2 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 : expression =
     pexp_attributes = attrs;
     pexp_desc =
       Pexp_apply
-        {funct = fn; args = [(Nolbl, arg1); (Nolbl, arg2)]; partial = false};
+        {funct = fn; args = [(Nolabel, arg1); (Nolabel, arg2)]; partial = false};
   }
 
 let app3 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 arg3 : expression =
@@ -71,7 +72,7 @@ let app3 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 arg3 : expression =
       Pexp_apply
         {
           funct = fn;
-          args = [(Nolbl, arg1); (Nolbl, arg2); (Nolbl, arg3)];
+          args = [(Nolabel, arg1); (Nolabel, arg2); (Nolabel, arg3)];
           partial = false;
         };
   }
@@ -82,7 +83,14 @@ let fun_ ?(loc = default_loc) ?(attrs = []) ?(async = false) ~arity pat exp =
     pexp_attributes = attrs;
     pexp_desc =
       Pexp_fun
-        {arg_label = Nolbl; default = None; lhs = pat; rhs = exp; arity; async};
+        {
+          arg_label = Nolabel;
+          default = None;
+          lhs = pat;
+          rhs = exp;
+          arity;
+          async;
+        };
   }
 
 let const_exp_string ?(loc = default_loc) ?(attrs = []) ?delimiter (s : string)
@@ -111,7 +119,7 @@ let apply_labels ?(loc = default_loc) ?(attrs = []) fn
           funct = fn;
           args =
             Ext_list.map args (fun (l, a) ->
-                (Asttypes.Lbl {txt = l; loc = Location.none}, a));
+                (Asttypes.Labelled {txt = l; loc = Location.none}, a));
           partial = false;
         };
   }
@@ -120,7 +128,8 @@ let label_arrow ?(loc = default_loc) ?(attrs = []) ~arity txt arg ret :
     core_type =
   {
     ptyp_desc =
-      Ptyp_arrow {lbl = Asttypes.Lbl {txt; loc = default_loc}; arg; ret; arity};
+      Ptyp_arrow
+        {lbl = Asttypes.Labelled {txt; loc = default_loc}; arg; ret; arity};
     ptyp_loc = loc;
     ptyp_attributes = attrs;
   }
@@ -129,7 +138,8 @@ let opt_arrow ?(loc = default_loc) ?(attrs = []) ~arity txt arg ret : core_type
     =
   {
     ptyp_desc =
-      Ptyp_arrow {lbl = Asttypes.Opt {txt; loc = default_loc}; arg; ret; arity};
+      Ptyp_arrow
+        {lbl = Asttypes.Optional {txt; loc = default_loc}; arg; ret; arity};
     ptyp_loc = loc;
     ptyp_attributes = attrs;
   }

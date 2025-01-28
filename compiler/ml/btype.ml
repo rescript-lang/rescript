@@ -597,7 +597,7 @@ let is_optional = function
   | _ -> false
 
 let is_optional_loc = function
-  | Opt _ -> true
+  | Optional _ -> true
   | _ -> false
 
 let label_name = function
@@ -605,8 +605,8 @@ let label_name = function
   | Labelled s | Optional s -> s
 
 let label_loc_name = function
-  | Nolbl -> ""
-  | Lbl {txt} | Opt {txt} -> txt
+  | Nolabel -> ""
+  | Labelled {txt} | Optional {txt} -> txt
 
 let prefixed_label_name = function
   | Noloc.Nolabel -> ""

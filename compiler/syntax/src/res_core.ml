@@ -425,14 +425,14 @@ let make_unary_expr start_pos token_end token operand =
       ~loc:(mk_loc start_pos operand.Parsetree.pexp_loc.loc_end)
       (Ast_helper.Exp.ident ~loc:token_loc
          (Location.mkloc (Longident.Lident operator) token_loc))
-      [(Nolbl, operand)]
+      [(Nolabel, operand)]
   | Token.Bang, _ ->
     let token_loc = mk_loc start_pos token_end in
     Ast_helper.Exp.apply
       ~loc:(mk_loc start_pos operand.Parsetree.pexp_loc.loc_end)
       (Ast_helper.Exp.ident ~loc:token_loc
          (Location.mkloc (Longident.Lident "not") token_loc))
-      [(Nolbl, operand)]
+      [(Nolabel, operand)]
   | _ -> operand
 
 let make_list_expression loc seq ext_opt =
@@ -539,7 +539,7 @@ let process_underscore_application args =
           ~loc:Location.none
       in
       let fun_expr =
-        Ast_helper.Exp.fun_ ~loc ~arity:(Some 1) Nolbl None pattern exp_apply
+        Ast_helper.Exp.fun_ ~loc ~arity:(Some 1) Nolabel None pattern exp_apply
       in
       Ast_uncurried.uncurried_fun ~arity:1 fun_expr
     | None -> exp_apply
@@ -1656,7 +1656,7 @@ and parse_parameter p =
           | Comma | Equal | Rparen ->
             let loc = mk_loc start_pos p.prev_end_pos in
             ( [],
-              Asttypes.Lbl {txt = lbl_name; loc = lbl_loc},
+              Asttypes.Labelled {txt = lbl_name; loc = lbl_loc},
               lbl_loc,
               Ast_helper.Pat.var ~attrs ~loc (Location.mkloc lbl_name loc) )
           | Colon ->
@@ -1669,26 +1669,26 @@ and parse_parameter p =
               let loc = mk_loc start_pos p.prev_end_pos in
               Ast_helper.Pat.constraint_ ~attrs ~loc pat typ
             in
-            ([], Asttypes.Lbl {txt = lbl_name; loc = lbl_loc}, lbl_loc, pat)
+            ([], Asttypes.Labelled {txt = lbl_name; loc = lbl_loc}, lbl_loc, pat)
           | As ->
             Parser.next p;
             let pat =
               let pat = parse_constrained_pattern p in
               {pat with ppat_attributes = attrs @ pat.ppat_attributes}
             in
-            ([], Asttypes.Lbl {txt = lbl_name; loc = lbl_loc}, lbl_loc, pat)
+            ([], Asttypes.Labelled {txt = lbl_name; loc = lbl_loc}, lbl_loc, pat)
           | t ->
             Parser.err p (Diagnostics.unexpected t p.breadcrumbs);
             let loc = mk_loc start_pos p.prev_end_pos in
             ( [],
-              Asttypes.Lbl {txt = lbl_name; loc = lbl_loc},
+              Asttypes.Labelled {txt = lbl_name; loc = lbl_loc},
               lbl_loc,
               Ast_helper.Pat.var ~attrs ~loc (Location.mkloc lbl_name loc) ))
         | _ ->
           let pattern = parse_constrained_pattern p in
           let attrs = List.concat [pattern.ppat_attributes; attrs] in
           ( [],
-            Asttypes.Nolbl,
+            Asttypes.Nolabel,
             Location.none,
             {pattern with ppat_attributes = attrs} )
       in
@@ -1697,8 +1697,8 @@ and parse_parameter p =
         Parser.next p;
         let lbl =
           match lbl with
-          | Asttypes.Lbl lbl_name -> Asttypes.Opt lbl_name
-          | Asttypes.Nolbl ->
+          | Asttypes.Labelled lbl_name -> Asttypes.Optional lbl_name
+          | Asttypes.Nolabel ->
             let lbl_name =
               match pat.ppat_desc with
               | Ppat_var var -> var.txt
@@ -1707,7 +1707,7 @@ and parse_parameter p =
             Parser.err ~start_pos ~end_pos:p.prev_end_pos p
               (Diagnostics.message
                  (ErrorMessages.missing_tilde_labeled_parameter lbl_name));
-            Asttypes.Opt {txt = lbl_name; loc = lbl_loc}
+            Asttypes.Optional {txt = lbl_name; loc = lbl_loc}
           | lbl -> lbl
         in
         match p.Parser.token with
@@ -1754,7 +1754,7 @@ and parse_parameters p : fundef_type_param option * fundef_term_param list =
     in
     {
       attrs = [];
-      p_label = Asttypes.Nolbl;
+      p_label = Asttypes.Nolabel;
       expr = None;
       pat = unit_pattern;
       p_pos = start_pos;
@@ -1768,7 +1768,7 @@ and parse_parameters p : fundef_type_param option * fundef_term_param list =
       [
         {
           attrs = [];
-          p_label = Asttypes.Nolbl;
+          p_label = Asttypes.Nolabel;
           expr = None;
           pat = Ast_helper.Pat.var ~loc (Location.mkloc ident loc);
           p_pos = start_pos;
@@ -1781,7 +1781,7 @@ and parse_parameters p : fundef_type_param option * fundef_term_param list =
       [
         {
           attrs = [];
-          p_label = Asttypes.Nolbl;
+          p_label = Asttypes.Nolabel;
           expr = None;
           pat = Ast_helper.Pat.any ~loc ();
           p_pos = start_pos;
@@ -2001,7 +2001,7 @@ and parse_bracket_access p expr start_pos =
       Ast_helper.Exp.apply ~loc
         (Ast_helper.Exp.ident ~loc:operator_loc
            (Location.mkloc (Longident.Lident "#=") operator_loc))
-        [(Nolbl, e); (Nolbl, rhs_expr)]
+        [(Nolabel, e); (Nolabel, rhs_expr)]
     | _ -> e)
   | _ -> (
     let access_expr = parse_constrained_or_coerced_expr p in
@@ -2028,7 +2028,7 @@ and parse_bracket_access p expr start_pos =
       let array_set =
         Ast_helper.Exp.apply ~loc:(mk_loc start_pos end_pos)
           (Ast_helper.Exp.ident ~loc:array_loc array_set)
-          [(Nolbl, expr); (Nolbl, access_expr); (Nolbl, rhs_expr)]
+          [(Nolabel, expr); (Nolabel, access_expr); (Nolabel, rhs_expr)]
       in
       Parser.eat_breadcrumb p;
       array_set
@@ -2038,7 +2038,7 @@ and parse_bracket_access p expr start_pos =
         Ast_helper.Exp.apply ~loc:(mk_loc start_pos end_pos)
           (Ast_helper.Exp.ident ~loc:array_loc
              (Location.mkloc (Longident.Ldot (Lident "Array", "get")) array_loc))
-          [(Nolbl, expr); (Nolbl, access_expr)]
+          [(Nolabel, expr); (Nolabel, access_expr)]
       in
       parse_primary_expr ~operand:e p)
 
@@ -2215,13 +2215,14 @@ and parse_binary_expr ?(context = OrdinaryExpr) ?a p prec =
           {
             b with
             pexp_desc =
-              Pexp_apply {funct = fun_expr; args = args @ [(Nolbl, a)]; partial};
+              Pexp_apply
+                {funct = fun_expr; args = args @ [(Nolabel, a)]; partial};
           }
-        | BarGreater, _ -> Ast_helper.Exp.apply ~loc b [(Nolbl, a)]
+        | BarGreater, _ -> Ast_helper.Exp.apply ~loc b [(Nolabel, a)]
         | _ ->
           Ast_helper.Exp.apply ~loc
             (make_infix_operator p token start_pos end_pos)
-            [(Nolbl, a); (Nolbl, b)]
+            [(Nolabel, a); (Nolabel, b)]
       in
       Parser.eat_breadcrumb p;
       loop expr)
@@ -2313,7 +2314,7 @@ and parse_template_expr ?prefix p =
     Ast_helper.Exp.apply
       ~attrs:[tagged_template_literal_attr]
       ~loc:lident_loc.loc ident
-      [(Nolbl, strings_array); (Nolbl, values_array)]
+      [(Nolabel, strings_array); (Nolabel, values_array)]
   in
 
   let hidden_operator =
@@ -2323,7 +2324,7 @@ and parse_template_expr ?prefix p =
   let concat (e1 : Parsetree.expression) (e2 : Parsetree.expression) =
     let loc = mk_loc e1.pexp_loc.loc_start e2.pexp_loc.loc_end in
     Ast_helper.Exp.apply ~attrs:[template_literal_attr] ~loc hidden_operator
-      [(Nolbl, e1); (Nolbl, e2)]
+      [(Nolabel, e1); (Nolabel, e2)]
   in
   let gen_interpolated_string () =
     let subparts =
@@ -2387,13 +2388,13 @@ and over_parse_constrained_or_coerced_or_arrow_expression p expr =
       let arrow1 =
         Ast_helper.Exp.fun_
           ~loc:(mk_loc expr.pexp_loc.loc_start body.pexp_loc.loc_end)
-          ~arity:None Asttypes.Nolbl None pat
+          ~arity:None Asttypes.Nolabel None pat
           (Ast_helper.Exp.constraint_ body typ)
       in
       let arrow2 =
         Ast_helper.Exp.fun_
           ~loc:(mk_loc expr.pexp_loc.loc_start body.pexp_loc.loc_end)
-          ~arity:None Asttypes.Nolbl None
+          ~arity:None Asttypes.Nolabel None
           (Ast_helper.Pat.constraint_ pat typ)
           body
       in
@@ -2672,8 +2673,8 @@ and parse_jsx_opening_or_self_closing_element ~start_pos p =
        [
          jsx_props;
          [
-           (Asttypes.Lbl {txt = "children"; loc = Location.none}, children);
-           ( Asttypes.Nolbl,
+           (Asttypes.Labelled {txt = "children"; loc = Location.none}, children);
+           ( Asttypes.Nolabel,
              Ast_helper.Exp.construct
                (Location.mknoloc (Longident.Lident "()"))
                None );
@@ -2738,7 +2739,7 @@ and parse_jsx_prop p =
     (* optional punning: <foo ?a /> *)
     if optional then
       Some
-        ( Asttypes.Opt {txt = name; loc},
+        ( Asttypes.Optional {txt = name; loc},
           Ast_helper.Exp.ident ~loc (Location.mkloc (Longident.Lident name) loc)
         )
     else
@@ -2750,8 +2751,8 @@ and parse_jsx_prop p =
         Scanner.pop_mode p.scanner Jsx;
         let attr_expr = parse_primary_expr ~operand:(parse_atomic_expr p) p in
         let label =
-          if optional then Asttypes.Opt {txt = name; loc}
-          else Asttypes.Lbl {txt = name; loc}
+          if optional then Asttypes.Optional {txt = name; loc}
+          else Asttypes.Labelled {txt = name; loc}
         in
         Some (label, attr_expr)
       | _ ->
@@ -2759,8 +2760,8 @@ and parse_jsx_prop p =
           Ast_helper.Exp.ident ~loc (Location.mkloc (Longident.Lident name) loc)
         in
         let label =
-          if optional then Asttypes.Opt {txt = name; loc}
-          else Asttypes.Lbl {txt = name; loc}
+          if optional then Asttypes.Optional {txt = name; loc}
+          else Asttypes.Labelled {txt = name; loc}
         in
         Some (label, attr_expr))
   (* {...props} *)
@@ -2774,7 +2775,7 @@ and parse_jsx_prop p =
       let loc = mk_loc p.Parser.start_pos p.prev_end_pos in
       let attr_expr = parse_primary_expr ~operand:(parse_expr p) p in
       (* using label "spreadProps" to distinguish from others *)
-      let label = Asttypes.Lbl {txt = "_spreadProps"; loc} in
+      let label = Asttypes.Labelled {txt = "_spreadProps"; loc} in
       match p.Parser.token with
       | Rbrace ->
         Parser.next p;
@@ -2990,7 +2991,7 @@ and parse_braced_or_record_expr p =
               [
                 {
                   attrs = [];
-                  p_label = Nolbl;
+                  p_label = Nolabel;
                   expr = None;
                   pat = Ast_helper.Pat.var ~loc:ident.loc ident;
                   p_pos = start_pos;
@@ -3583,7 +3584,7 @@ and parse_argument p : argument option =
             (Location.mknoloc (Longident.Lident "()"))
             None
         in
-        Some {label = Asttypes.Nolbl; expr = unit_expr}
+        Some {label = Asttypes.Nolabel; expr = unit_expr}
       | _ -> parse_argument2 p)
     | _ -> parse_argument2 p
   else None
@@ -3597,7 +3598,7 @@ and parse_argument2 p : argument option =
     let expr =
       Ast_helper.Exp.ident ~loc (Location.mkloc (Longident.Lident "_") loc)
     in
-    Some {label = Nolbl; expr}
+    Some {label = Nolabel; expr}
   | Tilde -> (
     Parser.next p;
     (* TODO: nesting of pattern matches not intuitive for error recovery *)
@@ -3614,15 +3615,19 @@ and parse_argument2 p : argument option =
       match p.Parser.token with
       | Question ->
         Parser.next p;
-        Some {label = Opt {txt = ident; loc = named_arg_loc}; expr = ident_expr}
+        Some
+          {
+            label = Optional {txt = ident; loc = named_arg_loc};
+            expr = ident_expr;
+          }
       | Equal ->
         Parser.next p;
         let label =
           match p.Parser.token with
           | Question ->
             Parser.next p;
-            Asttypes.Opt {txt = ident; loc = named_arg_loc}
-          | _ -> Asttypes.Lbl {txt = ident; loc = named_arg_loc}
+            Asttypes.Optional {txt = ident; loc = named_arg_loc}
+          | _ -> Asttypes.Labelled {txt = ident; loc = named_arg_loc}
         in
         let expr =
           match p.Parser.token with
@@ -3639,17 +3644,18 @@ and parse_argument2 p : argument option =
         let typ = parse_typ_expr p in
         let loc = mk_loc start_pos p.prev_end_pos in
         let expr = Ast_helper.Exp.constraint_ ~loc ident_expr typ in
-        Some {label = Asttypes.Lbl {txt = ident; loc = named_arg_loc}; expr}
+        Some
+          {label = Asttypes.Labelled {txt = ident; loc = named_arg_loc}; expr}
       | _ ->
         Some
           {
-            label = Asttypes.Lbl {txt = ident; loc = named_arg_loc};
+            label = Asttypes.Labelled {txt = ident; loc = named_arg_loc};
             expr = ident_expr;
           })
     | t ->
       Parser.err p (Diagnostics.lident t);
-      Some {label = Nolbl; expr = Recover.default_expr ()})
-  | _ -> Some {label = Nolbl; expr = parse_constrained_or_coerced_expr p}
+      Some {label = Nolabel; expr = Recover.default_expr ()})
+  | _ -> Some {label = Nolabel; expr = parse_constrained_or_coerced_expr p}
 
 and parse_call_expr p fun_expr =
   Parser.expect Lparen p;
@@ -3674,7 +3680,7 @@ and parse_call_expr p fun_expr =
       (* No args -> unit sugar: `foo()` *)
       [
         {
-          label = Nolbl;
+          label = Nolabel;
           expr =
             Ast_helper.Exp.construct ~loc
               (Location.mkloc (Longident.Lident "()") loc)
@@ -3877,7 +3883,7 @@ and parse_list_expr ~start_pos p =
             (Longident.Ldot
                (Longident.Ldot (Longident.Lident "Belt", "List"), "concatMany"))
             loc))
-      [(Asttypes.Nolbl, Ast_helper.Exp.array ~loc list_exprs)]
+      [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc list_exprs)]
 
 and parse_dict_expr ~start_pos p =
   let rows =
@@ -3906,7 +3912,7 @@ and parse_dict_expr ~start_pos p =
        (Location.mkloc
           (Longident.Ldot (Longident.Lident Primitive_modules.dict, "make"))
           loc))
-    [(Asttypes.Nolbl, Ast_helper.Exp.array ~loc key_value_pairs)]
+    [(Asttypes.Nolabel, Ast_helper.Exp.array ~loc key_value_pairs)]
 
 and parse_array_exp p =
   let start_pos = p.Parser.start_pos in
@@ -3961,7 +3967,7 @@ and parse_array_exp p =
             (Longident.Ldot
                (Longident.Ldot (Longident.Lident "Belt", "Array"), "concatMany"))
             loc))
-      [(Nolbl, Ast_helper.Exp.array ~loc list_exprs)]
+      [(Nolabel, Ast_helper.Exp.array ~loc list_exprs)]
 
 (* TODO: check attributes in the case of poly type vars,
  * might be context dependend: parseFieldDeclaration (see ocaml) *)
@@ -3988,7 +3994,7 @@ and parse_poly_type_expr p =
         let typ = Ast_helper.Typ.var ~loc:var.loc var.txt in
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc typ.Parsetree.ptyp_loc.loc_start p.prev_end_pos in
-        Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Nolbl typ return_type
+        Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Nolabel typ return_type
       | _ -> Ast_helper.Typ.var ~loc:var.loc var.txt)
     | _ -> assert false)
   | _ -> parse_typ_expr p
@@ -4220,8 +4226,8 @@ and parse_type_parameter p =
       | Equal ->
         Parser.next p;
         Parser.expect Question p;
-        Some {attrs; label = Opt {txt = name; loc}; typ; start_pos}
-      | _ -> Some {attrs; label = Lbl {txt = name; loc}; typ; start_pos})
+        Some {attrs; label = Optional {txt = name; loc}; typ; start_pos}
+      | _ -> Some {attrs; label = Labelled {txt = name; loc}; typ; start_pos})
     | Lident _ -> (
       let name, loc = parse_lident p in
       match p.token with
@@ -4239,8 +4245,8 @@ and parse_type_parameter p =
         | Equal ->
           Parser.next p;
           Parser.expect Question p;
-          Some {attrs; label = Opt {txt = name; loc}; typ; start_pos}
-        | _ -> Some {attrs; label = Lbl {txt = name; loc}; typ; start_pos})
+          Some {attrs; label = Optional {txt = name; loc}; typ; start_pos}
+        | _ -> Some {attrs; label = Labelled {txt = name; loc}; typ; start_pos})
       | _ ->
         let constr = Location.mkloc (Longident.Lident name) loc in
         let args = parse_type_constructor_args ~constr_name:constr p in
@@ -4252,13 +4258,13 @@ and parse_type_parameter p =
 
         let typ = parse_arrow_type_rest ~es6_arrow:true ~start_pos typ p in
         let typ = parse_type_alias p typ in
-        Some {attrs = []; label = Nolbl; typ; start_pos})
+        Some {attrs = []; label = Nolabel; typ; start_pos})
     | _ ->
       let typ = parse_typ_expr p in
       let typ_with_attributes =
         {typ with ptyp_attributes = List.concat [attrs; typ.ptyp_attributes]}
       in
-      Some {attrs = []; label = Nolbl; typ = typ_with_attributes; start_pos}
+      Some {attrs = []; label = Nolabel; typ = typ_with_attributes; start_pos}
   else None
 
 (* (int, ~x:string, float) *)
@@ -4271,7 +4277,7 @@ and parse_type_parameters p =
     let loc = mk_loc start_pos p.prev_end_pos in
     let unit_constr = Location.mkloc (Longident.Lident "unit") loc in
     let typ = Ast_helper.Typ.constr unit_constr [] in
-    [{attrs = []; label = Nolbl; typ; start_pos}]
+    [{attrs = []; label = Nolabel; typ; start_pos}]
   | _ ->
     let params =
       parse_comma_delimited_region ~grammar:Grammar.TypeParameters
@@ -4293,8 +4299,8 @@ and parse_es6_arrow_type ~attrs p =
       | Equal ->
         Parser.next p;
         Parser.expect Question p;
-        Asttypes.Opt {txt = name; loc = label_loc}
-      | _ -> Asttypes.Lbl {txt = name; loc = label_loc}
+        Asttypes.Optional {txt = name; loc = label_loc}
+      | _ -> Asttypes.Labelled {txt = name; loc = label_loc}
     in
     Parser.expect EqualGreater p;
     let return_type = parse_typ_expr ~alias:false p in
@@ -4314,7 +4320,7 @@ and parse_es6_arrow_type ~attrs p =
           let arity =
             (* Workaround for ~lbl: @as(json`false`) _, which changes the arity *)
             match arg_lbl with
-            | Lbl _s ->
+            | Labelled _s ->
               let typ_is_any =
                 match typ.ptyp_desc with
                 | Ptyp_any -> true
@@ -4388,7 +4394,7 @@ and parse_arrow_type_rest ~es6_arrow ~start_pos typ p =
     Parser.next p;
     let return_type = parse_typ_expr ~alias:false p in
     let loc = mk_loc start_pos p.prev_end_pos in
-    Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Nolbl typ return_type
+    Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Nolabel typ return_type
   | _ -> typ
 
 and parse_typ_expr_region p =
@@ -4995,7 +5001,7 @@ and parse_type_equation_or_constr_decl p =
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc uident_start_pos p.prev_end_pos in
         let arrow_type =
-          Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Nolbl typ return_type
+          Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Nolabel typ return_type
         in
         let typ = parse_type_alias p arrow_type in
         (Some typ, Asttypes.Public, Parsetree.Ptype_abstract)

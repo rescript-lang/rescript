@@ -3556,7 +3556,7 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
             omitted t2 []
         | _ -> collect_args ()
       else collect_args ()
-    | [(Nolbl, {pexp_desc = Pexp_construct ({txt = Lident "()"}, None)})]
+    | [(Nolabel, {pexp_desc = Pexp_construct ({txt = Lident "()"}, None)})]
       when total_app && omitted = [] && args <> []
            && List.length args = List.length !ignored ->
       (* foo(. ) treated as empty application if all args are optional (hence ignored) *)
@@ -3621,7 +3621,7 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
       let sargs, omitted, arg =
         match extract_label name sargs with
         | None ->
-          if optional && (total_app || label_assoc Nolbl sargs) then (
+          if optional && (total_app || label_assoc Nolabel sargs) then (
             ignored := (l, ty, lv) :: !ignored;
             ( sargs,
               omitted,
@@ -3657,7 +3657,7 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
   let top_arity = if total_app then Some max_arity else None in
   match sargs with
   (* Special case for ignore: avoid discarding warning *)
-  | [(Nolbl, sarg)] when is_ignore ~env ~arity:top_arity funct ->
+  | [(Nolabel, sarg)] when is_ignore ~env ~arity:top_arity funct ->
     let ty_arg, ty_res =
       filter_arrow ~env ~arity:top_arity (instance env funct.exp_type) Nolabel
     in

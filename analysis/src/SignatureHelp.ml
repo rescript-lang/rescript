@@ -130,7 +130,7 @@ let extractParameters ~signature ~typeStrForParser ~labelPrefixLen =
         (* The AST locations does not account for "=?" of optional arguments, so add that to the offset here if needed. *)
         let endOffset =
           match argumentLabel with
-          | Asttypes.Opt _ -> endOffset + 2
+          | Asttypes.Optional _ -> endOffset + 2
           | _ -> endOffset
         in
         extractParams nextFunctionExpr

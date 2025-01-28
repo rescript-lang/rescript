@@ -287,9 +287,9 @@ let string_quot f x = pp f "`%s" x
 
 let rec type_with_label ctxt f (label, c) =
   match label with
-  | Nolbl -> core_type1 ctxt f c (* otherwise parenthesize *)
-  | Lbl {txt = s} -> pp f "%s:%a" s (core_type1 ctxt) c
-  | Opt {txt = s} -> pp f "?%s:%a" s (core_type1 ctxt) c
+  | Nolabel -> core_type1 ctxt f c (* otherwise parenthesize *)
+  | Labelled {txt = s} -> pp f "%s:%a" s (core_type1 ctxt) c
+  | Optional {txt = s} -> pp f "?%s:%a" s (core_type1 ctxt) c
 
 and core_type ctxt f x =
   if x.ptyp_attributes <> [] then
@@ -494,10 +494,10 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
 
 and label_exp ctxt f (l, opt, p) =
   match l with
-  | Nolbl ->
+  | Nolabel ->
     (* single case pattern parens needed here *)
     pp f "%a@ " (simple_pattern ctxt) p
-  | Opt {txt = rest} -> (
+  | Optional {txt = rest} -> (
     match p with
     | {ppat_desc = Ppat_var {txt; _}; ppat_attributes = []} when txt = rest -> (
       match opt with
@@ -508,7 +508,7 @@ and label_exp ctxt f (l, opt, p) =
       | Some o ->
         pp f "?%s:(%a=@;%a)@;" rest (pattern1 ctxt) p (expression ctxt) o
       | None -> pp f "?%s:%a@;" rest (simple_pattern ctxt) p))
-  | Lbl {txt = l} -> (
+  | Labelled {txt = l} -> (
     match p with
     | {ppat_desc = Ppat_var {txt; _}; ppat_attributes = []} when txt = l ->
       pp f "~%s@;" l
@@ -523,7 +523,7 @@ and sugar_expr ctxt f e =
           funct = {pexp_desc = Pexp_ident {txt = id; _}; pexp_attributes = []; _};
           args;
         }
-      when List.for_all (fun (lab, _) -> lab = Nolbl) args -> (
+      when List.for_all (fun (lab, _) -> lab = Nolabel) args -> (
       let print_indexop a path_prefix assign left right print_index indices
           rem_args =
         let print_path ppf = function
@@ -636,7 +636,7 @@ and expression ctxt f x =
         match view_fixity_of_exp e with
         | `Infix s -> (
           match l with
-          | [((Nolbl, _) as arg1); ((Nolbl, _) as arg2)] ->
+          | [((Nolabel, _) as arg1); ((Nolabel, _) as arg2)] ->
             (* FIXME associativity label_x_expression_param *)
             pp f "@[<2>%a@;%s@;%a@]"
               (label_x_expression_param reset_ctxt)
@@ -661,7 +661,7 @@ and expression ctxt f x =
             else s
           in
           match l with
-          | [(Nolbl, x)] -> pp f "@[<2>%s@;%a@]" s (simple_expr ctxt) x
+          | [(Nolabel, x)] -> pp f "@[<2>%s@;%a@]" s (simple_expr ctxt) x
           | _ ->
             pp f "@[<2>%a %a@]" (simple_expr ctxt) e
               (list (label_x_expression_param ctxt))
@@ -988,7 +988,7 @@ and binding ctxt f {pvb_pat = p; pvb_expr = x; _} =
           | Some arity -> "[arity:" ^ string_of_int arity ^ "]"
         in
         let async_str = if async then "async " else "" in
-        if label = Nolbl then
+        if label = Nolabel then
           pp f "%s%s%a@ %a" async_str arity_str (simple_pattern ctxt) p
             pp_print_pexp_function e
         else
@@ -1281,11 +1281,11 @@ and label_x_expression_param ctxt f (l, e) =
     | _ -> None
   in
   match l with
-  | Nolbl -> expression2 ctxt f e (* level 2*)
-  | Opt {txt = str} ->
+  | Nolabel -> expression2 ctxt f e (* level 2*)
+  | Optional {txt = str} ->
     if Some str = simple_name then pp f "?%s" str
     else pp f "?%s:%a" str (simple_expr ctxt) e
-  | Lbl {txt = lbl} ->
+  | Labelled {txt = lbl} ->
     if Some lbl = simple_name then pp f "~%s" lbl
     else pp f "~%s:%a" lbl (simple_expr ctxt) e
 

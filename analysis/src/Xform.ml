@@ -95,7 +95,7 @@ module IfThenElse = struct
                             Pexp_ident
                               {txt = Longident.Lident (("==" | "!=") as op)};
                         };
-                      args = [(Nolbl, arg1); (Nolbl, arg2)];
+                      args = [(Nolabel, arg1); (Nolabel, arg2)];
                     };
               },
               e1,
@@ -300,7 +300,7 @@ module AddTypeAnnotation = struct
       match e.pexp_desc with
       | Pexp_fun {arg_label; lhs = pat; rhs = e} ->
         let isUnlabeledOnlyArg =
-          argNum = 1 && arg_label = Nolbl
+          argNum = 1 && arg_label = Nolabel
           &&
           match e.pexp_desc with
           | Pexp_fun _ -> false
