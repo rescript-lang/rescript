@@ -1,5 +1,9 @@
+use anyhow::Result;
 use clap::{Parser, ValueEnum};
+use clap_verbosity_flag::InfoLevel;
+use log::LevelFilter;
 use regex::Regex;
+use std::io::Write;
 
 use rewatch::{build, cmd, lock, watcher};
 
@@ -22,7 +26,7 @@ struct Args {
     #[arg(value_enum)]
     command: Option<Command>,
 
-    /// The relative path to where the main bsconfig.json resides. IE - the root of your project.
+    /// The relative path to where the main rescript.json resides. IE - the root of your project.
     folder: Option<String>,
 
     /// Filter allows for a regex to be supplied which will filter the files to be compiled. For
@@ -39,6 +43,16 @@ struct Args {
 
     #[arg(short, long)]
     no_timing: Option<bool>,
+
+    /// Verbosity:
+    /// -v -> Debug
+    /// -vv -> Trace
+    /// -q -> Warn
+    /// -qq -> Error 
+    /// -qqq -> Off. 
+    /// Default (/ no argument given): 'info'
+    #[command(flatten)]
+    verbose: clap_verbosity_flag::Verbosity<InfoLevel>,
 
     /// This creates a source_dirs.json file at the root of the monorepo, which is needed when you
     /// want to use Reanalyze
@@ -59,9 +73,15 @@ struct Args {
     bsc_path: Option<String>,
 }
 
-fn main() {
-    env_logger::init();
+fn main() -> Result<()> {
     let args = Args::parse();
+    let log_level_filter = args.verbose.log_level_filter();
+
+    env_logger::Builder::new()
+        .format(|buf, record| writeln!(buf, "{}:\n{}", record.level(), record.args()))
+        .filter_level(log_level_filter)
+        .target(env_logger::fmt::Target::Stdout)
+        .init();
 
     let command = args.command.unwrap_or(Command::Build);
     let folder = args.folder.unwrap_or(".".to_string());
@@ -74,29 +94,34 @@ fn main() {
         Some(path) => {
             println!(
                 "{}",
-                build::get_compiler_args(&path, args.rescript_version, args.bsc_path)
+                build::get_compiler_args(&path, args.rescript_version, args.bsc_path)?
             );
             std::process::exit(0);
         }
     }
 
+    // The 'normal run' mode will show the 'pretty' formatted progress. But if we turn off the log
+    // level, we should never show that.
+    let show_progress = log_level_filter == LevelFilter::Info;
+
     match lock::get(&folder) {
         lock::Lock::Error(ref e) => {
-            eprintln!("Error while trying to get lock: {e}");
+            log::error!("Could not start Rewatch: {e}");
             std::process::exit(1)
         }
         lock::Lock::Aquired(_) => match command {
-            Command::Clean => build::clean::clean(&folder, args.bsc_path),
+            Command::Clean => build::clean::clean(&folder, show_progress, args.bsc_path),
             Command::Build => {
                 match build::build(
                     &filter,
                     &folder,
+                    show_progress,
                     args.no_timing.unwrap_or(false),
                     args.create_sourcedirs.unwrap_or(false),
                     args.bsc_path,
                 ) {
                     Err(e) => {
-                        eprintln!("Error Building: {e}");
+                        log::error!("{e}");
                         std::process::exit(1)
                     }
                     Ok(_) => {
@@ -110,10 +135,13 @@ fn main() {
             Command::Watch => {
                 watcher::start(
                     &filter,
+                    show_progress,
                     &folder,
                     args.after_build,
                     args.create_sourcedirs.unwrap_or(false),
                 );
+
+                Ok(())
             }
         },
     }

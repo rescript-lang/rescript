@@ -1,4 +1,6 @@
 use crate::build::packages;
+use crate::helpers::deserialize::*;
+use anyhow::Result;
 use convert_case::{Case, Casing};
 use serde::Deserialize;
 use std::fs;
@@ -27,45 +29,6 @@ pub struct PackageSource {
     pub type_: Option<String>,
 }
 
-/// `to_qualified_without_children` takes a tree like structure of dependencies, coming in from
-/// `bsconfig`, and turns it into a flat list. The main thing we extract here are the source
-/// folders, and optional subdirs, where potentially, the subdirs recurse or not.
-pub fn to_qualified_without_children(s: &Source, sub_path: Option<PathBuf>) -> PackageSource {
-    match s {
-        Source::Shorthand(dir) => PackageSource {
-            dir: sub_path
-                .map(|p| p.join(Path::new(dir)))
-                .unwrap_or(Path::new(dir).to_path_buf())
-                .to_string_lossy()
-                .to_string(),
-            subdirs: None,
-            type_: None,
-        },
-        Source::Qualified(PackageSource {
-            dir,
-            type_,
-            subdirs: Some(Subdirs::Recurse(should_recurse)),
-        }) => PackageSource {
-            dir: sub_path
-                .map(|p| p.join(Path::new(dir)))
-                .unwrap_or(Path::new(dir).to_path_buf())
-                .to_string_lossy()
-                .to_string(),
-            subdirs: Some(Subdirs::Recurse(*should_recurse)),
-            type_: type_.to_owned(),
-        },
-        Source::Qualified(PackageSource { dir, type_, .. }) => PackageSource {
-            dir: sub_path
-                .map(|p| p.join(Path::new(dir)))
-                .unwrap_or(Path::new(dir).to_path_buf())
-                .to_string_lossy()
-                .to_string(),
-            subdirs: None,
-            type_: type_.to_owned(),
-        },
-    }
-}
-
 impl Eq for PackageSource {}
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Hash)]
@@ -74,12 +37,76 @@ pub enum Source {
     Shorthand(String),
     Qualified(PackageSource),
 }
+
+impl Source {
+    /// When reading, we should propagate the sources all the way through the tree
+    pub fn get_type(&self) -> Option<String> {
+        match self {
+            Source::Shorthand(_) => None,
+            Source::Qualified(PackageSource { type_, .. }) => type_.clone(),
+        }
+    }
+    pub fn set_type(&self, type_: Option<String>) -> Source {
+        match (self, type_) {
+            (Source::Shorthand(dir), Some(type_)) => Source::Qualified(PackageSource {
+                dir: dir.to_string(),
+                subdirs: None,
+                type_: Some(type_),
+            }),
+            (Source::Qualified(package_source), type_) => Source::Qualified(PackageSource {
+                type_,
+                ..package_source.clone()
+            }),
+            (source, _) => source.clone(),
+        }
+    }
+
+    /// `to_qualified_without_children` takes a tree like structure of dependencies, coming in from
+    /// `bsconfig`, and turns it into a flat list. The main thing we extract here are the source
+    /// folders, and optional subdirs, where potentially, the subdirs recurse or not.
+    pub fn to_qualified_without_children(&self, sub_path: Option<PathBuf>) -> PackageSource {
+        match self {
+            Source::Shorthand(dir) => PackageSource {
+                dir: sub_path
+                    .map(|p| p.join(Path::new(dir)))
+                    .unwrap_or(Path::new(dir).to_path_buf())
+                    .to_string_lossy()
+                    .to_string(),
+                subdirs: None,
+                type_: self.get_type(),
+            },
+            Source::Qualified(PackageSource {
+                dir,
+                type_,
+                subdirs: Some(Subdirs::Recurse(should_recurse)),
+            }) => PackageSource {
+                dir: sub_path
+                    .map(|p| p.join(Path::new(dir)))
+                    .unwrap_or(Path::new(dir).to_path_buf())
+                    .to_string_lossy()
+                    .to_string(),
+                subdirs: Some(Subdirs::Recurse(*should_recurse)),
+                type_: type_.to_owned(),
+            },
+            Source::Qualified(PackageSource { dir, type_, .. }) => PackageSource {
+                dir: sub_path
+                    .map(|p| p.join(Path::new(dir)))
+                    .unwrap_or(Path::new(dir).to_path_buf())
+                    .to_string_lossy()
+                    .to_string(),
+                subdirs: None,
+                type_: type_.to_owned(),
+            },
+        }
+    }
+}
+
 impl Eq for Source {}
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct PackageSpec {
     pub module: String,
-    #[serde(rename = "in-source")]
+    #[serde(rename = "in-source", default = "default_true")]
     pub in_source: bool,
     pub suffix: Option<String>,
 }
@@ -97,10 +124,14 @@ pub struct Warnings {
     pub error: Option<Error>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
-pub struct Reason {
-    #[serde(rename = "react-jsx")]
-    pub react_jsx: i32,
+#[derive(Deserialize, Debug, Clone, PartialEq, Hash)]
+#[serde(untagged)]
+pub enum Reason {
+    Versioned {
+        #[serde(rename = "react-jsx")]
+        react_jsx: i32,
+    },
+    Unversioned(bool),
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -110,21 +141,22 @@ pub enum NamespaceConfig {
     String(String),
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub enum JsxMode {
-    #[serde(rename = "classic")]
     Classic,
-    #[serde(rename = "automatic")]
     Automatic,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
 pub enum JsxModule {
-    #[serde(rename = "react")]
     React,
+    Other(String),
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct JsxSpecs {
     pub version: Option<i32>,
     pub module: Option<JsxModule>,
@@ -133,12 +165,17 @@ pub struct JsxSpecs {
     pub v3_dependencies: Option<Vec<String>>,
 }
 
+/// We do not care about the internal structure because the gentype config is loaded by bsc.
+pub type GenTypeConfig = serde_json::Value;
+
 /// # bsconfig.json representation
 /// This is tricky, there is a lot of ambiguity. This is probably incomplete.
 #[derive(Deserialize, Debug, Clone)]
 pub struct Config {
     pub name: String,
-    pub sources: OneOrMore<Source>,
+    // In the case of monorepos, the root source won't necessarily have to have sources. It can
+    // just be sources in packages
+    pub sources: Option<OneOrMore<Source>>,
     #[serde(rename = "package-specs")]
     pub package_specs: Option<OneOrMore<PackageSpec>>,
     pub warnings: Option<Warnings>,
@@ -157,6 +194,8 @@ pub struct Config {
     pub namespace: Option<NamespaceConfig>,
     pub jsx: Option<JsxSpecs>,
     pub uncurried: Option<bool>,
+    #[serde(rename = "gentypeconfig")]
+    pub gentype_config: Option<GenTypeConfig>,
     // this is a new feature of rewatch, and it's not part of the bsconfig.json spec
     #[serde(rename = "namespace-entry")]
     pub namespace_entry: Option<String>,
@@ -229,17 +268,22 @@ pub fn flatten_ppx_flags(
 }
 
 /// Try to convert a bsconfig from a certain path to a bsconfig struct
-pub fn read(path: String) -> Config {
-    fs::read_to_string(path.clone())
-        .map_err(|e| format!("Could not read bsconfig. {path} - {e}"))
-        .and_then(|x| {
-            serde_json::from_str::<Config>(&x).map_err(|e| format!("Could not parse bsconfig. {path} - {e}"))
-        })
-        .expect("Errors reading bsconfig")
+pub fn read(path: String) -> Result<Config> {
+    let read = fs::read_to_string(path.clone())?;
+    let parse = serde_json::from_str::<Config>(&read)?;
+
+    Ok(parse)
 }
 
-fn check_if_rescript11_or_higher(version: &str) -> bool {
-    version.split('.').next().unwrap().parse::<usize>().unwrap() >= 11
+fn check_if_rescript11_or_higher(version: &str) -> Result<bool, String> {
+    version
+        .split('.')
+        .next()
+        .and_then(|s| s.parse::<usize>().ok())
+        .map_or(
+            Err("Could not parse version".to_string()),
+            |major| Ok(major >= 11),
+        )
 }
 
 fn namespace_from_package_name(package_name: &str) -> String {
@@ -295,8 +339,12 @@ impl Config {
                 Some(_version) => panic!("Unsupported JSX version"),
                 None => vec![],
             },
-            (Some(reason), None) => {
-                vec!["-bs-jsx".to_string(), format!("{}", reason.react_jsx)]
+            (Some(Reason::Versioned { react_jsx }), None) => {
+                vec!["-bs-jsx".to_string(), format!("{}", react_jsx)]
+            }
+            (Some(Reason::Unversioned(true)), None) => {
+                // If Reason is 'true' - we should default to the latest
+                vec!["-bs-jsx".to_string()]
             }
             _ => vec![],
         }
@@ -324,6 +372,9 @@ impl Config {
                 Some(JsxModule::React) => {
                     vec!["-bs-jsx-module".to_string(), "react".to_string()]
                 }
+                Some(JsxModule::Other(module)) => {
+                    vec!["-bs-jsx-module".to_string(), module]
+                }
                 None => vec![],
             },
             _ => vec![],
@@ -331,14 +382,17 @@ impl Config {
     }
 
     pub fn get_uncurried_args(&self, version: &str) -> Vec<String> {
-        if check_if_rescript11_or_higher(version) {
-            match self.uncurried.to_owned() {
+        match check_if_rescript11_or_higher(version) {
+            Ok(true) => match self.uncurried.to_owned() {
                 // v11 is always uncurried except iff explicitly set to false in the root rescript.json
                 Some(false) => vec![],
                 _ => vec!["-uncurried".to_string()],
+            },
+            Ok(false) => vec![],
+            Err(_) => {
+                eprintln!("Could not establish Rescript Version number for uncurried mode. Defaulting to Rescript < 11, disabling uncurried mode. Please specify an exact version if you need > 11 and default uncurried mode. Version: {}", version);
+                vec![]
             }
-        } else {
-            vec![]
         }
     }
 
@@ -366,6 +420,13 @@ impl Config {
         .or(self.suffix.to_owned())
         .unwrap_or(".js".to_string())
     }
+
+    pub fn get_gentype_arg(&self) -> Vec<String> {
+        match &self.gentype_config {
+            Some(_) => vec!["-bs-gentype".to_string()],
+            None => vec![],
+        }
+    }
 }
 
 #[cfg(test)]
@@ -388,5 +449,112 @@ mod tests {
         let config = serde_json::from_str::<Config>(json).unwrap();
         assert_eq!(config.get_suffix(), ".mjs");
         assert_eq!(config.get_module(), "es6");
+    }
+
+    #[test]
+    fn test_sources() {
+        let json = r#"
+        {
+          "name": "@rescript/core",
+          "version": "0.5.0",
+          "sources": {
+              "dir": "test",
+              "subdirs": ["intl"],
+              "type": "dev"
+          },
+          "suffix": ".mjs",
+          "package-specs": {
+            "module": "esmodule",
+            "in-source": true
+          },
+          "bs-dev-dependencies": ["@rescript/tools"],
+          "warnings": {
+            "error": "+101"
+          }
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        if let Some(OneOrMore::Single(source)) = config.sources {
+            let source = source.to_qualified_without_children(None);
+            assert_eq!(source.type_, Some(String::from("dev")));
+        } else {
+            dbg!(config.sources);
+            unreachable!()
+        }
+    }
+
+    #[test]
+    fn test_detect_gentypeconfig() {
+        let json = r#"
+        {
+            "name": "my-monorepo",
+            "sources": [ { "dir": "src/", "subdirs": true } ],
+            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "suffix": ".mjs",
+            "pinned-dependencies": [ "@teamwalnut/app" ],
+            "bs-dependencies": [ "@teamwalnut/app" ],
+            "gentypeconfig": {
+                "module": "esmodule",
+                "generatedFileExtension": ".gen.tsx"
+            }
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert!(config.gentype_config.is_some());
+        assert_eq!(config.get_gentype_arg(), vec!["-bs-gentype".to_string()]);
+    }
+
+    #[test]
+    fn test_other_jsx_module() {
+        let json = r#"
+        {
+            "name": "my-monorepo",
+            "sources": [ { "dir": "src/", "subdirs": true } ],
+            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "suffix": ".mjs",
+            "pinned-dependencies": [ "@teamwalnut/app" ],
+            "bs-dependencies": [ "@teamwalnut/app" ],
+            "jsx": {
+                "module": "Voby.JSX"
+            }
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert!(config.jsx.is_some());
+        assert_eq!(
+            config.jsx.unwrap(),
+            JsxSpecs {
+                version: None,
+                module: Some(JsxModule::Other(String::from("Voby.JSX"))),
+                mode: None,
+                v3_dependencies: None,
+            },
+        );
+    }
+
+    #[test]
+    fn test_check_if_rescript11_or_higher() {
+        assert_eq!(check_if_rescript11_or_higher("11.0.0"), Ok(true));
+        assert_eq!(check_if_rescript11_or_higher("11.0.1"), Ok(true));
+        assert_eq!(check_if_rescript11_or_higher("11.1.0"), Ok(true));
+
+        assert_eq!(check_if_rescript11_or_higher("12.0.0"), Ok(true));
+
+        assert_eq!(check_if_rescript11_or_higher("10.0.0"), Ok(false));
+        assert_eq!(check_if_rescript11_or_higher("9.0.0"), Ok(false));
+    }
+
+    #[test]
+    fn test_check_if_rescript11_or_higher_misc() {
+        assert_eq!(check_if_rescript11_or_higher("11"), Ok(true));
+        assert_eq!(check_if_rescript11_or_higher("12.0.0-alpha.4"), Ok(true));
+
+        match check_if_rescript11_or_higher("*") {
+            Ok(_) => unreachable!("Should not parse"),
+            Err(_) => assert!(true),
+        }
     }
 }

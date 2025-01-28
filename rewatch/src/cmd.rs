@@ -7,7 +7,7 @@ use std::time::Instant;
 pub fn run(command_string: String) {
     let start_subcommand = Instant::now();
 
-    print!(
+    log::info!(
         "{} {}Running subcommand... \n{}\n",
         style("[...]").bold().dim(),
         COMMAND,
@@ -39,11 +39,11 @@ pub fn run(command_string: String) {
         }
 
         for line in std_err {
-            println!("{}", line.unwrap());
+            eprintln!("{}", line.unwrap());
         }
 
         let subcommand_duration = start_subcommand.elapsed();
-        println!(
+        log::info!(
             "{}{} {}Ran subcommand in {:.2}s",
             LINE_CLEAR,
             style("[...]").bold().dim(),
