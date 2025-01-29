@@ -31,6 +31,7 @@
 - AST cleanup: represent concatenation (`++`) and (dis)equality operators (`==`, `===`, `!=`, `!==`) just like in the syntax. https://github.com/rescript-lang/rescript/pull/7248
 - AST cleanup: use inline record for `Ptyp_arrow`. https://github.com/rescript-lang/rescript/pull/7250
 - Playground: Bundle stdlib runtime so that the playground can execute functions from Core/Belt/Js. (#7255)
+- Allow single newline in JSX. https://github.com/rescript-lang/rescript/pull/7246
 
 # 12.0.0-alpha.7
 
