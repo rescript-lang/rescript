@@ -12,6 +12,9 @@
 
 # 12.0.0-alpha.9 (Unreleased)
 
+#### :bug: Bug fix
+- Allow single newline in JSX. https://github.com/rescript-lang/rescript/pull/7246
+
 # 12.0.0-alpha.8
 
 #### :bug: Bug fix
