@@ -216,7 +216,6 @@ let x =
       let b = 2
       a + b
     }
-
     {event => handleClick(event)}
     {(event1, event2, event3) => {
       Js.log("debug click")
@@ -275,7 +274,6 @@ let x =
       exception Exit
       raise(Exit)
     }
-
     {assert(true)}
     {module(Foo)}
     module(Foo)
