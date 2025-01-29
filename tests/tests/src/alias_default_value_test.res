@@ -43,3 +43,24 @@ module C6 = {
   @react.component
   let make = (~comp as module(Comp: Comp), ~x as (a, b)) => Comp.xx
 }
+
+module C7 = {
+  @react.component
+  let make =
+    @directive("'use memo'")
+    (~count, ~username=?) => {
+      let times = switch count {
+      | 1 => "once"
+      | 2 => "twice"
+      | n => Belt.Int.toString(n) ++ " times"
+      }
+
+      let name = switch username {
+      | Some("") => "Anonymous"
+      | Some(name) => name
+      | None => "Anonymous"
+      }
+
+      React.string(`Hello ${name}, you clicked me ` ++ times)
+    }
+}

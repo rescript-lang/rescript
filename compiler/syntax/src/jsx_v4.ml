@@ -1002,9 +1002,8 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
            Exp.fun_ ~arity:None nolabel None
              (Pat.var @@ Location.mknoloc "ref")
              inner_expression
-         else inner_expression)
-         (* Todo: filter out any attributes? *)
-         ~attrs:binding.pvb_expr.pexp_attributes
+         else inner_expression (* Todo: filter out any attributes? *))
+        ~attrs:binding.pvb_expr.pexp_attributes
     in
     let full_expression =
       full_expression
