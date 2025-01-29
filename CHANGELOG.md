@@ -18,6 +18,7 @@
 - Fix leftover assert false in code for `null != undefined`. https://github.com/rescript-lang/rescript/pull/7232
 - Editor: Fix issue where completions would not show up inside of object bodies. https://github.com/rescript-lang/rescript/pull/7230
 - Fix issue with pattern matching empty list which interferes with boolean optimisations. https://github.com/rescript-lang/rescript/pull/7237
+- Fix Cannot combine @react.component and @directive. https://github.com/rescript-lang/rescript/pull/7260
 
 #### :house: Internal
 
