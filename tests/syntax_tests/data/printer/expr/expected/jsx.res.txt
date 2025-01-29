@@ -210,7 +210,6 @@ let x =
   <div>
     ident
     "constant"
-
     {
       let a = 1
       let b = 2
@@ -264,12 +263,10 @@ let x =
       do(i)
     }}
     {(20: int)}
-
     {
       module L = Log
       L.log()
     }
-
     {
       exception Exit
       raise(Exit)
