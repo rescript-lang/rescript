@@ -4433,7 +4433,7 @@ and print_jsx_fragment ~state expr cmt_tbl =
 and print_jsx_children ~state (children_expr : Parsetree.expression) ~sep
     cmt_tbl =
   match children_expr.pexp_desc with
-  | Pexp_construct ({loc; txt = Longident.Lident "::"}, _) ->
+  | Pexp_construct ({txt = Longident.Lident "::"}, _) ->
     let children, _ = ParsetreeViewer.collect_list_expressions children_expr in
     let print_expr (expr : Parsetree.expression) =
       let leading_line_comment_present =
@@ -4454,41 +4454,26 @@ and print_jsx_children ~state (children_expr : Parsetree.expression) ~sep
       | Braced braces_loc ->
         print_comments (add_parens_or_braces expr_doc) cmt_tbl braces_loc
     in
+    let get_loc expr =
+      match ParsetreeViewer.process_braces_attr expr with
+      | None, _ -> expr.pexp_loc
+      | Some ({loc}, _), _ -> loc
+    in
     let rec loop prev acc exprs =
       match exprs with
       | [] -> List.rev acc
-      | ({Parsetree.pexp_loc = current_loc} as expr) :: tails ->
+      | expr :: tails ->
+        let start_loc = (get_loc expr).loc_start.pos_lnum in
+        let end_loc = (get_loc prev).loc_end.pos_lnum in
+        let expr_doc = print_expr expr in
         let docs =
-          if current_loc.loc_start.pos_lnum - prev.Warnings.loc_end.pos_lnum > 1
-          then
-            let expr = print_expr expr in
-            let acc = Doc.concat [Doc.hard_line; expr] :: acc in
-            acc
-          else
-            let expr = print_expr expr in
-            let acc = expr :: acc in
-            acc
+          if start_loc - end_loc > 1 then
+            Doc.concat [Doc.hard_line; expr_doc] :: acc
+          else expr_doc :: acc
         in
-        (* adjust for braces when we forward the current_loc to the recursion *)
-        let current_loc =
-          match expr with
-          | {Parsetree.pexp_loc = loc}
-            when loc.loc_start.pos_lnum == loc.loc_end.pos_lnum ->
-            current_loc
-          | _ when ParsetreeViewer.is_braced_expr expr ->
-            {
-              current_loc with
-              loc_end =
-                {
-                  current_loc.loc_end with
-                  pos_lnum = current_loc.loc_end.pos_lnum + 1;
-                };
-            }
-          | _ -> current_loc
-        in
-        loop current_loc docs tails
+        loop expr docs tails
     in
-    let docs = loop loc [] children in
+    let docs = loop children_expr [] children in
     Doc.group (Doc.join ~sep docs)
   | _ ->
     let leading_line_comment_present =
