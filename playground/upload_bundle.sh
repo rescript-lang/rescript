@@ -54,4 +54,4 @@ TARGET="ftp://${KEYCDN_SRV}/v${VERSION}/${DIR}"
 
 echo "Uploading '$SOURCE/*.js' to '$TARGET/*.js'..."
 
-curl --ftp-create-dirs -T "${SOURCE}/*.js" --ssl --netrc-file $NETRC_FILE "${TARGET}/"
+find "${SOURCE}" -type f -name "*.js" -exec curl --ftp-create-dirs --ssl --netrc-file "$NETRC_FILE" -T {} "${TARGET}/{}" \;
