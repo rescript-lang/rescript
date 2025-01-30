@@ -10,32 +10,33 @@
 > - :house: [Internal]
 > - :nail_care: [Polish]
 
-# 12.0.0-alpha.8 (Unreleased)
+# 12.0.0-alpha.8
 
 #### :bug: Bug fix
 
 - Editor: Fix issue where pipe completions would not trigger with generic type arguments. https://github.com/rescript-lang/rescript/pull/7231
-- Fix leftover assert false in code for `null != undefined`. https://github.com/rescript-lang/rescript/pull/7232
+- Fix leftover `assert false` in code for `null != undefined`. https://github.com/rescript-lang/rescript/pull/7232
 - Editor: Fix issue where completions would not show up inside of object bodies. https://github.com/rescript-lang/rescript/pull/7230
 - Fix issue with pattern matching empty list which interferes with boolean optimisations. https://github.com/rescript-lang/rescript/pull/7237
-- Fix Cannot combine @react.component and @directive. https://github.com/rescript-lang/rescript/pull/7260
+- Fix Cannot combine `@react.component` and `@directive`. https://github.com/rescript-lang/rescript/pull/7260
 - Fix issue where attributes on an application were not preserved by the AST conversion for ppx. https://github.com/rescript-lang/rescript/pull/7262
 
 #### :house: Internal
 
-- AST cleanup: Prepare for ast async cleanup: Refactor code for "@res.async" payload handling and clean up handling of type and term parameters, so that now each `=>` in a function definition corresponds to a function. https://github.com/rescript-lang/rescript/pull/7223
+- AST cleanup: Prepare for ast async cleanup: Refactor code for `@res.async` payload handling and clean up handling of type and term parameters, so that now each `=>` in a function definition corresponds to a function. https://github.com/rescript-lang/rescript/pull/7223
 - AST: always put type parameters first in function definitions. https://github.com/rescript-lang/rescript/pull/7233
 - AST cleanup: Remove `@res.async` attribute from the internal representation, and add a flag to untyped and typed ASTs instead. https://github.com/rescript-lang/rescript/pull/7234
-- AST cleanup: Remove `expression_desc.Pexp_new`, `expression_desc.Pexp_setinstvar`, `expression_desc.Pexp_override`, `expression_desc.Pexp_poly`, `exp_extra.Texp_poly`, `expression_desc.Texp_new`, `expression_desc.Texp_setinstvar`, `expression_desc.Texp_override` & `expression_desc.Texp_instvar` from AST as it is unused. https://github.com/rescript-lang/rescript/pull/7239
+- AST cleanup: Remove unused `expression_desc.Pexp_new`, `expression_desc.Pexp_setinstvar`, `expression_desc.Pexp_override`, `expression_desc.Pexp_poly`, `exp_extra.Texp_poly`, `expression_desc.Texp_new`, `expression_desc.Texp_setinstvar`, `expression_desc.Texp_override` & `expression_desc.Texp_instvar` from AST. https://github.com/rescript-lang/rescript/pull/7239
 - AST cleanup: Remove `@res.partial` attribute from the internal representation, and add a flag to untyped and typed ASTs instead. https://github.com/rescript-lang/rescript/pull/7238 https://github.com/rescript-lang/rescript/pull/7240
-- AST cleanup: Remove `structure_item_desc.Pstr_class`, `signature_item_desc.Psig_class`, `structure_item_desc.Pstr_class_type`, `signature_item_desc.Psig_class_type`, `structure_item_desc.Tstr_class`, `structure_item_desc.Tstr_class_type`, `signature_item_desc.Tsig_class`, `signature_item_desc.Tsig_class_type` from AST as it is unused. https://github.com/rescript-lang/rescript/pull/7242
-- AST cleanup: remove "|." and rename "|." to "->" in the internal representation for the pipe operator. https://github.com/rescript-lang/rescript/pull/7244
+- AST cleanup: Remove unused `structure_item_desc.Pstr_class`, `signature_item_desc.Psig_class`, `structure_item_desc.Pstr_class_type`, `signature_item_desc.Psig_class_type`, `structure_item_desc.Tstr_class`, `structure_item_desc.Tstr_class_type`, `signature_item_desc.Tsig_class`, `signature_item_desc.Tsig_class_type` from AST. https://github.com/rescript-lang/rescript/pull/7242
+- AST cleanup: remove `|.` and rename `|.` to `->` in the internal representation for the pipe operator. https://github.com/rescript-lang/rescript/pull/7244
 - AST cleanup: represent concatenation (`++`) and (dis)equality operators (`==`, `===`, `!=`, `!==`) just like in the syntax. https://github.com/rescript-lang/rescript/pull/7248
 - AST cleanup: use inline record for `Ptyp_arrow`. https://github.com/rescript-lang/rescript/pull/7250
-- Playground: Bundle stdlib runtime so that the playground can execute functions from Core/Belt/Js. (#7255)
+- Playground: Bundle stdlib runtime so that the playground can execute functions from Core/Belt/Js. https://github.com/rescript-lang/rescript/pull/7255
 - AST cleanup: Remove `res.namedArgLoc` attribute and store the location information directly into the label. https://github.com/rescript-lang/rescript/pull/7247
 
 #### :nail_care: Polish
+
 - Rewatch 1.0.10. https://github.com/rescript-lang/rescript/pull/7259
 
 # 12.0.0-alpha.7
