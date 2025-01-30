@@ -72,6 +72,14 @@ let Pipe = {
 
 let concat = "ab";
 
+async function test() {
+  return 12;
+}
+
+async function f() {
+  return await test() + 1 | 0;
+}
+
 let a = "A";
 
 let b = "B";
@@ -104,4 +112,6 @@ exports.neq = neq;
 exports.neq2 = neq2;
 exports.eq = eq;
 exports.eq2 = eq2;
+exports.test = test;
+exports.f = f;
 /*  Not a pure module */

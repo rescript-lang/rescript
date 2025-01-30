@@ -346,7 +346,7 @@ module E = struct
       in
       let attrs =
         if partial then (Location.mknoloc "res.partial", Pt.PStr []) :: attrs
-        else []
+        else attrs
       in
       apply ~loc ~attrs (sub.expr sub e)
         (List.map (map_snd (sub.expr sub)) args)

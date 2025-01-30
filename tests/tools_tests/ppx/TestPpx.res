@@ -38,8 +38,8 @@ module Uncurried = {
 
 let async_succ = async x => x + 1
 let async_foo = async (x, y) => {
-  let a: promise<int> = async_succ(x)
-  let b: promise<int> = async_succ(y)
+  let a = async_succ(x)
+  let b = async_succ(y)
   (await a) + (await b)
 }
 
@@ -58,3 +58,6 @@ let neq2 = 3 !== 3
 
 let eq = 3 == 3
 let eq2 = 3 === 3
+
+let test = async () => 12
+let f = async () => (await test()) + 1
