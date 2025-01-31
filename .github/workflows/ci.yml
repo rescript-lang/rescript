@@ -82,7 +82,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
 
       - name: Copy exes to platform bin dirs
         run: node ./scripts/copyExes.js
@@ -166,7 +166,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
 
       - name: Install npm packages
         run: npm ci --ignore-scripts
@@ -276,7 +276,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
 
       - name: NPM install
         run: npm ci --ignore-scripts
@@ -337,7 +337,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -369,7 +369,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
           registry-url: https://registry.npmjs.org # Needed to make auth work for publishing
 
       - name: Download artifacts
