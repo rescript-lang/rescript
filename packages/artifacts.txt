@@ -1,8 +1,14 @@
+1076
+11.1.4
+30765d9b27ed30d9ded0fe630f7d121bf6a59ea1
 CHANGELOG.md
 COPYING
 COPYING.LESSER
 CREDITS.md
+Details
 LICENSE
+MB
+MB
 README.md
 bsc
 darwin/bsb_helper.exe
@@ -1061,8 +1067,11 @@ linuxarm64/bsc.exe
 linuxarm64/ninja.exe
 linuxarm64/rescript.exe
 ninja.COPYING
+notice
 package.json
 rescript
+rescript
+rescript-11.1.4.tgz
 scripts/bin_path.js
 scripts/rescript_arg.js
 scripts/rescript_bsb.js
@@ -1070,6 +1079,7 @@ scripts/rescript_convert.js
 scripts/rescript_dump.js
 scripts/rescript_format.js
 scripts/rescript_postinstall.js
+sha512-LT8WzAF/UgSTR[...]rIzZ1ic6cq2qg==
 win32/bsb_helper.exe
 win32/bsc.exe
 win32/ninja.exe
