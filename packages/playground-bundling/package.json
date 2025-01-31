@@ -19,5 +19,8 @@
     "@rollup/plugin-node-resolve": "^16.0.0",
     "glob": "^11.0.1",
     "rollup": "^4.32.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.32.1"
   }
 }
