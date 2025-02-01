@@ -17,6 +17,9 @@
 - Deprecate js_cast.res https://github.com/rescript-lang/rescript-compiler/pull/7074
 - Deprecate top-level `"suffix"` option in `rescript.json`. https://github.com/rescript-lang/rescript-compiler/pull/7056
 
+#### :house: Internal
+- Playground: Bundle and upload stdlib runtime so that the playground can execute functions from Core/Belt/Js. https://github.com/rescript-lang/rescript/pull/7268
+
 # 11.1.4
 
 - Fix issue where long layout break added a trailing comma in partial application `...`. https://github.com/rescript-lang/rescript-compiler/pull/6949

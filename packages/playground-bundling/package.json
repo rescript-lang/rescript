@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "rescript clean && rescript build && node ./scripts/generate_cmijs.js",
+    "bundle": "rollup -c",
     "clean": "rescript clean"
   },
   "keywords": [],
@@ -13,5 +14,13 @@
   "dependencies": {
     "@rescript/core": "^1.5.2",
     "@rescript/react": "^0.12.1"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^16.0.0",
+    "glob": "^11.0.1",
+    "rollup": "^4.32.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.32.1"
   }
 }

@@ -50,7 +50,7 @@ lib: build node_modules/.bin/semver
 	./scripts/prebuilt.js
 
 artifacts: lib
-	./scripts/makeArtifactList.js
+	./scripts/npmPack.js -updateArtifactList
 
 # Builds the core playground bundle (without the relevant cmijs files for the runtime)
 playground:

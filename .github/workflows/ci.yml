@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, buildjet-2vcpu-ubuntu-2204-arm]
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
 
     runs-on: ${{matrix.os}}
 
@@ -61,7 +61,7 @@ jobs:
     needs:
       - static-binaries-linux
 
-    runs-on: buildjet-2vcpu-ubuntu-2204-arm
+    runs-on: ubuntu-24.04-arm
 
     steps:
       - name: Checkout
@@ -82,7 +82,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
 
       - name: Copy exes to platform bin dirs
         run: node ./scripts/copyExes.js
@@ -105,7 +105,7 @@ jobs:
         os: [
             macos-13, # x64
             macos-14, # ARM
-            ubuntu-latest,
+            ubuntu-24.04,
             windows-latest,
           ]
         ocaml_compiler: [4.14.1]
@@ -140,20 +140,18 @@ jobs:
           chmod +x _build/install/default/bin/*
 
       - name: Use OCaml ${{matrix.ocaml_compiler}}
-        uses: ocaml/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v3.2.5
         if: matrix.os != 'windows-latest'
         with:
           ocaml-compiler: ${{matrix.ocaml_compiler}}
           opam-pin: false
-          opam-depext: false
 
       - name: Use OCaml ${{matrix.ocaml_compiler}} (Win)
-        uses: ocaml/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@v3.2.5
         if: matrix.os == 'windows-latest'
         with:
           ocaml-compiler: ${{matrix.ocaml_compiler}}
           opam-pin: false
-          opam-depext: false
           opam-repositories: |
             opam-repository-mingw: https://github.com/ocaml-opam/opam-repository-mingw.git#sunset
             default: https://github.com/ocaml/opam-repository.git
@@ -168,7 +166,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
 
       - name: Install npm packages
         run: npm ci --ignore-scripts
@@ -228,24 +226,24 @@ jobs:
         if: runner.os == 'Windows'
         run: node scripts/ciTest.js -mocha -theme -format
 
-      # Build the playground compiler on the fastest runner (ubuntu-latest)
+      # Build the playground compiler on the fastest runner (ubuntu-24.04)
       - name: Install JSOO
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: opam install js_of_ocaml.4.0.0
 
       - name: Build playground compiler
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: |
           opam exec -- node packages/playground-bundling/scripts/generate_cmijs.js
           opam exec -- dune build --profile browser
           cp ./_build/default/jscomp/jsoo/jsoo_playground_main.bc.js playground/compiler.js
 
       - name: Test playground compiler
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: node playground/playground_test.js
 
       - name: Upload playground compiler to CDN
-        if: ${{ matrix.os == 'ubuntu-latest' && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ matrix.os == 'ubuntu-24.04' && startsWith(github.ref, 'refs/tags/v') }}
         env:
           KEYCDN_USER: ${{ secrets.KEYCDN_USER }}
           KEYCDN_PASSWORD: ${{ secrets.KEYCDN_PASSWORD }}
@@ -269,7 +267,7 @@ jobs:
 
   package:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
@@ -278,7 +276,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
 
       - name: NPM install
         run: npm ci --ignore-scripts
@@ -289,11 +287,8 @@ jobs:
       - name: Move artifacts
         run: ./scripts/moveArtifacts.sh
 
-      - name: Check artifact list
-        run: node ./scripts/makeArtifactList.js -check
-
-      - name: npm pack (rescript)
-        run: npm pack
+      - name: npm pack (rescript) + check artifact list
+        run: node ./scripts/npmPack.js
 
       - name: Copy JS files to stdlib package
         run: mkdir -p packages/std/lib && cp -R lib/es6 lib/js packages/std/lib
@@ -325,8 +320,8 @@ jobs:
         os: [
             macos-13, # x64
             macos-14, # ARM
-            ubuntu-latest,
-            buildjet-2vcpu-ubuntu-2204-arm,
+            ubuntu-24.04,
+            ubuntu-24.04-arm,
             windows-latest,
           ]
 
@@ -339,7 +334,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -362,7 +357,7 @@ jobs:
 
     if: startsWith(github.ref, 'refs/tags/v')
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
@@ -371,7 +366,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 18
           registry-url: https://registry.npmjs.org # Needed to make auth work for publishing
 
       - name: Download artifacts

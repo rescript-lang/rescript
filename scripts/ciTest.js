@@ -5,6 +5,8 @@ var fs = require("fs");
 
 var duneBinDir = require("./dune").duneBinDir;
 
+const { exec } = require("./utils.js");
+
 var ounitTest = false;
 var mochaTest = false;
 var bsbTest = false;
@@ -37,7 +39,7 @@ if (all) {
   formatTest = true;
 }
 
-function runTests() {
+async function runTests() {
   if (ounitTest) {
     cp.execSync(path.join(duneBinDir, "ounit_tests"), {
       stdio: [0, 1, 2],
@@ -56,7 +58,7 @@ function runTests() {
     console.log("Doing build_tests");
     var buildTestDir = path.join(__dirname, "..", "jscomp", "build_tests");
     var files = fs.readdirSync(buildTestDir);
-    files.forEach(function (file) {
+    for (const file of files) {
       var testDir = path.join(buildTestDir, file);
       if (file === "node_modules" || !fs.lstatSync(testDir).isDirectory()) {
         return;
@@ -65,23 +67,18 @@ function runTests() {
         console.warn(`input.js does not exist in ${testDir}`);
       } else {
         console.log(`testing ${file}`);
-        // note existsSync test already ensure that it is a directory
-        cp.exec(
-          `node input.js`,
-          { cwd: testDir, encoding: "utf8" },
-          function (error, stdout, stderr) {
-            console.log(stdout);
 
-            if (error !== null) {
-              console.log(`❌ error in ${file} with stderr:\n`, stderr);
-              throw error;
-            } else {
-              console.log("✅ success in", file);
-            }
-          }
-        );
+        // note existsSync test already ensure that it is a directory
+        const out = await exec(`node`, ["input.js"], { cwd: testDir });
+        console.log(out.stdout);
+
+        if (out.code === 0) {
+          console.log("✅ success in", file);
+        } else {
+          console.log(`❌ error in ${file} with stderr:\n`, out.stderr);
+        }
       }
-    });
+    }
   }
 
   if (formatTest) {
@@ -92,12 +89,4 @@ function runTests() {
   }
 }
 
-function main() {
-  try {
-    runTests();
-  } catch (err) {
-    console.error(err);
-    process.exit(2);
-  }
-}
-main();
+runTests();
