@@ -4448,10 +4448,10 @@ and print_jsx_children ~state (children_expr : Parsetree.expression) ~sep
       | Braced braces_loc ->
         print_comments (add_parens_or_braces expr_doc) cmt_tbl braces_loc
     in
-    let get_first_leading_comment loc = 
-        match get_first_leading_comment cmt_tbl loc with
-        | None -> loc
-        | Some comment -> Comment.loc comment
+    let get_first_leading_comment loc =
+      match get_first_leading_comment cmt_tbl loc with
+      | None -> loc
+      | Some comment -> Comment.loc comment
     in
     let get_loc expr =
       match ParsetreeViewer.process_braces_attr expr with
