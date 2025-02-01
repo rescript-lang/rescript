@@ -217,29 +217,27 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   let async_saved = !async_context in
   let result = expr_mapper ~async_context ~in_function_def self e in
   async_context := async_saved;
-  let is_module, has_await =
-    match e.pexp_desc with
-    | Pexp_letmodule (_, {pmod_desc = Pmod_ident _; pmod_attributes}, _)
-    | Pexp_letmodule
-        ( _,
-          {
-            pmod_desc =
-              Pmod_constraint
-                ({pmod_desc = Pmod_ident _}, {pmty_desc = Pmty_ident _});
-            pmod_attributes;
-          },
-          _ ) ->
-      (true, Ast_attributes.has_await_payload pmod_attributes)
-    | _ -> (false, Ast_attributes.has_await_payload e.pexp_attributes)
-  in
-  match has_await with
-  | None -> result
-  | Some _ ->
+  let check_await () =
     if !async_context = false then
       Location.raise_errorf ~loc:e.pexp_loc
-        "Await on expression not in an async context";
-    if is_module = false then Ast_await.create_await_expression result
-    else result
+        "Await on expression not in an async context"
+  in
+  match e.pexp_desc with
+  | Pexp_letmodule (_, {pmod_desc = Pmod_ident _; pmod_attributes}, _)
+  | Pexp_letmodule
+      ( _,
+        {
+          pmod_desc =
+            Pmod_constraint ({pmod_desc = Pmod_ident _; pmod_attributes}, _);
+        },
+        _ )
+    when Ast_attributes.has_await_payload pmod_attributes ->
+    check_await ();
+    result
+  | _ when Ast_attributes.has_await_payload e.pexp_attributes ->
+    check_await ();
+    Ast_await.create_await_expression result
+  | _ -> result
 
 let typ_mapper (self : mapper) (typ : Parsetree.core_type) =
   Ast_core_type_class_type.typ_mapper self typ

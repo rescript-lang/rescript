@@ -5873,12 +5873,7 @@ and parse_module_expr p =
     | _ -> (false, mk_loc start_pos start_pos)
   in
   let attrs = parse_attributes p in
-  let attrs =
-    if has_await then
-      (({txt = "res.await"; loc = loc_await}, PStr []) : Parsetree.attribute)
-      :: attrs
-    else attrs
-  in
+  let attrs = if has_await then make_await_attr loc_await :: attrs else attrs in
   let mod_expr =
     if is_es6_arrow_functor p then parse_functor_module_expr p
     else parse_primary_mod_expr p

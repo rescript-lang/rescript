@@ -16,6 +16,10 @@
 
 - Allow single newline in JSX. https://github.com/rescript-lang/rescript/pull/7269
 
+#### :bug: Bug fix
+
+- Fix async context checking for module await. https://github.com/rescript-lang/rescript/pull/7271
+
 # 12.0.0-alpha.8
 
 #### :bug: Bug fix
