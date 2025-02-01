@@ -19,6 +19,7 @@
 #### :bug: Bug fix
 
 - Fix async context checking for module await. https://github.com/rescript-lang/rescript/pull/7271
+- Fix `%external` extension. https://github.com/rescript-lang/rescript/pull/7272
 
 # 12.0.0-alpha.8
 
