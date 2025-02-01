@@ -18,7 +18,7 @@
 - Deprecate top-level `"suffix"` option in `rescript.json`. https://github.com/rescript-lang/rescript-compiler/pull/7056
 
 #### :house: Internal
-- Playground: Bundle and upload stdlib runtime so that the playground can execute functions from Core/Belt/Js. #7268
+- Playground: Bundle and upload stdlib runtime so that the playground can execute functions from Core/Belt/Js. https://github.com/rescript-lang/rescript/pull/7268
 
 # 11.1.4
 
