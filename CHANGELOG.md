@@ -12,8 +12,9 @@
 
 # 12.0.0-alpha.9 (Unreleased)
 
-#### :bug: Bug fix
-- Allow single newline in JSX. https://github.com/rescript-lang/rescript/pull/7246
+#### :nail_care: Polish
+
+- Allow single newline in JSX. https://github.com/rescript-lang/rescript/pull/7269
 
 # 12.0.0-alpha.8
 
