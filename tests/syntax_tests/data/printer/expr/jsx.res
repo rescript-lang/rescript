@@ -446,6 +446,23 @@ let x = {
 
 let x =
   <div>
+    {
+      hello()
+      hello()
+    } 
+    {
+      world()
+      world()
+    }
+
+    {
+      hello()
+      hello()
+    } {
+      world()
+      world()
+    }
+    // another test
     <span
       id="1"
       className="sdf sdfdsf sdfs sdf asdf dsf"
