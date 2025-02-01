@@ -34,6 +34,14 @@ async function f(value) {
   return await Promise.resolve(1);
 }
 
+async function f0() {
+  return (await import("rescript/lib/es6/Belt_Option.js")).forEach;
+}
+
+async function f1() {
+  return (await import("rescript/lib/es6/Belt_Option.js")).forEach;
+}
+
 export {
   next,
   useNext,
@@ -43,5 +51,7 @@ export {
   toplevelAwait,
   toplevelAwait2,
   f,
+  f0,
+  f1,
 }
 /* toplevelAwait Not a pure module */

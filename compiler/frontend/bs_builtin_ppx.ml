@@ -196,11 +196,13 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
         ({
            pmod_desc =
              Pmod_constraint
-               ({pmod_desc = Pmod_ident _}, {pmty_desc = Pmty_ident mtyp_lid});
-           pmod_attributes;
+               ( {pmod_desc = Pmod_ident _; pmod_attributes = attrs1},
+                 {pmty_desc = Pmty_ident mtyp_lid} );
+           pmod_attributes = attrs2;
          } as me),
         expr )
-    when Res_parsetree_viewer.has_await_attribute pmod_attributes ->
+    when Res_parsetree_viewer.has_await_attribute attrs1
+         || Res_parsetree_viewer.has_await_attribute attrs2 ->
     {
       e with
       pexp_desc =
@@ -224,14 +226,20 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   in
   match e.pexp_desc with
   | Pexp_letmodule (_, {pmod_desc = Pmod_ident _; pmod_attributes}, _)
+    when Ast_attributes.has_await_payload pmod_attributes ->
+    check_await ();
+    result
   | Pexp_letmodule
       ( _,
         {
           pmod_desc =
-            Pmod_constraint ({pmod_desc = Pmod_ident _; pmod_attributes}, _);
+            Pmod_constraint
+              ({pmod_desc = Pmod_ident _; pmod_attributes = attrs1}, _);
+          pmod_attributes = attrs2;
         },
         _ )
-    when Ast_attributes.has_await_payload pmod_attributes ->
+    when Ast_attributes.has_await_payload attrs1
+         || Ast_attributes.has_await_payload attrs2 ->
     check_await ();
     result
   | _ when Ast_attributes.has_await_payload e.pexp_attributes ->
