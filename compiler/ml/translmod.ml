@@ -220,7 +220,7 @@ let merge_inline_attributes (attr1 : Lambda.inline_attribute)
     else raise (Error (loc, Conflicting_inline_attributes))
 
 let merge_functors mexp coercion root_path =
-  let rec merge mexp coercion path acc inline_attribute =
+  let merge mexp coercion path acc inline_attribute =
     let finished = (acc, mexp, path, coercion, inline_attribute) in
     match mexp.mod_desc with
     | Tmod_functor (param, _, _, body) ->
@@ -239,9 +239,19 @@ let merge_functors mexp coercion root_path =
       let inline_attribute =
         merge_inline_attributes inline_attribute inline_attribute' loc
       in
-      merge body res_coercion path
-        ((param, loc, arg_coercion) :: acc)
-        inline_attribute
+      let r =
+        ( (param, loc, arg_coercion) :: acc,
+          body,
+          path,
+          res_coercion,
+          inline_attribute )
+      in
+      (* let _ =
+           merge body res_coercion path
+             ((param, loc, arg_coercion) :: acc)
+             inline_attribute
+         in *)
+      r
     | _ -> finished
   in
   merge mexp coercion root_path [] Default_inline
