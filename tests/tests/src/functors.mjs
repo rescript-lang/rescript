@@ -40,16 +40,12 @@ function F2(X) {
 }
 
 let M = {
-  F: (funarg, funarg$1) => {
-    let Y = {
-      foo: funarg$1.foo
-    };
-    let cow = x => Y.foo(funarg.foo(x));
-    let sheep = x => 1 + cow(x) | 0;
+  F: funarg => (funarg$1 => {
+    let sheep = x => 1 + funarg$1.foo(funarg.foo(x)) | 0;
     return {
       sheep: sheep
     };
-  }
+  })
 };
 
 export {

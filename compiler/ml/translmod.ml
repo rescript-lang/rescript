@@ -87,11 +87,11 @@ let rec apply_coercion loc strict (restr : Typedtree.module_coercion) arg =
 
 and apply_coercion_result loc strict funct params args cc_res =
   match cc_res with
-  | Tcoerce_functor (cc_arg, cc_res) ->
-    let param = Ident.create "funarg" in
-    let arg = apply_coercion loc Alias cc_arg (Lvar param) in
-    apply_coercion_result loc strict funct (param :: params) (arg :: args)
-      cc_res
+  (* | Tcoerce_functor (cc_arg, cc_res) ->
+     let param = Ident.create "funarg" in
+     let arg = apply_coercion loc Alias cc_arg (Lvar param) in
+     apply_coercion_result loc strict funct (param :: params) (arg :: args)
+       cc_res *)
   | _ ->
     Lambda.name_lambda strict funct (fun id ->
         Lfunction

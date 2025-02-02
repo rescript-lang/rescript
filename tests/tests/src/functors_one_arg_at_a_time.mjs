@@ -21,7 +21,7 @@ let M = {
 let EQ = Eq({})({});
 
 let MF = {
-  F: (funarg, funarg$1) => ({})
+  F: funarg => (funarg => ({}))
 };
 
 function UseF(X) {
