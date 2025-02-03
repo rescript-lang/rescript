@@ -689,20 +689,20 @@ module Completable = struct
     | CPAwait ctxPath -> "await " ^ contextPathToString ctxPath
     | CPOption ctxPath -> "option<" ^ contextPathToString ctxPath ^ ">"
     | CPApply (cp, labels) ->
-      contextPathToString cp ^ "("
+      "CPApply(" ^ contextPathToString cp ^ "("
       ^ (labels
         |> List.map (function
              | Asttypes.Noloc.Nolabel -> "Nolabel"
              | Labelled s -> "~" ^ s
              | Optional s -> "?" ^ s)
         |> String.concat ", ")
-      ^ ")"
+      ^ "))"
     | CPArray (Some ctxPath) -> "array<" ^ contextPathToString ctxPath ^ ">"
     | CPArray None -> "array"
     | CPId {path; completionContext} ->
-      completionContextToString completionContext ^ list path
+      "CPID(" ^ completionContextToString completionContext ^ list path ^ ")"
     | CPField {contextPath = cp; fieldName = s} ->
-      contextPathToString cp ^ "." ^ str s
+      "CPField(" ^ contextPathToString cp ^ "." ^ str s ^ ")"
     | CPObj (cp, s) -> contextPathToString cp ^ "[\"" ^ s ^ "\"]"
     | CPPipe {contextPath; id; inJsx} ->
       contextPathToString contextPath
@@ -801,6 +801,19 @@ module Completion = struct
     | ExtractedType of completionType * [`Value | `Type]
     | FollowContextPath of Completable.contextPath * ScopeTypes.item list
 
+  let kind_to_string = function
+    | Module _ -> "Module"
+    | Value _ -> "Value"
+    | ObjLabel _ -> "ObjLabel"
+    | Label _ -> "Label"
+    | Type _ -> "Type"
+    | Constructor _ -> "Constructor"
+    | PolyvariantConstructor _ -> "PolyvariantConstructor"
+    | Field _ -> "Field"
+    | FileModule _ -> "FileModule"
+    | Snippet _ -> "Snippet"
+    | ExtractedType _ -> "ExtractedType"
+    | FollowContextPath _ -> "FollowContextPath"
   type t = {
     name: string;
     sortText: string option;
@@ -818,6 +831,10 @@ module Completion = struct
     synthetic: bool;
         (** Whether this item is an made up, synthetic item or not. *)
   }
+
+  let toString (t : t) : string =
+    Format.sprintf "Completion: %s %s %b" t.name (kind_to_string t.kind)
+      t.synthetic
 
   let create ?(synthetic = false) ?additionalTextEdits ?data ?typeArgContext
       ?(includesSnippets = false) ?insertText ~kind ~env ?sortText ?deprecated

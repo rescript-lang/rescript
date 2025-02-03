@@ -600,8 +600,11 @@ let getComplementaryCompletionsForTypedValue ~opens ~allFiles ~scope ~env prefix
   in
   localCompletionsWithOpens @ fileModules
 
-let getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
-    ~completionContext ~env path =
+let getCompletionsForPath ~(debug : bool) ~(opens : QueryEnv.t list)
+    ~(full : full) ~(pos : int * int) ~(exact : bool)
+    ~(scope : ScopeTypes.item list)
+    ~(completionContext : Completable.completionContext) ~(env : QueryEnv.t)
+    (path : filePath list) : Completion.t list =
   if debug then Printf.printf "Path %s\n" (path |> String.concat ".");
   let allFiles = allFilesInPackage full.package in
   match path with
@@ -775,6 +778,9 @@ let completionsGetCompletionType ~full completions =
 
 let rec completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
     completions =
+  Printf.printf "Enter completionsGetCompletionType2 with %d \n"
+    (List.length completions);
+  completions |> List.iter (fun c -> c |> Completion.toString |> print_endline);
   let firstNonSyntheticCompletion =
     List.find_opt (fun c -> not c.Completion.synthetic) completions
   in
@@ -816,9 +822,8 @@ and completionsGetTypeEnv2 ~debug (completions : Completion.t list) ~full ~opens
 and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     ~scope ?(mode = Regular) contextPath =
   let envCompletionIsMadeFrom = env in
-  if debug then
-    Printf.printf "ContextPath %s\n"
-      (Completable.contextPathToString contextPath);
+  if debug then print_endline "Enter getCompletionsForContextPath:";
+  Printf.printf "ContextPath %s\n" (Completable.contextPathToString contextPath);
   let package = full.package in
   match contextPath with
   | CPString ->
@@ -972,6 +977,121 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         [Completion.create "dummy" ~env ~kind:(Completion.Value retType)]
       | _ -> [])
     | _ -> [])
+  (* sh`meh` *)
+  | CPField
+      {
+        contextPath = CPApply ((CPId {path; completionContext} as cp), _);
+        fieldName;
+        posOfDot;
+        exprLoc;
+      } -> (
+    Format.printf "YAP '%s'\n" fieldName;
+    Location.print_loc Format.std_formatter exprLoc;
+    let completionsFromCtxPath =
+      getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
+        ~completionContext ~env:envCompletionIsMadeFrom path
+    in
+    let mainTypeCompletionEnv =
+      completionsFromCtxPath
+      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+    in
+    match mainTypeCompletionEnv with
+    | None -> []
+    | Some (typ, env) -> (
+      print_endline "FOOOOOO";
+      let _, rt, typeArgsOpt =
+        TypeUtils.extractFunctionType2 ~env:envCompletionIsMadeFrom
+          ~package:full.package typ
+      in
+      Printtyp.raw_type_expr Format.std_formatter rt;
+      print_endline "__";
+      let mainTypeId = TypeUtils.findRootTypeId ~full ~env rt in
+      let typePath = TypeUtils.pathFromTypeExpr rt in
+      match mainTypeId with
+      | None ->
+        if Debug.verbose () then
+          Printf.printf
+            "[pipe_completion] Could not find mainTypeId. Aborting pipe \
+             completions.\n";
+        []
+      | Some mainTypeId ->
+        if Debug.verbose () then
+          Printf.printf "[pipe_completion] mainTypeId: %s\n" mainTypeId;
+        let pipeCompletions =
+          (* We now need a completion path from where to look up the module for our dot completion type.
+              This is from where we pull all of the functions we want to complete for the pipe.
+
+              A completion path here could be one of two things:
+              1. A module path to the main module for the type we've found
+              2. A module path to a builtin module, like `Int` for `int`, or `Array` for `array`
+
+             The below code will deliberately _not_ dig into type aliases for the main type when we're looking
+             for what _module_ to complete from. This is because you should be able to control where completions
+             come from even if your type is an alias.
+          *)
+          let completeAsBuiltin =
+            match typePath with
+            | Some t ->
+              TypeUtils.completionPathFromMaybeBuiltin t ~package:full.package
+            | None -> None
+          in
+          let completionPath =
+            match (completeAsBuiltin, typePath) with
+            | Some completionPathForBuiltin, _ ->
+              Some (false, completionPathForBuiltin)
+            | _, Some p -> (
+              (* If this isn't a builtin, but we have a path, we try to resolve the
+                 module path relative to the env we're completing from. This ensures that
+                 what we get here is a module path we can find completions for regardless of
+                 of the current scope for the position we're at.*)
+              match
+                TypeUtils.getModulePathRelativeToEnv ~debug
+                  ~env:envCompletionIsMadeFrom ~envFromItem:env
+                  (Utils.expandPath p)
+              with
+              | None -> Some (true, [env.file.moduleName])
+              | Some p -> Some (false, p))
+            | _ -> None
+          in
+          match completionPath with
+          | None -> []
+          | Some (isFromCurrentModule, completionPath) ->
+            completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom ~opens
+              ~pos ~scope ~debug ~prefix:"" ~env ~rawOpens ~full completionPath
+            |> fun cps ->
+            Format.printf "Before filtering (%d)" (List.length cps);
+            cps
+            |> TypeUtils.filterPipeableFunctions ~env ~full ~synthetic:false
+                 ~targetTypeId:mainTypeId
+            |> List.filter (fun (c : Completion.t) ->
+                   (* If we're completing from the current module then we need to care about scope.
+                      This is automatically taken care of in other cases. *)
+                   if isFromCurrentModule then
+                     match c.kind with
+                     | Value _ ->
+                       scope
+                       |> List.find_opt (fun (item : ScopeTypes.item) ->
+                              match item with
+                              | Value (scopeItemName, _, _, _) ->
+                                scopeItemName = c.name
+                              | _ -> false)
+                       |> Option.is_some
+                     | _ -> false
+                   else true)
+        in
+        (* Extra completions can be drawn from the @editor.completeFrom attribute. Here we
+           find and add those completions as well. *)
+        let extraCompletions =
+          TypeUtils.getExtraModulesToCompleteFromForType ~env ~full typ
+          |> List.map (fun completionPath ->
+                 completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom
+                   ~opens ~pos ~scope ~debug ~prefix:"" ~env ~rawOpens ~full
+                   completionPath)
+          |> List.flatten
+          |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
+               ~targetTypeId:mainTypeId
+        in
+        pipeCompletions @ extraCompletions))
   | CPField {contextPath = CPId {path; completionContext = Module}; fieldName}
     ->
     if Debug.verbose () then print_endline "[ctx_path]--> CPField: M.field";
@@ -980,6 +1100,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     |> getCompletionsForPath ~debug ~opens ~full ~pos ~exact
          ~completionContext:Field ~env ~scope
   | CPField {contextPath = cp; fieldName; posOfDot; exprLoc} -> (
+    Completable.contextPathToString cp |> print_endline;
     if Debug.verbose () then print_endline "[dot_completion]--> Triggered";
     let completionsFromCtxPath =
       cp
@@ -1064,7 +1185,9 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         |> TypeUtils.resolveTypeForPipeCompletion ~env ~package:full.package
              ~full ~lhsLoc
       in
+      (* Here we search the root type, I'd expect that is not always the case? *)
       let mainTypeId = TypeUtils.findRootTypeId ~full ~env typ in
+      Printtyp.raw_type_expr Format.std_formatter typ;
       let typePath = TypeUtils.pathFromTypeExpr typ in
       match mainTypeId with
       | None ->
@@ -1117,6 +1240,9 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
           | Some (isFromCurrentModule, completionPath) ->
             completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom ~opens
               ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full completionPath
+            |> fun cps ->
+            Format.printf "Before filtering (%d)" (List.length cps);
+            cps
             |> TypeUtils.filterPipeableFunctions ~env ~full ~synthetic
                  ~targetTypeId:mainTypeId
             |> List.filter (fun (c : Completion.t) ->
@@ -1819,8 +1945,8 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
 module StringSet = Set.Make (String)
 
 let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
-  if debug then
-    Printf.printf "Completable: %s\n" (Completable.toString completable);
+  if debug then print_endline "Enter processCompletable:";
+  Printf.printf "Completable: %s\n" (Completable.toString completable);
   let package = full.package in
   let rawOpens = Scope.getRawOpens scope in
   let opens = getOpens ~debug ~rawOpens ~package ~env in

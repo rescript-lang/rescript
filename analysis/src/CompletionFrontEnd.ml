@@ -1127,6 +1127,40 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
       (* Case foo-> when the parser adds a ghost expression to the rhs
          so the apply expression does not include the cursor *)
       if setPipeResult ~lhs ~id:"" then setFound ()
+    (* sh`echo "meh"`. *)
+    | Pexp_apply
+        {
+          funct = {pexp_desc = Pexp_ident {txt = Lident "."; loc = dotLoc}};
+          args = [(_, ({pexp_desc = Pexp_apply _} as innerExpr)); _ghostThing];
+        }
+      when dotLoc |> Loc.hasPos ~pos:posBeforeCursor ->
+      Printast.expression 4 Format.std_formatter expr;
+      print_endline "yow_yow";
+      exprToContextPath innerExpr
+      |> Option.iter (fun cpath ->
+             setResult
+               (Cpath
+                  (CPField
+                     {
+                       contextPath = cpath;
+                       fieldName = "";
+                       posOfDot;
+                       exprLoc = expr.pexp_loc;
+                     }));
+             setFound ())
+    (* TODO: further extend on all the ghost stuff, make this clear that this targetting tag templates *)
+    | Pexp_field (e, {txt = Longident.Lident "_"}) -> (
+      print_endline "field yozora:_";
+      Printast.expression 4 Format.std_formatter expr;
+      match exprToContextPath e with
+      | None -> ()
+      | Some contextPath ->
+        print_endline (Completable.contextPathToString contextPath);
+        setFound ();
+        setResult
+          (Cpath
+             (CPField
+                {contextPath; fieldName = ""; posOfDot; exprLoc = e.pexp_loc})))
     | _ -> (
       if expr.pexp_loc |> Loc.hasPos ~pos:posNoWhite && !result = None then (
         setFound ();
