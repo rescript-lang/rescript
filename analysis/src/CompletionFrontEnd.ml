@@ -1134,8 +1134,9 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
           args = [(_, ({pexp_desc = Pexp_apply _} as innerExpr)); _ghostThing];
         }
       when dotLoc |> Loc.hasPos ~pos:posBeforeCursor ->
-      Printast.expression 4 Format.std_formatter expr;
-      print_endline "yow_yow";
+      if Debug.verbose () then (
+        Printast.expression 4 Format.std_formatter expr;
+        print_endline "yow_yow");
       exprToContextPath innerExpr
       |> Option.iter (fun cpath ->
              setResult
@@ -1150,8 +1151,9 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
              setFound ())
     (* TODO: further extend on all the ghost stuff, make this clear that this targetting tag templates *)
     | Pexp_field (e, {txt = Longident.Lident "_"}) -> (
-      print_endline "field yozora:_";
-      Printast.expression 4 Format.std_formatter expr;
+      if Debug.verbose () then (
+        print_endline "field yozora:_";
+        Printast.expression 4 Format.std_formatter expr);
       match exprToContextPath e with
       | None -> ()
       | Some contextPath ->

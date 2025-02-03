@@ -778,9 +778,11 @@ let completionsGetCompletionType ~full completions =
 
 let rec completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
     completions =
-  Printf.printf "Enter completionsGetCompletionType2 with %d \n"
-    (List.length completions);
-  completions |> List.iter (fun c -> c |> Completion.toString |> print_endline);
+  if Debug.verbose () then (
+    Printf.printf "Enter completionsGetCompletionType2 with %d \n"
+      (List.length completions);
+    completions
+    |> List.iter (fun c -> c |> Completion.toString |> print_endline));
   let firstNonSyntheticCompletion =
     List.find_opt (fun c -> not c.Completion.synthetic) completions
   in
@@ -822,8 +824,10 @@ and completionsGetTypeEnv2 ~debug (completions : Completion.t list) ~full ~opens
 and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     ~scope ?(mode = Regular) contextPath =
   let envCompletionIsMadeFrom = env in
-  if debug then print_endline "Enter getCompletionsForContextPath:";
-  Printf.printf "ContextPath %s\n" (Completable.contextPathToString contextPath);
+  if debug then (
+    print_endline "Enter getCompletionsForContextPath:";
+    Printf.printf "ContextPath %s\n"
+      (Completable.contextPathToString contextPath));
   let package = full.package in
   match contextPath with
   | CPString ->
@@ -982,11 +986,12 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       {
         contextPath = CPApply ((CPId {path; completionContext} as cp), _);
         fieldName;
-        posOfDot;
+        posOfDot = _;
         exprLoc;
       } -> (
-    Format.printf "YAP '%s'\n" fieldName;
-    Location.print_loc Format.std_formatter exprLoc;
+    if Debug.verbose () then (
+      Format.printf "YAP '%s'\n" fieldName;
+      Location.print_loc Format.std_formatter exprLoc);
     let completionsFromCtxPath =
       getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
         ~completionContext ~env:envCompletionIsMadeFrom path
@@ -998,13 +1003,14 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     match mainTypeCompletionEnv with
     | None -> []
     | Some (typ, env) -> (
-      print_endline "FOOOOOO";
-      let _, rt, typeArgsOpt =
+      if Debug.verbose () then print_endline "FOOOOOO";
+      let _, rt, _typeArgsOpt =
         TypeUtils.extractFunctionType2 ~env:envCompletionIsMadeFrom
           ~package:full.package typ
       in
-      Printtyp.raw_type_expr Format.std_formatter rt;
-      print_endline "__";
+      if Debug.verbose () then (
+        Printtyp.raw_type_expr Format.std_formatter rt;
+        print_endline "__");
       let mainTypeId = TypeUtils.findRootTypeId ~full ~env rt in
       let typePath = TypeUtils.pathFromTypeExpr rt in
       match mainTypeId with
@@ -1059,7 +1065,8 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
             completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom ~opens
               ~pos ~scope ~debug ~prefix:"" ~env ~rawOpens ~full completionPath
             |> fun cps ->
-            Format.printf "Before filtering (%d)" (List.length cps);
+            if Debug.verbose () then
+              Format.printf "Before filtering (%d)" (List.length cps);
             cps
             |> TypeUtils.filterPipeableFunctions ~env ~full ~synthetic:false
                  ~targetTypeId:mainTypeId
@@ -1100,7 +1107,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     |> getCompletionsForPath ~debug ~opens ~full ~pos ~exact
          ~completionContext:Field ~env ~scope
   | CPField {contextPath = cp; fieldName; posOfDot; exprLoc} -> (
-    Completable.contextPathToString cp |> print_endline;
+    if Debug.verbose () then Completable.contextPathToString cp |> print_endline;
     if Debug.verbose () then print_endline "[dot_completion]--> Triggered";
     let completionsFromCtxPath =
       cp
@@ -1187,7 +1194,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       in
       (* Here we search the root type, I'd expect that is not always the case? *)
       let mainTypeId = TypeUtils.findRootTypeId ~full ~env typ in
-      Printtyp.raw_type_expr Format.std_formatter typ;
+      if Debug.verbose () then Printtyp.raw_type_expr Format.std_formatter typ;
       let typePath = TypeUtils.pathFromTypeExpr typ in
       match mainTypeId with
       | None ->
@@ -1241,7 +1248,8 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
             completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom ~opens
               ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full completionPath
             |> fun cps ->
-            Format.printf "Before filtering (%d)" (List.length cps);
+            if Debug.verbose () then
+              Format.printf "Before filtering (%d)" (List.length cps);
             cps
             |> TypeUtils.filterPipeableFunctions ~env ~full ~synthetic
                  ~targetTypeId:mainTypeId
@@ -1946,7 +1954,8 @@ module StringSet = Set.Make (String)
 
 let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
   if debug then print_endline "Enter processCompletable:";
-  Printf.printf "Completable: %s\n" (Completable.toString completable);
+  if Debug.verbose () then
+    Printf.printf "Completable: %s\n" (Completable.toString completable);
   let package = full.package in
   let rawOpens = Scope.getRawOpens scope in
   let opens = getOpens ~debug ~rawOpens ~package ~env in

@@ -1168,7 +1168,7 @@ let transformCompletionToPipeCompletion ?(synthetic = false) ~env ?posOfDot
     of the project. Example: type x in module SomeModule in file SomeFile would get the globally 
     unique id `SomeFile.SomeModule.x`.*)
 let rec findRootTypeId ~full ~env (t : Types.type_expr) =
-  let debug = true in
+  let debug = Debug.verbose () in
   match t.desc with
   | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> findRootTypeId ~full ~env t1
   | Tconstr (path, _, _) -> (
@@ -1209,10 +1209,11 @@ let filterPipeableFunctions ~env ~full ?synthetic ?targetTypeId ?posOfDot
   match targetTypeId with
   | None -> completions
   | Some targetTypeId ->
-    Format.printf "targetTypeId: %s\n" targetTypeId;
+    if Debug.verbose () then Format.printf "targetTypeId: %s\n" targetTypeId;
     completions
     |> List.filter_map (fun (completion : Completion.t) ->
-           print_endline (Completion.toString completion);
+           if Debug.verbose () then
+             print_endline (Completion.toString completion);
            let thisCompletionItemTypeId =
              match completion.kind with
              | Value t -> (
