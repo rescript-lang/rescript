@@ -17,7 +17,7 @@ Path withSomeVarian
     "detail": "insert exhaustive switch for value",
     "documentation": null,
     "filterText": "withSomeVariant",
-    "insertText": "withSomeVariant {\n   | One => ${1:failwith(\"todo\")}\n   | Two => ${2:failwith(\"todo\")}\n   | Three(_) => ${3:failwith(\"todo\")}\n   }",
+    "insertText": "withSomeVariant {\n   | One => ${1:failwith(\"todo\")}\n   | Three(_) => ${2:failwith(\"todo\")}\n   | Two => ${3:failwith(\"todo\")}\n   }",
     "insertTextFormat": 2
   }]
 
@@ -40,7 +40,7 @@ Path withSomePol
     "detail": "insert exhaustive switch for value",
     "documentation": null,
     "filterText": "withSomePoly",
-    "insertText": "withSomePoly {\n   | #\"exotic ident\" => ${1:failwith(\"todo\")}\n   | #one => ${2:failwith(\"todo\")}\n   | #\"switch\" => ${3:failwith(\"todo\")}\n   | #three(_) => ${4:failwith(\"todo\")}\n   | #two => ${5:failwith(\"todo\")}\n   }",
+    "insertText": "withSomePoly {\n   | #\"exotic ident\" => ${1:failwith(\"todo\")}\n   | #\"switch\" => ${2:failwith(\"todo\")}\n   | #one => ${3:failwith(\"todo\")}\n   | #three(_) => ${4:failwith(\"todo\")}\n   | #two => ${5:failwith(\"todo\")}\n   }",
     "insertTextFormat": 2
   }]
 
@@ -63,7 +63,7 @@ Path someBoo
     "detail": "insert exhaustive switch for value",
     "documentation": null,
     "filterText": "someBool",
-    "insertText": "someBool {\n   | true => ${1:failwith(\"todo\")}\n   | false => ${2:failwith(\"todo\")}\n   }",
+    "insertText": "someBool {\n   | false => ${1:failwith(\"todo\")}\n   | true => ${2:failwith(\"todo\")}\n   }",
     "insertTextFormat": 2
   }]
 
@@ -86,7 +86,7 @@ Path someOp
     "detail": "insert exhaustive switch for value",
     "documentation": null,
     "filterText": "someOpt",
-    "insertText": "someOpt {\n   | Some($1) => ${2:failwith(\"todo\")}\n   | None => ${3:failwith(\"todo\")}\n   }",
+    "insertText": "someOpt {\n   | None => ${2:failwith(\"todo\")}\n   | Some($1) => ${3:failwith(\"todo\")}\n   }",
     "insertTextFormat": 2
   }]
 
@@ -164,7 +164,7 @@ Path withSomeVarian
     "detail": "insert exhaustive switch for value",
     "documentation": null,
     "filterText": "withSomeVariant",
-    "insertText": "withSomeVariant {\n   | One => ${1:%todo}\n   | Two => ${2:%todo}\n   | Three(_) => ${3:%todo}\n   }",
+    "insertText": "withSomeVariant {\n   | One => ${1:%todo}\n   | Three(_) => ${2:%todo}\n   | Two => ${3:%todo}\n   }",
     "insertTextFormat": 2
   }]
 
