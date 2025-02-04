@@ -1172,9 +1172,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
                TypeUtils.transformCompletionToPipeCompletion ~synthetic:true
                  ~env ?posOfDot c)
       in
-      let evenMoreCompletions = [] in
-
-      fieldCompletions @ pipeCompletions @ evenMoreCompletions)
+      fieldCompletions @ pipeCompletions)
   | CPObj (cp, label) -> (
     (* TODO: Also needs to support ExtractedType *)
     if Debug.verbose () then print_endline "[ctx_path]--> CPObj";
@@ -1230,7 +1228,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       in
       let evenMoreCompletions =
         match cp with
-        | CPApply (CPId {path; completionContext; loc}, _) -> (
+        | CPApply (CPId {path; completionContext; loc = _}, _) when false -> (
           let completionsFromCtxPath =
             getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
               ~completionContext ~env:envCompletionIsMadeFrom path

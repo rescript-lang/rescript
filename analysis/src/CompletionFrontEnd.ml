@@ -1150,7 +1150,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                      }));
              setFound ())
     (* TODO: further extend on all the ghost stuff, make this clear that this targetting tag templates *)
-    | Pexp_field (e, {txt = Longident.Lident "_"}) -> (
+    | Pexp_field (e, {txt = Longident.Lident "_"}) when false -> (
       if Debug.verbose () then (
         print_endline "field yozora:_";
         Printast.expression 4 Format.std_formatter expr);
