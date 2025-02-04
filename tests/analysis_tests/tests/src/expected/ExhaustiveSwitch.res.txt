@@ -40,7 +40,7 @@ Path withSomePol
     "detail": "insert exhaustive switch for value",
     "documentation": null,
     "filterText": "withSomePoly",
-    "insertText": "withSomePoly {\n   | #\"switch\" => ${1:failwith(\"todo\")}\n   | #one => ${2:failwith(\"todo\")}\n   | #three(_) => ${3:failwith(\"todo\")}\n   | #two => ${4:failwith(\"todo\")}\n   | #\"exotic ident\" => ${5:failwith(\"todo\")}\n   }",
+    "insertText": "withSomePoly {\n   | #\"exotic ident\" => ${1:failwith(\"todo\")}\n   | #one => ${2:failwith(\"todo\")}\n   | #\"switch\" => ${3:failwith(\"todo\")}\n   | #three(_) => ${4:failwith(\"todo\")}\n   | #two => ${5:failwith(\"todo\")}\n   }",
     "insertTextFormat": 2
   }]
 

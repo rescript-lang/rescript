@@ -242,7 +242,7 @@ TextDocumentEdit: Xform.res
 {"start": {"line": 101, "character": 2}, "end": {"line": 101, "character": 3}}
 newText:
   <--here
-  #second | #"illegal identifier" | #third(_)
+  #"illegal identifier" | #second | #third(_)
 
 Xform src/Xform.res 107:4
 posCursor:[105:16] posNoWhite:[105:14] Found expr:[105:9->109:1]

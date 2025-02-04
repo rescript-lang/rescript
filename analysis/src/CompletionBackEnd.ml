@@ -2235,6 +2235,7 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
       let newText =
         c.name ^ " {\n"
         ^ (cases
+          |> List.sort (String.compare)
           |> List.mapi (fun index caseText ->
                  "| " ^ caseText ^ " => "
                  ^ printFailwithStr (startIndex + index + 1))
