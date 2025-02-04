@@ -14,8 +14,7 @@ let fieldCompletionsForDotCompletion ?posOfDot typ ~env ~package ~prefix ~exact
   match asObject with
   | Some (objEnv, obj) ->
     (* Handle obj completion via dot *)
-    if Debug.verbose () then
-      Printf.printf "[dot_completion]--> Obj type found:\n";
+    Debug.verbose "[dot_completion]--> Obj type found:";
     obj |> TypeUtils.getObjFields
     |> Utils.filterMap (fun (field, _typ) ->
            if Utils.checkName field ~prefix ~exact then

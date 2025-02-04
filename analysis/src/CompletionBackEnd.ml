@@ -822,26 +822,25 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
   let package = full.package in
   match contextPath with
   | CPString ->
-    if Debug.verbose () then print_endline "[ctx_path]--> CPString";
+    Debug.verbose "[ctx_path]--> CPString";
     [Completion.create "dummy" ~env ~kind:(Completion.Value Predef.type_string)]
   | CPBool ->
-    if Debug.verbose () then print_endline "[ctx_path]--> CPBool";
+    Debug.verbose "[ctx_path]--> CPBool";
     [Completion.create "dummy" ~env ~kind:(Completion.Value Predef.type_bool)]
   | CPInt ->
-    if Debug.verbose () then print_endline "[ctx_path]--> CPInt";
+    Debug.verbose "[ctx_path]--> CPInt";
     [Completion.create "dummy" ~env ~kind:(Completion.Value Predef.type_int)]
   | CPFloat ->
-    if Debug.verbose () then print_endline "[ctx_path]--> CPFloat";
+    Debug.verbose "[ctx_path]--> CPFloat";
     [Completion.create "dummy" ~env ~kind:(Completion.Value Predef.type_float)]
   | CPArray None ->
-    if Debug.verbose () then print_endline "[ctx_path]--> CPArray (no payload)";
+    Debug.verbose "[ctx_path]--> CPArray (no payload)";
     [
       Completion.create "array" ~env
         ~kind:(Completion.Value (Ctype.newconstr Predef.path_array []));
     ]
   | CPArray (Some cp) -> (
-    if Debug.verbose () then
-      print_endline "[ctx_path]--> CPArray (with payload)";
+    Debug.verbose "[ctx_path]--> CPArray (with payload)";
     match mode with
     | Regular -> (
       match
@@ -865,7 +864,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
           ~kind:(Completion.Value (Ctype.newconstr Predef.path_array []));
       ])
   | CPOption cp -> (
-    if Debug.verbose () then print_endline "[ctx_path]--> CPOption";
+    Debug.verbose "[ctx_path]--> CPOption";
     match
       cp
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
@@ -880,7 +879,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
             (Completion.ExtractedType (Toption (env, ExtractedType typ), `Type));
       ])
   | CPAwait cp -> (
-    if Debug.verbose () then print_endline "[ctx_path]--> CPAwait";
+    Debug.verbose "[ctx_path]--> CPAwait";
     match
       cp
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
@@ -891,7 +890,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       [Completion.create "dummy" ~env ~kind:(Completion.Value typ)]
     | _ -> [])
   | CPId {path; completionContext; loc} ->
-    if Debug.verbose () then print_endline "[ctx_path]--> CPId";
+    Debug.verbose "[ctx_path]--> CPId";
     (* Looks up the type of an identifier.
 
        Because of reasons we sometimes don't get enough type
@@ -930,7 +929,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     in
     result
   | CPApply (cp, labels) -> (
-    if Debug.verbose () then print_endline "[ctx_path]--> CPApply";
+    Debug.verbose "[ctx_path]--> CPApply";
     match
       cp
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
@@ -974,13 +973,13 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     | _ -> [])
   | CPField {contextPath = CPId {path; completionContext = Module}; fieldName}
     ->
-    if Debug.verbose () then print_endline "[ctx_path]--> CPField: M.field";
+    Debug.verbose "[ctx_path]--> CPField: M.field";
     (* M.field *)
     path @ [fieldName]
     |> getCompletionsForPath ~debug ~opens ~full ~pos ~exact
          ~completionContext:Field ~env ~scope
   | CPField {contextPath = cp; fieldName; posOfDot; exprLoc} -> (
-    if Debug.verbose () then print_endline "[dot_completion]--> Triggered";
+    Debug.verbose "[dot_completion]--> Triggered";
     let completionsFromCtxPath =
       cp
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
@@ -992,9 +991,8 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     in
     match mainTypeCompletionEnv with
     | None ->
-      if Debug.verbose () then
-        Printf.printf
-          "[dot_completion] Could not extract main type completion env.\n";
+      Debug.verbose
+        "[dot_completion] Could not extract main type completion env.";
       []
     | Some (typ, env) ->
       let fieldCompletions =
@@ -1028,7 +1026,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       fieldCompletions @ pipeCompletions)
   | CPObj (cp, label) -> (
     (* TODO: Also needs to support ExtractedType *)
-    if Debug.verbose () then print_endline "[ctx_path]--> CPObj";
+    Debug.verbose "[ctx_path]--> CPObj";
     match
       cp
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
@@ -1047,7 +1045,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       | None -> [])
     | None -> [])
   | CPPipe {contextPath = cp; id = prefix; lhsLoc; inJsx; synthetic} -> (
-    if Debug.verbose () then print_endline "[ctx_path]--> CPPipe";
+    Debug.verbose "[ctx_path]--> CPPipe";
     match
       cp
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
@@ -1055,8 +1053,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
     with
     | None ->
-      if Debug.verbose () then
-        print_endline "[CPPipe]--> Could not resolve type env";
+      Debug.verbose "[CPPipe]--> Could not resolve type env";
       []
     | Some (typ, env) -> (
       let env, typ =
@@ -1068,14 +1065,12 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       let typePath = TypeUtils.pathFromTypeExpr typ in
       match mainTypeId with
       | None ->
-        if Debug.verbose () then
-          Printf.printf
-            "[pipe_completion] Could not find mainTypeId. Aborting pipe \
-             completions.\n";
+        Debug.verbose
+          "[pipe_completion] Could not find mainTypeId. Aborting pipe \
+           completions.";
         []
       | Some mainTypeId ->
-        if Debug.verbose () then
-          Printf.printf "[pipe_completion] mainTypeId: %s\n" mainTypeId;
+        Debug.verbose "[pipe_completion] mainTypeId: %s" mainTypeId;
         let pipeCompletions =
           (* We now need a completion path from where to look up the module for our dot completion type.
               This is from where we pull all of the functions we want to complete for the pipe.
@@ -1156,7 +1151,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         in
         jsxCompletions @ pipeCompletions @ extraCompletions))
   | CTuple ctxPaths ->
-    if Debug.verbose () then print_endline "[ctx_path]--> CTuple";
+    Debug.verbose "[ctx_path]--> CTuple";
     (* Turn a list of context paths into a list of type expressions. *)
     let typeExrps =
       ctxPaths
@@ -1176,7 +1171,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       ]
     else []
   | CJsxPropValue {pathToComponent; propName; emptyJsxPropNameHint} -> (
-    if Debug.verbose () then print_endline "[ctx_path]--> CJsxPropValue";
+    Debug.verbose "[ctx_path]--> CJsxPropValue";
     let findTypeOfValue path =
       path
       |> getCompletionsForPath ~debug ~completionContext:Value ~exact:true
@@ -1245,12 +1240,11 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
           ~kind:(Completion.Value (Utils.unwrapIfOption typ));
       ])
   | CArgument {functionContextPath; argumentLabel} -> (
-    if Debug.verbose () then print_endline "[ctx_path]--> CArgument";
-    if Debug.verbose () then
-      Printf.printf "--> function argument: %s\n"
-        (match argumentLabel with
-        | Labelled n | Optional n -> n
-        | Unlabelled {argumentPosition} -> "$" ^ string_of_int argumentPosition);
+    Debug.verbose "[ctx_path]--> CArgument";
+    Debug.verbose "--> function argument: %s"
+      (match argumentLabel with
+      | Labelled n | Optional n -> n
+      | Unlabelled {argumentPosition} -> "$" ^ string_of_int argumentPosition);
 
     let labels, env =
       match
@@ -1260,11 +1254,10 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         |> completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
       with
       | Some ((TypeExpr typ | ExtractedType (Tfunction {typ})), env) ->
-        if Debug.verbose () then print_endline "--> found function type";
+        Debug.verbose "--> found function type";
         (typ |> TypeUtils.getArgs ~full ~env, env)
       | _ ->
-        if Debug.verbose () then
-          print_endline "--> could not find function type";
+        Debug.verbose "--> could not find function type";
         ([], env)
     in
     let targetLabel =
@@ -1286,11 +1279,10 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     in
     match targetLabel with
     | None ->
-      if Debug.verbose () then
-        print_endline "--> could not look up function argument";
+      Debug.verbose "--> could not look up function argument";
       []
     | Some (_, typ) ->
-      if Debug.verbose () then print_endline "--> found function argument!";
+      Debug.verbose "--> found function argument!";
       [
         Completion.create "dummy" ~env
           ~kind:
@@ -1298,7 +1290,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
                (if expandOption then Utils.unwrapIfOption typ else typ));
       ])
   | CPatternPath {rootCtxPath; nested} -> (
-    if Debug.verbose () then print_endline "[ctx_path]--> CPatternPath";
+    Debug.verbose "[ctx_path]--> CPatternPath";
     (* TODO(env-stuff) Get rid of innerType etc *)
     match
       rootCtxPath
@@ -1313,7 +1305,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       | None -> [])
     | None -> [])
   | CTypeAtPos loc -> (
-    if Debug.verbose () then print_endline "[ctx_path]--> CTypeAtPos";
+    Debug.verbose "[ctx_path]--> CTypeAtPos";
     match TypeUtils.findTypeViaLoc loc ~full ~debug with
     | None -> []
     | Some typExpr -> [Completion.create "dummy" ~env ~kind:(Value typExpr)])
@@ -1381,8 +1373,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
   let create = Completion.create ?typeArgContext in
   match t with
   | TtypeT {env; path} when mode = Expression ->
-    if Debug.verbose () then
-      print_endline "[complete_typed_value]--> TtypeT (Expression)";
+    Debug.verbose "[complete_typed_value]--> TtypeT (Expression)";
     (* Find all values in the module with type t *)
     let valueWithTypeT t =
       match t.Types.desc with
@@ -1461,15 +1452,14 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     in
     completionItems
   | Tbool env ->
-    if Debug.verbose () then print_endline "[complete_typed_value]--> Tbool";
+    Debug.verbose "[complete_typed_value]--> Tbool";
     [
       create "true" ~kind:(Label "bool") ~env;
       create "false" ~kind:(Label "bool") ~env;
     ]
     |> filterItems ~prefix
   | TtypeT {env; path} ->
-    if Debug.verbose () then
-      print_endline "[complete_typed_value]--> TtypeT (Pattern)";
+    Debug.verbose "[complete_typed_value]--> TtypeT (Pattern)";
     (* This is in patterns. Emit an alias/binding with the module name as a value name. *)
     if prefix <> "" then []
     else
@@ -1484,7 +1474,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
           ~includesSnippets:true;
       ]
   | Tvariant {env; constructors; variantDecl; variantName} ->
-    if Debug.verbose () then print_endline "[complete_typed_value]--> Tvariant";
+    Debug.verbose "[complete_typed_value]--> Tvariant";
     constructors
     |> List.map (fun (constructor : Constructor.t) ->
            let numArgs =
@@ -1504,8 +1494,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
              ~env)
     |> filterItems ~prefix
   | Tpolyvariant {env; constructors; typeExpr} ->
-    if Debug.verbose () then
-      print_endline "[complete_typed_value]--> Tpolyvariant";
+    Debug.verbose "[complete_typed_value]--> Tpolyvariant";
     constructors
     |> List.map (fun (constructor : polyVariantConstructor) ->
            create
@@ -1527,7 +1516,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     |> filterItems
          ~prefix:(if Utils.startsWith prefix "#" then prefix else "#" ^ prefix)
   | Toption (env, t) ->
-    if Debug.verbose () then print_endline "[complete_typed_value]--> Toption";
+    Debug.verbose "[complete_typed_value]--> Toption";
     let innerType =
       match t with
       | ExtractedType t -> Some (t, None)
@@ -1570,7 +1559,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     in
     completions @ expandedCompletions |> filterItems ~prefix
   | Tresult {env; okType; errorType} ->
-    if Debug.verbose () then print_endline "[complete_typed_value]--> Tresult";
+    Debug.verbose "[complete_typed_value]--> Tresult";
     let okInnerType =
       okType |> TypeUtils.extractType ~env ~package:full.package
     in
@@ -1635,7 +1624,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     completions @ expandedOkCompletions @ expandedErrorCompletions
     |> filterItems ~prefix
   | Tuple (env, exprs, typ) ->
-    if Debug.verbose () then print_endline "[complete_typed_value]--> Tuple";
+    Debug.verbose "[complete_typed_value]--> Tuple";
     let numExprs = List.length exprs in
     [
       create
@@ -1645,7 +1634,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
         ~kind:(Value typ) ~env;
     ]
   | Trecord {env; fields} as extractedType -> (
-    if Debug.verbose () then print_endline "[complete_typed_value]--> Trecord";
+    Debug.verbose "[complete_typed_value]--> Trecord";
     (* As we're completing for a record, we'll need a hint (completionContext)
        here to figure out whether we should complete for a record field, or
        the record body itself. *)
@@ -1687,8 +1676,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
         ]
       else [])
   | TinlineRecord {env; fields} -> (
-    if Debug.verbose () then
-      print_endline "[complete_typed_value]--> TinlineRecord";
+    Debug.verbose "[complete_typed_value]--> TinlineRecord";
     match completionContext with
     | Some (Completable.RecordField {seenFields}) ->
       fields
@@ -1706,7 +1694,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
         ]
       else [])
   | Tarray (env, typ) ->
-    if Debug.verbose () then print_endline "[complete_typed_value]--> Tarray";
+    Debug.verbose "[complete_typed_value]--> Tarray";
     if prefix = "" then
       [
         create "[]" ~includesSnippets:true ~insertText:"[$0]" ~sortText:"A"
@@ -1723,7 +1711,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
       ]
     else []
   | Tstring env ->
-    if Debug.verbose () then print_endline "[complete_typed_value]--> Tstring";
+    Debug.verbose "[complete_typed_value]--> Tstring";
     if prefix = "" then
       [
         create "\"\"" ~includesSnippets:true ~insertText:"\"$0\"" ~sortText:"A"
@@ -1732,8 +1720,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     else []
   | Tfunction {env; typ; args; returnType} when prefix = "" && mode = Expression
     ->
-    if Debug.verbose () then
-      print_endline "[complete_typed_value]--> Tfunction #1";
+    Debug.verbose "[complete_typed_value]--> Tfunction #1";
     let shouldPrintAsUncurried = false in
     let mkFnArgs ~asSnippet =
       match args with
@@ -1794,11 +1781,10 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
         ~sortText:"A" ~kind:(Value typ) ~env;
     ]
   | Tfunction _ ->
-    if Debug.verbose () then
-      print_endline "[complete_typed_value]--> Tfunction #other";
+    Debug.verbose "[complete_typed_value]--> Tfunction #other";
     []
   | Texn env ->
-    if Debug.verbose () then print_endline "[complete_typed_value]--> Texn";
+    Debug.verbose "[complete_typed_value]--> Texn";
     [
       create
         (full.package.builtInCompletionModules.exnModulePath @ ["Error(error)"]
@@ -1813,7 +1799,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
         ~env;
     ]
   | Tpromise _ ->
-    if Debug.verbose () then print_endline "[complete_typed_value]--> Tpromise";
+    Debug.verbose "[complete_typed_value]--> Tpromise";
     []
 
 module StringSet = Set.Make (String)
@@ -1846,10 +1832,9 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
       if Utils.startsWith "key" prefix then [mkLabel ("key", "string")] else []
     in
     let pathToElementProps = TypeUtils.pathToElementProps package in
-    if Debug.verbose () then
-      Printf.printf
-        "[completing-lowercase-jsx] Attempting to complete from type at %s\n"
-        (pathToElementProps |> String.concat ".");
+    Debug.verbose
+      "[completing-lowercase-jsx] Attempting to complete from type at %s"
+      (pathToElementProps |> String.concat ".");
     let fromElementProps =
       match
         pathToElementProps
@@ -2148,17 +2133,16 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
       | CJsxPropValue _, [NRecordBody _] -> true
       | _ -> false
     in
-    if Debug.verbose () then
-      (* This happens in this scenario: `<SomeComponent someProp={<com>}`
-           Here, we don't know whether `{}` is just wraps for the type of
-           `someProp`, or if it's a record body where we want to complete
-            for the fields in the record. We need to look up what the type is
-           first before deciding what completions to show. So we do that here.*)
-      if isAmbigiousRecordBodyOrJsxWrap then
-        print_endline
-          "[process_completable]--> Cexpression special case: JSX prop value \
-           that might be record body or JSX wrap"
-      else print_endline "[process_completable]--> Cexpression";
+    (* This happens in this scenario: `<SomeComponent someProp={<com>}`
+         Here, we don't know whether `{}` is just wraps for the type of
+         `someProp`, or if it's a record body where we want to complete
+          for the fields in the record. We need to look up what the type is
+         first before deciding what completions to show. So we do that here.*)
+    if isAmbigiousRecordBodyOrJsxWrap then
+      Debug.verbose
+        "[process_completable]--> Cexpression special case: JSX prop value \
+         that might be record body or JSX wrap"
+    else Debug.verbose "[process_completable]--> Cexpression";
     (* Completions for local things like variables in scope, modules in the
        project, etc. We only add completions when there's a prefix of some sort
        we can filter on, since we know we're in some sort of context, and
@@ -2176,21 +2160,18 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
       |> completionsGetCompletionType ~full
     with
     | None ->
-      if Debug.verbose () then
-        print_endline
-          "[process_completable]--> could not get completions for context path";
+      Debug.verbose
+        "[process_completable]--> could not get completions for context path";
       regularCompletions
     | Some (typ, env) -> (
       match typ |> TypeUtils.resolveNested ~env ~full ~nested with
       | None ->
-        if Debug.verbose () then
-          print_endline
-            "[process_completable]--> could not resolve nested expression path";
+        Debug.verbose
+          "[process_completable]--> could not resolve nested expression path";
         if isAmbigiousRecordBodyOrJsxWrap then (
-          if Debug.verbose () then
-            print_endline
-              "[process_completable]--> case is ambigious Jsx prop vs record \
-               body case, complete also for the JSX prop value directly";
+          Debug.verbose
+            "[process_completable]--> case is ambigious Jsx prop vs record \
+             body case, complete also for the JSX prop value directly";
           let itemsForRawJsxPropValue =
             typ
             |> completeTypedValue ~rawOpens ~mode:Expression ~full ~prefix
@@ -2199,10 +2180,8 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
           itemsForRawJsxPropValue @ regularCompletions)
         else regularCompletions
       | Some (typ, _env, completionContext, typeArgContext) -> (
-        if Debug.verbose () then
-          print_endline
-            "[process_completable]--> found type in nested expression \
-             completion";
+        Debug.verbose
+          "[process_completable]--> found type in nested expression completion";
         (* Wrap the insert text in braces when we're completing the root of a
            JSX prop value. *)
         let wrapInsertTextInBraces =

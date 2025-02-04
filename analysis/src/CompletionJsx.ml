@@ -328,8 +328,7 @@ let findJsxPropsCompletable ~jsxProps ~endPos ~posBeforeCursor
     match props with
     | prop :: rest ->
       if prop.posStart <= posBeforeCursor && posBeforeCursor < prop.posEnd then (
-        if Debug.verbose () then
-          print_endline "[jsx_props_completable]--> Cursor on the prop name";
+        Debug.verbose "[jsx_props_completable]--> Cursor on the prop name";
 
         Some
           (Completable.Cjsx
@@ -340,16 +339,14 @@ let findJsxPropsCompletable ~jsxProps ~endPos ~posBeforeCursor
         prop.posEnd <= posBeforeCursor
         && posBeforeCursor < Loc.start prop.exp.pexp_loc
       then (
-        if Debug.verbose () then
-          print_endline
-            "[jsx_props_completable]--> Cursor between the prop name and expr \
-             assigned";
+        Debug.verbose
+          "[jsx_props_completable]--> Cursor between the prop name and expr \
+           assigned";
         match (firstCharBeforeCursorNoWhite, prop.exp) with
         | Some '=', {pexp_desc = Pexp_ident {txt = Lident txt}} ->
-          if Debug.verbose () then
-            Printf.printf
-              "[jsx_props_completable]--> Heuristic for empty JSX prop expr \
-               completion.\n";
+          Debug.verbose
+            "[jsx_props_completable]--> Heuristic for empty JSX prop expr \
+             completion.";
           Some
             (Cexpression
                {
@@ -366,8 +363,7 @@ let findJsxPropsCompletable ~jsxProps ~endPos ~posBeforeCursor
                })
         | _ -> None)
       else if prop.exp.pexp_loc |> Loc.hasPos ~pos:posBeforeCursor then (
-        if Debug.verbose () then
-          print_endline "[jsx_props_completable]--> Cursor on expr assigned";
+        Debug.verbose "[jsx_props_completable]--> Cursor on expr assigned";
         match
           CompletionExpressions.traverseExpr prop.exp ~exprPath:[]
             ~pos:posBeforeCursor ~firstCharBeforeCursorNoWhite
@@ -389,16 +385,14 @@ let findJsxPropsCompletable ~jsxProps ~endPos ~posBeforeCursor
                })
         | _ -> None)
       else if prop.exp.pexp_loc |> Loc.end_ = (Location.none |> Loc.end_) then (
-        if Debug.verbose () then
-          print_endline "[jsx_props_completable]--> Loc is broken";
+        Debug.verbose "[jsx_props_completable]--> Loc is broken";
         if
           CompletionExpressions.isExprHole prop.exp
           || isRegexpJsxHeuristicExpr prop.exp
         then (
-          if Debug.verbose () then
-            print_endline
-              "[jsx_props_completable]--> Expr was expr hole or regexp literal \
-               heuristic";
+          Debug.verbose
+            "[jsx_props_completable]--> Expr was expr hole or regexp literal \
+             heuristic";
           Some
             (Cexpression
                {
@@ -422,10 +416,8 @@ let findJsxPropsCompletable ~jsxProps ~endPos ~posBeforeCursor
            The completion comes at the end of the component, after the equals sign, but before any
            children starts, and '>' marks that it's at the end of the component JSX.
            This little heuristic makes sure we pick up this special case. *)
-        if Debug.verbose () then
-          print_endline
-            "[jsx_props_completable]--> Special case: last prop, '>' after \
-             cursor";
+        Debug.verbose
+          "[jsx_props_completable]--> Special case: last prop, '>' after cursor";
         Some
           (Cexpression
              {
@@ -444,8 +436,7 @@ let findJsxPropsCompletable ~jsxProps ~endPos ~posBeforeCursor
     | [] ->
       let afterCompName = posBeforeCursor >= posAfterCompName in
       if afterCompName && beforeChildrenStart then (
-        if Debug.verbose () then
-          print_endline "[jsx_props_completable]--> Complete for JSX prop name";
+        Debug.verbose "[jsx_props_completable]--> Complete for JSX prop name";
         Some
           (Cjsx
              ( Utils.flattenLongIdent ~jsx:true jsxProps.compName.txt,

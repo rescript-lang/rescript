@@ -384,9 +384,8 @@ module ExpandCatchAllForVariants = struct
     match !result with
     | None -> ()
     | Some (switchExpr, catchAllCase, cases) -> (
-      if Debug.verbose () then
-        print_endline
-          "[codeAction - ExpandCatchAllForVariants] Found target switch";
+      Debug.verbose
+        "[codeAction - ExpandCatchAllForVariants] Found target switch";
       let rec findAllConstructorNames ?(mode : [`option | `default] = `default)
           ?(constructorNames = []) (p : Parsetree.pattern) =
         match p.ppat_desc with
@@ -463,9 +462,8 @@ module ExpandCatchAllForVariants = struct
           codeActions := codeAction :: !codeActions
         else ()
       | Some (Toption (env, innerType)) -> (
-        if Debug.verbose () then
-          print_endline
-            "[codeAction - ExpandCatchAllForVariants] Found option type";
+        Debug.verbose
+          "[codeAction - ExpandCatchAllForVariants] Found option type";
         let innerType =
           match innerType with
           | ExtractedType t -> Some t

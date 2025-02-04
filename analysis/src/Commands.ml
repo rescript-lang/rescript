@@ -25,15 +25,13 @@ let completionResolve ~path ~modulePath =
   let docstring =
     match Cmt.loadFullCmtFromPath ~path with
     | None ->
-      if Debug.verbose () then
-        Printf.printf "[completion_resolve] Could not load cmt\n";
+      Debug.verbose "[completion_resolve] Could not load cmt";
       Protocol.null
     | Some full -> (
       match ProcessCmt.fileForModule ~package:full.package moduleName with
       | None ->
-        if Debug.verbose () then
-          Printf.printf "[completion_resolve] Did not find file for module %s\n"
-            moduleName;
+        Debug.verbose "[completion_resolve] Did not find file for module %s"
+          moduleName;
         Protocol.null
       | Some file ->
         file.structure.docstring |> String.concat "\n\n"
@@ -349,8 +347,7 @@ let test ~path =
           | "ve+" -> (
             let version = String.sub rest 3 (String.length rest - 3) in
             let version = String.trim version in
-            if Debug.verbose () then
-              Printf.printf "Setting version: %s\n" version;
+            Debug.verbose "Setting version: %s" version;
             match String.split_on_char '.' version with
             | [majorRaw; minorRaw] ->
               let version = (int_of_string majorRaw, int_of_string minorRaw) in

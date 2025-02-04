@@ -23,23 +23,20 @@ let findArgCompletables ~(args : arg list) ~endPos ~posBeforeCursor
         labelled.posStart <= posBeforeCursor
         && posBeforeCursor < labelled.posEnd
       then (
-        if Debug.verbose () then
-          print_endline "[findArgCompletables] Completing named arg #2";
+        Debug.verbose "[findArgCompletables] Completing named arg #2";
         Some (Completable.CnamedArg (contextPath, labelled.name, allNames)))
       else if exp.pexp_loc |> Loc.hasPos ~pos:posBeforeCursor then (
-        if Debug.verbose () then
-          print_endline
-            "[findArgCompletables] Completing in the assignment of labelled \
-             argument";
+        Debug.verbose
+          "[findArgCompletables] Completing in the assignment of labelled \
+           argument";
         match
           CompletionExpressions.traverseExpr exp ~exprPath:[]
             ~pos:posBeforeCursor ~firstCharBeforeCursorNoWhite
         with
         | None -> None
         | Some (prefix, nested) ->
-          if Debug.verbose () then
-            print_endline
-              "[findArgCompletables] Completing for labelled argument value";
+          Debug.verbose
+            "[findArgCompletables] Completing for labelled argument value";
           Some
             (Cexpression
                {
@@ -53,8 +50,7 @@ let findArgCompletables ~(args : arg list) ~endPos ~posBeforeCursor
                  nested = List.rev nested;
                }))
       else if CompletionExpressions.isExprHole exp then (
-        if Debug.verbose () then
-          print_endline "[findArgCompletables] found exprhole";
+        Debug.verbose "[findArgCompletables] found exprhole";
         Some
           (Cexpression
              {
@@ -69,9 +65,8 @@ let findArgCompletables ~(args : arg list) ~endPos ~posBeforeCursor
              }))
       else loop rest
     | {label = None; exp} :: rest ->
-      if Debug.verbose () then
-        Printf.printf "[findArgCompletable] unlabelled arg expr is: %s \n"
-          (DumpAst.printExprItem ~pos:posBeforeCursor ~indentation:0 exp);
+      Debug.verbose "[findArgCompletable] unlabelled arg expr is: %s"
+        (DumpAst.printExprItem ~pos:posBeforeCursor ~indentation:0 exp);
 
       (* Track whether there was an arg with an empty loc (indicates parser error)*)
       if CursorPosition.locIsEmpty exp.pexp_loc ~pos:posBeforeCursor then
@@ -79,22 +74,19 @@ let findArgCompletables ~(args : arg list) ~endPos ~posBeforeCursor
 
       if Res_parsetree_viewer.is_template_literal exp then None
       else if exp.pexp_loc |> Loc.hasPos ~pos:posBeforeCursor then (
-        if Debug.verbose () then
-          print_endline
-            "[findArgCompletables] Completing in an unlabelled argument";
+        Debug.verbose
+          "[findArgCompletables] Completing in an unlabelled argument";
         match
           CompletionExpressions.traverseExpr exp ~pos:posBeforeCursor
             ~firstCharBeforeCursorNoWhite ~exprPath:[]
         with
         | None ->
-          if Debug.verbose () then
-            print_endline
-              "[findArgCompletables] found nothing when traversing expr";
+          Debug.verbose
+            "[findArgCompletables] found nothing when traversing expr";
           None
         | Some (prefix, nested) ->
-          if Debug.verbose () then
-            print_endline
-              "[findArgCompletables] completing for unlabelled argument #2";
+          Debug.verbose
+            "[findArgCompletables] completing for unlabelled argument #2";
           Some
             (Cexpression
                {
@@ -109,8 +101,7 @@ let findArgCompletables ~(args : arg list) ~endPos ~posBeforeCursor
                  nested = List.rev nested;
                }))
       else if CompletionExpressions.isExprHole exp then (
-        if Debug.verbose () then
-          print_endline "[findArgCompletables] found an exprhole #2";
+        Debug.verbose "[findArgCompletables] found an exprhole #2";
         Some
           (Cexpression
              {
@@ -130,12 +121,10 @@ let findArgCompletables ~(args : arg list) ~endPos ~posBeforeCursor
     | [] ->
       let hadEmptyExpLoc = !someArgHadEmptyExprLoc in
       if fnHasCursor then (
-        if Debug.verbose () then
-          print_endline "[findArgCompletables] Function has cursor";
+        Debug.verbose "[findArgCompletables] Function has cursor";
         match charBeforeCursor with
         | Some '~' ->
-          if Debug.verbose () then
-            print_endline "[findArgCompletables] '~' is before cursor";
+          Debug.verbose "[findArgCompletables] '~' is before cursor";
           Some (Completable.CnamedArg (contextPath, "", allNames))
         | _ when hadEmptyExpLoc ->
           (* Special case: `Console.log(arr->)`, completing on the pipe.
@@ -150,22 +139,20 @@ let findArgCompletables ~(args : arg list) ~endPos ~posBeforeCursor
 
              This can be handled in a more robust way in a future refactor of the
              completion engine logic. *)
-          if Debug.verbose () then
-            print_endline
-              "[findArgCompletables] skipping completion in fn call because \
-               arg had empty loc";
+          Debug.verbose
+            "[findArgCompletables] skipping completion in fn call because arg \
+             had empty loc";
           None
         | _
           when firstCharBeforeCursorNoWhite = Some '('
                || firstCharBeforeCursorNoWhite = Some ',' ->
           (* Checks to ensure that completing for empty unlabelled arg makes
              sense by checking what's left of the cursor. *)
-          if Debug.verbose () then
-            Printf.printf
-              "[findArgCompletables] Completing for unlabelled argument value \
-               because nothing matched and is not labelled argument name \
-               completion. isPipedExpr: %b\n"
-              isPipedExpr;
+          Debug.verbose
+            "[findArgCompletables] Completing for unlabelled argument value \
+             because nothing matched and is not labelled argument name \
+             completion. isPipedExpr: %b"
+            isPipedExpr;
           Some
             (Cexpression
                {
@@ -188,8 +175,7 @@ let findArgCompletables ~(args : arg list) ~endPos ~posBeforeCursor
    {label = None; exp = {pexp_desc = Pexp_construct ({txt = Lident "()"}, _)}};
   ]
     when fnHasCursor ->
-    if Debug.verbose () then
-      print_endline "[findArgCompletables] Completing for unit argument";
+    Debug.verbose "[findArgCompletables] Completing for unit argument";
     Some
       (Completable.Cexpression
          {
@@ -419,14 +405,12 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
     if !result = None then
       match x with
       | None ->
-        if Debug.verbose () then
-          print_endline
-            "[set_result] did not set new result because result already was set";
+        Debug.verbose
+          "[set_result] did not set new result because result already was set";
         ()
       | Some x ->
-        if Debug.verbose () then
-          Printf.printf "[set_result] set new result to %s\n"
-            (Completable.toString x);
+        Debug.verbose "[set_result] set new result to %s"
+          (Completable.toString x);
         result := Some (x, !scope)
   in
   let setResult x = setResultOpt (Some x) in
@@ -545,8 +529,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
         contextPath )
     with
     | Some (prefix, nestedPattern), Some ctxPath ->
-      if Debug.verbose () then
-        Printf.printf "[completePattern] found pattern that can be completed\n";
+      Debug.verbose "[completePattern] found pattern that can be completed";
       setResult
         (Completable.Cpattern
            {
@@ -602,16 +585,16 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
   let typedCompletionExpr (exp : Parsetree.expression) =
     let debugTypedCompletionExpr = false in
     if exp.pexp_loc |> CursorPosition.locHasCursor ~pos:posBeforeCursor then (
-      if Debug.verbose () && debugTypedCompletionExpr then
-        print_endline "[typedCompletionExpr] Has cursor";
+      if debugTypedCompletionExpr then
+        Debug.verbose "[typedCompletionExpr] Has cursor";
       match exp.pexp_desc with
       (* No cases means there's no `|` yet in the switch *)
       | Pexp_match (({pexp_desc = Pexp_ident _} as expr), []) ->
-        if Debug.verbose () && debugTypedCompletionExpr then
-          print_endline "[typedCompletionExpr] No cases, with ident";
+        if debugTypedCompletionExpr then
+          Debug.verbose "[typedCompletionExpr] No cases, with ident";
         if locHasCursor expr.pexp_loc then (
-          if Debug.verbose () && debugTypedCompletionExpr then
-            print_endline "[typedCompletionExpr] No cases - has cursor";
+          if debugTypedCompletionExpr then
+            Debug.verbose "[typedCompletionExpr] No cases - has cursor";
           (* We can do exhaustive switch completion if this is an ident we can
              complete from. *)
           match exprToContextPath expr with
@@ -620,16 +603,16 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
             setResult (CexhaustiveSwitch {contextPath; exprLoc = exp.pexp_loc}))
       | Pexp_match (_expr, []) ->
         (* switch x { } *)
-        if Debug.verbose () && debugTypedCompletionExpr then
-          print_endline "[typedCompletionExpr] No cases, rest";
+        if debugTypedCompletionExpr then
+          Debug.verbose "[typedCompletionExpr] No cases, rest";
         ()
       | Pexp_match (expr, [{pc_lhs; pc_rhs}])
         when locHasCursor expr.pexp_loc
              && CompletionExpressions.isExprHole pc_rhs
              && CompletionPatterns.isPatternHole pc_lhs ->
         (* switch x { | } when we're in the switch expr itself. *)
-        if Debug.verbose () && debugTypedCompletionExpr then
-          print_endline
+        if debugTypedCompletionExpr then
+          Debug.verbose
             "[typedCompletionExpr] No cases (expr and pat holes), rest";
         ()
       | Pexp_match
@@ -657,17 +640,17 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                  patternMode = Default;
                }))
       | Pexp_match (exp, cases) -> (
-        if Debug.verbose () && debugTypedCompletionExpr then
-          print_endline "[typedCompletionExpr] Has cases";
+        if debugTypedCompletionExpr then
+          Debug.verbose "[typedCompletionExpr] Has cases";
         (* If there's more than one case, or the case isn't a pattern hole, figure out if we're completing another
            broken parser case (`switch x { | true => () | <com> }` for example). *)
         match exp |> exprToContextPath with
         | None ->
-          if Debug.verbose () && debugTypedCompletionExpr then
-            print_endline "[typedCompletionExpr] Has cases - no ctx path"
+          if debugTypedCompletionExpr then
+            Debug.verbose "[typedCompletionExpr] Has cases - no ctx path"
         | Some ctxPath -> (
-          if Debug.verbose () && debugTypedCompletionExpr then
-            print_endline "[typedCompletionExpr] Has cases - has ctx path";
+          if debugTypedCompletionExpr then
+            Debug.verbose "[typedCompletionExpr] Has cases - has ctx path";
           let hasCaseWithCursor =
             cases
             |> List.find_opt (fun case ->
@@ -680,10 +663,10 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                    locIsEmpty case.Parsetree.pc_lhs.ppat_loc)
             |> Option.is_some
           in
-          if Debug.verbose () && debugTypedCompletionExpr then
-            Printf.printf
+          if debugTypedCompletionExpr then
+            Debug.verbose
               "[typedCompletionExpr] Has cases - has ctx path - \
-               hasCaseWithEmptyLoc: %b, hasCaseWithCursor: %b\n"
+               hasCaseWithEmptyLoc: %b, hasCaseWithCursor: %b"
               hasCaseWithEmptyLoc hasCaseWithCursor;
           match (hasCaseWithEmptyLoc, hasCaseWithCursor) with
           | _, true ->
@@ -904,8 +887,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
              };
            ]
          when locHasCursor pexp_loc ->
-         if Debug.verbose () then
-           print_endline "[decoratorCompletion] Found @module";
+         Debug.verbose "[decoratorCompletion] Found @module";
          setResult (Completable.CdecoratorPayload (Module s))
        | PStr
            [
@@ -923,10 +905,9 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
          when locHasCursor fromExpr.pexp_loc
               || locIsEmpty fromExpr.pexp_loc
                  && CompletionExpressions.isExprHole fromExpr -> (
-         if Debug.verbose () then
-           print_endline
-             "[decoratorCompletion] Found @module with import attributes and \
-              cursor on \"from\"";
+         Debug.verbose
+           "[decoratorCompletion] Found @module with import attributes and \
+            cursor on \"from\"";
          match
            ( locHasCursor fromExpr.pexp_loc,
              locIsEmpty fromExpr.pexp_loc,
@@ -934,28 +915,24 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
              fromExpr )
          with
          | true, _, _, {pexp_desc = Pexp_constant (Pconst_string (s, _))} ->
-           if Debug.verbose () then
-             print_endline
-               "[decoratorCompletion] @module `from` payload was string";
+           Debug.verbose
+             "[decoratorCompletion] @module `from` payload was string";
            setResult (Completable.CdecoratorPayload (Module s))
          | false, true, true, _ ->
-           if Debug.verbose () then
-             print_endline
-               "[decoratorCompletion] @module `from` payload was expr hole";
+           Debug.verbose
+             "[decoratorCompletion] @module `from` payload was expr hole";
            setResult (Completable.CdecoratorPayload (Module ""))
          | _ -> ())
        | PStr [{pstr_desc = Pstr_eval (expr, _)}] -> (
-         if Debug.verbose () then
-           print_endline
-             "[decoratorCompletion] Found @module with non-string payload";
+         Debug.verbose
+           "[decoratorCompletion] Found @module with non-string payload";
          match
            CompletionExpressions.traverseExpr expr ~exprPath:[]
              ~pos:posBeforeCursor ~firstCharBeforeCursorNoWhite
          with
          | None -> ()
          | Some (prefix, nested) ->
-           if Debug.verbose () then
-             print_endline "[decoratorCompletion] Found @module record path";
+           Debug.verbose "[decoratorCompletion] Found @module record path";
            setResult
              (Completable.CdecoratorPayload
                 (ModuleWithImportAttributes {nested = List.rev nested; prefix}))
@@ -964,16 +941,14 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
      else if id.txt = "jsxConfig" then
        match payload with
        | PStr [{pstr_desc = Pstr_eval (expr, _)}] -> (
-         if Debug.verbose () then
-           print_endline "[decoratorCompletion] Found @jsxConfig";
+         Debug.verbose "[decoratorCompletion] Found @jsxConfig";
          match
            CompletionExpressions.traverseExpr expr ~exprPath:[]
              ~pos:posBeforeCursor ~firstCharBeforeCursorNoWhite
          with
          | None -> ()
          | Some (prefix, nested) ->
-           if Debug.verbose () then
-             print_endline "[decoratorCompletion] Found @jsxConfig path!";
+           Debug.verbose "[decoratorCompletion] Found @jsxConfig path!";
            setResult
              (Completable.CdecoratorPayload
                 (JsxConfig {nested = List.rev nested; prefix})))
@@ -993,8 +968,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
              };
            ]
          when locHasCursor pexp_loc ->
-         if Debug.verbose () then
-           print_endline "[decoratorCompletion] Found @editor.completeFrom";
+         Debug.verbose "[decoratorCompletion] Found @editor.completeFrom";
          setResult
            (Completable.Cpath
               (CPId
@@ -1099,8 +1073,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
       when cases <> []
            && locHasCursor expr.pexp_loc = false
            && Option.is_none findThisExprLoc ->
-      if Debug.verbose () then
-        print_endline "[completionFrontend] Checking each case";
+      Debug.verbose "[completionFrontend] Checking each case";
       let ctxPath = exprToContextPath expr in
       let oldCtxPath = !currentCtxPath in
       cases
@@ -1302,7 +1275,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                 ];
             }
           when loc |> Loc.hasPos ~pos:posBeforeCursor ->
-          if Debug.verbose () then print_endline "[expr_iter] Case foo->id";
+          Debug.verbose "[expr_iter] Case foo->id";
           setPipeResult ~lhs ~id |> ignore
         | Pexp_apply
             {
@@ -1310,7 +1283,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
               args = [(_, lhs); _];
             }
           when Loc.end_ opLoc = posCursor ->
-          if Debug.verbose () then print_endline "[expr_iter] Case foo->";
+          Debug.verbose "[expr_iter] Case foo->";
           setPipeResult ~lhs ~id:"" |> ignore
         | Pexp_apply
             {
@@ -1324,8 +1297,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                  (Loc.end_ expr.pexp_loc = posCursor
                  && charBeforeCursor = Some ')') -> (
           (* Complete fn argument values and named args when the fn call is piped. E.g. someVar->someFn(<com>). *)
-          if Debug.verbose () then
-            print_endline "[expr_iter] Complete fn arguments (piped)";
+          Debug.verbose "[expr_iter] Complete fn arguments (piped)";
           let args = extractExpApplyArgs ~args in
           let funCtxPath = exprToContextPath funExpr in
           let argCompletable =
@@ -1360,8 +1332,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                  (Loc.end_ expr.pexp_loc = posCursor
                  && charBeforeCursor = Some ')') -> (
           (* Complete fn argument values and named args when the fn call is _not_ piped. E.g. someFn(<com>). *)
-          if Debug.verbose () then
-            print_endline "[expr_iter] Complete fn arguments (not piped)";
+          Debug.verbose "[expr_iter] Complete fn arguments (not piped)";
           let args = extractExpApplyArgs ~args in
           if debug then
             Printf.printf "Pexp_apply ...%s (%s)\n"
@@ -1439,8 +1410,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                  match lbl with
                  | Nolabel -> Some (ctxPath, currentUnlabelledCount + 1)
                  | _ -> Some (ctxPath, currentUnlabelledCount));
-              if Debug.verbose () then
-                print_endline "[expr_iter] Completing for argument value";
+              Debug.verbose "[expr_iter] Completing for argument value";
               Some
                 (Completable.CArgument
                    {
