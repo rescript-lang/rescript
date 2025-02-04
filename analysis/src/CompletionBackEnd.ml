@@ -2234,8 +2234,7 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
          user has already written. Just complete for the rest. *)
       let newText =
         c.name ^ " {\n"
-        ^ (cases
-          |> List.sort (String.compare)
+        ^ (cases |> List.sort String.compare
           |> List.mapi (fun index caseText ->
                  "| " ^ caseText ^ " => "
                  ^ printFailwithStr (startIndex + index + 1))
