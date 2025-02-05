@@ -1116,14 +1116,14 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
       resetCurrentCtxPath oldCtxPath
     | Pexp_apply
         {
-          funct = {pexp_desc = Pexp_ident {txt = Lident "->"; loc = _}};
+          funct = {pexp_desc = Pexp_ident {txt = Lident "->"; loc = opLoc}};
           args =
             [
               (_, lhs);
               (_, {pexp_desc = Pexp_extension _; pexp_loc = {loc_ghost = true}});
             ];
         }
-      when expr.pexp_loc |> Loc.hasPos ~pos:posBeforeCursor ->
+      when opLoc |> Loc.hasPos ~pos:posBeforeCursor ->
       (* Case foo-> when the parser adds a ghost expression to the rhs
          so the apply expression does not include the cursor *)
       if setPipeResult ~lhs ~id:"" then setFound ()
