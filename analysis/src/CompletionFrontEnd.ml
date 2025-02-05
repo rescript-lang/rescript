@@ -1116,53 +1116,66 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
       resetCurrentCtxPath oldCtxPath
     | Pexp_apply
         {
-          funct = {pexp_desc = Pexp_ident {txt = Lident "->"; loc = opLoc}};
+          funct = {pexp_desc = Pexp_ident {txt = Lident "->"; loc = _}};
           args =
             [
               (_, lhs);
               (_, {pexp_desc = Pexp_extension _; pexp_loc = {loc_ghost = true}});
             ];
         }
-      when opLoc |> Loc.hasPos ~pos:posBeforeCursor ->
+      when expr.pexp_loc |> Loc.hasPos ~pos:posBeforeCursor ->
       (* Case foo-> when the parser adds a ghost expression to the rhs
          so the apply expression does not include the cursor *)
       if setPipeResult ~lhs ~id:"" then setFound ()
-    (* sh`echo "meh"`. *)
+    (*
+       A dot completion for a tagged templated application.
+       Example:
+         sh`echo "meh"`.
+       or
+         sh`bar`.len
+    *)
     | Pexp_apply
         {
-          funct = {pexp_desc = Pexp_ident {txt = Lident "."; loc = dotLoc}};
-          args = [(_, ({pexp_desc = Pexp_apply _} as innerExpr)); _ghostThing];
+          funct = {pexp_desc = Pexp_ident {txt = Lident "."; loc = _}};
+          args =
+            [(_, ({pexp_desc = Pexp_apply _} as innerExpr)); (_, fieldExpr)];
         }
-      when dotLoc |> Loc.hasPos ~pos:posBeforeCursor ->
+      when Res_parsetree_viewer.is_tagged_template_literal innerExpr
+           && expr.pexp_loc |> Loc.hasPos ~pos:posBeforeCursor
+           || CompletionExpressions.isExprHole fieldExpr ->
       if Debug.verbose () then (
+        let print_loc (loc : Location.t) : string =
+          Format.sprintf "(%d,%d:%d,%d)" loc.loc_start.pos_lnum
+            loc.loc_start.pos_cnum loc.loc_end.pos_lnum loc.loc_end.pos_cnum
+        in
         Printast.expression 4 Format.std_formatter expr;
-        print_endline "yow_yow");
+        Format.printf "posBeforeCursor: %s, expr.pexp_loc: %s"
+          (Pos.toString posBeforeCursor)
+          (print_loc expr.pexp_loc);
+        print_endline "\nyow_yow");
       exprToContextPath innerExpr
       |> Option.iter (fun cpath ->
+             (* Determine the field name if present *)
+             let fieldName =
+               match fieldExpr.pexp_desc with
+               | Pexp_ident {txt = Lident fieldName}
+                 when Res_parsetree_viewer.has_tagged_template_literal_attr
+                        innerExpr.pexp_attributes ->
+                 fieldName
+               (* This is likely to be an exprhole *)
+               | _ -> ""
+             in
+
              setResult
                (Cpath
                   (CPField
                      {
                        contextPath = cpath;
-                       fieldName = "";
+                       fieldName;
                        posOfDot;
                        exprLoc = expr.pexp_loc;
                      }));
              setFound ())
-    (* TODO: further extend on all the ghost stuff, make this clear that this targetting tag templates *)
-    | Pexp_field (e, {txt = Longident.Lident "_"}) when false -> (
-      if Debug.verbose () then (
-        print_endline "field yozora:_";
-        Printast.expression 4 Format.std_formatter expr);
-      match exprToContextPath e with
-      | None -> ()
-      | Some contextPath ->
-        print_endline (Completable.contextPathToString contextPath);
-        setFound ();
-        setResult
-          (Cpath
-             (CPField
-                {contextPath; fieldName = ""; posOfDot; exprLoc = e.pexp_loc})))
     | _ -> (
       if expr.pexp_loc |> Loc.hasPos ~pos:posNoWhite && !result = None then (
         setFound ();

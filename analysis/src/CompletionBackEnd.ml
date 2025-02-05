@@ -560,12 +560,9 @@ let findLocalCompletionsForModules ~(localTables : LocalTables.t) ~env ~prefix
 let findLocalCompletionsWithOpens ~pos ~(env : QueryEnv.t) ~prefix ~exact ~opens
     ~scope ~(completionContext : Completable.completionContext) =
   (* TODO: handle arbitrary interleaving of opens and local bindings correctly *)
-  if Debug.verbose () then
-    Format.printf
-      "findLocalCompletionsWithOpens uri: %s pos: %s completionContext: %s\n"
-      (Uri.toString env.file.uri)
-      (Pos.toString pos)
-      (Completable.completionContextToString completionContext);
+  Log.log
+    ("findLocalCompletionsWithOpens uri:" ^ Uri.toString env.file.uri ^ " pos:"
+   ^ Pos.toString pos);
   let localTables = LocalTables.create () in
   match completionContext with
   | Value | ValueOrField ->
@@ -603,14 +600,9 @@ let getComplementaryCompletionsForTypedValue ~opens ~allFiles ~scope ~env prefix
   in
   localCompletionsWithOpens @ fileModules
 
-let getCompletionsForPath ~(debug : bool) ~(opens : QueryEnv.t list)
-    ~(full : full) ~(pos : int * int) ~(exact : bool)
-    ~(scope : ScopeTypes.item list)
-    ~(completionContext : Completable.completionContext) ~(env : QueryEnv.t)
-    (path : filePath list) : Completion.t list =
-  if debug then
-    Printf.printf "Enter getCompletionsForPath:\nPath %s\n"
-      (path |> String.concat ".");
+let getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
+    ~completionContext ~env path =
+  if debug then Printf.printf "Path %s\n" (path |> String.concat ".");
   let allFiles = allFilesInPackage full.package in
   match path with
   | [] -> []
@@ -632,11 +624,6 @@ let getCompletionsForPath ~(debug : bool) ~(opens : QueryEnv.t list)
                  (Completion.create name ~env ~kind:(Completion.FileModule name))
              else None)
     in
-    if Debug.verbose () then
-      Format.printf "localCompletionsWithOpens (%d) fileModules (%d)\n"
-        (List.length localCompletionsWithOpens)
-        (List.length fileModules);
-
     localCompletionsWithOpens @ fileModules
   | moduleName :: path -> (
     Log.log ("Path " ^ pathToString path);
@@ -788,11 +775,6 @@ let completionsGetCompletionType ~full completions =
 
 let rec completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
     completions =
-  if Debug.verbose () then (
-    Printf.printf "Enter completionsGetCompletionType2 with %d \n"
-      (List.length completions);
-    completions
-    |> List.iter (fun c -> c |> Completion.toString |> print_endline));
   let firstNonSyntheticCompletion =
     List.find_opt (fun c -> not c.Completion.synthetic) completions
   in
@@ -834,10 +816,9 @@ and completionsGetTypeEnv2 ~debug (completions : Completion.t list) ~full ~opens
 and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     ~scope ?(mode = Regular) contextPath =
   let envCompletionIsMadeFrom = env in
-  if debug then (
-    print_endline "Enter getCompletionsForContextPath:";
+  if debug then
     Printf.printf "ContextPath %s\n"
-      (Completable.contextPathToString contextPath));
+      (Completable.contextPathToString contextPath);
   let package = full.package in
   match contextPath with
   | CPString ->
@@ -950,7 +931,6 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     result
   | CPApply (cp, labels) -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPApply";
-
     match
       cp
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
@@ -985,7 +965,6 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         | [], [(Nolabel | Labelled _ | Optional _)] ->
           (* should not happen, but just ignore extra arguments *) []
       in
-
       match TypeUtils.extractFunctionType ~env ~package typ with
       | args, tRet when args <> [] ->
         let args = processApply args labels in
@@ -993,39 +972,100 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         [Completion.create "dummy" ~env ~kind:(Completion.Value retType)]
       | _ -> [])
     | _ -> [])
-  (* sh`meh` *)
-  | CPField
-      {
-        contextPath = CPApply ((CPId {path; completionContext} as cp), _);
-        fieldName;
-        posOfDot = _;
-        exprLoc;
-      }
-    when false -> (
-    if Debug.verbose () then (
-      Format.printf "YAP '%s'\n" fieldName;
-      Location.print_loc Format.std_formatter exprLoc);
+  | CPField {contextPath = CPId {path; completionContext = Module}; fieldName}
+    ->
+    if Debug.verbose () then print_endline "[ctx_path]--> CPField: M.field";
+    (* M.field *)
+    path @ [fieldName]
+    |> getCompletionsForPath ~debug ~opens ~full ~pos ~exact
+         ~completionContext:Field ~env ~scope
+  | CPField {contextPath = cp; fieldName; posOfDot; exprLoc} -> (
+    if Debug.verbose () then print_endline "[dot_completion]--> Triggered";
     let completionsFromCtxPath =
-      getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
-        ~completionContext ~env:envCompletionIsMadeFrom path
+      cp
+      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+           ~exact:true ~scope
     in
     let mainTypeCompletionEnv =
       completionsFromCtxPath
       |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
     in
     match mainTypeCompletionEnv with
-    | None -> []
-    | Some (typ, env) -> (
-      if Debug.verbose () then print_endline "FOOOOOO";
-      let _, rt, _typeArgsOpt =
-        TypeUtils.extractFunctionType2 ~env:envCompletionIsMadeFrom
-          ~package:full.package typ
+    | None ->
+      if Debug.verbose () then
+        Printf.printf
+          "[dot_completion] Could not extract main type completion env.\n";
+      []
+    | Some (typ, env) ->
+      let fieldCompletions =
+        DotCompletionUtils.fieldCompletionsForDotCompletion typ ~env ~package
+          ~prefix:fieldName ?posOfDot ~exact
       in
-      if Debug.verbose () then (
-        Printtyp.raw_type_expr Format.std_formatter rt;
-        print_endline "__");
-      let mainTypeId = TypeUtils.findRootTypeId ~full ~env rt in
-      let typePath = TypeUtils.pathFromTypeExpr rt in
+      (* Get additional completions acting as if this field completion was actually a pipe completion. *)
+      let cpAsPipeCompletion =
+        Completable.CPPipe
+          {
+            synthetic = true;
+            contextPath =
+              (match cp with
+              | CPApply (c, args) -> CPApply (c, args @ [Asttypes.Noloc.Nolabel])
+              | CPId _ when TypeUtils.isFunctionType ~env ~package typ ->
+                CPApply (cp, [Asttypes.Noloc.Nolabel])
+              | _ -> cp);
+            id = fieldName;
+            inJsx = false;
+            lhsLoc = exprLoc;
+          }
+      in
+      let pipeCompletions =
+        cpAsPipeCompletion
+        |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos
+             ~env:envCompletionIsMadeFrom ~exact ~scope
+        |> List.filter_map (fun c ->
+               TypeUtils.transformCompletionToPipeCompletion ~synthetic:true
+                 ~env ?posOfDot c)
+      in
+      fieldCompletions @ pipeCompletions)
+  | CPObj (cp, label) -> (
+    (* TODO: Also needs to support ExtractedType *)
+    if Debug.verbose () then print_endline "[ctx_path]--> CPObj";
+    match
+      cp
+      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+           ~exact:true ~scope
+      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+    with
+    | Some (typ, env) -> (
+      match typ |> TypeUtils.extractObjectType ~env ~package with
+      | Some (env, tObj) ->
+        tObj |> TypeUtils.getObjFields
+        |> Utils.filterMap (fun (field, typ) ->
+               if Utils.checkName field ~prefix:label ~exact then
+                 Some
+                   (Completion.create field ~env ~kind:(Completion.ObjLabel typ))
+               else None)
+      | None -> [])
+    | None -> [])
+  | CPPipe {contextPath = cp; id = prefix; lhsLoc; inJsx; synthetic} -> (
+    if Debug.verbose () then print_endline "[ctx_path]--> CPPipe";
+    match
+      cp
+      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
+           ~exact:true ~scope ~mode:Pipe
+      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+    with
+    | None ->
+      if Debug.verbose () then
+        print_endline "[CPPipe]--> Could not resolve type env";
+      []
+    | Some (typ, env) -> (
+      let env, typ =
+        typ
+        |> TypeUtils.resolveTypeForPipeCompletion ~env ~package:full.package
+             ~full ~lhsLoc
+      in
+      let mainTypeId = TypeUtils.findRootTypeId ~full ~env typ in
+      let typePath = TypeUtils.pathFromTypeExpr typ in
       match mainTypeId with
       | None ->
         if Debug.verbose () then
@@ -1076,12 +1116,8 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
           | None -> []
           | Some (isFromCurrentModule, completionPath) ->
             completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom ~opens
-              ~pos ~scope ~debug ~prefix:"" ~env ~rawOpens ~full completionPath
-            |> fun cps ->
-            if Debug.verbose () then
-              Format.printf "Before filtering (%d)" (List.length cps);
-            cps
-            |> TypeUtils.filterPipeableFunctions ~env ~full ~synthetic:false
+              ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full completionPath
+            |> TypeUtils.filterPipeableFunctions ~env ~full ~synthetic
                  ~targetTypeId:mainTypeId
             |> List.filter (fun (c : Completion.t) ->
                    (* If we're completing from the current module then we need to care about scope.
@@ -1105,154 +1141,20 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
           TypeUtils.getExtraModulesToCompleteFromForType ~env ~full typ
           |> List.map (fun completionPath ->
                  completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom
-                   ~opens ~pos ~scope ~debug ~prefix:"" ~env ~rawOpens ~full
+                   ~opens ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full
                    completionPath)
           |> List.flatten
           |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
                ~targetTypeId:mainTypeId
         in
-        pipeCompletions @ extraCompletions))
-  | CPField {contextPath = CPId {path; completionContext = Module}; fieldName}
-    ->
-    if Debug.verbose () then print_endline "[ctx_path]--> CPField: M.field";
-    (* M.field *)
-    path @ [fieldName]
-    |> getCompletionsForPath ~debug ~opens ~full ~pos ~exact
-         ~completionContext:Field ~env ~scope
-  | CPField {contextPath = cp; fieldName; posOfDot; exprLoc} -> (
-    if Debug.verbose () then Completable.contextPathToString cp |> print_endline;
-    if Debug.verbose () then print_endline "[dot_completion]--> Triggered";
-    let completionsFromCtxPath =
-      cp
-      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-           ~exact:true ~scope
-    in
-    let mainTypeCompletionEnv =
-      completionsFromCtxPath
-      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
-    in
-    match mainTypeCompletionEnv with
-    | None ->
-      if Debug.verbose () then
-        Printf.printf
-          "[dot_completion] Could not extract main type completion env.\n";
-      []
-    | Some (typ, env) ->
-      let fieldCompletions =
-        DotCompletionUtils.fieldCompletionsForDotCompletion typ ~env ~package
-          ~prefix:fieldName ?posOfDot ~exact
-      in
-      (* typ comes from a hashtable and might already be a translation from *)
-      (* Get additional completions acting as if this field completion was actually a pipe completion. *)
-      let cpAsPipeCompletion =
-        Completable.CPPipe
-          {
-            synthetic = true;
-            contextPath =
-              (match cp with
-              | CPApply (c, args) -> CPApply (c, args @ [Asttypes.Noloc.Nolabel])
-              | CPId _ when TypeUtils.isFunctionType ~env ~package typ ->
-                CPApply (cp, [Asttypes.Noloc.Nolabel])
-              | _ -> cp);
-            id = fieldName;
-            inJsx = false;
-            lhsLoc = exprLoc;
-          }
-      in
-      let pipeCompletions =
-        cpAsPipeCompletion
-        |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos
-             ~env:envCompletionIsMadeFrom ~exact ~scope
-        |> fun cs ->
-        if Debug.verbose () then
-          Format.printf "Completions? %d\n" (List.length cs);
-        cs
-        |> List.filter_map (fun c ->
-               if Debug.verbose () then print_endline (Completion.toString c);
-               TypeUtils.transformCompletionToPipeCompletion ~synthetic:true
-                 ~env ?posOfDot c)
-      in
-      fieldCompletions @ pipeCompletions)
-  | CPObj (cp, label) -> (
-    (* TODO: Also needs to support ExtractedType *)
-    if Debug.verbose () then print_endline "[ctx_path]--> CPObj";
-    match
-      cp
-      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-           ~exact:true ~scope
-      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
-    with
-    | Some (typ, env) -> (
-      match typ |> TypeUtils.extractObjectType ~env ~package with
-      | Some (env, tObj) ->
-        tObj |> TypeUtils.getObjFields
-        |> Utils.filterMap (fun (field, typ) ->
-               if Utils.checkName field ~prefix:label ~exact then
-                 Some
-                   (Completion.create field ~env ~kind:(Completion.ObjLabel typ))
-               else None)
-      | None -> [])
-    | None -> [])
-  | CPPipe {contextPath = cp; id = prefix; lhsLoc; inJsx; synthetic} -> (
-    if Debug.verbose () then print_endline "[ctx_path]--> CPPipe";
-    match
-      cp
-      |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-           ~exact:true ~scope ~mode:Pipe
-      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
-    with
-    | None ->
-      if Debug.verbose () then
-        print_endline "[CPPipe]--> Could not resolve type env";
-      []
-    | Some (typ, env) ->
-      if Debug.verbose () then print_endline "Resolved type in CPPipe";
-      let env, typ =
-        typ
-        |> TypeUtils.resolveTypeForPipeCompletion ~env ~package:full.package
-             ~full ~lhsLoc
-      in
-      let mainTypeId = TypeUtils.findRootTypeId ~full ~env typ in
-      (* Here we search the root type, I'd expect that is not always the case? *)
-      let pipeCompletionsAndExtraCompletions =
-        nojaf_extracted ~debug ~full ~opens ~rawOpens ~prefix ~scope ~pos
-          ~synthetic ~env ~envCompletionIsMadeFrom ~mainTypeId ~typ
-      in
-      (* Add JSX completion items if we're in a JSX context. *)
-      let jsxCompletions =
-        match mainTypeId with
-        | Some mainTypeId when inJsx ->
-          PipeCompletionUtils.addJsxCompletionItems ~env ~mainTypeId ~prefix
-            ~full ~rawOpens typ
-        | _ -> []
-      in
-      let evenMoreCompletions =
-        match cp with
-        | CPApply (CPId {path; completionContext; loc = _}, _) when false -> (
-          let completionsFromCtxPath =
-            getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
-              ~completionContext ~env:envCompletionIsMadeFrom path
-          in
-          let mainTypeCompletionEnv =
-            completionsFromCtxPath
-            |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
-          in
-          match mainTypeCompletionEnv with
-          | None -> []
-          | Some (typ, env) -> (
-            match TypeUtils.extracReturnTypeButDontDoAnyAliasLookup typ with
-            | retType ->
-              if Debug.verbose () then (
-                print_endline "hoi\n";
-                Printtyp.type_expr Format.std_formatter retType;
-                print_endline "\nendhoi");
-              let mainTypeId = TypeUtils.findRootTypeId ~full ~env retType in
-              nojaf_extracted ~debug ~full ~opens ~rawOpens ~prefix ~scope ~pos
-                ~synthetic ~env ~envCompletionIsMadeFrom ~mainTypeId
-                ~typ:retType))
-        | _ -> []
-      in
-      jsxCompletions @ pipeCompletionsAndExtraCompletions @ evenMoreCompletions)
+        (* Add JSX completion items if we're in a JSX context. *)
+        let jsxCompletions =
+          if inJsx then
+            PipeCompletionUtils.addJsxCompletionItems ~env ~mainTypeId ~prefix
+              ~full ~rawOpens typ
+          else []
+        in
+        jsxCompletions @ pipeCompletions @ extraCompletions))
   | CTuple ctxPaths ->
     if Debug.verbose () then print_endline "[ctx_path]--> CTuple";
     (* Turn a list of context paths into a list of type expressions. *)
@@ -1415,100 +1317,6 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     match TypeUtils.findTypeViaLoc loc ~full ~debug with
     | None -> []
     | Some typExpr -> [Completion.create "dummy" ~env ~kind:(Value typExpr)])
-
-and nojaf_extracted ~(debug : bool) ~(full : full) ~(opens : QueryEnv.t list)
-    ~(rawOpens : string list list) ~(prefix : string)
-    ~(scope : ScopeTypes.item list) ~(pos : int * int) ~(synthetic : bool)
-    ~(env : QueryEnv.t) ~(envCompletionIsMadeFrom : QueryEnv.t)
-    ~(mainTypeId : file option) ~(typ : Types.type_expr) : Completion.t list =
-  if Debug.verbose () then (
-    print_endline "Enter nojaf_extracted";
-    Printtyp.raw_type_expr Format.std_formatter typ);
-  let typePath = TypeUtils.pathFromTypeExpr typ in
-  match mainTypeId with
-  | None ->
-    if Debug.verbose () then
-      Printf.printf
-        "[pipe_completion] Could not find mainTypeId. Aborting pipe completions.\n";
-    []
-  | Some mainTypeId ->
-    if Debug.verbose () then
-      Printf.printf "[pipe_completion] mainTypeId: %s\n" mainTypeId;
-    let pipeCompletions =
-      (* We now need a completion path from where to look up the module for our dot completion type.
-          This is from where we pull all of the functions we want to complete for the pipe.
-
-          A completion path here could be one of two things:
-          1. A module path to the main module for the type we've found
-          2. A module path to a builtin module, like `Int` for `int`, or `Array` for `array`
-
-         The below code will deliberately _not_ dig into type aliases for the main type when we're looking
-         for what _module_ to complete from. This is because you should be able to control where completions
-         come from even if your type is an alias.
-      *)
-      let completeAsBuiltin =
-        match typePath with
-        | Some t ->
-          TypeUtils.completionPathFromMaybeBuiltin t ~package:full.package
-        | None -> None
-      in
-      let completionPath =
-        match (completeAsBuiltin, typePath) with
-        | Some completionPathForBuiltin, _ ->
-          Some (false, completionPathForBuiltin)
-        | _, Some p -> (
-          (* If this isn't a builtin, but we have a path, we try to resolve the
-             module path relative to the env we're completing from. This ensures that
-             what we get here is a module path we can find completions for regardless of
-             of the current scope for the position we're at.*)
-          match
-            TypeUtils.getModulePathRelativeToEnv ~debug
-              ~env:envCompletionIsMadeFrom ~envFromItem:env (Utils.expandPath p)
-          with
-          | None -> Some (true, [env.file.moduleName])
-          | Some p -> Some (false, p))
-        | _ -> None
-      in
-      match completionPath with
-      | None -> []
-      | Some (isFromCurrentModule, completionPath) ->
-        completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom ~opens
-          ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full completionPath
-        |> fun cps ->
-        if Debug.verbose () then
-          Format.printf "Before filtering (%d)" (List.length cps);
-        cps
-        |> TypeUtils.filterPipeableFunctions ~env ~full ~synthetic
-             ~targetTypeId:mainTypeId
-        |> List.filter (fun (c : Completion.t) ->
-               (* If we're completing from the current module then we need to care about scope.
-                  This is automatically taken care of in other cases. *)
-               if isFromCurrentModule then
-                 match c.kind with
-                 | Value _ ->
-                   scope
-                   |> List.find_opt (fun (item : ScopeTypes.item) ->
-                          match item with
-                          | Value (scopeItemName, _, _, _) ->
-                            scopeItemName = c.name
-                          | _ -> false)
-                   |> Option.is_some
-                 | _ -> false
-               else true)
-    in
-    (* Extra completions can be drawn from the @editor.completeFrom attribute. Here we
-       find and add those completions as well. *)
-    let extraCompletions =
-      TypeUtils.getExtraModulesToCompleteFromForType ~env ~full typ
-      |> List.map (fun completionPath ->
-             completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom
-               ~opens ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full
-               completionPath)
-      |> List.flatten
-      |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
-           ~targetTypeId:mainTypeId
-    in
-    pipeCompletions @ extraCompletions
 
 let getOpens ~debug ~rawOpens ~package ~env =
   if debug && rawOpens <> [] then
@@ -2011,8 +1819,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
 module StringSet = Set.Make (String)
 
 let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
-  if debug then print_endline "Enter processCompletable:";
-  if Debug.verbose () then
+  if debug then
     Printf.printf "Completable: %s\n" (Completable.toString completable);
   let package = full.package in
   let rawOpens = Scope.getRawOpens scope in

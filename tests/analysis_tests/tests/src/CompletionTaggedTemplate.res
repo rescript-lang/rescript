@@ -1,15 +1,11 @@
-module X = {
-    type t = int
-
-    let minus_two = (t:t) => t - 2
-    let minus_three = (t:t) => t -3
-}
-
 @module("meh") @taggedTemplate
-external meh: (array<string>, array<string>) => X.t = "default"
+external meh: (array<string>, array<string>) => string = "default"
 
 // let x = meh`foo`.
 //                  ^com
+
+// let y = meh`bar`.len
+//                     ^com
 
 /*
 
