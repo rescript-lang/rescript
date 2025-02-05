@@ -262,13 +262,6 @@ let extractFunctionType ~env ~package typ =
   in
   loop ~env [] typ
 
-let rec extracReturnTypeButDontDoAnyAliasLookup (typ : Types.type_expr) :
-    Types.type_expr =
-  match typ.desc with
-  | Types.Tarrow (_, _t1, t2, _, _) ->
-    extracReturnTypeButDontDoAnyAliasLookup t2
-  | _ -> typ
-
 let extractFunctionTypeWithEnv ~env ~package typ =
   let rec loop ~env acc (t : Types.type_expr) =
     match t.desc with
@@ -515,7 +508,6 @@ let rec digToRelevantTemplateNameType ~env ~package ?(suffix = "")
 
 let rec resolveTypeForPipeCompletion ~env ~package ~lhsLoc ~full
     (t : Types.type_expr) =
-  if Debug.verbose () then print_endline "Enter resolveTypeForPipeCompletion:";
   (* If the type we're completing on is a type parameter, we won't be able to
      do completion unless we know what that type parameter is compiled as.
      This attempts to look up the compiled type for that type parameter by
@@ -1175,7 +1167,7 @@ let transformCompletionToPipeCompletion ?(synthetic = false) ~env ?posOfDot
     of the project. Example: type x in module SomeModule in file SomeFile would get the globally 
     unique id `SomeFile.SomeModule.x`.*)
 let rec findRootTypeId ~full ~env (t : Types.type_expr) =
-  let debug = Debug.verbose () in
+  let debug = false in
   match t.desc with
   | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> findRootTypeId ~full ~env t1
   | Tconstr (path, _, _) -> (
@@ -1216,11 +1208,8 @@ let filterPipeableFunctions ~env ~full ?synthetic ?targetTypeId ?posOfDot
   match targetTypeId with
   | None -> completions
   | Some targetTypeId ->
-    if Debug.verbose () then Format.printf "targetTypeId: %s\n" targetTypeId;
     completions
     |> List.filter_map (fun (completion : Completion.t) ->
-           if Debug.verbose () then
-             print_endline (Completion.toString completion);
            let thisCompletionItemTypeId =
              match completion.kind with
              | Value t -> (
