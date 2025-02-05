@@ -1143,16 +1143,6 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
       when Res_parsetree_viewer.is_tagged_template_literal innerExpr
            && expr.pexp_loc |> Loc.hasPos ~pos:posBeforeCursor
            || CompletionExpressions.isExprHole fieldExpr ->
-      if Debug.verbose () then (
-        let print_loc (loc : Location.t) : string =
-          Format.sprintf "(%d,%d:%d,%d)" loc.loc_start.pos_lnum
-            loc.loc_start.pos_cnum loc.loc_end.pos_lnum loc.loc_end.pos_cnum
-        in
-        Printast.expression 4 Format.std_formatter expr;
-        Format.printf "posBeforeCursor: %s, expr.pexp_loc: %s"
-          (Pos.toString posBeforeCursor)
-          (print_loc expr.pexp_loc);
-        print_endline "\nyow_yow");
       exprToContextPath innerExpr
       |> Option.iter (fun cpath ->
              (* Determine the field name if present *)
