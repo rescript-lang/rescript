@@ -3379,22 +3379,22 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
       let result_type =
         match (lhs_type.desc, specialization) with
         | Tconstr (path, _, _), _ when Path.same path Predef.path_int ->
-          Predef.type_int
+          instance_def Predef.type_int
         | Tconstr (path, _, _), {bool = Some _}
           when Path.same path Predef.path_bool ->
-          Predef.type_bool
+          instance_def Predef.type_bool
         | Tconstr (path, _, _), {float = Some _}
           when Path.same path Predef.path_float ->
-          Predef.type_float
+          instance_def Predef.type_float
         | Tconstr (path, _, _), {bigint = Some _}
           when Path.same path Predef.path_bigint ->
-          Predef.type_bigint
+          instance_def Predef.type_bigint
         | Tconstr (path, _, _), {string = Some _}
           when Path.same path Predef.path_string ->
-          Predef.type_string
+          instance_def Predef.type_string
         | _ ->
-          unify env lhs_type Predef.type_int;
-          Predef.type_int
+          unify env lhs_type (instance_def Predef.type_int);
+          instance_def Predef.type_int
       in
       let targs = [(to_noloc lhs_label, Some lhs)] in
       Some (targs, result_type)
@@ -3409,50 +3409,50 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
         match (lhs_type.desc, specialization) with
         | Tconstr (path, _, _), _ when Path.same path Predef.path_int ->
           let rhs = type_expect env rhs_expr Predef.type_int in
-          (lhs, rhs, Predef.type_int)
+          (lhs, rhs, instance_def Predef.type_int)
         | Tconstr (path, _, _), {bool = Some _}
           when Path.same path Predef.path_bool ->
           let rhs = type_expect env rhs_expr Predef.type_bool in
-          (lhs, rhs, Predef.type_bool)
+          (lhs, rhs, instance_def Predef.type_bool)
         | Tconstr (path, _, _), {float = Some _}
           when Path.same path Predef.path_float ->
           let rhs = type_expect env rhs_expr Predef.type_float in
-          (lhs, rhs, Predef.type_float)
+          (lhs, rhs, instance_def Predef.type_float)
         | Tconstr (path, _, _), {bigint = Some _}
           when Path.same path Predef.path_bigint ->
           let rhs = type_expect env rhs_expr Predef.type_bigint in
-          (lhs, rhs, Predef.type_bigint)
+          (lhs, rhs, instance_def Predef.type_bigint)
         | Tconstr (path, _, _), {string = Some _}
           when Path.same path Predef.path_string ->
           let rhs = type_expect env rhs_expr Predef.type_string in
-          (lhs, rhs, Predef.type_string)
+          (lhs, rhs, instance_def Predef.type_string)
         | _ -> (
           (* Rule 2. Try unifying to rhs *)
           match (rhs_type.desc, specialization) with
           | Tconstr (path, _, _), _ when Path.same path Predef.path_int ->
             let lhs = type_expect env lhs_expr Predef.type_int in
-            (lhs, rhs, Predef.type_int)
+            (lhs, rhs, instance_def Predef.type_int)
           | Tconstr (path, _, _), {bool = Some _}
             when Path.same path Predef.path_bool ->
             let lhs = type_expect env lhs_expr Predef.type_bool in
-            (lhs, rhs, Predef.type_bool)
+            (lhs, rhs, instance_def Predef.type_bool)
           | Tconstr (path, _, _), {float = Some _}
             when Path.same path Predef.path_float ->
             let lhs = type_expect env lhs_expr Predef.type_float in
-            (lhs, rhs, Predef.type_float)
+            (lhs, rhs, instance_def Predef.type_float)
           | Tconstr (path, _, _), {bigint = Some _}
             when Path.same path Predef.path_bigint ->
             let lhs = type_expect env lhs_expr Predef.type_bigint in
-            (lhs, rhs, Predef.type_bigint)
+            (lhs, rhs, instance_def Predef.type_bigint)
           | Tconstr (path, _, _), {string = Some _}
             when Path.same path Predef.path_string ->
             let lhs = type_expect env lhs_expr Predef.type_string in
-            (lhs, rhs, Predef.type_string)
+            (lhs, rhs, instance_def Predef.type_string)
           | _ ->
             (* Rule 3. Fallback to int *)
             let lhs = type_expect env lhs_expr Predef.type_int in
             let rhs = type_expect env rhs_expr Predef.type_int in
-            (lhs, rhs, Predef.type_int))
+            (lhs, rhs, instance_def Predef.type_int))
       in
       let targs =
         [(to_noloc lhs_label, Some lhs); (to_noloc rhs_label, Some rhs)]

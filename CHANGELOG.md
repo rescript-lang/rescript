@@ -20,6 +20,7 @@
 
 - Fix async context checking for module await. https://github.com/rescript-lang/rescript/pull/7271
 - Fix `%external` extension. https://github.com/rescript-lang/rescript/pull/7272
+- Fix issue with type environment for unified ops. https://github.com/rescript-lang/rescript/pull/7277
 - Fix completion for application with tagged template. https://github.com/rescript-lang/rescript/pull/7278
 
 # 12.0.0-alpha.8
