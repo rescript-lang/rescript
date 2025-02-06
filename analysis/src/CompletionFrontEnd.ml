@@ -1156,7 +1156,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                        exprLoc = expr.pexp_loc;
                      }));
              setFound ())
-      (*
+    (*
        A dot completion for a tagged templated application with an ident.
        Example:
          sh`echo "meh"`.foo
@@ -1166,7 +1166,9 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
           funct = {pexp_desc = Pexp_ident {txt = Lident "."; loc = _}};
           args =
             [
+              (*  sh`echo "meh"` *)
               (_, ({pexp_desc = Pexp_apply _} as innerExpr));
+              (* foo *)
               (_, {pexp_desc = Pexp_ident {txt = Lident fieldName}});
             ];
         }
