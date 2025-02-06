@@ -22,6 +22,10 @@
 - Fix `%external` extension. https://github.com/rescript-lang/rescript/pull/7272
 - Fix issue with type environment for unified ops. https://github.com/rescript-lang/rescript/pull/7277
 
+#### :house: Internal
+
+- Remove ignore in res_scanner.ml . https://github.com/rescript-lang/rescript/pull/7280
+
 # 12.0.0-alpha.8
 
 #### :bug: Bug fix

@@ -257,13 +257,13 @@ let scan_number scanner =
         8)
     | _ -> 10
   in
-  ignore (scan_digits scanner ~base);
+  let _ : bool = scan_digits scanner ~base in
 
   (*  *)
   let is_float =
     if '.' == scanner.ch then (
       next scanner;
-      ignore (scan_digits scanner ~base);
+      let _ : bool = scan_digits scanner ~base in
       true)
     else false
   in
