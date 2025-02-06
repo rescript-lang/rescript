@@ -1,5 +1,5 @@
-Complete src/CompletionTaggedTemplate.res 3:20
-posCursor:[3:20] posNoWhite:[3:19] Found expr:[3:11->0:-1]
+Complete src/CompletionTaggedTemplate.res 11:20
+posCursor:[11:20] posNoWhite:[11:19] Found expr:[11:11->0:-1]
 Completable: Cpath Value[meh](Nolabel, Nolabel).""
 Package opens Pervasives.JsxModules.place holder
 ContextPath Value[meh](Nolabel, Nolabel).""
@@ -10,596 +10,70 @@ ContextPath Value[meh](Nolabel, Nolabel, Nolabel)->
 ContextPath Value[meh](Nolabel, Nolabel, Nolabel)
 ContextPath Value[meh]
 Path meh
-Path Js.String2.
+CPPipe pathFromEnv:M found:true
+Path M.
 [{
-    "label": "->Js.String2.normalizeByForm",
+    "label": "->M.xyz",
     "kind": 12,
     "tags": [],
-    "detail": "(t, t) => t",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `normalize(str, form)` returns the normalized Unicode string using the\nspecified form of normalization, which may be one of:\n- \"NFC\" — Normalization Form Canonical Composition.\n- \"NFD\" — Normalization Form Canonical Decomposition.\n- \"NFKC\" — Normalization Form Compatibility Composition.\n- \"NFKD\" — Normalization Form Compatibility Decomposition.\n\nSee [`String.normalize`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/normalize) on MDN.\nSee also [Unicode technical report #15](https://unicode.org/reports/tr15/) for details.\n"},
-    "sortText": "normalizeByForm",
-    "insertText": "->Js.String2.normalizeByForm",
+    "detail": "(t, int) => int",
+    "documentation": null,
+    "sortText": "xyz",
+    "insertText": "->M.xyz",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
+      "range": {"start": {"line": 11, "character": 19}, "end": {"line": 11, "character": 20}},
       "newText": ""
       }]
   }, {
-    "label": "->Js.String2.toLowerCase",
+    "label": "->M.b",
     "kind": 12,
     "tags": [],
-    "detail": "t => t",
-    "documentation": {"kind": "markdown", "value": "\n`toLowerCase(str)` converts `str` to lower case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\ngive different results depending upon context, for example with the Greek\nletter sigma, which has two different lower case forms; one when it is the last\ncharacter in a string and another when it is not.\n\nSee [`String.toLowerCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.toLowerCase(\"ABC\") == \"abc\"\nJs.String2.toLowerCase(`ΣΠ`) == `σπ`\nJs.String2.toLowerCase(`ΠΣ`) == `πς`\n```\n"},
-    "sortText": "toLowerCase",
-    "insertText": "->Js.String2.toLowerCase",
+    "detail": "t => string",
+    "documentation": null,
+    "sortText": "b",
+    "insertText": "->M.b",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
+      "range": {"start": {"line": 11, "character": 19}, "end": {"line": 11, "character": 20}},
       "newText": ""
       }]
   }, {
-    "label": "->Js.String2.startsWith",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t) => bool",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `startsWith(str, substr)` returns `true` if the `str` starts with\n`substr`, `false` otherwise.\n\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.startsWith(\"ReScript\", \"Re\") == true\nJs.String2.startsWith(\"ReScript\", \"\") == true\nJs.String2.startsWith(\"JavaScript\", \"Re\") == false\n```\n"},
-    "sortText": "startsWith",
-    "insertText": "->Js.String2.startsWith",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.lastIndexOf",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t) => int",
-    "documentation": {"kind": "markdown", "value": "\n`lastIndexOf(str, searchValue)` returns the position of the last occurrence of\n`searchValue` within `str`, searching backwards from the end of the string.\nReturns -1 if `searchValue` is not in `str`. The return value is always\nrelative to the beginning of the string.\n\nSee [`String.lastIndexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/lastIndexOf)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.lastIndexOf(\"bookseller\", \"ok\") == 2\nJs.String2.lastIndexOf(\"beekeeper\", \"ee\") == 4\nJs.String2.lastIndexOf(\"abcdefg\", \"xyz\") == -1\n```\n"},
-    "sortText": "lastIndexOf",
-    "insertText": "->Js.String2.lastIndexOf",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.concat",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t) => t",
-    "documentation": {"kind": "markdown", "value": "\n`concat(original, append)` returns a new `string` with `append` added after\n`original`.\n\nSee [`String.concat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/concat)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.concat(\"cow\", \"bell\") == \"cowbell\"\n```\n"},
-    "sortText": "concat",
-    "insertText": "->Js.String2.concat",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.splitAtMost",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t, ~limit: int) => array<t>",
-    "documentation": {"kind": "markdown", "value": "\n`splitAtMost delimiter ~limit: n str` splits the given `str` at every occurrence of `delimiter` and returns an array of the first `n` resulting substrings. If `n` is negative or greater than the number of substrings, the array will contain all the substrings.\n\n```\nsplitAtMost \"ant/bee/cat/dog/elk\" \"/\" ~limit: 3 = [|\"ant\"; \"bee\"; \"cat\"|];;\nsplitAtMost \"ant/bee/cat/dog/elk\" \"/\" ~limit: 0 = [| |];;\nsplitAtMost \"ant/bee/cat/dog/elk\" \"/\" ~limit: 9 = [|\"ant\"; \"bee\"; \"cat\"; \"dog\"; \"elk\"|];;\n```\n"},
-    "sortText": "splitAtMost",
-    "insertText": "->Js.String2.splitAtMost",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.unsafeReplaceBy1",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, Js_re.t, (t, t, int, t) => t) => t",
-    "documentation": {"kind": "markdown", "value": "\nReturns a new `string` with some or all matches of a pattern with one set of\ncapturing parentheses replaced by the value returned from the given function.\nThe function receives as its parameters the matched string, the captured\nstring, the offset at which the match begins, and the whole string being\nmatched.\n\nSee [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace)\non MDN.\n\n## Examples\n\n```rescript\nlet str = \"Jony is 40\"\nlet re = /(Jony is )\\d+/g\nlet matchFn = (_match, part1, _offset, _wholeString) => {\n  part1 ++ \"41\"\n}\n\nJs.String2.unsafeReplaceBy1(str, re, matchFn) == \"Jony is 41\"\n```\n"},
-    "sortText": "unsafeReplaceBy1",
-    "insertText": "->Js.String2.unsafeReplaceBy1",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.replaceByRe",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, Js_re.t, t) => t",
-    "documentation": {"kind": "markdown", "value": "\n`replaceByRe(str, regex, replacement)` returns a new `string` where occurrences\nmatching regex have been replaced by `replacement`.\n\nSee [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.replaceByRe(\"vowels be gone\", /[aeiou]/g, \"x\") == \"vxwxls bx gxnx\"\nJs.String2.replaceByRe(\"Juan Fulano\", /(\\w+) (\\w+)/, \"$2, $1\") == \"Fulano, Juan\"\n```\n"},
-    "sortText": "replaceByRe",
-    "insertText": "->Js.String2.replaceByRe",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.trim",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => t",
-    "documentation": {"kind": "markdown", "value": "\n`trim(str)` returns a string that is `str` with whitespace stripped from both\nends. Internal whitespace is not removed.\n\nSee [`String.trim`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/trim)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.trim(\"   abc def   \") == \"abc def\"\nJs.String2.trim(\"\\n\\r\\t abc def \\n\\n\\t\\r \") == \"abc def\"\n```\n"},
-    "sortText": "trim",
-    "insertText": "->Js.String2.trim",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.includesFrom",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t, int) => bool",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `includes(str, searchValue start)` returns `true` if `searchValue` is\nfound anywhere within `str` starting at character number `start` (where 0 is\nthe first character), `false` otherwise.\n\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.includesFrom(\"programmer\", \"gram\", 1) == true\nJs.String2.includesFrom(\"programmer\", \"gram\", 4) == false\nJs.String2.includesFrom(`대한민국`, `한`, 1) == true\n```\n"},
-    "sortText": "includesFrom",
-    "insertText": "->Js.String2.includesFrom",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.concatMany",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, array<t>) => t",
-    "documentation": {"kind": "markdown", "value": "\n`concatMany(original, arr)` returns a new `string` consisting of each item of an\narray of strings added to the `original` string.\n\nSee [`String.concat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/concat)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.concatMany(\"1st\", [\"2nd\", \"3rd\", \"4th\"]) == \"1st2nd3rd4th\"\n```\n"},
-    "sortText": "concatMany",
-    "insertText": "->Js.String2.concatMany",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.repeat",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, int) => t",
-    "documentation": {"kind": "markdown", "value": "\n`repeat(str, n)` returns a `string` that consists of `n` repetitions of `str`.\nRaises `RangeError` if `n` is negative.\n\nSee [`String.repeat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/repeat)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.repeat(\"ha\", 3) == \"hahaha\"\nJs.String2.repeat(\"empty\", 0) == \"\"\n```\n"},
-    "sortText": "repeat",
-    "insertText": "->Js.String2.repeat",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.toLocaleLowerCase",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => t",
-    "documentation": {"kind": "markdown", "value": "\n`toLocaleLowerCase(str)` converts `str` to lower case using the current locale.\nSee [`String.toLocaleLowerCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLocaleLowerCase)\non MDN.\n"},
-    "sortText": "toLocaleLowerCase",
-    "insertText": "->Js.String2.toLocaleLowerCase",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.substrAtMost",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, ~from: int, ~length: int) => t",
-    "documentation": {"kind": "markdown", "value": "\n`substrAtMost(str, ~from: pos, ~length: n)` returns the substring of `str` of\nlength `n` starting at position `pos`.\n- If `pos` is less than zero, the starting position is the length of `str - pos`.\n- If `pos` is greater than or equal to the length of `str`, returns the empty string.\n- If `n` is less than or equal to zero, returns the empty string.\n\nJavaScript’s `String.substr()` is a legacy function. When possible, use\n`substring()` instead.\n\nSee [`String.substr`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/substr)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.substrAtMost(\"abcdefghij\", ~from=3, ~length=4) == \"defg\"\nJs.String2.substrAtMost(\"abcdefghij\", ~from=-3, ~length=4) == \"hij\"\nJs.String2.substrAtMost(\"abcdefghij\", ~from=12, ~length=2) == \"\"\n```\n"},
-    "sortText": "substrAtMost",
-    "insertText": "->Js.String2.substrAtMost",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.sliceToEnd",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, ~from: int) => t",
-    "documentation": {"kind": "markdown", "value": "\n`sliceToEnd(str, from:n)` returns the substring of `str` starting at character\n`n` to the end of the string.\n- If `n` is negative, then it is evaluated as `length(str - n)`.\n- If `n` is greater than the length of `str`, then sliceToEnd returns the empty string.\n\nSee [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nJs.String2.sliceToEnd(\"abcdefg\", ~from=4) == \"efg\"\nJs.String2.sliceToEnd(\"abcdefg\", ~from=-2) == \"fg\"\nJs.String2.sliceToEnd(\"abcdefg\", ~from=7) == \"\"\n```\n"},
-    "sortText": "sliceToEnd",
-    "insertText": "->Js.String2.sliceToEnd",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.slice",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, ~from: int, ~to_: int) => t",
-    "documentation": {"kind": "markdown", "value": "\n`slice(str, from:n1, to_:n2)` returns the substring of `str` starting at\ncharacter `n1` up to but not including `n2`.\n- If either `n1` or `n2` is negative, then it is evaluated as `length(str - n1)` or `length(str - n2)`.\n- If `n2` is greater than the length of `str`, then it is treated as `length(str)`.\n- If `n1` is greater than `n2`, slice returns the empty string.\n\nSee [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nJs.String2.slice(\"abcdefg\", ~from=2, ~to_=5) == \"cde\"\nJs.String2.slice(\"abcdefg\", ~from=2, ~to_=9) == \"cdefg\"\nJs.String2.slice(\"abcdefg\", ~from=-4, ~to_=-2) == \"de\"\nJs.String2.slice(\"abcdefg\", ~from=5, ~to_=1) == \"\"\n```\n"},
-    "sortText": "slice",
-    "insertText": "->Js.String2.slice",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.unsafeReplaceBy0",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, Js_re.t, (t, int, t) => t) => t",
-    "documentation": {"kind": "markdown", "value": "\nReturns a new `string` with some or all matches of a pattern with no capturing\nparentheses replaced by the value returned from the given function. The\nfunction receives as its parameters the matched string, the offset at which the\nmatch begins, and the whole string being matched.\n\nSee [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace)\non MDN.\n\n## Examples\n\n```rescript\nlet str = \"beautiful vowels\"\nlet re = /[aeiou]/g\nlet matchFn = (matchPart, _offset, _wholeString) => Js.String2.toUpperCase(matchPart)\n\nJs.String2.unsafeReplaceBy0(str, re, matchFn) == \"bEAUtIfUl vOwEls\"\n```\n"},
-    "sortText": "unsafeReplaceBy0",
-    "insertText": "->Js.String2.unsafeReplaceBy0",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.charCodeAt",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, int) => float",
-    "documentation": {"kind": "markdown", "value": "\n`charCodeAt(s, n)` returns the character code at position `n` in string `s`;\nthe result is in the range 0-65535, unlke `codePointAt`, so it will not work\ncorrectly for characters with code points greater than or equal to 0x10000. The\nreturn type is `float` because this function returns NaN if `n` is less than\nzero or greater than the length of the string.\n\nSee [`String.charCodeAt`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/charCodeAt)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.charCodeAt(`😺`, 0) == 0xd83d->Belt.Int.toFloat\nJs.String2.codePointAt(`😺`, 0) == Some(0x1f63a)\n```\n"},
-    "sortText": "charCodeAt",
-    "insertText": "->Js.String2.charCodeAt",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.link",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t) => t",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `link(linkText, urlText)` creates a string with an HTML `<a>` element\nwith href attribute of `urlText` and `linkText` as its content. Please do not\nuse this method, as it has been removed from the relevant web standards. See\n[`String.link`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/link)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.link(\"Go to page two\", \"page2.html\") == \"<a href=\"page2.html\">Go to page two</a>\"\n```\n"},
-    "sortText": "link",
-    "insertText": "->Js.String2.link",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.charAt",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, int) => t",
-    "documentation": {"kind": "markdown", "value": "\n`charAt(s, n)` gets the character at index `n` within string `s`. If `n` is\nnegative or greater than the length of `s`, it returns the empty string. If the\nstring contains characters outside the range \\u0000-\\uffff, it will return the\nfirst 16-bit value at that position in the string.\n\nSee [`String.charAt`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/charAt)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.charAt(\"Reason\", 0) == \"R\"\nJs.String2.charAt(\"Reason\", 12) == \"\"\nJs.String2.charAt(`Rẽasöń`, 5) == `ń`\n```\n"},
-    "sortText": "charAt",
-    "insertText": "->Js.String2.charAt",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.includes",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t) => bool",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `includes(str, searchValue)` returns `true` if `searchValue` is found\nanywhere within `str`, false otherwise.\n\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.includes(\"programmer\", \"gram\") == true\nJs.String2.includes(\"programmer\", \"er\") == true\nJs.String2.includes(\"programmer\", \"pro\") == true\nJs.String2.includes(\"programmer.dat\", \"xyz\") == false\n```\n"},
-    "sortText": "includes",
-    "insertText": "->Js.String2.includes",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.anchor",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t) => t",
-    "documentation": {"kind": "markdown", "value": "\n`anchor(anchorText, anchorName)` creates a string with an HTML `<a>` element\nwith name attribute of `anchorName` and `anchorText` as its content. Please do\nnot use this method, as it has been removed from the relevant web standards.\n\nSee [`String.anchor`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/anchor)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.anchor(\"Page One\", \"page1\") == \"<a name=\"page1\">Page One</a>\"\n```\n"},
-    "sortText": "anchor",
-    "insertText": "->Js.String2.anchor",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.splitByRe",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, Js_re.t) => array<option<t>>",
-    "documentation": {"kind": "markdown", "value": "\n`splitByRe(str, regex)` splits the given `str` at every occurrence of `regex`\nand returns an array of the resulting substrings.\n\nSee [`String.split`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/split)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.splitByRe(\"art; bed , cog ;dad\", /\\s*[,;]\\s*TODO/) == [\n    Some(\"art\"),\n    Some(\"bed\"),\n    Some(\"cog\"),\n    Some(\"dad\"),\n  ]\n```\n"},
-    "sortText": "splitByRe",
-    "insertText": "->Js.String2.splitByRe",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.match_",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, Js_re.t) => option<array<option<t>>>",
-    "documentation": {"kind": "markdown", "value": "\n`match(str, regexp)` matches a `string` against the given `regexp`. If there is\nno match, it returns `None`. For regular expressions without the g modifier, if\n  there is a match, the return value is `Some(array)` where the array contains:\n- The entire matched string\n- Any capture groups if the regexp had parentheses\nFor regular expressions with the g modifier, a matched expression returns\n`Some(array)` with all the matched substrings and no capture groups.\n\nSee [`String.match`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/match)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.match_(\"The better bats\", /b[aeiou]t/) == Some([\"bet\"])\nJs.String2.match_(\"The better bats\", /b[aeiou]t/g) == Some([\"bet\", \"bat\"])\nJs.String2.match_(\"Today is 2018-04-05.\", /(\\d+)-(\\d+)-(\\d+)/) ==\n  Some([\"2018-04-05\", \"2018\", \"04\", \"05\"])\nJs.String2.match_(\"The large container.\", /b[aeiou]g/) == None\n```\n"},
-    "sortText": "match_",
-    "insertText": "->Js.String2.match_",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.lastIndexOfFrom",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t, int) => int",
-    "documentation": {"kind": "markdown", "value": "\n`lastIndexOfFrom(str, searchValue, start)` returns the position of the last\noccurrence of `searchValue` within `str`, searching backwards from the given\nstart position. Returns -1 if `searchValue` is not in `str`. The return value\nis always relative to the beginning of the string.\n\nSee [`String.lastIndexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/lastIndexOf)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.lastIndexOfFrom(\"bookseller\", \"ok\", 6) == 2\nJs.String2.lastIndexOfFrom(\"beekeeper\", \"ee\", 8) == 4\nJs.String2.lastIndexOfFrom(\"beekeeper\", \"ee\", 3) == 1\nJs.String2.lastIndexOfFrom(\"abcdefg\", \"xyz\", 4) == -1\n```\n"},
-    "sortText": "lastIndexOfFrom",
-    "insertText": "->Js.String2.lastIndexOfFrom",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.replace",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t, t) => t",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `replace(str, substr, newSubstr)` returns a new `string` which is\nidentical to `str` except with the first matching instance of `substr` replaced\nby `newSubstr`. `substr` is treated as a verbatim string to match, not a\nregular expression.\n\nSee [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.replace(\"old string\", \"old\", \"new\") == \"new string\"\nJs.String2.replace(\"the cat and the dog\", \"the\", \"this\") == \"this cat and the dog\"\n```\n"},
-    "sortText": "replace",
-    "insertText": "->Js.String2.replace",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.codePointAt",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, int) => option<int>",
-    "documentation": {"kind": "markdown", "value": "\n`codePointAt(s, n)` returns the code point at position `n` within string `s` as\na `Some(value)`. The return value handles code points greater than or equal to\n0x10000. If there is no code point at the given position, the function returns\n`None`.\n\nSee [`String.codePointAt`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/codePointAt)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.codePointAt(`¿😺?`, 1) == Some(0x1f63a)\nJs.String2.codePointAt(\"abc\", 5) == None\n```\n"},
-    "sortText": "codePointAt",
-    "insertText": "->Js.String2.codePointAt",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.length",
+    "label": "->M.a",
     "kind": 12,
     "tags": [],
     "detail": "t => int",
-    "documentation": {"kind": "markdown", "value": "\n`length(s)` returns the length of the given `string`.\n\nSee [`String.length`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.length(\"abcd\") == 4\n```\n"},
-    "sortText": "length",
-    "insertText": "->Js.String2.length",
+    "documentation": null,
+    "sortText": "a",
+    "insertText": "->M.a",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.localeCompare",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t) => float",
-    "documentation": {"kind": "markdown", "value": "\n`localeCompare(reference, comparison)` returns\n- a negative value if reference comes before comparison in sort order\n- zero if reference and comparison have the same sort order\n- a positive value if reference comes after comparison in sort order\n\nSee [`String.localeCompare`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/localeCompare) on MDN.\n\n## Examples\n\n```rescript\nJs.String2.localeCompare(\"zebra\", \"ant\") > 0.0\nJs.String2.localeCompare(\"ant\", \"zebra\") < 0.0\nJs.String2.localeCompare(\"cat\", \"cat\") == 0.0\nJs.String2.localeCompare(\"CAT\", \"cat\") > 0.0\n```\n"},
-    "sortText": "localeCompare",
-    "insertText": "->Js.String2.localeCompare",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.indexOf",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t) => int",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `indexOf(str, searchValue)` returns the position at which `searchValue`\nwas first found within `str`, or -1 if `searchValue` is not in `str`.\n\nSee [`String.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/indexOf)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.indexOf(\"bookseller\", \"ok\") == 2\nJs.String2.indexOf(\"bookseller\", \"sell\") == 4\nJs.String2.indexOf(\"beekeeper\", \"ee\") == 1\nJs.String2.indexOf(\"bookseller\", \"xyz\") == -1\n```\n"},
-    "sortText": "indexOf",
-    "insertText": "->Js.String2.indexOf",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.startsWithFrom",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t, int) => bool",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `startsWithFrom(str, substr, n)` returns `true` if the `str` starts\nwith `substr` starting at position `n`, false otherwise. If `n` is negative,\nthe search starts at the beginning of `str`.\n\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.startsWithFrom(\"ReScript\", \"Scri\", 2) == true\nJs.String2.startsWithFrom(\"ReScript\", \"\", 2) == true\nJs.String2.startsWithFrom(\"JavaScript\", \"Scri\", 2) == false\n```\n"},
-    "sortText": "startsWithFrom",
-    "insertText": "->Js.String2.startsWithFrom",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.unsafeReplaceBy3",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, Js_re.t, (t, t, t, t, int, t) => t) => t",
-    "documentation": {"kind": "markdown", "value": "\nReturns a new `string` with some or all matches of a pattern with three sets of\ncapturing parentheses replaced by the value returned from the given function.\nThe function receives as its parameters the matched string, the captured\nstrings, the offset at which the match begins, and the whole string being\nmatched.\n\nSee [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace)\non MDN.\n"},
-    "sortText": "unsafeReplaceBy3",
-    "insertText": "->Js.String2.unsafeReplaceBy3",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.split",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t) => array<t>",
-    "documentation": {"kind": "markdown", "value": "\n`split(str, delimiter)` splits the given `str` at every occurrence of\n`delimiter` and returns an array of the resulting substrings.\n\nSee [`String.split`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/split)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.split(\"2018-01-02\", \"-\") == [\"2018\", \"01\", \"02\"]\nJs.String2.split(\"a,b,,c\", \",\") == [\"a\", \"b\", \"\", \"c\"]\nJs.String2.split(\"good::bad as great::awful\", \"::\") == [\"good\", \"bad as great\", \"awful\"]\nJs.String2.split(\"has-no-delimiter\", \";\") == [\"has-no-delimiter\"]\n```\n"},
-    "sortText": "split",
-    "insertText": "->Js.String2.split",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.endsWithFrom",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t, int) => bool",
-    "documentation": {"kind": "markdown", "value": "\n`endsWithFrom(str, ending, len)` returns `true` if the first len characters of\n`str` end with `ending`, `false` otherwise. If `len` is greater than or equal\nto the length of `str`, then it works like `endsWith`. (Honestly, this should\nhave been named endsWithAt, but oh well).\n\nSee [`String.endsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/endsWith)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.endsWithFrom(\"abcd\", \"cd\", 4) == true\nJs.String2.endsWithFrom(\"abcde\", \"cd\", 3) == false\nJs.String2.endsWithFrom(\"abcde\", \"cde\", 99) == true\nJs.String2.endsWithFrom(\"example.dat\", \"ple\", 7) == true\n```\n"},
-    "sortText": "endsWithFrom",
-    "insertText": "->Js.String2.endsWithFrom",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.endsWith",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t) => bool",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `endsWith(str, substr)` returns `true` if the `str` ends with `substr`,\n`false` otherwise.\n\nSee [`String.endsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/endsWith)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.endsWith(\"ReScript\", \"Script\") == true\nJs.String2.endsWith(\"C++\", \"Script\") == false\n```\n"},
-    "sortText": "endsWith",
-    "insertText": "->Js.String2.endsWith",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.splitByReAtMost",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, Js_re.t, ~limit: int) => array<option<t>>",
-    "documentation": {"kind": "markdown", "value": "\n`splitByReAtMost(str, regex, ~limit:n)` splits the given `str` at every\noccurrence of `regex` and returns an array of the first `n` resulting\nsubstrings. If `n` is negative or greater than the number of substrings, the\narray will contain all the substrings.\n\nSee [`String.split`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/split)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.splitByReAtMost(\"one: two: three: four\", /\\s*:\\s*TODO/, ~limit=3) == [\n    Some(\"one\"),\n    Some(\"two\"),\n    Some(\"three\"),\n  ]\n\nJs.String2.splitByReAtMost(\"one: two: three: four\", /\\s*:\\s*TODO/, ~limit=0) == []\n\nJs.String2.splitByReAtMost(\"one: two: three: four\", /\\s*:\\s*TODO/, ~limit=8) == [\n    Some(\"one\"),\n    Some(\"two\"),\n    Some(\"three\"),\n    Some(\"four\"),\n  ]\n```\n"},
-    "sortText": "splitByReAtMost",
-    "insertText": "->Js.String2.splitByReAtMost",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.normalize",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => t",
-    "documentation": {"kind": "markdown", "value": "\n`normalize(str)` returns the normalized Unicode string using Normalization Form\nCanonical (NFC) Composition. Consider the character ã, which can be represented\nas the single codepoint \\u00e3 or the combination of a lower case letter A\n\\u0061 and a combining tilde \\u0303. Normalization ensures that both can be\nstored in an equivalent binary representation.\n\nSee [`String.normalize`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/normalize)\non MDN. See also [Unicode technical report\n#15](https://unicode.org/reports/tr15/) for details.\n"},
-    "sortText": "normalize",
-    "insertText": "->Js.String2.normalize",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.substring",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, ~from: int, ~to_: int) => t",
-    "documentation": {"kind": "markdown", "value": "\n`substring(str, ~from: start, ~to_: finish)` returns characters `start` up to\nbut not including finish from `str`.\n- If `start` is less than zero, it is treated as zero.\n- If `finish` is zero or negative, the empty string is returned.\n- If `start` is greater than `finish`, the `start` and `finish` points are swapped.\n\nSee [`String.substring`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/substring) on MDN.\n\n## Examples\n\n```rescript\nJs.String2.substring(\"playground\", ~from=3, ~to_=6) == \"ygr\"\nJs.String2.substring(\"playground\", ~from=6, ~to_=3) == \"ygr\"\nJs.String2.substring(\"playground\", ~from=4, ~to_=12) == \"ground\"\n```\n"},
-    "sortText": "substring",
-    "insertText": "->Js.String2.substring",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.substr",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, ~from: int) => t",
-    "documentation": {"kind": "markdown", "value": "\n`substr(str, ~from:n)` returns the substring of `str` from position `n` to the\nend of the string.\n- If `n` is less than zero, the starting position is the length of `str - n`.\n- If `n` is greater than or equal to the length of `str`, returns the empty string.\n\nJavaScript’s `String.substr()` is a legacy function. When possible, use\n`substring()` instead.\n\nSee [`String.substr`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/substr)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.substr(\"abcdefghij\", ~from=3) == \"defghij\"\nJs.String2.substr(\"abcdefghij\", ~from=-3) == \"hij\"\nJs.String2.substr(\"abcdefghij\", ~from=12) == \"\"\n```\n"},
-    "sortText": "substr",
-    "insertText": "->Js.String2.substr",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.get",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, int) => t",
-    "documentation": {"kind": "markdown", "value": "\n`get(s, n)` returns as a `string` the character at the given index number. If\n`n` is out of range, this function returns `undefined`,so at some point this\nfunction may be modified to return `option<string>`.\n\n## Examples\n\n```rescript\nJs.String2.get(\"Reason\", 0) == \"R\"\nJs.String2.get(\"Reason\", 4) == \"o\"\nJs.String2.get(`Rẽasöń`, 5) == `ń`\n```\n"},
-    "sortText": "get",
-    "insertText": "->Js.String2.get",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.substringToEnd",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, ~from: int) => t",
-    "documentation": {"kind": "markdown", "value": "\n`substringToEnd(str, ~from: start)` returns the substring of `str` from\nposition `start` to the end.\n- If `start` is less than or equal to zero, the entire string is returned.\n- If `start` is greater than or equal to the length of `str`, the empty string is returned.\n\nSee [`String.substring`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/substring) on MDN.\n\n## Examples\n\n```rescript\nJs.String2.substringToEnd(\"playground\", ~from=4) == \"ground\"\nJs.String2.substringToEnd(\"playground\", ~from=-3) == \"playground\"\nJs.String2.substringToEnd(\"playground\", ~from=12) == \"\"\n```\n"},
-    "sortText": "substringToEnd",
-    "insertText": "->Js.String2.substringToEnd",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.search",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, Js_re.t) => int",
-    "documentation": {"kind": "markdown", "value": "\n`search(str, regexp)` returns the starting position of the first match of\n`regexp` in the given `str`, or -1 if there is no match.\n\nSee [`String.search`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/search)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.search(\"testing 1 2 3\", /\\d+/) == 8\nJs.String2.search(\"no numbers\", /\\d+/) == -1\n```\n"},
-    "sortText": "search",
-    "insertText": "->Js.String2.search",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.toUpperCase",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => t",
-    "documentation": {"kind": "markdown", "value": "\n`toUpperCase(str)` converts `str` to upper case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\nexpand the number of letters in the result; for example the German ß\ncapitalizes to two Ses in a row.\n\nSee [`String.toUpperCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toUpperCase)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.toUpperCase(\"abc\") == \"ABC\"\nJs.String2.toUpperCase(`Straße`) == `STRASSE`\nJs.String2.toUpperCase(`πς`) == `ΠΣ`\n```\n"},
-    "sortText": "toUpperCase",
-    "insertText": "->Js.String2.toUpperCase",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.castToArrayLike",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => Js_array2.array_like<t>",
-    "documentation": {"kind": "markdown", "value": "\nCasts its argument to an `array_like` entity that can be processed by functions\nsuch as `Js.Array2.fromMap()`\n\n## Examples\n\n```rescript\nlet s = \"abcde\"\nlet arr = Js.Array2.fromMap(Js.String2.castToArrayLike(s), x => x)\narr == [\"a\", \"b\", \"c\", \"d\", \"e\"]\n```\n"},
-    "sortText": "castToArrayLike",
-    "insertText": "->Js.String2.castToArrayLike",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.unsafeReplaceBy2",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, Js_re.t, (t, t, t, int, t) => t) => t",
-    "documentation": {"kind": "markdown", "value": "\nReturns a new `string` with some or all matches of a pattern with two sets of\ncapturing parentheses replaced by the value returned from the given function.\nThe function receives as its parameters the matched string, the captured\nstrings, the offset at which the match begins, and the whole string being\nmatched.\n\nSee [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace)\non MDN.\n\n## Examples\n\n```rescript\nlet str = \"7 times 6\"\nlet re = /(\\d+) times (\\d+)/\nlet matchFn = (_match, p1, p2, _offset, _wholeString) => {\n  switch (Belt.Int.fromString(p1), Belt.Int.fromString(p2)) {\n  | (Some(x), Some(y)) => Belt.Int.toString(x * y)\n  | _ => \"???\"\n  }\n}\n\nJs.String2.unsafeReplaceBy2(str, re, matchFn) == \"42\"\n```\n"},
-    "sortText": "unsafeReplaceBy2",
-    "insertText": "->Js.String2.unsafeReplaceBy2",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.toLocaleUpperCase",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => t",
-    "documentation": {"kind": "markdown", "value": "\n`toLocaleUpperCase(str)` converts `str` to upper case using the current locale.\nSee [`String.to:LocaleUpperCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLocaleUpperCase)\non MDN.\n"},
-    "sortText": "toLocaleUpperCase",
-    "insertText": "->Js.String2.toLocaleUpperCase",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.String2.indexOfFrom",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t, int) => int",
-    "documentation": {"kind": "markdown", "value": "\n`indexOfFrom(str, searchValue, start)` returns the position at which\n`searchValue` was found within `str` starting at character position `start`, or\n-1 if `searchValue` is not found in that portion of `str`. The return value is\nrelative to the beginning of the string, no matter where the search started\nfrom.\n\nSee [`String.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/indexOf)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.indexOfFrom(\"bookseller\", \"ok\", 1) == 2\nJs.String2.indexOfFrom(\"bookseller\", \"sell\", 2) == 4\nJs.String2.indexOfFrom(\"bookseller\", \"sell\", 5) == -1\n```\n"},
-    "sortText": "indexOfFrom",
-    "insertText": "->Js.String2.indexOfFrom",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 3, "character": 19}, "end": {"line": 3, "character": 20}},
+      "range": {"start": {"line": 11, "character": 19}, "end": {"line": 11, "character": 20}},
       "newText": ""
       }]
   }]
 
-Complete src/CompletionTaggedTemplate.res 6:23
-posCursor:[6:23] posNoWhite:[6:22] Found expr:[6:11->6:23]
-Completable: Cpath Value[meh](Nolabel, Nolabel).len
+Complete src/CompletionTaggedTemplate.res 14:21
+posCursor:[14:21] posNoWhite:[14:20] Found expr:[14:11->14:21]
+Completable: Cpath Value[meh](Nolabel, Nolabel).x
 Package opens Pervasives.JsxModules.place holder
-ContextPath Value[meh](Nolabel, Nolabel).len
+ContextPath Value[meh](Nolabel, Nolabel).x
 ContextPath Value[meh](Nolabel, Nolabel)
 ContextPath Value[meh]
 Path meh
-ContextPath Value[meh](Nolabel, Nolabel, Nolabel)->len
+ContextPath Value[meh](Nolabel, Nolabel, Nolabel)->x
 ContextPath Value[meh](Nolabel, Nolabel, Nolabel)
 ContextPath Value[meh]
 Path meh
-Path Js.String2.len
+CPPipe pathFromEnv:M found:true
+Path M.x
 [{
-    "label": "->Js.String2.length",
+    "label": "->M.xyz",
     "kind": 12,
     "tags": [],
-    "detail": "t => int",
-    "documentation": {"kind": "markdown", "value": "\n`length(s)` returns the length of the given `string`.\n\nSee [`String.length`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.length(\"abcd\") == 4\n```\n"},
-    "sortText": "length",
-    "insertText": "->Js.String2.length",
+    "detail": "(t, int) => int",
+    "documentation": null,
+    "sortText": "xyz",
+    "insertText": "->M.xyz",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 6, "character": 19}, "end": {"line": 6, "character": 20}},
+      "range": {"start": {"line": 14, "character": 19}, "end": {"line": 14, "character": 20}},
       "newText": ""
       }]
   }]

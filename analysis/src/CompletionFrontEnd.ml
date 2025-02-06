@@ -1148,10 +1148,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
              (* Determine the field name if present *)
              let fieldName =
                match fieldExpr.pexp_desc with
-               | Pexp_ident {txt = Lident fieldName}
-                 when Res_parsetree_viewer.is_tagged_template_literal innerExpr
-                 ->
-                 fieldName
+               | Pexp_ident {txt = Lident fieldName} -> fieldName
                (* This is likely to be an exprhole *)
                | _ -> ""
              in
