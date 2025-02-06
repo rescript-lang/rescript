@@ -18,7 +18,7 @@
 
 open Typedtree
 
-type error = Conflicting_inline_attributes | Fragile_pattern_in_toplevel
+type error = Fragile_pattern_in_toplevel
 
 exception Error of Location.t * error
 
@@ -78,37 +78,30 @@ let rec apply_coercion loc strict (restr : Typedtree.module_coercion) arg =
   | Tcoerce_functor (cc_arg, cc_res) ->
     let param = Ident.create "funarg" in
     let carg = apply_coercion loc Alias cc_arg (Lvar param) in
-    apply_coercion_result loc strict arg [param] [carg] cc_res
+    apply_coercion_result loc strict arg param carg cc_res
   | Tcoerce_primitive {pc_loc; pc_desc; pc_env; pc_type} ->
     Translcore.transl_primitive pc_loc pc_desc pc_env pc_type
   | Tcoerce_alias (path, cc) ->
     Lambda.name_lambda strict arg (fun _ ->
         apply_coercion loc Alias cc (Lambda.transl_normal_path path))
 
-and apply_coercion_result loc strict funct params args cc_res =
-  match cc_res with
-  (* | Tcoerce_functor (cc_arg, cc_res) ->
-     let param = Ident.create "funarg" in
-     let arg = apply_coercion loc Alias cc_arg (Lvar param) in
-     apply_coercion_result loc strict funct (param :: params) (arg :: args)
-       cc_res *)
-  | _ ->
-    Lambda.name_lambda strict funct (fun id ->
-        Lfunction
-          {
-            params = List.rev params;
-            attr = {Lambda.default_function_attribute with is_a_functor = true};
-            loc;
-            body =
-              apply_coercion loc Strict cc_res
-                (Lapply
-                   {
-                     ap_loc = loc;
-                     ap_func = Lvar id;
-                     ap_args = List.rev args;
-                     ap_inlined = Default_inline;
-                   });
-          })
+and apply_coercion_result loc strict funct param arg cc_res =
+  Lambda.name_lambda strict funct (fun id ->
+      Lfunction
+        {
+          params = [param];
+          attr = {Lambda.default_function_attribute with is_a_functor = true};
+          loc;
+          body =
+            apply_coercion loc Strict cc_res
+              (Lapply
+                 {
+                   ap_loc = loc;
+                   ap_func = Lvar id;
+                   ap_args = [arg];
+                   ap_inlined = Default_inline;
+                 });
+        })
 
 and wrap_id_pos_list loc id_pos_list get_field lam =
   let fv = Lambda.free_variables lam in
@@ -210,74 +203,41 @@ let rec bound_value_identifiers : Types.signature_item list -> Ident.t list =
    functor(s) being merged with.  Such an attribute will be placed on the
    resulting merged functor. *)
 
-let merge_inline_attributes (attr1 : Lambda.inline_attribute)
-    (attr2 : Lambda.inline_attribute) loc =
-  match (attr1, attr2) with
-  | Lambda.Default_inline, _ -> attr2
-  | _, Lambda.Default_inline -> attr1
-  | _, _ ->
-    if attr1 = attr2 then attr1
-    else raise (Error (loc, Conflicting_inline_attributes))
-
-let merge_functors mexp coercion root_path =
-  let merge mexp coercion path acc inline_attribute =
-    let finished = (acc, mexp, path, coercion, inline_attribute) in
-    match mexp.mod_desc with
-    | Tmod_functor (param, _, _, body) ->
-      let inline_attribute' =
-        Translattribute.get_inline_attribute mexp.mod_attributes
-      in
-      let arg_coercion, res_coercion =
-        match coercion with
-        | Tcoerce_none -> (Tcoerce_none, Tcoerce_none)
-        | Tcoerce_functor (arg_coercion, res_coercion) ->
-          (arg_coercion, res_coercion)
-        | _ -> Misc.fatal_error "Translmod.merge_functors: bad coercion"
-      in
-      let loc = mexp.mod_loc in
-      let path = functor_path path param in
-      let inline_attribute =
-        merge_inline_attributes inline_attribute inline_attribute' loc
-      in
-      let r =
-        ( (param, loc, arg_coercion) :: acc,
-          body,
-          path,
-          res_coercion,
-          inline_attribute )
-      in
-      (* let _ =
-           merge body res_coercion path
-             ((param, loc, arg_coercion) :: acc)
-             inline_attribute
-         in *)
-      r
-    | _ -> finished
-  in
-  merge mexp coercion root_path [] Default_inline
+let get_functor_params mexp coercion root_path =
+  match mexp.mod_desc with
+  | Tmod_functor (param, _, _, body) ->
+    let inline_attribute =
+      Translattribute.get_inline_attribute mexp.mod_attributes
+    in
+    let arg_coercion, res_coercion =
+      match coercion with
+      | Tcoerce_none -> (Tcoerce_none, Tcoerce_none)
+      | Tcoerce_functor (arg_coercion, res_coercion) ->
+        (arg_coercion, res_coercion)
+      | _ -> Misc.fatal_error "Translmod.get_functor_params: bad coercion"
+    in
+    let loc = mexp.mod_loc in
+    let path = functor_path root_path param in
+    ((param, loc, arg_coercion), body, path, res_coercion, inline_attribute)
+  | _ -> assert false
 
 let export_identifiers : Ident.t list ref = ref []
 
 let rec compile_functor mexp coercion root_path loc =
-  let functor_params_rev, body, body_path, res_coercion, inline_attribute =
-    merge_functors mexp coercion root_path
+  let functor_param, body, body_path, res_coercion, inline_attribute =
+    get_functor_params mexp coercion root_path
   in
-  assert (functor_params_rev <> []);
   (* cf. [transl_module] *)
-  let params, body =
-    List.fold_left
-      (fun (params, body) (param, loc, arg_coercion) ->
-        let param' = Ident.rename param in
-        let arg = apply_coercion loc Alias arg_coercion (Lvar param') in
-        let params = param' :: params in
-        let body = Lambda.Llet (Alias, Pgenval, param, arg, body) in
-        (params, body))
-      ([], transl_module res_coercion body_path body)
-      functor_params_rev
+  let param, loc_, arg_coercion = functor_param in
+  let param' = Ident.rename param in
+  let arg = apply_coercion loc_ Alias arg_coercion (Lvar param') in
+  let body =
+    Lambda.Llet
+      (Alias, Pgenval, param, arg, transl_module res_coercion body_path body)
   in
   Lambda.Lfunction
     {
-      params;
+      params = [param'];
       attr =
         {
           inline = inline_attribute;
@@ -523,8 +483,6 @@ let transl_implementation module_name (str, cc) =
 (* Error report *)
 
 let report_error ppf = function
-  | Conflicting_inline_attributes ->
-    Format.fprintf ppf "@[Conflicting ``inline'' attributes@]"
   | Fragile_pattern_in_toplevel ->
     Format.fprintf ppf "@[Such fragile pattern not allowed in the toplevel@]"
 
