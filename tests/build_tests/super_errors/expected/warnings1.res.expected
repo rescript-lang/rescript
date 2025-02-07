@@ -9,4 +9,4 @@
   5 [2m│[0m }
 
   This function has type (int, int) => int
-  It is applied with [1;31m1[0m arguments but it requires [1;33m2[0m.
+  It is applied with [1;31m1[0m argument but it requires [1;33m2[0m.

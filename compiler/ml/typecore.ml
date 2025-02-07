@@ -4464,7 +4464,7 @@ let report_error env ppf error =
       "@ @[It is applied with @{<error>%d@} argument%s but it requires \
        @{<info>%d@}.@]@]"
       args
-      (if args = 0 then "" else "s")
+      (if args = 1 then "" else "s")
       arity
   | Field_not_optional (name, typ) ->
     fprintf ppf "Field @{<info>%s@} is not optional in type %a. Use without ?"
