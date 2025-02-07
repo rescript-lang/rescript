@@ -22,6 +22,7 @@
 - Fix `%external` extension. https://github.com/rescript-lang/rescript/pull/7272
 - Fix issue with type environment for unified ops. https://github.com/rescript-lang/rescript/pull/7277
 - Fix completion for application with tagged template. https://github.com/rescript-lang/rescript/pull/7278
+- Fix error message for arity in the presence of optional arguments. https://github.com/rescript-lang/rescript/pull/7284
 
 # 12.0.0-alpha.8
 
