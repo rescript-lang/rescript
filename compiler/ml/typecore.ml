@@ -3514,13 +3514,14 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
     | Some arity ->
       let newarity = arity - nargs in
       let fully_applied = newarity <= 0 in
-      if total_app && not fully_applied then
-        raise
-          (Error
-             ( funct.exp_loc,
-               env,
-               Uncurried_arity_mismatch
-                 (funct.exp_type, arity, List.length sargs) ));
+      (if total_app && not fully_applied then
+         let required_args = List.length sargs in
+         raise
+           (Error
+              ( funct.exp_loc,
+                env,
+                Uncurried_arity_mismatch
+                  (funct.exp_type, required_args + newarity, required_args) )));
       let new_t =
         if fully_applied then new_t
         else
