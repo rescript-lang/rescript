@@ -25,7 +25,7 @@
 /*** Efficient JSON encoding using JavaScript API */
 
 @unboxed
-type rec t =
+type rec t = Stdlib_JSON.t =
   | Boolean(bool)
   | @as(null) Null
   | String(string)

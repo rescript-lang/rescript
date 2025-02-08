@@ -11,7 +11,7 @@ ContextPath CTypeAtPos()
     "kind": 12,
     "tags": [],
     "detail": "t",
-    "documentation": {"kind": "markdown", "value": " The JSON data structure \n\n```rescript\n@unboxed\ntype t =\n  | Boolean(bool)\n  | @as(null) Null\n  | String(string)\n  | Number(float)\n  | Object(dict<t>)\n  | Array(array<t>)\n```"},
+    "documentation": {"kind": "markdown", "value": " \nA type representing a JSON object.\n\n\n```rescript\n@unboxed\ntype t =\n  | Boolean(bool)\n  | @as(null) Null\n  | String(string)\n  | Number(float)\n  | Object(dict<t>)\n  | Array(array<t>)\n```"},
     "sortText": "A",
     "insertText": "[$0]",
     "insertTextFormat": 2

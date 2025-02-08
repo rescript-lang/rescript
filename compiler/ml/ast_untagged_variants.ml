@@ -179,8 +179,8 @@ let type_to_instanceof_backed_obj (t : Types.type_expr) =
   | Tconstr (path, _, _) when Path.same path Predef.path_array -> Some Array
   | Tconstr (path, _, _) -> (
     match Path.name path with
-    | "Js_date.t" -> Some Date
-    | "Js_re.t" -> Some RegExp
+    | "Stdlib_Date.t" -> Some Date
+    | "Stdlib_RegExp.t" -> Some RegExp
     | "Js_file.t" -> Some File
     | "Js_blob.t" -> Some Blob
     | _ -> None)

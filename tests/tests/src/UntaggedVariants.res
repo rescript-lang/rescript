@@ -399,7 +399,7 @@ module AllInstanceofTypes = {
     | Promise(promise<string>)
     | Object(record)
     | Date(Js.Date.t)
-    | RegExp(Js.Re.t)
+    | RegExp(Stdlib_RegExp.t)
     | File(Js.File.t)
     | Blob(Js.Blob.t)
 
