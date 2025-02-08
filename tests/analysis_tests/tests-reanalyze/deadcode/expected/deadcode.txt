@@ -2755,11 +2755,9 @@ File References
   DeadTest.res:121:1-40
   theSideEffectIsLogging is never used and could have side effects
 
-  Warning Dead Value
+  Warning Dead Value With Side Effects
   DeadTest.res:123:1-54
-  stringLengthNoSideEffects is never used
-  <-- line 123
-  @dead("stringLengthNoSideEffects") let stringLengthNoSideEffects = String.length("sdkdl")
+  stringLengthNoSideEffects is never used and could have side effects
 
   Warning Dead Type
   DeadTest.res:151:12-17
@@ -4249,4 +4247,4 @@ File References
   <-- line 96
   type variant1Object = | @dead("variant1Object.R") R(payload)
   
-  Analysis reported 302 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:21, Warning Dead Type:87, Warning Dead Value:174, Warning Dead Value With Side Effects:1, Warning Redundant Optional Argument:5, Warning Unused Argument:11)
+  Analysis reported 302 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:21, Warning Dead Type:87, Warning Dead Value:173, Warning Dead Value With Side Effects:2, Warning Redundant Optional Argument:5, Warning Unused Argument:11)

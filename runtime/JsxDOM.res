@@ -209,7 +209,7 @@ type domProps = {
   loop?: bool,
   low?: int,
   manifest?: string /* uri */,
-  max?: string /* should be int or Js.Date.t */,
+  max?: string /* should be int or Date.t */,
   maxLength?: int,
   media?: string /* a valid media query */,
   mediaGroup?: string,
