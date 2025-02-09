@@ -32,6 +32,12 @@ node_modules/.bin/semver:
 test: lib
 	node scripts/test.js -all
 
+test-analysis:
+	make -C tests/analysis_tests clean test
+	
+test-tools:
+	make -C tests/tools_tests clean test
+
 test-syntax:
 	bash ./scripts/test_syntax.sh
 	make reanalyze
@@ -45,7 +51,7 @@ test-syntax-roundtrip:
 test-gentype:
 	make -C tests/gentype_tests/typescript-react-example clean test
 
-test-all: test test-gentype
+test-all: test test-gentype test-analysis test-tools
 
 reanalyze:
 	reanalyze.exe -set-exit-code -all-cmt _build/default/compiler _build/default/tests -exclude-paths compiler/outcome_printer,compiler/ml,compiler/js_parser,compiler/frontend,compiler/ext,compiler/depends,compiler/core,compiler/common,compiler/cmij,compiler/bsb_helper,compiler/bsb
@@ -95,4 +101,4 @@ dev-container:
 
 .DEFAULT_GOAL := build
 
-.PHONY: build watch rewatch ninja bench dce test test-syntax test-syntax-roundtrip test-gentype test-all lib playground playground-cmijs playground-release artifacts format checkformat clean-gentype clean-rewatch clean clean-all dev-container
+.PHONY: build watch rewatch ninja bench dce test test-syntax test-syntax-roundtrip test-gentype test-analysis test-tools test-all lib playground playground-cmijs playground-release artifacts format checkformat clean-gentype clean-rewatch clean clean-all dev-container
