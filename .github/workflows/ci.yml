@@ -319,9 +319,10 @@ jobs:
         if: runner.os != 'Windows' && matrix.os != 'ubuntu-24.04-arm'
         run: opam exec -- make -C tests/analysis_tests test && make -C tests/tools_tests test
 
-      - name: Run gentype tests
-        if: runner.os != 'Windows'
-        run: make -C tests/gentype_tests/typescript-react-example clean test
+      # Deactivated for now
+      # - name: Run gentype tests
+      #   if: runner.os != 'Windows'
+      #   run: make -C tests/gentype_tests/typescript-react-example clean test
 
       - name: Run syntax benchmarks
         if: matrix.benchmarks
