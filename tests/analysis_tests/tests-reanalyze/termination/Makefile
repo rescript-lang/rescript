@@ -10,7 +10,7 @@ test: build node_modules/.bin/rescript
 	./test.sh
 
 clean:
-	rm -r node_modules lib
+	rm -rf node_modules lib
 
 .DEFAULT_GOAL := build
 
