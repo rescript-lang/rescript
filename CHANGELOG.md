@@ -12,6 +12,10 @@
 
 # 12.0.0-alpha.9 (Unreleased)
 
+#### :boom: Breaking Change
+
+- Clean list API. https://github.com/rescript-lang/rescript/pull/7290
+
 #### :nail_care: Polish
 
 - Allow single newline in JSX. https://github.com/rescript-lang/rescript/pull/7269
