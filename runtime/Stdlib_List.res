@@ -61,8 +61,6 @@
 
 @@config({flags: ["-bs-noassertfalse"]})
 
-type t<'a> = list<'a>
-
 module A = {
   @new external makeUninitializedUnsafe: int => array<'a> = "Array"
   external min: ('a, 'a) => 'a = "%bs_min"
@@ -85,7 +83,7 @@ module A = {
   }
 }
 
-external mutableCell: ('a, t<'a>) => t<'a> = "#makemutablelist"
+external mutableCell: ('a, list<'a>) => list<'a> = "#makemutablelist"
 
 /*
   `mutableCell x []` == `x`
@@ -94,7 +92,7 @@ external mutableCell: ('a, t<'a>) => t<'a> = "#makemutablelist"
    dont inline a binding to mutable cell, it is mutable
 */
 /* INVARIANT: relies on Literals.tl (internal representation) */
-@set external unsafeMutateTail: (t<'a>, t<'a>) => unit = "tl"
+@set external unsafeMutateTail: (list<'a>, list<'a>) => unit = "tl"
 
 /*
    - the cell is not empty
@@ -480,7 +478,7 @@ let rec fromArrayAux = (a, i, res) =>
 
 let fromArray = a => fromArrayAux(a, Stdlib_Array.length(a) - 1, list{})
 
-let toArray = (x: t<_>) => {
+let toArray = (x: list<_>) => {
   let len = length(x)
   let arr = A.makeUninitializedUnsafe(len)
   fillAux(arr, 0, x)
