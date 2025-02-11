@@ -689,6 +689,7 @@ let rec has = (xs, x, eq) =>
   | list{a, ...l} => eq(a, x) || has(l, x, eq)
   }
 
+@deprecated("Use a `Map` instead")
 let rec getAssoc = (xs, x, eq) =>
   switch xs {
   | list{} => None
@@ -700,12 +701,14 @@ let rec getAssoc = (xs, x, eq) =>
     }
   }
 
+@deprecated("Use a `Map` instead")
 let rec hasAssoc = (xs, x, eq) =>
   switch xs {
   | list{} => false
   | list{(a, _), ...l} => eq(a, x) || hasAssoc(l, x, eq)
   }
 
+@deprecated("Use a `Map` instead")
 let removeAssoc = (xs, x, eq) =>
   switch xs {
   | list{} => list{}
@@ -723,6 +726,7 @@ let removeAssoc = (xs, x, eq) =>
     }
   }
 
+@deprecated("Use a `Map` instead")
 let setAssoc = (xs, x, k, eq) =>
   switch xs {
   | list{} => list{(x, k)}

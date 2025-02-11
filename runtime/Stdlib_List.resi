@@ -822,6 +822,7 @@ list{(9, "morning"), (15, "afternoon"), (22, "night")}
 // Some("afternoon")
 ```
 */
+@deprecated("Use a `Map` instead")
 let getAssoc: (list<('a, 'c)>, 'b, ('a, 'b) => bool) => option<'c>
 
 /**
@@ -837,6 +838,7 @@ list{(9, "morning"), (15, "afternoon"), (22, "night")}
 ->List.hasAssoc(25, (k, item) => k /* 25 */ == item /* 9, 5, 22 */) // false
 ```
 */
+@deprecated("Use a `Map` instead")
 let hasAssoc: (list<('a, 'c)>, 'b, ('a, 'b) => bool) => bool
 
 /**
@@ -854,6 +856,7 @@ list{(9, "morning"), (15, "afternoon"), (22, "night")}
 // list{(15, "afternoon"), (22, "night")}
 ```
 */
+@deprecated("Use a `Map` instead")
 let removeAssoc: (list<('a, 'c)>, 'b, ('a, 'b) => bool) => list<('a, 'c)>
 
 /**
@@ -877,6 +880,7 @@ list{(9, "morning"), (3, "morning?!"), (22, "night")}
 **Please note**: In the last example, since: `15 mod 12` equals `3 mod 12`. Both
 the key _and_ the value are replaced in the list.
 */
+@deprecated("Use a `Map` instead")
 let setAssoc: (list<('a, 'c)>, 'a, 'c, ('a, 'a) => bool) => list<('a, 'c)>
 
 /**
