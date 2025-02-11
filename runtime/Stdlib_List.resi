@@ -201,6 +201,17 @@ List.fromInitializer(~length=5, i => i * i) // list{0, 1, 4, 9, 16}
 let fromInitializer: (~length: int, int => 'a) => list<'a>
 
 /**
+`shuffle(list)` returns a new list in random order.
+
+## Examples
+
+```rescript
+List.shuffle(list{1, 2, 3}) // list{2, 1, 3}
+```
+*/
+let shuffle: list<'a> => list<'a>
+
+/**
 `toShuffled(list)` returns a new list in random order.
 
 ## Examples
@@ -209,6 +220,7 @@ let fromInitializer: (~length: int, int => 'a) => list<'a>
 List.toShuffled(list{1, 2, 3}) // list{2, 1, 3}
 ```
 */
+@deprecated("Use `shuffle` instead")
 let toShuffled: list<'a> => list<'a>
 
 /**

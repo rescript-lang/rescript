@@ -485,11 +485,14 @@ let toArray = (x: list<_>) => {
   arr
 }
 
-let toShuffled = xs => {
+let shuffle = xs => {
   let v = toArray(xs)
   Stdlib_Array.shuffle(v)
   fromArray(v)
 }
+
+@deprecated("Use `shuffle` instead")
+let toShuffled = shuffle
 
 let rec reverseConcat = (l1, l2) =>
   switch l1 {
