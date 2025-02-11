@@ -48,9 +48,8 @@ let findFunctionType ~currentFile ~debug ~path ~pos =
           | None -> []
           | Some (docstring, _) -> docstring
         in
-        if Debug.verbose () then
-          Printf.printf "[sig_help_fn] Found loc item: %s.\n"
-            (Shared.typeToString typeExpr);
+        Debug.verbose "[sig_help_fn] Found loc item: %s."
+          (Shared.typeToString typeExpr);
         match
           TypeUtils.extractFunctionType2 ~env ~package:full.package typeExpr
         with
@@ -58,13 +57,10 @@ let findFunctionType ~currentFile ~debug ~path ~pos =
           Some (args, docstring, typeExpr, package, env, file)
         | _ -> None)
       | None ->
-        if Debug.verbose () then
-          Printf.printf "[sig_help_fn] Found no loc item.\n";
+        Debug.verbose "[sig_help_fn] Found no loc item.";
         None
       | Some _ ->
-        if Debug.verbose () then
-          Printf.printf
-            "[sig_help_fn] Found loc item, but not what was expected.\n";
+        Debug.verbose "[sig_help_fn] Found loc item, but not what was expected.";
         None
     in
     match fnFromLocItem with
@@ -272,25 +268,22 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
         | _ -> (
           match !result with
           | None ->
-            if Debug.verbose () then
-              Printf.printf "[sig_help_result] Setting because had none\n";
+            Debug.verbose "[sig_help_result] Setting because had none";
             result := Some (loc, thing)
           | Some (currentLoc, currentThing)
             when Pos.ofLexing loc.Location.loc_start
                  > Pos.ofLexing currentLoc.Location.loc_start ->
             result := Some (loc, thing);
 
-            if Debug.verbose () then
-              Printf.printf
-                "[sig_help_result] Setting because loc of %s > then existing \
-                 of %s\n"
-                (printThing thing) (printThing currentThing)
+            Debug.verbose
+              "[sig_help_result] Setting because loc of %s > then existing of \
+               %s"
+              (printThing thing) (printThing currentThing)
           | Some (_, currentThing) ->
-            if Debug.verbose () then
-              Printf.printf
-                "[sig_help_result] Doing nothing because loc of %s < then \
-                 existing of %s\n"
-                (printThing thing) (printThing currentThing))
+            Debug.verbose
+              "[sig_help_result] Doing nothing because loc of %s < then \
+               existing of %s"
+              (printThing thing) (printThing currentThing))
       in
       let searchForArgWithCursor ~isPipeExpr ~args =
         let extractedArgs = extractExpApplyArgs ~args in
@@ -525,12 +518,10 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
         | _ -> None)
       | Some (_, ((`ConstructorExpr (lid, _) | `ConstructorPat (lid, _)) as cs))
         -> (
-        if Debug.verbose () then
-          Printf.printf "[signature_help] Found constructor!\n";
+        Debug.verbose "[signature_help] Found constructor!";
         match Cmt.loadFullCmtFromPath ~path with
         | None ->
-          if Debug.verbose () then
-            Printf.printf "[signature_help] Could not load cmt\n";
+          Debug.verbose "[signature_help] Could not load cmt";
           None
         | Some full -> (
           let {file} = full in
@@ -541,9 +532,8 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
               {lid.loc with loc_start = lid.loc.loc_end}
           with
           | None ->
-            if Debug.verbose () then
-              Printf.printf "[signature_help] Did not find constructor '%s'\n"
-                constructorName;
+            Debug.verbose "[signature_help] Did not find constructor '%s'"
+              constructorName;
             None
           | Some constructor ->
             let argParts =

@@ -37,10 +37,8 @@ and traversePattern (pat : Parsetree.pattern) ~patternPath ~locHasCursor
     ~firstCharBeforeCursorNoWhite ~posBeforeCursor =
   let someIfHasCursor v debugId =
     if locHasCursor pat.Parsetree.ppat_loc then (
-      if Debug.verbose () then
-        Printf.printf
-          "[traversePattern:someIfHasCursor] '%s' has cursor, returning \n"
-          debugId;
+      Debug.verbose
+        "[traversePattern:someIfHasCursor] '%s' has cursor, returning" debugId;
       Some v)
     else None
   in
@@ -64,9 +62,7 @@ and traversePattern (pat : Parsetree.pattern) ~patternPath ~locHasCursor
     in
     match orPatWithItem with
     | None when isPatternHole p1 || isPatternHole p2 ->
-      if Debug.verbose () then
-        Printf.printf
-          "[traversePattern] found or-pattern that was pattern hole\n";
+      Debug.verbose "[traversePattern] found or-pattern that was pattern hole";
       Some ("", patternPath)
     | v -> v)
   | Ppat_any ->
