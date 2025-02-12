@@ -1,3 +1,4 @@
+type t<'a> = array<'a>
 type arrayLike<'a>
 
 @new external makeUninitializedUnsafe: int => array<'a> = "Array"

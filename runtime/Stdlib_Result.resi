@@ -45,6 +45,8 @@
   }
 ```
 */
+type t<'res, 'err> = result<'res, 'err> = Ok('res) | Error('err)
+
 /**
   `getExn(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, raise an exception
 

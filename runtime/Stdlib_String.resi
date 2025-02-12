@@ -28,6 +28,11 @@ See: [`String`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referenc
 */
 
 /**
+Type representing a string.
+*/
+type t = string
+
+/**
 `make(value)` converts the given value to a `string`.
 
 ## Examples

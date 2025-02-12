@@ -27,6 +27,11 @@ Functions for interacting with float.
 */
 
 /**
+Type representing a float.
+*/
+type t = float
+
+/**
 Float constants.
 */
 module Constants: {

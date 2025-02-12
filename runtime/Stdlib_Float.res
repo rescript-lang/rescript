@@ -1,3 +1,5 @@
+type t = float
+
 module Constants = {
   @val external nan: float = "NaN"
   @val external epsilon: float = "Number.EPSILON"

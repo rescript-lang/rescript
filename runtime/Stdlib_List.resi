@@ -32,6 +32,11 @@ Collection functions for manipulating the `list` data structures, a singly-linke
 - Better memory usage & performance.
 */
 /**
+Type representing a list of value `'a`.
+*/
+type t<'a> = list<'a>
+
+/**
 `length(list)` returns the length of `list`.
 
 ## Examples

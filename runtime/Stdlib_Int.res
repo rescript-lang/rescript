@@ -1,3 +1,5 @@
+type t = int
+
 module Constants = {
   @inline let minValue = -2147483648
   @inline let maxValue = 2147483647

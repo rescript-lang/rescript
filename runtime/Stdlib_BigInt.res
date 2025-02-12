@@ -1,3 +1,8 @@
+/**
+Type representing a bigint.
+*/
+type t = bigint
+
 @val external asIntN: (~width: int, bigint) => bigint = "BigInt.asIntN"
 @val external asUintN: (~width: int, bigint) => bigint = "BigInt.asUintN"
 

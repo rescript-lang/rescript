@@ -27,6 +27,11 @@ Functions for interacting with JavaScript Number.
 See: [`Number`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number).
 */
 
+/**
+Type representing an int.
+*/
+type t = int
+
 module Constants: {
   /**
   The smallest positive number represented in JavaScript.

@@ -61,6 +61,8 @@
 
 @@config({flags: ["-bs-noassertfalse"]})
 
+type t<'a> = list<'a>
+
 module A = {
   @new external makeUninitializedUnsafe: int => array<'a> = "Array"
   external min: ('a, 'a) => 'a = "%bs_min"

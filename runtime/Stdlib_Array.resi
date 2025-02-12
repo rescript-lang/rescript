@@ -1,3 +1,13 @@
+/***
+A mutable array.
+
+Compiles to a regular JavaScript array.*/
+
+/**
+Type representing an array of value `'a`.
+*/
+type t<'a> = array<'a>
+
 type arrayLike<'a>
 
 /**

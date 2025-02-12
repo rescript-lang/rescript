@@ -40,6 +40,11 @@ let someString: option<string> = Some("hello")
 */
 
 /**
+Type representing an option of type 'a.
+*/
+type t<'a> = option<'a> = None | Some('a)
+
+/**
 `filter(opt, f)` applies `f` to `opt`, if `f` returns `true`, then it returns `Some(value)`, otherwise returns `None`.
 
 ## Examples
