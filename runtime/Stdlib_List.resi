@@ -187,7 +187,7 @@ List.make(~length=3, 1) // list{1, 1, 1}
 let make: (~length: int, 'a) => list<'a>
 
 /**
-`makeBy(length, f)` return a list of length `length` with element initialized
+`fromInitializer(length, f)` return a list of length `length` with element initialized
 with `f`. Returns an empty list if `length` is negative.
 
 ## Examples
