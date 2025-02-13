@@ -31,7 +31,7 @@
 /**
   The type `Result.t(result, err)` describes a variant of two states:
   `Ok(someResult)` represents a successful operation, whereby
-  ``Error(someError)` signals an erronous operation.
+  ``Error(someError)` signals an erroneous operation.
 
   In this concrete example, we are defining our own `Result` type to reflect an HTTP like
   query operation:
