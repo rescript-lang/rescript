@@ -162,27 +162,16 @@ ContextPath Value[Js, String2, trim](Nolabel)->st <<jsx>>
 ContextPath Value[Js, String2, trim](Nolabel)
 ContextPath Value[Js, String2, trim]
 Path Js.String2.trim
-Path Js.String2.st
+CPPipe pathFromEnv: found:true
+Path Js_string2.st
 [{
     "label": "React.string",
     "kind": 12,
     "tags": [],
-    "detail": "string",
+    "detail": "t",
     "documentation": {"kind": "markdown", "value": "Turns `string` into a JSX element so it can be used inside of JSX."},
     "sortText": "A",
     "insertTextFormat": 2
-  }, {
-    "label": "Js.String2.startsWith",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t) => bool",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `startsWith(str, substr)` returns `true` if the `str` starts with\n`substr`, `false` otherwise.\n\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.startsWith(\"ReScript\", \"Re\") == true\nJs.String2.startsWith(\"ReScript\", \"\") == true\nJs.String2.startsWith(\"JavaScript\", \"Re\") == false\n```\n"}
-  }, {
-    "label": "Js.String2.startsWithFrom",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, t, int) => bool",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `startsWithFrom(str, substr, n)` returns `true` if the `str` starts\nwith `substr` starting at position `n`, false otherwise. If `n` is negative,\nthe search starts at the beginning of `str`.\n\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.startsWithFrom(\"ReScript\", \"Scri\", 2) == true\nJs.String2.startsWithFrom(\"ReScript\", \"\", 2) == true\nJs.String2.startsWithFrom(\"JavaScript\", \"Scri\", 2) == false\n```\n"}
   }]
 
 Complete src/CompletionJsx.res 24:19

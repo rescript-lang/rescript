@@ -333,32 +333,9 @@ ContextPath Value[Js, Array2, filter](Nolabel, Nolabel)->filt
 ContextPath Value[Js, Array2, filter](Nolabel, Nolabel)
 ContextPath Value[Js, Array2, filter]
 Path Js.Array2.filter
-Path Js.Array2.filt
-[{
-    "label": "->Js.Array2.filter",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t<'a>, 'a => bool) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "\nApplies the given predicate function (the second argument) to each element in\nthe array; the result is an array of those elements for which the predicate\nfunction returned `true`. See\n[`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter)\non MDN.\n\n## Examples\n\n```rescript\nlet nonEmpty = s => s != \"\"\nJs.Array2.filter([\"abc\", \"\", \"\", \"def\", \"ghi\"], nonEmpty) == [\"abc\", \"def\", \"ghi\"]\n```\n"},
-    "sortText": "filter",
-    "insertText": "->Js.Array2.filter",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 86, "character": 38}, "end": {"line": 86, "character": 39}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.Array2.filteri",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t<'a>, ('a, int) => bool) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "\nEach element of the given array are passed to the predicate function. The\nreturn value is an array of all those elements for which the predicate function\nreturned `true`.\n\nSee\n[`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter)\non MDN.\n\n## Examples\n\n```rescript\n// keep only positive elements at odd indices\nlet positiveOddElement = (item, index) => mod(index, 2) == 1 && item > 0\n\nJs.Array2.filteri([6, 3, 5, 8, 7, -4, 1], positiveOddElement) == [3, 8]\n```\n"},
-    "sortText": "filteri",
-    "insertText": "->Js.Array2.filteri",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 86, "character": 38}, "end": {"line": 86, "character": 39}},
-      "newText": ""
-      }]
-  }]
+CPPipe pathFromEnv: found:true
+Path Js_array2.filt
+[]
 
 Complete src/DotPipeCompletionSpec.res 89:70
 posCursor:[89:70] posNoWhite:[89:69] Found expr:[89:3->89:70]
@@ -414,20 +391,9 @@ ContextPath Value[Js, String2, toLowerCase](Nolabel)->toUpperCa
 ContextPath Value[Js, String2, toLowerCase](Nolabel)
 ContextPath Value[Js, String2, toLowerCase]
 Path Js.String2.toLowerCase
-Path Js.String2.toUpperCa
-[{
-    "label": "->Js.String2.toUpperCase",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => t",
-    "documentation": {"kind": "markdown", "value": "\n`toUpperCase(str)` converts `str` to upper case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\nexpand the number of letters in the result; for example the German ß\ncapitalizes to two Ses in a row.\n\nSee [`String.toUpperCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toUpperCase)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.toUpperCase(\"abc\") == \"ABC\"\nJs.String2.toUpperCase(`Straße`) == `STRASSE`\nJs.String2.toUpperCase(`πς`) == `ΠΣ`\n```\n"},
-    "sortText": "toUpperCase",
-    "insertText": "->Js.String2.toUpperCase",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 94, "character": 30}, "end": {"line": 94, "character": 31}},
-      "newText": ""
-      }]
-  }]
+CPPipe pathFromEnv: found:true
+Path Js_string2.toUpperCa
+[]
 
 Complete src/DotPipeCompletionSpec.res 97:63
 posCursor:[97:63] posNoWhite:[97:62] Found expr:[97:3->97:63]
@@ -442,20 +408,9 @@ ContextPath Value[Js, String2, toUpperCase](Nolabel)->toLowerC
 ContextPath Value[Js, String2, toUpperCase](Nolabel)
 ContextPath Value[Js, String2, toUpperCase]
 Path Js.String2.toUpperCase
-Path Js.String2.toLowerC
-[{
-    "label": "->Js.String2.toLowerCase",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => t",
-    "documentation": {"kind": "markdown", "value": "\n`toLowerCase(str)` converts `str` to lower case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\ngive different results depending upon context, for example with the Greek\nletter sigma, which has two different lower case forms; one when it is the last\ncharacter in a string and another when it is not.\n\nSee [`String.toLowerCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.toLowerCase(\"ABC\") == \"abc\"\nJs.String2.toLowerCase(`ΣΠ`) == `σπ`\nJs.String2.toLowerCase(`ΠΣ`) == `πς`\n```\n"},
-    "sortText": "toLowerCase",
-    "insertText": "->Js.String2.toLowerCase",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 97, "character": 54}, "end": {"line": 97, "character": 55}},
-      "newText": ""
-      }]
-  }]
+CPPipe pathFromEnv: found:true
+Path Js_string2.toLowerC
+[]
 
 Complete src/DotPipeCompletionSpec.res 101:7
 posCursor:[101:7] posNoWhite:[101:6] Found expr:[100:9->104:1]

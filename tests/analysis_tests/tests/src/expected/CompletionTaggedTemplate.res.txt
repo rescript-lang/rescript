@@ -1,15 +1,26 @@
-Complete src/CompletionTaggedTemplate.res 11:20
-posCursor:[11:20] posNoWhite:[11:19] Found expr:[11:11->0:-1]
-Completable: Cpath Value[meh](Nolabel, Nolabel).""
+
+Complete src/CompletionTaggedTemplate.res 14:13
+[decoratorCompletion] Found @module with non-string payload
+posCursor:[14:13] posNoWhite:[14:12] Found expr:[14:11->14:13]
+Pexp_field [14:11->14:12] _:[20:0->14:13]
+[set_result] set new result to Cpath Value[w].""
+Completable: Cpath Value[w].""
 Package opens Pervasives.JsxModules.place holder
-ContextPath Value[meh](Nolabel, Nolabel).""
-ContextPath Value[meh](Nolabel, Nolabel)
-ContextPath Value[meh]
-Path meh
-ContextPath Value[meh](Nolabel, Nolabel, Nolabel)->
-ContextPath Value[meh](Nolabel, Nolabel, Nolabel)
-ContextPath Value[meh]
-Path meh
+ContextPath Value[w].""
+[dot_completion]--> Triggered
+ContextPath Value[w]
+[ctx_path]--> CPId
+Path w
+[extract_type]--> starting extraction of type: M.t, in env: CompletionTaggedTemplate. Has type arg ctx: false
+[extract_type]--> digging for type M.t in CompletionTaggedTemplate
+[extract_type]--> found type manifest
+[extract_type]--> starting extraction of type: promise<string>, in env: CompletionTaggedTemplate.M. Has type arg ctx: false
+ContextPath Value[w]->
+[ctx_path]--> CPPipe
+ContextPath Value[w]
+[ctx_path]--> CPId
+Path w
+[pipe_completion] mainTypeId: promise
 CPPipe pathFromEnv:M found:true
 Path M.
 [{
@@ -21,7 +32,7 @@ Path M.
     "sortText": "xyz",
     "insertText": "->M.xyz",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 11, "character": 19}, "end": {"line": 11, "character": 20}},
+      "range": {"start": {"line": 14, "character": 12}, "end": {"line": 14, "character": 13}},
       "newText": ""
       }]
   }, {
@@ -33,7 +44,7 @@ Path M.
     "sortText": "b",
     "insertText": "->M.b",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 11, "character": 19}, "end": {"line": 11, "character": 20}},
+      "range": {"start": {"line": 14, "character": 12}, "end": {"line": 14, "character": 13}},
       "newText": ""
       }]
   }, {
@@ -45,25 +56,34 @@ Path M.
     "sortText": "a",
     "insertText": "->M.a",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 11, "character": 19}, "end": {"line": 11, "character": 20}},
+      "range": {"start": {"line": 14, "character": 12}, "end": {"line": 14, "character": 13}},
       "newText": ""
       }]
   }]
 
-Complete src/CompletionTaggedTemplate.res 14:21
-posCursor:[14:21] posNoWhite:[14:20] Found expr:[14:11->14:21]
-Completable: Cpath Value[meh](Nolabel, Nolabel).x
+Complete src/CompletionTaggedTemplate.res 17:20
+[decoratorCompletion] Found @module with non-string payload
+[set_result] set new result to Cpath Value[meh](Nolabel, Nolabel).""
+posCursor:[17:20] posNoWhite:[17:19] Found expr:[17:11->0:-1]
+Completable: Cpath Value[meh](Nolabel, Nolabel).""
 Package opens Pervasives.JsxModules.place holder
-ContextPath Value[meh](Nolabel, Nolabel).x
+ContextPath Value[meh](Nolabel, Nolabel).""
+[dot_completion]--> Triggered
 ContextPath Value[meh](Nolabel, Nolabel)
+[ctx_path]--> CPApply
 ContextPath Value[meh]
+[ctx_path]--> CPId
 Path meh
-ContextPath Value[meh](Nolabel, Nolabel, Nolabel)->x
+ContextPath Value[meh](Nolabel, Nolabel, Nolabel)->
+[ctx_path]--> CPPipe
 ContextPath Value[meh](Nolabel, Nolabel, Nolabel)
+[ctx_path]--> CPApply
 ContextPath Value[meh]
+[ctx_path]--> CPId
 Path meh
+[pipe_completion] mainTypeId: promise
 CPPipe pathFromEnv:M found:true
-Path M.x
+Path M.
 [{
     "label": "->M.xyz",
     "kind": 12,
@@ -73,7 +93,31 @@ Path M.x
     "sortText": "xyz",
     "insertText": "->M.xyz",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 14, "character": 19}, "end": {"line": 14, "character": 20}},
+      "range": {"start": {"line": 17, "character": 19}, "end": {"line": 17, "character": 20}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->M.b",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null,
+    "sortText": "b",
+    "insertText": "->M.b",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 17, "character": 19}, "end": {"line": 17, "character": 20}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->M.a",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => int",
+    "documentation": null,
+    "sortText": "a",
+    "insertText": "->M.a",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 17, "character": 19}, "end": {"line": 17, "character": 20}},
       "newText": ""
       }]
   }]

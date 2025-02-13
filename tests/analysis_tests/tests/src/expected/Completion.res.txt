@@ -1885,9 +1885,15 @@ Resolved opens 2 Completion Completion
 ContextPath Value[withCallback](~a)
 ContextPath Value[withCallback]
 Path withCallback
-Found type for function (~b: int) => int
+Found type for function (~b: int) => callback
 [{
     "label": "b",
+    "kind": 4,
+    "tags": [],
+    "detail": "int",
+    "documentation": null
+  }, {
+    "label": "a",
     "kind": 4,
     "tags": [],
     "detail": "int",
@@ -1904,7 +1910,7 @@ Resolved opens 2 Completion Completion
 ContextPath Value[withCallback](~b)
 ContextPath Value[withCallback]
 Path withCallback
-Found type for function (~a: int) => int
+Found type for function callback
 [{
     "label": "a",
     "kind": 4,
