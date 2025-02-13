@@ -616,7 +616,8 @@ module Completable = struct
         fieldName: string;
         posOfDot: (int * int) option;
         exprLoc: Location.t;
-        inJsx: bool;  (** Whether this pipe was found in a JSX context. *)
+        inJsx: bool;
+            (** Whether this field access was found in a JSX context. *)
       }
     | CPObj of contextPath * string
     | CPAwait of contextPath
