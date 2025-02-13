@@ -91,12 +91,5 @@ module Info = {
 //                        ^com
 
 
-module Foo = {
-  @react.component
-  let make = () => {
-    let content = ""
-    React.null
-    // <p>{content.s}</p>
-    //              ^com
-  }
-}
+// let _ = <p>{"".s}</p>
+//                 ^com

@@ -545,9 +545,7 @@ Path MultiPropComp.make
   }]
 
 Complete src/CompletionJsx.res 89:26
-posCursor:[89:26] posNoWhite:[89:24] Found expr:[89:4->100:3]
-Pexp_apply ...[93:11->93:12] (...[89:4->93:10], ...[94:2->100:3])
-posCursor:[89:26] posNoWhite:[89:24] Found expr:[89:4->93:10]
+posCursor:[89:26] posNoWhite:[89:24] Found expr:[89:4->89:27]
 JSX <Info:[89:4->89:8] _type[89:9->89:14]=...[89:16->89:24]> _children:89:26
 Completable: Cjsx([Info], "", [_type])
 Package opens Pervasives.JsxModules.place holder
@@ -560,24 +558,19 @@ Path Info.make
     "documentation": null
   }]
 
-Complete src/CompletionJsx.res 98:20
-posCursor:[98:20] posNoWhite:[98:19] Found expr:[95:13->100:3]
-posCursor:[98:20] posNoWhite:[98:19] Found expr:[96:4->98:25]
-posCursor:[98:20] posNoWhite:[98:19] Found expr:[97:4->98:25]
-posCursor:[98:20] posNoWhite:[98:19] Found expr:[98:8->98:25]
-JSX <p:[98:8->98:9] > _children:98:9
-posCursor:[98:20] posNoWhite:[98:19] Found expr:[98:9->98:21]
-posCursor:[98:20] posNoWhite:[98:19] Found expr:[98:11->98:21]
-posCursor:[98:20] posNoWhite:[98:19] Found expr:[98:11->98:20]
-Pexp_field [98:11->98:18] s:[98:19->98:20]
-Completable: Cpath Value[content].s
+Complete src/CompletionJsx.res 93:19
+posCursor:[93:19] posNoWhite:[93:18] Found expr:[93:12->93:24]
+JSX <p:[93:12->93:13] > _children:93:13
+posCursor:[93:19] posNoWhite:[93:18] Found expr:[93:13->93:20]
+posCursor:[93:19] posNoWhite:[93:18] Found expr:[93:15->93:20]
+posCursor:[93:19] posNoWhite:[93:18] Found expr:[93:15->93:19]
+Pexp_field [93:15->93:17] s:[93:18->93:19]
+Completable: Cpath string.s
 Package opens Pervasives.JsxModules.place holder
-ContextPath Value[content].s
-ContextPath Value[content]
-Path content
-ContextPath Value[content]->s <<jsx>>
-ContextPath Value[content]
-Path content
+ContextPath string.s
+ContextPath string
+ContextPath string->s <<jsx>>
+ContextPath string
 Path Js.String2.s
 [{
     "label": "->React.string",
@@ -589,7 +582,7 @@ Path Js.String2.s
     "insertText": "->React.string",
     "insertTextFormat": 2,
     "additionalTextEdits": [{
-      "range": {"start": {"line": 98, "character": 18}, "end": {"line": 98, "character": 19}},
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
       "newText": ""
       }]
   }, {
@@ -601,7 +594,7 @@ Path Js.String2.s
     "sortText": "startsWith",
     "insertText": "->Js.String2.startsWith",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 98, "character": 18}, "end": {"line": 98, "character": 19}},
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
       "newText": ""
       }]
   }, {
@@ -613,7 +606,7 @@ Path Js.String2.s
     "sortText": "splitAtMost",
     "insertText": "->Js.String2.splitAtMost",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 98, "character": 18}, "end": {"line": 98, "character": 19}},
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
       "newText": ""
       }]
   }, {
@@ -625,7 +618,7 @@ Path Js.String2.s
     "sortText": "substrAtMost",
     "insertText": "->Js.String2.substrAtMost",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 98, "character": 18}, "end": {"line": 98, "character": 19}},
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
       "newText": ""
       }]
   }, {
@@ -637,7 +630,7 @@ Path Js.String2.s
     "sortText": "sliceToEnd",
     "insertText": "->Js.String2.sliceToEnd",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 98, "character": 18}, "end": {"line": 98, "character": 19}},
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
       "newText": ""
       }]
   }, {
@@ -649,7 +642,7 @@ Path Js.String2.s
     "sortText": "slice",
     "insertText": "->Js.String2.slice",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 98, "character": 18}, "end": {"line": 98, "character": 19}},
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
       "newText": ""
       }]
   }, {
@@ -661,7 +654,7 @@ Path Js.String2.s
     "sortText": "splitByRe",
     "insertText": "->Js.String2.splitByRe",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 98, "character": 18}, "end": {"line": 98, "character": 19}},
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
       "newText": ""
       }]
   }, {
@@ -673,7 +666,7 @@ Path Js.String2.s
     "sortText": "startsWithFrom",
     "insertText": "->Js.String2.startsWithFrom",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 98, "character": 18}, "end": {"line": 98, "character": 19}},
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
       "newText": ""
       }]
   }, {
@@ -685,7 +678,7 @@ Path Js.String2.s
     "sortText": "split",
     "insertText": "->Js.String2.split",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 98, "character": 18}, "end": {"line": 98, "character": 19}},
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
       "newText": ""
       }]
   }, {
@@ -697,7 +690,7 @@ Path Js.String2.s
     "sortText": "splitByReAtMost",
     "insertText": "->Js.String2.splitByReAtMost",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 98, "character": 18}, "end": {"line": 98, "character": 19}},
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
       "newText": ""
       }]
   }, {
@@ -709,7 +702,7 @@ Path Js.String2.s
     "sortText": "substring",
     "insertText": "->Js.String2.substring",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 98, "character": 18}, "end": {"line": 98, "character": 19}},
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
       "newText": ""
       }]
   }, {
@@ -721,7 +714,7 @@ Path Js.String2.s
     "sortText": "substr",
     "insertText": "->Js.String2.substr",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 98, "character": 18}, "end": {"line": 98, "character": 19}},
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
       "newText": ""
       }]
   }, {
@@ -733,7 +726,7 @@ Path Js.String2.s
     "sortText": "substringToEnd",
     "insertText": "->Js.String2.substringToEnd",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 98, "character": 18}, "end": {"line": 98, "character": 19}},
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
       "newText": ""
       }]
   }, {
@@ -745,7 +738,7 @@ Path Js.String2.s
     "sortText": "search",
     "insertText": "->Js.String2.search",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 98, "character": 18}, "end": {"line": 98, "character": 19}},
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
       "newText": ""
       }]
   }]
