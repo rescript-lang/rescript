@@ -53,7 +53,10 @@ type t<'res, 'err> = result<'res, 'err> = Ok('res) | Error('err)
   ```res example
   Result.getExn(Result.Ok(42)) == 42
 
-  Result.getExn(Result.Error("Invalid data")) /* raises exception */
+  switch Result.getExn(Error("Invalid data")) {
+  | exception Not_found => assert(true)
+  | _ => assert(false)
+  }
   ```
 */
 let getExn: result<'a, 'b> => 'a
