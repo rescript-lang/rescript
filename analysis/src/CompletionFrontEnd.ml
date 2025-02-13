@@ -1196,7 +1196,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                        inJsx = !inJsxContext;
                      }));
              setFound ())
-    (* A dot completion of an integer
+    (* A dot completion of an integer inside braces. Useful for ->React.int completion.
        Example: {42.}
     *)
     | Pexp_constant (Pconst_float (float, _))
