@@ -979,7 +979,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     path @ [fieldName]
     |> getCompletionsForPath ~debug ~opens ~full ~pos ~exact
          ~completionContext:Field ~env ~scope
-  | CPField {contextPath = cp; fieldName; posOfDot; exprLoc} -> (
+  | CPField {contextPath = cp; fieldName; posOfDot; exprLoc; inJsx} -> (
     if Debug.verbose () then print_endline "[dot_completion]--> Triggered";
     let completionsFromCtxPath =
       cp
@@ -1013,7 +1013,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
                 CPApply (cp, [Asttypes.Noloc.Nolabel])
               | _ -> cp);
             id = fieldName;
-            inJsx = false;
+            inJsx;
             lhsLoc = exprLoc;
           }
       in

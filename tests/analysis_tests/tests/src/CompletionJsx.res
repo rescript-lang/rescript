@@ -89,3 +89,14 @@ module Info = {
 
 // <Info _type={#warning} >
 //                        ^com
+
+
+module Foo = {
+  @react.component
+  let make = () => {
+    let content = ""
+    React.null
+    // <p>{content.s}</p>
+    //              ^com
+  }
+}

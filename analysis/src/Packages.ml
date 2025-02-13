@@ -156,6 +156,7 @@ let newBsPackage ~rootPath =
                          | ["RescriptCore"] -> true
                          | _ -> false)
                   |> Option.is_some
+                  || fst rescriptVersion >= 12
                 then
                   {
                     arrayModulePath = ["Array"];

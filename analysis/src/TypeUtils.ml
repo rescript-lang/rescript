@@ -1152,7 +1152,10 @@ let transformCompletionToPipeCompletion ?(synthetic = false) ~env ?posOfDot
     {
       completion with
       name = nameWithPipe;
-      sortText = Some (name |> String.split_on_char '.' |> List.rev |> List.hd);
+      sortText =
+        (match completion.sortText with
+        | Some _ -> completion.sortText
+        | None -> Some (name |> String.split_on_char '.' |> List.rev |> List.hd));
       insertText = Some nameWithPipe;
       env;
       synthetic;
