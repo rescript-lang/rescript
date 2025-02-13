@@ -1196,6 +1196,33 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                        inJsx = !inJsxContext;
                      }));
              setFound ())
+    (* A dot completion of an integer
+       Example: {42.}
+    *)
+    | Pexp_constant (Pconst_float (float, _))
+      when String.ends_with ~suffix:"." float
+           && Utils.hasBraces expr.pexp_attributes ->
+      let length = String.length float - 1 in
+      let integerExpr =
+        {
+          expr with
+          pexp_desc =
+            Pexp_constant (Pconst_integer (String.sub float 0 length, None));
+        }
+      in
+      exprToContextPath ~inJsxContext:!inJsxContext integerExpr
+      |> Option.iter (fun cpath ->
+             setResult
+               (Cpath
+                  (CPField
+                     {
+                       contextPath = cpath;
+                       fieldName = "";
+                       posOfDot;
+                       exprLoc = expr.pexp_loc;
+                       inJsx = !inJsxContext;
+                     }));
+             setFound ())
     | _ -> (
       if expr.pexp_loc |> Loc.hasPos ~pos:posNoWhite && !result = None then (
         setFound ();

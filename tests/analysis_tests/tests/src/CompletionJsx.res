@@ -93,3 +93,6 @@ module Info = {
 
 // let _ = <p>{"".s}</p>
 //                 ^com
+
+// let _ = <i>{42.}</i>
+//                ^com
