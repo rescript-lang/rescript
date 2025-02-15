@@ -1801,7 +1801,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     if Debug.verbose () then print_endline "[complete_typed_value]--> Texn";
     [
       create
-        (["Exn.t"; "Error(error)"] |> ident)
+        (["Exn"; "Error(error)"] |> ident)
         ~kind:(Label "Catches errors from JavaScript errors.")
         ~docstring:
           [

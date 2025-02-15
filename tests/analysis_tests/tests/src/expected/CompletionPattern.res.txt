@@ -1016,7 +1016,7 @@ Package opens Pervasives.JsxModules.place holder
 ContextPath Value[xn]
 Path xn
 [{
-    "label": "Exn.t.Error(error)",
+    "label": "Exn.Error(error)",
     "kind": 4,
     "tags": [],
     "detail": "Catches errors from JavaScript errors.",
