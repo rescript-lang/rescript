@@ -1098,19 +1098,19 @@ Path WithChildren
     "documentation": null
   }]
 
-Complete src/Completion.res 172:13
-posCursor:[172:13] posNoWhite:[172:12] Found type:[172:12->172:13]
-Ptyp_constr n:[172:12->172:13]
-Completable: Cpath Type[n]
+Complete src/Completion.res 172:17
+posCursor:[172:17] posNoWhite:[172:16] Found type:[172:12->172:17]
+Ptyp_constr Null.:[172:12->172:17]
+Completable: Cpath Type[Null, ""]
 Package opens Pervasives.JsxModules.place holder
-ContextPath Type[n]
-Path n
+ContextPath Type[Null, ""]
+Path Null.
 [{
-    "label": "nestedObjT",
+    "label": "t",
     "kind": 22,
     "tags": [],
-    "detail": "type nestedObjT",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype nestedObjT = {\"x\": Objects.nestedObjT}\n```"}
+    "detail": "type t",
+    "documentation": {"kind": "markdown", "value": "\nA type representing a value that can be either `'a` or `null`.\n\n\n```rescript\n@unboxed\ntype t<'a> = Js.Null.t<'a> = Value('a) | @as(null) Null\n```"}
   }]
 
 Complete src/Completion.res 174:20

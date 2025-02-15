@@ -170,8 +170,8 @@ module WithChildren = {
 // <WithChildren
 //              ^com
 
-// type t = n
-//           ^com
+// type t = Null.
+//               ^com
 // type t = ForAuto.
 //                  ^com
 
