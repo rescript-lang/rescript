@@ -76,7 +76,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "1.8.3",
-    "mocha": "10.1.0",
+    "mocha": "10.8.2",
     "nyc": "15.0.0"
   },
   "packageManager": "npm@10.8.1+sha512.0e9d42e92bd2318408ed81eaff2da5f78baf23ee7d12a6eed44a6e2901d0f29d7ab715d1b918ade601f72e769a824d9a5c322383f22bbbda5dd396e79de2a077"
