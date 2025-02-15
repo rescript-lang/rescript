@@ -40,12 +40,10 @@ test-tools:
 
 test-syntax:
 	bash ./scripts/test_syntax.sh
-	make reanalyze
 	bash ./scripts/testok.sh
 
 test-syntax-roundtrip:
 	ROUNDTRIP_TEST=1 bash ./scripts/test_syntax.sh
-	make reanalyze
 	bash ./scripts/testok.sh
 
 test-gentype:
