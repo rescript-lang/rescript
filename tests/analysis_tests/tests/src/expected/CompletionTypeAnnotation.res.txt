@@ -85,16 +85,6 @@ Path someVariant
       "filePath": "src/CompletionTypeAnnotation.res"
     }
   }, {
-    "label": "Object",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Object",
-    "documentation": null,
-    "data": {
-      "modulePath": "Object",
-      "filePath": "src/CompletionTypeAnnotation.res"
-    }
-  }, {
     "label": "Objects",
     "kind": 9,
     "tags": [],
@@ -102,26 +92,6 @@ Path someVariant
     "documentation": null,
     "data": {
       "modulePath": "Objects",
-      "filePath": "src/CompletionTypeAnnotation.res"
-    }
-  }, {
-    "label": "Option",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Option",
-    "documentation": null,
-    "data": {
-      "modulePath": "Option",
-      "filePath": "src/CompletionTypeAnnotation.res"
-    }
-  }, {
-    "label": "Ordering",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Ordering",
-    "documentation": null,
-    "data": {
-      "modulePath": "Ordering",
       "filePath": "src/CompletionTypeAnnotation.res"
     }
   }]

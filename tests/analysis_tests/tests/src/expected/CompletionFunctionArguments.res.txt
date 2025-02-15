@@ -175,16 +175,6 @@ Path someFnTakingVariant
       "filePath": "src/CompletionFunctionArguments.res"
     }
   }, {
-    "label": "Object",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Object",
-    "documentation": null,
-    "data": {
-      "modulePath": "Object",
-      "filePath": "src/CompletionFunctionArguments.res"
-    }
-  }, {
     "label": "Objects",
     "kind": 9,
     "tags": [],
@@ -192,26 +182,6 @@ Path someFnTakingVariant
     "documentation": null,
     "data": {
       "modulePath": "Objects",
-      "filePath": "src/CompletionFunctionArguments.res"
-    }
-  }, {
-    "label": "Option",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Option",
-    "documentation": null,
-    "data": {
-      "modulePath": "Option",
-      "filePath": "src/CompletionFunctionArguments.res"
-    }
-  }, {
-    "label": "Ordering",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Ordering",
-    "documentation": null,
-    "data": {
-      "modulePath": "Ordering",
       "filePath": "src/CompletionFunctionArguments.res"
     }
   }]
@@ -268,16 +238,6 @@ Path someFnTakingVariant
       "filePath": "src/CompletionFunctionArguments.res"
     }
   }, {
-    "label": "Object",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Object",
-    "documentation": null,
-    "data": {
-      "modulePath": "Object",
-      "filePath": "src/CompletionFunctionArguments.res"
-    }
-  }, {
     "label": "Objects",
     "kind": 9,
     "tags": [],
@@ -285,26 +245,6 @@ Path someFnTakingVariant
     "documentation": null,
     "data": {
       "modulePath": "Objects",
-      "filePath": "src/CompletionFunctionArguments.res"
-    }
-  }, {
-    "label": "Option",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Option",
-    "documentation": null,
-    "data": {
-      "modulePath": "Option",
-      "filePath": "src/CompletionFunctionArguments.res"
-    }
-  }, {
-    "label": "Ordering",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Ordering",
-    "documentation": null,
-    "data": {
-      "modulePath": "Ordering",
       "filePath": "src/CompletionFunctionArguments.res"
     }
   }]

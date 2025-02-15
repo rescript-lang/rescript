@@ -44,26 +44,6 @@ Path M
     "detail": "module M",
     "documentation": null
   }, {
-    "label": "Map",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Map",
-    "documentation": null,
-    "data": {
-      "modulePath": "Map",
-      "filePath": "src/Jsx2.res"
-    }
-  }, {
-    "label": "Math",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Math",
-    "documentation": null,
-    "data": {
-      "modulePath": "Math",
-      "filePath": "src/Jsx2.res"
-    }
-  }, {
     "label": "ModuleStuff",
     "kind": 9,
     "tags": [],
