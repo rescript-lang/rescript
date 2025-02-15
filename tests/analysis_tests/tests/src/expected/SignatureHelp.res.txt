@@ -4,7 +4,8 @@ Pexp_apply ...[16:11->16:19] (...[46:0->16:20])
 posCursor:[16:19] posNoWhite:[16:18] Found expr:[16:11->16:19]
 Pexp_ident someFunc:[16:11->16:19]
 Completable: Cpath Value[someFunc]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someFunc]
 Path someFunc
 argAtCursor: unlabelled<0>
@@ -27,7 +28,8 @@ Pexp_apply ...[19:11->19:19] (...[19:20->19:21])
 posCursor:[19:19] posNoWhite:[19:18] Found expr:[19:11->19:19]
 Pexp_ident someFunc:[19:11->19:19]
 Completable: Cpath Value[someFunc]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someFunc]
 Path someFunc
 argAtCursor: unlabelled<0>
@@ -50,7 +52,8 @@ Pexp_apply ...[22:11->22:19] (...[22:20->22:23], ~two22:26->22:29=...[22:26->22:
 posCursor:[22:19] posNoWhite:[22:18] Found expr:[22:11->22:19]
 Pexp_ident someFunc:[22:11->22:19]
 Completable: Cpath Value[someFunc]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someFunc]
 Path someFunc
 argAtCursor: ~two
@@ -73,7 +76,8 @@ Pexp_apply ...[25:11->25:19] (...[25:20->25:23], ~two25:26->25:29=...[25:30->25:
 posCursor:[25:19] posNoWhite:[25:18] Found expr:[25:11->25:19]
 Pexp_ident someFunc:[25:11->25:19]
 Completable: Cpath Value[someFunc]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someFunc]
 Path someFunc
 argAtCursor: ~two
@@ -96,7 +100,8 @@ Pexp_apply ...[28:11->28:19] (...[28:20->28:23], ~two28:26->28:29=...[28:30->28:
 posCursor:[28:19] posNoWhite:[28:18] Found expr:[28:11->28:19]
 Pexp_ident someFunc:[28:11->28:19]
 Completable: Cpath Value[someFunc]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someFunc]
 Path someFunc
 argAtCursor: ~four
@@ -119,7 +124,8 @@ Pexp_apply ...[31:11->31:19] (...[31:20->31:23], ~two31:26->31:29=...[31:30->31:
 posCursor:[31:19] posNoWhite:[31:18] Found expr:[31:11->31:19]
 Pexp_ident someFunc:[31:11->31:19]
 Completable: Cpath Value[someFunc]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someFunc]
 Path someFunc
 argAtCursor: ~four
@@ -142,7 +148,8 @@ Pexp_apply ...[34:11->34:20] (...[46:0->34:21])
 posCursor:[34:20] posNoWhite:[34:19] Found expr:[34:11->34:20]
 Pexp_ident otherFunc:[34:11->34:20]
 Completable: Cpath Value[otherFunc]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[otherFunc]
 Path otherFunc
 argAtCursor: unlabelled<0>
@@ -163,7 +170,8 @@ Pexp_apply ...[37:11->37:20] (...[37:21->37:26])
 posCursor:[37:20] posNoWhite:[37:19] Found expr:[37:11->37:20]
 Pexp_ident otherFunc:[37:11->37:20]
 Completable: Cpath Value[otherFunc]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[otherFunc]
 Path otherFunc
 argAtCursor: unlabelled<0>
@@ -184,7 +192,8 @@ Pexp_apply ...[40:11->40:20] (...[40:21->40:26], ...[40:28->40:31], ...[40:33->4
 posCursor:[40:20] posNoWhite:[40:19] Found expr:[40:11->40:20]
 Pexp_ident otherFunc:[40:11->40:20]
 Completable: Cpath Value[otherFunc]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[otherFunc]
 Path otherFunc
 argAtCursor: unlabelled<2>
@@ -205,7 +214,8 @@ Pexp_apply ...[43:11->43:29] (~age43:31->43:34=...[43:31->43:34])
 posCursor:[43:29] posNoWhite:[43:28] Found expr:[43:11->43:29]
 Pexp_ident Completion.Lib.foo:[43:11->43:29]
 Completable: Cpath Value[Completion, Lib, foo]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[Completion, Lib, foo]
 Path Completion.Lib.foo
 argAtCursor: ~age
@@ -226,7 +236,8 @@ Pexp_apply ...[50:11->50:23] (...[56:0->50:24])
 posCursor:[50:23] posNoWhite:[50:22] Found expr:[50:11->50:23]
 Pexp_ident iAmSoSpecial:[50:11->50:23]
 Completable: Cpath Value[iAmSoSpecial]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[iAmSoSpecial]
 Path iAmSoSpecial
 argAtCursor: unlabelled<0>
@@ -248,7 +259,8 @@ Pexp_apply ...[53:20->53:29] (...[53:30->53:31])
 posCursor:[53:29] posNoWhite:[53:28] Found expr:[53:20->53:29]
 Pexp_ident otherFunc:[53:20->53:29]
 Completable: Cpath Value[otherFunc]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[otherFunc]
 Path otherFunc
 argAtCursor: unlabelled<1>
@@ -269,7 +281,8 @@ Pexp_apply ...[62:11->62:13] (...[62:14->62:16])
 posCursor:[62:13] posNoWhite:[62:12] Found expr:[62:11->62:13]
 Pexp_ident fn:[62:11->62:13]
 Completable: Cpath Value[fn]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[fn]
 Path fn
 argAtCursor: unlabelled<1>
@@ -290,7 +303,8 @@ Pexp_apply ...[65:11->65:13] (...[65:14->65:16], ...[65:20->65:24])
 posCursor:[65:13] posNoWhite:[65:12] Found expr:[65:11->65:13]
 Pexp_ident fn:[65:11->65:13]
 Completable: Cpath Value[fn]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[fn]
 Path fn
 argAtCursor: unlabelled<1>
@@ -311,7 +325,8 @@ Pexp_apply ...[68:11->68:13] (...[68:14->68:16], ...[68:18->68:25])
 posCursor:[68:13] posNoWhite:[68:12] Found expr:[68:11->68:13]
 Pexp_ident fn:[68:11->68:13]
 Completable: Cpath Value[fn]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[fn]
 Path fn
 argAtCursor: unlabelled<2>
@@ -334,7 +349,8 @@ Pexp_apply ...[71:16->71:28] (...[71:29->71:30])
 posCursor:[71:28] posNoWhite:[71:27] Found expr:[71:16->71:28]
 Pexp_ident iAmSoSpecial:[71:16->71:28]
 Completable: Cpath Value[iAmSoSpecial]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[iAmSoSpecial]
 Path iAmSoSpecial
 argAtCursor: unlabelled<0>
@@ -359,7 +375,8 @@ Pexp_apply ...[74:31->74:39] (...[74:40->74:41])
 posCursor:[74:39] posNoWhite:[74:38] Found expr:[74:31->74:39]
 Pexp_ident someFunc:[74:31->74:39]
 Completable: Cpath Value[someFunc]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someFunc]
 Path someFunc
 argAtCursor: unlabelled<0>

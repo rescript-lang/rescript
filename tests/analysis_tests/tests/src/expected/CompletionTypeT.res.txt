@@ -1,7 +1,8 @@
 Complete src/CompletionTypeT.res 4:26
 XXX Not found!
 Completable: Cpattern Value[date]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[date]
 Path date
 [{
@@ -31,80 +32,81 @@ Path date
 Complete src/CompletionTypeT.res 7:27
 XXX Not found!
 Completable: Cexpression Type[withDate]->recordField(date)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Type[withDate]
 Path withDate
 [{
-    "label": "Stdlib.Date.makeWithYMD()",
+    "label": "Date.makeWithYMD()",
     "kind": 12,
     "tags": [],
     "detail": "(~year: int, ~month: int, ~date: int) => t",
     "documentation": null,
-    "insertText": "Stdlib.Date.makeWithYMD($0)",
+    "insertText": "Date.makeWithYMD($0)",
     "insertTextFormat": 2
   }, {
-    "label": "Stdlib.Date.makeWithYMDHM()",
+    "label": "Date.makeWithYMDHM()",
     "kind": 12,
     "tags": [],
     "detail": "(\n  ~year: int,\n  ~month: int,\n  ~date: int,\n  ~hours: int,\n  ~minutes: int,\n) => t",
     "documentation": null,
-    "insertText": "Stdlib.Date.makeWithYMDHM($0)",
+    "insertText": "Date.makeWithYMDHM($0)",
     "insertTextFormat": 2
   }, {
-    "label": "Stdlib.Date.make()",
+    "label": "Date.make()",
     "kind": 12,
     "tags": [],
     "detail": "unit => t",
     "documentation": null,
-    "insertText": "Stdlib.Date.make($0)",
+    "insertText": "Date.make($0)",
     "insertTextFormat": 2
   }, {
-    "label": "Stdlib.Date.fromTime()",
+    "label": "Date.fromTime()",
     "kind": 12,
     "tags": [],
     "detail": "msSinceEpoch => t",
     "documentation": null,
-    "insertText": "Stdlib.Date.fromTime($0)",
+    "insertText": "Date.fromTime($0)",
     "insertTextFormat": 2
   }, {
-    "label": "Stdlib.Date.fromString()",
+    "label": "Date.fromString()",
     "kind": 12,
     "tags": [],
     "detail": "string => t",
     "documentation": null,
-    "insertText": "Stdlib.Date.fromString($0)",
+    "insertText": "Date.fromString($0)",
     "insertTextFormat": 2
   }, {
-    "label": "Stdlib.Date.makeWithYMDHMSM()",
+    "label": "Date.makeWithYMDHMSM()",
     "kind": 12,
     "tags": [],
     "detail": "(\n  ~year: int,\n  ~month: int,\n  ~date: int,\n  ~hours: int,\n  ~minutes: int,\n  ~seconds: int,\n  ~milliseconds: int,\n) => t",
     "documentation": null,
-    "insertText": "Stdlib.Date.makeWithYMDHMSM($0)",
+    "insertText": "Date.makeWithYMDHMSM($0)",
     "insertTextFormat": 2
   }, {
-    "label": "Stdlib.Date.makeWithYM()",
+    "label": "Date.makeWithYM()",
     "kind": 12,
     "tags": [],
     "detail": "(~year: int, ~month: int) => t",
     "documentation": null,
-    "insertText": "Stdlib.Date.makeWithYM($0)",
+    "insertText": "Date.makeWithYM($0)",
     "insertTextFormat": 2
   }, {
-    "label": "Stdlib.Date.makeWithYMDHMS()",
+    "label": "Date.makeWithYMDHMS()",
     "kind": 12,
     "tags": [],
     "detail": "(\n  ~year: int,\n  ~month: int,\n  ~date: int,\n  ~hours: int,\n  ~minutes: int,\n  ~seconds: int,\n) => t",
     "documentation": null,
-    "insertText": "Stdlib.Date.makeWithYMDHMS($0)",
+    "insertText": "Date.makeWithYMDHMS($0)",
     "insertTextFormat": 2
   }, {
-    "label": "Stdlib.Date.makeWithYMDH()",
+    "label": "Date.makeWithYMDH()",
     "kind": 12,
     "tags": [],
     "detail": "(~year: int, ~month: int, ~date: int, ~hours: int) => t",
     "documentation": null,
-    "insertText": "Stdlib.Date.makeWithYMDH($0)",
+    "insertText": "Date.makeWithYMDH($0)",
     "insertTextFormat": 2
   }]
 

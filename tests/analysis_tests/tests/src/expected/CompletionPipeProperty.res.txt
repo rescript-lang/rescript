@@ -2,7 +2,8 @@ Complete src/CompletionPipeProperty.res 21:17
 posCursor:[21:17] posNoWhite:[21:16] Found expr:[21:3->21:17]
 Pexp_field [21:3->21:16] _:[23:0->21:17]
 Completable: Cpath Value[sprite].anchor.""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[sprite].anchor.""
 ContextPath Value[sprite].anchor
 ContextPath Value[sprite]

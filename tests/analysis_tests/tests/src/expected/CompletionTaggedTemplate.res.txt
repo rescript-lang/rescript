@@ -1,7 +1,8 @@
 Complete src/CompletionTaggedTemplate.res 11:20
 posCursor:[11:20] posNoWhite:[11:19] Found expr:[11:11->0:-1]
 Completable: Cpath Value[meh](Nolabel, Nolabel).""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[meh](Nolabel, Nolabel).""
 ContextPath Value[meh](Nolabel, Nolabel)
 ContextPath Value[meh]
@@ -53,7 +54,8 @@ Path M.
 Complete src/CompletionTaggedTemplate.res 14:21
 posCursor:[14:21] posNoWhite:[14:20] Found expr:[14:11->14:21]
 Completable: Cpath Value[meh](Nolabel, Nolabel).x
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[meh](Nolabel, Nolabel).x
 ContextPath Value[meh](Nolabel, Nolabel)
 ContextPath Value[meh]

@@ -8,8 +8,8 @@ posCursor:[26:29] posNoWhite:[26:28] Found expr:[26:7->26:29]
 Pexp_field [26:7->26:28] _:[30:2->26:29]
 Completable: Cpath Value[merge](Nolabel, Nolabel).""
 Raw opens: 1 Rxjs.place holder
-Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 Rxjs
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib Rxjs
 ContextPath Value[merge](Nolabel, Nolabel).""
 ContextPath Value[merge](Nolabel, Nolabel)
 ContextPath Value[merge]
@@ -90,7 +90,8 @@ posCursor:[34:30] posNoWhite:[34:29] Found expr:[32:2->34:30]
 posCursor:[34:30] posNoWhite:[34:29] Found expr:[34:5->34:30]
 Pexp_field [34:5->34:29] _:[38:0->34:30]
 Completable: Cpath Value[Rxjs, combineLatest](Nolabel, Nolabel).""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[Rxjs, combineLatest](Nolabel, Nolabel).""
 ContextPath Value[Rxjs, combineLatest](Nolabel, Nolabel)
 ContextPath Value[Rxjs, combineLatest]

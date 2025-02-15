@@ -2,7 +2,8 @@ Complete src/DotPipeCompletionSpec.res 15:5
 posCursor:[15:5] posNoWhite:[15:4] Found expr:[15:3->15:5]
 Pexp_field [15:3->15:4] _:[18:0->15:5]
 Completable: Cpath Value[n].""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[n].""
 ContextPath Value[n]
 Path n
@@ -47,7 +48,8 @@ Complete src/DotPipeCompletionSpec.res 44:6
 posCursor:[44:6] posNoWhite:[44:5] Found expr:[44:3->44:6]
 Pexp_field [44:3->44:5] _:[47:0->44:6]
 Completable: Cpath Value[nn].""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[nn].""
 ContextPath Value[nn]
 Path nn
@@ -130,7 +132,8 @@ Complete src/DotPipeCompletionSpec.res 62:5
 posCursor:[62:5] posNoWhite:[62:4] Found expr:[62:3->62:5]
 Pexp_field [62:3->62:4] _:[65:0->62:5]
 Completable: Cpath Value[a].""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[a].""
 ContextPath Value[a]
 Path a
@@ -170,7 +173,8 @@ Complete src/DotPipeCompletionSpec.res 67:6
 posCursor:[67:6] posNoWhite:[67:5] Found expr:[67:3->67:6]
 Pexp_field [67:3->67:5] _:[70:0->67:6]
 Completable: Cpath Value[xx].""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[xx].""
 ContextPath Value[xx]
 Path xx
@@ -203,7 +207,8 @@ Complete src/DotPipeCompletionSpec.res 75:9
 posCursor:[75:9] posNoWhite:[75:8] Found expr:[75:3->75:9]
 Pexp_field [75:3->75:7] u:[75:8->75:9]
 Completable: Cpath Value[ffff].u
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[ffff].u
 ContextPath Value[ffff]
 Path ffff
@@ -212,37 +217,37 @@ ContextPath Value[ffff]
 Path ffff
 Path Stdlib.Array.u
 [{
-    "label": "->Stdlib.Array.unshiftMany",
+    "label": "->Array.unshiftMany",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, array<'a>) => unit",
     "documentation": {"kind": "markdown", "value": "\n`unshiftMany(array, itemsArray)` inserts many new items to the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshiftMany([\"yay\", \"wehoo\"])\nsomeArray->assertEqual([\"yay\", \"wehoo\", \"hi\", \"hello\"])\n```\n"},
     "sortText": "unshiftMany",
-    "insertText": "->Stdlib.Array.unshiftMany",
+    "insertText": "->Array.unshiftMany",
     "additionalTextEdits": [{
       "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
       "newText": ""
       }]
   }, {
-    "label": "->Stdlib.Array.unshift",
+    "label": "->Array.unshift",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a) => unit",
     "documentation": {"kind": "markdown", "value": "\n`unshift(array, item)` inserts a new item at the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.unshift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshift(\"yay\")\nsomeArray->assertEqual([\"yay\", \"hi\", \"hello\"])\n```\n"},
     "sortText": "unshift",
-    "insertText": "->Stdlib.Array.unshift",
+    "insertText": "->Array.unshift",
     "additionalTextEdits": [{
       "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
       "newText": ""
       }]
   }, {
-    "label": "->Stdlib.Array.unsafe_get",
+    "label": "->Array.unsafe_get",
     "kind": 12,
     "tags": [1],
     "detail": "(array<'a>, int) => 'a",
     "documentation": {"kind": "markdown", "value": "Deprecated: Use getUnsafe instead. This will be removed in v13\n\n\n`unsafe_get(array, index)` returns the element at `index` of `array`.\n\nThis is _unsafe_, meaning it will return `undefined` value if `index` does not exist in `array`.\n\nUse `Array.unsafe_get` only when you are sure the `index` exists (i.e. when using for-loop).\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3]\nfor index in 0 to array->Array.length - 1 {\n  let value = array->Array.unsafe_get(index)\n  Console.log(value)\n}\n```\n"},
     "sortText": "unsafe_get",
-    "insertText": "->Stdlib.Array.unsafe_get",
+    "insertText": "->Array.unsafe_get",
     "additionalTextEdits": [{
       "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
       "newText": ""
@@ -253,7 +258,8 @@ Complete src/DotPipeCompletionSpec.res 80:7
 posCursor:[80:7] posNoWhite:[80:6] Found expr:[80:3->80:7]
 Pexp_field [80:3->80:6] _:[84:0->80:7]
 Completable: Cpath Value[nnn].""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[nnn].""
 ContextPath Value[nnn]
 Path nnn
@@ -312,53 +318,162 @@ posCursor:[86:39] posNoWhite:[86:38] Found expr:[86:3->86:39]
 posCursor:[86:39] posNoWhite:[86:38] Found expr:[86:9->86:39]
 Pexp_field [86:9->86:34] filt:[86:35->86:39]
 Completable: Cpath Value[Array, filter](Nolabel).filt
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[Array, filter](Nolabel).filt
 ContextPath Value[Array, filter](Nolabel)
 ContextPath Value[Array, filter]
 Path Array.filter
-[]
+ContextPath Value[Array, filter](Nolabel, Nolabel)->filt
+ContextPath Value[Array, filter](Nolabel, Nolabel)
+ContextPath Value[Array, filter]
+Path Array.filter
+Path Stdlib.Array.filt
+[{
+    "label": "->Array.filterMap",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, 'a => option<'b>) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`filterMap(array, fn)`\n\nCalls `fn` for each element and returns a new array containing results of the `fn` calls which are not `None`.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]\n->Array.filterMap(item =>\n  switch item {\n  | \"Hello\" => Some(item->String.length)\n  | _ => None\n  }\n)\n->assertEqual([5])\n\n[1, 2, 3, 4, 5, 6]\n->Array.filterMap(n => mod(n, 2) == 0 ? Some(n * n) : None)\n->assertEqual([4, 16, 36])\n\nArray.filterMap([1, 2, 3, 4, 5, 6], _ => None)->assertEqual([])\n\nArray.filterMap([], n => mod(n, 2) == 0 ? Some(n * n) : None)->assertEqual([])\n```\n"},
+    "sortText": "filterMap",
+    "insertText": "->Array.filterMap",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 86, "character": 34}, "end": {"line": 86, "character": 35}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Array.filter",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, 'a => bool) => array<'a>",
+    "documentation": {"kind": "markdown", "value": "\n`filter(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]\n->Array.filter(num => num > 2)\n->assertEqual([3, 4])\n```\n"},
+    "sortText": "filter",
+    "insertText": "->Array.filter",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 86, "character": 34}, "end": {"line": 86, "character": 35}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Array.filterWithIndex",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, ('a, int) => bool) => array<'a>",
+    "documentation": {"kind": "markdown", "value": "\n`filterWithIndex(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]\n->Array.filterWithIndex((num, index) => index === 0 || num === 2)\n->assertEqual([1, 2])\n```\n"},
+    "sortText": "filterWithIndex",
+    "insertText": "->Array.filterWithIndex",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 86, "character": 34}, "end": {"line": 86, "character": 35}},
+      "newText": ""
+      }]
+  }]
 
 Complete src/DotPipeCompletionSpec.res 89:62
 posCursor:[89:62] posNoWhite:[89:61] Found expr:[89:3->89:62]
 posCursor:[89:62] posNoWhite:[89:61] Found expr:[89:36->89:62]
 Pexp_field [89:36->89:55] includ:[89:56->89:62]
 Completable: Cpath Value[Array, joinWith](Nolabel).includ
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[Array, joinWith](Nolabel).includ
 ContextPath Value[Array, joinWith](Nolabel)
 ContextPath Value[Array, joinWith]
 Path Array.joinWith
-[]
+ContextPath Value[Array, joinWith](Nolabel, Nolabel)->includ
+ContextPath Value[Array, joinWith](Nolabel, Nolabel)
+ContextPath Value[Array, joinWith]
+Path Array.joinWith
+Path Stdlib.String.includ
+[{
+    "label": "->String.includesFrom",
+    "kind": 12,
+    "tags": [],
+    "detail": "(string, string, int) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`includesFrom(str, searchValue, start)` returns `true` if `searchValue` is found\nanywhere within `str` starting at character number `start` (where 0 is the\nfirst character), `false` otherwise.\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes) on MDN.\n\n## Examples\n\n```rescript\nString.includesFrom(\"programmer\", \"gram\", 1) == true\nString.includesFrom(\"programmer\", \"gram\", 4) == false\nString.includesFrom(`대한민국`, `한`, 1) == true\n```\n"},
+    "sortText": "includesFrom",
+    "insertText": "->String.includesFrom",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 89, "character": 55}, "end": {"line": 89, "character": 56}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->String.includes",
+    "kind": 12,
+    "tags": [],
+    "detail": "(string, string) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`includes(str, searchValue)` returns `true` if `searchValue` is found anywhere\nwithin `str`, `false` otherwise.\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes) on MDN.\n\n## Examples\n\n```rescript\nString.includes(\"programmer\", \"gram\") == true\nString.includes(\"programmer\", \"er\") == true\nString.includes(\"programmer\", \"pro\") == true\nString.includes(\"programmer.dat\", \"xyz\") == false\n```\n"},
+    "sortText": "includes",
+    "insertText": "->String.includes",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 89, "character": 55}, "end": {"line": 89, "character": 56}},
+      "newText": ""
+      }]
+  }]
 
 Complete src/DotPipeCompletionSpec.res 94:36
 posCursor:[94:36] posNoWhite:[94:35] Found expr:[94:3->94:36]
 posCursor:[94:36] posNoWhite:[94:35] Found expr:[94:8->94:36]
 Pexp_field [94:8->94:26] toUpperCa:[94:27->94:36]
 Completable: Cpath Value[String, toLowerCase].toUpperCa
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[String, toLowerCase].toUpperCa
 ContextPath Value[String, toLowerCase]
 Path String.toLowerCase
-[]
+ContextPath Value[String, toLowerCase](Nolabel)->toUpperCa
+ContextPath Value[String, toLowerCase](Nolabel)
+ContextPath Value[String, toLowerCase]
+Path String.toLowerCase
+Path Stdlib.String.toUpperCa
+[{
+    "label": "->String.toUpperCase",
+    "kind": 12,
+    "tags": [],
+    "detail": "string => string",
+    "documentation": {"kind": "markdown", "value": "\n`toUpperCase(str)` converts `str` to upper case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\nexpand the number of letters in the result, for example the German ß\ncapitalizes to two Ses in a row.\nSee [`String.toUpperCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toUpperCase) on MDN.\n\n## Examples\n\n```rescript\nString.toUpperCase(\"abc\") == \"ABC\"\nString.toUpperCase(`Straße`) == `STRASSE`\nString.toUpperCase(`πς`) == `ΠΣ`\n```\n"},
+    "sortText": "toUpperCase",
+    "insertText": "->String.toUpperCase",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 94, "character": 26}, "end": {"line": 94, "character": 27}},
+      "newText": ""
+      }]
+  }]
 
 Complete src/DotPipeCompletionSpec.res 97:55
 posCursor:[97:55] posNoWhite:[97:54] Found expr:[97:3->97:55]
 posCursor:[97:55] posNoWhite:[97:54] Found expr:[97:28->97:55]
 Pexp_field [97:28->97:46] toLowerC:[97:47->97:55]
 Completable: Cpath Value[String, toUpperCase].toLowerC
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[String, toUpperCase].toLowerC
 ContextPath Value[String, toUpperCase]
 Path String.toUpperCase
-[]
+ContextPath Value[String, toUpperCase](Nolabel)->toLowerC
+ContextPath Value[String, toUpperCase](Nolabel)
+ContextPath Value[String, toUpperCase]
+Path String.toUpperCase
+Path Stdlib.String.toLowerC
+[{
+    "label": "->String.toLowerCase",
+    "kind": 12,
+    "tags": [],
+    "detail": "string => string",
+    "documentation": {"kind": "markdown", "value": "\n`toLowerCase(str)` converts `str` to lower case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\ngive different results depending upon context, for example with the Greek\nletter sigma, which has two different lower case forms, one when it is the last\ncharacter in a string and another when it is not.\nSee [`String.toLowerCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase) on MDN.\n\n## Examples\n\n```rescript\nString.toLowerCase(\"ABC\") == \"abc\"\nString.toLowerCase(`ΣΠ`) == `σπ`\nString.toLowerCase(`ΠΣ`) == `πς`\n```\n"},
+    "sortText": "toLowerCase",
+    "insertText": "->String.toLowerCase",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 97, "character": 46}, "end": {"line": 97, "character": 47}},
+      "newText": ""
+      }]
+  }]
 
 Complete src/DotPipeCompletionSpec.res 101:7
 posCursor:[101:7] posNoWhite:[101:6] Found expr:[100:9->104:1]
 posCursor:[101:7] posNoWhite:[101:6] Found expr:[101:5->103:3]
 Pexp_field [101:5->101:6] t:[103:2->103:3]
 Completable: Cpath Value[t].""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[t].""
 ContextPath Value[t]
 Path t
@@ -415,7 +530,8 @@ Path DotPipeCompletionSpec.SomeOtherModule.
 Complete src/DotPipeCompletionSpec.res 108:27
 XXX Not found!
 Completable: Cpath Module[Dot]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Module[Dot]
 Path Dot
 [{
@@ -435,7 +551,8 @@ posCursor:[111:39] posNoWhite:[111:38] Found expr:[111:24->111:40]
 posCursor:[111:39] posNoWhite:[111:38] Found expr:[111:25->111:39]
 Pexp_construct CompletionPipe:[111:25->111:39] None
 Completable: Cpath Value[CompletionPipe]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[CompletionPipe]
 Path CompletionPipe
 [{
@@ -475,7 +592,8 @@ posCursor:[114:44] posNoWhite:[114:43] Found expr:[114:24->114:45]
 posCursor:[114:44] posNoWhite:[114:43] Found expr:[114:41->114:44]
 Pexp_construct Dot:[114:41->114:44] None
 Completable: Cpath Value[Dot]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[Dot]
 Path Dot
 [{
@@ -494,7 +612,8 @@ Complete src/DotPipeCompletionSpec.res 122:11
 posCursor:[122:11] posNoWhite:[122:10] Found expr:[122:3->122:11]
 Pexp_field [122:3->122:10] _:[128:0->122:11]
 Completable: Cpath Value[someObj].""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someObj].""
 ContextPath Value[someObj]
 Path someObj
@@ -529,7 +648,8 @@ Complete src/DotPipeCompletionSpec.res 125:13
 posCursor:[125:13] posNoWhite:[125:12] Found expr:[125:3->125:13]
 Pexp_field [125:3->125:10] na:[125:11->125:13]
 Completable: Cpath Value[someObj].na
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someObj].na
 ContextPath Value[someObj]
 Path someObj
@@ -553,7 +673,8 @@ Complete src/DotPipeCompletionSpec.res 144:10
 posCursor:[144:10] posNoWhite:[144:9] Found expr:[144:3->144:10]
 Pexp_field [144:3->144:9] _:[147:0->144:10]
 Completable: Cpath Value[button].""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[button].""
 ContextPath Value[button]
 Path button

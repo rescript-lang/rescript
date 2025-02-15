@@ -1,7 +1,8 @@
 Complete src/CompletionTypeAnnotation.res 9:22
 XXX Not found!
 Completable: Cexpression Type[someRecord]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Type[someRecord]
 Path someRecord
 [{
@@ -18,7 +19,8 @@ Path someRecord
 Complete src/CompletionTypeAnnotation.res 12:24
 XXX Not found!
 Completable: Cexpression Type[someRecord]->recordBody
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Type[someRecord]
 Path someRecord
 [{
@@ -38,7 +40,8 @@ Path someRecord
 Complete src/CompletionTypeAnnotation.res 15:23
 XXX Not found!
 Completable: Cexpression Type[someVariant]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Type[someVariant]
 Path someVariant
 [{
@@ -62,7 +65,8 @@ Path someVariant
 Complete src/CompletionTypeAnnotation.res 18:25
 XXX Not found!
 Completable: Cexpression Type[someVariant]=O
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Type[someVariant]
 Path someVariant
 [{
@@ -74,6 +78,24 @@ Path someVariant
     "sortText": "A One",
     "insertText": "One",
     "insertTextFormat": 2
+  }, {
+    "label": "Option",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Option",
+    "documentation": null
+  }, {
+    "label": "Ordering",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Ordering",
+    "documentation": null
+  }, {
+    "label": "Object",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Object",
+    "documentation": null
   }, {
     "label": "Obj",
     "kind": 9,
@@ -99,7 +121,8 @@ Path someVariant
 Complete src/CompletionTypeAnnotation.res 21:27
 XXX Not found!
 Completable: Cexpression Type[somePolyVariant]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Type[somePolyVariant]
 Path somePolyVariant
 [{
@@ -123,7 +146,8 @@ Path somePolyVariant
 Complete src/CompletionTypeAnnotation.res 24:30
 XXX Not found!
 Completable: Cexpression Type[somePolyVariant]=#o
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Type[somePolyVariant]
 Path somePolyVariant
 [{
@@ -139,7 +163,8 @@ Path somePolyVariant
 Complete src/CompletionTypeAnnotation.res 29:20
 XXX Not found!
 Completable: Cexpression Type[someFunc]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Type[someFunc]
 Path someFunc
 [{
@@ -156,7 +181,8 @@ Path someFunc
 Complete src/CompletionTypeAnnotation.res 34:21
 XXX Not found!
 Completable: Cexpression Type[someTuple]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Type[someTuple]
 Path someTuple
 [{
@@ -172,7 +198,8 @@ Path someTuple
 Complete src/CompletionTypeAnnotation.res 37:28
 XXX Not found!
 Completable: Cexpression Type[someTuple]->tuple($1)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Type[someTuple]
 Path someTuple
 [{
@@ -206,7 +233,8 @@ Path someTuple
 Complete src/CompletionTypeAnnotation.res 40:31
 XXX Not found!
 Completable: Cexpression option<Type[someVariant]>
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath option<Type[someVariant]>
 ContextPath Type[someVariant]
 Path someVariant
@@ -245,7 +273,8 @@ Path someVariant
 Complete src/CompletionTypeAnnotation.res 43:37
 XXX Not found!
 Completable: Cexpression option<Type[someVariant]>->variantPayload::Some($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath option<Type[someVariant]>
 ContextPath Type[someVariant]
 Path someVariant
@@ -270,7 +299,8 @@ Path someVariant
 Complete src/CompletionTypeAnnotation.res 46:30
 XXX Not found!
 Completable: Cexpression array<Type[someVariant]>
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath array<Type[someVariant]>
 ContextPath Type[someVariant]
 Path someVariant
@@ -288,7 +318,8 @@ Path someVariant
 Complete src/CompletionTypeAnnotation.res 49:32
 XXX Not found!
 Completable: Cexpression array<Type[someVariant]>->array
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath array<Type[someVariant]>
 ContextPath Type[someVariant]
 Path someVariant
@@ -313,7 +344,8 @@ Path someVariant
 Complete src/CompletionTypeAnnotation.res 52:38
 XXX Not found!
 Completable: Cexpression array<option<Type[someVariant]>>
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath array<option<Type[someVariant]>>
 ContextPath option<Type[someVariant]>
 ContextPath Type[someVariant]
@@ -332,7 +364,8 @@ Path someVariant
 Complete src/CompletionTypeAnnotation.res 55:45
 XXX Not found!
 Completable: Cexpression option<array<Type[someVariant]>>->variantPayload::Some($0), array
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath option<array<Type[someVariant]>>
 ContextPath array<Type[someVariant]>
 ContextPath Type[someVariant]
