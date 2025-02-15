@@ -1090,8 +1090,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
           *)
           let completeAsBuiltin =
             match typePath with
-            | Some t ->
-              TypeUtils.completionPathFromMaybeBuiltin t ~package:full.package
+            | Some t -> TypeUtils.completionPathFromMaybeBuiltin t
             | None -> None
           in
           let completionPath =
@@ -1801,8 +1800,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     if Debug.verbose () then print_endline "[complete_typed_value]--> Texn";
     [
       create
-        (full.package.builtInCompletionModules.exnModulePath @ ["Error(error)"]
-        |> ident)
+        (["Exn.t"; "Error(error)"] |> ident)
         ~kind:(Label "Catches errors from JavaScript errors.")
         ~docstring:
           [

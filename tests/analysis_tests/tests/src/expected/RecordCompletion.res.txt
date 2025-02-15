@@ -11,19 +11,19 @@ ContextPath Value[t]
 Path t
 CPPipe pathFromEnv: found:true
 Path RecordCompletion.n
-Path Js.Array2.m
+Path Array.m
 [{
-    "label": "Js.Array2.mapi",
+    "label": "Array.map",
     "kind": 12,
     "tags": [],
-    "detail": "(t<'a>, ('a, int) => 'b) => t<'b>",
-    "documentation": {"kind": "markdown", "value": "\nApplies the function (the second argument) to each item in the array, returning\na new array. The function acceps two arguments: an item from the array and its\nindex number. The result array does not have to have elements of the same type\nas the input array. See\n[`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map)\non MDN.\n\n## Examples\n\n```rescript\n// multiply each item in array by its position\nlet product = (item, index) => item * index\nJs.Array2.mapi([10, 11, 12], product) == [0, 11, 24]\n```\n"}
+    "detail": "(array<'a>, 'a => 'b) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nassertEqual(mappedArray, [\"Hello to you\", \"Hi to you\", \"Good bye to you\"])\n```\n"}
   }, {
-    "label": "Js.Array2.map",
+    "label": "Array.mapWithIndex",
     "kind": 12,
     "tags": [],
-    "detail": "(t<'a>, 'a => 'b) => t<'b>",
-    "documentation": {"kind": "markdown", "value": "\nApplies the function (the second argument) to each item in the array, returning\na new array. The result array does not have to have elements of the same type\nas the input array. See\n[`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map)\non MDN.\n\n## Examples\n\n```rescript\nJs.Array2.map([12, 4, 8], x => x * x) == [144, 16, 64]\nJs.Array2.map([\"animal\", \"vegetable\", \"mineral\"], Js.String.length) == [6, 9, 7]\n```\n"}
+    "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray =\n  array->Array.mapWithIndex((greeting, index) =>\n    greeting ++ \" at position \" ++ Int.toString(index)\n  )\n\nassertEqual(mappedArray, [\"Hello at position 0\", \"Hi at position 1\", \"Good bye at position 2\"])\n```\n"}
   }]
 
 Complete src/RecordCompletion.res 11:13
@@ -51,19 +51,19 @@ CPPipe pathFromEnv: found:true
 Path RecordCompletion.n2
 CPPipe pathFromEnv: found:true
 Path RecordCompletion.n
-Path Js.Array2.m
+Path Array.m
 [{
-    "label": "Js.Array2.mapi",
+    "label": "Array.map",
     "kind": 12,
     "tags": [],
-    "detail": "(t<'a>, ('a, int) => 'b) => t<'b>",
-    "documentation": {"kind": "markdown", "value": "\nApplies the function (the second argument) to each item in the array, returning\na new array. The function acceps two arguments: an item from the array and its\nindex number. The result array does not have to have elements of the same type\nas the input array. See\n[`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map)\non MDN.\n\n## Examples\n\n```rescript\n// multiply each item in array by its position\nlet product = (item, index) => item * index\nJs.Array2.mapi([10, 11, 12], product) == [0, 11, 24]\n```\n"}
+    "detail": "(array<'a>, 'a => 'b) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nassertEqual(mappedArray, [\"Hello to you\", \"Hi to you\", \"Good bye to you\"])\n```\n"}
   }, {
-    "label": "Js.Array2.map",
+    "label": "Array.mapWithIndex",
     "kind": 12,
     "tags": [],
-    "detail": "(t<'a>, 'a => 'b) => t<'b>",
-    "documentation": {"kind": "markdown", "value": "\nApplies the function (the second argument) to each item in the array, returning\na new array. The result array does not have to have elements of the same type\nas the input array. See\n[`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map)\non MDN.\n\n## Examples\n\n```rescript\nJs.Array2.map([12, 4, 8], x => x * x) == [144, 16, 64]\nJs.Array2.map([\"animal\", \"vegetable\", \"mineral\"], Js.String.length) == [6, 9, 7]\n```\n"}
+    "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray =\n  array->Array.mapWithIndex((greeting, index) =>\n    greeting ++ \" at position \" ++ Int.toString(index)\n  )\n\nassertEqual(mappedArray, [\"Hello at position 0\", \"Hi at position 1\", \"Good bye at position 2\"])\n```\n"}
   }]
 
 Complete src/RecordCompletion.res 19:7

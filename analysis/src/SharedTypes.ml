@@ -483,19 +483,6 @@ type file = string
 
 module FileSet = Set.Make (String)
 
-type builtInCompletionModules = {
-  arrayModulePath: string list;
-  optionModulePath: string list;
-  stringModulePath: string list;
-  intModulePath: string list;
-  floatModulePath: string list;
-  promiseModulePath: string list;
-  listModulePath: string list;
-  resultModulePath: string list;
-  exnModulePath: string list;
-  regexpModulePath: string list;
-}
-
 type package = {
   genericJsxModule: string option;
   suffix: string;
@@ -504,7 +491,6 @@ type package = {
   dependenciesFiles: FileSet.t;
   pathsForModule: (file, paths) Hashtbl.t;
   namespace: string option;
-  builtInCompletionModules: builtInCompletionModules;
   opens: path list;
   uncurried: bool;
   rescriptVersion: int * int;

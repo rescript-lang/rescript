@@ -17,7 +17,7 @@ Path withSomeVarian
     "detail": "insert exhaustive switch for value",
     "documentation": null,
     "filterText": "withSomeVariant",
-    "insertText": "withSomeVariant {\n   | One => ${1:failwith(\"todo\")}\n   | Two => ${2:failwith(\"todo\")}\n   | Three(_) => ${3:failwith(\"todo\")}\n   }",
+    "insertText": "withSomeVariant {\n   | One => ${1:%todo}\n   | Two => ${2:%todo}\n   | Three(_) => ${3:%todo}\n   }",
     "insertTextFormat": 2
   }]
 
@@ -40,7 +40,7 @@ Path withSomePol
     "detail": "insert exhaustive switch for value",
     "documentation": null,
     "filterText": "withSomePoly",
-    "insertText": "withSomePoly {\n   | #\"switch\" => ${1:failwith(\"todo\")}\n   | #one => ${2:failwith(\"todo\")}\n   | #three(_) => ${3:failwith(\"todo\")}\n   | #two => ${4:failwith(\"todo\")}\n   | #\"exotic ident\" => ${5:failwith(\"todo\")}\n   }",
+    "insertText": "withSomePoly {\n   | #\"switch\" => ${1:%todo}\n   | #one => ${2:%todo}\n   | #three(_) => ${3:%todo}\n   | #two => ${4:%todo}\n   | #\"exotic ident\" => ${5:%todo}\n   }",
     "insertTextFormat": 2
   }]
 
@@ -63,7 +63,7 @@ Path someBoo
     "detail": "insert exhaustive switch for value",
     "documentation": null,
     "filterText": "someBool",
-    "insertText": "someBool {\n   | true => ${1:failwith(\"todo\")}\n   | false => ${2:failwith(\"todo\")}\n   }",
+    "insertText": "someBool {\n   | true => ${1:%todo}\n   | false => ${2:%todo}\n   }",
     "insertTextFormat": 2
   }]
 
@@ -86,7 +86,7 @@ Path someOp
     "detail": "insert exhaustive switch for value",
     "documentation": null,
     "filterText": "someOpt",
-    "insertText": "someOpt {\n   | Some($1) => ${2:failwith(\"todo\")}\n   | None => ${3:failwith(\"todo\")}\n   }",
+    "insertText": "someOpt {\n   | Some($1) => ${2:%todo}\n   | None => ${3:%todo}\n   }",
     "insertTextFormat": 2
   }]
 

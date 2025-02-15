@@ -389,7 +389,6 @@ let _ = x =>
 //                      ^com
 
 let _ = _ => {
-  open Js
   //  []->ma
   //        ^com
   ()

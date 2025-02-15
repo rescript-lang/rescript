@@ -650,19 +650,19 @@ Completable: Cpath array<int>->m
 Package opens Pervasives.JsxModules.place holder
 ContextPath array<int>->m
 ContextPath array<int>
-Path Js.Array2.m
+Path Array.m
 [{
-    "label": "Js.Array2.mapi",
+    "label": "Array.map",
     "kind": 12,
     "tags": [],
-    "detail": "(t<'a>, ('a, int) => 'b) => t<'b>",
-    "documentation": {"kind": "markdown", "value": "\nApplies the function (the second argument) to each item in the array, returning\na new array. The function acceps two arguments: an item from the array and its\nindex number. The result array does not have to have elements of the same type\nas the input array. See\n[`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map)\non MDN.\n\n## Examples\n\n```rescript\n// multiply each item in array by its position\nlet product = (item, index) => item * index\nJs.Array2.mapi([10, 11, 12], product) == [0, 11, 24]\n```\n"}
+    "detail": "(array<'a>, 'a => 'b) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nassertEqual(mappedArray, [\"Hello to you\", \"Hi to you\", \"Good bye to you\"])\n```\n"}
   }, {
-    "label": "Js.Array2.map",
+    "label": "Array.mapWithIndex",
     "kind": 12,
     "tags": [],
-    "detail": "(t<'a>, 'a => 'b) => t<'b>",
-    "documentation": {"kind": "markdown", "value": "\nApplies the function (the second argument) to each item in the array, returning\na new array. The result array does not have to have elements of the same type\nas the input array. See\n[`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map)\non MDN.\n\n## Examples\n\n```rescript\nJs.Array2.map([12, 4, 8], x => x * x) == [144, 16, 64]\nJs.Array2.map([\"animal\", \"vegetable\", \"mineral\"], Js.String.length) == [6, 9, 7]\n```\n"}
+    "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray =\n  array->Array.mapWithIndex((greeting, index) =>\n    greeting ++ \" at position \" ++ Int.toString(index)\n  )\n\nassertEqual(mappedArray, [\"Hello at position 0\", \"Hi at position 1\", \"Good bye at position 2\"])\n```\n"}
   }]
 
 Complete src/Completion.res 29:13
@@ -671,13 +671,13 @@ Completable: Cpath string->toU
 Package opens Pervasives.JsxModules.place holder
 ContextPath string->toU
 ContextPath string
-Path Js.String2.toU
+Path String.toU
 [{
-    "label": "Js.String2.toUpperCase",
+    "label": "String.toUpperCase",
     "kind": 12,
     "tags": [],
-    "detail": "t => t",
-    "documentation": {"kind": "markdown", "value": "\n`toUpperCase(str)` converts `str` to upper case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\nexpand the number of letters in the result; for example the German ß\ncapitalizes to two Ses in a row.\n\nSee [`String.toUpperCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toUpperCase)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.toUpperCase(\"abc\") == \"ABC\"\nJs.String2.toUpperCase(`Straße`) == `STRASSE`\nJs.String2.toUpperCase(`πς`) == `ΠΣ`\n```\n"}
+    "detail": "string => string",
+    "documentation": {"kind": "markdown", "value": "\n`toUpperCase(str)` converts `str` to upper case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\nexpand the number of letters in the result, for example the German ß\ncapitalizes to two Ses in a row.\nSee [`String.toUpperCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toUpperCase) on MDN.\n\n## Examples\n\n```rescript\nString.toUpperCase(\"abc\") == \"ABC\"\nString.toUpperCase(`Straße`) == `STRASSE`\nString.toUpperCase(`πς`) == `ΠΣ`\n```\n"}
   }]
 
 Complete src/Completion.res 34:8
@@ -687,19 +687,13 @@ Package opens Pervasives.JsxModules.place holder
 ContextPath Value[op]->e
 ContextPath Value[op]
 Path op
-Path Belt.Option.e
+Path Option.e
 [{
-    "label": "Belt.Option.eqU",
-    "kind": 12,
-    "tags": [1],
-    "detail": "(option<'a>, option<'b>, ('a, 'b) => bool) => bool",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `eq` instead\n\n\nUncurried version of `eq`\n"}
-  }, {
-    "label": "Belt.Option.eq",
+    "label": "Option.equal",
     "kind": 12,
     "tags": [],
     "detail": "(option<'a>, option<'b>, ('a, 'b) => bool) => bool",
-    "documentation": {"kind": "markdown", "value": "\nEvaluates two optional values for equality with respect to a predicate\nfunction. If both `optValue1` and `optValue2` are `None`, returns `true`.\nIf one of the arguments is `Some(value)` and the other is `None`, returns\n`false`.\n\nIf arguments are `Some(value1)` and `Some(value2)`, returns the result of\n`predicate(value1, value2)`; the predicate function must return a bool.\n\n## Examples\n\n```rescript\nlet clockEqual = (a, b) => mod(a, 12) == mod(b, 12)\n\nopen Belt.Option\n\neq(Some(3), Some(15), clockEqual) /* true */\n\neq(Some(3), None, clockEqual) /* false */\n\neq(None, Some(3), clockEqual) /* false */\n\neq(None, None, clockEqual) /* true */\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`equal(opt1, opt2, f)` evaluates two optional values for equality with respect to a predicate function `f`. If both `opt1` and `opt2` are `None`, returns `true`.\nIf one of the arguments is `Some(value)` and the other is `None`, returns\n`false`.\nIf arguments are `Some(value1)` and `Some(value2)`, returns the result of\n`f(value1, value2)`, the predicate function `f` must return a bool.\n\n## Examples\n\n```rescript\nlet clockEqual = (a, b) => mod(a, 12) == mod(b, 12)\n\nopen Option\n\nequal(Some(3), Some(15), clockEqual) // true\nequal(Some(3), None, clockEqual) // false\nequal(None, Some(3), clockEqual) // false\nequal(None, None, clockEqual) // true\n```\n"}
   }]
 
 Complete src/Completion.res 44:7
@@ -2255,39 +2249,38 @@ Path Completion.
     "documentation": {"kind": "markdown", "value": "```rescript\nstuff: string\n```\n\n```rescript\ntype funRecord = {\n  someFun: (~name: string) => unit,\n  stuff: string,\n}\n```"}
   }]
 
-Complete src/Completion.res 392:12
-posCursor:[392:12] posNoWhite:[392:11] Found expr:[390:8->395:1]
-posCursor:[392:12] posNoWhite:[392:11] Found expr:[391:2->394:4]
-posCursor:[392:12] posNoWhite:[392:11] Found expr:[392:6->394:4]
-posCursor:[392:12] posNoWhite:[392:11] Found expr:[392:6->392:12]
+Complete src/Completion.res 391:12
+posCursor:[391:12] posNoWhite:[391:11] Found expr:[390:8->394:1]
+posCursor:[391:12] posNoWhite:[391:11] Found expr:[391:6->393:4]
+posCursor:[391:12] posNoWhite:[391:11] Found expr:[391:6->391:12]
 Completable: Cpath array->ma
-Raw opens: 3 Js.place holder ... Shadow.B.place holder ... Shadow.A.place holder
+Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Pervasives.JsxModules.place holder
-Resolved opens 3 Completion Completion Js
+Resolved opens 2 Completion Completion
 ContextPath array->ma
 ContextPath array
-Path Js.Array2.ma
+Path Array.ma
 [{
-    "label": "Array2.mapi",
+    "label": "Array.map",
     "kind": 12,
     "tags": [],
-    "detail": "(t<'a>, ('a, int) => 'b) => t<'b>",
-    "documentation": {"kind": "markdown", "value": "\nApplies the function (the second argument) to each item in the array, returning\na new array. The function acceps two arguments: an item from the array and its\nindex number. The result array does not have to have elements of the same type\nas the input array. See\n[`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map)\non MDN.\n\n## Examples\n\n```rescript\n// multiply each item in array by its position\nlet product = (item, index) => item * index\nJs.Array2.mapi([10, 11, 12], product) == [0, 11, 24]\n```\n"}
+    "detail": "(array<'a>, 'a => 'b) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nassertEqual(mappedArray, [\"Hello to you\", \"Hi to you\", \"Good bye to you\"])\n```\n"}
   }, {
-    "label": "Array2.map",
+    "label": "Array.mapWithIndex",
     "kind": 12,
     "tags": [],
-    "detail": "(t<'a>, 'a => 'b) => t<'b>",
-    "documentation": {"kind": "markdown", "value": "\nApplies the function (the second argument) to each item in the array, returning\na new array. The result array does not have to have elements of the same type\nas the input array. See\n[`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map)\non MDN.\n\n## Examples\n\n```rescript\nJs.Array2.map([12, 4, 8], x => x * x) == [144, 16, 64]\nJs.Array2.map([\"animal\", \"vegetable\", \"mineral\"], Js.String.length) == [6, 9, 7]\n```\n"}
+    "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray =\n  array->Array.mapWithIndex((greeting, index) =>\n    greeting ++ \" at position \" ++ Int.toString(index)\n  )\n\nassertEqual(mappedArray, [\"Hello at position 0\", \"Hi at position 1\", \"Good bye at position 2\"])\n```\n"}
   }]
 
-Complete src/Completion.res 400:14
-posCursor:[400:14] posNoWhite:[400:13] Found expr:[399:14->400:20]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[399:14->400:16], ...[400:16->400:19])
-posCursor:[400:14] posNoWhite:[400:13] Found expr:[399:14->400:16]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[399:14->400:11], ...[400:13->400:16])
-posCursor:[400:14] posNoWhite:[400:13] Found expr:[400:13->400:16]
-Pexp_ident red:[400:13->400:16]
+Complete src/Completion.res 399:14
+posCursor:[399:14] posNoWhite:[399:13] Found expr:[398:14->399:20]
+Pexp_apply ...__ghost__[0:-1->0:-1] (...[398:14->399:16], ...[399:16->399:19])
+posCursor:[399:14] posNoWhite:[399:13] Found expr:[398:14->399:16]
+Pexp_apply ...__ghost__[0:-1->0:-1] (...[398:14->399:11], ...[399:13->399:16])
+posCursor:[399:14] posNoWhite:[399:13] Found expr:[399:13->399:16]
+Pexp_ident red:[399:13->399:16]
 Completable: Cpath Value[red]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Pervasives.JsxModules.place holder
@@ -2302,13 +2295,13 @@ Path red
     "documentation": null
   }]
 
-Complete src/Completion.res 405:25
-posCursor:[405:25] posNoWhite:[405:24] Found expr:[403:14->405:31]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[403:14->405:27], ...[405:27->405:30])
-posCursor:[405:25] posNoWhite:[405:24] Found expr:[403:14->405:27]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[403:14->405:22], ...[405:24->405:27])
-posCursor:[405:25] posNoWhite:[405:24] Found expr:[405:24->405:27]
-Pexp_ident red:[405:24->405:27]
+Complete src/Completion.res 404:25
+posCursor:[404:25] posNoWhite:[404:24] Found expr:[402:14->404:31]
+Pexp_apply ...__ghost__[0:-1->0:-1] (...[402:14->404:27], ...[404:27->404:30])
+posCursor:[404:25] posNoWhite:[404:24] Found expr:[402:14->404:27]
+Pexp_apply ...__ghost__[0:-1->0:-1] (...[402:14->404:22], ...[404:24->404:27])
+posCursor:[404:25] posNoWhite:[404:24] Found expr:[404:24->404:27]
+Pexp_ident red:[404:24->404:27]
 Completable: Cpath Value[red]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Pervasives.JsxModules.place holder
@@ -2323,14 +2316,14 @@ Path red
     "documentation": null
   }]
 
-Complete src/Completion.res 408:22
-posCursor:[408:22] posNoWhite:[408:21] Found expr:[408:11->469:0]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[408:11->426:17], ...[431:0->469:0])
-posCursor:[408:22] posNoWhite:[408:21] Found expr:[408:11->426:17]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[408:11->408:19], ...[408:21->426:17])
-posCursor:[408:22] posNoWhite:[408:21] Found expr:[408:21->426:17]
-posCursor:[408:22] posNoWhite:[408:21] Found expr:[408:21->408:22]
-Pexp_ident r:[408:21->408:22]
+Complete src/Completion.res 407:22
+posCursor:[407:22] posNoWhite:[407:21] Found expr:[407:11->468:0]
+Pexp_apply ...__ghost__[0:-1->0:-1] (...[407:11->425:17], ...[430:0->468:0])
+posCursor:[407:22] posNoWhite:[407:21] Found expr:[407:11->425:17]
+Pexp_apply ...__ghost__[0:-1->0:-1] (...[407:11->407:19], ...[407:21->425:17])
+posCursor:[407:22] posNoWhite:[407:21] Found expr:[407:21->425:17]
+posCursor:[407:22] posNoWhite:[407:21] Found expr:[407:21->407:22]
+Pexp_ident r:[407:21->407:22]
 Completable: Cpath Value[r]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Pervasives.JsxModules.place holder
@@ -2357,12 +2350,12 @@ Path r
     "documentation": {"kind": "markdown", "value": "```rescript\ntype r = {x: int, y: string}\n```"}
   }]
 
-Complete src/Completion.res 412:21
-posCursor:[412:21] posNoWhite:[412:20] Found expr:[411:14->418:1]
-posCursor:[412:21] posNoWhite:[412:20] Found expr:[412:5->417:17]
-posCursor:[412:21] posNoWhite:[412:20] Found expr:[412:5->414:42]
-posCursor:[412:21] posNoWhite:[412:20] Found expr:[412:5->414:5]
-Pexp_ident SomeLocalModule.:[412:5->414:5]
+Complete src/Completion.res 411:21
+posCursor:[411:21] posNoWhite:[411:20] Found expr:[410:14->417:1]
+posCursor:[411:21] posNoWhite:[411:20] Found expr:[411:5->416:17]
+posCursor:[411:21] posNoWhite:[411:20] Found expr:[411:5->413:42]
+posCursor:[411:21] posNoWhite:[411:20] Found expr:[411:5->413:5]
+Pexp_ident SomeLocalModule.:[411:5->413:5]
 Completable: Cpath Value[SomeLocalModule, ""]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Pervasives.JsxModules.place holder
@@ -2383,13 +2376,13 @@ Path SomeLocalModule.
     "documentation": null
   }]
 
-Complete src/Completion.res 415:21
-posCursor:[415:21] posNoWhite:[415:20] Found expr:[411:14->418:1]
-posCursor:[415:21] posNoWhite:[415:20] Found expr:[414:2->417:17]
-posCursor:[415:21] posNoWhite:[415:20] Found expr:[415:5->417:17]
-Pexp_apply ...[415:5->417:8] (...[417:9->417:16])
-posCursor:[415:21] posNoWhite:[415:20] Found expr:[415:5->417:8]
-Pexp_ident SomeLocalModule.:[415:5->417:8]
+Complete src/Completion.res 414:21
+posCursor:[414:21] posNoWhite:[414:20] Found expr:[410:14->417:1]
+posCursor:[414:21] posNoWhite:[414:20] Found expr:[413:2->416:17]
+posCursor:[414:21] posNoWhite:[414:20] Found expr:[414:5->416:17]
+Pexp_apply ...[414:5->416:8] (...[416:9->416:16])
+posCursor:[414:21] posNoWhite:[414:20] Found expr:[414:5->416:8]
+Pexp_ident SomeLocalModule.:[414:5->416:8]
 Completable: Cpath Value[SomeLocalModule, ""]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Pervasives.JsxModules.place holder
@@ -2410,54 +2403,150 @@ Path SomeLocalModule.
     "documentation": null
   }]
 
-Complete src/Completion.res 420:17
-posCursor:[420:17] posNoWhite:[420:16] Found expr:[420:11->420:17]
+Complete src/Completion.res 419:17
+posCursor:[419:17] posNoWhite:[419:16] Found expr:[419:11->419:17]
 Completable: Cpath int->t
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Pervasives.JsxModules.place holder
 Resolved opens 2 Completion Completion
 ContextPath int->t
 ContextPath int
-Path Belt.Int.t
+Path Int.t
 [{
-    "label": "Belt.Int.toString",
+    "label": "Int.toStringWithRadix",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~radix: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+  }, {
+    "label": "Int.toExponentialWithPrecision",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~digits: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(n, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\non MDN.\n\n## Examples\n\n```rescript\nInt.toExponentialWithPrecision(77, ~digits=2) // \"7.70e+1\"\nInt.toExponentialWithPrecision(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
+  }, {
+    "label": "Int.toFixedWithPrecision",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~digits: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(n, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixedWithPrecision(300, ~digits=4) // \"300.0000\"\nInt.toFixedWithPrecision(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
+  }, {
+    "label": "Int.toPrecisionWithPrecision",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~digits: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\nImplementations are allowed to support larger and smaller values as well.\nECMA-262 only requires a precision of up to 21 significant digits.\n\n"}
+  }, {
+    "label": "Int.toPrecision",
     "kind": 12,
     "tags": [],
-    "detail": "int => string",
-    "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `string`. Uses the JavaScript `String` constructor under the hood.\n\n## Examples\n\n```rescript\nBelt.Int.toString(1)->assertEqual(\"1\")\n```\n"}
+    "detail": "(int, ~digits: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toPrecision(n, ~digits=?)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecision(100) // \"100\"\nInt.toPrecision(1) // \"1\"\nInt.toPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\nImplementations are allowed to support larger and smaller values as well.\nECMA-262 only requires a precision of up to 21 significant digits.\n"}
   }, {
-    "label": "Belt.Int.toFloat",
+    "label": "Int.toString",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, ~radix: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toString(n, ~radix=?)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toString(1000) // \"1000\"\nInt.toString(-1000) // \"-1000\"\nInt.toString(6, ~radix=2) // \"110\"\nInt.toString(373592855, ~radix=16) // \"16449317\"\nInt.toString(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+  }, {
+    "label": "Int.toFloat",
     "kind": 12,
     "tags": [],
     "detail": "int => float",
-    "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `float`.\n\n## Examples\n\n```rescript\nBelt.Int.toFloat(1)->assertEqual(1.0)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`toFloat(n)` return a `float` representing the given value.\n\n## Examples\n\n```rescript\nInt.toFloat(100) == 100.0\nInt.toFloat(2) == 2.0\n```\n"}
+  }, {
+    "label": "Int.toLocaleString",
+    "kind": 12,
+    "tags": [],
+    "detail": "int => string",
+    "documentation": {"kind": "markdown", "value": "\n`toLocaleString(n)` return a `string` with language-sensitive representing the\ngiven value. See [`Number.toLocaleString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toLocaleString) on MDN.\n\n## Examples\n\n```rescript\n// If the application uses English as the default language\nInt.toLocaleString(1000) // \"1,000\"\n\n// If the application uses Portuguese Brazil as the default language\nInt.toLocaleString(1000) // \"1.000\"\n```\n"}
+  }, {
+    "label": "Int.toExponential",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, ~digits: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toExponential(n, ~digits=?)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point. See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential)\n\n## Examples\n\n```rescript\nInt.toExponential(1000) // \"1e+3\"\nInt.toExponential(-1000) // \"-1e+3\"\nInt.toExponential(77, ~digits=2) // \"7.70e+1\"\nInt.toExponential(5678, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
+  }, {
+    "label": "Int.toFixed",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, ~digits: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toFixed(n, ~digits=?)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixed(123456) // \"123456.00\"\nInt.toFixed(10) // \"10.00\"\nInt.toFixed(300, ~digits=4) // \"300.0000\"\nInt.toFixed(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
   }]
 
-Complete src/Completion.res 423:19
-posCursor:[423:19] posNoWhite:[423:18] Found expr:[423:11->423:19]
+Complete src/Completion.res 422:19
+posCursor:[422:19] posNoWhite:[422:18] Found expr:[422:11->422:19]
 Completable: Cpath float->t
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Pervasives.JsxModules.place holder
 Resolved opens 2 Completion Completion
 ContextPath float->t
 ContextPath float
-Path Belt.Float.t
+Path Float.t
 [{
-    "label": "Belt.Float.toInt",
+    "label": "Float.toStringWithRadix",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(float, ~radix: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` with `~radix` instead\n\n\n`toStringWithRadix(v, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.\n\n## Examples\n\n```rescript\nFloat.toStringWithRadix(6.0, ~radix=2) // \"110\"\nFloat.toStringWithRadix(3735928559.0, ~radix=16) // \"deadbeef\"\nFloat.toStringWithRadix(123456.0, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+  }, {
+    "label": "Float.toExponentialWithPrecision",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(float, ~digits: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(v, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point.\nSee [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.\n\n## Examples\n\n```rescript\nFloat.toExponentialWithPrecision(77.0, ~digits=2) // \"7.70e+1\"\nFloat.toExponentialWithPrecision(5678.0, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
+  }, {
+    "label": "Float.toInt",
     "kind": 12,
     "tags": [],
     "detail": "float => int",
-    "documentation": {"kind": "markdown", "value": "\nConverts a given `float` to an `int`.\n\n## Examples\n\n```rescript\nJs.log(Belt.Float.toInt(1.0) === 1) /* true */\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`toInt(v)` returns an int to given float `v`.\n\n## Examples\n\n```rescript\nFloat.toInt(2.0) == 2\nFloat.toInt(1.0) == 1\nFloat.toInt(1.1) == 1\nFloat.toInt(1.6) == 1\n```\n"}
   }, {
-    "label": "Belt.Float.toString",
+    "label": "Float.toFixedWithPrecision",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(float, ~digits: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(v, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point.\nSee [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed) on MDN.\n\n## Examples\n\n```rescript\nFloat.toFixedWithPrecision(300.0, ~digits=4) // \"300.0000\"\nFloat.toFixedWithPrecision(300.0, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
+  }, {
+    "label": "Float.toPrecisionWithPrecision",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(float, ~digits: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(v, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits.\nSee [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nFloat.toPrecisionWithPrecision(100.0, ~digits=2) // \"1.0e+2\"\nFloat.toPrecisionWithPrecision(1.0, ~digits=1) // \"1\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\nImplementations are allowed to support larger and smaller values as well.\nECMA-262 only requires a precision of up to 21 significant digits.\n\n"}
+  }, {
+    "label": "Float.toPrecision",
+    "kind": 12,
+    "tags": [],
+    "detail": "(float, ~digits: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toPrecision(v, ~digits=?)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits.\nSee [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nFloat.toPrecision(100.0) // \"100\"\nFloat.toPrecision(1.0) // \"1\"\nFloat.toPrecision(100.0, ~digits=2) // \"1.0e+2\"\nFloat.toPrecision(1.0, ~digits=1) // \"1\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\nImplementations are allowed to support larger and smaller values as well.\nECMA-262 only requires a precision of up to 21 significant digits.\n"}
+  }, {
+    "label": "Float.toString",
+    "kind": 12,
+    "tags": [],
+    "detail": "(float, ~radix: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toString(v)` return a `string` representing the given value.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.\n\n## Examples\n\n```rescript\nFloat.toString(1000.0) // \"1000\"\nFloat.toString(-1000.0) // \"-1000\"\n```\n"}
+  }, {
+    "label": "Float.toLocaleString",
     "kind": 12,
     "tags": [],
     "detail": "float => string",
-    "documentation": {"kind": "markdown", "value": "\nConverts a given `float` to a `string`. Uses the JavaScript `String` constructor under the hood.\n\n## Examples\n\n```rescript\nJs.log(Belt.Float.toString(1.0) === \"1.0\") /* true */\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`toLocaleString(v)` return a `string` with language-sensitive representing the\ngiven value.\nSee [`Number.toLocaleString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toLocaleString) on MDN.\n\n## Examples\n\n```rescript\n// If the application uses English as the default language\nFloat.toLocaleString(1000.0) // \"1,000\"\n\n// If the application uses Portuguese Brazil as the default language\nFloat.toLocaleString(1000.0) // \"1.000\"\n```\n"}
+  }, {
+    "label": "Float.toExponential",
+    "kind": 12,
+    "tags": [],
+    "detail": "(float, ~digits: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toExponential(v, ~digits=?)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point.\nSee [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.\n\n## Examples\n\n```rescript\nFloat.toExponential(1000.0) // \"1e+3\"\nFloat.toExponential(-1000.0) // \"-1e+3\"\nFloat.toExponential(77.0, ~digits=2) // \"7.70e+1\"\nFloat.toExponential(5678.0, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
+  }, {
+    "label": "Float.toFixed",
+    "kind": 12,
+    "tags": [],
+    "detail": "(float, ~digits: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toFixed(v, ~digits=?)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point.\nSee [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed) on MDN.\n\n## Examples\n\n```rescript\nFloat.toFixed(123456.0) // \"123456.00\"\nFloat.toFixed(10.0) // \"10.00\"\nFloat.toFixed(300.0, ~digits=4) // \"300.0000\"\nFloat.toFixed(300.0, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
   }]
 
-Complete src/Completion.res 428:8
-posCursor:[428:8] posNoWhite:[428:7] Found expr:[428:3->428:8]
+Complete src/Completion.res 427:8
+posCursor:[427:8] posNoWhite:[427:7] Found expr:[427:3->427:8]
 Completable: Cpath Value[ok]->g
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Pervasives.JsxModules.place holder
@@ -2465,24 +2554,30 @@ Resolved opens 2 Completion Completion
 ContextPath Value[ok]->g
 ContextPath Value[ok]
 Path ok
-Path Belt.Result.g
+Path Result.g
 [{
-    "label": "Belt.Result.getExn",
+    "label": "Result.getExn",
     "kind": 12,
     "tags": [],
-    "detail": "t<'a, 'b> => 'a",
-    "documentation": {"kind": "markdown", "value": "\n`getExn(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, raise an exception\n\n## Examples\n\n```rescript\nBelt.Result.Ok(42)\n->Belt.Result.getExn\n->assertEqual(42)\n\n\nswitch Belt.Result.getExn(Belt.Result.Error(\"Invalid data\")) { // raise a exception\n| exception _ => assert(true)\n| _ => assert(false)\n}\n```\n"}
+    "detail": "result<'a, 'b> => 'a",
+    "documentation": {"kind": "markdown", "value": "\n  Result types are really useful to describe the result of a certain operation\n  without relying on exceptions or `option` types.\n\n  This module gives you useful utilities to create and combine `Result` data.\n"}
   }, {
-    "label": "Belt.Result.getWithDefault",
+    "label": "Result.getOr",
     "kind": 12,
     "tags": [],
-    "detail": "(t<'a, 'b>, 'a) => 'a",
-    "documentation": {"kind": "markdown", "value": "\n`getWithDefault(res, defaultValue)`: If `res` is `Ok(n)`, returns `n`,\notherwise `default`\n\n## Examples\n\n```rescript\nBelt.Result.getWithDefault(Ok(42), 0) == 42\n\nBelt.Result.getWithDefault(Error(\"Invalid Data\"), 0) == 0\n```\n"}
+    "detail": "(result<'a, 'b>, 'a) => 'a",
+    "documentation": {"kind": "markdown", "value": "\n`getOr(res, defaultValue)`: If `res` is `Ok(n)`, returns `n`, otherwise `default`\n\n## Examples\n\n```rescript\nResult.getOr(Ok(42), 0) == 42\n\nResult.getOr(Error(\"Invalid Data\"), 0) == 0\n```\n"}
+  }, {
+    "label": "Result.getWithDefault",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(result<'a, 'b>, 'a) => 'a",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use getOr instead\n\n"}
   }]
 
-Complete src/Completion.res 446:15
-posCursor:[446:15] posNoWhite:[446:14] Found expr:[446:3->446:15]
-Pexp_field [446:3->446:12] so:[446:13->446:15]
+Complete src/Completion.res 445:15
+posCursor:[445:15] posNoWhite:[445:14] Found expr:[445:3->445:15]
+Pexp_field [445:3->445:12] so:[445:13->445:15]
 Completable: Cpath Value[rWithDepr].so
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Pervasives.JsxModules.place holder
@@ -2509,7 +2604,7 @@ Path Completion.so
     "documentation": {"kind": "markdown", "value": "Deprecated: Use 'someInt'.\n\n```rescript\nsomeFloat: float\n```\n\n```rescript\ntype someRecordWithDeprecatedField = {\n  name: string,\n  someInt: int,\n  someFloat: float,\n}\n```"}
   }]
 
-Complete src/Completion.res 453:37
+Complete src/Completion.res 452:37
 XXX Not found!
 Completable: Cexpression Type[someVariantWithDeprecated]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2543,8 +2638,8 @@ Path someVariantWithDeprecated
     "insertTextFormat": 2
   }]
 
-Complete src/Completion.res 458:30
-posCursor:[458:30] posNoWhite:[458:29] Found expr:[458:11->458:30]
+Complete src/Completion.res 457:30
+posCursor:[457:30] posNoWhite:[457:29] Found expr:[457:11->457:30]
 Completable: Cpath Value[uncurried](Nolabel)->toS
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Pervasives.JsxModules.place holder
@@ -2553,16 +2648,22 @@ ContextPath Value[uncurried](Nolabel)->toS
 ContextPath Value[uncurried](Nolabel)
 ContextPath Value[uncurried]
 Path uncurried
-Path Belt.Int.toS
+Path Int.toS
 [{
-    "label": "Belt.Int.toString",
+    "label": "Int.toStringWithRadix",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(int, ~radix: int) => string",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+  }, {
+    "label": "Int.toString",
     "kind": 12,
     "tags": [],
-    "detail": "int => string",
-    "documentation": {"kind": "markdown", "value": "\nConverts a given `int` to a `string`. Uses the JavaScript `String` constructor under the hood.\n\n## Examples\n\n```rescript\nBelt.Int.toString(1)->assertEqual(\"1\")\n```\n"}
+    "detail": "(int, ~radix: int=?) => string",
+    "documentation": {"kind": "markdown", "value": "\n`toString(n, ~radix=?)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toString(1000) // \"1000\"\nInt.toString(-1000) // \"-1000\"\nInt.toString(6, ~radix=2) // \"110\"\nInt.toString(373592855, ~radix=16) // \"16449317\"\nInt.toString(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
   }]
 
-Complete src/Completion.res 463:30
+Complete src/Completion.res 462:30
 XXX Not found!
 Completable: Cexpression Type[withUncurried]->recordField(fn)
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
@@ -2581,9 +2682,9 @@ Path withUncurried
     "insertTextFormat": 2
   }]
 
-Complete src/Completion.res 466:26
-posCursor:[466:26] posNoWhite:[466:25] Found expr:[466:22->466:26]
-Pexp_ident FAR.:[466:22->466:26]
+Complete src/Completion.res 465:26
+posCursor:[465:26] posNoWhite:[465:25] Found expr:[465:22->465:26]
+Pexp_ident FAR.:[465:22->465:26]
 Completable: Cpath ValueOrField[FAR, ""]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Pervasives.JsxModules.place holder

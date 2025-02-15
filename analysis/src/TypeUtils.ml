@@ -1253,17 +1253,16 @@ let pathToBuiltin path =
   Predef.builtin_idents
   |> List.find_opt (fun (_, i) -> Ident.same i (Path.head path))
 
-let completionPathFromMaybeBuiltin path ~package =
+let completionPathFromMaybeBuiltin path =
   match pathToBuiltin path with
-  | Some ("array", _) -> Some package.builtInCompletionModules.arrayModulePath
-  | Some ("option", _) -> Some package.builtInCompletionModules.optionModulePath
-  | Some ("string", _) -> Some package.builtInCompletionModules.stringModulePath
-  | Some ("int", _) -> Some package.builtInCompletionModules.intModulePath
-  | Some ("float", _) -> Some package.builtInCompletionModules.floatModulePath
-  | Some ("promise", _) ->
-    Some package.builtInCompletionModules.promiseModulePath
-  | Some ("list", _) -> Some package.builtInCompletionModules.listModulePath
-  | Some ("result", _) -> Some package.builtInCompletionModules.resultModulePath
+  | Some ("array", _) -> Some ["Array"]
+  | Some ("option", _) -> Some ["Option"]
+  | Some ("string", _) -> Some ["String"]
+  | Some ("int", _) -> Some ["Int"]
+  | Some ("float", _) -> Some ["Float"]
+  | Some ("promise", _) -> Some ["Promise"]
+  | Some ("list", _) -> Some ["List"]
+  | Some ("result", _) -> Some ["Result"]
   | Some ("dict", _) -> Some ["Dict"]
   | Some ("char", _) -> Some ["Char"]
   | _ -> None

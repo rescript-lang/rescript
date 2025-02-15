@@ -210,51 +210,39 @@ Path ffff
 ContextPath Value[ffff]->u
 ContextPath Value[ffff]
 Path ffff
-Path Js.Array2.u
+Path Array.u
 [{
-    "label": "->Js.Array2.unshiftMany",
+    "label": "->Array.unshiftMany",
     "kind": 12,
     "tags": [],
-    "detail": "(t<'a>, array<'a>) => int",
-    "documentation": {"kind": "markdown", "value": "\nAdds the elements in the second array argument at the beginning of the first\narray argument, returning the new number of elements in the array. *This\nfunction modifies the original array.* See\n[`Array.unshift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift)\non MDN.\n\n## Examples\n\n```rescript\nlet arr = [\"d\", \"e\"]\nJs.Array2.unshiftMany(arr, [\"a\", \"b\", \"c\"]) == 5\narr == [\"a\", \"b\", \"c\", \"d\", \"e\"]\n```\n"},
+    "detail": "(array<'a>, array<'a>) => unit",
+    "documentation": {"kind": "markdown", "value": "\n`unshiftMany(array, itemsArray)` inserts many new items to the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshiftMany([\"yay\", \"wehoo\"])\nsomeArray->assertEqual([\"yay\", \"wehoo\", \"hi\", \"hello\"])\n```\n"},
     "sortText": "unshiftMany",
-    "insertText": "->Js.Array2.unshiftMany",
+    "insertText": "->Array.unshiftMany",
     "additionalTextEdits": [{
       "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
       "newText": ""
       }]
   }, {
-    "label": "->Js.Array2.unshift",
+    "label": "->Array.unshift",
     "kind": 12,
     "tags": [],
-    "detail": "(t<'a>, 'a) => int",
-    "documentation": {"kind": "markdown", "value": "\nAdds the given element to the array, returning the new number of elements in\nthe array. *This function modifies the original array.* See\n[`Array.unshift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift)\non MDN.\n\n## Examples\n\n```rescript\nlet arr = [\"b\", \"c\", \"d\"]\nJs.Array2.unshift(arr, \"a\") == 4\narr == [\"a\", \"b\", \"c\", \"d\"]\n```\n"},
+    "detail": "(array<'a>, 'a) => unit",
+    "documentation": {"kind": "markdown", "value": "\n`unshift(array, item)` inserts a new item at the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.unshift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshift(\"yay\")\nsomeArray->assertEqual([\"yay\", \"hi\", \"hello\"])\n```\n"},
     "sortText": "unshift",
-    "insertText": "->Js.Array2.unshift",
+    "insertText": "->Array.unshift",
     "additionalTextEdits": [{
       "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
       "newText": ""
       }]
   }, {
-    "label": "->Js.Array2.unsafe_get",
+    "label": "->Array.unsafe_get",
     "kind": 12,
-    "tags": [],
+    "tags": [1],
     "detail": "(array<'a>, int) => 'a",
-    "documentation": {"kind": "markdown", "value": "\nReturns the value at the given position in the array if the position is in\nbounds; returns the JavaScript value `undefined` otherwise.\n\n## Examples\n\n```rescript\nlet arr = [100, 101, 102, 103]\nJs.Array2.unsafe_get(arr, 3) == 103\nJs.Array2.unsafe_get(arr, 4) // returns undefined\n```\n"},
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use getUnsafe instead. This will be removed in v13\n\n\n`unsafe_get(array, index)` returns the element at `index` of `array`.\n\nThis is _unsafe_, meaning it will return `undefined` value if `index` does not exist in `array`.\n\nUse `Array.unsafe_get` only when you are sure the `index` exists (i.e. when using for-loop).\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3]\nfor index in 0 to array->Array.length - 1 {\n  let value = array->Array.unsafe_get(index)\n  Console.log(value)\n}\n```\n"},
     "sortText": "unsafe_get",
-    "insertText": "->Js.Array2.unsafe_get",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Js.Array2.unsafe_set",
-    "kind": 12,
-    "tags": [],
-    "detail": "(array<'a>, int, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\nSets the value at the given position in the array if the position is in bounds.\nIf the index is out of bounds, well, “here there be dragons.“\n\n*This function modifies the original array.*\n\n## Examples\n\n```rescript\nlet arr = [100, 101, 102, 103]\nJs.Array2.unsafe_set(arr, 3, 99)\n// result is [100, 101, 102, 99];\n\nJs.Array2.unsafe_set(arr, 4, 88)\n// result is [100, 101, 102, 99, 88]\n\nJs.Array2.unsafe_set(arr, 6, 77)\n// result is [100, 101, 102, 99, 88, <1 empty item>, 77]\n\nJs.Array2.unsafe_set(arr, -1, 66)\n// you don't want to know.\n```\n"},
-    "sortText": "unsafe_set",
-    "insertText": "->Js.Array2.unsafe_set",
+    "insertText": "->Array.unsafe_get",
     "additionalTextEdits": [{
       "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
       "newText": ""
@@ -333,27 +321,39 @@ ContextPath Value[Js, Array2, filter](Nolabel, Nolabel)->filt
 ContextPath Value[Js, Array2, filter](Nolabel, Nolabel)
 ContextPath Value[Js, Array2, filter]
 Path Js.Array2.filter
-Path Js.Array2.filt
+Path Array.filt
 [{
-    "label": "->Js.Array2.filter",
+    "label": "->Array.filterMap",
     "kind": 12,
     "tags": [],
-    "detail": "(t<'a>, 'a => bool) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "\nApplies the given predicate function (the second argument) to each element in\nthe array; the result is an array of those elements for which the predicate\nfunction returned `true`. See\n[`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter)\non MDN.\n\n## Examples\n\n```rescript\nlet nonEmpty = s => s != \"\"\nJs.Array2.filter([\"abc\", \"\", \"\", \"def\", \"ghi\"], nonEmpty) == [\"abc\", \"def\", \"ghi\"]\n```\n"},
-    "sortText": "filter",
-    "insertText": "->Js.Array2.filter",
+    "detail": "(array<'a>, 'a => option<'b>) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`filterMap(array, fn)`\n\nCalls `fn` for each element and returns a new array containing results of the `fn` calls which are not `None`.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]\n->Array.filterMap(item =>\n  switch item {\n  | \"Hello\" => Some(item->String.length)\n  | _ => None\n  }\n)\n->assertEqual([5])\n\n[1, 2, 3, 4, 5, 6]\n->Array.filterMap(n => mod(n, 2) == 0 ? Some(n * n) : None)\n->assertEqual([4, 16, 36])\n\nArray.filterMap([1, 2, 3, 4, 5, 6], _ => None)->assertEqual([])\n\nArray.filterMap([], n => mod(n, 2) == 0 ? Some(n * n) : None)->assertEqual([])\n```\n"},
+    "sortText": "filterMap",
+    "insertText": "->Array.filterMap",
     "additionalTextEdits": [{
       "range": {"start": {"line": 86, "character": 38}, "end": {"line": 86, "character": 39}},
       "newText": ""
       }]
   }, {
-    "label": "->Js.Array2.filteri",
+    "label": "->Array.filter",
     "kind": 12,
     "tags": [],
-    "detail": "(t<'a>, ('a, int) => bool) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "\nEach element of the given array are passed to the predicate function. The\nreturn value is an array of all those elements for which the predicate function\nreturned `true`.\n\nSee\n[`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter)\non MDN.\n\n## Examples\n\n```rescript\n// keep only positive elements at odd indices\nlet positiveOddElement = (item, index) => mod(index, 2) == 1 && item > 0\n\nJs.Array2.filteri([6, 3, 5, 8, 7, -4, 1], positiveOddElement) == [3, 8]\n```\n"},
-    "sortText": "filteri",
-    "insertText": "->Js.Array2.filteri",
+    "detail": "(array<'a>, 'a => bool) => array<'a>",
+    "documentation": {"kind": "markdown", "value": "\n`filter(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]\n->Array.filter(num => num > 2)\n->assertEqual([3, 4])\n```\n"},
+    "sortText": "filter",
+    "insertText": "->Array.filter",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 86, "character": 38}, "end": {"line": 86, "character": 39}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Array.filterWithIndex",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, ('a, int) => bool) => array<'a>",
+    "documentation": {"kind": "markdown", "value": "\n`filterWithIndex(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]\n->Array.filterWithIndex((num, index) => index === 0 || num === 2)\n->assertEqual([1, 2])\n```\n"},
+    "sortText": "filterWithIndex",
+    "insertText": "->Array.filterWithIndex",
     "additionalTextEdits": [{
       "range": {"start": {"line": 86, "character": 38}, "end": {"line": 86, "character": 39}},
       "newText": ""
@@ -374,27 +374,27 @@ ContextPath Value[Js, Array2, joinWith](Nolabel, Nolabel)->includ
 ContextPath Value[Js, Array2, joinWith](Nolabel, Nolabel)
 ContextPath Value[Js, Array2, joinWith]
 Path Js.Array2.joinWith
-Path Js.String2.includ
+Path String.includ
 [{
-    "label": "->Js.String2.includesFrom",
+    "label": "->String.includesFrom",
     "kind": 12,
     "tags": [],
-    "detail": "(t, t, int) => bool",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `includes(str, searchValue start)` returns `true` if `searchValue` is\nfound anywhere within `str` starting at character number `start` (where 0 is\nthe first character), `false` otherwise.\n\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.includesFrom(\"programmer\", \"gram\", 1) == true\nJs.String2.includesFrom(\"programmer\", \"gram\", 4) == false\nJs.String2.includesFrom(`대한민국`, `한`, 1) == true\n```\n"},
+    "detail": "(string, string, int) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`includesFrom(str, searchValue, start)` returns `true` if `searchValue` is found\nanywhere within `str` starting at character number `start` (where 0 is the\nfirst character), `false` otherwise.\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes) on MDN.\n\n## Examples\n\n```rescript\nString.includesFrom(\"programmer\", \"gram\", 1) == true\nString.includesFrom(\"programmer\", \"gram\", 4) == false\nString.includesFrom(`대한민국`, `한`, 1) == true\n```\n"},
     "sortText": "includesFrom",
-    "insertText": "->Js.String2.includesFrom",
+    "insertText": "->String.includesFrom",
     "additionalTextEdits": [{
       "range": {"start": {"line": 89, "character": 63}, "end": {"line": 89, "character": 64}},
       "newText": ""
       }]
   }, {
-    "label": "->Js.String2.includes",
+    "label": "->String.includes",
     "kind": 12,
     "tags": [],
-    "detail": "(t, t) => bool",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `includes(str, searchValue)` returns `true` if `searchValue` is found\nanywhere within `str`, false otherwise.\n\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.includes(\"programmer\", \"gram\") == true\nJs.String2.includes(\"programmer\", \"er\") == true\nJs.String2.includes(\"programmer\", \"pro\") == true\nJs.String2.includes(\"programmer.dat\", \"xyz\") == false\n```\n"},
+    "detail": "(string, string) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`includes(str, searchValue)` returns `true` if `searchValue` is found anywhere\nwithin `str`, `false` otherwise.\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes) on MDN.\n\n## Examples\n\n```rescript\nString.includes(\"programmer\", \"gram\") == true\nString.includes(\"programmer\", \"er\") == true\nString.includes(\"programmer\", \"pro\") == true\nString.includes(\"programmer.dat\", \"xyz\") == false\n```\n"},
     "sortText": "includes",
-    "insertText": "->Js.String2.includes",
+    "insertText": "->String.includes",
     "additionalTextEdits": [{
       "range": {"start": {"line": 89, "character": 63}, "end": {"line": 89, "character": 64}},
       "newText": ""
@@ -414,15 +414,15 @@ ContextPath Value[Js, String2, toLowerCase](Nolabel)->toUpperCa
 ContextPath Value[Js, String2, toLowerCase](Nolabel)
 ContextPath Value[Js, String2, toLowerCase]
 Path Js.String2.toLowerCase
-Path Js.String2.toUpperCa
+Path String.toUpperCa
 [{
-    "label": "->Js.String2.toUpperCase",
+    "label": "->String.toUpperCase",
     "kind": 12,
     "tags": [],
-    "detail": "t => t",
-    "documentation": {"kind": "markdown", "value": "\n`toUpperCase(str)` converts `str` to upper case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\nexpand the number of letters in the result; for example the German ß\ncapitalizes to two Ses in a row.\n\nSee [`String.toUpperCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toUpperCase)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.toUpperCase(\"abc\") == \"ABC\"\nJs.String2.toUpperCase(`Straße`) == `STRASSE`\nJs.String2.toUpperCase(`πς`) == `ΠΣ`\n```\n"},
+    "detail": "string => string",
+    "documentation": {"kind": "markdown", "value": "\n`toUpperCase(str)` converts `str` to upper case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\nexpand the number of letters in the result, for example the German ß\ncapitalizes to two Ses in a row.\nSee [`String.toUpperCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toUpperCase) on MDN.\n\n## Examples\n\n```rescript\nString.toUpperCase(\"abc\") == \"ABC\"\nString.toUpperCase(`Straße`) == `STRASSE`\nString.toUpperCase(`πς`) == `ΠΣ`\n```\n"},
     "sortText": "toUpperCase",
-    "insertText": "->Js.String2.toUpperCase",
+    "insertText": "->String.toUpperCase",
     "additionalTextEdits": [{
       "range": {"start": {"line": 94, "character": 30}, "end": {"line": 94, "character": 31}},
       "newText": ""
@@ -442,15 +442,15 @@ ContextPath Value[Js, String2, toUpperCase](Nolabel)->toLowerC
 ContextPath Value[Js, String2, toUpperCase](Nolabel)
 ContextPath Value[Js, String2, toUpperCase]
 Path Js.String2.toUpperCase
-Path Js.String2.toLowerC
+Path String.toLowerC
 [{
-    "label": "->Js.String2.toLowerCase",
+    "label": "->String.toLowerCase",
     "kind": 12,
     "tags": [],
-    "detail": "t => t",
-    "documentation": {"kind": "markdown", "value": "\n`toLowerCase(str)` converts `str` to lower case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\ngive different results depending upon context, for example with the Greek\nletter sigma, which has two different lower case forms; one when it is the last\ncharacter in a string and another when it is not.\n\nSee [`String.toLowerCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.toLowerCase(\"ABC\") == \"abc\"\nJs.String2.toLowerCase(`ΣΠ`) == `σπ`\nJs.String2.toLowerCase(`ΠΣ`) == `πς`\n```\n"},
+    "detail": "string => string",
+    "documentation": {"kind": "markdown", "value": "\n`toLowerCase(str)` converts `str` to lower case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\ngive different results depending upon context, for example with the Greek\nletter sigma, which has two different lower case forms, one when it is the last\ncharacter in a string and another when it is not.\nSee [`String.toLowerCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase) on MDN.\n\n## Examples\n\n```rescript\nString.toLowerCase(\"ABC\") == \"abc\"\nString.toLowerCase(`ΣΠ`) == `σπ`\nString.toLowerCase(`ΠΣ`) == `πς`\n```\n"},
     "sortText": "toLowerCase",
-    "insertText": "->Js.String2.toLowerCase",
+    "insertText": "->String.toLowerCase",
     "additionalTextEdits": [{
       "range": {"start": {"line": 97, "character": 54}, "end": {"line": 97, "character": 55}},
       "newText": ""
