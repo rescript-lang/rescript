@@ -101,7 +101,7 @@ let three = Three("", [])
 let three2 = Three("", [])
 //                      ^she
 
-let _deepestTakesPrecedence = [12]->Js.Array2.map(v =>
+let _deepestTakesPrecedence = [12]->Array.map(v =>
   if v > 0 {
     One({})
     //   ^she

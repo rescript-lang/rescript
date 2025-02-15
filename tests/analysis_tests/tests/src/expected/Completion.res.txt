@@ -10,67 +10,31 @@ Path MyList.m
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, 'a => 'b) => t<'b>",
-    "documentation": {"kind": "markdown", "value": "\nEquivalent to `Belt.List.map(someList, f)->Belt.List.reverse`\n\n## Examples\n\n```rescript\nlist{3, 4, 5}\n->Belt.List.mapReverse(x => x * x)\n->assertEqual(list{25, 16, 9})\n```\n"}
-  }, {
-    "label": "makeBy",
-    "kind": 12,
-    "tags": [],
-    "detail": "(int, int => 'a) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "\nReturn a list of length `numItems` with element `i` initialized with `f(i)`.\nReturns an empty list if `numItems` is negative.\n\n## Examples\n\n```rescript\nBelt.List.makeBy(5, i => i) // list{0, 1, 2, 3, 4}\n\nBelt.List.makeBy(5, i => i * i) // list{0, 1, 4, 9, 16}\n```\n"}
-  }, {
-    "label": "make",
-    "kind": 12,
-    "tags": [],
-    "detail": "(int, 'a) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "\nReturns a list of length `numItems` with each element filled with value `v`. Returns an empty list if `numItems` is negative.\n\n## Examples\n\n```rescript\nBelt.List.make(3, 1) // list{1, 1, 1}\n```\n"}
-  }, {
-    "label": "mapReverse2U",
-    "kind": 12,
-    "tags": [1],
-    "detail": "(t<'a>, t<'b>, ('a, 'b) => 'c) => t<'c>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `mapReverse2` instead\n\n Uncurried version of [mapReverse2](#mapReverse2). "}
-  }, {
-    "label": "map",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t<'a>, 'a => 'b) => t<'b>",
-    "documentation": {"kind": "markdown", "value": "\nReturns a new list with `f` applied to each element of `someList`.\n\n## Examples\n\n```rescript\nlist{1, 2}->Belt.List.map(x => x + 1) // list{3, 4}\n```\n"}
-  }, {
-    "label": "mapWithIndexU",
-    "kind": 12,
-    "tags": [1],
-    "detail": "(t<'a>, (int, 'a) => 'b) => t<'b>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `mapWithIndex` instead\n\n Uncurried version of [mapWithIndex](#mapWithIndex). "}
-  }, {
-    "label": "mapU",
-    "kind": 12,
-    "tags": [1],
-    "detail": "(t<'a>, 'a => 'b) => t<'b>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `map` instead\n\n Uncurried version of [map](#map). "}
-  }, {
-    "label": "makeByU",
-    "kind": 12,
-    "tags": [1],
-    "detail": "(int, int => 'a) => t<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `makeBy` instead\n\n Uncurried version of [makeBy](#makeBy) "}
+    "documentation": {"kind": "markdown", "value": "\n`mapReverse(list, f)` is equivalent to `map` function.\n\n## Examples\n\n```rescript\nlet f = x => x * x\nlet l = list{3, 4, 5}\n\nlet withMap = List.map(l, f)->List.reverse\nlet withMapReverse = l->List.mapReverse(f)\n\nConsole.log(withMap == withMapReverse) // true\n```\n"}
   }, {
     "label": "mapReverse2",
     "kind": 12,
     "tags": [],
     "detail": "(t<'a>, t<'b>, ('a, 'b) => 'c) => t<'c>",
-    "documentation": {"kind": "markdown", "value": "\nEquivalent to: `zipBy(xs, ys, f)->reverse`\n\n## Examples\n\n```rescript\n\nBelt.List.mapReverse2(list{1, 2, 3}, list{1, 2}, (a, b) => a + b) // list{4, 2}\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`mapReverse2(list1, list2, f)` is equivalent to `List.zipBy(list1, list2, f)->List.reverse`.\n\n## Examples\n\n```rescript\nList.mapReverse2(list{1, 2, 3}, list{1, 2}, (a, b) => a + b) // list{4, 2}\n```\n"}
+  }, {
+    "label": "make",
+    "kind": 12,
+    "tags": [],
+    "detail": "(~length: int, 'a) => t<'a>",
+    "documentation": {"kind": "markdown", "value": "\n`make(length, value)` returns a list of length `length` with each element filled\nwith `value`. Returns an empty list if `value` is negative.\n\n## Examples\n\n```rescript\nList.make(~length=3, 1) // list{1, 1, 1}\n```\n"}
   }, {
     "label": "mapWithIndex",
     "kind": 12,
     "tags": [],
-    "detail": "(t<'a>, (int, 'a) => 'b) => t<'b>",
-    "documentation": {"kind": "markdown", "value": "\nApplies `f` to each element of `someList`.\nFunction `f` takes two arguments: the index starting from 0 and the element from `someList`, in that order.\n\n## Examples\n\n```rescript\nlist{1, 2, 3}->Belt.List.mapWithIndex((index, x) => index + x) // list{1, 3, 5}\n```\n"}
+    "detail": "(t<'a>, ('a, int) => 'b) => t<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(list, f)` applies `f` to each element of `list`. Function `f`\ntakes two arguments: the index starting from 0 and the element from `list`, in\nthat order.\n\n## Examples\n\n```rescript\nlist{1, 2, 3}->List.mapWithIndex((x, index) => index + x) // list{1, 3, 5}\n```\n"}
   }, {
-    "label": "mapReverseU",
+    "label": "map",
     "kind": 12,
-    "tags": [1],
+    "tags": [],
     "detail": "(t<'a>, 'a => 'b) => t<'b>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `mapReverse` instead\n\n Uncurried version of [mapReverse](#mapReverse). "}
+    "documentation": {"kind": "markdown", "value": "\n`map(list, f)` returns a new list with `f` applied to each element of `list`.\n\n## Examples\n\n```rescript\nlist{1, 2}->List.map(x => x + 1) // list{3, 4}\n```\n"}
   }]
 
 Complete src/Completion.res 3:9
@@ -722,26 +686,8 @@ Path ForAuto.
   }]
 
 Complete src/Completion.res 47:21
-posCursor:[47:21] posNoWhite:[47:20] Found expr:[47:3->47:21]
-posCursor:[47:21] posNoWhite:[47:20] Found expr:[47:12->47:21]
-Pexp_ident Js.Dict.u:[47:12->47:21]
-Completable: Cpath Value[Js, Dict, u]
-Package opens Pervasives.JsxModules.place holder
-ContextPath Value[Js, Dict, u]
-Path Js.Dict.u
-[{
-    "label": "unsafeGet",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t<'a>, key) => 'a",
-    "documentation": {"kind": "markdown", "value": "\n`Js.Dict.unsafeGet(key)` returns the value if the key exists, otherwise an `undefined` value is returned. Use this only when you are sure the key exists (i.e. when having used the `keys()` function to check that the key is valid).\n\n## Examples\n\n```rescript\nJs.Dict.unsafeGet(ages, \"Fred\") == 49\nJs.Dict.unsafeGet(ages, \"Paul\") // returns undefined\n```\n"}
-  }, {
-    "label": "unsafeDeleteKey",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t<string>, string) => unit",
-    "documentation": {"kind": "markdown", "value": " Experimental internal function "}
-  }]
+XXX Not found!
+[]
 
 Complete src/Completion.res 59:30
 posCursor:[59:30] posNoWhite:[59:29] Found expr:[59:15->59:30]
@@ -1152,31 +1098,19 @@ Path WithChildren
     "documentation": null
   }]
 
-Complete src/Completion.res 172:16
-posCursor:[172:16] posNoWhite:[172:15] Found type:[172:12->172:16]
-Ptyp_constr Js.n:[172:12->172:16]
-Completable: Cpath Type[Js, n]
+Complete src/Completion.res 172:13
+posCursor:[172:13] posNoWhite:[172:12] Found type:[172:12->172:13]
+Ptyp_constr n:[172:12->172:13]
+Completable: Cpath Type[n]
 Package opens Pervasives.JsxModules.place holder
-ContextPath Type[Js, n]
-Path Js.n
+ContextPath Type[n]
+Path n
 [{
-    "label": "null_undefined",
+    "label": "nestedObjT",
     "kind": 22,
     "tags": [],
-    "detail": "type null_undefined",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype null_undefined<'a> = nullable<'a>\n```"}
-  }, {
-    "label": "nullable",
-    "kind": 22,
-    "tags": [],
-    "detail": "type nullable",
-    "documentation": {"kind": "markdown", "value": "```rescript\n@unboxed\ntype nullable<'a> = Js_null_undefined.t<'a> =\n  | Value('a)\n  | @as(null) Null\n  | @as(undefined) Undefined\n```"}
-  }, {
-    "label": "null",
-    "kind": 22,
-    "tags": [],
-    "detail": "type null",
-    "documentation": {"kind": "markdown", "value": "```rescript\n@unboxed\ntype null<'a> = Js_null.t<'a> = Value('a) | @as(null) Null\n```"}
+    "detail": "type nestedObjT",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype nestedObjT = {\"x\": Objects.nestedObjT}\n```"}
   }]
 
 Complete src/Completion.res 174:20
@@ -2352,7 +2286,7 @@ Path r
 
 Complete src/Completion.res 411:21
 posCursor:[411:21] posNoWhite:[411:20] Found expr:[410:14->417:1]
-posCursor:[411:21] posNoWhite:[411:20] Found expr:[411:5->416:17]
+posCursor:[411:21] posNoWhite:[411:20] Found expr:[411:5->416:22]
 posCursor:[411:21] posNoWhite:[411:20] Found expr:[411:5->413:42]
 posCursor:[411:21] posNoWhite:[411:20] Found expr:[411:5->413:5]
 Pexp_ident SomeLocalModule.:[411:5->413:5]
@@ -2378,11 +2312,11 @@ Path SomeLocalModule.
 
 Complete src/Completion.res 414:21
 posCursor:[414:21] posNoWhite:[414:20] Found expr:[410:14->417:1]
-posCursor:[414:21] posNoWhite:[414:20] Found expr:[413:2->416:17]
-posCursor:[414:21] posNoWhite:[414:20] Found expr:[414:5->416:17]
-Pexp_apply ...[414:5->416:8] (...[416:9->416:16])
-posCursor:[414:21] posNoWhite:[414:20] Found expr:[414:5->416:8]
-Pexp_ident SomeLocalModule.:[414:5->416:8]
+posCursor:[414:21] posNoWhite:[414:20] Found expr:[413:2->416:22]
+posCursor:[414:21] posNoWhite:[414:20] Found expr:[414:5->416:22]
+Pexp_apply ...[414:5->416:13] (...[416:14->416:21])
+posCursor:[414:21] posNoWhite:[414:20] Found expr:[414:5->416:13]
+Pexp_ident SomeLocalModule.:[414:5->416:13]
 Completable: Cpath Value[SomeLocalModule, ""]
 Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
 Package opens Pervasives.JsxModules.place holder

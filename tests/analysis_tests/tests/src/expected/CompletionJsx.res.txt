@@ -141,27 +141,27 @@ Path String.st
     "documentation": {"kind": "markdown", "value": "\n`startsWithFrom(str, substr, n)` returns `true` if the `str` starts\nwith `substr` starting at position `n`, `false` otherwise. If `n` is negative,\nthe search starts at the beginning of `str`.\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith) on MDN.\n\n## Examples\n\n```rescript\nString.startsWithFrom(\"BuckleScript\", \"kle\", 3) == true\nString.startsWithFrom(\"BuckleScript\", \"\", 3) == true\nString.startsWithFrom(\"JavaScript\", \"Buckle\", 2) == false\n```\n"}
   }]
 
-Complete src/CompletionJsx.res 22:44
-posCursor:[22:44] posNoWhite:[22:43] Found expr:[8:13->33:3]
-posCursor:[22:44] posNoWhite:[22:43] Found expr:[9:4->32:10]
-posCursor:[22:44] posNoWhite:[22:43] Found expr:[10:4->32:10]
-posCursor:[22:44] posNoWhite:[22:43] Found expr:[11:4->32:10]
-posCursor:[22:44] posNoWhite:[22:43] Found expr:[12:4->32:10]
-posCursor:[22:44] posNoWhite:[22:43] Found expr:[15:5->32:10]
+Complete src/CompletionJsx.res 22:40
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[8:13->33:3]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[9:4->32:10]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[10:4->32:10]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[11:4->32:10]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[12:4->32:10]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[15:5->32:10]
 JSX <div:[15:5->15:8] > _children:15:8
-posCursor:[22:44] posNoWhite:[22:43] Found expr:[15:8->32:4]
-posCursor:[22:44] posNoWhite:[22:43] Found expr:[16:7->32:4]
-posCursor:[22:44] posNoWhite:[22:43] Found expr:[17:7->32:4]
-posCursor:[22:44] posNoWhite:[22:43] Found expr:[17:7->32:4]
-posCursor:[22:44] posNoWhite:[22:43] Found expr:[22:10->32:4]
-posCursor:[22:44] posNoWhite:[22:43] Found expr:[22:10->32:4]
-posCursor:[22:44] posNoWhite:[22:43] Found expr:[22:10->22:44]
-Completable: Cpath Value[Js, String2, trim](Nolabel)->st <<jsx>>
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[15:8->32:4]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[16:7->32:4]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[17:7->32:4]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[17:7->32:4]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[22:10->32:4]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[22:10->32:4]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[22:10->22:40]
+Completable: Cpath Value[String, trim](Nolabel)->st <<jsx>>
 Package opens Pervasives.JsxModules.place holder
-ContextPath Value[Js, String2, trim](Nolabel)->st <<jsx>>
-ContextPath Value[Js, String2, trim](Nolabel)
-ContextPath Value[Js, String2, trim]
-Path Js.String2.trim
+ContextPath Value[String, trim](Nolabel)->st <<jsx>>
+ContextPath Value[String, trim](Nolabel)
+ContextPath Value[String, trim]
+Path String.trim
 Path String.st
 [{
     "label": "React.string",

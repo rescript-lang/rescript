@@ -48,11 +48,11 @@ module Div = {
 // let _ = <div onMouseEnter={event => { let btn = event->JsxEvent.Mouse.button; btn->t }} />
 //                                                                                     ^com
 
-// let _ = <div onMouseEnter={event => { let btn = event->JsxEvent.Mouse.button->Belt.Int.toString; btn->spl }} />
-//                                                                                                          ^com
+// let _ = <div onMouseEnter={event => { let btn = event->JsxEvent.Mouse.button->Int.toString; btn->spl }} />
+//                                                                                                     ^com
 
-// let _ = <div onMouseEnter={event => { let btn = event->JsxEvent.Mouse.button->Belt.Int.toString->Js.String2.split("/"); btn->ma }} />
-//                                                                                                                                ^com
+// let _ = <div onMouseEnter={event => { let btn = event->JsxEvent.Mouse.button->Int.toString->String.split("/"); btn->ma }} />
+//                                                                                                                       ^com
 
 type someVariant = One | Two | Three(int, string)
 type somePolyVariant = [#one | #two | #three(int, string)]
@@ -145,8 +145,8 @@ let fn3 = (~cb: sameFileRecord => unit) => {
 //                                             ^com
 
 // Handles pipe chains as input for switch
-// let x = 123; switch x->Belt.Int.toString->Js.String2.split("/") { | }
-//                                                                    ^com
+// let x = 123; switch x->Belt.Int.toString->String.split("/") { | }
+//                                                                ^com
 
 // Regular completion works
 // let renderer = CompletionSupport2.makeRenderer(~prepare=() => "hello",~render=({support}) => {support.},())

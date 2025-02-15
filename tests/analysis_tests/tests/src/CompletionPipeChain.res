@@ -55,7 +55,7 @@ let f = int->Integer.increment(2)
 // let _ = CompletionSupport.Test.make(1)->CompletionSupport.Test.addSelf(2)->
 //                                                                            ^com
 
-let _ = [123]->Js.Array2.forEach(v => Js.log(v))
+let _ = [123]->Array.forEach(v => Console.log(v))
 // ->
 //   ^com
 
@@ -99,7 +99,7 @@ let renderer = CompletionSupport2.makeRenderer(
 // Console.log(int->t)
 //                   ^com
 
-let r = %re("/t/g")
+let r = /t/g
 
 // r->la
 //      ^com

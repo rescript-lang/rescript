@@ -1,58 +1,58 @@
-Complete src/CompletionDicts.res 0:33
-posCursor:[0:33] posNoWhite:[0:32] Found expr:[0:14->0:35]
-Pexp_apply ...[0:14->0:31] (...[0:32->0:34])
-Completable: Cexpression CArgument Value[Js, Dict, fromArray]($0)->array
+Complete src/CompletionDicts.res 0:30
+posCursor:[0:30] posNoWhite:[0:29] Found expr:[0:14->0:32]
+Pexp_apply ...[0:14->0:28] (...[0:29->0:31])
+Completable: Cexpression CArgument Value[Dict, fromArray]($0)->array
 Package opens Pervasives.JsxModules.place holder
-ContextPath CArgument Value[Js, Dict, fromArray]($0)
-ContextPath Value[Js, Dict, fromArray]
-Path Js.Dict.fromArray
+ContextPath CArgument Value[Dict, fromArray]($0)
+ContextPath Value[Dict, fromArray]
+Path Dict.fromArray
 [{
     "label": "(_, _)",
     "kind": 12,
     "tags": [],
-    "detail": "(key, 'a)",
+    "detail": "(string, 'a)",
     "documentation": null,
     "insertText": "(${1:_}, ${2:_})",
     "insertTextFormat": 2
   }]
 
-Complete src/CompletionDicts.res 3:34
-posCursor:[3:34] posNoWhite:[3:33] Found expr:[3:14->3:37]
-Pexp_apply ...[3:14->3:31] (...[3:32->3:36])
-Completable: Cexpression CArgument Value[Js, Dict, fromArray]($0)->array
+Complete src/CompletionDicts.res 3:31
+posCursor:[3:31] posNoWhite:[3:30] Found expr:[3:14->3:34]
+Pexp_apply ...[3:14->3:28] (...[3:29->3:33])
+Completable: Cexpression CArgument Value[Dict, fromArray]($0)->array
 Package opens Pervasives.JsxModules.place holder
-ContextPath CArgument Value[Js, Dict, fromArray]($0)
-ContextPath Value[Js, Dict, fromArray]
-Path Js.Dict.fromArray
+ContextPath CArgument Value[Dict, fromArray]($0)
+ContextPath Value[Dict, fromArray]
+Path Dict.fromArray
 [{
     "label": "(_, _)",
     "kind": 12,
     "tags": [],
-    "detail": "(key, 'a)",
+    "detail": "(string, 'a)",
     "documentation": null,
     "insertText": "(${1:_}, ${2:_})",
     "insertTextFormat": 2
   }]
 
-Complete src/CompletionDicts.res 6:40
-posCursor:[6:40] posNoWhite:[6:39] Found expr:[6:14->6:44]
-Pexp_apply ...[6:14->6:31] (...[6:32->6:43])
-Completable: Cexpression CArgument Value[Js, Dict, fromArray]($0)->array, tuple($1)
+Complete src/CompletionDicts.res 6:37
+posCursor:[6:37] posNoWhite:[6:36] Found expr:[6:14->6:41]
+Pexp_apply ...[6:14->6:28] (...[6:29->6:40])
+Completable: Cexpression CArgument Value[Dict, fromArray]($0)->array, tuple($1)
 Package opens Pervasives.JsxModules.place holder
-ContextPath CArgument Value[Js, Dict, fromArray]($0)
-ContextPath Value[Js, Dict, fromArray]
-Path Js.Dict.fromArray
+ContextPath CArgument Value[Dict, fromArray]($0)
+ContextPath Value[Dict, fromArray]
+Path Dict.fromArray
 []
 
 
 Complete src/CompletionDicts.res 12:14
 posCursor:[12:14] posNoWhite:[12:13] Found expr:[10:11->14:2]
-Pexp_apply ...[10:11->10:28] (...[10:29->14:1])
-Completable: Cexpression CArgument Value[Js, Dict, fromArray]($0)->array, tuple($1)
+Pexp_apply ...[10:11->10:25] (...[10:26->14:1])
+Completable: Cexpression CArgument Value[Dict, fromArray]($0)->array, tuple($1)
 Package opens Pervasives.JsxModules.place holder
-ContextPath CArgument Value[Js, Dict, fromArray]($0)
-ContextPath Value[Js, Dict, fromArray]
-Path Js.Dict.fromArray
+ContextPath CArgument Value[Dict, fromArray]($0)
+ContextPath Value[Dict, fromArray]
+Path Dict.fromArray
 [{
     "label": "true",
     "kind": 4,

@@ -8,13 +8,13 @@ Path date
     "label": "None",
     "kind": 12,
     "tags": [],
-    "detail": "Js.Date.t",
+    "detail": "Date.t",
     "documentation": null
   }, {
     "label": "Some(_)",
     "kind": 12,
     "tags": [],
-    "detail": "Js.Date.t",
+    "detail": "Date.t",
     "documentation": null,
     "insertText": "Some(${1:_})",
     "insertTextFormat": 2

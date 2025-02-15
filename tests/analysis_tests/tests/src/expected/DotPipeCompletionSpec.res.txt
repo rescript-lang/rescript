@@ -307,20 +307,20 @@ Path DotPipeCompletionSpec.SomeOtherModule.
       }]
   }]
 
-Complete src/DotPipeCompletionSpec.res 86:43
-posCursor:[86:43] posNoWhite:[86:42] Found expr:[86:3->86:43]
-posCursor:[86:43] posNoWhite:[86:42] Found expr:[86:9->86:43]
-Pexp_field [86:9->86:38] filt:[86:39->86:43]
-Completable: Cpath Value[Js, Array2, filter](Nolabel).filt
+Complete src/DotPipeCompletionSpec.res 86:39
+posCursor:[86:39] posNoWhite:[86:38] Found expr:[86:3->86:39]
+posCursor:[86:39] posNoWhite:[86:38] Found expr:[86:9->86:39]
+Pexp_field [86:9->86:34] filt:[86:35->86:39]
+Completable: Cpath Value[Array, filter](Nolabel).filt
 Package opens Pervasives.JsxModules.place holder
-ContextPath Value[Js, Array2, filter](Nolabel).filt
-ContextPath Value[Js, Array2, filter](Nolabel)
-ContextPath Value[Js, Array2, filter]
-Path Js.Array2.filter
-ContextPath Value[Js, Array2, filter](Nolabel, Nolabel)->filt
-ContextPath Value[Js, Array2, filter](Nolabel, Nolabel)
-ContextPath Value[Js, Array2, filter]
-Path Js.Array2.filter
+ContextPath Value[Array, filter](Nolabel).filt
+ContextPath Value[Array, filter](Nolabel)
+ContextPath Value[Array, filter]
+Path Array.filter
+ContextPath Value[Array, filter](Nolabel, Nolabel)->filt
+ContextPath Value[Array, filter](Nolabel, Nolabel)
+ContextPath Value[Array, filter]
+Path Array.filter
 Path Array.filt
 [{
     "label": "->Array.filterMap",
@@ -331,7 +331,7 @@ Path Array.filt
     "sortText": "filterMap",
     "insertText": "->Array.filterMap",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 86, "character": 38}, "end": {"line": 86, "character": 39}},
+      "range": {"start": {"line": 86, "character": 34}, "end": {"line": 86, "character": 35}},
       "newText": ""
       }]
   }, {
@@ -343,7 +343,7 @@ Path Array.filt
     "sortText": "filter",
     "insertText": "->Array.filter",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 86, "character": 38}, "end": {"line": 86, "character": 39}},
+      "range": {"start": {"line": 86, "character": 34}, "end": {"line": 86, "character": 35}},
       "newText": ""
       }]
   }, {
@@ -355,25 +355,25 @@ Path Array.filt
     "sortText": "filterWithIndex",
     "insertText": "->Array.filterWithIndex",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 86, "character": 38}, "end": {"line": 86, "character": 39}},
+      "range": {"start": {"line": 86, "character": 34}, "end": {"line": 86, "character": 35}},
       "newText": ""
       }]
   }]
 
-Complete src/DotPipeCompletionSpec.res 89:70
-posCursor:[89:70] posNoWhite:[89:69] Found expr:[89:3->89:70]
-posCursor:[89:70] posNoWhite:[89:69] Found expr:[89:40->89:70]
-Pexp_field [89:40->89:63] includ:[89:64->89:70]
-Completable: Cpath Value[Js, Array2, joinWith](Nolabel).includ
+Complete src/DotPipeCompletionSpec.res 89:62
+posCursor:[89:62] posNoWhite:[89:61] Found expr:[89:3->89:62]
+posCursor:[89:62] posNoWhite:[89:61] Found expr:[89:36->89:62]
+Pexp_field [89:36->89:55] includ:[89:56->89:62]
+Completable: Cpath Value[Array, joinWith](Nolabel).includ
 Package opens Pervasives.JsxModules.place holder
-ContextPath Value[Js, Array2, joinWith](Nolabel).includ
-ContextPath Value[Js, Array2, joinWith](Nolabel)
-ContextPath Value[Js, Array2, joinWith]
-Path Js.Array2.joinWith
-ContextPath Value[Js, Array2, joinWith](Nolabel, Nolabel)->includ
-ContextPath Value[Js, Array2, joinWith](Nolabel, Nolabel)
-ContextPath Value[Js, Array2, joinWith]
-Path Js.Array2.joinWith
+ContextPath Value[Array, joinWith](Nolabel).includ
+ContextPath Value[Array, joinWith](Nolabel)
+ContextPath Value[Array, joinWith]
+Path Array.joinWith
+ContextPath Value[Array, joinWith](Nolabel, Nolabel)->includ
+ContextPath Value[Array, joinWith](Nolabel, Nolabel)
+ContextPath Value[Array, joinWith]
+Path Array.joinWith
 Path String.includ
 [{
     "label": "->String.includesFrom",
@@ -384,7 +384,7 @@ Path String.includ
     "sortText": "includesFrom",
     "insertText": "->String.includesFrom",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 89, "character": 63}, "end": {"line": 89, "character": 64}},
+      "range": {"start": {"line": 89, "character": 55}, "end": {"line": 89, "character": 56}},
       "newText": ""
       }]
   }, {
@@ -396,24 +396,24 @@ Path String.includ
     "sortText": "includes",
     "insertText": "->String.includes",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 89, "character": 63}, "end": {"line": 89, "character": 64}},
+      "range": {"start": {"line": 89, "character": 55}, "end": {"line": 89, "character": 56}},
       "newText": ""
       }]
   }]
 
-Complete src/DotPipeCompletionSpec.res 94:40
-posCursor:[94:40] posNoWhite:[94:39] Found expr:[94:3->94:40]
-posCursor:[94:40] posNoWhite:[94:39] Found expr:[94:8->94:40]
-Pexp_field [94:8->94:30] toUpperCa:[94:31->94:40]
-Completable: Cpath Value[Js, String2, toLowerCase].toUpperCa
+Complete src/DotPipeCompletionSpec.res 94:36
+posCursor:[94:36] posNoWhite:[94:35] Found expr:[94:3->94:36]
+posCursor:[94:36] posNoWhite:[94:35] Found expr:[94:8->94:36]
+Pexp_field [94:8->94:26] toUpperCa:[94:27->94:36]
+Completable: Cpath Value[String, toLowerCase].toUpperCa
 Package opens Pervasives.JsxModules.place holder
-ContextPath Value[Js, String2, toLowerCase].toUpperCa
-ContextPath Value[Js, String2, toLowerCase]
-Path Js.String2.toLowerCase
-ContextPath Value[Js, String2, toLowerCase](Nolabel)->toUpperCa
-ContextPath Value[Js, String2, toLowerCase](Nolabel)
-ContextPath Value[Js, String2, toLowerCase]
-Path Js.String2.toLowerCase
+ContextPath Value[String, toLowerCase].toUpperCa
+ContextPath Value[String, toLowerCase]
+Path String.toLowerCase
+ContextPath Value[String, toLowerCase](Nolabel)->toUpperCa
+ContextPath Value[String, toLowerCase](Nolabel)
+ContextPath Value[String, toLowerCase]
+Path String.toLowerCase
 Path String.toUpperCa
 [{
     "label": "->String.toUpperCase",
@@ -424,24 +424,24 @@ Path String.toUpperCa
     "sortText": "toUpperCase",
     "insertText": "->String.toUpperCase",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 94, "character": 30}, "end": {"line": 94, "character": 31}},
+      "range": {"start": {"line": 94, "character": 26}, "end": {"line": 94, "character": 27}},
       "newText": ""
       }]
   }]
 
-Complete src/DotPipeCompletionSpec.res 97:63
-posCursor:[97:63] posNoWhite:[97:62] Found expr:[97:3->97:63]
-posCursor:[97:63] posNoWhite:[97:62] Found expr:[97:32->97:63]
-Pexp_field [97:32->97:54] toLowerC:[97:55->97:63]
-Completable: Cpath Value[Js, String2, toUpperCase].toLowerC
+Complete src/DotPipeCompletionSpec.res 97:55
+posCursor:[97:55] posNoWhite:[97:54] Found expr:[97:3->97:55]
+posCursor:[97:55] posNoWhite:[97:54] Found expr:[97:28->97:55]
+Pexp_field [97:28->97:46] toLowerC:[97:47->97:55]
+Completable: Cpath Value[String, toUpperCase].toLowerC
 Package opens Pervasives.JsxModules.place holder
-ContextPath Value[Js, String2, toUpperCase].toLowerC
-ContextPath Value[Js, String2, toUpperCase]
-Path Js.String2.toUpperCase
-ContextPath Value[Js, String2, toUpperCase](Nolabel)->toLowerC
-ContextPath Value[Js, String2, toUpperCase](Nolabel)
-ContextPath Value[Js, String2, toUpperCase]
-Path Js.String2.toUpperCase
+ContextPath Value[String, toUpperCase].toLowerC
+ContextPath Value[String, toUpperCase]
+Path String.toUpperCase
+ContextPath Value[String, toUpperCase](Nolabel)->toLowerC
+ContextPath Value[String, toUpperCase](Nolabel)
+ContextPath Value[String, toUpperCase]
+Path String.toUpperCase
 Path String.toLowerC
 [{
     "label": "->String.toLowerCase",
@@ -452,7 +452,7 @@ Path String.toLowerC
     "sortText": "toLowerCase",
     "insertText": "->String.toLowerCase",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 97, "character": 54}, "end": {"line": 97, "character": 55}},
+      "range": {"start": {"line": 97, "character": 46}, "end": {"line": 97, "character": 47}},
       "newText": ""
       }]
   }]

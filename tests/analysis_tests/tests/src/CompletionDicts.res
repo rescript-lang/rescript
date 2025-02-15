@@ -1,14 +1,14 @@
-// let dict = Js.Dict.fromArray([])
-//                               ^com
+// let dict = Dict.fromArray([])
+//                            ^com
 
-// let dict = Js.Dict.fromArray([()])
-//                                ^com
+// let dict = Dict.fromArray([()])
+//                             ^com
 
-// let dict = Js.Dict.fromArray([("key", )])
-//                                      ^com
+// let dict = Dict.fromArray([("key", )])
+//                                   ^com
 
 // ^in+
-let dict = Js.Dict.fromArray([
+let dict = Dict.fromArray([
   ("key", true),
   //  ("key2", )
   //          ^com

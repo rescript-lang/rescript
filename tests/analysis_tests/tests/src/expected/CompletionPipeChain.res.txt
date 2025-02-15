@@ -251,14 +251,14 @@ Path CompletionSupport.Test.
 
 Complete src/CompletionPipeChain.res 58:5
 posCursor:[58:5] posNoWhite:[58:4] Found expr:[57:8->0:-1]
-Completable: Cpath Value[Js, Array2, forEach](Nolabel, Nolabel)->
+Completable: Cpath Value[Array, forEach](Nolabel, Nolabel)->
 Package opens Pervasives.JsxModules.place holder
-ContextPath Value[Js, Array2, forEach](Nolabel, Nolabel)->
-ContextPath Value[Js, Array2, forEach](Nolabel, Nolabel)
-ContextPath Value[Js, Array2, forEach]
-Path Js.Array2.forEach
+ContextPath Value[Array, forEach](Nolabel, Nolabel)->
+ContextPath Value[Array, forEach](Nolabel, Nolabel)
+ContextPath Value[Array, forEach]
+Path Array.forEach
 CPPipe pathFromEnv: found:true
-Path Js_array2.
+Path Array.
 []
 
 Complete src/CompletionPipeChain.res 62:6

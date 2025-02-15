@@ -84,19 +84,19 @@ let nnn: typeOutsideModule = {nname: "hello"}
 // Continuous completion
 let xxxx = [1, 2]
 
-// xxxx->Js.Array2.filter(v => v > 10).filt
-//                                         ^com
+// xxxx->Array.filter(v => v > 10).filt
+//                                     ^com
 
-// xxxx->Js.Array2.filter(v => v > 10)->Js.Array2.joinWith(",").includ
-//                                                                    ^com
+// xxxx->Array.filter(v => v > 10)->Array.joinWith(",").includ
+//                                                            ^com
 
 let str = "hello"
 
-// str->Js.String2.toLowerCase.toUpperCa
-//                                      ^com
+// str->String.toLowerCase.toUpperCa
+//                                  ^com
 
-// str->Js.String2.toLowerCase->Js.String2.toUpperCase.toLowerC
-//                                                             ^com
+// str->String.toLowerCase->String.toUpperCase.toLowerC
+//                                                     ^com
 
 let cc = (t: typeOutsideModule) => {
   // t.
