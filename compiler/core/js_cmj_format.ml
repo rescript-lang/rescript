@@ -33,7 +33,7 @@ type cmj_value = {
       (** Either constant or closed functor *)
 }
 
-type effect = string option
+type effect_ = string option
 
 let single_na = Single Lam_arity.na
 
@@ -52,7 +52,7 @@ type t = {
   case: Ext_js_file_kind.case;
 }
 
-let make ~(values : cmj_value Map_string.t) ~effect ~package_spec ~case : t =
+let make ~(values : cmj_value Map_string.t) ~effect_ ~package_spec ~case : t =
   {
     values =
       Map_string.to_sorted_array_with_f values (fun k v ->
@@ -61,7 +61,7 @@ let make ~(values : cmj_value Map_string.t) ~effect ~package_spec ~case : t =
             arity = v.arity;
             persistent_closed_lambda = v.persistent_closed_lambda;
           });
-    pure = effect = None;
+    pure = effect_ = None;
     package_spec;
     case;
   }
