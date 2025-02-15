@@ -2244,12 +2244,7 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
         | _ -> items)))
   | CexhaustiveSwitch {contextPath; exprLoc} ->
     let range = Utils.rangeOfLoc exprLoc in
-    let rescriptMajor, rescriptMinor = Packages.getReScriptVersion () in
-    let printFailwithStr num =
-      if (rescriptMajor = 11 && rescriptMinor >= 1) || rescriptMajor >= 12 then
-        "${" ^ string_of_int num ^ ":%todo}"
-      else "${" ^ string_of_int num ^ ":failwith(\"todo\")}"
-    in
+    let printFailwithStr num = "${" ^ string_of_int num ^ ":%todo}" in
     let withExhaustiveItem ~cases ?(startIndex = 0) (c : Completion.t) =
       (* We don't need to write out `switch` here since we know that's what the
          user has already written. Just complete for the rest. *)
