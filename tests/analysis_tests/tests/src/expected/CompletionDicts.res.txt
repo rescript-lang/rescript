@@ -6,15 +6,7 @@ Package opens Pervasives.JsxModules.place holder
 ContextPath CArgument Value[Dict, fromArray]($0)
 ContextPath Value[Dict, fromArray]
 Path Dict.fromArray
-[{
-    "label": "(_, _)",
-    "kind": 12,
-    "tags": [],
-    "detail": "(string, 'a)",
-    "documentation": null,
-    "insertText": "(${1:_}, ${2:_})",
-    "insertTextFormat": 2
-  }]
+[]
 
 Complete src/CompletionDicts.res 3:31
 posCursor:[3:31] posNoWhite:[3:30] Found expr:[3:14->3:34]
@@ -24,15 +16,7 @@ Package opens Pervasives.JsxModules.place holder
 ContextPath CArgument Value[Dict, fromArray]($0)
 ContextPath Value[Dict, fromArray]
 Path Dict.fromArray
-[{
-    "label": "(_, _)",
-    "kind": 12,
-    "tags": [],
-    "detail": "(string, 'a)",
-    "documentation": null,
-    "insertText": "(${1:_}, ${2:_})",
-    "insertTextFormat": 2
-  }]
+[]
 
 Complete src/CompletionDicts.res 6:37
 posCursor:[6:37] posNoWhite:[6:36] Found expr:[6:14->6:41]
@@ -53,18 +37,6 @@ Package opens Pervasives.JsxModules.place holder
 ContextPath CArgument Value[Dict, fromArray]($0)
 ContextPath Value[Dict, fromArray]
 Path Dict.fromArray
-[{
-    "label": "true",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }, {
-    "label": "false",
-    "kind": 4,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null
-  }]
+[]
 
 

@@ -1259,28 +1259,20 @@ ContextPath CArgument Value[mkStuff]($0)
 ContextPath Value[mkStuff]
 Path mkStuff
 [{
-    "label": "/<regexp>/g",
-    "kind": 4,
-    "tags": [],
-    "detail": "Regular expression",
-    "documentation": null,
-    "insertText": "/$0/g",
-    "insertTextFormat": 2
-  }, {
-    "label": "Js.Re.fromString()",
+    "label": "Stdlib.RegExp.fromString()",
     "kind": 12,
     "tags": [],
     "detail": "string => t",
     "documentation": null,
-    "insertText": "Js.Re.fromString($0)",
+    "insertText": "Stdlib.RegExp.fromString($0)",
     "insertTextFormat": 2
   }, {
-    "label": "Js.Re.fromStringWithFlags()",
+    "label": "Stdlib.RegExp.fromStringWithFlags()",
     "kind": 12,
     "tags": [],
     "detail": "(string, ~flags: string) => t",
     "documentation": null,
-    "insertText": "Js.Re.fromStringWithFlags($0)",
+    "insertText": "Stdlib.RegExp.fromStringWithFlags($0)",
     "insertTextFormat": 2
   }]
 

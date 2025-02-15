@@ -211,43 +211,7 @@ ContextPath Value[ffff]->u
 ContextPath Value[ffff]
 Path ffff
 Path Array.u
-[{
-    "label": "->Array.unshiftMany",
-    "kind": 12,
-    "tags": [],
-    "detail": "(array<'a>, array<'a>) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`unshiftMany(array, itemsArray)` inserts many new items to the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshiftMany([\"yay\", \"wehoo\"])\nsomeArray->assertEqual([\"yay\", \"wehoo\", \"hi\", \"hello\"])\n```\n"},
-    "sortText": "unshiftMany",
-    "insertText": "->Array.unshiftMany",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Array.unshift",
-    "kind": 12,
-    "tags": [],
-    "detail": "(array<'a>, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`unshift(array, item)` inserts a new item at the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.unshift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshift(\"yay\")\nsomeArray->assertEqual([\"yay\", \"hi\", \"hello\"])\n```\n"},
-    "sortText": "unshift",
-    "insertText": "->Array.unshift",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Array.unsafe_get",
-    "kind": 12,
-    "tags": [1],
-    "detail": "(array<'a>, int) => 'a",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use getUnsafe instead. This will be removed in v13\n\n\n`unsafe_get(array, index)` returns the element at `index` of `array`.\n\nThis is _unsafe_, meaning it will return `undefined` value if `index` does not exist in `array`.\n\nUse `Array.unsafe_get` only when you are sure the `index` exists (i.e. when using for-loop).\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3]\nfor index in 0 to array->Array.length - 1 {\n  let value = array->Array.unsafe_get(index)\n  Console.log(value)\n}\n```\n"},
-    "sortText": "unsafe_get",
-    "insertText": "->Array.unsafe_get",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
-      "newText": ""
-      }]
-  }]
+[]
 
 Complete src/DotPipeCompletionSpec.res 80:7
 posCursor:[80:7] posNoWhite:[80:6] Found expr:[80:3->80:7]
@@ -317,48 +281,7 @@ ContextPath Value[Array, filter](Nolabel).filt
 ContextPath Value[Array, filter](Nolabel)
 ContextPath Value[Array, filter]
 Path Array.filter
-ContextPath Value[Array, filter](Nolabel, Nolabel)->filt
-ContextPath Value[Array, filter](Nolabel, Nolabel)
-ContextPath Value[Array, filter]
-Path Array.filter
-Path Array.filt
-[{
-    "label": "->Array.filterMap",
-    "kind": 12,
-    "tags": [],
-    "detail": "(array<'a>, 'a => option<'b>) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`filterMap(array, fn)`\n\nCalls `fn` for each element and returns a new array containing results of the `fn` calls which are not `None`.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]\n->Array.filterMap(item =>\n  switch item {\n  | \"Hello\" => Some(item->String.length)\n  | _ => None\n  }\n)\n->assertEqual([5])\n\n[1, 2, 3, 4, 5, 6]\n->Array.filterMap(n => mod(n, 2) == 0 ? Some(n * n) : None)\n->assertEqual([4, 16, 36])\n\nArray.filterMap([1, 2, 3, 4, 5, 6], _ => None)->assertEqual([])\n\nArray.filterMap([], n => mod(n, 2) == 0 ? Some(n * n) : None)->assertEqual([])\n```\n"},
-    "sortText": "filterMap",
-    "insertText": "->Array.filterMap",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 86, "character": 34}, "end": {"line": 86, "character": 35}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Array.filter",
-    "kind": 12,
-    "tags": [],
-    "detail": "(array<'a>, 'a => bool) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`filter(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]\n->Array.filter(num => num > 2)\n->assertEqual([3, 4])\n```\n"},
-    "sortText": "filter",
-    "insertText": "->Array.filter",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 86, "character": 34}, "end": {"line": 86, "character": 35}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->Array.filterWithIndex",
-    "kind": 12,
-    "tags": [],
-    "detail": "(array<'a>, ('a, int) => bool) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`filterWithIndex(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]\n->Array.filterWithIndex((num, index) => index === 0 || num === 2)\n->assertEqual([1, 2])\n```\n"},
-    "sortText": "filterWithIndex",
-    "insertText": "->Array.filterWithIndex",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 86, "character": 34}, "end": {"line": 86, "character": 35}},
-      "newText": ""
-      }]
-  }]
+[]
 
 Complete src/DotPipeCompletionSpec.res 89:62
 posCursor:[89:62] posNoWhite:[89:61] Found expr:[89:3->89:62]
@@ -370,36 +293,7 @@ ContextPath Value[Array, joinWith](Nolabel).includ
 ContextPath Value[Array, joinWith](Nolabel)
 ContextPath Value[Array, joinWith]
 Path Array.joinWith
-ContextPath Value[Array, joinWith](Nolabel, Nolabel)->includ
-ContextPath Value[Array, joinWith](Nolabel, Nolabel)
-ContextPath Value[Array, joinWith]
-Path Array.joinWith
-Path String.includ
-[{
-    "label": "->String.includesFrom",
-    "kind": 12,
-    "tags": [],
-    "detail": "(string, string, int) => bool",
-    "documentation": {"kind": "markdown", "value": "\n`includesFrom(str, searchValue, start)` returns `true` if `searchValue` is found\nanywhere within `str` starting at character number `start` (where 0 is the\nfirst character), `false` otherwise.\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes) on MDN.\n\n## Examples\n\n```rescript\nString.includesFrom(\"programmer\", \"gram\", 1) == true\nString.includesFrom(\"programmer\", \"gram\", 4) == false\nString.includesFrom(`대한민국`, `한`, 1) == true\n```\n"},
-    "sortText": "includesFrom",
-    "insertText": "->String.includesFrom",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 89, "character": 55}, "end": {"line": 89, "character": 56}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->String.includes",
-    "kind": 12,
-    "tags": [],
-    "detail": "(string, string) => bool",
-    "documentation": {"kind": "markdown", "value": "\n`includes(str, searchValue)` returns `true` if `searchValue` is found anywhere\nwithin `str`, `false` otherwise.\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes) on MDN.\n\n## Examples\n\n```rescript\nString.includes(\"programmer\", \"gram\") == true\nString.includes(\"programmer\", \"er\") == true\nString.includes(\"programmer\", \"pro\") == true\nString.includes(\"programmer.dat\", \"xyz\") == false\n```\n"},
-    "sortText": "includes",
-    "insertText": "->String.includes",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 89, "character": 55}, "end": {"line": 89, "character": 56}},
-      "newText": ""
-      }]
-  }]
+[]
 
 Complete src/DotPipeCompletionSpec.res 94:36
 posCursor:[94:36] posNoWhite:[94:35] Found expr:[94:3->94:36]
@@ -410,24 +304,7 @@ Package opens Pervasives.JsxModules.place holder
 ContextPath Value[String, toLowerCase].toUpperCa
 ContextPath Value[String, toLowerCase]
 Path String.toLowerCase
-ContextPath Value[String, toLowerCase](Nolabel)->toUpperCa
-ContextPath Value[String, toLowerCase](Nolabel)
-ContextPath Value[String, toLowerCase]
-Path String.toLowerCase
-Path String.toUpperCa
-[{
-    "label": "->String.toUpperCase",
-    "kind": 12,
-    "tags": [],
-    "detail": "string => string",
-    "documentation": {"kind": "markdown", "value": "\n`toUpperCase(str)` converts `str` to upper case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\nexpand the number of letters in the result, for example the German ß\ncapitalizes to two Ses in a row.\nSee [`String.toUpperCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toUpperCase) on MDN.\n\n## Examples\n\n```rescript\nString.toUpperCase(\"abc\") == \"ABC\"\nString.toUpperCase(`Straße`) == `STRASSE`\nString.toUpperCase(`πς`) == `ΠΣ`\n```\n"},
-    "sortText": "toUpperCase",
-    "insertText": "->String.toUpperCase",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 94, "character": 26}, "end": {"line": 94, "character": 27}},
-      "newText": ""
-      }]
-  }]
+[]
 
 Complete src/DotPipeCompletionSpec.res 97:55
 posCursor:[97:55] posNoWhite:[97:54] Found expr:[97:3->97:55]
@@ -438,24 +315,7 @@ Package opens Pervasives.JsxModules.place holder
 ContextPath Value[String, toUpperCase].toLowerC
 ContextPath Value[String, toUpperCase]
 Path String.toUpperCase
-ContextPath Value[String, toUpperCase](Nolabel)->toLowerC
-ContextPath Value[String, toUpperCase](Nolabel)
-ContextPath Value[String, toUpperCase]
-Path String.toUpperCase
-Path String.toLowerC
-[{
-    "label": "->String.toLowerCase",
-    "kind": 12,
-    "tags": [],
-    "detail": "string => string",
-    "documentation": {"kind": "markdown", "value": "\n`toLowerCase(str)` converts `str` to lower case using the locale-insensitive\ncase mappings in the Unicode Character Database. Notice that the conversion can\ngive different results depending upon context, for example with the Greek\nletter sigma, which has two different lower case forms, one when it is the last\ncharacter in a string and another when it is not.\nSee [`String.toLowerCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase) on MDN.\n\n## Examples\n\n```rescript\nString.toLowerCase(\"ABC\") == \"abc\"\nString.toLowerCase(`ΣΠ`) == `σπ`\nString.toLowerCase(`ΠΣ`) == `πς`\n```\n"},
-    "sortText": "toLowerCase",
-    "insertText": "->String.toLowerCase",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 97, "character": 46}, "end": {"line": 97, "character": 47}},
-      "newText": ""
-      }]
-  }]
+[]
 
 Complete src/DotPipeCompletionSpec.res 101:7
 posCursor:[101:7] posNoWhite:[101:6] Found expr:[100:9->104:1]

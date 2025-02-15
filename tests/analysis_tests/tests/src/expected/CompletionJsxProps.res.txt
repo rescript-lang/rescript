@@ -70,16 +70,6 @@ Path CompletionSupport.TestComponent.make
       "filePath": "src/CompletionJsxProps.res"
     }
   }, {
-    "label": "Type",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Type",
-    "documentation": null,
-    "data": {
-      "modulePath": "Type",
-      "filePath": "src/CompletionJsxProps.res"
-    }
-  }, {
     "label": "TypeArgCtx",
     "kind": 9,
     "tags": [],
@@ -117,16 +107,6 @@ Path CompletionSupport.TestComponent.make
     "documentation": null,
     "data": {
       "modulePath": "TypeDefinition",
-      "filePath": "src/CompletionJsxProps.res"
-    }
-  }, {
-    "label": "TypedArray",
-    "kind": 9,
-    "tags": [],
-    "detail": "module TypedArray",
-    "documentation": null,
-    "data": {
-      "modulePath": "TypedArray",
       "filePath": "src/CompletionJsxProps.res"
     }
   }]

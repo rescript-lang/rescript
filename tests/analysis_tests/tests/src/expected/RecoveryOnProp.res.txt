@@ -54,15 +54,5 @@ Path Res
       "modulePath": "RescriptTools_Docgen",
       "filePath": "src/RecoveryOnProp.res"
     }
-  }, {
-    "label": "Result",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Result",
-    "documentation": null,
-    "data": {
-      "modulePath": "Result",
-      "filePath": "src/RecoveryOnProp.res"
-    }
   }]
 
