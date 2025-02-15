@@ -59,7 +59,7 @@ Package opens Pervasives.JsxModules.place holder
 ContextPath Value[someString]->st <<jsx>>
 ContextPath Value[someString]
 Path someString
-Path String.st
+Path Stdlib.String.st
 [{
     "label": "GenericJsx.string",
     "kind": 12,
@@ -69,13 +69,13 @@ Path String.st
     "sortText": "A",
     "insertTextFormat": 2
   }, {
-    "label": "String.startsWith",
+    "label": "Stdlib.String.startsWith",
     "kind": 12,
     "tags": [],
     "detail": "(string, string) => bool",
     "documentation": {"kind": "markdown", "value": "\n`startsWith(str, substr)` returns `true` if the `str` starts with `substr`,\n`false` otherwise.\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith) on MDN.\n\n## Examples\n\n```rescript\nString.startsWith(\"BuckleScript\", \"Buckle\") == true\nString.startsWith(\"BuckleScript\", \"\") == true\nString.startsWith(\"JavaScript\", \"Buckle\") == false\n```\n"}
   }, {
-    "label": "String.startsWithFrom",
+    "label": "Stdlib.String.startsWithFrom",
     "kind": 12,
     "tags": [],
     "detail": "(string, string, int) => bool",
@@ -106,7 +106,7 @@ Resolved opens 1 GenericJsx
 ContextPath Value[someString]->st <<jsx>>
 ContextPath Value[someString]
 Path someString
-Path String.st
+Path Stdlib.String.st
 [{
     "label": "string",
     "kind": 12,
@@ -116,13 +116,13 @@ Path String.st
     "sortText": "A",
     "insertTextFormat": 2
   }, {
-    "label": "String.startsWith",
+    "label": "Stdlib.String.startsWith",
     "kind": 12,
     "tags": [],
     "detail": "(string, string) => bool",
     "documentation": {"kind": "markdown", "value": "\n`startsWith(str, substr)` returns `true` if the `str` starts with `substr`,\n`false` otherwise.\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith) on MDN.\n\n## Examples\n\n```rescript\nString.startsWith(\"BuckleScript\", \"Buckle\") == true\nString.startsWith(\"BuckleScript\", \"\") == true\nString.startsWith(\"JavaScript\", \"Buckle\") == false\n```\n"}
   }, {
-    "label": "String.startsWithFrom",
+    "label": "Stdlib.String.startsWithFrom",
     "kind": 12,
     "tags": [],
     "detail": "(string, string, int) => bool",

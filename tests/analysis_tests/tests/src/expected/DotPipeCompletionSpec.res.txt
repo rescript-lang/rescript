@@ -210,8 +210,44 @@ Path ffff
 ContextPath Value[ffff]->u
 ContextPath Value[ffff]
 Path ffff
-Path Array.u
-[]
+Path Stdlib.Array.u
+[{
+    "label": "->Stdlib.Array.unshiftMany",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, array<'a>) => unit",
+    "documentation": {"kind": "markdown", "value": "\n`unshiftMany(array, itemsArray)` inserts many new items to the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshiftMany([\"yay\", \"wehoo\"])\nsomeArray->assertEqual([\"yay\", \"wehoo\", \"hi\", \"hello\"])\n```\n"},
+    "sortText": "unshiftMany",
+    "insertText": "->Stdlib.Array.unshiftMany",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Stdlib.Array.unshift",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, 'a) => unit",
+    "documentation": {"kind": "markdown", "value": "\n`unshift(array, item)` inserts a new item at the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.unshift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshift(\"yay\")\nsomeArray->assertEqual([\"yay\", \"hi\", \"hello\"])\n```\n"},
+    "sortText": "unshift",
+    "insertText": "->Stdlib.Array.unshift",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Stdlib.Array.unsafe_get",
+    "kind": 12,
+    "tags": [1],
+    "detail": "(array<'a>, int) => 'a",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use getUnsafe instead. This will be removed in v13\n\n\n`unsafe_get(array, index)` returns the element at `index` of `array`.\n\nThis is _unsafe_, meaning it will return `undefined` value if `index` does not exist in `array`.\n\nUse `Array.unsafe_get` only when you are sure the `index` exists (i.e. when using for-loop).\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3]\nfor index in 0 to array->Array.length - 1 {\n  let value = array->Array.unsafe_get(index)\n  Console.log(value)\n}\n```\n"},
+    "sortText": "unsafe_get",
+    "insertText": "->Stdlib.Array.unsafe_get",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 75, "character": 7}, "end": {"line": 75, "character": 8}},
+      "newText": ""
+      }]
+  }]
 
 Complete src/DotPipeCompletionSpec.res 80:7
 posCursor:[80:7] posNoWhite:[80:6] Found expr:[80:3->80:7]
