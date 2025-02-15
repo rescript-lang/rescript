@@ -4,6 +4,8 @@ Pexp_construct Js
 Json
 Array:[0:8->0:21] [0:21->0:23]
 Completable: Cexpression CTypeAtPos()->variantPayload::Array($0)
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
 [{
     "label": "[]",
