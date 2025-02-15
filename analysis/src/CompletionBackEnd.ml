@@ -1452,6 +1452,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     let completionItems =
       match path with
       | Pdot (Pdot (Pident {name = "Js"}, "Re", _), "t", _)
+      | Pdot (Pdot (Pident {name = "Stdlib"}, "RegExp", _), "t", _)
       | Pdot (Pident {name = "RegExp"}, "t", _) ->
         (* regexps *)
         create "/<regexp>/g" ~insertText:"/$0/g" ~includesSnippets:true

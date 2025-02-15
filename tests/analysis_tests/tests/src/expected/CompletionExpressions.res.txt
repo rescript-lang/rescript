@@ -1259,6 +1259,14 @@ ContextPath CArgument Value[mkStuff]($0)
 ContextPath Value[mkStuff]
 Path mkStuff
 [{
+    "label": "/<regexp>/g",
+    "kind": 4,
+    "tags": [],
+    "detail": "Regular expression",
+    "documentation": null,
+    "insertText": "/$0/g",
+    "insertTextFormat": 2
+  }, {
     "label": "Stdlib.RegExp.fromString()",
     "kind": 12,
     "tags": [],
