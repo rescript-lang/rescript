@@ -11,8 +11,20 @@ ContextPath Value[t]
 Path t
 CPPipe pathFromEnv: found:true
 Path RecordCompletion.n
-Path Array.m
-[]
+Path Stdlib.Array.m
+[{
+    "label": "Stdlib.Array.map",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, 'a => 'b) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nassertEqual(mappedArray, [\"Hello to you\", \"Hi to you\", \"Good bye to you\"])\n```\n"}
+  }, {
+    "label": "Stdlib.Array.mapWithIndex",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray =\n  array->Array.mapWithIndex((greeting, index) =>\n    greeting ++ \" at position \" ++ Int.toString(index)\n  )\n\nassertEqual(mappedArray, [\"Hello at position 0\", \"Hi at position 1\", \"Good bye at position 2\"])\n```\n"}
+  }]
 
 Complete src/RecordCompletion.res 11:13
 posCursor:[11:13] posNoWhite:[11:12] Found expr:[11:3->11:13]
@@ -39,8 +51,20 @@ CPPipe pathFromEnv: found:true
 Path RecordCompletion.n2
 CPPipe pathFromEnv: found:true
 Path RecordCompletion.n
-Path Array.m
-[]
+Path Stdlib.Array.m
+[{
+    "label": "Stdlib.Array.map",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, 'a => 'b) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nassertEqual(mappedArray, [\"Hello to you\", \"Hi to you\", \"Good bye to you\"])\n```\n"}
+  }, {
+    "label": "Stdlib.Array.mapWithIndex",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
+    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray =\n  array->Array.mapWithIndex((greeting, index) =>\n    greeting ++ \" at position \" ++ Int.toString(index)\n  )\n\nassertEqual(mappedArray, [\"Hello at position 0\", \"Hi at position 1\", \"Good bye at position 2\"])\n```\n"}
+  }]
 
 Complete src/RecordCompletion.res 19:7
 posCursor:[19:7] posNoWhite:[19:6] Found expr:[19:3->19:7]
