@@ -1259,12 +1259,12 @@ ContextPath CArgument Value[mkStuff]($0)
 ContextPath Value[mkStuff]
 Path mkStuff
 [{
-    "label": "%re()",
+    "label": "/<regexp>/g",
     "kind": 4,
     "tags": [],
     "detail": "Regular expression",
     "documentation": null,
-    "insertText": "%re(\"/$0/g\")",
+    "insertText": "/$0/g",
     "insertTextFormat": 2
   }, {
     "label": "Js.Re.fromString()",

@@ -1451,9 +1451,10 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     (* Special casing for things where we want extra things in the completions *)
     let completionItems =
       match path with
-      | Pdot (Pdot (Pident m, "Re", _), "t", _) when Ident.name m = "Js" ->
+      | Pdot (Pdot (Pident {name = "Js"}, "Re", _), "t", _)
+      | Pdot (Pident {name = "RegExp"}, "t", _) ->
         (* regexps *)
-        create "%re()" ~insertText:"%re(\"/$0/g\")" ~includesSnippets:true
+        create "/<regexp>/g" ~insertText:"/$0/g" ~includesSnippets:true
           ~kind:(Label "Regular expression") ~env
         :: completionItems
       | _ -> completionItems
