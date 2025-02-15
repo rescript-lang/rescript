@@ -59,7 +59,7 @@ Package opens Pervasives.JsxModules.place holder
 ContextPath Value[someString]->st <<jsx>>
 ContextPath Value[someString]
 Path someString
-Path Js.String2.st
+Path String.st
 [{
     "label": "GenericJsx.string",
     "kind": 12,
@@ -69,17 +69,17 @@ Path Js.String2.st
     "sortText": "A",
     "insertTextFormat": 2
   }, {
-    "label": "Js.String2.startsWith",
+    "label": "String.startsWith",
     "kind": 12,
     "tags": [],
-    "detail": "(t, t) => bool",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `startsWith(str, substr)` returns `true` if the `str` starts with\n`substr`, `false` otherwise.\n\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.startsWith(\"ReScript\", \"Re\") == true\nJs.String2.startsWith(\"ReScript\", \"\") == true\nJs.String2.startsWith(\"JavaScript\", \"Re\") == false\n```\n"}
+    "detail": "(string, string) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`startsWith(str, substr)` returns `true` if the `str` starts with `substr`,\n`false` otherwise.\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith) on MDN.\n\n## Examples\n\n```rescript\nString.startsWith(\"BuckleScript\", \"Buckle\") == true\nString.startsWith(\"BuckleScript\", \"\") == true\nString.startsWith(\"JavaScript\", \"Buckle\") == false\n```\n"}
   }, {
-    "label": "Js.String2.startsWithFrom",
+    "label": "String.startsWithFrom",
     "kind": 12,
     "tags": [],
-    "detail": "(t, t, int) => bool",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `startsWithFrom(str, substr, n)` returns `true` if the `str` starts\nwith `substr` starting at position `n`, false otherwise. If `n` is negative,\nthe search starts at the beginning of `str`.\n\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.startsWithFrom(\"ReScript\", \"Scri\", 2) == true\nJs.String2.startsWithFrom(\"ReScript\", \"\", 2) == true\nJs.String2.startsWithFrom(\"JavaScript\", \"Scri\", 2) == false\n```\n"}
+    "detail": "(string, string, int) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`startsWithFrom(str, substr, n)` returns `true` if the `str` starts\nwith `substr` starting at position `n`, `false` otherwise. If `n` is negative,\nthe search starts at the beginning of `str`.\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith) on MDN.\n\n## Examples\n\n```rescript\nString.startsWithFrom(\"BuckleScript\", \"kle\", 3) == true\nString.startsWithFrom(\"BuckleScript\", \"\", 3) == true\nString.startsWithFrom(\"JavaScript\", \"Buckle\", 2) == false\n```\n"}
   }]
 
 Complete src/GenericJsxCompletion.res 20:24
@@ -106,7 +106,7 @@ Resolved opens 1 GenericJsx
 ContextPath Value[someString]->st <<jsx>>
 ContextPath Value[someString]
 Path someString
-Path Js.String2.st
+Path String.st
 [{
     "label": "string",
     "kind": 12,
@@ -116,16 +116,16 @@ Path Js.String2.st
     "sortText": "A",
     "insertTextFormat": 2
   }, {
-    "label": "Js.String2.startsWith",
+    "label": "String.startsWith",
     "kind": 12,
     "tags": [],
-    "detail": "(t, t) => bool",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `startsWith(str, substr)` returns `true` if the `str` starts with\n`substr`, `false` otherwise.\n\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.startsWith(\"ReScript\", \"Re\") == true\nJs.String2.startsWith(\"ReScript\", \"\") == true\nJs.String2.startsWith(\"JavaScript\", \"Re\") == false\n```\n"}
+    "detail": "(string, string) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`startsWith(str, substr)` returns `true` if the `str` starts with `substr`,\n`false` otherwise.\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith) on MDN.\n\n## Examples\n\n```rescript\nString.startsWith(\"BuckleScript\", \"Buckle\") == true\nString.startsWith(\"BuckleScript\", \"\") == true\nString.startsWith(\"JavaScript\", \"Buckle\") == false\n```\n"}
   }, {
-    "label": "Js.String2.startsWithFrom",
+    "label": "String.startsWithFrom",
     "kind": 12,
     "tags": [],
-    "detail": "(t, t, int) => bool",
-    "documentation": {"kind": "markdown", "value": "\nES2015: `startsWithFrom(str, substr, n)` returns `true` if the `str` starts\nwith `substr` starting at position `n`, false otherwise. If `n` is negative,\nthe search starts at the beginning of `str`.\n\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith)\non MDN.\n\n## Examples\n\n```rescript\nJs.String2.startsWithFrom(\"ReScript\", \"Scri\", 2) == true\nJs.String2.startsWithFrom(\"ReScript\", \"\", 2) == true\nJs.String2.startsWithFrom(\"JavaScript\", \"Scri\", 2) == false\n```\n"}
+    "detail": "(string, string, int) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`startsWithFrom(str, substr, n)` returns `true` if the `str` starts\nwith `substr` starting at position `n`, `false` otherwise. If `n` is negative,\nthe search starts at the beginning of `str`.\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith) on MDN.\n\n## Examples\n\n```rescript\nString.startsWithFrom(\"BuckleScript\", \"kle\", 3) == true\nString.startsWithFrom(\"BuckleScript\", \"\", 3) == true\nString.startsWithFrom(\"JavaScript\", \"Buckle\", 2) == false\n```\n"}
   }]
 
