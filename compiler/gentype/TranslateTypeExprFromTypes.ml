@@ -81,36 +81,40 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
   | ( ( ["FB"; "string"]
       | ["string"]
       | ["String"; "t"]
+      | ["Stdlib_String"; "t"]
       | ["Js"; ("String" | "String2"); "t"] ),
       [] ) ->
     {dependencies = []; type_ = string_t}
-  | (["Js"; "Types"; "bigint_val"] | ["BigInt"; "t"]), [] ->
+  | ( (["Js"; "Types"; "bigint_val"] | ["BigInt"; "t"] | ["Stdlib_BigInt"; "t"]),
+      [] ) ->
     {dependencies = []; type_ = bigint_t}
-  | (["Js"; "Date"; "t"] | ["Date"; "t"]), [] ->
+  | (["Js"; "Date"; "t"] | ["Date"; "t"] | ["Stdlib_Date"; "t"]), [] ->
     {dependencies = []; type_ = date_t}
-  | ["Map"; "t"], [param_translation1; param_translation2] ->
+  | ( (["Map"; "t"] | ["Stdlib_Map"; "t"]),
+      [param_translation1; param_translation2] ) ->
     {
       dependencies =
         param_translation1.dependencies @ param_translation2.dependencies;
       type_ = map_t (param_translation1.type_, param_translation2.type_);
     }
-  | ["WeakMap"; "t"], [param_translation1; param_translation2] ->
+  | ( (["WeakMap"; "t"] | ["Stdlib_WeakMap"; "t"]),
+      [param_translation1; param_translation2] ) ->
     {
       dependencies =
         param_translation1.dependencies @ param_translation2.dependencies;
       type_ = weakmap_t (param_translation1.type_, param_translation2.type_);
     }
-  | ["Set"; "t"], [param_translation] ->
+  | (["Set"; "t"] | ["Stdlib_Set"; "t"]), [param_translation] ->
     {
       dependencies = param_translation.dependencies;
       type_ = set_t param_translation.type_;
     }
-  | ["WeakSet"; "t"], [param_translation] ->
+  | (["WeakSet"; "t"] | ["Stdlib_WeakSet"; "t"]), [param_translation] ->
     {
       dependencies = param_translation.dependencies;
       type_ = weakset_t param_translation.type_;
     }
-  | (["Js"; "Re"; "t"] | ["RegExp"; "t"]), [] ->
+  | (["Js"; "Re"; "t"] | ["RegExp"; "t"] | ["Stdlib_RegExp"; "t"]), [] ->
     {dependencies = []; type_ = regexp_t}
   | (["FB"; "unit"] | ["unit"]), [] -> {dependencies = []; type_ = unit_t}
   | ( (["FB"; "array"] | ["array"] | ["Js"; ("Array" | "Array2"); "t"]),
@@ -134,7 +138,10 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
               };
             ] );
     }
-  | ( (["Pervasives"; "result"] | ["Belt"; "Result"; "t"] | ["result"]),
+  | ( ( ["Pervasives"; "result"]
+      | ["Belt"; "Result"; "t"]
+      | ["result"]
+      | ["Stdlib_Result"; "t"] ),
       [param_translation1; param_translation2] ) ->
     let case name type_ = {case = {label_js = StringLabel name}; t = type_} in
     let variant =
@@ -216,20 +223,28 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
   | ( (["Js"; "Undefined"; "t"] | ["Undefined"; "t"] | ["Js"; "undefined"]),
       [param_translation] ) ->
     {param_translation with type_ = Option param_translation.type_}
-  | (["Js"; "Null"; "t"] | ["Null"; "t"] | ["Js"; "null"]), [param_translation]
-    ->
+  | ( ( ["Js"; "Null"; "t"]
+      | ["Null"; "t"]
+      | ["Js"; "null"]
+      | ["Stdlib_Null"; "t"] ),
+      [param_translation] ) ->
     {param_translation with type_ = Null param_translation.type_}
   | ( ( ["Js"; "Nullable"; "t"]
       | ["Nullable"; "t"]
       | ["Js"; "nullable"]
       | ["Js"; "Null_undefined"; "t"]
-      | ["Js"; "null_undefined"] ),
+      | ["Js"; "null_undefined"]
+      | ["Stdlib_Nullable"; "t"] ),
       [param_translation] ) ->
     {param_translation with type_ = Nullable param_translation.type_}
-  | ( (["Js"; "Promise"; "t"] | ["Promise"; "t"] | ["promise"]),
+  | ( ( ["Js"; "Promise"; "t"]
+      | ["Promise"; "t"]
+      | ["promise"]
+      | ["Stdlib_Promise"; "t"] ),
       [param_translation] ) ->
     {param_translation with type_ = Promise param_translation.type_}
-  | (["Js"; "Dict"; "t"] | ["Dict"; "t"] | ["dict"]), [param_translation] ->
+  | ( (["Js"; "Dict"; "t"] | ["Dict"; "t"] | ["dict"] | ["Stdlib_Dict"; "t"]),
+      [param_translation] ) ->
     {param_translation with type_ = Dict param_translation.type_}
   | _ -> default_case ()
 
