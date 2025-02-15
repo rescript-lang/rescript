@@ -111,8 +111,6 @@ jobs:
             ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.4.14.2+options,ocaml-option-static
-          - os: ubuntu-24.04
-            ocaml_compiler: ocaml-variants.4.13.0+options,ocaml-option-static
 
     runs-on: ${{matrix.os}}
 
