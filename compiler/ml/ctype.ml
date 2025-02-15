@@ -600,8 +600,9 @@ let get_level env p =
     match (Env.find_type p env).type_newtype_level with
     | None -> Path.binding_time p
     | Some (x, _) -> x
-  with Not_found -> (* no newtypes in predef *)
-                    Path.binding_time p
+  with Not_found ->
+    (* no newtypes in predef *)
+    Path.binding_time p
 
 let rec normalize_package_path env p =
   let t = try (Env.find_modtype p env).mtd_type with Not_found -> None in
@@ -4265,7 +4266,8 @@ let maybe_pointer_type env typ =
       true
       (* This can happen due to e.g. missing -I options,
          causing some .cmi files to be unavailable.
-         Maybe we should emit a warning. *))
+         Maybe we should emit a warning. *)
+    )
   | Tvariant row ->
     let row = Btype.row_repr row in
     (* if all labels are devoid of arguments, not a pointer *)

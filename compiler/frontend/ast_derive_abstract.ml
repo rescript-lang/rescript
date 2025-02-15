@@ -95,7 +95,9 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
                 pld_attributes;
                 pld_loc;
               } :
-               Parsetree.label_declaration) (acc, maker, labels) ->
+               Parsetree.label_declaration)
+             (acc, maker, labels)
+           ->
           let prim_as_name, new_label =
             match Ast_attributes.iter_process_bs_string_as pld_attributes with
             | None -> (label_name, pld_name)

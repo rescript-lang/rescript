@@ -113,7 +113,7 @@ let get_result mid_val =
   match mid_val.persistent_closed_lambda with
   | Some
       (Lconst
-        (Const_js_null | Const_js_undefined _ | Const_js_true | Const_js_false))
+         (Const_js_null | Const_js_undefined _ | Const_js_true | Const_js_false))
   | None ->
     mid_val
   | Some _ ->
@@ -131,8 +131,10 @@ let rec binary_search_aux arr lo hi (key : string) =
       let lo_val = Array.unsafe_get arr lo in
       if lo_val.name = key then get_result lo_val else not_found key
     else binary_search_aux arr lo mid key
-  else if (*  a[lo] =< a[mid] < key <= a[hi] *)
-          lo = mid then
+  else if
+    (*  a[lo] =< a[mid] < key <= a[hi] *)
+    lo = mid
+  then
     let hi_val = Array.unsafe_get arr hi in
     if hi_val.name = key then get_result hi_val else not_found key
   else binary_search_aux arr mid hi key

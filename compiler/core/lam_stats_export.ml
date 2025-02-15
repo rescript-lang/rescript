@@ -55,8 +55,8 @@ let values_of_export (meta : Lam_stats.t) (export_map : Lam.t Map_ident.t) :
         match optlam with
         | Some
             (Lconst
-              ( Const_js_null | Const_js_undefined _ | Const_js_true
-              | Const_js_false ))
+               ( Const_js_null | Const_js_undefined _ | Const_js_true
+               | Const_js_false ))
         | None ->
           optlam
         | Some lambda ->

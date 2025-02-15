@@ -756,7 +756,8 @@ let insert_or_append p ps act ors no =
             let _, not_e = get_equiv q rem in
             if
               or_ok p ps not_e
-              && (* check append condition for head of O *)
+              &&
+              (* check append condition for head of O *)
               List.for_all (* check insert condition for tail of O *)
                 (fun cl ->
                   match cl with
@@ -2765,7 +2766,8 @@ let check_partial is_mutable is_lazy pat_act_list = function
   | Total ->
     if
       pat_act_list = []
-      || (* allow empty case list *)
+      ||
+      (* allow empty case list *)
       List.exists
         (fun (pats, lam) -> is_mutable pats && (is_guarded lam || is_lazy pats))
         pat_act_list

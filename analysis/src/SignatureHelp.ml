@@ -553,44 +553,44 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
                 let offset = ref 0 in
                 Some
                   (`InlineRecord
-                    (fields
-                    |> List.map (fun (field : field) ->
-                           let startOffset = !offset in
-                           let argText =
-                             Printf.sprintf "%s%s: %s" field.fname.txt
-                               (if field.optional then "?" else "")
-                               (Shared.typeToString
-                                  (if field.optional then
-                                     Utils.unwrapIfOption field.typ
-                                   else field.typ))
-                           in
-                           let endOffset =
-                             startOffset + String.length argText
-                           in
-                           offset := endOffset + String.length ", ";
-                           (argText, field, (startOffset, endOffset)))))
+                     (fields
+                     |> List.map (fun (field : field) ->
+                            let startOffset = !offset in
+                            let argText =
+                              Printf.sprintf "%s%s: %s" field.fname.txt
+                                (if field.optional then "?" else "")
+                                (Shared.typeToString
+                                   (if field.optional then
+                                      Utils.unwrapIfOption field.typ
+                                    else field.typ))
+                            in
+                            let endOffset =
+                              startOffset + String.length argText
+                            in
+                            offset := endOffset + String.length ", ";
+                            (argText, field, (startOffset, endOffset)))))
               | Args [(typ, _)] ->
                 Some
                   (`SingleArg
-                    ( typ |> Shared.typeToString,
-                      docsForLabel ~file:full.file ~package:full.package
-                        ~supportsMarkdownLinks typ ))
+                     ( typ |> Shared.typeToString,
+                       docsForLabel ~file:full.file ~package:full.package
+                         ~supportsMarkdownLinks typ ))
               | Args args ->
                 let offset = ref 0 in
                 Some
                   (`TupleArg
-                    (args
-                    |> List.map (fun (typ, _) ->
-                           let startOffset = !offset in
-                           let argText = typ |> Shared.typeToString in
-                           let endOffset =
-                             startOffset + String.length argText
-                           in
-                           offset := endOffset + String.length ", ";
-                           ( argText,
-                             docsForLabel ~file:full.file ~package:full.package
-                               ~supportsMarkdownLinks typ,
-                             (startOffset, endOffset) ))))
+                     (args
+                     |> List.map (fun (typ, _) ->
+                            let startOffset = !offset in
+                            let argText = typ |> Shared.typeToString in
+                            let endOffset =
+                              startOffset + String.length argText
+                            in
+                            offset := endOffset + String.length ", ";
+                            ( argText,
+                              docsForLabel ~file:full.file ~package:full.package
+                                ~supportsMarkdownLinks typ,
+                              (startOffset, endOffset) ))))
             in
             let label =
               constructor.name ^ "("

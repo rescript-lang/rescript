@@ -114,8 +114,9 @@ let record ~(package_kind : Bsb_package_kind.t) ~per_proj_dir ~file
   record_global_atime buf Sys.executable_name;
   Ext_list.iter config.ppx_files (fun {name; args = _} ->
       try record_global_atime buf name
-      with _ -> (* record the ppx files as a best effort *)
-                ());
+      with _ ->
+        (* record the ppx files as a best effort *)
+        ());
   let oc = open_out_bin file in
   Ext_buffer.output_buffer oc buf;
   close_out oc

@@ -146,7 +146,8 @@ let sub_binary_expr_operand parent_operator child_operator =
   || prec_parent == prec_child
      && not
           (ParsetreeViewer.flattenable_operators parent_operator child_operator)
-  || (* a && b || c, add parens to (a && b) for readability, who knows the difference by heart… *)
+  ||
+  (* a && b || c, add parens to (a && b) for readability, who knows the difference by heart… *)
   (parent_operator = "||" && child_operator = "&&")
 
 let rhs_binary_expr_operand parent_operator rhs =

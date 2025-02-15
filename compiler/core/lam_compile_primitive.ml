@@ -612,5 +612,6 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
   (* let parm = Ident.create "prim" in
      Lfunction(Curried, [parm],
                Matching.inline_lazy_force (Lvar parm) Location.none)
-     It is inlined, this should not appear here *) ->
+     It is inlined, this should not appear here *)
+    ->
     assert false

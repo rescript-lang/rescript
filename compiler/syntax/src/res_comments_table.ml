@@ -612,15 +612,15 @@ and walk_list : ?prev_loc:Location.t -> node list -> t -> Comment.t list -> unit
  * closing token of a "list-of-things". This routine visits the whole list,
  * but returns any remaining comments that likely fall after the whole list. *)
 and visit_list_but_continue_with_remaining_comments :
-      'node.
-      ?prev_loc:Location.t ->
-      newline_delimited:bool ->
-      get_loc:('node -> Location.t) ->
-      walk_node:('node -> t -> Comment.t list -> unit) ->
-      'node list ->
-      t ->
-      Comment.t list ->
-      Comment.t list =
+    'node.
+    ?prev_loc:Location.t ->
+    newline_delimited:bool ->
+    get_loc:('node -> Location.t) ->
+    walk_node:('node -> t -> Comment.t list -> unit) ->
+    'node list ->
+    t ->
+    Comment.t list ->
+    Comment.t list =
  fun ?prev_loc ~newline_delimited ~get_loc ~walk_node l t comments ->
   let open Location in
   match l with

@@ -509,26 +509,22 @@ let compile output_prefix =
         Ext_list.fold_left rest acc (fun acc x ->
             Js_output.append_output acc (compile_recursive_lets_aux cxt x)))
   and compile_general_cases :
-        'a.
-        make_exp:('a -> J.expression) ->
-        eq_exp:
-          ('a option ->
-          J.expression ->
-          'a option ->
-          J.expression ->
-          J.expression) ->
-        cxt:Lam_compile_context.t ->
-        switch:
-          (?default:J.block ->
-          ?declaration:Lam_compat.let_kind * Ident.t ->
-          _ ->
-          ('a * J.case_clause) list ->
-          J.statement) ->
-        switch_exp:J.expression ->
-        default:default_case ->
-        ?merge_cases:('a -> 'a -> bool) ->
-        ('a * Lam.t) list ->
-        J.block =
+      'a.
+      make_exp:('a -> J.expression) ->
+      eq_exp:
+        ('a option -> J.expression -> 'a option -> J.expression -> J.expression) ->
+      cxt:Lam_compile_context.t ->
+      switch:
+        (?default:J.block ->
+        ?declaration:Lam_compat.let_kind * Ident.t ->
+        _ ->
+        ('a * J.case_clause) list ->
+        J.statement) ->
+      switch_exp:J.expression ->
+      default:default_case ->
+      ?merge_cases:('a -> 'a -> bool) ->
+      ('a * Lam.t) list ->
+      J.block =
    fun (type a) ~(make_exp : a -> J.expression)
        ~(eq_exp :
           a option -> J.expression -> a option -> J.expression -> J.expression)

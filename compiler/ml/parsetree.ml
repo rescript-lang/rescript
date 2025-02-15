@@ -169,8 +169,7 @@ and pattern_desc =
 
        Other forms of interval are recognized by the parser
        but rejected by the type-checker. *)
-  | Ppat_tuple of pattern list
-    (* (P1, ..., Pn)
+  | Ppat_tuple of pattern list (* (P1, ..., Pn)
 
        Invariant: n >= 2
     *)
@@ -215,8 +214,7 @@ and expression = {
 }
 
 and expression_desc =
-  | Pexp_ident of Longident.t loc
-    (* x
+  | Pexp_ident of Longident.t loc (* x
        M.x
     *)
   | Pexp_constant of constant (* 1, 'a', "true", 1.0, 1l, 1L, 1n *)
