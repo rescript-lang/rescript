@@ -1951,7 +1951,7 @@ Path this
     "kind": 12,
     "tags": [],
     "detail": "\\\"Type Not Known\"",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype props<'first, 'zoo, 'second> = {\n  first?: 'first,\n  zoo?: 'zoo,\n  second: 'second,\n}\n```"}
+    "documentation": null
   }]
 
 Hover src/Completion.res 349:14
@@ -2511,7 +2511,7 @@ Path Stdlib.Result.g
     "kind": 12,
     "tags": [],
     "detail": "result<'a, 'b> => 'a",
-    "documentation": {"kind": "markdown", "value": "\n  Result types are really useful to describe the result of a certain operation\n  without relying on exceptions or `option` types.\n\n  This module gives you useful utilities to create and combine `Result` data.\n"}
+    "documentation": {"kind": "markdown", "value": "\n  `getExn(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, raise an exception\n\n  ```res example\n  Result.getExn(Result.Ok(42)) == 42\n\n  switch Result.getExn(Error(\"Invalid data\")) {\n  | exception Not_found => assert(true)\n  | _ => assert(false)\n  }\n  ```\n"}
   }, {
     "label": "Result.getOr",
     "kind": 12,
