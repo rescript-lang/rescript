@@ -535,7 +535,8 @@ module DynamicChecks = struct
     else (* (undefiled + other) || other *)
       typeof e != object_
 
-  let add_runtime_type_check ~tag_type ~(block_cases : block_type list) x y =
+  let add_runtime_type_check ~tag_type ~has_null_case
+      ~(block_cases : block_type list) x y =
     let instances =
       Ext_list.filter_map block_cases (function
         | InstanceType i -> Some i
@@ -547,14 +548,16 @@ module DynamicChecks = struct
         | FunctionType ) ->
       typeof y == x
     | Untagged ObjectType ->
+      let object_case =
+        if has_null_case then typeof y == x &&& (y != nil) else typeof y == x
+      in
       if instances <> [] then
         let not_one_of_the_instances =
-          Ext_list.fold_right instances
-            (typeof y == x)
-            (fun i x -> x &&& not (is_instance i y))
+          Ext_list.fold_right instances object_case (fun i x ->
+              x &&& not (is_instance i y))
         in
         not_one_of_the_instances
-      else typeof y == x
+      else object_case
     | Untagged (InstanceType i) -> is_instance i y
     | Untagged UnknownType ->
       (* This should not happen because unknown must be the only non-literal case *)

@@ -32,6 +32,7 @@
 - Fix issue in functors with more than one argument (which are curried): emit nested function always. https://github.com/rescript-lang/rescript/pull/7273
 - Fix dot completion issue with React primitives. https://github.com/rescript-lang/rescript/pull/7292
 - Stdlib namespace for Core modules (fixes name clashes with user modules). https://github.com/rescript-lang/rescript/pull/7285
+- Fix runtime type check for Object in untagged variants when one variant case is `null`. https://github.com/rescript-lang/rescript/pull/7303
 
 #### :house: Internal
 

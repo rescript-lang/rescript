@@ -3,7 +3,7 @@
 import * as Stdlib_Array from "rescript/lib/es6/Stdlib_Array.js";
 
 function decodeUser(json) {
-  if (typeof json !== "object" || Array.isArray(json)) {
+  if (typeof json !== "object" || json === null || Array.isArray(json)) {
     return;
   }
   let id = json.id;
@@ -30,7 +30,7 @@ function decodeUser(json) {
 }
 
 function decodeGroup(json) {
-  if (typeof json !== "object" || Array.isArray(json)) {
+  if (typeof json !== "object" || json === null || Array.isArray(json)) {
     return;
   }
   let id = json.id;
