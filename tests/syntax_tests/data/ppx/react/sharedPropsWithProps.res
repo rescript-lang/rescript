@@ -91,3 +91,13 @@ module V4A6 = {
     }
   }
 }
+
+module V4A7 = {
+  type props = {count: int}
+
+  @react.componentWithProps
+  let make = @directive("'use memo'")
+  props => {
+    React.int(props.count)
+  }
+}

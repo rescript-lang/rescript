@@ -64,3 +64,14 @@ module C7 = {
       React.string(`Hello ${name}, you clicked me ` ++ times)
     }
 }
+
+module C8 = {
+  type props = {count: int}
+
+  @react.componentWithProps
+  let make =
+    @directive("'use memo'")
+    props => {
+      React.int(props.count)
+    }
+}

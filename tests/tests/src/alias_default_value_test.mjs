@@ -82,6 +82,17 @@ let C7 = {
   make: Alias_default_value_test$C7
 };
 
+function make(props) {
+  'use memo';
+  return props.count;
+}
+
+let Alias_default_value_test$C8 = make;
+
+let C8 = {
+  make: Alias_default_value_test$C8
+};
+
 export {
   C0,
   C1,
@@ -90,5 +101,6 @@ export {
   C4,
   C6,
   C7,
+  C8,
 }
 /* No side effect */
