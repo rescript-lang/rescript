@@ -25,7 +25,8 @@
 - Fix completion for application with tagged template. https://github.com/rescript-lang/rescript/pull/7278
 - Fix error message for arity in the presence of optional arguments. https://github.com/rescript-lang/rescript/pull/7284
 - Fix issue in functors with more than one argument (which are curried): emit nested function always. https://github.com/rescript-lang/rescript/pull/7273
-- Fix dot completion issue with React primitives.  https://github.com/rescript-lang/rescript/pull/7292
+- Fix dot completion issue with React primitives. https://github.com/rescript-lang/rescript/pull/7292
+- Stdlib namespace for Core modules (fixes name clashes with user modules). https://github.com/rescript-lang/rescript/pull/7285
 
 #### :house: Internal
 
