@@ -612,7 +612,6 @@ let remove_stdlib t =
 
 let rec tree_of_typexp sch ty =
   let ty = repr ty in
-  let ty = remove_stdlib ty in
   let px = proxy ty in
   if List.mem_assq px !names && not (List.memq px !delayed) then
     let mark = is_non_gen sch ty in
