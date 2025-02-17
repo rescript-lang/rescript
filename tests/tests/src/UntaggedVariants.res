@@ -461,3 +461,11 @@ module MergeCases = {
     | Boolean(_) => "merge"
     }
 }
+
+module ObjectAndNull = {
+  let printLength = (json: JSON.t) =>
+    switch json {
+    | Object(o) => Console.log2("Length: ", o->Dict.valuesToArray->Array.length)
+    | _ => ()
+    }
+}
