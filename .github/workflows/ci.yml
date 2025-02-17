@@ -153,7 +153,7 @@ jobs:
       # matrix.ocaml_compiler may contain commas
       - name: Get OPAM cache key
         shell: bash
-        run: echo "opam_cache_key=opam-env-v6-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('dune-project') }}" | sed 's/,/-/g' >> $GITHUB_ENV
+        run: echo "opam_cache_key=opam-env-v7-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('dune-project') }}" | sed 's/,/-/g' >> $GITHUB_ENV
 
       - name: Restore OPAM environment
         id: cache-opam-env
@@ -190,6 +190,10 @@ jobs:
       - name: Install OPAM dependencies
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         run: opam install . --deps-only --with-test
+
+      - name: "Install reanalyze"
+        if: steps.cache-opam-env.outputs.cache-hit != 'true' && matrix.run_reanalyze
+        run: opam install reanalyze
 
       - name: Cache OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
@@ -303,9 +307,7 @@ jobs:
 
       - name: "Syntax: Run reanalyze"
         if: matrix.run_reanalyze
-        run: |
-          opam install reanalyze
-          opam exec -- make reanalyze
+        run: opam exec -- make reanalyze
 
       - name: Build runtime/stdlib
         run: ./scripts/buildRuntime.sh
