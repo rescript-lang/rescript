@@ -571,8 +571,48 @@ let reset_and_mark_loops_list tyl =
 
 (* Disabled in classic mode when printing an unification error *)
 
+let remove_stdlib t =
+  match t.Types.desc with
+  | Tconstr
+      ( Pdot
+          ( Pdot (Pident {name = "Stdlib"; flags}, module_name, s1),
+            identifier,
+            s2 ),
+        type_params,
+        m ) ->
+    {
+      t with
+      desc =
+        Tconstr
+          ( Pdot (Pident {name = module_name; stamp = s1; flags}, identifier, s2),
+            type_params,
+            m );
+    }
+  | Tconstr
+      ( Pdot (Pident ({name = ident_name} as ident), identifier, s1),
+        type_params,
+        m )
+    when String.starts_with ~prefix:"Stdlib_" ident_name ->
+    {
+      t with
+      desc =
+        Tconstr
+          ( Pdot
+              ( Pident
+                  {
+                    ident with
+                    name = String.sub ident_name 7 (String.length ident_name - 7);
+                  },
+                identifier,
+                s1 ),
+            type_params,
+            m );
+    }
+  | _ -> t
+
 let rec tree_of_typexp sch ty =
   let ty = repr ty in
+  let ty = remove_stdlib ty in
   let px = proxy ty in
   if List.mem_assq px !names && not (List.memq px !delayed) then
     let mark = is_non_gen sch ty in
@@ -1406,6 +1446,8 @@ let report_unification_error ppf env ?(unif = true) tr txt1 txt2 =
   wrap_printing_env env (fun () -> unification_error env unif tr txt1 ppf txt2)
 
 let super_type_expansion ~tag t ppf t' =
+  let t = remove_stdlib t in
+  let t' = remove_stdlib t' in
   let tag = Format.String_tag tag in
   if same_path t t' then (
     Format.pp_open_stag ppf tag;

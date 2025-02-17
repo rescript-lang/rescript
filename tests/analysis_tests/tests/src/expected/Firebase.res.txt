@@ -29,7 +29,7 @@ Path Firebase.Firestore.
     "label": "->Firestore.getDoc",
     "kind": 12,
     "tags": [],
-    "detail": "documentReference<\n  'documentdata,\n> => Stdlib.Promise.t<documentSnapshot<'documentdata>>",
+    "detail": "documentReference<\n  'documentdata,\n> => Promise.t<documentSnapshot<'documentdata>>",
     "documentation": null,
     "sortText": "getDoc",
     "insertText": "->Firestore.getDoc",
