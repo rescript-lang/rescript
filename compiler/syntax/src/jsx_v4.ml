@@ -1185,7 +1185,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     in
     (Some props_record_type, binding, new_binding))
   else if Jsx_common.has_attr_on_binding Jsx_common.has_attr_with_props binding
-  then (
+  then
     let modified_binding =
       {
         binding with
@@ -1197,8 +1197,6 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     let full_module_name =
       make_module_name file_name config.nested_modules fn_name
     in
-
-    Format.printf "Yow %s\n" full_module_name;
 
     let is_async =
       Ast_async.dig_async_payload_from_function modified_binding.pvb_expr
@@ -1246,6 +1244,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
 
       let wrapper_expr =
         Exp.fun_ ~arity:None Nolabel None props_pattern
+          ~attrs:binding.pvb_expr.pexp_attributes
           (Jsx_common.async_component ~async:is_async
              (Exp.apply
                 (Exp.ident
@@ -1285,7 +1284,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
         binding with
         pvb_attributes = binding.pvb_attributes |> List.filter other_attrs_pure;
       },
-      new_binding ))
+      new_binding )
   else (None, binding, None)
 
 let transform_structure_item ~config item =
