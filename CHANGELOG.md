@@ -21,6 +21,7 @@
 - Allow single newline in JSX. https://github.com/rescript-lang/rescript/pull/7269
 - Editor: Always complete from Core first. Use actual native regex syntax in code snippets for regexps. https://github.com/rescript-lang/rescript/pull/7295
 - Add `type t` to Stdlib modules. https://github.com/rescript-lang/rescript/pull/7302
+- Gentype: handle null/nullable/undefined from Stdlib. https://github.com/rescript-lang/rescript/pull/7132
 
 #### :bug: Bug fix
 
