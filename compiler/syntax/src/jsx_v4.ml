@@ -1283,6 +1283,12 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       {
         binding with
         pvb_attributes = binding.pvb_attributes |> List.filter other_attrs_pure;
+        pvb_expr =
+          {
+            binding.pvb_expr with
+            (* moved to wrapper_expr *)
+            pexp_attributes = [];
+          };
       },
       new_binding )
   else (None, binding, None)

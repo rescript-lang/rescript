@@ -82,12 +82,10 @@ let C7 = {
   make: Alias_default_value_test$C7
 };
 
-function make(props) {
+function Alias_default_value_test$C8(props) {
   'use memo';
   return props.count;
 }
-
-let Alias_default_value_test$C8 = make;
 
 let C8 = {
   make: Alias_default_value_test$C8
