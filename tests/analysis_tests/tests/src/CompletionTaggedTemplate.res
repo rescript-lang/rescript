@@ -11,7 +11,6 @@ external meh: (array<string>, array<string>) => M.t = "default"
 
 let w = meh``
 
-// ^dv+
 // let _ = w.
 //           ^com
 
