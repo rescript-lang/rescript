@@ -47,7 +47,7 @@ Make sure you have [opam](https://opam.ocaml.org/doc/Install.html) installed on 
 opam init
 
 # Any recent OCaml version works as a development compiler
-opam switch create 5.2.1 # can also create local switch with opam switch create
+opam switch create 5.3.0 # can also create local switch with opam switch create
 
 # Install dev dependencies from OPAM
 opam install . --deps-only --with-test --with-dev-setup -y

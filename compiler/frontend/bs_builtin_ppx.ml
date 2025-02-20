@@ -517,7 +517,8 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
         {txt = Lident safe_module_type_name; loc = mb.pmb_expr.pmod_loc}
       in
       module_type_decl
-      @ (* module M = @res.await Belt.List *)
+      @
+      (* module M = @res.await Belt.List *)
       {
         item with
         pstr_desc =

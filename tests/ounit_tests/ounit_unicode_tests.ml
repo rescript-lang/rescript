@@ -9,7 +9,8 @@ let ( ==~ ) a b =
        (Ast_utf8_string_interp.transform_test a
        |> List.filter (fun x -> not @@ Ast_utf8_string_interp.empty_segment x))
        (fun ({start = {offset = a}; finish = {offset = b}; kind; content} :
-              Ast_utf8_string_interp.segment) -> (a, b, kind, content)))
+              Ast_utf8_string_interp.segment)
+          -> (a, b, kind, content)))
     b
 
 let ( ==* ) a b =
@@ -23,7 +24,8 @@ let ( ==* ) a b =
               kind;
               content;
             } :
-             Ast_utf8_string_interp.segment) -> (la, a, lb, b, kind, content))
+             Ast_utf8_string_interp.segment)
+         -> (la, a, lb, b, kind, content))
   in
   OUnit.assert_equal segments b
 

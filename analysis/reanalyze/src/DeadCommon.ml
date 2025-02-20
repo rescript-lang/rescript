@@ -555,7 +555,8 @@ module Decl = struct
         let refIsBelow (pos : Lexing.position) =
           decl.pos.pos_fname <> pos.pos_fname
           || decl.pos.pos_cnum < pos.pos_cnum
-             && (* not a function defined inside a function, e.g. not a callback *)
+             &&
+             (* not a function defined inside a function, e.g. not a callback *)
              decl.posEnd.pos_cnum < pos.pos_cnum
         in
         refs |> PosSet.exists refIsBelow

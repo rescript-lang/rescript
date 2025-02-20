@@ -1096,8 +1096,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
           *)
           let completeAsBuiltin =
             match typePath with
-            | Some t ->
-              TypeUtils.completionPathFromMaybeBuiltin t ~package:full.package
+            | Some t -> TypeUtils.completionPathFromMaybeBuiltin t
             | None -> None
           in
           let completionPath =
@@ -1458,9 +1457,11 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     (* Special casing for things where we want extra things in the completions *)
     let completionItems =
       match path with
-      | Pdot (Pdot (Pident m, "Re", _), "t", _) when Ident.name m = "Js" ->
+      | Pdot (Pdot (Pident {name = "Js"}, "Re", _), "t", _)
+      | Pdot (Pdot (Pident {name = "Stdlib"}, "RegExp", _), "t", _)
+      | Pdot (Pident {name = "RegExp"}, "t", _) ->
         (* regexps *)
-        create "%re()" ~insertText:"%re(\"/$0/g\")" ~includesSnippets:true
+        create "/<regexp>/g" ~insertText:"/$0/g" ~includesSnippets:true
           ~kind:(Label "Regular expression") ~env
         :: completionItems
       | _ -> completionItems
@@ -1807,8 +1808,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     if Debug.verbose () then print_endline "[complete_typed_value]--> Texn";
     [
       create
-        (full.package.builtInCompletionModules.exnModulePath @ ["Error(error)"]
-        |> ident)
+        (["Exn"; "Error(error)"] |> ident)
         ~kind:(Label "Catches errors from JavaScript errors.")
         ~docstring:
           [
@@ -2250,12 +2250,7 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
         | _ -> items)))
   | CexhaustiveSwitch {contextPath; exprLoc} ->
     let range = Utils.rangeOfLoc exprLoc in
-    let rescriptMajor, rescriptMinor = Packages.getReScriptVersion () in
-    let printFailwithStr num =
-      if (rescriptMajor = 11 && rescriptMinor >= 1) || rescriptMajor >= 12 then
-        "${" ^ string_of_int num ^ ":%todo}"
-      else "${" ^ string_of_int num ^ ":failwith(\"todo\")}"
-    in
+    let printFailwithStr num = "${" ^ string_of_int num ^ ":%todo}" in
     let withExhaustiveItem ~cases ?(startIndex = 0) (c : Completion.t) =
       (* We don't need to write out `switch` here since we know that's what the
          user has already written. Just complete for the rest. *)

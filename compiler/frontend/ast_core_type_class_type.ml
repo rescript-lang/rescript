@@ -70,7 +70,8 @@ let typ_mapper (self : Bs_ast_mapper.mapper) (ty : Parsetree.core_type) =
   | Ptyp_arrow {lbl = label; arg = args; ret = body}
   (* let it go without regard label names,
      it will report error later when the label is not empty
-  *) -> (
+  *)
+    -> (
     match fst (Ast_attributes.process_attributes_rev ty.ptyp_attributes) with
     | Meth_callback _ ->
       Ast_typ_uncurry.to_method_callback_type loc self label args body

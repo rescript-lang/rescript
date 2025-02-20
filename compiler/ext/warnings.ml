@@ -386,7 +386,8 @@ let message = function
        - Deleting the variable if it's not used anymore.\n\
        - Prepending the variable name with `_` (like `_%s`) to ignore that the \
        variable is unused.\n\
-       - Using the variable somewhere." v v
+       - Using the variable somewhere."
+      v v
   | Wildcard_arg_to_constant_constr ->
     "wildcard pattern given as argument to a constant constructor"
   | Eol_in_string ->
@@ -472,7 +473,8 @@ let message = function
     in
     Printf.sprintf
       "Ambiguous or-pattern variables under guard;\n\
-       %s may match different arguments. (See manual section 8.5)" msg
+       %s may match different arguments. (See manual section 8.5)"
+      msg
   | Unused_module s -> "unused module " ^ s ^ "."
   | Constraint_on_gadt ->
     "Type constraints do not apply to GADT cases of variant types."

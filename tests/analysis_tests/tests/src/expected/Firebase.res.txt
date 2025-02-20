@@ -3,8 +3,8 @@ posCursor:[30:9] posNoWhite:[30:8] Found expr:[30:5->30:9]
 Pexp_field [30:5->30:8] _:[32:0->30:9]
 Completable: Cpath Value[ref].""
 Raw opens: 1 Firebase.place holder
-Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 Firebase
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib Firebase
 ContextPath Value[ref].""
 ContextPath Value[ref]
 Path ref
@@ -29,7 +29,7 @@ Path Firebase.Firestore.
     "label": "->Firestore.getDoc",
     "kind": 12,
     "tags": [],
-    "detail": "documentReference<\n  'documentdata,\n> => Promise.t<documentSnapshot<'documentdata>>",
+    "detail": "documentReference<\n  'documentdata,\n> => Stdlib.Promise.t<documentSnapshot<'documentdata>>",
     "documentation": null,
     "sortText": "getDoc",
     "insertText": "->Firestore.getDoc",

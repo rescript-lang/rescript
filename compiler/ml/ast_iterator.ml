@@ -403,7 +403,9 @@ let default_iterator =
     type_extension = T.iter_type_extension;
     extension_constructor = T.iter_extension_constructor;
     value_description =
-      (fun this {pval_name; pval_type; pval_prim = _; pval_loc; pval_attributes} ->
+      (fun this
+        {pval_name; pval_type; pval_prim = _; pval_loc; pval_attributes}
+      ->
         iter_loc this pval_name;
         this.typ this pval_type;
         this.attributes this pval_attributes;
@@ -457,7 +459,9 @@ let default_iterator =
         this.location this pcd_loc;
         this.attributes this pcd_attributes);
     label_declaration =
-      (fun this {pld_name; pld_type; pld_loc; pld_mutable = _; pld_attributes} ->
+      (fun this
+        {pld_name; pld_type; pld_loc; pld_mutable = _; pld_attributes}
+      ->
         iter_loc this pld_name;
         this.typ this pld_type;
         this.location this pld_loc;

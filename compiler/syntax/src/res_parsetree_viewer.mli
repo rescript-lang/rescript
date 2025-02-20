@@ -1,6 +1,6 @@
 (* Restructures a nested tree of arrow types into its args & returnType
-   * The parsetree contains: a => b => c => d, for printing purposes
-   * we restructure the tree into (a, b, c) and its returnType d *)
+ * The parsetree contains: a => b => c => d, for printing purposes
+ * we restructure the tree into (a, b, c) and its returnType d *)
 val arrow_type :
   ?max_arity:int ->
   Parsetree.core_type ->
@@ -23,8 +23,8 @@ type if_condition_kind =
   | IfLet of Parsetree.pattern * Parsetree.expression
 
 (* if ... else if ... else ... is represented as nested expressions: if ... else { if ... }
-   * The purpose of this function is to flatten nested ifs into one sequence.
-   * Basically compute: ([if, else if, else if, else if], else) *)
+ * The purpose of this function is to flatten nested ifs into one sequence.
+ * Basically compute: ([if, else if, else if, else if], else) *)
 val collect_if_expressions :
   Parsetree.expression ->
   (Location.t * if_condition_kind * Parsetree.expression) list
@@ -51,11 +51,11 @@ val fun_expr :
   Parsetree.expression -> bool * fun_param_kind list * Parsetree.expression
 
 (* example:
-   *  `makeCoordinate({
-   *    x: 1,
-   *    y: 2,
-   *  })`
-   *  Notice howe `({` and `})` "hug" or stick to each other *)
+ *  `makeCoordinate({
+ *    x: 1,
+ *    y: 2,
+ *  })`
+ *  Notice howe `({` and `})` "hug" or stick to each other *)
 val is_huggable_expression : Parsetree.expression -> bool
 
 val is_huggable_pattern : Parsetree.pattern -> bool

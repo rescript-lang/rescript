@@ -58,7 +58,8 @@ let free_variables (stats : idents_stats) =
         | Fun {env}
         (* a optimization to avoid walking into function again
             if it's already comuted
-        *) ->
+        *)
+          ->
           stats.used_idents <-
             Set_ident.union (Js_fun_env.get_unbounded env) stats.used_idents
         | _ -> super.expression self exp);

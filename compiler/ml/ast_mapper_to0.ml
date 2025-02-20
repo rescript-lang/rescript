@@ -524,14 +524,8 @@ let default_mapper =
           ~attrs:(this.attributes this pcd_attributes));
     label_declaration =
       (fun this
-           {
-             pld_name;
-             pld_type;
-             pld_loc;
-             pld_mutable;
-             pld_optional;
-             pld_attributes;
-           } ->
+        {pld_name; pld_type; pld_loc; pld_mutable; pld_optional; pld_attributes}
+      ->
         Type.field (map_loc this pld_name) (this.typ this pld_type)
           ~mut:pld_mutable
           ~loc:(this.location this pld_loc)

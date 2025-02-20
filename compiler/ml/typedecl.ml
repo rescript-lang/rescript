@@ -1163,11 +1163,14 @@ let compute_variance_type env check (required, loc) decl tyl =
       let v = get_variance ty tvl in
       let tr = decl.type_private in
       (* Use required variance where relevant *)
-      let concr = decl.type_kind <> Type_abstract (*|| tr = Type_new*) in
+      let concr =
+        decl.type_kind <> Type_abstract
+        (*|| tr = Type_new*)
+      in
       let p, n =
         if tr = Private || not (Btype.is_Tvar ty) then (p, n) (* set *)
         else (false, false)
-        (* only check *)
+      (* only check *)
       and i = concr || (i && tr = Private) in
       let v = union v (make p n i) in
       let v =
@@ -2093,8 +2096,7 @@ let report_error ppf = function
     Printtyp.report_unification_error ppf env trace
       (function
         | ppf -> fprintf ppf "This type constructor expands to type")
-      (function
-        | ppf -> fprintf ppf "but is used here with type")
+      (function ppf -> fprintf ppf "but is used here with type")
   | Null_arity_external -> fprintf ppf "External identifiers must be functions"
   | Unbound_type_var (ty, decl) -> (
     fprintf ppf "A type variable is unbound in this type declaration";
@@ -2136,8 +2138,7 @@ let report_error ppf = function
       (function
         | ppf ->
           fprintf ppf "The constructor %a@ has type" Printtyp.longident lid)
-      (function
-        | ppf -> fprintf ppf "but was expected to be of type")
+      (function ppf -> fprintf ppf "but was expected to be of type")
   | Rebind_mismatch (lid, p, p') ->
     fprintf ppf "@[%s@ %a@ %s@ %s@ %s@ %s@ %s@]" "The constructor"
       Printtyp.longident lid "extends type" (Path.name p)
@@ -2201,8 +2202,10 @@ let report_error ppf = function
     fprintf ppf "@[GADT case syntax cannot be used in a 'nonrec' block.@]"
   | Variant_runtime_representation_mismatch
       (Variant_coercion.VariantError
-        {is_spread_context; error = Variant_coercion.Untagged {left_is_unboxed}})
-    ->
+         {
+           is_spread_context;
+           error = Variant_coercion.Untagged {left_is_unboxed};
+         }) ->
     let other_variant_text =
       if is_spread_context then "the variant where this is spread"
       else "the other variant"
@@ -2214,7 +2217,7 @@ let report_error ppf = function
       ^ " is not. Both variants unboxed configuration must match")
   | Variant_runtime_representation_mismatch
       (Variant_coercion.VariantError
-        {is_spread_context; error = Variant_coercion.TagName _}) ->
+         {is_spread_context; error = Variant_coercion.TagName _}) ->
     let other_variant_text =
       if is_spread_context then "the variant where this is spread"
       else "the other variant"
@@ -2237,7 +2240,8 @@ let report_error ppf = function
     fprintf ppf "@[Type parameters are not supported in variant type spreads.@]"
   | Variant_spread_fail
       (Variant_type_spread.DuplicateConstructor
-        {variant_with_overlapping_constructor; overlapping_constructor_name}) ->
+         {variant_with_overlapping_constructor; overlapping_constructor_name})
+    ->
     fprintf ppf
       "@[Variant %s has a constructor named %s, but a constructor named %s \
        already exists in the variant it's spread into.@ You cannot spread \

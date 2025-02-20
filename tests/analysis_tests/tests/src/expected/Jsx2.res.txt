@@ -5,7 +5,8 @@ Complete src/Jsx2.res 8:15
 posCursor:[8:15] posNoWhite:[8:14] Found expr:[8:4->8:15]
 JSX <M:[8:4->8:5] second[8:6->8:12]=...[8:13->8:15]> _children:None
 Completable: Cexpression CJsxPropValue [M] second=fi
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [M] second
 Path M.make
 []
@@ -14,7 +15,8 @@ Complete src/Jsx2.res 11:20
 posCursor:[11:20] posNoWhite:[11:19] Found expr:[11:4->11:20]
 JSX <M:[11:4->11:5] second[11:6->11:12]=...[11:13->11:18] f[11:19->11:20]=...[11:19->11:20]> _children:None
 Completable: Cjsx([M], f, [second, f])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M.make
 [{
     "label": "first",
@@ -34,7 +36,8 @@ Complete src/Jsx2.res 14:13
 posCursor:[14:13] posNoWhite:[14:12] Found expr:[14:12->14:13]
 JSX <M:[14:12->14:13] > _children:None
 Completable: Cpath Module[M]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Module[M]
 Path M
 [{
@@ -44,25 +47,17 @@ Path M
     "detail": "module M",
     "documentation": null
   }, {
-    "label": "Map",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Map",
-    "documentation": null,
-    "data": {
-      "modulePath": "Map",
-      "filePath": "src/Jsx2.res"
-    }
-  }, {
     "label": "Math",
     "kind": 9,
     "tags": [],
     "detail": "module Math",
-    "documentation": null,
-    "data": {
-      "modulePath": "Math",
-      "filePath": "src/Jsx2.res"
-    }
+    "documentation": null
+  }, {
+    "label": "Map",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Map",
+    "documentation": null
   }, {
     "label": "ModuleStuff",
     "kind": 9,
@@ -79,7 +74,8 @@ Complete src/Jsx2.res 22:19
 posCursor:[22:19] posNoWhite:[22:18] Found expr:[22:4->22:19]
 JSX <M:[22:4->22:5] prop[22:6->22:10]=...[22:12->22:16] k[22:18->22:19]=...[22:18->22:19]> _children:None
 Completable: Cjsx([M], k, [prop, k])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M.make
 [{
     "label": "key",
@@ -93,7 +89,8 @@ Complete src/Jsx2.res 25:17
 posCursor:[25:17] posNoWhite:[25:16] Found expr:[25:4->25:17]
 JSX <M:[25:4->25:5] prop[25:6->25:10]=...[25:11->25:15] k[25:16->25:17]=...[25:16->25:17]> _children:None
 Completable: Cjsx([M], k, [prop, k])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M.make
 [{
     "label": "key",
@@ -107,7 +104,8 @@ Complete src/Jsx2.res 28:21
 posCursor:[28:21] posNoWhite:[28:20] Found expr:[28:4->28:21]
 JSX <M:[28:4->28:5] prop[28:6->28:10]=...[28:11->28:19] k[28:20->28:21]=...[28:20->28:21]> _children:None
 Completable: Cjsx([M], k, [prop, k])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M.make
 [{
     "label": "key",
@@ -121,7 +119,8 @@ Complete src/Jsx2.res 31:24
 posCursor:[31:24] posNoWhite:[31:23] Found expr:[31:4->31:24]
 JSX <M:[31:4->31:5] prop[31:6->31:10]=...[31:11->31:22] k[31:23->31:24]=...[31:23->31:24]> _children:None
 Completable: Cjsx([M], k, [prop, k])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M.make
 [{
     "label": "key",
@@ -135,7 +134,8 @@ Complete src/Jsx2.res 34:18
 posCursor:[34:18] posNoWhite:[34:17] Found expr:[34:4->34:18]
 JSX <M:[34:4->34:5] prop[34:6->34:10]=...[34:12->34:16] k[34:17->34:18]=...[34:17->34:18]> _children:None
 Completable: Cjsx([M], k, [prop, k])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M.make
 [{
     "label": "key",
@@ -149,7 +149,8 @@ Complete src/Jsx2.res 37:16
 posCursor:[37:16] posNoWhite:[37:15] Found expr:[37:4->37:16]
 JSX <M:[37:4->37:5] prop[37:6->37:10]=...[37:11->37:14] k[37:15->37:16]=...[37:15->37:16]> _children:None
 Completable: Cjsx([M], k, [prop, k])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M.make
 [{
     "label": "key",
@@ -163,7 +164,8 @@ Complete src/Jsx2.res 40:17
 posCursor:[40:17] posNoWhite:[40:16] Found expr:[40:4->40:17]
 JSX <M:[40:4->40:5] prop[40:6->40:10]=...[40:11->40:15] k[40:16->40:17]=...[40:16->40:17]> _children:None
 Completable: Cjsx([M], k, [prop, k])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M.make
 [{
     "label": "key",
@@ -177,7 +179,8 @@ Complete src/Jsx2.res 43:18
 posCursor:[43:18] posNoWhite:[43:17] Found expr:[43:4->43:18]
 JSX <M:[43:4->43:5] prop[43:6->43:10]=...[43:11->43:16] k[43:17->43:18]=...[43:17->43:18]> _children:None
 Completable: Cjsx([M], k, [prop, k])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M.make
 [{
     "label": "key",
@@ -191,7 +194,8 @@ Complete src/Jsx2.res 46:16
 posCursor:[46:16] posNoWhite:[46:15] Found expr:[46:4->46:16]
 JSX <M:[46:4->46:5] prop[46:6->46:10]=...[46:11->46:14] k[46:15->46:16]=...[46:15->46:16]> _children:None
 Completable: Cjsx([M], k, [prop, k])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M.make
 [{
     "label": "key",
@@ -205,7 +209,8 @@ Complete src/Jsx2.res 49:27
 posCursor:[49:27] posNoWhite:[49:26] Found expr:[49:4->49:27]
 JSX <M:[49:4->49:5] prop[49:6->49:10]=...[49:11->49:25] k[49:26->49:27]=...[49:26->49:27]> _children:None
 Completable: Cjsx([M], k, [prop, k])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M.make
 [{
     "label": "key",
@@ -219,7 +224,8 @@ Complete src/Jsx2.res 52:38
 posCursor:[52:38] posNoWhite:[52:37] Found expr:[52:4->52:38]
 JSX <M:[52:4->52:5] prop[52:6->52:10]=...[52:11->52:36] k[52:37->52:38]=...[52:37->52:38]> _children:None
 Completable: Cjsx([M], k, [prop, k])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M.make
 [{
     "label": "key",
@@ -233,7 +239,8 @@ Complete src/Jsx2.res 55:25
 posCursor:[55:25] posNoWhite:[55:24] Found expr:[55:4->55:25]
 JSX <M:[55:4->55:5] prop[55:6->55:10]=...[55:11->55:23] k[55:24->55:25]=...[55:24->55:25]> _children:None
 Completable: Cjsx([M], k, [prop, k])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M.make
 [{
     "label": "key",
@@ -250,7 +257,8 @@ Complete src/Jsx2.res 68:10
 posCursor:[68:10] posNoWhite:[68:9] Found expr:[68:4->68:10]
 JSX <Ext:[68:4->68:7] al[68:8->68:10]=...[68:8->68:10]> _children:None
 Completable: Cjsx([Ext], al, [al])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path Ext.make
 [{
     "label": "align",
@@ -264,7 +272,8 @@ Complete src/Jsx2.res 71:11
 posCursor:[71:11] posNoWhite:[71:10] Found expr:[71:4->71:11]
 JSX <M:[71:4->71:5] first[71:6->71:11]=...[71:6->71:11]> _children:None
 Completable: Cjsx([M], first, [first])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M.make
 []
 
@@ -272,7 +281,8 @@ Complete src/Jsx2.res 74:16
 posCursor:[74:16] posNoWhite:[74:15] Found expr:[74:4->74:16]
 JSX <M:[74:4->74:5] first[74:6->74:11]=...[74:12->74:14] k[74:15->74:16]=...[74:15->74:16]> _children:None
 Completable: Cjsx([M], k, [first, k])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M.make
 [{
     "label": "key",
@@ -286,7 +296,8 @@ Complete src/Jsx2.res 77:23
 posCursor:[77:23] posNoWhite:[77:22] Found expr:[77:4->77:23]
 JSX <M:[77:4->77:5] first[77:6->77:11]=...[77:19->77:21] k[77:22->77:23]=...[77:22->77:23]> _children:None
 Completable: Cjsx([M], k, [first, k])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M.make
 [{
     "label": "key",
@@ -315,7 +326,8 @@ Complete src/Jsx2.res 89:16
 posCursor:[89:16] posNoWhite:[89:15] Found expr:[89:4->89:16]
 JSX <WithChildren:[89:4->89:16] > _children:None
 Completable: Cpath Module[WithChildren]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Module[WithChildren]
 Path WithChildren
 [{
@@ -330,7 +342,8 @@ Complete src/Jsx2.res 91:18
 posCursor:[91:18] posNoWhite:[91:17] Found expr:[91:4->91:18]
 JSX <WithChildren:[91:4->91:16] n[91:17->91:18]=...[91:17->91:18]> _children:None
 Completable: Cjsx([WithChildren], n, [n])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path WithChildren.make
 [{
     "label": "name",
@@ -345,7 +358,8 @@ posCursor:[94:18] posNoWhite:[94:17] Found pattern:[94:7->94:18]
 posCursor:[94:18] posNoWhite:[94:17] Found type:[94:11->94:18]
 Ptyp_constr React.e:[94:11->94:18]
 Completable: Cpath Type[React, e]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Type[React, e]
 Path React.e
 [{
@@ -361,7 +375,8 @@ posCursor:[96:20] posNoWhite:[96:19] Found pattern:[96:7->99:6]
 posCursor:[96:20] posNoWhite:[96:19] Found type:[96:11->99:6]
 Ptyp_constr ReactDOMR:[96:11->99:6]
 Completable: Cpath Type[ReactDOMR]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Type[ReactDOMR]
 Path ReactDOMR
 [{
@@ -382,7 +397,8 @@ Pexp_apply ...[102:15->102:16] (...[102:13->102:14], ...[102:17->102:21])
 posCursor:[102:21] posNoWhite:[102:20] Found expr:[102:17->102:21]
 Pexp_field [102:17->102:18] th:[102:19->102:21]
 Completable: Cpath Value[x].th
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[x].th
 ContextPath Value[x]
 Path x
@@ -392,7 +408,8 @@ Complete src/Jsx2.res 106:28
 posCursor:[106:28] posNoWhite:[106:27] Found expr:[106:11->106:28]
 Pexp_ident DefineSomeFields.:[106:11->106:28]
 Completable: Cpath Value[DefineSomeFields, ""]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[DefineSomeFields, ""]
 Path DefineSomeFields.
 [{
@@ -409,7 +426,8 @@ Pexp_apply ...[108:13->108:14] (...[108:11->108:12], ...[108:15->108:36])
 posCursor:[108:36] posNoWhite:[108:35] Found expr:[108:15->108:36]
 Pexp_field [108:15->108:16] DefineSomeFields.th:[108:17->108:36]
 Completable: Cpath Module[DefineSomeFields].th
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Module[DefineSomeFields].th
 Path DefineSomeFields.th
 [{
@@ -432,7 +450,8 @@ JSX <div:[121:3->121:6] x[122:5->122:6]=...[122:7->122:20] name[124:4->124:8]=..
 posCursor:[122:20] posNoWhite:[122:19] Found expr:[122:7->122:20]
 Pexp_ident Outer.Inner.h:[122:7->122:20]
 Completable: Cpath Value[Outer, Inner, h]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[Outer, Inner, h]
 Path Outer.Inner.h
 [{
@@ -449,7 +468,8 @@ JSX <div:[128:3->128:6] x[129:5->129:6]=...[129:7->131:8]> _children:None
 posCursor:[129:19] posNoWhite:[129:18] Found expr:[129:7->131:8]
 Pexp_ident Outer.Inner.:[129:7->131:8]
 Completable: Cpath Value[Outer, Inner, ""]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[Outer, Inner, ""]
 Path Outer.Inner.
 [{
@@ -464,7 +484,8 @@ Complete src/Jsx2.res 136:7
 posCursor:[136:7] posNoWhite:[136:6] Found expr:[135:3->138:9]
 JSX <div:[135:3->135:6] x[136:5->136:6]=...[138:4->138:8]> _children:None
 Completable: Cexpression CJsxPropValue [div] x
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [div] x
 Path ReactDOM.domProps
 Path JsxDOM.domProps
@@ -483,7 +504,8 @@ Complete src/Jsx2.res 150:21
 posCursor:[150:21] posNoWhite:[150:20] Found expr:[150:12->150:32]
 JSX <Nested.Co:[150:12->150:21] name[150:22->150:26]=...[150:27->150:29]> _children:150:30
 Completable: Cpath Module[Nested, Co]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Module[Nested, Co]
 Path Nested.Co
 [{
@@ -498,7 +520,8 @@ Complete src/Jsx2.res 153:19
 posCursor:[153:19] posNoWhite:[153:18] Found expr:[153:12->153:25]
 JSX <Nested.:[153:12->153:24] > _children:None
 Completable: Cpath Module[Nested, ""]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Module[Nested, ""]
 Path Nested.
 [{
@@ -516,7 +539,8 @@ posCursor:[162:12] posNoWhite:[162:11] Found expr:[162:6->162:21]
 posCursor:[162:12] posNoWhite:[162:11] Found expr:[162:6->162:20]
 JSX <Comp:[162:6->162:10] age[162:11->162:14]=...[162:15->162:17]> _children:162:18
 Completable: Cjsx([Comp], age, [age])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path Comp.make
 {"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
 
@@ -529,7 +553,8 @@ posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:10->167:25]
 posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:10->167:24]
 JSX <Comp:[167:10->167:14] age[167:15->167:18]=...[167:19->167:21]> _children:167:22
 Completable: Cjsx([Comp], age, [age])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path Comp.make
 {"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
 

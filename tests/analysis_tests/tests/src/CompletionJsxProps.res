@@ -38,7 +38,7 @@ let tsomeVar = #two
 @@jsxConfig({version: 4, mode: "automatic"})
 
 module CompletableComponentLazy = {
-  let loadComponent = () => Js.import(CompletableComponent.make)
+  let loadComponent = () => import(CompletableComponent.make)
   let make = React.lazy_(loadComponent)
 }
 

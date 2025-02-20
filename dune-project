@@ -19,11 +19,11 @@
  (synopsis "ReScript compiler")
  (depends
   (ocaml
-   (>= 4.10))
+   (>= 4.14))
   (ocamlformat
    (and
     :with-test
-    (= 0.26.2)))
+    (= 0.27.0)))
   (yojson
    (and
     :with-test
@@ -31,15 +31,13 @@
   (ocaml-lsp-server
    (and
     :with-dev-setup
-    (= 1.19.0)))
+    (= 1.22.0)))
   (cppo
-   (= 1.6.9))
+   (= 1.8.0))
   (js_of_ocaml
-   (= 5.9.1))
+   (= 6.0.1))
   (ounit2
    (= 2.2.7))
-  (reanalyze
-   (= 2.25.1))
   dune))
 
 (package
@@ -47,9 +45,9 @@
  (synopsis "ReScript Analysis")
  (depends
   (ocaml
-   (>= 4.10))
+   (>= 4.14))
   (cppo
-   (= 1.6.9))
+   (= 1.8.0))
   dune))
 
 (package
@@ -57,8 +55,8 @@
  (synopsis "ReScript Tools")
  (depends
   (ocaml
-   (>= 4.10))
+   (>= 4.14))
   (cppo
-   (= 1.6.9))
+   (= 1.8.0))
   analysis
   dune))

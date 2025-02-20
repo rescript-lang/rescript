@@ -102,4 +102,4 @@ type doc = {
 /**
 `decodeFromJson(json)` parse JSON generated from `restool doc` command
 */
-external decodeFromJson: JSON.t => doc = "%identity"
+external decodeFromJson: Stdlib_JSON.t => doc = "%identity"

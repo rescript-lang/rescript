@@ -40,7 +40,8 @@ let print (fmt : Format.formatter) (x : error) =
   | Conflict_module (modname, dir1, dir2) ->
     Format.fprintf fmt
       "@{<error>Error:@} %s found in two directories: (%s, %s)\n\
-       File names must be unique per project" modname dir1 dir2
+       File names must be unique per project"
+      modname dir1 dir2
   | No_implementation modname ->
     Format.fprintf fmt "@{<error>Error:@} %s does not have implementation file"
       modname
@@ -51,12 +52,14 @@ let print (fmt : Format.formatter) (x : error) =
         "File \"bsconfig.json\", line 1\n\
          @{<error>Error:@} package @{<error>%s@} is not found\n\
          It's the basic, required package. If you have it installed globally,\n\
-         Please run `npm link rescript` to make it available" name
+         Please run `npm link rescript` to make it available"
+        name
     else
       Format.fprintf fmt
         "File \"bsconfig.json\", line 1\n\
          @{<error>Error:@} package @{<error>%s@} not found or built\n\
-         - Did you install it?" name
+         - Did you install it?"
+        name
   | Json_config (pos, s) ->
     Format.fprintf fmt
       "File %S, line %d:\n\

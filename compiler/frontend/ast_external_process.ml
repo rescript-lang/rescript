@@ -442,8 +442,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
    set_index = false;
    mk_obj = _;
    scopes =
-     []
-     (* wrapper does not work with @obj
+     [] (* wrapper does not work with @obj
         TODO: better error message *);
   } ->
     if String.length prim_name <> 0 then

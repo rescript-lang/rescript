@@ -47,6 +47,26 @@ export type nullOrString = (null | string);
 
 export type nullOrString2 = (null | string);
 
+export type nullOrString3 = (null | string);
+
+export type nullOrString4 = (null | string);
+
+export type nullableOrString = (null | undefined | string);
+
+export type nullableOrString2 = (null | undefined | string);
+
+export type nullableOrString3 = (null | undefined | string);
+
+export type nullableOrString4 = (null | undefined | string);
+
+export type undefinedOrString = (undefined | string);
+
+export type undefinedOrString2 = (undefined | string);
+
+export type undefinedOrString3 = (undefined | string);
+
+export type undefinedOrString4 = (undefined | string);
+
 export type record = { readonly i: number; readonly s: string };
 
 export type decorator<a,b> = (_1:a) => b;

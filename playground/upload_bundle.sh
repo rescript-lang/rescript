@@ -32,7 +32,7 @@ fi
 PACKAGES=("compiler-builtins" "@rescript/react")
 
 echo "Uploading compiler.js file..."
-curl --ftp-create-dirs -T "${SCRIPT_DIR}/compiler.js" --ssl --netrc-file $NETRC_FILE ftp://${KEYCDN_SRV}/v${VERSION}/compiler.js
+curl --ftp-create-dirs -T "${SCRIPT_DIR}/compiler.js" --ssl --tls-max 1.2 --netrc-file $NETRC_FILE ftp://${KEYCDN_SRV}/v${VERSION}/compiler.js
 
 echo "---"
 echo "Uploading packages cmij files..."
@@ -43,7 +43,7 @@ do
 
   echo "Uploading '$SOURCE/cmij.js' to '$TARGET/cmij.js'..."
 
-  curl --ftp-create-dirs -T "${SOURCE}/cmij.js" --ssl --netrc-file $NETRC_FILE "${TARGET}/cmij.js"
+  curl --ftp-create-dirs -T "${SOURCE}/cmij.js" --ssl --tls-max 1.2 --netrc-file $NETRC_FILE "${TARGET}/cmij.js"
 done
 
 # we now upload the bundled stdlib runtime files
@@ -54,4 +54,6 @@ TARGET="ftp://${KEYCDN_SRV}/v${VERSION}/${DIR}"
 
 echo "Uploading '$SOURCE/*.js' to '$TARGET/*.js'..."
 
-find "${SOURCE}" -type f -name "*.js" -exec sh -c 'curl --ftp-create-dirs --ssl --netrc-file "$0" -T "$1" "${2}/$(basename "$1")"' "$NETRC_FILE" {} "$TARGET" \;
+# we use TLS 1.2 because 1.3 sometimes causes data losses (files capped at 16384B)
+# https://github.com/curl/curl/issues/6149#issuecomment-1618591420
+find "${SOURCE}" -type f -name "*.js" -exec sh -c 'curl --ftp-create-dirs --ssl --tls-max 1.2 --netrc-file "$0" -T "$1" "${2}/$(basename "$1")"' "$NETRC_FILE" {} "$TARGET" \;

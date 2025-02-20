@@ -76,16 +76,22 @@ val external_var :
 val ml_module_as_var : ?comment:string -> ?dynamic_import:bool -> Ident.t -> t
 
 val runtime_call :
-  string -> (* module_name *)
-            string -> (* fn_name *)
-                      t list -> (* args *)
-                                t
+  string ->
+  (* module_name *)
+  string ->
+  (* fn_name *)
+  t list ->
+  (* args *)
+  t
 
 val pure_runtime_call :
-  string -> (* module_name *)
-            string -> (* fn_name *)
-                      t list -> (* args *)
-                                t
+  string ->
+  (* module_name *)
+  string ->
+  (* fn_name *)
+  t list ->
+  (* args *)
+  t
 
 val runtime_ref : string -> string -> t
 

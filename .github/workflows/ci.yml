@@ -87,32 +87,34 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04 # x64
-            ocaml_compiler: ocaml-variants.5.2.1+options,ocaml-option-static
+            ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
             upload_binaries: true
             upload_libs: true
           - os: ubuntu-24.04-arm # ARM
-            ocaml_compiler: ocaml-variants.5.2.1+options,ocaml-option-static
+            ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
             upload_binaries: true
             # Build the playground compiler and run the benchmarks on the fastest runner
             build_playground: true
             benchmarks: true
           - os: macos-13 # x64
-            ocaml_compiler: 5.2.1
+            ocaml_compiler: 5.3.0
             upload_binaries: true
           - os: macos-14 # ARM
-            ocaml_compiler: 5.2.1
+            ocaml_compiler: 5.3.0
             upload_binaries: true
           - os: windows-latest
-            ocaml_compiler: 5.2.1
+            ocaml_compiler: 5.3.0
             upload_binaries: true
 
           # Verify that the compiler still builds with older OCaml versions
           - os: ubuntu-24.04
+            ocaml_compiler: ocaml-variants.5.2.1+options,ocaml-option-static
+            # Reanalyze does not work on OCaml 5.3.0 anymore, therefore run it on 5.2.1
+            run_reanalyze: true
+          - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.4.14.2+options,ocaml-option-static
-          - os: ubuntu-24.04
-            ocaml_compiler: ocaml-variants.4.13.0+options,ocaml-option-static
 
     runs-on: ${{matrix.os}}
 
@@ -151,7 +153,7 @@ jobs:
       # matrix.ocaml_compiler may contain commas
       - name: Get OPAM cache key
         shell: bash
-        run: echo "opam_cache_key=opam-env-v6-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('dune-project') }}" | sed 's/,/-/g' >> $GITHUB_ENV
+        run: echo "opam_cache_key=opam-env-v7-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('dune-project') }}" | sed 's/,/-/g' >> $GITHUB_ENV
 
       - name: Restore OPAM environment
         id: cache-opam-env
@@ -188,6 +190,10 @@ jobs:
       - name: Install OPAM dependencies
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         run: opam install . --deps-only --with-test
+
+      - name: "Install reanalyze"
+        if: steps.cache-opam-env.outputs.cache-hit != 'true' && matrix.run_reanalyze
+        run: opam install reanalyze
 
       - name: Cache OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
@@ -299,6 +305,10 @@ jobs:
         if: ${{ runner.os == 'Windows' }}
         run: opam exec -- make test-syntax
 
+      - name: "Syntax: Run reanalyze"
+        if: matrix.run_reanalyze
+        run: opam exec -- make reanalyze
+
       - name: Build runtime/stdlib
         run: ./scripts/buildRuntime.sh
         shell: bash
@@ -316,7 +326,7 @@ jobs:
         run: git diff --ignore-cr-at-eol --exit-code tests
 
       - name: Run analysis / tools tests
-        if: runner.os != 'Windows' && matrix.os != 'ubuntu-24.04-arm'
+        if: runner.os != 'Windows' && runner.os != 'Linux'
         run: opam exec -- make -C tests/analysis_tests test && make -C tests/tools_tests test
 
       - name: Run gentype tests

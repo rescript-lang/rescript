@@ -525,8 +525,8 @@ let include_err ppf = function
   | Extension_constructors (id, x1, x2) ->
     fprintf ppf
       "@[<hv 2>Extension declarations do not match:@ %a@;\
-       <1 -2>is not included in@ %a@]" (extension_constructor id) x1
-      (extension_constructor id) x2;
+       <1 -2>is not included in@ %a@]"
+      (extension_constructor id) x1 (extension_constructor id) x2;
     show_locs ppf (x1.ext_loc, x2.ext_loc)
   | Module_types (mty1, mty2) ->
     fprintf ppf
@@ -535,8 +535,8 @@ let include_err ppf = function
   | Modtype_infos (id, d1, d2) ->
     fprintf ppf
       "@[<hv 2>Module type declarations do not match:@ %a@;\
-       <1 -2>does not match@ %a@]" (modtype_declaration id) d1
-      (modtype_declaration id) d2
+       <1 -2>does not match@ %a@]"
+      (modtype_declaration id) d1 (modtype_declaration id) d2
   | Modtype_permutation -> fprintf ppf "Illegal permutation of structure fields"
   | Interface_mismatch (impl_name, intf_name) ->
     fprintf ppf "@[The implementation %s@ does not match the interface %s:"

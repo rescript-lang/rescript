@@ -76,7 +76,8 @@ Hover src/Hover.res 122:3
 Nothing at that position. Now trying to use completion.
 Attribute id:live:[122:0->122:5] label:live
 Completable: Cdecorator(live)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 {"contents": {"kind": "markdown", "value": "The `@live` decorator is for reanalyze, a static analysis tool for ReScript that can do dead code analysis.\n\n`@live` tells the dead code analysis that the value should be considered live, even though it might appear to be dead. This is typically used in case of FFI where there are indirect ways to access values. It can be added to everything that could otherwise be considered unused by the dead code analysis - values, functions, arguments, records, individual record fields, and so on.\n\n[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#live-decorator).\n\nHint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!"}}
 
 Hover src/Hover.res 125:4
@@ -107,7 +108,8 @@ Complete src/Hover.res 170:16
 posCursor:[170:16] posNoWhite:[170:15] Found expr:[170:5->170:16]
 Pexp_field [170:5->170:15] _:[176:2->170:16]
 Completable: Cpath Value[x1].content.""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[x1].content.""
 ContextPath Value[x1].content
 ContextPath Value[x1]
@@ -140,7 +142,8 @@ Complete src/Hover.res 173:16
 posCursor:[173:16] posNoWhite:[173:15] Found expr:[173:5->173:16]
 Pexp_field [173:5->173:15] _:[176:2->173:16]
 Completable: Cpath Value[x2].content.""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[x2].content.""
 ContextPath Value[x2].content
 ContextPath Value[x2]
@@ -173,7 +176,8 @@ Complete src/Hover.res 182:16
 posCursor:[182:16] posNoWhite:[182:15] Found expr:[182:5->182:16]
 Pexp_field [182:5->182:15] _:[187:0->182:16]
 Completable: Cpath Value[y1].content.""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[y1].content.""
 ContextPath Value[y1].content
 ContextPath Value[y1]
@@ -206,7 +210,8 @@ Complete src/Hover.res 185:16
 posCursor:[185:16] posNoWhite:[185:15] Found expr:[185:5->185:16]
 Pexp_field [185:5->185:15] _:[187:0->185:16]
 Completable: Cpath Value[y2].content.""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[y2].content.""
 ContextPath Value[y2].content
 ContextPath Value[y2]
@@ -246,10 +251,12 @@ Nothing at that position. Now trying to use completion.
 posCursor:[210:13] posNoWhite:[210:12] Found expr:[210:11->210:14]
 Pexp_ident usr:[210:11->210:14]
 Completable: Cpath Value[usr]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[usr]
 Path usr
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 {"contents": {"kind": "markdown", "value": "```rescript\nuseR\n```\n\n---\n\n```\n \n```\n```rescript\ntype useR = {x: int, y: list<option<r<float>>>}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C200%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype r<'a> = {i: 'a, f: float}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C101%2C0%5D)\n"}}
 
 Hover src/Hover.res 230:20
@@ -263,7 +270,8 @@ Nothing at that position. Now trying to use completion.
 posCursor:[245:6] posNoWhite:[245:5] Found expr:[245:3->245:14]
 Pexp_field [245:3->245:4] someField:[245:5->245:14]
 Completable: Cpath Value[x].someField
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[x].someField
 ContextPath Value[x]
 Path x
@@ -272,7 +280,8 @@ ContextPath Value[x]
 Path x
 CPPipe pathFromEnv: found:true
 Path Hover.someField
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 {"contents": {"kind": "markdown", "value": " Mighty fine field here. \n\n```rescript\nbool\n```"}}
 
 Hover src/Hover.res 248:19
@@ -286,10 +295,12 @@ Nothing at that position. Now trying to use completion.
 posCursor:[257:23] posNoWhite:[257:22] Found expr:[257:22->257:25]
 Pexp_ident fff:[257:22->257:25]
 Completable: Cpath Value[fff]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[fff]
 Path fff
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath string
 {"contents": {"kind": "markdown", "value": "```rescript\nstring\n```"}}
 
@@ -298,10 +309,12 @@ Nothing at that position. Now trying to use completion.
 posCursor:[260:33] posNoWhite:[260:32] Found expr:[260:31->260:40]
 Pexp_ident someField:[260:31->260:40]
 Completable: Cpath Value[someField]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someField]
 Path someField
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CPatternPath(Value[x])->recordField(someField)
 ContextPath Value[x]
 Path x

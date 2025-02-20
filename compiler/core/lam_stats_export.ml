@@ -55,8 +55,8 @@ let values_of_export (meta : Lam_stats.t) (export_map : Lam.t Map_ident.t) :
         match optlam with
         | Some
             (Lconst
-              ( Const_js_null | Const_js_undefined _ | Const_js_true
-              | Const_js_false ))
+               ( Const_js_null | Const_js_undefined _ | Const_js_true
+               | Const_js_false ))
         | None ->
           optlam
         | Some lambda ->
@@ -128,11 +128,11 @@ let get_dependent_module_effect (maybe_pure : string option)
    ]}
    TODO: check that we don't do this in browser environment
 *)
-let export_to_cmj (meta : Lam_stats.t) effect export_map case : Js_cmj_format.t
+let export_to_cmj (meta : Lam_stats.t) effect_ export_map case : Js_cmj_format.t
     =
   let values = values_of_export meta export_map in
 
-  Js_cmj_format.make ~values ~effect
+  Js_cmj_format.make ~values ~effect_
     ~package_spec:(Js_packages_state.get_packages_info ())
     ~case
 (* FIXME: make sure [-o] would not change its case

@@ -1,7 +1,8 @@
 Complete src/ExhaustiveSwitch.res 8:24
 XXX Not found!
 Completable: CexhaustiveSwitch Value[withSomeVarian]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[withSomeVarian]
 Path withSomeVarian
 [{
@@ -17,14 +18,15 @@ Path withSomeVarian
     "detail": "insert exhaustive switch for value",
     "documentation": null,
     "filterText": "withSomeVariant",
-    "insertText": "withSomeVariant {\n   | One => ${1:failwith(\"todo\")}\n   | Two => ${2:failwith(\"todo\")}\n   | Three(_) => ${3:failwith(\"todo\")}\n   }",
+    "insertText": "withSomeVariant {\n   | One => ${1:%todo}\n   | Two => ${2:%todo}\n   | Three(_) => ${3:%todo}\n   }",
     "insertTextFormat": 2
   }]
 
 Complete src/ExhaustiveSwitch.res 11:21
 XXX Not found!
 Completable: CexhaustiveSwitch Value[withSomePol]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[withSomePol]
 Path withSomePol
 [{
@@ -40,14 +42,15 @@ Path withSomePol
     "detail": "insert exhaustive switch for value",
     "documentation": null,
     "filterText": "withSomePoly",
-    "insertText": "withSomePoly {\n   | #\"switch\" => ${1:failwith(\"todo\")}\n   | #one => ${2:failwith(\"todo\")}\n   | #three(_) => ${3:failwith(\"todo\")}\n   | #two => ${4:failwith(\"todo\")}\n   | #\"exotic ident\" => ${5:failwith(\"todo\")}\n   }",
+    "insertText": "withSomePoly {\n   | #\"switch\" => ${1:%todo}\n   | #one => ${2:%todo}\n   | #three(_) => ${3:%todo}\n   | #two => ${4:%todo}\n   | #\"exotic ident\" => ${5:%todo}\n   }",
     "insertTextFormat": 2
   }]
 
 Complete src/ExhaustiveSwitch.res 14:17
 XXX Not found!
 Completable: CexhaustiveSwitch Value[someBoo]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someBoo]
 Path someBoo
 [{
@@ -63,14 +66,15 @@ Path someBoo
     "detail": "insert exhaustive switch for value",
     "documentation": null,
     "filterText": "someBool",
-    "insertText": "someBool {\n   | true => ${1:failwith(\"todo\")}\n   | false => ${2:failwith(\"todo\")}\n   }",
+    "insertText": "someBool {\n   | true => ${1:%todo}\n   | false => ${2:%todo}\n   }",
     "insertTextFormat": 2
   }]
 
 Complete src/ExhaustiveSwitch.res 17:16
 XXX Not found!
 Completable: CexhaustiveSwitch Value[someOp]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someOp]
 Path someOp
 [{
@@ -86,7 +90,7 @@ Path someOp
     "detail": "insert exhaustive switch for value",
     "documentation": null,
     "filterText": "someOpt",
-    "insertText": "someOpt {\n   | Some($1) => ${2:failwith(\"todo\")}\n   | None => ${3:failwith(\"todo\")}\n   }",
+    "insertText": "someOpt {\n   | Some($1) => ${2:%todo}\n   | None => ${3:%todo}\n   }",
     "insertTextFormat": 2
   }]
 
@@ -94,23 +98,27 @@ Xform src/ExhaustiveSwitch.res 30:13
 posCursor:[30:13] posNoWhite:[30:12] Found expr:[30:3->30:17]
 posCursor:[30:13] posNoWhite:[30:12] Found expr:[30:10->30:17]
 Completable: Cpath Value[x]->
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[x]->
 ContextPath Value[x]
 Path x
 CPPipe pathFromEnv: found:true
 Path ExhaustiveSwitch.
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 
 Xform src/ExhaustiveSwitch.res start: 33:3, end: 33:10
 found selection: [33:3->33:10] -> [33:6->33:10]
 XXX Not found!
 Completable: Cpath Value[getV](Nolabel)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[getV](Nolabel)
 ContextPath Value[getV]
 Path getV
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Hit: Exhaustive switch
 
 TextDocumentEdit: ExhaustiveSwitch.res
@@ -126,10 +134,12 @@ newText:
 Xform src/ExhaustiveSwitch.res 36:4
 XXX Not found!
 Completable: Cpath Value[vvv]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[vvv]
 Path vvv
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Hit: Exhaustive switch
 
 TextDocumentEdit: ExhaustiveSwitch.res
@@ -148,7 +158,8 @@ newText:
 Complete src/ExhaustiveSwitch.res 40:24
 XXX Not found!
 Completable: CexhaustiveSwitch Value[withSomeVarian]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[withSomeVarian]
 Path withSomeVarian
 [{

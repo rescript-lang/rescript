@@ -847,14 +847,12 @@ let report_error env ppf = function
     Printtyp.report_unification_error ppf Env.empty trace
       (function
         | ppf -> fprintf ppf "This type")
-      (function
-        | ppf -> fprintf ppf "should be an instance of type")
+      (function ppf -> fprintf ppf "should be an instance of type")
   | Alias_type_mismatch trace ->
     Printtyp.report_unification_error ppf Env.empty trace
       (function
         | ppf -> fprintf ppf "This alias is bound to type")
-      (function
-        | ppf -> fprintf ppf "but is used as an instance of type")
+      (function ppf -> fprintf ppf "but is used as an instance of type")
   | Present_has_conjunction l ->
     fprintf ppf "The present constructor %s has a conjunctive type" l
   | Present_has_no_type l ->
