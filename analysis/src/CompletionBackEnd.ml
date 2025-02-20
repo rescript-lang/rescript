@@ -966,11 +966,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
           (* should not happen, but just ignore extra arguments *) []
       in
 
-      (* (match typ.desc with
-         | Tarrow _ -> print_endline "its an arrow"
-         | Tconstr _ -> print_endline "it's an alias"
-         | _ -> print_endline "something else"); *)
-      match TypeUtils.extractFunctionType ~env ~package typ with
+      match TypeUtils.extractFunctionType ~env ~package ~digInto:false typ with
       | args, tRet when args <> [] ->
         let args = processApply args labels in
         let retType = reconstructFunctionType args tRet in
@@ -1052,7 +1048,6 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       | None -> [])
     | None -> [])
   | CPPipe {contextPath = cp; id = prefix; lhsLoc; inJsx; synthetic} -> (
-    (* TODO: resolve somewhere in here a potential alias *)
     if Debug.verbose () then print_endline "[ctx_path]--> CPPipe";
     match
       cp
