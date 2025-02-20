@@ -276,18 +276,6 @@ Path DotPipeCompletionSpec.SomeOtherModule.
     "detail": "string",
     "documentation": {"kind": "markdown", "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"}
   }, {
-    "label": "->outOfScope",
-    "kind": 12,
-    "tags": [],
-    "detail": "typeOutsideModule => typeOutsideModule",
-    "documentation": null,
-    "sortText": "outOfScope",
-    "insertText": "->outOfScope",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 80, "character": 6}, "end": {"line": 80, "character": 7}},
-      "newText": ""
-      }]
-  }, {
     "label": "->doWithTypeOutsideModule",
     "kind": 12,
     "tags": [],
@@ -295,18 +283,6 @@ Path DotPipeCompletionSpec.SomeOtherModule.
     "documentation": null,
     "sortText": "doWithTypeOutsideModule",
     "insertText": "->doWithTypeOutsideModule",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 80, "character": 6}, "end": {"line": 80, "character": 7}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->cc",
-    "kind": 12,
-    "tags": [],
-    "detail": "typeOutsideModule => typeOutsideModule",
-    "documentation": null,
-    "sortText": "cc",
-    "insertText": "->cc",
     "additionalTextEdits": [{
       "range": {"start": {"line": 80, "character": 6}, "end": {"line": 80, "character": 7}},
       "newText": ""
@@ -514,18 +490,6 @@ Path DotPipeCompletionSpec.SomeOtherModule.
     "detail": "string",
     "documentation": {"kind": "markdown", "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"}
   }, {
-    "label": "->outOfScope",
-    "kind": 12,
-    "tags": [],
-    "detail": "typeOutsideModule => typeOutsideModule",
-    "documentation": null,
-    "sortText": "outOfScope",
-    "insertText": "->outOfScope",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 101, "character": 6}, "end": {"line": 101, "character": 7}},
-      "newText": ""
-      }]
-  }, {
     "label": "->doWithTypeOutsideModule",
     "kind": 12,
     "tags": [],
@@ -533,18 +497,6 @@ Path DotPipeCompletionSpec.SomeOtherModule.
     "documentation": null,
     "sortText": "doWithTypeOutsideModule",
     "insertText": "->doWithTypeOutsideModule",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 101, "character": 6}, "end": {"line": 101, "character": 7}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->cc",
-    "kind": 12,
-    "tags": [],
-    "detail": "typeOutsideModule => typeOutsideModule",
-    "documentation": null,
-    "sortText": "cc",
-    "insertText": "->cc",
     "additionalTextEdits": [{
       "range": {"start": {"line": 101, "character": 6}, "end": {"line": 101, "character": 7}},
       "newText": ""

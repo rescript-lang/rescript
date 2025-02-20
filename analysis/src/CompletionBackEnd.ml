@@ -1124,7 +1124,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
               ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full completionPath
             |> TypeUtils.filterPipeableFunctions ~env ~full ~synthetic
                  ~targetTypeId:mainTypeId
-            (* |> List.filter (fun (c : Completion.t) ->
+            |> List.filter (fun (c : Completion.t) ->
                    (* If we're completing from the current module then we need to care about scope.
                       This is automatically taken care of in other cases. *)
                    if isFromCurrentModule then
@@ -1138,7 +1138,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
                               | _ -> false)
                        |> Option.is_some
                      | _ -> false
-                   else true) *)
+                   else true)
         in
         (* Extra completions can be drawn from the @editor.completeFrom attribute. Here we
            find and add those completions as well. *)
