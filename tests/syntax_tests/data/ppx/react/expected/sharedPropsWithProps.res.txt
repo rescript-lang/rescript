@@ -135,13 +135,11 @@ module V4A6 = {
 module V4A7 = {
   type props = {count: int}
 
-  let make =
-    @directive("'use memo'")
-    props => {
-      React.int(props.count)
-    }
+  let make = props => {
+    React.int(props.count)
+  }
   let make = {
-    let \"SharedPropsWithProps$V4A7" = props => make(props)
+    let \"SharedPropsWithProps$V4A7" = @directive("'use memo'") props => make(props)
     \"SharedPropsWithProps$V4A7"
   }
 }
