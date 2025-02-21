@@ -2,7 +2,8 @@ Complete src/CompletionDicts.res 0:30
 posCursor:[0:30] posNoWhite:[0:29] Found expr:[0:14->0:32]
 Pexp_apply ...[0:14->0:28] (...[0:29->0:31])
 Completable: Cexpression CArgument Value[Dict, fromArray]($0)->array
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[Dict, fromArray]($0)
 ContextPath Value[Dict, fromArray]
 Path Dict.fromArray
@@ -20,7 +21,8 @@ Complete src/CompletionDicts.res 3:31
 posCursor:[3:31] posNoWhite:[3:30] Found expr:[3:14->3:34]
 Pexp_apply ...[3:14->3:28] (...[3:29->3:33])
 Completable: Cexpression CArgument Value[Dict, fromArray]($0)->array
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[Dict, fromArray]($0)
 ContextPath Value[Dict, fromArray]
 Path Dict.fromArray
@@ -38,7 +40,8 @@ Complete src/CompletionDicts.res 6:37
 posCursor:[6:37] posNoWhite:[6:36] Found expr:[6:14->6:41]
 Pexp_apply ...[6:14->6:28] (...[6:29->6:40])
 Completable: Cexpression CArgument Value[Dict, fromArray]($0)->array, tuple($1)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[Dict, fromArray]($0)
 ContextPath Value[Dict, fromArray]
 Path Dict.fromArray
@@ -49,7 +52,8 @@ Complete src/CompletionDicts.res 12:14
 posCursor:[12:14] posNoWhite:[12:13] Found expr:[10:11->14:2]
 Pexp_apply ...[10:11->10:25] (...[10:26->14:1])
 Completable: Cexpression CArgument Value[Dict, fromArray]($0)->array, tuple($1)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[Dict, fromArray]($0)
 ContextPath Value[Dict, fromArray]
 Path Dict.fromArray

@@ -1,7 +1,8 @@
 Complete src/CompletionExpressions.res 3:20
 XXX Not found!
 Completable: Cpattern CTuple(Value[s], Value[f])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CTuple(Value[s], Value[f])
 ContextPath Value[s]
 Path s
@@ -21,7 +22,8 @@ Complete src/CompletionExpressions.res 26:27
 posCursor:[26:27] posNoWhite:[26:26] Found expr:[26:11->26:29]
 Pexp_apply ...[26:11->26:25] (...[26:26->26:28])
 Completable: Cexpression CArgument Value[fnTakingRecord]($0)->recordBody
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
@@ -67,7 +69,8 @@ Complete src/CompletionExpressions.res 29:28
 posCursor:[29:28] posNoWhite:[29:27] Found expr:[29:11->29:30]
 Pexp_apply ...[29:11->29:25] (...[29:27->29:28])
 Completable: Cexpression CArgument Value[fnTakingRecord]($0)=n->recordBody
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
@@ -83,7 +86,8 @@ Complete src/CompletionExpressions.res 32:35
 posCursor:[32:35] posNoWhite:[32:34] Found expr:[32:11->32:38]
 Pexp_apply ...[32:11->32:25] (...[32:26->32:38])
 Completable: Cexpression CArgument Value[fnTakingRecord]($0)->recordField(offline)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
@@ -105,7 +109,8 @@ Complete src/CompletionExpressions.res 35:36
 posCursor:[35:36] posNoWhite:[35:35] Found expr:[35:11->35:39]
 Pexp_apply ...[35:11->35:25] (...[35:26->35:38])
 Completable: Cexpression CArgument Value[fnTakingRecord]($0)->recordBody
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
@@ -145,7 +150,8 @@ Complete src/CompletionExpressions.res 38:37
 posCursor:[38:37] posNoWhite:[38:35] Found expr:[38:11->38:53]
 Pexp_apply ...[38:11->38:25] (...[38:26->38:52])
 Completable: Cexpression CArgument Value[fnTakingRecord]($0)->recordBody
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
@@ -179,7 +185,8 @@ Complete src/CompletionExpressions.res 41:44
 posCursor:[41:44] posNoWhite:[41:43] Found expr:[41:11->41:47]
 Pexp_apply ...[41:11->41:25] (...[41:26->41:47])
 Completable: Cexpression CArgument Value[fnTakingRecord]($0)->recordField(nested)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
@@ -219,7 +226,8 @@ Complete src/CompletionExpressions.res 44:46
 posCursor:[44:46] posNoWhite:[44:45] Found expr:[44:11->44:49]
 Pexp_apply ...[44:11->44:25] (...[44:26->44:48])
 Completable: Cexpression CArgument Value[fnTakingRecord]($0)->recordField(nested), recordBody
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
@@ -229,7 +237,8 @@ Complete src/CompletionExpressions.res 47:51
 posCursor:[47:51] posNoWhite:[47:50] Found expr:[47:11->47:55]
 Pexp_apply ...[47:11->47:25] (...[47:26->47:54])
 Completable: Cexpression CArgument Value[fnTakingRecord]($0)->recordField(nested), variantPayload::Some($0), recordBody
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
@@ -251,7 +260,8 @@ Complete src/CompletionExpressions.res 50:45
 posCursor:[50:45] posNoWhite:[50:44] Found expr:[50:11->50:48]
 Pexp_apply ...[50:11->50:25] (...[50:26->50:48])
 Completable: Cexpression CArgument Value[fnTakingRecord]($0)->recordField(variant)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
@@ -285,7 +295,8 @@ Complete src/CompletionExpressions.res 53:47
 posCursor:[53:47] posNoWhite:[53:46] Found expr:[53:11->53:50]
 Pexp_apply ...[53:11->53:25] (...[53:26->53:49])
 Completable: Cexpression CArgument Value[fnTakingRecord]($0)=O->recordField(variant)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
@@ -303,7 +314,8 @@ Complete src/CompletionExpressions.res 56:57
 posCursor:[56:57] posNoWhite:[56:56] Found expr:[56:11->56:61]
 Pexp_apply ...[56:11->56:25] (...[56:26->56:60])
 Completable: Cexpression CArgument Value[fnTakingRecord]($0)->recordField(polyvariant), polyvariantPayload::three($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
@@ -322,7 +334,8 @@ Complete src/CompletionExpressions.res 59:60
 posCursor:[59:60] posNoWhite:[59:59] Found expr:[59:11->59:65]
 Pexp_apply ...[59:11->59:25] (...[59:26->59:64])
 Completable: Cexpression CArgument Value[fnTakingRecord]($0)->recordField(polyvariant), polyvariantPayload::three($1)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
@@ -344,7 +357,8 @@ Complete src/CompletionExpressions.res 62:62
 posCursor:[62:62] posNoWhite:[62:61] Found expr:[62:11->62:66]
 Pexp_apply ...[62:11->62:25] (...[62:26->62:65])
 Completable: Cexpression CArgument Value[fnTakingRecord]($0)=t->recordField(polyvariant), polyvariantPayload::three($1)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
@@ -353,6 +367,13 @@ Path fnTakingRecord
     "kind": 4,
     "tags": [],
     "detail": "bool",
+    "documentation": null,
+    "sortText": "A true"
+  }, {
+    "label": "typeof",
+    "kind": 12,
+    "tags": [],
+    "detail": "'a => Type.t",
     "documentation": null
   }]
 
@@ -360,7 +381,8 @@ Complete src/CompletionExpressions.res 69:25
 posCursor:[69:25] posNoWhite:[69:24] Found expr:[69:11->69:26]
 Pexp_apply ...[69:11->69:24] (...[69:25->69:26])
 Completable: Cexpression CArgument Value[fnTakingArray]($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
@@ -379,7 +401,8 @@ Complete src/CompletionExpressions.res 72:26
 posCursor:[72:26] posNoWhite:[72:25] Found expr:[72:11->72:28]
 Pexp_apply ...[72:11->72:24] (...[72:25->72:27])
 Completable: Cexpression CArgument Value[fnTakingArray]($0)->array
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
@@ -415,7 +438,8 @@ Complete src/CompletionExpressions.res 75:26
 posCursor:[75:26] posNoWhite:[75:25] Found expr:[75:11->75:27]
 Pexp_apply ...[75:11->75:24] (...[75:25->75:26])
 Completable: Cexpression CArgument Value[fnTakingArray]($0)=s
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
@@ -425,13 +449,38 @@ Path fnTakingArray
     "tags": [],
     "detail": "bool",
     "documentation": null
+  }, {
+    "label": "setTimeoutFloat",
+    "kind": 12,
+    "tags": [],
+    "detail": "(unit => unit, float) => timeoutId",
+    "documentation": {"kind": "markdown", "value": "\n`setTimeoutFloat(callback, durationInMilliseconds)` starts a timer that will execute `callback` after `durationInMilliseconds`.\n\nThe same as `setTimeout`, but allows you to pass a `float` instead of an `int` for the duration.\n\nSee [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console after 200 milliseconds.\nlet timeoutId = setTimeoutFloat(() => {\n  Console.log(\"This prints in 200 ms.\")\n}, 200.)\n```\n"}
+  }, {
+    "label": "setIntervalFloat",
+    "kind": 12,
+    "tags": [],
+    "detail": "(unit => unit, float) => intervalId",
+    "documentation": {"kind": "markdown", "value": "\n`setIntervalFloat(callback, intervalInMilliseconds)` starts an interval that will execute `callback` every `durationInMilliseconds` milliseconds.\n\nThe same as `setInterval`, but allows you to pass a `float` instead of an `int` for the duration.\n\nSee [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console ever 2 seconds (200 milliseconds).\nlet intervalId = setIntervalFloat(() => {\n  Console.log(\"This prints every 200 ms\")\n}, 200.)\n\n// Stop the interval after 500 ms\nlet timeoutId = setTimeoutFloat(() => {\n  clearInterval(intervalId)\n}, 500.0)\n```\n"}
+  }, {
+    "label": "setInterval",
+    "kind": 12,
+    "tags": [],
+    "detail": "(unit => unit, int) => intervalId",
+    "documentation": {"kind": "markdown", "value": "\n`setInterval(callback, intervalInMilliseconds)` starts an interval that will execute `callback` every `durationInMilliseconds` milliseconds.\n\nSee [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console ever 200 ms (200 milliseconds).\nlet intervalId = setInterval(() => {\n  Console.log(\"This prints every 200 ms.\")\n}, 200)\n\nlet timeoutId = setTimeout(() => {\n  clearInterval(intervalId)\n}, 500)\n```\n"}
+  }, {
+    "label": "setTimeout",
+    "kind": 12,
+    "tags": [],
+    "detail": "(unit => unit, int) => timeoutId",
+    "documentation": {"kind": "markdown", "value": "\n`setTimeout(callback, durationInMilliseconds)` starts a timer that will execute `callback` after `durationInMilliseconds`.\n\nSee [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console after 200 milliseconds.\nlet timeoutId = setTimeout(() => {\n  Console.log(\"This prints in 200 ms.\")\n}, 200)\n```\n"}
   }]
 
 Complete src/CompletionExpressions.res 78:31
 posCursor:[78:31] posNoWhite:[78:30] Found expr:[78:11->78:34]
 Pexp_apply ...[78:11->78:24] (...[78:25->78:33])
 Completable: Cexpression CArgument Value[fnTakingArray]($0)->array, variantPayload::Some($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
@@ -453,7 +502,8 @@ Complete src/CompletionExpressions.res 81:31
 posCursor:[81:31] posNoWhite:[81:30] Found expr:[81:11->81:34]
 Pexp_apply ...[81:11->81:24] (...[81:25->81:33])
 Completable: Cexpression CArgument Value[fnTakingArray]($0)->array
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
@@ -489,7 +539,8 @@ Complete src/CompletionExpressions.res 84:31
 posCursor:[84:31] posNoWhite:[84:30] Found expr:[84:11->84:40]
 Pexp_apply ...[84:11->84:24] (...[84:25->84:39])
 Completable: Cexpression CArgument Value[fnTakingArray]($0)->array
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingArray]($0)
 ContextPath Value[fnTakingArray]
 Path fnTakingArray
@@ -525,7 +576,8 @@ Complete src/CompletionExpressions.res 89:38
 posCursor:[89:38] posNoWhite:[89:37] Found expr:[89:11->89:41]
 Pexp_apply ...[89:11->89:25] (...[89:26->89:40])
 Completable: Cexpression CArgument Value[fnTakingRecord]($0)=so
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecord]($0)
 ContextPath Value[fnTakingRecord]
 Path fnTakingRecord
@@ -541,7 +593,8 @@ Complete src/CompletionExpressions.res 96:43
 posCursor:[96:43] posNoWhite:[96:42] Found expr:[96:11->96:46]
 Pexp_apply ...[96:11->96:30] (...[96:31->96:46])
 Completable: Cexpression CArgument Value[fnTakingOtherRecord]($0)->recordField(otherField)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingOtherRecord]($0)
 ContextPath Value[fnTakingOtherRecord]
 Path fnTakingOtherRecord
@@ -560,7 +613,8 @@ Complete src/CompletionExpressions.res 108:57
 posCursor:[108:57] posNoWhite:[108:56] Found expr:[108:11->108:60]
 Pexp_apply ...[108:11->108:42] (...[108:43->108:60])
 Completable: Cexpression CArgument Value[fnTakingRecordWithOptionalField]($0)->recordField(someOptField)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecordWithOptionalField]($0)
 ContextPath Value[fnTakingRecordWithOptionalField]
 Path fnTakingRecordWithOptionalField
@@ -582,7 +636,8 @@ Complete src/CompletionExpressions.res 116:53
 posCursor:[116:53] posNoWhite:[116:52] Found expr:[116:11->116:56]
 Pexp_apply ...[116:11->116:39] (...[116:40->116:56])
 Completable: Cexpression CArgument Value[fnTakingRecordWithOptVariant]($0)->recordField(someVariant)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingRecordWithOptVariant]($0)
 ContextPath Value[fnTakingRecordWithOptVariant]
 Path fnTakingRecordWithOptVariant
@@ -638,7 +693,8 @@ Complete src/CompletionExpressions.res 126:49
 posCursor:[126:49] posNoWhite:[126:48] Found expr:[126:11->126:51]
 Pexp_apply ...[126:11->126:31] (...[126:32->126:50])
 Completable: Cexpression CArgument Value[fnTakingInlineRecord]($0)->variantPayload::WithInlineRecord($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingInlineRecord]($0)
 ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
@@ -657,7 +713,8 @@ Complete src/CompletionExpressions.res 129:50
 posCursor:[129:50] posNoWhite:[129:49] Found expr:[129:11->129:53]
 Pexp_apply ...[129:11->129:31] (...[129:32->129:52])
 Completable: Cexpression CArgument Value[fnTakingInlineRecord]($0)->variantPayload::WithInlineRecord($0), recordBody
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingInlineRecord]($0)
 ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
@@ -685,7 +742,8 @@ Complete src/CompletionExpressions.res 132:51
 posCursor:[132:51] posNoWhite:[132:50] Found expr:[132:11->132:54]
 Pexp_apply ...[132:11->132:31] (...[132:32->132:53])
 Completable: Cexpression CArgument Value[fnTakingInlineRecord]($0)=s->variantPayload::WithInlineRecord($0), recordBody
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingInlineRecord]($0)
 ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
@@ -701,7 +759,8 @@ Complete src/CompletionExpressions.res 135:63
 posCursor:[135:63] posNoWhite:[135:62] Found expr:[135:11->135:67]
 Pexp_apply ...[135:11->135:31] (...[135:32->135:66])
 Completable: Cexpression CArgument Value[fnTakingInlineRecord]($0)->variantPayload::WithInlineRecord($0), recordField(nestedRecord)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingInlineRecord]($0)
 ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
@@ -720,7 +779,8 @@ Complete src/CompletionExpressions.res 138:65
 posCursor:[138:65] posNoWhite:[138:64] Found expr:[138:11->138:70]
 Pexp_apply ...[138:11->138:31] (...[138:32->138:69])
 Completable: Cexpression CArgument Value[fnTakingInlineRecord]($0)->variantPayload::WithInlineRecord($0), recordField(nestedRecord), recordBody
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingInlineRecord]($0)
 ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
@@ -742,7 +802,8 @@ Complete src/CompletionExpressions.res 159:20
 posCursor:[159:20] posNoWhite:[159:19] Found expr:[159:3->159:21]
 Pexp_apply ...[159:3->159:19] (...[159:20->159:21])
 Completable: Cexpression CArgument Value[fnTakingCallback]($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingCallback]($0)
 ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
@@ -761,17 +822,25 @@ Complete src/CompletionExpressions.res 162:21
 posCursor:[162:21] posNoWhite:[162:20] Found expr:[162:3->162:22]
 Pexp_apply ...[162:3->162:19] (...[162:20->162:21])
 Completable: Cexpression CArgument Value[fnTakingCallback]($0)=a
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingCallback]($0)
 ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
-[]
+[{
+    "label": "assertEqual",
+    "kind": 12,
+    "tags": [],
+    "detail": "('a, 'a) => unit",
+    "documentation": {"kind": "markdown", "value": "\n`assertEqual(a, b)` check if `a` is equal `b`. If not raise a panic exception\n\n## Examples\n\n```rescript\nlist{1, 2}\n->List.tailExn\n->assertEqual(list{2})\n```\n"}
+  }]
 
 Complete src/CompletionExpressions.res 165:22
 posCursor:[165:22] posNoWhite:[165:21] Found expr:[165:3->165:24]
 Pexp_apply ...[165:3->165:19] (...[165:20->165:21])
 Completable: Cexpression CArgument Value[fnTakingCallback]($1)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingCallback]($1)
 ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
@@ -790,7 +859,8 @@ Complete src/CompletionExpressions.res 168:25
 posCursor:[168:25] posNoWhite:[168:24] Found expr:[168:3->168:27]
 Pexp_apply ...[168:3->168:19] (...[168:20->168:21], ...[168:23->168:24])
 Completable: Cexpression CArgument Value[fnTakingCallback]($2)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingCallback]($2)
 ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
@@ -809,7 +879,8 @@ Complete src/CompletionExpressions.res 171:29
 posCursor:[171:29] posNoWhite:[171:27] Found expr:[171:3->171:30]
 Pexp_apply ...[171:3->171:19] (...[171:20->171:21], ...[171:23->171:24], ...[171:26->171:27])
 Completable: Cexpression CArgument Value[fnTakingCallback]($3)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingCallback]($3)
 ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
@@ -828,7 +899,8 @@ Complete src/CompletionExpressions.res 174:32
 posCursor:[174:32] posNoWhite:[174:30] Found expr:[174:3->174:33]
 Pexp_apply ...[174:3->174:19] (...[174:20->174:21], ...[174:23->174:24], ...[174:26->174:27], ...[174:29->174:30])
 Completable: Cexpression CArgument Value[fnTakingCallback]($4)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingCallback]($4)
 ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
@@ -847,7 +919,8 @@ Complete src/CompletionExpressions.res 177:34
 posCursor:[177:34] posNoWhite:[177:33] Found expr:[177:3->177:36]
 Pexp_apply ...[177:3->177:19] (...[177:20->177:21], ...[177:23->177:24], ...[177:26->177:27], ...[177:29->177:30], ...[177:32->177:33])
 Completable: Cexpression CArgument Value[fnTakingCallback]($5)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingCallback]($5)
 ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
@@ -870,7 +943,8 @@ posCursor:[185:15] posNoWhite:[185:14] Found expr:[184:2->185:16]
 posCursor:[185:15] posNoWhite:[185:14] Found expr:[185:2->185:16]
 Pexp_apply ...[185:2->185:13] (...[185:14->185:15])
 Completable: Cexpression CArgument Value[Console, log]($0)=s
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[Console, log]($0)
 ContextPath Value[Console, log]
 Path Console.log
@@ -898,13 +972,38 @@ Path Console.log
     "tags": [],
     "detail": "bool",
     "documentation": null
+  }, {
+    "label": "setTimeoutFloat",
+    "kind": 12,
+    "tags": [],
+    "detail": "(unit => unit, float) => timeoutId",
+    "documentation": {"kind": "markdown", "value": "\n`setTimeoutFloat(callback, durationInMilliseconds)` starts a timer that will execute `callback` after `durationInMilliseconds`.\n\nThe same as `setTimeout`, but allows you to pass a `float` instead of an `int` for the duration.\n\nSee [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console after 200 milliseconds.\nlet timeoutId = setTimeoutFloat(() => {\n  Console.log(\"This prints in 200 ms.\")\n}, 200.)\n```\n"}
+  }, {
+    "label": "setIntervalFloat",
+    "kind": 12,
+    "tags": [],
+    "detail": "(unit => unit, float) => intervalId",
+    "documentation": {"kind": "markdown", "value": "\n`setIntervalFloat(callback, intervalInMilliseconds)` starts an interval that will execute `callback` every `durationInMilliseconds` milliseconds.\n\nThe same as `setInterval`, but allows you to pass a `float` instead of an `int` for the duration.\n\nSee [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console ever 2 seconds (200 milliseconds).\nlet intervalId = setIntervalFloat(() => {\n  Console.log(\"This prints every 200 ms\")\n}, 200.)\n\n// Stop the interval after 500 ms\nlet timeoutId = setTimeoutFloat(() => {\n  clearInterval(intervalId)\n}, 500.0)\n```\n"}
+  }, {
+    "label": "setInterval",
+    "kind": 12,
+    "tags": [],
+    "detail": "(unit => unit, int) => intervalId",
+    "documentation": {"kind": "markdown", "value": "\n`setInterval(callback, intervalInMilliseconds)` starts an interval that will execute `callback` every `durationInMilliseconds` milliseconds.\n\nSee [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console ever 200 ms (200 milliseconds).\nlet intervalId = setInterval(() => {\n  Console.log(\"This prints every 200 ms.\")\n}, 200)\n\nlet timeoutId = setTimeout(() => {\n  clearInterval(intervalId)\n}, 500)\n```\n"}
+  }, {
+    "label": "setTimeout",
+    "kind": 12,
+    "tags": [],
+    "detail": "(unit => unit, int) => timeoutId",
+    "documentation": {"kind": "markdown", "value": "\n`setTimeout(callback, durationInMilliseconds)` starts a timer that will execute `callback` after `durationInMilliseconds`.\n\nSee [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.\n\n## Examples\n\n```rescript\n// Log to the console after 200 milliseconds.\nlet timeoutId = setTimeout(() => {\n  Console.log(\"This prints in 200 ms.\")\n}, 200)\n```\n"}
   }]
 
 Complete src/CompletionExpressions.res 196:14
 posCursor:[196:14] posNoWhite:[196:13] Found expr:[196:3->196:14]
 Pexp_field [196:3->196:6] someOpt:[196:7->196:14]
 Completable: Cpath Value[fff].someOpt
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[fff].someOpt
 ContextPath Value[fff]
 Path fff
@@ -925,7 +1024,8 @@ Complete src/CompletionExpressions.res 205:11
 posCursor:[205:11] posNoWhite:[205:10] Found expr:[205:3->205:12]
 Pexp_apply ...[205:3->205:10] (...[205:11->205:12])
 Completable: Cexpression CArgument Value[takesCb]($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[takesCb]($0)
 ContextPath Value[takesCb]
 Path takesCb
@@ -944,7 +1044,8 @@ Complete src/CompletionExpressions.res 216:12
 posCursor:[216:12] posNoWhite:[216:11] Found expr:[216:3->216:13]
 Pexp_apply ...[216:3->216:11] (...[216:12->216:13])
 Completable: Cexpression CArgument Value[takesCb2]($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[takesCb2]($0)
 ContextPath Value[takesCb2]
 Path takesCb2
@@ -963,7 +1064,8 @@ Complete src/CompletionExpressions.res 225:12
 posCursor:[225:12] posNoWhite:[225:11] Found expr:[225:3->225:13]
 Pexp_apply ...[225:3->225:11] (...[225:12->225:13])
 Completable: Cexpression CArgument Value[takesCb3]($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[takesCb3]($0)
 ContextPath Value[takesCb3]
 Path takesCb3
@@ -982,7 +1084,8 @@ Complete src/CompletionExpressions.res 232:12
 posCursor:[232:12] posNoWhite:[232:11] Found expr:[232:3->232:13]
 Pexp_apply ...[232:3->232:11] (...[232:12->232:13])
 Completable: Cexpression CArgument Value[takesCb4]($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[takesCb4]($0)
 ContextPath Value[takesCb4]
 Path takesCb4
@@ -1001,7 +1104,8 @@ Complete src/CompletionExpressions.res 239:12
 posCursor:[239:12] posNoWhite:[239:11] Found expr:[239:3->239:13]
 Pexp_apply ...[239:3->239:11] (...[239:12->239:13])
 Completable: Cexpression CArgument Value[takesCb5]($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[takesCb5]($0)
 ContextPath Value[takesCb5]
 Path takesCb5
@@ -1020,7 +1124,8 @@ Complete src/CompletionExpressions.res 250:30
 posCursor:[250:30] posNoWhite:[250:29] Found expr:[250:3->250:31]
 Pexp_apply ...[250:3->250:20] (~updater250:22->250:29=...__ghost__[0:-1->0:-1])
 Completable: Cexpression CArgument Value[commitLocalUpdate](~updater)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[commitLocalUpdate](~updater)
 ContextPath Value[commitLocalUpdate]
 Path commitLocalUpdate
@@ -1039,7 +1144,8 @@ Complete src/CompletionExpressions.res 257:25
 posCursor:[257:25] posNoWhite:[257:24] Found expr:[257:3->257:26]
 Pexp_apply ...[257:3->257:24] (...[257:25->257:26])
 Completable: Cexpression CArgument Value[fnTakingAsyncCallback]($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingAsyncCallback]($0)
 ContextPath Value[fnTakingAsyncCallback]
 Path fnTakingAsyncCallback
@@ -1057,7 +1163,8 @@ Path fnTakingAsyncCallback
 Complete src/CompletionExpressions.res 262:23
 posCursor:[262:23] posNoWhite:[262:22] Found expr:[262:3->262:24]
 Completable: Cexpression CArgument Value[Belt, Array, map]($1)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[Belt, Array, map]($1)
 ContextPath Value[Belt, Array, map]
 Path Belt.Array.map
@@ -1076,7 +1183,8 @@ Complete src/CompletionExpressions.res 271:15
 posCursor:[271:15] posNoWhite:[271:14] Found expr:[271:3->271:16]
 Pexp_apply ...[271:3->271:14] (...[271:15->271:16])
 Completable: Cexpression CArgument Value[takesExotic]($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[takesExotic]($0)
 ContextPath Value[takesExotic]
 Path takesExotic
@@ -1094,7 +1202,8 @@ Complete src/CompletionExpressions.res 278:23
 posCursor:[278:23] posNoWhite:[278:22] Found expr:[278:3->278:24]
 Pexp_apply ...[278:3->278:22] (...[278:23->278:24])
 Completable: Cexpression CArgument Value[fnTakingPolyVariant]($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingPolyVariant]($0)
 ContextPath Value[fnTakingPolyVariant]
 Path fnTakingPolyVariant
@@ -1128,7 +1237,8 @@ Complete src/CompletionExpressions.res 281:24
 posCursor:[281:24] posNoWhite:[281:23] Found expr:[281:3->290:18]
 Pexp_apply ...[281:3->281:22] (...[281:23->281:25], ...[290:0->290:16])
 Completable: Cexpression CArgument Value[fnTakingPolyVariant]($0)=#
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingPolyVariant]($0)
 ContextPath Value[fnTakingPolyVariant]
 Path fnTakingPolyVariant
@@ -1162,7 +1272,8 @@ Complete src/CompletionExpressions.res 284:25
 posCursor:[284:25] posNoWhite:[284:24] Found expr:[284:3->284:26]
 Pexp_apply ...[284:3->284:22] (...[284:23->284:25])
 Completable: Cexpression CArgument Value[fnTakingPolyVariant]($0)=#o
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingPolyVariant]($0)
 ContextPath Value[fnTakingPolyVariant]
 Path fnTakingPolyVariant
@@ -1180,7 +1291,8 @@ Complete src/CompletionExpressions.res 287:24
 posCursor:[287:24] posNoWhite:[287:23] Found expr:[287:3->287:25]
 Pexp_apply ...[287:3->287:22] (...[287:23->287:24])
 Completable: Cexpression CArgument Value[fnTakingPolyVariant]($0)=o
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[fnTakingPolyVariant]($0)
 ContextPath Value[fnTakingPolyVariant]
 Path fnTakingPolyVariant
@@ -1197,7 +1309,8 @@ Path fnTakingPolyVariant
 Complete src/CompletionExpressions.res 306:41
 XXX Not found!
 Completable: Cexpression Type[withIntLocal]->recordField(superInt)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Type[withIntLocal]
 Path withIntLocal
 [{
@@ -1214,7 +1327,8 @@ Complete src/CompletionExpressions.res 309:36
 posCursor:[309:36] posNoWhite:[309:35] Found expr:[309:3->309:37]
 Pexp_apply ...[309:3->309:35] (...[309:36->309:37])
 Completable: Cexpression CArgument Value[CompletionSupport, makeTestHidden]($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[CompletionSupport, makeTestHidden]($0)
 ContextPath Value[CompletionSupport, makeTestHidden]
 Path CompletionSupport.makeTestHidden
@@ -1233,8 +1347,8 @@ posCursor:[313:36] posNoWhite:[313:35] Found expr:[313:3->313:37]
 Pexp_apply ...[313:3->313:35] (...[313:36->313:37])
 Completable: Cexpression CArgument Value[CompletionSupport, makeTestHidden]($0)
 Raw opens: 1 CompletionSupport.place holder
-Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionSupport
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib CompletionSupport
 ContextPath CArgument Value[CompletionSupport, makeTestHidden]($0)
 ContextPath Value[CompletionSupport, makeTestHidden]
 Path CompletionSupport.makeTestHidden
@@ -1253,8 +1367,8 @@ posCursor:[321:11] posNoWhite:[321:10] Found expr:[321:3->321:12]
 Pexp_apply ...[321:3->321:10] (...[321:11->321:12])
 Completable: Cexpression CArgument Value[mkStuff]($0)
 Raw opens: 1 CompletionSupport.place holder
-Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionSupport
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib CompletionSupport
 ContextPath CArgument Value[mkStuff]($0)
 ContextPath Value[mkStuff]
 Path mkStuff
@@ -1267,20 +1381,20 @@ Path mkStuff
     "insertText": "/$0/g",
     "insertTextFormat": 2
   }, {
-    "label": "Js.Re.fromString()",
+    "label": "RegExp.fromString()",
     "kind": 12,
     "tags": [],
     "detail": "string => t",
     "documentation": null,
-    "insertText": "Js.Re.fromString($0)",
+    "insertText": "RegExp.fromString($0)",
     "insertTextFormat": 2
   }, {
-    "label": "Js.Re.fromStringWithFlags()",
+    "label": "RegExp.fromStringWithFlags()",
     "kind": 12,
     "tags": [],
     "detail": "(string, ~flags: string) => t",
     "documentation": null,
-    "insertText": "Js.Re.fromStringWithFlags($0)",
+    "insertText": "RegExp.fromStringWithFlags($0)",
     "insertTextFormat": 2
   }]
 
@@ -1289,8 +1403,8 @@ posCursor:[352:24] posNoWhite:[352:23] Found expr:[352:3->352:25]
 Pexp_apply ...[352:3->352:23] (...[352:24->352:25])
 Completable: Cexpression CArgument Value[tArgCompletionTestFn]($0)
 Raw opens: 1 CompletionSupport.place holder
-Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionSupport
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib CompletionSupport
 ContextPath CArgument Value[tArgCompletionTestFn]($0)
 ContextPath Value[tArgCompletionTestFn]
 Path tArgCompletionTestFn
@@ -1325,8 +1439,8 @@ posCursor:[357:37] posNoWhite:[357:36] Found expr:[357:3->357:38]
 Pexp_apply ...[357:3->357:30] (~tVal357:32->357:36=...__ghost__[0:-1->0:-1])
 Completable: Cexpression CArgument Value[labeledTArgCompletionTestFn](~tVal)
 Raw opens: 1 CompletionSupport.place holder
-Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionSupport
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib CompletionSupport
 ContextPath CArgument Value[labeledTArgCompletionTestFn](~tVal)
 ContextPath Value[labeledTArgCompletionTestFn]
 Path labeledTArgCompletionTestFn
@@ -1362,8 +1476,8 @@ posCursor:[362:18] posNoWhite:[362:17] Found expr:[362:10->362:18]
 Pexp_field [362:10->362:17] _:[362:19->362:18]
 Completable: Cpath Value[someTyp].""
 Raw opens: 1 CompletionSupport.place holder
-Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionSupport
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib CompletionSupport
 ContextPath Value[someTyp].""
 ContextPath Value[someTyp]
 Path someTyp
@@ -1385,8 +1499,8 @@ posCursor:[380:22] posNoWhite:[380:18] Found expr:[380:13->386:2]
 Pexp_apply ...[380:13->380:17] (...[380:18->386:1])
 Completable: Cexpression CArgument Value[hook]($0)->recordBody
 Raw opens: 1 CompletionSupport.place holder
-Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionSupport
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib CompletionSupport
 ContextPath CArgument Value[hook]($0)
 ContextPath Value[hook]
 Path hook
@@ -1403,8 +1517,8 @@ posCursor:[382:8] posNoWhite:[382:7] Found expr:[380:13->386:2]
 Pexp_apply ...[380:13->380:17] (...[380:18->386:1])
 Completable: Cexpression CArgument Value[hook]($0)=ope->recordBody
 Raw opens: 1 CompletionSupport.place holder
-Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionSupport
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib CompletionSupport
 ContextPath CArgument Value[hook]($0)
 ContextPath Value[hook]
 Path hook
@@ -1422,8 +1536,8 @@ posCursor:[388:18] posNoWhite:[388:17] Found expr:[388:10->388:18]
 Pexp_field [388:10->388:17] _:[388:19->388:18]
 Completable: Cpath Value[someTyp].""
 Raw opens: 1 CompletionSupport.place holder
-Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 CompletionSupport
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib CompletionSupport
 ContextPath Value[someTyp].""
 ContextPath Value[someTyp]
 Path someTyp

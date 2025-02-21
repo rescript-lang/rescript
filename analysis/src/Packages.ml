@@ -115,26 +115,35 @@ let newBsPackage ~rootPath =
                let path = [FindFiles.nameSpaceToName namespace] in
                [path]
            in
+           let bind f x = Option.bind x f in
+           let bsc_flags =
+             Json.get "bsc-flags" config
+             |> bind Json.array |> Option.value ~default:[]
+           in
+           let no_pervasives =
+             bsc_flags
+             |> List.exists (fun s -> Json.string s = Some "-nopervasives")
+           in
            let opens_from_bsc_flags =
-             let bind f x = Option.bind x f in
-             match Json.get "bsc-flags" config |> bind Json.array with
-             | Some l ->
-               List.fold_left
-                 (fun opens item ->
-                   match item |> Json.string with
-                   | None -> opens
-                   | Some s -> (
-                     let parts = String.split_on_char ' ' s in
-                     match parts with
-                     | "-open" :: name :: _ ->
-                       let path = name |> String.split_on_char '.' in
-                       path :: opens
-                     | _ -> opens))
-                 [] l
-             | None -> []
+             List.fold_left
+               (fun opens item ->
+                 match item |> Json.string with
+                 | None -> opens
+                 | Some s -> (
+                   let parts = String.split_on_char ' ' s in
+                   match parts with
+                   | "-open" :: name :: _ ->
+                     let path = name |> String.split_on_char '.' in
+                     path :: opens
+                   | _ -> opens))
+               [] bsc_flags
+           in
+           let opens_from_pervasives =
+             if no_pervasives then []
+             else [["Stdlib"]; ["Pervasives"; "JsxModules"]]
            in
            let opens =
-             ["Pervasives"; "JsxModules"] :: opens_from_namespace
+             opens_from_pervasives @ opens_from_namespace
              |> List.rev_append opens_from_bsc_flags
              |> List.map (fun path -> path @ ["place holder"])
            in

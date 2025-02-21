@@ -2,7 +2,8 @@ Complete src/CompletionMultipleEditorCompleteFrom.res 19:5
 posCursor:[19:5] posNoWhite:[19:4] Found expr:[19:3->19:5]
 Pexp_field [19:3->19:4] _:[22:0->19:5]
 Completable: Cpath Value[a].""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[a].""
 ContextPath Value[a]
 Path a

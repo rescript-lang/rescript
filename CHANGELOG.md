@@ -12,10 +12,16 @@
 
 # 12.0.0-alpha.9 (Unreleased)
 
+#### :boom: Breaking Change
+
+- Clean list API. https://github.com/rescript-lang/rescript/pull/7290
+
 #### :nail_care: Polish
 
 - Allow single newline in JSX. https://github.com/rescript-lang/rescript/pull/7269
 - Editor: Always complete from Core first. Use actual native regex syntax in code snippets for regexps. https://github.com/rescript-lang/rescript/pull/7295
+- Add `type t` to Stdlib modules. https://github.com/rescript-lang/rescript/pull/7302
+- Gentype: handle null/nullable/undefined from Stdlib. https://github.com/rescript-lang/rescript/pull/7132
 
 #### :bug: Bug fix
 
@@ -25,14 +31,19 @@
 - Fix completion for application with tagged template. https://github.com/rescript-lang/rescript/pull/7278
 - Fix error message for arity in the presence of optional arguments. https://github.com/rescript-lang/rescript/pull/7284
 - Fix issue in functors with more than one argument (which are curried): emit nested function always. https://github.com/rescript-lang/rescript/pull/7273
-- Fix dot completion issue with React primitives.  https://github.com/rescript-lang/rescript/pull/7292
+- Fix dot completion issue with React primitives. https://github.com/rescript-lang/rescript/pull/7292
+- Stdlib namespace for Core modules (fixes name clashes with user modules). https://github.com/rescript-lang/rescript/pull/7285
+- Fix runtime type check for Object in untagged variants when one variant case is `null`. https://github.com/rescript-lang/rescript/pull/7303
+- Fix files that were being truncated when sent to the CDN over FTP. https://github.com/rescript-lang/rescript/pull/7306
+- Fix better editor completion for applications. https://github.com/rescript-lang/rescript/pull/7291
 - Fix @react.componentWithProps no longer works with @directive("'use memo'"). https://github.com/rescript-lang/rescript/pull/7300
 
 #### :house: Internal
 
 - Remove ignore in res_scanner.ml . https://github.com/rescript-lang/rescript/pull/7280
 - Use the new stdlib modules in the analysis tests. https://github.com/rescript-lang/rescript/pull/7295
-- Build with OCaml 5.3.0. https://github.com/rescript-lang/rescript-compiler/pull/7294
+- Build with OCaml 5.3.0. https://github.com/rescript-lang/rescript/pull/7294
+- Simplify JSON.Decode implementation. https://github.com/rescript-lang/rescript/pull/7304
 
 # 12.0.0-alpha.8
 

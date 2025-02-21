@@ -1,7 +1,8 @@
 Complete src/RecordCompletion.res 8:9
 posCursor:[8:9] posNoWhite:[8:8] Found expr:[8:3->8:9]
 Completable: Cpath Value[t].n->m
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[t].n->m
 ContextPath Value[t].n
 ContextPath Value[t]
@@ -11,7 +12,7 @@ ContextPath Value[t]
 Path t
 CPPipe pathFromEnv: found:true
 Path RecordCompletion.n
-Path Array.m
+Path Stdlib.Array.m
 [{
     "label": "Array.map",
     "kind": 12,
@@ -29,7 +30,8 @@ Path Array.m
 Complete src/RecordCompletion.res 11:13
 posCursor:[11:13] posNoWhite:[11:12] Found expr:[11:3->11:13]
 Completable: Cpath Value[t2].n2.n->m
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[t2].n2.n->m
 ContextPath Value[t2].n2.n
 ContextPath Value[t2].n2
@@ -51,7 +53,7 @@ CPPipe pathFromEnv: found:true
 Path RecordCompletion.n2
 CPPipe pathFromEnv: found:true
 Path RecordCompletion.n
-Path Array.m
+Path Stdlib.Array.m
 [{
     "label": "Array.map",
     "kind": 12,
@@ -70,7 +72,8 @@ Complete src/RecordCompletion.res 19:7
 posCursor:[19:7] posNoWhite:[19:6] Found expr:[19:3->19:7]
 Pexp_field [19:3->19:4] R.:[19:5->19:7]
 Completable: Cpath Module[R].""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Module[R].""
 Path R.
 [{
@@ -85,7 +88,8 @@ Complete src/RecordCompletion.res 22:7
 posCursor:[22:7] posNoWhite:[22:6] Found expr:[22:3->22:10]
 Pexp_field [22:3->22:4] R.xx:[22:5->22:10]
 Completable: Cpath Module[R].""
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Module[R].""
 Path R.
 [{

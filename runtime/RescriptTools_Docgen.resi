@@ -99,4 +99,4 @@ type doc = {
   items: array<item>,
 }
 
-let decodeFromJson: JSON.t => doc
+let decodeFromJson: Stdlib_JSON.t => doc

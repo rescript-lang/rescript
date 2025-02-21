@@ -965,7 +965,8 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         | [], [(Nolabel | Labelled _ | Optional _)] ->
           (* should not happen, but just ignore extra arguments *) []
       in
-      match TypeUtils.extractFunctionType ~env ~package typ with
+
+      match TypeUtils.extractFunctionType ~env ~package ~digInto:false typ with
       | args, tRet when args <> [] ->
         let args = processApply args labels in
         let retType = reconstructFunctionType args tRet in
@@ -1452,6 +1453,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
     let completionItems =
       match path with
       | Pdot (Pdot (Pident {name = "Js"}, "Re", _), "t", _)
+      | Pdot (Pdot (Pident {name = "Stdlib"}, "RegExp", _), "t", _)
       | Pdot (Pident {name = "RegExp"}, "t", _) ->
         (* regexps *)
         create "/<regexp>/g" ~insertText:"/$0/g" ~includesSnippets:true

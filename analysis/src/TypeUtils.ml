@@ -243,12 +243,12 @@ let rec extractObjectType ~env ~package (t : Types.type_expr) =
     | _ -> None)
   | _ -> None
 
-let extractFunctionType ~env ~package typ =
+let extractFunctionType ~env ~package ?(digInto = true) typ =
   let rec loop ~env acc (t : Types.type_expr) =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ~env acc t1
     | Tarrow (label, tArg, tRet, _, _) -> loop ~env ((label, tArg) :: acc) tRet
-    | Tconstr (path, typeArgs, _) -> (
+    | Tconstr (path, typeArgs, _) when digInto -> (
       match References.digConstructor ~env ~package path with
       | Some
           ( env,
@@ -1255,14 +1255,14 @@ let pathToBuiltin path =
 
 let completionPathFromMaybeBuiltin path =
   match pathToBuiltin path with
-  | Some ("array", _) -> Some ["Array"]
-  | Some ("option", _) -> Some ["Option"]
-  | Some ("string", _) -> Some ["String"]
-  | Some ("int", _) -> Some ["Int"]
-  | Some ("float", _) -> Some ["Float"]
-  | Some ("promise", _) -> Some ["Promise"]
-  | Some ("list", _) -> Some ["List"]
-  | Some ("result", _) -> Some ["Result"]
-  | Some ("dict", _) -> Some ["Dict"]
-  | Some ("char", _) -> Some ["Char"]
+  | Some ("array", _) -> Some ["Stdlib"; "Array"]
+  | Some ("option", _) -> Some ["Stdlib"; "Option"]
+  | Some ("string", _) -> Some ["Stdlib"; "String"]
+  | Some ("int", _) -> Some ["Stdlib"; "Int"]
+  | Some ("float", _) -> Some ["Stdlib"; "Float"]
+  | Some ("promise", _) -> Some ["Stdlib"; "Promise"]
+  | Some ("list", _) -> Some ["Stdlib"; "List"]
+  | Some ("result", _) -> Some ["Stdlib"; "Result"]
+  | Some ("dict", _) -> Some ["Stdlib"; "Dict"]
+  | Some ("char", _) -> Some ["Stdlib"; "Char"]
   | _ -> None

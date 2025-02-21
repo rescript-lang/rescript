@@ -24,16 +24,16 @@ let ignoreRuntimeTests = [
     // Ignore some tests not supported by node v18
     18,
     [
-      "Array.toReversed",
-      "Array.toSorted",
-      "Promise.withResolvers",
-      "Set.union",
-      "Set.isSupersetOf",
-      "Set.isSubsetOf",
-      "Set.isDisjointFrom",
-      "Set.intersection",
-      "Set.symmetricDifference",
-      "Set.difference",
+      "Stdlib.Array.toReversed",
+      "Stdlib.Array.toSorted",
+      "Stdlib.Promise.withResolvers",
+      "Stdlib.Set.union",
+      "Stdlib.Set.isSupersetOf",
+      "Stdlib.Set.isSubsetOf",
+      "Stdlib.Set.isDisjointFrom",
+      "Stdlib.Set.intersection",
+      "Stdlib.Set.symmetricDifference",
+      "Stdlib.Set.difference",
     ],
   ),
 ]
@@ -150,7 +150,11 @@ let extractExamples = async () => {
   let docFiles = files->Array.filter(f =>
     switch f {
     // Ignore Js modules and RescriptTools for now
-    | f if f->String.startsWith("Js") || f->String.startsWith("RescriptTools") => false
+    // Avoid Stdlib modules showing up as both "Stdlib_X" and "Stdlib.X"
+    | f
+      if f->String.startsWith("Js") ||
+      f->String.startsWith("RescriptTools") ||
+      f->String.startsWith("Stdlib_") => false
     | f if f->String.endsWith(".resi") => true
     | f if f->String.endsWith(".res") && !(files->Array.includes(f ++ "i")) => true
     | _ => false

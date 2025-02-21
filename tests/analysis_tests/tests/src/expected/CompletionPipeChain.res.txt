@@ -1,7 +1,8 @@
 Complete src/CompletionPipeChain.res 27:16
 posCursor:[27:16] posNoWhite:[27:15] Found expr:[27:11->0:-1]
 Completable: Cpath Value[int]->
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[int]->
 ContextPath Value[int]
 Path int
@@ -30,7 +31,8 @@ Path Integer.
 Complete src/CompletionPipeChain.res 30:23
 posCursor:[30:23] posNoWhite:[30:22] Found expr:[30:11->0:-1]
 Completable: Cpath Value[toFlt](Nolabel)->
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[toFlt](Nolabel)->
 ContextPath Value[toFlt](Nolabel)
 ContextPath Value[toFlt]
@@ -48,7 +50,8 @@ Path SuperFloat.
 Complete src/CompletionPipeChain.res 33:38
 posCursor:[33:38] posNoWhite:[33:37] Found expr:[33:11->0:-1]
 Completable: Cpath Value[Integer, increment](Nolabel, Nolabel)->
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[Integer, increment](Nolabel, Nolabel)->
 ContextPath Value[Integer, increment](Nolabel, Nolabel)
 ContextPath Value[Integer, increment]
@@ -78,7 +81,8 @@ Path Integer.
 Complete src/CompletionPipeChain.res 36:38
 posCursor:[36:38] posNoWhite:[36:37] Found expr:[36:11->0:-1]
 Completable: Cpath Value[Integer, increment](Nolabel, Nolabel)->
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[Integer, increment](Nolabel, Nolabel)->
 ContextPath Value[Integer, increment](Nolabel, Nolabel)
 ContextPath Value[Integer, increment]
@@ -108,7 +112,8 @@ Path Integer.
 Complete src/CompletionPipeChain.res 39:47
 posCursor:[39:47] posNoWhite:[39:46] Found expr:[39:11->0:-1]
 Completable: Cpath Value[Integer, decrement](Nolabel, Nolabel)->
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[Integer, decrement](Nolabel, Nolabel)->
 ContextPath Value[Integer, decrement](Nolabel, Nolabel)
 ContextPath Value[Integer, decrement]
@@ -138,7 +143,8 @@ Path Integer.
 Complete src/CompletionPipeChain.res 42:69
 posCursor:[42:69] posNoWhite:[42:68] Found expr:[42:11->0:-1]
 Completable: Cpath Value[Integer, decrement](Nolabel, Nolabel)->
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[Integer, decrement](Nolabel, Nolabel)->
 ContextPath Value[Integer, decrement](Nolabel, Nolabel)
 ContextPath Value[Integer, decrement]
@@ -168,7 +174,8 @@ Path Integer.
 Complete src/CompletionPipeChain.res 45:62
 posCursor:[45:62] posNoWhite:[45:61] Found expr:[45:11->0:-1]
 Completable: Cpath Value[SuperFloat, fromInteger](Nolabel)->
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[SuperFloat, fromInteger](Nolabel)->
 ContextPath Value[SuperFloat, fromInteger](Nolabel)
 ContextPath Value[SuperFloat, fromInteger]
@@ -186,7 +193,8 @@ Path SuperFloat.
 Complete src/CompletionPipeChain.res 48:63
 posCursor:[48:63] posNoWhite:[48:62] Found expr:[48:11->48:63]
 Completable: Cpath Value[SuperFloat, fromInteger](Nolabel)->t
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[SuperFloat, fromInteger](Nolabel)->t
 ContextPath Value[SuperFloat, fromInteger](Nolabel)
 ContextPath Value[SuperFloat, fromInteger]
@@ -204,7 +212,8 @@ Path SuperFloat.t
 Complete src/CompletionPipeChain.res 51:82
 posCursor:[51:82] posNoWhite:[51:81] Found expr:[51:11->0:-1]
 Completable: Cpath Value[CompletionSupport, Test, make](Nolabel)->
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[CompletionSupport, Test, make](Nolabel)->
 ContextPath Value[CompletionSupport, Test, make](Nolabel)
 ContextPath Value[CompletionSupport, Test, make]
@@ -228,7 +237,8 @@ Path CompletionSupport.Test.
 Complete src/CompletionPipeChain.res 54:78
 posCursor:[54:78] posNoWhite:[54:77] Found expr:[54:11->0:-1]
 Completable: Cpath Value[CompletionSupport, Test, addSelf](Nolabel, Nolabel)->
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[CompletionSupport, Test, addSelf](Nolabel, Nolabel)->
 ContextPath Value[CompletionSupport, Test, addSelf](Nolabel, Nolabel)
 ContextPath Value[CompletionSupport, Test, addSelf]
@@ -252,24 +262,26 @@ Path CompletionSupport.Test.
 Complete src/CompletionPipeChain.res 58:5
 posCursor:[58:5] posNoWhite:[58:4] Found expr:[57:8->0:-1]
 Completable: Cpath Value[Array, forEach](Nolabel, Nolabel)->
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[Array, forEach](Nolabel, Nolabel)->
 ContextPath Value[Array, forEach](Nolabel, Nolabel)
 ContextPath Value[Array, forEach]
 Path Array.forEach
 CPPipe pathFromEnv: found:true
-Path Array.
+Path Stdlib_Array.
 []
 
 Complete src/CompletionPipeChain.res 62:6
 posCursor:[62:6] posNoWhite:[62:5] Found expr:[61:8->62:6]
 Completable: Cpath Value[Belt, Array, reduce](Nolabel, Nolabel, Nolabel)->t
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[Belt, Array, reduce](Nolabel, Nolabel, Nolabel)->t
 ContextPath Value[Belt, Array, reduce](Nolabel, Nolabel, Nolabel)
 ContextPath Value[Belt, Array, reduce]
 Path Belt.Array.reduce
-Path Int.t
+Path Stdlib.Int.t
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -335,7 +347,8 @@ Path Int.t
 Complete src/CompletionPipeChain.res 70:12
 posCursor:[70:12] posNoWhite:[70:11] Found expr:[70:3->0:-1]
 Completable: Cpath Value[aliased]->
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[aliased]->
 ContextPath Value[aliased]
 Path aliased
@@ -358,7 +371,8 @@ Path CompletionSupport.Test.
 Complete src/CompletionPipeChain.res 73:15
 posCursor:[73:15] posNoWhite:[73:14] Found expr:[73:3->0:-1]
 Completable: Cpath Value[notAliased]->
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[notAliased]->
 ContextPath Value[notAliased]
 Path notAliased
@@ -386,7 +400,8 @@ posCursor:[82:30] posNoWhite:[82:29] Found expr:[79:4->90:14]
 posCursor:[82:30] posNoWhite:[82:29] Found expr:[82:7->90:14]
 posCursor:[82:30] posNoWhite:[82:29] Found expr:[82:7->82:30]
 Completable: Cpath Value[props].support.root->ren
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[props].support.root->ren
 ContextPath Value[props].support.root
 ContextPath Value[props].support
@@ -428,7 +443,8 @@ posCursor:[88:16] posNoWhite:[88:15] Found expr:[85:4->90:14]
 posCursor:[88:16] posNoWhite:[88:15] Found expr:[88:7->90:14]
 posCursor:[88:16] posNoWhite:[88:15] Found expr:[88:7->88:16]
 Completable: Cpath Value[root]->ren
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[root]->ren
 ContextPath Value[root]
 Path root
@@ -448,7 +464,8 @@ Pexp_apply ...[95:3->95:14] (...[95:15->0:-1])
 posCursor:[95:20] posNoWhite:[95:19] Found expr:[95:15->0:-1]
 posCursor:[95:20] posNoWhite:[95:19] Found expr:[95:15->0:-1]
 Completable: Cpath Value[int]->
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[int]->
 ContextPath Value[int]
 Path int
@@ -479,7 +496,8 @@ posCursor:[98:21] posNoWhite:[98:20] Found expr:[98:3->98:22]
 Pexp_apply ...[98:3->98:14] (...[98:15->98:21])
 posCursor:[98:21] posNoWhite:[98:20] Found expr:[98:15->98:21]
 Completable: Cpath Value[int]->t
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[int]->t
 ContextPath Value[int]
 Path int
@@ -496,7 +514,8 @@ Path Integer.t
 Complete src/CompletionPipeChain.res 103:8
 posCursor:[103:8] posNoWhite:[103:7] Found expr:[103:3->103:8]
 Completable: Cpath Value[r]->la
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[r]->la
 ContextPath Value[r]
 Path r
@@ -513,7 +532,8 @@ Path Js.Re.la
 Complete src/CompletionPipeChain.res 112:7
 posCursor:[112:7] posNoWhite:[112:6] Found expr:[112:3->0:-1]
 Completable: Cpath Value[xx]->
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[xx]->
 ContextPath Value[xx]
 Path xx

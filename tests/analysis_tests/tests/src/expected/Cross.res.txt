@@ -97,7 +97,8 @@ Complete src/Cross.res 36:28
 posCursor:[36:28] posNoWhite:[36:27] Found expr:[36:3->36:28]
 Pexp_ident DefinitionWithInterface.a:[36:3->36:28]
 Completable: Cpath Value[DefinitionWithInterface, a]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[DefinitionWithInterface, a]
 Path DefinitionWithInterface.a
 []

@@ -2,40 +2,40 @@
 
 import * as Fs from "fs";
 import * as Os from "os";
-import * as Exn from "rescript/lib/es6/Exn.js";
-import * as Int from "rescript/lib/es6/Int.js";
 import * as Url from "url";
-import * as Dict from "rescript/lib/es6/Dict.js";
-import * as List from "rescript/lib/es6/List.js";
 import * as Path from "path";
-import * as $$Array from "rescript/lib/es6/Array.js";
-import * as $$Error from "rescript/lib/es6/Error.js";
-import * as Option from "rescript/lib/es6/Option.js";
+import * as Stdlib from "rescript/lib/es6/Stdlib.js";
 import * as Belt_List from "rescript/lib/es6/Belt_List.js";
 import * as ArrayUtils from "./ArrayUtils.res.mjs";
 import * as Belt_Array from "rescript/lib/es6/Belt_Array.js";
-import * as Pervasives from "rescript/lib/es6/Pervasives.js";
 import * as SpawnAsync from "./SpawnAsync.res.mjs";
+import * as Stdlib_Exn from "rescript/lib/es6/Stdlib_Exn.js";
+import * as Stdlib_Int from "rescript/lib/es6/Stdlib_Int.js";
+import * as Stdlib_Dict from "rescript/lib/es6/Stdlib_Dict.js";
+import * as Stdlib_List from "rescript/lib/es6/Stdlib_List.js";
+import * as Stdlib_Array from "rescript/lib/es6/Stdlib_Array.js";
+import * as Stdlib_Error from "rescript/lib/es6/Stdlib_Error.js";
+import * as Stdlib_Option from "rescript/lib/es6/Stdlib_Option.js";
 import * as Primitive_string from "rescript/lib/es6/Primitive_string.js";
 import * as Promises from "node:fs/promises";
 import * as Primitive_exceptions from "rescript/lib/es6/Primitive_exceptions.js";
 import * as RescriptTools_Docgen from "rescript/lib/es6/RescriptTools_Docgen.js";
 
-let nodeVersion = Option.getExn(Int.fromString(Option.getExn(process.version.replace("v", "").split(".")[0], "Failed to find major version of Node"), undefined), "Failed to convert node version to Int");
+let nodeVersion = Stdlib_Option.getExn(Stdlib_Int.fromString(Stdlib_Option.getExn(process.version.replace("v", "").split(".")[0], "Failed to find major version of Node"), undefined), "Failed to convert node version to Int");
 
 let ignoreRuntimeTests = [[
     18,
     [
-      "Array.toReversed",
-      "Array.toSorted",
-      "Promise.withResolvers",
-      "Set.union",
-      "Set.isSupersetOf",
-      "Set.isSubsetOf",
-      "Set.isDisjointFrom",
-      "Set.intersection",
-      "Set.symmetricDifference",
-      "Set.difference"
+      "Stdlib.Array.toReversed",
+      "Stdlib.Array.toSorted",
+      "Stdlib.Promise.withResolvers",
+      "Stdlib.Set.union",
+      "Stdlib.Set.isSupersetOf",
+      "Stdlib.Set.isSubsetOf",
+      "Stdlib.Set.isDisjointFrom",
+      "Stdlib.Set.intersection",
+      "Stdlib.Set.symmetricDifference",
+      "Stdlib.Set.difference"
     ]
   ]];
 
@@ -53,8 +53,8 @@ async function extractDocFromFile(file) {
     return RescriptTools_Docgen.decodeFromJson(JSON.parse(getOutput(match.stdout)));
   } catch (raw_exn) {
     let exn = Primitive_exceptions.internalToException(raw_exn);
-    if (exn.RE_EXN_ID === Exn.$$Error) {
-      return $$Error.panic("Failed to generate docstrings from " + file);
+    if (exn.RE_EXN_ID === Stdlib_Exn.$$Error) {
+      return Stdlib_Error.panic("Failed to generate docstrings from " + file);
     }
     throw {
       RE_EXN_ID: "Assert_failure",
@@ -114,7 +114,7 @@ function getExamples(param) {
           };
           _items = Belt_List.concatMany([
             items.tl,
-            List.fromArray(match.items)
+            Stdlib_List.fromArray(match.items)
           ]);
           continue;
         case "moduleType" :
@@ -129,7 +129,7 @@ function getExamples(param) {
           };
           _items = Belt_List.concatMany([
             items.tl,
-            List.fromArray(match.items)
+            Stdlib_List.fromArray(match.items)
           ]);
           continue;
         case "moduleAlias" :
@@ -144,13 +144,13 @@ function getExamples(param) {
           };
           _items = Belt_List.concatMany([
             items.tl,
-            List.fromArray(match.items)
+            Stdlib_List.fromArray(match.items)
           ]);
           continue;
       }
     };
   };
-  return List.toArray(loop(List.fromArray(param.items), /* [] */0)).filter(param => param.docstrings.length > 0);
+  return Stdlib_List.toArray(loop(Stdlib_List.fromArray(param.items), /* [] */0)).filter(param => param.docstrings.length > 0);
 }
 
 function getCodeBlocks(example) {
@@ -159,7 +159,7 @@ function getCodeBlocks(example) {
       let acc = _acc;
       let lines = _lines;
       if (lines === 0) {
-        return Pervasives.panic("Failed to find end of code block for " + example.kind + ": " + example.id);
+        return Stdlib.panic("Failed to find end of code block for " + example.kind + ": " + example.id);
       }
       let hd = lines.hd;
       if (hd.trim().endsWith("```")) {
@@ -184,7 +184,7 @@ function getCodeBlocks(example) {
       if (lines.hd.trim().startsWith("```res")) {
         let code = loopEndCodeBlock(rest, /* [] */0);
         _acc = {
-          hd: List.toArray(List.reverse(code)).join("\n"),
+          hd: Stdlib_List.toArray(Stdlib_List.reverse(code)).join("\n"),
           tl: acc
         };
         _lines = rest;
@@ -194,7 +194,7 @@ function getCodeBlocks(example) {
       continue;
     };
   };
-  return Belt_Array.reverse(List.toArray(loop(List.fromArray($$Array.reduce(example.docstrings, [], (acc, docstring) => acc.concat(docstring.split("\n")))), /* [] */0))).join("\n\n");
+  return Belt_Array.reverse(Stdlib_List.toArray(loop(Stdlib_List.fromArray(Stdlib_Array.reduce(example.docstrings, [], (acc, docstring) => acc.concat(docstring.split("\n")))), /* [] */0))).join("\n\n");
 }
 
 let batchSize = Os.cpus().length;
@@ -202,7 +202,7 @@ let batchSize = Os.cpus().length;
 async function extractExamples() {
   let files = Fs.readdirSync("runtime");
   let docFiles = files.filter(f => {
-    if (f.startsWith("Js") || f.startsWith("RescriptTools")) {
+    if (f.startsWith("Js") || f.startsWith("RescriptTools") || f.startsWith("Stdlib_")) {
       return false;
     } else if (f.endsWith(".resi")) {
       return true;
@@ -233,9 +233,9 @@ async function main() {
     dict[id] = [cur].concat(previous);
   });
   let output = [];
-  Dict.forEachWithKey(dict, (examples, key) => {
+  Stdlib_Dict.forEachWithKey(dict, (examples, key) => {
     examples.sort((a, b) => Primitive_string.compare(a.name, b.name));
-    let codeExamples = $$Array.filterMap(examples, example => {
+    let codeExamples = Stdlib_Array.filterMap(examples, example => {
       let ignoreExample = ignoreRuntimeTests.some(param => {
         if (nodeVersion === param[0]) {
           return param[1].includes(example.id);

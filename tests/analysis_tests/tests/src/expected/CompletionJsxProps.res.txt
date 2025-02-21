@@ -2,7 +2,8 @@ Complete src/CompletionJsxProps.res 0:47
 posCursor:[0:47] posNoWhite:[0:46] Found expr:[0:12->0:47]
 JSX <CompletionSupport.TestComponent:[0:12->0:43] on[0:44->0:46]=...__ghost__[0:-1->0:-1]> _children:None
 Completable: Cexpression CJsxPropValue [CompletionSupport, TestComponent] on
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] on
 Path CompletionSupport.TestComponent.make
 [{
@@ -23,7 +24,8 @@ Complete src/CompletionJsxProps.res 3:48
 posCursor:[3:48] posNoWhite:[3:47] Found expr:[3:12->3:48]
 JSX <CompletionSupport.TestComponent:[3:12->3:43] on[3:44->3:46]=...[3:47->3:48]> _children:None
 Completable: Cexpression CJsxPropValue [CompletionSupport, TestComponent] on=t
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] on
 Path CompletionSupport.TestComponent.make
 [{
@@ -31,6 +33,13 @@ Path CompletionSupport.TestComponent.make
     "kind": 4,
     "tags": [],
     "detail": "bool",
+    "documentation": null,
+    "sortText": "A true"
+  }, {
+    "label": "typeof",
+    "kind": 12,
+    "tags": [],
+    "detail": "'a => Type.t",
     "documentation": null
   }]
 
@@ -38,7 +47,8 @@ Complete src/CompletionJsxProps.res 6:50
 posCursor:[6:50] posNoWhite:[6:49] Found expr:[6:12->6:50]
 JSX <CompletionSupport.TestComponent:[6:12->6:43] test[6:44->6:48]=...[6:49->6:50]> _children:None
 Completable: Cexpression CJsxPropValue [CompletionSupport, TestComponent] test=T
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] test
 Path CompletionSupport.TestComponent.make
 [{
@@ -60,6 +70,18 @@ Path CompletionSupport.TestComponent.make
     "insertText": "{Three($0)}",
     "insertTextFormat": 2
   }, {
+    "label": "TypedArray",
+    "kind": 9,
+    "tags": [],
+    "detail": "module TypedArray",
+    "documentation": null
+  }, {
+    "label": "Type",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Type",
+    "documentation": null
+  }, {
     "label": "TableclothMap",
     "kind": 9,
     "tags": [],
@@ -67,16 +89,6 @@ Path CompletionSupport.TestComponent.make
     "documentation": null,
     "data": {
       "modulePath": "TableclothMap",
-      "filePath": "src/CompletionJsxProps.res"
-    }
-  }, {
-    "label": "Type",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Type",
-    "documentation": null,
-    "data": {
-      "modulePath": "Type",
       "filePath": "src/CompletionJsxProps.res"
     }
   }, {
@@ -119,23 +131,14 @@ Path CompletionSupport.TestComponent.make
       "modulePath": "TypeDefinition",
       "filePath": "src/CompletionJsxProps.res"
     }
-  }, {
-    "label": "TypedArray",
-    "kind": 9,
-    "tags": [],
-    "detail": "module TypedArray",
-    "documentation": null,
-    "data": {
-      "modulePath": "TypedArray",
-      "filePath": "src/CompletionJsxProps.res"
-    }
   }]
 
 Complete src/CompletionJsxProps.res 9:52
 posCursor:[9:52] posNoWhite:[9:51] Found expr:[9:12->9:52]
 JSX <CompletionSupport.TestComponent:[9:12->9:43] polyArg[9:44->9:51]=...__ghost__[0:-1->0:-1]> _children:None
 Completable: Cexpression CJsxPropValue [CompletionSupport, TestComponent] polyArg
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] polyArg
 Path CompletionSupport.TestComponent.make
 [{
@@ -176,7 +179,8 @@ Complete src/CompletionJsxProps.res 12:54
 posCursor:[12:54] posNoWhite:[12:53] Found expr:[12:12->12:54]
 JSX <CompletionSupport.TestComponent:[12:12->12:43] polyArg[12:44->12:51]=...[12:52->12:54]> _children:None
 Completable: Cexpression CJsxPropValue [CompletionSupport, TestComponent] polyArg=#t
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] polyArg
 Path CompletionSupport.TestComponent.make
 [{
@@ -209,7 +213,8 @@ Complete src/CompletionJsxProps.res 15:22
 posCursor:[15:22] posNoWhite:[15:21] Found expr:[15:12->15:25]
 JSX <div:[15:12->15:15] muted[15:16->15:21]=...__ghost__[0:-1->0:-1]> _children:None
 Completable: Cexpression CJsxPropValue [div] muted
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [div] muted
 Path ReactDOM.domProps
 Path JsxDOM.domProps
@@ -231,7 +236,8 @@ Complete src/CompletionJsxProps.res 18:29
 posCursor:[18:29] posNoWhite:[18:28] Found expr:[18:12->18:32]
 JSX <div:[18:12->18:15] onMouseEnter[18:16->18:28]=...__ghost__[0:-1->0:-1]> _children:None
 Completable: Cexpression CJsxPropValue [div] onMouseEnter
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [div] onMouseEnter
 Path ReactDOM.domProps
 Path JsxDOM.domProps
@@ -250,7 +256,8 @@ Complete src/CompletionJsxProps.res 22:52
 posCursor:[22:52] posNoWhite:[22:51] Found expr:[22:12->22:52]
 JSX <CompletionSupport.TestComponent:[22:12->22:43] testArr[22:44->22:51]=...__ghost__[0:-1->0:-1]> _children:None
 Completable: Cexpression CJsxPropValue [CompletionSupport, TestComponent] testArr
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] testArr
 Path CompletionSupport.TestComponent.make
 [{
@@ -268,7 +275,8 @@ Complete src/CompletionJsxProps.res 26:54
 posCursor:[26:54] posNoWhite:[26:53] Found expr:[26:12->26:56]
 JSX <CompletionSupport.TestComponent:[26:12->26:43] testArr[26:44->26:51]=...[26:53->26:55]> _children:None
 Completable: Cexpression CJsxPropValue [CompletionSupport, TestComponent] testArr->array
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] testArr
 Path CompletionSupport.TestComponent.make
 [{
@@ -301,7 +309,8 @@ Complete src/CompletionJsxProps.res 31:53
 posCursor:[31:53] posNoWhite:[31:52] Found expr:[31:12->31:54]
 JSX <CompletionSupport.TestComponent:[31:12->31:43] polyArg[31:44->31:51]=...[31:52->31:54]> _children:None
 Completable: Cexpression CJsxPropValue [CompletionSupport, TestComponent] polyArg->recordBody
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] polyArg
 Path CompletionSupport.TestComponent.make
 [{
@@ -342,7 +351,8 @@ Complete src/CompletionJsxProps.res 34:49
 posCursor:[34:49] posNoWhite:[34:48] Found expr:[34:12->34:50]
 JSX <CompletionSupport.TestComponent:[34:12->34:43] on[34:44->34:46]=...[34:48->34:49]> _children:None
 Completable: Cexpression CJsxPropValue [CompletionSupport, TestComponent] on=t->recordBody
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletionSupport, TestComponent] on
 Path CompletionSupport.TestComponent.make
 [{
@@ -357,13 +367,20 @@ Path CompletionSupport.TestComponent.make
     "tags": [],
     "detail": "[> #two]",
     "documentation": null
+  }, {
+    "label": "typeof",
+    "kind": 12,
+    "tags": [],
+    "detail": "'a => Type.t",
+    "documentation": null
   }]
 
 Complete src/CompletionJsxProps.res 44:44
 posCursor:[44:44] posNoWhite:[44:43] Found expr:[44:12->44:44]
 JSX <CompletableComponentLazy:[44:12->44:36] status[44:37->44:43]=...__ghost__[0:-1->0:-1]> _children:None
 Completable: Cexpression CJsxPropValue [CompletableComponentLazy] status
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletableComponentLazy] status
 Path CompletableComponentLazy.make
 [{

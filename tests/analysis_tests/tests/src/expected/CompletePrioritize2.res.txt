@@ -1,7 +1,8 @@
 Complete src/CompletePrioritize2.res 9:7
 posCursor:[9:7] posNoWhite:[9:6] Found expr:[9:3->0:-1]
 Completable: Cpath Value[ax]->
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[ax]->
 ContextPath Value[ax]
 Path ax
@@ -19,7 +20,8 @@ Complete src/CompletePrioritize2.res 12:5
 posCursor:[12:5] posNoWhite:[12:4] Found expr:[12:3->12:5]
 Pexp_ident ax:[12:3->12:5]
 Completable: Cpath Value[ax]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[ax]
 Path ax
 [{

@@ -1,11 +1,12 @@
 Complete src/CompletionJsx.res 3:17
 posCursor:[3:17] posNoWhite:[3:16] Found expr:[3:3->3:17]
 Completable: Cpath Value[someString]->st
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someString]->st
 ContextPath Value[someString]
 Path someString
-Path String.st
+Path Stdlib.String.st
 [{
     "label": "String.startsWith",
     "kind": 12,
@@ -29,11 +30,12 @@ posCursor:[13:21] posNoWhite:[13:20] Found expr:[12:4->32:10]
 posCursor:[13:21] posNoWhite:[13:20] Found expr:[13:7->32:10]
 posCursor:[13:21] posNoWhite:[13:20] Found expr:[13:7->13:21]
 Completable: Cpath Value[someString]->st <<jsx>>
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someString]->st <<jsx>>
 ContextPath Value[someString]
 Path someString
-Path String.st
+Path Stdlib.String.st
 [{
     "label": "React.string",
     "kind": 12,
@@ -72,11 +74,12 @@ posCursor:[18:24] posNoWhite:[18:23] Found expr:[18:10->32:4]
 posCursor:[18:24] posNoWhite:[18:23] Found expr:[18:10->32:4]
 posCursor:[18:24] posNoWhite:[18:23] Found expr:[18:10->18:24]
 Completable: Cpath Value[someString]->st <<jsx>>
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someString]->st <<jsx>>
 ContextPath Value[someString]
 Path someString
-Path String.st
+Path Stdlib.String.st
 [{
     "label": "React.string",
     "kind": 12,
@@ -115,10 +118,11 @@ posCursor:[20:27] posNoWhite:[20:26] Found expr:[20:10->32:4]
 posCursor:[20:27] posNoWhite:[20:26] Found expr:[20:10->32:4]
 posCursor:[20:27] posNoWhite:[20:26] Found expr:[20:10->20:27]
 Completable: Cpath string->st <<jsx>>
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath string->st <<jsx>>
 ContextPath string
-Path String.st
+Path Stdlib.String.st
 [{
     "label": "React.string",
     "kind": 12,
@@ -157,12 +161,13 @@ posCursor:[22:40] posNoWhite:[22:39] Found expr:[22:10->32:4]
 posCursor:[22:40] posNoWhite:[22:39] Found expr:[22:10->32:4]
 posCursor:[22:40] posNoWhite:[22:39] Found expr:[22:10->22:40]
 Completable: Cpath Value[String, trim](Nolabel)->st <<jsx>>
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[String, trim](Nolabel)->st <<jsx>>
 ContextPath Value[String, trim](Nolabel)
 ContextPath Value[String, trim]
 Path String.trim
-Path String.st
+Path Stdlib.String.st
 [{
     "label": "React.string",
     "kind": 12,
@@ -201,11 +206,12 @@ posCursor:[24:19] posNoWhite:[24:18] Found expr:[24:10->32:4]
 posCursor:[24:19] posNoWhite:[24:18] Found expr:[24:10->32:4]
 posCursor:[24:19] posNoWhite:[24:18] Found expr:[24:10->0:-1]
 Completable: Cpath Value[someInt]-> <<jsx>>
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someInt]-> <<jsx>>
 ContextPath Value[someInt]
 Path someInt
-Path Int.
+Path Stdlib.Int.
 [{
     "label": "React.int",
     "kind": 12,
@@ -254,7 +260,7 @@ Path Int.
     "label": "Int.compare",
     "kind": 12,
     "tags": [],
-    "detail": "(int, int) => Ordering.t",
+    "detail": "(int, int) => Stdlib_Ordering.t",
     "documentation": null
   }, {
     "label": "Int.toPrecision",
@@ -328,10 +334,11 @@ posCursor:[26:14] posNoWhite:[26:13] Found expr:[26:10->32:4]
 posCursor:[26:14] posNoWhite:[26:13] Found expr:[26:10->32:4]
 posCursor:[26:14] posNoWhite:[26:13] Found expr:[26:10->0:-1]
 Completable: Cpath int-> <<jsx>>
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath int-> <<jsx>>
 ContextPath int
-Path Int.
+Path Stdlib.Int.
 [{
     "label": "React.int",
     "kind": 12,
@@ -380,7 +387,7 @@ Path Int.
     "label": "Int.compare",
     "kind": 12,
     "tags": [],
-    "detail": "(int, int) => Ordering.t",
+    "detail": "(int, int) => Stdlib_Ordering.t",
     "documentation": null
   }, {
     "label": "Int.toPrecision",
@@ -454,11 +461,12 @@ posCursor:[28:20] posNoWhite:[28:19] Found expr:[28:10->32:4]
 posCursor:[28:20] posNoWhite:[28:19] Found expr:[28:10->32:4]
 posCursor:[28:20] posNoWhite:[28:19] Found expr:[28:10->28:20]
 Completable: Cpath Value[someArr]->a <<jsx>>
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[someArr]->a <<jsx>>
 ContextPath Value[someArr]
 Path someArr
-Path Array.a
+Path Stdlib.Array.a
 [{
     "label": "React.array",
     "kind": 12,
@@ -492,7 +500,8 @@ posCursor:[30:12] posNoWhite:[30:11] Found expr:[30:10->33:2]
 posCursor:[30:12] posNoWhite:[30:11] Found expr:[30:10->32:10]
 JSX <di:[30:10->30:12] div[32:6->32:9]=...[32:6->32:9]> _children:32:9
 Completable: ChtmlElement <di
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 [{
     "label": "<dialog>",
     "kind": 4,
@@ -520,7 +529,8 @@ Complete src/CompletionJsx.res 45:23
 posCursor:[45:23] posNoWhite:[45:22] Found expr:[45:4->45:23]
 JSX <CompWithoutJsxPpx:[45:4->45:21] n[45:22->45:23]=...[45:22->45:23]> _children:None
 Completable: Cjsx([CompWithoutJsxPpx], n, [n])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path CompWithoutJsxPpx.make
 [{
     "label": "name",
@@ -534,7 +544,8 @@ Complete src/CompletionJsx.res 48:27
 posCursor:[48:27] posNoWhite:[48:26] Found expr:[48:4->48:28]
 JSX <SomeComponent:[48:4->48:17] someProp[48:18->48:26]=...[48:18->48:26]> _children:None
 Completable: Cexpression CJsxPropValue [SomeComponent] someProp
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [SomeComponent] someProp
 Path SomeComponent.make
 [{
@@ -552,7 +563,8 @@ Complete src/CompletionJsx.res 51:11
 posCursor:[51:11] posNoWhite:[51:10] Found expr:[51:4->51:11]
 JSX <h1:[51:4->51:6] hidd[51:7->51:11]=...[51:7->51:11]> _children:None
 Completable: Cjsx([h1], hidd, [hidd])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path ReactDOM.domProps
 Path JsxDOM.domProps
 [{
@@ -567,7 +579,8 @@ Complete src/CompletionJsx.res 61:30
 posCursor:[61:30] posNoWhite:[61:28] Found expr:[61:4->61:29]
 JSX <IntrinsicElementLowercase:[61:4->61:29] > _children:None
 Completable: Cjsx([IntrinsicElementLowercase], "", [])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path IntrinsicElementLowercase.make
 [{
     "label": "name",
@@ -593,7 +606,8 @@ Complete src/CompletionJsx.res 73:36
 posCursor:[73:36] posNoWhite:[73:35] Found expr:[73:4->73:41]
 JSX <MultiPropComp:[73:4->73:17] name[73:18->73:22]=...[73:23->73:30] time[73:31->73:35]=...[73:37->73:40]> _children:None
 Completable: Cexpression CJsxPropValue [MultiPropComp] time
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [MultiPropComp] time
 Path MultiPropComp.make
 [{
@@ -618,7 +632,8 @@ Complete src/CompletionJsx.res 76:36
 posCursor:[76:36] posNoWhite:[76:35] Found expr:[76:4->76:40]
 JSX <MultiPropComp:[76:4->76:17] name[76:18->76:22]=...[76:23->76:30] time[76:31->76:35]=...[76:37->76:40]> _children:None
 Completable: Cexpression CJsxPropValue [MultiPropComp] time
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [MultiPropComp] time
 Path MultiPropComp.make
 [{
@@ -643,7 +658,8 @@ Complete src/CompletionJsx.res 79:28
 posCursor:[79:28] posNoWhite:[79:27] Found expr:[79:4->79:32]
 JSX <MultiPropComp:[79:4->79:17] name[79:18->79:22]=...[79:18->79:22] time[79:23->79:27]=...[79:29->79:32]> _children:None
 Completable: Cexpression CJsxPropValue [MultiPropComp] time
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [MultiPropComp] time
 Path MultiPropComp.make
 [{
@@ -668,7 +684,8 @@ Complete src/CompletionJsx.res 89:26
 posCursor:[89:26] posNoWhite:[89:24] Found expr:[89:4->89:27]
 JSX <Info:[89:4->89:8] _type[89:9->89:14]=...[89:16->89:24]> _children:89:26
 Completable: Cjsx([Info], "", [_type])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path Info.make
 [{
     "label": "key",
@@ -686,12 +703,13 @@ posCursor:[93:19] posNoWhite:[93:18] Found expr:[93:15->93:20]
 posCursor:[93:19] posNoWhite:[93:18] Found expr:[93:15->93:19]
 Pexp_field [93:15->93:17] s:[93:18->93:19]
 Completable: Cpath string.s
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath string.s
 ContextPath string
 ContextPath string->s <<jsx>>
 ContextPath string
-Path String.s
+Path Stdlib.String.s
 [{
     "label": "->React.string",
     "kind": 12,
@@ -733,7 +751,7 @@ Path String.s
     "label": "->String.searchOpt",
     "kind": 12,
     "tags": [],
-    "detail": "(string, RegExp.t) => option<int>",
+    "detail": "(string, Stdlib_RegExp.t) => option<int>",
     "documentation": {"kind": "markdown", "value": "\n`searchOpt(str, regexp)`. Like `search`, but return an `option<int>`.\n\n## Examples\n\n```rescript\nString.searchOpt(\"testing 1 2 3\", %re(\"/\\d+/\")) == Some(8)\nString.searchOpt(\"no numbers\", %re(\"/\\d+/\")) == None\n```\n"},
     "sortText": "searchOpt",
     "insertText": "->String.searchOpt",
@@ -745,7 +763,7 @@ Path String.s
     "label": "->String.splitByRegExpAtMost",
     "kind": 12,
     "tags": [],
-    "detail": "(string, RegExp.t, ~limit: int) => array<option<string>>",
+    "detail": "(\n  string,\n  Stdlib_RegExp.t,\n  ~limit: int,\n) => array<option<string>>",
     "documentation": {"kind": "markdown", "value": "\n`splitByRegExpAtMost(str, regexp, ~limit)` splits the given `str` at every\noccurrence of `regexp` and returns an array of the first `limit` resulting\nsubstrings. If `limit` is negative or greater than the number of substrings, the\narray will contain all the substrings.\nSee [`String.split`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/split) on MDN.\n\n## Examples\n\n```rescript\nString.splitByRegExpAtMost(\"Hello World. How are you doing?\", %re(\"/ /\"), ~limit=3) == [\n  Some(\"Hello\"),\n  Some(\"World.\"),\n  Some(\"How\"),\n]\n```\n"},
     "sortText": "splitByRegExpAtMost",
     "insertText": "->String.splitByRegExpAtMost",
@@ -781,7 +799,7 @@ Path String.s
     "label": "->String.setSymbol",
     "kind": 12,
     "tags": [],
-    "detail": "(string, Symbol.t, 'a) => unit",
+    "detail": "(string, Stdlib_Symbol.t, 'a) => unit",
     "documentation": null,
     "sortText": "setSymbol",
     "insertText": "->String.setSymbol",
@@ -793,7 +811,7 @@ Path String.s
     "label": "->String.splitByRegExp",
     "kind": 12,
     "tags": [],
-    "detail": "(string, RegExp.t) => array<option<string>>",
+    "detail": "(string, Stdlib_RegExp.t) => array<option<string>>",
     "documentation": {"kind": "markdown", "value": "\n`splitByRegExp(str, regexp)` splits the given `str` at every occurrence of\n`regexp` and returns an array of the resulting substrings.\nSee [`String.split`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/split) on MDN.\n\n## Examples\n\n```rescript\nString.splitByRegExp(\"Jan,Feb,Mar\", %re(\"/,/\")) == [Some(\"Jan\"), Some(\"Feb\"), Some(\"Mar\")]\n```\n"},
     "sortText": "splitByRegExp",
     "insertText": "->String.splitByRegExp",
@@ -841,7 +859,7 @@ Path String.s
     "label": "->String.search",
     "kind": 12,
     "tags": [],
-    "detail": "(string, RegExp.t) => int",
+    "detail": "(string, Stdlib_RegExp.t) => int",
     "documentation": {"kind": "markdown", "value": "\n`search(str, regexp)` returns the starting position of the first match of\n`regexp` in the given `str`, or -1 if there is no match.\nSee [`String.search`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/search) on MDN.\n\n## Examples\n\n```rescript\nString.search(\"testing 1 2 3\", %re(\"/\\d+/\")) == 8\nString.search(\"no numbers\", %re(\"/\\d+/\")) == -1\n```\n"},
     "sortText": "search",
     "insertText": "->String.search",

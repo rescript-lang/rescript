@@ -1,5 +1,5 @@
 module M = {
-    type t
+    type t = promise<string>
 
     let a = (_t:t) => 4
     let b = (_:t) => "c"
@@ -9,8 +9,10 @@ module M = {
 @module("meh") @taggedTemplate
 external meh: (array<string>, array<string>) => M.t = "default"
 
+let w = meh``
+
+// let _ = w.
+//           ^com
+
 // let x = meh`foo`.
 //                  ^com
-
-// let y = meh`bar`.x
-//                   ^com
