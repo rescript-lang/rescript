@@ -26,6 +26,7 @@
 - Fix error message for arity in the presence of optional arguments. https://github.com/rescript-lang/rescript/pull/7284
 - Fix issue in functors with more than one argument (which are curried): emit nested function always. https://github.com/rescript-lang/rescript/pull/7273
 - Fix dot completion issue with React primitives.  https://github.com/rescript-lang/rescript/pull/7292
+- Fix @react.componentWithProps no longer works with @directive("'use memo'"). https://github.com/rescript-lang/rescript/pull/7300
 
 #### :house: Internal
 
