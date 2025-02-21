@@ -68,6 +68,7 @@ val type_expansion : type_expr -> Format.formatter -> type_expr -> unit
 val prepare_expansion : type_expr * type_expr -> type_expr * type_expr
 val trace :
   bool -> bool -> string -> formatter -> (type_expr * type_expr) list -> unit
+val remove_stdlib : type_expr -> type_expr
 val report_unification_error :
   formatter ->
   Env.t ->
