@@ -338,9 +338,6 @@ let eight_int_literal : t =
 let nine_int_literal : t =
   {expression_desc = Number (Int {i = 9l; c = None}); comment = None}
 
-let obj_int_tag_literal : t =
-  {expression_desc = Number (Int {i = 248l; c = None}); comment = None}
-
 let int ?comment ?c i : t = {expression_desc = Number (Int {i; c}); comment}
 
 let bigint ?comment sign i : t =
@@ -364,7 +361,6 @@ let small_int i : t =
   | 7 -> seven_int_literal
   | 8 -> eight_int_literal
   | 9 -> nine_int_literal
-  | 248 -> obj_int_tag_literal
   | i -> int (Int32.of_int i)
 
 let true_ : t = {comment = None; expression_desc = Bool true}

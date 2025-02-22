@@ -132,7 +132,6 @@ val zero_int_literal : t
 
 (* val one_int_literal : t *)
 val zero_float_lit : t
-(* val obj_int_tag_literal : t *)
 
 val zero_bigint_literal : t
 
