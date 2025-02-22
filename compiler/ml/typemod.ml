@@ -1790,12 +1790,6 @@ let type_implementation_more ?check_exists sourcefile outputprefix modulename
       (Some sourcefile) initial_env None;
     raise e
 
-let type_implementation sourcefile outputprefix modulename initial_env ast =
-  let a, b, _, _ =
-    type_implementation_more sourcefile outputprefix modulename initial_env ast
-  in
-  (a, b)
-
 let save_signature modname tsg outputprefix source_file initial_env cmi =
   Cmt_format.save_cmt (outputprefix ^ ".cmti") modname
     (Cmt_format.Interface tsg) (Some source_file) initial_env (Some cmi)
@@ -1899,8 +1893,6 @@ let report_error ppf = function
     fprintf ppf "This is a generative functor. It can only be applied to ()"
   | Cannot_scrape_alias p ->
     fprintf ppf "This is an alias for module %a, which is missing" path p
-
-let super_report_error_no_wrap_printing_env = report_error
 
 let report_error env ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error ppf err)
