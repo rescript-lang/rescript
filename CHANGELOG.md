@@ -12,6 +12,10 @@
 
 # 12.0.0-alpha.10 (Unreleased)
 
+#### :house: Internal
+
+- Clean up legacy tags handling. https://github.com/rescript-lang/rescript/pull/7309
+
 # 12.0.0-alpha.9
 
 #### :boom: Breaking Change
