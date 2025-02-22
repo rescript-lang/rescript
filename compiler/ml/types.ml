@@ -198,11 +198,6 @@ type extension_constructor = {
   ext_is_exception: bool;
 }
 
-and type_transparence =
-  | Type_public (* unrestricted expansion *)
-  | Type_new (* "new" type *)
-  | Type_private (* private type *)
-
 (* Type expressions for the class language *)
 
 module Concr = Set.Make (OrderedString)
