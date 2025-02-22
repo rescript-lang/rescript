@@ -101,11 +101,10 @@ let constructor_has_optional_shape
 
 let constructor_descrs ty_path decl cstrs =
   let ty_res = newgenconstr ty_path decl.type_params in
-  let num_consts = ref 0 and num_nonconsts = ref 0 and num_normal = ref 0 in
+  let num_consts = ref 0 and num_nonconsts = ref 0 in
   List.iter
-    (fun {cd_args; cd_res; _} ->
-      if cd_args = Cstr_tuple [] then incr num_consts else incr num_nonconsts;
-      if cd_res = None then incr num_normal)
+    (fun {cd_args; _} ->
+      if cd_args = Cstr_tuple [] then incr num_consts else incr num_nonconsts)
     cstrs;
   let rec describe_constructors idx_const idx_nonconst = function
     | [] -> []
@@ -154,7 +153,6 @@ let constructor_descrs ty_path decl cstrs =
           cstr_tag = tag;
           cstr_consts = !num_consts;
           cstr_nonconsts = !num_nonconsts;
-          cstr_normal = !num_normal;
           cstr_private = decl.type_private;
           cstr_generalized = cd_res <> None;
           cstr_loc = cd_loc;
@@ -208,7 +206,6 @@ let extension_descr path_ext ext =
     cstr_consts = -1;
     cstr_nonconsts = -1;
     cstr_private = ext.ext_private;
-    cstr_normal = -1;
     cstr_generalized = ext.ext_ret_type <> None;
     cstr_loc = ext.ext_loc;
     cstr_attributes = ext.ext_attributes;
