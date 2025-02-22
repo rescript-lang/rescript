@@ -10,7 +10,7 @@
 > - :house: [Internal]
 > - :nail_care: [Polish]
 
-# 12.0.0-alpha.9 (Unreleased)
+# 12.0.0-alpha.9
 
 #### :boom: Breaking Change
 
@@ -36,14 +36,14 @@
 - Fix runtime type check for Object in untagged variants when one variant case is `null`. https://github.com/rescript-lang/rescript/pull/7303
 - Fix files that were being truncated when sent to the CDN over FTP. https://github.com/rescript-lang/rescript/pull/7306
 - Fix better editor completion for applications. https://github.com/rescript-lang/rescript/pull/7291
-- Fix @react.componentWithProps no longer works with @directive("'use memo'"). https://github.com/rescript-lang/rescript/pull/7300
+- Fix `@react.componentWithProps` no longer works with `@directive("'use memo'")`. https://github.com/rescript-lang/rescript/pull/7300
 
 #### :house: Internal
 
-- Remove ignore in res_scanner.ml . https://github.com/rescript-lang/rescript/pull/7280
+- Remove `ignore` in `res_scanner.ml`. https://github.com/rescript-lang/rescript/pull/7280
 - Use the new stdlib modules in the analysis tests. https://github.com/rescript-lang/rescript/pull/7295
 - Build with OCaml 5.3.0. https://github.com/rescript-lang/rescript/pull/7294
-- Simplify JSON.Decode implementation. https://github.com/rescript-lang/rescript/pull/7304
+- Simplify `JSON.Decode` implementation. https://github.com/rescript-lang/rescript/pull/7304
 
 # 12.0.0-alpha.8
 
