@@ -27,8 +27,6 @@ type summary =
   | Env_extension of summary * Ident.t * extension_constructor
   | Env_module of summary * Ident.t * module_declaration
   | Env_modtype of summary * Ident.t * modtype_declaration
-  | Env_class of unit
-  | Env_cltype of unit
   | Env_open of summary * Path.t
   | Env_functor_arg of summary * Ident.t
   | Env_constraints of summary * type_declaration PathMap.t
@@ -239,7 +237,6 @@ val env_of_only_summary : (summary -> Subst.t -> t) -> t -> t
 type error =
   | Illegal_renaming of string * string * string
   | Inconsistent_import of string * string * string
-  | Need_recursive_types of string * string
   | Missing_module of Location.t * Path.t * Path.t
   | Illegal_value_name of Location.t * string
 

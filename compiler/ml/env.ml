@@ -57,7 +57,6 @@ let prefixed_sg = Hashtbl.create 113
 type error =
   | Illegal_renaming of string * string * string
   | Inconsistent_import of string * string * string
-  | Need_recursive_types of string * string
   | Missing_module of Location.t * Path.t * Path.t
   | Illegal_value_name of Location.t * string
 
@@ -147,8 +146,6 @@ type summary =
   | Env_extension of summary * Ident.t * extension_constructor
   | Env_module of summary * Ident.t * module_declaration
   | Env_modtype of summary * Ident.t * modtype_declaration
-  | Env_class of unit
-  | Env_cltype of unit
   | Env_open of summary * Path.t
   | Env_functor_arg of summary * Ident.t
   | Env_constraints of summary * type_declaration PathMap.t
@@ -732,8 +729,6 @@ let check_pers_struct name =
           " %a@ contains the compiled interface for @ %s when %s was expected"
           Location.print_filename filename ps_name name
       | Inconsistent_import _ -> assert false
-      | Need_recursive_types (name, _) ->
-        Format.sprintf "%s uses recursive types" name
       | Missing_module _ -> assert false
       | Illegal_value_name _ -> assert false
     in
@@ -2129,10 +2124,6 @@ let report_error ppf = function
       "@[<hov>The files %a@ and %a@ make inconsistent assumptions@ over \
        interface %s@]"
       Location.print_filename source1 Location.print_filename source2 name
-  | Need_recursive_types (import, export) ->
-    fprintf ppf
-      "@[<hov>Unit %s imports from %s, which uses recursive types.@ %s@]" export
-      import "The compilation flag -rectypes is required"
   | Missing_module (_, path1, path2) ->
     fprintf ppf "@[@[<hov>";
     if Path.same path1 path2 then
