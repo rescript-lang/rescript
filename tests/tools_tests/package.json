@@ -13,6 +13,6 @@
   "license": "MIT",
   "dependencies": {
     "@rescript/react": "^0.13.0",
-    "rescript": "../.."
+    "rescript": "file:../.."
   }
 }

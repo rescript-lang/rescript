@@ -1,4 +1,5 @@
 {
+  "name": "tests-incremental-typechecking",
   "scripts": {
     "build": "rescript",
     "clean": "rescript clean -with-deps"

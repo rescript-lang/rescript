@@ -1,4 +1,5 @@
 {
+  "name": "tests-generic-jsx-transform",
   "scripts": {
     "build": "rescript",
     "clean": "rescript clean -with-deps"

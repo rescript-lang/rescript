@@ -322,9 +322,6 @@ jobs:
       - name: Run tests
         run: node scripts/test.js -all
 
-      - name: Check for diffs in tests folder
-        run: git diff --ignore-cr-at-eol --exit-code tests
-
       - name: Run analysis / tools tests
         if: runner.os != 'Windows' && runner.os != 'Linux'
         run: opam exec -- make -C tests/analysis_tests test && make -C tests/tools_tests test
@@ -332,6 +329,9 @@ jobs:
       - name: Run gentype tests
         if: runner.os != 'Windows'
         run: make -C tests/gentype_tests/typescript-react-example clean test
+
+      - name: Check for diffs in tests folder
+        run: git diff --ignore-cr-at-eol --exit-code tests
 
       - name: Run syntax benchmarks
         if: matrix.benchmarks

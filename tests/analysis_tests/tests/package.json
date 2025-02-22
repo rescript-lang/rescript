@@ -1,4 +1,5 @@
 {
+  "name": "tests",
   "scripts": {
     "build": "rescript",
     "clean": "rescript clean -with-deps"
