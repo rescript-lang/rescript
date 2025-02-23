@@ -57,6 +57,7 @@ module Classify = {
     | Object(dict<t>)
     | Array(array<t>)
 
+  @deprecated("Directly switch on the JSON object instead")
   let classify = value => {
     switch _internalClass(value) {
     | "[object Boolean]" => Bool(_asBool(value))

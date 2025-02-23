@@ -20,6 +20,10 @@
 
 - Clean up legacy tags handling. https://github.com/rescript-lang/rescript/pull/7309
 
+#### :nail_care: Polish
+
+- Deprecate JSON.Classify.classify. https://github.com/rescript-lang/rescript/pull/7315
+
 # 12.0.0-alpha.9
 
 #### :boom: Breaking Change

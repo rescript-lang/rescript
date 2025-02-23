@@ -630,6 +630,7 @@ module Classify: {
   // Number(42)
   ```
   */
+  @deprecated("Directly switch on the JSON object instead")
   let classify: 'a => t
 }
 
