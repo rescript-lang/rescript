@@ -28,8 +28,9 @@ let forEach = (dict, f) => {
   dict->valuesToArray->Stdlib_Array.forEach(value => f(value))
 }
 
+@inline
 let forEachWithKey = (dict, f) => {
-  dict->toArray->Stdlib_Array.forEach(((key, value)) => f(value, key))
+  dict->keysToArray->Stdlib_Array.forEach(key => f(dict->getUnsafe(key), key))
 }
 
 let mapValues = (dict, f) => {
@@ -39,3 +40,5 @@ let mapValues = (dict, f) => {
   })
   target
 }
+
+let has: (dict<'a>, string) => bool = %raw(`(dict, key) => key in dict`)
