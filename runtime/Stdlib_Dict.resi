@@ -17,7 +17,7 @@ Use `Dict.getUnsafe` only when you are sure the key exists (i.e. when iterating 
 
 ## Examples
 ```rescript
-let dict = Dict.fromArray([("key1", "value1"), ("key2", "value2")])
+let dict = dict{"key1": "value1", "key2": "value2"}
 let value = dict->Dict.getUnsafe("key1")
 Console.log(value) // value1
 ```
@@ -30,7 +30,7 @@ Returns the value at the provided key, if it exists. Returns an option.
 
 ## Examples
 ```rescript
-let dict = Dict.fromArray([("someKey", "someValue")])
+let dict = dict{"someKey": "someValue"}
 
 switch dict->Dict.get("someKey") {
 | None => Console.log("Nope, didn't have the key.")
@@ -59,7 +59,7 @@ external set: (dict<'a>, string, 'a) => unit = ""
 
 ## Examples
 ```rescript
-let dict = Dict.fromArray([("someKey", "someValue")])
+let dict = dict{"someKey": "someValue"}
 
 dict->Dict.delete("someKey")
 ```
@@ -189,7 +189,7 @@ external assign: (dict<'a>, dict<'a>) => dict<'a> = "Object.assign"
 
 ## Examples
 ```rescript
-let dict = Dict.fromArray([("key1", "value1"), ("key2", "value2")])
+let dict = dict{"key1": "value1", "key2": "value2"}
 let dict2 = dict->Dict.copy
 
 // Both log `["key1", "key2"]` here.
@@ -206,7 +206,7 @@ external copy: (@as(json`{}`) _, dict<'a>) => dict<'a> = "Object.assign"
 
 ## Examples
 ```rescript
-let dict = Dict.fromArray([("key1", "value1"), ("key2", "value2")])
+let dict = dict{"key1": "value1", "key2": "value2"}
 
 dict->Dict.forEach(value => {
   Console.log(value)
@@ -220,7 +220,7 @@ let forEach: (dict<'a>, 'a => unit) => unit
 
 ## Examples
 ```rescript
-let dict = Dict.fromArray([("key1", "value1"), ("key2", "value2")])
+let dict = dict{"key1": "value1", "key2": "value2"}
 
 dict->Dict.forEachWithKey((value, key) => {
   Console.log2(value, key)
@@ -235,10 +235,25 @@ let forEachWithKey: (dict<'a>, ('a, string) => unit) => unit
 ## Examples
 
 ```rescript
-let dict = Dict.fromArray([("key1", 1), ("key2", 2)])
+let dict = dict{"key1": 1, "key2": 2}
 
 dict->Dict.mapValues(v => v + 10)->Dict.toArray // [("key1", 11), ("key2", 12)]
 dict->Dict.mapValues(v => Int.toString(v))->Dict.toArray // [("key1", "1"), ("key2", "2")]
 ```
 */
 let mapValues: (dict<'a>, 'a => 'b) => dict<'b>
+
+/**
+`has(dictionary, "key")` returns true if the "key" is present in the dictionary.
+
+## Examples
+
+```rescript
+let dict = dict{"key1": Some(1), "key2": None}
+
+dict->Dict.has("key1") // true
+dict->Dict.has("key2") // true
+dict->Dict.has("key3") // false
+```
+*/
+let has: (dict<'a>, string) => bool

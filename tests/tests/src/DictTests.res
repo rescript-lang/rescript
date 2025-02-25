@@ -33,3 +33,14 @@ module PatternMatching = {
     | _ => Js.log("not one")
     }
 }
+
+module DictHas = {
+  let dict = dict{
+    "key1": Some(1),
+    "key2": None,
+  }
+
+  assert(dict->Dict.has("key1") === true)
+  assert(dict->Dict.has("key2") === true)
+  assert(dict->Dict.has("key3") === false)
+}
