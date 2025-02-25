@@ -12,6 +12,10 @@
 
 # 12.0.0-alpha.10 (Unreleased)
 
+#### :rocket: New Feature
+
+- Add `Dict.has` and double `Dict.forEachWithKey`/`Dict.mapValues` performance. https://github.com/rescript-lang/rescript/pull/7316
+
 #### :house: Internal
 
 - Clean up legacy tags handling. https://github.com/rescript-lang/rescript/pull/7309
