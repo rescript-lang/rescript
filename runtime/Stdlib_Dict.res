@@ -28,6 +28,7 @@ let forEach = (dict, f) => {
   dict->valuesToArray->Stdlib_Array.forEach(value => f(value))
 }
 
+@inline
 let forEachWithKey = (dict, f) => {
   dict->keysToArray->Stdlib_Array.forEach(key => f(dict->getUnsafe(key), key))
 }
