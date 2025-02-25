@@ -29,7 +29,7 @@ let forEach = (dict, f) => {
 }
 
 let forEachWithKey = (dict, f) => {
-  dict->toArray->Stdlib_Array.forEach(((key, value)) => f(value, key))
+  dict->keysToArray->Stdlib_Array.forEach(key => f(dict->getUnsafe(key), key))
 }
 
 let mapValues = (dict, f) => {
