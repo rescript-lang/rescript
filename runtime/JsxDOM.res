@@ -25,6 +25,9 @@
 type style = JsxDOMStyle.t
 type domRef
 type popover = | @as("auto") Auto | @as("manual") Manual
+/**
+  [Read more on MDN](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/button#popovertargetaction)
+*/
 type popoverTargetAction = | @as("toggle") Toggle | @as("show") Show | @as("hide") Hide
 
 /*
