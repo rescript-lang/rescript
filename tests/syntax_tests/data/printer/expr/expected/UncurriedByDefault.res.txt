@@ -45,9 +45,9 @@ let _ = setTimeout(() => {
 }, 100)
 
 let _ = @att x => 34
-let _ = @att async x => 34
+let _ = @res.async @att async x => 34
 let _ = preserveAttr(@att x => 34)
-let _ = preserveAttr(@att async x => 34)
+let _ = preserveAttr(@res.async @att async x => 34)
 
 let t0 = (type a b, l: list<a>, x: a) => list{x, ...l}
 let t1 = (type a b, l: list<a>, x: a) => list{x, ...l}
@@ -127,9 +127,9 @@ let _ = setTimeout(() => {
 }, 100)
 
 let _ = @att x => 34
-let _ = @att async x => 34
+let _ = @res.async @att async x => 34
 let _ = preserveAttr(@att x => 34)
-let _ = preserveAttr(@att async x => 34)
+let _ = preserveAttr(@res.async @att async x => 34)
 
 let t0 = (type a b, l: list<a>, x: a) => list{x, ...l}
 let t1 = (type a b, l: list<a>, x: a) => list{x, ...l}

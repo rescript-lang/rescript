@@ -165,6 +165,7 @@ module ResClflags : sig
   val jsx_module : string ref
   val jsx_mode : string ref
   val typechecker : bool ref
+  val test_ast_conversion : bool ref
 
   val parse : unit -> unit
 end = struct
@@ -178,6 +179,7 @@ end = struct
   let jsx_mode = ref "automatic"
   let file = ref ""
   let typechecker = ref false
+  let test_ast_conversion = ref false
 
   let usage =
     "\n\
@@ -215,6 +217,9 @@ end = struct
         Arg.Unit (fun () -> typechecker := true),
         "Parses the ast as it would be passed to the typechecker and not the \
          printer" );
+      ( "-test-ast-conversion",
+        Arg.Unit (fun () -> test_ast_conversion := true),
+        "Test the ast conversion" );
     ]
 
   let parse () = Arg.parse spec (fun f -> file := f) usage
@@ -225,7 +230,7 @@ module CliArgProcessor = struct
   [@@unboxed]
 
   let process_file ~is_interface ~width ~recover ~target ~jsx_version
-      ~jsx_module ~jsx_mode ~typechecker filename =
+      ~jsx_module ~jsx_mode ~typechecker ~test_ast_conversion filename =
     let len = String.length filename in
     let process_interface =
       is_interface
@@ -267,8 +272,17 @@ module CliArgProcessor = struct
         else exit 1)
       else
         let parsetree =
-          Jsx_ppx.rewrite_signature ~jsx_version ~jsx_module ~jsx_mode
-            parse_result.parsetree
+          if not test_ast_conversion then parse_result.parsetree
+          else
+            let tree0 =
+              Ast_mapper_to0.default_mapper.signature
+                Ast_mapper_to0.default_mapper parse_result.parsetree
+            in
+            Ast_mapper_from0.default_mapper.signature
+              Ast_mapper_from0.default_mapper tree0
+        in
+        let parsetree =
+          Jsx_ppx.rewrite_signature ~jsx_version ~jsx_module ~jsx_mode parsetree
         in
         print_engine.print_interface ~width ~filename
           ~comments:parse_result.comments parsetree
@@ -283,8 +297,18 @@ module CliArgProcessor = struct
         else exit 1)
       else
         let parsetree =
+          if not test_ast_conversion then parse_result.parsetree
+          else
+            let tree0 =
+              Ast_mapper_to0.default_mapper.structure
+                Ast_mapper_to0.default_mapper parse_result.parsetree
+            in
+            Ast_mapper_from0.default_mapper.structure
+              Ast_mapper_from0.default_mapper tree0
+        in
+        let parsetree =
           Jsx_ppx.rewrite_implementation ~jsx_version ~jsx_module ~jsx_mode
-            parse_result.parsetree
+            parsetree
         in
         print_engine.print_implementation ~width ~filename
           ~comments:parse_result.comments parsetree
@@ -298,5 +322,6 @@ let () =
       ~width:!ResClflags.width ~recover:!ResClflags.recover
       ~target:!ResClflags.print ~jsx_version:!ResClflags.jsx_version
       ~jsx_module:!ResClflags.jsx_module ~jsx_mode:!ResClflags.jsx_mode
-      ~typechecker:!ResClflags.typechecker !ResClflags.file)
+      ~typechecker:!ResClflags.typechecker !ResClflags.file
+      ~test_ast_conversion:!ResClflags.test_ast_conversion)
 [@@raises exit]
