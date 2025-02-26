@@ -148,7 +148,7 @@ type domProps = {
   hidden?: bool,
   id?: string,
   lang?: string,
-  popover?: string,
+  popover?: popover,
   popoverTarget?: string,
   popoverTargetAction?: popoverTargetAction,
   role?: string /* ARIA role */,
