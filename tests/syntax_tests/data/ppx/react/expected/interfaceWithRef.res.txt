@@ -1,8 +1,9 @@
 @res.jsxComponentProps type props<'x, 'ref> = {x: 'x, ref?: 'ref}
 let make = (
-  {x, _}: props<string, ReactDOM.Ref.currentDomRef>,
+  props: props<string, ReactDOM.Ref.currentDomRef>,
   ref: Js.Nullable.t<ReactDOM.Ref.currentDomRef>,
 ) => {
+  let x: string = props.x
   let _ = ref->Js.Nullable.toOption->Belt.Option.map(ReactDOM.Ref.domRef)
   React.string(x)
 }

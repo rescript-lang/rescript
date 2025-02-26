@@ -9,8 +9,9 @@ function mm(x) {
 }
 
 function make(props) {
+  let b = props.b;
   return mm({
-    b: props.b
+    b: b
   });
 }
 

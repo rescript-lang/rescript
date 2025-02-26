@@ -19,6 +19,17 @@ module Select = {
   }
 }
 
+module C6 = {
+  module type Comp = {
+    let xx: int
+    @react.component
+    let make: unit => React.element
+  }
+
+  @react.component
+  let make = (~comp as module(Comp: Comp), ~x as (a, b)) => Comp.xx
+}
+
 module External = {
   module type T = {
     type key
