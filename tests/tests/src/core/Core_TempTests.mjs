@@ -8,7 +8,6 @@ import * as Stdlib_Float from "rescript/lib/es6/Stdlib_Float.js";
 import * as Stdlib_BigInt from "rescript/lib/es6/Stdlib_BigInt.js";
 import * as Stdlib_Option from "rescript/lib/es6/Stdlib_Option.js";
 import * as Core_IntlTests from "./intl/Core_IntlTests.mjs";
-import * as Primitive_bigint from "rescript/lib/es6/Primitive_bigint.js";
 import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 console.info("");
@@ -140,7 +139,7 @@ console.info("BigInt");
 
 console.info("---");
 
-console.log(Primitive_bigint.div(BigInt(1), BigInt(12.0)));
+console.log(BigInt(1) / BigInt(12.0));
 
 console.info("");
 
