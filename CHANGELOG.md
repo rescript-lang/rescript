@@ -12,6 +12,10 @@
 
 # 12.0.0-alpha.10 (Unreleased)
 
+#### :rocket: New Feature
+
+- Add popover attributes to JsxDOM.domProps. https://github.com/rescript-lang/rescript/pull/7317
+
 #### :house: Internal
 
 - Clean up legacy tags handling. https://github.com/rescript-lang/rescript/pull/7309
