@@ -435,28 +435,6 @@ let make_unary_expr start_pos token_end token operand =
       [(Nolabel, operand)]
   | _ -> operand
 
-let make_list_expression loc seq ext_opt =
-  let rec handle_seq = function
-    | [] -> (
-      match ext_opt with
-      | Some ext -> ext
-      | None ->
-        let loc = {loc with Location.loc_ghost = true} in
-        let nil = Location.mkloc (Longident.Lident "[]") loc in
-        Ast_helper.Exp.construct ~loc nil None)
-    | e1 :: el ->
-      let exp_el = handle_seq el in
-      let loc =
-        mk_loc e1.Parsetree.pexp_loc.Location.loc_start exp_el.pexp_loc.loc_end
-      in
-      let arg = Ast_helper.Exp.tuple ~loc [e1; exp_el] in
-      Ast_helper.Exp.construct ~loc
-        (Location.mkloc (Longident.Lident "::") loc)
-        (Some arg)
-  in
-  let expr = handle_seq seq in
-  {expr with pexp_loc = loc}
-
 let make_list_pattern loc seq ext_opt =
   let rec handle_seq = function
     | [] ->
@@ -2619,7 +2597,7 @@ and parse_jsx_opening_or_self_closing_element ~start_pos p =
       Scanner.pop_mode p.scanner Jsx;
       Parser.expect GreaterThan p;
       let loc = mk_loc children_start_pos children_end_pos in
-      make_list_expression loc [] None (* no children *)
+      Ast_helper.Exp.make_list_expression loc [] None (* no children *)
     | GreaterThan -> (
       (* <foo a=b> bar </foo> *)
       let children_start_pos = p.Parser.start_pos in
@@ -2642,7 +2620,7 @@ and parse_jsx_opening_or_self_closing_element ~start_pos p =
         let loc = mk_loc children_start_pos children_end_pos in
         match (spread, children) with
         | true, child :: _ -> child
-        | _ -> make_list_expression loc children None)
+        | _ -> Ast_helper.Exp.make_list_expression loc children None)
       | token -> (
         Scanner.pop_mode p.scanner Jsx;
         let () =
@@ -2663,11 +2641,11 @@ and parse_jsx_opening_or_self_closing_element ~start_pos p =
         let loc = mk_loc children_start_pos children_end_pos in
         match (spread, children) with
         | true, child :: _ -> child
-        | _ -> make_list_expression loc children None))
+        | _ -> Ast_helper.Exp.make_list_expression loc children None))
     | token ->
       Scanner.pop_mode p.scanner Jsx;
       Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
-      make_list_expression Location.none [] None
+      Ast_helper.Exp.make_list_expression Location.none [] None
   in
   let jsx_end_pos = p.prev_end_pos in
   let loc = mk_loc jsx_start_pos jsx_end_pos in
@@ -2697,24 +2675,24 @@ and parse_jsx p =
   Parser.leave_breadcrumb p Grammar.Jsx;
   let start_pos = p.Parser.start_pos in
   Parser.expect LessThan p;
-  let jsx_expr =
+  let jsx_expr, jsx_attrs =
     match p.Parser.token with
     | Lident _ | Uident _ ->
-      parse_jsx_opening_or_self_closing_element ~start_pos p
+      (parse_jsx_opening_or_self_closing_element ~start_pos p, [jsx_attr])
     | GreaterThan ->
       (* fragment: <> foo </> *)
-      parse_jsx_fragment p
-    | _ -> parse_jsx_name p
+      (parse_jsx_fragment start_pos p, [])
+    | _ -> (parse_jsx_name p, [])
   in
   Parser.eat_breadcrumb p;
-  {jsx_expr with pexp_attributes = [jsx_attr]}
+  {jsx_expr with pexp_attributes = jsx_attrs}
 
 (*
  * jsx-fragment ::=
  *  | <> </>
  *  | <> jsx-children </>
  *)
-and parse_jsx_fragment p =
+and parse_jsx_fragment start_pos p =
   let children_start_pos = p.Parser.start_pos in
   Parser.expect GreaterThan p;
   let _spread, children = parse_jsx_children p in
@@ -2722,9 +2700,12 @@ and parse_jsx_fragment p =
   if p.token = LessThan then p.token <- Scanner.reconsider_less_than p.scanner;
   Parser.expect LessThanSlash p;
   Scanner.pop_mode p.scanner Jsx;
+  let end_pos = p.Parser.end_pos in
   Parser.expect GreaterThan p;
-  let loc = mk_loc children_start_pos children_end_pos in
-  make_list_expression loc children None
+  (* location is from starting < till closing >  *)
+  let loc = mk_loc start_pos end_pos in
+  Ast_helper.Exp.jsx_fragment ~attrs:[] ~loc children_start_pos children
+    children_end_pos
 
 (*
  * jsx-prop ::=
@@ -3864,9 +3845,10 @@ and parse_list_expr ~start_pos p =
   in
   let make_sub_expr = function
     | exprs, Some spread, start_pos, end_pos ->
-      make_list_expression (mk_loc start_pos end_pos) exprs (Some spread)
+      Ast_helper.Exp.make_list_expression (mk_loc start_pos end_pos) exprs
+        (Some spread)
     | exprs, None, start_pos, end_pos ->
-      make_list_expression (mk_loc start_pos end_pos) exprs None
+      Ast_helper.Exp.make_list_expression (mk_loc start_pos end_pos) exprs None
   in
   let list_exprs_rev =
     parse_comma_delimited_reversed_list p ~grammar:Grammar.ListExpr
@@ -3875,9 +3857,10 @@ and parse_list_expr ~start_pos p =
   Parser.expect Rbrace p;
   let loc = mk_loc start_pos p.prev_end_pos in
   match split_by_spread list_exprs_rev with
-  | [] -> make_list_expression loc [] None
-  | [(exprs, Some spread, _, _)] -> make_list_expression loc exprs (Some spread)
-  | [(exprs, None, _, _)] -> make_list_expression loc exprs None
+  | [] -> Ast_helper.Exp.make_list_expression loc [] None
+  | [(exprs, Some spread, _, _)] ->
+    Ast_helper.Exp.make_list_expression loc exprs (Some spread)
+  | [(exprs, None, _, _)] -> Ast_helper.Exp.make_list_expression loc exprs None
   | exprs ->
     let list_exprs = List.map make_sub_expr exprs in
     Ast_helper.Exp.apply ~loc

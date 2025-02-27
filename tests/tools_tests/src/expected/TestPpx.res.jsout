@@ -80,6 +80,10 @@ async function f() {
   return await test() + 1 | 0;
 }
 
+let Fragments = {
+  f1: /* [] */0
+};
+
 let a = "A";
 
 let b = "B";
@@ -114,4 +118,5 @@ exports.eq = eq;
 exports.eq2 = eq2;
 exports.test = test;
 exports.f = f;
+exports.Fragments = Fragments;
 /*  Not a pure module */

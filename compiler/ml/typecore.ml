@@ -147,7 +147,8 @@ let iter_expression f e =
     | Pexp_match (e, pel) | Pexp_try (e, pel) ->
       expr e;
       List.iter case pel
-    | Pexp_array el | Pexp_tuple el -> List.iter expr el
+    | Pexp_array el | Pexp_tuple el | Pexp_jsx_fragment (_, el, _) ->
+      List.iter expr el
     | Pexp_construct (_, eo) | Pexp_variant (_, eo) -> may expr eo
     | Pexp_record (iel, eo) ->
       may expr eo;
@@ -3194,6 +3195,8 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     | _ -> raise (Error (loc, env, Invalid_extension_constructor_payload)))
   | Pexp_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
+  | Pexp_jsx_fragment _ ->
+    failwith "Pexp_jsx_fragment is expected to be transformed at this point"
 
 and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
     caselist =

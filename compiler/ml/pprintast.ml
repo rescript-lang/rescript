@@ -794,6 +794,8 @@ and simple_expr ctxt f x =
       let expression = expression ctxt in
       pp f fmt (pattern ctxt) s expression e1 direction_flag df expression e2
         expression e3
+    | Pexp_jsx_fragment (_, xs, _) ->
+      pp f "<>%a</>" (list (simple_expr ctxt)) xs
     | _ -> paren true (expression ctxt) f x
 
 and attributes ctxt f l = List.iter (attribute ctxt f) l

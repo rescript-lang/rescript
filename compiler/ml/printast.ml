@@ -345,6 +345,9 @@ and expression i ppf x =
   | Pexp_extension (s, arg) ->
     line i ppf "Pexp_extension \"%s\"\n" s.txt;
     payload i ppf arg
+  | Pexp_jsx_fragment (_, xs, _) ->
+    line i ppf "Pexp_jsx_fragment";
+    list i expression ppf xs
 
 and value_description i ppf x =
   line i ppf "value_description %a %a\n" fmt_string_loc x.pval_name fmt_location

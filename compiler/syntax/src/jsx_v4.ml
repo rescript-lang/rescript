@@ -1530,8 +1530,62 @@ let transform_jsx_call ~config mapper call_expression call_arguments
       "JSX: `createElement` should be preceeded by a simple, direct module \
        name."
 
-let expr ~config mapper expression =
+let expr ~(config : Jsx_common.jsx_config) mapper expression =
   match expression with
+  | {
+   pexp_desc = Pexp_jsx_fragment (_, xs, _);
+   pexp_loc = loc;
+   pexp_attributes = attrs;
+  } ->
+    let loc = {loc with loc_ghost = true} in
+    let fragment =
+      match config.mode with
+      | "automatic" ->
+        Exp.ident ~loc {loc; txt = module_access_name config "jsxFragment"}
+      | "classic" | _ ->
+        Exp.ident ~loc {loc; txt = Ldot (Lident "React", "fragment")}
+    in
+    let record_of_children children =
+      Exp.record [(Location.mknoloc (Lident "children"), children, false)] None
+    in
+    let apply_jsx_array expr =
+      Exp.apply
+        (Exp.ident
+           {txt = module_access_name config "array"; loc = Location.none})
+        [(Nolabel, expr)]
+    in
+    let children_props =
+      match xs with
+      | [] -> empty_record ~loc:Location.none
+      | [child] -> record_of_children (mapper.expr mapper child)
+      | _ -> (
+        match config.mode with
+        | "automatic" ->
+          record_of_children
+          @@ apply_jsx_array (Exp.array (List.map (mapper.expr mapper) xs))
+        | "classic" | _ -> empty_record ~loc:Location.none)
+    in
+    let args =
+      (nolabel, fragment) :: (nolabel, children_props)
+      ::
+      (match config.mode with
+      | "classic" when List.length xs > 1 ->
+        [(nolabel, Exp.array (List.map (mapper.expr mapper) xs))]
+      | _ -> [])
+    in
+    Exp.apply ~loc ~attrs
+      (* ReactDOM.createElement *)
+      (match config.mode with
+      | "automatic" ->
+        if List.length xs > 1 then
+          Exp.ident ~loc {loc; txt = module_access_name config "jsxs"}
+        else Exp.ident ~loc {loc; txt = module_access_name config "jsx"}
+      | "classic" | _ ->
+        if List.length xs > 1 then
+          Exp.ident ~loc
+            {loc; txt = Ldot (Lident "React", "createElementVariadic")}
+        else Exp.ident ~loc {loc; txt = Ldot (Lident "React", "createElement")})
+      args
   (* Does the function application have the @JSX attribute? *)
   | {
    pexp_desc = Pexp_apply {funct = call_expression; args = call_arguments};
@@ -1549,87 +1603,6 @@ let expr ~config mapper expression =
     | _, non_jsx_attributes ->
       transform_jsx_call ~config mapper call_expression call_arguments pexp_loc
         non_jsx_attributes)
-  (* is it a list with jsx attribute? Reason <>foo</> desugars to [@JSX][foo]*)
-  | {
-      pexp_desc =
-        ( Pexp_construct
-            ({txt = Lident "::"; loc}, Some {pexp_desc = Pexp_tuple _})
-        | Pexp_construct ({txt = Lident "[]"; loc}, None) );
-      pexp_attributes;
-    } as list_items -> (
-    let jsx_attribute, non_jsx_attributes =
-      List.partition
-        (fun (attribute, _) -> attribute.txt = "JSX")
-        pexp_attributes
-    in
-    match (jsx_attribute, non_jsx_attributes) with
-    (* no JSX attribute *)
-    | [], _ -> default_mapper.expr mapper expression
-    | _, non_jsx_attributes ->
-      let loc = {loc with loc_ghost = true} in
-      let fragment =
-        match config.mode with
-        | "automatic" ->
-          Exp.ident ~loc {loc; txt = module_access_name config "jsxFragment"}
-        | "classic" | _ ->
-          Exp.ident ~loc {loc; txt = Ldot (Lident "React", "fragment")}
-      in
-      let children_expr = transform_children_if_list ~mapper list_items in
-      let record_of_children children =
-        Exp.record
-          [(Location.mknoloc (Lident "children"), children, false)]
-          None
-      in
-      let apply_jsx_array expr =
-        Exp.apply
-          (Exp.ident
-             {txt = module_access_name config "array"; loc = Location.none})
-          [(Nolabel, expr)]
-      in
-      let count_of_children = function
-        | {pexp_desc = Pexp_array children} -> List.length children
-        | _ -> 0
-      in
-      let transform_children_to_props children_expr =
-        match children_expr with
-        | {pexp_desc = Pexp_array children} -> (
-          match children with
-          | [] -> empty_record ~loc:Location.none
-          | [child] -> record_of_children child
-          | _ -> (
-            match config.mode with
-            | "automatic" -> record_of_children @@ apply_jsx_array children_expr
-            | "classic" | _ -> empty_record ~loc:Location.none))
-        | _ -> (
-          match config.mode with
-          | "automatic" -> record_of_children @@ apply_jsx_array children_expr
-          | "classic" | _ -> empty_record ~loc:Location.none)
-      in
-      let args =
-        (nolabel, fragment)
-        :: (nolabel, transform_children_to_props children_expr)
-        ::
-        (match config.mode with
-        | "classic" when count_of_children children_expr > 1 ->
-          [(nolabel, children_expr)]
-        | _ -> [])
-      in
-      Exp.apply
-        ~loc (* throw away the [@JSX] attribute and keep the others, if any *)
-        ~attrs:non_jsx_attributes
-        (* ReactDOM.createElement *)
-        (match config.mode with
-        | "automatic" ->
-          if count_of_children children_expr > 1 then
-            Exp.ident ~loc {loc; txt = module_access_name config "jsxs"}
-          else Exp.ident ~loc {loc; txt = module_access_name config "jsx"}
-        | "classic" | _ ->
-          if count_of_children children_expr > 1 then
-            Exp.ident ~loc
-              {loc; txt = Ldot (Lident "React", "createElementVariadic")}
-          else
-            Exp.ident ~loc {loc; txt = Ldot (Lident "React", "createElement")})
-        args)
   (* Delegate to the default mapper, a deep identity traversal *)
   | e -> default_mapper.expr mapper e
 

@@ -707,6 +707,11 @@ module SexpAst = struct
           ]
       | Pexp_extension ext ->
         Sexp.list [Sexp.atom "Pexp_extension"; extension ext]
+      | Pexp_jsx_fragment (_, xs, _) ->
+        Sexp.list
+          [
+            Sexp.atom "Pexp_jsx_fragment"; Sexp.list (map_empty ~f:expression xs);
+          ]
     in
     Sexp.list [Sexp.atom "expression"; desc]
 

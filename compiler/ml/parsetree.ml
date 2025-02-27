@@ -313,8 +313,14 @@ and expression_desc =
        let open M in E
        let! open M in E *)
   | Pexp_extension of extension
-(* [%id] *)
-(* . *)
+  (* [%id] *)
+  (* . *)
+  (* represents <> foo </> , the entire range is stored in the expression , we keep track of >, children and </ *)
+  | Pexp_jsx_fragment of
+      (* > *) Lexing.position
+      * (* children *)
+      expression list
+      * (* </ *) Lexing.position
 
 and case = {
   (* (P -> E) or (P when E0 -> E) *)

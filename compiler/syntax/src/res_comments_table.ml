@@ -24,25 +24,24 @@ let copy tbl =
 
 let empty = make ()
 
+let print_loc (k : Warnings.loc) =
+  Doc.concat
+    [
+      Doc.lbracket;
+      Doc.text (string_of_int k.loc_start.pos_lnum);
+      Doc.text ":";
+      Doc.text (string_of_int (k.loc_start.pos_cnum - k.loc_start.pos_bol));
+      Doc.text "-";
+      Doc.text (string_of_int k.loc_end.pos_lnum);
+      Doc.text ":";
+      Doc.text (string_of_int (k.loc_end.pos_cnum - k.loc_end.pos_bol));
+      Doc.rbracket;
+    ]
+
 let print_entries tbl =
-  let open Location in
   Hashtbl.fold
     (fun (k : Location.t) (v : Comment.t list) acc ->
-      let loc =
-        Doc.concat
-          [
-            Doc.lbracket;
-            Doc.text (string_of_int k.loc_start.pos_lnum);
-            Doc.text ":";
-            Doc.text
-              (string_of_int (k.loc_start.pos_cnum - k.loc_start.pos_bol));
-            Doc.text "-";
-            Doc.text (string_of_int k.loc_end.pos_lnum);
-            Doc.text ":";
-            Doc.text (string_of_int (k.loc_end.pos_cnum - k.loc_end.pos_bol));
-            Doc.rbracket;
-          ]
-      in
+      let loc = print_loc k in
       let doc =
         Doc.breakable_group ~force_break:true
           (Doc.concat
@@ -1508,7 +1507,13 @@ and walk_expression expr t comments =
         attach t.leading return_expr.pexp_loc leading;
         walk_expression return_expr t inside;
         attach t.trailing return_expr.pexp_loc trailing)
-  | _ -> ()
+  | Pexp_jsx_fragment (opening_greater_than, exprs, _closing_lesser_than) ->
+    let opening_token = {expr.pexp_loc with loc_end = opening_greater_than} in
+    let on_same_line, rest = partition_by_on_same_line opening_token comments in
+    attach t.trailing opening_token on_same_line;
+    let xs = exprs |> List.map (fun e -> Expression e) in
+    walk_list xs t rest
+  | Pexp_send _ -> ()
 
 and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =
   let leading, inside, trailing = partition_by_loc comments pattern.ppat_loc in

@@ -344,6 +344,7 @@ module E = struct
       iter_loc sub lid;
       sub.expr sub e
     | Pexp_extension x -> sub.extension sub x
+    | Pexp_jsx_fragment (_, xs, _) -> List.iter (sub.expr sub) xs
 end
 
 module P = struct

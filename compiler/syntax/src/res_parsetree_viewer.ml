@@ -492,6 +492,7 @@ let is_jsx_expression expr =
     | _ :: attrs -> loop attrs
   in
   match expr.pexp_desc with
+  | Pexp_jsx_fragment _ -> true
   | Pexp_apply _ -> loop expr.Parsetree.pexp_attributes
   | _ -> false
 

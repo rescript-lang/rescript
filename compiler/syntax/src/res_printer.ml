@@ -2098,6 +2098,7 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
           | {pexp_desc = Pexp_newtype _} -> false
           | {pexp_attributes = [({Location.txt = "res.taggedTemplate"}, _)]} ->
             false
+          | {pexp_desc = Pexp_jsx_fragment _} -> true
           | e ->
             ParsetreeViewer.has_attributes e.pexp_attributes
             || ParsetreeViewer.is_array_access e)
@@ -2782,9 +2783,8 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
     | Pexp_fun _ | Pexp_newtype _ -> print_arrow e
     | Parsetree.Pexp_constant c ->
       print_constant ~template_literal:(ParsetreeViewer.is_template_literal e) c
-    | Pexp_construct _ when ParsetreeViewer.has_jsx_attribute e.pexp_attributes
-      ->
-      print_jsx_fragment ~state e cmt_tbl
+    | Pexp_jsx_fragment (o, xs, c) ->
+      print_jsx_fragment ~state o xs c e.pexp_loc cmt_tbl
     | Pexp_construct ({txt = Longident.Lident "()"}, _) -> Doc.text "()"
     | Pexp_construct ({txt = Longident.Lident "[]"}, _) ->
       Doc.concat
@@ -3413,6 +3413,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
     | Pexp_ifthenelse _ ->
       true
     | Pexp_match _ when ParsetreeViewer.is_if_let_expr e -> true
+    | Pexp_jsx_fragment _ -> true
     | Pexp_construct _ when ParsetreeViewer.has_jsx_attribute e.pexp_attributes
       ->
       true
@@ -4403,26 +4404,65 @@ and print_jsx_expression ~state lident args cmt_tbl =
               ]);
        ])
 
-and print_jsx_fragment ~state expr cmt_tbl =
-  let opening = Doc.text "<>" in
-  let closing = Doc.text "</>" in
+and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
+    (children : Parsetree.expression list)
+    (closing_lesser_than : Lexing.position) (fragment_loc : Warnings.loc)
+    cmt_tbl =
+  let opening =
+    let loc : Location.t = {fragment_loc with loc_end = opening_greater_than} in
+    print_comments (Doc.text "<>") cmt_tbl loc
+  in
+  let closing =
+    let loc : Location.t =
+      {fragment_loc with loc_start = closing_lesser_than}
+    in
+    print_comments (Doc.text "</>") cmt_tbl loc
+  in
   let line_sep =
-    if has_nested_jsx_or_more_than_one_child expr then Doc.hard_line
+    if
+      List.length children > 1
+      || List.exists ParsetreeViewer.is_jsx_expression children
+    then Doc.hard_line
     else Doc.line
   in
   Doc.group
     (Doc.concat
        [
          opening;
-         (match expr.pexp_desc with
-         | Pexp_construct ({txt = Longident.Lident "[]"}, None) -> Doc.nil
-         | _ ->
+         (match children with
+         | [] -> Doc.nil
+         | children ->
            Doc.indent
              (Doc.concat
-                [Doc.line; print_jsx_children ~state expr ~sep:line_sep cmt_tbl]));
+                [
+                  Doc.line;
+                  Doc.join ~sep:line_sep
+                    (List.map
+                       (fun e -> print_jsx_child ~state e cmt_tbl)
+                       children);
+                ]));
          line_sep;
          closing;
        ])
+
+and print_jsx_child ~state (expr : Parsetree.expression) cmt_tbl =
+  let leading_line_comment_present =
+    has_leading_line_comment cmt_tbl expr.pexp_loc
+  in
+  let expr_doc = print_expression_with_comments ~state expr cmt_tbl in
+  let add_parens_or_braces expr_doc =
+    (* {(20: int)} make sure that we also protect the expression inside *)
+    let inner_doc =
+      if Parens.braced_expr expr then add_parens expr_doc else expr_doc
+    in
+    if leading_line_comment_present then add_braces inner_doc
+    else Doc.concat [Doc.lbrace; inner_doc; Doc.rbrace]
+  in
+  match Parens.jsx_child_expr expr with
+  | Nothing -> expr_doc
+  | Parenthesized -> add_parens_or_braces expr_doc
+  | Braced braces_loc ->
+    print_comments (add_parens_or_braces expr_doc) cmt_tbl braces_loc
 
 and print_jsx_children ~state (children_expr : Parsetree.expression) ~sep
     cmt_tbl =

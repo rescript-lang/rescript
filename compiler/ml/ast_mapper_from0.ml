@@ -358,6 +358,10 @@ module E = struct
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
+    | Pexp_construct ({txt = Longident.Lident "[]"}, None)
+      when attrs |> List.exists (fun ({txt}, _) -> txt == "JSX") ->
+      let attrs = attrs |> List.filter (fun ({txt}, _) -> txt != "JSX") in
+      jsx_fragment ~loc ~attrs loc.loc_start [] loc.loc_end
     | Pexp_construct (lid, arg) -> (
       let lid1 = map_loc sub lid in
       let arg1 = map_opt (sub.expr sub) arg in
