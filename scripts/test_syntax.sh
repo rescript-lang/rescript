@@ -45,7 +45,7 @@ done <temp/files.txt
 # printing with ast conversion
 find syntax_tests/data/ast-mapping -name "*.res" -o -name "*.resi" -o -name "*.ml" -o -name "*.mli" >temp/files.txt
 while read file; do
-  $DUNE_BIN_DIR/res_parser -test-ast-conversion $file &> $(exp $file) & maybeWait
+  $DUNE_BIN_DIR/res_parser -test-ast-conversion -jsx-version 4 -jsx-mode "automatic"  $file &> $(exp $file) & maybeWait
 done <temp/files.txt
 
 # printing with ppx
