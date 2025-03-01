@@ -126,10 +126,9 @@ let x = <> </>
 
 let x =
   <div
-    ident
-    ?ident
-    ident=?// punned optional
-    identifierExpr
+    ident // punned
+    ?ident // punned optional
+    ident=?identifierExpr
     ident=identifierExpr
     constant="constant"
     letExpr={

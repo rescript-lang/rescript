@@ -8,4 +8,7 @@ let () = ignore(3)
 
 let foo = /* ddd */ x => x
 
-let f = (~a) => a
+let f = (
+  // comment
+  ~a,
+) => a

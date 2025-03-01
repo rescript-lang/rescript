@@ -249,8 +249,8 @@ let makeEntryJobsForJournal = (journalId: string, userId: string) => {
   _getEntries(
     ~journalId,
     ~authHeader=MercuryService.makeAuthToken(userId),
-    ~onData=// This has got to add a promise to a mutable queue of promises or something.
-    onEntryData,
+    // This has got to add a promise to a mutable queue of promises or something.
+    ~onData=onEntryData,
     ~onComplete=_ => {
       // When the request is done, we should wait on the queue of promises to be all finished, then we can resolve.
       resolve()
@@ -340,8 +340,8 @@ showDialog(
 // callback in last position, with comment in between args
 showDialog(
   dialogMessage,
-  ~danger=// comment
-  true,
+  // comment
+  ~danger=true,
   ~confirmText="Yes, I am sure!",
   ~onConfirm=() => (),
 )
@@ -350,8 +350,8 @@ showDialog(
 showDialog(
   dialogMessage,
   ~danger=true,
-  ~confirmText=/* comment below */
-  "Yes, I am sure!",
+  /* comment below */
+  ~confirmText="Yes, I am sure!",
   ~onConfirm=() => (),
 )
 
@@ -359,8 +359,8 @@ showDialog(
 showDialog(
   ~onConfirm=() => (),
   dialogMessage,
-  ~danger=// comment
-  true,
+  // comment
+  ~danger=true,
   ~confirmText="Yes, I am sure!",
 )
 
@@ -369,8 +369,8 @@ showDialog(
   ~onConfirm=() => (),
   dialogMessage,
   ~danger=true,
-  ~confirmText=/* comment below */
-  "Yes, I am sure!",
+  /* comment below */
+  ~confirmText="Yes, I am sure!",
 )
 
 React.useEffect5(

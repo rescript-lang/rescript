@@ -41,15 +41,15 @@ type add = /* before */ (
   /* c2 */ int /* c3 */,
 ) => /* before return */ int /* after */
 type add = /* before */ (
-  ~a: /* c0 */ int /* c1 */,
-  ~b: /* c2 */ int /* c3 */,
+  /* c0 */ ~a: int /* c1 */,
+  /* c2 */ ~b: int /* c3 */,
 ) => /* before return */ int /* after */
 type multiply = /* before */ (
-  ~fn: /* c0 */ (
+  /* c0 */ ~fn: (
     /* cinner0 */ int /* cinner1 */,
     /* cinner2 */ int /* cinner3 */,
   ) => /* cx */ int /* c1 */,
-  ~b: /* c2 */ int /* c3 */,
+  /* c2 */ ~b: int /* c3 */,
 ) => int /* after */
 type make = (
   ~activity: ActivityFlow_Activity.t,
@@ -58,15 +58,15 @@ type make = (
   ~next: (string, string, array<string>) => unit,
   ~hapticFeedback: unit => unit,
   ~participants: Belt.Set.String.t,
-  ~openPhotoFeed: // here
+  // here
 
   // above
-  /* c0 */ /* c1 */ (
-    ~feedId: /* c2 */ /* c3 */ option<string> /* c4 */,
+  /* c0 */ ~openPhotoFeed: /* c1 */ (
+    /* c2 */ ~feedId: /* c3 */ option<string> /* c4 */,
     /* c5 */ unit /* c6 */,
   ) => /* c7 */ unit /* c8 */,
-  ~getAnother: // only provide this when it shows a random activity
-  unit => unit=?,
+  // only provide this when it shows a random activity
+  ~getAnother: unit => unit=?,
 ) => React.element
 
 //type f = /* c0 */ ~a: /* c1 */ int /* c2 */ => /* c3 */  int /* c4 */
@@ -81,10 +81,10 @@ type jsUser = /* before */ {
 } /* after */
 
 external test: (
-  ~int: // comment 1
-  int,
-  ~int: // comment 2
-  int,
+  // comment 1
+  ~int: int,
+  // comment 2
+  ~int: int,
 ) => unit = "test"
 
 external another_test: (

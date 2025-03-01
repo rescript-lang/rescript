@@ -24,8 +24,8 @@ module Cite = {
 />
 
 <A
-  value=// comment1
-  ""
+  // comment1
+  value=""
   // comment2
 >
   <B /* comment3 */ />
