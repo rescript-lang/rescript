@@ -15,6 +15,7 @@
 #### :rocket: New Feature
 
 - Add `Dict.has` and double `Dict.forEachWithKey`/`Dict.mapValues` performance. https://github.com/rescript-lang/rescript/pull/7316
+- Add popover attributes to JsxDOM.domProps. https://github.com/rescript-lang/rescript/pull/7317
 
 #### :house: Internal
 

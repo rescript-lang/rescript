@@ -21,10 +21,6 @@ let variant_has_catch_all_case
 
   constructors |> List.exists has_catch_all_string_case
 
-let variant_has_relevant_primitive_catch_all
-    (constructors : Types.constructor_declaration list) =
-  variant_has_catch_all_case constructors can_coerce_primitive
-
 (* Checks if every case of the variant has the same runtime representation as the target type. *)
 let variant_has_same_runtime_representation_as_target ~(target_path : Path.t)
     ~unboxed (constructors : Types.constructor_declaration list) =

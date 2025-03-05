@@ -69,7 +69,6 @@ type error =
   | Exception_pattern_below_toplevel
   | Inlined_record_escape
   | Inlined_record_expected
-  | Unrefuted_pattern of pattern
   | Invalid_extension_constructor_payload
   | Not_an_extension_constructor
   | Literal_overflow of string
@@ -1997,19 +1996,6 @@ let generalizable level ty =
     false
 
 (* Helpers for packaged modules. *)
-let create_package_type loc env (p, l) =
-  let s = !Typetexp.transl_modtype_longident loc env p in
-  let fields =
-    List.map
-      (fun (name, ct) -> (name, Typetexp.transl_simple_type env false ct))
-      l
-  in
-  let ty =
-    newty
-      (Tpackage
-         (s, List.map fst l, List.map (fun (_, cty) -> cty.ctyp_type) fields))
-  in
-  (s, fields, ty)
 
 let wrap_unpacks sexp unpacks =
   let open Ast_helper in
@@ -4154,12 +4140,6 @@ let type_binding env rec_flag spat_sexp_list scope =
   in
   (pat_exp_list, new_env)
 
-let type_let env rec_flag spat_sexp_list scope =
-  let pat_exp_list, new_env, _unpacks =
-    type_let env rec_flag spat_sexp_list scope false
-  in
-  (pat_exp_list, new_env)
-
 (* Typing of toplevel expressions *)
 
 let type_expression env sexp =
@@ -4436,10 +4416,6 @@ let report_error env ppf error =
        escape.@]"
   | Inlined_record_expected ->
     fprintf ppf "@[This constructor expects an inlined record argument.@]"
-  | Unrefuted_pattern pat ->
-    fprintf ppf "@[%s@ %s@ %a@]" "This match case could not be refuted."
-      "Here is an example of a value that would reach it:" Parmatch.top_pretty
-      pat
   | Invalid_extension_constructor_payload ->
     fprintf ppf
       "Invalid [%%extension_constructor] payload, a constructor is expected."
@@ -4477,8 +4453,6 @@ let report_error env ppf error =
     fprintf ppf
       "Direct field access on a dict is not supported. Use Dict.get instead."
 
-let super_report_error_no_wrap_printing_env = report_error
-
 let report_error env ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error env ppf err)
 
@@ -4489,7 +4463,4 @@ let () =
     | Error_forward err -> Some err
     | _ -> None)
 
-(* drop ?recarg argument from the external API *)
-let type_expect ?in_function env e ty = type_expect ?in_function env e ty
 let type_exp env e = type_exp env e
-let type_argument env e t1 t2 = type_argument env e t1 t2

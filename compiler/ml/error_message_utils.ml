@@ -5,7 +5,6 @@ type type_clash_statement = FunctionCall
 type type_clash_context =
   | SetRecordField
   | ArrayValue
-  | FunctionReturn
   | MaybeUnwrapOption
   | IfCondition
   | IfReturn
@@ -53,8 +52,6 @@ let error_expected_type_text ppf type_clash_context =
     fprintf ppf
       "But it's being used with the @{<info>%s@} operator, which works on:"
       operator
-  | Some FunctionReturn ->
-    fprintf ppf "But this function is expecting you to return:"
   | Some StringConcat -> fprintf ppf "But string concatenation is expecting:"
   | _ -> fprintf ppf "But it's expected to have type:"
 

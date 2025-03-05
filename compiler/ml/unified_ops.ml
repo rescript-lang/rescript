@@ -128,7 +128,7 @@ let entries =
       form = Binary;
       specialization =
         {
-          int = Pdivint Safe;
+          int = Pdivint;
           bool = None;
           float = Some Pdivfloat;
           bigint = Some Pdivbigint;
@@ -141,7 +141,7 @@ let entries =
       form = Binary;
       specialization =
         {
-          int = Pmodint Safe;
+          int = Pmodint;
           bool = None;
           float = Some Pmodfloat;
           bigint = Some Pmodbigint;
@@ -154,7 +154,7 @@ let entries =
       form = Binary;
       specialization =
         {
-          int = Pmodint Safe;
+          int = Pmodint;
           bool = None;
           float = Some Pmodfloat;
           bigint = Some Pmodbigint;

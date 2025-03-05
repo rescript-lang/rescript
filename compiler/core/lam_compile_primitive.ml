@@ -605,13 +605,3 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     match args with
     | [e1] -> E.runtime_call Primitive_modules.hash "hash_final_mix" args
     | _ -> assert false)
-  | Plazyforce
-  (* FIXME: we don't inline lazy force or at least
-     let buckle handle it
-  *)
-  (* let parm = Ident.create "prim" in
-     Lfunction(Curried, [parm],
-               Matching.inline_lazy_force (Lvar parm) Location.none)
-     It is inlined, this should not appear here *)
-    ->
-    assert false

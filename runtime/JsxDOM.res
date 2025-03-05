@@ -24,6 +24,14 @@
 
 type style = JsxDOMStyle.t
 type domRef
+/**
+  [Read more on MDN](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/popover)
+*/
+type popover = | @as("auto") Auto | @as("manual") Manual | @as("hint") Hint
+/**
+  [Read more on MDN](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/button#popovertargetaction)
+*/
+type popoverTargetAction = | @as("toggle") Toggle | @as("show") Show | @as("hide") Hide
 
 /*
   This list isn't exhaustive. We'll add more as we go.
@@ -146,6 +154,9 @@ type domProps = {
   hidden?: bool,
   id?: string,
   lang?: string,
+  popover?: popover,
+  popoverTarget?: string,
+  popoverTargetAction?: popoverTargetAction,
   role?: string /* ARIA role */,
   style?: style,
   spellCheck?: bool,

@@ -27,12 +27,6 @@ val type_binding :
   Parsetree.value_binding list ->
   Annot.ident option ->
   Typedtree.value_binding list * Env.t
-val type_let :
-  Env.t ->
-  rec_flag ->
-  Parsetree.value_binding list ->
-  Annot.ident option ->
-  Typedtree.value_binding list * Env.t
 val type_expression : Env.t -> Parsetree.expression -> Typedtree.expression
 val check_partial :
   ?lev:int ->
@@ -41,20 +35,8 @@ val check_partial :
   Location.t ->
   Typedtree.case list ->
   Typedtree.partial
-val type_expect :
-  ?in_function:Location.t * type_expr ->
-  Env.t ->
-  Parsetree.expression ->
-  type_expr ->
-  Typedtree.expression
 val type_exp : Env.t -> Parsetree.expression -> Typedtree.expression
 val type_approx : Env.t -> Parsetree.expression -> type_expr
-val type_argument :
-  Env.t ->
-  Parsetree.expression ->
-  type_expr ->
-  type_expr ->
-  Typedtree.expression
 
 val option_some : Typedtree.expression -> Typedtree.expression
 val option_none : type_expr -> Location.t -> Typedtree.expression
@@ -112,7 +94,6 @@ type error =
   | Exception_pattern_below_toplevel
   | Inlined_record_escape
   | Inlined_record_expected
-  | Unrefuted_pattern of Typedtree.pattern
   | Invalid_extension_constructor_payload
   | Not_an_extension_constructor
   | Literal_overflow of string
@@ -125,9 +106,6 @@ type error =
   | Field_access_on_dict_type
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
-
-val super_report_error_no_wrap_printing_env :
-  Env.t -> formatter -> error -> unit
 
 val report_error : Env.t -> formatter -> error -> unit
 (* Deprecated.  Use Location.{error_of_exn, report_error}. *)
@@ -153,11 +131,5 @@ val type_package :
   Longident.t list ->
   Typedtree.module_expr * type_expr list)
   ref
-
-val create_package_type :
-  Location.t ->
-  Env.t ->
-  Longident.t * (Longident.t * Parsetree.core_type) list ->
-  Path.t * (Longident.t * Typedtree.core_type) list * Types.type_expr
 
 val constant : Parsetree.constant -> (Asttypes.constant, error) result
