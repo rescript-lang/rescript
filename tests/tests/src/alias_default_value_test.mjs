@@ -2,8 +2,8 @@
 
 
 function Alias_default_value_test$C0(props) {
-  let __b = props.b;
   let __a = props.a;
+  let __b = props.b;
   let a = __a !== undefined ? __a : 2;
   let b = __b !== undefined ? __b : (a << 1);
   return a + b | 0;
@@ -27,11 +27,12 @@ let C1 = {
 };
 
 function Alias_default_value_test$C2(props) {
-  let __a = props.a;
   let __bar = props.foo;
+  let __a = props.a;
+  let b = props.b;
   let bar = __bar !== undefined ? __bar : "";
   let a = __a !== undefined ? __a : bar;
-  return bar + a + props.b;
+  return bar + a + b;
 }
 
 let C2 = {

@@ -4,7 +4,11 @@ module Foo = {
   @res.jsxComponentProps
   type props<'x, 'y> = {x: 'x, y: 'y}
 
-  let make = ({x, y, _}: props<_, _>) => React.string(x ++ y)
+  let make = (props: props<_, _>) => {
+    let x = props.x
+    let y = props.y
+    React.string(x ++ y)
+  }
   let make = {
     let \"RemovedKeyProp$Foo" = (props: props<_>) => make(props)
 
@@ -16,7 +20,10 @@ module HasChildren = {
   @res.jsxComponentProps
   type props<'children> = {children: 'children}
 
-  let make = ({children, _}: props<_>) => React.createElement(React.fragment, {children: children})
+  let make = (props: props<_>) => {
+    let children = props.children
+    React.createElement(React.fragment, {children: children})
+  }
   let make = {
     let \"RemovedKeyProp$HasChildren" = (props: props<_>) => make(props)
 
