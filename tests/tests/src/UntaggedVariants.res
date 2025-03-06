@@ -469,3 +469,10 @@ module ObjectAndNull = {
     | _ => ()
     }
 }
+
+module RecursiveType = {
+  type rec object2 = {foo: string}
+  @unboxed and tagged2 = Object(object2) | Fn(unit => object2)
+
+  let o = Object({foo: "hello"})
+}

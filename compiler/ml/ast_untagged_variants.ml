@@ -377,8 +377,12 @@ let names_from_type_variant ?(is_untagged_def = false) ~env
   let blocks = Ext_array.reverse_of_list blocks in
   Some {consts; blocks}
 
-let check_well_formed ~env ~is_untagged_def
-    (cstrs : Types.constructor_declaration list) =
+type well_formedness_check = {
+  is_untagged_def: bool;
+  cstrs: Types.constructor_declaration list;
+}
+
+let check_well_formed ~env {is_untagged_def; cstrs} =
   ignore (names_from_type_variant ~env ~is_untagged_def cstrs)
 
 let has_undefined_literal attrs = process_tag_type attrs = Some Undefined

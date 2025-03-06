@@ -600,6 +600,12 @@ let ObjectAndNull = {
   printLength: printLength
 };
 
+let RecursiveType = {
+  o: {
+    foo: "hello"
+  }
+};
+
 let $$Array;
 
 let i = 42;
@@ -653,5 +659,6 @@ export {
   OnlyOne,
   MergeCases,
   ObjectAndNull,
+  RecursiveType,
 }
 /* l2 Not a pure module */

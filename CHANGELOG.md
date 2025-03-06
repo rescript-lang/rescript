@@ -25,6 +25,10 @@
 
 - Deprecate JSON.Classify.classify. https://github.com/rescript-lang/rescript/pull/7315
 
+#### :bug: Bug fix
+
+- Fix recursive untagged variant type checking by delaying well-formedness checks until environment construction completes. [#7320](https://github.com/rescript-lang/rescript/pull/7320)
+
 # 12.0.0-alpha.9
 
 #### :boom: Breaking Change
