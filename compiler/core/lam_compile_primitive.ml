@@ -240,7 +240,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     | _ -> assert false)
   | Pdivbigint -> (
     match args with
-    | [e1; e2] -> E.bigint_div ~checked:!Js_config.check_div_by_zero e1 e2
+    | [e1; e2] -> E.bigint_div e1 e2
     | _ -> assert false)
   | Pmodint -> (
     match args with
@@ -248,7 +248,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     | _ -> assert false)
   | Pmodbigint -> (
     match args with
-    | [e1; e2] -> E.bigint_mod ~checked:!Js_config.check_div_by_zero e1 e2
+    | [e1; e2] -> E.bigint_mod e1 e2
     | _ -> assert false)
   | Ppowbigint -> (
     match args with
