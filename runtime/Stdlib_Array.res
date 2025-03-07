@@ -103,10 +103,13 @@ external copyWithin: (array<'a>, ~target: int, ~start: int, ~end: int) => array<
 @send external shift: array<'a> => option<'a> = "shift"
 
 @variadic @send
-external splice: (array<'a>, ~start: int, ~remove: int, ~insert: array<'a>) => unit = "splice"
+external splice: (array<'a>, ~start: int, ~remove: int, ~insert: array<'a>) => array<'a> = "splice"
 @variadic @send
 external toSpliced: (array<'a>, ~start: int, ~remove: int, ~insert: array<'a>) => array<'a> =
   "toSpliced"
+
+@send
+external removeInPlace: (array<'a>, int, @as(1) _) => unit = "splice"
 
 @send external with: (array<'a>, int, 'a) => array<'a> = "with"
 
