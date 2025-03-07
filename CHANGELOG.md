@@ -10,6 +10,12 @@
 > - :house: [Internal]
 > - :nail_care: [Polish]
 
+# 11.2.0-beta.2
+
+#### :house: Internal
+
+- Playground: use TLS 1.2 to upload files to CDN using FTP. https://github.com/rescript-lang/rescript/pull/7307
+
 # 11.2.0-beta.1
 
 #### :boom: Breaking Change
