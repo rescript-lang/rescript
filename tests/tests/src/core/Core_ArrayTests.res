@@ -109,3 +109,35 @@ Test.run(
 
 Test.run(__POS_OF__("last - with items"), [1, 2, 3]->Array.last, eq, Some(3))
 Test.run(__POS_OF__("last - empty"), []->Array.last, eq, None)
+
+{
+  let array = []
+  Test.run(
+    __POS_OF__("splice - Insert no delete"),
+    (array->Array.splice(~start=1, ~remove=0, ~insert=["foo"]), array),
+    eq,
+    ([], ["foo"]),
+  )
+}
+
+{
+  let array = ["bar", "baz"]
+  Test.run(
+    __POS_OF__("splice - Insert and delete"),
+    (array->Array.splice(~start=1, ~remove=1, ~insert=["foo"]), array),
+    eq,
+    (["baz"], ["bar", "foo"]),
+  )
+}
+
+{
+  let array = []
+  array->Array.removeInPlace(0)
+  Test.run(__POS_OF__("removeInPlace - empty"), array, eq, [])
+}
+
+{
+  let array = ["Hello", "Hi", "Good bye"]
+  array->Array.removeInPlace(1)
+  Test.run(__POS_OF__("removeInPlace - from middle"), array, eq, ["Hello", "Good bye"])
+}
