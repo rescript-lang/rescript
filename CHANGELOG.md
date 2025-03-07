@@ -17,6 +17,10 @@
 - Add `Dict.has` and double `Dict.forEachWithKey`/`Dict.mapValues` performance. https://github.com/rescript-lang/rescript/pull/7316
 - Add popover attributes to JsxDOM.domProps. https://github.com/rescript-lang/rescript/pull/7317
 
+#### :boom: Breaking Change
+
+- Replace ~date with ~day in Date.make\*. https://github.com/rescript-lang/rescript/pull/7324
+
 #### :house: Internal
 
 - Clean up legacy tags handling. https://github.com/rescript-lang/rescript/pull/7309

@@ -13,8 +13,8 @@ Console.log(formatter->Intl.DateTimeFormat.format(Date.fromTime(Date.now())))
 
 Console.log(
   formatter->Intl.DateTimeFormat.formatRange(
-    ~startDate=Date.makeWithYMD(~year=2023, ~date=1, ~month=1),
-    ~endDate=Date.makeWithYMD(~year=2023, ~date=31, ~month=12),
+    ~startDate=Date.makeWithYMD(~year=2023, ~day=1, ~month=1),
+    ~endDate=Date.makeWithYMD(~year=2023, ~day=31, ~month=12),
   ),
 )
 

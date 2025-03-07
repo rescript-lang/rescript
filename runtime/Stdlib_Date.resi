@@ -138,18 +138,18 @@ Values, which are out of range, will be carried over to the next bigger unit (s.
 
 ## Examples
 ```rescript
-Date.makeWithYMD(~year=2023, ~month=1, ~date=20)
+Date.makeWithYMD(~year=2023, ~month=1, ~day=20)
 // 2023-02-20T00:00:00.000Z
 
-Date.makeWithYMD(~year=2023, ~month=1, ~date=-1)
+Date.makeWithYMD(~year=2023, ~month=1, ~day=-1)
 // 2022-11-29T00:00:00.000Z
 
-Date.makeWithYMD(~year=2023, ~month=1, ~date=29)
+Date.makeWithYMD(~year=2023, ~month=1, ~day=29)
 // 2023-03-01T00:00:00.000Z
 ```
 */
 @new
-external makeWithYMD: (~year: int, ~month: int, ~date: int) => t = "Date"
+external makeWithYMD: (~year: int, ~month: int, ~day: int) => t = "Date"
 
 /**
 Creates a date object with the given year, month, date (day of month) and hours.
@@ -159,13 +159,13 @@ Values, which are out of range, will be carried over to the next bigger unit (s.
 
 ## Examples
 ```rescript
-Date.makeWithYMDH(~year=2023, ~month=1, ~date=20, ~hours=16)
+Date.makeWithYMDH(~year=2023, ~month=1, ~day=20, ~hours=16)
 // 2023-02-20T16:00:00.000Z
 
-Date.makeWithYMDH(~year=2023, ~month=1, ~date=20, ~hours=24)
+Date.makeWithYMDH(~year=2023, ~month=1, ~day=20, ~hours=24)
 // 2023-02-21T00:00:00.000Z
 
-Date.makeWithYMDH(~year=2023, ~month=1, ~date=20, ~hours=-1)
+Date.makeWithYMDH(~year=2023, ~month=1, ~day=20, ~hours=-1)
 // 2023-02-19T23:00:00.000Z
 
 // Note: The output depends on your local time zone.
@@ -174,7 +174,7 @@ Date.makeWithYMDH(~year=2023, ~month=1, ~date=20, ~hours=-1)
 ```
 */
 @new
-external makeWithYMDH: (~year: int, ~month: int, ~date: int, ~hours: int) => t = "Date"
+external makeWithYMDH: (~year: int, ~month: int, ~day: int, ~hours: int) => t = "Date"
 
 /**
 Creates a date object with the given year, month, date (day of month), hours and minutes.
@@ -184,13 +184,13 @@ Values, which are out of range, will be carried over to the next bigger unit (s.
 
 ## Examples
 ```rescript
-Date.makeWithYMDHM(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=40)
+Date.makeWithYMDHM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40)
 // 2023-02-20T16:40:00.000Z
 
-Date.makeWithYMDHM(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=60)
+Date.makeWithYMDHM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=60)
 // 2023-02-20T17:00:00.000Z
 
-Date.makeWithYMDHM(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=-1)
+Date.makeWithYMDHM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=-1)
 // 2023-02-20T15:59:00.000Z
 
 // Note: The output depends on your local time zone.
@@ -199,7 +199,7 @@ Date.makeWithYMDHM(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=-1)
 ```
 */
 @new
-external makeWithYMDHM: (~year: int, ~month: int, ~date: int, ~hours: int, ~minutes: int) => t =
+external makeWithYMDHM: (~year: int, ~month: int, ~day: int, ~hours: int, ~minutes: int) => t =
   "Date"
 
 /**
@@ -210,13 +210,13 @@ Values, which are out of range, will be carried over to the next bigger unit (s.
 
 ## Examples
 ```rescript
-Date.makeWithYMDHMS(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=40, ~seconds=0)
+Date.makeWithYMDHMS(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=0)
 // 2023-02-20T16:40:00.000Z
 
-Date.makeWithYMDHMS(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=40, ~seconds=60)
+Date.makeWithYMDHMS(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=60)
 // 2023-02-20T16:41:00.000Z
 
-Date.makeWithYMDHMS(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=40, ~seconds=-1)
+Date.makeWithYMDHMS(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=-1)
 // 2023-02-20T16:39:59.000Z
 
 // Note: The output depends on your local time zone.
@@ -228,7 +228,7 @@ Date.makeWithYMDHMS(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=40, ~sec
 external makeWithYMDHMS: (
   ~year: int,
   ~month: int,
-  ~date: int,
+  ~day: int,
   ~hours: int,
   ~minutes: int,
   ~seconds: int,
@@ -242,13 +242,13 @@ Values, which are out of range, will be carried over to the next bigger unit (s.
 
 ## Examples
 ```rescript
-Date.makeWithYMDHMSM(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=0)
+Date.makeWithYMDHMSM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=0)
 // 2023-02-20T16:40:00.000Z
 
-Date.makeWithYMDHMSM(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=1000)
+Date.makeWithYMDHMSM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=1000)
 // 2023-02-20T16:40:01.000Z
 
-Date.makeWithYMDHMSM(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=-1)
+Date.makeWithYMDHMSM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=-1)
 // 2023-02-20T16:39:59.999Z
 
 // Note: The output depends on your local time zone.
@@ -260,7 +260,7 @@ Date.makeWithYMDHMSM(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=40, ~se
 external makeWithYMDHMSM: (
   ~year: int,
   ~month: int,
-  ~date: int,
+  ~day: int,
   ~hours: int,
   ~minutes: int,
   ~seconds: int,
@@ -299,18 +299,18 @@ module UTC: {
 
   ## Examples
   ```rescript
-  Date.UTC.makeWithYMD(~year=2023, ~month=1, ~date=20)
+  Date.UTC.makeWithYMD(~year=2023, ~month=1, ~day=20)
   // 1676851200000
 
-  Date.UTC.makeWithYMD(~year=2023, ~month=1, ~date=-1)
+  Date.UTC.makeWithYMD(~year=2023, ~month=1, ~day=-1)
   // 1675036800000
 
-  Date.UTC.makeWithYMD(~year=2023, ~month=1, ~date=29)
+  Date.UTC.makeWithYMD(~year=2023, ~month=1, ~day=29)
   // 1677628800000
   ```
   */
   @val
-  external makeWithYMD: (~year: int, ~month: int, ~date: int) => msSinceEpoch = "Date.UTC"
+  external makeWithYMD: (~year: int, ~month: int, ~day: int) => msSinceEpoch = "Date.UTC"
 
   /**
   Returns the time, in milliseconds, since UNIX epoch (January 1, 1970 00:00:00 UTC).
@@ -320,18 +320,18 @@ module UTC: {
 
   ## Examples
   ```rescript
-  Date.UTC.makeWithYMDH(~year=2023, ~month=1, ~date=20, ~hours=16)
+  Date.UTC.makeWithYMDH(~year=2023, ~month=1, ~day=20, ~hours=16)
   // 1676908800000
 
-  Date.UTC.makeWithYMDH(~year=2023, ~month=1, ~date=20, ~hours=24)
+  Date.UTC.makeWithYMDH(~year=2023, ~month=1, ~day=20, ~hours=24)
   // 1676937600000
 
-  Date.UTC.makeWithYMDH(~year=2023, ~month=1, ~date=20, ~hours=-1)
+  Date.UTC.makeWithYMDH(~year=2023, ~month=1, ~day=20, ~hours=-1)
   // 1676847600000
   ```
   */
   @val
-  external makeWithYMDH: (~year: int, ~month: int, ~date: int, ~hours: int) => msSinceEpoch =
+  external makeWithYMDH: (~year: int, ~month: int, ~day: int, ~hours: int) => msSinceEpoch =
     "Date.UTC"
 
   /**
@@ -342,13 +342,13 @@ module UTC: {
 
   ## Examples
   ```rescript
-  Date.UTC.makeWithYMDHM(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=40)
+  Date.UTC.makeWithYMDHM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40)
   // 1676911200000
 
-  Date.UTC.makeWithYMDHM(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=60)
+  Date.UTC.makeWithYMDHM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=60)
   // 1676912400000
 
-  Date.UTC.makeWithYMDHM(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=-1)
+  Date.UTC.makeWithYMDHM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=-1)
   // 1676908740000
   ```
   */
@@ -356,7 +356,7 @@ module UTC: {
   external makeWithYMDHM: (
     ~year: int,
     ~month: int,
-    ~date: int,
+    ~day: int,
     ~hours: int,
     ~minutes: int,
   ) => msSinceEpoch = "Date.UTC"
@@ -369,13 +369,13 @@ module UTC: {
 
   ## Examples
   ```rescript
-  Date.UTC.makeWithYMDHMS(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=40, ~seconds=0)
+  Date.UTC.makeWithYMDHMS(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=0)
   // 1676911200000
 
-  Date.UTC.makeWithYMDHMS(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=40, ~seconds=60)
+  Date.UTC.makeWithYMDHMS(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=60)
   // 1676911260000
 
-  Date.UTC.makeWithYMDHMS(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=40, ~seconds=-1)
+  Date.UTC.makeWithYMDHMS(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=-1)
   // 1676911199000
   ```
   */
@@ -383,7 +383,7 @@ module UTC: {
   external makeWithYMDHMS: (
     ~year: int,
     ~month: int,
-    ~date: int,
+    ~day: int,
     ~hours: int,
     ~minutes: int,
     ~seconds: int,
@@ -397,13 +397,13 @@ module UTC: {
 
   ## Examples
   ```rescript
-  Date.UTC.makeWithYMDHMSM(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=0)->Console.log
+  Date.UTC.makeWithYMDHMSM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=0)->Console.log
   // 1676911200000
 
-  Date.UTC.makeWithYMDHMSM(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=1000)->Console.log
+  Date.UTC.makeWithYMDHMSM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=1000)->Console.log
   // 1676911201000
 
-  Date.UTC.makeWithYMDHMSM(~year=2023, ~month=1, ~date=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=-1)->Console.log
+  Date.UTC.makeWithYMDHMSM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=-1)->Console.log
   // 1676911199999
   ```
   */
@@ -411,7 +411,7 @@ module UTC: {
   external makeWithYMDHMSM: (
     ~year: int,
     ~month: int,
-    ~date: int,
+    ~day: int,
     ~hours: int,
     ~minutes: int,
     ~seconds: int,
@@ -607,18 +607,18 @@ Date.fromString("2023-02-20T16:40:00.00")->Date.setFullYearM(~year=2024, ~month=
 external setFullYearM: (t, ~year: int, ~month: int) => unit = "setFullYear"
 
 /**
-`setFullYearMD(date, ~year, ~month, ~date)`
+`setFullYearMD(date, ~year, ~month, ~day)`
 
 Sets the year, month and date (day of month) of a date (according to local time).
 Beware this will *mutate* the date.
 
 ## Examples
 ```rescript
-Date.fromString("2023-02-20T16:40:00.00")->Date.setFullYearMD(~year=2024, ~month=0, ~date=1)
+Date.fromString("2023-02-20T16:40:00.00")->Date.setFullYearMD(~year=2024, ~month=0, ~day=1)
 ```
 */
 @send
-external setFullYearMD: (t, ~year: int, ~month: int, ~date: int) => unit = "setFullYear"
+external setFullYearMD: (t, ~year: int, ~month: int, ~day: int) => unit = "setFullYear"
 
 /**
 `setMonth(date, month)`
@@ -923,18 +923,18 @@ Date.fromString("2023-02-20T16:40:00.00")->Date.setUTCFullYearM(~year=2024, ~mon
 external setUTCFullYearM: (t, ~year: int, ~month: int) => unit = "setUTCFullYear"
 
 /**
-`setUTCFullYearMD(date, ~year, ~month, ~date)`
+`setUTCFullYearMD(date, ~year, ~month, ~day)`
 
 Sets the year, month and date (day of month) of a date (according to UTC time).
 Beware this will *mutate* the date.
 
 ## Examples
 ```rescript
-Date.fromString("2023-02-20T16:40:00.00")->Date.setUTCFullYearMD(~year=2024, ~month=0, ~date=1)
+Date.fromString("2023-02-20T16:40:00.00")->Date.setUTCFullYearMD(~year=2024, ~month=0, ~day=1)
 ```
 */
 @send
-external setUTCFullYearMD: (t, ~year: int, ~month: int, ~date: int) => unit = "setUTCFullYear"
+external setUTCFullYearMD: (t, ~year: int, ~month: int, ~day: int) => unit = "setUTCFullYear"
 
 /**
 `setUTCMonth(date, month)`
