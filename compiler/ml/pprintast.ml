@@ -794,7 +794,16 @@ and simple_expr ctxt f x =
       let expression = expression ctxt in
       pp f fmt (pattern ctxt) s expression e1 direction_flag df expression e2
         expression e3
+    | Pexp_jsx_fragment (_, xs, _) ->
+      pp f "<>%a</>" (list (simple_expr ctxt)) (collect_jsx_children xs)
+    | Pexp_jsx_unary_element _ -> failwith "TODO: Pexp_jsx_unary_element 2"
+    | Pexp_jsx_container_element _ ->
+      failwith "TODO: Pexp_jsx_container_element 2"
     | _ -> paren true (expression ctxt) f x
+
+and collect_jsx_children = function
+  | JSXChildrenSpreading e -> [e]
+  | JSXChildrenItems xs -> xs
 
 and attributes ctxt f l = List.iter (attribute ctxt f) l
 

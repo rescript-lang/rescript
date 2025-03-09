@@ -26,4 +26,4 @@ let f = ((fun [arity:1]event -> (event.target).value)[@res.braces ])
 let f = ((fun [arity:1]event -> ((event.target).value : string))
   [@res.braces ])
 let x = ((let a = 1 in let b = 2 in a + b)[@res.braces ])
-;;(([(({js|\n|js} -> React.string)[@res.braces ])])[@JSX ])
+;;<>(({js|\n|js} -> React.string)[@res.braces ])</>

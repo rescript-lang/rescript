@@ -1496,7 +1496,7 @@ let transform_signature_item ~config item =
         "Only one JSX component call can exist on a component at one time")
   | _ -> [item]
 
-let transform_jsx_call ~config mapper call_expression call_arguments
+let _transform_jsx_call ~config mapper call_expression call_arguments
     jsx_expr_loc attrs =
   match call_expression.pexp_desc with
   | Pexp_ident caller -> (
@@ -1530,8 +1530,369 @@ let transform_jsx_call ~config mapper call_expression call_arguments
       "JSX: `createElement` should be preceeded by a simple, direct module \
        name."
 
-let expr ~config mapper expression =
+let starts_with_lowercase s =
+  if String.length s = 0 then false
+  else
+    let c = s.[0] in
+    Char.lowercase_ascii c = c
+
+let starts_with_uppercase s =
+  if String.length s = 0 then false
+  else
+    let c = s.[0] in
+    Char.uppercase_ascii c = c
+
+module AutomaticExpr = struct
+  (* There appear to be slightly different rules of transformation whether the component is upper-, lowercase or a fragment *)
+  type componentDescription =
+    | LowercasedComponent
+    | UppercasedComponent
+    | FragmentComponent
+
+  let loc_from_prop = function
+    | JSXPropPunning (_, {loc}) -> loc
+    | JSXPropValue (_, _, {pexp_loc}) -> pexp_loc
+    | JSXPropSpreading (loc, _) -> loc
+
+  let mk_record_from_props mapper (jsx_expr_loc : Location.t)
+      (props : jsx_props) : expression =
+    (* Create an artificial range from the first till the last prop *)
+    let loc =
+      match props with
+      | [] -> jsx_expr_loc
+      | head :: tail ->
+        let rec visit props =
+          match props with
+          | [] -> head
+          | [last] -> last
+          | _ :: rest -> visit rest
+        in
+        let first_item = head |> loc_from_prop in
+        let last_item = visit tail |> loc_from_prop in
+        {
+          loc_start = first_item.loc_start;
+          loc_end = last_item.loc_end;
+          loc_ghost = true;
+        }
+    in
+    (* key should be filtered out *)
+    let props =
+      props
+      |> List.filter (function
+           | JSXPropPunning (_, {txt = "key"})
+           | JSXPropValue ({txt = "key"}, _, _) ->
+             false
+           | _ -> true)
+    in
+    let props, spread_props =
+      match props with
+      | JSXPropSpreading (_, expr) :: rest ->
+        (rest, Some (mapper.expr mapper expr))
+      | _ -> (props, None)
+    in
+
+    let record_fields =
+      props
+      |> List.map (function
+           | JSXPropPunning (is_optional, name) ->
+             ( {txt = Lident name.txt; loc = name.loc},
+               Exp.ident {txt = Lident name.txt; loc = name.loc},
+               is_optional )
+           | JSXPropValue (name, is_optional, value) ->
+             ( {txt = Lident name.txt; loc = name.loc},
+               mapper.expr mapper value,
+               is_optional )
+           | JSXPropSpreading (loc, _) ->
+             (* There can only be one spread expression and it is expected to be the first prop *)
+             Jsx_common.raise_error ~loc
+               "JSX: use {...p} {x: v} not {x: v} {...p} \n\
+               \     multiple spreads {...p} {...p} not allowed.")
+    in
+    {
+      pexp_desc = Pexp_record (record_fields, spread_props);
+      pexp_loc = loc;
+      pexp_attributes = [];
+    }
+
+  let append_children_prop (config : Jsx_common.jsx_config) mapper
+      (component_description : componentDescription) (props : jsx_props)
+      (children : jsx_children) : jsx_props =
+    match children with
+    | JSXChildrenItems [] -> props
+    | JSXChildrenItems [child] | JSXChildrenSpreading child ->
+      let expr =
+        (* I don't quite know why fragment and uppercase don't do this additional ReactDOM.someElement wrapping *)
+        match component_description with
+        | FragmentComponent | UppercasedComponent -> mapper.expr mapper child
+        | LowercasedComponent ->
+          let element_binding =
+            match config.module_ |> String.lowercase_ascii with
+            | "react" -> Lident "ReactDOM"
+            | _generic -> module_access_name config "Elements"
+          in
+          Exp.apply
+            (Exp.ident
+               {
+                 txt = Ldot (element_binding, "someElement");
+                 loc = Location.none;
+               })
+            [(Nolabel, child)]
+      in
+      let is_optional =
+        match component_description with
+        | LowercasedComponent -> true
+        | FragmentComponent | UppercasedComponent -> false
+      in
+      props
+      @ [
+          JSXPropValue
+            ({txt = "children"; loc = Location.none}, is_optional, expr);
+        ]
+    | JSXChildrenItems xs ->
+      (* this is a hack to support react components that introspect into their children *)
+      props
+      @ [
+          JSXPropValue
+            ( {txt = "children"; loc = Location.none},
+              false,
+              Exp.apply
+                (Exp.ident
+                   {
+                     txt = module_access_name config "array";
+                     loc = Location.none;
+                   })
+                [(Nolabel, Exp.array (List.map (mapper.expr mapper) xs))] );
+        ]
+
+  let try_find_key_prop (props : jsx_props) : (arg_label * expression) option =
+    props
+    |> List.find_map (function
+         | JSXPropPunning (_, ({txt = "key"} as name)) ->
+           Some (Labelled name, Exp.ident {txt = Lident "key"; loc = name.loc})
+         | JSXPropValue (({txt = "key"} as name), is_optional, expr) ->
+           let arg_label =
+             if is_optional then Optional name else Labelled name
+           in
+           Some (arg_label, expr)
+         | _ -> None)
+
+  let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
+      (component_description : componentDescription) (elementTag : expression)
+      (props : jsx_props) (children : jsx_children) : expression =
+    let more_than_one_children =
+      match children with
+      | JSXChildrenSpreading _ -> false
+      | JSXChildrenItems xs -> List.length xs > 1
+    in
+    let props_with_children =
+      append_children_prop config mapper component_description props children
+    in
+    let props_record = mk_record_from_props mapper loc props_with_children in
+    let jsx_expr, key_and_unit =
+      let mk_element_bind (jsx_part : string) : Longident.t =
+        match component_description with
+        | FragmentComponent | UppercasedComponent ->
+          module_access_name config jsx_part
+        | LowercasedComponent ->
+          let element_binding =
+            match config.module_ |> String.lowercase_ascii with
+            | "react" -> Lident "ReactDOM"
+            | _generic -> module_access_name config "Elements"
+          in
+          Ldot (element_binding, jsx_part)
+      in
+      match try_find_key_prop props with
+      | None ->
+        ( Exp.ident
+            {
+              loc = Location.none;
+              txt =
+                mk_element_bind
+                  (if more_than_one_children then "jsxs" else "jsx");
+            },
+          [] )
+      | Some key_prop ->
+        ( Exp.ident
+            {
+              loc = Location.none;
+              txt =
+                mk_element_bind
+                  (if more_than_one_children then "jsxsKeyed" else "jsxKeyed");
+            },
+          [key_prop; (nolabel, unit_expr ~loc:Location.none)] )
+    in
+    let args =
+      [(nolabel, elementTag); (nolabel, props_record)] @ key_and_unit
+    in
+    Exp.apply ~loc ~attrs jsx_expr args
+
+  let expr ~(config : Jsx_common.jsx_config) mapper expression =
+    match expression with
+    | {
+     pexp_desc = Pexp_jsx_fragment (_, children, _);
+     pexp_loc = loc;
+     pexp_attributes = attrs;
+    } ->
+      let loc = {loc with loc_ghost = true} in
+      let fragment =
+        Exp.ident ~loc {loc; txt = module_access_name config "jsxFragment"}
+      in
+      mk_react_jsx config mapper loc attrs FragmentComponent fragment []
+        children
+    | {
+     pexp_desc =
+       Pexp_jsx_unary_element
+         {
+           jsx_unary_element_tag_name = tag_name;
+           jsx_unary_element_props = props;
+         };
+     pexp_loc = loc;
+     pexp_attributes = attrs;
+    } ->
+      let loc = {loc with loc_ghost = true} in
+      let name = Longident.flatten tag_name.txt |> String.concat "." in
+      if starts_with_lowercase name then
+        (* For example 'input' *)
+        let component_name_expr = constant_string ~loc:tag_name.loc name in
+        mk_react_jsx config mapper loc attrs LowercasedComponent
+          component_name_expr props (JSXChildrenItems [])
+      else if starts_with_uppercase name then
+        (* MyModule.make *)
+        let make_id =
+          Exp.ident ~loc:tag_name.loc
+            {txt = Ldot (tag_name.txt, "make"); loc = tag_name.loc}
+        in
+        mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
+          (JSXChildrenItems [])
+      else
+        Jsx_common.raise_error ~loc
+          "JSX: element name is neither upper- or lowercase, got \"%s\""
+          (Longident.flatten tag_name.txt |> String.concat ".")
+    | {
+     pexp_desc =
+       Pexp_jsx_container_element
+         {
+           jsx_container_element_tag_name_start = tag_name;
+           jsx_container_element_props = props;
+           jsx_container_element_children = children;
+         };
+     pexp_loc = loc;
+     pexp_attributes = attrs;
+    } ->
+      let loc = {loc with loc_ghost = true} in
+      let name = Longident.flatten tag_name.txt |> String.concat "." in
+      (* For example: <div> <h1></h1> <br /> </div>
+         This has an impact if we want to use ReactDOM.jsx or ReactDOM.jsxs
+           *)
+      if starts_with_lowercase name then
+        let component_name_expr = constant_string ~loc:tag_name.loc name in
+        mk_react_jsx config mapper loc attrs LowercasedComponent
+          component_name_expr props children
+      else if starts_with_uppercase name then
+        (* MyModule.make *)
+        let make_id =
+          Exp.ident ~loc:tag_name.loc
+            {txt = Ldot (tag_name.txt, "make"); loc = tag_name.loc}
+        in
+        mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
+          children
+      else
+        Jsx_common.raise_error ~loc
+          "JSX: element name is neither upper- or lowercase, got \"%s\""
+          (Longident.flatten tag_name.txt |> String.concat ".")
+    | e -> default_mapper.expr mapper e
+end
+
+module ClassicExpr = struct
+  let mk_react_create_element mapper loc attrs (elementTag : expression)
+      (children : jsx_children) : expression =
+    let more_than_one_children =
+      match children with
+      | JSXChildrenSpreading _ -> false
+      | JSXChildrenItems xs -> List.length xs > 1
+    in
+    (* children are a special prop are special in React.createElement *)
+    let children_props = empty_record ~loc:Location.none in
+    let args =
+      (nolabel, elementTag) :: (nolabel, children_props)
+      ::
+      (match children with
+      | JSXChildrenItems xs when more_than_one_children ->
+        [(nolabel, Exp.array (List.map (mapper.expr mapper) xs))]
+      | _ -> [])
+    in
+    Exp.apply ~loc ~attrs
+      (* ReactDOM.createElement *)
+      (if more_than_one_children then
+         Exp.ident ~loc
+           {loc; txt = Ldot (Lident "React", "createElementVariadic")}
+       else Exp.ident ~loc {loc; txt = Ldot (Lident "React", "createElement")})
+      args
+
+  let expr (_config : Jsx_common.jsx_config) mapper expression =
+    match expression with
+    | {
+     pexp_desc = Pexp_jsx_fragment (_, children, _);
+     pexp_loc = loc;
+     pexp_attributes = attrs;
+    } ->
+      let loc = {loc with loc_ghost = true} in
+      let fragment =
+        Exp.ident ~loc {loc; txt = Ldot (Lident "React", "fragment")}
+      in
+      mk_react_create_element mapper loc attrs fragment children
+    | e -> default_mapper.expr mapper e
+end
+
+let expr ~(config : Jsx_common.jsx_config) mapper expression =
+  match config.mode with
+  | "automatic" -> AutomaticExpr.expr ~config mapper expression
+  | "classic" -> ClassicExpr.expr config mapper expression
+  | _ -> default_mapper.expr mapper expression
+(*
   match expression with
+  | {
+   pexp_desc = Pexp_jsx_fragment (_, children, _);
+   pexp_loc = loc;
+   pexp_attributes = attrs;
+  } ->
+    let loc = {loc with loc_ghost = true} in
+    let fragment =
+      match config.mode with
+      | "automatic" ->
+        Exp.ident ~loc {loc; txt = module_access_name config "jsxFragment"}
+      | "classic" | _ ->
+        Exp.ident ~loc {loc; txt = Ldot (Lident "React", "fragment")}
+    in
+    mk_react_create_element config mapper loc attrs fragment children
+  | {
+      pexp_desc =
+        Pexp_jsx_unary_element
+          {jsx_unary_element_tag_name = name; jsx_unary_element_props = props};
+      pexp_loc = loc;
+      pexp_attributes = attrs;
+    } as e ->
+    let elementTag =
+      match name.txt with
+      | Longident.Lident elementName when starts_with_lowercase elementName -> (
+        (* For example 'input' *)
+        let component_name_expr = constant_string ~loc:name.loc elementName in
+        match config.mode with
+        | "automatic" ->
+          let element_binding =
+            match config.module_ |> String.lowercase_ascii with
+            | "react" -> Lident "ReactDOM"
+            | _generic -> module_access_name config "Elements"
+          in
+          Exp.ident ~loc {loc; txt = Lident elementName}
+        | "classic" | _ -> ()
+      )
+      | _ ->
+        Jsx_common.raise_error ~loc
+          "JSX: element name is neither upper- or lowercase, got \"%s\""
+          (Longident.flatten name.txt |> String.concat ".")
+    in
+    e
   (* Does the function application have the @JSX attribute? *)
   | {
    pexp_desc = Pexp_apply {funct = call_expression; args = call_arguments};
@@ -1549,89 +1910,9 @@ let expr ~config mapper expression =
     | _, non_jsx_attributes ->
       transform_jsx_call ~config mapper call_expression call_arguments pexp_loc
         non_jsx_attributes)
-  (* is it a list with jsx attribute? Reason <>foo</> desugars to [@JSX][foo]*)
-  | {
-      pexp_desc =
-        ( Pexp_construct
-            ({txt = Lident "::"; loc}, Some {pexp_desc = Pexp_tuple _})
-        | Pexp_construct ({txt = Lident "[]"; loc}, None) );
-      pexp_attributes;
-    } as list_items -> (
-    let jsx_attribute, non_jsx_attributes =
-      List.partition
-        (fun (attribute, _) -> attribute.txt = "JSX")
-        pexp_attributes
-    in
-    match (jsx_attribute, non_jsx_attributes) with
-    (* no JSX attribute *)
-    | [], _ -> default_mapper.expr mapper expression
-    | _, non_jsx_attributes ->
-      let loc = {loc with loc_ghost = true} in
-      let fragment =
-        match config.mode with
-        | "automatic" ->
-          Exp.ident ~loc {loc; txt = module_access_name config "jsxFragment"}
-        | "classic" | _ ->
-          Exp.ident ~loc {loc; txt = Ldot (Lident "React", "fragment")}
-      in
-      let children_expr = transform_children_if_list ~mapper list_items in
-      let record_of_children children =
-        Exp.record
-          [(Location.mknoloc (Lident "children"), children, false)]
-          None
-      in
-      let apply_jsx_array expr =
-        Exp.apply
-          (Exp.ident
-             {txt = module_access_name config "array"; loc = Location.none})
-          [(Nolabel, expr)]
-      in
-      let count_of_children = function
-        | {pexp_desc = Pexp_array children} -> List.length children
-        | _ -> 0
-      in
-      let transform_children_to_props children_expr =
-        match children_expr with
-        | {pexp_desc = Pexp_array children} -> (
-          match children with
-          | [] -> empty_record ~loc:Location.none
-          | [child] -> record_of_children child
-          | _ -> (
-            match config.mode with
-            | "automatic" -> record_of_children @@ apply_jsx_array children_expr
-            | "classic" | _ -> empty_record ~loc:Location.none))
-        | _ -> (
-          match config.mode with
-          | "automatic" -> record_of_children @@ apply_jsx_array children_expr
-          | "classic" | _ -> empty_record ~loc:Location.none)
-      in
-      let args =
-        (nolabel, fragment)
-        :: (nolabel, transform_children_to_props children_expr)
-        ::
-        (match config.mode with
-        | "classic" when count_of_children children_expr > 1 ->
-          [(nolabel, children_expr)]
-        | _ -> [])
-      in
-      Exp.apply
-        ~loc (* throw away the [@JSX] attribute and keep the others, if any *)
-        ~attrs:non_jsx_attributes
-        (* ReactDOM.createElement *)
-        (match config.mode with
-        | "automatic" ->
-          if count_of_children children_expr > 1 then
-            Exp.ident ~loc {loc; txt = module_access_name config "jsxs"}
-          else Exp.ident ~loc {loc; txt = module_access_name config "jsx"}
-        | "classic" | _ ->
-          if count_of_children children_expr > 1 then
-            Exp.ident ~loc
-              {loc; txt = Ldot (Lident "React", "createElementVariadic")}
-          else
-            Exp.ident ~loc {loc; txt = Ldot (Lident "React", "createElement")})
-        args)
   (* Delegate to the default mapper, a deep identity traversal *)
   | e -> default_mapper.expr mapper e
+*)
 
 let module_binding ~(config : Jsx_common.jsx_config) mapper module_binding =
   config.nested_modules <- module_binding.pmb_name.txt :: config.nested_modules;

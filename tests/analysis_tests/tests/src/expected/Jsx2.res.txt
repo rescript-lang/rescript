@@ -534,8 +534,7 @@ Path Nested.
 
 Hover src/Jsx2.res 162:12
 Nothing at that position. Now trying to use completion.
-posCursor:[162:12] posNoWhite:[162:11] Found expr:[162:3->162:21]
-posCursor:[162:12] posNoWhite:[162:11] Found expr:[162:6->162:21]
+posCursor:[162:12] posNoWhite:[162:11] Found expr:[162:2->162:24]
 posCursor:[162:12] posNoWhite:[162:11] Found expr:[162:6->162:20]
 JSX <Comp:[162:6->162:10] age[162:11->162:14]=...[162:15->162:17]> _children:162:18
 Completable: Cjsx([Comp], age, [age])
@@ -546,10 +545,8 @@ Path Comp.make
 
 Hover src/Jsx2.res 167:16
 Nothing at that position. Now trying to use completion.
-posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:3->167:30]
-posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:7->167:30]
-posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:7->167:25]
-posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:10->167:25]
+posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:2->167:33]
+posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:6->167:28]
 posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:10->167:24]
 JSX <Comp:[167:10->167:14] age[167:15->167:18]=...[167:19->167:21]> _children:167:22
 Completable: Cjsx([Comp], age, [age])

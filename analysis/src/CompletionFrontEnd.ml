@@ -1232,7 +1232,8 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                          then ValueOrField
                          else Value);
                     }))
-        | Pexp_construct ({txt = Lident ("::" | "()")}, _) ->
+        | Pexp_construct ({txt = Lident ("::" | "()")}, _) | Pexp_jsx_fragment _
+          ->
           (* Ignore list expressions, used in JSX, unit, and more *) ()
         | Pexp_construct (lid, eOpt) -> (
           let lidPath = flattenLidCheckDot lid in
