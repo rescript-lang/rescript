@@ -153,6 +153,7 @@ type domProps = {
   draggable?: bool,
   hidden?: bool,
   id?: string,
+  inert?: bool,
   lang?: string,
   popover?: popover,
   popoverTarget?: string,
