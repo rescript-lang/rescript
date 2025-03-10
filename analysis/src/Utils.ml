@@ -111,6 +111,7 @@ let identifyPexp pexp =
   | Pexp_pack _ -> "Pexp_pack"
   | Pexp_extension _ -> "Pexp_extension"
   | Pexp_open _ -> "Pexp_open"
+  | Pexp_jsx_fragment _ -> "Pexp_jsx_fragment"
 
 let identifyPpat pat =
   match pat with
@@ -154,6 +155,10 @@ let isJsxComponent (vb : Parsetree.value_binding) =
   |> List.exists (function
        | {Location.txt = "react.component" | "jsx.component"}, _payload -> true
        | _ -> false)
+  ||
+  match vb.pvb_expr.pexp_desc with
+  | Parsetree.Pexp_jsx_fragment _ -> true
+  | _ -> false
 
 let checkName name ~prefix ~exact =
   if exact then name = prefix else startsWith name prefix

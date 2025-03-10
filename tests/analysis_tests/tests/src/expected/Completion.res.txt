@@ -963,7 +963,7 @@ Path Objects.Rec.
 
 Complete src/Completion.res 120:7
 posCursor:[120:7] posNoWhite:[120:6] Found expr:[119:11->123:1]
-posCursor:[120:7] posNoWhite:[120:6] Found expr:[120:5->122:5]
+posCursor:[120:7] posNoWhite:[120:6] Found expr:[120:5->122:8]
 posCursor:[120:7] posNoWhite:[120:6] Found expr:[120:5->120:7]
 Pexp_ident my:[120:5->120:7]
 Completable: Cpath Value[my]

@@ -49,8 +49,7 @@ switch route {
     <div> {React.string("Second A div")} </div>
   </div>
 | B =>
-  <>
-    // fragment tag moves to the next line
+  <> // fragment tag stays after <>
     <div> {React.string("First B div")} </div>
     <div> {React.string("Second B div")} </div>
   </>

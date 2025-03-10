@@ -707,6 +707,20 @@ module SexpAst = struct
           ]
       | Pexp_extension ext ->
         Sexp.list [Sexp.atom "Pexp_extension"; extension ext]
+      | Pexp_jsx_fragment (_, children, _) ->
+        let xs =
+          match children with
+          | JSXChildrenSpreading e -> [e]
+          | JSXChildrenItems xs -> xs
+        in
+        Sexp.list
+          [
+            Sexp.atom "Pexp_jsx_fragment"; Sexp.list (map_empty ~f:expression xs);
+          ]
+      | Pexp_jsx_unary_element _ ->
+        failwith "Pexp_jsx_unary_element is not supported"
+      | Pexp_jsx_container_element _ ->
+        failwith "Pexp_jsx_container_element is not supported"
     in
     Sexp.list [Sexp.atom "expression"; desc]
 
