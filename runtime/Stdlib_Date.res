@@ -21,16 +21,16 @@ type localeOptions = {
 @new external fromTime: msSinceEpoch => t = "Date"
 
 @new external makeWithYM: (~year: int, ~month: int) => t = "Date"
-@new external makeWithYMD: (~year: int, ~month: int, ~date: int) => t = "Date"
-@new external makeWithYMDH: (~year: int, ~month: int, ~date: int, ~hours: int) => t = "Date"
+@new external makeWithYMD: (~year: int, ~month: int, ~day: int) => t = "Date"
+@new external makeWithYMDH: (~year: int, ~month: int, ~day: int, ~hours: int) => t = "Date"
 @new
-external makeWithYMDHM: (~year: int, ~month: int, ~date: int, ~hours: int, ~minutes: int) => t =
+external makeWithYMDHM: (~year: int, ~month: int, ~day: int, ~hours: int, ~minutes: int) => t =
   "Date"
 @new
 external makeWithYMDHMS: (
   ~year: int,
   ~month: int,
-  ~date: int,
+  ~day: int,
   ~hours: int,
   ~minutes: int,
   ~seconds: int,
@@ -39,7 +39,7 @@ external makeWithYMDHMS: (
 external makeWithYMDHMSM: (
   ~year: int,
   ~month: int,
-  ~date: int,
+  ~day: int,
   ~hours: int,
   ~minutes: int,
   ~seconds: int,
@@ -48,15 +48,15 @@ external makeWithYMDHMSM: (
 
 module UTC = {
   @val external makeWithYM: (~year: int, ~month: int) => msSinceEpoch = "Date.UTC"
-  @val external makeWithYMD: (~year: int, ~month: int, ~date: int) => msSinceEpoch = "Date.UTC"
+  @val external makeWithYMD: (~year: int, ~month: int, ~day: int) => msSinceEpoch = "Date.UTC"
   @val
-  external makeWithYMDH: (~year: int, ~month: int, ~date: int, ~hours: int) => msSinceEpoch =
+  external makeWithYMDH: (~year: int, ~month: int, ~day: int, ~hours: int) => msSinceEpoch =
     "Date.UTC"
   @val
   external makeWithYMDHM: (
     ~year: int,
     ~month: int,
-    ~date: int,
+    ~day: int,
     ~hours: int,
     ~minutes: int,
   ) => msSinceEpoch = "Date.UTC"
@@ -64,7 +64,7 @@ module UTC = {
   external makeWithYMDHMS: (
     ~year: int,
     ~month: int,
-    ~date: int,
+    ~day: int,
     ~hours: int,
     ~minutes: int,
     ~seconds: int,
@@ -73,7 +73,7 @@ module UTC = {
   external makeWithYMDHMSM: (
     ~year: int,
     ~month: int,
-    ~date: int,
+    ~day: int,
     ~hours: int,
     ~minutes: int,
     ~seconds: int,
@@ -102,7 +102,7 @@ let compare = (a, b) => Stdlib_Float.compare(a->getTime, b->getTime)
 
 @send external setFullYear: (t, int) => unit = "setFullYear"
 @send external setFullYearM: (t, ~year: int, ~month: int) => unit = "setFullYear"
-@send external setFullYearMD: (t, ~year: int, ~month: int, ~date: int) => unit = "setFullYear"
+@send external setFullYearMD: (t, ~year: int, ~month: int, ~day: int) => unit = "setFullYear"
 @send external setMonth: (t, int) => unit = "setMonth"
 @send external setDate: (t, int) => unit = "setDate"
 @send external setHours: (t, int) => unit = "setHours"
@@ -132,7 +132,7 @@ external setMinutesSMs: (t, ~minutes: int, ~seconds: int, ~milliseconds: int) =>
 @send external setUTCFullYear: (t, int) => unit = "setUTCFullYear"
 @send external setUTCFullYearM: (t, ~year: int, ~month: int) => unit = "setUTCFullYear"
 @send
-external setUTCFullYearMD: (t, ~year: int, ~month: int, ~date: int) => unit = "setUTCFullYear"
+external setUTCFullYearMD: (t, ~year: int, ~month: int, ~day: int) => unit = "setUTCFullYear"
 @send external setUTCMonth: (t, int) => unit = "setUTCMonth"
 @send external setUTCDate: (t, int) => unit = "setUTCDate"
 @send external setUTCHours: (t, int) => unit = "setUTCHours"
