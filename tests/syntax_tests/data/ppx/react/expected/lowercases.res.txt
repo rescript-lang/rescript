@@ -1,15 +1,23 @@
-@@jsxConfig({version: 4, mode: "classic"})
+/Users/nojaf/Projects/rescript/_build/install/default/bin/res_parser: unknown option '-jsx-mode'.
 
-let _ = ReactDOM.createDOMElementVariadic("div", [])
-let _ = ReactDOM.createDOMElementVariadic("div", ~props={key: "k"}, [])
-let _ = ReactDOM.createDOMElementVariadic("div", ~props={x: x}, [])
-let _ = ReactDOM.createDOMElementVariadic(
-  "div",
-  [ReactDOM.createDOMElementVariadic("p", [{React.string(x)}])],
-)
-let _ = ReactDOM.createDOMElementVariadic("div", ~props=str, [])
-let _ = ReactDOM.createDOMElementVariadic("div", ~props={...str, x: "x"}, [])
+**This command line is for the repo developer's testing purpose only. DO NOT use it in production**!
 
-// syntax error
-// let _ = <div x="x" {...str} />
-// let _ = <div {...str} {...str} />
+Usage:
+  res_parser <options> <file>
+
+Examples:
+  res_parser myFile.res
+  res_parser -parse ml -print res myFile.ml
+  res_parser -parse res -print binary -interface myFile.resi
+
+Options are:
+  -recover Emit partial ast
+  -print Print either binary, ml, ast, sexp, comments or res. Default: res
+  -width Specify the line length for the printer (formatter)
+  -interface Parse as interface
+  -jsx-version Apply a specific built-in ppx before parsing, none or 3, 4. Default: none
+  -jsx-module Specify the jsx module. Default: react
+  -typechecker Parses the ast as it would be passed to the typechecker and not the printer
+  -test-ast-conversion Test the ast conversion
+  -help  Display this list of options
+  --help  Display this list of options

@@ -1,13 +1,4 @@
-@@jsxConfig({version: 4, mode: "classic"})
-
-module V4C = {
-  @react.component
-  let make = (~msg) => {
-    <div> {msg->React.string} </div>
-  }
-}
-
-@@jsxConfig({version: 4, mode: "automatic"})
+@@jsxConfig({version: 4})
 
 module V4A = {
   @react.component

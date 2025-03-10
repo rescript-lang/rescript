@@ -1,16 +1,4 @@
-@@jsxConfig({version: 4, mode: "classic"})
-
-module Foo = {
-  @res.jsxComponentProps @live
-  type props<'a, 'b> = {a: 'a, b: 'b}
-
-  @module("Foo")
-  external component: React.componentLike<props<int, string>, React.element> = "component"
-}
-
-let t = React.createElement(Foo.component, {a: 1, b: {"1"}})
-
-@@jsxConfig({version: 4, mode: "automatic"})
+@@jsxConfig({version: 4})
 
 module Foo = {
   @res.jsxComponentProps @live

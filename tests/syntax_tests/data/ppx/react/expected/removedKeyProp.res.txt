@@ -1,55 +1,23 @@
-@@jsxConfig({version: 4, mode: "classic"})
+/Users/nojaf/Projects/rescript/_build/install/default/bin/res_parser: unknown option '-jsx-mode'.
 
-module Foo = {
-  @res.jsxComponentProps
-  type props<'x, 'y> = {x: 'x, y: 'y}
+**This command line is for the repo developer's testing purpose only. DO NOT use it in production**!
 
-  let make = ({x, y, _}: props<_, _>) => React.string(x ++ y)
-  let make = {
-    let \"RemovedKeyProp$Foo" = (props: props<_>) => make(props)
+Usage:
+  res_parser <options> <file>
 
-    \"RemovedKeyProp$Foo"
-  }
-}
+Examples:
+  res_parser myFile.res
+  res_parser -parse ml -print res myFile.ml
+  res_parser -parse res -print binary -interface myFile.resi
 
-module HasChildren = {
-  @res.jsxComponentProps
-  type props<'children> = {children: 'children}
-
-  let make = ({children, _}: props<_>) => React.createElement(React.fragment, {children: children})
-  let make = {
-    let \"RemovedKeyProp$HasChildren" = (props: props<_>) => make(props)
-
-    \"RemovedKeyProp$HasChildren"
-  }
-}
-@res.jsxComponentProps
-type props = {}
-
-let make = (_: props) =>
-  React.createElementVariadic(
-    React.fragment,
-    {},
-    [
-      JsxPPXReactSupport.createElementWithKey(~key="k", Foo.make, {x: "x", y: "y"}),
-      React.createElement(Foo.make, {x: "x", y: "y"}),
-      JsxPPXReactSupport.createElementWithKey(
-        ~key="k",
-        HasChildren.make,
-        {
-          children: React.createElement(Foo.make, {x: "x", y: "y"}),
-        },
-      ),
-      React.createElement(
-        HasChildren.make,
-        {
-          children: React.createElement(Foo.make, {x: "x", y: "y"}),
-        },
-      ),
-    ],
-  )
-let make = {
-  let \"RemovedKeyProp" = props => make(props)
-
-  \"RemovedKeyProp"
-}
+Options are:
+  -recover Emit partial ast
+  -print Print either binary, ml, ast, sexp, comments or res. Default: res
+  -width Specify the line length for the printer (formatter)
+  -interface Parse as interface
+  -jsx-version Apply a specific built-in ppx before parsing, none or 3, 4. Default: none
+  -jsx-module Specify the jsx module. Default: react
+  -typechecker Parses the ast as it would be passed to the typechecker and not the printer
+  -test-ast-conversion Test the ast conversion
+  -help  Display this list of options
+  --help  Display this list of options
