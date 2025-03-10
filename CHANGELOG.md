@@ -16,6 +16,7 @@
 
 - Add `Dict.has` and double `Dict.forEachWithKey`/`Dict.mapValues` performance. https://github.com/rescript-lang/rescript/pull/7316
 - Add popover attributes to JsxDOM.domProps. https://github.com/rescript-lang/rescript/pull/7317
+- Add `Array.removeInPlace` helper based on `splice`. https://github.com/rescript-lang/rescript/pull/7321
 
 #### :house: Internal
 
