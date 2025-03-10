@@ -302,6 +302,9 @@ external splice: (array<'a>, ~start: int, ~remove: int, ~insert: array<'a>) => u
 external toSpliced: (array<'a>, ~start: int, ~remove: int, ~insert: array<'a>) => array<'a> =
   "toSpliced"
 
+@send
+external removeInPlace: (array<'a>, int, @as(1) _) => unit = "splice"
+
 @send external with: (array<'a>, int, 'a) => array<'a> = "with"
 
 /**
