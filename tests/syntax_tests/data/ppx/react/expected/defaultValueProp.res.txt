@@ -1,7 +1,9 @@
 module C0 = {
   @res.jsxComponentProps
   type props<'a, 'b> = {a?: 'a, b?: 'b}
-  let make = ({a: ?__a, b: ?__b, _}: props<_, _>) => {
+  let make = (props: props<_, _>) => {
+    let __a = props.a
+    let __b = props.b
     let a = switch __a {
     | Some(a) => a
     | None => 2
@@ -23,7 +25,9 @@ module C1 = {
   @res.jsxComponentProps
   type props<'a, 'b> = {a?: 'a, b: 'b}
 
-  let make = ({a: ?__a, b, _}: props<_, _>) => {
+  let make = (props: props<_, _>) => {
+    let __a = props.a
+    let b = props.b
     let a = switch __a {
     | Some(a) => a
     | None => 2
@@ -43,7 +47,8 @@ module C2 = {
   @res.jsxComponentProps
   type props<'a> = {a?: 'a}
 
-  let make = ({a: ?__a, _}: props<_>) => {
+  let make = (props: props<_>) => {
+    let __a = props.a
     let a = switch __a {
     | Some(a) => a
     | None => a
@@ -62,7 +67,8 @@ module C3 = {
   @res.jsxComponentProps
   type props<'disabled> = {disabled?: 'disabled}
 
-  let make = ({disabled: ?__everythingDisabled, _}: props<bool>) => {
+  let make = (props: props<bool>) => {
+    let __everythingDisabled: bool = props.disabled
     let everythingDisabled = switch __everythingDisabled {
     | Some(disabled) => disabled
     | None => false

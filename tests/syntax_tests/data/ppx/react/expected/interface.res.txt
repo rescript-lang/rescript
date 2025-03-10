@@ -1,7 +1,10 @@
 module A = {
   @res.jsxComponentProps
   type props<'x> = {x: 'x}
-  let make = ({x, _}: props<_>) => React.string(x)
+  let make = (props: props<_>) => {
+    let x = props.x
+    React.string(x)
+  }
   let make = {
     let \"Interface$A" = (props: props<_>) => make(props)
     \"Interface$A"

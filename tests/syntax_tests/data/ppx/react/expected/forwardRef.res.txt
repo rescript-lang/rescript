@@ -10,9 +10,11 @@ module V4C = {
     }
 
     let make = (
-      {?className, children, _}: props<_, _, ReactRef.currentDomRef>,
+      props: props<_, _, ReactRef.currentDomRef>,
       ref: Js.Nullable.t<ReactRef.currentDomRef>,
-    ) =>
+    ) => {
+      let className = props.className
+      let children = props.children
       ReactDOM.createDOMElementVariadic(
         "div",
         [
@@ -28,6 +30,7 @@ module V4C = {
           children,
         ],
       )
+    }
     let make = React.forwardRef({
       let \"ForwardRef$V4C$FancyInput" = (props: props<_>, ref) => make(props, ref)
 
@@ -67,9 +70,11 @@ module V4CUncurried = {
     }
 
     let make = (
-      {?className, children, _}: props<_, _, ReactRef.currentDomRef>,
+      props: props<_, _, ReactRef.currentDomRef>,
       ref: Js.Nullable.t<ReactRef.currentDomRef>,
-    ) =>
+    ) => {
+      let className = props.className
+      let children = props.children
       ReactDOM.createDOMElementVariadic(
         "div",
         [
@@ -85,6 +90,7 @@ module V4CUncurried = {
           children,
         ],
       )
+    }
     let make = React.forwardRef({
       let \"ForwardRef$V4CUncurried$FancyInput" = (props: props<_>, ref) => make(props, ref)
 
@@ -125,7 +131,9 @@ module V4A = {
       ref?: 'ref,
     }
 
-    let make = ({?className, children, _}: props<_, _, 'ref>, ref: Js.Nullable.t<'ref>) =>
+    let make = (props: props<_, _, 'ref>, ref: Js.Nullable.t<'ref>) => {
+      let className = props.className
+      let children = props.children
       ReactDOM.jsxs(
         "div",
         {
@@ -142,6 +150,7 @@ module V4A = {
           ]),
         },
       )
+    }
     let make = React.forwardRef({
       let \"ForwardRef$V4A$FancyInput" = (props: props<_>, ref) => make(props, ref)
 
@@ -179,7 +188,9 @@ module V4AUncurried = {
       ref?: 'ref,
     }
 
-    let make = ({?className, children, _}: props<_, _, 'ref>, ref: Js.Nullable.t<'ref>) =>
+    let make = (props: props<_, _, 'ref>, ref: Js.Nullable.t<'ref>) => {
+      let className = props.className
+      let children = props.children
       ReactDOM.jsxs(
         "div",
         {
@@ -196,6 +207,7 @@ module V4AUncurried = {
           ]),
         },
       )
+    }
     let make = React.forwardRef({
       let \"ForwardRef$V4AUncurried$FancyInput" = (props: props<_>, ref) => make(props, ref)
 
