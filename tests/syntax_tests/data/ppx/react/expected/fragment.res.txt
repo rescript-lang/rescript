@@ -1,40 +1,4 @@
-@@jsxConfig({version: 4, mode: "classic"})
-
-let _ = React.createElement(React.fragment, {})
-let _ = React.createElement(
-  React.fragment,
-  {children: ReactDOM.createDOMElementVariadic("div", [])},
-)
-let _ = React.createElementVariadic(
-  React.fragment,
-  {},
-  [ReactDOM.createDOMElementVariadic("div", []), ReactDOM.createDOMElementVariadic("div", [])],
-)
-let _ = React.createElement(React.fragment, {children: React.createElement(React.fragment, {})})
-let _ = React.createElement(Z.make, {})
-let _ = React.createElement(Z.make, {children: ReactDOM.createDOMElementVariadic("div", [])})
-let _ = React.createElement(
-  Z.make,
-  {a: "a", children: ReactDOM.createDOMElementVariadic("div", [])},
-)
-let _ = React.createElementVariadic(
-  Z.make,
-  {children: React.null},
-  [ReactDOM.createDOMElementVariadic("div", []), ReactDOM.createDOMElementVariadic("div", [])],
-)
-let _ = ReactDOM.createDOMElementVariadic("div", [])
-let _ = ReactDOM.createDOMElementVariadic("div", [ReactDOM.createDOMElementVariadic("div", [])])
-let _ = ReactDOM.createDOMElementVariadic(
-  "div",
-  ~props={id: "id"},
-  [ReactDOM.createDOMElementVariadic("div", [])],
-)
-let _ = ReactDOM.createDOMElementVariadic(
-  "div",
-  [ReactDOM.createDOMElementVariadic("div", []), ReactDOM.createDOMElementVariadic("div", [])],
-)
-
-@@jsxConfig({version: 4, mode: "automatic"})
+@@jsxConfig({version: 4})
 
 let _ = React.jsx(React.jsxFragment, {})
 let _ = React.jsx(React.jsxFragment, {children: ReactDOM.jsx("div", {})})

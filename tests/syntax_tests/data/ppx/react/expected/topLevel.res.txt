@@ -1,21 +1,4 @@
-@@jsxConfig({version: 4, mode: "classic"})
-
-module V4C = {
-  @res.jsxComponentProps
-  type props<'a, 'b> = {a: 'a, b: 'b}
-
-  let make = ({a, b, _}: props<_, _>) => {
-    Js.log("This function should be named 'TopLevel.react'")
-    ReactDOM.createDOMElementVariadic("div", [])
-  }
-  let make = {
-    let \"TopLevel$V4C" = (props: props<_>) => make(props)
-
-    \"TopLevel$V4C"
-  }
-}
-
-@@jsxConfig({version: 4, mode: "automatic"})
+@@jsxConfig({version: 4})
 
 module V4A = {
   @res.jsxComponentProps

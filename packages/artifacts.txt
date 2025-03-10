@@ -115,7 +115,6 @@ lib/es6/Jsx.js
 lib/es6/JsxDOM.js
 lib/es6/JsxDOMStyle.js
 lib/es6/JsxEvent.js
-lib/es6/JsxPPXReactSupport.js
 lib/es6/Lazy.js
 lib/es6/Obj.js
 lib/es6/Pervasives.js
@@ -287,7 +286,6 @@ lib/js/Jsx.js
 lib/js/JsxDOM.js
 lib/js/JsxDOMStyle.js
 lib/js/JsxEvent.js
-lib/js/JsxPPXReactSupport.js
 lib/js/Lazy.js
 lib/js/Obj.js
 lib/js/Pervasives.js
@@ -808,10 +806,6 @@ lib/ocaml/JsxEvent.cmi
 lib/ocaml/JsxEvent.cmj
 lib/ocaml/JsxEvent.cmt
 lib/ocaml/JsxEvent.res
-lib/ocaml/JsxPPXReactSupport.cmi
-lib/ocaml/JsxPPXReactSupport.cmj
-lib/ocaml/JsxPPXReactSupport.cmt
-lib/ocaml/JsxPPXReactSupport.res
 lib/ocaml/Lazy.cmi
 lib/ocaml/Lazy.cmj
 lib/ocaml/Lazy.cmt

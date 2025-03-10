@@ -21,6 +21,7 @@
 #### :boom: Breaking Change
 
 - Replace ~date with ~day in Date.make\*. https://github.com/rescript-lang/rescript/pull/7324
+- Remove `-bs-jsx-mode`. https://github.com/rescript-lang/rescript/pull/7327
 
 #### :house: Internal
 

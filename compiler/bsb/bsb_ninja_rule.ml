@@ -167,10 +167,6 @@ let make_custom_rules ~(gentype_config : Bsb_config_types.gentype_config)
     | Some React -> Ext_buffer.add_string buf " -bs-jsx-module react"
     | Some (Generic {moduleName}) ->
       Ext_buffer.add_string buf (" -bs-jsx-module " ^ moduleName));
-    (match jsx.mode with
-    | None -> ()
-    | Some Classic -> Ext_buffer.add_string buf " -bs-jsx-mode classic"
-    | Some Automatic -> Ext_buffer.add_string buf " -bs-jsx-mode automatic");
 
     Ext_buffer.add_char_string buf ' ' bsc_flags;
     Ext_buffer.add_string buf " -absname -bs-ast -o $out $i";

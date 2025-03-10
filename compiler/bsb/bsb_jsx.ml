@@ -1,23 +1,18 @@
 type version = Jsx_v4
 type module_ = React | Generic of {moduleName: string}
-type mode = Classic | Automatic
 type dependencies = string list
 
-type t = {version: version option; module_: module_ option; mode: mode option}
+type t = {version: version option; module_: module_ option}
 
 let encode_no_nl jsx =
   (match jsx.version with
   | None -> ""
   | Some Jsx_v4 -> "4")
-  ^ (match jsx.module_ with
-    | None -> ""
-    | Some React -> "React"
-    | Some (Generic {moduleName}) -> moduleName)
   ^
-  match jsx.mode with
+  match jsx.module_ with
   | None -> ""
-  | Some Classic -> "Classic"
-  | Some Automatic -> "Automatic"
+  | Some React -> "React"
+  | Some (Generic {moduleName}) -> moduleName
 
 let ( .?() ) = Map_string.find_opt
 let ( |? ) m (key, cb) = m |> Ext_json.test key cb
@@ -33,7 +28,6 @@ let get_list_string s = get_list_string_acc s []
 let from_map map =
   let version : version option ref = ref None in
   let module_ : module_ option ref = ref None in
-  let mode : mode option ref = ref None in
   map
   |? ( Bsb_build_schemas.jsx,
        `Obj
@@ -59,18 +53,5 @@ let from_map map =
              Bsb_exception.config_error x
                "Unexpected input (jsx module name) for jsx module"
            | None -> ()) )
-  |? ( Bsb_build_schemas.jsx,
-       `Obj
-         (fun m ->
-           match m.?(Bsb_build_schemas.jsx_mode) with
-           | Some (Str {loc; str}) -> (
-             match str with
-             | "classic" -> mode := Some Classic
-             | "automatic" -> mode := Some Automatic
-             | _ -> Bsb_exception.errorf ~loc "Unsupported jsx mode %s" str)
-           | Some x ->
-             Bsb_exception.config_error x
-               "Unexpected input (expect classic or automatic) for jsx mode"
-           | None -> ()) )
   |> ignore;
-  {version = !version; module_ = !module_; mode = !mode}
+  {version = !version; module_ = !module_}
