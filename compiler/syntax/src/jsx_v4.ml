@@ -90,8 +90,7 @@ let transform_children_if_list ~mapper the_list =
   in
   transformChildren_ the_list []
 
-let extract_children ?(remove_last_position_unit = false) ~loc
-    props_and_children =
+let extract_children ~loc props_and_children =
   let rec allButLast_ lst acc =
     match lst with
     | [] -> []
@@ -111,10 +110,8 @@ let extract_children ?(remove_last_position_unit = false) ~loc
   | [], props ->
     (* no children provided? Place a placeholder list *)
     ( Exp.construct {loc = Location.none; txt = Lident "[]"} None,
-      if remove_last_position_unit then all_but_last props else props )
-  | [(_, children_expr)], props ->
-    ( children_expr,
-      if remove_last_position_unit then all_but_last props else props )
+      all_but_last props )
+  | [(_, children_expr)], props -> (children_expr, all_but_last props)
   | _ ->
     Jsx_common.raise_error ~loc
       "JSX: somehow there's more than one `children` label"
@@ -390,8 +387,7 @@ let make_props_record_type_sig ~core_type_of_attr ~external_
 let transform_uppercase_call3 ~config module_path mapper jsx_expr_loc
     call_expr_loc attrs call_arguments =
   let children, args_with_labels =
-    extract_children ~remove_last_position_unit:true ~loc:jsx_expr_loc
-      call_arguments
+    extract_children ~loc:jsx_expr_loc call_arguments
   in
   let args_for_make = args_with_labels in
   let children_expr = transform_children_if_list_upper ~mapper children in
@@ -480,8 +476,7 @@ let transform_lowercase_call3 ~config mapper jsx_expr_loc call_expr_loc attrs
   in
 
   let children, non_children_props =
-    extract_children ~remove_last_position_unit:true ~loc:jsx_expr_loc
-      call_arguments
+    extract_children ~loc:jsx_expr_loc call_arguments
   in
   let args_for_make = non_children_props in
   let children_expr = transform_children_if_list_upper ~mapper children in
