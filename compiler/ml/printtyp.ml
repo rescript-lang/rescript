@@ -52,10 +52,11 @@ let ident ppf id = pp_print_string ppf (ident_name id)
 (* Print a path *)
 
 let ident_pervasives = Ident.create_persistent "Pervasives"
+let ident_stdlib = Ident.create_persistent "Stdlib"
 let printing_env = ref Env.empty
-let non_shadowed_pervasive = function
+let non_shadowed_pervasive_or_stdlib = function
   | Pdot (Pident id, s, _pos) as path -> (
-    Ident.same id ident_pervasives
+    (Ident.same id ident_pervasives || Ident.same id ident_stdlib)
     &&
     try Path.same path (Env.lookup_type (Lident s) !printing_env)
     with Not_found -> true)
@@ -63,13 +64,20 @@ let non_shadowed_pervasive = function
 
 let rec tree_of_path = function
   | Pident id -> Oide_ident (ident_name id)
-  | Pdot (_, s, _pos) as path when non_shadowed_pervasive path -> Oide_ident s
+  | Pdot (p, s, _pos) when String.starts_with (Path.name p) ~prefix:"Stdlib_" ->
+    let path_name = Path.name p in
+    let ident_without_stdlib_prefix =
+      String.sub path_name 7 (String.length path_name - 7)
+    in
+    Oide_dot (Oide_ident ident_without_stdlib_prefix, s)
+  | Pdot (_, s, _pos) as path when non_shadowed_pervasive_or_stdlib path ->
+    Oide_ident s
   | Pdot (p, s, _pos) -> Oide_dot (tree_of_path p, s)
   | Papply (p1, p2) -> Oide_apply (tree_of_path p1, tree_of_path p2)
 
 let rec path ppf = function
   | Pident id -> ident ppf id
-  | Pdot (_, s, _pos) as path when non_shadowed_pervasive path ->
+  | Pdot (_, s, _pos) as path when non_shadowed_pervasive_or_stdlib path ->
     pp_print_string ppf s
   | Pdot (p, s, _pos) ->
     path ppf p;
@@ -571,48 +579,8 @@ let reset_and_mark_loops_list tyl =
 
 (* Disabled in classic mode when printing an unification error *)
 
-let remove_stdlib t =
-  match t.Types.desc with
-  | Tconstr
-      ( Pdot
-          ( Pdot (Pident {name = "Stdlib"; flags}, module_name, s1),
-            identifier,
-            s2 ),
-        type_params,
-        m ) ->
-    {
-      t with
-      desc =
-        Tconstr
-          ( Pdot (Pident {name = module_name; stamp = s1; flags}, identifier, s2),
-            type_params,
-            m );
-    }
-  | Tconstr
-      ( Pdot (Pident ({name = ident_name} as ident), identifier, s1),
-        type_params,
-        m )
-    when String.starts_with ~prefix:"Stdlib_" ident_name ->
-    {
-      t with
-      desc =
-        Tconstr
-          ( Pdot
-              ( Pident
-                  {
-                    ident with
-                    name = String.sub ident_name 7 (String.length ident_name - 7);
-                  },
-                identifier,
-                s1 ),
-            type_params,
-            m );
-    }
-  | _ -> t
-
 let rec tree_of_typexp sch ty =
   let ty = repr ty in
-  let ty = remove_stdlib ty in
   let px = proxy ty in
   if List.mem_assq px !names && not (List.memq px !delayed) then
     let mark = is_non_gen sch ty in
@@ -1446,8 +1414,6 @@ let report_unification_error ppf env ?(unif = true) tr txt1 txt2 =
   wrap_printing_env env (fun () -> unification_error env unif tr txt1 ppf txt2)
 
 let super_type_expansion ~tag t ppf t' =
-  let t = remove_stdlib t in
-  let t' = remove_stdlib t' in
   let tag = Format.String_tag tag in
   if same_path t t' then (
     Format.pp_open_stag ppf tag;
