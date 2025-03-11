@@ -216,6 +216,7 @@ ContextPath Value[ffff]->u
 ContextPath Value[ffff]
 Path ffff
 Path Stdlib.Array.u
+Path ArrayUtils.u
 [{
     "label": "->Array.unshiftMany",
     "kind": 12,
@@ -329,6 +330,7 @@ ContextPath Value[Array, filter](Nolabel, Nolabel)
 ContextPath Value[Array, filter]
 Path Array.filter
 Path Stdlib.Array.filt
+Path ArrayUtils.filt
 [{
     "label": "->Array.filterMap",
     "kind": 12,

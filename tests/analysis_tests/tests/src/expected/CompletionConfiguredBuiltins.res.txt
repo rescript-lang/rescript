@@ -1,0 +1,37 @@
+Complete src/CompletionConfiguredBuiltins.res 2:8
+posCursor:[2:8] posNoWhite:[2:7] Found expr:[2:3->2:8]
+Completable: Cpath Value[x]->em
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[x]->em
+ContextPath Value[x]
+Path x
+Path Stdlib.Array.em
+Path ArrayUtils.em
+[{
+    "label": "ArrayUtils.empty",
+    "kind": 12,
+    "tags": [],
+    "detail": "array<'a> => bool",
+    "documentation": null
+  }]
+
+Complete src/CompletionConfiguredBuiltins.res 7:16
+posCursor:[7:16] posNoWhite:[7:15] Found expr:[7:3->7:16]
+Completable: Cpath Value[fastify]->doSt
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[fastify]->doSt
+ContextPath Value[fastify]
+Path fastify
+CPPipe pathFromEnv:Fastify found:false
+Path Fastify.doSt
+Path FastifyExt.doSt
+[{
+    "label": "FastifyExt.doStuff",
+    "kind": 12,
+    "tags": [],
+    "detail": "Fastify.t => unit",
+    "documentation": null
+  }]
+

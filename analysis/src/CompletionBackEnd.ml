@@ -1135,6 +1135,32 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
                      | _ -> false
                    else true)
         in
+
+        (* TODO(config-complete-builtins) This config and config resolution should come from `package` instead. *)
+        let pretendPackageBuiltinsConfig =
+          Misc.StringMap.of_list
+            [("array", ["ArrayUtils"]); ("Fastify.t", ["FastifyExt"])]
+        in
+        let globallyConfiguredCompletionsForType =
+          match
+            pretendPackageBuiltinsConfig |> Misc.StringMap.find_opt mainTypeId
+          with
+          | None -> []
+          | Some completionPaths ->
+            completionPaths |> List.map (fun p -> String.split_on_char '.' p)
+        in
+
+        let globallyConfiguredCompletions =
+          globallyConfiguredCompletionsForType
+          |> List.map (fun completionPath ->
+                 completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom
+                   ~opens ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full
+                   completionPath)
+          |> List.flatten
+          |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
+               ~targetTypeId:mainTypeId
+        in
+
         (* Extra completions can be drawn from the @editor.completeFrom attribute. Here we
            find and add those completions as well. *)
         let extraCompletions =
@@ -1154,7 +1180,8 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
               ~full ~rawOpens typ
           else []
         in
-        jsxCompletions @ pipeCompletions @ extraCompletions))
+        jsxCompletions @ pipeCompletions @ extraCompletions
+        @ globallyConfiguredCompletions))
   | CTuple ctxPaths ->
     if Debug.verbose () then print_endline "[ctx_path]--> CTuple";
     (* Turn a list of context paths into a list of type expressions. *)
