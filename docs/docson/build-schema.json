@@ -349,6 +349,31 @@
           "description": "(Not implemented yet)"
         }
       ]
+    },
+    "editor": {
+      "type": "object",
+      "properties": {
+        "autocompleteConfig": {
+          "type": "object",
+          "properties": {
+            "array": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "patternProperties": {
+            "^[a-zA-Z0-9_.]+$": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
     }
   },
   "title": "ReScript build configuration",
@@ -472,6 +497,10 @@
     "reanalyze": {
       "$ref": "#/definitions/reanalyze",
       "description": "Configure reanalyze, a static code analysis tool for ReScript."
+    },
+    "editor": {
+      "$ref": "#/definitions/editor",
+      "description": "Configure editor functionality, like modules that should be included in autocompletions for given (built-in) types."
     }
   },
   "additionalProperties": false,
