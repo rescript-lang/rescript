@@ -31,6 +31,7 @@
 #### :nail_care: Polish
 
 - Deprecate JSON.Classify.classify. https://github.com/rescript-lang/rescript/pull/7315
+- Hide stdlib modules in output. https://github.com/rescript-lang/rescript/pull/7305
 
 #### :bug: Bug fix
 
