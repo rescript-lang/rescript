@@ -91,5 +91,9 @@
   Exception Analysis
   ExnA.res:1:5-7
   bar might raise Not_found (ExnA.res:1:16) and is not annotated with @raises(Not_found)
+
+  Exception Analysis
+  ExternalTest.res:7:5-24
+  bigIntFromStringExn2 might raise Exn.Error (ExternalTest.res:7:35) and is not annotated with @raises(Exn.Error)
   
-  Analysis reported 23 issues (Exception Analysis:23)
+  Analysis reported 24 issues (Exception Analysis:24)
