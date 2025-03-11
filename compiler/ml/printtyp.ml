@@ -64,14 +64,14 @@ let non_shadowed_pervasive_or_stdlib = function
 
 let rec tree_of_path = function
   | Pident id -> Oide_ident (ident_name id)
+  | Pdot (_, s, _pos) as path when non_shadowed_pervasive_or_stdlib path ->
+    Oide_ident s
   | Pdot (p, s, _pos) when String.starts_with (Path.name p) ~prefix:"Stdlib_" ->
     let path_name = Path.name p in
     let ident_without_stdlib_prefix =
       String.sub path_name 7 (String.length path_name - 7)
     in
     Oide_dot (Oide_ident ident_without_stdlib_prefix, s)
-  | Pdot (_, s, _pos) as path when non_shadowed_pervasive_or_stdlib path ->
-    Oide_ident s
   | Pdot (p, s, _pos) -> Oide_dot (tree_of_path p, s)
   | Papply (p1, p2) -> Oide_apply (tree_of_path p1, tree_of_path p2)
 
