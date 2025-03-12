@@ -189,6 +189,20 @@ function a18(prim0, prim1) {
   return Math.pow(prim0, prim1);
 }
 
+if ((
+    1 > 2 ? 1 : 2
+  ) !== 2) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "test_pervasive.res",
+      28,
+      0
+    ],
+    Error: new Error()
+  };
+}
+
 let f = Pervasives.$at;
 
 export {
@@ -214,4 +228,4 @@ export {
   a17,
   a18,
 }
-/* No side effect */
+/*  Not a pure module */

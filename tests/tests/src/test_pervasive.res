@@ -24,6 +24,9 @@ let a15 = log
 let a16 = log10
 let a17 = log1p
 let a18 = \"**"
+
+assert(max(1., 2.) === 2.)
+
 /* local variables: */
 /* compile-command: "ocamlc -dlambda -c test_pervasive.ml" */
 /* end: */

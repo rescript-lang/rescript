@@ -164,7 +164,7 @@ let comparisons_table =
           objcomp = Pobjmax;
           intcomp = Pintmax;
           boolcomp = Pboolmax;
-          floatcomp = Pboolmax;
+          floatcomp = Pfloatmax;
           stringcomp = Pstringmax;
           bigintcomp = Pbigintmax;
           simplify_constant_constructor = false;
@@ -215,7 +215,7 @@ let comparisons_table =
           objcomp = Pobjmax;
           intcomp = Pintmax;
           boolcomp = Pboolmax;
-          floatcomp = Pboolmax;
+          floatcomp = Pfloatmax;
           stringcomp = Pstringmax;
           bigintcomp = Pbigintmax;
           simplify_constant_constructor = false;
@@ -387,7 +387,7 @@ let primitives_table =
       (* Compiler internals, never expose to ReScript files *)
       ("#raw_expr", Pjs_raw_expr);
       ("#raw_stmt", Pjs_raw_stmt);
-      (* FIXME: Core compatibility *)
+      (* FIXME: Core compatibility. Prefer starting with % *)
       ("#null", Pnull);
       ("#undefined", Pundefined);
       ("#typeof", Ptypeof);
