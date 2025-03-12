@@ -212,22 +212,22 @@ let comparisons_table =
       (* FIXME: Core compatibility *)
       ( "%bs_min",
         {
-          objcomp = Pobjmax;
-          intcomp = Pintmax;
-          boolcomp = Pboolmax;
-          floatcomp = Pfloatmax;
-          stringcomp = Pstringmax;
-          bigintcomp = Pbigintmax;
-          simplify_constant_constructor = false;
-        } );
-      ( "%bs_max",
-        {
           objcomp = Pobjmin;
           intcomp = Pintmin;
           boolcomp = Pboolmin;
           floatcomp = Pfloatmin;
           stringcomp = Pstringmin;
           bigintcomp = Pbigintmin;
+          simplify_constant_constructor = false;
+        } );
+      ( "%bs_max",
+        {
+          objcomp = Pobjmax;
+          intcomp = Pintmax;
+          boolcomp = Pboolmax;
+          floatcomp = Pfloatmax;
+          stringcomp = Pstringmax;
+          bigintcomp = Pbigintmax;
           simplify_constant_constructor = false;
         } );
     |]
