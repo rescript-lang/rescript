@@ -8,7 +8,7 @@
   7 ┆   score: int
   8 ┆ }
 
-  An inline record type declaration is only allowed in a variant constructor's declaration
+  An inline record type declaration is only allowed in a variant constructor's declaration or nested inside of a record type declaration
 
 
   Syntax error!
@@ -20,7 +20,7 @@
      │ nder(props)
   20 │ 
 
-  An inline record type declaration is only allowed in a variant constructor's declaration
+  An inline record type declaration is only allowed in a variant constructor's declaration or nested inside of a record type declaration
 
 type nonrec entity =
   | Director 
@@ -29,11 +29,11 @@ type nonrec entity =
   reportCard: < passing: bool  ;score: int   >  } 
 type user.address = {
   street: string ;
-  country: string }[@@inlineRecordDefinition ]
+  country: string }[@@res.inlineRecordDefinition ]
 and user =
   {
   name: string ;
-  address: ((user.address)[@inlineRecordReference ]) }
+  address: ((user.address)[@res.inlineRecordReference ]) }
 let make
   [arity:1](props :
              < handleClick: Click.t -> unit (a:1)  ;value: string   > )
