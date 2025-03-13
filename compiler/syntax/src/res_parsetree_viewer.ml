@@ -72,6 +72,20 @@ let has_await_attribute attrs =
       | _ -> false)
     attrs
 
+let has_inline_record_definition_attribute attrs =
+  List.exists
+    (function
+      | {Location.txt = "res.inlineRecordDefinition"}, _ -> true
+      | _ -> false)
+    attrs
+
+let has_inline_record_reference_attribute attrs =
+  List.exists
+    (function
+      | {Location.txt = "res.inlineRecordReference"}, _ -> true
+      | _ -> false)
+    attrs
+
 let has_res_pat_variant_spread_attribute attrs =
   List.exists
     (function
