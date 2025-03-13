@@ -32,6 +32,7 @@
 
 - Deprecate JSON.Classify.classify. https://github.com/rescript-lang/rescript/pull/7315
 - Hide stdlib modules in output. https://github.com/rescript-lang/rescript/pull/7305
+- Deprecate unsafe host-specific bindings from stdlib. https://github.com/rescript-lang/rescript/pull/7334
 
 #### :bug: Bug fix
 
