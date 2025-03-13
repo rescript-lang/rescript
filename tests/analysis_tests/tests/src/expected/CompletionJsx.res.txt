@@ -724,30 +724,6 @@ Path Stdlib.String.s
       "newText": ""
       }]
   }, {
-    "label": "->String.startsWith",
-    "kind": 12,
-    "tags": [],
-    "detail": "(string, string) => bool",
-    "documentation": {"kind": "markdown", "value": "\n`startsWith(str, substr)` returns `true` if the `str` starts with `substr`,\n`false` otherwise.\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith) on MDN.\n\n## Examples\n\n```rescript\nString.startsWith(\"BuckleScript\", \"Buckle\") == true\nString.startsWith(\"BuckleScript\", \"\") == true\nString.startsWith(\"JavaScript\", \"Buckle\") == false\n```\n"},
-    "sortText": "startsWith",
-    "insertText": "->String.startsWith",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->String.splitAtMost",
-    "kind": 12,
-    "tags": [],
-    "detail": "(string, string, ~limit: int) => array<string>",
-    "documentation": {"kind": "markdown", "value": "\n`splitAtMost(str, delimiter, ~limit)` splits the given `str` at every\noccurrence of `delimiter` and returns an array of the first `limit` resulting\nsubstrings. If `limit` is negative or greater than the number of substrings,\nthe array will contain all the substrings.\n\n## Examples\n\n```rescript\nString.splitAtMost(\"ant/bee/cat/dog/elk\", \"/\", ~limit=3) == [\"ant\", \"bee\", \"cat\"]\nString.splitAtMost(\"ant/bee/cat/dog/elk\", \"/\", ~limit=0) == []\nString.splitAtMost(\"ant/bee/cat/dog/elk\", \"/\", ~limit=9) == [\"ant\", \"bee\", \"cat\", \"dog\", \"elk\"]\n```\n"},
-    "sortText": "splitAtMost",
-    "insertText": "->String.splitAtMost",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
-      "newText": ""
-      }]
-  }, {
     "label": "->String.searchOpt",
     "kind": 12,
     "tags": [],
@@ -779,6 +755,42 @@ Path Stdlib.String.s
     "documentation": {"kind": "markdown", "value": "\n`slice(str, ~start, ~end)` returns the substring of `str` starting at\ncharacter `start` up to but not including `end`.\n- If either `start` or `end` is negative, then it is evaluated as\n`length(str - start)` or `length(str - end)`.\n- If `end` is greater than the length of `str`, then it is treated as\n`length(str)`.\n- If `start` is greater than `end`, slice returns the empty string.\nSee [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.\n\n## Examples\n\n```rescript\nString.slice(\"abcdefg\", ~start=2, ~end=5) == \"cde\"\nString.slice(\"abcdefg\", ~start=2, ~end=9) == \"cdefg\"\nString.slice(\"abcdefg\", ~start=-4, ~end=-2) == \"de\"\nString.slice(\"abcdefg\", ~start=5, ~end=1) == \"\"\n```\n"},
     "sortText": "slice",
     "insertText": "->String.slice",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->String.substringToEnd",
+    "kind": 12,
+    "tags": [],
+    "detail": "(string, ~start: int) => string",
+    "documentation": {"kind": "markdown", "value": "\n`substringToEnd(str, ~start)` returns the substring of `str` from position\n`start` to the end.\n- If `start` is less than or equal to zero, the entire string is returned.\n- If `start` is greater than or equal to the length of `str`, the empty string\nis returned.\nSee [`String.substring`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/substring) on MDN.\n\n## Examples\n\n```rescript\nString.substringToEnd(\"playground\", ~start=4) == \"ground\"\nString.substringToEnd(\"playground\", ~start=-3) == \"playground\"\nString.substringToEnd(\"playground\", ~start=12) == \"\"\n```\n"},
+    "sortText": "substringToEnd",
+    "insertText": "->String.substringToEnd",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->String.startsWith",
+    "kind": 12,
+    "tags": [],
+    "detail": "(string, string) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`startsWith(str, substr)` returns `true` if the `str` starts with `substr`,\n`false` otherwise.\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith) on MDN.\n\n## Examples\n\n```rescript\nString.startsWith(\"BuckleScript\", \"Buckle\") == true\nString.startsWith(\"BuckleScript\", \"\") == true\nString.startsWith(\"JavaScript\", \"Buckle\") == false\n```\n"},
+    "sortText": "startsWith",
+    "insertText": "->String.startsWith",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->String.splitAtMost",
+    "kind": 12,
+    "tags": [],
+    "detail": "(string, string, ~limit: int) => array<string>",
+    "documentation": {"kind": "markdown", "value": "\n`splitAtMost(str, delimiter, ~limit)` splits the given `str` at every\noccurrence of `delimiter` and returns an array of the first `limit` resulting\nsubstrings. If `limit` is negative or greater than the number of substrings,\nthe array will contain all the substrings.\n\n## Examples\n\n```rescript\nString.splitAtMost(\"ant/bee/cat/dog/elk\", \"/\", ~limit=3) == [\"ant\", \"bee\", \"cat\"]\nString.splitAtMost(\"ant/bee/cat/dog/elk\", \"/\", ~limit=0) == []\nString.splitAtMost(\"ant/bee/cat/dog/elk\", \"/\", ~limit=9) == [\"ant\", \"bee\", \"cat\", \"dog\", \"elk\"]\n```\n"},
+    "sortText": "splitAtMost",
+    "insertText": "->String.splitAtMost",
     "additionalTextEdits": [{
       "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
       "newText": ""
@@ -863,18 +875,6 @@ Path Stdlib.String.s
     "documentation": {"kind": "markdown", "value": "\n`search(str, regexp)` returns the starting position of the first match of\n`regexp` in the given `str`, or -1 if there is no match.\nSee [`String.search`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/search) on MDN.\n\n## Examples\n\n```rescript\nString.search(\"testing 1 2 3\", %re(\"/\\d+/\")) == 8\nString.search(\"no numbers\", %re(\"/\\d+/\")) == -1\n```\n"},
     "sortText": "search",
     "insertText": "->String.search",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->String.substringToEnd",
-    "kind": 12,
-    "tags": [],
-    "detail": "(string, ~start: int) => string",
-    "documentation": {"kind": "markdown", "value": "\n`substringToEnd(str, ~start)` returns the substring of `str` from position\n`start` to the end.\n- If `start` is less than or equal to zero, the entire string is returned.\n- If `start` is greater than or equal to the length of `str`, the empty string\nis returned.\nSee [`String.substring`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/substring) on MDN.\n\n## Examples\n\n```rescript\nString.substringToEnd(\"playground\", ~start=4) == \"ground\"\nString.substringToEnd(\"playground\", ~start=-3) == \"playground\"\nString.substringToEnd(\"playground\", ~start=12) == \"\"\n```\n"},
-    "sortText": "substringToEnd",
-    "insertText": "->String.substringToEnd",
     "additionalTextEdits": [{
       "range": {"start": {"line": 93, "character": 17}, "end": {"line": 93, "character": 18}},
       "newText": ""
