@@ -1,29 +1,98 @@
+/**
+Type representing a BigInt.
+*/
 type t = bigint
 
+/**
+Interprets the low bits (set by `~width`) of a BigInt as a 2's-complement signed integer. All higher bits are discarded.
+
+
+ */
 @val
 external asIntN: (~width: int, bigint) => bigint = "BigInt.asIntN"
+
 @val external asUintN: (~width: int, bigint) => bigint = "BigInt.asUintN"
 
+/**
+ Creates a BigInt from a string.
+
+ ## Examples
+
+ ```rescript
+ /* returns 123n */
+ BigInt.fromString("123")
+ */
 @val
 external fromString: string => bigint = "BigInt"
 
-@val @raises(Exn.Error)
+/**
+Parses the given `string` into a `bigint` using JavaScript semantics. Return the
+number as a `bigint` if successfully parsed. Uncaught syntax exception otherwise.
+
+## Examples
+
+```rescript
+/* returns 123n */
+BigInt.fromStringExn("123")
+
+/* returns 0n */
+BigInt.fromStringExn("")
+
+/* returns 17n */
+BigInt.fromStringExn("0x11")
+
+/* returns 3n */
+BigInt.fromStringExn("0b11")
+
+/* returns 9n */
+BigInt.fromStringExn("0o11")
+
+/* catch exception */
+try {
+  BigInt.fromStringExn("a")
+} catch {
+| Exn.Error(_error) => 0n
+}
+```
+*/
+@val
+@raises(Exn.Error)
 external fromStringExn: string => bigint = "BigInt"
 @val external fromInt: int => bigint = "BigInt"
 @val external fromFloat: float => bigint = "BigInt"
 
+/**
+Formats a `bigint` as a string. Return a `string` representing the given value.
+See [`toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.
+
+## Examples
+
+```rescript
+/* prints "123" */
+BigInt.toString(123n)->Console.log
+```
+*/
 @send
 external toString: (bigint, ~radix: int=?) => string = "toString"
-
 @deprecated("Use `toString` with `~radix` instead") @send
 external toStringWithRadix: (bigint, ~radix: int) => string = "toString"
 
+/**
+Returns a string with a language-sensitive representation of this BigInt value.
+
+## Examples
+
+```rescript
+/* prints "123" */
+BigInt.toString(123n)->Console.log
+```
+*/
 @send
 external toLocaleString: bigint => string = "toLocaleString"
 
 @val external toFloat: bigint => float = "Number"
 
-let toInt = t => t->toFloat->Stdlib_Int.fromFloat
+let toInt: bigint => int
 
 external \"+": (bigint, bigint) => bigint = "%addbigint"
 external \"-": (bigint, bigint) => bigint = "%subbigint"
@@ -47,4 +116,4 @@ external lxor: (bigint, bigint) => bigint = "%xorbigint"
 external lsl: (bigint, bigint) => bigint = "%lslbigint"
 external asr: (bigint, bigint) => bigint = "%asrbigint"
 
-let lnot = x => lxor(x, -1n)
+let lnot: bigint => bigint
