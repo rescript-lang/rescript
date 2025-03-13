@@ -26,7 +26,6 @@
 
 type jsx_version = Jsx_v4
 type jsx_module = React | Generic of {module_name: string}
-type jsx_mode = Classic | Automatic
 
 let no_version_header = ref false
 
@@ -51,7 +50,6 @@ let force_cmi = ref false
 let force_cmj = ref false
 let jsx_version = ref None
 let jsx_module = ref React
-let jsx_mode = ref Automatic
 let js_stdout = ref true
 let all_module_aliases = ref false
 let no_stdlib = ref false
@@ -63,10 +61,6 @@ let string_of_jsx_module = function
   | React -> "react"
   | Generic {module_name} -> module_name
 
-let string_of_jsx_mode = function
-  | Classic -> "classic"
-  | Automatic -> "automatic"
-
 let jsx_version_of_int = function
   | 4 -> Some Jsx_v4
   | _ -> None
@@ -74,11 +68,6 @@ let jsx_version_of_int = function
 let jsx_module_of_string = function
   | "react" -> React
   | module_name -> Generic {module_name}
-
-let jsx_mode_of_string = function
-  | "classic" -> Classic
-  | "automatic" -> Automatic
-  | _ -> Classic
 
 (* option to config `@rescript/std`*)
 let customize_runtime : string option ref = ref None

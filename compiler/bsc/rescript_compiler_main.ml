@@ -254,16 +254,11 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
             | _ -> true
           in
           Js_config.jsx_module := Js_config.jsx_module_of_string i;
-          if is_generic then (
-            Js_config.jsx_mode := Automatic;
-            Js_config.jsx_version := Some Jsx_v4)),
+          if is_generic then Js_config.jsx_version := Some Jsx_v4),
       "*internal* Set jsx module" );
     ( "-bs-jsx-mode",
-      string_call (fun i ->
-          if i <> "classic" && i <> "automatic" then
-            Bsc_args.bad_arg (" Not supported jsx-mode : " ^ i);
-          Js_config.jsx_mode := Js_config.jsx_mode_of_string i),
-      "*internal* Set jsx mode" );
+      string_call ignore,
+      "*internal* Set jsx mode, this is no longer used and is a no-op." );
     ( "-bs-package-output",
       string_call Js_packages_state.update_npm_package_path,
       "*internal* Set npm-output-path: [opt_module]:path, for example: \

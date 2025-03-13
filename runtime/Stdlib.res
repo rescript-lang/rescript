@@ -53,8 +53,8 @@ type null<+'a> = Primitive_js_extern.null<'a>
 type undefined<+'a> = Primitive_js_extern.undefined<'a>
 type nullable<+'a> = Primitive_js_extern.nullable<'a>
 
-@val external window: Dom.window = "window"
-@val external document: Dom.document = "document"
+@deprecated("Use rescript-webapi instead") @val external window: Dom.window = "window"
+@deprecated("Use rescript-webapi instead") @val external document: Dom.document = "document"
 @val external globalThis: {..} = "globalThis"
 
 /**

@@ -488,8 +488,6 @@ module Compile = struct
       let types_signature = ref [] in
       Js_config.jsx_version := Some Js_config.Jsx_v4;
       (* default *)
-      Js_config.jsx_mode := Js_config.Automatic;
-      (* default *)
       let ast = impl str in
       let ast = Ppx_entry.rewrite_implementation ast in
       let typed_tree =

@@ -1,37 +1,4 @@
-@@jsxConfig({version: 4, mode: "classic"})
-// Error: spreadProps should be first in order than other props
-// let c0 = <A x="x" {...p} />
-
-// Error: multiple spreadProps not allowed
-// let c0 = <A x="x" {...p0} {...p1} />
-
-// only spread props
-let c1 = React.createElement(A.make, p)
-
-// reversed order
-let c2 = React.createElement(A.make, {...p, x: "x"})
-
-let c3 = ReactDOM.createDOMElementVariadic("div", ~props=p, [])
-
-let c4 = ReactDOM.createDOMElementVariadic("div", ~props={...p, x: "x", key: "k"}, [])
-
-let c4 = ReactDOM.createDOMElementVariadic(
-  "div",
-  ~props={...p, key: "k"},
-  [ReactDOM.createDOMElementVariadic("br", []), ReactDOM.createDOMElementVariadic("br", [])],
-)
-
-let c5 = ReactDOM.createDOMElementVariadic(
-  "div",
-  ~props={...p, key: "k"},
-  [ReactDOM.createDOMElementVariadic("br", []), ReactDOM.createDOMElementVariadic("br", [])],
-)
-
-// both need to be parsed
-let c6 = React.createElement(A.make, params->Obj.magic)
-let c7 = React.createElement(A.make, params->Obj.magic)
-
-@@jsxConfig({version: 4, mode: "automatic"})
+@@jsxConfig({version: 4})
 // Error: spreadProps should be first in order than other props
 // let c0 = <A x="x" {...p} />
 

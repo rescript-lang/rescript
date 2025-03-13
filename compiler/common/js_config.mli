@@ -24,7 +24,6 @@
 
 type jsx_version = Jsx_v4
 type jsx_module = React | Generic of {module_name: string}
-type jsx_mode = Classic | Automatic
 
 (* val get_packages_info :
    unit -> Js_packages_info.t *)
@@ -81,8 +80,6 @@ val jsx_version : jsx_version option ref
 
 val jsx_module : jsx_module ref
 
-val jsx_mode : jsx_mode ref
-
 val js_stdout : bool ref
 
 val all_module_aliases : bool ref
@@ -95,13 +92,9 @@ val int_of_jsx_version : jsx_version -> int
 
 val string_of_jsx_module : jsx_module -> string
 
-val string_of_jsx_mode : jsx_mode -> string
-
 val jsx_version_of_int : int -> jsx_version option
 
 val jsx_module_of_string : string -> jsx_module
-
-val jsx_mode_of_string : string -> jsx_mode
 
 val customize_runtime : string option ref
 

@@ -1,29 +1,4 @@
-@@jsxConfig({version: 4, mode: "classic"})
-
-module V4C = {
-  @res.jsxComponentProps @live
-  type props<'x, 'ref> = {
-    x: 'x,
-    ref?: 'ref,
-  }
-
-  @module("componentForwardRef")
-  external make: React.componentLike<props<string, ReactDOM.Ref.currentDomRef>, React.element> =
-    "component"
-}
-
-module type V4CType = {
-  @res.jsxComponentProps @live
-  type props<'x, 'y> = {
-    x: 'x,
-    y: 'y,
-  }
-
-  @module("someModule")
-  external make: React.componentLike<props<string, string>, React.element> = "component"
-}
-
-@@jsxConfig({version: 4, mode: "automatic"})
+@@jsxConfig({version: 4})
 
 module V4C = {
   @res.jsxComponentProps @live

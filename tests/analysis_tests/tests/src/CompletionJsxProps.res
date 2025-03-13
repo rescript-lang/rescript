@@ -35,7 +35,7 @@ let tsomeVar = #two
 // let _ = <CompletionSupport.TestComponent on={t}
 //                                               ^com
 
-@@jsxConfig({version: 4, mode: "automatic"})
+@@jsxConfig({version: 4})
 
 module CompletableComponentLazy = {
   let loadComponent = () => import(CompletableComponent.make)

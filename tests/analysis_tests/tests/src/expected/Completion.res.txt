@@ -116,13 +116,13 @@ Path Array.
     "label": "getSymbol",
     "kind": 12,
     "tags": [],
-    "detail": "(array<'a>, Stdlib_Symbol.t) => option<'b>",
+    "detail": "(array<'a>, Symbol.t) => option<'b>",
     "documentation": null
   }, {
     "label": "getSymbolUnsafe",
     "kind": 12,
     "tags": [],
-    "detail": "(array<'a>, Stdlib_Symbol.t) => 'b",
+    "detail": "(array<'a>, Symbol.t) => 'b",
     "documentation": null
   }, {
     "label": "findIndexOpt",
@@ -218,7 +218,7 @@ Path Array.
     "label": "sort",
     "kind": 12,
     "tags": [],
-    "detail": "(array<'a>, ('a, 'a) => Stdlib_Ordering.t) => unit",
+    "detail": "(array<'a>, ('a, 'a) => Ordering.t) => unit",
     "documentation": {"kind": "markdown", "value": "\n`sort(array, comparator)` sorts `array` in-place using the `comparator` function.\n\nBeware this will *mutate* the array.\n\nSee [`Array.sort`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort) on MDN.\n\n## Examples\n\n```rescript\nlet array = [3, 2, 1]\narray->Array.sort((a, b) => float(a - b))\narray->assertEqual([1, 2, 3])\n```\n"}
   }, {
     "label": "length",
@@ -326,7 +326,7 @@ Path Array.
     "label": "compare",
     "kind": 12,
     "tags": [],
-    "detail": "(\n  array<'a>,\n  array<'a>,\n  ('a, 'a) => Stdlib_Ordering.t,\n) => Stdlib_Ordering.t",
+    "detail": "(array<'a>, array<'a>, ('a, 'a) => Ordering.t) => Ordering.t",
     "documentation": null
   }, {
     "label": "join",
@@ -404,7 +404,7 @@ Path Array.
     "label": "setSymbol",
     "kind": 12,
     "tags": [],
-    "detail": "(array<'a>, Stdlib_Symbol.t, 'b) => unit",
+    "detail": "(array<'a>, Symbol.t, 'b) => unit",
     "documentation": null
   }, {
     "label": "equal",
@@ -458,7 +458,7 @@ Path Array.
     "label": "toSorted",
     "kind": 12,
     "tags": [],
-    "detail": "(array<'a>, ('a, 'a) => Stdlib_Ordering.t) => array<'a>",
+    "detail": "(array<'a>, ('a, 'a) => Ordering.t) => array<'a>",
     "documentation": {"kind": "markdown", "value": "\n`toSorted(array, comparator)` returns a new, sorted array from `array`, using the `comparator` function.\n\nSee [`Array.toSorted`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toSorted) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [3, 2, 1]\n\nsomeArray\n->Array.toSorted(Int.compare)\n->assertEqual([1, 2, 3])\n\nsomeArray->assertEqual([3, 2, 1]) // Original unchanged\n```\n"}
   }, {
     "label": "reduceWithIndex",
@@ -518,7 +518,7 @@ Path Array.
     "label": "fromIterator",
     "kind": 12,
     "tags": [],
-    "detail": "Stdlib_Iterator.t<'a> => array<'a>",
+    "detail": "Iterator.t<'a> => array<'a>",
     "documentation": {"kind": "markdown", "value": "\n`fromIterator(iterator)`\n\nCreates an array from the provided `iterator`\n\n## Examples\n\n```rescript\nMap.fromArray([(\"foo\", 1), (\"bar\", 2)])\n->Map.values\n->Array.fromIterator\n->assertEqual([1, 2])\n```\n"}
   }, {
     "label": "forEach",

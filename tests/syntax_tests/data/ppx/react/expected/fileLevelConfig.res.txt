@@ -1,20 +1,4 @@
-@@jsxConfig({version: 4, mode: "classic"})
-
-module V4C = {
-  @res.jsxComponentProps
-  type props<'msg> = {msg: 'msg}
-
-  let make = ({msg, _}: props<_>) => {
-    ReactDOM.createDOMElementVariadic("div", [{msg->React.string}])
-  }
-  let make = {
-    let \"FileLevelConfig$V4C" = (props: props<_>) => make(props)
-
-    \"FileLevelConfig$V4C"
-  }
-}
-
-@@jsxConfig({version: 4, mode: "automatic"})
+@@jsxConfig({version: 4})
 
 module V4A = {
   @res.jsxComponentProps
