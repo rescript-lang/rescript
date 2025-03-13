@@ -294,6 +294,7 @@ let type_declaration s decl =
       type_attributes = attrs s decl.type_attributes;
       type_immediate = decl.type_immediate;
       type_unboxed = decl.type_unboxed;
+      type_inlined_types = decl.type_inlined_types;
     }
   in
   cleanup_types ();
