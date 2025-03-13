@@ -1,22 +1,19 @@
-;;((wait 2)[@res.await ])
+;;await (wait 2)
 let maybeSomeValue =
-  match ((fetchData url)[@res.await ]) with
+  match await (fetchData url) with
   | data -> Some data
   | exception JsError _ -> None
-let x = ((1)[@res.await ]) + 2
-let x = ((wait 1)[@res.await ]) + ((wait 2)[@res.await ])
+let x = (await 1) + 2
+let x = (await (wait 1)) + (await (wait 2))
 let () =
-  ((let response = ((fetch {js|/users.json|js})[@res.await ]) in
-    let users = ((response.json ())[@res.await ]) in
-    let comments =
-      ((((fetch {js|comment.json|js})[@res.await ]).json ())
-      [@res.await ]).(0) in
+  ((let response = await (fetch {js|/users.json|js}) in
+    let users = await (response.json ()) in
+    let comments = (await ((await (fetch {js|comment.json|js})).json ())).(0) in
     Js.log2 users comments)
   [@res.braces ])
-let () = ((delay 10)[@res.braces ][@res.await ])
-let () = ((((delay 10)[@res.await ]); ((delay 20)[@res.await ]))
-  [@res.braces ])
-let forEach = ((Js.Import Belt.List.forEach)[@res.await ][@a ][@b ])
+let () = ((await (delay 10))[@res.braces ])
+let () = ((await (delay 10); await (delay 20))[@res.braces ])
+let forEach = await ((Js.Import Belt.List.forEach)[@a ][@b ])
 module M = ((Belt.List)[@res.await ][@a ][@b ])
 let f [arity:1]() =
   ((let module M = ((Belt.List)[@res.await ][@a ][@b ]) in M.forEach)

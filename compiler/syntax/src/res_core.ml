@@ -3307,15 +3307,12 @@ and parse_async_arrow_expression ?(arrow_attrs = []) p =
 
 and parse_await_expression p =
   let await_loc = mk_loc p.Parser.start_pos p.end_pos in
-  let await_attr = make_await_attr await_loc in
   Parser.expect Await p;
   let token_prec = Token.precedence MinusGreater in
   let expr = parse_binary_expr ~context:OrdinaryExpr p token_prec in
-  {
-    expr with
-    pexp_attributes = await_attr :: expr.pexp_attributes;
-    pexp_loc = {expr.pexp_loc with loc_start = await_loc.loc_start};
-  }
+  Ast_helper.Exp.await
+    ~loc:{expr.pexp_loc with loc_start = await_loc.loc_start}
+    ~attrs:[] expr
 
 and parse_try_expression p =
   let start_pos = p.Parser.start_pos in

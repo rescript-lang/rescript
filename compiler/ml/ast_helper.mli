@@ -210,6 +210,7 @@ module Exp : sig
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> expression
 
   val case : pattern -> ?guard:expression -> expression -> case
+  val await : ?loc:loc -> ?attrs:attrs -> expression -> expression
 end
 
 (** Value declarations *)

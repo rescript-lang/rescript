@@ -180,7 +180,7 @@ module Exp = struct
   let pack ?loc ?attrs a = mk ?loc ?attrs (Pexp_pack a)
   let open_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_open (a, b, c))
   let extension ?loc ?attrs a = mk ?loc ?attrs (Pexp_extension a)
-
+  let await ?loc ?attrs a = mk ?loc ?attrs (Pexp_await a)
   let case lhs ?guard rhs = {pc_lhs = lhs; pc_guard = guard; pc_rhs = rhs}
 end
 

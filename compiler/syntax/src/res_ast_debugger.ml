@@ -707,6 +707,7 @@ module SexpAst = struct
           ]
       | Pexp_extension ext ->
         Sexp.list [Sexp.atom "Pexp_extension"; extension ext]
+      | Pexp_await e -> Sexp.list [Sexp.atom "Pexp_await"; expression e]
     in
     Sexp.list [Sexp.atom "expression"; desc]
 
