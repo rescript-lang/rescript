@@ -10,9 +10,18 @@ let options = {
   //   ^hov
   extra: {
     name: "test",
+    //^hov
     superExtra: {
       age: 2222,
+      //^hov
     },
-    otherExtra: Some({test: true, anotherInlined: {record: true}}),
+    otherExtra: Some({
+      test: true,
+      // ^hov
+      anotherInlined: {
+        record: true,
+        // ^hov
+      },
+    }),
   },
 }
