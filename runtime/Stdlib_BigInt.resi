@@ -6,28 +6,51 @@ type t = bigint
 /**
 Interprets the low bits (set by `~width`) of a BigInt as a 2's-complement signed integer. All higher bits are discarded.
 
+---
 
+## Examples
+```rescript
+let i64_CEIL = BigInt.\"**"(2n, 63n)
+Console.log(i64_CEIL->BigInt.asIntN(~width=64)) 
+```
  */
 @val
 external asIntN: (~width: int, bigint) => bigint = "BigInt.asIntN"
 
-@val external asUintN: (~width: int, bigint) => bigint = "BigInt.asUintN"
+/**
+Interprets the low bits (setBy `~width`) of a BigInt as an unsigned integer. All higher bits are discarded.
+
+---
+
+## Examples
+```rescript
+let u64_CEIL = BigInt.\"**"(2n, 63n)
+Console.log(u64_CEIL->BigInt.asUintN(~width=64))
+/* returns 9223372036854775808n */
+```
+ */
+@val
+external asUintN: (~width: int, bigint) => bigint = "BigInt.asUintN"
 
 /**
- Creates a BigInt from a string.
+Creates a BigInt from a string.
 
- ## Examples
+---
 
- ```rescript
- /* returns 123n */
- BigInt.fromString("123")
- */
+## Examples
+
+```rescript
+/* returns 123n */
+BigInt.fromString("123")
+*/
 @val
 external fromString: string => bigint = "BigInt"
 
 /**
 Parses the given `string` into a `bigint` using JavaScript semantics. Return the
 number as a `bigint` if successfully parsed. Uncaught syntax exception otherwise.
+
+---
 
 ## Examples
 
@@ -58,8 +81,30 @@ try {
 @val
 @raises(Exn.Error)
 external fromStringExn: string => bigint = "BigInt"
-@val external fromInt: int => bigint = "BigInt"
-@val external fromFloat: float => bigint = "BigInt"
+
+/**
+Creates a BigInt from an int.
+
+---
+
+## Examples
+BigInt.fromInt(1000 * 1000)
+/* returns 1000000n */
+ */
+@val
+external fromInt: int => bigint = "BigInt"
+
+/**
+Creates a BigInt from a float.
+
+---
+
+## Examples
+BigInt.fromFloat(1000.00 *. 1000.00)
+/* returns 1000000n */
+ */
+@val
+external fromFloat: float => bigint = "BigInt"
 
 /**
 Formats a `bigint` as a string. Return a `string` representing the given value.
@@ -74,7 +119,12 @@ BigInt.toString(123n)->Console.log
 */
 @send
 external toString: (bigint, ~radix: int=?) => string = "toString"
-@deprecated("Use `toString` with `~radix` instead") @send
+
+/**
+Deprecated: Use `toString` with `~radix` instead.
+*/
+@deprecated("Use `toString` with `~radix` instead")
+@send
 external toStringWithRadix: (bigint, ~radix: int) => string = "toString"
 
 /**
@@ -90,8 +140,31 @@ BigInt.toString(123n)->Console.log
 @send
 external toLocaleString: bigint => string = "toLocaleString"
 
-@val external toFloat: bigint => float = "Number"
+/**
+Converts a BigInt to a float.
 
+---
+
+## Examples
+```rescript
+/* prints 10000 */
+10000n->BigInt.toFloat->Console.log
+```
+*/
+@val
+external toFloat: bigint => float = "Number"
+
+/**
+Converts a BigInt to an int.
+
+---
+
+## Examples
+```rescript
+/* prints 10000 */
+10000n->BigInt.toInt->Console.log
+```
+*/
 let toInt: bigint => int
 
 external \"+": (bigint, bigint) => bigint = "%addbigint"
