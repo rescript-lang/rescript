@@ -344,6 +344,7 @@ module E = struct
       iter_loc sub lid;
       sub.expr sub e
     | Pexp_extension x -> sub.extension sub x
+    | Pexp_await e -> sub.expr sub e
 end
 
 module P = struct

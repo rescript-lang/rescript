@@ -289,6 +289,7 @@ let rec add_expr bv exp =
     | Pstr_eval ({pexp_desc = Pexp_construct (c, None)}, _) -> add bv c
     | _ -> handle_extension e)
   | Pexp_extension e -> handle_extension e
+  | Pexp_await e -> add_expr bv e
 
 and add_cases bv cases = List.iter (add_case bv) cases
 
