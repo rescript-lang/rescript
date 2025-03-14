@@ -295,7 +295,23 @@ end
 module E = struct
   (* Value expressions for the core language *)
 
-  let map sub {pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} =
+  let map_jsx_list sub (e : expression) : Pt.expression list =
+    let rec visit (e : expression) : Pt.expression list =
+      match e.pexp_desc with
+      | Pexp_construct
+          ({txt = Longident.Lident "::"}, Some {pexp_desc = Pexp_tuple [e1; e2]})
+        ->
+        sub.expr sub e1 :: visit e2
+      | Pexp_construct ({txt = Longident.Lident "[]"}, ext_opt) -> (
+        match ext_opt with
+        | None -> []
+        | Some e -> visit e)
+      | _ -> [sub.expr sub e]
+    in
+    visit e
+
+  let map sub e =
+    let {pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} = e in
     let open Exp in
     let loc = sub.location sub loc in
     let attrs = sub.attributes sub attrs in
@@ -358,6 +374,14 @@ module E = struct
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
+    (* <></> *)
+    | Pexp_construct ({txt = Longident.Lident "[]" | Longident.Lident "::"}, _)
+      when attrs |> List.exists (fun ({txt}, _) -> txt = "JSX") ->
+      let attrs = attrs |> List.filter (fun ({txt}, _) -> txt <> "JSX") in
+      (* TODO: support spread *)
+      jsx_fragment ~loc ~attrs loc.loc_start
+        (Parsetree.JSXChildrenItems (map_jsx_list sub e))
+        loc.loc_end
     | Pexp_construct (lid, arg) -> (
       let lid1 = map_loc sub lid in
       let arg1 = map_opt (sub.expr sub) arg in

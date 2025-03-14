@@ -485,24 +485,11 @@ let filter_fragile_match_attributes attrs =
     attrs
 
 let is_jsx_expression expr =
-  let rec loop attrs =
-    match attrs with
-    | [] -> false
-    | ({Location.txt = "JSX"}, _) :: _ -> true
-    | _ :: attrs -> loop attrs
-  in
   match expr.pexp_desc with
-  | Pexp_apply _ -> loop expr.Parsetree.pexp_attributes
+  | Pexp_jsx_fragment _ | Pexp_jsx_unary_element _
+  | Pexp_jsx_container_element _ ->
+    true
   | _ -> false
-
-let has_jsx_attribute attributes =
-  let rec loop attrs =
-    match attrs with
-    | [] -> false
-    | ({Location.txt = "JSX"}, _) :: _ -> true
-    | _ :: attrs -> loop attrs
-  in
-  loop attributes
 
 let should_indent_binary_expr expr =
   let same_precedence_sub_expression operator sub_expression =

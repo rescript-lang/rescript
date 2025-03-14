@@ -407,6 +407,26 @@ module E = struct
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
     | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Pexp_jsx_fragment (o, children, c) ->
+      (*
+         The location of  Pexp_jsx_fragment is from the start of < till the end of />.
+         This is not the case in the old AST. There it is from >...</
+      *)
+      let loc = {loc with loc_start = o; loc_end = c} in
+      let xs =
+        match children with
+        | JSXChildrenSpreading e -> [e]
+        | JSXChildrenItems xs -> xs
+      in
+      let list_expr = Ast_helper.Exp.make_list_expression loc xs None in
+      let mapped = sub.expr sub list_expr in
+      let jsx_attr =
+        sub.attribute sub (Location.mknoloc "JSX", Parsetree.PStr [])
+      in
+      {mapped with pexp_attributes = jsx_attr :: attrs}
+    | Pexp_jsx_unary_element _ -> failwith "TODO: Pexp_jsx_unary_element 1"
+    | Pexp_jsx_container_element _ ->
+      failwith "TODO: Pexp_jsx_container_element 1"
 end
 
 module P = struct

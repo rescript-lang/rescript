@@ -2098,6 +2098,12 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
           | {pexp_desc = Pexp_newtype _} -> false
           | {pexp_attributes = [({Location.txt = "res.taggedTemplate"}, _)]} ->
             false
+          | {
+           pexp_desc =
+             ( Pexp_jsx_fragment _ | Pexp_jsx_unary_element _
+             | Pexp_jsx_container_element _ );
+          } ->
+            true
           | e ->
             ParsetreeViewer.has_attributes e.pexp_attributes
             || ParsetreeViewer.is_array_access e)
@@ -2782,9 +2788,24 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
     | Pexp_fun _ | Pexp_newtype _ -> print_arrow e
     | Parsetree.Pexp_constant c ->
       print_constant ~template_literal:(ParsetreeViewer.is_template_literal e) c
-    | Pexp_construct _ when ParsetreeViewer.has_jsx_attribute e.pexp_attributes
+    | Pexp_jsx_fragment (o, children, c) ->
+      let xs =
+        match children with
+        | JSXChildrenSpreading e -> [e]
+        | JSXChildrenItems xs -> xs
+      in
+      print_jsx_fragment ~state o xs c e.pexp_loc cmt_tbl
+    | Pexp_jsx_unary_element
+        {jsx_unary_element_tag_name = tag_name; jsx_unary_element_props = props}
       ->
-      print_jsx_fragment ~state e cmt_tbl
+      print_jsx_unary_tag ~state tag_name props cmt_tbl
+    | Pexp_jsx_container_element
+        {
+          jsx_container_element_tag_name_start = tag_name;
+          jsx_container_element_props = props;
+          jsx_container_element_children = children;
+        } ->
+      print_jsx_container_tag ~state tag_name props children cmt_tbl
     | Pexp_construct ({txt = Longident.Lident "()"}, _) -> Doc.text "()"
     | Pexp_construct ({txt = Longident.Lident "[]"}, _) ->
       Doc.concat
@@ -3413,8 +3434,8 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
     | Pexp_ifthenelse _ ->
       true
     | Pexp_match _ when ParsetreeViewer.is_if_let_expr e -> true
-    | Pexp_construct _ when ParsetreeViewer.has_jsx_attribute e.pexp_attributes
-      ->
+    | Pexp_jsx_fragment _ | Pexp_jsx_unary_element _
+    | Pexp_jsx_container_element _ ->
       true
     | _ -> false
   in
@@ -4306,7 +4327,7 @@ and print_pexp_apply ~state expr cmt_tbl =
 
 and print_jsx_expression ~state lident args cmt_tbl =
   let name = print_jsx_name lident in
-  let formatted_props, children = print_jsx_props ~state args cmt_tbl in
+  let formatted_props, children = print_jsx_props_old ~state args cmt_tbl in
   (* <div className="test" /> *)
   let has_children =
     match children with
@@ -4346,7 +4367,7 @@ and print_jsx_expression ~state lident args cmt_tbl =
                Doc.line;
                (match children with
                | Some children_expression ->
-                 print_jsx_children ~state children_expression ~sep:line_sep
+                 print_jsx_children_old ~state children_expression ~sep:line_sep
                    cmt_tbl
                | None -> Doc.nil);
              ]);
@@ -4403,28 +4424,135 @@ and print_jsx_expression ~state lident args cmt_tbl =
               ]);
        ])
 
-and print_jsx_fragment ~state expr cmt_tbl =
-  let opening = Doc.text "<>" in
-  let closing = Doc.text "</>" in
+and print_jsx_unary_tag ~state tag_name props cmt_tbl =
+  let name = print_jsx_name tag_name in
+  let formatted_props = print_jsx_props ~state props cmt_tbl in
+  Doc.group
+    (Doc.concat
+       [
+         Doc.group
+           (Doc.concat
+              [
+                print_comments
+                  (Doc.concat [Doc.less_than; name])
+                  cmt_tbl tag_name.Asttypes.loc;
+                Doc.space;
+                (* todo: might not be needed if no props?*)
+                Doc.join formatted_props ~sep:Doc.space;
+                Doc.text "/>";
+              ]);
+         Doc.nil;
+       ])
+
+and print_jsx_container_tag ~state tag_name props
+    (children : Parsetree.jsx_children) cmt_tbl =
+  let name = print_jsx_name tag_name in
+  let formatted_props = print_jsx_props ~state props cmt_tbl in
+  (* <div className="test" /> *)
+  let has_children =
+    match children with
+    | JSXChildrenSpreading _ | JSXChildrenItems (_ :: _) -> true
+    | JSXChildrenItems [] -> false
+  in
+  let line_sep = Doc.line in
+  let print_children children =
+    print_jsx_children ~sep:line_sep ~state children cmt_tbl
+    |> Doc.group |> Doc.indent
+  in
+
+  Doc.group
+    (Doc.concat
+       [
+         Doc.group
+           (Doc.concat
+              [
+                print_comments
+                  (Doc.concat [Doc.less_than; name])
+                  cmt_tbl tag_name.Asttypes.loc;
+                Doc.space;
+                (* todo: might not be needed if no props?*)
+                Doc.join formatted_props ~sep:Doc.space;
+                (* if tag A has trailing comments then put > on the next line
+                           <A
+                           // comments
+                           >
+                           </A>
+                        *)
+                (if has_trailing_comments cmt_tbl tag_name.Asttypes.loc then
+                   Doc.concat [Doc.soft_line; Doc.greater_than]
+                 else Doc.greater_than);
+              ]);
+         Doc.concat
+           [
+             (if has_children then Doc.line else Doc.nil);
+             (if has_children then print_children children else Doc.nil);
+             Doc.text "</";
+             name;
+             Doc.greater_than;
+           ];
+       ])
+
+and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
+    (children : Parsetree.expression list)
+    (closing_lesser_than : Lexing.position) (fragment_loc : Warnings.loc)
+    cmt_tbl =
+  let opening =
+    let loc : Location.t = {fragment_loc with loc_end = opening_greater_than} in
+    print_comments (Doc.text "<>") cmt_tbl loc
+  in
+  let closing =
+    let loc : Location.t =
+      {fragment_loc with loc_start = closing_lesser_than}
+    in
+    print_comments (Doc.text "</>") cmt_tbl loc
+  in
   let line_sep =
-    if has_nested_jsx_or_more_than_one_child expr then Doc.hard_line
+    if
+      List.length children > 1
+      || List.exists ParsetreeViewer.is_jsx_expression children
+    then Doc.hard_line
     else Doc.line
   in
   Doc.group
     (Doc.concat
        [
          opening;
-         (match expr.pexp_desc with
-         | Pexp_construct ({txt = Longident.Lident "[]"}, None) -> Doc.nil
-         | _ ->
+         (match children with
+         | [] -> Doc.nil
+         | children ->
            Doc.indent
              (Doc.concat
-                [Doc.line; print_jsx_children ~state expr ~sep:line_sep cmt_tbl]));
+                [
+                  Doc.line;
+                  Doc.join ~sep:line_sep
+                    (List.map
+                       (fun e -> print_jsx_child ~state e cmt_tbl)
+                       children);
+                ]));
          line_sep;
          closing;
        ])
 
-and print_jsx_children ~state (children_expr : Parsetree.expression) ~sep
+and print_jsx_child ~state (expr : Parsetree.expression) cmt_tbl =
+  let leading_line_comment_present =
+    has_leading_line_comment cmt_tbl expr.pexp_loc
+  in
+  let expr_doc = print_expression_with_comments ~state expr cmt_tbl in
+  let add_parens_or_braces expr_doc =
+    (* {(20: int)} make sure that we also protect the expression inside *)
+    let inner_doc =
+      if Parens.braced_expr expr then add_parens expr_doc else expr_doc
+    in
+    if leading_line_comment_present then add_braces inner_doc
+    else Doc.concat [Doc.lbrace; inner_doc; Doc.rbrace]
+  in
+  match Parens.jsx_child_expr expr with
+  | Nothing -> expr_doc
+  | Parenthesized -> add_parens_or_braces expr_doc
+  | Braced braces_loc ->
+    print_comments (add_parens_or_braces expr_doc) cmt_tbl braces_loc
+
+and print_jsx_children_old ~state (children_expr : Parsetree.expression) ~sep
     cmt_tbl =
   match children_expr.pexp_desc with
   | Pexp_construct ({txt = Longident.Lident "::"}, _) ->
@@ -4495,7 +4623,21 @@ and print_jsx_children ~state (children_expr : Parsetree.expression) ~sep
         | Nothing -> expr_doc);
       ]
 
-and print_jsx_props ~state args cmt_tbl : Doc.t * Parsetree.expression option =
+and print_jsx_children ~state (children_expr : Parsetree.jsx_children) ~sep
+    cmt_tbl =
+  let open Parsetree in
+  match children_expr with
+  | JSXChildrenSpreading child ->
+    Doc.concat
+      [Doc.dotdotdot; print_expression_with_comments ~state child cmt_tbl]
+  | JSXChildrenItems children ->
+    children
+    |> List.map (fun child ->
+           print_expression_with_comments ~state child cmt_tbl)
+    |> Doc.join ~sep
+
+and print_jsx_props_old ~state args cmt_tbl :
+    Doc.t * Parsetree.expression option =
   (* This function was introduced because we have different formatting behavior for self-closing tags and other tags
      we always put /> on a new line for self-closing tag when it breaks
      <A
@@ -4546,7 +4688,7 @@ and print_jsx_props ~state args cmt_tbl : Doc.t * Parsetree.expression option =
         | Nolabel -> expr.pexp_loc
       in
       let trailing_comments_present = has_trailing_comments cmt_tbl loc in
-      let prop_doc = print_jsx_prop ~state last_prop cmt_tbl in
+      let prop_doc = print_jsx_prop_old ~state last_prop cmt_tbl in
       let formatted_props =
         Doc.concat
           [
@@ -4567,12 +4709,12 @@ and print_jsx_props ~state args cmt_tbl : Doc.t * Parsetree.expression option =
       in
       (formatted_props, Some children)
     | arg :: args ->
-      let prop_doc = print_jsx_prop ~state arg cmt_tbl in
+      let prop_doc = print_jsx_prop_old ~state arg cmt_tbl in
       loop (prop_doc :: props) args
   in
   loop [] args
 
-and print_jsx_prop ~state arg cmt_tbl =
+and print_jsx_prop_old ~state arg cmt_tbl =
   match arg with
   | ( ((Asttypes.Labelled {txt = lbl_txt} | Optional {txt = lbl_txt}) as lbl),
       {
@@ -4627,6 +4769,26 @@ and print_jsx_prop ~state arg cmt_tbl =
     in
     let full_loc = {arg_loc with loc_end = expr.pexp_loc.loc_end} in
     print_comments (Doc.concat [lbl_doc; expr_doc]) cmt_tbl full_loc
+
+and print_jsx_prop ~state prop cmt_tbl =
+  let open Parsetree in
+  match prop with
+  | JSXPropPunning (is_optional, name) ->
+    if is_optional then Doc.concat [Doc.question; Doc.text name.txt]
+    else Doc.text name.txt
+  | JSXPropValue (name, is_optional, value) ->
+    let value =
+      if is_optional then
+        [Doc.question; print_expression_with_comments ~state value cmt_tbl]
+      else [print_expression_with_comments ~state value cmt_tbl]
+    in
+    Doc.concat [Doc.text name.txt; Doc.equal; Doc.group (Doc.concat value)]
+  | JSXPropSpreading (_, value) ->
+    Doc.concat
+      [Doc.dotdotdot; print_expression_with_comments ~state value cmt_tbl]
+
+and print_jsx_props ~state props cmt_tbl : Doc.t list =
+  props |> List.map (fun prop -> print_jsx_prop ~state prop cmt_tbl)
 
 (* div -> div.
  * Navabar.createElement -> Navbar
