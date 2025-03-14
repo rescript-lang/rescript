@@ -384,18 +384,6 @@ ContextPath Value[Array, joinWith]
 Path Array.joinWith
 Path Stdlib.String.includ
 [{
-    "label": "->String.includesFrom",
-    "kind": 12,
-    "tags": [],
-    "detail": "(string, string, int) => bool",
-    "documentation": {"kind": "markdown", "value": "\n`includesFrom(str, searchValue, start)` returns `true` if `searchValue` is found\nanywhere within `str` starting at character number `start` (where 0 is the\nfirst character), `false` otherwise.\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes) on MDN.\n\n## Examples\n\n```rescript\nString.includesFrom(\"programmer\", \"gram\", 1) == true\nString.includesFrom(\"programmer\", \"gram\", 4) == false\nString.includesFrom(`대한민국`, `한`, 1) == true\n```\n"},
-    "sortText": "includesFrom",
-    "insertText": "->String.includesFrom",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 89, "character": 55}, "end": {"line": 89, "character": 56}},
-      "newText": ""
-      }]
-  }, {
     "label": "->String.includes",
     "kind": 12,
     "tags": [],
@@ -403,6 +391,18 @@ Path Stdlib.String.includ
     "documentation": {"kind": "markdown", "value": "\n`includes(str, searchValue)` returns `true` if `searchValue` is found anywhere\nwithin `str`, `false` otherwise.\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes) on MDN.\n\n## Examples\n\n```rescript\nString.includes(\"programmer\", \"gram\") == true\nString.includes(\"programmer\", \"er\") == true\nString.includes(\"programmer\", \"pro\") == true\nString.includes(\"programmer.dat\", \"xyz\") == false\n```\n"},
     "sortText": "includes",
     "insertText": "->String.includes",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 89, "character": 55}, "end": {"line": 89, "character": 56}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->String.includesFrom",
+    "kind": 12,
+    "tags": [],
+    "detail": "(string, string, int) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`includesFrom(str, searchValue, start)` returns `true` if `searchValue` is found\nanywhere within `str` starting at character number `start` (where 0 is the\nfirst character), `false` otherwise.\nSee [`String.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes) on MDN.\n\n## Examples\n\n```rescript\nString.includesFrom(\"programmer\", \"gram\", 1) == true\nString.includesFrom(\"programmer\", \"gram\", 4) == false\nString.includesFrom(`대한민국`, `한`, 1) == true\n```\n"},
+    "sortText": "includesFrom",
+    "insertText": "->String.includesFrom",
     "additionalTextEdits": [{
       "range": {"start": {"line": 89, "character": 55}, "end": {"line": 89, "character": 56}},
       "newText": ""
