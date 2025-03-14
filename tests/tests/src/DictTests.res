@@ -36,11 +36,13 @@ module PatternMatching = {
 
 module DictHas = {
   let dict = dict{
-    "key1": Some(1),
+    "key1": Some(false),
     "key2": None,
   }
 
-  assert(dict->Dict.has("key1") === true)
-  assert(dict->Dict.has("key2") === true)
+  assert(dict->Dict.has("key1"))
+  assert(dict->Dict.has("key2"))
   assert(dict->Dict.has("key3") === false)
+  assert(dict->Dict.has("__proto__"))
+  assert(typeof(dict->Dict.has("key1")) === #boolean)
 }

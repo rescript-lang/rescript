@@ -1128,6 +1128,9 @@ let or_ ?comment (e1 : t) (e2 : t) =
     | Some e -> e
     | None -> {expression_desc = Bin (Or, e1, e2); comment})
 
+let in_ (prop : t) (obj : t) : t =
+  {expression_desc = In (prop, obj); comment = None}
+
 let not (e : t) : t =
   match e.expression_desc with
   | Number (Int {i; _}) -> bool (i = 0l)
