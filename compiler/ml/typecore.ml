@@ -3554,7 +3554,9 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
         let ty_fun = expand_head env ty_fun in
         let arity_ok = List.length args < max_arity in
         match ty_fun.desc with
-        | Tvar _ ->
+        | Tvar _ when force_tvar ->
+          (* This is a total application when the toplevel type is a polymorphic variable,
+          so the function type including arity can be inferred. *)
           let t1 = newvar () and t2 = newvar () in
           if ty_fun.level >= t1.level && not_identity funct.exp_desc then
             Location.prerr_warning sarg1.pexp_loc Warnings.Unused_argument;

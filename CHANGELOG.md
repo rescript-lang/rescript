@@ -18,6 +18,7 @@
 - Add popover attributes to JsxDOM.domProps. https://github.com/rescript-lang/rescript/pull/7317
 - Add `inert` attribute to `JsxDOM.domProps`. https://github.com/rescript-lang/rescript/pull/7326
 - Make reanalyze exception tracking work with the new stdlib. https://github.com/rescript-lang/rescript/pull/7328
+- Fix Pervasive.max using boolean comparison for floats. https://github.com/rescript-lang/rescript/pull/7333
 - Add built-in support for the JavaScript in operator. https://github.com/rescript-lang/rescript/pull/7342
 
 #### :boom: Breaking Change
@@ -33,10 +34,12 @@
 
 - Deprecate JSON.Classify.classify. https://github.com/rescript-lang/rescript/pull/7315
 - Hide stdlib modules in output. https://github.com/rescript-lang/rescript/pull/7305
+- Deprecate unsafe host-specific bindings from stdlib. https://github.com/rescript-lang/rescript/pull/7334
 
 #### :bug: Bug fix
 
 - Fix recursive untagged variant type checking by delaying well-formedness checks until environment construction completes. [#7320](https://github.com/rescript-lang/rescript/pull/7320)
+- Fix incorrect expansion of polymorphic return types in uncurried function applications. https://github.com/rescript-lang/rescript/pull/7338
 
 # 12.0.0-alpha.9
 

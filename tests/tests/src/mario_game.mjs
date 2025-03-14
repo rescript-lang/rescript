@@ -3,7 +3,6 @@
 import * as Belt_List from "rescript/lib/es6/Belt_List.js";
 import * as Pervasives from "rescript/lib/es6/Pervasives.js";
 import * as Primitive_int from "rescript/lib/es6/Primitive_int.js";
-import * as Primitive_bool from "rescript/lib/es6/Primitive_bool.js";
 import * as Primitive_float from "rescript/lib/es6/Primitive_float.js";
 import * as Primitive_object from "rescript/lib/es6/Primitive_object.js";
 import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
@@ -979,7 +978,7 @@ function update_player(player, keys, context) {
         if (!player.jumping && player.grounded) {
           player.jumping = true;
           player.grounded = false;
-          player.vel.y = Primitive_bool.max(player.vel.y - (5.7 + Math.abs(player.vel.x) * 0.25), -6);
+          player.vel.y = Primitive_float.max(player.vel.y - (5.7 + Math.abs(player.vel.x) * 0.25), -6);
           return;
         } else {
           return;
@@ -1531,7 +1530,7 @@ function make$3(param, param$1) {
 
 function calc_viewport_point(cc, vc, mc) {
   let vc_half = vc / 2;
-  return Primitive_float.min(Primitive_bool.max(cc - vc_half, 0), Primitive_float.min(mc - vc, Math.abs(cc - vc_half)));
+  return Primitive_float.min(Primitive_float.max(cc - vc_half, 0), Primitive_float.min(mc - vc, Math.abs(cc - vc_half)));
 }
 
 function in_viewport(v, pos) {
