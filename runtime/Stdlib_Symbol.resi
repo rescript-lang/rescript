@@ -32,7 +32,7 @@ Otherwise a new Symbol gets created and registered with key.
 ## Examples
 
 ```rescript
-Symbol.getFor("foo")->assetEqual("foo")
+Symbol.getFor("sym1")->assetEqual(Symbol.getFor("sym1"))
 ```
 */
 @val
@@ -48,13 +48,11 @@ Retrieves a shared Symbol key from the global Symbol registry for the given Symb
 ```rescript
 let globalSym = Symbol.getFor("sym1") // Global symbol
 
-Console.log(Symbol.keyFor(globalSym))
-// Expected output: "sym1"
+Symbol.keyFor(globalSym)->assertEqual(Some("sym1"))
 
 let localSym = Symbol.make("sym2") // Local symbol
 
-Console.log(Symbol.keyFor(localSym))
-// Expected output: undefined
+Symbol.keyFor(localSym)->assertEqual(None)
 ```
 */
 @val

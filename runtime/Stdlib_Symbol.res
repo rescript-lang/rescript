@@ -1,7 +1,7 @@
 type t
 
 @val external make: string => t = "Symbol"
-@val external getFor: string => t = "Symbol.for"
+@val external getFor: string => option<t> = "Symbol.for"
 @val external keyFor: t => option<string> = "Symbol.keyFor"
 @get
 external description: t => option<string> = "description"
