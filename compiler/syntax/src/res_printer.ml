@@ -550,16 +550,6 @@ module State = struct
   let should_break_callback t = t.custom_layout > custom_layout_threshold
 end
 
-let is_inline_record_definition attrs =
-  attrs
-  |> List.exists (fun (({txt}, _) : Parsetree.attribute) ->
-         txt = "res.inlineRecordDefinition")
-
-let is_inline_record_reference attrs =
-  attrs
-  |> List.exists (fun (({txt}, _) : Parsetree.attribute) ->
-         txt = "res.inlineRecordReference")
-
 let rec print_structure ~state (s : Parsetree.structure) t =
   match s with
   | [] -> print_comments_inside_file t
@@ -582,12 +572,14 @@ and print_structure_item ~state (si : Parsetree.structure_item) cmt_tbl =
   | Pstr_type (Recursive, type_declarations)
     when type_declarations
          |> List.find_opt (fun (td : Parsetree.type_declaration) ->
-                is_inline_record_definition td.ptype_attributes)
+                Res_parsetree_viewer.has_inline_record_definition_attribute
+                  td.ptype_attributes)
          |> Option.is_some ->
     let inline_record_definitions, regular_declarations =
       type_declarations
       |> List.partition (fun (td : Parsetree.type_declaration) ->
-             is_inline_record_definition td.ptype_attributes)
+             Res_parsetree_viewer.has_inline_record_definition_attribute
+               td.ptype_attributes)
     in
     print_type_declarations ~inline_record_definitions ~state
       ~rec_flag:
@@ -1722,7 +1714,8 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
       print_object ~state ~inline:false fields open_flag cmt_tbl
     | Ptyp_arrow {arity} -> print_arrow ~arity typ_expr
     | Ptyp_constr ({txt = Lident inline_record_name}, [])
-      when is_inline_record_reference typ_expr.ptyp_attributes -> (
+      when inline_record_definitions |> Option.is_some
+           && String.contains inline_record_name '.' -> (
       let inline_record_definitions =
         match inline_record_definitions with
         | None -> []

@@ -30,10 +30,9 @@ type nonrec entity =
 type user.address = {
   street: string ;
   country: string }[@@res.inlineRecordDefinition ]
-and user =
-  {
+and user = {
   name: string ;
-  address: ((user.address)[@res.inlineRecordReference ]) }
+  address: user.address }
 let make
   [arity:1](props :
              < handleClick: Click.t -> unit (a:1)  ;value: string   > )
