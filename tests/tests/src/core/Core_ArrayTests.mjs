@@ -502,7 +502,7 @@ array$2.splice(0, 1);
 Test.run([
   [
     "Core_ArrayTests.res",
-    132,
+    137,
     22,
     45
   ],
@@ -520,7 +520,7 @@ array$3.splice(1, 1);
 Test.run([
   [
     "Core_ArrayTests.res",
-    138,
+    143,
     22,
     51
   ],
