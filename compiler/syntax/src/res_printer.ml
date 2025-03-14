@@ -450,6 +450,15 @@ let polyvar_ident_to_string poly_var_ident =
   Doc.concat [Doc.text "#"; print_poly_var_ident poly_var_ident]
   |> Doc.to_string ~width:80
 
+let find_inline_record_definition inline_record_name
+    (inline_record_definitions : Parsetree.type_declaration list option) =
+  match inline_record_definitions with
+  | None -> None
+  | Some inline_record_definitions ->
+    inline_record_definitions
+    |> List.find_opt (fun (r : Parsetree.type_declaration) ->
+           r.ptype_name.txt = inline_record_name)
+
 let print_lident l =
   let flat_lid_opt lid =
     let rec flat accu = function
@@ -1714,21 +1723,17 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
       print_object ~state ~inline:false fields open_flag cmt_tbl
     | Ptyp_arrow {arity} -> print_arrow ~arity typ_expr
     | Ptyp_constr ({txt = Lident inline_record_name}, [])
-      when inline_record_definitions |> Option.is_some
-           && String.contains inline_record_name '.' -> (
-      let inline_record_definitions =
-        match inline_record_definitions with
-        | None -> []
-        | Some v -> v
-      in
-      let record_definition =
+      when inline_record_definitions
+           |> find_inline_record_definition inline_record_name
+           |> Option.is_some -> (
+      match
         inline_record_definitions
-        |> List.find_opt (fun (r : Parsetree.type_declaration) ->
-               r.ptype_name.txt = inline_record_name)
-      in
-      match record_definition with
+        |> find_inline_record_definition inline_record_name
+      with
       | Some {ptype_kind = Ptype_record lds} ->
-        print_record_declaration ~inline_record_definitions ~state lds cmt_tbl
+        print_record_declaration
+          ~inline_record_definitions:(inline_record_definitions |> Option.get)
+          ~state lds cmt_tbl
       | _ -> assert false)
     | Ptyp_constr
         (longident_loc, [{ptyp_desc = Ptyp_object (fields, open_flag)}]) ->
