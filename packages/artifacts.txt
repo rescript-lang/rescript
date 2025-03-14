@@ -1177,7 +1177,9 @@ lib/ocaml/Stdlib_String.resi
 lib/ocaml/Stdlib_Symbol.cmi
 lib/ocaml/Stdlib_Symbol.cmj
 lib/ocaml/Stdlib_Symbol.cmt
+lib/ocaml/Stdlib_Symbol.cmti
 lib/ocaml/Stdlib_Symbol.res
+lib/ocaml/Stdlib_Symbol.resi
 lib/ocaml/Stdlib_Type.cmi
 lib/ocaml/Stdlib_Type.cmj
 lib/ocaml/Stdlib_Type.cmt
