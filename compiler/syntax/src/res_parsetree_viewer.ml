@@ -79,13 +79,6 @@ let has_inline_record_definition_attribute attrs =
       | _ -> false)
     attrs
 
-let has_inline_record_reference_attribute attrs =
-  List.exists
-    (function
-      | {Location.txt = "res.inlineRecordReference"}, _ -> true
-      | _ -> false)
-    attrs
-
 let has_res_pat_variant_spread_attribute attrs =
   List.exists
     (function
@@ -213,7 +206,7 @@ let filter_parsing_attrs attrs =
               ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
               | "res.await" | "res.template" | "res.taggedTemplate"
               | "res.patVariantSpread" | "res.dictPattern"
-              | "res.inlineRecordReference" | "res.inlineRecordDefinition" );
+              | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
@@ -367,8 +360,7 @@ let has_attributes attrs =
       | ( {
             Location.txt =
               ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.await" | "res.template" | "res.inlineRecordReference"
-              | "res.inlineRecordDefinition" );
+              | "res.await" | "res.template" | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
@@ -563,8 +555,7 @@ let is_printable_attribute attr =
   | ( {
         Location.txt =
           ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.await"
-          | "res.template" | "res.ternary" | "res.inlineRecordReference"
-          | "res.inlineRecordDefinition" );
+          | "res.template" | "res.ternary" | "res.inlineRecordDefinition" );
       },
       _ ) ->
     false

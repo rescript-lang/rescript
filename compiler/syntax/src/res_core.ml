@@ -4080,12 +4080,19 @@ and parse_atomic_typ_expr ?current_type_name_path ?inline_types ~attrs p =
           ~constr_name:constr p
       in
       let number_of_inline_records_in_args =
-        args
-        |> List.filter (fun (c : Parsetree.core_type) ->
-               c.ptyp_attributes
-               |> List.exists (fun (({txt}, _) : Parsetree.attribute) ->
-                      txt = "res.inlineRecordReference"))
-        |> List.length
+        match inline_types with
+        | None -> 0
+        | Some inline_types ->
+          let inline_types = !inline_types in
+          args
+          |> List.filter (fun (c : Parsetree.core_type) ->
+                 match c.ptyp_desc with
+                 | Ptyp_constr ({txt = Lident typename}, _)
+                   when String.contains typename '.' ->
+                   inline_types
+                   |> List.exists (fun (name, _, _) -> name = typename)
+                 | _ -> false)
+          |> List.length
       in
       if number_of_inline_records_in_args > 1 then
         Parser.err ~start_pos ~end_pos:p.prev_end_pos p
@@ -4196,9 +4203,7 @@ and parse_record_or_object_type ?current_type_name_path ?inline_types ~attrs p =
       (inline_type_name, loc, Parsetree.Ptype_record labels) :: !inline_types;
 
     let lid = Location.mkloc (Longident.Lident inline_type_name) loc in
-    Ast_helper.Typ.constr
-      ~attrs:[(Location.mknoloc "res.inlineRecordReference", PStr [])]
-      ~loc lid []
+    Ast_helper.Typ.constr ~loc lid []
   | _ ->
     let () =
       match p.token with
