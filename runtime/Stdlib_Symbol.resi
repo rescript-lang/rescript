@@ -17,7 +17,9 @@ Makes a new unique Symbol value.
 ## Examples
 
 ```rescript
-Symbol.make("sym1")->assertEqual("sym1")
+Symbol.make("sym1")
+->Symbol.description
+->assertEqual(Some("sym1"))
 ```
 */
 @val
@@ -49,11 +51,11 @@ Retrieves a shared Symbol key from the global Symbol registry for the given Symb
 ```rescript
 let globalSym = Symbol.getFor("sym1") // Global symbol
 
-Symbol.keyFor(globalSym)->assertEqual(Some("sym1"))
+globalSym->Option.flatMap(Symbol.description)->assertEqual(Some("sym1"))
 
 let localSym = Symbol.make("sym2") // Local symbol
 
-Symbol.keyFor(localSym)->assertEqual(None)
+localSym->Option.flatMap(Symbol.description)->assertEqual(None)
 ```
 */
 @val
