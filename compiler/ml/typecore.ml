@@ -3104,6 +3104,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         type_attributes = [];
         type_immediate = false;
         type_unboxed = unboxed_false_default_false;
+        type_inlined_types = [];
       }
     in
     Ident.set_current_time ty.level;

@@ -203,6 +203,7 @@ let decl_abstr =
     type_attributes = [];
     type_immediate = false;
     type_unboxed = unboxed_false_default_false;
+    type_inlined_types = [];
   }
 
 let decl_abstr_imm = {decl_abstr with type_immediate = true}
