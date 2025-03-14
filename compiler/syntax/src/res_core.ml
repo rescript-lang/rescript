@@ -4087,8 +4087,7 @@ and parse_atomic_typ_expr ?current_type_name_path ?inline_types ~attrs p =
           args
           |> List.filter (fun (c : Parsetree.core_type) ->
                  match c.ptyp_desc with
-                 | Ptyp_constr ({txt = Lident typename}, _)
-                   when String.contains typename '.' ->
+                 | Ptyp_constr ({txt = Lident typename}, _) ->
                    inline_types
                    |> List.exists (fun (name, _, _) -> name = typename)
                  | _ -> false)
