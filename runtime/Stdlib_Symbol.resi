@@ -17,7 +17,7 @@ Makes a new unique Symbol value.
 ## Examples
 
 ```rescript
-Symbol.make("sym1")->assetEqual("sym1")
+Symbol.make("sym1")->assertEqual("sym1")
 ```
 */
 @val
@@ -32,11 +32,12 @@ Otherwise a new Symbol gets created and registered with key.
 ## Examples
 
 ```rescript
-Symbol.getFor("sym1")->assetEqual(Symbol.getFor("sym1"))
+Symbol.getFor("sym1")->assertEqual(Symbol.getFor("sym1"))
 ```
 */
 @val
-external getFor: string => t = "Symbol.for"
+@scope("Symbol")
+external getFor: string => option<t> = "for"
 
 /**
 `keyFor(key)`
@@ -56,7 +57,8 @@ Symbol.keyFor(localSym)->assertEqual(None)
 ```
 */
 @val
-external keyFor: t => option<string> = "Symbol.keyFor"
+@scope("Symbol")
+external keyFor: t => option<string> = "keyFor"
 
 /**
 `description`
@@ -88,18 +90,18 @@ Symbol.toString(sym)->assertEqual("Symbol(sym1)")
 @send
 external toString: t => string = "toString"
 
-@val
-external asyncIterator: t = "Symbol.asyncIterator"
-@val
-external hasInstance: t = "Symbol.hasInstance"
-@val external isConcatSpreadable: t = "Symbol.isConcatSpreadable"
-@val external iterator: t = "Symbol.iterator"
-@val external match: t = "Symbol.match"
-@val external matchAll: t = "Symbol.matchAll"
-@val external replace: t = "Symbol.replace"
-@val external search: t = "Symbol.search"
-@val external species: t = "Symbol.species"
-@val external split: t = "Symbol.split"
-@val external toPrimitive: t = "Symbol.toPrimitive"
-@val external toStringTag: t = "Symbol.toStringTag"
-@val external unscopables: t = "Symbol.unscopables"
+@val @scope("Symbol")
+external asyncIterator: t = "asyncIterator"
+@val @scope("Symbol")
+external hasInstance: t = "hasInstance"
+@val @scope("Symbol") external isConcatSpreadable: t = "isConcatSpreadable"
+@val @scope("Symbol") external iterator: t = "iterator"
+@val @scope("Symbol") external match: t = "match"
+@val @scope("Symbol") external matchAll: t = "matchAll"
+@val @scope("Symbol") external replace: t = "replace"
+@val @scope("Symbol") external search: t = "search"
+@val @scope("Symbol") external species: t = "species"
+@val @scope("Symbol") external split: t = "split"
+@val @scope("Symbol") external toPrimitive: t = "toPrimitive"
+@val @scope("Symbol") external toStringTag: t = "toStringTag"
+@val @scope("Symbol") external unscopables: t = "unscopables"
