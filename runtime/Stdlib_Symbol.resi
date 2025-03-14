@@ -65,8 +65,8 @@ Returns `Some(string)` containing the description of this symbol, or `None` if t
 ## Examples
 
 ```rescript
-let sym = Symbol.make("foo")
-Console.log(sym->Symbol.description)
+let sym = Symbol.make("sym1")
+Symbol.description(sym)->assertEqual(Some("sym1"))
 ```
 */
 @get
@@ -80,9 +80,9 @@ external description: t => option<string> = "description"
 ## Examples
 
 ```rescript
-let sym = Symbol.make("foo")
-Console.log(sym->Symbol.toString) 
-// Expected output: "Symbol(foo)"
+let sym = Symbol.make("sym1")
+
+Symbol.toString(sym)->assertEqual("Symbol(sym1)")
 ```
 */
 @send
