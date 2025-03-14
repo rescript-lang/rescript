@@ -17,7 +17,7 @@ Makes a new unique Symbol value.
 ## Examples
 
 ```rescript
-let sym = Symbol.make("foo")
+Symbol.make("sym1")->assetEqual("sym1")
 ```
 */
 @val
@@ -32,7 +32,7 @@ Otherwise a new Symbol gets created and registered with key.
 ## Examples
 
 ```rescript
-let sym = Symbol.getFor("foo")
+Symbol.getFor("foo")->assetEqual("foo")
 ```
 */
 @val
