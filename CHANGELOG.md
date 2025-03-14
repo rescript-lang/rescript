@@ -38,6 +38,7 @@
 #### :bug: Bug fix
 
 - Fix recursive untagged variant type checking by delaying well-formedness checks until environment construction completes. [#7320](https://github.com/rescript-lang/rescript/pull/7320)
+- Fix incorrect expansion of polymorphic return types in uncurried function applications. https://github.com/rescript-lang/rescript/pull/7338
 
 # 12.0.0-alpha.9
 

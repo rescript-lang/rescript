@@ -3449,7 +3449,6 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
 
 and type_application ?type_clash_context total_app env funct (sargs : sargs) :
     targs * Types.type_expr * bool =
-  (* Printf.eprintf "type_application: #args:%d\n" (List.length sargs); *)
   let result_type omitted ty_fun =
     List.fold_left
       (fun ty_fun (l, ty, lv) -> newty2 lv (Tarrow (l, ty, ty_fun, Cok, None)))
@@ -3466,7 +3465,6 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
     | Tvar _ when total_app -> true
     | _ -> false
   in
-  (* Printf.eprintf "force_tvar:%b\n" force_tvar; *)
   let has_arity funct =
     let t = funct.exp_type in
     if force_tvar then Some (List.length sargs)
@@ -3552,13 +3550,11 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
       type_unknown_args max_arity ~args ~top_arity:None omitted ty_fun []
     | (l1, sarg1) :: sargl ->
       let l1 = to_noloc l1 in
-      (* let lbl_name = label_name l1 in
-      Printf.eprintf "  type_unknown_args: lbl_name:%s\n" lbl_name; *)
       let ty1, ty2 =
         let ty_fun = expand_head env ty_fun in
         let arity_ok = List.length args < max_arity in
         match ty_fun.desc with
-        | Tvar _ when (* l1 = Nolabel || *) force_tvar ->
+        | Tvar _ when force_tvar ->
           (* This is a total application when the toplevel type is a polymorphic variable,
           so the function type including arity can be inferred. *)
           let t1 = newvar () and t2 = newvar () in
@@ -3611,11 +3607,9 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
       when sargs <> [] && commu_repr com = Cok && List.length args < max_arity
       ->
       let name = label_name l and optional = is_optional l in
-      (* Printf.eprintf "  type_args: name:%s, optional:%b\n" name optional; *)
       let sargs, omitted, arg =
         match extract_label name sargs with
         | None ->
-          (* Printf.eprintf "  extract_label: None\n"; *)
           if optional && (total_app || label_assoc Nolabel sargs) then (
             ignored := (l, ty, lv) :: !ignored;
             ( sargs,
@@ -3648,14 +3642,8 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
         sargs (* This is the hot path for non-labeled function*)
   in
   if total_app then force_uncurried_type funct;
-  (* Printf.eprintf "total_app:%b\n" total_app; *)
   let max_arity = get_max_arity funct in
-  (* Printf.eprintf "max_arity:%d\n" max_arity; *)
   let top_arity = if total_app then Some max_arity else None in
-  (* Printf.eprintf "top_arity:%s\n"
-    (match top_arity with
-    | Some _ -> "Some"
-    | None -> "None"); *)
   match sargs with
   (* Special case for ignore: avoid discarding warning *)
   | [(Nolabel, sarg)] when is_ignore ~env ~arity:top_arity funct ->
