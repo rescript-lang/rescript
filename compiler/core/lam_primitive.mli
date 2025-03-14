@@ -130,6 +130,7 @@ type t =
   | Pmakelist
   (* dict primitives *)
   | Pmakedict
+  | Phasin
   (* promise *)
   | Pawait
   (* etc or deprecated *)
