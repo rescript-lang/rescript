@@ -345,6 +345,10 @@ let common_initial_env add_type add_extension empty_env =
                (* __POS__ *)
                mk_field "pos"
                  (newgenty (Ttuple [type_string; type_int; type_int; type_int]));
+               (* __MODULE_PATH__ *)
+               mk_field "modulePath" type_string;
+               (* __VALUE_PATH__ *)
+               mk_field "valuePath" type_string;
              ],
              Record_regular ));
     }

@@ -2254,6 +2254,8 @@ let expand_injectable_args ~(apply_expr : Parsetree.expression) ~exp_type
               mk_source_loc_field "filename" "__FILE__";
               mk_source_loc_field "module_" "__MODULE__";
               mk_source_loc_field "pos" "__POS__";
+              mk_source_loc_field "modulePath" "__MODULE_PATH__";
+              mk_source_loc_field "valuePath" "__VALUE_PATH__";
             ]
             None );
       ]

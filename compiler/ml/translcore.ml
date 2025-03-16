@@ -34,6 +34,9 @@ let transl_module =
     (fun _cc _rootpath _modl -> assert false
       : module_coercion -> Path.t option -> module_expr -> lambda)
 
+let current_root_path = ref None
+let current_value_ident = ref None
+
 (* Compile an exception/extension definition *)
 
 let transl_extension_constructor env path ext =
@@ -244,6 +247,8 @@ let primitives_table =
       ("%loc_LINE", Ploc Loc_LINE);
       ("%loc_POS", Ploc Loc_POS);
       ("%loc_MODULE", Ploc Loc_MODULE);
+      ("%loc_MODULE_PATH", Ploc Loc_MODULE_PATH);
+      ("%loc_VALUE_PATH", Ploc Loc_VALUE_PATH);
       (* BEGIN Triples for  ref data type *)
       ("%makeref", Pmakeblock Lambda.ref_tag_info);
       ("%refset", Psetfield (0, Lambda.ref_field_set_info));
@@ -448,7 +453,10 @@ let transl_primitive loc p env ty =
   in
   match prim with
   | Ploc kind -> (
-    let lam = lam_of_loc kind loc in
+    let lam =
+      lam_of_loc ?current_value_ident:!current_value_ident
+        ?root_path:!current_root_path kind loc
+    in
     match p.prim_arity with
     | 0 -> lam
     | 1 ->
@@ -741,9 +749,14 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
         | _ -> k
       in
       wrap (Lprim (Praise k, [targ], e.exp_loc))
-    | Ploc kind, [] -> lam_of_loc kind e.exp_loc
+    | Ploc kind, [] ->
+      lam_of_loc ?current_value_ident:!current_value_ident
+        ?root_path:!current_root_path kind e.exp_loc
     | Ploc kind, [arg1] ->
-      let lam = lam_of_loc kind arg1.exp_loc in
+      let lam =
+        lam_of_loc ?current_value_ident:!current_value_ident
+          ?root_path:!current_root_path kind arg1.exp_loc
+      in
       Lprim (Pmakeblock Blk_tuple, lam :: argl, e.exp_loc)
     | Ploc _, _ -> assert false
     | _, _ -> (
@@ -1055,6 +1068,21 @@ and transl_function loc partial param case =
       is_base_type exp_env exp_type Predef.path_unit )
 
 and transl_let rec_flag pat_expr_list body =
+  let old_value_ident = !current_value_ident in
+
+  let binding_name =
+    pat_expr_list |> List.rev
+    |> List.find_map (fun {vb_pat} ->
+           match vb_pat.pat_desc with
+           | Tpat_var (id, _) -> Some id
+           | _ -> None)
+  in
+  current_value_ident := binding_name;
+  let res = transl_let_inner rec_flag pat_expr_list body in
+  current_value_ident := old_value_ident;
+  res
+
+and transl_let_inner rec_flag pat_expr_list body =
   match rec_flag with
   | Nonrecursive ->
     let rec transl = function
