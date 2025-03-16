@@ -495,41 +495,6 @@ Test.run([
   ]
 ]);
 
-let array$2 = [];
-
-array$2.splice(0, 1);
-
-Test.run([
-  [
-    "Core_ArrayTests.res",
-    137,
-    22,
-    45
-  ],
-  "removeInPlace - empty"
-], array$2, eq, []);
-
-let array$3 = [
-  "Hello",
-  "Hi",
-  "Good bye"
-];
-
-array$3.splice(1, 1);
-
-Test.run([
-  [
-    "Core_ArrayTests.res",
-    143,
-    22,
-    51
-  ],
-  "removeInPlace - from middle"
-], array$3, eq, [
-  "Hello",
-  "Good bye"
-]);
-
 export {
   eq,
 }

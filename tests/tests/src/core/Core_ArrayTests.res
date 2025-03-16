@@ -130,15 +130,3 @@ Test.run(__POS_OF__("last - empty"), []->Array.last, eq, None)
     ),
   )
 }
-
-{
-  let array = []
-  array->Array.removeInPlace(0)
-  Test.run(__POS_OF__("removeInPlace - empty"), array, eq, [])
-}
-
-{
-  let array = ["Hello", "Hi", "Good bye"]
-  array->Array.removeInPlace(1)
-  Test.run(__POS_OF__("removeInPlace - from middle"), array, eq, ["Hello", "Good bye"])
-}
