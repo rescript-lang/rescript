@@ -194,7 +194,7 @@ let primitive ppf (prim : Lam_primitive.t) =
   | Pmakearray -> fprintf ppf "makearray"
   | Pmakelist -> fprintf ppf "makelist"
   | Pmakedict -> fprintf ppf "makedict"
-  | Phas -> fprintf ppf "has_in"
+  | Phas -> fprintf ppf "has"
   | Parrayrefu -> fprintf ppf "array.unsafe_get"
   | Parraysetu -> fprintf ppf "array.unsafe_set"
   | Parrayrefs -> fprintf ppf "array.get"
