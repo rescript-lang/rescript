@@ -229,7 +229,7 @@ let primitive ppf = function
   | Pmakelist Mutable -> fprintf ppf "makelist"
   | Pmakelist Immutable -> fprintf ppf "makelist_imm"
   | Pmakedict -> fprintf ppf "makedict"
-  | Phasin -> fprintf ppf "has_in"
+  | Phas -> fprintf ppf "has_in"
   | Pisint -> fprintf ppf "isint"
   | Pisout -> fprintf ppf "isout"
   | Pisnullable -> fprintf ppf "isnullable"

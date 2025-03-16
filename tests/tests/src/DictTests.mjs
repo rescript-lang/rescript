@@ -51,7 +51,7 @@ if (!("key1" in dict)) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "DictTests.res",
-      43,
+      44,
       2
     ],
     Error: new Error()
@@ -63,7 +63,7 @@ if (!("key2" in dict)) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "DictTests.res",
-      44,
+      46,
       2
     ],
     Error: new Error()
@@ -75,19 +75,31 @@ if ("key3" in dict !== false) {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "DictTests.res",
-      45,
+      48,
       2
     ],
     Error: new Error()
   };
 }
 
-if (!("__proto__" in dict)) {
+if (Object.hasOwn(dict, "toString") !== false) {
   throw {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "DictTests.res",
-      46,
+      50,
+      2
+    ],
+    Error: new Error()
+  };
+}
+
+if (!Object.hasOwn(dict, "key1")) {
+  throw {
+    RE_EXN_ID: "Assert_failure",
+    _1: [
+      "DictTests.res",
+      52,
       2
     ],
     Error: new Error()
@@ -99,7 +111,7 @@ if (typeof ("key1" in dict) !== "boolean") {
     RE_EXN_ID: "Assert_failure",
     _1: [
       "DictTests.res",
-      47,
+      54,
       2
     ],
     Error: new Error()

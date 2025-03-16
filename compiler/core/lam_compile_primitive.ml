@@ -574,12 +574,12 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
                  Some (Js_op.Lit txt, expr)
                | _ -> None))
     | _ -> assert false)
-  | Phasin -> (
+  | Phas -> (
     match args with
-    | [obj; prop] -> E.in_ prop obj
+    | [obj; prop] -> E.has obj prop
     | _ ->
       Location.raise_errorf ~loc
-        "Invalid external \"%%has_in\" type signature. Expected to have two \
+        "Invalid external \"%%has\" type signature. Expected to have two \
          arguments.")
   | Parraysetu -> (
     match args with

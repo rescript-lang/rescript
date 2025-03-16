@@ -246,18 +246,20 @@ let mapValues: (dict<'a>, 'a => 'b) => dict<'b>
 /**
 `has(dictionary, "key")` returns true if the "key" is present in the dictionary.
 
+It uses the `in` operator under the hood and falls back to the `Object.hasOwn` method when safety cannot be guaranteed at compile time.
+
 ## Examples
 
 ```rescript
 let dict = dict{"key1": Some(1), "key2": None}
 
-dict->Dict.has("key1") // true
-dict->Dict.has("key2") // true
-dict->Dict.has("key3") // false
-dict->Dict.has("__proto__") // true, since it uses in operator under the hood
+dict->Dict.has("key1")->assertEqual(true)
+dict->Dict.has("key2")->assertEqual(true)
+dict->Dict.has("key3")->assertEqual(false)
+dict->Dict.has("toString")->assertEqual(false)
 ```
 */
-external has: (dict<'a>, string) => bool = "%has_in"
+external has: (dict<'a>, string) => bool = "%has"
 
 /**
   `ignore(dict)` ignores the provided dict and returns unit.
