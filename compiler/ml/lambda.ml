@@ -269,7 +269,7 @@ type primitive =
   | Pmakelist of Asttypes.mutable_flag
   (* dict primitives *)
   | Pmakedict
-  | Phasin
+  | Phas
   (* promise *)
   | Pawait
   (* module *)

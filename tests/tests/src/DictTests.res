@@ -40,9 +40,16 @@ module DictHas = {
     "key2": None,
   }
 
+  // Test success path
   assert(dict->Dict.has("key1"))
+  // Test undefined field
   assert(dict->Dict.has("key2"))
+  // Test missing field
   assert(dict->Dict.has("key3") === false)
-  assert(dict->Dict.has("__proto__"))
+  // Test prototype field
+  assert(dict->Dict.has("toString") === false)
+  // Test without compile time knowledge
+  assert(dict->Dict.has(%raw(`"key1"`)))
+  // Test parantesis in generated code
   assert(typeof(dict->Dict.has("key1")) === #boolean)
 }
