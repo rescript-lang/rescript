@@ -2223,6 +2223,41 @@ let not_function env ty =
   let ls, tvar = list_labels env ty in
   ls = [] && not tvar
 
+let rec find_injectable_source_loc_arg t =
+  match t.desc with
+  | Tarrow (Labelled n, {desc = Tconstr (p, [], _)}, _, _, _)
+    when Path.same p Predef.path_source_loc ->
+    Some n
+  | Tarrow (_, _, t, _, _) -> find_injectable_source_loc_arg t
+  | _ -> None
+
+let mk_source_loc_field ~parent_loc field_name ident_name =
+  ( Location.mknoloc (Longident.Lident field_name),
+    Ast_helper.Exp.ident
+      ~loc:{parent_loc with loc_ghost = true}
+      (Location.mknoloc (Longident.Lident ident_name)),
+    false )
+
+let expand_injectable_args ~(apply_expr : Parsetree.expression) ~exp_type
+    (sargs : sargs) =
+  match find_injectable_source_loc_arg exp_type with
+  | None -> sargs
+  | Some injectable_source_loc_arg_label_name ->
+    let mk_source_loc_field =
+      mk_source_loc_field ~parent_loc:apply_expr.pexp_loc
+    in
+    sargs
+    @ [
+        ( Labelled (Location.mknoloc injectable_source_loc_arg_label_name),
+          Ast_helper.Exp.record
+            [
+              mk_source_loc_field "filename" "__FILE__";
+              mk_source_loc_field "module_" "__MODULE__";
+              mk_source_loc_field "pos" "__POS__";
+            ]
+            None );
+      ]
+
 type lazy_args =
   (Asttypes.Noloc.arg_label * (unit -> Typedtree.expression) option) list
 
@@ -2412,7 +2447,9 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     let args, ty_res, fully_applied =
       match translate_unified_ops env funct sargs with
       | Some (targs, result_type) -> (targs, result_type, true)
-      | None -> type_application ?type_clash_context total_app env funct sargs
+      | None ->
+        type_application ~apply_expr:sexp ?type_clash_context total_app env
+          funct sargs
     in
     end_def ();
     unify_var env (newvar ()) funct.exp_type;
@@ -3447,8 +3484,11 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
     | _ -> None)
   | _ -> None
 
-and type_application ?type_clash_context total_app env funct (sargs : sargs) :
-    targs * Types.type_expr * bool =
+and type_application ?type_clash_context ~apply_expr total_app env funct
+    (sargs : sargs) : targs * Types.type_expr * bool =
+  let sargs =
+    expand_injectable_args ~apply_expr ~exp_type:funct.exp_type sargs
+  in
   let result_type omitted ty_fun =
     List.fold_left
       (fun ty_fun (l, ty, lv) -> newty2 lv (Tarrow (l, ty, ty_fun, Cok, None)))

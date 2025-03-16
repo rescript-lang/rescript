@@ -46,6 +46,7 @@ val path_list : Path.t
 val path_option : Path.t
 val path_result : Path.t
 val path_dict : Path.t
+val path_source_loc : Path.t
 
 val path_bigint : Path.t
 val path_lazy_t : Path.t

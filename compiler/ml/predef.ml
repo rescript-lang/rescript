@@ -51,6 +51,8 @@ and ident_result = ident_create "result"
 
 and ident_dict = ident_create "dict"
 
+and ident_source_loc = ident_create "sourceLoc"
+
 and ident_bigint = ident_create "bigint"
 
 and ident_lazy_t = ident_create "lazy_t"
@@ -97,6 +99,8 @@ and path_option = Pident ident_option
 and path_result = Pident ident_result
 
 and path_dict = Pident ident_dict
+
+and path_source_loc = Pident ident_source_loc
 
 and path_bigint = Pident ident_bigint
 
@@ -318,6 +322,32 @@ let common_initial_env add_type add_extension empty_env =
             ],
             Record_regular );
     }
+  and decl_source_loc =
+    {
+      decl_abstr with
+      type_kind =
+        (let mk_field name typ =
+           {
+             ld_id = ident_create name;
+             ld_attributes = [];
+             ld_loc = Location.none;
+             ld_mutable = Immutable;
+             ld_optional = false;
+             ld_type = typ;
+           }
+         in
+         Type_record
+           ( [
+               (* __FILE__ *)
+               mk_field "filename" type_string;
+               (* __MODULE__ *)
+               mk_field "module_" type_string;
+               (* __POS__ *)
+               mk_field "pos"
+                 (newgenty (Ttuple [type_string; type_int; type_int; type_int]));
+             ],
+             Record_regular ));
+    }
   and decl_uncurried =
     let tvar1 = newgenvar () in
     {
@@ -402,6 +432,7 @@ let common_initial_env add_type add_extension empty_env =
   |> add_type ident_array decl_array
   |> add_type ident_list decl_list
   |> add_type ident_dict decl_dict
+  |> add_type ident_source_loc decl_source_loc
   |> add_type ident_unknown decl_unknown
   |> add_exception ident_undefined_recursive_module
        [newgenty (Ttuple [type_string; type_int; type_int])]
