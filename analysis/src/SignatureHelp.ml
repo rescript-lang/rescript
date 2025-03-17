@@ -113,7 +113,8 @@ let extractParameters ~signature ~typeStrForParser ~labelPrefixLen =
       | {
        (* Gotcha: functions with multiple arugments are modelled as a series of single argument functions. *)
        Parsetree.ptyp_desc =
-         Ptyp_arrow (argumentLabel, argumentTypeExpr, nextFunctionExpr, _);
+         Ptyp_arrow
+           {lbl = argumentLabel; arg = argumentTypeExpr; ret = nextFunctionExpr};
        ptyp_loc;
       } ->
         let startOffset =
@@ -153,14 +154,14 @@ let findActiveParameter ~argAtCursor ~args =
     (* If a function only has one, unlabelled argument, we can safely assume that's active whenever we're in the signature help for that function,
        even if we technically didn't find anything at the cursor (which we don't for empty expressions). *)
     match args with
-    | [(Asttypes.Nolabel, _)] -> Some 0
+    | [(Asttypes.Noloc.Nolabel, _)] -> Some 0
     | _ -> None)
   | Some (Unlabelled unlabelledArgumentIndex) ->
     let index = ref 0 in
     args
     |> List.find_map (fun (label, _) ->
            match label with
-           | Asttypes.Nolabel when !index = unlabelledArgumentIndex ->
+           | Asttypes.Noloc.Nolabel when !index = unlabelledArgumentIndex ->
              Some !index
            | _ ->
              index := !index + 1;
@@ -170,7 +171,7 @@ let findActiveParameter ~argAtCursor ~args =
     args
     |> List.find_map (fun (label, _) ->
            match label with
-           | (Asttypes.Labelled labelName | Optional labelName)
+           | (Asttypes.Noloc.Labelled labelName | Optional labelName)
              when labelName = name ->
              Some !index
            | _ ->
@@ -364,16 +365,20 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
         | {
          pexp_desc =
            Pexp_apply
-             ( {pexp_desc = Pexp_ident {txt = Lident ("|." | "|.u")}},
-               [
-                 _;
-                 ( _,
-                   {
-                     pexp_desc =
-                       Pexp_apply (({pexp_desc = Pexp_ident _} as exp), args);
-                     pexp_loc;
-                   } );
-               ] );
+             {
+               funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};
+               args =
+                 [
+                   _;
+                   ( _,
+                     {
+                       pexp_desc =
+                         Pexp_apply
+                           {funct = {pexp_desc = Pexp_ident _} as exp; args};
+                       pexp_loc;
+                     } );
+                 ];
+             };
         }
           when locHasCursor pexp_loc ->
           let argAtCursor, extractedArgs =
@@ -383,7 +388,8 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
             (exp.pexp_loc, `FunctionCall (argAtCursor, exp, extractedArgs))
         (* Look for applying idents, like someIdent(...) *)
         | {
-         pexp_desc = Pexp_apply (({pexp_desc = Pexp_ident _} as exp), args);
+         pexp_desc =
+           Pexp_apply {funct = {pexp_desc = Pexp_ident _} as exp; args};
          pexp_loc;
         }
           when locHasCursor pexp_loc ->
@@ -468,6 +474,7 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
                     parameters =
                       parameters
                       |> List.map (fun (argLabel, start, end_) ->
+                             let argLabel = Asttypes.to_noloc argLabel in
                              let paramArgCount = !paramUnlabelledArgCount in
                              paramUnlabelledArgCount := paramArgCount + 1;
                              let unlabelledArgCount = ref 0 in
@@ -480,8 +487,8 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
                                            let argCount = !unlabelledArgCount in
                                            unlabelledArgCount := argCount + 1;
                                            match (lbl, argLabel) with
-                                           | ( Asttypes.Optional l1,
-                                               Asttypes.Optional l2 )
+                                           | ( Asttypes.Noloc.Optional l1,
+                                               Asttypes.Noloc.Optional l2 )
                                              when l1 = l2 ->
                                              true
                                            | Labelled l1, Labelled l2
@@ -546,44 +553,44 @@ let signatureHelp ~path ~pos ~currentFile ~debug ~allowForConstructorPayloads =
                 let offset = ref 0 in
                 Some
                   (`InlineRecord
-                    (fields
-                    |> List.map (fun (field : field) ->
-                           let startOffset = !offset in
-                           let argText =
-                             Printf.sprintf "%s%s: %s" field.fname.txt
-                               (if field.optional then "?" else "")
-                               (Shared.typeToString
-                                  (if field.optional then
-                                     Utils.unwrapIfOption field.typ
-                                   else field.typ))
-                           in
-                           let endOffset =
-                             startOffset + String.length argText
-                           in
-                           offset := endOffset + String.length ", ";
-                           (argText, field, (startOffset, endOffset)))))
+                     (fields
+                     |> List.map (fun (field : field) ->
+                            let startOffset = !offset in
+                            let argText =
+                              Printf.sprintf "%s%s: %s" field.fname.txt
+                                (if field.optional then "?" else "")
+                                (Shared.typeToString
+                                   (if field.optional then
+                                      Utils.unwrapIfOption field.typ
+                                    else field.typ))
+                            in
+                            let endOffset =
+                              startOffset + String.length argText
+                            in
+                            offset := endOffset + String.length ", ";
+                            (argText, field, (startOffset, endOffset)))))
               | Args [(typ, _)] ->
                 Some
                   (`SingleArg
-                    ( typ |> Shared.typeToString,
-                      docsForLabel ~file:full.file ~package:full.package
-                        ~supportsMarkdownLinks typ ))
+                     ( typ |> Shared.typeToString,
+                       docsForLabel ~file:full.file ~package:full.package
+                         ~supportsMarkdownLinks typ ))
               | Args args ->
                 let offset = ref 0 in
                 Some
                   (`TupleArg
-                    (args
-                    |> List.map (fun (typ, _) ->
-                           let startOffset = !offset in
-                           let argText = typ |> Shared.typeToString in
-                           let endOffset =
-                             startOffset + String.length argText
-                           in
-                           offset := endOffset + String.length ", ";
-                           ( argText,
-                             docsForLabel ~file:full.file ~package:full.package
-                               ~supportsMarkdownLinks typ,
-                             (startOffset, endOffset) ))))
+                     (args
+                     |> List.map (fun (typ, _) ->
+                            let startOffset = !offset in
+                            let argText = typ |> Shared.typeToString in
+                            let endOffset =
+                              startOffset + String.length argText
+                            in
+                            offset := endOffset + String.length ", ";
+                            ( argText,
+                              docsForLabel ~file:full.file ~package:full.package
+                                ~supportsMarkdownLinks typ,
+                              (startOffset, endOffset) ))))
             in
             let label =
               constructor.name ^ "("

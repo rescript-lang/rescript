@@ -152,14 +152,14 @@ let reset_pipe ctxt = { ctxt with pipe=false }
 *)
 
 let list :
-      'a.
-      ?sep:space_formatter ->
-      ?first:space_formatter ->
-      ?last:space_formatter ->
-      (Format.formatter -> 'a -> unit) ->
-      Format.formatter ->
-      'a list ->
-      unit =
+    'a.
+    ?sep:space_formatter ->
+    ?first:space_formatter ->
+    ?last:space_formatter ->
+    (Format.formatter -> 'a -> unit) ->
+    Format.formatter ->
+    'a list ->
+    unit =
  fun ?sep ?first ?last fu f xs ->
   let first =
     match first with
@@ -193,13 +193,13 @@ let list :
   aux f xs
 
 let option :
-      'a.
-      ?first:space_formatter ->
-      ?last:space_formatter ->
-      (Format.formatter -> 'a -> unit) ->
-      Format.formatter ->
-      'a option ->
-      unit =
+    'a.
+    ?first:space_formatter ->
+    ?last:space_formatter ->
+    (Format.formatter -> 'a -> unit) ->
+    Format.formatter ->
+    'a option ->
+    unit =
  fun ?first ?last fu f a ->
   let first =
     match first with
@@ -218,14 +218,14 @@ let option :
     pp f last
 
 let paren :
-      'a.
-      ?first:space_formatter ->
-      ?last:space_formatter ->
-      bool ->
-      (Format.formatter -> 'a -> unit) ->
-      Format.formatter ->
-      'a ->
-      unit =
+    'a.
+    ?first:space_formatter ->
+    ?last:space_formatter ->
+    bool ->
+    (Format.formatter -> 'a -> unit) ->
+    Format.formatter ->
+    'a ->
+    unit =
  fun ?(first = ("" : _ format6)) ?(last = ("" : _ format6)) b fu f x ->
   if b then (
     pp f "(";
@@ -288,8 +288,8 @@ let string_quot f x = pp f "`%s" x
 let rec type_with_label ctxt f (label, c) =
   match label with
   | Nolabel -> core_type1 ctxt f c (* otherwise parenthesize *)
-  | Labelled s -> pp f "%s:%a" s (core_type1 ctxt) c
-  | Optional s -> pp f "?%s:%a" s (core_type1 ctxt) c
+  | Labelled {txt = s} -> pp f "%s:%a" s (core_type1 ctxt) c
+  | Optional {txt = s} -> pp f "?%s:%a" s (core_type1 ctxt) c
 
 and core_type ctxt f x =
   if x.ptyp_attributes <> [] then
@@ -298,10 +298,10 @@ and core_type ctxt f x =
       (attributes ctxt) x.ptyp_attributes
   else
     match x.ptyp_desc with
-    | Ptyp_arrow (l, ct1, ct2, a) ->
+    | Ptyp_arrow {lbl = l; arg; ret; arity} ->
       pp f "@[<2>%a@;->@;%a%s@]" (* FIXME remove parens later *)
-        (type_with_label ctxt) (l, ct1) (core_type ctxt) ct2
-        (match a with
+        (type_with_label ctxt) (l, arg) (core_type ctxt) ret
+        (match arity with
         | None -> ""
         | Some n -> " (a:" ^ string_of_int n ^ ")")
     | Ptyp_alias (ct, s) -> pp f "@[<2>%a@;as@;'%s@]" (core_type1 ctxt) ct s
@@ -437,8 +437,10 @@ and pattern1 ctxt (f : Format.formatter) (x : pattern) : unit =
     | Ppat_construct ({txt = Lident ("()" | "[]"); _}, _) ->
       simple_pattern ctxt f x
     | Ppat_construct (({txt; _} as li), po) -> (
-      if (* FIXME The third field always false *)
-         txt = Lident "::" then pp f "%a" pattern_list_helper x
+      if
+        (* FIXME The third field always false *)
+        txt = Lident "::"
+      then pp f "%a" pattern_list_helper x
       else
         match po with
         | Some x -> pp f "%a@;%a" longident_loc li (simple_pattern ctxt) x
@@ -497,7 +499,7 @@ and label_exp ctxt f (l, opt, p) =
   | Nolabel ->
     (* single case pattern parens needed here *)
     pp f "%a@ " (simple_pattern ctxt) p
-  | Optional rest -> (
+  | Optional {txt = rest} -> (
     match p with
     | {ppat_desc = Ppat_var {txt; _}; ppat_attributes = []} when txt = rest -> (
       match opt with
@@ -508,7 +510,7 @@ and label_exp ctxt f (l, opt, p) =
       | Some o ->
         pp f "?%s:(%a=@;%a)@;" rest (pattern1 ctxt) p (expression ctxt) o
       | None -> pp f "?%s:%a@;" rest (simple_pattern ctxt) p))
-  | Labelled l -> (
+  | Labelled {txt = l} -> (
     match p with
     | {ppat_desc = Ppat_var {txt; _}; ppat_attributes = []} when txt = l ->
       pp f "~%s@;" l
@@ -519,7 +521,10 @@ and sugar_expr ctxt f e =
   else
     match e.pexp_desc with
     | Pexp_apply
-        ({pexp_desc = Pexp_ident {txt = id; _}; pexp_attributes = []; _}, args)
+        {
+          funct = {pexp_desc = Pexp_ident {txt = id; _}; pexp_attributes = []; _};
+          args;
+        }
       when List.for_all (fun (lab, _) -> lab = Nolabel) args -> (
       let print_indexop a path_prefix assign left right print_index indices
           rem_args =
@@ -605,14 +610,15 @@ and expression ctxt f x =
     | (Pexp_let _ | Pexp_letmodule _ | Pexp_open _ | Pexp_letexception _)
       when ctxt.semi ->
       paren true (expression reset_ctxt) f x
-    | Pexp_fun {arg_label = l; default = e0; lhs = p; rhs = e; arity} ->
+    | Pexp_fun {arg_label = l; default = e0; lhs = p; rhs = e; arity; async} ->
       let arity_str =
         match arity with
         | None -> ""
         | Some arity -> "[arity:" ^ string_of_int arity ^ "]"
       in
-      pp f "@[<2>fun@;%s%a->@;%a@]" arity_str (label_exp ctxt) (l, e0, p)
-        (expression ctxt) e
+      let async_str = if async then "async " else "" in
+      pp f "@[<2>%sfun@;%s%a->@;%a@]" async_str arity_str (label_exp ctxt)
+        (l, e0, p) (expression ctxt) e
     | Pexp_match (e, l) ->
       pp f "@[<hv0>@[<hv0>@[<2>match %a@]@ with@]%a@]" (expression reset_ctxt) e
         (case_list ctxt) l
@@ -627,7 +633,7 @@ and expression ctxt f x =
       (*   rec_flag rf *)
       pp f "@[<2>%a in@;<1 -2>%a@]" (bindings reset_ctxt) (rf, l)
         (expression ctxt) e
-    | Pexp_apply (e, l) -> (
+    | Pexp_apply {funct = e; args = l; partial} -> (
       if not (sugar_expr ctxt f x) then
         match view_fixity_of_exp e with
         | `Infix s -> (
@@ -663,14 +669,15 @@ and expression ctxt f x =
               (list (label_x_expression_param ctxt))
               l)
         | _ ->
-          pp f "@[<hov2>%a@]"
+          let partial_str = if partial then " ..." else "" in
+          pp f "@[<hov2>%a%s@]"
             (fun f (e, l) ->
               pp f "%a@ %a" (expression2 ctxt) e
                 (list (label_x_expression_param reset_ctxt))
                 l)
               (* reset here only because [function,match,try,sequence]
                  are lower priority *)
-            (e, l))
+            (e, l) partial_str)
     | Pexp_construct (li, Some eo) when not (is_simple_construct (view_expr x))
       -> (
       (* Not efficient FIXME*)
@@ -701,15 +708,6 @@ and expression ctxt f x =
       in
       let lst = sequence_helper [] x in
       pp f "@[<hv>%a@]" (list (expression (under_semi ctxt)) ~sep:";@;") lst
-    | Pexp_new li -> pp f "@[<hov2>new@ %a@]" longident_loc li
-    | Pexp_setinstvar (s, e) ->
-      pp f "@[<hov2>%s@ <-@ %a@]" s.txt (expression ctxt) e
-    | Pexp_override l ->
-      (* FIXME *)
-      let string_x_expression f (s, e) =
-        pp f "@[<hov2>%s@ =@ %a@]" s.txt (expression ctxt) e
-      in
-      pp f "@[<hov2>{<%a>}@]" (list string_x_expression ~sep:";") l
     | Pexp_letmodule (s, me, e) ->
       pp f "@[<hov2>let@ module@ %s@ =@ %a@ in@ %a@]" s.txt
         (module_expr reset_ctxt) me (expression ctxt) e
@@ -719,12 +717,6 @@ and expression ctxt f x =
         cd (expression ctxt) e
     | Pexp_assert e -> pp f "@[<hov2>assert@ %a@]" (simple_expr ctxt) e
     | Pexp_lazy e -> pp f "@[<hov2>lazy@ %a@]" (simple_expr ctxt) e
-    (* Pexp_poly: impossible but we should print it anyway, rather than
-       assert false *)
-    | Pexp_poly (e, None) -> pp f "@[<hov2>!poly!@ %a@]" (simple_expr ctxt) e
-    | Pexp_poly (e, Some ct) ->
-      pp f "@[<hov2>(!poly!@ %a@ : %a)@]" (simple_expr ctxt) e (core_type ctxt)
-        ct
     | Pexp_open (ovf, lid, e) ->
       pp f "@[<2>let open%s %a in@;%a@]" (override ovf) longident_loc lid
         (expression ctxt) e
@@ -893,7 +885,6 @@ and signature_item ctxt f x : unit =
       (value_description ctxt) vd (item_attributes ctxt) vd.pval_attributes
   | Psig_typext te -> type_extension ctxt f te
   | Psig_exception ed -> exception_declaration ctxt f ed
-  | Psig_class () -> ()
   | Psig_module
       ({pmd_type = {pmty_desc = Pmty_alias alias; pmty_attributes = []; _}; _}
        as pmd) ->
@@ -918,7 +909,6 @@ and signature_item ctxt f x : unit =
           pp_print_space f ();
           pp f "@ =@ %a" (module_type ctxt) mt)
       md (item_attributes ctxt) attrs
-  | Psig_class_type () -> ()
   | Psig_recmodule decls ->
     let rec string_x_module_type_list f ?(first = true) l =
       match l with
@@ -992,17 +982,19 @@ and binding ctxt f {pvb_pat = p; pvb_expr = x; _} =
     if x.pexp_attributes <> [] then pp f "=@;%a" (expression ctxt) x
     else
       match x.pexp_desc with
-      | Pexp_fun {arg_label = label; default = eo; lhs = p; rhs = e; arity} ->
+      | Pexp_fun
+          {arg_label = label; default = eo; lhs = p; rhs = e; arity; async} ->
         let arity_str =
           match arity with
           | None -> ""
           | Some arity -> "[arity:" ^ string_of_int arity ^ "]"
         in
+        let async_str = if async then "async " else "" in
         if label = Nolabel then
-          pp f "%s%a@ %a" arity_str (simple_pattern ctxt) p
+          pp f "%s%s%a@ %a" async_str arity_str (simple_pattern ctxt) p
             pp_print_pexp_function e
         else
-          pp f "%s%a@ %a" arity_str (label_exp ctxt) (label, eo, p)
+          pp f "%s%s%a@ %a" async_str arity_str (label_exp ctxt) (label, eo, p)
             pp_print_pexp_function e
       | Pexp_newtype (str, e) ->
         pp f "(type@ %s)@ %a" str.txt pp_print_pexp_function e
@@ -1123,8 +1115,6 @@ and structure_item ctxt f x =
           pp_print_space f ();
           pp f "@ =@ %a" (module_type ctxt) mt)
       md (item_attributes ctxt) attrs
-  | Pstr_class () -> ()
-  | Pstr_class_type () -> ()
   | Pstr_primitive vd ->
     pp f "@[<hov2>external@ %a@ :@ %a@]%a" protect_ident vd.pval_name.txt
       (value_description ctxt) vd (item_attributes ctxt) vd.pval_attributes
@@ -1294,10 +1284,10 @@ and label_x_expression_param ctxt f (l, e) =
   in
   match l with
   | Nolabel -> expression2 ctxt f e (* level 2*)
-  | Optional str ->
+  | Optional {txt = str} ->
     if Some str = simple_name then pp f "?%s" str
     else pp f "?%s:%a" str (simple_expr ctxt) e
-  | Labelled lbl ->
+  | Labelled {txt = lbl} ->
     if Some lbl = simple_name then pp f "~%s" lbl
     else pp f "~%s:%a" lbl (simple_expr ctxt) e
 

@@ -183,8 +183,8 @@ let something = {
   let second2 = 1
   ignore(second)
   ignore(second2)
-  Js.log(s)
-  //      ^com
+  Console.log(s)
+  //           ^com
 }
 
 let fff: recordWithOptionalField = {
@@ -314,7 +314,7 @@ open CompletionSupport
 // CompletionSupport.makeTestHidden()
 //                                  ^com
 
-let mkStuff = (r: Js.Re.t) => {
+let mkStuff = (r: RegExp.t) => {
   ignore(r)
   "hello"
 }
@@ -343,7 +343,7 @@ module Money: {
 
   let make = (): t => zero
 
-  let fromInt = (int): t => int->Js.Int.toString
+  let fromInt = (int): t => int->Int.toString
 
   let plus = (m1, _) => m1
 }

@@ -5,10 +5,10 @@ Definition src/Definition.res 10:23
 {"uri": "Definition.res", "range": {"start": {"line": 6, "character": 7}, "end": {"line": 6, "character": 13}}}
 
 Hover src/Definition.res 14:14
-{"contents": {"kind": "markdown", "value": "```rescript\n(List.t<'a>, 'a => 'b) => List.t<'b>\n```\n\n---\n\n```\n \n```\n```rescript\ntype List.t<'a> = list<'a>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22List.res%22%2C34%2C0%5D)\n\n---\n\n`map(list, f)` returns a new list with `f` applied to each element of `list`.\n\n## Examples\n\n```rescript\nlist{1, 2}->List.map(x => x + 1) // list{3, 4}\n```\n"}}
+{"contents": {"kind": "markdown", "value": "```rescript\n(list<'a>, 'a => 'b) => list<'b>\n```\n---\n\n`map(list, f)` returns a new list with `f` applied to each element of `list`.\n\n## Examples\n\n```rescript\nlist{1, 2}->List.map(x => x + 1) // list{3, 4}\n```\n"}}
 
 Hover src/Definition.res 18:14
-{"contents": {"kind": "markdown", "value": "```rescript\n('a => 'b, List.t<'a>) => List.t<'b>\n```\n\n---\n\n```\n \n```\n```rescript\ntype List.t<'a> = list<'a>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22List.res%22%2C34%2C0%5D)\n"}}
+{"contents": {"kind": "markdown", "value": "```rescript\n('a => 'b, list<'a>) => list<'b>\n```"}}
 
 Hover src/Definition.res 23:3
 {"contents": {"kind": "markdown", "value": "```rescript\n(int, int) => int\n```"}}

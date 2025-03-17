@@ -7,30 +7,28 @@ let arrow_type ?(max_arity = max_int) ct =
   let rec process attrs_before acc typ arity =
     match typ with
     | _ when arity < 0 -> (attrs_before, List.rev acc, typ)
-    | {ptyp_desc = Ptyp_arrow (_, _, _, Some _); ptyp_attributes = []}
+    | {ptyp_desc = Ptyp_arrow {arity = Some _}; ptyp_attributes = []}
       when acc <> [] ->
       (attrs_before, List.rev acc, typ)
     | {
-     ptyp_desc = Ptyp_arrow ((Nolabel as lbl), typ1, typ2, _);
+     ptyp_desc = Ptyp_arrow {lbl = Nolabel as lbl; arg; ret};
      ptyp_attributes = [];
     } ->
-      let arg = ([], lbl, typ1) in
-      process attrs_before (arg :: acc) typ2 (arity - 1)
+      let arg = ([], lbl, arg) in
+      process attrs_before (arg :: acc) ret (arity - 1)
     | {
-     ptyp_desc = Ptyp_arrow (Nolabel, _typ1, _typ2, _);
+     ptyp_desc = Ptyp_arrow {lbl = Nolabel};
      ptyp_attributes = [({txt = "bs"}, _)];
     } ->
       (* stop here, the uncurried attribute always indicates the beginning of an arrow function
-         * e.g. `(. int) => (. int)` instead of `(. int, . int)` *)
+       * e.g. `(. int) => (. int)` instead of `(. int, . int)` *)
       (attrs_before, List.rev acc, typ)
-    | {
-        ptyp_desc = Ptyp_arrow (Nolabel, _typ1, _typ2, _);
-        ptyp_attributes = _attrs;
-      } as return_type ->
+    | {ptyp_desc = Ptyp_arrow {lbl = Nolabel}; ptyp_attributes = _attrs} as
+      return_type ->
       let args = List.rev acc in
       (attrs_before, args, return_type)
     | {
-     ptyp_desc = Ptyp_arrow (((Labelled _ | Optional _) as lbl), typ1, typ2, _);
+     ptyp_desc = Ptyp_arrow {lbl = (Labelled _ | Optional _) as lbl; arg; ret};
      ptyp_attributes = attrs;
     } ->
       (* Res_core.parse_es6_arrow_type has a workaround that removed an extra arity for the function if the
@@ -39,21 +37,18 @@ let arrow_type ?(max_arity = max_int) ct =
          When this case is encountered we add that missing arity so the arrow is printed properly.
       *)
       let arity =
-        match typ1 with
+        match arg with
         | {ptyp_desc = Ptyp_any; ptyp_attributes = attrs1}
           when has_as_attr attrs1 ->
           arity
         | _ -> arity - 1
       in
-      let arg = (attrs, lbl, typ1) in
-      process attrs_before (arg :: acc) typ2 arity
+      let arg = (attrs, lbl, arg) in
+      process attrs_before (arg :: acc) ret arity
     | typ -> (attrs_before, List.rev acc, typ)
   in
   match ct with
-  | {
-      ptyp_desc = Ptyp_arrow (Nolabel, _typ1, _typ2, _);
-      ptyp_attributes = attrs1;
-    } as typ ->
+  | {ptyp_desc = Ptyp_arrow {lbl = Nolabel}; ptyp_attributes = attrs1} as typ ->
     process attrs1 [] {typ with ptyp_attributes = []} max_arity
   | typ -> process [] [] typ max_arity
 
@@ -69,33 +64,6 @@ let functor_type modtype =
     | mod_type -> (List.rev acc, mod_type)
   in
   process [] modtype
-
-let process_partial_app_attribute attrs =
-  let rec process partial_app acc attrs =
-    match attrs with
-    | [] -> (partial_app, List.rev acc)
-    | ({Location.txt = "res.partial"}, _) :: rest -> process true acc rest
-    | attr :: rest -> process partial_app (attr :: acc) rest
-  in
-  process false [] attrs
-
-let has_partial_attribute attrs =
-  List.exists
-    (function
-      | {Location.txt = "res.partial"}, _ -> true
-      | _ -> false)
-    attrs
-
-type function_attributes_info = {async: bool; attributes: Parsetree.attributes}
-
-let process_function_attributes attrs =
-  let rec process async bs acc attrs =
-    match attrs with
-    | [] -> {async; attributes = List.rev acc}
-    | ({Location.txt = "res.async"}, _) :: rest -> process true bs acc rest
-    | attr :: rest -> process async bs (attr :: acc) rest
-  in
-  process false false [] attrs
 
 let has_await_attribute attrs =
   List.exists
@@ -147,7 +115,7 @@ let rewrite_underscore_apply expr =
         arg_label = Nolabel;
         default = None;
         lhs = {ppat_desc = Ppat_var {txt = "__x"}};
-        rhs = {pexp_desc = Pexp_apply (call_expr, args)} as e;
+        rhs = {pexp_desc = Pexp_apply {funct = call_expr; args}} as e;
       } ->
     let new_args =
       List.map
@@ -164,7 +132,11 @@ let rewrite_underscore_apply expr =
           | arg -> arg)
         args
     in
-    {e with pexp_desc = Pexp_apply (call_expr, new_args)}
+    {
+      e with
+      pexp_desc =
+        Pexp_apply {funct = call_expr; args = new_args; partial = false};
+    }
   | _ -> expr
 
 type fun_param_kind =
@@ -176,32 +148,10 @@ type fun_param_kind =
     }
   | NewTypes of {attrs: Parsetree.attributes; locs: string Asttypes.loc list}
 
-let fun_expr expr =
-  (* Turns (type t, type u, type z) into "type t u z" *)
-  let rec collect_new_types acc return_expr =
-    match return_expr with
-    | {pexp_desc = Pexp_newtype (string_loc, return_expr); pexp_attributes = []}
-      ->
-      collect_new_types (string_loc :: acc) return_expr
-    | return_expr -> (List.rev acc, return_expr)
-  in
-  let rec collect ~n_fun attrs_before acc expr =
+let fun_expr expr_ =
+  let async = Ast_async.dig_async_payload_from_function expr_ in
+  let rec collect_params ~n_fun ~params expr =
     match expr with
-    | {
-     pexp_desc =
-       Pexp_fun
-         {
-           arg_label = Nolabel;
-           default = None;
-           lhs = {ppat_desc = Ppat_var {txt = "__x"}};
-           rhs = {pexp_desc = Pexp_apply _};
-         };
-    } ->
-      (attrs_before, List.rev acc, rewrite_underscore_apply expr)
-    | {pexp_desc = Pexp_newtype (string_loc, rest); pexp_attributes = attrs} ->
-      let string_locs, return_expr = collect_new_types [string_loc] rest in
-      let param = NewTypes {attrs; locs = string_locs} in
-      collect ~n_fun attrs_before (param :: acc) return_expr
     | {
      pexp_desc =
        Pexp_fun
@@ -212,25 +162,27 @@ let fun_expr expr =
            rhs = return_expr;
            arity;
          };
-     pexp_attributes = [];
+     pexp_attributes = attrs;
     }
       when arity = None || n_fun = 0 ->
-      let parameter =
-        Parameter {attrs = []; lbl; default_expr; pat = pattern}
-      in
-      collect ~n_fun:(n_fun + 1) attrs_before (parameter :: acc) return_expr
-    (* If a fun has an attribute, then it stops here and makes currying.
-       i.e attributes outside of (...), uncurried `(.)` and `async` make currying *)
-    | {pexp_desc = Pexp_fun _} -> (attrs_before, List.rev acc, expr)
-    | expr when n_fun = 0 && Ast_uncurried.expr_is_uncurried_fun expr ->
-      let expr = Ast_uncurried.expr_extract_uncurried_fun expr in
-      collect ~n_fun attrs_before acc expr
-    | expr -> (attrs_before, List.rev acc, expr)
+      let parameter = Parameter {attrs; lbl; default_expr; pat = pattern} in
+      collect_params ~n_fun:(n_fun + 1) ~params:(parameter :: params)
+        return_expr
+    | _ -> (async, List.rev params, expr)
   in
-  match expr with
-  | {pexp_desc = Pexp_fun _ | Pexp_newtype _} ->
-    collect ~n_fun:0 expr.pexp_attributes [] {expr with pexp_attributes = []}
-  | _ -> collect ~n_fun:0 [] [] expr
+  (* Turns (type t, type u, type z) into "type t u z" *)
+  let rec collect_new_types acc return_expr =
+    match return_expr with
+    | {pexp_desc = Pexp_newtype (string_loc, return_expr)} ->
+      collect_new_types (string_loc :: acc) return_expr
+    | return_expr -> (List.rev acc, return_expr)
+  in
+  match expr_ with
+  | {pexp_desc = Pexp_newtype (string_loc, rest)} ->
+    let string_locs, return_expr = collect_new_types [string_loc] rest in
+    let param = NewTypes {attrs = []; locs = string_locs} in
+    collect_params ~n_fun:0 ~params:[param] return_expr
+  | _ -> collect_params ~n_fun:0 ~params:[] {expr_ with pexp_attributes = []}
 
 let process_braces_attr expr =
   match expr.pexp_attributes with
@@ -244,10 +196,9 @@ let filter_parsing_attrs attrs =
       match attr with
       | ( {
             Location.txt =
-              ( "res.braces" | "ns.braces" | "res.iflet" | "res.namedArgLoc"
-              | "res.ternary" | "res.async" | "res.await" | "res.template"
-              | "res.taggedTemplate" | "res.patVariantSpread"
-              | "res.dictPattern" );
+              ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
+              | "res.await" | "res.template" | "res.taggedTemplate"
+              | "res.patVariantSpread" | "res.dictPattern" );
           },
           _ ) ->
         false
@@ -313,11 +264,11 @@ let operator_precedence operator =
   | ":=" -> 1
   | "||" -> 2
   | "&&" -> 3
-  | "=" | "==" | "<" | ">" | "!=" | "<>" | "!==" | "<=" | ">=" | "|>" -> 4
-  | "+" | "+." | "-" | "-." | "^" -> 5
+  | "==" | "===" | "<" | ">" | "!=" | "<>" | "!==" | "<=" | ">=" | "|>" -> 4
+  | "+" | "+." | "-" | "-." | "++" -> 5
   | "*" | "*." | "/" | "/." | "%" -> 6
   | "**" -> 7
-  | "#" | "##" | "|." | "|.u" -> 8
+  | "#" | "##" | "->" -> 8
   | _ -> 0
 
 let is_unary_operator operator =
@@ -328,8 +279,10 @@ let is_unary_operator operator =
 let is_unary_expression expr =
   match expr.pexp_desc with
   | Pexp_apply
-      ( {pexp_desc = Pexp_ident {txt = Longident.Lident operator}},
-        [(Nolabel, _arg)] )
+      {
+        funct = {pexp_desc = Pexp_ident {txt = Longident.Lident operator}};
+        args = [(Nolabel, _arg)];
+      }
     when is_unary_operator operator ->
     true
   | _ -> false
@@ -337,29 +290,32 @@ let is_unary_expression expr =
 (* TODO: tweak this to check for ghost ^ as template literal *)
 let is_binary_operator operator =
   match operator with
-  | ":=" | "||" | "&&" | "=" | "==" | "<" | ">" | "!=" | "!==" | "<=" | ">="
-  | "|>" | "+" | "+." | "-" | "-." | "^" | "*" | "*." | "/" | "/." | "**" | "|."
-  | "|.u" | "<>" | "%" ->
+  | ":=" | "||" | "&&" | "==" | "===" | "<" | ">" | "!=" | "!==" | "<=" | ">="
+  | "|>" | "+" | "+." | "-" | "-." | "++" | "*" | "*." | "/" | "/." | "**"
+  | "->" | "<>" | "%" ->
     true
   | _ -> false
 
 let is_binary_expression expr =
   match expr.pexp_desc with
   | Pexp_apply
-      ( {
-          pexp_desc =
-            Pexp_ident {txt = Longident.Lident operator; loc = operator_loc};
-        },
-        [(Nolabel, _operand1); (Nolabel, _operand2)] )
+      {
+        funct =
+          {
+            pexp_desc =
+              Pexp_ident {txt = Longident.Lident operator; loc = operator_loc};
+          };
+        args = [(Nolabel, _operand1); (Nolabel, _operand2)];
+      }
     when is_binary_operator operator
-         && not (operator_loc.loc_ghost && operator = "^")
+         && not (operator_loc.loc_ghost && operator = "++")
          (* template literal *) ->
     true
   | _ -> false
 
 let is_equality_operator operator =
   match operator with
-  | "=" | "==" | "<>" | "!=" -> true
+  | "==" | "===" | "!=" | "!==" -> true
   | _ -> false
 
 let is_rhs_binary_operator operator =
@@ -396,7 +352,7 @@ let has_attributes attrs =
       | ( {
             Location.txt =
               ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.async" | "res.await" | "res.template" );
+              | "res.await" | "res.template" );
           },
           _ ) ->
         false
@@ -417,8 +373,15 @@ let has_attributes attrs =
 let is_array_access expr =
   match expr.pexp_desc with
   | Pexp_apply
-      ( {pexp_desc = Pexp_ident {txt = Longident.Ldot (Lident "Array", "get")}},
-        [(Nolabel, _parentExpr); (Nolabel, _memberExpr)] ) ->
+      {
+        funct =
+          {
+            pexp_desc =
+              Pexp_ident
+                {txt = Longident.Ldot (Longident.Lident "Array", "get")};
+          };
+        args = [(Nolabel, _parentExpr); (Nolabel, _memberExpr)];
+      } ->
     true
   | _ -> false
 
@@ -491,7 +454,7 @@ let collect_ternary_parts expr =
 
 let parameters_should_hug parameters =
   match parameters with
-  | [Parameter {attrs = []; lbl = Asttypes.Nolabel; default_expr = None; pat}]
+  | [Parameter {attrs = []; lbl = Nolabel; default_expr = None; pat}]
     when is_huggable_pattern pat ->
     true
   | _ -> false
@@ -547,8 +510,10 @@ let should_indent_binary_expr expr =
     | {
      pexp_desc =
        Pexp_apply
-         ( {pexp_desc = Pexp_ident {txt = Longident.Lident sub_operator}},
-           [(Nolabel, _lhs); (Nolabel, _rhs)] );
+         {
+           funct = {pexp_desc = Pexp_ident {txt = Longident.Lident sub_operator}};
+           args = [(Nolabel, _lhs); (Nolabel, _rhs)];
+         };
     }
       when is_binary_operator sub_operator ->
       flattenable_operators operator sub_operator
@@ -558,8 +523,10 @@ let should_indent_binary_expr expr =
   | {
    pexp_desc =
      Pexp_apply
-       ( {pexp_desc = Pexp_ident {txt = Longident.Lident operator}},
-         [(Nolabel, lhs); (Nolabel, _rhs)] );
+       {
+         funct = {pexp_desc = Pexp_ident {txt = Longident.Lident operator}};
+         args = [(Nolabel, lhs); (Nolabel, _rhs)];
+       };
   }
     when is_binary_operator operator ->
     is_equality_operator operator
@@ -579,8 +546,8 @@ let is_printable_attribute attr =
   match attr with
   | ( {
         Location.txt =
-          ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.async"
-          | "res.await" | "res.template" | "res.ternary" );
+          ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.await"
+          | "res.template" | "res.ternary" );
       },
       _ ) ->
     false
@@ -669,8 +636,10 @@ let has_tagged_template_literal_attr attrs =
 let is_template_literal expr =
   match expr.pexp_desc with
   | Pexp_apply
-      ( {pexp_desc = Pexp_ident {txt = Longident.Lident "^"}},
-        [(Nolabel, _); (Nolabel, _)] )
+      {
+        funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "++"}};
+        args = [(Nolabel, _); (Nolabel, _)];
+      }
     when has_template_literal_attr expr.pexp_attributes ->
     true
   | Pexp_constant (Pconst_string (_, Some "")) -> true
@@ -738,15 +707,19 @@ let is_single_pipe_expr expr =
   let is_pipe_expr expr =
     match expr.pexp_desc with
     | Pexp_apply
-        ( {pexp_desc = Pexp_ident {txt = Longident.Lident ("|." | "|.u" | "|>")}},
-          [(Nolabel, _operand1); (Nolabel, _operand2)] ) ->
+        {
+          funct = {pexp_desc = Pexp_ident {txt = Longident.Lident ("->" | "|>")}};
+          args = [(Nolabel, _operand1); (Nolabel, _operand2)];
+        } ->
       true
     | _ -> false
   in
   match expr.pexp_desc with
   | Pexp_apply
-      ( {pexp_desc = Pexp_ident {txt = Longident.Lident ("|." | "|.u" | "|>")}},
-        [(Nolabel, operand1); (Nolabel, _operand2)] )
+      {
+        funct = {pexp_desc = Pexp_ident {txt = Longident.Lident ("->" | "|>")}};
+        args = [(Nolabel, operand1); (Nolabel, _operand2)];
+      }
     when not (is_pipe_expr operand1) ->
     true
   | _ -> false

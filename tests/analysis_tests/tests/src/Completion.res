@@ -1,4 +1,4 @@
-module MyList = Belt.List
+module MyList = List
 // MyList.m
 //         ^com
 // Array.
@@ -45,7 +45,7 @@ let fa: ForAuto.t = 34
 // fa->
 //     ^com
 
-// "hello"->Js.Dict.u
+// "hello"->String.in
 //                   ^com
 
 module O = {
@@ -142,7 +142,7 @@ let foo = {
     type z = int
     let v = 44
   }
-  exception MyException(int, string, float, array<Js.Json.t>)
+  exception MyException(int, string, float, array<JSON.t>)
   let _ = raise(MyException(2, "", 1.0, []))
   add((x: Inner.z), Inner.v + y)
 }
@@ -170,8 +170,8 @@ module WithChildren = {
 // <WithChildren
 //              ^com
 
-// type t = Js.n
-//              ^com
+// type t = Null.
+//               ^com
 // type t = ForAuto.
 //                  ^com
 
@@ -389,7 +389,6 @@ let _ = x =>
 //                      ^com
 
 let _ = _ => {
-  open Js
   //  []->ma
   //        ^com
   ()
@@ -415,7 +414,7 @@ let onClick = evt => {
   evt->ReactEvent.Synthetic.preventDefault
   // SomeLocalModule.
   //                 ^com
-  Js.log("Hello")
+  Console.log("Hello")
 }
 
 // let _ = 123->t

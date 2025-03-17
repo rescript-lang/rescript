@@ -293,7 +293,7 @@ let make_constructor env type_path type_params sargs sret_type =
    any type variable present in [ty].
 *)
 
-let transl_declaration ~type_record_as_object env sdecl id =
+let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
   (* Bind type parameters *)
   reset_type_variables ();
   Ctype.begin_def ();
@@ -529,7 +529,11 @@ let transl_declaration ~type_record_as_object env sdecl id =
       let is_untagged_def =
         Ast_untagged_variants.has_untagged sdecl.ptype_attributes
       in
-      Ast_untagged_variants.check_well_formed ~env ~is_untagged_def cstrs;
+      let well_formedness_check : Ast_untagged_variants.well_formedness_check =
+        {is_untagged_def; cstrs}
+      in
+      (* delay the check until the newenv is created to handle recursive types *)
+      untagged_wfc := well_formedness_check :: !untagged_wfc;
       (Ttype_variant tcstrs, Type_variant cstrs, sdecl)
     | Ptype_record lbls_ -> (
       let optional_labels =
@@ -1163,11 +1167,14 @@ let compute_variance_type env check (required, loc) decl tyl =
       let v = get_variance ty tvl in
       let tr = decl.type_private in
       (* Use required variance where relevant *)
-      let concr = decl.type_kind <> Type_abstract (*|| tr = Type_new*) in
+      let concr =
+        decl.type_kind <> Type_abstract
+        (*|| tr = Type_new*)
+      in
       let p, n =
         if tr = Private || not (Btype.is_Tvar ty) then (p, n) (* set *)
         else (false, false)
-        (* only check *)
+      (* only check *)
       and i = concr || (i && tr = Private) in
       let v = union v (make p n i) in
       let v =
@@ -1464,10 +1471,12 @@ let transl_type_decl env rec_flag sdecl_list =
     | Asttypes.Recursive | Asttypes.Nonrecursive -> (id, None)
   in
   let type_record_as_object = ref false in
+  let untagged_wfc = ref [] in
   let transl_declaration name_sdecl (id, slot) =
     current_slot := slot;
     Builtin_attributes.warning_scope name_sdecl.ptype_attributes (fun () ->
-        transl_declaration ~type_record_as_object temp_env name_sdecl id)
+        transl_declaration ~type_record_as_object ~untagged_wfc temp_env
+          name_sdecl id)
   in
   let tdecls =
     List.map2 transl_declaration sdecl_list (List.map id_slots id_list)
@@ -1525,6 +1534,9 @@ let transl_type_decl env rec_flag sdecl_list =
       | None -> ())
     sdecl_list tdecls;
   (* Check that constraints are enforced *)
+  List.iter
+    (fun check -> Ast_untagged_variants.check_well_formed ~env:newenv check)
+    !untagged_wfc;
   List.iter2 (check_constraints ~type_record_as_object newenv) sdecl_list decls;
   (* Name recursion *)
   let decls =
@@ -1790,7 +1802,7 @@ let transl_exception env sext =
 
 let rec arity_from_arrow_type env core_type ty =
   match (core_type.ptyp_desc, (Ctype.repr ty).desc) with
-  | Ptyp_arrow (_, _, ct2, _), Tarrow (_, _, t2, _, _) ->
+  | Ptyp_arrow {ret = ct2}, Tarrow (_, _, t2, _, _) ->
     1 + arity_from_arrow_type env ct2 t2
   | Ptyp_arrow _, _ | _, Tarrow _ -> assert false
   | _ -> 0
@@ -2093,8 +2105,7 @@ let report_error ppf = function
     Printtyp.report_unification_error ppf env trace
       (function
         | ppf -> fprintf ppf "This type constructor expands to type")
-      (function
-        | ppf -> fprintf ppf "but is used here with type")
+      (function ppf -> fprintf ppf "but is used here with type")
   | Null_arity_external -> fprintf ppf "External identifiers must be functions"
   | Unbound_type_var (ty, decl) -> (
     fprintf ppf "A type variable is unbound in this type declaration";
@@ -2136,8 +2147,7 @@ let report_error ppf = function
       (function
         | ppf ->
           fprintf ppf "The constructor %a@ has type" Printtyp.longident lid)
-      (function
-        | ppf -> fprintf ppf "but was expected to be of type")
+      (function ppf -> fprintf ppf "but was expected to be of type")
   | Rebind_mismatch (lid, p, p') ->
     fprintf ppf "@[%s@ %a@ %s@ %s@ %s@ %s@ %s@]" "The constructor"
       Printtyp.longident lid "extends type" (Path.name p)
@@ -2201,8 +2211,10 @@ let report_error ppf = function
     fprintf ppf "@[GADT case syntax cannot be used in a 'nonrec' block.@]"
   | Variant_runtime_representation_mismatch
       (Variant_coercion.VariantError
-        {is_spread_context; error = Variant_coercion.Untagged {left_is_unboxed}})
-    ->
+         {
+           is_spread_context;
+           error = Variant_coercion.Untagged {left_is_unboxed};
+         }) ->
     let other_variant_text =
       if is_spread_context then "the variant where this is spread"
       else "the other variant"
@@ -2214,7 +2226,7 @@ let report_error ppf = function
       ^ " is not. Both variants unboxed configuration must match")
   | Variant_runtime_representation_mismatch
       (Variant_coercion.VariantError
-        {is_spread_context; error = Variant_coercion.TagName _}) ->
+         {is_spread_context; error = Variant_coercion.TagName _}) ->
     let other_variant_text =
       if is_spread_context then "the variant where this is spread"
       else "the other variant"
@@ -2237,7 +2249,8 @@ let report_error ppf = function
     fprintf ppf "@[Type parameters are not supported in variant type spreads.@]"
   | Variant_spread_fail
       (Variant_type_spread.DuplicateConstructor
-        {variant_with_overlapping_constructor; overlapping_constructor_name}) ->
+         {variant_with_overlapping_constructor; overlapping_constructor_name})
+    ->
     fprintf ppf
       "@[Variant %s has a constructor named %s, but a constructor named %s \
        already exists in the variant it's spread into.@ You cannot spread \

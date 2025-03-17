@@ -756,7 +756,8 @@ let insert_or_append p ps act ors no =
             let _, not_e = get_equiv q rem in
             if
               or_ok p ps not_e
-              && (* check append condition for head of O *)
+              &&
+              (* check append condition for head of O *)
               List.for_all (* check insert condition for tail of O *)
                 (fun cl ->
                   match cl with
@@ -2245,7 +2246,8 @@ let combine_constructor sw_names loc arg ex_pat cstr partial ctx def
           let arg =
             if Datarepr.constructor_has_optional_shape cstr then
               Lprim (Pis_not_none, [arg], loc)
-            else arg
+            else
+              Lprim (Pjscomp Cneq, [arg; Lconst (Const_base (Const_int 0))], loc)
           in
           Lifthenelse (arg, act2, act1)
         | 2, 0, [(i1, act1); (_, act2)], []
@@ -2764,7 +2766,8 @@ let check_partial is_mutable is_lazy pat_act_list = function
   | Total ->
     if
       pat_act_list = []
-      || (* allow empty case list *)
+      ||
+      (* allow empty case list *)
       List.exists
         (fun (pats, lam) -> is_mutable pats && (is_guarded lam || is_lazy pats))
         pat_act_list

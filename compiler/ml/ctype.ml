@@ -600,8 +600,9 @@ let get_level env p =
     match (Env.find_type p env).type_newtype_level with
     | None -> Path.binding_time p
     | Some (x, _) -> x
-  with Not_found -> (* no newtypes in predef *)
-                    Path.binding_time p
+  with Not_found ->
+    (* no newtypes in predef *)
+    Path.binding_time p
 
 let rec normalize_package_path env p =
   let t = try (Env.find_modtype p env).mtd_type with Not_found -> None in
@@ -933,7 +934,6 @@ let rec copy ?env ?partial ?keep_names ty =
                       {
                         row_fields = Ext_list.filter row.row_fields not_reither;
                         row_more = more';
-                        row_bound = ();
                         row_closed = false;
                         row_fixed = false;
                         row_name = None;
@@ -1722,7 +1722,6 @@ let mkvariant fields closed =
          row_fields = fields;
          row_closed = closed;
          row_more = newvar ();
-         row_bound = ();
          row_fixed = false;
          row_name = None;
        })
@@ -1895,7 +1894,7 @@ let rec mcomp type_pairs env t1 t2 =
             match (t1'.desc, t2'.desc) with
             | Tvar _, Tvar _ -> assert false
             | Tarrow (l1, t1, u1, _, _), Tarrow (l2, t2, u2, _, _)
-              when Asttypes.same_arg_label l1 l2
+              when Asttypes.Noloc.same_arg_label l1 l2
                    || not (is_optional l1 || is_optional l2) ->
               mcomp type_pairs env t1 t2;
               mcomp type_pairs env u1 u2
@@ -2312,7 +2311,7 @@ and unify3 env t1 t1' t2 t2' =
       (match (d1, d2) with
       | Tarrow (l1, t1, u1, c1, a1), Tarrow (l2, t2, u2, c2, a2)
         when a1 = a2
-             && (Asttypes.same_arg_label l1 l2
+             && (Asttypes.Noloc.same_arg_label l1 l2
                 || (!umode = Pattern && not (is_optional l1 || is_optional l2))
                 ) -> (
         unify env t1 t2;
@@ -2554,7 +2553,6 @@ and unify_row env row1 row2 =
       {
         row_fields = [];
         row_more = more;
-        row_bound = ();
         row_closed = closed;
         row_fixed = fixed;
         row_name = name;
@@ -2768,7 +2766,7 @@ let filter_arrow ~env ~arity t l =
     let t' = newty2 lv (Tarrow (l, t1, t2, Cok, arity)) in
     link_type t t';
     (t1, t2)
-  | Tarrow (l', t1, t2, _, _) when Asttypes.same_arg_label l l' -> (t1, t2)
+  | Tarrow (l', t1, t2, _, _) when Asttypes.Noloc.same_arg_label l l' -> (t1, t2)
   | _ -> raise (Unify [])
 
 (* Used by [filter_method]. *)
@@ -2883,7 +2881,7 @@ let rec moregen inst_nongen type_pairs env t1 t2 =
                 moregen_occur env t1'.level t2;
                 link_type t1' t2
               | Tarrow (l1, t1, u1, _, _), Tarrow (l2, t2, u2, _, _)
-                when Asttypes.same_arg_label l1 l2 ->
+                when Asttypes.Noloc.same_arg_label l1 l2 ->
                 moregen inst_nongen type_pairs env t1 t2;
                 moregen inst_nongen type_pairs env u1 u2
               | Ttuple tl1, Ttuple tl2 ->
@@ -3153,7 +3151,7 @@ let rec eqtype rename type_pairs subst env t1 t2 =
                     raise (Unify []);
                   subst := (t1', t2') :: !subst)
               | Tarrow (l1, t1, u1, _, _), Tarrow (l2, t2, u2, _, _)
-                when Asttypes.same_arg_label l1 l2 ->
+                when Asttypes.Noloc.same_arg_label l1 l2 ->
                 eqtype rename type_pairs subst env t1 t2;
                 eqtype rename type_pairs subst env u1 u2
               | Ttuple tl1, Ttuple tl2 ->
@@ -3486,7 +3484,6 @@ let rec build_subtype env visited loops posi level t =
         {
           row_fields = List.map fst fields;
           row_more = newvar ();
-          row_bound = ();
           row_closed = posi;
           row_fixed = false;
           row_name = (if c > Unchanged then None else row.row_name);
@@ -3567,7 +3564,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
       match (t1.desc, t2.desc) with
       | Tvar _, _ | _, Tvar _ -> (trace, t1, t2, !univar_pairs) :: cstrs
       | Tarrow (l1, t1, u1, _, _), Tarrow (l2, t2, u2, _, _)
-        when Asttypes.same_arg_label l1 l2 ->
+        when Asttypes.Noloc.same_arg_label l1 l2 ->
         let cstrs = subtype_rec env ((t2, t1) :: trace) t2 t1 cstrs in
         subtype_rec env ((u1, u2) :: trace) u1 u2 cstrs
       | Ttuple tl1, Ttuple tl2 -> subtype_list env trace tl1 tl2 cstrs
@@ -4269,7 +4266,8 @@ let maybe_pointer_type env typ =
       true
       (* This can happen due to e.g. missing -I options,
          causing some .cmi files to be unavailable.
-         Maybe we should emit a warning. *))
+         Maybe we should emit a warning. *)
+    )
   | Tvariant row ->
     let row = Btype.row_repr row in
     (* if all labels are devoid of arguments, not a pointer *)

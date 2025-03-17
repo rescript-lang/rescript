@@ -2,12 +2,12 @@
 
 
 function x(url) {
-  if (!url) {
+  if (url === 0) {
     return "start";
   }
   switch (url.hd) {
     case "login" :
-      if (url.tl) {
+      if (url.tl !== 0) {
         return "start";
       } else {
         return "login";

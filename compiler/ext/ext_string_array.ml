@@ -37,8 +37,10 @@ let rec binary_search_aux (arr : string array) (lo : int) (hi : int)
       let lo_val = Array.unsafe_get arr lo in
       if lo_val = key then Some lo else None
     else binary_search_aux arr lo mid key
-  else if (*  a[lo] =< a[mid] < key <= a[hi] *)
-          lo = mid then
+  else if
+    (*  a[lo] =< a[mid] < key <= a[hi] *)
+    lo = mid
+  then
     let hi_val = Array.unsafe_get arr hi in
     if hi_val = key then Some hi else None
   else binary_search_aux arr mid hi key
@@ -67,8 +69,10 @@ let rec binary_search_assoc (arr : (string * _) array) (lo : int) (hi : int)
       let lo_val = Array.unsafe_get arr lo in
       if fst lo_val = key then Some (snd lo_val) else None
     else binary_search_assoc arr lo mid key
-  else if (*  a[lo] =< a[mid] < key <= a[hi] *)
-          lo = mid then
+  else if
+    (*  a[lo] =< a[mid] < key <= a[hi] *)
+    lo = mid
+  then
     let hi_val = Array.unsafe_get arr hi in
     if fst hi_val = key then Some (snd hi_val) else None
   else binary_search_assoc arr mid hi key

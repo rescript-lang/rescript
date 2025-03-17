@@ -58,13 +58,9 @@ let update_config config payload =
   | true, _ -> config.Jsx_common.version <- 4
   | false, Some i -> config.Jsx_common.version <- i
   | _ -> ());
-  (match module_raw with
+  match module_raw with
   | None -> ()
-  | Some s -> config.module_ <- s);
-  match (is_generic, get_string ~key:"mode" fields) with
-  | true, _ -> config.mode <- "automatic"
-  | false, Some s -> config.mode <- s
-  | _ -> ()
+  | Some s -> config.module_ <- s
 
 let is_jsx_config_attr ((loc, _) : attribute) = loc.txt = "jsxConfig"
 
@@ -94,14 +90,12 @@ let get_mapper ~config =
       config with
       version = config.version;
       module_ = config.module_;
-      mode = config.mode;
       has_component = config.has_component;
     }
   in
   let restore_config old_config =
     config.version <- old_config.Jsx_common.version;
     config.module_ <- old_config.module_;
-    config.mode <- old_config.mode;
     config.has_component <- old_config.has_component
   in
   let signature mapper items =
@@ -141,13 +135,12 @@ let get_mapper ~config =
 
   {default_mapper with expr; module_binding; signature; structure}
 
-let rewrite_implementation ~jsx_version ~jsx_module ~jsx_mode
-    (code : Parsetree.structure) : Parsetree.structure =
+let rewrite_implementation ~jsx_version ~jsx_module (code : Parsetree.structure)
+    : Parsetree.structure =
   let config =
     {
       Jsx_common.version = jsx_version;
       module_ = jsx_module;
-      mode = jsx_mode;
       nested_modules = [];
       has_component = false;
     }
@@ -155,13 +148,12 @@ let rewrite_implementation ~jsx_version ~jsx_module ~jsx_mode
   let mapper = get_mapper ~config in
   mapper.structure mapper code
 
-let rewrite_signature ~jsx_version ~jsx_module ~jsx_mode
-    (code : Parsetree.signature) : Parsetree.signature =
+let rewrite_signature ~jsx_version ~jsx_module (code : Parsetree.signature) :
+    Parsetree.signature =
   let config =
     {
       Jsx_common.version = jsx_version;
       module_ = jsx_module;
-      mode = jsx_mode;
       nested_modules = [];
       has_component = false;
     }

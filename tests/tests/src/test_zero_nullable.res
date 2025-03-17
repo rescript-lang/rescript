@@ -256,3 +256,9 @@ let () = {
 }
 
 let () = Mt.from_pair_suites(__MODULE__, suites.contents)
+
+module Null_undefined_neq = {
+  let a = null
+  let b = undefined
+  let res = a != b
+}

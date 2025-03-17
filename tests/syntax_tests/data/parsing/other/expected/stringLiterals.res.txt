@@ -1,12 +1,12 @@
 let s = {js|some unicode é £ |js}
 let s = (({js|foo|js})[@res.template ])
 let s =
-  (((((({js|foo |js})[@res.template ]) ^ bar)[@res.template ]) ^
+  (((((({js|foo |js})[@res.template ]) ++ bar)[@res.template ]) ++
       (({js| baz|js})[@res.template ]))
   [@res.template ])
 let s =
-  (((((({js|some unicode é |js})[@res.template ]) ^ bar)[@res.template ]) ^
-      (({js| £ |js})[@res.template ]))
+  (((((({js|some unicode é |js})[@res.template ]) ++ bar)[@res.template ])
+      ++ (({js| £ |js})[@res.template ]))
   [@res.template ])
 let s = ((x [|(({js|foo|js})[@res.template ])|] [||])[@res.taggedTemplate ])
 let s =

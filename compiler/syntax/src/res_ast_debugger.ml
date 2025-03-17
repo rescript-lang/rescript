@@ -111,11 +111,11 @@ module SexpAst = struct
     | Contravariant -> Sexp.atom "Contravariant"
     | Invariant -> Sexp.atom "Invariant"
 
-  let arg_label lbl =
+  let arg_label_loc lbl =
     match lbl with
     | Asttypes.Nolabel -> Sexp.atom "Nolabel"
-    | Labelled txt -> Sexp.list [Sexp.atom "Labelled"; string txt]
-    | Optional txt -> Sexp.list [Sexp.atom "Optional"; string txt]
+    | Labelled {txt} -> Sexp.list [Sexp.atom "Labelled"; string txt]
+    | Optional {txt} -> Sexp.list [Sexp.atom "Optional"; string txt]
 
   let constant c =
     let sexpr =
@@ -179,8 +179,6 @@ module SexpAst = struct
           [Sexp.atom "Pstr_modtype"; module_type_declaration mod_typ_decl]
       | Pstr_open open_desc ->
         Sexp.list [Sexp.atom "Pstr_open"; open_description open_desc]
-      | Pstr_class _ -> Sexp.atom "Pstr_class"
-      | Pstr_class_type _ -> Sexp.atom "Pstr_class_type"
       | Pstr_include id ->
         Sexp.list [Sexp.atom "Pstr_include"; include_declaration id]
       | Pstr_attribute attr ->
@@ -361,8 +359,6 @@ module SexpAst = struct
         Sexp.list [Sexp.atom "Psig_open"; open_description open_desc]
       | Psig_include incl_decl ->
         Sexp.list [Sexp.atom "Psig_include"; include_description incl_decl]
-      | Psig_class _ -> Sexp.list [Sexp.atom "Psig_class"]
-      | Psig_class_type _ -> Sexp.list [Sexp.atom "Psig_class_type"]
       | Psig_attribute attr ->
         Sexp.list [Sexp.atom "Psig_attribute"; attribute attr]
       | Psig_extension (ext, attrs) ->
@@ -563,14 +559,14 @@ module SexpAst = struct
         Sexp.list
           [
             Sexp.atom "Pexp_fun";
-            arg_label arg_lbl;
+            arg_label_loc arg_lbl;
             (match expr_opt with
             | None -> Sexp.atom "None"
             | Some expr -> Sexp.list [Sexp.atom "Some"; expression expr]);
             pattern pat;
             expression expr;
           ]
-      | Pexp_apply (expr, args) ->
+      | Pexp_apply {funct = expr; args} ->
         Sexp.list
           [
             Sexp.atom "Pexp_apply";
@@ -578,7 +574,7 @@ module SexpAst = struct
             Sexp.list
               (map_empty
                  ~f:(fun (arg_lbl, expr) ->
-                   Sexp.list [arg_label arg_lbl; expression expr])
+                   Sexp.list [arg_label_loc arg_lbl; expression expr])
                  args);
           ]
       | Pexp_match (expr, cases) ->
@@ -679,9 +675,6 @@ module SexpAst = struct
       | Pexp_coerce (expr, (), typexpr) ->
         Sexp.list [Sexp.atom "Pexp_coerce"; expression expr; core_type typexpr]
       | Pexp_send _ -> Sexp.list [Sexp.atom "Pexp_send"]
-      | Pexp_new _ -> Sexp.list [Sexp.atom "Pexp_new"]
-      | Pexp_setinstvar _ -> Sexp.list [Sexp.atom "Pexp_setinstvar"]
-      | Pexp_override _ -> Sexp.list [Sexp.atom "Pexp_override"]
       | Pexp_letmodule (mod_name, mod_expr, expr) ->
         Sexp.list
           [
@@ -699,7 +692,6 @@ module SexpAst = struct
           ]
       | Pexp_assert expr -> Sexp.list [Sexp.atom "Pexp_assert"; expression expr]
       | Pexp_lazy expr -> Sexp.list [Sexp.atom "Pexp_lazy"; expression expr]
-      | Pexp_poly _ -> Sexp.list [Sexp.atom "Pexp_poly"]
       | Pexp_newtype (lbl, expr) ->
         Sexp.list
           [Sexp.atom "Pexp_newtype"; string lbl.Asttypes.txt; expression expr]
@@ -844,13 +836,13 @@ module SexpAst = struct
       match typexpr.ptyp_desc with
       | Ptyp_any -> Sexp.atom "Ptyp_any"
       | Ptyp_var var -> Sexp.list [Sexp.atom "Ptyp_var"; string var]
-      | Ptyp_arrow (arg_lbl, typ1, typ2, _) ->
+      | Ptyp_arrow {lbl; arg; ret} ->
         Sexp.list
           [
             Sexp.atom "Ptyp_arrow";
-            arg_label arg_lbl;
-            core_type typ1;
-            core_type typ2;
+            arg_label_loc lbl;
+            core_type arg;
+            core_type ret;
           ]
       | Ptyp_tuple types ->
         Sexp.list

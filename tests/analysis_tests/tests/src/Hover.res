@@ -54,7 +54,7 @@ module type Logger = {
 
 module JsLogger: Logger = {
   //   ^hov
-  let log = (msg: string) => Js.log(msg)
+  let log = (msg: string) => Console.log(msg)
   let _oneMore = 3
 }
 
@@ -123,19 +123,19 @@ let typeDuplicate = AA.fnnxx
 @live let dd = 34
 // ^hov
 
-let arity0a = (. ()) => {
+let arity0a = () => {
   //^hov
   let f = () => 3
   f
 }
 
-let arity0b = (. (), . ()) => 3
+let arity0b = ((), ()) => 3
 //  ^hov
 
-let arity0c = (. (), ()) => 3
+let arity0c = ((), ()) => 3
 //  ^hov
 
-let arity0d = (. ()) => {
+let arity0d = () => {
   // ^hov
   let f = () => 3
   f

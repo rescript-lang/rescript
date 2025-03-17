@@ -40,8 +40,6 @@ type t =
   | Psetfield of int * Lam_compat.set_field_dbg_info
   (* could have field info at least for record *)
   | Pduprecord
-  (* Force lazy values *)
-  | Plazyforce
   (* External call *)
   | Pjs_call of {
       prim_name: string;
@@ -222,10 +220,10 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
   | Pjs_apply | Pjs_runtime_apply | Pval_from_option | Pval_from_option_not_nest
   | Pundefined_to_opt | Pnull_to_opt | Pnull_undefined_to_opt | Pis_null
   | Pis_not_none | Psome | Psome_not_nest | Pis_undefined | Pis_null_undefined
-  | Pimport | Ptypeof | Pfn_arity | Plazyforce | Pis_poly_var_block | Pdebugger
-  | Pinit_mod | Pupdate_mod | Pduprecord | Pmakearray | Parraylength
-  | Parrayrefu | Parraysetu | Parrayrefs | Parraysets | Pjs_fn_make_unit
-  | Pjs_fn_method | Phash | Phash_mixstring | Phash_mixint | Phash_finalmix ->
+  | Pimport | Ptypeof | Pfn_arity | Pis_poly_var_block | Pdebugger | Pinit_mod
+  | Pupdate_mod | Pduprecord | Pmakearray | Parraylength | Parrayrefu
+  | Parraysetu | Parrayrefs | Parraysets | Pjs_fn_make_unit | Pjs_fn_method
+  | Phash | Phash_mixstring | Phash_mixint | Phash_finalmix ->
     rhs = lhs
   | Pcreate_extension a -> (
     match rhs with

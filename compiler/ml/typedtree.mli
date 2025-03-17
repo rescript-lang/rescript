@@ -110,14 +110,12 @@ and expression = {
 
 and exp_extra =
   | Texp_constraint of core_type  (** E : T *)
-  | Texp_coerce of unit * core_type
-      (** E :> T           [Texp_coerce T]
+  | Texp_coerce of core_type  (** E :> T           [Texp_coerce T]
          *)
   | Texp_open of override_flag * Path.t * Longident.t loc * Env.t
       (** let open[!] M in    [Texp_open (!, P, M, env)]
                                 where [env] is the environment after opening [P]
          *)
-  | Texp_poly of core_type option  (** Used for method bodies. *)
   | Texp_newtype of string  (** fun (type t) ->  *)
 
 and expression_desc =
@@ -131,11 +129,12 @@ and expression_desc =
             let rec P1 = E1 and ... and Pn = EN in E   (flag = Recursive)
          *)
   | Texp_function of {
-      arg_label: arg_label;
+      arg_label: Noloc.arg_label;
       arity: arity;
       param: Ident.t;
       case: case;
       partial: partial;
+      async: bool;
     }
       (** [Pexp_fun] and [Pexp_function] both translate to [Texp_function].
             See {!Parsetree} for more details.
@@ -147,7 +146,11 @@ and expression_desc =
               [Partial] if the pattern match is partial
               [Total] otherwise.
          *)
-  | Texp_apply of expression * (arg_label * expression option) list
+  | Texp_apply of {
+      funct: expression;
+      args: (Noloc.arg_label * expression option) list;
+      partial: bool;
+    }
       (** E0 ~l1:E1 ... ~ln:En
 
             The expression can be None if the expression is abstracted over
@@ -216,10 +219,6 @@ and expression_desc =
       * direction_flag
       * expression
   | Texp_send of expression * meth * expression option
-  | Texp_new of unit
-  | Texp_instvar of unit
-  | Texp_setinstvar of unit
-  | Texp_override of unit
   | Texp_letmodule of Ident.t * string loc * module_expr * expression
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression
@@ -286,8 +285,6 @@ and structure_item_desc =
   | Tstr_recmodule of module_binding list
   | Tstr_modtype of module_type_declaration
   | Tstr_open of open_description
-  | Tstr_class of unit
-  | Tstr_class_type of unit
   | Tstr_include of include_declaration
   | Tstr_attribute of attribute
 
@@ -362,8 +359,6 @@ and signature_item_desc =
   | Tsig_modtype of module_type_declaration
   | Tsig_open of open_description
   | Tsig_include of include_description
-  | Tsig_class of unit
-  | Tsig_class_type of unit
   | Tsig_attribute of attribute
 
 and module_declaration = {
@@ -418,7 +413,7 @@ and core_type = {
 and core_type_desc =
   | Ttyp_any
   | Ttyp_var of string
-  | Ttyp_arrow of arg_label * core_type * core_type * arity
+  | Ttyp_arrow of Noloc.arg_label * core_type * core_type * arity
   | Ttyp_tuple of core_type list
   | Ttyp_constr of Path.t * Longident.t loc * core_type list
   | Ttyp_object of object_field list * closed_flag

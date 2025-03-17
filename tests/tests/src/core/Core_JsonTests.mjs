@@ -5,9 +5,9 @@ import * as Test from "./Test.mjs";
 function decodeJsonTest() {
   let json = {"someProp":{"otherProp": null, "thirdProp": [true, false]}};
   let decodedCorrectly;
-  if (typeof json === "object" && !Array.isArray(json)) {
+  if (typeof json === "object" && json !== null && !Array.isArray(json)) {
     let match = json["someProp"];
-    if (typeof match === "object" && !Array.isArray(match)) {
+    if (typeof match === "object" && match !== null && !Array.isArray(match)) {
       let match$1 = match["thirdProp"];
       if (Array.isArray(match$1) && match$1.length === 2) {
         let match$2 = match$1[0];

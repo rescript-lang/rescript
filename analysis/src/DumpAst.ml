@@ -171,7 +171,7 @@ and printExprItem expr ~pos ~indentation =
       |> String.concat "\n")
   | Pexp_ident {txt} ->
     "Pexp_ident:" ^ (Utils.flattenLongIdent txt |> SharedTypes.ident)
-  | Pexp_apply (expr, args) ->
+  | Pexp_apply {funct = expr; args} ->
     let printLabel labelled ~pos =
       match labelled with
       | None -> "<unlabelled>"
@@ -219,8 +219,8 @@ and printExprItem expr ~pos ~indentation =
     ^ "arg: "
     ^ (match arg with
       | Nolabel -> "Nolabel"
-      | Labelled name -> "Labelled(" ^ name ^ ")"
-      | Optional name -> "Optional(" ^ name ^ ")")
+      | Labelled {txt = name} -> "Labelled(" ^ name ^ ")"
+      | Optional {txt = name} -> "Optional(" ^ name ^ ")")
     ^ ",\n"
     ^ addIndentation (indentation + 2)
     ^ "pattern: "

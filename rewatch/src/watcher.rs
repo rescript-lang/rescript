@@ -49,11 +49,13 @@ fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
 async fn async_watch(
     q: Arc<FifoQueue<Result<Event, Error>>>,
     path: &str,
+    show_progress: bool,
     filter: &Option<regex::Regex>,
     after_build: Option<String>,
     create_sourcedirs: bool,
 ) -> notify::Result<()> {
-    let mut build_state = build::initialize_build(None, filter, path, None).expect("Can't initialize build");
+    let mut build_state =
+        build::initialize_build(None, filter, show_progress, path, None).expect("Can't initialize build");
     let mut needs_compile_type = CompileType::Incremental;
     // create a mutex to capture if ctrl-c was pressed
     let ctrlc_pressed = Arc::new(Mutex::new(false));
@@ -70,7 +72,9 @@ async fn async_watch(
 
     loop {
         if *ctrlc_pressed_clone.lock().unwrap() {
-            println!("\nExiting...");
+            if show_progress {
+                println!("\nExiting...");
+            }
             clean::cleanup_after_build(&build_state);
             break Ok(());
         }
@@ -183,6 +187,7 @@ async fn async_watch(
                     &mut build_state,
                     None,
                     initial_build,
+                    show_progress,
                     !initial_build,
                     create_sourcedirs,
                 )
@@ -192,23 +197,31 @@ async fn async_watch(
                         cmd::run(a)
                     }
                     let timing_total_elapsed = timing_total.elapsed();
-                    println!(
-                        "\n{}{}Finished {} compilation in {:.2}s\n",
-                        LINE_CLEAR,
-                        SPARKLES,
-                        if initial_build { "initial" } else { "incremental" },
-                        timing_total_elapsed.as_secs_f64()
-                    );
+                    if show_progress {
+                        println!(
+                            "\n{}{}Finished {} compilation in {:.2}s\n",
+                            LINE_CLEAR,
+                            SPARKLES,
+                            if initial_build { "initial" } else { "incremental" },
+                            timing_total_elapsed.as_secs_f64()
+                        );
+                    }
                 }
                 needs_compile_type = CompileType::None;
                 initial_build = false;
             }
             CompileType::Full => {
                 let timing_total = Instant::now();
-                build_state =
-                    build::initialize_build(None, filter, path, None).expect("Can't initialize build");
-                let _ =
-                    build::incremental_build(&mut build_state, None, initial_build, false, create_sourcedirs);
+                build_state = build::initialize_build(None, filter, show_progress, path, None)
+                    .expect("Can't initialize build");
+                let _ = build::incremental_build(
+                    &mut build_state,
+                    None,
+                    initial_build,
+                    show_progress,
+                    false,
+                    create_sourcedirs,
+                );
                 if let Some(a) = after_build.clone() {
                     cmd::run(a)
                 }
@@ -216,12 +229,14 @@ async fn async_watch(
                 build::write_build_ninja(&build_state);
 
                 let timing_total_elapsed = timing_total.elapsed();
-                println!(
-                    "\n{}{}Finished compilation in {:.2}s\n",
-                    LINE_CLEAR,
-                    SPARKLES,
-                    timing_total_elapsed.as_secs_f64()
-                );
+                if show_progress {
+                    println!(
+                        "\n{}{}Finished compilation in {:.2}s\n",
+                        LINE_CLEAR,
+                        SPARKLES,
+                        timing_total_elapsed.as_secs_f64()
+                    );
+                }
                 needs_compile_type = CompileType::None;
                 initial_build = false;
             }
@@ -236,6 +251,7 @@ async fn async_watch(
 
 pub fn start(
     filter: &Option<regex::Regex>,
+    show_progress: bool,
     folder: &str,
     after_build: Option<String>,
     create_sourcedirs: bool,
@@ -251,8 +267,17 @@ pub fn start(
             .watch(folder.as_ref(), RecursiveMode::Recursive)
             .expect("Could not start watcher");
 
-        if let Err(e) = async_watch(consumer, folder, filter, after_build, create_sourcedirs).await {
-            println!("error: {:?}", e)
+        if let Err(e) = async_watch(
+            consumer,
+            folder,
+            show_progress,
+            filter,
+            after_build,
+            create_sourcedirs,
+        )
+        .await
+        {
+            log::error!("{:?}", e)
         }
     })
 }

@@ -82,22 +82,22 @@ function showToJs(x) {
 }
 
 function third(l) {
-  if (!l) {
+  if (l === 0) {
     return false;
   }
   if (l.hd !== 1) {
     return false;
   }
   let match = l.tl;
-  if (!match) {
+  if (match === 0) {
     return false;
   }
   if (match.hd !== 2) {
     return false;
   }
   let match$1 = match.tl;
-  if (match$1 && match$1.hd === 3) {
-    return !match$1.tl;
+  if (match$1 !== 0 && match$1.hd === 3) {
+    return match$1.tl === 0;
   } else {
     return false;
   }

@@ -1,7 +1,7 @@
 open GenTypeCommon
 open! TranslateTypeExprFromTypes
 
-let remove_option ~(label : Asttypes.arg_label)
+let remove_option ~(label : Asttypes.Noloc.arg_label)
     (core_type : Typedtree.core_type) =
   match (core_type.ctyp_desc, label) with
   | Ttyp_constr (Path.Pident id, _, [t]), Optional lbl

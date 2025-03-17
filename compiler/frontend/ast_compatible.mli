@@ -74,6 +74,7 @@ val apply_labels :
 val fun_ :
   ?loc:Location.t ->
   ?attrs:attrs ->
+  ?async:bool ->
   arity:int option ->
   pattern ->
   expression ->

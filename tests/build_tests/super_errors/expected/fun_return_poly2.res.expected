@@ -1,0 +1,24 @@
+
+  [1;33mWarning number 20[0m
+  [36m/.../fixtures/fun_return_poly2.res[0m:[2m6:30[0m
+
+  4 [2m│[0m }
+  5 [2m│[0m 
+  [1;33m6[0m [2m│[0m let ok = r("")(~initialValue=[1;33m2[0m)
+  7 [2m│[0m let err = r("", ~initialValue=2)
+  8 [2m│[0m 
+
+  this argument will not be used by the function.
+
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/fun_return_poly2.res[0m:[2m7:31[0m
+
+  5 [2m│[0m 
+  6 [2m│[0m let ok = r("")(~initialValue=2)
+  [1;31m7[0m [2m│[0m let err = r("", ~initialValue=[1;31m2[0m)
+  8 [2m│[0m 
+
+  The function applied to this argument has type
+    (string, ~wrongLabelName: int=?) => 'a
+This argument cannot be applied with label ~initialValue

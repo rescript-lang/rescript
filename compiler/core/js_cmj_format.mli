@@ -52,7 +52,7 @@ type cmj_value = {
   persistent_closed_lambda: Lam.t option; (* Either constant or closed functor *)
 }
 
-type effect = string option
+type effect_ = string option
 
 type keyed_cmj_value = {
   name: string;
@@ -69,7 +69,7 @@ type t = {
 
 val make :
   values:cmj_value Map_string.t ->
-  effect:effect ->
+  effect_:effect_ ->
   package_spec:Js_packages_info.t ->
   case:Ext_js_file_kind.case ->
   t

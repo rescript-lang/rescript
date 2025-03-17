@@ -86,7 +86,7 @@ module Nullable = Js_null_undefined
 module Null_undefined = Js_null_undefined
 
 /** Provide utilities for dealing with Js exceptions */
-module Exn = Exn
+module Exn = Stdlib_Exn
 
 /** Provide bindings to JS array*/
 module Array = Js_array

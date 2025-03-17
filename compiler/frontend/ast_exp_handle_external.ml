@@ -60,7 +60,7 @@ let handle_external loc (x : string) : Parsetree.expression =
   Ast_compatible.app1 ~loc undefined_typeof
     (Exp.ifthenelse ~loc
        (Ast_compatible.app2 ~loc
-          (Exp.ident ~loc {loc; txt = Ldot (Lident "Pervasives", "=")})
+          (Exp.ident ~loc {loc; txt = Lident "=="})
           (Ast_compatible.app1 ~loc typeof raw_exp)
           (Ast_compatible.const_exp_string ~loc "undefined"))
        empty (Some raw_exp))

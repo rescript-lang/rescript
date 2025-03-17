@@ -73,11 +73,10 @@ type field_dbg_info = Lambda.field_dbg_info =
   | Fld_extension
   | Fld_variant
   | Fld_cons
-  | Fld_array
 
 let str_of_field_info (x : field_dbg_info) : string option =
   match x with
-  | Fld_array | Fld_extension | Fld_variant | Fld_cons | Fld_poly_var_tag
+  | Fld_extension | Fld_variant | Fld_cons | Fld_poly_var_tag
   | Fld_poly_var_content | Fld_tuple ->
     None
   | Fld_record {name; _}

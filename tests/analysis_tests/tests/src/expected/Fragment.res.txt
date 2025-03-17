@@ -10,7 +10,8 @@ JSX <SectionHeader:[9:13->9:26] > _children:9:26
 posCursor:[9:56] posNoWhite:[9:55] Found expr:__ghost__[9:10->9:67]
 Pexp_construct []:__ghost__[9:10->9:67] None
 Completable: Cexpression CTypeAtPos()=[]->variantPayload::::($1)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
 null
 

@@ -10,14 +10,24 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub type StdErr = String;
 
+pub mod deserialize {
+    pub fn default_false() -> bool {
+        false
+    }
+
+    pub fn default_true() -> bool {
+        true
+    }
+}
+
 pub mod emojis {
     use console::Emoji;
     pub static COMMAND: Emoji<'_, '_> = Emoji("🏃 ", "");
     pub static TREE: Emoji<'_, '_> = Emoji("📦 ", "");
     pub static SWEEP: Emoji<'_, '_> = Emoji("🧹 ", "");
-    pub static LOOKING_GLASS: Emoji<'_, '_> = Emoji("🕵️  ", "");
+    pub static LOOKING_GLASS: Emoji<'_, '_> = Emoji("🕵️ ", "");
     pub static CODE: Emoji<'_, '_> = Emoji("🧱 ", "");
-    pub static SWORDS: Emoji<'_, '_> = Emoji("🤺 ️", "");
+    pub static SWORDS: Emoji<'_, '_> = Emoji("⚔️ ", "");
     pub static DEPS: Emoji<'_, '_> = Emoji("️🌴 ", "");
     pub static CHECKMARK: Emoji<'_, '_> = Emoji("️✅ ", "");
     pub static CROSS: Emoji<'_, '_> = Emoji("️🛑 ", "");
@@ -140,6 +150,7 @@ pub fn get_bsc(root_path: &str, workspace_root: Option<String>) -> String {
     let subfolder = match (std::env::consts::OS, std::env::consts::ARCH) {
         ("macos", "aarch64") => "darwinarm64",
         ("macos", _) => "darwin",
+        ("linux", "aarch64") => "linuxarm64",
         ("linux", _) => "linux",
         ("windows", _) => "win32",
         _ => panic!("Unsupported architecture"),
@@ -296,11 +307,11 @@ fn has_rescript_config(path: &Path) -> bool {
 pub fn get_workspace_root(package_root: &str) -> Option<String> {
     std::path::PathBuf::from(&package_root)
         .parent()
-        .and_then(get_nearest_bsconfig)
+        .and_then(get_nearest_config)
 }
 
-// traverse up the directory tree until we find a bsconfig.json, if not return None
-pub fn get_nearest_bsconfig(path_buf: &Path) -> Option<String> {
+// traverse up the directory tree until we find a config.json, if not return None
+pub fn get_nearest_config(path_buf: &Path) -> Option<String> {
     let mut current_dir = path_buf.to_owned();
     loop {
         if has_rescript_config(&current_dir) {

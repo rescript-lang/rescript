@@ -3,7 +3,7 @@ let panicTest = () => {
   | Exn.Error(err) => Error.message(err)
   }
 
-  Test.run(__POS_OF__("Should resolve test"), caught, \"==", Some("Panic! uh oh"))
+  Test.run(__POS_OF__("Should resolve test"), caught, \"===", Some("Panic! uh oh"))
 }
 
 panicTest()

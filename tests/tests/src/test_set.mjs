@@ -554,7 +554,7 @@ function Make(Ord) {
             l
           ];
         case 1 :
-          if (l) {
+          if (l !== 0) {
             return [
               {
                 TAG: "Node",
@@ -568,9 +568,9 @@ function Make(Ord) {
           }
           break;
         case 2 :
-          if (l) {
+          if (l !== 0) {
             let match = l.tl;
-            if (match) {
+            if (match !== 0) {
               return [
                 {
                   TAG: "Node",
@@ -592,11 +592,11 @@ function Make(Ord) {
           }
           break;
         case 3 :
-          if (l) {
+          if (l !== 0) {
             let match$1 = l.tl;
-            if (match$1) {
+            if (match$1 !== 0) {
               let match$2 = match$1.tl;
-              if (match$2) {
+              if (match$2 !== 0) {
                 return [
                   {
                     TAG: "Node",
@@ -629,7 +629,7 @@ function Make(Ord) {
       let nl = n / 2 | 0;
       let match$3 = sub(nl, l);
       let l$1 = match$3[1];
-      if (l$1) {
+      if (l$1 !== 0) {
         let match$4 = sub((n - nl | 0) - 1 | 0, l$1.tl);
         return [
           create(match$3[0], l$1.hd, match$4[0]),
@@ -649,28 +649,28 @@ function Make(Ord) {
     return sub(Belt_List.length(l), l)[0];
   };
   let of_list = l => {
-    if (!l) {
+    if (l === 0) {
       return "Empty";
     }
     let match = l.tl;
     let x0 = l.hd;
-    if (!match) {
+    if (match === 0) {
       return singleton(x0);
     }
     let match$1 = match.tl;
     let x1 = match.hd;
-    if (!match$1) {
+    if (match$1 === 0) {
       return add(x1, singleton(x0));
     }
     let match$2 = match$1.tl;
     let x2 = match$1.hd;
-    if (!match$2) {
+    if (match$2 === 0) {
       return add(x2, add(x1, singleton(x0)));
     }
     let match$3 = match$2.tl;
     let x3 = match$2.hd;
-    if (match$3) {
-      if (match$3.tl) {
+    if (match$3 !== 0) {
+      if (match$3.tl !== 0) {
         return of_sorted_list(Belt_List.sort(l, Ord.compare));
       } else {
         return add(match$3.hd, add(x3, add(x2, add(x1, singleton(x0)))));

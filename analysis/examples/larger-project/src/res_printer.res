@@ -3495,7 +3495,6 @@ and printUnaryExpression = (expr, cmtTbl) => {
 and printBinaryExpression = (expr: Parsetree.expression, cmtTbl) => {
   let printBinaryOperator = (~inlineRhs, operator) => {
     let operatorTxt = switch operator {
-    | "|." => "->"
     | "^" => "++"
     | "=" => "=="
     | "==" => "==="

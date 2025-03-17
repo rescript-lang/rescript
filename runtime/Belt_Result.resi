@@ -39,9 +39,15 @@ type t<'a, 'b> = result<'a, 'b> =
 ## Examples
 
 ```rescript
-Belt.Result.getExn(Belt.Result.Ok(42)) == 42
+Belt.Result.Ok(42)
+->Belt.Result.getExn
+->assertEqual(42)
 
-Belt.Result.getExn(Belt.Result.Error("Invalid data")) /* raises exception */
+
+switch Belt.Result.getExn(Belt.Result.Error("Invalid data")) { // raise a exception
+| exception _ => assert(true)
+| _ => assert(false)
+}
 ```
 */
 let getExn: t<'a, 'b> => 'a

@@ -175,7 +175,7 @@ let xs = {
   tl: /* [] */0
 };
 
-b("File \"option_repr_test.res\", line 125, characters 3-10", Belt_List.every(xs, x => x));
+b("File \"option_repr_test.res\", line 125, characters 2-9", Belt_List.every(xs, x => x));
 
 let xs_0$1 = Primitive_object.lessthan(Primitive_option.some(undefined), 3) && Primitive_object.greaterthan(3, Primitive_option.some(undefined));
 
@@ -216,7 +216,7 @@ let xs$1 = {
   tl: xs_1
 };
 
-b("File \"option_repr_test.res\", line 127, characters 3-10", Belt_List.every(xs$1, x => x));
+b("File \"option_repr_test.res\", line 127, characters 2-9", Belt_List.every(xs$1, x => x));
 
 let xs_1$1 = {
   hd: neqx(undefined, null),
@@ -237,7 +237,7 @@ let xs$2 = {
   tl: xs_1$1
 };
 
-b("File \"option_repr_test.res\", line 143, characters 3-10", Belt_List.every(xs$2, x => x));
+b("File \"option_repr_test.res\", line 143, characters 2-9", Belt_List.every(xs$2, x => x));
 
 function v(x) {
   return x;

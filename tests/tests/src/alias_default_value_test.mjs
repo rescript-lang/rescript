@@ -67,6 +67,30 @@ let C6 = {
   make: Alias_default_value_test$C6
 };
 
+function Alias_default_value_test$C7(props) {
+  'use memo';
+  let username = props.username;
+  let count = props.count;
+  let times = count !== 1 ? (
+      count !== 2 ? String(count) + " times" : "twice"
+    ) : "once";
+  let name = username !== undefined && username !== "" ? username : "Anonymous";
+  return "Hello " + name + ", you clicked me " + times;
+}
+
+let C7 = {
+  make: Alias_default_value_test$C7
+};
+
+function Alias_default_value_test$C8(props) {
+  'use memo';
+  return props.count;
+}
+
+let C8 = {
+  make: Alias_default_value_test$C8
+};
+
 export {
   C0,
   C1,
@@ -74,5 +98,7 @@ export {
   C3,
   C4,
   C6,
+  C7,
+  C8,
 }
 /* No side effect */

@@ -10,5 +10,5 @@ let myTree = #Node(
   #Node(3, #Node(5, #Leaf, #Leaf), #Node(7, #Leaf, #Leaf)),
 )
 
-let () = myTree->sum->Js.log
+let () = myTree->sum->Console.log
 //        ^hov

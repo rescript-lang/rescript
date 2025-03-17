@@ -4,7 +4,7 @@ let ident l = l |> List.map str |> String.concat "."
 
 type path = string list
 
-type typedFnArg = Asttypes.arg_label * Types.type_expr
+type typedFnArg = Asttypes.Noloc.arg_label * Types.type_expr
 
 let pathToString (path : path) = path |> String.concat "."
 
@@ -483,19 +483,6 @@ type file = string
 
 module FileSet = Set.Make (String)
 
-type builtInCompletionModules = {
-  arrayModulePath: string list;
-  optionModulePath: string list;
-  stringModulePath: string list;
-  intModulePath: string list;
-  floatModulePath: string list;
-  promiseModulePath: string list;
-  listModulePath: string list;
-  resultModulePath: string list;
-  exnModulePath: string list;
-  regexpModulePath: string list;
-}
-
 type package = {
   genericJsxModule: string option;
   suffix: string;
@@ -504,7 +491,6 @@ type package = {
   dependenciesFiles: FileSet.t;
   pathsForModule: (file, paths) Hashtbl.t;
   namespace: string option;
-  builtInCompletionModules: builtInCompletionModules;
   opens: path list;
   uncurried: bool;
   rescriptVersion: int * int;
@@ -605,16 +591,24 @@ module Completable = struct
     | CPFloat
     | CPBool
     | CPOption of contextPath
-    | CPApply of contextPath * Asttypes.arg_label list
+    | CPApply of contextPath * Asttypes.Noloc.arg_label list
     | CPId of {
         path: string list;
         completionContext: completionContext;
         loc: Location.t;
       }
-    | CPField of contextPath * string
+    | CPField of {
+        contextPath: contextPath;
+        fieldName: string;
+        posOfDot: (int * int) option;
+        exprLoc: Location.t;
+        inJsx: bool;
+            (** Whether this field access was found in a JSX context. *)
+      }
     | CPObj of contextPath * string
     | CPAwait of contextPath
     | CPPipe of {
+        synthetic: bool;  (** Whether this pipe completion is synthetic. *)
         contextPath: contextPath;
         id: string;
         inJsx: bool;  (** Whether this pipe was found in a JSX context. *)
@@ -686,7 +680,7 @@ module Completable = struct
       contextPathToString cp ^ "("
       ^ (labels
         |> List.map (function
-             | Asttypes.Nolabel -> "Nolabel"
+             | Asttypes.Noloc.Nolabel -> "Nolabel"
              | Labelled s -> "~" ^ s
              | Optional s -> "?" ^ s)
         |> String.concat ", ")
@@ -695,7 +689,8 @@ module Completable = struct
     | CPArray None -> "array"
     | CPId {path; completionContext} ->
       completionContextToString completionContext ^ list path
-    | CPField (cp, s) -> contextPathToString cp ^ "." ^ str s
+    | CPField {contextPath = cp; fieldName = s} ->
+      contextPathToString cp ^ "." ^ str s
     | CPObj (cp, s) -> contextPathToString cp ^ "[\"" ^ s ^ "\"]"
     | CPPipe {contextPath; id; inJsx} ->
       contextPathToString contextPath
@@ -807,10 +802,14 @@ module Completion = struct
     detail: string option;
     typeArgContext: typeArgContext option;
     data: (string * string) list option;
+    additionalTextEdits: Protocol.textEdit list option;
+    synthetic: bool;
+        (** Whether this item is an made up, synthetic item or not. *)
   }
 
-  let create ?data ?typeArgContext ?(includesSnippets = false) ?insertText ~kind
-      ~env ?sortText ?deprecated ?filterText ?detail ?(docstring = []) name =
+  let create ?(synthetic = false) ?additionalTextEdits ?data ?typeArgContext
+      ?(includesSnippets = false) ?insertText ~kind ~env ?sortText ?deprecated
+      ?filterText ?detail ?(docstring = []) name =
     {
       name;
       env;
@@ -825,6 +824,8 @@ module Completion = struct
       detail;
       typeArgContext;
       data;
+      additionalTextEdits;
+      synthetic;
     }
 
   (* https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_completion *)
@@ -885,14 +886,12 @@ type arg = {label: label; exp: Parsetree.expression}
 let extractExpApplyArgs ~args =
   let rec processArgs ~acc args =
     match args with
-    | (((Asttypes.Labelled s | Optional s) as label), (e : Parsetree.expression))
+    | ( ((Asttypes.Labelled {txt = s; loc} | Optional {txt = s; loc}) as label),
+        (e : Parsetree.expression) )
       :: rest -> (
-      let namedArgLoc =
-        e.pexp_attributes
-        |> List.find_opt (fun ({Asttypes.txt}, _) -> txt = "res.namedArgLoc")
-      in
+      let namedArgLoc = if loc = Location.none then None else Some loc in
       match namedArgLoc with
-      | Some ({loc}, _) ->
+      | Some loc ->
         let labelled =
           {
             name = s;
@@ -906,7 +905,7 @@ let extractExpApplyArgs ~args =
         in
         processArgs ~acc:({label = Some labelled; exp = e} :: acc) rest
       | None -> processArgs ~acc rest)
-    | (Asttypes.Nolabel, (e : Parsetree.expression)) :: rest ->
+    | (Nolabel, (e : Parsetree.expression)) :: rest ->
       if e.pexp_loc.loc_ghost then processArgs ~acc rest
       else processArgs ~acc:({label = None; exp = e} :: acc) rest
     | [] -> List.rev acc

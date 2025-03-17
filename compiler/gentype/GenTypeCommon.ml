@@ -115,7 +115,8 @@ type dep =
   | Internal of ResolvedName.t
   | Dot of dep * string
 
-module ScopedPackage = (* Taken from ext_namespace.ml in bukclescript *)
+module ScopedPackage =
+(* Taken from ext_namespace.ml in bukclescript *)
 struct
   let namespace_of_package_name (s : string) : string =
     let len = String.length s in

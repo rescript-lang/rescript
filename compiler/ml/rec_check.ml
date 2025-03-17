@@ -195,15 +195,15 @@ let rec classify_expression : Typedtree.expression -> sd =
   | Texp_sequence (_, e)
   | Texp_letexception (_, e) ->
     classify_expression e
-  | Texp_ident _ | Texp_for _ | Texp_constant _ | Texp_new _ | Texp_instvar _
-  | Texp_tuple _ | Texp_array _ | Texp_construct _ | Texp_variant _
-  | Texp_record _ | Texp_setfield _ | Texp_while _ | Texp_setinstvar _
-  | Texp_pack _ | Texp_function _ | Texp_lazy _ | Texp_extension_constructor _
-    ->
+  | Texp_ident _ | Texp_for _ | Texp_constant _ | Texp_tuple _ | Texp_array _
+  | Texp_construct _ | Texp_variant _ | Texp_record _ | Texp_setfield _
+  | Texp_while _ | Texp_pack _ | Texp_function _ | Texp_lazy _
+  | Texp_extension_constructor _ ->
     Static
-  | Texp_apply ({exp_desc = Texp_ident (_, _, vd)}, _) when is_ref vd -> Static
+  | Texp_apply {funct = {exp_desc = Texp_ident (_, _, vd)}} when is_ref vd ->
+    Static
   | Texp_apply _ | Texp_match _ | Texp_ifthenelse _ | Texp_send _ | Texp_field _
-  | Texp_assert _ | Texp_try _ | Texp_override _ ->
+  | Texp_assert _ | Texp_try _ ->
     Dynamic
 
 let rec expression : Env.env -> Typedtree.expression -> Use.t =
@@ -233,12 +233,11 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
            for inclusion in another value *)
         (discard (expression env e3)))
   | Texp_constant _ -> Use.empty
-  | Texp_new _ -> assert false
-  | Texp_instvar _ -> Use.empty
-  | Texp_apply ({exp_desc = Texp_ident (_, _, vd)}, [(_, Some arg)])
+  | Texp_apply
+      {funct = {exp_desc = Texp_ident (_, _, vd)}; args = [(_, Some arg)]}
     when is_ref vd ->
     Use.guard (expression env arg)
-  | Texp_apply (e, args) ->
+  | Texp_apply {funct = e; args} ->
     let arg env (_, eo) = option expression env eo in
     Use.(join (inspect (expression env e)) (inspect (list arg env args)))
   | Texp_tuple exprs -> Use.guard (list expression env exprs)
@@ -283,7 +282,6 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
     Use.(
       join (inspect (expression env e1)) (inspect (option expression env eo)))
   | Texp_field (e, _, _) -> Use.(inspect (expression env e))
-  | Texp_setinstvar () -> assert false
   | Texp_letexception (_, e) -> expression env e
   | Texp_assert e -> Use.inspect (expression env e)
   | Texp_pack m -> modexp env m
@@ -291,7 +289,6 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
     (* This is more permissive than the old check. *)
     let case env {Typedtree.c_rhs} = expression env c_rhs in
     Use.join (expression env e) (list case env cases)
-  | Texp_override () -> assert false
   | Texp_function {case = case_} ->
     Use.delay (list (case ~scrutinee:Use.empty) env [case_])
   | Texp_lazy e -> (
@@ -359,8 +356,6 @@ and structure_item : Env.env -> Typedtree.structure_item -> Env.env * Use.t =
   | Tstr_exception _ -> (Env.empty, Use.empty)
   | Tstr_modtype _ -> (Env.empty, Use.empty)
   | Tstr_open _ -> (Env.empty, Use.empty)
-  | Tstr_class () -> (Env.empty, Use.empty)
-  | Tstr_class_type _ -> (Env.empty, Use.empty)
   | Tstr_include inc ->
     (* This is a kind of projection.  There's no need to add
        anything to the environment because everything is used in

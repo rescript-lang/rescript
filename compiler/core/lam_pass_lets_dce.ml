@@ -59,7 +59,8 @@ let lets_helper (count_var : Ident.t -> Lam_pass_count.used_info) lam : Lam.t =
          Note for some constant which is not
          inlined, we can still record it and
          do constant folding independently
-      *) ->
+      *)
+        ->
         Hash_ident.add subst v (simplif l1);
         simplif l2
       | _, Lconst (Const_string {s; unicode = false}) ->

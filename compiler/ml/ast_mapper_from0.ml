@@ -99,6 +99,7 @@ module T = struct
     | Ptyp_any -> any ~loc ~attrs ()
     | Ptyp_var s -> var ~loc ~attrs s
     | Ptyp_arrow (lab, t1, t2) ->
+      let lab = Asttypes.to_arg_label lab in
       arrow ~loc ~attrs ~arity:None lab (sub.typ sub t1) (sub.typ sub t2)
     | Ptyp_tuple tyl -> tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) -> (
@@ -106,8 +107,7 @@ module T = struct
         constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
       in
       match typ0.ptyp_desc with
-      | Ptyp_constr
-          (lid, [({ptyp_desc = Ptyp_arrow (lbl, t1, t2, _)} as fun_t); t_arity])
+      | Ptyp_constr (lid, [({ptyp_desc = Ptyp_arrow arr} as fun_t); t_arity])
         when lid.txt = Lident "function$" ->
         let decode_arity_string arity_s =
           int_of_string
@@ -120,7 +120,7 @@ module T = struct
           | _ -> assert false
         in
         let arity = arity_from_type t_arity in
-        {fun_t with ptyp_desc = Ptyp_arrow (lbl, t1, t2, Some arity)}
+        {fun_t with ptyp_desc = Ptyp_arrow {arr with arity = Some arity}}
       | _ -> typ0)
     | Ptyp_object (l, o) ->
       object_ ~loc ~attrs (List.map (object_field sub) l) o
@@ -283,8 +283,9 @@ module M = struct
     | Pstr_recmodule l -> rec_module ~loc (List.map (sub.module_binding sub) l)
     | Pstr_modtype x -> modtype ~loc (sub.module_type_declaration sub x)
     | Pstr_open x -> open_ ~loc (sub.open_description sub x)
-    | Pstr_class () -> {pstr_loc = loc; pstr_desc = Pstr_class ()}
-    | Pstr_class_type () -> {pstr_loc = loc; pstr_desc = Pstr_class_type ()}
+    | Pstr_class () -> failwith "Pstr_class is no longer present in ReScript"
+    | Pstr_class_type () ->
+      failwith "Pstr_class_type is no longer present in ReScript"
     | Pstr_include x -> include_ ~loc (sub.include_declaration sub x)
     | Pstr_extension (x, attrs) ->
       extension ~loc (sub.extension sub x) ~attrs:(sub.attributes sub attrs)
@@ -304,12 +305,55 @@ module E = struct
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
     | Pexp_fun (lab, def, p, e) ->
-      fun_ ~loc ~attrs ~arity:None lab
+      let lab = Asttypes.to_arg_label lab in
+      let async = Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.async") in
+      fun_ ~loc ~attrs ~async ~arity:None lab
         (map_opt (sub.expr sub) def)
         (sub.pat sub p) (sub.expr sub e)
     | Pexp_function _ -> assert false
     | Pexp_apply (e, l) ->
-      apply ~loc ~attrs (sub.expr sub e) (List.map (map_snd (sub.expr sub)) l)
+      let e =
+        match (e.pexp_desc, l) with
+        | ( Pexp_ident ({txt = Longident.Lident "|."} as lid),
+            [(Nolabel, _); (Nolabel, _)] ) ->
+          {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "->"}}
+        | ( Pexp_ident ({txt = Longident.Lident "^"} as lid),
+            [(Nolabel, _); (Nolabel, _)] ) ->
+          {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "++"}}
+        | ( Pexp_ident ({txt = Longident.Lident "<>"} as lid),
+            [(Nolabel, _); (Nolabel, _)] ) ->
+          {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "!="}}
+        | ( Pexp_ident ({txt = Longident.Lident "!="} as lid),
+            [(Nolabel, _); (Nolabel, _)] ) ->
+          {
+            e with
+            pexp_desc = Pexp_ident {lid with txt = Longident.Lident "!=="};
+          }
+        | ( Pexp_ident ({txt = Longident.Lident "="} as lid),
+            [(Nolabel, _); (Nolabel, _)] ) ->
+          {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "=="}}
+        | ( Pexp_ident ({txt = Longident.Lident "=="} as lid),
+            [(Nolabel, _); (Nolabel, _)] ) ->
+          {
+            e with
+            pexp_desc = Pexp_ident {lid with txt = Longident.Lident "==="};
+          }
+        | _ -> e
+      in
+      let process_partial_app_attribute attrs =
+        let rec process partial_app acc attrs =
+          match attrs with
+          | [] -> (partial_app, List.rev acc)
+          | ({Location.txt = "res.partial"}, _) :: rest -> process true acc rest
+          | attr :: rest -> process partial_app (attr :: acc) rest
+        in
+        process false [] attrs
+      in
+      let partial, attrs = process_partial_app_attribute attrs in
+      apply ~loc ~attrs ~partial (sub.expr sub e)
+        (List.map
+           (fun (lbl, e) -> (Asttypes.to_arg_label lbl, sub.expr sub e))
+           l)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
@@ -375,12 +419,11 @@ module E = struct
     | Pexp_constraint (e, t) ->
       constraint_ ~loc ~attrs (sub.expr sub e) (sub.typ sub t)
     | Pexp_send (e, s) -> send ~loc ~attrs (sub.expr sub e) (map_loc sub s)
-    | Pexp_new lid -> new_ ~loc ~attrs (map_loc sub lid)
-    | Pexp_setinstvar (s, e) ->
-      setinstvar ~loc ~attrs (map_loc sub s) (sub.expr sub e)
-    | Pexp_override sel ->
-      override ~loc ~attrs
-        (List.map (map_tuple (map_loc sub) (sub.expr sub)) sel)
+    | Pexp_new _ -> failwith "Pexp_new is no longer present in ReScript"
+    | Pexp_setinstvar _ ->
+      failwith "Pexp_setinstvar is no longer present in ReScript"
+    | Pexp_override _ ->
+      failwith "Pexp_override is no longer present in ReScript"
     | Pexp_letmodule (s, me, e) ->
       letmodule ~loc ~attrs (map_loc sub s) (sub.module_expr sub me)
         (sub.expr sub e)
@@ -390,8 +433,7 @@ module E = struct
         (sub.expr sub e)
     | Pexp_assert e -> assert_ ~loc ~attrs (sub.expr sub e)
     | Pexp_lazy e -> lazy_ ~loc ~attrs (sub.expr sub e)
-    | Pexp_poly (e, t) ->
-      poly ~loc ~attrs (sub.expr sub e) (map_opt (sub.typ sub) t)
+    | Pexp_poly _ -> failwith "Pexp_poly is no longer present in ReScript"
     | Pexp_object () -> assert false
     | Pexp_newtype (s, e) ->
       newtype ~loc ~attrs (map_loc sub s) (sub.expr sub e)

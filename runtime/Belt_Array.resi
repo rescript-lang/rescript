@@ -362,6 +362,7 @@ arr == [0, 1, 9, 9, 4]
 Belt.Array.fill(arr, ~offset=7, ~len=2, 8)
 
 arr == [0, 1, 9, 9, 4]
+```
 */
 let fill: (t<'a>, ~offset: int, ~len: int, 'a) => unit
 

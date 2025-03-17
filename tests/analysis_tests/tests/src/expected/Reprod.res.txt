@@ -2,7 +2,8 @@ Complete src/Reprod.res 7:53
 posCursor:[7:53] posNoWhite:[7:52] Found expr:[7:11->7:56]
 Pexp_apply ...[7:11->7:20] (~variables7:22->7:31=...[7:32->7:55])
 Completable: Cexpression CArgument Value[Query, use](~variables)->recordField(location), variantPayload::ByAddress($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CArgument Value[Query, use](~variables)
 ContextPath Value[Query, use]
 Path Query.use
@@ -20,7 +21,8 @@ Path Query.use
 Complete src/Reprod.res 33:28
 posCursor:[33:28] posNoWhite:[33:27] Found pattern:[33:21->33:31]
 Completable: Cpattern Value[record]->recordField(first)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[record]
 Path record
 [{
@@ -52,7 +54,8 @@ Path record
 Complete src/Reprod.res 36:29
 posCursor:[36:29] posNoWhite:[36:28] Found pattern:[36:21->36:32]
 Completable: Cpattern Value[record]->recordField(second)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[record]
 Path record
 [{
@@ -72,7 +75,8 @@ Ppat_construct Ok:[43:18->43:20]
 posCursor:[43:21] posNoWhite:[43:20] Found pattern:[43:20->43:22]
 Ppat_construct ():[43:20->43:22]
 Completable: Cpattern Value[res]->variantPayload::Ok($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[res]
 Path res
 [{
@@ -107,7 +111,8 @@ Ppat_construct Error:[46:18->46:23]
 posCursor:[46:24] posNoWhite:[46:23] Found pattern:[46:23->46:25]
 Ppat_construct ():[46:23->46:25]
 Completable: Cpattern Value[res]->variantPayload::Error($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[res]
 Path res
 [{
@@ -142,7 +147,8 @@ Ppat_construct Ok:[51:21->51:23]
 posCursor:[51:24] posNoWhite:[51:23] Found pattern:[51:23->51:25]
 Ppat_construct ():[51:23->51:25]
 Completable: Cpattern Value[resOpt]->variantPayload::Ok($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[resOpt]
 Path resOpt
 [{
@@ -193,7 +199,8 @@ Ppat_construct Some:[54:24->54:28]
 posCursor:[54:29] posNoWhite:[54:28] Found pattern:[54:28->54:30]
 Ppat_construct ():[54:28->54:30]
 Completable: Cpattern Value[resOpt]->variantPayload::Ok($0), variantPayload::Some($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Value[resOpt]
 Path resOpt
 [{

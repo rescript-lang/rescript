@@ -7,9 +7,9 @@ let z =
   [%obj { \xff = 1; \u2212 = {js|two|js}; \0 = zero; \o123 = {js|o123|js} }]
 let x = (({js|age|js})[@res.braces ])
 let x = (({js|age|js}.(0))[@res.braces ])
-let x = (({js|age|js} |.u Js.log)[@res.braces ])
+let x = (({js|age|js} -> Js.log)[@res.braces ])
 let x = ((if {js|age|js} then true else false)[@res.braces ][@res.ternary ])
-let x = (({js|age|js} |.u Js.log; (let foo = 1 in let bar = 2 in foo + bar))
+let x = (({js|age|js} -> Js.log; (let foo = 1 in let bar = 2 in foo + bar))
   [@res.braces ])
 let x =
   ((((if {js|age|js} then true else false)

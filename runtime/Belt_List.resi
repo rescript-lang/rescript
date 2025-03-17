@@ -69,9 +69,12 @@ with care.
 ## Examples
 
 ```rescript
-Belt.List.headExn(list{1, 2, 3}) // 1
+Belt.List.headExn(list{1, 2, 3})->assertEqual(1)
 
-Belt.List.headExn(list{}) // Raises an Error
+switch Belt.List.headExn(list{}) { // Raises an Error
+| exception _ => assert(true)
+| _ => assert(false)
+}
 ```
 */
 let headExn: t<'a> => 'a
@@ -97,9 +100,12 @@ with care.
 ## Examples
 
 ```rescript
-Belt.List.tailExn(list{1, 2, 3}) // list{2, 3}
+Belt.List.tailExn(list{1, 2, 3})->assertEqual(list{2, 3})
 
-Belt.List.tailExn(list{}) // Raises an Error
+switch Belt.List.tailExn(list{}) { // Raises an Error
+| exception _ => assert(true)
+| _ => assert(false)
+}
 ```
 */
 let tailExn: t<'a> => t<'a>
@@ -142,9 +148,12 @@ length. Use with care.
 ```rescript
 let abc = list{"A", "B", "C"}
 
-abc->Belt.List.getExn(1) // "B"
+abc->Belt.List.getExn(1)->assertEqual("B")
 
-abc->Belt.List.getExn(4) // Raises an Error
+switch abc->Belt.List.getExn(4) { // Raises an Error
+| exception _ => assert(true)
+| _ => assert(false)
+}
 ```
 */
 let getExn: (t<'a>, int) => 'a
@@ -377,16 +386,14 @@ let reverse: t<'a> => t<'a>
 let mapReverseU: (t<'a>, 'a => 'b) => t<'b>
 
 /**
-Equivalent to:
-
-```res
-map(someList, f)->reverse
-```
+Equivalent to `Belt.List.map(someList, f)->Belt.List.reverse`
 
 ## Examples
 
 ```rescript
-list{3, 4, 5}->Belt.List.mapReverse(x => x * x) /* list{25, 16, 9} */
+list{3, 4, 5}
+->Belt.List.mapReverse(x => x * x)
+->assertEqual(list{25, 16, 9})
 ```
 */
 let mapReverse: (t<'a>, 'a => 'b) => t<'b>
@@ -861,14 +868,16 @@ Creates a pair of lists; the first list consists of all elements of `someList` t
 
 In other words:
 
-```rescript
+```
 (elementsThatSatisfies, elementsThatDoesNotSatisfy)
 ```
 
 ## Examples
 
 ```rescript
-Belt.List.partition(list{1, 2, 3, 4}, x => x > 2) /* (list{3, 4}, list{1, 2}) */
+list{1, 2, 3, 4}
+->Belt.List.partition(x => x > 2)
+->assertEqual((list{3, 4}, list{1, 2}))
 ```
 */
 let partition: (t<'a>, 'a => bool) => (t<'a>, t<'a>)

@@ -109,7 +109,7 @@ let make_obj ~loc xs = Typ.object_ ~loc xs Closed
 *)
 let rec get_uncurry_arity_aux (ty : t) acc =
   match ty.ptyp_desc with
-  | Ptyp_arrow (_, _, new_ty, _) -> get_uncurry_arity_aux new_ty (succ acc)
+  | Ptyp_arrow {ret = new_ty} -> get_uncurry_arity_aux new_ty (succ acc)
   | Ptyp_poly (_, ty) -> get_uncurry_arity_aux ty acc
   | _ -> acc
 
@@ -120,12 +120,12 @@ let rec get_uncurry_arity_aux (ty : t) acc =
 *)
 let get_uncurry_arity (ty : t) =
   match ty.ptyp_desc with
-  | Ptyp_arrow (_, _, rest, _) -> Some (get_uncurry_arity_aux rest 1)
+  | Ptyp_arrow {ret = rest} -> Some (get_uncurry_arity_aux rest 1)
   | _ -> None
 
 let get_curry_arity (ty : t) =
   match ty.ptyp_desc with
-  | Ptyp_arrow (_, _, _, Some arity) -> arity
+  | Ptyp_arrow {arity = Some arity} -> arity
   | _ -> get_uncurry_arity_aux ty 0
 
 let is_arity_one ty = get_curry_arity ty = 1
@@ -142,23 +142,23 @@ let mk_fn_type (new_arg_types_ty : param_type list) (result : t) : t =
     Ext_list.fold_right new_arg_types_ty result
       (fun {label; ty; attr; loc} acc ->
         {
-          ptyp_desc = Ptyp_arrow (label, ty, acc, None);
+          ptyp_desc = Ptyp_arrow {lbl = label; arg = ty; ret = acc; arity = None};
           ptyp_loc = loc;
           ptyp_attributes = attr;
         })
   in
   match t.ptyp_desc with
-  | Ptyp_arrow (l, t1, t2, _arity) ->
+  | Ptyp_arrow arr ->
     let arity = List.length new_arg_types_ty in
-    {t with ptyp_desc = Ptyp_arrow (l, t1, t2, Some arity)}
+    {t with ptyp_desc = Ptyp_arrow {arr with arity = Some arity}}
   | _ -> t
 
 let list_of_arrow (ty : t) : t * param_type list =
   let rec aux (ty : t) acc =
     match ty.ptyp_desc with
-    | Ptyp_arrow (label, t1, t2, arity) when arity = None || acc = [] ->
-      aux t2
-        (({label; ty = t1; attr = ty.ptyp_attributes; loc = ty.ptyp_loc}
+    | Ptyp_arrow {lbl = label; arg; ret; arity} when arity = None || acc = [] ->
+      aux ret
+        (({label; ty = arg; attr = ty.ptyp_attributes; loc = ty.ptyp_loc}
            : param_type)
         :: acc)
     | Ptyp_poly (_, ty) ->

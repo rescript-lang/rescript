@@ -40,4 +40,4 @@ let sigFormatter = Intl.NumberFormat.make(
 
 let options = sigFormatter->Intl.NumberFormat.resolvedOptions
 Console.log(options)
-options.useGrouping->Intl_NumberFormat.Grouping.parseJsValue->Console.log
+options.useGrouping->Intl.NumberFormat.Grouping.parseJsValue->Console.log

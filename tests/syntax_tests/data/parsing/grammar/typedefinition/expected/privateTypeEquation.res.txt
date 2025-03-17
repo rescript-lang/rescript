@@ -5,8 +5,7 @@ type nonrec t = private int
 type nonrec t = private int -> int (a:1)
 type nonrec t = private int -> int (a:1)
 type nonrec t = private int -> int -> int (a:1) (a:1)
-type nonrec t = private
-  int -> x:((string)[@res.namedArgLoc ]) -> float -> unit (a:3)
+type nonrec t = private int -> x:string -> float -> unit (a:3)
 type nonrec t = private string as 'x
 type nonrec t = private [%ext ]
 type nonrec t = private [%ext {js|console.log|js}]

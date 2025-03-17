@@ -5,7 +5,8 @@ Complete src/JsxV4.res 11:20
 posCursor:[11:20] posNoWhite:[11:19] Found expr:[11:4->11:20]
 JSX <M4:[11:4->11:6] first[11:7->11:12]=...[11:13->11:18] f[11:19->11:20]=...[11:19->11:20]> _children:None
 Completable: Cjsx([M4], f, [first, f])
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 Path M4.make
 [{
     "label": "fun",

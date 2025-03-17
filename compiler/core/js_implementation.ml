@@ -96,8 +96,7 @@ let all_module_alias (ast : Parsetree.structure) =
       | Pstr_attribute _ -> true
       | Pstr_eval _ | Pstr_value _ | Pstr_primitive _ | Pstr_type _
       | Pstr_typext _ | Pstr_exception _ | Pstr_module _ | Pstr_recmodule _
-      | Pstr_modtype _ | Pstr_open _ | Pstr_class _ | Pstr_class_type _
-      | Pstr_include _ | Pstr_extension _ ->
+      | Pstr_modtype _ | Pstr_open _ | Pstr_include _ | Pstr_extension _ ->
         false)
 
 let no_export (rest : Parsetree.structure) : Parsetree.structure =

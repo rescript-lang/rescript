@@ -171,27 +171,27 @@ describe(__MODULE__, () => {
   test("removeAssoc", () => {
     let eqx = (x, y) => (x: int) == y
 
-    ok(__LOC__, N.hasAssoc(list{(1, "1"), (2, "2"), (3, "3")}, 2, \"="))
-    ok(__LOC__, !N.hasAssoc(list{(1, "1"), (2, "2"), (3, "3")}, 4, \"="))
+    ok(__LOC__, N.hasAssoc(list{(1, "1"), (2, "2"), (3, "3")}, 2, \"=="))
+    ok(__LOC__, !N.hasAssoc(list{(1, "1"), (2, "2"), (3, "3")}, 4, \"=="))
     ok(__LOC__, N.hasAssoc(list{(1, "1"), (2, "2"), (3, "3")}, 4, (x, y) => x + 1 == y))
     eq(
       __LOC__,
-      N.removeAssoc(list{(1, "1"), (2, "2"), (3, "3")}, 3, \"="),
+      N.removeAssoc(list{(1, "1"), (2, "2"), (3, "3")}, 3, \"=="),
       list{(1, "1"), (2, "2")},
     )
     eq(
       __LOC__,
-      N.removeAssoc(list{(1, "1"), (2, "2"), (3, "3")}, 1, \"="),
+      N.removeAssoc(list{(1, "1"), (2, "2"), (3, "3")}, 1, \"=="),
       list{(2, "2"), (3, "3")},
     )
     eq(
       __LOC__,
-      N.removeAssoc(list{(1, "1"), (2, "2"), (3, "3")}, 2, \"="),
+      N.removeAssoc(list{(1, "1"), (2, "2"), (3, "3")}, 2, \"=="),
       list{(1, "1"), (3, "3")},
     )
     eq(
       __LOC__,
-      N.removeAssoc(list{(1, "1"), (2, "2"), (3, "3")}, 0, \"="),
+      N.removeAssoc(list{(1, "1"), (2, "2"), (3, "3")}, 0, \"=="),
       list{(1, "1"), (2, "2"), (3, "3")},
     )
 
@@ -202,26 +202,26 @@ describe(__MODULE__, () => {
     let ll = list{(1, "1"), (2, "2"), (3, "3")}
     let ll0 = N.removeAssoc(ll, 0, eqx)
     ok(__LOC__, ll === ll0)
-    let ll1 = N.setAssoc(ll, 2, "22", \"=")
+    let ll1 = N.setAssoc(ll, 2, "22", \"==")
     eq(__LOC__, ll1, list{(1, "1"), (2, "22"), (3, "3")})
-    let ll2 = N.setAssoc(ll1, 22, "2", \"=")
+    let ll2 = N.setAssoc(ll1, 22, "2", \"==")
     ok(__LOC__, ll2 == list{(22, "2"), ...ll1})
     ok(__LOC__, N.tailExn(ll2) === ll1)
     ok(
       __LOC__,
-      N.setAssoc(list{(1, "a"), (2, "b"), (3, "c")}, 2, "x", \"=") ==
+      N.setAssoc(list{(1, "a"), (2, "b"), (3, "c")}, 2, "x", \"==") ==
         list{(1, "a"), (2, "x"), (3, "c")},
     )
     ok(
       __LOC__,
-      N.setAssoc(list{(1, "a"), (3, "c")}, 2, "2", \"=") == list{(2, "2"), (1, "a"), (3, "c")},
+      N.setAssoc(list{(1, "a"), (3, "c")}, 2, "2", \"==") == list{(2, "2"), (1, "a"), (3, "c")},
     )
-    eq(__LOC__, N.setAssoc(list{}, 1, "1", \"="), list{(1, "1")})
-    eq(__LOC__, N.setAssoc(list{(1, "2")}, 1, "1", \"="), list{(1, "1")})
+    eq(__LOC__, N.setAssoc(list{}, 1, "1", \"=="), list{(1, "1")})
+    eq(__LOC__, N.setAssoc(list{(1, "2")}, 1, "1", \"=="), list{(1, "1")})
 
-    eq(__LOC__, N.setAssoc(list{(0, "0"), (1, "2")}, 1, "1", \"="), list{(0, "0"), (1, "1")})
-    ok(__LOC__, N.getAssoc(list{(1, "a"), (2, "b"), (3, "c")}, 2, \"=") == Some("b"))
-    ok(__LOC__, N.getAssoc(list{(1, "a"), (2, "b"), (3, "c")}, 4, \"=") == None)
+    eq(__LOC__, N.setAssoc(list{(0, "0"), (1, "2")}, 1, "1", \"=="), list{(0, "0"), (1, "1")})
+    ok(__LOC__, N.getAssoc(list{(1, "a"), (2, "b"), (3, "c")}, 2, \"==") == Some("b"))
+    ok(__LOC__, N.getAssoc(list{(1, "a"), (2, "b"), (3, "c")}, 4, \"==") == None)
   })
 
   test("head/tail etc.", () => {
@@ -344,7 +344,7 @@ describe(__MODULE__, () => {
     ok(__LOC__, !N.eq(list{1, 2, 3}, list{1, 2}, (x, y) => x == y))
     ok(__LOC__, N.eq(list{1, 2, 3}, list{1, 2, 3}, (x, y) => x == y))
     ok(__LOC__, !N.eq(list{1, 2, 3}, list{1, 2, 4}, (x, y) => x == y))
-    ok(__LOC__, !N.eq(list{1, 2, 3}, list{1, 2, 3, 4}, \"="))
+    ok(__LOC__, !N.eq(list{1, 2, 3}, list{1, 2, 3, 4}, \"=="))
   })
 
   test("keepMap", () => {

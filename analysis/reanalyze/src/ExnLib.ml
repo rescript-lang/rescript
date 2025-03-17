@@ -1,19 +1,6 @@
 let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
   let table = Hashtbl.create 15 in
   let open Exn in
-  let array =
-    [
-      ("get", [invalidArgument]);
-      ("set", [invalidArgument]);
-      ("make", [invalidArgument]);
-      ("init", [invalidArgument]);
-      ("make_matrix", [invalidArgument]);
-      ("fill", [invalidArgument]);
-      ("blit", [invalidArgument]);
-      ("iter2", [invalidArgument]);
-      ("map2", [invalidArgument]);
-    ]
-  in
   let beltArray = [("getExn", [assertFailure]); ("setExn", [assertFailure])] in
   let beltList =
     [("getExn", [notFound]); ("headExn", [notFound]); ("tailExn", [notFound])]
@@ -49,91 +36,10 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
       ("either", [decodeError]);
     ]
   in
-  let buffer =
-    [
-      ("sub", [invalidArgument]);
-      ("blit", [invalidArgument]);
-      ("nth", [invalidArgument]);
-      ("add_substitute", [notFound]);
-      ("add_channel", [endOfFile]);
-      ("truncate", [invalidArgument]);
-    ]
-  in
-  let bytes =
-    [
-      ("get", [invalidArgument]);
-      ("set", [invalidArgument]);
-      ("create", [invalidArgument]);
-      ("make", [invalidArgument]);
-      ("init", [invalidArgument]);
-      ("sub", [invalidArgument]);
-      ("sub_string", [invalidArgument]);
-      ("extend", [invalidArgument]);
-      ("fill", [invalidArgument]);
-      ("blit", [invalidArgument]);
-      ("blit_string", [invalidArgument]);
-      (* ("concat", [invalidArgument]), if longer than {!Sys.max_string_length}
-         ("cat", [invalidArgument]), if longer than {!Sys.max_string_length}
-         ("escaped", [invalidArgument]), if longer than {!Sys.max_string_length} *)
-      ("index", [notFound]);
-      ("rindex", [notFound]);
-      ("index_from", [invalidArgument; notFound]);
-      ("index_from_opt", [invalidArgument]);
-      ("rindex_from", [invalidArgument; notFound]);
-      ("rindex_from_opt", [invalidArgument]);
-      ("contains_from", [invalidArgument]);
-      ("rcontains_from", [invalidArgument]);
-    ]
-  in
-  let filename =
-    [
-      ("chop_extension", [invalidArgument]);
-      ("temp_file", [sysError]);
-      ("open_temp_file", [sysError]);
-    ]
-  in
-  let hashtbl = [("find", [notFound])] in
-  let list =
-    [
-      ("hd", [failure]);
-      ("tl", [failure]);
-      ("nth", [failure; invalidArgument]);
-      ("nth_opt", [invalidArgument]);
-      ("init", [invalidArgument]);
-      ("iter2", [invalidArgument]);
-      ("map2", [invalidArgument]);
-      ("fold_left2", [invalidArgument]);
-      ("fold_right2", [invalidArgument]);
-      ("for_all2", [invalidArgument]);
-      ("exists2", [invalidArgument]);
-      ("find", [notFound]);
-      ("assoc", [notFound]);
-      ("combine", [invalidArgument]);
-    ]
-  in
-  let string =
-    [
-      ("get", [invalidArgument]);
-      ("set", [invalidArgument]);
-      ("create", [invalidArgument]);
-      ("make", [invalidArgument]);
-      ("init", [invalidArgument]);
-      ("sub", [invalidArgument]);
-      ("fill", [invalidArgument]);
-      (* ("concat", [invalidArgument]), if longer than {!Sys.max_string_length}
-         ("escaped", [invalidArgument]), if longer than {!Sys.max_string_length} *)
-      ("index", [notFound]);
-      ("rindex", [notFound]);
-      ("index_from", [invalidArgument; notFound]);
-      ("index_from_opt", [invalidArgument]);
-      ("rindex_from", [invalidArgument; notFound]);
-      ("rindex_from_opt", [invalidArgument]);
-      ("contains_from", [invalidArgument]);
-      ("rcontains_from", [invalidArgument]);
-    ]
-  in
   let stdlib =
     [
+      ("panic", [jsExnError]);
+      ("assertEqual", [jsExnError]);
       ("invalid_arg", [invalidArgument]);
       ("failwith", [failure]);
       ("/", [divisionByZero]);
@@ -142,29 +48,40 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
       ("bool_of_string", [invalidArgument]);
       ("int_of_string", [failure]);
       ("float_of_string", [failure]);
-      ("read_int", [failure]);
-      ("output", [invalidArgument]);
-      ("close_out", [sysError]);
-      ("input_char", [endOfFile]);
-      ("input_line", [endOfFile]);
-      ("input", [invalidArgument]);
-      ("really_input", [endOfFile; invalidArgument]);
-      ("really_input_string", [endOfFile]);
-      ("input_byte", [endOfFile]);
-      ("input_binary_int", [endOfFile]);
-      ("close_in", [sysError]);
-      ("exit", [exit]);
     ]
   in
-  let str =
+  let stdlibBigInt = [("fromStringExn", [jsExnError])] in
+  let stdlibError = [("raise", [jsExnError])] in
+  let stdlibExn =
     [
-      ("search_forward", [notFound]);
-      ("search_backward", [notFound]);
-      ("matched_group", [notFound]);
-      ("group_beginning", [notFound; invalidArgument]);
-      ("group_end", [notFound; invalidArgument]);
+      ("raiseError", [jsExnError]);
+      ("raiseEvalError", [jsExnError]);
+      ("raiseRangeError", [jsExnError]);
+      ("raiseReferenceError", [jsExnError]);
+      ("raiseSyntaxError", [jsExnError]);
+      ("raiseTypeError", [jsExnError]);
+      ("raiseUriError", [jsExnError]);
     ]
   in
+  let stdlibJson =
+    [
+      ("parseExn", [jsExnError]);
+      ("parseExnWithReviver", [jsExnError]);
+      ("stringifyAny", [jsExnError]);
+      ("stringifyAnyWithIndent", [jsExnError]);
+      ("stringifyAnyWithReplacer", [jsExnError]);
+      ("stringifyAnyWithReplacerAndIndent", [jsExnError]);
+      ("stringifyAnyWithFilter", [jsExnError]);
+      ("stringifyAnyWithFilterAndIndent", [jsExnError]);
+    ]
+  in
+  let stdlibList =
+    [("headExn", [notFound]); ("tailExn", [notFound]); ("getExn", [notFound])]
+  in
+  let stdlibNull = [("getExn", [invalidArgument])] in
+  let stdlibNullable = [("getExn", [invalidArgument])] in
+  let stdlibOption = [("getExn", [jsExnError])] in
+  let stdlibResult = [("getExn", [notFound])] in
   let yojsonBasic = [("from_string", [yojsonJsonError])] in
   let yojsonBasicUtil =
     [
@@ -183,7 +100,6 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
     ]
   in
   [
-    ("Array", array);
     ("Belt.Array", beltArray);
     ("Belt_Array", beltArray);
     ("Belt.List", beltList);
@@ -206,6 +122,11 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
     ("Belt_MutableMapString", beltMutableMap);
     ("Belt.MutableQueue", beltMutableQueue);
     ("Belt_MutableQueue", beltMutableQueue);
+    ("Belt_MutableSetInt", beltMutableSet);
+    ("Belt_MutableSetString", beltMutableSet);
+    ("Belt.MutableSet", beltMutableSet);
+    ("Belt.MutableSet.Int", beltMutableSet);
+    ("Belt.MutableSet.String", beltMutableSet);
     ("Belt.Option", beltOption);
     ("Belt_Option", beltOption);
     ("Belt.Result", beltResult);
@@ -218,35 +139,42 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
     ("Belt_Set.String", beltSet);
     ("Belt_SetInt", beltSet);
     ("Belt_SetString", beltSet);
-    ("Belt.MutableSet", beltMutableSet);
-    ("Belt.MutableSet.Int", beltMutableSet);
-    ("Belt.MutableSet.String", beltMutableSet);
+    ("BigInt", stdlibBigInt);
+    ("Char", [("chr", [invalidArgument])]);
+    ("Error", stdlibError);
+    ("Exn", stdlibExn);
+    ("Js.Json", [("parseExn", [jsExnError])]);
+    ("JSON", stdlibJson);
+    ("Json_decode", bsJson);
+    ("Json.Decode", bsJson);
+    ("List", stdlibList);
     ("MutableSet", beltMutableSet);
     ("MutableSet.Int", beltMutableSet);
     ("MutableSet.String", beltMutableSet);
-    ("Belt_MutableSetInt", beltMutableSet);
-    ("Belt_MutableSetString", beltMutableSet);
-    ("Buffer", buffer);
-    ("Bytes", bytes);
-    ("Char", [("chr", [invalidArgument])]);
-    ("Filename", filename);
-    ("Hashtbl", hashtbl);
-    ("Js.Json", [("parseExn", [jsExnError])]);
-    ("Json_decode", bsJson);
-    ("Json.Decode", bsJson);
-    ("List", list);
+    ("Null", stdlibNull);
+    ("Nullable", stdlibNullable);
+    ("Option", stdlibOption);
     ("Pervasives", stdlib);
+    ("Result", stdlibResult);
     ("Stdlib", stdlib);
-    ("Stdlib.Array", array);
-    ("Stdlib.Buffer", buffer);
-    ("Stdlib.Bytes", bytes);
-    ("Stdlib.Filename", filename);
-    ("Stdlib.Hashtbl", hashtbl);
-    ("Stdlib.List", list);
-    ("Stdlib.Str", str);
-    ("Stdlib.String", string);
-    ("Str", str);
-    ("String", string);
+    ("Stdlib_BigInt", stdlibBigInt);
+    ("Stdlib.BigInt", stdlibBigInt);
+    ("Stdlib_Error", stdlibError);
+    ("Stdlib.Error", stdlibError);
+    ("Stdlib_Exn", stdlibExn);
+    ("Stdlib.Exn", stdlibExn);
+    ("Stdlib_JSON", stdlibJson);
+    ("Stdlib.JSON", stdlibJson);
+    ("Stdlib_List", stdlibList);
+    ("Stdlib.List", stdlibList);
+    ("Stdlib_Null", stdlibNull);
+    ("Stdlib.Null", stdlibNull);
+    ("Stdlib_Nullable", stdlibNullable);
+    ("Stdlib.Nullable", stdlibNullable);
+    ("Stdlib_Option", stdlibOption);
+    ("Stdlib.Option", stdlibOption);
+    ("Stdlib_Result", stdlibResult);
+    ("Stdlib.Result", stdlibResult);
     ("Yojson.Basic", yojsonBasic);
     ("Yojson.Basic.Util", yojsonBasicUtil);
   ]

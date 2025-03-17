@@ -399,7 +399,7 @@ module AllInstanceofTypes = {
     | Promise(promise<string>)
     | Object(record)
     | Date(Js.Date.t)
-    | RegExp(Js.Re.t)
+    | RegExp(Stdlib_RegExp.t)
     | File(Js.File.t)
     | Blob(Js.Blob.t)
 
@@ -460,4 +460,19 @@ module MergeCases = {
     | Date(_) => "do not merge"
     | Boolean(_) => "merge"
     }
+}
+
+module ObjectAndNull = {
+  let printLength = (json: JSON.t) =>
+    switch json {
+    | Object(o) => Console.log2("Length: ", o->Dict.valuesToArray->Array.length)
+    | _ => ()
+    }
+}
+
+module RecursiveType = {
+  type rec object2 = {foo: string}
+  @unboxed and tagged2 = Object(object2) | Fn(unit => object2)
+
+  let o = Object({foo: "hello"})
 }

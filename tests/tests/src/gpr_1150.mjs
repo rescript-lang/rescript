@@ -2,17 +2,17 @@
 
 
 function f(children) {
-  if (!children) {
+  if (children === 0) {
     return [];
   }
   let children$1 = children.tl;
   let a0 = children.hd;
-  if (!children$1) {
+  if (children$1 === 0) {
     return [a0];
   }
   let children$2 = children$1.tl;
   let a1 = children$1.hd;
-  if (!children$2) {
+  if (children$2 === 0) {
     return [
       a0,
       a1
@@ -20,7 +20,7 @@ function f(children) {
   }
   let children$3 = children$2.tl;
   let a2 = children$2.hd;
-  if (!children$3) {
+  if (children$3 === 0) {
     return [
       a0,
       a1,
@@ -29,7 +29,7 @@ function f(children) {
   }
   let children$4 = children$3.tl;
   let a3 = children$3.hd;
-  if (!children$4) {
+  if (children$4 === 0) {
     return [
       a0,
       a1,
@@ -39,7 +39,7 @@ function f(children) {
   }
   let children$5 = children$4.tl;
   let a4 = children$4.hd;
-  if (!children$5) {
+  if (children$5 === 0) {
     return [
       a0,
       a1,
@@ -50,7 +50,7 @@ function f(children) {
   }
   let children$6 = children$5.tl;
   let a5 = children$5.hd;
-  if (!children$6) {
+  if (children$6 === 0) {
     return [
       a0,
       a1,
@@ -62,7 +62,7 @@ function f(children) {
   }
   let children$7 = children$6.tl;
   let a6 = children$6.hd;
-  if (!children$7) {
+  if (children$7 === 0) {
     return [
       a0,
       a1,
@@ -75,7 +75,7 @@ function f(children) {
   }
   let children$8 = children$7.tl;
   let a7 = children$7.hd;
-  if (!children$8) {
+  if (children$8 === 0) {
     return [
       a0,
       a1,
@@ -89,7 +89,7 @@ function f(children) {
   }
   let children$9 = children$8.tl;
   let a8 = children$8.hd;
-  if (!children$9) {
+  if (children$9 === 0) {
     return [
       a0,
       a1,
@@ -104,7 +104,7 @@ function f(children) {
   }
   let children$10 = children$9.tl;
   let a9 = children$9.hd;
-  if (!children$10) {
+  if (children$10 === 0) {
     return [
       a0,
       a1,
@@ -120,7 +120,7 @@ function f(children) {
   }
   let children$11 = children$10.tl;
   let a10 = children$10.hd;
-  if (!children$11) {
+  if (children$11 === 0) {
     return [
       a0,
       a1,
@@ -137,7 +137,7 @@ function f(children) {
   }
   let children$12 = children$11.tl;
   let a11 = children$11.hd;
-  if (!children$12) {
+  if (children$12 === 0) {
     return [
       a0,
       a1,
@@ -155,7 +155,7 @@ function f(children) {
   }
   let children$13 = children$12.tl;
   let a12 = children$12.hd;
-  if (!children$13) {
+  if (children$13 === 0) {
     return [
       a0,
       a1,
@@ -174,7 +174,7 @@ function f(children) {
   }
   let children$14 = children$13.tl;
   let a13 = children$13.hd;
-  if (!children$14) {
+  if (children$14 === 0) {
     return [
       a0,
       a1,
@@ -194,7 +194,7 @@ function f(children) {
   }
   let children$15 = children$14.tl;
   let a14 = children$14.hd;
-  if (!children$15) {
+  if (children$15 === 0) {
     return [
       a0,
       a1,
@@ -213,7 +213,7 @@ function f(children) {
       a14
     ];
   }
-  if (children$15.tl) {
+  if (children$15.tl !== 0) {
     throw {
       RE_EXN_ID: "Assert_failure",
       _1: [

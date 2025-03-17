@@ -120,7 +120,8 @@ include
         ;;{js||js}
         ;;{js|BS:6.0.1\x84\x95\xa6\xbe\0\0\0\x13\0\0\0\x07\0\0\0\x14\0\0\0\x13\xb0\xa0\xa0A\x91@@A\x98\xa0'compare@|js}
       end
-    let has [arity:2]rbt value = (_findNode rbt (rootGet rbt) value) != None
+    let has [arity:2]rbt value =
+      (!==) (_findNode rbt (rootGet rbt) value) None
     let rec minNode [arity:1]node = [%rescript.exprhole ]
     let findMin [arity:1]rbt = [%rescript.exprhole ]
     let removeNode [arity:2]rbt node =
@@ -140,10 +141,9 @@ include
           match successor with
           | None ->
               let leaf =
-                createNode ~value:((Js.Internal.raw_expr {js|0|js})
-                  [@res.namedArgLoc ]) ~color:((Black)[@res.namedArgLoc ])
-                  ~height:((0.)[@res.namedArgLoc ]) in
-              let isLeaf = Js.Internal.fn_mk1 (fun [arity:1]x -> x == leaf) in
+                createNode ~value:(Js.Internal.raw_expr {js|0|js})
+                  ~color:Black ~height:0. in
+              let isLeaf = Js.Internal.fn_mk1 (fun [arity:1]x -> x === leaf) in
               (leaf, isLeaf)
           | Some successor ->
               (successor, (Js.Internal.fn_mk1 (fun [arity:1]_ -> false))) in
@@ -152,15 +152,14 @@ include
         (match nodeParent with
          | None -> ()
          | Some parent ->
-             leftOrRightSet parent ~node:((nodeToRemove)[@res.namedArgLoc ])
-               (Some successor));
+             leftOrRightSet parent ~node:nodeToRemove (Some successor));
         updateSumRecursive rbt successor;
-        if (colorGet nodeToRemove) == Black
+        if (colorGet nodeToRemove) === Black
         then
-          (if (colorGet successor) == Red
+          (if (colorGet successor) === Red
            then
              (colorSet successor Black;
-              if (parentGet successor) == None
+              if (parentGet successor) === None
               then rootSet rbt (Some successor))
            else
              (let break = ref false in
@@ -173,8 +172,8 @@ include
                 | Some successorParent ->
                     let sibling = siblingOf successor in
                     (if
-                       (sibling != None) &&
-                         ((colorGet (castNotOption sibling)) == Red)
+                       ((!==) sibling None) &&
+                         ((colorGet (castNotOption sibling)) === Red)
                      then
                        (colorSet successorParent Red;
                         colorSet (castNotOption sibling) Black;
@@ -184,55 +183,55 @@ include
                      (let sibling = siblingOf successor in
                       let siblingNN = castNotOption sibling in
                       if
-                        ((colorGet successorParent) == Black) &&
-                          ((sibling == None) ||
-                             ((((colorGet siblingNN) == Black) &&
-                                 (((leftGet siblingNN) == None) ||
+                        ((colorGet successorParent) === Black) &&
+                          ((sibling === None) ||
+                             ((((colorGet siblingNN) === Black) &&
+                                 (((leftGet siblingNN) === None) ||
                                     ((colorGet
                                         (castNotOption (leftGet siblingNN)))
-                                       == Black)))
+                                       === Black)))
                                 &&
-                                (((rightGet siblingNN) == None) ||
+                                (((rightGet siblingNN) === None) ||
                                    ((colorGet
                                        (castNotOption (rightGet siblingNN)))
-                                      == Black))))
+                                      === Black))))
                       then
-                        (if sibling != None then colorSet siblingNN Red;
+                        (if (!==) sibling None then colorSet siblingNN Red;
                          successorRef.contents <- successorParent)
                       else
                         if
-                          ((colorGet successorParent) == Red) &&
-                            ((sibling == None) ||
-                               ((((colorGet siblingNN) == Black) &&
-                                   (((leftGet siblingNN) == None) ||
+                          ((colorGet successorParent) === Red) &&
+                            ((sibling === None) ||
+                               ((((colorGet siblingNN) === Black) &&
+                                   (((leftGet siblingNN) === None) ||
                                       ((colorGet
                                           (castNotOption (leftGet siblingNN)))
-                                         == Black)))
+                                         === Black)))
                                   &&
-                                  (((rightGet siblingNN) == None) ||
+                                  (((rightGet siblingNN) === None) ||
                                      ((colorGet
                                          (castNotOption (rightGet siblingNN)))
-                                        == Black))))
+                                        === Black))))
                         then
-                          (if sibling != None then colorSet siblingNN Red;
+                          (if (!==) sibling None then colorSet siblingNN Red;
                            colorSet successorParent Black;
                            break.contents <- true)
                         else
                           if
-                            (sibling != None) &&
-                              ((colorGet (castNotOption sibling)) == Black)
+                            ((!==) sibling None) &&
+                              ((colorGet (castNotOption sibling)) === Black)
                           then
                             (let sibling = castNotOption sibling in
                              if
                                (((isLeft successor) &&
-                                   (((rightGet sibling) == None) ||
+                                   (((rightGet sibling) === None) ||
                                       ((colorGet
                                           (castNotOption (rightGet sibling)))
-                                         == Black)))
-                                  && ((leftGet sibling) != None))
+                                         === Black)))
+                                  && ((!==) (leftGet sibling) None))
                                  &&
                                  ((colorGet (castNotOption (leftGet sibling)))
-                                    == Red)
+                                    === Red)
                              then
                                (colorSet sibling Red;
                                 colorSet (castNotOption (leftGet sibling))
@@ -241,15 +240,15 @@ include
                              else
                                if
                                  (((not (isLeft successor)) &&
-                                     (((leftGet sibling) == None) ||
+                                     (((leftGet sibling) === None) ||
                                         ((colorGet
                                             (castNotOption (leftGet sibling)))
-                                           == Black)))
-                                    && ((rightGet sibling) != None))
+                                           === Black)))
+                                    && ((!==) (rightGet sibling) None))
                                    &&
                                    ((colorGet
                                        (castNotOption (rightGet sibling)))
-                                      == Red)
+                                      === Red)
                                then
                                  (colorSet sibling Red;
                                   colorSet (castNotOption (rightGet sibling))
@@ -272,12 +271,10 @@ include
                 done));
         if Js.Internal.fn_run1 isLeaf successor
         then
-          (if (rootGet rbt) == (Some successor) then rootSet rbt None;
+          (if (rootGet rbt) === (Some successor) then rootSet rbt None;
            (match parentGet successor with
             | None -> ()
-            | Some parent ->
-                leftOrRightSet parent ~node:((successor)[@res.namedArgLoc ])
-                  None)))
+            | Some parent -> leftOrRightSet parent ~node:successor None)))
       [@res.braces ])
     let remove [arity:2]rbt value =
       match _findNode rbt (rootGet rbt) value with
@@ -292,7 +289,7 @@ include
           | None -> None
           | Some node ->
               let cmp = Js.Internal.fn_run1 cb (valueGet node) in
-              if cmp == 0
+              if cmp === 0
               then Some node
               else
                 if cmp < 0
@@ -302,25 +299,23 @@ include
         | None -> None
         | Some node -> Some (valueGet node))
       [@res.braces ])
-    let make [arity:1]~compare:((compare)[@res.namedArgLoc ])  =
-      t ~size:((0)[@res.namedArgLoc ]) ~root:((None)[@res.namedArgLoc ])
-        ~compare:((compare)[@res.namedArgLoc ])
+    let make [arity:1]~compare  = t ~size:0 ~root:None ~compare
     let rec heightOfInterval [arity:4]rbt node lhs rhs =
       match node with
       | None -> 0.
       | Some n ->
-          if (lhs == None) && (rhs == None)
+          if (lhs === None) && (rhs === None)
           then sumGet n
           else
             if
-              (lhs != None) &&
+              ((!==) lhs None) &&
                 ((Js.Internal.fn_run2 (compareGet rbt) (valueGet n)
                     (castNotOption lhs))
                    < 0)
             then heightOfInterval rbt (rightGet n) lhs rhs
             else
               if
-                (rhs != None) &&
+                ((!==) rhs None) &&
                   ((Js.Internal.fn_run2 (compareGet rbt) (valueGet n)
                       (castNotOption rhs))
                      > 0)
@@ -354,7 +349,7 @@ include
       match firstVisibleNode node offset with
       | None -> maxNode node
       | first -> first
-    let firstVisible [arity:2]rbt ~offset:((offset)[@res.namedArgLoc ])  =
+    let firstVisible [arity:2]rbt ~offset  =
       match firstVisibleNode (rootGet rbt) offset with
       | None -> None
       | Some node -> Some (valueGet node)
@@ -369,8 +364,7 @@ include
       match rightGet node with
       | None -> firstRightParent node
       | Some right -> Some (leftmost right)
-    let rec sumLeftSpine [arity:2]node
-      ~fromRightChild:((fromRightChild)[@res.namedArgLoc ])  =
+    let rec sumLeftSpine [arity:2]node ~fromRightChild  =
       ((let leftSpine =
           match leftGet node with
           | None -> heightGet node
@@ -383,12 +377,10 @@ include
         | Some parent ->
             leftSpine +.
               (sumLeftSpine parent
-                 ~fromRightChild:(((rightGet parent) == (Some node))
-                 [@res.namedArgLoc ])))
+                 ~fromRightChild:((rightGet parent) === (Some node))))
       [@res.braces ])
     let getY [arity:1]node =
-      (sumLeftSpine node ~fromRightChild:((true)[@res.namedArgLoc ])) -.
-        (heightGet node)
+      (sumLeftSpine node ~fromRightChild:true) -. (heightGet node)
     let linearSearch [arity:2]rbt callback =
       ((let rec find [arity:2]node callback =
           if Js.Internal.fn_run1 callback (valueGet node)
@@ -401,45 +393,39 @@ include
         | None -> None
         | Some node -> find node callback)
       [@res.braces ])
-    let rec iterate [arity:4]~inclusive:((inclusive)[@res.namedArgLoc ]) 
-      firstNode lastNode ~callback:((callback)[@res.namedArgLoc ])  =
+    let rec iterate [arity:4]~inclusive  firstNode lastNode ~callback  =
       match firstNode with
       | None -> ()
       | Some node ->
           (if inclusive then Js.Internal.fn_run1 callback node;
-           if firstNode != lastNode
+           if (!==) firstNode lastNode
            then
              (if not inclusive then Js.Internal.fn_run1 callback node;
-              iterate ~inclusive:((inclusive)[@res.namedArgLoc ])
-                (nextNode node) lastNode ~callback:((callback)
-                [@res.namedArgLoc ])))
-    let rec iterateWithY [arity:5]?y:((y)[@res.namedArgLoc ]) 
-      ~inclusive:((inclusive)[@res.namedArgLoc ])  firstNode lastNode
-      ~callback:((callback)[@res.namedArgLoc ])  =
+              iterate ~inclusive (nextNode node) lastNode ~callback))
+    let rec iterateWithY [arity:5]?y  ~inclusive  firstNode lastNode
+      ~callback  =
       match firstNode with
       | None -> ()
       | Some node ->
           let y = match y with | None -> getY node | Some y -> y in
           (if inclusive then Js.Internal.fn_run2 callback node y;
-           if firstNode != lastNode
+           if (!==) firstNode lastNode
            then
              (if not inclusive then Js.Internal.fn_run2 callback node y;
-              iterateWithY ~y:((y +. (heightGet node))[@res.namedArgLoc ])
-                ~inclusive:((inclusive)[@res.namedArgLoc ]) (nextNode node)
-                lastNode ~callback:((callback)[@res.namedArgLoc ])))
-    let rec updateSum [arity:2]node ~delta:((delta)[@res.namedArgLoc ])  =
+              iterateWithY ~y:(y +. (heightGet node)) ~inclusive
+                (nextNode node) lastNode ~callback))
+    let rec updateSum [arity:2]node ~delta  =
       match node with
       | None -> ()
       | Some node ->
           (sumSet node ((sumGet node) +. delta);
-           updateSum (parentGet node) ~delta:((delta)[@res.namedArgLoc ]))
-    let setHeight [arity:3]rbt value ~height:((height)[@res.namedArgLoc ])  =
+           updateSum (parentGet node) ~delta)
+    let setHeight [arity:3]rbt value ~height  =
       match _findNode rbt (rootGet rbt) value with
       | None -> ()
       | Some node ->
           let delta = height -. (heightGet node) in
-          (heightSet node height;
-           updateSum (Some node) ~delta:((delta)[@res.namedArgLoc ]))
+          (heightSet node height; updateSum (Some node) ~delta)
     type nonrec 'value oldNewVisibleNodes =
       {
       mutable old: 'value array ;

@@ -76,7 +76,7 @@ and core_type = {
 and core_type_desc =
   | Ptyp_any (*  _ *)
   | Ptyp_var of string (* 'a *)
-  | Ptyp_arrow of arg_label * core_type * core_type * arity
+  | Ptyp_arrow of {lbl: arg_label; arg: core_type; ret: core_type; arity: arity}
     (* T1 -> T2       Simple
        ~l:T1 -> T2    Labelled
        ?l:T1 -> T2    Optional
@@ -169,8 +169,7 @@ and pattern_desc =
 
        Other forms of interval are recognized by the parser
        but rejected by the type-checker. *)
-  | Ppat_tuple of pattern list
-    (* (P1, ..., Pn)
+  | Ppat_tuple of pattern list (* (P1, ..., Pn)
 
        Invariant: n >= 2
     *)
@@ -215,8 +214,7 @@ and expression = {
 }
 
 and expression_desc =
-  | Pexp_ident of Longident.t loc
-    (* x
+  | Pexp_ident of Longident.t loc (* x
        M.x
     *)
   | Pexp_constant of constant (* 1, 'a', "true", 1.0, 1l, 1L, 1n *)
@@ -230,6 +228,7 @@ and expression_desc =
       lhs: pattern;
       rhs: expression;
       arity: arity;
+      async: bool;
     }
     (* fun P -> E1                          (Simple, None)
        fun ~l:P -> E1                       (Labelled l, None)
@@ -241,7 +240,11 @@ and expression_desc =
        - "fun P1 P2 .. Pn -> E1" is represented as nested Pexp_fun.
        - "let f P = E" is represented using Pexp_fun.
     *)
-  | Pexp_apply of expression * (arg_label * expression) list
+  | Pexp_apply of {
+      funct: expression;
+      args: (arg_label * expression) list;
+      partial: bool;
+    }
     (* E0 ~l1:E1 ... ~ln:En
        li can be empty (non labeled argument) or start with '?'
        (optional argument).
@@ -290,10 +293,6 @@ and expression_desc =
     (* (E :> T)        (None, T)
          *)
   | Pexp_send of expression * label loc (*  E # m *)
-  | Pexp_new of Longident.t loc (* new M.c *)
-  | Pexp_setinstvar of label loc * expression (* x <- 2 *)
-  | Pexp_override of (label loc * expression) list
-    (* {< x1 = E1; ...; Xn = En >} *)
   | Pexp_letmodule of string loc * module_expr * expression
     (* let module M = ME in E *)
   | Pexp_letexception of extension_constructor * expression
@@ -303,11 +302,6 @@ and expression_desc =
        Note: "assert false" is treated in a special way by the
        type-checker. *)
   | Pexp_lazy of expression (* lazy E *)
-  | Pexp_poly of expression * core_type option
-    (* Used for method bodies.
-
-       Can only be used as the expression under Cfk_concrete
-       for methods (not values). *)
   | Pexp_newtype of string loc * expression (* fun (type t) -> E *)
   | Pexp_pack of module_expr
     (* (module ME)
@@ -480,8 +474,6 @@ and signature_item_desc =
        module type S *)
   | Psig_open of open_description (* open X *)
   | Psig_include of include_description (* include MT *)
-  | Psig_class of unit (* Dummy AST node *)
-  | Psig_class_type of unit (* Dummy AST node *)
   | Psig_attribute of attribute (* [@@@id] *)
   | Psig_extension of extension * attributes
 (* [%%id] *)
@@ -582,8 +574,6 @@ and structure_item_desc =
     (* module rec X1 = ME1 and ... and Xn = MEn *)
   | Pstr_modtype of module_type_declaration (* module type S = MT *)
   | Pstr_open of open_description (* open X *)
-  | Pstr_class of unit (* Dummy AST node *)
-  | Pstr_class_type of unit (* Dummy AST node *)
   | Pstr_include of include_declaration (* include ME *)
   | Pstr_attribute of attribute (* [@@@id] *)
   | Pstr_extension of extension * attributes

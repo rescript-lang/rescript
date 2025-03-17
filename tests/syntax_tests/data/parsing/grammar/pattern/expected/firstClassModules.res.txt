@@ -8,7 +8,7 @@ let sort (type s)
 let foo [arity:2](module Foo)  baz = Foo.bar baz
 let bump_list (type a)
   [arity:2]((module B)  : (module Bumpable with type t = a)) (l : a list) =
-  List.map ~f:((B.bump l)[@res.namedArgLoc ])
+  List.map ~f:(B.bump l)
 ;;match x with
   | (module Set)  -> ()
   | ((module Set)  : (module Set.S with type elt = s)) -> ()

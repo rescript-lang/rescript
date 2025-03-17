@@ -534,7 +534,7 @@ module FindFunctionsCalled = struct
     let super = Tast_mapper.default in
     let expr (self : Tast_mapper.mapper) (e : Typedtree.expression) =
       (match e.exp_desc with
-      | Texp_apply ({exp_desc = Texp_ident (callee, _, _)}, _args) ->
+      | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)}} ->
         let functionName = Path.name callee in
         callees := !callees |> StringSet.add functionName
       | _ -> ());
@@ -577,9 +577,12 @@ module ExtendFunctionTable = struct
         } ->
       Some (path, loc)
     | Some
-        {exp_desc = Texp_apply ({exp_desc = Texp_ident (path, {loc}, _)}, args)}
+        {
+          exp_desc =
+            Texp_apply {funct = {exp_desc = Texp_ident (path, {loc}, _)}; args};
+        }
       when kindOpt <> None ->
-      let checkArg ((argLabel : Asttypes.arg_label), _argOpt) =
+      let checkArg ((argLabel : Asttypes.Noloc.arg_label), _argOpt) =
         match (argLabel, kindOpt) with
         | (Labelled l | Optional l), Some kind ->
           kind |> List.for_all (fun {Kind.label} -> label <> l)
@@ -617,11 +620,11 @@ module ExtendFunctionTable = struct
                             calls a progress function"
                            functionName printPos id_pos;
                      })))
-      | Texp_apply ({exp_desc = Texp_ident (callee, _, _)}, args)
+      | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)}; args}
         when callee |> FunctionTable.isInFunctionInTable ~functionTable ->
         let functionName = Path.name callee in
         args
-        |> List.iter (fun ((argLabel : Asttypes.arg_label), argOpt) ->
+        |> List.iter (fun ((argLabel : Asttypes.Noloc.arg_label), argOpt) ->
                match (argLabel, argOpt |> extractLabelledArgument) with
                | Labelled label, Some (path, loc)
                  when path |> FunctionTable.isInFunctionInTable ~functionTable
@@ -665,10 +668,11 @@ module CheckExpressionWellFormed = struct
       | Texp_ident (path, {loc}, _) ->
         checkIdent ~path ~loc;
         e
-      | Texp_apply ({exp_desc = Texp_ident (functionPath, _, _)}, args) ->
+      | Texp_apply {funct = {exp_desc = Texp_ident (functionPath, _, _)}; args}
+        ->
         let functionName = Path.name functionPath in
         args
-        |> List.iter (fun ((argLabel : Asttypes.arg_label), argOpt) ->
+        |> List.iter (fun ((argLabel : Asttypes.Noloc.arg_label), argOpt) ->
                match argOpt |> ExtendFunctionTable.extractLabelledArgument with
                | Some (path, loc) -> (
                  match argLabel with
@@ -739,8 +743,10 @@ module Compile = struct
     match expr.exp_desc with
     | Texp_ident _ -> Command.nothing
     | Texp_apply
-        (({exp_desc = Texp_ident (calleeToRename, l, vd)} as expr), argsToExtend)
-      -> (
+        {
+          funct = {exp_desc = Texp_ident (calleeToRename, l, vd)} as expr;
+          args = argsToExtend;
+        } -> (
       let callee, args =
         match
           Hashtbl.find_opt ctx.innerRecursiveFunctions
@@ -755,7 +761,7 @@ module Compile = struct
           let argsFromKind =
             innerFunctionDefinition.kind
             |> List.map (fun (entry : Kind.entry) ->
-                   ( Asttypes.Labelled entry.label,
+                   ( Asttypes.Noloc.Labelled entry.label,
                      Some
                        {
                          expr with
@@ -779,7 +785,7 @@ module Compile = struct
             args
             |> List.find_opt (fun arg ->
                    match arg with
-                   | Asttypes.Labelled s, Some _ -> s = label
+                   | Asttypes.Noloc.Labelled s, Some _ -> s = label
                    | _ -> false)
           in
           let argOpt =
@@ -844,7 +850,8 @@ module Compile = struct
              and create a function call with the appropriate arguments *)
           assert false
         | None -> expr |> expression ~ctx |> evalArgs ~args ~ctx)
-    | Texp_apply (expr, args) -> expr |> expression ~ctx |> evalArgs ~args ~ctx
+    | Texp_apply {funct = expr; args} ->
+      expr |> expression ~ctx |> evalArgs ~args ~ctx
     | Texp_let
         ( Recursive,
           [{vb_pat = {pat_desc = Tpat_var (id, _); pat_loc}; vb_expr}],
@@ -974,18 +981,6 @@ module Compile = struct
       assert false
     | Texp_send _ ->
       notImplemented "Texp_send";
-      assert false
-    | Texp_new _ ->
-      notImplemented "Texp_new";
-      assert false
-    | Texp_instvar _ ->
-      notImplemented "Texp_instvar";
-      assert false
-    | Texp_setinstvar _ ->
-      notImplemented "Texp_setinstvar";
-      assert false
-    | Texp_override _ ->
-      notImplemented "Texp_override";
       assert false
     | Texp_letmodule _ ->
       notImplemented "Texp_letmodule";

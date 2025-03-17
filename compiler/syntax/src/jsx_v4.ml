@@ -10,7 +10,7 @@ let module_access_name config value =
 
 let nolabel = Nolabel
 
-let labelled str = Labelled str
+let labelled str = Labelled {txt = str; loc = Location.none}
 
 let is_optional str =
   match str with
@@ -28,7 +28,7 @@ let is_forward_ref = function
 
 let get_label str =
   match str with
-  | Optional str | Labelled str -> str
+  | Optional {txt = str} | Labelled {txt = str} -> str
   | Nolabel -> ""
 
 let constant_string ~loc str =
@@ -90,8 +90,7 @@ let transform_children_if_list ~mapper the_list =
   in
   transformChildren_ the_list []
 
-let extract_children ?(remove_last_position_unit = false) ~loc
-    props_and_children =
+let extract_children ~loc props_and_children =
   let rec allButLast_ lst acc =
     match lst with
     | [] -> []
@@ -111,10 +110,8 @@ let extract_children ?(remove_last_position_unit = false) ~loc
   | [], props ->
     (* no children provided? Place a placeholder list *)
     ( Exp.construct {loc = Location.none; txt = Lident "[]"} None,
-      if remove_last_position_unit then all_but_last props else props )
-  | [(_, children_expr)], props ->
-    ( children_expr,
-      if remove_last_position_unit then all_but_last props else props )
+      all_but_last props )
+  | [(_, children_expr)], props -> (children_expr, all_but_last props)
   | _ ->
     Jsx_common.raise_error ~loc
       "JSX: somehow there's more than one `children` label"
@@ -198,8 +195,8 @@ let record_from_props ~loc ~remove_key call_arguments =
     | (Nolabel, {pexp_loc}, _) :: _rest ->
       Jsx_common.raise_error ~loc:pexp_loc
         "JSX: found non-labelled argument before the last position"
-    | ((Labelled txt, {pexp_loc}, _) as prop) :: rest
-    | ((Optional txt, {pexp_loc}, _) as prop) :: rest ->
+    | ((Labelled {txt}, {pexp_loc}, _) as prop) :: rest
+    | ((Optional {txt}, {pexp_loc}, _) as prop) :: rest ->
       if txt = spread_props_label then
         match acc with
         | [] -> remove_last_position_unit_aux rest (prop :: acc)
@@ -212,7 +209,10 @@ let record_from_props ~loc ~remove_key call_arguments =
   let props, props_to_spread =
     remove_last_position_unit_aux call_arguments []
     |> List.rev
-    |> List.partition (fun (label, _, _) -> label <> labelled "_spreadProps")
+    |> List.partition (fun (label, _, _) ->
+           match label with
+           | Labelled {txt = "_spreadProps"} -> false
+           | _ -> true)
   in
   let props =
     if remove_key then
@@ -253,7 +253,11 @@ let make_props_type_params_tvar named_type_list =
   named_type_list
   |> List.filter_map (fun (_isOptional, label, _, loc, _interiorType) ->
          if label = "key" then None
-         else Some (Typ.var ~loc @@ safe_type_from_value (Labelled label)))
+         else
+           Some
+             (Typ.var ~loc
+             @@ safe_type_from_value
+                  (Labelled {txt = label; loc = Location.none})))
 
 let strip_option core_type =
   match core_type with
@@ -322,10 +326,12 @@ let make_label_decls named_type_list =
              interior_type
          else if is_optional then
            Type.field ~loc ~attrs ~optional:true {txt = label; loc}
-             (Typ.var @@ safe_type_from_value @@ Labelled label)
+             (Typ.var @@ safe_type_from_value
+             @@ Labelled {txt = label; loc = Location.none})
          else
            Type.field ~loc ~attrs {txt = label; loc}
-             (Typ.var @@ safe_type_from_value @@ Labelled label))
+             (Typ.var @@ safe_type_from_value
+             @@ Labelled {txt = label; loc = Location.none}))
 
 let make_type_decls ~attrs props_name loc named_type_list =
   let label_decl_list = make_label_decls named_type_list in
@@ -381,8 +387,7 @@ let make_props_record_type_sig ~core_type_of_attr ~external_
 let transform_uppercase_call3 ~config module_path mapper jsx_expr_loc
     call_expr_loc attrs call_arguments =
   let children, args_with_labels =
-    extract_children ~remove_last_position_unit:true ~loc:jsx_expr_loc
-      call_arguments
+    extract_children ~loc:jsx_expr_loc call_arguments
   in
   let args_for_make = args_with_labels in
   let children_expr = transform_children_if_list_upper ~mapper children in
@@ -398,25 +403,17 @@ let transform_uppercase_call3 ~config module_path mapper jsx_expr_loc
     match children_expr with
     | Exact children -> [(labelled "children", children, false)]
     | ListLiteral {pexp_desc = Pexp_array list} when list = [] -> []
-    | ListLiteral expression -> (
+    | ListLiteral expression ->
       (* this is a hack to support react components that introspect into their children *)
       children_arg := Some expression;
-      match config.Jsx_common.mode with
-      | "automatic" ->
-        [
-          ( labelled "children",
-            Exp.apply
-              (Exp.ident
-                 {txt = module_access_name config "array"; loc = Location.none})
-              [(Nolabel, expression)],
-            false );
-        ]
-      | _ ->
-        [
-          ( labelled "children",
-            Exp.ident {loc = Location.none; txt = Ldot (Lident "React", "null")},
-            false );
-        ])
+      [
+        ( labelled "children",
+          Exp.apply
+            (Exp.ident
+               {txt = module_access_name config "array"; loc = Location.none})
+            [(Nolabel, expression)],
+          false );
+      ]
   in
 
   let is_cap str = String.capitalize_ascii str = str in
@@ -448,207 +445,115 @@ let transform_uppercase_call3 ~config module_path mapper jsx_expr_loc
     Exp.ident ~loc:call_expr_loc
       {txt = ident ~suffix:"make"; loc = call_expr_loc}
   in
-  match config.mode with
-  (* The new jsx transform *)
-  | "automatic" ->
-    let jsx_expr, key_and_unit =
-      match (!children_arg, key_prop) with
-      | None, key :: _ ->
-        ( Exp.ident
-            {loc = Location.none; txt = module_access_name config "jsxKeyed"},
-          [key; (nolabel, unit_expr ~loc:Location.none)] )
-      | None, [] ->
-        ( Exp.ident {loc = Location.none; txt = module_access_name config "jsx"},
-          [] )
-      | Some _, key :: _ ->
-        ( Exp.ident
-            {loc = Location.none; txt = module_access_name config "jsxsKeyed"},
-          [key; (nolabel, unit_expr ~loc:Location.none)] )
-      | Some _, [] ->
-        ( Exp.ident {loc = Location.none; txt = module_access_name config "jsxs"},
-          [] )
-    in
-    Exp.apply ~loc:jsx_expr_loc ~attrs jsx_expr
-      ([(nolabel, make_i_d); (nolabel, props)] @ key_and_unit)
-  | _ -> (
+
+  let jsx_expr, key_and_unit =
     match (!children_arg, key_prop) with
     | None, key :: _ ->
-      Exp.apply ~loc:jsx_expr_loc ~attrs
-        (Exp.ident
-           {
-             loc = Location.none;
-             txt = Ldot (Lident "JsxPPXReactSupport", "createElementWithKey");
-           })
-        [key; (nolabel, make_i_d); (nolabel, props)]
+      ( Exp.ident
+          {loc = Location.none; txt = module_access_name config "jsxKeyed"},
+        [key; (nolabel, unit_expr ~loc:Location.none)] )
     | None, [] ->
-      Exp.apply ~loc:jsx_expr_loc ~attrs
-        (Exp.ident
-           {loc = Location.none; txt = Ldot (Lident "React", "createElement")})
-        [(nolabel, make_i_d); (nolabel, props)]
-    | Some children, key :: _ ->
-      Exp.apply ~loc:jsx_expr_loc ~attrs
-        (Exp.ident
-           {
-             loc = Location.none;
-             txt =
-               Ldot (Lident "JsxPPXReactSupport", "createElementVariadicWithKey");
-           })
-        [key; (nolabel, make_i_d); (nolabel, props); (nolabel, children)]
-    | Some children, [] ->
-      Exp.apply ~loc:jsx_expr_loc ~attrs
-        (Exp.ident
-           {
-             loc = Location.none;
-             txt = Ldot (Lident "React", "createElementVariadic");
-           })
-        [(nolabel, make_i_d); (nolabel, props); (nolabel, children)])
+      ( Exp.ident {loc = Location.none; txt = module_access_name config "jsx"},
+        [] )
+    | Some _, key :: _ ->
+      ( Exp.ident
+          {loc = Location.none; txt = module_access_name config "jsxsKeyed"},
+        [key; (nolabel, unit_expr ~loc:Location.none)] )
+    | Some _, [] ->
+      ( Exp.ident {loc = Location.none; txt = module_access_name config "jsxs"},
+        [] )
+  in
+  Exp.apply ~loc:jsx_expr_loc ~attrs jsx_expr
+    ([(nolabel, make_i_d); (nolabel, props)] @ key_and_unit)
 
 let transform_lowercase_call3 ~config mapper jsx_expr_loc call_expr_loc attrs
     call_arguments id =
   let component_name_expr = constant_string ~loc:call_expr_loc id in
-  match config.Jsx_common.mode with
-  (* the new jsx transform *)
-  | "automatic" ->
-    let element_binding =
-      match config.module_ |> String.lowercase_ascii with
-      | "react" -> Lident "ReactDOM"
-      | _generic -> module_access_name config "Elements"
-    in
+  let element_binding =
+    match config.Jsx_common.module_ |> String.lowercase_ascii with
+    | "react" -> Lident "ReactDOM"
+    | _generic -> module_access_name config "Elements"
+  in
 
-    let children, non_children_props =
-      extract_children ~remove_last_position_unit:true ~loc:jsx_expr_loc
-        call_arguments
-    in
-    let args_for_make = non_children_props in
-    let children_expr = transform_children_if_list_upper ~mapper children in
-    let recursively_transformed_args_for_make =
-      args_for_make
-      |> List.map (fun (label, expression) ->
-             (label, mapper.expr mapper expression, false))
-    in
-    let children_arg = ref None in
-    let args =
-      recursively_transformed_args_for_make
-      @
-      match children_expr with
-      | Exact children ->
-        [
-          ( labelled "children",
-            Exp.apply
-              (Exp.ident
-                 {
-                   txt = Ldot (element_binding, "someElement");
-                   loc = Location.none;
-                 })
-              [(Nolabel, children)],
-            true );
-        ]
-      | ListLiteral {pexp_desc = Pexp_array list} when list = [] -> []
-      | ListLiteral expression ->
-        (* this is a hack to support react components that introspect into their children *)
-        children_arg := Some expression;
-        [
-          ( labelled "children",
-            Exp.apply
-              (Exp.ident
-                 {txt = module_access_name config "array"; loc = Location.none})
-              [(Nolabel, expression)],
-            false );
-        ]
-    in
-    let is_empty_record {pexp_desc} =
-      match pexp_desc with
-      | Pexp_record (label_decls, _) when List.length label_decls = 0 -> true
-      | _ -> false
-    in
-    let record = record_from_props ~loc:jsx_expr_loc ~remove_key:true args in
-    let props =
-      if is_empty_record record then empty_record ~loc:jsx_expr_loc else record
-    in
-    let key_prop =
-      args
-      |> List.filter_map (fun (arg_label, e, _opt) ->
-             if "key" = get_label arg_label then Some (arg_label, e) else None)
-    in
-    let jsx_expr, key_and_unit =
-      match (!children_arg, key_prop) with
-      | None, key :: _ ->
-        ( Exp.ident
-            {loc = Location.none; txt = Ldot (element_binding, "jsxKeyed")},
-          [key; (nolabel, unit_expr ~loc:Location.none)] )
-      | None, [] ->
-        ( Exp.ident {loc = Location.none; txt = Ldot (element_binding, "jsx")},
-          [] )
-      | Some _, key :: _ ->
-        ( Exp.ident
-            {loc = Location.none; txt = Ldot (element_binding, "jsxsKeyed")},
-          [key; (nolabel, unit_expr ~loc:Location.none)] )
-      | Some _, [] ->
-        ( Exp.ident {loc = Location.none; txt = Ldot (element_binding, "jsxs")},
-          [] )
-    in
-    Exp.apply ~loc:jsx_expr_loc ~attrs jsx_expr
-      ([(nolabel, component_name_expr); (nolabel, props)] @ key_and_unit)
-  | _ ->
-    let children, non_children_props =
-      extract_children ~loc:jsx_expr_loc call_arguments
-    in
-    let children_expr = transform_children_if_list ~mapper children in
-    let create_element_call =
-      match children with
-      (* [@JSX] div(~children=[a]), coming from <div> a </div> *)
-      | {
-       pexp_desc =
-         ( Pexp_construct ({txt = Lident "::"}, Some {pexp_desc = Pexp_tuple _})
-         | Pexp_construct ({txt = Lident "[]"}, None) );
-      } ->
-        "createDOMElementVariadic"
-      (* [@JSX] div(~children= value), coming from <div> ...(value) </div> *)
-      | {pexp_loc} ->
-        Jsx_common.raise_error ~loc:pexp_loc
-          "A spread as a DOM element's children don't make sense written \
-           together. You can simply remove the spread."
-    in
-    let args =
-      match non_children_props with
-      | [_justTheUnitArgumentAtEnd] ->
-        [
-          (* "div" *)
-          (nolabel, component_name_expr);
-          (* [|moreCreateElementCallsHere|] *)
-          (nolabel, children_expr);
-        ]
-      | non_empty_props ->
-        let props_record =
-          record_from_props ~loc:Location.none ~remove_key:false
-            (non_empty_props |> List.map (fun (l, e) -> (l, e, false)))
-        in
-        [
-          (* "div" *)
-          (nolabel, component_name_expr);
-          (* ReactDOM.domProps(~className=blabla, ~foo=bar, ()) *)
-          (labelled "props", props_record);
-          (* [|moreCreateElementCallsHere|] *)
-          (nolabel, children_expr);
-        ]
-    in
-    Exp.apply ~loc:jsx_expr_loc ~attrs
-      (* ReactDOM.createElement *)
-      (Exp.ident
-         {
-           loc = Location.none;
-           txt = Ldot (Lident "ReactDOM", create_element_call);
-         })
-      args
+  let children, non_children_props =
+    extract_children ~loc:jsx_expr_loc call_arguments
+  in
+  let args_for_make = non_children_props in
+  let children_expr = transform_children_if_list_upper ~mapper children in
+  let recursively_transformed_args_for_make =
+    args_for_make
+    |> List.map (fun (label, expression) ->
+           (label, mapper.expr mapper expression, false))
+  in
+  let children_arg = ref None in
+  let args =
+    recursively_transformed_args_for_make
+    @
+    match children_expr with
+    | Exact children ->
+      [
+        ( labelled "children",
+          Exp.apply
+            (Exp.ident
+               {
+                 txt = Ldot (element_binding, "someElement");
+                 loc = Location.none;
+               })
+            [(Nolabel, children)],
+          true );
+      ]
+    | ListLiteral {pexp_desc = Pexp_array list} when list = [] -> []
+    | ListLiteral expression ->
+      (* this is a hack to support react components that introspect into their children *)
+      children_arg := Some expression;
+      [
+        ( labelled "children",
+          Exp.apply
+            (Exp.ident
+               {txt = module_access_name config "array"; loc = Location.none})
+            [(Nolabel, expression)],
+          false );
+      ]
+  in
+  let is_empty_record {pexp_desc} =
+    match pexp_desc with
+    | Pexp_record (label_decls, _) when List.length label_decls = 0 -> true
+    | _ -> false
+  in
+  let record = record_from_props ~loc:jsx_expr_loc ~remove_key:true args in
+  let props =
+    if is_empty_record record then empty_record ~loc:jsx_expr_loc else record
+  in
+  let key_prop =
+    args
+    |> List.filter_map (fun (arg_label, e, _opt) ->
+           if "key" = get_label arg_label then Some (arg_label, e) else None)
+  in
+  let jsx_expr, key_and_unit =
+    match (!children_arg, key_prop) with
+    | None, key :: _ ->
+      ( Exp.ident {loc = Location.none; txt = Ldot (element_binding, "jsxKeyed")},
+        [key; (nolabel, unit_expr ~loc:Location.none)] )
+    | None, [] ->
+      (Exp.ident {loc = Location.none; txt = Ldot (element_binding, "jsx")}, [])
+    | Some _, key :: _ ->
+      ( Exp.ident
+          {loc = Location.none; txt = Ldot (element_binding, "jsxsKeyed")},
+        [key; (nolabel, unit_expr ~loc:Location.none)] )
+    | Some _, [] ->
+      (Exp.ident {loc = Location.none; txt = Ldot (element_binding, "jsxs")}, [])
+  in
+  Exp.apply ~loc:jsx_expr_loc ~attrs jsx_expr
+    ([(nolabel, component_name_expr); (nolabel, props)] @ key_and_unit)
 
 let rec recursively_transform_named_args_for_make expr args newtypes core_type =
   match expr.pexp_desc with
   (* TODO: make this show up with a loc. *)
-  | Pexp_fun {arg_label = Labelled "key" | Optional "key"} ->
+  | Pexp_fun {arg_label = Labelled {txt = "key"} | Optional {txt = "key"}} ->
     Jsx_common.raise_error ~loc:expr.pexp_loc
       "Key cannot be accessed inside of a component. Don't worry - you can \
        always key a component from its parent!"
-  | Pexp_fun {arg_label = Labelled "ref" | Optional "ref"} ->
+  | Pexp_fun {arg_label = Labelled {txt = "ref"} | Optional {txt = "ref"}} ->
     Jsx_common.raise_error ~loc:expr.pexp_loc
       "Ref cannot be passed as a normal prop. Please use `forwardRef` API \
        instead."
@@ -720,7 +625,13 @@ let rec recursively_transform_named_args_for_make expr args newtypes core_type =
         | _ -> None
       in
       (* The ref arguement of forwardRef should be optional *)
-      ( (Optional "ref", None, pattern, txt, pattern.ppat_loc, type_) :: args,
+      ( ( Optional {txt = "ref"; loc = Location.none},
+          None,
+          pattern,
+          txt,
+          pattern.ppat_loc,
+          type_ )
+        :: args,
         newtypes,
         core_type )
     else (args, newtypes, core_type)
@@ -791,10 +702,8 @@ let modified_binding_old binding =
       (* here's where we spelunk! *)
       spelunk_for_fun_expression return_expression
     (* let make = React.forwardRef((~prop) => ...) *)
-    | {
-     pexp_desc =
-       Pexp_apply (_wrapperExpression, [(Nolabel, inner_function_expression)]);
-    } ->
+    | {pexp_desc = Pexp_apply {args = [(Nolabel, inner_function_expression)]}}
+      ->
       spelunk_for_fun_expression inner_function_expression
     | {
      pexp_desc = Pexp_sequence (_wrapperExpression, inner_function_expression);
@@ -871,7 +780,8 @@ let modified_binding ~binding_loc ~binding_pat_loc ~fn_name binding =
     (* let make = React.forwardRef((~prop) => ...) *)
     | {
      pexp_desc =
-       Pexp_apply (wrapper_expression, [(Nolabel, internal_expression)]);
+       Pexp_apply
+         {funct = wrapper_expression; args = [(Nolabel, internal_expression)]};
     } ->
       let () = has_application := true in
       let _, _, exp = spelunk_for_fun_expression internal_expression in
@@ -927,7 +837,6 @@ let vb_match_expr named_arg_list expr =
 let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
   if Jsx_common.has_attr_on_binding Jsx_common.has_attr binding then (
     check_multiple_components ~config ~loc:pstr_loc;
-    let binding = Jsx_common.remove_arity binding in
     let core_type_of_attr =
       Jsx_common.core_type_of_attrs binding.pvb_attributes
     in
@@ -954,11 +863,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     let binding_wrapper, has_forward_ref, expression =
       modified_binding ~binding_loc ~binding_pat_loc ~fn_name binding
     in
-    let is_async =
-      Ext_list.find_first binding.pvb_expr.pexp_attributes Ast_async.is_async
-      |> Option.is_some
-    in
-    (* do stuff here! *)
+    let is_async = Ast_async.dig_async_payload_from_function binding.pvb_expr in
     let named_arg_list, newtypes, _typeConstraints =
       recursively_transform_named_args_for_make
         (modified_binding_old binding)
@@ -1000,15 +905,16 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       (* let make = React.forwardRef({
            let \"App" = (props, ref) => make({...props, ref: @optional (Js.Nullabel.toOption(ref))})
          })*)
-      Exp.fun_ ~arity:None nolabel None
+      Exp.fun_ ~arity:None Nolabel None
         (match core_type_of_attr with
         | None -> make_props_pattern named_type_list
         | Some _ -> make_props_pattern typ_vars_of_core_type)
         (if has_forward_ref then
-           Exp.fun_ ~arity:None nolabel None
+           Exp.fun_ ~arity:None Nolabel None
              (Pat.var @@ Location.mknoloc "ref")
              inner_expression
          else inner_expression)
+        ~attrs:binding.pvb_expr.pexp_attributes
     in
     let full_expression =
       full_expression
@@ -1130,7 +1036,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       | _ -> Pat.record (List.rev patterns_with_label) Open
     in
     let expression =
-      Exp.fun_ ~arity:(Some 1) Nolabel None
+      Exp.fun_ ~arity:(Some 1) ~async:is_async Nolabel None
         (Pat.constraint_ record_pattern
            (Typ.constr ~loc:empty_loc
               {txt = Lident "props"; loc = empty_loc}
@@ -1145,7 +1051,6 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
                 | _ -> [Typ.any ()]))))
         expression
     in
-    let expression = Ast_async.add_async_attribute ~async:is_async expression in
     let expression =
       (* Add new tupes (type a,b,c) to make's definition *)
       newtypes
@@ -1177,12 +1082,10 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     (Some props_record_type, binding, new_binding))
   else if Jsx_common.has_attr_on_binding Jsx_common.has_attr_with_props binding
   then
-    let modified_binding = Jsx_common.remove_arity binding in
     let modified_binding =
       {
-        modified_binding with
-        pvb_attributes =
-          modified_binding.pvb_attributes |> List.filter other_attrs_pure;
+        binding with
+        pvb_attributes = binding.pvb_attributes |> List.filter other_attrs_pure;
       }
     in
     let fn_name = get_fn_name modified_binding.pvb_pat in
@@ -1192,15 +1095,16 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     in
 
     let is_async =
-      Ext_list.find_first modified_binding.pvb_expr.pexp_attributes
-        Ast_async.is_async
-      |> Option.is_some
+      Ast_async.dig_async_payload_from_function modified_binding.pvb_expr
     in
 
     let make_new_binding ~loc ~full_module_name binding =
       let props_pattern =
         match binding.pvb_expr with
-        | {pexp_desc = Pexp_apply (wrapper_expr, [(Nolabel, func_expr)])}
+        | {
+         pexp_desc =
+           Pexp_apply {funct = wrapper_expr; args = [(Nolabel, func_expr)]};
+        }
           when is_forward_ref wrapper_expr ->
           (* Case when using React.forwardRef *)
           let rec check_invalid_forward_ref expr =
@@ -1236,6 +1140,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
 
       let wrapper_expr =
         Exp.fun_ ~arity:None Nolabel None props_pattern
+          ~attrs:binding.pvb_expr.pexp_attributes
           (Jsx_common.async_component ~async:is_async
              (Exp.apply
                 (Exp.ident
@@ -1274,6 +1179,12 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       {
         binding with
         pvb_attributes = binding.pvb_attributes |> List.filter other_attrs_pure;
+        pvb_expr =
+          {
+            binding.pvb_expr with
+            (* moved to wrapper_expr *)
+            pexp_attributes = [];
+          };
       },
       new_binding )
   else (None, binding, None)
@@ -1286,9 +1197,21 @@ let transform_structure_item ~config item =
       pstr_desc =
         Pstr_primitive ({pval_attributes; pval_type} as value_description);
     } as pstr -> (
-    match List.filter Jsx_common.has_attr pval_attributes with
-    | [] -> [item]
-    | [_] ->
+    match
+      ( List.filter Jsx_common.has_attr pval_attributes,
+        List.filter Jsx_common.has_attr_with_props pval_attributes )
+    with
+    | [], [] -> [item]
+    | _, [_] ->
+      Jsx_common.raise_error ~loc:pstr_loc
+        "Components cannot be defined as externals when using \
+         @react.componentWithProps.\n\n\
+         If you intended to define an external for a React component using a \
+         props type,\n\
+         use the type React.component<props> instead.\n\
+         Alternatively, use @react.component for an external definition with \
+         labeled arguments."
+    | [_], [] ->
       check_multiple_components ~config ~loc:pstr_loc;
       check_string_int_attribute_iter.structure_item
         check_string_int_attribute_iter item;
@@ -1301,16 +1224,14 @@ let transform_structure_item ~config item =
       let rec get_prop_types types
           ({ptyp_loc; ptyp_desc; ptyp_attributes} as full_type) =
         match ptyp_desc with
-        | Ptyp_arrow (name, type_, ({ptyp_desc = Ptyp_arrow _} as rest), _)
+        | Ptyp_arrow {lbl = name; arg; ret = {ptyp_desc = Ptyp_arrow _} as typ2}
           when is_labelled name || is_optional name ->
-          get_prop_types
-            ((name, ptyp_attributes, ptyp_loc, type_) :: types)
-            rest
-        | Ptyp_arrow (Nolabel, _type, rest, _) -> get_prop_types types rest
-        | Ptyp_arrow (name, type_, return_value, _)
+          get_prop_types ((name, ptyp_attributes, ptyp_loc, arg) :: types) typ2
+        | Ptyp_arrow {lbl = Nolabel; ret} -> get_prop_types types ret
+        | Ptyp_arrow {lbl = name; arg; ret = return_value}
           when is_labelled name || is_optional name ->
           ( return_value,
-            (name, ptyp_attributes, return_value.ptyp_loc, type_) :: types )
+            (name, ptyp_attributes, return_value.ptyp_loc, arg) :: types )
         | _ -> (full_type, types)
       in
       let inner_type, prop_types = get_prop_types [] pval_type in
@@ -1405,21 +1326,27 @@ let transform_signature_item ~config item =
       let rec get_prop_types types ({ptyp_loc; ptyp_desc} as full_type) =
         match ptyp_desc with
         | Ptyp_arrow
-            ( name,
-              ({ptyp_attributes = attrs} as type_),
-              ({ptyp_desc = Ptyp_arrow _} as rest),
-              _ )
-          when is_optional name || is_labelled name ->
-          get_prop_types ((name, attrs, ptyp_loc, type_) :: types) rest
+            {
+              lbl;
+              arg = {ptyp_attributes = attrs} as type_;
+              ret = {ptyp_desc = Ptyp_arrow _} as rest;
+            }
+          when is_optional lbl || is_labelled lbl ->
+          get_prop_types ((lbl, attrs, ptyp_loc, type_) :: types) rest
         | Ptyp_arrow
-            ( Nolabel,
-              {ptyp_desc = Ptyp_constr ({txt = Lident "unit"}, _)},
-              rest,
-              _ ) ->
+            {
+              lbl = Nolabel;
+              arg = {ptyp_desc = Ptyp_constr ({txt = Lident "unit"}, _)};
+              ret = rest;
+            } ->
           get_prop_types types rest
-        | Ptyp_arrow (Nolabel, _type, rest, _) -> get_prop_types types rest
+        | Ptyp_arrow {lbl = Nolabel; ret = rest} -> get_prop_types types rest
         | Ptyp_arrow
-            (name, ({ptyp_attributes = attrs} as type_), return_value, _)
+            {
+              lbl = name;
+              arg = {ptyp_attributes = attrs} as type_;
+              ret = return_value;
+            }
           when is_optional name || is_labelled name ->
           (return_value, (name, attrs, return_value.ptyp_loc, type_) :: types)
         | _ -> (full_type, types)
@@ -1503,7 +1430,7 @@ let expr ~config mapper expression =
   match expression with
   (* Does the function application have the @JSX attribute? *)
   | {
-   pexp_desc = Pexp_apply (call_expression, call_arguments);
+   pexp_desc = Pexp_apply {funct = call_expression; args = call_arguments};
    pexp_attributes;
    pexp_loc;
   } -> (
@@ -1537,11 +1464,7 @@ let expr ~config mapper expression =
     | _, non_jsx_attributes ->
       let loc = {loc with loc_ghost = true} in
       let fragment =
-        match config.mode with
-        | "automatic" ->
-          Exp.ident ~loc {loc; txt = module_access_name config "jsxFragment"}
-        | "classic" | _ ->
-          Exp.ident ~loc {loc; txt = Ldot (Lident "React", "fragment")}
+        Exp.ident ~loc {loc; txt = module_access_name config "jsxFragment"}
       in
       let children_expr = transform_children_if_list ~mapper list_items in
       let record_of_children children =
@@ -1565,39 +1488,22 @@ let expr ~config mapper expression =
           match children with
           | [] -> empty_record ~loc:Location.none
           | [child] -> record_of_children child
-          | _ -> (
-            match config.mode with
-            | "automatic" -> record_of_children @@ apply_jsx_array children_expr
-            | "classic" | _ -> empty_record ~loc:Location.none))
-        | _ -> (
-          match config.mode with
-          | "automatic" -> record_of_children @@ apply_jsx_array children_expr
-          | "classic" | _ -> empty_record ~loc:Location.none)
+          | _ -> record_of_children @@ apply_jsx_array children_expr)
+        | _ -> record_of_children @@ apply_jsx_array children_expr
       in
       let args =
-        (nolabel, fragment)
-        :: (nolabel, transform_children_to_props children_expr)
-        ::
-        (match config.mode with
-        | "classic" when count_of_children children_expr > 1 ->
-          [(nolabel, children_expr)]
-        | _ -> [])
+        [
+          (nolabel, fragment);
+          (nolabel, transform_children_to_props children_expr);
+        ]
       in
       Exp.apply
         ~loc (* throw away the [@JSX] attribute and keep the others, if any *)
         ~attrs:non_jsx_attributes
         (* ReactDOM.createElement *)
-        (match config.mode with
-        | "automatic" ->
-          if count_of_children children_expr > 1 then
-            Exp.ident ~loc {loc; txt = module_access_name config "jsxs"}
-          else Exp.ident ~loc {loc; txt = module_access_name config "jsx"}
-        | "classic" | _ ->
-          if count_of_children children_expr > 1 then
-            Exp.ident ~loc
-              {loc; txt = Ldot (Lident "React", "createElementVariadic")}
-          else
-            Exp.ident ~loc {loc; txt = Ldot (Lident "React", "createElement")})
+        (if count_of_children children_expr > 1 then
+           Exp.ident ~loc {loc; txt = module_access_name config "jsxs"}
+         else Exp.ident ~loc {loc; txt = module_access_name config "jsx"})
         args)
   (* Delegate to the default mapper, a deep identity traversal *)
   | e -> default_mapper.expr mapper e

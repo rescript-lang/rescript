@@ -86,7 +86,7 @@ If given `None`, it throws a `getExn` exception.
 */
 let getExn = x =>
   switch x {
-  | None => Exn.raiseError("getExn")
+  | None => Stdlib_Exn.raiseError("getExn")
   | Some(x) => x
   }
 

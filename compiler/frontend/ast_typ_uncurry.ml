@@ -61,8 +61,7 @@ let to_uncurry_type loc (mapper : Bs_ast_mapper.mapper)
   let arity = Ast_core_type.get_uncurry_arity fn_type in
   let fn_type =
     match fn_type.ptyp_desc with
-    | Ptyp_arrow (l, t1, t2, _) ->
-      {fn_type with ptyp_desc = Ptyp_arrow (l, t1, t2, arity)}
+    | Ptyp_arrow arr -> {fn_type with ptyp_desc = Ptyp_arrow {arr with arity}}
     | _ -> assert false
   in
   match arity with

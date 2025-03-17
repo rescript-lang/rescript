@@ -589,6 +589,23 @@ let MergeCases = {
   can_merge: can_merge
 };
 
+function printLength(json) {
+  if (typeof json !== "object" || json === null || Array.isArray(json)) {
+    return;
+  }
+  console.log("Length: ", Object.values(json).length);
+}
+
+let ObjectAndNull = {
+  printLength: printLength
+};
+
+let RecursiveType = {
+  o: {
+    foo: "hello"
+  }
+};
+
 let $$Array;
 
 let i = 42;
@@ -641,5 +658,7 @@ export {
   Aliased,
   OnlyOne,
   MergeCases,
+  ObjectAndNull,
+  RecursiveType,
 }
 /* l2 Not a pure module */

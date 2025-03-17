@@ -1,3 +1,3 @@
 ;;while not eofReached do
-    let a = 1 in let b = 2 in Lexbuf.next (); (a + b) |.u Js.log done
+    let a = 1 in let b = 2 in Lexbuf.next (); (a + b) -> Js.log done
 ;;while (not (isLineEnding buf)) && true do foo (); next () done

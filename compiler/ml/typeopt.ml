@@ -108,8 +108,6 @@ let is_base_type env ty base_ty_path =
 let maybe_pointer_type env ty =
   if Ctype.maybe_pointer_type env ty then Pointer else Immediate
 
-let maybe_pointer exp = maybe_pointer_type exp.exp_env exp.exp_type
-
 type classification =
   | Int
   | Float

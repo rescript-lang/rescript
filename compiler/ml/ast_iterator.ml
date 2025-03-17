@@ -96,9 +96,9 @@ module T = struct
     sub.attributes sub attrs;
     match desc with
     | Ptyp_any | Ptyp_var _ -> ()
-    | Ptyp_arrow (_lab, t1, t2, _) ->
-      sub.typ sub t1;
-      sub.typ sub t2
+    | Ptyp_arrow {arg; ret} ->
+      sub.typ sub arg;
+      sub.typ sub ret
     | Ptyp_tuple tyl -> List.iter (sub.typ sub) tyl
     | Ptyp_constr (lid, tl) ->
       iter_loc sub lid;
@@ -216,8 +216,6 @@ module MT = struct
     | Psig_modtype x -> sub.module_type_declaration sub x
     | Psig_open x -> sub.open_description sub x
     | Psig_include x -> sub.include_description sub x
-    | Psig_class () -> ()
-    | Psig_class_type () -> ()
     | Psig_extension (x, attrs) ->
       sub.extension sub x;
       sub.attributes sub attrs
@@ -261,8 +259,6 @@ module M = struct
     | Pstr_recmodule l -> List.iter (sub.module_binding sub) l
     | Pstr_modtype x -> sub.module_type_declaration sub x
     | Pstr_open x -> sub.open_description sub x
-    | Pstr_class () -> ()
-    | Pstr_class_type () -> ()
     | Pstr_include x -> sub.include_declaration sub x
     | Pstr_extension (x, attrs) ->
       sub.extension sub x;
@@ -286,7 +282,7 @@ module E = struct
       iter_opt (sub.expr sub) def;
       sub.pat sub p;
       sub.expr sub e
-    | Pexp_apply (e, l) ->
+    | Pexp_apply {funct = e; args = l} ->
       sub.expr sub e;
       List.iter (iter_snd (sub.expr sub)) l
     | Pexp_match (e, pel) ->
@@ -333,12 +329,6 @@ module E = struct
       sub.expr sub e;
       sub.typ sub t
     | Pexp_send (e, _s) -> sub.expr sub e
-    | Pexp_new lid -> iter_loc sub lid
-    | Pexp_setinstvar (s, e) ->
-      iter_loc sub s;
-      sub.expr sub e
-    | Pexp_override sel ->
-      List.iter (iter_tuple (iter_loc sub) (sub.expr sub)) sel
     | Pexp_letmodule (s, me, e) ->
       iter_loc sub s;
       sub.module_expr sub me;
@@ -348,9 +338,6 @@ module E = struct
       sub.expr sub e
     | Pexp_assert e -> sub.expr sub e
     | Pexp_lazy e -> sub.expr sub e
-    | Pexp_poly (e, t) ->
-      sub.expr sub e;
-      iter_opt (sub.typ sub) t
     | Pexp_newtype (_s, e) -> sub.expr sub e
     | Pexp_pack me -> sub.module_expr sub me
     | Pexp_open (_ovf, lid, e) ->
@@ -416,7 +403,9 @@ let default_iterator =
     type_extension = T.iter_type_extension;
     extension_constructor = T.iter_extension_constructor;
     value_description =
-      (fun this {pval_name; pval_type; pval_prim = _; pval_loc; pval_attributes} ->
+      (fun this
+        {pval_name; pval_type; pval_prim = _; pval_loc; pval_attributes}
+      ->
         iter_loc this pval_name;
         this.typ this pval_type;
         this.attributes this pval_attributes;
@@ -470,7 +459,9 @@ let default_iterator =
         this.location this pcd_loc;
         this.attributes this pcd_attributes);
     label_declaration =
-      (fun this {pld_name; pld_type; pld_loc; pld_mutable = _; pld_attributes} ->
+      (fun this
+        {pld_name; pld_type; pld_loc; pld_mutable = _; pld_attributes}
+      ->
         iter_loc this pld_name;
         this.typ this pld_type;
         this.location this pld_loc;
