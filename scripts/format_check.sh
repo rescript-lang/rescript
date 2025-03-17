@@ -17,7 +17,7 @@ case "$(uname -s)" in
     fi
 
     echo "Checking ReScript code formatting..."
-    files=$(find runtime tests -type f \( -name "*.res" -o -name "*.resi" \) ! -name "syntaxErrors*" ! -path "tests/syntax_*" ! -path "tests/analysis_tests/tests*" ! -path "*/node_modules/*")
+    files=$(find runtime tests -type f \( -name "*.res" -o -name "*.resi" \) ! -name "syntaxErrors*" ! -name "generated_mocha_test.res" ! -path "tests/syntax_*" ! -path "tests/analysis_tests/tests*" ! -path "*/node_modules/*")
     if ./cli/rescript format -check $files; then
       printf "${successGreen}✅ ReScript code formatting ok.${reset}\n"
     else
