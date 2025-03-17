@@ -247,8 +247,8 @@ let primitives_table =
       ("%loc_LINE", Ploc Loc_LINE);
       ("%loc_POS", Ploc Loc_POS);
       ("%loc_MODULE", Ploc Loc_MODULE);
-      ("%loc_MODULE_PATH", Ploc Loc_MODULE_PATH);
-      ("%loc_VALUE_PATH", Ploc Loc_VALUE_PATH);
+      ("%loc_SOURCE_LOC_VALUE_PATH", Ploc Loc_SOURCE_LOC_VALUE_PATH);
+      ("%loc_SOURCE_LOC_POS", Ploc Loc_SOURCE_LOC_POS);
       (* BEGIN Triples for  ref data type *)
       ("%makeref", Pmakeblock Lambda.ref_tag_info);
       ("%refset", Psetfield (0, Lambda.ref_field_set_info));

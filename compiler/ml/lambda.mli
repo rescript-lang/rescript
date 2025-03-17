@@ -21,8 +21,8 @@ type loc_kind =
   | Loc_FILE
   | Loc_LINE
   | Loc_MODULE
-  | Loc_MODULE_PATH
-  | Loc_VALUE_PATH
+  | Loc_SOURCE_LOC_VALUE_PATH
+  | Loc_SOURCE_LOC_POS
   | Loc_LOC
   | Loc_POS
 

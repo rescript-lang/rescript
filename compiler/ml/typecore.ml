@@ -2223,42 +2223,36 @@ let not_function env ty =
   let ls, tvar = list_labels env ty in
   ls = [] && not tvar
 
-let rec find_injectable_source_loc_arg t =
-  match t.desc with
-  | Tarrow (Labelled n, {desc = Tconstr (p, [], _)}, _, _, _)
-    when Path.same p Predef.path_source_loc ->
-    Some n
-  | Tarrow (_, _, t, _, _) -> find_injectable_source_loc_arg t
-  | _ -> None
+type injectable_source_loc_arg = ValuePath | Pos
 
-let mk_source_loc_field ~parent_loc field_name ident_name =
-  ( Location.mknoloc (Longident.Lident field_name),
-    Ast_helper.Exp.ident
-      ~loc:{parent_loc with loc_ghost = true}
-      (Location.mknoloc (Longident.Lident ident_name)),
-    false )
+let rec find_injectable_source_loc_args ?(found = []) t =
+  match t.desc with
+  | Tarrow (Labelled n, {desc = Tconstr (p, [], _)}, next, _, _)
+    when Path.same p Predef.path_source_loc_pos ->
+    (Pos, n) :: find_injectable_source_loc_args ~found next
+  | Tarrow (Labelled n, {desc = Tconstr (p, [], _)}, next, _, _)
+    when Path.same p Predef.path_source_loc_value_path ->
+    (ValuePath, n) :: find_injectable_source_loc_args ~found next
+  | Tarrow (_, _, t, _, _) -> find_injectable_source_loc_args t
+  | _ -> found
 
 let expand_injectable_args ~(apply_expr : Parsetree.expression) ~exp_type
     (sargs : sargs) =
-  match find_injectable_source_loc_arg exp_type with
-  | None -> sargs
-  | Some injectable_source_loc_arg_label_name ->
-    let mk_source_loc_field =
-      mk_source_loc_field ~parent_loc:apply_expr.pexp_loc
-    in
+  match find_injectable_source_loc_args exp_type with
+  | [] -> sargs
+  | injectable_args ->
+    (* TODO: Error on args already being supplied *)
     sargs
-    @ [
-        ( Labelled (Location.mknoloc injectable_source_loc_arg_label_name),
-          Ast_helper.Exp.record
-            [
-              mk_source_loc_field "filename" "__FILE__";
-              mk_source_loc_field "module_" "__MODULE__";
-              mk_source_loc_field "pos" "__POS__";
-              mk_source_loc_field "modulePath" "__MODULE_PATH__";
-              mk_source_loc_field "valuePath" "__VALUE_PATH__";
-            ]
-            None );
-      ]
+    @ (injectable_args
+      |> List.map (fun (t, n) ->
+             ( Labelled (Location.mknoloc n),
+               Ast_helper.Exp.ident
+                 ~loc:{apply_expr.pexp_loc with loc_ghost = true}
+                 (Location.mknoloc
+                    (Longident.Lident
+                       (match t with
+                       | ValuePath -> "__SOURCE_LOC_VALUE_PATH__"
+                       | Pos -> "__SOURCE_LOC_POS__"))) )))
 
 type lazy_args =
   (Asttypes.Noloc.arg_label * (unit -> Typedtree.expression) option) list

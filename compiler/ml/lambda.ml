@@ -17,8 +17,8 @@ type loc_kind =
   | Loc_FILE
   | Loc_LINE
   | Loc_MODULE
-  | Loc_MODULE_PATH
-  | Loc_VALUE_PATH
+  | Loc_SOURCE_LOC_VALUE_PATH
+  | Loc_SOURCE_LOC_POS
   | Loc_LOC
   | Loc_POS
 
@@ -707,7 +707,9 @@ let raise_kind = function
 let lam_of_loc ?(root_path : Path.t option)
     ?(current_value_ident : Ident.t option) kind loc =
   let loc_start = loc.Location.loc_start in
+  let loc_end = loc.loc_end in
   let file, lnum, cnum = Location.get_pos_info loc_start in
+  let _, end_lnum, end_cnum = Location.get_pos_info loc_end in
   let file = Filename.basename file in
   let enum =
     loc.Location.loc_end.Lexing.pos_cnum - loc_start.Lexing.pos_cnum + cnum
@@ -724,11 +726,18 @@ let lam_of_loc ?(root_path : Path.t option)
              Const_base (Const_int enum);
            ] ))
   | Loc_FILE -> Lconst (Const_immstring file)
-  | Loc_MODULE_PATH -> (
-    match root_path with
-    | None -> Lconst (Const_immstring "<none>")
-    | Some path -> Lconst (Const_immstring (Path.name path)))
-  | Loc_VALUE_PATH -> (
+  | Loc_SOURCE_LOC_POS ->
+    Lconst
+      (Const_immstring
+         ([
+            file;
+            string_of_int lnum;
+            string_of_int cnum;
+            string_of_int end_lnum;
+            string_of_int end_cnum;
+          ]
+         |> String.concat ";"))
+  | Loc_SOURCE_LOC_VALUE_PATH -> (
     match root_path with
     | None -> Lconst (Const_immstring "<none>")
     | Some path ->
