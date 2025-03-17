@@ -26,7 +26,7 @@ type t<'res, 'err> = result<'res, 'err> = Ok('res) | Error('err)
 let getExn = x =>
   switch x {
   | Ok(x) => x
-  | Error(_) => raise(Not_found)
+  | Error(_) => throw(Not_found)
   }
 
 let mapOr = (opt, default, f) =>

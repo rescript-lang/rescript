@@ -370,6 +370,12 @@ Path fnTakingRecord
     "documentation": null,
     "sortText": "A true"
   }, {
+    "label": "throw",
+    "kind": 12,
+    "tags": [],
+    "detail": "Error.t => 'a",
+    "documentation": null
+  }, {
     "label": "typeof",
     "kind": 12,
     "tags": [],

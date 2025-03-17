@@ -100,6 +100,7 @@ async function main() {
 external import: 'a => promise<'a> = "%import"
 
 let panic = Error.panic
+let throw = Error.throw
 
 /**
 `assertEqual(a, b)` check if `a` is equal `b`. If not raise a panic exception

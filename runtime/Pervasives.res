@@ -1,6 +1,6 @@
 /**
    Since [others] depend on this file, its public mli files **should not
-   export types** introduced here, otherwise it would cause 
+   export types** introduced here, otherwise it would cause
    conflicts here.
 
    If the type exported here is also exported in modules from others,
@@ -16,10 +16,10 @@ __unsafe_cast: 'a => 'b = "%identity"
 external raise: exn => 'a = "%raise"
 
 @deprecated("Use custom exception instead")
-let failwith = s => raise(Failure(s))
+let failwith = s => throw(Failure(s))
 
 @deprecated("Use custom exception instead")
-let invalid_arg = s => raise(Invalid_argument(s))
+let invalid_arg = s => throw(Invalid_argument(s))
 
 @deprecated("Use custom exception instead") exception Exit
 

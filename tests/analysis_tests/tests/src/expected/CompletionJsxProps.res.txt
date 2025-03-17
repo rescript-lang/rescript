@@ -36,6 +36,12 @@ Path CompletionSupport.TestComponent.make
     "documentation": null,
     "sortText": "A true"
   }, {
+    "label": "throw",
+    "kind": 12,
+    "tags": [],
+    "detail": "Error.t => 'a",
+    "documentation": null
+  }, {
     "label": "typeof",
     "kind": 12,
     "tags": [],
@@ -366,6 +372,12 @@ Path CompletionSupport.TestComponent.make
     "kind": 12,
     "tags": [],
     "detail": "[> #two]",
+    "documentation": null
+  }, {
+    "label": "throw",
+    "kind": 12,
+    "tags": [],
+    "detail": "Error.t => 'a",
     "documentation": null
   }, {
     "label": "typeof",
