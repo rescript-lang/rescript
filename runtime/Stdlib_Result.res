@@ -164,3 +164,5 @@ let all6 = ((a, b, c, d, e, f)) => {
   | (_, _, _, _, _, Error(f)) => Error(f)
   }
 }
+
+external ignore: result<'res, 'err> => unit = "%ignore"

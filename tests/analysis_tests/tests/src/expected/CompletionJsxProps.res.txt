@@ -76,6 +76,12 @@ Path CompletionSupport.TestComponent.make
     "detail": "module TypedArray",
     "documentation": null
   }, {
+    "label": "TimeoutId",
+    "kind": 9,
+    "tags": [],
+    "detail": "module TimeoutId",
+    "documentation": null
+  }, {
     "label": "Type",
     "kind": 9,
     "tags": [],

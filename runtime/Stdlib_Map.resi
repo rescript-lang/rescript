@@ -277,3 +277,11 @@ Console.log(map->Map.entries->Iterator.toArray)
 */
 @send
 external entries: t<'k, 'v> => Stdlib_Iterator.t<('k, 'v)> = "entries"
+
+/**
+  `ignore(map)` ignores the provided map and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of a side-effecting operation)
+  without having to store or process it further.
+*/
+external ignore: t<'k, 'v> => unit = "%ignore"

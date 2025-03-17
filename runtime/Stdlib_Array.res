@@ -270,3 +270,5 @@ let findMap = (arr, f) => {
 @send external at: (array<'a>, int) => option<'a> = "at"
 
 let last = a => a->get(a->length - 1)
+
+external ignore: array<'a> => unit = "%ignore"

@@ -92,3 +92,11 @@ external lsl: (bigint, bigint) => bigint = "%lslbigint"
 external asr: (bigint, bigint) => bigint = "%asrbigint"
 
 let lnot = x => lxor(x, -1n)
+
+/**
+  `ignore(bigint)` ignores the provided bigint and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of a side-effecting operation)
+  without having to store or process it further.
+*/
+external ignore: bigint => unit = "%ignore"

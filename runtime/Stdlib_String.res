@@ -169,3 +169,5 @@ external splitByRegExpAtMost: (string, Stdlib_RegExp.t, ~limit: int) => array<op
 @set_index external setSymbol: (string, Stdlib_Symbol.t, 'a) => unit = ""
 
 @send external localeCompare: (string, string) => float = "localeCompare"
+
+external ignore: string => unit = "%ignore"

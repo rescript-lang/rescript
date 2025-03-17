@@ -267,7 +267,7 @@ module Concurrently = {
         setTimeout(() => {
           place := place.contents + 1
           resolve((place.contents, msg))
-        }, ms)->ignore
+        }, ms)->TimeoutId.ignore
       })
     }
 
@@ -289,7 +289,7 @@ module Concurrently = {
       Promise.make((resolve, _) => {
         setTimeout(() => {
           resolve(name)
-        }, ms)->ignore
+        }, ms)->TimeoutId.ignore
       })
     }
 
@@ -311,7 +311,7 @@ module Concurrently = {
         setTimeout(() => {
           place := place.contents + 1
           resolve((place.contents, msg))
-        }, ms)->ignore
+        }, ms)->TimeoutId.ignore
       })
     }
 
@@ -335,7 +335,7 @@ module Concurrently = {
         setTimeout(() => {
           place := place.contents + 1
           resolve((place.contents, msg))
-        }, ms)->ignore
+        }, ms)->TimeoutId.ignore
       })
     }
 
@@ -360,7 +360,7 @@ module Concurrently = {
         setTimeout(() => {
           place := place.contents + 1
           resolve((place.contents, msg))
-        }, ms)->ignore
+        }, ms)->TimeoutId.ignore
       })
     }
 
@@ -386,7 +386,7 @@ module Concurrently = {
         setTimeout(() => {
           place := place.contents + 1
           resolve((place.contents, msg))
-        }, ms)->ignore
+        }, ms)->TimeoutId.ignore
       })
     }
 
@@ -413,7 +413,7 @@ module Concurrently = {
         setTimeout(() => {
           place := place.contents + 1
           resolve((place.contents, msg))
-        }, ms)->ignore
+        }, ms)->TimeoutId.ignore
       })
     }
 

@@ -850,3 +850,5 @@ let zip = (l1, l2) =>
     zipAux(l1, l2, cell)
     cell
   }
+
+external ignore: list<'a> => unit = "%ignore"

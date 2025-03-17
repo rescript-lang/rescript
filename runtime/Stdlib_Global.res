@@ -15,3 +15,11 @@ type intervalId
 
 @val external encodeURIComponent: string => string = "encodeURIComponent"
 @val external decodeURIComponent: string => string = "decodeURIComponent"
+
+module TimeoutId = {
+  external ignore: timeoutId => unit = "%ignore"
+}
+
+module IntervalId = {
+  external ignore: intervalId => unit = "%ignore"
+}
