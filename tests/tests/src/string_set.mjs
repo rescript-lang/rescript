@@ -239,28 +239,28 @@ function find(x, _tree) {
 }
 
 function of_list(l) {
-  if (!l) {
+  if (l === 0) {
     return Set_gen.empty;
   }
   let match = l.tl;
   let x0 = l.hd;
-  if (!match) {
+  if (match === 0) {
     return Set_gen.singleton(x0);
   }
   let match$1 = match.tl;
   let x1 = match.hd;
-  if (!match$1) {
+  if (match$1 === 0) {
     return add(x1, Set_gen.singleton(x0));
   }
   let match$2 = match$1.tl;
   let x2 = match$1.hd;
-  if (!match$2) {
+  if (match$2 === 0) {
     return add(x2, add(x1, Set_gen.singleton(x0)));
   }
   let match$3 = match$2.tl;
   let x3 = match$2.hd;
-  if (match$3) {
-    if (match$3.tl) {
+  if (match$3 !== 0) {
+    if (match$3.tl !== 0) {
       return Set_gen.of_sorted_list(Belt_List.sort(l, compare_elt));
     } else {
       return add(match$3.hd, add(x3, add(x2, add(x1, Set_gen.singleton(x0)))));

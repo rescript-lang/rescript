@@ -1,0 +1,16 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/stdlib_removed_in_error.res[0m:[2m3:12-42[0m
+
+  1 [2m│[0m type x = Stdlib.Promise.t<int>
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m let x: x = [1;31mStdlib.Promise.resolve("hello")[0m
+  4 [2m│[0m 
+
+  This has type: [1;31mPromise.t<string>[0m [2m(defined as[0m [1;31mpromise<string>[0m[2m)[0m
+  But it's expected to have type: [1;33mx[0m [2m(defined as[0m [1;33mpromise<int>[0m[2m)[0m
+  
+  The incompatible parts:
+    [1;31mstring[0m vs [1;33mint[0m
+  
+  You can convert [1;33mstring[0m to [1;33mint[0m with [1;33mBelt.Int.fromString[0m.

@@ -45,7 +45,7 @@ module Path = {
     | Pident(string)
     | Pdot(t, string, int)
     | Papply(t, t)
-  let same = \"="
+  let same = \"=="
   let compare = compare
 }
 

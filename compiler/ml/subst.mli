@@ -57,10 +57,6 @@ val modtype_declaration : t -> modtype_declaration -> modtype_declaration
 val module_declaration : t -> module_declaration -> module_declaration
 val typexp : t -> Types.type_expr -> Types.type_expr
 
-(* Composition of substitutions:
-     apply (compose s1 s2) x = apply s2 (apply s1 x) *)
-val compose : t -> t -> t
-
 (* A forward reference to be filled in ctype.ml. *)
 val ctype_apply_env_empty :
   (type_expr list -> type_expr -> type_expr list -> type_expr) ref

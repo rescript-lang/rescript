@@ -4,14 +4,15 @@ Pexp_construct Js
 Json
 Array:[0:8->0:21] [0:21->0:23]
 Completable: Cexpression CTypeAtPos()->variantPayload::Array($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
 [{
     "label": "[]",
     "kind": 12,
     "tags": [],
     "detail": "t",
-    "documentation": {"kind": "markdown", "value": " The JSON data structure \n\n```rescript\n@unboxed\ntype t =\n  | Boolean(bool)\n  | @as(null) Null\n  | String(string)\n  | Number(float)\n  | Object(dict<t>)\n  | Array(array<t>)\n```"},
+    "documentation": {"kind": "markdown", "value": " \nA type representing a JSON object.\n\n\n```rescript\n@unboxed\ntype t =\n  | Boolean(bool)\n  | @as(null) Null\n  | String(string)\n  | Number(float)\n  | Object(dict<t>)\n  | Array(array<t>)\n```"},
     "sortText": "A",
     "insertText": "[$0]",
     "insertTextFormat": 2

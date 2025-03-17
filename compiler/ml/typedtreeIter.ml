@@ -118,8 +118,6 @@ end = struct
     | Tstr_recmodule list -> List.iter iter_module_binding list
     | Tstr_modtype mtd -> iter_module_type_declaration mtd
     | Tstr_open _ -> ()
-    | Tstr_class () -> ()
-    | Tstr_class_type () -> ()
     | Tstr_include incl -> iter_module_expr incl.incl_mod
     | Tstr_attribute _ -> ());
     Iter.leave_structure_item item
@@ -219,9 +217,8 @@ end = struct
         | cstr, _, _attrs -> (
           match cstr with
           | Texp_constraint ct -> iter_core_type ct
-          | Texp_coerce ((), cty2) -> iter_core_type cty2
+          | Texp_coerce cty2 -> iter_core_type cty2
           | Texp_open _ -> ()
-          | Texp_poly cto -> option iter_core_type cto
           | Texp_newtype _ -> ()))
       exp.exp_extra;
     (match exp.exp_desc with
@@ -231,7 +228,7 @@ end = struct
       iter_bindings rec_flag list;
       iter_expression exp
     | Texp_function {case; _} -> iter_case case
-    | Texp_apply (exp, list) ->
+    | Texp_apply {funct = exp; args = list} ->
       iter_expression exp;
       List.iter
         (fun (_label, expo) ->
@@ -287,7 +284,6 @@ end = struct
       match expo with
       | None -> ()
       | Some exp -> iter_expression exp)
-    | Texp_new _ | Texp_instvar _ | Texp_setinstvar _ | Texp_override _ -> ()
     | Texp_letmodule (_id, _, mexpr, exp) ->
       iter_module_expr mexpr;
       iter_expression exp
@@ -323,8 +319,6 @@ end = struct
     | Tsig_modtype mtd -> iter_module_type_declaration mtd
     | Tsig_open _ -> ()
     | Tsig_include incl -> iter_module_type incl.incl_mod
-    | Tsig_class () -> ()
-    | Tsig_class_type () -> ()
     | Tsig_attribute _ -> ());
     Iter.leave_signature_item item
 

@@ -1,6 +1,6 @@
 use crate::build::packages::{Namespace, Package};
 use ahash::{AHashMap, AHashSet};
-use std::time::SystemTime;
+use std::{fmt::Display, time::SystemTime};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParseState {
@@ -50,6 +50,15 @@ pub struct MlMap {
 pub enum SourceType {
     SourceFile(SourceFile),
     MlMap(MlMap),
+}
+
+impl Display for SourceType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SourceType::SourceFile(_) => write!(f, "SourceFile"),
+            SourceType::MlMap(_) => write!(f, "MlMap"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -119,6 +128,7 @@ impl BuildState {
             deps_initialized: false,
         }
     }
+
     pub fn insert_module(&mut self, module_name: &str, module: Module) {
         self.modules.insert(module_name.to_owned(), module);
         self.module_names.insert(module_name.to_owned());

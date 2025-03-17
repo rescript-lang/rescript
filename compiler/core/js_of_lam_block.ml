@@ -33,7 +33,7 @@ let make_block mutable_flag (tag_info : Lam_tag_info.t) tag args =
 
 let field (field_info : Lam_compat.field_dbg_info) e (i : int32) =
   match field_info with
-  | Fld_tuple | Fld_array ->
+  | Fld_tuple ->
     E.array_index_by_int ?comment:(Lam_compat.str_of_field_info field_info) e i
   | Fld_poly_var_content -> E.poly_var_value_access e
   | Fld_poly_var_tag -> E.poly_var_tag_access e

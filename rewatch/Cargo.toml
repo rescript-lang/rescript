@@ -1,6 +1,6 @@
 [package]
 name = "rewatch"
-version = "1.0.9"
+version = "1.0.10"
 edition = "2021"
 
 [dependencies]
@@ -11,10 +11,7 @@ serde_json = { version = "1.0.93" }
 ahash = "0.8.3"
 convert_case = "0.6.0"
 rayon = "1.6.1"
-log = { version = "0.4.17", features = [
-    "max_level_debug",
-    "release_max_level_warn",
-] }
+log = { version = "0.4.17" }
 env_logger = "0.10.0"
 indicatif = "0.17.3"
 console = "0.15.5"
@@ -26,15 +23,10 @@ futures-timer = "3.0.2"
 clap = { version = "4.3.17", features = ["derive"] }
 sysinfo = "0.29.10"
 ctrlc = "3.4.4"
+clap-verbosity-flag = "2.2.2"
+anyhow = "1.0.93"
 
 
 [profile.release]
 codegen-units = 1
 lto = true
-
-[dev-dependencies]
-criterion = "0.4"
-
-[[bench]]
-name = "base_bench"
-harness = false

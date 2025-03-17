@@ -93,8 +93,8 @@ module T = struct
     match desc with
     | Ptyp_any -> any ~loc ~attrs ()
     | Ptyp_var s -> var ~loc ~attrs s
-    | Ptyp_arrow (lab, t1, t2, arity) ->
-      arrow ~loc ~attrs ~arity lab (sub.typ sub t1) (sub.typ sub t2)
+    | Ptyp_arrow {lbl; arg; ret; arity} ->
+      arrow ~loc ~attrs ~arity lbl (sub.typ sub arg) (sub.typ sub ret)
     | Ptyp_tuple tyl -> tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) ->
       constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
@@ -215,8 +215,6 @@ module MT = struct
     | Psig_modtype x -> modtype ~loc (sub.module_type_declaration sub x)
     | Psig_open x -> open_ ~loc (sub.open_description sub x)
     | Psig_include x -> include_ ~loc (sub.include_description sub x)
-    | Psig_class _ -> assert false
-    | Psig_class_type _ -> assert false
     | Psig_extension (x, attrs) ->
       extension ~loc (sub.extension sub x) ~attrs:(sub.attributes sub attrs)
     | Psig_attribute x -> attribute ~loc (sub.attribute sub x)
@@ -258,8 +256,6 @@ module M = struct
     | Pstr_recmodule l -> rec_module ~loc (List.map (sub.module_binding sub) l)
     | Pstr_modtype x -> modtype ~loc (sub.module_type_declaration sub x)
     | Pstr_open x -> open_ ~loc (sub.open_description sub x)
-    | Pstr_class () -> {pstr_loc = loc; pstr_desc = Pstr_class ()}
-    | Pstr_class_type () -> {pstr_loc = loc; pstr_desc = Pstr_class_type ()}
     | Pstr_include x -> include_ ~loc (sub.include_declaration sub x)
     | Pstr_extension (x, attrs) ->
       extension ~loc (sub.extension sub x) ~attrs:(sub.attributes sub attrs)
@@ -278,12 +274,14 @@ module E = struct
     | Pexp_constant x -> constant ~loc ~attrs x
     | Pexp_let (r, vbs, e) ->
       let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
-    | Pexp_fun {arg_label = lab; default = def; lhs = p; rhs = e; arity} ->
-      fun_ ~loc ~attrs ~arity lab
+    | Pexp_fun {arg_label = lab; default = def; lhs = p; rhs = e; arity; async}
+      ->
+      fun_ ~loc ~attrs ~arity ~async lab
         (map_opt (sub.expr sub) def)
         (sub.pat sub p) (sub.expr sub e)
-    | Pexp_apply (e, l) ->
-      apply ~loc ~attrs (sub.expr sub e) (List.map (map_snd (sub.expr sub)) l)
+    | Pexp_apply {funct = e; args = l; partial} ->
+      apply ~loc ~attrs ~partial (sub.expr sub e)
+        (List.map (map_snd (sub.expr sub)) l)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
@@ -316,12 +314,6 @@ module E = struct
     | Pexp_constraint (e, t) ->
       constraint_ ~loc ~attrs (sub.expr sub e) (sub.typ sub t)
     | Pexp_send (e, s) -> send ~loc ~attrs (sub.expr sub e) (map_loc sub s)
-    | Pexp_new lid -> new_ ~loc ~attrs (map_loc sub lid)
-    | Pexp_setinstvar (s, e) ->
-      setinstvar ~loc ~attrs (map_loc sub s) (sub.expr sub e)
-    | Pexp_override sel ->
-      override ~loc ~attrs
-        (List.map (map_tuple (map_loc sub) (sub.expr sub)) sel)
     | Pexp_letmodule (s, me, e) ->
       letmodule ~loc ~attrs (map_loc sub s) (sub.module_expr sub me)
         (sub.expr sub e)
@@ -331,8 +323,6 @@ module E = struct
         (sub.expr sub e)
     | Pexp_assert e -> assert_ ~loc ~attrs (sub.expr sub e)
     | Pexp_lazy e -> lazy_ ~loc ~attrs (sub.expr sub e)
-    | Pexp_poly (e, t) ->
-      poly ~loc ~attrs (sub.expr sub e) (map_opt (sub.typ sub) t)
     | Pexp_newtype (s, e) ->
       newtype ~loc ~attrs (map_loc sub s) (sub.expr sub e)
     | Pexp_pack me -> pack ~loc ~attrs (sub.module_expr sub me)
@@ -449,14 +439,8 @@ let default_mapper =
           ~attrs:(this.attributes this pcd_attributes));
     label_declaration =
       (fun this
-           {
-             pld_name;
-             pld_type;
-             pld_loc;
-             pld_mutable;
-             pld_optional;
-             pld_attributes;
-           } ->
+        {pld_name; pld_type; pld_loc; pld_mutable; pld_optional; pld_attributes}
+      ->
         Type.field (map_loc this pld_name) (this.typ this pld_type)
           ~mut:pld_mutable ~optional:pld_optional
           ~loc:(this.location this pld_loc)

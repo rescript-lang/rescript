@@ -313,7 +313,7 @@ module Compile = struct
   (* Apparently it's not possible to retrieve the loc info from
    * Location.error_of_exn properly, so we need to do some extra
    * overloading action
-   * *)
+   *)
   let warning_infos : LocWarnInfo.t array ref = ref [||]
   let warning_buffer = Buffer.create 512
   let warning_ppf = Format.formatter_of_buffer warning_buffer
@@ -382,7 +382,7 @@ module Compile = struct
    * data to display types on hover etc.
    *
    * Note: start / end positions
-   * *)
+   *)
   let collect_type_hints typed_tree =
     let open Typedtree in
     let create_type_hint_obj loc kind hint =
@@ -487,8 +487,6 @@ module Compile = struct
       (* let finalenv = ref Env.empty in *)
       let types_signature = ref [] in
       Js_config.jsx_version := Some Js_config.Jsx_v4;
-      (* default *)
-      Js_config.jsx_mode := Js_config.Automatic;
       (* default *)
       let ast = impl str in
       let ast = Ppx_entry.rewrite_implementation ast in

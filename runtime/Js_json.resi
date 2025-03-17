@@ -31,7 +31,7 @@ Efficient JSON encoding using JavaScript API
 /* ## Types */
 
 @unboxed /** The JSON data structure */
-type rec t =
+type rec t = Stdlib_JSON.t =
   | Boolean(bool)
   | @as(null) Null
   | String(string)

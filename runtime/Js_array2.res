@@ -59,7 +59,7 @@ type t<'a> = array<'a>
 /**
 A type used to describe JavaScript objects that are like an array or are iterable.
 */
-type array_like<'a>
+type array_like<'a> = Stdlib_Array.arrayLike<'a>
 
 /* commented out until bs has a plan for iterators
    type 'a array_iter = 'a array_like

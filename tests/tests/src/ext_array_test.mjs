@@ -33,7 +33,7 @@ function reverse(a) {
 }
 
 function reverse_of_list(x) {
-  if (!x) {
+  if (x === 0) {
     return [];
   }
   let len = Belt_List.length(x);
@@ -43,7 +43,7 @@ function reverse_of_list(x) {
   while (true) {
     let x$1 = _x;
     let i = _i;
-    if (!x$1) {
+    if (x$1 === 0) {
       return a;
     }
     a[(len - i | 0) - 2 | 0] = x$1.hd;
@@ -146,7 +146,7 @@ function to_list_map_acc(f, a, acc) {
 }
 
 function of_list_map(f, a) {
-  if (!a) {
+  if (a === 0) {
     return [];
   }
   let tl = a.tl;
@@ -158,7 +158,7 @@ function of_list_map(f, a) {
   while (true) {
     let x = _x;
     let i = _i;
-    if (!x) {
+    if (x === 0) {
       return arr;
     }
     arr[i] = f(x.hd);

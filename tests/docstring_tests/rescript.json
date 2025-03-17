@@ -1,0 +1,11 @@
+{
+  "name": "doc-test-examples",
+  "sources": {
+    "dir": "."
+  },
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true
+  },
+  "suffix": ".res.mjs"
+}

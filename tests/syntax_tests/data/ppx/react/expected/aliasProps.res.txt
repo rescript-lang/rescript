@@ -1,4 +1,4 @@
-@@jsxConfig({version: 4, mode: "automatic"})
+@@jsxConfig({version: 4})
 
 module C0 = {
   @res.jsxComponentProps

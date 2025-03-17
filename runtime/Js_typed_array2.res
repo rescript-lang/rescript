@@ -28,7 +28,7 @@ JavaScript Typed Array API
 **see** [MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray)
 */
 
-type array_buffer
+type array_buffer = Stdlib_ArrayBuffer.t
 type array_like<'a> /* should be shared with js_array */
 
 module ArrayBuffer = {

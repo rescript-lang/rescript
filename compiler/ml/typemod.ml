@@ -573,8 +573,6 @@ and approx_sig env ssg =
       in
       let newenv = Env.add_signature sg env in
       sg @ approx_sig newenv srem
-    | Psig_class_type () -> assert false
-    | Psig_class () -> assert false
     | _ -> approx_sig env srem)
 
 and approx_modtype_info env sinfo =
@@ -870,8 +868,6 @@ and transl_signature env sg =
         in
         let trem, rem, final_env = transl_sig newenv srem in
         (mksig (Tsig_include incl) env loc :: trem, sg @ rem, final_env)
-      | Psig_class _ -> assert false
-      | Psig_class_type _ -> assert false
       | Psig_attribute x ->
         Builtin_attributes.warning_attribute x;
         let trem, rem, final_env = transl_sig env srem in
@@ -1567,8 +1563,6 @@ and type_structure ?(toplevel = false) funct_body anchor env sstr scope =
     | Pstr_open sod ->
       let _path, newenv, od = type_open ~toplevel env sod in
       (Tstr_open od, [], newenv)
-    | Pstr_class () -> assert false
-    | Pstr_class_type () -> assert false
     | Pstr_include sincl ->
       let smodl = sincl.pincl_mod in
       let modl =
@@ -1796,12 +1790,6 @@ let type_implementation_more ?check_exists sourcefile outputprefix modulename
       (Some sourcefile) initial_env None;
     raise e
 
-let type_implementation sourcefile outputprefix modulename initial_env ast =
-  let a, b, _, _ =
-    type_implementation_more sourcefile outputprefix modulename initial_env ast
-  in
-  (a, b)
-
 let save_signature modname tsg outputprefix source_file initial_env cmi =
   Cmt_format.save_cmt (outputprefix ^ ".cmti") modname
     (Cmt_format.Interface tsg) (Some source_file) initial_env (Some cmi)
@@ -1905,8 +1893,6 @@ let report_error ppf = function
     fprintf ppf "This is a generative functor. It can only be applied to ()"
   | Cannot_scrape_alias p ->
     fprintf ppf "This is an alias for module %a, which is missing" path p
-
-let super_report_error_no_wrap_printing_env = report_error
 
 let report_error env ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error ppf err)

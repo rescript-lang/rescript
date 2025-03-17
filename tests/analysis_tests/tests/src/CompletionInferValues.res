@@ -13,7 +13,7 @@ let reactEventFn = (cb: ReactEvent.Mouse.t => unit) => {
 
 @val external getSomeRecord: unit => someRecord = "getSomeRecord"
 
-// let x = 123; let aliased = x; aliased->f
+// let x = 123; let aliased = x; aliased->t
 //                                         ^com
 
 // let x = getSomeRecord(); x.
@@ -48,14 +48,11 @@ module Div = {
 // let _ = <div onMouseEnter={event => { let btn = event->JsxEvent.Mouse.button; btn->t }} />
 //                                                                                     ^com
 
-// let _ = <div onMouseEnter={event => { let btn = event->JsxEvent.Mouse.button->Belt.Int.toString; btn->spl }} />
-//                                                                                                          ^com
+// let _ = <div onMouseEnter={event => { let btn = event->JsxEvent.Mouse.button->Int.toString; btn->spl }} />
+//                                                                                                     ^com
 
-// let _ = <div onMouseEnter={event => { let btn = event->JsxEvent.Mouse.button->Belt.Int.toString->Js.String2.split("/"); btn->ma }} />
-//                                                                                                                                ^com
-
-// let x: someRecord = {name: "Hello", age: 123}; x.
-//                                                  ^com
+// let _ = <div onMouseEnter={event => { let btn = event->JsxEvent.Mouse.button->Int.toString->String.split("/"); btn->ma }} />
+//                                                                                                                       ^com
 
 type someVariant = One | Two | Three(int, string)
 type somePolyVariant = [#one | #two | #three(int, string)]
@@ -115,10 +112,6 @@ type otherNestedRecord = {
 // let x: otherNestedRecord; switch x { | {optRecord:Some({name})} => name->slic }
 //                                                                              ^com
 
-// Follow arrays
-// let x: array<otherNestedRecord>; switch x { | [inner] => inner.s }
-//                                                                 ^com
-
 // Infer top level return
 // let x = 123; switch x { | 123 => () | v => v->toSt }
 //                                                   ^com
@@ -152,8 +145,8 @@ let fn3 = (~cb: sameFileRecord => unit) => {
 //                                             ^com
 
 // Handles pipe chains as input for switch
-// let x = 123; switch x->Belt.Int.toString->Js.String2.split("/") { | }
-//                                                                    ^com
+// let x = 123; switch x->Belt.Int.toString->String.split("/") { | }
+//                                                                ^com
 
 // Regular completion works
 // let renderer = CompletionSupport2.makeRenderer(~prepare=() => "hello",~render=({support}) => {support.},())

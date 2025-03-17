@@ -27,10 +27,10 @@ Contains functions available in the global scope (`window` in a browser context)
 */
 
 /** Identify an interval started by `Js.Global.setInterval`. */
-type intervalId
+type intervalId = Stdlib_Global.intervalId
 
 /** Identify timeout started by `Js.Global.setTimeout`. */
-type timeoutId
+type timeoutId = Stdlib_Global.timeoutId
 
 @val
 /**

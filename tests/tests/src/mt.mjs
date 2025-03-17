@@ -12,11 +12,11 @@ function assert_fail(msg) {
 
 function is_mocha() {
   let match = Belt_List.fromArray(Process.argv);
-  if (!match) {
+  if (match === 0) {
     return false;
   }
   let match$1 = match.tl;
-  if (!match$1) {
+  if (match$1 === 0) {
     return false;
   }
   let exec = Path.basename(match$1.hd);
@@ -217,7 +217,7 @@ let from_promise_suites = (function from_promise_suites(name, suites) {
 
 function old_from_promise_suites_donotuse(name, suites) {
   let match = Belt_List.fromArray(Process.argv);
-  if (match) {
+  if (match !== 0) {
     if (is_mocha()) {
       describe(name, () => Belt_List.forEach(suites, param => {
         let code = param[1];

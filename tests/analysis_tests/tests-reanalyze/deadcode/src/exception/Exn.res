@@ -72,10 +72,8 @@ exception Error(string, string, int)
 
 let parse_json_from_file = s => {
   switch 34 {
-  | exception Error(p1, p2, e) =>
-    raise(Error(p1, p2, e))
-  | v =>
-    v
+  | exception Error(p1, p2, e) => raise(Error(p1, p2, e))
+  | v => v
   }
 }
 
@@ -95,15 +93,14 @@ let raiseInInternalLet = b => {
   a + 34
 }
 
-let indirectCall = () => () |> raisesWithAnnotaion
+let indirectCall = () => raisesWithAnnotaion()
 
-@raises(Invalid_argument)
 let array = a => a[2]
 
 let id = x => x
 
 let tryChar = v => {
-  try id(Char.chr(v)) |> ignore catch {
+  try ignore(id(Char.chr(v))) catch {
   | _ => ()
   }
   42
@@ -113,12 +110,12 @@ let tryChar = v => {
 let raiseAtAt = () => \"@@"(raise, Not_found)
 
 @raises(Not_found)
-let raisePipe = Not_found |> raise
+let raisePipe = raise(Not_found)
 
 @raises(Not_found)
 let raiseArrow = Not_found->raise
 
-@raises(Js.Exn.Error)
+@raises(Exn.Error)
 let bar = () => Js.Json.parseExn("!!!")
 
 let severalCases = cases =>
@@ -151,4 +148,4 @@ let onResult = () => @doesNotRaise Belt.Array.getExn([], 0)
 
 let onFunctionPipe = () => []->(@doesNotRaise Belt.Array.getExn)(0)
 
-let onResultPipeWrong = () => @doesNotRaise []->Belt.Array.getExn(0)
+let onResultPipeWrong = () => (@doesNotRaise [])->Belt.Array.getExn(0)

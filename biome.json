@@ -25,6 +25,7 @@
       "tests/tests/**",
       "tests/tools_tests/**",
       "tests/analysis_tests/**",
+      "tests/docstring_tests/**",
       "analysis/examples/**",
       "analysis/reanalyze/examples/**",
       "lib/**",

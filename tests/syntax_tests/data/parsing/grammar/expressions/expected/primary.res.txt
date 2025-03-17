@@ -18,15 +18,9 @@ let x = (arr.((x : int))).((y : int))
 ;;f (x : int)
 ;;f a b c
 ;;f a b c
-;;f ~a:((a)[@res.namedArgLoc ]) ~b:((bArg)[@res.namedArgLoc ]) ?c:((c)
-    [@res.namedArgLoc ]) ?d:((expr)[@res.namedArgLoc ])
-;;((f ~a:((a)[@res.namedArgLoc ]) ~b:((bArg)[@res.namedArgLoc ]) ?c:((c)
-      [@res.namedArgLoc ]) ?d:((expr)[@res.namedArgLoc ])) ~a:((a)
-     [@res.namedArgLoc ]) ~b:((bArg)[@res.namedArgLoc ]) ?c:((c)
-     [@res.namedArgLoc ]) ?d:((expr)[@res.namedArgLoc ])) ~a:((a)
-    [@res.namedArgLoc ]) ~b:((bArg)[@res.namedArgLoc ]) ?c:((c)
-    [@res.namedArgLoc ]) ?d:((expr)[@res.namedArgLoc ])
-;;f ~a:(((x : int))[@res.namedArgLoc ]) ?b:(((y : int))[@res.namedArgLoc ])
+;;f ~a ~b:bArg ?c ?d:expr
+;;((f ~a ~b:bArg ?c ?d:expr) ~a ~b:bArg ?c ?d:expr) ~a ~b:bArg ?c ?d:expr
+;;f ~a:(x : int) ?b:(y : int)
 ;;connection#platformId
 ;;((connection#left)#account)#accountName
 ;;john#age #= 99

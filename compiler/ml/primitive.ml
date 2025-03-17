@@ -18,8 +18,6 @@
 open Misc
 open Parsetree
 
-type boxed_integer = Pbigint | Pint32 | Pint64
-
 type description = {
   prim_name: string; (* Name of primitive  or C function *)
   prim_arity: int; (* Number of arguments *)
@@ -31,24 +29,6 @@ type description = {
 
 let coerce : (description -> description -> bool) ref =
   ref (fun (p1 : description) (p2 : description) -> p1 = p2)
-
-let simple ~name ~arity ~alloc =
-  {
-    prim_name = name;
-    prim_arity = arity;
-    prim_alloc = alloc;
-    prim_native_name = "";
-    prim_from_constructor = false;
-  }
-
-let make ~name ~alloc ~native_name ~arity =
-  {
-    prim_name = name;
-    prim_arity = arity;
-    prim_alloc = alloc;
-    prim_native_name = native_name;
-    prim_from_constructor = false;
-  }
 
 let parse_declaration valdecl ~arity ~from_constructor =
   let name, native_name =
@@ -73,8 +53,3 @@ let print p osig_val_decl =
     else [p.prim_name]
   in
   {osig_val_decl with oval_prims = prims; oval_attributes = []}
-
-let native_name p =
-  if p.prim_native_name <> "" then p.prim_native_name else p.prim_name
-
-let byte_name p = p.prim_name

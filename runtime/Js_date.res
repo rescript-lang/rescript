@@ -29,7 +29,7 @@ on MDN.) JavaScript stores dates as the number of milliseconds since the UNIX
 *epoch*, midnight 1 January 1970, UTC.
 */
 
-type t
+type t = Stdlib_Date.t
 
 @send
 /**

@@ -67,9 +67,8 @@ and expression = {
 
 and exp_extra =
   | Texp_constraint of core_type
-  | Texp_coerce of unit * core_type
+  | Texp_coerce of core_type
   | Texp_open of override_flag * Path.t * Longident.t loc * Env.t
-  | Texp_poly of core_type option
   | Texp_newtype of string
 
 and expression_desc =
@@ -77,13 +76,18 @@ and expression_desc =
   | Texp_constant of constant
   | Texp_let of rec_flag * value_binding list * expression
   | Texp_function of {
-      arg_label: arg_label;
+      arg_label: Noloc.arg_label;
       arity: arity;
       param: Ident.t;
       case: case;
       partial: partial;
+      async: bool;
     }
-  | Texp_apply of expression * (arg_label * expression option) list
+  | Texp_apply of {
+      funct: expression;
+      args: (Noloc.arg_label * expression option) list;
+      partial: bool;
+    }
   | Texp_match of expression * case list * case list * partial
   | Texp_try of expression * case list
   | Texp_tuple of expression list
@@ -114,10 +118,6 @@ and expression_desc =
       * direction_flag
       * expression
   | Texp_send of expression * meth * expression option
-  | Texp_new of unit
-  | Texp_instvar of unit
-  | Texp_setinstvar of unit
-  | Texp_override of unit
   | Texp_letmodule of Ident.t * string loc * module_expr * expression
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression
@@ -132,8 +132,6 @@ and case = {c_lhs: pattern; c_guard: expression option; c_rhs: expression}
 and record_label_definition =
   | Kept of Types.type_expr
   | Overridden of Longident.t loc * expression
-
-(* Value expressions for the class language *)
 
 (* Value expressions for the module language *)
 and module_expr = {
@@ -180,8 +178,6 @@ and structure_item_desc =
   | Tstr_recmodule of module_binding list
   | Tstr_modtype of module_type_declaration
   | Tstr_open of open_description
-  | Tstr_class of unit
-  | Tstr_class_type of unit
   | Tstr_include of include_declaration
   | Tstr_attribute of attribute
 
@@ -257,8 +253,6 @@ and signature_item_desc =
   | Tsig_modtype of module_type_declaration
   | Tsig_open of open_description
   | Tsig_include of include_description
-  | Tsig_class of unit
-  | Tsig_class_type of unit
   | Tsig_attribute of attribute
 
 and module_declaration = {
@@ -313,7 +307,7 @@ and core_type = {
 and core_type_desc =
   | Ttyp_any
   | Ttyp_var of string
-  | Ttyp_arrow of arg_label * core_type * core_type * arity
+  | Ttyp_arrow of Noloc.arg_label * core_type * core_type * arity
   | Ttyp_tuple of core_type list
   | Ttyp_constr of Path.t * Longident.t loc * core_type list
   | Ttyp_object of object_field list * closed_flag

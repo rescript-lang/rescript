@@ -110,10 +110,11 @@ let option i f ppf x =
 let longident_loc i ppf li = line i ppf "%a\n" fmt_longident_loc li
 let string i ppf s = line i ppf "\"%s\"\n" s
 let string_loc i ppf s = line i ppf "%a\n" fmt_string_loc s
-let arg_label i ppf = function
+
+let arg_label_loc i ppf = function
   | Nolabel -> line i ppf "Nolabel\n"
-  | Optional s -> line i ppf "Optional \"%s\"\n" s
-  | Labelled s -> line i ppf "Labelled \"%s\"\n" s
+  | Optional {txt = s} -> line i ppf "Optional \"%s\"\n" s
+  | Labelled {txt = s} -> line i ppf "Labelled \"%s\"\n" s
 
 let rec core_type i ppf x =
   line i ppf "core_type %a\n" fmt_location x.ptyp_loc;
@@ -122,16 +123,16 @@ let rec core_type i ppf x =
   match x.ptyp_desc with
   | Ptyp_any -> line i ppf "Ptyp_any\n"
   | Ptyp_var s -> line i ppf "Ptyp_var %s\n" s
-  | Ptyp_arrow (l, ct1, ct2, a) ->
+  | Ptyp_arrow {lbl; arg; ret; arity} ->
     line i ppf "Ptyp_arrow\n";
     let () =
-      match a with
+      match arity with
       | None -> ()
       | Some n -> line i ppf "arity = %d\n" n
     in
-    arg_label i ppf l;
-    core_type i ppf ct1;
-    core_type i ppf ct2
+    arg_label_loc i ppf lbl;
+    core_type i ppf arg;
+    core_type i ppf ret
   | Ptyp_tuple l ->
     line i ppf "Ptyp_tuple\n";
     list i core_type ppf l
@@ -238,19 +239,21 @@ and expression i ppf x =
     line i ppf "Pexp_let %a\n" fmt_rec_flag rf;
     list i value_binding ppf l;
     expression i ppf e
-  | Pexp_fun {arg_label = l; default = eo; lhs = p; rhs = e; arity} ->
+  | Pexp_fun {arg_label = l; default = eo; lhs = p; rhs = e; arity; async} ->
     line i ppf "Pexp_fun\n";
+    let () = if async then line i ppf "async\n" in
     let () =
       match arity with
       | None -> ()
       | Some arity -> line i ppf "arity:%d\n" arity
     in
-    arg_label i ppf l;
+    arg_label_loc i ppf l;
     option i expression ppf eo;
     pattern i ppf p;
     expression i ppf e
-  | Pexp_apply (e, l) ->
+  | Pexp_apply {funct = e; args = l; partial} ->
     line i ppf "Pexp_apply\n";
+    if partial then line i ppf "partial\n";
     expression i ppf e;
     list i label_x_expression ppf l
   | Pexp_match (e, l) ->
@@ -316,13 +319,6 @@ and expression i ppf x =
   | Pexp_send (e, s) ->
     line i ppf "Pexp_send \"%s\"\n" s.txt;
     expression i ppf e
-  | Pexp_new li -> line i ppf "Pexp_new %a\n" fmt_longident_loc li
-  | Pexp_setinstvar (s, e) ->
-    line i ppf "Pexp_setinstvar %a\n" fmt_string_loc s;
-    expression i ppf e
-  | Pexp_override l ->
-    line i ppf "Pexp_override\n";
-    list i string_x_expression ppf l
   | Pexp_letmodule (s, me, e) ->
     line i ppf "Pexp_letmodule %a\n" fmt_string_loc s;
     module_expr i ppf me;
@@ -337,10 +333,6 @@ and expression i ppf x =
   | Pexp_lazy e ->
     line i ppf "Pexp_lazy\n";
     expression i ppf e
-  | Pexp_poly (e, cto) ->
-    line i ppf "Pexp_poly\n";
-    expression i ppf e;
-    option i core_type ppf cto
   | Pexp_newtype (s, e) ->
     line i ppf "Pexp_newtype \"%s\"\n" s.txt;
     expression i ppf e
@@ -499,8 +491,6 @@ and signature_item i ppf x =
     line i ppf "Psig_include\n";
     module_type i ppf incl.pincl_mod;
     attributes i ppf incl.pincl_attributes
-  | Psig_class () -> ()
-  | Psig_class_type () -> ()
   | Psig_extension ((s, arg), attrs) ->
     line i ppf "Psig_extension \"%s\"\n" s.txt;
     attributes i ppf attrs;
@@ -595,8 +585,6 @@ and structure_item i ppf x =
     line i ppf "Pstr_open %a %a\n" fmt_override_flag od.popen_override
       fmt_longident_loc od.popen_lid;
     attributes i ppf od.popen_attributes
-  | Pstr_class () -> ()
-  | Pstr_class_type () -> ()
   | Pstr_include incl ->
     line i ppf "Pstr_include";
     attributes i ppf incl.pincl_attributes;
@@ -664,17 +652,13 @@ and value_binding i ppf x =
   pattern (i + 1) ppf x.pvb_pat;
   expression (i + 1) ppf x.pvb_expr
 
-and string_x_expression i ppf (s, e) =
-  line i ppf "<override> %a\n" fmt_string_loc s;
-  expression (i + 1) ppf e
-
 and longident_x_expression i ppf (li, e, opt) =
   line i ppf "%a%s\n" fmt_longident_loc li (if opt then "?" else "");
   expression (i + 1) ppf e
 
 and label_x_expression i ppf (l, e) =
   line i ppf "<arg>\n";
-  arg_label i ppf l;
+  arg_label_loc i ppf l;
   expression (i + 1) ppf e
 
 and label_x_bool_x_core_type_list i ppf x =

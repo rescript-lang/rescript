@@ -156,12 +156,12 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
       match Hash_ident.find_opt meta.ident_tbl v with
       | Some
           (FunctionId
-            {
-              lambda =
-                Some
-                  ( Lfunction ({params; body; attr = {is_a_functor}} as m),
-                    rec_flag );
-            })
+             {
+               lambda =
+                 Some
+                   ( Lfunction ({params; body; attr = {is_a_functor}} as m),
+                     rec_flag );
+             })
         when Lam_analysis.lfunction_can_be_inlined m ->
         if Ext_list.same_length ap_args params then
           if is_a_functor (* && (Set_ident.mem v meta.export_idents) && false *)
@@ -170,7 +170,6 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
                if so, maybe not since in that case,
                we are going to have two copy?
             *)
-
             (* Check: recursive applying may result in non-termination *)
             (* Ext_log.dwarn __LOC__ "beta .. %s/%d" v.name v.stamp ; *)
             simpl

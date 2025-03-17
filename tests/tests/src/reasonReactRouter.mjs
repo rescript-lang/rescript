@@ -107,10 +107,10 @@ function urlNotEqual(a, b) {
     while (true) {
       let bList = _bList;
       let aList = _aList;
-      if (!aList) {
-        return bList;
+      if (aList === 0) {
+        return bList !== 0;
       }
-      if (!bList) {
+      if (bList === 0) {
         return true;
       }
       if (aList.hd !== bList.hd) {

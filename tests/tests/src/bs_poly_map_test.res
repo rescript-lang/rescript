@@ -181,8 +181,8 @@ let () = {
     | _ => false
     },
   )
-  b(__LOC__, A.eq(M.keysToArray(v5), A.makeBy(5_000, i => i), \"="))
-  b(__LOC__, A.eq(M.keysToArray(v6), A.makeBy(5_000, i => 5_001 + i), \"="))
+  b(__LOC__, A.eq(M.keysToArray(v5), A.makeBy(5_000, i => i), \"=="))
+  b(__LOC__, A.eq(M.keysToArray(v6), A.makeBy(5_000, i => 5_001 + i), \"=="))
 
   let v7 = M.remove(v3, 5_000)
   let ((v8, v9), pres2) = M.split(v7, 5_000)
@@ -193,8 +193,8 @@ let () = {
     | _ => false
     },
   )
-  b(__LOC__, A.eq(M.keysToArray(v8), A.makeBy(5_000, i => i), \"="))
-  b(__LOC__, A.eq(M.keysToArray(v9), A.makeBy(5_000, i => 5_001 + i), \"="))
+  b(__LOC__, A.eq(M.keysToArray(v8), A.makeBy(5_000, i => i), \"=="))
+  b(__LOC__, A.eq(M.keysToArray(v9), A.makeBy(5_000, i => 5_001 + i), \"=="))
 }
 
 Mt.from_pair_suites(__MODULE__, suites.contents)

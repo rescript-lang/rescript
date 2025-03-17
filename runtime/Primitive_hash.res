@@ -174,21 +174,17 @@ let hash = (count: int, _limit, seed: int, obj: Obj.t): int => {
         if size != 0 {
           let obj_tag = Obj.tag(obj)
           let tag = lor(lsl(size, 10), obj_tag)
-          if obj_tag == 248 /* Obj.object_tag */ {
-            s.contents = hash_mix_int(s.contents, (Obj.obj(Obj.getField(obj, 1)): int))
-          } else {
-            s.contents = hash_mix_int(s.contents, tag)
-            let block = {
-              let v = size - 1
-              if v < num.contents {
-                v
-              } else {
-                num.contents
-              }
+          s.contents = hash_mix_int(s.contents, tag)
+          let block = {
+            let v = size - 1
+            if v < num.contents {
+              v
+            } else {
+              num.contents
             }
-            for i in 0 to block {
-              push_back(queue, Obj.getField(obj, i))
-            }
+          }
+          for i in 0 to block {
+            push_back(queue, Obj.getField(obj, i))
           }
         } else {
           let size: int = %raw(`function(obj,cb){

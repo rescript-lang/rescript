@@ -1,3 +1,3 @@
 Hover src/Auto.res 2:13
-{"contents": {"kind": "markdown", "value": "```rescript\n('a => 'b, List.t<'a>) => List.t<'b>\n```\n\n---\n\n```\n \n```\n```rescript\ntype List.t<'a> = list<'a>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22List.res%22%2C34%2C0%5D)\n"}}
+{"contents": {"kind": "markdown", "value": "```rescript\n('a => 'b, list<'a>) => list<'b>\n```"}}
 

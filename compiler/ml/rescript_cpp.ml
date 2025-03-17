@@ -48,7 +48,10 @@ let () =
      we want to overwrite in some cases with the
      same stdlib
   *)
-  let version = Config.version (* so that it can be overridden*) in
+  let version =
+    Config.version
+    (* so that it can be overridden*)
+  in
   replace_directive_built_in_value "OCAML_VERSION" (Dir_string version);
   replace_directive_built_in_value "OS_TYPE" (Dir_string Sys.os_type)
 

@@ -1,49 +1,34 @@
 type nonrec t = x -> unit (a:1)
 type nonrec t = x -> unit (a:1)
 type nonrec t = int -> string -> unit (a:2)
-type nonrec t =
-  a:((int)[@res.namedArgLoc ]) -> b:((int)[@res.namedArgLoc ]) -> int (a:2)
-type nonrec t =
-  ?a:((int)[@res.namedArgLoc ]) -> ?b:((int)[@res.namedArgLoc ]) -> int (a:2)
+type nonrec t = a:int -> b:int -> int (a:2)
+type nonrec t = ?a:int -> ?b:int -> int (a:2)
 type nonrec t = int -> int -> int -> int (a:1) (a:1) (a:1)
-type nonrec t =
-  a:((int)[@res.namedArgLoc ]) ->
-    b:((int)[@res.namedArgLoc ]) ->
-      c:((int)[@res.namedArgLoc ]) -> int (a:1) (a:1) (a:1)
+type nonrec t = a:int -> b:int -> c:int -> int (a:1) (a:1) (a:1)
 let (f : x -> unit (a:1)) = xf
 let (f : x -> unit (a:1)) = xf
 let (f : int -> string -> unit (a:2)) = xf
-let (t :
-  a:((int)[@res.namedArgLoc ]) -> b:((int)[@res.namedArgLoc ]) -> int (a:2))
-  = xf
-let (t :
-  ?a:((int)[@res.namedArgLoc ]) -> ?b:((int)[@res.namedArgLoc ]) -> int (a:2))
-  = xf
+let (t : a:int -> b:int -> int (a:2)) = xf
+let (t : ?a:int -> ?b:int -> int (a:2)) = xf
 let (t : int -> int -> int -> int (a:1) (a:1) (a:1)) = xf
-let (t :
-  a:((int)[@res.namedArgLoc ]) ->
-    b:((int)[@res.namedArgLoc ]) ->
-      c:((int)[@res.namedArgLoc ]) -> int (a:1) (a:1) (a:1))
-  = xf
-type nonrec t = f:((int)[@res.namedArgLoc ]) -> string
-type nonrec t = ?f:((int)[@res.namedArgLoc ]) -> string
-let (f : f:((int)[@res.namedArgLoc ]) -> string) = fx
-let (f : ?f:((int)[@res.namedArgLoc ]) -> string) = fx
-type nonrec t = f:((int)[@res.namedArgLoc ]) -> string (a:1)
-type nonrec t = f:((int)[@res.namedArgLoc ]) -> string
-type nonrec t = f:((int -> string (a:1))[@res.namedArgLoc ]) -> float (a:1)
-type nonrec t = f:((int -> string (a:1))[@res.namedArgLoc ]) -> float
-type nonrec t = f:((int)[@res.namedArgLoc ]) -> string -> float (a:1)
+let (t : a:int -> b:int -> c:int -> int (a:1) (a:1) (a:1)) = xf
+type nonrec t = f:int -> string
+type nonrec t = ?f:int -> string
+let (f : f:int -> string) = fx
+let (f : ?f:int -> string) = fx
+type nonrec t = f:int -> string (a:1)
+type nonrec t = f:int -> string
+type nonrec t = f:(int -> string (a:1)) -> float (a:1)
+type nonrec t = f:(int -> string (a:1)) -> float
+type nonrec t = f:int -> string -> float (a:1)
 type nonrec t =
-  ((a:((int)[@res.namedArgLoc ]) ->
-      ((b:((int)[@res.namedArgLoc ]) -> ((float)[@attr ]) -> unit)[@attrBeforeLblB
-                                                                    ]) (a:3))
+  ((a:int -> ((b:int -> ((float)[@attr ]) -> unit)[@attrBeforeLblB ]) (a:3))
   [@attrBeforeLblA ])
 type nonrec t =
-  ((a:((int)[@res.namedArgLoc ]) ->
-      ((b:((int)[@res.namedArgLoc ]) -> ((float)[@attr ]) -> unit (a:1) (a:1))
-      [@attrBeforeLblB ]) (a:1))[@attrBeforeLblA ])
-type nonrec t = ((a:((int)[@res.namedArgLoc ]) -> unit)[@attr ])
+  ((a:int ->
+      ((b:int -> ((float)[@attr ]) -> unit (a:1) (a:1))[@attrBeforeLblB ]) (a:1))
+  [@attrBeforeLblA ])
+type nonrec t = ((a:int -> unit)[@attr ])
 type nonrec 'a getInitialPropsFn =
   < query: string dict  ;req: 'a Js.t Js.Nullable.t   >  ->
     'a Js.t Js.Promise.t (a:1)

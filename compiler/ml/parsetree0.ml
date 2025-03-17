@@ -76,7 +76,7 @@ and core_type = {
 and core_type_desc =
   | Ptyp_any (*  _ *)
   | Ptyp_var of string (* 'a *)
-  | Ptyp_arrow of arg_label * core_type * core_type
+  | Ptyp_arrow of Noloc.arg_label * core_type * core_type
     (* T1 -> T2       Simple
        ~l:T1 -> T2    Labelled
        ?l:T1 -> T2    Optional
@@ -170,8 +170,7 @@ and pattern_desc =
 
        Other forms of interval are recognized by the parser
        but rejected by the type-checker. *)
-  | Ppat_tuple of pattern list
-    (* (P1, ..., Pn)
+  | Ppat_tuple of pattern list (* (P1, ..., Pn)
 
        Invariant: n >= 2
     *)
@@ -215,8 +214,7 @@ and expression = {
 }
 
 and expression_desc =
-  | Pexp_ident of Longident.t loc
-    (* x
+  | Pexp_ident of Longident.t loc (* x
        M.x
     *)
   | Pexp_constant of constant (* 1, 'a', "true", 1.0, 1l, 1L, 1n *)
@@ -225,7 +223,7 @@ and expression_desc =
        let rec P1 = E1 and ... and Pn = EN in E   (flag = Recursive)
     *)
   | Pexp_function of case list (* function P1 -> E1 | ... | Pn -> En *)
-  | Pexp_fun of arg_label * expression option * pattern * expression
+  | Pexp_fun of Noloc.arg_label * expression option * pattern * expression
     (* fun P -> E1                          (Simple, None)
        fun ~l:P -> E1                       (Labelled l, None)
        fun ?l:P -> E1                       (Optional l, None)
@@ -236,7 +234,7 @@ and expression_desc =
        - "fun P1 P2 .. Pn -> E1" is represented as nested Pexp_fun.
        - "let f P = E" is represented using Pexp_fun.
     *)
-  | Pexp_apply of expression * (arg_label * expression) list
+  | Pexp_apply of expression * (Noloc.arg_label * expression) list
     (* E0 ~l1:E1 ... ~ln:En
        li can be empty (non labeled argument) or start with '?'
        (optional argument).

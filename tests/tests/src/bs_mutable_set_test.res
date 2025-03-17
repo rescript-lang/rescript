@@ -96,7 +96,7 @@ include (
       let ((aa, bb), pres) = N.split(v, 1000)
       b(__LOC__, pres)
       b(__LOC__, A.eq(N.toArray(aa), I.range(500, 999), (x, y) => x == y))
-      b(__LOC__, A.eq(N.toArray(bb), I.range(1_001, 2_000), \"="))
+      b(__LOC__, A.eq(N.toArray(bb), I.range(1_001, 2_000), \"=="))
       b(__LOC__, N.subset(aa, v))
       b(__LOC__, N.subset(bb, v))
       b(__LOC__, N.isEmpty(N.intersect(aa, bb)))
@@ -104,8 +104,8 @@ include (
       b(__LOC__, c)
       let ((aa, bb), pres) = N.split(v, 1_000)
       b(__LOC__, !pres)
-      b(__LOC__, A.eq(N.toArray(aa), I.range(500, 999), \"="))
-      b(__LOC__, A.eq(N.toArray(bb), I.range(1_001, 2_000), \"="))
+      b(__LOC__, A.eq(N.toArray(aa), I.range(500, 999), \"=="))
+      b(__LOC__, A.eq(N.toArray(bb), I.range(1_001, 2_000), \"=="))
       b(__LOC__, N.subset(aa, v))
       b(__LOC__, N.subset(bb, v))
       b(__LOC__, N.isEmpty(N.intersect(aa, bb)))
@@ -117,7 +117,7 @@ include (
     let () = {
       let aa = f(I.randomRange(0, 100))
       let bb = f(I.randomRange(40, 120))
-      let cc = \"++"(aa, bb)
+      let cc = aa ++ bb
       b(__LOC__, \"=~"(cc, f(I.randomRange(0, 120))))
 
       b(
@@ -165,12 +165,12 @@ let () = {
     N.add(v, i)
   }
   N.checkInvariantInternal(v)
-  (b(__LOC__, ...))(R.every(0, 1_00_000, i => N.has(v, i)))
+  b(__LOC__, ...)(R.every(0, 1_00_000, i => N.has(v, i)))
   eq(__LOC__, N.size(v), 1_00_001)
 }
 
 let () = {
-  let u = \"++"(I.randomRange(30, 100), I.randomRange(40, 120))
+  let u = I.randomRange(30, 100) ++ I.randomRange(40, 120)
   let v = N.make()
   N.mergeMany(v, u)
   eq(__LOC__, N.size(v), 91)
@@ -178,7 +178,7 @@ let () = {
 }
 
 let () = {
-  let u = \"++"(I.randomRange(0, 100_000), I.randomRange(0, 100))
+  let u = I.randomRange(0, 100_000) ++ I.randomRange(0, 100)
   let v = N.fromArray(u)
   eq(__LOC__, N.size(v), 100_001)
   let u = I.randomRange(50_000, 80_000)
@@ -216,7 +216,7 @@ let () = {
   let id = (loc, x) => {
     let u = N.fromSortedArrayUnsafe(x)
     N.checkInvariantInternal(u)
-    b(loc, A.every2(N.toArray(u), x, \"="))
+    b(loc, A.every2(N.toArray(u), x, \"=="))
   }
 
   id(__LOC__, [])
@@ -265,7 +265,7 @@ let \"=~" = N.eq
 let () = {
   let aa = f(I.randomRange(0, 100))
   let bb = f(I.randomRange(40, 120))
-  let cc = \"++"(aa, bb)
+  let cc = aa ++ bb
   b(__LOC__, \"=~"(cc, f(I.randomRange(0, 120))))
 
   b(

@@ -64,9 +64,29 @@ type genTypeMispelled = int
 
 @genType let jsonStringify = Js.Json.stringify
 
-@genType type nullOrString = Js.Null.t<string>
+@genType type nullOrString = null<string>
 
-@genType type nullOrString2 = Js.null<string>
+@genType type nullOrString2 = Null.t<string>
+
+@genType type nullOrString3 = Js.null<string>
+
+@genType type nullOrString4 = Js.Null.t<string>
+
+@genType type nullableOrString = nullable<string>
+
+@genType type nullableOrString2 = Nullable.t<string>
+
+@genType type nullableOrString3 = Js.nullable<string>
+
+@genType type nullableOrString4 = Js.Nullable.t<string>
+
+@genType type undefinedOrString = undefined<string>
+
+@genType type undefinedOrString2 = Undefined.t<string>
+
+@genType type undefinedOrString3 = Js.undefined<string>
+
+@genType type undefinedOrString4 = Js.Undefined.t<string>
 
 type record = {
   i: int,

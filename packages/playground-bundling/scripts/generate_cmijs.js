@@ -63,7 +63,7 @@ function buildCompilerCmij() {
     "node_modules",
     "rescript",
     "lib",
-    "ocaml",
+    "ocaml"
   );
 
   const outputFolder = path.join(PACKAGES_DIR, "compiler-builtins");
@@ -75,7 +75,7 @@ function buildCompilerCmij() {
   }
 
   e(
-    `find ${rescriptLibOcamlFolder} -name "*.cmi" -or -name "*.cmj" | xargs -n1 basename | xargs js_of_ocaml build-fs -o ${cmijFile} -I ${rescriptLibOcamlFolder}`,
+    `find ${rescriptLibOcamlFolder} -name "*.cmi" -or -name "*.cmj" | xargs -n1 basename | xargs js_of_ocaml build-fs -o ${cmijFile} -I ${rescriptLibOcamlFolder}`
   );
 }
 
@@ -86,14 +86,14 @@ function buildThirdPartyCmijs() {
       "node_modules",
       pkg,
       "lib",
-      "ocaml",
+      "ocaml"
     );
     const libEs6Folder = path.join(
       PROJECT_ROOT_DIR,
       "node_modules",
       pkg,
       "lib",
-      "es6",
+      "es6"
     );
     const outputFolder = path.join(PACKAGES_DIR, pkg);
 
@@ -105,10 +105,15 @@ function buildThirdPartyCmijs() {
 
     e(`find ${libEs6Folder} -name '*.js' -exec cp {} ${outputFolder} \\;`);
     e(
-      `find ${libOcamlFolder} -name "*.cmi" -or -name "*.cmj" | xargs -n1 basename | xargs js_of_ocaml build-fs -o ${cmijFile} -I ${libOcamlFolder}`,
+      `find ${libOcamlFolder} -name "*.cmi" -or -name "*.cmj" | xargs -n1 basename | xargs js_of_ocaml build-fs -o ${cmijFile} -I ${libOcamlFolder}`
     );
   });
 }
 
+function bundleStdlibJs() {
+  e("npm run bundle");
+}
+
 buildCompilerCmij();
 buildThirdPartyCmijs();
+bundleStdlibJs();

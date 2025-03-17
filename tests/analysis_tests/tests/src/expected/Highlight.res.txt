@@ -81,7 +81,7 @@ Variable: x [69:21->69:22]
 Variable: world [69:24->69:30]
 Lident: x 69:35 Variable
 Lident: world 69:39 Variable
-Lident: add 71:21 Variable
+Lident: add 71:8 Variable
 JsxTag <: 73:8
 Lident: div 73:9 JsxLowercase
 Lident: div 73:36 JsxLowercase

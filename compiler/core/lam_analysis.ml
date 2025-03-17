@@ -97,8 +97,7 @@ let rec no_side_effects (lam : Lam.t) : bool =
     (* TODO *)
     | Praw_js_code _
     (* byte swap *)
-    | Parraysets | Parraysetu | Poffsetref _ | Praise | Plazyforce | Psetfield _
-      ->
+    | Parraysets | Parraysetu | Poffsetref _ | Praise | Psetfield _ ->
       false)
   | Llet (_, _, arg, body) -> no_side_effects arg && no_side_effects body
   | Lswitch (_, _) -> false

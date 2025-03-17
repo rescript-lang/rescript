@@ -121,7 +121,7 @@ let option i f ppf x =
 let longident i ppf li = line i ppf "%a\n" fmt_longident li
 let string i ppf s = line i ppf "\"%s\"\n" s
 let arg_label i ppf = function
-  | Nolabel -> line i ppf "Nolabel\n"
+  | Noloc.Nolabel -> line i ppf "Nolabel\n"
   | Optional s -> line i ppf "Optional \"%s\"\n" s
   | Labelled s -> line i ppf "Labelled \"%s\"\n" s
 
@@ -252,17 +252,13 @@ and expression_extra i ppf x attrs =
     line i ppf "Texp_constraint\n";
     attributes i ppf attrs;
     core_type i ppf ct
-  | Texp_coerce ((), cto2) ->
+  | Texp_coerce cto2 ->
     line i ppf "Texp_coerce\n";
     attributes i ppf attrs;
     core_type i ppf cto2
   | Texp_open (ovf, m, _, _) ->
     line i ppf "Texp_open %a \"%a\"\n" fmt_override_flag ovf fmt_path m;
     attributes i ppf attrs
-  | Texp_poly cto ->
-    line i ppf "Texp_poly\n";
-    attributes i ppf attrs;
-    option i core_type ppf cto
   | Texp_newtype s ->
     line i ppf "Texp_newtype \"%s\"\n" s;
     attributes i ppf attrs
@@ -279,21 +275,23 @@ and expression i ppf x =
   in
   match x.exp_desc with
   | Texp_ident (li, _, _) -> line i ppf "Texp_ident %a\n" fmt_path li
-  | Texp_instvar () -> assert false
   | Texp_constant c -> line i ppf "Texp_constant %a\n" fmt_constant c
   | Texp_let (rf, l, e) ->
     line i ppf "Texp_let %a\n" fmt_rec_flag rf;
     list i value_binding ppf l;
     expression i ppf e
-  | Texp_function {arg_label = p; arity; param; case = case_; partial = _} ->
+  | Texp_function
+      {arg_label = p; arity; async; param; case = case_; partial = _} ->
     line i ppf "Texp_function\n";
+    if async then line i ppf "async\n";
     (match arity with
     | Some arity -> line i ppf "arity: %d\n" arity
     | None -> ());
     line i ppf "%a" Ident.print param;
     arg_label i ppf p;
     case i ppf case_
-  | Texp_apply (e, l) ->
+  | Texp_apply {funct = e; args = l; partial} ->
+    if partial then line i ppf "partial\n";
     line i ppf "Texp_apply\n";
     expression i ppf e;
     list i label_x_expression ppf l
@@ -358,7 +356,6 @@ and expression i ppf x =
     line i ppf "Texp_send \"%s\"\n" s;
     expression i ppf e;
     option i expression ppf eo
-  | Texp_new _ | Texp_setinstvar _ | Texp_override _ -> ()
   | Texp_letmodule (s, _, me, e) ->
     line i ppf "Texp_letmodule \"%a\"\n" fmt_ident s;
     module_expr i ppf me;
@@ -502,8 +499,6 @@ and signature_item i ppf x =
     line i ppf "Tsig_include\n";
     attributes i ppf incl.incl_attributes;
     module_type i ppf incl.incl_mod
-  | Tsig_class () -> ()
-  | Tsig_class_type () -> ()
   | Tsig_attribute (s, arg) ->
     line i ppf "Tsig_attribute \"%s\"\n" s.txt;
     Printast.payload i ppf arg
@@ -598,8 +593,6 @@ and structure_item i ppf x =
     line i ppf "Tstr_open %a %a\n" fmt_override_flag od.open_override fmt_path
       od.open_path;
     attributes i ppf od.open_attributes
-  | Tstr_class () -> ()
-  | Tstr_class_type () -> ()
   | Tstr_include incl ->
     line i ppf "Tstr_include";
     attributes i ppf incl.incl_attributes;

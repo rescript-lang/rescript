@@ -34,7 +34,7 @@ type error =
   | Orpat_vars of Ident.t * Ident.t list
   | Expr_type_clash of (type_expr * type_expr) list * type_clash_context option
   | Apply_non_function of type_expr
-  | Apply_wrong_label of arg_label * type_expr
+  | Apply_wrong_label of Noloc.arg_label * type_expr
   | Label_multiply_defined of {
       label: string;
       jsx_component_info: jsx_prop_error_info option;
@@ -52,7 +52,7 @@ type error =
   | Private_label of Longident.t * type_expr
   | Not_subtype of (type_expr * type_expr) list * (type_expr * type_expr) list
   | Too_many_arguments of bool * type_expr
-  | Abstract_wrong_label of arg_label * type_expr
+  | Abstract_wrong_label of Noloc.arg_label * type_expr
   | Scoping_let_module of string * type_expr
   | Not_a_variant_type of Longident.t
   | Incoherent_label_order
@@ -69,7 +69,6 @@ type error =
   | Exception_pattern_below_toplevel
   | Inlined_record_escape
   | Inlined_record_expected
-  | Unrefuted_pattern of pattern
   | Invalid_extension_constructor_payload
   | Not_an_extension_constructor
   | Literal_overflow of string
@@ -134,12 +133,12 @@ let iter_expression f e =
     f e;
     match e.pexp_desc with
     | Pexp_extension _ (* we don't iterate under extension point *)
-    | Pexp_ident _ | Pexp_new _ | Pexp_constant _ ->
+    | Pexp_ident _ | Pexp_constant _ ->
       ()
     | Pexp_fun {default = eo; rhs = e} ->
       may expr eo;
       expr e
-    | Pexp_apply (e, lel) ->
+    | Pexp_apply {funct = e; args = lel} ->
       expr e;
       List.iter (fun (_, e) -> expr e) lel
     | Pexp_let (_, pel, e) ->
@@ -155,10 +154,8 @@ let iter_expression f e =
       List.iter (fun (_, e, _) -> expr e) iel
     | Pexp_open (_, _, e)
     | Pexp_newtype (_, e)
-    | Pexp_poly (e, _)
     | Pexp_lazy e
     | Pexp_assert e
-    | Pexp_setinstvar (_, e)
     | Pexp_send (e, _)
     | Pexp_constraint (e, _)
     | Pexp_coerce (e, _, _)
@@ -177,7 +174,6 @@ let iter_expression f e =
       expr e1;
       expr e2;
       expr e3
-    | Pexp_override sel -> List.iter (fun (_, e) -> expr e) sel
     | Pexp_letmodule (_, me, e) ->
       expr e;
       module_expr me
@@ -200,14 +196,11 @@ let iter_expression f e =
     | Pstr_eval (e, _) -> expr e
     | Pstr_value (_, pel) -> List.iter binding pel
     | Pstr_primitive _ | Pstr_type _ | Pstr_typext _ | Pstr_exception _
-    | Pstr_modtype _ | Pstr_open _
-    | Pstr_class_type ()
-    | Pstr_attribute _ | Pstr_extension _ ->
+    | Pstr_modtype _ | Pstr_open _ | Pstr_attribute _ | Pstr_extension _ ->
       ()
     | Pstr_include {pincl_mod = me} | Pstr_module {pmb_expr = me} ->
       module_expr me
     | Pstr_recmodule l -> List.iter (fun x -> module_expr x.pmb_expr) l
-    | Pstr_class () -> ()
   in
 
   expr e
@@ -369,7 +362,8 @@ let finalize_variant pat =
     (* Force check of well-formedness   WHY? *)
     (* unify_pat pat.pat_env pat
        (newty(Tvariant{row_fields=[]; row_more=newvar(); row_closed=false;
-                       row_bound=(); row_fixed=false; row_name=None})); *))
+                       row_bound=(); row_fixed=false; row_name=None})); *)
+    )
   | _ -> ()
 
 let rec iter_pattern f p =
@@ -480,7 +474,6 @@ let rec build_as_type env p =
          {
            row_fields = [(l, Rpresent ty)];
            row_more = newvar ();
-           row_bound = ();
            row_name = None;
            row_fixed = false;
            row_closed = false;
@@ -559,7 +552,6 @@ let build_or_pat env loc lid =
     {
       row_fields = List.rev fields;
       row_more = newvar ();
-      row_bound = ();
       row_closed = false;
       row_fixed = false;
       row_name = Some (path, tyl);
@@ -748,7 +740,8 @@ let print_expr_type_clash ?type_clash_context env trace ppf =
       ~pp_sep:(fun ppf _ -> fprintf ppf ",@ ")
       (fun ppf (label, argtype) ->
         match label with
-        | Asttypes.Nolabel -> fprintf ppf "@[%a@]" Printtyp.type_expr argtype
+        | Asttypes.Noloc.Nolabel ->
+          fprintf ppf "@[%a@]" Printtyp.type_expr argtype
         | Labelled label ->
           fprintf ppf "@[(~%s: %a)@]" label Printtyp.type_expr argtype
         | Optional label ->
@@ -789,8 +782,7 @@ let print_expr_type_clash ?type_clash_context env trace ppf =
     Printtyp.super_report_unification_error ppf env trace
       (function
         | ppf -> error_type_text ppf type_clash_context)
-      (function
-        | ppf -> error_expected_type_text ppf type_clash_context);
+      (function ppf -> error_expected_type_text ppf type_clash_context);
     print_extra_type_clash_help ~extract_concrete_typedecl ~env ppf trace
       type_clash_context;
     show_extra_help ppf env trace
@@ -1435,7 +1427,6 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     let row =
       {
         row_fields = [(l, Reither (sarg = None, arg_type, true, ref None))];
-        row_bound = ();
         row_closed = false;
         row_more = newvar ();
         row_fixed = false;
@@ -1799,7 +1790,7 @@ let rec is_nonexpansive exp =
     List.for_all (fun vb -> is_nonexpansive vb.vb_expr) pat_exp_list
     && is_nonexpansive body
   | Texp_function _ -> true
-  | Texp_apply (e, (_, None) :: el) ->
+  | Texp_apply {funct = e; args = (_, None) :: el} ->
     is_nonexpansive e && List.for_all is_nonexpansive_opt (List.map snd el)
   | Texp_match (e, cases, [], _) ->
     is_nonexpansive e
@@ -1823,7 +1814,6 @@ let rec is_nonexpansive exp =
   | Texp_ifthenelse (_cond, ifso, ifnot) ->
     is_nonexpansive ifso && is_nonexpansive_opt ifnot
   | Texp_sequence (_e1, e2) -> is_nonexpansive e2 (* PR#4354 *)
-  | Texp_new _ -> assert false
   (* Note: nonexpansive only means no _observable_ side effects *)
   | Texp_lazy e -> is_nonexpansive e
   | Texp_letmodule (_, _, mexp, e) ->
@@ -1834,12 +1824,15 @@ let rec is_nonexpansive exp =
      or the relaxed value restriction. See GPR#1142 *)
   | Texp_assert exp -> is_nonexpansive exp
   | Texp_apply
-      ( {
-          exp_desc =
-            Texp_ident
-              (_, _, {val_kind = Val_prim {Primitive.prim_name = "%raise"}});
-        },
-        [(Nolabel, Some e)] ) ->
+      {
+        funct =
+          {
+            exp_desc =
+              Texp_ident
+                (_, _, {val_kind = Val_prim {Primitive.prim_name = "%raise"}});
+          };
+        args = [(Nolabel, Some e)];
+      } ->
     is_nonexpansive e
   | _ -> false
 
@@ -1854,8 +1847,7 @@ and is_nonexpansive_mod mexp =
       (fun item ->
         match item.str_desc with
         | Tstr_eval _ | Tstr_primitive _ | Tstr_type _ | Tstr_modtype _
-        | Tstr_open _
-        | Tstr_class_type () ->
+        | Tstr_open _ ->
           true
         | Tstr_value (_, pat_exp_list) ->
           List.for_all (fun vb -> is_nonexpansive vb.vb_expr) pat_exp_list
@@ -1874,7 +1866,6 @@ and is_nonexpansive_mod mexp =
               | {ext_kind = Text_decl _} -> false
               | {ext_kind = Text_rebind _} -> true)
             te.tyext_constructors
-        | Tstr_class () -> assert false (* impossible *)
         | Tstr_attribute _ -> true)
       str.str_items
   | Tmod_apply _ -> false
@@ -1887,9 +1878,10 @@ and is_nonexpansive_opt = function
 
 let rec approx_type env sty =
   match sty.ptyp_desc with
-  | Ptyp_arrow (p, _, sty, a) ->
+  | Ptyp_arrow {lbl = p; ret = sty; arity} ->
+    let p = Asttypes.to_noloc p in
     let ty1 = if is_optional p then type_option (newvar ()) else newvar () in
-    newty (Tarrow (p, ty1, approx_type env sty, Cok, a))
+    newty (Tarrow (p, ty1, approx_type env sty, Cok, arity))
   | Ptyp_tuple args -> newty (Ttuple (List.map (approx_type env) args))
   | Ptyp_constr (lid, ctl) -> (
     try
@@ -1906,6 +1898,7 @@ let rec type_approx env sexp =
   match sexp.pexp_desc with
   | Pexp_let (_, _, e) -> type_approx env e
   | Pexp_fun {arg_label = p; rhs = e; arity} ->
+    let p = Asttypes.to_noloc p in
     let ty = if is_optional p then type_option (newvar ()) else newvar () in
     newty (Tarrow (p, ty, type_approx env e, Cok, arity))
   | Pexp_match (_, {pc_rhs = e} :: _) -> type_approx env e
@@ -2003,19 +1996,6 @@ let generalizable level ty =
     false
 
 (* Helpers for packaged modules. *)
-let create_package_type loc env (p, l) =
-  let s = !Typetexp.transl_modtype_longident loc env p in
-  let fields =
-    List.map
-      (fun (name, ct) -> (name, Typetexp.transl_simple_type env false ct))
-      l
-  in
-  let ty =
-    newty
-      (Tpackage
-         (s, List.map fst l, List.map (fun (_, cty) -> cty.ctyp_type) fields))
-  in
-  (s, fields, ty)
 
 let wrap_unpacks sexp unpacks =
   let open Ast_helper in
@@ -2130,7 +2110,6 @@ let check_absent_variant env =
           {
             row_fields = [(s, Reither (arg = None, ty_arg, true, ref None))];
             row_more = newvar ();
-            row_bound = ();
             row_closed = false;
             row_fixed = false;
             row_name = None;
@@ -2245,9 +2224,9 @@ let not_function env ty =
   ls = [] && not tvar
 
 type lazy_args =
-  (Asttypes.arg_label * (unit -> Typedtree.expression) option) list
+  (Asttypes.Noloc.arg_label * (unit -> Typedtree.expression) option) list
 
-type targs = (Asttypes.arg_label * Typedtree.expression option) list
+type targs = (Asttypes.Noloc.arg_label * Typedtree.expression option) list
 let rec type_exp ?recarg env sexp =
   (* We now delegate everything to type_expect *)
   type_expect ?recarg env sexp (newvar ())
@@ -2364,7 +2343,15 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         exp_env = env;
       }
   | Pexp_fun
-      {arg_label = l; default = Some default; lhs = spat; rhs = sbody; arity} ->
+      {
+        arg_label = l;
+        default = Some default;
+        lhs = spat;
+        rhs = sbody;
+        arity;
+        async;
+      } ->
+    let l = Asttypes.to_noloc l in
     assert (is_optional l);
     (* default allowed only with optional argument *)
     let open Ast_helper in
@@ -2402,12 +2389,16 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         [Vb.mk spat smatch]
         sbody
     in
-    type_function ?in_function ~arity loc sexp.pexp_attributes env ty_expected l
+    type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
+      ty_expected l
       [Exp.case pat body]
-  | Pexp_fun {arg_label = l; default = None; lhs = spat; rhs = sbody; arity} ->
-    type_function ?in_function ~arity loc sexp.pexp_attributes env ty_expected l
+  | Pexp_fun
+      {arg_label = l; default = None; lhs = spat; rhs = sbody; arity; async} ->
+    let l = Asttypes.to_noloc l in
+    type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
+      ty_expected l
       [Ast_helper.Exp.case spat sbody]
-  | Pexp_apply (sfunct, sargs) ->
+  | Pexp_apply {funct = sfunct; args = sargs; partial} ->
     assert (sargs <> []);
     begin_def ();
     (* one more level for non-returning functions *)
@@ -2416,11 +2407,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     end_def ();
     wrap_trace_gadt_instances env (lower_args env []) ty;
     begin_def ();
-    let total_app =
-      not
-      @@ Ext_list.exists sexp.pexp_attributes (fun ({txt}, _) ->
-             txt = "res.partial")
-    in
+    let total_app = not partial in
     let type_clash_context = type_clash_context_from_function sexp sfunct in
     let args, ty_res, fully_applied =
       match translate_unified_ops env funct sargs with
@@ -2433,7 +2420,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     let mk_apply funct args =
       rue
         {
-          exp_desc = Texp_apply (funct, args);
+          exp_desc = Texp_apply {funct; args; partial};
           exp_loc = loc;
           exp_extra = [];
           exp_type = ty_res;
@@ -2559,7 +2546,6 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
                  {
                    row_fields = [(l, Rpresent arg_type)];
                    row_more = newvar ();
-                   row_bound = ();
                    row_closed = false;
                    row_fixed = false;
                    row_name = None;
@@ -2974,7 +2960,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         exp_attributes = arg.exp_attributes;
         exp_env = env;
         exp_extra =
-          (Texp_coerce ((), cty'), loc, sexp.pexp_attributes) :: arg.exp_extra;
+          (Texp_coerce cty', loc, sexp.pexp_attributes) :: arg.exp_extra;
       }
   | Pexp_send (e, {txt = met}) -> (
     let obj = type_exp env e in
@@ -3024,7 +3010,6 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         (Error
            (e.pexp_loc, env, Undefined_method (obj.exp_type, met, valid_methods)))
     )
-  | Pexp_new _ | Pexp_setinstvar _ | Pexp_override _ -> assert false
   | Pexp_letmodule (name, smodl, sbody) ->
     let ty = newvar () in
     (* remember original level *)
@@ -3099,42 +3084,6 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         exp_type = instance env ty_expected;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
-      }
-  | Pexp_poly (sbody, sty) ->
-    let ty, cty =
-      match sty with
-      | None -> (repr ty_expected, None)
-      | Some sty ->
-        let sty = Ast_helper.Typ.force_poly sty in
-        let cty = Typetexp.transl_simple_type env false sty in
-        (repr cty.ctyp_type, Some cty)
-    in
-    if sty <> None then
-      unify_exp_types loc env (instance env ty) (instance env ty_expected);
-    let exp =
-      match (expand_head env ty).desc with
-      | Tpoly (ty', []) ->
-        let exp = type_expect env sbody ty' in
-        {exp with exp_type = instance env ty}
-      | Tpoly (ty', tl) ->
-        (* One more level to generalize locally *)
-        begin_def ();
-        let vars, ty'' = instance_poly true tl ty' in
-        let exp = type_expect env sbody ty'' in
-        end_def ();
-        check_univars env false "method" exp ty_expected vars;
-        {exp with exp_type = instance env ty}
-      | Tvar _ ->
-        let exp = type_exp env sbody in
-        let exp = {exp with exp_type = newty (Tpoly (exp.exp_type, []))} in
-        unify_exp env exp ty;
-        exp
-      | _ -> assert false
-    in
-    re
-      {
-        exp with
-        exp_extra = (Texp_poly cty, loc, sexp.pexp_attributes) :: exp.exp_extra;
       }
   | Pexp_newtype ({txt = name}, sbody) ->
     let ty = newvar () in
@@ -3246,7 +3195,8 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
   | Pexp_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
 
-and type_function ?in_function ~arity loc attrs env ty_expected_ l caselist =
+and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
+    caselist =
   let state = Warnings.backup () in
   (* Disable Unerasable_optional_argument for uncurried functions *)
   let unerasable_optional_argument =
@@ -3304,7 +3254,8 @@ and type_function ?in_function ~arity loc attrs env ty_expected_ l caselist =
   Warnings.restore state;
   re
     {
-      exp_desc = Texp_function {arg_label = l; arity; param; case; partial};
+      exp_desc =
+        Texp_function {arg_label = l; arity; param; case; partial; async};
       exp_loc = loc;
       exp_extra = [];
       exp_type;
@@ -3414,24 +3365,24 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
       let result_type =
         match (lhs_type.desc, specialization) with
         | Tconstr (path, _, _), _ when Path.same path Predef.path_int ->
-          Predef.type_int
+          instance_def Predef.type_int
         | Tconstr (path, _, _), {bool = Some _}
           when Path.same path Predef.path_bool ->
-          Predef.type_bool
+          instance_def Predef.type_bool
         | Tconstr (path, _, _), {float = Some _}
           when Path.same path Predef.path_float ->
-          Predef.type_float
+          instance_def Predef.type_float
         | Tconstr (path, _, _), {bigint = Some _}
           when Path.same path Predef.path_bigint ->
-          Predef.type_bigint
+          instance_def Predef.type_bigint
         | Tconstr (path, _, _), {string = Some _}
           when Path.same path Predef.path_string ->
-          Predef.type_string
+          instance_def Predef.type_string
         | _ ->
-          unify env lhs_type Predef.type_int;
-          Predef.type_int
+          unify env lhs_type (instance_def Predef.type_int);
+          instance_def Predef.type_int
       in
-      let targs = [(lhs_label, Some lhs)] in
+      let targs = [(to_noloc lhs_label, Some lhs)] in
       Some (targs, result_type)
     | ( Some {form = Binary; specialization},
         [(lhs_label, lhs_expr); (rhs_label, rhs_expr)] ) ->
@@ -3444,52 +3395,54 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
         match (lhs_type.desc, specialization) with
         | Tconstr (path, _, _), _ when Path.same path Predef.path_int ->
           let rhs = type_expect env rhs_expr Predef.type_int in
-          (lhs, rhs, Predef.type_int)
+          (lhs, rhs, instance_def Predef.type_int)
         | Tconstr (path, _, _), {bool = Some _}
           when Path.same path Predef.path_bool ->
           let rhs = type_expect env rhs_expr Predef.type_bool in
-          (lhs, rhs, Predef.type_bool)
+          (lhs, rhs, instance_def Predef.type_bool)
         | Tconstr (path, _, _), {float = Some _}
           when Path.same path Predef.path_float ->
           let rhs = type_expect env rhs_expr Predef.type_float in
-          (lhs, rhs, Predef.type_float)
+          (lhs, rhs, instance_def Predef.type_float)
         | Tconstr (path, _, _), {bigint = Some _}
           when Path.same path Predef.path_bigint ->
           let rhs = type_expect env rhs_expr Predef.type_bigint in
-          (lhs, rhs, Predef.type_bigint)
+          (lhs, rhs, instance_def Predef.type_bigint)
         | Tconstr (path, _, _), {string = Some _}
           when Path.same path Predef.path_string ->
           let rhs = type_expect env rhs_expr Predef.type_string in
-          (lhs, rhs, Predef.type_string)
+          (lhs, rhs, instance_def Predef.type_string)
         | _ -> (
           (* Rule 2. Try unifying to rhs *)
           match (rhs_type.desc, specialization) with
           | Tconstr (path, _, _), _ when Path.same path Predef.path_int ->
             let lhs = type_expect env lhs_expr Predef.type_int in
-            (lhs, rhs, Predef.type_int)
+            (lhs, rhs, instance_def Predef.type_int)
           | Tconstr (path, _, _), {bool = Some _}
             when Path.same path Predef.path_bool ->
             let lhs = type_expect env lhs_expr Predef.type_bool in
-            (lhs, rhs, Predef.type_bool)
+            (lhs, rhs, instance_def Predef.type_bool)
           | Tconstr (path, _, _), {float = Some _}
             when Path.same path Predef.path_float ->
             let lhs = type_expect env lhs_expr Predef.type_float in
-            (lhs, rhs, Predef.type_float)
+            (lhs, rhs, instance_def Predef.type_float)
           | Tconstr (path, _, _), {bigint = Some _}
             when Path.same path Predef.path_bigint ->
             let lhs = type_expect env lhs_expr Predef.type_bigint in
-            (lhs, rhs, Predef.type_bigint)
+            (lhs, rhs, instance_def Predef.type_bigint)
           | Tconstr (path, _, _), {string = Some _}
             when Path.same path Predef.path_string ->
             let lhs = type_expect env lhs_expr Predef.type_string in
-            (lhs, rhs, Predef.type_string)
+            (lhs, rhs, instance_def Predef.type_string)
           | _ ->
             (* Rule 3. Fallback to int *)
             let lhs = type_expect env lhs_expr Predef.type_int in
             let rhs = type_expect env rhs_expr Predef.type_int in
-            (lhs, rhs, Predef.type_int))
+            (lhs, rhs, instance_def Predef.type_int))
       in
-      let targs = [(lhs_label, Some lhs); (rhs_label, Some rhs)] in
+      let targs =
+        [(to_noloc lhs_label, Some lhs); (to_noloc rhs_label, Some rhs)]
+      in
       Some (targs, result_type)
     | _ -> None)
   | _ -> None
@@ -3547,13 +3500,14 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
     | Some arity ->
       let newarity = arity - nargs in
       let fully_applied = newarity <= 0 in
-      if total_app && not fully_applied then
-        raise
-          (Error
-             ( funct.exp_loc,
-               env,
-               Uncurried_arity_mismatch
-                 (funct.exp_type, arity, List.length sargs) ));
+      (if total_app && not fully_applied then
+         let required_args = List.length sargs in
+         raise
+           (Error
+              ( funct.exp_loc,
+                env,
+                Uncurried_arity_mismatch
+                  (funct.exp_type, required_args + newarity, required_args) )));
       let new_t =
         if fully_applied then new_t
         else
@@ -3580,9 +3534,9 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
       if List.length args < max_arity && total_app then
         match (expand_head env ty_fun).desc with
         | Tarrow (Optional l, t1, t2, _, _) ->
-          ignored := (Optional l, t1, ty_fun.level) :: !ignored;
+          ignored := (Noloc.Optional l, t1, ty_fun.level) :: !ignored;
           let arg =
-            ( Optional l,
+            ( Noloc.Optional l,
               Some (fun () -> option_none (instance env t1) Location.none) )
           in
           type_unknown_args max_arity ~args:(arg :: args) ~top_arity:None
@@ -3595,19 +3549,22 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
       (* foo(. ) treated as empty application if all args are optional (hence ignored) *)
       type_unknown_args max_arity ~args ~top_arity:None omitted ty_fun []
     | (l1, sarg1) :: sargl ->
+      let l1 = to_noloc l1 in
       let ty1, ty2 =
         let ty_fun = expand_head env ty_fun in
         let arity_ok = List.length args < max_arity in
         match ty_fun.desc with
-        | Tvar _ ->
+        | Tvar _ when force_tvar ->
+          (* This is a total application when the toplevel type is a polymorphic variable,
+          so the function type including arity can be inferred. *)
           let t1 = newvar () and t2 = newvar () in
           if ty_fun.level >= t1.level && not_identity funct.exp_desc then
             Location.prerr_warning sarg1.pexp_loc Warnings.Unused_argument;
           unify env ty_fun
             (newty (Tarrow (l1, t1, t2, Clink (ref Cunknown), top_arity)));
           (t1, t2)
-        | Tarrow (l, t1, t2, _, _) when Asttypes.same_arg_label l l1 && arity_ok
-          ->
+        | Tarrow (l, t1, t2, _, _)
+          when Asttypes.Noloc.same_arg_label l l1 && arity_ok ->
           (t1, t2)
         | td -> (
           let ty_fun =
@@ -3660,13 +3617,13 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
               Some (fun () -> option_none (instance env ty) Location.none) ))
           else (sargs, (l, ty, lv) :: omitted, None)
         | Some (l', sarg0, sargs) ->
-          if (not optional) && is_optional l' then
+          if (not optional) && is_optional_loc l' then
             Location.prerr_warning sarg0.pexp_loc
               (Warnings.Nonoptional_label (Printtyp.string_of_label l));
           ( sargs,
             omitted,
             Some
-              (if (not optional) || is_optional l' then fun () ->
+              (if (not optional) || is_optional_loc l' then fun () ->
                  type_argument
                    ?type_clash_context:
                      (type_clash_context_for_function_argument
@@ -4185,12 +4142,6 @@ let type_binding env rec_flag spat_sexp_list scope =
   in
   (pat_exp_list, new_env)
 
-let type_let env rec_flag spat_sexp_list scope =
-  let pat_exp_list, new_env, _unpacks =
-    type_let env rec_flag spat_sexp_list scope false
-  in
-  (pat_exp_list, new_env)
-
 (* Typing of toplevel expressions *)
 
 let type_expression env sexp =
@@ -4259,8 +4210,7 @@ let report_error env ppf error =
       (function
         | ppf ->
           fprintf ppf "The record field %a@ belongs to the type" longident lid)
-      (function
-        | ppf -> fprintf ppf "but is mixed here with fields of type")
+      (function ppf -> fprintf ppf "but is mixed here with fields of type")
   | Pattern_type_clash trace ->
     (* modified *)
     super_report_unification_error ppf env trace
@@ -4269,7 +4219,7 @@ let report_error env ppf error =
         | ppf -> fprintf ppf "This pattern matches values of type")
       (function
         | ppf ->
-          fprintf ppf "but a pattern was expected which matches values of type")
+        fprintf ppf "but a pattern was expected which matches values of type")
   | Or_pattern_type_clash (id, trace) ->
     (* modified *)
     super_report_unification_error ppf env trace
@@ -4278,8 +4228,7 @@ let report_error env ppf error =
           fprintf ppf
             "The variable %s on the left-hand side of this or-pattern has type"
             (Ident.name id))
-      (function
-        | ppf -> fprintf ppf "but on the right-hand side it has type")
+      (function ppf -> fprintf ppf "but on the right-hand side it has type")
   | Multiply_bound_variable name ->
     fprintf ppf "Variable %s is bound several times in this matching" name
   | Orpat_vars (id, valid_idents) ->
@@ -4330,7 +4279,7 @@ let report_error env ppf error =
         "It is not a function.")
   | Apply_wrong_label (l, ty) ->
     let print_label ppf = function
-      | Nolabel -> fprintf ppf "without label"
+      | Noloc.Nolabel -> fprintf ppf "without label"
       | l -> fprintf ppf "with label %s" (prefixed_label_name l)
     in
     fprintf ppf
@@ -4389,7 +4338,7 @@ let report_error env ppf error =
             name longident lid kind)
       (function
         | ppf ->
-          fprintf ppf "but a %s was expected belonging to the %s type" name kind)
+        fprintf ppf "but a %s was expected belonging to the %s type" name kind)
   | Undefined_method (ty, me, valid_methods) -> (
     fprintf ppf
       "@[<v>@[This expression has type@;<1 2>%a@]@,It has no field %s@]"
@@ -4400,8 +4349,10 @@ let report_error env ppf error =
   | Not_subtype (tr1, tr2) ->
     report_subtyping_error ppf env tr1 "is not a subtype of" tr2
   | Too_many_arguments (in_function, ty) ->
-    if (* modified *)
-       in_function then (
+    if
+      (* modified *)
+      in_function
+    then (
       fprintf ppf "@[This function expects too many arguments,@ ";
       fprintf ppf "it should have type@ %a@]" type_expr ty)
     else (
@@ -4409,7 +4360,7 @@ let report_error env ppf error =
       fprintf ppf "the expected type is@ %a@]" type_expr ty)
   | Abstract_wrong_label (l, ty) ->
     let label_mark = function
-      | Nolabel -> "but its first argument is not labelled"
+      | Noloc.Nolabel -> "but its first argument is not labelled"
       | l ->
         sprintf "but its first argument is labelled %s" (prefixed_label_name l)
     in
@@ -4447,8 +4398,7 @@ let report_error env ppf error =
     super_report_unification_error ppf env trace
       (function
         | ppf -> fprintf ppf "Recursive local constraint when unifying")
-      (function
-        | ppf -> fprintf ppf "with")
+      (function ppf -> fprintf ppf "with")
   | Unexpected_existential -> fprintf ppf "Unexpected existential"
   | Unqualified_gadt_pattern (tpath, name) ->
     fprintf ppf "@[The GADT constructor %s of type %a@ %s.@]" name Printtyp.path
@@ -4468,10 +4418,6 @@ let report_error env ppf error =
        escape.@]"
   | Inlined_record_expected ->
     fprintf ppf "@[This constructor expects an inlined record argument.@]"
-  | Unrefuted_pattern pat ->
-    fprintf ppf "@[%s@ %s@ %a@]" "This match case could not be refuted."
-      "Here is an example of a value that would reach it:" Parmatch.top_pretty
-      pat
   | Invalid_extension_constructor_payload ->
     fprintf ppf
       "Invalid [%%extension_constructor] payload, a constructor is expected."
@@ -4495,7 +4441,7 @@ let report_error env ppf error =
       "@ @[It is applied with @{<error>%d@} argument%s but it requires \
        @{<info>%d@}.@]@]"
       args
-      (if args = 0 then "" else "s")
+      (if args = 1 then "" else "s")
       arity
   | Field_not_optional (name, typ) ->
     fprintf ppf "Field @{<info>%s@} is not optional in type %a. Use without ?"
@@ -4509,8 +4455,6 @@ let report_error env ppf error =
     fprintf ppf
       "Direct field access on a dict is not supported. Use Dict.get instead."
 
-let super_report_error_no_wrap_printing_env = report_error
-
 let report_error env ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error env ppf err)
 
@@ -4521,7 +4465,4 @@ let () =
     | Error_forward err -> Some err
     | _ -> None)
 
-(* drop ?recarg argument from the external API *)
-let type_expect ?in_function env e ty = type_expect ?in_function env e ty
 let type_exp env e = type_exp env e
-let type_argument env e t1 t2 = type_argument env e t1 t2

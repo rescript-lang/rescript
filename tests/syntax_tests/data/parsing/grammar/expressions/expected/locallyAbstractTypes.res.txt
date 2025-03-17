@@ -1,16 +1,16 @@
 let f (type t) [arity:1](xs : t list) = ()
-let f (type t) [arity:2](xs : t list) (type s) (ys : s list) = ()
+let f (type t) (type s) [arity:2](xs : t list) (ys : s list) = ()
 let f (type t) (type u) (type v) [arity:1](xs : (t * u * v) list) = ()
-let f (type t) (type u) (type v) [arity:2](xs : (t * u * v) list) (type s)
-  (type w) (type z) (ys : (s * w * z) list) = ()
-let f = ((fun (type t) -> fun (type u) -> fun (type v) ->
-  fun [arity:2](xs : (t * u * v) list) -> ((fun (type s) -> fun (type w) ->
-    fun (type z) -> fun (ys : (s * w * z) list) -> ())[@attr2 ]))
-  [@attr ])
-let f = ((fun (type t) -> ((fun (type s) ->
-  fun [arity:2](xs : (t * s) list) -> ((fun (type u) -> ((fun (type v) -> fun
-    (type w) -> fun (ys : (u * v * w) list) -> ())[@attr ]))[@attr ]))
-  [@attr ]))[@attr ])
+let f (type t) (type u) (type v) (type s) (type w) (type z)
+  [arity:2](xs : (t * u * v) list) (ys : (s * w * z) list) = ()
+let f = ((fun (type t) -> fun (type u) -> fun (type v) -> fun (type s) -> fun
+  (type w) -> fun (type z) ->
+  fun [arity:2](xs : (t * u * v) list) -> fun (ys : (s * w * z) list) -> ())
+  [@attr ][@attr2 ])
+let f = ((fun (type t) -> fun (type s) -> fun (type u) -> fun (type v) -> fun
+  (type w) ->
+  fun [arity:2](xs : (t * s) list) -> fun (ys : (u * v * w) list) -> ())
+  [@attr ][@attr ][@attr ][@attr ])
 let cancel_and_collect_callbacks :
   'a 'u 'c .
     packed_callbacks list ->

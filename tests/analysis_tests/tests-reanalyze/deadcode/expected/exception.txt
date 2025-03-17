@@ -42,54 +42,58 @@
 
   Exception Analysis
   Exn.res:73:5-24
-  parse_json_from_file might raise Error (Exn.res:76:4) and is not annotated with @raises(Error)
+  parse_json_from_file might raise Error (Exn.res:75:34) and is not annotated with @raises(Error)
 
   Exception Analysis
-  Exn.res:82:5-11
-  reRaise might raise B (Exn.res:84:19) and is not annotated with @raises(B)
+  Exn.res:80:5-11
+  reRaise might raise B (Exn.res:82:19) and is not annotated with @raises(B)
 
   Exception Analysis
-  Exn.res:93:5-22
-  raiseInInternalLet might raise A (Exn.res:94:14) and is not annotated with @raises(A)
+  Exn.res:91:5-22
+  raiseInInternalLet might raise A (Exn.res:92:14) and is not annotated with @raises(A)
 
   Exception Analysis
-  Exn.res:98:5-16
-  indirectCall might raise Not_found (Exn.res:98:31) and is not annotated with @raises(Not_found)
+  Exn.res:96:5-16
+  indirectCall might raise Not_found (Exn.res:96:25) and is not annotated with @raises(Not_found)
 
   Exception Analysis
-  Exn.res:124:5-16
-  severalCases might raise Failure (Exn.res:126:13 Exn.res:127:13 Exn.res:128:15) and is not annotated with @raises(Failure)
+  Exn.res:121:5-16
+  severalCases might raise Failure (Exn.res:123:13 Exn.res:124:13 Exn.res:125:15) and is not annotated with @raises(Failure)
 
   Exception Analysis
-  Exn.res:136:5-23
+  Exn.res:133:5-23
   redundantAnnotation raises nothing and is annotated with redundant @raises(Invalid_argument)
 
   Exception Analysis
-  Exn.res:138:5-6
-  _x might raise A (Exn.res:138:9) and is not annotated with @raises(A)
+  Exn.res:135:5-6
+  _x might raise A (Exn.res:135:9) and is not annotated with @raises(A)
 
   Exception Analysis
-  Exn.res:140:5
-  _ might raise A (Exn.res:140:8) and is not annotated with @raises(A)
+  Exn.res:137:5
+  _ might raise A (Exn.res:137:8) and is not annotated with @raises(A)
 
   Exception Analysis
-  Exn.res:142:5-6
-  () might raise A (Exn.res:142:9) and is not annotated with @raises(A)
+  Exn.res:139:5-6
+  () might raise A (Exn.res:139:9) and is not annotated with @raises(A)
 
   Exception Analysis
-  Exn.res:144:1-16
-  Toplevel expression might raise Not_found (Exn.res:144:0) and is not annotated with @raises(Not_found)
+  Exn.res:141:1-16
+  Toplevel expression might raise Not_found (Exn.res:141:0) and is not annotated with @raises(Not_found)
 
   Exception Analysis
-  Exn.res:154:45-46
+  Exn.res:151:46-47
   expression does not raise and is annotated with redundant @doesNotRaise
 
   Exception Analysis
-  Exn.res:154:5-21
-  onResultPipeWrong might raise Assert_failure (Exn.res:154:48) and is not annotated with @raises(Assert_failure)
+  Exn.res:151:5-21
+  onResultPipeWrong might raise Assert_failure (Exn.res:151:50) and is not annotated with @raises(Assert_failure)
 
   Exception Analysis
   ExnA.res:1:5-7
   bar might raise Not_found (ExnA.res:1:16) and is not annotated with @raises(Not_found)
+
+  Exception Analysis
+  ExternalTest.res:7:5-24
+  bigIntFromStringExn2 might raise Exn.Error (ExternalTest.res:7:35) and is not annotated with @raises(Exn.Error)
   
-  Analysis reported 23 issues (Exception Analysis:23)
+  Analysis reported 24 issues (Exception Analysis:24)

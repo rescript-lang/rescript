@@ -82,7 +82,6 @@ let primitive ppf (prim : Lam_primitive.t) =
     let instr = "setfield " in
     fprintf ppf "%s%i" instr n
   | Pduprecord -> fprintf ppf "duprecord"
-  | Plazyforce -> fprintf ppf "force"
   | Pjs_call {prim_name} -> fprintf ppf "%s[js]" prim_name
   | Pjs_object_create _ -> fprintf ppf "[js.obj]"
   | Praise -> fprintf ppf "raise"

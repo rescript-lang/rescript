@@ -7,7 +7,7 @@ function length_aux(_len, _x) {
   while (true) {
     let x = _x;
     let len = _len;
-    if (!x) {
+    if (x === 0) {
       return len;
     }
     _x = x.tl;
@@ -21,7 +21,7 @@ function length(l) {
 }
 
 function hd(x) {
-  if (x) {
+  if (x !== 0) {
     return x.hd;
   } else {
     return Pervasives.failwith("hd");
@@ -29,7 +29,7 @@ function hd(x) {
 }
 
 function tl(x) {
-  if (x) {
+  if (x !== 0) {
     return x.tl;
   } else {
     return Pervasives.failwith("tl");
@@ -45,7 +45,7 @@ function nth(l, n) {
   while (true) {
     let n$1 = _n;
     let l$1 = _l;
-    if (!l$1) {
+    if (l$1 === 0) {
       return Pervasives.failwith("nth");
     }
     if (n$1 === 0) {
@@ -61,7 +61,7 @@ function rev_append(_l1, _l2) {
   while (true) {
     let l2 = _l2;
     let l1 = _l1;
-    if (!l1) {
+    if (l1 === 0) {
       return l2;
     }
     _l2 = {
@@ -78,7 +78,7 @@ function rev(l) {
 }
 
 function flatten(x) {
-  if (x) {
+  if (x !== 0) {
     return Pervasives.$at(x.hd, flatten(x.tl));
   } else {
     return /* [] */0;
@@ -86,7 +86,7 @@ function flatten(x) {
 }
 
 function map(f, x) {
-  if (!x) {
+  if (x === 0) {
     return /* [] */0;
   }
   let r = f(x.hd);
@@ -97,7 +97,7 @@ function map(f, x) {
 }
 
 function mapi(i, f, x) {
-  if (!x) {
+  if (x === 0) {
     return /* [] */0;
   }
   let r = f(i, x.hd);
@@ -117,7 +117,7 @@ function rev_map(f, l) {
   while (true) {
     let x = _x;
     let accu = _accu;
-    if (!x) {
+    if (x === 0) {
       return accu;
     }
     _x = x.tl;
@@ -132,7 +132,7 @@ function rev_map(f, l) {
 function iter(f, _x) {
   while (true) {
     let x = _x;
-    if (!x) {
+    if (x === 0) {
       return;
     }
     f(x.hd);
@@ -147,7 +147,7 @@ function iteri(f, l) {
   while (true) {
     let x = _x;
     let i = _i;
-    if (!x) {
+    if (x === 0) {
       return;
     }
     f(i, x.hd);
@@ -161,7 +161,7 @@ function fold_left(f, _accu, _l) {
   while (true) {
     let l = _l;
     let accu = _accu;
-    if (!l) {
+    if (l === 0) {
       return accu;
     }
     _l = l.tl;
@@ -171,7 +171,7 @@ function fold_left(f, _accu, _l) {
 }
 
 function fold_right(f, l, accu) {
-  if (l) {
+  if (l !== 0) {
     return f(l.hd, fold_right(f, l.tl, accu));
   } else {
     return accu;
@@ -179,14 +179,14 @@ function fold_right(f, l, accu) {
 }
 
 function map2(f, l1, l2) {
-  if (!l1) {
-    if (l2) {
+  if (l1 === 0) {
+    if (l2 !== 0) {
       return Pervasives.invalid_arg("List.map2");
     } else {
       return /* [] */0;
     }
   }
-  if (!l2) {
+  if (l2 === 0) {
     return Pervasives.invalid_arg("List.map2");
   }
   let r = f(l1.hd, l2.hd);
@@ -204,14 +204,14 @@ function rev_map2(f, l1, l2) {
     let l2$1 = _l2;
     let l1$1 = _l1;
     let accu = _accu;
-    if (!l1$1) {
-      if (l2$1) {
+    if (l1$1 === 0) {
+      if (l2$1 !== 0) {
         return Pervasives.invalid_arg("List.rev_map2");
       } else {
         return accu;
       }
     }
-    if (!l2$1) {
+    if (l2$1 === 0) {
       return Pervasives.invalid_arg("List.rev_map2");
     }
     _l2 = l2$1.tl;
@@ -228,14 +228,14 @@ function iter2(f, _l1, _l2) {
   while (true) {
     let l2 = _l2;
     let l1 = _l1;
-    if (!l1) {
-      if (l2) {
+    if (l1 === 0) {
+      if (l2 !== 0) {
         return Pervasives.invalid_arg("List.iter2");
       } else {
         return;
       }
     }
-    if (!l2) {
+    if (l2 === 0) {
       return Pervasives.invalid_arg("List.iter2");
     }
     f(l1.hd, l2.hd);
@@ -250,14 +250,14 @@ function fold_left2(f, _accu, _l1, _l2) {
     let l2 = _l2;
     let l1 = _l1;
     let accu = _accu;
-    if (!l1) {
-      if (l2) {
+    if (l1 === 0) {
+      if (l2 !== 0) {
         return Pervasives.invalid_arg("List.fold_left2");
       } else {
         return accu;
       }
     }
-    if (!l2) {
+    if (l2 === 0) {
       return Pervasives.invalid_arg("List.fold_left2");
     }
     _l2 = l2.tl;
@@ -268,13 +268,13 @@ function fold_left2(f, _accu, _l1, _l2) {
 }
 
 function fold_right2(f, l1, l2, accu) {
-  if (l1) {
-    if (l2) {
+  if (l1 !== 0) {
+    if (l2 !== 0) {
       return f(l1.hd, l2.hd, fold_right2(f, l1.tl, l2.tl, accu));
     } else {
       return Pervasives.invalid_arg("List.fold_right2");
     }
-  } else if (l2) {
+  } else if (l2 !== 0) {
     return Pervasives.invalid_arg("List.fold_right2");
   } else {
     return accu;
@@ -284,7 +284,7 @@ function fold_right2(f, l1, l2, accu) {
 function for_all(p, _x) {
   while (true) {
     let x = _x;
-    if (!x) {
+    if (x === 0) {
       return true;
     }
     if (!p(x.hd)) {
@@ -298,7 +298,7 @@ function for_all(p, _x) {
 function exists(p, _x) {
   while (true) {
     let x = _x;
-    if (!x) {
+    if (x === 0) {
       return false;
     }
     if (p(x.hd)) {
@@ -313,14 +313,14 @@ function for_all2(p, _l1, _l2) {
   while (true) {
     let l2 = _l2;
     let l1 = _l1;
-    if (!l1) {
-      if (l2) {
+    if (l1 === 0) {
+      if (l2 !== 0) {
         return Pervasives.invalid_arg("List.for_all2");
       } else {
         return true;
       }
     }
-    if (!l2) {
+    if (l2 === 0) {
       return Pervasives.invalid_arg("List.for_all2");
     }
     if (!p(l1.hd, l2.hd)) {
@@ -336,14 +336,14 @@ function exists2(p, _l1, _l2) {
   while (true) {
     let l2 = _l2;
     let l1 = _l1;
-    if (!l1) {
-      if (l2) {
+    if (l1 === 0) {
+      if (l2 !== 0) {
         return Pervasives.invalid_arg("List.exists2");
       } else {
         return false;
       }
     }
-    if (!l2) {
+    if (l2 === 0) {
       return Pervasives.invalid_arg("List.exists2");
     }
     if (p(l1.hd, l2.hd)) {
@@ -358,7 +358,7 @@ function exists2(p, _l1, _l2) {
 function mem(x, _x_) {
   while (true) {
     let x_ = _x_;
-    if (!x_) {
+    if (x_ === 0) {
       return false;
     }
     if (x_.hd === x) {
@@ -372,7 +372,7 @@ function mem(x, _x_) {
 function memq(x, _x_) {
   while (true) {
     let x_ = _x_;
-    if (!x_) {
+    if (x_ === 0) {
       return false;
     }
     if (x_.hd === x) {
@@ -386,7 +386,7 @@ function memq(x, _x_) {
 function assoc(x, _x_) {
   while (true) {
     let x_ = _x_;
-    if (x_) {
+    if (x_ !== 0) {
       let match = x_.hd;
       if (match[0] === x) {
         return match[1];
@@ -404,7 +404,7 @@ function assoc(x, _x_) {
 function assq(x, _x_) {
   while (true) {
     let x_ = _x_;
-    if (x_) {
+    if (x_ !== 0) {
       let match = x_.hd;
       if (match[0] === x) {
         return match[1];
@@ -422,7 +422,7 @@ function assq(x, _x_) {
 function mem_assoc(x, _x_) {
   while (true) {
     let x_ = _x_;
-    if (!x_) {
+    if (x_ === 0) {
       return false;
     }
     if (x_.hd[0] === x) {
@@ -436,7 +436,7 @@ function mem_assoc(x, _x_) {
 function mem_assq(x, _x_) {
   while (true) {
     let x_ = _x_;
-    if (!x_) {
+    if (x_ === 0) {
       return false;
     }
     if (x_.hd[0] === x) {
@@ -448,7 +448,7 @@ function mem_assq(x, _x_) {
 }
 
 function remove_assoc(x, x_) {
-  if (!x_) {
+  if (x_ === 0) {
     return /* [] */0;
   }
   let l = x_.tl;
@@ -464,7 +464,7 @@ function remove_assoc(x, x_) {
 }
 
 function remove_assq(x, x_) {
-  if (!x_) {
+  if (x_ === 0) {
     return /* [] */0;
   }
   let l = x_.tl;
@@ -482,7 +482,7 @@ function remove_assq(x, x_) {
 function find(p, _x) {
   while (true) {
     let x = _x;
-    if (x) {
+    if (x !== 0) {
       let x$1 = x.hd;
       if (p(x$1)) {
         return x$1;
@@ -504,7 +504,7 @@ function find_all(p) {
     while (true) {
       let x = _x;
       let accu = _accu;
-      if (!x) {
+      if (x === 0) {
         return rev_append(accu, /* [] */0);
       }
       let l = x.tl;
@@ -531,7 +531,7 @@ function partition(p, l) {
     let x = _x;
     let no = _no;
     let yes = _yes;
-    if (!x) {
+    if (x === 0) {
       return [
         rev_append(yes, /* [] */0),
         rev_append(no, /* [] */0)
@@ -557,7 +557,7 @@ function partition(p, l) {
 }
 
 function split(x) {
-  if (!x) {
+  if (x === 0) {
     return [
       /* [] */0,
       /* [] */0
@@ -578,8 +578,8 @@ function split(x) {
 }
 
 function combine(l1, l2) {
-  if (l1) {
-    if (l2) {
+  if (l1 !== 0) {
+    if (l2 !== 0) {
       return {
         hd: [
           l1.hd,
@@ -590,7 +590,7 @@ function combine(l1, l2) {
     } else {
       return Pervasives.invalid_arg("List.combine");
     }
-  } else if (l2) {
+  } else if (l2 !== 0) {
     return Pervasives.invalid_arg("List.combine");
   } else {
     return /* [] */0;
@@ -598,10 +598,10 @@ function combine(l1, l2) {
 }
 
 function merge(cmp, l1, l2) {
-  if (!l1) {
+  if (l1 === 0) {
     return l2;
   }
-  if (!l2) {
+  if (l2 === 0) {
     return l1;
   }
   let h2 = l2.hd;
@@ -626,7 +626,7 @@ function chop(_k, _l) {
     if (k === 0) {
       return l;
     }
-    if (l) {
+    if (l !== 0) {
       _l = l.tl;
       _k = k - 1 | 0;
       continue;
@@ -646,11 +646,11 @@ function chop(_k, _l) {
 function stable_sort(cmp, l) {
   let sort = (n, l) => {
     if (n !== 2) {
-      if (n === 3 && l) {
+      if (n === 3 && l !== 0) {
         let match = l.tl;
-        if (match) {
+        if (match !== 0) {
           let match$1 = match.tl;
-          if (match$1) {
+          if (match$1 !== 0) {
             let x3 = match$1.hd;
             let x2 = match.hd;
             let x1 = l.hd;
@@ -729,9 +729,9 @@ function stable_sort(cmp, l) {
         
       }
       
-    } else if (l) {
+    } else if (l !== 0) {
       let match$2 = l.tl;
-      if (match$2) {
+      if (match$2 !== 0) {
         let x2$1 = match$2.hd;
         let x1$1 = l.hd;
         if (cmp(x1$1, x2$1) <= 0) {
@@ -766,10 +766,10 @@ function stable_sort(cmp, l) {
       let accu = _accu;
       let l2$1 = _l2;
       let l1 = _l1;
-      if (!l1) {
+      if (l1 === 0) {
         return rev_append(l2$1, accu);
       }
-      if (!l2$1) {
+      if (l2$1 === 0) {
         return rev_append(l1, accu);
       }
       let h2 = l2$1.hd;
@@ -792,11 +792,11 @@ function stable_sort(cmp, l) {
   };
   let rev_sort = (n, l) => {
     if (n !== 2) {
-      if (n === 3 && l) {
+      if (n === 3 && l !== 0) {
         let match = l.tl;
-        if (match) {
+        if (match !== 0) {
           let match$1 = match.tl;
-          if (match$1) {
+          if (match$1 !== 0) {
             let x3 = match$1.hd;
             let x2 = match.hd;
             let x1 = l.hd;
@@ -875,9 +875,9 @@ function stable_sort(cmp, l) {
         
       }
       
-    } else if (l) {
+    } else if (l !== 0) {
       let match$2 = l.tl;
-      if (match$2) {
+      if (match$2 !== 0) {
         let x2$1 = match$2.hd;
         let x1$1 = l.hd;
         if (cmp(x1$1, x2$1) > 0) {
@@ -912,10 +912,10 @@ function stable_sort(cmp, l) {
       let accu = _accu;
       let l2$1 = _l2;
       let l1 = _l1;
-      if (!l1) {
+      if (l1 === 0) {
         return rev_append(l2$1, accu);
       }
-      if (!l2$1) {
+      if (l2$1 === 0) {
         return rev_append(l1, accu);
       }
       let h2 = l2$1.hd;
@@ -947,11 +947,11 @@ function stable_sort(cmp, l) {
 function sort_uniq(cmp, l) {
   let sort = (n, l) => {
     if (n !== 2) {
-      if (n === 3 && l) {
+      if (n === 3 && l !== 0) {
         let match = l.tl;
-        if (match) {
+        if (match !== 0) {
           let match$1 = match.tl;
-          if (match$1) {
+          if (match$1 !== 0) {
             let x3 = match$1.hd;
             let x2 = match.hd;
             let x1 = l.hd;
@@ -1097,9 +1097,9 @@ function sort_uniq(cmp, l) {
         
       }
       
-    } else if (l) {
+    } else if (l !== 0) {
       let match$2 = l.tl;
-      if (match$2) {
+      if (match$2 !== 0) {
         let x2$1 = match$2.hd;
         let x1$1 = l.hd;
         let c$6 = cmp(x1$1, x2$1);
@@ -1140,10 +1140,10 @@ function sort_uniq(cmp, l) {
       let accu = _accu;
       let l2$1 = _l2;
       let l1 = _l1;
-      if (!l1) {
+      if (l1 === 0) {
         return rev_append(l2$1, accu);
       }
-      if (!l2$1) {
+      if (l2$1 === 0) {
         return rev_append(l1, accu);
       }
       let t2 = l2$1.tl;
@@ -1178,11 +1178,11 @@ function sort_uniq(cmp, l) {
   };
   let rev_sort = (n, l) => {
     if (n !== 2) {
-      if (n === 3 && l) {
+      if (n === 3 && l !== 0) {
         let match = l.tl;
-        if (match) {
+        if (match !== 0) {
           let match$1 = match.tl;
-          if (match$1) {
+          if (match$1 !== 0) {
             let x3 = match$1.hd;
             let x2 = match.hd;
             let x1 = l.hd;
@@ -1328,9 +1328,9 @@ function sort_uniq(cmp, l) {
         
       }
       
-    } else if (l) {
+    } else if (l !== 0) {
       let match$2 = l.tl;
-      if (match$2) {
+      if (match$2 !== 0) {
         let x2$1 = match$2.hd;
         let x1$1 = l.hd;
         let c$6 = cmp(x1$1, x2$1);
@@ -1371,10 +1371,10 @@ function sort_uniq(cmp, l) {
       let accu = _accu;
       let l2$1 = _l2;
       let l1 = _l1;
-      if (!l1) {
+      if (l1 === 0) {
         return rev_append(l2$1, accu);
       }
-      if (!l2$1) {
+      if (l2$1 === 0) {
         return rev_append(l1, accu);
       }
       let t2 = l2$1.tl;
@@ -1413,6 +1413,14 @@ function sort_uniq(cmp, l) {
   } else {
     return sort(len, l);
   }
+}
+
+function isEmpty(x) {
+  return x === 0;
+}
+
+function isEmpty2(x) {
+  return x === /* [] */0;
 }
 
 let u = Belt_List.length;
@@ -1475,5 +1483,7 @@ export {
   sort,
   fast_sort,
   sort_uniq,
+  isEmpty,
+  isEmpty2,
 }
 /* No side effect */

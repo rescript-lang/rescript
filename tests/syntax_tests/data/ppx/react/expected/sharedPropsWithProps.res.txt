@@ -1,72 +1,6 @@
 let f = a => Js.Promise.resolve(a + a)
 
-@@jsxConfig({version: 4, mode: "classic"})
-
-module V4C1 = {
-  type props = sharedProps
-  let make = props => React.string(props.x ++ props.y)
-  let make = {
-    let \"SharedPropsWithProps$V4C1" = props => make(props)
-    \"SharedPropsWithProps$V4C1"
-  }
-}
-
-module V4C2 = {
-  type props = sharedProps
-  let make = (props: props) => React.string(props.x ++ props.y)
-  let make = {
-    let \"SharedPropsWithProps$V4C2" = (props: props) => make(props)
-    \"SharedPropsWithProps$V4C2"
-  }
-}
-
-module V4C3 = {
-  type props<'a> = sharedProps<'a>
-  let make = ({x, y}: props<_>) => React.string(x ++ y)
-  let make = {
-    let \"SharedPropsWithProps$V4C3" = (props: props<_>) => make(props)
-    \"SharedPropsWithProps$V4C3"
-  }
-}
-
-module V4C4 = {
-  type props<'a> = sharedProps<string, 'a>
-  let make = ({x, y}: props<_>) => React.string(x ++ y)
-  let make = {
-    let \"SharedPropsWithProps$V4C4" = (props: props<_>) => make(props)
-    \"SharedPropsWithProps$V4C4"
-  }
-}
-
-module V4C5 = {
-  type props<'a> = {a: 'a}
-  let make = async ({a}: props<_>) => {
-    let a = await f(a)
-    ReactDOM.createDOMElementVariadic("div", [{React.int(a)}])
-  }
-  let make = {
-    let \"SharedPropsWithProps$V4C5" = (props: props<_>) =>
-      JsxPPXReactSupport.asyncComponent(make(props))
-    \"SharedPropsWithProps$V4C5"
-  }
-}
-
-module V4C6 = {
-  type props<'status> = {status: 'status}
-  let make = async ({status}: props<_>) => {
-    switch status {
-    | #on => React.string("on")
-    | #off => React.string("off")
-    }
-  }
-  let make = {
-    let \"SharedPropsWithProps$V4C6" = (props: props<_>) =>
-      JsxPPXReactSupport.asyncComponent(make(props))
-    \"SharedPropsWithProps$V4C6"
-  }
-}
-
-@@jsxConfig({version: 4, mode: "automatic"})
+@@jsxConfig({version: 4})
 
 module V4A1 = {
   type props = sharedProps
@@ -129,5 +63,17 @@ module V4A6 = {
     let \"SharedPropsWithProps$V4A6" = (props: props<_>) =>
       JsxPPXReactSupport.asyncComponent(make(props))
     \"SharedPropsWithProps$V4A6"
+  }
+}
+
+module V4A7 = {
+  type props = {count: int}
+
+  let make = props => {
+    React.int(props.count)
+  }
+  let make = {
+    let \"SharedPropsWithProps$V4A7" = @directive("'use memo'") props => make(props)
+    \"SharedPropsWithProps$V4A7"
   }
 }

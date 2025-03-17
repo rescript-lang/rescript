@@ -1,5 +1,5 @@
 ;;(foo ()) / 1
 ;;foo ()
-;;(1, 2) |.u printTuple
-let f [arity:1]() = (((foo ()) / 1; foo (); (1, 2) |.u printTuple)
+;;(1, 2) -> printTuple
+let f [arity:1]() = (((foo ()) / 1; foo (); (1, 2) -> printTuple)
   [@res.braces ])

@@ -61,7 +61,7 @@ and type_desc =
   | Tvar of string option
       (** [Tvar (Some "a")] ==> ['a] or ['_a]
       [Tvar None]       ==> [_] *)
-  | Tarrow of arg_label * type_expr * type_expr * commutable * arity
+  | Tarrow of Noloc.arg_label * type_expr * type_expr * commutable * arity
       (** [Tarrow (Nolabel,      e1, e2, c)] ==> [e1    -> e2]
       [Tarrow (Labelled "l", e1, e2, c)] ==> [l:e1  -> e2]
       [Tarrow (Optional "l", e1, e2, c)] ==> [?l:e1 -> e2]
@@ -113,7 +113,6 @@ and type_desc =
 and row_desc = {
   row_fields: (label * row_field) list;
   row_more: type_expr;
-  row_bound: unit; (* kept for compatibility *)
   row_closed: bool;
   row_fixed: bool;
   row_name: (Path.t * type_expr list) option;
@@ -331,13 +330,6 @@ type extension_constructor = {
   ext_is_exception: bool;
 }
 
-and type_transparence =
-  | Type_public (* unrestricted expansion *)
-  | Type_new (* "new" type *)
-  | Type_private (* private type *)
-
-(* Type expressions for the class language *)
-
 module Concr : Set.S with type elt = string
 
 (* Type expressions for the module language *)
@@ -395,7 +387,6 @@ type constructor_description = {
   cstr_tag: constructor_tag; (* Tag for heap blocks *)
   cstr_consts: int; (* Number of constant constructors *)
   cstr_nonconsts: int; (* Number of non-const constructors *)
-  cstr_normal: int; (* Number of non generalized constrs *)
   cstr_generalized: bool; (* Constrained return type? *)
   cstr_private: private_flag; (* Read-only constructor? *)
   cstr_loc: Location.t;

@@ -93,17 +93,6 @@ module MakeComparable: (
 @deprecated("Use `comparable` instead")
 let comparableU: (~cmp: ('a, 'a) => int) => module(Comparable with type t = 'a)
 
-/**
-## Examples
-
-```rescript
-module C = (
-  val Belt.Id.comparable ~cmp:(compare : int -> int -> int)
-)
-let m = Belt.Set.make(module C)
-```
-Note that the name of C can not be ignored
-*/
 let comparable: (~cmp: ('a, 'a) => int) => module(Comparable with type t = 'a)
 
 module type Hashable = {

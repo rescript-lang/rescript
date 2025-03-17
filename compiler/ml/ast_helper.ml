@@ -54,8 +54,8 @@ module Typ = struct
 
   let any ?loc ?attrs () = mk ?loc ?attrs Ptyp_any
   let var ?loc ?attrs a = mk ?loc ?attrs (Ptyp_var a)
-  let arrow ?loc ?attrs ~arity a b c =
-    mk ?loc ?attrs (Ptyp_arrow (a, b, c, arity))
+  let arrow ?loc ?attrs ~arity lbl arg ret =
+    mk ?loc ?attrs (Ptyp_arrow {lbl; arg; ret; arity})
   let tuple ?loc ?attrs a = mk ?loc ?attrs (Ptyp_tuple a)
   let constr ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_constr (a, b))
   let object_ ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_object (a, b))
@@ -82,8 +82,8 @@ module Typ = struct
         | Ptyp_var x ->
           check_variable var_names t.ptyp_loc x;
           Ptyp_var x
-        | Ptyp_arrow (label, core_type, core_type', a) ->
-          Ptyp_arrow (label, loop core_type, loop core_type', a)
+        | Ptyp_arrow ({arg; ret} as arr) ->
+          Ptyp_arrow {arr with arg = loop arg; ret = loop ret}
         | Ptyp_tuple lst -> Ptyp_tuple (List.map loop lst)
         | Ptyp_constr ({txt = Longident.Lident s}, []) when List.mem s var_names
           ->
@@ -151,10 +151,11 @@ module Exp = struct
   let ident ?loc ?attrs a = mk ?loc ?attrs (Pexp_ident a)
   let constant ?loc ?attrs a = mk ?loc ?attrs (Pexp_constant a)
   let let_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_let (a, b, c))
-  let fun_ ?loc ?attrs ~arity a b c d =
+  let fun_ ?loc ?attrs ?(async = false) ~arity a b c d =
     mk ?loc ?attrs
-      (Pexp_fun {arg_label = a; default = b; lhs = c; rhs = d; arity})
-  let apply ?loc ?attrs a b = mk ?loc ?attrs (Pexp_apply (a, b))
+      (Pexp_fun {arg_label = a; default = b; lhs = c; rhs = d; arity; async})
+  let apply ?loc ?attrs ?(partial = false) funct args =
+    mk ?loc ?attrs (Pexp_apply {funct; args; partial})
   let match_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_match (a, b))
   let try_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_try (a, b))
   let tuple ?loc ?attrs a = mk ?loc ?attrs (Pexp_tuple a)
@@ -171,14 +172,10 @@ module Exp = struct
   let constraint_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_constraint (a, b))
   let coerce ?loc ?attrs a c = mk ?loc ?attrs (Pexp_coerce (a, (), c))
   let send ?loc ?attrs a b = mk ?loc ?attrs (Pexp_send (a, b))
-  let new_ ?loc ?attrs a = mk ?loc ?attrs (Pexp_new a)
-  let setinstvar ?loc ?attrs a b = mk ?loc ?attrs (Pexp_setinstvar (a, b))
-  let override ?loc ?attrs a = mk ?loc ?attrs (Pexp_override a)
   let letmodule ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_letmodule (a, b, c))
   let letexception ?loc ?attrs a b = mk ?loc ?attrs (Pexp_letexception (a, b))
   let assert_ ?loc ?attrs a = mk ?loc ?attrs (Pexp_assert a)
   let lazy_ ?loc ?attrs a = mk ?loc ?attrs (Pexp_lazy a)
-  let poly ?loc ?attrs a b = mk ?loc ?attrs (Pexp_poly (a, b))
   let newtype ?loc ?attrs a b = mk ?loc ?attrs (Pexp_newtype (a, b))
   let pack ?loc ?attrs a = mk ?loc ?attrs (Pexp_pack a)
   let open_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_open (a, b, c))

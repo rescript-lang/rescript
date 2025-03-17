@@ -125,7 +125,6 @@ type field_dbg_info =
   | Fld_extension
   | Fld_variant
   | Fld_cons
-  | Fld_array
 
 let fld_record (lbl : label) =
   Fld_record
@@ -164,8 +163,6 @@ let fld_record_extension_set (lbl : label) =
 
 type immediate_or_pointer = Immediate | Pointer
 
-type is_safe = Safe | Unsafe
-
 type primitive =
   | Pidentity
   | Pignore
@@ -183,8 +180,6 @@ type primitive =
   | Pfield of int * field_dbg_info
   | Psetfield of int * set_field_dbg_info
   | Pduprecord
-  (* Force lazy values *)
-  | Plazyforce
   (* External call *)
   | Pccall of Primitive.description
   (* Exceptions *)
@@ -209,8 +204,8 @@ type primitive =
   | Paddint
   | Psubint
   | Pmulint
-  | Pdivint of is_safe
-  | Pmodint of is_safe
+  | Pdivint
+  | Pmodint
   | Pandint
   | Porint
   | Pxorint
@@ -310,13 +305,12 @@ type primitive =
   | Pjs_fn_make of int
   | Pjs_fn_make_unit
   | Pjs_fn_method
-  | Pjs_unsafe_downgrade
 
 and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 
 and value_kind = Pgenval
 
-and raise_kind = Raise_regular | Raise_reraise | Raise_notrace
+and raise_kind = Raise_regular | Raise_reraise
 
 type pointer_info =
   | Pt_constructor of {
@@ -334,7 +328,6 @@ type structured_constant =
   | Const_base of Asttypes.constant
   | Const_pointer of int * pointer_info
   | Const_block of tag_info * structured_constant list
-  | Const_float_array of string list
   | Const_immstring of string
   | Const_false
   | Const_true
@@ -507,16 +500,6 @@ let name_lambda strict arg fn =
     let id = Ident.create "let" in
     Llet (strict, Pgenval, id, arg, fn id)
 
-let name_lambda_list args fn =
-  let rec name_list names = function
-    | [] -> fn (List.rev names)
-    | (Lvar _ as arg) :: rem -> name_list (arg :: names) rem
-    | arg :: rem ->
-      let id = Ident.create "let" in
-      Llet (Strict, Pgenval, id, arg, name_list (Lvar id :: names) rem)
-  in
-  name_list [] args
-
 let iter_opt f = function
   | None -> ()
   | Some e -> f e
@@ -650,16 +633,6 @@ let transl_value_path ?(loc = Location.none) env path =
 
 let transl_extension_path = transl_value_path
 
-(* compatibility alias, deprecated in the .mli *)
-(* Compile a sequence of expressions *)
-
-let rec make_sequence fn = function
-  | [] -> lambda_unit
-  | [x] -> fn x
-  | x :: rem ->
-    let lam = fn x in
-    Lsequence (lam, make_sequence fn rem)
-
 (* Apply a substitution to a lambda-term.
    Assumes that the bound variables of the lambda-term do not
    belong to the domain of the substitution.
@@ -713,56 +686,6 @@ let subst_lambda s lam =
   in
   subst lam
 
-let rec map f lam =
-  let lam =
-    match lam with
-    | Lvar _ -> lam
-    | Lconst _ -> lam
-    | Lapply {ap_func; ap_args; ap_loc; ap_inlined} ->
-      Lapply
-        {
-          ap_func = map f ap_func;
-          ap_args = List.map (map f) ap_args;
-          ap_loc;
-          ap_inlined;
-        }
-    | Lfunction {params; body; attr; loc} ->
-      Lfunction {params; body = map f body; attr; loc}
-    | Llet (str, k, v, e1, e2) -> Llet (str, k, v, map f e1, map f e2)
-    | Lletrec (idel, e2) ->
-      Lletrec (List.map (fun (v, e) -> (v, map f e)) idel, map f e2)
-    | Lprim (p, el, loc) -> Lprim (p, List.map (map f) el, loc)
-    | Lswitch (e, sw, loc) ->
-      Lswitch
-        ( map f e,
-          {
-            sw_numconsts = sw.sw_numconsts;
-            sw_consts = List.map (fun (n, e) -> (n, map f e)) sw.sw_consts;
-            sw_numblocks = sw.sw_numblocks;
-            sw_blocks = List.map (fun (n, e) -> (n, map f e)) sw.sw_blocks;
-            sw_failaction = Misc.may_map (map f) sw.sw_failaction;
-            sw_names = sw.sw_names;
-          },
-          loc )
-    | Lstringswitch (e, sw, default, loc) ->
-      Lstringswitch
-        ( map f e,
-          List.map (fun (s, e) -> (s, map f e)) sw,
-          Misc.may_map (map f) default,
-          loc )
-    | Lstaticraise (i, args) -> Lstaticraise (i, List.map (map f) args)
-    | Lstaticcatch (body, id, handler) ->
-      Lstaticcatch (map f body, id, map f handler)
-    | Ltrywith (e1, v, e2) -> Ltrywith (map f e1, v, map f e2)
-    | Lifthenelse (e1, e2, e3) -> Lifthenelse (map f e1, map f e2, map f e3)
-    | Lsequence (e1, e2) -> Lsequence (map f e1, map f e2)
-    | Lwhile (e1, e2) -> Lwhile (map f e1, map f e2)
-    | Lfor (v, e1, e2, dir, e3) -> Lfor (v, map f e1, map f e2, dir, map f e3)
-    | Lassign (v, e) -> Lassign (v, map f e)
-    | Lsend (k, o, loc) -> Lsend (k, map f o, loc)
-  in
-  f lam
-
 (* To let-bind expressions to variables *)
 
 let bind str var exp body =
@@ -770,26 +693,9 @@ let bind str var exp body =
   | Lvar var' when Ident.same var var' -> body
   | _ -> Llet (str, Pgenval, var, exp, body)
 
-and commute_comparison = function
-  | Ceq -> Ceq
-  | Cneq -> Cneq
-  | Clt -> Cgt
-  | Cle -> Cge
-  | Cgt -> Clt
-  | Cge -> Cle
-
-and negate_comparison = function
-  | Ceq -> Cneq
-  | Cneq -> Ceq
-  | Clt -> Cge
-  | Cle -> Cgt
-  | Cgt -> Cle
-  | Cge -> Clt
-
 let raise_kind = function
   | Raise_regular -> "raise"
   | Raise_reraise -> "reraise"
-  | Raise_notrace -> "raise_notrace"
 
 let lam_of_loc kind loc =
   let loc_start = loc.Location.loc_start in
@@ -821,5 +727,3 @@ let lam_of_loc kind loc =
     in
     Lconst (Const_immstring loc)
   | Loc_LINE -> Lconst (Const_base (Const_int lnum))
-
-let reset () = raise_count := 0

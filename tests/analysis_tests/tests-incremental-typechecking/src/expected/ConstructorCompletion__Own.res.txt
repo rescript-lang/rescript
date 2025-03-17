@@ -3,7 +3,8 @@ posCursor:[4:24] posNoWhite:[4:23] Found expr:[4:8->4:25]
 Pexp_construct WithVariant
 One:[4:8->4:23] [4:23->4:25]
 Completable: Cexpression CTypeAtPos()->variantPayload::One($0)
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
 [{
     "label": "{}",

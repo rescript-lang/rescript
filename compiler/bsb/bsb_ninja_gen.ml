@@ -40,7 +40,8 @@ let emit_bsc_lib_includes (bs_dependencies : Bsb_config_types.dependencies)
   let all_includes source_dirs =
     source_dirs
     @ Ext_list.map bs_dependencies (fun x -> x.package_install_path)
-    @ (* for external includes, if it is absolute path, leave it as is
+    @
+    (* for external includes, if it is absolute path, leave it as is
          for relative path './xx', we need '../.././x' since we are in
          [lib/bs], [build] is different from merlin though
       *)

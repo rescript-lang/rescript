@@ -25,9 +25,9 @@
 /*** Provide utilities for manipulating JS types. */
 
 /** Js symbol type (only available in ES6) */
-type symbol
+type symbol = Stdlib_Symbol.t
 
-type obj_val
+type obj_val = Stdlib_Type.Classify.object
 
 /** This type has only one value `undefined` */
 type undefined_val
@@ -35,7 +35,7 @@ type undefined_val
 /** This type has only one value `null` */
 type null_val
 
-type function_val
+type function_val = Stdlib_Type.Classify.function
 
 type rec t<_> =
   | Undefined: t<undefined_val>

@@ -5,12 +5,12 @@ mod dependency_cycle;
 use super::build_types::*;
 use super::logs;
 use super::packages;
-use crate::bsconfig;
+use crate::config;
 use crate::helpers;
 use ahash::{AHashMap, AHashSet};
+use anyhow::{anyhow, Result};
 use console::style;
-use log::debug;
-use log::{info, log_enabled, Level::Info};
+use log::{debug, log_enabled, trace, Level::Info};
 use rayon::prelude::*;
 use std::path::Path;
 use std::process::Command;
@@ -20,7 +20,7 @@ pub fn compile(
     build_state: &mut BuildState,
     inc: impl Fn() + std::marker::Sync,
     set_length: impl Fn(u64),
-) -> (String, String, usize) {
+) -> Result<(String, String, usize)> {
     let mut compiled_modules = AHashSet::<String>::new();
     let dirty_modules = build_state
         .modules
@@ -98,7 +98,7 @@ pub fn compile(
         files_current_loop_count = 0;
         loop_count += 1;
 
-        info!(
+        trace!(
             "Compiled: {} out of {}. Compile loop: {}",
             files_total_count,
             compile_universe.len(),
@@ -107,9 +107,9 @@ pub fn compile(
 
         let current_in_progres_modules = in_progress_modules.clone();
 
-        current_in_progres_modules
+        let results = current_in_progres_modules
             .par_iter()
-            .map(|module_name| {
+            .filter_map(|module_name| {
                 let module = build_state.get_module(module_name).unwrap();
                 let package = build_state
                     .get_package(&module.package_name)
@@ -185,16 +185,7 @@ pub fn compile(
                                 &build_state.project_root,
                                 &build_state.workspace_root,
                             );
-                            // if let Err(error) = result.to_owned() {
-                            //     println!("{}", error);
-                            //     panic!("Implementation compilation error!");
-                            // }
                             let cmi_digest_after = helpers::compute_file_hash(&cmi_path);
-
-                            // println!(
-                            //     "cmi path {}, digest: {:?} / {:?}",
-                            //     cmi_path, cmi_digest, cmi_digest_after
-                            // );
 
                             // we want to compare both the hash of interface and the implementation
                             // compile assets to verify that nothing changed. We also need to checke the interface
@@ -220,121 +211,111 @@ pub fn compile(
                 } else {
                     None
                 }
-                .map(|res| {
+                .inspect(|_res| {
                     if !(log_enabled!(Info)) {
                         inc();
                     }
-                    res
                 })
             })
-            .collect::<Vec<
-                Option<(
-                    String,
-                    Result<Option<String>, String>,
-                    Option<Result<Option<String>, String>>,
-                    bool,
-                    bool,
-                )>,
-            >>()
-            .iter()
-            .for_each(|result| match result {
-                Some((module_name, result, interface_result, is_clean, is_compiled)) => {
-                    in_progress_modules.remove(module_name);
+            .collect::<Vec<_>>();
 
-                    if *is_compiled {
-                        num_compiled_modules += 1;
-                    }
+        for result in results.iter() {
+            let (module_name, result, interface_result, is_clean, is_compiled) = result;
+            in_progress_modules.remove(module_name);
 
-                    files_current_loop_count += 1;
-                    compiled_modules.insert(module_name.to_string());
+            if *is_compiled {
+                num_compiled_modules += 1;
+            }
 
-                    if *is_clean {
-                        // actually add it to a list of clean modules
-                        clean_modules.insert(module_name.to_string());
-                    }
+            files_current_loop_count += 1;
+            compiled_modules.insert(module_name.to_string());
 
-                    let module_dependents = build_state.get_module(module_name).unwrap().dependents.clone();
+            if *is_clean {
+                // actually add it to a list of clean modules
+                clean_modules.insert(module_name.to_string());
+            }
 
-                    // if not clean -- compile modules that depend on this module
-                    for dep in module_dependents.iter() {
-                        //  mark the reverse dep as dirty when the source is not clean
-                        if !*is_clean {
-                            let dep_module = build_state.modules.get_mut(dep).unwrap();
-                            //  mark the reverse dep as dirty when the source is not clean
-                            dep_module.compile_dirty = true;
+            let module_dependents = build_state.get_module(module_name).unwrap().dependents.clone();
+
+            // if not clean -- compile modules that depend on this module
+            for dep in module_dependents.iter() {
+                //  mark the reverse dep as dirty when the source is not clean
+                if !*is_clean {
+                    let dep_module = build_state.modules.get_mut(dep).unwrap();
+                    //  mark the reverse dep as dirty when the source is not clean
+                    dep_module.compile_dirty = true;
+                }
+                if !compiled_modules.contains(dep) {
+                    in_progress_modules.insert(dep.to_string());
+                }
+            }
+
+            let module = build_state
+                .modules
+                .get_mut(module_name)
+                .ok_or(anyhow!("Module not found"))?;
+
+            let package = build_state
+                .packages
+                .get(&module.package_name)
+                .ok_or(anyhow!("Package name not found"))?;
+
+            match module.source_type {
+                SourceType::MlMap(ref mut mlmap) => {
+                    module.compile_dirty = false;
+                    mlmap.parse_dirty = false;
+                }
+                SourceType::SourceFile(ref mut source_file) => {
+                    match result {
+                        Ok(Some(err)) => {
+                            source_file.implementation.compile_state = CompileState::Warning;
+                            logs::append(package, err);
+                            compile_warnings.push_str(err);
                         }
-                        if !compiled_modules.contains(dep) {
-                            in_progress_modules.insert(dep.to_string());
+                        Ok(None) => {
+                            source_file.implementation.compile_state = CompileState::Success;
                         }
-                    }
-
-                    let module = build_state.modules.get_mut(module_name).unwrap();
-                    let package = build_state
-                        .packages
-                        .get(&module.package_name)
-                        .expect("Package not found");
-                    match module.source_type {
-                        SourceType::MlMap(ref mut mlmap) => {
-                            module.compile_dirty = false;
-                            mlmap.parse_dirty = false;
+                        Err(err) => {
+                            source_file.implementation.compile_state = CompileState::Error;
+                            logs::append(package, &err.to_string());
+                            compile_errors.push_str(&err.to_string());
                         }
-                        SourceType::SourceFile(ref mut source_file) => {
-                            match result {
-                                Ok(Some(err)) => {
-                                    source_file.implementation.compile_state = CompileState::Warning;
-                                    logs::append(package, err);
-                                    compile_warnings.push_str(err);
-                                }
-                                Ok(None) => {
-                                    source_file.implementation.compile_state = CompileState::Success;
-                                }
-                                Err(err) => {
-                                    source_file.implementation.compile_state = CompileState::Error;
-                                    logs::append(package, err);
-                                    compile_errors.push_str(err);
-                                }
-                            };
-                            match interface_result {
-                                Some(Ok(Some(err))) => {
-                                    source_file.interface.as_mut().unwrap().compile_state =
-                                        CompileState::Warning;
-                                    logs::append(package, err);
-                                    compile_warnings.push_str(err);
-                                }
-                                Some(Ok(None)) => {
-                                    if let Some(interface) = source_file.interface.as_mut() {
-                                        interface.compile_state = CompileState::Success;
-                                    }
-                                }
-
-                                Some(Err(err)) => {
-                                    source_file.interface.as_mut().unwrap().compile_state =
-                                        CompileState::Error;
-                                    logs::append(package, err);
-                                    compile_errors.push_str(err);
-                                }
-                                _ => (),
-                            };
-                            match (result, interface_result) {
-                                // successfull compilation
-                                (Ok(None), Some(Ok(None))) | (Ok(None), None) => {
-                                    module.compile_dirty = false;
-                                    module.last_compiled_cmi = Some(SystemTime::now());
-                                    module.last_compiled_cmt = Some(SystemTime::now());
-                                }
-                                // some error or warning
-                                (Err(_), _)
-                                | (_, Some(Err(_)))
-                                | (Ok(Some(_)), _)
-                                | (_, Some(Ok(Some(_)))) => {
-                                    module.compile_dirty = true;
-                                }
+                    };
+                    match interface_result {
+                        Some(Ok(Some(err))) => {
+                            source_file.interface.as_mut().unwrap().compile_state = CompileState::Warning;
+                            logs::append(package, &err.to_string());
+                            compile_warnings.push_str(&err.to_string());
+                        }
+                        Some(Ok(None)) => {
+                            if let Some(interface) = source_file.interface.as_mut() {
+                                interface.compile_state = CompileState::Success;
                             }
+                        }
+
+                        Some(Err(err)) => {
+                            source_file.interface.as_mut().unwrap().compile_state = CompileState::Error;
+                            logs::append(package, &err.to_string());
+                            compile_errors.push_str(&err.to_string());
+                        }
+                        _ => (),
+                    };
+
+                    match (result, interface_result) {
+                        // successfull compilation
+                        (Ok(None), Some(Ok(None))) | (Ok(None), None) => {
+                            module.compile_dirty = false;
+                            module.last_compiled_cmi = Some(SystemTime::now());
+                            module.last_compiled_cmt = Some(SystemTime::now());
+                        }
+                        // some error or warning
+                        (Err(_), _) | (_, Some(Err(_))) | (Ok(Some(_)), _) | (_, Some(Ok(Some(_)))) => {
+                            module.compile_dirty = true;
                         }
                     }
                 }
-                None => (),
-            });
+            }
+        }
 
         files_total_count += files_current_loop_count;
 
@@ -349,6 +330,7 @@ pub fn compile(
                     .map(|s| (s, build_state.get_module(s).unwrap()))
                     .collect::<Vec<(&String, &Module)>>(),
             );
+
             compile_errors.push_str(&format!(
                 "\n{}\n{}\n",
                 style("Can't continue... Found a circular dependency in your code:").red(),
@@ -360,12 +342,12 @@ pub fn compile(
         };
     }
 
-    (compile_errors, compile_warnings, num_compiled_modules)
+    Ok((compile_errors, compile_warnings, num_compiled_modules))
 }
 
 pub fn compiler_args(
-    config: &bsconfig::Config,
-    root_config: &bsconfig::Config,
+    config: &config::Config,
+    root_config: &config::Config,
     ast_path: &str,
     version: &str,
     file_path: &str,
@@ -379,17 +361,17 @@ pub fn compiler_args(
 ) -> Vec<String> {
     let normal_deps = config.bs_dependencies.as_ref().unwrap_or(&vec![]).to_owned();
 
-    let bsc_flags = bsconfig::flatten_flags(&config.bsc_flags);
+    let bsc_flags = config::flatten_flags(&config.bsc_flags);
     // don't compile dev-deps yet
     // let dev_deps = source
     //     .package
-    //     .bsconfig
+    //     .config
     //     .bs_dev_dependencies
     //     .as_ref()
     //     .unwrap_or(&vec![])
     //     .to_owned();
 
-    let deps = vec![normal_deps]
+    let deps = [normal_deps]
         .concat()
         .par_iter()
         .map(|package_name| {
@@ -434,6 +416,7 @@ pub fn compiler_args(
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
     let uncurried_args = root_config.get_uncurried_args(version);
+    let gentype_arg = root_config.get_gentype_arg();
 
     let warning_args: Vec<String> = match config.warnings.to_owned() {
         None => vec![],
@@ -446,16 +429,16 @@ pub fn compiler_args(
             };
 
             let warn_error = match warnings.error {
-                Some(bsconfig::Error::Catchall(true)) => {
+                Some(config::Error::Catchall(true)) => {
                     vec!["-warn-error".to_string(), "A".to_string()]
                 }
-                Some(bsconfig::Error::Qualified(errors)) => {
+                Some(config::Error::Qualified(errors)) => {
                     vec!["-warn-error".to_string(), errors.to_string()]
                 }
                 _ => vec![],
             };
 
-            vec![warn_number, warn_error].concat()
+            [warn_number, warn_error].concat()
         }
     };
 
@@ -494,6 +477,7 @@ pub fn compiler_args(
         read_cmi_args,
         vec!["-I".to_string(), ".".to_string()],
         deps.concat(),
+        gentype_arg,
         jsx_args,
         jsx_module_args,
         jsx_mode_args,
@@ -526,17 +510,21 @@ fn compile_file(
     packages: &AHashMap<String, packages::Package>,
     project_root: &str,
     workspace_root: &Option<String>,
-) -> Result<Option<String>, String> {
+) -> Result<Option<String>> {
     let build_path_abs = package.get_build_path();
-    let implementation_file_path = match module.source_type {
-        SourceType::SourceFile(ref source_file) => &source_file.implementation.path,
-        _ => panic!("Not a source file"),
-    };
+    let implementation_file_path = match &module.source_type {
+        SourceType::SourceFile(ref source_file) => Ok(&source_file.implementation.path),
+        sourcetype => Err(anyhow!(
+            "Tried to compile a file that is not a source file ({}). Path to AST: {}. ",
+            sourcetype,
+            ast_path
+        )),
+    }?;
     let module_name = helpers::file_path_to_module_name(implementation_file_path, &package.namespace);
     let has_interface = module.get_interface().is_some();
     let to_mjs_args = compiler_args(
-        &package.bsconfig,
-        &root_package.bsconfig,
+        &package.config,
+        &root_package.config,
         ast_path,
         version,
         implementation_file_path,
@@ -556,9 +544,13 @@ fn compile_file(
         Ok(x) if !x.status.success() => {
             let stderr = String::from_utf8_lossy(&x.stderr);
             let stdout = String::from_utf8_lossy(&x.stdout);
-            Err(stderr.to_string() + &stdout)
+            Err(anyhow!(stderr.to_string() + &stdout))
         }
-        Err(e) => Err(format!("ERROR, {}, {:?}", e, ast_path)),
+        Err(e) => Err(anyhow!(
+            "Could not compile file. Error: {}. Path to AST: {:?}",
+            e,
+            ast_path
+        )),
         Ok(x) => {
             let err = std::str::from_utf8(&x.stderr)
                 .expect("stdout should be non-null")

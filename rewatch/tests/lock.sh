@@ -23,7 +23,7 @@ success "Watcher Started"
 
 sleep 1
 
-if rewatch watch 2>&1 | grep 'Error while trying to get lock:' &> /dev/null; 
+if rewatch watch 2>&1 | grep 'Could not start Rewatch:' &> /dev/null; 
 then
   success "Lock is correctly set"
   exit_watcher
@@ -41,7 +41,7 @@ success "Watcher Started"
 
 sleep 1
 
-if cat tmp.txt | grep 'Error while trying to get lock:' &> /dev/null; 
+if cat tmp.txt | grep 'Could not start Rewatch:' &> /dev/null; 
 then
   error "Lock not removed correctly"
   exit_watcher

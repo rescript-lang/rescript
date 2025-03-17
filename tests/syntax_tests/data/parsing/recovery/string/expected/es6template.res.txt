@@ -8,6 +8,6 @@
   Did you forget to close this template expression with a backtick?
 
 let x =
-  (((((({js|this contains |js})[@res.template ]) ^ foo)[@res.template ]) ^
+  (((((({js|this contains |js})[@res.template ]) ++ foo)[@res.template ]) ++
       (({js|, missing closing|js})[@res.template ]))
   [@res.template ])

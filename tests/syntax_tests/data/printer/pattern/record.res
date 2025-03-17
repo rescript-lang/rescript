@@ -58,3 +58,14 @@ let get_age3 = ({age: module(P: S), name: _}) => age2
 let get_age3 = ({age: exception Exit, name: _}) => age2
 
 let get_age3 = ({age: %raw("__GC"), name: _}) => age2
+
+let get_age3 = ({age, _}) => age
+let get_age3 = ({_}) => ""
+let get_age3 = () => 
+  switch x {
+  | {age, _} => age
+  }
+let get_age3 = () => 
+  switch x {
+  | {_} => ""
+  }

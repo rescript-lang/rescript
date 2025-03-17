@@ -79,9 +79,14 @@ Raises an Error in case `None` is provided. Use with care.
 ## Examples
 
 ```rescript
-Belt.Option.getExn(Some(3)) /* 3 */
+Some(3)
+->Belt.Option.getExn
+->assertEqual(3)
 
-Belt.Option.getExn(None) /* Raises an Error */
+switch Belt.Option.getExn(None) { // Raises an exception
+| exception _ => assert(true)
+| _ => assert(false)
+}
 ```
 */
 let getExn: option<'a> => 'a

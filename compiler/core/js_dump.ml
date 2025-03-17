@@ -436,7 +436,7 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
     since it can be either [int] or [string]
 *)
 and pp_one_case_clause :
-      'a. _ -> P.t -> (P.t -> 'a -> unit) -> 'a * J.case_clause -> _ =
+    'a. _ -> P.t -> (P.t -> 'a -> unit) -> 'a * J.case_clause -> _ =
  fun cxt f pp_cond
      (switch_case, ({switch_body; should_break; comment} : J.case_clause)) ->
   P.newline f;
@@ -467,8 +467,7 @@ and pp_one_case_clause :
   cxt
 
 and loop_case_clauses :
-      'a. cxt -> P.t -> (P.t -> 'a -> unit) -> ('a * J.case_clause) list -> cxt
-    =
+    'a. cxt -> P.t -> (P.t -> 'a -> unit) -> ('a * J.case_clause) list -> cxt =
  fun cxt f pp_cond cases ->
   Ext_list.fold_left cases cxt (fun acc x -> pp_one_case_clause acc f pp_cond x)
 
@@ -693,7 +692,8 @@ and expression_desc cxt ~(level : int) f x : cxt =
      {[ 0. - x ]}
      {[ 0.00 - x ]}
      {[ 0.000 - x ]}
-  *) ->
+  *)
+    ->
     P.cond_paren_group f (level > 13) (fun _ ->
         P.string f
           (match desc with
@@ -1214,7 +1214,8 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
           semi f;
           cxt)
       (* There MUST be a space between the return and its
-         argument. A line return will not work *))
+         argument. A line return will not work *)
+    )
   | Int_switch (e, cc, def) ->
     P.string f L.switch;
     P.space f;

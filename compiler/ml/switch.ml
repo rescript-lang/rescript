@@ -16,7 +16,6 @@
 type 'a shared = Shared of 'a | Single of 'a
 
 type 'a t_store = {
-  act_get: unit -> 'a array;
   act_get_shared: unit -> 'a shared array;
   act_store: 'a -> int;
   act_store_shared: 'a -> int;
@@ -65,7 +64,6 @@ module Store (A : Stored) = struct
           st.map <- AMap.add key (mustshare, i) st.map;
           i)
       | None -> add mustshare act
-    and get () = Array.of_list (List.rev_map (fun (_, act) -> act) st.acts)
     and get_shared () =
       let acts =
         Array.of_list
@@ -85,7 +83,6 @@ module Store (A : Stored) = struct
     {
       act_store = store false;
       act_store_shared = store true;
-      act_get = get;
       act_get_shared = get_shared;
     }
 end

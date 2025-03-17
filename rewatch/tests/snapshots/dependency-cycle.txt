@@ -1,11 +1,18 @@
-[1/7]📦 Building package tree...[2K[1/7] 📦 Built package tree in 0.00s
-[2/7] 🕵️  Finding source files...[2K[2/7] 🕵️  Found source files in 0.00s
-[3/7] 📝 Reading compile state...[2K[3/7] 📝 Read compile state 0.00s
-[4/7] 🧹 Cleaning up previous build...[2K[4/7] 🧹 Cleaned 0/11 0.00s
+[1/7] 📦 Building package tree...
+[2K[1/7] 📦 Built package tree in 0.00s
+[2/7] 🕵️ Finding source files...
+[2K[2/7] 🕵️ Found source files in 0.00s
+[3/7] 📝 Reading compile state...
+[2K[3/7] 📝 Read compile state 0.00s
+[4/7] 🧹 Cleaning up previous build...
+[2K[4/7] 🧹 Cleaned 0/11 0.00s
 [2K[5/7] 🧱 Parsed 1 source files in 0.00s
 [2K[6/7] ️🌴 Collected deps in 0.00s
 [2K[7/7] ️🛑 Compiled 0 modules in 0.00s
+ERROR:
 
 Can't continue... Found a circular dependency in your code:
 NewNamespace.NS_alias -> Dep01 -> Dep02 -> NS -> NewNamespace.NS_alias
-Error Building: [2K  ️🛑 Error Running Incremental Build: [2K  ️🛑 Failed to Compile. See Errors Above
+
+ERROR:
+Incremental build failed. Error: [2K  ️🛑 Failed to Compile. See Errors Above

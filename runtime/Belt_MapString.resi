@@ -30,9 +30,14 @@ let findFirstByU: (t<'v>, (key, 'v) => bool) => option<(key, 'v)>
 `findFirstBy(m, p)` uses funcion `f` to find the first key value pair
 to match predicate `p`.
 
+## Examples
+
 ```rescript
-let s0 = fromArray(~id=module(IntCmp), [(4, "4"), (1, "1"), (2, "2,"(3, ""))])
-findFirstBy(s0, (k, v) => k == 4) == option((4, "4"))
+let mapString = Belt.Map.String.fromArray([("1", "one"), ("2", "two"), ("3", "three")])
+
+mapString->
+Belt.Map.String.findFirstBy((k, v) => k == "1" && v == "one")
+->assertEqual(Some("1", "one"))
 ```
 */
 let findFirstBy: (t<'v>, (key, 'v) => bool) => option<(key, 'v)>

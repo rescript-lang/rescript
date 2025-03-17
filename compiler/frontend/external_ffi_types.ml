@@ -247,7 +247,9 @@ let () =
            prim_alloc = _;
            prim_from_constructor = _;
          } :
-          Primitive.description) (p2 : Primitive.description) ->
+          Primitive.description)
+      (p2 : Primitive.description)
+    ->
       let p2_native = p2.prim_native_name in
       prim_name = p2.prim_name && prim_arity = p2.prim_arity
       && prim_native_name = p2_native

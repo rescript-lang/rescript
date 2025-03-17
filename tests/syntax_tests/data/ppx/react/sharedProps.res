@@ -1,46 +1,4 @@
-@@jsxConfig({version:4, mode: "classic"})
-
-module V4C1 = {
-  @react.component(:sharedProps<string>)
-  let make = (~x, ~y) => React.string(x ++ y)
-}
-
-module V4C2 = {
-  @react.component(:sharedProps<'a>)
-  let make = (~x, ~y) => React.string(x ++ y)
-}
-
-module V4C3 = {
-  @react.component(:sharedProps<string, 'a>)
-  let make = (~x, ~y) => React.string(x ++ y)
-}
-
-module V4C4 = {
-  @react.component(:sharedProps)
-  let make = (~x, ~y) => React.string(x ++ y)
-}
-
-module V4C5 = {
-  @react.component(:sharedProps<string>)
-  external make: (~x: string, ~y: 'a) => React.element = "default"
-}
-
-module V4C6 = {
-  @react.component(:sharedProps<'a>)
-  external make: (~x: string, ~y: 'a) => React.element = "default"
-}
-
-module V4C7 = {
-  @react.component(:sharedProps<string, 'a>)
-  external make: (~x: string, ~y: string) => React.element = "default"
-}
-
-module V4C8 = {
-  @react.component(:sharedProps)
-  external make: (~x: string, ~y: string) => React.element = "default"
-}
-
-@@jsxConfig({version:4, mode: "automatic"})
+@@jsxConfig({version:4})
 
 module V4A1 = {
   @react.component(:sharedProps<string>)

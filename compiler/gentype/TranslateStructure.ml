@@ -18,8 +18,10 @@ let rec addAnnotationsToTypes_ ~config ~(expr : Typedtree.expression)
       else a_name
     in
     {a_name; a_type} :: next_types1
-  | Texp_apply ({exp_desc = Texp_ident (path, _, _)}, [(_, Some expr1)]), _, _
-    -> (
+  | ( Texp_apply
+        {funct = {exp_desc = Texp_ident (path, _, _)}; args = [(_, Some expr1)]},
+      _,
+      _ ) -> (
     match path |> TranslateTypeExprFromTypes.path_to_list |> List.rev with
     | ["Js"; "Internal"; fn_mk]
       when (* Uncurried function definition uses Js.Internal.fn_mkX(...) *)
@@ -349,12 +351,6 @@ and translate_structure_item ~config ~output_file_relative ~resolver ~type_env
     Translation.empty
   | {str_desc = Tstr_open _} ->
     log_not_implemented ("Tstr_open " ^ __LOC__);
-    Translation.empty
-  | {str_desc = Tstr_class _} ->
-    log_not_implemented ("Tstr_class " ^ __LOC__);
-    Translation.empty
-  | {str_desc = Tstr_class_type _} ->
-    log_not_implemented ("Tstr_class_type " ^ __LOC__);
     Translation.empty
   | {str_desc = Tstr_attribute _} ->
     log_not_implemented ("Tstr_attribute " ^ __LOC__);

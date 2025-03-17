@@ -51,7 +51,10 @@ and decode_single (x : string) (offset : cursor) : group =
     let modules = decode_modules x offset module_number in
     let dir_info_offset = !offset in
     let module_info_offset = String.index_from x dir_info_offset '\n' + 1 in
-    let dir_length = Char.code x.[module_info_offset] - 48 (* Char.code '0'*) in
+    let dir_length =
+      Char.code x.[module_info_offset] - 48
+      (* Char.code '0'*)
+    in
     offset := module_info_offset + 1 + (dir_length * module_number) + 1;
     Group {modules; dir_info_offset; module_info_offset; dir_length})
   else Dummy

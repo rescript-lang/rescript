@@ -47,9 +47,9 @@ let f3 = x => {
    So the best is never shrink functons which could change arity
 */
 let () = {
-  (eq(__LOC__, 6, ...))(f0(1, 2, 3))
-  (eq(__LOC__, 6, ...))(f1(1)(2, 3))
-  (eq(__LOC__, 6, ...))(f2(1, 2)(3))
-  (eq(__LOC__, 6, ...))(f3(1)(2, 3))
+  eq(__LOC__, 6, ...)(f0(1, 2, 3))
+  eq(__LOC__, 6, ...)(f1(1)(2, 3))
+  eq(__LOC__, 6, ...)(f2(1, 2)(3))
+  eq(__LOC__, 6, ...)(f3(1)(2, 3))
 }
 let () = Mt.from_pair_suites(__MODULE__, suites.contents)

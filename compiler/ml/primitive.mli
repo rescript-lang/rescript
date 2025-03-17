@@ -15,8 +15,6 @@
 
 (* Description of primitive functions *)
 
-type boxed_integer = Pbigint | Pint32 | Pint64
-
 type description = private {
   prim_name: string; (* Name of primitive  or C function *)
   prim_arity: int; (* Number of arguments *)
@@ -28,11 +26,6 @@ type description = private {
 
 (* Invariant [List.length d.prim_native_repr_args = d.prim_arity] *)
 
-val simple : name:string -> arity:int -> alloc:bool -> description
-
-val make :
-  name:string -> alloc:bool -> native_name:string -> arity:int -> description
-
 val parse_declaration :
   Parsetree.value_description ->
   arity:int ->
@@ -40,8 +33,5 @@ val parse_declaration :
   description
 
 val print : description -> Outcometree.out_val_decl -> Outcometree.out_val_decl
-
-val native_name : description -> string
-val byte_name : description -> string
 
 val coerce : (description -> description -> bool) ref

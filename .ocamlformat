@@ -1,5 +1,5 @@
 profile = default
-version = 0.26.2
+version = 0.27.0
 
 field-space = tight-decl
 break-cases = toplevel
@@ -9,3 +9,4 @@ space-around-arrays = false
 space-around-lists = false
 space-around-records = false
 space-around-variants = false
+parse-docstrings = false

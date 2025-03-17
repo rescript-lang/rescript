@@ -8,7 +8,7 @@ function tailcall(x) {
 }
 
 function non_length(x) {
-  if (x) {
+  if (x !== 0) {
     return 1 + non_length(x.tl) | 0;
   } else {
     return 0;
@@ -19,11 +19,11 @@ function length(_acc, _x) {
   while (true) {
     let x = _x;
     let acc = _acc;
-    if (!x) {
+    if (x === 0) {
       return acc;
     }
     let tl = x.tl;
-    if (tl) {
+    if (tl !== 0) {
       return 1 + length(acc + 1 | 0, tl.tl) | 0;
     }
     _x = tl;

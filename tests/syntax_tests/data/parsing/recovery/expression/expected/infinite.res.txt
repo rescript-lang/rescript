@@ -1,1 +1,1 @@
-let smallest = (heap.compare ()) < (a |.u (f b))
+let smallest = (heap.compare ()) < (a -> (f b))

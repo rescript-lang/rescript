@@ -164,7 +164,7 @@ let comparisons_table =
           objcomp = Pobjmax;
           intcomp = Pintmax;
           boolcomp = Pboolmax;
-          floatcomp = Pboolmax;
+          floatcomp = Pfloatmax;
           stringcomp = Pstringmax;
           bigintcomp = Pbigintmax;
           simplify_constant_constructor = false;
@@ -212,22 +212,22 @@ let comparisons_table =
       (* FIXME: Core compatibility *)
       ( "%bs_min",
         {
-          objcomp = Pobjmax;
-          intcomp = Pintmax;
-          boolcomp = Pboolmax;
-          floatcomp = Pboolmax;
-          stringcomp = Pstringmax;
-          bigintcomp = Pbigintmax;
-          simplify_constant_constructor = false;
-        } );
-      ( "%bs_max",
-        {
           objcomp = Pobjmin;
           intcomp = Pintmin;
           boolcomp = Pboolmin;
           floatcomp = Pfloatmin;
           stringcomp = Pstringmin;
           bigintcomp = Pbigintmin;
+          simplify_constant_constructor = false;
+        } );
+      ( "%bs_max",
+        {
+          objcomp = Pobjmax;
+          intcomp = Pintmax;
+          boolcomp = Pboolmax;
+          floatcomp = Pfloatmax;
+          stringcomp = Pstringmax;
+          bigintcomp = Pbigintmax;
           simplify_constant_constructor = false;
         } );
     |]
@@ -274,8 +274,8 @@ let primitives_table =
       ("%addint", Paddint);
       ("%subint", Psubint);
       ("%mulint", Pmulint);
-      ("%divint", Pdivint Safe);
-      ("%modint", Pmodint Safe);
+      ("%divint", Pdivint);
+      ("%modint", Pmodint);
       ("%andint", Pandint);
       ("%orint", Porint);
       ("%xorint", Pxorint);
@@ -447,15 +447,6 @@ let transl_primitive loc p env ty =
     with Not_found -> Pccall p
   in
   match prim with
-  | Plazyforce ->
-    let parm = Ident.create "prim" in
-    Lfunction
-      {
-        params = [parm];
-        body = Matching.inline_lazy_force (Lvar parm) Location.none;
-        loc;
-        attr = default_function_attribute;
-      }
   | Ploc kind -> (
     let lam = lam_of_loc kind loc in
     match p.prim_arity with
@@ -555,7 +546,8 @@ let rec push_defaults loc bindings case partial =
    c_lhs = pat;
    c_guard = None;
    c_rhs =
-     {exp_desc = Texp_function {arg_label; arity; param; case; partial}} as exp;
+     {exp_desc = Texp_function {arg_label; arity; param; case; partial; async}}
+     as exp;
   } ->
     let case = push_defaults exp.exp_loc bindings case partial in
 
@@ -565,7 +557,8 @@ let rec push_defaults loc bindings case partial =
       c_rhs =
         {
           exp with
-          exp_desc = Texp_function {arg_label; arity; param; case; partial};
+          exp_desc =
+            Texp_function {arg_label; arity; param; case; partial; async};
         };
     }
   | {
@@ -652,9 +645,6 @@ let rec cut n l =
 
 let try_ids = Hashtbl.create 8
 
-let has_async_attribute exp =
-  exp.exp_attributes |> List.exists (fun ({txt}, _payload) -> txt = "res.async")
-
 let extract_directive_for_fn exp =
   exp.exp_attributes
   |> List.find_map (fun ({txt}, payload) ->
@@ -674,8 +664,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_constant cst -> Lconst (Const_base cst)
   | Texp_let (rec_flag, pat_expr_list, body) ->
     transl_let rec_flag pat_expr_list (transl_exp body)
-  | Texp_function {arg_label = _; arity; param; case; partial} -> (
-    let async = has_async_attribute e in
+  | Texp_function {arg_label = _; arity; param; case; partial; async} -> (
     let directive =
       match extract_directive_for_fn e with
       | None -> None
@@ -713,11 +702,14 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
           loc )
     | None -> lambda)
   | Texp_apply
-      ( ({
-           exp_desc = Texp_ident (_, _, {val_kind = Val_prim p});
-           exp_type = prim_type;
-         } as funct),
-        oargs )
+      {
+        funct =
+          {
+            exp_desc = Texp_ident (_, _, {val_kind = Val_prim p});
+            exp_type = prim_type;
+          } as funct;
+        args = oargs;
+      }
     when List.length oargs >= p.prim_arity
          && List.for_all (fun (_, arg) -> arg <> None) oargs -> (
     let args, args' = cut p.prim_arity oargs in
@@ -756,20 +748,15 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     | Ploc _, _ -> assert false
     | _, _ -> (
       match (prim, argl) with
-      | Plazyforce, [a] -> wrap (Matching.inline_lazy_force a e.exp_loc)
-      | Plazyforce, _ -> assert false
       | _ -> wrap (Lprim (prim, argl, e.exp_loc))))
-  | Texp_apply (funct, oargs) ->
+  | Texp_apply {funct; args = oargs; partial} ->
     let inlined, funct =
       Translattribute.get_and_remove_inlined_attribute funct
     in
     let uncurried_partial_application =
       (* In case of partial application foo(args, ...) when some args are missing,
          get the arity *)
-      let uncurried_partial_app =
-        Ext_list.exists e.exp_attributes (fun ({txt}, _) -> txt = "res.partial")
-      in
-      if uncurried_partial_app then
+      if partial then
         let arity_opt = Ctype.get_arity funct.exp_env funct.exp_type in
         match arity_opt with
         | Some arity ->
@@ -913,8 +900,6 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_send (expr, Tmeth_name nm, _) ->
     let obj = transl_exp expr in
     Lsend (nm, obj, e.exp_loc)
-  | Texp_new _ | Texp_instvar _ | Texp_setinstvar _ | Texp_override _ ->
-    assert false
   | Texp_letmodule (id, _loc, modl, body) ->
     let defining_expr = !transl_module Tcoerce_none None modl in
     Llet (Strict, Pgenval, id, defining_expr, transl_exp body)
@@ -1053,10 +1038,11 @@ and transl_function loc partial param case =
              param = param';
              case;
              partial = partial';
+             async;
            };
      } as exp;
   }
-    when Parmatch.inactive ~partial pat && not (exp |> has_async_attribute) ->
+    when Parmatch.inactive ~partial pat && not async ->
     let params, body, return_unit =
       transl_function exp.exp_loc partial' param' case
     in

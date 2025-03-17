@@ -36,7 +36,6 @@ type t =
   | Pfield of int * Lambda.field_dbg_info
   | Psetfield of int * Lambda.set_field_dbg_info
   | Pduprecord
-  | Plazyforce
   | Pjs_call of {
       (* Location.t *  [loc] is passed down *)
       prim_name: string;

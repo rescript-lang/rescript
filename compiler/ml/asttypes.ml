@@ -41,25 +41,59 @@ type closed_flag = Closed | Open
 
 type label = string
 
-type arg_label =
-  | Nolabel
-  | Labelled of string (*  label:T -> ... *)
-  | Optional of string (* ?label:T -> ... *)
-
 type arity = int option
 
 type 'a loc = 'a Location.loc = {txt: 'a; loc: Location.t}
 
 type variance = Covariant | Contravariant | Invariant
 
+type arg_label =
+  | Nolabel (* x => ...*)
+  | Labelled of string loc (*  ~label => ... *)
+  | Optional of string loc (* ~(label=e) => ... *)
+
+module Noloc = struct
+  type arg_label =
+    | Nolabel (* x => ...*)
+    | Labelled of string (*  ~label => ... *)
+    | Optional of string (* ~(label=e) => ... *)
+
+  let same_arg_label (x : arg_label) y =
+    match x with
+    | Nolabel -> y = Nolabel
+    | Labelled s -> (
+      match y with
+      | Labelled s0 -> s = s0
+      | _ -> false)
+    | Optional s -> (
+      match y with
+      | Optional s0 -> s = s0
+      | _ -> false)
+end
+
+let to_arg_label ?(loc = Location.none) lbl =
+  match lbl with
+  | Noloc.Nolabel -> Nolabel
+  | Labelled s -> Labelled {loc; txt = s}
+  | Optional s -> Optional {loc; txt = s}
+
+let to_noloc = function
+  | Nolabel -> Noloc.Nolabel
+  | Labelled {txt} -> Labelled txt
+  | Optional {txt} -> Optional txt
+
 let same_arg_label (x : arg_label) y =
   match x with
   | Nolabel -> y = Nolabel
-  | Labelled s -> (
+  | Labelled {txt = s} -> (
     match y with
-    | Labelled s0 -> s = s0
+    | Labelled {txt = s0} -> s = s0
     | _ -> false)
-  | Optional s -> (
+  | Optional {txt = s} -> (
     match y with
-    | Optional s0 -> s = s0
+    | Optional {txt = s0} -> s = s0
     | _ -> false)
+
+let get_lbl_loc = function
+  | Nolabel -> Location.none
+  | Labelled {loc} | Optional {loc} -> loc
