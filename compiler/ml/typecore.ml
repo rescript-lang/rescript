@@ -2227,11 +2227,23 @@ type injectable_source_loc_arg = ValuePath | Pos
 
 let rec find_injectable_source_loc_args ?(found = []) t =
   match t.desc with
-  | Tarrow (Labelled n, {desc = Tconstr (p, [], _)}, next, _, _)
-    when Path.same p Predef.path_source_loc_pos ->
+  | Tarrow
+      ( Optional n,
+        {desc = Tconstr (opt_p, [{desc = Tconstr (p, [], _)}], _)},
+        next,
+        _,
+        _ )
+    when Path.same opt_p Predef.path_option
+         && Path.same p Predef.path_source_loc_pos ->
     (Pos, n) :: find_injectable_source_loc_args ~found next
-  | Tarrow (Labelled n, {desc = Tconstr (p, [], _)}, next, _, _)
-    when Path.same p Predef.path_source_loc_value_path ->
+  | Tarrow
+      ( Optional n,
+        {desc = Tconstr (opt_p, [{desc = Tconstr (p, [], _)}], _)},
+        next,
+        _,
+        _ )
+    when Path.same opt_p Predef.path_option
+         && Path.same p Predef.path_source_loc_value_path ->
     (ValuePath, n) :: find_injectable_source_loc_args ~found next
   | Tarrow (_, _, t, _, _) -> find_injectable_source_loc_args t
   | _ -> found

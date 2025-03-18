@@ -26,6 +26,10 @@ open Ast_helper
 let handle_extension e (self : Bs_ast_mapper.mapper)
     (({txt; loc}, payload) : Parsetree.extension) =
   match txt with
+  | "autoFill" ->
+    Exp.apply ~loc
+      (Exp.ident ~loc {txt = Longident.parse "Obj.magic"; loc})
+      [(Nolabel, Exp.construct ~loc {txt = Longident.parse "()"; loc} None)]
   | "todo" ->
     let todo_message =
       match Ast_payload.is_single_string payload with
