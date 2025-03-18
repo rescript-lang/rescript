@@ -44,7 +44,6 @@
     }
   },
   "files": {
-    "include": ["tests/build_tests/**/node_modules/**"],
     "ignore": [
       ".yarn/**",
       "tests/analysis_tests/**/src/**",
