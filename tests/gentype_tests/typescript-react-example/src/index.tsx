@@ -1,12 +1,12 @@
 import type * as React from "react";
 import * as ReactDOM from "react-dom";
-import App from "./App";
+import App from "./App.tsx";
 import * as ImportJsValue from "./ImportJsValue.gen";
 import * as Uncurried from "./Uncurried.gen";
 import "./index.css";
 import * as DocStrings from "./Docstrings.gen";
 import Hooks from "./Hooks.gen";
-import * as MyMath from "./MyMath";
+import * as MyMath from "./MyMath.tsx";
 import { Universe_Nested2_Nested3_nested3Value } from "./NestedModules.gen";
 import * as Records from "./Records.gen";
 import * as TestPromise from "./TestPromise.gen";
@@ -126,7 +126,7 @@ type Props = {
   readonly method?: "push" | "replace";
 };
 
-export const make: React.FC<Props> = (x: Props) => {
+export const make: React.FC<Props> = (_x: Props) => {
   return <div />;
 };
 

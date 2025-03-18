@@ -15,7 +15,7 @@ class StringBuilder {
   }
 }
 
-class ArgError extends Error { }
+class ArgError extends Error {}
 
 /**
  * @param {string} s

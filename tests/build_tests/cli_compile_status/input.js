@@ -14,9 +14,7 @@ let out = child_process.spawnSync("node", [rescriptPath, "build"], {
 });
 assert.match(
   normalizeNewlines(out.stdout),
-  new RegExp(`>>>> Start compiling
-Dependency Finished
->>>> Finish compiling \\d+ mseconds`),
+  />>>> Start compiling\nDependency Finished\n>>>> Finish compiling \d+ mseconds/,
 );
 
 // Shows compile time for `rescript` command
@@ -26,9 +24,7 @@ out = child_process.spawnSync("node", [rescriptPath], {
 });
 assert.match(
   normalizeNewlines(out.stdout),
-  new RegExp(`>>>> Start compiling
-Dependency Finished
->>>> Finish compiling \\d+ mseconds`),
+  />>>> Start compiling\nDependency Finished\n>>>> Finish compiling \d+ mseconds/,
 );
 
 // Doesn't show compile time for `rescript build -verbose` command
@@ -42,6 +38,6 @@ out = child_process.spawnSync("node", [rescriptPath, "build", "-verbose"], {
 
 assert.match(
   normalizeNewlines(out.stdout),
-  /Package stack: test  \nDependency Finished\n/,
+  /Package stack: test {2}\nDependency Finished\n/,
 );
 assert.match(normalizeNewlines(out.stdout), /ninja.exe"? -C lib[\\/]bs ?\n/);

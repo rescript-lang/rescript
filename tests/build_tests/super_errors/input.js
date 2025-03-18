@@ -35,7 +35,7 @@ let atLeastOneTaskFailed = false;
 for (const fileName of fixtures) {
   const fullFilePath = path.join(__dirname, "fixtures", fileName);
   const command = `${prefix} -color always ${fullFilePath}`;
-  child_process.exec(command, (err, stdout, stderr) => {
+  child_process.exec(command, (_err, _stdout, stderr) => {
     doneTasksCount++;
     // careful of:
     // - warning test that actually succeeded in compiling (warning's still in stderr, so the code path is shared here)

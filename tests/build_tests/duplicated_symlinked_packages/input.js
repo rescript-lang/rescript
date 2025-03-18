@@ -22,21 +22,25 @@ if (process.platform === "win32") {
 
 child_process.execSync(`${rescript_exe} clean`, { cwd: __dirname });
 
-child_process.exec(rescript_exe, { cwd: __dirname }, (err, stdout, stderr) => {
-  const actualErrorOutput = postProcessErrorOutput(stderr.toString());
-  if (updateTests) {
-    fs.writeFileSync(expectedFilePath, actualErrorOutput);
-  } else {
-    const expectedErrorOutput = postProcessErrorOutput(
-      fs.readFileSync(expectedFilePath, { encoding: "utf-8" }),
-    );
-    if (expectedErrorOutput !== actualErrorOutput) {
-      console.error(`The old and new error output aren't the same`);
-      console.error("\n=== Old:");
-      console.error(expectedErrorOutput);
-      console.error("\n=== New:");
-      console.error(actualErrorOutput);
-      process.exit(1);
+child_process.exec(
+  rescript_exe,
+  { cwd: __dirname },
+  (_err, _stdout, stderr) => {
+    const actualErrorOutput = postProcessErrorOutput(stderr.toString());
+    if (updateTests) {
+      fs.writeFileSync(expectedFilePath, actualErrorOutput);
+    } else {
+      const expectedErrorOutput = postProcessErrorOutput(
+        fs.readFileSync(expectedFilePath, { encoding: "utf-8" }),
+      );
+      if (expectedErrorOutput !== actualErrorOutput) {
+        console.error(`The old and new error output aren't the same`);
+        console.error("\n=== Old:");
+        console.error(expectedErrorOutput);
+        console.error("\n=== New:");
+        console.error(actualErrorOutput);
+        process.exit(1);
+      }
     }
-  }
-});
+  },
+);

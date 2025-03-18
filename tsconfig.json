@@ -19,8 +19,5 @@
     "tests/**/input.js",
     "package.json"
   ],
-  "exclude": [
-    "*.res.js",
-    "*.res.mjs",
-  ]
+  "exclude": ["*.res.js", "*.res.mjs"]
 }

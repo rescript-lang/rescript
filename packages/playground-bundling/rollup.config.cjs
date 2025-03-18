@@ -1,7 +1,7 @@
 const resolve = require("@rollup/plugin-node-resolve");
 
 const { globSync } = require("glob");
-const path = require("path");
+const path = require("node:path");
 
 const RESCRIPT_COMPILER_ROOT_DIR = path.join(__dirname, "..", "..");
 const LIB_DIR = path.join(RESCRIPT_COMPILER_ROOT_DIR, "lib");

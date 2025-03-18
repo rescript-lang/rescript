@@ -32,7 +32,7 @@ function releaseBuild() {
     ownerProcess.kill("SIGHUP");
     try {
       fs.rmSync(lockFileName);
-    } catch { }
+    } catch {}
     ownerProcess = null;
   }
 }
@@ -147,7 +147,7 @@ function logFinishCompiling(code) {
 
 function logStartCompiling() {
   updateStartTime();
-  let log = `>>>> Start compiling`;
+  let log = ">>>> Start compiling";
   if (shouldColorize) {
     log = `\x1b[36m${log}\x1b[0m`;
   }
@@ -210,7 +210,7 @@ function watch(args) {
   let watchers = [];
 
   const verbose = args.includes("-verbose");
-  const dlog = verbose ? console.log : () => { };
+  const dlog = verbose ? console.log : () => {};
 
   const wsParamIndex = args.indexOf("-ws");
   if (wsParamIndex > -1) {
@@ -253,18 +253,18 @@ function watch(args) {
   function setUpWebSocket() {
     const _id = setInterval(notifyClients, 3000);
     createServer()
-      .on("upgrade", function(req, socket, upgradeHead) {
+      .on("upgrade", (req, socket, upgradeHead) => {
         dlog("connection opened");
-        var ws = new WebSocket(req, socket, upgradeHead);
-        socket.on("error", function(err) {
+        const ws = new WebSocket(req, socket, upgradeHead);
+        socket.on("error", err => {
           dlog(`Socket Error ${err}`);
         });
         wsClients.push(ws);
       })
-      .on("error", function(err) {
+      .on("error", err => {
         // @ts-ignore
         if (err !== undefined && err.code === "EADDRINUSE") {
-          var error = shouldColorize ? `\x1b[1;31mERROR:\x1b[0m` : `ERROR:`;
+          const error = shouldColorize ? "\x1b[1;31mERROR:\x1b[0m" : "ERROR:";
           console.error(`${error} The websocket port number ${webSocketPort} is in use.
 Please pick a different one using the \`-ws [host:]port\` flag from bsb.`);
         } else {
