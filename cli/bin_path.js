@@ -52,6 +52,7 @@ const rescript_editor_analysis_exe = path.join(
  */
 const rewatch_exe = path.join(platformDir, "rewatch.exe");
 
+exports.platformName = platformName;
 exports.platformDir = platformDir;
 exports.bsc_exe = bsc_exe;
 exports.ninja_exe = ninja_exe;
