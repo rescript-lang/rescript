@@ -80,7 +80,7 @@
     "#dev/*": "./lib_dev/*.js"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.8.3",
+    "@biomejs/biome": "1.9.4",
     "@types/node": "^20.14.9",
     "@types/semver": "^7.5.8",
     "mocha": "10.8.2",
