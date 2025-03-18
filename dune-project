@@ -1,4 +1,4 @@
-(lang dune 2.3)
+(lang dune 3.17)
 
 (name rescript)
 
