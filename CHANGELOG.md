@@ -35,6 +35,7 @@
 - Hide stdlib modules in output. https://github.com/rescript-lang/rescript/pull/7305
 - Deprecate unsafe host-specific bindings from stdlib. https://github.com/rescript-lang/rescript/pull/7334
 - Make unsafe function names consistent in Stdlib.String. https://github.com/rescript-lang/rescript/pull/7337
+- `rescript` package does not trigger `postinstall` script anymore. https://github.com/rescript-lang/rescript/pull/7350
 
 #### :bug: Bug fix
 
