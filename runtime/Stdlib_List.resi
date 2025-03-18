@@ -902,7 +902,7 @@ let sort: (list<'a>, ('a, 'a) => Stdlib_Ordering.t) => list<'a>
 /**
   `ignore(list)` ignores the provided list and returns unit.
 
-  This helper is useful when you want to discard a value (for example, the result of a side-effecting operation)
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
   without having to store or process it further.
 */
 external ignore: list<'a> => unit = "%ignore"

@@ -96,7 +96,7 @@ let lnot = x => lxor(x, -1n)
 /**
   `ignore(bigint)` ignores the provided bigint and returns unit.
 
-  This helper is useful when you want to discard a value (for example, the result of a side-effecting operation)
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
   without having to store or process it further.
 */
 external ignore: bigint => unit = "%ignore"

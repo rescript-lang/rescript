@@ -1362,7 +1362,7 @@ external toJSON: t => option<string> = "toJSON"
 /**
   `ignore(date)` ignores the provided date and returns unit.
 
-  This helper is useful when you want to discard a value (for example, the result of a side-effecting operation)
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
   without having to store or process it further.
 */
 external ignore: t => unit = "%ignore"

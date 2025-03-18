@@ -320,7 +320,7 @@ let all6: ((option<'a>, option<'b>, option<'c>, option<'d>, option<'e>, option<'
 /**
   `ignore(option)` ignores the provided option and returns unit.
 
-  This helper is useful when you want to discard a value (for example, the result of a side-effecting operation)
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
   without having to store or process it further.
 */
 external ignore: option<'a> => unit = "%ignore"
