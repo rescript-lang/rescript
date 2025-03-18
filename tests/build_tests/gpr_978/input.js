@@ -1,8 +1,8 @@
 //@ts-check
-const cp = require("child_process");
-const assert = require("assert");
-const fs = require("fs");
-const path = require("path");
+const cp = require("node:child_process");
+const assert = require("node:assert");
+const fs = require("node:fs");
+const path = require("node:path");
 const { rescript_exe } = require("#cli/bin_path");
 
 const output = cp.spawnSync(rescript_exe, { encoding: "utf8", shell: true });

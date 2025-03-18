@@ -1,6 +1,6 @@
 // @ts-check
 
-const { execFileSync } = require("child_process");
+const { execFileSync } = require("node:child_process");
 
 [
   ["belt_HashSetString.res", "hashset.res.cppo", "TYPE_STRING"],

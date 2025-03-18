@@ -70,7 +70,7 @@ async function readStdin() {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-const numThreads = os.cpus().length;
+const _numThreads = os.cpus().length;
 
 /**
  * Splits an array into smaller chunks of a specified size.

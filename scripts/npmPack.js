@@ -28,9 +28,9 @@
  * @typedef {[PackOutputEntry]} PackOutput
  */
 
-const { spawnSync, execSync } = require("child_process");
-const path = require("path");
-const fs = require("fs");
+const { spawnSync, execSync } = require("node:child_process");
+const path = require("node:path");
+const fs = require("node:fs");
 
 const mode = process.argv.includes("-updateArtifactList")
   ? "updateArtifactList"
@@ -40,7 +40,7 @@ const rootPath = path.join(__dirname, "..");
 const fileListPath = path.join(rootPath, "packages", "artifacts.txt");
 
 const output = spawnSync(
-  "npm pack --json" + (mode === "updateArtifactList" ? " --dry-run" : ""),
+  `npm pack --json${mode === "updateArtifactList" ? " --dry-run" : ""}`,
   {
     cwd: rootPath,
     encoding: "utf8",
@@ -77,8 +77,8 @@ function getFilesAddedByCI() {
 
   const files = ["ninja.COPYING"];
 
-  for (let platform of platforms) {
-    for (let exe of exes) {
+  for (const platform of platforms) {
+    for (const exe of exes) {
       files.push(`${platform}/${exe}`);
     }
   }

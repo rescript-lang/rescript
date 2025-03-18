@@ -1,7 +1,7 @@
 // @ts-check
 
-const assert = require("assert");
-const path = require("path");
+const assert = require("node:assert");
+const path = require("node:path");
 const { exec, normalizeNewlines } = require("../utils.js");
 
 const rescriptPath = path.join(__dirname, "..", "..", "..", "cli", "rescript");
@@ -103,7 +103,7 @@ async function test() {
   // Exits with build help with unknown arg
   await runTest(["build", "-foo"], {
     stdout: "",
-    stderr: 'Error: Unknown option "-foo".\n' + buildHelp,
+    stderr: `Error: Unknown option "-foo".\n${buildHelp}`,
     status: 2,
   });
 
@@ -119,14 +119,14 @@ async function test() {
   // Exits with cli help with unknown command
   await runTest(["built"], {
     stdout: "",
-    stderr: `Error: Unknown command "built".\n` + cliHelp,
+    stderr: `Error: Unknown command "built".\n${cliHelp}`,
     status: 2,
   });
 
   // Exits with build help with unknown args
   await runTest(["-foo"], {
     stdout: "",
-    stderr: 'Error: Unknown option "-foo".\n' + buildHelp,
+    stderr: `Error: Unknown option "-foo".\n${buildHelp}`,
     status: 2,
   });
 
@@ -143,7 +143,7 @@ async function test() {
   // Exits with clean help with unknown arg
   await runTest(["clean", "-foo"], {
     stdout: "",
-    stderr: 'Error: Unknown option "-foo".\n' + cleanHelp,
+    stderr: `Error: Unknown option "-foo".\n${cleanHelp}`,
     status: 2,
   });
 
