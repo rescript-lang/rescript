@@ -44,7 +44,6 @@
     }
   },
   "files": {
-    "include": ["tests/build_tests/**/node_modules/**"],
     "ignore": [
       "tests/analysis_tests/**/src/**",
       "tests/build_tests/**/src/**",
