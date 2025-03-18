@@ -43,7 +43,6 @@
     "rewatch": "cli/rewatch"
   },
   "scripts": {
-    "postinstall": "node cli/rescript_postinstall.js",
     "test": "node scripts/test.js -all",
     "test-bsb": "node scripts/test.js -bsb",
     "test-ocaml": "node scripts/test.js -ounit",
