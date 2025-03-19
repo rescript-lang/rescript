@@ -1,10 +1,10 @@
 // @ts-check
 
-const assert = require("assert");
-const path = require("path");
+const assert = require("node:assert");
+const path = require("node:path");
 const { exec, normalizeNewlines } = require("../utils.js");
 
-const rescriptPath = path.join(__dirname, "..", "..", "..", "cli", "rescript")
+const rescriptPath = path.join(__dirname, "..", "..", "..", "cli", "rescript");
 
 const cliHelp =
   "Usage: rescript <options> <subcommand>\n" +
@@ -77,12 +77,20 @@ async function runTest(params, expected) {
   assert.equal(normalizeNewlines(out.stderr), expected.stderr);
   assert.equal(out.status, expected.status);
 }
-  
-async function test() {
-    // Shows build help with --help arg
-  await runTest(["build", "--help"], { stdout: buildHelp, stderr: "", status: 0 });
 
-  await runTest(["build", "-w", "--help"], { stdout: buildHelp, stderr: "", status: 0 });
+async function test() {
+  // Shows build help with --help arg
+  await runTest(["build", "--help"], {
+    stdout: buildHelp,
+    stderr: "",
+    status: 0,
+  });
+
+  await runTest(["build", "-w", "--help"], {
+    stdout: buildHelp,
+    stderr: "",
+    status: 0,
+  });
 
   await runTest(["-w", "--help"], { stdout: cliHelp, stderr: "", status: 0 });
 
@@ -95,7 +103,7 @@ async function test() {
   // Exits with build help with unknown arg
   await runTest(["build", "-foo"], {
     stdout: "",
-    stderr: 'Error: Unknown option "-foo".\n' + buildHelp,
+    stderr: `Error: Unknown option "-foo".\n${buildHelp}`,
     status: 2,
   });
 
@@ -111,19 +119,23 @@ async function test() {
   // Exits with cli help with unknown command
   await runTest(["built"], {
     stdout: "",
-    stderr: `Error: Unknown command "built".\n` + cliHelp,
+    stderr: `Error: Unknown command "built".\n${cliHelp}`,
     status: 2,
   });
 
   // Exits with build help with unknown args
   await runTest(["-foo"], {
     stdout: "",
-    stderr: 'Error: Unknown option "-foo".\n' + buildHelp,
+    stderr: `Error: Unknown option "-foo".\n${buildHelp}`,
     status: 2,
   });
 
   // Shows clean help with --help arg
-  await runTest(["clean", "--help"], { stdout: cleanHelp, stderr: "", status: 0 });
+  await runTest(["clean", "--help"], {
+    stdout: cleanHelp,
+    stderr: "",
+    status: 0,
+  });
 
   // Shows clean help with -h arg
   await runTest(["clean", "-h"], { stdout: cleanHelp, stderr: "", status: 0 });
@@ -131,18 +143,30 @@ async function test() {
   // Exits with clean help with unknown arg
   await runTest(["clean", "-foo"], {
     stdout: "",
-    stderr: 'Error: Unknown option "-foo".\n' + cleanHelp,
+    stderr: `Error: Unknown option "-foo".\n${cleanHelp}`,
     status: 2,
   });
 
   // Shows format help with --help arg
-  await runTest(["format", "--help"], { stdout: formatHelp, stderr: "", status: 0 });
+  await runTest(["format", "--help"], {
+    stdout: formatHelp,
+    stderr: "",
+    status: 0,
+  });
 
   // Shows format help with -h arg
-  await runTest(["format", "-h"], { stdout: formatHelp, stderr: "", status: 0 });
+  await runTest(["format", "-h"], {
+    stdout: formatHelp,
+    stderr: "",
+    status: 0,
+  });
 
   // Shows dump help with --help arg
-  await runTest(["dump", "--help"], { stdout: dumpHelp, stderr: "", status: 0 });
+  await runTest(["dump", "--help"], {
+    stdout: dumpHelp,
+    stderr: "",
+    status: 0,
+  });
 
   // Shows dump help with -h arg
   await runTest(["dump", "-h"], { stdout: dumpHelp, stderr: "", status: 0 });

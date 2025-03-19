@@ -21,7 +21,7 @@ export class AbsoluteValue {
 
 export type stringFunction = (_: string) => string;
 
-export const useColor = (x: "tomato" | "gray"): number => 0;
+export const useColor = (_x: "tomato" | "gray"): number => 0;
 
 export const higherOrder = (foo: (_1: number, _2: number) => number) =>
   foo(3, 4);

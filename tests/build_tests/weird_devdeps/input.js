@@ -1,11 +1,11 @@
 //@ts-check
 
-var cp = require("child_process");
-var assert = require("assert");
-var os = require("os");
-var rescript_exe = require("#cli/bin_path").rescript_exe;
+const cp = require("node:child_process");
+const assert = require("node:assert");
+const os = require("node:os");
+const { rescript_exe } = require("#cli/bin_path");
 
-var out = cp.spawnSync(rescript_exe, {
+const out = cp.spawnSync(rescript_exe, {
   cwd: __dirname,
   encoding: "utf8",
 });

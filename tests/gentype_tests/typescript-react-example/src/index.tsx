@@ -1,16 +1,16 @@
 import type * as React from "react";
 import * as ReactDOM from "react-dom";
-import App from "./App";
-import * as ImportJsValue from "./ImportJsValue.gen";
-import * as Uncurried from "./Uncurried.gen";
+import App from "./App.tsx";
+import * as ImportJsValue from "./ImportJsValue.gen.tsx";
+import * as Uncurried from "./Uncurried.gen.tsx";
 import "./index.css";
-import * as MyMath from "./MyMath";
-import * as Types from "./nested/Types.gen";
-import { Universe_Nested2_Nested3_nested3Value } from "./NestedModules.gen";
-import * as Records from "./Records.gen";
-import * as Variants from "./Variants.gen";
-import Hooks from "./Hooks.gen";
-import * as DocStrings from "./Docstrings.gen";
+import * as DocStrings from "./Docstrings.gen.tsx";
+import Hooks from "./Hooks.gen.tsx";
+import * as MyMath from "./MyMath.tsx";
+import { Universe_Nested2_Nested3_nested3Value } from "./NestedModules.gen.tsx";
+import * as Records from "./Records.gen.tsx";
+import * as TestPromise from "./TestPromise.gen.tsx";
+import * as Variants from "./Variants.gen.tsx";
 import {
   printManyPayloads,
   printVariantWithPayload,
@@ -18,8 +18,8 @@ import {
   testManyPayloads,
   testVariantWithPayloads,
   testWithPayload,
-} from "./VariantsWithPayload.gen";
-import * as TestPromise from "./TestPromise.gen";
+} from "./VariantsWithPayload.gen.tsx";
+import * as Types from "./nested/Types.gen.tsx";
 
 const consoleLog = console.log;
 
@@ -126,7 +126,7 @@ type Props = {
   readonly method?: "push" | "replace";
 };
 
-export const make: React.FC<Props> = (x: Props) => {
+export const make: React.FC<Props> = (_x: Props) => {
   return <div />;
 };
 

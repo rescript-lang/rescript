@@ -47,11 +47,14 @@
     "test": "node scripts/test.js -all",
     "test-bsb": "node scripts/test.js -bsb",
     "test-ocaml": "node scripts/test.js -ounit",
+    "lint": "biome check --changed --no-errors-on-unmatched .",
+    "lint:all": "biome check .",
     "format": "biome format --changed --no-errors-on-unmatched --write .",
     "format:all": "biome format --write .",
     "checkFormat": "biome format --changed --no-errors-on-unmatched .",
     "checkFormat:all": "biome format .",
-    "coverage": "nyc --timeout=3000 --reporter=html mocha tests/tests/src/*_test.js && open ./coverage/index.html"
+    "coverage": "nyc --timeout=3000 --reporter=html mocha tests/tests/src/*_test.js && open ./coverage/index.html",
+    "typecheck": "tsc"
   },
   "files": [
     "CHANGELOG.md",
@@ -72,12 +75,18 @@
     "./package.json": "./package.json"
   },
   "imports": {
-    "#cli/bin_path": "./cli/bin_path.js"
+    "#cli/bin_path": "./cli/bin_path.js",
+    "#lib/minisocket": "./lib/minisocket.js",
+    "#dev/*": "./lib_dev/*.js"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.8.3",
+    "@biomejs/biome": "1.9.4",
+    "@types/node": "^20.14.9",
+    "@types/semver": "^7.5.8",
     "mocha": "10.8.2",
-    "nyc": "15.0.0"
+    "nyc": "15.0.0",
+    "semver": "7.6.2",
+    "typescript": "5.5.3"
   },
   "packageManager": "npm@10.8.1+sha512.0e9d42e92bd2318408ed81eaff2da5f78baf23ee7d12a6eed44a6e2901d0f29d7ab715d1b918ade601f72e769a824d9a5c322383f22bbbda5dd396e79de2a077"
 }

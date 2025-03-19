@@ -6,8 +6,8 @@
     "start": "rescript build -w",
     "build": "rescript",
     "clean": "rescript clean",
-    "tsc": "tsc -p tsconfig.json",
-    "lint": "biome check src"
+    "typecheck": "tsc",
+    "lint": "biome check --changed --no-errors-on-unmatched ."
   },
   "dependencies": {
     "@rescript/react": "^0.13.0",
@@ -15,10 +15,10 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.8.3",
-    "@types/node": "^18.15.12",
-    "@types/react-dom": "^18.0.11",
+    "@biomejs/biome": "1.9.4",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
     "rescript": "file:../../..",
-    "typescript": "^5.2.2"
+    "typescript": "5.5.3"
   }
 }

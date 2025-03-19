@@ -1,9 +1,9 @@
-//@ts-check
-/**
- * This file is used only in dev time, feel free to use es6
- */
-const fs = require("fs");
-const { execSync } = require("child_process");
+#!/usr/bin/env node
+
+// @ts-check
+
+const fs = require("node:fs");
+const { execSync } = require("node:child_process");
 
 const packageSpec = JSON.parse(fs.readFileSync("./package.json", "utf8"));
 const { version, name } = packageSpec;

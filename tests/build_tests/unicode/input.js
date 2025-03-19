@@ -1,9 +1,10 @@
-//@ts-check
-var child_process = require("child_process");
-var fs = require("fs");
-var path = require("path");
+// @ts-check
 
-var { rescript_exe } = require("#cli/bin_path");
+const child_process = require("node:child_process");
+const fs = require("node:fs");
+const path = require("node:path");
+const assert = require("node:assert");
+const { rescript_exe } = require("#cli/bin_path");
 
 if (process.platform === "win32") {
   console.log("Skipping test on Windows");
@@ -12,9 +13,9 @@ if (process.platform === "win32") {
 
 console.log(child_process.execSync(rescript_exe, { encoding: "utf8" }));
 
-var content =
-  "" + fs.readFileSync(path.join(__dirname, "lib", "bs", ".sourcedirs.json"));
-
-var assert = require("assert");
+const content = fs.readFileSync(
+  path.join(__dirname, "lib", "bs", ".sourcedirs.json"),
+  "utf-8",
+);
 
 assert(JSON.parse(content).dirs.some(x => x.includes("📕annotation")));
