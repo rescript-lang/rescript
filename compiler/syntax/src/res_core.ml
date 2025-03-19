@@ -11,7 +11,9 @@ let mk_loc start_loc end_loc =
   Location.{loc_start = start_loc; loc_end = end_loc; loc_ghost = false}
 
 type inline_types_context = {
-  mutable found_inline_types: (string * Warnings.loc * Parsetree.type_kind) list;
+  mutable found_inline_types:
+    (string * Warnings.loc * Parsetree.type_kind) list;
+  params: (Parsetree.core_type * Asttypes.variance) list;
 }
 
 module Recover = struct
@@ -4212,7 +4214,7 @@ and parse_record_or_object_type ?current_type_name_path ?inline_types_context
       :: inline_types_context.found_inline_types;
 
     let lid = Location.mkloc (Longident.Lident inline_type_name) loc in
-    Ast_helper.Typ.constr ~loc lid []
+    Ast_helper.Typ.constr ~loc lid (inline_types_context.params |> List.map fst)
   | _ ->
     let () =
       match p.token with
@@ -5599,7 +5601,7 @@ and parse_type_definition_or_extension ~attrs p =
          |> Diagnostics.message)
     in
     let current_type_name_path = Longident.flatten name.txt in
-    let inline_types_context = {found_inline_types = []} in
+    let inline_types_context = {found_inline_types = []; params} in
     let type_defs =
       parse_type_definitions ~inline_types_context ~current_type_name_path
         ~attrs ~name ~params ~start_pos p
@@ -5612,7 +5614,7 @@ and parse_type_definition_or_extension ~attrs p =
     let inline_types =
       inline_types_context.found_inline_types
       |> List.map (fun (inline_type_name, loc, kind) ->
-             Ast_helper.Type.mk
+             Ast_helper.Type.mk ~params
                ~attrs:[(Location.mknoloc "res.inlineRecordDefinition", PStr [])]
                ~loc ~kind
                {name with txt = inline_type_name})

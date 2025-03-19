@@ -1722,7 +1722,7 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
     | Ptyp_object (fields, open_flag) ->
       print_object ~state ~inline:false fields open_flag cmt_tbl
     | Ptyp_arrow {arity} -> print_arrow ~arity typ_expr
-    | Ptyp_constr ({txt = Lident inline_record_name}, [])
+    | Ptyp_constr ({txt = Lident inline_record_name}, _)
       when inline_record_definitions
            |> find_inline_record_definition inline_record_name
            |> Option.is_some -> (
