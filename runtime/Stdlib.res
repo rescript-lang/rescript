@@ -100,7 +100,23 @@ async function main() {
 external import: 'a => promise<'a> = "%import"
 
 let panic = Error.panic
-let throw = Error.throw
+
+/**
+Throw and exception which will stop execution.
+
+## Examples
+
+```rescript
+let error = Error.make("Everything is upside down.")
+
+if 5 > 10 {
+  error->throw
+} else {
+  Console.log("Phew, sanity still rules.")
+}
+```
+*/
+external throw: Error.t => 'a = "%raise"
 
 /**
 `assertEqual(a, b)` check if `a` is equal `b`. If not raise a panic exception

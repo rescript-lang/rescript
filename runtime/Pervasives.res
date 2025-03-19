@@ -12,7 +12,9 @@ external /* Internal */
 __unsafe_cast: 'a => 'b = "%identity"
 
 /* Exceptions */
-
+@deprecated(
+  "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `throw`"
+)
 external raise: exn => 'a = "%raise"
 
 @deprecated("Use custom exception instead")
