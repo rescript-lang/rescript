@@ -10,6 +10,10 @@ module Parser = Res_parser
 let mk_loc start_loc end_loc =
   Location.{loc_start = start_loc; loc_end = end_loc; loc_ghost = false}
 
+type inline_types_context = {
+  mutable found_inline_types: (string * Warnings.loc * Parsetree.type_kind) list;
+}
+
 module Recover = struct
   let default_expr () =
     let id = Location.mknoloc "rescript.exprhole" in
@@ -3978,7 +3982,7 @@ and parse_array_exp p =
 
 (* TODO: check attributes in the case of poly type vars,
  * might be context dependend: parseFieldDeclaration (see ocaml) *)
-and parse_poly_type_expr ?current_type_name_path ?inline_types p =
+and parse_poly_type_expr ?current_type_name_path ?inline_types_context p =
   let start_pos = p.Parser.start_pos in
   match p.Parser.token with
   | SingleQuote -> (
@@ -4004,7 +4008,7 @@ and parse_poly_type_expr ?current_type_name_path ?inline_types p =
         Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Nolabel typ return_type
       | _ -> Ast_helper.Typ.var ~loc:var.loc var.txt)
     | _ -> assert false)
-  | _ -> parse_typ_expr ?current_type_name_path ?inline_types p
+  | _ -> parse_typ_expr ?current_type_name_path ?inline_types_context p
 
 (* 'a 'b 'c *)
 and parse_type_var_list p =
@@ -4032,7 +4036,8 @@ and parse_lident_list p =
   in
   loop p []
 
-and parse_atomic_typ_expr ?current_type_name_path ?inline_types ~attrs p =
+and parse_atomic_typ_expr ?current_type_name_path ?inline_types_context ~attrs p
+    =
   Parser.leave_breadcrumb p Grammar.AtomicTypExpr;
   let start_pos = p.Parser.start_pos in
   let typ =
@@ -4076,14 +4081,14 @@ and parse_atomic_typ_expr ?current_type_name_path ?inline_types ~attrs p =
     | Uident _ | Lident _ ->
       let constr = parse_value_path p in
       let args =
-        parse_type_constructor_args ?inline_types ?current_type_name_path
-          ~constr_name:constr p
+        parse_type_constructor_args ?inline_types_context
+          ?current_type_name_path ~constr_name:constr p
       in
       let number_of_inline_records_in_args =
-        match inline_types with
+        match inline_types_context with
         | None -> 0
-        | Some inline_types ->
-          let inline_types = !inline_types in
+        | Some inline_types_context ->
+          let inline_types = inline_types_context.found_inline_types in
           args
           |> List.filter (fun (c : Parsetree.core_type) ->
                  match c.ptyp_desc with
@@ -4111,7 +4116,8 @@ and parse_atomic_typ_expr ?current_type_name_path ?inline_types ~attrs p =
       let loc = mk_loc start_pos p.prev_end_pos in
       Ast_helper.Typ.extension ~attrs ~loc extension
     | Lbrace ->
-      parse_record_or_object_type ?current_type_name_path ?inline_types ~attrs p
+      parse_record_or_object_type ?current_type_name_path ?inline_types_context
+        ~attrs p
     | Eof ->
       Parser.err p (Diagnostics.unexpected p.Parser.token p.breadcrumbs);
       Recover.default_type ()
@@ -4173,7 +4179,8 @@ and parse_package_constraint p =
     Some (type_constr, typ)
   | _ -> None
 
-and parse_record_or_object_type ?current_type_name_path ?inline_types ~attrs p =
+and parse_record_or_object_type ?current_type_name_path ?inline_types_context
+    ~attrs p =
   (* for inline record in constructor *)
   let start_pos = p.Parser.start_pos in
   Parser.expect Lbrace p;
@@ -4187,19 +4194,22 @@ and parse_record_or_object_type ?current_type_name_path ?inline_types ~attrs p =
       Asttypes.Closed
     | _ -> Asttypes.Closed
   in
-  match (p.token, inline_types, current_type_name_path) with
-  | Lident _, Some inline_types, Some current_type_name_path ->
+  match (p.token, inline_types_context, current_type_name_path) with
+  | Lident _, Some inline_types_context, Some current_type_name_path ->
     let labels =
       parse_comma_delimited_region ~grammar:Grammar.RecordDecl ~closing:Rbrace
         ~f:
-          (parse_field_declaration_region ~current_type_name_path ~inline_types)
+          (parse_field_declaration_region ~current_type_name_path
+             ~inline_types_context)
         p
     in
     Parser.expect Rbrace p;
     let loc = mk_loc start_pos p.prev_end_pos in
     let inline_type_name = current_type_name_path |> String.concat "." in
-    inline_types :=
-      (inline_type_name, loc, Parsetree.Ptype_record labels) :: !inline_types;
+
+    inline_types_context.found_inline_types <-
+      (inline_type_name, loc, Parsetree.Ptype_record labels)
+      :: inline_types_context.found_inline_types;
 
     let lid = Location.mkloc (Longident.Lident inline_type_name) loc in
     Ast_helper.Typ.constr ~loc lid []
@@ -4417,7 +4427,7 @@ and parse_es6_arrow_type ~attrs p =
  *  | uident.lident
  *  | uident.uident.lident     --> long module path
  *)
-and parse_typ_expr ?current_type_name_path ?inline_types ?attrs
+and parse_typ_expr ?current_type_name_path ?inline_types_context ?attrs
     ?(es6_arrow = true) ?(alias = true) p =
   (* Parser.leaveBreadcrumb p Grammar.TypeExpression; *)
   let start_pos = p.Parser.start_pos in
@@ -4430,7 +4440,8 @@ and parse_typ_expr ?current_type_name_path ?inline_types ?attrs
     if es6_arrow && is_es6_arrow_type p then parse_es6_arrow_type ~attrs p
     else
       let typ =
-        parse_atomic_typ_expr ?current_type_name_path ?inline_types ~attrs p
+        parse_atomic_typ_expr ?current_type_name_path ?inline_types_context
+          ~attrs p
       in
       parse_arrow_type_rest ~es6_arrow ~start_pos typ p
   in
@@ -4470,16 +4481,18 @@ and parse_tuple_type ~attrs ~first ~start_pos p =
   let tuple_loc = mk_loc start_pos p.prev_end_pos in
   Ast_helper.Typ.tuple ~attrs ~loc:tuple_loc typexprs
 
-and parse_type_constructor_arg_region ?inline_types ?current_type_name_path p =
+and parse_type_constructor_arg_region ?inline_types_context
+    ?current_type_name_path p =
   if Grammar.is_typ_expr_start p.Parser.token then
-    Some (parse_typ_expr ?inline_types ?current_type_name_path p)
+    Some (parse_typ_expr ?inline_types_context ?current_type_name_path p)
   else if p.token = LessThan then (
     Parser.next p;
-    parse_type_constructor_arg_region ?inline_types ?current_type_name_path p)
+    parse_type_constructor_arg_region ?inline_types_context
+      ?current_type_name_path p)
   else None
 
 (* Js.Nullable.value<'a> *)
-and parse_type_constructor_args ?inline_types ?current_type_name_path
+and parse_type_constructor_args ?inline_types_context ?current_type_name_path
     ~constr_name p =
   let opening = p.Parser.token in
   let opening_start_pos = p.start_pos in
@@ -4492,7 +4505,7 @@ and parse_type_constructor_args ?inline_types ?current_type_name_path
       parse_comma_delimited_region ~grammar:Grammar.TypExprList
         ~closing:GreaterThan
         ~f:
-          (parse_type_constructor_arg_region ?inline_types
+          (parse_type_constructor_arg_region ?inline_types_context
              ?current_type_name_path)
         p
     in
@@ -4578,7 +4591,7 @@ and parse_field_declaration p =
   let loc = mk_loc start_pos typ.ptyp_loc.loc_end in
   Ast_helper.Type.field ~attrs ~loc ~mut ~optional name typ
 
-and parse_field_declaration_region ?current_type_name_path ?inline_types
+and parse_field_declaration_region ?current_type_name_path ?inline_types_context
     ?found_object_field p =
   let start_pos = p.Parser.start_pos in
   let attrs = parse_attributes p in
@@ -4614,7 +4627,7 @@ and parse_field_declaration_region ?current_type_name_path ?inline_types
       match p.Parser.token with
       | Colon ->
         Parser.next p;
-        parse_poly_type_expr ?current_type_name_path ?inline_types p
+        parse_poly_type_expr ?current_type_name_path ?inline_types_context p
       | _ ->
         Ast_helper.Typ.constr ~loc:name.loc ~attrs
           {name with txt = Lident name.txt}
@@ -4640,12 +4653,14 @@ and parse_field_declaration_region ?current_type_name_path ?inline_types
  *  | { field-decl, field-decl }
  *  | { field-decl, field-decl, field-decl, }
  *)
-and parse_record_declaration ?current_type_name_path ?inline_types p =
+and parse_record_declaration ?current_type_name_path ?inline_types_context p =
   Parser.leave_breadcrumb p Grammar.RecordDecl;
   Parser.expect Lbrace p;
   let rows =
     parse_comma_delimited_region ~grammar:Grammar.RecordDecl ~closing:Rbrace
-      ~f:(parse_field_declaration_region ?current_type_name_path ?inline_types)
+      ~f:
+        (parse_field_declaration_region ?current_type_name_path
+           ?inline_types_context)
       p
   in
   Parser.expect Rbrace p;
@@ -4889,7 +4904,7 @@ and parse_type_constructor_declarations ?first p =
  *  ∣	 = private record-decl
  *  |  = ..
  *)
-and parse_type_representation ?current_type_name_path ?inline_types p =
+and parse_type_representation ?current_type_name_path ?inline_types_context p =
   Parser.leave_breadcrumb p Grammar.TypeRepresentation;
   (* = consumed *)
   let private_flag =
@@ -4902,7 +4917,8 @@ and parse_type_representation ?current_type_name_path ?inline_types p =
       Parsetree.Ptype_variant (parse_type_constructor_declarations p)
     | Lbrace ->
       Parsetree.Ptype_record
-        (parse_record_declaration ?current_type_name_path ?inline_types p)
+        (parse_record_declaration ?current_type_name_path ?inline_types_context
+           p)
     | DotDot ->
       Parser.next p;
       Ptype_open
@@ -5093,7 +5109,8 @@ and parse_type_equation_or_constr_decl p =
     (* TODO: is this a good idea? *)
     (None, Asttypes.Public, Parsetree.Ptype_abstract)
 
-and parse_record_or_object_decl ?current_type_name_path ?inline_types p =
+and parse_record_or_object_decl ?current_type_name_path ?inline_types_context p
+    =
   let start_pos = p.Parser.start_pos in
   Parser.expect Lbrace p;
   match p.Parser.token with
@@ -5151,7 +5168,7 @@ and parse_record_or_object_decl ?current_type_name_path ?inline_types p =
         parse_comma_delimited_region ~grammar:Grammar.RecordDecl ~closing:Rbrace
           ~f:
             (parse_field_declaration_region ?current_type_name_path
-               ?inline_types ~found_object_field)
+               ?inline_types_context ~found_object_field)
           p
       in
       Parser.expect Rbrace p;
@@ -5225,7 +5242,7 @@ and parse_record_or_object_decl ?current_type_name_path ?inline_types p =
             ~closing:Rbrace
             ~f:
               (parse_field_declaration_region ?current_type_name_path
-                 ?inline_types)
+                 ?inline_types_context)
             p
         | attr :: _ as attrs ->
           let first =
@@ -5246,7 +5263,7 @@ and parse_record_or_object_decl ?current_type_name_path ?inline_types p =
                ~closing:Rbrace
                ~f:
                  (parse_field_declaration_region ?current_type_name_path
-                    ?inline_types)
+                    ?inline_types_context)
                p
       in
       Parser.expect Rbrace p;
@@ -5437,8 +5454,8 @@ and parse_polymorphic_variant_type_args p =
   | [typ] -> typ
   | types -> Ast_helper.Typ.tuple ~loc ~attrs types
 
-and parse_type_equation_and_representation ?current_type_name_path ?inline_types
-    p =
+and parse_type_equation_and_representation ?current_type_name_path
+    ?inline_types_context p =
   match p.Parser.token with
   | (Equal | Bar) as token -> (
     if token = Bar then Parser.expect Equal p;
@@ -5446,7 +5463,8 @@ and parse_type_equation_and_representation ?current_type_name_path ?inline_types
     match p.Parser.token with
     | Uident _ -> parse_type_equation_or_constr_decl p
     | Lbrace ->
-      parse_record_or_object_decl ?current_type_name_path ?inline_types p
+      parse_record_or_object_decl ?current_type_name_path ?inline_types_context
+        p
     | Private -> parse_private_eq_or_repr p
     | Bar | DotDot ->
       let priv, kind = parse_type_representation p in
@@ -5457,7 +5475,8 @@ and parse_type_equation_and_representation ?current_type_name_path ?inline_types
       | Equal ->
         Parser.next p;
         let priv, kind =
-          parse_type_representation ?current_type_name_path ?inline_types p
+          parse_type_representation ?current_type_name_path
+            ?inline_types_context p
         in
         (manifest, priv, kind)
       | _ -> (manifest, Public, Parsetree.Ptype_abstract)))
@@ -5524,12 +5543,12 @@ and parse_type_extension ~params ~attrs ~name p =
   let constructors = loop p [first] in
   Ast_helper.Te.mk ~attrs ~params ~priv name constructors
 
-and parse_type_definitions ~current_type_name_path ~inline_types ~attrs ~name
-    ~params ~start_pos p =
+and parse_type_definitions ~current_type_name_path ~inline_types_context ~attrs
+    ~name ~params ~start_pos p =
   let type_def =
     let manifest, priv, kind =
       parse_type_equation_and_representation ~current_type_name_path
-        ~inline_types p
+        ~inline_types_context p
     in
     let cstrs = parse_type_constraints p in
     let loc = mk_loc start_pos p.prev_end_pos in
@@ -5580,16 +5599,18 @@ and parse_type_definition_or_extension ~attrs p =
          |> Diagnostics.message)
     in
     let current_type_name_path = Longident.flatten name.txt in
-    let inline_types = ref [] in
+    let inline_types_context = {found_inline_types = []} in
     let type_defs =
-      parse_type_definitions ~inline_types ~current_type_name_path ~attrs ~name
-        ~params ~start_pos p
+      parse_type_definitions ~inline_types_context ~current_type_name_path
+        ~attrs ~name ~params ~start_pos p
     in
     let rec_flag =
-      if List.length !inline_types > 0 then Asttypes.Recursive else rec_flag
+      if List.length inline_types_context.found_inline_types > 0 then
+        Asttypes.Recursive
+      else rec_flag
     in
     let inline_types =
-      !inline_types
+      inline_types_context.found_inline_types
       |> List.map (fun (inline_type_name, loc, kind) ->
              Ast_helper.Type.mk
                ~attrs:[(Location.mknoloc "res.inlineRecordDefinition", PStr [])]
