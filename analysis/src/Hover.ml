@@ -105,6 +105,8 @@ let expandTypes ~file ~package ~supportsMarkdownLinks typ =
   | {decl; path} :: _
     when Res_parsetree_viewer.has_inline_record_definition_attribute
            decl.type_attributes ->
+    (* We print inline record types just with their definition, not the constr pointing 
+    to them, since that doesn't make sense to show the user. *)
     ( [
         Markdown.codeBlock
           (decl

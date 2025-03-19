@@ -646,6 +646,7 @@ let rec tree_of_typexp ?(printing_context : printing_context option) sch ty =
           find_inlined_type (Path.name p) printing_context |> Option.get
         with
         | Record {labels} ->
+          (* Print inlined records as actual inlined record structures, not a reference to the inlined type only. *)
           Otyp_record (List.map (tree_of_label ?printing_context) labels))
       | Tconstr (p, tyl, _abbrev) ->
         let p', s = best_type_path p in
