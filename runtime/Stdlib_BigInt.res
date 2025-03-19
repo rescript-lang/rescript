@@ -77,10 +77,10 @@ external \"~-": bigint => bigint = "%negbigint"
 external \"~+": bigint => bigint = "%identity"
 external \"**": (bigint, bigint) => bigint = "%powbigint"
 
-external add: (bigint, bigint) => bigint = "%addfloat"
-external sub: (bigint, bigint) => bigint = "%subfloat"
-external mul: (bigint, bigint) => bigint = "%mulfloat"
-external div: (bigint, bigint) => bigint = "%divfloat"
+external add: (bigint, bigint) => bigint = "%addbigint"
+external sub: (bigint, bigint) => bigint = "%subbigint"
+external mul: (bigint, bigint) => bigint = "%mulbigint"
+external div: (bigint, bigint) => bigint = "%divbigint"
 
 external mod: (bigint, bigint) => bigint = "%modbigint"
 
