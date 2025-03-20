@@ -109,9 +109,6 @@ jobs:
           # Verify that the compiler still builds with older OCaml versions
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.5.2.1+options,ocaml-option-static
-            # Reanalyze does not work on OCaml 5.3.0 anymore, therefore run it on 5.2.1
-            # disabled for now, since Reanalyze will stop working going forward. Can likely be removed entirely soon
-            run_reanalyze: false
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
           - os: ubuntu-24.04
@@ -191,10 +188,6 @@ jobs:
       - name: Install OPAM dependencies
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         run: opam install . --deps-only --with-test
-
-      - name: "Install reanalyze"
-        if: steps.cache-opam-env.outputs.cache-hit != 'true' && matrix.run_reanalyze
-        run: opam install reanalyze
 
       - name: Cache OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
@@ -305,10 +298,6 @@ jobs:
       - name: "Syntax: Run tests (Windows)"
         if: ${{ runner.os == 'Windows' }}
         run: opam exec -- make test-syntax
-
-      - name: "Syntax: Run reanalyze"
-        if: matrix.run_reanalyze
-        run: opam exec -- make reanalyze
 
       - name: Build runtime/stdlib
         run: ./scripts/buildRuntime.sh
