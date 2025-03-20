@@ -19,6 +19,7 @@
 - Add `inert` attribute to `JsxDOM.domProps`. https://github.com/rescript-lang/rescript/pull/7326
 - Make reanalyze exception tracking work with the new stdlib. https://github.com/rescript-lang/rescript/pull/7328
 - Fix Pervasive.max using boolean comparison for floats. https://github.com/rescript-lang/rescript/pull/7333
+- Rename `raise` to `throw` to align with JavaScript vocabulary. `raise` has been deprecated. https://github.com/rescript-lang/rescript/pull/7346
 
 #### :boom: Breaking Change
 
