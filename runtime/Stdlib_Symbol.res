@@ -23,3 +23,5 @@ external hasInstance: t = "hasInstance"
 @val @scope("Symbol") external toPrimitive: t = "toPrimitive"
 @val @scope("Symbol") external toStringTag: t = "toStringTag"
 @val @scope("Symbol") external unscopables: t = "unscopables"
+
+external ignore: t => unit = "%ignore"

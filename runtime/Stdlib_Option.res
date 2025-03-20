@@ -155,3 +155,5 @@ let all6 = ((a, b, c, d, e, f)) => {
   | _ => None
   }
 }
+
+external ignore: option<'a> => unit = "%ignore"

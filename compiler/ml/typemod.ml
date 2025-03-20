@@ -335,6 +335,7 @@ let merge_constraint initial_env loc sg constr =
           type_attributes = [];
           type_immediate = false;
           type_unboxed = unboxed_false_default_false;
+          type_inlined_types = [];
         }
       and id_row = Ident.create (s ^ "#row") in
       let initial_env = Env.add_type ~check:false id_row decl_row initial_env in

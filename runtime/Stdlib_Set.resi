@@ -326,3 +326,11 @@ set->Set.toArray // ["apple", "orange", "banana"]
 ```
 */
 external toArray: t<'a> => array<'a> = "Array.from"
+
+/**
+  `ignore(set)` ignores the provided set and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: t<'a> => unit = "%ignore"

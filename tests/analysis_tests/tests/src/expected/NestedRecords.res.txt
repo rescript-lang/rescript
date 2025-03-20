@@ -1,0 +1,118 @@
+Hover src/NestedRecords.res 17:5
+Nothing at that position. Now trying to use completion.
+posCursor:[17:5] posNoWhite:[17:4] Found expr:[17:3->17:10]
+Pexp_ident options:[17:3->17:10]
+Completable: Cpath Value[options]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[options]
+Path options
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+{"contents": {"kind": "markdown", "value": "```rescript\noptions\n```\n\n---\n\n```\n \n```\n```rescript\ntype options = {\n  extra: {name: string, superExtra: {age: int}},\n}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22NestedRecords.res%22%2C1%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype options.extra = {name: string, superExtra: {age: int}}\n```\n"}}
+
+Hover src/NestedRecords.res 20:13
+Nothing at that position. Now trying to use completion.
+posCursor:[20:13] posNoWhite:[20:12] Found expr:[20:3->20:16]
+Pexp_field [20:3->20:10] extra:[20:11->20:16]
+Completable: Cpath Value[options].extra
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[options].extra
+ContextPath Value[options]
+Path options
+ContextPath Value[options]->extra
+ContextPath Value[options]
+Path options
+CPPipe pathFromEnv: found:true
+Path NestedRecords.extra
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+{"contents": {"kind": "markdown", "value": "```rescript\ntype options.extra = {name: string, superExtra: {age: int}}\n```"}}
+
+Hover src/NestedRecords.res 23:26
+Nothing at that position. Now trying to use completion.
+posCursor:[23:26] posNoWhite:[23:25] Found expr:[23:3->23:27]
+Pexp_field [23:3->23:16] superExtra:[23:17->23:27]
+Completable: Cpath Value[options].extra.superExtra
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[options].extra.superExtra
+ContextPath Value[options].extra
+ContextPath Value[options]
+Path options
+ContextPath Value[options]->extra
+ContextPath Value[options]
+Path options
+CPPipe pathFromEnv: found:true
+Path NestedRecords.extra
+ContextPath Value[options].extra->superExtra
+ContextPath Value[options].extra
+ContextPath Value[options]
+Path options
+ContextPath Value[options]->extra
+ContextPath Value[options]
+Path options
+CPPipe pathFromEnv: found:true
+Path NestedRecords.extra
+CPPipe pathFromEnv: found:true
+Path NestedRecords.superExtra
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+{"contents": {"kind": "markdown", "value": "```rescript\ntype options.extra.superExtra = {age: int}\n```"}}
+
+Hover src/NestedRecords.res 26:29
+Nothing at that position. Now trying to use completion.
+posCursor:[26:29] posNoWhite:[26:28] Found expr:[26:3->26:31]
+Pexp_field [26:3->26:27] age:[26:28->26:31]
+Completable: Cpath Value[options].extra.superExtra.age
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[options].extra.superExtra.age
+ContextPath Value[options].extra.superExtra
+ContextPath Value[options].extra
+ContextPath Value[options]
+Path options
+ContextPath Value[options]->extra
+ContextPath Value[options]
+Path options
+CPPipe pathFromEnv: found:true
+Path NestedRecords.extra
+ContextPath Value[options].extra->superExtra
+ContextPath Value[options].extra
+ContextPath Value[options]
+Path options
+ContextPath Value[options]->extra
+ContextPath Value[options]
+Path options
+CPPipe pathFromEnv: found:true
+Path NestedRecords.extra
+CPPipe pathFromEnv: found:true
+Path NestedRecords.superExtra
+ContextPath Value[options].extra.superExtra->age
+ContextPath Value[options].extra.superExtra
+ContextPath Value[options].extra
+ContextPath Value[options]
+Path options
+ContextPath Value[options]->extra
+ContextPath Value[options]
+Path options
+CPPipe pathFromEnv: found:true
+Path NestedRecords.extra
+ContextPath Value[options].extra->superExtra
+ContextPath Value[options].extra
+ContextPath Value[options]
+Path options
+ContextPath Value[options]->extra
+ContextPath Value[options]
+Path options
+CPPipe pathFromEnv: found:true
+Path NestedRecords.extra
+CPPipe pathFromEnv: found:true
+Path NestedRecords.superExtra
+CPPipe pathFromEnv: found:true
+Path NestedRecords.age
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+{"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
+

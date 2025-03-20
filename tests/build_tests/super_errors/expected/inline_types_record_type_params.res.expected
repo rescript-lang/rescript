@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/inline_types_record_type_params.res[0m:[2m13:12-15[0m
+
+  11 [2m┆[0m name: "test",
+  12 [2m┆[0m superExtra: {
+  [1;31m13[0m [2m┆[0m   age: [1;31m2222[0m,
+  14 [2m┆[0m },
+  15 [2m┆[0m otherExtra: Some({test: true, anotherInlined: {record: true}}),
+
+  This has type: [1;31mint[0m
+  But it's expected to have type: [1;33mstring[0m
+  
+  You can convert [1;33mint[0m to [1;33mstring[0m with [1;33mBelt.Int.toString[0m.

@@ -450,6 +450,15 @@ let polyvar_ident_to_string poly_var_ident =
   Doc.concat [Doc.text "#"; print_poly_var_ident poly_var_ident]
   |> Doc.to_string ~width:80
 
+let find_inline_record_definition inline_record_name
+    (inline_record_definitions : Parsetree.type_declaration list option) =
+  match inline_record_definitions with
+  | None -> None
+  | Some inline_record_definitions ->
+    inline_record_definitions
+    |> List.find_opt (fun (r : Parsetree.type_declaration) ->
+           r.ptype_name.txt = inline_record_name)
+
 let print_lident l =
   let flat_lid_opt lid =
     let rec flat accu = function
@@ -569,6 +578,23 @@ and print_structure_item ~state (si : Parsetree.structure_item) cmt_tbl =
       | Asttypes.Recursive -> Doc.text "rec "
     in
     print_value_bindings ~state ~rec_flag value_bindings cmt_tbl
+  | Pstr_type (Recursive, type_declarations)
+    when type_declarations
+         |> List.find_opt (fun (td : Parsetree.type_declaration) ->
+                Res_parsetree_viewer.has_inline_record_definition_attribute
+                  td.ptype_attributes)
+         |> Option.is_some ->
+    let inline_record_definitions, regular_declarations =
+      type_declarations
+      |> List.partition (fun (td : Parsetree.type_declaration) ->
+             Res_parsetree_viewer.has_inline_record_definition_attribute
+               td.ptype_attributes)
+    in
+    print_type_declarations ~inline_record_definitions ~state
+      ~rec_flag:
+        (if List.length regular_declarations > 1 then Doc.text "rec "
+         else Doc.nil)
+      regular_declarations cmt_tbl
   | Pstr_type (rec_flag, type_declarations) ->
     let rec_flag =
       match rec_flag with
@@ -1107,11 +1133,12 @@ and print_value_description ~state value_description cmt_tbl =
           else Doc.nil);
        ])
 
-and print_type_declarations ~state ~rec_flag type_declarations cmt_tbl =
+and print_type_declarations ?inline_record_definitions ~state ~rec_flag
+    type_declarations cmt_tbl =
   print_listi
     ~get_loc:(fun n -> n.Parsetree.ptype_loc)
     ~nodes:type_declarations
-    ~print:(print_type_declaration2 ~state ~rec_flag)
+    ~print:(print_type_declaration2 ?inline_record_definitions ~state ~rec_flag)
     cmt_tbl
 
 (*
@@ -1217,8 +1244,8 @@ and print_type_declaration ~state ~name ~equal_sign ~rec_flag i
     (Doc.concat
        [attrs; prefix; type_name; type_params; manifest_and_kind; constraints])
 
-and print_type_declaration2 ~state ~rec_flag (td : Parsetree.type_declaration)
-    cmt_tbl i =
+and print_type_declaration2 ?inline_record_definitions ~state ~rec_flag
+    (td : Parsetree.type_declaration) cmt_tbl i =
   let name =
     let doc = print_ident_like td.Parsetree.ptype_name.txt in
     print_comments doc cmt_tbl td.ptype_name.loc
@@ -1278,7 +1305,8 @@ and print_type_declaration2 ~state ~rec_flag (td : Parsetree.type_declaration)
             manifest;
             Doc.concat [Doc.space; Doc.text equal_sign; Doc.space];
             print_private_flag td.ptype_private;
-            print_record_declaration ~state lds cmt_tbl;
+            print_record_declaration ?inline_record_definitions ~state lds
+              cmt_tbl;
           ]
     | Ptype_variant cds ->
       let manifest =
@@ -1371,8 +1399,8 @@ and print_type_param ~state (param : Parsetree.core_type * Asttypes.variance)
   in
   Doc.concat [printed_variance; print_typ_expr ~state typ cmt_tbl]
 
-and print_record_declaration ~state (lds : Parsetree.label_declaration list)
-    cmt_tbl =
+and print_record_declaration ?inline_record_definitions ~state
+    (lds : Parsetree.label_declaration list) cmt_tbl =
   let force_break =
     match (lds, List.rev lds) with
     | first :: _, last :: _ ->
@@ -1391,7 +1419,10 @@ and print_record_declaration ~state (lds : Parsetree.label_declaration list)
                   ~sep:(Doc.concat [Doc.comma; Doc.line])
                   (List.map
                      (fun ld ->
-                       let doc = print_label_declaration ~state ld cmt_tbl in
+                       let doc =
+                         print_label_declaration ?inline_record_definitions
+                           ~state ld cmt_tbl
+                       in
                        print_comments doc cmt_tbl ld.Parsetree.pld_loc)
                      lds);
               ]);
@@ -1556,7 +1587,8 @@ and print_constructor_arguments ?(is_dot_dot_dot = false) ~state ~indent
     in
     if indent then Doc.indent args else args
 
-and print_label_declaration ~state (ld : Parsetree.label_declaration) cmt_tbl =
+and print_label_declaration ?inline_record_definitions ~state
+    (ld : Parsetree.label_declaration) cmt_tbl =
   let attrs =
     print_attributes ~state ~loc:ld.pld_name.loc ld.pld_attributes cmt_tbl
   in
@@ -1581,10 +1613,11 @@ and print_label_declaration ~state (ld : Parsetree.label_declaration) cmt_tbl =
          name;
          optional;
          (if is_dot then Doc.nil else Doc.text ": ");
-         print_typ_expr ~state ld.pld_type cmt_tbl;
+         print_typ_expr ?inline_record_definitions ~state ld.pld_type cmt_tbl;
        ])
 
-and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
+and print_typ_expr ?inline_record_definitions ~(state : State.t)
+    (typ_expr : Parsetree.core_type) cmt_tbl =
   let print_arrow ~arity typ_expr =
     let max_arity =
       match arity with
@@ -1689,6 +1722,19 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
     | Ptyp_object (fields, open_flag) ->
       print_object ~state ~inline:false fields open_flag cmt_tbl
     | Ptyp_arrow {arity} -> print_arrow ~arity typ_expr
+    | Ptyp_constr ({txt = Lident inline_record_name}, _)
+      when inline_record_definitions
+           |> find_inline_record_definition inline_record_name
+           |> Option.is_some -> (
+      match
+        inline_record_definitions
+        |> find_inline_record_definition inline_record_name
+      with
+      | Some {ptype_kind = Ptype_record lds} ->
+        print_record_declaration
+          ~inline_record_definitions:(inline_record_definitions |> Option.get)
+          ~state lds cmt_tbl
+      | _ -> assert false)
     | Ptyp_constr
         (longident_loc, [{ptyp_desc = Ptyp_object (fields, open_flag)}]) ->
       (* for foo<{"a": b}>, when the object is long and needs a line break, we
@@ -1729,7 +1775,8 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
                         ~sep:(Doc.concat [Doc.comma; Doc.line])
                         (List.map
                            (fun typexpr ->
-                             print_typ_expr ~state typexpr cmt_tbl)
+                             print_typ_expr ?inline_record_definitions ~state
+                               typexpr cmt_tbl)
                            constr_args);
                     ]);
                Doc.trailing_comma;
@@ -1737,7 +1784,8 @@ and print_typ_expr ~(state : State.t) (typ_expr : Parsetree.core_type) cmt_tbl =
                Doc.greater_than;
              ]))
     | Ptyp_tuple types -> print_tuple_type ~state ~inline:false types cmt_tbl
-    | Ptyp_poly ([], typ) -> print_typ_expr ~state typ cmt_tbl
+    | Ptyp_poly ([], typ) ->
+      print_typ_expr ?inline_record_definitions ~state typ cmt_tbl
     | Ptyp_poly (string_locs, typ) ->
       Doc.concat
         [

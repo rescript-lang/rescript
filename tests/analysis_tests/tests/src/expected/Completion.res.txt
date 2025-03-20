@@ -341,6 +341,12 @@ Path Array.
     "detail": "array<'a> => option<'a>",
     "documentation": {"kind": "markdown", "value": "\n`last(array)` returns the last element of `array`.\n\nReturns `None` if the array is empty.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]\n->Array.last\n->assertEqual(Some(\"Good bye\"))\n\n[]\n->Array.last\n->assertEqual(None)\n```\n"}
   }, {
+    "label": "ignore",
+    "kind": 12,
+    "tags": [],
+    "detail": "array<'a> => unit",
+    "documentation": {"kind": "markdown", "value": "\n  `ignore(array)` ignores the provided array and returns unit.\n\n  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)\n  without having to store or process it further.\n"}
+  }, {
     "label": "isArray",
     "kind": 12,
     "tags": [],
@@ -2040,6 +2046,12 @@ Path T
     "kind": 9,
     "tags": [],
     "detail": "module TypedArray",
+    "documentation": null
+  }, {
+    "label": "TimeoutId",
+    "kind": 9,
+    "tags": [],
+    "detail": "module TimeoutId",
     "documentation": null
   }, {
     "label": "Type",

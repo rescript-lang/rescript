@@ -288,3 +288,11 @@ let all6: (
     result<'r6, 'e>,
   )
 ) => result<('r1, 'r2, 'r3, 'r4, 'r5, 'r6), 'e>
+
+/**
+  `ignore(result)` ignores the provided result and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: result<'res, 'err> => unit = "%ignore"

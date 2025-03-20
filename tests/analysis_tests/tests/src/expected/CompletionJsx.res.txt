@@ -263,6 +263,12 @@ Path Stdlib.Int.
     "detail": "(int, int) => Ordering.t",
     "documentation": null
   }, {
+    "label": "Int.ignore",
+    "kind": 12,
+    "tags": [],
+    "detail": "int => unit",
+    "documentation": {"kind": "markdown", "value": "\n  `ignore(int)` ignores the provided int and returns unit.\n\n  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)\n  without having to store or process it further.\n"}
+  }, {
     "label": "Int.toPrecision",
     "kind": 12,
     "tags": [],
@@ -389,6 +395,12 @@ Path Stdlib.Int.
     "tags": [],
     "detail": "(int, int) => Ordering.t",
     "documentation": null
+  }, {
+    "label": "Int.ignore",
+    "kind": 12,
+    "tags": [],
+    "detail": "int => unit",
+    "documentation": {"kind": "markdown", "value": "\n  `ignore(int)` ignores the provided int and returns unit.\n\n  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)\n  without having to store or process it further.\n"}
   }, {
     "label": "Int.toPrecision",
     "kind": 12,

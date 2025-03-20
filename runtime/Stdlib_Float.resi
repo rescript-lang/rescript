@@ -462,3 +462,11 @@ Float.clamp(4.2, ~min=4.3, ~max=4.1) == 4.3
 ```
 */
 let clamp: (~min: float=?, ~max: float=?, float) => float
+
+/**
+  `ignore(float)` ignores the provided float and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: float => unit = "%ignore"

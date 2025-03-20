@@ -134,7 +134,11 @@ type type_declaration = {
   type_attributes: Parsetree.attributes;
   type_immediate: bool;
   type_unboxed: unboxed_status;
+  type_inlined_types: type_inlined_type list;
 }
+
+and type_inlined_type =
+  | Record of {type_name: string; labels: label_declaration list}
 
 and type_kind =
   | Type_abstract

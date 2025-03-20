@@ -34,3 +34,11 @@ external supportedLocalesOf: (array<string>, ~options: supportedLocalesOptions=?
 @send external resolvedOptions: t => resolvedOptions = "resolvedOptions"
 
 @send external compare: (t, string, string) => int = "compare"
+
+/**
+  `ignore(collator)` ignores the provided collator and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: t => unit = "%ignore"

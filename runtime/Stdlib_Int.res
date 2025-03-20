@@ -106,3 +106,5 @@ module Bitwise = {
 
   let lnot = x => lxor(x, -1)
 }
+
+external ignore: int => unit = "%ignore"

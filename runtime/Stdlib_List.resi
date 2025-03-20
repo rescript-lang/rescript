@@ -898,3 +898,11 @@ List.sort(list{5, 4, 9, 3, 7}, Int.compare) // list{3, 4, 5, 7, 9}
 ```
 */
 let sort: (list<'a>, ('a, 'a) => Stdlib_Ordering.t) => list<'a>
+
+/**
+  `ignore(list)` ignores the provided list and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: list<'a> => unit = "%ignore"

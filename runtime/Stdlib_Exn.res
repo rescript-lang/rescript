@@ -88,3 +88,5 @@ exception TypeError of error
  The URIError object represents an error when a global URI handling function was used in a wrong way. 
 exception URIError of error    
 */
+
+external ignore: t => unit = "%ignore"

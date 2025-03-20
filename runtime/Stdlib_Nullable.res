@@ -65,3 +65,5 @@ let flatMap = (value, f) =>
   | Some(x) => f(x)
   | None => Obj.magic(value)
   }
+
+external ignore: t<'a> => unit = "%ignore"

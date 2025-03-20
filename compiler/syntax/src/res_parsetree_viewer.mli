@@ -15,6 +15,7 @@ val functor_type :
   * Parsetree.module_type
 
 val has_await_attribute : Parsetree.attributes -> bool
+val has_inline_record_definition_attribute : Parsetree.attributes -> bool
 val has_res_pat_variant_spread_attribute : Parsetree.attributes -> bool
 val has_dict_pattern_attribute : Parsetree.attributes -> bool
 

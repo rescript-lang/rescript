@@ -62,3 +62,5 @@ let flatMap = (value, f) =>
   | Some(x) => f(x)
   | None => null
   }
+
+external ignore: t<'a> => unit = "%ignore"
