@@ -32,7 +32,7 @@ let getWithDefault = getOr
 let getExn: t<'a> => 'a = value =>
   switch value->toOption {
   | Some(x) => x
-  | None => raise(Invalid_argument("Null.getExn: value is null"))
+  | None => throw(Invalid_argument("Null.getExn: value is null"))
   }
 
 external getUnsafe: t<'a> => 'a = "%identity"

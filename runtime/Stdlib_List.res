@@ -108,7 +108,7 @@ let head = x =>
 
 let headExn = x =>
   switch x {
-  | list{} => raise(Not_found)
+  | list{} => throw(Not_found)
   | list{x, ..._} => x
   }
 
@@ -120,7 +120,7 @@ let tail = x =>
 
 let tailExn = x =>
   switch x {
-  | list{} => raise(Not_found)
+  | list{} => throw(Not_found)
   | list{_, ...t} => t
   }
 
@@ -146,7 +146,7 @@ let rec nthAuxAssert = (x, n) =>
     } else {
       nthAuxAssert(t, n - 1)
     }
-  | _ => raise(Not_found)
+  | _ => throw(Not_found)
   }
 
 let get = (x, n) =>
@@ -158,7 +158,7 @@ let get = (x, n) =>
 
 let getExn = (x, n) =>
   if n < 0 {
-    raise(Not_found)
+    throw(Not_found)
   } else {
     nthAuxAssert(x, n)
   }

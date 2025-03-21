@@ -1,5 +1,5 @@
 /* Exceptions */
-external raise: exn => 'a = "%raise"
+external throw: exn => 'a = "%raise"
 
 /* Debugging */
 

@@ -21,6 +21,7 @@
 - Make reanalyze exception tracking work with the new stdlib. https://github.com/rescript-lang/rescript/pull/7328
 - Fix Pervasive.max using boolean comparison for floats. https://github.com/rescript-lang/rescript/pull/7333
 - Experimental: Support nested/inline record types - records defined inside of other records, without needing explicit separate type definitions. https://github.com/rescript-lang/rescript/pull/7241
+- Rename `raise` to `throw` to align with JavaScript vocabulary. `raise` has been deprecated. https://github.com/rescript-lang/rescript/pull/7346
 
 #### :boom: Breaking Change
 

@@ -23,7 +23,7 @@ let max = (x: string, y: string): string =>
 
 let getChar = (s, i) =>
   if i >= Primitive_string_extern.length(s) || i < 0 {
-    raise(Invalid_argument("index out of bounds"))
+    throw(Invalid_argument("index out of bounds"))
   } else {
     Primitive_string_extern.getChar(s, i)
   }

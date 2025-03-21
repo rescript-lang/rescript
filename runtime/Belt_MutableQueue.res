@@ -72,7 +72,7 @@ let peekUndefined = q =>
 
 let peekExn = q =>
   switch q.first {
-  | None => raise(Not_found)
+  | None => throw(Not_found)
   | Some(v) => v.content
   }
 
@@ -95,7 +95,7 @@ let pop = q =>
 let popExn = q =>
   /* TO fix */
   switch q.first {
-  | None => raise(Not_found)
+  | None => throw(Not_found)
   | Some(x) =>
     let next = x.next
     if next == None {

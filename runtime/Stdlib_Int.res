@@ -64,7 +64,7 @@ let range = (start, end, ~options: rangeOptions={}) => {
   let step = switch options.step {
   | None => isInverted ? -1 : 1
   | Some(0) if start !== end =>
-    Stdlib_Error.raise(Stdlib_Error.RangeError.make("Incorrect range arguments"))
+    Stdlib_Error.throw(Stdlib_Error.RangeError.make("Incorrect range arguments"))
   | Some(n) => n
   }
 
