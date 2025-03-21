@@ -44,12 +44,6 @@ Path someFn
     "detail": "bool",
     "documentation": null
   }, {
-    "label": "throw",
-    "kind": 12,
-    "tags": [],
-    "detail": "Error.t => 'a",
-    "documentation": {"kind": "markdown", "value": "\nThrow and exception which will stop execution.\n\n## Examples\n\n```rescript\nlet error = Error.make(\"Everything is upside down.\")\n\nif 5 > 10 {\n  error->throw\n} else {\n  Console.log(\"Phew, sanity still rules.\")\n}\n```\n"}
-  }, {
     "label": "typeof",
     "kind": 12,
     "tags": [],
@@ -373,12 +367,6 @@ Path someOtherFn
     "tags": [],
     "detail": "bool",
     "documentation": null
-  }, {
-    "label": "throw",
-    "kind": 12,
-    "tags": [],
-    "detail": "Error.t => 'a",
-    "documentation": {"kind": "markdown", "value": "\nThrow and exception which will stop execution.\n\n## Examples\n\n```rescript\nlet error = Error.make(\"Everything is upside down.\")\n\nif 5 > 10 {\n  error->throw\n} else {\n  Console.log(\"Phew, sanity still rules.\")\n}\n```\n"}
   }, {
     "label": "typeof",
     "kind": 12,

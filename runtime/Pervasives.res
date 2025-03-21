@@ -25,6 +25,23 @@ let invalid_arg = s => throw(Invalid_argument(s))
 
 @deprecated("Use custom exception instead") exception Exit
 
+/**
+Throw and exception which will stop execution.
+
+## Examples
+
+```rescript
+let error = Error.make("Everything is upside down.")
+
+if 5 > 10 {
+  error->throw
+} else {
+  Console.log("Phew, sanity still rules.")
+}
+```
+*/
+external throw: Stdlib_Error.t => 'a = "%raise"
+
 /* Composition operators */
 
 external \"|>": ('a, 'a => 'b) => 'b = "%revapply"
