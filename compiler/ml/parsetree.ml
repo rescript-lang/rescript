@@ -313,8 +313,66 @@ and expression_desc =
        let open M in E
        let! open M in E *)
   | Pexp_extension of extension
-(* [%id] *)
-(* . *)
+  (* [%id] *)
+  (* . *)
+  (* represents <> foo </> , the entire range is stored in the expression , we keep track of >, children and </ *)
+  | Pexp_jsx_fragment of
+      (* > *) Lexing.position
+      * (* children *)
+        jsx_children
+      * (* </ *) Lexing.position
+  (* represents <input type_="text" /> *)
+  | Pexp_jsx_unary_element of jsx_unary_element
+  (* represents <div className={v}>{children}</div> *)
+  | Pexp_jsx_container_element of jsx_container_element
+
+and jsx_unary_element = {
+  (* jsx_unary_element_opening: Lexing.position; *)
+  jsx_unary_element_tag_name: Longident.t loc;
+  jsx_unary_element_props: jsx_props;
+      (* jsx_unary_element_closing: Lexing.position; *)
+}
+
+and jsx_container_element = {
+  (* jsx_container_element_opening_tag_start: Lexing.position; *)
+  jsx_container_element_tag_name_start: Longident.t loc;
+  (* > *)
+  jsx_container_element_opening_tag_end: Lexing.position;
+  jsx_container_element_props: jsx_props;
+  jsx_container_element_children: jsx_children;
+  jsx_container_element_closing_tag: jsx_closing_container_tag option;
+}
+
+and jsx_prop =
+  (*
+   *   |  lident
+   *   | ?lident
+   *)
+  | JSXPropPunning of (* optional *) bool * (* name *) string loc
+  (*
+   *   |  lident =  jsx_expr
+   *   |  lident = ?jsx_expr
+   *)
+  | JSXPropValue of
+      (* name *) string loc * (* optional *) bool * (* value *) expression
+  (*
+   *   |  {...jsx_expr}
+   *)
+  | JSXPropSpreading of Location.t * expression
+
+and jsx_children =
+  | JSXChildrenSpreading of expression
+  | JSXChildrenItems of expression list
+
+and jsx_props = jsx_prop list
+
+and jsx_closing_container_tag = {
+  (* </ *)
+  jsx_closing_container_tag_start: Lexing.position;
+  (* name *)
+  jsx_closing_container_tag_name: Longident.t loc; (* > *)
+  jsx_closing_container_tag_end: Lexing.position;
+}
 
 and case = {
   (* (P -> E) or (P when E0 -> E) *)

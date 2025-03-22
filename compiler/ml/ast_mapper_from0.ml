@@ -295,10 +295,72 @@ end
 module E = struct
   (* Value expressions for the core language *)
 
-  let map sub {pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} =
+  let map_jsx_children sub (e : expression) : Pt.jsx_children =
+    let rec visit (e : expression) : Pt.expression list =
+      match e.pexp_desc with
+      | Pexp_construct
+          ({txt = Longident.Lident "::"}, Some {pexp_desc = Pexp_tuple [e1; e2]})
+        ->
+        sub.expr sub e1 :: visit e2
+      | Pexp_construct ({txt = Longident.Lident "[]"}, ext_opt) -> (
+        match ext_opt with
+        | None -> []
+        | Some e -> visit e)
+      | _ -> [sub.expr sub e]
+    in
+    match e.pexp_desc with
+    | Pexp_construct ({txt = Longident.Lident "[]" | Longident.Lident "::"}, _)
+      ->
+      JSXChildrenItems (visit e)
+    | _ -> JSXChildrenSpreading (sub.expr sub e)
+
+  let try_map_jsx_prop (sub : mapper) (lbl : Asttypes.Noloc.arg_label)
+      (e : expression) : Parsetree.jsx_prop option =
+    match (lbl, e) with
+    | Asttypes.Noloc.Labelled "_spreadProps", expr ->
+      Some (Parsetree.JSXPropSpreading (Location.none, sub.expr sub expr))
+    | ( Asttypes.Noloc.Labelled name,
+        {pexp_desc = Pexp_ident {txt = Longident.Lident v}; pexp_loc = name_loc}
+      )
+      when name = v ->
+      Some (Parsetree.JSXPropPunning (false, {txt = name; loc = name_loc}))
+    | ( Asttypes.Noloc.Optional name,
+        {pexp_desc = Pexp_ident {txt = Longident.Lident v}; pexp_loc = name_loc}
+      )
+      when name = v ->
+      Some (Parsetree.JSXPropPunning (true, {txt = name; loc = name_loc}))
+    | Asttypes.Noloc.Labelled name, exp ->
+      Some
+        (Parsetree.JSXPropValue
+           ({txt = name; loc = Location.none}, false, sub.expr sub exp))
+    | Asttypes.Noloc.Optional name, exp ->
+      Some
+        (Parsetree.JSXPropValue
+           ({txt = name; loc = Location.none}, true, sub.expr sub exp))
+    | _ -> None
+
+  let extract_props_and_children (sub : mapper) items =
+    let rec visit props items =
+      match items with
+      | [] | [_] -> (List.rev props, None)
+      | [(Asttypes.Noloc.Labelled "children", children_expr); _] ->
+        (List.rev props, Some (map_jsx_children sub children_expr))
+      | (lbl, e) :: rest -> (
+        match try_map_jsx_prop sub lbl e with
+        | Some prop -> visit (prop :: props) rest
+        | None -> visit props rest)
+    in
+    let props, children = visit [] items in
+    (props, children)
+
+  let map sub e =
+    let {pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} = e in
     let open Exp in
     let loc = sub.location sub loc in
     let attrs = sub.attributes sub attrs in
+    let has_jsx_attribute () =
+      attrs |> List.exists (fun ({txt}, _) -> txt = "JSX")
+    in
     match desc with
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
@@ -311,6 +373,15 @@ module E = struct
         (map_opt (sub.expr sub) def)
         (sub.pat sub p) (sub.expr sub e)
     | Pexp_function _ -> assert false
+    | Pexp_apply ({pexp_desc = Pexp_ident tag_name}, args)
+      when has_jsx_attribute () -> (
+      let attrs = attrs |> List.filter (fun ({txt}, _) -> txt <> "JSX") in
+      let props, children = extract_props_and_children sub args in
+      match children with
+      | None -> jsx_unary_element ~loc ~attrs tag_name props
+      | Some children ->
+        jsx_container_element ~loc ~attrs tag_name props Lexing.dummy_pos
+          children None)
     | Pexp_apply (e, l) ->
       let e =
         match (e.pexp_desc, l) with
@@ -358,6 +429,12 @@ module E = struct
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
     | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
+    (* <></> *)
+    | Pexp_construct ({txt = Longident.Lident "[]" | Longident.Lident "::"}, _)
+      when has_jsx_attribute () ->
+      let attrs = attrs |> List.filter (fun ({txt}, _) -> txt <> "JSX") in
+      jsx_fragment ~loc ~attrs loc.loc_start (map_jsx_children sub e)
+        loc.loc_end
     | Pexp_construct (lid, arg) -> (
       let lid1 = map_loc sub lid in
       let arg1 = map_opt (sub.expr sub) arg in

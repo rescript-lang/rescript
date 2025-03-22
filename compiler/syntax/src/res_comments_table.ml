@@ -24,25 +24,24 @@ let copy tbl =
 
 let empty = make ()
 
+let print_location (k : Warnings.loc) =
+  Doc.concat
+    [
+      Doc.lbracket;
+      Doc.text (string_of_int k.loc_start.pos_lnum);
+      Doc.text ":";
+      Doc.text (string_of_int (k.loc_start.pos_cnum - k.loc_start.pos_bol));
+      Doc.text "-";
+      Doc.text (string_of_int k.loc_end.pos_lnum);
+      Doc.text ":";
+      Doc.text (string_of_int (k.loc_end.pos_cnum - k.loc_end.pos_bol));
+      Doc.rbracket;
+    ]
+
 let print_entries tbl =
-  let open Location in
   Hashtbl.fold
     (fun (k : Location.t) (v : Comment.t list) acc ->
-      let loc =
-        Doc.concat
-          [
-            Doc.lbracket;
-            Doc.text (string_of_int k.loc_start.pos_lnum);
-            Doc.text ":";
-            Doc.text
-              (string_of_int (k.loc_start.pos_cnum - k.loc_start.pos_bol));
-            Doc.text "-";
-            Doc.text (string_of_int k.loc_end.pos_lnum);
-            Doc.text ":";
-            Doc.text (string_of_int (k.loc_end.pos_cnum - k.loc_end.pos_bol));
-            Doc.rbracket;
-          ]
-      in
+      let loc = print_location k in
       let doc =
         Doc.breakable_group ~force_break:true
           (Doc.concat
@@ -1398,67 +1397,21 @@ and walk_expression expr t comments =
         walk_expression call_expr t inside;
         after)
     in
-    if ParsetreeViewer.is_jsx_expression expr then (
-      let props =
-        arguments
-        |> List.filter (fun (label, _) ->
-               match label with
-               | Asttypes.Labelled {txt = "children"} -> false
-               | Asttypes.Nolabel -> false
-               | _ -> true)
-      in
-      let maybe_children =
-        arguments
-        |> List.find_opt (fun (label, _) ->
-               match label with
-               | Asttypes.Labelled {txt = "children"} -> true
-               | _ -> false)
-      in
-      match maybe_children with
-      (* There is no need to deal with this situation as the children cannot be NONE *)
-      | None -> ()
-      | Some (_, children) ->
-        let leading, inside, _ = partition_by_loc after children.pexp_loc in
-        if props = [] then
-          (* All comments inside a tag are trailing comments of the tag if there are no props
-             <A
-             // comment
-             // comment
-             />
-          *)
-          let after_expr, _ =
-            partition_adjacent_trailing call_expr.pexp_loc after
-          in
-          attach t.trailing call_expr.pexp_loc after_expr
-        else
-          walk_list
-            (props
-            |> List.map (fun (lbl, expr) ->
-                   let loc =
-                     match lbl with
-                     | Asttypes.Labelled {loc} | Optional {loc} ->
-                       {loc with loc_end = expr.Parsetree.pexp_loc.loc_end}
-                     | _ -> expr.pexp_loc
-                   in
-                   ExprArgument {expr; loc}))
-            t leading;
-        walk_expression children t inside)
-    else
-      let after_expr, rest =
-        partition_adjacent_trailing call_expr.pexp_loc after
-      in
-      attach t.trailing call_expr.pexp_loc after_expr;
-      walk_list
-        (arguments
-        |> List.map (fun (lbl, expr) ->
-               let loc =
-                 match lbl with
-                 | Asttypes.Labelled {loc} | Optional {loc} ->
-                   {loc with loc_end = expr.Parsetree.pexp_loc.loc_end}
-                 | _ -> expr.pexp_loc
-               in
-               ExprArgument {expr; loc}))
-        t rest
+    let after_expr, rest =
+      partition_adjacent_trailing call_expr.pexp_loc after
+    in
+    attach t.trailing call_expr.pexp_loc after_expr;
+    walk_list
+      (arguments
+      |> List.map (fun (lbl, expr) ->
+             let loc =
+               match lbl with
+               | Asttypes.Labelled {loc} | Optional {loc} ->
+                 {loc with loc_end = expr.Parsetree.pexp_loc.loc_end}
+               | _ -> expr.pexp_loc
+             in
+             ExprArgument {expr; loc}))
+      t rest
   | Pexp_fun _ | Pexp_newtype _ -> (
     let _, parameters, return_expr = fun_expr expr in
     let comments =
@@ -1508,7 +1461,55 @@ and walk_expression expr t comments =
         attach t.leading return_expr.pexp_loc leading;
         walk_expression return_expr t inside;
         attach t.trailing return_expr.pexp_loc trailing)
-  | _ -> ()
+  | Pexp_jsx_fragment (opening_greater_than, children, _closing_lesser_than) ->
+    let opening_token = {expr.pexp_loc with loc_end = opening_greater_than} in
+    let on_same_line, rest = partition_by_on_same_line opening_token comments in
+    attach t.trailing opening_token on_same_line;
+    let exprs =
+      match children with
+      | Parsetree.JSXChildrenSpreading e -> [e]
+      | Parsetree.JSXChildrenItems xs -> xs
+    in
+    let xs = exprs |> List.map (fun e -> Expression e) in
+    walk_list xs t rest
+  | Pexp_jsx_unary_element
+      {jsx_unary_element_tag_name = tag; jsx_unary_element_props = props} ->
+    (* handles the comments at the tag *)
+    let _, _, trailing = partition_by_loc comments tag.loc in
+    let after_expr, _ = partition_adjacent_trailing tag.loc trailing in
+    attach t.trailing tag.loc after_expr;
+    (* handles the comments for the actual props *)
+    List.iter
+      (fun prop ->
+        match prop with
+        | Parsetree.JSXPropPunning (_, _) -> ()
+        | Parsetree.JSXPropValue (_, _, expr) ->
+          let _leading, inside, trailing =
+            partition_by_loc comments expr.pexp_loc
+          in
+          let after_expr, _ =
+            partition_adjacent_trailing expr.pexp_loc trailing
+          in
+          attach t.trailing expr.pexp_loc after_expr;
+          walk_expression expr t inside
+        | Parsetree.JSXPropSpreading (_loc, _expr) -> ())
+      props
+  | Pexp_jsx_container_element
+      {
+        jsx_container_element_opening_tag_end = opening_greater_than;
+        jsx_container_element_children = children;
+      } ->
+    let opening_token = {expr.pexp_loc with loc_end = opening_greater_than} in
+    let on_same_line, rest = partition_by_on_same_line opening_token comments in
+    attach t.trailing opening_token on_same_line;
+    let exprs =
+      match children with
+      | Parsetree.JSXChildrenSpreading e -> [e]
+      | Parsetree.JSXChildrenItems xs -> xs
+    in
+    let xs = exprs |> List.map (fun e -> Expression e) in
+    walk_list xs t rest
+  | Pexp_send _ -> ()
 
 and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =
   let leading, inside, trailing = partition_by_loc comments pattern.ppat_loc in

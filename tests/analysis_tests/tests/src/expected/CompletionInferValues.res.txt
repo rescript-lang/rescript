@@ -256,8 +256,8 @@ Path ReactEvent.Mouse.pr
   }]
 
 Complete src/CompletionInferValues.res 41:50
-posCursor:[41:50] posNoWhite:[41:49] Found expr:[41:12->41:56]
-JSX <div:[41:12->41:15] onMouseEnter[41:16->41:28]=...[41:36->41:52]> _children:41:54
+posCursor:[41:50] posNoWhite:[41:49] Found expr:[41:11->41:56]
+JSX <div:[41:12->41:15] onMouseEnter[41:16->41:28]=...[41:36->41:52]> _children:None
 posCursor:[41:50] posNoWhite:[41:49] Found expr:[41:36->41:52]
 posCursor:[41:50] posNoWhite:[41:49] Found expr:[41:41->41:50]
 Completable: Cpath Value[event]->pr <<jsx>>
@@ -281,8 +281,8 @@ Path JsxEvent.Mouse.pr
   }]
 
 Complete src/CompletionInferValues.res 44:50
-posCursor:[44:50] posNoWhite:[44:49] Found expr:[44:12->44:56]
-JSX <Div:[44:12->44:15] onMouseEnter[44:16->44:28]=...[44:36->44:52]> _children:44:54
+posCursor:[44:50] posNoWhite:[44:49] Found expr:[44:11->44:56]
+JSX <Div:[44:12->44:15] onMouseEnter[44:16->44:28]=...[44:36->44:52]> _children:None
 posCursor:[44:50] posNoWhite:[44:49] Found expr:[44:36->44:52]
 posCursor:[44:50] posNoWhite:[44:49] Found expr:[44:41->44:50]
 Completable: Cpath Value[event]->pr <<jsx>>
@@ -305,8 +305,8 @@ Path JsxEvent.Mouse.pr
   }]
 
 Complete src/CompletionInferValues.res 47:87
-posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:12->47:93]
-JSX <div:[47:12->47:15] onMouseEnter[47:16->47:28]=...[47:36->47:89]> _children:47:91
+posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:11->47:93]
+JSX <div:[47:12->47:15] onMouseEnter[47:16->47:28]=...[47:36->47:89]> _children:None
 posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:36->47:89]
 posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:41->47:87]
 posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:81->47:87]
@@ -383,8 +383,8 @@ Path Stdlib.Int.t
   }]
 
 Complete src/CompletionInferValues.res 50:103
-posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:12->50:109]
-JSX <div:[50:12->50:15] onMouseEnter[50:16->50:28]=...[50:36->50:105]> _children:50:107
+posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:11->50:109]
+JSX <div:[50:12->50:15] onMouseEnter[50:16->50:28]=...[50:36->50:105]> _children:None
 posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:36->50:105]
 posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:41->50:103]
 posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:95->50:103]
@@ -400,8 +400,8 @@ Path Int.toString
 []
 
 Complete src/CompletionInferValues.res 53:121
-posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:12->53:127]
-JSX <div:[53:12->53:15] onMouseEnter[53:16->53:28]=...[53:36->53:123]> _children:53:125
+posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:11->53:127]
+JSX <div:[53:12->53:15] onMouseEnter[53:16->53:28]=...[53:36->53:123]> _children:None
 posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:36->53:123]
 posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:41->53:121]
 posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:114->53:121]

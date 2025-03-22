@@ -51,8 +51,8 @@ let _ = ((el ~punned ~children:[] ())[@JSX ])
 let _ = ((el ?punned ~children:[] ())[@JSX ])
 let _ = ((el ?a:b ~children:[] ())[@JSX ])
 let _ = ((el ?a:b ~children:[] ())[@JSX ])
-let _ = (([])[@JSX ])
-let _ = (([])[@JSX ])
+let _ = <></>
+let _ = <></>
 let _ =
   ((div ~className:{js|menu|js}
       ~children:[((div ~className:{js|submenu|js} ~children:[sub1] ())
@@ -83,8 +83,7 @@ let _ =
   ((Outer.createElement ~inner:((Inner.createElement ~children:[] ())
       [@JSX ]) ~children:[] ())
   [@JSX ])
-let _ =
-  ((div ~onClick:onClickHandler ~children:[(([{js|foobar|js}])[@JSX ])] ())
+let _ = ((div ~onClick:onClickHandler ~children:[<>{js|foobar|js}</>] ())
   [@JSX ])
 let _ =
   ((Window.createElement
@@ -98,21 +97,19 @@ let _ =
              } ~children:[] ())
   [@JSX ])
 let _ = ((OverEager.createElement ~fiber:Metal.fiber ~children:[] ())[@JSX ])
-let arrayOfListOfJsx = [|(([])[@JSX ])|]
+let arrayOfListOfJsx = [|<></>|]
+let arrayOfListOfJsx = [|<>((Foo.createElement ~children:[] ())[@JSX ])</>|]
 let arrayOfListOfJsx =
-  [|(([((Foo.createElement ~children:[] ())[@JSX ])])[@JSX ])|]
-let arrayOfListOfJsx =
-  [|(([((Foo.createElement ~children:[] ())[@JSX ])])
-    [@JSX ]);(([((Bar.createElement ~children:[] ())[@JSX ])])[@JSX ])|]
-let sameButWithSpaces = [|(([])[@JSX ])|]
+  [|<>((Foo.createElement ~children:[] ())
+    [@JSX ])</>;<>((Bar.createElement ~children:[] ())[@JSX ])</>|]
+let sameButWithSpaces = [|<></>|]
+let sameButWithSpaces = [|<>((Foo.createElement ~children:[] ())[@JSX ])</>|]
 let sameButWithSpaces =
-  [|(([((Foo.createElement ~children:[] ())[@JSX ])])[@JSX ])|]
+  [|<>((Foo.createElement ~children:[] ())
+    [@JSX ])</>;<>((Bar.createElement ~children:[] ())[@JSX ])</>|]
 let sameButWithSpaces =
-  [|(([((Foo.createElement ~children:[] ())[@JSX ])])
-    [@JSX ]);(([((Bar.createElement ~children:[] ())[@JSX ])])[@JSX ])|]
-let sameButWithSpaces =
-  [|(([((Foo.createElement ~children:[] ())[@JSX ])])
-    [@JSX ]);(([((Bar.createElement ~children:[] ())[@JSX ])])[@JSX ])|]
+  [|<>((Foo.createElement ~children:[] ())
+    [@JSX ])</>;<>((Bar.createElement ~children:[] ())[@JSX ])</>|]
 let arrayOfJsx = [||]
 let arrayOfJsx = [|((Foo.createElement ~children:[] ())[@JSX ])|]
 let arrayOfJsx =
@@ -495,11 +492,11 @@ let _ =
 ;;((div ~children:[|a|] ())[@JSX ])
 ;;((div ~children:(1, 2) ())[@JSX ])
 ;;((div ~children:((array -> f)[@res.braces ]) ())[@JSX ])
-;;(([element])[@JSX ])
-;;(([(((fun [arity:1]a -> 1))[@res.braces ])])[@JSX ])
-;;(([((span ~children:[] ())[@JSX ])])[@JSX ])
-;;(([[|a|]])[@JSX ])
-;;(([(1, 2)])[@JSX ])
-;;(([((array -> f)[@res.braces ])])[@JSX ])
+;;<>element</>
+;;<>((fun [arity:1]a -> 1)[@res.braces ])</>
+;;<>((span ~children:[] ())[@JSX ])</>
+;;<>[|a|]</>
+;;<>(1, 2)</>
+;;<>((array -> f)[@res.braces ])</>
 let _ = ((A.createElement ~x:{js|y|js} ~_spreadProps:str ~children:[] ())
   [@JSX ])

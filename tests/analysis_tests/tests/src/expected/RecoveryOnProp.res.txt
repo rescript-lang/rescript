@@ -1,5 +1,5 @@
 Complete src/RecoveryOnProp.res 6:26
-posCursor:[6:26] posNoWhite:[6:25] Found expr:[3:3->11:8]
+posCursor:[6:26] posNoWhite:[6:25] Found expr:[3:2->11:8]
 JSX <div:[3:3->3:6] onClick[4:4->4:11]=...[4:13->0:-1]> _children:None
 posCursor:[6:26] posNoWhite:[6:25] Found expr:[4:13->8:6]
 posCursor:[6:26] posNoWhite:[6:25] Found expr:[5:6->8:5]
