@@ -2,9 +2,9 @@
   "name": "@tests/tools",
   "private": true,
   "scripts": {
-    "res:build": "rescript",
-    "res:clean": "rescript clean",
-    "res:dev": "rescript -w"
+    "build": "rescript",
+    "clean": "rescript clean",
+    "dev": "rescript -w"
   },
   "dependencies": {
     "@rescript/react": "^0.13.0",
