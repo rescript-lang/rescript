@@ -41,3 +41,6 @@ val transl_module :
   Typedtree.module_expr ->
   Lambda.lambda)
   ref
+
+val current_root_path : Path.t option ref
+val current_value_ident : Ident.t option ref
