@@ -59,6 +59,14 @@ function odd(n) {
   return n % 2 === 1;
 }
 
+function bxor_int(a, b) {
+  return a ^ b;
+}
+
+function bxor_bigint(a, b) {
+  return a ^ b;
+}
+
 let int = 3;
 
 export {
@@ -79,5 +87,7 @@ export {
   case2,
   even,
   odd,
+  bxor_int,
+  bxor_bigint,
 }
 /* No side effect */

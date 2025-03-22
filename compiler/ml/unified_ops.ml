@@ -163,7 +163,7 @@ let entries =
     };
     {
       path = builtin "^";
-      name = "%xor";
+      name = "%bitxor";
       form = Binary;
       specialization =
         {

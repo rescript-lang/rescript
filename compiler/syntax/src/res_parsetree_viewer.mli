@@ -65,6 +65,7 @@ val is_huggable_rhs : Parsetree.expression -> bool
 
 val operator_precedence : string -> int
 
+val not_ghost_operator : string -> Location.t -> bool
 val is_unary_expression : Parsetree.expression -> bool
 val is_binary_operator : string -> bool
 val is_binary_expression : Parsetree.expression -> bool
