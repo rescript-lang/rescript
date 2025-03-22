@@ -65,7 +65,7 @@ let pow2 = 2 ** 2;
 
 let pow3 = 2n ** 2n;
 
-let pow_overflow = 1;
+let pow_overflow = 0;
 
 let int = 3;
 

@@ -36,9 +36,11 @@ eq("File \"exponentiation_test.res\", line 19, characters 5-12", -2147483648, in
 
 eq("File \"exponentiation_test.res\", line 20, characters 5-12", 0, intPow(2, 32));
 
-eq("File \"exponentiation_test.res\", line 21, characters 5-12", 1, intPow(2147483647, 2));
+eq("File \"exponentiation_test.res\", line 21, characters 5-12", 0, intPow(2147483647, 2));
 
-eq("File \"exponentiation_test.res\", line 23, characters 5-12", 256, four ** four | 0);
+eq("File \"exponentiation_test.res\", line 22, characters 5-12", 0, intPow(-2147483648, 2));
+
+eq("File \"exponentiation_test.res\", line 24, characters 5-12", 256, four ** four | 0);
 
 Mt.from_pair_suites("Exponentiation_test", suites.contents);
 
