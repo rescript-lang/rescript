@@ -1,7 +1,11 @@
 {
   "name": "@tests/reanalyze-termination",
   "private": true,
+  "scripts": {
+    "build": "rescript",
+    "clean": "rescript clean -with-deps"
+  },
   "dependencies": {
-    "rescript": "*"
+    "rescript": "workspace:^"
   }
 }

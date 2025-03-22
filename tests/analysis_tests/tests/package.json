@@ -6,7 +6,7 @@
     "clean": "rescript clean -with-deps"
   },
   "dependencies": {
-    "@rescript/react": "^0.13.0",
-    "rescript": "*"
+    "@rescript/react": "^0.13.1",
+    "rescript": "workspace:^"
   }
 }

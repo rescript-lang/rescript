@@ -3,11 +3,11 @@
   "private": true,
   "scripts": {
     "build": "rescript",
-    "clean": "rescript clean",
+    "clean": "rescript clean -with-deps",
     "dev": "rescript -w"
   },
   "dependencies": {
-    "@rescript/react": "^0.13.0",
-    "rescript": "*"
+    "@rescript/react": "^0.13.1",
+    "rescript": "workspace:^"
   }
 }

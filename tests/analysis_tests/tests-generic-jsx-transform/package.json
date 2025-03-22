@@ -6,6 +6,6 @@
     "clean": "rescript clean -with-deps"
   },
   "dependencies": {
-    "rescript": "*"
+    "rescript": "workspace:^"
   }
 }

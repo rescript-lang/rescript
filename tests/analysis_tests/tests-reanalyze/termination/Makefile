@@ -1,13 +1,13 @@
 SHELL = /bin/bash
 
 build:
-	npm run build
+	yarn build
 
 test: build
 	./test.sh
 
 clean:
-	rm -rf lib
+	yarn clean
 
 .DEFAULT_GOAL := build
 

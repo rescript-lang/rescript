@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // @ts-check
 
+// TODO: Use `yarn pack --json` instead.
+
 // This performs `npm pack` and retrieves the list of artifact files from the output.
 //
 // In local dev, invoke it with `-updateArtifactList` to perform a dry run of `npm pack`
