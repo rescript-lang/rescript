@@ -172,11 +172,11 @@ let entries =
           float = Some Ppowfloat;
           bigint = Some Ppowbigint;
           string = None;
-        }
+        };
     };
     {
       path = builtin "^";
-      name = "%xor";
+      name = "%bitxor";
       form = Binary;
       specialization =
         {
