@@ -135,6 +135,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
+          cache: npm
           node-version-file: .nvmrc
 
       - name: Get artifact dir name
@@ -401,6 +402,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
+          cache: npm
           node-version-file: .nvmrc
 
       - name: NPM install
@@ -461,6 +463,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
+          cache: npm
           node-version-file: .nvmrc
 
       - name: Download artifacts
@@ -495,6 +498,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
+          cache: npm
           node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org # Needed to make auth work for publishing
 
