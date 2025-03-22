@@ -3,6 +3,7 @@ const cp = require("child_process");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
+const glob = require("glob");
 const { rescript_exe } = require("#cli/bin_path");
 
 const duneBinDir = require("./dune").duneBinDir;
@@ -105,6 +106,18 @@ async function runTests() {
       } else {
         console.log(`testing ${file}`);
 
+        // Remove lib directory with stale output
+        const libFolders = glob.sync(`${buildTestDir}/**/lib`);
+
+        libFolders.forEach((libFolder) => {
+          if (
+            fs.existsSync(libFolder) &&
+            fs.lstatSync(libFolder).isDirectory()
+          ) {
+            fs.rmSync(libFolder, { recursive: true });
+          }
+        });
+
         // note existsSync test already ensure that it is a directory
         const out = await exec(`node`, ["input.js"], { cwd: testDir });
         console.log(out.stdout);
@@ -128,15 +141,23 @@ async function runTests() {
       console.log(`Skipping docstrings tests on ${process.platform}`);
     } else if (process.platform === "darwin" && os.release().startsWith("22")) {
       // Workaround for intermittent hangs in CI
-      console.log("Skipping docstrings tests on macOS 13")
+      console.log("Skipping docstrings tests on macOS 13");
     } else {
       console.log("Running runtime docstrings tests");
 
+      const docstringsTestsDir = path.join("tests", "docstring_tests");
+
       const generated_mocha_test_res = path.join(
-        "tests",
-        "docstring_tests",
+        docstringsTestsDir,
         "generated_mocha_test.res",
       );
+
+      const libFolder = path.join(docstringsTestsDir, "lib");
+
+      // Remove stale lib directory
+      if (fs.existsSync(libFolder) && fs.lstatSync(libFolder).isDirectory()) {
+        fs.rmSync(libFolder, { recursive: true });
+      }
 
       // Remove `generated_mocha_test.res` if file exists
       if (fs.existsSync(generated_mocha_test_res)) {
@@ -150,17 +171,14 @@ async function runTests() {
       });
 
       // Generate rescript file with all tests `generated_mocha_test.res`
-      cp.execSync(
-        `node ${path.join("tests", "docstring_tests", "DocTest.res.mjs")}`,
-        {
-          cwd: path.join(__dirname, ".."),
-          stdio: [0, 1, 2],
-        },
-      );
+      cp.execSync(`node ${path.join(docstringsTestsDir, "DocTest.res.mjs")}`, {
+        cwd: path.join(__dirname, ".."),
+        stdio: [0, 1, 2],
+      });
 
       // Build again to check if generated_mocha_test.res has syntax or type erros
       cp.execSync(`${rescript_exe} build`, {
-        cwd: path.join(__dirname, "..", "tests/docstring_tests"),
+        cwd: path.join(__dirname, "..", docstringsTestsDir),
         stdio: [0, 1, 2],
       });
 
@@ -173,7 +191,7 @@ async function runTests() {
 
       console.log("Run mocha test");
       cp.execSync(
-        `npx mocha ${path.join("tests", "docstring_tests", "generated_mocha_test.res.mjs")}`,
+        `npx mocha ${path.join(docstringsTestsDir, "generated_mocha_test.res.mjs")}`,
         {
           cwd: path.join(__dirname, ".."),
           stdio: [0, 1, 2],
