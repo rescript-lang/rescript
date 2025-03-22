@@ -18,6 +18,7 @@ let () = {
   eq(__LOC__, (2 ** 3) ** 2, intPow(intPow(2, 3), 2))
   eq(__LOC__, -2 ** 31, intPow(-2, 31))
   eq(__LOC__, 2 ** 32, intPow(2, 32))
+  eq(__LOC__, 2147483647 ** 2, intPow(2147483647, 2))
 
   eq(__LOC__, 4 ** 4, four ** four)
 }

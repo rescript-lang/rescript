@@ -65,6 +65,8 @@ let pow2 = 2 ** 2;
 
 let pow3 = 2n ** 2n;
 
+let pow_overflow = 1;
+
 let int = 3;
 
 export {
@@ -88,5 +90,6 @@ export {
   pow1,
   pow2,
   pow3,
+  pow_overflow,
 }
 /* No side effect */
