@@ -20,3 +20,6 @@ let case2 = (a, b) => a + "test" + b
 
 let even = n => n % 2 == 0
 let odd = n => n % 2 == 1
+
+let bxor_int = (a, b) => a ^ b
+let bxor_bigint = (a: bigint, b) => a ^ b

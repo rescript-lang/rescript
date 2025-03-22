@@ -834,6 +834,9 @@ let rec scan scanner =
       | _ ->
         next scanner;
         Token.Band)
+    | '^' ->
+      next scanner;
+      Token.Caret
     | ':' -> (
       match peek scanner with
       | '=' ->
