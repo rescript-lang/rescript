@@ -1,7 +1,7 @@
-const child_process = require("node:child_process");
-const { rescript_exe } = require("#cli/bin_path");
+// @ts-check
 
-child_process.execSync(rescript_exe, {
-  cwd: __dirname,
-  encoding: "utf8",
-});
+import { setupWithUrl } from "#dev/process";
+
+const { execBuild } = setupWithUrl(import.meta.url);
+
+await execBuild();

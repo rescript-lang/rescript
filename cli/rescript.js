@@ -2,15 +2,15 @@
 
 //@ts-check
 
-"use strict";
-
 // This script is supposed to be running in project root directory
 // It matters since we need read .sourcedirs(location)
 // and its content are file/directories with regard to project root
 
-const tty = require("node:tty");
-const { bsc_exe, rescript_exe } = require("./bin_path.js");
-const bsb = require("./rescript_bsb.js");
+import * as tty from "node:tty";
+import packageJson from "rescript/package.json" with { type: "json" };
+
+import * as bsb from "./_bsb.js";
+import { bsc_exe, rescript_exe } from "./_paths.js";
 
 const cwd = process.cwd();
 process.env.BSB_PROJECT_ROOT = cwd;
@@ -21,7 +21,10 @@ if (process.env.FORCE_COLOR === undefined) {
     process.env.NINJA_ANSI_FORCED = "1";
   }
 } else {
-  if (process.env.FORCE_COLOR === "1" && process.env.NINJA_ANSI_FORCED === undefined) {
+  if (
+    process.env.FORCE_COLOR === "1" &&
+    process.env.NINJA_ANSI_FORCED === undefined
+  ) {
     process.env.NINJA_ANSI_FORCED = "1";
   }
   if (process.argv.includes("-verbose")) {
@@ -77,19 +80,20 @@ try {
 
 const args = process.argv.slice(2);
 const argPatterns = {
-  help: ['help', '-h', '-help', '--help'],
-  version: ['version', '-v', '-version', '--version'],
+  help: ["help", "-h", "-help", "--help"],
+  version: ["version", "-v", "-version", "--version"],
 };
 
 const helpArgIndex = args.findIndex(arg => argPatterns.help.includes(arg));
 const firstPositionalArgIndex = args.findIndex(arg => !arg.startsWith("-"));
 
-if (helpArgIndex !== -1 && (firstPositionalArgIndex === -1 || helpArgIndex <= firstPositionalArgIndex)) {
+if (
+  helpArgIndex !== -1 &&
+  (firstPositionalArgIndex === -1 || helpArgIndex <= firstPositionalArgIndex)
+) {
   console.log(helpMessage);
-
 } else if (argPatterns.version.includes(args[0])) {
-  console.log(require("../package.json").version);
-
+  console.log(packageJson.version);
 } else if (firstPositionalArgIndex !== -1) {
   const subcmd = args[firstPositionalArgIndex];
   const subcmdArgs = args.slice(firstPositionalArgIndex + 1);
@@ -108,25 +112,17 @@ if (helpArgIndex !== -1 && (firstPositionalArgIndex === -1 || helpArgIndex <= fi
       break;
     }
     case "format": {
-      require("./rescript_format.js").main(
-        subcmdArgs,
-        rescript_exe,
-        bsc_exe
-      );
+      const mod = await import("./rescript/rescript_format.js");
+      await mod.main(subcmdArgs, rescript_exe, bsc_exe);
       break;
     }
     case "dump": {
-      require("./rescript_dump.js").main(
-        subcmdArgs,
-        rescript_exe,
-        bsc_exe
-      );
+      const mod = await import("./rescript/rescript_dump.js");
+      mod.main(subcmdArgs, rescript_exe, bsc_exe);
       break;
     }
     default: {
-      console.error(
-        `Error: Unknown command "${subcmd}".\n${helpMessage}`
-      );
+      console.error(`Error: Unknown command "${subcmd}".\n${helpMessage}`);
       process.exit(2);
     }
   }

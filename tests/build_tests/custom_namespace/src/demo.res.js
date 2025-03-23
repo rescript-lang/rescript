@@ -1,7 +1,9 @@
-'use strict';
+
 
 
 let v = 42;
 
-exports.v = v;
+export {
+  v,
+}
 /* No side effect */

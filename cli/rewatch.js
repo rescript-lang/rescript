@@ -2,10 +2,8 @@
 
 // @ts-check
 
-"use strict";
-
-const child_process = require("node:child_process");
-const { rewatch_exe } = require("./bin_path.js");
+import * as child_process from "node:child_process";
+import { rewatch_exe } from "./bin_path.js";
 
 const args = process.argv.slice(2);
 

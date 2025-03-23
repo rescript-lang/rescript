@@ -1,27 +1,20 @@
 // @ts-check
 
-const assert = require("node:assert");
-const path = require("node:path");
-const child_process = require("node:child_process");
-const { normalizeNewlines } = require("../utils.js");
+import * as assert from "node:assert";
+import { setupWithUrl } from "#dev/process";
+import { normalizeNewlines } from "#dev/utils";
 
-const rescriptPath = path.join(__dirname, "..", "..", "..", "cli", "rescript");
+const { rescript } = setupWithUrl(import.meta.url);
 
 // Shows compile time for `rescript build` command
-let out = child_process.spawnSync("node", [rescriptPath, "build"], {
-  encoding: "utf8",
-  cwd: __dirname,
-});
+let out = await rescript("build");
 assert.match(
   normalizeNewlines(out.stdout),
   />>>> Start compiling\nDependency Finished\n>>>> Finish compiling \d+ mseconds/,
 );
 
 // Shows compile time for `rescript` command
-out = child_process.spawnSync("node", [rescriptPath], {
-  encoding: "utf8",
-  cwd: __dirname,
-});
+out = await rescript("build");
 assert.match(
   normalizeNewlines(out.stdout),
   />>>> Start compiling\nDependency Finished\n>>>> Finish compiling \d+ mseconds/,
@@ -31,10 +24,7 @@ assert.match(
 // Because we can't be sure that -verbose is a valid argument
 // And bsb won't fail with a usage message.
 // It works this way not only for -verbose, but any other arg, including -h/--help/-help
-out = child_process.spawnSync("node", [rescriptPath, "build", "-verbose"], {
-  encoding: "utf8",
-  cwd: __dirname,
-});
+out = await rescript("build", ["-verbose"]);
 
 assert.match(
   normalizeNewlines(out.stdout),

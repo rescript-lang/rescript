@@ -1,66 +1,69 @@
 // @ts-check
 
-const path = require("node:path");
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * The project root path
  */
-const projectDir = path.resolve(__dirname, "..");
+export const projectDir = path.resolve(__dirname, "..");
 
 /**
  * path: `<projectDir>/compiler/`
  */
-const compilerRootDir = path.resolve(projectDir, "compiler");
+export const compilerRootDir = path.resolve(projectDir, "compiler");
 
 /**
  * path: `<projectDir>/runtime/`
  */
-const runtimeDir = path.resolve(projectDir, "runtime");
+export const runtimeDir = path.resolve(projectDir, "runtime");
 
 /**
  * path: `<projectDir>/lib/js/`
  */
-const runtimeCjsOutputDir = path.resolve(projectDir, "lib", "js");
+export const runtimeCjsOutputDir = path.resolve(projectDir, "lib", "js");
 
 /**
  * path: `<projectDir>/lib/es6/`
  */
-const runtimeEsmOutputDir = path.resolve(projectDir, "lib", "es6");
+export const runtimeEsmOutputDir = path.resolve(projectDir, "lib", "es6");
 
 /**
  * path: `<projectDir>/rewatch/`
  */
-const rewatchDir = path.resolve(projectDir, "rewatch");
+export const rewatchDir = path.resolve(projectDir, "rewatch");
 
 /**
  * path: `<projectDir>/ninja/`
  */
-const ninjaDir = path.resolve(projectDir, "ninja");
+export const ninjaDir = path.resolve(projectDir, "ninja");
 
 /**
  * path: `<projectDir>/tests/`
  */
-const testDir = path.resolve(projectDir, "tests");
+export const testDir = path.resolve(projectDir, "tests");
 
 /**
  * path: `<projectDir>/tests/tests/`
  */
-const compilerTestDir = path.resolve(testDir, "tests");
+export const compilerTestDir = path.resolve(testDir, "tests");
 
 /**
  * path: `<projectDir>/tests/build_tests/`
  */
-const buildTestDir = path.resolve(testDir, "build_tests");
+export const buildTestDir = path.resolve(testDir, "build_tests");
 
 /**
  * path: `<projectDir>/tests/docstring_tests/`
  */
-const docstringTestDir = path.resolve(testDir, "docstring_tests");
+export const docstringTestDir = path.resolve(testDir, "docstring_tests");
 
 /**
  * path: `<projectDir>/compiler/common/bs_version.ml`
  */
-const compilerVersionFile = path.resolve(
+export const compilerVersionFile = path.resolve(
   compilerRootDir,
   "common",
   "bs_version.ml",
@@ -69,7 +72,7 @@ const compilerVersionFile = path.resolve(
 /**
  * path: `<projectDir>/_build/install/default/bin/`
  */
-const compilerBinDir = path.resolve(
+export const compilerBinDir = path.resolve(
   projectDir,
   "_build",
   "install",
@@ -78,27 +81,15 @@ const compilerBinDir = path.resolve(
 );
 
 /**
+ * path: `<projectDir>/_build/install/default/bin/ounit_tests`
+ */
+export const ounitTestBin = path.join(compilerBinDir, "ounit_tests");
+
+/**
  * path: `<projectDir>/tests/gentype_tests/typescript-react-example/`
  */
-const gentypeExampleDir = path.resolve(
+export const gentypeExampleDir = path.resolve(
   testDir,
   "gentype_tests",
   "typescript-react-example",
 );
-
-module.exports = {
-  projectDir,
-  compilerRootDir,
-  runtimeDir,
-  runtimeCjsOutputDir,
-  runtimeEsmOutputDir,
-  rewatchDir,
-  ninjaDir,
-  testDir,
-  compilerTestDir,
-  buildTestDir,
-  docstringTestDir,
-  compilerVersionFile,
-  compilerBinDir,
-  gentypeExampleDir,
-};

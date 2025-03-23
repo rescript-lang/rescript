@@ -1,8 +1,11 @@
-const child_process = require("node:child_process");
-const assert = require("node:assert");
-const { rescript_exe } = require("#cli/bin_path");
+// @ts-check
 
-const out = child_process.spawnSync(rescript_exe, { encoding: "utf8" });
+import assert from "node:assert";
+import { setupWithUrl } from "#dev/process";
+
+const { execBuild } = setupWithUrl(import.meta.url);
+
+const out = await execBuild();
 assert.match(
   out.stderr,
   /deprecated: Option "es6-global" is deprecated\. Use "esmodule" instead\./,

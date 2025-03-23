@@ -1,7 +1,7 @@
 SHELL = /bin/bash
 
 test:
-	npm run lint
+	npm run check
 	npm run build
 	npm run typecheck
 	@git diff --quiet src/ \

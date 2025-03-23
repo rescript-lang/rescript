@@ -1,13 +1,16 @@
-const child_process = require("node:child_process");
-const assert = require("node:assert");
-const { rescript_exe } = require("#cli/bin_path");
+// @ts-check
+
+import * as assert from "node:assert";
+import { setupWithUrl } from "#dev/process";
+
+const { execBuild } = setupWithUrl(import.meta.url);
 
 if (process.platform === "win32") {
   console.log("Skipping test on Windows");
   process.exit(0);
 }
 
-const out = child_process.spawnSync(rescript_exe, { encoding: "utf8" });
+const out = await execBuild();
 
 if (out.status !== 0) {
   assert.fail(out.stdout + out.stderr);

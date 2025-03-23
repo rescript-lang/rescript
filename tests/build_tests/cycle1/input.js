@@ -1,16 +1,17 @@
-//@ts-check
-const cp = require("node:child_process");
-const assert = require("node:assert");
-const fs = require("node:fs");
-const path = require("node:path");
-const { rescript_exe } = require("#cli/bin_path");
+// @ts-check
 
-cp.execSync(`${rescript_exe} clean`, { cwd: __dirname });
+import * as assert from "node:assert";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { setupWithUrl } from "#dev/process";
 
-const output = cp.spawnSync(rescript_exe, { encoding: "utf8", shell: true });
+const { execBuild, execClean } = setupWithUrl(import.meta.url);
 
-assert(/is dangling/.test(output.stdout));
+await execClean();
+const output = await execBuild();
 
-const compilerLogFile = path.join(__dirname, "lib", "bs", ".compiler.log");
-const compilerLog = fs.readFileSync(compilerLogFile, "utf8");
-assert(/is dangling/.test(compilerLog));
+assert.match(output.stdout, /is dangling/);
+
+const compilerLogFile = path.join("lib", "bs", ".compiler.log");
+const compilerLog = await fs.readFile(compilerLogFile, "utf8");
+assert.match(compilerLog, /is dangling/);

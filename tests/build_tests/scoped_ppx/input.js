@@ -1,24 +1,19 @@
-const cp = require("node:child_process");
-const assert = require("node:assert");
-const { rescript_exe } = require("#cli/bin_path");
+// @ts-check
+
+import * as assert from "node:assert";
+import { setupWithUrl } from "#dev/process";
+
+const { execBuild } = setupWithUrl(import.meta.url);
 
 if (process.platform === "win32") {
   console.log("Skipping test on Windows");
   process.exit(0);
 }
 
-cp.execSync(rescript_exe, { cwd: __dirname, encoding: "utf8" });
+await execBuild();
+const output = await execBuild(["--", "-t", "commands", "src/hello.ast"]);
 
-const output = cp.execSync(
-  `${rescript_exe} build -- -t commands src/hello.ast`,
-  {
-    cwd: __dirname,
-    encoding: "utf8",
-  },
-);
-
-assert.ok(
-  /-ppx '.*\/test\.js -hello' -ppx '.*\/test\.js -heyy' -ppx .*test\.js/.test(
-    output,
-  ),
+assert.match(
+  output.stdout,
+  /-ppx '.*\/test\.js -hello' -ppx '.*\/test\.js -heyy' -ppx .*test\.js/,
 );

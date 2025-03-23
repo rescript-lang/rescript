@@ -1,7 +1,7 @@
-const fs = require("node:fs");
-const os = require("node:os");
+import * as fs from "node:fs";
+import * as os from "node:os";
 
-const { platformName } = require("#cli/bin_path");
+import { platformName } from "#cli/paths";
 
 // Pass artifactDirName to subsequent GitHub actions
 fs.appendFileSync(

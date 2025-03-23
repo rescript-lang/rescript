@@ -2,15 +2,14 @@
 
 // @ts-check
 
-"use strict";
+import { execFileSync } from "node:child_process";
 
-const child_process = require("child_process");
-const { bsc_exe } = require("./bin_path.js");
+import { bsc_exe } from "./_paths.js";
 
 const delegate_args = process.argv.slice(2);
 
 try {
-  child_process.execFileSync(bsc_exe, delegate_args, { stdio: "inherit" });
+  execFileSync(bsc_exe, delegate_args, { stdio: "inherit" });
 } catch (e) {
   if (e.code === "ENOENT") {
     console.error(String(e));

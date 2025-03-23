@@ -2,11 +2,11 @@
 
 // @ts-check
 
-const fs = require("node:fs");
-const assert = require("node:assert");
-const semver = require("semver");
-const { compilerVersionFile } = require("#dev/paths");
-const { packageJson } = require("#dev/meta");
+import assert from "node:assert";
+import fs from "node:fs";
+import packageJson from "rescript/package.json" with { type: "json" };
+import semver from "semver";
+import { compilerVersionFile } from "#dev/paths";
 
 /**
  * @param {semver.SemVer} bsVersion

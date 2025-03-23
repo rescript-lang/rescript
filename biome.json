@@ -10,6 +10,9 @@
     "enabled": true,
     "rules": {
       "recommended": true,
+      "nursery": {
+        "noCommonJs": "error"
+      },
       "correctness": {
         "useImportExtensions": "error",
         "noUndeclaredDependencies": "error",
@@ -49,6 +52,7 @@
       "tests/analysis_tests/**/src/**",
       "tests/build_tests/**/src/**",
       "tests/docstring_tests/**",
+      "tests/gentype_tests/**",
       "tests/tests/**/src/**",
       "tests/tools_tests/**/src/**",
       "analysis/examples/**/src/**",

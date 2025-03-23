@@ -4,11 +4,11 @@
 
 // Copy exes built by dune to platform bin dir
 
-const path = require("node:path");
-const fs = require("node:fs");
-const child_process = require("node:child_process");
-const { platformDir } = require("#cli/bin_path");
-const { compilerBinDir, ninjaDir, rewatchDir } = require("#dev/paths");
+import * as child_process from "node:child_process";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { platformDir } from "#cli/paths";
+import { compilerBinDir, ninjaDir, rewatchDir } from "#dev/paths";
 
 fs.mkdirSync(platformDir, { recursive: true });
 

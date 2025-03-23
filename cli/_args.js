@@ -15,12 +15,12 @@ class StringBuilder {
   }
 }
 
-class ArgError extends Error {}
+export class ArgError extends Error {}
 
 /**
  * @param {string} s
  */
-function bad_arg(s) {
+export function bad_arg(s) {
   throw new ArgError(s);
 }
 
@@ -118,7 +118,7 @@ function stop_raise(usage, error, specs) {
  * @param {number} start
  * @param {number} finish
  */
-function parse_exn(
+export function parse_exn(
   usage,
   argv,
   specs,
@@ -174,6 +174,3 @@ function parse_exn(
   }
   annofun(list);
 }
-exports.bad_arg = bad_arg;
-exports.parse_exn = parse_exn;
-exports.ArgError = ArgError;

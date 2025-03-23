@@ -15,11 +15,14 @@
  * playground bundle.
  */
 
-const child_process = require("node:child_process");
-const fs = require("node:fs");
-const path = require("node:path");
+import * as child_process from "node:child_process";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const resConfig = require("../rescript.json");
+import resConfig from "../rescript.json" with { type: "json" };
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const RESCRIPT_COMPILER_ROOT_DIR = path.join(__dirname, "..", "..", "..");
 const PLAYGROUND_DIR = path.join(RESCRIPT_COMPILER_ROOT_DIR, "playground");

@@ -4,5 +4,8 @@
   "sources": {
     "dir": "src",
     "subdirs": true
+  },
+  "package-specs": {
+    "module": "esmodule"
   }
 }

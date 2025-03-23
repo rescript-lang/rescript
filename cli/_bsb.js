@@ -1,12 +1,13 @@
 // @ts-check
 
-const fs = require("node:fs");
-const path = require("node:path");
-const os = require("node:os");
-const child_process = require("node:child_process");
-const { createServer } = require("node:http");
-const { MiniWebSocket: WebSocket } = require("#lib/minisocket");
-const { rescript_exe } = require("#cli/bin_path");
+import * as child_process from "node:child_process";
+import * as fs from "node:fs";
+import { createServer } from "node:http";
+import * as os from "node:os";
+import * as path from "node:path";
+import { WebSocket } from "#lib/minisocket";
+
+import { rescript_exe } from "./_paths.js";
 
 const cwd = process.cwd();
 const lockFileName = path.join(cwd, ".bsb.lock");
@@ -27,7 +28,7 @@ const lockFileName = path.join(cwd, ".bsb.lock");
  * @type {child_process.ChildProcess | null}
  */
 let ownerProcess = null;
-function releaseBuild() {
+export function releaseBuild() {
   if (ownerProcess) {
     ownerProcess.kill("SIGHUP");
     try {
@@ -100,14 +101,14 @@ function delegate(args, maybeOnClose) {
 /**
  * @param {Array<string>} args
  */
-function info(args) {
+export function info(args) {
   delegate(["info", ...args]);
 }
 
 /**
  * @param {Array<string>} args
  */
-function clean(args) {
+export function clean(args) {
   delegate(["clean", ...args]);
 }
 
@@ -475,7 +476,7 @@ Please pick a different one using the \`-ws [host:]port\` flag from bsb.`);
 /**
  * @param {Array<string>} args
  */
-function build(args) {
+export function build(args) {
   // We want to show the compile time for build
   // But bsb might show a help message when --help or invalid arguments are passed
   // We don't want to show the compile time in that case
@@ -499,8 +500,3 @@ function build(args) {
   }
   delegate(["build", ...args]);
 }
-
-exports.releaseBuild = releaseBuild;
-exports.info = info;
-exports.clean = clean;
-exports.build = build;

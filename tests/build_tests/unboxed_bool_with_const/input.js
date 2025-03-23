@@ -1,14 +1,12 @@
-//@ts-check
+// @ts-check
 
-const cp = require("node:child_process");
-const assert = require("node:assert");
-const { rescript_exe } = require("#cli/bin_path");
-const { normalizeNewlines } = require("../utils.js");
+import * as assert from "node:assert";
+import { setupWithUrl } from "#dev/process";
+import { normalizeNewlines } from "#dev/utils";
 
-const out = cp.spawnSync(rescript_exe, {
-  cwd: __dirname,
-  encoding: "utf8",
-});
+const { execBuild } = setupWithUrl(import.meta.url);
+
+const out = await execBuild();
 
 assert.equal(
   normalizeNewlines(out.stdout.slice(out.stdout.indexOf("Main.res:3:3-14"))),

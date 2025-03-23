@@ -2,10 +2,9 @@
 
 // @ts-check
 
-"use strict";
+import * as child_process from "node:child_process";
 
-const child_process = require("node:child_process");
-const { rescript_tools_exe } = require("./bin_path.js");
+import { rescript_tools_exe } from "./_paths.js";
 
 const args = process.argv.slice(2);
 

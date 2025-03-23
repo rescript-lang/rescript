@@ -1,9 +1,14 @@
-const fs = require("node:fs");
-const path = require("node:path");
-const child_process = require("node:child_process");
-const { rescript_exe } = require("#cli/bin_path");
+// @ts-check
 
-const expectedFilePath = path.join(__dirname, "out.expected");
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+import { setupWithUrl } from "#dev/process";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const { execBuild, execClean } = setupWithUrl(import.meta.url);
+
+const expectedFilePath = "./out.expected";
 
 const updateTests = process.argv[2] === "update";
 
@@ -20,27 +25,22 @@ if (process.platform === "win32") {
   process.exit(0);
 }
 
-child_process.execSync(`${rescript_exe} clean`, { cwd: __dirname });
+await execClean();
+const { stderr } = await execBuild();
 
-child_process.exec(
-  rescript_exe,
-  { cwd: __dirname },
-  (_err, _stdout, stderr) => {
-    const actualErrorOutput = postProcessErrorOutput(stderr.toString());
-    if (updateTests) {
-      fs.writeFileSync(expectedFilePath, actualErrorOutput);
-    } else {
-      const expectedErrorOutput = postProcessErrorOutput(
-        fs.readFileSync(expectedFilePath, { encoding: "utf-8" }),
-      );
-      if (expectedErrorOutput !== actualErrorOutput) {
-        console.error(`The old and new error output aren't the same`);
-        console.error("\n=== Old:");
-        console.error(expectedErrorOutput);
-        console.error("\n=== New:");
-        console.error(actualErrorOutput);
-        process.exit(1);
-      }
-    }
-  },
-);
+const actualErrorOutput = postProcessErrorOutput(stderr.toString());
+if (updateTests) {
+  await fs.writeFile(expectedFilePath, actualErrorOutput);
+} else {
+  const expectedErrorOutput = postProcessErrorOutput(
+    await fs.readFile(expectedFilePath, { encoding: "utf-8" }),
+  );
+  if (expectedErrorOutput !== actualErrorOutput) {
+    console.error(`The old and new error output aren't the same`);
+    console.error("\n=== Old:");
+    console.error(expectedErrorOutput);
+    console.error("\n=== New:");
+    console.error(actualErrorOutput);
+    process.exit(1);
+  }
+}
