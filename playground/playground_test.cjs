@@ -1,8 +1,9 @@
 // Playground bundle is UMD module
 // It uses `module.exports` in current context, or fallback to `globalThis`
-import "./compiler.js";
-import "./packages/compiler-builtins/cmij.js";
-import "./packages/@rescript/react/cmij.js";
+const { rescript_compiler } = require("./compiler.js");
+
+require("./packages/compiler-builtins/cmij.cjs");
+require("./packages/@rescript/react/cmij.cjs");
 
 const compiler = rescript_compiler.make();
 

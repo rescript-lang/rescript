@@ -71,7 +71,7 @@ function buildCompilerCmij() {
 
   const outputFolder = path.join(PACKAGES_DIR, "compiler-builtins");
 
-  const cmijFile = path.join(outputFolder, "cmij.js");
+  const cmijFile = path.join(outputFolder, "cmij.cjs");
 
   if (!fs.existsSync(outputFolder)) {
     fs.mkdirSync(outputFolder, { recursive: true });
@@ -100,7 +100,7 @@ function buildThirdPartyCmijs() {
     );
     const outputFolder = path.join(PACKAGES_DIR, pkg);
 
-    const cmijFile = path.join(outputFolder, "cmij.js");
+    const cmijFile = path.join(outputFolder, "cmij.cjs");
 
     if (!fs.existsSync(outputFolder)) {
       fs.mkdirSync(outputFolder, { recursive: true });

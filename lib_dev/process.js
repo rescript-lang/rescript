@@ -44,6 +44,8 @@ export function setup(cwd = process.cwd()) {
 
     const subprocess = child_process.spawn(command, args, {
       cwd,
+      // Enable shell mode only in Windows for performance
+      shell: process.platform === 'win32',
       stdio: ["ignore", "pipe", "pipe"],
       ...options,
     });
