@@ -26,6 +26,7 @@
 
 - Replace ~date with ~day in Date.make\*. https://github.com/rescript-lang/rescript/pull/7324
 - Remove `-bs-jsx-mode`. https://github.com/rescript-lang/rescript/pull/7327
+- Drop Node.js version <20 support, as it is reaching End-of-Life. https://github.com/rescript-lang/rescript-compiler/pull/7354
 
 #### :house: Internal
 
