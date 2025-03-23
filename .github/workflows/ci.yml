@@ -244,6 +244,13 @@ jobs:
           fi
         shell: bash
 
+      - name: Restore compiler build state
+        id: compiler-build-state
+        uses: actions/cache@v4
+        with:
+          path: _build
+          key: compiler-build-state-v1-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('dune-project') }}
+
       - name: Build compiler
         if: runner.os != 'Linux'
         run: opam exec -- dune build --display quiet --profile release
