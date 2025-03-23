@@ -3,9 +3,9 @@
 import * as assert from "node:assert";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { setupWithUrl } from "#dev/process";
+import { setup } from "#dev/process";
 
-const { execBuild } = setupWithUrl(import.meta.url);
+const { execBuild } = setup(import.meta.dirname);
 
 if (process.platform === "win32") {
   console.log("Skipping test on Windows");

@@ -1,10 +1,10 @@
 // @ts-check
 
 import * as assert from "node:assert";
-import { setupWithUrl } from "#dev/process";
+import { setup } from "#dev/process";
 import { normalizeNewlines } from "#dev/utils";
 
-const { rescript } = setupWithUrl(import.meta.url);
+const { rescript } = setup(import.meta.dirname);
 
 const cliHelp =
   "Usage: rescript <options> <subcommand>\n" +

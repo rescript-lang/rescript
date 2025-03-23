@@ -1,10 +1,10 @@
 // @ts-check
 
 import * as assert from "node:assert";
-import { setupWithUrl } from "#dev/process";
+import { setup } from "#dev/process";
 import { normalizeNewlines } from "#dev/utils";
 
-const { execBuild } = setupWithUrl(import.meta.url);
+const { execBuild } = setup(import.meta.dirname);
 
 const { stderr } = await execBuild();
 

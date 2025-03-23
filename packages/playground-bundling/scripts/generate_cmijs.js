@@ -18,17 +18,19 @@
 import * as child_process from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import resConfig from "../rescript.json" with { type: "json" };
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const RESCRIPT_COMPILER_ROOT_DIR = path.join(__dirname, "..", "..", "..");
+const RESCRIPT_COMPILER_ROOT_DIR = path.join(
+  import.meta.dirname,
+  "..",
+  "..",
+  "..",
+);
 const PLAYGROUND_DIR = path.join(RESCRIPT_COMPILER_ROOT_DIR, "playground");
 
 // The playground-bundling root dir
-const PROJECT_ROOT_DIR = path.join(__dirname, "..");
+const PROJECT_ROOT_DIR = path.join(import.meta.dirname, "..");
 
 // Final target output directory where all the cmijs will be stored
 const PACKAGES_DIR = path.join(PLAYGROUND_DIR, "packages");

@@ -1,11 +1,8 @@
 // @ts-check
 
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-export const cliPath = path.join(__dirname, "rescript.js");
+export const cliPath = path.join(import.meta.dirname, "rescript.js");
 
 /**
  * For compatibility reasons, if the architecture is x64, omit it from the bin directory name.
@@ -19,7 +16,11 @@ export const platformName =
     ? process.platform
     : process.platform + process.arch;
 
-export const platformDir = path.resolve(__dirname, "..", platformName);
+export const platformDir = path.resolve(
+  import.meta.dirname,
+  "..",
+  platformName,
+);
 
 export const bsc_exe = path.join(platformDir, "bsc.exe");
 

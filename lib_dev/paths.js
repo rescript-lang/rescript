@@ -1,14 +1,11 @@
 // @ts-check
 
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * The project root path
  */
-export const projectDir = path.resolve(__dirname, "..");
+export const projectDir = path.resolve(import.meta.dirname, "..");
 
 /**
  * path: `<projectDir>/compiler/`

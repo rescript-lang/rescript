@@ -3,14 +3,12 @@
 import { readdirSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
-import { setupWithUrl } from "#dev/process";
+import { setup } from "#dev/process";
 import { normalizeNewlines } from "#dev/utils";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const { bsc } = setupWithUrl(import.meta.url);
+const { bsc } = setup(import.meta.dirname);
 
-const expectedDir = path.join(__dirname, "expected");
+const expectedDir = path.join(import.meta.dirname, "expected");
 
 const fixtures = readdirSync("fixtures").filter(
   fileName => path.extname(fileName) === ".res",
@@ -38,7 +36,7 @@ let doneTasksCount = 0;
 let atLeastOneTaskFailed = false;
 
 for (const fileName of fixtures) {
-  const fullFilePath = path.join(__dirname, "fixtures", fileName);
+  const fullFilePath = path.join(import.meta.dirname, "fixtures", fileName);
   const { stderr } = await bsc([...prefix, "-color", "always", fullFilePath]);
   doneTasksCount++;
   // careful of:

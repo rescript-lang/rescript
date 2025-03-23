@@ -1,6 +1,4 @@
 import * as child_process from "node:child_process";
-import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 import { bsc_exe, cliPath, rescript_exe } from "#cli/paths";
 
 /**
@@ -22,17 +20,9 @@ export const { exec, node, npx, mocha, bsc, rescript, execBuild, execClean } =
   setup();
 
 /**
- * @param {string} url
- */
-export function setupWithUrl(url) {
-  return setup(path.dirname(fileURLToPath(url)));
-}
-
-/**
  * @param {string} [cwd]
  */
 export function setup(cwd = process.cwd()) {
-
   /**
    * @param {string} command
    * @param {string[]} [args]

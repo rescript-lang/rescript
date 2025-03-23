@@ -3,9 +3,9 @@
 import * as assert from "node:assert";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { setupWithUrl } from "#dev/process";
+import { setup } from "#dev/process";
 
-const { execBuild } = setupWithUrl(import.meta.url);
+const { execBuild } = setup(import.meta.dirname);
 
 await execBuild();
 
@@ -20,12 +20,3 @@ assert.equal(content.match(/b0_main/g)?.length, 1);
 
 const mod = await import("./src/demo.js");
 assert.equal(mod.v, 4, "nested");
-
-// var testWarnError = /warnings\s*=\s*[^\r\n]*-warn-error/;
-
-// function hasWarnError(file) {
-//   var content = fs.readFileSync(file, "utf8");
-//   return testWarnError.test(content);
-// }
-
-// assert.ok(hasWarnError(path.join(__dirname,'lib','bs','build.ninja')))

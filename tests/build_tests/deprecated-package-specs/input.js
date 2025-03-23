@@ -1,9 +1,9 @@
 // @ts-check
 
 import assert from "node:assert";
-import { setupWithUrl } from "#dev/process";
+import { setup } from "#dev/process";
 
-const { execBuild } = setupWithUrl(import.meta.url);
+const { execBuild } = setup(import.meta.dirname);
 
 const out = await execBuild();
 assert.match(

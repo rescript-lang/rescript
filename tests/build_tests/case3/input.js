@@ -3,9 +3,9 @@
 import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { setupWithUrl } from "#dev/process";
+import { setup } from "#dev/process";
 
-const { execBuild } = setupWithUrl(import.meta.url);
+const { execBuild } = setup(import.meta.dirname);
 
 await execBuild();
 

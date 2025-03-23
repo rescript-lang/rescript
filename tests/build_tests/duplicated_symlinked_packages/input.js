@@ -1,12 +1,9 @@
 // @ts-check
 
 import * as fs from "node:fs/promises";
-import * as path from "node:path";
-import { fileURLToPath } from "node:url";
-import { setupWithUrl } from "#dev/process";
+import { setup } from "#dev/process";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const { execBuild, execClean } = setupWithUrl(import.meta.url);
+const { execBuild, execClean } = setup(import.meta.dirname);
 
 const expectedFilePath = "./out.expected";
 
@@ -17,7 +14,7 @@ const updateTests = process.argv[2] === "update";
  * @return {string}
  */
 function postProcessErrorOutput(output) {
-  return output.trimEnd().replace(new RegExp(__dirname, "gi"), ".");
+  return output.trimEnd().replace(new RegExp(import.meta.dirname, "gi"), ".");
 }
 
 if (process.platform === "win32") {

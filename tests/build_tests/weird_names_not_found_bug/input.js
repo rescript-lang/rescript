@@ -1,7 +1,7 @@
 import * as assert from "node:assert";
-import { setupWithUrl } from "#dev/process";
+import { setup } from "#dev/process";
 
-const { execBuild } = await setupWithUrl(import.meta.url);
+const { execBuild } = await setup(import.meta.dirname);
 
 const out = await execBuild();
 
