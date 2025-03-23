@@ -3,7 +3,9 @@
 // @ts-check
 
 import fs from "node:fs";
-import { name, version } from "rescript/package.json" with { type: "json" };
+import packageSpec from "rescript/package.json" with { type: "json" };
+
+const { name, version } = packageSpec;
 
 const stdlibPackageSpec = JSON.parse(
   fs.readFileSync("./packages/std/package.json", "utf8"),
