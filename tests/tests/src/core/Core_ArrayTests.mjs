@@ -257,7 +257,7 @@ Test.run([
   6
 ], n => {
   if (n % 2 === 0) {
-    return Math.imul(n, n);
+    return n * n | 0;
   }
   
 }), eq, [
@@ -293,7 +293,7 @@ Test.run([
   "filterMap - empty"
 ], Stdlib_Array.filterMap([], n => {
   if (n % 2 === 0) {
-    return Math.imul(n, n);
+    return n * n | 0;
   }
   
 }), eq, []);
@@ -406,7 +406,7 @@ Test.run([
   "findMap - empty"
 ], Stdlib_Array.findMap([], n => {
   if (n % 2 === 0) {
-    return Math.imul(n, n);
+    return n * n | 0;
   }
   
 }), eq, undefined);

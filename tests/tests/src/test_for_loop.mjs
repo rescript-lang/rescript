@@ -51,7 +51,7 @@ function for_5(x, u) {
   };
   let arr = Belt_Array.map(x, param => (() => {}));
   for (let i = 0, i_finish = x.length; i <= i_finish; ++i) {
-    let k = Math.imul((u << 1), u);
+    let k = (u << 1) * u | 0;
     arr[i] = () => {
       v.contents = v.contents + k | 0;
     };
@@ -78,7 +78,7 @@ function for_6(x, u) {
       contents: 0
     };
     for (let i = 0, i_finish = x.length; i <= i_finish; ++i) {
-      let k = Math.imul((u << 1), u);
+      let k = (u << 1) * u | 0;
       let h = (v5.contents << 1);
       v2.contents = v2.contents + 1 | 0;
       arr[i] = () => {
