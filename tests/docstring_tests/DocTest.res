@@ -21,11 +21,14 @@ let nodeVersion =
 
 let ignoreRuntimeTests = [
   (
-    // Ignore some tests not supported by node v18
-    18,
+    // Ignore some tests require Node.js v20+
+    20,
+    ["Stdlib.Array.toReversed", "Stdlib.Array.toSorted"],
+  ),
+  (
+    // Ignore some tests require Node.js v22+
+    22,
     [
-      "Stdlib.Array.toReversed",
-      "Stdlib.Array.toSorted",
       "Stdlib.Promise.withResolvers",
       "Stdlib.Set.union",
       "Stdlib.Set.isSupersetOf",
@@ -202,7 +205,7 @@ let main = async () => {
     let codeExamples = examples->Array.filterMap(example => {
       let ignoreExample =
         ignoreRuntimeTests->Array.some(
-          ((version, tests)) => nodeVersion === version && tests->Array.includes(example.id),
+          ((version, tests)) => nodeVersion < version && tests->Array.includes(example.id),
         )
 
       if ignoreExample {
