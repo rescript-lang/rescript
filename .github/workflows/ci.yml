@@ -282,7 +282,7 @@ jobs:
           key: ${{ steps.compiler-build-state-key.outputs.value }}
 
       - name: Install npm packages
-        run: yarn install --immutable
+        run: yarn install
 
       - name: Copy compiler exes to platform bin dir
         run: node ./scripts/copyExes.js -compiler
@@ -434,7 +434,7 @@ jobs:
           node-version-file: .nvmrc
 
       - name: NPM install
-        run: yarn install --immutable
+        run: yarn install
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
