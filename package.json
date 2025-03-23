@@ -33,7 +33,7 @@
     "Woonki Moon (https://github.com/mununki)"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=20.11.0"
   },
   "bin": {
     "bsc": "cli/bsc",
