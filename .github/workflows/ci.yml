@@ -244,12 +244,18 @@ jobs:
           fi
         shell: bash
 
+      - name: Compiler build state key
+        id: compiler-build-state-key
+        run: |
+          echo "value=compiler-build-state-v1-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('dune-project') }}" \
+            | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
+
       - name: Restore compiler build state
         id: compiler-build-state
         uses: actions/cache@v4
         with:
           path: _build
-          key: compiler-build-state-v1-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('dune-project') }}
+          key: ${{ steps.compiler-build-state-key.outputs.value }}
 
       - name: Build compiler
         if: runner.os != 'Linux'
