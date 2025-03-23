@@ -29,10 +29,10 @@ assert.ok(bsVersionMatch, "Failed to parse the compiler version file");
 const bsVersion = semver.parse(bsVersionMatch.version);
 assert.ok(bsVersion, "Failed to parse the compiler version file");
 
-const pakageVersion = semver.parse(packageJson.version);
-assert.ok(pakageVersion, "Failed to parse the version of the package.json");
+const packageVersion = semver.parse(packageJson.version);
+assert.ok(packageVersion, "Failed to parse the version of the package.json");
 
 assert.ok(
-  verifyVersion(bsVersion, pakageVersion),
+  verifyVersion(bsVersion, packageVersion),
   `Bump the compiler version in ${compilerVersionFile}`,
 );
