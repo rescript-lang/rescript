@@ -129,7 +129,7 @@ export function setup(cwd = process.cwd()) {
      * @return {Promise<ExecResult>}
      */
     rescript(command, args = [], options = {}) {
-      return exec(cliPath, [command, ...args].filter(Boolean), options);
+      return exec("node", [cliPath, command, ...args].filter(Boolean), options);
     },
 
     /**

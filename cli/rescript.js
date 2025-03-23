@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-//@ts-check
+// @ts-check
 
 // This script is supposed to be running in project root directory
 // It matters since we need read .sourcedirs(location)
