@@ -50,6 +50,7 @@
     "test-ocaml": "node scripts/test.js -ounit",
     "check": "biome check --changed --no-errors-on-unmatched .",
     "check:all": "biome check .",
+    "format": "biome check --changed --no-errors-on-unmatched . --fix",
     "coverage": "nyc --timeout=3000 --reporter=html mocha tests/tests/src/*_test.js && open ./coverage/index.html",
     "typecheck": "tsc"
   },

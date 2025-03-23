@@ -32,6 +32,7 @@ export function setupWithUrl(url) {
  * @param {string} [cwd]
  */
 export function setup(cwd = process.cwd()) {
+
   /**
    * @param {string} command
    * @param {string[]} [args]
@@ -44,8 +45,7 @@ export function setup(cwd = process.cwd()) {
 
     const subprocess = child_process.spawn(command, args, {
       cwd,
-      // Enable shell mode only in Windows for performance
-      shell: process.platform === 'win32',
+      shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "pipe"],
       ...options,
     });
