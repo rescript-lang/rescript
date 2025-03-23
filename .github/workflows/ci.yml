@@ -246,6 +246,7 @@ jobs:
 
       - name: Compiler build state key
         id: compiler-build-state-key
+        shell: bash
         run: |
           echo "value=compiler-build-state-v1-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('dune-project') }}" \
             | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
