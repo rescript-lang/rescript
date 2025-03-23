@@ -7,7 +7,7 @@
     "dev": "rescript -w"
   },
   "dependencies": {
-    "@rescript/react": "^0.13.1",
+    "@rescript/react": "workspace:tests/dependencies/rescript-react",
     "rescript": "workspace:^"
   }
 }

@@ -80,6 +80,7 @@
     "nyc": "15.0.0"
   },
   "workspaces": [
+    "tests/dependencies/**",
     "tests/analysis_tests/**",
     "tests/gentype_tests/**",
     "tests/tools_tests"

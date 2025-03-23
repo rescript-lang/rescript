@@ -12,7 +12,13 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[React, e]
 Path React.e
-[]
+[{
+    "label": "element",
+    "kind": 22,
+    "tags": [],
+    "detail": "type element",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype element = Jsx.element\n```"}
+  }]
 
 Complete src/Jsx2.resi 10:18
 posCursor:[10:18] posNoWhite:[10:17] Found type:[10:11->10:18]
@@ -22,5 +28,11 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[React, e]
 Path React.e
-[]
+[{
+    "label": "element",
+    "kind": 22,
+    "tags": [],
+    "detail": "type element",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype element = Jsx.element\n```"}
+  }]
 

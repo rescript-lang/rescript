@@ -398,11 +398,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rescript/react@workspace:tests/dependencies/rescript-react, @tests/rescript-react@workspace:tests/dependencies/rescript-react":
+  version: 0.0.0-use.local
+  resolution: "@tests/rescript-react@workspace:tests/dependencies/rescript-react"
+  languageName: unknown
+  linkType: soft
+
 "@tests/analysis@workspace:tests/analysis_tests/tests":
   version: 0.0.0-use.local
   resolution: "@tests/analysis@workspace:tests/analysis_tests/tests"
   dependencies:
-    "@rescript/react": "npm:^0.13.1"
+    "@rescript/react": "workspace:tests/dependencies/rescript-react"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft
@@ -443,7 +449,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/reanalyze-deadcode@workspace:tests/analysis_tests/tests-reanalyze/deadcode"
   dependencies:
-    "@rescript/react": "npm:^0.13.1"
+    "@rescript/react": "workspace:tests/dependencies/rescript-react"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft
@@ -460,7 +466,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/tools@workspace:tests/tools_tests"
   dependencies:
-    "@rescript/react": "npm:^0.13.1"
+    "@rescript/react": "workspace:tests/dependencies/rescript-react"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft

@@ -865,13 +865,13 @@ ContextPath CArgument Value[fnTakingCallback]($2)
 ContextPath Value[fnTakingCallback]
 Path fnTakingCallback
 [{
-    "label": "mouse => mouse",
+    "label": "event => event",
     "kind": 12,
     "tags": [],
     "detail": "ReactEvent.Mouse.t => unit",
     "documentation": null,
     "sortText": "A",
-    "insertText": "${1:mouse} => ${0:mouse}",
+    "insertText": "${1:event} => ${0:event}",
     "insertTextFormat": 2
   }]
 

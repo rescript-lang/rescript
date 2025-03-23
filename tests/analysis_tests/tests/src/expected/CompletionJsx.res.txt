@@ -578,8 +578,14 @@ Completable: Cjsx([h1], hidd, [hidd])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path ReactDOM.domProps
-[completing-lowercase-jsx] could not find element props to complete from.
-[]
+Path JsxDOM.domProps
+[{
+    "label": "hidden",
+    "kind": 4,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null
+  }]
 
 Complete src/CompletionJsx.res 61:30
 posCursor:[61:30] posNoWhite:[61:28] Found expr:[61:4->61:29]

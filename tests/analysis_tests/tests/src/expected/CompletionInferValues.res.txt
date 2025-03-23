@@ -245,7 +245,15 @@ ContextPath CArgument CArgument Value[reactEventFn]($0)($0)
 ContextPath CArgument Value[reactEventFn]($0)
 ContextPath Value[reactEventFn]
 Path reactEventFn
-[]
+CPPipe pathFromEnv:ReactEvent.Mouse found:false
+Path ReactEvent.Mouse.pr
+[{
+    "label": "ReactEvent.Mouse.preventDefault",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => unit",
+    "documentation": null
+  }]
 
 Complete src/CompletionInferValues.res 41:50
 posCursor:[41:50] posNoWhite:[41:49] Found expr:[41:12->41:56]
@@ -261,7 +269,16 @@ Path event
 ContextPath CArgument CJsxPropValue [div] onMouseEnter($0)
 ContextPath CJsxPropValue [div] onMouseEnter
 Path ReactDOM.domProps
-[]
+Path JsxDOM.domProps
+CPPipe pathFromEnv:JsxEvent.Mouse found:false
+Path JsxEvent.Mouse.pr
+[{
+    "label": "JsxEvent.Mouse.preventDefault",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => unit",
+    "documentation": null
+  }]
 
 Complete src/CompletionInferValues.res 44:50
 posCursor:[44:50] posNoWhite:[44:49] Found expr:[44:12->44:56]
@@ -793,7 +810,21 @@ ContextPath CArgument CArgument Value[fn2](~cb)($0)
 ContextPath CArgument Value[fn2](~cb)
 ContextPath Value[fn2]
 Path fn2
-[]
+CPPipe pathFromEnv:ReactDOM.Client.Root found:false
+Path ReactDOM.Client.Root.
+[{
+    "label": "ReactDOM.Client.Root.unmount",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, unit) => unit",
+    "documentation": null
+  }, {
+    "label": "ReactDOM.Client.Root.render",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, React.element) => unit",
+    "documentation": null
+  }]
 
 Complete src/CompletionInferValues.res 139:30
 posCursor:[139:30] posNoWhite:[139:29] Found expr:[139:3->139:33]
@@ -918,7 +949,21 @@ ContextPath CArgument CArgument Value[CompletionSupport2, makeRenderer](~render)
 ContextPath CArgument Value[CompletionSupport2, makeRenderer](~render)
 ContextPath Value[CompletionSupport2, makeRenderer]
 Path CompletionSupport2.makeRenderer
-[]
+CPPipe pathFromEnv:ReactDOM.Client.Root found:false
+Path ReactDOM.Client.Root.
+[{
+    "label": "ReactDOM.Client.Root.unmount",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, unit) => unit",
+    "documentation": null
+  }, {
+    "label": "ReactDOM.Client.Root.render",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, React.element) => unit",
+    "documentation": null
+  }]
 
 Hover src/CompletionInferValues.res 160:27
 Nothing at that position. Now trying to use completion.
