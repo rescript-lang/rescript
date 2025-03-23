@@ -255,7 +255,9 @@ jobs:
         id: compiler-build-state
         uses: actions/cache@v4
         with:
-          path: _build
+          path: |
+            ~/.cache/dune
+            _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
 
       - name: Build compiler
