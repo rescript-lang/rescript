@@ -33,16 +33,16 @@ module Time : sig
 
   val now : unit -> t
 
-  val[@warning "-32"] to_uint64 : t -> int64
+  val [@warning "-32"] to_uint64 : t -> int64
 
   (* let of_uint64_ns ns = ns *)
 
-  val[@warning "-32"] nanosecond : t
-  val[@warning "-32"] microsecond : t
-  val[@warning "-32"] millisecond : t
-  val[@warning "-32"] second : t
-  val[@warning "-32"] minute : t
-  val[@warning "-32"] hour : t
+  val [@warning "-32"] nanosecond : t
+  val [@warning "-32"] microsecond : t
+  val [@warning "-32"] millisecond : t
+  val [@warning "-32"] second : t
+  val [@warning "-32"] minute : t
+  val [@warning "-32"] hour : t
 
   val zero : t
 
