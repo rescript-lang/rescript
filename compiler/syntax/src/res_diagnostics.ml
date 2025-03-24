@@ -66,7 +66,7 @@ let explain t =
     "Did you forget to close this template expression with a backtick?"
   | UnclosedComment -> "This comment seems to be missing a closing `*/`"
   | UnknownUchar uchar ->
-    "Not sure what to do with this character \"" ^ Char.escaped uchar ^ "\""
+    "Not sure what to do with this character: \"" ^ Char.escaped uchar ^ "\"."
   | Expected {context; token = t} ->
     let hint =
       match context with
