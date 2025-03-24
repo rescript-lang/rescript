@@ -275,12 +275,12 @@ list{0, 1, 2, 3, 4}->List.splitAt(2) // Some((list{0, 1}, list{2, 3, 4}))
 let splitAt: (list<'a>, int) => option<(list<'a>, list<'a>)>
 
 /**
-`concat(list1, list2)` returns the list obtained by adding `list1` after `list2`.
+`concat(list1, list2)` returns the list obtained by adding `list2` after `list1`.
 
 ## Examples
 
 ```rescript
-List.concat(list{1, 2, 3}, list{4, 5}) // list{1, 2, 3, 4, 5}
+List.concat(list{1, 2, 3}, list{4, 5})->assertEqual(list{1, 2, 3, 4, 5})
 ```
 */
 let concat: (list<'a>, list<'a>) => list<'a>
