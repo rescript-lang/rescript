@@ -36,6 +36,8 @@
    (= 1.8.0))
   (js_of_ocaml
    (= 6.0.1))
+  (js_of_ocaml-ppx
+   (= 6.0.1))
   (ounit2
    (= 2.2.7))
   dune))
