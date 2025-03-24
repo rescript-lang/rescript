@@ -94,8 +94,8 @@ let bitwiseNot = x => bitwiseXor(x, -1n)
 external lsl: (bigint, bigint) => bigint = "%lslbigint"
 external asr: (bigint, bigint) => bigint = "%asrbigint"
 
-external leftShift: (bigint, bigint) => bigint = "%lslbigint"
-external rightShift: (bigint, bigint) => bigint = "%asrbigint"
+external shiftLeft: (bigint, bigint) => bigint = "%lslbigint"
+external shiftRight: (bigint, bigint) => bigint = "%asrbigint"
 
 /**
   `ignore(bigint)` ignores the provided bigint and returns unit.

@@ -102,8 +102,8 @@ external bitwiseXor: (int, int) => int = "%xorint"
 // TODO: make it a primitive
 let bitwiseNot = x => bitwiseXor(x, -1)
 
-external leftShift: (int, int) => int = "%lslint"
-external rightShift: (int, int) => int = "%asrint"
-external unsignedRightShift: (int, int) => int = "%lsrint"
+external shiftLeft: (int, int) => int = "%lslint"
+external shiftRight: (int, int) => int = "%asrint"
+external shiftRightUnsigned: (int, int) => int = "%lsrint"
 
 external ignore: int => unit = "%ignore"

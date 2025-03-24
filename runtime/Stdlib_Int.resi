@@ -438,31 +438,31 @@ Int.bitwiseNot(2) == -3
 let bitwiseNot: int => int
 
 /**
-`leftShift(n, length)` calculates the shifted value of an integer `n` by `length` bits to the left.
+`shiftLeft(n, length)` calculates the shifted value of an integer `n` by `length` bits to the left.
 
 ## Examples
 
 ```rescript
-Int.leftShift(4, 1) == 8
+Int.shiftLeft(4, 1) == 8
 ```
 */
-external leftShift: (int, int) => int = "%lslint"
+external shiftLeft: (int, int) => int = "%lslint"
 
 /**
-`rightShift(n, length)` calculates the shifted value of an integer `n` by `length` bits to the right.
+`shiftRight(n, length)` calculates the shifted value of an integer `n` by `length` bits to the right.
 
 Also known as "arithmetic right shift" operation.
 
 ## Examples
 
 ```rescript
-Int.rightShift(8, 1) == 4
+Int.shiftRight(8, 1) == 4
 ```
 */
-external rightShift: (int, int) => int = "%asrint"
+external shiftRight: (int, int) => int = "%asrint"
 
 /**
-`unsignedRightShift(n, length)` calculates the shifted value of an integer `n` by `length` bits to the right.
+`shiftRightUnsigned(n, length)` calculates the shifted value of an integer `n` by `length` bits to the right.
 Excess bits shifted off to the right are discarded, and zero bits are shifted in from the left.
 
 Also known as "zero-filling right shift" operation.
@@ -470,10 +470,10 @@ Also known as "zero-filling right shift" operation.
 ## Examples
 
 ```rescript
-Int.unsignedRightShift(4, 1) == 2
+Int.shiftRightUnsigned(4, 1) == 2
 ```
 */
-external unsignedRightShift: (int, int) => int = "%lsrint"
+external shiftRightUnsigned: (int, int) => int = "%lsrint"
 
 /**
   `ignore(int)` ignores the provided int and returns unit.
