@@ -13,7 +13,7 @@ __unsafe_cast: 'a => 'b = "%identity"
 
 /* Exceptions */
 @deprecated(
-  "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `throw`"
+  "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `throw` instead"
 )
 external raise: exn => 'a = "%raise"
 
