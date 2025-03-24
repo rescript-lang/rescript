@@ -29,8 +29,8 @@ function sum2(xs, ys) {
 
 Mocha.describe("Belt_list_test", () => {
   Mocha.test("makeBy", () => {
-    let u = Belt_List.makeBy(5, i => Math.imul(i, i));
-    let f = i => Test_utils.eq("File \"belt_list_test.res\", line 23, characters 20-27", Belt_List.getExn(u, i), Math.imul(i, i));
+    let u = Belt_List.makeBy(5, i => i * i | 0);
+    let f = i => Test_utils.eq("File \"belt_list_test.res\", line 23, characters 20-27", Belt_List.getExn(u, i), i * i | 0);
     for (let i = 0; i <= 4; ++i) {
       f(i);
     }

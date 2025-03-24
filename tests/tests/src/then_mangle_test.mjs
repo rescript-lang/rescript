@@ -16,7 +16,7 @@ function eq(loc, x, y) {
 
 function then(a, b) {
   console.log("no inline");
-  return Math.imul(a, a) + Math.imul(b, b) | 0;
+  return (a * a | 0) + (b * b | 0) | 0;
 }
 
 eq("File \"then_mangle_test.res\", line 14, characters 3-10", then(1, 2), 5);

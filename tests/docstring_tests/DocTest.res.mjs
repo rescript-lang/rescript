@@ -23,11 +23,17 @@ import * as RescriptTools_Docgen from "rescript/lib/es6/RescriptTools_Docgen.js"
 
 let nodeVersion = Stdlib_Option.getExn(Stdlib_Int.fromString(Stdlib_Option.getExn(process.version.replace("v", "").split(".")[0], "Failed to find major version of Node"), undefined), "Failed to convert node version to Int");
 
-let ignoreRuntimeTests = [[
-    18,
+let ignoreRuntimeTests = [
+  [
+    20,
     [
       "Stdlib.Array.toReversed",
-      "Stdlib.Array.toSorted",
+      "Stdlib.Array.toSorted"
+    ]
+  ],
+  [
+    22,
+    [
       "Stdlib.Promise.withResolvers",
       "Stdlib.Set.union",
       "Stdlib.Set.isSupersetOf",
@@ -37,7 +43,8 @@ let ignoreRuntimeTests = [[
       "Stdlib.Set.symmetricDifference",
       "Stdlib.Set.difference"
     ]
-  ]];
+  ]
+];
 
 function getOutput(buffer) {
   return buffer.map(e => e.toString()).join("");
@@ -60,7 +67,7 @@ async function extractDocFromFile(file) {
       RE_EXN_ID: "Assert_failure",
       _1: [
         "DocTest.res",
-        58,
+        61,
         9
       ],
       Error: new Error()
@@ -237,7 +244,7 @@ async function main() {
     examples.sort((a, b) => Primitive_string.compare(a.name, b.name));
     let codeExamples = Stdlib_Array.filterMap(examples, example => {
       let ignoreExample = ignoreRuntimeTests.some(param => {
-        if (nodeVersion === param[0]) {
+        if (nodeVersion < param[0]) {
           return param[1].includes(example.id);
         } else {
           return false;

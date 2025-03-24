@@ -40,7 +40,7 @@ function for_5(x, u) {
   };
   let arr = Belt_Array.map(x, param => (() => {}));
   for (let i = 0, i_finish = x.length; i < i_finish; ++i) {
-    let k = Math.imul((u << 1), u);
+    let k = (u << 1) * u | 0;
     arr[i] = () => {
       v.contents = v.contents + k | 0;
     };
@@ -68,7 +68,7 @@ function for_6(x, u) {
       contents: 0
     };
     for (let i = 0, i_finish = x.length; i < i_finish; ++i) {
-      let k = Math.imul((u << 1), u);
+      let k = (u << 1) * u | 0;
       let h = (v5.contents << 1);
       v2.contents = v2.contents + 1 | 0;
       arr[i] = () => {
@@ -93,7 +93,7 @@ function for_7() {
   let arr = Belt_Array.make(21, () => {});
   for (let i = 0; i <= 6; ++i) {
     for (let j = 0; j <= 2; ++j) {
-      arr[Math.imul(i, 3) + j | 0] = () => {
+      arr[(i * 3 | 0) + j | 0] = () => {
         v.contents = (v.contents + i | 0) + j | 0;
       };
     }
@@ -111,7 +111,7 @@ function for_8() {
     let k = (i << 1);
     for (let j = 0; j <= 2; ++j) {
       let h = i + j | 0;
-      arr[Math.imul(i, 3) + j | 0] = () => {
+      arr[(i * 3 | 0) + j | 0] = () => {
         v.contents = (((v.contents + i | 0) + j | 0) + h | 0) + k | 0;
       };
     }

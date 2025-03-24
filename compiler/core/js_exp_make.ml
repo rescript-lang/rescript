@@ -1607,14 +1607,8 @@ let int32_mul ?comment (e1 : J.expression) (e2 : J.expression) : J.expression =
   | {expression_desc = Number (Int {i = i0}); _}, e ->
     let i = is_pos_pow i0 in
     if i >= 0 then int32_lsl e (small_int i)
-    else
-      call ?comment ~info:Js_call_info.builtin_runtime_call
-        (dot (js_global "Math") Literals.imul)
-        [e1; e2]
-  | _ ->
-    call ?comment ~info:Js_call_info.builtin_runtime_call
-      (dot (js_global "Math") Literals.imul)
-      [e1; e2]
+    else to_int32 (float_mul ?comment e1 e2)
+  | _ -> to_int32 (float_mul ?comment e1 e2)
 
 let unchecked_int32_mul ?comment e1 e2 : J.expression =
   {comment; expression_desc = Bin (Mul, e1, e2)}

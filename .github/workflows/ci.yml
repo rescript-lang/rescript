@@ -244,6 +244,24 @@ jobs:
           fi
         shell: bash
 
+      - name: Compiler build state key
+        id: compiler-build-state-key
+        shell: bash
+        run: |
+          echo "value=compiler-build-state-v1-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('dune-project') }}" \
+            | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
+
+      - name: Restore compiler build state
+        if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
+        id: compiler-build-state
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            D:\.cache\dune
+            ~/.cache/dune
+            _build
+          key: ${{ steps.compiler-build-state-key.outputs.value }}
+
       - name: Build compiler
         if: runner.os != 'Linux'
         run: opam exec -- dune build --display quiet --profile release
@@ -251,6 +269,16 @@ jobs:
       - name: Build compiler (Linux static)
         if: runner.os == 'Linux'
         run: opam exec -- dune build --display quiet --profile static
+
+      - name: Save compiler build state
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            D:\.cache\dune
+            ~/.cache/dune
+            _build
+          key: ${{ steps.compiler-build-state-key.outputs.value }}
 
       - name: Install npm packages
         run: npm ci --ignore-scripts

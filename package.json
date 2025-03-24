@@ -23,6 +23,7 @@
   "maintainers": [
     "Christoph Knittel (https://github.com/cknitt)",
     "Cristiano Calcagno (https://github.com/cristianoc)",
+    "Dmitry Zakharov (https://github.com/DZakh)",
     "Florian Hammerschmidt (https://github.com/fhammerschmidt)",
     "Gabriel Nordeborn (https://github.com/zth)",
     "Hyeseong Kim (https://github.com/cometkim)",
@@ -33,7 +34,7 @@
     "Woonki Moon (https://github.com/mununki)"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=20.11.0"
   },
   "bin": {
     "bsc": "cli/bsc",
@@ -78,5 +79,5 @@
     "mocha": "10.8.2",
     "nyc": "15.0.0"
   },
-  "packageManager": "npm@10.8.1+sha512.0e9d42e92bd2318408ed81eaff2da5f78baf23ee7d12a6eed44a6e2901d0f29d7ab715d1b918ade601f72e769a824d9a5c322383f22bbbda5dd396e79de2a077"
+  "packageManager": "npm@10.8.2+sha512.c7f0088c520a46596b85c6f8f1da943400199748a0f7ea8cb8df75469668dc26f6fb3ba26df87e2884a5ebe91557292d0f3db7d0929cdb4f14910c3032ac81fb"
 }

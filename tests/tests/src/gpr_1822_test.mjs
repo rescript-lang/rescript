@@ -32,7 +32,7 @@ let myShape = {
 
 let area;
 
-area = myShape.TAG === "Circle" ? 100 * 3.14 : Math.imul(10, myShape._1);
+area = myShape.TAG === "Circle" ? 100 * 3.14 : 10 * myShape._1 | 0;
 
 eq("File \"gpr_1822_test.res\", line 23, characters 3-10", area, 314);
 
