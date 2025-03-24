@@ -169,7 +169,7 @@ Raises the given exception, terminating execution unless caught by a surrounding
 let error = Error.make("Everything is upside down.")
 
 if 5 > 10 {
-  error->Error.throw
+  Error.throw(error)
 } else {
   Console.log("Phew, sanity still rules.")
 }
