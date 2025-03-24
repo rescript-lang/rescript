@@ -233,12 +233,6 @@ Path Stdlib.Int.
     "detail": "(int, ~radix: int) => string",
     "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
   }, {
-    "label": "Int.leftShift",
-    "kind": 12,
-    "tags": [],
-    "detail": "(int, int) => int",
-    "documentation": {"kind": "markdown", "value": "\n`leftShift(n, length)` calculates the shifted value of an integer `n` by `length` bits to the left.\n\n## Examples\n\n```rescript\nInt.leftShift(4, 1) == 8\n```\n"}
-  }, {
     "label": "Int.toExponentialWithPrecision",
     "kind": 12,
     "tags": [1],
@@ -257,12 +251,6 @@ Path Stdlib.Int.
     "detail": "(~min: int=?, ~max: int=?, int) => int",
     "documentation": {"kind": "markdown", "value": "\n`clamp(~min=?, ~max=?, value)` returns `value`, optionally bounded by `min` and `max`.\n\nif `max` < `min` returns `min`.\n\n## Examples\n\n```rescript\nInt.clamp(42) == 42\nInt.clamp(42, ~min=50) == 50\nInt.clamp(42, ~max=40) == 40\nInt.clamp(42, ~min=50, ~max=40) == 50\n```\n"}
   }, {
-    "label": "Int.unsignedRightShift",
-    "kind": 12,
-    "tags": [],
-    "detail": "(int, int) => int",
-    "documentation": {"kind": "markdown", "value": "\n`unsignedRightShift(n, length)` calculates the shifted value of an integer `n` by `length` bits to the right.\nExcess bits shifted off to the right are discarded, and zero bits are shifted in from the left.\n\nAlso known as \"zero-filling right shift\" operation.\n\n## Examples\n\n```rescript\nInt.unsignedRightShift(4, 1) == 2\n```\n"}
-  }, {
     "label": "Int.toFixedWithPrecision",
     "kind": 12,
     "tags": [1],
@@ -280,6 +268,12 @@ Path Stdlib.Int.
     "tags": [],
     "detail": "(int, int) => int",
     "documentation": {"kind": "markdown", "value": "\n`bitwiseAnd(n1, n2)` calculates the bitwise AND of two integers.\n\n## Examples\n\n```rescript\nInt.bitwiseAnd(7, 4) == 4\n```\n"}
+  }, {
+    "label": "Int.shiftRight",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, int) => int",
+    "documentation": {"kind": "markdown", "value": "\n`shiftRight(n, length)` calculates the shifted value of an integer `n` by `length` bits to the right.\n\nAlso known as \"arithmetic right shift\" operation.\n\n## Examples\n\n```rescript\nInt.shiftRight(8, 1) == 4\n```\n"}
   }, {
     "label": "Int.compare",
     "kind": 12,
@@ -317,6 +311,12 @@ Path Stdlib.Int.
     "detail": "(int, ~radix: int=?) => string",
     "documentation": {"kind": "markdown", "value": "\n`toString(n, ~radix=?)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toString(1000) // \"1000\"\nInt.toString(-1000) // \"-1000\"\nInt.toString(6, ~radix=2) // \"110\"\nInt.toString(373592855, ~radix=16) // \"16449317\"\nInt.toString(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
   }, {
+    "label": "Int.shiftLeft",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, int) => int",
+    "documentation": {"kind": "markdown", "value": "\n`shiftLeft(n, length)` calculates the shifted value of an integer `n` by `length` bits to the left.\n\n## Examples\n\n```rescript\nInt.shiftLeft(4, 1) == 8\n```\n"}
+  }, {
     "label": "Int.toFloat",
     "kind": 12,
     "tags": [],
@@ -334,6 +334,12 @@ Path Stdlib.Int.
     "tags": [1],
     "detail": "(int, int, rangeOptions) => array<int>",
     "documentation": {"kind": "markdown", "value": "Deprecated: Use `range` instead\n\n\n`rangeWithOptions(start, end, options)` is like `range`, but with `step` and\n`inclusive` options configurable.\n\nIf `step` is set, the sequence will increase or decrease by that amount for each\nstep. If `start < end` and `step` is negative, or vice versa, an empty array is\nreturned since the sequence would otherwise never reach or exceed the end value\nand hence be infinite. If `step` is `0` and `start !=` end, a `RangeError` is\nraised as the sequence would never reach or exceed the end value and hence be\ninfinite.\n\nIf `inclusive` is set to `true`, the sequence will include `end` if `step` is\nset such that the sequence includes it.\n\n## Examples\n\n```rescript\nInt.rangeWithOptions(3, 7, {step: 2}) == [3, 5]\nInt.rangeWithOptions(3, 7, {step: 2, inclusive: true}) == [3, 5, 7]\nInt.rangeWithOptions(3, 6, {step: -2}) // RangeError\n```\n\n## Exceptions\n\n- Raises `RangeError` if `step == 0 && start != end`.\n"}
+  }, {
+    "label": "Int.shiftRightUnsigned",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, int) => int",
+    "documentation": {"kind": "markdown", "value": "\n`shiftRightUnsigned(n, length)` calculates the shifted value of an integer `n` by `length` bits to the right.\nExcess bits shifted off to the right are discarded, and zero bits are shifted in from the left.\n\nAlso known as \"zero-filling right shift\" operation.\n\n## Examples\n\n```rescript\nInt.shiftRightUnsigned(4, 1) == 2\n```\n"}
   }, {
     "label": "Int.toLocaleString",
     "kind": 12,
@@ -358,12 +364,6 @@ Path Stdlib.Int.
     "tags": [],
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {"kind": "markdown", "value": "\n`toFixed(n, ~digits=?)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixed(123456) // \"123456.00\"\nInt.toFixed(10) // \"10.00\"\nInt.toFixed(300, ~digits=4) // \"300.0000\"\nInt.toFixed(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
-  }, {
-    "label": "Int.rightShift",
-    "kind": 12,
-    "tags": [],
-    "detail": "(int, int) => int",
-    "documentation": {"kind": "markdown", "value": "\n`rightShift(n, length)` calculates the shifted value of an integer `n` by `length` bits to the right.\n\nAlso known as \"arithmetic right shift\" operation.\n\n## Examples\n\n```rescript\nInt.rightShift(8, 1) == 4\n```\n"}
   }]
 
 Complete src/CompletionJsx.res 26:14
@@ -408,12 +408,6 @@ Path Stdlib.Int.
     "detail": "(int, ~radix: int) => string",
     "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` instead\n\n\n`toStringWithRadix(n, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toStringWithRadix(6, ~radix=2) // \"110\"\nInt.toStringWithRadix(373592855, ~radix=16) // \"16449317\"\nInt.toStringWithRadix(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
   }, {
-    "label": "Int.leftShift",
-    "kind": 12,
-    "tags": [],
-    "detail": "(int, int) => int",
-    "documentation": {"kind": "markdown", "value": "\n`leftShift(n, length)` calculates the shifted value of an integer `n` by `length` bits to the left.\n\n## Examples\n\n```rescript\nInt.leftShift(4, 1) == 8\n```\n"}
-  }, {
     "label": "Int.toExponentialWithPrecision",
     "kind": 12,
     "tags": [1],
@@ -432,12 +426,6 @@ Path Stdlib.Int.
     "detail": "(~min: int=?, ~max: int=?, int) => int",
     "documentation": {"kind": "markdown", "value": "\n`clamp(~min=?, ~max=?, value)` returns `value`, optionally bounded by `min` and `max`.\n\nif `max` < `min` returns `min`.\n\n## Examples\n\n```rescript\nInt.clamp(42) == 42\nInt.clamp(42, ~min=50) == 50\nInt.clamp(42, ~max=40) == 40\nInt.clamp(42, ~min=50, ~max=40) == 50\n```\n"}
   }, {
-    "label": "Int.unsignedRightShift",
-    "kind": 12,
-    "tags": [],
-    "detail": "(int, int) => int",
-    "documentation": {"kind": "markdown", "value": "\n`unsignedRightShift(n, length)` calculates the shifted value of an integer `n` by `length` bits to the right.\nExcess bits shifted off to the right are discarded, and zero bits are shifted in from the left.\n\nAlso known as \"zero-filling right shift\" operation.\n\n## Examples\n\n```rescript\nInt.unsignedRightShift(4, 1) == 2\n```\n"}
-  }, {
     "label": "Int.toFixedWithPrecision",
     "kind": 12,
     "tags": [1],
@@ -455,6 +443,12 @@ Path Stdlib.Int.
     "tags": [],
     "detail": "(int, int) => int",
     "documentation": {"kind": "markdown", "value": "\n`bitwiseAnd(n1, n2)` calculates the bitwise AND of two integers.\n\n## Examples\n\n```rescript\nInt.bitwiseAnd(7, 4) == 4\n```\n"}
+  }, {
+    "label": "Int.shiftRight",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, int) => int",
+    "documentation": {"kind": "markdown", "value": "\n`shiftRight(n, length)` calculates the shifted value of an integer `n` by `length` bits to the right.\n\nAlso known as \"arithmetic right shift\" operation.\n\n## Examples\n\n```rescript\nInt.shiftRight(8, 1) == 4\n```\n"}
   }, {
     "label": "Int.compare",
     "kind": 12,
@@ -492,6 +486,12 @@ Path Stdlib.Int.
     "detail": "(int, ~radix: int=?) => string",
     "documentation": {"kind": "markdown", "value": "\n`toString(n, ~radix=?)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString)\non MDN.\n\n## Examples\n\n```rescript\nInt.toString(1000) // \"1000\"\nInt.toString(-1000) // \"-1000\"\nInt.toString(6, ~radix=2) // \"110\"\nInt.toString(373592855, ~radix=16) // \"16449317\"\nInt.toString(123456, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
   }, {
+    "label": "Int.shiftLeft",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, int) => int",
+    "documentation": {"kind": "markdown", "value": "\n`shiftLeft(n, length)` calculates the shifted value of an integer `n` by `length` bits to the left.\n\n## Examples\n\n```rescript\nInt.shiftLeft(4, 1) == 8\n```\n"}
+  }, {
     "label": "Int.toFloat",
     "kind": 12,
     "tags": [],
@@ -509,6 +509,12 @@ Path Stdlib.Int.
     "tags": [1],
     "detail": "(int, int, rangeOptions) => array<int>",
     "documentation": {"kind": "markdown", "value": "Deprecated: Use `range` instead\n\n\n`rangeWithOptions(start, end, options)` is like `range`, but with `step` and\n`inclusive` options configurable.\n\nIf `step` is set, the sequence will increase or decrease by that amount for each\nstep. If `start < end` and `step` is negative, or vice versa, an empty array is\nreturned since the sequence would otherwise never reach or exceed the end value\nand hence be infinite. If `step` is `0` and `start !=` end, a `RangeError` is\nraised as the sequence would never reach or exceed the end value and hence be\ninfinite.\n\nIf `inclusive` is set to `true`, the sequence will include `end` if `step` is\nset such that the sequence includes it.\n\n## Examples\n\n```rescript\nInt.rangeWithOptions(3, 7, {step: 2}) == [3, 5]\nInt.rangeWithOptions(3, 7, {step: 2, inclusive: true}) == [3, 5, 7]\nInt.rangeWithOptions(3, 6, {step: -2}) // RangeError\n```\n\n## Exceptions\n\n- Raises `RangeError` if `step == 0 && start != end`.\n"}
+  }, {
+    "label": "Int.shiftRightUnsigned",
+    "kind": 12,
+    "tags": [],
+    "detail": "(int, int) => int",
+    "documentation": {"kind": "markdown", "value": "\n`shiftRightUnsigned(n, length)` calculates the shifted value of an integer `n` by `length` bits to the right.\nExcess bits shifted off to the right are discarded, and zero bits are shifted in from the left.\n\nAlso known as \"zero-filling right shift\" operation.\n\n## Examples\n\n```rescript\nInt.shiftRightUnsigned(4, 1) == 2\n```\n"}
   }, {
     "label": "Int.toLocaleString",
     "kind": 12,
@@ -533,12 +539,6 @@ Path Stdlib.Int.
     "tags": [],
     "detail": "(int, ~digits: int=?) => string",
     "documentation": {"kind": "markdown", "value": "\n`toFixed(n, ~digits=?)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point. See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed)\non MDN.\n\n## Examples\n\n```rescript\nInt.toFixed(123456) // \"123456.00\"\nInt.toFixed(10) // \"10.00\"\nInt.toFixed(300, ~digits=4) // \"300.0000\"\nInt.toFixed(300, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
-  }, {
-    "label": "Int.rightShift",
-    "kind": 12,
-    "tags": [],
-    "detail": "(int, int) => int",
-    "documentation": {"kind": "markdown", "value": "\n`rightShift(n, length)` calculates the shifted value of an integer `n` by `length` bits to the right.\n\nAlso known as \"arithmetic right shift\" operation.\n\n## Examples\n\n```rescript\nInt.rightShift(8, 1) == 4\n```\n"}
   }]
 
 Complete src/CompletionJsx.res 28:20
