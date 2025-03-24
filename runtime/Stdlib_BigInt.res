@@ -91,9 +91,6 @@ external bitwiseXor: (bigint, bigint) => bigint = "%xorbigint"
 // TODO: make it a primitive
 let bitwiseNot = x => bitwiseXor(x, -1n)
 
-external lsl: (bigint, bigint) => bigint = "%lslbigint"
-external asr: (bigint, bigint) => bigint = "%asrbigint"
-
 external shiftLeft: (bigint, bigint) => bigint = "%lslbigint"
 external shiftRight: (bigint, bigint) => bigint = "%asrbigint"
 
