@@ -82,7 +82,7 @@ if ("key3" in dict !== false) {
   };
 }
 
-if (Object.hasOwn(dict, "toString") !== false) {
+if ("toString" in dict !== false) {
   throw {
     RE_EXN_ID: "Assert_failure",
     _1: [
@@ -94,7 +94,7 @@ if (Object.hasOwn(dict, "toString") !== false) {
   };
 }
 
-if (!Object.hasOwn(dict, "key1")) {
+if (!("key1" in dict)) {
   throw {
     RE_EXN_ID: "Assert_failure",
     _1: [

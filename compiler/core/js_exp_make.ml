@@ -1131,28 +1131,6 @@ let or_ ?comment (e1 : t) (e2 : t) =
 let in_ (prop : t) (obj : t) : t =
   {expression_desc = In (prop, obj); comment = None}
 
-let has (obj : t) (prop : t) : t =
-  let non_prototype_prop =
-    match prop.expression_desc with
-    | Str
-        {
-          txt =
-            ( "__proto__" | "toString" | "toLocaleString" | "valueOf"
-            | "hasOwnProperty" | "isPrototypeOf" | "propertyIsEnumerable" );
-        } ->
-      false
-    (* Optimize to use the in operator when property is a known string which is not a prototype property *)
-    | Str _ -> true
-    (* We can be sure in this case that the prop is not a prototype property like __proto__ or toString *)
-    | _ -> false
-  in
-  if non_prototype_prop then in_ prop obj
-  else
-    call
-      ~info:{arity = Full; call_info = Call_na}
-      (js_global "Object.hasOwn")
-      [obj; prop]
-
 let not (e : t) : t =
   match e.expression_desc with
   | Number (Int {i; _}) -> bool (i = 0l)
