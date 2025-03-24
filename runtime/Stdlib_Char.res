@@ -10,7 +10,7 @@ external fromIntUnsafe: int => t = "%identity"
 
 let fromIntExn = n =>
   if n < 0 || n > 255 {
-    raise(Invalid_argument("`Char.fromIntExn` expects an integer between 0 and 255"))
+    throw(Invalid_argument("`Char.fromIntExn` expects an integer between 0 and 255"))
   } else {
     fromIntUnsafe(n)
   }

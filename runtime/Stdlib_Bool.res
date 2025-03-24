@@ -19,7 +19,7 @@ let fromStringExn = param =>
   switch param {
   | "true" => true
   | "false" => false
-  | _ => raise(Invalid_argument(`Bool.fromStringExn: value is neither "true" nor "false"`))
+  | _ => throw(Invalid_argument(`Bool.fromStringExn: value is neither "true" nor "false"`))
   }
 
 external compare: (bool, bool) => Stdlib_Ordering.t = "%compare"
