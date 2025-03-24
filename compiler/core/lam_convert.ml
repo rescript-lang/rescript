@@ -249,6 +249,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pmulint -> prim ~primitive:Pmulint ~args loc
   | Pdivint -> prim ~primitive:Pdivint ~args loc
   | Pmodint -> prim ~primitive:Pmodint ~args loc
+  | Ppowint -> prim ~primitive:Ppowint ~args loc
   | Pandint -> prim ~primitive:Pandint ~args loc
   | Porint -> prim ~primitive:Porint ~args loc
   | Pxorint -> prim ~primitive:Pxorint ~args loc
@@ -281,6 +282,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pmulfloat -> prim ~primitive:Pmulfloat ~args loc
   | Pdivfloat -> prim ~primitive:Pdivfloat ~args loc
   | Pmodfloat -> prim ~primitive:Pmodfloat ~args loc
+  | Ppowfloat -> prim ~primitive:Ppowfloat ~args loc
   | Pfloatorder -> prim ~primitive:Pfloatorder ~args loc
   | Pfloatmin -> prim ~primitive:Pfloatmin ~args loc
   | Pfloatmax -> prim ~primitive:Pfloatmax ~args loc

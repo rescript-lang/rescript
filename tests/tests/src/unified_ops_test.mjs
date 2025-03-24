@@ -59,6 +59,14 @@ function odd(n) {
   return n % 2 === 1;
 }
 
+let pow1 = 4;
+
+let pow2 = 2 ** 2;
+
+let pow3 = 2n ** 2n;
+
+let pow_overflow = 0;
+
 let int = 3;
 
 export {
@@ -79,5 +87,9 @@ export {
   case2,
   even,
   odd,
+  pow1,
+  pow2,
+  pow3,
+  pow_overflow,
 }
 /* No side effect */

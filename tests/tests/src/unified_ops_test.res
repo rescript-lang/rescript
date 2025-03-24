@@ -20,3 +20,9 @@ let case2 = (a, b) => a + "test" + b
 
 let even = n => n % 2 == 0
 let odd = n => n % 2 == 1
+
+let pow1 = 2 ** 2
+let pow2 = 2. ** 2.
+let pow3 = 2n ** 2n
+
+let pow_overflow = 2147483647 ** 2

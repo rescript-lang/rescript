@@ -68,6 +68,7 @@ type t =
   | Pmulint
   | Pdivint
   | Pmodint
+  | Ppowint
   | Pandint
   | Porint
   | Pxorint
@@ -89,6 +90,7 @@ type t =
   | Pmulfloat
   | Pdivfloat
   | Pmodfloat
+  | Ppowfloat
   | Pfloatcomp of Lam_compat.comparison
   | Pfloatorder
   | Pfloatmin

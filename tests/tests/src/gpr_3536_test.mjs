@@ -22,7 +22,7 @@ function xx(obj, a0, a1, a2, a3, a4, a5) {
 
 eq("File \"gpr_3536_test.res\", line 18, characters 12-19", 5, 5);
 
-eq("File \"gpr_3536_test.res\", line 20, characters 12-19", xx(3, (prim0, prim1) => prim0 - prim1 | 0, 2, (prim0, prim1) => prim0 + prim1 | 0, 4, (prim0, prim1) => Math.imul(prim0, prim1), 3), 11);
+eq("File \"gpr_3536_test.res\", line 20, characters 12-19", xx(3, (prim0, prim1) => prim0 - prim1 | 0, 2, (prim0, prim1) => prim0 + prim1 | 0, 4, (prim0, prim1) => prim0 * prim1 | 0, 3), 11);
 
 Mt.from_pair_suites("Gpr_3536_test", suites.contents);
 

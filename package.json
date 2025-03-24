@@ -23,6 +23,7 @@
   "maintainers": [
     "Christoph Knittel (https://github.com/cknitt)",
     "Cristiano Calcagno (https://github.com/cristianoc)",
+    "Dmitry Zakharov (https://github.com/DZakh)",
     "Florian Hammerschmidt (https://github.com/fhammerschmidt)",
     "Gabriel Nordeborn (https://github.com/zth)",
     "Hyeseong Kim (https://github.com/cometkim)",
@@ -33,7 +34,7 @@
     "Woonki Moon (https://github.com/mununki)"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=20.11.0"
   },
   "bin": {
     "bsc": "cli/bsc",
@@ -78,5 +79,11 @@
     "mocha": "10.8.2",
     "nyc": "15.0.0"
   },
-  "packageManager": "npm@10.8.1+sha512.0e9d42e92bd2318408ed81eaff2da5f78baf23ee7d12a6eed44a6e2901d0f29d7ab715d1b918ade601f72e769a824d9a5c322383f22bbbda5dd396e79de2a077"
+  "workspaces": [
+    "tests/dependencies/**",
+    "tests/analysis_tests/**",
+    "tests/gentype_tests/**",
+    "tests/tools_tests"
+  ],
+  "packageManager": "yarn@4.7.0"
 }

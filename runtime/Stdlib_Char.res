@@ -1,9 +1,3 @@
-// FIXME:
-//   This exists for compatibility reason.
-//   Move this into Pervasives or Core
-
-// Below is all deprecated and should be removed in v13
-
 type t = char
 
 external code: t => int = "%identity"
@@ -11,6 +5,22 @@ external code: t => int = "%identity"
 external unsafe_chr: int => t = "%identity"
 
 external chr: int => t = "%identity"
+
+external fromIntUnsafe: int => t = "%identity"
+
+let fromIntExn = n =>
+  if n < 0 || n > 255 {
+    raise(Invalid_argument("`Char.fromIntExn` expects an integer between 0 and 255"))
+  } else {
+    fromIntUnsafe(n)
+  }
+
+let fromInt = n =>
+  if n < 0 || n > 255 {
+    None
+  } else {
+    Some(fromIntUnsafe(n))
+  }
 
 external bytes_create: int => array<char> = "Array"
 
@@ -41,19 +51,23 @@ let escaped = param =>
     unsafe_to_string(s)
   }
 
-let lowercase_ascii = c =>
+let toLowerCaseAscii = c =>
   if c >= 'A' && c <= 'Z' {
     unsafe_chr(code(c) + 32)
   } else {
     c
   }
 
-let uppercase_ascii = c =>
+let lowercase_ascii = toLowerCaseAscii
+
+let toUpperCaseAscii = c =>
   if c >= 'a' && c <= 'z' {
     unsafe_chr(code(c) - 32)
   } else {
     c
   }
 
-let compare = (c1, c2) => code(c1) - code(c2)
-let equal = (c1: t, c2: t) => compare(c1, c2) == 0
+let uppercase_ascii = toUpperCaseAscii
+
+external equal: (char, char) => bool = "%equal"
+external compare: (char, char) => Stdlib_Ordering.t = "%compare"

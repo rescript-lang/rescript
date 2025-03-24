@@ -22,9 +22,9 @@ reset='\033[0m'
 
 diff=$(git ls-files --modified src/expected)
 if [[ $diff = "" ]]; then
-  printf "${successGreen}✅ No unstaged tests difference.${reset}\n"
+  printf "${successGreen}✅ No analysis_tests snapshot changes detected.${reset}\n"
 else
-  printf "${warningYellow}⚠️ There are unstaged differences in tests/! Did you break a test?\n${diff}\n${reset}"
+  printf "${warningYellow}⚠️ The analysis_tests snapshot doesn't match. Double check that the output is correct, run 'make analysis_tests' and stage the diff.\n${diff}\n${reset}"
   git --no-pager diff src/expected
   exit 1
 fi

@@ -206,6 +206,7 @@ type primitive =
   | Pmulint
   | Pdivint
   | Pmodint
+  | Ppowint
   | Pandint
   | Porint
   | Pxorint
@@ -228,6 +229,7 @@ type primitive =
   | Psubfloat
   | Pmulfloat
   | Pdivfloat
+  | Ppowfloat
   | Pfloatcomp of comparison
   | Pfloatorder
   | Pfloatmin

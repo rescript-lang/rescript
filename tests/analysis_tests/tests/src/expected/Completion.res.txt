@@ -515,6 +515,12 @@ Path Array.
     "detail": "(array<'a>, int) => option<'a>",
     "documentation": {"kind": "markdown", "value": "\n`get(array, index)` returns the element at `index` of `array`.\n\nReturns `None` if the index does not exist in the array. Equivalent to doing `array[index]` in JavaScript.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\n\narray\n->Array.get(0)\n->assertEqual(Some(\"Hello\"))\n\narray\n->Array.get(3)\n->assertEqual(None)\n```\n"}
   }, {
+    "label": "removeInPlace",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, int) => unit",
+    "documentation": {"kind": "markdown", "value": "\n`removeInPlace(array, index)` removes the item at the specified `index` from `array`.\n\nBeware this will *mutate* the array.\n\n## Examples\n\n```rescript\nlet array = []\narray->Array.removeInPlace(0)\nassertEqual(array, []) // Removing from an empty array does nothing\n\nlet array2 = [\"Hello\", \"Hi\", \"Good bye\"]\narray2->Array.removeInPlace(1)\nassertEqual(array2, [\"Hello\", \"Good bye\"]) // Removes the item at index 1\n```\n "}
+  }, {
     "label": "pushMany",
     "kind": 12,
     "tags": [],
@@ -1906,26 +1912,6 @@ Path Res
     "tags": [],
     "detail": "module Result",
     "documentation": null
-  }, {
-    "label": "RescriptReactErrorBoundary",
-    "kind": 9,
-    "tags": [],
-    "detail": "module RescriptReactErrorBoundary",
-    "documentation": null,
-    "data": {
-      "modulePath": "RescriptReactErrorBoundary",
-      "filePath": "src/Completion.res"
-    }
-  }, {
-    "label": "RescriptReactRouter",
-    "kind": 9,
-    "tags": [],
-    "detail": "module RescriptReactRouter",
-    "documentation": null,
-    "data": {
-      "modulePath": "RescriptReactRouter",
-      "filePath": "src/Completion.res"
-    }
   }, {
     "label": "RescriptTools",
     "kind": 9,

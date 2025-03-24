@@ -254,6 +254,8 @@ val int32_div : checked:bool -> ?comment:string -> t -> t -> t
 
 val int32_mod : checked:bool -> ?comment:string -> t -> t -> t
 
+val int32_pow : ?comment:string -> t -> t -> t
+
 val int32_lsl : ?comment:string -> t -> t -> t
 
 val int32_lsr : ?comment:string -> t -> t -> t
@@ -277,6 +279,8 @@ val float_div : ?comment:string -> t -> t -> t
 val float_notequal : ?comment:string -> t -> t -> t
 
 val float_mod : ?comment:string -> t -> t -> t
+
+val float_pow : ?comment:string -> t -> t -> t
 
 val int_comp : Lam_compat.comparison -> ?comment:string -> t -> t -> t
 

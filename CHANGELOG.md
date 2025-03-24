@@ -16,20 +16,25 @@
 
 - Add `Dict.has` and double `Dict.forEachWithKey`/`Dict.mapValues` performance. https://github.com/rescript-lang/rescript/pull/7316
 - Add popover attributes to JsxDOM.domProps. https://github.com/rescript-lang/rescript/pull/7317
+- Add `Array.removeInPlace` helper based on `splice`. https://github.com/rescript-lang/rescript/pull/7321
 - Add `inert` attribute to `JsxDOM.domProps`. https://github.com/rescript-lang/rescript/pull/7326
 - Make reanalyze exception tracking work with the new stdlib. https://github.com/rescript-lang/rescript/pull/7328
 - Fix Pervasive.max using boolean comparison for floats. https://github.com/rescript-lang/rescript/pull/7333
 - Experimental: Support nested/inline record types - records defined inside of other records, without needing explicit separate type definitions. https://github.com/rescript-lang/rescript/pull/7241
+- Add unified exponentiation (`**`) operator for numeric types using ES7 `**`. https://github.com/rescript-lang/rescript-compiler/pull/7153
 - Rename `raise` to `throw` to align with JavaScript vocabulary. `raise` has been deprecated. https://github.com/rescript-lang/rescript/pull/7346
 
 #### :boom: Breaking Change
 
 - Replace ~date with ~day in Date.make\*. https://github.com/rescript-lang/rescript/pull/7324
 - Remove `-bs-jsx-mode`. https://github.com/rescript-lang/rescript/pull/7327
+- Drop Node.js version <20 support, as it is reaching End-of-Life. https://github.com/rescript-lang/rescript-compiler/pull/7354
+- Treat `int` multiplication as a normal int32 operation instead of using `Math.imul`. https://github.com/rescript-lang/rescript/pull/7358
 
 #### :house: Internal
 
 - Clean up legacy tags handling. https://github.com/rescript-lang/rescript/pull/7309
+- Use Yarn (Berry) workspaces for internal tooling. https://github.com/rescript-lang/rescript/pull/7309
 
 #### :nail_care: Polish
 
@@ -38,6 +43,7 @@
 - Deprecate unsafe host-specific bindings from stdlib. https://github.com/rescript-lang/rescript/pull/7334
 - Make unsafe function names consistent in Stdlib.String. https://github.com/rescript-lang/rescript/pull/7337
 - `rescript` package does not trigger `postinstall` script anymore. https://github.com/rescript-lang/rescript/pull/7350
+- Add Stdlib Bool and Char modules and improve Pervasives deprecation messages. https://github.com/rescript-lang/rescript/pull/7361
 
 #### :bug: Bug fix
 

@@ -26,9 +26,6 @@ ninja/ninja:
 
 ninja: ninja/ninja
 
-node_modules/.bin/semver:
-	npm install
-
 test: lib
 	node scripts/test.js -all
 
@@ -54,7 +51,7 @@ test-all: test test-gentype test-analysis test-tools
 reanalyze:
 	reanalyze.exe -set-exit-code -all-cmt _build/default/compiler _build/default/tests -exclude-paths compiler/outcome_printer,compiler/ml,compiler/js_parser,compiler/frontend,compiler/ext,compiler/depends,compiler/core,compiler/common,compiler/cmij,compiler/bsb_helper,compiler/bsb
 
-lib: build node_modules/.bin/semver
+lib: build
 	./scripts/buildRuntime.sh
 	./scripts/prebuilt.js
 

@@ -161,6 +161,19 @@ let entries =
           string = None;
         };
     };
+    {
+      path = builtin "**";
+      name = "%pow";
+      form = Binary;
+      specialization =
+        {
+          int = Ppowint;
+          bool = None;
+          float = Some Ppowfloat;
+          bigint = Some Ppowbigint;
+          string = None;
+        };
+    };
   |]
 
 let index_by_path =
