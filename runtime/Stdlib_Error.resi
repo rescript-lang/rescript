@@ -161,7 +161,7 @@ if 5 > 10 {
 external raise: t => 'a = "%raise"
 
 /**
-Throw and exception provided `Error.t`, which will stop execution.
+Raises the given exception, terminating execution unless caught by a surrounding try/catch block.
 
 ## Examples
 
