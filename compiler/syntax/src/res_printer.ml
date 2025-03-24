@@ -4362,19 +4362,37 @@ and print_jsx_container_tag ~state tag_name props
     | JSXChildrenSpreading _ | JSXChildrenItems (_ :: _) -> true
     | JSXChildrenItems [] -> false
   in
-  let line_sep = Doc.line in
+  let line_sep =
+    let children =
+      match children with
+      | JSXChildrenItems children -> children
+      | JSXChildrenSpreading child -> [child]
+    in
+    if
+      List.length children > 1
+      || List.exists
+           (function
+             | {
+                 Parsetree.pexp_desc =
+                   ( Pexp_jsx_container_element _ | Pexp_jsx_fragment _
+                   | Pexp_jsx_unary_element _ );
+               } ->
+               true
+             | _ -> false)
+           children
+    then Doc.hard_line
+    else Doc.line
+  in
   let print_children children =
-    Doc.group
-      (Doc.concat
-         [
-           Doc.indent
-             (Doc.concat
-                [
-                  Doc.line;
-                  print_jsx_children ~sep:line_sep ~state children cmt_tbl;
-                ]);
-           Doc.line;
-         ])
+    Doc.concat
+      [
+        Doc.indent
+          (Doc.concat
+             [
+               Doc.line; print_jsx_children ~sep:line_sep ~state children cmt_tbl;
+             ]);
+        line_sep;
+      ]
   in
 
   Doc.group
@@ -4395,11 +4413,11 @@ and print_jsx_container_tag ~state tag_name props
                           Doc.group (Doc.join formatted_props ~sep:Doc.line);
                         ]));
                 (* if tag A has trailing comments then put > on the next line
-                           <A
-                           // comments
-                           >
-                           </A>
-                        *)
+                <A
+                // comments
+                >
+                </A>
+             *)
                 (if has_trailing_comments cmt_tbl tag_name.Asttypes.loc then
                    Doc.concat [Doc.soft_line; Doc.greater_than]
                  else Doc.greater_than);
