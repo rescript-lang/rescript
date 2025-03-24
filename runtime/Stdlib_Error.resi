@@ -156,7 +156,7 @@ if 5 > 10 {
 ```
 */
 @deprecated(
-  "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `throw`"
+  "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `throw` instead"
 )
 external raise: t => 'a = "%raise"
 
