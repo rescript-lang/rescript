@@ -36,11 +36,20 @@ module PatternMatching = {
 
 module DictHas = {
   let dict = dict{
-    "key1": Some(1),
+    "key1": Some(false),
     "key2": None,
   }
 
-  assert(dict->Dict.has("key1") === true)
-  assert(dict->Dict.has("key2") === true)
+  // Test success path
+  assert(dict->Dict.has("key1"))
+  // Test undefined field
+  assert(dict->Dict.has("key2"))
+  // Test missing field
   assert(dict->Dict.has("key3") === false)
+  // Test prototype field
+  assert(dict->Dict.has("toString") === false)
+  // Test without compile time knowledge
+  assert(dict->Dict.has(%raw(`"key1"`)))
+  // Test parantesis in generated code
+  assert(typeof(dict->Dict.has("key1")) === #boolean)
 }
