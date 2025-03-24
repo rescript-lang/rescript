@@ -4510,34 +4510,52 @@ and print_jsx_prop ~state prop cmt_tbl =
   let open Parsetree in
   match prop with
   | JSXPropPunning (is_optional, name) ->
-    if is_optional then Doc.concat [Doc.question; Doc.text name.txt]
-    else Doc.text name.txt
+    let prop_has_trailing_comment = has_trailing_comments cmt_tbl name.loc in
+    let doc =
+      if is_optional then Doc.concat [Doc.question; Doc.text name.txt]
+      else Doc.text name.txt
+    in
+    let doc = print_comments doc cmt_tbl name.loc in
+    if prop_has_trailing_comment then
+      Doc.group (Doc.concat [Doc.break_parent; doc])
+    else doc
   | JSXPropValue (name, is_optional, value) ->
+    let value =
+      {
+        value with
+        pexp_loc = {value.pexp_loc with loc_start = name.loc.loc_start};
+      }
+    in
     let value_doc =
-      let v =
-        Doc.concat
-          [
-            (if is_optional then Doc.question else Doc.nil);
-            print_expression_with_comments ~state value cmt_tbl;
-          ]
-      in
+      let v = print_expression ~state value cmt_tbl in
       match Parens.jsx_prop_expr value with
       | Parenthesized | Braced _ ->
         let inner_doc = if Parens.braced_expr value then add_parens v else v in
-        if has_leading_line_comment cmt_tbl value.pexp_loc then
-          add_braces inner_doc
-        else Doc.concat [Doc.lbrace; inner_doc; Doc.rbrace]
+        Doc.concat [Doc.lbrace; inner_doc; Doc.rbrace]
       | _ -> v
     in
-    Doc.concat [Doc.text name.txt; Doc.equal; Doc.group value_doc]
-  | JSXPropSpreading (_, value) ->
-    Doc.concat
-      [
-        Doc.lbrace;
-        Doc.dotdotdot;
-        print_expression_with_comments ~state value cmt_tbl;
-        Doc.rbrace;
-      ]
+    let doc =
+      Doc.concat
+        [
+          Doc.text name.txt;
+          Doc.equal;
+          (if is_optional then Doc.question else Doc.nil);
+          Doc.group value_doc;
+        ]
+    in
+    print_comments doc cmt_tbl value.pexp_loc
+  | JSXPropSpreading (loc, value) ->
+    let value =
+      {value with pexp_loc = {value.pexp_loc with loc_start = loc.loc_start}}
+    in
+    Doc.group
+      (Doc.concat
+         [
+           Doc.lbrace;
+           Doc.dotdotdot;
+           print_expression_with_comments ~state value cmt_tbl;
+           Doc.rbrace;
+         ])
 
 and print_jsx_props ~state props cmt_tbl : Doc.t list =
   props |> List.map (fun prop -> print_jsx_prop ~state prop cmt_tbl)
