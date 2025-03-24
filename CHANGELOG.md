@@ -41,6 +41,7 @@
 - Deprecate unsafe host-specific bindings from stdlib. https://github.com/rescript-lang/rescript/pull/7334
 - Make unsafe function names consistent in Stdlib.String. https://github.com/rescript-lang/rescript/pull/7337
 - `rescript` package does not trigger `postinstall` script anymore. https://github.com/rescript-lang/rescript/pull/7350
+- Add Stdlib Bool and Char modules and improve Pervasives deprecation messages. https://github.com/rescript-lang/rescript/pull/7361
 
 #### :bug: Bug fix
 
