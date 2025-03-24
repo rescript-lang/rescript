@@ -26,7 +26,7 @@ let invalid_arg = s => throw(Invalid_argument(s))
 @deprecated("Use custom exception instead") exception Exit
 
 /**
-Throw and exception which will stop execution.
+Raises the given exception, terminating execution unless caught by a surrounding try/catch block.
 
 ## Examples
 
