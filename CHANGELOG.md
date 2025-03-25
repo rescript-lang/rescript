@@ -23,7 +23,7 @@
 - Experimental: Support nested/inline record types - records defined inside of other records, without needing explicit separate type definitions. https://github.com/rescript-lang/rescript/pull/7241
 - Add unified exponentiation (`**`) operator for numeric types using ES7 `**`. https://github.com/rescript-lang/rescript-compiler/pull/7153
 - Rename `raise` to `throw` to align with JavaScript vocabulary. `raise` has been deprecated. https://github.com/rescript-lang/rescript/pull/7346
-- Add unified bitwise (`^`) operator `**`. https://github.com/rescript-lang/rescript/pull/7216
+- Add unified bitwise (`^`) operator. https://github.com/rescript-lang/rescript/pull/7216
 
 #### :boom: Breaking Change
 
