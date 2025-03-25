@@ -55,7 +55,7 @@ if (process.argv.includes("-all")) {
 }
 
 if (formatTest) {
-  await exec("bash", ["scripts/format_check.sh"], {
+  await exec("./scripts/format_check.sh", [], {
     cwd: projectDir,
     stdio: "inherit",
   });

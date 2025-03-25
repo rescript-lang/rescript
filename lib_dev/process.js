@@ -4,6 +4,10 @@ import { bsc_exe, rescript_exe } from "#cli/bins";
 
 /**
  * @typedef {{
+ *   throwOnFail?: boolean,
+ * } & child_process.SpawnOptions} ExecOptions
+ *
+ * @typedef {{
  *   status: number,
  *   stdout: string,
  *   stderr: string,
@@ -21,23 +25,17 @@ export const { exec, node, npx, mocha, bsc, rescript, execBuild, execClean } =
   setup();
 
 /**
- * @typedef {{
- *   throwOnExit?: boolean,
- * }} ExecOptions
- */
-
-/**
  * @param {string} [cwd]
  */
 export function setup(cwd = process.cwd()) {
   /**
    * @param {string} command
    * @param {string[]} [args]
-   * @param {child_process.SpawnOptions & ExecOptions} [options]
+   * @param {ExecOptions} [options]
    * @return {Promise<ExecResult>}
    */
   async function exec(command, args = [], options = {}) {
-    const { throwOnExit = true } = options;
+    const { throwOnFail = options.stdio === "inherit" } = options;
 
     const stdoutChunks = [];
     const stderrChunks = [];
@@ -63,12 +61,8 @@ export function setup(cwd = process.cwd()) {
       });
 
       subprocess.once("close", (exitCode, signal) => {
-        const stdout = stdoutChunks.length
-          ? Buffer.concat(stdoutChunks).toString("utf8")
-          : null;
-        const stderr = stdoutChunks.length
-          ? Buffer.concat(stderrChunks).toString("utf8")
-          : null;
+        const stdout = Buffer.concat(stdoutChunks).toString("utf8");
+        const stderr = Buffer.concat(stderrChunks).toString("utf8");
 
         let code = exitCode ?? 1;
         if (signals[signal]) {
@@ -76,7 +70,7 @@ export function setup(cwd = process.cwd()) {
           code = signals[signal] + 128;
         }
 
-        if (throwOnExit && code !== 0) {
+        if (throwOnFail && code !== 0) {
           reject({ status: code, stdout, stderr });
         } else {
           resolve({ status: code, stdout, stderr });
@@ -92,7 +86,7 @@ export function setup(cwd = process.cwd()) {
      * `node` CLI
      *
      * @param {string[]} [args]
-     * @param {child_process.SpawnOptions} [options]
+     * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
     node(args = [], options = {}) {
@@ -103,7 +97,7 @@ export function setup(cwd = process.cwd()) {
      * `npx` CLI
      *
      * @param {string[]} [args]
-     * @param {child_process.SpawnOptions} [options]
+     * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
     npx(args = [], options = {}) {
@@ -114,7 +108,7 @@ export function setup(cwd = process.cwd()) {
      * Mocha CLI
      *
      * @param {string[]} [args]
-     * @param {child_process.SpawnOptions} [options]
+     * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
     mocha(args = [], options = {}) {
@@ -132,7 +126,7 @@ export function setup(cwd = process.cwd()) {
      *   | (string & {})
      * )} command
      * @param {string[]} [args]
-     * @param {child_process.SpawnOptions} [options]
+     * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
     rescript(command, args = [], options = {}) {
@@ -144,7 +138,7 @@ export function setup(cwd = process.cwd()) {
      * `bsc` CLI
      *
      * @param {string[]} [args]
-     * @param {child_process.SpawnOptions} [options]
+     * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
     bsc(args = [], options = {}) {
@@ -155,7 +149,7 @@ export function setup(cwd = process.cwd()) {
      * Execute ReScript `build` command directly
      *
      * @param {string[]} [args]
-     * @param {child_process.SpawnOptions} [options]
+     * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
     execBuild(args = [], options = {}) {
@@ -166,7 +160,7 @@ export function setup(cwd = process.cwd()) {
      * Execute ReScript `clean` command directly
      *
      * @param {string[]} [args]
-     * @param {child_process.SpawnOptions} [options]
+     * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
     execClean(args = [], options = {}) {
