@@ -1,5 +1,6 @@
 import * as child_process from "node:child_process";
-import { bsc_exe, cliPath, rescript_exe } from "#cli/paths";
+import * as path from "node:path";
+import { bsc_exe, rescript_exe } from "#cli/bins";
 
 /**
  * @typedef {{
@@ -135,6 +136,7 @@ export function setup(cwd = process.cwd()) {
      * @return {Promise<ExecResult>}
      */
     rescript(command, args = [], options = {}) {
+      const cliPath = path.join(import.meta.dirname, "../cli/rescript.js");
       return exec("node", [cliPath, command, ...args].filter(Boolean), options);
     },
 

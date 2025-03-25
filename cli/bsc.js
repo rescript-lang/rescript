@@ -4,7 +4,7 @@
 
 import { execFileSync } from "node:child_process";
 
-import { bsc_exe } from "#cli/paths";
+import { bsc_exe } from "./common/bins.js";
 
 const delegate_args = process.argv.slice(2);
 

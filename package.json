@@ -73,7 +73,7 @@
     "./package.json": "./package.json"
   },
   "imports": {
-    "#cli/*": "./cli/common/*.js",
+    "#cli/bins": "./cli/common/bins.js",
     "#dev/*": "./lib_dev/*.js",
     "#lib/minisocket": "./lib/minisocket.js"
   },

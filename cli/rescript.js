@@ -9,8 +9,8 @@
 import * as tty from "node:tty";
 import packageJson from "rescript/package.json" with { type: "json" };
 
-import * as bsb from "#cli/bsb";
-import { bsc_exe, rescript_exe } from "#cli/paths";
+import { bsc_exe, rescript_exe } from "./common/bins.js";
+import * as bsb from "./common/bsb.js";
 
 const cwd = process.cwd();
 process.env.BSB_PROJECT_ROOT = cwd;

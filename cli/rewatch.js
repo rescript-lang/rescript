@@ -3,7 +3,7 @@
 // @ts-check
 
 import * as child_process from "node:child_process";
-import { rewatch_exe } from "#cli/paths";
+import { rewatch_exe } from "./common/bins.js";
 
 const args = process.argv.slice(2);
 

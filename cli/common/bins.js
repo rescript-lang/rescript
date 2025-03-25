@@ -2,8 +2,6 @@
 
 import * as path from "node:path";
 
-export const cliPath = path.join(import.meta.dirname, "../rescript.js");
-
 /**
  * For compatibility reasons, if the architecture is x64, omit it from the bin directory name.
  * So we'll have "darwin", "linux" and "win32" for x64 arch,
@@ -18,6 +16,7 @@ export const platformName =
 
 export const platformDir = path.resolve(
   import.meta.dirname,
+  "..",
   "..",
   platformName,
 );
