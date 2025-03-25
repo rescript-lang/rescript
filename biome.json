@@ -13,6 +13,9 @@
       "nursery": {
         "noCommonJs": "error"
       },
+      "suspicious": {
+        "noAssignInExpressions": "warn"
+      },
       "correctness": {
         "useImportExtensions": "error",
         "noUndeclaredDependencies": "error",
@@ -59,7 +62,8 @@
       "lib/es6/**",
       "lib/js/**",
       "ninja/**",
-      "playground/packages/**",
+      "packages/**",
+      "playground/**",
       "*.bs.js",
       "*.res.js",
       "*.res.mjs",

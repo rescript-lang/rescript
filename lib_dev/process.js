@@ -20,16 +20,24 @@ export const { exec, node, npx, mocha, bsc, rescript, execBuild, execClean } =
   setup();
 
 /**
+ * @typedef {{
+ *   throwOnExit?: boolean,
+ * }} ExecOptions
+ */
+
+/**
  * @param {string} [cwd]
  */
 export function setup(cwd = process.cwd()) {
   /**
    * @param {string} command
    * @param {string[]} [args]
-   * @param {child_process.SpawnOptions} [options]
+   * @param {child_process.SpawnOptions & ExecOptions} [options]
    * @return {Promise<ExecResult>}
    */
   async function exec(command, args = [], options = {}) {
+    const { throwOnExit = true } = options;
+
     const stdoutChunks = [];
     const stderrChunks = [];
 
@@ -54,8 +62,12 @@ export function setup(cwd = process.cwd()) {
       });
 
       subprocess.once("close", (exitCode, signal) => {
-        const stdout = Buffer.concat(stdoutChunks).toString("utf8");
-        const stderr = Buffer.concat(stderrChunks).toString("utf8");
+        const stdout = stdoutChunks.length
+          ? Buffer.concat(stdoutChunks).toString("utf8")
+          : null;
+        const stderr = stdoutChunks.length
+          ? Buffer.concat(stderrChunks).toString("utf8")
+          : null;
 
         let code = exitCode ?? 1;
         if (signals[signal]) {
@@ -63,7 +75,11 @@ export function setup(cwd = process.cwd()) {
           code = signals[signal] + 128;
         }
 
-        resolve({ status: code, stdout, stderr });
+        if (throwOnExit && code !== 0) {
+          reject({ status: code, stdout, stderr });
+        } else {
+          resolve({ status: code, stdout, stderr });
+        }
       });
     });
   }
