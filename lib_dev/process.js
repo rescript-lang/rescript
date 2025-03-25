@@ -21,7 +21,7 @@ const signals = {
   SIGTERM: 15,
 };
 
-export const { exec, node, npx, mocha, bsc, rescript, execBuild, execClean } =
+export const { exec, node, yarn, mocha, bsc, rescript, execBuild, execClean } =
   setup();
 
 /**
@@ -94,14 +94,14 @@ export function setup(cwd = process.cwd()) {
     },
 
     /**
-     * `npx` CLI
+     * `yarn` CLI
      *
      * @param {string[]} [args]
      * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
-    npx(args = [], options = {}) {
-      return exec("npx", args, options);
+    yarn(args = [], options = {}) {
+      return exec("yarn", args, options);
     },
 
     /**
@@ -112,6 +112,8 @@ export function setup(cwd = process.cwd()) {
      * @return {Promise<ExecResult>}
      */
     mocha(args = [], options = {}) {
+      // `yarn mocha` works, but format output differently
+      // No more efforts here since we're plannig to drop Mocha
       return exec("npx", ["mocha", ...args], options);
     },
 
