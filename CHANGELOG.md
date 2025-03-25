@@ -12,6 +12,12 @@
 
 # 12.0.0-alpha.11 (Unreleased)
 
+#### :bug: Bug fix
+
+- Fix `Error.fromException`. https://github.com/rescript-lang/rescript/pull/7364
+
+# 12.0.0-alpha.10
+
 #### :rocket: New Feature
 
 - Add `Dict.has` and double `Dict.forEachWithKey`/`Dict.mapValues` performance. https://github.com/rescript-lang/rescript/pull/7316
