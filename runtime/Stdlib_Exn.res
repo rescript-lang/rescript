@@ -43,38 +43,38 @@ type error
 
 external anyToExnInternal: 'a => exn = "%wrap_exn"
 
-let raiseError = str => raise((Obj.magic((makeError(str): error)): exn))
+let raiseError = str => throw((Obj.magic((makeError(str): error)): exn))
 
 type eval_error
 @new external makeEvalError: string => eval_error = "EvalError"
 
-let raiseEvalError = str => raise((Obj.magic((makeEvalError(str): eval_error)): exn))
+let raiseEvalError = str => throw((Obj.magic((makeEvalError(str): eval_error)): exn))
 
 type range_error
 @new external makeRangeError: string => range_error = "RangeError"
 
-let raiseRangeError = str => raise((Obj.magic((makeRangeError(str): range_error)): exn))
+let raiseRangeError = str => throw((Obj.magic((makeRangeError(str): range_error)): exn))
 
 type reference_error
 
 @new external makeReferenceError: string => reference_error = "ReferenceError"
 
-let raiseReferenceError = str => raise(Obj.magic(makeReferenceError(str)))
+let raiseReferenceError = str => throw(Obj.magic(makeReferenceError(str)))
 
 type syntax_error
 @new external makeSyntaxError: string => syntax_error = "SyntaxError"
 
-let raiseSyntaxError = str => raise(Obj.magic(makeSyntaxError(str)))
+let raiseSyntaxError = str => throw(Obj.magic(makeSyntaxError(str)))
 
 type type_error
 @new external makeTypeError: string => type_error = "TypeError"
 
-let raiseTypeError = str => raise(Obj.magic(makeTypeError(str)))
+let raiseTypeError = str => throw(Obj.magic(makeTypeError(str)))
 
 type uri_error
 @new external makeURIError: string => uri_error = "URIError"
 
-let raiseUriError = str => raise(Obj.magic(makeURIError(str)))
+let raiseUriError = str => throw(Obj.magic(makeURIError(str)))
 
 /* TODO add predicate to tell which error is which " */
 

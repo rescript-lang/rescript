@@ -22,6 +22,7 @@
 - Fix Pervasive.max using boolean comparison for floats. https://github.com/rescript-lang/rescript/pull/7333
 - Experimental: Support nested/inline record types - records defined inside of other records, without needing explicit separate type definitions. https://github.com/rescript-lang/rescript/pull/7241
 - Add unified exponentiation (`**`) operator for numeric types using ES7 `**`. https://github.com/rescript-lang/rescript-compiler/pull/7153
+- Rename `raise` to `throw` to align with JavaScript vocabulary. `raise` has been deprecated. https://github.com/rescript-lang/rescript/pull/7346
 - Add unified bitwise (`^`) operator `**`. https://github.com/rescript-lang/rescript/pull/7216
 
 #### :boom: Breaking Change
@@ -34,6 +35,7 @@
 #### :house: Internal
 
 - Clean up legacy tags handling. https://github.com/rescript-lang/rescript/pull/7309
+- Use Yarn (Berry) workspaces for internal tooling. https://github.com/rescript-lang/rescript/pull/7309
 
 #### :nail_care: Polish
 
@@ -42,6 +44,7 @@
 - Deprecate unsafe host-specific bindings from stdlib. https://github.com/rescript-lang/rescript/pull/7334
 - Make unsafe function names consistent in Stdlib.String. https://github.com/rescript-lang/rescript/pull/7337
 - `rescript` package does not trigger `postinstall` script anymore. https://github.com/rescript-lang/rescript/pull/7350
+- Add Stdlib Bool and Char modules and improve Pervasives deprecation messages. https://github.com/rescript-lang/rescript/pull/7361
 
 #### :bug: Bug fix
 

@@ -81,3 +81,10 @@ tests/tools_tests/**/*.res.js
 tests/tools_tests/lib
 tests/analysis_tests*/lib
 tests/analysis_tests/**/*.bs.js
+
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions

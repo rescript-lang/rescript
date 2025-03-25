@@ -31,4 +31,4 @@ case "$(uname -s)" in
 esac
 
 echo "Biome format check"
-npm run checkFormat
+yarn checkFormat

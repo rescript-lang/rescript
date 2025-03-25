@@ -50,7 +50,7 @@ exception Undefined
   }
 )
 
-%%private(let raise_undefined = () => raise(Undefined))
+%%private(let raise_undefined = () => throw(Undefined))
 
 /* Assume [blk] is a block with tag lazy */
 %%private(
@@ -59,8 +59,8 @@ exception Undefined
     blk.value = fnToVal(raise_undefined)
     try forward_with_closure(blk, closure) catch {
     | e =>
-      blk.value = fnToVal(() => raise(e))
-      raise(e)
+      blk.value = fnToVal(() => throw(e))
+      throw(e)
     }
   }
 )

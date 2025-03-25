@@ -72,7 +72,6 @@ lib/es6/Belt_internalMapString.js
 lib/es6/Belt_internalSetBuckets.js
 lib/es6/Belt_internalSetInt.js
 lib/es6/Belt_internalSetString.js
-lib/es6/Char.js
 lib/es6/Dom.js
 lib/es6/Dom_storage.js
 lib/es6/Dom_storage2.js
@@ -149,6 +148,8 @@ lib/es6/Stdlib_AsyncIterator.js
 lib/es6/Stdlib_BigInt.js
 lib/es6/Stdlib_BigInt64Array.js
 lib/es6/Stdlib_BigUint64Array.js
+lib/es6/Stdlib_Bool.js
+lib/es6/Stdlib_Char.js
 lib/es6/Stdlib_Console.js
 lib/es6/Stdlib_DataView.js
 lib/es6/Stdlib_Date.js
@@ -243,7 +244,6 @@ lib/js/Belt_internalMapString.js
 lib/js/Belt_internalSetBuckets.js
 lib/js/Belt_internalSetInt.js
 lib/js/Belt_internalSetString.js
-lib/js/Char.js
 lib/js/Dom.js
 lib/js/Dom_storage.js
 lib/js/Dom_storage2.js
@@ -320,6 +320,8 @@ lib/js/Stdlib_AsyncIterator.js
 lib/js/Stdlib_BigInt.js
 lib/js/Stdlib_BigInt64Array.js
 lib/js/Stdlib_BigUint64Array.js
+lib/js/Stdlib_Bool.js
+lib/js/Stdlib_Char.js
 lib/js/Stdlib_Console.js
 lib/js/Stdlib_DataView.js
 lib/js/Stdlib_Date.js
@@ -619,12 +621,6 @@ lib/ocaml/Belt_internalSetString.cmi
 lib/ocaml/Belt_internalSetString.cmj
 lib/ocaml/Belt_internalSetString.cmt
 lib/ocaml/Belt_internalSetString.res
-lib/ocaml/Char.cmi
-lib/ocaml/Char.cmj
-lib/ocaml/Char.cmt
-lib/ocaml/Char.cmti
-lib/ocaml/Char.res
-lib/ocaml/Char.resi
 lib/ocaml/Dom.cmi
 lib/ocaml/Dom.cmj
 lib/ocaml/Dom.cmt
@@ -967,6 +963,18 @@ lib/ocaml/Stdlib_BigUint64Array.cmi
 lib/ocaml/Stdlib_BigUint64Array.cmj
 lib/ocaml/Stdlib_BigUint64Array.cmt
 lib/ocaml/Stdlib_BigUint64Array.res
+lib/ocaml/Stdlib_Bool.cmi
+lib/ocaml/Stdlib_Bool.cmj
+lib/ocaml/Stdlib_Bool.cmt
+lib/ocaml/Stdlib_Bool.cmti
+lib/ocaml/Stdlib_Bool.res
+lib/ocaml/Stdlib_Bool.resi
+lib/ocaml/Stdlib_Char.cmi
+lib/ocaml/Stdlib_Char.cmj
+lib/ocaml/Stdlib_Char.cmt
+lib/ocaml/Stdlib_Char.cmti
+lib/ocaml/Stdlib_Char.res
+lib/ocaml/Stdlib_Char.resi
 lib/ocaml/Stdlib_Console.cmi
 lib/ocaml/Stdlib_Console.cmj
 lib/ocaml/Stdlib_Console.cmt

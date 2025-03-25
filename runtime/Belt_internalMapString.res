@@ -65,7 +65,7 @@ let rec getUndefined = (n, x: key) =>
 
 let rec getExn = (n, x: key) =>
   switch n {
-  | None => raise(Not_found)
+  | None => throw(Not_found)
   | Some(n) =>
     let v = n.N.key
     if x == v {

@@ -14,7 +14,7 @@
   ],
   "package-specs": {
     "module": "esmodule",
-    "in-source": true
+    "in-source": false
   },
-  "suffix": ".bs.js"
+  "suffix": ".res.js"
 }

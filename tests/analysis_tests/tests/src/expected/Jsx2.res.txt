@@ -379,17 +379,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[ReactDOMR]
 Path ReactDOMR
-[{
-    "label": "ReactDOMRe",
-    "kind": 9,
-    "tags": [],
-    "detail": "module ReactDOMRe",
-    "documentation": null,
-    "data": {
-      "modulePath": "ReactDOMRe",
-      "filePath": "src/Jsx2.res"
-    }
-  }]
+[]
 
 Complete src/Jsx2.res 102:21
 posCursor:[102:21] posNoWhite:[102:20] Found expr:[102:13->102:21]

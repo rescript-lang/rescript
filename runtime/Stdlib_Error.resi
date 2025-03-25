@@ -155,7 +155,27 @@ if 5 > 10 {
 }
 ```
 */
+@deprecated(
+  "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `throw` instead"
+)
 external raise: t => 'a = "%raise"
+
+/**
+Raises the given exception, terminating execution unless caught by a surrounding try/catch block.
+
+## Examples
+
+```rescript
+let error = Error.make("Everything is upside down.")
+
+if 5 > 10 {
+  Error.throw(error)
+} else {
+  Console.log("Phew, sanity still rules.")
+}
+```
+*/
+external throw: t => 'a = "%raise"
 
 /**
 Raises a panic exception with the given message.

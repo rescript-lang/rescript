@@ -1,6 +1,5 @@
 {
-  "name": "typescript-react-example",
-  "version": "0.1.0",
+  "name": "@tests/gentype-react-example",
   "private": true,
   "scripts": {
     "start": "rescript build -w",
@@ -10,15 +9,16 @@
     "lint": "biome check src"
   },
   "dependencies": {
-    "@rescript/react": "^0.13.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "@rescript/react": "^0.13.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "rescript": "workspace:^"
   },
   "devDependencies": {
     "@biomejs/biome": "1.8.3",
     "@types/node": "^18.15.12",
-    "@types/react-dom": "^18.0.11",
-    "rescript": "file:../../..",
+    "@types/react": "^18.3.19",
+    "@types/react-dom": "^18.3.5",
     "typescript": "^5.2.2"
   }
 }

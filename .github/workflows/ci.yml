@@ -135,6 +135,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
+          cache: yarn
           node-version-file: .nvmrc
 
       - name: Get artifact dir name
@@ -270,6 +271,18 @@ jobs:
         if: runner.os == 'Linux'
         run: opam exec -- dune build --display quiet --profile static
 
+      - name: Delete stable compiler build state
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        shell: bash
+        run: |
+          gh extension install actions/gh-actions-cache
+          gh actions-cache delete ${{ steps.compiler-build-state-key.outputs.value }} \
+            -R ${{ github.repository }} \
+            -B ${{ github.ref }} \
+            --confirm || echo "not exist"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Save compiler build state
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         uses: actions/cache/save@v4
@@ -281,7 +294,7 @@ jobs:
           key: ${{ steps.compiler-build-state-key.outputs.value }}
 
       - name: Install npm packages
-        run: npm ci --ignore-scripts
+        run: yarn install
 
       - name: Copy compiler exes to platform bin dir
         run: node ./scripts/copyExes.js -compiler
@@ -429,10 +442,11 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
+          cache: yarn
           node-version-file: .nvmrc
 
       - name: NPM install
-        run: npm ci --ignore-scripts
+        run: yarn install
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -523,6 +537,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
+          cache: yarn
           node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org # Needed to make auth work for publishing
 

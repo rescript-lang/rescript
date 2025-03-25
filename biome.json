@@ -21,6 +21,7 @@
     "lineWidth": 80,
     "attributePosition": "auto",
     "ignore": [
+      ".yarn/**",
       "tests/build_tests/**",
       "tests/tests/**",
       "tests/tools_tests/**",

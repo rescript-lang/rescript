@@ -1,27 +1,38 @@
-/**
-   Since [others] depend on this file, its public mli files **should not
-   export types** introduced here, otherwise it would cause 
-   conflicts here.
-
-   If the type exported here is also exported in modules from others,
-   you will get a type not equivalent.
-*/
 @deprecated("Do not use. This will be removed in v13")
 external /* Internal */
 
 __unsafe_cast: 'a => 'b = "%identity"
 
 /* Exceptions */
-
+@deprecated(
+  "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `throw` instead"
+)
 external raise: exn => 'a = "%raise"
 
 @deprecated("Use custom exception instead")
-let failwith = s => raise(Failure(s))
+let failwith = s => throw(Failure(s))
 
 @deprecated("Use custom exception instead")
-let invalid_arg = s => raise(Invalid_argument(s))
+let invalid_arg = s => throw(Invalid_argument(s))
 
 @deprecated("Use custom exception instead") exception Exit
+
+/**
+Raises the given exception, terminating execution unless caught by a surrounding try/catch block.
+
+## Examples
+
+```rescript
+let error = Error.make("Everything is upside down.")
+
+if 5 > 10 {
+  throw(error)
+} else {
+  Console.log("Phew, sanity still rules.")
+}
+```
+*/
+external throw: Stdlib_Error.t => 'a = "%raise"
 
 /* Composition operators */
 
@@ -82,7 +93,7 @@ external \"||": (bool, bool) => bool = "%sequor"
 external succ: int => int = "%succint"
 external pred: int => int = "%predint"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Math.abs` instead. This will be removed in v13")
 let abs = x =>
   if x >= 0 {
     x
@@ -100,10 +111,10 @@ external lsl: (int, int) => int = "%lslint"
 external lsr: (int, int) => int = "%lsrint"
 external asr: (int, int) => int = "%asrint"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Int.Constants.maxValue` instead. This will be removed in v13")
 let max_int = lsr(-1, 1)
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Int.Constants.minValue` instead. This will be removed in v13")
 let min_int =
   max_int + 1
 
@@ -116,91 +127,91 @@ external \"-.": (float, float) => float = "%subfloat"
 external \"*.": (float, float) => float = "%mulfloat"
 external \"/.": (float, float) => float = "%divfloat"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.exp` instead. This will be removed in v13") @val @scope("Math")
 external exp: float => float = "exp"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.acos` instead. This will be removed in v13") @val @scope("Math")
 external acos: float => float = "acos"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.asin` instead. This will be removed in v13") @val @scope("Math")
 external asin: float => float = "asin"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.atan` instead. This will be removed in v13") @val @scope("Math")
 external atan: float => float = "atan"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.atan2` instead. This will be removed in v13") @val @scope("Math")
 external atan2: (float, float) => float = "atan2"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.cos` instead. This will be removed in v13") @val @scope("Math")
 external cos: float => float = "cos"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.cosh` instead. This will be removed in v13") @val @scope("Math")
 external cosh: float => float = "cosh"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.log` instead. This will be removed in v13") @val @scope("Math")
 external log: float => float = "log"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.log10` instead. This will be removed in v13") @val @scope("Math")
 external log10: float => float = "log10"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.log1p` instead. This will be removed in v13") @val @scope("Math")
 external log1p: float => float = "log1p"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use  `Math.sin` instead. This will be removed in v13") @val @scope("Math")
 external sin: float => float = "sin"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.sinh` instead. This will be removed in v13") @val @scope("Math")
 external sinh: float => float = "sinh"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.sqrt` instead. This will be removed in v13") @val @scope("Math")
 external sqrt: float => float = "sqrt"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.tan` instead. This will be removed in v13") @val @scope("Math")
 external tan: float => float = "tan"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.tanh` instead. This will be removed in v13") @val @scope("Math")
 external tanh: float => float = "tanh"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.ceil` instead. This will be removed in v13") @val @scope("Math")
 external ceil: float => float = "ceil"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.floor` instead. This will be removed in v13") @val @scope("Math")
 external floor: float => float = "floor"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.abs` instead. This will be removed in v13") @val @scope("Math")
 external abs_float: float => float = "abs"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `%` instead. This will be removed in v13")
 external mod_float: (float, float) => float = "%modfloat"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Int.toFloat` instead. This will be removed in v13")
 external float: int => float = "%floatofint"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Int.toFloat` instead. This will be removed in v13")
 external float_of_int: int => float = "%floatofint"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Float.toInt` instead. This will be removed in v13")
 external truncate: float => int = "%intoffloat"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Float.toInt` instead. This will be removed in v13")
 external int_of_float: float => int = "%intoffloat"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Float.positiveInfinity` instead. This will be removed in v13")
 let infinity = 0x1p2047
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Float.negativeInfinity` instead. This will be removed in v13")
 let neg_infinity = -0x1p2047
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Number")
+@deprecated("Use `Float.nan` instead. This will be removed in v13") @val @scope("Number")
 external nan: float = "NaN"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Float.Constants.maxValue` instead. This will be removed in v13")
 let max_float = 1.79769313486231571e+308 /* 0x1.ffff_ffff_ffff_fp+1023 */
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Float.Constants.minValue` instead. This will be removed in v13")
 let min_float = 2.22507385850720138e-308 /* 0x1p-1022 */
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Float.Constants.epsilon` instead. This will be removed in v13")
 let epsilon_float = 2.22044604925031308e-16 /* 0x1p-52 */
 
 @deprecated("Do not use. This will be removed in v13")
@@ -233,13 +244,13 @@ external \"++": (string, string) => string = "%string_concat"
 
 /* Character operations -- more in module Char */
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Char.code` instead. This will be removed in v13")
 external int_of_char: char => int = "%identity"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Char.fromIntUnsafe` instead. This will be removed in v13")
 external unsafe_char_of_int: int => char = "%identity"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Char.fromIntExn` instead. This will be removed in v13")
 let char_of_int = n =>
   if n < 0 || n > 255 {
     invalid_arg("char_of_int")
@@ -267,7 +278,7 @@ external decr: ref<int> => unit = "%decr"
 
 /* String conversion functions */
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Bool.toString` instead. This will be removed in v13")
 let string_of_bool = b =>
   if b {
     "true"
@@ -275,7 +286,7 @@ let string_of_bool = b =>
     "false"
   }
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Bool.fromString` instead. This will be removed in v13")
 let bool_of_string = param =>
   switch param {
   | "true" => true
@@ -283,7 +294,7 @@ let bool_of_string = param =>
   | _ => invalid_arg("bool_of_string")
   }
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Bool.fromString` instead. This will be removed in v13")
 let bool_of_string_opt = param =>
   switch param {
   | "true" => Some(true)
@@ -291,10 +302,10 @@ let bool_of_string_opt = param =>
   | _ => None
   }
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Int.toString` instead. This will be removed in v13")
 external string_of_int: int => string = "String"
 
-@deprecated("Use Core instead. This will be removed in v13") @scope("Number")
+@deprecated("Use `Int.fromString` instead. This will be removed in v13") @scope("Number")
 external int_of_string: string => int = "parseInt"
 
 let int_of_string_opt = s =>
@@ -303,12 +314,12 @@ let int_of_string_opt = s =>
   | n => Some(n)
   }
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `String.get` instead. This will be removed in v13")
 external string_get: (string, int) => char = "%string_safe_get"
 
 /* List operations -- more in module List */
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `List.concat` instead. This will be removed in v13")
 let rec \"@" = (l1, l2) =>
   switch l1 {
   | list{} => l2

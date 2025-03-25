@@ -15,6 +15,7 @@ Happy hacking!
 > Most of our contributors are working on Apple machines, so all our instructions are currently macOS / Linux centric. Contributions for Windows development welcome!
 
 - [Node.js](https://nodejs.org/) v20.x
+- [Yarn CLI](https://yarnpkg.com/getting-started/install) (can be installed with `corepack`, Homebrew, etc)
 - C compiler toolchain (usually installed with `xcode` on Mac)
 - Python <= 3.11 (required to build ninja)
 - Rust toolchain (required to build rewatch; follow the instructions at https://www.rust-lang.org/tools/install)
@@ -58,7 +59,7 @@ opam install . --deps-only --with-test --with-dev-setup -y
 
 #### npm install
 
-Run `npm install --ignore-scripts`. This will install the npm dependencies required for the build scripts.
+Run `yarn install`. This will install the npm dependencies required for the build scripts.
 
 ### B. Devcontainer
 

@@ -79,5 +79,11 @@
     "mocha": "10.8.2",
     "nyc": "15.0.0"
   },
-  "packageManager": "npm@10.8.2+sha512.c7f0088c520a46596b85c6f8f1da943400199748a0f7ea8cb8df75469668dc26f6fb3ba26df87e2884a5ebe91557292d0f3db7d0929cdb4f14910c3032ac81fb"
+  "workspaces": [
+    "tests/dependencies/**",
+    "tests/analysis_tests/**",
+    "tests/gentype_tests/**",
+    "tests/tools_tests"
+  ],
+  "packageManager": "yarn@4.7.0"
 }
