@@ -54,8 +54,6 @@ let api_version = "5"
 
 module Js = Js_of_ocaml.Js
 
-let export (field : string) v = Js.Unsafe.set Js.Unsafe.global field v
-
 module Lang = struct
   type t = Res
 
