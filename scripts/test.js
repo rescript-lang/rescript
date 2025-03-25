@@ -159,7 +159,7 @@ if (runtimeDocstrings) {
     });
 
     // Generate rescript file with all tests `generated_mocha_test.res`
-    await node([path.join(docstringTestDir, "DocTest.res.mjs")], {
+    await node([path.join(docstringTestDir, "DocTest.res.js")], {
       cwd: projectDir,
       stdio: "inherit",
     });
@@ -179,7 +179,7 @@ if (runtimeDocstrings) {
 
     console.log("Run mocha test");
     await mocha(
-      [path.join("tests", "docstring_tests", "generated_mocha_test.res.mjs")],
+      [path.join("tests", "docstring_tests", "generated_mocha_test.res.js")],
       {
         cwd: projectDir,
         stdio: "inherit",

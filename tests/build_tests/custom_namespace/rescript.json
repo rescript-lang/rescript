@@ -8,12 +8,12 @@
   "namespace": "Foo_bar",
   "package-specs": {
     "module": "esmodule",
-    "in-source": true
+    "in-source": true,
+    "suffix": ".res.js"
   },
   "bsc-flags": ["-bs-no-version-header"],
   "warnings": {
     "number": "-40+6+7",
     "error": true
-  },
-  "suffix": ".res.js"
+  }
 }

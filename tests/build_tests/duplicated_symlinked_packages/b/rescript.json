@@ -7,9 +7,9 @@
   },
   "package-specs": {
     "module": "esmodule",
-    "in-source": true
+    "in-source": true,
+    "suffix": ".res.js"
   },
-  "suffix": ".res.js",
   "bs-dependencies": ["c"],
   "warnings": { "error": "+101" },
   "namespace": true

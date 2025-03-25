@@ -13,9 +13,9 @@
   ],
   "package-specs": {
     "module": "esmodule",
-    "in-source": true
+    "in-source": true,
+    "suffix": ".res.js"
   },
-  "suffix": ".res.js",
   "bs-dependencies": ["weird"],
   "warnings": { "error": "+101" }
 }
