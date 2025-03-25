@@ -23,16 +23,32 @@ Raises the given exception, terminating execution unless caught by a surrounding
 ## Examples
 
 ```rescript
-let error = Error.make("Everything is upside down.")
+exception MyException(string)
 
-if 5 > 10 {
-  throw(error)
-} else {
-  Console.log("Phew, sanity still rules.")
+try {
+  throw(MyException("Error message"))
+} catch {
+| MyException(message) => Console.log("Caught exception: " + message)
 }
 ```
 */
-external throw: Stdlib_Error.t => 'a = "%raise"
+external throw: exn => 'a = "%raise"
+
+/**
+Raises the given exception, terminating execution unless caught by a surrounding try/catch block.
+
+## Examples
+
+```rescript
+try {
+  // You can throw any JS value, but it is not good practice
+  throwAny(42)
+} catch {
+| Exn.Error(error) => Console.log("Caught exception: " + error->String.make)
+}
+```
+*/
+external throwAny: 'a => 'b = "%raise"
 
 /* Composition operators */
 
