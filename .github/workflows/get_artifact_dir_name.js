@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 
-import { platformName } from "#cli/paths";
+import { platformName } from "#cli/bins";
 
 // Pass artifactDirName to subsequent GitHub actions
 fs.appendFileSync(

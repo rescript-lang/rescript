@@ -6,15 +6,8 @@ LICENSE
 README.md
 cli/bsc.js
 cli/common/args.js
+cli/common/bins.js
 cli/common/bsb.js
-cli/common/paths.js
-cli/linux/bsb_helper.exe
-cli/linux/bsc.exe
-cli/linux/ninja.exe
-cli/linux/rescript-editor-analysis.exe
-cli/linux/rescript-tools.exe
-cli/linux/rescript.exe
-cli/linux/rewatch.exe
 cli/rescript-tools.js
 cli/rescript.js
 cli/rescript/dump.js
