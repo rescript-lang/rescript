@@ -10,6 +10,6 @@ const output = await execBuild();
 console.log(output);
 
 assert.ok(
-  !existsSync("./node_modules/c/lib/js/tests/test.mjs"),
+  !existsSync("./node_modules/c/lib/es6/tests/test.res.js"),
   "dev files of module 'c' were built by 'a' even though 'c' is not a pinned dependency of 'a'",
 );
