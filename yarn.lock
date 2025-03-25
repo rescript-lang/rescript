@@ -2135,11 +2135,11 @@ __metadata:
     semver: "npm:7.6.2"
     typescript: "npm:5.5.3"
   bin:
-    bsc: cli/bsc
-    bstracing: lib/bstracing
-    rescript: cli/rescript
-    rescript-tools: cli/rescript-tools
-    rewatch: cli/rewatch
+    bsc: cli/bsc.js
+    bstracing: lib/bstracing.js
+    rescript: cli/rescript.js
+    rescript-tools: cli/rescript-tools.js
+    rewatch: cli/rewatch.js
   languageName: unknown
   linkType: soft
 
