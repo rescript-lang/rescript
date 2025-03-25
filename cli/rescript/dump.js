@@ -3,7 +3,7 @@
 import * as child_process from "node:child_process";
 import * as path from "node:path";
 
-import * as arg from "../_args.js";
+import * as arg from "#cli/args";
 
 const dump_usage = `Usage: rescript dump <options> [target]
 \`rescript dump\` dumps the information for the target

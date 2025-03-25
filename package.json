@@ -73,9 +73,9 @@
     "./package.json": "./package.json"
   },
   "imports": {
-    "#cli/paths": "./cli/_paths.js",
-    "#lib/minisocket": "./lib/minisocket.js",
-    "#dev/*": "./lib_dev/*.js"
+    "#cli/*": "./cli/common/*.js",
+    "#dev/*": "./lib_dev/*.js",
+    "#lib/minisocket": "./lib/minisocket.js"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",

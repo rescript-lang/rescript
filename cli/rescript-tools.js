@@ -4,7 +4,7 @@
 
 import * as child_process from "node:child_process";
 
-import { rescript_tools_exe } from "./_paths.js";
+import { rescript_tools_exe } from "#cli/paths";
 
 const args = process.argv.slice(2);
 

@@ -8,7 +8,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { promisify } from "node:util";
 
-import * as arg from "../_args.js";
+import * as arg from "#cli/args";
 
 const asyncExecFile = promisify(child_process.execFile);
 

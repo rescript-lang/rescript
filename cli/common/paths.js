@@ -2,7 +2,7 @@
 
 import * as path from "node:path";
 
-export const cliPath = path.join(import.meta.dirname, "rescript.js");
+export const cliPath = path.join(import.meta.dirname, "../rescript.js");
 
 /**
  * For compatibility reasons, if the architecture is x64, omit it from the bin directory name.

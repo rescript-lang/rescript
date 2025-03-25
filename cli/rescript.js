@@ -9,8 +9,8 @@
 import * as tty from "node:tty";
 import packageJson from "rescript/package.json" with { type: "json" };
 
-import * as bsb from "./_bsb.js";
-import { bsc_exe, rescript_exe } from "./_paths.js";
+import * as bsb from "#cli/bsb";
+import { bsc_exe, rescript_exe } from "#cli/paths";
 
 const cwd = process.cwd();
 process.env.BSB_PROJECT_ROOT = cwd;
@@ -112,12 +112,12 @@ if (
       break;
     }
     case "format": {
-      const mod = await import("./rescript/rescript_format.js");
+      const mod = await import("./rescript/format.js");
       await mod.main(subcmdArgs, rescript_exe, bsc_exe);
       break;
     }
     case "dump": {
-      const mod = await import("./rescript/rescript_dump.js");
+      const mod = await import("./rescript/dump.js");
       mod.main(subcmdArgs, rescript_exe, bsc_exe);
       break;
     }
