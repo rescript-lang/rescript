@@ -12,12 +12,13 @@ import {
 } from "#dev/paths";
 
 import {
-  exec,
+  execBin,
   execBuild,
   execClean,
   mocha,
   node,
   rescript,
+  shell,
 } from "#dev/process";
 
 let ounitTest = false;
@@ -55,7 +56,7 @@ if (process.argv.includes("-all")) {
 }
 
 if (formatTest) {
-  await exec("./scripts/format_check.sh", [], {
+  await shell("./scripts/format_check.sh", [], {
     cwd: projectDir,
     stdio: "inherit",
   });
@@ -65,7 +66,7 @@ if (ounitTest) {
   if (process.platform === "win32") {
     console.log("Skipping OUnit tests on Windows");
   } else {
-    await exec(ounitTestBin, [], {
+    await execBin(ounitTestBin, [], {
       stdio: "inherit",
     });
   }
@@ -87,12 +88,12 @@ if (mochaTest) {
     stdio: "inherit",
   });
 
-  await node(["tests/tests/src/core/Core_TestSuite.mjs"], {
+  await node("tests/tests/src/core/Core_TestSuite.mjs", [], {
     cwd: projectDir,
     stdio: "inherit",
   });
 
-  await node(["tests/tests/src/core/Core_TempTests.mjs"], {
+  await node("tests/tests/src/core/Core_TempTests.mjs", [], {
     cwd: projectDir,
     stdio: "inherit",
   });
@@ -115,7 +116,7 @@ if (bsbTest) {
       console.log(`testing ${file}`);
 
       // note existsSync test already ensure that it is a directory
-      const out = await exec("node", ["input.js"], { cwd: testDir });
+      const out = await node("input.js", [], { cwd: testDir });
       console.log(out.stdout);
 
       if (out.status === 0) {
@@ -159,7 +160,7 @@ if (runtimeDocstrings) {
     });
 
     // Generate rescript file with all tests `generated_mocha_test.res`
-    await node([path.join(docstringTestDir, "DocTest.res.js")], {
+    await node(path.join(docstringTestDir, "DocTest.res.js"), [], {
       cwd: projectDir,
       stdio: "inherit",
     });

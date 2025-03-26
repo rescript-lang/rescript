@@ -21,8 +21,17 @@ const signals = {
   SIGTERM: 15,
 };
 
-export const { exec, node, yarn, mocha, bsc, rescript, execBuild, execClean } =
-  setup();
+export const {
+  shell,
+  node,
+  yarn,
+  mocha,
+  bsc,
+  rescript,
+  execBin,
+  execBuild,
+  execClean,
+} = setup();
 
 /**
  * @param {string} [cwd]
@@ -71,7 +80,11 @@ export function setup(cwd = process.cwd()) {
         }
 
         if (throwOnFail && code !== 0) {
-          reject({ status: code, stdout, stderr });
+          reject(
+            new Error(
+              `Command ${command} exited with non-zero status: ${code}`,
+            ),
+          );
         } else {
           resolve({ status: code, stdout, stderr });
         }
@@ -80,32 +93,44 @@ export function setup(cwd = process.cwd()) {
   }
 
   return {
-    exec,
-
     /**
-     * `node` CLI
+     * bash shell script
      *
+     * @param {string} script
      * @param {string[]} [args]
      * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
-    node(args = [], options = {}) {
-      return exec("node", args, options);
+    shell(script, args = [], options = {}) {
+      return exec("bash", [script, ...args], options);
     },
 
     /**
-     * `yarn` CLI
+     * Execute JavaScript on Node.js
      *
+     * @param {string} script
      * @param {string[]} [args]
      * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
-    yarn(args = [], options = {}) {
-      return exec("yarn", args, options);
+    node(script, args = [], options = {}) {
+      return exec("node", [script, ...args], options);
     },
 
     /**
-     * Mocha CLI
+     * Execute Yarn command
+     *
+     * @param {string} command
+     * @param {string[]} [args]
+     * @param {ExecOptions} [options]
+     * @return {Promise<ExecResult>}
+     */
+    yarn(command, args = [], options = {}) {
+      return exec("yarn", [...command.split(" "), ...args], options);
+    },
+
+    /**
+     * Execute Mocha CLI
      *
      * @param {string[]} [args]
      * @param {ExecOptions} [options]
@@ -167,6 +192,19 @@ export function setup(cwd = process.cwd()) {
      */
     execClean(args = [], options = {}) {
       return exec(rescript_exe, ["clean", ...args], options);
+    },
+
+    /**
+     * Execute any binary or wrapper.
+     * It should support Windows as well
+     *
+     * @param {string} bin
+     * @param {string[]} [args]
+     * @param {ExecOptions} [options]
+     * @return {Promise<ExecResult>}
+     */
+    execBin(bin, args = [], options = {}) {
+      return exec(bin, args, options);
     },
   };
 }
