@@ -15,6 +15,7 @@
 #### :bug: Bug fix
 
 - Fix `Error.fromException`. https://github.com/rescript-lang/rescript/pull/7364
+- Fix signature of `throw` and add `throwAny`. https://github.com/rescript-lang/rescript/pull/7365
 
 # 12.0.0-alpha.10
 

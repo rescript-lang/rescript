@@ -149,33 +149,14 @@ Raises (throws in JavaScript language) the provided `Error.t`, which will stop e
 let error = Error.make("Everything is upside down.")
 
 if 5 > 10 {
-  error->Error.raise
+  throw(error->Error.toException)
 } else {
   Console.log("Phew, sanity still rules.")
 }
 ```
 */
-@deprecated(
-  "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `throw` instead"
-)
+@deprecated("Please use the global `throw` or `throwAny` function instead")
 external raise: t => 'a = "%raise"
-
-/**
-Raises the given exception, terminating execution unless caught by a surrounding try/catch block.
-
-## Examples
-
-```rescript
-let error = Error.make("Everything is upside down.")
-
-if 5 > 10 {
-  Error.throw(error)
-} else {
-  Console.log("Phew, sanity still rules.")
-}
-```
-*/
-external throw: t => 'a = "%raise"
 
 /**
 Raises a panic exception with the given message.

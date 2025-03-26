@@ -40,8 +40,6 @@ module URIError = {
 
 external raise: t => 'a = "%raise"
 
-external throw: t => 'a = "%raise"
-
-let panic = msg => make(`Panic! ${msg}`)->raise
+let panic = msg => make(`Panic! ${msg}`)->toException->throw
 
 external ignore: t => unit = "%ignore"
