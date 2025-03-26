@@ -1173,11 +1173,15 @@ let mk_record_from_props mapper
              "JSX: use {...p} {x: v} not {x: v} {...p} \n\
              \     multiple spreads {...p} {...p} not allowed.")
   in
-  {
-    pexp_desc = Pexp_record (record_fields, spread_props);
-    pexp_loc = loc;
-    pexp_attributes = [];
-  }
+  match (record_fields, spread_props) with
+  | [], Some spread_props ->
+    {pexp_desc = spread_props.pexp_desc; pexp_loc = loc; pexp_attributes = []}
+  | record_fields, spread_props ->
+    {
+      pexp_desc = Pexp_record (record_fields, spread_props);
+      pexp_loc = loc;
+      pexp_attributes = [];
+    }
 
 let try_find_key_prop (props : jsx_props) : (arg_label * expression) option =
   props
