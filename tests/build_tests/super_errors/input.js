@@ -27,7 +27,7 @@ function postProcessErrorOutput(output) {
   result = result.trimEnd();
   result = result.replace(
     /(?:[A-Z]:)?[\\/][^ ]+?tests[\\/]build_tests[\\/]super_errors[\\/]([^:]+)/g,
-    (_match, path, _offset, _string) => `/.../${path.replace("\\", "/")}`,
+    (_match, path, _offset, _string) => "/.../" + path.replace("\\", "/"),
   );
   return normalizeNewlines(result);
 }

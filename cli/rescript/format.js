@@ -198,9 +198,11 @@ export async function main(argv, rescript_exe, bsc_exe) {
         process.exit(2);
       }
       if (isSupportedStd(use_stdin)) {
+        const randomHex = crypto.randomBytes(8).toString("hex");
+        const basename = path.basename(use_stdin);
         const filename = path.join(
           os.tmpdir(),
-          `rescript_${crypto.randomBytes(8).toString("hex")}${path.parse(use_stdin).base}`,
+          `rescript_${randomHex}${basename}`,
         );
         (async () => {
           const content = await readStdin();

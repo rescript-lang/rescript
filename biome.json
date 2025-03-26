@@ -10,6 +10,9 @@
     "enabled": true,
     "rules": {
       "recommended": true,
+      "style": {
+        "useTemplate": "off"
+      },
       "nursery": {
         "noCommonJs": "error"
       },
