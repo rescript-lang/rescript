@@ -128,39 +128,36 @@ async function runTests() {
       console.log(`Skipping docstrings tests on ${process.platform}`);
     } else if (process.platform === "darwin" && os.release().startsWith("22")) {
       // Workaround for intermittent hangs in CI
-      console.log("Skipping docstrings tests on macOS 13")
+      console.log("Skipping docstrings tests on macOS 13");
     } else {
       console.log("Running runtime docstrings tests");
 
+      const docstringsTestsDir = path.join("tests", "docstring_tests");
+
       const generated_mocha_test_res = path.join(
-        "tests",
-        "docstring_tests",
+        docstringsTestsDir,
         "generated_mocha_test.res",
       );
 
-      // Remove `generated_mocha_test.res` if file exists
-      if (fs.existsSync(generated_mocha_test_res)) {
-        console.log(`Removing ${generated_mocha_test_res}`);
-        fs.unlinkSync(generated_mocha_test_res);
-      }
+      cp.execSync(`${rescript_exe} clean`, {
+        cwd: docstringsTestsDir,
+        stdio: [0, 1, 2],
+      });
 
       cp.execSync(`${rescript_exe} build`, {
-        cwd: path.join(__dirname, "..", "tests/docstring_tests"),
+        cwd: docstringsTestsDir,
         stdio: [0, 1, 2],
       });
 
       // Generate rescript file with all tests `generated_mocha_test.res`
-      cp.execSync(
-        `node ${path.join("tests", "docstring_tests", "DocTest.res.mjs")}`,
-        {
-          cwd: path.join(__dirname, ".."),
-          stdio: [0, 1, 2],
-        },
-      );
+      cp.execSync(`node ${path.join(docstringsTestsDir, "DocTest.res.mjs")}`, {
+        cwd: path.join(__dirname, ".."),
+        stdio: [0, 1, 2],
+      });
 
       // Build again to check if generated_mocha_test.res has syntax or type erros
       cp.execSync(`${rescript_exe} build`, {
-        cwd: path.join(__dirname, "..", "tests/docstring_tests"),
+        cwd: docstringsTestsDir,
         stdio: [0, 1, 2],
       });
 
@@ -173,7 +170,7 @@ async function runTests() {
 
       console.log("Run mocha test");
       cp.execSync(
-        `npx mocha ${path.join("tests", "docstring_tests", "generated_mocha_test.res.mjs")}`,
+        `npx mocha ${path.join(docstringsTestsDir, "generated_mocha_test.res.mjs")}`,
         {
           cwd: path.join(__dirname, ".."),
           stdio: [0, 1, 2],
