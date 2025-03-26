@@ -17,7 +17,14 @@
 
 open Asttypes
 
-type loc_kind = Loc_FILE | Loc_LINE | Loc_MODULE | Loc_LOC | Loc_POS
+type loc_kind =
+  | Loc_FILE
+  | Loc_LINE
+  | Loc_MODULE
+  | Loc_SOURCE_LOC_VALUE_PATH
+  | Loc_SOURCE_LOC_POS
+  | Loc_LOC
+  | Loc_POS
 
 type tag_info =
   | Blk_constructor of {
@@ -417,4 +424,9 @@ val is_guarded : lambda -> bool
 val patch_guarded : lambda -> lambda -> lambda
 
 val raise_kind : raise_kind -> string
-val lam_of_loc : loc_kind -> Location.t -> lambda
+val lam_of_loc :
+  ?root_path:Path.t ->
+  ?current_value_ident:Ident.t ->
+  loc_kind ->
+  Location.t ->
+  lambda
