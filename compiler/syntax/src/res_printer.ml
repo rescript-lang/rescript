@@ -4414,20 +4414,18 @@ and print_jsx_container_tag ~state tag_name props
     | JSXChildrenItems [] -> false
   in
   let line_sep =
-    let children =
-      match children with
-      | JSXChildrenItems children -> children
-      | JSXChildrenSpreading child -> [child]
-    in
-    if
-      List.length children > 1
-      || List.exists
-           (function
-             | {Parsetree.pexp_desc = Pexp_jsx_element _} -> true
-             | _ -> false)
-           children
-    then Doc.hard_line
-    else Doc.line
+    match children with
+    | JSXChildrenSpreading _ -> Doc.line
+    | JSXChildrenItems children ->
+      if
+        List.length children > 1
+        || List.exists
+             (function
+               | {Parsetree.pexp_desc = Pexp_jsx_element _} -> true
+               | _ -> false)
+             children
+      then Doc.hard_line
+      else Doc.line
   in
   let print_children children =
     Doc.concat
