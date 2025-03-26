@@ -1279,6 +1279,20 @@ let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
   let args = [(nolabel, elementTag); (nolabel, props_record)] @ key_and_unit in
   Exp.apply ~loc ~attrs jsx_expr args
 
+(* In most situations, the component name is the make function from a module. 
+    However, if the name contains a lowercase letter, it means it probably an external component.
+    In this case, we use the name as is.
+    See tests/syntax_tests/data/ppx/react/externalWithCustomName.res
+*)
+let mk_uppercase_tag_name_expr tag_name =
+  let tag_identifier : Longident.t =
+    if Longident.flatten tag_name.txt |> List.for_all starts_with_uppercase then
+      (* All parts are uppercase, so we append .make *)
+      Ldot (tag_name.txt, "make")
+    else tag_name.txt
+  in
+  Exp.ident ~loc:tag_name.loc {txt = tag_identifier; loc = tag_name.loc}
+
 let expr ~(config : Jsx_common.jsx_config) mapper expression =
   match expression with
   | {
@@ -1305,10 +1319,7 @@ let expr ~(config : Jsx_common.jsx_config) mapper expression =
           component_name_expr props (JSXChildrenItems [])
       else if starts_with_uppercase name then
         (* MyModule.make *)
-        let make_id =
-          Exp.ident ~loc:tag_name.loc
-            {txt = Ldot (tag_name.txt, "make"); loc = tag_name.loc}
-        in
+        let make_id = mk_uppercase_tag_name_expr tag_name in
         mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
           (JSXChildrenItems [])
       else
@@ -1331,10 +1342,7 @@ let expr ~(config : Jsx_common.jsx_config) mapper expression =
           component_name_expr props children
       else if starts_with_uppercase name then
         (* MyModule.make *)
-        let make_id =
-          Exp.ident ~loc:tag_name.loc
-            {txt = Ldot (tag_name.txt, "make"); loc = tag_name.loc}
-        in
+        let make_id = mk_uppercase_tag_name_expr tag_name in
         mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
           children
       else
