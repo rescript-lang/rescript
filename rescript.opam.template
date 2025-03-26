@@ -1,0 +1,15 @@
+depends: [
+  "ocaml" {>= "4.14"}
+  "cppo" {= "1.8.0"}
+  "dune" {>= "3.17"}
+  "ocamlformat" {with-test & = "0.27.0"}
+  "yojson" {with-test & = "2.2.2"}
+  "ounit2" {with-test & = "2.2.7"}
+  "odoc" {with-doc}
+  "ocaml-lsp-server" {with-dev-setup & = "1.22.0"}
+
+  # Test dependencies that would be broken on Windows runners
+  "js_of_ocaml" {os != "win32" & with-test & = "6.0.1"}
+  "js_of_ocaml-ppx" {os != "win32" & with-test & = "6.0.1"}
+  "wasm_of_ocaml-compiler" {os != "win32" & with-test & = "6.0.1"}
+]
