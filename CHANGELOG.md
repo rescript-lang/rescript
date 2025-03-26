@@ -19,6 +19,7 @@
 #### :house: Internal
 
 - Remove `Stdlib_Char` module for now. https://github.com/rescript-lang/rescript/pull/7367
+- Convert internal JavaScript codebase into ESM, ReScript package itself is now ESM (`"type": "module"`). https://github.com/rescript-lang/rescript/pull/6899
 
 # 12.0.0-alpha.10
 
