@@ -73,6 +73,7 @@ type t =
   | Pmulint
   | Pdivint
   | Pmodint
+  | Ppowint
   | Pandint
   | Porint
   | Pxorint
@@ -94,6 +95,7 @@ type t =
   | Pmulfloat
   | Pdivfloat
   | Pmodfloat
+  | Ppowfloat
   | Pfloatcomp of Lam_compat.comparison
   | Pfloatorder
   | Pfloatmin
@@ -197,12 +199,12 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
   (* bool primitives *)
   | Psequand | Psequor | Pnot | Pboolcomp _ | Pboolorder | Pboolmin | Pboolmax
   (* int primitives *)
-  | Pisint | Pnegint | Paddint | Psubint | Pmulint | Pdivint | Pmodint | Pandint
-  | Porint | Pxorint | Plslint | Plsrint | Pasrint | Pintorder | Pintmin
-  | Pintmax
+  | Pisint | Pnegint | Paddint | Psubint | Pmulint | Pdivint | Pmodint | Ppowint
+  | Pandint | Porint | Pxorint | Plslint | Plsrint | Pasrint | Pintorder
+  | Pintmin | Pintmax
   (* float primitives *)
   | Pintoffloat | Pfloatofint | Pnegfloat | Paddfloat | Psubfloat | Pmulfloat
-  | Pdivfloat | Pmodfloat | Pfloatorder | Pfloatmin | Pfloatmax
+  | Pdivfloat | Pmodfloat | Ppowfloat | Pfloatorder | Pfloatmin | Pfloatmax
   (* bigint primitives *)
   | Pnegbigint | Paddbigint | Psubbigint | Pmulbigint | Pdivbigint | Pmodbigint
   | Ppowbigint | Pandbigint | Porbigint | Pxorbigint | Plslbigint | Pasrbigint

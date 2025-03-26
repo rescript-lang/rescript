@@ -109,3 +109,24 @@ Test.run(
 
 Test.run(__POS_OF__("last - with items"), [1, 2, 3]->Array.last, eq, Some(3))
 Test.run(__POS_OF__("last - empty"), []->Array.last, eq, None)
+
+{
+  let array = []
+  array->Array.splice(~start=1, ~remove=0, ~insert=["foo"])
+  Test.run(__POS_OF__("splice - Insert no delete"), array, eq, ["foo"])
+}
+
+{
+  let array = ["bar", "baz"]
+  Test.run(
+    __POS_OF__("splice - Insert and delete"),
+    (array->Array.splice(~start=1, ~remove=1, ~insert=["foo"]), array),
+    eq,
+    (
+      // Even though original .splice returns an array with the removed items,
+      // the binding returns unit so there's no confusion about it mutating the original array.
+      (),
+      ["bar", "foo"],
+    ),
+  )
+}

@@ -19,6 +19,9 @@ open Format
 open Types
 open Outcometree
 
+type printing_context = {inlined_types: type_inlined_type list}
+(** Tracks things like inlined records, to help with printing. *)
+
 val print_res_poly_identifier : (string -> string) ref
 val longident : formatter -> Longident.t -> unit
 val ident : formatter -> Ident.t -> unit
@@ -62,7 +65,8 @@ val modtype : formatter -> module_type -> unit
 val signature : formatter -> signature -> unit
 val tree_of_modtype_declaration : Ident.t -> modtype_declaration -> out_sig_item
 val tree_of_signature : Types.signature -> out_sig_item list
-val tree_of_typexp : bool -> type_expr -> out_type
+val tree_of_typexp :
+  ?printing_context:printing_context -> bool -> type_expr -> out_type
 val modtype_declaration : Ident.t -> formatter -> modtype_declaration -> unit
 val type_expansion : type_expr -> Format.formatter -> type_expr -> unit
 val prepare_expansion : type_expr * type_expr -> type_expr * type_expr

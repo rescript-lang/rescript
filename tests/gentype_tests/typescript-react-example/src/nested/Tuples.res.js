@@ -7,15 +7,15 @@ function testTuple(param) {
 }
 
 function computeArea(param) {
-  return Math.imul(Math.imul(param[0], param[1]), Belt_Option.mapWithDefault(param[2], 1, n => n));
+  return (param[0] * param[1] | 0) * Belt_Option.mapWithDefault(param[2], 1, n => n) | 0;
 }
 
 function computeAreaWithIdent(param) {
-  return Math.imul(Math.imul(param[0], param[1]), Belt_Option.mapWithDefault(param[2], 1, n => n));
+  return (param[0] * param[1] | 0) * Belt_Option.mapWithDefault(param[2], 1, n => n) | 0;
 }
 
 function computeAreaNoConverters(param) {
-  return Math.imul(param[0], param[1]);
+  return param[0] * param[1] | 0;
 }
 
 function coord2d(x, y) {

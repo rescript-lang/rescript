@@ -1016,6 +1016,7 @@ let new_declaration newtype manifest =
     type_attributes = [];
     type_immediate = false;
     type_unboxed = unboxed_false_default_false;
+    type_inlined_types = [];
   }
 
 let instance_constructor ?in_pattern cstr =
@@ -4185,6 +4186,7 @@ let nondep_type_decl env mid id is_covariant decl =
       type_attributes = decl.type_attributes;
       type_immediate = decl.type_immediate;
       type_unboxed = decl.type_unboxed;
+      type_inlined_types = decl.type_inlined_types;
     }
   with Not_found ->
     clear_hash ();

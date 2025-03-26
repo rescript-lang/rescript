@@ -186,7 +186,7 @@ function a17(prim) {
 }
 
 function a18(prim0, prim1) {
-  return Math.pow(prim0, prim1);
+  return prim0 ** prim1 | 0;
 }
 
 let f = Pervasives.$at;

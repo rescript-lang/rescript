@@ -302,6 +302,26 @@ external splice: (array<'a>, ~start: int, ~remove: int, ~insert: array<'a>) => u
 external toSpliced: (array<'a>, ~start: int, ~remove: int, ~insert: array<'a>) => array<'a> =
   "toSpliced"
 
+/**
+`removeInPlace(array, index)` removes the item at the specified `index` from `array`.
+
+Beware this will *mutate* the array.
+
+## Examples
+
+```rescript
+let array = []
+array->Array.removeInPlace(0)
+assertEqual(array, []) // Removing from an empty array does nothing
+
+let array2 = ["Hello", "Hi", "Good bye"]
+array2->Array.removeInPlace(1)
+assertEqual(array2, ["Hello", "Good bye"]) // Removes the item at index 1
+```
+ */
+@send
+external removeInPlace: (array<'a>, int, @as(1) _) => unit = "splice"
+
 @send external with: (array<'a>, int, 'a) => array<'a> = "with"
 
 /**
@@ -1255,3 +1275,11 @@ Returns `None` if the array is empty.
 ```
 */
 let last: array<'a> => option<'a>
+
+/**
+  `ignore(array)` ignores the provided array and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: array<'a> => unit = "%ignore"

@@ -9,13 +9,13 @@ Path date
     "label": "None",
     "kind": 12,
     "tags": [],
-    "detail": "Stdlib.Date.t",
+    "detail": "Date.t",
     "documentation": {"kind": "markdown", "value": "\nA type representing a JavaScript date.\n"}
   }, {
     "label": "Some(_)",
     "kind": 12,
     "tags": [],
-    "detail": "Stdlib.Date.t",
+    "detail": "Date.t",
     "documentation": {"kind": "markdown", "value": "\nA type representing a JavaScript date.\n"},
     "insertText": "Some(${1:_})",
     "insertTextFormat": 2

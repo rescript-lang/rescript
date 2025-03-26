@@ -2,9 +2,11 @@
 
 (executables
  (names jsoo_playground_main)
- (modes js)
+ (modes js wasm)
  (enabled_if
   (= %{profile} browser))
  (flags
   (:standard -w +a-4-9-40-42-44-45))
- (libraries core syntax ml js_of_ocaml))
+ (libraries core syntax ml js_of_ocaml)
+ (preprocess
+  (pps js_of_ocaml-ppx)))

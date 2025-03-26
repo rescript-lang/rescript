@@ -161,6 +161,32 @@ let entries =
           string = None;
         };
     };
+    {
+      path = builtin "**";
+      name = "%pow";
+      form = Binary;
+      specialization =
+        {
+          int = Ppowint;
+          bool = None;
+          float = Some Ppowfloat;
+          bigint = Some Ppowbigint;
+          string = None;
+        };
+    };
+    {
+      path = builtin "^";
+      name = "%bitxor";
+      form = Binary;
+      specialization =
+        {
+          int = Pxorint;
+          bool = None;
+          float = None;
+          bigint = Some Pxorbigint;
+          string = None;
+        };
+    };
   |]
 
 let index_by_path =

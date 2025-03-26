@@ -139,12 +139,12 @@ let binary_expr_operand ~is_lhs expr =
       else Nothing)
 
 let sub_binary_expr_operand parent_operator child_operator =
-  let prec_parent = ParsetreeViewer.operator_precedence parent_operator in
-  let prec_child = ParsetreeViewer.operator_precedence child_operator in
+  let open ParsetreeViewer in
+  let prec_parent = operator_precedence parent_operator in
+  let prec_child = operator_precedence child_operator in
   prec_parent > prec_child
-  || prec_parent == prec_child
-     && not
-          (ParsetreeViewer.flattenable_operators parent_operator child_operator)
+  || is_equality_operator parent_operator
+     && is_equality_operator child_operator
   ||
   (* a && b || c, add parens to (a && b) for readability, who knows the difference by heart… *)
   (parent_operator = "||" && child_operator = "&&")
@@ -161,8 +161,7 @@ let rhs_binary_expr_operand parent_operator rhs =
           };
         args = [(_, _left); (_, _right)];
       }
-    when ParsetreeViewer.is_binary_operator operator
-         && not (operator_loc.loc_ghost && operator = "++") ->
+    when ParsetreeViewer.not_ghost_operator operator operator_loc ->
     let prec_parent = ParsetreeViewer.operator_precedence parent_operator in
     let prec_child = ParsetreeViewer.operator_precedence operator in
     prec_parent == prec_child
@@ -179,8 +178,7 @@ let flatten_operand_rhs parent_operator rhs =
           };
         args = [(_, _left); (_, _right)];
       }
-    when ParsetreeViewer.is_binary_operator operator
-         && not (operator_loc.loc_ghost && operator = "++") ->
+    when ParsetreeViewer.not_ghost_operator operator operator_loc ->
     let prec_parent = ParsetreeViewer.operator_precedence parent_operator in
     let prec_child = ParsetreeViewer.operator_precedence operator in
     prec_parent >= prec_child || rhs.pexp_attributes <> []

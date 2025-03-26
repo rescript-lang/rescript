@@ -1,0 +1,23 @@
+
+  [1;33mWarning number 20[0m
+  [36m/.../fixtures/fun_return_poly1.res[0m:[2m3:15[0m
+
+  1 [2m│[0m let f = (_, ~def=3) => assert(false)
+  2 [2m│[0m 
+  [1;33m3[0m [2m│[0m let ok = f(1)([1;33m2[0m)
+  4 [2m│[0m let err = f(1, 2)
+  5 [2m│[0m 
+
+  this argument will not be used by the function.
+
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/fun_return_poly1.res[0m:[2m4:16[0m
+
+  2 [2m│[0m 
+  3 [2m│[0m let ok = f(1)(2)
+  [1;31m4[0m [2m│[0m let err = f(1, [1;31m2[0m)
+  5 [2m│[0m 
+
+  The function applied to this argument has type ('a, ~def: int=?) => 'b
+This argument cannot be applied without label

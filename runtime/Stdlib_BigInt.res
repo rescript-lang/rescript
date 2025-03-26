@@ -77,18 +77,27 @@ external \"~-": bigint => bigint = "%negbigint"
 external \"~+": bigint => bigint = "%identity"
 external \"**": (bigint, bigint) => bigint = "%powbigint"
 
-external add: (bigint, bigint) => bigint = "%addfloat"
-external sub: (bigint, bigint) => bigint = "%subfloat"
-external mul: (bigint, bigint) => bigint = "%mulfloat"
-external div: (bigint, bigint) => bigint = "%divfloat"
+external add: (bigint, bigint) => bigint = "%addbigint"
+external sub: (bigint, bigint) => bigint = "%subbigint"
+external mul: (bigint, bigint) => bigint = "%mulbigint"
+external div: (bigint, bigint) => bigint = "%divbigint"
 
 external mod: (bigint, bigint) => bigint = "%modbigint"
 
-external land: (bigint, bigint) => bigint = "%andbigint"
-external lor: (bigint, bigint) => bigint = "%orbigint"
-external lxor: (bigint, bigint) => bigint = "%xorbigint"
+external bitwiseAnd: (bigint, bigint) => bigint = "%andbigint"
+external bitwiseOr: (bigint, bigint) => bigint = "%orbigint"
+external bitwiseXor: (bigint, bigint) => bigint = "%xorbigint"
 
-external lsl: (bigint, bigint) => bigint = "%lslbigint"
-external asr: (bigint, bigint) => bigint = "%asrbigint"
+// TODO: make it a primitive
+let bitwiseNot = x => bitwiseXor(x, -1n)
 
-let lnot = x => lxor(x, -1n)
+external shiftLeft: (bigint, bigint) => bigint = "%lslbigint"
+external shiftRight: (bigint, bigint) => bigint = "%asrbigint"
+
+/**
+  `ignore(bigint)` ignores the provided bigint and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: bigint => unit = "%ignore"

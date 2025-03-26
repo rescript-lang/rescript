@@ -72,6 +72,13 @@ let has_await_attribute attrs =
       | _ -> false)
     attrs
 
+let has_inline_record_definition_attribute attrs =
+  List.exists
+    (function
+      | {Location.txt = "res.inlineRecordDefinition"}, _ -> true
+      | _ -> false)
+    attrs
+
 let has_res_pat_variant_spread_attribute attrs =
   List.exists
     (function
@@ -198,7 +205,8 @@ let filter_parsing_attrs attrs =
             Location.txt =
               ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
               | "res.await" | "res.template" | "res.taggedTemplate"
-              | "res.patVariantSpread" | "res.dictPattern" );
+              | "res.patVariantSpread" | "res.dictPattern"
+              | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
@@ -264,11 +272,12 @@ let operator_precedence operator =
   | ":=" -> 1
   | "||" -> 2
   | "&&" -> 3
-  | "==" | "===" | "<" | ">" | "!=" | "<>" | "!==" | "<=" | ">=" | "|>" -> 4
-  | "+" | "+." | "-" | "-." | "++" -> 5
-  | "*" | "*." | "/" | "/." | "%" -> 6
-  | "**" -> 7
-  | "#" | "##" | "->" -> 8
+  | "^" -> 4
+  | "==" | "===" | "<" | ">" | "!=" | "<>" | "!==" | "<=" | ">=" | "|>" -> 5
+  | "+" | "+." | "-" | "-." | "++" -> 6
+  | "*" | "*." | "/" | "/." | "%" -> 7
+  | "**" -> 8
+  | "#" | "##" | "->" -> 9
   | _ -> 0
 
 let is_unary_operator operator =
@@ -287,14 +296,16 @@ let is_unary_expression expr =
     true
   | _ -> false
 
-(* TODO: tweak this to check for ghost ^ as template literal *)
 let is_binary_operator operator =
   match operator with
   | ":=" | "||" | "&&" | "==" | "===" | "<" | ">" | "!=" | "!==" | "<=" | ">="
   | "|>" | "+" | "+." | "-" | "-." | "++" | "*" | "*." | "/" | "/." | "**"
-  | "->" | "<>" | "%" ->
+  | "->" | "<>" | "%" | "^" ->
     true
   | _ -> false
+
+let not_ghost_operator operator (loc : Location.t) =
+  is_binary_operator operator && not (loc.loc_ghost && operator = "++")
 
 let is_binary_expression expr =
   match expr.pexp_desc with
@@ -307,9 +318,7 @@ let is_binary_expression expr =
           };
         args = [(Nolabel, _operand1); (Nolabel, _operand2)];
       }
-    when is_binary_operator operator
-         && not (operator_loc.loc_ghost && operator = "++")
-         (* template literal *) ->
+    when not_ghost_operator operator operator_loc ->
     true
   | _ -> false
 
@@ -352,7 +361,7 @@ let has_attributes attrs =
       | ( {
             Location.txt =
               ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.await" | "res.template" );
+              | "res.await" | "res.template" | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
@@ -527,7 +536,7 @@ let is_printable_attribute attr =
   | ( {
         Location.txt =
           ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.await"
-          | "res.template" | "res.ternary" );
+          | "res.template" | "res.ternary" | "res.inlineRecordDefinition" );
       },
       _ ) ->
     false

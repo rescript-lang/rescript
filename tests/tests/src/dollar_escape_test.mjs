@@ -32,7 +32,7 @@ function $$(x, y) {
 let v = 3;
 
 function $$$plus(x, y) {
-  return Math.imul(x, y);
+  return x * y | 0;
 }
 
 let u = 3;

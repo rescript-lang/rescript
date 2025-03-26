@@ -1549,6 +1549,7 @@ let unchecked_int32_minus ?comment e1 e2 : J.expression =
   float_minus ?comment e1 e2
 
 let float_div ?comment e1 e2 = bin ?comment Div e1 e2
+let float_pow ?comment e1 e2 = bin ?comment Pow e1 e2
 let float_notequal ?comment e1 e2 = bin ?comment NotEqEq e1 e2
 
 let int32_asr ?comment e1 e2 : J.expression =
@@ -1606,17 +1607,17 @@ let int32_mul ?comment (e1 : J.expression) (e2 : J.expression) : J.expression =
   | {expression_desc = Number (Int {i = i0}); _}, e ->
     let i = is_pos_pow i0 in
     if i >= 0 then int32_lsl e (small_int i)
-    else
-      call ?comment ~info:Js_call_info.builtin_runtime_call
-        (dot (js_global "Math") Literals.imul)
-        [e1; e2]
-  | _ ->
-    call ?comment ~info:Js_call_info.builtin_runtime_call
-      (dot (js_global "Math") Literals.imul)
-      [e1; e2]
+    else to_int32 (float_mul ?comment e1 e2)
+  | _ -> to_int32 (float_mul ?comment e1 e2)
 
 let unchecked_int32_mul ?comment e1 e2 : J.expression =
   {comment; expression_desc = Bin (Mul, e1, e2)}
+
+let int32_pow ?comment (e1 : t) (e2 : t) : J.expression =
+  match (e1.expression_desc, e2.expression_desc) with
+  | Number (Int {i = i1}), Number (Int {i = i2}) ->
+    int ?comment (Ext_int.int32_pow i1 i2)
+  | _ -> to_int32 (float_pow ?comment e1 e2)
 
 let rec int32_bxor ?comment (e1 : t) (e2 : t) : J.expression =
   match (e1.expression_desc, e2.expression_desc) with

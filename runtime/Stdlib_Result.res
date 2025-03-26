@@ -26,7 +26,7 @@ type t<'res, 'err> = result<'res, 'err> = Ok('res) | Error('err)
 let getExn = x =>
   switch x {
   | Ok(x) => x
-  | Error(_) => raise(Not_found)
+  | Error(_) => throw(Not_found)
   }
 
 let mapOr = (opt, default, f) =>
@@ -164,3 +164,5 @@ let all6 = ((a, b, c, d, e, f)) => {
   | (_, _, _, _, _, Error(f)) => Error(f)
   }
 }
+
+external ignore: result<'res, 'err> => unit = "%ignore"

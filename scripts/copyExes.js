@@ -24,10 +24,19 @@ function copyExe(dir, exe) {
     fs.rmSync(dest);
   }
 
-  fs.copyFileSync(src, dest);
-
-  if (process.platform !== "win32") {
-    child_process.execSync(`strip ${dest}`);
+  let mode = 0o755;
+  if (fs.existsSync(dest)) {
+    mode = fs.statSync(dest).mode & 0o777;
+    fs.chmodSync(dest, mode | 0o200); // u+w
+  }
+  try {
+    fs.copyFileSync(src, dest);
+    if (process.platform !== "win32") {
+      fs.chmodSync(dest, mode | 0o200); // u+w
+      child_process.execSync(`strip ${dest}`);
+    }
+  } finally {
+    fs.chmodSync(dest, mode);
   }
 }
 

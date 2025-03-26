@@ -1,0 +1,15 @@
+Hover src/NestedRecordsHover.res 8:7
+{"contents": {"kind": "markdown", "value": "```rescript\noptions\n```\n\n---\n\n```\n \n```\n```rescript\ntype options = {\n  extra?: {\n    name: string,\n    superExtra?: {age: int},\n    otherExtra: option<\n      {\n        test: bool,\n        anotherInlined: {record: bool},\n      },\n    >,\n  },\n}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22NestedRecordsHover.res%22%2C0%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype options.extra = {\n  name: string,\n  superExtra?: {age: int},\n  otherExtra: option<\n    {\n      test: bool,\n      anotherInlined: {record: bool},\n    },\n  >,\n}\n```\n"}}
+
+Hover src/NestedRecordsHover.res 11:6
+{"contents": {"kind": "markdown", "value": "```rescript\ntype options.extra = {\n  name: string,\n  superExtra?: {age: int},\n  otherExtra: option<\n    {\n      test: bool,\n      anotherInlined: {record: bool},\n    },\n  >,\n}\n```"}}
+
+Hover src/NestedRecordsHover.res 14:8
+{"contents": {"kind": "markdown", "value": "```rescript\ntype options.extra.superExtra = {age: int}\n```"}}
+
+Hover src/NestedRecordsHover.res 18:9
+{"contents": {"kind": "markdown", "value": "```rescript\ntype options.extra.otherExtra = {\n  test: bool,\n  anotherInlined: {record: bool},\n}\n```"}}
+
+Hover src/NestedRecordsHover.res 21:11
+{"contents": {"kind": "markdown", "value": "```rescript\ntype options.extra.otherExtra.anotherInlined = {\n  record: bool,\n}\n```"}}
+

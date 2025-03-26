@@ -1,5 +1,20 @@
-(dirs bsb bsb_exe bsb_helper bsb_helper_exe bsc cmij common core depends ext
-  frontend gentype jsoo js_parser ml syntax)
+(dirs
+ bsb
+ bsb_exe
+ bsb_helper
+ bsb_helper_exe
+ bsc
+ cmij
+ common
+ core
+ depends
+ ext
+ frontend
+ gentype
+ jsoo
+ js_parser
+ ml
+ syntax)
 
 (env
  (dev
