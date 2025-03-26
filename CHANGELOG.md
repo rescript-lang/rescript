@@ -16,6 +16,10 @@
 
 - Fix `Error.fromException`. https://github.com/rescript-lang/rescript/pull/7364
 
+#### :house: Internal
+
+- Remove `Stdlib_Char` module for now. https://github.com/rescript-lang/rescript/pull/7367
+
 # 12.0.0-alpha.10
 
 #### :rocket: New Feature

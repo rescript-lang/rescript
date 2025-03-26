@@ -3,7 +3,6 @@ include Stdlib_Global
 module Array = Stdlib_Array
 module BigInt = Stdlib_BigInt
 module Bool = Stdlib_Bool
-module Char = Stdlib_Char
 module Console = Stdlib_Console
 module DataView = Stdlib_DataView
 module Date = Stdlib_Date

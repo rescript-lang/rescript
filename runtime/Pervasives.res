@@ -244,13 +244,13 @@ external \"++": (string, string) => string = "%string_concat"
 
 /* Character operations -- more in module Char */
 
-@deprecated("Use `Char.code` instead. This will be removed in v13")
+@deprecated("Use type `string` and `String.charCodeAt` instead. This will be removed in v13")
 external int_of_char: char => int = "%identity"
 
-@deprecated("Use `Char.fromIntUnsafe` instead. This will be removed in v13")
+@deprecated("Use type `string` and `String.fromCharCode` instead. This will be removed in v13")
 external unsafe_char_of_int: int => char = "%identity"
 
-@deprecated("Use `Char.fromIntExn` instead. This will be removed in v13")
+@deprecated("Use type `string` and `String.fromCharCode` instead. This will be removed in v13")
 let char_of_int = n =>
   if n < 0 || n > 255 {
     invalid_arg("char_of_int")
