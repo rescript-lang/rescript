@@ -4573,8 +4573,8 @@ and print_jsx_prop ~state prop cmt_tbl =
   | JSXPropPunning (is_optional, name) ->
     let prop_has_trailing_comment = has_trailing_comments cmt_tbl name.loc in
     let doc =
-      if is_optional then Doc.concat [Doc.question; Doc.text name.txt]
-      else Doc.text name.txt
+      if is_optional then Doc.concat [Doc.question; print_ident_like name.txt]
+      else print_ident_like name.txt
     in
     let doc = print_comments doc cmt_tbl name.loc in
     if prop_has_trailing_comment then
@@ -4598,7 +4598,7 @@ and print_jsx_prop ~state prop cmt_tbl =
     let doc =
       Doc.concat
         [
-          Doc.text name.txt;
+          print_ident_like name.txt;
           Doc.equal;
           (if is_optional then Doc.question else Doc.nil);
           Doc.group value_doc;
