@@ -794,25 +794,25 @@ and simple_expr ctxt f x =
       let expression = expression ctxt in
       pp f fmt (pattern ctxt) s expression e1 direction_flag df expression e2
         expression e3
-      (* TODO: what should this really be?
-        I miss some context why this print form even exists.
-        Can/should we improve the output here?
-        *)
-    | Pexp_jsx_fragment (_, xs, _) ->
-      pp f "<>%a</>" (list (simple_expr ctxt)) (collect_jsx_children xs)
-    | Pexp_jsx_unary_element
-        {jsx_unary_element_tag_name = tag_name; jsx_unary_element_props = props}
-      -> (
+    | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
+      pp f "<>%a</>" (list (simple_expr ctxt)) (collect_jsx_children children)
+    | Pexp_jsx_element
+        (Jsx_unary_element
+           {
+             jsx_unary_element_tag_name = tag_name;
+             jsx_unary_element_props = props;
+           }) -> (
       let name = Longident.flatten tag_name.txt |> String.concat "." in
       match props with
       | [] -> pp f "<%s />" name
       | _ -> pp f "<%s %a />" name (print_jsx_props ctxt) props)
-    | Pexp_jsx_container_element
-        {
-          jsx_container_element_tag_name_start = tag_name;
-          jsx_container_element_props = props;
-          jsx_container_element_children = children;
-        } -> (
+    | Pexp_jsx_element
+        (Jsx_container_element
+           {
+             jsx_container_element_tag_name_start = tag_name;
+             jsx_container_element_props = props;
+             jsx_container_element_children = children;
+           }) -> (
       let name = Longident.flatten tag_name.txt |> String.concat "." in
       match props with
       | [] ->

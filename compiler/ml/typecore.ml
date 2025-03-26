@@ -178,16 +178,16 @@ let iter_expression f e =
       expr e;
       module_expr me
     | Pexp_pack me -> module_expr me
-    | Pexp_jsx_fragment (_, children, _) -> iter_jsx_children children
-    | Pexp_jsx_unary_element
-        {jsx_unary_element_tag_name = _; jsx_unary_element_props = props} ->
+    | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
+      iter_jsx_children children
+    | Pexp_jsx_element (Jsx_unary_element {jsx_unary_element_props = props}) ->
       iter_jsx_props props
-    | Pexp_jsx_container_element
-        {
-          jsx_container_element_tag_name_start = _;
-          jsx_container_element_props = props;
-          jsx_container_element_children = children;
-        } ->
+    | Pexp_jsx_element
+        (Jsx_container_element
+           {
+             jsx_container_element_props = props;
+             jsx_container_element_children = children;
+           }) ->
       iter_jsx_props props;
       iter_jsx_children children
   and case {pc_lhs = _; pc_guard; pc_rhs} =
@@ -3213,14 +3213,8 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     | _ -> raise (Error (loc, env, Invalid_extension_constructor_payload)))
   | Pexp_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
-  | Pexp_jsx_fragment _ ->
-    failwith "Pexp_jsx_fragment is expected to be transformed at this point"
-  | Pexp_jsx_unary_element _ ->
-    failwith
-      "Pexp_jsx_unary_element is expected to be transformed at this point"
-  | Pexp_jsx_container_element _ ->
-    failwith
-      "Pexp_jsx_container_element is expected to be transformed at this point"
+  | Pexp_jsx_element _ ->
+    failwith "Pexp_jsx_element is expected to be transformed at this point"
 
 and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
     caselist =

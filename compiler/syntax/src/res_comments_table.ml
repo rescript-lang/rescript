@@ -1461,7 +1461,13 @@ and walk_expression expr t comments =
         attach t.leading return_expr.pexp_loc leading;
         walk_expression return_expr t inside;
         attach t.trailing return_expr.pexp_loc trailing)
-  | Pexp_jsx_fragment (opening_greater_than, children, _closing_lesser_than) ->
+  | Pexp_jsx_element
+      (Jsx_fragment
+         {
+           jsx_fragment_opening = opening_greater_than;
+           jsx_fragment_children = children;
+           jsx_fragment_closing = _closing_lesser_than;
+         }) ->
     let opening_token = {expr.pexp_loc with loc_end = opening_greater_than} in
     let on_same_line, rest = partition_by_on_same_line opening_token comments in
     attach t.trailing opening_token on_same_line;
@@ -1472,13 +1478,15 @@ and walk_expression expr t comments =
     in
     let xs = exprs |> List.map (fun e -> Expression e) in
     walk_list xs t rest
-  | Pexp_jsx_unary_element
-      {jsx_unary_element_tag_name = tag; jsx_unary_element_props = []} ->
+  | Pexp_jsx_element
+      (Jsx_unary_element
+         {jsx_unary_element_tag_name = tag; jsx_unary_element_props = []}) ->
     let _, _, trailing = partition_by_loc comments tag.loc in
     let after_expr, _ = partition_adjacent_trailing tag.loc trailing in
     attach t.trailing tag.loc after_expr
-  | Pexp_jsx_unary_element
-      {jsx_unary_element_tag_name = tag; jsx_unary_element_props = props} ->
+  | Pexp_jsx_element
+      (Jsx_unary_element
+         {jsx_unary_element_tag_name = tag; jsx_unary_element_props = props}) ->
     let _leading, inside, trailing = partition_by_loc comments tag.loc in
     walk_list
       (props
@@ -1494,11 +1502,12 @@ and walk_expression expr t comments =
                Some (ExprArgument {expr; loc})))
       t trailing;
     walk_expression expr t inside
-  | Pexp_jsx_container_element
-      {
-        jsx_container_element_opening_tag_end = opening_greater_than;
-        jsx_container_element_children = children;
-      } ->
+  | Pexp_jsx_element
+      (Jsx_container_element
+         {
+           jsx_container_element_opening_tag_end = opening_greater_than;
+           jsx_container_element_children = children;
+         }) ->
     let opening_token = {expr.pexp_loc with loc_end = opening_greater_than} in
     let on_same_line, rest = partition_by_on_same_line opening_token comments in
     attach t.trailing opening_token on_same_line;

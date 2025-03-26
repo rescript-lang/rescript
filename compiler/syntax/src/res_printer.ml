@@ -2086,12 +2086,7 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
           | {pexp_desc = Pexp_newtype _} -> false
           | {pexp_attributes = [({Location.txt = "res.taggedTemplate"}, _)]} ->
             false
-          | {
-           pexp_desc =
-             ( Pexp_jsx_fragment _ | Pexp_jsx_unary_element _
-             | Pexp_jsx_container_element _ );
-          } ->
-            true
+          | {pexp_desc = Pexp_jsx_element _} -> true
           | e ->
             ParsetreeViewer.has_attributes e.pexp_attributes
             || ParsetreeViewer.is_array_access e)
@@ -2776,23 +2771,33 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
     | Pexp_fun _ | Pexp_newtype _ -> print_arrow e
     | Parsetree.Pexp_constant c ->
       print_constant ~template_literal:(ParsetreeViewer.is_template_literal e) c
-    | Pexp_jsx_fragment (o, children, c) ->
+    | Pexp_jsx_element
+        (Jsx_fragment
+           {
+             jsx_fragment_opening = o;
+             jsx_fragment_children = children;
+             jsx_fragment_closing = c;
+           }) ->
       let xs =
         match children with
         | JSXChildrenSpreading e -> [e]
         | JSXChildrenItems xs -> xs
       in
       print_jsx_fragment ~state o xs c e.pexp_loc cmt_tbl
-    | Pexp_jsx_unary_element
-        {jsx_unary_element_tag_name = tag_name; jsx_unary_element_props = props}
-      ->
+    | Pexp_jsx_element
+        (Jsx_unary_element
+           {
+             jsx_unary_element_tag_name = tag_name;
+             jsx_unary_element_props = props;
+           }) ->
       print_jsx_unary_tag ~state tag_name props cmt_tbl
-    | Pexp_jsx_container_element
-        {
-          jsx_container_element_tag_name_start = tag_name;
-          jsx_container_element_props = props;
-          jsx_container_element_children = children;
-        } ->
+    | Pexp_jsx_element
+        (Jsx_container_element
+           {
+             jsx_container_element_tag_name_start = tag_name;
+             jsx_container_element_props = props;
+             jsx_container_element_children = children;
+           }) ->
       print_jsx_container_tag ~state tag_name props children cmt_tbl
     | Pexp_construct ({txt = Longident.Lident "()"}, _) -> Doc.text "()"
     | Pexp_construct ({txt = Longident.Lident "[]"}, _) ->
@@ -3422,9 +3427,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
     | Pexp_ifthenelse _ ->
       true
     | Pexp_match _ when ParsetreeViewer.is_if_let_expr e -> true
-    | Pexp_jsx_fragment _ | Pexp_jsx_unary_element _
-    | Pexp_jsx_container_element _ ->
-      true
+    | Pexp_jsx_element _ -> true
     | _ -> false
   in
   match e.pexp_attributes with
@@ -4372,12 +4375,7 @@ and print_jsx_container_tag ~state tag_name props
       List.length children > 1
       || List.exists
            (function
-             | {
-                 Parsetree.pexp_desc =
-                   ( Pexp_jsx_container_element _ | Pexp_jsx_fragment _
-                   | Pexp_jsx_unary_element _ );
-               } ->
-               true
+             | {Parsetree.pexp_desc = Pexp_jsx_element _} -> true
              | _ -> false)
            children
     then Doc.hard_line
@@ -4450,12 +4448,7 @@ and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
       List.length children > 1
       || List.exists
            (function
-             | {
-                 Parsetree.pexp_desc =
-                   ( Pexp_jsx_fragment _ | Pexp_jsx_unary_element _
-                   | Pexp_jsx_container_element _ );
-               } ->
-               true
+             | {Parsetree.pexp_desc = Pexp_jsx_element _} -> true
              | _ -> false)
            children
     then Doc.hard_line

@@ -343,19 +343,28 @@ module E = struct
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
     | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
-    | Pexp_jsx_fragment (o, children, c) ->
+    | Pexp_jsx_element
+        (Jsx_fragment
+           {
+             jsx_fragment_opening = o;
+             jsx_fragment_children = children;
+             jsx_fragment_closing = c;
+           }) ->
       jsx_fragment ~loc ~attrs o (map_jsx_children sub children) c
-    | Pexp_jsx_unary_element
-        {jsx_unary_element_tag_name = name; jsx_unary_element_props = props} ->
+    | Pexp_jsx_element
+        (Jsx_unary_element
+           {jsx_unary_element_tag_name = name; jsx_unary_element_props = props})
+      ->
       jsx_unary_element ~loc ~attrs (map_loc sub name) (map_jsx_props sub props)
-    | Pexp_jsx_container_element
-        {
-          jsx_container_element_tag_name_start = name;
-          jsx_container_element_opening_tag_end = ote;
-          jsx_container_element_props = props;
-          jsx_container_element_children = children;
-          jsx_container_element_closing_tag = closing_tag;
-        } ->
+    | Pexp_jsx_element
+        (Jsx_container_element
+           {
+             jsx_container_element_tag_name_start = name;
+             jsx_container_element_opening_tag_end = ote;
+             jsx_container_element_props = props;
+             jsx_container_element_children = children;
+             jsx_container_element_closing_tag = closing_tag;
+           }) ->
       jsx_container_element ~loc ~attrs (map_loc sub name)
         (map_jsx_props sub props) ote
         (map_jsx_children sub children)

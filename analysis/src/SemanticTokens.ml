@@ -245,7 +245,8 @@ let command ~debug ~emitter ~path =
                ~posEnd:(Some (Loc.end_ loc))
                ~lid ~debug;
       Ast_iterator.default_iterator.expr iterator e
-    | Pexp_jsx_unary_element {jsx_unary_element_tag_name = lident} ->
+    | Pexp_jsx_element (Jsx_unary_element {jsx_unary_element_tag_name = lident})
+      ->
       (*
          Angled brackets:
           - These are handled in the grammar:  <>  </>  </  />
@@ -261,13 +262,14 @@ let command ~debug ~emitter ~path =
       emitter (* <foo ...props /> <-- *)
       |> emitJsxTag ~debug ~name:"/>" ~pos:(closing_line, closing_column - 2)
       (* minus two for /> *)
-    | Pexp_jsx_container_element
-        {
-          jsx_container_element_tag_name_start = lident;
-          jsx_container_element_opening_tag_end = posOfGreatherthanAfterProps;
-          jsx_container_element_children = children;
-          jsx_container_element_closing_tag = closing_tag_opt;
-        } ->
+    | Pexp_jsx_element
+        (Jsx_container_element
+           {
+             jsx_container_element_tag_name_start = lident;
+             jsx_container_element_opening_tag_end = posOfGreatherthanAfterProps;
+             jsx_container_element_children = children;
+             jsx_container_element_closing_tag = closing_tag_opt;
+           }) ->
       (* opening tag *)
       emitter (* --> <div... *)
       |> emitJsxTag ~debug ~name:"<" ~pos:(Loc.start e.pexp_loc);

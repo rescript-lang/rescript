@@ -345,19 +345,22 @@ and expression i ppf x =
   | Pexp_extension (s, arg) ->
     line i ppf "Pexp_extension \"%s\"\n" s.txt;
     payload i ppf arg
-  | Pexp_jsx_fragment (_, children, _) ->
+  | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
     line i ppf "Pexp_jsx_fragment";
     jsx_children i ppf children
-  | Pexp_jsx_unary_element
-      {jsx_unary_element_tag_name = name; jsx_unary_element_props = props} ->
+  | Pexp_jsx_element
+      (Jsx_unary_element
+         {jsx_unary_element_tag_name = name; jsx_unary_element_props = props})
+    ->
     line i ppf "Pexp_jsx_unary_element %a\n" fmt_longident_loc name;
     jsx_props i ppf props
-  | Pexp_jsx_container_element
-      {
-        jsx_container_element_tag_name_start = name;
-        jsx_container_element_props = props;
-        jsx_container_element_children = children;
-      } ->
+  | Pexp_jsx_element
+      (Jsx_container_element
+         {
+           jsx_container_element_tag_name_start = name;
+           jsx_container_element_props = props;
+           jsx_container_element_children = children;
+         }) ->
     line i ppf "Pexp_jsx_container_element %a\n" fmt_longident_loc name;
     jsx_props i ppf props;
     jsx_children i ppf children

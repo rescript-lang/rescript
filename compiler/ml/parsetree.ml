@@ -315,16 +315,18 @@ and expression_desc =
   | Pexp_extension of extension
   (* [%id] *)
   (* . *)
-  (* represents <> foo </> , the entire range is stored in the expression , we keep track of >, children and </ *)
-  | Pexp_jsx_fragment of
-      (* > *) Lexing.position
-      * (* children *)
-        jsx_children
-      * (* </ *) Lexing.position
-  (* represents <input type_="text" /> *)
-  | Pexp_jsx_unary_element of jsx_unary_element
-  (* represents <div className={v}>{children}</div> *)
-  | Pexp_jsx_container_element of jsx_container_element
+  | Pexp_jsx_element of jsx_element
+
+and jsx_element =
+  | Jsx_fragment of jsx_fragment
+  | Jsx_unary_element of jsx_unary_element
+  | Jsx_container_element of jsx_container_element
+
+and jsx_fragment = {
+  (* > *) jsx_fragment_opening: Lexing.position;
+  (* children *) jsx_fragment_children: jsx_children;
+  (* </ *) jsx_fragment_closing: Lexing.position;
+}
 
 and jsx_unary_element = {
   (* jsx_unary_element_opening: Lexing.position; *)

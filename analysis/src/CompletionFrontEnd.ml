@@ -1322,21 +1322,23 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                         inJsx = !inJsxContext;
                       }))
             | None -> ())
-        | Pexp_jsx_unary_element
-            {
-              jsx_unary_element_tag_name = compName;
-              jsx_unary_element_props = props;
-            }
-        | Pexp_jsx_container_element
-            {
-              jsx_container_element_tag_name_start = compName;
-              jsx_container_element_props = props;
-            } ->
+        | Pexp_jsx_element
+            ( Jsx_unary_element
+                {
+                  jsx_unary_element_tag_name = compName;
+                  jsx_unary_element_props = props;
+                }
+            | Jsx_container_element
+                {
+                  jsx_container_element_tag_name_start = compName;
+                  jsx_container_element_props = props;
+                } ) ->
           inJsxContext := true;
           let children =
             match expr.pexp_desc with
-            | Pexp_jsx_container_element
-                {jsx_container_element_children = children} ->
+            | Pexp_jsx_element
+                (Jsx_container_element
+                   {jsx_container_element_children = children}) ->
               children
             | _ -> JSXChildrenItems []
           in
@@ -1360,12 +1362,13 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
               | Some childrenPosStart -> Pos.toString childrenPosStart);
           let jsxCompletable =
             match expr.pexp_desc with
-            | Pexp_jsx_container_element
-                {
-                  jsx_container_element_closing_tag = None;
-                  jsx_container_element_children =
-                    JSXChildrenSpreading _ | JSXChildrenItems (_ :: _);
-                } ->
+            | Pexp_jsx_element
+                (Jsx_container_element
+                   {
+                     jsx_container_element_closing_tag = None;
+                     jsx_container_element_children =
+                       JSXChildrenSpreading _ | JSXChildrenItems (_ :: _);
+                   }) ->
               (* This is a weird edge case where there is no closing tag but there are children *)
               None
             | _ ->

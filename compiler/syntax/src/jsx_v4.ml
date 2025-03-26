@@ -1282,73 +1282,65 @@ let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
 let expr ~(config : Jsx_common.jsx_config) mapper expression =
   match expression with
   | {
-   pexp_desc = Pexp_jsx_fragment (_, children, _);
+   pexp_desc = Pexp_jsx_element jsx_element;
    pexp_loc = loc;
    pexp_attributes = attrs;
-  } ->
+  } -> (
     let loc = {loc with loc_ghost = true} in
-    let fragment =
-      Exp.ident ~loc {loc; txt = module_access_name config "jsxFragment"}
-    in
-    mk_react_jsx config mapper loc attrs FragmentComponent fragment [] children
-  | {
-   pexp_desc =
-     Pexp_jsx_unary_element
-       {jsx_unary_element_tag_name = tag_name; jsx_unary_element_props = props};
-   pexp_loc = loc;
-   pexp_attributes = attrs;
-  } ->
-    let loc = {loc with loc_ghost = true} in
-    let name = Longident.flatten tag_name.txt |> String.concat "." in
-    if starts_with_lowercase name then
-      (* For example 'input' *)
-      let component_name_expr = constant_string ~loc:tag_name.loc name in
-      mk_react_jsx config mapper loc attrs LowercasedComponent
-        component_name_expr props (JSXChildrenItems [])
-    else if starts_with_uppercase name then
-      (* MyModule.make *)
-      let make_id =
-        Exp.ident ~loc:tag_name.loc
-          {txt = Ldot (tag_name.txt, "make"); loc = tag_name.loc}
+    match jsx_element with
+    | Jsx_fragment {jsx_fragment_children = children} ->
+      let fragment =
+        Exp.ident ~loc {loc; txt = module_access_name config "jsxFragment"}
       in
-      mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
-        (JSXChildrenItems [])
-    else
-      Jsx_common.raise_error ~loc
-        "JSX: element name is neither upper- or lowercase, got \"%s\""
-        (Longident.flatten tag_name.txt |> String.concat ".")
-  | {
-   pexp_desc =
-     Pexp_jsx_container_element
-       {
-         jsx_container_element_tag_name_start = tag_name;
-         jsx_container_element_props = props;
-         jsx_container_element_children = children;
-       };
-   pexp_loc = loc;
-   pexp_attributes = attrs;
-  } ->
-    let loc = {loc with loc_ghost = true} in
-    let name = Longident.flatten tag_name.txt |> String.concat "." in
-    (* For example: <div> <h1></h1> <br /> </div>
+      mk_react_jsx config mapper loc attrs FragmentComponent fragment []
+        children
+    | Jsx_unary_element
+        {jsx_unary_element_tag_name = tag_name; jsx_unary_element_props = props}
+      ->
+      let name = Longident.flatten tag_name.txt |> String.concat "." in
+      if starts_with_lowercase name then
+        (* For example 'input' *)
+        let component_name_expr = constant_string ~loc:tag_name.loc name in
+        mk_react_jsx config mapper loc attrs LowercasedComponent
+          component_name_expr props (JSXChildrenItems [])
+      else if starts_with_uppercase name then
+        (* MyModule.make *)
+        let make_id =
+          Exp.ident ~loc:tag_name.loc
+            {txt = Ldot (tag_name.txt, "make"); loc = tag_name.loc}
+        in
+        mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
+          (JSXChildrenItems [])
+      else
+        Jsx_common.raise_error ~loc
+          "JSX: element name is neither upper- or lowercase, got \"%s\""
+          (Longident.flatten tag_name.txt |> String.concat ".")
+    | Jsx_container_element
+        {
+          jsx_container_element_tag_name_start = tag_name;
+          jsx_container_element_props = props;
+          jsx_container_element_children = children;
+        } ->
+      let name = Longident.flatten tag_name.txt |> String.concat "." in
+      (* For example: <div> <h1></h1> <br /> </div>
          This has an impact if we want to use ReactDOM.jsx or ReactDOM.jsxs
            *)
-    if starts_with_lowercase name then
-      let component_name_expr = constant_string ~loc:tag_name.loc name in
-      mk_react_jsx config mapper loc attrs LowercasedComponent
-        component_name_expr props children
-    else if starts_with_uppercase name then
-      (* MyModule.make *)
-      let make_id =
-        Exp.ident ~loc:tag_name.loc
-          {txt = Ldot (tag_name.txt, "make"); loc = tag_name.loc}
-      in
-      mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
-        children
-    else
-      Jsx_common.raise_error ~loc
-        "JSX: element name is neither upper- or lowercase, got \"%s\""
-        (Longident.flatten tag_name.txt |> String.concat ".")
+      if starts_with_lowercase name then
+        let component_name_expr = constant_string ~loc:tag_name.loc name in
+        mk_react_jsx config mapper loc attrs LowercasedComponent
+          component_name_expr props children
+      else if starts_with_uppercase name then
+        (* MyModule.make *)
+        let make_id =
+          Exp.ident ~loc:tag_name.loc
+            {txt = Ldot (tag_name.txt, "make"); loc = tag_name.loc}
+        in
+        mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
+          children
+      else
+        Jsx_common.raise_error ~loc
+          "JSX: element name is neither upper- or lowercase, got \"%s\""
+          (Longident.flatten tag_name.txt |> String.concat "."))
   | e -> default_mapper.expr mapper e
 
 let module_binding ~(config : Jsx_common.jsx_config) mapper module_binding =

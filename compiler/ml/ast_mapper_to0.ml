@@ -467,7 +467,13 @@ module E = struct
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
     | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
-    | Pexp_jsx_fragment (o, children, c) ->
+    | Pexp_jsx_element
+        (Jsx_fragment
+           {
+             jsx_fragment_opening = o;
+             jsx_fragment_children = children;
+             jsx_fragment_closing = c;
+           }) ->
       (*
          The location of  Pexp_jsx_fragment is from the start of < till the end of />.
          This is not the case in the old AST. There it is from >...</
@@ -475,9 +481,12 @@ module E = struct
       let loc = {loc with loc_start = o; loc_end = c} in
       let mapped = map_jsx_children sub loc children in
       {mapped with pexp_attributes = jsx_attr sub :: attrs}
-    | Pexp_jsx_unary_element
-        {jsx_unary_element_tag_name = tag_name; jsx_unary_element_props = props}
-      ->
+    | Pexp_jsx_element
+        (Jsx_unary_element
+           {
+             jsx_unary_element_tag_name = tag_name;
+             jsx_unary_element_props = props;
+           }) ->
       let tag_ident = map_loc sub tag_name in
       let props = map_jsx_props sub props in
       let children_expr =
@@ -501,12 +510,13 @@ module E = struct
             (Asttypes.Noloc.Labelled "children", children_expr);
             (Asttypes.Noloc.Nolabel, unit_expr);
           ])
-    | Pexp_jsx_container_element
-        {
-          jsx_container_element_tag_name_start = tag_name;
-          jsx_container_element_props = props;
-          jsx_container_element_children = children;
-        } ->
+    | Pexp_jsx_element
+        (Jsx_container_element
+           {
+             jsx_container_element_tag_name_start = tag_name;
+             jsx_container_element_props = props;
+             jsx_container_element_children = children;
+           }) ->
       let tag_ident = map_loc sub tag_name in
       let props = map_jsx_props sub props in
       let children_expr = map_jsx_children sub loc children in

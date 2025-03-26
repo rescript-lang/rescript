@@ -111,9 +111,7 @@ let identifyPexp pexp =
   | Pexp_pack _ -> "Pexp_pack"
   | Pexp_extension _ -> "Pexp_extension"
   | Pexp_open _ -> "Pexp_open"
-  | Pexp_jsx_fragment _ -> "Pexp_jsx_fragment"
-  | Pexp_jsx_unary_element _ -> "Pexp_jsx_unary_element"
-  | Pexp_jsx_container_element _ -> "Pexp_jsx_container_element"
+  | Pexp_jsx_element _ -> "Pexp_jsx_element"
 
 let identifyPpat pat =
   match pat with
@@ -153,13 +151,8 @@ let rec unwrapIfOption (t : Types.type_expr) =
   | _ -> t
 
 let isJsxComponent (vb : Parsetree.value_binding) =
-  vb.pvb_attributes
-  |> List.exists (function
-       | {Location.txt = "react.component" | "jsx.component"}, _payload -> true
-       | _ -> false)
-  ||
   match vb.pvb_expr.pexp_desc with
-  | Parsetree.Pexp_jsx_fragment _ -> true
+  | Parsetree.Pexp_jsx_element _ -> true
   | _ -> false
 
 let checkName name ~prefix ~exact =

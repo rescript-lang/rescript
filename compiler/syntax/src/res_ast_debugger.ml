@@ -707,7 +707,7 @@ module SexpAst = struct
           ]
       | Pexp_extension ext ->
         Sexp.list [Sexp.atom "Pexp_extension"; extension ext]
-      | Pexp_jsx_fragment (_, children, _) ->
+      | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
         let xs =
           match children with
           | JSXChildrenSpreading e -> [e]
@@ -717,17 +717,19 @@ module SexpAst = struct
           [
             Sexp.atom "Pexp_jsx_fragment"; Sexp.list (map_empty ~f:expression xs);
           ]
-      | Pexp_jsx_unary_element {jsx_unary_element_props = props} ->
+      | Pexp_jsx_element (Jsx_unary_element {jsx_unary_element_props = props})
+        ->
         Sexp.list
           [
             Sexp.atom "Pexp_jsx_unary_element";
             Sexp.list (map_empty ~f:jsx_prop props);
           ]
-      | Pexp_jsx_container_element
-          {
-            jsx_container_element_props = props;
-            jsx_container_element_children = children;
-          } ->
+      | Pexp_jsx_element
+          (Jsx_container_element
+             {
+               jsx_container_element_props = props;
+               jsx_container_element_children = children;
+             }) ->
         let xs =
           match children with
           | JSXChildrenSpreading e -> [e]
