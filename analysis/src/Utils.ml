@@ -151,9 +151,10 @@ let rec unwrapIfOption (t : Types.type_expr) =
   | _ -> t
 
 let isJsxComponent (vb : Parsetree.value_binding) =
-  match vb.pvb_expr.pexp_desc with
-  | Parsetree.Pexp_jsx_element _ -> true
-  | _ -> false
+  vb.pvb_attributes
+  |> List.exists (function
+       | {Location.txt = "react.component" | "jsx.component"}, _payload -> true
+       | _ -> false)
 
 let checkName name ~prefix ~exact =
   if exact then name = prefix else startsWith name prefix
