@@ -2843,10 +2843,12 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         (Jsx_container_element
            {
              jsx_container_element_tag_name_start = tag_name;
+             jsx_container_element_opening_tag_end = opening_greater_than;
              jsx_container_element_props = props;
              jsx_container_element_children = children;
            }) ->
-      print_jsx_container_tag ~state tag_name props children cmt_tbl
+      print_jsx_container_tag ~state tag_name opening_greater_than props
+        children e.pexp_loc cmt_tbl
     | Pexp_construct ({txt = Longident.Lident "()"}, _) -> Doc.text "()"
     | Pexp_construct ({txt = Longident.Lident "[]"}, _) ->
       Doc.concat
@@ -4403,9 +4405,14 @@ and print_jsx_unary_tag ~state tag_name props cmt_tbl =
          closing_tag_doc;
        ])
 
-and print_jsx_container_tag ~state tag_name props
-    (children : Parsetree.jsx_children) cmt_tbl =
+and print_jsx_container_tag ~state tag_name
+    (opening_greater_than : Lexing.position) props
+    (children : Parsetree.jsx_children) (pexp_loc : Location.t) cmt_tbl =
   let name = print_jsx_name tag_name in
+  let opening_greater_than_doc =
+    let loc = {pexp_loc with loc_end = opening_greater_than} in
+    print_comments Doc.greater_than cmt_tbl loc
+  in
   let formatted_props = print_jsx_props ~state props cmt_tbl in
   (* <div className="test" /> *)
   let has_children =
@@ -4463,8 +4470,8 @@ and print_jsx_container_tag ~state tag_name props
                 </A>
              *)
                 (if has_trailing_comments cmt_tbl tag_name.Asttypes.loc then
-                   Doc.concat [Doc.soft_line; Doc.greater_than]
-                 else Doc.greater_than);
+                   Doc.concat [Doc.soft_line; opening_greater_than_doc]
+                 else opening_greater_than_doc);
               ]);
          Doc.concat
            [
@@ -4621,15 +4628,11 @@ and print_jsx_prop ~state prop cmt_tbl =
 and print_jsx_props ~state props cmt_tbl : Doc.t list =
   props |> List.map (fun prop -> print_jsx_prop ~state prop cmt_tbl)
 
-(* div -> div.
- * Navabar.createElement -> Navbar
- * Staff.Users.createElement -> Staff.Users *)
 and print_jsx_name {txt = lident} =
   let print_ident = print_ident_like ~allow_uident:true ~allow_hyphen:true in
   let rec flatten acc lident =
     match lident with
     | Longident.Lident txt -> print_ident txt :: acc
-    | Ldot (lident, "createElement") -> flatten acc lident
     | Ldot (lident, txt) -> flatten (print_ident txt :: acc) lident
     | _ -> acc
   in

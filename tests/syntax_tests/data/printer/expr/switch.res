@@ -40,7 +40,7 @@ switch count {
 }
 
 switch route {
-| A => <div> // div tag moves to the next line
+| A => <div> // div tag stays after >
     <div> {React.string("First A div")} </div>
     <div> {React.string("Second A div")} </div>
   </div>
