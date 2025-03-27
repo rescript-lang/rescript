@@ -4588,19 +4588,20 @@ and print_jsx_prop ~state prop cmt_tbl =
       Doc.group (Doc.concat [Doc.break_parent; doc])
     else doc
   | JSXPropValue (name, is_optional, value) ->
-    let value =
-      {
-        value with
-        pexp_loc = {value.pexp_loc with loc_start = name.loc.loc_start};
-      }
-    in
     let value_doc =
-      let v = print_expression ~state value cmt_tbl in
+      let leading_line_comment_present =
+        has_leading_line_comment cmt_tbl value.pexp_loc
+      in
+      let doc = print_expression_with_comments ~state value cmt_tbl in
       match Parens.jsx_prop_expr value with
       | Parenthesized | Braced _ ->
-        let inner_doc = if Parens.braced_expr value then add_parens v else v in
-        Doc.concat [Doc.lbrace; inner_doc; Doc.rbrace]
-      | _ -> v
+        (* {(20: int)} make sure that we also protect the expression inside *)
+        let inner_doc =
+          if Parens.braced_expr value then add_parens doc else doc
+        in
+        if leading_line_comment_present then add_braces inner_doc
+        else Doc.concat [Doc.lbrace; inner_doc; Doc.rbrace]
+      | _ -> doc
     in
     let doc =
       Doc.concat
