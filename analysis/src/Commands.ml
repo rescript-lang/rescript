@@ -57,22 +57,13 @@ let codeLens ~path ~debug =
   in
   print_endline result
 
-let hover ~path ~pos ~currentFile ~debug ~supportsMarkdownLinks =
+let hover ~path ~pos ~debug ~supportsMarkdownLinks =
   let result =
     match Cmt.loadFullCmtFromPath ~path with
     | None -> Protocol.null
     | Some full -> (
       match References.getLocItem ~full ~pos ~debug with
-      | None -> (
-        if debug then
-          Printf.printf
-            "Nothing at that position. Now trying to use completion.\n";
-        match
-          Hover.getHoverViaCompletions ~debug ~path ~pos ~currentFile
-            ~forHover:true ~supportsMarkdownLinks
-        with
-        | None -> Protocol.null
-        | Some hover -> hover)
+      | None -> Protocol.null
       | Some locItem -> (
         let isModule =
           match locItem.locType with
@@ -393,8 +384,7 @@ let test ~path =
               ("Hover " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
             let currentFile = createCurrentFile () in
-            hover ~supportsMarkdownLinks:true ~path ~pos:(line, col)
-              ~currentFile ~debug:true;
+            hover ~supportsMarkdownLinks:true ~path ~pos:(line, col) ~debug:true;
             Sys.remove currentFile
           | "she" ->
             print_endline
