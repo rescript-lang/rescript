@@ -18,18 +18,6 @@ Inlay Hint src/InlayHint.res 1:34
     "paddingLeft": true,
     "paddingRight": false
 }, {
-    "position": {"line": 26, "character": 23},
-    "label": ": (string, string)",
-    "kind": 1,
-    "paddingLeft": true,
-    "paddingRight": false
-}, {
-    "position": {"line": 18, "character": 9},
-    "label": ": string",
-    "kind": 1,
-    "paddingLeft": true,
-    "paddingRight": false
-}, {
     "position": {"line": 16, "character": 9},
     "label": ": (string, string)",
     "kind": 1,

@@ -460,6 +460,9 @@ type locType =
   | LModule of locKind
   | TopLevelModule of string
   | TypeDefinition of string * Types.type_declaration * int
+  (* For all other expressions and patterns that are not tracked by the above. Needed to produce hovers, completions, and what not. *)
+  | OtherExpression of Types.type_expr
+  | OtherPattern of Types.type_expr
 
 type locItem = {loc: Location.t; locType: locType}
 
@@ -535,6 +538,8 @@ let locTypeToString = function
     "Typed " ^ name ^ " " ^ Shared.typeToString e ^ " "
     ^ locKindToString locKind
   | Constant _ -> "Constant"
+  | OtherExpression e -> "OtherExpression " ^ Shared.typeToString e
+  | OtherPattern e -> "OtherPattern " ^ Shared.typeToString e
   | LModule locKind -> "LModule " ^ locKindToString locKind
   | TopLevelModule _ -> "TopLevelModule"
   | TypeDefinition _ -> "TypeDefinition"

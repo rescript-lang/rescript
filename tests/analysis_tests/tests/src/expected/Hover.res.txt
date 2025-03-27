@@ -19,7 +19,7 @@ heuristic for: [makeProps, make, createElement], give the loc of `make`
 {"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
 
 Hover src/Hover.res 33:4
-{"contents": {"kind": "markdown", "value": "```rescript\nunit => int\n```\n---\nDoc comment for functionWithTypeAnnotation"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nunit => int\n```"}}
 
 Hover src/Hover.res 37:13
 {"contents": {"kind": "markdown", "value": "```rescript\nstring\n```"}}
@@ -49,16 +49,10 @@ Hover src/Hover.res 77:7
 {"contents": {"kind": "markdown", "value": "```rescript\nmodule A: {\n  let x: int\n}\n```"}}
 
 Hover src/Hover.res 91:10
-Nothing at that position. Now trying to use completion.
-posCursor:[91:10] posNoWhite:[91:8] Found expr:[88:2->91:9]
-JSX <Comp:[88:3->88:7] > _children:89:4
 null
 
 Hover src/Hover.res 98:10
-Nothing at that position. Now trying to use completion.
-posCursor:[98:10] posNoWhite:[98:9] Found expr:[95:2->98:10]
-JSX <Comp1:[95:3->95:8] > _children:96:4
-null
+{"contents": {"kind": "markdown", "value": "```rescript\nReact.element\n```"}}
 
 Hover src/Hover.res 103:25
 {"contents": {"kind": "markdown", "value": "```rescript\nfloat\n```"}}
@@ -73,12 +67,7 @@ Hover src/Hover.res 119:25
 {"contents": {"kind": "markdown", "value": "```rescript\nAA.cond<([< #str(string)] as 'a)> => AA.cond<'a>\n```\n\n---\n\n```\n \n```\n```rescript\ntype AA.cond<'a> = 'a\n  constraint 'a = [< #str(string)]\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C110%2C2%5D)\n"}}
 
 Hover src/Hover.res 122:3
-Nothing at that position. Now trying to use completion.
-Attribute id:live:[122:0->122:5] label:live
-Completable: Cdecorator(live)
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-{"contents": {"kind": "markdown", "value": "The `@live` decorator is for reanalyze, a static analysis tool for ReScript that can do dead code analysis.\n\n`@live` tells the dead code analysis that the value should be considered live, even though it might appear to be dead. This is typically used in case of FFI where there are indirect ways to access values. It can be added to everything that could otherwise be considered unused by the dead code analysis - values, functions, arguments, records, individual record fields, and so on.\n\n[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#live-decorator).\n\nHint: Did you know you can run an interactive code analysis in your project by running the command `> ReScript: Start Code Analyzer`? Try it!"}}
+null
 
 Hover src/Hover.res 125:4
 {"contents": {"kind": "markdown", "value": "```rescript\nunit => unit => int\n```"}}
@@ -244,20 +233,10 @@ Hover src/Hover.res 197:4
 {"contents": {"kind": "markdown", "value": "```rescript\nCompV4.props<int, string> => React.element\n```\n\n---\n\n```\n \n```\n```rescript\ntype CompV4.props<'n, 's> = {n?: 'n, s: 's}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C190%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.element = Jsx.element\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C0%2C0%5D)\n"}}
 
 Hover src/Hover.res 202:16
-{"contents": {"kind": "markdown", "value": "```rescript\nuseR\n```\n\n---\n\n```\n \n```\n```rescript\ntype useR = {x: int, y: list<option<r<float>>>}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C200%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype r<'a> = {i: 'a, f: float}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C101%2C0%5D)\n"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nuseR\n```"}}
 
 Hover src/Hover.res 210:13
-Nothing at that position. Now trying to use completion.
-posCursor:[210:13] posNoWhite:[210:12] Found expr:[210:11->210:14]
-Pexp_ident usr:[210:11->210:14]
-Completable: Cpath Value[usr]
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-ContextPath Value[usr]
-Path usr
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-{"contents": {"kind": "markdown", "value": "```rescript\nuseR\n```\n\n---\n\n```\n \n```\n```rescript\ntype useR = {x: int, y: list<option<r<float>>>}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C200%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype r<'a> = {i: 'a, f: float}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C101%2C0%5D)\n"}}
+null
 
 Hover src/Hover.res 230:20
 {"contents": {"kind": "markdown", "value": "```rescript\nint\n```\n---\n More Stuff "}}
@@ -266,23 +245,7 @@ Hover src/Hover.res 233:17
 {"contents": {"kind": "markdown", "value": "```rescript\nint\n```\n---\n More Stuff "}}
 
 Hover src/Hover.res 245:6
-Nothing at that position. Now trying to use completion.
-posCursor:[245:6] posNoWhite:[245:5] Found expr:[245:3->245:14]
-Pexp_field [245:3->245:4] someField:[245:5->245:14]
-Completable: Cpath Value[x].someField
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-ContextPath Value[x].someField
-ContextPath Value[x]
-Path x
-ContextPath Value[x]->someField
-ContextPath Value[x]
-Path x
-CPPipe pathFromEnv: found:true
-Path Hover.someField
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-{"contents": {"kind": "markdown", "value": " Mighty fine field here. \n\n```rescript\nbool\n```"}}
+null
 
 Hover src/Hover.res 248:19
 {"contents": {"kind": "markdown", "value": "```rescript\nbool\n```\n---\n Mighty fine field here. "}}
@@ -291,34 +254,10 @@ Hover src/Hover.res 253:20
 {"contents": {"kind": "markdown", "value": "```rescript\nvariant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n\n---\n```rescript\nCoolVariant\n```\n---\n Cool variant! "}}
 
 Hover src/Hover.res 257:23
-Nothing at that position. Now trying to use completion.
-posCursor:[257:23] posNoWhite:[257:22] Found expr:[257:22->257:25]
-Pexp_ident fff:[257:22->257:25]
-Completable: Cpath Value[fff]
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-ContextPath Value[fff]
-Path fff
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-ContextPath string
-{"contents": {"kind": "markdown", "value": "```rescript\nstring\n```"}}
+null
 
 Hover src/Hover.res 260:33
-Nothing at that position. Now trying to use completion.
-posCursor:[260:33] posNoWhite:[260:32] Found expr:[260:31->260:40]
-Pexp_ident someField:[260:31->260:40]
-Completable: Cpath Value[someField]
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-ContextPath Value[someField]
-Path someField
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-ContextPath CPatternPath(Value[x])->recordField(someField)
-ContextPath Value[x]
-Path x
-{"contents": {"kind": "markdown", "value": "```rescript\nbool\n```"}}
+null
 
 Hover src/Hover.res 263:8
 {"contents": {"kind": "markdown", "value": "\n [`Belt.Array`]()\n\n  **mutable array**: Utilities functions\n\n```rescript\nmodule Array: {\n  module Id\n  module Array\n  module SortArray\n  module MutableQueue\n  module MutableStack\n  module List\n  module Range\n  module Set\n  module Map\n  module MutableSet\n  module MutableMap\n  module HashSet\n  module HashMap\n  module Option\n  module Result\n  module Int\n  module Float\n}\n```"}}

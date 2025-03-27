@@ -967,17 +967,5 @@ Path ReactDOM.Client.Root.
   }]
 
 Hover src/CompletionInferValues.res 160:27
-Nothing at that position. Now trying to use completion.
-posCursor:[160:27] posNoWhite:[160:26] Found expr:[160:25->160:28]
-Pexp_ident res:[160:25->160:28]
-Completable: Cpath Value[res]
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-ContextPath Value[res]
-Path res
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-ContextPath Value[res]
-Path res
-{"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
+null
 
