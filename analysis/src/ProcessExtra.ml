@@ -383,7 +383,7 @@ let pat ~(file : File.t) ~env ~extra (iter : Tast_iterator.iterator)
     (* Log.log("Pattern " ++ name.txt); *)
     let stamp = Ident.binding_time ident in
     addForPattern stamp name
-  | _ -> ());
+  | _ -> addLocItem extra pattern.pat_loc (OtherPattern pattern.pat_type));
   Tast_iterator.default_iterator.pat iter pattern
 
 let expr ~env ~(extra : extra) (iter : Tast_iterator.iterator)
@@ -409,7 +409,8 @@ let expr ~env ~(extra : extra) (iter : Tast_iterator.iterator)
   | Texp_field (inner, lident, _label_description) ->
     addForField ~env ~extra ~recordType:inner.exp_type
       ~fieldType:expression.exp_type lident
-  | _ -> ());
+  | _ ->
+    addLocItem extra expression.exp_loc (OtherExpression expression.exp_type));
   Tast_iterator.default_iterator.expr iter expression
 
 let getExtra ~file ~infos =
