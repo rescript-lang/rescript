@@ -1113,12 +1113,8 @@ let loc_from_prop = function
   | JSXPropValue (_, _, {pexp_loc}) -> pexp_loc
   | JSXPropSpreading (loc, _) -> loc
 
-let mk_record_from_props mapper
-    (* automatic mode always will filter this out. 
-      Upper case components for classic mode as well.
-    *)
-      (filter_key : bool) (jsx_expr_loc : Location.t) (props : jsx_props) :
-    expression =
+let mk_record_from_props mapper (jsx_expr_loc : Location.t) (props : jsx_props)
+    : expression =
   (* Create an artificial range from the first till the last prop *)
   let loc =
     match props with
@@ -1140,14 +1136,12 @@ let mk_record_from_props mapper
   in
   (* key should be filtered out *)
   let props =
-    if not filter_key then props
-    else
-      props
-      |> List.filter (function
-           | JSXPropPunning (_, {txt = "key"})
-           | JSXPropValue ({txt = "key"}, _, _) ->
-             false
-           | _ -> true)
+    props
+    |> List.filter (function
+         | JSXPropPunning (_, {txt = "key"}) | JSXPropValue ({txt = "key"}, _, _)
+           ->
+           false
+         | _ -> true)
   in
   let props, spread_props =
     match props with
@@ -1186,8 +1180,9 @@ let mk_record_from_props mapper
 let try_find_key_prop (props : jsx_props) : (arg_label * expression) option =
   props
   |> List.find_map (function
-       | JSXPropPunning (_, ({txt = "key"} as name)) ->
-         Some (Labelled name, Exp.ident {txt = Lident "key"; loc = name.loc})
+       | JSXPropPunning (is_optional, ({txt = "key"} as name)) ->
+         let arg_label = if is_optional then Optional name else Labelled name in
+         Some (arg_label, Exp.ident {txt = Lident "key"; loc = name.loc})
        | JSXPropValue (({txt = "key"} as name), is_optional, expr) ->
          let arg_label = if is_optional then Optional name else Labelled name in
          Some (arg_label, expr)
@@ -1247,7 +1242,7 @@ let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
   let props_with_children =
     append_children_prop config mapper component_description props children
   in
-  let props_record = mk_record_from_props mapper true loc props_with_children in
+  let props_record = mk_record_from_props mapper loc props_with_children in
   let jsx_expr, key_and_unit =
     let mk_element_bind (jsx_part : string) : Longident.t =
       match component_description with
