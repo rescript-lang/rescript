@@ -68,7 +68,9 @@ let hover ~path ~pos ~debug ~supportsMarkdownLinks =
         let isModule =
           match locItem.locType with
           | LModule _ | TopLevelModule _ -> true
-          | TypeDefinition _ | Typed _ | Constant _ -> false
+          | TypeDefinition _ | Typed _ | Constant _ | OtherExpression _
+          | OtherPattern _ ->
+            false
         in
         let uriLocOpt = References.definitionForLocItem ~full locItem in
         let skipZero =
@@ -126,7 +128,9 @@ let definition ~path ~pos ~debug =
           let isModule =
             match locItem.locType with
             | LModule _ | TopLevelModule _ -> true
-            | TypeDefinition _ | Typed _ | Constant _ -> false
+            | TypeDefinition _ | Typed _ | Constant _ | OtherExpression _
+            | OtherPattern _ ->
+              false
           in
           let skipLoc =
             (not isModule) && (not isInterface) && posIsZero loc.loc_start

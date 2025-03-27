@@ -8,7 +8,7 @@ TypeDefinition src/TypeDefinition.res 8:4
 {"uri": "TypeDefinition.res", "range": {"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 28}}}
 
 TypeDefinition src/TypeDefinition.res 13:4
-{"uri": "TypeDefinition.res", "range": {"start": {"line": 11, "character": 0}, "end": {"line": 11, "character": 26}}}
+null
 
 TypeDefinition src/TypeDefinition.res 16:13
 {"uri": "TypeDefinition.res", "range": {"start": {"line": 2, "character": 0}, "end": {"line": 2, "character": 28}}}
