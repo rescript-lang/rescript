@@ -2417,6 +2417,9 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     end_def ();
     unify_var env (newvar ()) funct.exp_type;
 
+    let args_with_loc =
+      List.map2 (fun (sarg, _) (_, label_exp) -> (sarg, label_exp)) sargs args
+    in
     let mk_apply funct args =
       rue
         {
@@ -2435,8 +2438,8 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
       | _ -> false
     in
 
-    if fully_applied && not is_primitive then rue (mk_apply funct args)
-    else rue (mk_apply funct args)
+    if fully_applied && not is_primitive then rue (mk_apply funct args_with_loc)
+    else rue (mk_apply funct args_with_loc)
   | Pexp_match (sarg, caselist) ->
     begin_def ();
     let arg = type_exp env sarg in
