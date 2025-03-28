@@ -278,7 +278,7 @@ let option_none ty loc =
   let cnone = Env.lookup_constructor lid env in
   mkexp (Texp_construct (mknoloc lid, cnone, [])) ty loc env
 
-let tainted () =
+let tainted_expr () =
   let lid = Longident.Lident "None" and env = Env.initial_safe_string in
   let cnone = Env.lookup_constructor lid env in
   {
@@ -289,6 +289,19 @@ let tainted () =
     exp_extra = [];
     exp_attributes = [(Location.mknoloc "tainted", PStr [])];
   }
+
+let tainted_pat expected_type =
+  let env = Env.initial_safe_string in
+  {
+    pat_desc = Tpat_var (Ident.create "tainted$", Location.mknoloc "tainted$");
+    pat_type = expected_type;
+    pat_loc = Location.none;
+    pat_env = env;
+    pat_extra = [];
+    pat_attributes = [(Location.mknoloc "tainted", PStr [])];
+  }
+
+let _ = ignore tainted_pat
 
 let option_some texp =
   let lid = Longident.Lident "Some" in
@@ -1529,21 +1542,27 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
       if vars = [] then end_def ();
       (try unify_pat_types loc !env ty_res record_ty
        with Unify trace ->
-         raise
+         raise_or_continue
            (Error (label_lid.loc, !env, Label_mismatch (label_lid.txt, trace))));
-      type_pat sarg ty_arg (fun arg ->
-          if vars <> [] then (
-            end_def ();
-            generalize ty_arg;
-            List.iter generalize vars;
-            let instantiated tv =
-              let tv = expand_head !env tv in
-              (not (is_Tvar tv)) || tv.level <> generic_level
-            in
-            if List.exists instantiated vars then
-              raise
-                (Error (label_lid.loc, !env, Polymorphic_label label_lid.txt)));
-          k (label_lid, label, arg, opt))
+      try
+        type_pat sarg ty_arg (fun arg ->
+            if vars <> [] then (
+              end_def ();
+              generalize ty_arg;
+              List.iter generalize vars;
+              let instantiated tv =
+                let tv = expand_head !env tv in
+                (not (is_Tvar tv)) || tv.level <> generic_level
+              in
+              if List.exists instantiated vars then
+                raise_or_continue
+                  (Error (label_lid.loc, !env, Polymorphic_label label_lid.txt)));
+            k (label_lid, label, arg, opt))
+      with err ->
+        if !Clflags.editor_mode then (
+          add_delayed_error err;
+          k (label_lid, label, tainted_pat ty_arg, opt))
+        else raise err
     in
     let k' k lbl_pat_list =
       check_recordpat_labels ~get_jsx_component_error_info loc lbl_pat_list
@@ -3578,7 +3597,7 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
                 ( l,
                   Some
                     (if !Clflags.editor_mode then
-                       try f () with _ -> tainted ()
+                       try f () with _ -> tainted_expr ()
                      else f ()) ))
             (List.rev args),
           instance env (result_type omitted ty_fun) )
