@@ -42,6 +42,10 @@ and only_parse = ref false (* -only-parse *)
 
 and ignore_parse_errors = ref false (* -ignore-parse-errors *)
 
+and editor_mode = ref true
+(* -editor-mode *)
+(* true for easy testing *)
+
 let dont_write_files = ref false (* set to true under ocamldoc *)
 
 let reset_dump_state () =
