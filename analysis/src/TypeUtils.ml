@@ -37,7 +37,12 @@ let rec hasTvar (ty : Types.type_expr) : bool =
 
 let findTypeViaLoc ~full ~debug (loc : Location.t) =
   match References.getLocItem ~full ~pos:(Pos.ofLexing loc.loc_end) ~debug with
-  | Some {locType = Typed (_, typExpr, _)} -> Some typExpr
+  | Some
+      {
+        locType =
+          Typed (_, typExpr, _) | OtherExpression typExpr | OtherPattern typExpr;
+      } ->
+    Some typExpr
   | _ -> None
 
 let pathFromTypeExpr (t : Types.type_expr) =

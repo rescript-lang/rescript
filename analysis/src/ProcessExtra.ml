@@ -397,7 +397,8 @@ let expr ~env ~(extra : extra) (iter : Tast_iterator.iterator)
       |> Utils.filterMap (fun (desc, item, opt) ->
              match item with
              | Typedtree.Overridden (loc, _) -> Some (loc, desc, (), opt)
-             | _ -> None))
+             | _ -> None));
+    addLocItem extra expression.exp_loc (OtherExpression expression.exp_type)
   | Texp_constant constant ->
     addLocItem extra expression.exp_loc (Constant constant)
   (* Skip unit and list literals *)
