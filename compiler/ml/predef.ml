@@ -65,6 +65,8 @@ and ident_promise = ident_create "promise"
 
 and ident_uncurried = ident_create "function$"
 
+and ident_tainted = ident_create "tainted$"
+
 type test = For_sure_yes | For_sure_no | NA
 
 let type_is_builtin_path_but_option (p : Path.t) : test =
@@ -111,6 +113,8 @@ and path_extension_constructor = Pident ident_extension_constructor
 and path_promise = Pident ident_promise
 
 and path_uncurried = Pident ident_uncurried
+
+and path_tainted = Pident ident_tainted
 
 let type_int = newgenty (Tconstr (path_int, [], ref Mnil))
 

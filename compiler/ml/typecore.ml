@@ -84,6 +84,14 @@ exception Error_forward of Location.error
 
 (* Forward declaration, to be filled in by Typemod.type_module *)
 
+let delayed_typechecking_errors = ref []
+
+let add_delayed_error e =
+  delayed_typechecking_errors := e :: !delayed_typechecking_errors
+
+let get_first_delayed_error () =
+  List.nth_opt (!delayed_typechecking_errors |> List.rev) 0
+
 let type_module =
   ref
     (fun _env _md -> assert false
@@ -263,6 +271,18 @@ let option_none ty loc =
   let lid = Longident.Lident "None" and env = Env.initial_safe_string in
   let cnone = Env.lookup_constructor lid env in
   mkexp (Texp_construct (mknoloc lid, cnone, [])) ty loc env
+
+let tainted () =
+  let lid = Longident.Lident "None" and env = Env.initial_safe_string in
+  let cnone = Env.lookup_constructor lid env in
+  {
+    exp_desc = Texp_construct (mknoloc lid, cnone, []);
+    exp_type = newconstr Predef.path_tainted [];
+    exp_loc = Location.none;
+    exp_env = env;
+    exp_extra = [];
+    exp_attributes = [(Location.mknoloc "tainted", PStr [])];
+  }
 
 let option_some texp =
   let lid = Longident.Lident "Some" in
@@ -2249,6 +2269,11 @@ and type_expect ?type_clash_context ?in_function ?recarg env sexp ty_expected =
   in
   Cmt_format.set_saved_types
     (Cmt_format.Partial_expression exp :: previous_saved_types);
+
+  (match get_first_delayed_error () with
+  | None -> ()
+  | Some e -> raise e);
+
   exp
 
 and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
@@ -3537,7 +3562,15 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
         ( List.map
             (function
               | l, None -> (l, None)
-              | l, Some f -> (l, Some (f ())))
+              | l, Some f ->
+                ( l,
+                  Some
+                    (if !Clflags.editor_mode then (
+                       try f ()
+                       with e ->
+                         add_delayed_error e;
+                         tainted ())
+                     else f ()) ))
             (List.rev args),
           instance env (result_type omitted ty_fun) )
       in
