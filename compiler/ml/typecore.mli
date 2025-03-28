@@ -19,6 +19,8 @@ open Asttypes
 open Types
 open Format
 
+val raise_delayed_error_if_exists : unit -> unit
+
 val is_nonexpansive : Typedtree.expression -> bool
 
 val type_binding :
@@ -105,6 +107,7 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
 exception Error of Location.t * Env.t * error
+exception Errors of exn list
 exception Error_forward of Location.error
 
 val report_error : Env.t -> formatter -> error -> unit

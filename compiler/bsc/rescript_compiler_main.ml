@@ -456,6 +456,9 @@ let _ : unit =
   | Bsc_args.Bad msg ->
     Format.eprintf "%s@." msg;
     exit 2
+  | Typecore.Errors exns ->
+    exns |> List.rev |> List.iter (Location.report_exception ppf);
+    exit 2
   | x ->
     Location.report_exception ppf x;
     exit 2
