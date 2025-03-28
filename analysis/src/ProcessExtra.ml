@@ -373,7 +373,8 @@ let pat ~(file : File.t) ~env ~extra (iter : Tast_iterator.iterator)
   (* Log.log("Entering pattern " ++ Utils.showLocation(pat_loc)); *)
   (match pattern.pat_desc with
   | Tpat_record (items, _) ->
-    addForRecord ~env ~extra ~recordType:pattern.pat_type items
+    addForRecord ~env ~extra ~recordType:pattern.pat_type items;
+    addLocItem extra pattern.pat_loc (OtherPattern pattern.pat_type)
   | Tpat_construct (lident, constructor, _) ->
     addForConstructor ~env ~extra pattern.pat_type lident constructor
   | Tpat_alias (_inner, ident, name) ->
