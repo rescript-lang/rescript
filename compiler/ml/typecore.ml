@@ -80,6 +80,7 @@ type error =
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
 exception Error of Location.t * Env.t * error
+exception Errors of exn list
 exception Error_forward of Location.error
 
 (* Forward declaration, to be filled in by Typemod.type_module *)
@@ -89,8 +90,13 @@ let delayed_typechecking_errors = ref []
 let add_delayed_error e =
   delayed_typechecking_errors := e :: !delayed_typechecking_errors
 
-let get_first_delayed_error () =
-  List.nth_opt (!delayed_typechecking_errors |> List.rev) 0
+let raise_delayed_error_if_exists () =
+  (* Might have duplicate errors, so remove those. *)
+  let errors = List.sort_uniq compare !delayed_typechecking_errors in
+  if errors <> [] then raise (Errors errors)
+
+let raise_or_continue exn =
+  if !Clflags.editor_mode then add_delayed_error exn else raise exn
 
 let type_module =
   ref
@@ -322,15 +328,18 @@ let check_optional_attr env ld optional loc =
 (* unification inside type_pat*)
 let unify_pat_types loc env ty ty' =
   try unify env ty ty' with
-  | Unify trace -> raise (Error (loc, env, Pattern_type_clash trace))
+  | Unify trace ->
+    raise_or_continue (Error (loc, env, Pattern_type_clash trace))
   | Tags (l1, l2) ->
-    raise (Typetexp.Error (loc, env, Typetexp.Variant_tags (l1, l2)))
+    raise_or_continue
+      (Typetexp.Error (loc, env, Typetexp.Variant_tags (l1, l2)))
 
 (* unification inside type_exp and type_expect *)
 let unify_exp_types ?type_clash_context loc env ty expected_ty =
   try unify env ty expected_ty with
   | Unify trace ->
-    raise (Error (loc, env, Expr_type_clash (trace, type_clash_context)))
+    raise_or_continue
+      (Error (loc, env, Expr_type_clash (trace, type_clash_context)))
   | Tags (l1, l2) ->
     raise (Typetexp.Error (loc, env, Typetexp.Variant_tags (l1, l2)))
 
@@ -348,11 +357,13 @@ let unify_pat_types_gadt loc env ty ty' =
     | Some x -> x
   in
   try unify_gadt ~newtype_level env ty ty' with
-  | Unify trace -> raise (Error (loc, !env, Pattern_type_clash trace))
+  | Unify trace ->
+    raise_or_continue (Error (loc, !env, Pattern_type_clash trace))
   | Tags (l1, l2) ->
-    raise (Typetexp.Error (loc, !env, Typetexp.Variant_tags (l1, l2)))
+    raise_or_continue
+      (Typetexp.Error (loc, !env, Typetexp.Variant_tags (l1, l2)))
   | Unification_recursive_abbrev trace ->
-    raise (Error (loc, !env, Recursive_local_constraint trace))
+    raise_or_continue (Error (loc, !env, Recursive_local_constraint trace))
 
 (* Creating new conjunctive types is not allowed when typing patterns *)
 
@@ -460,7 +471,8 @@ let enter_orpat_variables loc env p1_vs p2_vs =
       else (
         (try unify env t1 t2
          with Unify trace ->
-           raise (Error (loc, env, Or_pattern_type_clash (x1, trace))));
+           raise_or_continue
+             (Error (loc, env, Or_pattern_type_clash (x1, trace))));
         (x2, x1) :: unify_vars rem1 rem2)
     | [], [] -> []
     | (x, _, _, _, _) :: _, [] -> raise (Error (loc, env, Orpat_vars (x, [])))
@@ -1934,7 +1946,8 @@ let rec type_approx env sexp =
     let ty1 = approx_type env sty in
     (try unify env ty ty1
      with Unify trace ->
-       raise (Error (sexp.pexp_loc, env, Expr_type_clash (trace, None))));
+       raise_or_continue
+         (Error (sexp.pexp_loc, env, Expr_type_clash (trace, None))));
     ty1
   | Pexp_coerce (e, (), sty2) ->
     let approx_ty_opt = function
@@ -1946,7 +1959,8 @@ let rec type_approx env sexp =
     and ty2 = approx_type env sty2 in
     (try unify env ty ty1
      with Unify trace ->
-       raise (Error (sexp.pexp_loc, env, Expr_type_clash (trace, None))));
+       raise_or_continue
+         (Error (sexp.pexp_loc, env, Expr_type_clash (trace, None))));
     ty2
   | _ -> newvar ()
 
@@ -2269,11 +2283,6 @@ and type_expect ?type_clash_context ?in_function ?recarg env sexp ty_expected =
   in
   Cmt_format.set_saved_types
     (Cmt_format.Partial_expression exp :: previous_saved_types);
-
-  (match get_first_delayed_error () with
-  | None -> ()
-  | Some e -> raise e);
-
   exp
 
 and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
@@ -2953,7 +2962,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
           let gen = generalizable tv.level arg.exp_type in
           (try unify_var env tv arg.exp_type
            with Unify trace ->
-             raise
+             raise_or_continue
                (Error
                   (arg.exp_loc, env, Expr_type_clash (trace, type_clash_context))));
           gen)
@@ -3351,8 +3360,11 @@ and type_label_exp ?type_clash_context create env loc ty_expected
     (* Generalize information merged from ty_expected *)
     generalize_structure ty_arg);
   if label.lbl_private = Private then
-    if create then raise (Error (loc, env, Private_type ty_expected))
-    else raise (Error (lid.loc, env, Private_label (lid.txt, ty_expected)));
+    if create then
+      raise_or_continue (Error (loc, env, Private_type ty_expected))
+    else
+      raise_or_continue
+        (Error (lid.loc, env, Private_label (lid.txt, ty_expected)));
   let arg =
     let snap = if vars = [] then None else Some (Btype.snapshot ()) in
     let arg =
@@ -3565,11 +3577,8 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
               | l, Some f ->
                 ( l,
                   Some
-                    (if !Clflags.editor_mode then (
-                       try f ()
-                       with e ->
-                         add_delayed_error e;
-                         tainted ())
+                    (if !Clflags.editor_mode then
+                       try f () with _ -> tainted ()
                      else f ()) ))
             (List.rev args),
           instance env (result_type omitted ty_fun) )
