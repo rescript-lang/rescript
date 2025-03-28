@@ -410,6 +410,23 @@ let expr ~env ~(extra : extra) (iter : Tast_iterator.iterator)
   | Texp_field (inner, lident, _label_description) ->
     addForField ~env ~extra ~recordType:inner.exp_type
       ~fieldType:expression.exp_type lident
+  | Texp_apply {funct; args} ->
+    args
+    |> List.iter (fun (label, _) ->
+           match label with
+           | Asttypes.Labelled {txt; loc} | Optional {txt; loc} -> (
+             let rec findArgType (t : Types.type_expr) =
+               match t.desc with
+               | Tarrow ((Labelled lbl | Optional lbl), argType, _, _, _)
+                 when lbl = txt ->
+                 Some argType
+               | Tarrow (_, _, next, _, _) -> findArgType next
+               | _ -> None
+             in
+             match findArgType funct.exp_type with
+             | None -> ()
+             | Some argType -> addLocItem extra loc (OtherExpression argType))
+           | _ -> ())
   | _ ->
     addLocItem extra expression.exp_loc (OtherExpression expression.exp_type));
   Tast_iterator.default_iterator.expr iter expression
