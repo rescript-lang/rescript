@@ -369,6 +369,9 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
     ( "-ignore-parse-errors",
       set Clflags.ignore_parse_errors,
       "*internal* continue after parse errors" );
+    ( "-editor-mode",
+      set Clflags.editor_mode,
+      "*internal* editor mode. Adapts compilation for editors." );
     ( "-where",
       unit_call print_standard_library,
       "*internal* Print location of standard library and exit" );
