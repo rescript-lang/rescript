@@ -244,6 +244,8 @@ let newHover ~full:{file; package} ~supportsMarkdownLinks locItem =
       showModule ~docstring:file.structure.docstring ~name:file.moduleName ~file
         ~package None)
   | Typed (_, _, Definition (_, (Field _ | Constructor _))) -> None
+  | OtherExpression t | OtherPattern t ->
+    Some (Markdown.codeBlock (Shared.typeToString t))
   | Constant t ->
     Some
       (Markdown.codeBlock
