@@ -84,7 +84,7 @@
     "mocha": "10.8.2",
     "nyc": "15.0.0",
     "semver": "7.6.2",
-    "typescript": "5.5.3"
+    "typescript": "5.8.2"
   },
   "workspaces": [
     "tests/dependencies/**",
