@@ -794,7 +794,53 @@ and simple_expr ctxt f x =
       let expression = expression ctxt in
       pp f fmt (pattern ctxt) s expression e1 direction_flag df expression e2
         expression e3
+    | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
+      pp f "<>%a</>" (list (simple_expr ctxt)) (collect_jsx_children children)
+    | Pexp_jsx_element
+        (Jsx_unary_element
+           {
+             jsx_unary_element_tag_name = tag_name;
+             jsx_unary_element_props = props;
+           }) -> (
+      let name = Longident.flatten tag_name.txt |> String.concat "." in
+      match props with
+      | [] -> pp f "<%s />" name
+      | _ -> pp f "<%s %a />" name (print_jsx_props ctxt) props)
+    | Pexp_jsx_element
+        (Jsx_container_element
+           {
+             jsx_container_element_tag_name_start = tag_name;
+             jsx_container_element_props = props;
+             jsx_container_element_children = children;
+           }) -> (
+      let name = Longident.flatten tag_name.txt |> String.concat "." in
+      match props with
+      | [] ->
+        pp f "<%s>%a</%s>" name
+          (list (simple_expr ctxt))
+          (collect_jsx_children children)
+          name
+      | _ ->
+        pp f "<%s %a>%a</%s>" name (print_jsx_props ctxt) props
+          (list (simple_expr ctxt))
+          (collect_jsx_children children)
+          name)
     | _ -> paren true (expression ctxt) f x
+
+and collect_jsx_children = function
+  | JSXChildrenSpreading e -> [e]
+  | JSXChildrenItems xs -> xs
+
+and print_jsx_prop ctxt f = function
+  | JSXPropPunning (is_optional, name) ->
+    pp f "%s" (if is_optional then "?" ^ name.txt else name.txt)
+  | JSXPropValue (name, is_optional, value) ->
+    pp f "%s=%s%a" name.txt
+      (if is_optional then "?" else "")
+      (simple_expr ctxt) value
+  | JSXPropSpreading (_, expr) -> pp f "{...%a}" (simple_expr ctxt) expr
+
+and print_jsx_props ctxt f = list ~sep:" " (print_jsx_prop ctxt) f
 
 and attributes ctxt f l = List.iter (attribute ctxt f) l
 

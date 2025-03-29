@@ -208,8 +208,33 @@ module Exp : sig
   val open_ :
     ?loc:loc -> ?attrs:attrs -> override_flag -> lid -> expression -> expression
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> expression
+  val jsx_fragment :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    Lexing.position ->
+    Parsetree.jsx_children ->
+    Lexing.position ->
+    expression
+  val jsx_unary_element :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    Longident.t Location.loc ->
+    Parsetree.jsx_props ->
+    expression
+  val jsx_container_element :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    Longident.t Location.loc ->
+    Parsetree.jsx_props ->
+    Lexing.position ->
+    Parsetree.jsx_children ->
+    Parsetree.jsx_closing_container_tag option ->
+    expression
 
   val case : pattern -> ?guard:expression -> expression -> case
+
+  val make_list_expression :
+    Location.t -> expression list -> expression option -> expression
 end
 
 (** Value declarations *)

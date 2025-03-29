@@ -313,8 +313,68 @@ and expression_desc =
        let open M in E
        let! open M in E *)
   | Pexp_extension of extension
-(* [%id] *)
-(* . *)
+  (* [%id] *)
+  (* . *)
+  | Pexp_jsx_element of jsx_element
+
+and jsx_element =
+  | Jsx_fragment of jsx_fragment
+  | Jsx_unary_element of jsx_unary_element
+  | Jsx_container_element of jsx_container_element
+
+and jsx_fragment = {
+  (* > *) jsx_fragment_opening: Lexing.position;
+  (* children *) jsx_fragment_children: jsx_children;
+  (* </ *) jsx_fragment_closing: Lexing.position;
+}
+
+and jsx_unary_element = {
+  (* jsx_unary_element_opening: Lexing.position; *)
+  jsx_unary_element_tag_name: Longident.t loc;
+  jsx_unary_element_props: jsx_props;
+      (* jsx_unary_element_closing: Lexing.position; *)
+}
+
+and jsx_container_element = {
+  (* jsx_container_element_opening_tag_start: Lexing.position; *)
+  jsx_container_element_tag_name_start: Longident.t loc;
+  (* > *)
+  jsx_container_element_opening_tag_end: Lexing.position;
+  jsx_container_element_props: jsx_props;
+  jsx_container_element_children: jsx_children;
+  jsx_container_element_closing_tag: jsx_closing_container_tag option;
+}
+
+and jsx_prop =
+  (*
+   *   |  lident
+   *   | ?lident
+   *)
+  | JSXPropPunning of (* optional *) bool * (* name *) string loc
+  (*
+   *   |  lident =  jsx_expr
+   *   |  lident = ?jsx_expr
+   *)
+  | JSXPropValue of
+      (* name *) string loc * (* optional *) bool * (* value *) expression
+  (*
+   *   |  {...jsx_expr}
+   *)
+  | JSXPropSpreading of Location.t * expression
+
+and jsx_children =
+  | JSXChildrenSpreading of expression
+  | JSXChildrenItems of expression list
+
+and jsx_props = jsx_prop list
+
+and jsx_closing_container_tag = {
+  (* </ *)
+  jsx_closing_container_tag_start: Lexing.position;
+  (* name *)
+  jsx_closing_container_tag_name: Longident.t loc; (* > *)
+  jsx_closing_container_tag_end: Lexing.position;
+}
 
 and case = {
   (* (P -> E) or (P when E0 -> E) *)

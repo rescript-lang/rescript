@@ -24,25 +24,24 @@ let copy tbl =
 
 let empty = make ()
 
+let print_location (k : Warnings.loc) =
+  Doc.concat
+    [
+      Doc.lbracket;
+      Doc.text (string_of_int k.loc_start.pos_lnum);
+      Doc.text ":";
+      Doc.text (string_of_int (k.loc_start.pos_cnum - k.loc_start.pos_bol));
+      Doc.text "-";
+      Doc.text (string_of_int k.loc_end.pos_lnum);
+      Doc.text ":";
+      Doc.text (string_of_int (k.loc_end.pos_cnum - k.loc_end.pos_bol));
+      Doc.rbracket;
+    ]
+
 let print_entries tbl =
-  let open Location in
   Hashtbl.fold
     (fun (k : Location.t) (v : Comment.t list) acc ->
-      let loc =
-        Doc.concat
-          [
-            Doc.lbracket;
-            Doc.text (string_of_int k.loc_start.pos_lnum);
-            Doc.text ":";
-            Doc.text
-              (string_of_int (k.loc_start.pos_cnum - k.loc_start.pos_bol));
-            Doc.text "-";
-            Doc.text (string_of_int k.loc_end.pos_lnum);
-            Doc.text ":";
-            Doc.text (string_of_int (k.loc_end.pos_cnum - k.loc_end.pos_bol));
-            Doc.rbracket;
-          ]
-      in
+      let loc = print_location k in
       let doc =
         Doc.breakable_group ~force_break:true
           (Doc.concat
@@ -86,6 +85,28 @@ let attach tbl loc comments =
   | [] -> ()
   | comments -> Hashtbl.replace tbl loc comments
 
+(* Partitions a list of comments into three groups based on their position relative to a location:
+ * - leading: comments that end before the location's start position
+ * - inside: comments that overlap with the location
+ * - trailing: comments that start after the location's end position
+ *
+ * For example, given code:
+ *   /* comment1 */ let x = /* comment2 */ 5 /* comment3 */
+ *
+ * When splitting around the location of `x = 5`:
+ * - leading: [comment1]
+ * - inside: [comment2]  
+ * - trailing: [comment3]
+ * 
+ * This is the primary comment partitioning function used for associating comments
+ * with AST nodes during the tree traversal.
+ *
+ * Parameters:
+ * - comments: list of comments to partition
+ * - loc: location to split around
+ *
+ * Returns: (leading_comments, inside_comments, trailing_comments)
+ *)
 let partition_by_loc comments loc =
   let rec loop (leading, inside, trailing) comments =
     let open Location in
@@ -101,6 +122,23 @@ let partition_by_loc comments loc =
   in
   loop ([], [], []) comments
 
+(* Splits a list of comments into two groups based on their position relative to a location:
+ * - leading: comments that end before the location's start
+ * - trailing: comments that start at or after the location's start
+ *
+ * For example, given the code:
+ *   /* comment1 */ let /* comment2 */ x = 1 /* comment3 */
+ *
+ * When splitting around `x`'s location:
+ * - leading: [comment1, comment2]
+ * - trailing: [comment3]
+ *
+ * Parameters:
+ * - comments: list of comments to partition
+ * - loc: location to split around
+ *
+ * Returns: (leading_comments, trailing_comments)
+ *)
 let partition_leading_trailing comments loc =
   let rec loop (leading, trailing) comments =
     let open Location in
@@ -141,6 +179,51 @@ let partition_adjacent_trailing loc1 comments =
       else (List.rev after_loc1, comments)
   in
   loop ~prev_end_pos:loc1.loc_end [] comments
+
+(* Splits comments that follow a location but come before another token.
+ * This is particularly useful for handling comments between two tokens
+ * where traditional leading/trailing partitioning isn't precise enough.
+ *
+ * For example, given code:
+ *   let x = 1 /* comment */ + 2
+ *
+ * When splitting comments between `1` and `+`:
+ * - first_part: [/* comment */]  (comments on same line as loc and before next_token)
+ * - rest: []                     (remaining comments)
+ *
+ * Parameters:
+ * - loc: location of the reference token
+ * - next_token: location of the next token
+ * - comments: list of comments to partition
+ *
+ * Returns: (first_part, rest) where first_part contains comments on the same line as loc
+ * that appear entirely before next_token, and rest contains all other comments.
+ *
+ * This function is useful for precisely attaching comments between specific tokens
+ * in constructs like JSX props, function arguments, and other multi-token expressions.
+ *)
+let partition_adjacent_trailing_before_next_token (loc : Warnings.loc)
+    (next_token : Warnings.loc) (comments : Comment.t list) :
+    Comment.t list * Comment.t list =
+  let open Location in
+  let open Lexing in
+  let rec loop after_loc comments =
+    match comments with
+    | [] -> (List.rev after_loc, [])
+    | comment :: rest ->
+      (* Check if the comment is on the same line as the loc, and is entirely before the next_token *)
+      let cmt_loc = Comment.loc comment in
+      if
+        (* Same line *)
+        cmt_loc.loc_start.pos_lnum == loc.loc_end.pos_lnum
+        (* comment after loc *)
+        && cmt_loc.loc_start.pos_cnum > loc.loc_end.pos_cnum
+        (* comment before next_token *)
+        && cmt_loc.loc_end.pos_cnum < next_token.loc_start.pos_cnum
+      then loop (comment :: after_loc) rest
+      else (List.rev after_loc, comments)
+  in
+  loop [] comments
 
 let rec collect_list_patterns acc pattern =
   let open Parsetree in
@@ -392,6 +475,13 @@ let get_loc node =
   | StructureItem si -> si.pstr_loc
   | TypeDeclaration td -> td.ptype_loc
   | ValueBinding vb -> vb.pvb_loc
+
+let get_jsx_prop_loc = function
+  | Parsetree.JSXPropPunning (_, name) -> name.loc
+  | Parsetree.JSXPropValue (name, _, value) ->
+    {name.loc with loc_end = value.pexp_loc.loc_end}
+  | Parsetree.JSXPropSpreading (dots, expr) ->
+    {dots with loc_end = expr.pexp_loc.loc_end}
 
 let rec walk_structure s t comments =
   match s with
@@ -1398,67 +1488,21 @@ and walk_expression expr t comments =
         walk_expression call_expr t inside;
         after)
     in
-    if ParsetreeViewer.is_jsx_expression expr then (
-      let props =
-        arguments
-        |> List.filter (fun (label, _) ->
-               match label with
-               | Asttypes.Labelled {txt = "children"} -> false
-               | Asttypes.Nolabel -> false
-               | _ -> true)
-      in
-      let maybe_children =
-        arguments
-        |> List.find_opt (fun (label, _) ->
-               match label with
-               | Asttypes.Labelled {txt = "children"} -> true
-               | _ -> false)
-      in
-      match maybe_children with
-      (* There is no need to deal with this situation as the children cannot be NONE *)
-      | None -> ()
-      | Some (_, children) ->
-        let leading, inside, _ = partition_by_loc after children.pexp_loc in
-        if props = [] then
-          (* All comments inside a tag are trailing comments of the tag if there are no props
-             <A
-             // comment
-             // comment
-             />
-          *)
-          let after_expr, _ =
-            partition_adjacent_trailing call_expr.pexp_loc after
-          in
-          attach t.trailing call_expr.pexp_loc after_expr
-        else
-          walk_list
-            (props
-            |> List.map (fun (lbl, expr) ->
-                   let loc =
-                     match lbl with
-                     | Asttypes.Labelled {loc} | Optional {loc} ->
-                       {loc with loc_end = expr.Parsetree.pexp_loc.loc_end}
-                     | _ -> expr.pexp_loc
-                   in
-                   ExprArgument {expr; loc}))
-            t leading;
-        walk_expression children t inside)
-    else
-      let after_expr, rest =
-        partition_adjacent_trailing call_expr.pexp_loc after
-      in
-      attach t.trailing call_expr.pexp_loc after_expr;
-      walk_list
-        (arguments
-        |> List.map (fun (lbl, expr) ->
-               let loc =
-                 match lbl with
-                 | Asttypes.Labelled {loc} | Optional {loc} ->
-                   {loc with loc_end = expr.Parsetree.pexp_loc.loc_end}
-                 | _ -> expr.pexp_loc
-               in
-               ExprArgument {expr; loc}))
-        t rest
+    let after_expr, rest =
+      partition_adjacent_trailing call_expr.pexp_loc after
+    in
+    attach t.trailing call_expr.pexp_loc after_expr;
+    walk_list
+      (arguments
+      |> List.map (fun (lbl, expr) ->
+             let loc =
+               match lbl with
+               | Asttypes.Labelled {loc} | Optional {loc} ->
+                 {loc with loc_end = expr.Parsetree.pexp_loc.loc_end}
+               | _ -> expr.pexp_loc
+             in
+             ExprArgument {expr; loc}))
+      t rest
   | Pexp_fun _ | Pexp_newtype _ -> (
     let _, parameters, return_expr = fun_expr expr in
     let comments =
@@ -1508,7 +1552,87 @@ and walk_expression expr t comments =
         attach t.leading return_expr.pexp_loc leading;
         walk_expression return_expr t inside;
         attach t.trailing return_expr.pexp_loc trailing)
-  | _ -> ()
+  | Pexp_jsx_element
+      (Jsx_fragment
+         {
+           jsx_fragment_opening = opening_greater_than;
+           jsx_fragment_children = children;
+           jsx_fragment_closing = _closing_lesser_than;
+         }) ->
+    let opening_token = {expr.pexp_loc with loc_end = opening_greater_than} in
+    let on_same_line, rest = partition_by_on_same_line opening_token comments in
+    attach t.trailing opening_token on_same_line;
+    let exprs =
+      match children with
+      | Parsetree.JSXChildrenSpreading e -> [e]
+      | Parsetree.JSXChildrenItems xs -> xs
+    in
+    let xs = exprs |> List.map (fun e -> Expression e) in
+    walk_list xs t rest
+  | Pexp_jsx_element
+      (Jsx_unary_element
+         {jsx_unary_element_tag_name = tag; jsx_unary_element_props = []}) ->
+    let _, _, trailing = partition_by_loc comments tag.loc in
+    let after_expr, _ = partition_adjacent_trailing tag.loc trailing in
+    attach t.trailing tag.loc after_expr
+  | Pexp_jsx_element
+      (Jsx_unary_element
+         {jsx_unary_element_tag_name = tag; jsx_unary_element_props = props}) ->
+    let _leading, inside, trailing = partition_by_loc comments tag.loc in
+    walk_list
+      (props
+      |> List.filter_map (fun prop ->
+             match prop with
+             | Parsetree.JSXPropPunning (_, {loc}) ->
+               Some (ExprArgument {expr; loc})
+             | Parsetree.JSXPropValue ({loc}, _, expr) ->
+               let loc = {loc with loc_end = expr.pexp_loc.loc_end} in
+               Some (ExprArgument {expr; loc})
+             | Parsetree.JSXPropSpreading (loc, expr) ->
+               let loc = {loc with loc_end = expr.pexp_loc.loc_end} in
+               Some (ExprArgument {expr; loc})))
+      t trailing;
+    walk_expression expr t inside
+  | Pexp_jsx_element
+      (Jsx_container_element
+         {
+           jsx_container_element_tag_name_start = tag_name_start;
+           jsx_container_element_props = props;
+           jsx_container_element_opening_tag_end = opening_greater_than;
+           jsx_container_element_children = _children;
+         }) ->
+    let opening_greater_than_loc =
+      {
+        loc_start = opening_greater_than;
+        loc_end = opening_greater_than;
+        loc_ghost = false;
+      }
+    in
+    let after_opening_tag_name, _rest =
+      (* Either the first prop or the closing > token *)
+      let next_token =
+        match props with
+        | [] -> opening_greater_than_loc
+        | head :: _ -> get_jsx_prop_loc head
+      in
+      partition_adjacent_trailing_before_next_token tag_name_start.loc
+        next_token comments
+    in
+    (* Only attach comments to the element name if they are on the same line *)
+    attach t.trailing tag_name_start.loc after_opening_tag_name;
+    ()
+    (* attach t.leading expr.pexp_loc leading; *)
+    (* let opening_token = {expr.pexp_loc with loc_end = opening_greater_than} in
+    let on_same_line, rest = partition_by_on_same_line opening_token comments in
+    attach t.trailing opening_token on_same_line;
+    let exprs =
+      match children with
+      | Parsetree.JSXChildrenSpreading e -> [e]
+      | Parsetree.JSXChildrenItems xs -> xs
+    in
+    let xs = exprs |> List.map (fun e -> Expression e) in
+    walk_list xs t rest *)
+  | Pexp_send _ -> ()
 
 and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =
   let leading, inside, trailing = partition_by_loc comments pattern.ppat_loc in

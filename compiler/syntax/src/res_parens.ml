@@ -66,9 +66,8 @@ let structure_expr expr =
   | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
   | None -> (
     match expr with
-    | _
-      when ParsetreeViewer.has_attributes expr.pexp_attributes
-           && not (ParsetreeViewer.is_jsx_expression expr) ->
+    | {pexp_desc = Pexp_jsx_element _} -> Nothing
+    | _ when ParsetreeViewer.has_attributes expr.pexp_attributes ->
       Parenthesized
     | {
      Parsetree.pexp_desc =
@@ -383,7 +382,7 @@ let jsx_child_expr expr =
          ( Pexp_ident _ | Pexp_constant _ | Pexp_field _ | Pexp_construct _
          | Pexp_variant _ | Pexp_array _ | Pexp_pack _ | Pexp_record _
          | Pexp_extension _ | Pexp_letmodule _ | Pexp_letexception _
-         | Pexp_open _ | Pexp_sequence _ | Pexp_let _ );
+         | Pexp_open _ | Pexp_sequence _ | Pexp_let _ | Pexp_jsx_element _ );
        pexp_attributes = [];
       } ->
         Nothing
@@ -394,7 +393,7 @@ let jsx_child_expr expr =
        pexp_attributes = [];
       } ->
         Nothing
-      | expr when ParsetreeViewer.is_jsx_expression expr -> Nothing
+      | {pexp_desc = Pexp_jsx_element _} -> Nothing
       | _ -> Parenthesized))
 
 let binary_expr expr =

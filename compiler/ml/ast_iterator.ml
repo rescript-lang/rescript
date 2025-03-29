@@ -267,6 +267,19 @@ module M = struct
 end
 
 module E = struct
+  let iter_jsx_children sub = function
+    | JSXChildrenSpreading e -> sub.expr sub e
+    | JSXChildrenItems xs -> List.iter (sub.expr sub) xs
+
+  let iter_jsx_prop sub = function
+    | JSXPropPunning (_, name) -> iter_loc sub name
+    | JSXPropValue (name, _, value) ->
+      iter_loc sub name;
+      sub.expr sub value
+    | JSXPropSpreading (_, e) -> sub.expr sub e
+
+  let iter_jsx_props sub = List.iter (iter_jsx_prop sub)
+
   (* Value expressions for the core language *)
 
   let iter sub {pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} =
@@ -344,6 +357,24 @@ module E = struct
       iter_loc sub lid;
       sub.expr sub e
     | Pexp_extension x -> sub.extension sub x
+    | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
+      iter_jsx_children sub children
+    | Pexp_jsx_element
+        (Jsx_unary_element
+           {jsx_unary_element_tag_name = name; jsx_unary_element_props = props})
+      ->
+      iter_loc sub name;
+      iter_jsx_props sub props
+    | Pexp_jsx_element
+        (Jsx_container_element
+           {
+             jsx_container_element_tag_name_start = name;
+             jsx_container_element_props = props;
+             jsx_container_element_children = children;
+           }) ->
+      iter_loc sub name;
+      iter_jsx_props sub props;
+      iter_jsx_children sub children
 end
 
 module P = struct

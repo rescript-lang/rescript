@@ -1232,8 +1232,6 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                          then ValueOrField
                          else Value);
                     }))
-        | Pexp_construct ({txt = Lident ("::" | "()")}, _) ->
-          (* Ignore list expressions, used in JSX, unit, and more *) ()
         | Pexp_construct (lid, eOpt) -> (
           let lidPath = flattenLidCheckDot lid in
           if debug then
@@ -1324,10 +1322,29 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                         inJsx = !inJsxContext;
                       }))
             | None -> ())
-        | Pexp_apply {funct = {pexp_desc = Pexp_ident compName}; args}
-          when Res_parsetree_viewer.is_jsx_expression expr ->
+        | Pexp_jsx_element
+            ( Jsx_unary_element
+                {
+                  jsx_unary_element_tag_name = compName;
+                  jsx_unary_element_props = props;
+                }
+            | Jsx_container_element
+                {
+                  jsx_container_element_tag_name_start = compName;
+                  jsx_container_element_props = props;
+                } ) ->
           inJsxContext := true;
-          let jsxProps = CompletionJsx.extractJsxProps ~compName ~args in
+          let children =
+            match expr.pexp_desc with
+            | Pexp_jsx_element
+                (Jsx_container_element
+                   {jsx_container_element_children = children}) ->
+              children
+            | _ -> JSXChildrenItems []
+          in
+          let jsxProps =
+            CompletionJsx.extractJsxProps ~compName ~props ~children
+          in
           let compNamePath = flattenLidCheckDot ~jsx:true compName in
           if debug then
             Printf.printf "JSX <%s:%s %s> _children:%s\n"
@@ -1344,10 +1361,21 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
               | None -> "None"
               | Some childrenPosStart -> Pos.toString childrenPosStart);
           let jsxCompletable =
-            CompletionJsx.findJsxPropsCompletable ~jsxProps
-              ~endPos:(Loc.end_ expr.pexp_loc) ~posBeforeCursor
-              ~posAfterCompName:(Loc.end_ compName.loc)
-              ~firstCharBeforeCursorNoWhite ~charAtCursor
+            match expr.pexp_desc with
+            | Pexp_jsx_element
+                (Jsx_container_element
+                   {
+                     jsx_container_element_closing_tag = None;
+                     jsx_container_element_children =
+                       JSXChildrenSpreading _ | JSXChildrenItems (_ :: _);
+                   }) ->
+              (* This is a weird edge case where there is no closing tag but there are children *)
+              None
+            | _ ->
+              CompletionJsx.findJsxPropsCompletable ~jsxProps
+                ~endPos:(Loc.end_ expr.pexp_loc) ~posBeforeCursor
+                ~posAfterCompName:(Loc.end_ compName.loc)
+                ~firstCharBeforeCursorNoWhite ~charAtCursor
           in
           if jsxCompletable <> None then setResultOpt jsxCompletable
           else if compName.loc |> Loc.hasPos ~pos:posBeforeCursor then

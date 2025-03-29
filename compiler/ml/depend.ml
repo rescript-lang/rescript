@@ -289,6 +289,35 @@ let rec add_expr bv exp =
     | Pstr_eval ({pexp_desc = Pexp_construct (c, None)}, _) -> add bv c
     | _ -> handle_extension e)
   | Pexp_extension e -> handle_extension e
+  | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
+    add_jsx_children bv children
+  | Pexp_jsx_element
+      (Jsx_unary_element
+         {jsx_unary_element_tag_name = name; jsx_unary_element_props = props})
+    ->
+    add bv name;
+    and_jsx_props bv props
+  | Pexp_jsx_element
+      (Jsx_container_element
+         {
+           jsx_container_element_tag_name_start = name;
+           jsx_container_element_props = props;
+           jsx_container_element_children = children;
+         }) ->
+    add bv name;
+    and_jsx_props bv props;
+    add_jsx_children bv children
+
+and add_jsx_children bv = function
+  | JSXChildrenSpreading e -> add_expr bv e
+  | JSXChildrenItems xs -> List.iter (add_expr bv) xs
+
+and add_jsx_prop bv = function
+  | JSXPropPunning (_, _) -> ()
+  | JSXPropValue (_, _, e) -> add_expr bv e
+  | JSXPropSpreading (_, e) -> add_expr bv e
+
+and and_jsx_props bv = List.iter (add_jsx_prop bv)
 
 and add_cases bv cases = List.iter (add_case bv) cases
 
