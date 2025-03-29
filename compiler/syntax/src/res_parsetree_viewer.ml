@@ -65,12 +65,22 @@ let functor_type modtype =
   in
   process [] modtype
 
-let has_await_attribute attrs =
+let has_await_attribute2 attrs =
   List.exists
     (function
       | {Location.txt = "res.await"}, _ -> true
       | _ -> false)
     attrs
+
+let has_await_attribute e =
+  (match e.pexp_desc with
+  | Pexp_await _ -> true
+  | _ -> false)
+  || List.exists
+       (function
+         | {Location.txt = "res.await"}, _ -> true
+         | _ -> false)
+       e.pexp_attributes
 
 let has_inline_record_definition_attribute attrs =
   List.exists

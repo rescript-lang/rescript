@@ -700,7 +700,7 @@ and print_module_binding ~state ~is_rec module_binding cmt_tbl i =
     match module_binding.pmb_expr with
     | {pmod_desc = Pmod_constraint (mod_expr, mod_type)}
       when not
-             (ParsetreeViewer.has_await_attribute
+             (ParsetreeViewer.has_await_attribute2
                 module_binding.pmb_expr.pmod_attributes) ->
       ( print_mod_expr ~state mod_expr cmt_tbl,
         Doc.concat [Doc.text ": "; print_mod_type ~state mod_type cmt_tbl] )
@@ -3432,9 +3432,31 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         Doc.concat [Doc.text "\""; member_doc; Doc.text "\""]
       in
       Doc.group (Doc.concat [parent_doc; Doc.lbracket; member; Doc.rbracket])
+    | Pexp_await e ->
+      let printed_expression =
+        print_expression_with_comments ~state e cmt_tbl
+      in
+      let rhs =
+        match
+          Parens.lazy_or_assert_or_await_expr_rhs ~in_await:true
+            {
+              e with
+              pexp_attributes =
+                List.filter
+                  (function
+                    | {Location.txt = "res.braces" | "ns.braces"}, _ -> false
+                    | _ -> true)
+                  e.pexp_attributes;
+            }
+        with
+        | Parens.Parenthesized -> add_parens printed_expression
+        | Braced braces -> print_braces printed_expression e braces
+        | Nothing -> printed_expression
+      in
+      Doc.concat [Doc.text "await "; rhs]
   in
   let expr_with_await =
-    if ParsetreeViewer.has_await_attribute e.pexp_attributes then
+    if ParsetreeViewer.has_await_attribute2 e.pexp_attributes then
       let rhs =
         match
           Parens.lazy_or_assert_or_await_expr_rhs ~in_await:true
@@ -3761,7 +3783,10 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
               | _ -> add_parens doc
             in
             let is_await =
-              ParsetreeViewer.has_await_attribute expr.pexp_attributes
+              (match expr.pexp_desc with
+              | Pexp_await _ -> true
+              | _ -> false)
+              || ParsetreeViewer.has_await_attribute expr
             in
             let doc =
               if is_await then
@@ -5298,7 +5323,7 @@ and print_expression_block ~state ~braces expr cmt_tbl =
         match mod_expr.pmod_desc with
         | Pmod_constraint (mod_expr2, mod_type)
           when not
-                 (ParsetreeViewer.has_await_attribute mod_expr.pmod_attributes)
+                 (ParsetreeViewer.has_await_attribute2 mod_expr.pmod_attributes)
           ->
           let name =
             Doc.concat
@@ -5792,7 +5817,7 @@ and print_mod_expr ~state mod_expr cmt_tbl =
     | Pmod_functor _ -> print_mod_functor ~state mod_expr cmt_tbl
   in
   let doc =
-    if ParsetreeViewer.has_await_attribute mod_expr.pmod_attributes then
+    if ParsetreeViewer.has_await_attribute2 mod_expr.pmod_attributes then
       match mod_expr.pmod_desc with
       | Pmod_constraint _ ->
         Doc.concat [Doc.text "await "; Doc.lparen; doc; Doc.rparen]
