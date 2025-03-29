@@ -85,6 +85,28 @@ let attach tbl loc comments =
   | [] -> ()
   | comments -> Hashtbl.replace tbl loc comments
 
+(* Partitions a list of comments into three groups based on their position relative to a location:
+ * - leading: comments that end before the location's start position
+ * - inside: comments that overlap with the location
+ * - trailing: comments that start after the location's end position
+ *
+ * For example, given code:
+ *   /* comment1 */ let x = /* comment2 */ 5 /* comment3 */
+ *
+ * When splitting around the location of `x = 5`:
+ * - leading: [comment1]
+ * - inside: [comment2]  
+ * - trailing: [comment3]
+ * 
+ * This is the primary comment partitioning function used for associating comments
+ * with AST nodes during the tree traversal.
+ *
+ * Parameters:
+ * - comments: list of comments to partition
+ * - loc: location to split around
+ *
+ * Returns: (leading_comments, inside_comments, trailing_comments)
+ *)
 let partition_by_loc comments loc =
   let rec loop (leading, inside, trailing) comments =
     let open Location in
@@ -100,6 +122,23 @@ let partition_by_loc comments loc =
   in
   loop ([], [], []) comments
 
+(* Splits a list of comments into two groups based on their position relative to a location:
+ * - leading: comments that end before the location's start
+ * - trailing: comments that start at or after the location's start
+ *
+ * For example, given the code:
+ *   /* comment1 */ let /* comment2 */ x = 1 /* comment3 */
+ *
+ * When splitting around `x`'s location:
+ * - leading: [comment1, comment2]
+ * - trailing: [comment3]
+ *
+ * Parameters:
+ * - comments: list of comments to partition
+ * - loc: location to split around
+ *
+ * Returns: (leading_comments, trailing_comments)
+ *)
 let partition_leading_trailing comments loc =
   let rec loop (leading, trailing) comments =
     let open Location in
@@ -140,6 +179,51 @@ let partition_adjacent_trailing loc1 comments =
       else (List.rev after_loc1, comments)
   in
   loop ~prev_end_pos:loc1.loc_end [] comments
+
+(* Splits comments that follow a location but come before another token.
+ * This is particularly useful for handling comments between two tokens
+ * where traditional leading/trailing partitioning isn't precise enough.
+ *
+ * For example, given code:
+ *   let x = 1 /* comment */ + 2
+ *
+ * When splitting comments between `1` and `+`:
+ * - first_part: [/* comment */]  (comments on same line as loc and before next_token)
+ * - rest: []                     (remaining comments)
+ *
+ * Parameters:
+ * - loc: location of the reference token
+ * - next_token: location of the next token
+ * - comments: list of comments to partition
+ *
+ * Returns: (first_part, rest) where first_part contains comments on the same line as loc
+ * that appear entirely before next_token, and rest contains all other comments.
+ *
+ * This function is useful for precisely attaching comments between specific tokens
+ * in constructs like JSX props, function arguments, and other multi-token expressions.
+ *)
+let partition_adjacent_trailing_before_next_token (loc : Warnings.loc)
+    (next_token : Warnings.loc) (comments : Comment.t list) :
+    Comment.t list * Comment.t list =
+  let open Location in
+  let open Lexing in
+  let rec loop after_loc comments =
+    match comments with
+    | [] -> (List.rev after_loc, [])
+    | comment :: rest ->
+      (* Check if the comment is on the same line as the loc, and is entirely before the next_token *)
+      let cmt_loc = Comment.loc comment in
+      if
+        (* Same line *)
+        cmt_loc.loc_start.pos_lnum == loc.loc_end.pos_lnum
+        (* comment after loc *)
+        && cmt_loc.loc_start.pos_cnum > loc.loc_end.pos_cnum
+        (* comment before next_token *)
+        && cmt_loc.loc_end.pos_cnum < next_token.loc_start.pos_cnum
+      then loop (comment :: after_loc) rest
+      else (List.rev after_loc, comments)
+  in
+  loop [] comments
 
 let rec collect_list_patterns acc pattern =
   let open Parsetree in
@@ -391,6 +475,13 @@ let get_loc node =
   | StructureItem si -> si.pstr_loc
   | TypeDeclaration td -> td.ptype_loc
   | ValueBinding vb -> vb.pvb_loc
+
+let get_jsx_prop_loc = function
+  | Parsetree.JSXPropPunning (_, name) -> name.loc
+  | Parsetree.JSXPropValue (name, _, value) ->
+    {name.loc with loc_end = value.pexp_loc.loc_end}
+  | Parsetree.JSXPropSpreading (dots, expr) ->
+    {dots with loc_end = expr.pexp_loc.loc_end}
 
 let rec walk_structure s t comments =
   match s with
@@ -1505,10 +1596,33 @@ and walk_expression expr t comments =
   | Pexp_jsx_element
       (Jsx_container_element
          {
+           jsx_container_element_tag_name_start = tag_name_start;
+           jsx_container_element_props = props;
            jsx_container_element_opening_tag_end = opening_greater_than;
-           jsx_container_element_children = children;
+           jsx_container_element_children = _children;
          }) ->
-    let opening_token = {expr.pexp_loc with loc_end = opening_greater_than} in
+    let opening_greater_than_loc =
+      {
+        loc_start = opening_greater_than;
+        loc_end = opening_greater_than;
+        loc_ghost = false;
+      }
+    in
+    let after_opening_tag_name, _rest =
+      (* Either the first prop or the closing > token *)
+      let next_token =
+        match props with
+        | [] -> opening_greater_than_loc
+        | head :: _ -> get_jsx_prop_loc head
+      in
+      partition_adjacent_trailing_before_next_token tag_name_start.loc
+        next_token comments
+    in
+    (* Only attach comments to the element name if they are on the same line *)
+    attach t.trailing tag_name_start.loc after_opening_tag_name;
+    ()
+    (* attach t.leading expr.pexp_loc leading; *)
+    (* let opening_token = {expr.pexp_loc with loc_end = opening_greater_than} in
     let on_same_line, rest = partition_by_on_same_line opening_token comments in
     attach t.trailing opening_token on_same_line;
     let exprs =
@@ -1517,7 +1631,7 @@ and walk_expression expr t comments =
       | Parsetree.JSXChildrenItems xs -> xs
     in
     let xs = exprs |> List.map (fun e -> Expression e) in
-    walk_list xs t rest
+    walk_list xs t rest *)
   | Pexp_send _ -> ()
 
 and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =

@@ -359,10 +359,12 @@ and expression i ppf x =
          {
            jsx_container_element_tag_name_start = name;
            jsx_container_element_props = props;
+           jsx_container_element_opening_tag_end = gt;
            jsx_container_element_children = children;
          }) ->
     line i ppf "Pexp_jsx_container_element %a\n" fmt_longident_loc name;
     jsx_props i ppf props;
+    if !Clflags.dump_location then line i ppf "> %a\n" (fmt_position false) gt;
     jsx_children i ppf children
 
 and jsx_children i ppf children =
