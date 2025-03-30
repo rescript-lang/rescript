@@ -15,6 +15,7 @@
 #### :bug: Bug fix
 
 - Fix `Error.fromException`. https://github.com/rescript-lang/rescript/pull/7364
+- Fix signature of `throw`. https://github.com/rescript-lang/rescript/pull/7365
 
 #### :house: Internal
 

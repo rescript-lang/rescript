@@ -23,16 +23,18 @@ Raises the given exception, terminating execution unless caught by a surrounding
 ## Examples
 
 ```rescript
-let error = Error.make("Everything is upside down.")
+exception MyException(string)
 
-if 5 > 10 {
-  throw(error)
-} else {
-  Console.log("Phew, sanity still rules.")
+let result = try {
+  throw(MyException("Out of milk"))
+} catch {
+| MyException(message) => "Caught exception: " ++ message
 }
+
+assertEqual(result, "Caught exception: Out of milk")
 ```
 */
-external throw: Stdlib_Error.t => 'a = "%raise"
+external throw: exn => 'a = "%raise"
 
 /* Composition operators */
 
