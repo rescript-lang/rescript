@@ -409,3 +409,14 @@ let make = (~keycap) =>
 (@doesNotRaise [])->Belt.Array.getExn(0)
 @doesNotRaise
 []->Belt.Array.getExn(0)
+
+// shift operators
+let x = a << b
+let x = a >> b
+let x = a >>> b
+let x = a << b + c
+let x = a + b << c
+let x = a >> b + c
+let x = a + b >> c
+let x = a >>> b + c
+let x = a + b >>> c

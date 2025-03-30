@@ -888,6 +888,14 @@ let rec scan scanner =
         Token.Plus)
     | '>' -> (
       match peek scanner with
+      | '>' -> (
+        match peek2 scanner with
+        | '>' ->
+          next3 scanner;
+          Token.GreaterThanGreaterThanGreaterThan
+        | _ ->
+          next2 scanner;
+          Token.GreaterThanGreaterThan)
       | '=' when not (in_diamond_mode scanner) ->
         next2 scanner;
         Token.GreaterEqual
@@ -896,6 +904,9 @@ let rec scan scanner =
         Token.GreaterThan)
     | '<' when not (in_jsx_mode scanner) -> (
       match peek scanner with
+      | '<' ->
+        next2 scanner;
+        Token.LessThanLessThan
       | '=' ->
         next2 scanner;
         Token.LessEqual
