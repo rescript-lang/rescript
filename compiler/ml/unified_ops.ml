@@ -152,13 +152,40 @@ let entries =
       path = builtin "<<";
       name = "%lsl";
       form = Binary;
-      specialization = {
-        int = Plslint;
-        bool = None;
-        float = None;
-        bigint = Some Plslbigint;
-        string = None;
-      };
+      specialization =
+        {
+          int = Plslint;
+          bool = None;
+          float = None;
+          bigint = Some Plslbigint;
+          string = None;
+        };
+    };
+    {
+      path = builtin ">>";
+      name = "%asr";
+      form = Binary;
+      specialization =
+        {
+          int = Pasrint;
+          bool = None;
+          float = None;
+          bigint = Some Pasrbigint;
+          string = None;
+        };
+    };
+    {
+      path = builtin ">>>";
+      name = "%lsr";
+      form = Binary;
+      specialization =
+        {
+          int = Plsrint;
+          bool = None;
+          float = None;
+          bigint = Some Pasrbigint;
+          string = None;
+        };
     };
     {
       path = builtin "mod";

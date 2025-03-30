@@ -69,6 +69,8 @@ external \"<<": ('a, 'a) => 'a = "%lsl"
 external mod: ('a, 'a) => 'a = "%mod"
 external \"**": ('a, 'a) => 'a = "%pow"
 external \"^": ('a, 'a) => 'a = "%bitxor"
+external \">>": ('a, 'a) => 'a = "%asr"
+external \">>>": ('a, 'a) => 'a = "%lsr"
 
 /* Comparisons */
 /* Note: Later comparisons will be converted to unified operations too */
