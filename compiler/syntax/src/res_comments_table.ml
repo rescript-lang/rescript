@@ -24,6 +24,11 @@ let copy tbl =
 
 let empty = make ()
 
+let rec list_last = function
+  | [] -> failwith "list_last: empty list"
+  | [x] -> x
+  | _ :: rest -> list_last rest
+
 let print_location (k : Warnings.loc) =
   Doc.concat
     [
@@ -457,6 +462,7 @@ type node =
   | StructureItem of Parsetree.structure_item
   | TypeDeclaration of Parsetree.type_declaration
   | ValueBinding of Parsetree.value_binding
+  | JsxProp of Parsetree.jsx_prop
 
 let get_loc node =
   let open Parsetree in
@@ -497,6 +503,7 @@ let get_loc node =
   | StructureItem si -> si.pstr_loc
   | TypeDeclaration td -> td.ptype_loc
   | ValueBinding vb -> vb.pvb_loc
+  | JsxProp prop -> ParsetreeViewer.get_jsx_prop_loc prop
 
 let rec walk_structure s t comments =
   match s with
@@ -676,6 +683,7 @@ and walk_node node tbl comments =
   | StructureItem si -> walk_structure_item si tbl comments
   | TypeDeclaration td -> walk_type_declaration td tbl comments
   | ValueBinding vb -> walk_value_binding vb tbl comments
+  | JsxProp prop -> walk_jsx_prop prop tbl comments
 
 and walk_list : ?prev_loc:Location.t -> node list -> t -> Comment.t list -> unit
     =
@@ -1645,7 +1653,13 @@ and walk_expression expr t comments =
         (* attach comments to the closing > token *)
         attach t.leading opening_greater_than_loc before_greater_than;
         rest
-      | _ -> rest
+      | props ->
+        let comments_for_props, rest =
+          partition_leading_trailing rest opening_greater_than_loc
+        in
+        let prop_nodes = List.map (fun prop -> JsxProp prop) props in
+        walk_list prop_nodes t comments_for_props;
+        rest
     in
     let _rest =
       match (children, closing_tag) with
@@ -2183,3 +2197,5 @@ and walk_payload payload t comments =
   match payload with
   | PStr s -> walk_structure s t comments
   | _ -> ()
+
+and walk_jsx_prop prop t comments = ()
