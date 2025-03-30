@@ -31,6 +31,7 @@ external \"/": (int, int) => int = "%divint"
 external \"%": (int, int) => int = "%modint"
 external mod: (int, int) => int = "%modint"
 external \"**": (int, int) => int = "%powint"
+external \"^": (int, int) => int = "%bitxorint"
 
 /* Comparisons */
 /* Note: Later comparisons will be converted to unified operations too */

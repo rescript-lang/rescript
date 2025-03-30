@@ -1,13 +1,13 @@
 {
   "compilerOptions": {
-    "target": "esnext",
-    "module": "esnext",
-    "moduleResolution": "node",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
     "allowJs": true,
-    "jsx": "react-jsx",
+    "allowImportingTsExtensions": true,
     "noEmit": true
   },
   "include": ["src"]

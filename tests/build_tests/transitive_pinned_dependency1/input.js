@@ -1,21 +1,15 @@
-//@ts-check
-var child_process = require("child_process");
-var assert = require("assert");
-var fs = require("fs");
-var { rescript_exe } = require("#cli/bin_path");
+// @ts-check
 
-console.log(
-  child_process.execSync(`${rescript_exe} clean`, {
-    encoding: "utf8",
-    cwd: "./a",
-  }),
-);
+import * as assert from "node:assert";
+import { existsSync } from "node:fs";
+import { setup } from "#dev/process";
 
-console.log(
-  child_process.execSync(rescript_exe, { encoding: "utf8", cwd: "./a" }),
-);
+const { execBuild } = setup("./a");
 
-assert(
-  fs.existsSync("./node_modules/c/lib/js/tests/test.mjs"),
+const output = await execBuild();
+console.log(output);
+
+assert.ok(
+  existsSync("./node_modules/c/lib/es6/tests/test.res.js"),
   "dev files of module 'c' were not built by 'a' even though 'c' is a transitive pinned dependency of 'a' through 'b'",
 );

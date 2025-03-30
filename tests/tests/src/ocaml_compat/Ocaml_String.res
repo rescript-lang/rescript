@@ -11,8 +11,8 @@ type t = string
 module B = {
   include Array
 
-  let uppercase_ascii = bytes => map(Stdlib.Char.uppercase_ascii, bytes)
-  let lowercase_ascii = bytes => map(Stdlib.Char.lowercase_ascii, bytes)
+  let uppercase_ascii = bytes => map(Char.uppercase_ascii, bytes)
+  let lowercase_ascii = bytes => map(Char.lowercase_ascii, bytes)
 
   let apply1 = (f, bytes) =>
     if length(bytes) == 0 {
@@ -22,10 +22,10 @@ module B = {
       unsafe_set(r, 0, f(unsafe_get(bytes, 0)))
       r
     }
-  let capitalize_ascii = bytes => apply1(Stdlib.Char.uppercase_ascii, bytes)
-  let uncapitalize_ascii = bytes => apply1(Stdlib.Char.lowercase_ascii, bytes)
+  let capitalize_ascii = bytes => apply1(Char.uppercase_ascii, bytes)
+  let uncapitalize_ascii = bytes => apply1(Char.lowercase_ascii, bytes)
 
-  let escaped = bytes => map(Stdlib.Char.escaped, bytes)
+  let escaped = bytes => map(Char.escaped, bytes)
 }
 
 @send external join: (array<string>, string) => string = "join"

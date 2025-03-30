@@ -1,8 +1,10 @@
-var cp = require("child_process");
-var assert = require("assert");
-var { rescript_exe } = require("#cli/bin_path");
+import * as assert from "node:assert";
+import { setup } from "#dev/process";
 
-var out = cp.spawnSync(rescript_exe, { encoding: "utf8" });
+const { execBuild } = await setup(import.meta.dirname);
+
+const out = await execBuild();
+
 if (out.stderr !== "") {
   assert.fail(out.stderr);
 }

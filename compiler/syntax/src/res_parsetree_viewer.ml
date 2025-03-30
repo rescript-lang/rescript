@@ -272,11 +272,12 @@ let operator_precedence operator =
   | ":=" -> 1
   | "||" -> 2
   | "&&" -> 3
-  | "==" | "===" | "<" | ">" | "!=" | "<>" | "!==" | "<=" | ">=" | "|>" -> 4
-  | "+" | "+." | "-" | "-." | "++" -> 5
-  | "*" | "*." | "/" | "/." | "%" -> 6
-  | "**" -> 7
-  | "#" | "##" | "->" -> 8
+  | "^" -> 4
+  | "==" | "===" | "<" | ">" | "!=" | "<>" | "!==" | "<=" | ">=" | "|>" -> 5
+  | "+" | "+." | "-" | "-." | "++" -> 6
+  | "*" | "*." | "/" | "/." | "%" -> 7
+  | "**" -> 8
+  | "#" | "##" | "->" -> 9
   | _ -> 0
 
 let is_unary_operator operator =
@@ -295,14 +296,16 @@ let is_unary_expression expr =
     true
   | _ -> false
 
-(* TODO: tweak this to check for ghost ^ as template literal *)
 let is_binary_operator operator =
   match operator with
   | ":=" | "||" | "&&" | "==" | "===" | "<" | ">" | "!=" | "!==" | "<=" | ">="
   | "|>" | "+" | "+." | "-" | "-." | "++" | "*" | "*." | "/" | "/." | "**"
-  | "->" | "<>" | "%" ->
+  | "->" | "<>" | "%" | "^" ->
     true
   | _ -> false
+
+let not_ghost_operator operator (loc : Location.t) =
+  is_binary_operator operator && not (loc.loc_ghost && operator = "++")
 
 let is_binary_expression expr =
   match expr.pexp_desc with
@@ -315,9 +318,7 @@ let is_binary_expression expr =
           };
         args = [(Nolabel, _operand1); (Nolabel, _operand2)];
       }
-    when is_binary_operator operator
-         && not (operator_loc.loc_ghost && operator = "++")
-         (* template literal *) ->
+    when not_ghost_operator operator operator_loc ->
     true
   | _ -> false
 

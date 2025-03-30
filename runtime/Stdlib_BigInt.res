@@ -84,14 +84,15 @@ external div: (bigint, bigint) => bigint = "%divbigint"
 
 external mod: (bigint, bigint) => bigint = "%modbigint"
 
-external land: (bigint, bigint) => bigint = "%andbigint"
-external lor: (bigint, bigint) => bigint = "%orbigint"
-external lxor: (bigint, bigint) => bigint = "%xorbigint"
+external bitwiseAnd: (bigint, bigint) => bigint = "%andbigint"
+external bitwiseOr: (bigint, bigint) => bigint = "%orbigint"
+external bitwiseXor: (bigint, bigint) => bigint = "%xorbigint"
 
-external lsl: (bigint, bigint) => bigint = "%lslbigint"
-external asr: (bigint, bigint) => bigint = "%asrbigint"
+// TODO: make it a primitive
+let bitwiseNot = x => bitwiseXor(x, -1n)
 
-let lnot = x => lxor(x, -1n)
+external shiftLeft: (bigint, bigint) => bigint = "%lslbigint"
+external shiftRight: (bigint, bigint) => bigint = "%asrbigint"
 
 /**
   `ignore(bigint)` ignores the provided bigint and returns unit.

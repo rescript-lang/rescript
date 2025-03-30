@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "cli/*",
+    "lib/*",
+    "lib_dev/*",
+    "scripts/*",
+    "tests/**/input.js",
+    ".github/workflows/*.js",
+    "package.json"
+  ],
+  "exclude": ["*.res.js", "*.res.mjs"]
+}

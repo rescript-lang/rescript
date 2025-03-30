@@ -6,18 +6,8 @@ authors: ["Hongbo Zhang <bobzhang1988@gmail.com>"]
 license: "LGPL-3.0-or-later"
 homepage: "https://github.com/rescript-lang/rescript-compiler"
 bug-reports: "https://github.com/rescript-lang/rescript-compiler/issues"
-depends: [
-  "ocaml" {>= "4.14"}
-  "ocamlformat" {with-test & = "0.27.0"}
-  "yojson" {with-test & = "2.2.2"}
-  "ocaml-lsp-server" {with-dev-setup & = "1.22.0"}
-  "cppo" {= "1.8.0"}
-  "js_of_ocaml" {= "6.0.1"}
-  "ounit2" {= "2.2.7"}
-  "dune"
-]
 build: [
-  ["dune" "subst"] {pinned}
+  ["dune" "subst"] {dev}
   [
     "dune"
     "build"
@@ -29,4 +19,19 @@ build: [
     "@runtest" {with-test}
     "@doc" {with-doc}
   ]
+]
+depends: [
+  "ocaml" {>= "4.14"}
+  "cppo" {= "1.8.0"}
+  "dune" {>= "3.17"}
+  "ocamlformat" {with-test & = "0.27.0"}
+  "yojson" {with-test & = "2.2.2"}
+  "ounit2" {with-test & = "2.2.7"}
+  "odoc" {with-doc}
+  "ocaml-lsp-server" {with-dev-setup & = "1.22.0"}
+
+  # Test dependencies that would be broken on Windows runners
+  "js_of_ocaml" {os != "win32" & with-test & = "6.0.1"}
+  "js_of_ocaml-ppx" {os != "win32" & with-test & = "6.0.1"}
+  "wasm_of_ocaml-compiler" {os != "win32" & with-test & = "6.0.1"}
 ]

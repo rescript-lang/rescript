@@ -1,14 +1,16 @@
-//@ts-check
-const cp = require("child_process");
-const assert = require("assert");
-const fs = require("fs");
-const path = require("path");
-var { rescript_exe } = require("#cli/bin_path");
+// @ts-check
 
-var output = cp.spawnSync(rescript_exe, { encoding: "utf8", shell: true });
+import * as assert from "node:assert";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { setup } from "#dev/process";
 
-assert(/dependency cycle/.test(output.stdout));
+const { execBuild } = setup(import.meta.dirname);
 
-var compilerLogFile = path.join(__dirname, "lib", "bs", ".compiler.log");
-var compilerLog = fs.readFileSync(compilerLogFile, "utf8");
-assert(/dependency cycle/.test(compilerLog));
+const output = await execBuild();
+
+assert.match(output.stdout, /dependency cycle/);
+
+const compilerLogFile = path.join("lib", "bs", ".compiler.log");
+const compilerLog = await fs.readFile(compilerLogFile, "utf8");
+assert.match(compilerLog, /dependency cycle/);

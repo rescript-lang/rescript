@@ -1,26 +1,23 @@
 
   Syntax error!
-  syntax_tests/data/parsing/errors/scanner/oldDerefOp.res:1:50
+  syntax_tests/data/parsing/errors/scanner/oldDerefOp.res:1:51
 
   1 │ let newVelocity = velocity +. a *. secondPerFrame^;
   2 │ let newX = x +. newVelocity *. secondPerFrame^;
   3 │ 
 
-  Not sure what to do with this character.
-  If you're trying to dereference a mutable value, use `myValue.contents` instead.
-  To concatenate strings, use `"a" ++ "b"` instead.
+  Did you forget to write an expression here?
 
 
   Syntax error!
-  syntax_tests/data/parsing/errors/scanner/oldDerefOp.res:2:46
+  syntax_tests/data/parsing/errors/scanner/oldDerefOp.res:2:47
 
   1 │ let newVelocity = velocity +. a *. secondPerFrame^;
   2 │ let newX = x +. newVelocity *. secondPerFrame^;
   3 │ 
 
-  Not sure what to do with this character.
-  If you're trying to dereference a mutable value, use `myValue.contents` instead.
-  To concatenate strings, use `"a" ++ "b"` instead.
+  Did you forget to write an expression here?
 
-let newVelocity = velocity +. (a *. secondPerFrame)
-let newX = x +. (newVelocity *. secondPerFrame)
+let newVelocity =
+  (velocity +. (a *. secondPerFrame)) ^ ([%rescript.exprhole ])
+let newX = (x +. (newVelocity *. secondPerFrame)) ^ ([%rescript.exprhole ])

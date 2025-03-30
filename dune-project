@@ -1,4 +1,4 @@
-(lang dune 2.3)
+(lang dune 3.17)
 
 (name rescript)
 
@@ -16,29 +16,7 @@
 
 (package
  (name rescript)
- (synopsis "ReScript compiler")
- (depends
-  (ocaml
-   (>= 4.14))
-  (ocamlformat
-   (and
-    :with-test
-    (= 0.27.0)))
-  (yojson
-   (and
-    :with-test
-    (= 2.2.2)))
-  (ocaml-lsp-server
-   (and
-    :with-dev-setup
-    (= 1.22.0)))
-  (cppo
-   (= 1.8.0))
-  (js_of_ocaml
-   (= 6.0.1))
-  (ounit2
-   (= 2.2.7))
-  dune))
+ (synopsis "ReScript compiler"))
 
 (package
  (name analysis)
