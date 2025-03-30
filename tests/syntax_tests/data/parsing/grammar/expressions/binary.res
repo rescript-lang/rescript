@@ -33,6 +33,17 @@ let x = a % a == 0
 let x = a -b
 let x = a -.b
 
+// shift operators
+let x = a << b
+let x = a >> b
+let x = a >>> b
+let x = a << b + c
+let x = a >> b + c
+let x = a >>> b + c
+let x = a + b << c
+let x = a + b >> c
+let x = a + b >>> c
+
 // not binary expr
 Constructor(a, b)
 #Constructor(a, b)

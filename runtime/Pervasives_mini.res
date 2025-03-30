@@ -30,6 +30,8 @@ external \"*": (int, int) => int = "%mulint"
 external \"/": (int, int) => int = "%divint"
 external \"%": (int, int) => int = "%modint"
 external \"<<": (int, int) => int = "%lslint"
+external \">>": (int, int) => int = "%asrint"
+external \">>>": (int, int) => int = "%lsrint"
 external mod: (int, int) => int = "%modint"
 
 /* Comparisons */

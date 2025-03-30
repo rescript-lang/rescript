@@ -20,3 +20,13 @@ let case2 = (a, b) => a + "test" + b
 
 let even = n => n % 2 == 0
 let odd = n => n % 2 == 1
+
+let shl = 1 << 2
+let shr = 8 >> 2
+let ushr = -1 >>> 1
+
+let lhs_shift = (a: int, b) => a << b
+let rhs_shift = (a, b: int) => a << b
+let unknown_shift = (a, b) => a << b
+
+let bigint_shift = 1n << 2n
