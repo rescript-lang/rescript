@@ -4,7 +4,9 @@ import * as assert from "node:assert";
 import { existsSync } from "node:fs";
 import { setup } from "#dev/process";
 
-const { execBuild } = setup("./a");
+const { execBuild, execClean } = setup("./a");
+
+await execClean()
 
 const output = await execBuild();
 console.log(output);
