@@ -229,9 +229,9 @@ let partition_adjacent_trailing loc1 comments =
  * This function is useful for precisely attaching comments between specific tokens
  * in constructs like JSX props, function arguments, and other multi-token expressions.
  *)
-let partition_adjacent_trailing_before_next_token_on_same_line (loc : Warnings.loc)
-    (next_token : Warnings.loc) (comments : Comment.t list) :
-    Comment.t list * Comment.t list =
+let partition_adjacent_trailing_before_next_token_on_same_line
+    (loc : Warnings.loc) (next_token : Warnings.loc) (comments : Comment.t list)
+    : Comment.t list * Comment.t list =
   let open Location in
   let open Lexing in
   let rec loop after_loc comments =
@@ -1594,28 +1594,42 @@ and walk_expression expr t comments =
     walk_list xs t rest
   | Pexp_jsx_element
       (Jsx_unary_element
-         {jsx_unary_element_tag_name = tag; jsx_unary_element_props = []}) ->
-    let _, _, trailing = partition_by_loc comments tag.loc in
-    let after_expr, _ = partition_adjacent_trailing tag.loc trailing in
-    attach t.trailing tag.loc after_expr
-  | Pexp_jsx_element
-      (Jsx_unary_element
-         {jsx_unary_element_tag_name = tag; jsx_unary_element_props = props}) ->
-    let _leading, inside, trailing = partition_by_loc comments tag.loc in
-    walk_list
-      (props
-      |> List.filter_map (fun prop ->
-             match prop with
-             | Parsetree.JSXPropPunning (_, {loc}) ->
-               Some (ExprArgument {expr; loc})
-             | Parsetree.JSXPropValue ({loc}, _, expr) ->
-               let loc = {loc with loc_end = expr.pexp_loc.loc_end} in
-               Some (ExprArgument {expr; loc})
-             | Parsetree.JSXPropSpreading (loc, expr) ->
-               let loc = {loc with loc_end = expr.pexp_loc.loc_end} in
-               Some (ExprArgument {expr; loc})))
-      t trailing;
-    walk_expression expr t inside
+         {
+           jsx_unary_element_tag_name = tag_name;
+           jsx_unary_element_props = props;
+         }) -> (
+    let closing_token_loc =
+      ParsetreeViewer.unary_element_closing_token expr.pexp_loc
+    in
+
+    let after_opening_tag_name, rest =
+      (* Either the first prop or the closing /> token *)
+      let next_token =
+        match props with
+        | [] -> closing_token_loc
+        | head :: _ -> ParsetreeViewer.get_jsx_prop_loc head
+      in
+      partition_adjacent_trailing_before_next_token_on_same_line tag_name.loc
+        next_token comments
+    in
+
+    (* Only attach comments to the element name if they are on the same line *)
+    attach t.trailing tag_name.loc after_opening_tag_name;
+    match props with
+    | [] ->
+      let before_closing_token, _rest =
+        partition_leading_trailing rest closing_token_loc
+      in
+      (* attach comments to the closing /> token *)
+      attach t.leading closing_token_loc before_closing_token
+      (* the _rest comments are going to be attached after the entire expression,
+         dealt with in the parent node. *)
+    | props ->
+      let comments_for_props, _rest =
+        partition_leading_trailing rest closing_token_loc
+      in
+      let prop_nodes = List.map (fun prop -> JsxProp prop) props in
+      walk_list prop_nodes t comments_for_props)
   | Pexp_jsx_element
       (Jsx_container_element
          {
@@ -1639,8 +1653,8 @@ and walk_expression expr t comments =
         | [] -> opening_greater_than_loc
         | head :: _ -> ParsetreeViewer.get_jsx_prop_loc head
       in
-      partition_adjacent_trailing_before_next_token_on_same_line tag_name_start.loc
-        next_token comments
+      partition_adjacent_trailing_before_next_token_on_same_line
+        tag_name_start.loc next_token comments
     in
     (* Only attach comments to the element name if they are on the same line *)
     attach t.trailing tag_name_start.loc after_opening_tag_name;
@@ -1672,7 +1686,9 @@ and walk_expression expr t comments =
       match closing_tag with
       | None -> (rest, [])
       | Some closing_tag ->
-        let closing_tag_loc = ParsetreeViewer.closing_tag_loc closing_tag in
+        let closing_tag_loc =
+          ParsetreeViewer.container_element_closing_tag_loc closing_tag
+        in
         partition_leading_trailing rest closing_tag_loc
     in
 

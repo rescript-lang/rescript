@@ -746,9 +746,22 @@ let get_jsx_prop_loc = function
     {name.loc with loc_end = value.pexp_loc.loc_end}
   | Parsetree.JSXPropSpreading (loc, _) -> loc
 
-let closing_tag_loc (tag : Parsetree.jsx_closing_container_tag) =
+let container_element_closing_tag_loc
+    (tag : Parsetree.jsx_closing_container_tag) =
   {
     tag.jsx_closing_container_tag_name.loc with
     loc_start = tag.jsx_closing_container_tag_start;
     loc_end = tag.jsx_closing_container_tag_end;
+  }
+
+(** returns the location of the /> token in a unary element *)
+let unary_element_closing_token (expression_loc : Warnings.loc) =
+  {
+    expression_loc with
+    loc_start =
+      {
+        expression_loc.loc_end with
+        pos_cnum = expression_loc.loc_end.pos_cnum - 2;
+        pos_bol = expression_loc.loc_end.pos_bol - 2;
+      };
   }

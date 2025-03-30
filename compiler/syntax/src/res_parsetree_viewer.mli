@@ -158,4 +158,7 @@ val is_tuple_array : Parsetree.expression -> bool
 
 val get_jsx_prop_loc : Parsetree.jsx_prop -> Warnings.loc
 
-val closing_tag_loc : Parsetree.jsx_closing_container_tag -> Warnings.loc
+val container_element_closing_tag_loc :
+  Parsetree.jsx_closing_container_tag -> Warnings.loc
+
+val unary_element_closing_token : Warnings.loc -> Warnings.loc
