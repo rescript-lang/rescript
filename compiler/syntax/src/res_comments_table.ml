@@ -2198,4 +2198,4 @@ and walk_payload payload t comments =
   | PStr s -> walk_structure s t comments
   | _ -> ()
 
-and walk_jsx_prop prop t comments = ()
+and walk_jsx_prop _prop _t _comments = ()

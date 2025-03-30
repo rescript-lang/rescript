@@ -2858,20 +2858,19 @@ and parse_jsx_prop p : Parsetree.jsx_prop option =
   (* {...props} *)
   | Lbrace -> (
     Scanner.pop_mode p.scanner Jsx;
+    let spread_start = p.Parser.start_pos in
     Parser.next p;
     match p.Parser.token with
     | DotDotDot -> (
       Scanner.pop_mode p.scanner Jsx;
       Parser.next p;
-      (* TODO: is this loc even correct? 
-        Should this be the dots or the entire thing?
-      *)
-      let loc = mk_loc p.Parser.start_pos p.prev_end_pos in
       let attr_expr = parse_primary_expr ~operand:(parse_expr p) p in
       (* using label "spreadProps" to distinguish from others *)
       (* let label = Asttypes.Labelled {txt = "_spreadProps"; loc} in *)
       match p.Parser.token with
       | Rbrace ->
+        let spread_end = p.Parser.end_pos in
+        let loc = mk_loc spread_start spread_end in
         Parser.next p;
         Scanner.set_jsx_mode p.scanner;
         Some (Parsetree.JSXPropSpreading (loc, attr_expr))

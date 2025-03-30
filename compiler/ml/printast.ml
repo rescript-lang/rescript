@@ -379,9 +379,10 @@ and jsx_prop i ppf = function
   | JSXPropValue (name, opt, expr) ->
     line i ppf "%s=%s" name.txt (if opt then "?" else "");
     expression i ppf expr
-  | JSXPropSpreading (_, e) ->
-    line i ppf "...";
-    expression i ppf e
+  | JSXPropSpreading (loc, e) ->
+    line i ppf "{... %a\n" fmt_location loc;
+    expression (i + 1) ppf e;
+    line i ppf "}\n"
 
 and jsx_props i ppf xs =
   line i ppf "jsx_props =\n";
