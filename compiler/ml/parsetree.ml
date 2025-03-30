@@ -372,7 +372,8 @@ and jsx_closing_container_tag = {
   (* </ *)
   jsx_closing_container_tag_start: Lexing.position;
   (* name *)
-  jsx_closing_container_tag_name: Longident.t loc; (* > *)
+  jsx_closing_container_tag_name: Longident.t loc;
+  (* > *)
   jsx_closing_container_tag_end: Lexing.position;
 }
 

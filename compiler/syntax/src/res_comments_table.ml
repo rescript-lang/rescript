@@ -152,6 +152,28 @@ let partition_leading_trailing comments loc =
   in
   loop ([], []) comments
 
+(* Splits comments into two groups based on whether they start on the same line as a location's end position.
+ *
+ * This is particularly useful for handling comments that appear on the same line as a syntax element
+ * versus comments that appear on subsequent lines.
+ *
+ * For example, given code:
+ *   let x = 1 /* same line comment */
+ *   /* different line comment */
+ *
+ * When splitting around `x = 1`'s location:
+ * - on_same_line: [/* same line comment */]
+ * - on_other_line: [/* different line comment */]
+ *
+ * This function is often used for formatting decisions where comments on the same line
+ * should be treated differently than comments on different lines (like in JSX elements).
+ *
+ * Parameters:
+ * - loc: location to compare line numbers against
+ * - comments: list of comments to partition
+ *
+ * Returns: (on_same_line_comments, on_other_line_comments)
+ *)
 let partition_by_on_same_line loc comments =
   let rec loop (on_same_line, on_other_line) comments =
     let open Location in
@@ -482,6 +504,13 @@ let get_jsx_prop_loc = function
     {name.loc with loc_end = value.pexp_loc.loc_end}
   | Parsetree.JSXPropSpreading (dots, expr) ->
     {dots with loc_end = expr.pexp_loc.loc_end}
+
+let closing_tag_loc (tag : Parsetree.jsx_closing_container_tag) =
+  {
+    tag.jsx_closing_container_tag_name.loc with
+    loc_start = tag.jsx_closing_container_tag_start;
+    loc_end = tag.jsx_closing_container_tag_end;
+  }
 
 let rec walk_structure s t comments =
   match s with
@@ -1599,7 +1628,8 @@ and walk_expression expr t comments =
            jsx_container_element_tag_name_start = tag_name_start;
            jsx_container_element_props = props;
            jsx_container_element_opening_tag_end = opening_greater_than;
-           jsx_container_element_children = _children;
+           jsx_container_element_children = children;
+           jsx_container_element_closing_tag = closing_tag;
          }) ->
     let opening_greater_than_loc =
       {
@@ -1608,7 +1638,7 @@ and walk_expression expr t comments =
         loc_ghost = false;
       }
     in
-    let after_opening_tag_name, _rest =
+    let after_opening_tag_name, rest =
       (* Either the first prop or the closing > token *)
       let next_token =
         match props with
@@ -1620,6 +1650,32 @@ and walk_expression expr t comments =
     in
     (* Only attach comments to the element name if they are on the same line *)
     attach t.trailing tag_name_start.loc after_opening_tag_name;
+    let _rest =
+      match props with
+      | [] ->
+        let before_greater_than, rest =
+          partition_leading_trailing rest opening_greater_than_loc
+        in
+        (* attach comments to the closing > token *)
+        attach t.leading opening_greater_than_loc before_greater_than;
+        rest
+      | _ -> rest
+    in
+    let _rest =
+      match (children, closing_tag) with
+      | JSXChildrenItems [], Some closing_tag ->
+        (* There are no children, comments after '>' on the same line should be attached *)
+        let after_opening_greater_than, rest =
+          partition_by_on_same_line opening_greater_than_loc rest
+        in
+        attach t.trailing opening_greater_than_loc after_opening_greater_than;
+        let before_closing_tag, rest =
+          partition_leading_trailing rest (closing_tag_loc closing_tag)
+        in
+        attach t.leading (closing_tag_loc closing_tag) before_closing_tag;
+        rest
+      | _ -> rest
+    in
     ()
     (* attach t.leading expr.pexp_loc leading; *)
     (* let opening_token = {expr.pexp_loc with loc_end = opening_greater_than} in
