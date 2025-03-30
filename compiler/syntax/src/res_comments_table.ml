@@ -1644,7 +1644,7 @@ and walk_expression expr t comments =
     in
     (* Only attach comments to the element name if they are on the same line *)
     attach t.trailing tag_name_start.loc after_opening_tag_name;
-    let _rest =
+    let rest =
       match props with
       | [] ->
         let before_greater_than, rest =
@@ -2198,4 +2198,22 @@ and walk_payload payload t comments =
   | PStr s -> walk_structure s t comments
   | _ -> ()
 
-and walk_jsx_prop _prop _t _comments = ()
+and walk_jsx_prop prop t comments =
+  match prop with
+  | Parsetree.JSXPropPunning _ ->
+    (* this is covered by walk_list, as the location for the prop is cover there. *)
+    ()
+  | Parsetree.JSXPropValue (name, _, value) ->
+    if name.loc.loc_end.pos_lnum == value.pexp_loc.loc_start.pos_lnum then
+      (* In the rare case that comments are found between name=value,
+         where both are on the same line,
+         we assign them to the value, and not to the name. *)
+      walk_list [Expression value] t comments
+    else
+      (* otherwise we attach comments that come directly after the name to the name *)
+      let after_name, rest = partition_by_on_same_line name.loc comments in
+      attach t.trailing name.loc after_name;
+      walk_list [Expression value] t rest
+  | Parsetree.JSXPropSpreading (_, value) ->
+    (* We assign all comments to the spreaded expression *)
+    walk_list [Expression value] t comments

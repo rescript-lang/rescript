@@ -744,8 +744,7 @@ let get_jsx_prop_loc = function
   | Parsetree.JSXPropPunning (_, name) -> name.loc
   | Parsetree.JSXPropValue (name, _, value) ->
     {name.loc with loc_end = value.pexp_loc.loc_end}
-  | Parsetree.JSXPropSpreading (dots, expr) ->
-    {dots with loc_end = expr.pexp_loc.loc_end}
+  | Parsetree.JSXPropSpreading (loc, _) -> loc
 
 let closing_tag_loc (tag : Parsetree.jsx_closing_container_tag) =
   {

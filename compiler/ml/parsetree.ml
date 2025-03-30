@@ -360,7 +360,10 @@ and jsx_prop =
   (*
    *   |  {...jsx_expr}
    *)
-  | JSXPropSpreading of Location.t * expression
+  | JSXPropSpreading of
+      (* entire {...expr} location *)
+      Location.t
+      * expression
 
 and jsx_children =
   | JSXChildrenSpreading of expression
