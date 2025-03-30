@@ -59,12 +59,13 @@ let rec no_side_effects (lam : Lam.t) : bool =
     (* bool primitives *)
     | Psequand | Psequor | Pnot | Pboolcomp _ | Pboolorder | Pboolmin | Pboolmax
     (* int primitives *)
-    | Pnegint | Paddint | Psubint | Pmulint | Pandint | Porint | Pxorint
-    | Plslint | Plsrint | Pasrint | Pintcomp _ | Pintorder | Pintmin | Pintmax
+    | Pnegint | Paddint | Psubint | Pmulint | Ppowint | Pandint | Porint
+    | Pxorint | Plslint | Plsrint | Pasrint | Pintcomp _ | Pintorder | Pintmin
+    | Pintmax
     (* float primitives *)
     | Pintoffloat | Pfloatofint | Pnegfloat | Paddfloat | Psubfloat | Pmulfloat
-    | Pdivfloat | Pmodfloat | Pfloatcomp _ | Pjscomp _ | Pfloatorder | Pfloatmin
-    | Pfloatmax
+    | Ppowfloat | Pdivfloat | Pmodfloat | Pfloatcomp _ | Pjscomp _ | Pfloatorder
+    | Pfloatmin | Pfloatmax
     (* bigint primitives *)
     | Pnegbigint | Paddbigint | Psubbigint | Pmulbigint | Ppowbigint
     | Pandbigint | Porbigint | Pxorbigint | Plslbigint | Pasrbigint
@@ -97,8 +98,7 @@ let rec no_side_effects (lam : Lam.t) : bool =
     (* TODO *)
     | Praw_js_code _
     (* byte swap *)
-    | Parraysets | Parraysetu | Poffsetref _ | Praise | Plazyforce | Psetfield _
-      ->
+    | Parraysets | Parraysetu | Poffsetref _ | Praise | Psetfield _ ->
       false)
   | Llet (_, _, arg, body) -> no_side_effects arg && no_side_effects body
   | Lswitch (_, _) -> false

@@ -1,5 +1,5 @@
 /* Exceptions */
-external raise: exn => 'a = "%raise"
+external throw: exn => 'a = "%raise"
 
 /* Debugging */
 
@@ -33,12 +33,14 @@ external \"<<": (int, int) => int = "%lslint"
 external \">>": (int, int) => int = "%asrint"
 external \">>>": (int, int) => int = "%lsrint"
 external mod: (int, int) => int = "%modint"
+external \"**": (int, int) => int = "%powint"
+external \"^": (int, int) => int = "%bitxorint"
 
 /* Comparisons */
 /* Note: Later comparisons will be converted to unified operations too */
 
-external \"=": ('a, 'a) => bool = "%equal"
-external \"<>": ('a, 'a) => bool = "%notequal"
+external \"==": ('a, 'a) => bool = "%equal"
+external \"!=": ('a, 'a) => bool = "%notequal"
 external \"<": ('a, 'a) => bool = "%lessthan"
 external \">": ('a, 'a) => bool = "%greaterthan"
 external \"<=": ('a, 'a) => bool = "%lessequal"
@@ -46,8 +48,8 @@ external \">=": ('a, 'a) => bool = "%greaterequal"
 external compare: ('a, 'a) => int = "%compare"
 external min: ('a, 'a) => 'a = "%min"
 external max: ('a, 'a) => 'a = "%max"
-external \"==": ('a, 'a) => bool = "%eq"
-external \"!=": ('a, 'a) => bool = "%noteq"
+external \"===": ('a, 'a) => bool = "%eq"
+external \"!==": ('a, 'a) => bool = "%noteq"
 
 /* Boolean operations */
 
@@ -81,7 +83,7 @@ external \"/.": (float, float) => float = "%divfloat"
 
 /* String operations */
 
-external \"^": (string, string) => string = "%string_concat"
+external \"++": (string, string) => string = "%string_concat"
 
 /* Unit operations */
 

@@ -61,7 +61,7 @@ and type_desc =
   | Tvar of string option
       (** [Tvar (Some "a")] ==> ['a] or ['_a]
       [Tvar None]       ==> [_] *)
-  | Tarrow of arg_label * type_expr * type_expr * commutable
+  | Tarrow of Noloc.arg_label * type_expr * type_expr * commutable * arity
       (** [Tarrow (Nolabel,      e1, e2, c)] ==> [e1    -> e2]
       [Tarrow (Labelled "l", e1, e2, c)] ==> [l:e1  -> e2]
       [Tarrow (Optional "l", e1, e2, c)] ==> [?l:e1 -> e2]
@@ -113,7 +113,6 @@ and type_desc =
 and row_desc = {
   row_fields: (label * row_field) list;
   row_more: type_expr;
-  row_bound: unit; (* kept for compatibility *)
   row_closed: bool;
   row_fixed: bool;
   row_name: (Path.t * type_expr list) option;
@@ -263,7 +262,12 @@ type type_declaration = {
   type_attributes: Parsetree.attributes;
   type_immediate: bool; (* true iff type should not be a pointer *)
   type_unboxed: unboxed_status;
+  type_inlined_types: type_inlined_type list;
+      (** Representation of inlined types, needed for printing *)
 }
+
+and type_inlined_type =
+  | Record of {type_name: string; labels: label_declaration list}
 
 and type_kind =
   | Type_abstract
@@ -281,15 +285,14 @@ and record_representation =
       tag: int;
       name: string;
       num_nonconsts: int;
-      optional_labels: string list;
       attrs: Parsetree.attributes;
     }
   | Record_extension (* Inlined record under extension *)
-  | Record_optional_labels of string list (* List of optional labels *)
 
 and label_declaration = {
   ld_id: Ident.t;
   ld_mutable: mutable_flag;
+  ld_optional: bool;
   ld_type: type_expr;
   ld_loc: Location.t;
   ld_attributes: Parsetree.attributes;
@@ -331,13 +334,6 @@ type extension_constructor = {
   ext_attributes: Parsetree.attributes;
   ext_is_exception: bool;
 }
-
-and type_transparence =
-  | Type_public (* unrestricted expansion *)
-  | Type_new (* "new" type *)
-  | Type_private (* private type *)
-
-(* Type expressions for the class language *)
 
 module Concr : Set.S with type elt = string
 
@@ -396,7 +392,6 @@ type constructor_description = {
   cstr_tag: constructor_tag; (* Tag for heap blocks *)
   cstr_consts: int; (* Number of constant constructors *)
   cstr_nonconsts: int; (* Number of non-const constructors *)
-  cstr_normal: int; (* Number of non generalized constrs *)
   cstr_generalized: bool; (* Constrained return type? *)
   cstr_private: private_flag; (* Read-only constructor? *)
   cstr_loc: Location.t;
@@ -422,6 +417,7 @@ type label_description = {
   lbl_res: type_expr; (* Type of the result *)
   lbl_arg: type_expr; (* Type of the argument *)
   lbl_mut: mutable_flag; (* Is this a mutable field? *)
+  lbl_optional: bool; (* Is this an optional field? *)
   lbl_pos: int; (* Position in block *)
   mutable lbl_all: label_description array;
   (* All the labels in this type. This is mutable only because of a specific feature related to dicts, and should not be mutated elsewhere. *)

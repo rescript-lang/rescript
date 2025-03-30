@@ -1,20 +1,21 @@
-//@ts-check
-var child_process = require("child_process");
-var fs = require("fs");
-var path = require("path");
+// @ts-check
 
-var { rescript_exe } = require("#cli/bin_path");
+import * as assert from "node:assert";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { setup } from "#dev/process";
+
+const { execBuild } = setup(import.meta.dirname);
 
 if (process.platform === "win32") {
   console.log("Skipping test on Windows");
   process.exit(0);
 }
 
-console.log(child_process.execSync(rescript_exe, { encoding: "utf8" }));
+await execBuild();
+const content = await fs.readFile(
+  path.join("lib", "bs", ".sourcedirs.json"),
+  "utf-8",
+);
 
-var content =
-  "" + fs.readFileSync(path.join(__dirname, "lib", "bs", ".sourcedirs.json"));
-
-var assert = require("assert");
-
-assert(JSON.parse(content).dirs.some(x => x.includes("📕annotation")));
+assert.ok(JSON.parse(content).dirs.some(x => x.includes("📕annotation")));

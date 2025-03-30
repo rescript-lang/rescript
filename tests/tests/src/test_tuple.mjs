@@ -10,9 +10,9 @@ for (let k = 1; k <= 10; ++k) {
         (i << 1)
       ] : [
         2,
-        Math.imul(i, 3)
+        i * 3 | 0
       ];
-    r = Math.imul(r, match[0]) + match[1] | 0;
+    r = (r * match[0] | 0) + match[1] | 0;
   }
 }
 

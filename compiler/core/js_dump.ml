@@ -436,7 +436,7 @@ and pp_function ~return_unit ~async ~is_method ?directive cxt (f : P.t)
     since it can be either [int] or [string]
 *)
 and pp_one_case_clause :
-      'a. _ -> P.t -> (P.t -> 'a -> unit) -> 'a * J.case_clause -> _ =
+    'a. _ -> P.t -> (P.t -> 'a -> unit) -> 'a * J.case_clause -> _ =
  fun cxt f pp_cond
      (switch_case, ({switch_body; should_break; comment} : J.case_clause)) ->
   P.newline f;
@@ -467,8 +467,7 @@ and pp_one_case_clause :
   cxt
 
 and loop_case_clauses :
-      'a. cxt -> P.t -> (P.t -> 'a -> unit) -> ('a * J.case_clause) list -> cxt
-    =
+    'a. cxt -> P.t -> (P.t -> 'a -> unit) -> ('a * J.case_clause) list -> cxt =
  fun cxt f pp_cond cases ->
   Ext_list.fold_left cases cxt (fun acc x -> pp_one_case_clause acc f pp_cond x)
 
@@ -693,7 +692,8 @@ and expression_desc cxt ~(level : int) f x : cxt =
      {[ 0. - x ]}
      {[ 0.00 - x ]}
      {[ 0.000 - x ]}
-  *) ->
+  *)
+    ->
     P.cond_paren_group f (level > 13) (fun _ ->
         P.string f
           (match desc with
@@ -759,24 +759,19 @@ and expression_desc cxt ~(level : int) f x : cxt =
            Ext_list.map_combine fields el (fun x ->
                Js_op.Lit (Ext_ident.convert x)) ))
   (*name convention of Record is slight different from modules*)
-  | Caml_block (el, mutable_flag, _, Blk_record {fields; record_repr}) -> (
+  | Caml_block (el, mutable_flag, _, Blk_record {fields}) ->
     if
       Array.length fields <> 0
-      && Ext_array.for_alli fields (fun i v -> string_of_int i = v)
+      && Ext_array.for_alli fields (fun i (v, _) -> string_of_int i = v)
     then expression_desc cxt ~level f (Array (el, mutable_flag))
     else
-      match record_repr with
-      | Record_regular ->
-        expression_desc cxt ~level f
-          (Object (None, Ext_list.combine_array fields el (fun i -> Js_op.Lit i)))
-      | Record_optional ->
-        let fields =
-          Ext_list.array_list_filter_map fields el (fun f x ->
-              match x.expression_desc with
-              | Undefined _ -> None
-              | _ -> Some (Js_op.Lit f, x))
-        in
-        expression_desc cxt ~level f (Object (None, fields)))
+      let fields =
+        Ext_list.array_list_filter_map fields el (fun (f, opt) x ->
+            match x.expression_desc with
+            | Undefined _ when opt -> None
+            | _ -> Some (Js_op.Lit f, x))
+      in
+      expression_desc cxt ~level f (Object (None, fields))
   | Caml_block (el, _, _, Blk_poly_var _) -> (
     match el with
     | [tag; value] ->
@@ -794,14 +789,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
     let untagged = Ast_untagged_variants.process_untagged p.attrs in
     let objs =
       let tails =
-        Ext_list.combine_array_append p.fields el
-          (if !Js_config.debug then [(name_symbol, E.str p.name)] else [])
-          (fun i -> Js_op.Lit i)
-      in
-      let is_optional (pname : Js_op.property_name) =
-        match pname with
-        | Lit n -> Ext_list.mem_string p.optional_labels n
-        | Symbol_name -> false
+        Ext_list.combine_array p.fields el (fun (i, opt) -> (Js_op.Lit i, opt))
       in
       let tag_name =
         match Ast_untagged_variants.process_tag_name p.attrs with
@@ -809,13 +797,10 @@ and expression_desc cxt ~(level : int) f x : cxt =
         | Some s -> s
       in
       let tails =
-        match p.optional_labels with
-        | [] -> tails
-        | _ ->
-          Ext_list.filter_map tails (fun (f, x) ->
-              match x.expression_desc with
-              | Undefined _ when is_optional f -> None
-              | _ -> Some (f, x))
+        Ext_list.filter_map tails (fun ((f, optional), x) ->
+            match x.expression_desc with
+            | Undefined _ when optional -> None
+            | _ -> Some (f, x))
       in
       if untagged then tails
       else
@@ -1229,7 +1214,8 @@ and statement_desc top cxt f (s : J.statement_desc) : cxt =
           semi f;
           cxt)
       (* There MUST be a space between the return and its
-         argument. A line return will not work *))
+         argument. A line return will not work *)
+    )
   | Int_switch (e, cc, def) ->
     P.string f L.switch;
     P.space f;

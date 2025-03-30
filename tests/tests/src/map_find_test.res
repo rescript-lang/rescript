@@ -19,7 +19,7 @@ include (
     ) => acc->SMap.set(k, v))
     @val("console.log") external log: 'a => unit = ""
 
-    (Mt.from_pair_suites(__MODULE__, ...))(list{
+    Mt.from_pair_suites(__MODULE__, ...)(list{
       ("int", _ => Eq(IntMap.get(m, 10), Some('a'))),
       ("string", _ => Eq(SMap.get(s, "10"), Some('a'))),
     })

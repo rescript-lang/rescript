@@ -28,6 +28,7 @@ let x = z |> @attr while condition { () }
 let x = a + -1 + -2
 let x = a + @attr -1 + @attr -2
 let x = a % a == 0
+let x = a ^ a == 0
 
 // should be interpreted as binary expression not prefix op
 let x = a -b

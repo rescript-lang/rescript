@@ -322,8 +322,9 @@ and parse_sources (cxt : cxt) (sources : Ext_json_types.t) =
   | Arr file_groups -> parsing_arr_sources cxt file_groups.content
   | _ -> parsing_single_source cxt sources
 
-let scan ~package_kind ~root ~cut_generators ~(* ~namespace  *)
-                                              ignored_dirs x : t =
+let scan ~package_kind ~root ~cut_generators
+    ~(* ~namespace  *)
+     ignored_dirs x : t =
   parse_sources
     {
       ignored_dirs;

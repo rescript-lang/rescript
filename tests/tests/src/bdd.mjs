@@ -57,7 +57,7 @@ function resize(newSize) {
   let copyBucket = _bucket => {
     while (true) {
       let bucket = _bucket;
-      if (!bucket) {
+      if (bucket === 0) {
         return;
       }
       let n = bucket.hd;
@@ -135,7 +135,7 @@ function mkNode(low, v, high) {
   let _b = bucket;
   while (true) {
     let b = _b;
-    if (b) {
+    if (b !== 0) {
       let n = b.hd;
       if (typeof n !== "object") {
         if (n === "One") {
@@ -348,7 +348,7 @@ let seed = {
 };
 
 function random() {
-  seed.contents = Math.imul(seed.contents, 25173) + 17431 | 0;
+  seed.contents = (seed.contents * 25173 | 0) + 17431 | 0;
   return (seed.contents & 1) > 0;
 }
 

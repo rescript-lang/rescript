@@ -89,8 +89,8 @@ let () = {
   eq(__LOC__, N.get(v, 1_200), Some(1_200))
   let ((aa, bb), pres) = N.split(v, 1000)
   b(__LOC__, pres)
-  b(__LOC__, A.eq(N.toArray(aa), I.range(500, 999), \"="))
-  b(__LOC__, A.eq(N.toArray(bb), I.range(1_001, 2_000), \"="))
+  b(__LOC__, A.eq(N.toArray(aa), I.range(500, 999), \"=="))
+  b(__LOC__, A.eq(N.toArray(bb), I.range(1_001, 2_000), \"=="))
   b(__LOC__, N.subset(aa, v))
   b(__LOC__, N.subset(bb, v))
   b(__LOC__, N.isEmpty(N.intersect(aa, bb)))
@@ -98,8 +98,8 @@ let () = {
   b(__LOC__, c)
   let ((aa, bb), pres) = N.split(v, 1_000)
   b(__LOC__, !pres)
-  b(__LOC__, A.eq(N.toArray(aa), I.range(500, 999), \"="))
-  b(__LOC__, A.eq(N.toArray(bb), I.range(1_001, 2_000), \"="))
+  b(__LOC__, A.eq(N.toArray(aa), I.range(500, 999), \"=="))
+  b(__LOC__, A.eq(N.toArray(bb), I.range(1_001, 2_000), \"=="))
   b(__LOC__, N.subset(aa, v))
   b(__LOC__, N.subset(bb, v))
   b(__LOC__, N.isEmpty(N.intersect(aa, bb)))
@@ -111,7 +111,7 @@ let \"=~" = N.eq
 let () = {
   let aa = f(I.randomRange(0, 100))
   let bb = f(I.randomRange(40, 120))
-  let cc = \"++"(aa, bb)
+  let cc = aa ++ bb
   b(__LOC__, \"=~"(cc, f(I.randomRange(0, 120))))
 
   b(

@@ -1,15 +1,9 @@
-let foo =
-  ((Function$
-      (fun ~a:((a)[@res.namedArgLoc ]) ->
-         (a (let __res_unit = () in __res_unit)) +. 1.))
-  [@res.arity 1])
-let a = ((Function$ (fun () -> 2))[@res.arity 1])
-let bar = foo ~a:((a)[@res.namedArgLoc ])
-let comparisonResult =
-  compare currentNode.value ~targetValue:((targetValue)[@res.namedArgLoc ])
-;;callback firstNode ~y:((y)[@res.namedArgLoc ])
+let foo [arity:1]~a  = (a ()) +. 1.
+let a [arity:1]() = 2
+let bar = foo ~a
+let comparisonResult = compare currentNode.value ~targetValue
+;;callback firstNode ~y
 ;;document.createElementWithOptions {js|div|js}
-    (elementProps ~onClick:((Function$ (fun _ -> Js.log {js|hello world|js}))
-       [@res.namedArgLoc ][@res.arity 1]))
+    (elementProps ~onClick:(fun [arity:1]_ -> Js.log {js|hello world|js}))
 ;;resolve ()
-;;resolve (let __res_unit = () in __res_unit)
+;;resolve ()

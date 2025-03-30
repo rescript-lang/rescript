@@ -29,7 +29,7 @@ type t<'a, 'b> = result<'a, 'b> =
 let getExn = x =>
   switch x {
   | Ok(x) => x
-  | Error(_) => raise(Not_found)
+  | Error(_) => throw(Not_found)
   }
 
 let mapWithDefault = (opt, default, f) =>

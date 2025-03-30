@@ -84,18 +84,15 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                         all_mod,
                     );
 
-                    match &source_file.interface {
-                        Some(interface) => {
-                            let iast_path = package.get_iast_path(&interface.path);
+                    if let Some(interface) = &source_file.interface {
+                        let iast_path = package.get_iast_path(&interface.path);
 
-                            deps.extend(get_dep_modules(
-                                &iast_path,
-                                package.namespace.to_suffix(),
-                                package.modules.as_ref().unwrap(),
-                                all_mod,
-                            ))
-                        }
-                        None => (),
+                        deps.extend(get_dep_modules(
+                            &iast_path,
+                            package.namespace.to_suffix(),
+                            package.modules.as_ref().unwrap(),
+                            all_mod,
+                        ))
                     }
                     match &package.namespace {
                         packages::Namespace::NamespaceWithEntry { namespace: _, entry }

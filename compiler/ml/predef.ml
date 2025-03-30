@@ -203,6 +203,7 @@ let decl_abstr =
     type_attributes = [];
     type_immediate = false;
     type_unboxed = unboxed_false_default_false;
+    type_inlined_types = [];
   }
 
 let decl_abstr_imm = {decl_abstr with type_immediate = true}
@@ -309,26 +310,23 @@ let common_initial_env add_type add_extension empty_env =
           ( [
               {
                 ld_id = ident_dict_magic_field_name;
-                ld_attributes =
-                  [
-                    (Location.mknoloc "res.optional", Parsetree.PStr []);
-                    Dict_type_helpers.dict_magic_field_attr;
-                  ];
+                ld_attributes = [Dict_type_helpers.dict_magic_field_attr];
                 ld_loc = Location.none;
                 ld_mutable = Immutable;
+                ld_optional = true;
                 ld_type = newgenty (Tconstr (path_option, [tvar], ref Mnil));
               };
             ],
-            Record_optional_labels [Ident.name ident_dict_magic_field_name] );
+            Record_regular );
     }
   and decl_uncurried =
-    let tvar1, tvar2 = (newgenvar (), newgenvar ()) in
+    let tvar1 = newgenvar () in
     {
       decl_abstr with
-      type_params = [tvar1; tvar2];
-      type_arity = 2;
+      type_params = [tvar1];
+      type_arity = 1;
       type_kind = Type_variant [cstr ident_ctor_uncurried [tvar1]];
-      type_variance = [Variance.covariant; Variance.covariant];
+      type_variance = [Variance.covariant];
       type_unboxed = Types.unboxed_true_default_false;
     }
   and decl_unknown =

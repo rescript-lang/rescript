@@ -260,7 +260,7 @@ let rec iter_row f row =
 let iter_type_expr f ty =
   match ty.desc with
   | Tvar _ -> ()
-  | Tarrow (_, ty1, ty2, _) ->
+  | Tarrow (_, ty1, ty2, _, _) ->
     f ty1;
     f ty2
   | Ttuple l -> List.iter f l
@@ -404,7 +404,6 @@ let copy_row f fixed row keep more =
   {
     row_fields = fields;
     row_more = more;
-    row_bound = ();
     row_fixed = row.row_fixed && fixed;
     row_closed = row.row_closed;
     row_name = name;
@@ -429,7 +428,8 @@ let rec norm_univar ty =
 
 let rec copy_type_desc ?(keep_names = false) f = function
   | Tvar _ as ty -> if keep_names then ty else Tvar None
-  | Tarrow (p, ty1, ty2, c) -> Tarrow (p, f ty1, f ty2, copy_commu c)
+  | Tarrow (p, ty1, ty2, c, arity) ->
+    Tarrow (p, f ty1, f ty2, copy_commu c, arity)
   | Ttuple l -> Ttuple (List.map f l)
   | Tconstr (p, l, _) -> Tconstr (p, List.map f l, ref Mnil)
   | Tobject (ty, {contents = Some (p, tl)}) ->
@@ -593,15 +593,23 @@ let forget_abbrev mem path =
 (**********************************)
 
 let is_optional = function
+  | Noloc.Optional _ -> true
+  | _ -> false
+
+let is_optional_loc = function
   | Optional _ -> true
   | _ -> false
 
 let label_name = function
-  | Nolabel -> ""
+  | Noloc.Nolabel -> ""
   | Labelled s | Optional s -> s
 
-let prefixed_label_name = function
+let label_loc_name = function
   | Nolabel -> ""
+  | Labelled {txt} | Optional {txt} -> txt
+
+let prefixed_label_name = function
+  | Noloc.Nolabel -> ""
   | Labelled s -> "~" ^ s
   | Optional s -> "?" ^ s
 
@@ -610,7 +618,7 @@ type sargs = (Asttypes.arg_label * Parsetree.expression) list
 let rec extract_label_aux hd l = function
   | [] -> None
   | ((l', t) as p) :: ls ->
-    if label_name l' = l then Some (l', t, List.rev_append hd ls)
+    if label_loc_name l' = l then Some (l', t, List.rev_append hd ls)
     else extract_label_aux (p :: hd) l ls
 
 let extract_label l (ls : sargs) :

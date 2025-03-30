@@ -42,10 +42,16 @@ while read file; do
   $DUNE_BIN_DIR/res_parser $file &> $(exp $file) & maybeWait
 done <temp/files.txt
 
+# printing with ast conversion
+find syntax_tests/data/ast-mapping -name "*.res" -o -name "*.resi" -o -name "*.ml" -o -name "*.mli" >temp/files.txt
+while read file; do
+  $DUNE_BIN_DIR/res_parser -test-ast-conversion -jsx-version 4 $file &> $(exp $file) & maybeWait
+done <temp/files.txt
+
 # printing with ppx
 find syntax_tests/data/ppx/react -name "*.res" -o -name "*.resi" >temp/files.txt
 while read file; do
-  $DUNE_BIN_DIR/res_parser -jsx-version 4 -jsx-mode "automatic" $file &> $(exp $file) & maybeWait
+  $DUNE_BIN_DIR/res_parser -jsx-version 4 $file &> $(exp $file) & maybeWait
 done <temp/files.txt
 
 wait
@@ -54,7 +60,7 @@ warningYellow='\033[0;33m'
 successGreen='\033[0;32m'
 reset='\033[0m'
 
-git diff --ignore-cr-at-eol $(find tests -name expected) >temp/diff.txt
+git diff --ignore-cr-at-eol $(find syntax_tests -name expected) >temp/diff.txt
 diff=$(cat temp/diff.txt)
 if [[ $diff = "" ]]; then
   printf "${successGreen}✅ No unstaged tests difference.${reset}\n"

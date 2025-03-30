@@ -87,51 +87,15 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   (* Its output should not be rewritten anymore *)
   | Pexp_extension extension ->
     Ast_exp_extension.handle_extension e self extension
-  | Pexp_setinstvar ({txt; loc}, expr) ->
-    if Stack.is_empty Js_config.self_stack then
-      Location.raise_errorf ~loc:e.pexp_loc
-        "This assignment can only happen in object context";
-    let name = Stack.top Js_config.self_stack in
-    if name = "" then
-      Location.raise_errorf ~loc:e.pexp_loc
-        "The current object does not assign a name";
-    let open Ast_helper in
-    self.expr self
-      (Exp.apply ~loc:e.pexp_loc
-         (Exp.ident ~loc {loc; txt = Lident "#="})
-         [
-           ( Nolabel,
-             Exp.send ~loc (Exp.ident ~loc {loc; txt = Lident name}) {loc; txt}
-           );
-           (Nolabel, expr);
-         ])
   | Pexp_constant (Pconst_string (s, Some delim)) ->
     Ast_utf8_string_interp.transform_exp e s delim
   | Pexp_constant (Pconst_integer (s, Some 'l')) ->
     {e with pexp_desc = Pexp_constant (Pconst_integer (s, None))}
   (* End rewriting *)
-  | Pexp_function _ ->
-    async_context := false;
-    default_expr_mapper self e
-  | _
-    when Ast_uncurried.expr_is_uncurried_fun e
-         &&
-         match
-           Ast_attributes.process_attributes_rev
-             (Ast_uncurried.expr_extract_uncurried_fun e).pexp_attributes
-         with
-         | Meth_callback _, _ -> true
-         | _ -> false ->
-    (* Treat @this (. x, y, z) => ... just like @this (x, y, z) => ... *)
-    let fun_expr = Ast_uncurried.expr_extract_uncurried_fun e in
-    self.expr self fun_expr
   | Pexp_newtype (s, body) ->
-    let async = Ast_attributes.has_async_payload e.pexp_attributes <> None in
-    let body = Ast_async.add_async_attribute ~async body in
     let res = self.expr self body in
     {e with pexp_desc = Pexp_newtype (s, res)}
-  | Pexp_fun (label, _, pat, body) -> (
-    let async = Ast_attributes.has_async_payload e.pexp_attributes <> None in
+  | Pexp_fun {arg_label = label; lhs = pat; rhs = body; async} -> (
     match Ast_attributes.process_attributes_rev e.pexp_attributes with
     | Nothing, _ ->
       (* Handle @async x => y => ... is in async context *)
@@ -232,11 +196,13 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
         ({
            pmod_desc =
              Pmod_constraint
-               ({pmod_desc = Pmod_ident _}, {pmty_desc = Pmty_ident mtyp_lid});
-           pmod_attributes;
+               ( {pmod_desc = Pmod_ident _; pmod_attributes = attrs1},
+                 {pmty_desc = Pmty_ident mtyp_lid} );
+           pmod_attributes = attrs2;
          } as me),
         expr )
-    when Res_parsetree_viewer.has_await_attribute pmod_attributes ->
+    when Res_parsetree_viewer.has_await_attribute attrs1
+         || Res_parsetree_viewer.has_await_attribute attrs2 ->
     {
       e with
       pexp_desc =
@@ -253,29 +219,33 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   let async_saved = !async_context in
   let result = expr_mapper ~async_context ~in_function_def self e in
   async_context := async_saved;
-  let is_module, has_await =
-    match e.pexp_desc with
-    | Pexp_letmodule (_, {pmod_desc = Pmod_ident _; pmod_attributes}, _)
-    | Pexp_letmodule
-        ( _,
-          {
-            pmod_desc =
-              Pmod_constraint
-                ({pmod_desc = Pmod_ident _}, {pmty_desc = Pmty_ident _});
-            pmod_attributes;
-          },
-          _ ) ->
-      (true, Ast_attributes.has_await_payload pmod_attributes)
-    | _ -> (false, Ast_attributes.has_await_payload e.pexp_attributes)
-  in
-  match has_await with
-  | None -> result
-  | Some _ ->
+  let check_await () =
     if !async_context = false then
       Location.raise_errorf ~loc:e.pexp_loc
-        "Await on expression not in an async context";
-    if is_module = false then Ast_await.create_await_expression result
-    else result
+        "Await on expression not in an async context"
+  in
+  match e.pexp_desc with
+  | Pexp_letmodule (_, {pmod_desc = Pmod_ident _; pmod_attributes}, _)
+    when Ast_attributes.has_await_payload pmod_attributes ->
+    check_await ();
+    result
+  | Pexp_letmodule
+      ( _,
+        {
+          pmod_desc =
+            Pmod_constraint
+              ({pmod_desc = Pmod_ident _; pmod_attributes = attrs1}, _);
+          pmod_attributes = attrs2;
+        },
+        _ )
+    when Ast_attributes.has_await_payload attrs1
+         || Ast_attributes.has_await_payload attrs2 ->
+    check_await ();
+    result
+  | _ when Ast_attributes.has_await_payload e.pexp_attributes ->
+    check_await ();
+    Ast_await.create_await_expression result
+  | _ -> result
 
 let typ_mapper (self : mapper) (typ : Parsetree.core_type) =
   Ast_core_type_class_type.typ_mapper self typ
@@ -547,7 +517,8 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
         {txt = Lident safe_module_type_name; loc = mb.pmb_expr.pmod_loc}
       in
       module_type_decl
-      @ (* module M = @res.await Belt.List *)
+      @
+      (* module M = @res.await Belt.List *)
       {
         item with
         pstr_desc =
@@ -594,7 +565,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
             | Pexp_ifthenelse (_, then_expr, Some else_expr) ->
               aux then_expr @ aux else_expr
             | Pexp_construct (_, Some expr) -> aux expr
-            | Pexp_fun (_, _, _, expr) | Pexp_newtype (_, expr) -> aux expr
+            | Pexp_fun {rhs = expr} | Pexp_newtype (_, expr) -> aux expr
             | _ -> acc
           in
           aux pvb_expr @ spelunk_vbs acc tl

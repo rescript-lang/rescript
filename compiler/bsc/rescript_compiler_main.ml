@@ -10,9 +10,11 @@
 (*                                                                     *)
 (***********************************************************************)
 
+let absname = ref false
+
 let set_abs_input_name sourcefile =
   let sourcefile =
-    if !Location.absname && Filename.is_relative sourcefile then
+    if !absname && Filename.is_relative sourcefile then
       Ext_path.absolute_cwd_path sourcefile
     else sourcefile
   in
@@ -134,23 +136,16 @@ let ppf = Format.err_formatter
 (* Error messages to standard error formatter *)
 
 let anonymous ~(rev_args : string list) =
-  if !Js_config.as_ppx then
-    match rev_args with
-    | [output; input] ->
-      Ppx_apply.apply_lazy ~source:input ~target:output
-        Ppx_entry.rewrite_implementation Ppx_entry.rewrite_signature
-    | _ -> Bsc_args.bad_arg "Wrong format when use -as-ppx"
-  else
-    match rev_args with
-    | [filename] -> process_file filename ppf
-    | [] -> ()
-    | _ ->
-      if !Js_config.syntax_only then
-        Ext_list.rev_iter rev_args (fun filename ->
-            Clflags.reset_dump_state ();
-            Warnings.reset ();
-            process_file filename ppf)
-      else Bsc_args.bad_arg "can not handle multiple files"
+  match rev_args with
+  | [filename] -> process_file filename ppf
+  | [] -> ()
+  | _ ->
+    if !Js_config.syntax_only then
+      Ext_list.rev_iter rev_args (fun filename ->
+          Clflags.reset_dump_state ();
+          Warnings.reset ();
+          process_file filename ppf)
+    else Bsc_args.bad_arg "can not handle multiple files"
 
 let format_file input =
   let ext =
@@ -259,16 +254,11 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
             | _ -> true
           in
           Js_config.jsx_module := Js_config.jsx_module_of_string i;
-          if is_generic then (
-            Js_config.jsx_mode := Automatic;
-            Js_config.jsx_version := Some Jsx_v4)),
+          if is_generic then Js_config.jsx_version := Some Jsx_v4),
       "*internal* Set jsx module" );
     ( "-bs-jsx-mode",
-      string_call (fun i ->
-          if i <> "classic" && i <> "automatic" then
-            Bsc_args.bad_arg (" Not supported jsx-mode : " ^ i);
-          Js_config.jsx_mode := Js_config.jsx_mode_of_string i),
-      "*internal* Set jsx mode" );
+      string_call ignore,
+      "*internal* Set jsx mode, this is no longer used and is a no-op." );
     ( "-bs-package-output",
       string_call Js_packages_state.update_npm_package_path,
       "*internal* Set npm-output-path: [opt_module]:path, for example: \
@@ -295,7 +285,6 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
       string_call Js_packages_state.set_package_map,
       "*internal* Set package map, not only set package name but also use it \
        as a namespace" );
-    ("-as-ppx", set Js_config.as_ppx, "*internal*As ppx for editor integration");
     ( "-as-pp",
       unit_call (fun _ ->
           Js_config.as_pp := true;
@@ -402,13 +391,12 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
       string_optional_set Clflags.preprocessor,
       "*internal* <command>  Pipe sources through preprocessor <command>" );
     ( "-absname",
-      set Location.absname,
+      set absname,
       "*internal* Show absolute filenames in error messages" );
     (* Not used, the build system did the expansion *)
     ( "-bs-no-bin-annot",
       clear Clflags.binary_annotations,
       "*internal* Disable binary annotations (by default on)" );
-    ("-modules", set Js_config.modules, "*internal* serve similar to ocamldep");
     ( "-short-paths",
       clear Clflags.real_paths,
       "*internal* Shorten paths in types" );

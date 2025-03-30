@@ -7,6 +7,15 @@ for file in src/*.{res,resi}; do
   fi
 done
 
+for file in ppx/*.res; do
+  output="src/expected/$(basename $file).jsout"
+  ../../cli/bsc -ppx "../../_build/install/default/bin/rescript-tools ppx" $file > $output
+  # # CI. We use LF, and the CI OCaml fork prints CRLF. Convert.
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- $output
+  fi
+done
+
 warningYellow='\033[0;33m'
 successGreen='\033[0;32m'
 reset='\033[0m'

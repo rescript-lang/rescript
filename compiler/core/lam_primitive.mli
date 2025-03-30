@@ -36,7 +36,6 @@ type t =
   | Pfield of int * Lambda.field_dbg_info
   | Psetfield of int * Lambda.set_field_dbg_info
   | Pduprecord
-  | Plazyforce
   | Pjs_call of {
       (* Location.t *  [loc] is passed down *)
       prim_name: string;
@@ -69,6 +68,7 @@ type t =
   | Pmulint
   | Pdivint
   | Pmodint
+  | Ppowint
   | Pandint
   | Porint
   | Pxorint
@@ -90,6 +90,7 @@ type t =
   | Pmulfloat
   | Pdivfloat
   | Pmodfloat
+  | Ppowfloat
   | Pfloatcomp of Lam_compat.comparison
   | Pfloatorder
   | Pfloatmin

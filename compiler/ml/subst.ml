@@ -251,6 +251,7 @@ let label_declaration s l =
   {
     ld_id = l.ld_id;
     ld_mutable = l.ld_mutable;
+    ld_optional = l.ld_optional;
     ld_type = typexp s l.ld_type;
     ld_loc = loc s l.ld_loc;
     ld_attributes = attrs s l.ld_attributes;
@@ -293,6 +294,7 @@ let type_declaration s decl =
       type_attributes = attrs s decl.type_attributes;
       type_immediate = decl.type_immediate;
       type_unboxed = decl.type_unboxed;
+      type_inlined_types = decl.type_inlined_types;
     }
   in
   cleanup_types ();
@@ -388,26 +390,3 @@ and modtype_declaration s decl =
 
 (* For every binding k |-> d of m1, add k |-> f d to m2
    and return resulting merged map. *)
-
-let merge_tbls f m1 m2 = Tbl.fold (fun k d accu -> Tbl.add k (f d) accu) m1 m2
-
-let merge_path_maps f m1 m2 =
-  PathMap.fold (fun k d accu -> PathMap.add k (f d) accu) m1 m2
-
-let type_replacement s = function
-  | Path p -> Path (type_path s p)
-  | Type_function {params; body} ->
-    let params = List.map (typexp s) params in
-    let body = typexp s body in
-    Type_function {params; body}
-
-(* Composition of substitutions:
-     apply (compose s1 s2) x = apply s2 (apply s1 x) *)
-
-let compose s1 s2 =
-  {
-    types = merge_path_maps (type_replacement s2) s1.types s2.types;
-    modules = merge_path_maps (module_path s2) s1.modules s2.modules;
-    modtypes = merge_tbls (modtype s2) s1.modtypes s2.modtypes;
-    for_saving = s1.for_saving || s2.for_saving;
-  }

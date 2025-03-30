@@ -612,3 +612,11 @@ let sort_uniq = (cmp, l) => {
     sort(len, l)
   }
 }
+
+let isEmpty = x =>
+  switch x {
+  | list{} => true
+  | _ => false
+  }
+
+let isEmpty2 = x => x == list{} ? true : false

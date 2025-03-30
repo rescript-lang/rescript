@@ -60,7 +60,7 @@ let rec traverseExpr (exp : Parsetree.expression) ~exprPath ~pos
     let fieldWithCursor = ref None in
     let fieldWithExprHole = ref None in
     fields
-    |> List.iter (fun (fname, exp) ->
+    |> List.iter (fun (fname, exp, _) ->
            match
              ( fname.Location.txt,
                exp.Parsetree.pexp_loc |> CursorPosition.classifyLoc ~pos )
@@ -72,7 +72,7 @@ let rec traverseExpr (exp : Parsetree.expression) ~exprPath ~pos
            | _ -> ());
     let seenFields =
       fields
-      |> List.filter_map (fun (fieldName, _f) ->
+      |> List.filter_map (fun (fieldName, _f, _) ->
              match fieldName with
              | {Location.txt = Longident.Lident fieldName} -> Some fieldName
              | _ -> None)

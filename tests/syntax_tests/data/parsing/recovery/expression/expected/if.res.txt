@@ -16,4 +16,4 @@
 
   Did you forget a `{` here?
 
-;;if foo = bar then Js.log {js|if-branch|js} else Js.log {js|else-branch|js}
+;;if foo == bar then Js.log {js|if-branch|js} else Js.log {js|else-branch|js}

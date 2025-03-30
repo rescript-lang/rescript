@@ -20,8 +20,8 @@ module SomeComponent = {
       //                ^com
       // {"Some string"->st}
       //                   ^com
-      // {"Some string"->Js.String2.trim->st}
-      //                                    ^com
+      // {"Some string"->String.trim->st}
+      //                                ^com
       // {someInt->}
       //           ^com
       // {12->}
@@ -89,3 +89,7 @@ module Info = {
 
 // <Info _type={#warning} >
 //                        ^com
+
+
+// let _ = <p>{"".s}</p>
+//                 ^com

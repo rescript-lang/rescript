@@ -110,8 +110,7 @@ let Pervasives$1 = {
   bool_of_string: Pervasives.bool_of_string,
   bool_of_string_opt: Pervasives.bool_of_string_opt,
   int_of_string_opt: Pervasives.int_of_string_opt,
-  $at: Pervasives.$at,
-  panic: Pervasives.panic
+  $at: Pervasives.$at
 };
 
 function a0(prim) {
@@ -187,7 +186,7 @@ function a17(prim) {
 }
 
 function a18(prim0, prim1) {
-  return Math.pow(prim0, prim1);
+  return prim0 ** prim1 | 0;
 }
 
 let f = Pervasives.$at;

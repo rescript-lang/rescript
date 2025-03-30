@@ -214,16 +214,16 @@ let ctx_matcher p =
       | Tpat_tuple args when List.length args = len -> (p, args @ rem)
       | Tpat_any -> (p, omegas @ rem)
       | _ -> raise NoMatch)
-  | Tpat_record (((_, lbl, _) :: _ as l), _) -> (
+  | Tpat_record (((_, lbl, _, _) :: _ as l), _) -> (
     (* Records are normalized *)
     let len = Array.length lbl.lbl_all in
     fun q rem ->
       match q.pat_desc with
-      | Tpat_record (((_, lbl', _) :: _ as l'), _)
+      | Tpat_record (((_, lbl', _, _) :: _ as l'), _)
         when Array.length lbl'.lbl_all = len ->
         let l' = all_record_args l' in
-        (p, List.fold_right (fun (_, _, p) r -> p :: r) l' rem)
-      | Tpat_any -> (p, List.fold_right (fun (_, _, p) r -> p :: r) l rem)
+        (p, List.fold_right (fun (_, _, p, _) r -> p :: r) l' rem)
+      | Tpat_any -> (p, List.fold_right (fun (_, _, p, _) r -> p :: r) l rem)
       | _ -> raise NoMatch)
   | Tpat_lazy omega -> (
     fun q rem ->
@@ -623,7 +623,7 @@ let rec extract_vars r p =
   | Tpat_alias (p, id, _) -> extract_vars (IdentSet.add id r) p
   | Tpat_tuple pats -> List.fold_left extract_vars r pats
   | Tpat_record (lpats, _) ->
-    List.fold_left (fun r (_, _, p) -> extract_vars r p) r lpats
+    List.fold_left (fun r (_, _, p, _) -> extract_vars r p) r lpats
   | Tpat_construct (_, _, pats) -> List.fold_left extract_vars r pats
   | Tpat_array pats -> List.fold_left extract_vars r pats
   | Tpat_variant (_, Some p, _) -> extract_vars r p
@@ -756,7 +756,8 @@ let insert_or_append p ps act ors no =
             let _, not_e = get_equiv q rem in
             if
               or_ok p ps not_e
-              && (* check append condition for head of O *)
+              &&
+              (* check append condition for head of O *)
               List.for_all (* check insert condition for tail of O *)
                 (fun cl ->
                   match cl with
@@ -1500,7 +1501,7 @@ let divide_tuple arity p ctx pm =
 
 let record_matching_line num_fields lbl_pat_list =
   let patv = Array.make num_fields omega in
-  List.iter (fun (_, lbl, pat) -> patv.(lbl.lbl_pos) <- pat) lbl_pat_list;
+  List.iter (fun (_, lbl, pat, _) -> patv.(lbl.lbl_pos) <- pat) lbl_pat_list;
   Array.to_list patv
 
 let get_args_record num_fields p rem =
@@ -1515,7 +1516,7 @@ let matcher_record num_fields p rem =
   | Tpat_or (_, _, _) -> raise OrPat
   | Tpat_any | Tpat_var _ -> record_matching_line num_fields [] @ rem
   | Tpat_record ([], _) when num_fields = 0 -> rem
-  | Tpat_record (((_, lbl, _) :: _ as lbl_pat_list), _)
+  | Tpat_record (((_, lbl, _, _) :: _ as lbl_pat_list), _)
     when Array.length lbl.lbl_all = num_fields ->
     record_matching_line num_fields lbl_pat_list @ rem
   | _ -> raise NoMatch
@@ -1530,7 +1531,7 @@ let make_record_matching loc all_labels def = function
         let access =
           match lbl.lbl_repres with
           | Record_float_unused -> assert false
-          | Record_regular | Record_optional_labels _ ->
+          | Record_regular ->
             Lprim (Pfield (lbl.lbl_pos, Lambda.fld_record lbl), [arg], loc)
           | Record_inlined _ ->
             Lprim
@@ -2245,7 +2246,8 @@ let combine_constructor sw_names loc arg ex_pat cstr partial ctx def
           let arg =
             if Datarepr.constructor_has_optional_shape cstr then
               Lprim (Pis_not_none, [arg], loc)
-            else arg
+            else
+              Lprim (Pjscomp Cneq, [arg; Lconst (Const_base (Const_int 0))], loc)
           in
           Lifthenelse (arg, act2, act1)
         | 2, 0, [(i1, act1); (_, act2)], []
@@ -2641,7 +2643,7 @@ and do_compile_matching repr partial ctx arg pmh =
       compile_no_test
         (divide_tuple (List.length patl) (normalize_pat pat))
         ctx_combine repr partial ctx pm
-    | Tpat_record ((_, lbl, _) :: _, _) ->
+    | Tpat_record ((_, lbl, _, _) :: _, _) ->
       compile_no_test
         (divide_record lbl.lbl_all (normalize_pat pat))
         ctx_combine repr partial ctx pm
@@ -2721,7 +2723,8 @@ let find_in_pat pred =
       find_rec p
     | Tpat_tuple ps | Tpat_construct (_, _, ps) | Tpat_array ps ->
       List.exists find_rec ps
-    | Tpat_record (lpats, _) -> List.exists (fun (_, _, p) -> find_rec p) lpats
+    | Tpat_record (lpats, _) ->
+      List.exists (fun (_, _, p, _) -> find_rec p) lpats
     | Tpat_or (p, q, _) -> find_rec p || find_rec q
     | Tpat_constant _ | Tpat_var _ | Tpat_any | Tpat_variant (_, None, _) ->
       false
@@ -2741,7 +2744,7 @@ let have_mutable_field p =
   match p with
   | Tpat_record (lps, _) ->
     List.exists
-      (fun (_, lbl, _) ->
+      (fun (_, lbl, _, _) ->
         match lbl.Types.lbl_mut with
         | Mutable -> true
         | Immutable -> false)
@@ -2763,7 +2766,8 @@ let check_partial is_mutable is_lazy pat_act_list = function
   | Total ->
     if
       pat_act_list = []
-      || (* allow empty case list *)
+      ||
+      (* allow empty case list *)
       List.exists
         (fun (pats, lam) -> is_mutable pats && (is_guarded lam || is_lazy pats))
         pat_act_list

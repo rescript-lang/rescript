@@ -54,8 +54,6 @@ let api_version = "5"
 
 module Js = Js_of_ocaml.Js
 
-let export (field : string) v = Js.Unsafe.set Js.Unsafe.global field v
-
 module Lang = struct
   type t = Res
 
@@ -313,7 +311,7 @@ module Compile = struct
   (* Apparently it's not possible to retrieve the loc info from
    * Location.error_of_exn properly, so we need to do some extra
    * overloading action
-   * *)
+   *)
   let warning_infos : LocWarnInfo.t array ref = ref [||]
   let warning_buffer = Buffer.create 512
   let warning_ppf = Format.formatter_of_buffer warning_buffer
@@ -375,7 +373,6 @@ module Compile = struct
   let reset_compiler () =
     warning_infos := [||];
     flush_warning_buffer () |> ignore;
-    Location.reset ();
     Warnings.reset_fatal ();
     Env.reset_cache_toplevel ()
 
@@ -383,7 +380,7 @@ module Compile = struct
    * data to display types on hover etc.
    *
    * Note: start / end positions
-   * *)
+   *)
   let collect_type_hints typed_tree =
     let open Typedtree in
     let create_type_hint_obj loc kind hint =
@@ -488,8 +485,6 @@ module Compile = struct
       (* let finalenv = ref Env.empty in *)
       let types_signature = ref [] in
       Js_config.jsx_version := Some Js_config.Jsx_v4;
-      (* default *)
-      Js_config.jsx_mode := Js_config.Automatic;
       (* default *)
       let ast = impl str in
       let ast = Ppx_entry.rewrite_implementation ast in
@@ -679,11 +674,9 @@ module Export = struct
 end
 
 let () =
-  export "rescript_compiler"
-    Js.Unsafe.(
-      obj
-        [|
-          ("api_version", inject @@ Js.string api_version);
-          ("version", inject @@ Js.string Bs_version.version);
-          ("make", inject @@ Export.make);
-        |])
+  Js.export "rescript_compiler"
+    (object%js
+       val api_version = api_version
+       val version = Bs_version.version
+       method make = Export.make ()
+    end)

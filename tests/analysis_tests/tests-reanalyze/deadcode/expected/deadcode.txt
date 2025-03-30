@@ -15,15 +15,32 @@
   addValueReference BucklescriptAnnotations.res:25:4 --> BucklescriptAnnotations.res:26:6
   Scanning ComponentAsProp.cmt Source:ComponentAsProp.res
   addValueDeclaration +make ComponentAsProp.res:6:4 path:+ComponentAsProp
-  DeadOptionalArgs.addReferences ReactDOMRe.createDOMElementVariadic called with optional argNames: argNamesMaybe: ComponentAsProp.res:7:3
-  DeadOptionalArgs.addReferences ReactDOMRe.createDOMElementVariadic called with optional argNames: argNamesMaybe: ComponentAsProp.res:8:5
+  addRecordLabelDeclaration title ComponentAsProp.res:6:12 path:+ComponentAsProp.props
+  addRecordLabelDeclaration description ComponentAsProp.res:6:20 path:+ComponentAsProp.props
+  addRecordLabelDeclaration button ComponentAsProp.res:6:34 path:+ComponentAsProp.props
   addValueReference ComponentAsProp.res:9:6 --> ComponentAsProp.res:6:12
   addValueReference ComponentAsProp.res:10:6 --> ComponentAsProp.res:6:20
   addValueReference ComponentAsProp.res:12:24 --> ComponentAsProp.res:12:13
   addValueReference ComponentAsProp.res:13:16 --> React.res:3:0
   addValueReference ComponentAsProp.res:11:14 --> ComponentAsProp.res:6:34
-  addValueReference ComponentAsProp.res:8:5 --> ReactDOMRe.res:8:0
-  addValueReference ComponentAsProp.res:7:3 --> ReactDOMRe.res:8:0
+  addValueReference ComponentAsProp.res:9:6 --> ComponentAsProp.res:6:12
+  addValueReference ComponentAsProp.res:10:6 --> ComponentAsProp.res:6:20
+  addValueReference ComponentAsProp.res:12:24 --> ComponentAsProp.res:12:13
+  addValueReference ComponentAsProp.res:13:16 --> React.res:3:0
+  addValueReference ComponentAsProp.res:11:14 --> ComponentAsProp.res:6:34
+  addValueReference ComponentAsProp.res:9:6 --> ComponentAsProp.res:6:12
+  addValueReference ComponentAsProp.res:10:6 --> ComponentAsProp.res:6:20
+  addValueReference ComponentAsProp.res:12:24 --> ComponentAsProp.res:12:13
+  addValueReference ComponentAsProp.res:13:16 --> React.res:3:0
+  addValueReference ComponentAsProp.res:11:14 --> ComponentAsProp.res:6:34
+  addValueReference ComponentAsProp.res:9:6 --> ComponentAsProp.res:6:12
+  addValueReference ComponentAsProp.res:10:6 --> ComponentAsProp.res:6:20
+  addValueReference ComponentAsProp.res:12:24 --> ComponentAsProp.res:12:13
+  addValueReference ComponentAsProp.res:13:16 --> React.res:3:0
+  addValueReference ComponentAsProp.res:11:14 --> ComponentAsProp.res:6:34
+  addTypeReference _none_:1:-1 --> ComponentAsProp.res:6:12
+  addTypeReference _none_:1:-1 --> ComponentAsProp.res:6:20
+  addTypeReference _none_:1:-1 --> ComponentAsProp.res:6:34
   Scanning CreateErrorHandler1.cmt Source:CreateErrorHandler1.res
   addValueDeclaration +notification CreateErrorHandler1.res:3:6 path:+CreateErrorHandler1.Error1
   addValueReference CreateErrorHandler1.res:3:6 --> CreateErrorHandler1.res:3:21
@@ -89,22 +106,18 @@
   addValueDeclaration +foo DeadTest.res:90:8 path:+DeadTest
   addValueDeclaration +bar DeadTest.res:94:4 path:+DeadTest
   addValueDeclaration +withDefaultValue DeadTest.res:96:4 path:+DeadTest
-  addValueDeclaration +reasonResource DeadTest.res:111:6 path:+DeadTest.LazyDynamicallyLoadedComponent2
-  addValueDeclaration +makeProps DeadTest.res:114:6 path:+DeadTest.LazyDynamicallyLoadedComponent2
-  addValueDeclaration +make DeadTest.res:115:6 path:+DeadTest.LazyDynamicallyLoadedComponent2
-  addValueDeclaration +zzz DeadTest.res:127:4 path:+DeadTest
-  addValueDeclaration +second DeadTest.res:135:4 path:+DeadTest
-  addValueDeclaration +minute DeadTest.res:136:4 path:+DeadTest
-  addValueDeclaration +deadRef DeadTest.res:138:4 path:+DeadTest
-  addValueDeclaration +make DeadTest.res:141:4 path:+DeadTest
-  addValueDeclaration +theSideEffectIsLogging DeadTest.res:145:4 path:+DeadTest
-  addValueDeclaration +stringLengthNoSideEffects DeadTest.res:147:4 path:+DeadTest
-  addValueDeclaration +globallyLive1 DeadTest.res:152:6 path:+DeadTest.GloobLive
-  addValueDeclaration +globallyLive2 DeadTest.res:153:6 path:+DeadTest.GloobLive
-  addValueDeclaration +globallyLive3 DeadTest.res:154:6 path:+DeadTest.GloobLive
-  addValueDeclaration +funWithInnerVars DeadTest.res:169:4 path:+DeadTest
-  addValueDeclaration +deadIncorrect DeadTest.res:178:4 path:+DeadTest
-  addValueDeclaration +ira DeadTest.res:184:4 path:+DeadTest
+  addValueDeclaration +zzz DeadTest.res:104:4 path:+DeadTest
+  addValueDeclaration +second DeadTest.res:112:4 path:+DeadTest
+  addValueDeclaration +deadRef DeadTest.res:114:4 path:+DeadTest
+  addValueDeclaration +make DeadTest.res:117:4 path:+DeadTest
+  addValueDeclaration +theSideEffectIsLogging DeadTest.res:121:4 path:+DeadTest
+  addValueDeclaration +stringLengthNoSideEffects DeadTest.res:123:4 path:+DeadTest
+  addValueDeclaration +globallyLive1 DeadTest.res:128:6 path:+DeadTest.GloobLive
+  addValueDeclaration +globallyLive2 DeadTest.res:129:6 path:+DeadTest.GloobLive
+  addValueDeclaration +globallyLive3 DeadTest.res:130:6 path:+DeadTest.GloobLive
+  addValueDeclaration +funWithInnerVars DeadTest.res:145:4 path:+DeadTest
+  addValueDeclaration +deadIncorrect DeadTest.res:154:4 path:+DeadTest
+  addValueDeclaration +ira DeadTest.res:160:4 path:+DeadTest
   addValueReference DeadTest.res:1:15 --> ImmutableArray.resi:9:0
   addValueReference DeadTest.res:8:7 --> DeadTest.res:7:4
   addValueReference DeadTest.res:11:7 --> DeadTest.res:10:4
@@ -153,62 +166,55 @@
   addValueReference DeadTest.res:96:4 --> DeadTest.res:96:42
   addValueReference DeadTest.res:96:4 --> DeadTest.res:96:24
   addValueReference DeadTest.res:96:4 --> DeadTest.res:96:45
-  addTypeReference DeadTest.res:106:16 --> DeadRT.resi:2:2
-  addValueReference DeadTest.res:111:6 --> JSResource.res:3:0
-  addValueReference DeadTest.res:115:6 --> DynamicallyLoadedComponent.res:2:4
-  addValueReference DeadTest.res:115:6 --> DeadTest.res:111:6
-  addValueReference DeadTest.res:115:6 --> BootloaderResource.res:3:0
-  addValueReference DeadTest.res:115:6 --> DeadTest.res:115:13
-  addValueReference DeadTest.res:115:6 --> React.res:18:0
-  addValueDeclaration +a1 DeadTest.res:128:6 path:+DeadTest
-  addValueDeclaration +a2 DeadTest.res:129:6 path:+DeadTest
-  addValueDeclaration +a3 DeadTest.res:130:6 path:+DeadTest
-  addValueReference DeadTest.res:133:17 --> DynamicallyLoadedComponent.res:2:4
-  addValueReference DeadTest.res:133:17 --> React.res:18:0
-  addValueReference DeadTest.res:136:4 --> DeadTest.res:135:4
-  addValueReference DeadTest.res:141:32 --> DeadTest.res:141:12
-  addValueReference DeadTest.res:141:19 --> React.res:7:0
-  addValueReference DeadTest.res:143:16 --> DeadTest.res:141:4
-  addVariantCaseDeclaration A DeadTest.res:158:11 path:+DeadTest.WithInclude.t
-  addVariantCaseDeclaration A DeadTest.res:161:13 path:+DeadTest.WithInclude.T.t
-  addVariantCaseDeclaration A DeadTest.res:161:13 path:+DeadTest.WithInclude.t
-  extendTypeDependencies DeadTest.res:161:13 --> DeadTest.res:158:11
-  extendTypeDependencies DeadTest.res:158:11 --> DeadTest.res:161:13
-  addTypeReference DeadTest.res:166:7 --> DeadTest.res:158:11
-  addValueDeclaration +x DeadTest.res:170:6 path:+DeadTest
-  addValueDeclaration +y DeadTest.res:171:6 path:+DeadTest
-  addValueReference DeadTest.res:169:4 --> DeadTest.res:170:6
-  addValueReference DeadTest.res:169:4 --> DeadTest.res:171:6
-  addRecordLabelDeclaration a DeadTest.res:175:11 path:+DeadTest.rc
-  addValueDeclaration +_ DeadTest.res:180:0 path:+DeadTest
-  addValueReference DeadTest.res:180:8 --> DeadTest.res:178:4
-  addRecordLabelDeclaration IR.a DeadTest.res:182:24 path:+DeadTest.inlineRecord
-  addRecordLabelDeclaration IR.b DeadTest.res:182:32 path:+DeadTest.inlineRecord
-  addRecordLabelDeclaration IR.c DeadTest.res:182:40 path:+DeadTest.inlineRecord
-  addRecordLabelDeclaration IR.d DeadTest.res:182:51 path:+DeadTest.inlineRecord
-  addRecordLabelDeclaration IR.e DeadTest.res:182:65 path:+DeadTest.inlineRecord
-  addVariantCaseDeclaration IR DeadTest.res:182:20 path:+DeadTest.inlineRecord
-  addValueDeclaration +_ DeadTest.res:185:0 path:+DeadTest
-  addTypeReference DeadTest.res:187:20 --> DeadTest.res:182:20
-  addValueReference DeadTest.res:187:27 --> DeadTest.res:184:4
-  addTypeReference DeadTest.res:187:35 --> DeadTest.res:182:32
-  addValueReference DeadTest.res:187:35 --> DeadTest.res:187:7
-  addValueReference DeadTest.res:187:40 --> DeadTest.res:187:8
-  addTypeReference DeadTest.res:187:7 --> DeadTest.res:182:40
-  addValueReference DeadTest.res:186:9 --> DeadTest.res:185:8
-  addRecordLabelDeclaration IR2.a DeadTest.res:191:26 path:+DeadTest.inlineRecord2
-  addRecordLabelDeclaration IR2.b DeadTest.res:191:34 path:+DeadTest.inlineRecord2
-  addVariantCaseDeclaration IR2 DeadTest.res:191:21 path:+DeadTest.inlineRecord2
-  addRecordLabelDeclaration IR3.a DeadTest.res:193:34 path:+DeadTest.inlineRecord3
-  addRecordLabelDeclaration IR3.b DeadTest.res:193:42 path:+DeadTest.inlineRecord3
-  addVariantCaseDeclaration IR3 DeadTest.res:193:21 path:+DeadTest.inlineRecord3
+  addTypeReference DeadTest.res:98:16 --> DeadRT.resi:2:2
+  addValueDeclaration +a1 DeadTest.res:105:6 path:+DeadTest
+  addValueDeclaration +a2 DeadTest.res:106:6 path:+DeadTest
+  addValueDeclaration +a3 DeadTest.res:107:6 path:+DeadTest
+  addValueReference DeadTest.res:110:17 --> DynamicallyLoadedComponent.res:2:4
+  addRecordLabelDeclaration s DeadTest.res:117:12 path:+DeadTest.props
+  addValueReference DeadTest.res:117:32 --> DeadTest.res:117:12
+  addValueReference DeadTest.res:117:19 --> React.res:7:0
+  addTypeReference _none_:1:-1 --> DeadTest.res:117:12
+  addValueReference DeadTest.res:119:16 --> DeadTest.res:117:4
+  addVariantCaseDeclaration A DeadTest.res:134:11 path:+DeadTest.WithInclude.t
+  addVariantCaseDeclaration A DeadTest.res:137:13 path:+DeadTest.WithInclude.T.t
+  addVariantCaseDeclaration A DeadTest.res:137:13 path:+DeadTest.WithInclude.t
+  extendTypeDependencies DeadTest.res:137:13 --> DeadTest.res:134:11
+  extendTypeDependencies DeadTest.res:134:11 --> DeadTest.res:137:13
+  addTypeReference DeadTest.res:142:7 --> DeadTest.res:134:11
+  addValueDeclaration +x DeadTest.res:146:6 path:+DeadTest
+  addValueDeclaration +y DeadTest.res:147:6 path:+DeadTest
+  addValueReference DeadTest.res:145:4 --> DeadTest.res:146:6
+  addValueReference DeadTest.res:145:4 --> DeadTest.res:147:6
+  addRecordLabelDeclaration a DeadTest.res:151:11 path:+DeadTest.rc
+  addValueDeclaration +_ DeadTest.res:156:0 path:+DeadTest
+  addValueReference DeadTest.res:156:8 --> DeadTest.res:154:4
+  addRecordLabelDeclaration IR.a DeadTest.res:158:24 path:+DeadTest.inlineRecord
+  addRecordLabelDeclaration IR.b DeadTest.res:158:32 path:+DeadTest.inlineRecord
+  addRecordLabelDeclaration IR.c DeadTest.res:158:40 path:+DeadTest.inlineRecord
+  addRecordLabelDeclaration IR.d DeadTest.res:158:51 path:+DeadTest.inlineRecord
+  addRecordLabelDeclaration IR.e DeadTest.res:158:65 path:+DeadTest.inlineRecord
+  addVariantCaseDeclaration IR DeadTest.res:158:20 path:+DeadTest.inlineRecord
+  addValueDeclaration +_ DeadTest.res:161:0 path:+DeadTest
+  addTypeReference DeadTest.res:163:20 --> DeadTest.res:158:20
+  addValueReference DeadTest.res:163:27 --> DeadTest.res:160:4
+  addTypeReference DeadTest.res:163:35 --> DeadTest.res:158:32
+  addValueReference DeadTest.res:163:35 --> DeadTest.res:163:7
+  addValueReference DeadTest.res:163:40 --> DeadTest.res:163:8
+  addTypeReference DeadTest.res:163:7 --> DeadTest.res:158:40
+  addValueReference DeadTest.res:162:9 --> DeadTest.res:161:8
+  addRecordLabelDeclaration IR2.a DeadTest.res:167:26 path:+DeadTest.inlineRecord2
+  addRecordLabelDeclaration IR2.b DeadTest.res:167:34 path:+DeadTest.inlineRecord2
+  addVariantCaseDeclaration IR2 DeadTest.res:167:21 path:+DeadTest.inlineRecord2
+  addRecordLabelDeclaration IR3.a DeadTest.res:169:34 path:+DeadTest.inlineRecord3
+  addRecordLabelDeclaration IR3.b DeadTest.res:169:42 path:+DeadTest.inlineRecord3
+  addVariantCaseDeclaration IR3 DeadTest.res:169:21 path:+DeadTest.inlineRecord3
   addValueReference DeadTest.res:28:2 --> DeadTest.res:31:6
   addValueReference DeadTest.res:36:2 --> DeadTest.res:39:6
   addValueReference DeadTest.res:60:2 --> DeadTest.res:64:6
   addValueReference DeadTest.res:61:2 --> DeadTest.res:63:6
-  addValueReference DeadTest.res:101:2 --> DeadTest.res:103:2
-  addTypeReference DeadTest.res:161:13 --> DeadTest.res:158:11
-  addTypeReference DeadTest.res:158:11 --> DeadTest.res:161:13
+  addTypeReference DeadTest.res:137:13 --> DeadTest.res:134:11
+  addTypeReference DeadTest.res:134:11 --> DeadTest.res:137:13
   addTypeReference DeadTest.res:38:11 --> DeadTest.res:35:11
   addTypeReference DeadTest.res:35:11 --> DeadTest.res:38:11
   Scanning DeadTestBlacklist.cmt Source:DeadTestBlacklist.res
@@ -336,14 +342,13 @@
   addTypeReference Docstrings.res:67:39 --> Docstrings.res:60:2
   Scanning DynamicallyLoadedComponent.cmt Source:DynamicallyLoadedComponent.res
   addValueDeclaration +make DynamicallyLoadedComponent.res:2:4 path:+DynamicallyLoadedComponent
+  addRecordLabelDeclaration s DynamicallyLoadedComponent.res:2:12 path:+DynamicallyLoadedComponent.props
   addValueReference DynamicallyLoadedComponent.res:2:32 --> DynamicallyLoadedComponent.res:2:12
   addValueReference DynamicallyLoadedComponent.res:2:19 --> React.res:7:0
+  addTypeReference _none_:1:-1 --> DynamicallyLoadedComponent.res:2:12
   Scanning EmptyArray.cmt Source:EmptyArray.res
   addValueDeclaration +make EmptyArray.res:5:6 path:+EmptyArray.Z
-  DeadOptionalArgs.addReferences ReactDOMRe.createDOMElementVariadic called with optional argNames: argNamesMaybe: EmptyArray.res:6:5
-  addValueReference EmptyArray.res:6:5 --> ReactDOMRe.res:8:0
   addValueReference EmptyArray.res:10:9 --> EmptyArray.res:5:6
-  addValueReference EmptyArray.res:10:9 --> React.res:18:0
   Scanning ErrorHandler.cmt Source:ErrorHandler.res
   addValueDeclaration +notify ErrorHandler.res:7:6 path:+ErrorHandler.Make
   addValueDeclaration +x ErrorHandler.res:12:4 path:+ErrorHandler
@@ -360,12 +365,6 @@
   addValueDeclaration +x EverythingLiveHere.res:1:4 path:+EverythingLiveHere
   addValueDeclaration +y EverythingLiveHere.res:3:4 path:+EverythingLiveHere
   addValueDeclaration +z EverythingLiveHere.res:5:4 path:+EverythingLiveHere
-  Scanning FC.cmt Source:FC.res
-  addValueDeclaration +foo FC.res:6:4 path:+FC
-  addValueReference FC.res:7:13 --> FC.res:6:11
-  addValueReference FC.res:6:4 --> FC.res:2:2
-  addValueReference FC.res:6:4 --> FC.res:7:6
-  addValueReference FC.res:11:7 --> FC.res:6:4
   Scanning FirstClassModules.cmt Source:FirstClassModules.res
   addValueDeclaration +y FirstClassModules.res:23:6 path:+FirstClassModules.M
   addValueDeclaration +k FirstClassModules.res:29:8 path:+FirstClassModules.M.InnerModule2
@@ -411,132 +410,103 @@
   Scanning Hooks.cmt Source:Hooks.res
   addValueDeclaration +make Hooks.res:4:4 path:+Hooks
   addValueDeclaration +default Hooks.res:25:4 path:+Hooks
-  addValueDeclaration +anotherComponent Hooks.res:28:4 path:+Hooks
-  addValueDeclaration +make Hooks.res:35:6 path:+Hooks.Inner
-  addValueDeclaration +anotherComponent Hooks.res:38:6 path:+Hooks.Inner
-  addValueDeclaration +make Hooks.res:42:8 path:+Hooks.Inner.Inner2
-  addValueDeclaration +anotherComponent Hooks.res:45:8 path:+Hooks.Inner.Inner2
-  addValueDeclaration +make Hooks.res:52:6 path:+Hooks.NoProps
-  addValueDeclaration +functionWithRenamedArgs Hooks.res:58:4 path:+Hooks
-  addValueDeclaration +componentWithRenamedArgs Hooks.res:64:4 path:+Hooks
-  addValueDeclaration +makeWithRef Hooks.res:70:4 path:+Hooks
-  addValueDeclaration +testForwardRef Hooks.res:80:4 path:+Hooks
-  addValueDeclaration +input Hooks.res:85:4 path:+Hooks
-  addValueDeclaration +polymorphicComponent Hooks.res:100:4 path:+Hooks
-  addValueDeclaration +functionReturningReactElement Hooks.res:103:4 path:+Hooks
-  addValueDeclaration +make Hooks.res:107:6 path:+Hooks.RenderPropRequiresConversion
-  addValueDeclaration +aComponentWithChildren Hooks.res:114:4 path:+Hooks
+  addValueDeclaration +make Hooks.res:29:6 path:+Hooks.Inner
+  addValueDeclaration +make Hooks.res:33:8 path:+Hooks.Inner.Inner2
+  addValueDeclaration +make Hooks.res:39:6 path:+Hooks.NoProps
+  addValueDeclaration +functionWithRenamedArgs Hooks.res:45:4 path:+Hooks
+  addValueDeclaration +make Hooks.res:63:6 path:+Hooks.RenderPropRequiresConversion
   addRecordLabelDeclaration name Hooks.res:1:16 path:+Hooks.vehicle
-  addValueReference Hooks.res:5:26 --> React.res:167:0
-  DeadOptionalArgs.addReferences ReactDOMRe.createDOMElementVariadic called with optional argNames: argNamesMaybe: Hooks.res:7:3
-  DeadOptionalArgs.addReferences ReactDOMRe.createDOMElementVariadic called with optional argNames: argNamesMaybe: Hooks.res:8:5
+  addRecordLabelDeclaration vehicle Hooks.res:4:12 path:+Hooks.props
+  addValueReference Hooks.res:5:26 --> React.res:134:0
   addTypeReference Hooks.res:10:29 --> Hooks.res:1:16
   addValueReference Hooks.res:10:29 --> Hooks.res:4:12
-  addValueReference Hooks.res:10:76 --> Hooks.res:5:7
+  addValueReference Hooks.res:10:75 --> Hooks.res:5:7
   addValueReference Hooks.res:9:7 --> React.res:7:0
-  addValueReference Hooks.res:8:5 --> ReactDOMRe.res:8:0
-  DeadOptionalArgs.addReferences ReactDOMRe.createDOMElementVariadic called with optional argNames:props argNamesMaybe: Hooks.res:13:5
+  addTypeReference Hooks.res:10:29 --> Hooks.res:1:16
+  addValueReference Hooks.res:10:29 --> Hooks.res:4:12
+  addValueReference Hooks.res:10:75 --> Hooks.res:5:7
+  addValueReference Hooks.res:9:7 --> React.res:7:0
+  addValueReference Hooks.res:13:54 --> React.res:7:0
+  addValueReference Hooks.res:13:54 --> React.res:7:0
   addValueReference Hooks.res:13:40 --> Hooks.res:5:7
   addValueReference Hooks.res:13:26 --> Hooks.res:5:14
-  addValueReference Hooks.res:13:54 --> React.res:7:0
-  addValueReference Hooks.res:13:5 --> ReactDOMRe.res:8:0
-  addValueReference Hooks.res:14:5 --> ImportHooks.res:13:0
-  DeadOptionalArgs.addReferences ImportHooks.makeProps called with optional argNames: argNamesMaybe: Hooks.res:14:5
-  addValueReference Hooks.res:14:5 --> React.res:3:0
-  addValueReference Hooks.res:14:63 --> React.res:7:0
   addValueReference Hooks.res:14:5 --> ImportHooks.res:13:0
   addValueReference Hooks.res:15:7 --> React.res:7:0
   addValueReference Hooks.res:15:32 --> React.res:7:0
-  addValueReference Hooks.res:14:5 --> React.res:24:0
-  addValueReference Hooks.res:17:5 --> ImportHookDefault.res:6:0
-  DeadOptionalArgs.addReferences ImportHookDefault.makeProps called with optional argNames: argNamesMaybe: Hooks.res:17:5
-  addValueReference Hooks.res:17:5 --> React.res:3:0
-  addValueReference Hooks.res:18:61 --> React.res:7:0
+  addValueReference Hooks.res:15:7 --> React.res:7:0
+  addValueReference Hooks.res:15:32 --> React.res:7:0
+  addValueReference Hooks.res:14:76 --> Hooks.res:14:57
+  addValueReference Hooks.res:14:63 --> React.res:7:0
   addValueReference Hooks.res:17:5 --> ImportHookDefault.res:6:0
   addValueReference Hooks.res:19:7 --> React.res:7:0
   addValueReference Hooks.res:19:32 --> React.res:7:0
-  addValueReference Hooks.res:17:5 --> React.res:24:0
-  addValueReference Hooks.res:7:3 --> ReactDOMRe.res:8:0
+  addValueReference Hooks.res:19:7 --> React.res:7:0
+  addValueReference Hooks.res:19:32 --> React.res:7:0
+  addValueReference Hooks.res:18:74 --> Hooks.res:18:55
+  addValueReference Hooks.res:18:61 --> React.res:7:0
+  addTypeReference Hooks.res:10:29 --> Hooks.res:1:16
+  addValueReference Hooks.res:10:29 --> Hooks.res:4:12
+  addValueReference Hooks.res:10:75 --> Hooks.res:5:7
+  addValueReference Hooks.res:9:7 --> React.res:7:0
+  addTypeReference Hooks.res:10:29 --> Hooks.res:1:16
+  addValueReference Hooks.res:10:29 --> Hooks.res:4:12
+  addValueReference Hooks.res:10:75 --> Hooks.res:5:7
+  addValueReference Hooks.res:9:7 --> React.res:7:0
+  addValueReference Hooks.res:13:54 --> React.res:7:0
+  addValueReference Hooks.res:13:54 --> React.res:7:0
+  addValueReference Hooks.res:13:40 --> Hooks.res:5:7
+  addValueReference Hooks.res:13:26 --> Hooks.res:5:14
+  addValueReference Hooks.res:14:5 --> ImportHooks.res:13:0
+  addValueReference Hooks.res:15:7 --> React.res:7:0
+  addValueReference Hooks.res:15:32 --> React.res:7:0
+  addValueReference Hooks.res:15:7 --> React.res:7:0
+  addValueReference Hooks.res:15:32 --> React.res:7:0
+  addValueReference Hooks.res:14:76 --> Hooks.res:14:57
+  addValueReference Hooks.res:14:63 --> React.res:7:0
+  addValueReference Hooks.res:17:5 --> ImportHookDefault.res:6:0
+  addValueReference Hooks.res:19:7 --> React.res:7:0
+  addValueReference Hooks.res:19:32 --> React.res:7:0
+  addValueReference Hooks.res:19:7 --> React.res:7:0
+  addValueReference Hooks.res:19:32 --> React.res:7:0
+  addValueReference Hooks.res:18:74 --> Hooks.res:18:55
+  addValueReference Hooks.res:18:61 --> React.res:7:0
+  addTypeReference _none_:1:-1 --> Hooks.res:4:12
   addValueReference Hooks.res:25:4 --> Hooks.res:4:4
-  DeadOptionalArgs.addReferences ReactDOMRe.createDOMElementVariadic called with optional argNames: argNamesMaybe: Hooks.res:30:3
-  addTypeReference Hooks.res:30:41 --> Hooks.res:1:16
-  addValueReference Hooks.res:30:41 --> Hooks.res:28:24
-  addValueReference Hooks.res:30:9 --> React.res:7:0
-  addValueReference Hooks.res:30:3 --> ReactDOMRe.res:8:0
-  addValueReference Hooks.res:29:2 --> Hooks.res:28:34
-  DeadOptionalArgs.addReferences ReactDOMRe.createDOMElementVariadic called with optional argNames: argNamesMaybe: Hooks.res:35:28
-  addTypeReference Hooks.res:35:66 --> Hooks.res:1:16
-  addValueReference Hooks.res:35:66 --> Hooks.res:35:14
-  addValueReference Hooks.res:35:34 --> React.res:7:0
-  addValueReference Hooks.res:35:28 --> ReactDOMRe.res:8:0
-  DeadOptionalArgs.addReferences ReactDOMRe.createDOMElementVariadic called with optional argNames: argNamesMaybe: Hooks.res:38:40
-  addTypeReference Hooks.res:38:78 --> Hooks.res:1:16
-  addValueReference Hooks.res:38:78 --> Hooks.res:38:26
-  addValueReference Hooks.res:38:46 --> React.res:7:0
-  addValueReference Hooks.res:38:40 --> ReactDOMRe.res:8:0
-  DeadOptionalArgs.addReferences ReactDOMRe.createDOMElementVariadic called with optional argNames: argNamesMaybe: Hooks.res:42:30
-  addTypeReference Hooks.res:42:68 --> Hooks.res:1:16
-  addValueReference Hooks.res:42:68 --> Hooks.res:42:16
-  addValueReference Hooks.res:42:36 --> React.res:7:0
-  addValueReference Hooks.res:42:30 --> ReactDOMRe.res:8:0
-  DeadOptionalArgs.addReferences ReactDOMRe.createDOMElementVariadic called with optional argNames: argNamesMaybe: Hooks.res:46:7
-  addTypeReference Hooks.res:46:45 --> Hooks.res:1:16
-  addValueReference Hooks.res:46:45 --> Hooks.res:45:28
-  addValueReference Hooks.res:46:13 --> React.res:7:0
-  addValueReference Hooks.res:46:7 --> ReactDOMRe.res:8:0
-  DeadOptionalArgs.addReferences ReactDOMRe.createDOMElementVariadic called with optional argNames: argNamesMaybe: Hooks.res:52:20
-  addValueReference Hooks.res:52:25 --> React.res:3:0
-  addValueReference Hooks.res:52:20 --> ReactDOMRe.res:8:0
-  addTypeReference Hooks.res:60:2 --> Hooks.res:1:16
-  addValueReference Hooks.res:58:4 --> Hooks.res:58:31
-  addTypeReference Hooks.res:60:14 --> Hooks.res:1:16
-  addValueReference Hooks.res:58:4 --> Hooks.res:58:37
-  addValueReference Hooks.res:58:4 --> Hooks.res:58:31
-  addValueReference Hooks.res:58:4 --> Hooks.res:58:45
-  addTypeReference Hooks.res:66:15 --> Hooks.res:1:16
-  addValueReference Hooks.res:66:15 --> Hooks.res:64:32
-  addTypeReference Hooks.res:66:27 --> Hooks.res:1:16
-  addValueReference Hooks.res:66:27 --> Hooks.res:64:38
-  addValueReference Hooks.res:66:2 --> React.res:7:0
-  addValueReference Hooks.res:65:6 --> Hooks.res:64:32
-  addValueReference Hooks.res:65:2 --> Hooks.res:64:46
-  addValueDeclaration +_ Hooks.res:71:2 path:+Hooks
-  DeadOptionalArgs.addReferences ReactDOMRe.createDOMElementVariadic called with optional argNames:props argNamesMaybe: Hooks.res:74:20
-  addValueReference Hooks.res:74:52 --> Hooks.res:74:11
-  addValueReference Hooks.res:74:32 --> ReactDOM.res:47:2
-  addTypeReference Hooks.res:74:73 --> Hooks.res:1:16
-  addValueReference Hooks.res:74:73 --> Hooks.res:70:19
-  addValueReference Hooks.res:74:60 --> React.res:7:0
-  addValueReference Hooks.res:74:20 --> ReactDOMRe.res:8:0
-  addValueReference Hooks.res:75:14 --> React.res:3:0
-  addValueReference Hooks.res:73:11 --> Hooks.res:72:2
-  addValueReference Hooks.res:80:4 --> Hooks.res:70:4
-  addValueReference Hooks.res:80:4 --> React.res:90:0
-  addRecordLabelDeclaration x Hooks.res:82:10 path:+Hooks.r
-  DeadOptionalArgs.addReferences ReactDOMRe.createDOMElementVariadic called with optional argNames:props argNamesMaybe: Hooks.res:85:47
-  addValueReference Hooks.res:85:66 --> Hooks.res:85:38
-  addTypeReference Hooks.res:85:87 --> Hooks.res:82:10
-  addValueReference Hooks.res:85:87 --> Hooks.res:85:30
-  addValueReference Hooks.res:85:74 --> React.res:7:0
-  addValueReference Hooks.res:85:47 --> ReactDOMRe.res:8:0
-  addValueReference Hooks.res:85:4 --> React.res:90:0
-  addTypeReference Hooks.res:100:58 --> Hooks.res:1:16
-  addValueReference Hooks.res:100:58 --> Hooks.res:100:35
-  addValueReference Hooks.res:100:45 --> React.res:7:0
-  addValueReference Hooks.res:103:60 --> Hooks.res:103:37
-  addValueReference Hooks.res:103:47 --> React.res:7:0
-  addValueDeclaration +car Hooks.res:108:8 path:+Hooks.RenderPropRequiresConversion
-  addValueReference Hooks.res:109:30 --> Hooks.res:108:8
-  addValueReference Hooks.res:109:18 --> Hooks.res:109:18
-  addValueReference Hooks.res:109:4 --> Hooks.res:107:14
-  DeadOptionalArgs.addReferences ReactDOMRe.createDOMElementVariadic called with optional argNames: argNamesMaybe: Hooks.res:115:3
-  addTypeReference Hooks.res:115:41 --> Hooks.res:1:16
-  addValueReference Hooks.res:115:41 --> Hooks.res:114:30
-  addValueReference Hooks.res:115:9 --> React.res:7:0
-  DeadOptionalArgs.addReferences ReactDOMRe.createDOMElementVariadic called with optional argNames: argNamesMaybe: Hooks.res:115:57
-  addValueReference Hooks.res:115:62 --> Hooks.res:114:40
-  addValueReference Hooks.res:115:57 --> ReactDOMRe.res:8:0
-  addValueReference Hooks.res:115:3 --> ReactDOMRe.res:8:0
+  addRecordLabelDeclaration vehicle Hooks.res:29:14 path:+Hooks.Inner.props
+  addRecordLabelDeclaration vehicle Hooks.res:33:16 path:+Hooks.Inner.Inner2.props
+  addRecordLabelDeclaration vehicle Hooks.res:29:14 path:+Hooks.Inner.props
+  addTypeReference Hooks.res:29:66 --> Hooks.res:1:16
+  addValueReference Hooks.res:29:66 --> Hooks.res:29:14
+  addValueReference Hooks.res:29:34 --> React.res:7:0
+  addTypeReference Hooks.res:29:66 --> Hooks.res:1:16
+  addValueReference Hooks.res:29:66 --> Hooks.res:29:14
+  addValueReference Hooks.res:29:34 --> React.res:7:0
+  addTypeReference _none_:1:-1 --> Hooks.res:29:14
+  addRecordLabelDeclaration vehicle Hooks.res:33:16 path:+Hooks.Inner.Inner2.props
+  addRecordLabelDeclaration vehicle Hooks.res:33:16 path:+Hooks.Inner.Inner2.props
+  addTypeReference Hooks.res:33:68 --> Hooks.res:1:16
+  addValueReference Hooks.res:33:68 --> Hooks.res:33:16
+  addValueReference Hooks.res:33:36 --> React.res:7:0
+  addTypeReference Hooks.res:33:68 --> Hooks.res:1:16
+  addValueReference Hooks.res:33:68 --> Hooks.res:33:16
+  addValueReference Hooks.res:33:36 --> React.res:7:0
+  addTypeReference _none_:1:-1 --> Hooks.res:33:16
+  addValueReference Hooks.res:39:25 --> React.res:3:0
+  addValueReference Hooks.res:39:25 --> React.res:3:0
+  addTypeReference Hooks.res:47:2 --> Hooks.res:1:16
+  addValueReference Hooks.res:45:4 --> Hooks.res:45:31
+  addTypeReference Hooks.res:47:14 --> Hooks.res:1:16
+  addValueReference Hooks.res:45:4 --> Hooks.res:45:37
+  addValueReference Hooks.res:45:4 --> Hooks.res:45:31
+  addValueReference Hooks.res:45:4 --> Hooks.res:45:45
+  addRecordLabelDeclaration x Hooks.res:50:10 path:+Hooks.r
+  addRecordLabelDeclaration renderVehicle Hooks.res:63:14 path:+Hooks.RenderPropRequiresConversion.props
+  addRecordLabelDeclaration renderVehicle Hooks.res:63:14 path:+Hooks.RenderPropRequiresConversion.props
+  addValueDeclaration +car Hooks.res:64:8 path:+Hooks.RenderPropRequiresConversion
+  addValueReference Hooks.res:65:30 --> Hooks.res:64:8
+  addValueReference Hooks.res:65:18 --> Hooks.res:65:18
+  addValueReference Hooks.res:65:4 --> Hooks.res:63:14
+  addTypeReference _none_:1:-1 --> Hooks.res:63:14
   Scanning IgnoreInterface.cmt Source:IgnoreInterface.res
   Scanning IgnoreInterface.cmti Source:IgnoreInterface.resi
   Scanning ImmutableArray.cmt Source:ImmutableArray.res
@@ -1009,16 +979,22 @@
   addValueDeclaration +eq ImmutableArray.resi:110:0 path:ImmutableArray
   Scanning ImportHookDefault.cmt Source:ImportHookDefault.res
   addValueDeclaration +make ImportHookDefault.res:6:0 path:+ImportHookDefault
-  addValueDeclaration +make2 ImportHookDefault.res:13:0 path:+ImportHookDefault
   addRecordLabelDeclaration name ImportHookDefault.res:2:2 path:+ImportHookDefault.person
   addRecordLabelDeclaration age ImportHookDefault.res:3:2 path:+ImportHookDefault.person
+  addRecordLabelDeclaration person ImportHookDefault.res:7:15 path:+ImportHookDefault.props
+  addRecordLabelDeclaration children ImportHookDefault.res:9:2 path:+ImportHookDefault.props
+  addRecordLabelDeclaration renderMe ImportHookDefault.res:11:5 path:+ImportHookDefault.props
   Scanning ImportHooks.cmt Source:ImportHooks.res
   addValueDeclaration +make ImportHooks.res:13:0 path:+ImportHooks
   addValueDeclaration +foo ImportHooks.res:20:0 path:+ImportHooks
   addRecordLabelDeclaration name ImportHooks.res:3:2 path:+ImportHooks.person
   addRecordLabelDeclaration age ImportHooks.res:4:2 path:+ImportHooks.person
+  addRecordLabelDeclaration person ImportHooks.res:14:15 path:+ImportHooks.props
+  addRecordLabelDeclaration children ImportHooks.res:16:2 path:+ImportHooks.props
+  addRecordLabelDeclaration renderMe ImportHooks.res:18:5 path:+ImportHooks.props
   Scanning ImportIndex.cmt Source:ImportIndex.res
   addValueDeclaration +make ImportIndex.res:2:0 path:+ImportIndex
+  addRecordLabelDeclaration method ImportIndex.res:3:50 path:+ImportIndex.props
   Scanning ImportJsValue.cmt Source:ImportJsValue.res
   addValueDeclaration +round ImportJsValue.res:1:0 path:+ImportJsValue
   addValueDeclaration +area ImportJsValue.res:15:0 path:+ImportJsValue
@@ -1239,7 +1215,7 @@
   addValueReference OptArg.res:14:4 --> OptArg.res:14:15
   addValueReference OptArg.res:14:4 --> OptArg.res:14:21
   addValueReference OptArg.res:14:4 --> OptArg.res:14:27
-  DeadOptionalArgs.addReferences twoArgs called with optional argNames: argNamesMaybe: OptArg.res:16:12
+  DeadOptionalArgs.addReferences twoArgs called with optional argNames: argNamesMaybe: OptArg.res:16:7
   addValueReference OptArg.res:16:12 --> OptArg.res:14:4
   addValueReference OptArg.res:18:4 --> OptArg.res:18:17
   addValueReference OptArg.res:18:4 --> OptArg.res:18:14
@@ -1573,17 +1549,16 @@
   addValueDeclaration +selfRecursiveConverter Types.res:42:4 path:+Types
   addValueDeclaration +mutuallyRecursiveConverter Types.res:49:4 path:+Types
   addValueDeclaration +testFunctionOnOptionsAsArgument Types.res:52:4 path:+Types
-  addValueDeclaration +stringT Types.res:60:4 path:+Types
-  addValueDeclaration +jsStringT Types.res:63:4 path:+Types
-  addValueDeclaration +jsString2T Types.res:66:4 path:+Types
-  addValueDeclaration +jsonStringify Types.res:78:4 path:+Types
-  addValueDeclaration +testConvertNull Types.res:92:4 path:+Types
-  addValueDeclaration +testMarshalFields Types.res:112:4 path:+Types
-  addValueDeclaration +setMatch Types.res:128:4 path:+Types
-  addValueDeclaration +testInstantiateTypeParameter Types.res:138:4 path:+Types
-  addValueDeclaration +currentTime Types.res:147:4 path:+Types
-  addValueDeclaration +i64Const Types.res:156:4 path:+Types
-  addValueDeclaration +optFunction Types.res:159:4 path:+Types
+  addValueDeclaration +jsStringT Types.res:60:4 path:+Types
+  addValueDeclaration +jsString2T Types.res:63:4 path:+Types
+  addValueDeclaration +jsonStringify Types.res:75:4 path:+Types
+  addValueDeclaration +testConvertNull Types.res:89:4 path:+Types
+  addValueDeclaration +testMarshalFields Types.res:109:4 path:+Types
+  addValueDeclaration +setMatch Types.res:125:4 path:+Types
+  addValueDeclaration +testInstantiateTypeParameter Types.res:135:4 path:+Types
+  addValueDeclaration +currentTime Types.res:144:4 path:+Types
+  addValueDeclaration +i64Const Types.res:153:4 path:+Types
+  addValueDeclaration +optFunction Types.res:156:4 path:+Types
   addVariantCaseDeclaration A Types.res:12:2 path:+Types.typeWithVars
   addVariantCaseDeclaration B Types.res:13:2 path:+Types.typeWithVars
   addValueReference Types.res:23:8 --> Types.res:23:16
@@ -1603,14 +1578,14 @@
   addValueReference Types.res:52:4 --> Types.res:52:54
   addVariantCaseDeclaration A Types.res:56:2 path:+Types.opaqueVariant
   addVariantCaseDeclaration B Types.res:57:2 path:+Types.opaqueVariant
-  addRecordLabelDeclaration i Types.res:87:2 path:+Types.record
-  addRecordLabelDeclaration s Types.res:88:2 path:+Types.record
-  addValueReference Types.res:92:4 --> Types.res:92:23
-  addValueReference Types.res:112:4 --> Types.res:112:39
-  addValueReference Types.res:128:4 --> Types.res:128:16
-  addRecordLabelDeclaration id Types.res:133:19 path:+Types.someRecord
-  addValueReference Types.res:138:4 --> Types.res:138:36
-  addValueDeclaration +x Types.res:166:6 path:+Types.ObjectId
+  addRecordLabelDeclaration i Types.res:84:2 path:+Types.record
+  addRecordLabelDeclaration s Types.res:85:2 path:+Types.record
+  addValueReference Types.res:89:4 --> Types.res:89:23
+  addValueReference Types.res:109:4 --> Types.res:109:39
+  addValueReference Types.res:125:4 --> Types.res:125:16
+  addRecordLabelDeclaration id Types.res:130:19 path:+Types.someRecord
+  addValueReference Types.res:135:4 --> Types.res:135:36
+  addValueDeclaration +x Types.res:163:6 path:+Types.ObjectId
   Scanning Unboxed.cmt Source:Unboxed.res
   addValueDeclaration +testV1 Unboxed.res:8:4 path:+Unboxed
   addValueDeclaration +r2Test Unboxed.res:17:4 path:+Unboxed
@@ -1690,16 +1665,16 @@
   addValueReference Unison.res:26:8 --> Unison.res:26:20
   addValueReference Unison.res:26:8 --> Unison.res:28:23
   addValueReference Unison.res:26:8 --> Unison.res:19:8
-  addValueReference Unison.res:26:8 --> Unison.res:28:23
   addValueReference Unison.res:26:8 --> Unison.res:26:20
+  addValueReference Unison.res:26:8 --> Unison.res:28:23
   addValueReference Unison.res:26:8 --> Unison.res:26:8
   addValueReference Unison.res:26:8 --> Unison.res:28:17
-  addValueReference Unison.res:26:8 --> Unison.res:28:23
   addValueReference Unison.res:26:8 --> Unison.res:26:20
+  addValueReference Unison.res:26:8 --> Unison.res:28:23
   addValueReference Unison.res:26:8 --> Unison.res:26:8
   addValueReference Unison.res:26:8 --> Unison.res:28:17
-  addValueReference Unison.res:26:8 --> Unison.res:28:23
   addValueReference Unison.res:26:8 --> Unison.res:26:20
+  addValueReference Unison.res:26:8 --> Unison.res:28:23
   addValueReference Unison.res:26:8 --> Unison.res:26:8
   addValueReference Unison.res:26:8 --> Unison.res:28:10
   addTypeReference Unison.res:28:9 --> Unison.res:9:2
@@ -1811,6 +1786,9 @@
   addValueReference VariantsWithPayload.res:93:4 --> VariantsWithPayload.res:93:23
   addVariantCaseDeclaration R VariantsWithPayload.res:96:22 path:+VariantsWithPayload.variant1Object
   addValueReference VariantsWithPayload.res:99:4 --> VariantsWithPayload.res:99:26
+  Implementation 0
+  Implementation 0
+  Implementation 0
   addValueReference TestDeadExn.res:1:7 --> DeadExn.res:1:0
   
 File References
@@ -1818,7 +1796,7 @@ File References
   AutoAnnotate.res -->> 
   BootloaderResource.res -->> 
   BucklescriptAnnotations.res -->> 
-  ComponentAsProp.res -->> React.res, ReactDOMRe.res
+  ComponentAsProp.res -->> React.res
   CreateErrorHandler1.res -->> ErrorHandler.resi
   CreateErrorHandler2.res -->> 
   DeadCodeImplementation.res -->> 
@@ -1827,7 +1805,7 @@ File References
   DeadExn.resi -->> 
   DeadRT.res -->> 
   DeadRT.resi -->> 
-  DeadTest.res -->> React.res, BootloaderResource.res, DeadValueTest.resi, DynamicallyLoadedComponent.res, ImmutableArray.resi, JSResource.res
+  DeadTest.res -->> DeadValueTest.resi, DynamicallyLoadedComponent.res, ImmutableArray.resi, React.res
   DeadTestBlacklist.res -->> 
   DeadTestWithInterface.res -->> 
   DeadTypeTest.res -->> 
@@ -1836,15 +1814,14 @@ File References
   DeadValueTest.resi -->> DeadValueTest.res
   Docstrings.res -->> 
   DynamicallyLoadedComponent.res -->> React.res
-  EmptyArray.res -->> React.res, ReactDOMRe.res
+  EmptyArray.res -->> 
   ErrorHandler.res -->> 
   ErrorHandler.resi -->> ErrorHandler.res
   EverythingLiveHere.res -->> 
-  FC.res -->> 
   FirstClassModules.res -->> 
   FirstClassModulesInterface.res -->> 
   FirstClassModulesInterface.resi -->> FirstClassModulesInterface.res
-  Hooks.res -->> React.res, ReactDOM.res, ReactDOMRe.res, ImportHookDefault.res, ImportHooks.res
+  Hooks.res -->> ImportHookDefault.res, ImportHooks.res, React.res
   IgnoreInterface.res -->> 
   IgnoreInterface.resi -->> 
   ImmutableArray.res -->> 
@@ -1908,13 +1885,16 @@ File References
   Dead VariantCase +AutoAnnotate.variant.R: 0 references () [0]
   Dead Value +BucklescriptAnnotations.+bar: 0 references () [1]
   Dead Value +BucklescriptAnnotations.+f: 0 references () [0]
+  Live RecordLabel +ComponentAsProp.props.button: 1 references (_none_:1:-1) [0]
+  Live RecordLabel +ComponentAsProp.props.description: 1 references (_none_:1:-1) [0]
+  Live RecordLabel +ComponentAsProp.props.title: 1 references (_none_:1:-1) [0]
   Live Value +ComponentAsProp.+make: 0 references () [0]
   Live Value +CreateErrorHandler1.Error1.+notification: 1 references (ErrorHandler.resi:3:2) [0]
   Live Value +CreateErrorHandler2.Error2.+notification: 1 references (ErrorHandler.resi:3:2) [0]
   Live Value +DeadCodeImplementation.M.+x: 1 references (DeadCodeInterface.res:2:2) [0]
   Dead Value +DeadRT.+emitModuleAccessPath: 0 references () [0]
   Live VariantCase +DeadRT.moduleAccessPath.Kaboom: 1 references (DeadRT.res:11:16) [0]
-  Live VariantCase DeadRT.moduleAccessPath.Root: 1 references (DeadTest.res:106:16) [1]
+  Live VariantCase DeadRT.moduleAccessPath.Root: 1 references (DeadTest.res:98:16) [1]
   Live VariantCase +DeadRT.moduleAccessPath.Root: 1 references (DeadRT.resi:2:2) [0]
   Live VariantCase DeadRT.moduleAccessPath.Kaboom: 1 references (DeadRT.res:3:2) [0]
   Dead RecordLabel +DeadTest.inlineRecord3.IR3.b: 0 references () [0]
@@ -1924,37 +1904,34 @@ File References
   Dead RecordLabel +DeadTest.inlineRecord2.IR2.a: 0 references () [0]
   Dead VariantCase +DeadTest.inlineRecord2.IR2: 0 references () [0]
   Dead Value +DeadTest.+_: 0 references () [0]
-  Live Value +DeadTest.+ira: 1 references (DeadTest.res:187:27) [0]
+  Live Value +DeadTest.+ira: 1 references (DeadTest.res:163:27) [0]
   Live RecordLabel +DeadTest.inlineRecord.IR.e: 0 references () [0]
   Dead RecordLabel +DeadTest.inlineRecord.IR.d: 0 references () [0]
-  Live RecordLabel +DeadTest.inlineRecord.IR.c: 1 references (DeadTest.res:187:7) [0]
-  Live RecordLabel +DeadTest.inlineRecord.IR.b: 1 references (DeadTest.res:187:35) [0]
+  Live RecordLabel +DeadTest.inlineRecord.IR.c: 1 references (DeadTest.res:163:7) [0]
+  Live RecordLabel +DeadTest.inlineRecord.IR.b: 1 references (DeadTest.res:163:35) [0]
   Dead RecordLabel +DeadTest.inlineRecord.IR.a: 0 references () [0]
-  Live VariantCase +DeadTest.inlineRecord.IR: 1 references (DeadTest.res:187:20) [0]
+  Live VariantCase +DeadTest.inlineRecord.IR: 1 references (DeadTest.res:163:20) [0]
   Dead Value +DeadTest.+_: 0 references () [0]
-  Live Value +DeadTest.+deadIncorrect: 1 references (DeadTest.res:180:8) [0]
+  Live Value +DeadTest.+deadIncorrect: 1 references (DeadTest.res:156:8) [0]
   Dead RecordLabel +DeadTest.rc.a: 0 references () [0]
   Dead Value +DeadTest.+funWithInnerVars: 0 references () [1]
   Dead Value +DeadTest.+y: 0 references () [0]
   Dead Value +DeadTest.+x: 0 references () [0]
-  Live VariantCase +DeadTest.WithInclude.t.A: 1 references (DeadTest.res:166:7) [1]
-  Live VariantCase +DeadTest.WithInclude.t.A: 1 references (DeadTest.res:158:11) [0]
+  Live VariantCase +DeadTest.WithInclude.t.A: 1 references (DeadTest.res:142:7) [1]
+  Live VariantCase +DeadTest.WithInclude.t.A: 1 references (DeadTest.res:134:11) [0]
   Live Value +DeadTest.GloobLive.+globallyLive3: 0 references () [0]
   Live Value +DeadTest.GloobLive.+globallyLive2: 0 references () [0]
   Live Value +DeadTest.GloobLive.+globallyLive1: 0 references () [0]
   Dead Value +DeadTest.+stringLengthNoSideEffects: 0 references () [0]
   Dead Value +DeadTest.+theSideEffectIsLogging: 0 references () [0]
-  Live Value +DeadTest.+make: 1 references (DeadTest.res:143:16) [0]
+  Live RecordLabel +DeadTest.props.s: 1 references (_none_:1:-1) [0]
+  Live Value +DeadTest.+make: 1 references (DeadTest.res:119:16) [0]
   Dead Value +DeadTest.+deadRef: 0 references () [0]
-  Dead Value +DeadTest.+minute: 0 references () [0]
   Dead Value +DeadTest.+second: 0 references () [0]
   Dead Value +DeadTest.+a3: 0 references () [0]
   Dead Value +DeadTest.+a2: 0 references () [0]
   Dead Value +DeadTest.+a1: 0 references () [0]
   Dead Value +DeadTest.+zzz: 0 references () [0]
-  Dead Value +DeadTest.LazyDynamicallyLoadedComponent2.+make: 0 references () [0]
-  Dead Value +DeadTest.LazyDynamicallyLoadedComponent2.+makeProps: 0 references () [0]
-  Dead Value +DeadTest.LazyDynamicallyLoadedComponent2.+reasonResource: 0 references () [0]
   Dead Value +DeadTest.+withDefaultValue: 0 references () [0]
   Dead Value +DeadTest.+bar: 0 references () [0]
   Dead Value +DeadTest.+foo: 0 references () [1]
@@ -2029,7 +2006,6 @@ File References
   Dead Value +EverythingLiveHere.+z: 0 references () [0]
   Dead Value +EverythingLiveHere.+y: 0 references () [0]
   Dead Value +EverythingLiveHere.+x: 0 references () [0]
-  Live Value +FC.+foo: 1 references (FC.res:11:7) [0]
   Live Value +FirstClassModules.+someFunctorAsFunction: 0 references () [0]
   Live Value +FirstClassModules.SomeFunctor.+ww: 1 references (FirstClassModules.res:57:2) [0]
   Live Value +FirstClassModules.+testConvert: 0 references () [0]
@@ -2042,27 +2018,21 @@ File References
   Dead Value FirstClassModulesInterface.+r: 0 references () [0]
   Dead RecordLabel FirstClassModulesInterface.record.y: 0 references () [0]
   Dead RecordLabel FirstClassModulesInterface.record.x: 0 references () [0]
-  Live Value +Hooks.+aComponentWithChildren: 0 references () [0]
-  Live Value +Hooks.RenderPropRequiresConversion.+car: 1 references (Hooks.res:109:30) [0]
+  Live Value +Hooks.RenderPropRequiresConversion.+car: 1 references (Hooks.res:65:30) [0]
+  Live RecordLabel +Hooks.RenderPropRequiresConversion.props.renderVehicle: 1 references (_none_:1:-1) [0]
   Live Value +Hooks.RenderPropRequiresConversion.+make: 0 references () [0]
-  Live Value +Hooks.+functionReturningReactElement: 0 references () [0]
-  Live Value +Hooks.+polymorphicComponent: 0 references () [0]
-  Live Value +Hooks.+input: 0 references () [0]
-  Live RecordLabel +Hooks.r.x: 1 references (Hooks.res:85:87) [0]
-  Live Value +Hooks.+testForwardRef: 0 references () [0]
-  Dead Value +Hooks.+_: 0 references () [0]
-  Live Value +Hooks.+makeWithRef: 1 references (Hooks.res:80:4) [0]
-  Live Value +Hooks.+componentWithRenamedArgs: 0 references () [0]
+  Dead RecordLabel +Hooks.r.x: 0 references () [0]
   Live Value +Hooks.+functionWithRenamedArgs: 0 references () [0]
   Live Value +Hooks.NoProps.+make: 0 references () [0]
-  Live Value +Hooks.Inner.Inner2.+anotherComponent: 0 references () [0]
+  Live RecordLabel +Hooks.Inner.Inner2.props.vehicle: 1 references (_none_:1:-1) [0]
   Live Value +Hooks.Inner.Inner2.+make: 0 references () [0]
-  Live Value +Hooks.Inner.+anotherComponent: 0 references () [0]
+  Live RecordLabel +Hooks.Inner.props.vehicle: 1 references (_none_:1:-1) [0]
   Live Value +Hooks.Inner.+make: 0 references () [0]
-  Live Value +Hooks.+anotherComponent: 0 references () [0]
   Live Value +Hooks.+default: 0 references () [0]
+  Live RecordLabel +Hooks.props.vehicle: 1 references (_none_:1:-1) [0]
   Live Value +Hooks.+make: 1 references (Hooks.res:25:4) [0]
-  Live RecordLabel +Hooks.vehicle.name: 13 references (Hooks.res:10:29, Hooks.res:30:41, Hooks.res:35:66, Hooks.res:38:78, Hooks.res:42:68, Hooks.res:46:45, Hooks.res:60:2, Hooks.res:60:14, Hooks.res:66:15, Hooks.res:66:27, Hooks.res:74:73, Hooks.res:100:58, Hooks.res:115:41) [0]
+  Live RecordLabel +Hooks.vehicle.name: 5 references (Hooks.res:10:29, Hooks.res:29:66, Hooks.res:33:68, Hooks.res:47:2, Hooks.res:47:14) [0]
+  Live RecordLabel +ImportIndex.props.method: 0 references () [0]
   Live Value +ImportIndex.+make: 0 references () [0]
   Dead Value +ImportMyBanner.+make: 0 references () [0]
   Live Value +ImportMyBanner.+make: 0 references () [0]
@@ -2262,7 +2232,6 @@ File References
   Live Value +Types.+jsonStringify: 0 references () [0]
   Live Value +Types.+jsString2T: 0 references () [0]
   Live Value +Types.+jsStringT: 0 references () [0]
-  Live Value +Types.+stringT: 0 references () [0]
   Dead VariantCase +Types.opaqueVariant.B: 0 references () [0]
   Dead VariantCase +Types.opaqueVariant.A: 0 references () [0]
   Live Value +Types.+testFunctionOnOptionsAsArgument: 0 references () [0]
@@ -2367,7 +2336,8 @@ File References
   Dead VariantCase +DeadTypeTest.t.B: 0 references () [0]
   Dead Value DeadValueTest.+valueDead: 0 references () [0]
   Live Value DeadValueTest.+valueAlive: 1 references (DeadTest.res:73:16) [0]
-  Live Value +DynamicallyLoadedComponent.+make: 1 references (DeadTest.res:133:17) [0]
+  Live RecordLabel +DynamicallyLoadedComponent.props.s: 1 references (_none_:1:-1) [0]
+  Live Value +DynamicallyLoadedComponent.+make: 1 references (DeadTest.res:110:17) [0]
   Dead Value ErrorHandler.+x: 0 references () [0]
   Live Value ErrorHandler.Make.+notify: 1 references (CreateErrorHandler1.res:8:0) [0]
   Dead Value +FirstClassModulesInterface.+r: 0 references () [0]
@@ -2434,11 +2404,16 @@ File References
   Dead Value ImmutableArray.+toArray: 0 references () [0]
   Live Value ImmutableArray.+fromArray: 1 references (DeadTest.res:1:15) [0]
   Live Value ImmutableArray.Array.+get: 1 references (TestImmutableArray.res:2:4) [0]
-  Live Value +ImportHookDefault.+make2: 0 references () [0]
+  Live RecordLabel +ImportHookDefault.props.renderMe: 0 references () [0]
+  Live RecordLabel +ImportHookDefault.props.children: 0 references () [0]
+  Live RecordLabel +ImportHookDefault.props.person: 0 references () [0]
   Live Value +ImportHookDefault.+make: 1 references (Hooks.res:17:5) [0]
   Dead RecordLabel +ImportHookDefault.person.age: 0 references () [0]
   Dead RecordLabel +ImportHookDefault.person.name: 0 references () [0]
   Live Value +ImportHooks.+foo: 0 references () [0]
+  Live RecordLabel +ImportHooks.props.renderMe: 0 references () [0]
+  Live RecordLabel +ImportHooks.props.children: 0 references () [0]
+  Live RecordLabel +ImportHooks.props.person: 0 references () [0]
   Live Value +ImportHooks.+make: 1 references (Hooks.res:14:5) [0]
   Dead RecordLabel +ImportHooks.person.age: 0 references () [0]
   Dead RecordLabel +ImportHooks.person.name: 0 references () [0]
@@ -2541,7 +2516,7 @@ File References
   Live Value +OptArg.+foo: 1 references (OptArg.res:5:7) [0]
 
   Incorrect Dead Annotation
-  DeadTest.res:178:1-22
+  DeadTest.res:153:1-28
   deadIncorrect  is annotated @dead but is live
 
   Warning Unused Argument
@@ -2758,70 +2733,42 @@ File References
   <-- line 96
   @dead("withDefaultValue") let withDefaultValue = (~paramWithDefault=3, y) => paramWithDefault + y
 
-  Warning Dead Module
-  DeadTest.res:110:8-413
-  DeadTest.LazyDynamicallyLoadedComponent2 is a dead module as all its items are dead.
-
-  Warning Dead Value With Side Effects
-  DeadTest.res:111:3-142
-  LazyDynamicallyLoadedComponent2.reasonResource is never used and could have side effects
-
   Warning Dead Value
-  DeadTest.res:114:3-54
-  LazyDynamicallyLoadedComponent2.makeProps is never used
-  <-- line 114
-    @dead("LazyDynamicallyLoadedComponent2.makeProps") let makeProps = DynamicallyLoadedComponent.makeProps
-
-  Warning Dead Value
-  DeadTest.res:115:3-170
-  LazyDynamicallyLoadedComponent2.make is never used
-  <-- line 115
-    @dead("LazyDynamicallyLoadedComponent2.make") let make = props =>
-
-  Warning Dead Value
-  DeadTest.res:127:1-52
+  DeadTest.res:104:1-52
   zzz is never used
-  <-- line 127
+  <-- line 104
   @dead("zzz") let zzz = {
 
   Warning Dead Value
-  DeadTest.res:135:1-15
+  DeadTest.res:112:1-14
   second is never used
-  <-- line 135
-  @dead("second") let second = 1L
+  <-- line 112
+  @dead("second") let second = 1
 
   Warning Dead Value
-  DeadTest.res:136:1-35
-  minute is never used
-  <-- line 136
-  @dead("minute") let minute = Int64.mul(60L, second)
-
-  Warning Dead Value
-  DeadTest.res:138:1-21
+  DeadTest.res:114:1-21
   deadRef is never used
-  <-- line 138
+  <-- line 114
   @dead("deadRef") let deadRef = ref(12)
 
   Warning Dead Value With Side Effects
-  DeadTest.res:145:1-40
+  DeadTest.res:121:1-40
   theSideEffectIsLogging is never used and could have side effects
 
-  Warning Dead Value
-  DeadTest.res:147:1-54
-  stringLengthNoSideEffects is never used
-  <-- line 147
-  @dead("stringLengthNoSideEffects") let stringLengthNoSideEffects = String.length("sdkdl")
+  Warning Dead Value With Side Effects
+  DeadTest.res:123:1-54
+  stringLengthNoSideEffects is never used and could have side effects
 
   Warning Dead Type
-  DeadTest.res:175:12-17
+  DeadTest.res:151:12-17
   rc.a is a record label never used to read a value
-  <-- line 175
+  <-- line 151
   type rc = {@dead("rc.a") a: int}
 
   Warning Dead Type
-  DeadTest.res:182:25-30
+  DeadTest.res:158:25-30
   inlineRecord.IR.a is a record label never used to read a value
-  <-- line 182
+  <-- line 158
   type inlineRecord = IR({@dead("inlineRecord.IR.a") a: int, b: int, c: string, @dead d: int, @live e: int})
 
   Warning Dead Module
@@ -2921,10 +2868,10 @@ File References
   ErrorHandler is a dead module as all its items are dead.
 
   Warning Dead Value
-  ErrorHandler.res:12:1-10
+  ErrorHandler.res:11:1-19
   x is never used
   <-- line 12
-  @dead("x") let x = 42
+  @dead("x") @genType
 
   Warning Dead Module
   ErrorHandler.resi:0:1
@@ -3001,6 +2948,12 @@ File References
   r is never used
   <-- line 7
   @dead("r") let r: record
+
+  Warning Dead Type
+  Hooks.res:50:11-19
+  r.x is a record label never used to read a value
+  <-- line 50
+  type r = {@dead("r.x") x: string}
 
   Warning Dead Value
   ImmutableArray.res:16:3-41
@@ -4159,31 +4112,31 @@ File References
     | @dead("opaqueVariant.B") B
 
   Warning Dead Type
-  Types.res:87:3-8
+  Types.res:84:3-8
   record.i is a record label never used to read a value
-  <-- line 87
+  <-- line 84
     @dead("record.i") i: int,
 
   Warning Dead Type
-  Types.res:88:3-11
+  Types.res:85:3-11
   record.s is a record label never used to read a value
-  <-- line 88
+  <-- line 85
     @dead("record.s") s: string,
 
   Warning Dead Type
-  Types.res:133:20-26
+  Types.res:130:20-26
   someRecord.id is a record label never used to read a value
-  <-- line 133
+  <-- line 130
   type someRecord = {@dead("someRecord.id") id: int}
 
   Warning Dead Module
-  Types.res:161:8-79
+  Types.res:158:8-79
   Types.ObjectId is a dead module as all its items are dead.
 
   Warning Dead Value
-  Types.res:166:3-11
+  Types.res:163:3-11
   ObjectId.x is never used
-  <-- line 166
+  <-- line 163
     @dead("ObjectId.x") let x = 1
 
   Warning Dead Type
@@ -4294,4 +4247,4 @@ File References
   <-- line 96
   type variant1Object = | @dead("variant1Object.R") R(payload)
   
-  Analysis reported 306 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:22, Warning Dead Type:86, Warning Dead Value:177, Warning Dead Value With Side Effects:2, Warning Redundant Optional Argument:5, Warning Unused Argument:11)
+  Analysis reported 302 issues (Incorrect Dead Annotation:1, Warning Dead Exception:2, Warning Dead Module:21, Warning Dead Type:87, Warning Dead Value:173, Warning Dead Value With Side Effects:2, Warning Redundant Optional Argument:5, Warning Unused Argument:11)

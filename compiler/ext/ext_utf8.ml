@@ -29,19 +29,30 @@ let classify chr =
   let c = int_of_char chr in
   (* Classify byte according to leftmost 0 bit *)
   if c land 0b1000_0000 = 0 then Single c
-  else if (* c 0b0____*)
-          c land 0b0100_0000 = 0 then Cont (c land 0b0011_1111)
-  else if (* c 0b10___*)
-          c land 0b0010_0000 = 0 then Leading (1, c land 0b0001_1111)
-  else if (* c 0b110__*)
-          c land 0b0001_0000 = 0 then Leading (2, c land 0b0000_1111)
-  else if (* c 0b1110_ *)
-          c land 0b0000_1000 = 0 then Leading (3, c land 0b0000_0111)
-  else if (* c 0b1111_0___*)
-          c land 0b0000_0100 = 0 then Leading (4, c land 0b0000_0011)
-  else if (* c 0b1111_10__*)
-          c land 0b0000_0010 = 0 then Leading (5, c land 0b0000_0001)
-    (* c 0b1111_110__ *)
+  else if
+    (* c 0b0____*)
+    c land 0b0100_0000 = 0
+  then Cont (c land 0b0011_1111)
+  else if
+    (* c 0b10___*)
+    c land 0b0010_0000 = 0
+  then Leading (1, c land 0b0001_1111)
+  else if
+    (* c 0b110__*)
+    c land 0b0001_0000 = 0
+  then Leading (2, c land 0b0000_1111)
+  else if
+    (* c 0b1110_ *)
+    c land 0b0000_1000 = 0
+  then Leading (3, c land 0b0000_0111)
+  else if
+    (* c 0b1111_0___*)
+    c land 0b0000_0100 = 0
+  then Leading (4, c land 0b0000_0011)
+  else if
+    (* c 0b1111_10__*)
+    c land 0b0000_0010 = 0
+  then Leading (5, c land 0b0000_0001) (* c 0b1111_110__ *)
   else Invalid
 
 exception Invalid_utf8 of string

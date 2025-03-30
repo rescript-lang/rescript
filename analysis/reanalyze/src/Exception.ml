@@ -294,8 +294,10 @@ let traverseAst () =
         }
         :: !currentEvents
     | Texp_apply
-        ( {exp_desc = Texp_ident (atat, _, _)},
-          [(_lbl1, Some {exp_desc = Texp_ident (callee, _, _)}); arg] )
+        {
+          funct = {exp_desc = Texp_ident (atat, _, _)};
+          args = [(_lbl1, Some {exp_desc = Texp_ident (callee, _, _)}); arg];
+        }
       when (* raise @@ Exn(...) *)
            atat |> Path.name = "Pervasives.@@" && callee |> Path.name |> isRaise
       ->
@@ -303,15 +305,17 @@ let traverseAst () =
       currentEvents := {Event.exceptions; loc; kind = Raises} :: !currentEvents;
       arg |> snd |> iterExprOpt self
     | Texp_apply
-        ( {exp_desc = Texp_ident (atat, _, _)},
-          [arg; (_lbl1, Some {exp_desc = Texp_ident (callee, _, _)})] )
+        {
+          funct = {exp_desc = Texp_ident (atat, _, _)};
+          args = [arg; (_lbl1, Some {exp_desc = Texp_ident (callee, _, _)})];
+        }
       when (*  Exn(...) |> raise *)
            atat |> Path.name = "Pervasives.|>" && callee |> Path.name |> isRaise
       ->
       let exceptions = [arg] |> raiseArgs in
       currentEvents := {Event.exceptions; loc; kind = Raises} :: !currentEvents;
       arg |> snd |> iterExprOpt self
-    | Texp_apply (({exp_desc = Texp_ident (callee, _, _)} as e), args) ->
+    | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)} as e; args} ->
       let calleeName = Path.name callee in
       if calleeName |> isRaise then
         let exceptions = args |> raiseArgs in

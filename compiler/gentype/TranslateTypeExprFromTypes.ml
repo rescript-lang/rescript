@@ -2,7 +2,7 @@ open GenTypeCommon
 
 type translation = {dependencies: dep list; type_: type_}
 
-let rec remove_option ~(label : Asttypes.arg_label)
+let rec remove_option ~(label : Asttypes.Noloc.arg_label)
     (type_expr : Types.type_expr) =
   match (type_expr.desc, label) with
   | Tconstr (Path.Pident id, [t], _), Optional lbl when Ident.name id = "option"
@@ -81,36 +81,42 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
   | ( ( ["FB"; "string"]
       | ["string"]
       | ["String"; "t"]
+      | ["Stdlib"; "String"; "t"]
       | ["Js"; ("String" | "String2"); "t"] ),
       [] ) ->
     {dependencies = []; type_ = string_t}
-  | (["Js"; "Types"; "bigint_val"] | ["BigInt"; "t"]), [] ->
+  | ( ( ["Js"; "Types"; "bigint_val"]
+      | ["BigInt"; "t"]
+      | ["Stdlib"; "BigInt"; "t"] ),
+      [] ) ->
     {dependencies = []; type_ = bigint_t}
-  | (["Js"; "Date"; "t"] | ["Date"; "t"]), [] ->
+  | (["Js"; "Date"; "t"] | ["Date"; "t"] | ["Stdlib"; "Date"; "t"]), [] ->
     {dependencies = []; type_ = date_t}
-  | ["Map"; "t"], [param_translation1; param_translation2] ->
+  | ( (["Map"; "t"] | ["Stdlib"; "Map"; "t"]),
+      [param_translation1; param_translation2] ) ->
     {
       dependencies =
         param_translation1.dependencies @ param_translation2.dependencies;
       type_ = map_t (param_translation1.type_, param_translation2.type_);
     }
-  | ["WeakMap"; "t"], [param_translation1; param_translation2] ->
+  | ( (["WeakMap"; "t"] | ["Stdlib"; "WeakMap"; "t"]),
+      [param_translation1; param_translation2] ) ->
     {
       dependencies =
         param_translation1.dependencies @ param_translation2.dependencies;
       type_ = weakmap_t (param_translation1.type_, param_translation2.type_);
     }
-  | ["Set"; "t"], [param_translation] ->
+  | (["Set"; "t"] | ["Stdlib"; "Set"; "t"]), [param_translation] ->
     {
       dependencies = param_translation.dependencies;
       type_ = set_t param_translation.type_;
     }
-  | ["WeakSet"; "t"], [param_translation] ->
+  | (["WeakSet"; "t"] | ["Stdlib"; "WeakSet"; "t"]), [param_translation] ->
     {
       dependencies = param_translation.dependencies;
       type_ = weakset_t param_translation.type_;
     }
-  | (["Js"; "Re"; "t"] | ["RegExp"; "t"]), [] ->
+  | (["Js"; "Re"; "t"] | ["RegExp"; "t"] | ["Stdlib"; "RegExp"; "t"]), [] ->
     {dependencies = []; type_ = regexp_t}
   | (["FB"; "unit"] | ["unit"]), [] -> {dependencies = []; type_ = unit_t}
   | ( (["FB"; "array"] | ["array"] | ["Js"; ("Array" | "Array2"); "t"]),
@@ -134,7 +140,10 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
               };
             ] );
     }
-  | ( (["Pervasives"; "result"] | ["Belt"; "Result"; "t"] | ["result"]),
+  | ( ( ["Pervasives"; "result"]
+      | ["Belt"; "Result"; "t"]
+      | ["result"]
+      | ["Stdlib"; "Result"; "t"] ),
       [param_translation1; param_translation2] ) ->
     let case name type_ = {case = {label_js = StringLabel name}; t = type_} in
     let variant =
@@ -213,26 +222,37 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
     {dependencies = []; type_ = EmitType.type_react_element}
   | (["FB"; "option"] | ["option"]), [param_translation] ->
     {param_translation with type_ = Option param_translation.type_}
-  | ( (["Js"; "Undefined"; "t"] | ["Undefined"; "t"] | ["Js"; "undefined"]),
+  | ( ( ["Js"; "Undefined"; "t"]
+      | ["Undefined"; "t"]
+      | ["Js"; "undefined"]
+      | ["Stdlib"; "undefined"] ),
       [param_translation] ) ->
     {param_translation with type_ = Option param_translation.type_}
-  | (["Js"; "Null"; "t"] | ["Null"; "t"] | ["Js"; "null"]), [param_translation]
-    ->
+  | ( ( ["Js"; "Null"; "t"]
+      | ["Null"; "t"]
+      | ["Js"; "null"]
+      | ["Stdlib"; "Null"; "t"]
+      | ["Stdlib"; "null"] ),
+      [param_translation] ) ->
     {param_translation with type_ = Null param_translation.type_}
   | ( ( ["Js"; "Nullable"; "t"]
       | ["Nullable"; "t"]
       | ["Js"; "nullable"]
       | ["Js"; "Null_undefined"; "t"]
-      | ["Js"; "null_undefined"] ),
+      | ["Js"; "null_undefined"]
+      | ["Stdlib"; "Nullable"; "t"]
+      | ["Stdlib"; "nullable"] ),
       [param_translation] ) ->
     {param_translation with type_ = Nullable param_translation.type_}
-  | ( (["Js"; "Promise"; "t"] | ["Promise"; "t"] | ["promise"]),
+  | ( ( ["Js"; "Promise"; "t"]
+      | ["Promise"; "t"]
+      | ["promise"]
+      | ["Stdlib"; "Promise"; "t"] ),
       [param_translation] ) ->
     {param_translation with type_ = Promise param_translation.type_}
-  | (["Js"; "Dict"; "t"] | ["Dict"; "t"] | ["dict"]), [param_translation] ->
+  | ( (["Js"; "Dict"; "t"] | ["Dict"; "t"] | ["dict"] | ["Stdlib"; "Dict"; "t"]),
+      [param_translation] ) ->
     {param_translation with type_ = Dict param_translation.type_}
-  | ["function$"], [arg; _arity] ->
-    {dependencies = arg.dependencies; type_ = arg.type_}
   | _ -> default_case ()
 
 type process_variant = {
@@ -270,7 +290,8 @@ let rec translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps
   | Tlink t ->
     translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps
       ~rev_args t
-  | Tarrow (Nolabel, type_expr1, type_expr2, _) ->
+  | Tarrow (Nolabel, type_expr1, type_expr2, _, arity)
+    when arity = None || rev_args = [] ->
     let {dependencies; type_} =
       type_expr1 |> fun __x ->
       translateTypeExprFromTypes_ ~config ~type_vars_gen ~type_env __x
@@ -280,8 +301,13 @@ let rec translate_arrow_type ~config ~type_vars_gen ~type_env ~rev_arg_deps
     |> translate_arrow_type ~config ~type_vars_gen ~type_env
          ~rev_arg_deps:next_rev_deps
          ~rev_args:((Nolabel, type_) :: rev_args)
-  | Tarrow (((Labelled lbl | Optional lbl) as label), type_expr1, type_expr2, _)
-    -> (
+  | Tarrow
+      ( ((Labelled lbl | Optional lbl) as label),
+        type_expr1,
+        type_expr2,
+        _,
+        arity )
+    when arity = None || rev_args = [] -> (
     match type_expr1 |> remove_option ~label with
     | None ->
       let {dependencies; type_ = type1} =

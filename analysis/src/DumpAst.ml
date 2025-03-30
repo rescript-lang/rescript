@@ -104,7 +104,7 @@ let rec printPattern pattern ~pos ~indentation =
     ^ addIndentation (indentation + 1)
     ^ "fields:\n"
     ^ (fields
-      |> List.map (fun ((Location.{txt} as loc), pat) ->
+      |> List.map (fun ((Location.{txt} as loc), pat, _) ->
              addIndentation (indentation + 2)
              ^ (loc |> printLocDenominatorLoc ~pos)
              ^ (Utils.flattenLongIdent txt |> ident |> str)
@@ -171,7 +171,7 @@ and printExprItem expr ~pos ~indentation =
       |> String.concat "\n")
   | Pexp_ident {txt} ->
     "Pexp_ident:" ^ (Utils.flattenLongIdent txt |> SharedTypes.ident)
-  | Pexp_apply (expr, args) ->
+  | Pexp_apply {funct = expr; args} ->
     let printLabel labelled ~pos =
       match labelled with
       | None -> "<unlabelled>"
@@ -213,14 +213,14 @@ and printExprItem expr ~pos ~indentation =
       | None -> ""
       | Some expr -> "," ^ printExprItem expr ~pos ~indentation)
     ^ ")"
-  | Pexp_fun (arg, _maybeDefaultArgExpr, pattern, nextExpr) ->
+  | Pexp_fun {arg_label = arg; lhs = pattern; rhs = nextExpr} ->
     "Pexp_fun(\n"
     ^ addIndentation (indentation + 1)
     ^ "arg: "
     ^ (match arg with
       | Nolabel -> "Nolabel"
-      | Labelled name -> "Labelled(" ^ name ^ ")"
-      | Optional name -> "Optional(" ^ name ^ ")")
+      | Labelled {txt = name} -> "Labelled(" ^ name ^ ")"
+      | Optional {txt = name} -> "Optional(" ^ name ^ ")")
     ^ ",\n"
     ^ addIndentation (indentation + 2)
     ^ "pattern: "
@@ -245,7 +245,7 @@ and printExprItem expr ~pos ~indentation =
     ^ addIndentation (indentation + 1)
     ^ "fields:\n"
     ^ (fields
-      |> List.map (fun ((Location.{txt} as loc), expr) ->
+      |> List.map (fun ((Location.{txt} as loc), expr, _) ->
              addIndentation (indentation + 2)
              ^ (loc |> printLocDenominatorLoc ~pos)
              ^ (Utils.flattenLongIdent txt |> ident |> str)

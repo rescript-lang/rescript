@@ -21,9 +21,9 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let msg = match self {
-            Error::Locked(pid) => format!("Rewatch is already running with PID {}", pid),
-            Error::ParsingLockfile(e) => format!("Could not parse lockfile: \n {}", e),
-            Error::ReadingLockfile(e) => format!("Could not read lockfile: \n {}", e),
+            Error::Locked(pid) => format!("Rewatch is already running. The process ID (PID) is {}", pid),
+            Error::ParsingLockfile(e) => format!("Could not parse lockfile: \n {} \n  (try removing it and running the command again)", e),
+            Error::ReadingLockfile(e) => format!("Could not read lockfile: \n {} \n  (try removing it and running the command again)", e),
             Error::WritingLockfile(e) => format!("Could not write lockfile: \n {}", e),
         };
         write!(f, "{}", msg)

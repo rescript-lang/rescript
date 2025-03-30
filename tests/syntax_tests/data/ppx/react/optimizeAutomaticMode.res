@@ -1,4 +1,4 @@
-@@jsxConfig({version: 4, mode: "automatic"})
+@@jsxConfig({version: 4})
 
 module User = {
   type t = {firstName: string, lastName: string}

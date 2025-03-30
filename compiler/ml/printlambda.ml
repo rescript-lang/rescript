@@ -39,10 +39,6 @@ let rec struct_const ppf = function
       List.iter (fun sc -> fprintf ppf "@ %a" struct_const sc) scl
     in
     fprintf ppf "@[<1>[%i:@ @[%a%a@]]@]" tag struct_const sc1 sconsts scl
-  | Const_float_array [] -> fprintf ppf "[| |]"
-  | Const_float_array (f1 :: fl) ->
-    let floats ppf fl = List.iter (fun f -> fprintf ppf "@ %s" f) fl in
-    fprintf ppf "@[<1>[|@[%s%a@]|]@]" f1 floats fl
   | Const_false -> fprintf ppf "false"
   | Const_true -> fprintf ppf "true"
 
@@ -87,7 +83,6 @@ let str_of_field_info (fld_info : Lambda.field_dbg_info) =
   | Fld_extension -> "ext"
   | Fld_variant -> "var"
   | Fld_cons -> "cons"
-  | Fld_array -> "[||]"
 let print_taginfo ppf = function
   | Blk_extension -> fprintf ppf "ext"
   | Blk_record_ext {fields = ss} ->
@@ -97,14 +92,14 @@ let print_taginfo ppf = function
     fprintf ppf "%s/%i" name num_nonconst
   | Blk_poly_var name -> fprintf ppf "`%s" name
   | Blk_record {fields = ss} ->
-    fprintf ppf "[%s]" (String.concat ";" (Array.to_list ss))
+    fprintf ppf "[%s]" (String.concat ";" (List.map fst (Array.to_list ss)))
   | Blk_module ss -> fprintf ppf "[%s]" (String.concat ";" ss)
   | Blk_some -> fprintf ppf "some"
   | Blk_some_not_nested -> fprintf ppf "some_not_nested"
   | Blk_lazy_general -> fprintf ppf "lazy_general"
   | Blk_module_export _ -> fprintf ppf "module/exports"
   | Blk_record_inlined {fields = ss} ->
-    fprintf ppf "[%s]" (String.concat ";" (Array.to_list ss))
+    fprintf ppf "[%s]" (String.concat ";" (List.map fst (Array.to_list ss)))
 
 let primitive ppf = function
   | Pidentity -> fprintf ppf "id"
@@ -122,7 +117,6 @@ let primitive ppf = function
   | Pfield (n, fld) -> fprintf ppf "field:%s/%i" (str_of_field_info fld) n
   | Psetfield (n, _) -> fprintf ppf "setfield %i" n
   | Pduprecord -> fprintf ppf "duprecord"
-  | Plazyforce -> fprintf ppf "force"
   | Pccall p -> fprintf ppf "%s" p.prim_name
   | Praise k -> fprintf ppf "%s" (Lambda.raise_kind k)
   | Pobjcomp Ceq -> fprintf ppf "=="
@@ -152,10 +146,9 @@ let primitive ppf = function
   | Paddint -> fprintf ppf "+"
   | Psubint -> fprintf ppf "-"
   | Pmulint -> fprintf ppf "*"
-  | Pdivint Safe -> fprintf ppf "/"
-  | Pdivint Unsafe -> fprintf ppf "/u"
-  | Pmodint Safe -> fprintf ppf "mod"
-  | Pmodint Unsafe -> fprintf ppf "mod_unsafe"
+  | Pdivint -> fprintf ppf "/"
+  | Pmodint -> fprintf ppf "mod"
+  | Ppowint -> fprintf ppf "**"
   | Pandint -> fprintf ppf "and"
   | Porint -> fprintf ppf "or"
   | Pxorint -> fprintf ppf "xor"
@@ -182,6 +175,7 @@ let primitive ppf = function
   | Pmulfloat -> fprintf ppf "*."
   | Pdivfloat -> fprintf ppf "/."
   | Pmodfloat -> fprintf ppf "mod"
+  | Ppowfloat -> fprintf ppf "**"
   | Pfloatcomp Ceq -> fprintf ppf "==."
   | Pfloatcomp Cneq -> fprintf ppf "!=."
   | Pfloatcomp Clt -> fprintf ppf "<."
@@ -268,7 +262,6 @@ let primitive ppf = function
   | Pjs_fn_make arity -> fprintf ppf "#fn_mk(%d)" arity
   | Pjs_fn_make_unit -> fprintf ppf "#fn_mk_unit"
   | Pjs_fn_method -> fprintf ppf "#fn_method"
-  | Pjs_unsafe_downgrade -> fprintf ppf "#unsafe_downgrade"
 
 let function_attribute ppf {inline; is_a_functor; return_unit} =
   if is_a_functor then fprintf ppf "is_a_functor@ ";

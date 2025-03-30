@@ -208,20 +208,20 @@ function process_input_line(ticker_map, all_tickers, line) {
     };
   };
   let tokens = split("|", line);
-  if (!tokens) {
+  if (tokens === 0) {
     return Pervasives.failwith("Invalid input line");
   }
   switch (tokens.hd) {
     case "Q" :
       let match = tokens.tl;
-      if (!match) {
+      if (match === 0) {
         return Pervasives.failwith("Invalid input line");
       }
       let match$1 = match.tl;
-      if (!match$1) {
+      if (match$1 === 0) {
         return Pervasives.failwith("Invalid input line");
       }
-      if (match$1.tl) {
+      if (match$1.tl !== 0) {
         return Pervasives.failwith("Invalid input line");
       }
       let ticker_map$1 = ticker_map !== undefined ? Primitive_option.valFromOption(ticker_map) : compute_update_sequences(all_tickers);
@@ -233,22 +233,22 @@ function process_input_line(ticker_map, all_tickers, line) {
       ];
     case "R" :
       let match$2 = tokens.tl;
-      if (!match$2) {
+      if (match$2 === 0) {
         return Pervasives.failwith("Invalid input line");
       }
       let match$3 = match$2.tl;
-      if (!match$3) {
+      if (match$3 === 0) {
         return Pervasives.failwith("Invalid input line");
       }
       let ticker_name = match$2.hd;
       switch (match$3.hd) {
         case "+" :
           let match$4 = match$3.tl;
-          if (!match$4) {
+          if (match$4 === 0) {
             return Pervasives.failwith("Invalid input line");
           }
           let match$5 = match$4.tl;
-          if (match$5 && !match$5.tl) {
+          if (match$5 !== 0 && match$5.tl === 0) {
             return [
               {
                 hd: make_binary_op(ticker_name, match$4.hd, match$5.hd, "PLUS"),
@@ -261,11 +261,11 @@ function process_input_line(ticker_map, all_tickers, line) {
           }
         case "-" :
           let match$6 = match$3.tl;
-          if (!match$6) {
+          if (match$6 === 0) {
             return Pervasives.failwith("Invalid input line");
           }
           let match$7 = match$6.tl;
-          if (match$7 && !match$7.tl) {
+          if (match$7 !== 0 && match$7.tl === 0) {
             return [
               {
                 hd: make_binary_op(ticker_name, match$6.hd, match$7.hd, "MINUS"),
@@ -277,7 +277,7 @@ function process_input_line(ticker_map, all_tickers, line) {
             return Pervasives.failwith("Invalid input line");
           }
         case "S" :
-          if (match$3.tl) {
+          if (match$3.tl !== 0) {
             return Pervasives.failwith("Invalid input line");
           } else {
             return [
@@ -306,7 +306,7 @@ function loop(_lines, _param) {
     let param = _param;
     let lines = _lines;
     let all_tickers = param[0];
-    if (!lines) {
+    if (lines === 0) {
       return print_all_composite(all_tickers);
     }
     _param = process_input_line(param[1], all_tickers, lines.hd);

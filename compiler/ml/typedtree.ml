@@ -50,7 +50,8 @@ and pattern_desc =
   | Tpat_construct of Longident.t loc * constructor_description * pattern list
   | Tpat_variant of label * pattern option * row_desc ref
   | Tpat_record of
-      (Longident.t loc * label_description * pattern) list * closed_flag
+      (Longident.t loc * label_description * pattern * bool (* optional *)) list
+      * closed_flag
   | Tpat_array of pattern list
   | Tpat_or of pattern * pattern * row_desc option
   | Tpat_lazy of pattern
@@ -66,9 +67,8 @@ and expression = {
 
 and exp_extra =
   | Texp_constraint of core_type
-  | Texp_coerce of unit * core_type
+  | Texp_coerce of core_type
   | Texp_open of override_flag * Path.t * Longident.t loc * Env.t
-  | Texp_poly of core_type option
   | Texp_newtype of string
 
 and expression_desc =
@@ -76,12 +76,18 @@ and expression_desc =
   | Texp_constant of constant
   | Texp_let of rec_flag * value_binding list * expression
   | Texp_function of {
-      arg_label: arg_label;
+      arg_label: Noloc.arg_label;
+      arity: arity;
       param: Ident.t;
-      cases: case list;
+      case: case;
       partial: partial;
+      async: bool;
     }
-  | Texp_apply of expression * (arg_label * expression option) list
+  | Texp_apply of {
+      funct: expression;
+      args: (Noloc.arg_label * expression option) list;
+      partial: bool;
+    }
   | Texp_match of expression * case list * case list * partial
   | Texp_try of expression * case list
   | Texp_tuple of expression list
@@ -89,7 +95,11 @@ and expression_desc =
       Longident.t loc * constructor_description * expression list
   | Texp_variant of label * expression option
   | Texp_record of {
-      fields: (Types.label_description * record_label_definition) array;
+      fields:
+        (Types.label_description
+        * record_label_definition
+        * bool (* optional *))
+        array;
       representation: Types.record_representation;
       extended_expression: expression option;
     }
@@ -108,17 +118,11 @@ and expression_desc =
       * direction_flag
       * expression
   | Texp_send of expression * meth * expression option
-  | Texp_new of unit
-  | Texp_instvar of unit
-  | Texp_setinstvar of unit
-  | Texp_override of unit
   | Texp_letmodule of Ident.t * string loc * module_expr * expression
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression
   | Texp_lazy of expression
-  | Texp_object of unit
   | Texp_pack of module_expr
-  | Texp_unreachable
   | Texp_extension_constructor of Longident.t loc * Path.t
 
 and meth = Tmeth_name of string
@@ -128,8 +132,6 @@ and case = {c_lhs: pattern; c_guard: expression option; c_rhs: expression}
 and record_label_definition =
   | Kept of Types.type_expr
   | Overridden of Longident.t loc * expression
-
-(* Value expressions for the class language *)
 
 (* Value expressions for the module language *)
 and module_expr = {
@@ -176,8 +178,6 @@ and structure_item_desc =
   | Tstr_recmodule of module_binding list
   | Tstr_modtype of module_type_declaration
   | Tstr_open of open_description
-  | Tstr_class of unit
-  | Tstr_class_type of unit
   | Tstr_include of include_declaration
   | Tstr_attribute of attribute
 
@@ -253,8 +253,6 @@ and signature_item_desc =
   | Tsig_modtype of module_type_declaration
   | Tsig_open of open_description
   | Tsig_include of include_description
-  | Tsig_class of unit
-  | Tsig_class_type of unit
   | Tsig_attribute of attribute
 
 and module_declaration = {
@@ -299,9 +297,8 @@ and with_constraint =
   | Twith_modsubst of Path.t * Longident.t loc
 
 and core_type = {
-  (* mutable because of [Typeclass.declare_method] *)
-  mutable ctyp_desc: core_type_desc;
-  mutable ctyp_type: type_expr;
+  ctyp_desc: core_type_desc;
+  ctyp_type: type_expr;
   ctyp_env: Env.t; (* BINANNOT ADDED *)
   ctyp_loc: Location.t;
   ctyp_attributes: attribute list;
@@ -310,11 +307,10 @@ and core_type = {
 and core_type_desc =
   | Ttyp_any
   | Ttyp_var of string
-  | Ttyp_arrow of arg_label * core_type * core_type
+  | Ttyp_arrow of Noloc.arg_label * core_type * core_type * arity
   | Ttyp_tuple of core_type list
   | Ttyp_constr of Path.t * Longident.t loc * core_type list
   | Ttyp_object of object_field list * closed_flag
-  | Ttyp_class of unit (* dummy AST node *)
   | Ttyp_alias of core_type * string
   | Ttyp_variant of row_field list * closed_flag * label list option
   | Ttyp_poly of string list * core_type
@@ -368,6 +364,7 @@ and label_declaration = {
   ld_id: Ident.t;
   ld_name: string loc;
   ld_mutable: mutable_flag;
+  ld_optional: bool;
   ld_type: core_type;
   ld_loc: Location.t;
   ld_attributes: attribute list;
@@ -416,7 +413,7 @@ let iter_pattern_desc f = function
   | Tpat_construct (_, _, patl) -> List.iter f patl
   | Tpat_variant (_, pat, _) -> may f pat
   | Tpat_record (lbl_pat_list, _) ->
-    List.iter (fun (_, _, pat) -> f pat) lbl_pat_list
+    List.iter (fun (_, _, pat, _) -> f pat) lbl_pat_list
   | Tpat_array patl -> List.iter f patl
   | Tpat_or (p1, p2, _) ->
     f p1;
@@ -429,7 +426,7 @@ let map_pattern_desc f d =
   | Tpat_alias (p1, id, s) -> Tpat_alias (f p1, id, s)
   | Tpat_tuple pats -> Tpat_tuple (List.map f pats)
   | Tpat_record (lpats, closed) ->
-    Tpat_record (List.map (fun (lid, l, p) -> (lid, l, f p)) lpats, closed)
+    Tpat_record (List.map (fun (lid, l, p, o) -> (lid, l, f p, o)) lpats, closed)
   | Tpat_construct (lid, c, pats) -> Tpat_construct (lid, c, List.map f pats)
   | Tpat_array pats -> Tpat_array (List.map f pats)
   | Tpat_lazy p1 -> Tpat_lazy (f p1)

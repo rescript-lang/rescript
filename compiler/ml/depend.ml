@@ -105,9 +105,9 @@ let rec add_type bv ty =
   match ty.ptyp_desc with
   | Ptyp_any -> ()
   | Ptyp_var _ -> ()
-  | Ptyp_arrow (_, t1, t2) ->
-    add_type bv t1;
-    add_type bv t2
+  | Ptyp_arrow {arg; ret} ->
+    add_type bv arg;
+    add_type bv ret
   | Ptyp_tuple tl -> List.iter (add_type bv) tl
   | Ptyp_constr (c, tl) ->
     add bv c;
@@ -118,7 +118,6 @@ let rec add_type bv ty =
         | Otag (_, _, t) -> add_type bv t
         | Oinherit t -> add_type bv t)
       fl
-  | Ptyp_class () -> ()
   | Ptyp_alias (t, _) -> add_type bv t
   | Ptyp_variant (fl, _, _) ->
     List.iter
@@ -186,7 +185,7 @@ let rec add_pattern bv pat =
     add_opt add_pattern bv op
   | Ppat_record (pl, _) ->
     List.iter
-      (fun (lbl, p) ->
+      (fun (lbl, p, _) ->
         add bv lbl;
         add_pattern bv p)
       pl
@@ -219,11 +218,10 @@ let rec add_expr bv exp =
   | Pexp_let (rf, pel, e) ->
     let bv = add_bindings rf bv pel in
     add_expr bv e
-  | Pexp_fun (_, opte, p, e) ->
+  | Pexp_fun {default = opte; lhs = p; rhs = e} ->
     add_opt add_expr bv opte;
     add_expr (add_pattern bv p) e
-  | Pexp_function pel -> add_cases bv pel
-  | Pexp_apply (e, el) ->
+  | Pexp_apply {funct = e; args = el} ->
     add_expr bv e;
     List.iter (fun (_, e) -> add_expr bv e) el
   | Pexp_match (e, pel) ->
@@ -239,7 +237,7 @@ let rec add_expr bv exp =
   | Pexp_variant (_, opte) -> add_opt add_expr bv opte
   | Pexp_record (lblel, opte) ->
     List.iter
-      (fun (lbl, e) ->
+      (fun (lbl, e, _) ->
         add bv lbl;
         add_expr bv e)
       lblel;
@@ -273,19 +271,12 @@ let rec add_expr bv exp =
     add_expr bv e1;
     add_type bv ty2
   | Pexp_send (e, _m) -> add_expr bv e
-  | Pexp_new li -> add bv li
-  | Pexp_setinstvar (_v, e) -> add_expr bv e
-  | Pexp_override sel -> List.iter (fun (_s, e) -> add_expr bv e) sel
   | Pexp_letmodule (id, m, e) ->
     let b = add_module_binding bv m in
     add_expr (StringMap.add id.txt b bv) e
   | Pexp_letexception (_, e) -> add_expr bv e
   | Pexp_assert e -> add_expr bv e
   | Pexp_lazy e -> add_expr bv e
-  | Pexp_poly (e, t) ->
-    add_expr bv e;
-    add_opt add_type bv t
-  | Pexp_object () -> ()
   | Pexp_newtype (_, e) -> add_expr bv e
   | Pexp_pack m -> add_module bv m
   | Pexp_open (_ovf, m, e) ->
@@ -298,7 +289,6 @@ let rec add_expr bv exp =
     | Pstr_eval ({pexp_desc = Pexp_construct (c, None)}, _) -> add bv c
     | _ -> handle_extension e)
   | Pexp_extension e -> handle_extension e
-  | Pexp_unreachable -> ()
 
 and add_cases bv cases = List.iter (add_case bv) cases
 
@@ -395,8 +385,6 @@ and add_sig_item (bv, m) item =
     add_names s;
     let add = StringMap.fold StringMap.add m' in
     (add bv, add m)
-  | Psig_class () -> (bv, m)
-  | Psig_class_type () -> (bv, m)
   | Psig_attribute _ -> (bv, m)
   | Psig_extension (e, _) ->
     handle_extension e;
@@ -481,8 +469,6 @@ and add_struct_item (bv, m) item : _ StringMap.t * _ StringMap.t =
     | Some mty -> add_modtype bv mty);
     (bv, m)
   | Pstr_open od -> (open_module bv od.popen_lid.txt, m)
-  | Pstr_class () -> (bv, m)
-  | Pstr_class_type () -> (bv, m)
   | Pstr_include incl ->
     let (Node (s, m')) = add_module_binding bv incl.pincl_mod in
     add_names s;

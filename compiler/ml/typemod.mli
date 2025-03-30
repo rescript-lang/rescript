@@ -38,14 +38,6 @@ val type_implementation_more :
   Parsetree.structure ->
   Typedtree.structure * Typedtree.module_coercion * Env.t * Types.signature
 
-val type_implementation :
-  string ->
-  string ->
-  string ->
-  Env.t ->
-  Parsetree.structure ->
-  Typedtree.structure * Typedtree.module_coercion
-
 val transl_signature : Env.t -> Parsetree.signature -> Typedtree.signature
 val check_nongen_schemes : Env.t -> Types.signature -> unit
 val type_open_ :
@@ -95,7 +87,5 @@ type error =
 
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
-
-val super_report_error_no_wrap_printing_env : formatter -> error -> unit
 
 val report_error : Env.t -> formatter -> error -> unit

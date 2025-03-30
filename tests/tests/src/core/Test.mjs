@@ -3,7 +3,7 @@
 import * as Fs from "fs";
 import * as Path from "path";
 import * as Util from "util";
-import * as Option from "rescript/lib/es6/Option.js";
+import * as Stdlib_Option from "rescript/lib/es6/Stdlib_Option.js";
 import * as CodeFrame from "@babel/code-frame";
 
 let dirname = (new URL('.', import.meta.url).pathname);
@@ -13,7 +13,7 @@ function print(value) {
   if (match === "object" || match === "bigint") {
     return Util.inspect(value);
   } else if (match === "string") {
-    return Option.getExn(JSON.stringify(value), undefined);
+    return Stdlib_Option.getExn(JSON.stringify(value), undefined);
   } else {
     return String(value);
   }

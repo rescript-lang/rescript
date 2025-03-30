@@ -266,13 +266,13 @@ js
           ) 
     in
     Warnings.check_fatal();
-    let effect = 
+    let effect_ = 
       Lam_stats_export.get_dependent_module_effect
         maybe_pure external_module_ids in 
     let v : Js_cmj_format.t = 
       Lam_stats_export.export_to_cmj 
         meta  
-        effect 
+        effect_ 
         coerced_input.export_map          
         (if Ext_char.is_lower_case (Filename.basename output_prefix).[0] then Little else Upper)
     in
@@ -280,7 +280,7 @@ js
        Js_cmj_format.to_file 
          ~check_exists:(not !Js_config.force_cmj)
          (output_prefix ^ Literals.suffix_cmj) v);
-    {J.program = program ; side_effect = effect ; modules = external_module_ids }      
+    {J.program = program ; side_effect = effect_ ; modules = external_module_ids }      
   )
 ;;
 

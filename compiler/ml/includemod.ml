@@ -504,23 +504,12 @@ let show_locs ppf (loc1, loc2) =
   show_loc "Expected declaration" ppf loc2;
   show_loc "Actual declaration" ppf loc1
 
-let include_err ~env ppf = function
+let include_err ppf = function
   | Missing_field (id, loc, kind) ->
     fprintf ppf "The %s `%a' is required but not provided" kind ident id;
     show_loc "Expected declaration" ppf loc
   | Value_descriptions (id, d1, d2) ->
-    let curry_kind_1, curry_kind_2 =
-      match
-        (Ctype.expand_head env d1.val_type, Ctype.expand_head env d2.val_type)
-      with
-      | {desc = Tarrow _}, {desc = Tconstr (Pident {name = "function$"}, _, _)}
-        ->
-        (" (curried)", " (uncurried)")
-      | {desc = Tconstr (Pident {name = "function$"}, _, _)}, {desc = Tarrow _}
-        ->
-        (" (uncurried)", " (curried)")
-      | _ -> ("", "")
-    in
+    let curry_kind_1, curry_kind_2 = ("", "") in
     fprintf ppf
       "@[<hv 2>Values do not match:@ %a%s@;<1 -2>is not included in@ %a%s@]"
       (value_description id) d1 curry_kind_1 (value_description id) d2
@@ -536,8 +525,8 @@ let include_err ~env ppf = function
   | Extension_constructors (id, x1, x2) ->
     fprintf ppf
       "@[<hv 2>Extension declarations do not match:@ %a@;\
-       <1 -2>is not included in@ %a@]" (extension_constructor id) x1
-      (extension_constructor id) x2;
+       <1 -2>is not included in@ %a@]"
+      (extension_constructor id) x1 (extension_constructor id) x2;
     show_locs ppf (x1.ext_loc, x2.ext_loc)
   | Module_types (mty1, mty2) ->
     fprintf ppf
@@ -546,8 +535,8 @@ let include_err ~env ppf = function
   | Modtype_infos (id, d1, d2) ->
     fprintf ppf
       "@[<hv 2>Module type declarations do not match:@ %a@;\
-       <1 -2>does not match@ %a@]" (modtype_declaration id) d1
-      (modtype_declaration id) d2
+       <1 -2>does not match@ %a@]"
+      (modtype_declaration id) d1 (modtype_declaration id) d2
   | Modtype_permutation -> fprintf ppf "Illegal permutation of structure fields"
   | Interface_mismatch (impl_name, intf_name) ->
     fprintf ppf "@[The implementation %s@ does not match the interface %s:"
@@ -606,7 +595,7 @@ let context ppf cxt =
 
 let include_err ppf (cxt, env, err) =
   Printtyp.wrap_printing_env env (fun () ->
-      fprintf ppf "@[<v>%a%a@]" context (List.rev cxt) (include_err ~env) err)
+      fprintf ppf "@[<v>%a%a@]" context (List.rev cxt) include_err err)
 
 let buffer = ref Bytes.empty
 let is_big obj =

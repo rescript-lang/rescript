@@ -23,8 +23,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 (* [@@@warning "-37"] *)
-type t = (* | File of string  *)
-  | Dir of string [@@unboxed]
+type t =
+  (* | File of string  *)
+  | Dir of string
+[@@unboxed]
 
 let simple_convert_node_path_to_os_path =
   if Sys.unix then fun x -> x

@@ -443,3 +443,69 @@ let x = {
   let _ = <C> {children} </C>
   msg->React.string
 }
+
+let x =
+  <div>
+    {
+      hello()
+      hello()
+    } 
+    {
+      world()
+      world()
+    }
+
+    {
+      hello()
+      hello()
+    } {
+      world()
+      world()
+    }
+    // another test
+    <span
+      id="1"
+      className="sdf sdfdsf sdfs sdf asdf dsf"
+      onClick={() => {
+        ()
+      }}
+    />
+
+    // Comment 2
+
+    <span
+      id="2"
+      className="sdf sdfdsf sdfs sdf asdf dsf"
+      onClick={() => {
+        ()
+      }}
+    >
+      <span
+        id="2-1"
+        className="sdf sdfdsf sdfs sdf asdf dsf"
+        onClick={() => {
+          ()
+        }}
+      />
+
+
+      // Comment
+      <span
+        id="2-2"
+        className="sdf sdfdsf sdfs sdf asdf dsf"
+        onClick={() => {
+          ()
+        }}
+      />
+
+      <span id="2-3" 
+      />
+    </span>
+    <span
+      id="3"
+      className="sdf sdfdsf sdfs sdf asdf dsf"
+      onClick={() => {
+        ()
+      }}
+    />
+  </div>

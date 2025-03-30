@@ -295,6 +295,16 @@ eq("File \"test_zero_nullable.res\", line 255, characters 5-12", f1$1(undefined)
 
 Mt.from_pair_suites("Test_zero_nullable", suites.contents);
 
+let a = null;
+
+let res = a !== undefined;
+
+let Null_undefined_neq = {
+  a: a,
+  b: undefined,
+  res: res
+};
+
 export {
   suites,
   test_id,
@@ -302,5 +312,6 @@ export {
   Test_null,
   Test_def,
   Test_null_def,
+  Null_undefined_neq,
 }
 /* u Not a pure module */

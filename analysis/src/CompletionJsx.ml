@@ -235,11 +235,7 @@ let getJsxLabels ~componentPath ~findTypeOfValue ~package =
     in
     let rec getLabels (t : Types.type_expr) =
       match t.desc with
-      | Tlink t1
-      | Tsubst t1
-      | Tpoly (t1, [])
-      | Tconstr (Pident {name = "function$"}, [t1; _], _) ->
-        getLabels t1
+      | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> getLabels t1
       | Tconstr (p, [propsType], _) when Path.name p = "React.component" -> (
         let rec getPropsType (t : Types.type_expr) =
           match t.desc with
@@ -251,7 +247,7 @@ let getJsxLabels ~componentPath ~findTypeOfValue ~package =
         match propsType |> getPropsType with
         | Some (path, typeArgs) -> getFields ~path ~typeArgs
         | None -> [])
-      | Tarrow (Nolabel, {desc = Tconstr (path, typeArgs, _)}, _, _)
+      | Tarrow (Nolabel, {desc = Tconstr (path, typeArgs, _)}, _, _, _)
         when Path.last path = "props" ->
         getFields ~path ~typeArgs
       | Tconstr (clPath, [{desc = Tconstr (path, typeArgs, _)}; _], _)
@@ -259,7 +255,7 @@ let getJsxLabels ~componentPath ~findTypeOfValue ~package =
              && Path.last path = "props" ->
         (* JSX V4 external or interface *)
         getFields ~path ~typeArgs
-      | Tarrow (Nolabel, typ, _, _) -> (
+      | Tarrow (Nolabel, typ, _, _, _) -> (
         (* Component without the JSX PPX, like a make fn taking a hand-written
            type props. *)
         let rec digToConstr typ =
@@ -469,20 +465,19 @@ let extractJsxProps ~(compName : Longident.t Location.loc) ~args =
   in
   let rec processProps ~acc args =
     match args with
-    | (Asttypes.Labelled "children", {Parsetree.pexp_loc}) :: _ ->
+    | (Asttypes.Labelled {txt = "children"}, {Parsetree.pexp_loc}) :: _ ->
       {
         compName;
         props = List.rev acc;
         childrenStart =
           (if pexp_loc.loc_ghost then None else Some (Loc.start pexp_loc));
       }
-    | ((Labelled s | Optional s), (eProp : Parsetree.expression)) :: rest -> (
-      let namedArgLoc =
-        eProp.pexp_attributes
-        |> List.find_opt (fun ({Asttypes.txt}, _) -> txt = "res.namedArgLoc")
-      in
+    | ( (Labelled {txt = s; loc} | Optional {txt = s; loc}),
+        (eProp : Parsetree.expression) )
+      :: rest -> (
+      let namedArgLoc = if loc = Location.none then None else Some loc in
       match namedArgLoc with
-      | Some ({loc}, _) ->
+      | Some loc ->
         processProps
           ~acc:
             ({

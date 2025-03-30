@@ -1,18 +1,19 @@
-var p = require("child_process");
-var assert = require("assert");
-var { rescript_exe } = require("#cli/bin_path");
-var { normalizeNewlines } = require("../utils.js");
+import * as assert from "node:assert";
+import { setup } from "#dev/process";
+import { normalizeNewlines } from "#dev/utils";
 
-var o = p.spawnSync(rescript_exe, { encoding: "utf8", cwd: __dirname });
+const { execBuild } = setup(import.meta.dirname);
+
+const { stderr } = await execBuild();
 
 if (
   ![
-    `Error: Invalid bsconfig.json implementation and interface have different path names or different cases src/demo vs src/Demo\n`,
+    "Error: Invalid bsconfig.json implementation and interface have different path names or different cases src/demo vs src/Demo\n",
     // Windows: path separator
-    `Error: Invalid bsconfig.json implementation and interface have different path names or different cases src\\demo vs src\\Demo\n`,
+    "Error: Invalid bsconfig.json implementation and interface have different path names or different cases src\\demo vs src\\Demo\n",
     // Linux: files are parsed in different order
-    `Error: Invalid bsconfig.json implementation and interface have different path names or different cases src/Demo vs src/demo\n`,
-  ].includes(normalizeNewlines(o.stderr))
+    "Error: Invalid bsconfig.json implementation and interface have different path names or different cases src/Demo vs src/demo\n",
+  ].includes(normalizeNewlines(stderr))
 ) {
-  assert.fail(o.stderr);
+  assert.fail(stderr);
 }

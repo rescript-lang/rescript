@@ -34,3 +34,15 @@ let move = 0x1_0000_0000
 let int32_unsigned_to_int (n : int32) : int =
   let i = Int32.to_int n in
   if i < 0 then i + move else i
+
+let int32_pow (x : int32) (y : int32) =
+  let x_float = Int32.to_float x in
+  let y_float = Int32.to_float y in
+  let result = x_float ** y_float in
+  let truncated =
+    if result > 2147483647.0 || result < -2147483648.0 then
+      let i = int_of_float result in
+      i land 0xFFFFFFFF
+    else int_of_float result
+  in
+  Int32.of_int truncated

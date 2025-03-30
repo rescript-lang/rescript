@@ -11,12 +11,12 @@
     }
   ],
   "package-specs": {
-    "module": "commonjs",
-    "in-source": false
+    "module": "esmodule",
+    "in-source": false,
+    "suffix": ".res.js"
   },
   "warnings": {
     "error": true
   },
-  "suffix": ".mjs",
   "bs-dependencies": ["b"]
 }

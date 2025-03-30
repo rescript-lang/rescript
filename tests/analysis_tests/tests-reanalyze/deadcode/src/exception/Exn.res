@@ -21,8 +21,6 @@ let callsRaiseWithAnnotation = raisesWithAnnotaion()
 @raises(A)
 let callsRaiseWithAnnotationAndIsAnnotated = raisesWithAnnotaion()
 
-let z = List.hd(list{})
-
 let incompleteMatch = l =>
   switch l {
   | list{} => ()
@@ -74,10 +72,8 @@ exception Error(string, string, int)
 
 let parse_json_from_file = s => {
   switch 34 {
-  | exception Error(p1, p2, e) =>
-    raise(Error(p1, p2, e))
-  | v =>
-    v
+  | exception Error(p1, p2, e) => raise(Error(p1, p2, e))
+  | v => v
   }
 }
 
@@ -97,53 +93,30 @@ let raiseInInternalLet = b => {
   a + 34
 }
 
-let indirectCall = () => () |> raisesWithAnnotaion
+let indirectCall = () => raisesWithAnnotaion()
 
-@raises(Invalid_argument)
 let array = a => a[2]
 
 let id = x => x
 
 let tryChar = v => {
-  try id(Char.chr(v)) |> ignore catch {
+  try ignore(id(Char.chr(v))) catch {
   | _ => ()
   }
   42
 }
 
-module StringHash = Hashtbl.Make({
-  include String
-  let hash = Hashtbl.hash
-})
-
-let specializedHash = tbl => StringHash.find(tbl, "abc")
-
-@raises(Not_found)
-let genericHash = tbl => Hashtbl.find(tbl, "abc")
-
 @raises(Not_found)
 let raiseAtAt = () => \"@@"(raise, Not_found)
 
 @raises(Not_found)
-let raisePipe = Not_found |> raise
+let raisePipe = raise(Not_found)
 
 @raises(Not_found)
 let raiseArrow = Not_found->raise
 
-@raises(Js.Exn.Error)
+@raises(Exn.Error)
 let bar = () => Js.Json.parseExn("!!!")
-
-let foo = () =>
-  try Js.Json.parseExn("!!!") catch {
-  | Js.Exn.Error(_) => Js.Json.null
-  }
-
-@raises(Invalid_argument)
-let stringMake1 = String.make(12, ' ')
-
-let stringMake2 = (@doesNotRaise String.make)(12, ' ')
-
-let stringMake3 = @doesNotRaise String.make(12, ' ')
 
 let severalCases = cases =>
   switch cases {
@@ -156,22 +129,6 @@ let severalCases = cases =>
 @raises(genericException)
 let genericRaiseIsNotSupported = exn => raise(exn)
 
-let redundant = (@doesNotRaise String.uncapitalize_ascii)("abc")
-
-let redundant2 = @doesNotRaise String.uncapitalize_ascii("abc")
-
-let redundant3 = @doesNotRaise (@doesNotRaise String.uncapitalize_ascii)("abc")
-
-let redundant4 = () => {
-  let _ = String.uncapitalize_ascii("abc")
-  let _ = @doesNotRaise String.uncapitalize_ascii("abc")
-  let _ = String.uncapitalize_ascii("abc")
-  let _ = String.uncapitalize_ascii(@doesNotRaise "abc")
-}
-
-@raises(exit)
-let exits = () => exit(1)
-
 @raises(Invalid_argument)
 let redundantAnnotation = () => ()
 
@@ -183,8 +140,6 @@ let () = raise(A)
 
 raise(Not_found)
 
-true ? exits() : ()
-
 // Examples with pipe
 
 let onFunction = () => (@doesNotRaise Belt.Array.getExn)([], 0)
@@ -193,4 +148,4 @@ let onResult = () => @doesNotRaise Belt.Array.getExn([], 0)
 
 let onFunctionPipe = () => []->(@doesNotRaise Belt.Array.getExn)(0)
 
-let onResultPipeWrong = () => @doesNotRaise []->Belt.Array.getExn(0)
+let onResultPipeWrong = () => (@doesNotRaise [])->Belt.Array.getExn(0)

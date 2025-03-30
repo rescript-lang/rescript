@@ -23,10 +23,10 @@ let \"++" = (q, x) => {
 let () = {
   let q = Q.make()
   assert(Q.toArray(q) == [] && Q.size(q) == 0)
-  assert(Q.toArray(\"++"(q, 1)) == [1] && Q.size(q) == 1)
-  assert(Q.toArray(\"++"(q, 2)) == [1, 2] && Q.size(q) == 2)
-  assert(Q.toArray(\"++"(q, 3)) == [1, 2, 3] && Q.size(q) == 3)
-  assert(Q.toArray(\"++"(q, 4)) == [1, 2, 3, 4] && Q.size(q) == 4)
+  assert(Q.toArray(q ++ 1) == [1] && Q.size(q) == 1)
+  assert(Q.toArray(q ++ 2) == [1, 2] && Q.size(q) == 2)
+  assert(Q.toArray(q ++ 3) == [1, 2, 3] && Q.size(q) == 3)
+  assert(Q.toArray(q ++ 4) == [1, 2, 3, 4] && Q.size(q) == 4)
   assert(Q.popExn(q) == 1)
   assert(Q.toArray(q) == [2, 3, 4] && Q.size(q) == 3)
   assert(Q.popExn(q) == 2)
@@ -40,18 +40,18 @@ let () = {
 
 let () = {
   let q = Q.make()
-  assert(Q.popExn(\"++"(q, 1)) == 1)
+  assert(Q.popExn(q ++ 1) == 1)
   assert(does_raise(Q.popExn, q))
-  assert(Q.popExn(\"++"(q, 2)) == 2)
+  assert(Q.popExn(q ++ 2) == 2)
   assert(does_raise(Q.popExn, q))
   assert(Q.size(q) == 0)
 }
 
 let () = {
   let q = Q.make()
-  assert(Q.peekExn(\"++"(q, 1)) == 1)
-  assert(Q.peekExn(\"++"(q, 2)) == 1)
-  assert(Q.peekExn(\"++"(q, 3)) == 1)
+  assert(Q.peekExn(q ++ 1) == 1)
+  assert(Q.peekExn(q ++ 2) == 1)
+  assert(Q.peekExn(q ++ 3) == 1)
   assert(Q.peekExn(q) == 1)
   assert(Q.popExn(q) == 1)
   assert(Q.peekExn(q) == 2)

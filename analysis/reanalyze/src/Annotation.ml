@@ -63,8 +63,6 @@ let rec getAttributePayload checkText (attributes : Typedtree.attributes) =
       | PStr ({pstr_desc = Pstr_recmodule _} :: _) -> Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_modtype _} :: _) -> Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_open _} :: _) -> Some UnrecognizedPayload
-      | PStr ({pstr_desc = Pstr_class _} :: _) -> Some UnrecognizedPayload
-      | PStr ({pstr_desc = Pstr_class_type _} :: _) -> Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_include _} :: _) -> Some UnrecognizedPayload
       | PStr ({pstr_desc = Pstr_attribute _} :: _) -> Some UnrecognizedPayload
       | PPat _ -> Some UnrecognizedPayload

@@ -81,6 +81,7 @@ type t =
   | Land
   | Lor
   | Band (* Bitwise and: & *)
+  | Caret
   | BangEqual
   | BangEqualEqual
   | LessEqual
@@ -105,14 +106,16 @@ let precedence = function
   | HashEqual | ColonEqual -> 1
   | Lor -> 2
   | Land -> 3
+  | Caret -> 4
   | Equal | EqualEqual | EqualEqualEqual | LessThan | GreaterThan | BangEqual
   | BangEqualEqual | LessEqual | GreaterEqual | BarGreater ->
-    4
-  | Plus | PlusDot | Minus | MinusDot | PlusPlus | LessThanLessThan | GreaterThanGreaterThan | GreaterThanGreaterThanGreaterThan -> 5
-  | Asterisk | AsteriskDot | Forwardslash | ForwardslashDot | Percent -> 6
-  | Exponentiation -> 7
-  | MinusGreater -> 8
-  | Dot -> 9
+    5
+  | Plus | PlusDot | Minus | MinusDot | PlusPlus | LessThanLessThan | GreaterThanGreaterThan
+  | GreaterThanGreaterThanGreaterThan -> 6
+  | Asterisk | AsteriskDot | Forwardslash | ForwardslashDot | Percent -> 7
+  | Exponentiation -> 8
+  | MinusGreater -> 9
+  | Dot -> 10
   | _ -> 0
 
 let to_string = function
@@ -195,6 +198,7 @@ let to_string = function
   | Of -> "of"
   | Lor -> "||"
   | Band -> "&"
+  | Caret -> "^"
   | Land -> "&&"
   | BangEqual -> "!="
   | BangEqualEqual -> "!=="

@@ -85,7 +85,6 @@ let identifyPexp pexp =
   | Parsetree.Pexp_ident _ -> "Pexp_ident"
   | Pexp_constant _ -> "Pexp_constant"
   | Pexp_let _ -> "Pexp_let"
-  | Pexp_function _ -> "Pexp_function"
   | Pexp_fun _ -> "Pexp_fun"
   | Pexp_apply _ -> "Pexp_apply"
   | Pexp_match _ -> "Pexp_match"
@@ -104,20 +103,14 @@ let identifyPexp pexp =
   | Pexp_constraint _ -> "Pexp_constraint"
   | Pexp_coerce _ -> "Pexp_coerce"
   | Pexp_send _ -> "Pexp_send"
-  | Pexp_new _ -> "Pexp_new"
-  | Pexp_setinstvar _ -> "Pexp_setinstvar"
-  | Pexp_override _ -> "Pexp_override"
   | Pexp_letmodule _ -> "Pexp_letmodule"
   | Pexp_letexception _ -> "Pexp_letexception"
   | Pexp_assert _ -> "Pexp_assert"
   | Pexp_lazy _ -> "Pexp_lazy"
-  | Pexp_poly _ -> "Pexp_poly"
-  | Pexp_object _ -> "Pexp_object"
   | Pexp_newtype _ -> "Pexp_newtype"
   | Pexp_pack _ -> "Pexp_pack"
   | Pexp_extension _ -> "Pexp_extension"
   | Pexp_open _ -> "Pexp_open"
-  | Pexp_unreachable -> "Pexp_unreachable"
 
 let identifyPpat pat =
   match pat with

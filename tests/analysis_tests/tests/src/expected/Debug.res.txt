@@ -6,8 +6,8 @@ posCursor:[11:8] posNoWhite:[11:7] Found expr:[11:5->11:8]
 Pexp_ident eqN:[11:5->11:8]
 Completable: Cpath Value[eqN]
 Raw opens: 1 Js.place holder
-Package opens Pervasives.JsxModules.place holder
-Resolved opens 1 Js
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 2 Stdlib Js
 ContextPath Value[eqN]
 Path eqN
 [{

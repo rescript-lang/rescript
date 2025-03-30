@@ -128,7 +128,7 @@ let entries =
       form = Binary;
       specialization =
         {
-          int = Pdivint Safe;
+          int = Pdivint;
           bool = None;
           float = Some Pdivfloat;
           bigint = Some Pdivbigint;
@@ -141,7 +141,7 @@ let entries =
       form = Binary;
       specialization =
         {
-          int = Pmodint Safe;
+          int = Pmodint;
           bool = None;
           float = Some Pmodfloat;
           bigint = Some Pmodbigint;
@@ -193,10 +193,36 @@ let entries =
       form = Binary;
       specialization =
         {
-          int = Pmodint Safe;
+          int = Pmodint;
           bool = None;
           float = Some Pmodfloat;
           bigint = Some Pmodbigint;
+          string = None;
+        };
+    };
+    {
+      path = builtin "**";
+      name = "%pow";
+      form = Binary;
+      specialization =
+        {
+          int = Ppowint;
+          bool = None;
+          float = Some Ppowfloat;
+          bigint = Some Ppowbigint;
+          string = None;
+        };
+    };
+    {
+      path = builtin "^";
+      name = "%bitxor";
+      form = Binary;
+      specialization =
+        {
+          int = Pxorint;
+          bool = None;
+          float = None;
+          bigint = Some Pxorbigint;
           string = None;
         };
     };

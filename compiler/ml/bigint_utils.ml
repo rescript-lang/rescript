@@ -89,6 +89,8 @@ let compare (p0, s0) (p1, s1) =
     else if len0 > len1 then
       if p0 then 1
       else -1 (* A longer s0 means it's larger unless it's negative. *)
-    else if (* len0 < len1 *)
-            p0 then -1
+    else if
+      (* len0 < len1 *)
+      p0
+    then -1
     else 1 (* A longer s1 means s0 is smaller unless s1 is negative. *)

@@ -72,7 +72,13 @@ val apply_labels :
 *)
 
 val fun_ :
-  ?loc:Location.t -> ?attrs:attrs -> pattern -> expression -> expression
+  ?loc:Location.t ->
+  ?attrs:attrs ->
+  ?async:bool ->
+  arity:int option ->
+  pattern ->
+  expression ->
+  expression
 
 (* val opt_label : string -> Asttypes.arg_label *)
 
@@ -85,11 +91,17 @@ val fun_ :
    expression *)
 
 val arrow :
-  ?loc:Location.t -> ?attrs:attrs -> core_type -> core_type -> core_type
+  ?loc:Location.t ->
+  ?attrs:attrs ->
+  arity:Asttypes.arity ->
+  core_type ->
+  core_type ->
+  core_type
 
 val label_arrow :
   ?loc:Location.t ->
   ?attrs:attrs ->
+  arity:Asttypes.arity ->
   string ->
   core_type ->
   core_type ->
@@ -98,6 +110,7 @@ val label_arrow :
 val opt_arrow :
   ?loc:Location.t ->
   ?attrs:attrs ->
+  arity:Asttypes.arity ->
   string ->
   core_type ->
   core_type ->

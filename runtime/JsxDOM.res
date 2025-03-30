@@ -24,6 +24,14 @@
 
 type style = JsxDOMStyle.t
 type domRef
+/**
+  [Read more on MDN](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/popover)
+*/
+type popover = | @as("auto") Auto | @as("manual") Manual | @as("hint") Hint
+/**
+  [Read more on MDN](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/button#popovertargetaction)
+*/
+type popoverTargetAction = | @as("toggle") Toggle | @as("show") Show | @as("hide") Hide
 
 /*
   This list isn't exhaustive. We'll add more as we go.
@@ -145,7 +153,11 @@ type domProps = {
   draggable?: bool,
   hidden?: bool,
   id?: string,
+  inert?: bool,
   lang?: string,
+  popover?: popover,
+  popoverTarget?: string,
+  popoverTargetAction?: popoverTargetAction,
   role?: string /* ARIA role */,
   style?: style,
   spellCheck?: bool,
@@ -209,7 +221,7 @@ type domProps = {
   loop?: bool,
   low?: int,
   manifest?: string /* uri */,
-  max?: string /* should be int or Js.Date.t */,
+  max?: string /* should be int or Date.t */,
   maxLength?: int,
   media?: string /* a valid media query */,
   mediaGroup?: string,

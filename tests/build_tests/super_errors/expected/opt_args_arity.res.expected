@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/opt_args_arity.res[0m:[2m2:9[0m
+
+  1 [2m│[0m let f = (~a=0, b, c) => a + b + c
+  [1;31m2[0m [2m│[0m let x = [1;31mf[0m(42)
+  3 [2m│[0m 
+
+  This function has type (~a: int=?, int, int) => int
+  It is applied with [1;31m1[0m argument but it requires [1;33m2[0m.

@@ -2,27 +2,27 @@
 
 
 function f_list(x) {
-  if (!x) {
+  if (x === 0) {
     return 0;
   }
   let match = x.tl;
-  if (!match) {
+  if (match === 0) {
     return 0;
   }
   let match$1 = match.tl;
-  if (!match$1) {
+  if (match$1 === 0) {
     return 0;
   }
   let match$2 = match$1.tl;
-  if (!match$2) {
+  if (match$2 === 0) {
     return 0;
   }
   let match$3 = match$2.tl;
-  if (!match$3) {
+  if (match$3 === 0) {
     return 0;
   }
   let match$4 = match$3.tl;
-  if (match$4) {
+  if (match$4 !== 0) {
     return ((((x.hd + match.hd | 0) + match$1.hd | 0) + match$2.hd | 0) + match$3.hd | 0) + match$4.hd | 0;
   } else {
     return 0;
@@ -49,21 +49,21 @@ function f_opion(x) {
       return 0;
     }
     let match$1 = x.lo;
-    if (!match$1) {
+    if (match$1 === 0) {
       return 0;
     }
     if (match$1.hd !== undefined) {
       return 0;
     }
     let match$2 = match$1.tl;
-    if (!match$2) {
+    if (match$2 === 0) {
       return 0;
     }
     if (match$2.hd !== undefined) {
       return 0;
     }
     let match$3 = match$2.tl;
-    if (!match$3) {
+    if (match$3 === 0) {
       return 0;
     }
     let match$4 = match$3.hd;
@@ -74,7 +74,7 @@ function f_opion(x) {
       return 0;
     }
     let match$5 = match$3.tl;
-    if (!match$5) {
+    if (match$5 === 0) {
       return 0;
     }
     let match$6 = match$5.hd;
@@ -85,28 +85,28 @@ function f_opion(x) {
       return 0;
     }
     let match$7 = match$5.tl;
-    if (match$7 && match$7.hd !== undefined) {
+    if (match$7 !== 0 && match$7.hd !== undefined) {
       return 2;
     } else {
       return 0;
     }
   }
   let match$8 = x.lo;
-  if (!match$8) {
+  if (match$8 === 0) {
     return 0;
   }
   if (match$8.hd !== undefined) {
     return 0;
   }
   let match$9 = match$8.tl;
-  if (!match$9) {
+  if (match$9 === 0) {
     return 0;
   }
   if (match$9.hd !== undefined) {
     return 0;
   }
   let match$10 = match$9.tl;
-  if (!match$10) {
+  if (match$10 === 0) {
     return 0;
   }
   let match$11 = match$10.hd;
@@ -117,7 +117,7 @@ function f_opion(x) {
     return 0;
   }
   let match$12 = match$10.tl;
-  if (!match$12) {
+  if (match$12 === 0) {
     return 0;
   }
   let match$13 = match$12.hd;
@@ -128,7 +128,7 @@ function f_opion(x) {
     return 0;
   }
   let match$14 = match$12.tl;
-  if (match$14 && match$14.hd !== undefined) {
+  if (match$14 !== 0 && match$14.hd !== undefined) {
     return 3;
   } else {
     return 0;

@@ -32,7 +32,6 @@ type t = Primitive_object_extern.t
 let repr = Primitive_object_extern.repr
 let magic = Primitive_object_extern.magic
 let tag = Primitive_object_extern.tag
-let field = Primitive_object_extern.getField
 let size = Primitive_object_extern.size
 
 module O = {
@@ -95,7 +94,7 @@ let rec compare = (a: t, b: t): int =>
     | ("boolean", "boolean") => Pervasives.compare((magic(a): bool), magic(b))
     | ("boolean", _) => 1
     | (_, "boolean") => -1
-    | ("function", "function") => raise(Invalid_argument("compare: functional value"))
+    | ("function", "function") => throw(Invalid_argument("compare: functional value"))
     | ("function", _) => 1
     | (_, "function") => -1
     | ("bigint", "bigint")
@@ -145,11 +144,7 @@ let rec compare = (a: t, b: t): int =>
       } else {
         let tag_a = tag(a)
         let tag_b = tag(b)
-        if tag_a == 248 /* object/exception */ {
-          Pervasives.compare((magic(field(a, 1)): int), magic(field(b, 1)))
-        } else if tag_a == 251 /* abstract_tag */ {
-          raise(Invalid_argument("equal: abstract value"))
-        } else if tag_a != tag_b {
+        if tag_a != tag_b {
           if tag_a < tag_b {
             -1
           } else {
@@ -266,7 +261,7 @@ let rec equal = (a: t, b: t): bool =>
     } else {
       let b_type = Js.typeof(b)
       if a_type == "function" || b_type == "function" {
-        raise(Invalid_argument("equal: functional value"))
+        throw(Invalid_argument("equal: functional value"))
       } /* first, check using reference equality */
       else if (
         /* a_type = "object" || "symbol" */
@@ -277,11 +272,7 @@ let rec equal = (a: t, b: t): bool =>
         /* [a] [b] could not be null, so it can not raise */
         let tag_a = tag(a)
         let tag_b = tag(b)
-        if tag_a == 248 /* object/exception */ {
-          magic(field(a, 1)) === magic(field(b, 1))
-        } else if tag_a == 251 /* abstract_tag */ {
-          raise(Invalid_argument("equal: abstract value"))
-        } else if tag_a != tag_b {
+        if tag_a != tag_b {
           false
         } else {
           let len_a = size(a)

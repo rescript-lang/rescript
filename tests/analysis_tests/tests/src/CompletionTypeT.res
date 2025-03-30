@@ -1,6 +1,6 @@
-let date = Some(Js.Date.make())
+let date = Some(Date.make())
 
-type withDate = {date: Js.Date.t}
+type withDate = {date: Date.t}
 
 // let x = switch date { | }
 //                        ^com

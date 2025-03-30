@@ -1,29 +1,19 @@
-let f (type t) = ((Function$ (fun (xs : t list) -> ()))[@res.arity 1])
-let f (type t) =
-  ((Function$ (fun (xs : t list) -> fun (type s) -> fun (ys : s list) -> ()))
-  [@res.arity 2])
-let f (type t) (type u) (type v) =
-  ((Function$ (fun (xs : (t * u * v) list) -> ()))[@res.arity 1])
-let f (type t) (type u) (type v) =
-  ((Function$
-      (fun (xs : (t * u * v) list) -> fun (type s) -> fun (type w) -> fun
-         (type z) -> fun (ys : (s * w * z) list) -> ()))
-  [@res.arity 2])
-let f = ((fun (type t) -> fun (type u) -> fun (type v) ->
-  ((Function$
-      (fun (xs : (t * u * v) list) -> ((fun (type s) -> fun (type w) -> fun
-         (type z) -> fun (ys : (s * w * z) list) -> ())[@attr2 ])))
-  [@res.arity 2]))[@attr ])
-let f = ((fun (type t) -> ((fun (type s) ->
-  ((Function$
-      (fun (xs : (t * s) list) -> ((fun (type u) -> ((fun (type v) -> fun
-         (type w) -> fun (ys : (u * v * w) list) -> ())[@attr ]))[@attr ])))
-  [@res.arity 2]))[@attr ]))[@attr ])
+let f (type t) [arity:1](xs : t list) = ()
+let f (type t) (type s) [arity:2](xs : t list) (ys : s list) = ()
+let f (type t) (type u) (type v) [arity:1](xs : (t * u * v) list) = ()
+let f (type t) (type u) (type v) (type s) (type w) (type z)
+  [arity:2](xs : (t * u * v) list) (ys : (s * w * z) list) = ()
+let f = ((fun (type t) -> fun (type u) -> fun (type v) -> fun (type s) -> fun
+  (type w) -> fun (type z) ->
+  fun [arity:2](xs : (t * u * v) list) -> fun (ys : (s * w * z) list) -> ())
+  [@attr ][@attr2 ])
+let f = ((fun (type t) -> fun (type s) -> fun (type u) -> fun (type v) -> fun
+  (type w) ->
+  fun [arity:2](xs : (t * s) list) -> fun (ys : (u * v * w) list) -> ())
+  [@attr ][@attr ][@attr ][@attr ])
 let cancel_and_collect_callbacks :
   'a 'u 'c .
-    (packed_callbacks list -> ('a, 'u, 'c) promise -> packed_callbacks list,
-      [ `Has_arity2 ]) function$
+    packed_callbacks list ->
+      ('a, 'u, 'c) promise -> packed_callbacks list (a:2)
   = fun (type x) ->
-  ((Function$
-      (fun callbacks_accumulator -> fun (p : (_, _, c) promise) -> ()))
-  [@res.arity 2])
+  fun [arity:2]callbacks_accumulator -> fun (p : (_, _, c) promise) -> ()

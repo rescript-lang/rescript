@@ -2,7 +2,6 @@ Complete src/RecoveryOnProp.res 6:26
 posCursor:[6:26] posNoWhite:[6:25] Found expr:[3:3->11:8]
 JSX <div:[3:3->3:6] onClick[4:4->4:11]=...[4:13->0:-1]> _children:None
 posCursor:[6:26] posNoWhite:[6:25] Found expr:[4:13->8:6]
-posCursor:[6:26] posNoWhite:[6:25] Found expr:[4:13->8:6]
 posCursor:[6:26] posNoWhite:[6:25] Found expr:[5:6->8:5]
 posCursor:[6:26] posNoWhite:[6:25] Found expr:[6:16->8:5]
 posCursor:[6:26] posNoWhite:[6:25] Found pattern:[6:20->8:5]
@@ -12,29 +11,16 @@ posCursor:[6:26] posNoWhite:[6:25] Found pattern:[6:20->8:5]
 posCursor:[6:26] posNoWhite:[6:25] Found type:[6:23->8:5]
 Ptyp_constr Res:[6:23->8:5]
 Completable: Cpath Type[Res]
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath Type[Res]
 Path Res
 [{
-    "label": "RescriptReactErrorBoundary",
+    "label": "Result",
     "kind": 9,
     "tags": [],
-    "detail": "module RescriptReactErrorBoundary",
-    "documentation": null,
-    "data": {
-      "modulePath": "RescriptReactErrorBoundary",
-      "filePath": "src/RecoveryOnProp.res"
-    }
-  }, {
-    "label": "RescriptReactRouter",
-    "kind": 9,
-    "tags": [],
-    "detail": "module RescriptReactRouter",
-    "documentation": null,
-    "data": {
-      "modulePath": "RescriptReactRouter",
-      "filePath": "src/RecoveryOnProp.res"
-    }
+    "detail": "module Result",
+    "documentation": null
   }, {
     "label": "RescriptTools",
     "kind": 9,
@@ -53,16 +39,6 @@ Path Res
     "documentation": null,
     "data": {
       "modulePath": "RescriptTools_Docgen",
-      "filePath": "src/RecoveryOnProp.res"
-    }
-  }, {
-    "label": "Result",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Result",
-    "documentation": null,
-    "data": {
-      "modulePath": "Result",
       "filePath": "src/RecoveryOnProp.res"
     }
   }]

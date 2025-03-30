@@ -20,14 +20,14 @@ let attrsToDocstring attrs =
   | None -> []
   | Some docstring -> [docstring]
 
-let mapRecordField {Types.ld_id; ld_type; ld_attributes} =
+let mapRecordField {Types.ld_id; ld_type; ld_attributes; ld_optional} =
   let astamp = Ident.binding_time ld_id in
   let name = Ident.name ld_id in
   {
     stamp = astamp;
     fname = Location.mknoloc name;
     typ = ld_type;
-    optional = Res_parsetree_viewer.has_optional_attribute ld_attributes;
+    optional = ld_optional;
     docstring =
       (match ProcessAttributes.findDocAttribute ld_attributes with
       | None -> []
@@ -259,10 +259,7 @@ let forTypeDeclaration ~env ~(exported : Exported.t)
                                           stamp = astamp;
                                           fname = Location.mknoloc name;
                                           typ = f.ld_type.ctyp_type;
-                                          optional =
-                                            Res_parsetree_viewer
-                                            .has_optional_attribute
-                                              f.ld_attributes;
+                                          optional = f.ld_optional;
                                           docstring =
                                             (match
                                                ProcessAttributes
@@ -300,6 +297,7 @@ let forTypeDeclaration ~env ~(exported : Exported.t)
                          ld_name = fname;
                          ld_type = {ctyp_type};
                          ld_attributes;
+                         ld_optional;
                        }
                      ->
                        let fstamp = Ident.binding_time ld_id in
@@ -307,9 +305,7 @@ let forTypeDeclaration ~env ~(exported : Exported.t)
                          stamp = fstamp;
                          fname;
                          typ = ctyp_type;
-                         optional =
-                           Res_parsetree_viewer.has_optional_attribute
-                             ld_attributes;
+                         optional = ld_optional;
                          docstring = attrsToDocstring ld_attributes;
                          deprecated =
                            ProcessAttributes.findDeprecatedAttribute
@@ -463,7 +459,7 @@ let rec forStructureItem ~env ~(exported : Exported.t) item =
         pats |> List.iter (fun p -> handlePattern [] p)
       | Tpat_or (p, _, _) -> handlePattern [] p
       | Tpat_record (items, _) ->
-        items |> List.iter (fun (_, _, p) -> handlePattern [] p)
+        items |> List.iter (fun (_, _, p, _) -> handlePattern [] p)
       | Tpat_lazy p -> handlePattern [] p
       | Tpat_variant (_, Some p, _) -> handlePattern [] p
       | Tpat_variant (_, None, _) | Tpat_any | Tpat_constant _ -> ()

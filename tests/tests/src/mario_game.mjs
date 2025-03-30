@@ -3,7 +3,6 @@
 import * as Belt_List from "rescript/lib/es6/Belt_List.js";
 import * as Pervasives from "rescript/lib/es6/Pervasives.js";
 import * as Primitive_int from "rescript/lib/es6/Primitive_int.js";
-import * as Primitive_bool from "rescript/lib/es6/Primitive_bool.js";
 import * as Primitive_float from "rescript/lib/es6/Primitive_float.js";
 import * as Primitive_object from "rescript/lib/es6/Primitive_object.js";
 import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
@@ -979,7 +978,7 @@ function update_player(player, keys, context) {
         if (!player.jumping && player.grounded) {
           player.jumping = true;
           player.grounded = false;
-          player.vel.y = Primitive_bool.max(player.vel.y - (5.7 + Math.abs(player.vel.x) * 0.25), -6);
+          player.vel.y = Primitive_float.max(player.vel.y - (5.7 + Math.abs(player.vel.x) * 0.25), -6);
           return;
         } else {
           return;
@@ -1531,7 +1530,7 @@ function make$3(param, param$1) {
 
 function calc_viewport_point(cc, vc, mc) {
   let vc_half = vc / 2;
-  return Primitive_float.min(Primitive_bool.max(cc - vc_half, 0), Primitive_float.min(mc - vc, Math.abs(cc - vc_half)));
+  return Primitive_float.min(Primitive_float.max(cc - vc_half, 0), Primitive_float.min(mc - vc, Math.abs(cc - vc_half)));
 }
 
 function in_viewport(v, pos) {
@@ -2000,7 +1999,7 @@ function process_collision(dir, c1, c2, state) {
               evolve_enemy(o1.dir, typ, s2, o2, context)
             ];
           }
-          let score = Math.imul(100, state.multiplier);
+          let score = 100 * state.multiplier | 0;
           update_score(state, score);
           o2.score = score;
           state.multiplier = (state.multiplier << 1);
@@ -2098,7 +2097,7 @@ function check_collisions(collid, all_collids, state) {
   while (true) {
     let acc = _acc;
     let cs = _cs;
-    if (!cs) {
+    if (cs === 0) {
       return acc;
     }
     let h = cs.hd;
@@ -2421,7 +2420,7 @@ let Director = {
 function mem_loc(checkloc, _loclist) {
   while (true) {
     let loclist = _loclist;
-    if (!loclist) {
+    if (loclist === 0) {
       return false;
     }
     if (Primitive_object.equal(checkloc, loclist.hd[1])) {
@@ -2433,7 +2432,7 @@ function mem_loc(checkloc, _loclist) {
 }
 
 function convert_list(lst) {
-  if (!lst) {
+  if (lst === 0) {
     return /* [] */0;
   }
   let h = lst.hd;
@@ -2485,7 +2484,7 @@ function choose_sblock_typ(typ) {
 function avoid_overlap(_lst, currentLst) {
   while (true) {
     let lst = _lst;
-    if (!lst) {
+    if (lst === 0) {
       return /* [] */0;
     }
     let t = lst.tl;
@@ -2504,7 +2503,7 @@ function avoid_overlap(_lst, currentLst) {
 function trim_edges(_lst, blockw, blockh) {
   while (true) {
     let lst = _lst;
-    if (!lst) {
+    if (lst === 0) {
       return /* [] */0;
     }
     let t = lst.tl;
@@ -2545,7 +2544,7 @@ function generate_coins(_block_coord) {
   while (true) {
     let block_coord = _block_coord;
     let place_coin = int(2);
-    if (!block_coord) {
+    if (block_coord === 0) {
       return /* [] */0;
     }
     let t = block_coord.tl;
@@ -3037,7 +3036,7 @@ function generate_block_enemies(_block_coord) {
     let block_coord = _block_coord;
     let place_enemy = int(20);
     let enemy_typ = int(3);
-    if (!block_coord) {
+    if (block_coord === 0) {
       return /* [] */0;
     }
     let t = block_coord.tl;
@@ -3149,7 +3148,7 @@ function generate_ground(blockw, blockh, _inc, _acc) {
 }
 
 function convert_to_block_obj(lst, context) {
-  if (!lst) {
+  if (lst === 0) {
     return /* [] */0;
   }
   let h = lst.hd;
@@ -3165,7 +3164,7 @@ function convert_to_block_obj(lst, context) {
 }
 
 function convert_to_enemy_obj(lst, context) {
-  if (!lst) {
+  if (lst === 0) {
     return /* [] */0;
   }
   let h = lst.hd;
@@ -3181,7 +3180,7 @@ function convert_to_enemy_obj(lst, context) {
 }
 
 function convert_to_coin_obj(lst, context) {
-  if (!lst) {
+  if (lst === 0) {
     return /* [] */0;
   }
   let ob = spawn({

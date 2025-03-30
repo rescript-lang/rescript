@@ -1,27 +1,38 @@
-/**
-   Since [others] depend on this file, its public mli files **should not
-   export types** introduced here, otherwise it would cause 
-   conflicts here.
-
-   If the type exported here is also exported in modules from others,
-   you will get a type not equivalent.
-*/
 @deprecated("Do not use. This will be removed in v13")
 external /* Internal */
 
 __unsafe_cast: 'a => 'b = "%identity"
 
 /* Exceptions */
-
+@deprecated(
+  "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `throw` instead"
+)
 external raise: exn => 'a = "%raise"
 
 @deprecated("Use custom exception instead")
-let failwith = s => raise(Failure(s))
+let failwith = s => throw(Failure(s))
 
 @deprecated("Use custom exception instead")
-let invalid_arg = s => raise(Invalid_argument(s))
+let invalid_arg = s => throw(Invalid_argument(s))
 
 @deprecated("Use custom exception instead") exception Exit
+
+/**
+Raises the given exception, terminating execution unless caught by a surrounding try/catch block.
+
+## Examples
+
+```rescript
+let error = Error.make("Everything is upside down.")
+
+if 5 > 10 {
+  throw(error)
+} else {
+  Console.log("Phew, sanity still rules.")
+}
+```
+*/
+external throw: Stdlib_Error.t => 'a = "%raise"
 
 /* Composition operators */
 
@@ -50,6 +61,9 @@ external \"-": ('a, 'a) => 'a = "%sub"
 external \"*": ('a, 'a) => 'a = "%mul"
 external \"/": ('a, 'a) => 'a = "%div"
 external \"%": ('a, 'a) => 'a = "%mod"
+external mod: ('a, 'a) => 'a = "%mod"
+external \"**": ('a, 'a) => 'a = "%pow"
+external \"^": ('a, 'a) => 'a = "%bitxor"
 external \"<<": ('a, 'a) => 'a = "%lsl"
 external \">>": ('a, 'a) => 'a = "%asr"
 external \">>>": ('a, 'a) => 'a = "%lsr"
@@ -57,8 +71,8 @@ external \">>>": ('a, 'a) => 'a = "%lsr"
 /* Comparisons */
 /* Note: Later comparisons will be converted to unified operations too */
 
-external \"=": ('a, 'a) => bool = "%equal"
-external \"<>": ('a, 'a) => bool = "%notequal"
+external \"==": ('a, 'a) => bool = "%equal"
+external \"!=": ('a, 'a) => bool = "%notequal"
 external \"<": ('a, 'a) => bool = "%lessthan"
 external \">": ('a, 'a) => bool = "%greaterthan"
 external \"<=": ('a, 'a) => bool = "%lessequal"
@@ -66,8 +80,8 @@ external \">=": ('a, 'a) => bool = "%greaterequal"
 external compare: ('a, 'a) => int = "%compare"
 external min: ('a, 'a) => 'a = "%min"
 external max: ('a, 'a) => 'a = "%max"
-external \"==": ('a, 'a) => bool = "%eq"
-external \"!=": ('a, 'a) => bool = "%noteq"
+external \"===": ('a, 'a) => bool = "%eq"
+external \"!==": ('a, 'a) => bool = "%noteq"
 
 /* Boolean operations */
 
@@ -82,7 +96,7 @@ external \"||": (bool, bool) => bool = "%sequor"
 external succ: int => int = "%succint"
 external pred: int => int = "%predint"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Math.abs` instead. This will be removed in v13")
 let abs = x =>
   if x >= 0 {
     x
@@ -100,10 +114,10 @@ external lsl: (int, int) => int = "%lslint"
 external lsr: (int, int) => int = "%lsrint"
 external asr: (int, int) => int = "%asrint"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Int.Constants.maxValue` instead. This will be removed in v13")
 let max_int = lsr(-1, 1)
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Int.Constants.minValue` instead. This will be removed in v13")
 let min_int =
   max_int + 1
 
@@ -116,94 +130,91 @@ external \"-.": (float, float) => float = "%subfloat"
 external \"*.": (float, float) => float = "%mulfloat"
 external \"/.": (float, float) => float = "%divfloat"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
-external \"**": (float, float) => float = "pow"
-
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.exp` instead. This will be removed in v13") @val @scope("Math")
 external exp: float => float = "exp"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.acos` instead. This will be removed in v13") @val @scope("Math")
 external acos: float => float = "acos"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.asin` instead. This will be removed in v13") @val @scope("Math")
 external asin: float => float = "asin"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.atan` instead. This will be removed in v13") @val @scope("Math")
 external atan: float => float = "atan"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.atan2` instead. This will be removed in v13") @val @scope("Math")
 external atan2: (float, float) => float = "atan2"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.cos` instead. This will be removed in v13") @val @scope("Math")
 external cos: float => float = "cos"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.cosh` instead. This will be removed in v13") @val @scope("Math")
 external cosh: float => float = "cosh"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.log` instead. This will be removed in v13") @val @scope("Math")
 external log: float => float = "log"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.log10` instead. This will be removed in v13") @val @scope("Math")
 external log10: float => float = "log10"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.log1p` instead. This will be removed in v13") @val @scope("Math")
 external log1p: float => float = "log1p"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use  `Math.sin` instead. This will be removed in v13") @val @scope("Math")
 external sin: float => float = "sin"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.sinh` instead. This will be removed in v13") @val @scope("Math")
 external sinh: float => float = "sinh"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.sqrt` instead. This will be removed in v13") @val @scope("Math")
 external sqrt: float => float = "sqrt"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.tan` instead. This will be removed in v13") @val @scope("Math")
 external tan: float => float = "tan"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.tanh` instead. This will be removed in v13") @val @scope("Math")
 external tanh: float => float = "tanh"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.ceil` instead. This will be removed in v13") @val @scope("Math")
 external ceil: float => float = "ceil"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.floor` instead. This will be removed in v13") @val @scope("Math")
 external floor: float => float = "floor"
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Math")
+@deprecated("Use `Math.abs` instead. This will be removed in v13") @val @scope("Math")
 external abs_float: float => float = "abs"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `%` instead. This will be removed in v13")
 external mod_float: (float, float) => float = "%modfloat"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Int.toFloat` instead. This will be removed in v13")
 external float: int => float = "%floatofint"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Int.toFloat` instead. This will be removed in v13")
 external float_of_int: int => float = "%floatofint"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Float.toInt` instead. This will be removed in v13")
 external truncate: float => int = "%intoffloat"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Float.toInt` instead. This will be removed in v13")
 external int_of_float: float => int = "%intoffloat"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Float.positiveInfinity` instead. This will be removed in v13")
 let infinity = 0x1p2047
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Float.negativeInfinity` instead. This will be removed in v13")
 let neg_infinity = -0x1p2047
 
-@deprecated("Use Core instead. This will be removed in v13") @val @scope("Number")
+@deprecated("Use `Float.nan` instead. This will be removed in v13") @val @scope("Number")
 external nan: float = "NaN"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Float.Constants.maxValue` instead. This will be removed in v13")
 let max_float = 1.79769313486231571e+308 /* 0x1.ffff_ffff_ffff_fp+1023 */
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Float.Constants.minValue` instead. This will be removed in v13")
 let min_float = 2.22507385850720138e-308 /* 0x1p-1022 */
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Float.Constants.epsilon` instead. This will be removed in v13")
 let epsilon_float = 2.22044604925031308e-16 /* 0x1p-52 */
 
 @deprecated("Do not use. This will be removed in v13")
@@ -232,17 +243,17 @@ let classify_float = (x: float): fpclass =>
 
 /* String and byte sequence operations -- more in modules String and Bytes */
 
-external \"^": (string, string) => string = "%string_concat"
+external \"++": (string, string) => string = "%string_concat"
 
 /* Character operations -- more in module Char */
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use type `string` and `String.charCodeAt` instead. This will be removed in v13")
 external int_of_char: char => int = "%identity"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use type `string` and `String.fromCharCode` instead. This will be removed in v13")
 external unsafe_char_of_int: int => char = "%identity"
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use type `string` and `String.fromCharCode` instead. This will be removed in v13")
 let char_of_int = n =>
   if n < 0 || n > 255 {
     invalid_arg("char_of_int")
@@ -270,7 +281,7 @@ external decr: ref<int> => unit = "%decr"
 
 /* String conversion functions */
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Bool.toString` instead. This will be removed in v13")
 let string_of_bool = b =>
   if b {
     "true"
@@ -278,7 +289,7 @@ let string_of_bool = b =>
     "false"
   }
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Bool.fromString` instead. This will be removed in v13")
 let bool_of_string = param =>
   switch param {
   | "true" => true
@@ -286,7 +297,7 @@ let bool_of_string = param =>
   | _ => invalid_arg("bool_of_string")
   }
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Bool.fromString` instead. This will be removed in v13")
 let bool_of_string_opt = param =>
   switch param {
   | "true" => Some(true)
@@ -294,10 +305,10 @@ let bool_of_string_opt = param =>
   | _ => None
   }
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `Int.toString` instead. This will be removed in v13")
 external string_of_int: int => string = "String"
 
-@deprecated("Use Core instead. This will be removed in v13") @scope("Number")
+@deprecated("Use `Int.fromString` instead. This will be removed in v13") @scope("Number")
 external int_of_string: string => int = "parseInt"
 
 let int_of_string_opt = s =>
@@ -306,12 +317,12 @@ let int_of_string_opt = s =>
   | n => Some(n)
   }
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `String.get` instead. This will be removed in v13")
 external string_get: (string, int) => char = "%string_safe_get"
 
 /* List operations -- more in module List */
 
-@deprecated("Use Core instead. This will be removed in v13")
+@deprecated("Use `List.concat` instead. This will be removed in v13")
 let rec \"@" = (l1, l2) =>
   switch l1 {
   | list{} => l2
@@ -321,248 +332,3 @@ let rec \"@" = (l1, l2) =>
 /* Miscellaneous */
 
 type int32 = int
-
-/***
-Bindings to functions available in the global JavaScript scope.
-*/
-
-/**
-An `id` representing a timeout started via `setTimeout`.
-
-See [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.
-*/
-type timeoutId = Js_global.timeoutId
-
-/**
-`setTimeout(callback, durationInMilliseconds)` starts a timer that will execute `callback` after `durationInMilliseconds`.
-
-See [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.
-
-## Examples
-```rescript
-// Log to the console after 2 seconds (2000 milliseconds).
-let timeoutId = setTimeout(() => {
-  Console.log("This prints in 2 seconds.")
-}, 2000)
-```
-*/
-@val
-external setTimeout: (unit => unit, int) => timeoutId = "setTimeout"
-
-/**
-`setTimeoutFloat(callback, durationInMilliseconds)` starts a timer that will execute `callback` after `durationInMilliseconds`.
-
-The same as `setTimeout`, but allows you to pass a `float` instead of an `int` for the duration.
-
-See [`setTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout) on MDN.
-
-## Examples
-```rescript
-// Log to the console after 2 seconds (2000 milliseconds).
-let timeoutId = setTimeoutFloat(() => {
-  Console.log("This prints in 2 seconds.")
-}, 2000.)
-```
-*/
-@val
-external setTimeoutFloat: (unit => unit, float) => timeoutId = "setTimeout"
-
-/**
-`clearTimeout(timeoutId)` clears a scheduled timeout if it hasn't already executed.
-
-See [`clearTimeout`](https://developer.mozilla.org/en-US/docs/Web/API/clearTimeout) on MDN.
-
-## Examples
-```rescript
-let timeoutId = setTimeout(() => {
-  Console.log("This prints in 2 seconds.")
-}, 2000)
-
-// Clearing the timeout right away, before 2 seconds has passed, means that the above callback logging to the console will never run.
-clearTimeout(timeoutId)
-```
-*/
-@val
-external clearTimeout: timeoutId => unit = "clearTimeout"
-
-/**
-An `id` representing an interval started via `setInterval`.
-
-See [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.
-*/
-type intervalId = Js_global.intervalId
-
-/**
-`setInterval(callback, intervalInMilliseconds)` starts an interval that will execute `callback` every `durationInMilliseconds` milliseconds.
-
-See [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.
-
-## Examples
-```rescript
-// Log to the console ever 2 seconds (2000 milliseconds).
-let intervalId = setInterval(() => {
-  Console.log("This prints every 2 seconds.")
-}, 2000)
-```
-*/
-@val
-external setInterval: (unit => unit, int) => intervalId = "setInterval"
-
-/**
-`setIntervalFloat(callback, intervalInMilliseconds)` starts an interval that will execute `callback` every `durationInMilliseconds` milliseconds.
-
-The same as `setInterval`, but allows you to pass a `float` instead of an `int` for the duration.
-
-See [`setInterval`](https://developer.mozilla.org/en-US/docs/Web/API/setInterval) on MDN.
-
-## Examples
-```rescript
-// Log to the console ever 2 seconds (2000 milliseconds).
-let intervalId = setIntervalFloat(() => {
-  Console.log("This prints every 2 seconds.")
-}, 2000.)
-```
-*/
-@val
-external setIntervalFloat: (unit => unit, float) => intervalId = "setInterval"
-
-/**
-`clearInterval(intervalId)` clears a scheduled interval.
-
-See [`clearInterval`](https://developer.mozilla.org/en-US/docs/Web/API/clearInterval) on MDN.
-
-## Examples
-```rescript
-let intervalId = setInterval(() => {
-  Console.log("This prints in 2 seconds.")
-}, 2000)
-
-// Stop the interval after 10 seconds
-let timeoutId = setTimeout(() => {
-  clearInterval(intervalId)
-}, 10000)
-```
-*/
-@val
-external clearInterval: intervalId => unit = "clearInterval"
-
-/**
-Encodes a URI by replacing characters in the provided string that aren't valid in a URL.
-
-This is intended to operate on full URIs, so it encodes fewer characters than what `encodeURIComponent` does.
-If you're looking to encode just parts of a URI, like a query parameter, prefer `encodeURIComponent`.
-
-See [`encodeURI`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURI) on MDN.
-
-## Examples
-```rescript
-Console.log(encodeURI("https://rescript-lang.org?array=[someValue]"))
-// Logs "https://rescript-lang.org?array=%5BsomeValue%5D" to the console.
-```
-
-*/
-@val
-external encodeURI: string => string = "encodeURI"
-
-/**
-Decodes a previously encoded URI back to a regular string.
-
-This is intended to operate on full URIs, so it decodes fewer characters than what `decodeURIComponent` does.
-If you're looking to decode just parts of a URI, like a query parameter, prefer `decodeURIComponent`.
-
-See [`decodeURI`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/decodeURI) on MDN.
-
-## Examples
-```rescript
-Console.log(decodeURI("https://rescript-lang.org?array=%5BsomeValue%5D"))
-// Logs "https://rescript-lang.org?array=[someValue]" to the console.
-```
-*/
-@val
-external decodeURI: string => string = "decodeURI"
-
-/**
-Encodes a string so it can be used as part of a URI.
-
-See [`encodeURIComponent`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent) on MDN.
-
-## Examples
-```rescript
-Console.log(encodeURIComponent("array=[someValue]"))
-// Logs "array%3D%5BsomeValue%5D" to the console.
-```
-*/
-@val
-external encodeURIComponent: string => string = "encodeURIComponent"
-
-/**
-Decodes a previously URI encoded string back to its original form.
-
-See [`decodeURIComponent`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/decodeURIComponent) on MDN.
-
-## Examples
-```rescript
-Console.log(decodeURIComponent("array%3D%5BsomeValue%5D"))
-// Logs "array=[someValue]" to the console.
-```
-*/
-@val
-external decodeURIComponent: string => string = "decodeURIComponent"
-
-@val external window: Dom.window = "window"
-@val external document: Dom.document = "document"
-@val external globalThis: {..} = "globalThis"
-
-external null: Js.Nullable.t<'a> = "#null"
-external undefined: Js.Nullable.t<'a> = "#undefined"
-external typeof: 'a => Type.t = "#typeof"
-
-/**
-`import(value)` dynamically import a value or function from a ReScript
-module. The import call will return a `promise`, resolving to the dynamically loaded
-value.
-
-## Examples
-
-`Array.res` file:
-
-```rescript
-@send external indexOf: (array<'a>, 'a) => int = "indexOf"
-
-let indexOfOpt = (arr, item) =>
-  switch arr->indexOf(item) {
-  | -1 => None
-  | index => Some(index)
-  }
-```
-In other file you can import the `indexOfOpt` value defined in `Array.res`
-
-```rescript
-let main = async () => {
-  let indexOfOpt = await import(Array.indexOfOpt)
-  let index = indexOfOpt([1, 2], 2)
-  Console.log(index)
-}
-```
-
-Compiles to:
-
-```javascript
-async function main() {
-  var add = await import("./Array.mjs").then(function(m) {
-    return m.indexOfOpt;
-  });
-  var index = indexOfOpt([1, 2], 2);
-  console.log(index);
-}
-```
-*/
-external import: 'a => promise<'a> = "%import"
-
-type null<+'a> = Js.null<'a>
-
-type undefined<+'a> = Js.undefined<'a>
-
-type nullable<+'a> = Js.nullable<'a>
-
-let panic = Error.panic

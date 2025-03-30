@@ -179,8 +179,8 @@ let type_to_instanceof_backed_obj (t : Types.type_expr) =
   | Tconstr (path, _, _) when Path.same path Predef.path_array -> Some Array
   | Tconstr (path, _, _) -> (
     match Path.name path with
-    | "Js_date.t" -> Some Date
-    | "Js_re.t" -> Some RegExp
+    | "Stdlib_Date.t" -> Some Date
+    | "Stdlib_RegExp.t" -> Some RegExp
     | "Js_file.t" -> Some File
     | "Js_blob.t" -> Some Blob
     | _ -> None)
@@ -199,8 +199,6 @@ let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
     Some BigintType
   | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bool ->
     Some BooleanType
-  | {desc = Tconstr _} as t when Ast_uncurried_utils.type_is_uncurried_fun t ->
-    Some FunctionType
   | {desc = Tarrow _} -> Some FunctionType
   | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_string ->
     Some StringType
@@ -379,8 +377,12 @@ let names_from_type_variant ?(is_untagged_def = false) ~env
   let blocks = Ext_array.reverse_of_list blocks in
   Some {consts; blocks}
 
-let check_well_formed ~env ~is_untagged_def
-    (cstrs : Types.constructor_declaration list) =
+type well_formedness_check = {
+  is_untagged_def: bool;
+  cstrs: Types.constructor_declaration list;
+}
+
+let check_well_formed ~env {is_untagged_def; cstrs} =
   ignore (names_from_type_variant ~env ~is_untagged_def cstrs)
 
 let has_undefined_literal attrs = process_tag_type attrs = Some Undefined
@@ -537,7 +539,8 @@ module DynamicChecks = struct
     else (* (undefiled + other) || other *)
       typeof e != object_
 
-  let add_runtime_type_check ~tag_type ~(block_cases : block_type list) x y =
+  let add_runtime_type_check ~tag_type ~has_null_case
+      ~(block_cases : block_type list) x y =
     let instances =
       Ext_list.filter_map block_cases (function
         | InstanceType i -> Some i
@@ -549,14 +552,16 @@ module DynamicChecks = struct
         | FunctionType ) ->
       typeof y == x
     | Untagged ObjectType ->
+      let object_case =
+        if has_null_case then typeof y == x &&& (y != nil) else typeof y == x
+      in
       if instances <> [] then
         let not_one_of_the_instances =
-          Ext_list.fold_right instances
-            (typeof y == x)
-            (fun i x -> x &&& not (is_instance i y))
+          Ext_list.fold_right instances object_case (fun i x ->
+              x &&& not (is_instance i y))
         in
         not_one_of_the_instances
-      else typeof y == x
+      else object_case
     | Untagged (InstanceType i) -> is_instance i y
     | Untagged UnknownType ->
       (* This should not happen because unknown must be the only non-literal case *)

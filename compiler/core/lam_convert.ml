@@ -34,9 +34,8 @@ let lam_extension_id loc (head : Lam.t) =
 let lazy_block_info : Lam_tag_info.t =
   Blk_record
     {
-      fields = [|Literals.lazy_done; Literals.lazy_val|];
+      fields = [|(Literals.lazy_done, false); (Literals.lazy_val, false)|];
       mutable_flag = Mutable;
-      record_repr = Record_regular;
     }
 
 (** A conservative approach to avoid packing exceptions
@@ -230,7 +229,6 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pfield (id, info) -> prim ~primitive:(Pfield (id, info)) ~args loc
   | Psetfield (id, info) -> prim ~primitive:(Psetfield (id, info)) ~args loc
   | Pduprecord -> prim ~primitive:Pduprecord ~args loc
-  | Plazyforce -> prim ~primitive:Plazyforce ~args loc
   | Praise _ -> prim ~primitive:Praise ~args loc
   | Pobjcomp x -> prim ~primitive:(Pobjcomp x) ~args loc
   | Pobjorder -> prim ~primitive:Pobjorder ~args loc
@@ -249,8 +247,9 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Paddint -> prim ~primitive:Paddint ~args loc
   | Psubint -> prim ~primitive:Psubint ~args loc
   | Pmulint -> prim ~primitive:Pmulint ~args loc
-  | Pdivint _is_safe (*FIXME*) -> prim ~primitive:Pdivint ~args loc
-  | Pmodint _is_safe (*FIXME*) -> prim ~primitive:Pmodint ~args loc
+  | Pdivint -> prim ~primitive:Pdivint ~args loc
+  | Pmodint -> prim ~primitive:Pmodint ~args loc
+  | Ppowint -> prim ~primitive:Ppowint ~args loc
   | Pandint -> prim ~primitive:Pandint ~args loc
   | Porint -> prim ~primitive:Porint ~args loc
   | Pxorint -> prim ~primitive:Pxorint ~args loc
@@ -283,6 +282,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pmulfloat -> prim ~primitive:Pmulfloat ~args loc
   | Pdivfloat -> prim ~primitive:Pdivfloat ~args loc
   | Pmodfloat -> prim ~primitive:Pmodfloat ~args loc
+  | Ppowfloat -> prim ~primitive:Ppowfloat ~args loc
   | Pfloatorder -> prim ~primitive:Pfloatorder ~args loc
   | Pfloatmin -> prim ~primitive:Pfloatmin ~args loc
   | Pfloatmax -> prim ~primitive:Pfloatmax ~args loc
@@ -335,11 +335,6 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pjs_fn_make arity -> prim ~primitive:(Pjs_fn_make arity) ~args loc
   | Pjs_fn_make_unit -> prim ~primitive:Pjs_fn_make_unit ~args loc
   | Pjs_fn_method -> prim ~primitive:Pjs_fn_method ~args loc
-  | Pjs_unsafe_downgrade ->
-    let primitive : Lam_primitive.t =
-      Pjs_unsafe_downgrade {name = Ext_string.empty; setter = false}
-    in
-    prim ~primitive ~args loc
 
 (* Does not exist since we compile array in js backend unlike native backend *)
 

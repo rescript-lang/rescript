@@ -2,3 +2,5 @@
 *.mli linguist-language=OCaml
 *.res linguist-language=ReScript
 *.resi linguist-language=ReScript
+
+.yarn/releases/* binary linguist-vendored

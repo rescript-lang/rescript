@@ -249,7 +249,7 @@ let rec print_out_type ppf = function
   | ty -> print_out_type_1 ppf ty
 
 and print_out_type_1 ppf = function
-  | Otyp_arrow (lab, ty1, ty2) ->
+  | Otyp_arrow (lab, ty1, ty2, _) ->
     pp_open_box ppf 0;
     if lab <> "" then (
       pp_print_string ppf lab;
@@ -271,24 +271,6 @@ and print_simple_out_type ppf = function
     fprintf ppf "@[%a%s#%a@]" print_typargs tyl
       (if ng then "_" else "")
       print_ident id
-  | Otyp_constr (Oide_dot (Oide_dot (Oide_ident "Js", "Fn"), name), [tyl]) ->
-    let res =
-      if name = "arity0" then
-        Otyp_arrow ("", Otyp_constr (Oide_ident "unit", []), tyl)
-      else tyl
-    in
-    fprintf ppf "@[<0>(%a@ [@bs])@]" print_out_type_1 res
-  | Otyp_constr (Oide_dot (Oide_dot (Oide_ident "Js_OO", "Meth"), name), [tyl])
-    ->
-    let res =
-      if name = "arity0" then
-        Otyp_arrow ("", Otyp_constr (Oide_ident "unit", []), tyl)
-      else tyl
-    in
-    fprintf ppf "@[<0>(%a@ [@meth])@]" print_out_type_1 res
-  | Otyp_constr (Oide_dot (Oide_dot (Oide_ident "Js_OO", "Callback"), _), [tyl])
-    ->
-    fprintf ppf "@[<0>(%a@ [@this])@]" print_out_type_1 tyl
   | Otyp_constr (id, tyl) ->
     pp_open_box ppf 0;
     print_typargs ppf tyl;

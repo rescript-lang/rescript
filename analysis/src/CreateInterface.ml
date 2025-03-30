@@ -118,13 +118,13 @@ let printSignature ~extractor ~signature =
 
   let buf = Buffer.create 10 in
 
-  let rec getComponentType (typ : Types.type_expr) =
+  let getComponentType (typ : Types.type_expr) =
     let reactElement =
       Ctype.newconstr (Pdot (Pident (Ident.create "React"), "element", 0)) []
     in
     match typ.desc with
-    | Tconstr (Pident {name = "function$"}, [typ; _], _) -> getComponentType typ
-    | Tarrow (_, {desc = Tconstr (Path.Pident propsId, typeArgs, _)}, retType, _)
+    | Tarrow
+        (_, {desc = Tconstr (Path.Pident propsId, typeArgs, _)}, retType, _, _)
       when Ident.name propsId = "props" ->
       Some (typeArgs, retType)
     | Tconstr
@@ -145,12 +145,7 @@ let printSignature ~extractor ~signature =
   let rec processSignature ~indent (signature : Types.signature) : unit =
     match signature with
     | Sig_type
-        ( propsId,
-          {
-            type_params;
-            type_kind = Type_record (labelDecls, recordRepresentation);
-          },
-          _ )
+        (propsId, {type_params; type_kind = Type_record (labelDecls, _)}, _)
       :: Sig_value (makeId (* make *), makeValueDesc)
       :: rest
       when Ident.name propsId = "props"
@@ -175,22 +170,20 @@ let printSignature ~extractor ~signature =
             in
             let lblName = labelDecl.ld_id |> Ident.name in
             let lbl =
-              let optLbls =
-                match recordRepresentation with
-                | Record_optional_labels optLbls -> optLbls
-                | _ -> []
-              in
-              if List.mem lblName optLbls then Asttypes.Optional lblName
+              if labelDecl.ld_optional then Asttypes.Noloc.Optional lblName
               else Labelled lblName
             in
-            {retType with desc = Tarrow (lbl, propType, mkFunType rest, Cok)}
+            {
+              retType with
+              desc = Tarrow (lbl, propType, mkFunType rest, Cok, None);
+            }
         in
         let funType =
           if List.length labelDecls = 0 (* No props *) then
             let tUnit =
               Ctype.newconstr (Path.Pident (Ident.create "unit")) []
             in
-            {retType with desc = Tarrow (Nolabel, tUnit, retType, Cok)}
+            {retType with desc = Tarrow (Nolabel, tUnit, retType, Cok, None)}
           else mkFunType labelDecls
         in
         sigItemToString

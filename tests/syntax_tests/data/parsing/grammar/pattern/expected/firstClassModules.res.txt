@@ -1,22 +1,14 @@
-let sort (type s) = ((Function$ (fun (module Set)  -> fun l -> ()))
-  [@res.arity 2])
-let sort (type s) =
-  ((Function$
-      (fun ((module Set)  : (module Set.S with type elt = s)) -> fun l -> ()))
-  [@res.arity 2])
-let sort (type s) =
-  ((Function$
-      (fun
-         ((module Set)  : (module Set.S with type elt = s and type elt2 = t))
-         -> fun l -> ()))
-  [@res.arity 2])
-let foo = ((Function$ (fun (module Foo)  -> fun baz -> Foo.bar baz))
-  [@res.arity 2])
-let bump_list (type a) =
-  ((Function$
-      (fun ((module B)  : (module Bumpable with type t = a)) ->
-         fun (l : a list) -> List.map ~f:((B.bump l)[@res.namedArgLoc ])))
-  [@res.arity 2])
+let sort (type s) [arity:2](module Set)  l = ()
+let sort (type s) [arity:2]((module Set)  : (module Set.S with type elt = s))
+  l = ()
+let sort (type s)
+  [arity:2]((module Set)  :
+             (module Set.S with type elt = s and type elt2 = t))
+  l = ()
+let foo [arity:2](module Foo)  baz = Foo.bar baz
+let bump_list (type a)
+  [arity:2]((module B)  : (module Bumpable with type t = a)) (l : a list) =
+  List.map ~f:(B.bump l)
 ;;match x with
   | (module Set)  -> ()
   | ((module Set)  : (module Set.S with type elt = s)) -> ()

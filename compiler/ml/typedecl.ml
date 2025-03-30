@@ -107,6 +107,7 @@ let enter_type rec_flag env sdecl id =
         type_attributes = sdecl.ptype_attributes;
         type_immediate = false;
         type_unboxed = unboxed_false_default_false;
+        type_inlined_types = [];
       }
     in
     Env.add_type ~check:true id decl env
@@ -158,7 +159,6 @@ let is_fixed_type sd =
   let rec has_row_var sty =
     match sty.ptyp_desc with
     | Ptyp_alias (sty, _) -> has_row_var sty
-    | Ptyp_class _
     | Ptyp_object (_, Open)
     | Ptyp_variant (_, Open, _)
     | Ptyp_variant (_, Closed, Some _) ->
@@ -214,6 +214,7 @@ let transl_labels ?record_name env closed lbls =
       {
         pld_name = name;
         pld_mutable = mut;
+        pld_optional = optional;
         pld_type = arg;
         pld_loc = loc;
         pld_attributes = attrs;
@@ -225,6 +226,7 @@ let transl_labels ?record_name env closed lbls =
           ld_id = Ident.create name.txt;
           ld_name = name;
           ld_mutable = mut;
+          ld_optional = optional;
           ld_type = cty;
           ld_loc = loc;
           ld_attributes = attrs;
@@ -243,6 +245,7 @@ let transl_labels ?record_name env closed lbls =
         {
           Types.ld_id = ld.ld_id;
           ld_mutable = ld.ld_mutable;
+          ld_optional = ld.ld_optional;
           ld_type = ty;
           ld_loc = ld.ld_loc;
           ld_attributes = ld.ld_attributes;
@@ -291,7 +294,7 @@ let make_constructor env type_path type_params sargs sret_type =
    any type variable present in [ty].
 *)
 
-let transl_declaration ~type_record_as_object env sdecl id =
+let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
   (* Bind type parameters *)
   reset_type_variables ();
   Ctype.begin_def ();
@@ -366,9 +369,6 @@ let transl_declaration ~type_record_as_object env sdecl id =
          | [] -> ()
          | (_, _, loc) :: _ ->
            Location.prerr_warning loc Warnings.Constraint_on_gadt);
-      let has_optional attrs =
-        Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.optional")
-      in
       let scstrs =
         Ext_list.map scstrs (fun ({pcd_args} as cstr) ->
             match pcd_args with
@@ -379,7 +379,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
                 pcd_args =
                   Pcstr_record
                     (Ext_list.map lds (fun ld ->
-                         if has_optional ld.pld_attributes then
+                         if ld.pld_optional then
                            let typ = ld.pld_type in
                            let typ =
                              {
@@ -476,6 +476,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
                                  ld_name =
                                    Location.mkloc (Ident.name l.ld_id) l.ld_loc;
                                  ld_mutable = l.ld_mutable;
+                                 ld_optional = l.ld_optional;
                                  ld_type =
                                    {
                                      ctyp_desc = Ttyp_any;
@@ -529,16 +530,16 @@ let transl_declaration ~type_record_as_object env sdecl id =
       let is_untagged_def =
         Ast_untagged_variants.has_untagged sdecl.ptype_attributes
       in
-      Ast_untagged_variants.check_well_formed ~env ~is_untagged_def cstrs;
+      let well_formedness_check : Ast_untagged_variants.well_formedness_check =
+        {is_untagged_def; cstrs}
+      in
+      (* delay the check until the newenv is created to handle recursive types *)
+      untagged_wfc := well_formedness_check :: !untagged_wfc;
       (Ttype_variant tcstrs, Type_variant cstrs, sdecl)
     | Ptype_record lbls_ -> (
-      let has_optional attrs =
-        Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.optional")
-      in
       let optional_labels =
         Ext_list.filter_map lbls_ (fun lbl ->
-            if has_optional lbl.pld_attributes then Some lbl.pld_name.txt
-            else None)
+            if lbl.pld_optional then Some lbl.pld_name.txt else None)
       in
       let lbls =
         if optional_labels = [] then lbls_
@@ -546,7 +547,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
           Ext_list.map lbls_ (fun lbl ->
               let typ = lbl.pld_type in
               let typ =
-                if has_optional lbl.pld_attributes then
+                if lbl.pld_optional then
                   {
                     typ with
                     ptyp_desc =
@@ -576,6 +577,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
               ld_id = l.ld_id;
               ld_name = {txt = Ident.name l.ld_id; loc = l.ld_loc};
               ld_mutable = l.ld_mutable;
+              ld_optional = l.ld_optional;
               ld_type =
                 {
                   ld_type with
@@ -633,17 +635,12 @@ let transl_declaration ~type_record_as_object env sdecl id =
       match lbls_opt with
       | Some (lbls, lbls') ->
         check_duplicates sdecl.ptype_loc lbls StringSet.empty;
-        let optional_labels =
-          Ext_list.filter_map lbls (fun lbl ->
-              if has_optional lbl.ld_attributes then Some lbl.ld_name.txt
-              else None)
-        in
+        let optional = Ext_list.exists lbls (fun lbl -> lbl.ld_optional) in
         ( Ttype_record lbls,
           Type_record
             ( lbls',
               if unbox then Record_unboxed false
-              else if optional_labels <> [] then
-                Record_optional_labels optional_labels
+              else if optional then Record_regular
               else Record_regular ),
           sdecl )
       | None ->
@@ -687,6 +684,7 @@ let transl_declaration ~type_record_as_object env sdecl id =
       type_attributes = sdecl.ptype_attributes;
       type_immediate = false;
       type_unboxed = unboxed_status;
+      type_inlined_types = [];
     }
   in
 
@@ -1018,7 +1016,7 @@ let compute_variance env visited vari ty =
       visited := TypeMap.add ty vari !visited;
       let compute_same = compute_variance_rec vari in
       match ty.desc with
-      | Tarrow (_, ty1, ty2, _) ->
+      | Tarrow (_, ty1, ty2, _, _) ->
         let open Variance in
         let v = conjugate vari in
         let v1 =
@@ -1171,11 +1169,14 @@ let compute_variance_type env check (required, loc) decl tyl =
       let v = get_variance ty tvl in
       let tr = decl.type_private in
       (* Use required variance where relevant *)
-      let concr = decl.type_kind <> Type_abstract (*|| tr = Type_new*) in
+      let concr =
+        decl.type_kind <> Type_abstract
+        (*|| tr = Type_new*)
+      in
       let p, n =
         if tr = Private || not (Btype.is_Tvar ty) then (p, n) (* set *)
         else (false, false)
-        (* only check *)
+      (* only check *)
       and i = concr || (i && tr = Private) in
       let v = union v (make p n i) in
       let v =
@@ -1472,15 +1473,35 @@ let transl_type_decl env rec_flag sdecl_list =
     | Asttypes.Recursive | Asttypes.Nonrecursive -> (id, None)
   in
   let type_record_as_object = ref false in
+  let untagged_wfc = ref [] in
   let transl_declaration name_sdecl (id, slot) =
     current_slot := slot;
     Builtin_attributes.warning_scope name_sdecl.ptype_attributes (fun () ->
-        transl_declaration ~type_record_as_object temp_env name_sdecl id)
+        transl_declaration ~type_record_as_object ~untagged_wfc temp_env
+          name_sdecl id)
   in
   let tdecls =
     List.map2 transl_declaration sdecl_list (List.map id_slots id_list)
   in
-  let decls = List.map (fun tdecl -> (tdecl.typ_id, tdecl.typ_type)) tdecls in
+  let inline_types =
+    tdecls
+    |> List.filter (fun tdecl ->
+           tdecl.typ_attributes
+           |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
+                  txt = "res.inlineRecordDefinition")
+           |> Option.is_some)
+    |> List.filter_map (fun tdecl ->
+           match tdecl.typ_type.type_kind with
+           | Type_record (labels, _) ->
+             Some (Record {type_name = tdecl.typ_name.txt; labels})
+           | _ -> None)
+  in
+  let decls =
+    List.map
+      (fun tdecl ->
+        (tdecl.typ_id, {tdecl.typ_type with type_inlined_types = inline_types}))
+      tdecls
+  in
   let sdecl_list =
     Variant_type_spread.expand_dummy_constructor_args sdecl_list decls
   in
@@ -1533,6 +1554,9 @@ let transl_type_decl env rec_flag sdecl_list =
       | None -> ())
     sdecl_list tdecls;
   (* Check that constraints are enforced *)
+  List.iter
+    (fun check -> Ast_untagged_variants.check_well_formed ~env:newenv check)
+    !untagged_wfc;
   List.iter2 (check_constraints ~type_record_as_object newenv) sdecl_list decls;
   (* Name recursion *)
   let decls =
@@ -1798,17 +1822,17 @@ let transl_exception env sext =
 
 let rec arity_from_arrow_type env core_type ty =
   match (core_type.ptyp_desc, (Ctype.repr ty).desc) with
-  | Ptyp_arrow (_, _, ct2), Tarrow (_, _, t2, _) ->
+  | Ptyp_arrow {ret = ct2}, Tarrow (_, _, t2, _, _) ->
     1 + arity_from_arrow_type env ct2 t2
   | Ptyp_arrow _, _ | _, Tarrow _ -> assert false
   | _ -> 0
 
 let parse_arity env core_type ty =
-  match Ast_uncurried.uncurried_type_get_arity_opt ~env ty with
+  match Ctype.get_arity env ty with
   | Some arity ->
     let from_constructor =
       match ty.desc with
-      | Tconstr (_, _, _) -> not (Ast_uncurried_utils.type_is_uncurried_fun ty)
+      | Tconstr (_, _, _) -> true
       | _ -> false
     in
     (arity, from_constructor)
@@ -1931,6 +1955,7 @@ let transl_with_constraint env id row_path orig_decl sdecl =
       type_attributes = sdecl.ptype_attributes;
       type_immediate = false;
       type_unboxed;
+      type_inlined_types = [];
     }
   in
   (match row_path with
@@ -1981,6 +2006,7 @@ let abstract_type_decl arity =
       type_attributes = [];
       type_immediate = false;
       type_unboxed = unboxed_false_default_false;
+      type_inlined_types = [];
     }
   in
   Ctype.end_def ();
@@ -2101,8 +2127,7 @@ let report_error ppf = function
     Printtyp.report_unification_error ppf env trace
       (function
         | ppf -> fprintf ppf "This type constructor expands to type")
-      (function
-        | ppf -> fprintf ppf "but is used here with type")
+      (function ppf -> fprintf ppf "but is used here with type")
   | Null_arity_external -> fprintf ppf "External identifiers must be functions"
   | Unbound_type_var (ty, decl) -> (
     fprintf ppf "A type variable is unbound in this type declaration";
@@ -2144,8 +2169,7 @@ let report_error ppf = function
       (function
         | ppf ->
           fprintf ppf "The constructor %a@ has type" Printtyp.longident lid)
-      (function
-        | ppf -> fprintf ppf "but was expected to be of type")
+      (function ppf -> fprintf ppf "but was expected to be of type")
   | Rebind_mismatch (lid, p, p') ->
     fprintf ppf "@[%s@ %a@ %s@ %s@ %s@ %s@ %s@]" "The constructor"
       Printtyp.longident lid "extends type" (Path.name p)
@@ -2209,8 +2233,10 @@ let report_error ppf = function
     fprintf ppf "@[GADT case syntax cannot be used in a 'nonrec' block.@]"
   | Variant_runtime_representation_mismatch
       (Variant_coercion.VariantError
-        {is_spread_context; error = Variant_coercion.Untagged {left_is_unboxed}})
-    ->
+         {
+           is_spread_context;
+           error = Variant_coercion.Untagged {left_is_unboxed};
+         }) ->
     let other_variant_text =
       if is_spread_context then "the variant where this is spread"
       else "the other variant"
@@ -2222,7 +2248,7 @@ let report_error ppf = function
       ^ " is not. Both variants unboxed configuration must match")
   | Variant_runtime_representation_mismatch
       (Variant_coercion.VariantError
-        {is_spread_context; error = Variant_coercion.TagName _}) ->
+         {is_spread_context; error = Variant_coercion.TagName _}) ->
     let other_variant_text =
       if is_spread_context then "the variant where this is spread"
       else "the other variant"
@@ -2245,7 +2271,8 @@ let report_error ppf = function
     fprintf ppf "@[Type parameters are not supported in variant type spreads.@]"
   | Variant_spread_fail
       (Variant_type_spread.DuplicateConstructor
-        {variant_with_overlapping_constructor; overlapping_constructor_name}) ->
+         {variant_with_overlapping_constructor; overlapping_constructor_name})
+    ->
     fprintf ppf
       "@[Variant %s has a constructor named %s, but a constructor named %s \
        already exists in the variant it's spread into.@ You cannot spread \

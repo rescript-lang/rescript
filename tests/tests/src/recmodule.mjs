@@ -18,12 +18,14 @@ let UseCase = {
   MakeLayer: MakeLayer
 };
 
-function MakeLayer$1(Deps, UC) {
-  let presentLight = light => Deps.presentJson(light, 200);
-  let handleGetLight = req => UC.getLight(req.params.id);
-  return {
-    handleGetLight: handleGetLight,
-    presentLight: presentLight
+function MakeLayer$1(Deps) {
+  return UC => {
+    let presentLight = light => Deps.presentJson(light, 200);
+    let handleGetLight = req => UC.getLight(req.params.id);
+    return {
+      handleGetLight: handleGetLight,
+      presentLight: presentLight
+    };
   };
 }
 

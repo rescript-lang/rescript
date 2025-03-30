@@ -40,7 +40,9 @@ let tuple_type_pair ?loc kind arity =
     match kind with
     | `Run -> (ty, [], ty)
     | `Make ->
-      (Ast_compatible.arrow ?loc (Ast_literal.type_unit ?loc ()) ty, [], ty)
+      ( Ast_compatible.arrow ?loc ~arity:None (Ast_literal.type_unit ?loc ()) ty,
+        [],
+        ty )
   else
     let number = arity + 1 in
     let tys =
@@ -50,7 +52,7 @@ let tuple_type_pair ?loc kind arity =
     match tys with
     | result :: rest ->
       ( Ext_list.reduce_from_left tys (fun r arg ->
-            Ast_compatible.arrow ?loc arg r),
+            Ast_compatible.arrow ?loc ~arity:None arg r),
         List.rev rest,
         result )
     | [] -> assert false

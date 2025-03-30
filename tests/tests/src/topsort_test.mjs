@@ -73,7 +73,7 @@ function dfs1(_nodes, graph, _visited) {
   while (true) {
     let visited = _visited;
     let nodes = _nodes;
-    if (!nodes) {
+    if (nodes === 0) {
       return Belt_List.reverse(visited);
     }
     let xs = nodes.tl;
@@ -171,7 +171,7 @@ function dfs2(nodes, graph, visited) {
     while (true) {
       let visited = _visited;
       let nodes = _nodes;
-      if (!nodes) {
+      if (nodes === 0) {
         return visited;
       }
       let xs = nodes.tl;
@@ -539,13 +539,13 @@ try {
   let exit = 0;
   if (exn.RE_EXN_ID === Cycle) {
     let match = exn._1;
-    if (match && match.hd === "go") {
+    if (match !== 0 && match.hd === "go") {
       let match$1 = match.tl;
-      if (match$1 && match$1.hd === "washup") {
+      if (match$1 !== 0 && match$1.hd === "washup") {
         let match$2 = match$1.tl;
-        if (match$2 && match$2.hd === "eat") {
+        if (match$2 !== 0 && match$2.hd === "eat") {
           let match$3 = match$2.tl;
-          if (!(match$3 && !(match$3.hd !== "go" || match$3.tl))) {
+          if (match$3 === 0 || match$3.hd !== "go" || match$3.tl !== 0) {
             exit = 1;
           }
           

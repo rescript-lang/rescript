@@ -97,7 +97,7 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
 
 let is_function_type env ty =
   match scrape env ty with
-  | Tarrow (_, lhs, rhs, _) -> Some (lhs, rhs)
+  | Tarrow (_, lhs, rhs, _, _) -> Some (lhs, rhs)
   | _ -> None
 
 let is_base_type env ty base_ty_path =
@@ -107,8 +107,6 @@ let is_base_type env ty base_ty_path =
 
 let maybe_pointer_type env ty =
   if Ctype.maybe_pointer_type env ty then Pointer else Immediate
-
-let maybe_pointer exp = maybe_pointer_type exp.exp_env exp.exp_type
 
 type classification =
   | Int

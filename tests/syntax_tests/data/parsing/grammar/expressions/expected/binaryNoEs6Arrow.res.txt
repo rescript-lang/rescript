@@ -1,37 +1,33 @@
-;;if (color == Black) && ((sibling == None) || (parent == None)) then ()
+;;if (color === Black) && ((sibling === None) || (parent === None)) then ()
 ;;if
-    ((color == Black) && (color != Red)) &&
-      ((sibling == None) || (parent == None))
+    ((color === Black) && ((!==) color Red)) &&
+      ((sibling === None) || (parent === None))
   then ()
-;;match (color == Black) && ((sibling == None) || (parent == None)) with
+;;match (color === Black) && ((sibling === None) || (parent === None)) with
   | _ -> ()
-;;match ((color == Black) && (color != Red)) &&
-          ((sibling == None) || (parent == None))
+;;match ((color === Black) && ((!==) color Red)) &&
+          ((sibling === None) || (parent === None))
   with
   | _ -> ()
-;;try (color == Black) && ((sibling == None) || (parent == None))
+;;try (color === Black) && ((sibling === None) || (parent === None))
   with | _ -> ()
 ;;try
-    ((color == Black) && (color == Red)) &&
-      ((sibling == None) || (parent == None))
+    ((color === Black) && (color === Red)) &&
+      ((sibling === None) || (parent === None))
   with | _ -> ()
-;;while (color == Black) && ((sibling == None) || (parent == None)) do ()
+;;while (color === Black) && ((sibling === None) || (parent === None)) do ()
     done
 ;;while
-    ((color == Black) && (color == Red)) &&
-      ((sibling == None) || (parent == None))
+    ((color === Black) && (color === Red)) &&
+      ((sibling === None) || (parent === None))
     do () done
 ;;((div
-      ~onClick:((Function$
-                   (fun event ->
-                      ((match videoContainerRect with
-                        | Some videoContainerRect ->
-                            let newChapter =
-                              ({ startTime = (percent *. duration) } : 
-                              Video.chapter) in
-                            { a; b } |.u onChange
-                        | _ -> ())
-                      [@res.braces ])))
-      [@res.namedArgLoc ][@res.braces ][@res.arity 1]) ~children:[] ())
-  [@JSX ])
+      ~onClick:((fun [arity:1]event ->
+                   ((match videoContainerRect with
+                     | Some videoContainerRect ->
+                         let newChapter =
+                           ({ startTime = (percent *. duration) } : Video.chapter) in
+                         { a; b } -> onChange
+                     | _ -> ())
+                   [@res.braces ]))[@res.braces ]) ~children:[] ())[@JSX ])
 ;;if inclusions.(index) <- (uid, url) then onChange inclusions

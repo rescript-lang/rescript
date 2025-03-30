@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-"use strict";
+// @ts-check
 
 /*
  * Requires the version matching `rescript` binary to be `npm link`ed in this
@@ -15,17 +15,22 @@
  * playground bundle.
  */
 
-const child_process = require("child_process");
-const fs = require("fs");
-const path = require("path");
+import * as child_process from "node:child_process";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
-const resConfig = require("../rescript.json");
+import resConfig from "../rescript.json" with { type: "json" };
 
-const RESCRIPT_COMPILER_ROOT_DIR = path.join(__dirname, "..", "..", "..");
+const RESCRIPT_COMPILER_ROOT_DIR = path.join(
+  import.meta.dirname,
+  "..",
+  "..",
+  "..",
+);
 const PLAYGROUND_DIR = path.join(RESCRIPT_COMPILER_ROOT_DIR, "playground");
 
 // The playground-bundling root dir
-const PROJECT_ROOT_DIR = path.join(__dirname, "..");
+const PROJECT_ROOT_DIR = path.join(import.meta.dirname, "..");
 
 // Final target output directory where all the cmijs will be stored
 const PACKAGES_DIR = path.join(PLAYGROUND_DIR, "packages");
@@ -35,23 +40,23 @@ if (!fs.existsSync(PACKAGES_DIR)) {
   fs.mkdirSync(PACKAGES_DIR, { recursive: true });
 }
 
-const config = {
-  cwd: PROJECT_ROOT_DIR,
-  encoding: "utf8",
-  stdio: [0, 1, 2],
-  shell: true,
-};
-
+/**
+ * @param {string} cmd
+ */
 function e(cmd) {
   console.log(`>>>>>> running command: ${cmd}`);
-  child_process.execSync(cmd, config);
-  console.log(`<<<<<<`);
+  child_process.execSync(cmd, {
+    cwd: PROJECT_ROOT_DIR,
+    encoding: "utf8",
+    stdio: [0, 1, 2],
+  });
+  console.log("<<<<<<");
 }
 
-e(`npm install`);
+e("npm install");
 e(`npm link ${RESCRIPT_COMPILER_ROOT_DIR}`);
-e(`npx rescript clean`);
-e(`npx rescript`);
+e("npx rescript clean");
+e("npx rescript");
 
 const packages = resConfig["bs-dependencies"];
 
@@ -68,7 +73,7 @@ function buildCompilerCmij() {
 
   const outputFolder = path.join(PACKAGES_DIR, "compiler-builtins");
 
-  const cmijFile = path.join(outputFolder, `cmij.js`);
+  const cmijFile = path.join(outputFolder, "cmij.cjs");
 
   if (!fs.existsSync(outputFolder)) {
     fs.mkdirSync(outputFolder, { recursive: true });
@@ -80,7 +85,7 @@ function buildCompilerCmij() {
 }
 
 function buildThirdPartyCmijs() {
-  packages.forEach(function installLib(pkg) {
+  for (const pkg of packages) {
     const libOcamlFolder = path.join(
       PROJECT_ROOT_DIR,
       "node_modules",
@@ -97,7 +102,7 @@ function buildThirdPartyCmijs() {
     );
     const outputFolder = path.join(PACKAGES_DIR, pkg);
 
-    const cmijFile = path.join(outputFolder, `cmij.js`);
+    const cmijFile = path.join(outputFolder, "cmij.cjs");
 
     if (!fs.existsSync(outputFolder)) {
       fs.mkdirSync(outputFolder, { recursive: true });
@@ -107,8 +112,13 @@ function buildThirdPartyCmijs() {
     e(
       `find ${libOcamlFolder} -name "*.cmi" -or -name "*.cmj" | xargs -n1 basename | xargs js_of_ocaml build-fs -o ${cmijFile} -I ${libOcamlFolder}`,
     );
-  });
+  }
+}
+
+function bundleStdlibJs() {
+  e("npm run bundle");
 }
 
 buildCompilerCmij();
 buildThirdPartyCmijs();
+bundleStdlibJs();

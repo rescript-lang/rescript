@@ -32,7 +32,6 @@
 type 'a shared = Shared of 'a | Single of 'a
 
 type 'a t_store = {
-  act_get: unit -> 'a array;
   act_get_shared: unit -> 'a shared array;
   act_store: 'a -> int;
   act_store_shared: 'a -> int;

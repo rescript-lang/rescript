@@ -30,9 +30,6 @@ type error =
   | Unbound_type_constructor of Longident.t
   | Unbound_type_constructor_2 of Path.t
   | Type_arity_mismatch of Longident.t * int * int
-  | Bound_type_variable of string
-  | Recursive_type
-  | Unbound_row_variable of Longident.t
   | Type_mismatch of (type_expr * type_expr) list
   | Alias_type_mismatch of (type_expr * type_expr) list
   | Present_has_conjunction of string
@@ -131,7 +128,6 @@ let find_constructor =
 let find_all_constructors =
   find_component Env.lookup_all_constructors (fun lid ->
       Unbound_constructor lid)
-let find_label = find_component Env.lookup_label (fun lid -> Unbound_label lid)
 let find_all_labels =
   find_component Env.lookup_all_labels (fun lid -> Unbound_label lid)
 
@@ -232,11 +228,6 @@ let validate_name = function
 let new_global_var ?name () = new_global_var ?name:(validate_name name) ()
 let newvar ?name () = newvar ?name:(validate_name name) ()
 
-let type_variable loc name =
-  try Tbl.find name !type_variables
-  with Not_found ->
-    raise (Error (loc, Env.empty, Unbound_type_variable ("'" ^ name)))
-
 let transl_type_param env styp =
   let loc = styp.ptyp_loc in
   match styp.ptyp_desc with
@@ -327,17 +318,18 @@ and transl_type_aux env policy styp =
           v)
     in
     ctyp (Ttyp_var name) ty
-  | Ptyp_arrow (l, st1, st2) ->
+  | Ptyp_arrow {lbl; arg = st1; ret = st2; arity} ->
+    let lbl = Asttypes.to_noloc lbl in
     let cty1 = transl_type env policy st1 in
     let cty2 = transl_type env policy st2 in
     let ty1 = cty1.ctyp_type in
     let ty1 =
-      if Btype.is_optional l then
+      if Btype.is_optional lbl then
         newty (Tconstr (Predef.path_option, [ty1], ref Mnil))
       else ty1
     in
-    let ty = newty (Tarrow (l, ty1, cty2.ctyp_type, Cok)) in
-    ctyp (Ttyp_arrow (l, cty1, cty2)) ty
+    let ty = newty (Tarrow (lbl, ty1, cty2.ctyp_type, Cok, arity)) in
+    ctyp (Ttyp_arrow (lbl, cty1, cty2, arity)) ty
   | Ptyp_tuple stl ->
     assert (List.length stl >= 2);
     let ctys = List.map (transl_type env policy) stl in
@@ -379,7 +371,6 @@ and transl_type_aux env policy styp =
   | Ptyp_object (fields, o) ->
     let ty, fields = transl_fields env policy o fields in
     ctyp (Ttyp_object (fields, o)) (newobj ty)
-  | Ptyp_class () -> assert false
   | Ptyp_alias (st, alias) ->
     let cty =
       try
@@ -423,7 +414,6 @@ and transl_type_aux env policy styp =
            {
              row_fields = [(l, f)];
              row_more = newvar ();
-             row_bound = ();
              row_closed = true;
              row_fixed = false;
              row_name = None;
@@ -510,7 +500,6 @@ and transl_type_aux env policy styp =
       {
         row_fields = List.rev fields;
         row_more = newvar ();
-        row_bound = ();
         row_closed = closed = Closed;
         row_fixed = false;
         row_name = !name;
@@ -670,8 +659,6 @@ let make_fixed_univars ty =
   make_fixed_univars ty;
   Btype.unmark_type ty
 
-let create_package_mty = create_package_mty false
-
 let globalize_used_variables env fixed =
   let r = ref [] in
   Tbl.iter
@@ -710,40 +697,6 @@ let transl_simple_type env fixed styp =
   globalize_used_variables env fixed ();
   make_fixed_univars typ.ctyp_type;
   typ
-
-let transl_simple_type_univars env styp =
-  univars := [];
-  used_variables := Tbl.empty;
-  pre_univars := [];
-  begin_def ();
-  let typ = transl_type env Univars styp in
-  (* Only keep already global variables in used_variables *)
-  let new_variables = !used_variables in
-  used_variables := Tbl.empty;
-  Tbl.iter
-    (fun name p ->
-      if Tbl.mem name !type_variables then
-        used_variables := Tbl.add name p !used_variables)
-    new_variables;
-  globalize_used_variables env false ();
-  end_def ();
-  generalize typ.ctyp_type;
-  let univs =
-    List.fold_left
-      (fun acc v ->
-        let v = repr v in
-        match v.desc with
-        | Tvar name when v.level = Btype.generic_level ->
-          v.desc <- Tunivar name;
-          v :: acc
-        | _ -> acc)
-      [] !pre_univars
-  in
-  make_fixed_univars typ.ctyp_type;
-  {
-    typ with
-    ctyp_type = instance env (Btype.newgenty (Tpoly (typ.ctyp_type, univs)));
-  }
 
 let transl_simple_type_delayed env styp =
   univars := [];
@@ -838,25 +791,16 @@ let report_error env ppf = function
         "@[The type constructor %a@ expects %i argument(s),@ but is here \
          applied to %i argument(s)@]"
         longident lid expected provided
-  | Bound_type_variable name ->
-    fprintf ppf "Already bound type parameter '%s" name
-  | Recursive_type -> fprintf ppf "This type is recursive"
-  | Unbound_row_variable lid ->
-    (* we don't use "spellcheck" here: this error is not raised
-       anywhere so it's unclear how it should be handled *)
-    fprintf ppf "Unbound row variable in #%a" longident lid
   | Type_mismatch trace ->
     Printtyp.report_unification_error ppf Env.empty trace
       (function
         | ppf -> fprintf ppf "This type")
-      (function
-        | ppf -> fprintf ppf "should be an instance of type")
+      (function ppf -> fprintf ppf "should be an instance of type")
   | Alias_type_mismatch trace ->
     Printtyp.report_unification_error ppf Env.empty trace
       (function
         | ppf -> fprintf ppf "This alias is bound to type")
-      (function
-        | ppf -> fprintf ppf "but is used as an instance of type")
+      (function ppf -> fprintf ppf "but is used as an instance of type")
   | Present_has_conjunction l ->
     fprintf ppf "The present constructor %s has a conjunctive type" l
   | Present_has_no_type l ->

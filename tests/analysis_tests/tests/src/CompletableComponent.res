@@ -1,6 +1,6 @@
 type status = On | Off
 
-@@jsxConfig({version: 4, mode: "automatic"})
+@@jsxConfig({version: 4})
 
 @react.component
 let make = (~status: status, ~name: string) => {

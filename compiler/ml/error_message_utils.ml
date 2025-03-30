@@ -5,7 +5,6 @@ type type_clash_statement = FunctionCall
 type type_clash_context =
   | SetRecordField
   | ArrayValue
-  | FunctionReturn
   | MaybeUnwrapOption
   | IfCondition
   | IfReturn
@@ -53,8 +52,7 @@ let error_expected_type_text ppf type_clash_context =
     fprintf ppf
       "But it's being used with the @{<info>%s@} operator, which works on:"
       operator
-  | Some FunctionReturn ->
-    fprintf ppf "But this function is expecting you to return:"
+  | Some StringConcat -> fprintf ppf "But string concatenation is expecting:"
   | _ -> fprintf ppf "But it's expected to have type:"
 
 let is_record_type ~extract_concrete_typedecl ~env ty =
@@ -204,7 +202,7 @@ let type_clash_context_from_function sexp sfunct =
   in
   match sfunct.Parsetree.pexp_desc with
   | Pexp_ident
-      {txt = Lident ("=" | "==" | "<>" | "!=" | ">" | ">=" | "<" | "<=")} ->
+      {txt = Lident ("==" | "===" | "!=" | "!==" | ">" | ">=" | "<" | "<=")} ->
     Some ComparisonOperator
   | Pexp_ident {txt = Lident "++"} -> Some StringConcat
   | Pexp_ident {txt = Lident (("/." | "*." | "+." | "-.") as operator)} ->

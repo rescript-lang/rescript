@@ -203,7 +203,12 @@ val unify_var : Env.t -> type_expr -> type_expr -> unit
 val with_passive_variants : ('a -> 'b) -> 'a -> 'b
 (* Call [f] in passive_variants mode, for exhaustiveness check. *)
 
-val filter_arrow : Env.t -> type_expr -> arg_label -> type_expr * type_expr
+val filter_arrow :
+  env:Env.t ->
+  arity:arity ->
+  type_expr ->
+  Noloc.arg_label ->
+  type_expr * type_expr
 (* A special case of unification (with l:'a -> 'b). *)
 
 val filter_method : Env.t -> string -> private_flag -> type_expr -> type_expr
@@ -323,3 +328,5 @@ val package_subtype :
 
 val variant_is_subtype :
   (Env.t -> Types.row_desc -> Types.type_expr -> bool) ref
+
+val get_arity : Env.t -> type_expr -> int option

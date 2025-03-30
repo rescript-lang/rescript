@@ -1,9 +1,8 @@
 (* Restructures a nested tree of arrow types into its args & returnType
-   * The parsetree contains: a => b => c => d, for printing purposes
-   * we restructure the tree into (a, b, c) and its returnType d *)
+ * The parsetree contains: a => b => c => d, for printing purposes
+ * we restructure the tree into (a, b, c) and its returnType d *)
 val arrow_type :
-  ?arity:int ->
-  ?attrs:Parsetree.attributes ->
+  ?max_arity:int ->
   Parsetree.core_type ->
   Parsetree.attributes
   * (Parsetree.attributes * Asttypes.arg_label * Parsetree.core_type) list
@@ -15,18 +14,8 @@ val functor_type :
   list
   * Parsetree.module_type
 
-val process_partial_app_attribute :
-  Parsetree.attributes -> bool * Parsetree.attributes
-
-val has_partial_attribute : Parsetree.attributes -> bool
-
-type function_attributes_info = {async: bool; attributes: Parsetree.attributes}
-
-(* determines whether a function is async and/or uncurried based on the given attributes *)
-val process_function_attributes :
-  Parsetree.attributes -> function_attributes_info
-
 val has_await_attribute : Parsetree.attributes -> bool
+val has_inline_record_definition_attribute : Parsetree.attributes -> bool
 val has_res_pat_variant_spread_attribute : Parsetree.attributes -> bool
 val has_dict_pattern_attribute : Parsetree.attributes -> bool
 
@@ -35,8 +24,8 @@ type if_condition_kind =
   | IfLet of Parsetree.pattern * Parsetree.expression
 
 (* if ... else if ... else ... is represented as nested expressions: if ... else { if ... }
-   * The purpose of this function is to flatten nested ifs into one sequence.
-   * Basically compute: ([if, else if, else if, else if], else) *)
+ * The purpose of this function is to flatten nested ifs into one sequence.
+ * Basically compute: ([if, else if, else if, else if], else) *)
 val collect_if_expressions :
   Parsetree.expression ->
   (Location.t * if_condition_kind * Parsetree.expression) list
@@ -60,15 +49,14 @@ type fun_param_kind =
   | NewTypes of {attrs: Parsetree.attributes; locs: string Asttypes.loc list}
 
 val fun_expr :
-  Parsetree.expression ->
-  bool * Parsetree.attributes * fun_param_kind list * Parsetree.expression
+  Parsetree.expression -> bool * fun_param_kind list * Parsetree.expression
 
 (* example:
-   *  `makeCoordinate({
-   *    x: 1,
-   *    y: 2,
-   *  })`
-   *  Notice howe `({` and `})` "hug" or stick to each other *)
+ *  `makeCoordinate({
+ *    x: 1,
+ *    y: 2,
+ *  })`
+ *  Notice howe `({` and `})` "hug" or stick to each other *)
 val is_huggable_expression : Parsetree.expression -> bool
 
 val is_huggable_pattern : Parsetree.pattern -> bool
@@ -77,10 +65,12 @@ val is_huggable_rhs : Parsetree.expression -> bool
 
 val operator_precedence : string -> int
 
+val not_ghost_operator : string -> Location.t -> bool
 val is_unary_expression : Parsetree.expression -> bool
 val is_binary_operator : string -> bool
 val is_binary_expression : Parsetree.expression -> bool
 val is_rhs_binary_operator : string -> bool
+val is_equality_operator : string -> bool
 
 val flattenable_operators : string -> string -> bool
 
@@ -102,7 +92,6 @@ val filter_fragile_match_attributes :
 
 val is_jsx_expression : Parsetree.expression -> bool
 val has_jsx_attribute : Parsetree.attributes -> bool
-val has_optional_attribute : Parsetree.attributes -> bool
 
 val should_indent_binary_expr : Parsetree.expression -> bool
 val should_inline_rhs_binary_expr : Parsetree.expression -> bool

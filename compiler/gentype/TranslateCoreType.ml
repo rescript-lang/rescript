@@ -1,7 +1,7 @@
 open GenTypeCommon
 open! TranslateTypeExprFromTypes
 
-let remove_option ~(label : Asttypes.arg_label)
+let remove_option ~(label : Asttypes.Noloc.arg_label)
     (core_type : Typedtree.core_type) =
   match (core_type.ctyp_desc, label) with
   | Ttyp_constr (Path.Pident id, _, [t]), Optional lbl
@@ -52,7 +52,8 @@ let rec translate_arrow_type ~config ~type_vars_gen
     ~no_function_return_dependencies ~type_env ~rev_arg_deps ~rev_args
     (core_type : Typedtree.core_type) =
   match core_type.ctyp_desc with
-  | Ttyp_arrow (Nolabel, core_type1, core_type2) ->
+  | Ttyp_arrow (Nolabel, core_type1, core_type2, arity)
+    when arity = None || rev_args = [] ->
     let {dependencies; type_} =
       core_type1 |> fun __x ->
       translateCoreType_ ~config ~type_vars_gen ~type_env __x
@@ -62,8 +63,9 @@ let rec translate_arrow_type ~config ~type_vars_gen
     |> translate_arrow_type ~config ~type_vars_gen
          ~no_function_return_dependencies ~type_env ~rev_arg_deps:next_rev_deps
          ~rev_args:((Nolabel, type_) :: rev_args)
-  | Ttyp_arrow (((Labelled lbl | Optional lbl) as label), core_type1, core_type2)
-    -> (
+  | Ttyp_arrow
+      (((Labelled lbl | Optional lbl) as label), core_type1, core_type2, arity)
+    when arity = None || rev_args = [] -> (
     let as_label =
       match core_type.ctyp_attributes |> Annotation.get_gentype_as_renaming with
       | Some s -> s
@@ -269,7 +271,7 @@ and translateCoreType_ ~config ~type_vars_gen
         type_;
       }
     | None -> {dependencies = []; type_ = unknown})
-  | Ttyp_any | Ttyp_class _ -> {dependencies = []; type_ = unknown}
+  | Ttyp_any -> {dependencies = []; type_ = unknown}
 
 and translateCoreTypes_ ~config ~type_vars_gen ~type_env type_exprs :
     translation list =

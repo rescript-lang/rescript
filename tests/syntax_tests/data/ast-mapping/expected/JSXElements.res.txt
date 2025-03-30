@@ -1,0 +1,41 @@
+let emptyUnary = ReactDOM.jsx("input", {})
+
+let emptyNonunary = ReactDOM.jsx("div", {})
+
+let emptyUnaryWithAttributes = ReactDOM.jsx("input", {type_: "text"})
+
+let emptyNonunaryWithAttributes = ReactDOM.jsx("div", {className: "container"})
+
+let elementWithChildren = ReactDOM.jsxs(
+  "div",
+  {
+    children: React.array([
+      ReactDOM.jsx("h1", {children: ?ReactDOM.someElement({React.string("Hi")})}),
+      ReactDOM.jsx("p", {children: ?ReactDOM.someElement({React.string("Hello")})}),
+    ]),
+  },
+)
+
+let elementWithChildrenAndAttributes = ReactDOM.jsxs(
+  "div",
+  {
+    className: "container",
+    children: React.array([
+      ReactDOM.jsx("h1", {children: ?ReactDOM.someElement({React.string("Hi")})}),
+      ReactDOM.jsx("p", {children: ?ReactDOM.someElement({React.string("Hello")})}),
+    ]),
+  },
+)
+
+let elementWithConditionalChildren = ReactDOM.jsx(
+  "div",
+  {
+    children: ?ReactDOM.someElement({
+      if true {
+        ReactDOM.jsx("h1", {children: ?ReactDOM.someElement({React.string("Hi")})})
+      } else {
+        React.null
+      }
+    }),
+  },
+)

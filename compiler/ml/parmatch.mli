@@ -31,8 +31,8 @@ val omegas : int -> pattern list
 val omega_list : 'a list -> pattern list
 val normalize_pat : pattern -> pattern
 val all_record_args :
-  (Longident.t loc * label_description * pattern) list ->
-  (Longident.t loc * label_description * pattern) list
+  (Longident.t loc * label_description * pattern * bool) list ->
+  (Longident.t loc * label_description * pattern * bool) list
 val const_compare : constant -> constant -> int
 
 val le_pat : pattern -> pattern -> bool
@@ -84,8 +84,7 @@ val check_partial_gadt :
   case list ->
   partial
 val check_unused :
-  (bool ->
-  (string, constructor_description) Hashtbl.t ->
+  ((string, constructor_description) Hashtbl.t ->
   (string, label_description) Hashtbl.t ->
   Parsetree.pattern ->
   pattern option) ->

@@ -104,7 +104,7 @@ let processOptionalArgs ~expType ~(locFrom : Location.t) ~locTo ~path args =
              | None -> Some false
            in
            match lbl with
-           | Asttypes.Optional s when not locFrom.loc_ghost ->
+           | Asttypes.Noloc.Optional s when not locFrom.loc_ghost ->
              if argIsSupplied <> Some false then supplied := s :: !supplied;
              if argIsSupplied = None then suppliedMaybe := s :: !suppliedMaybe
            | _ -> ());
@@ -126,13 +126,16 @@ let rec collectExpr super self (e : Typedtree.expression) =
       ValueReferences.add locTo.loc_start Location.none.loc_start)
     else addValueReference ~addFileReference:true ~locFrom ~locTo
   | Texp_apply
-      ( {
-          exp_desc =
-            Texp_ident
-              (path, _, {Types.val_loc = {loc_ghost = false; _} as locTo});
-          exp_type;
-        },
-        args ) ->
+      {
+        funct =
+          {
+            exp_desc =
+              Texp_ident
+                (path, _, {Types.val_loc = {loc_ghost = false; _} as locTo});
+            exp_type;
+          };
+        args;
+      } ->
     args
     |> processOptionalArgs ~expType:exp_type
          ~locFrom:(locFrom : Location.t)
@@ -156,18 +159,19 @@ let rec collectExpr super self (e : Typedtree.expression) =
           exp_desc =
             Texp_function
               {
-                cases =
-                  [
-                    {
-                      c_lhs = {pat_desc = Tpat_var (etaArg, _)};
-                      c_rhs =
-                        {
-                          exp_desc =
-                            Texp_apply
-                              ({exp_desc = Texp_ident (idArg2, _, _)}, args);
-                        };
-                    };
-                  ];
+                case =
+                  {
+                    c_lhs = {pat_desc = Tpat_var (etaArg, _)};
+                    c_rhs =
+                      {
+                        exp_desc =
+                          Texp_apply
+                            {
+                              funct = {exp_desc = Texp_ident (idArg2, _, _)};
+                              args;
+                            };
+                      };
+                  };
               };
         } )
     when Ident.name idArg = "arg"
@@ -192,7 +196,7 @@ let rec collectExpr super self (e : Typedtree.expression) =
       DeadType.addTypeReference ~posTo ~posFrom:locFrom.loc_start
   | Texp_record {fields} ->
     fields
-    |> Array.iter (fun (_, record_label_definition) ->
+    |> Array.iter (fun (_, record_label_definition, _) ->
            match record_label_definition with
            | Typedtree.Overridden (_, ({exp_loc} as e)) when exp_loc.loc_ghost
              ->
@@ -219,7 +223,7 @@ let collectPattern : _ -> _ -> Typedtree.pattern -> Typedtree.pattern =
   (match pat.pat_desc with
   | Typedtree.Tpat_record (cases, _clodsedFlag) ->
     cases
-    |> List.iter (fun (_loc, {Types.lbl_loc = {loc_start = posTo}}, _pat) ->
+    |> List.iter (fun (_loc, {Types.lbl_loc = {loc_start = posTo}}, _pat, _) ->
            if !Config.analyzeTypes then
              DeadType.addTypeReference ~posFrom ~posTo)
   | _ -> ());

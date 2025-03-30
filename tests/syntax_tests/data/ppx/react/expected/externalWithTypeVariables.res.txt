@@ -1,17 +1,4 @@
-@@jsxConfig({version: 4, mode: "classic"})
-
-module V4C = {
-  @res.jsxComponentProps @live
-  type props<'x, 'children> = {
-    x: 'x,
-    children: 'children,
-  }
-
-  @module("c")
-  external make: React.componentLike<props<t<'a>, React.element>, React.element> = "component"
-}
-
-@@jsxConfig({version: 4, mode: "automatic"})
+@@jsxConfig({version: 4})
 
 module V4C = {
   @res.jsxComponentProps @live

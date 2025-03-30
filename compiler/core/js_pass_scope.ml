@@ -198,7 +198,8 @@ let record_scope_pass =
                   since it's in the loop
 
                   TODO: we should also
-              *) -> (
+              *)
+                -> (
                 match value with
                 | None ->
                   add_loop_mutable_variable state ident

@@ -37,7 +37,7 @@ external getUnsafe: t<'a> => 'a = "%identity"
 
 let getExn = f =>
   switch toOption(f) {
-  | None => Exn.raiseError("Js.Undefined.getExn")
+  | None => Stdlib_Exn.raiseError("Js.Undefined.getExn")
   | Some(x) => x
   }
 

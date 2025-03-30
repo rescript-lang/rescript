@@ -19,8 +19,6 @@ open Asttypes
 
 type loc_kind = Loc_FILE | Loc_LINE | Loc_MODULE | Loc_LOC | Loc_POS
 
-type record_repr = Record_regular | Record_optional
-
 type tag_info =
   | Blk_constructor of {
       name: string;
@@ -32,17 +30,15 @@ type tag_info =
       name: string;
       num_nonconst: int;
       tag: int;
-      optional_labels: string list;
-      fields: string array;
+      fields: (string * bool (* optional *)) array;
       mutable_flag: mutable_flag;
       attrs: Parsetree.attributes;
     }
   | Blk_tuple
   | Blk_poly_var of string
   | Blk_record of {
-      fields: string array;
+      fields: (string * bool (* optional *)) array;
       mutable_flag: mutable_flag;
-      record_repr: record_repr;
     }
   | Blk_module of string list
   | Blk_module_export of Ident.t list
@@ -67,21 +63,19 @@ val find_name : Parsetree.attribute -> Asttypes.label option
 val tag_of_tag_info : tag_info -> int
 val mutable_flag_of_tag_info : tag_info -> mutable_flag
 val blk_record :
-  (Types.label_description * Typedtree.record_label_definition) array ->
+  (Types.label_description * Typedtree.record_label_definition * bool) array ->
   mutable_flag ->
-  record_repr ->
   tag_info
 
 val blk_record_ext :
-  (Types.label_description * Typedtree.record_label_definition) array ->
+  (Types.label_description * Typedtree.record_label_definition * bool) array ->
   mutable_flag ->
   tag_info
 
 val blk_record_inlined :
-  (Types.label_description * Typedtree.record_label_definition) array ->
+  (Types.label_description * Typedtree.record_label_definition * bool) array ->
   string ->
   int ->
-  string list ->
   tag:int ->
   attrs:Parsetree.attributes ->
   mutable_flag ->
@@ -100,7 +94,6 @@ type field_dbg_info =
   | Fld_extension
   | Fld_variant
   | Fld_cons
-  | Fld_array
 
 val fld_record : Types.label_description -> field_dbg_info
 
@@ -124,7 +117,6 @@ val fld_record_inline_set : Types.label_description -> set_field_dbg_info
 val fld_record_extension_set : Types.label_description -> set_field_dbg_info
 
 type immediate_or_pointer = Immediate | Pointer
-type is_safe = Safe | Unsafe
 
 type pointer_info =
   | Pt_constructor of {
@@ -155,8 +147,6 @@ type primitive =
   | Pfield of int * field_dbg_info
   | Psetfield of int * set_field_dbg_info
   | Pduprecord
-  (* Force lazy values *)
-  | Plazyforce
   (* External call *)
   | Pccall of Primitive.description
   (* Exceptions *)
@@ -181,8 +171,9 @@ type primitive =
   | Paddint
   | Psubint
   | Pmulint
-  | Pdivint of is_safe
-  | Pmodint of is_safe
+  | Pdivint
+  | Pmodint
+  | Ppowint
   | Pandint
   | Porint
   | Pxorint
@@ -205,6 +196,7 @@ type primitive =
   | Psubfloat
   | Pmulfloat
   | Pdivfloat
+  | Ppowfloat
   | Pfloatcomp of comparison
   | Pfloatorder
   | Pfloatmin
@@ -282,19 +274,17 @@ type primitive =
   | Pjs_fn_make of int
   | Pjs_fn_make_unit
   | Pjs_fn_method
-  | Pjs_unsafe_downgrade
 
 and comparison = Ceq | Cneq | Clt | Cgt | Cle | Cge
 
 and value_kind = Pgenval
 
-and raise_kind = Raise_regular | Raise_reraise | Raise_notrace
+and raise_kind = Raise_regular | Raise_reraise
 
 type structured_constant =
   | Const_base of constant
   | Const_pointer of int * pointer_info
   | Const_block of tag_info * structured_constant list
-  | Const_float_array of string list
   | Const_immstring of string
   | Const_false
   | Const_true
@@ -392,7 +382,6 @@ val lambda_assert_false : lambda
 val lambda_unit : lambda
 val lambda_module_alias : lambda
 val name_lambda : let_kind -> lambda -> (Ident.t -> lambda) -> lambda
-val name_lambda_list : lambda list -> (lambda list -> lambda) -> lambda
 
 val iter : (lambda -> unit) -> lambda -> unit
 module IdentSet : Set.S with type elt = Ident.t
@@ -404,14 +393,8 @@ val transl_module_path : ?loc:Location.t -> Env.t -> Path.t -> lambda
 val transl_value_path : ?loc:Location.t -> Env.t -> Path.t -> lambda
 val transl_extension_path : ?loc:Location.t -> Env.t -> Path.t -> lambda
 
-val make_sequence : ('a -> lambda) -> 'a list -> lambda
-
 val subst_lambda : lambda Ident.tbl -> lambda -> lambda
-val map : (lambda -> lambda) -> lambda -> lambda
 val bind : let_kind -> Ident.t -> lambda -> lambda -> lambda
-
-val commute_comparison : comparison -> comparison
-val negate_comparison : comparison -> comparison
 
 val default_function_attribute : function_attribute
 
@@ -435,5 +418,3 @@ val patch_guarded : lambda -> lambda -> lambda
 
 val raise_kind : raise_kind -> string
 val lam_of_loc : loc_kind -> Location.t -> lambda
-
-val reset : unit -> unit

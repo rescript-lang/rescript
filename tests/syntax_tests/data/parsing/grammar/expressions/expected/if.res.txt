@@ -1,8 +1,8 @@
 ;;if foo then true else false
-;;if foo = 2 then let bar = 1 in let foo = 2 in bar + foo
+;;if foo == 2 then let bar = 1 in let foo = 2 in bar + foo
 let ifThenElse = if foo then lala else doStuff x y z
 let ifElseIfThen =
-  if foo = bar
+  if foo == bar
   then f ()
-  else if foo = bar2 then f1 () else if foo = bar3 then f2 () else f3 ()
+  else if foo == bar2 then f1 () else if foo == bar3 then f2 () else f3 ()
 let x = (if true then 1 else 2) + (if false then 2 else 3)

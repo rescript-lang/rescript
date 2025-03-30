@@ -5,5 +5,5 @@ module Error1 = {
 
 module MyErrorHandler = ErrorHandler.Make(Error1)
 
-MyErrorHandler.notify("abc")
+MyErrorHandler.notify("abc")->ignore
 

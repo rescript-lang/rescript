@@ -69,8 +69,6 @@ let structure_item sub {str_desc; str_env; _} =
   | Tstr_module mb -> sub.module_binding sub mb
   | Tstr_recmodule list -> List.iter (sub.module_binding sub) list
   | Tstr_modtype x -> sub.module_type_declaration sub x
-  | Tstr_class _ -> ()
-  | Tstr_class_type () -> ()
   | Tstr_include incl -> include_infos (sub.module_expr sub) incl
   | Tstr_open _ -> ()
   | Tstr_attribute _ -> ()
@@ -131,7 +129,7 @@ let pat sub {pat_extra; pat_desc; pat_env; _} =
   | Tpat_tuple l -> List.iter (sub.pat sub) l
   | Tpat_construct (_, _, l) -> List.iter (sub.pat sub) l
   | Tpat_variant (_, po, _) -> Option.iter (sub.pat sub) po
-  | Tpat_record (l, _) -> List.iter (fun (_, _, i) -> sub.pat sub i) l
+  | Tpat_record (l, _) -> List.iter (fun (_, _, i, _) -> sub.pat sub i) l
   | Tpat_array l -> List.iter (sub.pat sub) l
   | Tpat_or (p1, p2, _) ->
     sub.pat sub p1;
@@ -142,9 +140,8 @@ let pat sub {pat_extra; pat_desc; pat_env; _} =
 let expr sub {exp_extra; exp_desc; exp_env; _} =
   let extra = function
     | Texp_constraint cty -> sub.typ sub cty
-    | Texp_coerce ((), cty2) -> sub.typ sub cty2
+    | Texp_coerce cty2 -> sub.typ sub cty2
     | Texp_newtype _ -> ()
-    | Texp_poly cto -> Option.iter (sub.typ sub) cto
     | Texp_open (_, _, _, _) -> ()
   in
   List.iter (fun (e, _, _) -> extra e) exp_extra;
@@ -155,8 +152,8 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   | Texp_let (rec_flag, list, exp) ->
     sub.value_bindings sub (rec_flag, list);
     sub.expr sub exp
-  | Texp_function {cases; _} -> sub.cases sub cases
-  | Texp_apply (exp, list) ->
+  | Texp_function {case; _} -> sub.case sub case
+  | Texp_apply {funct = exp; args = list} ->
     sub.expr sub exp;
     List.iter (fun (_, o) -> Option.iter (sub.expr sub) o) list
   | Texp_match (exp, list1, list2, _) ->
@@ -172,8 +169,8 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   | Texp_record {fields; extended_expression; _} ->
     Array.iter
       (function
-        | _, Kept _ -> ()
-        | _, Overridden (_, exp) -> sub.expr sub exp)
+        | _, Kept _, _ -> ()
+        | _, Overridden (_, exp), _ -> sub.expr sub exp)
       fields;
     Option.iter (sub.expr sub) extended_expression
   | Texp_field (exp, _, _) -> sub.expr sub exp
@@ -198,10 +195,6 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   | Texp_send (exp, _, expo) ->
     sub.expr sub exp;
     Option.iter (sub.expr sub) expo
-  | Texp_new _ -> ()
-  | Texp_instvar _ -> ()
-  | Texp_setinstvar _ -> ()
-  | Texp_override _ -> ()
   | Texp_letmodule (_, _, mexpr, exp) ->
     sub.module_expr sub mexpr;
     sub.expr sub exp
@@ -210,9 +203,7 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
     sub.expr sub exp
   | Texp_assert exp -> sub.expr sub exp
   | Texp_lazy exp -> sub.expr sub exp
-  | Texp_object _ -> ()
   | Texp_pack mexpr -> sub.module_expr sub mexpr
-  | Texp_unreachable -> ()
   | Texp_extension_constructor _ -> ()
 
 let package_type sub {pack_fields; _} =
@@ -233,8 +224,6 @@ let signature_item sub {sig_desc; sig_env; _} =
   | Tsig_recmodule list -> List.iter (sub.module_declaration sub) list
   | Tsig_modtype x -> sub.module_type_declaration sub x
   | Tsig_include incl -> include_infos (sub.module_type sub) incl
-  | Tsig_class () -> ()
-  | Tsig_class_type () -> ()
   | Tsig_open _od -> ()
   | Tsig_attribute _ -> ()
 
@@ -297,13 +286,12 @@ let typ sub {ctyp_desc; ctyp_env; _} =
   match ctyp_desc with
   | Ttyp_any -> ()
   | Ttyp_var _ -> ()
-  | Ttyp_arrow (_, ct1, ct2) ->
+  | Ttyp_arrow (_, ct1, ct2, _) ->
     sub.typ sub ct1;
     sub.typ sub ct2
   | Ttyp_tuple list -> List.iter (sub.typ sub) list
   | Ttyp_constr (_, _, list) -> List.iter (sub.typ sub) list
   | Ttyp_object (list, _) -> List.iter (sub.object_field sub) list
-  | Ttyp_class () -> ()
   | Ttyp_alias (ct, _) -> sub.typ sub ct
   | Ttyp_variant (list, _, _) -> List.iter (sub.row_field sub) list
   | Ttyp_poly (_, ct) -> sub.typ sub ct

@@ -9,7 +9,7 @@ function length(l) {
   while (true) {
     let param = _param;
     let len = _len;
-    if (!param) {
+    if (param === 0) {
       return len;
     }
     _param = param.tl;
@@ -26,7 +26,7 @@ function cons(a, l) {
 }
 
 function hd(param) {
-  if (param) {
+  if (param !== 0) {
     return param.hd;
   } else {
     return Pervasives.failwith("hd");
@@ -34,7 +34,7 @@ function hd(param) {
 }
 
 function tl(param) {
-  if (param) {
+  if (param !== 0) {
     return param.tl;
   } else {
     return Pervasives.failwith("tl");
@@ -50,7 +50,7 @@ function nth(l, n) {
   while (true) {
     let n$1 = _n;
     let l$1 = _l;
-    if (!l$1) {
+    if (l$1 === 0) {
       return Pervasives.failwith("nth");
     }
     if (n$1 === 0) {
@@ -71,7 +71,7 @@ function nth_opt(l, n) {
   while (true) {
     let n$1 = _n;
     let l$1 = _l;
-    if (!l$1) {
+    if (l$1 === 0) {
       return;
     }
     if (n$1 === 0) {
@@ -87,7 +87,7 @@ function rev_append(_l1, _l2) {
   while (true) {
     let l2 = _l2;
     let l1 = _l1;
-    if (!l1) {
+    if (l1 === 0) {
       return l2;
     }
     _l2 = {
@@ -141,7 +141,7 @@ function init(len, f) {
 }
 
 function flatten(param) {
-  if (param) {
+  if (param !== 0) {
     return Pervasives.$at(param.hd, flatten(param.tl));
   } else {
     return /* [] */0;
@@ -149,7 +149,7 @@ function flatten(param) {
 }
 
 function map(f, param) {
-  if (!param) {
+  if (param === 0) {
     return /* [] */0;
   }
   let r = f(param.hd);
@@ -160,7 +160,7 @@ function map(f, param) {
 }
 
 function mapi(i, f, param) {
-  if (!param) {
+  if (param === 0) {
     return /* [] */0;
   }
   let r = f(i, param.hd);
@@ -180,7 +180,7 @@ function rev_map(f, l) {
   while (true) {
     let param = _param;
     let accu = _accu;
-    if (!param) {
+    if (param === 0) {
       return accu;
     }
     _param = param.tl;
@@ -195,7 +195,7 @@ function rev_map(f, l) {
 function iter(f, _param) {
   while (true) {
     let param = _param;
-    if (!param) {
+    if (param === 0) {
       return;
     }
     f(param.hd);
@@ -210,7 +210,7 @@ function iteri(f, l) {
   while (true) {
     let param = _param;
     let i = _i;
-    if (!param) {
+    if (param === 0) {
       return;
     }
     f(i, param.hd);
@@ -224,7 +224,7 @@ function fold_left(f, _accu, _l) {
   while (true) {
     let l = _l;
     let accu = _accu;
-    if (!l) {
+    if (l === 0) {
       return accu;
     }
     _l = l.tl;
@@ -234,7 +234,7 @@ function fold_left(f, _accu, _l) {
 }
 
 function fold_right(f, l, accu) {
-  if (l) {
+  if (l !== 0) {
     return f(l.hd, fold_right(f, l.tl, accu));
   } else {
     return accu;
@@ -242,14 +242,14 @@ function fold_right(f, l, accu) {
 }
 
 function map2(f, l1, l2) {
-  if (!l1) {
-    if (l2) {
+  if (l1 === 0) {
+    if (l2 !== 0) {
       return Pervasives.invalid_arg("List.map2");
     } else {
       return /* [] */0;
     }
   }
-  if (!l2) {
+  if (l2 === 0) {
     return Pervasives.invalid_arg("List.map2");
   }
   let r = f(l1.hd, l2.hd);
@@ -267,14 +267,14 @@ function rev_map2(f, l1, l2) {
     let l2$1 = _l2;
     let l1$1 = _l1;
     let accu = _accu;
-    if (!l1$1) {
-      if (l2$1) {
+    if (l1$1 === 0) {
+      if (l2$1 !== 0) {
         return Pervasives.invalid_arg("List.rev_map2");
       } else {
         return accu;
       }
     }
-    if (!l2$1) {
+    if (l2$1 === 0) {
       return Pervasives.invalid_arg("List.rev_map2");
     }
     _l2 = l2$1.tl;
@@ -291,14 +291,14 @@ function iter2(f, _l1, _l2) {
   while (true) {
     let l2 = _l2;
     let l1 = _l1;
-    if (!l1) {
-      if (l2) {
+    if (l1 === 0) {
+      if (l2 !== 0) {
         return Pervasives.invalid_arg("List.iter2");
       } else {
         return;
       }
     }
-    if (!l2) {
+    if (l2 === 0) {
       return Pervasives.invalid_arg("List.iter2");
     }
     f(l1.hd, l2.hd);
@@ -313,14 +313,14 @@ function fold_left2(f, _accu, _l1, _l2) {
     let l2 = _l2;
     let l1 = _l1;
     let accu = _accu;
-    if (!l1) {
-      if (l2) {
+    if (l1 === 0) {
+      if (l2 !== 0) {
         return Pervasives.invalid_arg("List.fold_left2");
       } else {
         return accu;
       }
     }
-    if (!l2) {
+    if (l2 === 0) {
       return Pervasives.invalid_arg("List.fold_left2");
     }
     _l2 = l2.tl;
@@ -331,13 +331,13 @@ function fold_left2(f, _accu, _l1, _l2) {
 }
 
 function fold_right2(f, l1, l2, accu) {
-  if (l1) {
-    if (l2) {
+  if (l1 !== 0) {
+    if (l2 !== 0) {
       return f(l1.hd, l2.hd, fold_right2(f, l1.tl, l2.tl, accu));
     } else {
       return Pervasives.invalid_arg("List.fold_right2");
     }
-  } else if (l2) {
+  } else if (l2 !== 0) {
     return Pervasives.invalid_arg("List.fold_right2");
   } else {
     return accu;
@@ -347,7 +347,7 @@ function fold_right2(f, l1, l2, accu) {
 function for_all(p, _param) {
   while (true) {
     let param = _param;
-    if (!param) {
+    if (param === 0) {
       return true;
     }
     if (!p(param.hd)) {
@@ -361,7 +361,7 @@ function for_all(p, _param) {
 function exists(p, _param) {
   while (true) {
     let param = _param;
-    if (!param) {
+    if (param === 0) {
       return false;
     }
     if (p(param.hd)) {
@@ -376,14 +376,14 @@ function for_all2(p, _l1, _l2) {
   while (true) {
     let l2 = _l2;
     let l1 = _l1;
-    if (!l1) {
-      if (l2) {
+    if (l1 === 0) {
+      if (l2 !== 0) {
         return Pervasives.invalid_arg("List.for_all2");
       } else {
         return true;
       }
     }
-    if (!l2) {
+    if (l2 === 0) {
       return Pervasives.invalid_arg("List.for_all2");
     }
     if (!p(l1.hd, l2.hd)) {
@@ -399,14 +399,14 @@ function exists2(p, _l1, _l2) {
   while (true) {
     let l2 = _l2;
     let l1 = _l1;
-    if (!l1) {
-      if (l2) {
+    if (l1 === 0) {
+      if (l2 !== 0) {
         return Pervasives.invalid_arg("List.exists2");
       } else {
         return false;
       }
     }
-    if (!l2) {
+    if (l2 === 0) {
       return Pervasives.invalid_arg("List.exists2");
     }
     if (p(l1.hd, l2.hd)) {
@@ -421,7 +421,7 @@ function exists2(p, _l1, _l2) {
 function mem(x, _param) {
   while (true) {
     let param = _param;
-    if (!param) {
+    if (param === 0) {
       return false;
     }
     if (param.hd === x) {
@@ -435,7 +435,7 @@ function mem(x, _param) {
 function memq(x, _param) {
   while (true) {
     let param = _param;
-    if (!param) {
+    if (param === 0) {
       return false;
     }
     if (param.hd === x) {
@@ -449,7 +449,7 @@ function memq(x, _param) {
 function assoc(x, _param) {
   while (true) {
     let param = _param;
-    if (param) {
+    if (param !== 0) {
       let match = param.hd;
       if (match[0] === x) {
         return match[1];
@@ -467,7 +467,7 @@ function assoc(x, _param) {
 function assoc_opt(x, _param) {
   while (true) {
     let param = _param;
-    if (!param) {
+    if (param === 0) {
       return;
     }
     let match = param.hd;
@@ -482,7 +482,7 @@ function assoc_opt(x, _param) {
 function assq(x, _param) {
   while (true) {
     let param = _param;
-    if (param) {
+    if (param !== 0) {
       let match = param.hd;
       if (match[0] === x) {
         return match[1];
@@ -500,7 +500,7 @@ function assq(x, _param) {
 function assq_opt(x, _param) {
   while (true) {
     let param = _param;
-    if (!param) {
+    if (param === 0) {
       return;
     }
     let match = param.hd;
@@ -515,7 +515,7 @@ function assq_opt(x, _param) {
 function mem_assoc(x, _param) {
   while (true) {
     let param = _param;
-    if (!param) {
+    if (param === 0) {
       return false;
     }
     if (param.hd[0] === x) {
@@ -529,7 +529,7 @@ function mem_assoc(x, _param) {
 function mem_assq(x, _param) {
   while (true) {
     let param = _param;
-    if (!param) {
+    if (param === 0) {
       return false;
     }
     if (param.hd[0] === x) {
@@ -541,7 +541,7 @@ function mem_assq(x, _param) {
 }
 
 function remove_assoc(x, param) {
-  if (!param) {
+  if (param === 0) {
     return /* [] */0;
   }
   let l = param.tl;
@@ -557,7 +557,7 @@ function remove_assoc(x, param) {
 }
 
 function remove_assq(x, param) {
-  if (!param) {
+  if (param === 0) {
     return /* [] */0;
   }
   let l = param.tl;
@@ -575,7 +575,7 @@ function remove_assq(x, param) {
 function find(p, _param) {
   while (true) {
     let param = _param;
-    if (param) {
+    if (param !== 0) {
       let x = param.hd;
       if (p(x)) {
         return x;
@@ -593,7 +593,7 @@ function find(p, _param) {
 function find_opt(p, _param) {
   while (true) {
     let param = _param;
-    if (!param) {
+    if (param === 0) {
       return;
     }
     let x = param.hd;
@@ -611,7 +611,7 @@ function find_all(p, l) {
   while (true) {
     let param = _param;
     let accu = _accu;
-    if (!param) {
+    if (param === 0) {
       return rev_append(accu, /* [] */0);
     }
     let l$1 = param.tl;
@@ -637,7 +637,7 @@ function partition(p, l) {
     let param = _param;
     let no = _no;
     let yes = _yes;
-    if (!param) {
+    if (param === 0) {
       return [
         rev_append(yes, /* [] */0),
         rev_append(no, /* [] */0)
@@ -663,7 +663,7 @@ function partition(p, l) {
 }
 
 function split(param) {
-  if (!param) {
+  if (param === 0) {
     return [
       /* [] */0,
       /* [] */0
@@ -684,8 +684,8 @@ function split(param) {
 }
 
 function combine(l1, l2) {
-  if (l1) {
-    if (l2) {
+  if (l1 !== 0) {
+    if (l2 !== 0) {
       return {
         hd: [
           l1.hd,
@@ -696,7 +696,7 @@ function combine(l1, l2) {
     } else {
       return Pervasives.invalid_arg("List.combine");
     }
-  } else if (l2) {
+  } else if (l2 !== 0) {
     return Pervasives.invalid_arg("List.combine");
   } else {
     return /* [] */0;
@@ -704,10 +704,10 @@ function combine(l1, l2) {
 }
 
 function merge(cmp, l1, l2) {
-  if (!l1) {
+  if (l1 === 0) {
     return l2;
   }
-  if (!l2) {
+  if (l2 === 0) {
     return l1;
   }
   let h2 = l2.hd;
@@ -732,7 +732,7 @@ function chop(_k, _l) {
     if (k === 0) {
       return l;
     }
-    if (l) {
+    if (l !== 0) {
       _l = l.tl;
       _k = k - 1 | 0;
       continue;
@@ -752,11 +752,11 @@ function chop(_k, _l) {
 function stable_sort(cmp, l) {
   let sort = (n, l) => {
     if (n !== 2) {
-      if (n === 3 && l) {
+      if (n === 3 && l !== 0) {
         let match = l.tl;
-        if (match) {
+        if (match !== 0) {
           let match$1 = match.tl;
-          if (match$1) {
+          if (match$1 !== 0) {
             let x3 = match$1.hd;
             let x2 = match.hd;
             let x1 = l.hd;
@@ -835,9 +835,9 @@ function stable_sort(cmp, l) {
         
       }
       
-    } else if (l) {
+    } else if (l !== 0) {
       let match$2 = l.tl;
-      if (match$2) {
+      if (match$2 !== 0) {
         let x2$1 = match$2.hd;
         let x1$1 = l.hd;
         if (cmp(x1$1, x2$1) <= 0) {
@@ -872,10 +872,10 @@ function stable_sort(cmp, l) {
       let accu = _accu;
       let l2$1 = _l2;
       let l1 = _l1;
-      if (!l1) {
+      if (l1 === 0) {
         return rev_append(l2$1, accu);
       }
-      if (!l2$1) {
+      if (l2$1 === 0) {
         return rev_append(l1, accu);
       }
       let h2 = l2$1.hd;
@@ -898,11 +898,11 @@ function stable_sort(cmp, l) {
   };
   let rev_sort = (n, l) => {
     if (n !== 2) {
-      if (n === 3 && l) {
+      if (n === 3 && l !== 0) {
         let match = l.tl;
-        if (match) {
+        if (match !== 0) {
           let match$1 = match.tl;
-          if (match$1) {
+          if (match$1 !== 0) {
             let x3 = match$1.hd;
             let x2 = match.hd;
             let x1 = l.hd;
@@ -981,9 +981,9 @@ function stable_sort(cmp, l) {
         
       }
       
-    } else if (l) {
+    } else if (l !== 0) {
       let match$2 = l.tl;
-      if (match$2) {
+      if (match$2 !== 0) {
         let x2$1 = match$2.hd;
         let x1$1 = l.hd;
         if (cmp(x1$1, x2$1) > 0) {
@@ -1018,10 +1018,10 @@ function stable_sort(cmp, l) {
       let accu = _accu;
       let l2$1 = _l2;
       let l1 = _l1;
-      if (!l1) {
+      if (l1 === 0) {
         return rev_append(l2$1, accu);
       }
-      if (!l2$1) {
+      if (l2$1 === 0) {
         return rev_append(l1, accu);
       }
       let h2 = l2$1.hd;
@@ -1053,11 +1053,11 @@ function stable_sort(cmp, l) {
 function sort_uniq(cmp, l) {
   let sort = (n, l) => {
     if (n !== 2) {
-      if (n === 3 && l) {
+      if (n === 3 && l !== 0) {
         let match = l.tl;
-        if (match) {
+        if (match !== 0) {
           let match$1 = match.tl;
-          if (match$1) {
+          if (match$1 !== 0) {
             let x3 = match$1.hd;
             let x2 = match.hd;
             let x1 = l.hd;
@@ -1203,9 +1203,9 @@ function sort_uniq(cmp, l) {
         
       }
       
-    } else if (l) {
+    } else if (l !== 0) {
       let match$2 = l.tl;
-      if (match$2) {
+      if (match$2 !== 0) {
         let x2$1 = match$2.hd;
         let x1$1 = l.hd;
         let c$6 = cmp(x1$1, x2$1);
@@ -1246,10 +1246,10 @@ function sort_uniq(cmp, l) {
       let accu = _accu;
       let l2$1 = _l2;
       let l1 = _l1;
-      if (!l1) {
+      if (l1 === 0) {
         return rev_append(l2$1, accu);
       }
-      if (!l2$1) {
+      if (l2$1 === 0) {
         return rev_append(l1, accu);
       }
       let t2 = l2$1.tl;
@@ -1284,11 +1284,11 @@ function sort_uniq(cmp, l) {
   };
   let rev_sort = (n, l) => {
     if (n !== 2) {
-      if (n === 3 && l) {
+      if (n === 3 && l !== 0) {
         let match = l.tl;
-        if (match) {
+        if (match !== 0) {
           let match$1 = match.tl;
-          if (match$1) {
+          if (match$1 !== 0) {
             let x3 = match$1.hd;
             let x2 = match.hd;
             let x1 = l.hd;
@@ -1434,9 +1434,9 @@ function sort_uniq(cmp, l) {
         
       }
       
-    } else if (l) {
+    } else if (l !== 0) {
       let match$2 = l.tl;
-      if (match$2) {
+      if (match$2 !== 0) {
         let x2$1 = match$2.hd;
         let x1$1 = l.hd;
         let c$6 = cmp(x1$1, x2$1);
@@ -1477,10 +1477,10 @@ function sort_uniq(cmp, l) {
       let accu = _accu;
       let l2$1 = _l2;
       let l1 = _l1;
-      if (!l1) {
+      if (l1 === 0) {
         return rev_append(l2$1, accu);
       }
-      if (!l2$1) {
+      if (l2$1 === 0) {
         return rev_append(l1, accu);
       }
       let t2 = l2$1.tl;
@@ -1525,14 +1525,14 @@ function compare_lengths(_l1, _l2) {
   while (true) {
     let l2 = _l2;
     let l1 = _l1;
-    if (!l1) {
-      if (l2) {
+    if (l1 === 0) {
+      if (l2 !== 0) {
         return -1;
       } else {
         return 0;
       }
     }
-    if (!l2) {
+    if (l2 === 0) {
       return 1;
     }
     _l2 = l2.tl;
@@ -1545,7 +1545,7 @@ function compare_length_with(_l, _n) {
   while (true) {
     let n = _n;
     let l = _l;
-    if (!l) {
+    if (l === 0) {
       if (n === 0) {
         return 0;
       } else if (n > 0) {

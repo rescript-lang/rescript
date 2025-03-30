@@ -1,7 +1,8 @@
 Complete src/TypeAtPosCompletion.res 7:17
 posCursor:[7:17] posNoWhite:[7:15] Found expr:[6:16->9:1]
 Completable: Cexpression CTypeAtPos()->recordBody
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
 [{
     "label": "age",
@@ -22,7 +23,8 @@ posCursor:[16:18] posNoWhite:[16:16] Found expr:[13:8->19:1]
 Pexp_construct One:[13:8->13:11] [13:11->19:1]
 posCursor:[16:18] posNoWhite:[16:16] Found expr:[15:2->18:3]
 Completable: Cexpression CTypeAtPos()->variantPayload::One($1), recordBody
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
 [{
     "label": "age",
@@ -41,7 +43,8 @@ ContextPath CTypeAtPos()
 Complete src/TypeAtPosCompletion.res 22:12
 posCursor:[22:12] posNoWhite:[22:11] Found expr:[21:10->24:1]
 Completable: Cexpression CTypeAtPos()->array
-Package opens Pervasives.JsxModules.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
 [{
     "label": "{}",

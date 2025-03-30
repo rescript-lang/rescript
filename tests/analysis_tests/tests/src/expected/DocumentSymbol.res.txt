@@ -14,7 +14,7 @@ DocumentSymbol src/DocumentSymbol.res
   "children": [
   {
     "name": "customDouble",
-    "kind": 13,
+    "kind": 12,
     "range": {"start": {"line": 6, "character": 2}, "end": {"line": 6, "character": 35}},
     "selectionRange": {"start": {"line": 6, "character": 2}, "end": {"line": 6, "character": 35}}
   }]
@@ -27,13 +27,13 @@ DocumentSymbol src/DocumentSymbol.res
   "children": [
   {
     "name": "foo",
-    "kind": 13,
+    "kind": 12,
     "range": {"start": {"line": 10, "character": 2}, "end": {"line": 10, "character": 54}},
     "selectionRange": {"start": {"line": 10, "character": 2}, "end": {"line": 10, "character": 54}}
   },
   {
     "name": "next",
-    "kind": 13,
+    "kind": 12,
     "range": {"start": {"line": 11, "character": 2}, "end": {"line": 11, "character": 48}},
     "selectionRange": {"start": {"line": 11, "character": 2}, "end": {"line": 11, "character": 48}}
   }]
@@ -58,13 +58,13 @@ DocumentSymbol src/DocumentSymbol.res
   },
   {
     "name": "abc",
-    "kind": 13,
+    "kind": 12,
     "range": {"start": {"line": 18, "character": 2}, "end": {"line": 18, "character": 32}},
     "selectionRange": {"start": {"line": 18, "character": 2}, "end": {"line": 18, "character": 32}}
   },
   {
     "name": "abd",
-    "kind": 13,
+    "kind": 12,
     "range": {"start": {"line": 19, "character": 2}, "end": {"line": 19, "character": 32}},
     "selectionRange": {"start": {"line": 19, "character": 2}, "end": {"line": 19, "character": 32}}
   }]
@@ -89,7 +89,7 @@ DocumentSymbol src/DocumentSymbol.res
     "children": [
     {
       "name": "make",
-      "kind": 13,
+      "kind": 12,
       "range": {"start": {"line": 26, "character": 4}, "end": {"line": 27, "character": 97}},
       "selectionRange": {"start": {"line": 26, "character": 4}, "end": {"line": 27, "character": 97}}
     }]

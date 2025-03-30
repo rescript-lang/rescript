@@ -1,0 +1,16 @@
+{
+  "name": "test",
+  "reanalyze": {
+    "analysis": ["dce"]
+  },
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ],
+  "bsc-flags": ["-w -33-44-8"],
+  "bs-dependencies": ["@rescript/react"],
+  "jsx": { "version": 4 },
+  "suffix": ".res.js"
+}

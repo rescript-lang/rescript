@@ -1,0 +1,24 @@
+let empty = React.jsx(React.jsxFragment, {})
+
+let fragmentWithBracedExpresssion = React.jsx(React.jsxFragment, {children: {React.int(1 + 2)}})
+
+let fragmentWithJSXElements = React.jsxs(
+  React.jsxFragment,
+  {
+    children: React.array([
+      ReactDOM.jsx("h1", {children: ?ReactDOM.someElement({React.string("Hi")})}),
+      ReactDOM.jsx("p", {children: ?ReactDOM.someElement({React.string("Hello")})}),
+    ]),
+  },
+)
+
+let nestedFragments = React.jsxs(
+  React.jsxFragment,
+  {
+    children: React.array([
+      ReactDOM.jsx("h1", {children: ?ReactDOM.someElement({React.string("Hi")})}),
+      ReactDOM.jsx("p", {children: ?ReactDOM.someElement({React.string("Hello")})}),
+      React.jsx(React.jsxFragment, {children: {React.string("Bye")}}),
+    ]),
+  },
+)

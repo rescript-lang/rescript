@@ -226,7 +226,8 @@ let command ~debug ~emitter ~path =
       Ast_iterator.default_iterator.pat iterator p
     | Ppat_record (cases, _) ->
       cases
-      |> List.iter (fun (label, _) -> emitter |> emitRecordLabel ~label ~debug);
+      |> List.iter (fun (label, _, _) ->
+             emitter |> emitRecordLabel ~label ~debug);
       Ast_iterator.default_iterator.pat iterator p
     | Ppat_construct (name, _) ->
       emitter |> emitVariant ~name ~debug;
@@ -246,7 +247,7 @@ let command ~debug ~emitter ~path =
                ~posEnd:(Some (Loc.end_ loc))
                ~lid ~debug;
       Ast_iterator.default_iterator.expr iterator e
-    | Pexp_apply ({pexp_desc = Pexp_ident lident; pexp_loc}, args)
+    | Pexp_apply {funct = {pexp_desc = Pexp_ident lident; pexp_loc}; args}
       when Res_parsetree_viewer.is_jsx_expression e ->
       (*
          Angled brackets:
@@ -265,7 +266,7 @@ let command ~debug ~emitter ~path =
 
       let posOfGreatherthanAfterProps =
         let rec loop = function
-          | (Asttypes.Labelled "children", {Parsetree.pexp_loc}) :: _ ->
+          | (Asttypes.Labelled {txt = "children"}, {Parsetree.pexp_loc}) :: _ ->
             Loc.start pexp_loc
           | _ :: args -> loop args
           | [] -> (* should not happen *) (-1, -1)
@@ -298,18 +299,21 @@ let command ~debug ~emitter ~path =
 
       args |> List.iter (fun (_lbl, arg) -> iterator.expr iterator arg)
     | Pexp_apply
-        ( {
-            pexp_desc =
-              Pexp_ident {txt = Longident.Lident (("<" | ">") as op); loc};
-          },
-          [_; _] ) ->
+        {
+          funct =
+            {
+              pexp_desc =
+                Pexp_ident {txt = Longident.Lident (("<" | ">") as op); loc};
+            };
+          args = [_; _];
+        } ->
       if debug then
         Printf.printf "Binary operator %s %s\n" op (Loc.toString loc);
       emitter |> emitFromLoc ~loc ~type_:Operator;
       Ast_iterator.default_iterator.expr iterator e
     | Pexp_record (cases, _) ->
       cases
-      |> List.filter_map (fun ((label : Longident.t Location.loc), _) ->
+      |> List.filter_map (fun ((label : Longident.t Location.loc), _, _) ->
              match label.txt with
              | Longident.Lident s when not (Utils.isFirstCharUppercase s) ->
                Some label

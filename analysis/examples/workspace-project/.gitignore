@@ -25,3 +25,5 @@ lib
 .merlin
 .bsb.lock
 /node_modules/
+package-lock.json
+yarn.lock

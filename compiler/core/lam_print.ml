@@ -82,7 +82,6 @@ let primitive ppf (prim : Lam_primitive.t) =
     let instr = "setfield " in
     fprintf ppf "%s%i" instr n
   | Pduprecord -> fprintf ppf "duprecord"
-  | Plazyforce -> fprintf ppf "force"
   | Pjs_call {prim_name} -> fprintf ppf "%s[js]" prim_name
   | Pjs_object_create _ -> fprintf ppf "[js.obj]"
   | Praise -> fprintf ppf "raise"
@@ -116,6 +115,7 @@ let primitive ppf (prim : Lam_primitive.t) =
   | Pmulint -> fprintf ppf "*"
   | Pdivint -> fprintf ppf "/"
   | Pmodint -> fprintf ppf "mod"
+  | Ppowint -> fprintf ppf "**"
   | Pandint -> fprintf ppf "and"
   | Porint -> fprintf ppf "or"
   | Pxorint -> fprintf ppf "xor"
@@ -141,6 +141,7 @@ let primitive ppf (prim : Lam_primitive.t) =
   | Pmulfloat -> fprintf ppf "*."
   | Pdivfloat -> fprintf ppf "/."
   | Pmodfloat -> fprintf ppf "mod"
+  | Ppowfloat -> fprintf ppf "**"
   | Pfloatcomp Ceq -> fprintf ppf "==."
   | Pfloatcomp Cneq -> fprintf ppf "!=."
   | Pfloatcomp Clt -> fprintf ppf "<."

@@ -237,7 +237,7 @@ let addForRecord ~env ~extra ~recordType items =
   | Tconstr (path, _args, _memo) ->
     let t = getTypeAtPath ~env path in
     items
-    |> List.iter (fun ({Asttypes.txt; loc}, _, _) ->
+    |> List.iter (fun ({Asttypes.txt; loc}, _, _, _) ->
            (* let name = Longident.last(txt); *)
            let name = handleConstructor txt in
            let nameLoc = Utils.endOfLocation loc (String.length name) in
@@ -394,9 +394,9 @@ let expr ~env ~(extra : extra) (iter : Tast_iterator.iterator)
   | Texp_record {fields} ->
     addForRecord ~env ~extra ~recordType:expression.exp_type
       (fields |> Array.to_list
-      |> Utils.filterMap (fun (desc, item) ->
+      |> Utils.filterMap (fun (desc, item, opt) ->
              match item with
-             | Typedtree.Overridden (loc, _) -> Some (loc, desc, ())
+             | Typedtree.Overridden (loc, _) -> Some (loc, desc, (), opt)
              | _ -> None))
   | Texp_constant constant ->
     addLocItem extra expression.exp_loc (Constant constant)

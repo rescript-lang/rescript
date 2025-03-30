@@ -60,8 +60,8 @@ let module_comment_to_attribute_token comment =
   Token.ModuleComment (loc, txt)
 
 (* Advance to the next non-comment token and store any encountered comment
-   * in the parser's state. Every comment contains the end position of its
-   * previous token to facilite comment interleaving *)
+ * in the parser's state. Every comment contains the end position of its
+ * previous token to facilite comment interleaving *)
 let rec next ?prev_end_pos p =
   if p.token = Eof then assert false;
   let prev_end_pos =

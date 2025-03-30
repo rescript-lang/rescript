@@ -259,6 +259,11 @@ You will need this decorator whenever you want to use a JSX component in ReScrip
 
 [Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#variadic-decorator).|};
       ] );
+    ( "editor.completeFrom",
+      None,
+      [
+        {|The `@editor.completeFrom` decorator instructs the editor where it can draw additional completions from for this type.|};
+      ] );
   ]
 
 let toplevel =

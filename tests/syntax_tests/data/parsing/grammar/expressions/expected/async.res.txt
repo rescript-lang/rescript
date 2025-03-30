@@ -1,41 +1,44 @@
-let greetUser =
-  ((Function$
-      ((fun userId ->
-          ((let name = ((getUserName userId)[@res.await ]) in
-            ({js|Hello |js} ^ name) ^ {js|!|js})
-          [@res.braces ]))
-      [@res.async ]))
-  [@res.arity 1])
-;;((Function$ ((fun () -> 123)[@res.async ]))[@res.arity 1])
-let fetch = ((Function$ ((fun url -> browserFetch url)[@res.async ]))
-  [@res.braces ][@res.arity 1])
+let greetUser async [arity:1]userId =
+  ((let name = ((getUserName userId)[@res.await ]) in
+    ({js|Hello |js} ++ name) ++ {js|!|js})
+  [@res.braces ])
+;;async fun [arity:1]() -> 123
+let fetch = ((async fun [arity:1]url -> browserFetch url)[@res.braces ])
 let fetch2 =
-  ((((Function$ (((fun url -> browserFetch url))[@res.async ]))
-    [@res.arity 1]);
-    ((Function$ (((fun url -> browserFetch2 url))[@res.async ]))
-    [@res.arity 1]))
+  (((async fun [arity:1]url -> browserFetch url);
+    (async fun [arity:1]url -> browserFetch2 url))
   [@res.braces ])
 let async =
   ((let f = async () in
-    () |.u async;
+    () -> async;
     async ();
     async.async;
     { async = (async.(async)) };
-    (result |.u async) |.u
-      (mapAsync ((Function$ (fun a -> doStuff a))[@res.arity 1])))
+    (result -> async) -> (mapAsync (fun [arity:1]a -> doStuff a)))
   [@res.braces ])
 let f =
   ((if isPositive
-    then ((Function$ ((fun a -> fun b -> (a + b : int))[@res.async ]))
-      [@res.arity 2])
-    else ((Function$ (((fun c -> fun d -> (c - d : int)))[@res.async ]))
-      [@res.arity 2]))
+    then async fun [arity:2]a -> fun b -> (a + b : int)
+    else (async fun [arity:2]c -> fun d -> (c - d : int)))
   [@res.ternary ])
-let foo = async ~a:((34)[@res.namedArgLoc ])
-let bar =
-  ((Function$ ((fun ~a:((a)[@res.namedArgLoc ]) -> a + 1)[@res.async ]))
-  [@res.arity 1])
+let foo = async ~a:34
+let bar async [arity:1]~a  = a + 1
 let ex1 = ((3)[@res.await ]) + ((4)[@res.await ])
 let ex2 = ((3)[@res.await ]) ** ((4)[@res.await ])
-let ex3 = ((foo |.u (bar ~arg:((arg)[@res.namedArgLoc ])))[@res.await ])
+let ex3 = ((foo -> (bar ~arg))[@res.await ])
 let ex4 = (((foo.bar).baz)[@res.await ])
+let attr1 = ((async fun [arity:1]x -> x + 1)[@a ])
+let attr2 = ((fun (type a) ->
+  async fun [arity:1]() -> fun (type b) -> fun (type c) ->
+    fun [arity:1]x -> 3)
+  [@a ])
+let attr3 = ((fun (type a) ->
+  fun [arity:1]() -> fun (type b) -> fun (type c) ->
+    async fun [arity:1]x -> 3)
+  [@a ])
+let attr4 = ((fun (type a) ->
+  fun [arity:1]() -> ((fun (type b) -> fun (type c) ->
+    async fun [arity:1]x -> 3)[@b ]))
+  [@a ])
+let (attr5 : int) = ((fun (type a) -> fun (type b) -> fun (type c) ->
+  async fun [arity:1]() -> fun [arity:1](x : a) -> x)[@a ][@b ])

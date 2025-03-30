@@ -2,7 +2,7 @@
 
 
 function f(x, y) {
-  return Math.imul(x, y);
+  return x * y | 0;
 }
 
 export {

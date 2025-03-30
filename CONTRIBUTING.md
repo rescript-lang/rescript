@@ -14,7 +14,8 @@ Happy hacking!
 
 > Most of our contributors are working on Apple machines, so all our instructions are currently macOS / Linux centric. Contributions for Windows development welcome!
 
-- [NodeJS v18](https://nodejs.org/)
+- [Node.js](https://nodejs.org/) v20.x
+- [Yarn CLI](https://yarnpkg.com/getting-started/install) (can be installed with `corepack`, Homebrew, etc)
 - C compiler toolchain (usually installed with `xcode` on Mac)
 - Python <= 3.11 (required to build ninja)
 - Rust toolchain (required to build rewatch; follow the instructions at https://www.rust-lang.org/tools/install)
@@ -47,7 +48,10 @@ Make sure you have [opam](https://opam.ocaml.org/doc/Install.html) installed on 
 opam init
 
 # Any recent OCaml version works as a development compiler
-opam switch create 5.2.0 # can also create local switch with opam switch create
+# Can also create local switch with opam switch create
+# If you get "No compiler matching `5.3.0' found" error,
+# then you need to run `opam update && opam upgrade` first
+opam switch create 5.3.0
 
 # Install dev dependencies from OPAM
 opam install . --deps-only --with-test --with-dev-setup -y
@@ -55,7 +59,7 @@ opam install . --deps-only --with-test --with-dev-setup -y
 
 #### npm install
 
-Run `npm install --ignore-scripts`. This will install the npm dependencies required for the build scripts.
+Run `yarn install`. This will install the npm dependencies required for the build scripts.
 
 ### B. Devcontainer
 
@@ -119,7 +123,19 @@ After adding a new file to the repository that should go into the npm package - 
 
 ```sh
 make lib # Build compiler and standard library
-./bsc myTestFile.res
+./cli/bsc myTestFile.res
+```
+
+To view the untyped tree of the file run:
+
+```sh
+./cli/bsc -dparsetree myTestFile.res
+```
+
+To view the typed tree of the file run:
+
+```sh
+./cli/bsc -dtypedtree myTestFile.res
 ```
 
 ### Project
@@ -214,13 +230,7 @@ This is usually the file you want to create to test certain compile behavior wit
 
 The "Playground bundle" is a JS version of the ReScript compiler; including all necessary dependency files (stdlib / belt etc). It is useful for building tools where you want to compile and execute arbitrary ReScript code in the browser.
 
-The ReScript source code is compiled with a tool called [JSOO (js_of_ocaml)](https://ocsigen.org/js_of_ocaml/4.0.0/manual/overview), which uses OCaml bytecode to compile to JavaScript and is part of the bigger OCaml ecosystem.
-
-Install `jsoo` via `opam`:
-
-```sh
-opam install js_of_ocaml.4.0.0
-```
+The ReScript source code is compiled with a tool called [JSOO (js_of_ocaml)](https://ocsigen.org/js_of_ocaml/latest/manual/overview), which uses OCaml bytecode to compile to JavaScript and is part of the bigger OCaml ecosystem.
 
 ### Building the Bundle
 
@@ -253,7 +263,7 @@ $ node
 
 ### Testing the Playground bundle
 
-Run `node playground/playground_test.js` for a quick sanity check to see if all the build artifacts are working together correctly. When releasing the playground bundle, the test will always be executed before publishing to catch regressions.
+Run `node playground/playground_test.cjs` for a quick sanity check to see if all the build artifacts are working together correctly. When releasing the playground bundle, the test will always be executed before publishing to catch regressions.
 
 ### Working on the Playground JS API
 
@@ -263,7 +273,7 @@ Whenever you are modifying any files in the ReScript compiler, or in the `jsoo_p
 make playground
 
 # optionally run your test / arbitrary node script to verify your changes
-node playground/playground_test.js
+node playground/playground_test.cjs
 ```
 
 ### Publishing the Playground Bundle on our KeyCDN

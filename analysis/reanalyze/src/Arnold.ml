@@ -534,7 +534,7 @@ module FindFunctionsCalled = struct
     let super = Tast_mapper.default in
     let expr (self : Tast_mapper.mapper) (e : Typedtree.expression) =
       (match e.exp_desc with
-      | Texp_apply ({exp_desc = Texp_ident (callee, _, _)}, _args) ->
+      | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)}} ->
         let functionName = Path.name callee in
         callees := !callees |> StringSet.add functionName
       | _ -> ());
@@ -545,7 +545,7 @@ module FindFunctionsCalled = struct
   let findCallees (expression : Typedtree.expression) =
     let isFunction =
       match expression.exp_desc with
-      | Texp_function _ -> true
+      | Texp_function {arity = None} -> true
       | _ -> false
     in
     let callees = ref StringSet.empty in
@@ -577,9 +577,12 @@ module ExtendFunctionTable = struct
         } ->
       Some (path, loc)
     | Some
-        {exp_desc = Texp_apply ({exp_desc = Texp_ident (path, {loc}, _)}, args)}
+        {
+          exp_desc =
+            Texp_apply {funct = {exp_desc = Texp_ident (path, {loc}, _)}; args};
+        }
       when kindOpt <> None ->
-      let checkArg ((argLabel : Asttypes.arg_label), _argOpt) =
+      let checkArg ((argLabel : Asttypes.Noloc.arg_label), _argOpt) =
         match (argLabel, kindOpt) with
         | (Labelled l | Optional l), Some kind ->
           kind |> List.for_all (fun {Kind.label} -> label <> l)
@@ -617,11 +620,11 @@ module ExtendFunctionTable = struct
                             calls a progress function"
                            functionName printPos id_pos;
                      })))
-      | Texp_apply ({exp_desc = Texp_ident (callee, _, _)}, args)
+      | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)}; args}
         when callee |> FunctionTable.isInFunctionInTable ~functionTable ->
         let functionName = Path.name callee in
         args
-        |> List.iter (fun ((argLabel : Asttypes.arg_label), argOpt) ->
+        |> List.iter (fun ((argLabel : Asttypes.Noloc.arg_label), argOpt) ->
                match (argLabel, argOpt |> extractLabelledArgument) with
                | Labelled label, Some (path, loc)
                  when path |> FunctionTable.isInFunctionInTable ~functionTable
@@ -665,10 +668,11 @@ module CheckExpressionWellFormed = struct
       | Texp_ident (path, {loc}, _) ->
         checkIdent ~path ~loc;
         e
-      | Texp_apply ({exp_desc = Texp_ident (functionPath, _, _)}, args) ->
+      | Texp_apply {funct = {exp_desc = Texp_ident (functionPath, _, _)}; args}
+        ->
         let functionName = Path.name functionPath in
         args
-        |> List.iter (fun ((argLabel : Asttypes.arg_label), argOpt) ->
+        |> List.iter (fun ((argLabel : Asttypes.Noloc.arg_label), argOpt) ->
                match argOpt |> ExtendFunctionTable.extractLabelledArgument with
                | Some (path, loc) -> (
                  match argLabel with
@@ -739,8 +743,10 @@ module Compile = struct
     match expr.exp_desc with
     | Texp_ident _ -> Command.nothing
     | Texp_apply
-        (({exp_desc = Texp_ident (calleeToRename, l, vd)} as expr), argsToExtend)
-      -> (
+        {
+          funct = {exp_desc = Texp_ident (calleeToRename, l, vd)} as expr;
+          args = argsToExtend;
+        } -> (
       let callee, args =
         match
           Hashtbl.find_opt ctx.innerRecursiveFunctions
@@ -755,7 +761,7 @@ module Compile = struct
           let argsFromKind =
             innerFunctionDefinition.kind
             |> List.map (fun (entry : Kind.entry) ->
-                   ( Asttypes.Labelled entry.label,
+                   ( Asttypes.Noloc.Labelled entry.label,
                      Some
                        {
                          expr with
@@ -779,7 +785,7 @@ module Compile = struct
             args
             |> List.find_opt (fun arg ->
                    match arg with
-                   | Asttypes.Labelled s, Some _ -> s = label
+                   | Asttypes.Noloc.Labelled s, Some _ -> s = label
                    | _ -> false)
           in
           let argOpt =
@@ -844,7 +850,8 @@ module Compile = struct
              and create a function call with the appropriate arguments *)
           assert false
         | None -> expr |> expression ~ctx |> evalArgs ~args ~ctx)
-    | Texp_apply (expr, args) -> expr |> expression ~ctx |> evalArgs ~args ~ctx
+    | Texp_apply {funct = expr; args} ->
+      expr |> expression ~ctx |> evalArgs ~args ~ctx
     | Texp_let
         ( Recursive,
           [{vb_pat = {pat_desc = Tpat_var (id, _); pat_loc}; vb_expr}],
@@ -908,7 +915,7 @@ module Compile = struct
         let open Command in
         c +++ ConstrOption Rnone
       | _ -> c)
-    | Texp_function {cases} -> cases |> List.map (case ~ctx) |> Command.nondet
+    | Texp_function {case = case_} -> case ~ctx case_
     | Texp_match (e, casesOk, casesExn, _partial)
       when not
              (casesExn
@@ -947,7 +954,8 @@ module Compile = struct
          |> List.map
               (fun
                 ( _desc,
-                  (recordLabelDefinition : Typedtree.record_label_definition) )
+                  (recordLabelDefinition : Typedtree.record_label_definition),
+                  _ )
               ->
                 match recordLabelDefinition with
                 | Kept _typeExpr -> None
@@ -974,18 +982,6 @@ module Compile = struct
     | Texp_send _ ->
       notImplemented "Texp_send";
       assert false
-    | Texp_new _ ->
-      notImplemented "Texp_new";
-      assert false
-    | Texp_instvar _ ->
-      notImplemented "Texp_instvar";
-      assert false
-    | Texp_setinstvar _ ->
-      notImplemented "Texp_setinstvar";
-      assert false
-    | Texp_override _ ->
-      notImplemented "Texp_override";
-      assert false
     | Texp_letmodule _ ->
       notImplemented "Texp_letmodule";
       assert false
@@ -995,14 +991,8 @@ module Compile = struct
     | Texp_lazy _ ->
       notImplemented "Texp_lazy";
       assert false
-    | Texp_object _ ->
-      notImplemented "Texp_letmodule";
-      assert false
     | Texp_pack _ ->
       notImplemented "Texp_pack";
-      assert false
-    | Texp_unreachable ->
-      notImplemented "Texp_unreachable";
       assert false
     | Texp_extension_constructor _ when true ->
       notImplemented "Texp_extension_constructor";

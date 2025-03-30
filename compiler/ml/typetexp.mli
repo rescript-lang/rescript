@@ -19,8 +19,6 @@ open Types
 
 val transl_simple_type :
   Env.t -> bool -> Parsetree.core_type -> Typedtree.core_type
-val transl_simple_type_univars :
-  Env.t -> Parsetree.core_type -> Typedtree.core_type
 val transl_simple_type_delayed :
   Env.t -> Parsetree.core_type -> Typedtree.core_type * (unit -> unit)
 (* Translate a type, but leave type variables unbound. Returns
@@ -28,7 +26,6 @@ val transl_simple_type_delayed :
 
 val transl_type_scheme : Env.t -> Parsetree.core_type -> Typedtree.core_type
 val reset_type_variables : unit -> unit
-val type_variable : Location.t -> string -> type_expr
 val transl_type_param : Env.t -> Parsetree.core_type -> Typedtree.core_type
 
 type variable_context
@@ -42,9 +39,6 @@ type error =
   | Unbound_type_constructor of Longident.t
   | Unbound_type_constructor_2 of Path.t
   | Type_arity_mismatch of Longident.t * int * int
-  | Bound_type_variable of string
-  | Recursive_type
-  | Unbound_row_variable of Longident.t
   | Type_mismatch of (type_expr * type_expr) list
   | Alias_type_mismatch of (type_expr * type_expr) list
   | Present_has_conjunction of string
@@ -80,11 +74,6 @@ val transl_modtype_longident :
 val transl_modtype :
   (* from Typemod *)
   (Env.t -> Parsetree.module_type -> Typedtree.module_type) ref
-val create_package_mty :
-  Location.t ->
-  Env.t ->
-  Parsetree.package_type ->
-  (Longident.t Asttypes.loc * Parsetree.core_type) list * Parsetree.module_type
 
 val find_type : Env.t -> Location.t -> Longident.t -> Path.t * type_declaration
 val find_constructor :
@@ -94,7 +83,6 @@ val find_all_constructors :
   Location.t ->
   Longident.t ->
   (constructor_description * (unit -> unit)) list
-val find_label : Env.t -> Location.t -> Longident.t -> label_description
 val find_all_labels :
   Env.t ->
   Location.t ->
@@ -110,14 +98,3 @@ val find_modtype :
 
 val unbound_constructor_error : Env.t -> Longident.t Location.loc -> 'a
 val unbound_label_error : Env.t -> Longident.t Location.loc -> 'a
-
-val spellcheck :
-  Format.formatter ->
-  (('a -> 'a list -> 'a list) ->
-  Longident.t option ->
-  'b ->
-  'c list ->
-  string list) ->
-  'b ->
-  Longident.t ->
-  unit
