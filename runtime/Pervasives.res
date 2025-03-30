@@ -38,7 +38,10 @@ external throw: exn => 'a = "%raise"
 
 /* Composition operators */
 
+@deprecated("This will be removed in v13")
 external \"|>": ('a, 'a => 'b) => 'b = "%revapply"
+
+@deprecated("This will be removed in v13")
 external \"@@": ('a => 'b, 'a) => 'b = "%apply"
 
 /* Debugging */
@@ -92,7 +95,10 @@ external \"||": (bool, bool) => bool = "%sequor"
 
 /* Integer operations */
 
+@deprecated("Use `x => x + 1` instead. This will be removed in v13")
 external succ: int => int = "%succint"
+
+@deprecated("Use `x => x - 1` instead. This will be removed in v13")
 external pred: int => int = "%predint"
 
 @deprecated("Use `Math.abs` instead. This will be removed in v13")
@@ -103,14 +109,25 @@ let abs = x =>
     -x
   }
 
+@deprecated("Use `Int.bitwiseAnd` instead. This will be removed in v13")
 external land: (int, int) => int = "%andint"
+
+@deprecated("Use `Int.bitwiseOr` instead. This will be removed in v13")
 external lor: (int, int) => int = "%orint"
+
+@deprecated("Use `Int.bitwiseXor` instead. This will be removed in v13")
 external lxor: (int, int) => int = "%xorint"
 
+@deprecated("Use `Int.bitwiseNot` instead. This will be removed in v13")
 let lnot = x => lxor(x, -1)
 
+@deprecated("Use `Int.shiftLeft` instead. This will be removed in v13")
 external lsl: (int, int) => int = "%lslint"
+
+@deprecated("Use `Int.shiftRightUnsigned` instead. This will be removed in v13")
 external lsr: (int, int) => int = "%lsrint"
+
+@deprecated("Use `Int.shiftRight` instead. This will be removed in v13")
 external asr: (int, int) => int = "%asrint"
 
 @deprecated("Use `Int.Constants.maxValue` instead. This will be removed in v13")
@@ -310,6 +327,7 @@ external string_of_int: int => string = "String"
 @deprecated("Use `Int.fromString` instead. This will be removed in v13") @scope("Number")
 external int_of_string: string => int = "parseInt"
 
+@deprecated("Use `Int.fromString` instead. This will be removed in v13")
 let int_of_string_opt = s =>
   switch int_of_string(s) {
   | n if n == %raw("NaN") => None
@@ -330,4 +348,5 @@ let rec \"@" = (l1, l2) =>
 
 /* Miscellaneous */
 
+@deprecated("This will be removed in v13")
 type int32 = int
