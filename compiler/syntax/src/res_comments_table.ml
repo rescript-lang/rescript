@@ -498,20 +498,6 @@ let get_loc node =
   | TypeDeclaration td -> td.ptype_loc
   | ValueBinding vb -> vb.pvb_loc
 
-let get_jsx_prop_loc = function
-  | Parsetree.JSXPropPunning (_, name) -> name.loc
-  | Parsetree.JSXPropValue (name, _, value) ->
-    {name.loc with loc_end = value.pexp_loc.loc_end}
-  | Parsetree.JSXPropSpreading (dots, expr) ->
-    {dots with loc_end = expr.pexp_loc.loc_end}
-
-let closing_tag_loc (tag : Parsetree.jsx_closing_container_tag) =
-  {
-    tag.jsx_closing_container_tag_name.loc with
-    loc_start = tag.jsx_closing_container_tag_start;
-    loc_end = tag.jsx_closing_container_tag_end;
-  }
-
 let rec walk_structure s t comments =
   match s with
   | _ when comments = [] -> ()
@@ -1643,7 +1629,7 @@ and walk_expression expr t comments =
       let next_token =
         match props with
         | [] -> opening_greater_than_loc
-        | head :: _ -> get_jsx_prop_loc head
+        | head :: _ -> ParsetreeViewer.get_jsx_prop_loc head
       in
       partition_adjacent_trailing_before_next_token tag_name_start.loc
         next_token comments
@@ -1669,10 +1655,12 @@ and walk_expression expr t comments =
           partition_by_on_same_line opening_greater_than_loc rest
         in
         attach t.trailing opening_greater_than_loc after_opening_greater_than;
+        (* attach everything else that came before the closing tag to the closing tag *)
+        let closing_tag_loc = ParsetreeViewer.closing_tag_loc closing_tag in
         let before_closing_tag, rest =
-          partition_leading_trailing rest (closing_tag_loc closing_tag)
+          partition_leading_trailing rest closing_tag_loc
         in
-        attach t.leading (closing_tag_loc closing_tag) before_closing_tag;
+        attach t.leading closing_tag_loc before_closing_tag;
         rest
       | _ -> rest
     in

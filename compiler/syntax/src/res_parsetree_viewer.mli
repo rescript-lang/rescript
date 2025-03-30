@@ -155,3 +155,7 @@ val is_rewritten_underscore_apply_sugar : Parsetree.expression -> bool
 val is_fun_newtype : Parsetree.expression -> bool
 
 val is_tuple_array : Parsetree.expression -> bool
+
+val get_jsx_prop_loc : Parsetree.jsx_prop -> Warnings.loc
+
+val closing_tag_loc : Parsetree.jsx_closing_container_tag -> Warnings.loc

@@ -739,3 +739,17 @@ let is_tuple_array (expr : Parsetree.expression) =
   match expr with
   | {pexp_desc = Pexp_array items} -> List.for_all is_plain_tuple items
   | _ -> false
+
+let get_jsx_prop_loc = function
+  | Parsetree.JSXPropPunning (_, name) -> name.loc
+  | Parsetree.JSXPropValue (name, _, value) ->
+    {name.loc with loc_end = value.pexp_loc.loc_end}
+  | Parsetree.JSXPropSpreading (dots, expr) ->
+    {dots with loc_end = expr.pexp_loc.loc_end}
+
+let closing_tag_loc (tag : Parsetree.jsx_closing_container_tag) =
+  {
+    tag.jsx_closing_container_tag_name.loc with
+    loc_start = tag.jsx_closing_container_tag_start;
+    loc_end = tag.jsx_closing_container_tag_end;
+  }
