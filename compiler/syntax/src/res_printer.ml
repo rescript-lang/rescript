@@ -50,6 +50,11 @@ let has_leading_line_comment tbl loc =
   | Some comment -> Comment.is_single_line_comment comment
   | None -> false
 
+let has_trailing_single_line_comment tbl loc =
+  match Hashtbl.find_opt tbl.CommentTable.trailing loc with
+  | Some (comment :: _) -> Comment.is_single_line_comment comment
+  | _ -> false
+
 let has_comment_below tbl loc =
   match Hashtbl.find tbl.CommentTable.trailing loc with
   | comment :: _ ->
@@ -4419,16 +4424,32 @@ and print_jsx_container_tag ~state tag_name
     (closing_tag : Parsetree.jsx_closing_container_tag option)
     (pexp_loc : Location.t) cmt_tbl =
   let name = print_jsx_name tag_name in
-  let opening_greater_than_doc =
-    let open Warnings in
-    let opening_greater_than_loc =
-      {
-        loc_start = opening_greater_than;
-        loc_end = opening_greater_than;
-        loc_ghost = false;
-      }
+  let last_prop_has_comment_after =
+    let rec visit props =
+      match props with
+      | [] -> None
+      | [x] -> Some x
+      | _ :: xs -> visit xs
     in
-    print_comments Doc.greater_than cmt_tbl opening_greater_than_loc
+    let last_prop = visit props in
+    match last_prop with
+    | None -> false
+    | Some last_prop ->
+      has_trailing_comments cmt_tbl (ParsetreeViewer.get_jsx_prop_loc last_prop)
+  in
+  let opening_greater_than_loc =
+    {
+      Warnings.loc_start = opening_greater_than;
+      loc_end = opening_greater_than;
+      loc_ghost = false;
+    }
+  in
+  let opening_greater_than_has_leading_comments, opening_greater_than_doc =
+    let has_leading_comments =
+      has_leading_comments cmt_tbl opening_greater_than_loc
+    in
+    ( has_leading_comments,
+      print_comments Doc.greater_than cmt_tbl opening_greater_than_loc )
   in
   let formatted_props = print_jsx_props ~state props cmt_tbl in
   (* <div className="test" /> *)
@@ -4493,14 +4514,40 @@ and print_jsx_container_tag ~state tag_name
                           Doc.line;
                           Doc.group (Doc.join formatted_props ~sep:Doc.line);
                         ]));
-                (* if tag A has trailing comments then put > on the next line
-                <A
-                // comments
+                (* 
+                if the element name has a single comment on the same line
+
+                <A // foo
                 >
                 </A>
-             *)
-                (if has_trailing_comments cmt_tbl tag_name.Asttypes.loc then
-                   Doc.concat [Doc.soft_line; opening_greater_than_doc]
+
+                We need to force a newline.
+               *)
+                (if
+                   has_trailing_single_line_comment cmt_tbl
+                     tag_name.Asttypes.loc
+                 then Doc.concat [Doc.hard_line; opening_greater_than_doc]
+                   (*
+                  if the last prop has trailing comment
+
+                  <A
+                    prop=value
+                    // comments
+                  >
+                  </A>
+
+                  or there are leading comments before `>`
+
+                  <A
+                    // comments
+                  >
+
+                  then put > on the next line
+                 *)
+                 else if
+                   last_prop_has_comment_after
+                   || opening_greater_than_has_leading_comments
+                 then Doc.concat [Doc.soft_line; opening_greater_than_doc]
                  else opening_greater_than_doc);
               ]);
          Doc.concat

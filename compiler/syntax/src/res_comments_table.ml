@@ -246,7 +246,7 @@ let partition_adjacent_trailing_before_next_token_on_same_line
         (* comment after loc *)
         && cmt_loc.loc_start.pos_cnum > loc.loc_end.pos_cnum
         (* comment before next_token *)
-        && cmt_loc.loc_end.pos_cnum < next_token.loc_start.pos_cnum
+        && cmt_loc.loc_end.pos_cnum <= next_token.loc_start.pos_cnum
       then loop (comment :: after_loc) rest
       else (List.rev after_loc, comments)
   in
