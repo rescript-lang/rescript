@@ -333,7 +333,9 @@ module App = {
   amount={
     // ->BN.new_("86400")
     // There are 86400 seconds in a day.
-    amount->BN.div(BN.new_("86400"))->BN.toString
+    amount
+    ->BN.div(BN.new_("86400"))
+    ->BN.toString
   }
 />
 
@@ -351,7 +353,6 @@ module App = {
     // comment
     content
   }
-
   {
     // comment
     if condition() {
@@ -472,7 +473,6 @@ let x =
       world()
       world()
     }
-
     {
       hello()
       hello()
@@ -489,7 +489,6 @@ let x =
         ()
       }}
     />
-
     // Comment 2
 
     <span
@@ -505,7 +504,6 @@ let x =
           ()
         }}
       />
-
       // Comment
       <span
         id="2-2"
@@ -514,7 +512,6 @@ let x =
           ()
         }}
       />
-
       <span id="2-3" />
     </span>
     <span

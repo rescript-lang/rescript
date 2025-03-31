@@ -56,13 +56,9 @@
 
   I'm not sure what to parse here when looking at ".".
 
-let x = ((di-v ~children:[] ())[@JSX ])
-let x = ((Unclosed.createElement ~children:[] ())[@JSX ])
-let x =
-  ((Foo.Bar.createElement ~children:[] ())[@JSX ]) > ([%rescript.exprhole ])
-let x =
-  ((Foo.Bar.Baz.createElement ~children:[] ())[@JSX ]) >
-    ([%rescript.exprhole ])
-let x =
-  ((Foo.bar.createElement ~children:[] ())[@JSX ]) > ([%rescript.exprhole ])
-let x = ((Foo.bar.createElement ~baz ~children:[] ())[@JSX ])
+let x = <di-v />
+let x = <Unclosed></Unclosed>
+let x = <Foo.Bar></Foo.Bar> > ([%rescript.exprhole ])
+let x = <Foo.Bar.Baz></Foo.Bar.Baz> > ([%rescript.exprhole ])
+let x = <Foo.bar></Foo.bar> > ([%rescript.exprhole ])
+let x = <Foo.bar baz />
