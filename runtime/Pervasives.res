@@ -293,9 +293,15 @@ external snd: (('a, 'b)) => 'b = "%field1"
 
 type ref<'a> = {mutable contents: 'a}
 external ref: 'a => ref<'a> = "%makeref"
-external \"!": ref<'a> => 'a = "%refget"
 external \":=": (ref<'a>, 'a) => unit = "%refset"
+
+@deprecated("Do not use. This will be removed in v13")
+external \"!": ref<'a> => 'a = "%refget"
+
+@deprecated("Use `Int.Ref.increment` instead. This will be removed in v13")
 external incr: ref<int> => unit = "%incr"
+
+@deprecated("Use `Int.Ref.decrement` instead. This will be removed in v13")
 external decr: ref<int> => unit = "%decr"
 
 /* String conversion functions */
