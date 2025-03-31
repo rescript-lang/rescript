@@ -47,6 +47,8 @@ external __LOC__: string = "%loc_LOC"
 external __FILE__: string = "%loc_FILE"
 external __LINE__: int = "%loc_LINE"
 external __MODULE__: string = "%loc_MODULE"
+external __SOURCE_LOC_VALUE_PATH__: sourceLocValuePath = "%loc_SOURCE_LOC_VALUE_PATH"
+external __SOURCE_LOC_POS__: sourceLocPos = "%loc_SOURCE_LOC_POS"
 external __POS__: (string, int, int, int) = "%loc_POS"
 
 external __LOC_OF__: 'a => (string, 'a) = "%loc_LOC"

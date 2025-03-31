@@ -51,6 +51,10 @@ and ident_result = ident_create "result"
 
 and ident_dict = ident_create "dict"
 
+and ident_source_loc_pos = ident_create "sourceLocPos"
+
+and ident_source_loc_value_path = ident_create "sourceLocValuePath"
+
 and ident_bigint = ident_create "bigint"
 
 and ident_lazy_t = ident_create "lazy_t"
@@ -97,6 +101,10 @@ and path_option = Pident ident_option
 and path_result = Pident ident_result
 
 and path_dict = Pident ident_dict
+
+and path_source_loc_pos = Pident ident_source_loc_pos
+
+and path_source_loc_value_path = Pident ident_source_loc_value_path
 
 and path_bigint = Pident ident_bigint
 
@@ -403,6 +411,8 @@ let common_initial_env add_type add_extension empty_env =
   |> add_type ident_array decl_array
   |> add_type ident_list decl_list
   |> add_type ident_dict decl_dict
+  |> add_type ident_source_loc_pos decl_abstr
+  |> add_type ident_source_loc_value_path decl_abstr
   |> add_type ident_unknown decl_unknown
   |> add_exception ident_undefined_recursive_module
        [newgenty (Ttuple [type_string; type_int; type_int])]
