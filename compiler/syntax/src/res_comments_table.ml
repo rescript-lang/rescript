@@ -252,6 +252,47 @@ let partition_adjacent_trailing_before_next_token_on_same_line
   in
   loop [] comments
 
+(* Extracts comments that appear between two specified line numbers in a source file.
+ *
+ * This function is particularly useful for handling comments that should be preserved
+ * between two syntax elements that appear on different lines, such as comments between
+ * opening and closing tags in JSX elements.
+ *
+ * For example, given code:
+ *   <div>
+ *     // comment 1
+ *     // comment 2
+ *   </div>
+ *
+ * When calling partition_between_lines with the line numbers of the opening and closing tags:
+ * - between_comments: [comment 1, comment 2]
+ * - rest: any comments that appear before or after the specified lines
+ *
+ * Parameters:
+ * - start_line: the line number after which to start collecting comments
+ * - end_line: the line number before which to stop collecting comments
+ * - comments: list of comments to partition
+ *
+ * Returns: (between_comments, rest) where between_comments contains all comments
+ * entirely between the start_line and end_line, and rest contains all other comments.
+ *)
+let partition_between_lines start_line end_line comments =
+  let open Location in
+  let open Lexing in
+  let rec loop between_comments comments =
+    match comments with
+    | [] -> (List.rev between_comments, [])
+    | comment :: rest ->
+      (* Check if the comment is between the start_line and end_line *)
+      let cmt_loc = Comment.loc comment in
+      if
+        cmt_loc.loc_start.pos_lnum > start_line
+        && cmt_loc.loc_end.pos_lnum < end_line
+      then loop (comment :: between_comments) rest
+      else (List.rev between_comments, comments)
+  in
+  loop [] comments
+
 let rec collect_list_patterns acc pattern =
   let open Parsetree in
   match pattern.ppat_desc with
@@ -1702,7 +1743,27 @@ and walk_expression expr t comments =
         let closing_tag_loc =
           ParsetreeViewer.container_element_closing_tag_loc closing_tag
         in
-        attach t.leading closing_tag_loc comments_for_children)
+        if
+          opening_greater_than_loc.loc_end.pos_lnum
+          < closing_tag_loc.loc_start.pos_lnum + 1
+        then (
+          (* In this case, there are no children but there are comments between the opening and closing tag,
+             We can attach these the inside table, to easily print them later as indented comments
+             For example:
+             <div>
+                // comment 1
+                // comment 2
+            </div>
+          *)
+          let inside_comments, leading_for_closing_tag =
+            partition_between_lines opening_greater_than_loc.loc_end.pos_lnum
+              closing_tag_loc.loc_start.pos_lnum comments_for_children
+          in
+          attach t.inside expr.pexp_loc inside_comments;
+          attach t.leading closing_tag_loc leading_for_closing_tag)
+        else
+          (* if the closing tag is on the same line, attach comments to the opening tag *)
+          attach t.leading closing_tag_loc comments_for_children)
     | children ->
       let children_nodes =
         match children with

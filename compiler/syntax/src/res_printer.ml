@@ -2851,9 +2851,10 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
              jsx_container_element_opening_tag_end = opening_greater_than;
              jsx_container_element_props = props;
              jsx_container_element_children = children;
+             jsx_container_element_closing_tag = closing_tag;
            }) ->
       print_jsx_container_tag ~state tag_name opening_greater_than props
-        children e.pexp_loc cmt_tbl
+        children closing_tag e.pexp_loc cmt_tbl
     | Pexp_construct ({txt = Longident.Lident "()"}, _) -> Doc.text "()"
     | Pexp_construct ({txt = Longident.Lident "[]"}, _) ->
       Doc.concat
@@ -4414,7 +4415,9 @@ and print_jsx_unary_tag ~state tag_name props expr_loc cmt_tbl =
 
 and print_jsx_container_tag ~state tag_name
     (opening_greater_than : Lexing.position) props
-    (children : Parsetree.jsx_children) (pexp_loc : Location.t) cmt_tbl =
+    (children : Parsetree.jsx_children)
+    (closing_tag : Parsetree.jsx_closing_container_tag option)
+    (pexp_loc : Location.t) cmt_tbl =
   let name = print_jsx_name tag_name in
   let opening_greater_than_doc =
     let loc = {pexp_loc with loc_end = opening_greater_than} in
@@ -4453,6 +4456,19 @@ and print_jsx_container_tag ~state tag_name
       ]
   in
 
+  (* comments between the opening and closing tag *)
+  let has_comments_inside = has_comments_inside cmt_tbl pexp_loc in
+  let closing_element_doc =
+    match closing_tag with
+    | None -> Doc.nil
+    | Some closing_tag ->
+      let closing_tag_loc =
+        ParsetreeViewer.container_element_closing_tag_loc closing_tag
+      in
+      print_comments
+        (Doc.concat [Doc.text "</"; name; Doc.greater_than])
+        cmt_tbl closing_tag_loc
+  in
   Doc.group
     (Doc.concat
        [
@@ -4482,10 +4498,10 @@ and print_jsx_container_tag ~state tag_name
               ]);
          Doc.concat
            [
-             (if has_children then print_children children else Doc.nil);
-             Doc.text "</";
-             name;
-             Doc.greater_than;
+             (if has_children then print_children children
+              else if not has_comments_inside then Doc.soft_line
+              else print_comments_inside cmt_tbl pexp_loc);
+             closing_element_doc;
            ];
        ])
 
