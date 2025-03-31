@@ -53,7 +53,7 @@ type r = {x: string}
 type testReactContext = React.Context.t<int>
 
 @genType
-type testReactRef = React.Ref.t<int>
+type testReactRef = React.ref<int>
 
 @genType
 type testDomRef = ReactDOM.domRef

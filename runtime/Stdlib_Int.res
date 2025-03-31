@@ -64,7 +64,7 @@ let range = (start, end, ~options: rangeOptions={}) => {
   let step = switch options.step {
   | None => isInverted ? -1 : 1
   | Some(0) if start !== end =>
-    Stdlib_Error.raise(Stdlib_Error.RangeError.make("Incorrect range arguments"))
+    Stdlib_Error.throw(Stdlib_Error.RangeError.make("Incorrect range arguments"))
   | Some(n) => n
   }
 
@@ -95,16 +95,15 @@ let clamp = (~min=?, ~max=?, value): int => {
   }
 }
 
-module Bitwise = {
-  external land: (int, int) => int = "%andint"
-  external lor: (int, int) => int = "%orint"
-  external lxor: (int, int) => int = "%xorint"
+external bitwiseAnd: (int, int) => int = "%andint"
+external bitwiseOr: (int, int) => int = "%orint"
+external bitwiseXor: (int, int) => int = "%xorint"
 
-  external lsl: (int, int) => int = "%lslint"
-  external lsr: (int, int) => int = "%lsrint"
-  external asr: (int, int) => int = "%asrint"
+// TODO: make it a primitive
+let bitwiseNot = x => bitwiseXor(x, -1)
 
-  let lnot = x => lxor(x, -1)
-}
+external shiftLeft: (int, int) => int = "%lslint"
+external shiftRight: (int, int) => int = "%asrint"
+external shiftRightUnsigned: (int, int) => int = "%lsrint"
 
 external ignore: int => unit = "%ignore"

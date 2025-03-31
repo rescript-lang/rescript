@@ -65,14 +65,8 @@ let explain t =
   | UnclosedTemplate ->
     "Did you forget to close this template expression with a backtick?"
   | UnclosedComment -> "This comment seems to be missing a closing `*/`"
-  | UnknownUchar uchar -> (
-    match uchar with
-    | '^' ->
-      "Not sure what to do with this character.\n"
-      ^ "  If you're trying to dereference a mutable value, use \
-         `myValue.contents` instead.\n"
-      ^ "  To concatenate strings, use `\"a\" ++ \"b\"` instead."
-    | _ -> "Not sure what to do with this character.")
+  | UnknownUchar uchar ->
+    "Not sure what to do with this character: \"" ^ Char.escaped uchar ^ "\"."
   | Expected {context; token = t} ->
     let hint =
       match context with

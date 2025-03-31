@@ -6,7 +6,7 @@
     "subdirs": true
   },
   "package-specs": {
-    "module": "commonjs",
+    "module": "esmodule",
     "in-source": true
   },
   "namespace": true,

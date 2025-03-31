@@ -15,6 +15,7 @@ Happy hacking!
 > Most of our contributors are working on Apple machines, so all our instructions are currently macOS / Linux centric. Contributions for Windows development welcome!
 
 - [Node.js](https://nodejs.org/) v20.x
+- [Yarn CLI](https://yarnpkg.com/getting-started/install) (can be installed with `corepack`, Homebrew, etc)
 - C compiler toolchain (usually installed with `xcode` on Mac)
 - Python <= 3.11 (required to build ninja)
 - Rust toolchain (required to build rewatch; follow the instructions at https://www.rust-lang.org/tools/install)
@@ -58,7 +59,7 @@ opam install . --deps-only --with-test --with-dev-setup -y
 
 #### npm install
 
-Run `npm install --ignore-scripts`. This will install the npm dependencies required for the build scripts.
+Run `yarn install`. This will install the npm dependencies required for the build scripts.
 
 ### B. Devcontainer
 
@@ -262,7 +263,7 @@ $ node
 
 ### Testing the Playground bundle
 
-Run `node playground/playground_test.js` for a quick sanity check to see if all the build artifacts are working together correctly. When releasing the playground bundle, the test will always be executed before publishing to catch regressions.
+Run `node playground/playground_test.cjs` for a quick sanity check to see if all the build artifacts are working together correctly. When releasing the playground bundle, the test will always be executed before publishing to catch regressions.
 
 ### Working on the Playground JS API
 
@@ -272,7 +273,7 @@ Whenever you are modifying any files in the ReScript compiler, or in the `jsoo_p
 make playground
 
 # optionally run your test / arbitrary node script to verify your changes
-node playground/playground_test.js
+node playground/playground_test.cjs
 ```
 
 ### Publishing the Playground Bundle on our KeyCDN

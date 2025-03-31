@@ -22,26 +22,6 @@ Path Res
     "detail": "module Result",
     "documentation": null
   }, {
-    "label": "RescriptReactErrorBoundary",
-    "kind": 9,
-    "tags": [],
-    "detail": "module RescriptReactErrorBoundary",
-    "documentation": null,
-    "data": {
-      "modulePath": "RescriptReactErrorBoundary",
-      "filePath": "src/RecoveryOnProp.res"
-    }
-  }, {
-    "label": "RescriptReactRouter",
-    "kind": 9,
-    "tags": [],
-    "detail": "module RescriptReactRouter",
-    "documentation": null,
-    "data": {
-      "modulePath": "RescriptReactRouter",
-      "filePath": "src/RecoveryOnProp.res"
-    }
-  }, {
     "label": "RescriptTools",
     "kind": 9,
     "tags": [],

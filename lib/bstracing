@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-"use strict";
-//@ts-check
 
-const fs = require("fs");
-const readline = require("readline");
-const path = require("path");
+// @ts-check
+
+import * as fs from "node:fs";
+import * as readline from "node:readline";
+import * as path from "node:path";
 
 /**
  *
@@ -13,8 +13,8 @@ const path = require("path");
  * @param {()=>void} finish
  */
 function processEntry(file, lineCb, finish) {
-  let input = fs.createReadStream(file);
-  input.on("error", function (error) {
+  const input = fs.createReadStream(file);
+  input.on("error", (error) => {
     console.error(error.message);
     console.error(
       "make sure you are running after bsb building and in the top directory"
@@ -23,7 +23,7 @@ function processEntry(file, lineCb, finish) {
   });
   const rl = readline.createInterface({
     input: input,
-    crlfDelay: Infinity,
+    crlfDelay: Number.POSITIVE_INFINITY,
   });
 
   rl.on("line", lineCb);
@@ -121,7 +121,7 @@ const colors = [
   "cq_build_attempt_failed",
 ];
 
-let allocated = new Map();
+const allocated = new Map();
 
 function getColorName(obj, cat) {
   obj.cat = cat;
@@ -139,9 +139,9 @@ function getColorName(obj, cat) {
  * @param {Interval} target
  */
 function category(target, obj) {
-  let targets = target.targets;
+  const targets = target.targets;
   if (targets.length === 1) {
-    let curTar = targets[0];
+    const curTar = targets[0];
     if (curTar.endsWith(".d")) {
       getColorName(obj, "dep");
     } else if (curTar.endsWith(".mlast") || curTar.endsWith(".mliast")) {
@@ -174,13 +174,13 @@ function readIntervals(file, showAll, outputFile) {
   processEntry(
     file,
     (line) => {
-      let lineTrim = line.trim();
+      const lineTrim = line.trim();
       if (lineTrim.startsWith("#")) {
         return;
       }
 
       let [start, end, _, name, cmdHash] = lineTrim.split("\t");
-      cmdHash += "/" + end;
+      cmdHash += `/${end}`;
       if (+end < lastEndSeen) {
         // This is a guess
         // it could be wrong, when there's multiple small compilation
@@ -199,12 +199,12 @@ function readIntervals(file, showAll, outputFile) {
       ).targets.push(name);
     },
     () => {
-      let sorted = [...targets.values()].sort((a, b) => {
+      const sorted = [...targets.values()].sort((a, b) => {
         return a.start - b.start;
       });
-      let jsonArray = [];
-      let threads = new Threads();
-      for (let target of sorted) {
+      const jsonArray = [];
+      const threads = new Threads();
+      for (const target of sorted) {
         jsonArray.push(
           category(target, {
             ph: "X",
@@ -221,38 +221,38 @@ function readIntervals(file, showAll, outputFile) {
     }
   );
 }
-let logName = ".ninja_log";
+const logName = ".ninja_log";
 
 /**
  * @type {string}
  */
-var file;
+let file;
 /**
  *
  * @param ps {string[]}
  */
 function tryLocation(ps) {
-  for (let p of ps) {
-    let log = path.join(p, logName);
+  for (const p of ps) {
+    const log = path.join(p, logName);
     if (fs.existsSync(log)) {
       file = log;
       return;
     }
   }
   console.error(
-    `no .ninja_log found in specified paths, make sure you set bstracing to the proper directory`
+    "no .ninja_log found in specified paths, make sure you set bstracing to the proper directory"
   );
   process.exit(2);
 }
 
 let showAll = false;
-let curDate = new Date();
+const curDate = new Date();
 let outputFile = `tracing_${curDate.getHours()}_${curDate.getMinutes()}_${curDate.getSeconds()}.json`;
 
 {
-  let index = process.argv.indexOf(`-C`);
+  let index = process.argv.indexOf("-C");
   if (index >= 0) {
-    let p = process.argv[index + 1];
+    const p = process.argv[index + 1];
     tryLocation([p, path.join(p, "lib", "bs")]);
   } else {
     tryLocation([".", path.join("lib", "bs")]);
@@ -260,7 +260,7 @@ let outputFile = `tracing_${curDate.getHours()}_${curDate.getMinutes()}_${curDat
   if (process.argv.includes("-all")) {
     showAll = true;
   }
-  index = process.argv.indexOf(`-o`);
+  index = process.argv.indexOf("-o");
   if (index >= 0) {
     outputFile = process.argv[index + 1];
   }

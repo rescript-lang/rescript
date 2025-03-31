@@ -41,5 +41,6 @@ describe(__MODULE__, () => {
     eq(__LOC__, 2 * 3, 6)
     eq(__LOC__, 2 / 3, 0)
     eq(__LOC__, 2 % 2, 0)
+    eq(__LOC__, 2 ^ 3, 1)
   })
 })

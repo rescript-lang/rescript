@@ -174,6 +174,19 @@ let entries =
           string = None;
         };
     };
+    {
+      path = builtin "^";
+      name = "%bitxor";
+      form = Binary;
+      specialization =
+        {
+          int = Pxorint;
+          bool = None;
+          float = None;
+          bigint = Some Pxorbigint;
+          string = None;
+        };
+    };
   |]
 
 let index_by_path =

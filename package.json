@@ -1,7 +1,8 @@
 {
   "name": "rescript",
-  "version": "12.0.0-alpha.10",
+  "version": "12.0.0-alpha.11",
   "description": "ReScript toolchain",
+  "type": "module",
   "keywords": [
     "ReScript",
     "Compiler",
@@ -37,21 +38,21 @@
     "node": ">=20.11.0"
   },
   "bin": {
-    "bsc": "cli/bsc",
-    "bstracing": "lib/bstracing",
-    "rescript": "cli/rescript",
-    "rescript-tools": "cli/rescript-tools",
-    "rewatch": "cli/rewatch"
+    "bsc": "cli/bsc.js",
+    "bstracing": "lib/bstracing.js",
+    "rescript": "cli/rescript.js",
+    "rescript-tools": "cli/rescript-tools.js",
+    "rewatch": "cli/rewatch.js"
   },
   "scripts": {
     "test": "node scripts/test.js -all",
     "test-bsb": "node scripts/test.js -bsb",
     "test-ocaml": "node scripts/test.js -ounit",
-    "format": "biome format --changed --no-errors-on-unmatched --write .",
-    "format:all": "biome format --write .",
-    "checkFormat": "biome format --changed --no-errors-on-unmatched .",
-    "checkFormat:all": "biome format .",
-    "coverage": "nyc --timeout=3000 --reporter=html mocha tests/tests/src/*_test.js && open ./coverage/index.html"
+    "check": "biome check --changed --no-errors-on-unmatched .",
+    "check:all": "biome check .",
+    "format": "biome check --changed --no-errors-on-unmatched . --fix",
+    "coverage": "nyc --timeout=3000 --reporter=html mocha tests/tests/src/*_test.js && open ./coverage/index.html",
+    "typecheck": "tsc"
   },
   "files": [
     "CHANGELOG.md",
@@ -72,12 +73,24 @@
     "./package.json": "./package.json"
   },
   "imports": {
-    "#cli/bin_path": "./cli/bin_path.js"
+    "#cli/*": "./cli/common/*.js",
+    "#dev/*": "./lib_dev/*.js",
+    "#lib/minisocket": "./lib/minisocket.js"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.8.3",
+    "@biomejs/biome": "1.9.4",
+    "@types/node": "^20.14.9",
+    "@types/semver": "^7.5.8",
     "mocha": "10.8.2",
-    "nyc": "15.0.0"
+    "nyc": "15.0.0",
+    "semver": "7.6.2",
+    "typescript": "5.8.2"
   },
-  "packageManager": "npm@10.8.2+sha512.c7f0088c520a46596b85c6f8f1da943400199748a0f7ea8cb8df75469668dc26f6fb3ba26df87e2884a5ebe91557292d0f3db7d0929cdb4f14910c3032ac81fb"
+  "workspaces": [
+    "tests/dependencies/**",
+    "tests/analysis_tests/**",
+    "tests/gentype_tests/**",
+    "tests/tools_tests"
+  ],
+  "packageManager": "yarn@4.7.0"
 }

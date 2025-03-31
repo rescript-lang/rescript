@@ -67,6 +67,14 @@ let pow3 = 2n ** 2n;
 
 let pow_overflow = 0;
 
+function bxor_int(a, b) {
+  return a ^ b;
+}
+
+function bxor_bigint(a, b) {
+  return a ^ b;
+}
+
 let int = 3;
 
 export {
@@ -91,5 +99,7 @@ export {
   pow2,
   pow3,
   pow_overflow,
+  bxor_int,
+  bxor_bigint,
 }
 /* No side effect */

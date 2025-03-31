@@ -20,7 +20,7 @@
   6 │ | _ => ()
   7 │ }
 
-  Not sure what to do with this character.
+  Not sure what to do with this character: "$".
 
 
   Syntax error!

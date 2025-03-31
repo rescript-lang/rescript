@@ -91,7 +91,7 @@ type callback<'input, 'output> = React.callback<'input, 'output>
 type testReactContext = React.Context.t<int>
 
 @genType
-type testReactRef = React.Ref.t<int>
+type testReactRef = React.ref<int>
 
 @genType
 type testDomRef = ReactDOM.domRef
