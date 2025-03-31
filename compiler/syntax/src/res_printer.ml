@@ -4370,9 +4370,13 @@ and print_jsx_unary_tag ~state tag_name props cmt_tbl =
   let props_doc =
     if tag_has_no_props then Doc.nil
     else
-      Doc.indent
-        (Doc.concat
-           [Doc.line; Doc.group (Doc.join formatted_props ~sep:Doc.line)])
+      Doc.concat
+        [
+          Doc.indent
+            (Doc.concat
+               [Doc.line; Doc.group (Doc.join ~sep:Doc.line formatted_props)]);
+          Doc.line;
+        ]
   in
   let opening_tag =
     print_comments
@@ -4384,23 +4388,13 @@ and print_jsx_unary_tag ~state tag_name props cmt_tbl =
       Doc.indent opening_tag
     else opening_tag
   in
-  let closing_tag_doc =
-    let sep =
-      match
-        (Doc.will_break props_doc, tag_has_trailing_comment, tag_has_no_props)
-      with
-      | true, _, _ -> Doc.soft_line
-      | false, true, true -> Doc.nil
-      | false, _, _ -> Doc.line
-    in
-    Doc.concat [sep; Doc.text "/>"]
-  in
+  let closing_tag_doc = Doc.text "/>" in
   Doc.group
     (Doc.concat
        [
          opening_tag_doc;
          props_doc;
-         (if tag_has_trailing_comment && tag_has_no_props then Doc.hard_line
+         (if tag_has_trailing_comment && tag_has_no_props then Doc.space
           else Doc.nil);
          closing_tag_doc;
        ])
@@ -4576,55 +4570,53 @@ and print_jsx_children ~state (children_expr : Parsetree.jsx_children) ~sep
 
 and print_jsx_prop ~state prop cmt_tbl =
   let open Parsetree in
-  match prop with
-  | JSXPropPunning (is_optional, name) ->
-    let prop_has_trailing_comment = has_trailing_comments cmt_tbl name.loc in
-    let doc =
+  let prop_loc = ParsetreeViewer.get_jsx_prop_loc prop in
+  let doc =
+    match prop with
+    | JSXPropPunning (is_optional, name) ->
+      (* We don't print any comments here because they will be attached to the entire prop_loc *)
       if is_optional then Doc.concat [Doc.question; print_ident_like name.txt]
       else print_ident_like name.txt
-    in
-    let doc = print_comments doc cmt_tbl name.loc in
-    if prop_has_trailing_comment then
-      Doc.group (Doc.concat [Doc.break_parent; doc])
-    else doc
-  | JSXPropValue (name, is_optional, value) ->
-    let value_doc =
-      let leading_line_comment_present =
-        has_leading_line_comment cmt_tbl value.pexp_loc
-      in
-      let doc = print_expression_with_comments ~state value cmt_tbl in
-      match Parens.jsx_prop_expr value with
-      | Parenthesized | Braced _ ->
-        (* {(20: int)} make sure that we also protect the expression inside *)
-        let inner_doc =
-          if Parens.braced_expr value then add_parens doc else doc
+    | JSXPropValue (name, is_optional, value) ->
+      let value_doc =
+        let leading_line_comment_present =
+          has_leading_line_comment cmt_tbl value.pexp_loc
         in
-        if leading_line_comment_present then add_braces inner_doc
-        else Doc.concat [Doc.lbrace; inner_doc; Doc.rbrace]
-      | _ -> doc
-    in
-    let doc =
-      Doc.concat
-        [
-          print_ident_like name.txt;
-          Doc.equal;
-          (if is_optional then Doc.question else Doc.nil);
-          Doc.group value_doc;
-        ]
-    in
-    print_comments doc cmt_tbl value.pexp_loc
-  | JSXPropSpreading (loc, value) ->
-    let value =
-      {value with pexp_loc = {value.pexp_loc with loc_start = loc.loc_start}}
-    in
-    Doc.group
-      (Doc.concat
-         [
-           Doc.lbrace;
-           Doc.dotdotdot;
-           print_expression_with_comments ~state value cmt_tbl;
-           Doc.rbrace;
-         ])
+        let doc = print_expression_with_comments ~state value cmt_tbl in
+        match Parens.jsx_prop_expr value with
+        | Parenthesized | Braced _ ->
+          (* {(20: int)} make sure that we also protect the expression inside *)
+          let inner_doc =
+            if Parens.braced_expr value then add_parens doc else doc
+          in
+          if leading_line_comment_present then add_braces inner_doc
+          else Doc.concat [Doc.lbrace; inner_doc; Doc.rbrace]
+        | _ -> doc
+      in
+      let doc =
+        Doc.concat
+          [
+            print_ident_like name.txt;
+            Doc.equal;
+            (if is_optional then Doc.question else Doc.nil);
+            Doc.group value_doc;
+          ]
+      in
+      print_comments doc cmt_tbl value.pexp_loc
+    | JSXPropSpreading (loc, value) ->
+      let value =
+        {value with pexp_loc = {value.pexp_loc with loc_start = loc.loc_start}}
+      in
+      Doc.group
+        (Doc.concat
+           [
+             Doc.lbrace;
+             Doc.dotdotdot;
+             print_expression_with_comments ~state value cmt_tbl;
+             Doc.rbrace;
+           ])
+  in
+  print_comments doc cmt_tbl prop_loc
 
 and print_jsx_props ~state props cmt_tbl : Doc.t list =
   props |> List.map (fun prop -> print_jsx_prop ~state prop cmt_tbl)
