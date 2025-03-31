@@ -109,8 +109,8 @@ external shiftRightUnsigned: (int, int) => int = "%lsrint"
 external ignore: int => unit = "%ignore"
 
 module Ref = {
-  type t = Pervasives.ref<int>
+  type t = ref<int>
 
-  external increment: t => unit = "%incr"
-  external decrement: t => unit = "%decr"
+  external increment: ref<int> => unit = "%incr"
+  external decrement: ref<int> => unit = "%decr"
 }

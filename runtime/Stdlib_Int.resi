@@ -484,7 +484,7 @@ external shiftRightUnsigned: (int, int) => int = "%lsrint"
 external ignore: int => unit = "%ignore"
 
 module Ref: {
-  type t = Pervasives.ref<int>
+  type t = ref<int>
 
   /**
   `increment(intRef)` increments the value of the provided reference by 1.
@@ -497,7 +497,7 @@ module Ref: {
   assertEqual(myRef.contents, 5)
   ```
   */
-  external increment: t => unit = "%incr"
+  external increment: ref<int> => unit = "%incr"
 
   /**
   `decrement(intRef)` decrements the value of the provided reference by 1.
@@ -510,5 +510,5 @@ module Ref: {
   assertEqual(myRef.contents, 3)
   ```
   */
-  external decrement: t => unit = "%decr"
+  external decrement: ref<int> => unit = "%decr"
 }

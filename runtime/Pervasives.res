@@ -1,21 +1,7 @@
 @deprecated("Do not use. This will be removed in v13")
-external /* Internal */
-
-__unsafe_cast: 'a => 'b = "%identity"
+external __unsafe_cast: 'a => 'b = "%identity"
 
 /* Exceptions */
-@deprecated(
-  "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `throw` instead"
-)
-external raise: exn => 'a = "%raise"
-
-@deprecated("Use custom exception instead")
-let failwith = s => throw(Failure(s))
-
-@deprecated("Use custom exception instead")
-let invalid_arg = s => throw(Invalid_argument(s))
-
-@deprecated("Use custom exception instead") exception Exit
 
 /**
 Raises the given exception, terminating execution unless caught by a surrounding try/catch block.
@@ -35,6 +21,19 @@ assertEqual(result, "Caught exception: Out of milk")
 ```
 */
 external throw: exn => 'a = "%raise"
+
+@deprecated(
+  "`raise` has been renamed to `throw` to align with JavaScript vocabulary. Please use `throw` instead"
+)
+external raise: exn => 'a = "%raise"
+
+@deprecated("Use custom exception instead")
+let failwith = s => throw(Failure(s))
+
+@deprecated("Use custom exception instead")
+let invalid_arg = s => throw(Invalid_argument(s))
+
+@deprecated("Use custom exception instead") exception Exit
 
 /* Composition operators */
 
