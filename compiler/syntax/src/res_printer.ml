@@ -4420,8 +4420,15 @@ and print_jsx_container_tag ~state tag_name
     (pexp_loc : Location.t) cmt_tbl =
   let name = print_jsx_name tag_name in
   let opening_greater_than_doc =
-    let loc = {pexp_loc with loc_end = opening_greater_than} in
-    print_comments Doc.greater_than cmt_tbl loc
+    let open Warnings in
+    let opening_greater_than_loc =
+      {
+        loc_start = opening_greater_than;
+        loc_end = opening_greater_than;
+        loc_ghost = false;
+      }
+    in
+    print_comments Doc.greater_than cmt_tbl opening_greater_than_loc
   in
   let formatted_props = print_jsx_props ~state props cmt_tbl in
   (* <div className="test" /> *)
