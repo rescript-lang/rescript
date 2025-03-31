@@ -16,6 +16,7 @@
 
 - Fix `Error.fromException`. https://github.com/rescript-lang/rescript/pull/7364
 - Fix signature of `throw`. https://github.com/rescript-lang/rescript/pull/7365
+- More deprecations in `Pervasives`; add `Stdlib.Pair` and `Stdlib.Int.Ref`. https://github.com/rescript-lang/rescript/pull/7371
 
 #### :house: Internal
 
