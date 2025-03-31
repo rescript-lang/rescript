@@ -4661,6 +4661,9 @@ and print_jsx_prop ~state prop cmt_tbl =
       if is_optional then Doc.concat [Doc.question; print_ident_like name.txt]
       else print_ident_like name.txt
     | JSXPropValue (name, is_optional, value) ->
+      let has_trailing_comment_after_name =
+        has_trailing_single_line_comment cmt_tbl name.loc
+      in
       let value_doc =
         let leading_line_comment_present =
           (* If the value expression has braces, these will be representend as an attribute containing the brace range *)
@@ -4687,9 +4690,10 @@ and print_jsx_prop ~state prop cmt_tbl =
       let doc =
         Doc.concat
           [
-            print_ident_like name.txt;
+            print_comments (print_ident_like name.txt) cmt_tbl name.loc;
             Doc.equal;
             (if is_optional then Doc.question else Doc.nil);
+            (if has_trailing_comment_after_name then Doc.hard_line else Doc.nil);
             Doc.group value_doc;
           ]
       in
