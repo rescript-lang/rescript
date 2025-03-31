@@ -68,6 +68,11 @@ let has_trailing_comments tbl loc =
   | None -> false
   | _ -> true
 
+let has_leading_comments tbl loc =
+  match Hashtbl.find_opt tbl.CommentTable.leading loc with
+  | None -> false
+  | _ -> true
+
 let print_multiline_comment_content txt =
   (* Turns
    *         |* first line
@@ -2838,7 +2843,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
              jsx_unary_element_tag_name = tag_name;
              jsx_unary_element_props = props;
            }) ->
-      print_jsx_unary_tag ~state tag_name props cmt_tbl
+      print_jsx_unary_tag ~state tag_name props e.pexp_loc cmt_tbl
     | Pexp_jsx_element
         (Jsx_container_element
            {
@@ -4362,13 +4367,19 @@ and print_pexp_apply ~state expr cmt_tbl =
         [print_attributes ~state attrs cmt_tbl; call_expr_doc; args_doc]
   | _ -> assert false
 
-and print_jsx_unary_tag ~state tag_name props cmt_tbl =
+and print_jsx_unary_tag ~state tag_name props expr_loc cmt_tbl =
   let name = print_jsx_name tag_name in
   let formatted_props = print_jsx_props ~state props cmt_tbl in
   let tag_has_trailing_comment = has_trailing_comments cmt_tbl tag_name.loc in
   let tag_has_no_props = List.is_empty props in
+  let closing_token_loc =
+    ParsetreeViewer.unary_element_closing_token expr_loc
+  in
   let props_doc =
-    if tag_has_no_props then Doc.nil
+    if tag_has_no_props then
+      if has_leading_comments cmt_tbl closing_token_loc then Doc.soft_line
+      else if tag_has_trailing_comment then Doc.nil
+      else Doc.space
     else
       Doc.concat
         [
@@ -4388,7 +4399,9 @@ and print_jsx_unary_tag ~state tag_name props cmt_tbl =
       Doc.indent opening_tag
     else opening_tag
   in
-  let closing_tag_doc = Doc.text "/>" in
+  let closing_tag_doc =
+    print_comments (Doc.text "/>") cmt_tbl closing_token_loc
+  in
   Doc.group
     (Doc.concat
        [
