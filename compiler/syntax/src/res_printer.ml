@@ -4663,7 +4663,15 @@ and print_jsx_prop ~state prop cmt_tbl =
     | JSXPropValue (name, is_optional, value) ->
       let value_doc =
         let leading_line_comment_present =
-          has_leading_line_comment cmt_tbl value.pexp_loc
+          (* If the value expression has braces, these will be representend as an attribute containing the brace range *)
+          (* comment assignment is a little weird that this point, it will be assigned to a child node of the value expression *)
+          match (Parens.jsx_prop_expr value, value.pexp_desc) with
+          | ( Braced _,
+              Parsetree.Pexp_apply {funct = fun_expr; args = (_, head_arg) :: _}
+            ) ->
+            has_leading_line_comment cmt_tbl fun_expr.pexp_loc
+            || has_leading_line_comment cmt_tbl head_arg.pexp_loc
+          | _ -> has_leading_line_comment cmt_tbl value.pexp_loc
         in
         let doc = print_expression_with_comments ~state value cmt_tbl in
         match Parens.jsx_prop_expr value with

@@ -2825,9 +2825,6 @@ and parse_jsx_prop p : Parsetree.jsx_prop option =
     let name, loc = parse_lident p in
     (* optional punning: <foo ?a /> *)
     if optional then Some (Parsetree.JSXPropPunning (true, {txt = name; loc}))
-      (* ( Asttypes.Optional {txt = name; loc},
-          Ast_helper.Exp.ident ~loc (Location.mkloc (Longident.Lident name) loc)
-        ) *)
     else
       match p.Parser.token with
       | Equal ->
@@ -2836,25 +2833,8 @@ and parse_jsx_prop p : Parsetree.jsx_prop option =
         let optional = Parser.optional p Question in
         Scanner.pop_mode p.scanner Jsx;
         let attr_expr = parse_primary_expr ~operand:(parse_atomic_expr p) p in
-        (* let label =
-          if optional then Asttypes.Optional {txt = name; loc}
-          else Asttypes.Labelled {txt = name; loc}
-        in *)
         Some (Parsetree.JSXPropValue ({txt = name; loc}, optional, attr_expr))
-        (* Some (label, attr_expr) *)
-      | _ -> Some (Parsetree.JSXPropPunning (false, {txt = name; loc}))
-    (* let label =
-          if optional then Asttypes.Optional {txt = name; loc}
-          else Asttypes.Labelled {txt = name; loc}
-        let attr_expr =
-          Ast_helper.Exp.ident ~loc (Location.mkloc (Longident.Lident name) loc)
-        in
-        let label =
-          if optional then Asttypes.Optional {txt = name; loc}
-          else Asttypes.Labelled {txt = name; loc}
-        in
-        Some (label, attr_expr)) *)
-    )
+      | _ -> Some (Parsetree.JSXPropPunning (false, {txt = name; loc})))
   (* {...props} *)
   | Lbrace -> (
     Scanner.pop_mode p.scanner Jsx;
