@@ -72,6 +72,18 @@ let decodeJsonTest = Core_JsonTests.decodeJsonTest;
 
 let shouldHandleNullableValues = Core_NullableTests.shouldHandleNullableValues;
 
+let someString = Core_DictTests.someString;
+
+let createdDict = Core_DictTests.createdDict;
+
+let three = Core_DictTests.three;
+
+let intDict = Core_DictTests.intDict;
+
+let PatternMatching = Core_DictTests.PatternMatching;
+
+let Has = Core_DictTests.Has;
+
 let eq = Core_IteratorTests.eq;
 
 let iterator = Core_IteratorTests.iterator;
@@ -112,6 +124,12 @@ export {
   o,
   decodeJsonTest,
   shouldHandleNullableValues,
+  someString,
+  createdDict,
+  three,
+  intDict,
+  PatternMatching,
+  Has,
   eq,
   iterator,
   syncResult,
