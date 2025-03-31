@@ -1638,7 +1638,7 @@ and walk_expression expr t comments =
            jsx_container_element_opening_tag_end = opening_greater_than;
            jsx_container_element_children = children;
            jsx_container_element_closing_tag = closing_tag;
-         }) ->
+         }) -> (
     let opening_greater_than_loc =
       {
         loc_start = opening_greater_than;
@@ -1691,18 +1691,31 @@ and walk_expression expr t comments =
         in
         partition_leading_trailing rest closing_tag_loc
     in
+    match children with
+    | Parsetree.JSXChildrenItems [] -> (
+      (* attach all comments to the closing tag if there are no children *)
+      match closing_tag with
+      | None ->
+        (* if there is no closing tag, the comments will attached after the expression *)
+        ()
+      | Some closing_tag ->
+        let closing_tag_loc =
+          ParsetreeViewer.container_element_closing_tag_loc closing_tag
+        in
+        attach t.leading closing_tag_loc comments_for_children)
+    | children ->
+      let children_nodes =
+        match children with
+        | Parsetree.JSXChildrenSpreading e -> [Expression e]
+        | Parsetree.JSXChildrenItems xs -> List.map (fun e -> Expression e) xs
+      in
 
-    let children_nodes =
-      match children with
-      | Parsetree.JSXChildrenSpreading e -> [Expression e]
-      | Parsetree.JSXChildrenItems xs -> List.map (fun e -> Expression e) xs
-    in
-
-    walk_list children_nodes t comments_for_children
+      walk_list children_nodes t comments_for_children
     (* It is less likely that there are comments inside the closing tag, 
        so we don't process them right now,
        if you ever need this, feel free to update process _rest. 
        Comments after the closing tag will already be taking into account by the parent node. *)
+    )
   | Pexp_send _ -> ()
 
 and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =
