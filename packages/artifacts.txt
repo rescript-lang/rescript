@@ -186,6 +186,7 @@ lib/es6/Stdlib_Nullable.js
 lib/es6/Stdlib_Object.js
 lib/es6/Stdlib_Option.js
 lib/es6/Stdlib_Ordering.js
+lib/es6/Stdlib_Pair.js
 lib/es6/Stdlib_Promise.js
 lib/es6/Stdlib_RegExp.js
 lib/es6/Stdlib_Result.js
@@ -358,6 +359,7 @@ lib/js/Stdlib_Nullable.js
 lib/js/Stdlib_Object.js
 lib/js/Stdlib_Option.js
 lib/js/Stdlib_Ordering.js
+lib/js/Stdlib_Pair.js
 lib/js/Stdlib_Promise.js
 lib/js/Stdlib_RegExp.js
 lib/js/Stdlib_Result.js
@@ -1151,6 +1153,10 @@ lib/ocaml/Stdlib_Ordering.cmi
 lib/ocaml/Stdlib_Ordering.cmj
 lib/ocaml/Stdlib_Ordering.cmt
 lib/ocaml/Stdlib_Ordering.res
+lib/ocaml/Stdlib_Pair.cmi
+lib/ocaml/Stdlib_Pair.cmj
+lib/ocaml/Stdlib_Pair.cmt
+lib/ocaml/Stdlib_Pair.res
 lib/ocaml/Stdlib_Promise.cmi
 lib/ocaml/Stdlib_Promise.cmj
 lib/ocaml/Stdlib_Promise.cmt

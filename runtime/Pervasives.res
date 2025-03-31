@@ -283,7 +283,10 @@ external ignore: 'a => unit = "%ignore"
 
 /* Pair operations */
 
+@deprecated("Use `Pair.first` instead. This will be removed in v13")
 external fst: (('a, 'b)) => 'a = "%field0"
+
+@deprecated("Use `Pair.second` instead. This will be removed in v13")
 external snd: (('a, 'b)) => 'b = "%field1"
 
 /* References */
