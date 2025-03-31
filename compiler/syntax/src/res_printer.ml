@@ -4603,10 +4603,7 @@ and print_jsx_prop ~state prop cmt_tbl =
           ]
       in
       print_comments doc cmt_tbl value.pexp_loc
-    | JSXPropSpreading (loc, value) ->
-      let value =
-        {value with pexp_loc = {value.pexp_loc with loc_start = loc.loc_start}}
-      in
+    | JSXPropSpreading (_, value) ->
       Doc.group
         (Doc.concat
            [
