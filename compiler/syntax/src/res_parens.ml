@@ -1,19 +1,16 @@
 module ParsetreeViewer = Res_parsetree_viewer
 type kind = Parenthesized | Braced of Location.t | Nothing
 
-let expr expr =
-  let opt_braces, _ = ParsetreeViewer.process_braces_attr expr in
-  match opt_braces with
-  | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
-  | _ -> (
-    match expr with
-    | {
-     Parsetree.pexp_desc =
-       Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
-    } ->
-      Nothing
-    | {pexp_desc = Pexp_constraint _} -> Parenthesized
-    | _ -> Nothing)
+let expr (expr : Parsetree.expression) =
+  match expr with
+  | {pexp_desc = Parsetree.Pexp_braces _} -> Braced expr.pexp_loc
+  | {
+   Parsetree.pexp_desc =
+     Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
+  } ->
+    Nothing
+  | {pexp_desc = Pexp_constraint _} -> Parenthesized
+  | _ -> Nothing
 
 let expr_record_row_rhs ~optional e =
   let kind = expr e in
@@ -25,119 +22,107 @@ let expr_record_row_rhs ~optional e =
     | _ -> kind)
   | _ -> kind
 
-let call_expr expr =
-  let opt_braces, _ = ParsetreeViewer.process_braces_attr expr in
-  match opt_braces with
-  | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
-  | _ -> (
-    match expr with
-    | {Parsetree.pexp_attributes = attrs}
-      when match ParsetreeViewer.filter_parsing_attrs attrs with
-           | _ :: _ -> true
-           | [] -> false ->
-      Parenthesized
-    | _
-      when ParsetreeViewer.is_unary_expression expr
-           || ParsetreeViewer.is_binary_expression expr ->
-      Parenthesized
-    | {
-     Parsetree.pexp_desc =
-       Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
-    } ->
-      Nothing
-    | {pexp_desc = Pexp_fun _}
-      when ParsetreeViewer.is_underscore_apply_sugar expr ->
-      Nothing
-    | {
-     pexp_desc =
-       ( Pexp_lazy _ | Pexp_assert _ | Pexp_fun _ | Pexp_newtype _
-       | Pexp_constraint _ | Pexp_setfield _ | Pexp_match _ | Pexp_try _
-       | Pexp_while _ | Pexp_for _ | Pexp_ifthenelse _ );
-    } ->
-      Parenthesized
-    | _ when Ast_uncurried.expr_is_uncurried_fun expr -> Parenthesized
-    | _ when ParsetreeViewer.has_await_attribute expr.pexp_attributes ->
-      Parenthesized
-    | _ -> Nothing)
+let call_expr (expr : Parsetree.expression) =
+  match expr with
+  | {pexp_desc = Pexp_braces _} -> Braced expr.pexp_loc
+  | {Parsetree.pexp_attributes = attrs}
+    when match ParsetreeViewer.filter_parsing_attrs attrs with
+         | _ :: _ -> true
+         | [] -> false ->
+    Parenthesized
+  | _
+    when ParsetreeViewer.is_unary_expression expr
+         || ParsetreeViewer.is_binary_expression expr ->
+    Parenthesized
+  | {
+   Parsetree.pexp_desc =
+     Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
+  } ->
+    Nothing
+  | {pexp_desc = Pexp_fun _} when ParsetreeViewer.is_underscore_apply_sugar expr
+    ->
+    Nothing
+  | {
+   pexp_desc =
+     ( Pexp_lazy _ | Pexp_assert _ | Pexp_fun _ | Pexp_newtype _
+     | Pexp_constraint _ | Pexp_setfield _ | Pexp_match _ | Pexp_try _
+     | Pexp_while _ | Pexp_for _ | Pexp_ifthenelse _ );
+  } ->
+    Parenthesized
+  | _ when Ast_uncurried.expr_is_uncurried_fun expr -> Parenthesized
+  | _ when ParsetreeViewer.has_await_attribute expr.pexp_attributes ->
+    Parenthesized
+  | _ -> Nothing
 
-let structure_expr expr =
-  let opt_braces, _ = ParsetreeViewer.process_braces_attr expr in
-  match opt_braces with
-  | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
-  | None -> (
-    match expr with
-    | _
-      when ParsetreeViewer.has_attributes expr.pexp_attributes
-           && not (ParsetreeViewer.is_jsx_expression expr) ->
-      Parenthesized
-    | {
-     Parsetree.pexp_desc =
-       Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
-    } ->
-      Nothing
-    | {pexp_desc = Pexp_constraint _} -> Parenthesized
-    | _ -> Nothing)
+let structure_expr (expr : Parsetree.expression) =
+  match expr with
+  | {pexp_desc = Pexp_braces _} -> Braced expr.pexp_loc
+  | _
+    when ParsetreeViewer.has_attributes expr.pexp_attributes
+         && not (ParsetreeViewer.is_jsx_expression expr) ->
+    Parenthesized
+  | {
+   Parsetree.pexp_desc =
+     Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
+  } ->
+    Nothing
+  | {pexp_desc = Pexp_constraint _} -> Parenthesized
+  | _ -> Nothing
 
-let unary_expr_operand expr =
-  let opt_braces, _ = ParsetreeViewer.process_braces_attr expr in
-  match opt_braces with
-  | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
-  | None -> (
-    match expr with
-    | {Parsetree.pexp_attributes = attrs}
-      when match ParsetreeViewer.filter_parsing_attrs attrs with
-           | _ :: _ -> true
-           | [] -> false ->
-      Parenthesized
-    | expr
-      when ParsetreeViewer.is_unary_expression expr
-           || ParsetreeViewer.is_binary_expression expr ->
-      Parenthesized
-    | {
-     pexp_desc =
-       Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
-    } ->
-      Nothing
-    | {pexp_desc = Pexp_fun _}
-      when ParsetreeViewer.is_underscore_apply_sugar expr ->
-      Nothing
-    | {
-     pexp_desc =
-       ( Pexp_lazy _ | Pexp_assert _ | Pexp_fun _ | Pexp_newtype _
-       | Pexp_constraint _ | Pexp_setfield _
-       | Pexp_extension _ (* readability? maybe remove *) | Pexp_match _
-       | Pexp_try _ | Pexp_while _ | Pexp_for _ | Pexp_ifthenelse _ );
-    } ->
-      Parenthesized
-    | _ when ParsetreeViewer.has_await_attribute expr.pexp_attributes ->
-      Parenthesized
-    | _ -> Nothing)
+let unary_expr_operand (expr : Parsetree.expression) =
+  match expr with
+  | {pexp_desc = Pexp_braces _} -> Braced expr.pexp_loc
+  | {Parsetree.pexp_attributes = attrs}
+    when match ParsetreeViewer.filter_parsing_attrs attrs with
+         | _ :: _ -> true
+         | [] -> false ->
+    Parenthesized
+  | expr
+    when ParsetreeViewer.is_unary_expression expr
+         || ParsetreeViewer.is_binary_expression expr ->
+    Parenthesized
+  | {
+   pexp_desc =
+     Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
+  } ->
+    Nothing
+  | {pexp_desc = Pexp_fun _} when ParsetreeViewer.is_underscore_apply_sugar expr
+    ->
+    Nothing
+  | {
+   pexp_desc =
+     ( Pexp_lazy _ | Pexp_assert _ | Pexp_fun _ | Pexp_newtype _
+     | Pexp_constraint _ | Pexp_setfield _
+     | Pexp_extension _ (* readability? maybe remove *) | Pexp_match _
+     | Pexp_try _ | Pexp_while _ | Pexp_for _ | Pexp_ifthenelse _ );
+  } ->
+    Parenthesized
+  | _ when ParsetreeViewer.has_await_attribute expr.pexp_attributes ->
+    Parenthesized
+  | _ -> Nothing
 
-let binary_expr_operand ~is_lhs expr =
-  let opt_braces, _ = ParsetreeViewer.process_braces_attr expr in
-  match opt_braces with
-  | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
-  | None -> (
-    match expr with
-    | {
-     Parsetree.pexp_desc =
-       Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
-    } ->
-      Nothing
-    | {pexp_desc = Pexp_fun _}
-      when ParsetreeViewer.is_underscore_apply_sugar expr ->
-      Nothing
-    | {pexp_desc = Pexp_constraint _ | Pexp_fun _ | Pexp_newtype _} ->
-      Parenthesized
-    | _ when Ast_uncurried.expr_is_uncurried_fun expr -> Parenthesized
-    | expr when ParsetreeViewer.is_binary_expression expr -> Parenthesized
-    | expr when ParsetreeViewer.is_ternary_expr expr -> Parenthesized
-    | {pexp_desc = Pexp_lazy _ | Pexp_assert _} when is_lhs -> Parenthesized
-    | _ when ParsetreeViewer.has_await_attribute expr.pexp_attributes ->
-      Parenthesized
-    | {Parsetree.pexp_attributes = attrs} ->
-      if ParsetreeViewer.has_printable_attributes attrs then Parenthesized
-      else Nothing)
+let binary_expr_operand ~is_lhs (expr : Parsetree.expression) =
+  match expr with
+  | {pexp_desc = Pexp_braces _} -> Braced expr.pexp_loc
+  | {
+   Parsetree.pexp_desc =
+     Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
+  } ->
+    Nothing
+  | {pexp_desc = Pexp_fun _} when ParsetreeViewer.is_underscore_apply_sugar expr
+    ->
+    Nothing
+  | {pexp_desc = Pexp_constraint _ | Pexp_fun _ | Pexp_newtype _} ->
+    Parenthesized
+  | _ when Ast_uncurried.expr_is_uncurried_fun expr -> Parenthesized
+  | expr when ParsetreeViewer.is_binary_expression expr -> Parenthesized
+  | expr when ParsetreeViewer.is_ternary_expr expr -> Parenthesized
+  | {pexp_desc = Pexp_lazy _ | Pexp_assert _} when is_lhs -> Parenthesized
+  | _ when ParsetreeViewer.has_await_attribute expr.pexp_attributes ->
+    Parenthesized
+  | {Parsetree.pexp_attributes = attrs} ->
+    if ParsetreeViewer.has_printable_attributes attrs then Parenthesized
+    else Nothing
 
 let sub_binary_expr_operand parent_operator child_operator =
   let open ParsetreeViewer in
@@ -193,46 +178,44 @@ let binary_operator_inside_await_needs_parens operator =
   ParsetreeViewer.operator_precedence operator
   < ParsetreeViewer.operator_precedence "->"
 
-let lazy_or_assert_or_await_expr_rhs ?(in_await = false) expr =
-  let opt_braces, _ = ParsetreeViewer.process_braces_attr expr in
-  match opt_braces with
-  | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
-  | None -> (
-    match expr with
-    | {Parsetree.pexp_attributes = attrs}
-      when match ParsetreeViewer.filter_parsing_attrs attrs with
-           | _ :: _ -> true
-           | [] -> false ->
-      Parenthesized
-    | {
-     pexp_desc =
-       Pexp_apply
-         {funct = {pexp_desc = Pexp_ident {txt = Longident.Lident operator}}};
-    }
-      when ParsetreeViewer.is_binary_expression expr ->
-      if in_await && not (binary_operator_inside_await_needs_parens operator)
-      then Nothing
-      else Parenthesized
-    | {
-     pexp_desc =
-       Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
-    } ->
+let lazy_or_assert_or_await_expr_rhs ?(in_await = false)
+    (expr : Parsetree.expression) =
+  match expr with
+  | {pexp_desc = Pexp_braces _} -> Braced expr.pexp_loc
+  | {Parsetree.pexp_attributes = attrs}
+    when match ParsetreeViewer.filter_parsing_attrs attrs with
+         | _ :: _ -> true
+         | [] -> false ->
+    Parenthesized
+  | {
+   pexp_desc =
+     Pexp_apply
+       {funct = {pexp_desc = Pexp_ident {txt = Longident.Lident operator}}};
+  }
+    when ParsetreeViewer.is_binary_expression expr ->
+    if in_await && not (binary_operator_inside_await_needs_parens operator) then
       Nothing
-    | {pexp_desc = Pexp_fun _}
-      when ParsetreeViewer.is_underscore_apply_sugar expr ->
-      Nothing
-    | {
-     pexp_desc =
-       ( Pexp_lazy _ | Pexp_assert _ | Pexp_fun _ | Pexp_newtype _
-       | Pexp_constraint _ | Pexp_setfield _ | Pexp_match _ | Pexp_try _
-       | Pexp_while _ | Pexp_for _ | Pexp_ifthenelse _ );
-    } ->
-      Parenthesized
-    | _
-      when (not in_await)
-           && ParsetreeViewer.has_await_attribute expr.pexp_attributes ->
-      Parenthesized
-    | _ -> Nothing)
+    else Parenthesized
+  | {
+   pexp_desc =
+     Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
+  } ->
+    Nothing
+  | {pexp_desc = Pexp_fun _} when ParsetreeViewer.is_underscore_apply_sugar expr
+    ->
+    Nothing
+  | {
+   pexp_desc =
+     ( Pexp_lazy _ | Pexp_assert _ | Pexp_fun _ | Pexp_newtype _
+     | Pexp_constraint _ | Pexp_setfield _ | Pexp_match _ | Pexp_try _
+     | Pexp_while _ | Pexp_for _ | Pexp_ifthenelse _ );
+  } ->
+    Parenthesized
+  | _
+    when (not in_await)
+         && ParsetreeViewer.has_await_attribute expr.pexp_attributes ->
+    Parenthesized
+  | _ -> Nothing
 
 let is_negative_constant constant =
   let is_neg txt =
@@ -244,74 +227,65 @@ let is_negative_constant constant =
     true
   | _ -> false
 
-let field_expr expr =
-  let opt_braces, _ = ParsetreeViewer.process_braces_attr expr in
-  match opt_braces with
-  | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
-  | None -> (
-    match expr with
-    | {Parsetree.pexp_attributes = attrs}
-      when match ParsetreeViewer.filter_parsing_attrs attrs with
-           | _ :: _ -> true
-           | [] -> false ->
-      Parenthesized
-    | expr
-      when ParsetreeViewer.is_binary_expression expr
-           || ParsetreeViewer.is_unary_expression expr ->
-      Parenthesized
-    | {
-     pexp_desc =
-       Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
-    } ->
-      Nothing
-    | {pexp_desc = Pexp_constant c} when is_negative_constant c -> Parenthesized
-    | {pexp_desc = Pexp_fun _}
-      when ParsetreeViewer.is_underscore_apply_sugar expr ->
-      Nothing
-    | {
-     pexp_desc =
-       ( Pexp_lazy _ | Pexp_assert _
-       | Pexp_extension _ (* %extension.x vs (%extension).x *) | Pexp_fun _
-       | Pexp_newtype _ | Pexp_constraint _ | Pexp_setfield _ | Pexp_match _
-       | Pexp_try _ | Pexp_while _ | Pexp_for _ | Pexp_ifthenelse _ );
-    } ->
-      Parenthesized
-    | _ when ParsetreeViewer.has_await_attribute expr.pexp_attributes ->
-      Parenthesized
-    | _ -> Nothing)
+let field_expr (expr : Parsetree.expression) =
+  match expr with
+  | {pexp_desc = Pexp_braces _} -> Braced expr.pexp_loc
+  | {Parsetree.pexp_attributes = attrs}
+    when match ParsetreeViewer.filter_parsing_attrs attrs with
+         | _ :: _ -> true
+         | [] -> false ->
+    Parenthesized
+  | expr
+    when ParsetreeViewer.is_binary_expression expr
+         || ParsetreeViewer.is_unary_expression expr ->
+    Parenthesized
+  | {
+   pexp_desc =
+     Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
+  } ->
+    Nothing
+  | {pexp_desc = Pexp_constant c} when is_negative_constant c -> Parenthesized
+  | {pexp_desc = Pexp_fun _} when ParsetreeViewer.is_underscore_apply_sugar expr
+    ->
+    Nothing
+  | {
+   pexp_desc =
+     ( Pexp_lazy _ | Pexp_assert _
+     | Pexp_extension _ (* %extension.x vs (%extension).x *) | Pexp_fun _
+     | Pexp_newtype _ | Pexp_constraint _ | Pexp_setfield _ | Pexp_match _
+     | Pexp_try _ | Pexp_while _ | Pexp_for _ | Pexp_ifthenelse _ );
+  } ->
+    Parenthesized
+  | _ when ParsetreeViewer.has_await_attribute expr.pexp_attributes ->
+    Parenthesized
+  | _ -> Nothing
 
-let set_field_expr_rhs expr =
-  let opt_braces, _ = ParsetreeViewer.process_braces_attr expr in
-  match opt_braces with
-  | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
-  | None -> (
-    match expr with
-    | {
-     Parsetree.pexp_desc =
-       Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
-    } ->
-      Nothing
-    | {pexp_desc = Pexp_constraint _} -> Parenthesized
-    | _ -> Nothing)
+let set_field_expr_rhs (expr : Parsetree.expression) =
+  match expr with
+  | {pexp_desc = Pexp_braces _} -> Braced expr.pexp_loc
+  | {
+   Parsetree.pexp_desc =
+     Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
+  } ->
+    Nothing
+  | {pexp_desc = Pexp_constraint _} -> Parenthesized
+  | _ -> Nothing
 
-let ternary_operand expr =
-  let opt_braces, _ = ParsetreeViewer.process_braces_attr expr in
-  match opt_braces with
-  | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
-  | None -> (
-    match expr with
-    | {
-     Parsetree.pexp_desc =
-       Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
-    } ->
-      Nothing
-    | {pexp_desc = Pexp_constraint _} -> Parenthesized
-    | _ when Res_parsetree_viewer.is_fun_newtype expr -> (
-      let _, _parameters, return_expr = ParsetreeViewer.fun_expr expr in
-      match return_expr.pexp_desc with
-      | Pexp_constraint _ -> Parenthesized
-      | _ -> Nothing)
+let ternary_operand (expr : Parsetree.expression) =
+  match expr with
+  | {pexp_desc = Pexp_braces _} -> Braced expr.pexp_loc
+  | {
+   Parsetree.pexp_desc =
+     Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
+  } ->
+    Nothing
+  | {pexp_desc = Pexp_constraint _} -> Parenthesized
+  | _ when Res_parsetree_viewer.is_fun_newtype expr -> (
+    let _, _parameters, return_expr = ParsetreeViewer.fun_expr expr in
+    match return_expr.pexp_desc with
+    | Pexp_constraint _ -> Parenthesized
     | _ -> Nothing)
+  | _ -> Nothing
 
 let starts_with_minus txt =
   let len = String.length txt in
@@ -326,37 +300,33 @@ let jsx_prop_expr expr =
   | Pexp_letmodule _ | Pexp_open _ ->
     Nothing
   | _ -> (
-    let opt_braces, _ = ParsetreeViewer.process_braces_attr expr in
-    match opt_braces with
-    | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
-    | None -> (
-      match expr with
-      | {
-       Parsetree.pexp_desc =
-         Pexp_constant (Pconst_integer (x, _) | Pconst_float (x, _));
-       pexp_attributes = [];
-      }
-        when starts_with_minus x ->
-        Parenthesized
-      | _ when ParsetreeViewer.has_await_attribute expr.pexp_attributes ->
-        Parenthesized
-      | {
-       Parsetree.pexp_desc =
-         ( Pexp_ident _ | Pexp_constant _ | Pexp_field _ | Pexp_construct _
-         | Pexp_variant _ | Pexp_array _ | Pexp_pack _ | Pexp_record _
-         | Pexp_extension _ | Pexp_letmodule _ | Pexp_letexception _
-         | Pexp_open _ | Pexp_sequence _ | Pexp_let _ | Pexp_tuple _ );
-       pexp_attributes = [];
-      } ->
-        Nothing
-      | {
-       Parsetree.pexp_desc =
-         Pexp_constraint
-           ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
-       pexp_attributes = [];
-      } ->
-        Nothing
-      | _ -> Parenthesized))
+    match expr with
+    | {pexp_desc = Pexp_braces _} -> Braced expr.pexp_loc
+    | {
+     Parsetree.pexp_desc =
+       Pexp_constant (Pconst_integer (x, _) | Pconst_float (x, _));
+     pexp_attributes = [];
+    }
+      when starts_with_minus x ->
+      Parenthesized
+    | _ when ParsetreeViewer.has_await_attribute expr.pexp_attributes ->
+      Parenthesized
+    | {
+     Parsetree.pexp_desc =
+       ( Pexp_ident _ | Pexp_constant _ | Pexp_field _ | Pexp_construct _
+       | Pexp_variant _ | Pexp_array _ | Pexp_pack _ | Pexp_record _
+       | Pexp_extension _ | Pexp_letmodule _ | Pexp_letexception _ | Pexp_open _
+       | Pexp_sequence _ | Pexp_let _ | Pexp_tuple _ );
+     pexp_attributes = [];
+    } ->
+      Nothing
+    | {
+     Parsetree.pexp_desc =
+       Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
+     pexp_attributes = [];
+    } ->
+      Nothing
+    | _ -> Parenthesized)
 
 let jsx_child_expr expr =
   match expr.Parsetree.pexp_desc with
@@ -364,49 +334,42 @@ let jsx_child_expr expr =
   | Pexp_letmodule _ | Pexp_open _ ->
     Nothing
   | _ -> (
-    let opt_braces, _ = ParsetreeViewer.process_braces_attr expr in
-    match opt_braces with
-    | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
-    | _ -> (
-      match expr with
-      | {
-       Parsetree.pexp_desc =
-         Pexp_constant (Pconst_integer (x, _) | Pconst_float (x, _));
-       pexp_attributes = [];
-      }
-        when starts_with_minus x ->
-        Parenthesized
-      | _ when ParsetreeViewer.has_await_attribute expr.pexp_attributes ->
-        Parenthesized
-      | {
-       Parsetree.pexp_desc =
-         ( Pexp_ident _ | Pexp_constant _ | Pexp_field _ | Pexp_construct _
-         | Pexp_variant _ | Pexp_array _ | Pexp_pack _ | Pexp_record _
-         | Pexp_extension _ | Pexp_letmodule _ | Pexp_letexception _
-         | Pexp_open _ | Pexp_sequence _ | Pexp_let _ );
-       pexp_attributes = [];
-      } ->
-        Nothing
-      | {
-       Parsetree.pexp_desc =
-         Pexp_constraint
-           ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
-       pexp_attributes = [];
-      } ->
-        Nothing
-      | expr when ParsetreeViewer.is_jsx_expression expr -> Nothing
-      | _ -> Parenthesized))
-
-let binary_expr expr =
-  let opt_braces, _ = ParsetreeViewer.process_braces_attr expr in
-  match opt_braces with
-  | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
-  | None -> (
     match expr with
-    | {Parsetree.pexp_attributes = _ :: _} as expr
-      when ParsetreeViewer.is_binary_expression expr ->
+    | {pexp_desc = Pexp_braces _} -> Braced expr.pexp_loc
+    | {
+     Parsetree.pexp_desc =
+       Pexp_constant (Pconst_integer (x, _) | Pconst_float (x, _));
+     pexp_attributes = [];
+    }
+      when starts_with_minus x ->
       Parenthesized
-    | _ -> Nothing)
+    | _ when ParsetreeViewer.has_await_attribute expr.pexp_attributes ->
+      Parenthesized
+    | {
+     Parsetree.pexp_desc =
+       ( Pexp_ident _ | Pexp_constant _ | Pexp_field _ | Pexp_construct _
+       | Pexp_variant _ | Pexp_array _ | Pexp_pack _ | Pexp_record _
+       | Pexp_extension _ | Pexp_letmodule _ | Pexp_letexception _ | Pexp_open _
+       | Pexp_sequence _ | Pexp_let _ );
+     pexp_attributes = [];
+    } ->
+      Nothing
+    | {
+     Parsetree.pexp_desc =
+       Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
+     pexp_attributes = [];
+    } ->
+      Nothing
+    | expr when ParsetreeViewer.is_jsx_expression expr -> Nothing
+    | _ -> Parenthesized)
+
+let binary_expr (expr : Parsetree.expression) =
+  match expr with
+  | {pexp_desc = Pexp_braces _} -> Braced expr.pexp_loc
+  | {Parsetree.pexp_attributes = _ :: _} as expr
+    when ParsetreeViewer.is_binary_expression expr ->
+    Parenthesized
+  | _ -> Nothing
 
 let mod_type_functor_return mod_type =
   match mod_type with

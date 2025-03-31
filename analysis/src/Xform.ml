@@ -223,56 +223,62 @@ end
 module AddBracesToFn = struct
   (* Add braces to fn without braces *)
 
-  let mkIterator ~pos ~changed =
+  let map_structure ~pos ~(changed : Parsetree.structure) =
     (* While iterating the AST, keep info on which structure item we are in.
        Printing from the structure item, rather than the body of the function,
        gives better local pretty printing *)
-    let currentStructureItem = ref None in
-
-    let structure_item (iterator : Ast_iterator.iterator)
-        (item : Parsetree.structure_item) =
-      let saved = !currentStructureItem in
-      currentStructureItem := Some item;
-      Ast_iterator.default_iterator.structure_item iterator item;
-      currentStructureItem := saved
+    let did_map = ref false in
+    let current_structure = ref None in
+    let structure_item (mapper : Ast_mapper.mapper)
+        (structure_item : Parsetree.structure_item) =
+      if !did_map then structure_item
+      else (
+        current_structure := Some structure_item;
+        mapper.structure_item mapper structure_item)
     in
-    let expr (iterator : Ast_iterator.iterator) (e : Parsetree.expression) =
-      let bracesAttribute =
-        let loc =
-          {
-            Location.none with
-            loc_start = Lexing.dummy_pos;
-            loc_end =
-              {
-                Lexing.dummy_pos with
-                pos_lnum = Lexing.dummy_pos.pos_lnum + 1 (* force line break *);
-              };
-          }
-        in
-        (Location.mkloc "res.braces" loc, Parsetree.PStr [])
+    let expr (mapper : Ast_mapper.mapper) (e : Parsetree.expression) =
+      let braces_loc =
+        {
+          Location.none with
+          loc_start = Lexing.dummy_pos;
+          loc_end =
+            {
+              Lexing.dummy_pos with
+              pos_lnum = Lexing.dummy_pos.pos_lnum + 1 (* force line break *);
+            };
+        }
       in
       let isFunction = function
         | {Parsetree.pexp_desc = Pexp_fun _} -> true
         | _ -> false
       in
-      (match e.pexp_desc with
-      | Pexp_fun {rhs = bodyExpr}
+      match e.pexp_desc with
+      | Pexp_fun ({rhs = bodyExpr} as f)
         when Loc.hasPos ~pos bodyExpr.pexp_loc
              && isBracedExpr bodyExpr = false
              && isFunction bodyExpr = false ->
-        bodyExpr.pexp_attributes <- bracesAttribute :: bodyExpr.pexp_attributes;
-        changed := !currentStructureItem
-      | _ -> ());
-      Ast_iterator.default_iterator.expr iterator e
+        did_map := true;
+        {
+          e with
+          pexp_desc =
+            Pexp_fun
+              {f with rhs = Ast_helper.Exp.braces ~loc:braces_loc bodyExpr};
+        }
+      | _ -> mapper.expr mapper e
     in
 
-    {Ast_iterator.default_iterator with expr; structure_item}
+    let mapper = {Ast_mapper.default_mapper with expr; structure_item} in
+    let rec visit structure =
+      match structure with
+      | [] -> None
+      | x :: xs ->
+        let mapped = mapper.structure_item mapper x in
+        if !did_map then Some mapped else visit xs
+    in
+    visit changed
 
   let xform ~pos ~codeActions ~path ~printStructureItem structure =
-    let changed = ref None in
-    let iterator = mkIterator ~pos ~changed in
-    iterator.structure iterator structure;
-    match !changed with
+    match map_structure ~pos ~changed:structure with
     | None -> ()
     | Some newStructureItem ->
       let range = Loc.rangeOfLoc newStructureItem.pstr_loc in

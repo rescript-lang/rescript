@@ -357,19 +357,10 @@ let get_loc node =
   let open Parsetree in
   match node with
   | Case case ->
-    {
-      case.pc_lhs.ppat_loc with
-      loc_end =
-        (match ParsetreeViewer.process_braces_attr case.pc_rhs with
-        | None, _ -> case.pc_rhs.pexp_loc.loc_end
-        | Some ({loc}, _), _ -> loc.Location.loc_end);
-    }
+    {case.pc_lhs.ppat_loc with loc_end = case.pc_rhs.pexp_loc.loc_end}
   | CoreType ct -> ct.ptyp_loc
   | ExprArgument {loc} -> loc
-  | Expression e -> (
-    match e.pexp_attributes with
-    | ({txt = "res.braces" | "ns.braces"; loc}, _) :: _ -> loc
-    | _ -> e.pexp_loc)
+  | Expression e -> e.pexp_loc
   | ExprRecordRow (li, e) -> {li.loc with loc_end = e.pexp_loc.loc_end}
   | ExtensionConstructor ec -> ec.pext_loc
   | LabelDeclaration ld -> ld.pld_loc

@@ -295,153 +295,187 @@ end
 module E = struct
   (* Value expressions for the core language *)
 
-  let map sub {pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} =
+  let map sub {pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs0} =
     let open Exp in
     let loc = sub.location sub loc in
-    let attrs = sub.attributes sub attrs in
-    match desc with
-    | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
-    | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
-    | Pexp_let (r, vbs, e) ->
-      let_ ~loc ~attrs r (List.map (sub.value_binding sub) vbs) (sub.expr sub e)
-    | Pexp_fun (lab, def, p, e) ->
-      let lab = Asttypes.to_arg_label lab in
-      let async = Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.async") in
-      fun_ ~loc ~attrs ~async ~arity:None lab
-        (map_opt (sub.expr sub) def)
-        (sub.pat sub p) (sub.expr sub e)
-    | Pexp_function _ -> assert false
-    | Pexp_apply (e, l) ->
-      let e =
-        match (e.pexp_desc, l) with
-        | ( Pexp_ident ({txt = Longident.Lident "|."} as lid),
-            [(Nolabel, _); (Nolabel, _)] ) ->
-          {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "->"}}
-        | ( Pexp_ident ({txt = Longident.Lident "^"} as lid),
-            [(Nolabel, _); (Nolabel, _)] ) ->
-          {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "++"}}
-        | ( Pexp_ident ({txt = Longident.Lident "<>"} as lid),
-            [(Nolabel, _); (Nolabel, _)] ) ->
-          {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "!="}}
-        | ( Pexp_ident ({txt = Longident.Lident "!="} as lid),
-            [(Nolabel, _); (Nolabel, _)] ) ->
-          {
-            e with
-            pexp_desc = Pexp_ident {lid with txt = Longident.Lident "!=="};
-          }
-        | ( Pexp_ident ({txt = Longident.Lident "="} as lid),
-            [(Nolabel, _); (Nolabel, _)] ) ->
-          {e with pexp_desc = Pexp_ident {lid with txt = Longident.Lident "=="}}
-        | ( Pexp_ident ({txt = Longident.Lident "=="} as lid),
-            [(Nolabel, _); (Nolabel, _)] ) ->
-          {
-            e with
-            pexp_desc = Pexp_ident {lid with txt = Longident.Lident "==="};
-          }
-        | _ -> e
+    let attrs = sub.attributes sub attrs0 in
+    if List.exists (fun ({txt}, _) -> txt = "res.braces") attrs then
+      let braces_loc =
+        List.find (fun ({txt}, _) -> txt = "res.braces") attrs
+        |> fun ({loc}, _) -> loc
       in
-      let process_partial_app_attribute attrs =
-        let rec process partial_app acc attrs =
-          match attrs with
-          | [] -> (partial_app, List.rev acc)
-          | ({Location.txt = "res.partial"}, _) :: rest -> process true acc rest
-          | attr :: rest -> process partial_app (attr :: acc) rest
-        in
-        process false [] attrs
+      let inner_attrs =
+        List.filter (fun ({txt}, _) -> txt <> "res.braces") attrs0
       in
-      let partial, attrs = process_partial_app_attribute attrs in
-      apply ~loc ~attrs ~partial (sub.expr sub e)
-        (List.map
-           (fun (lbl, e) -> (Asttypes.to_arg_label lbl, sub.expr sub e))
-           l)
-    | Pexp_match (e, pel) ->
-      match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
-    | Pexp_try (e, pel) -> try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
-    | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
-    | Pexp_construct (lid, arg) -> (
-      let lid1 = map_loc sub lid in
-      let arg1 = map_opt (sub.expr sub) arg in
-      let exp1 = construct ~loc ~attrs lid1 arg1 in
-      match lid.txt with
-      | Lident "Function$" -> (
-        let rec attributes_to_arity (attrs : Parsetree.attributes) =
-          match attrs with
-          | ( {txt = "res.arity"},
-              PStr
-                [
-                  {
-                    pstr_desc =
-                      Pstr_eval
-                        ( {pexp_desc = Pexp_constant (Pconst_integer (arity, _))},
-                          _ );
-                  };
-                ] )
-            :: _ ->
-            int_of_string arity
-          | _ :: rest -> attributes_to_arity rest
-          | [] -> assert false
+      Ast_helper.Exp.braces ~loc:braces_loc
+        (sub.expr sub
+           {pexp_loc = loc; pexp_desc = desc; pexp_attributes = inner_attrs})
+    else
+      match desc with
+      | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
+      | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
+      | Pexp_let (r, vbs, e) ->
+        let_ ~loc ~attrs r
+          (List.map (sub.value_binding sub) vbs)
+          (sub.expr sub e)
+      | Pexp_fun (lab, def, p, e) ->
+        let lab = Asttypes.to_arg_label lab in
+        let async =
+          Ext_list.exists attrs (fun ({txt}, _) -> txt = "res.async")
         in
-        match arg1 with
-        | Some ({pexp_desc = Pexp_fun f} as e1) ->
-          let arity = Some (attributes_to_arity attrs) in
-          {e1 with pexp_desc = Pexp_fun {f with arity}}
+        fun_ ~loc ~attrs ~async ~arity:None lab
+          (map_opt (sub.expr sub) def)
+          (sub.pat sub p) (sub.expr sub e)
+      | Pexp_function _ -> assert false
+      | Pexp_apply (e, l) ->
+        let e =
+          match (e.pexp_desc, l) with
+          | ( Pexp_ident ({txt = Longident.Lident "|."} as lid),
+              [(Nolabel, _); (Nolabel, _)] ) ->
+            {
+              e with
+              pexp_desc = Pexp_ident {lid with txt = Longident.Lident "->"};
+            }
+          | ( Pexp_ident ({txt = Longident.Lident "^"} as lid),
+              [(Nolabel, _); (Nolabel, _)] ) ->
+            {
+              e with
+              pexp_desc = Pexp_ident {lid with txt = Longident.Lident "++"};
+            }
+          | ( Pexp_ident ({txt = Longident.Lident "<>"} as lid),
+              [(Nolabel, _); (Nolabel, _)] ) ->
+            {
+              e with
+              pexp_desc = Pexp_ident {lid with txt = Longident.Lident "!="};
+            }
+          | ( Pexp_ident ({txt = Longident.Lident "!="} as lid),
+              [(Nolabel, _); (Nolabel, _)] ) ->
+            {
+              e with
+              pexp_desc = Pexp_ident {lid with txt = Longident.Lident "!=="};
+            }
+          | ( Pexp_ident ({txt = Longident.Lident "="} as lid),
+              [(Nolabel, _); (Nolabel, _)] ) ->
+            {
+              e with
+              pexp_desc = Pexp_ident {lid with txt = Longident.Lident "=="};
+            }
+          | ( Pexp_ident ({txt = Longident.Lident "=="} as lid),
+              [(Nolabel, _); (Nolabel, _)] ) ->
+            {
+              e with
+              pexp_desc = Pexp_ident {lid with txt = Longident.Lident "==="};
+            }
+          | _ -> e
+        in
+        let process_partial_app_attribute attrs =
+          let rec process partial_app acc attrs =
+            match attrs with
+            | [] -> (partial_app, List.rev acc)
+            | ({Location.txt = "res.partial"}, _) :: rest ->
+              process true acc rest
+            | attr :: rest -> process partial_app (attr :: acc) rest
+          in
+          process false [] attrs
+        in
+        let partial, attrs = process_partial_app_attribute attrs in
+        apply ~loc ~attrs ~partial (sub.expr sub e)
+          (List.map
+             (fun (lbl, e) -> (Asttypes.to_arg_label lbl, sub.expr sub e))
+             l)
+      | Pexp_match (e, pel) ->
+        match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
+      | Pexp_try (e, pel) ->
+        try_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
+      | Pexp_tuple el -> tuple ~loc ~attrs (List.map (sub.expr sub) el)
+      | Pexp_construct (lid, arg) -> (
+        let lid1 = map_loc sub lid in
+        let arg1 = map_opt (sub.expr sub) arg in
+        let exp1 = construct ~loc ~attrs lid1 arg1 in
+        match lid.txt with
+        | Lident "Function$" -> (
+          let rec attributes_to_arity (attrs : Parsetree.attributes) =
+            match attrs with
+            | ( {txt = "res.arity"},
+                PStr
+                  [
+                    {
+                      pstr_desc =
+                        Pstr_eval
+                          ( {
+                              pexp_desc =
+                                Pexp_constant (Pconst_integer (arity, _));
+                            },
+                            _ );
+                    };
+                  ] )
+              :: _ ->
+              int_of_string arity
+            | _ :: rest -> attributes_to_arity rest
+            | [] -> assert false
+          in
+          match arg1 with
+          | Some ({pexp_desc = Pexp_fun f} as e1) ->
+            let arity = Some (attributes_to_arity attrs) in
+            {e1 with pexp_desc = Pexp_fun {f with arity}}
+          | _ -> exp1)
         | _ -> exp1)
-      | _ -> exp1)
-    | Pexp_variant (lab, eo) ->
-      variant ~loc ~attrs lab (map_opt (sub.expr sub) eo)
-    | Pexp_record (l, eo) ->
-      record ~loc ~attrs
-        (Ext_list.map l (fun (lid, e) ->
-             let lid1 = map_loc sub lid in
-             let e1 = sub.expr sub e in
-             let optional, attrs =
-               Parsetree0.get_optional_attr e1.pexp_attributes
-             in
-             (lid1, {e1 with pexp_attributes = attrs}, optional)))
-        (map_opt (sub.expr sub) eo)
-    | Pexp_field (e, lid) ->
-      field ~loc ~attrs (sub.expr sub e) (map_loc sub lid)
-    | Pexp_setfield (e1, lid, e2) ->
-      setfield ~loc ~attrs (sub.expr sub e1) (map_loc sub lid) (sub.expr sub e2)
-    | Pexp_array el -> array ~loc ~attrs (List.map (sub.expr sub) el)
-    | Pexp_ifthenelse (e1, e2, e3) ->
-      ifthenelse ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
-        (map_opt (sub.expr sub) e3)
-    | Pexp_sequence (e1, e2) ->
-      sequence ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
-    | Pexp_while (e1, e2) ->
-      while_ ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
-    | Pexp_for (p, e1, e2, d, e3) ->
-      for_ ~loc ~attrs (sub.pat sub p) (sub.expr sub e1) (sub.expr sub e2) d
-        (sub.expr sub e3)
-    | Pexp_coerce (e, (), t2) ->
-      coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
-    | Pexp_constraint (e, t) ->
-      constraint_ ~loc ~attrs (sub.expr sub e) (sub.typ sub t)
-    | Pexp_send (e, s) -> send ~loc ~attrs (sub.expr sub e) (map_loc sub s)
-    | Pexp_new _ -> failwith "Pexp_new is no longer present in ReScript"
-    | Pexp_setinstvar _ ->
-      failwith "Pexp_setinstvar is no longer present in ReScript"
-    | Pexp_override _ ->
-      failwith "Pexp_override is no longer present in ReScript"
-    | Pexp_letmodule (s, me, e) ->
-      letmodule ~loc ~attrs (map_loc sub s) (sub.module_expr sub me)
-        (sub.expr sub e)
-    | Pexp_letexception (cd, e) ->
-      letexception ~loc ~attrs
-        (sub.extension_constructor sub cd)
-        (sub.expr sub e)
-    | Pexp_assert e -> assert_ ~loc ~attrs (sub.expr sub e)
-    | Pexp_lazy e -> lazy_ ~loc ~attrs (sub.expr sub e)
-    | Pexp_poly _ -> failwith "Pexp_poly is no longer present in ReScript"
-    | Pexp_object () -> assert false
-    | Pexp_newtype (s, e) ->
-      newtype ~loc ~attrs (map_loc sub s) (sub.expr sub e)
-    | Pexp_pack me -> pack ~loc ~attrs (sub.module_expr sub me)
-    | Pexp_open (ovf, lid, e) ->
-      open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
-    | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
-    | Pexp_unreachable -> assert false
+      | Pexp_variant (lab, eo) ->
+        variant ~loc ~attrs lab (map_opt (sub.expr sub) eo)
+      | Pexp_record (l, eo) ->
+        record ~loc ~attrs
+          (Ext_list.map l (fun (lid, e) ->
+               let lid1 = map_loc sub lid in
+               let e1 = sub.expr sub e in
+               let optional, attrs =
+                 Parsetree0.get_optional_attr e1.pexp_attributes
+               in
+               (lid1, {e1 with pexp_attributes = attrs}, optional)))
+          (map_opt (sub.expr sub) eo)
+      | Pexp_field (e, lid) ->
+        field ~loc ~attrs (sub.expr sub e) (map_loc sub lid)
+      | Pexp_setfield (e1, lid, e2) ->
+        setfield ~loc ~attrs (sub.expr sub e1) (map_loc sub lid)
+          (sub.expr sub e2)
+      | Pexp_array el -> array ~loc ~attrs (List.map (sub.expr sub) el)
+      | Pexp_ifthenelse (e1, e2, e3) ->
+        ifthenelse ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
+          (map_opt (sub.expr sub) e3)
+      | Pexp_sequence (e1, e2) ->
+        sequence ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
+      | Pexp_while (e1, e2) ->
+        while_ ~loc ~attrs (sub.expr sub e1) (sub.expr sub e2)
+      | Pexp_for (p, e1, e2, d, e3) ->
+        for_ ~loc ~attrs (sub.pat sub p) (sub.expr sub e1) (sub.expr sub e2) d
+          (sub.expr sub e3)
+      | Pexp_coerce (e, (), t2) ->
+        coerce ~loc ~attrs (sub.expr sub e) (sub.typ sub t2)
+      | Pexp_constraint (e, t) ->
+        constraint_ ~loc ~attrs (sub.expr sub e) (sub.typ sub t)
+      | Pexp_send (e, s) -> send ~loc ~attrs (sub.expr sub e) (map_loc sub s)
+      | Pexp_new _ -> failwith "Pexp_new is no longer present in ReScript"
+      | Pexp_setinstvar _ ->
+        failwith "Pexp_setinstvar is no longer present in ReScript"
+      | Pexp_override _ ->
+        failwith "Pexp_override is no longer present in ReScript"
+      | Pexp_letmodule (s, me, e) ->
+        letmodule ~loc ~attrs (map_loc sub s) (sub.module_expr sub me)
+          (sub.expr sub e)
+      | Pexp_letexception (cd, e) ->
+        letexception ~loc ~attrs
+          (sub.extension_constructor sub cd)
+          (sub.expr sub e)
+      | Pexp_assert e -> assert_ ~loc ~attrs (sub.expr sub e)
+      | Pexp_lazy e -> lazy_ ~loc ~attrs (sub.expr sub e)
+      | Pexp_poly _ -> failwith "Pexp_poly is no longer present in ReScript"
+      | Pexp_object () -> assert false
+      | Pexp_newtype (s, e) ->
+        newtype ~loc ~attrs (map_loc sub s) (sub.expr sub e)
+      | Pexp_pack me -> pack ~loc ~attrs (sub.module_expr sub me)
+      | Pexp_open (ovf, lid, e) ->
+        open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
+      | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
+      | Pexp_unreachable -> assert false
 end
 
 module P = struct

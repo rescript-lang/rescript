@@ -191,22 +191,15 @@ let fun_expr expr_ =
     collect_params ~n_fun:0 ~params:[param] return_expr
   | _ -> collect_params ~n_fun:0 ~params:[] {expr_ with pexp_attributes = []}
 
-let process_braces_attr expr =
-  match expr.pexp_attributes with
-  | (({txt = "res.braces" | "ns.braces"}, _) as attr) :: attrs ->
-    (Some attr, {expr with pexp_attributes = attrs})
-  | _ -> (None, expr)
-
 let filter_parsing_attrs attrs =
   List.filter
     (fun attr ->
       match attr with
       | ( {
             Location.txt =
-              ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.await" | "res.template" | "res.taggedTemplate"
-              | "res.patVariantSpread" | "res.dictPattern"
-              | "res.inlineRecordDefinition" );
+              ( "res.iflet" | "res.ternary" | "res.await" | "res.template"
+              | "res.taggedTemplate" | "res.patVariantSpread"
+              | "res.dictPattern" | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
@@ -221,8 +214,8 @@ let is_block_expr expr =
   | _ -> false
 
 let is_braced_expr expr =
-  match process_braces_attr expr with
-  | Some _, _ -> true
+  match expr.pexp_desc with
+  | Pexp_braces _ -> true
   | _ -> false
 
 let is_multiline_text txt =
@@ -360,8 +353,8 @@ let has_attributes attrs =
       match attr with
       | ( {
             Location.txt =
-              ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.await" | "res.template" | "res.inlineRecordDefinition" );
+              ( "res.iflet" | "res.ternary" | "res.await" | "res.template"
+              | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
@@ -555,8 +548,8 @@ let is_printable_attribute attr =
   match attr with
   | ( {
         Location.txt =
-          ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.await"
-          | "res.template" | "res.ternary" | "res.inlineRecordDefinition" );
+          ( "ns.braces" | "JSX" | "res.await" | "res.template" | "res.ternary"
+          | "res.inlineRecordDefinition" );
       },
       _ ) ->
     false

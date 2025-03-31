@@ -407,6 +407,14 @@ module E = struct
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
     | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Pexp_braces inner ->
+      let mapped_inner = sub.expr sub inner in
+      {
+        mapped_inner with
+        pexp_attributes =
+          (Location.mkloc "res.braces" loc, Parsetree0.PStr [])
+          :: mapped_inner.pexp_attributes;
+      }
 end
 
 module P = struct

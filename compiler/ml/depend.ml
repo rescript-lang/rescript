@@ -213,6 +213,7 @@ let add_pattern bv pat =
 
 let rec add_expr bv exp =
   match exp.pexp_desc with
+  | Pexp_braces e -> add_expr bv e
   | Pexp_ident l -> add bv l
   | Pexp_constant _ -> ()
   | Pexp_let (rf, pel, e) ->

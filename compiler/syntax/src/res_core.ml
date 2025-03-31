@@ -166,7 +166,7 @@ let suppress_fragile_match_warning_attr =
         Ast_helper.Str.eval
           (Ast_helper.Exp.constant (Pconst_string ("-4", None)));
       ] )
-let make_braces_attr loc = (Location.mkloc "res.braces" loc, Parsetree.PStr [])
+
 let template_literal_attr = (Location.mknoloc "res.template", Parsetree.PStr [])
 let make_pat_variant_spread_attr =
   (Location.mknoloc "res.patVariantSpread", Parsetree.PStr [])
@@ -2888,22 +2888,16 @@ and parse_braced_or_record_expr p =
         let expr = parse_expr_block ~first:e p in
         Parser.expect Rbrace p;
         let loc = mk_loc start_pos p.prev_end_pos in
-        let braces = make_braces_attr loc in
-        {
-          expr with
-          Parsetree.pexp_attributes = braces :: expr.Parsetree.pexp_attributes;
-        }
+        Ast_helper.Exp.braces ~loc expr
       | Rbrace ->
         Parser.next p;
         let loc = mk_loc start_pos p.prev_end_pos in
-        let braces = make_braces_attr loc in
-        {e with pexp_attributes = braces :: e.pexp_attributes}
+        Ast_helper.Exp.braces ~loc e
       | _ ->
         let expr = parse_expr_block ~first:e p in
         Parser.expect Rbrace p;
         let loc = mk_loc start_pos p.prev_end_pos in
-        let braces = make_braces_attr loc in
-        {expr with pexp_attributes = braces :: expr.pexp_attributes}))
+        Ast_helper.Exp.braces ~loc expr))
   | Question ->
     let expr = parse_record_expr ~start_pos [] p in
     Parser.expect Rbrace p;
@@ -2921,8 +2915,7 @@ and parse_braced_or_record_expr p =
     let expr = parse_expr_block ~first:expr p in
     Parser.expect Rbrace p;
     let loc = mk_loc start_pos p.prev_end_pos in
-    let braces = make_braces_attr loc in
-    {expr with pexp_attributes = braces :: expr.pexp_attributes}
+    Ast_helper.Exp.braces ~loc expr
   | Uident _ | Lident _ -> (
     let start_token = p.token in
     let value_or_constructor = parse_value_or_constructor p in
@@ -2987,14 +2980,12 @@ and parse_braced_or_record_expr p =
         in
         Parser.expect Rbrace p;
         let loc = mk_loc start_pos p.prev_end_pos in
-        let braces = make_braces_attr loc in
-        {expr with pexp_attributes = braces :: expr.pexp_attributes}
+        Ast_helper.Exp.braces ~loc expr
       | Rbrace ->
         Parser.next p;
         let expr = Ast_helper.Exp.ident ~loc:path_ident.loc path_ident in
         let loc = mk_loc start_pos p.prev_end_pos in
-        let braces = make_braces_attr loc in
-        {expr with pexp_attributes = braces :: expr.pexp_attributes}
+        Ast_helper.Exp.braces ~loc expr
       | EqualGreater -> (
         let loc = mk_loc start_pos ident_end_pos in
         let ident = Location.mkloc (Longident.last path_ident.txt) loc in
@@ -3019,19 +3010,16 @@ and parse_braced_or_record_expr p =
           let expr = parse_expr_block ~first:e p in
           Parser.expect Rbrace p;
           let loc = mk_loc start_pos p.prev_end_pos in
-          let braces = make_braces_attr loc in
-          {expr with pexp_attributes = braces :: expr.pexp_attributes}
+          Ast_helper.Exp.braces ~loc expr
         | Rbrace ->
           Parser.next p;
           let loc = mk_loc start_pos p.prev_end_pos in
-          let braces = make_braces_attr loc in
-          {e with pexp_attributes = braces :: e.pexp_attributes}
+          Ast_helper.Exp.braces ~loc e
         | _ ->
           let expr = parse_expr_block ~first:e p in
           Parser.expect Rbrace p;
           let loc = mk_loc start_pos p.prev_end_pos in
-          let braces = make_braces_attr loc in
-          {expr with pexp_attributes = braces :: expr.pexp_attributes})
+          Ast_helper.Exp.braces ~loc expr)
       | _ -> (
         Parser.leave_breadcrumb p Grammar.ExprBlock;
         let a =
@@ -3047,19 +3035,16 @@ and parse_braced_or_record_expr p =
           let expr = parse_expr_block ~first:e p in
           Parser.expect Rbrace p;
           let loc = mk_loc start_pos p.prev_end_pos in
-          let braces = make_braces_attr loc in
-          {expr with pexp_attributes = braces :: expr.pexp_attributes}
+          Ast_helper.Exp.braces ~loc expr
         | Rbrace ->
           Parser.next p;
           let loc = mk_loc start_pos p.prev_end_pos in
-          let braces = make_braces_attr loc in
-          {e with pexp_attributes = braces :: e.pexp_attributes}
+          Ast_helper.Exp.braces ~loc e
         | _ ->
           let expr = parse_expr_block ~first:e p in
           Parser.expect Rbrace p;
           let loc = mk_loc start_pos p.prev_end_pos in
-          let braces = make_braces_attr loc in
-          {expr with pexp_attributes = braces :: expr.pexp_attributes}))
+          Ast_helper.Exp.braces ~loc expr))
     | _ -> (
       Parser.leave_breadcrumb p Grammar.ExprBlock;
       let a = parse_primary_expr ~operand:value_or_constructor p in
@@ -3071,25 +3056,21 @@ and parse_braced_or_record_expr p =
         let expr = parse_expr_block ~first:e p in
         Parser.expect Rbrace p;
         let loc = mk_loc start_pos p.prev_end_pos in
-        let braces = make_braces_attr loc in
-        {expr with pexp_attributes = braces :: expr.pexp_attributes}
+        Ast_helper.Exp.braces ~loc expr
       | Rbrace ->
         Parser.next p;
         let loc = mk_loc start_pos p.prev_end_pos in
-        let braces = make_braces_attr loc in
-        {e with pexp_attributes = braces :: e.pexp_attributes}
+        Ast_helper.Exp.braces ~loc e
       | _ ->
         let expr = parse_expr_block ~first:e p in
         Parser.expect Rbrace p;
         let loc = mk_loc start_pos p.prev_end_pos in
-        let braces = make_braces_attr loc in
-        {expr with pexp_attributes = braces :: expr.pexp_attributes}))
+        Ast_helper.Exp.braces ~loc expr))
   | _ ->
     let expr = parse_expr_block p in
     Parser.expect Rbrace p;
     let loc = mk_loc start_pos p.prev_end_pos in
-    let braces = make_braces_attr loc in
-    {expr with pexp_attributes = braces :: expr.pexp_attributes}
+    Ast_helper.Exp.braces ~loc expr
 
 and parse_record_expr_row_with_string_key p =
   match p.Parser.token with
