@@ -4506,7 +4506,7 @@ and print_jsx_container_tag ~state tag_name
                 print_comments
                   (Doc.concat [Doc.less_than; name])
                   cmt_tbl tag_name.Asttypes.loc;
-                (if List.is_empty formatted_props then Doc.nil
+                (if List.length formatted_props == 0 then Doc.nil
                  else
                    Doc.indent
                      (Doc.concat
