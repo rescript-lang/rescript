@@ -1109,8 +1109,9 @@ type componentDescription =
   | FragmentComponent
 
 let loc_from_prop = function
-  | JSXPropPunning (_, {loc}) -> loc
-  | JSXPropValue (_, _, {pexp_loc}) -> pexp_loc
+  | JSXPropPunning (_, name) -> name.loc
+  | JSXPropValue (name, _, value) ->
+    {name.loc with loc_end = value.pexp_loc.loc_end}
   | JSXPropSpreading (loc, _) -> loc
 
 let mk_record_from_props mapper (jsx_expr_loc : Location.t) (props : jsx_props)
