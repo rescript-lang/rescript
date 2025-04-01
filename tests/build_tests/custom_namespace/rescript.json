@@ -7,14 +7,13 @@
   },
   "namespace": "Foo_bar",
   "package-specs": {
-    "module": "commonjs",
-    "in-source": true
+    "module": "esmodule",
+    "in-source": true,
+    "suffix": ".res.js"
   },
   "bsc-flags": ["-bs-no-version-header"],
-  "bs-dependencies": [],
   "warnings": {
     "number": "-40+6+7",
     "error": true
-  },
-  "suffix": ".bs.js"
+  }
 }

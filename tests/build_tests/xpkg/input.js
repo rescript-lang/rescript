@@ -1,12 +1,9 @@
-var p = require("child_process");
-var assert = require("assert");
-var { rescript_exe } = require("#cli/bin_path");
-try {
-  var output = p.spawnSync(`${rescript_exe} build -regen`, {
-    shell: true,
-    encoding: "utf8",
-  });
+// @ts-check
 
-  assert.ok(output.stderr.match(/reserved package name/));
-} finally {
-}
+import * as assert from "node:assert";
+import { setup } from "#dev/process";
+
+const { execBuild } = await setup(import.meta.dirname);
+
+const output = await execBuild(["-regen"]);
+assert.match(output.stderr, /reserved package name/);

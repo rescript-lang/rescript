@@ -1,24 +1,9 @@
-var child_process = require("child_process");
+// @ts-check
 
-var assert = require("assert");
+import * as assert from "node:assert";
+import { setup } from "#dev/process";
 
-var { rescript_exe } = require("#cli/bin_path");
+const { execBuild } = setup(import.meta.dirname);
 
-assert.throws(
-  () => {
-    var output = child_process.execSync(`${rescript_exe} build -regen`, {
-      cwd: __dirname,
-      encoding: "utf8",
-    });
-  },
-  function (err) {
-    if (err.message.match(/detected two module formats/)) {
-      return true;
-    }
-    return false;
-  },
-);
-
-// assert.throws(()=>{
-//     throw new Error('Wrong value')
-// }, /x/)
+const output = await execBuild(["-regen"]);
+assert.match(output.stderr, /detected two module formats/);

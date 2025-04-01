@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 // @ts-check
 
 // TODO: Use `yarn pack --json` instead.
@@ -28,21 +29,21 @@
  * @typedef {[PackOutputEntry]} PackOutput
  */
 
-const { spawnSync, execSync } = require("child_process");
-const path = require("path");
-const fs = require("fs");
+import { execSync, spawnSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { projectDir } from "#dev/paths";
 
 const mode = process.argv.includes("-updateArtifactList")
   ? "updateArtifactList"
   : "package";
 
-const rootPath = path.join(__dirname, "..");
-const fileListPath = path.join(rootPath, "packages", "artifacts.txt");
+const fileListPath = path.join(projectDir, "packages", "artifacts.txt");
 
 const output = spawnSync(
-  "npm pack --json" + (mode === "updateArtifactList" ? " --dry-run" : ""),
+  `npm pack --json${mode === "updateArtifactList" ? " --dry-run" : ""}`,
   {
-    cwd: rootPath,
+    cwd: projectDir,
     encoding: "utf8",
     shell: true,
   },
@@ -77,8 +78,8 @@ function getFilesAddedByCI() {
 
   const files = ["ninja.COPYING"];
 
-  for (let platform of platforms) {
-    for (let exe of exes) {
+  for (const platform of platforms) {
+    for (const exe of exes) {
       files.push(`${platform}/${exe}`);
     }
   }

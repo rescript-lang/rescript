@@ -1,5 +1,8 @@
-var p = require("child_process");
-var assert = require("assert");
-var { rescript_exe } = require("#cli/bin_path");
-var out = p.spawnSync(rescript_exe, { encoding: "utf8", cwd: __dirname });
-assert(out.status == 0);
+// @ts-check
+
+import * as assert from "node:assert";
+import { setup } from "#dev/process";
+
+const { execBuild } = setup(import.meta.dirname);
+const output = await execBuild();
+assert.ok(output.status === 0);

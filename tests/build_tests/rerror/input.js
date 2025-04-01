@@ -1,35 +1,28 @@
 // @ts-check
-var child_process = require("child_process");
-var assert = require("assert");
-var os = require("os");
-var { rescript_exe } = require("#cli/bin_path");
 
-child_process.spawnSync(`${rescript_exe} clean`, {
-  cwd: __dirname,
-  encoding: "utf8",
-});
+import * as assert from "node:assert";
+import { setup } from "#dev/process";
 
-var o = child_process.spawnSync(rescript_exe, {
-  cwd: __dirname,
-  encoding: "utf8",
-  shell: true,
-});
+const { execBuild, execClean } = setup(import.meta.dirname);
+
+await execClean();
+const output = await execBuild([]);
 
 // verify the output is in reason syntax
-var u = o.stdout.match(/=>/g);
+const u = output.stdout.match(/=>/g);
 
-var lines = o.stdout
+const lines = output.stdout
   .split(/\r?\n/)
   .map(x => x.trim())
   .filter(Boolean);
 
-var test = false;
-for (var i = 0; i < lines.length; ++i) {
+let test = false;
+for (let i = 0; i < lines.length; i++) {
   if (lines[i] === "We've found a bug for you!") {
     console.log(`line ${i} found`);
-    assert.ok(/src[\\/]demo.res:1:21-23/.test(lines[i + 1]));
+    assert.match(lines[i + 1], /src[\\/]demo.res:1:21-23/);
     test = true;
   }
 }
 assert.ok(test);
-assert.ok(u.length === 2);
+assert.equal(u?.length, 2);

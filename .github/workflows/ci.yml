@@ -45,6 +45,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
       - name: Restore build cache
         id: build-cache
         uses: actions/cache@v4
@@ -401,11 +406,11 @@ jobs:
         run: |
           opam exec -- node packages/playground-bundling/scripts/generate_cmijs.js
           opam exec -- dune build --profile browser
-          cp ./_build/default/compiler/jsoo/jsoo_playground_main.bc.js playground/compiler.js
+          cp ./_build/default/compiler/jsoo/jsoo_playground_main.bc.js playground/compiler.cjs
 
       - name: Test playground compiler
         if: matrix.build_playground
-        run: node playground/playground_test.js
+        run: node playground/playground_test.cjs
 
       - name: Upload playground compiler to CDN
         if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}

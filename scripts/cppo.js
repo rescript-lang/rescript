@@ -1,8 +1,8 @@
 // @ts-check
 
-const { execFileSync } = require("child_process");
+import { execFileSync } from "node:child_process";
 
-[
+const targets = [
   ["belt_HashSetString.res", "hashset.res.cppo", "TYPE_STRING"],
   ["belt_HashSetString.resi", "hashset.resi.cppo", "TYPE_STRING"],
   ["belt_HashSetInt.res", "hashset.res.cppo", "TYPE_INT"],
@@ -35,10 +35,12 @@ const { execFileSync } = require("child_process");
   ["belt_internalMapInt.res", "internal_map.res.cppo", "TYPE_INT"],
   ["belt_internalSetString.res", "internal_set.res.cppo", "TYPE_STRING"],
   ["belt_internalSetInt.res", "internal_set.res.cppo", "TYPE_INT"],
-].forEach(([output, input, type]) => {
+];
+
+for (const [output, input, type] of targets) {
   execFileSync(
     "cppo",
     ["-n", "-D", type, `runtime/cppo/${input}`, "-o", `runtime/${output}`],
     { stdio: "inherit" },
   );
-});
+}

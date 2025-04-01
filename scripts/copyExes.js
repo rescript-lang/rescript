@@ -1,23 +1,25 @@
 #!/usr/bin/env node
+
+// @ts-check
+
 // Copy exes built by dune to platform bin dir
 
-const path = require("path");
-const fs = require("fs");
-const child_process = require("child_process");
-const { duneBinDir } = require("./dune");
-const { absolutePath: platformBinDir } = require("#cli/bin_path");
+import * as child_process from "node:child_process";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { platformDir } from "#cli/bins";
+import { compilerBinDir, ninjaDir, rewatchDir } from "#dev/paths";
 
-const ninjaDir = path.join(__dirname, "..", "ninja");
-const rewatchDir = path.join(__dirname, "..", "rewatch");
+fs.mkdirSync(platformDir, { recursive: true });
 
-if (!fs.existsSync(platformBinDir)) {
-  fs.mkdirSync(platformBinDir);
-}
-
+/**
+ * @param {string} dir
+ * @param {string} exe
+ */
 function copyExe(dir, exe) {
   const ext = process.platform === "win32" ? ".exe" : "";
   const src = path.join(dir, exe + ext);
-  const dest = path.join(platformBinDir, exe + ".exe");
+  const dest = path.join(platformDir, `${exe}.exe`);
 
   // For some reason, the copy operation fails in Windows CI if the file already exists.
   if (process.platform === "win32" && fs.existsSync(dest)) {
@@ -41,11 +43,11 @@ function copyExe(dir, exe) {
 }
 
 if (process.argv.includes("-all") || process.argv.includes("-compiler")) {
-  copyExe(duneBinDir, "rescript");
-  copyExe(duneBinDir, "rescript-editor-analysis");
-  copyExe(duneBinDir, "rescript-tools");
-  copyExe(duneBinDir, "bsc");
-  copyExe(duneBinDir, "bsb_helper");
+  copyExe(compilerBinDir, "rescript");
+  copyExe(compilerBinDir, "rescript-editor-analysis");
+  copyExe(compilerBinDir, "rescript-tools");
+  copyExe(compilerBinDir, "bsc");
+  copyExe(compilerBinDir, "bsb_helper");
 }
 
 if (process.argv.includes("-all") || process.argv.includes("-ninja")) {

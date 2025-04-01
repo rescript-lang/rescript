@@ -3,7 +3,6 @@ include Stdlib_Global
 module Array = Stdlib_Array
 module BigInt = Stdlib_BigInt
 module Bool = Stdlib_Bool
-module Char = Stdlib_Char
 module Console = Stdlib_Console
 module DataView = Stdlib_DataView
 module Date = Stdlib_Date
@@ -21,6 +20,7 @@ module Nullable = Stdlib_Nullable
 module Object = Stdlib_Object
 module Option = Stdlib_Option
 module Ordering = Stdlib_Ordering
+module Pair = Stdlib_Pair
 module Promise = Stdlib_Promise
 module RegExp = Stdlib_RegExp
 module Result = Stdlib_Result

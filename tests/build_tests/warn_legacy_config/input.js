@@ -1,10 +1,12 @@
-const { spawnSync } = require("child_process");
-const assert = require("assert");
-const { rescript_exe } = require("#cli/bin_path");
+// @ts-check
 
-const output = spawnSync(rescript_exe, { encoding: "utf8" });
-assert(
-  /^Warning: bsconfig.json is deprecated. Migrate it to rescript.json/.test(
-    output.stdout,
-  ),
+import * as assert from "node:assert";
+import { setup } from "#dev/process";
+
+const { execBuild } = setup(import.meta.dirname);
+
+const output = await execBuild();
+assert.match(
+  output.stdout,
+  /^Warning: bsconfig.json is deprecated. Migrate it to rescript.json/,
 );

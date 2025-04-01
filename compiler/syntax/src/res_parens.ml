@@ -184,6 +184,7 @@ let flatten_operand_rhs parent_operator rhs =
     prec_parent >= prec_child || rhs.pexp_attributes <> []
   | Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _}) ->
     false
+  | Pexp_fun {lhs = {ppat_desc = Ppat_var {txt = "__x"}}} -> false
   | Pexp_fun _ | Pexp_newtype _ | Pexp_setfield _ | Pexp_constraint _ -> true
   | _ when ParsetreeViewer.is_ternary_expr rhs -> true
   | _ -> false

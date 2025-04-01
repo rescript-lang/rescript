@@ -263,7 +263,7 @@ $ node
 
 ### Testing the Playground bundle
 
-Run `node playground/playground_test.js` for a quick sanity check to see if all the build artifacts are working together correctly. When releasing the playground bundle, the test will always be executed before publishing to catch regressions.
+Run `node playground/playground_test.cjs` for a quick sanity check to see if all the build artifacts are working together correctly. When releasing the playground bundle, the test will always be executed before publishing to catch regressions.
 
 ### Working on the Playground JS API
 
@@ -273,7 +273,7 @@ Whenever you are modifying any files in the ReScript compiler, or in the `jsoo_p
 make playground
 
 # optionally run your test / arbitrary node script to verify your changes
-node playground/playground_test.js
+node playground/playground_test.cjs
 ```
 
 ### Publishing the Playground Bundle on our KeyCDN

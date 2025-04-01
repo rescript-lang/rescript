@@ -1,31 +1,26 @@
-var p = require("child_process");
-var assert = require("assert");
-var { rescript_exe } = require("#cli/bin_path");
+import * as assert from "node:assert";
+import { setup } from "#dev/process";
 
-var o1 = p.spawnSync(rescript_exe, ["build"], {
-  encoding: "utf8",
-  cwd: __dirname,
-});
+const { execBuild, execClean } = setup(import.meta.dirname);
 
-var first_message = o1.stdout
+const o1 = await execBuild();
+
+const first_message = o1.stdout
   .split("\n")
   .map(s => s.trim())
-  .find(s => s == "Warning number 110");
+  .find(s => s === "Warning number 110");
 
 if (!first_message) {
   assert.fail(o1.stdout);
 }
 
 // Second build using -warn-error +110
-var o2 = p.spawnSync(rescript_exe, ["build", "-warn-error", "+110"], {
-  encoding: "utf8",
-  cwd: __dirname,
-});
+const o2 = await execBuild(["-warn-error", "+110"]);
 
-var second_message = o2.stdout
+const second_message = o2.stdout
   .split("\n")
   .map(s => s.trim())
-  .find(s => s == "Warning number 110 (configured as error)");
+  .find(s => s === "Warning number 110 (configured as error)");
 
 if (!second_message) {
   assert.fail(o2.stdout);
@@ -33,21 +28,15 @@ if (!second_message) {
 
 // Third build, without -warn-error +110
 // The result should not be a warning as error
-var o3 = p.spawnSync(rescript_exe, ["build"], {
-  encoding: "utf8",
-  cwd: __dirname,
-});
+const o3 = await execBuild();
 
-var third_message = o3.stdout
+const third_message = o3.stdout
   .split("\n")
   .map(s => s.trim())
-  .find(s => s == "Dependency Finished");
+  .find(s => s === "Dependency Finished");
 
 if (!third_message) {
   assert.fail(o3.stdout);
 }
 
-var cleanup = p.spawnSync(rescript_exe, ["clean"], {
-  encoding: "utf8",
-  cwd: __dirname,
-});
+await execClean();
