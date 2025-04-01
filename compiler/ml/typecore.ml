@@ -178,18 +178,8 @@ let iter_expression f e =
       expr e;
       module_expr me
     | Pexp_pack me -> module_expr me
-    | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
-      iter_jsx_children children
-    | Pexp_jsx_element (Jsx_unary_element {jsx_unary_element_props = props}) ->
-      iter_jsx_props props
-    | Pexp_jsx_element
-        (Jsx_container_element
-           {
-             jsx_container_element_props = props;
-             jsx_container_element_children = children;
-           }) ->
-      iter_jsx_props props;
-      iter_jsx_children children
+    | Pexp_jsx_element _ ->
+      failwith "Pexp_jsx_element should be transformed at this point."
   and case {pc_lhs = _; pc_guard; pc_rhs} =
     may expr pc_guard;
     expr pc_rhs
@@ -213,14 +203,7 @@ let iter_expression f e =
     | Pstr_include {pincl_mod = me} | Pstr_module {pmb_expr = me} ->
       module_expr me
     | Pstr_recmodule l -> List.iter (fun x -> module_expr x.pmb_expr) l
-  and iter_jsx_children = function
-    | JSXChildrenSpreading e -> expr e
-    | JSXChildrenItems el -> List.iter expr el
-  and iter_jsx_prop = function
-    | JSXPropPunning _ -> ()
-    | JSXPropValue (_, _, e) -> expr e
-    | JSXPropSpreading (_, e) -> expr e
-  and iter_jsx_props props = List.iter iter_jsx_prop props in
+  in
 
   expr e
 
