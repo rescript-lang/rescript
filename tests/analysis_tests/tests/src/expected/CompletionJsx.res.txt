@@ -25,9 +25,9 @@ Complete src/CompletionJsx.res 13:21
 posCursor:[13:21] posNoWhite:[13:20] Found expr:[8:13->33:3]
 posCursor:[13:21] posNoWhite:[13:20] Found expr:[9:4->32:10]
 posCursor:[13:21] posNoWhite:[13:20] Found expr:[10:4->32:10]
-posCursor:[13:21] posNoWhite:[13:20] Found expr:[11:4->33:2]
-posCursor:[13:21] posNoWhite:[13:20] Found expr:[12:4->33:2]
-posCursor:[13:21] posNoWhite:[13:20] Found expr:[13:7->33:2]
+posCursor:[13:21] posNoWhite:[13:20] Found expr:[11:4->32:10]
+posCursor:[13:21] posNoWhite:[13:20] Found expr:[12:4->32:10]
+posCursor:[13:21] posNoWhite:[13:20] Found expr:[13:7->32:10]
 posCursor:[13:21] posNoWhite:[13:20] Found expr:[13:7->13:21]
 Completable: Cpath Value[someString]->st <<jsx>>
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -62,9 +62,9 @@ Complete src/CompletionJsx.res 18:24
 posCursor:[18:24] posNoWhite:[18:23] Found expr:[8:13->33:3]
 posCursor:[18:24] posNoWhite:[18:23] Found expr:[9:4->32:10]
 posCursor:[18:24] posNoWhite:[18:23] Found expr:[10:4->32:10]
-posCursor:[18:24] posNoWhite:[18:23] Found expr:[11:4->33:2]
-posCursor:[18:24] posNoWhite:[18:23] Found expr:[12:4->33:2]
-posCursor:[18:24] posNoWhite:[18:23] Found expr:[15:4->33:2]
+posCursor:[18:24] posNoWhite:[18:23] Found expr:[11:4->32:10]
+posCursor:[18:24] posNoWhite:[18:23] Found expr:[12:4->32:10]
+posCursor:[18:24] posNoWhite:[18:23] Found expr:[15:4->32:10]
 JSX <div:[15:5->15:8] > _children:16:7
 posCursor:[18:24] posNoWhite:[18:23] Found expr:[18:10->18:24]
 Completable: Cpath Value[someString]->st <<jsx>>
@@ -100,9 +100,9 @@ Complete src/CompletionJsx.res 20:27
 posCursor:[20:27] posNoWhite:[20:26] Found expr:[8:13->33:3]
 posCursor:[20:27] posNoWhite:[20:26] Found expr:[9:4->32:10]
 posCursor:[20:27] posNoWhite:[20:26] Found expr:[10:4->32:10]
-posCursor:[20:27] posNoWhite:[20:26] Found expr:[11:4->33:2]
-posCursor:[20:27] posNoWhite:[20:26] Found expr:[12:4->33:2]
-posCursor:[20:27] posNoWhite:[20:26] Found expr:[15:4->33:2]
+posCursor:[20:27] posNoWhite:[20:26] Found expr:[11:4->32:10]
+posCursor:[20:27] posNoWhite:[20:26] Found expr:[12:4->32:10]
+posCursor:[20:27] posNoWhite:[20:26] Found expr:[15:4->32:10]
 JSX <div:[15:5->15:8] > _children:16:7
 posCursor:[20:27] posNoWhite:[20:26] Found expr:[20:10->20:27]
 Completable: Cpath string->st <<jsx>>
@@ -137,9 +137,9 @@ Complete src/CompletionJsx.res 22:40
 posCursor:[22:40] posNoWhite:[22:39] Found expr:[8:13->33:3]
 posCursor:[22:40] posNoWhite:[22:39] Found expr:[9:4->32:10]
 posCursor:[22:40] posNoWhite:[22:39] Found expr:[10:4->32:10]
-posCursor:[22:40] posNoWhite:[22:39] Found expr:[11:4->33:2]
-posCursor:[22:40] posNoWhite:[22:39] Found expr:[12:4->33:2]
-posCursor:[22:40] posNoWhite:[22:39] Found expr:[15:4->33:2]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[11:4->32:10]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[12:4->32:10]
+posCursor:[22:40] posNoWhite:[22:39] Found expr:[15:4->32:10]
 JSX <div:[15:5->15:8] > _children:16:7
 posCursor:[22:40] posNoWhite:[22:39] Found expr:[22:10->22:40]
 Completable: Cpath Value[String, trim](Nolabel)->st <<jsx>>
@@ -176,9 +176,9 @@ Complete src/CompletionJsx.res 24:19
 posCursor:[24:19] posNoWhite:[24:18] Found expr:[8:13->33:3]
 posCursor:[24:19] posNoWhite:[24:18] Found expr:[9:4->32:10]
 posCursor:[24:19] posNoWhite:[24:18] Found expr:[10:4->32:10]
-posCursor:[24:19] posNoWhite:[24:18] Found expr:[11:4->33:2]
-posCursor:[24:19] posNoWhite:[24:18] Found expr:[12:4->33:2]
-posCursor:[24:19] posNoWhite:[24:18] Found expr:[15:4->33:2]
+posCursor:[24:19] posNoWhite:[24:18] Found expr:[11:4->32:10]
+posCursor:[24:19] posNoWhite:[24:18] Found expr:[12:4->32:10]
+posCursor:[24:19] posNoWhite:[24:18] Found expr:[15:4->32:10]
 JSX <div:[15:5->15:8] > _children:16:7
 posCursor:[24:19] posNoWhite:[24:18] Found expr:[24:10->0:-1]
 Completable: Cpath Value[someInt]-> <<jsx>>
@@ -346,9 +346,9 @@ Complete src/CompletionJsx.res 26:14
 posCursor:[26:14] posNoWhite:[26:13] Found expr:[8:13->33:3]
 posCursor:[26:14] posNoWhite:[26:13] Found expr:[9:4->32:10]
 posCursor:[26:14] posNoWhite:[26:13] Found expr:[10:4->32:10]
-posCursor:[26:14] posNoWhite:[26:13] Found expr:[11:4->33:2]
-posCursor:[26:14] posNoWhite:[26:13] Found expr:[12:4->33:2]
-posCursor:[26:14] posNoWhite:[26:13] Found expr:[15:4->33:2]
+posCursor:[26:14] posNoWhite:[26:13] Found expr:[11:4->32:10]
+posCursor:[26:14] posNoWhite:[26:13] Found expr:[12:4->32:10]
+posCursor:[26:14] posNoWhite:[26:13] Found expr:[15:4->32:10]
 JSX <div:[15:5->15:8] > _children:16:7
 posCursor:[26:14] posNoWhite:[26:13] Found expr:[26:10->0:-1]
 Completable: Cpath int-> <<jsx>>
@@ -515,9 +515,9 @@ Complete src/CompletionJsx.res 28:20
 posCursor:[28:20] posNoWhite:[28:19] Found expr:[8:13->33:3]
 posCursor:[28:20] posNoWhite:[28:19] Found expr:[9:4->32:10]
 posCursor:[28:20] posNoWhite:[28:19] Found expr:[10:4->32:10]
-posCursor:[28:20] posNoWhite:[28:19] Found expr:[11:4->33:2]
-posCursor:[28:20] posNoWhite:[28:19] Found expr:[12:4->33:2]
-posCursor:[28:20] posNoWhite:[28:19] Found expr:[15:4->33:2]
+posCursor:[28:20] posNoWhite:[28:19] Found expr:[11:4->32:10]
+posCursor:[28:20] posNoWhite:[28:19] Found expr:[12:4->32:10]
+posCursor:[28:20] posNoWhite:[28:19] Found expr:[15:4->32:10]
 JSX <div:[15:5->15:8] > _children:16:7
 posCursor:[28:20] posNoWhite:[28:19] Found expr:[28:10->28:20]
 Completable: Cpath Value[someArr]->a <<jsx>>
@@ -750,7 +750,7 @@ Path Info.make
   }]
 
 Complete src/CompletionJsx.res 93:19
-posCursor:[93:19] posNoWhite:[93:18] Found expr:[93:11->96:0]
+posCursor:[93:19] posNoWhite:[93:18] Found expr:[93:11->93:24]
 JSX <p:[93:12->93:13] > _children:93:15
 posCursor:[93:19] posNoWhite:[93:18] Found expr:[93:15->93:19]
 Pexp_field [93:15->93:17] s:[93:18->93:19]
