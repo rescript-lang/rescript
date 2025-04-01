@@ -754,20 +754,8 @@ let verify_jsx_opening_closing_name p
     | Uident _ -> (parse_module_long_ident ~lowercase:true p).txt
     | _ -> Longident.Lident ""
   in
-  (* match name_longident.Parsetree.pexp_desc with
-  | Pexp_ident opening_ident -> *)
-  (* let opening =
-    let without_create_element =
-      Longident.flatten name_longident.txt
-      (* |> List.filter (fun s -> s <> "createElement") *)
-    in
-    match Longident.unflatten without_create_element with
-    | Some li -> li
-    | None -> Longident.Lident ""
-  in *)
   let opening = name_longident.txt in
   opening = closing
-(* | _ -> assert false *)
 
 let string_of_longident (longindent : Longident.t Location.loc) =
   Longident.flatten longindent.txt
@@ -2562,13 +2550,7 @@ and parse_let_bindings ~attrs ~start_pos p =
   in
   (rec_flag, loop p [first])
 
-(*
- * div -> div
- * Foo -> Foo.createElement
- * Foo.Bar -> Foo.Bar.createElement
- *)
 and parse_jsx_name p : Longident.t Location.loc =
-  (* let longident = *)
   match p.Parser.token with
   | Lident ident ->
     let ident_start = p.start_pos in
@@ -2579,9 +2561,6 @@ and parse_jsx_name p : Longident.t Location.loc =
   | Uident _ ->
     let longident = parse_module_long_ident ~lowercase:true p in
     longident
-    (* Location.mkloc
-        (Longident.Ldot (longident.txt, "createElement")) (* TODO: I kinda wanna drop the createElement here as that is not what the user typed *)
-        longident.loc *)
   | _ ->
     let msg =
       "A jsx name must be a lowercase or uppercase name, like: div in <div /> \
@@ -2589,8 +2568,6 @@ and parse_jsx_name p : Longident.t Location.loc =
     in
     Parser.err p (Diagnostics.message msg);
     Location.mknoloc (Longident.Lident "_")
-(* in
-  Ast_helper.Exp.ident ~loc:longident.loc longident *)
 
 and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
     ~start_pos p : Parsetree.expression =
@@ -2599,22 +2576,17 @@ and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
   match p.Parser.token with
   | Forwardslash ->
     (* <foo a=b /> *)
-    (* let children_start_pos = p.Parser.start_pos in *)
     Parser.next p;
-    (* let children_end_pos = p.Parser.start_pos in *)
     Scanner.pop_mode p.scanner Jsx;
     let jsx_end_pos = p.end_pos in
     Parser.expect GreaterThan p;
     let loc = mk_loc start_pos jsx_end_pos in
-    (* Ast_helper.Exp.make_list_expression loc [] None no children *)
     Ast_helper.Exp.jsx_unary_element ~loc name jsx_props
   | GreaterThan -> (
     (* <foo a=b> bar </foo> *)
-    (* let children_start_pos = p.Parser.start_pos in *)
     let opening_tag_end = p.Parser.start_pos in
     Parser.next p;
     let children = parse_jsx_children p in
-    (* let children_end_pos = p.Parser.start_pos in *)
     let closing_tag_start =
       match p.token with
       | LessThanSlash ->
@@ -2650,11 +2622,6 @@ and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
 
       Ast_helper.Exp.jsx_container_element ~loc name jsx_props opening_tag_end
         children closing_tag
-      (*  end_tag_name  *)
-      (* let loc = mk_loc children_start_pos children_end_pos in
-      match (spread, children) with
-      | true, child :: _ -> child
-      | _ -> Ast_helper.Exp.make_list_expression loc children None) *)
     | token ->
       Scanner.pop_mode p.scanner Jsx;
       let () =
@@ -2674,9 +2641,7 @@ and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
       in
       Ast_helper.Exp.jsx_container_element
         ~loc:(mk_loc start_pos p.prev_end_pos)
-        name jsx_props opening_tag_end children None
-    (* Ast_helper.Exp.make_list_expression (mk_loc p.start_pos p.end_pos) [] None *)
-    )
+        name jsx_props opening_tag_end children None)
   | token ->
     Scanner.pop_mode p.scanner Jsx;
     Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
