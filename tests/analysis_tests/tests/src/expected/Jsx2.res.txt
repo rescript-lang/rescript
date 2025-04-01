@@ -517,25 +517,8 @@ Path Nested.
   }]
 
 Hover src/Jsx2.res 162:12
-Nothing at that position. Now trying to use completion.
-posCursor:[162:12] posNoWhite:[162:11] Found expr:[162:2->162:24]
-posCursor:[162:12] posNoWhite:[162:11] Found expr:[162:5->162:20]
-JSX <Comp:[162:6->162:10] age[162:11->162:14]=...[162:15->162:17]> _children:None
-Completable: Cjsx([Comp], age, [age])
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-Path Comp.make
-{"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nComp.props<int>\n```\n\n---\n\n```\n \n```\n```rescript\ntype Comp.props<'age> = {age: 'age}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Jsx2.res%22%2C157%2C2%5D)\n"}}
 
 Hover src/Jsx2.res 167:16
-Nothing at that position. Now trying to use completion.
-posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:2->167:33]
-posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:6->167:28]
-posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:9->167:24]
-JSX <Comp:[167:10->167:14] age[167:15->167:18]=...[167:19->167:21]> _children:None
-Completable: Cjsx([Comp], age, [age])
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-Path Comp.make
-{"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nComp.props<int>\n```\n\n---\n\n```\n \n```\n```rescript\ntype Comp.props<'age> = {age: 'age}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Jsx2.res%22%2C157%2C2%5D)\n"}}
 
