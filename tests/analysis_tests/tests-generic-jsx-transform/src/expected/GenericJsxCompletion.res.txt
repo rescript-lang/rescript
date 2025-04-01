@@ -93,7 +93,7 @@ posCursor:[20:24] posNoWhite:[20:23] Found expr:[11:4->22:10]
 posCursor:[20:24] posNoWhite:[20:23] Found expr:[12:4->22:10]
 posCursor:[20:24] posNoWhite:[20:23] Found expr:[13:4->22:10]
 posCursor:[20:24] posNoWhite:[20:23] Found expr:[16:4->22:10]
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[17:4->23:2]
+posCursor:[20:24] posNoWhite:[20:23] Found expr:[17:4->22:10]
 JSX <div:[17:5->17:8] > _children:18:7
 posCursor:[20:24] posNoWhite:[20:23] Found expr:[20:10->20:24]
 Completable: Cpath Value[someString]->st <<jsx>>
