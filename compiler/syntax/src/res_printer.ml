@@ -4649,7 +4649,41 @@ and print_jsx_children ~state (children_expr : Parsetree.jsx_children) ~sep
   | JSXChildrenSpreading child -> Doc.concat [Doc.dotdotdot; print_expr child]
   | JSXChildrenItems [] -> Doc.nil
   | JSXChildrenItems children ->
-    children |> List.map print_expr |> Doc.join ~sep
+    let get_loc (expr : Parsetree.expression) =
+      let braces =
+        expr.pexp_attributes
+        |> List.find_map (fun (attr, _) ->
+               match attr with
+               | {Location.txt = "res.braces"; loc} -> Some loc
+               | _ -> None)
+      in
+      match braces with
+      | None -> expr.pexp_loc
+      | Some loc -> loc
+    in
+
+    let rec visit acc children =
+      match children with
+      | [] -> acc
+      | [x] -> Doc.concat [acc; print_expr x]
+      | x :: (y :: _ as rest) ->
+        let end_line_x =
+          let loc = get_loc x in
+          loc.loc_end.pos_lnum
+        in
+        let start_line_y =
+          let loc = get_loc y in
+          loc.loc_start.pos_lnum
+        in
+        (* If there are lines between the jsx elements, we preserve at least one line *)
+        if end_line_x + 1 < start_line_y then
+          let doc = Doc.concat [print_expr x; sep; Doc.hard_line] in
+          visit (Doc.concat [acc; doc]) rest
+        else
+          let doc = Doc.concat [print_expr x; sep] in
+          visit (Doc.concat [acc; doc]) rest
+    in
+    visit Doc.nil children
 
 and print_jsx_prop ~state prop cmt_tbl =
   let open Parsetree in
