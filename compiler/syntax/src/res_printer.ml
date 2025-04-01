@@ -50,6 +50,12 @@ let has_leading_line_comment tbl loc =
   | Some comment -> Comment.is_single_line_comment comment
   | None -> false
 
+let get_leading_line_comment_count tbl loc =
+  match Hashtbl.find_opt tbl.CommentTable.leading loc with
+  | Some comments ->
+    List.filter Comment.is_single_line_comment comments |> List.length
+  | None -> 0
+
 let has_trailing_single_line_comment tbl loc =
   match Hashtbl.find_opt tbl.CommentTable.trailing loc with
   | Some (comment :: _) -> Comment.is_single_line_comment comment
@@ -2836,12 +2842,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
              jsx_fragment_children = children;
              jsx_fragment_closing = c;
            }) ->
-      let xs =
-        match children with
-        | JSXChildrenSpreading e -> [e]
-        | JSXChildrenItems xs -> xs
-      in
-      print_jsx_fragment ~state o xs c e.pexp_loc cmt_tbl
+      print_jsx_fragment ~state o children c e.pexp_loc cmt_tbl
     | Pexp_jsx_element
         (Jsx_unary_element
            {
@@ -4458,28 +4459,12 @@ and print_jsx_container_tag ~state tag_name
     | JSXChildrenSpreading _ | JSXChildrenItems (_ :: _) -> true
     | JSXChildrenItems [] -> false
   in
-  let line_sep =
-    match children with
-    | JSXChildrenSpreading _ -> Doc.line
-    | JSXChildrenItems children ->
-      if
-        List.length children > 1
-        || List.exists
-             (function
-               | {Parsetree.pexp_desc = Pexp_jsx_element _} -> true
-               | _ -> false)
-             children
-      then Doc.hard_line
-      else Doc.line
-  in
+  let line_sep = get_line_sep_for_jsx_children children in
   let print_children children =
     Doc.concat
       [
         Doc.indent
-          (Doc.concat
-             [
-               Doc.line; print_jsx_children ~sep:line_sep ~state children cmt_tbl;
-             ]);
+          (Doc.concat [Doc.line; print_jsx_children ~state children cmt_tbl]);
         line_sep;
       ]
   in
@@ -4560,9 +4545,8 @@ and print_jsx_container_tag ~state tag_name
        ])
 
 and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
-    (children : Parsetree.expression list)
-    (closing_lesser_than : Lexing.position) (fragment_loc : Warnings.loc)
-    cmt_tbl =
+    (children : Parsetree.jsx_children) (closing_lesser_than : Lexing.position)
+    (fragment_loc : Warnings.loc) cmt_tbl =
   let opening =
     let loc : Location.t = {fragment_loc with loc_end = opening_greater_than} in
     print_comments (Doc.text "<>") cmt_tbl loc
@@ -4573,7 +4557,26 @@ and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
     in
     print_comments (Doc.text "</>") cmt_tbl loc
   in
-  let line_sep =
+  let has_children =
+    match children with
+    | JSXChildrenItems [] -> false
+    | JSXChildrenSpreading _ | JSXChildrenItems (_ :: _) -> true
+  in
+  let line_sep = get_line_sep_for_jsx_children children in
+  Doc.group
+    (Doc.concat
+       [
+         opening;
+         Doc.indent
+           (Doc.concat [Doc.line; print_jsx_children ~state children cmt_tbl]);
+         (if has_children then line_sep else Doc.nil);
+         closing;
+       ])
+
+and get_line_sep_for_jsx_children (children : Parsetree.jsx_children) =
+  match children with
+  | JSXChildrenSpreading _ -> Doc.line
+  | JSXChildrenItems children ->
     if
       List.length children > 1
       || List.exists
@@ -4583,49 +4586,10 @@ and print_jsx_fragment ~state (opening_greater_than : Lexing.position)
            children
     then Doc.hard_line
     else Doc.line
-  in
-  Doc.group
-    (Doc.concat
-       [
-         opening;
-         (match children with
-         | [] -> Doc.nil
-         | children ->
-           Doc.indent
-             (Doc.concat
-                [
-                  Doc.line;
-                  Doc.join ~sep:line_sep
-                    (List.map
-                       (fun e -> print_jsx_child ~state e cmt_tbl)
-                       children);
-                ]));
-         line_sep;
-         closing;
-       ])
 
-and print_jsx_child ~state (expr : Parsetree.expression) cmt_tbl =
-  let leading_line_comment_present =
-    has_leading_line_comment cmt_tbl expr.pexp_loc
-  in
-  let expr_doc = print_expression_with_comments ~state expr cmt_tbl in
-  let add_parens_or_braces expr_doc =
-    (* {(20: int)} make sure that we also protect the expression inside *)
-    let inner_doc =
-      if Parens.braced_expr expr then add_parens expr_doc else expr_doc
-    in
-    if leading_line_comment_present then add_braces inner_doc
-    else Doc.concat [Doc.lbrace; inner_doc; Doc.rbrace]
-  in
-  match Parens.jsx_child_expr expr with
-  | Nothing -> expr_doc
-  | Parenthesized -> add_parens_or_braces expr_doc
-  | Braced braces_loc ->
-    print_comments (add_parens_or_braces expr_doc) cmt_tbl braces_loc
-
-and print_jsx_children ~state (children_expr : Parsetree.jsx_children) ~sep
-    cmt_tbl =
+and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
   let open Parsetree in
+  let sep = get_line_sep_for_jsx_children children in
   let print_expr (expr : Parsetree.expression) =
     let leading_line_comment_present =
       has_leading_line_comment cmt_tbl expr.pexp_loc
@@ -4645,9 +4609,9 @@ and print_jsx_children ~state (children_expr : Parsetree.jsx_children) ~sep
     | Braced braces_loc ->
       print_comments (add_parens_or_braces expr_doc) cmt_tbl braces_loc
   in
-  match children_expr with
-  | JSXChildrenSpreading child -> Doc.concat [Doc.dotdotdot; print_expr child]
+  match children with
   | JSXChildrenItems [] -> Doc.nil
+  | JSXChildrenSpreading child -> Doc.concat [Doc.dotdotdot; print_expr child]
   | JSXChildrenItems children ->
     let get_loc (expr : Parsetree.expression) =
       let braces =
@@ -4675,8 +4639,16 @@ and print_jsx_children ~state (children_expr : Parsetree.jsx_children) ~sep
           let loc = get_loc y in
           loc.loc_start.pos_lnum
         in
+        let lines_between = start_line_y - end_line_x - 1 in
+        let leading_single_line_comments =
+          get_leading_line_comment_count cmt_tbl (get_loc y)
+        in
         (* If there are lines between the jsx elements, we preserve at least one line *)
-        if end_line_x + 1 < start_line_y then
+        if
+          (* Unless they are all comments *)
+          (* The edge case of comment followed by blank line is not caught here *)
+          lines_between > 0 && not (lines_between = leading_single_line_comments)
+        then
           let doc = Doc.concat [print_expr x; sep; Doc.hard_line] in
           visit (Doc.concat [acc; doc]) rest
         else

@@ -509,3 +509,29 @@ let x =
       }}
     />
   </div>
+
+let moo =
+  <div>
+    <p> {React.string("moo")} </p>
+    // c1
+    <p> {React.string("moo")} </p>
+    // c2
+    // c3
+    <p> {React.string("moo")} </p>
+    // c4
+
+    <p> {React.string("moo")} </p>
+  </div>
+
+let fragmented_moo =
+  <>
+    <p> {React.string("moo")} </p>
+    // c1
+    <p> {React.string("moo")} </p>
+    // c2
+    // c3
+    <p> {React.string("moo")} </p>
+    // c4
+
+    <p> {React.string("moo")} </p>
+  </>

@@ -2609,7 +2609,7 @@ and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
       Scanner.pop_mode p.scanner Jsx;
       let closing_tag_end = p.start_pos in
       Parser.expect GreaterThan p;
-      let loc = mk_loc start_pos p.Parser.start_pos in
+      let loc = mk_loc start_pos p.prev_end_pos in
       let closing_tag =
         closing_tag_start
         |> Option.map (fun closing_tag_start ->
