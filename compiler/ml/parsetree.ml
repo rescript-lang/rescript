@@ -329,10 +329,8 @@ and jsx_fragment = {
 }
 
 and jsx_unary_element = {
-  (* jsx_unary_element_opening: Lexing.position; *)
   jsx_unary_element_tag_name: Longident.t loc;
   jsx_unary_element_props: jsx_props;
-      (* jsx_unary_element_closing: Lexing.position; *)
 }
 
 and jsx_container_element = {
