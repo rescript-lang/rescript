@@ -143,16 +143,14 @@ if (runtimeDocstrings) {
     console.log("Running runtime docstrings tests");
 
     const generated_mocha_test_res = path.join(
-      "tests",
-      "docstring_tests",
+      docstringTestDir,
       "generated_mocha_test.res",
     );
 
-    // Remove `generated_mocha_test.res` if file exists
-    if (fs.existsSync(generated_mocha_test_res)) {
-      console.log(`Removing ${generated_mocha_test_res}`);
-      fs.unlinkSync(generated_mocha_test_res);
-    }
+    await execClean([], {
+      cwd: docstringTestDir,
+      stdio: "inherit"
+    })
 
     await execBuild([], {
       cwd: docstringTestDir,
@@ -180,7 +178,7 @@ if (runtimeDocstrings) {
 
     console.log("Run mocha test");
     await mocha(
-      [path.join("tests", "docstring_tests", "generated_mocha_test.res.js")],
+      [path.join(docstringTestDir, "generated_mocha_test.res.js")],
       {
         cwd: projectDir,
         stdio: "inherit",

@@ -41,6 +41,6 @@ let mapValues = (dict, f) => {
   target
 }
 
-let has: (dict<'a>, string) => bool = %raw(`(dict, key) => key in dict`)
+external has: (dict<'a>, string) => bool = "%dict_has"
 
 external ignore: dict<'a> => unit = "%ignore"
