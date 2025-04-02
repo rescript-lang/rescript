@@ -313,8 +313,10 @@ and expression_desc =
        let open M in E
        let! open M in E *)
   | Pexp_extension of extension
-(* [%id] *)
-(* . *)
+  (* [%id] *)
+  (* . *)
+  | Pexp_braces of expression
+(* expression wrapped in { } *)
 
 and case = {
   (* (P -> E) or (P when E0 -> E) *)

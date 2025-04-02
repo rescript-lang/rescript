@@ -111,6 +111,7 @@ let identifyPexp pexp =
   | Pexp_pack _ -> "Pexp_pack"
   | Pexp_extension _ -> "Pexp_extension"
   | Pexp_open _ -> "Pexp_open"
+  | Pexp_braces _ -> "Pexp_braces"
 
 let identifyPpat pat =
   match pat with
@@ -139,9 +140,6 @@ let rec skipWhite text i =
     match text.[i] with
     | ' ' | '\n' | '\r' | '\t' -> skipWhite text (i - 1)
     | _ -> i
-
-let hasBraces attributes =
-  attributes |> List.exists (fun (loc, _) -> loc.Location.txt = "res.braces")
 
 let rec unwrapIfOption (t : Types.type_expr) =
   match t.desc with

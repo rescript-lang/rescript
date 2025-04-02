@@ -15,7 +15,7 @@ let rec traverseExpr (exp : Parsetree.expression) ~exprPath ~pos
   let locHasCursor loc = loc |> CursorPosition.locHasCursor ~pos in
   let someIfHasCursor v = if locHasCursor exp.pexp_loc then Some v else None in
   match exp.pexp_desc with
-  | Pexp_ident {txt = Lident txt} when Utils.hasBraces exp.pexp_attributes ->
+  | Pexp_braces {pexp_desc = Pexp_ident {txt = Lident txt}} ->
     (* An ident with braces attribute corresponds to for example `{n}`.
        Looks like a record but is parsed as an ident with braces. *)
     someIfHasCursor (txt, [Completable.NRecordBody {seenFields = []}] @ exprPath)

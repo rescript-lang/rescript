@@ -26,6 +26,11 @@ let add_parens doc =
          Doc.rparen;
        ])
 
+let unwrap_braces expr =
+  match expr.Parsetree.pexp_desc with
+  | Pexp_braces inner -> inner
+  | _ -> expr
+
 let add_braces doc =
   Doc.group
     (Doc.concat
@@ -606,7 +611,9 @@ and print_structure_item ~state (si : Parsetree.structure_item) cmt_tbl =
     print_value_description ~state value_description cmt_tbl
   | Pstr_eval (expr, attrs) ->
     let expr_doc =
-      let doc = print_expression_with_comments ~state expr cmt_tbl in
+      let doc =
+        print_expression_with_comments ~state (unwrap_braces expr) cmt_tbl
+      in
       match Parens.structure_expr expr with
       | Parens.Parenthesized -> add_parens doc
       | Braced braces -> print_braces doc expr braces
@@ -2085,12 +2092,20 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
                   ]);
            ]))
   | _ ->
-    let opt_braces, expr = ParsetreeViewer.process_braces_attr vb.pvb_expr in
+    let has_braces =
+      match vb.pvb_expr.pexp_desc with
+      | Parsetree.Pexp_braces _ -> true
+      | _ -> false
+    in
     let printed_expr =
-      let doc = print_expression_with_comments ~state vb.pvb_expr cmt_tbl in
+      let doc =
+        print_expression_with_comments ~state
+          (unwrap_braces vb.pvb_expr)
+          cmt_tbl
+      in
       match Parens.expr vb.pvb_expr with
       | Parens.Parenthesized -> add_parens doc
-      | Braced braces -> print_braces doc expr braces
+      | Braced braces -> print_braces doc vb.pvb_expr braces
       | Nothing -> doc
     in
     let pattern_doc = print_pattern ~state vb.pvb_pat cmt_tbl in
@@ -2131,10 +2146,9 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
         ]
     else
       let should_indent =
-        match opt_braces with
-        | Some _ -> false
-        | _ -> (
-          ParsetreeViewer.is_binary_expression expr
+        if has_braces then false
+        else
+          ParsetreeViewer.is_binary_expression vb.pvb_expr
           ||
           match vb.pvb_expr with
           | {
@@ -2148,7 +2162,7 @@ and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
             false
           | e ->
             ParsetreeViewer.has_attributes e.pexp_attributes
-            || ParsetreeViewer.is_array_access e)
+            || ParsetreeViewer.is_array_access e
       in
       Doc.group
         (Doc.concat
@@ -2660,7 +2674,7 @@ and print_pattern_dict_row ~state
 
 and print_expression_with_comments ~state expr cmt_tbl : Doc.t =
   let doc = print_expression ~state expr cmt_tbl in
-  print_comments doc cmt_tbl expr.Parsetree.pexp_loc
+  print_comments doc cmt_tbl (unwrap_braces expr).Parsetree.pexp_loc
 
 and print_if_chain ~state pexp_attributes ifs else_expr cmt_tbl =
   let if_docs =
@@ -2689,9 +2703,9 @@ and print_if_chain ~state pexp_attributes ifs else_expr cmt_tbl =
                    Doc.group condition;
                    Doc.space;
                    (let then_expr =
-                      match ParsetreeViewer.process_braces_attr then_expr with
+                      match then_expr.Parsetree.pexp_desc with
                       (* This case only happens when coming from Reason, we strip braces *)
-                      | Some _, expr -> expr
+                      | Pexp_braces inner -> inner
                       | _ -> then_expr
                     in
                     print_expression_block ~state ~braces:true then_expr cmt_tbl);
@@ -2758,14 +2772,11 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         ~has_constraint parameters cmt_tbl
     in
     let return_expr_doc =
-      let opt_braces, _ = ParsetreeViewer.process_braces_attr return_expr in
       let should_inline =
-        match (return_expr.pexp_desc, opt_braces) with
-        | _, Some _ -> true
-        | ( ( Pexp_array _ | Pexp_tuple _
-            | Pexp_construct (_, Some _)
-            | Pexp_record _ ),
-            _ ) ->
+        match return_expr.Parsetree.pexp_desc with
+        | Pexp_braces _ | Pexp_array _ | Pexp_tuple _
+        | Pexp_construct (_, Some _)
+        | Pexp_record _ ->
           true
         | _ -> false
       in
@@ -2816,6 +2827,9 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
   in
   let printed_expression =
     match e_fun.pexp_desc with
+    | Pexp_braces inner ->
+      (* the rules for printing braces are all over the place *)
+      print_expression ~state inner cmt_tbl
     | Pexp_fun
         {
           arg_label = Nolabel;
@@ -3436,18 +3450,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
   let expr_with_await =
     if ParsetreeViewer.has_await_attribute e.pexp_attributes then
       let rhs =
-        match
-          Parens.lazy_or_assert_or_await_expr_rhs ~in_await:true
-            {
-              e with
-              pexp_attributes =
-                List.filter
-                  (function
-                    | {Location.txt = "res.braces" | "ns.braces"}, _ -> false
-                    | _ -> true)
-                  e.pexp_attributes;
-            }
-        with
+        match Parens.lazy_or_assert_or_await_expr_rhs ~in_await:true e with
         | Parens.Parenthesized -> add_parens printed_expression
         | Braced braces -> print_braces printed_expression e braces
         | Nothing -> printed_expression
@@ -3503,14 +3506,11 @@ and print_pexp_fun ~state ~in_callback e cmt_tbl =
     | _ -> true
   in
   let return_expr_doc =
-    let opt_braces, _ = ParsetreeViewer.process_braces_attr return_expr in
     let should_inline =
-      match (return_expr.pexp_desc, opt_braces) with
-      | _, Some _ -> true
-      | ( ( Pexp_array _ | Pexp_tuple _
-          | Pexp_construct (_, Some _)
-          | Pexp_record _ ),
-          _ ) ->
+      match return_expr.pexp_desc with
+      | Parsetree.Pexp_braces _ -> true
+      | Pexp_array _ | Pexp_tuple _ | Pexp_construct (_, Some _) | Pexp_record _
+        ->
         true
       | _ -> false
     in
@@ -4501,11 +4501,7 @@ and print_jsx_children ~state (children_expr : Parsetree.expression) ~sep
       | None -> loc
       | Some comment -> Comment.loc comment
     in
-    let get_loc expr =
-      match ParsetreeViewer.process_braces_attr expr with
-      | None, _ -> get_first_leading_comment expr.pexp_loc
-      | Some ({loc}, _), _ -> get_first_leading_comment loc
-    in
+    let get_loc expr = get_first_leading_comment expr.Parsetree.pexp_loc in
     let rec loop prev acc exprs =
       match exprs with
       | [] -> List.rev acc
@@ -5033,10 +5029,7 @@ and print_cases ~state (cases : Parsetree.case list) cmt_tbl =
                ~get_loc:(fun n ->
                  {
                    n.Parsetree.pc_lhs.ppat_loc with
-                   loc_end =
-                     (match ParsetreeViewer.process_braces_attr n.pc_rhs with
-                     | None, _ -> n.pc_rhs.pexp_loc.loc_end
-                     | Some ({loc}, _), _ -> loc.Location.loc_end);
+                   loc_end = n.pc_rhs.pexp_loc.loc_end;
                  })
                ~print:(print_case ~state) ~nodes:cases cmt_tbl;
            ];
@@ -5431,7 +5424,8 @@ and print_expression_block ~state ~braces expr cmt_tbl =
  *   a + b
  * }
  *)
-and print_braces doc expr braces_loc =
+and print_braces doc (expr : Parsetree.expression) (braces_loc : Warnings.loc) =
+  let expr = unwrap_braces expr in
   let over_multiple_lines =
     let open Location in
     braces_loc.loc_end.pos_lnum > braces_loc.loc_start.pos_lnum

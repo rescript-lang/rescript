@@ -136,9 +136,6 @@ val is_spread_belt_array_concat : Parsetree.expression -> bool
 
 val collect_or_pattern_chain : Parsetree.pattern -> Parsetree.pattern list
 
-val process_braces_attr :
-  Parsetree.expression -> Parsetree.attribute option * Parsetree.expression
-
 val filter_parsing_attrs : Parsetree.attributes -> Parsetree.attributes
 
 val is_braced_expr : Parsetree.expression -> bool

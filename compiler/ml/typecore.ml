@@ -132,6 +132,7 @@ let iter_expression f e =
   let rec expr e =
     f e;
     match e.pexp_desc with
+    | Pexp_braces inner -> expr inner
     | Pexp_extension _ (* we don't iterate under extension point *)
     | Pexp_ident _ | Pexp_constant _ ->
       ()
@@ -2265,6 +2266,9 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     else (id, ld, e, opt)
   in
   match sexp.pexp_desc with
+  | Pexp_braces inner ->
+    type_expect ?type_clash_context ?in_function ?recarg:(Some recarg) env inner
+      ty_expected
   | Pexp_ident lid ->
     let path, desc = Typetexp.find_value env lid.loc lid.txt in
     (if !Clflags.annotations then
