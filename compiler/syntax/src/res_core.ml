@@ -2810,8 +2810,6 @@ and parse_jsx_prop p : Parsetree.jsx_prop option =
       Scanner.pop_mode p.scanner Jsx;
       Parser.next p;
       let attr_expr = parse_primary_expr ~operand:(parse_expr p) p in
-      (* using label "spreadProps" to distinguish from others *)
-      (* let label = Asttypes.Labelled {txt = "_spreadProps"; loc} in *)
       match p.Parser.token with
       | Rbrace ->
         let spread_end = p.Parser.end_pos in
