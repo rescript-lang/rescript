@@ -1,11 +1,12 @@
 let getCompletions ~debug ~path ~pos ~currentFile ~forHover =
+  ignore forHover;
   let textOpt = Files.readFile currentFile in
   match textOpt with
   | None | Some "" -> None
   | Some text -> (
     match
-      CompletionFrontEnd.completionWithParser ~debug ~path ~posCursor:pos
-        ~currentFile ~text
+      CompletionFrontEndRevamped.completionWithParser ~debug ~path
+        ~posCursor:pos ~currentFile ~text
     with
     | None -> None
     | Some (completable, scope) -> (
@@ -16,7 +17,7 @@ let getCompletions ~debug ~path ~pos ~currentFile ~forHover =
         let env = SharedTypes.QueryEnv.fromFile full.file in
         let completables =
           completable
-          |> CompletionBackEnd.processCompletable ~debug ~full ~pos ~scope ~env
-               ~forHover
+          |> CompletionBackEndRevamped.processCompletable ~debug ~full ~pos
+               ~scope ~env
         in
         Some (completables, full, scope)))

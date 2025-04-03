@@ -770,6 +770,26 @@ module Completable = struct
     | ChtmlElement {prefix} -> "ChtmlElement <" ^ prefix
 end
 
+module CompletableRevamped = struct
+  type decoratorPayload =
+    | Module of string
+    | ModuleWithImportAttributes of {prefix: string}
+    | JsxConfig of {prefix: string}
+
+  type completionKind = Field of {hint: string}
+
+  type t =
+    | Cexpression of {
+        kind: completionKind;
+        typeLoc: Location.t;
+        posOfDot: Pos.t option;
+      }
+    | Cnone
+    | CextensionNode of string
+    | Cdecorator of string
+    | CdecoratorPayload of decoratorPayload
+end
+
 module ScopeTypes = struct
   type item =
     | Constructor of string * Location.t
