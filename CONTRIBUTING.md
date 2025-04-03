@@ -123,19 +123,19 @@ After adding a new file to the repository that should go into the npm package - 
 
 ```sh
 make lib # Build compiler and standard library
-./cli/bsc myTestFile.res
+./cli/bsc.js myTestFile.res
 ```
 
 To view the untyped tree of the file run:
 
 ```sh
-./cli/bsc -dparsetree myTestFile.res
+./cli/bsc.js -dparsetree myTestFile.res
 ```
 
 To view the typed tree of the file run:
 
 ```sh
-./cli/bsc -dtypedtree myTestFile.res
+./cli/bsc.js -dtypedtree myTestFile.res
 ```
 
 ### Project
