@@ -535,3 +535,15 @@ let fragmented_moo =
 
     <p> {React.string("moo")} </p>
   </>
+
+let arrow_with_fragment = el => <>
+  {t(nbsp ++ "(")}
+  el
+  {t(")")}
+</>
+
+let arrow_with_container_tag = el => <div>
+  {t(nbsp ++ "(")}
+  el
+  {t(")")}
+</div>

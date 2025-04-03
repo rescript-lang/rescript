@@ -2777,7 +2777,8 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
       let should_indent =
         match return_expr.pexp_desc with
         | Pexp_sequence _ | Pexp_let _ | Pexp_letmodule _ | Pexp_letexception _
-        | Pexp_open _ ->
+        | Pexp_open _
+        | Pexp_jsx_element (Jsx_fragment _) ->
           false
         | _ -> true
       in
