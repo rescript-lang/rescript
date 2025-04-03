@@ -177,7 +177,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
   (* module M = await Belt.List *)
   | Pexp_letmodule
       (lid, ({pmod_desc = Pmod_ident {txt}; pmod_attributes} as me), expr)
-    when Res_parsetree_viewer.has_await_attribute2 pmod_attributes ->
+    when Res_parsetree_viewer.has_await_attribute pmod_attributes ->
     let safe_module_type_lid : Ast_helper.lid =
       {txt = Lident (local_module_type_name txt); loc = me.pmod_loc}
     in
@@ -201,8 +201,8 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
            pmod_attributes = attrs2;
          } as me),
         expr )
-    when Res_parsetree_viewer.has_await_attribute2 attrs1
-         || Res_parsetree_viewer.has_await_attribute2 attrs2 ->
+    when Res_parsetree_viewer.has_await_attribute attrs1
+         || Res_parsetree_viewer.has_await_attribute attrs2 ->
     {
       e with
       pexp_desc =
@@ -495,7 +495,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
     | Pstr_module
         ({pmb_expr = {pmod_desc = Pmod_ident {txt; loc}; pmod_attributes} as me}
          as mb)
-      when Res_parsetree_viewer.has_await_attribute2 pmod_attributes ->
+      when Res_parsetree_viewer.has_await_attribute pmod_attributes ->
       let item = self.structure_item self item in
       let safe_module_type_name = local_module_type_name txt in
       let has_local_module_name =
@@ -546,8 +546,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
                 ( _,
                   ({pmod_desc = Pmod_ident {txt; loc}; pmod_attributes} as me),
                   expr )
-              when Res_parsetree_viewer.has_await_attribute2 pmod_attributes
-              -> (
+              when Res_parsetree_viewer.has_await_attribute pmod_attributes -> (
               let safe_module_type_name = local_module_type_name txt in
               let has_local_module_name =
                 Hashtbl.find_opt !await_context safe_module_type_name

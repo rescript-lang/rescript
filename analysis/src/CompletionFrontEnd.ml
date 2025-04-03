@@ -317,7 +317,7 @@ let rec exprToContextPathInner ~(inJsxContext : bool) (e : Parsetree.expression)
 
 and exprToContextPath ~(inJsxContext : bool) (e : Parsetree.expression) =
   match
-    ( Res_parsetree_viewer.has_await_attribute e,
+    ( Res_parsetree_viewer.expr_is_await e,
       exprToContextPathInner ~inJsxContext e )
   with
   | true, Some ctxPath -> Some (CPAwait ctxPath)

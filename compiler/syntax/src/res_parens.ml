@@ -56,7 +56,7 @@ let call_expr expr =
     } ->
       Parenthesized
     | _ when Ast_uncurried.expr_is_uncurried_fun expr -> Parenthesized
-    | _ when ParsetreeViewer.has_await_attribute expr -> Parenthesized
+    | _ when ParsetreeViewer.expr_is_await expr -> Parenthesized
     | _ -> Nothing)
 
 let structure_expr expr =
@@ -108,7 +108,7 @@ let unary_expr_operand expr =
        | Pexp_try _ | Pexp_while _ | Pexp_for _ | Pexp_ifthenelse _ );
     } ->
       Parenthesized
-    | _ when ParsetreeViewer.has_await_attribute expr -> Parenthesized
+    | _ when ParsetreeViewer.expr_is_await expr -> Parenthesized
     | _ -> Nothing)
 
 let binary_expr_operand ~is_lhs expr =
@@ -131,7 +131,7 @@ let binary_expr_operand ~is_lhs expr =
     | expr when ParsetreeViewer.is_binary_expression expr -> Parenthesized
     | expr when ParsetreeViewer.is_ternary_expr expr -> Parenthesized
     | {pexp_desc = Pexp_lazy _ | Pexp_assert _} when is_lhs -> Parenthesized
-    | _ when ParsetreeViewer.has_await_attribute expr -> Parenthesized
+    | _ when ParsetreeViewer.expr_is_await expr -> Parenthesized
     | {Parsetree.pexp_attributes = attrs} ->
       if ParsetreeViewer.has_printable_attributes attrs then Parenthesized
       else Nothing)
@@ -226,7 +226,7 @@ let lazy_or_assert_or_await_expr_rhs ?(in_await = false) expr =
        | Pexp_while _ | Pexp_for _ | Pexp_ifthenelse _ );
     } ->
       Parenthesized
-    | _ when (not in_await) && ParsetreeViewer.has_await_attribute expr ->
+    | _ when (not in_await) && ParsetreeViewer.expr_is_await expr ->
       Parenthesized
     | _ -> Nothing)
 
@@ -272,7 +272,7 @@ let field_expr expr =
        | Pexp_try _ | Pexp_while _ | Pexp_for _ | Pexp_ifthenelse _ );
     } ->
       Parenthesized
-    | _ when ParsetreeViewer.has_await_attribute expr -> Parenthesized
+    | _ when ParsetreeViewer.expr_is_await expr -> Parenthesized
     | _ -> Nothing)
 
 let set_field_expr_rhs expr =
@@ -333,7 +333,7 @@ let jsx_prop_expr expr =
       }
         when starts_with_minus x ->
         Parenthesized
-      | _ when ParsetreeViewer.has_await_attribute expr -> Parenthesized
+      | _ when ParsetreeViewer.expr_is_await expr -> Parenthesized
       | {
        Parsetree.pexp_desc =
          ( Pexp_ident _ | Pexp_constant _ | Pexp_field _ | Pexp_construct _
@@ -370,7 +370,7 @@ let jsx_child_expr expr =
       }
         when starts_with_minus x ->
         Parenthesized
-      | _ when ParsetreeViewer.has_await_attribute expr -> Parenthesized
+      | _ when ParsetreeViewer.expr_is_await expr -> Parenthesized
       | {
        Parsetree.pexp_desc =
          ( Pexp_ident _ | Pexp_constant _ | Pexp_field _ | Pexp_construct _
