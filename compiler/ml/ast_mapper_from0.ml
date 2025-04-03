@@ -295,11 +295,30 @@ end
 module E = struct
   (* Value expressions for the core language *)
 
-  let map sub {pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} =
+  let has_await_attribute attrs =
+    List.exists
+      (function
+        | {Location.txt = "res.await"}, _ -> true
+        | _ -> false)
+      attrs
+
+  let remove_await_attribute attrs =
+    List.filter
+      (function
+        | {Location.txt = "res.await"}, _ -> false
+        | _ -> true)
+      attrs
+
+  let map sub ({pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} as e)
+      =
     let open Exp in
     let loc = sub.location sub loc in
     let attrs = sub.attributes sub attrs in
     match desc with
+    | _ when has_await_attribute attrs ->
+      let attrs = remove_await_attribute e.pexp_attributes in
+      let e = sub.expr sub {e with pexp_attributes = attrs} in
+      await ~loc e
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
     | Pexp_let (r, vbs, e) ->
