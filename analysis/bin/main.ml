@@ -143,10 +143,10 @@ let main () =
       ~pos:(int_of_string line, int_of_string col)
       ~debug
   | [_; "documentSymbol"; path] -> DocumentSymbol.command ~path
-  | [_; "hover"; path; line; col; currentFile; supportsMarkdownLinks] ->
+  | [_; "hover"; path; line; col; _currentFile; supportsMarkdownLinks] ->
     Commands.hover ~path
       ~pos:(int_of_string line, int_of_string col)
-      ~currentFile ~debug
+      ~debug
       ~supportsMarkdownLinks:
         (match supportsMarkdownLinks with
         | "true" -> true

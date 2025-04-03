@@ -1020,7 +1020,7 @@ and transl_apply ?(inlined = Default_inline)
   | _ ->
     (build_apply lam []
        (List.map
-          (fun (l, x) -> (may_map transl_exp x, Btype.is_optional l))
+          (fun (l, x) -> (may_map transl_exp x, Btype.is_optional_loc l))
           sargs)
       : Lambda.lambda)
 

@@ -125,6 +125,11 @@ let arg_label i ppf = function
   | Optional s -> line i ppf "Optional \"%s\"\n" s
   | Labelled s -> line i ppf "Labelled \"%s\"\n" s
 
+let arg_label_loc i ppf = function
+  | Nolabel -> line i ppf "Nolabel\n"
+  | Optional {txt = s} -> line i ppf "Optional \"%s\"\n" s
+  | Labelled {txt = s} -> line i ppf "Labelled \"%s\"\n" s
+
 let record_representation i ppf =
   let open Types in
   function
@@ -658,7 +663,7 @@ and record_field i ppf = function
 
 and label_x_expression i ppf (l, e) =
   line i ppf "<arg>\n";
-  arg_label (i + 1) ppf l;
+  arg_label_loc (i + 1) ppf l;
   match e with
   | None -> ()
   | Some e -> expression (i + 1) ppf e

@@ -379,7 +379,17 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[ReactDOMR]
 Path ReactDOMR
-[]
+[{
+    "label": "ReactDOMRe",
+    "kind": 9,
+    "tags": [],
+    "detail": "module ReactDOMRe",
+    "documentation": null,
+    "data": {
+      "modulePath": "ReactDOMRe",
+      "filePath": "src/Jsx2.res"
+    }
+  }]
 
 Complete src/Jsx2.res 102:21
 posCursor:[102:21] posNoWhite:[102:20] Found expr:[102:13->102:21]
@@ -523,28 +533,8 @@ Path Nested.
   }]
 
 Hover src/Jsx2.res 162:12
-Nothing at that position. Now trying to use completion.
-posCursor:[162:12] posNoWhite:[162:11] Found expr:[162:3->162:21]
-posCursor:[162:12] posNoWhite:[162:11] Found expr:[162:6->162:21]
-posCursor:[162:12] posNoWhite:[162:11] Found expr:[162:6->162:20]
-JSX <Comp:[162:6->162:10] age[162:11->162:14]=...[162:15->162:17]> _children:162:18
-Completable: Cjsx([Comp], age, [age])
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-Path Comp.make
-{"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nReact.element\n```"}}
 
 Hover src/Jsx2.res 167:16
-Nothing at that position. Now trying to use completion.
-posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:3->167:30]
-posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:7->167:30]
-posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:7->167:25]
-posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:10->167:25]
-posCursor:[167:16] posNoWhite:[167:15] Found expr:[167:10->167:24]
-JSX <Comp:[167:10->167:14] age[167:15->167:18]=...[167:19->167:21]> _children:167:22
-Completable: Cjsx([Comp], age, [age])
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-Path Comp.make
-{"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nReact.element\n```"}}
 
