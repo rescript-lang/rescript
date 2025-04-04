@@ -1777,6 +1777,7 @@ and walk_expression expr t comments =
        if you ever need this, feel free to update process _rest. 
        Comments after the closing tag will already be taking into account by the parent node. *)
     )
+  | Pexp_await expr -> walk_expression expr t comments
   | Pexp_send _ -> ()
 
 and walk_expr_parameter (_attrs, _argLbl, expr_opt, pattern) t comments =
