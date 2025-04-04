@@ -69,4 +69,6 @@ export const option0: (x:(undefined | string)) => (undefined | string) = CoreJS.
 
 export const option1: (x:(undefined | variant)) => (undefined | variant) = CoreJS.option1 as any;
 
-export const jsonEncodeString: unknown = CoreJS.jsonEncodeString as any;
+export const jsonEncodeString1: unknown = CoreJS.jsonEncodeString1 as any;
+
+export const jsonEncodeString2: unknown = CoreJS.jsonEncodeString2 as any;
