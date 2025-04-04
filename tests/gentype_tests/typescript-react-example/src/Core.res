@@ -88,4 +88,4 @@ external someFunWithNullUndefinedArg: (
 let jsonEncodeString1 = JSON.Encode.string("hello")
 
 @genType
-let jsonEncodeString2 : JSON.t = JSON.Encode.string("hello")
+let jsonEncodeString2: JSON.t = JSON.Encode.string("hello")
