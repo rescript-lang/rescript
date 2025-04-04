@@ -3756,14 +3756,8 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
               | [] -> doc
               | _ -> add_parens doc
             in
-            let is_await =
-              (match expr.pexp_desc with
-              | Pexp_await _ -> true
-              | _ -> false)
-              || ParsetreeViewer.expr_is_await expr
-            in
             let doc =
-              if is_await then
+              if ParsetreeViewer.expr_is_await expr then
                 let parens =
                   Res_parens.binary_operator_inside_await_needs_parens operator
                 in
