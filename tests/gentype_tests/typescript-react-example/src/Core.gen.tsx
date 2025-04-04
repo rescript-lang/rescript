@@ -68,3 +68,5 @@ export const weakset1: (x:WeakSet<number[]>) => WeakSet<number[]> = CoreJS.weaks
 export const option0: (x:(undefined | string)) => (undefined | string) = CoreJS.option0 as any;
 
 export const option1: (x:(undefined | variant)) => (undefined | variant) = CoreJS.option1 as any;
+
+export const jsonEncodeString: unknown = CoreJS.jsonEncodeString as any;
