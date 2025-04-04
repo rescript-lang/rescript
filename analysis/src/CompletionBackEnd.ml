@@ -1136,14 +1136,9 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
                    else true)
         in
 
-        (* TODO(config-complete-builtins) This config and config resolution should come from `package` instead. *)
-        let pretendPackageBuiltinsConfig =
-          Misc.StringMap.of_list
-            [("array", ["ArrayUtils"]); ("Fastify.t", ["FastifyExt"])]
-        in
         let globallyConfiguredCompletionsForType =
           match
-            pretendPackageBuiltinsConfig |> Misc.StringMap.find_opt mainTypeId
+            package.autocompleteConfig |> Misc.StringMap.find_opt mainTypeId
           with
           | None -> []
           | Some completionPaths ->
