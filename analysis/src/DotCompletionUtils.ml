@@ -1,7 +1,9 @@
-let filterRecordFields ~env ~recordAsString ~prefix ~exact fields =
+let filterRecordFields ~env ~recordAsString ~prefix ~exact ?(seenFields = [])
+    fields =
   fields
   |> Utils.filterMap (fun (field : SharedTypes.field) ->
-         if Utils.checkName field.fname.txt ~prefix ~exact then
+         if List.mem field.fname.txt seenFields then None
+         else if Utils.checkName field.fname.txt ~prefix ~exact then
            Some
              (SharedTypes.Completion.create field.fname.txt ~env
                 ?deprecated:field.deprecated ~docstring:field.docstring

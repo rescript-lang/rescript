@@ -775,14 +775,20 @@ module CompletableRevamped = struct
     | ModuleWithImportAttributes of {prefix: string}
     | JsxConfig of {prefix: string}
 
-  type completionKind = Field of {hint: string}
+  type completionExprKind = Field of {hint: string}
+
+  type completionPatternKind =
+    | Empty
+    | Field of {hint: string; seenFields: string list}
+    | FieldValue of {fieldName: string}
 
   type t =
     | Cexpression of {
-        kind: completionKind;
+        kind: completionExprKind;
         typeLoc: Location.t;
         posOfDot: Pos.t option;
       }
+    | Cpattern of {kind: completionPatternKind; typeLoc: Location.t}
     | Cnone
     | CextensionNode of string
     | Cdecorator of string

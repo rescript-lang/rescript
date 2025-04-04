@@ -48,6 +48,7 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
 
   let found = ref false in
   let result = ref None in
+  let currentTypeLoc = ref None in
   let scope = ref (Scope.create ()) in
   let setResultOpt x =
     if !result = None then
@@ -403,6 +404,18 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
       if expr.pexp_loc |> Loc.hasPos ~pos:posNoWhite && !result = None then (
         setFound ();
         match expr.pexp_desc with
+        | Pexp_match (switchExpr, [{pc_lhs = lhsPat}])
+          when CompletionPatterns.isPatternHole lhsPat
+               && locHasCursor switchExpr.pexp_loc = false ->
+          setResult (Cpattern {kind = Empty; typeLoc = switchExpr.pexp_loc})
+        | Pexp_match (switchExpr, cases) ->
+          let oldTypeLoc = !currentTypeLoc in
+          currentTypeLoc := Some switchExpr.pexp_loc;
+          cases
+          |> List.iter (fun case ->
+                 Ast_iterator.default_iterator.case iterator case);
+          currentTypeLoc := oldTypeLoc;
+          processed := true
         | Pexp_extension ({txt = "obj"}, PStr [str_item]) ->
           Ast_iterator.default_iterator.structure_item iterator str_item
         | Pexp_extension ({txt}, _) -> setResult (CextensionNode txt)
@@ -614,6 +627,58 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
           (Pos.toString posCursor) (Pos.toString posNoWhite)
           (Loc.toString pat.ppat_loc);
       (match pat.ppat_desc with
+      | Ppat_record ([], _) ->
+        (* No fields means empty record body.*)
+        setResult
+          (Cpattern
+             {kind = Field {hint = ""; seenFields = []}; typeLoc = pat.ppat_loc})
+      | Ppat_record (fields, _) -> (
+        let fieldWithCursor = ref None in
+        let fieldWithPatHole = ref None in
+        fields
+        |> List.iter (fun (fname, f, _) ->
+               match
+                 ( fname.Location.txt,
+                   f.Parsetree.ppat_loc
+                   |> CursorPosition.classifyLoc ~pos:posBeforeCursor )
+               with
+               | Longident.Lident fname, HasCursor ->
+                 fieldWithCursor := Some (fname, f)
+               | Lident fname, _ when CompletionPatterns.isPatternHole f ->
+                 fieldWithPatHole := Some (fname, f)
+               | _ -> ());
+        let seenFields =
+          fields
+          |> List.filter_map (fun (fieldName, _f, _) ->
+                 match fieldName with
+                 | {Location.txt = Longident.Lident fieldName} -> Some fieldName
+                 | _ -> None)
+        in
+        match (!fieldWithCursor, !fieldWithPatHole) with
+        | Some (fname, f), _ | None, Some (fname, f) -> (
+          match f.ppat_desc with
+          | Ppat_extension ({txt = "rescript.patternhole"}, _) ->
+            (* A pattern hole means for example `{someField: <com>}`. We want to complete for the type of `someField`.  *)
+            setResult
+              (Cpattern
+                 {kind = FieldValue {fieldName = fname}; typeLoc = pat.ppat_loc})
+          | Ppat_var {txt} ->
+            (* A var means `{s}` or similar. Complete for fields. *)
+            setResult
+              (Cpattern
+                 {kind = Field {hint = txt; seenFields}; typeLoc = pat.ppat_loc})
+          | _ -> ())
+        | None, None -> (
+          (* Figure out if we're completing for a new field.
+         If the cursor is inside of the record body, but no field has the cursor,
+         and there's no pattern hole. Check the first char to the left of the cursor,
+         ignoring white space. If that's a comma, we assume you're completing for a new field. *)
+          match firstCharBeforeCursorNoWhite with
+          | Some ',' ->
+            setResult
+              (Cpattern
+                 {kind = Field {hint = ""; seenFields}; typeLoc = pat.ppat_loc})
+          | _ -> ()))
       | Ppat_construct (lid, _) ->
         let lidPath = flattenLidCheckDot lid in
         if debug then
