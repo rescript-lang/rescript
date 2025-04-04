@@ -722,6 +722,7 @@ and expression ctxt f x =
         (expression ctxt) e
     | Pexp_variant (l, Some eo) -> pp f "@[<2>`%s@;%a@]" l (simple_expr ctxt) eo
     | Pexp_extension e -> extension ctxt f e
+    | Pexp_await e -> pp f "@[<hov2>await@ %a@]" (simple_expr ctxt) e
     | _ -> expression1 ctxt f x
 
 and expression1 ctxt f x =

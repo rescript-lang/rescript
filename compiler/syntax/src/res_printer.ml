@@ -2816,12 +2816,8 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
            return_expr_doc;
          ])
   in
-  let uncurried = Ast_uncurried.expr_is_uncurried_fun e in
-  let e_fun =
-    if uncurried then Ast_uncurried.expr_extract_uncurried_fun e else e
-  in
   let printed_expression =
-    match e_fun.pexp_desc with
+    match e.pexp_desc with
     | Pexp_fun
         {
           arg_label = Nolabel;
@@ -2831,7 +2827,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         } ->
       (* (__x) => f(a, __x, c) -----> f(a, _, c)  *)
       print_expression_with_comments ~state
-        (ParsetreeViewer.rewrite_underscore_apply e_fun)
+        (ParsetreeViewer.rewrite_underscore_apply e)
         cmt_tbl
     | Pexp_fun _ | Pexp_newtype _ -> print_arrow e
     | Parsetree.Pexp_constant c ->
@@ -3461,9 +3457,10 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         Doc.concat [Doc.text "\""; member_doc; Doc.text "\""]
       in
       Doc.group (Doc.concat [parent_doc; Doc.lbracket; member; Doc.rbracket])
-  in
-  let expr_with_await =
-    if ParsetreeViewer.has_await_attribute e.pexp_attributes then
+    | Pexp_await e ->
+      let printed_expression =
+        print_expression_with_comments ~state e cmt_tbl
+      in
       let rhs =
         match
           Parens.lazy_or_assert_or_await_expr_rhs ~in_await:true
@@ -3482,7 +3479,6 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
         | Nothing -> printed_expression
       in
       Doc.concat [Doc.text "await "; rhs]
-    else printed_expression
   in
   let should_print_its_own_attributes =
     match e.pexp_desc with
@@ -3494,11 +3490,11 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
     | _ -> false
   in
   match e.pexp_attributes with
-  | [] -> expr_with_await
+  | [] -> printed_expression
   | attrs when not should_print_its_own_attributes ->
     Doc.group
-      (Doc.concat [print_attributes ~state attrs cmt_tbl; expr_with_await])
-  | _ -> expr_with_await
+      (Doc.concat [print_attributes ~state attrs cmt_tbl; printed_expression])
+  | _ -> printed_expression
 
 and print_pexp_fun ~state ~in_callback e cmt_tbl =
   let async, parameters, return_expr = ParsetreeViewer.fun_expr e in
@@ -3787,11 +3783,8 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
               | [] -> doc
               | _ -> add_parens doc
             in
-            let is_await =
-              ParsetreeViewer.has_await_attribute expr.pexp_attributes
-            in
             let doc =
-              if is_await then
+              if ParsetreeViewer.expr_is_await expr then
                 let parens =
                   Res_parens.binary_operator_inside_await_needs_parens operator
                 in

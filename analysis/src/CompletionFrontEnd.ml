@@ -312,11 +312,12 @@ let rec exprToContextPathInner ~(inJsxContext : bool) (e : Parsetree.expression)
     if List.length exprs = List.length exprsAsContextPaths then
       Some (CTuple exprsAsContextPaths)
     else None
+  | Pexp_await e -> exprToContextPathInner ~inJsxContext e
   | _ -> None
 
 and exprToContextPath ~(inJsxContext : bool) (e : Parsetree.expression) =
   match
-    ( Res_parsetree_viewer.has_await_attribute e.pexp_attributes,
+    ( Res_parsetree_viewer.expr_is_await e,
       exprToContextPathInner ~inJsxContext e )
   with
   | true, Some ctxPath -> Some (CPAwait ctxPath)

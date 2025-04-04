@@ -72,6 +72,11 @@ let has_await_attribute attrs =
       | _ -> false)
     attrs
 
+let expr_is_await e =
+  match e.pexp_desc with
+  | Pexp_await _ -> true
+  | _ -> false
+
 let has_inline_record_definition_attribute attrs =
   List.exists
     (function
@@ -111,12 +116,7 @@ let collect_list_expressions expr =
 
 (* (__x) => f(a, __x, c) -----> f(a, _, c)  *)
 let rewrite_underscore_apply expr =
-  let expr_fun =
-    if Ast_uncurried.expr_is_uncurried_fun expr then
-      Ast_uncurried.expr_extract_uncurried_fun expr
-    else expr
-  in
-  match expr_fun.pexp_desc with
+  match expr.pexp_desc with
   | Pexp_fun
       {
         arg_label = Nolabel;

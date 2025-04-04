@@ -345,6 +345,9 @@ and expression i ppf x =
   | Pexp_extension (s, arg) ->
     line i ppf "Pexp_extension \"%s\"\n" s.txt;
     payload i ppf arg
+  | Pexp_await e ->
+    line i ppf "Pexp_await\n";
+    expression i ppf e
   | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
     line i ppf "Pexp_jsx_fragment";
     jsx_children i ppf children

@@ -295,6 +295,20 @@ end
 module E = struct
   (* Value expressions for the core language *)
 
+  let has_await_attribute attrs =
+    List.exists
+      (function
+        | {Location.txt = "res.await"}, _ -> true
+        | _ -> false)
+      attrs
+
+  let remove_await_attribute attrs =
+    List.filter
+      (function
+        | {Location.txt = "res.await"}, _ -> false
+        | _ -> true)
+      attrs
+
   let map_jsx_children sub (e : expression) : Pt.jsx_children =
     let rec visit (e : expression) : Pt.expression list =
       match e.pexp_desc with
@@ -362,6 +376,10 @@ module E = struct
       attrs |> List.exists (fun ({txt}, _) -> txt = "JSX")
     in
     match desc with
+    | _ when has_await_attribute attrs ->
+      let attrs = remove_await_attribute e.pexp_attributes in
+      let e = sub.expr sub {e with pexp_attributes = attrs} in
+      await ~loc e
     | Pexp_ident x -> ident ~loc ~attrs (map_loc sub x)
     | Pexp_constant x -> constant ~loc ~attrs (map_constant x)
     | Pexp_let (r, vbs, e) ->

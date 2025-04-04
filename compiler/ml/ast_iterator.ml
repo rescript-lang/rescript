@@ -357,6 +357,7 @@ module E = struct
       iter_loc sub lid;
       sub.expr sub e
     | Pexp_extension x -> sub.extension sub x
+    | Pexp_await e -> sub.expr sub e
     | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
       iter_jsx_children sub children
     | Pexp_jsx_element

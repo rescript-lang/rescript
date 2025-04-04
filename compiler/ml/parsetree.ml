@@ -315,6 +315,7 @@ and expression_desc =
   | Pexp_extension of extension
   (* [%id] *)
   (* . *)
+  | Pexp_await of expression
   | Pexp_jsx_element of jsx_element
 
 and jsx_element =

@@ -232,6 +232,7 @@ module Exp : sig
     expression
 
   val case : pattern -> ?guard:expression -> expression -> case
+  val await : ?loc:loc -> ?attrs:attrs -> expression -> expression
 
   val make_list_expression :
     Location.t -> expression list -> expression option -> expression

@@ -707,6 +707,7 @@ module SexpAst = struct
           ]
       | Pexp_extension ext ->
         Sexp.list [Sexp.atom "Pexp_extension"; extension ext]
+      | Pexp_await e -> Sexp.list [Sexp.atom "Pexp_await"; expression e]
       | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
         let xs =
           match children with
