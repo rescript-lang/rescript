@@ -43,3 +43,5 @@ module Classify = {
     }
   }
 }
+
+external ignore: t => unit = "%ignore"

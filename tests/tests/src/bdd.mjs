@@ -348,7 +348,7 @@ let seed = {
 };
 
 function random() {
-  seed.contents = Math.imul(seed.contents, 25173) + 17431 | 0;
+  seed.contents = (seed.contents * 25173 | 0) + 17431 | 0;
   return (seed.contents & 1) > 0;
 }
 

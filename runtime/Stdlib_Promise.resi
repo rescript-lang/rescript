@@ -102,7 +102,7 @@ let {promise, resolve, _} = Promise.withResolvers()
 
 setTimeout(() => {
   resolve(. "success")
-}, 1000)->ignore
+}, 1000)->TimeoutId.ignore
 
 promise
 ->thenResolve(str => {
@@ -256,7 +256,7 @@ let racer = (ms, name) => {
   Promise.make((resolve, _) => {
     setTimeout(() => {
       resolve(name)
-    }, ms)->ignore
+    }, ms)->TimeoutId.ignore
   })
 }
 
@@ -283,7 +283,7 @@ let racer = (ms, name) => {
   Promise.make((resolve, _) => {
     setTimeout(() => {
       resolve(name)
-    }, ms)->ignore
+    }, ms)->TimeoutId.ignore
   })
 }
 
@@ -451,4 +451,13 @@ external allSettled6: ((t<'a>, t<'b>, t<'c>, t<'d>, t<'e>, t<'f>)) => t<(
 `done(p)` is a safe way to ignore a promise. If a value is anything else than a
 promise, it will raise a type error.
 */
+@deprecated("Please use `Promise.ignore` instead")
 external done: promise<'a> => unit = "%ignore"
+
+/**
+  `ignore(promise)` ignores the provided promise and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: promise<'a> => unit = "%ignore"

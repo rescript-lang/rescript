@@ -1,12 +1,11 @@
-//@ts-check
-/**
- * This file is used only in dev time, feel free to use es6
- */
-const fs = require("fs");
-const { execSync } = require("child_process");
+#!/usr/bin/env node
 
-const packageSpec = JSON.parse(fs.readFileSync("./package.json", "utf8"));
-const { version, name } = packageSpec;
+// @ts-check
+
+import fs from "node:fs";
+import packageSpec from "rescript/package.json" with { type: "json" };
+
+const { name, version } = packageSpec;
 
 const stdlibPackageSpec = JSON.parse(
   fs.readFileSync("./packages/std/package.json", "utf8"),
@@ -48,6 +47,3 @@ let package_name = ref "${name}"
 `,
   "utf8",
 );
-
-// For some reason, the version number is also in npm's package-lock.json. This updates it.
-execSync("npm i --ignore-scripts", { stdio: "inherit" });

@@ -707,8 +707,49 @@ module SexpAst = struct
           ]
       | Pexp_extension ext ->
         Sexp.list [Sexp.atom "Pexp_extension"; extension ext]
+      | Pexp_await e -> Sexp.list [Sexp.atom "Pexp_await"; expression e]
+      | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
+        let xs =
+          match children with
+          | JSXChildrenSpreading e -> [e]
+          | JSXChildrenItems xs -> xs
+        in
+        Sexp.list
+          [
+            Sexp.atom "Pexp_jsx_fragment"; Sexp.list (map_empty ~f:expression xs);
+          ]
+      | Pexp_jsx_element (Jsx_unary_element {jsx_unary_element_props = props})
+        ->
+        Sexp.list
+          [
+            Sexp.atom "Pexp_jsx_unary_element";
+            Sexp.list (map_empty ~f:jsx_prop props);
+          ]
+      | Pexp_jsx_element
+          (Jsx_container_element
+             {
+               jsx_container_element_props = props;
+               jsx_container_element_children = children;
+             }) ->
+        let xs =
+          match children with
+          | JSXChildrenSpreading e -> [e]
+          | JSXChildrenItems xs -> xs
+        in
+        Sexp.list
+          [
+            Sexp.atom "Pexp_jsx_container_element";
+            Sexp.list (map_empty ~f:jsx_prop props);
+            Sexp.list (map_empty ~f:expression xs);
+          ]
     in
     Sexp.list [Sexp.atom "expression"; desc]
+
+  and jsx_prop = function
+    | JSXPropPunning (_, name) -> Sexp.atom name.txt
+    | JSXPropValue (name, _, expr) ->
+      Sexp.list [Sexp.atom name.txt; expression expr]
+    | JSXPropSpreading (_, expr) -> expression expr
 
   and case c =
     Sexp.list

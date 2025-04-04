@@ -10,10 +10,11 @@ depends: [
   "ocaml" {>= "4.14"}
   "cppo" {= "1.8.0"}
   "analysis"
-  "dune"
+  "dune" {>= "3.17"}
+  "odoc" {with-doc}
 ]
 build: [
-  ["dune" "subst"] {pinned}
+  ["dune" "subst"] {dev}
   [
     "dune"
     "build"

@@ -4,7 +4,6 @@ open Parsetree
 type jsx_config = {
   mutable version: int;
   mutable module_: string;
-  mutable mode: string;
   mutable nested_modules: string list;
   mutable has_component: bool;
 }

@@ -205,3 +205,11 @@ Null.flatMap(Null.null, addIfAboveOne) // null
 ```
 */
 let flatMap: (t<'a>, 'a => t<'b>) => t<'b>
+
+/**
+  `ignore(null)` ignores the provided null and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: t<'a> => unit = "%ignore"

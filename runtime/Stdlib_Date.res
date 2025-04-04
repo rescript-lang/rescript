@@ -178,3 +178,5 @@ external toLocaleTimeStringWithLocaleAndOptions: (t, string, localeOptions) => s
 @send external toISOString: t => string = "toISOString"
 @send external toUTCString: t => string = "toUTCString"
 @return(nullable) @send external toJSON: t => option<string> = "toJSON"
+
+external ignore: t => unit = "%ignore"

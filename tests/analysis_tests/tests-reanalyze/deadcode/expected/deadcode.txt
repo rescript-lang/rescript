@@ -417,7 +417,7 @@
   addValueDeclaration +make Hooks.res:63:6 path:+Hooks.RenderPropRequiresConversion
   addRecordLabelDeclaration name Hooks.res:1:16 path:+Hooks.vehicle
   addRecordLabelDeclaration vehicle Hooks.res:4:12 path:+Hooks.props
-  addValueReference Hooks.res:5:26 --> React.res:145:0
+  addValueReference Hooks.res:5:26 --> React.res:134:0
   addTypeReference Hooks.res:10:29 --> Hooks.res:1:16
   addValueReference Hooks.res:10:29 --> Hooks.res:4:12
   addValueReference Hooks.res:10:75 --> Hooks.res:5:7
@@ -1805,7 +1805,7 @@ File References
   DeadExn.resi -->> 
   DeadRT.res -->> 
   DeadRT.resi -->> 
-  DeadTest.res -->> React.res, DeadValueTest.resi, DynamicallyLoadedComponent.res, ImmutableArray.resi
+  DeadTest.res -->> DeadValueTest.resi, DynamicallyLoadedComponent.res, ImmutableArray.resi, React.res
   DeadTestBlacklist.res -->> 
   DeadTestWithInterface.res -->> 
   DeadTypeTest.res -->> 
@@ -1821,7 +1821,7 @@ File References
   FirstClassModules.res -->> 
   FirstClassModulesInterface.res -->> 
   FirstClassModulesInterface.resi -->> FirstClassModulesInterface.res
-  Hooks.res -->> React.res, ImportHookDefault.res, ImportHooks.res
+  Hooks.res -->> ImportHookDefault.res, ImportHooks.res, React.res
   IgnoreInterface.res -->> 
   IgnoreInterface.resi -->> 
   ImmutableArray.res -->> 

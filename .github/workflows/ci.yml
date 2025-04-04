@@ -45,6 +45,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
       - name: Restore build cache
         id: build-cache
         uses: actions/cache@v4
@@ -109,8 +114,6 @@ jobs:
           # Verify that the compiler still builds with older OCaml versions
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.5.2.1+options,ocaml-option-static
-            # Reanalyze does not work on OCaml 5.3.0 anymore, therefore run it on 5.2.1
-            run_reanalyze: true
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
           - os: ubuntu-24.04
@@ -137,6 +140,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
+          cache: yarn
           node-version-file: .nvmrc
 
       - name: Get artifact dir name
@@ -153,7 +157,7 @@ jobs:
       # matrix.ocaml_compiler may contain commas
       - name: Get OPAM cache key
         shell: bash
-        run: echo "opam_cache_key=opam-env-v7-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('dune-project') }}" | sed 's/,/-/g' >> $GITHUB_ENV
+        run: echo "opam_cache_key=opam-env-v7-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" | sed 's/,/-/g' >> $GITHUB_ENV
 
       - name: Restore OPAM environment
         id: cache-opam-env
@@ -190,10 +194,6 @@ jobs:
       - name: Install OPAM dependencies
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         run: opam install . --deps-only --with-test
-
-      - name: "Install reanalyze"
-        if: steps.cache-opam-env.outputs.cache-hit != 'true' && matrix.run_reanalyze
-        run: opam install reanalyze
 
       - name: Cache OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
@@ -250,6 +250,24 @@ jobs:
           fi
         shell: bash
 
+      - name: Compiler build state key
+        id: compiler-build-state-key
+        shell: bash
+        run: |
+          echo "value=compiler-build-state-v1-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" \
+            | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
+
+      - name: Restore compiler build state
+        if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
+        id: compiler-build-state
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            D:\.cache\dune
+            ~/.cache/dune
+            _build
+          key: ${{ steps.compiler-build-state-key.outputs.value }}
+
       - name: Build compiler
         if: runner.os != 'Linux'
         run: opam exec -- dune build --display quiet --profile release
@@ -258,8 +276,30 @@ jobs:
         if: runner.os == 'Linux'
         run: opam exec -- dune build --display quiet --profile static
 
+      - name: Delete stable compiler build state
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        shell: bash
+        run: |
+          gh extension install actions/gh-actions-cache
+          gh actions-cache delete ${{ steps.compiler-build-state-key.outputs.value }} \
+            -R ${{ github.repository }} \
+            -B ${{ github.ref }} \
+            --confirm || echo "not exist"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Save compiler build state
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            D:\.cache\dune
+            ~/.cache/dune
+            _build
+          key: ${{ steps.compiler-build-state-key.outputs.value }}
+
       - name: Install npm packages
-        run: npm ci --ignore-scripts
+        run: yarn install
 
       - name: Copy compiler exes to platform bin dir
         run: node ./scripts/copyExes.js -compiler
@@ -304,10 +344,6 @@ jobs:
       - name: "Syntax: Run tests (Windows)"
         if: ${{ runner.os == 'Windows' }}
         run: opam exec -- make test-syntax
-
-      - name: "Syntax: Run reanalyze"
-        if: matrix.run_reanalyze
-        run: opam exec -- make reanalyze
 
       - name: Build runtime/stdlib
         run: ./scripts/buildRuntime.sh
@@ -370,11 +406,11 @@ jobs:
         run: |
           opam exec -- node packages/playground-bundling/scripts/generate_cmijs.js
           opam exec -- dune build --profile browser
-          cp ./_build/default/compiler/jsoo/jsoo_playground_main.bc.js playground/compiler.js
+          cp ./_build/default/compiler/jsoo/jsoo_playground_main.bc.js playground/compiler.cjs
 
       - name: Test playground compiler
         if: matrix.build_playground
-        run: node playground/playground_test.js
+        run: node playground/playground_test.cjs
 
       - name: Upload playground compiler to CDN
         if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
@@ -411,10 +447,11 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
+          cache: yarn
           node-version-file: .nvmrc
 
       - name: NPM install
-        run: npm ci --ignore-scripts
+        run: yarn install
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -505,6 +542,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
+          cache: yarn
           node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org # Needed to make auth work for publishing
 

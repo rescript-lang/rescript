@@ -345,6 +345,51 @@ and expression i ppf x =
   | Pexp_extension (s, arg) ->
     line i ppf "Pexp_extension \"%s\"\n" s.txt;
     payload i ppf arg
+  | Pexp_await e ->
+    line i ppf "Pexp_await\n";
+    expression i ppf e
+  | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
+    line i ppf "Pexp_jsx_fragment";
+    jsx_children i ppf children
+  | Pexp_jsx_element
+      (Jsx_unary_element
+         {jsx_unary_element_tag_name = name; jsx_unary_element_props = props})
+    ->
+    line i ppf "Pexp_jsx_unary_element %a\n" fmt_longident_loc name;
+    jsx_props i ppf props
+  | Pexp_jsx_element
+      (Jsx_container_element
+         {
+           jsx_container_element_tag_name_start = name;
+           jsx_container_element_props = props;
+           jsx_container_element_opening_tag_end = gt;
+           jsx_container_element_children = children;
+         }) ->
+    line i ppf "Pexp_jsx_container_element %a\n" fmt_longident_loc name;
+    jsx_props i ppf props;
+    if !Clflags.dump_location then line i ppf "> %a\n" (fmt_position false) gt;
+    jsx_children i ppf children
+
+and jsx_children i ppf children =
+  line i ppf "jsx_children =\n";
+  match children with
+  | JSXChildrenSpreading e -> expression (i + 1) ppf e
+  | JSXChildrenItems xs -> list (i + 1) expression ppf xs
+
+and jsx_prop i ppf = function
+  | JSXPropPunning (opt, name) ->
+    line i ppf "%s%s" (if opt then "?" else "") name.txt
+  | JSXPropValue (name, opt, expr) ->
+    line i ppf "%s=%s" name.txt (if opt then "?" else "");
+    expression i ppf expr
+  | JSXPropSpreading (loc, e) ->
+    line i ppf "{... %a\n" fmt_location loc;
+    expression (i + 1) ppf e;
+    line i ppf "}\n"
+
+and jsx_props i ppf xs =
+  line i ppf "jsx_props =\n";
+  list (i + 1) jsx_prop ppf xs
 
 and value_description i ppf x =
   line i ppf "value_description %a %a\n" fmt_string_loc x.pval_name fmt_location

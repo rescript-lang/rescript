@@ -94,7 +94,7 @@ let rec compare = (a: t, b: t): int =>
     | ("boolean", "boolean") => Pervasives.compare((magic(a): bool), magic(b))
     | ("boolean", _) => 1
     | (_, "boolean") => -1
-    | ("function", "function") => raise(Invalid_argument("compare: functional value"))
+    | ("function", "function") => throw(Invalid_argument("compare: functional value"))
     | ("function", _) => 1
     | (_, "function") => -1
     | ("bigint", "bigint")
@@ -261,7 +261,7 @@ let rec equal = (a: t, b: t): bool =>
     } else {
       let b_type = Js.typeof(b)
       if a_type == "function" || b_type == "function" {
-        raise(Invalid_argument("equal: functional value"))
+        throw(Invalid_argument("equal: functional value"))
       } /* first, check using reference equality */
       else if (
         /* a_type = "object" || "symbol" */

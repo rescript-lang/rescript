@@ -281,6 +281,66 @@ module M = struct
 end
 
 module E = struct
+  let jsx_attr sub =
+    sub.attribute sub (Location.mknoloc "JSX", Parsetree.PStr [])
+
+  let offset_position (pos : Lexing.position) (offset : int) : Lexing.position =
+    if offset <= 0 then pos
+    else
+      let open Lexing in
+      let rec aux pos offset =
+        if offset <= 0 then pos
+        else if offset <= pos.pos_cnum - pos.pos_bol then
+          (* We're on the same line *)
+          {pos with pos_cnum = pos.pos_cnum - offset}
+        else
+          (* Move to previous line and continue *)
+          let remaining = offset - (pos.pos_cnum - pos.pos_bol) in
+          aux
+            {
+              pos with
+              pos_lnum = pos.pos_lnum - 1;
+              pos_cnum = pos.pos_bol;
+              pos_bol = max 0 (pos.pos_bol - remaining);
+            }
+            remaining
+      in
+      aux pos offset
+
+  let jsx_unit_expr =
+    Ast_helper0.Exp.construct ~loc:!Ast_helper0.default_loc
+      {txt = Lident "()"; loc = !Ast_helper0.default_loc}
+      None
+
+  let map_jsx_props sub props =
+    props
+    |> List.map (function
+         | JSXPropPunning (is_optional, name) ->
+           let ident =
+             Exp.ident ~loc:name.loc
+               {txt = Longident.Lident name.txt; loc = name.loc}
+           in
+           let label =
+             if is_optional then Asttypes.Noloc.Optional name.txt
+             else Asttypes.Noloc.Labelled name.txt
+           in
+           (label, ident)
+         | JSXPropValue (name, is_optional, value) ->
+           let label =
+             if is_optional then Asttypes.Noloc.Optional name.txt
+             else Asttypes.Noloc.Labelled name.txt
+           in
+           (label, sub.expr sub value)
+         | JSXPropSpreading (_, value) ->
+           (Asttypes.Noloc.Labelled "_spreadProps", sub.expr sub value))
+
+  let map_jsx_children sub loc children =
+    match children with
+    | JSXChildrenSpreading e -> sub.expr sub e
+    | JSXChildrenItems xs ->
+      let list_expr = Ast_helper.Exp.make_list_expression loc xs None in
+      sub.expr sub list_expr
+
   (* Value expressions for the core language *)
 
   let map sub {pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} =
@@ -407,6 +467,72 @@ module E = struct
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
     | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Pexp_await e ->
+      let e = sub.expr sub e in
+      {
+        e with
+        pexp_attributes =
+          (Location.mknoloc "res.await", Pt.PStr []) :: e.pexp_attributes;
+      }
+    | Pexp_jsx_element
+        (Jsx_fragment
+           {
+             jsx_fragment_opening = o;
+             jsx_fragment_children = children;
+             jsx_fragment_closing = c;
+           }) ->
+      (*
+         The location of  Pexp_jsx_fragment is from the start of < till the end of />.
+         This is not the case in the old AST. There it is from >...</
+      *)
+      let loc = {loc with loc_start = o; loc_end = c} in
+      let mapped = map_jsx_children sub loc children in
+      {mapped with pexp_attributes = jsx_attr sub :: attrs}
+    | Pexp_jsx_element
+        (Jsx_unary_element
+           {
+             jsx_unary_element_tag_name = tag_name;
+             jsx_unary_element_props = props;
+           }) ->
+      let tag_ident = map_loc sub tag_name in
+      let props = map_jsx_props sub props in
+      let children_expr =
+        let loc =
+          {
+            loc_ghost = true;
+            loc_start = offset_position loc.loc_end 2;
+            loc_end = offset_position loc.loc_end 1;
+          }
+        in
+        Ast_helper0.Exp.construct ~loc {txt = Lident "[]"; loc} None
+      in
+      let unit_expr =
+        Ast_helper0.Exp.construct ~loc:!Ast_helper0.default_loc
+          {txt = Lident "()"; loc = !Ast_helper0.default_loc}
+          None
+      in
+      apply ~loc ~attrs:(jsx_attr sub :: attrs) (ident tag_ident)
+        (props
+        @ [
+            (Asttypes.Noloc.Labelled "children", children_expr);
+            (Asttypes.Noloc.Nolabel, unit_expr);
+          ])
+    | Pexp_jsx_element
+        (Jsx_container_element
+           {
+             jsx_container_element_tag_name_start = tag_name;
+             jsx_container_element_props = props;
+             jsx_container_element_children = children;
+           }) ->
+      let tag_ident = map_loc sub tag_name in
+      let props = map_jsx_props sub props in
+      let children_expr = map_jsx_children sub loc children in
+      apply ~loc ~attrs:(jsx_attr sub :: attrs) (ident tag_ident)
+        (props
+        @ [
+            (Asttypes.Noloc.Labelled "children", children_expr);
+            (Asttypes.Noloc.Nolabel, jsx_unit_expr);
+          ])
 end
 
 module P = struct

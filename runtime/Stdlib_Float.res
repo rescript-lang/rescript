@@ -59,3 +59,5 @@ let clamp = (~min=?, ~max=?, value): float => {
   | _ => value
   }
 }
+
+external ignore: float => unit = "%ignore"

@@ -2,6 +2,7 @@
   "name": "proj",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "build": "rescript clean && rescript build && node ./scripts/generate_cmijs.js",

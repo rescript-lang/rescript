@@ -22,3 +22,5 @@ module Result = {
 @get external source: t => string = "source"
 @get external sticky: t => bool = "sticky"
 @get external unicode: t => bool = "unicode"
+
+external ignore: t => unit = "%ignore"

@@ -250,6 +250,14 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     match args with
     | [e1; e2] -> E.bigint_mod ~checked:!Js_config.check_div_by_zero e1 e2
     | _ -> assert false)
+  | Ppowint -> (
+    match args with
+    | [e1; e2] -> E.int32_pow e1 e2
+    | _ -> assert false)
+  | Ppowfloat -> (
+    match args with
+    | [e1; e2] -> E.float_pow e1 e2
+    | _ -> assert false)
   | Ppowbigint -> (
     match args with
     | [e1; e2] -> E.bigint_op Pow e1 e2
@@ -566,6 +574,13 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
                  Some (Js_op.Lit txt, expr)
                | _ -> None))
     | _ -> assert false)
+  | Pdict_has -> (
+    match args with
+    | [obj; prop] -> E.in_ prop obj
+    | _ ->
+      Location.raise_errorf ~loc
+        "Invalid external \"%%dict_has\" type signature. Expected to have two \
+         arguments.")
   | Parraysetu -> (
     match args with
     (* wrong*)

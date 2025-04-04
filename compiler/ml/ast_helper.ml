@@ -180,8 +180,60 @@ module Exp = struct
   let pack ?loc ?attrs a = mk ?loc ?attrs (Pexp_pack a)
   let open_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_open (a, b, c))
   let extension ?loc ?attrs a = mk ?loc ?attrs (Pexp_extension a)
+  let await ?loc ?attrs a = mk ?loc ?attrs (Pexp_await a)
+  let jsx_fragment ?loc ?attrs a b c =
+    mk ?loc ?attrs
+      (Pexp_jsx_element
+         (Jsx_fragment
+            {
+              jsx_fragment_opening = a;
+              jsx_fragment_children = b;
+              jsx_fragment_closing = c;
+            }))
+  let jsx_unary_element ?loc ?attrs a b =
+    mk ?loc ?attrs
+      (Pexp_jsx_element
+         (Jsx_unary_element
+            {jsx_unary_element_tag_name = a; jsx_unary_element_props = b}))
+
+  let jsx_container_element ?loc ?attrs a b c d e =
+    mk ?loc ?attrs
+      (Pexp_jsx_element
+         (Jsx_container_element
+            {
+              jsx_container_element_tag_name_start = a;
+              jsx_container_element_props = b;
+              jsx_container_element_opening_tag_end = c;
+              jsx_container_element_children = d;
+              jsx_container_element_closing_tag = e;
+            }))
 
   let case lhs ?guard rhs = {pc_lhs = lhs; pc_guard = guard; pc_rhs = rhs}
+
+  let make_list_expression loc seq ext_opt =
+    let rec handle_seq = function
+      | [] -> (
+        match ext_opt with
+        | Some ext -> ext
+        | None ->
+          let loc = {loc with Location.loc_ghost = true} in
+          let nil = Location.mkloc (Longident.Lident "[]") loc in
+          construct ~loc nil None)
+      | e1 :: el ->
+        let exp_el = handle_seq el in
+        let loc =
+          Location.
+            {
+              loc_start = e1.Parsetree.pexp_loc.Location.loc_start;
+              loc_end = exp_el.pexp_loc.loc_end;
+              loc_ghost = false;
+            }
+        in
+        let arg = tuple ~loc [e1; exp_el] in
+        construct ~loc (Location.mkloc (Longident.Lident "::") loc) (Some arg)
+    in
+    let expr = handle_seq seq in
+    {expr with pexp_loc = loc}
 end
 
 module Mty = struct

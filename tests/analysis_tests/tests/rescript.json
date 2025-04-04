@@ -17,5 +17,6 @@
       "array": ["ArrayUtils"],
       "Fastify.t": ["FastifyExt"]
     }
-  }
+  },
+  "suffix": ".res.js"
 }

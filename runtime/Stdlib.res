@@ -2,6 +2,7 @@ include Stdlib_Global
 
 module Array = Stdlib_Array
 module BigInt = Stdlib_BigInt
+module Bool = Stdlib_Bool
 module Console = Stdlib_Console
 module DataView = Stdlib_DataView
 module Date = Stdlib_Date
@@ -19,6 +20,7 @@ module Nullable = Stdlib_Nullable
 module Object = Stdlib_Object
 module Option = Stdlib_Option
 module Ordering = Stdlib_Ordering
+module Pair = Stdlib_Pair
 module Promise = Stdlib_Promise
 module RegExp = Stdlib_RegExp
 module Result = Stdlib_Result
@@ -53,8 +55,8 @@ type null<+'a> = Primitive_js_extern.null<'a>
 type undefined<+'a> = Primitive_js_extern.undefined<'a>
 type nullable<+'a> = Primitive_js_extern.nullable<'a>
 
-@val external window: Dom.window = "window"
-@val external document: Dom.document = "document"
+@deprecated("Use rescript-webapi instead") @val external window: Dom.window = "window"
+@deprecated("Use rescript-webapi instead") @val external document: Dom.document = "document"
 @val external globalThis: {..} = "globalThis"
 
 /**

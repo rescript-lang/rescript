@@ -393,81 +393,122 @@ Int.clamp(42, ~min=50, ~max=40) == 50
 */
 let clamp: (~min: int=?, ~max: int=?, int) => int
 
-module Bitwise: {
+/**
+`bitwiseAnd(n1, n2)` calculates the bitwise AND of two integers.
+
+## Examples
+
+```rescript
+Int.bitwiseAnd(7, 4) == 4
+```
+*/
+external bitwiseAnd: (int, int) => int = "%andint"
+
+/**
+`bitwiseOr(n1, n2)` calculates the bitwise OR of two integers.
+
+## Examples
+
+```rescript
+Int.bitwiseOr(7, 4) == 7
+```
+*/
+external bitwiseOr: (int, int) => int = "%orint"
+
+/**
+`bigwiseXor(n1, n2)` calculates the bitwise XOR of two integers.
+
+## Examples
+
+```rescript
+Int.bitwiseXor(7, 4) == 3
+```
+*/
+external bitwiseXor: (int, int) => int = "%xorint"
+
+/**
+`bitwiseNot(n)` calculates the bitwise NOT of an integer.
+
+## Examples
+
+```rescript
+Int.bitwiseNot(2) == -3
+```
+*/
+let bitwiseNot: int => int
+
+/**
+`shiftLeft(n, length)` calculates the shifted value of an integer `n` by `length` bits to the left.
+
+## Examples
+
+```rescript
+Int.shiftLeft(4, 1) == 8
+```
+*/
+external shiftLeft: (int, int) => int = "%lslint"
+
+/**
+`shiftRight(n, length)` calculates the shifted value of an integer `n` by `length` bits to the right.
+
+Also known as "arithmetic right shift" operation.
+
+## Examples
+
+```rescript
+Int.shiftRight(8, 1) == 4
+```
+*/
+external shiftRight: (int, int) => int = "%asrint"
+
+/**
+`shiftRightUnsigned(n, length)` calculates the shifted value of an integer `n` by `length` bits to the right.
+Excess bits shifted off to the right are discarded, and zero bits are shifted in from the left.
+
+Also known as "zero-filling right shift" operation.
+
+## Examples
+
+```rescript
+Int.shiftRightUnsigned(4, 1) == 2
+```
+*/
+external shiftRightUnsigned: (int, int) => int = "%lsrint"
+
+/**
+  `ignore(int)` ignores the provided int and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: int => unit = "%ignore"
+
+module Ref: {
+  type t = ref<int>
+
   /**
-  `land(n1, n2)` calculates the bitwise logical AND of two integers.
+  `increment(intRef)` increments the value of the provided reference by 1.
 
   ## Examples
 
   ```rescript
-  Int.Bitwise.land(7, 4) == 4
+  let myRef = ref(4)
+  Int.Ref.increment(myRef)
+  assertEqual(myRef.contents, 5)
   ```
   */
-  external land: (int, int) => int = "%andint"
+  external increment: ref<int> => unit = "%incr"
 
   /**
-  `lor(n1, n2)` calculates the bitwise logical OR of two integers.
+  `decrement(intRef)` decrements the value of the provided reference by 1.
 
   ## Examples
 
   ```rescript
-  Int.Bitwise.lor(7, 4) == 7
+  let myRef = ref(4)
+  Int.Ref.decrement(myRef)
+  assertEqual(myRef.contents, 3)
   ```
   */
-  external lor: (int, int) => int = "%orint"
-
-  /**
-  `lxor(n1, n2)` calculates the bitwise logical XOR of two integers.
-
-  ## Examples
-
-  ```rescript
-  Int.Bitwise.lxor(7, 4) == 3
-  ```
-  */
-  external lxor: (int, int) => int = "%xorint"
-
-  /**
-  `lnot(n)` calculates the bitwise logical NOT of an integer.
-
-  ## Examples
-
-  ```rescript
-  Int.Bitwise.lnot(2) == -3
-  ```
-  */
-  let lnot: int => int
-
-  /**
-  `lsl(n, length)` calculates the bitwise logical left shift of an integer `n` by `length`.
-
-  ## Examples
-
-  ```rescript
-  Int.Bitwise.lsl(4, 1) == 8
-  ```
-  */
-  external lsl: (int, int) => int = "%lslint"
-
-  /**
-  `lsr(n, length)` calculates the bitwise logical right shift of an integer `n` by `length`.
-
-  ## Examples
-
-  ```rescript
-  Int.Bitwise.lsr(8, 1) == 4
-  ```
-  */
-  external lsr: (int, int) => int = "%lsrint"
-
-  /**
-  `asr(n, length)` calculates the bitwise arithmetic right shift of an integer `n` by `length`.
-
-  ## Examples
-
-  ```rescript
-  Int.Bitwise.asr(4, 1) == 2
-  ```
-  */
-  external asr: (int, int) => int = "%asrint"
+  external decrement: ref<int> => unit = "%decr"
 }

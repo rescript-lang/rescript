@@ -66,7 +66,7 @@ let _ = await (assert(x))
 let _ = await promises[0]
 let _ = await promises["resolved"]
 let _ = await (promises["resolved"] = sideEffect())
-let _ = await (@attr expr)
+let _ = @outer await @inner expr
 let _ = await module(Foo)
 let _ = await module(Foo: Bar)
 let _ = await Promise

@@ -86,6 +86,7 @@ and expression_desc =
      [typeof] is an operator
   *)
   | Typeof of expression
+  | In of expression * expression (* prop in obj *)
   | Js_not of expression (* !v *)
   (* TODO: Add some primitives so that [js inliner] can do a better job *)
   | Seq of expression * expression

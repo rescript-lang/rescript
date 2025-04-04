@@ -72,6 +72,18 @@ let has_await_attribute attrs =
       | _ -> false)
     attrs
 
+let expr_is_await e =
+  match e.pexp_desc with
+  | Pexp_await _ -> true
+  | _ -> false
+
+let has_inline_record_definition_attribute attrs =
+  List.exists
+    (function
+      | {Location.txt = "res.inlineRecordDefinition"}, _ -> true
+      | _ -> false)
+    attrs
+
 let has_res_pat_variant_spread_attribute attrs =
   List.exists
     (function
@@ -104,12 +116,7 @@ let collect_list_expressions expr =
 
 (* (__x) => f(a, __x, c) -----> f(a, _, c)  *)
 let rewrite_underscore_apply expr =
-  let expr_fun =
-    if Ast_uncurried.expr_is_uncurried_fun expr then
-      Ast_uncurried.expr_extract_uncurried_fun expr
-    else expr
-  in
-  match expr_fun.pexp_desc with
+  match expr.pexp_desc with
   | Pexp_fun
       {
         arg_label = Nolabel;
@@ -198,7 +205,8 @@ let filter_parsing_attrs attrs =
             Location.txt =
               ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
               | "res.await" | "res.template" | "res.taggedTemplate"
-              | "res.patVariantSpread" | "res.dictPattern" );
+              | "res.patVariantSpread" | "res.dictPattern"
+              | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
@@ -264,11 +272,12 @@ let operator_precedence operator =
   | ":=" -> 1
   | "||" -> 2
   | "&&" -> 3
-  | "==" | "===" | "<" | ">" | "!=" | "<>" | "!==" | "<=" | ">=" | "|>" -> 4
-  | "+" | "+." | "-" | "-." | "++" -> 5
-  | "*" | "*." | "/" | "/." | "%" -> 6
-  | "**" -> 7
-  | "#" | "##" | "->" -> 8
+  | "^" -> 4
+  | "==" | "===" | "<" | ">" | "!=" | "<>" | "!==" | "<=" | ">=" | "|>" -> 5
+  | "+" | "+." | "-" | "-." | "++" -> 6
+  | "*" | "*." | "/" | "/." | "%" -> 7
+  | "**" -> 8
+  | "#" | "##" | "->" -> 9
   | _ -> 0
 
 let is_unary_operator operator =
@@ -287,14 +296,16 @@ let is_unary_expression expr =
     true
   | _ -> false
 
-(* TODO: tweak this to check for ghost ^ as template literal *)
 let is_binary_operator operator =
   match operator with
   | ":=" | "||" | "&&" | "==" | "===" | "<" | ">" | "!=" | "!==" | "<=" | ">="
   | "|>" | "+" | "+." | "-" | "-." | "++" | "*" | "*." | "/" | "/." | "**"
-  | "->" | "<>" | "%" ->
+  | "->" | "<>" | "%" | "^" ->
     true
   | _ -> false
+
+let not_ghost_operator operator (loc : Location.t) =
+  is_binary_operator operator && not (loc.loc_ghost && operator = "++")
 
 let is_binary_expression expr =
   match expr.pexp_desc with
@@ -307,9 +318,7 @@ let is_binary_expression expr =
           };
         args = [(Nolabel, _operand1); (Nolabel, _operand2)];
       }
-    when is_binary_operator operator
-         && not (operator_loc.loc_ghost && operator = "++")
-         (* template literal *) ->
+    when not_ghost_operator operator operator_loc ->
     true
   | _ -> false
 
@@ -352,7 +361,7 @@ let has_attributes attrs =
       | ( {
             Location.txt =
               ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.await" | "res.template" );
+              | "res.await" | "res.template" | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
@@ -484,26 +493,6 @@ let filter_fragile_match_attributes attrs =
       | _ -> true)
     attrs
 
-let is_jsx_expression expr =
-  let rec loop attrs =
-    match attrs with
-    | [] -> false
-    | ({Location.txt = "JSX"}, _) :: _ -> true
-    | _ :: attrs -> loop attrs
-  in
-  match expr.pexp_desc with
-  | Pexp_apply _ -> loop expr.Parsetree.pexp_attributes
-  | _ -> false
-
-let has_jsx_attribute attributes =
-  let rec loop attrs =
-    match attrs with
-    | [] -> false
-    | ({Location.txt = "JSX"}, _) :: _ -> true
-    | _ :: attrs -> loop attrs
-  in
-  loop attributes
-
 let should_indent_binary_expr expr =
   let same_precedence_sub_expression operator sub_expression =
     match sub_expression with
@@ -547,7 +536,7 @@ let is_printable_attribute attr =
   | ( {
         Location.txt =
           ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.await"
-          | "res.template" | "res.ternary" );
+          | "res.template" | "res.ternary" | "res.inlineRecordDefinition" );
       },
       _ ) ->
     false
@@ -750,3 +739,29 @@ let is_tuple_array (expr : Parsetree.expression) =
   match expr with
   | {pexp_desc = Pexp_array items} -> List.for_all is_plain_tuple items
   | _ -> false
+
+let get_jsx_prop_loc = function
+  | Parsetree.JSXPropPunning (_, name) -> name.loc
+  | Parsetree.JSXPropValue (name, _, value) ->
+    {name.loc with loc_end = value.pexp_loc.loc_end}
+  | Parsetree.JSXPropSpreading (loc, _) -> loc
+
+let container_element_closing_tag_loc
+    (tag : Parsetree.jsx_closing_container_tag) =
+  {
+    tag.jsx_closing_container_tag_name.loc with
+    loc_start = tag.jsx_closing_container_tag_start;
+    loc_end = tag.jsx_closing_container_tag_end;
+  }
+
+(** returns the location of the /> token in a unary element *)
+let unary_element_closing_token (expression_loc : Warnings.loc) =
+  {
+    expression_loc with
+    loc_start =
+      {
+        expression_loc.loc_end with
+        pos_cnum = expression_loc.loc_end.pos_cnum - 2;
+        pos_bol = expression_loc.loc_end.pos_bol - 2;
+      };
+  }

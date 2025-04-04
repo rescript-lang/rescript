@@ -29,11 +29,11 @@ user.data = await fetch()
 
 <Navbar promise={await gc()}> {await weirdReactSuspenseApi} </Navbar>
 
-let inBinaryExpression = await x->Js.Promise.resolve + 1
-let inBinaryExpression = await x->Js.Promise.resolve + await y->Js.Promise.resolve
+let inBinaryExpression = (await x->Js.Promise.resolve) + 1
+let inBinaryExpression = (await x->Js.Promise.resolve) + (await y->Js.Promise.resolve)
 
 let withCallback = async () => {
-  async x => await x->Js.promise.resolve + 1
+  async x => (await x->Js.promise.resolve) + 1
 }
 
 let () = await (await fetch(url))->(await resolve)
@@ -68,7 +68,7 @@ let _ = await (
 let _ = await (condition() ? true : false)
 let _ = await f(x)
 let _ = await f(x)
-let _ = (await (f(x): Js.Promise.t<unit>))
+let _ = await (f(x): Js.Promise.t<unit>)
 let _ = await (
   while true {
     infiniteLoop()
@@ -88,7 +88,7 @@ let _ = await (assert(x))
 let _ = await promises[0]
 let _ = await promises["resolved"]
 let _ = await promises["resolved"] = sideEffect()
-let _ = @attr await (expr)
+let _ = @outer await (@inner expr)
 let _ = await module(Foo)
 let _ = await module(Foo: Bar)
 let _ = await Promise

@@ -52,3 +52,11 @@ external fromArrayLikeOrIterable: 'a => t = "Int16Array.from"
 */
 @val
 external fromArrayLikeOrIterableWithMap: ('a, ('b, int) => int) => t = "Int16Array.from"
+
+/**
+  `ignore(intArray)` ignores the provided intArray and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: t => unit = "%ignore"

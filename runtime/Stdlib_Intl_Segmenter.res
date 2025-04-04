@@ -32,3 +32,11 @@ external supportedLocalesOf: (array<string>, ~options: supportedLocalesOptions=?
 @send external resolvedOptions: t => resolvedOptions = "resolvedOptions"
 
 @send external segment: (t, string) => Stdlib_Intl_Segments.t = "segment"
+
+/**
+  `ignore(segmenter)` ignores the provided segmenter and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: t => unit = "%ignore"

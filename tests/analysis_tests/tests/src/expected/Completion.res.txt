@@ -116,13 +116,13 @@ Path Array.
     "label": "getSymbol",
     "kind": 12,
     "tags": [],
-    "detail": "(array<'a>, Stdlib_Symbol.t) => option<'b>",
+    "detail": "(array<'a>, Symbol.t) => option<'b>",
     "documentation": null
   }, {
     "label": "getSymbolUnsafe",
     "kind": 12,
     "tags": [],
-    "detail": "(array<'a>, Stdlib_Symbol.t) => 'b",
+    "detail": "(array<'a>, Symbol.t) => 'b",
     "documentation": null
   }, {
     "label": "findIndexOpt",
@@ -218,7 +218,7 @@ Path Array.
     "label": "sort",
     "kind": 12,
     "tags": [],
-    "detail": "(array<'a>, ('a, 'a) => Stdlib_Ordering.t) => unit",
+    "detail": "(array<'a>, ('a, 'a) => Ordering.t) => unit",
     "documentation": {"kind": "markdown", "value": "\n`sort(array, comparator)` sorts `array` in-place using the `comparator` function.\n\nBeware this will *mutate* the array.\n\nSee [`Array.sort`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort) on MDN.\n\n## Examples\n\n```rescript\nlet array = [3, 2, 1]\narray->Array.sort((a, b) => float(a - b))\narray->assertEqual([1, 2, 3])\n```\n"}
   }, {
     "label": "length",
@@ -326,7 +326,7 @@ Path Array.
     "label": "compare",
     "kind": 12,
     "tags": [],
-    "detail": "(\n  array<'a>,\n  array<'a>,\n  ('a, 'a) => Stdlib_Ordering.t,\n) => Stdlib_Ordering.t",
+    "detail": "(array<'a>, array<'a>, ('a, 'a) => Ordering.t) => Ordering.t",
     "documentation": null
   }, {
     "label": "join",
@@ -340,6 +340,12 @@ Path Array.
     "tags": [],
     "detail": "array<'a> => option<'a>",
     "documentation": {"kind": "markdown", "value": "\n`last(array)` returns the last element of `array`.\n\nReturns `None` if the array is empty.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]\n->Array.last\n->assertEqual(Some(\"Good bye\"))\n\n[]\n->Array.last\n->assertEqual(None)\n```\n"}
+  }, {
+    "label": "ignore",
+    "kind": 12,
+    "tags": [],
+    "detail": "array<'a> => unit",
+    "documentation": {"kind": "markdown", "value": "\n  `ignore(array)` ignores the provided array and returns unit.\n\n  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)\n  without having to store or process it further.\n"}
   }, {
     "label": "isArray",
     "kind": 12,
@@ -404,7 +410,7 @@ Path Array.
     "label": "setSymbol",
     "kind": 12,
     "tags": [],
-    "detail": "(array<'a>, Stdlib_Symbol.t, 'b) => unit",
+    "detail": "(array<'a>, Symbol.t, 'b) => unit",
     "documentation": null
   }, {
     "label": "equal",
@@ -458,7 +464,7 @@ Path Array.
     "label": "toSorted",
     "kind": 12,
     "tags": [],
-    "detail": "(array<'a>, ('a, 'a) => Stdlib_Ordering.t) => array<'a>",
+    "detail": "(array<'a>, ('a, 'a) => Ordering.t) => array<'a>",
     "documentation": {"kind": "markdown", "value": "\n`toSorted(array, comparator)` returns a new, sorted array from `array`, using the `comparator` function.\n\nSee [`Array.toSorted`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toSorted) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [3, 2, 1]\n\nsomeArray\n->Array.toSorted(Int.compare)\n->assertEqual([1, 2, 3])\n\nsomeArray->assertEqual([3, 2, 1]) // Original unchanged\n```\n"}
   }, {
     "label": "reduceWithIndex",
@@ -509,6 +515,12 @@ Path Array.
     "detail": "(array<'a>, int) => option<'a>",
     "documentation": {"kind": "markdown", "value": "\n`get(array, index)` returns the element at `index` of `array`.\n\nReturns `None` if the index does not exist in the array. Equivalent to doing `array[index]` in JavaScript.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\n\narray\n->Array.get(0)\n->assertEqual(Some(\"Hello\"))\n\narray\n->Array.get(3)\n->assertEqual(None)\n```\n"}
   }, {
+    "label": "removeInPlace",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, int) => unit",
+    "documentation": {"kind": "markdown", "value": "\n`removeInPlace(array, index)` removes the item at the specified `index` from `array`.\n\nBeware this will *mutate* the array.\n\n## Examples\n\n```rescript\nlet array = []\narray->Array.removeInPlace(0)\nassertEqual(array, []) // Removing from an empty array does nothing\n\nlet array2 = [\"Hello\", \"Hi\", \"Good bye\"]\narray2->Array.removeInPlace(1)\nassertEqual(array2, [\"Hello\", \"Good bye\"]) // Removes the item at index 1\n```\n "}
+  }, {
     "label": "pushMany",
     "kind": 12,
     "tags": [],
@@ -518,7 +530,7 @@ Path Array.
     "label": "fromIterator",
     "kind": 12,
     "tags": [],
-    "detail": "Stdlib_Iterator.t<'a> => array<'a>",
+    "detail": "Iterator.t<'a> => array<'a>",
     "documentation": {"kind": "markdown", "value": "\n`fromIterator(iterator)`\n\nCreates an array from the provided `iterator`\n\n## Examples\n\n```rescript\nMap.fromArray([(\"foo\", 1), (\"bar\", 2)])\n->Map.values\n->Array.fromIterator\n->assertEqual([1, 2])\n```\n"}
   }, {
     "label": "forEach",
@@ -700,7 +712,7 @@ XXX Not found!
 []
 
 Complete src/Completion.res 59:30
-posCursor:[59:30] posNoWhite:[59:29] Found expr:[59:15->59:30]
+posCursor:[59:30] posNoWhite:[59:29] Found expr:[59:14->59:30]
 JSX <O.Comp:[59:15->59:21] second[59:22->59:28]=...[59:29->59:30]> _children:None
 Completable: Cexpression CJsxPropValue [O, Comp] second=z
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -716,7 +728,7 @@ Path O.Comp.make
   }]
 
 Complete src/Completion.res 62:23
-posCursor:[62:23] posNoWhite:[62:22] Found expr:[62:15->62:23]
+posCursor:[62:23] posNoWhite:[62:22] Found expr:[62:14->62:23]
 JSX <O.Comp:[62:15->62:21] z[62:22->62:23]=...[62:22->62:23]> _children:None
 Completable: Cjsx([O, Comp], z, [z])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -964,7 +976,7 @@ Path Objects.Rec.
 
 Complete src/Completion.res 120:7
 posCursor:[120:7] posNoWhite:[120:6] Found expr:[119:11->123:1]
-posCursor:[120:7] posNoWhite:[120:6] Found expr:[120:5->122:5]
+posCursor:[120:7] posNoWhite:[120:6] Found expr:[120:5->122:8]
 posCursor:[120:7] posNoWhite:[120:6] Found expr:[120:5->120:7]
 Pexp_ident my:[120:5->120:7]
 Completable: Cpath Value[my]
@@ -1004,7 +1016,7 @@ Path Objects.object
   }]
 
 Complete src/Completion.res 151:6
-posCursor:[151:6] posNoWhite:[151:5] Found expr:[151:4->151:6]
+posCursor:[151:6] posNoWhite:[151:5] Found expr:[151:3->151:6]
 JSX <O.:[151:4->151:6] > _children:None
 Completable: Cpath Module[O, ""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1110,7 +1122,7 @@ Path Lis
   }]
 
 Complete src/Completion.res 169:16
-posCursor:[169:16] posNoWhite:[169:15] Found expr:[169:4->169:16]
+posCursor:[169:16] posNoWhite:[169:15] Found expr:[169:3->169:16]
 JSX <WithChildren:[169:4->169:16] > _children:None
 Completable: Cpath Module[WithChildren]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1877,7 +1889,7 @@ Found type for function callback
   }]
 
 Complete src/Completion.res 339:26
-posCursor:[339:26] posNoWhite:[339:25] Found expr:[336:3->349:23]
+posCursor:[339:26] posNoWhite:[339:25] Found expr:[336:2->349:23]
 JSX <div:[336:3->336:6] onClick[337:4->337:11]=...[337:13->349:23]> _children:None
 posCursor:[339:26] posNoWhite:[339:25] Found expr:[337:13->349:23]
 posCursor:[339:26] posNoWhite:[339:25] Found expr:[337:13->341:6]
@@ -1901,26 +1913,6 @@ Path Res
     "tags": [],
     "detail": "module Result",
     "documentation": null
-  }, {
-    "label": "RescriptReactErrorBoundary",
-    "kind": 9,
-    "tags": [],
-    "detail": "module RescriptReactErrorBoundary",
-    "documentation": null,
-    "data": {
-      "modulePath": "RescriptReactErrorBoundary",
-      "filePath": "src/Completion.res"
-    }
-  }, {
-    "label": "RescriptReactRouter",
-    "kind": 9,
-    "tags": [],
-    "detail": "module RescriptReactRouter",
-    "documentation": null,
-    "data": {
-      "modulePath": "RescriptReactRouter",
-      "filePath": "src/Completion.res"
-    }
   }, {
     "label": "RescriptTools",
     "kind": 9,
@@ -2041,6 +2033,12 @@ Path T
     "kind": 9,
     "tags": [],
     "detail": "module TypedArray",
+    "documentation": null
+  }, {
+    "label": "TimeoutId",
+    "kind": 9,
+    "tags": [],
+    "detail": "module TimeoutId",
     "documentation": null
   }, {
     "label": "Type",

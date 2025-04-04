@@ -36,7 +36,7 @@ f((a, b) => List.length(_), a, b)
 f(a, b, _)(x, y)
 -f(a, b, _)
 f(a, b, _) + g(x, _, z)
-f(a, b, _) + (g(x, _, z)) + h(alpha, beta, _)
+f(a, b, _) + g(x, _, z) + h(alpha, beta, _)
 
 assert(f(a, b, _))
 
@@ -66,3 +66,8 @@ x => {
   // Comment 2
   something()
 }, _)
+
+let status =
+  json
+  ->optional(field("status", string, _), _)
+  ->Option.mapOr(Status.Active, Status.fromString)

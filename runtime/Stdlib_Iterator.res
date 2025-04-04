@@ -18,3 +18,5 @@ let forEach = (iterator, f) => {
     iteratorDone := done
   }
 }
+
+external ignore: t<'a> => unit = "%ignore"

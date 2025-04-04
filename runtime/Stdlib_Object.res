@@ -297,3 +297,11 @@ obj->Object.isExtensible // false
 */
 @val
 external isExtensible: 'a => bool = "Object.isExtensible"
+
+/**
+  `ignore(object)` ignores the provided object and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: {..} => unit = "%ignore"

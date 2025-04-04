@@ -1,5 +1,5 @@
 Complete src/GenericJsxCompletion.res 0:8
-posCursor:[0:8] posNoWhite:[0:6] Found expr:[0:4->0:7]
+posCursor:[0:8] posNoWhite:[0:6] Found expr:[0:3->0:7]
 JSX <div:[0:4->0:7] > _children:None
 Completable: Cjsx([div], "", [])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -26,7 +26,7 @@ Path GenericJsx.Elements.props
   }]
 
 Complete src/GenericJsxCompletion.res 3:17
-posCursor:[3:17] posNoWhite:[3:16] Found expr:[3:4->3:18]
+posCursor:[3:17] posNoWhite:[3:16] Found expr:[3:3->3:18]
 JSX <div:[3:4->3:7] testing[3:8->3:15]=...[3:16->3:18]> _children:None
 Completable: Cexpression CJsxPropValue [div] testing->recordBody
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -93,14 +93,8 @@ posCursor:[20:24] posNoWhite:[20:23] Found expr:[11:4->22:10]
 posCursor:[20:24] posNoWhite:[20:23] Found expr:[12:4->22:10]
 posCursor:[20:24] posNoWhite:[20:23] Found expr:[13:4->22:10]
 posCursor:[20:24] posNoWhite:[20:23] Found expr:[16:4->22:10]
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[17:5->22:10]
-JSX <div:[17:5->17:8] > _children:17:8
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[17:8->22:4]
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[18:7->22:4]
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[19:7->22:4]
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[19:7->22:4]
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[20:10->22:4]
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[20:10->22:4]
+posCursor:[20:24] posNoWhite:[20:23] Found expr:[17:4->22:10]
+JSX <div:[17:5->17:8] > _children:18:7
 posCursor:[20:24] posNoWhite:[20:23] Found expr:[20:10->20:24]
 Completable: Cpath Value[someString]->st <<jsx>>
 Raw opens: 1 GenericJsx.place holder

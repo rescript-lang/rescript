@@ -107,6 +107,7 @@ let enter_type rec_flag env sdecl id =
         type_attributes = sdecl.ptype_attributes;
         type_immediate = false;
         type_unboxed = unboxed_false_default_false;
+        type_inlined_types = [];
       }
     in
     Env.add_type ~check:true id decl env
@@ -683,6 +684,7 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
       type_attributes = sdecl.ptype_attributes;
       type_immediate = false;
       type_unboxed = unboxed_status;
+      type_inlined_types = [];
     }
   in
 
@@ -1481,7 +1483,25 @@ let transl_type_decl env rec_flag sdecl_list =
   let tdecls =
     List.map2 transl_declaration sdecl_list (List.map id_slots id_list)
   in
-  let decls = List.map (fun tdecl -> (tdecl.typ_id, tdecl.typ_type)) tdecls in
+  let inline_types =
+    tdecls
+    |> List.filter (fun tdecl ->
+           tdecl.typ_attributes
+           |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
+                  txt = "res.inlineRecordDefinition")
+           |> Option.is_some)
+    |> List.filter_map (fun tdecl ->
+           match tdecl.typ_type.type_kind with
+           | Type_record (labels, _) ->
+             Some (Record {type_name = tdecl.typ_name.txt; labels})
+           | _ -> None)
+  in
+  let decls =
+    List.map
+      (fun tdecl ->
+        (tdecl.typ_id, {tdecl.typ_type with type_inlined_types = inline_types}))
+      tdecls
+  in
   let sdecl_list =
     Variant_type_spread.expand_dummy_constructor_args sdecl_list decls
   in
@@ -1935,6 +1955,7 @@ let transl_with_constraint env id row_path orig_decl sdecl =
       type_attributes = sdecl.ptype_attributes;
       type_immediate = false;
       type_unboxed;
+      type_inlined_types = [];
     }
   in
   (match row_path with
@@ -1985,6 +2006,7 @@ let abstract_type_decl arity =
       type_attributes = [];
       type_immediate = false;
       type_unboxed = unboxed_false_default_false;
+      type_inlined_types = [];
     }
   in
   Ctype.end_def ();

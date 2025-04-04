@@ -199,3 +199,23 @@ Console.log(decodeURIComponent("array%3D%5BsomeValue%5D"))
 */
 @val
 external decodeURIComponent: string => string = "decodeURIComponent"
+
+module TimeoutId: {
+  /**
+    `ignore(timeoutId)` ignores the provided timeoutId and returns unit.
+
+    This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+    without having to store or process it further.
+*/
+  external ignore: timeoutId => unit = "%ignore"
+}
+
+module IntervalId: {
+  /**
+    `ignore(intervalId)` ignores the provided intervalId and returns unit.
+
+    This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+    without having to store or process it further.
+  */
+  external ignore: intervalId => unit = "%ignore"
+}

@@ -117,3 +117,5 @@ module Decode = {
     | _ => None
     }
 }
+
+external ignore: t => unit = "%ignore"
