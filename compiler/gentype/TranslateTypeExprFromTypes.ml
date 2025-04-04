@@ -13,6 +13,10 @@ let rec remove_option ~(label : Asttypes.Noloc.arg_label)
 
 let rec path_to_list path =
   match path with
+  | Path.Pident id when String.starts_with (Ident.name id) ~prefix:"Stdlib_" ->
+    let name = Ident.name id in
+    let without_stdlib_prefix = String.sub name 7 (String.length name - 7) in
+    [without_stdlib_prefix; "Stdlib"]
   | Path.Pident id -> [id |> Ident.name]
   | Path.Pdot (p, s, _) -> s :: (p |> path_to_list)
   | Path.Papply _ -> []
@@ -248,7 +252,7 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
   | ( (["Js"; "Dict"; "t"] | ["Dict"; "t"] | ["dict"] | ["Stdlib"; "Dict"; "t"]),
       [param_translation] ) ->
     {param_translation with type_ = Dict param_translation.type_}
-  | ["Stdlib_JSON"; "t"], [] -> {dependencies = []; type_ = unknown}
+  | ["Stdlib"; "JSON"; "t"], [] -> {dependencies = []; type_ = unknown}
   | _ -> default_case ()
 
 type process_variant = {
