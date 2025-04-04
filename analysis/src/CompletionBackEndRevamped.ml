@@ -3,13 +3,33 @@ open SharedTypes
 let resolveOpens = CompletionBackEnd.resolveOpens
 let getOpens = CompletionBackEnd.getOpens
 
-let findFields ~env ~package ~hint typ =
+let findFields ~env ~package ~hint ?(seenFields = []) typ =
   match TypeUtils.extractRecordType ~env ~package typ with
   | None -> []
   | Some (_recordEnv, fields, decl) ->
     fields
-    |> DotCompletionUtils.filterRecordFields ~env ~prefix:hint ~exact:false
+    |> DotCompletionUtils.filterRecordFields ~env ~prefix:hint ~seenFields
+         ~exact:false
          ~recordAsString:(decl.item.decl |> Shared.declToString decl.name.txt)
+
+let findRecordField ~env ~package ~fieldName typ =
+  match TypeUtils.extractRecordType ~env ~package typ with
+  | None -> None
+  | Some (_recordEnv, fields, _decl) ->
+    fields |> List.find_opt (fun (field : field) -> field.fname.txt = fieldName)
+
+let completeEmptyPattern ~env ~package typ =
+  match TypeUtils.extractType ~env ~package typ with
+  | None -> []
+  | Some (completionType, typeArgContext) -> (
+    (* Fill this out with the different completions *)
+    match completionType with
+    | Trecord _ ->
+      [
+        Completion.create ?typeArgContext "{}" ~includesSnippets:true
+          ~insertText:"{$0}" ~sortText:"A" ~kind:(Value typ) ~env;
+      ]
+    | _ -> [])
 
 let processCompletable ~debug ~full ~scope ~env ~pos
     (completable : CompletableRevamped.t) =
@@ -29,6 +49,18 @@ let processCompletable ~debug ~full ~scope ~env ~pos
     | Some typ -> (
       match kind with
       | Field {hint} -> findFields ~env ~package ~hint typ))
+  | Cpattern {kind; typeLoc} -> (
+    match TypeUtils.findTypeViaLoc typeLoc ~full ~debug with
+    | None -> []
+    | Some typ -> (
+      match kind with
+      | Empty -> completeEmptyPattern ~env ~package typ
+      | Field {hint; seenFields} ->
+        findFields ~env ~package ~hint ~seenFields typ
+      | FieldValue {fieldName} -> (
+        match findRecordField ~env ~package ~fieldName typ with
+        | None -> []
+        | Some field -> completeEmptyPattern ~env ~package field.typ)))
   | Cnone -> []
   | CextensionNode _ -> []
   | Cdecorator prefix ->
