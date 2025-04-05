@@ -7,7 +7,7 @@
 // and its content are file/directories with regard to project root
 
 import * as tty from "node:tty";
-import packageJson from "rescript/package.json" with { type: "json" };
+import * as fs from "node:fs";
 
 import { bsc_exe, rescript_exe } from "./common/bins.js";
 import * as bsb from "./common/bsb.js";
@@ -93,7 +93,11 @@ if (
 ) {
   console.log(helpMessage);
 } else if (argPatterns.version.includes(args[0])) {
-  console.log(packageJson.version);
+  const packageSpec = JSON.parse(
+    fs.readFileSync(new URL("../package.json", import.meta.url), "utf-8")
+  );
+
+  console.log(packageSpec.version);
 } else if (firstPositionalArgIndex !== -1) {
   const subcmd = args[firstPositionalArgIndex];
   const subcmdArgs = args.slice(firstPositionalArgIndex + 1);

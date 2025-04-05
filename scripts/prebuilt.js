@@ -4,7 +4,6 @@
 
 import assert from "node:assert";
 import fs from "node:fs";
-import packageJson from "rescript/package.json" with { type: "json" };
 import semver from "semver";
 import { compilerVersionFile } from "#dev/paths";
 
@@ -29,7 +28,11 @@ assert.ok(bsVersionMatch, "Failed to parse the compiler version file");
 const bsVersion = semver.parse(bsVersionMatch.version);
 assert.ok(bsVersion, "Failed to parse the compiler version file");
 
-const packageVersion = semver.parse(packageJson.version);
+const packageSpec = JSON.parse(
+  fs.readFileSync(new URL("../package.json", import.meta.url), "utf-8"),
+);
+
+const packageVersion = semver.parse(packageSpec.version);
 assert.ok(packageVersion, "Failed to parse the version of the package.json");
 
 assert.ok(
