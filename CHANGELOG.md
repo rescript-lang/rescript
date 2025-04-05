@@ -12,8 +12,13 @@
 
 # 12.0.0-alpha.12 (Unreleased)
 
+#### :bug: Bug fix
+
+- Fix node.js ExperimentalWarning. https://github.com/rescript-lang/rescript/pull/7379
+
 #### :house: Internal
-- Better representation of JSX in AST . https://github.com/rescript-lang/rescript/pull/7286
+
+- Better representation of JSX in AST. https://github.com/rescript-lang/rescript/pull/7286
 
 # 12.0.0-alpha.11
 
