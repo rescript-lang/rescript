@@ -373,33 +373,35 @@ jobs:
         if: matrix.benchmarks
         run: ./_build/install/default/bin/syntax_benchmarks | tee tests/benchmark-output.json
 
-      - name: Restore previous benchmark data
-        if: matrix.benchmarks
-        uses: actions/cache/restore@v4
-        with:
-          path: ./tests/benchmark-cache
-          key: syntax-benchmark-v1
+      # Benchmarking is disabled for now because of inconsistent run times on different runners
+      #
+      # - name: Restore previous benchmark data
+      #   if: matrix.benchmarks
+      #   uses: actions/cache/restore@v4
+      #   with:
+      #     path: ./tests/benchmark-cache
+      #     key: syntax-benchmark-v1
 
-      - name: Create new benchmark data and comment on alert
-        # Do not run for PRs created from other repos as those won't be able to write to the pull request
-        if: ${{ matrix.benchmarks && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.repository.full_name) }}
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Syntax Benchmarks
-          tool: customSmallerIsBetter
-          output-file-path: tests/benchmark-output.json
-          external-data-json-path: ./tests/benchmark-cache/benchmark-data.json
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          alert-threshold: "105%"
-          comment-always: false
-          comment-on-alert: true
+      # - name: Create new benchmark data and comment on alert
+      #   # Do not run for PRs created from other repos as those won't be able to write to the pull request
+      #   if: ${{ matrix.benchmarks && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.repository.full_name) }}
+      #   uses: benchmark-action/github-action-benchmark@v1
+      #   with:
+      #     name: Syntax Benchmarks
+      #     tool: customSmallerIsBetter
+      #     output-file-path: tests/benchmark-output.json
+      #     external-data-json-path: ./tests/benchmark-cache/benchmark-data.json
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     alert-threshold: "105%"
+      #     comment-always: false
+      #     comment-on-alert: true
 
-      - name: Save benchmark data as new baseline
-        if: matrix.benchmarks && github.ref == 'refs/heads/master'
-        uses: actions/cache/save@v4
-        with:
-          path: ./tests/benchmark-cache
-          key: syntax-benchmark-v1
+      # - name: Save benchmark data as new baseline
+      #   if: matrix.benchmarks && github.ref == 'refs/heads/master'
+      #   uses: actions/cache/save@v4
+      #   with:
+      #     path: ./tests/benchmark-cache
+      #     key: syntax-benchmark-v1
 
       - name: Build playground compiler
         if: matrix.build_playground
