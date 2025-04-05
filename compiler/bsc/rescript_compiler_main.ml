@@ -454,8 +454,5 @@ let _ : unit =
     Format.eprintf "%s@." msg;
     exit 2
   | x ->
-    (*
-        Ext_obj.bt ();
-*)
     Location.report_exception ppf x;
     exit 2
