@@ -1,1 +1,1 @@
-(dirs ext ml res_syntax json js_parser)
+(dirs ext ml res_syntax json flow_parser)

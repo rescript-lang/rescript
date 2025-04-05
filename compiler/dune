@@ -9,10 +9,10 @@
  core
  depends
  ext
+ flow_parser
  frontend
  gentype
  jsoo
- js_parser
  ml
  syntax)
 
