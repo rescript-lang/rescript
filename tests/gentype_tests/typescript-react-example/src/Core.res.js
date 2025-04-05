@@ -98,6 +98,10 @@ let $$Map;
 
 let $$Set;
 
+let jsonEncodeString1 = "hello";
+
+let jsonEncodeString2 = "hello";
+
 export {
   null0,
   null1,
@@ -124,5 +128,7 @@ export {
   option1,
   someFunWithNullThenOptionalArgs,
   someFunWithNullUndefinedArg,
+  jsonEncodeString1,
+  jsonEncodeString2,
 }
 /* ./Core.gen Not a pure module */

@@ -27,6 +27,7 @@
 - Fix `Error.fromException`. https://github.com/rescript-lang/rescript/pull/7364
 - Fix signature of `throw`. https://github.com/rescript-lang/rescript/pull/7365
 - Fix formatter adds superfluous parens in pipe chain. https://github.com/rescript-lang/rescript/pull/7370
+- Fix issue wiht gentype and stdlib json. https://github.com/rescript-lang/rescript/pull/7378
 
 #### :house: Internal
 
