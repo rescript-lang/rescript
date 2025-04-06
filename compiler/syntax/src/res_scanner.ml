@@ -887,16 +887,14 @@ let rec scan scanner =
         next scanner;
         Token.Plus)
     | '>' -> (
-      match peek scanner with
-      | '>' -> (
-        match peek2 scanner with
-        | '>' ->
-          next3 scanner;
-          Token.GreaterThanGreaterThanGreaterThan
-        | _ ->
-          next2 scanner;
-          Token.GreaterThanGreaterThan)
-      | '=' when not (in_diamond_mode scanner) ->
+      match (peek scanner, peek2 scanner) with
+      | '>', '>' when not (in_diamond_mode scanner) ->
+        next3 scanner;
+        Token.GreaterThanGreaterThanGreaterThan
+      | '>', _ when not (in_diamond_mode scanner) ->
+        next2 scanner;
+        Token.GreaterThanGreaterThan
+      | '=', _ when not (in_diamond_mode scanner) ->
         next2 scanner;
         Token.GreaterEqual
       | _ ->
@@ -1039,6 +1037,9 @@ let reconsider_less_than scanner =
   if scanner.ch == '/' then
     let () = next scanner in
     Token.LessThanSlash
+  else if scanner.ch == '<' then (
+    next scanner;
+    Token.LessThanLessThan)
   else Token.LessThan
 
 (* If an operator has whitespace around both sides, it's a binary operator *)

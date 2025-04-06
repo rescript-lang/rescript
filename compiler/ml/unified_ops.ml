@@ -179,13 +179,7 @@ let entries =
       name = "%lsr";
       form = Binary;
       specialization =
-        {
-          int = Plsrint;
-          bool = None;
-          float = None;
-          bigint = None;
-          string = None;
-        };
+        {int = Plsrint; bool = None; float = None; bigint = None; string = None};
     };
     {
       path = builtin "mod";
