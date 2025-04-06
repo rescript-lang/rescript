@@ -29,3 +29,6 @@ let pow_overflow = 2147483647 ** 2
 
 let bxor_int = (a, b) => a ^ b
 let bxor_bigint = (a: bigint, b) => a ^ b
+
+let bitor_int = (a, b) => a | b
+let bitor_bigint = (a: bigint, b) => a | b

@@ -79,6 +79,7 @@ type t =
   | Lor
   | Band (* Bitwise and: & *)
   | Caret
+
   | BangEqual
   | BangEqualEqual
   | LessEqual
@@ -103,15 +104,16 @@ let precedence = function
   | HashEqual | ColonEqual -> 1
   | Lor -> 2
   | Land -> 3
-  | Caret -> 4
+  | Bar -> 4
+  | Caret -> 5
   | Equal | EqualEqual | EqualEqualEqual | LessThan | GreaterThan | BangEqual
   | BangEqualEqual | LessEqual | GreaterEqual | BarGreater ->
-    5
-  | Plus | PlusDot | Minus | MinusDot | PlusPlus -> 6
-  | Asterisk | AsteriskDot | Forwardslash | ForwardslashDot | Percent -> 7
-  | Exponentiation -> 8
-  | MinusGreater -> 9
-  | Dot -> 10
+    6
+  | Plus | PlusDot | Minus | MinusDot | PlusPlus -> 7
+  | Asterisk | AsteriskDot | Forwardslash | ForwardslashDot | Percent -> 8
+  | Exponentiation -> 9
+  | MinusGreater -> 10
+  | Dot -> 11
   | _ -> 0
 
 let to_string = function
