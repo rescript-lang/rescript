@@ -887,24 +887,23 @@ let rec scan scanner =
         next scanner;
         Token.Plus)
     | '>' -> (
-      match (peek scanner, peek2 scanner) with
-      | '>', '>' when not (in_diamond_mode scanner) ->
-        next3 scanner;
-        Token.GreaterThanGreaterThanGreaterThan
-      | '>', _ when not (in_diamond_mode scanner) ->
-        next2 scanner;
-        Token.GreaterThanGreaterThan
-      | '=', _ when not (in_diamond_mode scanner) ->
+      match peek scanner with
+      | '=' when not (in_diamond_mode scanner) ->
         next2 scanner;
         Token.GreaterEqual
       | _ ->
         next scanner;
         Token.GreaterThan)
+    | '<' when not (in_diamond_mode scanner) -> (
+      match peek scanner with
+      | '=' ->
+        next2 scanner;
+        Token.LessEqual
+      | _ ->
+        next scanner;
+        Token.LessThan)
     | '<' when not (in_jsx_mode scanner) -> (
       match peek scanner with
-      | '<' ->
-        next2 scanner;
-        Token.LessThanLessThan
       | '=' ->
         next2 scanner;
         Token.LessEqual
@@ -1037,9 +1036,6 @@ let reconsider_less_than scanner =
   if scanner.ch == '/' then
     let () = next scanner in
     Token.LessThanSlash
-  else if scanner.ch == '<' then (
-    next scanner;
-    Token.LessThanLessThan)
   else Token.LessThan
 
 (* If an operator has whitespace around both sides, it's a binary operator *)
@@ -1058,3 +1054,26 @@ let is_binary_op src start_cnum end_cnum =
       || is_whitespace (String.unsafe_get src end_cnum)
     in
     left_ok && right_ok)
+
+let is_left_shift scanner _start_cnum =
+  (* print_endline ("@@@@@ is_left_shift ch: " ^ (Char.escaped scanner.ch)); *)
+  (* print_endline ("@@@@@ is_left_shift cnum: " ^ (string_of_int _start_cnum)); *)
+  (* print_endline ("@@@@@ is_left_shift peek: " ^ (Char.escaped (peek scanner))); *)
+  match scanner.ch with
+  | '<' -> true
+  | _ -> false
+
+let is_right_shift scanner _start_cnum =
+  (* print_endline ("@@@@@ is_right_shift ch: " ^ (Char.escaped scanner.ch)); *)
+  (* print_endline ("@@@@@ is_right_shift cnum: " ^ (string_of_int _start_cnum)); *)
+  (* print_endline ("@@@@@ is_right_shift peek: " ^ (Char.escaped (peek scanner))); *)
+  match scanner.ch with
+  | '>' -> true
+  | _ -> false
+
+let is_right_shift_unsigned scanner _start_cnum =
+  (* print_endline ("@@@@@ is_right_shift_unsigned ch: " ^ (Char.escaped scanner.ch)); *)
+  (* print_endline ("@@@@@ is_right_shift_unsigned peek: " ^ (Char.escaped (peek scanner))); *)
+  match (scanner.ch, peek scanner) with
+  | '>', '>' -> true
+  | _ -> false

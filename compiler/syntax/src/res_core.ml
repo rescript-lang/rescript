@@ -2138,6 +2138,27 @@ and parse_operand_expr ~context p =
     (* pexp_loc = mkLoc startPos endPos *)
   }
 
+and parse_shift_operator (p : Parser.t) =
+  let start_pos = p.start_pos in
+  let end_pos = p.end_pos in
+  if p.token = LessThan && Scanner.is_left_shift p.scanner start_pos.pos_cnum
+  then (
+    Parser.next p;
+    {p with token = LeftShift; start_pos; prev_end_pos = end_pos})
+  else if
+    p.token = GreaterThan
+    && Scanner.is_right_shift_unsigned p.scanner start_pos.pos_cnum
+  then (
+    Parser.next p;
+    Parser.next p;
+    {p with token = RightShiftUnsigned; start_pos; prev_end_pos = end_pos})
+  else if
+    p.token = GreaterThan && Scanner.is_right_shift p.scanner start_pos.pos_cnum
+  then (
+    Parser.next p;
+    {p with token = RightShift; start_pos; prev_end_pos = end_pos})
+  else p
+
 (* a binary expression is an expression that combines two expressions with an
  * operator. Examples:
  *    a + b
@@ -2150,6 +2171,11 @@ and parse_binary_expr ?(context = OrdinaryExpr) ?a p prec =
     | None -> parse_operand_expr ~context p
   in
   let rec loop a =
+    let p =
+      match p.token with
+      | LessThan | GreaterThan -> parse_shift_operator p
+      | _ -> p
+    in
     let token = p.Parser.token in
     let token_prec =
       match token with
@@ -2179,6 +2205,11 @@ and parse_binary_expr ?(context = OrdinaryExpr) ?a p prec =
       Parser.leave_breadcrumb p (Grammar.ExprBinaryAfterOp token);
       let start_pos = p.start_pos in
       Parser.next p;
+      (* let p =
+        match p.token with
+        | LessThan | GreaterThan -> parse_shift_operator p
+        | _ -> p
+      in *)
       let end_pos = p.prev_end_pos in
       let token_prec =
         (* exponentiation operator is right-associative *)
