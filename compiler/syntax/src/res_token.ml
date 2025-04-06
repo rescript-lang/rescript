@@ -110,8 +110,8 @@ let precedence = function
   | Equal | EqualEqual | EqualEqualEqual | LessThan | GreaterThan | BangEqual
   | BangEqualEqual | LessEqual | GreaterEqual | BarGreater ->
     5
-  | Plus | PlusDot | Minus | MinusDot | PlusPlus | LessThanLessThan | GreaterThanGreaterThan
-  | GreaterThanGreaterThanGreaterThan ->
+  | Plus | PlusDot | Minus | MinusDot | PlusPlus | LessThanLessThan 
+  | GreaterThanGreaterThan | GreaterThanGreaterThanGreaterThan ->
     6
   | Asterisk | AsteriskDot | Forwardslash | ForwardslashDot | Percent -> 7
   | Exponentiation -> 8

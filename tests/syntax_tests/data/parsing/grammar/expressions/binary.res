@@ -31,7 +31,7 @@ let x = a % a == 0
 let x = a ^ a == 0
 let x = a << a == 0
 let x = a >> a == 0
-
+let x = a >>> a == 0
 
 // should be interpreted as binary expression not prefix op
 let x = a -b
