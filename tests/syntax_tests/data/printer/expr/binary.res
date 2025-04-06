@@ -55,6 +55,8 @@ x + y / z
 x / y + z
 x % y * z
 x ^ y + z
+x << y + z
+x >> y + z
 100 * x / total
 2 / 3 * 10 / 2 + 2
 let rotateX = ((range / rect.height) * refY - range / 2) * getXMultiplication(rect.width)
@@ -409,14 +411,3 @@ let make = (~keycap) =>
 (@doesNotRaise [])->Belt.Array.getExn(0)
 @doesNotRaise
 []->Belt.Array.getExn(0)
-
-// shift operators
-let x = a << b
-let x = a >> b
-let x = a >>> b
-let x = a << b + c
-let x = a + b << c
-let x = a >> b + c
-let x = a + b >> c
-let x = a >>> b + c
-let x = a + b >>> c
