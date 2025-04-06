@@ -183,7 +183,7 @@ let entries =
           int = Plsrint;
           bool = None;
           float = None;
-          bigint = Some Pasrbigint;
+          bigint = None;
           string = None;
         };
     };

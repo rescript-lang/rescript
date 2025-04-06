@@ -39,4 +39,3 @@ let rhs_shift = (a, b: int) => a << b
 let unknown_shift = (a, b) => a << b
 
 let shl_bigint = 1n << 2n
-let shr_bigint = 8n >> 2n
