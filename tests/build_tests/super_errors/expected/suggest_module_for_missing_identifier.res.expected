@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/suggest_module_for_missing_identifier.res[0m:[2m1:1-7[0m
+
+  [1;31m1[0m [2m│[0m [1;31mconsole[0m.log("Hello")
+  2 [2m│[0m 
+
+  The value console can't be found
+
+  Maybe you meant to use the module [1;33mConsole[0m?

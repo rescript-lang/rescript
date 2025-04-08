@@ -10,8 +10,8 @@ const { bsc } = setup(import.meta.dirname);
 
 const expectedDir = path.join(import.meta.dirname, "expected");
 
-const fixtures = readdirSync("fixtures").filter(
-  fileName => path.extname(fileName) === ".res",
+const fixtures = readdirSync(path.join(import.meta.dirname, "fixtures")).filter(
+  (fileName) => path.extname(fileName) === ".res"
 );
 
 const prefix = ["-w", "+A", "-bs-jsx", "4"];
