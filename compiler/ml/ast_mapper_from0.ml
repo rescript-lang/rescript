@@ -250,23 +250,82 @@ end
 module M = struct
   (* Value expressions for the module language *)
 
-  let map sub {pmod_loc = loc; pmod_desc = desc; pmod_attributes = attrs} =
-    let open Mod in
+  let rec map sub ({Parsetree0.pmod_loc = loc; pmod_desc = desc; pmod_attributes = attrs} : Parsetree0.module_expr) =
     let loc = sub.location sub loc in
     let attrs = sub.attributes sub attrs in
+    let has_await_attribute =
+      List.exists (fun (attr : Parsetree.attribute) -> 
+        match attr with
+        | ({Location.txt = "res.await"}, _) -> true
+        | _ -> false
+      ) attrs
+    in
+    let attrs_without_await =
+      List.filter (fun (attr : Parsetree.attribute) ->
+        match attr with
+        | ({Location.txt = "res.await"}, _) -> false
+        | _ -> true
+      ) attrs
+    in
     match desc with
-    | Pmod_ident x -> ident ~loc ~attrs (map_loc sub x)
-    | Pmod_structure str -> structure ~loc ~attrs (sub.structure sub str)
-    | Pmod_functor (arg, arg_ty, body) ->
-      functor_ ~loc ~attrs (map_loc sub arg)
-        (Misc.may_map (sub.module_type sub) arg_ty)
-        (sub.module_expr sub body)
-    | Pmod_apply (m1, m2) ->
-      apply ~loc ~attrs (sub.module_expr sub m1) (sub.module_expr sub m2)
-    | Pmod_constraint (m, mty) ->
-      constraint_ ~loc ~attrs (sub.module_expr sub m) (sub.module_type sub mty)
-    | Pmod_unpack e -> unpack ~loc ~attrs (sub.expr sub e)
-    | Pmod_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Parsetree0.Pmod_ident x when has_await_attribute ->
+      let inner_mod = {
+        Parsetree.pmod_loc = loc;
+        pmod_desc = Parsetree.Pmod_ident (map_loc sub x);
+        pmod_attributes = []
+      } in
+      {
+        Parsetree.pmod_loc = loc;
+        pmod_desc = Parsetree.Pmod_await inner_mod;
+        pmod_attributes = attrs_without_await
+      }
+    | Parsetree0.Pmod_ident x -> 
+      {
+        Parsetree.pmod_loc = loc;
+        pmod_desc = Parsetree.Pmod_ident (map_loc sub x);
+        pmod_attributes = attrs
+      }
+    | Parsetree0.Pmod_structure s ->
+      {
+        Parsetree.pmod_loc = loc;
+        pmod_desc = Parsetree.Pmod_structure (sub.structure sub s);
+        pmod_attributes = attrs
+      }
+    | Parsetree0.Pmod_functor (arg, arg_type, body) ->
+      {
+        Parsetree.pmod_loc = loc;
+        pmod_desc = Parsetree.Pmod_functor (
+          map_loc sub arg,
+          Option.map (sub.module_type sub) arg_type,
+          map sub body
+        );
+        pmod_attributes = attrs
+      }
+    | Parsetree0.Pmod_apply (me1, me2) ->
+      {
+        Parsetree.pmod_loc = loc;
+        pmod_desc = Parsetree.Pmod_apply (map sub me1, map sub me2);
+        pmod_attributes = attrs
+      }
+    | Parsetree0.Pmod_constraint (me, mt) ->
+      {
+        Parsetree.pmod_loc = loc;
+        pmod_desc = Parsetree.Pmod_constraint (map sub me, sub.module_type sub mt);
+        pmod_attributes = attrs
+      }
+    | Parsetree0.Pmod_unpack e ->
+      {
+        Parsetree.pmod_loc = loc;
+        pmod_desc = Parsetree.Pmod_unpack (sub.expr sub e);
+        pmod_attributes = attrs
+      }
+    | Parsetree0.Pmod_extension x ->
+      {
+        Parsetree.pmod_loc = loc;
+        pmod_desc = Parsetree.Pmod_extension (sub.extension sub x);
+        pmod_attributes = attrs
+      }
+    | _ -> assert false
 
   let map_structure_item sub {pstr_loc = loc; pstr_desc = desc} =
     let open Str in
