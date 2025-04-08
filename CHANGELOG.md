@@ -21,6 +21,10 @@
 
 - Better representation of JSX in AST. https://github.com/rescript-lang/rescript/pull/7286
 
+#### :nail_care: Polish
+
+- Improve error message for missing value when the identifier is also the name of a module in scope. https://github.com/rescript-lang/rescript/pull/7384
+
 # 12.0.0-alpha.11
 
 #### :bug: Bug fix
