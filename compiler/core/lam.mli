@@ -75,6 +75,7 @@ and t = private
   | Lwhile of t * t
   | Lfor of ident * t * t * Asttypes.direction_flag * t
   | Lassign of ident * t
+  | LJsx_container_element of (* name *) string * (* children *) t list
 
 (* | Lsend of Lambda.meth_kind * t * t * t list * Location.t *)
 (* | Levent of t * Lambda.lambda_event
@@ -161,3 +162,5 @@ val for_ : ident -> t -> t -> Asttypes.direction_flag -> t -> t
 (**************************************************************)
 
 val eq_approx : t -> t -> bool
+
+val jsx_container_element : string -> t list -> t

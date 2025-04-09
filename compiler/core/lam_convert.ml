@@ -108,6 +108,7 @@ let exception_id_destructed (l : Lam.t) (fv : Ident.t) : bool =
     | Lifthenelse (e1, e2, e3) -> hit e1 || hit e2 || hit e3
     | Lsequence (e1, e2) -> hit e1 || hit e2
     | Lwhile (e1, e2) -> hit e1 || hit e2
+    | LJsx_container_element (_, children) -> hit_list children
   in
   hit l
 
@@ -506,6 +507,8 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
     | Lfor (id, from_, to_, dir, loop) ->
       Lam.for_ id (convert_aux from_) (convert_aux to_) dir (convert_aux loop)
     | Lassign (id, body) -> Lam.assign id (convert_aux body)
+    | LJsx_container_element (name, children) ->
+      Lam.jsx_container_element name (List.map convert_aux children)
   and convert_let (kind : Lam_compat.let_kind) id (e : Lambda.lambda) body :
       Lam.t =
     match (kind, e) with

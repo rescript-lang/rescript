@@ -191,6 +191,8 @@ let expression_desc : expression_desc fn =
   | Spread _x0 ->
     let _x0 = _self.expression _self _x0 in
     Spread _x0
+  | Jsx_container_element (name, children) ->
+    Jsx_container_element (name, children)
 
 let for_ident_expression : for_ident_expression fn =
  fun _self arg -> _self.expression _self arg

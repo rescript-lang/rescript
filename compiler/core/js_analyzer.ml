@@ -118,6 +118,7 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
   | FlatCall _ | Call _ | New _ | Raw_js_code _ (* actually true? *) -> false
   | Await _ -> false
   | Spread _ -> false
+  | Jsx_container_element _ -> false
 
 and no_side_effect (x : J.expression) =
   no_side_effect_expression_desc x.expression_desc
@@ -232,6 +233,7 @@ let rec eq_expression ({expression_desc = x0} : J.expression)
   | Caml_block_tag _ | Object _ | Tagged_template _ | Await _ ->
     false
   | Spread _ -> false
+  | Jsx_container_element _ -> false
 
 and eq_expression_list xs ys = Ext_list.for_all2_no_exn xs ys eq_expression
 

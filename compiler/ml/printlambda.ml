@@ -388,6 +388,8 @@ let rec lam ppf = function
   | Lassign (id, expr) ->
     fprintf ppf "@[<2>(assign@ %a@ %a)@]" Ident.print id lam expr
   | Lsend (name, obj, _) -> fprintf ppf "@[<2>(send%s@ %a@ )@]" name lam obj
+  | LJsx_container_element (tag, _) ->
+    fprintf ppf "LJsx_container_element %s" tag
 
 and sequence ppf = function
   | Lsequence (l1, l2) -> fprintf ppf "%a@ %a" sequence l1 sequence l2

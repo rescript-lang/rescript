@@ -205,6 +205,7 @@ let rec classify_expression : Typedtree.expression -> sd =
   | Texp_apply _ | Texp_match _ | Texp_ifthenelse _ | Texp_send _ | Texp_field _
   | Texp_assert _ | Texp_try _ ->
     Dynamic
+  | Texp_jsx_container_element _ -> Static
 
 let rec expression : Env.env -> Typedtree.expression -> Use.t =
  fun env exp ->
@@ -296,6 +297,8 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
     | `Constant_or_function | `Identifier _ | `Float -> expression env e
     | `Other -> Use.delay (expression env e))
   | Texp_extension_constructor _ -> Use.empty
+  | Texp_jsx_container_element (_, children) ->
+    Use.(join (list expression env children) Use.empty)
 
 and option : 'a. (Env.env -> 'a -> Use.t) -> Env.env -> 'a option -> Use.t =
  fun f env -> value_default (f env) ~default:Use.empty

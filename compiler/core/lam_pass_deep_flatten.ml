@@ -266,5 +266,7 @@ let deep_flatten (lam : Lam.t) : Lam.t =
       (* Lalias-bound variables are never assigned, so don't increase
          v's refaux *)
       Lam.assign v (aux l)
+    | LJsx_container_element (name, children) ->
+      Lam.jsx_container_element name (Ext_list.map children aux)
   in
   aux lam

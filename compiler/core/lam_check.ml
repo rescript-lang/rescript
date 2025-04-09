@@ -87,6 +87,7 @@ let check file lam =
     | Lifthenelse (e1, e2, e3) -> check_list [e1; e2; e3] cxt
     | Lsequence (e1, e2) -> check_list [e1; e2] cxt
     | Lassign (_id, e) -> check_staticfails e cxt
+    | LJsx_container_element (_tag, children) -> check_list children cxt
   in
   let rec iter_list xs = Ext_list.iter xs iter
   and iter_list_snd : 'a. ('a * Lam.t) list -> unit =
@@ -149,6 +150,7 @@ let check file lam =
     | Lassign (id, e) ->
       use id;
       iter e
+    | LJsx_container_element (_tag, children) -> iter_list children
   in
   check_staticfails lam Set_int.empty;
   iter lam;

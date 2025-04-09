@@ -144,6 +144,7 @@ let expression_desc : expression_desc fn =
   | Null -> ()
   | Await _x0 -> _self.expression _self _x0
   | Spread _x0 -> _self.expression _self _x0
+  | Jsx_container_element (_, children) -> list _self.expression _self children
 
 let for_ident_expression : for_ident_expression fn =
  fun _self arg -> _self.expression _self arg

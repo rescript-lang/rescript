@@ -174,6 +174,7 @@ let rec exp_need_paren ?(arrow = false) (e : J.expression) =
   | Tagged_template _ -> false
   | Optional_block (e, true) when arrow -> exp_need_paren ~arrow e
   | Optional_block _ -> false
+  | Jsx_container_element _ -> false
 
 (** Print as underscore for unused vars, may not be 
     needed in the future *)
@@ -955,6 +956,9 @@ and expression_desc cxt ~(level : int) f x : cxt =
     P.cond_paren_group f (level > 13) (fun _ ->
         P.string f "...";
         expression ~level:13 cxt f e)
+  | Jsx_container_element (name, children) ->
+    P.string f (Format.sprintf "<%s></%s>" name name);
+    cxt
 
 and property_name_and_value_list cxt f (l : J.property_map) =
   iter_lst cxt f l

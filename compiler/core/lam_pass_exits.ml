@@ -56,6 +56,7 @@ and no_bounded_variables (l : Lam.t) =
   | Ltrywith _ -> false
   | Llet _ -> false
   | Lletrec (decl, body) -> decl = [] && no_bounded_variables body
+  | LJsx_container_element _ -> false
 
 (*
    TODO: 
@@ -233,6 +234,8 @@ let subst_helper (subst : subst_tbl) (query : int -> int) (lam : Lam.t) : Lam.t
     | Lfor (v, l1, l2, dir, l3) ->
       Lam.for_ v (simplif l1) (simplif l2) dir (simplif l3)
     | Lassign (v, l) -> Lam.assign v (simplif l)
+    | LJsx_container_element (name, children) ->
+      Lam.jsx_container_element name (List.map simplif children)
   in
   simplif lam
 

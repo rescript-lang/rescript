@@ -164,6 +164,7 @@ and expression_desc =
   | Null
   | Await of expression
   | Spread of expression
+  | Jsx_container_element of string * expression list
 
 and for_ident_expression = expression
 (* pure*)

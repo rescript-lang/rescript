@@ -128,6 +128,10 @@ let rec no_side_effects (lam : Lam.t) : bool =
       } ->
     no_side_effects arg
   | Lapply _ -> false
+  | LJsx_container_element (name, children) ->
+    List.fold_left
+      (fun acc child -> acc || no_side_effects child)
+      false children
 (* we need purity analysis .. *)
 
 (*
@@ -180,6 +184,8 @@ let rec size (lam : Lam.t) =
     | Lwhile _ -> really_big ()
     | Lfor _ -> really_big ()
     | Lassign (_, v) -> 1 + size v
+    | LJsx_container_element (_, children) ->
+      Ext_list.fold_left children 1 (fun acc x -> size x + acc)
     (* This is side effectful,  be careful *)
     (* | Lsend _  ->  really_big () *)
   with Too_big_to_inline -> 1000

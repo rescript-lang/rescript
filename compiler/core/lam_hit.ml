@@ -56,6 +56,7 @@ let hit_variables (fv : Set_ident.t) (l : t) : bool =
     | Lifthenelse (e1, e2, e3) -> hit e1 || hit e2 || hit e3
     | Lsequence (e1, e2) -> hit e1 || hit e2
     | Lwhile (e1, e2) -> hit e1 || hit e2
+    | LJsx_container_element (_, children) -> hit_list children
   in
   hit l
 
@@ -91,5 +92,6 @@ let hit_variable (fv : Ident.t) (l : t) : bool =
     | Lifthenelse (e1, e2, e3) -> hit e1 || hit e2 || hit e3
     | Lsequence (e1, e2) -> hit e1 || hit e2
     | Lwhile (e1, e2) -> hit e1 || hit e2
+    | LJsx_container_element (_, children) -> hit_list children
   in
   hit l

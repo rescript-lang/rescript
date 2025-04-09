@@ -293,7 +293,10 @@ end = struct
     | Texp_assert exp -> iter_expression exp
     | Texp_lazy exp -> iter_expression exp
     | Texp_pack mexpr -> iter_module_expr mexpr
-    | Texp_extension_constructor _ -> ());
+    | Texp_extension_constructor _ -> ()
+    | Texp_jsx_container_element (_, children) ->
+      List.iter iter_expression children);
+
     Iter.leave_expression exp
 
   and iter_package_type pack =

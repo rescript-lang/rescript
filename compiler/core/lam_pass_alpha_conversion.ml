@@ -119,6 +119,8 @@ let alpha_conversion (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
       (* Lalias-bound variables are never assigned, so don't increase
          v's refsimpl *)
       Lam.assign v (simpl l)
+    | LJsx_container_element (name, children) ->
+      Lam.jsx_container_element name (Ext_list.map children simpl)
   in
 
   simpl lam

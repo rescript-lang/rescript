@@ -80,6 +80,7 @@ let inner_iter (l : t) (f : t -> unit) : unit =
     f e2;
     f e3
   | Lassign (_id, e) -> f e
+  | LJsx_container_element (name, children) -> List.iter f children
 
 let inner_exists (l : t) (f : t -> bool) : bool =
   match l with
@@ -113,3 +114,4 @@ let inner_exists (l : t) (f : t -> bool) : bool =
   | Lwhile (e1, e2) -> f e1 || f e2
   | Lfor (_v, e1, e2, _dir, e3) -> f e1 || f e2 || f e3
   | Lassign (_id, e) -> f e
+  | LJsx_container_element (name, children) -> Ext_list.exists children f

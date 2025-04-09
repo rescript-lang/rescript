@@ -205,6 +205,7 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
   | Texp_lazy exp -> sub.expr sub exp
   | Texp_pack mexpr -> sub.module_expr sub mexpr
   | Texp_extension_constructor _ -> ()
+  | Texp_jsx_container_element _ -> ()
 
 let package_type sub {pack_fields; _} =
   List.iter (fun (_, p) -> sub.typ sub p) pack_fields
