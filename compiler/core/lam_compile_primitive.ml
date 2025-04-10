@@ -56,14 +56,14 @@ let get_module_system () =
 
 let import_of_path path =
   E.call
-    ~info:{arity = Full; call_info = Call_na}
+    ~info:{arity = Full; call_info = Call_na; call_transformed_jsx = None}
     (E.js_global "import")
     [E.str path]
 
 let wrap_then import value =
   let arg = Ident.create "m" in
   E.call
-    ~info:{arity = Full; call_info = Call_na}
+    ~info:{arity = Full; call_info = Call_na; call_transformed_jsx = None}
     (E.dot import "then")
     [
       E.ocaml_fun ~return_unit:false ~async:false ~one_unit_arg:false [arg]
@@ -88,7 +88,10 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     | _ -> assert false)
   | Pjs_apply -> (
     match args with
-    | fn :: rest -> E.call ~info:{arity = Full; call_info = Call_na} fn rest
+    | fn :: rest ->
+      E.call
+        ~info:{arity = Full; call_info = Call_na; call_transformed_jsx = None}
+        fn rest
     | _ -> assert false)
   | Pnull_to_opt -> (
     match args with

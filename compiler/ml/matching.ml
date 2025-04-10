@@ -1449,6 +1449,7 @@ let inline_lazy_force arg loc =
       ap_inlined = Default_inline;
       ap_args = [arg];
       ap_loc = loc;
+      ap_transformed_jsx = None;
     }
 let make_lazy_matching def = function
   | [] -> fatal_error "Matching.make_lazy_matching"

@@ -41,7 +41,12 @@ type lambda_switch = {
   sw_names: Ast_untagged_variants.switch_names option;
 }
 
-and apply = private {ap_func: t; ap_args: t list; ap_info: ap_info}
+and apply = private {
+  ap_func: t;
+  ap_args: t list;
+  ap_info: ap_info;
+  ap_transformed_jsx: Parsetree.jsx_element option;
+}
 
 and lfunction = {
   arity: int;
@@ -103,7 +108,12 @@ val global_module : ?dynamic_import:bool -> ident -> t
 
 val const : Lam_constant.t -> t
 
-val apply : t -> t list -> ap_info -> t
+val apply :
+  ?ap_transformed_jsx:Parsetree.jsx_element option ->
+  t ->
+  t list ->
+  ap_info ->
+  t
 
 val function_ :
   attr:Lambda.function_attribute ->

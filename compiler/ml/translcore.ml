@@ -710,6 +710,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
             exp_type = prim_type;
           } as funct;
         args = oargs;
+        transformed_jsx;
       }
     when List.length oargs >= p.prim_arity
          && List.for_all (fun (_, arg) -> arg <> None) oargs -> (
@@ -720,7 +721,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
         let inlined, _ =
           Translattribute.get_and_remove_inlined_attribute funct
         in
-        transl_apply ~inlined f args' e.exp_loc
+        transl_apply ~inlined ~transformed_jsx f args' e.exp_loc
     in
     let args =
       List.map
@@ -750,7 +751,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     | _, _ -> (
       match (prim, argl) with
       | _ -> wrap (Lprim (prim, argl, e.exp_loc))))
-  | Texp_apply {funct; args = oargs; partial} ->
+  | Texp_apply {funct; args = oargs; partial; transformed_jsx} ->
     let inlined, funct =
       Translattribute.get_and_remove_inlined_attribute funct
     in
@@ -766,8 +767,8 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
         | None -> None
       else None
     in
-    transl_apply ~inlined ~uncurried_partial_application (transl_exp funct)
-      oargs e.exp_loc
+    transl_apply ~inlined ~uncurried_partial_application ~transformed_jsx
+      (transl_exp funct) oargs e.exp_loc
   | Texp_match (arg, pat_expr_list, exn_pat_expr_list, partial) ->
     transl_match e arg pat_expr_list exn_pat_expr_list partial
   | Texp_try (body, pat_expr_list) ->
@@ -948,9 +949,17 @@ and transl_case_try {c_lhs; c_guard; c_rhs} =
 and transl_cases_try cases = List.map transl_case_try cases
 
 and transl_apply ?(inlined = Default_inline)
-    ?(uncurried_partial_application = None) lam sargs loc =
+    ?(uncurried_partial_application = None) ?(transformed_jsx = None) lam sargs
+    loc =
   let lapply ap_func ap_args =
-    Lapply {ap_loc = loc; ap_func; ap_args; ap_inlined = inlined}
+    Lapply
+      {
+        ap_loc = loc;
+        ap_func;
+        ap_args;
+        ap_inlined = inlined;
+        ap_transformed_jsx = transformed_jsx;
+      }
   in
   let rec build_apply lam args = function
     | (None, optional) :: l ->
@@ -1008,7 +1017,14 @@ and transl_apply ?(inlined = Default_inline)
     let extra_args = Ext_list.map extra_ids (fun id -> Lvar id) in
     let ap_args = args @ extra_args in
     let l0 =
-      Lapply {ap_func = lam; ap_args; ap_inlined = inlined; ap_loc = loc}
+      Lapply
+        {
+          ap_func = lam;
+          ap_args;
+          ap_inlined = inlined;
+          ap_loc = loc;
+          ap_transformed_jsx = transformed_jsx;
+        }
     in
     Lfunction
       {

@@ -224,8 +224,8 @@ let deep_flatten (lam : Lam.t) : Lam.t =
     (*           can we switch to the tupled backend? *\) *)
     (*   when  List.length params = List.length args -> *)
     (*       aux (beta_reduce params body args) *)
-    | Lapply {ap_func = l1; ap_args = ll; ap_info} ->
-      Lam.apply (aux l1) (Ext_list.map ll aux) ap_info
+    | Lapply {ap_func = l1; ap_args = ll; ap_info; ap_transformed_jsx} ->
+      Lam.apply (aux l1) (Ext_list.map ll aux) ap_info ~ap_transformed_jsx
     (* This kind of simple optimizations should be done each time
        and as early as possible *)
     | Lglobal_module _ -> lam
