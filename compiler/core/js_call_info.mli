@@ -35,7 +35,11 @@ type call_info =
    {[ fun x y -> f x y === f ]} when [f] is an atom
 *)
 
-type t = {call_info: call_info; arity: arity}
+type t = {
+  call_info: call_info;
+  arity: arity;
+  call_transformed_jsx: Parsetree.jsx_element option;
+}
 
 val dummy : t
 

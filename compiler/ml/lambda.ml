@@ -383,6 +383,7 @@ and lambda_apply = {
   ap_args: lambda list;
   ap_loc: Location.t;
   ap_inlined: inline_attribute;
+  ap_transformed_jsx: Parsetree.jsx_element option;
 }
 
 and lambda_switch = {
