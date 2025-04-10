@@ -88,11 +88,12 @@ let app_exp_mapper (e : exp) (self : Bs_ast_mapper.mapper) : exp =
       {f with pexp_desc = Pexp_variant (label, Some a); pexp_loc = e.pexp_loc}
     | Pexp_construct (ctor, None) ->
       {f with pexp_desc = Pexp_construct (ctor, Some a); pexp_loc = e.pexp_loc}
-    | Pexp_apply {funct = fn1; args; partial} ->
+    | Pexp_apply {funct = fn1; args; partial; transformed_jsx} ->
       Bs_ast_invariant.warn_discarded_unused_attributes fn1.pexp_attributes;
       {
         pexp_desc =
-          Pexp_apply {funct = fn1; args = (Nolabel, a) :: args; partial};
+          Pexp_apply
+            {funct = fn1; args = (Nolabel, a) :: args; partial; transformed_jsx};
         pexp_loc = e.pexp_loc;
         pexp_attributes = e.pexp_attributes @ f.pexp_attributes;
       }
@@ -108,7 +109,7 @@ let app_exp_mapper (e : exp) (self : Bs_ast_mapper.mapper) : exp =
                          fn with
                          pexp_desc = Pexp_construct (ctor, Some bounded_obj_arg);
                        }
-                     | Pexp_apply {funct = fn; args} ->
+                     | Pexp_apply {funct = fn; args; transformed_jsx} ->
                        Bs_ast_invariant.warn_discarded_unused_attributes
                          fn.pexp_attributes;
                        {
@@ -118,6 +119,7 @@ let app_exp_mapper (e : exp) (self : Bs_ast_mapper.mapper) : exp =
                                funct = fn;
                                args = (Nolabel, bounded_obj_arg) :: args;
                                partial = false;
+                               transformed_jsx;
                              };
                          pexp_attributes = [];
                          pexp_loc = fn.pexp_loc;

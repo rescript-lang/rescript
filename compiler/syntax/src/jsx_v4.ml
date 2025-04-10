@@ -1232,7 +1232,8 @@ let append_children_prop (config : Jsx_common.jsx_config) mapper
               [(Nolabel, Exp.array (List.map (mapper.expr mapper) xs))] );
       ]
 
-let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
+let mk_react_jsx (config : Jsx_common.jsx_config) mapper
+    (transformed_jsx : jsx_element) loc attrs
     (component_description : componentDescription) (elementTag : expression)
     (props : jsx_props) (children : jsx_children) : expression =
   let more_than_one_children =
@@ -1277,7 +1278,7 @@ let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
         [key_prop; (nolabel, unit_expr ~loc:Location.none)] )
   in
   let args = [(nolabel, elementTag); (nolabel, props_record)] @ key_and_unit in
-  Exp.apply ~loc ~attrs jsx_expr args
+  Exp.apply ~loc ~attrs ~transformed_jsx jsx_expr args
 
 (* In most situations, the component name is the make function from a module. 
     However, if the name contains a lowercase letter, it means it probably an external component.
@@ -1306,8 +1307,8 @@ let expr ~(config : Jsx_common.jsx_config) mapper expression =
       let fragment =
         Exp.ident ~loc {loc; txt = module_access_name config "jsxFragment"}
       in
-      mk_react_jsx config mapper loc attrs FragmentComponent fragment []
-        children
+      mk_react_jsx config mapper jsx_element loc attrs FragmentComponent
+        fragment [] children
     | Jsx_unary_element
         {jsx_unary_element_tag_name = tag_name; jsx_unary_element_props = props}
       ->
@@ -1315,13 +1316,13 @@ let expr ~(config : Jsx_common.jsx_config) mapper expression =
       if starts_with_lowercase name then
         (* For example 'input' *)
         let component_name_expr = constant_string ~loc:tag_name.loc name in
-        mk_react_jsx config mapper loc attrs LowercasedComponent
+        mk_react_jsx config mapper jsx_element loc attrs LowercasedComponent
           component_name_expr props (JSXChildrenItems [])
       else if starts_with_uppercase name then
         (* MyModule.make *)
         let make_id = mk_uppercase_tag_name_expr tag_name in
-        mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
-          (JSXChildrenItems [])
+        mk_react_jsx config mapper jsx_element loc attrs UppercasedComponent
+          make_id props (JSXChildrenItems [])
       else
         Jsx_common.raise_error ~loc
           "JSX: element name is neither upper- or lowercase, got \"%s\""
@@ -1338,13 +1339,13 @@ let expr ~(config : Jsx_common.jsx_config) mapper expression =
            *)
       if starts_with_lowercase name then
         let component_name_expr = constant_string ~loc:tag_name.loc name in
-        mk_react_jsx config mapper loc attrs LowercasedComponent
+        mk_react_jsx config mapper jsx_element loc attrs LowercasedComponent
           component_name_expr props children
       else if starts_with_uppercase name then
         (* MyModule.make *)
         let make_id = mk_uppercase_tag_name_expr tag_name in
-        mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
-          children
+        mk_react_jsx config mapper jsx_element loc attrs UppercasedComponent
+          make_id props children
       else
         Jsx_common.raise_error ~loc
           "JSX: element name is neither upper- or lowercase, got \"%s\""
