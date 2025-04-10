@@ -2188,12 +2188,18 @@ and parse_binary_expr ?(context = OrdinaryExpr) ?a p prec =
       let loc = mk_loc a.Parsetree.pexp_loc.loc_start b.pexp_loc.loc_end in
       let expr =
         match (token, b.pexp_desc) with
-        | BarGreater, Pexp_apply {funct = fun_expr; args; partial} ->
+        | ( BarGreater,
+            Pexp_apply {funct = fun_expr; args; partial; transformed_jsx} ) ->
           {
             b with
             pexp_desc =
               Pexp_apply
-                {funct = fun_expr; args = args @ [(Nolabel, a)]; partial};
+                {
+                  funct = fun_expr;
+                  args = args @ [(Nolabel, a)];
+                  partial;
+                  transformed_jsx;
+                };
           }
         | BarGreater, _ -> Ast_helper.Exp.apply ~loc b [(Nolabel, a)]
         | _ ->
