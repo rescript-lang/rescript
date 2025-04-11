@@ -348,8 +348,8 @@ let rec rename_optional_parameters map params (body : Lambda.lambda) =
         value_kind,
         id,
         Lifthenelse
-          ( Lprim (p, [Lvar ({name = "*opt*"} as opt)], p_loc),
-            Lprim (p1, [Lvar ({name = "*opt*"} as opt2)], x_loc),
+          ( Lprim (p, [Lvar ({name = "*opt*"} as opt)], p_loc, p_tj),
+            Lprim (p1, [Lvar ({name = "*opt*"} as opt2)], x_loc, x_tj),
             f ),
         rest )
     when Ident.same opt opt2 && List.mem opt params ->
@@ -361,8 +361,8 @@ let rec rename_optional_parameters map params (body : Lambda.lambda) =
           value_kind,
           id,
           Lifthenelse
-            ( Lprim (p, [Lvar new_id], p_loc),
-              Lprim (p1, [Lvar new_id], x_loc),
+            ( Lprim (p, [Lvar new_id], p_loc, p_tj),
+              Lprim (p1, [Lvar new_id], x_loc, x_tj),
               f ),
           rest ) )
   | _ -> (map, body)
@@ -373,7 +373,7 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
   let exit_map = Hash_int.create 0 in
   let may_depends = Lam_module_ident.Hash_set.create 0 in
 
-  let rec convert_ccall (a_prim : Primitive.description)
+  let rec convert_ccall ?(transformed_jsx = None) (a_prim : Primitive.description)
       (args : Lambda.lambda list) loc ~dynamic_import : Lam.t =
     let prim_name = a_prim.prim_name in
     match External_ffi_types.from_string a_prim.prim_native_name with
@@ -381,13 +381,14 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
       let args = Ext_list.map args convert_aux in
       prim ~primitive:(Pjs_object_create labels) ~args loc
     | Ffi_bs (arg_types, result_type, ffi) ->
+      Format.fprintf Format.err_formatter "Ffi_bs\n";
       let arg_types =
         match arg_types with
         | Params ls -> ls
         | Param_number i -> Ext_list.init i (fun _ -> External_arg_spec.dummy)
       in
       let args = Ext_list.map args convert_aux in
-      Lam.handle_bs_non_obj_ffi arg_types result_type ffi args loc prim_name
+      Lam.handle_bs_non_obj_ffi ?transformed_jsx arg_types result_type ffi args loc prim_name
         ~dynamic_import
     | Ffi_inline_const i -> Lam.const i
     | Ffi_normal ->
@@ -447,20 +448,23 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
       let lam = Lam.letrec bindings body in
       Lam_scc.scc bindings lam body
     (* inlining will affect how mututal recursive behave *)
-    | Lprim (Prevapply, [x; f], outer_loc) | Lprim (Pdirapply, [f; x], outer_loc)
-      ->
+    | Lprim (Prevapply, [x; f], outer_loc, _)
+    | Lprim (Pdirapply, [f; x], outer_loc, _) ->
       convert_pipe f x outer_loc
-    | Lprim (Prevapply, _, _) -> assert false
-    | Lprim (Pdirapply, _, _) -> assert false
-    | Lprim (Pccall a, args, loc) -> convert_ccall a args loc ~dynamic_import
-    | Lprim (Pjs_raw_expr, args, loc) -> (
+    | Lprim (Prevapply, _, _, _) -> assert false
+    | Lprim (Pdirapply, _, _, _) -> assert false
+    | Lprim (Pccall a, args, loc, transformed_jsx) ->
+      Format.fprintf Format.err_formatter
+        "lam convert Pccall Has transformed_jsx %b\n" (Option.is_some transformed_jsx);
+      convert_ccall ~transformed_jsx a args loc ~dynamic_import
+    | Lprim (Pjs_raw_expr, args, loc, _) -> (
       match args with
       | [Lconst (Const_base (Const_string (code, _)))] ->
         (* js parsing here *)
         let kind = Classify_function.classify code in
         prim ~primitive:(Praw_js_code {code; code_info = Exp kind}) ~args:[] loc
       | _ -> assert false)
-    | Lprim (Pjs_raw_stmt, args, loc) -> (
+    | Lprim (Pjs_raw_stmt, args, loc, _) -> (
       match args with
       | [Lconst (Const_base (Const_string (code, _)))] ->
         let kind = Classify_function.classify_stmt code in
@@ -468,7 +472,7 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
           ~primitive:(Praw_js_code {code; code_info = Stmt kind})
           ~args:[] loc
       | _ -> assert false)
-    | Lprim (Pgetglobal id, args, _) ->
+    | Lprim (Pgetglobal id, args, _, _) ->
       let args = Ext_list.map args convert_aux in
       if Ident.is_predef_exn id then
         Lam.const (Const_string {s = id.name; unicode = false})
@@ -476,10 +480,10 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
         may_depend may_depends (Lam_module_ident.of_ml ~dynamic_import id);
         assert (args = []);
         Lam.global_module ~dynamic_import id)
-    | Lprim (Pimport, args, loc) ->
+    | Lprim (Pimport, args, loc, _) ->
       let args = Ext_list.map args (convert_aux ~dynamic_import:true) in
       lam_prim ~primitive:Pimport ~args loc
-    | Lprim (primitive, args, loc) ->
+    | Lprim (primitive, args, loc, tj) ->
       let args = Ext_list.map args (convert_aux ~dynamic_import) in
       lam_prim ~primitive ~args loc
     | Lswitch (e, s, _loc) -> convert_switch e s
