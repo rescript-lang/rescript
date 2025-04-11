@@ -46,6 +46,7 @@ type t =
       arg_types: External_arg_spec.params;
       ffi: External_ffi_types.external_spec;
       dynamic_import: bool;
+      transformed_jsx: Parsetree.jsx_element option;
     }
   | Pjs_object_create of External_arg_spec.obj_params
   (* Exceptions *)
@@ -250,7 +251,7 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
     | Pmakeblock (i1, info1, flag1) ->
       i0 = i1 && flag0 = flag1 && eq_tag_info info0 info1
     | _ -> false)
-  | Pjs_call {prim_name; arg_types; ffi; dynamic_import} -> (
+  | Pjs_call {prim_name; arg_types; ffi; dynamic_import; _} -> (
     match rhs with
     | Pjs_call rhs ->
       prim_name = rhs.prim_name && arg_types = rhs.arg_types && ffi = rhs.ffi

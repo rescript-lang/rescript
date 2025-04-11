@@ -324,7 +324,7 @@ type lambda =
   | Lfunction of lfunction
   | Llet of let_kind * value_kind * Ident.t * lambda * lambda
   | Lletrec of (Ident.t * lambda) list * lambda
-  | Lprim of primitive * lambda list * Location.t
+  | Lprim of primitive * lambda list * Location.t * Parsetree.jsx_element option
   | Lswitch of lambda * lambda_switch * Location.t
   (* switch on strings, clauses are sorted by string order,
      strings are pairwise distinct *)

@@ -42,6 +42,7 @@ type t =
       arg_types: External_arg_spec.params;
       ffi: External_ffi_types.external_spec;
       dynamic_import: bool;
+      transformed_jsx: Parsetree.jsx_element option;
     }
   | Pjs_object_create of External_arg_spec.obj_params
   | Praise
