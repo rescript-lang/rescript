@@ -717,13 +717,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
     expression_desc cxt ~level:(level : int) f (Is_null_or_undefined e1)
   | Bin (op, e1, e2) ->
     let out, lft, rght = Js_op_util.op_prec op in
-    let need_paren =
-      level > out
-      ||
-      match op with
-      | Lsl | Lsr | Asr -> true
-      | _ -> false
-    in
+    let need_paren = level > out in
     (* We are more conservative here, to make the generated code more readable
           to the user *)
     P.cond_paren_group f need_paren (fun _ ->
@@ -735,13 +729,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
   | String_append (e1, e2) ->
     let op : Js_op.binop = Plus in
     let out, lft, rght = Js_op_util.op_prec op in
-    let need_paren =
-      level > out
-      ||
-      match op with
-      | Lsl | Lsr | Asr -> true
-      | _ -> false
-    in
+    let need_paren = level > out in
     P.cond_paren_group f need_paren (fun _ ->
         let cxt = expression ~level:lft cxt f e1 in
         P.space f;

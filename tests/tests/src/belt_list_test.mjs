@@ -657,7 +657,7 @@ Mocha.describe("Belt_list_test", () => {
   });
   let id = x => x;
   Mocha.test("map", () => {
-    Test_utils.eq("File \"belt_list_test.res\", line 109, characters 7-14", Belt_List.map(Belt_List.makeBy(5, id), x => (x << 1)), {
+    Test_utils.eq("File \"belt_list_test.res\", line 109, characters 7-14", Belt_List.map(Belt_List.makeBy(5, id), x => x << 1), {
       hd: 0,
       tl: {
         hd: 2,
@@ -686,7 +686,7 @@ Mocha.describe("Belt_list_test", () => {
   let length_10_id = Belt_List.makeBy(10, id);
   let length_8_id = Belt_List.makeBy(8, id);
   Mocha.test("mapWithIndex etc.", () => {
-    let d = Belt_List.makeBy(10, x => (x << 1));
+    let d = Belt_List.makeBy(10, x => x << 1);
     Test_utils.eq("File \"belt_list_test.res\", line 124, characters 7-14", Belt_List.zipBy(length_10_id, length_10_id, add), d);
     Test_utils.eq("File \"belt_list_test.res\", line 125, characters 7-14", Belt_List.zipBy(/* [] */0, {
       hd: 1,
@@ -697,7 +697,7 @@ Mocha.describe("Belt_list_test", () => {
       tl: /* [] */0
     }, /* [] */0, add), /* [] */0);
     Test_utils.eq("File \"belt_list_test.res\", line 127, characters 7-14", Belt_List.zipBy(/* [] */0, /* [] */0, add), /* [] */0);
-    Test_utils.eq("File \"belt_list_test.res\", line 128, characters 7-14", Belt_List.zipBy(length_10_id, length_10_id, add), Belt_List.concat(Belt_List.map(length_8_id, x => (x << 1)), {
+    Test_utils.eq("File \"belt_list_test.res\", line 128, characters 7-14", Belt_List.zipBy(length_10_id, length_10_id, add), Belt_List.concat(Belt_List.map(length_8_id, x => x << 1), {
       hd: 16,
       tl: {
         hd: 18,
@@ -705,7 +705,7 @@ Mocha.describe("Belt_list_test", () => {
       }
     }));
     Test_utils.eq("File \"belt_list_test.res\", line 129, characters 7-14", Belt_List.zipBy(length_10_id, length_8_id, add), Belt_List.mapWithIndex(length_8_id, (i, x) => i + x | 0));
-    Test_utils.eq("File \"belt_list_test.res\", line 131, characters 6-13", Belt_List.reverse(Belt_List.mapReverse2(length_10_id, length_10_id, add)), Belt_List.map(length_10_id, x => (x << 1)));
+    Test_utils.eq("File \"belt_list_test.res\", line 131, characters 6-13", Belt_List.reverse(Belt_List.mapReverse2(length_10_id, length_10_id, add)), Belt_List.map(length_10_id, x => x << 1));
     let xs = Belt_List.reverse(Belt_List.mapReverse2(length_8_id, length_10_id, add));
     Test_utils.eq("File \"belt_list_test.res\", line 136, characters 7-14", Belt_List.length(xs), 8);
     Test_utils.eq("File \"belt_list_test.res\", line 137, characters 7-14", xs, Belt_List.zipBy(length_10_id, length_8_id, add));

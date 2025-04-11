@@ -9,7 +9,7 @@ function for_3(x) {
   };
   let arr = Belt_Array.map(x, param => (() => {}));
   for (let i = 0, i_finish = x.length; i < i_finish; ++i) {
-    let j = (i << 1);
+    let j = i << 1;
     arr[i] = () => {
       v.contents = v.contents + j | 0;
     };
@@ -24,8 +24,8 @@ function for_4(x) {
   };
   let arr = Belt_Array.map(x, param => (() => {}));
   for (let i = 0, i_finish = x.length; i < i_finish; ++i) {
-    let j = (i << 1);
-    let k = (j << 1);
+    let j = i << 1;
+    let k = j << 1;
     arr[i] = () => {
       v.contents = v.contents + k | 0;
     };
@@ -69,7 +69,7 @@ function for_6(x, u) {
     };
     for (let i = 0, i_finish = x.length; i < i_finish; ++i) {
       let k = (u << 1) * u | 0;
-      let h = (v5.contents << 1);
+      let h = v5.contents << 1;
       v2.contents = v2.contents + 1 | 0;
       arr[i] = () => {
         v.contents = (((((v.contents + k | 0) + v2.contents | 0) + v4.contents | 0) + v5.contents | 0) + h | 0) + u | 0;
@@ -108,7 +108,7 @@ function for_8() {
   };
   let arr = Belt_Array.make(21, () => {});
   for (let i = 0; i <= 6; ++i) {
-    let k = (i << 1);
+    let k = i << 1;
     for (let j = 0; j <= 2; ++j) {
       let h = i + j | 0;
       arr[(i * 3 | 0) + j | 0] = () => {

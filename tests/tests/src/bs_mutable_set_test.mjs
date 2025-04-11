@@ -447,7 +447,7 @@ for (let i$6 = 0; i$6 <= 200; ++i$6) {
 
 eq("File \"bs_mutable_set_test.res\", line 244, characters 5-12", Belt_MutableSetInt.size(copyV), 126);
 
-eq("File \"bs_mutable_set_test.res\", line 245, characters 5-12", Belt_MutableSetInt.toArray(copyV), Belt_Array.makeBy(126, i => (i << 3)));
+eq("File \"bs_mutable_set_test.res\", line 245, characters 5-12", Belt_MutableSetInt.toArray(copyV), Belt_Array.makeBy(126, i => i << 3));
 
 eq("File \"bs_mutable_set_test.res\", line 246, characters 5-12", Belt_MutableSetInt.size(v$5), 800);
 
@@ -465,13 +465,13 @@ b("File \"bs_mutable_set_test.res\", line 254, characters 4-11", Belt_MutableSet
 
 b("File \"bs_mutable_set_test.res\", line 255, characters 4-11", Belt_MutableSetInt.eq(match$7[1], Belt_MutableSetInt.fromArray(Array_data_util.randomRange(401, 1000))));
 
-let d = Belt_MutableSetInt.fromArray(Belt_Array.map(Array_data_util.randomRange(0, 1000), x => (x << 1)));
+let d = Belt_MutableSetInt.fromArray(Belt_Array.map(Array_data_util.randomRange(0, 1000), x => x << 1));
 
 let match$8 = Belt_MutableSetInt.split(d, 1001);
 
 let match$9 = match$8[0];
 
-b("File \"bs_mutable_set_test.res\", line 258, characters 4-11", Belt_MutableSetInt.eq(match$9[0], Belt_MutableSetInt.fromArray(Belt_Array.makeBy(501, x => (x << 1)))));
+b("File \"bs_mutable_set_test.res\", line 258, characters 4-11", Belt_MutableSetInt.eq(match$9[0], Belt_MutableSetInt.fromArray(Belt_Array.makeBy(501, x => x << 1))));
 
 b("File \"bs_mutable_set_test.res\", line 259, characters 4-11", Belt_MutableSetInt.eq(match$9[1], Belt_MutableSetInt.fromArray(Belt_Array.makeBy(500, x => 1002 + (x << 1) | 0))));
 

@@ -141,7 +141,7 @@ let u25 = Belt_Set.add(u22, 59);
 
 let u26 = Belt_Set.add(Belt_Set.make(IntCmp), 3);
 
-let ss = Belt_Array.makeByAndShuffle(100, i => (i << 1));
+let ss = Belt_Array.makeByAndShuffle(100, i => i << 1);
 
 let u27 = Belt_Set.fromArray(ss, IntCmp);
 

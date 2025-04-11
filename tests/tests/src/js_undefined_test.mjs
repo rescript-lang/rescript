@@ -64,7 +64,7 @@ let suites_1 = {
               param => ({
                 TAG: "Eq",
                 _0: 4,
-                _1: Js_undefined.bind(2, n => (n << 1))
+                _1: Js_undefined.bind(2, n => n << 1)
               })
             ],
             tl: {

@@ -24,7 +24,7 @@ let array = [
   4
 ];
 
-console.info(Stdlib_Array.reduce(array.map(x => (x << 1)), 0, (a, b) => a + b | 0));
+console.info(Stdlib_Array.reduce(array.map(x => x << 1), 0, (a, b) => a + b | 0));
 
 console.info(typeof array);
 

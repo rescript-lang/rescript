@@ -5,7 +5,7 @@ function Alias_default_value_test$C0(props) {
   let __b = props.b;
   let __a = props.a;
   let a = __a !== undefined ? __a : 2;
-  let b = __b !== undefined ? __b : (a << 1);
+  let b = __b !== undefined ? __b : a << 1;
   return a + b | 0;
 }
 
