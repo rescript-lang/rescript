@@ -26,10 +26,6 @@ val scan : t -> Lexing.position * Lexing.position * Res_token.t
 
 val is_binary_op : string -> int -> int -> bool
 
-val is_left_shift : t -> int -> bool
-val is_right_shift : t -> int -> bool
-val is_right_shift_unsigned : t -> int -> bool
-
 val set_jsx_mode : t -> unit
 val set_diamond_mode : t -> unit
 val pop_mode : t -> mode -> unit
