@@ -87,6 +87,7 @@
     "typescript": "5.8.2"
   },
   "workspaces": [
+    "packages/*",
     "tests/dependencies/**",
     "tests/analysis_tests/**",
     "tests/gentype_tests/**",
