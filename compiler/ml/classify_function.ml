@@ -24,7 +24,10 @@
 
 let rec is_obj_literal (x : _ Flow_ast.Expression.t) : bool =
   match snd x with
-  | Identifier (_, {name = "undefined"}) | RegExpLiteral _ -> true
+  | Identifier (_, {name = "undefined"})
+  | StringLiteral _ | BooleanLiteral _ | NullLiteral _ | NumberLiteral _
+  | BigIntLiteral _ | RegExpLiteral _ | ModuleRefLiteral _ ->
+    true
   | Unary {operator = Minus; argument} -> is_obj_literal argument
   | Object {properties} -> Ext_list.for_all properties is_literal_kv
   | Array {elements} ->
