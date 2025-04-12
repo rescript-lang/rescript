@@ -102,8 +102,8 @@ type t =
 let precedence = function
   | HashEqual | ColonEqual -> 1
   | Lor -> 2
-  | Land -> 3
-  | Caret -> 4
+  | Caret -> 3
+  | Land -> 4
   | Equal | EqualEqual | EqualEqualEqual | LessThan | GreaterThan | BangEqual
   | BangEqualEqual | LessEqual | GreaterEqual | BarGreater ->
     5
