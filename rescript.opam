@@ -24,7 +24,7 @@ depends: [
   "ocaml" {>= "4.14"}
   "cppo" {= "1.8.0"}
   "dune" {>= "3.17"}
-  "flow_parser" {= "0.266.1"}
+  "flow_parser" {= "0.267.0"}
   "ocamlformat" {with-test & = "0.27.0"}
   "yojson" {with-test & = "2.2.2"}
   "ounit2" {with-test & = "2.2.7"}
@@ -37,5 +37,5 @@ depends: [
   "wasm_of_ocaml-compiler" {os != "win32" & with-test & = "6.0.1"}
 ]
 pin-depends: [
-  ["flow_parser.0.266.1" "git+https://github.com/facebook/flow.git#v0.266.1"]
+  ["flow_parser.0.267.0" "git+https://github.com/rescript-lang/flow.git#d35a6f5c0cc219e85bbcb822d6f19ed9b2ec3448"]
 ]
