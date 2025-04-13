@@ -1384,7 +1384,7 @@ Path mkStuff
     "label": "RegExp.fromString()",
     "kind": 12,
     "tags": [],
-    "detail": "string => t",
+    "detail": "(string, ~flags: string=?) => t",
     "documentation": null,
     "insertText": "RegExp.fromString($0)",
     "insertTextFormat": 2

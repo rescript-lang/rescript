@@ -8,7 +8,7 @@ module Result = {
   @get external input: t => string = "input"
 }
 
-@new external fromString: string => t = "RegExp"
+@new external fromString: (string, ~flags: string=?) => t = "RegExp"
 @new external fromStringWithFlags: (string, ~flags: string) => t = "RegExp"
 
 @send external test: (t, string) => bool = "test"
