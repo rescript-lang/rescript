@@ -16,6 +16,7 @@
 
 - Fix node.js ExperimentalWarning. https://github.com/rescript-lang/rescript/pull/7379
 - Fix issue with gentype and stdlib json. https://github.com/rescript-lang/rescript/pull/7378
+- Fix type of `RegExp.Result.matches`. https://github.com/rescript-lang/rescript/pull/7393
 
 #### :house: Internal
 

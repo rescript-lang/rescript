@@ -43,7 +43,7 @@ module Result: {
   // This below will log "ReScript" and "is" to the console.
   switch regexp->RegExp.exec("ReScript is pretty cool, right?") {
   | None => Console.log("Nope, no match...")
-  | Some(result) => switch result->RegExp.Result.matches {
+  | Some(result) => switch result->RegExp.Result.matches->Array.keepSome {
     | [firstWord, secondWord] => Console.log2(firstWord, secondWord)
     | _ => Console.log("Didn't find exactly two words...")
     }
@@ -51,7 +51,7 @@ module Result: {
   ```
   */
   @send
-  external matches: (t, @as(1) _) => array<string> = "slice"
+  external matches: (t, @as(1) _) => array<option<string>> = "slice"
   @get external index: t => int = "index"
 
   /**
