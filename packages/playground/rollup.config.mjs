@@ -4,9 +4,9 @@ import { glob } from "glob";
 
 const RESCRIPT_COMPILER_ROOT_DIR = path.join(import.meta.dirname, "..", "..");
 const LIB_DIR = path.join(RESCRIPT_COMPILER_ROOT_DIR, "lib");
-const PLAYGROUND_DIR = path.join(RESCRIPT_COMPILER_ROOT_DIR, "playground");
+
 // Final target output directory where all the cmijs will be stored
-const PACKAGES_DIR = path.join(PLAYGROUND_DIR, "packages");
+const PACKAGES_DIR = path.join(import.meta.dirname, "packages");
 const outputFolder = path.join(PACKAGES_DIR, "compiler-builtins", "stdlib");
 
 const entryPoint = await glob(`${LIB_DIR}/es6/*.js`);

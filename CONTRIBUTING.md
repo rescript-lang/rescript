@@ -241,29 +241,28 @@ make playground
 make playground-cmijs
 ```
 
-Note that building the cmijs is based on the dependencies defined in `packages/playground-bundling/package.json`. In case you want to build some different version of e.g. `@rescript/react` or just want to add a new package, change the definition within the `package.json` file and run `make playground-cmijs` again.
+Note that building the cmijs is based on the dependencies defined in `packages/playground/package.json`. In case you want to build some different version of e.g. `@rescript/react` or just want to add a new package, change the definition within the `package.json` file and run `yarn workspace playground build` again.
 
 After a successful compilation, you will find following files in your project:
 
 - `playground/compiler.js` -> This is the ReScript compiler, which binds the ReScript API to the `window` object.
-- `playground/packages` -> Contains third party deps with cmij.js files (as defined in `packages/playground-bundling/bsconfig.json`)
-- `playground/compilerCmij.js` -> The compiler base cmij containing all the relevant core modules (`Js`, `Belt`, `Pervasives`, etc.)
+- `playground/packages/compiler-builtins` -> The compiler base cmij containing all the relevant core modules (`Js`, `Belt`, `Pervasives`, etc.)
+- `playground/packages/*` -> Contains third party deps with cmij.js files (as defined in `packages/playground/rescript.json`)
 
 You can now use the `compiler.js` file either directly by using a `<script src="/path/to/compiler.js"/>` and `<script src="/path/to/packages/compilerCmij.js"/>` inside a html file, use a browser bundler infrastructure to optimize it, or use `nodejs` to run it on a command line:
 
 ```
 $ node
-> require("./compiler.js");
-> require("./packages/compilerCmij.js")
-> let compiler = rescript_compiler.make()
-> let result = compiler.rescript.compile(`Js.log(Sys.ocaml_version)`);
+> let { rescript_compiler } = require("./compiler.js");
+> require("./packages/compiler-builtins/cmij.js")
+> let { rescript } = rescript_compiler.make()
+> let result = rescript.compile(`Console.log(${rescript.version})`);
 > eval(result.js_code);
-4.06.2+BS
 ```
 
 ### Testing the Playground bundle
 
-Run `node playground/playground_test.cjs` for a quick sanity check to see if all the build artifacts are working together correctly. When releasing the playground bundle, the test will always be executed before publishing to catch regressions.
+Run `yarn workspace playground test` for a quick sanity check to see if all the build artifacts are working together correctly. When releasing the playground bundle, the test will always be executed before publishing to catch regressions.
 
 ### Working on the Playground JS API
 
@@ -271,9 +270,10 @@ Whenever you are modifying any files in the ReScript compiler, or in the `jsoo_p
 
 ```
 make playground
+yarn workspace playground build
 
 # optionally run your test / arbitrary node script to verify your changes
-node playground/playground_test.cjs
+yarn workspace playground test
 ```
 
 ### Publishing the Playground Bundle on our KeyCDN

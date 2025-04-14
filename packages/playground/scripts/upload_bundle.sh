@@ -1,13 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script will publish the compiler.js bundle / packages cmij.js files to our KeyCDN server.
 # The target folder on KeyCDN will be the compiler.js' version number.
 # This script requires `curl` / `openssl` to be installed.
 
-SCRIPT_DIR=$(cd "$(dirname "$0")"; pwd -P)
+SCRIPT_PATH=${BASH_SOURCE[0]}
+SCRIPT_DIR=$(dirname "$(dirname "$current_script_path")")
 
 # Get the actual version from the compiled playground bundle
-VERSION=$(cd $SCRIPT_DIR; node -e 'require("./compiler.js"); console.log(rescript_compiler.make().rescript.version)')
+VERSION=$(cd $SCRIPT_DIR; node -e 'require("/compiler.js"); console.log(rescript_compiler.make().rescript.version)')
 
 if [ -z "${KEYCDN_USER}" ]; then
   echo "KEYCDN_USER environment variable not set. Make sure to set the environment accordingly."

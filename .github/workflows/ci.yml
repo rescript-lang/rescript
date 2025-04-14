@@ -406,21 +406,18 @@ jobs:
 
       - name: Build playground compiler
         if: matrix.build_playground
-        run: |
-          opam exec -- node packages/playground-bundling/scripts/generate_cmijs.js
-          opam exec -- dune build --profile browser
-          cp ./_build/default/compiler/jsoo/jsoo_playground_main.bc.js playground/compiler.cjs
+        run: opam exec -- make playground playground-cmijs
 
       - name: Test playground compiler
         if: matrix.build_playground
-        run: node playground/playground_test.cjs
+        run: yarn workspace playground test
 
       - name: Upload playground compiler to CDN
         if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
         env:
           KEYCDN_USER: ${{ secrets.KEYCDN_USER }}
           KEYCDN_PASSWORD: ${{ secrets.KEYCDN_PASSWORD }}
-        run: bash playground/upload_bundle.sh
+        run: yarn workspace playground upload-bundle
 
       - name: "Upload artifacts: binaries"
         if: matrix.upload_binaries
@@ -577,5 +574,5 @@ jobs:
       - name: Update Website Playground
         env:
           NEXT_REVALIDATE_SECRET_TOKEN: ${{ secrets.NEXT_REVALIDATE_SECRET_TOKEN }}
-        run: ./playground/website_update_playground.sh
+        run: yarn workspace playground revalidate
         shell: bash

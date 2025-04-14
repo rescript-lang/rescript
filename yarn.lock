@@ -2340,9 +2340,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"playground-bundling@workspace:packages/playground-bundling":
+"playground@workspace:packages/playground":
   version: 0.0.0-use.local
-  resolution: "playground-bundling@workspace:packages/playground-bundling"
+  resolution: "playground@workspace:packages/playground"
   dependencies:
     "@rescript/react": "npm:^0.13.1"
     "@rollup/plugin-node-resolve": "npm:^16.0.0"

@@ -1,4 +1,4 @@
-#/usr/bin/sh
+#!/usr/bin/env bash
 
 if [ -z "${NEXT_REVALIDATE_SECRET_TOKEN}" ]; then
   echo "NEXT_REVALIDATE_SECRET_TOKEN environment variable not set."

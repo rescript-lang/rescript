@@ -26,10 +26,8 @@ const RESCRIPT_COMPILER_ROOT_DIR = path.join(
   "..",
 );
 
-const PLAYGROUND_DIR = path.join(RESCRIPT_COMPILER_ROOT_DIR, "playground");
-
 // The playground-bundling root dir
-const PROJECT_ROOT_DIR = path.join(import.meta.dirname, "..");
+const PLAYGROUND_DIR = path.join(import.meta.dirname, "..");
 
 // Final target output directory where all the cmijs will be stored
 const PACKAGES_DIR = path.join(PLAYGROUND_DIR, "packages");
@@ -43,14 +41,13 @@ fs.mkdirSync(PACKAGES_DIR, { recursive: true });
 function e(cmd) {
   console.log(`>>>>>> running command: ${cmd}`);
   child_process.execSync(cmd, {
-    cwd: PROJECT_ROOT_DIR,
+    cwd: PLAYGROUND_DIR,
     encoding: "utf8",
     stdio: [0, 1, 2],
   });
   console.log("<<<<<<");
 }
 
-e("yarn install");
 e("yarn rescript clean");
 e("yarn rescript");
 
@@ -68,7 +65,7 @@ function buildCompilerCmij() {
   const outputFolder = path.join(PACKAGES_DIR, "compiler-builtins");
   fs.mkdirSync(outputFolder, { recursive: true });
 
-  const cmijFile = path.join(outputFolder, "cmij.cjs");
+  const cmijFile = path.join(outputFolder, "cmij.js");
 
   e(
     `find ${rescriptLibOcamlFolder} -name "*.cmi" -or -name "*.cmj" | xargs -n1 basename | xargs js_of_ocaml build-fs -o ${cmijFile} -I ${rescriptLibOcamlFolder}`,
@@ -94,7 +91,7 @@ function buildThirdPartyCmijs() {
     const outputFolder = path.join(PACKAGES_DIR, pkg);
     fs.mkdirSync(outputFolder, { recursive: true });
 
-    const cmijFile = path.join(outputFolder, "cmij.cjs");
+    const cmijFile = path.join(outputFolder, "cmij.js");
 
     e(`find ${libEs6Folder} -name '*.js' -exec cp {} ${outputFolder} \\;`);
     e(
@@ -103,10 +100,5 @@ function buildThirdPartyCmijs() {
   }
 }
 
-function bundleStdlibJs() {
-  e("yarn bundle");
-}
-
 buildCompilerCmij();
 buildThirdPartyCmijs();
-bundleStdlibJs();
