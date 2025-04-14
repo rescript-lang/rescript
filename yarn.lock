@@ -388,6 +388,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rescript/linux-arm64@workspace:packages/@rescript/linux-arm64":
+  version: 0.0.0-use.local
+  resolution: "@rescript/linux-arm64@workspace:packages/@rescript/linux-arm64"
+  languageName: unknown
+  linkType: soft
+
+"@rescript/linux-x64@workspace:packages/@rescript/linux-x64":
+  version: 0.0.0-use.local
+  resolution: "@rescript/linux-x64@workspace:packages/@rescript/linux-x64"
+  languageName: unknown
+  linkType: soft
+
 "@rescript/react@link:../../../dependencies/rescript-react::locator=%40tests%2Freanalyze-deadcode%40workspace%3Atests%2Fanalysis_tests%2Ftests-reanalyze%2Fdeadcode":
   version: 0.0.0-use.local
   resolution: "@rescript/react@link:../../../dependencies/rescript-react::locator=%40tests%2Freanalyze-deadcode%40workspace%3Atests%2Fanalysis_tests%2Ftests-reanalyze%2Fdeadcode"
