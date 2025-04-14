@@ -829,7 +829,7 @@ let suites_1 = {
                                                                                                           2,
                                                                                                           3,
                                                                                                           4
-                                                                                                        ].map(n => n << 1)
+                                                                                                        ].map(n => (n << 1))
                                                                                                       })
                                                                                                     ],
                                                                                                     tl: {
@@ -848,7 +848,7 @@ let suites_1 = {
                                                                                                             2,
                                                                                                             3,
                                                                                                             4
-                                                                                                          ].map((param, i) => i << 1)
+                                                                                                          ].map((param, i) => (i << 1))
                                                                                                         })
                                                                                                       ],
                                                                                                       tl: {

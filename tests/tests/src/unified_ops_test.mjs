@@ -75,9 +75,9 @@ function bxor_bigint(a, b) {
   return a ^ b;
 }
 
-let shl_bigint = 1n << 2n;
+let shl_bigint = (1n << 2n);
 
-let shr_bigint = 8n >> 2n;
+let shr_bigint = (8n >> 2n);
 
 let int = 3;
 

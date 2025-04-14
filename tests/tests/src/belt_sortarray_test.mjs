@@ -268,7 +268,7 @@ Mocha.describe("Belt_sortarray_test", () => {
     ], 4, cmp), 3);
     let aa = Array_data_util.range(0, 1000);
     Test_utils.ok("File \"belt_sortarray_test.res\", line 115, characters 7-14", Belt_Range.every(0, 1000, i => Belt_SortArray.binarySearchBy(aa, i, cmp) === i));
-    let cc = Belt_Array.map(Array_data_util.range(0, 2000), x => x << 1);
+    let cc = Belt_Array.map(Array_data_util.range(0, 2000), x => (x << 1));
     Test_utils.eq("File \"belt_sortarray_test.res\", line 118, characters 7-14", Pervasives.lnot(Belt_SortArray.binarySearchBy(cc, 5000, cmp)), 2001);
     Test_utils.eq("File \"belt_sortarray_test.res\", line 119, characters 7-14", Pervasives.lnot(Belt_SortArray.binarySearchBy(cc, -1, cmp)), 0);
     Test_utils.eq("File \"belt_sortarray_test.res\", line 120, characters 7-14", Belt_SortArray.binarySearchBy(cc, 0, cmp), 0);

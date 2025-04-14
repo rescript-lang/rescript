@@ -74,11 +74,11 @@ function bigint_lxor(prim0, prim1) {
 }
 
 function bigint_lsl(prim0, prim1) {
-  return prim0 << prim1;
+  return (prim0 << prim1);
 }
 
 function bigint_asr(prim0, prim1) {
-  return prim0 >> prim1;
+  return (prim0 >> prim1);
 }
 
 eq("File \"bigint_test.res\", line 26, characters 5-12", Primitive_bigint.compare(1n, 1n), 0);
@@ -135,17 +135,17 @@ eq("File \"bigint_test.res\", line 159, characters 5-12", 9n | 1n, 9n);
 
 eq("File \"bigint_test.res\", line 160, characters 5-12", 9n ^ 1n, 8n);
 
-eq("File \"bigint_test.res\", line 161, characters 5-12", 9n << 1n, 18n);
+eq("File \"bigint_test.res\", line 161, characters 5-12", (9n << 1n), 18n);
 
-eq("File \"bigint_test.res\", line 162, characters 5-12", 9n << -1n, 4n);
+eq("File \"bigint_test.res\", line 162, characters 5-12", (9n << -1n), 4n);
 
-eq("File \"bigint_test.res\", line 163, characters 5-12", 9n >> 1n, 4n);
+eq("File \"bigint_test.res\", line 163, characters 5-12", (9n >> 1n), 4n);
 
-eq("File \"bigint_test.res\", line 164, characters 5-12", 9n >> -1n, 18n);
+eq("File \"bigint_test.res\", line 164, characters 5-12", (9n >> -1n), 18n);
 
-eq("File \"bigint_test.res\", line 165, characters 5-12", -9n >> 1n, -5n);
+eq("File \"bigint_test.res\", line 165, characters 5-12", (-9n >> 1n), -5n);
 
-eq("File \"bigint_test.res\", line 166, characters 5-12", -9n >> -1n, -18n);
+eq("File \"bigint_test.res\", line 166, characters 5-12", (-9n >> -1n), -18n);
 
 eq("File \"bigint_test.res\", line 167, characters 5-12", 9n > 1n ? 9n : 1n, 9n);
 

@@ -9,7 +9,7 @@ function f(x) {
 
 function set(x) {
   x.THIS_IS_NOT_EXPRESSIBLE_IN_BUCKLE = 3;
-  return x.THIS_IS_NOT_EXPRESSIBLE_IN_BUCKLE << 1;
+  return (x.THIS_IS_NOT_EXPRESSIBLE_IN_BUCKLE << 1);
 }
 
 function f1(u) {
@@ -31,7 +31,7 @@ function f3(x) {
 }
 
 function f4(param) {
-  return ((param.EXACT_MAPPING_TO_JS_LABEL + param.EXACT_2 | 0) + param.z.hello | 0) << 1;
+  return (((param.EXACT_MAPPING_TO_JS_LABEL + param.EXACT_2 | 0) + param.z.hello | 0) << 1);
 }
 
 function u() {

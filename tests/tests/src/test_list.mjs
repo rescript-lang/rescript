@@ -754,7 +754,7 @@ function stable_sort(cmp, l) {
       }
       
     }
-    let n1 = n >> 1;
+    let n1 = (n >> 1);
     let n2 = n - n1 | 0;
     let l2 = chop(n1, l);
     let s1 = rev_sort(n1, l);
@@ -900,7 +900,7 @@ function stable_sort(cmp, l) {
       }
       
     }
-    let n1 = n >> 1;
+    let n1 = (n >> 1);
     let n2 = n - n1 | 0;
     let l2 = chop(n1, l);
     let s1 = sort(n1, l);
@@ -1128,7 +1128,7 @@ function sort_uniq(cmp, l) {
       }
       
     }
-    let n1 = n >> 1;
+    let n1 = (n >> 1);
     let n2 = n - n1 | 0;
     let l2 = chop(n1, l);
     let s1 = rev_sort(n1, l);
@@ -1359,7 +1359,7 @@ function sort_uniq(cmp, l) {
       }
       
     }
-    let n1 = n >> 1;
+    let n1 = (n >> 1);
     let n2 = n - n1 | 0;
     let l2 = chop(n1, l);
     let s1 = sort(n1, l);

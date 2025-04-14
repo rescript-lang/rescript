@@ -64,7 +64,7 @@ let suites_1 = {
               param => ({
                 TAG: "StrictEq",
                 _0: 4,
-                _1: Js_null.bind(2, n => n << 1)
+                _1: Js_null.bind(2, n => (n << 1))
               })
             ],
             tl: {
