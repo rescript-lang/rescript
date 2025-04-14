@@ -1,7 +1,7 @@
 {
-  "name": "@rescript/linux-arm64",
+  "name": "@rescript/win32-x64",
   "version": "12.0.0-alpha.12",
-  "description": "ReScript binaries for Linux ARM64",
+  "description": "ReScript binaries for Windows x86_64",
   "type": "module",
   "repository": {
     "type": "git",
@@ -14,10 +14,10 @@
     "node": ">=20.11.0"
   },
   "os": [
-    "linux"
+    "win32"
   ],
   "cpu": [
-    "arm64"
+    "x64"
   ],
   "files": [
     "bin"

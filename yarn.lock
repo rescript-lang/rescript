@@ -388,15 +388,59 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rescript/linux-arm64@workspace:packages/@rescript/linux-arm64":
+"@rescript/darwin-arm64@npm:12.0.0-alpha.12, @rescript/darwin-arm64@workspace:packages/@rescript/darwin-arm64":
   version: 0.0.0-use.local
-  resolution: "@rescript/linux-arm64@workspace:packages/@rescript/linux-arm64"
+  resolution: "@rescript/darwin-arm64@workspace:packages/@rescript/darwin-arm64"
+  bin:
+    bsb_helper.exe: ./bin/bsb_helper.exe
+    bsc.exe: ./bin/bsc.exe
+    ninja.exe: ./bin/ninja.exe
+    rescript-editor-analysis.exe: ./bin/rescript-editor-analysis.exe
+    rescript-tools.exe: ./bin/rescript-tools.exe
+    rescript.exe: ./bin/rescript.exe
+    rewatch.exe: ./bin/rewatch.exe
   languageName: unknown
   linkType: soft
 
-"@rescript/linux-x64@workspace:packages/@rescript/linux-x64":
+"@rescript/darwin-x64@npm:12.0.0-alpha.12, @rescript/darwin-x64@workspace:packages/@rescript/darwin-x64":
+  version: 0.0.0-use.local
+  resolution: "@rescript/darwin-x64@workspace:packages/@rescript/darwin-x64"
+  bin:
+    bsb_helper.exe: ./bin/bsb_helper.exe
+    bsc.exe: ./bin/bsc.exe
+    ninja.exe: ./bin/ninja.exe
+    rescript-editor-analysis.exe: ./bin/rescript-editor-analysis.exe
+    rescript-tools.exe: ./bin/rescript-tools.exe
+    rescript.exe: ./bin/rescript.exe
+    rewatch.exe: ./bin/rewatch.exe
+  languageName: unknown
+  linkType: soft
+
+"@rescript/linux-arm64@npm:12.0.0-alpha.12, @rescript/linux-arm64@workspace:packages/@rescript/linux-arm64":
+  version: 0.0.0-use.local
+  resolution: "@rescript/linux-arm64@workspace:packages/@rescript/linux-arm64"
+  bin:
+    bsb_helper.exe: ./bin/bsb_helper.exe
+    bsc.exe: ./bin/bsc.exe
+    ninja.exe: ./bin/ninja.exe
+    rescript-editor-analysis.exe: ./bin/rescript-editor-analysis.exe
+    rescript-tools.exe: ./bin/rescript-tools.exe
+    rescript.exe: ./bin/rescript.exe
+    rewatch.exe: ./bin/rewatch.exe
+  languageName: unknown
+  linkType: soft
+
+"@rescript/linux-x64@npm:12.0.0-alpha.12, @rescript/linux-x64@workspace:packages/@rescript/linux-x64":
   version: 0.0.0-use.local
   resolution: "@rescript/linux-x64@workspace:packages/@rescript/linux-x64"
+  bin:
+    bsb_helper.exe: ./bin/bsb_helper.exe
+    bsc.exe: ./bin/bsc.exe
+    ninja.exe: ./bin/ninja.exe
+    rescript-editor-analysis.exe: ./bin/rescript-editor-analysis.exe
+    rescript-tools.exe: ./bin/rescript-tools.exe
+    rescript.exe: ./bin/rescript.exe
+    rewatch.exe: ./bin/rewatch.exe
   languageName: unknown
   linkType: soft
 
@@ -437,6 +481,20 @@ __metadata:
 "@rescript/std@workspace:packages/std":
   version: 0.0.0-use.local
   resolution: "@rescript/std@workspace:packages/std"
+  languageName: unknown
+  linkType: soft
+
+"@rescript/win32-x64@npm:12.0.0-alpha.12, @rescript/win32-x64@workspace:packages/@rescript/win32-x64":
+  version: 0.0.0-use.local
+  resolution: "@rescript/win32-x64@workspace:packages/@rescript/win32-x64"
+  bin:
+    bsb_helper.exe: ./bin/bsb_helper.exe
+    bsc.exe: ./bin/bsc.exe
+    ninja.exe: ./bin/ninja.exe
+    rescript-editor-analysis.exe: ./bin/rescript-editor-analysis.exe
+    rescript-tools.exe: ./bin/rescript-tools.exe
+    rescript.exe: ./bin/rescript.exe
+    rewatch.exe: ./bin/rewatch.exe
   languageName: unknown
   linkType: soft
 
@@ -2457,12 +2515,28 @@ __metadata:
   resolution: "rescript@workspace:."
   dependencies:
     "@biomejs/biome": "npm:1.9.4"
+    "@rescript/darwin-arm64": "npm:12.0.0-alpha.12"
+    "@rescript/darwin-x64": "npm:12.0.0-alpha.12"
+    "@rescript/linux-arm64": "npm:12.0.0-alpha.12"
+    "@rescript/linux-x64": "npm:12.0.0-alpha.12"
+    "@rescript/win32-x64": "npm:12.0.0-alpha.12"
     "@types/node": "npm:^20.14.9"
     "@types/semver": "npm:^7.5.8"
     mocha: "npm:10.8.2"
     nyc: "npm:15.0.0"
     semver: "npm:7.6.2"
     typescript: "npm:5.8.2"
+  dependenciesMeta:
+    "@rescript/darwin-arm64":
+      optional: true
+    "@rescript/darwin-x64":
+      optional: true
+    "@rescript/linux-arm64":
+      optional: true
+    "@rescript/linux-x64":
+      optional: true
+    "@rescript/win32-x64":
+      optional: true
   bin:
     bsc: cli/bsc.js
     bstracing: cli/bstracing.js

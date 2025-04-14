@@ -1,7 +1,7 @@
 {
-  "name": "@rescript/linux-arm64",
+  "name": "@rescript/darwin-arm64",
   "version": "12.0.0-alpha.12",
-  "description": "ReScript binaries for Linux ARM64",
+  "description": "ReScript binaries for MacOS ARM64",
   "type": "module",
   "repository": {
     "type": "git",
@@ -14,7 +14,7 @@
     "node": ">=20.11.0"
   },
   "os": [
-    "linux"
+    "darwin"
   ],
   "cpu": [
     "arm64"

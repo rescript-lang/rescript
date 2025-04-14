@@ -1,11 +1,14 @@
 {
   "name": "@rescript/linux-x64",
   "version": "12.0.0-alpha.12",
-  "description": "ReScript binaries for Linux x64",
+  "description": "ReScript binaries for Linux x86_64",
   "type": "module",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rescript-lang/rescript-compiler.git"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=20.11.0"
@@ -19,10 +22,17 @@
   "files": [
     "bin"
   ],
-  "publishConfig": {
-    "access": "public"
+  "bin": {
+    "bsb_helper.exe": "./bin/bsb_helper.exe",
+    "bsc.exe": "./bin/bsc.exe",
+    "ninja.exe": "./bin/ninja.exe",
+    "rescript-editor-analysis.exe": "./bin/rescript-editor-analysis.exe",
+    "rescript-tools.exe": "./bin/rescript-tools.exe",
+    "rescript.exe": "./bin/rescript.exe",
+    "rewatch.exe": "./bin/rewatch.exe"
   },
   "exports": {
     "./paths": "./bin/paths.js"
-  }
+  },
+  "preferUnplugged": true
 }

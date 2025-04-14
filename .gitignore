@@ -46,7 +46,6 @@ _build
 node_modules
 *.dump
 coverage
-*.exe
 
 .ninja_log
 .bsdeps
@@ -81,6 +80,12 @@ tests/tools_tests/**/*.res.js
 tests/tools_tests/lib
 tests/analysis_tests*/lib
 tests/analysis_tests/**/*.bs.js
+
+/linux/*.exe
+/linuxarm64/*.exe
+/darwin/*.exe
+/darwinarm64/*.exe
+/win32/*.exe
 
 .yarn/*
 !.yarn/patches
