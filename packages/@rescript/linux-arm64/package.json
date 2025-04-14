@@ -1,0 +1,37 @@
+{
+  "name": "@rescript/linux-arm64",
+  "version": "12.0.0-alpha.12",
+  "description": "ReScript toolchain",
+  "type": "module",
+  "keywords": [
+    "ReScript",
+    "Compiler",
+    "Types",
+    "JavaScript",
+    "Language"
+  ],
+  "license": "SEE LICENSE IN LICENSE",
+  "homepage": "http://rescript-lang.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rescript-lang/rescript-compiler.git"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "files": [
+    "bin"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    "./paths": "./bin/paths.js"
+  }
+}

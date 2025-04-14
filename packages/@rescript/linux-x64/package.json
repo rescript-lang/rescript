@@ -1,0 +1,28 @@
+{
+  "name": "@rescript/linux-x64",
+  "version": "12.0.0-alpha.12",
+  "description": "ReScript binaries for Linux x64",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rescript-lang/rescript-compiler.git"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    "./paths": "./bin/paths.js"
+  }
+}
