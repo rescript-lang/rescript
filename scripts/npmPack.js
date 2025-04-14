@@ -2,7 +2,9 @@
 
 // @ts-check
 
-// TODO: Use `yarn pack --json` instead.
+// NOTE:
+//   We cannot use `yarn pack` since we need to set our OCaml binaries executable.
+//   Yarn (Berry) only allow `bin` to be executable, wouldn't preserve permission bits.
 
 // This performs `npm pack` and retrieves the list of artifact files from the output.
 //
