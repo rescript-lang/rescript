@@ -3,9 +3,7 @@
 // @ts-check
 
 /*
- * Requires the version matching `rescript` binary to be `npm link`ed in this
- * project. Or in other words: You need to build cmij files with the same
- * rescript version as the compiler bundle.
+ * You need to build cmij files with the same rescript version as the compiler bundle.
  *
  * This script extracts all cmi / cmj files of the rescript/lib/ocaml and all
  * dependencies listed in the project root's rescript.json, creates cmij.js
@@ -27,6 +25,7 @@ const RESCRIPT_COMPILER_ROOT_DIR = path.join(
   "..",
   "..",
 );
+
 const PLAYGROUND_DIR = path.join(RESCRIPT_COMPILER_ROOT_DIR, "playground");
 
 // The playground-bundling root dir
@@ -36,9 +35,7 @@ const PROJECT_ROOT_DIR = path.join(import.meta.dirname, "..");
 const PACKAGES_DIR = path.join(PLAYGROUND_DIR, "packages");
 
 // Making sure this directory exists, since it's not checked in to git
-if (!fs.existsSync(PACKAGES_DIR)) {
-  fs.mkdirSync(PACKAGES_DIR, { recursive: true });
-}
+fs.mkdirSync(PACKAGES_DIR, { recursive: true });
 
 /**
  * @param {string} cmd
@@ -53,10 +50,9 @@ function e(cmd) {
   console.log("<<<<<<");
 }
 
-e("npm install");
-e(`npm link ${RESCRIPT_COMPILER_ROOT_DIR}`);
-e("npx rescript clean");
-e("npx rescript");
+e("yarn install");
+e("yarn rescript clean");
+e("yarn rescript");
 
 const packages = resConfig["bs-dependencies"];
 
@@ -64,20 +60,15 @@ const packages = resConfig["bs-dependencies"];
 // Otherwise we can't use them for compilation within the playground.
 function buildCompilerCmij() {
   const rescriptLibOcamlFolder = path.join(
-    PROJECT_ROOT_DIR,
-    "node_modules",
-    "rescript",
+    RESCRIPT_COMPILER_ROOT_DIR,
     "lib",
     "ocaml",
   );
 
   const outputFolder = path.join(PACKAGES_DIR, "compiler-builtins");
+  fs.mkdirSync(outputFolder, { recursive: true });
 
   const cmijFile = path.join(outputFolder, "cmij.cjs");
-
-  if (!fs.existsSync(outputFolder)) {
-    fs.mkdirSync(outputFolder, { recursive: true });
-  }
 
   e(
     `find ${rescriptLibOcamlFolder} -name "*.cmi" -or -name "*.cmj" | xargs -n1 basename | xargs js_of_ocaml build-fs -o ${cmijFile} -I ${rescriptLibOcamlFolder}`,
@@ -87,26 +78,23 @@ function buildCompilerCmij() {
 function buildThirdPartyCmijs() {
   for (const pkg of packages) {
     const libOcamlFolder = path.join(
-      PROJECT_ROOT_DIR,
+      RESCRIPT_COMPILER_ROOT_DIR,
       "node_modules",
       pkg,
       "lib",
       "ocaml",
     );
     const libEs6Folder = path.join(
-      PROJECT_ROOT_DIR,
+      RESCRIPT_COMPILER_ROOT_DIR,
       "node_modules",
       pkg,
       "lib",
       "es6",
     );
     const outputFolder = path.join(PACKAGES_DIR, pkg);
+    fs.mkdirSync(outputFolder, { recursive: true });
 
     const cmijFile = path.join(outputFolder, "cmij.cjs");
-
-    if (!fs.existsSync(outputFolder)) {
-      fs.mkdirSync(outputFolder, { recursive: true });
-    }
 
     e(`find ${libEs6Folder} -name '*.js' -exec cp {} ${outputFolder} \\;`);
     e(
@@ -116,7 +104,7 @@ function buildThirdPartyCmijs() {
 }
 
 function bundleStdlibJs() {
-  e("npm run bundle");
+  e("yarn bundle");
 }
 
 buildCompilerCmij();
