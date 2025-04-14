@@ -2440,12 +2440,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rescript-test@workspace:packages/test":
-  version: 0.0.0-use.local
-  resolution: "rescript-test@workspace:packages/test"
-  languageName: unknown
-  linkType: soft
-
 "rescript@workspace:., rescript@workspace:^":
   version: 0.0.0-use.local
   resolution: "rescript@workspace:."

@@ -524,7 +524,7 @@ jobs:
             dir=$(mktemp -d)
           fi
           echo "path=$dir" >> "$GITHUB_OUTPUT"
-          cp -r packages/test/* "$dir"
+          cp -r tests/package_tests/installation_test/* "$dir"
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
