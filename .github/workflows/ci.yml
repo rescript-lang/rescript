@@ -128,11 +128,12 @@ jobs:
       DUNE_PROFILE: release
 
     steps:
-      - name: "Windows: Set git to use LF"
+      - name: "Windows: Set git config"
         if: runner.os == 'Windows'
         run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
+          git config --system core.autocrlf false
+          git config --system core.eol lf
+          git config --system core.longpaths true
 
       - name: Checkout
         uses: actions/checkout@v4
