@@ -58,11 +58,6 @@
     "CHANGELOG.md",
     "CREDITS.md",
     "ninja.COPYING",
-    "darwin",
-    "darwinarm64",
-    "linux",
-    "linuxarm64",
-    "win32",
     "docs/docson/build-schema.json",
     "lib",
     "cli"
@@ -76,6 +71,13 @@
     "#cli/*": "./cli/common/*.js",
     "#dev/*": "./lib_dev/*.js",
     "#lib/minisocket": "./lib/minisocket.js"
+  },
+  "optionalDependencies": {
+    "@rescript/darwin-arm64": "12.0.0-alpha.12",
+    "@rescript/darwin-x64": "12.0.0-alpha.12",
+    "@rescript/linux-arm64": "12.0.0-alpha.12",
+    "@rescript/linux-x64": "12.0.0-alpha.12",
+    "@rescript/win32-x64": "12.0.0-alpha.12"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",

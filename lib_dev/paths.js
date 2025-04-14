@@ -8,6 +8,23 @@ import * as path from "node:path";
 export const projectDir = path.resolve(import.meta.dirname, "..");
 
 /**
+ * For compatibility reasons, if the architecture is x64, omit it from the bin directory name.
+ * So we'll have "darwin", "linux" and "win32" for x64 arch,
+ * but "darwinarm64" and "linuxarm64" for arm64 arch.
+ * Also, we do not have Windows ARM binaries yet. But the x64 binaries do work on Windows 11 ARM.
+ * So omit the architecture for Windows, too.
+ */
+export const platformName =
+  process.arch === "x64" || process.platform === "win32"
+    ? process.platform
+    : process.platform + process.arch;
+
+/**
+ * path: `<projectDir>/<platform>` (e.g. linux, darwinarm64)
+ */
+export const platformDir = path.resolve(projectDir, platformName);
+
+/**
  * path: `<projectDir>/compiler/`
  */
 export const compilerRootDir = path.resolve(projectDir, "compiler");
