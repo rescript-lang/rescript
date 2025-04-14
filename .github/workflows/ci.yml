@@ -513,23 +513,36 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      - name: Make test directory
+        id: tmp-dir
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            dir=$(powershell -Command "[System.IO.Path]::GetTempPath() + [System.Guid]::NewGuid().ToString()" | tr -d '\r')
+            mkdir -p "$dir"
+          else
+            dir=$(mktemp -d)
+          fi
+          echo "path=$dir" >> "$GITHUB_OUTPUT"
+          cp -r packages/test/* "$dir"
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: npm-packages
-          path: packages/test
+          path: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Install ReScript package
         run: |
           npm i --ignore-scripts --no-audit \
             rescript-${{ needs.package.outputs.rescript_version }}.tgz
         shell: bash
-        working-directory: packages/test
+        working-directory: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Test installation
         run: npx rescript -h && npx rescript build && cat src/Test.bs.js
         shell: bash
-        working-directory: packages/test
+        working-directory: ${{ steps.tmp-dir.outputs.path }}
 
   publish:
     needs: [package, installationTest]
