@@ -2280,9 +2280,9 @@ let not_function env ty =
   ls = [] && not tvar
 
 type lazy_args =
-  (Asttypes.Noloc.arg_label * (unit -> Typedtree.expression) option) list
+  (Asttypes.arg_label * (unit -> Typedtree.expression) option) list
 
-type targs = (Asttypes.Noloc.arg_label * Typedtree.expression option) list
+type targs = (Asttypes.arg_label * Typedtree.expression option) list
 let rec type_exp ?recarg env sexp =
   (* We now delegate everything to type_expect *)
   type_expect ?recarg env sexp (newvar ())
@@ -2473,9 +2473,6 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     end_def ();
     unify_var env (newvar ()) funct.exp_type;
 
-    let args_with_loc =
-      List.map2 (fun (sarg, _) (_, label_exp) -> (sarg, label_exp)) sargs args
-    in
     let mk_apply funct args =
       rue
         {
@@ -2494,8 +2491,8 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
       | _ -> false
     in
 
-    if fully_applied && not is_primitive then rue (mk_apply funct args_with_loc)
-    else rue (mk_apply funct args_with_loc)
+    if fully_applied && not is_primitive then rue (mk_apply funct args)
+    else rue (mk_apply funct args)
   | Pexp_match (sarg, caselist) ->
     begin_def ();
     let arg = type_exp env sarg in
@@ -3448,7 +3445,7 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
           unify env lhs_type (instance_def Predef.type_int);
           instance_def Predef.type_int
       in
-      let targs = [(to_noloc lhs_label, Some lhs)] in
+      let targs = [(lhs_label, Some lhs)] in
       Some (targs, result_type)
     | ( Some {form = Binary; specialization},
         [(lhs_label, lhs_expr); (rhs_label, rhs_expr)] ) ->
@@ -3506,9 +3503,7 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
             let rhs = type_expect env rhs_expr Predef.type_int in
             (lhs, rhs, instance_def Predef.type_int))
       in
-      let targs =
-        [(to_noloc lhs_label, Some lhs); (to_noloc rhs_label, Some rhs)]
-      in
+      let targs = [(lhs_label, Some lhs); (rhs_label, Some rhs)] in
       Some (targs, result_type)
     | _ -> None)
   | _ -> None
@@ -3607,7 +3602,7 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
         | Tarrow (Optional l, t1, t2, _, _) ->
           ignored := (Noloc.Optional l, t1, ty_fun.level) :: !ignored;
           let arg =
-            ( Noloc.Optional l,
+            ( to_arg_label (Optional l),
               Some (fun () -> option_none (instance env t1) Location.none) )
           in
           type_unknown_args max_arity ~args:(arg :: args) ~top_arity:None
@@ -3667,7 +3662,8 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
         if optional then unify_exp env arg1 (type_option (newvar ()));
         arg1
       in
-      type_unknown_args max_arity ~args:((l1, Some arg1) :: args)
+      type_unknown_args max_arity
+        ~args:((to_arg_label l1, Some arg1) :: args)
         ~top_arity:None omitted ty2 sargl
   in
   let rec type_args ?type_clash_context max_arity args omitted ~ty_fun ty_fun0
@@ -3706,8 +3702,9 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
                       (extract_option_type env ty)
                       (extract_option_type env ty0))) )
       in
-      type_args ?type_clash_context max_arity ((l, arg) :: args) omitted ~ty_fun
-        ty_fun0 ~sargs ~top_arity
+      type_args ?type_clash_context max_arity
+        ((to_arg_label l, arg) :: args)
+        omitted ~ty_fun ty_fun0 ~sargs ~top_arity
     | _ ->
       type_unknown_args max_arity ~args ~top_arity omitted ty_fun0
         sargs (* This is the hot path for non-labeled function*)
