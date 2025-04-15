@@ -223,6 +223,7 @@ let main () =
     Cfg.useRevampedCompletion := true;
     Commands.test ~path ~debug
   | args when List.mem "-h" args || List.mem "--help" args -> prerr_endline help
+  | [_; "cmt"; path] -> CmtViewer.dump path
   | _ ->
     prerr_endline help;
     exit 1

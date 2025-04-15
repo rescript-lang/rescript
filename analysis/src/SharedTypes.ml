@@ -155,6 +155,14 @@ module Declared = struct
 end
 
 module Stamps : sig
+  type kind =
+    | KType of Type.t Declared.t
+    | KValue of Types.type_expr Declared.t
+    | KModule of Module.t Declared.t
+    | KConstructor of Constructor.t Declared.t
+
+  val locOfKind : kind -> Warnings.loc
+
   type t
 
   val addConstructor : t -> int -> Constructor.t Declared.t -> unit
@@ -169,6 +177,7 @@ module Stamps : sig
   val iterModules : (int -> Module.t Declared.t -> unit) -> t -> unit
   val iterTypes : (int -> Type.t Declared.t -> unit) -> t -> unit
   val iterValues : (int -> Types.type_expr Declared.t -> unit) -> t -> unit
+  val getEntries : t -> (int * kind) list
 end = struct
   type 't stampMap = (int, 't Declared.t) Hashtbl.t
 
@@ -177,6 +186,12 @@ end = struct
     | KValue of Types.type_expr Declared.t
     | KModule of Module.t Declared.t
     | KConstructor of Constructor.t Declared.t
+
+  let locOfKind = function
+    | KType declared -> declared.extentLoc
+    | KValue declared -> declared.extentLoc
+    | KModule declared -> declared.extentLoc
+    | KConstructor declared -> declared.extentLoc
 
   type t = (int, kind) Hashtbl.t
 
@@ -239,6 +254,8 @@ end = struct
         | KConstructor d -> f stamp d
         | _ -> ())
       stamps
+
+  let getEntries t = t |> Hashtbl.to_seq |> List.of_seq
 end
 
 module File = struct
