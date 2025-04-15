@@ -10,11 +10,11 @@
 > - :house: [Internal]
 > - :nail_care: [Polish]
 
-# 12.0.0-alpha.12 (Unreleased)
+# 12.0.0-alpha.12
 
 #### :bug: Bug fix
 
-- Fix node.js ExperimentalWarning. https://github.com/rescript-lang/rescript/pull/7379
+- Fix node.js `ExperimentalWarning`. https://github.com/rescript-lang/rescript/pull/7379
 - Fix issue with gentype and stdlib json. https://github.com/rescript-lang/rescript/pull/7378
 - Fix type of `RegExp.Result.matches`. https://github.com/rescript-lang/rescript/pull/7393
 - Add optional `flags` argument to `RegExp.fromString` and deprecate `RegExp.fromStringWithFlags`. https://github.com/rescript-lang/rescript/pull/7393
@@ -26,6 +26,7 @@
 #### :nail_care: Polish
 
 - Improve error message for missing value when the identifier is also the name of a module in scope. https://github.com/rescript-lang/rescript/pull/7384
+- Upgrade Flow parser to 0.267.0. https://github.com/rescript-lang/rescript/pull/7390
 
 # 12.0.0-alpha.11
 
