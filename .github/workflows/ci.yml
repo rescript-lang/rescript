@@ -438,7 +438,7 @@ jobs:
       - build-compiler
       - build-rewatch
 
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm
 
     steps:
       - name: Checkout
@@ -447,29 +447,21 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          cache: yarn
           node-version-file: .nvmrc
-
-      - name: NPM install
-        run: yarn install
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           pattern: "@(binaries-*|rewatch-*|lib-ocaml)"
 
-      - name: Move artifacts
-        run: ./scripts/moveArtifacts.sh
+      - name: Move artifacts into packages
+        run: .github/workflows/moveArtifacts.sh
 
-      - name: npm pack (rescript) + check artifact list
+      - name: Check artifact list
         run: node ./scripts/npmPack.js
 
-      - name: Copy JS files to stdlib package
-        run: mkdir -p packages/std/lib && cp -R lib/es6 lib/js packages/std/lib
-
-      - name: npm pack (@rescript/std)
-        run: npm pack
-        working-directory: packages/std
+      - name: yarn pack @rescript/* subpackages
+        run: yarn workspaces foreach -W --no-private --exclude rescript pack
 
       - name: Prepare package upload
         # For pull requests, pass the correct commit SHA explicitly as GITHUB_SHA points to the wrong commit.
@@ -482,6 +474,11 @@ jobs:
           path: |
             rescript-${{ env.rescript_version }}.tgz
             rescript-std-${{ env.rescript_version }}.tgz
+            rescript-linux-x64-${{ env.rescript_version }}.tgz
+            rescript-linux-arm64-${{ env.rescript_version }}.tgz
+            rescript-darwin-x64-${{ env.rescript_version }}.tgz
+            rescript-darwin-arm64-${{ env.rescript_version }}.tgz
+            rescript-win32-x64-${{ env.rescript_version }}.tgz
 
     outputs:
       rescript_version: ${{ env.rescript_version }}
@@ -491,15 +488,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [
-            macos-13, # x64
-            macos-14, # ARM
-            ubuntu-24.04,
-            ubuntu-24.04-arm,
-            windows-latest,
-          ]
+        include:
+          - os: macos-13 # x64
+            target: darwin-x64
+          - os: macos-14 # ARM
+            target: darwin-arm64
+          - os: ubuntu-24.04
+            target: linux-x64
+          - os: ubuntu-24.04-arm
+            target: linux-arm64
+          - os: windows-latest
+            target: win32-x64
 
-    runs-on: ${{matrix.os}}
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
@@ -532,7 +533,8 @@ jobs:
       - name: Install ReScript package
         run: |
           npm i --ignore-scripts --no-audit \
-            rescript-${{ needs.package.outputs.rescript_version }}.tgz
+            rescript-${{ needs.package.outputs.rescript_version }}.tgz \
+            rescript-${{ matrix.target }}-${{ env.rescript_version }}.tgz
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
@@ -546,7 +548,7 @@ jobs:
 
     if: startsWith(github.ref, 'refs/tags/v')
 
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm
 
     steps:
       - name: Checkout
@@ -568,8 +570,13 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
         run: |
-          npm publish rescript-${{ needs.package.outputs.rescript_version }}.tgz --tag ci
-          npm publish rescript-std-${{ needs.package.outputs.rescript_version }}.tgz --tag ci
+          npm publish --tag ci rescript-${{ needs.package.outputs.rescript_version }}.tgz
+          npm publish --tag ci rescript-std-${{ needs.package.outputs.rescript_version }}.tgz
+          npm publish --tag ci rescript-linux-x64-${{ needs.package.outputs.rescript_version }}.tgz
+          npm publish --tag ci rescript-linux-arm64-${{ needs.package.outputs.rescript_version }}.tgz
+          npm publish --tag ci rescript-darwin-x64-${{ needs.package.outputs.rescript_version }}.tgz
+          npm publish --tag ci rescript-darwin-arm64-{{ needs.package.outputs.rescript_version }}.tgz
+          npm publish --tag ci rescript-win32-x64-${{ needs.package.outputs.rescript_version }}.tgz
 
       - name: Update Website Playground
         env:

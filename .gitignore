@@ -95,3 +95,6 @@ tests/analysis_tests/**/*.bs.js
 !.yarn/versions
 
 *.tsbuildinfo
+
+# package tarballs
+package.tgz
