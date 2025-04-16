@@ -3,8 +3,8 @@
 // @ts-check
 
 import * as fs from "node:fs";
-import * as readline from "node:readline";
 import * as path from "node:path";
+import * as readline from "node:readline";
 
 /**
  *
@@ -14,10 +14,10 @@ import * as path from "node:path";
  */
 function processEntry(file, lineCb, finish) {
   const input = fs.createReadStream(file);
-  input.on("error", (error) => {
+  input.on("error", error => {
     console.error(error.message);
     console.error(
-      "make sure you are running after bsb building and in the top directory"
+      "make sure you are running after bsb building and in the top directory",
     );
     process.exit(2);
   });
@@ -156,7 +156,7 @@ function category(target, obj) {
   } else {
     getColorName(obj, "cmj");
   }
-  obj.name = target.targets.map((x) => path.parse(x).base).join(",");
+  obj.name = target.targets.map(x => path.parse(x).base).join(",");
   return obj;
 }
 /**
@@ -173,7 +173,7 @@ function readIntervals(file, showAll, outputFile) {
   let offset = 0;
   processEntry(
     file,
-    (line) => {
+    line => {
       const lineTrim = line.trim();
       if (lineTrim.startsWith("#")) {
         return;
@@ -195,7 +195,7 @@ function readIntervals(file, showAll, outputFile) {
       setDefault(
         targets,
         cmdHash,
-        new Interval(Number(start) + offset, Number(end) + offset)
+        new Interval(Number(start) + offset, Number(end) + offset),
       ).targets.push(name);
     },
     () => {
@@ -213,12 +213,12 @@ function readIntervals(file, showAll, outputFile) {
             ts: target.start * 1000,
             tid: threads.alloc(target),
             args: {},
-          })
+          }),
         );
       }
       console.log(` ${outputFile} is produced, loade it via chrome://tracing/`);
       fs.writeFileSync(outputFile, JSON.stringify(jsonArray), "utf8");
-    }
+    },
   );
 }
 const logName = ".ninja_log";
@@ -240,7 +240,7 @@ function tryLocation(ps) {
     }
   }
   console.error(
-    "no .ninja_log found in specified paths, make sure you set bstracing to the proper directory"
+    "no .ninja_log found in specified paths, make sure you set bstracing to the proper directory",
   );
   process.exit(2);
 }

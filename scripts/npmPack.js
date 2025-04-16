@@ -10,12 +10,12 @@
 // In CI, the scripts is invoked without options. It then performs `yarn pack` for real,
 // recreates the artifact list and verifies that it has no changes compared to the committed state.
 
-import { spawn, execSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import { parseArgs } from "node:util";
 import { artifactListFile } from "#dev/paths";
 
-/** 
+/**
  * @typedef {(
  *   | { "base": string }
  *   | { "location": string }
@@ -33,9 +33,7 @@ const { values } = parseArgs({
   },
 });
 
-const mode = values.updateArtifactList
-  ? "updateArtifactList"
-  : "package";
+const mode = values.updateArtifactList ? "updateArtifactList" : "package";
 
 const child = spawn(
   "yarn",
@@ -55,7 +53,9 @@ const exitCode = new Promise((resolve, reject) => {
 fs.unlinkSync(artifactListFile);
 
 for await (const chunk of child.stdout.setEncoding("utf8")) {
-  const lines = /** @type {string} */ (chunk).trim().split(/\s/);
+  const lines = /** @type {string} */ (chunk)
+    .trim()
+    .split(/\s/);
   for (const line of lines) {
     /** @type {YarnPackOutputLine} */
     const json = JSON.parse(line);
@@ -65,11 +65,7 @@ for await (const chunk of child.stdout.setEncoding("utf8")) {
       if (json.location.startsWith("_build")) {
         continue;
       }
-      fs.appendFileSync(
-        artifactListFile,
-        json.location + "\n",
-        "utf8",
-      );
+      fs.appendFileSync(artifactListFile, json.location + "\n", "utf8");
     }
   }
 }
