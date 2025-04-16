@@ -65,12 +65,12 @@
       "lib/es6/**",
       "lib/js/**",
       "ninja/**",
-      "packages/**",
       "playground/**",
       "*.bs.js",
       "*.res.js",
       "*.res.mjs",
       "*.gen.ts*",
+      "*.exe",
       "package.json"
     ]
   }
