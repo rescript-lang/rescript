@@ -3,20 +3,8 @@
 import * as fs from "node:fs";
 
 /**
- * @typedef {{
- *   binDir: string,
- *   binPaths: BinaryPaths,
- * }} BinaryModuleExports
- *
- * @typedef {{
- *   bsb_helper_exe: string,
- *   bsc_exe: string,
- *   ninja_exe: string,
- *   rescript_exe: string,
- *   rescript_tools_exe: string,
- *   rescript_editor_analysis_exe: string,
- *   rewatch_exe: string,
- * }} BinaryPaths
+ * @import {BinaryPaths} from "@rescript/linux-x64"
+ * @typedef {import("@rescript/linux-x64")} BinaryModuleExports
  */
 
 const target = `${process.platform}-${process.arch}`;
