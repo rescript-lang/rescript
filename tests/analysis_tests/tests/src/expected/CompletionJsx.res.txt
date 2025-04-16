@@ -527,6 +527,7 @@ ContextPath Value[someArr]->a <<jsx>>
 ContextPath Value[someArr]
 Path someArr
 Path Stdlib.Array.a
+Path ArrayUtils.a
 [{
     "label": "React.array",
     "kind": 12,
