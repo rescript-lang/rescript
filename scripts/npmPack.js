@@ -4,7 +4,7 @@
 
 // This performs `yarn pack` and retrieves the list of artifact files from the output.
 //
-// In local dev, invoke it with `-updateArtifactList` to perform a dry run of `yarn pack`
+// In local dev, invoke it with `--updateArtifactList` to perform a dry run of `yarn pack`
 // and recreate `packages/artifacts.txt`.
 //
 // In CI, the scripts is invoked without options. It then performs `yarn pack` for real,

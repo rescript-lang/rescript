@@ -56,7 +56,7 @@ lib:
 	./scripts/prebuilt.js
 
 artifacts: lib
-	./scripts/npmPack.js -updateArtifactList
+	./scripts/npmPack.js --updateArtifactList
 
 # Builds the core playground bundle (without the relevant cmijs files for the runtime)
 playground:
