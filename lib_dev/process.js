@@ -169,9 +169,8 @@ export function setup(cwd = process.cwd()) {
      * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
-    async bsc(args = [], options = {}) {
-      const realPath = await fs.realpath(bsc_exe);
-      return exec(realPath, args, options);
+    bsc(args = [], options = {}) {
+      return exec(bsc_exe, args, options);
     },
 
     /**
@@ -181,9 +180,8 @@ export function setup(cwd = process.cwd()) {
      * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
-    async execBuild(args = [], options = {}) {
-      const realPath = await fs.realpath(rescript_exe);
-      return exec(realPath, ["build", ...args], options);
+    execBuild(args = [], options = {}) {
+      return exec(rescript_exe, ["build", ...args], options);
     },
 
     /**
@@ -193,9 +191,8 @@ export function setup(cwd = process.cwd()) {
      * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
-    async execClean(args = [], options = {}) {
-      const realPath = await fs.realpath(rescript_exe);
-      return exec(realPath, ["clean", ...args], options);
+    execClean(args = [], options = {}) {
+      return exec(rescript_exe, ["clean", ...args], options);
     },
 
     /**
