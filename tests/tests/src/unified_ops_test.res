@@ -30,13 +30,9 @@ let pow_overflow = 2147483647 ** 2
 let bxor_int = (a, b) => a ^ b
 let bxor_bigint = (a: bigint, b) => a ^ b
 
-let shl_int = 1 << 2
-let shr_int = 8 >> 2
-let lsr_int = -1 >>> 1
+let intShiftLeft = 1 << 2
+let intShiftRight = 8 >> 2
+let intShiftRightUnsigned = -2 >>> 1
 
-let lhs_shift = (a: int, b) => a << b
-let rhs_shift = (a, b: int) => a << b
-let unknown_shift = (a, b) => a << b
-
-let shl_bigint = 1n << 2n
-let shr_bigint = 8n >> 2n
+let bigintShiftLeft = 1n << 2n
+let bigintShiftRight = 8n >> 2n
