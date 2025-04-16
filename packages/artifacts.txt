@@ -5,6 +5,7 @@ CREDITS.md
 LICENSE
 README.md
 cli/bsc.js
+cli/bstracing.js
 cli/common/args.js
 cli/common/bins.js
 cli/common/bsb.js
@@ -28,7 +29,6 @@ darwinarm64/rescript-tools.exe
 darwinarm64/rescript.exe
 darwinarm64/rewatch.exe
 docs/docson/build-schema.json
-lib/bstracing
 lib/es6/Belt.js
 lib/es6/Belt_Array.js
 lib/es6/Belt_Float.js
