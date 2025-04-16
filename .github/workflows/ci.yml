@@ -537,7 +537,7 @@ jobs:
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Test installation
-        run: npx rescript -h && npx rescript build && cat src/Test.bs.js
+        run: npx rescript -h && npx rescript build && cat src/Test.res.js
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
