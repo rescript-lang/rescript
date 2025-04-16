@@ -12,6 +12,10 @@
 
 # 12.0.0-alpha.13 (Unreleased)
 
+#### :rocket: New Feature
+
+- Add shift (`<<`, `>>`, `>>>`) operators for `int` and `bigint`. https://github.com/rescript-lang/rescript/pull/7183
+
 # 12.0.0-alpha.12
 
 #### :bug: Bug fix
