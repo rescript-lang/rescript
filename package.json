@@ -56,11 +56,12 @@
   },
   "files": [
     "CHANGELOG.md",
+    "COPYING",
+    "COPYING.LESSER",
     "CREDITS.md",
     "ninja.COPYING",
     "docs/docson/build-schema.json",
-    "lib/js/*.js",
-    "lib/es6/*.js",
+    "lib",
     "cli"
   ],
   "exports": {
