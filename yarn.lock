@@ -2453,7 +2453,7 @@ __metadata:
     typescript: "npm:5.8.2"
   bin:
     bsc: cli/bsc.js
-    bstracing: lib/bstracing.js
+    bstracing: cli/bstracing.js
     rescript: cli/rescript.js
     rescript-tools: cli/rescript-tools.js
     rewatch: cli/rewatch.js
