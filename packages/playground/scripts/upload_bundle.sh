@@ -4,11 +4,11 @@
 # The target folder on KeyCDN will be the compiler.js' version number.
 # This script requires `curl` / `openssl` to be installed.
 
-SCRIPT_PATH=${BASH_SOURCE[0]}
-SCRIPT_DIR=$(dirname "$(dirname "$current_script_path")")
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+SCRIPT_DIR="$(dirname "$(dirname "$SCRIPT_PATH")")"
 
 # Get the actual version from the compiled playground bundle
-VERSION=$(cd $SCRIPT_DIR; node -e 'require("./compiler.js"); console.log(rescript_compiler.make().rescript.version)')
+VERSION="$(node -e "console.log(require('$SCRIPT_DIR/compiler.js').rescript_compiler.make().rescript.version)")"
 
 if [ -z "${KEYCDN_USER}" ]; then
   echo "KEYCDN_USER environment variable not set. Make sure to set the environment accordingly."
