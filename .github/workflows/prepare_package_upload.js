@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 
 const packageSpec = JSON.parse(
-  fs.readFileSync(new URL("../../package.json", import.meta.url), "utf-8")
+  fs.readFileSync(new URL("../../package.json", import.meta.url), "utf-8"),
 );
 
 const { version } = packageSpec;
@@ -11,10 +11,7 @@ const commitHash = process.argv[2] || process.env.GITHUB_SHA;
 const commitHashShort = commitHash.substring(0, 7);
 
 // rescript
-fs.renameSync(
-  "package.tgz",
-  `rescript-${version}-${commitHashShort}.tgz`,
-);
+fs.renameSync("package.tgz", `rescript-${version}-${commitHashShort}.tgz`);
 
 // @rescript/std
 fs.renameSync(
