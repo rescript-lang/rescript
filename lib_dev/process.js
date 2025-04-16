@@ -1,4 +1,5 @@
 import * as child_process from "node:child_process";
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { bsc_exe, rescript_exe } from "#cli/bins";
 
@@ -168,8 +169,9 @@ export function setup(cwd = process.cwd()) {
      * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
-    bsc(args = [], options = {}) {
-      return exec(bsc_exe, args, options);
+    async bsc(args = [], options = {}) {
+      const realPath = await fs.realpath(bsc_exe);
+      return exec(realPath, args, options);
     },
 
     /**
@@ -179,8 +181,9 @@ export function setup(cwd = process.cwd()) {
      * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
-    execBuild(args = [], options = {}) {
-      return exec(rescript_exe, ["build", ...args], options);
+    async execBuild(args = [], options = {}) {
+      const realPath = await fs.realpath(rescript_exe);
+      return exec(realPath, ["build", ...args], options);
     },
 
     /**
@@ -190,8 +193,9 @@ export function setup(cwd = process.cwd()) {
      * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
-    execClean(args = [], options = {}) {
-      return exec(rescript_exe, ["clean", ...args], options);
+    async execClean(args = [], options = {}) {
+      const realPath = await fs.realpath(rescript_exe);
+      return exec(realPath, ["clean", ...args], options);
     },
 
     /**
@@ -203,8 +207,9 @@ export function setup(cwd = process.cwd()) {
      * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
-    execBin(bin, args = [], options = {}) {
-      return exec(bin, args, options);
+    async execBin(bin, args = [], options = {}) {
+      const realPath = await fs.realpath(bin);
+      return exec(realPath, args, options);
     },
   };
 }
