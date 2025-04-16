@@ -16,6 +16,10 @@
 
 - Add shift (`<<`, `>>`, `>>>`) operators for `int` and `bigint`. https://github.com/rescript-lang/rescript/pull/7183
 
+#### :bug: Bug fix
+
+- Fix broken `bstracing` CLI location. https://github.com/rescript-lang/rescript/pull/7398
+
 # 12.0.0-alpha.12
 
 #### :bug: Bug fix
