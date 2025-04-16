@@ -489,9 +489,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-13 # x64
+          - os: macos-13
             target: darwin-x64
-          - os: macos-14 # ARM
+          - os: macos-14
             target: darwin-arm64
           - os: ubuntu-24.04
             target: linux-x64
@@ -534,7 +534,7 @@ jobs:
         run: |
           npm i --ignore-scripts --no-audit \
             rescript-${{ needs.package.outputs.rescript_version }}.tgz \
-            rescript-${{ matrix.target }}-${{ env.rescript_version }}.tgz
+            rescript-${{ matrix.target }}-${{ needs.package.outputs.rescript_version }}.tgz
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
