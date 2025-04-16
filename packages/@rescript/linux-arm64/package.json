@@ -20,7 +20,8 @@
     "arm64"
   ],
   "files": [
-    "bin"
+    "bin.js",
+    "bin/"
   ],
   "bin": {
     "bsb_helper.exe": "./bin/bsb_helper.exe",
@@ -31,8 +32,6 @@
     "rescript.exe": "./bin/rescript.exe",
     "rewatch.exe": "./bin/rewatch.exe"
   },
-  "exports": {
-    "./paths": "./bin/paths.js"
-  },
+  "exports": "./bin.js",
   "preferUnplugged": true
 }

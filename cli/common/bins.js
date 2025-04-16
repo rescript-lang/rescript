@@ -2,7 +2,11 @@
 
 /**
  * @typedef {{
- *   platformDir: string,
+ *   binDir: string,
+ *   binPaths: BinaryPaths,
+ * }} BinaryModuleExports
+ *
+ * @typedef {{
  *   bsb_helper_exe: string,
  *   bsc_exe: string,
  *   ninja_exe: string,
@@ -15,22 +19,23 @@
 
 const target = `${process.platform}-${process.arch}`;
 
-/** @type {BinaryPaths} */
-let binPaths;
+/** @type {BinaryModuleExports} */
+let mod;
 try {
-  binPaths = await import(`@rescript/${target}/paths`);
-} catch (err) {
-  console.error(`Platform ${target} is not supported!`);
-  throw err;
+  mod = await import(`@rescript/${target}`);
+} catch {
+  throw new Error(`Platform ${target} is not supported!`);
 }
 
 export const {
-  platformDir,
-  bsb_helper_exe,
-  bsc_exe,
-  ninja_exe,
-  rescript_editor_analysis_exe,
-  rescript_tools_exe,
-  rescript_exe,
-  rewatch_exe,
-} = binPaths;
+  binDir: platformDir,
+  binPaths: {
+    bsb_helper_exe,
+    bsc_exe,
+    ninja_exe,
+    rescript_editor_analysis_exe,
+    rescript_tools_exe,
+    rescript_exe,
+    rewatch_exe,
+  },
+} = mod;
