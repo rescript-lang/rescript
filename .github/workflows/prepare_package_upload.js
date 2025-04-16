@@ -15,7 +15,7 @@ fs.renameSync("package.tgz", `rescript-${version}-${commitHashShort}.tgz`);
 
 // @rescript/std
 fs.renameSync(
-  "packages/@rescript/std/package.tgz",
+  "packages/std/package.tgz",
   `rescript-std-${version}-${commitHashShort}.tgz`,
 );
 
