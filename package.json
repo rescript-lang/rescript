@@ -59,7 +59,8 @@
     "CREDITS.md",
     "ninja.COPYING",
     "docs/docson/build-schema.json",
-    "lib",
+    "lib/js/*.js",
+    "lib/es6/*.js",
     "cli"
   ],
   "exports": {
