@@ -8,7 +8,7 @@ SCRIPT_PATH=${BASH_SOURCE[0]}
 SCRIPT_DIR=$(dirname "$(dirname "$current_script_path")")
 
 # Get the actual version from the compiled playground bundle
-VERSION=$(cd $SCRIPT_DIR; node -e 'require("/compiler.js"); console.log(rescript_compiler.make().rescript.version)')
+VERSION=$(cd $SCRIPT_DIR; node -e 'require("./compiler.js"); console.log(rescript_compiler.make().rescript.version)')
 
 if [ -z "${KEYCDN_USER}" ]; then
   echo "KEYCDN_USER environment variable not set. Make sure to set the environment accordingly."
