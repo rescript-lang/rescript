@@ -187,6 +187,19 @@ let entries =
           string = None;
         };
     };
+    {
+      path = builtin "|";
+      name = "%bitor";
+      form = Binary;
+      specialization =
+        {
+          int = Porint;
+          bool = None;
+          float = None;
+          bigint = Some Porbigint;
+          string = None;
+        };
+    };
   |]
 
 let index_by_path =

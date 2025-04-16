@@ -55,6 +55,7 @@ x + y / z
 x / y + z
 x % y * z
 x ^ y + z
+x | y + z
 100 * x / total
 2 / 3 * 10 / 2 + 2
 let rotateX = ((range / rect.height) * refY - range / 2) * getXMultiplication(rect.width)
