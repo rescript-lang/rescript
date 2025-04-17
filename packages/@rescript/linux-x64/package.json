@@ -25,5 +25,8 @@
     "bin/"
   ],
   "exports": "./bin.js",
-  "preferUnplugged": true
+  "preferUnplugged": true,
+  "scripts": {
+    "postpack": "./scripts/repack.sh package.tgz"
+  }
 }
