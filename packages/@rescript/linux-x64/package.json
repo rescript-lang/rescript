@@ -8,7 +8,16 @@
     "url": "git+https://github.com/rescript-lang/rescript-compiler.git"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "executableFiles": [
+      "./bin/bsb_helper.exe",
+      "./bin/bsc.exe",
+      "./bin/ninja.exe",
+      "./bin/rescript.exe",
+      "./bin/rescript-editor-analysis.exe",
+      "./bin/rescript-tools.exe",
+      "./bin/rewatch.exe"
+    ]
   },
   "engines": {
     "node": ">=20.11.0"
@@ -25,8 +34,5 @@
     "bin/"
   ],
   "exports": "./bin.js",
-  "preferUnplugged": true,
-  "scripts": {
-    "postpack": "./scripts/repack.sh package.tgz"
-  }
+  "preferUnplugged": true
 }
