@@ -25,16 +25,22 @@ check_statically_linked() {
     fi
 }
 
+clean_dir() {
+    local dir="$1"
+    rm -rf "$dir" && mkdir -p "$dir"
+    echo -n "$dir"
+}
+
 # rescript
 mv lib-ocaml lib/ocaml
 
 # @rescript/{target}
 chmod +x binaries-*/*.exe rewatch-*/*.exe
-mv -f binaries-darwin/* rewatch-darwin/*           packages/@rescript/darwin-x64/bin
-mv -f binaries-darwinarm64/* rewatch-darwinarm64/* packages/@rescript/darwin-arm64/bin
-mv -f binaries-linux/* rewatch-linux/*             packages/@rescript/linux-x64/bin
-mv -f binaries-linuxarm64/* rewatch-linuxarm64/*   packages/@rescript/linux-arm64/bin
-mv -f binaries-win32/* rewatch-win32/*             packages/@rescript/win32-x64/bin
+mv -f binaries-darwin/* rewatch-darwin/* "$(clean_dir "packages/@rescript/darwin-x64/bin")"
+mv -f binaries-darwinarm64/* rewatch-darwinarm64/* "$(clean_dir "packages/@rescript/darwin-arm64/bin")"
+mv -f binaries-linux/* rewatch-linux/* "$(clean_dir "packages/@rescript/linux-x64/bin")"
+mv -f binaries-linuxarm64/* rewatch-linuxarm64/* "$(clean_dir "packages/@rescript/linux-arm64/bin")"
+mv -f binaries-win32/* rewatch-win32/* "$(clean_dir "packages/@rescript/win32-x64/bin")"
 check_statically_linked "packages/@rescript/linux-x64/bin"
 check_statically_linked "packages/@rescript/linux-arm64/bin"
 
