@@ -3,7 +3,7 @@ let version = "4.06.1+BS"
 let standard_library =
   let ( // ) = Filename.concat in
   let exe_path = Sys.executable_name in
-  if Ext_string.contain_substring exe_path "node_modules/@rescript" then
+  if Ext_string.contain_substring exe_path ("node_modules" // "@rescript") then
     (* node_modules/@rescirpt/{platform}/bins *)
     Filename.dirname exe_path // Filename.parent_dir_name
     // Filename.parent_dir_name // Filename.parent_dir_name // "rescript"
