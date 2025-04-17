@@ -391,56 +391,24 @@ __metadata:
 "@rescript/darwin-arm64@npm:12.0.0-alpha.13, @rescript/darwin-arm64@workspace:packages/@rescript/darwin-arm64":
   version: 0.0.0-use.local
   resolution: "@rescript/darwin-arm64@workspace:packages/@rescript/darwin-arm64"
-  bin:
-    bsb_helper.exe: ./bin/bsb_helper.exe
-    bsc.exe: ./bin/bsc.exe
-    ninja.exe: ./bin/ninja.exe
-    rescript-editor-analysis.exe: ./bin/rescript-editor-analysis.exe
-    rescript-tools.exe: ./bin/rescript-tools.exe
-    rescript.exe: ./bin/rescript.exe
-    rewatch.exe: ./bin/rewatch.exe
   languageName: unknown
   linkType: soft
 
 "@rescript/darwin-x64@npm:12.0.0-alpha.13, @rescript/darwin-x64@workspace:packages/@rescript/darwin-x64":
   version: 0.0.0-use.local
   resolution: "@rescript/darwin-x64@workspace:packages/@rescript/darwin-x64"
-  bin:
-    bsb_helper.exe: ./bin/bsb_helper.exe
-    bsc.exe: ./bin/bsc.exe
-    ninja.exe: ./bin/ninja.exe
-    rescript-editor-analysis.exe: ./bin/rescript-editor-analysis.exe
-    rescript-tools.exe: ./bin/rescript-tools.exe
-    rescript.exe: ./bin/rescript.exe
-    rewatch.exe: ./bin/rewatch.exe
   languageName: unknown
   linkType: soft
 
 "@rescript/linux-arm64@npm:12.0.0-alpha.13, @rescript/linux-arm64@workspace:packages/@rescript/linux-arm64":
   version: 0.0.0-use.local
   resolution: "@rescript/linux-arm64@workspace:packages/@rescript/linux-arm64"
-  bin:
-    bsb_helper.exe: ./bin/bsb_helper.exe
-    bsc.exe: ./bin/bsc.exe
-    ninja.exe: ./bin/ninja.exe
-    rescript-editor-analysis.exe: ./bin/rescript-editor-analysis.exe
-    rescript-tools.exe: ./bin/rescript-tools.exe
-    rescript.exe: ./bin/rescript.exe
-    rewatch.exe: ./bin/rewatch.exe
   languageName: unknown
   linkType: soft
 
 "@rescript/linux-x64@npm:12.0.0-alpha.13, @rescript/linux-x64@workspace:packages/@rescript/linux-x64":
   version: 0.0.0-use.local
   resolution: "@rescript/linux-x64@workspace:packages/@rescript/linux-x64"
-  bin:
-    bsb_helper.exe: ./bin/bsb_helper.exe
-    bsc.exe: ./bin/bsc.exe
-    ninja.exe: ./bin/ninja.exe
-    rescript-editor-analysis.exe: ./bin/rescript-editor-analysis.exe
-    rescript-tools.exe: ./bin/rescript-tools.exe
-    rescript.exe: ./bin/rescript.exe
-    rewatch.exe: ./bin/rewatch.exe
   languageName: unknown
   linkType: soft
 
@@ -487,14 +455,6 @@ __metadata:
 "@rescript/win32-x64@npm:12.0.0-alpha.13, @rescript/win32-x64@workspace:packages/@rescript/win32-x64":
   version: 0.0.0-use.local
   resolution: "@rescript/win32-x64@workspace:packages/@rescript/win32-x64"
-  bin:
-    bsb_helper.exe: ./bin/bsb_helper.exe
-    bsc.exe: ./bin/bsc.exe
-    ninja.exe: ./bin/ninja.exe
-    rescript-editor-analysis.exe: ./bin/rescript-editor-analysis.exe
-    rescript-tools.exe: ./bin/rescript-tools.exe
-    rescript.exe: ./bin/rescript.exe
-    rewatch.exe: ./bin/rewatch.exe
   languageName: unknown
   linkType: soft
 
