@@ -24,15 +24,6 @@
     "bin.d.ts",
     "bin/"
   ],
-  "bin": {
-    "bsb_helper.exe": "./bin/bsb_helper.exe",
-    "bsc.exe": "./bin/bsc.exe",
-    "ninja.exe": "./bin/ninja.exe",
-    "rescript-editor-analysis.exe": "./bin/rescript-editor-analysis.exe",
-    "rescript-tools.exe": "./bin/rescript-tools.exe",
-    "rescript.exe": "./bin/rescript.exe",
-    "rewatch.exe": "./bin/rewatch.exe"
-  },
   "exports": "./bin.js",
   "preferUnplugged": true
 }
