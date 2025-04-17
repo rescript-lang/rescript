@@ -142,7 +142,13 @@ let rewrite_underscore_apply expr =
     {
       e with
       pexp_desc =
-        Pexp_apply {funct = call_expr; args = new_args; partial = false};
+        Pexp_apply
+          {
+            funct = call_expr;
+            args = new_args;
+            partial = false;
+            transformed_jsx = None;
+          };
     }
   | _ -> expr
 

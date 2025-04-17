@@ -66,7 +66,7 @@ let refine_let
   (*     let v= subst_lambda (Map_ident.singleton param arg ) l in *)
   (*     Ext_log.err "@[substitution << @]@."; *)
   (* v *)
-  | _, _, Lapply {ap_func=fn; ap_args = [Lvar w]; ap_info} when
+  | _, _, Lapply {ap_func=fn; ap_args = [Lvar w]; ap_info; ap_transformed_jsx} when
       Ident.same w param &&
       (not (Lam_hit.hit_variable param fn ))
     -> 
@@ -79,7 +79,7 @@ let refine_let
        ]}
         #1667 make sure body does not hit k 
     *)
-    Lam.apply fn [arg] ap_info
+    Lam.apply fn [arg] ap_info ~ap_transformed_jsx
   | (Strict | StrictOpt ),
     ( Lvar _    | Lconst  _ | 
       Lprim {primitive = Pfield (_ , Fld_module _) ;  

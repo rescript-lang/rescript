@@ -287,7 +287,11 @@ let translate_ffi (cxt : Lam_compile_context.t) arg_types
     | _ ->
       let args, eff, dynamic = assemble_args_has_splice arg_types args in
       let args = if dynamic then E.variadic_args args else args in
-      add_eff eff (E.call ~info:{arity = Full; call_info = Call_na} fn args))
+      add_eff eff
+        (E.call
+           ~info:
+             {arity = Full; call_info = Call_na; call_transformed_jsx = None}
+           fn args))
   | Js_call
       {
         external_module_name = module_name;
@@ -302,20 +306,36 @@ let translate_ffi (cxt : Lam_compile_context.t) arg_types
     if splice then
       let args, eff, dynamic = assemble_args_has_splice arg_types args in
       let args = if dynamic then E.variadic_args args else args in
-      add_eff eff (E.call ~info:{arity = Full; call_info = Call_na} fn args)
+      add_eff eff
+        (E.call
+           ~info:
+             {arity = Full; call_info = Call_na; call_transformed_jsx = None}
+           fn args)
     else
       let args, eff = assemble_args_no_splice arg_types args in
-      add_eff eff @@ E.call ~info:{arity = Full; call_info = Call_na} fn args
+      add_eff eff
+      @@ E.call
+           ~info:
+             {arity = Full; call_info = Call_na; call_transformed_jsx = None}
+           fn args
   | Js_module_as_fn {external_module_name; splice} ->
     let fn = external_var external_module_name ~dynamic_import in
     if splice then
       let args, eff, dynamic = assemble_args_has_splice arg_types args in
       let args = if dynamic then E.variadic_args args else args in
-      add_eff eff (E.call ~info:{arity = Full; call_info = Call_na} fn args)
+      add_eff eff
+        (E.call
+           ~info:
+             {arity = Full; call_info = Call_na; call_transformed_jsx = None}
+           fn args)
     else
       let args, eff = assemble_args_no_splice arg_types args in
       (* TODO: fix in rest calling convention *)
-      add_eff eff (E.call ~info:{arity = Full; call_info = Call_na} fn args)
+      add_eff eff
+        (E.call
+           ~info:
+             {arity = Full; call_info = Call_na; call_transformed_jsx = None}
+           fn args)
   | Js_new {external_module_name = module_name; name = fn; splice; scopes} ->
     (* handle [@@new]*)
     (* This has some side effect, it will
@@ -362,14 +382,16 @@ let translate_ffi (cxt : Lam_compile_context.t) arg_types
         add_eff eff
           (let self = translate_scoped_access js_send_scopes self in
            E.call
-             ~info:{arity = Full; call_info = Call_na}
+             ~info:
+               {arity = Full; call_info = Call_na; call_transformed_jsx = None}
              (E.dot self name) args)
       else
         let args, eff = assemble_args_no_splice arg_types args in
         add_eff eff
           (let self = translate_scoped_access js_send_scopes self in
            E.call
-             ~info:{arity = Full; call_info = Call_na}
+             ~info:
+               {arity = Full; call_info = Call_na; call_transformed_jsx = None}
              (E.dot self name) args)
     | _ -> assert false)
   | Js_module_as_var module_name -> external_var module_name ~dynamic_import
@@ -384,7 +406,10 @@ let translate_ffi (cxt : Lam_compile_context.t) arg_types
         ~dynamic_import
     in
     if args = [] then e
-    else E.call ~info:{arity = Full; call_info = Call_na} e args
+    else
+      E.call
+        ~info:{arity = Full; call_info = Call_na; call_transformed_jsx = None}
+        e args
   | Js_module_as_class module_name ->
     let fn = external_var module_name ~dynamic_import in
     let args, eff = assemble_args_no_splice arg_types args in

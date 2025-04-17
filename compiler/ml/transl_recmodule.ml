@@ -151,7 +151,7 @@ let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
         ( Strict,
           Pgenval,
           id,
-          Lprim (Pinit_mod, [loc; shape], Location.none),
+          Lprim (Pinit_mod, [loc; shape], Location.none, None),
           bind_inits rem acc )
   in
   let rec bind_strict args acc =
@@ -167,7 +167,7 @@ let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
     | (_id, None, _rhs) :: rem -> patch_forwards rem
     | (id, Some (_loc, shape), rhs) :: rem ->
       Lsequence
-        ( Lprim (Pupdate_mod, [shape; Lvar id; rhs], Location.none),
+        ( Lprim (Pupdate_mod, [shape; Lvar id; rhs], Location.none, None),
           patch_forwards rem )
   in
   bind_inits bindings (bind_strict bindings (patch_forwards bindings))
@@ -178,7 +178,7 @@ let eval_rec_bindings_aux (bindings : binding list) (cont : t) : t =
 *)
 let rec is_function_or_const_block (lam : Lambda.lambda) acc =
   match lam with
-  | Lprim (Pmakeblock _, args, _) ->
+  | Lprim (Pmakeblock _, args, _, _) ->
     Ext_list.for_all args (fun x ->
         match x with
         | Lvar id -> Set_ident.mem acc id

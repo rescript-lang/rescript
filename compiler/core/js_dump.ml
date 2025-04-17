@@ -524,7 +524,13 @@ and expression_desc cxt ~(level : int) f x : cxt =
          when Ext_list.length_equal el i
        ]}
     *)
+  | Call (e, el, {call_transformed_jsx = Some jsx_element}) ->
+    (* The grand point would be to reconstruct the JSX here *)
+    P.string f "<meh />";
+    cxt
   | Call (e, el, info) ->
+    Format.fprintf Format.err_formatter "Js_dump Has transformed_jsx %b\n"
+    (Option.is_some info.call_transformed_jsx);
     P.cond_paren_group f (level > 15) (fun _ ->
         P.group f 0 (fun _ ->
             match (info, el) with

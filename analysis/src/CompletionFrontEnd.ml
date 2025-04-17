@@ -267,12 +267,14 @@ let rec exprToContextPathInner ~(inJsxContext : bool) (e : Parsetree.expression)
           };
         args =
           [(_, lhs); (_, {pexp_desc = Pexp_apply {funct = d; args; partial}})];
+        transformed_jsx;
       } ->
     (* Transform away pipe with apply call *)
     exprToContextPath ~inJsxContext
       {
         pexp_desc =
-          Pexp_apply {funct = d; args = (Nolabel, lhs) :: args; partial};
+          Pexp_apply
+            {funct = d; args = (Nolabel, lhs) :: args; partial; transformed_jsx};
         pexp_loc;
         pexp_attributes;
       }
@@ -284,6 +286,7 @@ let rec exprToContextPathInner ~(inJsxContext : bool) (e : Parsetree.expression)
             (_, lhs); (_, {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes});
           ];
         partial;
+        transformed_jsx;
       } ->
     (* Transform away pipe with identifier *)
     exprToContextPath ~inJsxContext
@@ -294,6 +297,7 @@ let rec exprToContextPathInner ~(inJsxContext : bool) (e : Parsetree.expression)
               funct = {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes};
               args = [(Nolabel, lhs)];
               partial;
+              transformed_jsx;
             };
         pexp_loc;
         pexp_attributes;
