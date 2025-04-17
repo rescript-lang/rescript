@@ -1,37 +1,45 @@
 // @ts-check
 
-import * as path from "node:path";
+import * as fs from "node:fs";
 
 /**
- * For compatibility reasons, if the architecture is x64, omit it from the bin directory name.
- * So we'll have "darwin", "linux" and "win32" for x64 arch,
- * but "darwinarm64" and "linuxarm64" for arm64 arch.
- * Also, we do not have Windows ARM binaries yet. But the x64 binaries do work on Windows 11 ARM.
- * So omit the architecture for Windows, too.
+ * @import {BinaryPaths} from "@rescript/linux-x64"
+ * @typedef {import("@rescript/linux-x64")} BinaryModuleExports
  */
-export const platformName =
-  process.arch === "x64" || process.platform === "win32"
-    ? process.platform
-    : process.platform + process.arch;
 
-export const platformDir = path.resolve(
-  import.meta.dirname,
-  "..",
-  "..",
-  platformName,
-);
+const target = `${process.platform}-${process.arch}`;
 
-export const bsc_exe = path.join(platformDir, "bsc.exe");
+/** @type {BinaryModuleExports} */
+let mod;
+try {
+  mod = await import(`@rescript/${target}`);
+} catch {
+  throw new Error(`Platform ${target} is not supported!`);
+}
 
-export const ninja_exe = path.join(platformDir, "ninja.exe");
+const binPaths = mod.binPaths;
+// Compiler use symbolic links in the development process
+if (fs.lstatSync(binPaths.rescript_exe).isSymbolicLink()) {
+  for (const [key, binPath] of Object.entries(binPaths)) {
+    try {
+      binPaths[/** @type {keyof BinaryPaths} */ (key)] =
+        fs.realpathSync(binPath);
+    } catch {
+      // Cannot populate the realpath of a binary, some tests may fails.
+      //
+      // But we don't report error here,
+      // so pass even some binaries are not built yet.
+    }
+  }
+}
 
-export const rescript_exe = path.join(platformDir, "rescript.exe");
-
-export const rescript_tools_exe = path.join(platformDir, "rescript-tools.exe");
-
-export const rescript_editor_analysis_exe = path.join(
-  platformDir,
-  "rescript-editor-analysis.exe",
-);
-
-export const rewatch_exe = path.join(platformDir, "rewatch.exe");
+export const platformDir = mod.binDir;
+export const {
+  bsb_helper_exe,
+  bsc_exe,
+  ninja_exe,
+  rescript_editor_analysis_exe,
+  rescript_tools_exe,
+  rescript_exe,
+  rewatch_exe,
+} = binPaths;

@@ -1,0 +1,38 @@
+{
+  "name": "@rescript/linux-arm64",
+  "version": "12.0.0-alpha.13",
+  "description": "ReScript binaries for Linux ARM64",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rescript-lang/rescript-compiler.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "executableFiles": [
+      "./bin/bsb_helper.exe",
+      "./bin/bsc.exe",
+      "./bin/ninja.exe",
+      "./bin/rescript.exe",
+      "./bin/rescript-editor-analysis.exe",
+      "./bin/rescript-tools.exe",
+      "./bin/rewatch.exe"
+    ]
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "files": [
+    "bin.js",
+    "bin.d.ts",
+    "bin/"
+  ],
+  "exports": "./bin.js",
+  "preferUnplugged": true
+}

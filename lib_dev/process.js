@@ -1,4 +1,5 @@
 import * as child_process from "node:child_process";
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { bsc_exe, rescript_exe } from "#cli/bins";
 
@@ -203,8 +204,9 @@ export function setup(cwd = process.cwd()) {
      * @param {ExecOptions} [options]
      * @return {Promise<ExecResult>}
      */
-    execBin(bin, args = [], options = {}) {
-      return exec(bin, args, options);
+    async execBin(bin, args = [], options = {}) {
+      const realPath = await fs.realpath(bin);
+      return exec(realPath, args, options);
     },
   };
 }
