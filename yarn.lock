@@ -388,7 +388,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rescript/darwin-arm64@npm:12.0.0-alpha.12, @rescript/darwin-arm64@workspace:packages/@rescript/darwin-arm64":
+"@rescript/darwin-arm64@npm:12.0.0-alpha.13, @rescript/darwin-arm64@workspace:packages/@rescript/darwin-arm64":
   version: 0.0.0-use.local
   resolution: "@rescript/darwin-arm64@workspace:packages/@rescript/darwin-arm64"
   bin:
@@ -402,7 +402,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/darwin-x64@npm:12.0.0-alpha.12, @rescript/darwin-x64@workspace:packages/@rescript/darwin-x64":
+"@rescript/darwin-x64@npm:12.0.0-alpha.13, @rescript/darwin-x64@workspace:packages/@rescript/darwin-x64":
   version: 0.0.0-use.local
   resolution: "@rescript/darwin-x64@workspace:packages/@rescript/darwin-x64"
   bin:
@@ -416,7 +416,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/linux-arm64@npm:12.0.0-alpha.12, @rescript/linux-arm64@workspace:packages/@rescript/linux-arm64":
+"@rescript/linux-arm64@npm:12.0.0-alpha.13, @rescript/linux-arm64@workspace:packages/@rescript/linux-arm64":
   version: 0.0.0-use.local
   resolution: "@rescript/linux-arm64@workspace:packages/@rescript/linux-arm64"
   bin:
@@ -430,7 +430,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/linux-x64@npm:12.0.0-alpha.12, @rescript/linux-x64@workspace:packages/@rescript/linux-x64":
+"@rescript/linux-x64@npm:12.0.0-alpha.13, @rescript/linux-x64@workspace:packages/@rescript/linux-x64":
   version: 0.0.0-use.local
   resolution: "@rescript/linux-x64@workspace:packages/@rescript/linux-x64"
   bin:
@@ -484,7 +484,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/win32-x64@npm:12.0.0-alpha.12, @rescript/win32-x64@workspace:packages/@rescript/win32-x64":
+"@rescript/win32-x64@npm:12.0.0-alpha.13, @rescript/win32-x64@workspace:packages/@rescript/win32-x64":
   version: 0.0.0-use.local
   resolution: "@rescript/win32-x64@workspace:packages/@rescript/win32-x64"
   bin:
@@ -2515,11 +2515,11 @@ __metadata:
   resolution: "rescript@workspace:."
   dependencies:
     "@biomejs/biome": "npm:1.9.4"
-    "@rescript/darwin-arm64": "npm:12.0.0-alpha.12"
-    "@rescript/darwin-x64": "npm:12.0.0-alpha.12"
-    "@rescript/linux-arm64": "npm:12.0.0-alpha.12"
-    "@rescript/linux-x64": "npm:12.0.0-alpha.12"
-    "@rescript/win32-x64": "npm:12.0.0-alpha.12"
+    "@rescript/darwin-arm64": "npm:12.0.0-alpha.13"
+    "@rescript/darwin-x64": "npm:12.0.0-alpha.13"
+    "@rescript/linux-arm64": "npm:12.0.0-alpha.13"
+    "@rescript/linux-x64": "npm:12.0.0-alpha.13"
+    "@rescript/win32-x64": "npm:12.0.0-alpha.13"
     "@types/node": "npm:^20.14.9"
     "@types/semver": "npm:^7.5.8"
     mocha: "npm:10.8.2"
