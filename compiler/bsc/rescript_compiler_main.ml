@@ -185,11 +185,7 @@ let define_variable s =
   | _ -> Bsc_args.bad_arg ("illegal definition: " ^ s)
 
 let print_standard_library () =
-  let ( // ) = Filename.concat in
-  let standard_library =
-    Filename.dirname Sys.executable_name
-    // Filename.parent_dir_name // "lib" // "ocaml"
-  in
+  let standard_library = Config.standard_library in
   print_string standard_library;
   print_newline ();
   exit 0
