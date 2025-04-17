@@ -456,6 +456,7 @@ jobs:
 
       - name: Move artifacts into packages
         run: .github/workflows/moveArtifacts.sh
+        shell: bash
 
       - name: Check artifact list
         run: node ./scripts/npmPack.js
