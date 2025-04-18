@@ -923,6 +923,8 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
        optimize the translation just as Lazy.lazy_from_val would
        do *)
     Lprim (Pmakeblock Blk_lazy_general, [transl_exp e], e.exp_loc)
+  | Texp_jsx_container_element (name, children) ->
+    LJsx_container_element (name, transl_list children)
 
 and transl_list expr_list = List.map transl_exp expr_list
 

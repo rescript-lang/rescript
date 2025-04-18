@@ -253,6 +253,8 @@ let expr sub x =
     | Texp_lazy exp -> Texp_lazy (sub.expr sub exp)
     | Texp_pack mexpr -> Texp_pack (sub.module_expr sub mexpr)
     | Texp_extension_constructor _ as e -> e
+    | Texp_jsx_container_element (name, children) ->
+      Texp_jsx_container_element (name, List.map (sub.expr sub) children)
   in
   {x with exp_extra; exp_desc; exp_env}
 

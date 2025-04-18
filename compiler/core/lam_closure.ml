@@ -137,6 +137,8 @@ let free_variables (export_idents : Set_ident.t) (params : stats Map_ident.t)
     | Lassign (id, e) ->
       used top id;
       iter top e
+    | LJsx_container_element (_, children) ->
+      List.iter (fun child -> iter sink_pos child) children
   in
   iter Lam_var_stats.fresh_env lam;
   !fv

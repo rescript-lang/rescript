@@ -86,6 +86,7 @@ let pass_free_variables (l : Lam.t) : Set_ident.t =
     | Lwhile (e1, e2) ->
       free e1;
       free e2
+    | LJsx_container_element (_, children) -> free_list children
   in
   free l;
   !fv

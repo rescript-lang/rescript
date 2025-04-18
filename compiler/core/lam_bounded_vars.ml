@@ -155,6 +155,8 @@ let rewrite (map : _ Hash_ident.t) (lam : Lam.t) : Lam.t =
       let l2 = aux l2 in
       Lam.while_ l1 l2
     | Lassign (v, l) -> Lam.assign v (aux l)
+    | LJsx_container_element (tag, children) ->
+      Lam.jsx_container_element tag (Ext_list.map children aux)
   in
   aux lam
 

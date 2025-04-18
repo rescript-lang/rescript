@@ -370,6 +370,7 @@ type lambda =
   | Lfor of Ident.t * lambda * lambda * Asttypes.direction_flag * lambda
   | Lassign of Ident.t * lambda
   | Lsend of string * lambda * Location.t
+  | LJsx_container_element of (* name *) string * (* children *) lambda list
 
 and lfunction = {
   params: Ident.t list;
@@ -479,6 +480,8 @@ let make_key e =
     | Lassign (x, e) -> Lassign (x, tr_rec env e)
     | Lsend (m, e1, _loc) -> Lsend (m, tr_rec env e1, Location.none)
     | Lletrec _ | Lfunction _ | Lfor _ | Lwhile _ -> raise_notrace Not_simple
+    | LJsx_container_element (name, children) ->
+      LJsx_container_element (name, List.map (tr_rec env) children)
   and tr_recs env es = List.map (tr_rec env) es
   and tr_sw env sw =
     {
@@ -552,6 +555,7 @@ let iter f = function
     f e3
   | Lassign (_, e) -> f e
   | Lsend (_k, obj, _) -> f obj
+  | LJsx_container_element (_name, children) -> List.iter f children
 
 module IdentSet = Set.Make (Ident)
 
@@ -574,6 +578,7 @@ let free_ids get l =
     | Lvar _ | Lconst _ | Lapply _ | Lprim _ | Lswitch _ | Lstringswitch _
     | Lstaticraise _ | Lifthenelse _ | Lsequence _ | Lwhile _ | Lsend _ ->
       ()
+    | LJsx_container_element (_name, children) -> List.iter free children
   in
   free l;
   !fv
@@ -680,6 +685,8 @@ let subst_lambda s lam =
     | Lfor (v, e1, e2, dir, e3) -> Lfor (v, subst e1, subst e2, dir, subst e3)
     | Lassign (id, e) -> Lassign (id, subst e)
     | Lsend (k, obj, loc) -> Lsend (k, subst obj, loc)
+    | LJsx_container_element (name, children) ->
+      LJsx_container_element (name, List.map subst children)
   and subst_decl (id, exp) = (id, subst exp)
   and subst_case (key, case) = (key, subst case)
   and subst_strcase (key, case) = (key, subst case)

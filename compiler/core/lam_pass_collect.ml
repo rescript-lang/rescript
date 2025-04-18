@@ -157,5 +157,6 @@ let collect_info (meta : Lam_stats.t) (lam : Lam.t) =
       (* Lalias-bound variables are never assigned, so don't increase
          v's refcollect *)
       collect l
+    | LJsx_container_element (_, children) -> List.iter collect children
   in
   collect lam

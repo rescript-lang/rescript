@@ -124,6 +124,8 @@ and expression_desc =
   | Texp_lazy of expression
   | Texp_pack of module_expr
   | Texp_extension_constructor of Longident.t loc * Path.t
+  | Texp_jsx_container_element of
+      (* name *) string * (* children *) expression list
 
 and meth = Tmeth_name of string
 

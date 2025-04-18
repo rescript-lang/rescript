@@ -97,6 +97,7 @@ let count_helper (lam : Lam.t) : collection =
       count l2;
       count l3
     | Lassign (_, l) -> count l
+    | LJsx_container_element (_, children) -> List.iter count children
   and count_default sw =
     match sw.sw_failaction with
     | None -> ()

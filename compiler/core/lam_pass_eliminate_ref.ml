@@ -98,3 +98,5 @@ let rec eliminate_ref id (lam : Lam.t) =
     Lam.for_ v (eliminate_ref id e1) (eliminate_ref id e2) dir
       (eliminate_ref id e3)
   | Lassign (v, e) -> Lam.assign v (eliminate_ref id e)
+  | LJsx_container_element (tag, children) ->
+    Lam.jsx_container_element tag (Ext_list.map children (eliminate_ref id))

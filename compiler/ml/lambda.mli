@@ -339,6 +339,7 @@ type lambda =
   | Lfor of Ident.t * lambda * lambda * direction_flag * lambda
   | Lassign of Ident.t * lambda
   | Lsend of string * lambda * Location.t
+  | LJsx_container_element of (* name *) string * (* children *) lambda list
 
 and lfunction = {
   params: Ident.t list;

@@ -1822,6 +1822,16 @@ let compile output_prefix =
     | Ltrywith (lam, id, catch) ->
       (* generate documentation *)
       compile_trywith lam id catch lambda_cxt
+    | LJsx_container_element (name, children) ->
+      Js_output.make []
+        ~value:
+          {
+            expression_desc =
+              Jsx_container_element
+                (* Not sure how to proceed here *)
+                (name, []);
+            comment = None;
+          }
   in
 
   (compile_recursive_lets, compile_lambda)

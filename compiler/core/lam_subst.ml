@@ -67,6 +67,8 @@ let subst (s : Lam.t Map_ident.t) lam =
     | Lfor (v, e1, e2, dir, e3) ->
       Lam.for_ v (subst_aux e1) (subst_aux e2) dir (subst_aux e3)
     | Lassign (id, e) -> Lam.assign id (subst_aux e)
+    | LJsx_container_element (tag, children) ->
+      Lam.jsx_container_element tag (Ext_list.map children subst_aux)
   and subst_decl (id, exp) = (id, subst_aux exp)
   and subst_case (key, case) = (key, subst_aux case)
   and subst_strcase (key, case) = (key, subst_aux case)

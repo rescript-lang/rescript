@@ -3199,6 +3199,45 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
   | Pexp_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
   | Pexp_await _ -> (* should be handled earlier *) assert false
+  | Pexp_jsx_element
+      (Jsx_container_element
+         {
+           jsx_container_element_tag_name_start = tag_name;
+           jsx_container_element_props = props;
+         }) ->
+    let fields =
+      props
+      |> List.filter_map (function
+           | JSXPropValue (name, _, value) ->
+             Some
+               ( {
+                   txt = Longident.Ldot (Longident.Lident "JsxDOM", name.txt);
+                   loc = name.loc;
+                 },
+                 value,
+                 false )
+           | _ -> None)
+    in
+    let record = Ast_helper.Exp.record fields None in
+    let domProps =
+      Path.Pdot (Path.Pident (Ident.create "JsxDOM"), "domProps", 0)
+    in
+    let jsx_dom_type_expected = Ctype.newconstr domProps [] in
+    let element_type =
+      let path = Path.Pdot (Path.Pident (Ident.create "Jsx"), "element", 0) in
+      Ctype.newconstr path []
+    in
+    let _typed_record = type_expect_ env record jsx_dom_type_expected in
+    {
+      exp_desc =
+        Texp_jsx_container_element
+          (tag_name.txt |> Longident.flatten |> String.concat ".", []);
+      exp_loc = loc;
+      exp_extra = [];
+      exp_type = element_type;
+      exp_attributes = sexp.pexp_attributes;
+      exp_env = env;
+    }
   | Pexp_jsx_element _ ->
     failwith "Pexp_jsx_element is expected to be transformed at this point"
 

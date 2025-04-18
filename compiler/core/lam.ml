@@ -102,6 +102,7 @@ module Types = struct
     | Lwhile of t * t
     | Lfor of ident * t * t * Asttypes.direction_flag * t
     | Lassign of ident * t
+    | LJsx_container_element of (* name *) string * (* children *) t list
   (* | Lsend of Lam_compat.meth_kind * t * t * t list * Location.t *)
 end
 
@@ -149,6 +150,7 @@ module X = struct
     | Lwhile of t * t
     | Lfor of ident * t * t * Asttypes.direction_flag * t
     | Lassign of ident * t
+    | LJsx_container_element of (* name *) string * (* children *) t list
   (* | Lsend of Lam_compat.meth_kind * t * t * t list * Location.t *)
 end
 
@@ -239,6 +241,8 @@ let inner_map (l : t) (f : t -> X.t) : X.t =
   | Lassign (id, e) ->
     let e = f e in
     Lassign (id, e)
+  | LJsx_container_element (name, children) ->
+    LJsx_container_element (name, List.map f children)
 (* | Lsend (k, met, obj, args, loc) ->
    let met = f met in
    let obj = f obj in
@@ -392,6 +396,7 @@ let rec eq_approx (l1 : t) (l2 : t) =
   | Lletrec _ | Lswitch _ | Lstaticcatch _ | Ltrywith _
   | Lfor (_, _, _, _, _) ->
     false
+  | LJsx_container_element _ -> false
 
 and eq_option l1 l2 =
   match l1 with
@@ -443,6 +448,9 @@ let var id : t = Lvar id
 let global_module ?(dynamic_import = false) id =
   Lglobal_module (id, dynamic_import)
 let const ct : t = Lconst ct
+
+let jsx_container_element name children : t =
+  LJsx_container_element (name, children)
 
 let function_ ~attr ~arity ~params ~body : t =
   Lfunction {arity; params; body; attr}

@@ -410,6 +410,7 @@ let lambda ppf v =
         lam hi lam body
     | Lassign (id, expr) ->
       fprintf ppf "@[<2>(assign@ %a@ %a)@]" Ident.print id lam expr
+    | LJsx_container_element _ -> fprintf ppf "todo"
   and sequence ppf = function
     | Lsequence (l1, l2) -> fprintf ppf "%a@ %a" sequence l1 sequence l2
     | l -> lam ppf l
