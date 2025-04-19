@@ -39,7 +39,7 @@ type popoverTargetAction = | @as("toggle") Toggle | @as("show") Show | @as("hide
 */
 type domProps = {
   key?: string,
-  children?: Jsx.element,
+  children?: Jsx_common.element,
   ref?: domRef,
   /* accessibility */
   /* https://www.w3.org/TR/wai-aria-1.1/ */
