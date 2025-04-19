@@ -356,6 +356,8 @@ val and_ : ?comment:string -> t -> t -> t
 
 val or_ : ?comment:string -> t -> t -> t
 
+val in_ : t -> t -> t
+
 (** we don't expose a general interface, since a general interface is generally not safe *)
 
 val dummy_obj : ?comment:string -> Lam_tag_info.t -> t

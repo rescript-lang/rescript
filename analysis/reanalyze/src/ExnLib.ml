@@ -52,7 +52,6 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
   in
   let stdlibBigInt = [("fromStringExn", [jsExnError])] in
   let stdlibBool = [("fromStringExn", [invalidArgument])] in
-  let stdlibChar = [("fromIntExn", [invalidArgument])] in
   let stdlibError = [("raise", [jsExnError])] in
   let stdlibExn =
     [
@@ -143,7 +142,6 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
     ("Belt_SetString", beltSet);
     ("BigInt", stdlibBigInt);
     ("Bool", stdlibBool);
-    ("Char", stdlibChar);
     ("Error", stdlibError);
     ("Exn", stdlibExn);
     ("Js.Json", [("parseExn", [jsExnError])]);
@@ -164,8 +162,6 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
     ("Stdlib.BigInt", stdlibBigInt);
     ("Stdlib_Bool", stdlibBool);
     ("Stdlib.Bool", stdlibBool);
-    ("Stdlib_Char", stdlibChar);
-    ("Stdlib.Char", stdlibChar);
     ("Stdlib_Error", stdlibError);
     ("Stdlib.Error", stdlibError);
     ("Stdlib_Exn", stdlibExn);

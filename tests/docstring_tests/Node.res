@@ -1,6 +1,6 @@
 module Path = {
-  @module("path") @variadic external join: array<string> => string = "join"
-  @module("path") external dirname: string => string = "dirname"
+  @module("node:path") @variadic external join: array<string> => string = "join"
+  @module("node:path") external dirname: string => string = "dirname"
 }
 
 module Process = {
@@ -9,7 +9,7 @@ module Process = {
 }
 
 module Fs = {
-  @module("fs") external readdirSync: string => array<string> = "readdirSync"
+  @module("node:fs") external readdirSync: string => array<string> = "readdirSync"
   @module("node:fs/promises") external writeFile: (string, string) => promise<unit> = "writeFile"
 }
 
@@ -22,7 +22,7 @@ module ChildProcess = {
   type readable
   type spawnReturns = {stderr: readable, stdout: readable}
   type options = {cwd?: string, env?: Dict.t<string>, timeout?: int}
-  @module("child_process")
+  @module("node:child_process")
   external spawn: (string, array<string>, ~options: options=?) => spawnReturns = "spawn"
 
   @send external on: (readable, string, Buffer.t => unit) => unit = "on"
@@ -32,12 +32,12 @@ module ChildProcess = {
 }
 
 module OS = {
-  @module("os")
+  @module("node:os")
   external cpus: unit => array<{.}> = "cpus"
 }
 
 module URL = {
-  @module("url") external fileURLToPath: string => string = "fileURLToPath"
+  @module("node:url") external fileURLToPath: string => string = "fileURLToPath"
 }
 
 @val @scope(("import", "meta")) external url: string = "url"

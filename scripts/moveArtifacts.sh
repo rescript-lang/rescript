@@ -39,4 +39,3 @@ mv ninja/COPYING ninja.COPYING
 
 check_statically_linked "linux"
 check_statically_linked "linuxarm64"
-

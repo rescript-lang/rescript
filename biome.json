@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.8.3/schema.json",
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -7,10 +7,28 @@
     "useIgnoreFile": true
   },
   "linter": {
-    "enabled": false
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "style": {
+        "useTemplate": "off"
+      },
+      "nursery": {
+        "noCommonJs": "error"
+      },
+      "suspicious": {
+        "noAssignInExpressions": "warn"
+      },
+      "correctness": {
+        "useImportExtensions": "error",
+        "noUndeclaredDependencies": "error",
+        "noUnusedImports": "error",
+        "noUnusedVariables": "warn"
+      }
+    }
   },
   "organizeImports": {
-    "enabled": false
+    "enabled": true
   },
   "formatter": {
     "enabled": true,
@@ -19,24 +37,7 @@
     "indentWidth": 2,
     "lineEnding": "lf",
     "lineWidth": 80,
-    "attributePosition": "auto",
-    "ignore": [
-      ".yarn/**",
-      "tests/build_tests/**",
-      "tests/tests/**",
-      "tests/tools_tests/**",
-      "tests/analysis_tests/**",
-      "tests/docstring_tests/**",
-      "analysis/examples/**",
-      "analysis/reanalyze/examples/**",
-      "lib/**",
-      "ninja/**",
-      "playground/**",
-      "**/*.bs.js",
-      "**/*.res.js",
-      "**/*.gen.ts*",
-      "package.json"
-    ]
+    "attributePosition": "auto"
   },
   "javascript": {
     "formatter": {
@@ -50,5 +51,27 @@
       "quoteStyle": "double",
       "attributePosition": "auto"
     }
+  },
+  "files": {
+    "ignore": [
+      ".yarn/**",
+      "tests/analysis_tests/**/src/**",
+      "tests/build_tests/**/src/**",
+      "tests/docstring_tests/**",
+      "tests/gentype_tests/**",
+      "tests/tests/**/src/**",
+      "tests/tools_tests/**/src/**",
+      "analysis/examples/**/src/**",
+      "lib/es6/**",
+      "lib/js/**",
+      "ninja/**",
+      "packages/**",
+      "playground/**",
+      "*.bs.js",
+      "*.res.js",
+      "*.res.mjs",
+      "*.gen.ts*",
+      "package.json"
+    ]
   }
 }

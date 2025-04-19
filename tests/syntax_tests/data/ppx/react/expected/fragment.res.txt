@@ -1,14 +1,29 @@
 @@jsxConfig({version: 4})
 
 let _ = React.jsx(React.jsxFragment, {})
-let _ = React.jsx(React.jsxFragment, {children: ReactDOM.jsx("div", {})})
+let _ = React.jsx(
+  React.jsxFragment,
+  {
+    children: ReactDOM.jsx("div", {}),
+  },
+)
 let _ = React.jsxs(
   React.jsxFragment,
   {children: React.array([ReactDOM.jsx("div", {}), ReactDOM.jsx("div", {})])},
 )
-let _ = React.jsx(React.jsxFragment, {children: React.jsx(React.jsxFragment, {})})
+let _ = React.jsx(
+  React.jsxFragment,
+  {
+    children: React.jsx(React.jsxFragment, {}),
+  },
+)
 let _ = React.jsx(Z.make, {})
-let _ = React.jsx(Z.make, {children: ReactDOM.jsx("div", {})})
+let _ = React.jsx(
+  Z.make,
+  {
+    children: ReactDOM.jsx("div", {}),
+  },
+)
 let _ = React.jsx(Z.make, {a: "a", children: ReactDOM.jsx("div", {})})
 let _ = React.jsxs(
   Z.make,

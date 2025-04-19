@@ -285,17 +285,17 @@ let all: array<option<'a>> => option<array<'a>>
 let all2: ((option<'a>, option<'b>)) => option<('a, 'b)>
 
 /**
-`all3((o1, o2, o3))`. Like `all()`, but with a fixed size tuple of 2
+`all3((o1, o2, o3))`. Like `all()`, but with a fixed size tuple of 3
 */
 let all3: ((option<'a>, option<'b>, option<'c>)) => option<('a, 'b, 'c)>
 
 /**
-`all4((o1, o2, o3, o4))`. Like `all()`, but with a fixed size tuple of 2
+`all4((o1, o2, o3, o4))`. Like `all()`, but with a fixed size tuple of 4
 */
 let all4: ((option<'a>, option<'b>, option<'c>, option<'d>)) => option<('a, 'b, 'c, 'd)>
 
 /**
-`all5((o1, o2, o3, o4, o5))`. Like `all()`, but with a fixed size tuple of 2
+`all5((o1, o2, o3, o4, o5))`. Like `all()`, but with a fixed size tuple of 5
 */
 let all5: ((option<'a>, option<'b>, option<'c>, option<'d>, option<'e>)) => option<(
   'a,
@@ -306,7 +306,7 @@ let all5: ((option<'a>, option<'b>, option<'c>, option<'d>, option<'e>)) => opti
 )>
 
 /**
-`all6((o1, o2, o3, o4, o5, o6))`. Like `all()`, but with a fixed size tuple of 2
+`all6((o1, o2, o3, o4, o5, o6))`. Like `all()`, but with a fixed size tuple of 6
 */
 let all6: ((option<'a>, option<'b>, option<'c>, option<'d>, option<'e>, option<'f>)) => option<(
   'a,

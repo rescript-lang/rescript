@@ -333,7 +333,9 @@ module App = {
   amount={
     // ->BN.new_("86400")
     // There are 86400 seconds in a day.
-    amount->BN.div(BN.new_("86400"))->BN.toString
+    amount
+    ->BN.div(BN.new_("86400"))
+    ->BN.toString
   }
 />
 
@@ -435,7 +437,7 @@ let x = <C> ...{() => msg->React.string} </C>
 
 let x = <C> ...{array->Array.map(React.string)} </C>
 
-let x = <> {array->Array.map(React.string)} </>
+let x = <> ...{array->Array.map(React.string)} </>
 
 let x = {
   let _ = <div />
@@ -524,4 +526,45 @@ let x =
         ()
       }}
     />
+  </div>
+
+let moo =
+  <div>
+    <p> {React.string("moo")} </p>
+    // c1
+    <p> {React.string("moo")} </p>
+    // c2
+    // c3
+    <p> {React.string("moo")} </p>
+
+    // c4
+
+    <p> {React.string("moo")} </p>
+  </div>
+
+let fragmented_moo =
+  <>
+    <p> {React.string("moo")} </p>
+    // c1
+    <p> {React.string("moo")} </p>
+    // c2
+    // c3
+    <p> {React.string("moo")} </p>
+
+    // c4
+
+    <p> {React.string("moo")} </p>
+  </>
+
+let arrow_with_fragment = el => <>
+  {t(nbsp ++ "(")}
+  el
+  {t(")")}
+</>
+
+let arrow_with_container_tag = el =>
+  <div>
+    {t(nbsp ++ "(")}
+    el
+    {t(")")}
   </div>

@@ -45,6 +45,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
       - name: Restore build cache
         id: build-cache
         uses: actions/cache@v4
@@ -123,11 +128,12 @@ jobs:
       DUNE_PROFILE: release
 
     steps:
-      - name: "Windows: Set git to use LF"
+      - name: "Windows: Set git config"
         if: runner.os == 'Windows'
         run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
+          git config --system core.autocrlf false
+          git config --system core.eol lf
+          git config --system core.longpaths true
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -152,7 +158,7 @@ jobs:
       # matrix.ocaml_compiler may contain commas
       - name: Get OPAM cache key
         shell: bash
-        run: echo "opam_cache_key=opam-env-v7-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('dune-project') }}" | sed 's/,/-/g' >> $GITHUB_ENV
+        run: echo "opam_cache_key=opam-env-v7-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" | sed 's/,/-/g' >> $GITHUB_ENV
 
       - name: Restore OPAM environment
         id: cache-opam-env
@@ -249,7 +255,7 @@ jobs:
         id: compiler-build-state-key
         shell: bash
         run: |
-          echo "value=compiler-build-state-v1-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('dune-project') }}" \
+          echo "value=compiler-build-state-v1-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" \
             | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
 
       - name: Restore compiler build state
@@ -368,51 +374,50 @@ jobs:
         if: matrix.benchmarks
         run: ./_build/install/default/bin/syntax_benchmarks | tee tests/benchmark-output.json
 
-      - name: Restore previous benchmark data
-        if: matrix.benchmarks
-        uses: actions/cache/restore@v4
-        with:
-          path: ./tests/benchmark-cache
-          key: syntax-benchmark-v1
+      # Benchmarking is disabled for now because of inconsistent run times on different runners
+      #
+      # - name: Restore previous benchmark data
+      #   if: matrix.benchmarks
+      #   uses: actions/cache/restore@v4
+      #   with:
+      #     path: ./tests/benchmark-cache
+      #     key: syntax-benchmark-v1
 
-      - name: Create new benchmark data and comment on alert
-        # Do not run for PRs created from other repos as those won't be able to write to the pull request
-        if: ${{ matrix.benchmarks && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.repository.full_name) }}
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Syntax Benchmarks
-          tool: customSmallerIsBetter
-          output-file-path: tests/benchmark-output.json
-          external-data-json-path: ./tests/benchmark-cache/benchmark-data.json
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          alert-threshold: "105%"
-          comment-always: false
-          comment-on-alert: true
+      # - name: Create new benchmark data and comment on alert
+      #   # Do not run for PRs created from other repos as those won't be able to write to the pull request
+      #   if: ${{ matrix.benchmarks && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.repository.full_name) }}
+      #   uses: benchmark-action/github-action-benchmark@v1
+      #   with:
+      #     name: Syntax Benchmarks
+      #     tool: customSmallerIsBetter
+      #     output-file-path: tests/benchmark-output.json
+      #     external-data-json-path: ./tests/benchmark-cache/benchmark-data.json
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     alert-threshold: "105%"
+      #     comment-always: false
+      #     comment-on-alert: true
 
-      - name: Save benchmark data as new baseline
-        if: matrix.benchmarks && github.ref == 'refs/heads/master'
-        uses: actions/cache/save@v4
-        with:
-          path: ./tests/benchmark-cache
-          key: syntax-benchmark-v1
+      # - name: Save benchmark data as new baseline
+      #   if: matrix.benchmarks && github.ref == 'refs/heads/master'
+      #   uses: actions/cache/save@v4
+      #   with:
+      #     path: ./tests/benchmark-cache
+      #     key: syntax-benchmark-v1
 
       - name: Build playground compiler
         if: matrix.build_playground
-        run: |
-          opam exec -- node packages/playground-bundling/scripts/generate_cmijs.js
-          opam exec -- dune build --profile browser
-          cp ./_build/default/compiler/jsoo/jsoo_playground_main.bc.js playground/compiler.js
+        run: opam exec -- make playground playground-cmijs
 
       - name: Test playground compiler
         if: matrix.build_playground
-        run: node playground/playground_test.js
+        run: yarn workspace playground test
 
       - name: Upload playground compiler to CDN
         if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
         env:
           KEYCDN_USER: ${{ secrets.KEYCDN_USER }}
           KEYCDN_PASSWORD: ${{ secrets.KEYCDN_PASSWORD }}
-        run: bash playground/upload_bundle.sh
+        run: yarn workspace playground upload-bundle
 
       - name: "Upload artifacts: binaries"
         if: matrix.upload_binaries
@@ -505,23 +510,36 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      - name: Make test directory
+        id: tmp-dir
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            dir=$(powershell -Command "[System.IO.Path]::GetTempPath() + [System.Guid]::NewGuid().ToString()" | tr -d '\r')
+            mkdir -p "$dir"
+          else
+            dir=$(mktemp -d)
+          fi
+          echo "path=$dir" >> "$GITHUB_OUTPUT"
+          cp -r tests/package_tests/installation_test/* "$dir"
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: npm-packages
-          path: packages/test
+          path: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Install ReScript package
         run: |
           npm i --ignore-scripts --no-audit \
             rescript-${{ needs.package.outputs.rescript_version }}.tgz
         shell: bash
-        working-directory: packages/test
+        working-directory: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Test installation
-        run: npx rescript -h && npx rescript build && cat src/Test.bs.js
+        run: npx rescript -h && npx rescript build && cat src/Test.res.js
         shell: bash
-        working-directory: packages/test
+        working-directory: ${{ steps.tmp-dir.outputs.path }}
 
   publish:
     needs: [package, installationTest]
@@ -556,5 +574,5 @@ jobs:
       - name: Update Website Playground
         env:
           NEXT_REVALIDATE_SECRET_TOKEN: ${{ secrets.NEXT_REVALIDATE_SECRET_TOKEN }}
-        run: ./playground/website_update_playground.sh
+        run: yarn workspace playground revalidate
         shell: bash

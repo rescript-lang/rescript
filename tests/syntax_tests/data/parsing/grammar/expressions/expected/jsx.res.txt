@@ -1,165 +1,106 @@
-let _ = ((div ~children:[] ())[@JSX ])
-let _ = ((div ~children:[] ())[@JSX ])
-let _ = ((div ~className:{js|menu|js} ~children:[] ())[@JSX ])
-let _ = ((div ~className:{js|menu|js} ~children:[] ())[@JSX ])
-let _ = ((div ~className:{js|menu|js} ~children:[] ())[@JSX ])
-let _ = ((div ~className:{js|menu|js} ~children:[] ())[@JSX ])
+let _ = <div></div>
+let _ = <div></div>
+let _ = <div className={js|menu|js}></div>
+let _ = <div className={js|menu|js}></div>
+let _ = <div className={js|menu|js}></div>
+let _ = <div className={js|menu|js}></div>
 let _ =
-  ((div ~className:{js|menu|js}
-      ~onClick:((fun [arity:1]_ -> Js.log {js|click|js})[@res.braces ])
-      ~children:[] ())
-  [@JSX ])
+  <div className={js|menu|js} onClick=((fun [arity:1]_ ->
+                                          Js.log {js|click|js})
+  [@res.braces ])></div>
 let _ =
-  ((div ~className:{js|menu|js}
-      ~onClick:((fun [arity:1]_ -> Js.log {js|click|js})[@res.braces ])
-      ~children:[] ())
-  [@JSX ])
-let _ = ((Navbar.createElement ~children:[] ())[@JSX ])
-let _ = ((Navbar.createElement ~children:[] ())[@JSX ])
-let _ = ((Navbar.createElement ~children:[] ())[@JSX ])
-let _ = ((Navbar.createElement ~className:{js|menu|js} ~children:[] ())
-  [@JSX ])
-let _ = ((Dot.Up.createElement ~children:[] ())[@JSX ])
-let _ = ((Dot.Up.createElement ~children:[] ())[@JSX ])
-let _ = ((Dot.Up.createElement ~children:[] ())[@JSX ])
+  <div className={js|menu|js} onClick=((fun [arity:1]_ ->
+                                          Js.log {js|click|js})
+  [@res.braces ])></div>
+let _ = <Navbar />
+let _ = <Navbar></Navbar>
+let _ = <Navbar></Navbar>
+let _ = <Navbar className={js|menu|js}></Navbar>
+let _ = <Dot.Up />
+let _ = <Dot.Up></Dot.Up>
+let _ = <Dot.Up></Dot.Up>
+let _ = <Dot.Up><Dot.low /></Dot.Up>
+let _ = <Dot.Up><Dot.Up /></Dot.Up>
+let _ = <Dot.Up className={js|menu|js}></Dot.Up>
+let _ = <Dot.low />
+let _ = <Dot.low></Dot.low>
+let _ = <Dot.low></Dot.low>
+let _ = <Dot.low><Dot.Up /></Dot.low>
+let _ = <Dot.low><Dot.low /></Dot.low>
+let _ = <Dot.low className={js|menu|js}></Dot.low>
+let _ = <el punned></el>
+let _ = <el ?punned></el>
+let _ = <el punned />
+let _ = <el ?punned />
+let _ = <el a=?b></el>
+let _ = <el a=?b />
+let _ = <></>
+let _ = <></>
+let _ = <div className={js|menu|js}><div className={js|submenu|js}>sub1</div>
+  <div className={js|submenu|js}>sub2</div></div>
+let _ = <div className={js|menu|js}><div className={js|submenu|js}>sub1</div>
+  <div className={js|submenu|js}>sub2</div></div>
+let _ = <div>child</div>
+let _ = <Foo>(fun [arity:1]a -> 1)</Foo>
+let _ = <Foo><Foo2 /></Foo>
+let _ = <Foo>[|a|]</Foo>
+let _ = <Foo>(1, 2)</Foo>
+let _ = <Foo>(1, 2)</Foo>
+let _ = <div>ident [|1;2;3|] ((call a b)[@res.braces ]) ((x.y).z)</div>
+let _ = <Outer inner=<Inner /> />
+let _ = <div onClick=onClickHandler><>{js|foobar|js}</></div>
 let _ =
-  ((Dot.Up.createElement
-      ~children:[((Dot.low.createElement ~children:[] ())[@JSX ])] ())
-  [@JSX ])
-let _ =
-  ((Dot.Up.createElement
-      ~children:[((Dot.Up.createElement ~children:[] ())[@JSX ])] ())
-  [@JSX ])
-let _ = ((Dot.Up.createElement ~className:{js|menu|js} ~children:[] ())
-  [@JSX ])
-let _ = ((Dot.low.createElement ~children:[] ())[@JSX ])
-let _ = ((Dot.low.createElement ~children:[] ())[@JSX ])
-let _ = ((Dot.low.createElement ~children:[] ())[@JSX ])
-let _ =
-  ((Dot.low.createElement
-      ~children:[((Dot.Up.createElement ~children:[] ())[@JSX ])] ())
-  [@JSX ])
-let _ =
-  ((Dot.low.createElement
-      ~children:[((Dot.low.createElement ~children:[] ())[@JSX ])] ())
-  [@JSX ])
-let _ = ((Dot.low.createElement ~className:{js|menu|js} ~children:[] ())
-  [@JSX ])
-let _ = ((el ~punned ~children:[] ())[@JSX ])
-let _ = ((el ?punned ~children:[] ())[@JSX ])
-let _ = ((el ~punned ~children:[] ())[@JSX ])
-let _ = ((el ?punned ~children:[] ())[@JSX ])
-let _ = ((el ?a:b ~children:[] ())[@JSX ])
-let _ = ((el ?a:b ~children:[] ())[@JSX ])
-let _ = (([])[@JSX ])
-let _ = (([])[@JSX ])
-let _ =
-  ((div ~className:{js|menu|js}
-      ~children:[((div ~className:{js|submenu|js} ~children:[sub1] ())
-                [@JSX ]);
-                ((div ~className:{js|submenu|js} ~children:[sub2] ())
-                [@JSX ])] ())
-  [@JSX ])
-let _ =
-  ((div ~className:{js|menu|js}
-      ~children:[((div ~className:{js|submenu|js} ~children:[sub1] ())
-                [@JSX ]);
-                ((div ~className:{js|submenu|js} ~children:[sub2] ())
-                [@JSX ])] ())
-  [@JSX ])
-let _ = ((div ~children:child ())[@JSX ])
-let _ = ((Foo.createElement ~children:(fun [arity:1]a -> 1) ())[@JSX ])
-let _ =
-  ((Foo.createElement ~children:((Foo2.createElement ~children:[] ())
-      [@JSX ]) ())
-  [@JSX ])
-let _ = ((Foo.createElement ~children:[|a|] ())[@JSX ])
-let _ = ((Foo.createElement ~children:(1, 2) ())[@JSX ])
-let _ = ((Foo.createElement ~children:(1, 2) ())[@JSX ])
-let _ =
-  ((div ~children:[ident; [|1;2;3|]; ((call a b)[@res.braces ]); (x.y).z] ())
-  [@JSX ])
-let _ =
-  ((Outer.createElement ~inner:((Inner.createElement ~children:[] ())
-      [@JSX ]) ~children:[] ())
-  [@JSX ])
-let _ =
-  ((div ~onClick:onClickHandler ~children:[(([{js|foobar|js}])[@JSX ])] ())
-  [@JSX ])
-let _ =
-  ((Window.createElement
-      ~style:{
-               width = 10;
-               height = 10;
-               paddingTop = 10;
-               paddingLeft = 10;
-               paddingRight = 10;
-               paddingBottom = 10
-             } ~children:[] ())
-  [@JSX ])
-let _ = ((OverEager.createElement ~fiber:Metal.fiber ~children:[] ())[@JSX ])
-let arrayOfListOfJsx = [|(([])[@JSX ])|]
-let arrayOfListOfJsx =
-  [|(([((Foo.createElement ~children:[] ())[@JSX ])])[@JSX ])|]
-let arrayOfListOfJsx =
-  [|(([((Foo.createElement ~children:[] ())[@JSX ])])
-    [@JSX ]);(([((Bar.createElement ~children:[] ())[@JSX ])])[@JSX ])|]
-let sameButWithSpaces = [|(([])[@JSX ])|]
-let sameButWithSpaces =
-  [|(([((Foo.createElement ~children:[] ())[@JSX ])])[@JSX ])|]
-let sameButWithSpaces =
-  [|(([((Foo.createElement ~children:[] ())[@JSX ])])
-    [@JSX ]);(([((Bar.createElement ~children:[] ())[@JSX ])])[@JSX ])|]
-let sameButWithSpaces =
-  [|(([((Foo.createElement ~children:[] ())[@JSX ])])
-    [@JSX ]);(([((Bar.createElement ~children:[] ())[@JSX ])])[@JSX ])|]
+  <Window style={
+                  width = 10;
+                  height = 10;
+                  paddingTop = 10;
+                  paddingLeft = 10;
+                  paddingRight = 10;
+                  paddingBottom = 10
+                } />
+let _ = <OverEager fiber=Metal.fiber />
+let arrayOfListOfJsx = [|<></>|]
+let arrayOfListOfJsx = [|<><Foo></Foo></>|]
+let arrayOfListOfJsx = [|<><Foo /></>;<><Bar /></>|]
+let sameButWithSpaces = [|<></>|]
+let sameButWithSpaces = [|<><Foo /></>|]
+let sameButWithSpaces = [|<><Foo /></>;<><Bar /></>|]
+let sameButWithSpaces = [|<><Foo /></>;<><Bar /></>|]
 let arrayOfJsx = [||]
-let arrayOfJsx = [|((Foo.createElement ~children:[] ())[@JSX ])|]
-let arrayOfJsx =
-  [|((Foo.createElement ~children:[] ())
-    [@JSX ]);((Bar.createElement ~children:[] ())[@JSX ])|]
+let arrayOfJsx = [|<Foo></Foo>|]
+let arrayOfJsx = [|<Foo />;<Bar />|]
 let sameButWithSpaces = [||]
-let sameButWithSpaces = [|((Foo.createElement ~children:[] ())[@JSX ])|]
-let sameButWithSpaces =
-  [|((Foo.createElement ~children:[] ())
-    [@JSX ]);((Bar.createElement ~children:[] ())[@JSX ])|]
-let _ = ((a ~children:[] ())[@JSX ]) < ((b ~children:[] ())[@JSX ])
-let _ = ((a ~children:[] ())[@JSX ]) > ((b ~children:[] ())[@JSX ])
-let _ = ((a ~children:[] ())[@JSX ]) < ((b ~children:[] ())[@JSX ])
-let _ = ((a ~children:[] ())[@JSX ]) > ((b ~children:[] ())[@JSX ])
+let sameButWithSpaces = [|<Foo />|]
+let sameButWithSpaces = [|<Foo />;<Bar />|]
+let _ = <a /> < <b />
+let _ = <a /> > <b />
+let _ = <a></a> < <b></b>
+let _ = <a></a> > <b></b>
 let y =
-  ((Routes.createElement ~path:(Routes.stateToPath state) ~isHistorical:true
-      ~onHashChange:((fun [arity:3]_oldPath ->
-                        fun _oldUrl ->
-                          fun newUrl ->
-                            updater
-                              (fun [arity:2]latestComponentBag ->
-                                 fun _ ->
-                                   ((let currentActualPath =
-                                       Routes.hashOfUri newUrl in
-                                     let pathFromState =
-                                       Routes.stateToPath
-                                         latestComponentBag.state in
-                                     ((if currentActualPath == pathFromState
-                                       then None
-                                       else
-                                         dispatchEventless
-                                           (State.UriNavigated
-                                              currentActualPath)
-                                           latestComponentBag ())
-                                       [@res.ternary ]))
-                                   [@res.braces ])) ())[@res.braces ])
-      ~children:[] ())
-  [@JSX ])
+  <Routes path=(Routes.stateToPath state) isHistorical=true onHashChange=((
+  fun [arity:3]_oldPath ->
+    fun _oldUrl ->
+      fun newUrl ->
+        updater
+          (fun [arity:2]latestComponentBag ->
+             fun _ ->
+               ((let currentActualPath = Routes.hashOfUri newUrl in
+                 let pathFromState =
+                   Routes.stateToPath latestComponentBag.state in
+                 ((if currentActualPath == pathFromState
+                   then None
+                   else
+                     dispatchEventless (State.UriNavigated currentActualPath)
+                       latestComponentBag ())
+                   [@res.ternary ]))
+               [@res.braces ])) ())
+  [@res.braces ]) />
 let z =
-  ((div
-      ~style:(ReactDOMRe.Style.make ~width ~height ~color ~backgroundColor
-                ~margin ~padding ~border ~borderColor ~someOtherAttribute ())
-      ~key:(string_of_int 1) ~children:[] ())
-  [@JSX ])
+  <div style=(ReactDOMRe.Style.make ~width ~height ~color ~backgroundColor
+                ~margin ~padding ~border ~borderColor ~someOtherAttribute ()) key=(
+  string_of_int 1) />
 let omega =
-  ((div
-      ~aList:[width;
+  <div aList=[width;
              height;
              color;
              backgroundColor;
@@ -167,339 +108,235 @@ let omega =
              padding;
              border;
              borderColor;
-             someOtherAttribute] ~key:(string_of_int 1) ~children:[] ())
-  [@JSX ])
+             someOtherAttribute] key=(string_of_int 1) />
 let someArray =
-  ((div
-      ~anArray:[|width;height;color;backgroundColor;margin;padding;border;borderColor;someOtherAttribute|]
-      ~key:(string_of_int 1) ~children:[] ())
-  [@JSX ])
+  <div anArray=[|width;height;color;backgroundColor;margin;padding;border;borderColor;someOtherAttribute|] key=(
+  string_of_int 1) />
 let tuples =
-  ((div
-      ~aTuple:(width, height, color, backgroundColor, margin, padding,
-                border, borderColor, someOtherAttribute, definitelyBreakere)
-      ~key:(string_of_int 1) ~children:[] ())
-  [@JSX ])
+  <div aTuple=(width, height, color, backgroundColor, margin, padding,
+                border, borderColor, someOtherAttribute, definitelyBreakere) key=(
+  string_of_int 1) />
 let icon =
-  ((Icon.createElement
-      ~name:((match state.volume with
-              | v when v < 0.1 -> {js|sound-off|js}
-              | v when v < 0.11 -> {js|sound-min|js}
-              | v when v < 0.51 -> {js|sound-med|js}
-              | _ -> {js|sound-max|js})[@res.braces ]) ~children:[] ())
-  [@JSX ])
+  <Icon name=((match state.volume with
+               | v when v < 0.1 -> {js|sound-off|js}
+               | v when v < 0.11 -> {js|sound-min|js}
+               | v when v < 0.51 -> {js|sound-med|js}
+               | _ -> {js|sound-max|js})
+  [@res.braces ]) />
 let _ =
-  ((MessengerSharedPhotosAlbumViewPhotoReact.createElement
-      ?ref:((if foo#bar === baz
-             then Some (foooooooooooooooooooooooo setRefChild)
-             else None)[@res.ternary ]) ~key:(node#legacy_attachment_id)
-      ~children:[] ())
-  [@JSX ])
-let _ = ((Foo.createElement ~bar ~children:[] ())[@JSX ])
-let _ = ((Foo.createElement ?bar ~children:[] ())[@JSX ])
-let _ = ((Foo.createElement ?bar:Baz.bar ~children:[] ())[@JSX ])
-let x = ((div ~children:[] ())[@JSX ])
-let _ = ((div ~asd:1 ~children:[] ())[@JSX ])
-;;foo#bar #= ((bar ~children:[] ())[@JSX ])
-;;foo #= ((bar ~children:[] ())[@JSX ])
-;;foo #= ((bar ~children:[] ())[@JSX ])
-let x = [|((div ~children:[] ())[@JSX ])|]
-let z = ((div ~children:[] ())[@JSX ])
+  <MessengerSharedPhotosAlbumViewPhotoReact ref=?((if foo#bar === baz
+                                                   then
+                                                     Some
+                                                       (foooooooooooooooooooooooo
+                                                          setRefChild)
+                                                   else None)
+  [@res.ternary ]) key=(node#legacy_attachment_id) />
+let _ = <Foo bar />
+let _ = <Foo bar=?bar />
+let _ = <Foo bar=?Baz.bar />
+let x = <div />
+let _ = <div asd=1></div>
+;;foo#bar #= <bar />
+;;foo #= <bar />
+;;foo #= <bar />
+let x = [|<div />|]
+let z = <div />
 let z =
-  (((Button.createElement ~onClick:handleStaleClick ~children:[] ())[@JSX ]),
-    ((Button.createElement ~onClick:handleStaleClick ~children:[] ())
-    [@JSX ]))
-let y = [|((div ~children:[] ())[@JSX ]);((div ~children:[] ())[@JSX ])|]
+  (<Button onClick=handleStaleClick />, <Button onClick=handleStaleClick />)
+let y = [|<div />;<div />|]
 let y =
-  [|((Button.createElement ~onClick:handleStaleClick ~children:[] ())
-    [@JSX ]);((Button.createElement ~onClick:handleStaleClick ~children:[] ())
-    [@JSX ])|]
+  [|<Button onClick=handleStaleClick />;<Button onClick=handleStaleClick />|]
+let _ = <Description term=((<Text text={js|Age|js} />)
+  [@res.braces ])>child</Description>
 let _ =
-  ((Description.createElement
-      ~term:((Text.createElement ~text:{js|Age|js} ~children:[] ())
-      [@res.braces ][@JSX ]) ~children:[child] ())
-  [@JSX ])
+  <Description term=((Text.createElement ~text:{js|Age|js} ~children:[||] ())
+  [@res.braces ])>child</Description>
+let _ = <Description term=((Text.createElement ~text:{js|Age|js} ())
+  [@res.braces ][@JSX ])>child</Description>
 let _ =
-  ((Description.createElement
-      ~term:((Text.createElement ~text:{js|Age|js} ~children:[||] ())
-      [@res.braces ]) ~children:[child] ())
-  [@JSX ])
+  <Description term=((<Text superLongPunnedProp anotherSuperLongOneCrazyLongThingHere text={js|Age|js} />)
+  [@res.braces ])>child</Description>
 let _ =
-  ((Description.createElement
-      ~term:((Text.createElement ~text:{js|Age|js} ())[@res.braces ][@JSX ])
-      ~children:[child] ())
-  [@JSX ])
+  <Foo bar=((<Baz superLongPunnedProp anotherSuperLongOneCrazyLongThingHere />)
+  [@res.braces ]) />
+let _ = <div><span>(str {js|hello|js})</span></div>
+let _ = <description term=((<text text={js|Age|js} />)
+  [@res.braces ])>child</description>
+let _ = <description term=((text ~text:{js|Age|js} ~children:[||] ())
+  [@res.braces ])>child</description>
+let _ = <description term=((text ~text:{js|Age|js} ~children:[||])
+  [@res.braces ][@JSX ])>child</description>
+let _ = <description term=((text ~text:{js|Age|js} ())
+  [@res.braces ][@JSX ])>child</description>
 let _ =
-  ((Description.createElement
-      ~term:((Text.createElement ~superLongPunnedProp
-                ~anotherSuperLongOneCrazyLongThingHere ~text:{js|Age|js}
-                ~children:[] ())[@res.braces ][@JSX ]) ~children:[child] ())
-  [@JSX ])
+  <description term=((<div superLongPunnedProp anotherSuperLongOneCrazyLongThingHere text={js|Age|js} />)
+  [@res.braces ])>child</description>
+let _ = <div onClick=((fun [arity:1]event -> handleChange event)
+  [@res.braces ]) />
 let _ =
-  ((Foo.createElement
-      ~bar:((Baz.createElement ~superLongPunnedProp
-               ~anotherSuperLongOneCrazyLongThingHere ~children:[] ())
-      [@res.braces ][@JSX ]) ~children:[] ())
-  [@JSX ])
+  <div onClick=((fun [arity:1]eventWithLongIdent ->
+                   handleChange eventWithLongIdent)
+  [@res.braces ]) />
 let _ =
-  ((div ~children:[((span ~children:[str {js|hello|js}] ())[@JSX ])] ())
-  [@JSX ])
+  <div onClick=((fun [arity:1]event -> ((Js.log event; handleChange event)
+                   [@res.braces ]))
+  [@res.braces ]) />
 let _ =
-  ((description ~term:((text ~text:{js|Age|js} ~children:[] ())
-      [@res.braces ][@JSX ]) ~children:[child] ())
-  [@JSX ])
+  <StaticDiv onClick=((fun [arity:5]foo ->
+                         fun bar ->
+                           fun baz ->
+                             fun lineBreak ->
+                               fun identifier ->
+                                 ((doStuff foo bar baz;
+                                   bar lineBreak identifier)
+                                 [@res.braces ]))
+  [@res.braces ]) />
+let _ = <AttrDiv onClick=((fun [arity:1]event -> handleChange event)
+  [@res.braces ][@bar ]) />
 let _ =
-  ((description ~term:((text ~text:{js|Age|js} ~children:[||] ())
-      [@res.braces ]) ~children:[child] ())
-  [@JSX ])
+  <AttrDiv onClick=((fun [arity:1]eventLongIdentifier ->
+                       handleChange eventLongIdentifier)
+  [@res.braces ][@bar ]) />
 let _ =
-  ((description ~term:((text ~text:{js|Age|js} ~children:[||])
-      [@res.braces ][@JSX ]) ~children:[child] ())
-  [@JSX ])
+  <StaticDivNamed onClick=((fun [arity:6]~foo ->
+                              fun ~bar ->
+                                fun ~baz ->
+                                  fun ~lineBreak ->
+                                    fun ~identifier ->
+                                      fun () -> bar lineBreak identifier)
+  [@res.braces ]) />
 let _ =
-  ((description ~term:((text ~text:{js|Age|js} ())[@res.braces ][@JSX ])
-      ~children:[child] ())
-  [@JSX ])
+  <div onClick=((fun [arity:1]e -> (((doStuff (); bar foo)
+                   [@res.braces ]) : event))
+  [@res.braces ]) />
 let _ =
-  ((description
-      ~term:((div ~superLongPunnedProp ~anotherSuperLongOneCrazyLongThingHere
-                ~text:{js|Age|js} ~children:[] ())[@res.braces ][@JSX ])
-      ~children:[child] ())
-  [@JSX ])
-let _ =
-  ((div ~onClick:((fun [arity:1]event -> handleChange event)[@res.braces ])
-      ~children:[] ())
-  [@JSX ])
-let _ =
-  ((div
-      ~onClick:((fun [arity:1]eventWithLongIdent ->
-                   handleChange eventWithLongIdent)[@res.braces ])
-      ~children:[] ())
-  [@JSX ])
-let _ =
-  ((div
-      ~onClick:((fun [arity:1]event -> ((Js.log event; handleChange event)
-                   [@res.braces ]))[@res.braces ]) ~children:[] ())
-  [@JSX ])
-let _ =
-  ((StaticDiv.createElement
-      ~onClick:((fun [arity:5]foo ->
-                   fun bar ->
-                     fun baz ->
-                       fun lineBreak ->
-                         fun identifier ->
-                           ((doStuff foo bar baz; bar lineBreak identifier)
-                           [@res.braces ]))[@res.braces ]) ~children:[] ())
-  [@JSX ])
-let _ =
-  ((AttrDiv.createElement
-      ~onClick:((fun [arity:1]event -> handleChange event)
-      [@res.braces ][@bar ]) ~children:[] ())
-  [@JSX ])
-let _ =
-  ((AttrDiv.createElement
-      ~onClick:((fun [arity:1]eventLongIdentifier ->
-                   handleChange eventLongIdentifier)[@res.braces ][@bar ])
-      ~children:[] ())
-  [@JSX ])
-let _ =
-  ((StaticDivNamed.createElement
-      ~onClick:((fun [arity:6]~foo ->
-                   fun ~bar ->
-                     fun ~baz ->
-                       fun ~lineBreak ->
-                         fun ~identifier ->
-                           fun () -> bar lineBreak identifier)[@res.braces ])
-      ~children:[] ())
-  [@JSX ])
-let _ =
-  ((div
-      ~onClick:((fun [arity:1]e -> (((doStuff (); bar foo)
-                   [@res.braces ]) : event))[@res.braces ]) ~children:[] ())
-  [@JSX ])
-let _ =
-  ((div
-      ~onClick:((fun [arity:2]e ->
+  <div onClick=((fun [arity:2]e ->
                    fun e2 -> (((doStuff (); bar foo)[@res.braces ]) : event))
-      [@res.braces ]) ~children:[] ())
-  [@JSX ])
+  [@res.braces ]) />
 let _ =
-  ((div
-      ~onClick:((fun [arity:5]foo ->
+  <div onClick=((fun [arity:5]foo ->
                    fun bar ->
                      fun baz ->
                        fun superLongIdent ->
                          fun breakLine -> (((doStuff (); bar foo)
                            [@res.braces ]) : (event * event2 * event3 *
                                                event4 * event5)))
-      [@res.braces ]) ~children:[] ())
-  [@JSX ])
+  [@res.braces ]) />
 let _ =
-  ((div
-      ~onClick:((fun [arity:5]foo ->
+  <div onClick=((fun [arity:5]foo ->
                    fun bar ->
                      fun baz ->
                        fun superLongIdent ->
                          fun breakLine ->
                            (doStuff () : (event * event2 * event3 * event4 *
-                                           event5)))[@res.braces ])
-      ~children:[] ())
-  [@JSX ])
+                                           event5)))
+  [@res.braces ]) />
 let _ =
-  ((div
-      ~children:[(((match color with
-                    | Black -> ReasonReact.string {js|black|js}
-                    | Red -> ReasonReact.string {js|red|js}))
-                [@res.braces ])] ())
-  [@JSX ])
+  <div>((match color with
+         | Black -> ReasonReact.string {js|black|js}
+         | Red -> ReasonReact.string {js|red|js})
+  [@res.braces ])</div>
 let _ =
-  ((div
-      ~style:((ReactDOMRe.Style.make ~width:{js|20px|js} ~height:{js|20px|js}
+  <div style=((ReactDOMRe.Style.make ~width:{js|20px|js} ~height:{js|20px|js}
                  ~borderRadius:{js|100%|js} ~backgroundColor:{js|red|js})
-      [@res.braces ][@foo ]) ~children:[] ())
-  [@JSX ])
+  [@res.braces ][@foo ]) />
 let _ =
-  ((Animated.createElement ~initialValue:0.0 ~value
-      ~children:((ReactDOMRe.Style.make ~width:{js|20px|js}
-                    ~height:{js|20px|js} ~borderRadius:{js|100%|js}
-                    ~backgroundColor:{js|red|js})[@res.braces ]) ())
-  [@JSX ])
+  <Animated initialValue=0.0 value>((ReactDOMRe.Style.make
+                                       ~width:{js|20px|js}
+                                       ~height:{js|20px|js}
+                                       ~borderRadius:{js|100%|js}
+                                       ~backgroundColor:{js|red|js})
+  [@res.braces ])</Animated>
 let _ =
-  ((Animated.createElement ~initialValue:0.0 ~value
-      ~children:((fun [arity:1]value ->
-                    ((div
-                        ~style:((ReactDOMRe.Style.make ~width:{js|20px|js}
-                                   ~height:{js|20px|js}
-                                   ~borderRadius:{js|100%|js}
-                                   ~backgroundColor:{js|red|js})
-                        [@res.braces ]) ~children:[] ())
-                    [@JSX ]))[@res.braces ]) ())
-  [@JSX ])
+  <Animated initialValue=0.0 value>((fun [arity:1]value ->
+                                       <div style=((ReactDOMRe.Style.make
+                                                      ~width:{js|20px|js}
+                                                      ~height:{js|20px|js}
+                                                      ~borderRadius:{js|100%|js}
+                                                      ~backgroundColor:{js|red|js})
+                                       [@res.braces ]) />)
+  [@res.braces ])</Animated>
 let _ =
-  ((Animated.createElement ~initialValue:0.0 ~value
-      ~children:((fun [arity:1]value ->
-                    (((div
-                         ~style:((ReactDOMRe.Style.make ~width:{js|20px|js}
-                                    ~height:{js|20px|js}
-                                    ~borderRadius:{js|100%|js}
-                                    ~backgroundColor:{js|red|js})
-                         [@res.braces ]) ~children:[] ())
-                    [@JSX ]) : ReasonReact.element))[@res.braces ]) ())
-  [@JSX ])
+  <Animated initialValue=0.0 value>((fun [arity:1]value ->
+                                       (<div style=((ReactDOMRe.Style.make
+                                                       ~width:{js|20px|js}
+                                                       ~height:{js|20px|js}
+                                                       ~borderRadius:{js|100%|js}
+                                                       ~backgroundColor:{js|red|js})
+                                       [@res.braces ]) /> : ReasonReact.element))
+  [@res.braces ])</Animated>
 let _ =
-  ((Animated.createElement ~initialValue:0.0 ~value
-      ~children:((fun [arity:1]value ->
-                    ((div
-                        ~style:((ReactDOMRe.Style.make ~width:{js|20px|js}
-                                   ~height:{js|20px|js}
-                                   ~borderRadius:{js|100%|js}
-                                   ~backgroundColor:{js|red|js})
-                        [@res.braces ]) ~children:[] ())
-                    [@res.braces ][@JSX ]))[@res.braces ][@foo ]) ())
-  [@JSX ])
+  <Animated initialValue=0.0 value>((fun [arity:1]value ->
+                                       ((<div style=((ReactDOMRe.Style.make
+                                                        ~width:{js|20px|js}
+                                                        ~height:{js|20px|js}
+                                                        ~borderRadius:{js|100%|js}
+                                                        ~backgroundColor:{js|red|js})
+                                       [@res.braces ]) />)[@res.braces ]))
+  [@res.braces ][@foo ])</Animated>
 let _ =
-  ((Animated.createElement ~initialValue:0.0 ~value
-      ~children:((fun [arity:1]value ->
-                    ((let width = {js|20px|js} in
-                      let height = {js|20px|js} in
-                      ((div
-                          ~style:((ReactDOMRe.Style.make ~width ~height
-                                     ~borderRadius:{js|100%|js}
-                                     ~backgroundColor:{js|red|js})
-                          [@res.braces ]) ~children:[] ())
-                        [@JSX ]))
-                    [@res.braces ]))[@res.braces ]) ())
-  [@JSX ])
+  <Animated initialValue=0.0 value>((fun [arity:1]value ->
+                                       ((let width = {js|20px|js} in
+                                         let height = {js|20px|js} in
+                                         <div style=((ReactDOMRe.Style.make
+                                                        ~width ~height
+                                                        ~borderRadius:{js|100%|js}
+                                                        ~backgroundColor:{js|red|js})
+                                           [@res.braces ]) />)
+                                       [@res.braces ]))
+  [@res.braces ])</Animated>
+let _ = <div callback=((reduce (fun [arity:1]() -> not state))
+  [@res.braces ]) />
 let _ =
-  ((div ~callback:((reduce (fun [arity:1]() -> not state))[@res.braces ])
-      ~children:[] ())
-  [@JSX ])
+  <button ?id className=((Cn.make [|{js|button|js};{js|is-fullwidth|js}|])
+  [@res.braces ]) onClick>((ste {js|Submit|js})[@res.braces ])</button>
 let _ =
-  ((button ?id ~className:((Cn.make [|{js|button|js};{js|is-fullwidth|js}|])
-      [@res.braces ]) ~onClick
-      ~children:[((ste {js|Submit|js})[@res.braces ])] ())
-  [@JSX ])
+  <button ?id className=((Cn.make [{js|button|js}; {js|is-fullwidth|js}])
+  [@res.braces ]) onClick>((ste {js|Submit|js})[@res.braces ])</button>
 let _ =
-  ((button ?id ~className:((Cn.make [{js|button|js}; {js|is-fullwidth|js}])
-      [@res.braces ]) ~onClick
-      ~children:[((ste {js|Submit|js})[@res.braces ])] ())
-  [@JSX ])
+  <button ?id className=((Cn.make ({js|button|js}, {js|is-fullwidth|js}))
+  [@res.braces ]) onClick>((ste {js|Submit|js})[@res.braces ])</button>
+let _ = <button ?id className=((Cn.make { a = b })
+  [@res.braces ]) onClick>((ste {js|Submit|js})[@res.braces ])</button>
+let _ = <X y=((z -> (Belt.Option.getWithDefault {js||js}))[@res.braces ]) />
+let _ = <div style=((getStyle ())
+  [@res.braces ])>((ReasonReact.string {js|BugTest|js})[@res.braces ])</div>
 let _ =
-  ((button ?id ~className:((Cn.make ({js|button|js}, {js|is-fullwidth|js}))
-      [@res.braces ]) ~onClick
-      ~children:[((ste {js|Submit|js})[@res.braces ])] ())
-  [@JSX ])
+  <div>((let left = limit -> Int.toString in
+         (((((({js||js})[@res.template ]) ++ left)[@res.template ]) ++
+             (({js| characters left|js})[@res.template ]))
+           [@res.template ]) -> React.string)
+  [@res.braces ])</div>
 let _ =
-  ((button ?id ~className:((Cn.make { a = b })[@res.braces ]) ~onClick
-      ~children:[((ste {js|Submit|js})[@res.braces ])] ())
-  [@JSX ])
-let _ =
-  ((X.createElement ~y:((z -> (Belt.Option.getWithDefault {js||js}))
-      [@res.braces ]) ~children:[] ())
-  [@JSX ])
-let _ =
-  ((div ~style:((getStyle ())[@res.braces ])
-      ~children:[((ReasonReact.string {js|BugTest|js})[@res.braces ])] ())
-  [@JSX ])
-let _ =
-  ((div
-      ~children:[(((let left = limit -> Int.toString in
-                    (((((({js||js})[@res.template ]) ++ left)
-                        [@res.template ]) ++ (({js| characters left|js})
-                        [@res.template ]))
-                      [@res.template ]) -> React.string))
-                [@res.braces ])] ())
-  [@JSX ])
-let _ =
-  ((View.createElement ~style:(styles#backgroundImageWrapper)
-      ~children:[(((let uri = {js|/images/header-background.png|js} in
-                    ((Image.createElement ~resizeMode:Contain
-                        ~style:(styles#backgroundImage) ~uri ~children:[] ())
-                      [@JSX ])))
-                [@res.braces ])] ())
-  [@JSX ])
-;;((div
-      ~children:[((ReasonReact.array
-                     (Array.of_list
-                        (List.map
-                           (fun [arity:1]possibleGradeValue ->
-                              ((option
-                                  ~key:((string_of_int possibleGradeValue)
-                                  [@res.braces ])
-                                  ~value:((string_of_int possibleGradeValue)
-                                  [@res.braces ])
-                                  ~children:[((str
-                                                 (string_of_int
-                                                    possibleGradeValue))
-                                            [@res.braces ])] ())
-                              [@JSX ]))
-                           (List.filter
-                              (fun [arity:1]g -> g <= state.maxGrade)
-                              possibleGradeValues))))
-                [@res.braces ])] ())[@JSX ])
-;;((div ~children:[((Js.log (a <= 10))[@res.braces ])] ())[@JSX ])
-;;((div
-      ~children:[((div ~children:[((Js.log (a <= 10))[@res.braces ])] ())
-                [@JSX ])] ())[@JSX ])
-;;((div
-      ~children:[((div ~onClick:((fun [arity:1]_ -> Js.log (a <= 10))
-                     [@res.braces ])
-                     ~children:[((div
-                                    ~children:[((Js.log (a <= 10))
-                                              [@res.braces ])] ())
-                               [@JSX ])] ())
-                [@JSX ])] ())[@JSX ])
-;;((div ~children:element ())[@JSX ])
-;;((div ~children:((fun [arity:1]a -> 1)[@res.braces ]) ())[@JSX ])
-;;((div ~children:((span ~children:[] ())[@JSX ]) ())[@JSX ])
-;;((div ~children:[|a|] ())[@JSX ])
-;;((div ~children:(1, 2) ())[@JSX ])
-;;((div ~children:((array -> f)[@res.braces ]) ())[@JSX ])
-;;(([element])[@JSX ])
-;;(([(((fun [arity:1]a -> 1))[@res.braces ])])[@JSX ])
-;;(([((span ~children:[] ())[@JSX ])])[@JSX ])
-;;(([[|a|]])[@JSX ])
-;;(([(1, 2)])[@JSX ])
-;;(([((array -> f)[@res.braces ])])[@JSX ])
-let _ = ((A.createElement ~x:{js|y|js} ~_spreadProps:str ~children:[] ())
-  [@JSX ])
+  <View style=(styles#backgroundImageWrapper)>((let uri =
+                                                  {js|/images/header-background.png|js} in
+                                                <Image resizeMode=Contain style=(
+                                                  styles#backgroundImage) uri />)
+  [@res.braces ])</View>
+;;<div>((ReasonReact.array
+           (Array.of_list
+              (List.map
+                 (fun [arity:1]possibleGradeValue ->
+                    <option key=((string_of_int possibleGradeValue)
+                    [@res.braces ]) value=((string_of_int possibleGradeValue)
+                    [@res.braces ])>((str (string_of_int possibleGradeValue))
+                    [@res.braces ])</option>)
+                 (List.filter (fun [arity:1]g -> g <= state.maxGrade)
+                    possibleGradeValues))))[@res.braces ])</div>
+;;<div>((Js.log (a <= 10))[@res.braces ])</div>
+;;<div><div>((Js.log (a <= 10))[@res.braces ])</div></div>
+;;<div><div onClick=((fun [arity:1]_ -> Js.log (a <= 10))
+  [@res.braces ])><div>((Js.log (a <= 10))[@res.braces ])</div></div></div>
+;;<div>element</div>
+;;<div>((fun [arity:1]a -> 1)[@res.braces ])</div>
+;;<div><span /></div>
+;;<div>[|a|]</div>
+;;<div>(1, 2)</div>
+;;<div>((array -> f)[@res.braces ])</div>
+;;<>element</>
+;;<>((fun [arity:1]a -> 1)[@res.braces ])</>
+;;<><span /></>
+;;<>[|a|]</>
+;;<>(1, 2)</>
+;;<>((array -> f)[@res.braces ])</>
+let _ = <A x={js|y|js} {...str} />

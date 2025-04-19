@@ -71,3 +71,8 @@ underscoreWithComments(
   },
   _,
 )
+
+let status =
+    json
+    ->optional(field("status", string, _), _)
+    ->Option.mapOr(Status.Active, Status.fromString)

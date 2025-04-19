@@ -72,7 +72,7 @@ playground/stdlib/
 playground/*.cmj
 playground/*.cmi
 playground/.netrc
-playground/compiler.js
+playground/compiler.*js
 
 rewatch/target/
 rewatch/rewatch
@@ -88,3 +88,5 @@ tests/analysis_tests/**/*.bs.js
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+*.tsbuildinfo

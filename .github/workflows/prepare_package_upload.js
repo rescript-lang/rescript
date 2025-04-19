@@ -1,7 +1,10 @@
-const fs = require("fs");
-const os = require("os");
+import * as fs from "node:fs";
+import * as os from "node:os";
 
-const packageSpec = require("rescript/package.json");
+const packageSpec = JSON.parse(
+  fs.readFileSync(new URL("../../package.json", import.meta.url), "utf-8")
+);
+
 const { version } = packageSpec;
 
 const commitHash = process.argv[2] || process.env.GITHUB_SHA;

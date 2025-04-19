@@ -12,7 +12,6 @@
 
 module InstallerDownload =
   struct
-    let make [arity:1]() = ((div ~children:[] ())[@res.braces ][@JSX ])
-      [@@react.component ]
+    let make [arity:1]() = ((<div />)[@res.braces ])[@@react.component ]
   end
 module LicenseList = struct  end

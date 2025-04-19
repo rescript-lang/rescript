@@ -137,6 +137,7 @@ type t =
   | Pmakelist
   (* dict primitives *)
   | Pmakedict
+  | Pdict_has
   (* promise *)
   | Pawait
   (* etc or deprecated *)
@@ -215,7 +216,7 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
   (* List primitives *)
   | Pmakelist
   (* dict primitives *)
-  | Pmakedict
+  | Pmakedict | Pdict_has
   (* promise *)
   | Pawait
   (* etc *)

@@ -47,7 +47,7 @@ let getOutput = buffer =>
   ->Array.join("")
 
 let extractDocFromFile = async file => {
-  let toolsBin = Path.join([Process.cwd(), "cli", "rescript-tools"])
+  let toolsBin = Path.join([Process.cwd(), "cli", "rescript-tools.js"])
 
   let {stdout} = await SpawnAsync.run(~command=toolsBin, ~args=["doc", file])
 

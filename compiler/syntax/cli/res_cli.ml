@@ -26,19 +26,19 @@
 *)
 module Color = struct
   (* use ANSI color codes, see https://en.wikipedia.org/wiki/ANSI_escape_code *)
-  type color =
-    | Black [@live]
+  type[@warning "-37"] color =
+    | Black
     | Red
-    | Green [@live]
+    | Green
     | Yellow
-    | Blue [@live]
+    | Blue
     | Magenta
     | Cyan
-    | White [@live]
+    | White
 
-  type style =
+  type[@warning "-37"] style =
     | FG of color (* foreground *)
-    | BG of color [@live] (* background *)
+    | BG of color (* background *)
     | Bold
     | Reset
     | Dim
@@ -132,7 +132,7 @@ module Color = struct
     let term = try Sys.getenv "TERM" with Not_found -> "" in
     term <> "dumb" && term <> "" && isatty stderr
 
-  type setting = Auto [@live] | Always [@live] | Never [@live]
+  type[@warning "-37"] setting = Auto | Always | Never
 
   let setup =
     let first = ref true in

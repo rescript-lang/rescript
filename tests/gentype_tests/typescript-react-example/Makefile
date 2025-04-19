@@ -1,9 +1,9 @@
 SHELL = /bin/bash
 
 test:
-	npm run lint
+	npm run check
 	npm run build
-	npm run tsc
+	npm run typecheck
 	@git diff --quiet src/ \
 		|| { echo; echo "Please review the Gentype outputs too!"; echo; false; } \
 		|| exit 1

@@ -3,15 +3,8 @@ Hover src/Fragment.res 6:19
 
 Hover src/Fragment.res 9:56
 Nothing at that position. Now trying to use completion.
-posCursor:[9:56] posNoWhite:[9:55] Found expr:[9:10->9:67]
-posCursor:[9:56] posNoWhite:[9:55] Found expr:[9:13->9:67]
-posCursor:[9:56] posNoWhite:[9:55] Found expr:[9:13->9:66]
-JSX <SectionHeader:[9:13->9:26] > _children:9:26
-posCursor:[9:56] posNoWhite:[9:55] Found expr:__ghost__[9:10->9:67]
-Pexp_construct []:__ghost__[9:10->9:67] None
-Completable: Cexpression CTypeAtPos()=[]->variantPayload::::($1)
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-ContextPath CTypeAtPos()
+posCursor:[9:56] posNoWhite:[9:55] Found expr:[9:9->9:70]
+posCursor:[9:56] posNoWhite:[9:55] Found expr:[9:12->9:66]
+JSX <SectionHeader:[9:13->9:26] > _children:9:29
 null
 

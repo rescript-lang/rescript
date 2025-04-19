@@ -292,6 +292,20 @@ module M = struct
 end
 
 module E = struct
+  let map_jsx_children sub = function
+    | JSXChildrenSpreading e -> JSXChildrenSpreading (sub.expr sub e)
+    | JSXChildrenItems xs -> JSXChildrenItems (List.map (sub.expr sub) xs)
+
+  let map_jsx_prop sub = function
+    | JSXPropPunning (optional, name) ->
+      JSXPropPunning (optional, map_loc sub name)
+    | JSXPropValue (name, optional, value) ->
+      JSXPropValue (map_loc sub name, optional, sub.expr sub value)
+    | JSXPropSpreading (loc, e) ->
+      JSXPropSpreading (sub.location sub loc, sub.expr sub e)
+
+  let map_jsx_props sub = List.map (map_jsx_prop sub)
+
   (* Value expressions for the core language *)
 
   let map sub {pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} =
@@ -366,6 +380,32 @@ module E = struct
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
     | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Pexp_await e -> await ~loc ~attrs (sub.expr sub e)
+    | Pexp_jsx_element
+        (Jsx_fragment
+           {
+             jsx_fragment_opening = o;
+             jsx_fragment_children = children;
+             jsx_fragment_closing = c;
+           }) ->
+      jsx_fragment o (map_jsx_children sub children) c
+    | Pexp_jsx_element
+        (Jsx_unary_element
+           {jsx_unary_element_tag_name = name; jsx_unary_element_props = props})
+      ->
+      jsx_unary_element ~loc ~attrs name (map_jsx_props sub props)
+    | Pexp_jsx_element
+        (Jsx_container_element
+           {
+             jsx_container_element_tag_name_start = name;
+             jsx_container_element_opening_tag_end = ote;
+             jsx_container_element_props = props;
+             jsx_container_element_children = children;
+             jsx_container_element_closing_tag = closing_tag;
+           }) ->
+      jsx_container_element ~loc ~attrs name (map_jsx_props sub props) ote
+        (map_jsx_children sub children)
+        closing_tag
 end
 
 module P = struct

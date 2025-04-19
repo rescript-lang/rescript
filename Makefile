@@ -26,7 +26,7 @@ ninja/ninja:
 
 ninja: ninja/ninja
 
-test: lib
+test: build lib
 	node scripts/test.js -all
 
 test-analysis:
@@ -49,9 +49,9 @@ test-gentype:
 test-all: test test-gentype test-analysis test-tools
 
 reanalyze:
-	reanalyze.exe -set-exit-code -all-cmt _build/default/compiler _build/default/tests -exclude-paths compiler/outcome_printer,compiler/ml,compiler/js_parser,compiler/frontend,compiler/ext,compiler/depends,compiler/core,compiler/common,compiler/cmij,compiler/bsb_helper,compiler/bsb
+	reanalyze.exe -set-exit-code -all-cmt _build/default/compiler _build/default/tests -exclude-paths compiler/outcome_printer,compiler/ml,compiler/frontend,compiler/ext,compiler/depends,compiler/core,compiler/common,compiler/cmij,compiler/bsb_helper,compiler/bsb
 
-lib: build
+lib:
 	./scripts/buildRuntime.sh
 	./scripts/prebuilt.js
 
@@ -61,17 +61,17 @@ artifacts: lib
 # Builds the core playground bundle (without the relevant cmijs files for the runtime)
 playground:
 	dune build --profile browser
-	cp ./_build/default/compiler/jsoo/jsoo_playground_main.bc.js playground/compiler.js
+	cp ./_build/default/compiler/jsoo/jsoo_playground_main.bc.js packages/playground/compiler.js
 
 # Creates all the relevant core and third party cmij files to side-load together with the playground bundle
 playground-cmijs: artifacts
-	node packages/playground-bundling/scripts/generate_cmijs.js
+	yarn workspace playground build
 
 # Builds the playground, runs some e2e tests and releases the playground to the
 # CDN (requires KEYCDN_USER and KEYCDN_PASSWORD set in the env variables)
 playground-release: playground playground-cmijs
-	node playground/playground_test.js
-	sh playground/upload_bundle.sh
+	yarn workspace playground test
+	yarn workspace playground upload-bundle
 
 format:
 	bash scripts/format.sh
@@ -86,7 +86,7 @@ clean-rewatch:
 	cargo clean --manifest-path rewatch/Cargo.toml && rm -f rewatch/rewatch
 
 clean:
-	(cd runtime && ../cli/rescript clean)
+	(cd runtime && ../cli/rescript.js clean)
 	dune clean
 
 clean-all: clean clean-gentype clean-rewatch 

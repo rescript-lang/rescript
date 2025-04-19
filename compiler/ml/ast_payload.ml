@@ -147,11 +147,13 @@ let raw_as_string_exp_exn ~(kind : Js_raw_info.raw_kind) ?is_function (x : t) :
       (match kind with
       | Raw_re | Raw_exp ->
         let ((_loc, e) as prog), errors =
-          Parser_flow.parse_expression (Parser_env.init_env None str) false
+          let open Parser_flow in
+          let env = Parser_env.init_env None str in
+          do_parse env Parse.expression false
         in
         (if kind = Raw_re then
            match e with
-           | Literal {value = RegExp _} -> ()
+           | RegExpLiteral _ -> ()
            | _ ->
              Location.raise_errorf ~loc
                "Syntax error: a valid JS regex literal expected");

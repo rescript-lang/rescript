@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/suggest_module_for_missing_identifier_with_spellcheck.res[0m:[2m2:1-7[0m
+
+  1 [2m│[0m let consol = 1
+  [1;31m2[0m [2m│[0m [1;31mconsole[0m.log("Hello")
+  3 [2m│[0m 
+
+  The value console can't be found
+  
+  [1;33mHint: Did you mean consol?[0m
+
+  Or did you mean to use the module [1;33mConsole[0m?

@@ -834,6 +834,9 @@ let rec scan scanner =
       | _ ->
         next scanner;
         Token.Band)
+    | '^' ->
+      next scanner;
+      Token.Caret
     | ':' -> (
       match peek scanner with
       | '=' ->
@@ -883,16 +886,30 @@ let rec scan scanner =
       | _ ->
         next scanner;
         Token.Plus)
-    | '>' -> (
+    | '>' when not (in_diamond_mode scanner) -> (
       match peek scanner with
-      | '=' when not (in_diamond_mode scanner) ->
+      | '=' ->
         next2 scanner;
         Token.GreaterEqual
+      | '>' -> (
+        match peek2 scanner with
+        | '>' ->
+          next3 scanner;
+          Token.RightShiftUnsigned
+        | _ ->
+          next2 scanner;
+          Token.RightShift)
       | _ ->
         next scanner;
         Token.GreaterThan)
+    | '>' ->
+      next scanner;
+      Token.GreaterThan
     | '<' when not (in_jsx_mode scanner) -> (
       match peek scanner with
+      | '<' when not (in_diamond_mode scanner) ->
+        next2 scanner;
+        Token.LeftShift
       | '=' ->
         next2 scanner;
         Token.LessEqual

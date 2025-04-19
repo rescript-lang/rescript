@@ -14,6 +14,7 @@ val functor_type :
   list
   * Parsetree.module_type
 
+val expr_is_await : Parsetree.expression -> bool
 val has_await_attribute : Parsetree.attributes -> bool
 val has_inline_record_definition_attribute : Parsetree.attributes -> bool
 val has_res_pat_variant_spread_attribute : Parsetree.attributes -> bool
@@ -65,6 +66,7 @@ val is_huggable_rhs : Parsetree.expression -> bool
 
 val operator_precedence : string -> int
 
+val not_ghost_operator : string -> Location.t -> bool
 val is_unary_expression : Parsetree.expression -> bool
 val is_binary_operator : string -> bool
 val is_binary_expression : Parsetree.expression -> bool
@@ -88,9 +90,6 @@ val parameters_should_hug : fun_param_kind list -> bool
 val filter_ternary_attributes : Parsetree.attributes -> Parsetree.attributes
 val filter_fragile_match_attributes :
   Parsetree.attributes -> Parsetree.attributes
-
-val is_jsx_expression : Parsetree.expression -> bool
-val has_jsx_attribute : Parsetree.attributes -> bool
 
 val should_indent_binary_expr : Parsetree.expression -> bool
 val should_inline_rhs_binary_expr : Parsetree.expression -> bool
@@ -157,3 +156,10 @@ val is_rewritten_underscore_apply_sugar : Parsetree.expression -> bool
 val is_fun_newtype : Parsetree.expression -> bool
 
 val is_tuple_array : Parsetree.expression -> bool
+
+val get_jsx_prop_loc : Parsetree.jsx_prop -> Warnings.loc
+
+val container_element_closing_tag_loc :
+  Parsetree.jsx_closing_container_tag -> Warnings.loc
+
+val unary_element_closing_token : Warnings.loc -> Warnings.loc

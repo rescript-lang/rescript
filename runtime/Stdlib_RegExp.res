@@ -3,12 +3,12 @@ type t
 module Result = {
   type t = array<option<string>>
   @get_index external fullMatch: (t, @as(0) _) => string = ""
-  @send external matches: (t, @as(1) _) => array<string> = "slice"
+  @send external matches: (t, @as(1) _) => array<option<string>> = "slice"
   @get external index: t => int = "index"
   @get external input: t => string = "input"
 }
 
-@new external fromString: string => t = "RegExp"
+@new external fromString: (string, ~flags: string=?) => t = "RegExp"
 @new external fromStringWithFlags: (string, ~flags: string) => t = "RegExp"
 
 @send external test: (t, string) => bool = "test"

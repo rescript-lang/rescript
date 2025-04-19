@@ -2,7 +2,7 @@ type t = Stdlib_Exn.t
 
 let fromException: exn => option<t> = exn =>
   switch Obj.magic(exn) {
-  | Error(t) => Some(t)
+  | Stdlib_Exn.Error(t) => Some(t)
   | _ => None
   }
 external toException: t => exn = "%identity"

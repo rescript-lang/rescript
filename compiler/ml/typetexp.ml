@@ -841,7 +841,7 @@ let report_error env ppf = function
         Printtyp.reset_and_mark_loops_list [ty; ty'];
         fprintf ppf "@[<hov>Method '%s' has type %a,@ which should be %a@]" l
           Printtyp.type_expr ty Printtyp.type_expr ty')
-  | Unbound_value lid ->
+  | Unbound_value lid -> (
     (* modified *)
     (match lid with
     | Ldot (outer, inner) ->
@@ -850,7 +850,29 @@ let report_error env ppf = function
     | other_ident ->
       Format.fprintf ppf "The value %a can't be found" Printtyp.longident
         other_ident);
-    super_spellcheck ppf Env.fold_values env lid |> ignore
+    let did_spellcheck = super_spellcheck ppf Env.fold_values env lid in
+    (* For cases such as when the user refers to something that's a value with 
+      a lowercase identifier in JS but a module in ReScript.
+      
+      'Console' is a typical example, where JS is `console.log` and ReScript is `Console.log`. *)
+    (* TODO(codemods) Add codemod for refering to the module instead. *)
+    let as_module =
+      match lid with
+      | Lident name -> (
+        try
+          Some
+            (env
+            |> Env.lookup_module ~load:false
+                 (Lident (String.capitalize_ascii name)))
+        with _ -> None)
+      | _ -> None
+    in
+    match as_module with
+    | None -> ()
+    | Some module_path ->
+      Format.fprintf ppf "@,@[<v 2>@,@[%s to use the module @{<info>%a@}?@]@]"
+        (if did_spellcheck then "Or did you mean" else "Maybe you meant")
+        Printtyp.path module_path)
   | Unbound_module lid ->
     (* modified *)
     (match lid with

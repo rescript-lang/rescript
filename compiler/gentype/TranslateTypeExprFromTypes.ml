@@ -8,14 +8,15 @@ let rec remove_option ~(label : Asttypes.Noloc.arg_label)
   | Tconstr (Path.Pident id, [t], _), Optional lbl when Ident.name id = "option"
     ->
     Some (lbl, t)
-  | Tconstr (Pdot (Path.Pident name_space, id, _), [t], _), Optional lbl
-    when Ident.name name_space = "FB" && id = "option" ->
-    Some (lbl, t)
   | Tlink t, _ -> t |> remove_option ~label
   | _ -> None
 
 let rec path_to_list path =
   match path with
+  | Path.Pident id when String.starts_with (Ident.name id) ~prefix:"Stdlib_" ->
+    let name = Ident.name id in
+    let without_stdlib_prefix = String.sub name 7 (String.length name - 7) in
+    [without_stdlib_prefix; "Stdlib"]
   | Path.Pident id -> [id |> Ident.name]
   | Path.Pdot (p, s, _) -> s :: (p |> path_to_list)
   | Path.Papply _ -> []
@@ -75,11 +76,10 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
       }
   in
   match (path |> path_to_list |> List.rev, params_translation) with
-  | (["FB"; "bool"] | ["bool"]), [] -> {dependencies = []; type_ = boolean_t}
-  | (["FB"; "int"] | ["int"]), [] -> {dependencies = []; type_ = number_t}
-  | (["FB"; "float"] | ["float"]), [] -> {dependencies = []; type_ = number_t}
-  | ( ( ["FB"; "string"]
-      | ["string"]
+  | ["bool"], [] -> {dependencies = []; type_ = boolean_t}
+  | ["int"], [] -> {dependencies = []; type_ = number_t}
+  | ["float"], [] -> {dependencies = []; type_ = number_t}
+  | ( ( ["string"]
       | ["String"; "t"]
       | ["Stdlib"; "String"; "t"]
       | ["Js"; ("String" | "String2"); "t"] ),
@@ -118,9 +118,8 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
     }
   | (["Js"; "Re"; "t"] | ["RegExp"; "t"] | ["Stdlib"; "RegExp"; "t"]), [] ->
     {dependencies = []; type_ = regexp_t}
-  | (["FB"; "unit"] | ["unit"]), [] -> {dependencies = []; type_ = unit_t}
-  | ( (["FB"; "array"] | ["array"] | ["Js"; ("Array" | "Array2"); "t"]),
-      [param_translation] ) ->
+  | ["unit"], [] -> {dependencies = []; type_ = unit_t}
+  | (["array"] | ["Js"; ("Array" | "Array2"); "t"]), [param_translation] ->
     {param_translation with type_ = Array (param_translation.type_, Mutable)}
   | ["ImmutableArray"; "t"], [param_translation] ->
     {param_translation with type_ = Array (param_translation.type_, Immutable)}
@@ -220,7 +219,7 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
       | ["Jsx"; "element"] ),
       [] ) ->
     {dependencies = []; type_ = EmitType.type_react_element}
-  | (["FB"; "option"] | ["option"]), [param_translation] ->
+  | ["option"], [param_translation] ->
     {param_translation with type_ = Option param_translation.type_}
   | ( ( ["Js"; "Undefined"; "t"]
       | ["Undefined"; "t"]
@@ -253,6 +252,7 @@ let translate_constr ~config ~params_translation ~(path : Path.t) ~type_env =
   | ( (["Js"; "Dict"; "t"] | ["Dict"; "t"] | ["dict"] | ["Stdlib"; "Dict"; "t"]),
       [param_translation] ) ->
     {param_translation with type_ = Dict param_translation.type_}
+  | ["Stdlib"; "JSON"; "t"], [] -> {dependencies = []; type_ = unknown}
   | _ -> default_case ()
 
 type process_variant = {

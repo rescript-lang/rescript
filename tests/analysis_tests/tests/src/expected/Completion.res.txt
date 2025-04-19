@@ -711,7 +711,7 @@ XXX Not found!
 []
 
 Complete src/Completion.res 59:30
-posCursor:[59:30] posNoWhite:[59:29] Found expr:[59:15->59:30]
+posCursor:[59:30] posNoWhite:[59:29] Found expr:[59:14->59:30]
 JSX <O.Comp:[59:15->59:21] second[59:22->59:28]=...[59:29->59:30]> _children:None
 Completable: Cexpression CJsxPropValue [O, Comp] second=z
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -727,7 +727,7 @@ Path O.Comp.make
   }]
 
 Complete src/Completion.res 62:23
-posCursor:[62:23] posNoWhite:[62:22] Found expr:[62:15->62:23]
+posCursor:[62:23] posNoWhite:[62:22] Found expr:[62:14->62:23]
 JSX <O.Comp:[62:15->62:21] z[62:22->62:23]=...[62:22->62:23]> _children:None
 Completable: Cjsx([O, Comp], z, [z])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -975,7 +975,7 @@ Path Objects.Rec.
 
 Complete src/Completion.res 120:7
 posCursor:[120:7] posNoWhite:[120:6] Found expr:[119:11->123:1]
-posCursor:[120:7] posNoWhite:[120:6] Found expr:[120:5->122:5]
+posCursor:[120:7] posNoWhite:[120:6] Found expr:[120:5->122:8]
 posCursor:[120:7] posNoWhite:[120:6] Found expr:[120:5->120:7]
 Pexp_ident my:[120:5->120:7]
 Completable: Cpath Value[my]
@@ -1015,7 +1015,7 @@ Path Objects.object
   }]
 
 Complete src/Completion.res 151:6
-posCursor:[151:6] posNoWhite:[151:5] Found expr:[151:4->151:6]
+posCursor:[151:6] posNoWhite:[151:5] Found expr:[151:3->151:6]
 JSX <O.:[151:4->151:6] > _children:None
 Completable: Cpath Module[O, ""]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1121,7 +1121,7 @@ Path Lis
   }]
 
 Complete src/Completion.res 169:16
-posCursor:[169:16] posNoWhite:[169:15] Found expr:[169:4->169:16]
+posCursor:[169:16] posNoWhite:[169:15] Found expr:[169:3->169:16]
 JSX <WithChildren:[169:4->169:16] > _children:None
 Completable: Cpath Module[WithChildren]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
@@ -1888,7 +1888,7 @@ Found type for function callback
   }]
 
 Complete src/Completion.res 339:26
-posCursor:[339:26] posNoWhite:[339:25] Found expr:[336:3->349:23]
+posCursor:[339:26] posNoWhite:[339:25] Found expr:[336:2->349:23]
 JSX <div:[336:3->336:6] onClick[337:4->337:11]=...[337:13->349:23]> _children:None
 posCursor:[339:26] posNoWhite:[339:25] Found expr:[337:13->349:23]
 posCursor:[339:26] posNoWhite:[339:25] Found expr:[337:13->341:6]

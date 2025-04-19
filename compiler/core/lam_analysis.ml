@@ -78,7 +78,7 @@ let rec no_side_effects (lam : Lam.t) : bool =
     (* list primitives *)
     | Pmakelist
     (* dict primitives *)
-    | Pmakedict
+    | Pmakedict | Pdict_has
     (* Test if the argument is a block or an immediate integer *)
     | Pisint | Pis_poly_var_block
     (* Test if the (integer) argument is outside an interval *)
