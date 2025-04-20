@@ -27,36 +27,36 @@ module rec Int3: {
 module rec Inta: {
   let a: Lazy.t<int>
 } = {
-  let a = Lazy.from_fun(() => Lazy.force(Intb.a))
+  let a = Lazy.make(() => Lazy.get(Intb.a))
 }
 and Intb: {
   let a: Lazy.t<int>
 } = {
-  let a = Lazy.from_fun(() => Lazy.force(Inta.a) + 1)
+  let a = Lazy.make(() => Lazy.get(Inta.a) + 1)
 }
 
 eq(
   __LOC__,
   -1,
-  try Lazy.force(Intb.a) catch {
+  try Lazy.get(Intb.a) catch {
   | Lazy.Undefined => -1
   },
 )
 
 module A = {
   module rec Inta: {
-    let a: lazy_t<int>
+    let a: Lazy.t<int>
   } = {
-    let a = Lazy.from_fun(() => Lazy.force(Intb.a) + 1)
+    let a = Lazy.make(() => Lazy.get(Intb.a) + 1)
   }
   and Intb: {
-    let a: lazy_t<int>
+    let a: Lazy.t<int>
   } = {
-    let a = Lazy.from_fun(() => 2)
+    let a = Lazy.make(() => 2)
   }
 }
 
-eq(__LOC__, Lazy.force(A.Inta.a), 3)
+eq(__LOC__, Lazy.get(A.Inta.a), 3)
 /* expect raise Undefined_recursive_module */
 eq(
   __LOC__,

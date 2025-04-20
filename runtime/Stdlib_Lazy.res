@@ -1,10 +1,12 @@
-// FIXME:
-//   This exists for compatibility reason.
-//   Move this into Pervasives or Core
-
 type t<'a> = lazy_t<'a>
 
 exception Undefined = Primitive_lazy.Undefined
+
+let make = Primitive_lazy.from_fun
+
+let get = Primitive_lazy.force
+
+let isEvaluated = Primitive_lazy.is_val
 
 let force = Primitive_lazy.force
 

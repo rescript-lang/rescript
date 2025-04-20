@@ -37,6 +37,7 @@
 
 - Improve error message for missing value when the identifier is also the name of a module in scope. https://github.com/rescript-lang/rescript/pull/7384
 - Upgrade Flow parser to 0.267.0. https://github.com/rescript-lang/rescript/pull/7390
+- Move `Lazy` module to Stdlib. https://github.com/rescript-lang/rescript/pull/7399
 
 # 12.0.0-alpha.11
 

@@ -114,7 +114,6 @@ lib/es6/Jsx.js
 lib/es6/JsxDOM.js
 lib/es6/JsxDOMStyle.js
 lib/es6/JsxEvent.js
-lib/es6/Lazy.js
 lib/es6/Obj.js
 lib/es6/Pervasives.js
 lib/es6/Primitive_array.js
@@ -178,6 +177,7 @@ lib/es6/Stdlib_Intl_Segmenter.js
 lib/es6/Stdlib_Intl_Segments.js
 lib/es6/Stdlib_Iterator.js
 lib/es6/Stdlib_JSON.js
+lib/es6/Stdlib_Lazy.js
 lib/es6/Stdlib_List.js
 lib/es6/Stdlib_Map.js
 lib/es6/Stdlib_Math.js
@@ -287,7 +287,6 @@ lib/js/Jsx.js
 lib/js/JsxDOM.js
 lib/js/JsxDOMStyle.js
 lib/js/JsxEvent.js
-lib/js/Lazy.js
 lib/js/Obj.js
 lib/js/Pervasives.js
 lib/js/Primitive_array.js
@@ -351,6 +350,7 @@ lib/js/Stdlib_Intl_Segmenter.js
 lib/js/Stdlib_Intl_Segments.js
 lib/js/Stdlib_Iterator.js
 lib/js/Stdlib_JSON.js
+lib/js/Stdlib_Lazy.js
 lib/js/Stdlib_List.js
 lib/js/Stdlib_Map.js
 lib/js/Stdlib_Math.js
@@ -809,12 +809,6 @@ lib/ocaml/JsxEvent.cmi
 lib/ocaml/JsxEvent.cmj
 lib/ocaml/JsxEvent.cmt
 lib/ocaml/JsxEvent.res
-lib/ocaml/Lazy.cmi
-lib/ocaml/Lazy.cmj
-lib/ocaml/Lazy.cmt
-lib/ocaml/Lazy.cmti
-lib/ocaml/Lazy.res
-lib/ocaml/Lazy.resi
 lib/ocaml/Obj.cmi
 lib/ocaml/Obj.cmj
 lib/ocaml/Obj.cmt
@@ -1109,6 +1103,12 @@ lib/ocaml/Stdlib_JSON.cmt
 lib/ocaml/Stdlib_JSON.cmti
 lib/ocaml/Stdlib_JSON.res
 lib/ocaml/Stdlib_JSON.resi
+lib/ocaml/Stdlib_Lazy.cmi
+lib/ocaml/Stdlib_Lazy.cmj
+lib/ocaml/Stdlib_Lazy.cmt
+lib/ocaml/Stdlib_Lazy.cmti
+lib/ocaml/Stdlib_Lazy.res
+lib/ocaml/Stdlib_Lazy.resi
 lib/ocaml/Stdlib_List.cmi
 lib/ocaml/Stdlib_List.cmj
 lib/ocaml/Stdlib_List.cmt

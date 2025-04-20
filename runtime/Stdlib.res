@@ -13,6 +13,7 @@ module Float = Stdlib_Float
 module Int = Stdlib_Int
 module Intl = Stdlib_Intl
 module JSON = Stdlib_JSON
+module Lazy = Stdlib_Lazy
 module List = Stdlib_List
 module Math = Stdlib_Math
 module Null = Stdlib_Null
