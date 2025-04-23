@@ -524,13 +524,58 @@ and expression_desc cxt ~(level : int) f x : cxt =
          when Ext_list.length_equal el i
        ]}
     *)
-  | Call (e, el, {call_transformed_jsx = Some jsx_element}) ->
-    (* The grand point would be to reconstruct the JSX here *)
-    P.string f "<meh />";
-    cxt
+  | Call (e, el, {call_transformed_jsx = Some jsx_element}) -> (
+    match el with
+    | [
+     _tag;
+     {
+       expression_desc =
+         Caml_block (el, _mutable_flag, _, Lambda.Blk_record {fields});
+     };
+    ] -> (
+      let fields =
+        Ext_list.array_list_filter_map fields el (fun (f, opt) x ->
+            match x.expression_desc with
+            | Undefined _ when opt -> None
+            | _ -> Some (f, x))
+      in
+      match jsx_element with
+      | Parsetree.Jsx_container_element
+          {
+            jsx_container_element_tag_name_start =
+              {txt = Longident.Lident tagName};
+          } ->
+        P.string f (Format.sprintf "<%s" tagName);
+        List.iter
+          (fun (n, x) ->
+            P.space f;
+            P.string f n;
+            P.string f "=";
+            P.string f "{";
+            let _ = expression ~level:0 cxt f x in
+            P.string f "}")
+          fields;
+        P.string f "></";
+        P.string f tagName;
+        P.string f ">";
+        cxt
+      | _ ->
+        expression_desc cxt ~level f
+          (Call
+             ( e,
+               el,
+               {call_transformed_jsx = None; arity = Full; call_info = Call_ml}
+             )))
+    | _ ->
+      expression_desc cxt ~level f
+        (Call
+           ( e,
+             el,
+             {call_transformed_jsx = None; arity = Full; call_info = Call_ml} ))
+    )
   | Call (e, el, info) ->
     Format.fprintf Format.err_formatter "Js_dump Has transformed_jsx %b\n"
-    (Option.is_some info.call_transformed_jsx);
+      (Option.is_some info.call_transformed_jsx);
     P.cond_paren_group f (level > 15) (fun _ ->
         P.group f 0 (fun _ ->
             match (info, el) with
@@ -686,6 +731,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
   | In (prop, obj) ->
     P.cond_paren_group f (level > 12) (fun _ ->
         let cxt = expression ~level:0 cxt f prop in
+        P.string f " in ";
         P.string f " in ";
         expression ~level:0 cxt f obj)
   | Typeof e ->

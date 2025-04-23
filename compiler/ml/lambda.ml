@@ -357,7 +357,7 @@ type lambda =
   | Lfunction of lfunction
   | Llet of let_kind * value_kind * Ident.t * lambda * lambda
   | Lletrec of (Ident.t * lambda) list * lambda
-  | Lprim of primitive * lambda list * Location.t * Parsetree.jsx_element option 
+  | Lprim of primitive * lambda list * Location.t * Parsetree.jsx_element option
   | Lswitch of lambda * lambda_switch * Location.t
   | Lstringswitch of
       lambda * (string * lambda) list * lambda option * Location.t
@@ -624,7 +624,8 @@ let rec transl_normal_path = function
     Lprim
       ( Pfield (pos, Fld_module {name = s}),
         [transl_normal_path p],
-        Location.none , None)
+        Location.none,
+        None )
   | Papply _ -> assert false
 
 (* Translation of identifiers *)

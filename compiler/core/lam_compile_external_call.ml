@@ -267,7 +267,8 @@ let translate_scoped_access scopes obj =
   | [] -> obj
   | x :: xs -> Ext_list.fold_left xs (E.dot obj x) E.dot
 
-let translate_ffi (cxt : Lam_compile_context.t) arg_types
+let translate_ffi ?(transformed_jsx : Parsetree.jsx_element option)
+    (cxt : Lam_compile_context.t) arg_types
     (ffi : External_ffi_types.external_spec) (args : J.expression list)
     ~dynamic_import =
   match ffi with
@@ -290,7 +291,11 @@ let translate_ffi (cxt : Lam_compile_context.t) arg_types
       add_eff eff
         (E.call
            ~info:
-             {arity = Full; call_info = Call_na; call_transformed_jsx = None}
+             {
+               arity = Full;
+               call_info = Call_na;
+               call_transformed_jsx = transformed_jsx;
+             }
            fn args))
   | Js_call
       {
@@ -309,14 +314,22 @@ let translate_ffi (cxt : Lam_compile_context.t) arg_types
       add_eff eff
         (E.call
            ~info:
-             {arity = Full; call_info = Call_na; call_transformed_jsx = None}
+             {
+               arity = Full;
+               call_info = Call_na;
+               call_transformed_jsx = transformed_jsx;
+             }
            fn args)
     else
       let args, eff = assemble_args_no_splice arg_types args in
       add_eff eff
       @@ E.call
            ~info:
-             {arity = Full; call_info = Call_na; call_transformed_jsx = None}
+             {
+               arity = Full;
+               call_info = Call_na;
+               call_transformed_jsx = transformed_jsx;
+             }
            fn args
   | Js_module_as_fn {external_module_name; splice} ->
     let fn = external_var external_module_name ~dynamic_import in
@@ -326,7 +339,11 @@ let translate_ffi (cxt : Lam_compile_context.t) arg_types
       add_eff eff
         (E.call
            ~info:
-             {arity = Full; call_info = Call_na; call_transformed_jsx = None}
+             {
+               arity = Full;
+               call_info = Call_na;
+               call_transformed_jsx = transformed_jsx;
+             }
            fn args)
     else
       let args, eff = assemble_args_no_splice arg_types args in
@@ -334,7 +351,11 @@ let translate_ffi (cxt : Lam_compile_context.t) arg_types
       add_eff eff
         (E.call
            ~info:
-             {arity = Full; call_info = Call_na; call_transformed_jsx = None}
+             {
+               arity = Full;
+               call_info = Call_na;
+               call_transformed_jsx = transformed_jsx;
+             }
            fn args)
   | Js_new {external_module_name = module_name; name = fn; splice; scopes} ->
     (* handle [@@new]*)
@@ -383,7 +404,11 @@ let translate_ffi (cxt : Lam_compile_context.t) arg_types
           (let self = translate_scoped_access js_send_scopes self in
            E.call
              ~info:
-               {arity = Full; call_info = Call_na; call_transformed_jsx = None}
+               {
+                 arity = Full;
+                 call_info = Call_na;
+                 call_transformed_jsx = transformed_jsx;
+               }
              (E.dot self name) args)
       else
         let args, eff = assemble_args_no_splice arg_types args in
@@ -391,7 +416,11 @@ let translate_ffi (cxt : Lam_compile_context.t) arg_types
           (let self = translate_scoped_access js_send_scopes self in
            E.call
              ~info:
-               {arity = Full; call_info = Call_na; call_transformed_jsx = None}
+               {
+                 arity = Full;
+                 call_info = Call_na;
+                 call_transformed_jsx = transformed_jsx;
+               }
              (E.dot self name) args)
     | _ -> assert false)
   | Js_module_as_var module_name -> external_var module_name ~dynamic_import
@@ -408,7 +437,12 @@ let translate_ffi (cxt : Lam_compile_context.t) arg_types
     if args = [] then e
     else
       E.call
-        ~info:{arity = Full; call_info = Call_na; call_transformed_jsx = None}
+        ~info:
+          {
+            arity = Full;
+            call_info = Call_na;
+            call_transformed_jsx = transformed_jsx;
+          }
         e args
   | Js_module_as_class module_name ->
     let fn = external_var module_name ~dynamic_import in

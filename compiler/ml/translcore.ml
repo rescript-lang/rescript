@@ -1233,7 +1233,10 @@ and transl_record loc env fields repres opt_init_expr =
             in
             let slot = transl_extension_path env path in
             Lprim
-              (Pmakeblock (Lambda.blk_record_ext fields mut), slot :: ll, loc, None))
+              ( Pmakeblock (Lambda.blk_record_ext fields mut),
+                slot :: ll,
+                loc,
+                None ))
       in
       match opt_init_expr with
       | None -> lam
@@ -1258,7 +1261,8 @@ and transl_record loc env fields repres opt_init_expr =
             | Record_extension ->
               Psetfield (lbl.lbl_pos + 1, Lambda.fld_record_extension_set lbl)
           in
-          Lsequence (Lprim (upd, [Lvar copy_id; transl_exp expr], loc, None), cont)
+          Lsequence
+            (Lprim (upd, [Lvar copy_id; transl_exp expr], loc, None), cont)
       in
       match opt_init_expr with
       | None -> assert false

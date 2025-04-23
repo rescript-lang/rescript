@@ -65,7 +65,8 @@ let or_list (arg : lam) (hash_names : (int * string) list) =
       Lprim
         ( Pintcomp Ceq,
           [arg; Lconst (Const_pointer (hash, Pt_variant {name}))],
-          Location.none, None )
+          Location.none,
+          None )
     in
     Ext_list.fold_left rest init (fun acc (hash, name) ->
         Lambda.Lprim
@@ -75,9 +76,11 @@ let or_list (arg : lam) (hash_names : (int * string) list) =
               Lprim
                 ( Pintcomp Ceq,
                   [arg; Lconst (Const_pointer (hash, Pt_variant {name}))],
-                  Location.none , None );
+                  Location.none,
+                  None );
             ],
-            Location.none, None ))
+            Location.none,
+            None ))
   | _ -> assert false
 
 let make_test_sequence_variant_constant (fail : lam option) (arg : lam)

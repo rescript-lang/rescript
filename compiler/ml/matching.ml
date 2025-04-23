@@ -1540,7 +1540,8 @@ let make_record_matching loc all_labels def = function
             Lprim
               ( Pfield (lbl.lbl_pos, Lambda.fld_record_inline lbl),
                 [arg],
-                loc, None )
+                loc,
+                None )
           | Record_unboxed _ -> arg
           | Record_extension ->
             Lprim
@@ -1592,7 +1593,10 @@ let make_array_matching p def ctx = function
       if pos >= len then argl
       else
         ( Lprim
-            (Parrayrefu, [arg; Lconst (Const_base (Const_int pos))], p.pat_loc, None),
+            ( Parrayrefu,
+              [arg; Lconst (Const_base (Const_int pos))],
+              p.pat_loc,
+              None ),
           StrictOpt )
         :: make_args (pos + 1)
     in
@@ -1644,7 +1648,8 @@ let make_string_test_sequence loc arg sw d =
       List.fold_right
         (fun (s, lam) k ->
           Lifthenelse
-            ( Lprim (Pstringcomp Cneq, [arg; Lconst (Const_immstring s)], loc, None),
+            ( Lprim
+                (Pstringcomp Cneq, [arg; Lconst (Const_immstring s)], loc, None),
               k,
               lam ))
         sw d)
@@ -1791,7 +1796,8 @@ let make_test_sequence loc fail tst lt_tst arg const_lambda_list =
       cut (List.length const_lambda_list / 2) const_lambda_list
     in
     Lifthenelse
-      ( Lprim (lt_tst, [arg; Lconst (Const_base (fst (List.hd list2)))], loc, None),
+      ( Lprim
+          (lt_tst, [arg; Lconst (Const_base (fst (List.hd list2)))], loc, None),
         make_test_sequence list1,
         make_test_sequence list2 )
   in
@@ -2221,7 +2227,9 @@ let combine_constructor sw_names loc arg ex_pat cstr partial ctx def
             (fun (path, act) rem ->
               let ext = transl_extension_path ex_pat.pat_env path in
               Lifthenelse
-                (Lprim (Pextension_slot_eq, [Lvar tag; ext], loc, None), act, rem))
+                ( Lprim (Pextension_slot_eq, [Lvar tag; ext], loc, None),
+                  act,
+                  rem ))
             extension_cases default
         in
         Llet (Alias, Pgenval, tag, arg, tests)
@@ -2253,7 +2261,11 @@ let combine_constructor sw_names loc arg ex_pat cstr partial ctx def
             if Datarepr.constructor_has_optional_shape cstr then
               Lprim (Pis_not_none, [arg], loc, None)
             else
-              Lprim (Pjscomp Cneq, [arg; Lconst (Const_base (Const_int 0))], loc, None)
+              Lprim
+                ( Pjscomp Cneq,
+                  [arg; Lconst (Const_base (Const_int 0))],
+                  loc,
+                  None )
           in
           Lifthenelse (arg, act2, act1)
         | 2, 0, [(i1, act1); (_, act2)], []
@@ -2840,9 +2852,11 @@ let partial_function loc () =
                        Const_base (Const_int char);
                      ] ));
             ],
-            loc, None );
+            loc,
+            None );
       ],
-      loc, None )
+      loc,
+      None )
 
 let for_function loc repr param pat_act_list partial =
   compile_matching repr (partial_function loc) param pat_act_list partial

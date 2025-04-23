@@ -723,10 +723,12 @@ let result_wrap loc (result_type : External_ffi_types.return_wrapper) result =
     prim ~primitive:Pundefined_to_opt ~args:[result] loc
   | Return_unset | Return_identity -> result
 
-let handle_bs_non_obj_ffi ?transformed_jsx (arg_types : External_arg_spec.params)
+let handle_bs_non_obj_ffi ?transformed_jsx
+    (arg_types : External_arg_spec.params)
     (result_type : External_ffi_types.return_wrapper) ffi args loc prim_name
     ~dynamic_import =
   result_wrap loc result_type
     (prim
-       ~primitive:(Pjs_call {prim_name; arg_types; ffi; dynamic_import; transformed_jsx})
+       ~primitive:
+         (Pjs_call {prim_name; arg_types; ffi; dynamic_import; transformed_jsx})
        ~args loc)

@@ -30,6 +30,7 @@ val ocaml_to_js_eff :
 (** Compile ocaml external function call to JS IR. *)
 
 val translate_ffi :
+  ?transformed_jsx:Parsetree.jsx_element ->
   Lam_compile_context.t ->
   External_arg_spec.params ->
   External_ffi_types.external_spec ->
