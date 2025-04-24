@@ -98,3 +98,4 @@ tests/analysis_tests/**/*.bs.js
 
 # package tarballs
 package.tgz
+*.exe

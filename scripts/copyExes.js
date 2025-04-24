@@ -7,10 +7,8 @@
 import * as child_process from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { platformDir } from "#dev/paths";
+import { binDir } from "#cli/bins";
 import { compilerBinDir, ninjaDir, rewatchDir } from "#dev/paths";
-
-fs.mkdirSync(platformDir, { recursive: true });
 
 /**
  * @param {string} dir
@@ -19,7 +17,7 @@ fs.mkdirSync(platformDir, { recursive: true });
 function copyExe(dir, exe) {
   const ext = process.platform === "win32" ? ".exe" : "";
   const src = path.join(dir, exe + ext);
-  const dest = path.join(platformDir, `${exe}.exe`);
+  const dest = path.join(binDir, `${exe}.exe`);
 
   // For some reason, the copy operation fails in Windows CI if the file already exists.
   if (process.platform === "win32" && fs.existsSync(dest)) {
