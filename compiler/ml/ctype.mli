@@ -37,6 +37,12 @@ type subtype_context =
       right_variant_name: Path.t;
       issue: Variant_coercion.variant_configuration_issue;
     }
+  | Different_type_kinds of {
+      left_typename: Path.t;
+      right_typename: Path.t;
+      left_type_kind: type_kind;
+      right_type_kind: type_kind;
+    }
 
 exception Unify of (type_expr * type_expr) list
 exception Tags of label * label

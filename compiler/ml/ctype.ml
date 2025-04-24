@@ -88,6 +88,12 @@ type subtype_context =
       right_variant_name: Path.t;
       issue: Variant_coercion.variant_configuration_issue;
     }
+  | Different_type_kinds of {
+      left_typename: Path.t;
+      right_typename: Path.t;
+      left_type_kind: type_kind;
+      right_type_kind: type_kind;
+    }
 
 exception
   Subtype of
@@ -3777,6 +3783,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
                            Variant_coercion.variant_representation_matches
                              c1_attributes c2_attributes
                          then
+                           (* TODO(subtype-errors) Inline record coercion check, piggy back on record coercion check *)
                            let violation, tl1, tl2 =
                              Record_coercion.check_record_fields fields1 fields2
                            in
@@ -3810,6 +3817,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
               else (trace, t1, t2, !univar_pairs, None) :: cstrs)
         | ( (_, _, {type_kind = Type_record (fields1, repr1)}),
             (_, _, {type_kind = Type_record (fields2, repr2)}) ) ->
+          (* TODO(subtype-errors) Record representation *)
           let same_repr =
             match (repr1, repr2) with
             | Record_regular, Record_regular ->
@@ -3826,7 +3834,20 @@ let rec subtype_rec env trace t1 t2 cstrs =
             if violation then (trace, t1, t2, !univar_pairs, None) :: cstrs
             else subtype_list env trace tl1 tl2 cstrs
           else (trace, t1, t2, !univar_pairs, None) :: cstrs
-        | _ -> (trace, t1, t2, !univar_pairs, None) :: cstrs
+        | (p1, _, {type_kind = tk1}), (p2, _, {type_kind = tk2}) ->
+          ( trace,
+            t1,
+            t2,
+            !univar_pairs,
+            Some
+              (Different_type_kinds
+                 {
+                   left_typename = p1;
+                   right_typename = p2;
+                   left_type_kind = tk1;
+                   right_type_kind = tk2;
+                 }) )
+          :: cstrs
         | exception Not_found -> (trace, t1, t2, !univar_pairs, None) :: cstrs)
       (* | (_, Tconstr(p2, _, _)) when generic_private_abbrev false env p2 ->
          subtype_rec env trace t1 (expand_abbrev_opt env t2) cstrs *)
