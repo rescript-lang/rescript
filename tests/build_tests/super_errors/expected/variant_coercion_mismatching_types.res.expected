@@ -1,0 +1,14 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/variant_coercion_mismatching_types.res[0m:[2m9:10-15[0m
+
+   7 [2m│[0m let x: x = One(true)
+   8 [2m│[0m 
+   [1;31m9[0m [2m│[0m let y = ([1;31mx :> y[0m)
+  10 [2m│[0m 
+
+  Type x is not a subtype of y 
+
+  The types of [1;33mx[0m and [1;33my[0m are different:
+  - [1;33mx[0m is a variant
+  - [1;33my[0m is a record

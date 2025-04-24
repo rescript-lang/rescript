@@ -1651,9 +1651,9 @@ let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
            (trace false (mis = None) "is not compatible with type")
            tr2 (explanation true mis));
       match ctx with
-      | Some ctx ->
+      | Some ctx -> (
         fprintf ppf "@,@,@[<v 2>";
-        (match ctx with
+        match ctx with
         | Generic {errorCode} -> fprintf ppf "Error: %s" errorCode
         | Primitive_coercion_target_variant_not_unboxed
             {variant_name; primitive} ->
@@ -1684,8 +1684,22 @@ let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
         | Variant_configurations_mismatch
             {left_variant_name; right_variant_name; issue} ->
           print_variant_configuration_issue ppf issue ~left_variant_name
-            ~right_variant_name);
-        fprintf ppf "@]"
+            ~right_variant_name
+        | Different_type_kinds
+            {left_typename; right_typename; left_type_kind; right_type_kind} ->
+          let type_kind_to_string = function
+            | Type_abstract -> "an abstract type"
+            | Type_record _ -> "a record"
+            | Type_variant _ -> "a variant"
+            | Type_open -> "an open type"
+          in
+          fprintf ppf
+            "@ The types of @{<info>%s@} and @{<info>%s@} are different:"
+            (Path.name left_typename) (Path.name right_typename);
+          fprintf ppf "@ - @{<info>%s@} is %s" (Path.name left_typename)
+            (type_kind_to_string left_type_kind);
+          fprintf ppf "@ - @{<info>%s@} is %s" (Path.name right_typename)
+            (type_kind_to_string right_type_kind))
       | None -> ())
 
 let report_ambiguous_type_error ppf env (tp0, tp0') tpl txt1 txt2 txt3 =
