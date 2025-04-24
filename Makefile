@@ -22,9 +22,9 @@ rewatch:
 
 ninja/ninja:
 	./scripts/buildNinjaBinary.js
-	./scripts/copyExes.js --ninja
 
 ninja: ninja/ninja
+	./scripts/copyExes.js --ninja
 
 test: build lib
 	node scripts/test.js -all
