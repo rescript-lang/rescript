@@ -176,6 +176,7 @@ exception VariantConfigurationError of variant_error
 type variant_configuration_issue =
   | Unboxed_config_not_matching of {left_unboxed: bool; right_unboxed: bool}
   | Tag_name_not_matching of {left_tag: string option; right_tag: string option}
+  | Incompatible_constructor_count of {constructor_names: string list}
 
 let variant_configuration_can_be_coerced2 (a1 : Parsetree.attributes)
     (a2 : Parsetree.attributes) =
