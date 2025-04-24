@@ -173,6 +173,37 @@ type variant_error =
 
 exception VariantConfigurationError of variant_error
 
+type variant_configuration_issue =
+  | Unboxed_config_not_matching of {left_unboxed: bool; right_unboxed: bool}
+  | Tag_name_not_matching of {left_tag: string option; right_tag: string option}
+
+let variant_configuration_can_be_coerced2 (a1 : Parsetree.attributes)
+    (a2 : Parsetree.attributes) =
+  let unboxed =
+    match
+      ( Ast_untagged_variants.process_untagged a1,
+        Ast_untagged_variants.process_untagged a2 )
+    with
+    | true, true | false, false -> Ok ()
+    | left, right ->
+      Error
+        (Unboxed_config_not_matching
+           {left_unboxed = left; right_unboxed = right})
+  in
+  let tag =
+    match
+      ( Ast_untagged_variants.process_tag_name a1,
+        Ast_untagged_variants.process_tag_name a2 )
+    with
+    | Some tag1, Some tag2 when tag1 = tag2 -> Ok ()
+    | None, None -> Ok ()
+    | tag1, tag2 ->
+      Error (Tag_name_not_matching {left_tag = tag1; right_tag = tag2})
+  in
+  match (unboxed, tag) with
+  | Ok (), Ok () -> Ok ()
+  | Error e, _ | _, Error e -> Error e
+
 let variant_configuration_can_be_coerced (a1 : Parsetree.attributes)
     (a2 : Parsetree.attributes) =
   let unboxed =

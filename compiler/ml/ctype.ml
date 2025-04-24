@@ -83,6 +83,11 @@ type subtype_context =
       variant_name: Path.t;
       issues: Variant_coercion.variant_runtime_representation_issue list;
     }
+  | Variant_configurations_mismatch of {
+      left_variant_name: Path.t;
+      right_variant_name: Path.t;
+      issue: Variant_coercion.variant_configuration_issue;
+    }
 
 exception
   Subtype of
@@ -3587,7 +3592,9 @@ let rec subtype_rec env trace t1 t2 cstrs =
         when Asttypes.Noloc.same_arg_label l1 l2 ->
         let cstrs = subtype_rec env ((t2, t1) :: trace) t2 t1 cstrs in
         subtype_rec env ((u1, u2) :: trace) u1 u2 cstrs
-      | Ttuple tl1, Ttuple tl2 -> subtype_list env trace tl1 tl2 cstrs
+      | Ttuple tl1, Ttuple tl2 ->
+        (* TODO(subtype-errors) Tuple as context *)
+        subtype_list env trace tl1 tl2 cstrs
       | Tconstr (p1, [], _), Tconstr (p2, [], _) when Path.same p1 p2 -> cstrs
       | Tconstr (p1, _tl1, _abbrev1), _
         when generic_abbrev env p1 && safe_abbrev env t1 ->
@@ -3624,6 +3631,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
         subtype_rec env trace (expand_abbrev_opt env t1) t2 cstrs
       | Tconstr (p1, [], _), Tconstr (p2, [], _)
         when Path.same p1 Predef.path_int && Path.same p2 Predef.path_float ->
+        (* Int can always be coerced to float *)
         cstrs
       | Tconstr (path, [], _), Tconstr (_, [], _)
         when Variant_coercion.can_coerce_primitive path
@@ -3699,15 +3707,23 @@ let rec subtype_rec env trace t1 t2 cstrs =
         match
           (extract_concrete_typedecl env t1, extract_concrete_typedecl env t2)
         with
-        | ( (_, _, {type_kind = Type_variant c1; type_attributes = t1attrs}),
-            (_, _, {type_kind = Type_variant c2; type_attributes = t2attrs}) )
-          ->
-          if
-            Variant_coercion.variant_configuration_can_be_coerced t1attrs
+        | ( (p1, _, {type_kind = Type_variant c1; type_attributes = t1attrs}),
+            (p2, _, {type_kind = Type_variant c2; type_attributes = t2attrs}) )
+          -> (
+          match
+            Variant_coercion.variant_configuration_can_be_coerced2 t1attrs
               t2attrs
-            = false
-          then (trace, t1, t2, !univar_pairs, None) :: cstrs
-          else
+          with
+          | Error issue ->
+            ( trace,
+              t1,
+              t2,
+              !univar_pairs,
+              Some
+                (Variant_configurations_mismatch
+                   {left_variant_name = p1; right_variant_name = p2; issue}) )
+            :: cstrs
+          | Ok () ->
             let c1_len = List.length c1 in
             if c1_len > List.length c2 then
               (trace, t1, t2, !univar_pairs, None) :: cstrs
@@ -3767,7 +3783,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
                          else false
                        | _ -> false)
               then cstrs
-              else (trace, t1, t2, !univar_pairs, None) :: cstrs
+              else (trace, t1, t2, !univar_pairs, None) :: cstrs)
         | ( (_, _, {type_kind = Type_record (fields1, repr1)}),
             (_, _, {type_kind = Type_record (fields2, repr2)}) ) ->
           let same_repr =

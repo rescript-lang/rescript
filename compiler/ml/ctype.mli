@@ -32,6 +32,11 @@ type subtype_context =
       variant_name: Path.t;
       issues: Variant_coercion.variant_runtime_representation_issue list;
     }
+  | Variant_configurations_mismatch of {
+      left_variant_name: Path.t;
+      right_variant_name: Path.t;
+      issue: Variant_coercion.variant_configuration_issue;
+    }
 
 exception Unify of (type_expr * type_expr) list
 exception Tags of label * label
