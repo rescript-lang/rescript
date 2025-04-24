@@ -28,18 +28,6 @@ setVersion("./packages/@rescript/darwin-x64/package.json", version);
 setVersion("./packages/@rescript/darwin-arm64/package.json", version);
 setVersion("./packages/@rescript/win32-x64/package.json", version);
 
-packageSpec.optionalDependencies["@rescript/linux-x64"] = version;
-packageSpec.optionalDependencies["@rescript/linux-arm64"] = version;
-packageSpec.optionalDependencies["@rescript/darwin-x64"] = version;
-packageSpec.optionalDependencies["@rescript/darwin-arm64"] = version;
-packageSpec.optionalDependencies["@rescript/win32-x64"] = version;
-
-fs.writeFileSync(
-  "./package.json",
-  JSON.stringify(packageSpec, null, 2) + "\n",
-  "utf8",
-);
-
 fs.writeFileSync(
   "./compiler/common/bs_version.ml",
   `(* Copyright (C) 2015-2016 Bloomberg Finance L.P.
