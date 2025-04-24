@@ -1525,18 +1525,102 @@ let trace fst keep_last txt ppf tr =
     | _ -> ()
   with exn -> raise exn
 
-let report_subtyping_error ppf env tr1 txt1 tr2 =
+let print_variant_runtime_representation_issue ppf variant_name
+    (issue : Variant_coercion.variant_runtime_representation_issue) =
+  match issue with
+  | Cannot_coerce_non_unboxed_with_payload {constructor_name; expected_typename}
+    ->
+    fprintf ppf
+      "The constructor @{<info>%s@} of variant @{<info>%s@} has a payload, but \
+       the variant itself is not unboxed. @ This means that the constructor \
+       @{<info>%s@} will be encoded as an object at runtime, which is not \
+       compatible with @{<info>%s@}."
+      constructor_name (Path.name variant_name) constructor_name
+      (Path.name expected_typename)
+  | Inline_record_cannot_be_coerced {constructor_name} ->
+    fprintf ppf
+      "The constructor @{<info>%s@} of variant @{<info>%s@} has an inline \
+       record as payload. Inline records cannot be coerced."
+      constructor_name (Path.name variant_name)
+  | As_payload_cannot_be_coerced
+      {constructor_name; as_payload; expected_typename} ->
+    fprintf ppf
+      "The constructor @{<info>%s@} of variant @{<info>%s@} has an \
+       @{<info>@as@} payload that has a runtime representation of \
+       @{<info>%s@}, which is not compatible with the expected of \
+       @{<info>%s@}."
+      constructor_name (Path.name variant_name)
+      (Ast_untagged_variants.tag_type_to_type_string as_payload)
+      (Path.name expected_typename)
+  | Mismatched_unboxed_payload _ -> ()
+  | Mismatched_as_payload {constructor_name; expected_typename; as_payload} ->
+    fprintf ppf "The constructor @{<info>%s@} of variant @{<info>%s@} has "
+      constructor_name (Path.name variant_name);
+    (match as_payload with
+    | None ->
+      fprintf ppf
+        "no @{<info>@as@} payload, which makes it a @{<info>string@} at \
+         runtime."
+    | Some payload ->
+      fprintf ppf
+        "an @{<info>@as@} payload that gives it the runtime type of \
+         @{<info>%s@}."
+        (Ast_untagged_variants.tag_type_to_type_string payload));
+    fprintf ppf
+      "@ That runtime representation is not compatible with the expected \
+       runtime representation of @{<info>%s@}."
+      (Path.name expected_typename);
+    fprintf ppf
+      "@,\
+       @ Fix this by making sure all constructors in variant @{<info>%s@} has \
+       a runtime representation of @{<info>%s@}."
+      (Path.name variant_name)
+      (Path.name expected_typename)
+let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
   wrap_printing_env env (fun () ->
       reset ();
       let tr1 = List.map prepare_expansion tr1
       and tr2 = List.map prepare_expansion tr2 in
       fprintf ppf "@[<v>%a" (trace true (tr2 = []) txt1) tr1;
-      if tr2 = [] then fprintf ppf "@]"
-      else
-        let mis = mismatch tr2 in
-        fprintf ppf "%a%t@]"
-          (trace false (mis = None) "is not compatible with type")
-          tr2 (explanation true mis))
+      (if tr2 = [] then fprintf ppf "@]"
+       else
+         let mis = mismatch tr2 in
+         fprintf ppf "%a%t@]"
+           (trace false (mis = None) "is not compatible with type")
+           tr2 (explanation true mis));
+      match ctx with
+      | Some ctx ->
+        fprintf ppf "@,@,@[<v 2>";
+        (match ctx with
+        | Generic {errorCode} -> fprintf ppf "Error: %s" errorCode
+        | Primitive_coercion_target_variant_not_unboxed
+            {variant_name; primitive} ->
+          fprintf ppf
+            "@ The variant @{<info>%s@} is not unboxed, so it cannot be \
+             coerced to a @{<info>%s@}. @ Fix this by adding the \
+             @{<info>@unboxed@} attribute to the variant @{<info>%s@}."
+            (Path.name variant_name) (Path.name primitive)
+            (Path.name variant_name)
+        | Primitive_coercion_target_variant_no_catch_all
+            {variant_name; primitive} ->
+          fprintf ppf
+            "@ The variant @{<info>%s@} is unboxed, but has no catch-all case \
+             for the primitive @{<info>%s@}, and therefore does not cover all \
+             values of type @{<info>%s@}. @ Fix this by adding a catch-all for \
+             @{<info>%s@} to @{<info>%s@}, like @{<info>%s(%s)@}."
+            (Path.name variant_name) (Path.name primitive) (Path.name primitive)
+            (Path.name variant_name) (Path.name primitive)
+            (String.capitalize_ascii (Path.name primitive))
+            (Path.name primitive)
+        | Variant_constructor_runtime_representation_mismatch
+            {variant_name; issues} ->
+          List.iter
+            (fun issue ->
+              fprintf ppf "@ ";
+              print_variant_runtime_representation_issue ppf variant_name issue)
+            issues);
+        fprintf ppf "@]"
+      | None -> ())
 
 let report_ambiguous_type_error ppf env (tp0, tp0') tpl txt1 txt2 txt3 =
   wrap_printing_env env (fun () ->

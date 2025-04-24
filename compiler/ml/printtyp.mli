@@ -97,6 +97,7 @@ val report_subtyping_error :
   (type_expr * type_expr) list ->
   string ->
   (type_expr * type_expr) list ->
+  Ctype.subtype_context option ->
   unit
 val report_ambiguous_type_error :
   formatter ->

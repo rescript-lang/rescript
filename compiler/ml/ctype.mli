@@ -18,9 +18,28 @@
 open Asttypes
 open Types
 
+type subtype_context =
+  | Generic of {errorCode: string}
+  | Primitive_coercion_target_variant_not_unboxed of {
+      variant_name: Path.t;
+      primitive: Path.t;
+    }
+  | Primitive_coercion_target_variant_no_catch_all of {
+      variant_name: Path.t;
+      primitive: Path.t;
+    }
+  | Variant_constructor_runtime_representation_mismatch of {
+      variant_name: Path.t;
+      issues: Variant_coercion.variant_runtime_representation_issue list;
+    }
+
 exception Unify of (type_expr * type_expr) list
 exception Tags of label * label
-exception Subtype of (type_expr * type_expr) list * (type_expr * type_expr) list
+exception
+  Subtype of
+    (type_expr * type_expr) list
+    * (type_expr * type_expr) list
+    * subtype_context option
 exception Cannot_expand
 exception Cannot_apply
 exception Recursive_abbrev
