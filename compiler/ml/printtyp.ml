@@ -1614,7 +1614,11 @@ let print_variant_configuration_issue ppf
        @{<info>@tag@} configuration, or no @{<info>@tag@} at all."
   | Incompatible_constructor_count {constructor_names} ->
     let total_constructor_count = List.length constructor_names in
-    let constructor_names_to_print = constructor_names |> List.take 3 in
+    let constructor_names_to_print =
+      match constructor_names with
+      | a :: b :: c :: _ -> [a; b; c]
+      | names -> names
+    in
     let not_printed_constructor_count =
       total_constructor_count - List.length constructor_names_to_print
     in
