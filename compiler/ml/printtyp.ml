@@ -1612,6 +1612,31 @@ let print_variant_configuration_issue ppf
       "@,\
        @ Fix this by making sure the variants either have the exact same \
        @{<info>@tag@} configuration, or no @{<info>@tag@} at all."
+  | Incompatible_constructor_count {constructor_names} ->
+    let total_constructor_count = List.length constructor_names in
+    let constructor_names_to_print = constructor_names |> List.take 3 in
+    let not_printed_constructor_count =
+      total_constructor_count - List.length constructor_names_to_print
+    in
+    fprintf ppf
+      "@ @{<info>%s@} has %i constructor%s that @{<info>%s@} does not have: "
+      (Path.name left_variant_name)
+      total_constructor_count
+      (if total_constructor_count = 1 then "" else "s")
+      (Path.name right_variant_name);
+
+    constructor_names_to_print
+    |> List.iteri (fun index name ->
+           if index = 0 then () else fprintf ppf ", ";
+           fprintf ppf "@{<info>%s@}" name);
+    if not_printed_constructor_count > 0 then
+      fprintf ppf " (+%i more)" not_printed_constructor_count;
+
+    fprintf ppf
+      "@ Therefore, it is not possible for @{<info>%s@} to represent \
+       @{<info>%s@}."
+      (Path.name right_variant_name)
+      (Path.name left_variant_name)
 
 let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
   wrap_printing_env env (fun () ->
