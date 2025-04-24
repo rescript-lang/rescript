@@ -1642,6 +1642,51 @@ let print_variant_configuration_issue ppf
       (Path.name right_variant_name)
       (Path.name left_variant_name)
 
+let print_record_field_subtype_violation ppf
+    (issue : Record_coercion.record_field_subtype_violation) ~left_record_name
+    ~right_record_name =
+  match issue with
+  | Optional_mismatch {label; left_optional; right_optional} -> (
+    fprintf ppf "The field @{<info>%s@} " label;
+    match (left_optional, right_optional) with
+    | true, false ->
+      fprintf ppf
+        "is optional in record @{<info>%s@}, but is not optional in record \
+         @{<info>%s@}"
+        (Path.name left_record_name)
+        (Path.name right_record_name)
+    | false, true ->
+      fprintf ppf
+        "is not optional in record @{<info>%s@}, but is optional in record \
+         @{<info>%s@}"
+        (Path.name left_record_name)
+        (Path.name right_record_name)
+    | _ -> failwith "Invalid optional mismatch")
+  | Field_runtime_name_mismatch {label; left_as; right_as} ->
+    fprintf ppf "Field @{<info>%s@} runtime representation" label;
+    (match left_as with
+    | Some as_name ->
+      fprintf ppf
+        " is configured to be @{<info>\"%s\"@} (via the @as attribute)" as_name
+    | None -> fprintf ppf " is @{<info>\"%s\"@}" label);
+    fprintf ppf " in record @{<info>%s@}, but in record @{<info>%s@}"
+      (Path.name right_record_name)
+      (Path.name left_record_name);
+    (match right_as with
+    | Some as_name ->
+      fprintf ppf
+        " it is configured to be @{<info>\"%s\"@} (via the @as attribute)."
+        as_name
+    | None -> fprintf ppf " it is @{<info>\"%s\"@}." label);
+    fprintf ppf " Runtime representations must match."
+  | Field_missing {label} ->
+    fprintf ppf
+      "The field @{<info>%s@} is missing in record @{<info>%s@}, but present \
+       in record @{<info>%s@}"
+      label
+      (Path.name right_record_name)
+      (Path.name left_record_name)
+
 let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
   wrap_printing_env env (fun () ->
       reset ();
@@ -1703,7 +1748,20 @@ let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
           fprintf ppf "@ - @{<info>%s@} is %s" (Path.name left_typename)
             (type_kind_to_string left_type_kind);
           fprintf ppf "@ - @{<info>%s@} is %s" (Path.name right_typename)
-            (type_kind_to_string right_type_kind))
+            (type_kind_to_string right_type_kind)
+        | Record_fields_mismatch {left_record_name; right_record_name; issues}
+          ->
+          fprintf ppf
+            "@ The record @{<info>%s@} cannot be coerced to the record \
+             @{<info>%s@} because:"
+            (Path.name left_record_name)
+            (Path.name right_record_name);
+          List.iter
+            (fun issue ->
+              fprintf ppf "@ - ";
+              print_record_field_subtype_violation ppf issue ~left_record_name
+                ~right_record_name)
+            issues)
       | None -> ())
 
 let report_ambiguous_type_error ppf env (tp0, tp0') tpl txt1 txt2 txt3 =
