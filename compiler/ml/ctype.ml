@@ -3726,7 +3726,31 @@ let rec subtype_rec env trace t1 t2 cstrs =
           | Ok () ->
             let c1_len = List.length c1 in
             if c1_len > List.length c2 then
-              (trace, t1, t2, !univar_pairs, None) :: cstrs
+              let c1_constructor_names =
+                c1 |> List.map (fun c -> c.cd_id.name)
+              in
+              let c2_constructor_names =
+                c2 |> List.map (fun c -> c.cd_id.name)
+              in
+              let incompatible_constructor_names =
+                c1_constructor_names
+                |> List.filter (fun name ->
+                       not (List.mem name c2_constructor_names))
+              in
+              ( trace,
+                t1,
+                t2,
+                !univar_pairs,
+                Some
+                  (Variant_configurations_mismatch
+                     {
+                       left_variant_name = p1;
+                       right_variant_name = p2;
+                       issue =
+                         Incompatible_constructor_count
+                           {constructor_names = incompatible_constructor_names};
+                     }) )
+              :: cstrs
             else
               let constructor_map = Hashtbl.create c1_len in
               c2
