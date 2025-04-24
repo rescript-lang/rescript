@@ -1576,6 +1576,43 @@ let print_variant_runtime_representation_issue ppf variant_name
        a runtime representation of @{<info>%s@}."
       (Path.name variant_name)
       (Path.name expected_typename)
+
+let print_variant_configuration_issue ppf
+    (issue : Variant_coercion.variant_configuration_issue) ~left_variant_name
+    ~right_variant_name =
+  match issue with
+  | Unboxed_config_not_matching {left_unboxed; right_unboxed} ->
+    fprintf ppf
+      "@ The variants have different @{<info>@unboxed@} configurations.";
+    let print_unboxed_status ppf unboxed name =
+      fprintf ppf "@ - Variant @{<info>%s@} is @{<error>%s@}unboxed."
+        (Path.name name)
+        (if unboxed then "not " else "")
+    in
+    print_unboxed_status ppf left_unboxed left_variant_name;
+    print_unboxed_status ppf right_unboxed right_variant_name;
+    fprintf ppf
+      "@,\
+       @ Fix this by making sure the variants either both have, or don't have, \
+       the @{<info>@unboxed@} attribute."
+  | Tag_name_not_matching {left_tag; right_tag} ->
+    fprintf ppf "@ The variants have different @{<info>@tag@} configurations.";
+    let print_tag ppf tag variant_name =
+      match tag with
+      | Some tag ->
+        fprintf ppf "@ - @{<info>%s@} has tag @{<info>%s@}."
+          (Path.name variant_name) tag
+      | None ->
+        fprintf ppf "@ - @{<info>%s@} has no explicit tag."
+          (Path.name variant_name)
+    in
+    print_tag ppf left_tag left_variant_name;
+    print_tag ppf right_tag right_variant_name;
+    fprintf ppf
+      "@,\
+       @ Fix this by making sure the variants either have the exact same \
+       @{<info>@tag@} configuration, or no @{<info>@tag@} at all."
+
 let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
   wrap_printing_env env (fun () ->
       reset ();
@@ -1618,7 +1655,11 @@ let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
             (fun issue ->
               fprintf ppf "@ ";
               print_variant_runtime_representation_issue ppf variant_name issue)
-            issues);
+            issues
+        | Variant_configurations_mismatch
+            {left_variant_name; right_variant_name; issue} ->
+          print_variant_configuration_issue ppf issue ~left_variant_name
+            ~right_variant_name);
         fprintf ppf "@]"
       | None -> ())
 
