@@ -527,64 +527,19 @@ and expression_desc cxt ~(level : int) f x : cxt =
   | Call (e, el, {call_transformed_jsx = Some jsx_element}) -> (
     match el with
     | [
-     _tag;
+     tag;
      {
        expression_desc =
          Caml_block (el, _mutable_flag, _, Lambda.Blk_record {fields});
      };
-    ] -> (
+    ] ->
       let fields =
         Ext_list.array_list_filter_map fields el (fun (f, opt) x ->
             match x.expression_desc with
             | Undefined _ when opt -> None
             | _ -> Some (f, x))
       in
-      match jsx_element with
-      | Parsetree.Jsx_fragment {jsx_fragment_children = children} ->
-        P.string f "<>";
-        (let children =
-           fields
-           |> List.find_map (fun (n, e) ->
-                  if n = "children" then Some e else None)
-         in
-         children
-         |> Option.iter (fun c ->
-                P.string f "{";
-                let _ = expression ~level:1 cxt f c in
-                P.string f "}"));
-        P.string f "</>";
-        cxt
-      | Parsetree.Jsx_unary_element
-          {jsx_unary_element_tag_name = {txt = Longident.Lident tagName}} ->
-        Printf.eprintf "Crazy Tag: %s\n" tagName;
-        P.string f (Format.sprintf "<%s />" tagName);
-        cxt
-      | Parsetree.Jsx_container_element
-          {
-            jsx_container_element_tag_name_start =
-              {txt = Longident.Lident tagName};
-          } ->
-        P.string f (Format.sprintf "<%s" tagName);
-        List.iter
-          (fun (n, x) ->
-            P.space f;
-            P.string f n;
-            P.string f "=";
-            P.string f "{";
-            let _ = expression ~level:0 cxt f x in
-            P.string f "}")
-          fields;
-        P.string f "></";
-        P.string f tagName;
-        P.string f ">";
-        cxt
-      | _ ->
-        expression_desc cxt ~level f
-          (Call
-             ( e,
-               el,
-               {call_transformed_jsx = None; arity = Full; call_info = Call_ml}
-             )))
+      print_jsx cxt ~level f tag fields
     | _ ->
       expression_desc cxt ~level f
         (Call
@@ -1026,6 +981,74 @@ and expression_desc cxt ~(level : int) f x : cxt =
     P.cond_paren_group f (level > 13) (fun _ ->
         P.string f "...";
         expression ~level:13 cxt f e)
+
+(*
+      (* match jsx_element with
+      | Parsetree.Jsx_fragment {jsx_fragment_children = children} ->
+        P.string f "<>";
+        (let children =
+           fields
+           |> List.find_map (fun (n, e) ->
+                  if n = "children" then Some e else None)
+         in
+         children
+         |> Option.iter (fun c ->
+                P.string f "{";
+                let _ = expression ~level:1 cxt f c in
+                P.string f "}"));
+        P.string f "</>";
+        cxt
+      | Parsetree.Jsx_unary_element
+          {jsx_unary_element_tag_name = {txt = Longident.Lident tagName}} ->
+        Printf.eprintf "Crazy Tag: %s\n" tagName;
+        P.string f (Format.sprintf "<%s />" tagName);
+        cxt
+      | Parsetree.Jsx_container_element
+          {
+            jsx_container_element_tag_name_start =
+              {txt = Longident.Lident tagName};
+          } ->
+        P.string f (Format.sprintf "<%s" tagName);
+        List.iter
+          (fun (n, x) ->
+            P.space f;
+            P.string f n;
+            P.string f "=";
+            P.string f "{";
+            let _ = expression ~level:0 cxt f x in
+            P.string f "}")
+          fields;
+        P.string f "></";
+        P.string f tagName;
+        P.string f ">";
+        cxt *)
+      | _ ->
+        expression_desc cxt ~level f
+          (Call
+             ( e,
+               el,
+               {call_transformed_jsx = None; arity = Full; call_info = Call_ml}
+             )))
+*)
+
+and print_jsx cxt ~(level : int) f (tag : J.expression)
+    (fields : (string * J.expression) list) : cxt =
+  ignore (level, tag, fields);
+  let children_opt =
+    List.find_map (fun (n, e) -> if n = "children" then Some e else None) fields
+  in
+  (match children_opt with
+  | None -> P.string f "< />"
+  | Some children ->
+    P.string f "<";
+    let _ = expression ~level cxt f tag in
+    P.string f ">";
+    let _ = expression ~level cxt f children in
+    P.string f "</";
+    let _ = expression ~level cxt f tag in
+    P.string f ">");
+
+  cxt
 
 and property_name_and_value_list cxt f (l : J.property_map) =
   iter_lst cxt f l
