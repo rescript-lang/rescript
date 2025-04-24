@@ -27,14 +27,19 @@ jobs:
         include:
           - os: macos-13 # x64
             rust-target: x86_64-apple-darwin
+            node-target: darwin-x64
           - os: macos-14 # ARM
             rust-target: aarch64-apple-darwin
+            node-target: darwin-arm64
           - os: ubuntu-24.04 # x64
             rust-target: x86_64-unknown-linux-musl
+            node-target: linux-x64
           - os: ubuntu-24.04-arm # ARM
             rust-target: aarch64-unknown-linux-musl
+            node-target: linux-arm64
           - os: windows-latest
             rust-target: x86_64-pc-windows-gnu
+            node-target: win32-x64
 
     runs-on: ${{matrix.os}}
 
@@ -66,25 +71,24 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
-          targets: ${{matrix.rust-target}}
+          targets: ${{ matrix.rust-target }}
 
       - name: Build rewatch
         if: steps.build-cache.outputs.cache-hit != 'true'
-        run: cargo build --manifest-path rewatch/Cargo.toml --target ${{matrix.rust-target}} --release
-
-      - name: Copy rewatch exe to platform bin dir
         run: |
-          cp rewatch/target/${{matrix.rust-target}}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch
-          node ./scripts/copyExes.js -rewatch
+          cargo build --manifest-path rewatch/Cargo.toml --target ${{ matrix.rust-target }} --release
 
-      - name: Get artifact dir name
-        run: node .github/workflows/get_artifact_dir_name.js
+      - name: Copy rewatch binary
+        run: |
+          cp rewatch/target/${{ matrix.rust-target }}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch.exe
+        shell: bash
 
       - name: "Upload artifact: rewatch binary"
         uses: actions/upload-artifact@v4
         with:
-          name: rewatch-${{env.artifact_dir_name}}
-          path: ${{ env.artifact_dir_name }}
+          name: rewatch-${{ matrix.node-target }}
+          path: rewatch.exe
+          if-no-files-found: error
 
   build-compiler:
     strategy:
@@ -95,21 +99,26 @@ jobs:
             ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
             upload_binaries: true
             upload_libs: true
+            node-target: linux-x64
           - os: ubuntu-24.04-arm # ARM
             ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
             upload_binaries: true
             # Build the playground compiler and run the benchmarks on the fastest runner
             build_playground: true
             benchmarks: true
+            node-target: linux-arm64
           - os: macos-13 # x64
             ocaml_compiler: 5.3.0
             upload_binaries: true
+            node-target: darwin-x64
           - os: macos-14 # ARM
             ocaml_compiler: 5.3.0
             upload_binaries: true
+            node-target: darwin-arm64
           - os: windows-latest
             ocaml_compiler: 5.3.0
             upload_binaries: true
+            node-target: win32-x64
 
           # Verify that the compiler still builds with older OCaml versions
           - os: ubuntu-24.04
@@ -143,9 +152,6 @@ jobs:
         with:
           cache: yarn
           node-version-file: .nvmrc
-
-      - name: Get artifact dir name
-        run: node .github/workflows/get_artifact_dir_name.js
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
@@ -303,13 +309,13 @@ jobs:
         run: yarn install
 
       - name: Copy compiler exes to platform bin dir
-        run: node ./scripts/copyExes.js -compiler
+        run: node scripts/copyExes.js --compiler
 
       - name: Restore ninja build cache
         id: ninja-build-cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.artifact_dir_name }}/ninja.exe
+          path: packages/@rescript/${{ matrix.node-target }}/bin/ninja.exe
           key: ninja-build-v1-${{ matrix.os }}-${{ hashFiles('ninja/src/**') }}
 
       - name: Setup Python for ninja build
@@ -336,7 +342,7 @@ jobs:
 
       - name: Copy ninja exe to platform bin dir
         if: steps.ninja-build-cache.outputs.cache-hit != 'true'
-        run: node ./scripts/copyExes.js -ninja
+        run: node scripts/copyExes.js --ninja
 
       - name: "Syntax: Run roundtrip tests"
         if: ${{ runner.os != 'Windows' }}
@@ -423,8 +429,8 @@ jobs:
         if: matrix.upload_binaries
         uses: actions/upload-artifact@v4
         with:
-          name: binaries-${{ env.artifact_dir_name }}
-          path: ${{ env.artifact_dir_name }}
+          name: binaries-${{ matrix.node-target }}
+          path: packages/@rescript/${{ matrix.node-target }}/bin
 
       - name: "Upload artifacts: lib/ocaml"
         if: matrix.upload_libs
@@ -491,15 +497,15 @@ jobs:
       matrix:
         include:
           - os: macos-13
-            target: darwin-x64
+            node-target: darwin-x64
           - os: macos-14
-            target: darwin-arm64
+            node-target: darwin-arm64
           - os: ubuntu-24.04
-            target: linux-x64
+            node-target: linux-x64
           - os: ubuntu-24.04-arm
-            target: linux-arm64
+            node-target: linux-arm64
           - os: windows-latest
-            target: win32-x64
+            node-target: win32-x64
 
     runs-on: ${{ matrix.os }}
 
@@ -535,7 +541,7 @@ jobs:
         run: |
           npm i --ignore-scripts --no-audit \
             rescript-${{ needs.package.outputs.rescript_version }}.tgz \
-            rescript-${{ matrix.target }}-${{ needs.package.outputs.rescript_version }}.tgz
+            rescript-${{ matrix.node-target }}-${{ needs.package.outputs.rescript_version }}.tgz
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 

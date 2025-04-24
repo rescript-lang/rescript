@@ -7,8 +7,47 @@
 import * as child_process from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { parseArgs } from "node:util";
 import { binDir } from "#cli/bins";
 import { compilerBinDir, ninjaDir, rewatchDir } from "#dev/paths";
+
+const args = parseArgs({
+  args: process.argv.slice(2),
+  options: {
+    all: {
+      type: "boolean",
+    },
+    compiler: {
+      type: "boolean",
+    },
+    ninja: {
+      type: "boolean",
+    },
+    rewatch: {
+      type: "boolean",
+    },
+  },
+});
+
+const shouldCopyCompiler = args.values.all || args.values.compiler;
+const shouldCopyNinja = args.values.all || args.values.ninja;
+const shouldCopyRewatch = args.values.all || args.values.rewatch;
+
+if (shouldCopyCompiler) {
+  copyExe(compilerBinDir, "rescript");
+  copyExe(compilerBinDir, "rescript-editor-analysis");
+  copyExe(compilerBinDir, "rescript-tools");
+  copyExe(compilerBinDir, "bsc");
+  copyExe(compilerBinDir, "bsb_helper");
+}
+
+if (shouldCopyNinja) {
+  copyExe(ninjaDir, "ninja");
+}
+
+if (shouldCopyRewatch) {
+  copyExe(rewatchDir, "rewatch");
+}
 
 /**
  * @param {string} dir
@@ -38,20 +77,4 @@ function copyExe(dir, exe) {
   } finally {
     fs.chmodSync(dest, mode);
   }
-}
-
-if (process.argv.includes("-all") || process.argv.includes("-compiler")) {
-  copyExe(compilerBinDir, "rescript");
-  copyExe(compilerBinDir, "rescript-editor-analysis");
-  copyExe(compilerBinDir, "rescript-tools");
-  copyExe(compilerBinDir, "bsc");
-  copyExe(compilerBinDir, "bsb_helper");
-}
-
-if (process.argv.includes("-all") || process.argv.includes("-ninja")) {
-  copyExe(ninjaDir, "ninja");
-}
-
-if (process.argv.includes("-all") || process.argv.includes("-rewatch")) {
-  copyExe(rewatchDir, "rewatch");
 }
