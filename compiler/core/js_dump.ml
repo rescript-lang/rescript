@@ -540,6 +540,25 @@ and expression_desc cxt ~(level : int) f x : cxt =
             | _ -> Some (f, x))
       in
       match jsx_element with
+      | Parsetree.Jsx_fragment {jsx_fragment_children = children} ->
+        P.string f "<>";
+        (let children =
+           fields
+           |> List.find_map (fun (n, e) ->
+                  if n = "children" then Some e else None)
+         in
+         children
+         |> Option.iter (fun c ->
+                P.string f "{";
+                let _ = expression ~level:1 cxt f c in
+                P.string f "}"));
+        P.string f "</>";
+        cxt
+      | Parsetree.Jsx_unary_element
+          {jsx_unary_element_tag_name = {txt = Longident.Lident tagName}} ->
+        Printf.eprintf "Crazy Tag: %s\n" tagName;
+        P.string f (Format.sprintf "<%s />" tagName);
+        cxt
       | Parsetree.Jsx_container_element
           {
             jsx_container_element_tag_name_start =

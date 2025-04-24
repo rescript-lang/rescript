@@ -1,3 +1,18 @@
+let lambda_tag_info_to_string (e : Lambda.tag_info) =
+  match e with
+  | Lambda.Blk_constructor _ -> "Blk_constructor"
+  | Lambda.Blk_record_inlined _ -> "Blk_record_inlined"
+  | Lambda.Blk_tuple -> "Blk_tuple"
+  | Lambda.Blk_poly_var _ -> "Blk_poly_var"
+  | Lambda.Blk_record _ -> "Blk_record"
+  | Lambda.Blk_module _ -> "Blk_module"
+  | Lambda.Blk_module_export _ -> "Blk_module_export"
+  | Lambda.Blk_extension -> "Blk_extension"
+  | Lambda.Blk_some -> "Blk_some"
+  | Lambda.Blk_some_not_nested -> "Blk_some_not_nested"
+  | Lambda.Blk_record_ext _ -> "Blk_record_ext"
+  | Lambda.Blk_lazy_general -> "Blk_lazy_general"
+
 let j_exp_to_string (e : J.expression) =
   match e.J.expression_desc with
   | J.Object _ -> "Object"
@@ -21,7 +36,8 @@ let j_exp_to_string (e : J.expression) =
   | J.Array_index _ -> "Array_index"
   | J.Static_index _ -> "Static_index"
   | J.Length _ -> "Length"
-  | J.Caml_block _ -> "Caml_block"
+  | J.Caml_block (_, _, _, tag) ->
+    Format.sprintf "Caml_block (%s)" (lambda_tag_info_to_string tag)
   | J.Caml_block_tag _ -> "Caml_block_tag"
   | J.Tagged_template _ -> "Tagged_template"
   | J.Optional_block _ -> "Optional_block"
@@ -29,18 +45,3 @@ let j_exp_to_string (e : J.expression) =
   | J.Await _ -> "Await"
   | J.Raw_js_code _ -> "Raw_js_code"
   | _ -> "Other"
-
-let lambda_tag_info_to_string (e : Lambda.tag_info) =
-  match e with
-  | Lambda.Blk_constructor _ -> "Blk_constructor"
-  | Lambda.Blk_record_inlined _ -> "Blk_record_inlined"
-  | Lambda.Blk_tuple -> "Blk_tuple"
-  | Lambda.Blk_poly_var _ -> "Blk_poly_var"
-  | Lambda.Blk_record _ -> "Blk_record"
-  | Lambda.Blk_module _ -> "Blk_module"
-  | Lambda.Blk_module_export _ -> "Blk_module_export"
-  | Lambda.Blk_extension -> "Blk_extension"
-  | Lambda.Blk_some -> "Blk_some"
-  | Lambda.Blk_some_not_nested -> "Blk_some_not_nested"
-  | Lambda.Blk_record_ext _ -> "Blk_record_ext"
-  | Lambda.Blk_lazy_general -> "Blk_lazy_general"

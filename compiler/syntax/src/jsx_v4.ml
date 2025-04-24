@@ -1208,7 +1208,7 @@ let append_children_prop (config : Jsx_common.jsx_config) mapper
         Exp.apply
           (Exp.ident
              {txt = Ldot (element_binding, "someElement"); loc = Location.none})
-          [(Nolabel, child)]
+          [(Nolabel, mapper.expr mapper child)]
     in
     let is_optional =
       match component_description with
