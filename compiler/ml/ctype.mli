@@ -43,6 +43,11 @@ type subtype_context =
       left_type_kind: type_kind;
       right_type_kind: type_kind;
     }
+  | Record_fields_mismatch of {
+      left_record_name: Path.t;
+      right_record_name: Path.t;
+      issues: Record_coercion.record_field_subtype_violation list;
+    }
 
 exception Unify of (type_expr * type_expr) list
 exception Tags of label * label

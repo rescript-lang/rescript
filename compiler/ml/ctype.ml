@@ -94,6 +94,11 @@ type subtype_context =
       left_type_kind: type_kind;
       right_type_kind: type_kind;
     }
+  | Record_fields_mismatch of {
+      left_record_name: Path.t;
+      right_record_name: Path.t;
+      issues: Record_coercion.record_field_subtype_violation list;
+    }
 
 exception
   Subtype of
@@ -3762,9 +3767,9 @@ let rec subtype_rec env trace t1 t2 cstrs =
               c2
               |> List.iter (fun (c : Types.constructor_declaration) ->
                      Hashtbl.add constructor_map (Ident.name c.cd_id) c);
-              if
+              let field_subtype_violations =
                 c1
-                |> List.for_all (fun (c : Types.constructor_declaration) ->
+                |> List.filter_map (fun (c : Types.constructor_declaration) ->
                        match
                          ( c,
                            Hashtbl.find_opt constructor_map (Ident.name c.cd_id)
@@ -3783,17 +3788,18 @@ let rec subtype_rec env trace t1 t2 cstrs =
                            Variant_coercion.variant_representation_matches
                              c1_attributes c2_attributes
                          then
-                           (* TODO(subtype-errors) Inline record coercion check, piggy back on record coercion check *)
-                           let violation, tl1, tl2 =
+                           let violations, tl1, tl2 =
                              Record_coercion.check_record_fields fields1 fields2
                            in
-                           if violation then false
-                           else
+                           match violations with
+                           | [] -> (
                              try
                                let lst = subtype_list env trace tl1 tl2 cstrs in
-                               List.length lst = List.length cstrs
-                             with _ -> false
-                         else false
+                               if List.length lst = List.length cstrs then None
+                               else Some [ (* TODO(subtype-errors) *) ]
+                             with _ -> Some [ (* TODO(subtype-errors) *) ])
+                           | violations -> Some violations
+                         else Some [ (* TODO(subtype-errors) *) ]
                        | ( {
                              Types.cd_args = Cstr_tuple tl1;
                              cd_attributes = c1_attributes;
@@ -3809,14 +3815,16 @@ let rec subtype_rec env trace t1 t2 cstrs =
                          then
                            try
                              let lst = subtype_list env trace tl1 tl2 cstrs in
-                             List.length lst = List.length cstrs
-                           with _ -> false
-                         else false
-                       | _ -> false)
-              then cstrs
+                             if List.length lst = List.length cstrs then None
+                             else Some [ (* TODO(subtype-errors) *) ]
+                           with _ -> Some [ (* TODO(subtype-errors) *) ]
+                         else Some [ (* TODO(subtype-errors) *) ]
+                       | _ -> Some [ (* TODO(subtype-errors) *) ])
+              in
+              if field_subtype_violations = [] then cstrs
               else (trace, t1, t2, !univar_pairs, None) :: cstrs)
-        | ( (_, _, {type_kind = Type_record (fields1, repr1)}),
-            (_, _, {type_kind = Type_record (fields2, repr2)}) ) ->
+        | ( (p1, _, {type_kind = Type_record (fields1, repr1)}),
+            (p2, _, {type_kind = Type_record (fields2, repr2)}) ) ->
           (* TODO(subtype-errors) Record representation *)
           let same_repr =
             match (repr1, repr2) with
@@ -3828,10 +3836,22 @@ let rec subtype_rec env trace t1 t2 cstrs =
             | _ -> false
           in
           if same_repr then
-            let violation, tl1, tl2 =
+            let violations, tl1, tl2 =
               Record_coercion.check_record_fields fields1 fields2
             in
-            if violation then (trace, t1, t2, !univar_pairs, None) :: cstrs
+            if violations <> [] then
+              ( trace,
+                t1,
+                t2,
+                !univar_pairs,
+                Some
+                  (Record_fields_mismatch
+                     {
+                       left_record_name = p1;
+                       right_record_name = p2;
+                       issues = violations;
+                     }) )
+              :: cstrs
             else subtype_list env trace tl1 tl2 cstrs
           else (trace, t1, t2, !univar_pairs, None) :: cstrs
         | (p1, _, {type_kind = tk1}), (p2, _, {type_kind = tk2}) ->
@@ -3862,6 +3882,8 @@ let rec subtype_rec env trace t1 t2 cstrs =
       | Tvariant {row_closed = true; row_fields}, Tconstr (_, [], _)
         when extract_concrete_typedecl_opt env t2
              |> Variant_coercion.type_is_variant -> (
+        (* TODO(subtype-errors) Polyvariant to variant *)
+        (* TODO(subtype-errors) Add Variant to polyvariant while we're at it? *)
         match extract_concrete_typedecl env t2 with
         | _, _, {type_kind = Type_variant variant_constructors; type_attributes}
           -> (
