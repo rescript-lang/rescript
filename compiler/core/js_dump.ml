@@ -996,60 +996,13 @@ and expression_desc cxt ~(level : int) f x : cxt =
         P.string f "...";
         expression ~level:13 cxt f e)
 
-(*
-      (* match jsx_element with
-      | Parsetree.Jsx_fragment {jsx_fragment_children = children} ->
-        P.string f "<>";
-        (let children =
-           fields
-           |> List.find_map (fun (n, e) ->
-                  if n = "children" then Some e else None)
-         in
-         children
-         |> Option.iter (fun c ->
-                P.string f "{";
-                let _ = expression ~level:1 cxt f c in
-                P.string f "}"));
-        P.string f "</>";
-        cxt
-      | Parsetree.Jsx_unary_element
-          {jsx_unary_element_tag_name = {txt = Longident.Lident tagName}} ->
-        Printf.eprintf "Crazy Tag: %s\n" tagName;
-        P.string f (Format.sprintf "<%s />" tagName);
-        cxt
-      | Parsetree.Jsx_container_element
-          {
-            jsx_container_element_tag_name_start =
-              {txt = Longident.Lident tagName};
-          } ->
-        P.string f (Format.sprintf "<%s" tagName);
-        List.iter
-          (fun (n, x) ->
-            P.space f;
-            P.string f n;
-            P.string f "=";
-            P.string f "{";
-            let _ = expression ~level:0 cxt f x in
-            P.string f "}")
-          fields;
-        P.string f "></";
-        P.string f tagName;
-        P.string f ">";
-        cxt *)
-      | _ ->
-        expression_desc cxt ~level f
-          (Call
-             ( e,
-               el,
-               {call_transformed_jsx = None; arity = Full; call_info = Call_ml}
-             )))
-*)
-
 and print_jsx cxt ~(level : int) f (tag : J.expression)
     (fields : (string * J.expression) list) : cxt =
   let print_tag () =
     match tag.expression_desc with
     | J.Str {txt} -> P.string f txt
+    (* fragment *)
+    | J.Var (J.Qualified ({id = {name = "JsxRuntime"}}, Some "Fragment")) -> ()
     | _ ->
       let _ = expression ~level cxt f tag in
       ()
