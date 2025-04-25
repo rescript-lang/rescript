@@ -44,7 +44,7 @@ let transl_extension_constructor env path ext =
   in
   let loc = ext.ext_loc in
   match ext.ext_kind with
-  | Text_decl _ -> Lprim (Pcreate_extension name, [], loc, None)
+  | Text_decl _ -> Lprim (Pcreate_extension name, [], loc, false)
   | Text_rebind (path, _lid) -> transl_extension_path ~loc env path
 
 (* Translation of primitives *)
@@ -460,7 +460,7 @@ let transl_primitive loc p env ty =
           params = [param];
           attr = default_function_attribute;
           loc;
-          body = Lprim (Pmakeblock Blk_tuple, [lam; Lvar param], loc, None);
+          body = Lprim (Pmakeblock Blk_tuple, [lam; Lvar param], loc, false);
         }
     | _ -> assert false)
   | _ ->
@@ -471,7 +471,8 @@ let transl_primitive loc p env ty =
         :: make_params (n - 1) total
     in
     let prim_arity = p.prim_arity in
-    if p.prim_from_constructor || prim_arity = 0 then Lprim (prim, [], loc, None)
+    if p.prim_from_constructor || prim_arity = 0 then
+      Lprim (prim, [], loc, false)
     else
       let params =
         if prim_arity = 1 then [Ident.create "prim"]
@@ -482,7 +483,7 @@ let transl_primitive loc p env ty =
           params;
           attr = default_function_attribute;
           loc;
-          body = Lprim (prim, List.map (fun id -> Lvar id) params, loc, None);
+          body = Lprim (prim, List.map (fun id -> Lvar id) params, loc, false);
         }
 
 let transl_primitive_application loc prim env ty args =
@@ -630,10 +631,10 @@ let assert_failed exp =
                      ] ));
             ],
             exp.exp_loc,
-            None );
+            false );
       ],
       exp.exp_loc,
-      None )
+      false )
 
 let rec cut n l =
   if n = 0 then ([], l)
@@ -703,7 +704,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
         ( prim (* could be replaced with Opaque in the future except arity 0*),
           [lambda],
           loc,
-          None )
+          false )
     | None -> lambda)
   | Texp_apply
       {
@@ -717,16 +718,9 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       }
     when List.length oargs >= p.prim_arity
          && List.for_all (fun (_, arg) -> arg <> None) oargs -> (
-    Format.fprintf Format.err_formatter
-      "transl_exp0 when Has transformed_jsx %b"
-      (Option.is_some transformed_jsx);
     let args, args' = cut p.prim_arity oargs in
     let wrap f =
-      if args' = [] then (
-        Format.fprintf Format.err_formatter
-          "args' = [] Has transformed_jsx %b\n"
-          (Option.is_some transformed_jsx);
-        f)
+      if args' = [] then f
       else
         let inlined, _ =
           Translattribute.get_and_remove_inlined_attribute funct
@@ -755,8 +749,6 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       wrap (Lprim (Praise k, [targ], e.exp_loc, transformed_jsx))
     | Ploc kind, [] -> lam_of_loc kind e.exp_loc
     | Ploc kind, [arg1] ->
-      Format.fprintf Format.err_formatter "Ploc Has transformed_jsx %b"
-        (Option.is_some transformed_jsx);
       let lam = lam_of_loc kind arg1.exp_loc in
       Lprim (Pmakeblock Blk_tuple, lam :: argl, e.exp_loc, transformed_jsx)
     | Ploc _, _ -> assert false
@@ -764,8 +756,6 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       match (prim, argl) with
       | _ -> wrap (Lprim (prim, argl, e.exp_loc, transformed_jsx))))
   | Texp_apply {funct; args = oargs; partial; transformed_jsx} ->
-    Format.fprintf Format.err_formatter "transl_exp0 Has transformed_jsx %b"
-      (Option.is_some transformed_jsx);
     let inlined, funct =
       Translattribute.get_and_remove_inlined_attribute funct
     in
@@ -794,7 +784,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
   | Texp_tuple el -> (
     let ll = transl_list el in
     try Lconst (Const_block (Blk_tuple, List.map extract_constant ll))
-    with Not_constant -> Lprim (Pmakeblock Blk_tuple, ll, e.exp_loc, None))
+    with Not_constant -> Lprim (Pmakeblock Blk_tuple, ll, e.exp_loc, false))
   | Texp_construct ({txt = Lident "false"}, _, []) -> Lconst Const_false
   | Texp_construct ({txt = Lident "true"}, _, []) -> Lconst Const_true
   | Texp_construct (lid, cstr, args) -> (
@@ -849,13 +839,13 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
               }
         in
         try Lconst (Const_block (tag_info, List.map extract_constant ll))
-        with Not_constant -> Lprim (Pmakeblock tag_info, ll, e.exp_loc, None))
+        with Not_constant -> Lprim (Pmakeblock tag_info, ll, e.exp_loc, false))
       | Cstr_extension path ->
         Lprim
           ( Pmakeblock Blk_extension,
             transl_extension_path e.exp_env path :: ll,
             e.exp_loc,
-            None ))
+            false ))
   | Texp_extension_constructor (_, path) -> transl_extension_path e.exp_env path
   | Texp_variant (l, arg) -> (
     let tag = Btype.hash_variant l in
@@ -873,7 +863,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
           ( Pmakeblock tag_info,
             [Lconst (Const_base (Const_int tag)); lam],
             e.exp_loc,
-            None )))
+            false )))
   | Texp_record {fields; representation; extended_expression} ->
     transl_record e.exp_loc e.exp_env fields representation extended_expression
   | Texp_field (arg, _, lbl) -> (
@@ -882,20 +872,20 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     | Record_float_unused -> assert false
     | Record_regular ->
       Lprim
-        (Pfield (lbl.lbl_pos, Lambda.fld_record lbl), [targ], e.exp_loc, None)
+        (Pfield (lbl.lbl_pos, Lambda.fld_record lbl), [targ], e.exp_loc, false)
     | Record_inlined _ ->
       Lprim
         ( Pfield (lbl.lbl_pos, Lambda.fld_record_inline lbl),
           [targ],
           e.exp_loc,
-          None )
+          false )
     | Record_unboxed _ -> targ
     | Record_extension ->
       Lprim
         ( Pfield (lbl.lbl_pos + 1, Lambda.fld_record_extension lbl),
           [targ],
           e.exp_loc,
-          None ))
+          false ))
   | Texp_setfield (arg, _, lbl, newval) ->
     let access =
       match lbl.lbl_repres with
@@ -907,10 +897,10 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
       | Record_extension ->
         Psetfield (lbl.lbl_pos + 1, Lambda.fld_record_extension_set lbl)
     in
-    Lprim (access, [transl_exp arg; transl_exp newval], e.exp_loc, None)
+    Lprim (access, [transl_exp arg; transl_exp newval], e.exp_loc, false)
   | Texp_array expr_list ->
     let ll = transl_list expr_list in
-    Lprim (Pmakearray Mutable, ll, e.exp_loc, None)
+    Lprim (Pmakearray Mutable, ll, e.exp_loc, false)
   | Texp_ifthenelse (cond, ifso, Some ifnot) ->
     Lifthenelse (transl_exp cond, transl_exp ifso, transl_exp ifnot)
   | Texp_ifthenelse (cond, ifso, None) ->
@@ -944,7 +934,7 @@ and transl_exp0 (e : Typedtree.expression) : Lambda.lambda =
     (* when e needs no computation (constants, identifiers, ...), we
        optimize the translation just as Lazy.lazy_from_val would
        do *)
-    Lprim (Pmakeblock Blk_lazy_general, [transl_exp e], e.exp_loc, None)
+    Lprim (Pmakeblock Blk_lazy_general, [transl_exp e], e.exp_loc, false)
 
 and transl_list expr_list = List.map transl_exp expr_list
 
@@ -970,11 +960,9 @@ and transl_case_try {c_lhs; c_guard; c_rhs} =
 and transl_cases_try cases = List.map transl_case_try cases
 
 and transl_apply ?(inlined = Default_inline)
-    ?(uncurried_partial_application = None) ?(transformed_jsx = None) lam sargs
+    ?(uncurried_partial_application = None) ?(transformed_jsx = false) lam sargs
     loc =
   let lapply ap_func ap_args =
-    Format.fprintf Format.err_formatter "Lapply transformed_jsx %b"
-      (Option.is_some transformed_jsx);
     Lapply
       {
         ap_loc = loc;
@@ -1039,9 +1027,6 @@ and transl_apply ?(inlined = Default_inline)
     in
     let extra_args = Ext_list.map extra_ids (fun id -> Lvar id) in
     let ap_args = args @ extra_args in
-    Format.fprintf Format.err_formatter
-      "uncurried_partial_application transformed_jsx %b"
-      (Option.is_some transformed_jsx);
     let l0 =
       Lapply
         {
@@ -1140,7 +1125,7 @@ and transl_record loc env fields repres opt_init_expr =
           (* could be replaced with Opaque in the future except arity 0*)
           [lambda],
           loc,
-          None )
+          false )
     else lambda
   | _ -> (
     let size = Array.length fields in
@@ -1177,7 +1162,7 @@ and transl_record loc env fields repres opt_init_expr =
                 | Record_extension ->
                   Pfield (i + 1, Lambda.fld_record_extension lbl)
               in
-              Lprim (access, [Lvar init_id], loc, None)
+              Lprim (access, [Lvar init_id], loc, false)
             | Overridden (_lid, expr) -> transl_exp expr)
           fields
       in
@@ -1210,7 +1195,7 @@ and transl_record loc env fields repres opt_init_expr =
         with Not_constant -> (
           match repres with
           | Record_regular ->
-            Lprim (Pmakeblock (Lambda.blk_record fields mut), ll, loc, None)
+            Lprim (Pmakeblock (Lambda.blk_record fields mut), ll, loc, false)
           | Record_float_unused -> assert false
           | Record_inlined {tag; name; num_nonconsts; attrs} ->
             Lprim
@@ -1219,7 +1204,7 @@ and transl_record loc env fields repres opt_init_expr =
                      ~attrs mut),
                 ll,
                 loc,
-                None )
+                false )
           | Record_unboxed _ -> (
             match ll with
             | [v] -> v
@@ -1236,7 +1221,7 @@ and transl_record loc env fields repres opt_init_expr =
               ( Pmakeblock (Lambda.blk_record_ext fields mut),
                 slot :: ll,
                 loc,
-                None ))
+                false ))
       in
       match opt_init_expr with
       | None -> lam
@@ -1262,7 +1247,7 @@ and transl_record loc env fields repres opt_init_expr =
               Psetfield (lbl.lbl_pos + 1, Lambda.fld_record_extension_set lbl)
           in
           Lsequence
-            (Lprim (upd, [Lvar copy_id; transl_exp expr], loc, None), cont)
+            (Lprim (upd, [Lvar copy_id; transl_exp expr], loc, false), cont)
       in
       match opt_init_expr with
       | None -> assert false
@@ -1271,7 +1256,7 @@ and transl_record loc env fields repres opt_init_expr =
           ( Strict,
             Pgenval,
             copy_id,
-            Lprim (Pduprecord, [transl_exp init_expr], loc, None),
+            Lprim (Pduprecord, [transl_exp init_expr], loc, false),
             Array.fold_left update_field (Lvar copy_id) fields ))
 
 and transl_match e arg pat_expr_list exn_pat_expr_list partial =

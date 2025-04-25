@@ -64,7 +64,7 @@ let rec apply_coercion loc strict (restr : Typedtree.module_coercion) arg =
   | Tcoerce_structure (pos_cc_list, id_pos_list, runtime_fields) ->
     Lambda.name_lambda strict arg (fun id ->
         let get_field_name name pos =
-          Lambda.Lprim (Pfield (pos, Fld_module {name}), [Lvar id], loc, None)
+          Lambda.Lprim (Pfield (pos, Fld_module {name}), [Lvar id], loc, false)
         in
         let lam =
           Lambda.Lprim
@@ -72,9 +72,9 @@ let rec apply_coercion loc strict (restr : Typedtree.module_coercion) arg =
               Ext_list.map2 pos_cc_list runtime_fields (fun (pos, cc) name ->
                   apply_coercion loc Alias cc
                     (Lprim
-                       (Pfield (pos, Fld_module {name}), [Lvar id], loc, None))),
+                       (Pfield (pos, Fld_module {name}), [Lvar id], loc, false))),
               loc,
-              None )
+              false )
         in
         wrap_id_pos_list loc id_pos_list get_field_name lam)
   | Tcoerce_functor (cc_arg, cc_res) ->
@@ -102,7 +102,7 @@ and apply_coercion_result loc strict funct param arg cc_res =
                    ap_func = Lvar id;
                    ap_args = [arg];
                    ap_inlined = Default_inline;
-                   ap_transformed_jsx = None;
+                   ap_transformed_jsx = false;
                  });
         })
 
@@ -279,7 +279,7 @@ and transl_module cc rootpath mexp =
              ap_func = transl_module Tcoerce_none None funct;
              ap_args = [transl_module ccarg None arg];
              ap_inlined = inlined_attribute;
-             ap_transformed_jsx = None;
+             ap_transformed_jsx = false;
            })
     | Tmod_constraint (arg, _, _, ccarg) ->
       transl_module (compose_coercions cc ccarg) rootpath arg
@@ -309,7 +309,7 @@ and transl_structure loc fields cc rootpath final_env = function
                else Blk_module (List.rev_map (fun id -> id.Ident.name) fields)),
             block_fields,
             loc,
-            None ),
+            false ),
         List.length fields )
     | Tcoerce_structure (pos_cc_list, id_pos_list, runtime_fields) ->
       (* Do not ignore id_pos_list ! *)
@@ -346,7 +346,7 @@ and transl_structure loc fields cc rootpath final_env = function
                else Blk_module runtime_fields),
             result,
             loc,
-            None )
+            false )
       and id_pos_list =
         Ext_list.filter id_pos_list (fun (id, _, _) ->
             not (Lambda.IdentSet.mem id ids))
@@ -439,7 +439,7 @@ and transl_structure loc fields cc rootpath final_env = function
                   ( Pfield (pos, Fld_module {name = Ident.name id}),
                     [Lvar mid],
                     incl.incl_loc,
-                    None ),
+                    false ),
                 body ),
             size )
       in

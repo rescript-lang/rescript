@@ -45,7 +45,7 @@ and apply = private {
   ap_func: t;
   ap_args: t list;
   ap_info: ap_info;
-  ap_transformed_jsx: Parsetree.jsx_element option;
+  ap_transformed_jsx: bool;
 }
 
 and lfunction = {
@@ -90,7 +90,7 @@ and t = private
 val inner_map : t -> (t -> t) -> t
 
 val handle_bs_non_obj_ffi :
-  ?transformed_jsx:Parsetree.jsx_element ->
+  ?transformed_jsx:bool ->
   External_arg_spec.params ->
   External_ffi_types.return_wrapper ->
   External_ffi_types.external_spec ->
@@ -109,12 +109,7 @@ val global_module : ?dynamic_import:bool -> ident -> t
 
 val const : Lam_constant.t -> t
 
-val apply :
-  ?ap_transformed_jsx:Parsetree.jsx_element option ->
-  t ->
-  t list ->
-  ap_info ->
-  t
+val apply : ?ap_transformed_jsx:bool -> t -> t list -> ap_info -> t
 
 val function_ :
   attr:Lambda.function_attribute ->

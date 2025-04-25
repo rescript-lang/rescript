@@ -33,16 +33,12 @@ type call_info =
    {[ fun x y -> (f x y) === f ]} when [f] is an atom
 *)
 
-type t = {
-  call_info: call_info;
-  arity: arity;
-  call_transformed_jsx: Parsetree.jsx_element option;
-}
+type t = {call_info: call_info; arity: arity; call_transformed_jsx: bool}
 
-let dummy = {arity = NA; call_info = Call_na; call_transformed_jsx = None}
+let dummy = {arity = NA; call_info = Call_na; call_transformed_jsx = false}
 
 let builtin_runtime_call =
-  {arity = Full; call_info = Call_builtin_runtime; call_transformed_jsx = None}
+  {arity = Full; call_info = Call_builtin_runtime; call_transformed_jsx = false}
 
 let ml_full_call =
-  {arity = Full; call_info = Call_ml; call_transformed_jsx = None}
+  {arity = Full; call_info = Call_ml; call_transformed_jsx = false}

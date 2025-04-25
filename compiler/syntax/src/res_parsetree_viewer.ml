@@ -147,7 +147,7 @@ let rewrite_underscore_apply expr =
             funct = call_expr;
             args = new_args;
             partial = false;
-            transformed_jsx = None;
+            transformed_jsx = false;
           };
     }
   | _ -> expr

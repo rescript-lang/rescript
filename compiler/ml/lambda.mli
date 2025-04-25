@@ -324,7 +324,7 @@ type lambda =
   | Lfunction of lfunction
   | Llet of let_kind * value_kind * Ident.t * lambda * lambda
   | Lletrec of (Ident.t * lambda) list * lambda
-  | Lprim of primitive * lambda list * Location.t * Parsetree.jsx_element option
+  | Lprim of primitive * lambda list * Location.t * bool
   | Lswitch of lambda * lambda_switch * Location.t
   (* switch on strings, clauses are sorted by string order,
      strings are pairwise distinct *)
@@ -352,7 +352,7 @@ and lambda_apply = {
   ap_args: lambda list;
   ap_loc: Location.t;
   ap_inlined: inline_attribute; (* specified with the [@inlined] attribute *)
-  ap_transformed_jsx: Parsetree.jsx_element option;
+  ap_transformed_jsx: bool;
 }
 
 and lambda_switch = {

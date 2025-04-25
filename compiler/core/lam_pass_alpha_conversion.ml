@@ -23,7 +23,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 let alpha_conversion (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
-  let rec populate_apply_info ?(ap_transformed_jsx = None)
+  let rec populate_apply_info ?(ap_transformed_jsx = false)
       (args_arity : int list) (len : int) (fn : Lam.t) (args : Lam.t list)
       ap_info : Lam.t =
     match args_arity with

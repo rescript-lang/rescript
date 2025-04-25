@@ -149,7 +149,7 @@ module Exp : sig
     ?loc:loc ->
     ?attrs:attrs ->
     ?partial:bool ->
-    ?transformed_jsx:jsx_element ->
+    ?transformed_jsx:bool ->
     expression ->
     (arg_label * expression) list ->
     expression

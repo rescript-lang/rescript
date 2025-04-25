@@ -85,7 +85,7 @@ module Types = struct
     ap_func: t;
     ap_args: t list;
     ap_info: ap_info;
-    ap_transformed_jsx: Parsetree.jsx_element option;
+    ap_transformed_jsx: bool;
   }
 
   and t =
@@ -130,7 +130,7 @@ module X = struct
     ap_func: t;
     ap_args: t list;
     ap_info: ap_info;
-    ap_transformed_jsx: Parsetree.jsx_element option;
+    ap_transformed_jsx: bool;
   }
 
   and lfunction = Types.lfunction = {
@@ -289,7 +289,7 @@ let rec is_eta_conversion_exn params inner_args outer_args : t list =
   | _, _, _ -> raise_notrace Not_simple_form
 
 (** FIXME: more robust inlining check later, we should inline it before we add stub code*)
-let rec apply ?(ap_transformed_jsx = None) fn args (ap_info : ap_info) : t =
+let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
   match fn with
   | Lfunction
       {
@@ -723,7 +723,7 @@ let result_wrap loc (result_type : External_ffi_types.return_wrapper) result =
     prim ~primitive:Pundefined_to_opt ~args:[result] loc
   | Return_unset | Return_identity -> result
 
-let handle_bs_non_obj_ffi ?transformed_jsx
+let handle_bs_non_obj_ffi ?(transformed_jsx = false)
     (arg_types : External_arg_spec.params)
     (result_type : External_ffi_types.return_wrapper) ffi args loc prim_name
     ~dynamic_import =

@@ -373,7 +373,7 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
   let exit_map = Hash_int.create 0 in
   let may_depends = Lam_module_ident.Hash_set.create 0 in
 
-  let rec convert_ccall ?(transformed_jsx = None)
+  let rec convert_ccall ?(transformed_jsx = false)
       (a_prim : Primitive.description) (args : Lambda.lambda list) loc
       ~dynamic_import : Lam.t =
     let prim_name = a_prim.prim_name in
@@ -382,14 +382,13 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
       let args = Ext_list.map args convert_aux in
       prim ~primitive:(Pjs_object_create labels) ~args loc
     | Ffi_bs (arg_types, result_type, ffi) ->
-      Format.fprintf Format.err_formatter "Ffi_bs\n";
       let arg_types =
         match arg_types with
         | Params ls -> ls
         | Param_number i -> Ext_list.init i (fun _ -> External_arg_spec.dummy)
       in
       let args = Ext_list.map args convert_aux in
-      Lam.handle_bs_non_obj_ffi ?transformed_jsx arg_types result_type ffi args
+      Lam.handle_bs_non_obj_ffi ~transformed_jsx arg_types result_type ffi args
         loc prim_name ~dynamic_import
     | Ffi_inline_const i -> Lam.const i
     | Ffi_normal ->
@@ -455,9 +454,6 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
     | Lprim (Prevapply, _, _, _) -> assert false
     | Lprim (Pdirapply, _, _, _) -> assert false
     | Lprim (Pccall a, args, loc, transformed_jsx) ->
-      Format.fprintf Format.err_formatter
-        "lam convert Pccall Has transformed_jsx %b\n"
-        (Option.is_some transformed_jsx);
       convert_ccall ~transformed_jsx a args loc ~dynamic_import
     | Lprim (Pjs_raw_expr, args, loc, _) -> (
       match args with

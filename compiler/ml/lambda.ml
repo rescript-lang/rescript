@@ -357,7 +357,7 @@ type lambda =
   | Lfunction of lfunction
   | Llet of let_kind * value_kind * Ident.t * lambda * lambda
   | Lletrec of (Ident.t * lambda) list * lambda
-  | Lprim of primitive * lambda list * Location.t * Parsetree.jsx_element option
+  | Lprim of primitive * lambda list * Location.t * bool
   | Lswitch of lambda * lambda_switch * Location.t
   | Lstringswitch of
       lambda * (string * lambda) list * lambda option * Location.t
@@ -383,7 +383,7 @@ and lambda_apply = {
   ap_args: lambda list;
   ap_loc: Location.t;
   ap_inlined: inline_attribute;
-  ap_transformed_jsx: Parsetree.jsx_element option;
+  ap_transformed_jsx: bool;
 }
 
 and lambda_switch = {
@@ -618,14 +618,14 @@ let rec patch_guarded patch = function
 
 let rec transl_normal_path = function
   | Path.Pident id ->
-    if Ident.global id then Lprim (Pgetglobal id, [], Location.none, None)
+    if Ident.global id then Lprim (Pgetglobal id, [], Location.none, false)
     else Lvar id
   | Pdot (p, s, pos) ->
     Lprim
       ( Pfield (pos, Fld_module {name = s}),
         [transl_normal_path p],
         Location.none,
-        None )
+        false )
   | Papply _ -> assert false
 
 (* Translation of identifiers *)

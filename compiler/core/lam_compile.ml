@@ -55,7 +55,7 @@ let rec apply_with_arity_aux (fn : J.expression) (arity : int list)
                {
                  arity = Full;
                  call_info = Call_ml;
-                 (* no clue if this is correct *) call_transformed_jsx = None;
+                 (* no clue if this is correct *) call_transformed_jsx = false;
                }
              fn first_part)
           rest continue (len - x)
@@ -76,7 +76,7 @@ let rec apply_with_arity_aux (fn : J.expression) (arity : int list)
                      arity = Full;
                      call_info = Call_ml;
                      (* no clue if this is correct *) call_transformed_jsx =
-                       None;
+                       false;
                    }
                  fn
                  (Ext_list.append args @@ Ext_list.map params E.var));

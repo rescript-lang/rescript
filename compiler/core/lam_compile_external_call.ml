@@ -267,10 +267,9 @@ let translate_scoped_access scopes obj =
   | [] -> obj
   | x :: xs -> Ext_list.fold_left xs (E.dot obj x) E.dot
 
-let translate_ffi ?(transformed_jsx : Parsetree.jsx_element option)
-    (cxt : Lam_compile_context.t) arg_types
-    (ffi : External_ffi_types.external_spec) (args : J.expression list)
-    ~dynamic_import =
+let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
+    arg_types (ffi : External_ffi_types.external_spec)
+    (args : J.expression list) ~dynamic_import =
   match ffi with
   | Js_call
       {external_module_name; name; splice : _; scopes; tagged_template = true}

@@ -56,14 +56,14 @@ let get_module_system () =
 
 let import_of_path path =
   E.call
-    ~info:{arity = Full; call_info = Call_na; call_transformed_jsx = None}
+    ~info:{arity = Full; call_info = Call_na; call_transformed_jsx = false}
     (E.js_global "import")
     [E.str path]
 
 let wrap_then import value =
   let arg = Ident.create "m" in
   E.call
-    ~info:{arity = Full; call_info = Call_na; call_transformed_jsx = None}
+    ~info:{arity = Full; call_info = Call_na; call_transformed_jsx = false}
     (E.dot import "then")
     [
       E.ocaml_fun ~return_unit:false ~async:false ~one_unit_arg:false [arg]
@@ -90,7 +90,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     match args with
     | fn :: rest ->
       E.call
-        ~info:{arity = Full; call_info = Call_na; call_transformed_jsx = None}
+        ~info:{arity = Full; call_info = Call_na; call_transformed_jsx = false}
         fn rest
     | _ -> assert false)
   | Pnull_to_opt -> (
@@ -599,7 +599,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
   | Pjs_object_create _ -> assert false
   | Pjs_call {arg_types; ffi; dynamic_import; transformed_jsx} ->
     Lam_compile_external_call.translate_ffi cxt arg_types ffi args
-      ~dynamic_import ?transformed_jsx
+      ~dynamic_import ~transformed_jsx
   (* FIXME, this can be removed later *)
   | Pisint -> E.is_type_number (Ext_list.singleton_exn args)
   | Pis_poly_var_block -> E.is_type_object (Ext_list.singleton_exn args)

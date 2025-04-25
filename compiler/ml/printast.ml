@@ -256,11 +256,7 @@ and expression i ppf x =
     if partial then line i ppf "partial\n";
     expression i ppf e;
     list i label_x_expression ppf l;
-    Option.iter
-      (fun jsx ->
-        line i ppf "transformed_jsx:\n";
-        expression (i + 1) ppf {x with pexp_desc = Pexp_jsx_element jsx})
-      transformed_jsx
+    line i ppf "transformed_jsx: %b\n" transformed_jsx
   | Pexp_match (e, l) ->
     line i ppf "Pexp_match\n";
     expression i ppf e;

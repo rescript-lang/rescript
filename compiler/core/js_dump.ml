@@ -524,7 +524,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
          when Ext_list.length_equal el i
        ]}
     *)
-  | Call (e, el, {call_transformed_jsx = Some jsx_element}) -> (
+  | Call (e, el, {call_transformed_jsx = true}) -> (
     match el with
     | [
      tag;
@@ -561,11 +561,9 @@ and expression_desc cxt ~(level : int) f x : cxt =
         (Call
            ( e,
              el,
-             {call_transformed_jsx = None; arity = Full; call_info = Call_ml} ))
-    )
+             {call_transformed_jsx = false; arity = Full; call_info = Call_ml}
+           )))
   | Call (e, el, info) ->
-    Format.fprintf Format.err_formatter "Js_dump Has transformed_jsx %b\n"
-      (Option.is_some info.call_transformed_jsx);
     P.cond_paren_group f (level > 15) (fun _ ->
         P.group f 0 (fun _ ->
             match (info, el) with
@@ -1080,7 +1078,7 @@ and print_jsx cxt ~(level : int) f (tag : J.expression)
   | Some children ->
     let child_is_jsx =
       match children.expression_desc with
-      | J.Call (_, _, {call_transformed_jsx = Some _}) -> true
+      | J.Call (_, _, {call_transformed_jsx = is_jsx}) -> is_jsx
       | _ -> false
     in
 
