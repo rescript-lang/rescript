@@ -14,7 +14,7 @@
   "jsx": { "version": 4 },
   "suffix": ".res.js",
   "editor": {
-    "autocompleteConfig": {
+    "autocomplete": {
       "array": ["ArrayUtils"],
       "Fastify.t": ["FastifyExt"]
     }

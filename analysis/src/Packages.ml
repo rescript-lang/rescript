@@ -66,10 +66,10 @@ let newBsPackage ~rootPath =
           | _ -> None)
         | None -> None
       in
-      let autocompleteConfig =
+      let autocomplete =
         match config |> Json.get "editor" with
         | Some editorConfig -> (
-          match editorConfig |> Json.get "autocompleteConfig" with
+          match editorConfig |> Json.get "autocomplete" with
           | Some (Object map) ->
             map
             |> List.fold_left
@@ -180,7 +180,7 @@ let newBsPackage ~rootPath =
              opens;
              namespace;
              uncurried;
-             autocompleteConfig;
+             autocomplete;
            }))
     | None -> None
   in

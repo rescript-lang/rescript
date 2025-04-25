@@ -1137,9 +1137,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         in
 
         let globallyConfiguredCompletionsForType =
-          match
-            package.autocompleteConfig |> Misc.StringMap.find_opt mainTypeId
-          with
+          match package.autocomplete |> Misc.StringMap.find_opt mainTypeId with
           | None -> []
           | Some completionPaths ->
             completionPaths |> List.map (fun p -> String.split_on_char '.' p)

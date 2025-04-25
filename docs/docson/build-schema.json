@@ -353,7 +353,7 @@
     "editor": {
       "type": "object",
       "properties": {
-        "autocompleteConfig": {
+        "autocomplete": {
           "type": "object",
           "description": "A mapping to extend the autocompletion for a given type with an array of modules. E.g. `{ \"int\": [\"IntUtils\", \"IntExt\"] }` will extend the autocompletion of the `int` type with the values from `IntUtils` and `IntExt` modules.",
           "patternProperties": {
