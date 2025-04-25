@@ -540,6 +540,22 @@ and expression_desc cxt ~(level : int) f x : cxt =
             | _ -> Some (f, x))
       in
       print_jsx cxt ~level f tag fields
+    | [
+     tag;
+     {
+       expression_desc =
+         Caml_block (el, _mutable_flag, _, Lambda.Blk_record {fields});
+     };
+     key;
+    ] ->
+      let fields =
+        Ext_list.array_list_filter_map fields el (fun (f, opt) x ->
+            match x.expression_desc with
+            | Undefined _ when opt -> None
+            | _ -> Some (f, x))
+      in
+      let fields = ("key", key) :: fields in
+      print_jsx cxt ~level f tag fields
     | _ ->
       expression_desc cxt ~level f
         (Call
@@ -1033,19 +1049,50 @@ and expression_desc cxt ~(level : int) f x : cxt =
 
 and print_jsx cxt ~(level : int) f (tag : J.expression)
     (fields : (string * J.expression) list) : cxt =
-  ignore (level, tag, fields);
+  let print_tag () =
+    match tag.expression_desc with
+    | J.Str {txt} -> P.string f txt
+    | _ ->
+      let _ = expression ~level cxt f tag in
+      ()
+  in
   let children_opt =
     List.find_map (fun (n, e) -> if n = "children" then Some e else None) fields
   in
+  let print_props () =
+    let props = List.filter (fun (n, _) -> n <> "children") fields in
+    if not (List.is_empty props) then
+      (List.iter (fun (n, x) ->
+           P.space f;
+           P.string f n;
+           P.string f "=";
+           P.string f "{";
+           let _ = expression ~level:0 cxt f x in
+           P.string f "}"))
+        props
+  in
   (match children_opt with
-  | None -> P.string f "< />"
-  | Some children ->
+  | None ->
     P.string f "<";
-    let _ = expression ~level cxt f tag in
+    print_tag ();
+    print_props ();
+    P.string f "/>"
+  | Some children ->
+    let child_is_jsx =
+      match children.expression_desc with
+      | J.Call (_, _, {call_transformed_jsx = Some _}) -> true
+      | _ -> false
+    in
+
+    P.string f "<";
+    print_tag ();
+    print_props ();
     P.string f ">";
+    if not child_is_jsx then P.string f "{";
     let _ = expression ~level cxt f children in
+    if not child_is_jsx then P.string f "}";
     P.string f "</";
-    let _ = expression ~level cxt f tag in
+    print_tag ();
     P.string f ">");
 
   cxt
