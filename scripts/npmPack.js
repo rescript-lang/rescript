@@ -11,7 +11,8 @@
 // recreates the artifact list and verifies that it has no changes compared to the committed state.
 
 import { execSync, spawn } from "node:child_process";
-import fs from "node:fs";
+import * as fs from "node:fs/promises";
+import * as readline from "node:readline/promises";
 import { parseArgs } from "node:util";
 import { artifactListFile } from "#dev/paths";
 
@@ -50,23 +51,21 @@ const exitCode = new Promise((resolve, reject) => {
   child.once("close", code => resolve(code));
 });
 
-fs.unlinkSync(artifactListFile);
+await fs.unlink(artifactListFile);
 
-for await (const chunk of child.stdout.setEncoding("utf8")) {
-  const lines = /** @type {string} */ (chunk)
-    .trim()
-    .split(/\s/);
-  for (const line of lines) {
-    /** @type {YarnPackOutputLine} */
-    const json = JSON.parse(line);
-    if ("location" in json) {
-      // Workaround for false positive reports
-      // See https://github.com/yarnpkg/berry/issues/6766
-      if (json.location.startsWith("_build")) {
-        continue;
-      }
-      fs.appendFileSync(artifactListFile, json.location + "\n", "utf8");
+for await (const line of readline.createInterface({
+  input: child.stdout.setEncoding("utf8"),
+  crlfDelay: Number.POSITIVE_INFINITY,
+})) {
+  /** @type {YarnPackOutputLine} */
+  const json = JSON.parse(line);
+  if ("location" in json) {
+    // Workaround for false positive reports
+    // See https://github.com/yarnpkg/berry/issues/6766
+    if (json.location.startsWith("_build")) {
+      continue;
     }
+    await fs.appendFile(artifactListFile, json.location + "\n", "utf8");
   }
 }
 
