@@ -488,8 +488,9 @@ let default_mapper =
           ~attrs:(this.attributes this pld_attributes));
     cases = (fun this l -> List.map (this.case this) l);
     case =
-      (fun this {pc_lhs; pc_guard; pc_rhs} ->
+      (fun this {pc_bar; pc_lhs; pc_guard; pc_rhs} ->
         {
+          pc_bar;
           pc_lhs = this.pat this pc_lhs;
           pc_guard = map_opt (this.expr this) pc_guard;
           pc_rhs = this.expr this pc_rhs;

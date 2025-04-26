@@ -208,7 +208,8 @@ module Exp = struct
               jsx_container_element_closing_tag = e;
             }))
 
-  let case lhs ?guard rhs = {pc_lhs = lhs; pc_guard = guard; pc_rhs = rhs}
+  let case ?bar lhs ?guard rhs =
+    {pc_bar = bar; pc_lhs = lhs; pc_guard = guard; pc_rhs = rhs}
 
   let make_list_expression loc seq ext_opt =
     let rec handle_seq = function

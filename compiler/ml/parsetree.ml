@@ -381,6 +381,7 @@ and jsx_closing_container_tag = {
 
 and case = {
   (* (P -> E) or (P when E0 -> E) *)
+  pc_bar: Lexing.position option;
   pc_lhs: pattern;
   pc_guard: expression option;
   pc_rhs: expression;
