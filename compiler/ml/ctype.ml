@@ -53,8 +53,9 @@ open Btype
 *)
 
 (**** Errors ****)
+type type_pairs = (type_expr * type_expr) list
 
-exception Unify of (type_expr * type_expr) list
+exception Unify of type_pairs
 
 exception Tags of label * label
 
@@ -100,11 +101,20 @@ type subtype_context =
       issues: Record_coercion.record_field_subtype_violation list;
     }
 
+type subtype_type_position =
+  | RecordField of {
+      field_name: string;
+      left_record_name: Path.t;
+      right_record_name: Path.t;
+    }
+  | TupleElement of {index: int}
+
 exception
   Subtype of
-    (type_expr * type_expr) list
-    * (type_expr * type_expr) list
+    type_pairs
+    * type_pairs
     * subtype_context option
+    * subtype_type_position option
 
 exception Cannot_expand
 
@@ -113,7 +123,7 @@ exception Cannot_apply
 exception Recursive_abbrev
 
 (* GADT: recursive abbrevs can appear as a result of local constraints *)
-exception Unification_recursive_abbrev of (type_expr * type_expr) list
+exception Unification_recursive_abbrev of type_pairs
 
 (**** Type level management ****)
 
@@ -3579,15 +3589,15 @@ let enlarge_type env ty =
 
 let subtypes = TypePairs.create 17
 
-let subtype_error ?ctx env trace =
-  raise (Subtype (expand_trace env (List.rev trace), [], ctx))
+let subtype_error ?type_position ?ctx env trace =
+  raise (Subtype (expand_trace env (List.rev trace), [], ctx, type_position))
 
 let extract_concrete_typedecl_opt env t =
   match extract_concrete_typedecl env t with
   | v -> Some v
   | exception Not_found -> None
 
-let rec subtype_rec env trace t1 t2 cstrs =
+let rec subtype_rec ?type_position env trace t1 t2 cstrs =
   let t1 = repr t1 in
   let t2 = repr t2 in
   if t1 == t2 then cstrs
@@ -3598,14 +3608,16 @@ let rec subtype_rec env trace t1 t2 cstrs =
     with Not_found -> (
       TypePairs.add subtypes (t1, t2) ();
       match (t1.desc, t2.desc) with
-      | Tvar _, _ | _, Tvar _ -> (trace, t1, t2, !univar_pairs, None) :: cstrs
+      | Tvar _, _ | _, Tvar _ ->
+        (trace, t1, t2, !univar_pairs, None, type_position) :: cstrs
       | Tarrow (l1, t1, u1, _, _), Tarrow (l2, t2, u2, _, _)
         when Asttypes.Noloc.same_arg_label l1 l2 ->
         let cstrs = subtype_rec env ((t2, t1) :: trace) t2 t1 cstrs in
         subtype_rec env ((u1, u2) :: trace) u1 u2 cstrs
       | Ttuple tl1, Ttuple tl2 ->
-        (* TODO(subtype-errors) Tuple as context *)
-        subtype_list env trace tl1 tl2 cstrs
+        subtype_list
+          ~make_type_position:(fun i -> Some (TupleElement {index = i}))
+          env trace tl1 tl2 cstrs
       | Tconstr (p1, [], _), Tconstr (p2, [], _) when Path.same p1 p2 -> cstrs
       | Tconstr (p1, _tl1, _abbrev1), _
         when generic_abbrev env p1 && safe_abbrev env t1 ->
@@ -3631,13 +3643,15 @@ let rec subtype_rec env trace t1 t2 cstrs =
                       newty2 t1.level (Ttuple [t1]),
                       newty2 t2.level (Ttuple [t2]),
                       !univar_pairs,
-                      None )
+                      None,
+                      type_position )
                     :: cstrs
                 else subtype_rec env ((t1, t2) :: trace) t1 t2 cstrs
               else if cn then subtype_rec env ((t2, t1) :: trace) t2 t1 cstrs
               else cstrs)
             cstrs decl.type_variance (List.combine tl1 tl2)
-        with Not_found -> (trace, t1, t2, !univar_pairs, None) :: cstrs)
+        with Not_found ->
+          (trace, t1, t2, !univar_pairs, None, type_position) :: cstrs)
       | Tconstr (p1, _, _), _ when generic_private_abbrev env p1 ->
         subtype_rec env trace (expand_abbrev_opt env t1) t2 cstrs
       | Tconstr (p1, [], _), Tconstr (p2, [], _)
@@ -3664,7 +3678,8 @@ let rec subtype_rec env trace t1 t2 cstrs =
             !univar_pairs,
             Some
               (Primitive_coercion_target_variant_not_unboxed
-                 {variant_name = p; primitive = path}) )
+                 {variant_name = p; primitive = path}),
+            type_position )
           :: cstrs
         | Some (p, constructors, true) ->
           if
@@ -3678,11 +3693,17 @@ let rec subtype_rec env trace t1 t2 cstrs =
               !univar_pairs,
               Some
                 (Primitive_coercion_target_variant_no_catch_all
-                   {variant_name = p; primitive = path}) )
+                   {variant_name = p; primitive = path}),
+              type_position )
             :: cstrs
         | None ->
           (* Unclear when this case actually happens. *)
-          (trace, t1, t2, !univar_pairs, Some (Generic {errorCode = "VCPMMVD"}))
+          ( trace,
+            t1,
+            t2,
+            !univar_pairs,
+            Some (Generic {errorCode = "VCPMMVD"}),
+            type_position )
           :: cstrs)
       | Tconstr (_, [], _), Tconstr (path, [], _)
         when Variant_coercion.can_coerce_primitive path
@@ -3708,11 +3729,11 @@ let rec subtype_rec env trace t1 t2 cstrs =
               !univar_pairs,
               Some
                 (Variant_constructor_runtime_representation_mismatch
-                   {issues = runtime_representation_issues; variant_name = p})
-            )
+                   {issues = runtime_representation_issues; variant_name = p}),
+              type_position )
             :: cstrs
           else cstrs
-        | None -> (trace, t1, t2, !univar_pairs, None) :: cstrs)
+        | None -> (trace, t1, t2, !univar_pairs, None, type_position) :: cstrs)
       | Tconstr (_, [], _), Tconstr (_, [], _) -> (
         (* type coercion for variants and records *)
         match
@@ -3722,7 +3743,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
             (p2, _, {type_kind = Type_variant c2; type_attributes = t2attrs}) )
           -> (
           match
-            Variant_coercion.variant_configuration_can_be_coerced2 t1attrs
+            Variant_coercion.variant_configuration_can_be_coerced t1attrs
               t2attrs
           with
           | Error issue ->
@@ -3732,7 +3753,8 @@ let rec subtype_rec env trace t1 t2 cstrs =
               !univar_pairs,
               Some
                 (Variant_configurations_mismatch
-                   {left_variant_name = p1; right_variant_name = p2; issue}) )
+                   {left_variant_name = p1; right_variant_name = p2; issue}),
+              type_position )
             :: cstrs
           | Ok () ->
             let c1_len = List.length c1 in
@@ -3760,7 +3782,8 @@ let rec subtype_rec env trace t1 t2 cstrs =
                        issue =
                          Incompatible_constructor_count
                            {constructor_names = incompatible_constructor_names};
-                     }) )
+                     }),
+                type_position )
               :: cstrs
             else
               let constructor_map = Hashtbl.create c1_len in
@@ -3822,7 +3845,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
                        | _ -> Some [ (* TODO(subtype-errors) *) ])
               in
               if field_subtype_violations = [] then cstrs
-              else (trace, t1, t2, !univar_pairs, None) :: cstrs)
+              else (trace, t1, t2, !univar_pairs, None, type_position) :: cstrs)
         | ( (p1, _, {type_kind = Type_record (fields1, repr1)}),
             (p2, _, {type_kind = Type_record (fields2, repr2)}) ) ->
           (* TODO(subtype-errors) Record representation *)
@@ -3850,10 +3873,24 @@ let rec subtype_rec env trace t1 t2 cstrs =
                        left_record_name = p1;
                        right_record_name = p2;
                        issues = violations;
-                     }) )
+                     }),
+                type_position )
               :: cstrs
-            else subtype_list env trace tl1 tl2 cstrs
-          else (trace, t1, t2, !univar_pairs, None) :: cstrs
+            else
+              subtype_list
+                ~make_type_position:(fun i ->
+                  match List.nth_opt fields1 i with
+                  | None -> None
+                  | Some field ->
+                    Some
+                      (RecordField
+                         {
+                           field_name = field.ld_id.name;
+                           left_record_name = p1;
+                           right_record_name = p2;
+                         }))
+                env trace tl1 tl2 cstrs
+          else (trace, t1, t2, !univar_pairs, None, type_position) :: cstrs
         | (p1, _, {type_kind = tk1}), (p2, _, {type_kind = tk2}) ->
           ( trace,
             t1,
@@ -3866,19 +3903,22 @@ let rec subtype_rec env trace t1 t2 cstrs =
                    right_typename = p2;
                    left_type_kind = tk1;
                    right_type_kind = tk2;
-                 }) )
+                 }),
+            type_position )
           :: cstrs
-        | exception Not_found -> (trace, t1, t2, !univar_pairs, None) :: cstrs)
+        | exception Not_found ->
+          (trace, t1, t2, !univar_pairs, None, type_position) :: cstrs)
       (* | (_, Tconstr(p2, _, _)) when generic_private_abbrev false env p2 ->
          subtype_rec env trace t1 (expand_abbrev_opt env t2) cstrs *)
       | Tobject (f1, _), Tobject (f2, _)
         when is_Tvar (object_row f1) && is_Tvar (object_row f2) ->
         (* Same row variable implies same object. *)
-        (trace, t1, t2, !univar_pairs, None) :: cstrs
+        (trace, t1, t2, !univar_pairs, None, type_position) :: cstrs
       | Tobject (f1, _), Tobject (f2, _) -> subtype_fields env trace f1 f2 cstrs
       | Tvariant row1, Tvariant row2 -> (
         try subtype_row env trace row1 row2 cstrs
-        with Exit -> (trace, t1, t2, !univar_pairs, None) :: cstrs)
+        with Exit ->
+          (trace, t1, t2, !univar_pairs, None, type_position) :: cstrs)
       | Tvariant {row_closed = true; row_fields}, Tconstr (_, [], _)
         when extract_concrete_typedecl_opt env t2
              |> Variant_coercion.type_is_variant -> (
@@ -3892,8 +3932,9 @@ let rec subtype_rec env trace t1 t2 cstrs =
               ~variant_constructors ~type_attributes
           with
           | Ok _ -> cstrs
-          | Error _ -> (trace, t1, t2, !univar_pairs, None) :: cstrs)
-        | _ -> (trace, t1, t2, !univar_pairs, None) :: cstrs)
+          | Error _ ->
+            (trace, t1, t2, !univar_pairs, None, type_position) :: cstrs)
+        | _ -> (trace, t1, t2, !univar_pairs, None, type_position) :: cstrs)
       | Tvariant v, _ when !variant_is_subtype env (row_repr v) t2 -> cstrs
       | Tpoly (u1, []), Tpoly (u2, []) -> subtype_rec env trace u1 u2 cstrs
       | Tpoly (u1, tl1), Tpoly (u2, []) ->
@@ -3903,7 +3944,8 @@ let rec subtype_rec env trace t1 t2 cstrs =
         try
           enter_poly env univar_pairs u1 tl1 u2 tl2 (fun t1 t2 ->
               subtype_rec env trace t1 t2 cstrs)
-        with Unify _ -> (trace, t1, t2, !univar_pairs, None) :: cstrs)
+        with Unify _ ->
+          (trace, t1, t2, !univar_pairs, None, type_position) :: cstrs)
       | Tpackage (p1, nl1, tl1), Tpackage (p2, nl2, tl2) -> (
         try
           let ntl1 = complete_type_list env nl2 t1.level (Mty_ident p1) nl1 tl1
@@ -3914,7 +3956,12 @@ let rec subtype_rec env trace t1 t2 cstrs =
           let cstrs' =
             List.map
               (fun (n2, t2) ->
-                (trace, List.assoc n2 ntl1, t2, !univar_pairs, None))
+                ( trace,
+                  List.assoc n2 ntl1,
+                  t2,
+                  !univar_pairs,
+                  None,
+                  type_position ))
               ntl2
           in
           if eq_package_path env p1 p2 then cstrs' @ cstrs
@@ -3922,7 +3969,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
             (* need to check module subtyping *)
             let snap = Btype.snapshot () in
             try
-              List.iter (fun (_, t1, t2, _, _) -> unify env t1 t2) cstrs';
+              List.iter (fun (_, t1, t2, _, _, _) -> unify env t1 t2) cstrs';
               if !package_subtype env p1 nl1 tl1 p2 nl2 tl2 then (
                 Btype.backtrack snap;
                 cstrs' @ cstrs)
@@ -3930,16 +3977,28 @@ let rec subtype_rec env trace t1 t2 cstrs =
             with Unify _ ->
               Btype.backtrack snap;
               raise Not_found
-        with Not_found -> (trace, t1, t2, !univar_pairs, None) :: cstrs)
-      | _, _ -> (trace, t1, t2, !univar_pairs, None) :: cstrs)
+        with Not_found ->
+          (trace, t1, t2, !univar_pairs, None, type_position) :: cstrs)
+      | _, _ -> (trace, t1, t2, !univar_pairs, None, type_position) :: cstrs)
 
-and subtype_list env trace tl1 tl2 cstrs =
-  if List.length tl1 <> List.length tl2 then subtype_error env trace;
+and subtype_list ?make_type_position env trace tl1 tl2 cstrs =
+  if List.length tl1 <> List.length tl2 then
+    (* TODO(subtype-errors): Not the same length error *)
+    subtype_error env trace;
+  let idx = ref 0 in
   List.fold_left2
-    (fun cstrs t1 t2 -> subtype_rec env ((t1, t2) :: trace) t1 t2 cstrs)
+    (fun cstrs t1 t2 ->
+      let index = !idx in
+      incr idx;
+      let type_position =
+        match make_type_position with
+        | Some f -> f index
+        | None -> None
+      in
+      subtype_rec ?type_position env ((t1, t2) :: trace) t1 t2 cstrs)
     cstrs tl1 tl2
 
-and subtype_fields env trace ty1 ty2 cstrs =
+and subtype_fields ?type_position env trace ty1 ty2 cstrs =
   (* Assume that either rest1 or rest2 is not Tvar *)
   let fields1, rest1 = flatten_fields ty1 in
   let fields2, rest2 = flatten_fields ty2 in
@@ -3953,7 +4012,8 @@ and subtype_fields env trace ty1 ty2 cstrs =
         build_fields (repr ty1).level miss1 rest1,
         rest2,
         !univar_pairs,
-        None )
+        None,
+        type_position )
       :: cstrs
   in
   let cstrs =
@@ -3963,7 +4023,8 @@ and subtype_fields env trace ty1 ty2 cstrs =
         rest1,
         build_fields (repr ty2).level miss2 (newvar ()),
         !univar_pairs,
-        None )
+        None,
+        type_position )
       :: cstrs
   in
   List.fold_left
@@ -4020,14 +4081,15 @@ let subtype env ty1 ty2 =
   | () ->
     List.iter
       (function
-        | trace0, t1, t2, pairs, ctx -> (
+        | trace0, t1, t2, pairs, ctx, type_position -> (
           try unify_pairs (ref env) t1 t2 pairs
           with Unify trace ->
             raise
               (Subtype
                  ( expand_trace env (List.rev trace0),
                    List.tl (List.tl trace),
-                   ctx ))))
+                   ctx,
+                   type_position ))))
       (List.rev cstrs)
 
 (*******************)

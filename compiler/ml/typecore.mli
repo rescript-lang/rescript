@@ -76,9 +76,10 @@ type error =
   | Private_type of type_expr
   | Private_label of Longident.t * type_expr
   | Not_subtype of
-      (type_expr * type_expr) list
-      * (type_expr * type_expr) list
+      Ctype.type_pairs
+      * Ctype.type_pairs
       * Ctype.subtype_context option
+      * Ctype.subtype_type_position option
   | Too_many_arguments of bool * type_expr
   | Abstract_wrong_label of Noloc.arg_label * type_expr
   | Scoping_let_module of string * type_expr
