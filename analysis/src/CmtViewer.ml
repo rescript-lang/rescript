@@ -4,15 +4,40 @@ let loc_to_string (loc : Warnings.loc) : string =
     loc.loc_end.pos_lnum
     (loc.loc_end.pos_cnum - loc.loc_end.pos_bol)
 
-let dump path =
+let filter_by_cursor cursor (loc : Warnings.loc) : bool =
+  match cursor with
+  | None -> true
+  | Some (line, col) ->
+    let start = loc.loc_start and end_ = loc.loc_end in
+    let line_in = start.pos_lnum <= line && line <= end_.pos_lnum in
+    let col_in =
+      if start.pos_lnum = end_.pos_lnum then
+        start.pos_cnum - start.pos_bol <= col
+        && col <= end_.pos_cnum - end_.pos_bol
+      else if line = start.pos_lnum then col >= start.pos_cnum - start.pos_bol
+      else if line = end_.pos_lnum then col <= end_.pos_cnum - end_.pos_bol
+      else true
+    in
+    line_in && col_in
+
+let dump ?(cursor = None) path =
   match Cmt.loadFullCmtFromPath ~path with
   | None -> failwith (Format.sprintf "Could not load cmt for %s" path)
   | Some full ->
     let open SharedTypes in
     let open SharedTypes.Stamps in
-    let stamps = full.file.stamps |> getEntries in
+    let filter = filter_by_cursor cursor in
+    cursor
+    |> Option.iter (fun (line, col) ->
+           Printf.printf "Filtering by cursor %d,%d\n" line col);
+    let stamps =
+      full.file.stamps |> getEntries
+      |> List.filter (fun (_, stamp) -> filter (locOfKind stamp))
+    in
 
-    Printf.printf "Found %d stamps:\n\n" (List.length stamps);
+    let total_stamps = List.length stamps in
+    Printf.printf "Found %d stamps:\n%s" total_stamps
+      (if total_stamps > 0 then "\n" else "");
 
     stamps
     |> List.sort (fun (_, a) (_, b) ->
@@ -39,7 +64,8 @@ let dump path =
     (* Dump all locItems (typed nodes) *)
     let locItems =
       match full.extra with
-      | {locItems} -> locItems
+      | {locItems} ->
+        locItems |> List.filter (fun locItem -> filter locItem.loc)
     in
 
     Printf.printf "\nFound %d locItems (typed nodes):\n\n"
