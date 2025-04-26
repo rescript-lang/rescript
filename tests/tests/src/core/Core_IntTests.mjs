@@ -2,7 +2,6 @@
 
 import * as Test from "./Test.mjs";
 import * as Pervasives from "rescript/lib/es6/Pervasives.js";
-import * as Stdlib_Exn from "rescript/lib/es6/Stdlib_Exn.js";
 import * as Stdlib_Int from "rescript/lib/es6/Stdlib_Int.js";
 import * as Primitive_object from "rescript/lib/es6/Primitive_object.js";
 import * as Primitive_exceptions from "rescript/lib/es6/Primitive_exceptions.js";
@@ -15,7 +14,7 @@ function $$catch(f) {
     return Pervasives.failwith("no exception raised");
   } catch (raw_err) {
     let err = Primitive_exceptions.internalToException(raw_err);
-    if (err.RE_EXN_ID === Stdlib_Exn.$$Error) {
+    if (err.RE_EXN_ID === "JsExn") {
       return err._1;
     }
     throw err;
@@ -54,9 +53,9 @@ Test.run([
     "Core_IntTests.res",
     13,
     20,
-    51
+    52
   ],
-  "range - cross-zero, incresing"
+  "range - cross-zero, increasing"
 ], Stdlib_Int.range(-1, 2, undefined), eq, [
   -1,
   0,

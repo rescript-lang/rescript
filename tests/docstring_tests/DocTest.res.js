@@ -9,13 +9,12 @@ import * as Nodepath from "node:path";
 import * as ArrayUtils from "./ArrayUtils.res.js";
 import * as Belt_Array from "rescript/lib/es6/Belt_Array.js";
 import * as SpawnAsync from "./SpawnAsync.res.js";
-import * as Stdlib_Exn from "rescript/lib/es6/Stdlib_Exn.js";
 import * as Stdlib_Int from "rescript/lib/es6/Stdlib_Int.js";
 import * as Stdlib_Dict from "rescript/lib/es6/Stdlib_Dict.js";
 import * as Stdlib_List from "rescript/lib/es6/Stdlib_List.js";
 import * as Stdlib_Array from "rescript/lib/es6/Stdlib_Array.js";
-import * as Stdlib_Error from "rescript/lib/es6/Stdlib_Error.js";
 import * as Stdlib_Option from "rescript/lib/es6/Stdlib_Option.js";
+import * as Stdlib_JsError from "rescript/lib/es6/Stdlib_JsError.js";
 import * as Primitive_string from "rescript/lib/es6/Primitive_string.js";
 import * as Promises from "node:fs/promises";
 import * as Primitive_exceptions from "rescript/lib/es6/Primitive_exceptions.js";
@@ -60,8 +59,8 @@ async function extractDocFromFile(file) {
     return RescriptTools_Docgen.decodeFromJson(JSON.parse(getOutput(match.stdout)));
   } catch (raw_exn) {
     let exn = Primitive_exceptions.internalToException(raw_exn);
-    if (exn.RE_EXN_ID === Stdlib_Exn.$$Error) {
-      return Stdlib_Error.panic("Failed to generate docstrings from " + file);
+    if (exn.RE_EXN_ID === "JsExn") {
+      return Stdlib_JsError.panic("Failed to generate docstrings from " + file);
     }
     throw {
       RE_EXN_ID: "Assert_failure",

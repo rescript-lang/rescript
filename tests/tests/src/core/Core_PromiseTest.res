@@ -130,7 +130,7 @@ module Catching = {
     ->then(_ => resolve()) // Since our asyncParse will fail anyways, we convert to promise<unit> for our catch later
     ->catch(e => {
       let success = switch e {
-      | Exn.Error(err) => Exn.name(err) == Some("SyntaxError")
+      | JsExn(err) => JsExn.name(err) == Some("SyntaxError")
       | _ => false
       }
 
@@ -173,7 +173,7 @@ module Catching = {
     })
     ->catch(e => {
       let isTestErr = switch e {
-      | Exn.Error(err) => Exn.message(err) == Some("Some JS error")
+      | JsExn(err) => JsExn.message(err) == Some("Some JS error")
       | _ => false
       }
       Test.run(__POS_OF__("Should be some JS error"), isTestErr, equal, true)

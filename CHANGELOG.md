@@ -12,6 +12,10 @@
 
 # 12.0.0-alpha.13 (Unreleased)
 
+#### :boom: Breaking Change
+
+- Rename `JsError` to `JsExn` and error modules cleanup. https://github.com/rescript-lang/rescript/pull/7408
+
 #### :rocket: New Feature
 
 - Add shift (`<<`, `>>`, `>>>`) operators for `int` and `bigint`. https://github.com/rescript-lang/rescript/pull/7183

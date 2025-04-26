@@ -10,7 +10,7 @@ val failure : t
 val fromLid : Longident.t -> t
 val fromString : string -> t
 val invalidArgument : t
-val jsExnError : t
+val jsExn : t
 val matchFailure : t
 val notFound : t
 val sysError : t

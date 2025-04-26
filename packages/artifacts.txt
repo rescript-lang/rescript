@@ -177,6 +177,8 @@ lib/es6/Stdlib_Intl_Segmenter.js
 lib/es6/Stdlib_Intl_Segments.js
 lib/es6/Stdlib_Iterator.js
 lib/es6/Stdlib_JSON.js
+lib/es6/Stdlib_JsError.js
+lib/es6/Stdlib_JsExn.js
 lib/es6/Stdlib_Lazy.js
 lib/es6/Stdlib_List.js
 lib/es6/Stdlib_Map.js
@@ -350,6 +352,8 @@ lib/js/Stdlib_Intl_Segmenter.js
 lib/js/Stdlib_Intl_Segments.js
 lib/js/Stdlib_Iterator.js
 lib/js/Stdlib_JSON.js
+lib/js/Stdlib_JsError.js
+lib/js/Stdlib_JsExn.js
 lib/js/Stdlib_Lazy.js
 lib/js/Stdlib_List.js
 lib/js/Stdlib_Map.js
@@ -1103,6 +1107,18 @@ lib/ocaml/Stdlib_JSON.cmt
 lib/ocaml/Stdlib_JSON.cmti
 lib/ocaml/Stdlib_JSON.res
 lib/ocaml/Stdlib_JSON.resi
+lib/ocaml/Stdlib_JsError.cmi
+lib/ocaml/Stdlib_JsError.cmj
+lib/ocaml/Stdlib_JsError.cmt
+lib/ocaml/Stdlib_JsError.cmti
+lib/ocaml/Stdlib_JsError.res
+lib/ocaml/Stdlib_JsError.resi
+lib/ocaml/Stdlib_JsExn.cmi
+lib/ocaml/Stdlib_JsExn.cmj
+lib/ocaml/Stdlib_JsExn.cmt
+lib/ocaml/Stdlib_JsExn.cmti
+lib/ocaml/Stdlib_JsExn.res
+lib/ocaml/Stdlib_JsExn.resi
 lib/ocaml/Stdlib_Lazy.cmi
 lib/ocaml/Stdlib_Lazy.cmj
 lib/ocaml/Stdlib_Lazy.cmt

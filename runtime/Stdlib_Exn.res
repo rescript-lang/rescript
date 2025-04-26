@@ -25,7 +25,7 @@
 type t = unknown
 
 @@warning("-38") /* unused extension constructor */
-exception Error = JsError
+exception Error = JsExn
 
 let asJsExn: exn => option<t> = exn =>
   switch Obj.magic(exn) {

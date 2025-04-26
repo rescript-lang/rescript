@@ -115,7 +115,7 @@ let raisePipe = raise(Not_found)
 @raises(Not_found)
 let raiseArrow = Not_found->raise
 
-@raises(Exn.Error)
+@raises(JsExn)
 let bar = () => Js.Json.parseExn("!!!")
 
 let severalCases = cases =>

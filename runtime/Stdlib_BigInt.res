@@ -28,7 +28,7 @@ BigInt.fromStringExn("0o11")->assertEqual(9n)
 
 /* catch exception */
 switch BigInt.fromStringExn("a") {
-| exception Exn.Error(_error) => assert(true)
+| exception JsExn(_error) => assert(true)
 | _bigInt => assert(false)
 }
 ```

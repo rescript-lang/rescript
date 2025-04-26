@@ -12,6 +12,8 @@ module Error = Stdlib_Error
 module Float = Stdlib_Float
 module Int = Stdlib_Int
 module Intl = Stdlib_Intl
+module JsError = Stdlib_JsError
+module JsExn = Stdlib_JsExn
 module JSON = Stdlib_JSON
 module Lazy = Stdlib_Lazy
 module List = Stdlib_List
@@ -102,7 +104,7 @@ async function main() {
 */
 external import: 'a => promise<'a> = "%import"
 
-let panic = Error.panic
+let panic = JsError.panic
 
 /**
 `assertEqual(a, b)` check if `a` is equal `b`. If not raise a panic exception

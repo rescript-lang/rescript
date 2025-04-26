@@ -27,7 +27,7 @@ module Js = Primitive_js_extern
 
 type t = {@as("RE_EXN_ID") id: string}
 
-exception Error = JsError
+exception Error = JsExn
 type js_error = {cause: exn}
 
 /**
@@ -76,7 +76,7 @@ let internalToException = (e: unknown) =>
   if isExtension(e) {
     (Obj.magic(e): exn)
   } else {
-    JsError(e)
+    JsExn(e)
   }
 
 module Dict = {

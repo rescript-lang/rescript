@@ -5,12 +5,12 @@ let catch = f =>
     let _ = f()
     failwith("no exception raised")
   } catch {
-  | Exn.Error(err) => err
+  | JsExn(err) => err
   }
 
 Test.run(__POS_OF__("range - positive, increasing"), Int.range(3, 6), eq, [3, 4, 5])
 Test.run(__POS_OF__("range - negative, increasing"), Int.range(-3, -1), eq, [-3, -2])
-Test.run(__POS_OF__("range - cross-zero, incresing"), Int.range(-1, 2), eq, [-1, 0, 1])
+Test.run(__POS_OF__("range - cross-zero, increasing"), Int.range(-1, 2), eq, [-1, 0, 1])
 Test.run(__POS_OF__("range - start == end"), Int.range(3, 3), eq, [])
 Test.run(__POS_OF__("range - positive, decreasing"), Int.range(3, 1), eq, [3, 2])
 Test.run(__POS_OF__("range - negative, decreasing"), Int.range(-1, -3), eq, [-1, -2])
@@ -43,7 +43,7 @@ Test.run(
   __POS_OF__("range - positive, increasing, step 0"),
   catch(() => Int.range(3, 6, ~options={step: 0})),
   eq,
-  Error.RangeError.make("Incorrect range arguments"),
+  JsError.RangeError.make("Incorrect range arguments")->JsError.toJsExn,
 )
 Test.run(__POS_OF__("range - start == end, step 0"), Int.range(3, 3, ~options={step: 0}), eq, [])
 Test.run(
@@ -110,7 +110,7 @@ Test.run(
   __POS_OF__("range - positive, increasing, step 0, inclusive"),
   catch(() => Int.range(3, 6, ~options={step: 0, inclusive: true})),
   eq,
-  Error.RangeError.make("Incorrect range arguments"),
+  JsError.RangeError.make("Incorrect range arguments")->JsError.toJsExn,
 )
 Test.run(
   __POS_OF__("range - start == end, step 0, inclusive"),

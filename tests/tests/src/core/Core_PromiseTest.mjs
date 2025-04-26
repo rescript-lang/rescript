@@ -149,7 +149,7 @@ let asyncParseFail = (function() {
 
 function testExternalPromiseThrow() {
   return Stdlib_Promise.$$catch(asyncParseFail().then(param => Promise.resolve()), e => {
-    let success = e.RE_EXN_ID === Stdlib_Exn.$$Error ? Primitive_object.equal(e._1.name, "SyntaxError") : false;
+    let success = e.RE_EXN_ID === "JsExn" ? Primitive_object.equal(e._1.name, "SyntaxError") : false;
     Test.run([
       [
         "Core_PromiseTest.res",
@@ -187,7 +187,7 @@ function testExnThrow() {
 
 function testRaiseErrorThrow() {
   return Stdlib_Promise.$$catch(Promise.resolve().then(() => Stdlib_Exn.raiseError("Some JS error")), e => {
-    let isTestErr = e.RE_EXN_ID === Stdlib_Exn.$$Error ? Primitive_object.equal(e._1.message, "Some JS error") : false;
+    let isTestErr = e.RE_EXN_ID === "JsExn" ? Primitive_object.equal(e._1.message, "Some JS error") : false;
     Test.run([
       [
         "Core_PromiseTest.res",
