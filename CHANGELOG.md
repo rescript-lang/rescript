@@ -20,6 +20,10 @@
 
 - Fix broken `bstracing` CLI location. https://github.com/rescript-lang/rescript/pull/7398
 
+#### :house: Internal
+
+- AST: Add bar location to `case`. https://github.com/rescript-lang/rescript/pull/7407
+
 # 12.0.0-alpha.12
 
 #### :bug: Bug fix
