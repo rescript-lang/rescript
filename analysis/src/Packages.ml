@@ -12,6 +12,7 @@ let makePathsForModule ~projectFilesAndPaths ~dependenciesFilesAndPaths =
   pathsForModule
 
 let overrideRescriptVersion = ref None
+let overrideConfigFilePath = ref None
 
 let getReScriptVersion () =
   match !overrideRescriptVersion with
@@ -185,15 +186,21 @@ let newBsPackage ~rootPath =
     | None -> None
   in
 
-  match Files.readFile rescriptJson with
-  | Some raw -> parseRaw raw
-  | None -> (
-    Log.log ("Unable to read " ^ rescriptJson);
-    match Files.readFile bsconfigJson with
+  match !overrideConfigFilePath with
+  | Some configFilePath -> (
+    match Files.readFile configFilePath with
     | Some raw -> parseRaw raw
-    | None ->
-      Log.log ("Unable to read " ^ bsconfigJson);
-      None)
+    | None -> failwith "Unable to read passed config file")
+  | None -> (
+    match Files.readFile rescriptJson with
+    | Some raw -> parseRaw raw
+    | None -> (
+      Log.log ("Unable to read " ^ rescriptJson);
+      match Files.readFile bsconfigJson with
+      | Some raw -> parseRaw raw
+      | None ->
+        Log.log ("Unable to read " ^ bsconfigJson);
+        None))
 
 let findRoot ~uri packagesByRoot =
   let path = Uri.toPath uri in

@@ -1,0 +1,15 @@
+{
+  "name": "@tests/analysis_new",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rescript",
+    "clean": "rescript clean -with-deps",
+    "test": "yarn build && node test.js",
+    "test:update": "node --test-update-snapshots test.js"
+  },
+  "dependencies": {
+    "@rescript/react": "link:../../dependencies/rescript-react",
+    "rescript": "workspace:^"
+  }
+}
