@@ -1,0 +1,17 @@
+{
+  "name": "test",
+  "sources": [
+    {
+      "dir": "support_files"
+    }
+  ],
+  "bsc-flags": ["-w -33-44-8"],
+  "bs-dependencies": ["@rescript/react"],
+  "suffix": ".res.js",
+  "package-specs": [
+    {
+      "module": "esmodule",
+      "in-source": true
+    }
+  ]
+}

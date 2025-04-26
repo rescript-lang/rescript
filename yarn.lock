@@ -400,6 +400,12 @@ __metadata:
   languageName: node
   linkType: soft
 
+"@rescript/react@link:../../dependencies/rescript-react::locator=%40tests%2Fanalysis_new%40workspace%3Atests%2Fanalysis_new_tests%2Ftests":
+  version: 0.0.0-use.local
+  resolution: "@rescript/react@link:../../dependencies/rescript-react::locator=%40tests%2Fanalysis_new%40workspace%3Atests%2Fanalysis_new_tests%2Ftests"
+  languageName: node
+  linkType: soft
+
 "@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Ftools%40workspace%3Atests%2Ftools_tests":
   version: 0.0.0-use.local
   resolution: "@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Ftools%40workspace%3Atests%2Ftools_tests"
@@ -605,6 +611,15 @@ __metadata:
 "@tests/analysis@workspace:tests/analysis_tests/tests":
   version: 0.0.0-use.local
   resolution: "@tests/analysis@workspace:tests/analysis_tests/tests"
+  dependencies:
+    "@rescript/react": "link:../../dependencies/rescript-react"
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@tests/analysis_new@workspace:tests/analysis_new_tests/tests":
+  version: 0.0.0-use.local
+  resolution: "@tests/analysis_new@workspace:tests/analysis_new_tests/tests"
   dependencies:
     "@rescript/react": "link:../../dependencies/rescript-react"
     rescript: "workspace:^"
