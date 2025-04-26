@@ -55,7 +55,7 @@ const splitTestBlocks = (contents) => {
 
 const testBlocksPerFile = new Map();
 
-const baseCommand = `./node_modules/.bin/bsc -I lib/bs/support_files -I node_modules/@rescript/react/lib/ocaml -editor-mode -ignore-parse-errors -color never -bs-package-name test -bs-package-output esmodule:test.res`;
+const baseCommand = `./node_modules/.bin/bsc -I lib/bs/support_files -I node_modules/@rescript/react/lib/ocaml -editor-mode -ignore-parse-errors -color never`;
 
 // Compile all files and move incremental cmt's
 await Promise.all(
