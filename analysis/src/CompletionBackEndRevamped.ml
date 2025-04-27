@@ -29,6 +29,18 @@ let completeEmptyPattern ~env ~package typ =
         Completion.create ?typeArgContext "{}" ~includesSnippets:true
           ~insertText:"{$0}" ~sortText:"A" ~kind:(Value typ) ~env;
       ]
+    | Tarray _ ->
+      [
+        Completion.create ?typeArgContext "[]" ~includesSnippets:true
+          ~insertText:"[$0]" ~sortText:"A" ~kind:(Value typ) ~env;
+      ]
+    | Tbool _ ->
+      [
+        Completion.create ?typeArgContext "true" ~includesSnippets:true
+          ~insertText:"true" ~sortText:"A" ~kind:(Value typ) ~env;
+        Completion.create ?typeArgContext "false" ~includesSnippets:true
+          ~insertText:"false" ~sortText:"A" ~kind:(Value typ) ~env;
+      ]
     | _ -> [])
 
 let processCompletable ~debug ~full ~scope ~env ~pos
