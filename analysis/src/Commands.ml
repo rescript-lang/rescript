@@ -1,7 +1,7 @@
-let completion ~debug ~path ~pos ~currentFile =
+let completion (debug : bool) ~path ~pos ~currentFile =
   let completions =
     match
-      Completions.getCompletions ~debug ~path ~pos ~currentFile ~forHover:false
+      Completions.getCompletions debug ~path ~pos ~currentFile ~forHover:false
     with
     | None -> []
     | Some (completions, full, _) ->
@@ -11,9 +11,11 @@ let completion ~debug ~path ~pos ~currentFile =
   in
   completions |> Protocol.array |> print_endline
 
-let completionRevamped ~debug ~path ~pos ~currentFile =
+let completionRevamped ?(source = None) ~debug ~path ~pos ~currentFile =
   let completions =
-    match Completions.getCompletionsRevamped ~debug ~path ~pos ~currentFile with
+    match
+      Completions.getCompletionsRevamped ~source ~debug ~path ~pos ~currentFile
+    with
     | None -> []
     | Some (completions, full, _) ->
       completions
@@ -313,7 +315,7 @@ let format ~path =
 let diagnosticSyntax ~path =
   print_endline (Diagnostics.document_syntax ~path |> Protocol.array)
 
-let test ~path =
+let test ~path ~debug =
   Uri.stripPath := true;
   match Files.readFile path with
   | None -> assert false
@@ -383,8 +385,10 @@ let test ~path =
              ^ string_of_int col);
             let currentFile = createCurrentFile () in
             if !Cfg.useRevampedCompletion then
-              completionRevamped ~debug:true ~path ~pos:(line, col) ~currentFile
-            else completion ~debug:true ~path ~pos:(line, col) ~currentFile;
+              let source = Files.readFile currentFile in
+              completionRevamped ~source ~debug:true ~path ~pos:(line, col)
+                ~currentFile
+            else completion debug ~path ~pos:(line, col) ~currentFile;
             Sys.remove currentFile
           | "cre" ->
             let modulePath = String.sub rest 3 (String.length rest - 3) in
