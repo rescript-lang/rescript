@@ -1,4 +1,4 @@
-import { test } from "node:test";
+import { test, expect } from "vitest";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { glob } from "glob";
@@ -116,7 +116,7 @@ await Promise.all(
 resFiles.forEach((file) => {
   const blockData = testBlocksPerFile.get(file.relativePath);
   for (const block of blockData) {
-    test(`${file.relativePath} - ${block.description}`, async (t) => {
+    test(`${file.relativePath} - ${block.description}`, async () => {
       // Run rescript-editor-analysis and capture output
       const analysisOutput = await new Promise((resolve, reject) => {
         const analysisCmd = spawn(
@@ -153,7 +153,14 @@ resFiles.forEach((file) => {
         });
       });
 
-      t.assert.snapshot(analysisOutput.stdout);
+      // Construct snapshot path
+      const snapshotDir = path.join(testFilesDir, "__snapshots__");
+      await fs.mkdir(snapshotDir, { recursive: true }); // Ensure snapshot dir exists
+      const snapshotFileName = `${file.relativePath}_${block.description.replace(/\\s+/g, "_")}.snap`;
+      const snapshotPath = path.join(snapshotDir, snapshotFileName);
+
+      // Use Vitest's expect().toMatchFileSnapshot()
+      await expect(analysisOutput.stdout).toMatchFileSnapshot(snapshotPath);
     });
   }
 });

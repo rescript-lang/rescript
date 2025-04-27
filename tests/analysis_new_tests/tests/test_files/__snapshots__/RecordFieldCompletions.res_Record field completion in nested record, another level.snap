@@ -1,0 +1,18 @@
+Complete /Users/nojaf/Projects/rescript/tests/analysis_new_tests/tests/test_files/.build/RecordFieldCompletions_2.res 1:45
+posCursor:[1:45] posNoWhite:[1:44] Found expr:[1:8->1:45]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+[{
+    "label": "name",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype \\\"nestedTestRecord.nested\" = {\n  name: string,\n  oneMoreLevel: {here: bool},\n}\n```"}
+  }, {
+    "label": "oneMoreLevel",
+    "kind": 5,
+    "tags": [],
+    "detail": "\\\"nestedTestRecord.nested.oneMoreLevel\"",
+    "documentation": {"kind": "markdown", "value": "```rescript\noneMoreLevel: \\\"nestedTestRecord.nested.oneMoreLevel\"\n```\n\n```rescript\ntype \\\"nestedTestRecord.nested\" = {\n  name: string,\n  oneMoreLevel: {here: bool},\n}\n```"}
+  }]
+
