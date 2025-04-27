@@ -385,7 +385,7 @@ let test ~path =
             Sys.remove currentFile
           | "crm" ->
             print_endline
-              ("Complete Revamped " ^ path ^ " " ^ string_of_int line ^ ":"
+              ("Complete " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
             let currentFile = createCurrentFile () in
             completionRevamped ~debug:true ~path ~pos:(line, col) ~currentFile;
