@@ -132,6 +132,11 @@ let main () =
     Commands.completion ~debug ~path
       ~pos:(int_of_string line, int_of_string col)
       ~currentFile
+  | [_; "completion-revamped"; path; line; col; currentFile] ->
+    printHeaderInfo path line col;
+    Commands.completionRevamped ~debug ~path
+      ~pos:(int_of_string line, int_of_string col)
+      ~currentFile
   | [_; "completionResolve"; path; modulePath] ->
     Commands.completionResolve ~path ~modulePath
   | [_; "definition"; path; line; col] ->
@@ -143,10 +148,10 @@ let main () =
       ~pos:(int_of_string line, int_of_string col)
       ~debug
   | [_; "documentSymbol"; path] -> DocumentSymbol.command ~path
-  | [_; "hover"; path; line; col; _currentFile; supportsMarkdownLinks] ->
+  | [_; "hover"; path; line; col; currentFile; supportsMarkdownLinks] ->
     Commands.hover ~path
       ~pos:(int_of_string line, int_of_string col)
-      ~debug
+      ~currentFile ~debug
       ~supportsMarkdownLinks:
         (match supportsMarkdownLinks with
         | "true" -> true

@@ -373,17 +373,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[ReactDOMR]
 Path ReactDOMR
-[{
-    "label": "ReactDOMRe",
-    "kind": 9,
-    "tags": [],
-    "detail": "module ReactDOMRe",
-    "documentation": null,
-    "data": {
-      "modulePath": "ReactDOMRe",
-      "filePath": "src/Jsx2.res"
-    }
-  }]
+[]
 
 Complete src/Jsx2.res 102:21
 posCursor:[102:21] posNoWhite:[102:20] Found expr:[102:13->102:21]
@@ -527,8 +517,8 @@ Path Nested.
   }]
 
 Hover src/Jsx2.res 162:12
-{"contents": {"kind": "markdown", "value": "```rescript\nReact.element\n```"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nComp.props<int>\n```\n\n---\n\n```\n \n```\n```rescript\ntype Comp.props<'age> = {age: 'age}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Jsx2.res%22%2C157%2C2%5D)\n"}}
 
 Hover src/Jsx2.res 167:16
-{"contents": {"kind": "markdown", "value": "```rescript\nReact.element\n```"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nComp.props<int>\n```\n\n---\n\n```\n \n```\n```rescript\ntype Comp.props<'age> = {age: 'age}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Jsx2.res%22%2C157%2C2%5D)\n"}}
 

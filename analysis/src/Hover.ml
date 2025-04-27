@@ -245,6 +245,7 @@ let newHover ~full:{file; package} ~supportsMarkdownLinks locItem =
         ~package None)
   | Typed (_, _, Definition (_, (Field _ | Constructor _))) -> None
   | OtherExpression t | OtherPattern t ->
+    (* TODO: Just for debugging. *)
     Some (Markdown.codeBlock (Shared.typeToString t))
   | Constant t ->
     Some
