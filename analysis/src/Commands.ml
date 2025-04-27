@@ -11,6 +11,16 @@ let completion ~debug ~path ~pos ~currentFile =
   in
   completions |> Protocol.array |> print_endline
 
+let completionRevamped ~debug ~path ~pos ~currentFile =
+  let completions =
+    match Completions.getCompletionsRevamped ~debug ~path ~pos ~currentFile with
+    | None -> []
+    | Some (completions, full, _) ->
+      completions
+      |> List.map (CompletionBackEnd.completionToItem ~full)
+      |> List.map Protocol.stringifyCompletionItem
+  in
+  completions |> Protocol.array |> print_endline
 let completionResolve ~path ~modulePath =
   (* We ignore the internal module path as of now because there's currently
      no use case for it. But, if we wanted to move resolving documentation
@@ -57,13 +67,22 @@ let codeLens ~path ~debug =
   in
   print_endline result
 
-let hover ~path ~pos ~debug ~supportsMarkdownLinks =
+let hover ~path ~pos ~currentFile ~debug ~supportsMarkdownLinks =
   let result =
     match Cmt.loadFullCmtFromPath ~path with
     | None -> Protocol.null
     | Some full -> (
       match References.getLocItem ~full ~pos ~debug with
-      | None -> Protocol.null
+      | None -> (
+        if debug then
+          Printf.printf
+            "Nothing at that position. Now trying to use completion.\n";
+        match
+          Hover.getHoverViaCompletions ~debug ~path ~pos ~currentFile
+            ~forHover:true ~supportsMarkdownLinks
+        with
+        | None -> Protocol.null
+        | Some hover -> hover)
       | Some locItem -> (
         let isModule =
           match locItem.locType with
@@ -364,6 +383,13 @@ let test ~path =
             let currentFile = createCurrentFile () in
             completion ~debug:true ~path ~pos:(line, col) ~currentFile;
             Sys.remove currentFile
+          | "crm" ->
+            print_endline
+              ("Complete Revamped " ^ path ^ " " ^ string_of_int line ^ ":"
+             ^ string_of_int col);
+            let currentFile = createCurrentFile () in
+            completionRevamped ~debug:true ~path ~pos:(line, col) ~currentFile;
+            Sys.remove currentFile
           | "cre" ->
             let modulePath = String.sub rest 3 (String.length rest - 3) in
             let modulePath = String.trim modulePath in
@@ -388,7 +414,8 @@ let test ~path =
               ("Hover " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
             let currentFile = createCurrentFile () in
-            hover ~supportsMarkdownLinks:true ~path ~pos:(line, col) ~debug:true;
+            hover ~supportsMarkdownLinks:true ~path ~pos:(line, col)
+              ~currentFile ~debug:true;
             Sys.remove currentFile
           | "she" ->
             print_endline

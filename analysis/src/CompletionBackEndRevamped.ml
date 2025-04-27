@@ -19,6 +19,7 @@ let findRecordField ~env ~package ~fieldName typ =
     fields |> List.find_opt (fun (field : field) -> field.fname.txt = fieldName)
 
 let completeEmptyPattern ~env ~package typ =
+  prerr_endline (Shared.typeToString typ);
   match TypeUtils.extractType ~env ~package typ with
   | None -> []
   | Some (completionType, typeArgContext) -> (

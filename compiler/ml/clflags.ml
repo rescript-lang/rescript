@@ -42,7 +42,7 @@ and only_parse = ref false (* -only-parse *)
 
 and ignore_parse_errors = ref false (* -ignore-parse-errors *)
 
-and editor_mode = ref true
+and editor_mode = ref false
 (* -editor-mode *)
 (* true for easy testing *)
 
