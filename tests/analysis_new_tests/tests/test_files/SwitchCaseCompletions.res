@@ -3,17 +3,17 @@ let someStringArr = ["hello"]
 
 let x = switch someStringArr {
   | 
-//  ^com
+//  ^crm
 }
 
 // == TEST: Empty case, record
 let x = switch TestTypeDefs.nestedTestRecord {
   | 
-//  ^com
+//  ^crm
 }
 
 // == TEST: Empty case, bool
 let x = switch true {
   | 
-//  ^com
+//  ^crm
 }
