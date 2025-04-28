@@ -58,7 +58,7 @@ try {
   let e$2 = Primitive_exceptions.internalToException(raw_e$2);
   if (e$2.RE_EXN_ID === "JsExn") {
     let e$3 = e$2._1;
-    let message = Stdlib_Option.map(e$3.message, prim => prim.toLowerCase());
+    let message = Stdlib_Option.map(Stdlib_JsExn.message(e$3), prim => prim.toLowerCase());
     let exit = 0;
     if (message === "invalid key : someinvalidkey") {
       console.log("Caught expected error");

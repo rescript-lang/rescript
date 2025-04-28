@@ -38,8 +38,7 @@ try {JsError.make("error")->JsError.throw} catch {
 }
 ```
 */
-@get
-external stack: t => option<string> = "stack"
+let stack: t => option<string>
 
 /**
 `message(error)` retrieves the `message` property of the error, if it exists.
@@ -54,8 +53,7 @@ try {JsError.SyntaxError.throwWithMessage("Some message here")} catch {
 }
 ```
 */
-@get
-external message: t => option<string> = "message"
+let message: t => option<string>
 
 /**
 `name(error)` retrieves the `name` property of the error, if it exists.
@@ -70,16 +68,14 @@ try {JsError.SyntaxError.throwWithMessage("Some message here")} catch {
 }
 ```
 */
-@get
-external name: t => option<string> = "name"
+let name: t => option<string>
 
 /**
 `fileName(error)` retrieves the `fileName` property of the error, if it exists.
 
 See [`Error.prototype.fileName`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/fileName) on MDN.
 */
-@get
-external fileName: t => option<string> = "fileName"
+let fileName: t => option<string>
 
 /**
 Throws the given value, terminating execution unless caught by a surrounding try/catch block.

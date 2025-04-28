@@ -8,10 +8,14 @@ let fromException: exn => option<t> = exn =>
 
 external anyToExnInternal: 'a => exn = "%wrap_exn"
 
-@get external stack: t => option<string> = "stack"
-@get external message: t => option<string> = "message"
-@get external name: t => option<string> = "name"
-@get external fileName: t => option<string> = "fileName"
+let getOrUndefined: string => t => option<
+  string,
+> = %raw(`fieldName => t => (t && typeof t[fieldName] === "string" ? t[fieldName] : undefined)`)
+
+let stack = getOrUndefined("stack")
+let message = getOrUndefined("message")
+let name = getOrUndefined("name")
+let fileName = getOrUndefined("fileName")
 
 external throw: 'a => 'b = "%raise"
 
