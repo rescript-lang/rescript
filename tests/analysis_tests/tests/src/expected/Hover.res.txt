@@ -19,7 +19,7 @@ heuristic for: [makeProps, make, createElement], give the loc of `make`
 {"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}
 
 Hover src/Hover.res 33:4
-{"contents": {"kind": "markdown", "value": "```rescript\nunit => int\n```"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nunit => int\n```\n---\nDoc comment for functionWithTypeAnnotation"}}
 
 Hover src/Hover.res 37:13
 {"contents": {"kind": "markdown", "value": "```rescript\nstring\n```"}}
@@ -99,10 +99,10 @@ Hover src/Hover.res 148:6
 {"contents": {"kind": "markdown", "value": "```rescript\nint\n```\n---\n doc comment 2 "}}
 
 Hover src/Hover.res 165:23
-{"contents": {"kind": "markdown", "value": "```rescript\nfoo<bar>\n```"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nfoo<bar>\n```\n\n---\n\n```\n \n```\n```rescript\ntype foo<'a> = {content: 'a, zzz: string}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C161%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype bar = {age: int}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C162%2C2%5D)\n"}}
 
 Hover src/Hover.res 167:22
-{"contents": {"kind": "markdown", "value": "```rescript\nfoobar\n```"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nfoobar\n```\n\n---\n\n```\n \n```\n```rescript\ntype foobar = foo<bar>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C163%2C2%5D)\n"}}
 
 Complete src/Hover.res 170:16
 posCursor:[170:16] posNoWhite:[170:15] Found expr:[170:5->170:16]
@@ -244,7 +244,7 @@ Hover src/Hover.res 197:4
 {"contents": {"kind": "markdown", "value": "```rescript\nCompV4.props<int, string> => React.element\n```\n\n---\n\n```\n \n```\n```rescript\ntype CompV4.props<'n, 's> = {n?: 'n, s: 's}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C190%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.element = Jsx.element\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C0%2C0%5D)\n"}}
 
 Hover src/Hover.res 202:16
-{"contents": {"kind": "markdown", "value": "```rescript\nuseR\n```"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nuseR\n```\n\n---\n\n```\n \n```\n```rescript\ntype useR = {x: int, y: list<option<r<float>>>}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C200%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype r<'a> = {i: 'a, f: float}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C101%2C0%5D)\n"}}
 
 Hover src/Hover.res 210:13
 Nothing at that position. Now trying to use completion.
