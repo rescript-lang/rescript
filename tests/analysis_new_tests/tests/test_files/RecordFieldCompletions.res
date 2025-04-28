@@ -1,7 +1,7 @@
 // == TEST: Record field completion in nested record
 let x = TestTypeDefs.nestedTestRecord.
-//                                    ^crm
+//                                    ^com
 
 // == TEST: Record field completion in nested record, another level
 let x = TestTypeDefs.nestedTestRecord.nested.
-//                                           ^crm
+//                                           ^com

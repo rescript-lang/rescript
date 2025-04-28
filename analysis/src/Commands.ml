@@ -73,6 +73,7 @@ let hover ~path ~pos ~currentFile ~debug ~supportsMarkdownLinks =
     | None -> Protocol.null
     | Some full -> (
       match References.getLocItem ~full ~pos ~debug with
+      | None when !Cfg.useRevampedCompletion -> Protocol.null
       | None -> (
         if debug then
           Printf.printf
@@ -381,14 +382,9 @@ let test ~path =
               ("Complete " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
             let currentFile = createCurrentFile () in
-            completion ~debug:true ~path ~pos:(line, col) ~currentFile;
-            Sys.remove currentFile
-          | "crm" ->
-            print_endline
-              ("Complete " ^ path ^ " " ^ string_of_int line ^ ":"
-             ^ string_of_int col);
-            let currentFile = createCurrentFile () in
-            completionRevamped ~debug:true ~path ~pos:(line, col) ~currentFile;
+            if !Cfg.useRevampedCompletion then
+              completionRevamped ~debug:true ~path ~pos:(line, col) ~currentFile
+            else completion ~debug:true ~path ~pos:(line, col) ~currentFile;
             Sys.remove currentFile
           | "cre" ->
             let modulePath = String.sub rest 3 (String.length rest - 3) in
