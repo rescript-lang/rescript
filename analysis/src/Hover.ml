@@ -246,7 +246,9 @@ let newHover ~full:{file; package} ~supportsMarkdownLinks locItem =
   | Typed (_, _, Definition (_, (Field _ | Constructor _))) -> None
   | OtherExpression t | OtherPattern t ->
     (* TODO: Just for debugging. *)
-    Some (Markdown.codeBlock (Shared.typeToString t))
+    if !Cfg.useRevampedCompletion then
+      Some (Markdown.codeBlock (Shared.typeToString t))
+    else None
   | Constant t ->
     Some
       (Markdown.codeBlock

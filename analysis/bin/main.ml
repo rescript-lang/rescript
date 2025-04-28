@@ -129,14 +129,14 @@ let main () =
     | _ -> print_endline "\"ERR: Did not find root \"")
   | [_; "completion"; path; line; col; currentFile] ->
     printHeaderInfo path line col;
-    Commands.completion ~debug ~path
-      ~pos:(int_of_string line, int_of_string col)
-      ~currentFile
-  | [_; "completion-revamped"; path; line; col; currentFile] ->
-    printHeaderInfo path line col;
-    Commands.completionRevamped ~debug ~path
-      ~pos:(int_of_string line, int_of_string col)
-      ~currentFile
+    if !Cfg.useRevampedCompletion then
+      Commands.completionRevamped ~debug ~path
+        ~pos:(int_of_string line, int_of_string col)
+        ~currentFile
+    else
+      Commands.completion ~debug ~path
+        ~pos:(int_of_string line, int_of_string col)
+        ~currentFile
   | [_; "completionResolve"; path; modulePath] ->
     Commands.completionResolve ~path ~modulePath
   | [_; "definition"; path; line; col] ->
@@ -216,6 +216,7 @@ let main () =
   | [_; "test"; path] -> Commands.test ~path
   | [_; "test_revamped"; path; config_file_path] ->
     Packages.overrideConfigFilePath := Some config_file_path;
+    Cfg.useRevampedCompletion := true;
     Commands.test ~path
   | args when List.mem "-h" args || List.mem "--help" args -> prerr_endline help
   | _ ->
