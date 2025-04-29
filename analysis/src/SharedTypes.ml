@@ -820,6 +820,7 @@ module CompletableRevamped = struct
     | CextensionNode of string
     | Cdecorator of string
     | CdecoratorPayload of decoratorPayload
+    | Ccase of Location.t
 
   let toString (t : t) =
     match t with
@@ -829,11 +830,13 @@ module CompletableRevamped = struct
     | CextensionNode _ -> "CextensionNode"
     | Cdecorator _ -> "Cdecorator"
     | CdecoratorPayload _ -> "CdecoratorPayload"
+    | Ccase _ -> "Ccase"
 
   let try_loc (t : t) =
     match t with
     | Cexpression {typeLoc; _} -> Some typeLoc
     | Cpattern {typeLoc; _} -> Some typeLoc
+    | Ccase loc -> Some loc
     | _ -> None
 end
 

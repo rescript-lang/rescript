@@ -420,16 +420,14 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
       if expr.pexp_loc |> Loc.hasPos ~pos:posNoWhite && !result = None then (
         setFound ();
         match expr.pexp_desc with
-        | Pexp_match (switchExpr, [{pc_lhs = lhsPat}])
+        (* | Pexp_match (switchExpr, [{pc_lhs = lhsPat}])
           when CompletionPatterns.isPatternHole lhsPat
                && locHasCursor switchExpr.pexp_loc = false ->
-          setResult (Cpattern {kind = Empty; typeLoc = switchExpr.pexp_loc})
+          setResult (Cpattern {kind = Empty; typeLoc = switchExpr.pexp_loc}) *)
         | Pexp_match (switchExpr, cases) ->
           let oldTypeLoc = !currentTypeLoc in
           currentTypeLoc := Some switchExpr.pexp_loc;
-          cases
-          |> List.iter (fun case ->
-                 Ast_iterator.default_iterator.case iterator case);
+          cases |> List.iter (fun case -> iterator.case iterator case);
           currentTypeLoc := oldTypeLoc;
           processed := true
         | Pexp_extension ({txt = "obj"}, PStr [str_item]) ->
@@ -615,6 +613,10 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
         | _ -> ());
       if not !processed then Ast_iterator.default_iterator.expr iterator expr
   in
+  let case (_iterator : Ast_iterator.iterator) (case : Parsetree.case) =
+    if case.pc_loc |> Loc.hasPos ~pos:posCursor then
+      setResult (Ccase case.pc_loc)
+  in
   let typ (iterator : Ast_iterator.iterator) (core_type : Parsetree.core_type) =
     if core_type.ptyp_loc |> Loc.hasPos ~pos:posNoWhite then (
       found := true;
@@ -781,6 +783,7 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
       Ast_iterator.default_iterator with
       attribute;
       expr;
+      case;
       location;
       module_expr;
       module_type;
@@ -800,7 +803,8 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
       Res_driver.parsing_engine.parse_implementation ~for_printer:false
     in
     let {Res_driver.parsetree = str} = parser ~filename:currentFile in
-    iterator.structure iterator str |> ignore;
+    let tree = Res_recovery.map str in
+    iterator.structure iterator tree |> ignore;
     if blankAfterCursor = Some ' ' || blankAfterCursor = Some '\n' then
       scope := !lastScopeBeforeCursor
       (* TODO(revamp) Complete any value *)
