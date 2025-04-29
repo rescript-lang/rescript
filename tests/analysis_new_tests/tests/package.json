@@ -5,11 +5,14 @@
   "scripts": {
     "build": "rescript",
     "clean": "rescript clean -with-deps",
-    "test": "yarn build && node test.js",
-    "test:update": "node --test-update-snapshots test.js"
+    "test": "yarn build && vitest run test.js",
+    "test:update": "vitest run -u test.js"
   },
   "dependencies": {
     "@rescript/react": "link:../../dependencies/rescript-react",
     "rescript": "workspace:^"
+  },
+  "devDependencies": {
+    "vitest": "3.1.2"
   }
 }

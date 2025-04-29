@@ -1,0 +1,23 @@
+Complete /Users/nojaf/Projects/rescript/tests/analysis_new_tests/tests/test_files/.build/RecordFieldCompletions_1.res 1:38
+Found Completable: Cexpression
+
+1 + // Record field completion in nested record
+2 + let x = TestTypeDefs.nestedTestRecord.
+            ----------------------------- 
+3 + //                                    ^com
+4 + 
+
+[{
+    "label": "test",
+    "kind": 5,
+    "tags": [],
+    "detail": "bool",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntest: bool\n```\n\n```rescript\ntype nestedTestRecord = {\n  test: bool,\n  nested: {name: string, oneMoreLevel: {here: bool}},\n}\n```"}
+  }, {
+    "label": "nested",
+    "kind": 5,
+    "tags": [],
+    "detail": "\\\"nestedTestRecord.nested\"",
+    "documentation": {"kind": "markdown", "value": "```rescript\nnested: \\\"nestedTestRecord.nested\"\n```\n\n```rescript\ntype nestedTestRecord = {\n  test: bool,\n  nested: {name: string, oneMoreLevel: {here: bool}},\n}\n```"}
+  }]
+
