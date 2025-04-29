@@ -1,4 +1,4 @@
-let completion (debug : bool) ~path ~pos ~currentFile =
+let completion ~(debug : bool) ~path ~pos ~currentFile =
   let completions =
     match
       Completions.getCompletions debug ~path ~pos ~currentFile ~forHover:false
@@ -386,9 +386,9 @@ let test ~path ~debug =
             let currentFile = createCurrentFile () in
             if !Cfg.useRevampedCompletion then
               let source = Files.readFile currentFile in
-              completionRevamped ~source ~debug:true ~path ~pos:(line, col)
+              completionRevamped ~source ~debug ~path ~pos:(line, col)
                 ~currentFile
-            else completion debug ~path ~pos:(line, col) ~currentFile;
+            else completion ~debug:true ~path ~pos:(line, col) ~currentFile;
             Sys.remove currentFile
           | "cre" ->
             let modulePath = String.sub rest 3 (String.length rest - 3) in

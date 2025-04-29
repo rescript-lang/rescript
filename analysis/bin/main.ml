@@ -135,7 +135,7 @@ let main () =
         ~pos:(int_of_string line, int_of_string col)
         ~currentFile
     else
-      Commands.completion debug ~path
+      Commands.completion ~debug:true ~path
         ~pos:(int_of_string line, int_of_string col)
         ~currentFile
   | [_; "completionResolve"; path; modulePath] ->
