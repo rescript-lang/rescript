@@ -1,12 +1,11 @@
 Found Completable: Cpattern
 
-1 + // Empty case, string
-2 + let str = "hello"
-3 + let x = switch str {
-                   ---  
-4 +   | 
-5 + //  ^com
-6 + }
+  1 │ // Empty case, string
+  2 │ let str = "hello"
+  3 │ let x = switch str {
+    │                ‾‾‾
+  4 │   | 
+  5 │ //  ^com
 
 [{
     "label": "\"\"",

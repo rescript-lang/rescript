@@ -140,8 +140,9 @@ let print ?(src = None) ~message_kind intro ppf (loc : t) =
          branch might not be reached (aka no inline file content display) so
          we don't wanna end up with two line breaks in the the consequent *)
       fprintf ppf "@,%s"
-        (Code_frame.print ~is_warning:(message_kind = `warning) ~src
-           ~start_pos:loc.loc_start ~end_pos:loc.loc_end)
+        (Code_frame.print ~draw_underline:false
+           ~is_warning:(message_kind = `warning) ~src ~start_pos:loc.loc_start
+           ~end_pos:loc.loc_end)
     with
     (* this might happen if the file is e.g. "", "_none_" or any of the fake file name placeholders.
        we've already printed the location above, so nothing more to do here. *)
