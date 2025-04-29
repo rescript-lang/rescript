@@ -511,12 +511,12 @@ let vb_match ~expr (name, default, _, alias, loc, _) =
         (Exp.match_
            (Exp.ident {txt = Lident ("__" ^ alias); loc = Location.none})
            [
-             Exp.case
+             Exp.case Location.none
                (Pat.construct
                   (Location.mknoloc @@ Lident "Some")
                   (Some (Pat.var (Location.mknoloc label))))
                (Exp.ident (Location.mknoloc @@ Lident label));
-             Exp.case
+             Exp.case Location.none
                (Pat.construct (Location.mknoloc @@ Lident "None") None)
                default;
            ])

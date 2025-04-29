@@ -105,8 +105,13 @@ module IfThenElse = struct
           let mkMatch ~arg ~pat =
             let cases =
               [
-                Ast_helper.Exp.case pat e1;
-                Ast_helper.Exp.case (Ast_helper.Pat.any ()) e2;
+                Ast_helper.Exp.case
+                  {
+                    pat.Parsetree.ppat_loc with
+                    Location.loc_end = e1.pexp_loc.loc_end;
+                  }
+                  pat e1;
+                Ast_helper.Exp.case e2.pexp_loc (Ast_helper.Pat.any ()) e2;
               ]
             in
             Ast_helper.Exp.match_ ~loc:e.pexp_loc ~attrs:e.pexp_attributes arg

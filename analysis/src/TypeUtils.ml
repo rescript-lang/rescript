@@ -1044,7 +1044,7 @@ module Codegen = struct
       Some
         (patterns
         |> List.map (fun (pat : Parsetree.pattern) ->
-               Ast_helper.Exp.case pat (mkFailWithExp ())))
+               Ast_helper.Exp.case pat.ppat_loc pat (mkFailWithExp ())))
 end
 
 let getModulePathRelativeToEnv ~debug ~(env : QueryEnv.t) ~envFromItem path =

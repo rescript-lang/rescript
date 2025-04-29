@@ -19,7 +19,8 @@ let transform ~path ~pos ~debug ~typ ~hint =
       let cases =
         collectPatterns pattern
         |> List.map (fun (p : Parsetree.pattern) ->
-               Ast_helper.Exp.case p (TypeUtils.Codegen.mkFailWithExp ()))
+               Ast_helper.Exp.case p.ppat_loc p
+                 (TypeUtils.Codegen.mkFailWithExp ()))
       in
       let result = ref None in
       let mkIterator ~pos ~result =

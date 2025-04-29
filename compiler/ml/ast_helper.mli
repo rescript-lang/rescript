@@ -231,8 +231,7 @@ module Exp : sig
     Parsetree.jsx_closing_container_tag option ->
     expression
 
-  val case :
-    ?bar:Lexing.position -> pattern -> ?guard:expression -> expression -> case
+  val case : Location.t -> pattern -> ?guard:expression -> expression -> case
   val await : ?loc:loc -> ?attrs:attrs -> expression -> expression
 
   val make_list_expression :

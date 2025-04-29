@@ -2371,7 +2371,14 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     type_expect ?in_function env
       {
         sexp with
-        pexp_desc = Pexp_match (sval, [Ast_helper.Exp.case spat sbody]);
+        pexp_desc =
+          Pexp_match
+            ( sval,
+              [
+                Ast_helper.Exp.case
+                  {spat.ppat_loc with Location.loc_end = sbody.pexp_loc.loc_end}
+                  spat sbody;
+              ] );
       }
       ty_expected
   | Pexp_let (rec_flag, spat_sexp_list, sbody) ->
@@ -2414,12 +2421,12 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     let default_loc = default.pexp_loc in
     let scases =
       [
-        Exp.case
+        Exp.case default_loc
           (Pat.construct ~loc:default_loc
              (mknoloc Longident.(Ldot (Lident "*predef*", "Some")))
              (Some (Pat.var ~loc:default_loc (mknoloc "*sth*"))))
           (Exp.ident ~loc:default_loc (mknoloc (Longident.Lident "*sth*")));
-        Exp.case
+        Exp.case default_loc
           (Pat.construct ~loc:default_loc
              (mknoloc Longident.(Ldot (Lident "*predef*", "None")))
              None)
@@ -2447,13 +2454,17 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     in
     type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
       ty_expected l
-      [Exp.case pat body]
+      [Exp.case sloc pat body]
   | Pexp_fun
       {arg_label = l; default = None; lhs = spat; rhs = sbody; arity; async} ->
     let l = Asttypes.to_noloc l in
     type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
       ty_expected l
-      [Ast_helper.Exp.case spat sbody]
+      [
+        Ast_helper.Exp.case
+          {spat.ppat_loc with Location.loc_end = sbody.pexp_loc.loc_end}
+          spat sbody;
+      ]
   | Pexp_apply {funct = sfunct; args = sargs; partial} ->
     assert (sargs <> []);
     begin_def ();
