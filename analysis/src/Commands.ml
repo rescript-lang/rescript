@@ -398,7 +398,7 @@ let test ~path ~debug =
                     ~src:text ~start_pos:loc.loc_start ~end_pos:loc.loc_end
                   |> print_endline;
                   print_endline completionsText
-                | None -> ())
+                | None -> print_endline "No location found for completable")
               | _ -> print_endline "ERR: Unexpected completion result");
               ())
             else (
