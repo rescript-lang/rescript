@@ -1,11 +1,10 @@
 Found Completable: Cpattern
 
-1 + // Empty case, record
-2 + let x = switch TestTypeDefs.nestedTestRecord {
-                   -----------------------------  
-3 +   | 
-4 + //  ^com
-5 + }
+  1 │ // Empty case, record
+  2 │ let x = switch TestTypeDefs.nestedTestRecord {
+    │                ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+  3 │   | 
+  4 │ //  ^com
 
 [{
     "label": "{}",

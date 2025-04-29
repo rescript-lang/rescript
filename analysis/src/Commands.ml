@@ -381,6 +381,7 @@ let test ~path ~debug =
           | "com" ->
             let currentFile = createCurrentFile () in
             if !Cfg.useRevampedCompletion then (
+              Code_frame.setup (Some Misc.Color.Never);
               let source = Files.readFile currentFile in
               let completions =
                 completionRevamped ~debug ~path ~pos:(line, col) ~currentFile
@@ -391,16 +392,10 @@ let test ~path ~debug =
               | Some (completable, completionsText), Some text -> (
                 match SharedTypes.CompletableRevamped.try_loc completable with
                 | Some loc ->
-                  let range =
-                    CodeFence.
-                      {
-                        start = loc.Location.loc_start.pos_cnum;
-                        finish = loc.Warnings.loc_end.pos_cnum;
-                      }
-                  in
                   Printf.printf "Found Completable: %s\n\n"
                     (SharedTypes.CompletableRevamped.toString completable);
-                  CodeFence.format_code_snippet_cropped text (Some range) 3
+                  Code_frame.print ~is_warning:true ~draw_underline:true
+                    ~src:text ~start_pos:loc.loc_start ~end_pos:loc.loc_end
                   |> print_endline;
                   print_endline completionsText
                 | None -> ())

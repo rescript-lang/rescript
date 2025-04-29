@@ -1,10 +1,10 @@
 Found Completable: Cexpression
 
-1 + // Record field completion in nested record, another level
-2 + let x = TestTypeDefs.nestedTestRecord.nested.
-            ------------------------------------ 
-3 + //                                           ^com
-4 + 
+  1 │ // Record field completion in nested record, another level
+  2 │ let x = TestTypeDefs.nestedTestRecord.nested.
+    │         ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+  3 │ //                                           ^com
+  4 │ 
 
 [{
     "label": "name",

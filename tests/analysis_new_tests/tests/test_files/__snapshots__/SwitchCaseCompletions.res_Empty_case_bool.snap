@@ -1,11 +1,10 @@
 Found Completable: Cpattern
 
-1 + // Empty case, bool
-2 + let x = switch true {
-                   ----  
-3 +   | 
-4 + //  ^com
-5 + }
+  1 │ // Empty case, bool
+  2 │ let x = switch true {
+    │                ‾‾‾‾
+  3 │   | 
+  4 │ //  ^com
 
 [{
     "label": "true",
