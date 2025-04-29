@@ -1,0 +1,20 @@
+Found Completable: Cpattern
+
+1 + // Empty case, record
+2 + let x = switch TestTypeDefs.nestedTestRecord {
+                   -----------------------------  
+3 +   | 
+4 + //  ^com
+5 + }
+
+[{
+    "label": "{}",
+    "kind": 12,
+    "tags": [],
+    "detail": "TestTypeDefs.nestedTestRecord",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype nestedTestRecord = {\n  test: bool,\n  nested: {name: string, oneMoreLevel: {here: bool}},\n}\n```"},
+    "sortText": "A",
+    "insertText": "{$0}",
+    "insertTextFormat": 2
+  }]
+
