@@ -16,21 +16,30 @@ const incrementalDir = path.join(
   import.meta.dirname,
   "./lib/bs/___incremental"
 );
+const snapshotDir = path.join(testFilesDir, "__snapshots__");
 
 // Recreate directories needed
-try {
-  await fs.access(incrementalDir);
-  await fs.rm(incrementalDir, { recursive: true });
-} catch (_) {}
-await fs.mkdir(incrementalDir, { recursive: true });
+async function ensureSnapshotDir() {
+  await fs.mkdir(snapshotDir, { recursive: true }); // Ensure snapshot dir exists
+}
 
-try {
-  await fs.access(buildDir);
-  await fs.rm(buildDir, { recursive: true });
-} catch (_) {}
-await fs.mkdir(buildDir, { recursive: true });
+async function ensureIncrementalDir() {
+  try {
+    await fs.access(incrementalDir);
+    await fs.rm(incrementalDir, { recursive: true });
+  } catch (_) {}
+  await fs.mkdir(incrementalDir, { recursive: true });
+}
 
-const resFiles = await glob("**/*.res", {
+async function ensureBuildDir() {
+  try {
+    await fs.access(buildDir);
+    await fs.rm(buildDir, { recursive: true });
+  } catch (_) {}
+  await fs.mkdir(buildDir, { recursive: true });
+}
+
+const resFilesPromise = glob("**/*.res", {
   cwd: testFilesDir,
   absolute: true,
 }).then((files) =>
@@ -39,6 +48,13 @@ const resFiles = await glob("**/*.res", {
     relativePath: path.relative(testFilesDir, file),
   }))
 );
+
+const [resFiles] = await Promise.all([
+  resFilesPromise,
+  ensureSnapshotDir(),
+  ensureIncrementalDir(),
+  ensureBuildDir(),
+]);
 
 // Function to split test file contents into blocks
 const splitTestBlocks = (contents) => {
@@ -154,9 +170,9 @@ resFiles.forEach((file) => {
       });
 
       // Construct snapshot path
-      const snapshotDir = path.join(testFilesDir, "__snapshots__");
-      await fs.mkdir(snapshotDir, { recursive: true }); // Ensure snapshot dir exists
-      const snapshotFileName = `${file.relativePath}_${block.description.replace(/\\s+/g, "_")}.snap`;
+      const snapshotFileName = `${
+        file.relativePath
+      }_${block.description.replace(/[^a-zA-Z0-9]+/g, "_")}.snap`;
       const snapshotPath = path.join(snapshotDir, snapshotFileName);
 
       // Use Vitest's expect().toMatchFileSnapshot()

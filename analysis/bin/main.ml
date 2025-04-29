@@ -130,10 +130,13 @@ let main () =
   | [_; "completion"; path; line; col; currentFile] ->
     printHeaderInfo path line col;
     if !Cfg.useRevampedCompletion then
-      let source = Files.readFile currentFile in
-      Commands.completionRevamped ~source ~debug ~path
-        ~pos:(int_of_string line, int_of_string col)
-        ~currentFile
+      match
+        Commands.completionRevamped ~debug ~path
+          ~pos:(int_of_string line, int_of_string col)
+          ~currentFile
+      with
+      | None -> ()
+      | Some (_, completablesText) -> print_endline completablesText
     else
       Commands.completion ~debug:true ~path
         ~pos:(int_of_string line, int_of_string col)

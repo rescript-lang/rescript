@@ -1,0 +1,29 @@
+Found Completable: Cpattern
+
+1 + // Empty case, bool
+2 + let x = switch true {
+                   ----  
+3 +   | 
+4 + //  ^com
+5 + }
+
+[{
+    "label": "true",
+    "kind": 12,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null,
+    "sortText": "A",
+    "insertText": "true",
+    "insertTextFormat": 2
+  }, {
+    "label": "false",
+    "kind": 12,
+    "tags": [],
+    "detail": "bool",
+    "documentation": null,
+    "sortText": "A",
+    "insertText": "false",
+    "insertTextFormat": 2
+  }]
+

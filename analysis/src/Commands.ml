@@ -11,18 +11,17 @@ let completion ~(debug : bool) ~path ~pos ~currentFile =
   in
   completions |> Protocol.array |> print_endline
 
-let completionRevamped ?(source = None) ~debug ~path ~pos ~currentFile =
-  let completions =
-    match
-      Completions.getCompletionsRevamped ~source ~debug ~path ~pos ~currentFile
-    with
-    | None -> []
-    | Some (completions, full, _) ->
-      completions
-      |> List.map (CompletionBackEnd.completionToItem ~full)
-      |> List.map Protocol.stringifyCompletionItem
-  in
-  completions |> Protocol.array |> print_endline
+let completionRevamped ~debug ~path ~pos ~currentFile =
+  match Completions.getCompletionsRevamped ~debug ~pos ~currentFile ~path with
+  | None -> None
+  | Some (completable, completions, full, _) ->
+    Some
+      ( completable,
+        completions
+        |> List.map (CompletionBackEnd.completionToItem ~full)
+        |> List.map Protocol.stringifyCompletionItem
+        |> Protocol.array )
+
 let completionResolve ~path ~modulePath =
   (* We ignore the internal module path as of now because there's currently
      no use case for it. But, if we wanted to move resolving documentation
@@ -380,15 +379,38 @@ let test ~path ~debug =
              ^ string_of_int col);
             definition ~path ~pos:(line, col) ~debug:true
           | "com" ->
-            print_endline
-              ("Complete " ^ path ^ " " ^ string_of_int line ^ ":"
-             ^ string_of_int col);
             let currentFile = createCurrentFile () in
-            if !Cfg.useRevampedCompletion then
+            if !Cfg.useRevampedCompletion then (
               let source = Files.readFile currentFile in
-              completionRevamped ~source ~debug ~path ~pos:(line, col)
-                ~currentFile
-            else completion ~debug:true ~path ~pos:(line, col) ~currentFile;
+              let completions =
+                completionRevamped ~debug ~path ~pos:(line, col) ~currentFile
+              in
+              (match (completions, source) with
+              | None, _ ->
+                print_endline "Completion Frontend did not return completable"
+              | Some (completable, completionsText), Some text -> (
+                match SharedTypes.CompletableRevamped.try_loc completable with
+                | Some loc ->
+                  let range =
+                    CodeFence.
+                      {
+                        start = loc.Location.loc_start.pos_cnum;
+                        finish = loc.Warnings.loc_end.pos_cnum;
+                      }
+                  in
+                  Printf.printf "Found Completable: %s\n\n"
+                    (SharedTypes.CompletableRevamped.toString completable);
+                  CodeFence.format_code_snippet_cropped text (Some range) 3
+                  |> print_endline;
+                  print_endline completionsText
+                | None -> ())
+              | _ -> print_endline "ERR: Unexpected completion result");
+              ())
+            else (
+              print_endline
+                ("Complete " ^ path ^ " " ^ string_of_int line ^ ":"
+               ^ string_of_int col);
+              completion ~debug:true ~path ~pos:(line, col) ~currentFile);
             Sys.remove currentFile
           | "cre" ->
             let modulePath = String.sub rest 3 (String.length rest - 3) in
