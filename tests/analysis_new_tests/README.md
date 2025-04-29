@@ -2,6 +2,15 @@
 
 These tests test the analysis functionality for the editor tooling.
 
+## TLDR; Contributing
+
+To make a new completion feature easy to review, follow these steps:
+
+1. Add a new (or extend an existing) test file in `test_files` with a non-working test. Make sure you use good, clear naming. Commit the (non functional) test snapshot
+2. Implement your changes
+3. Update snapshots to show things now work. Ensure no other test results have changed unexpectedly
+4. PR!
+
 ## Test Structure
 
 Test files are located in the `test_files` directory and follow a specific format:

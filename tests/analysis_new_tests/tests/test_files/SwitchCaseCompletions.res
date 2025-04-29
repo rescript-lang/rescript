@@ -17,3 +17,10 @@ let x = switch true {
   | 
 //  ^com
 }
+
+// == TEST: Empty case, string
+let str = "hello"
+let x = switch str {
+  | 
+//  ^com
+}
