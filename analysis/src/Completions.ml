@@ -1,4 +1,4 @@
-let getCompletions ~debug ~path ~pos ~currentFile ~forHover =
+let getCompletions (debug : bool) ~path ~pos ~currentFile ~forHover =
   let textOpt = Files.readFile currentFile in
   match textOpt with
   | None | Some "" -> None
@@ -21,7 +21,7 @@ let getCompletions ~debug ~path ~pos ~currentFile ~forHover =
         in
         Some (completables, full, scope)))
 
-let getCompletionsRevamped ~debug ~path ~pos ~currentFile =
+let getCompletionsRevamped ?(source = None) ~debug ~path ~pos ~currentFile =
   let textOpt = Files.readFile currentFile in
   match textOpt with
   | None | Some "" -> None
@@ -30,8 +30,32 @@ let getCompletionsRevamped ~debug ~path ~pos ~currentFile =
       CompletionFrontEndRevamped.completionWithParser ~debug ~path
         ~posCursor:pos ~currentFile ~text
     with
-    | None -> None
+    | None ->
+      source
+      |> Option.iter (fun _ ->
+             print_endline "Completion Frontend did not return completable");
+      None
     | Some (completable, scope) -> (
+      let _ =
+        match source with
+        | Some text -> (
+          match SharedTypes.CompletableRevamped.try_loc completable with
+          | Some loc ->
+            let range =
+              CodeFence.
+                {
+                  start = loc.Location.loc_start.pos_cnum;
+                  finish = loc.Warnings.loc_end.pos_cnum;
+                }
+            in
+            Printf.printf "Found Completable: %s\n\n"
+              (SharedTypes.CompletableRevamped.toString completable);
+            CodeFence.format_code_snippet_cropped text (Some range) 3
+            |> print_endline
+          | None -> ())
+        | None -> ()
+      in
+
       (* Only perform expensive ast operations if there are completables *)
       match Cmt.loadFullCmtFromPath ~path with
       | None -> None

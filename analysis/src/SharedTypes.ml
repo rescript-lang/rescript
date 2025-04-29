@@ -794,6 +794,21 @@ module CompletableRevamped = struct
     | CextensionNode of string
     | Cdecorator of string
     | CdecoratorPayload of decoratorPayload
+
+  let toString (t : t) =
+    match t with
+    | Cexpression _ -> "Cexpression"
+    | Cpattern _ -> "Cpattern"
+    | Cnone -> "Cnone"
+    | CextensionNode _ -> "CextensionNode"
+    | Cdecorator _ -> "Cdecorator"
+    | CdecoratorPayload _ -> "CdecoratorPayload"
+
+  let try_loc (t : t) =
+    match t with
+    | Cexpression {typeLoc; _} -> Some typeLoc
+    | Cpattern {typeLoc; _} -> Some typeLoc
+    | _ -> None
 end
 
 module ScopeTypes = struct

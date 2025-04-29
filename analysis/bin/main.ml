@@ -130,11 +130,12 @@ let main () =
   | [_; "completion"; path; line; col; currentFile] ->
     printHeaderInfo path line col;
     if !Cfg.useRevampedCompletion then
-      Commands.completionRevamped ~debug ~path
+      let source = Files.readFile currentFile in
+      Commands.completionRevamped ~source ~debug ~path
         ~pos:(int_of_string line, int_of_string col)
         ~currentFile
     else
-      Commands.completion ~debug ~path
+      Commands.completion ~debug:true ~path
         ~pos:(int_of_string line, int_of_string col)
         ~currentFile
   | [_; "completionResolve"; path; modulePath] ->
@@ -213,11 +214,11 @@ let main () =
       (Json.escape (CreateInterface.command ~path ~cmiFile))
   | [_; "format"; path] ->
     Printf.printf "\"%s\"" (Json.escape (Commands.format ~path))
-  | [_; "test"; path] -> Commands.test ~path
+  | [_; "test"; path] -> Commands.test ~path ~debug
   | [_; "test_revamped"; path; config_file_path] ->
     Packages.overrideConfigFilePath := Some config_file_path;
     Cfg.useRevampedCompletion := true;
-    Commands.test ~path
+    Commands.test ~path ~debug
   | args when List.mem "-h" args || List.mem "--help" args -> prerr_endline help
   | _ ->
     prerr_endline help;
