@@ -1,0 +1,21 @@
+Found Completable: Cpattern
+
+1 + // Empty case, string
+2 + let str = "hello"
+3 + let x = switch str {
+                   ---  
+4 +   | 
+5 + //  ^com
+6 + }
+
+[{
+    "label": "\"\"",
+    "kind": 12,
+    "tags": [],
+    "detail": "string",
+    "documentation": null,
+    "sortText": "A",
+    "insertText": "\"$0\"",
+    "insertTextFormat": 2
+  }]
+

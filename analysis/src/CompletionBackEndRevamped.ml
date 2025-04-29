@@ -19,7 +19,6 @@ let findRecordField ~env ~package ~fieldName typ =
     fields |> List.find_opt (fun (field : field) -> field.fname.txt = fieldName)
 
 let completeEmptyPattern ~env ~package typ =
-  prerr_endline (Shared.typeToString typ);
   match TypeUtils.extractType ~env ~package typ with
   | None -> []
   | Some (completionType, typeArgContext) -> (
@@ -41,6 +40,11 @@ let completeEmptyPattern ~env ~package typ =
           ~insertText:"true" ~sortText:"A" ~kind:(Value typ) ~env;
         Completion.create ?typeArgContext "false" ~includesSnippets:true
           ~insertText:"false" ~sortText:"A" ~kind:(Value typ) ~env;
+      ]
+    | Tstring _ ->
+      [
+        Completion.create ?typeArgContext "\"\"" ~includesSnippets:true
+          ~insertText:"\"$0\"" ~sortText:"A" ~kind:(Value typ) ~env;
       ]
     | _ -> [])
 
