@@ -225,8 +225,8 @@ let main () =
   | args when List.mem "-h" args || List.mem "--help" args -> prerr_endline help
   | [_; "cmt"; path] -> CmtViewer.dump path
   | [_; "cmt"; line; col; path] ->
-    let cursor = Some (int_of_string line, int_of_string col) in
-    CmtViewer.dump ~cursor path
+    let cursor = (int_of_string line, int_of_string col) in
+    CmtViewer.dump ~filter:(Cursor cursor) path
   | _ ->
     prerr_endline help;
     exit 1

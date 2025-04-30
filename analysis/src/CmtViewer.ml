@@ -20,19 +20,28 @@ let filter_by_cursor cursor (loc : Warnings.loc) : bool =
     in
     line_in && col_in
 
-let dump ?(cursor = None) path =
+type filter = Cursor of (int * int) | Loc of Loc.t
+
+let dump ?filter path =
   match Cmt.loadFullCmtFromPath ~path with
   | None -> failwith (Format.sprintf "Could not load cmt for %s" path)
   | Some full ->
     let open SharedTypes in
     let open SharedTypes.Stamps in
-    let filter = filter_by_cursor cursor in
-    cursor
-    |> Option.iter (fun (line, col) ->
-           Printf.printf "Filtering by cursor %d,%d\n" line col);
+    let applyFilter =
+      match filter with
+      | None -> fun _ -> true
+      | Some (Cursor cursor) -> Loc.hasPos ~pos:cursor
+      | Some (Loc loc) -> Loc.isInside loc
+    in
+    (match filter with
+    | None -> ()
+    | Some (Cursor (line, col)) ->
+      Printf.printf "Filtering by cursor %d,%d\n" line col
+    | Some (Loc loc) -> Printf.printf "Filtering by loc %s\n" (Loc.toString loc));
     let stamps =
       full.file.stamps |> getEntries
-      |> List.filter (fun (_, stamp) -> filter (locOfKind stamp))
+      |> List.filter (fun (_, stamp) -> applyFilter (locOfKind stamp))
     in
 
     let total_stamps = List.length stamps in
@@ -65,7 +74,7 @@ let dump ?(cursor = None) path =
     let locItems =
       match full.extra with
       | {locItems} ->
-        locItems |> List.filter (fun locItem -> filter locItem.loc)
+        locItems |> List.filter (fun locItem -> applyFilter locItem.loc)
     in
 
     Printf.printf "\nFound %d locItems (typed nodes):\n\n"

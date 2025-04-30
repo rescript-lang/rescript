@@ -1,4 +1,4 @@
-Found Completable: Cexpression
+Found Completable: Cexpression at type loc: [1:8->1:37]
 
   1 │ // Record field completion in nested record
   2 │ let x = TestTypeDefs.nestedTestRecord.

@@ -1,4 +1,4 @@
-Found Completable: Cpattern
+Found Completable: Cpattern at type loc: [2:15->2:18]
 
   1 │ // Empty case, string
   2 │ let str = "hello"

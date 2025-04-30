@@ -1,4 +1,4 @@
-Found Completable: Cpattern
+Found Completable: Cpattern at type loc: [3:15->3:28]
 
   2 │ let someStringArr = ["hello"]
   3 │ 

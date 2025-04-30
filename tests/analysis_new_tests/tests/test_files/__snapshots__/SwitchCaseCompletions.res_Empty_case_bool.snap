@@ -1,4 +1,4 @@
-Found Completable: Cpattern
+Found Completable: Cpattern at type loc: [1:15->1:19]
 
   1 │ // Empty case, bool
   2 │ let x = switch true {

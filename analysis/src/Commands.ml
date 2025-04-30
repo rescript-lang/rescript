@@ -359,6 +359,9 @@ let test ~path ~debug =
           | "db+" -> Log.verbose := true
           | "db-" -> Log.verbose := false
           | "dv+" -> Debug.debugLevel := Verbose
+          | "wrk" ->
+            Cfg.isTestWorkmode := true;
+            Debug.debugLevel := Verbose
           | "dv-" -> Debug.debugLevel := Off
           | "in+" -> Cfg.inIncrementalTypecheckingMode := true
           | "in-" -> Cfg.inIncrementalTypecheckingMode := false
@@ -382,6 +385,11 @@ let test ~path ~debug =
             let currentFile = createCurrentFile () in
             if !Cfg.useRevampedCompletion then (
               Code_frame.setup (Some Misc.Color.Never);
+              if !Cfg.isTestWorkmode then (
+                print_endline "===== CMT CONTENT =====";
+                CmtViewer.dump path
+                (*print_endline "\n===== CMT FILTERED BY CURSOR =====";
+                CmtViewer.dump path ~filter:(Cursor (line, col))*));
               let source = Files.readFile currentFile in
               let completions =
                 completionRevamped ~debug ~path ~pos:(line, col) ~currentFile
@@ -392,8 +400,13 @@ let test ~path ~debug =
               | Some (completable, completionsText), Some text -> (
                 match SharedTypes.CompletableRevamped.try_loc completable with
                 | Some loc ->
-                  Printf.printf "Found Completable: %s\n\n"
-                    (SharedTypes.CompletableRevamped.toString completable);
+                  Printf.printf "Found Completable: %s at type loc: %s\n\n"
+                    (SharedTypes.CompletableRevamped.toString completable)
+                    (Loc.toString loc);
+                  if !Cfg.isTestWorkmode then (
+                    print_endline "\n===== CMT FILTERED BY TYPE LOC =====";
+                    CmtViewer.dump path ~filter:(Loc loc);
+                    print_endline "\n\n");
                   Code_frame.print ~is_warning:true ~draw_underline:true
                     ~src:text ~start_pos:loc.loc_start ~end_pos:loc.loc_end
                   |> print_endline;
