@@ -510,8 +510,8 @@ jobs:
 
       - name: Install ReScript package
         run: |
-          COMMIT_SHA="${{ steps.checkout.outputs.commit }}"
-          npm i --no-audit "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
+          npm i --no-audit \
+            "https://pkg.pr.new/rescript-lang/rescript@${GITHUB_SHA::7}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
