@@ -487,6 +487,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
+        id: checkout
         uses: actions/checkout@v4
 
       - name: Use Node.js
@@ -509,8 +510,8 @@ jobs:
 
       - name: Install ReScript package
         run: |
-          COMMIT_SHA="$(git rev-parse --short HEAD)"
-          npm i --no-audit "https://pkg.pr.new/rescript-lang/rescript@$COMMIT_SHA"
+          COMMIT_SHA="${{ steps.checkout.outputs.commit }}"
+          npm i --no-audit "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
