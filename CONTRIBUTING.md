@@ -404,7 +404,21 @@ To reproduce issues, it can be helpful to the team to install a specific version
 1. In your repository run:
 
 ```console
-npm i <path_to_download>npm-packages/rescript-*.tgz
+npm i <path_to_download>/npm-packages/rescript-*.tgz
+```
+
+If you use Yarn or pnpm, you should override platform package resolutions by [`resolutions`](https://yarnpkg.com/configuration/manifest#resolutions) in Yarn or [`overrides`](https://pnpm.io/settings#overrides) in Pnpm.
+
+```
+{
+  "resolutions": {
+    "@rescript/linux-x64": "<path_to_download>/npm-packages/rescript-linux-x64.tgz",
+    "@rescript/linux-arm64": "<path_to_download>/npm-packages/rescript-linux-arm64.tgz",
+    "@rescript/darwin-x64": "<path_to_download>/npm-packages/rescript-darwin-x64.tgz",
+    "@rescript/darwin-arm64": "<path_to_download>/npm-packages/rescript-darwin-arm64.tgz",
+    "@rescript/win32-x64": "<path_to_download>/npm-packages/rescript-win32-x64.tgz"
+  }
+}
 ```
 
 1. Then attempt to rebuild your project as you would normally.
