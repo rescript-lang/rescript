@@ -6,7 +6,7 @@
     "build": "rescript",
     "clean": "rescript clean -with-deps",
     "test": "yarn build && vitest run test.js",
-    "test:update": "vitest run -u test.js"
+    "test:update": "rm test_files/__snapshots__/*.snap && vitest run -u test.js"
   },
   "dependencies": {
     "@rescript/react": "link:../../dependencies/rescript-react",
