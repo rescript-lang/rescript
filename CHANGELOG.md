@@ -15,6 +15,7 @@
 #### :rocket: New Feature
 
 - Add shift (`<<`, `>>`, `>>>`) operators for `int` and `bigint`. https://github.com/rescript-lang/rescript/pull/7183
+- Significantly reduced the download size by splitting binaries into optional platform-specific dependencies (e.g, `@rescirpt/linux-x64`). https://github.com/rescript-lang/rescript/pull/7395
 
 #### :bug: Bug fix
 
