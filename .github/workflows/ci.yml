@@ -439,119 +439,8 @@ jobs:
           name: lib-ocaml
           path: lib/ocaml
 
-  package:
-    needs:
-      - build-compiler
-      - build-rewatch
-
-    runs-on: ubuntu-24.04-arm
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: "@(binaries-*|rewatch-*|lib-ocaml)"
-
-      - name: Move artifacts into packages
-        run: .github/workflows/moveArtifacts.sh
-        shell: bash
-
-      - name: Check artifact list
-        run: node ./scripts/npmPack.js
-
-      - name: yarn pack @rescript/* subpackages
-        run: yarn workspaces foreach -W --no-private --exclude rescript pack
-
-      - name: Prepare package upload
-        # For pull requests, pass the correct commit SHA explicitly as GITHUB_SHA points to the wrong commit.
-        run: node .github/workflows/prepare_package_upload.js ${{ github.event.pull_request.head.sha }}
-
-      - name: "Upload artifact: npm packages"
-        uses: actions/upload-artifact@v4
-        with:
-          name: npm-packages
-          path: |
-            rescript-${{ env.rescript_version }}.tgz
-            rescript-std-${{ env.rescript_version }}.tgz
-            rescript-linux-x64-${{ env.rescript_version }}.tgz
-            rescript-linux-arm64-${{ env.rescript_version }}.tgz
-            rescript-darwin-x64-${{ env.rescript_version }}.tgz
-            rescript-darwin-arm64-${{ env.rescript_version }}.tgz
-            rescript-win32-x64-${{ env.rescript_version }}.tgz
-
-    outputs:
-      rescript_version: ${{ env.rescript_version }}
-
-  installationTest:
-    needs: package
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-13
-            node-target: darwin-x64
-          - os: macos-14
-            node-target: darwin-arm64
-          - os: ubuntu-24.04
-            node-target: linux-x64
-          - os: ubuntu-24.04-arm
-            node-target: linux-arm64
-          - os: windows-latest
-            node-target: win32-x64
-
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-
-      - name: Make test directory
-        id: tmp-dir
-        shell: bash
-        run: |
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            dir=$(powershell -Command "[System.IO.Path]::GetTempPath() + [System.Guid]::NewGuid().ToString()" | tr -d '\r')
-            mkdir -p "$dir"
-          else
-            dir=$(mktemp -d)
-          fi
-          echo "path=$dir" >> "$GITHUB_OUTPUT"
-          cp -r tests/package_tests/installation_test/* "$dir"
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: npm-packages
-          path: ${{ steps.tmp-dir.outputs.path }}
-
-      - name: Install ReScript package
-        run: |
-          npm i --ignore-scripts --no-audit \
-            rescript-${{ needs.package.outputs.rescript_version }}.tgz \
-            rescript-${{ matrix.node-target }}-${{ needs.package.outputs.rescript_version }}.tgz
-        shell: bash
-        working-directory: ${{ steps.tmp-dir.outputs.path }}
-
-      - name: Test installation
-        run: npx rescript -h && npx rescript build && cat src/Test.res.js
-        shell: bash
-        working-directory: ${{ steps.tmp-dir.outputs.path }}
-
-  publish-pr:
-    needs: [package, installationTest]
+  pkg-pr-new:
+    needs: [build-rewatch, build-compiler]
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04-arm
     steps:
@@ -577,8 +466,60 @@ jobs:
         run: |
           yarn dlx pkg-pr-new publish "." "./packages/@rescript/*"
 
+  installationTest:
+    needs: [pkg-pr-new]
+    if: github.event_name == 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-13
+            node-target: darwin-x64
+          - os: macos-14
+            node-target: darwin-arm64
+          - os: ubuntu-24.04
+            node-target: linux-x64
+          - os: ubuntu-24.04-arm
+            node-target: linux-arm64
+          - os: windows-latest
+            node-target: win32-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Make test directory
+        id: tmp-dir
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            dir=$(powershell -Command "[System.IO.Path]::GetTempPath() + [System.Guid]::NewGuid().ToString()" | tr -d '\r')
+            mkdir -p "$dir"
+          else
+            dir=$(mktemp -d)
+          fi
+          echo "path=$dir" >> "$GITHUB_OUTPUT"
+          cp -r tests/package_tests/installation_test/* "$dir"
+
+      - name: Install ReScript package
+        run: |
+          COMMIT_SHA="$(git rev-parse --short HEAD)"
+          npm i --no-audit "https://pkg.pr.new/rescript-lang/rescript@$COMMIT_SHA"
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.path }}
+
+      - name: Test installation
+        run: npx rescript -h && npx rescript build && cat src/Test.res.js
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.path }}
+
   publish:
-    needs: [package, installationTest]
+    needs: [build-rewatch, build-compiler]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04-arm
     steps:
@@ -595,19 +536,18 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: npm-packages
+          pattern: "@(binaries-*|rewatch-*|lib-ocaml)"
+
+      - name: Move artifacts into packages
+        run: .github/workflows/moveArtifacts.sh
+        shell: bash
 
       - name: Publish packages on npm with tag "ci"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
         run: |
-          npm publish --tag ci rescript-${{ needs.package.outputs.rescript_version }}.tgz
-          npm publish --tag ci rescript-std-${{ needs.package.outputs.rescript_version }}.tgz
-          npm publish --tag ci rescript-linux-x64-${{ needs.package.outputs.rescript_version }}.tgz
-          npm publish --tag ci rescript-linux-arm64-${{ needs.package.outputs.rescript_version }}.tgz
-          npm publish --tag ci rescript-darwin-x64-${{ needs.package.outputs.rescript_version }}.tgz
-          npm publish --tag ci rescript-darwin-arm64-{{ needs.package.outputs.rescript_version }}.tgz
-          npm publish --tag ci rescript-win32-x64-${{ needs.package.outputs.rescript_version }}.tgz
+          yarn workspaces foreach -W --no-private \
+            npm publish --tag ci
 
       - name: Update Website Playground
         env:
