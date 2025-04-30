@@ -165,6 +165,22 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
   in
   let value_binding (iterator : Ast_iterator.iterator)
       (value_binding : Parsetree.value_binding) =
+    (match value_binding with
+    | {pvb_pat = {ppat_desc = Ppat_constraint (p, _)}; pvb_expr; pvb_loc}
+      when CompletionExpressions.isExprHole pvb_expr
+           && locHasCursor pvb_loc
+           && not (locHasCursor p.ppat_loc) ->
+      (* let x: constraint = <com> *)
+      setResult (Cexpression {kind = Empty; typeLoc = p.ppat_loc; posOfDot})
+    | {pvb_pat; pvb_expr; pvb_loc}
+      when CompletionExpressions.isExprHole pvb_expr
+           && locHasCursor pvb_loc
+           && not (locHasCursor pvb_pat.ppat_loc) ->
+      (* let x= <com> *)
+      (* Unclear if this happens and if we need to care about it. *)
+      setResult
+        (Cexpression {kind = Empty; typeLoc = pvb_pat.ppat_loc; posOfDot})
+    | _ -> ());
     Ast_iterator.default_iterator.value_binding iterator value_binding
   in
   let signature (iterator : Ast_iterator.iterator)

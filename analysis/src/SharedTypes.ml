@@ -802,7 +802,7 @@ module CompletableRevamped = struct
     | ModuleWithImportAttributes of {prefix: string}
     | JsxConfig of {prefix: string}
 
-  type completionExprKind = Field of {hint: string}
+  type completionExprKind = Empty | Field of {hint: string}
 
   type completionPatternKind =
     | Empty

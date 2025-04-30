@@ -1,0 +1,19 @@
+Found Completable: Cexpression at type loc: [1:4->1:5]
+
+  1 │ // Empty let assignment expression, array
+  2 │ let x: array<string> = 
+    │     ‾
+  3 │ //                    ^com
+  4 │ 
+
+[{
+    "label": "[]",
+    "kind": 12,
+    "tags": [],
+    "detail": "array<string>",
+    "documentation": null,
+    "sortText": "A",
+    "insertText": "[$0]",
+    "insertTextFormat": 2
+  }]
+

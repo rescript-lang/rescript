@@ -18,9 +18,14 @@ let findRecordField ~env ~package ~fieldName typ =
   | Some (_recordEnv, fields, _decl) ->
     fields |> List.find_opt (fun (field : field) -> field.fname.txt = fieldName)
 
-let completeEmptyPattern ~env ~package typ =
+type patternOrExpr = Pattern | Expr
+let completeEmpty ~(mode : patternOrExpr) ~env ~package typ =
+  ignore mode;
   match TypeUtils.extractType ~env ~package typ with
-  | None -> []
+  | None ->
+    if Debug.verbose () then
+      print_endline "⚠️ Could not extract completable type";
+    []
   | Some (completionType, typeArgContext) -> (
     (* Fill this out with the different completions *)
     match completionType with
@@ -62,22 +67,27 @@ let processCompletable ~debug ~full ~scope ~env ~pos
   match completable with
   | Cexpression {kind; typeLoc} -> (
     match TypeUtils.findTypeViaLoc typeLoc ~full ~debug with
-    | None -> []
+    | None ->
+      if Debug.verbose () then print_endline "⚠️ No type found for loc";
+      []
     | Some typ -> (
+      if Debug.verbose () then
+        print_endline ("✅ Found type at loc:" ^ Shared.typeToString typ);
       match kind with
+      | Empty -> completeEmpty ~mode:Expr ~env ~package typ
       | Field {hint} -> findFields ~env ~package ~hint typ))
   | Cpattern {kind; typeLoc} -> (
     match TypeUtils.findTypeViaLoc typeLoc ~full ~debug with
     | None -> []
     | Some typ -> (
       match kind with
-      | Empty -> completeEmptyPattern ~env ~package typ
+      | Empty -> completeEmpty ~mode:Pattern ~env ~package typ
       | Field {hint; seenFields} ->
         findFields ~env ~package ~hint ~seenFields typ
       | FieldValue {fieldName} -> (
         match findRecordField ~env ~package ~fieldName typ with
         | None -> []
-        | Some field -> completeEmptyPattern ~env ~package field.typ)))
+        | Some field -> completeEmpty ~mode:Pattern ~env ~package field.typ)))
   | Cnone -> []
   | CextensionNode _ -> []
   | Cdecorator prefix ->
