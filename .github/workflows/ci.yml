@@ -567,7 +567,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: npm-packages
+          pattern: "@(binaries-*|rewatch-*|lib-ocaml)"
 
       - name: Move artifacts into packages
         run: .github/workflows/moveArtifacts.sh
