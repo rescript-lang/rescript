@@ -647,7 +647,6 @@ let descriptions =
     (57, "Ambiguous or-pattern variables under guard");
     (59, "Assignment to non-mutable value");
     (60, "Unused module declaration");
-    (61, "Unboxable type in primitive declaration");
     (62, "Type constraint on GADT type declaration");
     (101, "Unused bs attributes");
     (102, "Polymorphic comparison introduced (maybe unsafe)");
