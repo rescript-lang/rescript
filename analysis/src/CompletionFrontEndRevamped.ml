@@ -427,7 +427,9 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
         | Pexp_match (switchExpr, cases) ->
           let oldTypeLoc = !currentTypeLoc in
           currentTypeLoc := Some switchExpr.pexp_loc;
-          cases |> List.iter (fun case -> iterator.case iterator case);
+          cases
+          |> List.iter (fun case ->
+                 Ast_iterator.default_iterator.case iterator case);
           currentTypeLoc := oldTypeLoc;
           processed := true
         | Pexp_extension ({txt = "obj"}, PStr [str_item]) ->
@@ -613,10 +615,6 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
         | _ -> ());
       if not !processed then Ast_iterator.default_iterator.expr iterator expr
   in
-  let case (_iterator : Ast_iterator.iterator) (case : Parsetree.case) =
-    if case.pc_loc |> Loc.hasPos ~pos:posCursor then
-      setResult (Ccase case.pc_loc)
-  in
   let typ (iterator : Ast_iterator.iterator) (core_type : Parsetree.core_type) =
     if core_type.ptyp_loc |> Loc.hasPos ~pos:posNoWhite then (
       found := true;
@@ -709,7 +707,9 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
         in
         (* TODO(revamp) Complete *)
         ()
-      | _ -> ());
+      | _ ->
+        if CompletionPatterns.isPatternHole pat then
+          setResult (Cpattern {kind = Empty; typeLoc = pat.ppat_loc}));
       Ast_iterator.default_iterator.pat iterator pat)
   in
   let module_expr (iterator : Ast_iterator.iterator)
@@ -783,7 +783,6 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
       Ast_iterator.default_iterator with
       attribute;
       expr;
-      case;
       location;
       module_expr;
       module_type;

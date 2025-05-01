@@ -13,22 +13,26 @@ let map_expr (mapper : Ast_mapper.mapper) (expr : Parsetree.expression) =
       match cases with
       | [] -> mapped_cases
       | [last_case] when is_ghost_case last_case ->
-        prerr_endline "last case";
+        let loc = {last_case.pc_loc with loc_end = match_end_loc} in
         let mapped =
           mapper.case mapper
             {
               last_case with
-              pc_loc = {last_case.pc_loc with loc_end = match_end_loc};
+              pc_loc = loc;
+              pc_lhs = mapper.pat mapper {last_case.pc_lhs with ppat_loc = loc};
             }
         in
         process_cases (mapped :: mapped_cases) []
       | current :: (next :: _ as rest) when is_ghost_case current ->
+        let loc =
+          {current.pc_loc with loc_end = next.pc_lhs.ppat_loc.loc_start}
+        in
         let mapped =
           mapper.case mapper
             {
               current with
-              pc_loc =
-                {current.pc_loc with loc_end = next.pc_lhs.ppat_loc.loc_start};
+              pc_loc = loc;
+              pc_lhs = mapper.pat mapper {current.pc_lhs with ppat_loc = loc};
             }
         in
         process_cases (mapped :: mapped_cases) rest
