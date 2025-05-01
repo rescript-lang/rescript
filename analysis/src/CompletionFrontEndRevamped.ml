@@ -707,9 +707,8 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
         in
         (* TODO(revamp) Complete *)
         ()
-      | _ ->
-        if CompletionPatterns.isPatternHole pat then
-          setResult (Cpattern {kind = Empty; typeLoc = pat.ppat_loc}));
+      | Ppat_hole -> setResult (Cpattern {kind = Empty; typeLoc = pat.ppat_loc})
+      | _ -> ());
       Ast_iterator.default_iterator.pat iterator pat)
   in
   let module_expr (iterator : Ast_iterator.iterator)

@@ -227,6 +227,7 @@ and pattern i ppf x =
   | Ppat_extension (s, arg) ->
     line i ppf "Ppat_extension \"%s\"\n" s.txt;
     payload i ppf arg
+  | Ppat_hole -> line i ppf "Ppat_hole\n"
 
 and expression i ppf x =
   line i ppf "expression %a\n" fmt_location x.pexp_loc;

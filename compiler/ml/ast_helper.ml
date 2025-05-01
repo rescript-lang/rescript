@@ -141,6 +141,7 @@ module Pat = struct
   let open_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_open (a, b))
   let exception_ ?loc ?attrs a = mk ?loc ?attrs (Ppat_exception a)
   let extension ?loc ?attrs a = mk ?loc ?attrs (Ppat_extension a)
+  let hole ?loc ?attrs () = mk ?loc ?attrs Ppat_hole
 end
 
 module Exp = struct

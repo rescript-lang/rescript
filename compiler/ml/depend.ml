@@ -205,6 +205,7 @@ let rec add_pattern bv pat =
     add_pattern bv p
   | Ppat_exception p -> add_pattern bv p
   | Ppat_extension e -> handle_extension e
+  | Ppat_hole -> ()
 
 let add_pattern bv pat =
   pattern_bv := bv;

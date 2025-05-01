@@ -25,9 +25,7 @@ module Recover = struct
     let id = Location.mknoloc "rescript.typehole" in
     Ast_helper.Typ.extension (id, PStr [])
 
-  let default_pattern () =
-    let id = Location.mknoloc "rescript.patternhole" in
-    Ast_helper.Pat.extension (id, PStr [])
+  let default_pattern () = Ast_helper.Pat.hole ()
 
   let default_module_expr () = Ast_helper.Mod.structure []
   let default_module_type () = Ast_helper.Mty.signature []

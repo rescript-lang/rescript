@@ -119,6 +119,7 @@ module Pat : sig
   val open_ : ?loc:loc -> ?attrs:attrs -> lid -> pattern -> pattern
   val exception_ : ?loc:loc -> ?attrs:attrs -> pattern -> pattern
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> pattern
+  val hole : ?loc:loc -> ?attrs:attrs -> unit -> pattern
 end
 
 (** Expressions *)

@@ -414,6 +414,7 @@ module P = struct
     | Ppat_open (lid, p) ->
       iter_loc sub lid;
       sub.pat sub p
+    | Ppat_hole -> ()
 end
 
 (* Now, a generic AST mapper, to be extended to cover all kinds and

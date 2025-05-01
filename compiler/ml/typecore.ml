@@ -1727,6 +1727,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     raise (Error (loc, !env, Exception_pattern_below_toplevel))
   | Ppat_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
+  | Ppat_hole -> failwith "Ppat_hole"
 
 let type_pat ?(allow_existentials = false) ?constrs ?labels ?(mode = Normal)
     ?(explode = 0) ?(lev = get_current_level ()) env sp expected_ty =
@@ -2097,7 +2098,7 @@ let contains_variant_either ty =
 let iter_ppat f p =
   match p.ppat_desc with
   | Ppat_any | Ppat_var _ | Ppat_constant _ | Ppat_interval _ | Ppat_extension _
-  | Ppat_type _ | Ppat_unpack _ ->
+  | Ppat_type _ | Ppat_unpack _ | Ppat_hole ->
     ()
   | Ppat_array pats -> List.iter f pats
   | Ppat_or (p1, p2) ->
@@ -3858,6 +3859,7 @@ and type_statement env sexp =
   exp
 
 (* Typing of match cases *)
+(* TODO: if we have Ppat_hole we can probably just return the type of the match expression? *)
 
 and type_cases ?root_type_clash_context ?in_function env ty_arg ty_res
     partial_flag loc caselist : _ * Typedtree.partial =
