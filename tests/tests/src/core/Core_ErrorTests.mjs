@@ -2,7 +2,7 @@
 
 import * as Test from "./Test.mjs";
 import * as Stdlib from "rescript/lib/es6/Stdlib.js";
-import * as Stdlib_Exn from "rescript/lib/es6/Stdlib_Exn.js";
+import * as Stdlib_JsExn from "rescript/lib/es6/Stdlib_JsExn.js";
 import * as Primitive_exceptions from "rescript/lib/es6/Primitive_exceptions.js";
 
 function panicTest() {
@@ -11,8 +11,8 @@ function panicTest() {
     caught = Stdlib.panic("uh oh");
   } catch (raw_err) {
     let err = Primitive_exceptions.internalToException(raw_err);
-    if (err.RE_EXN_ID === Stdlib_Exn.$$Error) {
-      caught = err._1.message;
+    if (err.RE_EXN_ID === "JsExn") {
+      caught = Stdlib_JsExn.message(err._1);
     } else {
       throw err;
     }

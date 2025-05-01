@@ -349,6 +349,24 @@
           "description": "(Not implemented yet)"
         }
       ]
+    },
+    "editor": {
+      "type": "object",
+      "properties": {
+        "autocomplete": {
+          "type": "object",
+          "description": "A mapping to extend the autocompletion for a given type with an array of modules. E.g. `{ \"int\": [\"IntUtils\", \"IntExt\"] }` will extend the autocompletion of the `int` type with the values from `IntUtils` and `IntExt` modules.",
+          "patternProperties": {
+            "^[a-zA-Z0-9_.]+$": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": false
     }
   },
   "title": "ReScript build configuration",
@@ -472,6 +490,10 @@
     "reanalyze": {
       "$ref": "#/definitions/reanalyze",
       "description": "Configure reanalyze, a static code analysis tool for ReScript."
+    },
+    "editor": {
+      "$ref": "#/definitions/editor",
+      "description": "Configure editor functionality, like modules that should be included in autocompletions for given (built-in) types."
     }
   },
   "additionalProperties": false,

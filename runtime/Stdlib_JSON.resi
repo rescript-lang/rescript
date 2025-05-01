@@ -33,7 +33,7 @@ try {
   let _ = JSON.parseExn("")
   // error
 } catch {
-| Exn.Error(_) => Console.log("error")
+| JsExn(_) => Console.log("error")
 }
 
 let reviver = (_, value: JSON.t) =>
@@ -52,7 +52,7 @@ try {
   JSON.parseExn("", ~reviver)->Console.log
   // error
 } catch {
-| Exn.Error(_) => Console.log("error")
+| JsExn(_) => Console.log("error")
 }
 ```
 
@@ -89,7 +89,7 @@ try {
   JSON.parseExnWithReviver("", reviver)->Console.log
   // error
 } catch {
-| Exn.Error(_) => Console.log("error")
+| JsExn(_) => Console.log("error")
 }
 ```
 

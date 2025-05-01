@@ -2,6 +2,8 @@
 
 // @ts-check
 
+// TODO: Use Yarn's constraints instead.
+
 import fs from "node:fs";
 
 const packageSpec = JSON.parse(
@@ -9,14 +11,22 @@ const packageSpec = JSON.parse(
 );
 const { name, version } = packageSpec;
 
-const stdlibPackageSpec = JSON.parse(
-  fs.readFileSync("./packages/std/package.json", "utf8"),
-);
-stdlibPackageSpec.version = version;
-fs.writeFileSync(
-  "./packages/std/package.json",
-  JSON.stringify(stdlibPackageSpec, null, 2),
-);
+/**
+ * @param {string} specPath
+ * @param {string} version
+ */
+function setVersion(specPath, version) {
+  const spec = JSON.parse(fs.readFileSync(specPath, "utf8"));
+  spec.version = version;
+  fs.writeFileSync(specPath, JSON.stringify(spec, null, 2) + "\n", "utf8");
+}
+
+setVersion("./packages/std/package.json", version);
+setVersion("./packages/@rescript/linux-x64/package.json", version);
+setVersion("./packages/@rescript/linux-arm64/package.json", version);
+setVersion("./packages/@rescript/darwin-x64/package.json", version);
+setVersion("./packages/@rescript/darwin-arm64/package.json", version);
+setVersion("./packages/@rescript/win32-x64/package.json", version);
 
 fs.writeFileSync(
   "./compiler/common/bs_version.ml",

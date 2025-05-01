@@ -372,7 +372,7 @@ function packError(exn){
   }
 }
 ```
-So whenever we raise an OCaml exception, we always wrapped it as a JS error.
+So whenever we raise an OCaml exception, we always wrapped it as a JS exception.
 Now we unpack it, it could be OCaml exception or JS exception, so we  did 
 a runtime dispatch.
 
@@ -381,7 +381,7 @@ Some potential optimization
 ```ocaml
 try f x with 
 Not_found -> ..
-JsError e
+JsExn e
 ```
 
 currently it would be transalted as 

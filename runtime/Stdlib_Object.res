@@ -190,7 +190,7 @@ point->Object.seal->ignore
 try {
   point->Object.set("z", 9) // fails
 } catch {
-| Exn.Error(_) => assert(true)
+| JsExn(_) => assert(true)
 | _ => assert(false)
 }
 
@@ -214,7 +214,7 @@ obj->Object.preventExtensions->ignore
 try {
   obj->Object.set("c", 3) // fails
 } catch {
-| Exn.Error(_) => assert(true)
+| JsExn(_) => assert(true)
 | _ => assert(false)
 }
 ```
@@ -239,7 +239,7 @@ obj->Object.freeze->ignore
 try {
   obj->Object.set("a", 3) // fails
 } catch {
-| Exn.Error(_) => assert(true)
+| JsExn(_) => assert(true)
 | _ => assert(false)
 }
 ```

@@ -494,6 +494,7 @@ type package = {
   opens: path list;
   uncurried: bool;
   rescriptVersion: int * int;
+  autocomplete: file list Misc.StringMap.t;
 }
 
 let allFilesInPackage package =

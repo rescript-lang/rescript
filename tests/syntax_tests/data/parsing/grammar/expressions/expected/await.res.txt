@@ -2,7 +2,7 @@
 let maybeSomeValue =
   match await (fetchData url) with
   | data -> Some data
-  | exception JsError _ -> None
+  | exception JsExn _ -> None
 let x = (await 1) + 2
 let x = (await (wait 1)) + (await (wait 2))
 let () =

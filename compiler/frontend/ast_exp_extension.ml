@@ -43,7 +43,7 @@ let handle_extension e (self : Bs_ast_mapper.mapper)
     in
 
     Exp.apply ~loc
-      (Exp.ident ~loc {txt = Longident.parse "Js.Exn.raiseError"; loc})
+      (Exp.ident ~loc {txt = Longident.parse "JsError.throwWithMessage"; loc})
       [
         ( Nolabel,
           Exp.constant ~loc

@@ -158,7 +158,7 @@ and ident_error = ident_create_predef_exn "Error"
 and ident_dict_magic_field_name =
   ident_create Dict_type_helpers.dict_magic_field_name
 
-and ident_js_error = ident_create_predef_exn "JsError"
+and ident_js_exn = ident_create_predef_exn "JsExn"
 
 and ident_not_found = ident_create_predef_exn "Not_found"
 
@@ -176,7 +176,7 @@ let all_predef_exns =
     ident_match_failure;
     ident_invalid_argument;
     ident_failure;
-    ident_js_error;
+    ident_js_exn;
     ident_not_found;
     ident_end_of_file;
     ident_division_by_zero;
@@ -412,7 +412,7 @@ let common_initial_env add_type add_extension empty_env =
   |> add_exception ident_end_of_file []
   |> add_exception ident_not_found []
   |> add_exception ident_failure [type_string]
-  |> add_exception ident_js_error [type_unknown]
+  |> add_exception ident_js_exn [type_unknown]
   |> add_exception ident_invalid_argument [type_string]
   |> add_exception ident_match_failure
        [newgenty (Ttuple [type_string; type_int; type_int])]
@@ -433,7 +433,7 @@ let builtin_values =
       ident_match_failure;
       ident_invalid_argument;
       ident_failure;
-      ident_js_error;
+      ident_js_exn;
       ident_not_found;
       ident_end_of_file;
       ident_division_by_zero;

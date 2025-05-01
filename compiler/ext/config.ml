@@ -1,9 +1,23 @@
 let version = "4.06.1+BS"
 
+(* FIXME: Unreliable resolution *)
 let standard_library =
   let ( // ) = Filename.concat in
-  Filename.dirname Sys.executable_name
-  // Filename.parent_dir_name // "lib" // "ocaml"
+  let exe_path = Sys.executable_name in
+  if Ext_string.contain_substring exe_path ("node_modules" // "@rescript") then
+    (* node_modules/@rescript/{platform}/bin *)
+    Filename.dirname exe_path // Filename.parent_dir_name
+    // Filename.parent_dir_name // Filename.parent_dir_name // "rescript"
+    // "lib" // "ocaml"
+  else if Ext_string.contain_substring exe_path ("node_modules" // "rescript")
+  then
+    (* node_modules/rescript/{platform} *)
+    Filename.dirname exe_path // Filename.parent_dir_name // "lib" // "ocaml"
+  else
+    (* git repo: rescript/packages/@rescript/{platform}/bin *)
+    Filename.dirname exe_path // Filename.parent_dir_name
+    // Filename.parent_dir_name // Filename.parent_dir_name
+    // Filename.parent_dir_name // "lib" // "ocaml"
 
 let standard_library_default = standard_library
 

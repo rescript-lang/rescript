@@ -67,6 +67,15 @@ export const compilerVersionFile = path.resolve(
 );
 
 /**
+ * path: `<projectDir>/packages/artifacts.txt`
+ */
+export const artifactListFile = path.resolve(
+  projectDir,
+  "packages",
+  "artifacts.txt",
+);
+
+/**
  * path: `<projectDir>/_build/install/default/bin/`
  */
 export const compilerBinDir = path.resolve(

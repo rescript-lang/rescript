@@ -415,6 +415,7 @@ ContextPath Value[String, split](Nolabel, Nolabel)
 ContextPath Value[String, split]
 Path String.split
 Path Stdlib.Array.ma
+Path ArrayUtils.ma
 [{
     "label": "Array.map",
     "kind": 12,

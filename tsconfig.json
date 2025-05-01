@@ -16,6 +16,7 @@
     "lib/*",
     "lib_dev/*",
     "scripts/*",
+    "packages/**",
     "tests/**/input.js",
     ".github/workflows/*.js",
     "package.json"

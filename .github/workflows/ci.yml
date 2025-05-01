@@ -27,14 +27,19 @@ jobs:
         include:
           - os: macos-13 # x64
             rust-target: x86_64-apple-darwin
+            node-target: darwin-x64
           - os: macos-14 # ARM
             rust-target: aarch64-apple-darwin
+            node-target: darwin-arm64
           - os: ubuntu-24.04 # x64
             rust-target: x86_64-unknown-linux-musl
+            node-target: linux-x64
           - os: ubuntu-24.04-arm # ARM
             rust-target: aarch64-unknown-linux-musl
+            node-target: linux-arm64
           - os: windows-latest
             rust-target: x86_64-pc-windows-gnu
+            node-target: win32-x64
 
     runs-on: ${{matrix.os}}
 
@@ -66,25 +71,24 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
-          targets: ${{matrix.rust-target}}
+          targets: ${{ matrix.rust-target }}
 
       - name: Build rewatch
         if: steps.build-cache.outputs.cache-hit != 'true'
-        run: cargo build --manifest-path rewatch/Cargo.toml --target ${{matrix.rust-target}} --release
-
-      - name: Copy rewatch exe to platform bin dir
         run: |
-          cp rewatch/target/${{matrix.rust-target}}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch
-          node ./scripts/copyExes.js -rewatch
+          cargo build --manifest-path rewatch/Cargo.toml --target ${{ matrix.rust-target }} --release
 
-      - name: Get artifact dir name
-        run: node .github/workflows/get_artifact_dir_name.js
+      - name: Copy rewatch binary
+        run: |
+          cp rewatch/target/${{ matrix.rust-target }}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch.exe
+        shell: bash
 
       - name: "Upload artifact: rewatch binary"
         uses: actions/upload-artifact@v4
         with:
-          name: rewatch-${{env.artifact_dir_name}}
-          path: ${{ env.artifact_dir_name }}
+          name: rewatch-${{ matrix.node-target }}
+          path: rewatch.exe
+          if-no-files-found: error
 
   build-compiler:
     strategy:
@@ -95,21 +99,26 @@ jobs:
             ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
             upload_binaries: true
             upload_libs: true
+            node-target: linux-x64
           - os: ubuntu-24.04-arm # ARM
             ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
             upload_binaries: true
             # Build the playground compiler and run the benchmarks on the fastest runner
             build_playground: true
             benchmarks: true
+            node-target: linux-arm64
           - os: macos-13 # x64
             ocaml_compiler: 5.3.0
             upload_binaries: true
+            node-target: darwin-x64
           - os: macos-14 # ARM
             ocaml_compiler: 5.3.0
             upload_binaries: true
+            node-target: darwin-arm64
           - os: windows-latest
             ocaml_compiler: 5.3.0
             upload_binaries: true
+            node-target: win32-x64
 
           # Verify that the compiler still builds with older OCaml versions
           - os: ubuntu-24.04
@@ -143,9 +152,6 @@ jobs:
         with:
           cache: yarn
           node-version-file: .nvmrc
-
-      - name: Get artifact dir name
-        run: node .github/workflows/get_artifact_dir_name.js
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
@@ -303,13 +309,13 @@ jobs:
         run: yarn install
 
       - name: Copy compiler exes to platform bin dir
-        run: node ./scripts/copyExes.js -compiler
+        run: node scripts/copyExes.js --compiler
 
       - name: Restore ninja build cache
         id: ninja-build-cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.artifact_dir_name }}/ninja.exe
+          path: packages/@rescript/${{ matrix.node-target }}/bin/ninja.exe
           key: ninja-build-v1-${{ matrix.os }}-${{ hashFiles('ninja/src/**') }}
 
       - name: Setup Python for ninja build
@@ -336,7 +342,7 @@ jobs:
 
       - name: Copy ninja exe to platform bin dir
         if: steps.ninja-build-cache.outputs.cache-hit != 'true'
-        run: node ./scripts/copyExes.js -ninja
+        run: node scripts/copyExes.js --ninja
 
       - name: "Syntax: Run roundtrip tests"
         if: ${{ runner.os != 'Windows' }}
@@ -423,8 +429,8 @@ jobs:
         if: matrix.upload_binaries
         uses: actions/upload-artifact@v4
         with:
-          name: binaries-${{ env.artifact_dir_name }}
-          path: ${{ env.artifact_dir_name }}
+          name: binaries-${{ matrix.node-target }}
+          path: packages/@rescript/${{ matrix.node-target }}/bin
 
       - name: "Upload artifacts: lib/ocaml"
         if: matrix.upload_libs
@@ -433,13 +439,11 @@ jobs:
           name: lib-ocaml
           path: lib/ocaml
 
-  package:
-    needs:
-      - build-compiler
+  pkg-pr-new:
+    needs: 
       - build-rewatch
-
-    runs-on: ubuntu-24.04
-
+      - build-compiler
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -450,59 +454,40 @@ jobs:
           cache: yarn
           node-version-file: .nvmrc
 
-      - name: NPM install
-        run: yarn install
-
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           pattern: "@(binaries-*|rewatch-*|lib-ocaml)"
 
-      - name: Move artifacts
-        run: ./scripts/moveArtifacts.sh
+      - name: Move artifacts into packages
+        run: .github/workflows/moveArtifacts.sh
+        shell: bash
 
-      - name: npm pack (rescript) + check artifact list
-        run: node ./scripts/npmPack.js
-
-      - name: Copy JS files to stdlib package
-        run: mkdir -p packages/std/lib && cp -R lib/es6 lib/js packages/std/lib
-
-      - name: npm pack (@rescript/std)
-        run: npm pack
-        working-directory: packages/std
-
-      - name: Prepare package upload
-        # For pull requests, pass the correct commit SHA explicitly as GITHUB_SHA points to the wrong commit.
-        run: node .github/workflows/prepare_package_upload.js ${{ github.event.pull_request.head.sha }}
-
-      - name: "Upload artifact: npm packages"
-        uses: actions/upload-artifact@v4
-        with:
-          name: npm-packages
-          path: |
-            rescript-${{ env.rescript_version }}.tgz
-            rescript-std-${{ env.rescript_version }}.tgz
-
-    outputs:
-      rescript_version: ${{ env.rescript_version }}
+      - name: Publish packages to pkg.pr.new
+        run: |
+          yarn dlx pkg-pr-new publish "." "./packages/@rescript/*"
 
   installationTest:
-    needs: package
+    needs:
+      - pkg-pr-new
     strategy:
       fail-fast: false
       matrix:
-        os: [
-            macos-13, # x64
-            macos-14, # ARM
-            ubuntu-24.04,
-            ubuntu-24.04-arm,
-            windows-latest,
-          ]
-
-    runs-on: ${{matrix.os}}
-
+        include:
+          - os: macos-13
+            node-target: darwin-x64
+          - os: macos-14
+            node-target: darwin-arm64
+          - os: ubuntu-24.04
+            node-target: linux-x64
+          - os: ubuntu-24.04-arm
+            node-target: linux-arm64
+          - os: windows-latest
+            node-target: win32-x64
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
+        id: checkout
         uses: actions/checkout@v4
 
       - name: Use Node.js
@@ -523,16 +508,11 @@ jobs:
           echo "path=$dir" >> "$GITHUB_OUTPUT"
           cp -r tests/package_tests/installation_test/* "$dir"
 
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: npm-packages
-          path: ${{ steps.tmp-dir.outputs.path }}
-
       - name: Install ReScript package
         run: |
-          npm i --ignore-scripts --no-audit \
-            rescript-${{ needs.package.outputs.rescript_version }}.tgz
+          COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          npm i --no-audit \
+            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
@@ -542,12 +522,12 @@ jobs:
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
   publish:
-    needs: [package, installationTest]
-
+    needs:
+      - build-rewatch
+      - build-compiler
+      - installationTest
     if: startsWith(github.ref, 'refs/tags/v')
-
-    runs-on: ubuntu-24.04
-
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -562,14 +542,18 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: npm-packages
+          pattern: "@(binaries-*|rewatch-*|lib-ocaml)"
+
+      - name: Move artifacts into packages
+        run: .github/workflows/moveArtifacts.sh
+        shell: bash
 
       - name: Publish packages on npm with tag "ci"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
         run: |
-          npm publish rescript-${{ needs.package.outputs.rescript_version }}.tgz --tag ci
-          npm publish rescript-std-${{ needs.package.outputs.rescript_version }}.tgz --tag ci
+          yarn workspaces foreach -W --no-private \
+            npm publish --tag ci
 
       - name: Update Website Playground
         env:

@@ -56,13 +56,10 @@
   },
   "files": [
     "CHANGELOG.md",
+    "COPYING",
+    "COPYING.LESSER",
     "CREDITS.md",
     "ninja.COPYING",
-    "darwin",
-    "darwinarm64",
-    "linux",
-    "linuxarm64",
-    "win32",
     "docs/docson/build-schema.json",
     "lib",
     "cli"
@@ -77,6 +74,13 @@
     "#dev/*": "./lib_dev/*.js",
     "#lib/minisocket": "./lib/minisocket.js"
   },
+  "optionalDependencies": {
+    "@rescript/darwin-arm64": "workspace:packages/@rescript/darwin-arm64",
+    "@rescript/darwin-x64": "workspace:packages/@rescript/darwin-x64",
+    "@rescript/linux-arm64": "workspace:packages/@rescript/linux-arm64",
+    "@rescript/linux-x64": "workspace:packages/@rescript/linux-x64",
+    "@rescript/win32-x64": "workspace:packages/@rescript/win32-x64"
+  },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "@types/node": "^20.14.9",
@@ -88,6 +92,7 @@
   },
   "workspaces": [
     "packages/*",
+    "packages/@rescript/*",
     "tests/dependencies/**",
     "tests/analysis_tests/**",
     "tests/gentype_tests/**",

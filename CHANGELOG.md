@@ -12,13 +12,22 @@
 
 # 12.0.0-alpha.13 (Unreleased)
 
+#### :boom: Breaking Change
+
+- Rename `JsError` to `JsExn` and error modules cleanup. https://github.com/rescript-lang/rescript/pull/7408
+
 #### :rocket: New Feature
 
 - Add shift (`<<`, `>>`, `>>>`) operators for `int` and `bigint`. https://github.com/rescript-lang/rescript/pull/7183
+- Significantly reduced the download size by splitting binaries into optional platform-specific dependencies (e.g, `@rescript/linux-x64`). https://github.com/rescript-lang/rescript/pull/7395
 
 #### :bug: Bug fix
 
 - Fix broken `bstracing` CLI location. https://github.com/rescript-lang/rescript/pull/7398
+
+#### :house: Internal
+
+- AST: Add bar location to `case`. https://github.com/rescript-lang/rescript/pull/7407
 
 # 12.0.0-alpha.12
 
@@ -37,6 +46,7 @@
 
 - Improve error message for missing value when the identifier is also the name of a module in scope. https://github.com/rescript-lang/rescript/pull/7384
 - Upgrade Flow parser to 0.267.0. https://github.com/rescript-lang/rescript/pull/7390
+- Move `Lazy` module to Stdlib. https://github.com/rescript-lang/rescript/pull/7399
 
 # 12.0.0-alpha.11
 

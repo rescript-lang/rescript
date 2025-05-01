@@ -395,19 +395,24 @@ To build a new version and release it on NPM, follow these steps:
 
 ## Debugging issues from CI builds
 
-To reproduce issues, it can be helpful to the team to install a specific version of the compiler. To do so:
+To reproduce issues, it can be helpful to the team to install a specific version of the compiler.
 
-1. Go to [Actions CI for master](https://github.com/rescript-lang/rescript-compiler/actions/workflows/ci.yml?query=branch%3Amaster)
-   - If you need a specific branch, select a different one to filter to in the GitHub UI.
-1. Select a specific run (likely the latest)
-1. Under "Artifacts", download the `npm-packages` artifact and extract it to a folder.
-1. In your repository run:
+ReScript uses [pkg.pr.new](https://github.com/stackblitz-labs/pkg.pr.new) for continuous releases. Once tests are passed successfully, the bot comment is available. 
 
-```console
-npm i <path_to_download>npm-packages/rescript-*.tgz
+Follow the instructions from the comment, which are like:
+
+```bash
+# Use NPM
+npm i "https://pkg.pr.new/rescript-lang/rescript@${PR_NUMBER}"
+
+# Use Yarn
+yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${PR_NUMBER}"
+
+# Use pnpm
+pnpm add "https://pkg.pr.new/rescript-lang/rescript@${PR_NUMBER}"
 ```
 
-1. Then attempt to rebuild your project as you would normally.
+Then attempt to rebuild your project as you would normally.
 
 ## Contribution Licensing
 

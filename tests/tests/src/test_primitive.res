@@ -85,7 +85,7 @@ let gg = x => x.u = 0.
 
 let f = (x: string) => String.length(x)
 
-let is_lazy_force = x => Lazy.force(x)
+let is_lazy_force = x => Lazy.get(x)
 
 let rec fib = (n: int) =>
   switch n {

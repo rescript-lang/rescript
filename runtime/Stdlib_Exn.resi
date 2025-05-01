@@ -27,16 +27,18 @@ Provide utilities for dealing with JS exceptions.
 */
 
 /** Represents a JS exception */
+@deprecated("Use `JsExn.t` instead")
 type t
 
 type exn += private Error(t)
 
+@deprecated("Use `JsExn.fromException` instead")
 let asJsExn: exn => option<t>
 
-@get external stack: t => option<string> = "stack"
-@get external message: t => option<string> = "message"
-@get external name: t => option<string> = "name"
-@get external fileName: t => option<string> = "fileName"
+@deprecated("Use `JsExn.stack` instead") @get external stack: t => option<string> = "stack"
+@deprecated("Use `JsExn.message` instead") @get external message: t => option<string> = "message"
+@deprecated("Use `JsExn.name` instead") @get external name: t => option<string> = "name"
+@deprecated("Use `JsExn.fileName` instead") @get external fileName: t => option<string> = "fileName"
 
 /**
 `anyToExnInternal(obj)` will take any value `obj` and wrap it
@@ -49,15 +51,23 @@ a value passed to a Promise.catch callback)
 
 **IMPORTANT**: This is an internal API and may be changed / removed any time in the future.
 */
+@deprecated("Use `JsExn.anyToExnInternal` instead")
 external anyToExnInternal: 'a => exn = "%wrap_exn"
 
 /** Raise Js exception Error object with stacktrace */
+@deprecated("Use `JsError.throwWithMessage` instead")
 let raiseError: string => 'a
+@deprecated("Use `JsError.EvalError.throwWithMessage` instead")
 let raiseEvalError: string => 'a
+@deprecated("Use `JsError.RangeError.throwWithMessage` instead")
 let raiseRangeError: string => 'a
+@deprecated("Use `JsError.ReferenceError.throwWithMessage` instead")
 let raiseReferenceError: string => 'a
+@deprecated("Use `JsError.SyntaxError.throwWithMessage` instead")
 let raiseSyntaxError: string => 'a
+@deprecated("Use `JsError.TypeError.throwWithMessage` instead")
 let raiseTypeError: string => 'a
+@deprecated("Use `JsError.URIError.throwWithMessage` instead")
 let raiseUriError: string => 'a
 
 /**
@@ -66,4 +76,5 @@ let raiseUriError: string => 'a
   This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
   without having to store or process it further.
 */
+@deprecated("Use `JsExn.ignore` instead")
 external ignore: t => unit = "%ignore"

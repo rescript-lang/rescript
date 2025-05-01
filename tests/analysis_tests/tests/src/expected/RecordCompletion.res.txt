@@ -13,6 +13,7 @@ Path t
 CPPipe pathFromEnv: found:true
 Path RecordCompletion.n
 Path Stdlib.Array.m
+Path ArrayUtils.m
 [{
     "label": "Array.map",
     "kind": 12,
@@ -54,6 +55,7 @@ Path RecordCompletion.n2
 CPPipe pathFromEnv: found:true
 Path RecordCompletion.n
 Path Stdlib.Array.m
+Path ArrayUtils.m
 [{
     "label": "Array.map",
     "kind": 12,

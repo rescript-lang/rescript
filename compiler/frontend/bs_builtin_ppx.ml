@@ -165,7 +165,9 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
         {
           e with
           pexp_desc =
-            Pexp_match (pvb_expr, [{pc_lhs = p; pc_guard = None; pc_rhs = body}]);
+            Pexp_match
+              ( pvb_expr,
+                [{pc_bar = None; pc_lhs = p; pc_guard = None; pc_rhs = body}] );
           pexp_attributes = e.pexp_attributes @ pvb_attributes;
         })
   (* let [@warning "a"] {a;b} = c in body

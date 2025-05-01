@@ -4,7 +4,7 @@ DUNE_BIN_DIR = ./_build/install/default/bin
 
 build: ninja rewatch
 	dune build
-	./scripts/copyExes.js -compiler
+	./scripts/copyExes.js --compiler
 
 watch:
 	dune build -w
@@ -18,13 +18,13 @@ dce:
 rewatch:
 	cargo build --manifest-path rewatch/Cargo.toml
 	cp rewatch/target/debug/rewatch rewatch
-	./scripts/copyExes.js -rewatch
+	./scripts/copyExes.js --rewatch
 
 ninja/ninja:
 	./scripts/buildNinjaBinary.js
-	./scripts/copyExes.js -ninja
 
 ninja: ninja/ninja
+	./scripts/copyExes.js --ninja
 
 test: build lib
 	node scripts/test.js -all
@@ -56,7 +56,7 @@ lib:
 	./scripts/prebuilt.js
 
 artifacts: lib
-	./scripts/npmPack.js -updateArtifactList
+	./scripts/npmPack.js --updateArtifactList
 
 # Builds the core playground bundle (without the relevant cmijs files for the runtime)
 playground:

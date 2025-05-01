@@ -665,6 +665,7 @@ let default_mapper =
     case =
       (fun this {pc_lhs; pc_guard; pc_rhs} ->
         {
+          pc_bar = None;
           pc_lhs = this.pat this pc_lhs;
           pc_guard = map_opt (this.expr this) pc_guard;
           pc_rhs = this.expr this pc_rhs;

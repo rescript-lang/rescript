@@ -1,4 +1,4 @@
-exception Error = JsError
+exception Error = JsExn
 type js_error = {cause: exn}
 
 // TODO: remove legacy exn representation

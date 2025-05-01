@@ -3543,6 +3543,7 @@ and parse_pattern_match_case p =
   Parser.leave_breadcrumb p Grammar.PatternMatchCase;
   match p.Parser.token with
   | Token.Bar ->
+    let bar = p.start_pos in
     Parser.next p;
     Parser.leave_breadcrumb p Grammar.Pattern;
     let lhs = parse_pattern p in
@@ -3556,7 +3557,7 @@ and parse_pattern_match_case p =
     let rhs = parse_expr_block p in
     Parser.end_region p;
     Parser.eat_breadcrumb p;
-    Some (Ast_helper.Exp.case lhs ?guard rhs)
+    Some (Ast_helper.Exp.case ~bar lhs ?guard rhs)
   | _ ->
     Parser.end_region p;
     Parser.eat_breadcrumb p;

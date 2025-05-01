@@ -38,8 +38,8 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
   in
   let stdlib =
     [
-      ("panic", [jsExnError]);
-      ("assertEqual", [jsExnError]);
+      ("panic", [jsExn]);
+      ("assertEqual", [jsExn]);
       ("invalid_arg", [invalidArgument]);
       ("failwith", [failure]);
       ("/", [divisionByZero]);
@@ -50,30 +50,30 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
       ("float_of_string", [failure]);
     ]
   in
-  let stdlibBigInt = [("fromStringExn", [jsExnError])] in
+  let stdlibBigInt = [("fromStringExn", [jsExn])] in
   let stdlibBool = [("fromStringExn", [invalidArgument])] in
-  let stdlibError = [("raise", [jsExnError])] in
+  let stdlibError = [("raise", [jsExn])] in
   let stdlibExn =
     [
-      ("raiseError", [jsExnError]);
-      ("raiseEvalError", [jsExnError]);
-      ("raiseRangeError", [jsExnError]);
-      ("raiseReferenceError", [jsExnError]);
-      ("raiseSyntaxError", [jsExnError]);
-      ("raiseTypeError", [jsExnError]);
-      ("raiseUriError", [jsExnError]);
+      ("raiseError", [jsExn]);
+      ("raiseEvalError", [jsExn]);
+      ("raiseRangeError", [jsExn]);
+      ("raiseReferenceError", [jsExn]);
+      ("raiseSyntaxError", [jsExn]);
+      ("raiseTypeError", [jsExn]);
+      ("raiseUriError", [jsExn]);
     ]
   in
   let stdlibJson =
     [
-      ("parseExn", [jsExnError]);
-      ("parseExnWithReviver", [jsExnError]);
-      ("stringifyAny", [jsExnError]);
-      ("stringifyAnyWithIndent", [jsExnError]);
-      ("stringifyAnyWithReplacer", [jsExnError]);
-      ("stringifyAnyWithReplacerAndIndent", [jsExnError]);
-      ("stringifyAnyWithFilter", [jsExnError]);
-      ("stringifyAnyWithFilterAndIndent", [jsExnError]);
+      ("parseExn", [jsExn]);
+      ("parseExnWithReviver", [jsExn]);
+      ("stringifyAny", [jsExn]);
+      ("stringifyAnyWithIndent", [jsExn]);
+      ("stringifyAnyWithReplacer", [jsExn]);
+      ("stringifyAnyWithReplacerAndIndent", [jsExn]);
+      ("stringifyAnyWithFilter", [jsExn]);
+      ("stringifyAnyWithFilterAndIndent", [jsExn]);
     ]
   in
   let stdlibList =
@@ -81,7 +81,7 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
   in
   let stdlibNull = [("getExn", [invalidArgument])] in
   let stdlibNullable = [("getExn", [invalidArgument])] in
-  let stdlibOption = [("getExn", [jsExnError])] in
+  let stdlibOption = [("getExn", [jsExn])] in
   let stdlibResult = [("getExn", [notFound])] in
   let yojsonBasic = [("from_string", [yojsonJsonError])] in
   let yojsonBasicUtil =
@@ -144,7 +144,7 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
     ("Bool", stdlibBool);
     ("Error", stdlibError);
     ("Exn", stdlibExn);
-    ("Js.Json", [("parseExn", [jsExnError])]);
+    ("Js.Json", [("parseExn", [jsExn])]);
     ("JSON", stdlibJson);
     ("Json_decode", bsJson);
     ("Json.Decode", bsJson);

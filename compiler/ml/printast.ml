@@ -681,8 +681,10 @@ and longident_x_pattern i ppf (li, p, opt) =
   line i ppf "%a%s\n" fmt_longident_loc li (if opt then "?" else "");
   pattern (i + 1) ppf p
 
-and case i ppf {pc_lhs; pc_guard; pc_rhs} =
+and case i ppf {pc_bar; pc_lhs; pc_guard; pc_rhs} =
   line i ppf "<case>\n";
+  pc_bar
+  |> Option.iter (fun bar -> line i ppf "| %a\n" (fmt_position false) bar);
   pattern (i + 1) ppf pc_lhs;
   (match pc_guard with
   | None -> ()

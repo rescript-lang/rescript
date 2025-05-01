@@ -633,6 +633,7 @@ Resolved opens 1 Stdlib
 ContextPath array<int>->m
 ContextPath array<int>
 Path Stdlib.Array.m
+Path ArrayUtils.m
 [{
     "label": "Array.map",
     "kind": 12,
@@ -2215,6 +2216,7 @@ Resolved opens 3 Stdlib Completion Completion
 ContextPath array->ma
 ContextPath array
 Path Stdlib.Array.ma
+Path ArrayUtils.ma
 [{
     "label": "Array.map",
     "kind": 12,
