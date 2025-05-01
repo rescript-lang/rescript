@@ -603,8 +603,8 @@ let descriptions =
     (22, "Preprocessor warning.");
     (23, "Useless record \"with\" clause.");
     ( 24,
-      "Bad module name: the source file name is not a valid ReScript module name."
-    );
+      "Bad module name: the source file name is not a valid ReScript module \
+       name." );
     (25, "Deprecated: now part of warning 8.");
     ( 26,
       "Suspicious unused variable: unused variable that is bound\n\
