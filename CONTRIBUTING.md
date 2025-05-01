@@ -406,7 +406,7 @@ Follow the instructions from the comment, which are like:
 npm i "https://pkg.pr.new/rescript-lang/rescript@${PR_NUMBER}"
 
 # Use Yarn
-yarn add "https://pkg.pr.new/rescript-lang/rescript@${PR_NUMBER}"
+yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${PR_NUMBER}"
 
 # Use pnpm
 pnpm add "https://pkg.pr.new/rescript-lang/rescript@${PR_NUMBER}"
