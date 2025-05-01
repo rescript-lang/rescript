@@ -583,7 +583,6 @@ let descriptions =
     ( 5,
       "Partially applied function: expression whose result has function\n\
       \    type and is ignored." );
-    (6, "Label omitted in function application.");
     (7, "Method overridden.");
     (8, "Partial match: missing cases in pattern-matching.");
     (9, "Missing fields in a record pattern.");
@@ -638,7 +637,6 @@ let descriptions =
     (48, "Implicit elimination of optional arguments.");
     (49, "Absent cmi file when looking up module alias.");
     (50, "Unexpected documentation comment.");
-    (51, "Warning on non-tail calls if @tailcall present.");
     (52, "Fragile constant pattern.");
     (53, "Attribute cannot appear in this context");
     (54, "Attribute used more than once on an expression");
