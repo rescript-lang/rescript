@@ -208,6 +208,19 @@ let entries =
         };
     };
     {
+      path = builtin "&";
+      name = "%bitand";
+      form = Binary;
+      specialization =
+        {
+          int = Pandint;
+          bool = None;
+          float = None;
+          bigint = Some Pandbigint;
+          string = None;
+        };
+    };
+    {
       path = builtin "^";
       name = "%bitxor";
       form = Binary;

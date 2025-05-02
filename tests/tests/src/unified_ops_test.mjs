@@ -75,6 +75,14 @@ function bxor_bigint(a, b) {
   return a ^ b;
 }
 
+function band_int(a, b) {
+  return a & b;
+}
+
+function band_bigint(a, b) {
+  return a & b;
+}
+
 let bigintShiftLeft = (1n << 2n);
 
 let bigintShiftRight = (8n >> 2n);
@@ -111,6 +119,8 @@ export {
   pow_overflow,
   bxor_int,
   bxor_bigint,
+  band_int,
+  band_bigint,
   intShiftLeft,
   intShiftRight,
   intShiftRightUnsigned,
