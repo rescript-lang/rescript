@@ -121,3 +121,4 @@ let processCompletable ~debug ~full ~scope ~env ~pos
            (dec2, doc, maybeInsertText))
     |> List.map mkDecorator
   | CdecoratorPayload _ -> []
+  | Ccase _ -> []

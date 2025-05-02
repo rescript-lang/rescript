@@ -119,6 +119,7 @@ module Pat : sig
   val open_ : ?loc:loc -> ?attrs:attrs -> lid -> pattern -> pattern
   val exception_ : ?loc:loc -> ?attrs:attrs -> pattern -> pattern
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> pattern
+  val hole : ?loc:loc -> ?attrs:attrs -> unit -> pattern
 end
 
 (** Expressions *)
@@ -231,8 +232,7 @@ module Exp : sig
     Parsetree.jsx_closing_container_tag option ->
     expression
 
-  val case :
-    ?bar:Lexing.position -> pattern -> ?guard:expression -> expression -> case
+  val case : Location.t -> pattern -> ?guard:expression -> expression -> case
   val await : ?loc:loc -> ?attrs:attrs -> expression -> expression
 
   val make_list_expression :

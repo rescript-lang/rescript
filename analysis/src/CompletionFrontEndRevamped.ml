@@ -420,10 +420,10 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
       if expr.pexp_loc |> Loc.hasPos ~pos:posNoWhite && !result = None then (
         setFound ();
         match expr.pexp_desc with
-        | Pexp_match (switchExpr, [{pc_lhs = lhsPat}])
+        (* | Pexp_match (switchExpr, [{pc_lhs = lhsPat}])
           when CompletionPatterns.isPatternHole lhsPat
                && locHasCursor switchExpr.pexp_loc = false ->
-          setResult (Cpattern {kind = Empty; typeLoc = switchExpr.pexp_loc})
+          setResult (Cpattern {kind = Empty; typeLoc = switchExpr.pexp_loc}) *)
         | Pexp_match (switchExpr, cases) ->
           let oldTypeLoc = !currentTypeLoc in
           currentTypeLoc := Some switchExpr.pexp_loc;
@@ -712,6 +712,7 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
         in
         (* TODO(revamp) Complete *)
         ()
+      | Ppat_hole -> setResult (Cpattern {kind = Empty; typeLoc = pat.ppat_loc})
       | _ -> ());
       Ast_iterator.default_iterator.pat iterator pat)
   in
@@ -805,7 +806,8 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
       Res_driver.parsing_engine.parse_implementation ~for_printer:false
     in
     let {Res_driver.parsetree = str} = parser ~filename:currentFile in
-    iterator.structure iterator str |> ignore;
+    let tree = Res_recovery.map str in
+    iterator.structure iterator tree |> ignore;
     if blankAfterCursor = Some ' ' || blankAfterCursor = Some '\n' then
       scope := !lastScopeBeforeCursor
       (* TODO(revamp) Complete any value *)

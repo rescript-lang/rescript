@@ -139,8 +139,9 @@ let parse_implementation ?(ignore_parse_errors = false) sourcefile =
   in
   if parse_result.invalid then (
     Res_diagnostics.print_report parse_result.diagnostics parse_result.source;
-    if not ignore_parse_errors then exit 1);
-  parse_result.parsetree
+    if not ignore_parse_errors then exit 1;
+    Res_recovery.map parse_result.parsetree)
+  else parse_result.parsetree
 [@@raises exit]
 
 let parse_interface ?(ignore_parse_errors = false) sourcefile =

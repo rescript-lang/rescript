@@ -665,7 +665,9 @@ let default_mapper =
     case =
       (fun this {pc_lhs; pc_guard; pc_rhs} ->
         {
-          pc_bar = None;
+          pc_loc =
+            this.location this
+              {pc_lhs.ppat_loc with Location.loc_end = pc_rhs.pexp_loc.loc_end};
           pc_lhs = this.pat this pc_lhs;
           pc_guard = map_opt (this.expr this) pc_guard;
           pc_rhs = this.expr this pc_rhs;

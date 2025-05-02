@@ -1727,6 +1727,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     raise (Error (loc, !env, Exception_pattern_below_toplevel))
   | Ppat_extension ext ->
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
+  | Ppat_hole -> failwith "Ppat_hole"
 
 let type_pat ?(allow_existentials = false) ?constrs ?labels ?(mode = Normal)
     ?(explode = 0) ?(lev = get_current_level ()) env sp expected_ty =
@@ -2097,7 +2098,7 @@ let contains_variant_either ty =
 let iter_ppat f p =
   match p.ppat_desc with
   | Ppat_any | Ppat_var _ | Ppat_constant _ | Ppat_interval _ | Ppat_extension _
-  | Ppat_type _ | Ppat_unpack _ ->
+  | Ppat_type _ | Ppat_unpack _ | Ppat_hole ->
     ()
   | Ppat_array pats -> List.iter f pats
   | Ppat_or (p1, p2) ->
@@ -2371,7 +2372,14 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     type_expect ?in_function env
       {
         sexp with
-        pexp_desc = Pexp_match (sval, [Ast_helper.Exp.case spat sbody]);
+        pexp_desc =
+          Pexp_match
+            ( sval,
+              [
+                Ast_helper.Exp.case
+                  {spat.ppat_loc with Location.loc_end = sbody.pexp_loc.loc_end}
+                  spat sbody;
+              ] );
       }
       ty_expected
   | Pexp_let (rec_flag, spat_sexp_list, sbody) ->
@@ -2414,12 +2422,12 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     let default_loc = default.pexp_loc in
     let scases =
       [
-        Exp.case
+        Exp.case default_loc
           (Pat.construct ~loc:default_loc
              (mknoloc Longident.(Ldot (Lident "*predef*", "Some")))
              (Some (Pat.var ~loc:default_loc (mknoloc "*sth*"))))
           (Exp.ident ~loc:default_loc (mknoloc (Longident.Lident "*sth*")));
-        Exp.case
+        Exp.case default_loc
           (Pat.construct ~loc:default_loc
              (mknoloc Longident.(Ldot (Lident "*predef*", "None")))
              None)
@@ -2447,13 +2455,17 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     in
     type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
       ty_expected l
-      [Exp.case pat body]
+      [Exp.case sloc pat body]
   | Pexp_fun
       {arg_label = l; default = None; lhs = spat; rhs = sbody; arity; async} ->
     let l = Asttypes.to_noloc l in
     type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
       ty_expected l
-      [Ast_helper.Exp.case spat sbody]
+      [
+        Ast_helper.Exp.case
+          {spat.ppat_loc with Location.loc_end = sbody.pexp_loc.loc_end}
+          spat sbody;
+      ]
   | Pexp_apply {funct = sfunct; args = sargs; partial} ->
     assert (sargs <> []);
     begin_def ();
@@ -3847,6 +3859,7 @@ and type_statement env sexp =
   exp
 
 (* Typing of match cases *)
+(* TODO: if we have Ppat_hole we can probably just return the type of the match expression? *)
 
 and type_cases ?root_type_clash_context ?in_function env ty_arg ty_res
     partial_flag loc caselist : _ * Typedtree.partial =

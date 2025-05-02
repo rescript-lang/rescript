@@ -202,10 +202,10 @@ and pattern_desc =
   | Ppat_exception of pattern (* exception P *)
   | Ppat_extension of extension (* [%id] *)
   | Ppat_open of Longident.t loc * pattern
-(* M.(P) *)
+  (* M.(P) *)
+  | Ppat_hole
 
 (* Value expressions *)
-
 and expression = {
   pexp_desc: expression_desc;
   pexp_loc: Location.t;
@@ -381,7 +381,7 @@ and jsx_closing_container_tag = {
 
 and case = {
   (* (P -> E) or (P when E0 -> E) *)
-  pc_bar: Lexing.position option;
+  pc_loc: Location.t;
   pc_lhs: pattern;
   pc_guard: expression option;
   pc_rhs: expression;

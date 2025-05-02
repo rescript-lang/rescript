@@ -25,9 +25,7 @@ module Recover = struct
     let id = Location.mknoloc "rescript.typehole" in
     Ast_helper.Typ.extension (id, PStr [])
 
-  let default_pattern () =
-    let id = Location.mknoloc "rescript.patternhole" in
-    Ast_helper.Pat.extension (id, PStr [])
+  let default_pattern () = Ast_helper.Pat.hole ()
 
   let default_module_expr () = Ast_helper.Mod.structure []
   let default_module_type () = Ast_helper.Mty.signature []
@@ -3431,8 +3429,10 @@ and parse_if_let_expr start_pos p =
     ~attrs:[if_let_attr; suppress_fragile_match_warning_attr]
     ~loc condition_expr
     [
-      Ast_helper.Exp.case pattern then_expr;
-      Ast_helper.Exp.case (Ast_helper.Pat.any ()) else_expr;
+      Ast_helper.Exp.case
+        {pattern.ppat_loc with Location.loc_end = loc.loc_end}
+        pattern then_expr;
+      Ast_helper.Exp.case else_expr.pexp_loc (Ast_helper.Pat.any ()) else_expr;
     ]
 
 and parse_if_or_if_let_expression p =
@@ -3557,7 +3557,8 @@ and parse_pattern_match_case p =
     let rhs = parse_expr_block p in
     Parser.end_region p;
     Parser.eat_breadcrumb p;
-    Some (Ast_helper.Exp.case ~bar lhs ?guard rhs)
+    let loc = mk_loc bar rhs.pexp_loc.loc_end in
+    Some (Ast_helper.Exp.case loc lhs ?guard rhs)
   | _ ->
     Parser.end_region p;
     Parser.eat_breadcrumb p;

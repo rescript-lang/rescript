@@ -227,6 +227,7 @@ and pattern i ppf x =
   | Ppat_extension (s, arg) ->
     line i ppf "Ppat_extension \"%s\"\n" s.txt;
     payload i ppf arg
+  | Ppat_hole -> line i ppf "Ppat_hole\n"
 
 and expression i ppf x =
   line i ppf "expression %a\n" fmt_location x.pexp_loc;
@@ -681,10 +682,8 @@ and longident_x_pattern i ppf (li, p, opt) =
   line i ppf "%a%s\n" fmt_longident_loc li (if opt then "?" else "");
   pattern (i + 1) ppf p
 
-and case i ppf {pc_bar; pc_lhs; pc_guard; pc_rhs} =
-  line i ppf "<case>\n";
-  pc_bar
-  |> Option.iter (fun bar -> line i ppf "| %a\n" (fmt_position false) bar);
+and case i ppf {pc_loc; pc_lhs; pc_guard; pc_rhs} =
+  line i ppf "<case> %a\n" fmt_location pc_loc;
   pattern (i + 1) ppf pc_lhs;
   (match pc_guard with
   | None -> ()

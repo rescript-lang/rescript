@@ -2,7 +2,7 @@ open SharedTypes
 
 let isPatternHole pat =
   match pat.Parsetree.ppat_desc with
-  | Ppat_extension ({txt = "rescript.patternhole"}, _) -> true
+  | Ppat_hole -> true
   | _ -> false
 
 let isPatternTuple pat =

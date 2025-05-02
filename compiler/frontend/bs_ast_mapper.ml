@@ -439,6 +439,7 @@ module P = struct
     | Ppat_open (lid, p) -> open_ ~loc ~attrs (map_loc sub lid) (sub.pat sub p)
     | Ppat_exception p -> exception_ ~loc ~attrs (sub.pat sub p)
     | Ppat_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Ppat_hole -> hole ~loc ~attrs ()
 end
 
 (* Now, a generic AST mapper, to be extended to cover all kinds and
@@ -539,9 +540,9 @@ let default_mapper =
           ~attrs:(this.attributes this pld_attributes));
     cases = (fun this l -> List.map (this.case this) l);
     case =
-      (fun this {pc_bar; pc_lhs; pc_guard; pc_rhs} ->
+      (fun this {pc_loc; pc_lhs; pc_guard; pc_rhs} ->
         {
-          pc_bar;
+          pc_loc = this.location this pc_loc;
           pc_lhs = this.pat this pc_lhs;
           pc_guard = map_opt (this.expr this) pc_guard;
           pc_rhs = this.expr this pc_rhs;

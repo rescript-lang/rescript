@@ -543,6 +543,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
     | Ppat_exception p -> scopePattern ~patternPath ?contextPath p
     | Ppat_extension _ -> ()
     | Ppat_open (_, p) -> scopePattern ~patternPath ?contextPath p
+    | Ppat_hole -> ()
   in
   let locHasCursor = CursorPosition.locHasCursor ~pos:posBeforeCursor in
   let locIsEmpty = CursorPosition.locIsEmpty ~pos:posBeforeCursor in

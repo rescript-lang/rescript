@@ -1,28 +1,15 @@
-Found Completable: Cpattern at type loc: [1:15->1:19]
+case _ vamp [2:2->4:1], has cursor true
+Found Completable: Ccase
 
   1 │ // Empty case, bool
   2 │ let x = switch true {
-    │                ‾‾‾‾
   3 │   | 
+    │   ‾‾
   4 │ //  ^com
+    │ ‾‾‾‾‾‾‾‾
+  5 │ }
+    │ ‾
+  6 │ 
 
-[{
-    "label": "true",
-    "kind": 12,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null,
-    "sortText": "A",
-    "insertText": "true",
-    "insertTextFormat": 2
-  }, {
-    "label": "false",
-    "kind": 12,
-    "tags": [],
-    "detail": "bool",
-    "documentation": null,
-    "sortText": "A",
-    "insertText": "false",
-    "insertTextFormat": 2
-  }]
+[]
 

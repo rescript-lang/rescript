@@ -831,6 +831,7 @@ module SexpAst = struct
             longident longident_loc.Location.txt;
             pattern p;
           ]
+      | Ppat_hole -> Sexp.atom "Ppat_hole"
     in
     Sexp.list [Sexp.atom "pattern"; descr]
 

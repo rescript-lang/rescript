@@ -2586,6 +2586,7 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
     | Ppat_interval (a, b) ->
       Doc.concat [print_constant a; Doc.text " .. "; print_constant b]
     | Ppat_open _ -> Doc.nil
+    | Ppat_hole -> Doc.nil
   in
   let doc =
     match p.ppat_attributes with

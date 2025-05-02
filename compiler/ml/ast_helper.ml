@@ -141,6 +141,7 @@ module Pat = struct
   let open_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_open (a, b))
   let exception_ ?loc ?attrs a = mk ?loc ?attrs (Ppat_exception a)
   let extension ?loc ?attrs a = mk ?loc ?attrs (Ppat_extension a)
+  let hole ?loc ?attrs () = mk ?loc ?attrs Ppat_hole
 end
 
 module Exp = struct
@@ -208,8 +209,8 @@ module Exp = struct
               jsx_container_element_closing_tag = e;
             }))
 
-  let case ?bar lhs ?guard rhs =
-    {pc_bar = bar; pc_lhs = lhs; pc_guard = guard; pc_rhs = rhs}
+  let case loc lhs ?guard rhs =
+    {pc_loc = loc; pc_lhs = lhs; pc_guard = guard; pc_rhs = rhs}
 
   let make_list_expression loc seq ext_opt =
     let rec handle_seq = function
