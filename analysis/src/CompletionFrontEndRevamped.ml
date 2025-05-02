@@ -434,6 +434,11 @@ let completionWithParser ~currentFile ~debug ~offset ~path ~posCursor text =
           processed := true
         | Pexp_extension ({txt = "obj"}, PStr [str_item]) ->
           Ast_iterator.default_iterator.structure_item iterator str_item
+        | Pexp_record ([], _) ->
+          (* Empty fields means we're in a record body `{}`. Complete for the fields. *)
+          setResult
+            (Cexpression
+               {kind = Field {hint = ""}; typeLoc = expr.pexp_loc; posOfDot})
         | Pexp_extension ({txt}, _) -> setResult (CextensionNode txt)
         | Pexp_constant _ -> setResult Cnone
         | Pexp_ident lid ->
