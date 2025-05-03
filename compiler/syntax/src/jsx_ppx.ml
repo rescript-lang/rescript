@@ -77,12 +77,12 @@ let get_mapper ~config =
 
   let expr mapper e =
     match config.version with
-    | 4 | 5 -> expr4 mapper e
+    | 4 -> expr4 mapper e
     | _ -> default_mapper.expr mapper e
   in
   let module_binding mapper mb =
     match config.version with
-    | 4 | 5 -> module_binding4 mapper mb
+    | 4 -> module_binding4 mapper mb
     | _ -> default_mapper.module_binding mapper mb
   in
   let save_config () =

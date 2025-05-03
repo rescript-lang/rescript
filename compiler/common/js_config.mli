@@ -22,7 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type jsx_version = Jsx_v4 | Jsx_preserve
+type jsx_version = Jsx_v4
 type jsx_module = React | Generic of {module_name: string}
 
 (* val get_packages_info :

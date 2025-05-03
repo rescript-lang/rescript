@@ -1277,7 +1277,7 @@ let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
         [key_prop; (nolabel, unit_expr ~loc:Location.none)] )
   in
   let args = [(nolabel, elementTag); (nolabel, props_record)] @ key_and_unit in
-  Exp.apply ~loc ~attrs ~transformed_jsx:(config.version = 5) jsx_expr args
+  Exp.apply ~loc ~attrs ~transformed_jsx:true jsx_expr args
 
 (* In most situations, the component name is the make function from a module. 
     However, if the name contains a lowercase letter, it means it probably an external component.

@@ -237,7 +237,7 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
       "*internal* <module>  Opens the module <module> before typing" );
     ( "-bs-jsx",
       string_call (fun i ->
-          if i <> "3" && i <> "4" && i <> "5" then
+          if i <> "3" && i <> "4" then
             Bsc_args.bad_arg (" Not supported jsx version : " ^ i);
           Js_config.jsx_version :=
             Js_config.jsx_version_of_int @@ int_of_string i),
