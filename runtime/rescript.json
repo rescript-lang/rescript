@@ -16,6 +16,7 @@
     }
   ],
   "bsc-flags": [
+    "-make-runtime",
     "-nostdlib",
     "-nopervasives",
     "-open Pervasives",
