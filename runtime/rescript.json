@@ -5,8 +5,17 @@
       "dir": "."
     }
   ],
+  "package-specs": [
+    {
+      "module": "commonjs",
+      "in-source": false
+    },
+    {
+      "module": "esmodule",
+      "in-source": false
+    }
+  ],
   "bsc-flags": [
-    "-make-runtime",
     "-nostdlib",
     "-nopervasives",
     "-open Pervasives",
