@@ -106,8 +106,8 @@ let precedence = function
   | HashEqual | ColonEqual -> 1
   | Lor -> 2
   | Land -> 3
-  | Band -> 4
-  | Caret -> 5
+  | Caret -> 4
+  | Band -> 5
   | Equal | EqualEqual | EqualEqualEqual | LessThan | GreaterThan | BangEqual
   | BangEqualEqual | LessEqual | GreaterEqual | BarGreater ->
     6
