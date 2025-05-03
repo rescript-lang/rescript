@@ -524,7 +524,10 @@ and expression_desc cxt ~(level : int) f x : cxt =
          when Ext_list.length_equal el i
        ]}
     *)
-  | Call (e, el, {call_transformed_jsx = true}) -> (
+  | Call
+      ( ({expression_desc = J.Var (J.Qualified (_, Some fnName))} as e),
+        el,
+        {call_transformed_jsx = true} ) -> (
     match el with
     | [
      tag;
@@ -539,7 +542,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
             | Undefined _ when opt -> None
             | _ -> Some (f, x))
       in
-      print_jsx cxt ~level f tag fields
+      print_jsx cxt ~level f fnName tag fields
     | [
      tag;
      {
@@ -555,7 +558,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
             | _ -> Some (f, x))
       in
       let fields = ("key", key) :: fields in
-      print_jsx cxt ~level f tag fields
+      print_jsx cxt ~level f fnName tag fields
     | _ ->
       expression_desc cxt ~level f
         (Call
@@ -996,7 +999,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
         P.string f "...";
         expression ~level:13 cxt f e)
 
-and print_jsx cxt ~(level : int) f (tag : J.expression)
+and print_jsx cxt ~(level : int) f (fnName : string) (tag : J.expression)
     (fields : (string * J.expression) list) : cxt =
   let print_tag () =
     match tag.expression_desc with
@@ -1008,7 +1011,17 @@ and print_jsx cxt ~(level : int) f (tag : J.expression)
       ()
   in
   let children_opt =
-    List.find_map (fun (n, e) -> if n = "children" then Some e else None) fields
+    List.find_map
+      (fun (n, e) ->
+        if n = "children" then
+          if fnName = "jsxs" then
+            match e.J.expression_desc with
+            | J.Optional_block ({expression_desc = J.Array (xs, _)}, _) ->
+              Some xs
+            | _ -> Some [e]
+          else Some [e]
+        else None)
+      fields
   in
   let print_props () =
     let props = List.filter (fun (n, _) -> n <> "children") fields in
@@ -1029,8 +1042,8 @@ and print_jsx cxt ~(level : int) f (tag : J.expression)
     print_props ();
     P.string f "/>"
   | Some children ->
-    let child_is_jsx =
-      match children.expression_desc with
+    let child_is_jsx child =
+      match child.J.expression_desc with
       | J.Call (_, _, {call_transformed_jsx = is_jsx}) -> is_jsx
       | _ -> false
     in
@@ -1039,9 +1052,18 @@ and print_jsx cxt ~(level : int) f (tag : J.expression)
     print_tag ();
     print_props ();
     P.string f ">";
-    if not child_is_jsx then P.string f "{";
-    let _ = expression ~level cxt f children in
-    if not child_is_jsx then P.string f "}";
+
+    let _ =
+      children
+      |> List.fold_left
+           (fun acc e ->
+             if not (child_is_jsx e) then P.string f "{";
+             let next = expression ~level acc f e in
+             if not (child_is_jsx e) then P.string f "}";
+             next)
+           cxt
+    in
+
     P.string f "</";
     print_tag ();
     P.string f ">");

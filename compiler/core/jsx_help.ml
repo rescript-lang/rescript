@@ -17,6 +17,7 @@ let j_exp_to_string (e : J.expression) =
   match e.J.expression_desc with
   | J.Object _ -> "Object"
   | J.Str _ -> "String"
+  | J.Var (J.Qualified (_, Some o)) -> "Var_" ^ o
   | J.Var _ -> "Var"
   | J.Call _ -> "Call"
   | J.Fun _ -> "Fun"
