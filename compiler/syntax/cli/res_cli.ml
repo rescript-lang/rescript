@@ -163,6 +163,7 @@ module ResClflags : sig
   val interface : bool ref
   val jsx_version : int ref
   val jsx_module : string ref
+  val jsx_preserve : bool ref
   val typechecker : bool ref
   val test_ast_conversion : bool ref
 
@@ -175,6 +176,7 @@ end = struct
   let interface = ref false
   let jsx_version = ref (-1)
   let jsx_module = ref "react"
+  let jsx_preserve = ref false
   let file = ref ""
   let typechecker = ref false
   let test_ast_conversion = ref false
@@ -225,7 +227,7 @@ module CliArgProcessor = struct
   [@@unboxed]
 
   let process_file ~is_interface ~width ~recover ~target ~jsx_version
-      ~jsx_module ~typechecker ~test_ast_conversion filename =
+      ~jsx_module ~jsx_preserve ~typechecker ~test_ast_conversion filename =
     let len = String.length filename in
     let process_interface =
       is_interface
@@ -277,7 +279,8 @@ module CliArgProcessor = struct
               Ast_mapper_from0.default_mapper tree0
         in
         let parsetree =
-          Jsx_ppx.rewrite_signature ~jsx_version ~jsx_module parsetree
+          Jsx_ppx.rewrite_signature ~jsx_version ~jsx_module ~jsx_preserve
+            parsetree
         in
         print_engine.print_interface ~width ~filename
           ~comments:parse_result.comments parsetree
@@ -302,7 +305,8 @@ module CliArgProcessor = struct
               Ast_mapper_from0.default_mapper tree0
         in
         let parsetree =
-          Jsx_ppx.rewrite_implementation ~jsx_version ~jsx_module parsetree
+          Jsx_ppx.rewrite_implementation ~jsx_version ~jsx_module ~jsx_preserve
+            parsetree
         in
         print_engine.print_implementation ~width ~filename
           ~comments:parse_result.comments parsetree
@@ -315,7 +319,7 @@ let () =
     CliArgProcessor.process_file ~is_interface:!ResClflags.interface
       ~width:!ResClflags.width ~recover:!ResClflags.recover
       ~target:!ResClflags.print ~jsx_version:!ResClflags.jsx_version
-      ~jsx_module:!ResClflags.jsx_module ~typechecker:!ResClflags.typechecker
-      !ResClflags.file
+      ~jsx_module:!ResClflags.jsx_module ~jsx_preserve:!ResClflags.jsx_preserve
+      ~typechecker:!ResClflags.typechecker !ResClflags.file
       ~test_ast_conversion:!ResClflags.test_ast_conversion)
 [@@raises exit]

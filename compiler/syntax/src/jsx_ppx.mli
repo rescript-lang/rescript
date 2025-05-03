@@ -11,11 +11,13 @@
 val rewrite_implementation :
   jsx_version:int ->
   jsx_module:string ->
+  jsx_preserve:bool ->
   Parsetree.structure ->
   Parsetree.structure
 
 val rewrite_signature :
   jsx_version:int ->
   jsx_module:string ->
+  jsx_preserve:bool ->
   Parsetree.signature ->
   Parsetree.signature

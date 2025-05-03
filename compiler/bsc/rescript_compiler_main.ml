@@ -255,6 +255,9 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
     ( "-bs-jsx-mode",
       string_call ignore,
       "*internal* Set jsx mode, this is no longer used and is a no-op." );
+    ( "-bs-jsx-preserve",
+      unit_call (fun _ -> Js_config.jsx_preserve := true),
+      "*internal* Preserve jsx" );
     ( "-bs-package-output",
       string_call Js_packages_state.update_npm_package_path,
       "*internal* Set npm-output-path: [opt_module]:path, for example: \
