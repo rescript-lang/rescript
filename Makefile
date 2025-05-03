@@ -63,6 +63,10 @@ lib-bsb:
 lib:
 	./scripts/buildRuntimeRewatch.sh
 
+lib:
+	./scripts/buildRuntimeRewatch.sh
+	./scripts/prebuilt.js
+
 artifacts: lib
 	./scripts/npmPack.js --updateArtifactList
 
