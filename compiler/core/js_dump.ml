@@ -723,7 +723,6 @@ and expression_desc cxt ~(level : int) f x : cxt =
     P.cond_paren_group f (level > 12) (fun _ ->
         let cxt = expression ~level:0 cxt f prop in
         P.string f " in ";
-        P.string f " in ";
         expression ~level:0 cxt f obj)
   | Typeof e ->
     P.string f "typeof";
