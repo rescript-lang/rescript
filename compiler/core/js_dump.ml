@@ -1024,7 +1024,7 @@ and print_jsx cxt ~(level : int) f (fnName : string) (tag : J.expression)
   in
   let print_props () =
     let props = List.filter (fun (n, _) -> n <> "children") fields in
-    if not (List.is_empty props) then
+    if List.length props > 0 then
       (List.iter (fun (n, x) ->
            P.space f;
            P.string f n;
