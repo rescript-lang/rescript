@@ -17,25 +17,25 @@ Path MyList.m
     "kind": 12,
     "tags": [],
     "detail": "(list<'a>, list<'b>, ('a, 'b) => 'c) => list<'c>",
-    "documentation": {"kind": "markdown", "value": "\n`mapReverse2(list1, list2, f)` is equivalent to `List.zipBy(list1, list2, f)->List.reverse`.\n\n## Examples\n\n```rescript\nList.mapReverse2(list{1, 2, 3}, list{1, 2}, (a, b) => a + b) // list{4, 2}\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`mapReverse2(list1, list2, f)` is equivalent to `List.zipBy(list1, list2, f)->List.reverse`.\n\n## Examples\n\n```rescript\nassertEqual(List.mapReverse2(list{1, 2, 3}, list{1, 2}, (a, b) => a + b), list{4, 2})\n```\n"}
   }, {
     "label": "make",
     "kind": 12,
     "tags": [],
     "detail": "(~length: int, 'a) => list<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`make(length, value)` returns a list of length `length` with each element filled\nwith `value`. Returns an empty list if `value` is negative.\n\n## Examples\n\n```rescript\nList.make(~length=3, 1) // list{1, 1, 1}\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`make(length, value)` returns a list of length `length` with each element filled\nwith `value`. Returns an empty list if `value` is negative.\n\n## Examples\n\n```rescript\nassertEqual(List.make(~length=3, 1), list{1, 1, 1})\n```\n"}
   }, {
     "label": "mapWithIndex",
     "kind": 12,
     "tags": [],
     "detail": "(list<'a>, ('a, int) => 'b) => list<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(list, f)` applies `f` to each element of `list`. Function `f`\ntakes two arguments: the index starting from 0 and the element from `list`, in\nthat order.\n\n## Examples\n\n```rescript\nlist{1, 2, 3}->List.mapWithIndex((x, index) => index + x) // list{1, 3, 5}\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(list, f)` applies `f` to each element of `list`. Function `f`\ntakes two arguments: the index starting from 0 and the element from `list`, in\nthat order.\n\n## Examples\n\n```rescript\nassertEqual(list{1, 2, 3}->List.mapWithIndex((x, index) => index + x), list{1, 3, 5})\n```\n"}
   }, {
     "label": "map",
     "kind": 12,
     "tags": [],
     "detail": "(list<'a>, 'a => 'b) => list<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`map(list, f)` returns a new list with `f` applied to each element of `list`.\n\n## Examples\n\n```rescript\nlist{1, 2}->List.map(x => x + 1) // list{3, 4}\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`map(list, f)` returns a new list with `f` applied to each element of `list`.\n\n## Examples\n\n```rescript\nassertEqual(list{1, 2}->List.map(x => x + 1), list{2, 3})\n```\n"}
   }]
 
 Complete src/Completion.res 3:9

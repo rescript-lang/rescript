@@ -45,13 +45,13 @@ let strictlySortedLengthU: (array<'a>, ('a, 'a) => bool) => int
 ## Examples
 
 ```rescript
-Belt.SortArray.strictlySortedLength([1, 2, 3, 4, 3], (x, y) => x < y) == 4
+assertEqual(Belt.SortArray.strictlySortedLength([1, 2, 3, 4, 3], (x, y) => x < y), 4)
 
-Belt.SortArray.strictlySortedLength([], (x, y) => x < y) == 0
+assertEqual(Belt.SortArray.strictlySortedLength([], (x, y) => x < y), 0)
 
-Belt.SortArray.strictlySortedLength([1], (x, y) => x < y) == 1
+assertEqual(Belt.SortArray.strictlySortedLength([1], (x, y) => x < y), 1)
 
-Belt.SortArray.strictlySortedLength([4, 3, 2, 1], (x, y) => x < y) == -4
+assertEqual(Belt.SortArray.strictlySortedLength([4, 3, 2, 1], (x, y) => x < y), -4)
 ```
 */
 let strictlySortedLength: (array<'a>, ('a, 'a) => bool) => int
@@ -93,9 +93,9 @@ than all elements return `lnot(-1) == 0` since `lnot(- (len + 1)) == len`
 ## Examples
 
 ```rescript
-Belt.SortArray.binarySearchBy([1, 2, 3, 4, 33, 35, 36], 33, Pervasives.compare) == 4
+assertEqual(Belt.SortArray.binarySearchBy([1, 2, 3, 4, 33, 35, 36], 33, Pervasives.compare), 4)
 
-lnot(Belt.SortArray.binarySearchBy([1, 3, 5, 7], 4, Pervasives.compare)) == 2
+assertEqual(lnot(Belt.SortArray.binarySearchBy([1, 3, 5, 7], 4, Pervasives.compare)), 2)
 ```
 */
 let binarySearchBy: (array<'a>, 'a, ('a, 'a) => int) => int

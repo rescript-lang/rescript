@@ -62,10 +62,10 @@ otherwise `default`.
 
 ```rescript
 let ok = Belt.Result.Ok(42)
-Belt.Result.mapWithDefault(ok, 0, (x) => x / 2) == 21
+assertEqual(Belt.Result.mapWithDefault(ok, 0, (x) => x / 2), 21)
 
 let error = Belt.Result.Error("Invalid data")
-Belt.Result.mapWithDefault(error, 0, (x) => x / 2) == 0
+assertEqual(Belt.Result.mapWithDefault(error, 0, (x) => x / 2), 0)
 ```
 */
 let mapWithDefault: (t<'a, 'c>, 'b, 'a => 'b) => 'b
@@ -82,9 +82,9 @@ ordinary value.
 ```rescript
 let f = (x) => sqrt(Belt.Int.toFloat(x))
 
-Belt.Result.map(Ok(64), f) == Ok(8.0)
+assertEqual(Belt.Result.map(Ok(64), f), Ok(8.0))
 
-Belt.Result.map(Error("Invalid data"), f) == Error("Invalid data")
+assertEqual(Belt.Result.map(Error("Invalid data"), f), Error("Invalid data"))
 ```
 */
 let map: (t<'a, 'c>, 'a => 'b) => t<'b, 'c>
@@ -106,11 +106,11 @@ let recip = (x) =>
     Belt.Result.Error("Divide by zero")
   }
 
-Belt.Result.flatMap(Ok(2.0), recip) == Ok(0.5)
+assertEqual(Belt.Result.flatMap(Ok(2.0), recip), Ok(0.5))
 
-Belt.Result.flatMap(Ok(0.0), recip) == Error("Divide by zero")
+assertEqual(Belt.Result.flatMap(Ok(0.0), recip), Error("Divide by zero"))
 
-Belt.Result.flatMap(Error("Already bad"), recip) == Error("Already bad")
+assertEqual(Belt.Result.flatMap(Error("Already bad"), recip), Error("Already bad"))
 ```
 */
 let flatMap: (t<'a, 'c>, 'a => t<'b, 'c>) => t<'b, 'c>
@@ -122,9 +122,9 @@ otherwise `default`
 ## Examples
 
 ```rescript
-Belt.Result.getWithDefault(Ok(42), 0) == 42
+assertEqual(Belt.Result.getWithDefault(Ok(42), 0), 42)
 
-Belt.Result.getWithDefault(Error("Invalid Data"), 0) == 0
+assertEqual(Belt.Result.getWithDefault(Error("Invalid Data"), 0), 0)
 ```
 */
 let getWithDefault: (t<'a, 'b>, 'a) => 'a
@@ -163,13 +163,13 @@ let bad2 = Belt.Result.Error("really invalid")
 
 let mod10equal = (a, b) => mod(a, 10) === mod(b, 10)
 
-Belt.Result.eq(good1, good2, mod10equal) == true
+assertEqual(Belt.Result.eq(good1, good2, mod10equal), true)
 
-Belt.Result.eq(good1, bad1, mod10equal) == false
+assertEqual(Belt.Result.eq(good1, bad1, mod10equal), false)
 
-Belt.Result.eq(bad2, good2, mod10equal) == false
+assertEqual(Belt.Result.eq(bad2, good2, mod10equal), false)
 
-Belt.Result.eq(bad1, bad2, mod10equal) == true
+assertEqual(Belt.Result.eq(bad1, bad2, mod10equal), true)
 ```
 */
 let eq: (t<'a, 'c>, t<'b, 'd>, ('a, 'b) => bool) => bool
@@ -201,15 +201,15 @@ let bad2 = Belt.Result.Error("really invalid")
 
 let mod10cmp = (a, b) => Pervasives.compare(mod(a, 10), mod(b, 10))
 
-Belt.Result.cmp(Ok(39), Ok(57), mod10cmp) == 1
+assertEqual(Belt.Result.cmp(Ok(39), Ok(57), mod10cmp), 1)
 
-Belt.Result.cmp(Ok(57), Ok(39), mod10cmp) == (-1)
+assertEqual(Belt.Result.cmp(Ok(57), Ok(39), mod10cmp), (-1))
 
-Belt.Result.cmp(Ok(39), Error("y"), mod10cmp) == 1
+assertEqual(Belt.Result.cmp(Ok(39), Error("y"), mod10cmp), 1)
 
-Belt.Result.cmp(Error("x"), Ok(57), mod10cmp) == (-1)
+assertEqual(Belt.Result.cmp(Error("x"), Ok(57), mod10cmp), (-1))
 
-Belt.Result.cmp(Error("x"), Error("y"), mod10cmp) == 0
+assertEqual(Belt.Result.cmp(Error("x"), Error("y"), mod10cmp), 0)
 ```
 */
 let cmp: (t<'a, 'c>, t<'b, 'd>, ('a, 'b) => int) => int
