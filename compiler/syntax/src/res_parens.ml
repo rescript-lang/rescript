@@ -230,17 +230,13 @@ let lazy_or_assert_or_await_expr_rhs ?(in_await = false) expr =
       Parenthesized
     | _ -> Nothing)
 
-let is_prefixed_constant constant =
-  let is_prefix txt =
+let is_negative_constant constant =
+  let is_neg txt =
     let len = String.length txt in
-    len > 0
-    &&
-    match (String.get [@doesNotRaise]) txt 0 with
-    | '-' | '~' -> true
-    | _ -> false
+    len > 0 && (String.get [@doesNotRaise]) txt 0 = '-'
   in
   match constant with
-  | (Parsetree.Pconst_integer (i, _) | Pconst_float (i, _)) when is_prefix i ->
+  | (Parsetree.Pconst_integer (i, _) | Pconst_float (i, _)) when is_neg i ->
     true
   | _ -> false
 
@@ -264,7 +260,7 @@ let field_expr expr =
        Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
     } ->
       Nothing
-    | {pexp_desc = Pexp_constant c} when is_prefixed_constant c -> Parenthesized
+    | {pexp_desc = Pexp_constant c} when is_negative_constant c -> Parenthesized
     | {pexp_desc = Pexp_fun _}
       when ParsetreeViewer.is_underscore_apply_sugar expr ->
       Nothing
