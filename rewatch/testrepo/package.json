@@ -1,0 +1,20 @@
+{
+  "name": "testrepo",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "packages/main",
+      "packages/dep01",
+      "packages/dep02",
+      "packages/new-namespace"
+    ]
+  },
+  "scripts": {
+    "build": "../target/release/rewatch build .",
+    "build:rescript": "rescript build -with-deps",
+    "watch": "../target/release/rewatch watch .",
+    "watch:rescript": "rescript watch -with-deps",
+    "clean": "../target/release/rewatch clean .",
+    "clean:rescript": "rescript clean"
+  }
+}

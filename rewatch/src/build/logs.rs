@@ -16,8 +16,8 @@ enum Location {
 
 fn get_log_file_path(package: &packages::Package, subfolder: Location) -> String {
     let build_folder = match subfolder {
-        Location::Bs => package.get_bs_build_path(),
-        Location::Ocaml => package.get_build_path(),
+        Location::Bs => package.get_build_path(),
+        Location::Ocaml => package.get_ocaml_build_path(),
     };
 
     build_folder.to_owned() + "/.compiler.log"

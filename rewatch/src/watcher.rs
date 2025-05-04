@@ -53,6 +53,7 @@ async fn async_watch(
     filter: &Option<regex::Regex>,
     after_build: Option<String>,
     create_sourcedirs: bool,
+    build_dev_deps: bool,
 ) -> notify::Result<()> {
     let mut build_state =
         build::initialize_build(None, filter, show_progress, path, None).expect("Can't initialize build");
@@ -190,6 +191,7 @@ async fn async_watch(
                     show_progress,
                     !initial_build,
                     create_sourcedirs,
+                    build_dev_deps,
                 )
                 .is_ok()
                 {
@@ -221,6 +223,7 @@ async fn async_watch(
                     show_progress,
                     false,
                     create_sourcedirs,
+                    build_dev_deps,
                 );
                 if let Some(a) = after_build.clone() {
                     cmd::run(a)
@@ -255,6 +258,7 @@ pub fn start(
     folder: &str,
     after_build: Option<String>,
     create_sourcedirs: bool,
+    build_dev_deps: bool,
 ) {
     futures::executor::block_on(async {
         let queue = Arc::new(FifoQueue::<Result<Event, Error>>::new());
@@ -274,10 +278,11 @@ pub fn start(
             filter,
             after_build,
             create_sourcedirs,
+            build_dev_deps,
         )
         .await
         {
-            log::error!("{:?}", e)
+            println!("{:?}", e)
         }
     })
 }
