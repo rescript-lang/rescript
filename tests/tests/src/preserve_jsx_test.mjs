@@ -7,17 +7,17 @@ let React = {};
 
 let ReactDOM = {};
 
-function Nojaf$Icon(props) {
+function Preserve_jsx_test$Icon(props) {
   return <strong/>;
 }
 
 let Icon = {
-  make: Nojaf$Icon
+  make: Preserve_jsx_test$Icon
 };
 
 let _single_element_child = <div><h1>{"Hello, world!"}</h1></div>;
 
-let _multiple_element_children = <div><h1>{"Hello, world!"}</h1><Nojaf$Icon/></div>;
+let _multiple_element_children = <div><h1>{"Hello, world!"}</h1><Preserve_jsx_test$Icon/></div>;
 
 let _single_element_fragment = <>{Primitive_option.some(<input/>)}</>;
 
