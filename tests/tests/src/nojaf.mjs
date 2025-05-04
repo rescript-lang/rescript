@@ -34,7 +34,13 @@ let baseProps = {
 
 let newrecord = {...baseProps};
 
-let _unary_element_with_spread_props = <input {...(newrecord.type = "text", newrecord)}/>;
+let _unary_element_with_spread_props = <input {...newrecord}  type={"text"}/>;
+
+let newrecord$1 = {...baseProps};
+
+let _container_with_spread_props = <div {...newrecord$1}  title={"barry"} className={"barry"}>{"Hello, world!"}
+<input type={"text"}/>
+</div>;
 
 export {
   React,
@@ -48,5 +54,6 @@ export {
   _container_element_with_props_and_children,
   baseProps,
   _unary_element_with_spread_props,
+  _container_with_spread_props,
 }
 /* _single_element_child Not a pure module */

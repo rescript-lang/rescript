@@ -106,3 +106,9 @@ let baseProps: JsxDOM.domProps = {
 }
 
 let _unary_element_with_spread_props = <input {...baseProps} type_="text" />
+
+let _container_with_spread_props =
+  <div {...baseProps} title="barry" className="barry">
+    {React.string("Hello, world!")}
+    <input type_="text" />
+  </div>
