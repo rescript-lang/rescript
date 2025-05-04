@@ -112,3 +112,13 @@ let _container_with_spread_props =
     {React.string("Hello, world!")}
     <input type_="text" />
   </div>
+
+let baseChildren = React.array([
+  <span> {React.string("Hello, world!")} </span>,
+  <span> {React.string("Hello, world!")} </span>,
+])
+
+let _container_with_spread_children = <div title="barry" className="barry"> ...baseChildren </div>
+
+let _container_with_spread_props_and_children =
+  <div {...baseProps} title="barry" className="barry"> ...baseChildren </div>

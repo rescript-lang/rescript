@@ -42,6 +42,18 @@ let _container_with_spread_props = <div {...newrecord$1}  title={"barry"} classN
 <input type={"text"}/>
 </div>;
 
+let baseChildren = [
+  <span>{"Hello, world!"}</span>,
+  <span>{"Hello, world!"}</span>
+];
+
+let _container_with_spread_children = <div className={"barry"} title={"barry"}>{baseChildren}</div>;
+
+let newrecord$2 = {...baseProps};
+
+let _container_with_spread_props_and_children = <div {...newrecord$2}  title={"barry"} className={"barry"}>{baseChildren}
+</div>;
+
 export {
   React,
   ReactDOM,
@@ -55,5 +67,8 @@ export {
   baseProps,
   _unary_element_with_spread_props,
   _container_with_spread_props,
+  baseChildren,
+  _container_with_spread_children,
+  _container_with_spread_props_and_children,
 }
 /* _single_element_child Not a pure module */
