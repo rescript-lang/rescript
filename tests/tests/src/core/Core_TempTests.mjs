@@ -140,7 +140,7 @@ console.info("BigInt");
 
 console.info("---");
 
-console.log(Primitive_bigint.div(BigInt(1), BigInt(12.0)));
+console.log(Primitive_bigint.div(BigInt(1), Stdlib_Option.getOr(Stdlib_BigInt.fromFloat(12.0), 0n)));
 
 console.info("");
 

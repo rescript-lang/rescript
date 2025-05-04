@@ -15,6 +15,7 @@
 #### :boom: Breaking Change
 
 - Rename `JsError` to `JsExn` and error modules cleanup. https://github.com/rescript-lang/rescript/pull/7408
+- Make `BigInt.fromFloat` return an option rather than throwing an error in case it's passed a value with a decimal value. https://github.com/rescript-lang/rescript/pull/7419
 
 #### :rocket: New Feature
 

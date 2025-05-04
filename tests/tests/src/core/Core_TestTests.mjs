@@ -2,11 +2,13 @@
 
 import * as Test from "./Test.mjs";
 import * as Pervasives from "rescript/lib/es6/Pervasives.js";
+import * as Stdlib_BigInt from "rescript/lib/es6/Stdlib_BigInt.js";
+import * as Stdlib_Option from "rescript/lib/es6/Stdlib_Option.js";
 import * as Primitive_object from "rescript/lib/es6/Primitive_object.js";
 
 let eq = Primitive_object.equal;
 
-let bign = BigInt(Number.MAX_VALUE);
+let bign = Stdlib_Option.getOr(Stdlib_BigInt.fromFloat(Number.MAX_VALUE), 0n);
 
 let bign$1 = bign + bign;
 

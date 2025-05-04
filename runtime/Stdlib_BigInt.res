@@ -35,7 +35,13 @@ switch BigInt.fromStringExn("a") {
 */
 external fromStringExn: string => bigint = "BigInt"
 @val external fromInt: int => bigint = "BigInt"
-@val external fromFloat: float => bigint = "BigInt"
+@val external _fromFloat: float => bigint = "BigInt"
+
+let fromFloat = (value: float) => {
+  try Some(_fromFloat(value)) catch {
+  | _ => None
+  }
+}
 
 @send
 /**
