@@ -85,6 +85,7 @@
     "@biomejs/biome": "1.9.4",
     "@types/node": "^20.14.9",
     "@types/semver": "^7.5.8",
+    "esbuild": "0.25.3",
     "mocha": "10.8.2",
     "nyc": "15.0.0",
     "semver": "7.6.2",

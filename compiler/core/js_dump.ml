@@ -558,8 +558,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
             | Undefined _ when opt -> None
             | _ -> Some (f, x))
       in
-      let fields = ("key", key) :: fields in
-      print_jsx cxt ~level f fnName tag fields
+      print_jsx cxt ~level ~key f fnName tag fields
     (* In the case of prop spreading *)
     | [tag; ({expression_desc = J.Seq _} as props)] ->
       let fields, spread_props =
@@ -599,8 +598,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
         in
         visit [] props
       in
-      let fields = ("key", key) :: fields in
-      print_jsx cxt ~level ~spread_props f fnName tag fields
+      print_jsx cxt ~level ~spread_props ~key f fnName tag fields
     | _ ->
       expression_desc cxt ~level f
         (Call
@@ -1040,9 +1038,9 @@ and expression_desc cxt ~(level : int) f x : cxt =
         P.string f "...";
         expression ~level:13 cxt f e)
 
-and print_jsx cxt ?(spread_props : J.expression option) ~(level : int) f
-    (fnName : string) (tag : J.expression)
-    (fields : (string * J.expression) list) : cxt =
+and print_jsx cxt ?(spread_props : J.expression option)
+    ?(key : J.expression option) ~(level : int) f (fnName : string)
+    (tag : J.expression) (fields : (string * J.expression) list) : cxt =
   let print_tag () =
     match tag.expression_desc with
     | J.Str {txt} -> P.string f txt
@@ -1066,6 +1064,14 @@ and print_jsx cxt ?(spread_props : J.expression option) ~(level : int) f
       fields
   in
   let print_props () =
+    (* If a key is present, should be printed before the spread props,
+    This is to ensure tools like ESBuild use the automatic JSX runtime *)
+    (match key with
+    | None -> ()
+    | Some key ->
+      P.string f " key={";
+      let _ = expression ~level:0 cxt f key in
+      P.string f "} ");
     let props = List.filter (fun (n, _) -> n <> "children") fields in
     (match spread_props with
     | None -> ()
