@@ -166,8 +166,8 @@ let rec exp_need_paren ?(arrow = false) (e : J.expression) =
   | Length _ | Call _ | Caml_block_tag _ | Seq _ | Static_index _ | Cond _
   | Bin _ | Is_null_or_undefined _ | String_index _ | Array_index _
   | String_append _ | Var _ | Undefined _ | Null | Str _ | Array _
-  | Caml_block _ | FlatCall _ | Typeof _ | Number _ | Js_not _ | In _ | Bool _
-  | New _ ->
+  | Caml_block _ | FlatCall _ | Typeof _ | Number _ | Js_not _ | Js_bnot _
+  | In _ | Bool _ | New _ ->
     false
   | Await _ -> false
   | Spread _ -> false
@@ -676,6 +676,10 @@ and expression_desc cxt ~(level : int) f x : cxt =
   | Js_not e ->
     P.cond_paren_group f (level > 13) (fun _ ->
         P.string f "!";
+        expression ~level:13 cxt f e)
+  | Js_bnot e ->
+    P.cond_paren_group f (level > 13) (fun _ ->
+        P.string f "~";
         expression ~level:13 cxt f e)
   | In (prop, obj) ->
     P.cond_paren_group f (level > 12) (fun _ ->

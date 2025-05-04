@@ -276,6 +276,7 @@ let primitives_table =
       ("%mulint", Pmulint);
       ("%divint", Pdivint);
       ("%modint", Pmodint);
+      ("%bitnot_int", P_bitnot_int);
       ("%andint", Pandint);
       ("%orint", Porint);
       ("%xorint", Pxorint);
@@ -322,6 +323,7 @@ let primitives_table =
       ("%lebigint", Pbigintcomp Cle);
       ("%gtbigint", Pbigintcomp Cgt);
       ("%gebigint", Pbigintcomp Cge);
+      ("%bitnot_bigint", P_bitnot_bigint);
       ("%andbigint", Pandbigint);
       ("%orbigint", Porbigint);
       ("%xorbigint", Pxorbigint);

@@ -72,6 +72,7 @@ type t =
   | Pandint
   | Porint
   | Pxorint
+  | P_bitnot_int
   | Plslint
   | Plsrint
   | Pasrint
@@ -106,6 +107,7 @@ type t =
   | Pandbigint
   | Porbigint
   | Pxorbigint
+  | P_bitnot_bigint
   | Plslbigint
   | Pasrbigint
   | Pbigintcomp of Lam_compat.comparison

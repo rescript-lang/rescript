@@ -6,4 +6,7 @@
 ;;List.reduce (fun [arity:2]acc -> fun curr -> acc + curr) 0 myList
 let unitUncurried = apply ()
 ;;call ~a:(a : int)
+;;call (~ a)
+;;call ~a:(a ^ (~ a))
+;;call ~a:(~ a)
 ;;call_partial 3 ...

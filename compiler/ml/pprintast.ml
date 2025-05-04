@@ -652,7 +652,7 @@ and expression ctxt f x =
         | `Prefix s -> (
           let s =
             if
-              List.mem s ["~+"; "~-"; "~+."; "~-."]
+              List.mem s ["~+"; "~-"; "~+."; "~-."; "~~"]
               &&
               match l with
               (* See #7200: avoid turning (~- 1) into (- 1) which is

@@ -27,6 +27,9 @@ let pow3 = 2n ** 2n
 
 let pow_overflow = 2147483647 ** 2
 
+let bnot_int = a => ~a
+let bnot_bigint = (a: bigint) => ~a
+
 let bxor_int = (a, b) => a ^ b
 let bxor_bigint = (a: bigint, b) => a ^ b
 

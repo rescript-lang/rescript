@@ -268,7 +268,7 @@ let rec go_to_closing closing_token state =
 (* Madness *)
 let is_es6_arrow_expression ~in_ternary p =
   Parser.lookahead p (fun state ->
-      let async =
+      let _async =
         match state.Parser.token with
         | Lident "async" ->
           Parser.next state;
@@ -315,7 +315,6 @@ let is_es6_arrow_expression ~in_ternary p =
           | EqualGreater -> true
           | _ -> false)
         | Dot (* uncurried *) -> true
-        | Tilde when not async -> true
         | Backtick ->
           false
           (* (` always indicates the start of an expr, can't be es6 parameter *)
@@ -427,7 +426,7 @@ let make_unary_expr start_pos token_end token operand =
     }
   | (Minus | MinusDot), Pexp_constant (Pconst_float (n, m)) ->
     {operand with pexp_desc = Pexp_constant (Pconst_float (negate_string n, m))}
-  | (Token.Plus | PlusDot | Minus | MinusDot), _ ->
+  | (Token.Plus | PlusDot | Minus | MinusDot | Tilde), _ ->
     let token_loc = mk_loc start_pos token_end in
     let operator = "~" ^ Token.to_string token in
     Ast_helper.Exp.apply
@@ -2078,7 +2077,7 @@ and parse_primary_expr ~operand ?(no_call = false) p =
 and parse_unary_expr p =
   let start_pos = p.Parser.start_pos in
   match p.Parser.token with
-  | (Minus | MinusDot | Plus | PlusDot | Bang) as token ->
+  | (Minus | MinusDot | Plus | PlusDot | Bang | Tilde) as token ->
     Parser.leave_breadcrumb p Grammar.ExprUnary;
     let token_end = p.end_pos in
     Parser.next p;

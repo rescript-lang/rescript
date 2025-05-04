@@ -1616,6 +1616,11 @@ let int32_mul ?comment (e1 : J.expression) (e2 : J.expression) : J.expression =
 let unchecked_int32_mul ?comment e1 e2 : J.expression =
   {comment; expression_desc = Bin (Mul, e1, e2)}
 
+let int_bnot ?comment (e : t) : J.expression =
+  match e.expression_desc with
+  | Number (Int {i}) -> int ?comment (Int32.lognot i)
+  | _ -> {comment; expression_desc = Js_bnot e}
+
 let int32_pow ?comment (e1 : t) (e2 : t) : J.expression =
   match (e1.expression_desc, e2.expression_desc) with
   | Number (Int {i = i1}), Number (Int {i = i2}) ->

@@ -68,6 +68,7 @@ external \"%": ('a, 'a) => 'a = "%mod"
 external \"<<": ('a, 'a) => 'a = "%lsl"
 external mod: ('a, 'a) => 'a = "%mod"
 external \"**": ('a, 'a) => 'a = "%pow"
+external \"~~": 'a => 'a = "%bitnot"
 external \"&": ('a, 'a) => 'a = "%bitand"
 external \"^": ('a, 'a) => 'a = "%bitxor"
 external \">>": ('a, 'a) => 'a = "%asr"
@@ -122,7 +123,7 @@ external lor: (int, int) => int = "%orint"
 external lxor: (int, int) => int = "%xorint"
 
 @deprecated("Use `Int.bitwiseNot` instead. This will be removed in v13")
-let lnot = x => lxor(x, -1)
+external lnot: int => int = "%bitnot_int"
 
 @deprecated("Use `Int.shiftLeft` instead. This will be removed in v13")
 external lsl: (int, int) => int = "%lslint"

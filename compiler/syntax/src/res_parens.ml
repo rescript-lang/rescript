@@ -129,6 +129,7 @@ let binary_expr_operand ~is_lhs expr =
     | _ when Ast_uncurried.expr_is_uncurried_fun expr -> Parenthesized
     | expr when ParsetreeViewer.is_binary_expression expr -> Parenthesized
     | expr when ParsetreeViewer.is_ternary_expr expr -> Parenthesized
+    | expr when ParsetreeViewer.is_unary_bitnot_expression expr -> Parenthesized
     | {pexp_desc = Pexp_lazy _ | Pexp_assert _} when is_lhs -> Parenthesized
     | _ when ParsetreeViewer.expr_is_await expr -> Parenthesized
     | {Parsetree.pexp_attributes = attrs} ->
@@ -229,13 +230,17 @@ let lazy_or_assert_or_await_expr_rhs ?(in_await = false) expr =
       Parenthesized
     | _ -> Nothing)
 
-let is_negative_constant constant =
-  let is_neg txt =
+let is_prefixed_constant constant =
+  let is_prefix txt =
     let len = String.length txt in
-    len > 0 && (String.get [@doesNotRaise]) txt 0 = '-'
+    len > 0
+    &&
+    match (String.get [@doesNotRaise]) txt 0 with
+    | '-' | '~' -> true
+    | _ -> false
   in
   match constant with
-  | (Parsetree.Pconst_integer (i, _) | Pconst_float (i, _)) when is_neg i ->
+  | (Parsetree.Pconst_integer (i, _) | Pconst_float (i, _)) when is_prefix i ->
     true
   | _ -> false
 
@@ -259,7 +264,7 @@ let field_expr expr =
        Pexp_constraint ({pexp_desc = Pexp_pack _}, {ptyp_desc = Ptyp_package _});
     } ->
       Nothing
-    | {pexp_desc = Pexp_constant c} when is_negative_constant c -> Parenthesized
+    | {pexp_desc = Pexp_constant c} when is_prefixed_constant c -> Parenthesized
     | {pexp_desc = Pexp_fun _}
       when ParsetreeViewer.is_underscore_apply_sugar expr ->
       Nothing

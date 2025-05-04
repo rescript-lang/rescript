@@ -99,8 +99,7 @@ external bitwiseAnd: (int, int) => int = "%andint"
 external bitwiseOr: (int, int) => int = "%orint"
 external bitwiseXor: (int, int) => int = "%xorint"
 
-// TODO: make it a primitive
-let bitwiseNot = x => bitwiseXor(x, -1)
+external bitwiseNot: int => int = "%bitnot_int"
 
 external shiftLeft: (int, int) => int = "%lslint"
 external shiftRight: (int, int) => int = "%asrint"

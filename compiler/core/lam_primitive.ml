@@ -77,6 +77,7 @@ type t =
   | Pandint
   | Porint
   | Pxorint
+  | P_bitnot_int
   | Plslint
   | Plsrint
   | Pasrint
@@ -111,6 +112,7 @@ type t =
   | Pandbigint
   | Porbigint
   | Pxorbigint
+  | P_bitnot_bigint
   | Plslbigint
   | Pasrbigint
   | Pbigintcomp of Lam_compat.comparison
@@ -201,15 +203,15 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
   | Psequand | Psequor | Pnot | Pboolcomp _ | Pboolorder | Pboolmin | Pboolmax
   (* int primitives *)
   | Pisint | Pnegint | Paddint | Psubint | Pmulint | Pdivint | Pmodint | Ppowint
-  | Pandint | Porint | Pxorint | Plslint | Plsrint | Pasrint | Pintorder
-  | Pintmin | Pintmax
+  | P_bitnot_int | Pandint | Porint | Pxorint | Plslint | Plsrint | Pasrint
+  | Pintorder | Pintmin | Pintmax
   (* float primitives *)
   | Pintoffloat | Pfloatofint | Pnegfloat | Paddfloat | Psubfloat | Pmulfloat
   | Pdivfloat | Pmodfloat | Ppowfloat | Pfloatorder | Pfloatmin | Pfloatmax
   (* bigint primitives *)
   | Pnegbigint | Paddbigint | Psubbigint | Pmulbigint | Pdivbigint | Pmodbigint
-  | Ppowbigint | Pandbigint | Porbigint | Pxorbigint | Plslbigint | Pasrbigint
-  | Pbigintorder | Pbigintmin | Pbigintmax
+  | Ppowbigint | P_bitnot_bigint | Pandbigint | Porbigint | Pxorbigint
+  | Plslbigint | Pasrbigint | Pbigintorder | Pbigintmin | Pbigintmax
   (* string primitives *)
   | Pstringlength | Pstringrefu | Pstringrefs | Pstringadd | Pstringcomp _
   | Pstringorder | Pstringmin | Pstringmax

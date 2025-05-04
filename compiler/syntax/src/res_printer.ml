@@ -3705,6 +3705,7 @@ and print_unary_expression ~state expr cmt_tbl =
       | "~+." -> "+."
       | "~-" -> "-"
       | "~-." -> "-."
+      | "~~" -> "~"
       | "not" -> "!"
       | _ -> assert false)
   in
@@ -5043,10 +5044,20 @@ and print_argument ~state (arg_lbl, arg) cmt_tbl =
     in
     let printed_expr =
       let doc = print_expression_with_comments ~state expr cmt_tbl in
-      match Parens.expr expr with
-      | Parenthesized -> add_parens doc
-      | Braced braces -> print_braces doc expr braces
-      | Nothing -> doc
+      let doc =
+        match Parens.expr expr with
+        | Parenthesized -> add_parens doc
+        | Braced braces -> print_braces doc expr braces
+        | Nothing -> doc
+      in
+      match expr.pexp_desc with
+      | Pexp_apply
+          {
+            funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "~~"}};
+            args = [(Nolabel, _)];
+          } ->
+        add_parens doc
+      | _ -> doc
     in
     let loc = {arg_loc with loc_end = expr.pexp_loc.loc_end} in
     let doc =

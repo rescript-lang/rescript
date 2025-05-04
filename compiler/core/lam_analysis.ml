@@ -59,17 +59,17 @@ let rec no_side_effects (lam : Lam.t) : bool =
     (* bool primitives *)
     | Psequand | Psequor | Pnot | Pboolcomp _ | Pboolorder | Pboolmin | Pboolmax
     (* int primitives *)
-    | Pnegint | Paddint | Psubint | Pmulint | Ppowint | Pandint | Porint
-    | Pxorint | Plslint | Plsrint | Pasrint | Pintcomp _ | Pintorder | Pintmin
-    | Pintmax
+    | Pnegint | Paddint | Psubint | Pmulint | Ppowint | P_bitnot_int | Pandint
+    | Porint | Pxorint | Plslint | Plsrint | Pasrint | Pintcomp _ | Pintorder
+    | Pintmin | Pintmax
     (* float primitives *)
     | Pintoffloat | Pfloatofint | Pnegfloat | Paddfloat | Psubfloat | Pmulfloat
     | Ppowfloat | Pdivfloat | Pmodfloat | Pfloatcomp _ | Pjscomp _ | Pfloatorder
     | Pfloatmin | Pfloatmax
     (* bigint primitives *)
     | Pnegbigint | Paddbigint | Psubbigint | Pmulbigint | Ppowbigint
-    | Pandbigint | Porbigint | Pxorbigint | Plslbigint | Pasrbigint
-    | Pbigintcomp _ | Pbigintorder | Pbigintmin | Pbigintmax
+    | P_bitnot_bigint | Pandbigint | Porbigint | Pxorbigint | Plslbigint
+    | Pasrbigint | Pbigintcomp _ | Pbigintorder | Pbigintmin | Pbigintmax
     (* string primitives *)
     | Pstringlength | Pstringrefu | Pstringrefs | Pstringcomp _ | Pstringorder
     | Pstringmin | Pstringmax

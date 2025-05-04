@@ -110,7 +110,7 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
     no_side_effect call_expr
     && Ext_list.for_all strings no_side_effect
     && Ext_list.for_all values no_side_effect
-  | Js_not e -> no_side_effect e
+  | Js_not e | Js_bnot e -> no_side_effect e
   | In (prop, obj) -> no_side_effect prop && no_side_effect obj
   | Cond (a, b, c) -> no_side_effect a && no_side_effect b && no_side_effect c
   | Call ({expression_desc = Str {txt = "Array.isArray"}}, [e], _) ->
@@ -228,8 +228,8 @@ let rec eq_expression ({expression_desc = x0} : J.expression)
       eq_expression_list ls0 ls1 && flag0 = flag1 && eq_expression tag0 tag1
     | _ -> false)
   | Length _ | Is_null_or_undefined _ | String_append _ | Typeof _ | Js_not _
-  | In _ | Cond _ | FlatCall _ | New _ | Fun _ | Raw_js_code _ | Array _
-  | Caml_block_tag _ | Object _ | Tagged_template _ | Await _ ->
+  | Js_bnot _ | In _ | Cond _ | FlatCall _ | New _ | Fun _ | Raw_js_code _
+  | Array _ | Caml_block_tag _ | Object _ | Tagged_template _ | Await _ ->
     false
   | Spread _ -> false
 

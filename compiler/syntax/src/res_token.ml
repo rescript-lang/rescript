@@ -175,7 +175,7 @@ let to_string = function
   | AsteriskDot -> "*."
   | Exponentiation -> "**"
   | Assert -> "assert"
-  | Tilde -> "tilde"
+  | Tilde -> "~"
   | Question -> "?"
   | If -> "if"
   | Else -> "else"

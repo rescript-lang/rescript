@@ -284,7 +284,7 @@ let operator_precedence operator =
 
 let is_unary_operator operator =
   match operator with
-  | "~+" | "~+." | "~-" | "~-." | "not" -> true
+  | "~+" | "~+." | "~-" | "~-." | "~~" | "not" -> true
   | _ -> false
 
 let is_unary_expression expr =
@@ -295,6 +295,16 @@ let is_unary_expression expr =
         args = [(Nolabel, _arg)];
       }
     when is_unary_operator operator ->
+    true
+  | _ -> false
+
+let is_unary_bitnot_expression expr =
+  match expr.pexp_desc with
+  | Pexp_apply
+      {
+        funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "~~"}};
+        args = [(Nolabel, _arg)];
+      } ->
     true
   | _ -> false
 

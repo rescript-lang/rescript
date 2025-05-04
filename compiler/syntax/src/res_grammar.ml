@@ -151,8 +151,8 @@ let is_atomic_typ_expr_start = function
 let is_expr_start = function
   | Token.Assert | At | Await | Backtick | Bang | Codepoint _ | False | Float _
   | For | Hash | If | Int _ | Lbrace | Lbracket | LessThan | Lident _ | List
-  | Lparen | Minus | MinusDot | Module | Percent | Plus | PlusDot | String _
-  | Switch | True | Try | Uident _ | Underscore (* _ => doThings() *)
+  | Lparen | Minus | MinusDot | Module | Percent | Plus | PlusDot | Tilde
+  | String _ | Switch | True | Try | Uident _ | Underscore (* _ => doThings() *)
   | While | Forwardslash | ForwardslashDot | Dict ->
     true
   | _ -> false

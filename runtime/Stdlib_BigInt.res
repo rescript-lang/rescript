@@ -94,8 +94,7 @@ external bitwiseAnd: (bigint, bigint) => bigint = "%andbigint"
 external bitwiseOr: (bigint, bigint) => bigint = "%orbigint"
 external bitwiseXor: (bigint, bigint) => bigint = "%xorbigint"
 
-// TODO: make it a primitive
-let bitwiseNot = x => bitwiseXor(x, -1n)
+external bitwiseNot: bigint => bigint = "%bitnot_bigint"
 
 external shiftLeft: (bigint, bigint) => bigint = "%lslbigint"
 external shiftRight: (bigint, bigint) => bigint = "%asrbigint"

@@ -103,6 +103,9 @@ class fold =
       | Js_not _x0 ->
         let _self = _self#expression _x0 in
         _self
+      | Js_bnot _x0 ->
+        let _self = _self#expression _x0 in
+        _self
       | In (_x0, _x1) ->
         let _self = _self#expression _x0 in
         let _self = _self#expression _x1 in
