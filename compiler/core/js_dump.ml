@@ -562,7 +562,24 @@ and expression_desc cxt ~(level : int) f x : cxt =
       print_jsx cxt ~level f fnName tag fields
     (* In the case of prop spreading *)
     | [tag; ({expression_desc = J.Seq _} as props)] ->
-      print_jsx_prop_spreading cxt ~level f fnName tag props
+      let fields, spread_props =
+        let rec visit acc e =
+          match e.J.expression_desc with
+          | J.Seq
+              ( {
+                  J.expression_desc =
+                    J.Bin
+                      ( Js_op.Eq,
+                        {J.expression_desc = J.Static_index (_, name, _)},
+                        value );
+                },
+                rest ) ->
+            visit ((name, value) :: acc) rest
+          | _ -> (List.rev acc, e)
+        in
+        visit [] props
+      in
+      print_jsx cxt ~level ~spread_props f fnName tag fields
     | _ ->
       expression_desc cxt ~level f
         (Call
@@ -1002,7 +1019,8 @@ and expression_desc cxt ~(level : int) f x : cxt =
         P.string f "...";
         expression ~level:13 cxt f e)
 
-and print_jsx cxt ~(level : int) f (fnName : string) (tag : J.expression)
+and print_jsx cxt ?(spread_props : J.expression option) ~(level : int) f
+    (fnName : string) (tag : J.expression)
     (fields : (string * J.expression) list) : cxt =
   let print_tag () =
     match tag.expression_desc with
@@ -1028,6 +1046,12 @@ and print_jsx cxt ~(level : int) f (fnName : string) (tag : J.expression)
   in
   let print_props () =
     let props = List.filter (fun (n, _) -> n <> "children") fields in
+    (match spread_props with
+    | None -> ()
+    | Some spread ->
+      P.string f " {...";
+      let _ = expression ~level:0 cxt f spread in
+      P.string f "} ");
     if List.length props > 0 then
       (List.iter (fun (n, x) ->
            P.space f;
@@ -1063,111 +1087,6 @@ and print_jsx cxt ~(level : int) f (fnName : string) (tag : J.expression)
              if not (child_is_jsx e) then P.string f "{";
              let next = expression ~level acc f e in
              if not (child_is_jsx e) then P.string f "}";
-             next)
-           cxt
-    in
-
-    P.string f "</";
-    print_tag ();
-    P.string f ">");
-
-  cxt
-
-(* TODO: clean up the code , a lot of code is duplicated *)
-and print_jsx_prop_spreading cxt ~level f fnName tag props =
-  (* The spreading expression is going to look something like:
-    (newrecord.type = "text", newrecord.tabIndex = 0, newrecord.children = 5, newrecord)
-    Where there are some assignments to the props object and then the props object is returned.
-    We want to extract the assignments and turn them into props.
-    And so capture the object we need to spread.
-  *)
-  let fields, spread =
-    let rec visit acc e =
-      match e.J.expression_desc with
-      | J.Seq
-          ( {
-              J.expression_desc =
-                J.Bin
-                  ( Js_op.Eq,
-                    {J.expression_desc = J.Static_index (_, name, _)},
-                    value );
-            },
-            rest ) ->
-        visit ((name, value) :: acc) rest
-      | _ -> (List.rev acc, e)
-    in
-    visit [] props
-  in
-
-  let print_tag () =
-    match tag.expression_desc with
-    | J.Str {txt} -> P.string f txt
-    (* fragment *)
-    | J.Var (J.Qualified ({id = {name = "JsxRuntime"}}, Some "Fragment")) -> ()
-    | _ ->
-      let _ = expression ~level cxt f tag in
-      ()
-  in
-  let children_opt =
-    List.find_map
-      (fun (n, e) ->
-        if n = "children" then
-          if fnName = "jsxs" then
-            match e.J.expression_desc with
-            | J.Optional_block ({expression_desc = J.Array (xs, _)}, _) ->
-              Some xs
-            | _ -> Some [e]
-          else Some [e]
-        else None)
-      fields
-  in
-  let print_props fields =
-    let props = List.filter (fun (n, _) -> n <> "children") fields in
-    if List.length props > 0 then
-      (List.iter (fun (n, x) ->
-           P.space f;
-           P.string f n;
-           P.string f "=";
-           P.string f "{";
-           let _ = expression ~level:0 cxt f x in
-           P.string f "}"))
-        props
-  in
-  let print_spreaded_props () =
-    (* Spread the object first, as that is what happens in ReScript *)
-    P.string f " {...";
-    let _ = expression ~level:0 cxt f spread in
-    P.string f "} ";
-    (* Then print the rest of the props *)
-    print_props fields
-  in
-  (match children_opt with
-  | None ->
-    P.string f "<";
-    print_tag ();
-    print_spreaded_props ();
-    P.string f "/>"
-  | Some children ->
-    let child_is_jsx child =
-      match child.J.expression_desc with
-      | J.Call (_, _, {call_transformed_jsx = is_jsx}) -> is_jsx
-      | _ -> false
-    in
-
-    P.string f "<";
-    print_tag ();
-    print_spreaded_props ();
-    P.string f ">";
-
-    let _ =
-      children
-      |> List.fold_left
-           (fun acc e ->
-             if not (child_is_jsx e) then P.string f "{";
-             let next = expression ~level acc f e in
-             if not (child_is_jsx e) then P.string f "}";
-             (* Can we some indent this? *)
-             P.newline f;
              next)
            cxt
     in
