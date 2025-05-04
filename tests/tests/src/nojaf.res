@@ -73,8 +73,36 @@ module Icon = {
   }
 }
 
-let _ =
+let _single_element_child =
+  <div>
+    <h1> {React.string("Hello, world!")} </h1>
+  </div>
+
+let _multiple_element_children =
   <div>
     <h1> {React.string("Hello, world!")} </h1>
     <Icon />
   </div>
+
+let _single_element_fragment =
+  <>
+    <input />
+  </>
+
+let _multiple_element_fragment =
+  <>
+    <input type_="text" />
+    <input type_="number" />
+  </>
+
+let _unary_element_with_props = <input type_="text" className="foo" />
+
+let _container_element_with_props_and_children =
+  <div title="foo" className="foo"> {React.string("Hello, world!")} </div>
+
+let baseProps: JsxDOM.domProps = {
+  title: "foo",
+  className: "foo",
+}
+
+let _unary_element_with_spread_props = <input {...baseProps} type_="text" />

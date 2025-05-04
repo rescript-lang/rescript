@@ -543,6 +543,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
             | _ -> Some (f, x))
       in
       print_jsx cxt ~level f fnName tag fields
+    (* jsxKeyed call *)
     | [
      tag;
      {
@@ -559,6 +560,9 @@ and expression_desc cxt ~(level : int) f x : cxt =
       in
       let fields = ("key", key) :: fields in
       print_jsx cxt ~level f fnName tag fields
+    (* In the case of prop spreading *)
+    | [tag; ({expression_desc = J.Seq _} as props)] ->
+      print_jsx_prop_spreading cxt ~level f fnName tag props
     | _ ->
       expression_desc cxt ~level f
         (Call
@@ -1035,6 +1039,71 @@ and print_jsx cxt ~(level : int) f (fnName : string) (tag : J.expression)
         props
   in
   (match children_opt with
+  | None ->
+    P.string f "<";
+    print_tag ();
+    print_props ();
+    P.string f "/>"
+  | Some children ->
+    let child_is_jsx child =
+      match child.J.expression_desc with
+      | J.Call (_, _, {call_transformed_jsx = is_jsx}) -> is_jsx
+      | _ -> false
+    in
+
+    P.string f "<";
+    print_tag ();
+    print_props ();
+    P.string f ">";
+
+    let _ =
+      children
+      |> List.fold_left
+           (fun acc e ->
+             if not (child_is_jsx e) then P.string f "{";
+             let next = expression ~level acc f e in
+             if not (child_is_jsx e) then P.string f "}";
+             next)
+           cxt
+    in
+
+    P.string f "</";
+    print_tag ();
+    P.string f ">");
+
+  cxt
+
+(* TODO: clean up the code , a lot of code is duplicated *)
+and print_jsx_prop_spreading cxt ~level f fnName tag props =
+  (* TODO: the children as somewhere present in the props Seq *)
+  let print_tag () =
+    match tag.expression_desc with
+    | J.Str {txt} -> P.string f txt
+    (* fragment *)
+    | J.Var (J.Qualified ({id = {name = "JsxRuntime"}}, Some "Fragment")) -> ()
+    | _ ->
+      let _ = expression ~level cxt f tag in
+      ()
+  in
+  (* let children_opt =
+    List.find_map
+      (fun (n, e) ->
+        if n = "children" then
+          if fnName = "jsxs" then
+            match e.J.expression_desc with
+            | J.Optional_block ({expression_desc = J.Array (xs, _)}, _) ->
+              Some xs
+            | _ -> Some [e]
+          else Some [e]
+        else None)
+      fields
+  in *)
+  let print_props () =
+    P.string f " {...(";
+    let _ = expression ~level:0 cxt f props in
+    P.string f ")}"
+  in
+  (match None with
   | None ->
     P.string f "<";
     print_tag ();
