@@ -160,7 +160,6 @@ let acc = ref(list{})
 
 Belt.Map.forEach(s0, (k, v) => acc := list{(k, v), ...acc.contents})
 
-Console.log(acc.contents)
 assertEqual(acc.contents, list{(4, "4"), (3, "3"),  (2, "2"), (1, "1")})
 ```
 */
