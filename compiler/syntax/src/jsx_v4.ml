@@ -251,10 +251,6 @@ let rec recursively_transform_named_args_for_make expr args newtypes core_type =
     Jsx_common.raise_error ~loc:expr.pexp_loc
       "Key cannot be accessed inside of a component. Don't worry - you can \
        always key a component from its parent!"
-  | Pexp_fun {arg_label = Labelled {txt = "ref"} | Optional {txt = "ref"}} ->
-    Jsx_common.raise_error ~loc:expr.pexp_loc
-      "Ref cannot be passed as a normal prop. Please use `forwardRef` API \
-       instead."
   | Pexp_fun {arg_label = arg; default; lhs = pattern; rhs = expression}
     when is_optional arg || is_labelled arg ->
     let () =
