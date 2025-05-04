@@ -46,7 +46,10 @@ test-syntax-roundtrip:
 test-gentype:
 	make -C tests/gentype_tests/typescript-react-example clean test
 
-test-all: test test-gentype test-analysis test-tools
+test-rewatch:
+	bash ./rewatch/tests/suite.sh
+
+test-all: test test-gentype test-analysis test-tools test-rewatch
 
 reanalyze:
 	reanalyze.exe -set-exit-code -all-cmt _build/default/compiler _build/default/tests -exclude-paths compiler/outcome_printer,compiler/ml,compiler/frontend,compiler/ext,compiler/depends,compiler/core,compiler/common,compiler/cmij,compiler/bsb_helper,compiler/bsb
