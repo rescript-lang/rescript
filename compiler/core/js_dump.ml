@@ -515,7 +515,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
     (* TODO: dump for comments *)
     pp_function ?directive ~is_method ~return_unit ~async
       ~fn_state:default_fn_exp_state cxt f params body env
-    (* TODO:
+  (* TODO:
        when [e] is [Js_raw_code] with arity
        print it in a more precise way
        It seems the optimizer already did work to make sure
@@ -524,18 +524,35 @@ and expression_desc cxt ~(level : int) f x : cxt =
          when Ext_list.length_equal el i
        ]}
     *)
+  (* When -bs-preserve-jsx is enabled, we marked each transformed application node throughout the compilation.
+     Here we print the transformed application node into a JSX syntax.
+     The JSX is slightly different from what a user would write,
+     but it is still valid JSX and is usable by tools like ESBuild.
+  *)
   | Call
-      ( ({expression_desc = J.Var (J.Qualified (_, Some fnName))} as e),
+      ( ({
+           expression_desc =
+             J.Var
+               (J.Qualified
+                  ( _,
+                    Some fnName
+                    (* We care about the function name when it is jsxs,
+                       If this is the case, we need to unpack an array later on *)
+                  ));
+         } as e),
         el,
         {call_transformed_jsx = true} ) -> (
+    (* We match a JsxRuntime.jsx call *)
     match el with
     | [
      tag;
      {
        expression_desc =
+         (* This is the props javascript object *)
          Caml_block (el, _mutable_flag, _, Lambda.Blk_record {fields});
      };
     ] ->
+      (* We extract the props from the javascript object *)
       let fields =
         Ext_list.array_list_filter_map fields el (fun (f, opt) x ->
             match x.expression_desc with
@@ -543,7 +560,6 @@ and expression_desc cxt ~(level : int) f x : cxt =
             | _ -> Some (f, x))
       in
       print_jsx cxt ~level f fnName tag fields
-    (* jsxKeyed call *)
     | [
      tag;
      {
@@ -552,6 +568,7 @@ and expression_desc cxt ~(level : int) f x : cxt =
      };
      key;
     ] ->
+      (* When a component has a key the matching runtime function call will have a third argument being the key *)
       let fields =
         Ext_list.array_list_filter_map fields el (fun (f, opt) x ->
             match x.expression_desc with
@@ -559,8 +576,14 @@ and expression_desc cxt ~(level : int) f x : cxt =
             | _ -> Some (f, x))
       in
       print_jsx cxt ~level ~key f fnName tag fields
-    (* In the case of prop spreading *)
     | [tag; ({expression_desc = J.Seq _} as props)] ->
+      (* In the case of prop spreading, the expression will look like:
+           (props.a = "Hello, world!", props)
+           which is equivalent to
+           <tag {...props} a="Hello, world!" />
+
+           We need to extract the props and the spread object.
+         *)
       let fields, spread_props =
         let rec visit acc e =
           match e.J.expression_desc with
@@ -579,8 +602,8 @@ and expression_desc cxt ~(level : int) f x : cxt =
         visit [] props
       in
       print_jsx cxt ~level ~spread_props f fnName tag fields
-    (* In the case of prop spreading and keyed *)
     | [tag; ({expression_desc = J.Seq _} as props); key] ->
+      (* In the case of props + prop spreading and key argument *)
       let fields, spread_props =
         let rec visit acc e =
           match e.J.expression_desc with
@@ -599,7 +622,11 @@ and expression_desc cxt ~(level : int) f x : cxt =
         visit [] props
       in
       print_jsx cxt ~level ~spread_props ~key f fnName tag fields
+    | [tag; ({expression_desc = J.Var _} as spread_props)] ->
+      (* All the props are spread *)
+      print_jsx cxt ~level ~spread_props f fnName tag []
     | _ ->
+      (* This should not happen, we fallback to the general case *)
       expression_desc cxt ~level f
         (Call
            ( e,
@@ -1041,14 +1068,16 @@ and expression_desc cxt ~(level : int) f x : cxt =
 and print_jsx cxt ?(spread_props : J.expression option)
     ?(key : J.expression option) ~(level : int) f (fnName : string)
     (tag : J.expression) (fields : (string * J.expression) list) : cxt =
-  let print_tag () =
+  let print_tag cxt =
     match tag.expression_desc with
-    | J.Str {txt} -> P.string f txt
+    (* "div" or any other primitive tag *)
+    | J.Str {txt} ->
+      P.string f txt;
+      cxt
     (* fragment *)
-    | J.Var (J.Qualified ({id = {name = "JsxRuntime"}}, Some "Fragment")) -> ()
-    | _ ->
-      let _ = expression ~level cxt f tag in
-      ()
+    | J.Var (J.Qualified ({id = {name = "JsxRuntime"}}, Some "Fragment")) -> cxt
+    (* A user defined component or external component *)
+    | _ -> expression ~level cxt f tag
   in
   let children_opt =
     List.find_map
@@ -1063,38 +1092,46 @@ and print_jsx cxt ?(spread_props : J.expression option)
         else None)
       fields
   in
-  let print_props () =
+  let print_props cxt =
     (* If a key is present, should be printed before the spread props,
     This is to ensure tools like ESBuild use the automatic JSX runtime *)
-    (match key with
-    | None -> ()
-    | Some key ->
-      P.string f " key={";
-      let _ = expression ~level:0 cxt f key in
-      P.string f "} ");
+    let cxt =
+      match key with
+      | None -> cxt
+      | Some key ->
+        P.string f " key={";
+        let cxt = expression ~level:0 cxt f key in
+        P.string f "} ";
+        cxt
+    in
     let props = List.filter (fun (n, _) -> n <> "children") fields in
-    (match spread_props with
-    | None -> ()
-    | Some spread ->
-      P.string f " {...";
-      let _ = expression ~level:0 cxt f spread in
-      P.string f "} ");
-    if List.length props > 0 then
-      (List.iter (fun (n, x) ->
+    let cxt =
+      match spread_props with
+      | None -> cxt
+      | Some spread ->
+        P.string f " {...";
+        let cxt = expression ~level:0 cxt f spread in
+        P.string f "} ";
+        cxt
+    in
+    if List.length props = 0 then cxt
+    else
+      (List.fold_left (fun acc (n, x) ->
            P.space f;
            P.string f n;
            P.string f "=";
            P.string f "{";
-           let _ = expression ~level:0 cxt f x in
-           P.string f "}"))
-        props
+           let next = expression ~level:0 acc f x in
+           P.string f "}";
+           next))
+        cxt props
   in
-  (match children_opt with
+  match children_opt with
   | None ->
     P.string f "<";
-    print_tag ();
-    print_props ();
-    P.string f "/>"
+    let cxt = cxt |> print_tag |> print_props in
+    P.string f "/>";
+    cxt
   | Some children ->
     let child_is_jsx child =
       match child.J.expression_desc with
@@ -1103,26 +1140,26 @@ and print_jsx cxt ?(spread_props : J.expression option)
     in
 
     P.string f "<";
-    print_tag ();
-    print_props ();
-    P.string f ">";
+    let cxt = cxt |> print_tag |> print_props in
 
-    let _ =
-      children
-      |> List.fold_left
-           (fun acc e ->
-             if not (child_is_jsx e) then P.string f "{";
-             let next = expression ~level acc f e in
-             if not (child_is_jsx e) then P.string f "}";
-             next)
-           cxt
+    P.string f ">";
+    if List.length children > 0 then P.newline f;
+
+    let cxt =
+      List.fold_left
+        (fun acc e ->
+          if not (child_is_jsx e) then P.string f "{";
+          let next = expression ~level acc f e in
+          if not (child_is_jsx e) then P.string f "}";
+          P.newline f;
+          next)
+        cxt children
     in
 
     P.string f "</";
-    print_tag ();
-    P.string f ">");
-
-  cxt
+    let cxt = print_tag cxt in
+    P.string f ">";
+    cxt
 
 and property_name_and_value_list cxt f (l : J.property_map) =
   iter_lst cxt f l

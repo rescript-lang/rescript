@@ -130,3 +130,5 @@ let _container_with_spread_props_keyed =
     {React.string("Hello, world!")}
     <input type_="text" />
   </div>
+
+let _unary_element_with_only_spread_props = <input {...baseProps} />

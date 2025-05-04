@@ -46,6 +46,7 @@ let _container_with_spread_props_keyed = /* @__PURE__ */ jsxs("div", { ...newrec
   "Hello, world!",
   /* @__PURE__ */ jsx("input", { type: "text" })
 ] }, "barry-key");
+let _unary_element_with_only_spread_props = /* @__PURE__ */ jsx("input", { ...baseProps });
 export {
   Icon,
   React,
@@ -59,6 +60,7 @@ export {
   _multiple_element_fragment,
   _single_element_child,
   _single_element_fragment,
+  _unary_element_with_only_spread_props,
   _unary_element_with_props,
   _unary_element_with_spread_props,
   _unary_element_with_spread_props_keyed,
