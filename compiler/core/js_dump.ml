@@ -580,6 +580,27 @@ and expression_desc cxt ~(level : int) f x : cxt =
         visit [] props
       in
       print_jsx cxt ~level ~spread_props f fnName tag fields
+    (* In the case of prop spreading and keyed *)
+    | [tag; ({expression_desc = J.Seq _} as props); key] ->
+      let fields, spread_props =
+        let rec visit acc e =
+          match e.J.expression_desc with
+          | J.Seq
+              ( {
+                  J.expression_desc =
+                    J.Bin
+                      ( Js_op.Eq,
+                        {J.expression_desc = J.Static_index (_, name, _)},
+                        value );
+                },
+                rest ) ->
+            visit ((name, value) :: acc) rest
+          | _ -> (List.rev acc, e)
+        in
+        visit [] props
+      in
+      let fields = ("key", key) :: fields in
+      print_jsx cxt ~level ~spread_props f fnName tag fields
     | _ ->
       expression_desc cxt ~level f
         (Call

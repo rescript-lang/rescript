@@ -38,9 +38,7 @@ let _unary_element_with_spread_props = <input {...newrecord}  type={"text"}/>;
 
 let newrecord$1 = {...baseProps};
 
-let _container_with_spread_props = <div {...newrecord$1}  title={"barry"} className={"barry"}>{"Hello, world!"}
-<input type={"text"}/>
-</div>;
+let _container_with_spread_props = <div {...newrecord$1}  title={"barry"} className={"barry"}>{"Hello, world!"}<input type={"text"}/></div>;
 
 let baseChildren = [
   <span>{"Hello, world!"}</span>,
@@ -51,8 +49,15 @@ let _container_with_spread_children = <div className={"barry"} title={"barry"}>{
 
 let newrecord$2 = {...baseProps};
 
-let _container_with_spread_props_and_children = <div {...newrecord$2}  title={"barry"} className={"barry"}>{baseChildren}
-</div>;
+let _container_with_spread_props_and_children = <div {...newrecord$2}  title={"barry"} className={"barry"}>{baseChildren}</div>;
+
+let newrecord$3 = {...baseProps};
+
+let _unary_element_with_spread_props_keyed = <input {...newrecord$3}  key={"barry-key"} type={"text"}/>;
+
+let newrecord$4 = {...baseProps};
+
+let _container_with_spread_props_keyed = <div {...newrecord$4}  key={"barry-key"} title={"barry"} className={"barry"}>{"Hello, world!"}<input type={"text"}/></div>;
 
 export {
   React,
@@ -70,5 +75,7 @@ export {
   baseChildren,
   _container_with_spread_children,
   _container_with_spread_props_and_children,
+  _unary_element_with_spread_props_keyed,
+  _container_with_spread_props_keyed,
 }
 /* _single_element_child Not a pure module */
