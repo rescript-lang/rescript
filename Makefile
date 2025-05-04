@@ -55,6 +55,10 @@ lib:
 	./scripts/buildRuntime.sh
 	./scripts/prebuilt.js
 
+lib-rewatch:
+	./scripts/buildRuntimeRewatch.sh
+	./scripts/prebuilt.js
+
 artifacts: lib
 	./scripts/npmPack.js --updateArtifactList
 
