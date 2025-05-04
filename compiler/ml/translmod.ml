@@ -64,17 +64,15 @@ let rec apply_coercion loc strict (restr : Typedtree.module_coercion) arg =
   | Tcoerce_structure (pos_cc_list, id_pos_list, runtime_fields) ->
     Lambda.name_lambda strict arg (fun id ->
         let get_field_name name pos =
-          Lambda.Lprim (Pfield (pos, Fld_module {name}), [Lvar id], loc, false)
+          Lambda.Lprim (Pfield (pos, Fld_module {name}), [Lvar id], loc)
         in
         let lam =
           Lambda.Lprim
             ( Pmakeblock (Blk_module runtime_fields),
               Ext_list.map2 pos_cc_list runtime_fields (fun (pos, cc) name ->
                   apply_coercion loc Alias cc
-                    (Lprim
-                       (Pfield (pos, Fld_module {name}), [Lvar id], loc, false))),
-              loc,
-              false )
+                    (Lprim (Pfield (pos, Fld_module {name}), [Lvar id], loc))),
+              loc )
         in
         wrap_id_pos_list loc id_pos_list get_field_name lam)
   | Tcoerce_functor (cc_arg, cc_res) ->
@@ -308,8 +306,7 @@ and transl_structure loc fields cc rootpath final_env = function
               (if is_top_root_path then Blk_module_export !export_identifiers
                else Blk_module (List.rev_map (fun id -> id.Ident.name) fields)),
             block_fields,
-            loc,
-            false ),
+            loc ),
         List.length fields )
     | Tcoerce_structure (pos_cc_list, id_pos_list, runtime_fields) ->
       (* Do not ignore id_pos_list ! *)
@@ -345,8 +342,7 @@ and transl_structure loc fields cc rootpath final_env = function
               (if is_top_root_path then Blk_module_export !export_identifiers
                else Blk_module runtime_fields),
             result,
-            loc,
-            false )
+            loc )
       and id_pos_list =
         Ext_list.filter id_pos_list (fun (id, _, _) ->
             not (Lambda.IdentSet.mem id ids))
@@ -438,8 +434,7 @@ and transl_structure loc fields cc rootpath final_env = function
                 Lprim
                   ( Pfield (pos, Fld_module {name = Ident.name id}),
                     [Lvar mid],
-                    incl.incl_loc,
-                    false ),
+                    incl.incl_loc ),
                 body ),
             size )
       in

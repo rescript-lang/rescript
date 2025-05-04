@@ -25,7 +25,10 @@ type description = {
   prim_native_name: string; (* Name of C function for the nat. code gen. *)
   prim_from_constructor: bool;
       (* Is it from a type constructor instead of a concrete function type? *)
+  transformed_jsx: bool;
 }
+
+let set_transformed_jsx d ~transformed_jsx = {d with transformed_jsx}
 
 let coerce : (description -> description -> bool) ref =
   ref (fun (p1 : description) (p2 : description) -> p1 = p2)
@@ -43,6 +46,7 @@ let parse_declaration valdecl ~arity ~from_constructor =
     prim_alloc = true;
     prim_native_name = native_name;
     prim_from_constructor = from_constructor;
+    transformed_jsx = false;
   }
 
 open Outcometree

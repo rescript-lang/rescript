@@ -357,7 +357,7 @@ type lambda =
   | Lfunction of lfunction
   | Llet of let_kind * value_kind * Ident.t * lambda * lambda
   | Lletrec of (Ident.t * lambda) list * lambda
-  | Lprim of primitive * lambda list * Location.t * bool
+  | Lprim of primitive * lambda list * Location.t
   | Lswitch of lambda * lambda_switch * Location.t
   | Lstringswitch of
       lambda * (string * lambda) list * lambda option * Location.t
@@ -462,7 +462,7 @@ let make_key e =
       let ex = tr_rec env ex in
       let y = make_key x in
       Llet (str, k, y, ex, tr_rec (Ident.add x (Lvar y) env) e)
-    | Lprim (p, es, _, tj) -> Lprim (p, tr_recs env es, Location.none, tj)
+    | Lprim (p, es, _) -> Lprim (p, tr_recs env es, Location.none)
     | Lswitch (e, sw, loc) -> Lswitch (tr_rec env e, tr_sw env sw, loc)
     | Lstringswitch (e, sw, d, _) ->
       Lstringswitch
@@ -520,7 +520,7 @@ let iter f = function
   | Lletrec (decl, body) ->
     f body;
     List.iter (fun (_id, exp) -> f exp) decl
-  | Lprim (_p, args, _loc, _tj) -> List.iter f args
+  | Lprim (_p, args, _loc) -> List.iter f args
   | Lswitch (arg, sw, _) ->
     f arg;
     List.iter (fun (_key, case) -> f case) sw.sw_consts;
@@ -618,14 +618,13 @@ let rec patch_guarded patch = function
 
 let rec transl_normal_path = function
   | Path.Pident id ->
-    if Ident.global id then Lprim (Pgetglobal id, [], Location.none, false)
+    if Ident.global id then Lprim (Pgetglobal id, [], Location.none)
     else Lvar id
   | Pdot (p, s, pos) ->
     Lprim
       ( Pfield (pos, Fld_module {name = s}),
         [transl_normal_path p],
-        Location.none,
-        false )
+        Location.none )
   | Papply _ -> assert false
 
 (* Translation of identifiers *)
@@ -659,7 +658,7 @@ let subst_lambda s lam =
       Lfunction {params; body = subst body; attr; loc}
     | Llet (str, k, id, arg, body) -> Llet (str, k, id, subst arg, subst body)
     | Lletrec (decl, body) -> Lletrec (List.map subst_decl decl, subst body)
-    | Lprim (p, args, loc, tj) -> Lprim (p, List.map subst args, loc, tj)
+    | Lprim (p, args, loc) -> Lprim (p, List.map subst args, loc)
     | Lswitch (arg, sw, loc) ->
       Lswitch
         ( subst arg,

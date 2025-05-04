@@ -76,8 +76,8 @@ let rec add_inline_attribute (expr : Lambda.lambda) loc attributes =
       Location.prerr_warning loc (Warnings.Duplicated_attribute "inline"));
     let attr = {attr with inline} in
     Lfunction {funct with attr}
-  | Lprim (((Pjs_fn_make _ | Pjs_fn_make_unit) as p), [e], l, tj), _ ->
-    Lambda.Lprim (p, [add_inline_attribute e loc attributes], l, tj)
+  | Lprim (((Pjs_fn_make _ | Pjs_fn_make_unit) as p), [e], l), _ ->
+    Lambda.Lprim (p, [add_inline_attribute e loc attributes], l)
   | expr, Always_inline ->
     Location.prerr_warning loc (Warnings.Misplaced_attribute "inline1");
     expr
