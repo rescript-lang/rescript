@@ -210,7 +210,7 @@ type primitive =
   | Pandint
   | Porint
   | Pxorint
-  | P_bitnot_int
+  | Pnotint
   | Plslint
   | Plsrint
   | Pasrint
@@ -246,7 +246,7 @@ type primitive =
   | Pandbigint
   | Porbigint
   | Pxorbigint
-  | P_bitnot_bigint
+  | Pnotbigint
   | Plslbigint
   | Pasrbigint
   | Pbigintcomp of comparison

@@ -59,7 +59,7 @@ let rec no_side_effects (lam : Lam.t) : bool =
     (* bool primitives *)
     | Psequand | Psequor | Pnot | Pboolcomp _ | Pboolorder | Pboolmin | Pboolmax
     (* int primitives *)
-    | Pnegint | Paddint | Psubint | Pmulint | Ppowint | P_bitnot_int | Pandint
+    | Pnegint | Paddint | Psubint | Pmulint | Ppowint | Pnotint | Pandint
     | Porint | Pxorint | Plslint | Plsrint | Pasrint | Pintcomp _ | Pintorder
     | Pintmin | Pintmax
     (* float primitives *)
@@ -68,8 +68,8 @@ let rec no_side_effects (lam : Lam.t) : bool =
     | Pfloatmin | Pfloatmax
     (* bigint primitives *)
     | Pnegbigint | Paddbigint | Psubbigint | Pmulbigint | Ppowbigint
-    | P_bitnot_bigint | Pandbigint | Porbigint | Pxorbigint | Plslbigint
-    | Pasrbigint | Pbigintcomp _ | Pbigintorder | Pbigintmin | Pbigintmax
+    | Pnotbigint | Pandbigint | Porbigint | Pxorbigint | Plslbigint | Pasrbigint
+    | Pbigintcomp _ | Pbigintorder | Pbigintmin | Pbigintmax
     (* string primitives *)
     | Pstringlength | Pstringrefu | Pstringrefs | Pstringcomp _ | Pstringorder
     | Pstringmin | Pstringmax

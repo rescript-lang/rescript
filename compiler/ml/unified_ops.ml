@@ -213,10 +213,10 @@ let entries =
       form = Unary;
       specialization =
         {
-          int = P_bitnot_int;
+          int = Pnotint;
           bool = None;
           float = None;
-          bigint = Some P_bitnot_bigint;
+          bigint = Some Pnotbigint;
           string = None;
         };
     };

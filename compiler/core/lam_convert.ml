@@ -253,7 +253,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pandint -> prim ~primitive:Pandint ~args loc
   | Porint -> prim ~primitive:Porint ~args loc
   | Pxorint -> prim ~primitive:Pxorint ~args loc
-  | P_bitnot_int -> prim ~primitive:P_bitnot_int ~args loc
+  | Pnotint -> prim ~primitive:Pnotint ~args loc
   | Plslint -> prim ~primitive:Plslint ~args loc
   | Plsrint -> prim ~primitive:Plsrint ~args loc
   | Pasrint -> prim ~primitive:Pasrint ~args loc
@@ -297,7 +297,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pandbigint -> prim ~primitive:Pandbigint ~args loc
   | Porbigint -> prim ~primitive:Porbigint ~args loc
   | Pxorbigint -> prim ~primitive:Pxorbigint ~args loc
-  | P_bitnot_bigint -> prim ~primitive:P_bitnot_bigint ~args loc
+  | Pnotbigint -> prim ~primitive:Pnotbigint ~args loc
   | Plslbigint -> prim ~primitive:Plslbigint ~args loc
   | Pasrbigint -> prim ~primitive:Pasrbigint ~args loc
   | Pbigintcomp x -> prim ~primitive:(Pbigintcomp x) ~args loc

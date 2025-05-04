@@ -283,11 +283,11 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     match args with
     | [e1; e2] -> E.bigint_op Asr e1 e2
     | _ -> assert false)
-  | P_bitnot_int -> (
+  | Pnotint -> (
     match args with
     | [e] -> E.int_bnot e
     | _ -> assert false)
-  | P_bitnot_bigint -> (
+  | Pnotbigint -> (
     match args with
     | [e] -> E.int_bnot e
     | _ -> assert false)
