@@ -1,5 +1,4 @@
 use super::build_types::*;
-use super::is_dirty;
 use super::packages;
 use crate::helpers;
 use ahash::AHashSet;
@@ -10,8 +9,10 @@ fn get_dep_modules(
     namespace: Option<String>,
     package_modules: &AHashSet<String>,
     valid_modules: &AHashSet<String>,
+    package: &packages::Package,
 ) -> AHashSet<String> {
     let mut deps = AHashSet::new();
+    let ast_file = package.get_build_path() + "/" + ast_file;
     if let Ok(lines) = helpers::read_lines(ast_file.to_string()) {
         // we skip the first line with is some null characters
         // the following lines in the AST are the dependency modules
@@ -75,23 +76,25 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                 let package = build_state
                     .get_package(&module.package_name)
                     .expect("Package not found");
-                let ast_path = package.get_ast_path(&source_file.implementation.path);
-                if is_dirty(module) || !build_state.deps_initialized {
+                let ast_path = helpers::get_ast_path(&source_file.implementation.path);
+                if module.deps_dirty || !build_state.deps_initialized {
                     let mut deps = get_dep_modules(
-                        &ast_path,
+                        &ast_path.to_string_lossy(),
                         package.namespace.to_suffix(),
                         package.modules.as_ref().unwrap(),
                         all_mod,
+                        &package,
                     );
 
                     if let Some(interface) = &source_file.interface {
-                        let iast_path = package.get_iast_path(&interface.path);
+                        let iast_path = helpers::get_ast_path(&interface.path);
 
                         deps.extend(get_dep_modules(
-                            &iast_path,
+                            &iast_path.to_string_lossy(),
                             package.namespace.to_suffix(),
                             package.modules.as_ref().unwrap(),
                             all_mod,
+                            &package,
                         ))
                     }
                     match &package.namespace {
@@ -114,6 +117,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
         .for_each(|(module_name, deps)| {
             if let Some(module) = build_state.modules.get_mut(&module_name) {
                 module.deps = deps.clone();
+                module.deps_dirty = false;
             }
             deps.iter().for_each(|dep_name| {
                 if let Some(module) = build_state.modules.get_mut(dep_name) {

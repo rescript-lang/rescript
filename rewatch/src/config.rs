@@ -111,6 +111,27 @@ pub struct PackageSpec {
     pub suffix: Option<String>,
 }
 
+impl PackageSpec {
+    pub fn get_out_of_source_dir(&self) -> String {
+        match self.module.as_str() {
+            "commonjs" => "js",
+            _ => "es6",
+        }
+        .to_string()
+    }
+
+    pub fn is_common_js(&self) -> bool {
+        match self.module.as_str() {
+            "commonjs" => true,
+            _ => false,
+        }
+    }
+
+    pub fn get_suffix(&self) -> String {
+        self.suffix.to_owned().unwrap_or(".js".to_string())
+    }
+}
+
 #[derive(Deserialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum Error {
@@ -396,35 +417,22 @@ impl Config {
         }
     }
 
-    pub fn get_module(&self) -> String {
-        match &self.package_specs {
-            Some(OneOrMore::Single(PackageSpec { module, .. })) => module.to_string(),
-            Some(OneOrMore::Multiple(vec)) => match vec.first() {
-                Some(PackageSpec { module, .. }) => module.to_string(),
-                None => "commonjs".to_string(),
-            },
-            _ => "commonjs".to_string(),
-        }
-    }
-
-    pub fn get_suffix(&self) -> String {
-        match &self.package_specs {
-            Some(OneOrMore::Single(PackageSpec { suffix, .. })) => suffix.to_owned(),
-            Some(OneOrMore::Multiple(vec)) => match vec.first() {
-                Some(PackageSpec { suffix, .. }) => suffix.to_owned(),
-                None => None,
-            },
-
-            _ => None,
-        }
-        .or(self.suffix.to_owned())
-        .unwrap_or(".js".to_string())
-    }
-
     pub fn get_gentype_arg(&self) -> Vec<String> {
         match &self.gentype_config {
             Some(_) => vec!["-bs-gentype".to_string()],
             None => vec![],
+        }
+    }
+
+    pub fn get_package_specs(&self) -> Vec<PackageSpec> {
+        match self.package_specs.clone() {
+            None => vec![PackageSpec {
+                module: "commonjs".to_string(),
+                in_source: true,
+                suffix: Some(".js".to_string()),
+            }],
+            Some(OneOrMore::Single(spec)) => vec![spec],
+            Some(OneOrMore::Multiple(vec)) => vec,
         }
     }
 }
