@@ -1,0 +1,78 @@
+Complete src/CompletionRegexp.res 1:17
+posCursor:[1:17] posNoWhite:[1:16] Found expr:[1:3->0:-1]
+Completable: Cpath Value[emailPattern]->
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[emailPattern]->
+ContextPath Value[emailPattern]
+Path emailPattern
+CPPipe pathFromEnv:Stdlib.RegExp found:false
+Path Stdlib.RegExp.
+[{
+    "label": "RegExp.lastIndex",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => int",
+    "documentation": {"kind": "markdown", "value": "\n`lastIndex(regexp)` returns the index the next match will start from.\n\nSee [`RegExp.lastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/lastIndex) on MDN.\n\n## Examples\n```rescript\n// Match the first word in a sentence\nlet regexp = RegExp.fromString(\"\\\\w+\")\nlet someStr = \"Many words here.\"\n\nConsole.log(regexp->RegExp.lastIndex) // Logs `0` to the console\n\nregexp->RegExp.exec(someStr)->ignore\n\nConsole.log(regexp->RegExp.lastIndex) // Logs `4` to the console\n```\n"}
+  }, {
+    "label": "RegExp.setLastIndex",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, int) => unit",
+    "documentation": {"kind": "markdown", "value": "\n`setLastIndex(regexp, index)` set the index the next match will start from.\n\nSee [`RegExp.lastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/lastIndex) on MDN.\n\n## Examples\n```rescript\n// Match the first word in a sentence\nlet regexp = RegExp.fromString(\"\\\\w+\")\nlet someStr = \"Many words here.\"\n\nregexp->RegExp.setLastIndex(4)\nregexp->RegExp.exec(someStr)->ignore\n\nConsole.log(regexp->RegExp.lastIndex) // Logs `10` to the console\n```\n"}
+  }, {
+    "label": "RegExp.sticky",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => bool",
+    "documentation": {"kind": "markdown", "value": "\n`sticky(regexp)` returns whether the sticky (`y`) flag is set on this `RegExp`.\n\nSee [`RegExp.sticky`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/sticky) on MDN.\n\n## Examples\n```rescript\nlet regexp1 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp1->RegExp.unicode) // Logs `false`, since `y` is not set\n\nlet regexp2 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"my\")\nConsole.log(regexp2->RegExp.unicode) // Logs `true`, since `y` is set\n```\n"}
+  }, {
+    "label": "RegExp.ignore",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => unit",
+    "documentation": {"kind": "markdown", "value": "\n  `ignore(regExp)` ignores the provided regExp and returns unit.\n\n  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)\n  without having to store or process it further.\n"}
+  }, {
+    "label": "RegExp.exec",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, string) => option<Result.t>",
+    "documentation": {"kind": "markdown", "value": "\n`exec(regexp, string)` executes the provided regexp on the provided string, optionally returning a `RegExp.Result.t` if the regexp matches on the string.\n\nSee [`RegExp.exec`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/exec) on MDN.\n\n## Examples\n```rescript\n// Match the first word in a sentence\nlet regexp = RegExp.fromString(\"\\\\w+\")\n\nswitch regexp->RegExp.exec(\"ReScript is pretty cool, right?\") {\n| None => Console.log(\"Nope, no match...\")\n| Some(result) => Console.log(result->RegExp.Result.fullMatch) // Prints \"ReScript\"\n}\n```\n"}
+  }, {
+    "label": "RegExp.ignoreCase",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => bool",
+    "documentation": {"kind": "markdown", "value": "\n`ignoreCase(regexp)` returns whether the ignore case (`i`) flag is set on this `RegExp`.\n\nSee [`RegExp.ignoreCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/ignoreCase) on MDN.\n\n## Examples\n```rescript\nlet regexp1 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp1->RegExp.ignoreCase) // Logs `false`, since `i` is not set\n\nlet regexp2 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"i\")\nConsole.log(regexp2->RegExp.ignoreCase) // Logs `true`, since `i` is set\n```\n"}
+  }, {
+    "label": "RegExp.global",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => bool",
+    "documentation": {"kind": "markdown", "value": "\n`global(regexp)` returns whether the global (`g`) flag is set on this `RegExp`.\n\nSee [`RegExp.global`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/global) on MDN.\n\n## Examples\n```rescript\nlet regexp1 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp1->RegExp.global) // Logs `true`, since `g` is set\n\nlet regexp2 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"i\")\nConsole.log(regexp2->RegExp.global) // Logs `false`, since `g` is not set\n```\n"}
+  }, {
+    "label": "RegExp.multiline",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => bool",
+    "documentation": {"kind": "markdown", "value": "\n`multiline(regexp)` returns whether the multiline (`m`) flag is set on this `RegExp`.\n\nSee [`RegExp.multiline`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/multiline) on MDN.\n\n## Examples\n```rescript\nlet regexp1 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp1->RegExp.multiline) // Logs `false`, since `m` is not set\n\nlet regexp2 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"mi\")\nConsole.log(regexp2->RegExp.multiline) // Logs `true`, since `m` is set\n```\n"}
+  }, {
+    "label": "RegExp.test",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, string) => bool",
+    "documentation": {"kind": "markdown", "value": "\n`test(regexp, string)` tests whether the provided `regexp` matches on the provided string.\n\nSee [`RegExp.test`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/test) on MDN.\n\n## Examples\n```rescript\n// Match the first word in a sentence\nlet regexp = RegExp.fromString(\"\\\\w+\")\n\nif regexp->RegExp.test(\"ReScript is cool!\") {\n  Console.log(\"Yay, there's a word in there.\")\n}\n```\n"}
+  }, {
+    "label": "RegExp.unicode",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => bool",
+    "documentation": {"kind": "markdown", "value": "\n`unicode(regexp)` returns whether the unicode (`y`) flag is set on this `RegExp`.\n\nSee [`RegExp.unicode`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicode) on MDN.\n\n## Examples\n```rescript\nlet regexp1 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp1->RegExp.unicode) // Logs `false`, since `u` is not set\n\nlet regexp2 = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"mu\")\nConsole.log(regexp2->RegExp.unicode) // Logs `true`, since `u` is set\n```\n"}
+  }, {
+    "label": "RegExp.source",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": {"kind": "markdown", "value": "\n`source(regexp)` returns the source text for this `RegExp`, without the two forward slashes (if present), and without any set flags.\n\nSee [`RegExp.source`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/source) on MDN.\n\n## Examples\n```rescript\nlet regexp = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp->RegExp.source) // Logs `\\w+`, the source text of the `RegExp`\n```\n"}
+  }]
+

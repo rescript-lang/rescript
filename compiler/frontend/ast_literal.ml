@@ -71,7 +71,7 @@ module Lid = struct
   let js_null_undefined : t = Ldot (Lident "Js", "null_undefined")
 
   (* FIXME: Use primitive module *)
-  let js_re_id : t = Ldot (Ldot (Lident "Js", "Re"), "t")
+  let js_re_id : t = Ldot (Lident "RegExp", "t")
 end
 
 module No_loc = struct

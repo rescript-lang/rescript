@@ -586,11 +586,11 @@ CPPipe pathFromEnv:Js.Re found:false
 Path Js.Re.la
 Path la
 [{
-    "label": "Js.Re.lastIndex",
+    "label": "RegExp.lastIndex",
     "kind": 12,
     "tags": [],
     "detail": "t => int",
-    "documentation": {"kind": "markdown", "value": "\nReturns the index where the next match will start its search. This property\nwill be modified when the RegExp object is used, if the global (\"g\") flag is\nset.\n\n## Examples\n\n```rescript\nlet re = /ab*TODO/g\nlet str = \"abbcdefabh\"\n\nlet break = ref(false)\nwhile !break.contents {\n  switch Js.Re.exec_(re, str) {\n  | Some(result) => Js.Nullable.iter(Js.Re.captures(result)[0], (. match_) => {\n      let next = Belt.Int.toString(Js.Re.lastIndex(re))\n      Js.log(\"Found \" ++ (match_ ++ (\". Next match starts at \" ++ next)))\n    })\n  | None => break := true\n  }\n}\n```\n\nSee\n[`RegExp: lastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/lastIndex)\non MDN.\n"}
+    "documentation": {"kind": "markdown", "value": "\n`lastIndex(regexp)` returns the index the next match will start from.\n\nSee [`RegExp.lastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/lastIndex) on MDN.\n\n## Examples\n```rescript\n// Match the first word in a sentence\nlet regexp = RegExp.fromString(\"\\\\w+\")\nlet someStr = \"Many words here.\"\n\nConsole.log(regexp->RegExp.lastIndex) // Logs `0` to the console\n\nregexp->RegExp.exec(someStr)->ignore\n\nConsole.log(regexp->RegExp.lastIndex) // Logs `4` to the console\n```\n"}
   }]
 
 Complete src/CompletionPipeChain.res 112:7
