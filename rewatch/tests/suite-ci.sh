@@ -9,6 +9,9 @@ bold "Reset yarn.lock changes"
 git checkout ../testrepo/yarn.lock
 success "Reset yarn.lock"
 
+bold "Rescript version"
+(cd ../testrepo && yarn rescript -v)
+
 bold "Check if build exists"
 if test -f ../target/release/rewatch; 
 then
