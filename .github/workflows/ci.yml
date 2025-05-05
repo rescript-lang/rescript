@@ -20,9 +20,9 @@ env:
   OCAMLRUNPARAM: b
 
 jobs:
-  test-rewatch:
-    # needs:
-    #   - publish
+  test-rewatch-integration:
+    needs:
+      - pkg-pr-new
     runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: "1"
@@ -35,32 +35,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-
-      - name: Restore build cache
-        id: build-cache
-        uses: actions/cache@v4
-        with:
-          path: rewatch/target
-          key: rewatch-build-v2-${{ runner.os }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
-
-      - name: Install rust toolchain
-        if: steps.build-cache.outputs.cache-hit != 'true'
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-
-      - name: Build rewatch
-        if: steps.build-cache.outputs.cache-hit != 'true'
+      - name: Install ReScript package
         run: |
-          cargo build --manifest-path rewatch/Cargo.toml --release
-
-      - name: Run rewatch unit tests
-        run: |
-          cargo test --manifest-path rewatch/Cargo.toml
+          COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          npm i --no-audit \
+            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
+        shell: bash
+        working-directory: rewatch/testrepo
 
       - name: Run rewatch integration tests
         run: |
-          make test-rewatch
+          make test-rewatch-ci
 
   build-rewatch:
     strategy:
@@ -119,6 +104,10 @@ jobs:
         if: steps.build-cache.outputs.cache-hit != 'true'
         run: |
           cargo build --manifest-path rewatch/Cargo.toml --target ${{ matrix.rust-target }} --release
+
+      - name: Run rewatch unit tests
+        run: |
+          cargo test --manifest-path rewatch/Cargo.toml
 
       - name: Copy rewatch binary
         run: |
