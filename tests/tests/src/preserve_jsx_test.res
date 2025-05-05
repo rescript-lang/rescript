@@ -132,3 +132,26 @@ let _container_with_spread_props_keyed =
   </div>
 
 let _unary_element_with_only_spread_props = <input {...baseProps} />
+
+// Simulate an external component
+%%raw(`
+  function QueryClientProvider(props) { return props.children }
+  `)
+
+module A = {
+  @react.component
+  external make: (~children: React.element) => React.element = "QueryClientProvider"
+}
+
+module B = {
+  @react.component
+  let make = () => {
+    <p> {React.string("Hello, world!")} </p>
+  }
+}
+
+let _external_component_with_children =
+  <A>
+    <strong />
+    <B />
+  </A>

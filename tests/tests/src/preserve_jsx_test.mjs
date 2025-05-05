@@ -47,7 +47,24 @@ let _container_with_spread_props_keyed = /* @__PURE__ */ jsxs("div", { ...newrec
   /* @__PURE__ */ jsx("input", { type: "text" })
 ] }, "barry-key");
 let _unary_element_with_only_spread_props = /* @__PURE__ */ jsx("input", { ...baseProps });
+function QueryClientProvider(props) {
+  return props.children;
+}
+;
+let A = {};
+function Preserve_jsx_test$B(props) {
+  return /* @__PURE__ */ jsx("p", { children: "Hello, world!" });
+}
+let B = {
+  make: Preserve_jsx_test$B
+};
+let _external_component_with_children = /* @__PURE__ */ jsxs(QueryClientProvider, { children: [
+  /* @__PURE__ */ jsx("strong", {}),
+  /* @__PURE__ */ jsx(Preserve_jsx_test$B, {})
+] });
 export {
+  A,
+  B,
   Icon,
   React,
   ReactDOM,
@@ -56,6 +73,7 @@ export {
   _container_with_spread_props,
   _container_with_spread_props_and_children,
   _container_with_spread_props_keyed,
+  _external_component_with_children,
   _multiple_element_children,
   _multiple_element_fragment,
   _single_element_child,

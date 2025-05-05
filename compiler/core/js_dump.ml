@@ -1086,6 +1086,7 @@ and print_jsx cxt ?(spread_props : J.expression option)
         if n = "children" then
           if fnName = "jsxs" then
             match e.J.expression_desc with
+            | J.Array (xs, _)
             | J.Optional_block ({expression_desc = J.Array (xs, _)}, _) ->
               Some xs
             | _ -> Some [e]
