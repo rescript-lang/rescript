@@ -21,6 +21,8 @@ env:
 
 jobs:
   test-rewatch:
+    needs:
+      - publish
     runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: "1"

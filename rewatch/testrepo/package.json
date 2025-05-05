@@ -9,6 +9,9 @@
       "packages/new-namespace"
     ]
   },
+  "dependencies": {
+    "rescript": "ci"
+  },
   "scripts": {
     "build": "../target/release/rewatch build .",
     "build:rescript": "rescript build -with-deps",
