@@ -17,10 +17,12 @@ fi
 bold "Make sure the testrepo is clean"
 if git diff --exit-code ../testrepo &> diff.txt; 
 then
+  rm diff.txt
   success "Testrepo has no changes"
 else 
   error "Testrepo is not clean to start with"
   cat diff.txt
+  rm diff.txt
   exit 1
 fi
 

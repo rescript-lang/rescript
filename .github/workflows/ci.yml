@@ -21,7 +21,7 @@ env:
 
 jobs:
   test-rewatch:
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: "1"
 
@@ -38,12 +38,8 @@ jobs:
         id: build-cache
         uses: actions/cache@v4
         with:
-          path: rewatch/targed
-          key: rewatch-build-v2-aarch64-apple-darwin-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
-
-      - name: Install musl gcc
-        if: steps.build-cache.outputs.cache-hit != 'true' && runner.os == 'Linux'
-        run: sudo apt-get install -y --no-install-recommends musl-tools
+          path: rewatch/target
+          key: rewatch-build-v2-${{ runner.os }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
 
       - name: Install rust toolchain
         if: steps.build-cache.outputs.cache-hit != 'true'
