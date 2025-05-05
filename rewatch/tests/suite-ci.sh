@@ -2,12 +2,22 @@
 # Make sure we are in the right directory
 cd $(dirname $0)
 
-source ./utils.sh
-(cd ../testrepo && yarn install)
+# Get rewatch executable location from the first argument or use default
+if [ -n "$1" ]; then
+  REWATCH_EXECUTABLE="$1"
+else
+  REWATCH_EXECUTABLE="../target/release/rewatch"
+fi
+export REWATCH_EXECUTABLE
 
-bold "Reset yarn.lock changes"
+source ./utils.sh
+
+# we need to reset the yarn.lock and package.json to the original state
+# so there is not diff in git. The CI will install new ReScript package
+bold "Reset package.json and yarn.lock"
 git checkout ../testrepo/yarn.lock
-success "Reset yarn.lock"
+git checkout ../testrepo/package.json
+success "Reset package.json and yarn.lock"
 
 bold "Rescript version"
 (cd ../testrepo && yarn rescript -v)
