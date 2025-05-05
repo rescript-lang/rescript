@@ -3,6 +3,7 @@
 cd $(dirname $0)
 
 source ./utils.sh
+(cd ../testrepo && yarn install)
 
 bold "Check if build exists"
 if test -f ../target/release/rewatch; 
