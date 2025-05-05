@@ -3,7 +3,7 @@
 cd $(dirname $0)
 
 source ./utils.sh
-(cd ../testrepo && yarn install)
+(cd ../testrepo && yarn install --immutable)
 
 bold "Check if build exists"
 if test -f ../target/release/rewatch; 
