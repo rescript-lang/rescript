@@ -155,3 +155,15 @@ let _external_component_with_children =
     <strong />
     <B />
   </A>
+
+module MyWeirdComponent = {
+  type props = {\"MyWeirdProp": string}
+
+  let make = props =>
+    <p>
+      {React.string("foo")}
+      {React.string(props.\"MyWeirdProp")}
+    </p>
+}
+
+let _escaped_jsx_prop = <MyWeirdComponent \"MyWeirdProp"="bar" />
