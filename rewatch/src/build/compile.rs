@@ -460,7 +460,7 @@ pub fn compiler_args(
         vec![]
     } else {
         debug!("Compiling file: {}", &module_name);
-        let specs = config.get_package_specs();
+        let specs = root_config.get_package_specs();
 
         specs
             .iter()
@@ -488,7 +488,7 @@ pub fn compiler_args(
                                 .unwrap()
                             )
                         },
-                        spec.get_suffix()
+                        root_config.get_suffix(spec),
                     ),
                 ];
             })
@@ -680,11 +680,11 @@ fn compile_file(
                         }) => {
                             let source = helpers::get_source_file_from_rescript_file(
                                 &std::path::Path::new(&package.path).join(path),
-                                &spec.get_suffix(),
+                                &root_package.config.get_suffix(spec),
                             );
                             let destination = helpers::get_source_file_from_rescript_file(
                                 &std::path::Path::new(&package.get_build_path()).join(path),
-                                &spec.get_suffix(),
+                                &root_package.config.get_suffix(spec),
                             );
 
                             if source.exists() {

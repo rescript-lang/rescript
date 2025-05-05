@@ -83,7 +83,7 @@ pub fn clean_mjs_files(build_state: &BuildState) {
                                         .join(&source_file.implementation.path)
                                         .to_string_lossy()
                                         .to_string(),
-                                    spec.get_suffix(),
+                                    root_package.config.get_suffix(spec),
                                 ))
                             } else {
                                 None

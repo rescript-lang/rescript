@@ -127,8 +127,8 @@ impl PackageSpec {
         }
     }
 
-    pub fn get_suffix(&self) -> String {
-        self.suffix.to_owned().unwrap_or(".js".to_string())
+    pub fn get_suffix(&self) -> Option<String> {
+        self.suffix.to_owned()
     }
 }
 
@@ -203,13 +203,13 @@ pub struct Config {
     pub suffix: Option<String>,
     #[serde(rename = "pinned-dependencies")]
     pub pinned_dependencies: Option<Vec<String>>,
-    #[serde(rename = "bs-dependencies")]
+    #[serde(rename = "dependencies", alias = "bs-dependencies")]
     pub bs_dependencies: Option<Vec<String>>,
-    #[serde(rename = "bs-dev-dependencies")]
+    #[serde(rename = "bs-dev-dependencies", alias = "dev-dependencies")]
     pub bs_dev_dependencies: Option<Vec<String>>,
     #[serde(rename = "ppx-flags")]
     pub ppx_flags: Option<Vec<OneOrMore<String>>>,
-    #[serde(rename = "bsc-flags")]
+    #[serde(rename = "bsc-flags", alias = "compiler-flags")]
     pub bsc_flags: Option<Vec<OneOrMore<String>>>,
     pub reason: Option<Reason>,
     pub namespace: Option<NamespaceConfig>,
@@ -435,6 +435,12 @@ impl Config {
             Some(OneOrMore::Multiple(vec)) => vec,
         }
     }
+
+    pub fn get_suffix(&self, spec: &PackageSpec) -> String {
+        spec.get_suffix()
+            .or(self.suffix.clone())
+            .unwrap_or(".js".to_string())
+    }
 }
 
 #[cfg(test)]
@@ -455,8 +461,11 @@ mod tests {
         "#;
 
         let config = serde_json::from_str::<Config>(json).unwrap();
-        assert_eq!(config.get_suffix(), ".mjs");
-        assert_eq!(config.get_module(), "es6");
+        let specs = config.get_package_specs();
+        assert_eq!(specs.len(), 1);
+        let spec = specs.first().unwrap();
+        assert_eq!(spec.module, "es6");
+        assert_eq!(config.get_suffix(spec), ".mjs");
     }
 
     #[test]
@@ -540,6 +549,134 @@ mod tests {
                 mode: None,
                 v3_dependencies: None,
             },
+        );
+    }
+
+    #[test]
+    fn test_get_suffix() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "es6",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs"
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(
+            config.get_suffix(&config.get_package_specs().first().unwrap()),
+            ".mjs"
+        );
+    }
+
+    #[test]
+    fn test_dependencies() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "es6",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs",
+            "bs-dependencies": [ "@testrepo/main" ]
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(config.bs_dependencies, Some(vec!["@testrepo/main".to_string()]));
+    }
+
+    #[test]
+    fn test_dependencies_alias() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "es6",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs",
+            "dependencies": [ "@testrepo/main" ]
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(config.bs_dependencies, Some(vec!["@testrepo/main".to_string()]));
+    }
+
+    #[test]
+    fn test_dev_dependencies() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "es6",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs",
+            "bs-dev-dependencies": [ "@testrepo/main" ]
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(
+            config.bs_dev_dependencies,
+            Some(vec!["@testrepo/main".to_string()])
+        );
+    }
+
+    #[test]
+    fn test_dev_dependencies_alias() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "es6",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs",
+            "dev-dependencies": [ "@testrepo/main" ]
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(
+            config.bs_dev_dependencies,
+            Some(vec!["@testrepo/main".to_string()])
         );
     }
 
