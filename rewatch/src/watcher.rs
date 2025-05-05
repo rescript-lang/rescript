@@ -54,9 +54,10 @@ async fn async_watch(
     after_build: Option<String>,
     create_sourcedirs: bool,
     build_dev_deps: bool,
+    bsc_path: Option<String>,
 ) -> notify::Result<()> {
     let mut build_state =
-        build::initialize_build(None, filter, show_progress, path, None).expect("Can't initialize build");
+        build::initialize_build(None, filter, show_progress, path, bsc_path).expect("Can't initialize build");
     let mut needs_compile_type = CompileType::Incremental;
     // create a mutex to capture if ctrl-c was pressed
     let ctrlc_pressed = Arc::new(Mutex::new(false));
@@ -259,6 +260,7 @@ pub fn start(
     after_build: Option<String>,
     create_sourcedirs: bool,
     build_dev_deps: bool,
+    bsc_path: Option<String>,
 ) {
     futures::executor::block_on(async {
         let queue = Arc::new(FifoQueue::<Result<Event, Error>>::new());
@@ -279,6 +281,7 @@ pub fn start(
             after_build,
             create_sourcedirs,
             build_dev_deps,
+            bsc_path,
         )
         .await
         {

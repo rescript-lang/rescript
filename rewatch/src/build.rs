@@ -73,7 +73,7 @@ pub fn get_compiler_args(
         rescript_version
     } else {
         let bsc_path = match bsc_path {
-            Some(bsc_path) => bsc_path,
+            Some(bsc_path) => helpers::get_abs_path(&bsc_path),
             None => helpers::get_bsc(&package_root, workspace_root.to_owned()),
         };
         helpers::get_rescript_version(&bsc_path)
