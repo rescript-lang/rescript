@@ -50,7 +50,7 @@ test-rewatch:
 	bash ./rewatch/tests/suite-ci.sh
 
 test-rewatch-ci:
-	bash ./rewatch/tests/suite-ci.sh
+	bash ./rewatch/tests/suite-ci.sh node_modules/.bin/rewatch
 
 test-all: test test-gentype test-analysis test-tools test-rewatch
 
