@@ -22,16 +22,6 @@ git checkout ../testrepo/yarn.lock
 git checkout ../testrepo/package.json
 success "Reset package.json and yarn.lock"
 
-
-bold "Check if build exists"
-if test -f ../target/release/rewatch; 
-then
-  success "Build exists"
-else 
-  error "Build does not exist. Exiting..."
-  exit 1
-fi
-
 bold "Make sure the testrepo is clean"
 if git diff --exit-code ../testrepo &> diff.txt; 
 then
