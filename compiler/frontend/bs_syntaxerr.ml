@@ -33,16 +33,12 @@ type error =
   | Expect_string_literal
   | Expect_int_or_string_or_json_literal
   | Unhandled_poly_type
-  | Unregistered of string
   | Invalid_underscore_type_in_external
   | Invalid_bs_string_type
   | Invalid_bs_int_type
   | Invalid_bs_unwrap_type
   | Conflict_ffi_attribute of string
-  | Not_supported_in_bs_deriving
-  | Canot_infer_arity_by_syntax
   | Illegal_attribute
-  | Inconsistent_arity of int * int
   (* we still rqeuire users to have explicit annotation to avoid
      {[ (((int -> int) -> int) -> int )]}
   *)
@@ -66,12 +62,6 @@ let pp_error fmt err =
        syntax wise `_ option` for safety"
     | Not_supported_directive_in_bs_return -> "Not supported return directive"
     | Illegal_attribute -> "Illegal attributes"
-    | Canot_infer_arity_by_syntax ->
-      "Cannot infer the arity through the syntax, either [%@uncurry n] or \n\
-       write it in arrow syntax "
-    | Inconsistent_arity (arity, n) ->
-      Printf.sprintf "Inconsistent arity %d vs %d" arity n
-    | Not_supported_in_bs_deriving -> "not supported in deriving"
     | Unsupported_predicates -> "unsupported predicates"
     | Conflict_bs_bs_this_bs_meth ->
       "%@this, %@bs, %@meth can not be applied at the same time"
@@ -82,7 +72,6 @@ let pp_error fmt err =
     | Expect_int_or_string_or_json_literal ->
       "expect int, string literal or json literal {json|text here|json} "
     | Unhandled_poly_type -> "Unhandled poly type"
-    | Unregistered str -> "Unregistered " ^ str
     | Invalid_underscore_type_in_external ->
       "_ is not allowed in combination with external optional type"
     | Invalid_bs_string_type -> "Not a valid type for %@string"
