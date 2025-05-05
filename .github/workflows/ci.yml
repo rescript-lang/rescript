@@ -38,8 +38,7 @@ jobs:
       - name: Install ReScript package
         run: |
           COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
-          npm i --no-audit \
-            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
+          yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
         shell: bash
         working-directory: rewatch/testrepo
 
