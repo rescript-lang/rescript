@@ -541,7 +541,8 @@ and expression_desc cxt ~(level : int) f x : cxt =
                   ));
          } as e),
         el,
-        {call_transformed_jsx = true} ) -> (
+        {call_transformed_jsx = true} )
+    when !Js_config.jsx_preserve -> (
     (* We match a JsxRuntime.jsx call *)
     match el with
     | [

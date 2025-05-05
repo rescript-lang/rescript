@@ -135,29 +135,27 @@ let get_mapper ~config =
 
   {default_mapper with expr; module_binding; signature; structure}
 
-let rewrite_implementation ~jsx_version ~jsx_module ~jsx_preserve
-    (code : Parsetree.structure) : Parsetree.structure =
+let rewrite_implementation ~jsx_version ~jsx_module (code : Parsetree.structure)
+    : Parsetree.structure =
   let config =
     {
       Jsx_common.version = jsx_version;
       module_ = jsx_module;
       nested_modules = [];
       has_component = false;
-      preserve = jsx_preserve;
     }
   in
   let mapper = get_mapper ~config in
   mapper.structure mapper code
 
-let rewrite_signature ~jsx_version ~jsx_module ~jsx_preserve
-    (code : Parsetree.signature) : Parsetree.signature =
+let rewrite_signature ~jsx_version ~jsx_module (code : Parsetree.signature) :
+    Parsetree.signature =
   let config =
     {
       Jsx_common.version = jsx_version;
       module_ = jsx_module;
       nested_modules = [];
       has_component = false;
-      preserve = jsx_preserve;
     }
   in
   let mapper = get_mapper ~config in

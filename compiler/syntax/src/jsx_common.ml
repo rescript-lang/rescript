@@ -6,7 +6,6 @@ type jsx_config = {
   mutable module_: string;
   mutable nested_modules: string list;
   mutable has_component: bool;
-  mutable preserve: bool;
 }
 
 (* Helper method to look up the [@react.component] attribute *)
