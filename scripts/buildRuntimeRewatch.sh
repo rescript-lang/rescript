@@ -3,7 +3,6 @@ set -e
 shopt -s extglob
 
 (cd runtime && ../cli/rewatch.js clean)
-rm -f lib
 (cd runtime && ../cli/rewatch.js build)
 
 cp runtime/lib/es6/!(Pervasives_mini).js lib/es6

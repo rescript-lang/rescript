@@ -16,8 +16,8 @@ dce:
 	reanalyze.exe -dce-cmt _build/default/compiler
 
 rewatch:
-	cargo build --manifest-path rewatch/Cargo.toml
-	cp rewatch/target/debug/rewatch rewatch
+	cargo build --manifest-path rewatch/Cargo.toml --release
+	cp rewatch/target/release/rewatch rewatch
 	./scripts/copyExes.js --rewatch
 
 ninja/ninja:
