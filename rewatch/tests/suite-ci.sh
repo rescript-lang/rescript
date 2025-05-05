@@ -15,11 +15,12 @@ else
 fi
 
 bold "Make sure the testrepo is clean"
-if git diff --exit-code ../testrepo &> /dev/null; 
+if git diff --exit-code ../testrepo &> diff.txt; 
 then
   success "Testrepo has no changes"
 else 
   error "Testrepo is not clean to start with"
+  cat diff.txt
   exit 1
 fi
 
