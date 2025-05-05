@@ -12,6 +12,9 @@ export REWATCH_EXECUTABLE
 
 source ./utils.sh
 
+bold "Rescript version"
+(cd ../testrepo && yarn rescript -v)
+
 # we need to reset the yarn.lock and package.json to the original state
 # so there is not diff in git. The CI will install new ReScript package
 bold "Reset package.json and yarn.lock"
@@ -19,8 +22,6 @@ git checkout ../testrepo/yarn.lock
 git checkout ../testrepo/package.json
 success "Reset package.json and yarn.lock"
 
-bold "Rescript version"
-(cd ../testrepo && yarn rescript -v)
 
 bold "Check if build exists"
 if test -f ../target/release/rewatch; 
