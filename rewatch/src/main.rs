@@ -149,6 +149,7 @@ fn main() -> Result<()> {
                     args.after_build,
                     args.create_sourcedirs,
                     args.dev,
+                    args.bsc_path,
                 );
 
                 Ok(())
