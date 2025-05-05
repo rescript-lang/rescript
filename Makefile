@@ -54,11 +54,11 @@ test-all: test test-gentype test-analysis test-tools test-rewatch
 reanalyze:
 	reanalyze.exe -set-exit-code -all-cmt _build/default/compiler _build/default/tests -exclude-paths compiler/outcome_printer,compiler/ml,compiler/frontend,compiler/ext,compiler/depends,compiler/core,compiler/common,compiler/cmij,compiler/bsb_helper,compiler/bsb
 
-lib:
+lib-bsb:
 	./scripts/buildRuntime.sh
 	./scripts/prebuilt.js
 
-lib-rewatch:
+lib:
 	./scripts/buildRuntimeRewatch.sh
 	./scripts/prebuilt.js
 
