@@ -3,7 +3,6 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import * as esbuild from "esbuild";
 import {
   buildTestDir,
   compilerTestDir,
@@ -84,38 +83,22 @@ if (mochaTest) {
     stdio: "inherit",
   });
 
-  // We need to the jsx because mocha doesn't support jsx
-  const preserveJsxTestFile = path.join(
-    projectDir,
-    "tests/tests/src/preserve_jsx_test.mjs",
+  await mocha(
+    [
+      "-t",
+      "10000",
+      "tests/tests/**/*_test.mjs",
+      // Ignore the preserve_jsx_test.mjs file.
+      // I can't run because Mocha doesn't support jsx.
+      // We also want to keep the output as is.
+      "--ignore",
+      "tests/tests/src/preserve_jsx_test.mjs",
+    ],
+    {
+      cwd: projectDir,
+      stdio: "inherit",
+    },
   );
-  try {
-    await esbuild.build({
-      entryPoints: [preserveJsxTestFile], // Specify the single input file
-      outfile: preserveJsxTestFile, // Specify the single output file
-      allowOverwrite: true, // We just overwrite the existing file
-      bundle: false, // Crucial: Turn off bundling
-      minify: false, // Turn off minification
-      sourcemap: false, // Turn off source maps if not needed
-      loader: { ".mjs": "jsx" }, // Tell esbuild to apply the 'jsx' loader to .mjs files
-      format: "esm", // Ensure output is ESM
-      platform: "node", // Target Node.js environment
-      jsx: "automatic",
-    });
-
-    console.log(`Built (transformed) ${preserveJsxTestFile}`);
-  } catch (error) {
-    console.error(
-      `Error building (transforming) ${preserveJsxTestFile}:`,
-      error,
-    );
-    process.exit(1);
-  }
-
-  await mocha(["-t", "10000", "tests/tests/**/*_test.mjs"], {
-    cwd: projectDir,
-    stdio: "inherit",
-  });
 
   await node("tests/tests/src/core/Core_TestSuite.mjs", [], {
     cwd: projectDir,
