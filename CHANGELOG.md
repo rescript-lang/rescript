@@ -28,6 +28,7 @@
 #### :bug: Bug fix
 
 - Fix broken `bstracing` CLI location. https://github.com/rescript-lang/rescript/pull/7398
+- Fix field flattening optimization to avoid creating unnecessary copies of allocating constants. https://github.com/rescript-lang/rescript-compiler/pull/7421
 
 #### :house: Internal
 

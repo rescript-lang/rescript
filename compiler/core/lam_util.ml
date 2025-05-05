@@ -200,14 +200,15 @@ let field_flatten_get
         for i = 0 to Array.length fields - 1 do
           if fst(fields.(i)) = name then found := Ext_list.nth_opt ls i done;
         (match !found with
-        | Some c -> Lam.const c
-        | None  -> lam())
+        | Some c when not (Lam_constant.is_allocating c) -> Lam.const c
+        | _ -> lam())
       | _ -> lam ()
     )
   | Some (Constant (Const_block (_,_,ls))) ->
     begin match Ext_list.nth_opt ls i with 
       | None -> lam  ()
-      | Some x -> Lam.const x
+      | Some x when not (Lam_constant.is_allocating x) -> Lam.const x
+      | Some _ -> lam ()
     end
   | Some _
   | None -> lam ()
