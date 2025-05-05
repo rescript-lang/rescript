@@ -279,25 +279,23 @@ let rec exprToContextPathInner ~(inJsxContext : bool) (e : Parsetree.expression)
         pexp_attributes;
       }
   | Pexp_apply
-      {
-        funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};
-        args =
-          [
-            (_, lhs); (_, {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes});
-          ];
-        partial;
-        transformed_jsx;
-      } ->
+      ({
+         funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};
+         args =
+           [
+             (_, lhs);
+             (_, {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes});
+           ];
+       } as app) ->
     (* Transform away pipe with identifier *)
     exprToContextPath ~inJsxContext
       {
         pexp_desc =
           Pexp_apply
             {
+              app with
               funct = {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes};
               args = [(Nolabel, lhs)];
-              partial;
-              transformed_jsx;
             };
         pexp_loc;
         pexp_attributes;
