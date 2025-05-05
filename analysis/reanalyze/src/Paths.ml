@@ -81,7 +81,7 @@ module Config = struct
     | Some False -> RunConfig.transitive false
     | _ -> ()
 
-  (* Read the config from rescript.json/bsconfig.json and apply it to runConfig and suppress and unsuppress *)
+  (* Read the config from rescript.json and apply it to runConfig and suppress and unsuppress *)
   let processBsconfig () =
     Lazy.force setReScriptProjectRoot;
     let rescriptFile = Filename.concat runConfig.projectRoot rescriptJson in

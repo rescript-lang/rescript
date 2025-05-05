@@ -56,12 +56,12 @@ type builtin = {
 (** rules are generally composed of built-in rules and customized rules, there are two design choices:
     1. respect custom rules with the same name, then we need adjust our built-in 
     rules dynamically in case the conflict.
-    2. respect our built-in rules, then we only need re-load custom rules for each bsconfig.json
+    2. respect our built-in rules, then we only need re-load custom rules for each rescript.json
 *)
 
 type command = string
 
-(* Since now we generate ninja files per bsconfig.json in a single process,
+(* Since now we generate ninja files per rescript.json in a single process,
     we must make sure it is re-entrant
 *)
 val make_custom_rules :

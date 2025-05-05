@@ -13,7 +13,7 @@ if (out.stdout !== "") {
   assert.equal(
     out.stderr,
     [
-      'File "bsconfig.json", line 1',
+      'File "rescript.json", line 1',
       "Error: package weird not found or built",
       "- Did you install it?",
       "",

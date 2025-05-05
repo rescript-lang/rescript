@@ -24,10 +24,10 @@
 
 val generate_sourcedirs_meta : name:string -> Bsb_file_groups.t -> unit
 (** This module try to generate some meta data so that
-    everytime [bsconfig.json] is reload, we can re-read
+    everytime [rescript.json] is reloaded, we can re-read
     such meta data changes in the watcher.
 
-    Another way of doing it is processing [bsconfig.json] 
+    Another way of doing it is processing [rescript.json] 
     directly in [watcher] but that would 
     mean the duplication of logic in [bsb] and [bsb_watcher]
 *)

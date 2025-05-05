@@ -164,7 +164,7 @@ Example `@raises(Exn)` or `@raises([E1, E2, E3])` for multiple exceptions.
 
 You will need this decorator whenever you want to use a ReScript / React component in ReScript JSX expressions.
 
-Note: The `@react.component` decorator requires the `jsx` config to be set in your `rescript.json`/`bsconfig.json` to enable the required React transformations.
+Note: The `@react.component` decorator requires the `jsx` config to be set in your `rescript.json` to enable the required React transformations.
 
 [Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#react-component-decorator).|};
       ] );
