@@ -42,3 +42,6 @@ let builtin_runtime_call =
 
 let ml_full_call =
   {arity = Full; call_info = Call_ml; call_transformed_jsx = false}
+
+let na_full_call transformed_jsx =
+  {arity = Full; call_info = Call_na; call_transformed_jsx = transformed_jsx}

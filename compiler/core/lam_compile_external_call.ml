@@ -288,14 +288,7 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
       let args, eff, dynamic = assemble_args_has_splice arg_types args in
       let args = if dynamic then E.variadic_args args else args in
       add_eff eff
-        (E.call
-           ~info:
-             {
-               arity = Full;
-               call_info = Call_na;
-               call_transformed_jsx = transformed_jsx;
-             }
-           fn args))
+        (E.call ~info:(Js_call_info.na_full_call transformed_jsx) fn args))
   | Js_call
       {
         external_module_name = module_name;
@@ -311,14 +304,7 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
       let args, eff, dynamic = assemble_args_has_splice arg_types args in
       let args = if dynamic then E.variadic_args args else args in
       add_eff eff
-        (E.call
-           ~info:
-             {
-               arity = Full;
-               call_info = Call_na;
-               call_transformed_jsx = transformed_jsx;
-             }
-           fn args)
+        (E.call ~info:(Js_call_info.na_full_call transformed_jsx) fn args)
     else
       let args, eff = assemble_args_no_splice arg_types args in
       add_eff eff
@@ -336,26 +322,12 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
       let args, eff, dynamic = assemble_args_has_splice arg_types args in
       let args = if dynamic then E.variadic_args args else args in
       add_eff eff
-        (E.call
-           ~info:
-             {
-               arity = Full;
-               call_info = Call_na;
-               call_transformed_jsx = transformed_jsx;
-             }
-           fn args)
+        (E.call ~info:(Js_call_info.na_full_call transformed_jsx) fn args)
     else
       let args, eff = assemble_args_no_splice arg_types args in
       (* TODO: fix in rest calling convention *)
       add_eff eff
-        (E.call
-           ~info:
-             {
-               arity = Full;
-               call_info = Call_na;
-               call_transformed_jsx = transformed_jsx;
-             }
-           fn args)
+        (E.call ~info:(Js_call_info.na_full_call transformed_jsx) fn args)
   | Js_new {external_module_name = module_name; name = fn; splice; scopes} ->
     (* handle [@@new]*)
     (* This has some side effect, it will
@@ -414,12 +386,7 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
         add_eff eff
           (let self = translate_scoped_access js_send_scopes self in
            E.call
-             ~info:
-               {
-                 arity = Full;
-                 call_info = Call_na;
-                 call_transformed_jsx = transformed_jsx;
-               }
+             ~info:(Js_call_info.na_full_call transformed_jsx)
              (E.dot self name) args)
     | _ -> assert false)
   | Js_module_as_var module_name -> external_var module_name ~dynamic_import
@@ -434,15 +401,7 @@ let translate_ffi ?(transformed_jsx = false) (cxt : Lam_compile_context.t)
         ~dynamic_import
     in
     if args = [] then e
-    else
-      E.call
-        ~info:
-          {
-            arity = Full;
-            call_info = Call_na;
-            call_transformed_jsx = transformed_jsx;
-          }
-        e args
+    else E.call ~info:(Js_call_info.na_full_call transformed_jsx) e args
   | Js_module_as_class module_name ->
     let fn = external_var module_name ~dynamic_import in
     let args, eff = assemble_args_no_splice arg_types args in

@@ -50,14 +50,7 @@ let rec apply_with_arity_aux (fn : J.expression) (arity : int list)
       if len >= x then
         let first_part, continue = Ext_list.split_at args x in
         apply_with_arity_aux
-          (E.call
-             ~info:
-               {
-                 arity = Full;
-                 call_info = Call_ml;
-                 (* no clue if this is correct *) call_transformed_jsx = false;
-               }
-             fn first_part)
+          (E.call ~info:Js_call_info.ml_full_call fn first_part)
           rest continue (len - x)
       else if
         (* GPR #1423 *)
@@ -70,15 +63,7 @@ let rec apply_with_arity_aux (fn : J.expression) (arity : int list)
           ~async:false ~one_unit_arg:false
           [
             S.return_stmt
-              (E.call
-                 ~info:
-                   {
-                     arity = Full;
-                     call_info = Call_ml;
-                     (* no clue if this is correct *) call_transformed_jsx =
-                       false;
-                   }
-                 fn
+              (E.call ~info:Js_call_info.ml_full_call fn
                  (Ext_list.append args @@ Ext_list.map params E.var));
           ]
       else E.call ~info:Js_call_info.dummy fn args

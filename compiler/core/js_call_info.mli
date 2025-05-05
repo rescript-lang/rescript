@@ -42,3 +42,5 @@ val dummy : t
 val builtin_runtime_call : t
 
 val ml_full_call : t
+
+val na_full_call : bool -> t
