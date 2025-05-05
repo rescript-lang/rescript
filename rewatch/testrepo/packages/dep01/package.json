@@ -12,7 +12,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@testrepo/dep02": "*",
-    "rescript": "*"
+    "@testrepo/dep02": "*"
   }
 }

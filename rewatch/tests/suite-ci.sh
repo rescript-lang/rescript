@@ -3,7 +3,11 @@
 cd $(dirname $0)
 
 source ./utils.sh
-(cd ../testrepo && yarn install --immutable)
+(cd ../testrepo && yarn install)
+
+bold "Reset yarn.lock changes"
+git checkout ../testrepo/yarn.lock
+success "Reset yarn.lock"
 
 bold "Check if build exists"
 if test -f ../target/release/rewatch; 
