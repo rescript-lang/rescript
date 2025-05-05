@@ -9,12 +9,12 @@ Dep01.log();
 
 console.log(InternalDep.value);
 
-var $$Array;
+let $$Array;
 
-var $$String;
+let $$String;
 
 export {
-  $$Array ,
-  $$String ,
+  $$Array,
+  $$String,
 }
 /*  Not a pure module */
