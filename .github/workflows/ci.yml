@@ -20,6 +20,50 @@ env:
   OCAMLRUNPARAM: b
 
 jobs:
+  test-rewatch:
+    runs-on: ubuntu-latest
+    env:
+      RUST_BACKTRACE: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Restore build cache
+        id: build-cache
+        uses: actions/cache@v4
+        with:
+          path: rewatch/target
+          key: rewatch-build-v2-ubuntu-24.04-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
+
+      - name: Install musl gcc
+        if: steps.build-cache.outputs.cache-hit != 'true' && runner.os == 'Linux'
+        run: sudo apt-get install -y --no-install-recommends musl-tools
+
+      - name: Install rust toolchain
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Build rewatch
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        run: |
+          cargo build --manifest-path rewatch/Cargo.toml --release
+
+      - name: Run rewatch unit tests
+        run: |
+          cargo test --manifest-path rewatch/Cargo.toml
+
+      - name: Run rewatch integration tests
+        run: |
+          make test-rewatch
+
   build-rewatch:
     strategy:
       fail-fast: false
@@ -440,7 +484,7 @@ jobs:
           path: lib/ocaml
 
   pkg-pr-new:
-    needs: 
+    needs:
       - build-rewatch
       - build-compiler
     runs-on: ubuntu-24.04-arm
