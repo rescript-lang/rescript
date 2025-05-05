@@ -6,7 +6,6 @@ Resolved opens 1 Stdlib
 ContextPath Value[emailPattern]->
 ContextPath Value[emailPattern]
 Path emailPattern
-CPPipe pathFromEnv:Stdlib.RegExp found:false
 Path Stdlib.RegExp.
 [{
     "label": "RegExp.lastIndex",
