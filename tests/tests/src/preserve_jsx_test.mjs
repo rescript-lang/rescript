@@ -111,6 +111,19 @@ let _external_component_with_children = <QueryClientProvider>
 <Preserve_jsx_test$B/>
 </QueryClientProvider>;
 
+function make(props) {
+  return <p>
+  {"foo"}
+  {props["\\\"MyWeirdProp\""]}
+  </p>;
+}
+
+let MyWeirdComponent = {
+  make: make
+};
+
+let _escaped_jsx_prop = <make MyWeirdProp={"bar"}/>;
+
 export {
   React,
   ReactDOM,
@@ -133,5 +146,7 @@ export {
   A,
   B,
   _external_component_with_children,
+  MyWeirdComponent,
+  _escaped_jsx_prop,
 }
 /* _single_element_child Not a pure module */

@@ -1124,7 +1124,9 @@ and print_jsx cxt ?(spread_props : J.expression option)
     else
       (List.fold_left (fun acc (n, x) ->
            P.space f;
-           P.string f n;
+           let prop_name = Js_dump_property.property_key_string n in
+
+           P.string f prop_name;
            P.string f "=";
            P.string f "{";
            let next = expression ~level:0 acc f x in
