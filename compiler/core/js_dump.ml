@@ -1213,16 +1213,25 @@ and print_jsx cxt ?(spread_props : J.expression option)
   | Some children ->
     (* Tag with children *)
     let has_children = List.length children > 0 in
-    if has_multiple_props || has_children then P.newline f;
+    (* Newline for ">" only if props themselves were multi-line. Children alone don't push ">" to a new line. *)
+    if has_multiple_props then P.newline f;
     P.string f ">";
 
     let cxt_after_children =
-      print_indented_list f level cxt children print_one_child
+      if has_children then
+        (* Only call print_indented_list if there are children *)
+        print_indented_list f level cxt children print_one_child
+      else cxt
+      (* No children, no change to context here, no newlines from children block *)
     in
     let cxt = cxt_after_children in
 
-    P.newline f;
-    (* For closing </tag> *)
+    (* The closing "</tag>" goes on a new line if the opening part was multi-line (due to props)
+       OR if there were actual children printed (which always makes the element multi-line).
+    *)
+    let element_content_was_multiline = has_multiple_props || has_children in
+    if element_content_was_multiline then P.newline f;
+
     P.string f "</";
     let cxt = print_tag cxt in
     P.string f ">";
