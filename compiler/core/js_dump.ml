@@ -1070,6 +1070,34 @@ and expression_desc cxt ~(level : int) f x : cxt =
         P.string f "...";
         expression ~level:13 cxt f e)
 
+and print_indented_list (f : P.t) (parent_expr_level : int) (cxt : cxt)
+    (items : 'a list) (print_item_func : int -> cxt -> P.t -> 'a -> cxt) : cxt =
+  if List.length items = 0 then cxt
+  else
+    P.group f 1 (fun () ->
+        (* Increment indent level by 1 for this block of items *)
+        P.newline f;
+        (* Start the block on a new, fully indented line for the first item *)
+        let rec process_items current_cxt_for_fold remaining_items =
+          match remaining_items with
+          | [] ->
+            current_cxt_for_fold
+            (* Base case for recursion, though initial check avoids empty items *)
+          | [last_item] ->
+            (* Print the last item, but DO NOT print a newline after it *)
+            print_item_func parent_expr_level current_cxt_for_fold f last_item
+          | current_item :: next_items ->
+            let cxt_after_current =
+              print_item_func parent_expr_level current_cxt_for_fold f
+                current_item
+            in
+            P.newline f;
+            (* Add a newline AFTER the current item, to prepare for the NEXT item *)
+            process_items cxt_after_current next_items
+        in
+        (* Initial call to the recursive helper; initial check ensures items is not empty *)
+        process_items cxt items)
+
 and print_jsx cxt ?(spread_props : J.expression option)
     ?(key : J.expression option) ~(level : int) f (fnName : string)
     (tag : J.expression) (fields : (string * J.expression) list) : cxt =
@@ -1134,6 +1162,23 @@ and print_jsx cxt ?(spread_props : J.expression option)
            next))
         cxt props
   in
+
+  let print_one_child expr_level_for_child current_cxt_for_child f_format
+      child_expr =
+    let child_is_jsx_itself =
+      match child_expr.J.expression_desc with
+      | J.Call (_, _, {call_transformed_jsx = is_jsx}) -> is_jsx
+      | _ -> false
+    in
+    if not child_is_jsx_itself then P.string f_format "{";
+    let next_cxt =
+      expression ~level:expr_level_for_child current_cxt_for_child f_format
+        child_expr
+    in
+    if not child_is_jsx_itself then P.string f_format "}";
+    next_cxt
+  in
+
   match children_opt with
   | None ->
     P.string f "<";
@@ -1141,29 +1186,18 @@ and print_jsx cxt ?(spread_props : J.expression option)
     P.string f "/>";
     cxt
   | Some children ->
-    let child_is_jsx child =
-      match child.J.expression_desc with
-      | J.Call (_, _, {call_transformed_jsx = is_jsx}) -> is_jsx
-      | _ -> false
-    in
-
     P.string f "<";
     let cxt = cxt |> print_tag |> print_props in
-
     P.string f ">";
-    if List.length children > 0 then P.newline f;
 
-    let cxt =
-      List.fold_left
-        (fun acc e ->
-          if not (child_is_jsx e) then P.string f "{";
-          let next = expression ~level acc f e in
-          if not (child_is_jsx e) then P.string f "}";
-          P.newline f;
-          next)
-        cxt children
+    let cxt_after_children =
+      print_indented_list f level cxt children print_one_child
     in
+    let cxt = cxt_after_children in
 
+    P.newline f;
+
+    (* Newline before the closing tag, uses parent's indent level *)
     P.string f "</";
     let cxt = print_tag cxt in
     P.string f ">";
