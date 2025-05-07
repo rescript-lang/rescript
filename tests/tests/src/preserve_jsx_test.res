@@ -159,6 +159,7 @@ let _external_component_with_children =
 module MyWeirdComponent = {
   type props = {\"MyWeirdProp": string}
 
+  @react.componentWithProps
   let make = props =>
     <p>
       {React.string("foo")}

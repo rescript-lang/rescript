@@ -111,7 +111,7 @@ let _external_component_with_children = <QueryClientProvider>
 <Preserve_jsx_test$B/>
 </QueryClientProvider>;
 
-function make(props) {
+function Preserve_jsx_test$MyWeirdComponent(props) {
   return <p>
   {"foo"}
   {props["\\\"MyWeirdProp\""]}
@@ -119,10 +119,10 @@ function make(props) {
 }
 
 let MyWeirdComponent = {
-  make: make
+  make: Preserve_jsx_test$MyWeirdComponent
 };
 
-let _escaped_jsx_prop = <make MyWeirdProp={"bar"}/>;
+let _escaped_jsx_prop = <Preserve_jsx_test$MyWeirdComponent MyWeirdProp={"bar"}/>;
 
 export {
   React,
