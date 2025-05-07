@@ -1126,19 +1126,19 @@ and print_jsx cxt ?(spread_props : J.expression option)
         else None)
       fields
   in
-  let print_props cxt =
+  let print_props cxt props =
     (* If a key is present, should be printed before the spread props,
     This is to ensure tools like ESBuild use the automatic JSX runtime *)
     let cxt =
       match key with
       | None -> cxt
-      | Some key ->
+      | Some k ->
         P.string f " key={";
-        let cxt = expression ~level:0 cxt f key in
+        let cxt_k = expression ~level:0 cxt f k in
         P.string f "} ";
-        cxt
+        cxt_k
     in
-    let props = List.filter (fun (n, _) -> n <> "children") fields in
+
     let cxt =
       match spread_props with
       | None -> cxt
@@ -1150,17 +1150,32 @@ and print_jsx cxt ?(spread_props : J.expression option)
     in
     if List.length props = 0 then cxt
     else
-      (List.fold_left (fun acc (n, x) ->
-           P.space f;
-           let prop_name = Js_dump_property.property_key_string n in
-
-           P.string f prop_name;
-           P.string f "=";
-           P.string f "{";
-           let next = expression ~level:0 acc f x in
-           P.string f "}";
-           next))
-        cxt props
+      P.group f 1 (fun () ->
+          P.newline f;
+          let rec process_remaining_props acc_cxt props_to_process =
+            match props_to_process with
+            | [] -> acc_cxt
+            | (n, x) :: [] ->
+              let prop_name = Js_dump_property.property_key_string n in
+              P.string f prop_name;
+              P.string f "=";
+              P.string f "{";
+              let next_cxt = expression ~level:0 acc_cxt f x in
+              P.string f "}";
+              next_cxt
+            | (n, x) :: tail ->
+              let prop_name = Js_dump_property.property_key_string n in
+              P.string f prop_name;
+              P.string f "=";
+              P.string f "{";
+              let cxt_after_current_prop_value =
+                expression ~level:0 acc_cxt f x
+              in
+              P.string f "}";
+              P.newline f;
+              process_remaining_props cxt_after_current_prop_value tail
+          in
+          process_remaining_props cxt props)
   in
 
   let print_one_child expr_level_for_child current_cxt_for_child f_format
@@ -1179,15 +1194,26 @@ and print_jsx cxt ?(spread_props : J.expression option)
     next_cxt
   in
 
+  let props = List.filter (fun (n, _) -> n <> "children") fields in
+
+  (* Actual printing of JSX element starts here *)
+  P.string f "<";
+  let cxt = print_tag cxt in
+  let cxt = print_props cxt props in
+  (* print_props handles its own block and updates cxt *)
+
+  let has_multiple_props = List.length props > 0 in
+
   match children_opt with
   | None ->
-    P.string f "<";
-    let cxt = cxt |> print_tag |> print_props in
+    (* Self-closing tag *)
+    if has_multiple_props then P.newline f;
     P.string f "/>";
     cxt
   | Some children ->
-    P.string f "<";
-    let cxt = cxt |> print_tag |> print_props in
+    (* Tag with children *)
+    let has_children = List.length children > 0 in
+    if has_multiple_props || has_children then P.newline f;
     P.string f ">";
 
     let cxt_after_children =
@@ -1196,8 +1222,7 @@ and print_jsx cxt ?(spread_props : J.expression option)
     let cxt = cxt_after_children in
 
     P.newline f;
-
-    (* Newline before the closing tag, uses parent's indent level *)
+    (* For closing </tag> *)
     P.string f "</";
     let cxt = print_tag cxt in
     P.string f ">";
