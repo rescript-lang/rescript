@@ -1129,53 +1129,58 @@ and print_jsx cxt ?(spread_props : J.expression option)
   let print_props cxt props =
     (* If a key is present, should be printed before the spread props,
     This is to ensure tools like ESBuild use the automatic JSX runtime *)
-    let cxt =
-      match key with
-      | None -> cxt
-      | Some k ->
-        P.string f " key={";
-        let cxt_k = expression ~level:0 cxt f k in
-        P.string f "} ";
-        cxt_k
+    let print_key key cxt =
+      P.string f "key={";
+      let cxt_k = expression ~level:0 cxt f key in
+      P.string f "} ";
+      cxt_k
     in
 
-    let cxt =
-      match spread_props with
-      | None -> cxt
-      | Some spread ->
-        P.string f " {...";
-        let cxt = expression ~level:0 cxt f spread in
-        P.string f "} ";
-        cxt
+    let print_spread_props spread cxt =
+      P.string f "{...";
+      let cxt = expression ~level:0 cxt f spread in
+      P.string f "} ";
+      cxt
     in
-    if List.length props = 0 then cxt
+
+    let print_prop n x ctx =
+      let prop_name = Js_dump_property.property_key_string n in
+      P.string f prop_name;
+      P.string f "=";
+      P.string f "{";
+      let next_cxt = expression ~level:0 ctx f x in
+      P.string f "}";
+      next_cxt
+    in
+    let printable_props =
+      (match key with
+      | None -> []
+      | Some k -> [print_key k])
+      @ (match spread_props with
+        | None -> []
+        | Some spread -> [print_spread_props spread])
+      @ List.map (fun (n, x) -> print_prop n x) props
+    in
+    if List.length printable_props = 0 then (
+      match children_opt with
+      | Some _ -> cxt
+      | None ->
+        (* Put a space the tag name and /> *)
+        P.space f;
+        cxt)
     else
       P.group f 1 (fun () ->
           P.newline f;
-          let rec process_remaining_props acc_cxt props_to_process =
-            match props_to_process with
+          let rec process_remaining_props acc_cxt printable_props =
+            match printable_props with
             | [] -> acc_cxt
-            | (n, x) :: [] ->
-              let prop_name = Js_dump_property.property_key_string n in
-              P.string f prop_name;
-              P.string f "=";
-              P.string f "{";
-              let next_cxt = expression ~level:0 acc_cxt f x in
-              P.string f "}";
-              next_cxt
-            | (n, x) :: tail ->
-              let prop_name = Js_dump_property.property_key_string n in
-              P.string f prop_name;
-              P.string f "=";
-              P.string f "{";
-              let cxt_after_current_prop_value =
-                expression ~level:0 acc_cxt f x
-              in
-              P.string f "}";
+            | print_prop :: [] -> print_prop acc_cxt
+            | print_prop :: tail ->
+              let next_cxt = print_prop acc_cxt in
               P.newline f;
-              process_remaining_props cxt_after_current_prop_value tail
+              process_remaining_props next_cxt tail
           in
-          process_remaining_props cxt props)
+          process_remaining_props cxt printable_props)
   in
 
   let print_one_child expr_level_for_child current_cxt_for_child f_format

@@ -8,7 +8,7 @@ let React = {};
 let ReactDOM = {};
 
 function Preserve_jsx_test$Icon(props) {
-  return <strong/>;
+  return <strong />;
 }
 
 let Icon = {
@@ -25,11 +25,11 @@ let _multiple_element_children = <div>
   <h1>
     {"Hello, world!"}
   </h1>
-  <Preserve_jsx_test$Icon/>
+  <Preserve_jsx_test$Icon />
 </div>;
 
 let _single_element_fragment = <>
-  {Primitive_option.some(<input/>)}
+  {Primitive_option.some(<input />)}
 </>;
 
 let _multiple_element_fragment = <>
@@ -60,13 +60,15 @@ let baseProps = {
 
 let newrecord = {...baseProps};
 
-let _unary_element_with_spread_props = <input {...newrecord} 
+let _unary_element_with_spread_props = <input
+  {...newrecord} 
   type={"text"}
 />;
 
 let newrecord$1 = {...baseProps};
 
-let _container_with_spread_props = <div {...newrecord$1} 
+let _container_with_spread_props = <div
+  {...newrecord$1} 
   title={"barry"}
   className={"barry"}
 >
@@ -94,7 +96,8 @@ let _container_with_spread_children = <div
 
 let newrecord$2 = {...baseProps};
 
-let _container_with_spread_props_and_children = <div {...newrecord$2} 
+let _container_with_spread_props_and_children = <div
+  {...newrecord$2} 
   title={"barry"}
   className={"barry"}
 >
@@ -103,13 +106,17 @@ let _container_with_spread_props_and_children = <div {...newrecord$2}
 
 let newrecord$3 = {...baseProps};
 
-let _unary_element_with_spread_props_keyed = <input key={"barry-key"}  {...newrecord$3} 
+let _unary_element_with_spread_props_keyed = <input
+  key={"barry-key"} 
+  {...newrecord$3} 
   type={"text"}
 />;
 
 let newrecord$4 = {...baseProps};
 
-let _container_with_spread_props_keyed = <div key={"barry-key"}  {...newrecord$4} 
+let _container_with_spread_props_keyed = <div
+  key={"barry-key"} 
+  {...newrecord$4} 
   title={"barry"}
   className={"barry"}
 >
@@ -119,7 +126,8 @@ let _container_with_spread_props_keyed = <div key={"barry-key"}  {...newrecord$4
   />
 </div>;
 
-let _unary_element_with_only_spread_props = <input {...baseProps} />;
+let _unary_element_with_only_spread_props = <input
+  {...baseProps} />;
 
 function QueryClientProvider(props) { return props.children }
 ;
@@ -137,8 +145,8 @@ let B = {
 };
 
 let _external_component_with_children = <QueryClientProvider>
-  <strong/>
-  <Preserve_jsx_test$B/>
+  <strong />
+  <Preserve_jsx_test$B />
 </QueryClientProvider>;
 
 function Preserve_jsx_test$MyWeirdComponent(props) {
