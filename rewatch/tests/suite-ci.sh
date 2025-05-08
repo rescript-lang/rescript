@@ -13,13 +13,13 @@ export REWATCH_EXECUTABLE
 source ./utils.sh
 
 bold "Rescript version"
-(cd ../testrepo && yarn rescript -v)
+(cd ../testrepo && ./node_modules/.bin/rescript -v)
 
 # we need to reset the yarn.lock and package.json to the original state
 # so there is not diff in git. The CI will install new ReScript package
 bold "Reset package.json and yarn.lock"
-git checkout ../testrepo/yarn.lock
-git checkout ../testrepo/package.json
+git checkout ../testrepo/yarn.lock &> /dev/null
+git checkout ../testrepo/package.json &> /dev/null
 success "Reset package.json and yarn.lock"
 
 bold "Make sure the testrepo is clean"

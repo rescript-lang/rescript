@@ -3,7 +3,7 @@ cd ../testrepo
 
 bold "Test: It should watch"
 
-if rewatch clean ;
+if rewatch clean &> /dev/null;
 then
   success "Repo Cleaned"
 else 
@@ -16,7 +16,7 @@ exit_watcher() {
   rm lib/rewatch.lock
 }
 
-rewatch watch  &
+rewatch_bg watch > /dev/null 2>&1 &
 success "Watcher Started"
 
 echo 'Js.log("added-by-test")' >> ./packages/main/src/Main.res
