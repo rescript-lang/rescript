@@ -1127,13 +1127,23 @@ and print_jsx cxt ?(spread_props : J.expression option)
       fields
   in
   let print_props cxt props =
+    let print_prop_value (x : J.expression) ctx =
+      let needs_braces =
+        match x.expression_desc with
+        | Str _ | Optional_block ({expression_desc = Str _}, _) -> false
+        | _ -> true
+      in
+      if needs_braces then P.string f "{";
+      let next_cxt = expression ~level:0 ctx f x in
+      if needs_braces then P.string f "}";
+      next_cxt
+    in
+
     (* If a key is present, should be printed before the spread props,
     This is to ensure tools like ESBuild use the automatic JSX runtime *)
     let print_key key cxt =
-      P.string f "key={";
-      let cxt_k = expression ~level:0 cxt f key in
-      P.string f "} ";
-      cxt_k
+      P.string f "key=";
+      print_prop_value key cxt
     in
 
     let print_spread_props spread cxt =
@@ -1147,10 +1157,7 @@ and print_jsx cxt ?(spread_props : J.expression option)
       let prop_name = Js_dump_property.property_key_string n in
       P.string f prop_name;
       P.string f "=";
-      P.string f "{";
-      let next_cxt = expression ~level:0 ctx f x in
-      P.string f "}";
-      next_cxt
+      print_prop_value x ctx
     in
     let printable_props =
       (match key with
