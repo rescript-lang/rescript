@@ -85,7 +85,7 @@ pub fn print(buildstate: &BuildState) {
 
             // Write sourcedirs.json
             write_sourcedirs_files(
-                package.get_bs_build_path(),
+                package.get_build_path(),
                 &SourceDirs {
                     dirs: &dirs.clone().into_iter().collect::<Vec<Dir>>(),
                     pkgs: &pkgs.clone().flatten().collect::<Vec<Pkg>>(),
@@ -109,7 +109,7 @@ pub fn print(buildstate: &BuildState) {
 
     // Write sourcedirs.json
     write_sourcedirs_files(
-        root_package.get_bs_build_path(),
+        root_package.get_build_path(),
         &SourceDirs {
             dirs: &merged_dirs.into_iter().collect::<Vec<Dir>>(),
             pkgs: &merged_pkgs.into_iter().collect::<Vec<Pkg>>(),
