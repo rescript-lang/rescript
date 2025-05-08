@@ -92,6 +92,20 @@ async fn async_watch(
         }
 
         for event in events {
+            // if there is a file named rewatch.lock in the events path, we can quit the watcher
+            if let Some(path) = event.paths.iter().find(|path| path.ends_with("rewatch.lock")) {
+                match event.kind {
+                    EventKind::Remove(_) => {
+                        if show_progress {
+                            println!("\nExiting... (lockfile removed)");
+                        }
+                        clean::cleanup_after_build(&build_state);
+                        return Ok(());
+                    }
+                    _ => (),
+                }
+            }
+
             let paths = event
                 .paths
                 .iter()
