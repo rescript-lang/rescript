@@ -19,7 +19,6 @@ exit_watcher() {
 }
 
 rewatch_bg watch > /dev/null 2>&1 &
-echo "Started watcher in background"
 
 sleep 1
 
