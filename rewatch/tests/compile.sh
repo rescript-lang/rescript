@@ -72,7 +72,35 @@ rewatch build &> /dev/null
 echo 'Dep01.log()' >> packages/new-namespace/src/NS_alias.res
 rewatch build &> ../tests/snapshots/dependency-cycle.txt
 git checkout -- packages/new-namespace/src/NS_alias.res
-rewatch build &> /dev/null
+
+# it should compile dev dependencies with the --dev flag
+rewatch clean &> /dev/null
+rewatch build --dev &> /dev/null;
+if [ $? -ne 0 ];
+then
+  error "Failed to compile dev dependencies"
+  exit 1
+fi
+
+file_count=$(find ./packages/with-dev-deps/test -name *.mjs | wc -l)
+if [ "$file_count" -eq 1 ];
+then
+  success "Compiled dev dependencies successfully"
+else
+  error "Expected 2 files to be compiled with the --dev flag, found $file_count"
+  exit 1
+fi
+
+rewatch clean --dev &> /dev/null
+file_count=$(find ./packages/with-dev-deps -name *.mjs | wc -l)
+if [ "$file_count" -eq 0 ];
+then
+  success "Cleaned dev dependencies successfully"
+else
+  error "Expected 0 files remaining after cleaning, found $file_count"
+  exit 1
+fi
+
 
 # it should not loop (we had an infinite loop when clean building with a cycle)
 rewatch clean &> /dev/null

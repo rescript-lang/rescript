@@ -496,6 +496,7 @@ pub fn get_source_files(
     package_dir: &Path,
     filter: &Option<regex::Regex>,
     source: &config::PackageSource,
+    build_dev_deps: bool,
 ) -> AHashMap<String, SourceFileMeta> {
     let mut map: AHashMap<String, SourceFileMeta> = AHashMap::new();
 
@@ -509,24 +510,19 @@ pub fn get_source_files(
     };
 
     let path_dir = Path::new(&source.dir);
-    // don't include dev sources for now
-    if type_ != &Some("dev".to_string()) {
-        match read_folders(filter, package_dir, path_dir, recurse) {
+    match (build_dev_deps, type_) {
+        (false, Some(type_)) if type_ == "dev" => (),
+        _ => match read_folders(filter, package_dir, path_dir, recurse) {
             Ok(files) => map.extend(files),
-            // Err(_e) if type_ == &Some("dev".to_string()) => {
-            //     log::warn!(
-            //         "Could not read folder: {}... Probably ok as type is dev",
-            //         path_dir.to_string_lossy()
-            //     )
-            // }
+
             Err(_e) => log::error!(
                 "Could not read folder: {:?}. Specified in dependency: {}, located {:?}...",
                 path_dir.to_path_buf().into_os_string(),
                 package_name,
                 package_dir
             ),
-        }
-    }
+        },
+    };
 
     map
 }
@@ -536,13 +532,22 @@ pub fn get_source_files(
 fn extend_with_children(
     filter: &Option<regex::Regex>,
     mut build: AHashMap<String, Package>,
+    build_dev_deps: bool,
 ) -> AHashMap<String, Package> {
     for (_key, package) in build.iter_mut() {
         let mut map: AHashMap<String, SourceFileMeta> = AHashMap::new();
         package
             .source_folders
             .par_iter()
-            .map(|source| get_source_files(&package.name, Path::new(&package.path), filter, source))
+            .map(|source| {
+                get_source_files(
+                    &package.name,
+                    Path::new(&package.path),
+                    filter,
+                    source,
+                    build_dev_deps,
+                )
+            })
             .collect::<Vec<AHashMap<String, SourceFileMeta>>>()
             .into_iter()
             .for_each(|source| map.extend(source));
@@ -584,12 +589,13 @@ pub fn make(
     root_folder: &str,
     workspace_root: &Option<String>,
     show_progress: bool,
+    build_dev_deps: bool,
 ) -> Result<AHashMap<String, Package>> {
     let map = read_packages(root_folder, workspace_root.to_owned(), show_progress)?;
 
     /* Once we have the deduplicated packages, we can add the source files for each - to minimize
      * the IO */
-    let result = extend_with_children(filter, map);
+    let result = extend_with_children(filter, map, build_dev_deps);
 
     Ok(result)
 }
