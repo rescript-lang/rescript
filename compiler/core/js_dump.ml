@@ -148,7 +148,7 @@ let raw_snippet_exp_simple_enough (s : string) =
 
 (* e = function(x){...}(x);  is good
 *)
-let rec exp_need_paren ?(arrow = false) (e : J.expression) =
+let exp_need_paren ?(arrow = false) (e : J.expression) =
   match e.expression_desc with
   (* | Caml_uninitialized_obj _  *)
   | Call ({expression_desc = Raw_js_code _}, _, _) -> true
@@ -172,8 +172,6 @@ let rec exp_need_paren ?(arrow = false) (e : J.expression) =
   | Await _ -> false
   | Spread _ -> false
   | Tagged_template _ -> false
-  | Optional_block (e, true) when arrow -> exp_need_paren ~arrow e
-  | Optional_block _ -> false
 
 (** Print as underscore for unused vars, may not be 
     needed in the future *)
@@ -867,10 +865,6 @@ and expression_desc cxt ~(level : int) f x : cxt =
     match el with
     | [] | [_] -> P.bracket_group f 1 (fun _ -> array_element_list cxt f el)
     | _ -> P.bracket_vgroup f 1 (fun _ -> array_element_list cxt f el))
-  | Optional_block (e, identity) ->
-    expression ~level cxt f
-      (if identity then e
-       else E.runtime_call Primitive_modules.option "some" [e])
   | Caml_block (el, _, _, Blk_module fields) ->
     expression_desc cxt ~level f
       (Object
@@ -1118,9 +1112,7 @@ and print_jsx cxt ?(spread_props : J.expression option)
         if n = "children" then
           if fnName = "jsxs" then
             match e.J.expression_desc with
-            | J.Array (xs, _)
-            | J.Optional_block ({expression_desc = J.Array (xs, _)}, _) ->
-              Some xs
+            | J.Array (xs, _) -> Some xs
             | _ -> Some [e]
           else Some [e]
         else None)

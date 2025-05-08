@@ -2,7 +2,6 @@
 
 import * as Stdlib_JsExn from "rescript/lib/es6/Stdlib_JsExn.js";
 import * as Stdlib_Option from "rescript/lib/es6/Stdlib_Option.js";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 import * as Core_Intl_LocaleTest from "./Core_Intl_LocaleTest.mjs";
 import * as Primitive_exceptions from "rescript/lib/es6/Primitive_exceptions.js";
 import * as Core_Intl_CollatorTest from "./Core_Intl_CollatorTest.mjs";
@@ -73,7 +72,7 @@ try {
   } else {
     let e$4 = Stdlib_JsExn.fromException(e$2);
     if (e$4 !== undefined) {
-      throw Primitive_option.valFromOption(e$4);
+      throw e$4;
     }
     console.error("Unexpected error");
   }

@@ -93,21 +93,21 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     | [e] -> (
       match e.expression_desc with
       | Var _ | Undefined _ | Null -> Js_of_lam_option.null_to_opt e
-      | _ -> E.runtime_call Primitive_modules.option "fromNull" args)
+      | _ -> e)
     | _ -> assert false)
   | Pundefined_to_opt -> (
     match args with
     | [e] -> (
       match e.expression_desc with
       | Var _ | Undefined _ | Null -> Js_of_lam_option.undef_to_opt e
-      | _ -> E.runtime_call Primitive_modules.option "fromUndefined" args)
+      | _ -> e)
     | _ -> assert false)
   | Pnull_undefined_to_opt -> (
     match args with
     | [e] -> (
       match e.expression_desc with
       | Var _ | Undefined _ | Null -> Js_of_lam_option.null_undef_to_opt e
-      | _ -> E.runtime_call Primitive_modules.option "fromNullable" args)
+      | _ -> e)
     | _ -> assert false)
   (* Compile %import: The module argument for dynamic import is represented as a path,
      and the module value is expressed through wrapping it with promise.then *)

@@ -132,7 +132,6 @@ let expression_desc : expression_desc fn =
   | Str _ -> ()
   | Raw_js_code _ -> ()
   | Array (_x0, _x1) -> list _self.expression _self _x0
-  | Optional_block (_x0, _x1) -> _self.expression _self _x0
   | Caml_block (_x0, _x1, _x2, _x3) ->
     list _self.expression _self _x0;
     _self.expression _self _x2

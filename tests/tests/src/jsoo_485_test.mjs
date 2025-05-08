@@ -2,7 +2,7 @@
 
 
 function f() {
-  3;
+  
 }
 
 export {

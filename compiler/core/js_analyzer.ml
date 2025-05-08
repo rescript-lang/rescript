@@ -101,7 +101,6 @@ let rec no_side_effect_expression_desc (x : J.expression_desc) =
         the block is mutable does not mean this operation is non-pure
     *)
     Ext_list.for_all xs no_side_effect
-  | Optional_block (x, _) -> no_side_effect x
   | Object (_, kvs) -> Ext_list.for_all_snd kvs no_side_effect
   | String_append (a, b) | Seq (a, b) -> no_side_effect a && no_side_effect b
   | Length (e, _) | Caml_block_tag (e, _) | Typeof e -> no_side_effect e
@@ -217,10 +216,6 @@ let rec eq_expression ({expression_desc = x0} : J.expression)
   | Bool a0 -> (
     match y0 with
     | Bool b0 -> a0 = b0
-    | _ -> false)
-  | Optional_block (a0, b0) -> (
-    match y0 with
-    | Optional_block (a1, b1) -> b0 = b1 && eq_expression a0 a1
     | _ -> false)
   | Caml_block (ls0, flag0, tag0, _) -> (
     match y0 with

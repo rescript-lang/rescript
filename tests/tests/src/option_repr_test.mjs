@@ -3,7 +3,6 @@
 import * as Mt from "./mt.mjs";
 import * as Belt_List from "rescript/lib/es6/Belt_List.js";
 import * as Primitive_object from "rescript/lib/es6/Primitive_object.js";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 let suites = {
   contents: /* [] */0
@@ -65,16 +64,16 @@ function f4(x) {
 }
 
 function f5(a) {
-  return false;
+  return a === undefined;
 }
 
 function f6(a) {
-  return true;
+  return a !== undefined;
 }
 
-let f10 = Primitive_option.some(Primitive_option.some(Primitive_option.some(Primitive_option.some(undefined))));
+let f10;
 
-let f11 = Primitive_option.some(f10);
+let f11 = f10;
 
 let randomized = {
   contents: false
@@ -126,9 +125,9 @@ b("File \"option_repr_test.res\", line 94, characters 4-11", !Primitive_object.g
 
 b("File \"option_repr_test.res\", line 95, characters 4-11", Primitive_object.greaterthan(null, undefined));
 
-b("File \"option_repr_test.res\", line 96, characters 4-11", Primitive_object.lessthan(undefined, Primitive_option.some(undefined)));
+b("File \"option_repr_test.res\", line 96, characters 4-11", Primitive_object.lessthan(undefined, undefined));
 
-b("File \"option_repr_test.res\", line 97, characters 4-11", Primitive_object.greaterthan(Primitive_option.some(undefined), undefined));
+b("File \"option_repr_test.res\", line 97, characters 4-11", Primitive_object.greaterthan(undefined, undefined));
 
 console.log(6, undefined);
 
@@ -168,7 +167,7 @@ function all_true(xs) {
   return Belt_List.every(xs, x => x);
 }
 
-let xs_0 = gtx(Primitive_option.some(null), Primitive_option.some(undefined));
+let xs_0 = gtx(null, undefined);
 
 let xs = {
   hd: xs_0,
@@ -177,22 +176,22 @@ let xs = {
 
 b("File \"option_repr_test.res\", line 125, characters 2-9", Belt_List.every(xs, x => x));
 
-let xs_0$1 = Primitive_object.lessthan(Primitive_option.some(undefined), 3) && Primitive_object.greaterthan(3, Primitive_option.some(undefined));
+let xs_0$1 = Primitive_object.lessthan(undefined, 3) && Primitive_object.greaterthan(3, undefined);
 
 let xs_1 = {
-  hd: Primitive_object.lessthan(Primitive_option.some(undefined), Primitive_option.some(Primitive_option.some(undefined))) && Primitive_object.greaterthan(Primitive_option.some(Primitive_option.some(undefined)), Primitive_option.some(undefined)),
+  hd: Primitive_object.lessthan(undefined, undefined) && Primitive_object.greaterthan(undefined, undefined),
   tl: {
-    hd: Primitive_object.lessthan(Primitive_option.some(undefined), "3") && Primitive_object.greaterthan("3", Primitive_option.some(undefined)),
+    hd: Primitive_object.lessthan(undefined, "3") && Primitive_object.greaterthan("3", undefined),
     tl: {
-      hd: Primitive_object.lessthan(Primitive_option.some(undefined), true) && Primitive_object.greaterthan(true, Primitive_option.some(undefined)),
+      hd: Primitive_object.lessthan(undefined, true) && Primitive_object.greaterthan(true, undefined),
       tl: {
-        hd: Primitive_object.lessthan(Primitive_option.some(undefined), false) && Primitive_object.greaterthan(false, Primitive_option.some(undefined)),
+        hd: Primitive_object.lessthan(undefined, false) && Primitive_object.greaterthan(false, undefined),
         tl: {
           hd: Primitive_object.lessthan(false, true) && Primitive_object.greaterthan(true, false),
           tl: {
             hd: Primitive_object.lessthan(false, true) && Primitive_object.greaterthan(true, false),
             tl: {
-              hd: Primitive_object.lessthan(undefined, Primitive_option.some(undefined)) && Primitive_object.greaterthan(Primitive_option.some(undefined), undefined),
+              hd: Primitive_object.lessthan(undefined, undefined) && Primitive_object.greaterthan(undefined, undefined),
               tl: {
                 hd: ltx(undefined, null),
                 tl: {
@@ -221,11 +220,11 @@ b("File \"option_repr_test.res\", line 127, characters 2-9", Belt_List.every(xs$
 let xs_1$1 = {
   hd: neqx(undefined, null),
   tl: {
-    hd: Primitive_object.equal(Primitive_option.some(undefined), Primitive_option.some(undefined)) && Primitive_object.equal(Primitive_option.some(undefined), Primitive_option.some(undefined)),
+    hd: true,
     tl: {
-      hd: Primitive_object.equal(Primitive_option.some(Primitive_option.some(undefined)), Primitive_option.some(Primitive_option.some(undefined))) && Primitive_object.equal(Primitive_option.some(Primitive_option.some(undefined)), Primitive_option.some(Primitive_option.some(undefined))),
+      hd: true,
       tl: {
-        hd: Primitive_object.notequal(Primitive_option.some(Primitive_option.some(Primitive_option.some(undefined))), Primitive_option.some(Primitive_option.some(undefined))) && Primitive_object.notequal(Primitive_option.some(Primitive_option.some(undefined)), Primitive_option.some(Primitive_option.some(Primitive_option.some(undefined)))),
+        hd: false,
         tl: /* [] */0
       }
     }
@@ -256,9 +255,9 @@ Mt.from_pair_suites("Option_repr_test", suites.contents);
 
 let f7;
 
-let f8 = Primitive_option.some(undefined);
+let f8;
 
-let f9 = Primitive_option.some(Primitive_option.some(undefined));
+let f9;
 
 let N;
 

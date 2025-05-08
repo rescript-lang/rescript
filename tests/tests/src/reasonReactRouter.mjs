@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import * as Js_string from "rescript/lib/es6/Js_string.js";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 function safeMakeEvent(eventName) {
   if (typeof Event === "function") {
@@ -18,7 +17,7 @@ function path() {
   if (window === undefined) {
     return /* [] */0;
   }
-  let raw = Primitive_option.valFromOption(window).location.pathname;
+  let raw = window.location.pathname;
   switch (raw) {
     case "" :
     case "/" :
@@ -51,7 +50,7 @@ function hash() {
   if (window === undefined) {
     return "";
   }
-  let raw = Primitive_option.valFromOption(window).location.hash;
+  let raw = window.location.hash;
   switch (raw) {
     case "" :
     case "#" :
@@ -66,7 +65,7 @@ function search() {
   if (window === undefined) {
     return "";
   }
-  let raw = Primitive_option.valFromOption(window).location.search;
+  let raw = window.location.search;
   switch (raw) {
     case "" :
     case "?" :
@@ -80,8 +79,8 @@ function push(path) {
   let match = globalThis.history;
   let match$1 = globalThis.window;
   if (match !== undefined && match$1 !== undefined) {
-    Primitive_option.valFromOption(match).pushState(null, "", path);
-    Primitive_option.valFromOption(match$1).dispatchEvent(safeMakeEvent("popstate"));
+    match.pushState(null, "", path);
+    match$1.dispatchEvent(safeMakeEvent("popstate"));
     return;
   }
   
@@ -91,8 +90,8 @@ function replace(path) {
   let match = globalThis.history;
   let match$1 = globalThis.window;
   if (match !== undefined && match$1 !== undefined) {
-    Primitive_option.valFromOption(match).replaceState(null, "", path);
-    Primitive_option.valFromOption(match$1).dispatchEvent(safeMakeEvent("popstate"));
+    match.replaceState(null, "", path);
+    match$1.dispatchEvent(safeMakeEvent("popstate"));
     return;
   }
   
@@ -137,14 +136,14 @@ function watchUrl(callback) {
     return () => {};
   }
   let watcherID = () => callback(url());
-  Primitive_option.valFromOption(window).addEventListener("popstate", watcherID);
+  window.addEventListener("popstate", watcherID);
   return watcherID;
 }
 
 function unwatchUrl(watcherID) {
   let window = globalThis.window;
   if (window !== undefined) {
-    Primitive_option.valFromOption(window).removeEventListener("popstate", watcherID);
+    window.removeEventListener("popstate", watcherID);
     return;
   }
   

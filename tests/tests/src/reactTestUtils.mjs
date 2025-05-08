@@ -2,7 +2,6 @@
 
 import * as Belt_Array from "rescript/lib/es6/Belt_Array.js";
 import * as Belt_Option from "rescript/lib/es6/Belt_Option.js";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 import * as TestUtils from "react-dom/test-utils";
 
 function act(func) {
@@ -65,7 +64,7 @@ let DOM = {
 function prepareContainer(container, param) {
   let containerElement = document.createElement("div");
   Belt_Option.map(document.body, body => body.appendChild(containerElement));
-  container.contents = Primitive_option.some(containerElement);
+  container.contents = containerElement;
 }
 
 function cleanupContainer(container, param) {

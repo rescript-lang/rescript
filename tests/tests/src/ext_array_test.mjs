@@ -3,7 +3,6 @@
 import * as Belt_List from "rescript/lib/es6/Belt_List.js";
 import * as Belt_Array from "rescript/lib/es6/Belt_Array.js";
 import * as Pervasives from "rescript/lib/es6/Pervasives.js";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 function reverse_range(a, i, len) {
   if (len === 0) {
@@ -92,7 +91,7 @@ function filter_map(f, a) {
     if (v$1 !== undefined) {
       _i = i + 1 | 0;
       _acc = {
-        hd: Primitive_option.valFromOption(v$1),
+        hd: v$1,
         tl: acc
       };
       continue;
@@ -129,7 +128,7 @@ function tolist_aux(a, f, _i, _res) {
     let v = a[i];
     let v$1 = f(v);
     _res = v$1 !== undefined ? ({
-        hd: Primitive_option.valFromOption(v$1),
+        hd: v$1,
         tl: res
       }) : res;
     _i = i - 1 | 0;

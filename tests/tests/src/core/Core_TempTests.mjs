@@ -9,7 +9,6 @@ import * as Stdlib_BigInt from "rescript/lib/es6/Stdlib_BigInt.js";
 import * as Stdlib_Option from "rescript/lib/es6/Stdlib_Option.js";
 import * as Core_IntlTests from "./intl/Core_IntlTests.mjs";
 import * as Primitive_bigint from "rescript/lib/es6/Primitive_bigint.js";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 console.info("");
 
@@ -205,7 +204,7 @@ console.log(regex.test(string));
 
 let result = regex.exec(string);
 
-let result$1 = (result == null) ? undefined : Primitive_option.some(result);
+let result$1 = (result == null) ? undefined : result;
 
 console.log(Stdlib_Option.map(result$1, prim => prim.input));
 
@@ -276,9 +275,13 @@ let z = 1.2 % 1.4;
 
 let intFromBigInt = Stdlib_BigInt.toInt(BigInt("10000000000"));
 
-console.log({
-  bar: "1"
-});
+let tmp$1 = {};
+
+if ("1" !== undefined) {
+  tmp$1.bar = "1";
+}
+
+console.log(tmp$1);
 
 let Bugfix = {};
 

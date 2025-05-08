@@ -6,7 +6,6 @@ import * as Pervasives from "rescript/lib/es6/Pervasives.js";
 import * as Belt_Option from "rescript/lib/es6/Belt_Option.js";
 import * as Primitive_int from "rescript/lib/es6/Primitive_int.js";
 import * as Belt_MapString from "rescript/lib/es6/Belt_MapString.js";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 function split(delim, s) {
   let len = s.length;
@@ -224,12 +223,12 @@ function process_input_line(ticker_map, all_tickers, line) {
       if (match$1.tl !== 0) {
         return Pervasives.failwith("Invalid input line");
       }
-      let ticker_map$1 = ticker_map !== undefined ? Primitive_option.valFromOption(ticker_map) : compute_update_sequences(all_tickers);
+      let ticker_map$1 = ticker_map !== undefined ? ticker_map : compute_update_sequences(all_tickers);
       let value = Belt_Option.getExn(Belt_Float.fromString(match$1.hd));
       process_quote(ticker_map$1, match.hd, value);
       return [
         all_tickers,
-        Primitive_option.some(ticker_map$1)
+        ticker_map$1
       ];
     case "R" :
       let match$2 = tokens.tl;

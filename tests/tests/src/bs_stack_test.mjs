@@ -2,7 +2,6 @@
 
 import * as Mt from "./mt.mjs";
 import * as Js_undefined from "rescript/lib/es6/Js_undefined.js";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 import * as Belt_MutableQueue from "rescript/lib/es6/Belt_MutableQueue.js";
 import * as Belt_MutableStack from "rescript/lib/es6/Belt_MutableStack.js";
 
@@ -91,7 +90,7 @@ function n(l, r, a) {
   };
 }
 
-let test1 = n(Primitive_option.some(n(Primitive_option.some(n(undefined, undefined, 4)), Primitive_option.some(n(undefined, undefined, 5)), 2)), Primitive_option.some(n(undefined, undefined, 3)), 1);
+let test1 = n(n(n(undefined, undefined, 4), n(undefined, undefined, 5), 2), n(undefined, undefined, 3), 1);
 
 function pushAllLeft(st1, s1) {
   let current = st1;
@@ -102,9 +101,9 @@ function pushAllLeft(st1, s1) {
   };
 }
 
-let test2 = n(Primitive_option.some(n(Primitive_option.some(n(Primitive_option.some(n(Primitive_option.some(n(undefined, undefined, 4)), undefined, 2)), undefined, 5)), undefined, 1)), undefined, 3);
+let test2 = n(n(n(n(n(undefined, undefined, 4), undefined, 2), undefined, 5), undefined, 1), undefined, 3);
 
-let test3 = n(Primitive_option.some(n(Primitive_option.some(n(Primitive_option.some(n(undefined, undefined, 4)), undefined, 2)), undefined, 5)), Primitive_option.some(n(undefined, undefined, 3)), 1);
+let test3 = n(n(n(n(undefined, undefined, 4), undefined, 2), undefined, 5), n(undefined, undefined, 3), 1);
 
 eq("File \"bs_stack_test.res\", line 98, characters 3-10", inOrder(test1), [
   4,

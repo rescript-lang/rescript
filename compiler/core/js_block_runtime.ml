@@ -22,12 +22,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-let option_id = Ident.create_persistent Primitive_modules.option
-
 let curry_id = Ident.create_persistent Primitive_modules.curry
 
 let check_additional_id (x : J.expression) : Ident.t option =
   match x.expression_desc with
-  | Optional_block (_, false) -> Some option_id
   | Call (_, _, {arity = NA}) -> Some curry_id
   | _ -> None

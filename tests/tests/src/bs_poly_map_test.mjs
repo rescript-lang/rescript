@@ -7,7 +7,6 @@ import * as Belt_Set from "rescript/lib/es6/Belt_Set.js";
 import * as Belt_Array from "rescript/lib/es6/Belt_Array.js";
 import * as Primitive_int from "rescript/lib/es6/Primitive_int.js";
 import * as Array_data_util from "./array_data_util.mjs";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 let suites = {
   contents: /* [] */0
@@ -40,30 +39,15 @@ function emptyMap() {
 }
 
 function mergeInter(s1, s2) {
-  return Belt_Set.fromArray(Belt_Map.keysToArray(Belt_Map.merge(s1, s2, (k, v1, v2) => {
-    if (v1 !== undefined && v2 !== undefined) {
-      return Primitive_option.some(undefined);
-    }
-    
-  })), Icmp);
+  return Belt_Set.fromArray(Belt_Map.keysToArray(Belt_Map.merge(s1, s2, (k, v1, v2) => {})), Icmp);
 }
 
 function mergeUnion(s1, s2) {
-  return Belt_Set.fromArray(Belt_Map.keysToArray(Belt_Map.merge(s1, s2, (k, v1, v2) => {
-    if (v1 !== undefined || v2 !== undefined) {
-      return Primitive_option.some(undefined);
-    }
-    
-  })), Icmp);
+  return Belt_Set.fromArray(Belt_Map.keysToArray(Belt_Map.merge(s1, s2, (k, v1, v2) => {})), Icmp);
 }
 
 function mergeDiff(s1, s2) {
-  return Belt_Set.fromArray(Belt_Map.keysToArray(Belt_Map.merge(s1, s2, (k, v1, v2) => {
-    if (v1 !== undefined && v2 === undefined) {
-      return Primitive_option.some(undefined);
-    }
-    
-  })), Icmp);
+  return Belt_Set.fromArray(Belt_Map.keysToArray(Belt_Map.merge(s1, s2, (k, v1, v2) => {})), Icmp);
 }
 
 function randomRange(i, j) {

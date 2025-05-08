@@ -3,15 +3,15 @@
 import * as Nodeassert from "node:assert";
 
 function ok(loc, a) {
-  Nodeassert.ok(a, loc);
+  Nodeassert.ok(a, loc !== undefined ? loc : undefined);
 }
 
 function eq(loc, a, b) {
-  Nodeassert.deepStrictEqual(a, b, loc);
+  Nodeassert.deepStrictEqual(a, b, loc !== undefined ? loc : undefined);
 }
 
 function $$throw(loc, f) {
-  Nodeassert.throws(f, undefined, loc);
+  Nodeassert.throws(f, undefined, loc !== undefined ? loc : undefined);
 }
 
 export {

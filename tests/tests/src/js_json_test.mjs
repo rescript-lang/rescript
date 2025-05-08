@@ -6,7 +6,6 @@ import * as Js_json from "rescript/lib/es6/Js_json.js";
 import * as Belt_List from "rescript/lib/es6/Belt_List.js";
 import * as Belt_Array from "rescript/lib/es6/Belt_Array.js";
 import * as Primitive_array from "rescript/lib/es6/Primitive_array.js";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 let suites = {
   contents: /* [] */0
@@ -229,7 +228,7 @@ test(false);
 
 function option_get(x) {
   if (x !== undefined) {
-    return Primitive_option.valFromOption(x);
+    return x;
   }
   throw {
     RE_EXN_ID: "Assert_failure",

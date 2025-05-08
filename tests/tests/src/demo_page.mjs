@@ -40,9 +40,13 @@ function f(extra) {
 }
 
 ReactDom.render(React.createClass({
-  render: () => React.DOM.div({
-    alt: "pic"
-  }, React.DOM.h1(undefined, "hello react"), React.DOM.h2(undefined, "type safe!"))
+  render: () => {
+    let tmp = {};
+    if ("pic" !== undefined) {
+      tmp.alt = "pic";
+    }
+    return React.DOM.div(tmp !== undefined ? tmp : undefined, React.DOM.h1(undefined, "hello react"), React.DOM.h2(undefined, "type safe!"));
+  }
 }), document.getElementById("hi"));
 
 export {
