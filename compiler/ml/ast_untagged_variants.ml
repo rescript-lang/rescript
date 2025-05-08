@@ -258,8 +258,10 @@ let is_nullary_variant (x : Types.constructor_arguments) =
 let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
     ~(blocks : (Location.t * block) list) =
   let module StringSet = Set.Make (String) in
-  let string_literals = ref StringSet.empty in
-  let nonstring_literals = ref StringSet.empty in
+  let string_literals_consts = ref StringSet.empty in
+  let string_literals_blocks = ref StringSet.empty in
+  let nonstring_literals_consts = ref StringSet.empty in
+  let nonstring_literals_blocks = ref StringSet.empty in
   let instance_types = Hashtbl.create 1 in
   let function_types = ref 0 in
   let object_types = ref 0 in
@@ -268,15 +270,21 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
   let bigint_types = ref 0 in
   let boolean_types = ref 0 in
   let unknown_types = ref 0 in
-  let add_string_literal ~loc s =
-    if StringSet.mem s !string_literals then
+  let add_string_literal ~is_const ~loc s =
+    let set =
+      if is_const then string_literals_consts else string_literals_blocks
+    in
+    if StringSet.mem s !set then
       raise (Error (loc, InvalidUntaggedVariantDefinition (DuplicateLiteral s)));
-    string_literals := StringSet.add s !string_literals
+    set := StringSet.add s !set
   in
-  let add_nonstring_literal ~loc s =
-    if StringSet.mem s !nonstring_literals then
+  let add_nonstring_literal ~is_const ~loc s =
+    let set =
+      if is_const then nonstring_literals_consts else nonstring_literals_blocks
+    in
+    if StringSet.mem s !set then
       raise (Error (loc, InvalidUntaggedVariantDefinition (DuplicateLiteral s)));
-    nonstring_literals := StringSet.add s !nonstring_literals
+    set := StringSet.add s !set
   in
   let invariant loc name =
     if !unknown_types <> 0 && List.length blocks <> 1 then
@@ -302,23 +310,27 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
       raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBoolean));
     if
       !boolean_types > 0
-      && (StringSet.mem "true" !nonstring_literals
-         || StringSet.mem "false" !nonstring_literals)
+      && (StringSet.mem "true" !nonstring_literals_consts
+         || StringSet.mem "false" !nonstring_literals_consts)
     then raise (Error (loc, InvalidUntaggedVariantDefinition AtMostOneBoolean));
     ()
   in
+  let check_literal ~is_const ~loc (literal : tag) =
+    match literal.tag_type with
+    | Some (String s) -> add_string_literal ~is_const ~loc s
+    | Some (Int i) -> add_nonstring_literal ~is_const ~loc (string_of_int i)
+    | Some (Float f) -> add_nonstring_literal ~is_const ~loc f
+    | Some (BigInt i) -> add_nonstring_literal ~is_const ~loc i
+    | Some Null -> add_nonstring_literal ~is_const ~loc "null"
+    | Some Undefined -> add_nonstring_literal ~is_const ~loc "undefined"
+    | Some (Bool b) ->
+      add_nonstring_literal ~is_const ~loc (if b then "true" else "false")
+    | Some (Untagged _) -> ()
+    | None -> add_string_literal ~is_const ~loc literal.name
+  in
+
   Ext_list.rev_iter consts (fun (loc, literal) ->
-      match literal.tag_type with
-      | Some (String s) -> add_string_literal ~loc s
-      | Some (Int i) -> add_nonstring_literal ~loc (string_of_int i)
-      | Some (Float f) -> add_nonstring_literal ~loc f
-      | Some (BigInt i) -> add_nonstring_literal ~loc i
-      | Some Null -> add_nonstring_literal ~loc "null"
-      | Some Undefined -> add_nonstring_literal ~loc "undefined"
-      | Some (Bool b) ->
-        add_nonstring_literal ~loc (if b then "true" else "false")
-      | Some (Untagged _) -> ()
-      | None -> add_string_literal ~loc literal.name);
+      check_literal ~is_const:true ~loc literal);
   if is_untagged_def then
     Ext_list.rev_iter blocks (fun (loc, block) ->
         match block.block_type with
@@ -338,6 +350,9 @@ let check_invariant ~is_untagged_def ~(consts : (Location.t * tag) list)
           | StringType -> incr string_types);
           invariant loc block.tag.name
         | None -> ())
+  else
+    Ext_list.rev_iter blocks (fun (loc, block) ->
+        check_literal ~is_const:false ~loc block.tag)
 
 let get_cstr_loc_tag (cstr : Types.constructor_declaration) =
   ( cstr.cd_loc,

@@ -32,6 +32,7 @@
 - Fix leading comments removed when braces inside JSX contains `let` assignment. https://github.com/rescript-lang/rescript/pull/7424
 - Fix JSON escaping in code editor analysis: JSON was not always escaped properly, which prevented code actions from being available in certain situations https://github.com/rescript-lang/rescript/pull/7435
 - Fix regression in pattern matching for optional fields containing variants. https://github.com/rescript-lang/rescript/pull/7440
+- Fix missing checks for duplicate literals in variants with payloads. https://github.com/rescript-lang/rescript/pull/7441
 
 #### :house: Internal
 
