@@ -553,11 +553,6 @@ let all_record_args lbls =
             in
             match cdecl with
             | None -> x
-            | Some cstr
-              when Ast_untagged_variants.is_nullary_variant cstr.cd_args ->
-              let _, tag = Ast_untagged_variants.get_cstr_loc_tag cstr in
-              if Ast_untagged_variants.tag_can_be_undefined tag then x
-              else (id, lbl, pat_construct, o)
             | Some cstr -> (
               match
                 Ast_untagged_variants.get_block_type ~env:pat.pat_env cstr

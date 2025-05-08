@@ -2413,7 +2413,7 @@ let combine_array names loc arg partial ctx def (len_lambda_list, total1, _pats)
 
 (* Insertion of debugging events *)
 
-let[@inline] event_branch _repr lam = lam
+(* let[@inline] event_branch _repr lam = lam *)
 
 (*
    This exception is raised when the compiler cannot produce code
@@ -2602,8 +2602,8 @@ let rec compile_match repr partial ctx m =
   | {cases = ([], action) :: rem} ->
     if is_guarded action then
       let lambda, total = compile_match None partial ctx {m with cases = rem} in
-      (event_branch repr (patch_guarded lambda action), total)
-    else (event_branch repr action, jumps_empty)
+      (patch_guarded lambda action, total)
+    else (action, jumps_empty)
   | {args = (arg, str) :: argl} ->
     let v, newarg = arg_to_var arg m.cases in
     let first_match, rem =
