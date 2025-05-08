@@ -3,7 +3,6 @@
 import * as Mt from "./mt.mjs";
 import * as Belt_List from "rescript/lib/es6/Belt_List.js";
 import * as String_set from "./string_set.mjs";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 let suites = {
   contents: /* [] */0
@@ -30,13 +29,17 @@ function eq(loc, x, y) {
 
 let a = {};
 
-let b = {
-  foo: "42"
-};
+let tmp = {};
+
+if ("42" !== undefined) {
+  tmp.foo = "42";
+}
+
+let b = tmp;
 
 function map(f, x) {
   if (x !== undefined) {
-    return Primitive_option.some(f(Primitive_option.valFromOption(x)));
+    return f(x);
   }
   
 }
@@ -82,9 +85,11 @@ function test3(_open, xx__hi) {
 function test4(_open, xx__hi) {
   console.log("no inlin");
   let tmp = {
-    _open: _open,
     hi: 2
   };
+  if (_open !== undefined) {
+    tmp._open = _open;
+  }
   if (xx__hi !== undefined) {
     tmp.xx__hi = xx__hi;
   }

@@ -2,7 +2,6 @@
 
 import * as Mt from "./mt.mjs";
 import * as Gpr_3566_test from "./gpr_3566_test.mjs";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 let suites = {
   contents: /* [] */0
@@ -23,7 +22,7 @@ eq("File \"gpr_3566_drive_test.res\", line 7, characters 12-19", H.b, true);
 let Caml_option = {};
 
 function f(x) {
-  return Primitive_option.some(x);
+  return x;
 }
 
 Mt.from_pair_suites("gpr_3566_drive_test.res", suites.contents);

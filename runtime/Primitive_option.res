@@ -80,12 +80,7 @@ let valFromOption = (x: Obj.t): Obj.t =>
     Obj.magic(x)
   }
 
-let toUndefined = (x: option<'a>) =>
-  if x == None {
-    Js.undefined
-  } else {
-    Obj.magic(valFromOption(Obj.repr(x)))
-  }
+let toUndefined = (_: option<'a>) => Js.undefined
 
 type poly = {@as("VAL") value: Obj.t}
 

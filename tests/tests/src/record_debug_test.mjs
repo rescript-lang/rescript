@@ -23,12 +23,10 @@ let v = {
   }
 };
 
-let u_a = 2;
-
 let u_b = v.b;
 
 let u = {
-  a: u_a,
+  a: 2,
   b: u_b
 };
 

@@ -3,7 +3,6 @@
 import * as Js_dict from "rescript/lib/es6/Js_dict.js";
 import * as Belt_Array from "rescript/lib/es6/Belt_Array.js";
 import * as Primitive_array from "rescript/lib/es6/Primitive_array.js";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 function classify(x) {
   if (x === "A") {
@@ -316,11 +315,11 @@ function testHasNull(x) {
 }
 
 function testHasUndefined(x) {
-  return Primitive_option.some(x);
+  return x;
 }
 
 function untaggedWithOptionPayload(x) {
-  return Primitive_option.some(x);
+  return x;
 }
 
 function untaggedWithIntPayload(x) {
@@ -332,11 +331,11 @@ function untaggedInlineNoOptions(x) {
 }
 
 function untaggedInlineUnaryWihtExplicitOption(x) {
-  return Primitive_option.some(x);
+  return x;
 }
 
 function untaggedInlineUnaryWihtImplicitOption(x) {
-  return Primitive_option.some(x);
+  return x;
 }
 
 function untaggedInlineMultinaryOption(x) {

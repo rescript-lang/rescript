@@ -2,7 +2,6 @@
 
 import * as Mt from "./mt.mjs";
 import * as Primitive_array from "rescript/lib/es6/Primitive_array.js";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 let suites_0 = [
   "captures",
@@ -36,9 +35,9 @@ let suites_1 = {
     "fromString",
     param => {
       let contentOf = (tag, xmlString) => {
-        let x = Primitive_option.fromNull(new RegExp("<" + (tag + (">(.*?)<\\/" + (tag + ">")))).exec(xmlString));
+        let x = new RegExp("<" + (tag + (">(.*?)<\\/" + (tag + ">")))).exec(xmlString);
         if (x !== undefined) {
-          return Primitive_option.fromNullable(Primitive_array.get(Primitive_option.valFromOption(x), 1));
+          return Primitive_array.get(x, 1);
         }
         
       };

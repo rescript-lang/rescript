@@ -5,7 +5,6 @@ import * as Pervasives from "rescript/lib/es6/Pervasives.js";
 import * as Primitive_int from "rescript/lib/es6/Primitive_int.js";
 import * as Primitive_float from "rescript/lib/es6/Primitive_float.js";
 import * as Primitive_object from "rescript/lib/es6/Primitive_object.js";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 function self_init() {
   
@@ -847,7 +846,7 @@ function new_id() {
 }
 
 function make$2($staropt$star, $staropt$star$1, spawnable, context, param) {
-  let id = $staropt$star !== undefined ? Primitive_option.valFromOption($staropt$star) : undefined;
+  let id = $staropt$star !== undefined ? $staropt$star : undefined;
   let dir = $staropt$star$1 !== undefined ? $staropt$star$1 : "Left";
   let spr = make(spawnable, dir, context);
   let params = make_type$2(spawnable);

@@ -11,11 +11,14 @@ let v = {
   lo: 3
 };
 
-let vv = {
+let tmp = {
   hi: 3,
-  lo: 3,
-  width: 3
+  lo: 3
 };
+
+tmp.width = 3;
+
+let vv = tmp;
 
 let u = v.hi;
 

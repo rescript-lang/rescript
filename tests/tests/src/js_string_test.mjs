@@ -3,7 +3,6 @@
 import * as Mt from "./mt.mjs";
 import * as Js_string from "rescript/lib/es6/Js_string.js";
 import * as Belt_Option from "rescript/lib/es6/Belt_Option.js";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 let suites_0 = [
   "make",
@@ -212,7 +211,7 @@ let suites_1 = {
                                                   "na",
                                                   "na"
                                                 ],
-                                                _1: Primitive_option.fromNull("banana".match(/na+/g))
+                                                _1: "banana".match(/na+/g)
                                               })
                                             ],
                                             tl: {
@@ -221,7 +220,7 @@ let suites_1 = {
                                                 param => ({
                                                   TAG: "Eq",
                                                   _0: undefined,
-                                                  _1: Primitive_option.fromNull("banana".match(/nanana+/g))
+                                                  _1: "banana".match(/nanana+/g)
                                                 })
                                               ],
                                               tl: {
@@ -233,7 +232,7 @@ let suites_1 = {
                                                       "hello ",
                                                       undefined
                                                     ],
-                                                    _1: Belt_Option.map(Primitive_option.fromNull("hello word".match(/hello (world)?/)), prim => prim.slice())
+                                                    _1: Belt_Option.map("hello word".match(/hello (world)?/), prim => prim.slice())
                                                   })
                                                 ],
                                                 tl: {

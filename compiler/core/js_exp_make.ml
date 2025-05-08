@@ -166,13 +166,9 @@ let raw_js_code ?comment info s : t =
   }
 
 let array ?comment mt es : t = {expression_desc = Array (es, mt); comment}
-let some_comment = None
+let optional_block e : J.expression = e
 
-let optional_block e : J.expression =
-  {expression_desc = Optional_block (e, false); comment = some_comment}
-
-let optional_not_nest_block e : J.expression =
-  {expression_desc = Optional_block (e, true); comment = None}
+let optional_not_nest_block e : J.expression = e
 
 (** used in normal property
     like [e.length], no dependency introduced
@@ -599,7 +595,7 @@ let str_equal (txt0 : string) (delim0 : External_arg_spec.delim) txt1 delim1 =
     else None
   else None
 
-let rec triple_equal ?comment (e0 : t) (e1 : t) : t =
+let triple_equal ?comment (e0 : t) (e1 : t) : t =
   match (e0.expression_desc, e1.expression_desc) with
   | ( (Null | Undefined _),
       (Bool _ | Number _ | Typeof _ | Fun _ | Array _ | Caml_block _) )
@@ -610,11 +606,7 @@ let rec triple_equal ?comment (e0 : t) (e1 : t) : t =
     when no_side_effect e0 ->
     false_
   | Number (Int {i = i0; _}), Number (Int {i = i1; _}) -> bool (i0 = i1)
-  | Optional_block (a, _), Optional_block (b, _) -> triple_equal ?comment a b
-  | Undefined _, Optional_block _
-  | Optional_block _, Undefined _
-  | Null, Undefined _
-  | Undefined _, Null
+  | (Null, Undefined _ | Undefined _, Null)
     when no_side_effect e0 && no_side_effect e1 ->
     false_
   | Null, Null | Undefined _, Undefined _ -> true_
@@ -1388,14 +1380,8 @@ let rec int_comp (cmp : Lam_compat.comparison) ?comment (e0 : t) (e1 : t) =
           _ ),
       Number (Int {i = 0l}) ) ->
     int_comp cmp l r (* = 0 > 0 < 0 *)
-  | (Ceq, Optional_block _, Undefined _ | Ceq, Undefined _, Optional_block _)
-    when no_side_effect e0 && no_side_effect e1 ->
-    false_
   | Ceq, _, _ -> int_equal e0 e1
-  | Cneq, Optional_block _, Undefined _
-  | Cneq, Undefined _, Optional_block _
-  | Cneq, Caml_block _, Number _
-  | Cneq, Number _, Caml_block _
+  | (Cneq, Caml_block _, Number _ | Cneq, Number _, Caml_block _)
     when no_side_effect e0 && no_side_effect e1 ->
     true_
   | _ -> bin ?comment (Lam_compile_util.jsop_of_comp cmp) e0 e1

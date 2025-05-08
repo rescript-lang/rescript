@@ -53,7 +53,7 @@ b("File \"equal_box_test.res\", line 22, characters 4-11", true);
 
 b("File \"equal_box_test.res\", line 23, characters 4-11", true);
 
-b("File \"equal_box_test.res\", line 24, characters 4-11", 3 !== undefined);
+b("File \"equal_box_test.res\", line 24, characters 4-11", true);
 
 let v = null;
 
@@ -77,7 +77,7 @@ b("File \"equal_box_test.res\", line 37, characters 4-11", true);
 
 b("File \"equal_box_test.res\", line 38, characters 4-11", true);
 
-b("File \"equal_box_test.res\", line 39, characters 4-11", 3 !== undefined);
+b("File \"equal_box_test.res\", line 39, characters 4-11", true);
 
 b("File \"equal_box_test.res\", line 45, characters 4-11", 3 !== undefined);
 
@@ -99,7 +99,7 @@ b("File \"equal_box_test.res\", line 56, characters 4-11", true);
 
 b("File \"equal_box_test.res\", line 57, characters 4-11", true);
 
-b("File \"equal_box_test.res\", line 58, characters 4-11", 3 !== undefined);
+b("File \"equal_box_test.res\", line 58, characters 4-11", true);
 
 Mt.from_pair_suites("File \"equal_box_test.res\", line 61, characters 20-27", suites.contents);
 

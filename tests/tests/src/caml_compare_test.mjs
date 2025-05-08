@@ -382,7 +382,10 @@ let suites = {
                                     () => ({
                                       TAG: "Eq",
                                       _0: false,
-                                      _1: false
+                                      _1: undefined === [
+                                        1,
+                                        30
+                                      ]
                                     })
                                   ],
                                   tl: {
@@ -391,7 +394,10 @@ let suites = {
                                       () => ({
                                         TAG: "Eq",
                                         _0: false,
-                                        _1: false
+                                        _1: [
+                                          1,
+                                          30
+                                        ] === undefined
                                       })
                                     ],
                                     tl: {

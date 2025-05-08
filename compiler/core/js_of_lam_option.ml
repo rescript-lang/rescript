@@ -46,7 +46,6 @@ let is_not_none (e : J.expression) : J.expression =
   if is_none_static desc then E.false_
   else
     match desc with
-    | Optional_block _ -> E.true_
     | _ -> E.not (E.triple_equal e none)
 
 (**
@@ -64,31 +63,20 @@ let is_not_none (e : J.expression) : J.expression =
      {!Js_ast_util.named_expression} does not help 
      since we need an expression here, it might be a statement
 *)
-let val_from_option (arg : J.expression) =
-  match arg.expression_desc with
-  | Optional_block (x, _) -> x
-  | _ -> E.runtime_call Primitive_modules.option "valFromOption" [arg]
+let val_from_option (arg : J.expression) = arg
 
 let get_default_undefined_from_optional (arg : J.expression) : J.expression =
   let desc = arg.expression_desc in
   if is_none_static desc then E.undefined
   else
     match desc with
-    | Optional_block (x, _) -> x (* invariant: option encoding *)
     | _ ->
       if Js_analyzer.is_okay_to_duplicate arg then
         (* FIXME: no need do such inlining*)
         E.econd (is_not_none arg) (val_from_option arg) E.undefined
-      else E.runtime_call Primitive_modules.option "toUndefined" [arg]
+      else arg
 
-let option_unwrap (arg : J.expression) : J.expression =
-  let desc = arg.expression_desc in
-  if is_none_static desc then E.undefined
-  else
-    match desc with
-    | Optional_block (x, _) -> E.poly_var_value_access x
-    (* invariant: option encoding *)
-    | _ -> E.runtime_call Primitive_modules.option "unwrapPolyVar" [arg]
+let option_unwrap (arg : J.expression) : J.expression = arg
 
 let destruct_optional ~for_sure_none ~for_sure_some ~not_sure
     (arg : J.expression) =
@@ -96,7 +84,6 @@ let destruct_optional ~for_sure_none ~for_sure_some ~not_sure
   if is_none_static desc then for_sure_none
   else
     match desc with
-    | Optional_block (x, _) -> for_sure_some x
     | _ -> not_sure ()
 
 let some = E.optional_block

@@ -48,9 +48,9 @@ b("File \"bs_min_max_test.res\", line 23, characters 4-11", Primitive_object.gre
 
 b("File \"bs_min_max_test.res\", line 24, characters 4-11", Primitive_object.lessequal(undefined, 5));
 
-b("File \"bs_min_max_test.res\", line 25, characters 4-11", true);
+b("File \"bs_min_max_test.res\", line 25, characters 4-11", undefined !== 5);
 
-b("File \"bs_min_max_test.res\", line 26, characters 4-11", true);
+b("File \"bs_min_max_test.res\", line 26, characters 4-11", undefined !== 5);
 
 Mt.from_pair_suites("Bs_min_max_test", suites.contents);
 

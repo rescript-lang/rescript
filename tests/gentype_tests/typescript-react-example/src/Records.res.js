@@ -3,7 +3,6 @@
 import * as Belt_List from "rescript/lib/es6/Belt_List.js";
 import * as Belt_Array from "rescript/lib/es6/Belt_Array.js";
 import * as Belt_Option from "rescript/lib/es6/Belt_Option.js";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 function computeArea(param) {
   return (param.x * param.y | 0) * Belt_Option.mapWithDefault(param.z, 1, n => n) | 0;
@@ -63,7 +62,7 @@ function getPayloadRecordPlusOne(param) {
 }
 
 function findAddress2(business) {
-  return Belt_Option.mapWithDefault(Primitive_option.fromNullable(business.address2), /* [] */0, a => ({
+  return Belt_Option.mapWithDefault(business.address2, /* [] */0, a => ({
     hd: a,
     tl: /* [] */0
   }));
@@ -80,7 +79,7 @@ let someBusiness2 = {
 };
 
 function computeArea3(o) {
-  return (o.x * o.y | 0) * Belt_Option.mapWithDefault(Primitive_option.fromNullable(o.z), 1, n => n) | 0;
+  return (o.x * o.y | 0) * Belt_Option.mapWithDefault(o.z, 1, n => n) | 0;
 }
 
 function computeArea4(o) {

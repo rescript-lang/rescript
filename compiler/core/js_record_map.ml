@@ -171,9 +171,6 @@ let expression_desc : expression_desc fn =
   | Array (_x0, _x1) ->
     let _x0 = list _self.expression _self _x0 in
     Array (_x0, _x1)
-  | Optional_block (_x0, _x1) ->
-    let _x0 = _self.expression _self _x0 in
-    Optional_block (_x0, _x1)
   | Caml_block (_x0, _x1, _x2, _x3) ->
     let _x0 = list _self.expression _self _x0 in
     let _x2 = _self.expression _self _x2 in

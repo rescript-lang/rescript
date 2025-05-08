@@ -42,7 +42,7 @@ let options = {
   timeZoneName: "longGeneric"
 };
 
-let formatter$1 = new Intl.DateTimeFormat(undefined, options);
+let formatter$1 = new Intl.DateTimeFormat(undefined, options !== undefined ? options : undefined);
 
 console.log(formatter$1.format(new Date(Date.now())));
 
