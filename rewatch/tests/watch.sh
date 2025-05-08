@@ -3,7 +3,7 @@ cd ../testrepo
 
 bold "Test: It should watch"
 
-if rewatch clean &> /dev/null;
+if rewatch clean ;
 then
   success "Repo Cleaned"
 else 
@@ -13,10 +13,10 @@ fi
 
 exit_watcher() { 
   # we need to kill the parent process (rewatch)
-  kill $(pgrep -P $!);
+  rm lib/rewatch.lock
 }
 
-rewatch watch &>/dev/null &
+rewatch watch  &
 success "Watcher Started"
 
 echo 'Js.log("added-by-test")' >> ./packages/main/src/Main.res
