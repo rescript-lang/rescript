@@ -152,17 +152,18 @@ pub fn create_path_for_path(path: &Path) {
 
 pub fn get_bsc(root_path: &str, workspace_root: Option<String>) -> String {
     let subfolder = match (std::env::consts::OS, std::env::consts::ARCH) {
-        ("macos", "aarch64") => "darwinarm64",
-        ("macos", _) => "darwin",
-        ("linux", "aarch64") => "linuxarm64",
-        ("linux", _) => "linux",
-        ("windows", _) => "win32",
+        ("macos", "aarch64") => "darwin-arm64",
+        ("macos", _) => "darwin-x64",
+        ("linux", "aarch64") => "linux-arm64",
+        ("linux", _) => "linux-x64",
+        ("windows", "aarch64") => "win-arm64",
+        ("windows", _) => "win-x64",
         _ => panic!("Unsupported architecture"),
     };
 
     match (
         PathBuf::from(format!(
-            "{}/node_modules/rescript/{}/bsc.exe",
+            "{}/node_modules/@rescript/{}/bin/bsc.exe",
             root_path, subfolder
         ))
         .canonicalize(),
