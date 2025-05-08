@@ -308,11 +308,32 @@ fn check_if_rescript11_or_higher(version: &str) -> Result<bool, String> {
 }
 
 fn namespace_from_package_name(package_name: &str) -> String {
-    package_name
-        .to_owned()
-        .replace('@', "")
-        .replace('/', "_")
-        .to_case(Case::Pascal)
+    let len = package_name.len();
+    let mut buf = String::with_capacity(len);
+
+    fn aux(s: &str, capital: bool, buf: &mut String, off: usize) {
+        if off >= s.len() {
+            return;
+        }
+
+        let ch = s.as_bytes()[off] as char;
+        match ch {
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => {
+                let new_capital = false;
+                buf.push(if capital { ch.to_ascii_uppercase() } else { ch });
+                aux(s, new_capital, buf, off + 1);
+            }
+            '/' | '-' => {
+                aux(s, true, buf, off + 1);
+            }
+            _ => {
+                aux(s, capital, buf, off + 1);
+            }
+        }
+    }
+
+    aux(package_name, true, &mut buf, 0);
+    buf
 }
 
 impl Config {
@@ -333,7 +354,7 @@ impl Config {
                 namespace if namespace.is_case(Case::UpperFlat) => {
                     packages::Namespace::Namespace(namespace.to_string())
                 }
-                namespace => packages::Namespace::Namespace(namespace.to_string().to_case(Case::Pascal)),
+                namespace => packages::Namespace::Namespace(namespace_from_package_name(namespace)),
             },
             (Some(self::NamespaceConfig::String(str)), Some(entry)) => match str.as_str() {
                 "true" => packages::Namespace::NamespaceWithEntry {
@@ -495,6 +516,40 @@ mod tests {
         if let Some(OneOrMore::Single(source)) = config.sources {
             let source = source.to_qualified_without_children(None);
             assert_eq!(source.type_, Some(String::from("dev")));
+        } else {
+            dbg!(config.sources);
+            unreachable!()
+        }
+    }
+
+    #[test]
+    fn test_dev_sources_multiple() {
+        let json = r#"
+        {
+            "name": "@rescript/core",
+            "version": "0.5.0",
+            "sources": [
+                { "dir": "src" },
+                { "dir": "test", "type": "dev" }
+            ],
+            "package-specs": {
+              "module": "esmodule",
+              "in-source": true
+            },
+            "bs-dev-dependencies": ["@rescript/tools"],
+            "suffix": ".mjs",
+            "warnings": {
+              "error": "+101"
+            }
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        if let Some(OneOrMore::Multiple(sources)) = config.sources {
+            assert_eq!(sources.len(), 2);
+            let test_dir = sources[1].to_qualified_without_children(None);
+
+            assert_eq!(test_dir.type_, Some(String::from("dev")));
         } else {
             dbg!(config.sources);
             unreachable!()

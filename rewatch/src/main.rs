@@ -118,7 +118,7 @@ fn main() -> Result<()> {
             std::process::exit(1)
         }
         lock::Lock::Aquired(_) => match command {
-            Command::Clean => build::clean::clean(&folder, show_progress, args.bsc_path),
+            Command::Clean => build::clean::clean(&folder, show_progress, args.bsc_path, args.dev),
             Command::Build => {
                 match build::build(
                     &filter,

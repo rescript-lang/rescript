@@ -12,7 +12,6 @@ use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_w
 use crate::helpers::emojis::*;
 use crate::helpers::{self, get_workspace_root};
 use crate::sourcedirs;
-use ahash::AHashSet;
 use anyhow::{anyhow, Result};
 use build_types::*;
 use console::style;
@@ -134,6 +133,7 @@ pub fn initialize_build(
     show_progress: bool,
     path: &str,
     bsc_path: Option<String>,
+    build_dev_deps: bool,
 ) -> Result<BuildState> {
     let project_root = helpers::get_abs_path(path);
     let workspace_root = helpers::get_workspace_root(&project_root);
@@ -150,7 +150,13 @@ pub fn initialize_build(
     }
 
     let timing_package_tree = Instant::now();
-    let packages = packages::make(filter, &project_root, &workspace_root, show_progress)?;
+    let packages = packages::make(
+        filter,
+        &project_root,
+        &workspace_root,
+        show_progress,
+        build_dev_deps,
+    )?;
     let timing_package_tree_elapsed = timing_package_tree.elapsed();
 
     if show_progress {
@@ -276,7 +282,7 @@ impl fmt::Display for IncrementalBuildError {
 pub fn incremental_build(
     build_state: &mut BuildState,
     default_timing: Option<Duration>,
-    initial_build: bool,
+    _initial_build: bool,
     show_progress: bool,
     only_incremental: bool,
     create_sourcedirs: bool,
@@ -350,17 +356,7 @@ pub fn incremental_build(
         );
     }
 
-    // track the compile dirty state, we reset it when the compile fails
-    let mut tracked_dirty_modules = AHashSet::new();
-    for (module_name, module) in build_state.modules.iter() {
-        if module.compile_dirty {
-            tracked_dirty_modules.insert(module_name.to_owned());
-        }
-    }
-    if initial_build {
-        // repair broken state
-        mark_modules_with_expired_deps_dirty(build_state);
-    }
+    mark_modules_with_expired_deps_dirty(build_state);
     mark_modules_with_deleted_deps_dirty(build_state);
     current_step += 1;
 
@@ -421,12 +417,6 @@ pub fn incremental_build(
         if helpers::contains_ascii_characters(&compile_errors) {
             println!("{}", &compile_errors);
         }
-        // mark the original files as dirty again, because we didn't complete a full build
-        for (module_name, module) in build_state.modules.iter_mut() {
-            if tracked_dirty_modules.contains(module_name) {
-                module.compile_dirty = true;
-            }
-        }
         Err(IncrementalBuildError::CompileError(None))
     } else {
         if show_progress {
@@ -476,8 +466,15 @@ pub fn build(
         None
     };
     let timing_total = Instant::now();
-    let mut build_state = initialize_build(default_timing, filter, show_progress, path, bsc_path)
-        .map_err(|e| anyhow!("Could not initialize build. Error: {e}"))?;
+    let mut build_state = initialize_build(
+        default_timing,
+        filter,
+        show_progress,
+        path,
+        bsc_path,
+        build_dev_deps,
+    )
+    .map_err(|e| anyhow!("Could not initialize build. Error: {e}"))?;
 
     match incremental_build(
         &mut build_state,
