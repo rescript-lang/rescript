@@ -33,48 +33,27 @@ type t =
   | Obj of t Map_string.t
 
 (** poor man's serialization *)
-let naive_escaped (unmodified_input : string) : string =
-  let n = ref 0 in
-  let len = String.length unmodified_input in
-  for i = 0 to len - 1 do
-    n :=
-      !n
-      +
-      match String.unsafe_get unmodified_input i with
-      | '\"' | '\\' | '\n' | '\t' | '\r' | '\b' -> 2
-      | _ -> 1
-  done;
-  if !n = len then unmodified_input
-  else
-    let result = Bytes.create !n in
-    n := 0;
-    for i = 0 to len - 1 do
-      let open Bytes in
-      (match String.unsafe_get unmodified_input i with
-      | ('\"' | '\\') as c ->
-        unsafe_set result !n '\\';
-        incr n;
-        unsafe_set result !n c
-      | '\n' ->
-        unsafe_set result !n '\\';
-        incr n;
-        unsafe_set result !n 'n'
-      | '\t' ->
-        unsafe_set result !n '\\';
-        incr n;
-        unsafe_set result !n 't'
-      | '\r' ->
-        unsafe_set result !n '\\';
-        incr n;
-        unsafe_set result !n 'r'
-      | '\b' ->
-        unsafe_set result !n '\\';
-        incr n;
-        unsafe_set result !n 'b'
-      | c -> unsafe_set result !n c);
-      incr n
-    done;
-    Bytes.unsafe_to_string result
+let naive_escaped (text : string) : string =
+  let ln = String.length text in
+  let buf = Buffer.create ln in
+  let rec loop i =
+    if i < ln then (
+      (match text.[i] with
+      | '\012' -> Buffer.add_string buf "\\f"
+      | '\\' -> Buffer.add_string buf "\\\\"
+      | '"' -> Buffer.add_string buf "\\\""
+      | '\n' -> Buffer.add_string buf "\\n"
+      | '\b' -> Buffer.add_string buf "\\b"
+      | '\r' -> Buffer.add_string buf "\\r"
+      | '\t' -> Buffer.add_string buf "\\t"
+      | c ->
+        let code = Char.code c in
+        if code < 0x20 then Printf.bprintf buf "\\u%04x" code
+        else Buffer.add_char buf c);
+      loop (i + 1))
+  in
+  loop 0;
+  Buffer.contents buf
 
 let quot x = "\"" ^ naive_escaped x ^ "\""
 
