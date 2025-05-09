@@ -39,6 +39,10 @@
 
 - AST: Add bar location to `case`. https://github.com/rescript-lang/rescript/pull/7407
 
+#### :nail_care: Polish
+
+- Make `Jsx.element` a private empty record to avoid unnecessary `Primitive_option.some`. https://github.com/rescript-lang/rescript/pull/7450
+
 # 12.0.0-alpha.12
 
 #### :bug: Bug fix
