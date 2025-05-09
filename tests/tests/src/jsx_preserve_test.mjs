@@ -197,7 +197,7 @@ let ComponentWithOptionalProps = {
   make: Jsx_preserve_test$ComponentWithOptionalProps
 };
 
-let _element = <Jsx_preserve_test$ComponentWithOptionalProps
+let _optional_props = <Jsx_preserve_test$ComponentWithOptionalProps
   i={1}
   s="test"
   element={<div />}
@@ -227,6 +227,6 @@ export {
   _escaped_jsx_prop,
   _large_component,
   ComponentWithOptionalProps,
-  _element,
+  _optional_props,
 }
 /* _single_element_child Not a pure module */

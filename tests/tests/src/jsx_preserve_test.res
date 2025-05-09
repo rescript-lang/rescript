@@ -125,4 +125,4 @@ module ComponentWithOptionalProps = {
   ) => React.null
 }
 
-let _element = <ComponentWithOptionalProps i=1 s="test" element={<div />} />
+let _optional_props = <ComponentWithOptionalProps i=1 s="test" element={<div />} />
