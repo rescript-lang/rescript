@@ -39,6 +39,10 @@
 
 - AST: Add bar location to `case`. https://github.com/rescript-lang/rescript/pull/7407
 
+#### :nail_care: Polish
+
+- In type errors, recommend stdlib over Belt functions for converting between float/int/string. https://github.com/rescript-lang/rescript/pull/7453
+
 # 12.0.0-alpha.12
 
 #### :bug: Bug fix
