@@ -676,12 +676,12 @@ let rec bottom_aliases = function
 
 let simple_conversions =
   [
-    (("float", "int"), "Belt.Float.toInt");
-    (("float", "string"), "Belt.Float.toString");
-    (("int", "float"), "Belt.Int.toFloat");
-    (("int", "string"), "Belt.Int.toString");
-    (("string", "float"), "Belt.Float.fromString");
-    (("string", "int"), "Belt.Int.fromString");
+    (("float", "int"), "Float.toInt");
+    (("float", "string"), "Float.toString");
+    (("int", "float"), "Int.toFloat");
+    (("int", "string"), "Int.toString");
+    (("string", "float"), "Float.fromString");
+    (("string", "int"), "Int.fromString");
   ]
 
 let print_simple_conversion ppf (actual, expected) =
