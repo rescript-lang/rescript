@@ -22,7 +22,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. */
 
-type element
+// Define this as a private empty record so that the compiler does not
+// unnecessarily add `Primitive_option.some` calls for optional props.
+type element = private {}
+
 type ref
 
 @val external null: element = "null"
