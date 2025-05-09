@@ -92,7 +92,7 @@ if (mochaTest) {
       // I can't run because Mocha doesn't support jsx.
       // We also want to keep the output as is.
       "--ignore",
-      "tests/tests/src/preserve_jsx_test.mjs",
+      "tests/tests/src/jsx_preserve_test.mjs",
     ],
     {
       cwd: projectDir,

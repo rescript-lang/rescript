@@ -42,6 +42,7 @@
 #### :nail_care: Polish
 
 - In type errors, recommend stdlib over Belt functions for converting between float/int/string. https://github.com/rescript-lang/rescript/pull/7453
+- Make `Jsx.element` a private empty record to avoid unnecessary `Primitive_option.some`. https://github.com/rescript-lang/rescript/pull/7450
 
 # 12.0.0-alpha.12
 
