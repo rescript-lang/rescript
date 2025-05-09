@@ -1289,6 +1289,7 @@ and print_type_declaration2 ?inline_record_definitions ~state ~rec_flag
             Doc.space;
             Doc.text equal_sign;
             Doc.space;
+            print_private_flag td.ptype_private;
             Doc.lbrace;
             print_comments_inside cmt_tbl td.ptype_loc;
             Doc.rbrace;

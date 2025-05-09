@@ -1,4 +1,4 @@
-type t1 = {}
+type t1 = private {}
 
 type t2 = private {x: int}
 
