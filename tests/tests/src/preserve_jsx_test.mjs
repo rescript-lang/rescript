@@ -3,10 +3,6 @@
 import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 import * as JsxRuntime from "react/jsx-runtime";
 
-let React = {};
-
-let ReactDOM = {};
-
 function Preserve_jsx_test$Icon(props) {
   return <strong />;
 }
@@ -195,8 +191,6 @@ let _large_component = <div
 </div>;
 
 export {
-  React,
-  ReactDOM,
   Icon,
   _single_element_child,
   _multiple_element_children,
