@@ -190,6 +190,20 @@ let _large_component = <div
   </p>
 </div>;
 
+function Jsx_preserve_test$ComponentWithOptionalProps(props) {
+  return null;
+}
+
+let ComponentWithOptionalProps = {
+  make: Jsx_preserve_test$ComponentWithOptionalProps
+};
+
+let _element = <Jsx_preserve_test$ComponentWithOptionalProps
+  i={1}
+  s="test"
+  element={Primitive_option.some(<div />)}
+/>;
+
 export {
   Icon,
   _single_element_child,
@@ -213,5 +227,7 @@ export {
   MyWeirdComponent,
   _escaped_jsx_prop,
   _large_component,
+  ComponentWithOptionalProps,
+  _element,
 }
 /* _single_element_child Not a pure module */
