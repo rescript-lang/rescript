@@ -33,6 +33,7 @@
 - Fix JSON escaping in code editor analysis: JSON was not always escaped properly, which prevented code actions from being available in certain situations https://github.com/rescript-lang/rescript/pull/7435
 - Fix regression in pattern matching for optional fields containing variants. https://github.com/rescript-lang/rescript/pull/7440
 - Fix missing checks for duplicate literals in variants with payloads. https://github.com/rescript-lang/rescript/pull/7441
+- Fix printer removing private for empty record. https://github.com/rescript-lang/rescript/pull/7448
 
 #### :house: Internal
 
