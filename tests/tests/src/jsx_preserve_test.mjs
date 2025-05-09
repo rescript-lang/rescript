@@ -3,12 +3,12 @@
 import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 import * as JsxRuntime from "react/jsx-runtime";
 
-function Preserve_jsx_test$Icon(props) {
+function Jsx_preserve_test$Icon(props) {
   return <strong />;
 }
 
 let Icon = {
-  make: Preserve_jsx_test$Icon
+  make: Jsx_preserve_test$Icon
 };
 
 let _single_element_child = <div>
@@ -21,7 +21,7 @@ let _multiple_element_children = <div>
   <h1>
     {"Hello, world!"}
   </h1>
-  <Preserve_jsx_test$Icon />
+  <Jsx_preserve_test$Icon />
 </div>;
 
 let _single_element_fragment = <>
@@ -130,22 +130,22 @@ function QueryClientProvider(props) { return props.children }
 
 let A = {};
 
-function Preserve_jsx_test$B(props) {
+function Jsx_preserve_test$B(props) {
   return <p>
     {"Hello, world!"}
   </p>;
 }
 
 let B = {
-  make: Preserve_jsx_test$B
+  make: Jsx_preserve_test$B
 };
 
 let _external_component_with_children = <QueryClientProvider>
   <strong />
-  <Preserve_jsx_test$B />
+  <Jsx_preserve_test$B />
 </QueryClientProvider>;
 
-function Preserve_jsx_test$MyWeirdComponent(props) {
+function Jsx_preserve_test$MyWeirdComponent(props) {
   return <p>
     {"foo"}
     {props["\\\"MyWeirdProp\""]}
@@ -153,10 +153,10 @@ function Preserve_jsx_test$MyWeirdComponent(props) {
 }
 
 let MyWeirdComponent = {
-  make: Preserve_jsx_test$MyWeirdComponent
+  make: Jsx_preserve_test$MyWeirdComponent
 };
 
-let _escaped_jsx_prop = <Preserve_jsx_test$MyWeirdComponent
+let _escaped_jsx_prop = <Jsx_preserve_test$MyWeirdComponent
   MyWeirdProp="bar"
 />;
 
