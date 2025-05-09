@@ -26,8 +26,6 @@
 // unnecessarily add `Primitive_option.some` calls for optional props.
 type element = private {}
 
-type ref
-
 @val external null: element = "null"
 
 external float: float => element = "%identity"
