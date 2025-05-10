@@ -1,7 +1,7 @@
-let completion ~debug ~path ~pos ~currentFile =
+let completion ~(debug : bool) ~path ~pos ~currentFile =
   let completions =
     match
-      Completions.getCompletions ~debug ~path ~pos ~currentFile ~forHover:false
+      Completions.getCompletions debug ~path ~pos ~currentFile ~forHover:false
     with
     | None -> []
     | Some (completions, full, _) ->
@@ -10,6 +10,17 @@ let completion ~debug ~path ~pos ~currentFile =
       |> List.map Protocol.stringifyCompletionItem
   in
   completions |> Protocol.array |> print_endline
+
+let completionRevamped ~debug ~path ~pos ~currentFile =
+  match Completions.getCompletionsRevamped ~debug ~pos ~currentFile ~path with
+  | None -> None
+  | Some (completable, completions, full, _) ->
+    Some
+      ( completable,
+        completions
+        |> List.map (CompletionBackEnd.completionToItem ~full)
+        |> List.map Protocol.stringifyCompletionItem
+        |> Protocol.array )
 
 let completionResolve ~path ~modulePath =
   (* We ignore the internal module path as of now because there's currently
@@ -63,6 +74,7 @@ let hover ~path ~pos ~currentFile ~debug ~supportsMarkdownLinks =
     | None -> Protocol.null
     | Some full -> (
       match References.getLocItem ~full ~pos ~debug with
+      | None when !Cfg.useRevampedCompletion -> Protocol.null
       | None -> (
         if debug then
           Printf.printf
@@ -77,7 +89,9 @@ let hover ~path ~pos ~currentFile ~debug ~supportsMarkdownLinks =
         let isModule =
           match locItem.locType with
           | LModule _ | TopLevelModule _ -> true
-          | TypeDefinition _ | Typed _ | Constant _ -> false
+          | TypeDefinition _ | Typed _ | Constant _ | OtherExpression _
+          | OtherPattern _ ->
+            false
         in
         let uriLocOpt = References.definitionForLocItem ~full locItem in
         let skipZero =
@@ -135,7 +149,9 @@ let definition ~path ~pos ~debug =
           let isModule =
             match locItem.locType with
             | LModule _ | TopLevelModule _ -> true
-            | TypeDefinition _ | Typed _ | Constant _ -> false
+            | TypeDefinition _ | Typed _ | Constant _ | OtherExpression _
+            | OtherPattern _ ->
+              false
           in
           let skipLoc =
             (not isModule) && (not isInterface) && posIsZero loc.loc_start
@@ -298,7 +314,7 @@ let format ~path =
 let diagnosticSyntax ~path =
   print_endline (Diagnostics.document_syntax ~path |> Protocol.array)
 
-let test ~path =
+let test ~path ~debug =
   Uri.stripPath := true;
   match Files.readFile path with
   | None -> assert false
@@ -343,6 +359,9 @@ let test ~path =
           | "db+" -> Log.verbose := true
           | "db-" -> Log.verbose := false
           | "dv+" -> Debug.debugLevel := Verbose
+          | "wrk" ->
+            Cfg.isTestWorkmode := true;
+            Debug.debugLevel := Verbose
           | "dv-" -> Debug.debugLevel := Off
           | "in+" -> Cfg.inIncrementalTypecheckingMode := true
           | "in-" -> Cfg.inIncrementalTypecheckingMode := false
@@ -363,11 +382,43 @@ let test ~path =
              ^ string_of_int col);
             definition ~path ~pos:(line, col) ~debug:true
           | "com" ->
-            print_endline
-              ("Complete " ^ path ^ " " ^ string_of_int line ^ ":"
-             ^ string_of_int col);
             let currentFile = createCurrentFile () in
-            completion ~debug:true ~path ~pos:(line, col) ~currentFile;
+            if !Cfg.useRevampedCompletion then (
+              Code_frame.setup (Some Misc.Color.Never);
+              if !Cfg.isTestWorkmode then (
+                print_endline "===== CMT CONTENT =====";
+                CmtViewer.dump path
+                (*print_endline "\n===== CMT FILTERED BY CURSOR =====";
+                CmtViewer.dump path ~filter:(Cursor (line, col))*));
+              let source = Files.readFile currentFile in
+              let completions =
+                completionRevamped ~debug ~path ~pos:(line, col) ~currentFile
+              in
+              (match (completions, source) with
+              | None, _ ->
+                print_endline "Completion Frontend did not return completable"
+              | Some (completable, completionsText), Some text -> (
+                match SharedTypes.CompletableRevamped.try_loc completable with
+                | Some loc ->
+                  Printf.printf "Found Completable: %s at type loc: %s\n\n"
+                    (SharedTypes.CompletableRevamped.toString completable)
+                    (Loc.toString loc);
+                  if !Cfg.isTestWorkmode then (
+                    print_endline "\n===== CMT FILTERED BY TYPE LOC =====";
+                    CmtViewer.dump path ~filter:(Loc loc);
+                    print_endline "\n\n");
+                  Code_frame.print ~is_warning:true ~draw_underline:true
+                    ~src:text ~start_pos:loc.loc_start ~end_pos:loc.loc_end
+                  |> print_endline;
+                  print_endline completionsText
+                | None -> print_endline "No location found for completable")
+              | _ -> print_endline "ERR: Unexpected completion result");
+              ())
+            else (
+              print_endline
+                ("Complete " ^ path ^ " " ^ string_of_int line ^ ":"
+               ^ string_of_int col);
+              completion ~debug:true ~path ~pos:(line, col) ~currentFile);
             Sys.remove currentFile
           | "cre" ->
             let modulePath = String.sub rest 3 (String.length rest - 3) in

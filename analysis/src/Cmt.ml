@@ -29,9 +29,7 @@ let fullFromUri ~uri =
       else None
     in
     match incremental with
-    | Some cmtInfo ->
-      if Debug.verbose () then Printf.printf "[cmt] Found incremental cmt\n";
-      Some cmtInfo
+    | Some cmtInfo -> Some cmtInfo
     | None -> (
       match Hashtbl.find_opt package.pathsForModule moduleName with
       | Some paths ->

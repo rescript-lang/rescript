@@ -129,9 +129,18 @@ let main () =
     | _ -> print_endline "\"ERR: Did not find root \"")
   | [_; "completion"; path; line; col; currentFile] ->
     printHeaderInfo path line col;
-    Commands.completion ~debug ~path
-      ~pos:(int_of_string line, int_of_string col)
-      ~currentFile
+    if !Cfg.useRevampedCompletion then
+      match
+        Commands.completionRevamped ~debug ~path
+          ~pos:(int_of_string line, int_of_string col)
+          ~currentFile
+      with
+      | None -> ()
+      | Some (_, completablesText) -> print_endline completablesText
+    else
+      Commands.completion ~debug:true ~path
+        ~pos:(int_of_string line, int_of_string col)
+        ~currentFile
   | [_; "completionResolve"; path; modulePath] ->
     Commands.completionResolve ~path ~modulePath
   | [_; "definition"; path; line; col] ->
@@ -208,8 +217,16 @@ let main () =
       (Json.escape (CreateInterface.command ~path ~cmiFile))
   | [_; "format"; path] ->
     Printf.printf "\"%s\"" (Json.escape (Commands.format ~path))
-  | [_; "test"; path] -> Commands.test ~path
+  | [_; "test"; path] -> Commands.test ~path ~debug
+  | [_; "test_revamped"; path; config_file_path] ->
+    Packages.overrideConfigFilePath := Some config_file_path;
+    Cfg.useRevampedCompletion := true;
+    Commands.test ~path ~debug
   | args when List.mem "-h" args || List.mem "--help" args -> prerr_endline help
+  | [_; "cmt"; path] -> CmtViewer.dump path
+  | [_; "cmt"; line; col; path] ->
+    let cursor = (int_of_string line, int_of_string col) in
+    CmtViewer.dump ~filter:(Cursor cursor) path
   | _ ->
     prerr_endline help;
     exit 1

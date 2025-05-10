@@ -150,7 +150,7 @@ let hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks typ =
    makes it (most often) work with unsaved content. *)
 let getHoverViaCompletions ~debug ~path ~pos ~currentFile ~forHover
     ~supportsMarkdownLinks =
-  match Completions.getCompletions ~debug ~path ~pos ~currentFile ~forHover with
+  match Completions.getCompletions debug ~path ~pos ~currentFile ~forHover with
   | None -> None
   | Some (completions, ({file; package} as full), scope) -> (
     let rawOpens = Scope.getRawOpens scope in
@@ -244,6 +244,11 @@ let newHover ~full:{file; package} ~supportsMarkdownLinks locItem =
       showModule ~docstring:file.structure.docstring ~name:file.moduleName ~file
         ~package None)
   | Typed (_, _, Definition (_, (Field _ | Constructor _))) -> None
+  | OtherExpression t | OtherPattern t ->
+    (* TODO: Just for debugging. *)
+    if !Cfg.useRevampedCompletion then
+      Some (Markdown.codeBlock (Shared.typeToString t))
+    else None
   | Constant t ->
     Some
       (Markdown.codeBlock

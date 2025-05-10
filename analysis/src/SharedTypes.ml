@@ -155,6 +155,14 @@ module Declared = struct
 end
 
 module Stamps : sig
+  type kind =
+    | KType of Type.t Declared.t
+    | KValue of Types.type_expr Declared.t
+    | KModule of Module.t Declared.t
+    | KConstructor of Constructor.t Declared.t
+
+  val locOfKind : kind -> Warnings.loc
+
   type t
 
   val addConstructor : t -> int -> Constructor.t Declared.t -> unit
@@ -169,6 +177,7 @@ module Stamps : sig
   val iterModules : (int -> Module.t Declared.t -> unit) -> t -> unit
   val iterTypes : (int -> Type.t Declared.t -> unit) -> t -> unit
   val iterValues : (int -> Types.type_expr Declared.t -> unit) -> t -> unit
+  val getEntries : t -> (int * kind) list
 end = struct
   type 't stampMap = (int, 't Declared.t) Hashtbl.t
 
@@ -177,6 +186,12 @@ end = struct
     | KValue of Types.type_expr Declared.t
     | KModule of Module.t Declared.t
     | KConstructor of Constructor.t Declared.t
+
+  let locOfKind = function
+    | KType declared -> declared.extentLoc
+    | KValue declared -> declared.extentLoc
+    | KModule declared -> declared.extentLoc
+    | KConstructor declared -> declared.extentLoc
 
   type t = (int, kind) Hashtbl.t
 
@@ -239,6 +254,8 @@ end = struct
         | KConstructor d -> f stamp d
         | _ -> ())
       stamps
+
+  let getEntries t = t |> Hashtbl.to_seq |> List.of_seq
 end
 
 module File = struct
@@ -460,6 +477,9 @@ type locType =
   | LModule of locKind
   | TopLevelModule of string
   | TypeDefinition of string * Types.type_declaration * int
+  (* For all other expressions and patterns that are not tracked by the above. Needed to produce hovers, completions, and what not. *)
+  | OtherExpression of Types.type_expr
+  | OtherPattern of Types.type_expr
 
 type locItem = {loc: Location.t; locType: locType}
 
@@ -530,14 +550,25 @@ let locKindToString = function
   | NotFound -> "NotFound"
   | Definition (_, tip) -> "(Definition " ^ Tip.toString tip ^ ")"
 
+let constantToString = function
+  | Asttypes.Const_int _ -> "Const_int"
+  | Asttypes.Const_char _ -> "Const_char"
+  | Asttypes.Const_string _ -> "Const_string"
+  | Asttypes.Const_float _ -> "Const_float"
+  | Asttypes.Const_int32 _ -> "Const_int32"
+  | Asttypes.Const_int64 _ -> "Const_int64"
+  | Asttypes.Const_bigint _ -> "Const_bigint"
+
 let locTypeToString = function
   | Typed (name, e, locKind) ->
-    "Typed " ^ name ^ " " ^ Shared.typeToString e ^ " "
-    ^ locKindToString locKind
-  | Constant _ -> "Constant"
+    Format.sprintf "Typed(%s) %s: %s" (locKindToString locKind) name
+      (Shared.typeToString e)
+  | Constant c -> "Constant " ^ constantToString c
+  | OtherExpression e -> "OtherExpression " ^ Shared.typeToString e
+  | OtherPattern e -> "OtherPattern " ^ Shared.typeToString e
   | LModule locKind -> "LModule " ^ locKindToString locKind
-  | TopLevelModule _ -> "TopLevelModule"
-  | TypeDefinition _ -> "TypeDefinition"
+  | TopLevelModule name -> "TopLevelModule " ^ name
+  | TypeDefinition (name, _, _) -> "TypeDefinition " ^ name
 
 let locItemToString {loc = {Location.loc_start; loc_end}; locType} =
   let pos1 = Utils.cmtPosToPosition loc_start in
@@ -763,6 +794,47 @@ module Completable = struct
     | CexhaustiveSwitch {contextPath} ->
       "CexhaustiveSwitch " ^ contextPathToString contextPath
     | ChtmlElement {prefix} -> "ChtmlElement <" ^ prefix
+end
+
+module CompletableRevamped = struct
+  type decoratorPayload =
+    | Module of string
+    | ModuleWithImportAttributes of {prefix: string}
+    | JsxConfig of {prefix: string}
+
+  type completionExprKind = Empty | Field of {hint: string}
+
+  type completionPatternKind =
+    | Empty
+    | Field of {hint: string; seenFields: string list}
+    | FieldValue of {fieldName: string}
+
+  type t =
+    | Cexpression of {
+        kind: completionExprKind;
+        typeLoc: Location.t;
+        posOfDot: Pos.t option;
+      }
+    | Cpattern of {kind: completionPatternKind; typeLoc: Location.t}
+    | Cnone
+    | CextensionNode of string
+    | Cdecorator of string
+    | CdecoratorPayload of decoratorPayload
+
+  let toString (t : t) =
+    match t with
+    | Cexpression _ -> "Cexpression"
+    | Cpattern _ -> "Cpattern"
+    | Cnone -> "Cnone"
+    | CextensionNode _ -> "CextensionNode"
+    | Cdecorator _ -> "Cdecorator"
+    | CdecoratorPayload _ -> "CdecoratorPayload"
+
+  let try_loc (t : t) =
+    match t with
+    | Cexpression {typeLoc; _} -> Some typeLoc
+    | Cpattern {typeLoc; _} -> Some typeLoc
+    | _ -> None
 end
 
 module ScopeTypes = struct

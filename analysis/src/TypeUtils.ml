@@ -37,7 +37,12 @@ let rec hasTvar (ty : Types.type_expr) : bool =
 
 let findTypeViaLoc ~full ~debug (loc : Location.t) =
   match References.getLocItem ~full ~pos:(Pos.ofLexing loc.loc_end) ~debug with
-  | Some {locType = Typed (_, typExpr, _)} -> Some typExpr
+  | Some
+      {
+        locType =
+          Typed (_, typExpr, _) | OtherExpression typExpr | OtherPattern typExpr;
+      } ->
+    Some typExpr
   | _ -> None
 
 let pathFromTypeExpr (t : Types.type_expr) =
@@ -341,19 +346,19 @@ let rec extractType ?(printOpeningDebug = true)
   match t.desc with
   | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
     extractType ?typeArgContext ~printOpeningDebug:false ~env ~package t1
-  | Tconstr (Path.Pident {name = "option"}, [payloadTypeExpr], _) ->
+  | Tconstr (p, [payloadTypeExpr], _) when Path.same p Predef.path_option ->
     Some (Toption (env, TypeExpr payloadTypeExpr), typeArgContext)
-  | Tconstr (Path.Pident {name = "promise"}, [payloadTypeExpr], _) ->
+  | Tconstr (p, [payloadTypeExpr], _) when Path.same p Predef.path_promise ->
     Some (Tpromise (env, payloadTypeExpr), typeArgContext)
-  | Tconstr (Path.Pident {name = "array"}, [payloadTypeExpr], _) ->
+  | Tconstr (p, [payloadTypeExpr], _) when Path.same p Predef.path_array ->
     Some (Tarray (env, TypeExpr payloadTypeExpr), typeArgContext)
-  | Tconstr (Path.Pident {name = "result"}, [okType; errorType], _) ->
+  | Tconstr (p, [okType; errorType], _) when Path.same p Predef.path_result ->
     Some (Tresult {env; okType; errorType}, typeArgContext)
-  | Tconstr (Path.Pident {name = "bool"}, [], _) ->
+  | Tconstr (p, [], _) when Path.same p Predef.path_bool ->
     Some (Tbool env, typeArgContext)
-  | Tconstr (Path.Pident {name = "string"}, [], _) ->
+  | Tconstr (p, [], _) when Path.same p Predef.path_string ->
     Some (Tstring env, typeArgContext)
-  | Tconstr (Path.Pident {name = "exn"}, [], _) ->
+  | Tconstr (p, [], _) when Path.same p Predef.path_exn ->
     Some (Texn env, typeArgContext)
   | Tarrow _ -> (
     match extractFunctionType2 ?typeArgContext t ~env ~package with

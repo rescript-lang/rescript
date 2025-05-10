@@ -1,0 +1,20 @@
+Found Completable: Cpattern at type loc: [3:15->3:28]
+
+  2 │ let someStringArr = ["hello"]
+  3 │ 
+  4 │ let x = switch someStringArr {
+    │                ‾‾‾‾‾‾‾‾‾‾‾‾‾
+  5 │   | 
+  6 │ //  ^com
+
+[{
+    "label": "[]",
+    "kind": 12,
+    "tags": [],
+    "detail": "array<string>",
+    "documentation": null,
+    "sortText": "A",
+    "insertText": "[$0]",
+    "insertTextFormat": 2
+  }]
+

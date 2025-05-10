@@ -1,0 +1,18 @@
+{
+  "name": "@tests/analysis_new",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rescript",
+    "clean": "rescript clean -with-deps",
+    "test": "yarn build && vitest run test.js",
+    "test:update": "rm test_files/__snapshots__/*.snap && vitest run -u test.js"
+  },
+  "dependencies": {
+    "@rescript/react": "link:../../dependencies/rescript-react",
+    "rescript": "workspace:^"
+  },
+  "devDependencies": {
+    "vitest": "3.1.2"
+  }
+}

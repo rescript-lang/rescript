@@ -104,7 +104,7 @@ end
 
 let setup = Color.setup
 
-type gutter = Number of int | Elided
+type gutter = Number of int | Elided | UnderlinedRow
 type highlighted_string = {s: string; start: int; end_: int}
 type line = {gutter: gutter; content: highlighted_string list}
 
@@ -116,7 +116,7 @@ type line = {gutter: gutter; content: highlighted_string list}
   - center snippet when it's heavily indented
   - ellide intermediate lines when the reported range is huge
 *)
-let print ~is_warning ~src ~(start_pos : Lexing.position)
+let print ~is_warning ~draw_underline ~src ~(start_pos : Lexing.position)
     ~(end_pos : Lexing.position) =
   let indent = 2 in
   let highlight_line_start_line = start_pos.pos_lnum in
@@ -175,7 +175,8 @@ let print ~is_warning ~src ~(start_pos : Lexing.position)
                |> break_long_line line_width
                |> List.mapi (fun i line ->
                       match gutter with
-                      | Elided -> {s = line; start = 0; end_ = 0}
+                      | Elided | UnderlinedRow ->
+                        {s = line; start = 0; end_ = 0}
                       | Number line_number ->
                         let highlight_line_start_offset =
                           start_pos.pos_cnum - start_pos.pos_bol
@@ -207,7 +208,41 @@ let print ~is_warning ~src ~(start_pos : Lexing.position)
                         in
                         {s = line; start; end_})
            in
-           {gutter; content = new_content})
+           if draw_underline then
+             let has_highlight =
+               List.exists (fun {start; end_} -> start < end_) new_content
+             in
+             if has_highlight then
+               let underline_content =
+                 List.map
+                   (fun {start; end_} ->
+                     if start < end_ then
+                       let overline_char = "‾" in
+                       let underline_length = end_ - start in
+                       let underline =
+                         String.concat ""
+                           (List.init underline_length (fun _ -> overline_char))
+                       in
+                       [
+                         {
+                           s = String.make start ' ' ^ underline;
+                           start = 0;
+                           end_ = 0;
+                         };
+                       ]
+                     else [{s = ""; start = 0; end_ = 0}])
+                   new_content
+               in
+               [
+                 {gutter; content = new_content};
+                 {
+                   gutter = UnderlinedRow;
+                   content = List.flatten underline_content;
+                 };
+               ]
+             else [{gutter; content = new_content}]
+           else [{gutter; content = new_content}])
+    |> List.flatten
   in
   let buf = Buffer.create 100 in
   let open Color in
@@ -275,5 +310,11 @@ let print ~is_warning ~src ~(start_pos : Lexing.position)
                            else NoColor
                          in
                          add_ch c ch);
+                  add_ch NoColor '\n')
+         | UnderlinedRow ->
+           content
+           |> List.iter (fun line ->
+                  draw_gutter NoColor "";
+                  line.s |> String.iter (fun ch -> add_ch NoColor ch);
                   add_ch NoColor '\n'));
   Buffer.contents buf

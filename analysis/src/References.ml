@@ -358,7 +358,7 @@ let definitionForLocItem ~full:{file; package} locItem =
   | Typed (_, _, NotFound)
   | LModule (NotFound | Definition (_, _))
   | TypeDefinition (_, _, _)
-  | Constant _ ->
+  | Constant _ | OtherExpression _ | OtherPattern _ ->
     None
   | TopLevelModule name -> (
     maybeLog ("Toplevel " ^ name);
@@ -405,7 +405,9 @@ let digConstructor ~env ~package path =
 
 let typeDefinitionForLocItem ~full:{file; package} locItem =
   match locItem.locType with
-  | Constant _ | TopLevelModule _ | LModule _ -> None
+  | Constant _ | TopLevelModule _ | LModule _ | OtherExpression _
+  | OtherPattern _ ->
+    None
   | TypeDefinition _ -> Some (file.uri, locItem.loc)
   | Typed (_, typ, _) -> (
     let env = QueryEnv.fromFile file in
@@ -546,7 +548,10 @@ let allReferencesForLocItem ~full:({file; package} as full) locItem =
         getSrc paths |> List.map moduleSrcToRef
     in
     List.append targetModuleReferences otherModulesReferences
-  | Typed (_, _, NotFound) | LModule NotFound | Constant _ -> []
+  | Typed (_, _, NotFound)
+  | LModule NotFound
+  | Constant _ | OtherExpression _ | OtherPattern _ ->
+    []
   | TypeDefinition (_, _, stamp) -> forLocalStamp ~full stamp Type
   | Typed (_, _, (LocalReference (stamp, tip) | Definition (stamp, tip)))
   | LModule (LocalReference (stamp, tip) | Definition (stamp, tip)) ->

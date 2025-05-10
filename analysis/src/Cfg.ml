@@ -17,3 +17,8 @@ let readProjectConfigCache =
        | "true" -> true
        | _ -> false
      with _ -> false)
+
+let useRevampedCompletion =
+  ref (Sys.getenv_opt "RESCRIPT_NEW_ANALYSIS_ENGINE" |> Option.is_some)
+
+let isTestWorkmode = ref false

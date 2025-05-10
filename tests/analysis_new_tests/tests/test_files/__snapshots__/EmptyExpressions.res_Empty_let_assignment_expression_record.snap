@@ -1,0 +1,19 @@
+Found Completable: Cexpression at type loc: [1:4->1:5]
+
+  1 │ // Empty let assignment expression, record
+  2 │ let x: TestTypeDefs.nestedTestRecord = 
+    │     ‾
+  3 │ //                                    ^com
+  4 │ 
+
+[{
+    "label": "{}",
+    "kind": 12,
+    "tags": [],
+    "detail": "TestTypeDefs.nestedTestRecord",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype nestedTestRecord = {\n  test: bool,\n  nested: {name: string, oneMoreLevel: {here: bool}},\n}\n```"},
+    "sortText": "A",
+    "insertText": "{$0}",
+    "insertTextFormat": 2
+  }]
+

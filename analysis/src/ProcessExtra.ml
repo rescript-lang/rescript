@@ -373,7 +373,9 @@ let pat ~(file : File.t) ~env ~extra (iter : Tast_iterator.iterator)
   (* Log.log("Entering pattern " ++ Utils.showLocation(pat_loc)); *)
   (match pattern.pat_desc with
   | Tpat_record (items, _) ->
-    addForRecord ~env ~extra ~recordType:pattern.pat_type items
+    addForRecord ~env ~extra ~recordType:pattern.pat_type items;
+    if !Cfg.useRevampedCompletion then
+      addLocItem extra pattern.pat_loc (OtherPattern pattern.pat_type)
   | Tpat_construct (lident, constructor, _) ->
     addForConstructor ~env ~extra pattern.pat_type lident constructor
   | Tpat_alias (_inner, ident, name) ->
@@ -383,7 +385,9 @@ let pat ~(file : File.t) ~env ~extra (iter : Tast_iterator.iterator)
     (* Log.log("Pattern " ++ name.txt); *)
     let stamp = Ident.binding_time ident in
     addForPattern stamp name
-  | _ -> ());
+  | _ ->
+    if !Cfg.useRevampedCompletion then
+      addLocItem extra pattern.pat_loc (OtherPattern pattern.pat_type));
   Tast_iterator.default_iterator.pat iter pattern
 
 let expr ~env ~(extra : extra) (iter : Tast_iterator.iterator)
@@ -397,7 +401,9 @@ let expr ~env ~(extra : extra) (iter : Tast_iterator.iterator)
       |> Utils.filterMap (fun (desc, item, opt) ->
              match item with
              | Typedtree.Overridden (loc, _) -> Some (loc, desc, (), opt)
-             | _ -> None))
+             | _ -> None));
+    if !Cfg.useRevampedCompletion then
+      addLocItem extra expression.exp_loc (OtherExpression expression.exp_type)
   | Texp_constant constant ->
     addLocItem extra expression.exp_loc (Constant constant)
   (* Skip unit and list literals *)
@@ -409,7 +415,25 @@ let expr ~env ~(extra : extra) (iter : Tast_iterator.iterator)
   | Texp_field (inner, lident, _label_description) ->
     addForField ~env ~extra ~recordType:inner.exp_type
       ~fieldType:expression.exp_type lident
-  | _ -> ());
+  | Texp_apply {funct; args} when !Cfg.useRevampedCompletion ->
+    args
+    |> List.iter (fun (label, _) ->
+           match label with
+           | Asttypes.Labelled {txt; loc} | Optional {txt; loc} -> (
+             let rec findArgType (t : Types.type_expr) =
+               match t.desc with
+               | Tarrow ((Labelled lbl | Optional lbl), argType, _, _, _)
+                 when lbl = txt ->
+                 Some argType
+               | Tarrow (_, _, next, _, _) -> findArgType next
+               | _ -> None
+             in
+             match findArgType funct.exp_type with
+             | None -> ()
+             | Some argType -> addLocItem extra loc (OtherExpression argType))
+           | _ -> ())
+  | _ ->
+    addLocItem extra expression.exp_loc (OtherExpression expression.exp_type));
   Tast_iterator.default_iterator.expr iter expression
 
 let getExtra ~file ~infos =
