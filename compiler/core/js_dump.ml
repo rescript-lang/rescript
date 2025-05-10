@@ -1154,6 +1154,19 @@ and print_jsx cxt ?(spread_props : J.expression option)
     in
 
     let print_prop n x ctx =
+      let n =
+        (* turn aria-label to ariaLabel *)
+        if not (String.contains n '-') then n
+        else
+          let chars = String.to_seq n |> List.of_seq in
+          let rec visit chars acc =
+            match chars with
+            | [] -> List.rev acc
+            | '-' :: l :: rest -> visit rest (Char.uppercase_ascii l :: acc)
+            | c :: rest -> visit rest (c :: acc)
+          in
+          visit chars [] |> List.to_seq |> String.of_seq
+      in
       let prop_name = Js_dump_property.property_key_string n in
       P.string f prop_name;
       P.string f "=";
