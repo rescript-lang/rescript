@@ -11,3 +11,4 @@ include Core_JsonTests
 include Core_NullableTests
 include Core_DictTests
 include Core_IteratorTests
+include Core_RegExpTest
