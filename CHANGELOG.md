@@ -24,6 +24,7 @@
 - Add bitwise NOT (`~`) operator for `int` and `bigint`. https://github.com/rescript-lang/rescript/pull/7418
 - Significantly reduced the download size by splitting binaries into optional platform-specific dependencies (e.g, `@rescript/linux-x64`). https://github.com/rescript-lang/rescript/pull/7395
 - JSX: do not error on ref as prop anymore (which is allowed in React 19). https://github.com/rescript-lang/rescript/pull/7420
+- Add new attribute `@notUndefined` for abstract types to prevent unnecessary wrapping with `Primitive_option.some` in JS output. https://github.com/rescript-lang/rescript/pull/7458
 
 #### :bug: Bug fix
 
@@ -42,7 +43,6 @@
 #### :nail_care: Polish
 
 - In type errors, recommend stdlib over Belt functions for converting between float/int/string. https://github.com/rescript-lang/rescript/pull/7453
-- Make `Jsx.element` a private empty record to avoid unnecessary `Primitive_option.some`. https://github.com/rescript-lang/rescript/pull/7450
 - Remove unused type `Jsx.ref`. https://github.com/rescript-lang/rescript/pull/7459
 
 # 12.0.0-alpha.12
