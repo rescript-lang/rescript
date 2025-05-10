@@ -20,6 +20,32 @@ env:
   OCAMLRUNPARAM: b
 
 jobs:
+  test-rewatch-integration:
+    needs:
+      - pkg-pr-new
+    runs-on: ubuntu-latest
+    env:
+      RUST_BACKTRACE: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Install ReScript package
+        run: |
+          COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
+        shell: bash
+        working-directory: rewatch/testrepo
+
+      - name: Run rewatch integration tests
+        run: |
+          make test-rewatch-ci
+
   build-rewatch:
     strategy:
       fail-fast: false
@@ -77,6 +103,11 @@ jobs:
         if: steps.build-cache.outputs.cache-hit != 'true'
         run: |
           cargo build --manifest-path rewatch/Cargo.toml --target ${{ matrix.rust-target }} --release
+
+      - name: Run rewatch unit tests
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        run: |
+          cargo test --manifest-path rewatch/Cargo.toml
 
       - name: Copy rewatch binary
         run: |
@@ -440,7 +471,7 @@ jobs:
           path: lib/ocaml
 
   pkg-pr-new:
-    needs: 
+    needs:
       - build-rewatch
       - build-compiler
     runs-on: ubuntu-24.04-arm

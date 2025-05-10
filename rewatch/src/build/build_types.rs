@@ -70,6 +70,7 @@ pub struct Module {
     pub compile_dirty: bool,
     pub last_compiled_cmi: Option<SystemTime>,
     pub last_compiled_cmt: Option<SystemTime>,
+    pub deps_dirty: bool,
 }
 
 impl Module {

@@ -8,9 +8,9 @@ use super::packages;
 use crate::config;
 use crate::helpers;
 use ahash::{AHashMap, AHashSet};
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
 use console::style;
-use log::{debug, log_enabled, trace, Level::Info};
+use log::{debug, trace};
 use rayon::prelude::*;
 use std::path::Path;
 use std::process::Command;
@@ -18,9 +18,11 @@ use std::time::SystemTime;
 
 pub fn compile(
     build_state: &mut BuildState,
+    show_progress: bool,
     inc: impl Fn() + std::marker::Sync,
     set_length: impl Fn(u64),
-) -> Result<(String, String, usize)> {
+    build_dev_deps: bool,
+) -> anyhow::Result<(String, String, usize)> {
     let mut compiled_modules = AHashSet::<String>::new();
     let dirty_modules = build_state
         .modules
@@ -146,7 +148,7 @@ pub fn compile(
                                 "cmi",
                             );
 
-                            let cmi_digest = helpers::compute_file_hash(&cmi_path);
+                            let cmi_digest = helpers::compute_file_hash(Path::new(&cmi_path));
 
                             let package = build_state
                                 .get_package(&module.package_name)
@@ -160,7 +162,7 @@ pub fn compile(
                                     let result = compile_file(
                                         package,
                                         root_package,
-                                        &package.get_iast_path(&path),
+                                        &helpers::get_ast_path(&path).to_string_lossy(),
                                         module,
                                         &build_state.rescript_version,
                                         true,
@@ -168,6 +170,7 @@ pub fn compile(
                                         &build_state.packages,
                                         &build_state.project_root,
                                         &build_state.workspace_root,
+                                        build_dev_deps,
                                     );
                                     Some(result)
                                 }
@@ -176,7 +179,7 @@ pub fn compile(
                             let result = compile_file(
                                 package,
                                 root_package,
-                                &package.get_ast_path(&source_file.implementation.path),
+                                &helpers::get_ast_path(&source_file.implementation.path).to_string_lossy(),
                                 module,
                                 &build_state.rescript_version,
                                 false,
@@ -184,8 +187,9 @@ pub fn compile(
                                 &build_state.packages,
                                 &build_state.project_root,
                                 &build_state.workspace_root,
+                                build_dev_deps,
                             );
-                            let cmi_digest_after = helpers::compute_file_hash(&cmi_path);
+                            let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
 
                             // we want to compare both the hash of interface and the implementation
                             // compile assets to verify that nothing changed. We also need to checke the interface
@@ -212,7 +216,7 @@ pub fn compile(
                     None
                 }
                 .inspect(|_res| {
-                    if !(log_enabled!(Info)) {
+                    if show_progress {
                         inc();
                     }
                 })
@@ -322,7 +326,7 @@ pub fn compile(
         if files_total_count == compile_universe_count {
             break;
         }
-        if in_progress_modules.len() == 0 || in_progress_modules.eq(&current_in_progres_modules) {
+        if in_progress_modules.is_empty() || in_progress_modules.eq(&current_in_progres_modules) {
             // find the dependency cycle
             let cycle = dependency_cycle::find(
                 &compile_universe
@@ -358,36 +362,12 @@ pub fn compiler_args(
     // if packages are known, we pass a reference here
     // this saves us a scan to find their paths
     packages: &Option<&AHashMap<String, packages::Package>>,
+    build_dev_deps: bool,
 ) -> Vec<String> {
-    let normal_deps = config.bs_dependencies.as_ref().unwrap_or(&vec![]).to_owned();
-
     let bsc_flags = config::flatten_flags(&config.bsc_flags);
-    // don't compile dev-deps yet
-    // let dev_deps = source
-    //     .package
-    //     .config
-    //     .bs_dev_dependencies
-    //     .as_ref()
-    //     .unwrap_or(&vec![])
-    //     .to_owned();
 
-    let deps = [normal_deps]
-        .concat()
-        .par_iter()
-        .map(|package_name| {
-            let canonicalized_path = if let Some(packages) = packages {
-                packages
-                    .get(package_name)
-                    .expect("expect package")
-                    .path
-                    .to_string()
-            } else {
-                packages::read_dependency(package_name, project_root, project_root, workspace_root)
-                    .expect("cannot find dep")
-            };
-            vec!["-I".to_string(), packages::get_build_path(&canonicalized_path)]
-        })
-        .collect::<Vec<Vec<String>>>();
+    let dependency_paths =
+        get_dependency_paths(config, project_root, workspace_root, packages, build_dev_deps);
 
     let module_name = helpers::file_path_to_module_name(file_path, &config.get_namespace());
 
@@ -412,11 +392,8 @@ pub fn compiler_args(
         packages::Namespace::NoNamespace => vec![],
     };
 
-    let jsx_args = root_config.get_jsx_args();
-    let jsx_module_args = root_config.get_jsx_module_args();
-    let jsx_mode_args = root_config.get_jsx_mode_args();
     let uncurried_args = root_config.get_uncurried_args(version);
-    let gentype_arg = root_config.get_gentype_arg();
+    let gentype_arg = config.get_gentype_arg();
 
     let warning_args: Vec<String> = match config.warnings.to_owned() {
         None => vec![],
@@ -453,50 +430,150 @@ pub fn compiler_args(
         false => vec![],
     };
 
+    let package_name_arg = vec!["-bs-package-name".to_string(), config.name.to_owned()];
+
     let implementation_args = if is_interface {
         debug!("Compiling interface file: {}", &module_name);
         vec![]
     } else {
         debug!("Compiling file: {}", &module_name);
+        let specs = root_config.get_package_specs();
 
-        vec![
-            "-bs-package-name".to_string(),
-            config.name.to_owned(),
-            "-bs-package-output".to_string(),
-            format!(
-                "{}:{}:{}",
-                root_config.get_module(),
-                Path::new(file_path).parent().unwrap().to_str().unwrap(),
-                root_config.get_suffix()
-            ),
-        ]
+        specs
+            .iter()
+            .map(|spec| {
+                return vec![
+                    "-bs-package-output".to_string(),
+                    format!(
+                        "{}:{}:{}",
+                        spec.module,
+                        if spec.in_source {
+                            Path::new(file_path)
+                                .parent()
+                                .unwrap()
+                                .to_str()
+                                .unwrap()
+                                .to_string()
+                        } else {
+                            format!(
+                                "lib/{}",
+                                Path::join(
+                                    Path::new(&spec.get_out_of_source_dir()),
+                                    Path::new(file_path).parent().unwrap()
+                                )
+                                .to_str()
+                                .unwrap()
+                            )
+                        },
+                        root_config.get_suffix(spec),
+                    ),
+                ];
+            })
+            .flatten()
+            .collect()
     };
 
     vec![
         namespace_args,
         read_cmi_args,
-        vec!["-I".to_string(), ".".to_string()],
-        deps.concat(),
-        gentype_arg,
-        jsx_args,
-        jsx_module_args,
-        jsx_mode_args,
+        vec!["-I".to_string(), "../ocaml".to_string()],
+        dependency_paths.concat(),
         uncurried_args,
         bsc_flags.to_owned(),
         warning_args,
+        gentype_arg,
         // vec!["-warn-error".to_string(), "A".to_string()],
         // ^^ this one fails for bisect-ppx
         // this is the default
         // we should probably parse the right ones from the package config
         // vec!["-w".to_string(), "a".to_string()],
+        package_name_arg,
         implementation_args,
         // vec![
         //     "-I".to_string(),
         //     abs_node_modules_path.to_string() + "/rescript/ocaml",
         // ],
+        vec!["-bs-v".to_string(), format!("{}", version)],
         vec![ast_path.to_string()],
     ]
     .concat()
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum DependentPackage {
+    Normal(String),
+    Dev(String),
+}
+
+impl DependentPackage {
+    fn name(&self) -> &str {
+        match self {
+            Self::Normal(name) => name,
+            Self::Dev(name) => name,
+        }
+    }
+
+    fn is_dev(&self) -> bool {
+        match self {
+            Self::Normal(_) => false,
+            Self::Dev(_) => true,
+        }
+    }
+}
+
+fn get_dependency_paths(
+    config: &config::Config,
+    project_root: &str,
+    workspace_root: &Option<String>,
+    packages: &Option<&AHashMap<String, packages::Package>>,
+    build_dev_deps: bool,
+) -> Vec<Vec<String>> {
+    let normal_deps = config
+        .bs_dependencies
+        .clone()
+        .unwrap_or_default()
+        .into_iter()
+        .map(DependentPackage::Normal)
+        .collect();
+    let dev_deps = if build_dev_deps {
+        config
+            .bs_dev_dependencies
+            .clone()
+            .unwrap_or_default()
+            .into_iter()
+            .map(DependentPackage::Dev)
+            .collect()
+    } else {
+        vec![]
+    };
+
+    [dev_deps, normal_deps]
+        .concat()
+        .par_iter()
+        .filter_map(|dependent_package| {
+            let package_name = dependent_package.name();
+            let dependency_path = if let Some(packages) = packages {
+                packages.get(package_name).map(|package| package.path.to_string())
+            } else {
+                packages::read_dependency(package_name, project_root, project_root, workspace_root).ok()
+            }
+            .map(|canonicalized_path| {
+                vec![
+                    "-I".to_string(),
+                    packages::get_ocaml_build_path(&canonicalized_path),
+                ]
+            });
+
+            if !dependent_package.is_dev() && dependency_path.is_none() {
+                panic!(
+                    "Expected to find dependent package {} of {}",
+                    package_name, config.name
+                );
+            }
+
+            dependency_path
+        })
+        .collect::<Vec<Vec<String>>>()
 }
 
 fn compile_file(
@@ -510,14 +587,15 @@ fn compile_file(
     packages: &AHashMap<String, packages::Package>,
     project_root: &str,
     workspace_root: &Option<String>,
-) -> Result<Option<String>> {
+    build_dev_deps: bool,
+) -> Result<Option<String>, String> {
+    let ocaml_build_path_abs = package.get_ocaml_build_path();
     let build_path_abs = package.get_build_path();
     let implementation_file_path = match &module.source_type {
         SourceType::SourceFile(ref source_file) => Ok(&source_file.implementation.path),
-        sourcetype => Err(anyhow!(
+        sourcetype => Err(format!(
             "Tried to compile a file that is not a source file ({}). Path to AST: {}. ",
-            sourcetype,
-            ast_path
+            sourcetype, ast_path
         )),
     }?;
     let module_name = helpers::file_path_to_module_name(implementation_file_path, &package.namespace);
@@ -533,6 +611,7 @@ fn compile_file(
         project_root,
         workspace_root,
         &Some(packages),
+        build_dev_deps,
     );
 
     let to_mjs = Command::new(bsc_path)
@@ -544,12 +623,11 @@ fn compile_file(
         Ok(x) if !x.status.success() => {
             let stderr = String::from_utf8_lossy(&x.stderr);
             let stdout = String::from_utf8_lossy(&x.stdout);
-            Err(anyhow!(stderr.to_string() + &stdout))
+            Err(stderr.to_string() + &stdout)
         }
-        Err(e) => Err(anyhow!(
+        Err(e) => Err(format!(
             "Could not compile file. Error: {}. Path to AST: {:?}",
-            e,
-            ast_path
+            e, ast_path
         )),
         Ok(x) => {
             let err = std::str::from_utf8(&x.stderr)
@@ -561,43 +639,69 @@ fn compile_file(
             // perhaps we can do this copying somewhere else
             if !is_interface {
                 let _ = std::fs::copy(
-                    build_path_abs.to_string() + "/" + &module_name + ".cmi",
-                    std::path::Path::new(&package.get_bs_build_path())
+                    std::path::Path::new(&package.get_build_path())
                         .join(dir)
                         // because editor tooling doesn't support namespace entries yet
                         // we just remove the @ for now. This makes sure the editor support
                         // doesn't break
                         .join(module_name.to_owned() + ".cmi"),
+                    ocaml_build_path_abs.to_string() + "/" + &module_name + ".cmi",
                 );
                 let _ = std::fs::copy(
-                    build_path_abs.to_string() + "/" + &module_name + ".cmj",
-                    std::path::Path::new(&package.get_bs_build_path())
+                    std::path::Path::new(&package.get_build_path())
                         .join(dir)
                         .join(module_name.to_owned() + ".cmj"),
+                    ocaml_build_path_abs.to_string() + "/" + &module_name + ".cmj",
                 );
                 let _ = std::fs::copy(
-                    build_path_abs.to_string() + "/" + &module_name + ".cmt",
-                    std::path::Path::new(&package.get_bs_build_path())
+                    std::path::Path::new(&package.get_build_path())
                         .join(dir)
                         // because editor tooling doesn't support namespace entries yet
                         // we just remove the @ for now. This makes sure the editor support
                         // doesn't break
                         .join(module_name.to_owned() + ".cmt"),
+                    ocaml_build_path_abs.to_string() + "/" + &module_name + ".cmt",
                 );
             } else {
                 let _ = std::fs::copy(
-                    build_path_abs.to_string() + "/" + &module_name + ".cmti",
-                    std::path::Path::new(&package.get_bs_build_path())
+                    std::path::Path::new(&package.get_build_path())
                         .join(dir)
                         .join(module_name.to_owned() + ".cmti"),
+                    ocaml_build_path_abs.to_string() + "/" + &module_name + ".cmti",
+                );
+                let _ = std::fs::copy(
+                    std::path::Path::new(&package.get_build_path())
+                        .join(dir)
+                        .join(module_name.to_owned() + ".cmi"),
+                    ocaml_build_path_abs.to_string() + "/" + &module_name + ".cmi",
                 );
             }
+
             match &module.source_type {
                 SourceType::SourceFile(SourceFile {
                     interface: Some(Interface { path, .. }),
                     ..
-                })
-                | SourceType::SourceFile(SourceFile {
+                }) => {
+                    // we need to copy the source file to the build directory.
+                    // editor tools expects the source file in lib/bs for finding the current package
+                    // and in lib/ocaml when referencing modules in other packages
+                    let _ = std::fs::copy(
+                        std::path::Path::new(&package.path).join(path),
+                        std::path::Path::new(&package.get_build_path()).join(path),
+                    )
+                    .expect("copying source file failed");
+
+                    let _ = std::fs::copy(
+                        std::path::Path::new(&package.path).join(path),
+                        std::path::Path::new(&package.get_ocaml_build_path())
+                            .join(std::path::Path::new(path).file_name().unwrap()),
+                    )
+                    .expect("copying source file failed");
+                }
+                _ => (),
+            }
+            match &module.source_type {
+                SourceType::SourceFile(SourceFile {
                     implementation: Implementation { path, .. },
                     ..
                 }) => {
@@ -606,13 +710,13 @@ fn compile_file(
                     // and in lib/ocaml when referencing modules in other packages
                     let _ = std::fs::copy(
                         std::path::Path::new(&package.path).join(path),
-                        std::path::Path::new(&package.get_bs_build_path()).join(path),
+                        std::path::Path::new(&package.get_build_path()).join(path),
                     )
                     .expect("copying source file failed");
 
                     let _ = std::fs::copy(
                         std::path::Path::new(&package.path).join(path),
-                        std::path::Path::new(&package.get_build_path())
+                        std::path::Path::new(&package.get_ocaml_build_path())
                             .join(std::path::Path::new(path).file_name().unwrap()),
                     )
                     .expect("copying source file failed");
@@ -620,8 +724,35 @@ fn compile_file(
                 _ => (),
             }
 
+            // copy js file
+            root_package.config.get_package_specs().iter().for_each(|spec| {
+                if spec.in_source {
+                    match &module.source_type {
+                        SourceType::SourceFile(SourceFile {
+                            implementation: Implementation { path, .. },
+                            ..
+                        }) => {
+                            let source = helpers::get_source_file_from_rescript_file(
+                                &std::path::Path::new(&package.path).join(path),
+                                &root_package.config.get_suffix(spec),
+                            );
+                            let destination = helpers::get_source_file_from_rescript_file(
+                                &std::path::Path::new(&package.get_build_path()).join(path),
+                                &root_package.config.get_suffix(spec),
+                            );
+
+                            if source.exists() {
+                                let _ =
+                                    std::fs::copy(&source, &destination).expect("copying source file failed");
+                            }
+                        }
+                        _ => (),
+                    }
+                }
+            });
+
             if helpers::contains_ascii_characters(&err) {
-                if package.is_pinned_dep {
+                if package.is_pinned_dep || package.is_local_dep {
                     // supress warnings of external deps
                     Ok(Some(err))
                 } else {
@@ -667,7 +798,7 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildState) {
                 let dependent_module = build_state.modules.get(dependent).unwrap();
                 match dependent_module.source_type {
                     SourceType::SourceFile(_) => {
-                        match (module.last_compiled_cmt, module.last_compiled_cmi) {
+                        match (module.last_compiled_cmt, module.last_compiled_cmt) {
                             (None, None) | (Some(_), None) | (None, Some(_)) => {
                                 // println!(
                                 //     "🛑 {} is a dependent of {} but has no cmt/cmi",
@@ -681,7 +812,7 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildState) {
                         // we compare the last compiled time of the dependent module with the last
                         // compile of the interface of the module it depends on, if the interface
                         // didn't change it doesn't matter
-                        match (dependent_module.last_compiled_cmt, module.last_compiled_cmi) {
+                        match (dependent_module.last_compiled_cmt, module.last_compiled_cmt) {
                             (Some(last_compiled_dependent), Some(last_compiled)) => {
                                 if last_compiled_dependent < last_compiled {
                                     // println!(
@@ -714,7 +845,7 @@ pub fn mark_modules_with_expired_deps_dirty(build_state: &mut BuildState) {
                             let dependent_module = build_state.modules.get(dependent_of_namespace).unwrap();
 
                             if let (Some(last_compiled_dependent), Some(last_compiled)) =
-                                (dependent_module.last_compiled_cmt, module.last_compiled_cmi)
+                                (dependent_module.last_compiled_cmt, module.last_compiled_cmt)
                             {
                                 if last_compiled_dependent < last_compiled {
                                     modules_with_expired_deps.insert(dependent.to_string());

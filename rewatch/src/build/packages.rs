@@ -5,7 +5,7 @@ use crate::config;
 use crate::helpers;
 use crate::helpers::emojis::*;
 use ahash::{AHashMap, AHashSet};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use console::style;
 use log::{debug, error};
 use rayon::prelude::*;
@@ -59,20 +59,41 @@ pub struct Package {
     pub path: String,
     pub dirs: Option<AHashSet<PathBuf>>,
     pub is_pinned_dep: bool,
+    pub is_local_dep: bool,
     pub is_root: bool,
 }
 
 pub fn get_build_path(canonical_path: &str) -> String {
+    format!("{}/lib/bs", canonical_path)
+}
+
+pub fn get_js_path(canonical_path: &str) -> String {
+    format!("{}/lib/js", canonical_path)
+}
+
+pub fn get_es6_path(canonical_path: &str) -> String {
+    format!("{}/lib/es6", canonical_path)
+}
+
+pub fn get_ocaml_build_path(canonical_path: &str) -> String {
     format!("{}/lib/ocaml", canonical_path)
 }
 
 impl Package {
-    pub fn get_bs_build_path(&self) -> String {
-        format!("{}/lib/bs", self.path)
+    pub fn get_ocaml_build_path(&self) -> String {
+        get_ocaml_build_path(&self.path)
     }
 
     pub fn get_build_path(&self) -> String {
         get_build_path(&self.path)
+    }
+
+    pub fn get_js_path(&self) -> String {
+        get_js_path(&self.path)
+    }
+
+    pub fn get_es6_path(&self) -> String {
+        get_es6_path(&self.path)
     }
 
     pub fn get_mlmap_path(&self) -> String {
@@ -93,14 +114,6 @@ impl Package {
                 .to_suffix()
                 .expect("namespace should be set for mlmap module")
             + ".cmi"
-    }
-
-    pub fn get_ast_path(&self, source_file: &str) -> String {
-        helpers::get_compiler_asset(self, &packages::Namespace::NoNamespace, source_file, "ast")
-    }
-
-    pub fn get_iast_path(&self, source_file: &str) -> String {
-        helpers::get_compiler_asset(self, &packages::Namespace::NoNamespace, source_file, "iast")
     }
 }
 
@@ -377,6 +390,25 @@ fn flatten_dependencies(dependencies: Vec<Dependency>) -> Vec<Dependency> {
     flattened
 }
 
+pub fn read_package_name(package_dir: &str) -> Result<String> {
+    let package_json_path = if package_dir.is_empty() {
+        "package.json".to_string()
+    } else {
+        format!("{}/package.json", package_dir)
+    };
+
+    let package_json_contents =
+        fs::read_to_string(&package_json_path).map_err(|e| anyhow!("Could not read package.json: {}", e))?;
+
+    let package_json: serde_json::Value = serde_json::from_str(&package_json_contents)
+        .map_err(|e| anyhow!("Could not parse package.json: {}", e))?;
+
+    package_json["name"]
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| anyhow!("No name field found in package.json"))
+}
+
 fn make_package(config: config::Config, package_path: &str, is_pinned_dep: bool, is_root: bool) -> Package {
     let source_folders = match config.sources.to_owned() {
         Some(config::OneOrMore::Single(source)) => get_source_dirs(source, None),
@@ -399,8 +431,9 @@ fn make_package(config: config::Config, package_path: &str, is_pinned_dep: bool,
         }
     };
 
+    let package_name = read_package_name(package_path).expect("Could not read package name");
     Package {
-        name: config.name.to_owned(),
+        name: package_name,
         config: config.to_owned(),
         source_folders,
         source_files: None,
@@ -414,6 +447,7 @@ fn make_package(config: config::Config, package_path: &str, is_pinned_dep: bool,
             .to_string(),
         dirs: None,
         is_pinned_dep,
+        is_local_dep: !package_path.contains("node_modules"),
         is_root,
     }
 }
@@ -427,10 +461,8 @@ fn read_packages(
 
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
-    map.insert(
-        root_config.name.to_owned(),
-        make_package(root_config.to_owned(), project_root, false, true),
-    );
+    let root_package = make_package(root_config.to_owned(), project_root, false, true);
+    map.insert(root_package.name.to_string(), root_package);
 
     let mut registered_dependencies_set: AHashSet<String> = AHashSet::new();
     let dependencies = flatten_dependencies(read_dependencies(
@@ -443,10 +475,8 @@ fn read_packages(
     ));
     dependencies.iter().for_each(|d| {
         if !map.contains_key(&d.name) {
-            map.insert(
-                d.name.to_owned(),
-                make_package(d.config.to_owned(), &d.path, d.is_pinned, false),
-            );
+            let package = make_package(d.config.to_owned(), &d.path, d.is_pinned, false);
+            map.insert(package.name.to_string(), package);
         }
     });
 
@@ -466,6 +496,7 @@ pub fn get_source_files(
     package_dir: &Path,
     filter: &Option<regex::Regex>,
     source: &config::PackageSource,
+    build_dev_deps: bool,
 ) -> AHashMap<String, SourceFileMeta> {
     let mut map: AHashMap<String, SourceFileMeta> = AHashMap::new();
 
@@ -479,24 +510,19 @@ pub fn get_source_files(
     };
 
     let path_dir = Path::new(&source.dir);
-    // don't include dev sources for now
-    if type_ != &Some("dev".to_string()) {
-        match read_folders(filter, package_dir, path_dir, recurse) {
+    match (build_dev_deps, type_) {
+        (false, Some(type_)) if type_ == "dev" => (),
+        _ => match read_folders(filter, package_dir, path_dir, recurse) {
             Ok(files) => map.extend(files),
-            // Err(_e) if type_ == &Some("dev".to_string()) => {
-            //     log::warn!(
-            //         "Could not read folder: {}... Probably ok as type is dev",
-            //         path_dir.to_string_lossy()
-            //     )
-            // }
+
             Err(_e) => log::error!(
                 "Could not read folder: {:?}. Specified in dependency: {}, located {:?}...",
                 path_dir.to_path_buf().into_os_string(),
                 package_name,
                 package_dir
             ),
-        }
-    }
+        },
+    };
 
     map
 }
@@ -506,13 +532,22 @@ pub fn get_source_files(
 fn extend_with_children(
     filter: &Option<regex::Regex>,
     mut build: AHashMap<String, Package>,
+    build_dev_deps: bool,
 ) -> AHashMap<String, Package> {
     for (_key, package) in build.iter_mut() {
         let mut map: AHashMap<String, SourceFileMeta> = AHashMap::new();
         package
             .source_folders
             .par_iter()
-            .map(|source| get_source_files(&package.name, Path::new(&package.path), filter, source))
+            .map(|source| {
+                get_source_files(
+                    &package.name,
+                    Path::new(&package.path),
+                    filter,
+                    source,
+                    build_dev_deps,
+                )
+            })
             .collect::<Vec<AHashMap<String, SourceFileMeta>>>()
             .into_iter()
             .for_each(|source| map.extend(source));
@@ -554,28 +589,15 @@ pub fn make(
     root_folder: &str,
     workspace_root: &Option<String>,
     show_progress: bool,
+    build_dev_deps: bool,
 ) -> Result<AHashMap<String, Package>> {
     let map = read_packages(root_folder, workspace_root.to_owned(), show_progress)?;
 
     /* Once we have the deduplicated packages, we can add the source files for each - to minimize
      * the IO */
-    let result = extend_with_children(filter, map);
-
-    result.values().for_each(|package| {
-        if let Some(dirs) = &package.dirs {
-            dirs.iter().for_each(|dir| {
-                let _ = std::fs::create_dir_all(std::path::Path::new(&package.get_bs_build_path()).join(dir));
-            })
-        }
-    });
+    let result = extend_with_children(filter, map, build_dev_deps);
 
     Ok(result)
-}
-
-pub fn get_package_name(path: &str) -> Result<String> {
-    let config = read_config(path)?;
-
-    Ok(config.name)
 }
 
 pub fn parse_packages(build_state: &mut BuildState) {
@@ -589,9 +611,49 @@ pub fn parse_packages(build_state: &mut BuildState) {
                 build_state.module_names.extend(package_modules)
             }
             let build_path_abs = package.get_build_path();
-            let bs_build_path = package.get_bs_build_path();
-            helpers::create_build_path(&build_path_abs);
-            helpers::create_build_path(&bs_build_path);
+            let bs_build_path = package.get_ocaml_build_path();
+            helpers::create_path(&build_path_abs);
+            helpers::create_path(&bs_build_path);
+            let root_config = build_state
+                .get_package(&build_state.root_config_name)
+                .expect("cannot find root config");
+
+            root_config.config.get_package_specs().iter().for_each(|spec| {
+                if !spec.in_source {
+                    // we don't want to calculate this if we don't have out of source specs
+                    // we do this twice, but we almost never have multiple package specs
+                    // so this optimization is less important
+                    let relative_dirs: AHashSet<PathBuf> = match &package.source_files {
+                        Some(source_files) => source_files
+                            .keys()
+                            .map(|source_file| {
+                                Path::new(source_file)
+                                    .parent()
+                                    .expect("parent dir not found")
+                                    .to_owned()
+                            })
+                            .collect(),
+                        _ => AHashSet::new(),
+                    };
+                    if spec.is_common_js() {
+                        helpers::create_path(&package.get_js_path());
+                        relative_dirs.iter().for_each(|path_buf| {
+                            helpers::create_path_for_path(&Path::join(
+                                &PathBuf::from(package.get_js_path()),
+                                path_buf,
+                            ))
+                        })
+                    } else {
+                        helpers::create_path(&package.get_es6_path());
+                        relative_dirs.iter().for_each(|path_buf| {
+                            helpers::create_path_for_path(&Path::join(
+                                &PathBuf::from(package.get_es6_path()),
+                                path_buf,
+                            ))
+                        })
+                    }
+                }
+            });
 
             package.namespace.to_suffix().iter().for_each(|namespace| {
                 // generate the mlmap "AST" file for modules that have a namespace configured
@@ -645,6 +707,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
                 build_state.insert_module(
                     &helpers::file_path_to_module_name(&mlmap.to_owned(), &packages::Namespace::NoNamespace),
                     Module {
+                        deps_dirty: false,
                         source_type: SourceType::MlMap(MlMap { parse_dirty: false }),
                         deps,
                         dependents: AHashSet::new(),
@@ -685,6 +748,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
                                 }
                             })
                             .or_insert(Module {
+                                deps_dirty: true,
                                 source_type: SourceType::SourceFile(SourceFile {
                                     implementation: Implementation {
                                         path: file.to_owned(),
@@ -732,6 +796,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
                                         }
                                     })
                                     .or_insert(Module {
+                                        deps_dirty: true,
                                         source_type: SourceType::SourceFile(SourceFile {
                                             // this will be overwritten later
                                             implementation: Implementation {
@@ -803,7 +868,7 @@ fn get_unallowed_dependents(
 struct UnallowedDependency {
     bs_deps: Vec<String>,
     pinned_deps: Vec<String>,
-    bs_dev_deps: Vec<String>,
+    bs_build_dev_deps: Vec<String>,
 }
 
 pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> bool {
@@ -827,7 +892,7 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
                 let empty_unallowed_deps = UnallowedDependency {
                     bs_deps: vec![],
                     pinned_deps: vec![],
-                    bs_dev_deps: vec![],
+                    bs_build_dev_deps: vec![],
                 };
 
                 let unallowed_dependency = detected_unallowed_dependencies.entry(String::from(package_name));
@@ -835,7 +900,7 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
                 match *dependency_type {
                     "bs-dependencies" => value.bs_deps.push(unallowed_dependency_name),
                     "pinned-dependencies" => value.pinned_deps.push(unallowed_dependency_name),
-                    "bs-dev-dependencies" => value.bs_dev_deps.push(unallowed_dependency_name),
+                    "bs-dev-dependencies" => value.bs_build_dev_deps.push(unallowed_dependency_name),
                     _ => (),
                 }
             }
@@ -851,7 +916,7 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
         [
             ("bs-dependencies", unallowed_deps.bs_deps.to_owned()),
             ("pinned-dependencies", unallowed_deps.pinned_deps.to_owned()),
-            ("bs-dev-dependencies", unallowed_deps.bs_dev_deps.to_owned()),
+            ("bs-dev-dependencies", unallowed_deps.bs_build_dev_deps.to_owned()),
         ]
         .iter()
         .for_each(|(deps_type, map)| {
@@ -887,7 +952,7 @@ mod test {
         name: String,
         bs_deps: Vec<String>,
         pinned_deps: Vec<String>,
-        dev_deps: Vec<String>,
+        build_dev_deps: Vec<String>,
         allowed_dependents: Option<Vec<String>>,
     ) -> Package {
         Package {
@@ -902,7 +967,7 @@ mod test {
                 suffix: None,
                 pinned_dependencies: Some(pinned_deps),
                 bs_dependencies: Some(bs_deps),
-                bs_dev_dependencies: Some(dev_deps),
+                bs_dev_dependencies: Some(build_dev_deps),
                 ppx_flags: None,
                 bsc_flags: None,
                 reason: None,
@@ -921,6 +986,7 @@ mod test {
             dirs: None,
             is_pinned_dep: false,
             is_root: false,
+            is_local_dep: false,
         }
     }
     #[test]

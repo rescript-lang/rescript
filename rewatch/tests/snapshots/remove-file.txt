@@ -1,15 +1,10 @@
-[1/7] 📦 Building package tree...
-[2K[1/7] 📦 Built package tree in 0.00s
-[2/7] 🕵️ Finding source files...
-[2K[2/7] 🕵️ Found source files in 0.00s
-[3/7] 📝 Reading compile state...
-[2K[3/7] 📝 Read compile state 0.00s
-[4/7] 🧹 Cleaning up previous build...
-[2K[4/7] 🧹 Cleaned 1/11 0.00s
+[1/7] 📦 Building package tree...[2K[1/7] 📦 Built package tree in 0.00s
+[2/7] 👀 Finding source files...[2K[2/7] 👀 Found source files in 0.00s
+[3/7] 📝 Reading compile state...[2K[3/7] 📝 Read compile state 0.00s
+[4/7] 🧹 Cleaning up previous build...[2K[4/7] 🧹 Cleaned 1/94 0.00s
 [2K[5/7] 🧱 Parsed 0 source files in 0.00s
-[2K[6/7] ️🌴 Collected deps in 0.00s
-[2K[7/7] ️🛑 Compiled 1 modules in 0.00s
-ERROR:
+[2K[6/7] 🌴 Collected deps in 0.00s
+[2K[7/7] ❌ Compiled 1 modules in 0.00s
 
   [1;31mWe've found a bug for you![0m
   [36m/packages/dep01/src/Dep01.res[0m:[2m3:9-17[0m
@@ -22,10 +17,9 @@ ERROR:
 
   [1;33mThe module or file Dep02 can't be found.[0m
   - If it's a third-party dependency:
-    - Did you add it to the "bs-dependencies" or "bs-dev-dependencies" in rescript.json?
-  - Did you include the file's directory to the "sources" in rescript.json?
+    - Did you add it to the "bs-dependencies" or "bs-dev-dependencies" in bsconfig.json?
+  - Did you include the file's directory to the "sources" in bsconfig.json?
   
 
 
-ERROR:
-Incremental build failed. Error: [2K  ️🛑 Failed to Compile. See Errors Above
+Incremental build failed. Error: [2K  ❌ Failed to Compile. See Errors Above

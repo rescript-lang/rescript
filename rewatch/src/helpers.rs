@@ -25,12 +25,12 @@ pub mod emojis {
     pub static COMMAND: Emoji<'_, '_> = Emoji("🏃 ", "");
     pub static TREE: Emoji<'_, '_> = Emoji("📦 ", "");
     pub static SWEEP: Emoji<'_, '_> = Emoji("🧹 ", "");
-    pub static LOOKING_GLASS: Emoji<'_, '_> = Emoji("🕵️ ", "");
+    pub static LOOKING_GLASS: Emoji<'_, '_> = Emoji("👀 ", "");
     pub static CODE: Emoji<'_, '_> = Emoji("🧱 ", "");
-    pub static SWORDS: Emoji<'_, '_> = Emoji("⚔️ ", "");
-    pub static DEPS: Emoji<'_, '_> = Emoji("️🌴 ", "");
-    pub static CHECKMARK: Emoji<'_, '_> = Emoji("️✅ ", "");
-    pub static CROSS: Emoji<'_, '_> = Emoji("️🛑 ", "");
+    pub static SWORDS: Emoji<'_, '_> = Emoji("🤺 ", "");
+    pub static DEPS: Emoji<'_, '_> = Emoji("🌴 ", "");
+    pub static CHECKMARK: Emoji<'_, '_> = Emoji("✅ ", "");
+    pub static CROSS: Emoji<'_, '_> = Emoji("❌ ", "");
     pub static SPARKLES: Emoji<'_, '_> = Emoji("✨ ", "");
     pub static COMPILE_STATE: Emoji<'_, '_> = Emoji("📝 ", "");
     pub static LINE_CLEAR: &str = "\x1b[2K\r";
@@ -139,26 +139,31 @@ pub fn contains_ascii_characters(str: &str) -> bool {
     false
 }
 
-pub fn create_build_path(build_path: &str) {
+pub fn create_path(path: &str) {
     fs::DirBuilder::new()
         .recursive(true)
-        .create(PathBuf::from(build_path.to_string()))
+        .create(PathBuf::from(path.to_string()))
         .unwrap();
+}
+
+pub fn create_path_for_path(path: &Path) {
+    fs::DirBuilder::new().recursive(true).create(path).unwrap();
 }
 
 pub fn get_bsc(root_path: &str, workspace_root: Option<String>) -> String {
     let subfolder = match (std::env::consts::OS, std::env::consts::ARCH) {
-        ("macos", "aarch64") => "darwinarm64",
-        ("macos", _) => "darwin",
-        ("linux", "aarch64") => "linuxarm64",
-        ("linux", _) => "linux",
-        ("windows", _) => "win32",
+        ("macos", "aarch64") => "darwin-arm64",
+        ("macos", _) => "darwin-x64",
+        ("linux", "aarch64") => "linux-arm64",
+        ("linux", _) => "linux-x64",
+        ("windows", "aarch64") => "win-arm64",
+        ("windows", _) => "win-x64",
         _ => panic!("Unsupported architecture"),
     };
 
     match (
         PathBuf::from(format!(
-            "{}/node_modules/rescript/{}/bsc.exe",
+            "{}/node_modules/@rescript/{}/bin/bsc.exe",
             root_path, subfolder
         ))
         .canonicalize(),
@@ -184,6 +189,24 @@ pub fn string_ends_with_any(s: &Path, suffixes: &[&str]) -> bool {
         .any(|&suffix| s.extension().unwrap_or(&OsString::new()).to_str().unwrap_or("") == suffix)
 }
 
+fn path_to_ast_extension(path: &Path) -> &str {
+    let extension = path.extension().unwrap().to_str().unwrap();
+    if extension.ends_with("i") {
+        ".iast"
+    } else {
+        ".ast"
+    }
+}
+
+pub fn get_ast_path(source_file: &str) -> PathBuf {
+    let source_path = Path::new(source_file);
+
+    source_path.parent().unwrap().join(
+        file_path_to_compiler_asset_basename(source_file, &packages::Namespace::NoNamespace)
+            + path_to_ast_extension(source_path),
+    )
+}
+
 pub fn get_compiler_asset(
     package: &packages::Package,
     namespace: &packages::Namespace,
@@ -194,18 +217,15 @@ pub fn get_compiler_asset(
         "ast" | "iast" => &packages::Namespace::NoNamespace,
         _ => namespace,
     };
-    package.get_build_path()
+    package.get_ocaml_build_path()
         + "/"
         + &file_path_to_compiler_asset_basename(source_file, namespace)
         + "."
         + extension
 }
 
-pub fn canonicalize_string_path(path: &str) -> Option<String> {
-    return Path::new(path)
-        .canonicalize()
-        .ok()
-        .map(|path| path.to_str().expect("Could not canonicalize").to_string());
+pub fn canonicalize_string_path(path: &str) -> Option<PathBuf> {
+    return Path::new(path).canonicalize().ok();
 }
 
 pub fn get_bs_compiler_asset(
@@ -221,7 +241,7 @@ pub fn get_bs_compiler_asset(
 
     let dir = std::path::Path::new(&source_file).parent().unwrap();
 
-    std::path::Path::new(&package.get_bs_build_path())
+    std::path::Path::new(&package.get_build_path())
         .join(dir)
         .join(file_path_to_compiler_asset_basename(source_file, namespace) + extension)
         .to_str()
@@ -293,7 +313,7 @@ pub fn format_namespaced_module_name(module_name: &str) -> String {
     }
 }
 
-pub fn compute_file_hash(path: &str) -> Option<blake3::Hash> {
+pub fn compute_file_hash(path: &Path) -> Option<blake3::Hash> {
     match fs::read(path) {
         Ok(str) => Some(blake3::hash(&str)),
         Err(_) => None,
@@ -341,4 +361,11 @@ pub fn read_file(path: &Path) -> Result<String, std::io::Error> {
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
     Ok(contents)
+}
+
+pub fn get_source_file_from_rescript_file(path: &Path, suffix: &str) -> PathBuf {
+    path.with_extension(
+        // suffix.to_string includes the ., so we need to remove it
+        &suffix.to_string()[1..],
+    )
 }

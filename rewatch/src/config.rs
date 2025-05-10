@@ -111,6 +111,27 @@ pub struct PackageSpec {
     pub suffix: Option<String>,
 }
 
+impl PackageSpec {
+    pub fn get_out_of_source_dir(&self) -> String {
+        match self.module.as_str() {
+            "commonjs" => "js",
+            _ => "es6",
+        }
+        .to_string()
+    }
+
+    pub fn is_common_js(&self) -> bool {
+        match self.module.as_str() {
+            "commonjs" => true,
+            _ => false,
+        }
+    }
+
+    pub fn get_suffix(&self) -> Option<String> {
+        self.suffix.to_owned()
+    }
+}
+
 #[derive(Deserialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum Error {
@@ -182,13 +203,13 @@ pub struct Config {
     pub suffix: Option<String>,
     #[serde(rename = "pinned-dependencies")]
     pub pinned_dependencies: Option<Vec<String>>,
-    #[serde(rename = "bs-dependencies")]
+    #[serde(rename = "dependencies", alias = "bs-dependencies")]
     pub bs_dependencies: Option<Vec<String>>,
-    #[serde(rename = "bs-dev-dependencies")]
+    #[serde(rename = "bs-dev-dependencies", alias = "dev-dependencies")]
     pub bs_dev_dependencies: Option<Vec<String>>,
     #[serde(rename = "ppx-flags")]
     pub ppx_flags: Option<Vec<OneOrMore<String>>>,
-    #[serde(rename = "bsc-flags")]
+    #[serde(rename = "bsc-flags", alias = "compiler-flags")]
     pub bsc_flags: Option<Vec<OneOrMore<String>>>,
     pub reason: Option<Reason>,
     pub namespace: Option<NamespaceConfig>,
@@ -287,11 +308,32 @@ fn check_if_rescript11_or_higher(version: &str) -> Result<bool, String> {
 }
 
 fn namespace_from_package_name(package_name: &str) -> String {
-    package_name
-        .to_owned()
-        .replace('@', "")
-        .replace('/', "_")
-        .to_case(Case::Pascal)
+    let len = package_name.len();
+    let mut buf = String::with_capacity(len);
+
+    fn aux(s: &str, capital: bool, buf: &mut String, off: usize) {
+        if off >= s.len() {
+            return;
+        }
+
+        let ch = s.as_bytes()[off] as char;
+        match ch {
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => {
+                let new_capital = false;
+                buf.push(if capital { ch.to_ascii_uppercase() } else { ch });
+                aux(s, new_capital, buf, off + 1);
+            }
+            '/' | '-' => {
+                aux(s, true, buf, off + 1);
+            }
+            _ => {
+                aux(s, capital, buf, off + 1);
+            }
+        }
+    }
+
+    aux(package_name, true, &mut buf, 0);
+    buf
 }
 
 impl Config {
@@ -312,7 +354,7 @@ impl Config {
                 namespace if namespace.is_case(Case::UpperFlat) => {
                     packages::Namespace::Namespace(namespace.to_string())
                 }
-                namespace => packages::Namespace::Namespace(namespace.to_string().to_case(Case::Pascal)),
+                namespace => packages::Namespace::Namespace(namespace_from_package_name(namespace)),
             },
             (Some(self::NamespaceConfig::String(str)), Some(entry)) => match str.as_str() {
                 "true" => packages::Namespace::NamespaceWithEntry {
@@ -396,36 +438,29 @@ impl Config {
         }
     }
 
-    pub fn get_module(&self) -> String {
-        match &self.package_specs {
-            Some(OneOrMore::Single(PackageSpec { module, .. })) => module.to_string(),
-            Some(OneOrMore::Multiple(vec)) => match vec.first() {
-                Some(PackageSpec { module, .. }) => module.to_string(),
-                None => "commonjs".to_string(),
-            },
-            _ => "commonjs".to_string(),
-        }
-    }
-
-    pub fn get_suffix(&self) -> String {
-        match &self.package_specs {
-            Some(OneOrMore::Single(PackageSpec { suffix, .. })) => suffix.to_owned(),
-            Some(OneOrMore::Multiple(vec)) => match vec.first() {
-                Some(PackageSpec { suffix, .. }) => suffix.to_owned(),
-                None => None,
-            },
-
-            _ => None,
-        }
-        .or(self.suffix.to_owned())
-        .unwrap_or(".js".to_string())
-    }
-
     pub fn get_gentype_arg(&self) -> Vec<String> {
         match &self.gentype_config {
             Some(_) => vec!["-bs-gentype".to_string()],
             None => vec![],
         }
+    }
+
+    pub fn get_package_specs(&self) -> Vec<PackageSpec> {
+        match self.package_specs.clone() {
+            None => vec![PackageSpec {
+                module: "commonjs".to_string(),
+                in_source: true,
+                suffix: Some(".js".to_string()),
+            }],
+            Some(OneOrMore::Single(spec)) => vec![spec],
+            Some(OneOrMore::Multiple(vec)) => vec,
+        }
+    }
+
+    pub fn get_suffix(&self, spec: &PackageSpec) -> String {
+        spec.get_suffix()
+            .or(self.suffix.clone())
+            .unwrap_or(".js".to_string())
     }
 }
 
@@ -447,8 +482,11 @@ mod tests {
         "#;
 
         let config = serde_json::from_str::<Config>(json).unwrap();
-        assert_eq!(config.get_suffix(), ".mjs");
-        assert_eq!(config.get_module(), "es6");
+        let specs = config.get_package_specs();
+        assert_eq!(specs.len(), 1);
+        let spec = specs.first().unwrap();
+        assert_eq!(spec.module, "es6");
+        assert_eq!(config.get_suffix(spec), ".mjs");
     }
 
     #[test]
@@ -478,6 +516,40 @@ mod tests {
         if let Some(OneOrMore::Single(source)) = config.sources {
             let source = source.to_qualified_without_children(None);
             assert_eq!(source.type_, Some(String::from("dev")));
+        } else {
+            dbg!(config.sources);
+            unreachable!()
+        }
+    }
+
+    #[test]
+    fn test_dev_sources_multiple() {
+        let json = r#"
+        {
+            "name": "@rescript/core",
+            "version": "0.5.0",
+            "sources": [
+                { "dir": "src" },
+                { "dir": "test", "type": "dev" }
+            ],
+            "package-specs": {
+              "module": "esmodule",
+              "in-source": true
+            },
+            "bs-dev-dependencies": ["@rescript/tools"],
+            "suffix": ".mjs",
+            "warnings": {
+              "error": "+101"
+            }
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        if let Some(OneOrMore::Multiple(sources)) = config.sources {
+            assert_eq!(sources.len(), 2);
+            let test_dir = sources[1].to_qualified_without_children(None);
+
+            assert_eq!(test_dir.type_, Some(String::from("dev")));
         } else {
             dbg!(config.sources);
             unreachable!()
@@ -532,6 +604,134 @@ mod tests {
                 mode: None,
                 v3_dependencies: None,
             },
+        );
+    }
+
+    #[test]
+    fn test_get_suffix() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "es6",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs"
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(
+            config.get_suffix(&config.get_package_specs().first().unwrap()),
+            ".mjs"
+        );
+    }
+
+    #[test]
+    fn test_dependencies() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "es6",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs",
+            "bs-dependencies": [ "@testrepo/main" ]
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(config.bs_dependencies, Some(vec!["@testrepo/main".to_string()]));
+    }
+
+    #[test]
+    fn test_dependencies_alias() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "es6",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs",
+            "dependencies": [ "@testrepo/main" ]
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(config.bs_dependencies, Some(vec!["@testrepo/main".to_string()]));
+    }
+
+    #[test]
+    fn test_dev_dependencies() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "es6",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs",
+            "bs-dev-dependencies": [ "@testrepo/main" ]
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(
+            config.bs_dev_dependencies,
+            Some(vec!["@testrepo/main".to_string()])
+        );
+    }
+
+    #[test]
+    fn test_dev_dependencies_alias() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "es6",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs",
+            "dev-dependencies": [ "@testrepo/main" ]
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert_eq!(
+            config.bs_dev_dependencies,
+            Some(vec!["@testrepo/main".to_string()])
         );
     }
 

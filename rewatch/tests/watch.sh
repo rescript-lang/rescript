@@ -13,10 +13,10 @@ fi
 
 exit_watcher() { 
   # we need to kill the parent process (rewatch)
-  kill $(pgrep -P $!);
+  rm lib/rewatch.lock
 }
 
-rewatch watch &>/dev/null &
+rewatch_bg watch > /dev/null 2>&1 &
 success "Watcher Started"
 
 echo 'Js.log("added-by-test")' >> ./packages/main/src/Main.res
