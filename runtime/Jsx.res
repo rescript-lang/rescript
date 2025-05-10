@@ -24,7 +24,8 @@
 
 // Define this as a private empty record so that the compiler does not
 // unnecessarily add `Primitive_option.some` calls for optional props.
-type element = private {}
+@notUndefined
+type element
 
 @val external null: element = "null"
 

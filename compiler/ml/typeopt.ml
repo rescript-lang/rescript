@@ -50,17 +50,14 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
     | For_sure_yes -> true
     | For_sure_no -> false
     | NA -> (
-      let untagged = ref false in
-      match
-        let decl = Env.find_type p env in
-        let () =
-          if Ast_untagged_variants.has_untagged decl.type_attributes then
-            untagged := true
-        in
-        decl.type_kind
-      with
+      let decl = Env.find_type p env in
+      match decl.type_kind with
       | exception _ -> false
-      | Type_abstract | Type_open -> false
+      | Type_abstract ->
+        List.exists
+          (fun ({txt}, _) -> txt = "notUndefined")
+          decl.type_attributes
+      | Type_open -> false
       | Type_record _ -> true
       | Type_variant
           ( [
@@ -74,10 +71,13 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
           | [{cd_id = {name = "()"}; cd_args = Cstr_tuple []}] ) ->
         false (* conservative *)
       | Type_variant cdecls ->
+        let untagged =
+          Ast_untagged_variants.has_untagged decl.type_attributes
+        in
         Ext_list.for_all cdecls (fun cd ->
             if Ast_untagged_variants.has_undefined_literal cd.cd_attributes then
               false
-            else if !untagged then
+            else if untagged then
               match cd.cd_args with
               | Cstr_tuple [t] ->
                 Ast_untagged_variants.type_is_builtin_object t
