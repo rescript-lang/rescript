@@ -203,6 +203,10 @@ let _optional_props = <Jsx_preserve_test$ComponentWithOptionalProps
   element={<div />}
 />;
 
+let _props_with_hypen = <label
+  ariaLabel="close sidebar"
+/>;
+
 export {
   Icon,
   _single_element_child,
@@ -228,5 +232,6 @@ export {
   _large_component,
   ComponentWithOptionalProps,
   _optional_props,
+  _props_with_hypen,
 }
 /* _single_element_child Not a pure module */
