@@ -297,4 +297,17 @@ let toplevel =
 
 [Read more and see examples in the documentation](https://rescript-lang.org/docs/manual/latest/jsx#file-level-configuration).|};
       ] );
+    ( "notUndefined",
+      None,
+      [
+        {|The `@notUndefined` decorator marks an abstract type as one that can never be `undefined` in JavaScript. This allows the compiler to generate more efficient code when the type is used inside an `option`.
+
+Example usage:
+```rescript
+@notUndefined
+type t
+```
+
+[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#notundefined-decorator).|};
+      ] );
   ]

@@ -1,0 +1,2 @@
+@notUndefined
+type t = int
