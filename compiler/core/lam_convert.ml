@@ -442,6 +442,22 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
         in
         Lam.function_ ~attr ~arity:(List.length params) ~params
           ~body:(convert_aux body)
+    | Llet (_, _, _, Lprim (Pgetglobal id, args, _), _body) when dynamic_import
+      ->
+      (*
+        Normally `await M` produces (global M!)
+        but when M contains an alias such as `module VS = VariantSpreads`,
+        it produces something like this:
+      
+        (let (let/1202 = (global M!))
+              (makeblock [x;M;y;X] (field:x/0 let/1202)
+                ...)
+
+        Here, we need to extract the original module id from the Llet.
+      *)
+      may_depend may_depends (Lam_module_ident.of_ml ~dynamic_import id);
+      assert (args = []);
+      Lam.global_module ~dynamic_import id
     | Llet (kind, Pgenval, id, e, body) (*FIXME*) -> convert_let kind id e body
     | Lletrec (bindings, body) ->
       let bindings = Ext_list.map_snd bindings convert_aux in

@@ -34,6 +34,7 @@
 - Fix regression in pattern matching for optional fields containing variants. https://github.com/rescript-lang/rescript/pull/7440
 - Fix missing checks for duplicate literals in variants with payloads. https://github.com/rescript-lang/rescript/pull/7441
 - Fix printer removing private for empty record. https://github.com/rescript-lang/rescript/pull/7448
+- Fix: handle dynamic imports with module aliases. https://github.com/rescript-lang/rescript/pull/7452
 
 #### :house: Internal
 
