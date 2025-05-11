@@ -249,7 +249,6 @@ external fillRangeInPlace: (t<'a>, 'a, ~start: int, ~end_: int) => t<'a> = "fill
 /* ES2015 */
 
 @send
-@return(undefined_to_opt)
 /**
 If the array is not empty, removes the last element and returns it as
 `Some(value)`; returns `None` if the array is empty. *This function modifies
@@ -324,7 +323,6 @@ arr == ["cat", "bee", "ant"]
 external reverseInPlace: t<'a> => t<'a> = "reverse"
 
 @send
-@return(undefined_to_opt)
 /**
 If the array is not empty, removes the first element and returns it as
 `Some(value)`; returns `None` if the array is empty. *This function modifies
@@ -803,7 +801,6 @@ Js.Array2.filteri([6, 3, 5, 8, 7, -4, 1], positiveOddElement) == [3, 8]
 external filteri: (t<'a>, ('a, int) => bool) => t<'a> = "filter"
 
 @send
-@return({undefined_to_opt: undefined_to_opt})
 /**
 Returns `Some(value)` for the first element in the array that satisifies the
 given predicate function, or `None` if no element satisifies the predicate. See
@@ -823,7 +820,6 @@ external find: (t<'a>, 'a => bool) => option<'a> = "find"
 /* ES2015 */
 
 @send
-@return({undefined_to_opt: undefined_to_opt})
 /**
 Returns `Some(value)` for the first element in the array that satisifies the
 given predicate function, or `None` if no element satisifies the predicate. The
