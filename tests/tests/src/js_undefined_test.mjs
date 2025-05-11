@@ -2,7 +2,6 @@
 
 import * as Mt from "./mt.mjs";
 import * as Js_undefined from "rescript/lib/es6/Js_undefined.js";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 let suites_0 = [
   "toOption - empty",
@@ -28,7 +27,7 @@ let suites_1 = {
       param => ({
         TAG: "Eq",
         _0: "something",
-        _1: Primitive_option.fromUndefined("something")
+        _1: "something"
       })
     ],
     tl: {

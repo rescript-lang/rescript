@@ -197,7 +197,6 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pisnullable -> prim ~primitive:Pis_null_undefined ~args loc
   | Pnull_to_opt -> prim ~primitive:Pnull_to_opt ~args loc
   | Pnullable_to_opt -> prim ~primitive:Pnull_undefined_to_opt ~args loc
-  | Pundefined_to_opt -> prim ~primitive:Pundefined_to_opt ~args loc
   | Pis_not_none -> prim ~primitive:Pis_not_none ~args loc
   | Pval_from_option -> prim ~primitive:Pval_from_option ~args loc
   | Pval_from_option_not_nest ->

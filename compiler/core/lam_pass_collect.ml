@@ -66,8 +66,6 @@ let collect_info (meta : Lam_stats.t) (lam : Lam.t) =
       collect v
     | Lprim {primitive = Pnull_to_opt; args = [(Lvar _ as l)]; _} ->
       Hash_ident.replace meta.ident_tbl ident (OptionalBlock (l, Null))
-    | Lprim {primitive = Pundefined_to_opt; args = [(Lvar _ as l)]; _} ->
-      Hash_ident.replace meta.ident_tbl ident (OptionalBlock (l, Undefined))
     | Lprim {primitive = Pnull_undefined_to_opt; args = [(Lvar _ as l)]} ->
       Hash_ident.replace meta.ident_tbl ident
         (OptionalBlock (l, Null_undefined))

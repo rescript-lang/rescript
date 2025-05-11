@@ -15,7 +15,7 @@ if (!Primitive_object.equal(Primitive_option.fromNullable(""), "")) {
   };
 }
 
-if (!Primitive_object.equal(Primitive_option.fromUndefined(""), "")) {
+if (!Primitive_object.equal("", "")) {
   throw {
     RE_EXN_ID: "Assert_failure",
     _1: [

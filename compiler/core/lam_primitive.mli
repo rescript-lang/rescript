@@ -152,7 +152,6 @@ type t =
   | Pjs_fn_make of int
   | Pjs_fn_make_unit
   | Pjs_fn_method
-  | Pundefined_to_opt
   | Pnull_to_opt
   | Pnull_undefined_to_opt
   | Pis_null

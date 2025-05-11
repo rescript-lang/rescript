@@ -156,7 +156,7 @@ function f7$1(x) {
 
 function f8$1(x) {
   if (x !== undefined) {
-    if (x !== undefined) {
+    if (Primitive_option.valFromOption(x) !== undefined) {
       return 0;
     } else {
       return 1;
@@ -169,11 +169,7 @@ function f8$1(x) {
 let u$1 = f8$1(undefined);
 
 function f9$1(x) {
-  if (x === undefined) {
-    return;
-  } else {
-    return Primitive_option.some(x);
-  }
+  return x;
 }
 
 function f10$1(x) {
