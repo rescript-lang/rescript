@@ -26,8 +26,8 @@
 
 type t<+'a> = Primitive_js_extern.undefined<'a>
 
-external to_opt: t<'a> => option<'a> = "%undefined_to_opt"
-external toOption: t<'a> => option<'a> = "%undefined_to_opt"
+external to_opt: t<'a> => option<'a> = "%identity"
+external toOption: t<'a> => option<'a> = "%identity"
 external return: 'a => t<'a> = "%identity"
 
 external empty: t<'a> = "%undefined"

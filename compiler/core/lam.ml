@@ -298,8 +298,8 @@ let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
           Lprim
             {
               primitive =
-                ( Pundefined_to_opt | Pnull_to_opt | Pnull_undefined_to_opt
-                | Pis_null | Pis_null_undefined | Ptypeof ) as wrap;
+                ( Pnull_to_opt | Pnull_undefined_to_opt | Pis_null
+                | Pis_null_undefined | Ptypeof ) as wrap;
               args =
                 [Lprim ({primitive = _; args = inner_args} as primitive_call)];
             };
@@ -442,11 +442,7 @@ let rec seq (a : t) b : t =
   match a with
   | Lprim {primitive = Pmakeblock _; args = x :: xs} ->
     seq (Ext_list.fold_left xs x seq) b
-  | Lprim
-      {
-        primitive = Pnull_to_opt | Pundefined_to_opt | Pnull_undefined_to_opt;
-        args = [a];
-      } ->
+  | Lprim {primitive = Pnull_to_opt | Pnull_undefined_to_opt; args = [a]} ->
     seq a b
   | _ -> Lsequence (a, b)
 
@@ -719,8 +715,6 @@ let result_wrap loc (result_type : External_ffi_types.return_wrapper) result =
   | Return_null_to_opt -> prim ~primitive:Pnull_to_opt ~args:[result] loc
   | Return_null_undefined_to_opt ->
     prim ~primitive:Pnull_undefined_to_opt ~args:[result] loc
-  | Return_undefined_to_opt ->
-    prim ~primitive:Pundefined_to_opt ~args:[result] loc
   | Return_unset | Return_identity -> result
 
 let handle_bs_non_obj_ffi ?(transformed_jsx = false)
