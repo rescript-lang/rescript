@@ -246,6 +246,7 @@ let () =
            prim_native_name;
            prim_alloc = _;
            prim_from_constructor = _;
+           transformed_jsx = _;
          } :
           Primitive.description)
       (p2 : Primitive.description)

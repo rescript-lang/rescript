@@ -30,7 +30,7 @@ Converts a given `float` to an `int`.
 ## Examples
 
 ```rescript
-Js.log(Belt.Float.toInt(1.0) === 1) /* true */
+assertEqual(Belt.Float.toInt(1.0), 1)
 ```
 */
 external toInt: float => int = "%intoffloat"
@@ -41,7 +41,7 @@ Converts a given `int` to a `float`.
 ## Examples
 
 ```rescript
-Js.log(Belt.Float.fromInt(1) === 1.0) /* true */
+assertEqual(Belt.Float.fromInt(1), 1.0)
 ```
 */
 external fromInt: int => float = "%identity"
@@ -52,7 +52,7 @@ Converts a given `string` to a `float`. Returns `Some(float)` when the input is 
 ## Examples
 
 ```rescript
-Js.log(Belt.Float.fromString("1.0") === Some(1.0)) /* true */
+assertEqual(Belt.Float.fromString("1.0"), Some(1.0))
 ```
 */
 let fromString: string => option<float>
@@ -64,7 +64,7 @@ Converts a given `float` to a `string`. Uses the JavaScript `String` constructor
 ## Examples
 
 ```rescript
-Js.log(Belt.Float.toString(1.0) === "1.0") /* true */
+assertEqual(Belt.Float.toString(1.0), "1")
 ```
 */
 external toString: float => string = "String"

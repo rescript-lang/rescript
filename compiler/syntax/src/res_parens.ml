@@ -129,6 +129,7 @@ let binary_expr_operand ~is_lhs expr =
     | _ when Ast_uncurried.expr_is_uncurried_fun expr -> Parenthesized
     | expr when ParsetreeViewer.is_binary_expression expr -> Parenthesized
     | expr when ParsetreeViewer.is_ternary_expr expr -> Parenthesized
+    | expr when ParsetreeViewer.is_unary_bitnot_expression expr -> Parenthesized
     | {pexp_desc = Pexp_lazy _ | Pexp_assert _} when is_lhs -> Parenthesized
     | _ when ParsetreeViewer.expr_is_await expr -> Parenthesized
     | {Parsetree.pexp_attributes = attrs} ->

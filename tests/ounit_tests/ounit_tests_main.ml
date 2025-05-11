@@ -3,6 +3,7 @@ let suites =
     [
       Ounit_vec_test.suites;
       Ounit_json_tests.suites;
+      Ounit_ext_json_tests.suites;
       Ounit_path_tests.suites;
       Ounit_array_tests.suites;
       Ounit_scc_tests.suites;

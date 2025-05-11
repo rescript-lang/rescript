@@ -87,6 +87,7 @@ and expression_desc =
       funct: expression;
       args: (Noloc.arg_label * expression option) list;
       partial: bool;
+      transformed_jsx: bool;
     }
   | Texp_match of expression * case list * case list * partial
   | Texp_try of expression * case list

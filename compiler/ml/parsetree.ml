@@ -244,6 +244,7 @@ and expression_desc =
       funct: expression;
       args: (arg_label * expression) list;
       partial: bool;
+      transformed_jsx: bool;
     }
     (* E0 ~l1:E1 ... ~ln:En
        li can be empty (non labeled argument) or start with '?'

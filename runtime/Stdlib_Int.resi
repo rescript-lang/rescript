@@ -435,7 +435,7 @@ external bitwiseXor: (int, int) => int = "%xorint"
 Int.bitwiseNot(2) == -3
 ```
 */
-let bitwiseNot: int => int
+external bitwiseNot: int => int = "%bitnot_int"
 
 /**
 `shiftLeft(n, length)` calculates the shifted value of an integer `n` by `length` bits to the left.

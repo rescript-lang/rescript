@@ -253,6 +253,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pandint -> prim ~primitive:Pandint ~args loc
   | Porint -> prim ~primitive:Porint ~args loc
   | Pxorint -> prim ~primitive:Pxorint ~args loc
+  | Pnotint -> prim ~primitive:Pnotint ~args loc
   | Plslint -> prim ~primitive:Plslint ~args loc
   | Plsrint -> prim ~primitive:Plsrint ~args loc
   | Pasrint -> prim ~primitive:Pasrint ~args loc
@@ -296,6 +297,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pandbigint -> prim ~primitive:Pandbigint ~args loc
   | Porbigint -> prim ~primitive:Porbigint ~args loc
   | Pxorbigint -> prim ~primitive:Pxorbigint ~args loc
+  | Pnotbigint -> prim ~primitive:Pnotbigint ~args loc
   | Plslbigint -> prim ~primitive:Plslbigint ~args loc
   | Pasrbigint -> prim ~primitive:Pasrbigint ~args loc
   | Pbigintcomp x -> prim ~primitive:(Pbigintcomp x) ~args loc
@@ -387,8 +389,8 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
         | Param_number i -> Ext_list.init i (fun _ -> External_arg_spec.dummy)
       in
       let args = Ext_list.map args convert_aux in
-      Lam.handle_bs_non_obj_ffi arg_types result_type ffi args loc prim_name
-        ~dynamic_import
+      Lam.handle_bs_non_obj_ffi ~transformed_jsx:a_prim.transformed_jsx
+        arg_types result_type ffi args loc prim_name ~dynamic_import
     | Ffi_inline_const i -> Lam.const i
     | Ffi_normal ->
       Location.raise_errorf ~loc
@@ -414,11 +416,19 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
       let setter = Ext_string.ends_with name Literals.setter_suffix in
       let _ = assert (not setter) in
       prim ~primitive:(Pjs_unsafe_downgrade {name; setter}) ~args loc
-    | Lapply {ap_func = fn; ap_args = args; ap_loc = loc; ap_inlined} ->
+    | Lapply
+        {
+          ap_func = fn;
+          ap_args = args;
+          ap_loc = loc;
+          ap_inlined;
+          ap_transformed_jsx;
+        } ->
       (* we need do this eargly in case [aux fn] add some wrapper *)
       Lam.apply (convert_aux fn)
         (Ext_list.map args convert_aux)
         {ap_loc = loc; ap_inlined; ap_status = App_uncurry}
+        ~ap_transformed_jsx
     | Lfunction {params; body; attr} ->
       let new_map, body =
         rename_optional_parameters Map_ident.empty params body
@@ -571,8 +581,8 @@ let convert (exports : Set_ident.t) (lam : Lambda.lambda) :
       when Ext_list.for_all2_no_exn inner_args params lam_is_var
            && Ext_list.length_larger_than_n inner_args args 1 ->
       Lam.prim ~primitive ~args:(Ext_list.append_one args x) outer_loc
-    | Lapply {ap_func; ap_args; ap_info} ->
-      Lam.apply ap_func
+    | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx} ->
+      Lam.apply ~ap_transformed_jsx ap_func
         (Ext_list.append_one ap_args x)
         {
           ap_loc = outer_loc;

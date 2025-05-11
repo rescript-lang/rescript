@@ -83,10 +83,22 @@ if (mochaTest) {
     stdio: "inherit",
   });
 
-  await mocha(["-t", "10000", "tests/tests/**/*_test.mjs"], {
-    cwd: projectDir,
-    stdio: "inherit",
-  });
+  await mocha(
+    [
+      "-t",
+      "10000",
+      "tests/tests/**/*_test.mjs",
+      // Ignore the preserve_jsx_test.mjs file.
+      // I can't run because Mocha doesn't support jsx.
+      // We also want to keep the output as is.
+      "--ignore",
+      "tests/tests/src/jsx_preserve_test.mjs",
+    ],
+    {
+      cwd: projectDir,
+      stdio: "inherit",
+    },
+  );
 
   await node("tests/tests/src/core/Core_TestSuite.mjs", [], {
     cwd: projectDir,
@@ -149,8 +161,8 @@ if (runtimeDocstrings) {
 
     await execClean([], {
       cwd: docstringTestDir,
-      stdio: "inherit"
-    })
+      stdio: "inherit",
+    });
 
     await execBuild([], {
       cwd: docstringTestDir,
@@ -177,12 +189,9 @@ if (runtimeDocstrings) {
     });
 
     console.log("Run mocha test");
-    await mocha(
-      [path.join(docstringTestDir, "generated_mocha_test.res.js")],
-      {
-        cwd: projectDir,
-        stdio: "inherit",
-      },
-    );
+    await mocha([path.join(docstringTestDir, "generated_mocha_test.res.js")], {
+      cwd: projectDir,
+      stdio: "inherit",
+    });
   }
 }

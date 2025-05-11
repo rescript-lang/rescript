@@ -75,4 +75,5 @@ let to_method_callback loc (self : Bs_ast_mapper.mapper) label
                  [Typ.any ~loc ()]) );
         ];
       partial = false;
+      transformed_jsx = false;
     }

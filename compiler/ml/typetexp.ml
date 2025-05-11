@@ -889,9 +889,9 @@ let report_error env ppf = function
         "@[<v>@{<info>The module or file %a can't be found.@}@,\
          @[<v 2>- If it's a third-party dependency:@,\
          - Did you add it to the \"bs-dependencies\" or \
-         \"bs-dev-dependencies\" in bsconfig.json?@]@,\
+         \"bs-dev-dependencies\" in rescript.json?@]@,\
          - Did you include the file's directory to the \"sources\" in \
-         bsconfig.json?@,"
+         rescript.json?@,"
         Printtyp.longident lid);
     super_spellcheck ppf Env.fold_modules env lid |> ignore
   | Unbound_constructor lid ->

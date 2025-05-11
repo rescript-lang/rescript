@@ -25,7 +25,11 @@ function decodeGroup(group) {
 }
 
 function decodeNull(x) {
-  let tmp = x.field;
+  let match = x.field;
+  if (match === undefined) {
+    return "no";
+  }
+  let tmp = Primitive_option.valFromOption(match);
   if (tmp === null) {
     return "yes it's null";
   } else {

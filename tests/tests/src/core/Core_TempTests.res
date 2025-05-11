@@ -77,7 +77,7 @@ Console.info("---")
 @warning("-44")
 Console.log({
   open BigInt
-  fromInt(1) / fromFloat(12.0)
+  fromInt(1) / fromFloat(12.0)->Option.getOr(0n)
 })
 
 Console.info("")

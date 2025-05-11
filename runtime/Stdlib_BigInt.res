@@ -37,6 +37,12 @@ external fromStringExn: string => bigint = "BigInt"
 @val external fromInt: int => bigint = "BigInt"
 @val external fromFloat: float => bigint = "BigInt"
 
+let fromFloat = (value: float) => {
+  try Some(fromFloat(value)) catch {
+  | _ => None
+  }
+}
+
 @send
 /**
 Formats a `bigint` as a string. Return a `string` representing the given value.
@@ -88,8 +94,7 @@ external bitwiseAnd: (bigint, bigint) => bigint = "%andbigint"
 external bitwiseOr: (bigint, bigint) => bigint = "%orbigint"
 external bitwiseXor: (bigint, bigint) => bigint = "%xorbigint"
 
-// TODO: make it a primitive
-let bitwiseNot = x => bitwiseXor(x, -1n)
+external bitwiseNot: bigint => bigint = "%bitnot_bigint"
 
 external shiftLeft: (bigint, bigint) => bigint = "%lslbigint"
 external shiftRight: (bigint, bigint) => bigint = "%asrbigint"

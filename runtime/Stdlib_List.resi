@@ -42,7 +42,7 @@ type t<'a> = list<'a>
 ## Examples
 
 ```rescript
-List.length(list{1, 2, 3}) // 3
+assertEqual(List.length(list{1, 2, 3}), 3)
 ```
 */
 let length: list<'a> => int
@@ -53,7 +53,7 @@ let length: list<'a> => int
 ## Examples
 
 ```rescript
-List.size(list{1, 2, 3}) // 3
+assertEqual(List.size(list{1, 2, 3}), 3)
 ```
 */
 let size: list<'a> => int
@@ -65,8 +65,8 @@ list, or `None` if `list` is an empty list.
 ## Examples
 
 ```rescript
-List.head(list{}) // None
-List.head(list{1, 2, 3}) // Some(1)
+assertEqual(List.head(list{}), None)
+assertEqual(List.head(list{1, 2, 3}), Some(1))
 ```
 */
 let head: list<'a> => option<'a>
@@ -99,9 +99,9 @@ where `tail` is everything except the first element of `list`.
 ## Examples
 
 ```rescript
-List.tail(list{1, 2, 3}) // Some(list{2, 3})
+assertEqual(List.tail(list{1, 2, 3}), Some(list{2, 3}))
 
-List.tail(list{}) // None
+assertEqual(List.tail(list{}), None)
 ```
 */
 let tail: list<'a> => option<list<'a>>
@@ -132,9 +132,9 @@ let tailExn: list<'a> => list<'a>
 ## Examples
 
 ```rescript
-List.add(list{2, 3}, 1) // list{1, 2, 3}
+assertEqual(List.add(list{2, 3}, 1), list{1, 2, 3})
 
-List.add(list{"World", "!"}, "Hello") // list{"Hello", "World", "!"}
+assertEqual(List.add(list{"World", "!"}, "Hello"), list{"Hello", "World", "!"})
 ```
 */
 let add: (list<'a>, 'a) => list<'a>
@@ -148,9 +148,9 @@ is larger than the length of list `list`.
 ```rescript
 let abc = list{"A", "B", "C"}
 
-abc->List.get(1) // Some("B")
+assertEqual(abc->List.get(1), Some("B"))
 
-abc->List.get(4) // None
+assertEqual(abc->List.get(4), None)
 ```
 */
 let get: (list<'a>, int) => option<'a>
@@ -186,7 +186,7 @@ with `value`. Returns an empty list if `value` is negative.
 ## Examples
 
 ```rescript
-List.make(~length=3, 1) // list{1, 1, 1}
+assertEqual(List.make(~length=3, 1), list{1, 1, 1})
 ```
 */
 let make: (~length: int, 'a) => list<'a>
@@ -198,9 +198,9 @@ with `f`. Returns an empty list if `length` is negative.
 ## Examples
 
 ```rescript
-List.fromInitializer(~length=5, i => i) // list{0, 1, 2, 3, 4}
+assertEqual(List.fromInitializer(~length=5, i => i), list{0, 1, 2, 3, 4})
 
-List.fromInitializer(~length=5, i => i * i) // list{0, 1, 4, 9, 16}
+assertEqual(List.fromInitializer(~length=5, i => i * i), list{0, 1, 4, 9, 16})
 ```
 */
 let fromInitializer: (~length: int, int => 'a) => list<'a>
@@ -235,11 +235,11 @@ Returns `None` if `list` has fewer than `value` elements.
 ## Examples
 
 ```rescript
-list{1, 2, 3}->List.drop(2) // Some(list{3})
+assertEqual(list{1, 2, 3}->List.drop(2), Some(list{3}))
 
-list{1, 2, 3}->List.drop(3) // Some(list{})
+assertEqual(list{1, 2, 3}->List.drop(3), Some(list{}))
 
-list{1, 2, 3}->List.drop(4) // None
+assertEqual(list{1, 2, 3}->List.drop(4), None)
 ```
 */
 let drop: (list<'a>, int) => option<list<'a>>
@@ -251,11 +251,11 @@ or `None` if `list` has fewer than `value` elements.
 ## Examples
 
 ```rescript
-list{1, 2, 3}->List.take(1) // Some(list{1})
+assertEqual(list{1, 2, 3}->List.take(1), Some(list{1}))
 
-list{1, 2, 3}->List.take(2) // Some(list{1, 2})
+assertEqual(list{1, 2, 3}->List.take(2), Some(list{1, 2}))
 
-list{1, 2, 3}->List.take(4) // None
+assertEqual(list{1, 2, 3}->List.take(4), None)
 ```
 */
 let take: (list<'a>, int) => option<list<'a>>
@@ -267,9 +267,9 @@ of `list` is less than `n`.
 ## Examples
 
 ```rescript
-list{"Hello", "World"}->List.splitAt(1) // Some((list{"Hello"}, list{"World"}))
+assertEqual(list{"Hello", "World"}->List.splitAt(1), Some((list{"Hello"}, list{"World"})))
 
-list{0, 1, 2, 3, 4}->List.splitAt(2) // Some((list{0, 1}, list{2, 3, 4}))
+assertEqual(list{0, 1, 2, 3, 4}->List.splitAt(2), Some((list{0, 1}, list{2, 3, 4})))
 ```
 */
 let splitAt: (list<'a>, int) => option<(list<'a>, list<'a>)>
@@ -292,7 +292,7 @@ array `arr`, in order.
 ## Examples
 
 ```rescript
-List.concatMany([list{1, 2, 3}, list{}, list{3}]) // list{1, 2, 3, 3}
+assertEqual(List.concatMany([list{1, 2, 3}, list{}, list{3}]), list{1, 2, 3, 3})
 ```
 */
 let concatMany: array<list<'a>> => list<'a>
@@ -303,7 +303,7 @@ let concatMany: array<list<'a>> => list<'a>
 ## Examples
 
 ```rescript
-List.reverseConcat(list{1, 2}, list{3, 4}) // list{2, 1, 3, 4}
+assertEqual(List.reverseConcat(list{1, 2}, list{3, 4}), list{2, 1, 3, 4})
 ```
 */
 let reverseConcat: (list<'a>, list<'a>) => list<'a>
@@ -315,7 +315,7 @@ let reverseConcat: (list<'a>, list<'a>) => list<'a>
 ## Examples
 
 ```rescript
-List.flat(list{list{1, 2, 3}, list{}, list{3}}) // list{1, 2, 3, 3}
+assertEqual(List.flat(list{list{1, 2, 3}, list{}, list{3}}), list{1, 2, 3, 3})
 ```
 */
 let flat: list<list<'a>> => list<'a>
@@ -326,7 +326,7 @@ let flat: list<list<'a>> => list<'a>
 ## Examples
 
 ```rescript
-list{1, 2}->List.map(x => x + 1) // list{3, 4}
+assertEqual(list{1, 2}->List.map(x => x + 1), list{2, 3})
 ```
 */
 let map: (list<'a>, 'a => 'b) => list<'b>
@@ -338,7 +338,7 @@ of the shorter list.
 ## Examples
 
 ```rescript
-List.zip(list{1, 2}, list{3, 4, 5}) // list{(1, 3), (2, 4)}
+assertEqual(List.zip(list{1, 2}, list{3, 4, 5}), list{(1, 3), (2, 4)})
 ```
 */
 let zip: (list<'a>, list<'b>) => list<('a, 'b)>
@@ -349,7 +349,7 @@ let zip: (list<'a>, list<'b>) => list<('a, 'b)>
 ## Examples
 
 ```rescript
-List.zipBy(list{1, 2, 3}, list{4, 5}, (a, b) => 2 * a + b) // list{6, 9}
+assertEqual(List.zipBy(list{1, 2, 3}, list{4, 5}, (a, b) => 2 * a + b), list{6, 9})
 ```
 */
 let zipBy: (list<'a>, list<'b>, ('a, 'b) => 'c) => list<'c>
@@ -362,7 +362,7 @@ that order.
 ## Examples
 
 ```rescript
-list{1, 2, 3}->List.mapWithIndex((x, index) => index + x) // list{1, 3, 5}
+assertEqual(list{1, 2, 3}->List.mapWithIndex((x, index) => index + x), list{1, 3, 5})
 ```
 */
 let mapWithIndex: (list<'a>, ('a, int) => 'b) => list<'b>
@@ -373,7 +373,7 @@ let mapWithIndex: (list<'a>, ('a, int) => 'b) => list<'b>
 ## Examples
 
 ```rescript
-List.fromArray([1, 2, 3]) // list{1, 2, 3}
+assertEqual(List.fromArray([1, 2, 3]), list{1, 2, 3})
 ```
 */
 let fromArray: array<'a> => list<'a>
@@ -384,7 +384,7 @@ let fromArray: array<'a> => list<'a>
 ## Examples
 
 ```rescript
-List.toArray(list{1, 2, 3}) // [1, 2, 3]
+assertEqual(List.toArray(list{1, 2, 3}), [1, 2, 3])
 ```
 */
 let toArray: list<'a> => array<'a>
@@ -396,7 +396,7 @@ reversed order.
 ## Examples
 
 ```rescript
-List.reverse(list{1, 2, 3}) // list{3, 2, 1}
+assertEqual(List.reverse(list{1, 2, 3}), list{3, 2, 1})
 ```
 */
 let reverse: list<'a> => list<'a>
@@ -467,11 +467,11 @@ the final value of the accumulator.
 ## Examples
 
 ```rescript
-list{1, 2, 3, 4}->List.reduce(0, (a, b) => a + b) // 10
+assertEqual(list{1, 2, 3, 4}->List.reduce(0, (a, b) => a + b), 10)
 
 // same as
 
-list{1, 2, 3, 4}->List.reduce(0, (acc, item) => acc + item) // 10
+assertEqual(list{1, 2, 3, 4}->List.reduce(0, (acc, item) => acc + item), 10)
 ```
 */
 let reduce: (list<'a>, 'b, ('b, 'a) => 'b) => 'b
@@ -485,7 +485,7 @@ of each element. `reduceWithIndex` returns the final value of the accumulator.
 ## Examples
 
 ```rescript
-list{1, 2, 3, 4}->List.reduceWithIndex(0, (acc, item, index) => acc + item + index) // 16
+assertEqual(list{1, 2, 3, 4}->List.reduceWithIndex(0, (acc, item, index) => acc + item + index), 16)
 ```
 */
 let reduceWithIndex: (list<'a>, 'b, ('b, 'a, int) => 'b) => 'b
@@ -497,11 +497,11 @@ function `f` is applied to each item of `list` from the last back to the first.
 ## Examples
 
 ```rescript
-list{1, 2, 3, 4}->List.reduceReverse(0, (a, b) => a + b) // 10
+assertEqual(list{1, 2, 3, 4}->List.reduceReverse(0, (a, b) => a + b), 10)
 
-list{1, 2, 3, 4}->List.reduceReverse(10, (a, b) => a - b) // 0
+assertEqual(list{1, 2, 3, 4}->List.reduceReverse(10, (a, b) => a - b), 0)
 
-list{1, 2, 3, 4}->List.reduceReverse(list{}, List.add) // list{1, 2, 3, 4}
+assertEqual(list{1, 2, 3, 4}->List.reduceReverse(list{}, List.add), list{1, 2, 3, 4})
 ```
 */
 let reduceReverse: (list<'a>, 'b, ('b, 'a) => 'b) => 'b
@@ -512,7 +512,7 @@ let reduceReverse: (list<'a>, 'b, ('b, 'a) => 'b) => 'b
 ## Examples
 
 ```rescript
-List.mapReverse2(list{1, 2, 3}, list{1, 2}, (a, b) => a + b) // list{4, 2}
+assertEqual(List.mapReverse2(list{1, 2, 3}, list{1, 2}, (a, b) => a + b), list{4, 2})
 ```
 */
 let mapReverse2: (list<'a>, list<'b>, ('a, 'b) => 'c) => list<'c>
@@ -545,7 +545,10 @@ accumulator.
 ## Examples
 
 ```rescript
-List.reduce2(list{1, 2, 3}, list{4, 5}, 0, (acc, x, y) => acc + x * x + y) // 0 + (1 * 1 + 4) + (2 * 2 + 5)
+assertEqual(
+  List.reduce2(list{1, 2, 3}, list{4, 5}, 0, (acc, x, y) => acc + x * x + y),
+  0 + (1 * 1 + 4) + (2 * 2 + 5)
+)
 ```
 */
 let reduce2: (list<'b>, list<'c>, 'a, ('a, 'b, 'c) => 'a) => 'a
@@ -560,7 +563,10 @@ final value of the accumulator.
 ## Examples
 
 ```rescript
-List.reduceReverse2(list{1, 2, 3}, list{4, 5}, 0, (acc, x, y) => acc + x * x + y) //  + (1 * 1 + 4) + (2 * 2 + 5)
+assertEqual(
+  List.reduceReverse2(list{1, 2, 3}, list{4, 5}, 0, (acc, x, y) => acc + x * x + y),
+  0  + (1 * 1 + 4) + (2 * 2 + 5)
+)
 ```
 */
 let reduceReverse2: (list<'a>, list<'b>, 'c, ('c, 'a, 'b) => 'c) => 'c
@@ -574,9 +580,9 @@ is a predicate: a function taking an element and returning a bool.
 ```rescript
 let isBelow10 = value => value < 10
 
-list{1, 9, 8, 2}->List.every(isBelow10) // true
+assertEqual(list{1, 9, 8, 2}->List.every(isBelow10), true)
 
-list{1, 99, 8, 2}->List.every(isBelow10) // false
+assertEqual(list{1, 99, 8, 2}->List.every(isBelow10), false)
 ```
 */
 let every: (list<'a>, 'a => bool) => bool
@@ -591,9 +597,9 @@ returning a bool.
 ```rescript
 let isAbove100 = value => value > 100
 
-list{101, 1, 2, 3}->List.some(isAbove100) // true
+assertEqual(list{101, 1, 2, 3}->List.some(isAbove100), true)
 
-list{1, 2, 3, 4}->List.some(isAbove100) // false
+assertEqual(list{1, 2, 3, 4}->List.some(isAbove100), false)
 ```
 */
 let some: (list<'a>, 'a => bool) => bool
@@ -605,13 +611,13 @@ pairs of elements up to the shorter length (i.e. `min(length(list1), length(list
 ## Examples
 
 ```rescript
-List.every2(list{1, 2, 3}, list{0, 1}, (a, b) => a > b) // true
+assertEqual(List.every2(list{1, 2, 3}, list{0, 1}, (a, b) => a > b), true)
 
-List.every2(list{}, list{1}, (a, b) => a > b) // true
+assertEqual(List.every2(list{}, list{1}, (a, b) => a > b), true)
 
-List.every2(list{2, 3}, list{1}, (a, b) => a > b) // true
+assertEqual(List.every2(list{2, 3}, list{1}, (a, b) => a > b), true)
 
-List.every2(list{0, 1}, list{5, 0}, (a, b) => a > b) // false
+assertEqual(List.every2(list{0, 1}, list{5, 0}, (a, b) => a > b), false)
 ```
 */
 let every2: (list<'a>, list<'b>, ('a, 'b) => bool) => bool
@@ -623,13 +629,13 @@ of elements up to the shorter length (i.e. `min(length(list1), length(list2))`)
 ## Examples
 
 ```rescript
-List.some2(list{1, 2, 3}, list{0, 1}, (a, b) => a > b) // true
+assertEqual(List.some2(list{1, 2, 3}, list{0, 1}, (a, b) => a > b), true)
 
-List.some2(list{}, list{1}, (a, b) => a > b) // false
+assertEqual(List.some2(list{}, list{1}, (a, b) => a > b), false)
 
-List.some2(list{2, 3}, list{1}, (a, b) => a > b) // true
+assertEqual(List.some2(list{2, 3}, list{1}, (a, b) => a > b), true)
 
-List.some2(list{0, 1}, list{5, 0}, (a, b) => a > b) // true
+assertEqual(List.some2(list{0, 1}, list{5, 0}, (a, b) => a > b), true)
 ```
 */
 let some2: (list<'a>, list<'b>, ('a, 'b) => bool) => bool
@@ -642,11 +648,11 @@ let some2: (list<'a>, list<'b>, ('a, 'b) => bool) => bool
 ## Examples
 
 ```rescript
-List.compareLength(list{1, 2}, list{3, 4, 5, 6}) // -1.
+assertEqual(List.compareLength(list{1, 2}, list{3, 4, 5, 6}), -1.)
 
-List.compareLength(list{1, 2, 3}, list{4, 5, 6}) // 0.
+assertEqual(List.compareLength(list{1, 2, 3}, list{4, 5, 6}), 0.)
 
-List.compareLength(list{1, 2, 3, 4}, list{5, 6}) // 1.
+assertEqual(List.compareLength(list{1, 2, 3, 4}, list{5, 6}), 1.)
 ```
 */
 let compareLength: (list<'a>, list<'a>) => Stdlib_Ordering.t
@@ -665,11 +671,11 @@ zero for all `list1` and `list2`.
 ## Examples
 
 ```rescript
-List.compare(list{3}, list{3, 7}, (a, b) => Int.compare(a, b)) // -1.
-List.compare(list{5, 3}, list{5}, (a, b) => Int.compare(a, b)) // 1.
-List.compare(list{1, 3, 5}, list{1, 4, 2}, (a, b) => Int.compare(a, b)) // -1.
-List.compare(list{1, 3, 5}, list{1, 2, 3}, (a, b) => Int.compare(a, b)) // 1.
-List.compare(list{1, 3, 5}, list{1, 3, 5}, (a, b) => Int.compare(a, b)) // 0.
+assertEqual(List.compare(list{3}, list{3, 7}, (a, b) => Int.compare(a, b)), -1.)
+assertEqual(List.compare(list{5, 3}, list{5}, (a, b) => Int.compare(a, b)), 1.)
+assertEqual(List.compare(list{1, 3, 5}, list{1, 4, 2}, (a, b) => Int.compare(a, b)), -1.)
+assertEqual(List.compare(list{1, 3, 5}, list{1, 2, 3}, (a, b) => Int.compare(a, b)), 1.)
+assertEqual(List.compare(list{1, 3, 5}, list{1, 3, 5}, (a, b) => Int.compare(a, b)), 0.)
 ```
 
 **Please note:** The total ordering of List is different from Array,
@@ -687,11 +693,11 @@ of `list1` and `list2` are not the same.
 ## Examples
 
 ```rescript
-List.equal(list{1, 2, 3}, list{1, 2}, (a, b) => a == b) // false
+assertEqual(List.equal(list{1, 2, 3}, list{1, 2}, (a, b) => a == b), false)
 
-List.equal(list{1, 2}, list{1, 2}, (a, b) => a == b) // true
+assertEqual(List.equal(list{1, 2}, list{1, 2}, (a, b) => a == b), true)
 
-List.equal(list{1, 2, 3}, list{(-1), (-2), (-3)}, (a, b) => abs(a) == abs(b)) // true
+assertEqual(List.equal(list{1, 2, 3}, list{(-1), (-2), (-3)}, (a, b) => abs(a) == abs(b)), true)
 ```
 */
 let equal: (list<'a>, list<'a>, ('a, 'a) => bool) => bool
@@ -703,11 +709,11 @@ let equal: (list<'a>, list<'a>, ('a, 'a) => bool) => bool
 ## Examples
 
 ```rescript
-list{1, 2, 3}->List.has(2, (a, b) => a == b) // true
+assertEqual(list{1, 2, 3}->List.has(2, (a, b) => a == b), true)
 
-list{1, 2, 3}->List.has(4, (a, b) => a == b) // false
+assertEqual(list{1, 2, 3}->List.has(4, (a, b) => a == b), false)
 
-list{(-1), (-2), (-3)}->List.has(2, (a, b) => abs(a) == abs(b)) // true
+assertEqual(list{(-1), (-2), (-3)}->List.has(2, (a, b) => abs(a) == abs(b)), true)
 ```
 */
 let has: (list<'a>, 'b, ('a, 'b) => bool) => bool
@@ -720,9 +726,9 @@ the function.
 ## Examples
 
 ```rescript
-List.find(list{1, 4, 3, 2}, x => x > 3) // Some(4)
+assertEqual(List.find(list{1, 4, 3, 2}, x => x > 3), Some(4))
 
-List.find(list{1, 4, 3, 2}, x => x > 4) // None
+assertEqual(List.find(list{1, 4, 3, 2}, x => x > 4), None)
 ```
 */
 let find: (list<'a>, 'a => bool) => option<'a>
@@ -736,9 +742,9 @@ predicate function `f`.
 ```rescript
 let isEven = x => mod(x, 2) == 0
 
-List.filter(list{1, 2, 3, 4}, isEven) // list{2, 4}
+assertEqual(List.filter(list{1, 2, 3, 4}, isEven), list{2, 4})
 
-List.filter(list{None, Some(2), Some(3), None}, Option.isSome) // list{Some(2), Some(3)}
+assertEqual(List.filter(list{None, Some(2), Some(3), None}, Option.isSome), list{Some(2), Some(3)})
 ```
 */
 let filter: (list<'a>, 'a => bool) => list<'a>
@@ -752,7 +758,7 @@ satisfy the predicate function `f`.
 ```rescript
 let isEven = x => mod(x, 2) == 0
 
-List.filterWithIndex(list{1, 2, 3, 4}, (_x, index) => isEven(index)) // list{1, 3}
+assertEqual(List.filterWithIndex(list{1, 2, 3, 4}, (_x, index) => isEven(index)), list{1, 3})
 ```
 */
 let filterWithIndex: (list<'a>, ('a, int) => bool) => list<'a>
@@ -776,7 +782,7 @@ list{1, 2, 3, 4}
     }
   ) // list{2, 4}
 
-list{Some(1), Some(2), None}->List.filterMap(x => x) // list{1, 2}
+assertEqual(list{Some(1), Some(2), None}->List.filterMap(x => x), list{1, 2})
 ```
 */
 let filterMap: (list<'a>, 'a => option<'b>) => list<'b>
@@ -791,7 +797,7 @@ consists of all elements of `list` that _do not_ satisfy `f`.
 ```rescript
 // (elementsThatSatisfies, elementsThatDoesNotSatisfy)
 
-List.partition(list{1, 2, 3, 4}, x => x > 2) // (list{3, 4}, list{1, 2})
+assertEqual(List.partition(list{1, 2, 3, 4}, x => x > 2), (list{3, 4}, list{1, 2}))
 ```
 */
 let partition: (list<'a>, 'a => bool) => (list<'a>, list<'a>)
@@ -806,8 +812,10 @@ second items.
 ```rescript
 List.unzip(list{(1, 2), (3, 4)}) // (list{1, 3}, list{2, 4})
 
-List.unzip(list{("H", "W"), ("e", "o"), ("l", "r"), ("l", "l"), ("o", "d"), (" ", "!")})
-// (list{"H", "e", "l", "l", "o", " "}, list{"W", "o", "r", "l", "d", "!"})
+assertEqual(
+  List.unzip(list{("H", "W"), ("e", "o"), ("l", "r"), ("l", "l"), ("o", "d"), (" ", "!")}),
+  (list{"H", "e", "l", "l", "o", " "}, list{"W", "o", "r", "l", "d", "!"})
+)
 ```
 */
 let unzip: list<('a, 'b)> => (list<'a>, list<'b>)
@@ -822,9 +830,11 @@ not found.
 ```rescript
 list{(1, "a"), (2, "b"), (3, "c")}->List.getAssoc(3, (a, b) => a == b) // Some("c")
 
-list{(9, "morning"), (15, "afternoon"), (22, "night")}
-->List.getAssoc(15, (k, item) => k /* 15 */ == item /* 9, 5, 22 */)
-// Some("afternoon")
+assertEqual(
+  list{(9, "morning"), (15, "afternoon"), (22, "night")}
+  ->List.getAssoc(15, (k, item) => k /* 15 */ == item /* 9, 5, 22 */),
+  Some("afternoon")
+)
 ```
 */
 @deprecated("Use a `Map` instead")
@@ -839,8 +849,11 @@ first element equals `k` as per the predicate function `f`.
 ```rescript
 list{(1, "a"), (2, "b"), (3, "c")}->List.hasAssoc(1, (a, b) => a == b) // true
 
-list{(9, "morning"), (15, "afternoon"), (22, "night")}
-->List.hasAssoc(25, (k, item) => k /* 25 */ == item /* 9, 5, 22 */) // false
+assertEqual(
+  list{(9, "morning"), (15, "afternoon"), (22, "night")}
+  ->List.hasAssoc(25, (k, item) => k /* 25 */ == item /* 9, 5, 22 */),
+  false
+)
 ```
 */
 @deprecated("Use a `Map` instead")
@@ -856,9 +869,11 @@ list identical to `list`.
 ```rescript
 list{(1, "a"), (2, "b"), (3, "c")}->List.removeAssoc(1, (a, b) => a == b) // list{(2, "b"), (3, "c")}
 
-list{(9, "morning"), (15, "afternoon"), (22, "night")}
-->List.removeAssoc(9, (k, item) => k /* 9 */ == item /* 9, 5, 22 */)
-// list{(15, "afternoon"), (22, "night")}
+assertEqual(
+  list{(9, "morning"), (15, "afternoon"), (22, "night")}
+  ->List.removeAssoc(9, (k, item) => k /* 9 */ == item /* 9, 5, 22 */),
+  list{(15, "afternoon"), (22, "night")}
+)
 ```
 */
 @deprecated("Use a `Map` instead")
@@ -873,13 +888,21 @@ predicate, return a new list with the key and value replaced by the new `k` and
 ## Examples
 
 ```rescript
-list{(1, "a"), (2, "b"), (3, "c")}->List.setAssoc(2, "x", (a, b) => a == b) // list{(1, "a"), (2, "x"), (3, "c")}
+assertEqual(
+  list{(1, "a"), (2, "b"), (3, "c")}->List.setAssoc(2, "x", (a, b) => a == b),
+  list{(1, "a"), (2, "x"), (3, "c")}
+)
 
-list{(1, "a"), (3, "c")}->List.setAssoc(2, "b", (a, b) => a == b) // list{(2, "b"), (1, "a"), (3, "c")}
+assertEqual(
+  list{(1, "a"), (3, "c")}->List.setAssoc(2, "b", (a, b) => a == b),
+  list{(2, "b"), (1, "a"), (3, "c")}
+)
 
-list{(9, "morning"), (3, "morning?!"), (22, "night")}
-->List.setAssoc(15, "afternoon", (a, b) => mod(a, 12) == mod(b, 12))
-// list{(9, "morning"), (15, "afternoon"), (22, "night")}
+assertEqual(
+  list{(9, "morning"), (3, "morning?!"), (22, "night")}
+  ->List.setAssoc(15, "afternoon", (a, b) => mod(a, 12) == mod(b, 12)),
+  list{(9, "morning"), (15, "afternoon"), (22, "night")}
+)
 ```
 
 **Please note**: In the last example, since: `15 mod 12` equals `3 mod 12`. Both
@@ -894,7 +917,10 @@ let setAssoc: (list<('a, 'c)>, 'a, 'c, ('a, 'a) => bool) => list<('a, 'c)>
 ## Examples
 
 ```rescript
-List.sort(list{5, 4, 9, 3, 7}, Int.compare) // list{3, 4, 5, 7, 9}
+assertEqual(
+  List.sort(list{5, 4, 9, 3, 7}, Int.compare),
+  list{3, 4, 5, 7, 9}
+)
 ```
 */
 let sort: (list<'a>, ('a, 'a) => Stdlib_Ordering.t) => list<'a>

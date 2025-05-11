@@ -1289,6 +1289,7 @@ and print_type_declaration2 ?inline_record_definitions ~state ~rec_flag
             Doc.space;
             Doc.text equal_sign;
             Doc.space;
+            print_private_flag td.ptype_private;
             Doc.lbrace;
             print_comments_inside cmt_tbl td.ptype_loc;
             Doc.rbrace;
@@ -3705,6 +3706,7 @@ and print_unary_expression ~state expr cmt_tbl =
       | "~+." -> "+."
       | "~-" -> "-"
       | "~-." -> "-."
+      | "~~" -> "~"
       | "not" -> "!"
       | _ -> assert false)
   in
@@ -4583,6 +4585,18 @@ and get_line_sep_for_jsx_children (children : Parsetree.jsx_children) =
 
 and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
   let open Parsetree in
+  let get_loc (expr : Parsetree.expression) =
+    let braces =
+      expr.pexp_attributes
+      |> List.find_map (fun (attr, _) ->
+             match attr with
+             | {Location.txt = "res.braces"; loc} -> Some loc
+             | _ -> None)
+    in
+    match braces with
+    | None -> expr.pexp_loc
+    | Some loc -> loc
+  in
   let sep = get_line_sep_for_jsx_children children in
   let print_expr (expr : Parsetree.expression) =
     let leading_line_comment_present =
@@ -4598,7 +4612,7 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
       else Doc.concat [Doc.lbrace; inner_doc; Doc.rbrace]
     in
     match Parens.jsx_child_expr expr with
-    | Nothing -> expr_doc
+    | Nothing -> print_comments expr_doc cmt_tbl (get_loc expr)
     | Parenthesized -> add_parens_or_braces expr_doc
     | Braced braces_loc ->
       print_comments (add_parens_or_braces expr_doc) cmt_tbl braces_loc
@@ -4607,19 +4621,6 @@ and print_jsx_children ~state (children : Parsetree.jsx_children) cmt_tbl =
   | JSXChildrenItems [] -> Doc.nil
   | JSXChildrenSpreading child -> Doc.concat [Doc.dotdotdot; print_expr child]
   | JSXChildrenItems children ->
-    let get_loc (expr : Parsetree.expression) =
-      let braces =
-        expr.pexp_attributes
-        |> List.find_map (fun (attr, _) ->
-               match attr with
-               | {Location.txt = "res.braces"; loc} -> Some loc
-               | _ -> None)
-      in
-      match braces with
-      | None -> expr.pexp_loc
-      | Some loc -> loc
-    in
-
     let rec visit acc children =
       match children with
       | [] -> acc
@@ -5046,6 +5047,8 @@ and print_argument ~state (arg_lbl, arg) cmt_tbl =
       match Parens.expr expr with
       | Parenthesized -> add_parens doc
       | Braced braces -> print_braces doc expr braces
+      | Nothing when ParsetreeViewer.is_unary_bitnot_expression expr ->
+        add_parens doc
       | Nothing -> doc
     in
     let loc = {arg_loc with loc_end = expr.pexp_loc.loc_end} in

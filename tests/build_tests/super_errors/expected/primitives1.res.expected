@@ -9,5 +9,5 @@
   This has type: [1;31mint[0m
   But it's expected to have type: [1;33mfloat[0m
   
-  You can convert [1;33mint[0m to [1;33mfloat[0m with [1;33mBelt.Int.toFloat[0m.
+  You can convert [1;33mint[0m to [1;33mfloat[0m with [1;33mInt.toFloat[0m.
   If this is a literal, try a number with a trailing dot (e.g. [1;33m20.[0m).

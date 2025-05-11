@@ -251,10 +251,6 @@ let rec recursively_transform_named_args_for_make expr args newtypes core_type =
     Jsx_common.raise_error ~loc:expr.pexp_loc
       "Key cannot be accessed inside of a component. Don't worry - you can \
        always key a component from its parent!"
-  | Pexp_fun {arg_label = Labelled {txt = "ref"} | Optional {txt = "ref"}} ->
-    Jsx_common.raise_error ~loc:expr.pexp_loc
-      "Ref cannot be passed as a normal prop. Please use `forwardRef` API \
-       instead."
   | Pexp_fun {arg_label = arg; default; lhs = pattern; rhs = expression}
     when is_optional arg || is_labelled arg ->
     let () =
@@ -1208,7 +1204,7 @@ let append_children_prop (config : Jsx_common.jsx_config) mapper
         Exp.apply
           (Exp.ident
              {txt = Ldot (element_binding, "someElement"); loc = Location.none})
-          [(Nolabel, child)]
+          [(Nolabel, mapper.expr mapper child)]
     in
     let is_optional =
       match component_description with
@@ -1277,7 +1273,7 @@ let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
         [key_prop; (nolabel, unit_expr ~loc:Location.none)] )
   in
   let args = [(nolabel, elementTag); (nolabel, props_record)] @ key_and_unit in
-  Exp.apply ~loc ~attrs jsx_expr args
+  Exp.apply ~loc ~attrs ~transformed_jsx:true jsx_expr args
 
 (* In most situations, the component name is the make function from a module. 
     However, if the name contains a lowercase letter, it means it probably an external component.

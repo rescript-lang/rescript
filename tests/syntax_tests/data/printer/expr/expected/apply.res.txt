@@ -5,6 +5,8 @@ let rbt = make(~compare?)
 let rbt = make(~compare=intCompare)
 let rbt = make(~compare=?intCompare)
 let rbt = make(~compare=?(intCompare: (int, int) => int))
+let rbt = make((~compare))
+let rbt = make((~(-compare)) ^ (~x))
 
 let () = applyFunctionToArguments(
   superLongIdentifierWooooooowThisIsSuchLong,

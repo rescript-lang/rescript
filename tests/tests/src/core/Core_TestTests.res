@@ -1,6 +1,6 @@
 let eq = (a, b) => a == b
 
-let bign = BigInt.fromFloat(Float.Constants.maxValue)
+let bign = BigInt.fromFloat(Float.Constants.maxValue)->Option.getOr(0n)
 let bign = BigInt.add(bign, bign)
 
 Test.run(__POS_OF__("print null"), Test.print(null), eq, "null")

@@ -142,7 +142,13 @@ let rewrite_underscore_apply expr =
     {
       e with
       pexp_desc =
-        Pexp_apply {funct = call_expr; args = new_args; partial = false};
+        Pexp_apply
+          {
+            funct = call_expr;
+            args = new_args;
+            partial = false;
+            transformed_jsx = false;
+          };
     }
   | _ -> expr
 
@@ -273,17 +279,18 @@ let operator_precedence operator =
   | "||" -> 2
   | "&&" -> 3
   | "^" -> 4
-  | "==" | "===" | "<" | ">" | "!=" | "<>" | "!==" | "<=" | ">=" | "|>" -> 5
-  | "<<" | ">>" | ">>>" -> 6
-  | "+" | "+." | "-" | "-." | "++" -> 7
-  | "*" | "*." | "/" | "/." | "%" -> 8
-  | "**" -> 9
-  | "#" | "##" | "->" -> 10
+  | "&" -> 5
+  | "==" | "===" | "<" | ">" | "!=" | "<>" | "!==" | "<=" | ">=" | "|>" -> 6
+  | "<<" | ">>" | ">>>" -> 7
+  | "+" | "+." | "-" | "-." | "++" -> 8
+  | "*" | "*." | "/" | "/." | "%" -> 9
+  | "**" -> 10
+  | "#" | "##" | "->" -> 11
   | _ -> 0
 
 let is_unary_operator operator =
   match operator with
-  | "~+" | "~+." | "~-" | "~-." | "not" -> true
+  | "~+" | "~+." | "~-" | "~-." | "~~" | "not" -> true
   | _ -> false
 
 let is_unary_expression expr =
@@ -297,11 +304,21 @@ let is_unary_expression expr =
     true
   | _ -> false
 
+let is_unary_bitnot_expression expr =
+  match expr.pexp_desc with
+  | Pexp_apply
+      {
+        funct = {pexp_desc = Pexp_ident {txt = Longident.Lident "~~"}};
+        args = [(Nolabel, _arg)];
+      } ->
+    true
+  | _ -> false
+
 let is_binary_operator operator =
   match operator with
   | ":=" | "||" | "&&" | "==" | "===" | "<" | ">" | "!=" | "!==" | "<=" | ">="
   | "|>" | "+" | "+." | "-" | "-." | "++" | "*" | "*." | "/" | "/." | "**"
-  | "->" | "<>" | "%" | "^" | "<<" | ">>" | ">>>" ->
+  | "->" | "<>" | "%" | "&" | "^" | "<<" | ">>" | ">>>" ->
     true
   | _ -> false
 

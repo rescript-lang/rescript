@@ -81,7 +81,7 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let s0 = Belt.MutableSet.fromArray([1, 3, 2, 4], ~id=module(IntCmp))
 
-s0->Belt.MutableSet.toArray /* [1, 2, 3, 4] */
+assertEqual(s0->Belt.MutableSet.toArray, [1, 2, 3, 4])
 ```
 */
 let fromArray: (array<'value>, ~id: id<'value, 'id>) => t<'value, 'id>
@@ -105,7 +105,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.MutableSet.fromArray([1, 3, 2, 4], ~id=module(IntCmp))
 
 let copied = s0->Belt.MutableSet.copy
-copied->Belt.MutableSet.toArray /* [1, 2, 3, 4] */
+assertEqual(copied->Belt.MutableSet.toArray, [1, 2, 3, 4])
 ```
 */
 let copy: t<'value, 'id> => t<'value, 'id>
@@ -124,8 +124,8 @@ module IntCmp = Belt.Id.MakeComparable({
 let empty = Belt.MutableSet.fromArray([], ~id=module(IntCmp))
 let notEmpty = Belt.MutableSet.fromArray([1], ~id=module(IntCmp))
 
-Belt.MutableSet.isEmpty(empty) /* true */
-Belt.MutableSet.isEmpty(notEmpty) /* false */
+assertEqual(Belt.MutableSet.isEmpty(empty), true)
+assertEqual(Belt.MutableSet.isEmpty(notEmpty), false)
 ```
 */
 let isEmpty: t<_> => bool
@@ -143,8 +143,8 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let set = Belt.MutableSet.fromArray([1, 4, 2, 5], ~id=module(IntCmp))
 
-set->Belt.MutableSet.has(3) /* false */
-set->Belt.MutableSet.has(1) /* true */
+assertEqual(set->Belt.MutableSet.has(3), false)
+assertEqual(set->Belt.MutableSet.has(1), true)
 ```
 */
 let has: (t<'value, 'id>, 'value) => bool
@@ -165,7 +165,7 @@ s0->Belt.MutableSet.add(1)
 s0->Belt.MutableSet.add(2)
 s0->Belt.MutableSet.add(2)
 
-s0->Belt.MutableSet.toArray /* [1, 2] */
+assertEqual(s0->Belt.MutableSet.toArray, [1, 2])
 ```
 */
 let add: (t<'value, 'id>, 'value) => unit
@@ -186,7 +186,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let set = Belt.MutableSet.make(~id=module(IntCmp))
 
 set->Belt.MutableSet.mergeMany([5, 4, 3, 2, 1])
-set->Belt.MutableSet.toArray /* [1, 2, 3, 4, 5] */
+assertEqual(set->Belt.MutableSet.toArray, [1, 2, 3, 4, 5])
 ```
 */
 let mergeMany: (t<'value, 'id>, array<'value>) => unit
@@ -207,7 +207,7 @@ s0->Belt.MutableSet.remove(1)
 s0->Belt.MutableSet.remove(3)
 s0->Belt.MutableSet.remove(3)
 
-s0->Belt.MutableSet.toArray /* [2,4,5] */
+assertEqual(s0->Belt.MutableSet.toArray, [2,4,5])
 ```
 */
 let remove: (t<'value, 'id>, 'value) => unit
@@ -229,7 +229,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let set = Belt.MutableSet.fromArray([1, 2, 3, 4], ~id=module(IntCmp))
 
 set->Belt.MutableSet.removeMany([5, 4, 3, 2, 1])
-set->Belt.MutableSet.toArray /* [] */
+assertEqual(set->Belt.MutableSet.toArray, [])
 ```
 */
 let removeMany: (t<'value, 'id>, array<'value>) => unit
@@ -248,7 +248,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.MutableSet.fromArray([5, 2, 3, 5, 6], ~id=module(IntCmp))
 let s1 = Belt.MutableSet.fromArray([5, 2, 3, 1, 5, 4], ~id=module(IntCmp))
 let union = Belt.MutableSet.union(s0, s1)
-union->Belt.MutableSet.toArray /* [1,2,3,4,5,6] */
+assertEqual(union->Belt.MutableSet.toArray, [1,2,3,4,5,6])
 ```
 */
 let union: (t<'value, 'id>, t<'value, 'id>) => t<'value, 'id>
@@ -267,7 +267,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.MutableSet.fromArray([5, 2, 3, 5, 6], ~id=module(IntCmp))
 let s1 = Belt.MutableSet.fromArray([5, 2, 3, 1, 5, 4], ~id=module(IntCmp))
 let intersect = Belt.MutableSet.intersect(s0, s1)
-intersect->Belt.MutableSet.toArray /* [2,3,5] */
+assertEqual(intersect->Belt.MutableSet.toArray, [2,3,5])
 ```
 */
 let intersect: (t<'value, 'id>, t<'value, 'id>) => t<'value, 'id>
@@ -285,8 +285,8 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let s0 = Belt.MutableSet.fromArray([5, 2, 3, 5, 6], ~id=module(IntCmp))
 let s1 = Belt.MutableSet.fromArray([5, 2, 3, 1, 5, 4], ~id=module(IntCmp))
-Belt.MutableSet.toArray(Belt.MutableSet.diff(s0, s1)) /* [6] */
-Belt.MutableSet.toArray(Belt.MutableSet.diff(s1, s0)) /* [1,4] */
+assertEqual(Belt.MutableSet.toArray(Belt.MutableSet.diff(s0, s1)), [6])
+assertEqual(Belt.MutableSet.toArray(Belt.MutableSet.diff(s1, s0)), [1,4])
 ```
 */
 let diff: (t<'value, 'id>, t<'value, 'id>) => t<'value, 'id>
@@ -305,9 +305,9 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.MutableSet.fromArray([5, 2, 3, 5, 6], ~id=module(IntCmp))
 let s1 = Belt.MutableSet.fromArray([5, 2, 3, 1, 5, 4], ~id=module(IntCmp))
 let s2 = Belt.MutableSet.intersect(s0, s1)
-Belt.MutableSet.subset(s2, s0) /* true */
-Belt.MutableSet.subset(s2, s1) /* true */
-Belt.MutableSet.subset(s1, s0) /* false */
+assertEqual(Belt.MutableSet.subset(s2, s0), true)
+assertEqual(Belt.MutableSet.subset(s2, s1), true)
+assertEqual(Belt.MutableSet.subset(s1, s0), false)
 ```
 */
 let subset: (t<'value, 'id>, t<'value, 'id>) => bool
@@ -332,7 +332,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.MutableSet.fromArray([5, 2, 3], ~id=module(IntCmp))
 let s1 = Belt.MutableSet.fromArray([3, 2, 5], ~id=module(IntCmp))
 
-Belt.MutableSet.eq(s0, s1) /* true */
+assertEqual(Belt.MutableSet.eq(s0, s1), true)
 ```
 */
 let eq: (t<'value, 'id>, t<'value, 'id>) => bool
@@ -357,7 +357,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.MutableSet.fromArray([5, 2, 3, 5, 6], ~id=module(IntCmp))
 let acc = ref(list{})
 s0->Belt.MutableSet.forEach(x => acc := Belt.List.add(acc.contents, x))
-acc /* [6,5,3,2] */
+assertEqual(acc.contents, list{6, 5, 3, 2})
 ```
 */
 let forEach: (t<'value, 'id>, 'value => unit) => unit
@@ -377,7 +377,10 @@ module IntCmp = Belt.Id.MakeComparable({
 })
 
 let s0 = Belt.MutableSet.fromArray([5, 2, 3, 5, 6], ~id=module(IntCmp))
-s0->Belt.MutableSet.reduce(list{}, (acc, element) => acc->Belt.List.add(element)) /* [6,5,3,2] */
+assertEqual(
+  s0->Belt.MutableSet.reduce(list{}, (acc, element) => acc->Belt.List.add(element)),
+  list{6, 5, 3, 2}
+)
 ```
 */
 let reduce: (t<'value, 'id>, 'a, ('a, 'value) => 'a) => 'a
@@ -399,7 +402,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let isEven = x => mod(x, 2) == 0
 
 let s0 = Belt.MutableSet.fromArray([2, 4, 6, 8], ~id=module(IntCmp))
-s0->Belt.MutableSet.every(isEven) /* true */
+assertEqual(s0->Belt.MutableSet.every(isEven), true)
 ```
 */
 let every: (t<'value, 'id>, 'value => bool) => bool
@@ -421,7 +424,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let isOdd = x => mod(x, 2) != 0
 
 let s0 = Belt.MutableSet.fromArray([1, 2, 4, 6, 8], ~id=module(IntCmp))
-s0->Belt.MutableSet.some(isOdd) /* true */
+assertEqual(s0->Belt.MutableSet.some(isOdd), true)
 ```
 */
 let some: (t<'value, 'id>, 'value => bool) => bool
@@ -445,7 +448,7 @@ let isEven = x => mod(x, 2) == 0
 let s0 = Belt.MutableSet.fromArray([1, 2, 3, 4, 5], ~id=module(IntCmp))
 let s1 = s0->Belt.MutableSet.keep(isEven)
 
-s1->Belt.MutableSet.toArray /* [2, 4] */
+assertEqual(s1->Belt.MutableSet.toArray, [2, 4])
 ```
 */
 let keep: (t<'value, 'id>, 'value => bool) => t<'value, 'id>
@@ -467,8 +470,8 @@ let isOdd = x => mod(x, 2) != 0
 let s0 = Belt.MutableSet.fromArray([1, 2, 3, 4, 5], ~id=module(IntCmp))
 let (s1, s2) = s0->Belt.MutableSet.partition(isOdd)
 
-s1->Belt.MutableSet.toArray /* [1,3,5] */
-s2->Belt.MutableSet.toArray /* [2,4] */
+assertEqual(s1->Belt.MutableSet.toArray, [1,3,5])
+assertEqual(s2->Belt.MutableSet.toArray, [2,4])
 ```
 */
 let partition: (t<'value, 'id>, 'value => bool) => (t<'value, 'id>, t<'value, 'id>)
@@ -486,7 +489,7 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let s0 = Belt.MutableSet.fromArray([1, 2, 3, 4], ~id=module(IntCmp))
 
-s0->Belt.MutableSet.size /* 4 */
+assertEqual(s0->Belt.MutableSet.size, 4)
 ```
 */
 let size: t<'value, 'id> => int
@@ -504,7 +507,7 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let s0 = Belt.MutableSet.fromArray([3, 2, 1, 5], ~id=module(IntCmp))
 
-s0->Belt.MutableSet.toList /* [1,2,3,5] */
+assertEqual(s0->Belt.MutableSet.toList, list{1, 2, 3, 5})
 ```
 */
 let toList: t<'value, 'id> => list<'value>
@@ -522,7 +525,7 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let s0 = Belt.MutableSet.fromArray([3, 2, 1, 5], ~id=module(IntCmp))
 
-s0->Belt.MutableSet.toArray /* [1,2,3,5] */
+assertEqual(s0->Belt.MutableSet.toArray, [1,2,3,5])
 ```
 */
 let toArray: t<'value, 'id> => array<'value>
@@ -541,8 +544,8 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.MutableSet.make(~id=module(IntCmp))
 let s1 = Belt.MutableSet.fromArray([3, 2, 1, 5], ~id=module(IntCmp))
 
-s0->Belt.MutableSet.minimum /* None */
-s1->Belt.MutableSet.minimum /* Some(1) */
+assertEqual(s0->Belt.MutableSet.minimum, None)
+assertEqual(s1->Belt.MutableSet.minimum, Some(1))
 ```
 */
 let minimum: t<'value, 'id> => option<'value>
@@ -561,8 +564,8 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.MutableSet.make(~id=module(IntCmp))
 let s1 = Belt.MutableSet.fromArray([3, 2, 1, 5], ~id=module(IntCmp))
 
-s0->Belt.MutableSet.minUndefined /* undefined */
-s1->Belt.MutableSet.minUndefined /* 1 */
+assertEqual(s0->Belt.MutableSet.minUndefined, Js.undefined)
+assertEqual(s1->Belt.MutableSet.minUndefined, Js.Undefined.return(1))
 ```
 */
 let minUndefined: t<'value, 'id> => Js.undefined<'value>
@@ -581,8 +584,8 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.MutableSet.make(~id=module(IntCmp))
 let s1 = Belt.MutableSet.fromArray([3, 2, 1, 5], ~id=module(IntCmp))
 
-s0->Belt.MutableSet.maximum /* None */
-s1->Belt.MutableSet.maximum /* Some(5) */
+assertEqual(s0->Belt.MutableSet.maximum, None)
+assertEqual(s1->Belt.MutableSet.maximum, Some(5))
 ```
 */
 let maximum: t<'value, 'id> => option<'value>
@@ -601,8 +604,8 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.MutableSet.make(~id=module(IntCmp))
 let s1 = Belt.MutableSet.fromArray([3, 2, 1, 5], ~id=module(IntCmp))
 
-s0->Belt.MutableSet.maxUndefined /* undefined */
-s1->Belt.MutableSet.maxUndefined /* 5 */
+assertEqual(s0->Belt.MutableSet.maxUndefined, Js.undefined)
+assertEqual(s1->Belt.MutableSet.maxUndefined, Js.Undefined.return(5))
 ```
 */
 let maxUndefined: t<'value, 'id> => Js.undefined<'value>
@@ -620,8 +623,8 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let s0 = Belt.MutableSet.fromArray([1, 2, 3, 4, 5], ~id=module(IntCmp))
 
-s0->Belt.MutableSet.get(3) /* Some(3) */
-s0->Belt.MutableSet.get(20) /* None */
+assertEqual(s0->Belt.MutableSet.get(3), Some(3))
+assertEqual(s0->Belt.MutableSet.get(20), None)
 ```
 */
 let get: (t<'value, 'id>, 'value) => option<'value>
@@ -651,9 +654,9 @@ let s0 = Belt.MutableSet.fromArray([1, 2, 3, 4, 5], ~id=module(IntCmp))
 
 let ((smaller, larger), present) = s0->Belt.MutableSet.split(3)
 
-present /* true */
-smaller->Belt.MutableSet.toArray /* [1,2] */
-larger->Belt.MutableSet.toArray /* [4,5] */
+assertEqual(present, true)
+assertEqual(smaller->Belt.MutableSet.toArray, [1,2])
+assertEqual(larger->Belt.MutableSet.toArray, [4,5])
 ```
 */
 let split: (t<'value, 'id>, 'value) => ((t<'value, 'id>, t<'value, 'id>), bool)

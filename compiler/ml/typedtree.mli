@@ -150,6 +150,7 @@ and expression_desc =
       funct: expression;
       args: (Noloc.arg_label * expression option) list;
       partial: bool;
+      transformed_jsx: bool;
     }
       (** E0 ~l1:E1 ... ~ln:En
 

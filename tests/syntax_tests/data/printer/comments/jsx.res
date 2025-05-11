@@ -67,6 +67,14 @@ value=""
     React.string("Hello, World!")}
 </div>
 
+<div>
+  // Outside comment
+  {// But this one is inside
+    let x = 1
+    let y = 2
+  }
+</div>
+
 let x = <>
   // before a
   {a} // after a

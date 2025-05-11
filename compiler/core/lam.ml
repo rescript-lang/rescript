@@ -81,7 +81,12 @@ module Types = struct
   *)
   and prim_info = {primitive: Lam_primitive.t; args: t list; loc: Location.t}
 
-  and apply = {ap_func: t; ap_args: t list; ap_info: ap_info}
+  and apply = {
+    ap_func: t;
+    ap_args: t list;
+    ap_info: ap_info;
+    ap_transformed_jsx: bool;
+  }
 
   and t =
     | Lvar of ident
@@ -121,7 +126,12 @@ module X = struct
     loc: Location.t;
   }
 
-  and apply = Types.apply = {ap_func: t; ap_args: t list; ap_info: ap_info}
+  and apply = Types.apply = {
+    ap_func: t;
+    ap_args: t list;
+    ap_info: ap_info;
+    ap_transformed_jsx: bool;
+  }
 
   and lfunction = Types.lfunction = {
     arity: int;
@@ -159,10 +169,10 @@ include Types
 let inner_map (l : t) (f : t -> X.t) : X.t =
   match l with
   | Lvar (_ : ident) | Lconst (_ : Lam_constant.t) -> ((* Obj.magic *) l : X.t)
-  | Lapply {ap_func; ap_args; ap_info} ->
+  | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx} ->
     let ap_func = f ap_func in
     let ap_args = Ext_list.map ap_args f in
-    Lapply {ap_func; ap_args; ap_info}
+    Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx}
   | Lfunction {body; arity; params; attr} ->
     let body = f body in
     Lfunction {body; arity; params; attr}
@@ -279,7 +289,7 @@ let rec is_eta_conversion_exn params inner_args outer_args : t list =
   | _, _, _ -> raise_notrace Not_simple_form
 
 (** FIXME: more robust inlining check later, we should inline it before we add stub code*)
-let rec apply fn args (ap_info : ap_info) : t =
+let rec apply ?(ap_transformed_jsx = false) fn args (ap_info : ap_info) : t =
   match fn with
   | Lfunction
       {
@@ -300,7 +310,7 @@ let rec apply fn args (ap_info : ap_info) : t =
       Lprim
         {primitive = wrap; args = [Lprim {primitive_call with args; loc}]; loc}
     | exception Not_simple_form ->
-      Lapply {ap_func = fn; ap_args = args; ap_info})
+      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx})
   | Lfunction
       {
         params;
@@ -308,7 +318,8 @@ let rec apply fn args (ap_info : ap_info) : t =
       } -> (
     match is_eta_conversion_exn params inner_args args with
     | args -> Lprim {primitive_call with args; loc = ap_info.ap_loc}
-    | exception _ -> Lapply {ap_func = fn; ap_args = args; ap_info})
+    | exception _ ->
+      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx})
   | Lfunction
       {
         params;
@@ -321,17 +332,17 @@ let rec apply fn args (ap_info : ap_info) : t =
     | args ->
       Lsequence (Lprim {primitive_call with args; loc = ap_info.ap_loc}, const)
     | exception _ ->
-      Lapply {ap_func = fn; ap_args = args; ap_info}
+      Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx}
       (* | Lfunction {params;body} when Ext_list.same_length params args ->
           Ext_list.fold_right2 (fun p arg acc ->
             Llet(Strict,p,arg,acc)
           ) params args body *)
       (* TODO: more rigirous analysis on [let_kind] *))
   | Llet (kind, id, e, (Lfunction _ as fn)) ->
-    Llet (kind, id, e, apply fn args ap_info)
+    Llet (kind, id, e, apply fn args ap_info ~ap_transformed_jsx)
   (* | Llet (kind0, id0, e0, Llet (kind,id, e, (Lfunction _ as fn))) ->
      Llet(kind0,id0,e0,Llet (kind, id, e, apply fn args loc status)) *)
-  | _ -> Lapply {ap_func = fn; ap_args = args; ap_info}
+  | _ -> Lapply {ap_func = fn; ap_args = args; ap_info; ap_transformed_jsx}
 
 let rec eq_approx (l1 : t) (l2 : t) =
   match l1 with
@@ -712,10 +723,12 @@ let result_wrap loc (result_type : External_ffi_types.return_wrapper) result =
     prim ~primitive:Pundefined_to_opt ~args:[result] loc
   | Return_unset | Return_identity -> result
 
-let handle_bs_non_obj_ffi (arg_types : External_arg_spec.params)
+let handle_bs_non_obj_ffi ?(transformed_jsx = false)
+    (arg_types : External_arg_spec.params)
     (result_type : External_ffi_types.return_wrapper) ffi args loc prim_name
     ~dynamic_import =
   result_wrap loc result_type
     (prim
-       ~primitive:(Pjs_call {prim_name; arg_types; ffi; dynamic_import})
+       ~primitive:
+         (Pjs_call {prim_name; arg_types; ffi; dynamic_import; transformed_jsx})
        ~args loc)

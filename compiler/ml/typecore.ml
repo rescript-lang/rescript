@@ -676,12 +676,12 @@ let rec bottom_aliases = function
 
 let simple_conversions =
   [
-    (("float", "int"), "Belt.Float.toInt");
-    (("float", "string"), "Belt.Float.toString");
-    (("int", "float"), "Belt.Int.toFloat");
-    (("int", "string"), "Belt.Int.toString");
-    (("string", "float"), "Belt.Float.fromString");
-    (("string", "int"), "Belt.Int.fromString");
+    (("float", "int"), "Float.toInt");
+    (("float", "string"), "Float.toString");
+    (("int", "float"), "Int.toFloat");
+    (("int", "string"), "Int.toString");
+    (("string", "float"), "Float.fromString");
+    (("string", "int"), "Int.fromString");
   ]
 
 let print_simple_conversion ppf (actual, expected) =
@@ -2401,7 +2401,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
       ty_expected l
       [Ast_helper.Exp.case spat sbody]
-  | Pexp_apply {funct = sfunct; args = sargs; partial} ->
+  | Pexp_apply {funct = sfunct; args = sargs; partial; transformed_jsx} ->
     assert (sargs <> []);
     begin_def ();
     (* one more level for non-returning functions *)
@@ -2423,7 +2423,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     let mk_apply funct args =
       rue
         {
-          exp_desc = Texp_apply {funct; args; partial};
+          exp_desc = Texp_apply {funct; args; partial; transformed_jsx};
           exp_loc = loc;
           exp_extra = [];
           exp_type = ty_res;

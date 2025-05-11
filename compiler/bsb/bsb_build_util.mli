@@ -57,7 +57,7 @@ val include_dirs_by : 'a list -> ('a -> string) -> string
 val mkp : string -> unit
 
 (* The path of [bsc] and [bsdep] is normalized so that the invokation of [./compiler/bin/bsb.exe]
-   and [bsb.exe] (combined with a dirty bsconfig.json) will not trigger unnecessary rebuild.
+   and [bsb.exe] (combined with a dirty rescript.json) will not trigger unnecessary rebuild.
 
    The location of [bsc] and [bsdep] is configured by the combination of [Sys.executable_name]
    and [cwd].

@@ -16,5 +16,5 @@
   - Ensure all values in this calculation has the type [1;33mfloat[0m. You can convert between floats and ints via [1;33mBelt.Float.toInt[0m and [1;33mBelt.Int.fromFloat[0m.
   - Change the operator to [1;33m+[0m, which works on [1;33mint[0m
   
-  You can convert [1;33mint[0m to [1;33mfloat[0m with [1;33mBelt.Int.toFloat[0m.
+  You can convert [1;33mint[0m to [1;33mfloat[0m with [1;33mInt.toFloat[0m.
   If this is a literal, try a number with a trailing dot (e.g. [1;33m20.[0m).

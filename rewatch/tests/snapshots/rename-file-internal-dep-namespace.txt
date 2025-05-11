@@ -20,8 +20,8 @@ ERROR:
 
   [1;33mThe module or file Other_module can't be found.[0m
   - If it's a third-party dependency:
-    - Did you add it to the "bs-dependencies" or "bs-dev-dependencies" in bsconfig.json?
-  - Did you include the file's directory to the "sources" in bsconfig.json?
+    - Did you add it to the "bs-dependencies" or "bs-dev-dependencies" in rescript.json?
+  - Did you include the file's directory to the "sources" in rescript.json?
   
   
   [1;33mHint: Did you mean Other_module2?[0m

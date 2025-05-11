@@ -31,12 +31,13 @@ let args_either_function_or_const (args : Lam.t list) =
       | Lfunction _ | Lconst _ -> true
       | _ -> false)
 
-let call_info_of_ap_status (ap_status : Lam.apply_status) : Js_call_info.t =
+let call_info_of_ap_status call_transformed_jsx (ap_status : Lam.apply_status) :
+    Js_call_info.t =
   (* XXX *)
   match ap_status with
-  | App_infer_full -> {arity = Full; call_info = Call_ml}
-  | App_uncurry -> {arity = Full; call_info = Call_na}
-  | App_na -> {arity = NA; call_info = Call_ml}
+  | App_infer_full -> {arity = Full; call_info = Call_ml; call_transformed_jsx}
+  | App_uncurry -> {arity = Full; call_info = Call_na; call_transformed_jsx}
+  | App_na -> {arity = NA; call_info = Call_ml; call_transformed_jsx}
 
 let rec apply_with_arity_aux (fn : J.expression) (arity : int list)
     (args : E.t list) (len : int) : E.t =
@@ -49,7 +50,7 @@ let rec apply_with_arity_aux (fn : J.expression) (arity : int list)
       if len >= x then
         let first_part, continue = Ext_list.split_at args x in
         apply_with_arity_aux
-          (E.call ~info:{arity = Full; call_info = Call_ml} fn first_part)
+          (E.call ~info:Js_call_info.ml_full_call fn first_part)
           rest continue (len - x)
       else if
         (* GPR #1423 *)
@@ -62,9 +63,7 @@ let rec apply_with_arity_aux (fn : J.expression) (arity : int list)
           ~async:false ~one_unit_arg:false
           [
             S.return_stmt
-              (E.call
-                 ~info:{arity = Full; call_info = Call_ml}
-                 fn
+              (E.call ~info:Js_call_info.ml_full_call fn
                  (Ext_list.append args @@ Ext_list.map params E.var));
           ]
       else E.call ~info:Js_call_info.dummy fn args
@@ -306,7 +305,9 @@ let compile output_prefix =
       let expression =
         match appinfo.ap_info.ap_status with
         | (App_infer_full | App_uncurry) as ap_status ->
-          E.call ~info:(call_info_of_ap_status ap_status) fn args
+          E.call
+            ~info:(call_info_of_ap_status appinfo.ap_transformed_jsx ap_status)
+            fn args
         | App_na -> (
           match ident_info.arity with
           | Submodule _ | Single Arity_na ->
@@ -1439,6 +1440,7 @@ let compile output_prefix =
      ap_func =
        Lapply {ap_func; ap_args; ap_info = {ap_status = App_na; ap_inlined}};
      ap_info = {ap_status = App_na} as outer_ap_info;
+     ap_transformed_jsx;
     } ->
       (* After inlining, we can generate such code, see {!Ari_regress_test}*)
       let ap_info =
@@ -1446,7 +1448,9 @@ let compile output_prefix =
         else {outer_ap_info with ap_inlined}
       in
       compile_lambda lambda_cxt
-        (Lam.apply ap_func (Ext_list.append ap_args appinfo.ap_args) ap_info)
+        (Lam.apply ap_func
+           (Ext_list.append ap_args appinfo.ap_args)
+           ap_info ~ap_transformed_jsx)
     (* External function call: it can not be tailcall in this case*)
     | {
      ap_func =
@@ -1529,7 +1533,9 @@ let compile output_prefix =
         Js_output.output_of_block_and_expression lambda_cxt.continuation
           args_code
           (E.call
-             ~info:(call_info_of_ap_status appinfo.ap_info.ap_status)
+             ~info:
+               (call_info_of_ap_status appinfo.ap_transformed_jsx
+                  appinfo.ap_info.ap_status)
              fn_code args))
   and compile_prim (prim_info : Lam.prim_info)
       (lambda_cxt : Lam_compile_context.t) =

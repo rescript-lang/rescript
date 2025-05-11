@@ -50,11 +50,11 @@ let () = x.left = value |> logMutation
 let () = x.left = (value |> process) |> x.right = value |> process
 let () = (x: int) |> (print_int: int => unit)
 
-// math
 x + y / z
 x / y + z
 x % y * z
 x ^ y + z
+x & y + z
 x << y + z
 x >> y + z
 x >>> y + z

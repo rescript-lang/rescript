@@ -210,6 +210,8 @@ val float_equal : ?comment:string -> t -> t -> t
 
 val int_equal : ?comment:string -> t -> t -> t
 
+val int_bnot : ?comment:string -> t -> t
+
 val string_equal : ?comment:string -> t -> t -> t
 
 val eq_null_undefined_boolean : ?comment:string -> t -> t -> t

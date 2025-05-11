@@ -15,19 +15,35 @@
 #### :boom: Breaking Change
 
 - Rename `JsError` to `JsExn` and error modules cleanup. https://github.com/rescript-lang/rescript/pull/7408
+- Make `BigInt.fromFloat` return an option rather than throwing an error in case it's passed a value with a decimal value. https://github.com/rescript-lang/rescript/pull/7419
 
 #### :rocket: New Feature
 
 - Add shift (`<<`, `>>`, `>>>`) operators for `int` and `bigint`. https://github.com/rescript-lang/rescript/pull/7183
+- Add bitwise AND (`&`) operator for `int` and `bigint`. https://github.com/rescript-lang/rescript/pull/7415
+- Add bitwise NOT (`~`) operator for `int` and `bigint`. https://github.com/rescript-lang/rescript/pull/7418
 - Significantly reduced the download size by splitting binaries into optional platform-specific dependencies (e.g, `@rescript/linux-x64`). https://github.com/rescript-lang/rescript/pull/7395
+- JSX: do not error on ref as prop anymore (which is allowed in React 19). https://github.com/rescript-lang/rescript/pull/7420
 
 #### :bug: Bug fix
 
 - Fix broken `bstracing` CLI location. https://github.com/rescript-lang/rescript/pull/7398
+- Fix field flattening optimization to avoid creating unnecessary copies of allocating constants. https://github.com/rescript-lang/rescript-compiler/pull/7421
+- Fix leading comments removed when braces inside JSX contains `let` assignment. https://github.com/rescript-lang/rescript/pull/7424
+- Fix JSON escaping in code editor analysis: JSON was not always escaped properly, which prevented code actions from being available in certain situations https://github.com/rescript-lang/rescript/pull/7435
+- Fix regression in pattern matching for optional fields containing variants. https://github.com/rescript-lang/rescript/pull/7440
+- Fix missing checks for duplicate literals in variants with payloads. https://github.com/rescript-lang/rescript/pull/7441
+- Fix printer removing private for empty record. https://github.com/rescript-lang/rescript/pull/7448
 
 #### :house: Internal
 
 - AST: Add bar location to `case`. https://github.com/rescript-lang/rescript/pull/7407
+
+#### :nail_care: Polish
+
+- In type errors, recommend stdlib over Belt functions for converting between float/int/string. https://github.com/rescript-lang/rescript/pull/7453
+- Make `Jsx.element` a private empty record to avoid unnecessary `Primitive_option.some`. https://github.com/rescript-lang/rescript/pull/7450
+- Remove unused type `Jsx.ref`. https://github.com/rescript-lang/rescript/pull/7459
 
 # 12.0.0-alpha.12
 
@@ -41,6 +57,7 @@
 #### :house: Internal
 
 - Better representation of JSX in AST. https://github.com/rescript-lang/rescript/pull/7286
+- Clean up default warnings. https://github.com/rescript-lang/rescript/pull/7413
 
 #### :nail_care: Polish
 

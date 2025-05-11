@@ -22,7 +22,10 @@ type description = private {
   prim_native_name: string; (* Name of C function for the nat. code gen. *)
   prim_from_constructor: bool;
       (* Is it from a type constructor instead of a concrete function type? *)
+  transformed_jsx: bool;
 }
+
+val set_transformed_jsx : description -> transformed_jsx:bool -> description
 
 (* Invariant [List.length d.prim_native_repr_args = d.prim_arity] *)
 

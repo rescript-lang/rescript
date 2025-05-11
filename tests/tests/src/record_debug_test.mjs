@@ -25,10 +25,7 @@ let v = {
 
 let u_a = 2;
 
-let u_b = {
-  xx: 2,
-  yy: 3
-};
+let u_b = v.b;
 
 let u = {
   a: u_a,

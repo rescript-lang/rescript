@@ -67,12 +67,28 @@ let pow3 = 2n ** 2n;
 
 let pow_overflow = 0;
 
+function bnot_int(a) {
+  return ~a;
+}
+
+function bnot_bigint(a) {
+  return ~a;
+}
+
 function bxor_int(a, b) {
   return a ^ b;
 }
 
 function bxor_bigint(a, b) {
   return a ^ b;
+}
+
+function band_int(a, b) {
+  return a & b;
+}
+
+function band_bigint(a, b) {
+  return a & b;
 }
 
 let bigintShiftLeft = (1n << 2n);
@@ -109,8 +125,12 @@ export {
   pow2,
   pow3,
   pow_overflow,
+  bnot_int,
+  bnot_bigint,
   bxor_int,
   bxor_bigint,
+  band_int,
+  band_bigint,
   intShiftLeft,
   intShiftRight,
   intShiftRightUnsigned,

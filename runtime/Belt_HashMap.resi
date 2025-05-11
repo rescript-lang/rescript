@@ -114,7 +114,7 @@ module IntHash = Belt.Id.MakeHashable({
 
 let hMap = Belt.HashMap.fromArray([(1, "1")], ~id=module(IntHash))
 Belt.HashMap.clear(hMap)
-Belt.HashMap.isEmpty(hMap) == true
+assertEqual(Belt.HashMap.isEmpty(hMap), true)
 ```
 */
 let clear: t<'key, 'value, 'id> => unit
@@ -131,7 +131,7 @@ module IntHash = Belt.Id.MakeHashable({
   let eq = (a, b) => a == b
 })
 
-Belt.HashMap.isEmpty(Belt.HashMap.fromArray([(1, "1")], ~id=module(IntHash))) == false
+assertEqual(Belt.HashMap.isEmpty(Belt.HashMap.fromArray([(1, "1")], ~id=module(IntHash))), false)
 ```
 */
 let isEmpty: t<_> => bool
@@ -152,7 +152,7 @@ let s0 = Belt.HashMap.fromArray([(2, "2"), (1, "1"), (3, "3")], ~id=module(IntHa
 
 Belt.HashMap.set(s0, 2, "3")
 
-Belt.HashMap.valuesToArray(s0) == ["1", "3", "3"]
+assertEqual(Belt.HashMap.valuesToArray(s0), ["1", "3", "3"])
 ```
 */
 let set: (t<'key, 'value, 'id>, 'key, 'value) => unit
@@ -174,7 +174,7 @@ let s1 = Belt.HashMap.copy(s0)
 
 Belt.HashMap.set(s0, 2, "3")
 
-Belt.HashMap.get(s0, 2) != Belt.HashMap.get(s1, 2)
+assertEqual(Belt.HashMap.get(s0, 2) == Belt.HashMap.get(s1, 2), false)
 ```
 */
 let copy: t<'key, 'value, 'id> => t<'key, 'value, 'id>
@@ -194,8 +194,8 @@ module IntHash = Belt.Id.MakeHashable({
 let s0 = Belt.HashMap.make(~hintSize=10, ~id=module(IntHash))
 Belt.HashMap.set(s0, 1, "value1")
 
-Belt.HashMap.get(s0, 1) == Some("value1")
-Belt.HashMap.get(s0, 2) == None
+assertEqual(Belt.HashMap.get(s0, 1), Some("value1"))
+assertEqual(Belt.HashMap.get(s0, 2), None)
 ```
 */
 let get: (t<'key, 'value, 'id>, 'key) => option<'value>
@@ -215,8 +215,8 @@ module IntHash = Belt.Id.MakeHashable({
 let s0 = Belt.HashMap.make(~hintSize=10, ~id=module(IntHash))
 Belt.HashMap.set(s0, 1, "value1")
 
-Belt.HashMap.has(s0, 1) == true
-Belt.HashMap.has(s0, 2) == false
+assertEqual(Belt.HashMap.has(s0, 1), true)
+assertEqual(Belt.HashMap.has(s0, 2), false)
 ```
 */
 let has: (t<'key, 'value, 'id>, 'key) => bool
@@ -236,7 +236,7 @@ module IntHash = Belt.Id.MakeHashable({
 let s0 = Belt.HashMap.make(~hintSize=10, ~id=module(IntHash))
 Belt.HashMap.set(s0, 1, "value1")
 Belt.HashMap.remove(s0, 1)
-Belt.HashMap.has(s0, 1) == false
+assertEqual(Belt.HashMap.has(s0, 1), false)
 ```
 */
 let remove: (t<'key, 'value, 'id>, 'key) => unit
@@ -340,7 +340,7 @@ let s0 = Belt.HashMap.make(~hintSize=10, ~id=module(IntHash))
 Belt.HashMap.set(s0, 1, "value1")
 Belt.HashMap.set(s0, 2, "value2")
 
-Belt.HashMap.size(s0) == 2
+assertEqual(Belt.HashMap.size(s0), 2)
 ```
 */
 let size: t<_> => int
@@ -361,7 +361,7 @@ let s0 = Belt.HashMap.make(~hintSize=10, ~id=module(IntHash))
 Belt.HashMap.set(s0, 1, "value1")
 Belt.HashMap.set(s0, 2, "value2")
 
-Belt.HashMap.toArray(s0) == [(1, "value1"), (2, "value2")]
+assertEqual(Belt.HashMap.toArray(s0), [(1, "value1"), (2, "value2")])
 ```
 */
 let toArray: t<'key, 'value, 'id> => array<('key, 'value)>
@@ -382,7 +382,7 @@ let s0 = Belt.HashMap.make(~hintSize=10, ~id=module(IntHash))
 Belt.HashMap.set(s0, 1, "value1")
 Belt.HashMap.set(s0, 2, "value2")
 
-Belt.HashMap.keysToArray(s0) == [1, 2]
+assertEqual(Belt.HashMap.keysToArray(s0), [1, 2])
 ```
  */
 let keysToArray: t<'key, _, _> => array<'key>
@@ -403,7 +403,7 @@ let s0 = Belt.HashMap.make(~hintSize=10, ~id=module(IntHash))
 Belt.HashMap.set(s0, 1, "value1")
 Belt.HashMap.set(s0, 2, "value2")
 
-Belt.HashMap.valuesToArray(s0) == ["value1", "value2"]
+assertEqual(Belt.HashMap.valuesToArray(s0), ["value1", "value2"])
 ```
 */
 let valuesToArray: t<_, 'value, _> => array<'value>
@@ -423,7 +423,7 @@ module IntHash = Belt.Id.MakeHashable({
 })
 
 let s0 = Belt.HashMap.fromArray([(1, "value1"), (2, "value2")], ~id=module(IntHash))
-Belt.HashMap.toArray(s0) == [(1, "value1"), (2, "value2")]
+assertEqual(Belt.HashMap.toArray(s0), [(1, "value1"), (2, "value2")])
 ```
 */
 let fromArray: (array<('key, 'value)>, ~id: id<'key, 'id>) => t<'key, 'value, 'id>

@@ -46,6 +46,7 @@ type t =
       arg_types: External_arg_spec.params;
       ffi: External_ffi_types.external_spec;
       dynamic_import: bool;
+      transformed_jsx: bool;
     }
   | Pjs_object_create of External_arg_spec.obj_params
   (* Exceptions *)
@@ -77,6 +78,7 @@ type t =
   | Pandint
   | Porint
   | Pxorint
+  | Pnotint
   | Plslint
   | Plsrint
   | Pasrint
@@ -111,6 +113,7 @@ type t =
   | Pandbigint
   | Porbigint
   | Pxorbigint
+  | Pnotbigint
   | Plslbigint
   | Pasrbigint
   | Pbigintcomp of Lam_compat.comparison
@@ -201,15 +204,15 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
   | Psequand | Psequor | Pnot | Pboolcomp _ | Pboolorder | Pboolmin | Pboolmax
   (* int primitives *)
   | Pisint | Pnegint | Paddint | Psubint | Pmulint | Pdivint | Pmodint | Ppowint
-  | Pandint | Porint | Pxorint | Plslint | Plsrint | Pasrint | Pintorder
-  | Pintmin | Pintmax
+  | Pnotint | Pandint | Porint | Pxorint | Plslint | Plsrint | Pasrint
+  | Pintorder | Pintmin | Pintmax
   (* float primitives *)
   | Pintoffloat | Pfloatofint | Pnegfloat | Paddfloat | Psubfloat | Pmulfloat
   | Pdivfloat | Pmodfloat | Ppowfloat | Pfloatorder | Pfloatmin | Pfloatmax
   (* bigint primitives *)
   | Pnegbigint | Paddbigint | Psubbigint | Pmulbigint | Pdivbigint | Pmodbigint
-  | Ppowbigint | Pandbigint | Porbigint | Pxorbigint | Plslbigint | Pasrbigint
-  | Pbigintorder | Pbigintmin | Pbigintmax
+  | Ppowbigint | Pnotbigint | Pandbigint | Porbigint | Pxorbigint | Plslbigint
+  | Pasrbigint | Pbigintorder | Pbigintmin | Pbigintmax
   (* string primitives *)
   | Pstringlength | Pstringrefu | Pstringrefs | Pstringadd | Pstringcomp _
   | Pstringorder | Pstringmin | Pstringmax
@@ -250,7 +253,7 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
     | Pmakeblock (i1, info1, flag1) ->
       i0 = i1 && flag0 = flag1 && eq_tag_info info0 info1
     | _ -> false)
-  | Pjs_call {prim_name; arg_types; ffi; dynamic_import} -> (
+  | Pjs_call {prim_name; arg_types; ffi; dynamic_import; _} -> (
     match rhs with
     | Pjs_call rhs ->
       prim_name = rhs.prim_name && arg_types = rhs.arg_types && ffi = rhs.ffi

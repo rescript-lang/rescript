@@ -38,6 +38,7 @@ type binop =
   | Le
   | Gt
   | Ge
+  | Bnot
   | Bor
   | Bxor
   | Band

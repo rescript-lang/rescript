@@ -15,6 +15,7 @@ let x = (a + (-1)) + (-2)
 let x = (a + (((-1))[@attr ])) + (((-2))[@attr ])
 let x = (a % a) == 0
 let x = a ^ (a == 0)
+let x = a & (a == 0)
 let x = (a << a) == 0
 let x = (a >> a) == 0
 let x = (a >>> a) == 0

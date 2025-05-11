@@ -41,7 +41,7 @@ Returns the length of a list.
 ## Examples
 
 ```rescript
-Belt.List.length(list{1, 2, 3}) // 3
+assertEqual(Belt.List.length(list{1, 2, 3}), 3)
 ```
 */
 let length: t<'a> => int
@@ -56,8 +56,8 @@ Returns `Some(value)` where `value` is the first element in the list, or
 ## Examples
 
 ```rescript
-Belt.List.head(list{}) // None
-Belt.List.head(list{1, 2, 3}) // Some(1)
+assertEqual(Belt.List.head(list{}), None)
+assertEqual(Belt.List.head(list{1, 2, 3}), Some(1))
 ```
 */
 let head: t<'a> => option<'a>
@@ -86,9 +86,9 @@ where `tail` is everything except the first element of `someList`.
 ## Examples
 
 ```rescript
-Belt.List.tail(list{1, 2, 3}) // Some(list{2, 3})
+assertEqual(Belt.List.tail(list{1, 2, 3}), Some(list{2, 3}))
 
-Belt.List.tail(list{}) // None
+assertEqual(Belt.List.tail(list{}), None)
 ```
 */
 let tail: t<'a> => option<t<'a>>
@@ -118,7 +118,7 @@ Adds `value` to the beginning of `someList`.
 ```rescript
 Belt.List.add(list{2, 3}, 1) // list{1, 2, 3}
 
-Belt.List.add(list{"World", "!"}, "Hello") // list{"Hello", "World", "!"}
+assertEqual(Belt.List.add(list{"World", "!"}, "Hello"), list{"Hello", "World", "!"})
 ```
 */
 let add: (t<'a>, 'a) => t<'a>
@@ -132,9 +132,9 @@ length.
 ```rescript
 let abc = list{"A", "B", "C"}
 
-abc->Belt.List.get(1) // Some("B")
+assertEqual(abc->Belt.List.get(1), Some("B"))
 
-abc->Belt.List.get(4) // None
+assertEqual(abc->Belt.List.get(4), None)
 ```
 */
 let get: (t<'a>, int) => option<'a>
@@ -164,7 +164,7 @@ Returns a list of length `numItems` with each element filled with value `v`. Ret
 ## Examples
 
 ```rescript
-Belt.List.make(3, 1) // list{1, 1, 1}
+assertEqual(Belt.List.make(3, 1), list{1, 1, 1})
 ```
 */
 let make: (int, 'a) => t<'a>
@@ -180,9 +180,9 @@ Returns an empty list if `numItems` is negative.
 ## Examples
 
 ```rescript
-Belt.List.makeBy(5, i => i) // list{0, 1, 2, 3, 4}
+assertEqual(Belt.List.makeBy(5, i => i), list{0, 1, 2, 3, 4})
 
-Belt.List.makeBy(5, i => i * i) // list{0, 1, 4, 9, 16}
+assertEqual(Belt.List.makeBy(5, i => i * i), list{0, 1, 4, 9, 16})
 ```
 */
 let makeBy: (int, int => 'a) => t<'a>
@@ -204,11 +204,11 @@ Return a new list, dropping the first `n` elements. Returns `None` if `someList`
 ## Examples
 
 ```rescript
-list{1, 2, 3}->Belt.List.drop(2) // Some(list{3})
+assertEqual(list{1, 2, 3}->Belt.List.drop(2), Some(list{3}))
 
-list{1, 2, 3}->Belt.List.drop(3) // Some(list{})
+assertEqual(list{1, 2, 3}->Belt.List.drop(3), Some(list{}))
 
-list{1, 2, 3}->Belt.List.drop(4) // None
+assertEqual(list{1, 2, 3}->Belt.List.drop(4), None)
 ```
 */
 let drop: (t<'a>, int) => option<t<'a>>
@@ -219,11 +219,11 @@ Returns a list with the first `n` elements from `someList`, or `None` if `someLi
 ## Examples
 
 ```rescript
-list{1, 2, 3}->Belt.List.take(1) // Some(list{1})
+assertEqual(list{1, 2, 3}->Belt.List.take(1), Some(list{1}))
 
-list{1, 2, 3}->Belt.List.take(2) // Some(list{1, 2})
+assertEqual(list{1, 2, 3}->Belt.List.take(2), Some(list{1, 2}))
 
-list{1, 2, 3}->Belt.List.take(4) // None
+assertEqual(list{1, 2, 3}->Belt.List.take(4), None)
 ```
 */
 let take: (t<'a>, int) => option<t<'a>>
@@ -234,9 +234,9 @@ Split the list `someList` at `index`. Returns `None` when the length of `someLis
 ## Examples
 
 ```rescript
-list{"Hello", "World"}->Belt.List.splitAt(1) // Some((list{"Hello"}, list{"World"}))
+assertEqual(list{"Hello", "World"}->Belt.List.splitAt(1), Some((list{"Hello"}, list{"World"})))
 
-list{0, 1, 2, 3, 4}->Belt.List.splitAt(2) // Some((list{0, 1}, list{2, 3, 4}))
+assertEqual(list{0, 1, 2, 3, 4}->Belt.List.splitAt(2), Some((list{0, 1}, list{2, 3, 4})))
 ```
 */
 let splitAt: (t<'a>, int) => option<(list<'a>, list<'a>)>
@@ -247,7 +247,7 @@ Returns the list obtained by adding `secondList` after `firstList`.
 ## Examples
 
 ```rescript
-Belt.List.concat(list{1, 2, 3}, list{4, 5}) // list{1, 2, 3, 4, 5}
+assertEqual(Belt.List.concat(list{1, 2, 3}, list{4, 5}), list{1, 2, 3, 4, 5})
 ```
 */
 let concat: (t<'a>, t<'a>) => t<'a>
@@ -259,7 +259,7 @@ order.
 ## Examples
 
 ```rescript
-Belt.List.concatMany([list{1, 2, 3}, list{}, list{3}]) // list{1, 2, 3, 3}
+assertEqual(Belt.List.concatMany([list{1, 2, 3}, list{}, list{3}]), list{1, 2, 3, 3})
 ```
 */
 let concatMany: array<t<'a>> => t<'a>
@@ -270,7 +270,7 @@ Equivalent to writing: `concat(reverse(firstList, secondList)`
 ## Examples
 
 ```rescript
-Belt.List.reverseConcat(list{1, 2}, list{3, 4}) // list{2, 1, 3, 4}
+assertEqual(Belt.List.reverseConcat(list{1, 2}, list{3, 4}), list{2, 1, 3, 4})
 ```
 */
 let reverseConcat: (t<'a>, t<'a>) => t<'a>
@@ -281,7 +281,7 @@ Return the list obtained by concatenating all the lists in list `ls`, in order.
 ## Examples
 
 ```rescript
-Belt.List.flatten(list{list{1, 2, 3}, list{}, list{3}}) // list{1, 2, 3, 3}
+assertEqual(Belt.List.flatten(list{list{1, 2, 3}, list{}, list{3}}), list{1, 2, 3, 3})
 ```
 */
 let flatten: t<t<'a>> => t<'a>
@@ -296,7 +296,7 @@ Returns a new list with `f` applied to each element of `someList`.
 ## Examples
 
 ```rescript
-list{1, 2}->Belt.List.map(x => x + 1) // list{3, 4}
+assertEqual(list{1, 2}->Belt.List.map(x => x + 1), list{2, 3})
 ```
 */
 let map: (t<'a>, 'a => 'b) => t<'b>
@@ -307,7 +307,7 @@ Returns a list of pairs from the two lists with the length of the shorter list.
 ## Examples
 
 ```rescript
-Belt.List.zip(list{1, 2}, list{3, 4, 5}) // list{(1, 3), (2, 4)}
+assertEqual(Belt.List.zip(list{1, 2}, list{3, 4, 5}), list{(1, 3), (2, 4)})
 ```
 */
 let zip: (t<'a>, t<'b>) => t<('a, 'b)>
@@ -322,7 +322,7 @@ See [Belt.List.zip](#zip)
 ## Examples
 
 ```rescript
-Belt.List.zipBy(list{1, 2, 3}, list{4, 5}, (a, b) => 2 * a + b) // list{6, 9}
+assertEqual(Belt.List.zipBy(list{1, 2, 3}, list{4, 5}, (a, b) => 2 * a + b), list{6, 9})
 ```
 */
 let zipBy: (t<'a>, t<'b>, ('a, 'b) => 'c) => t<'c>
@@ -338,7 +338,7 @@ Function `f` takes two arguments: the index starting from 0 and the element from
 ## Examples
 
 ```rescript
-list{1, 2, 3}->Belt.List.mapWithIndex((index, x) => index + x) // list{1, 3, 5}
+assertEqual(list{1, 2, 3}->Belt.List.mapWithIndex((index, x) => index + x), list{1, 3, 5})
 ```
 */
 let mapWithIndex: (t<'a>, (int, 'a) => 'b) => t<'b>
@@ -349,7 +349,7 @@ Converts the given array to a list.
 ## Examples
 
 ```rescript
-Belt.List.fromArray([1, 2, 3]) // list{1, 2, 3}
+assertEqual(Belt.List.fromArray([1, 2, 3]), list{1, 2, 3})
 ```
 */
 let fromArray: array<'a> => t<'a>
@@ -360,7 +360,7 @@ Converts the given list to an array.
 ## Examples
 
 ```rescript
-Belt.List.toArray(list{1, 2, 3}) // [1, 2, 3]
+assertEqual(Belt.List.toArray(list{1, 2, 3}), [1, 2, 3])
 ```
 */
 let toArray: t<'a> => array<'a>
@@ -376,7 +376,7 @@ Returns a new list whose elements are those of `someList` in reversed order.
 ## Examples
 
 ```rescript
-Belt.List.reverse(list{1, 2, 3}) /* list{3, 2, 1} */
+assertEqual(Belt.List.reverse(list{1, 2, 3}), list{3, 2, 1})
 ```
 */
 let reverse: t<'a> => t<'a>
@@ -454,11 +454,11 @@ Applies `f` to each element of `someList` from beginning to end. Function `f` ha
 ## Examples
 
 ```rescript
-list{1, 2, 3, 4}->Belt.List.reduce(0, (a, b) => a + b) /* 10 */
+assertEqual(list{1, 2, 3, 4}->Belt.List.reduce(0, (a, b) => a + b), 10)
 
 /* same as */
 
-list{1, 2, 3, 4}->Belt.List.reduce(0, (acc, item) => acc + item) /* 10 */
+assertEqual(list{1, 2, 3, 4}->Belt.List.reduce(0, (acc, item) => acc + item), 10)
 ```
 */
 let reduce: (t<'a>, 'b, ('b, 'a) => 'b) => 'b
@@ -473,7 +473,10 @@ Applies `f` to each element of `someList` from beginning to end. Function `f` ha
 ## Examples
 
 ```rescript
-list{1, 2, 3, 4}->Belt.List.reduceWithIndex(0, (acc, item, index) => acc + item + index) /* 16 */
+assertEqual(
+  list{1, 2, 3, 4}->Belt.List.reduceWithIndex(0, (acc, item, index) => acc + item + index),
+  16
+)
 ```
 */
 let reduceWithIndex: (t<'a>, 'b, ('b, 'a, int) => 'b) => 'b
@@ -489,11 +492,11 @@ item of `someList` from the last back to the first.
 ## Examples
 
 ```rescript
-list{1, 2, 3, 4}->Belt.List.reduceReverse(0, (a, b) => a + b) /* 10 */
+assertEqual(list{1, 2, 3, 4}->Belt.List.reduceReverse(0, (a, b) => a + b), 10)
 
-list{1, 2, 3, 4}->Belt.List.reduceReverse(10, (a, b) => a - b) /* 0 */
+assertEqual(list{1, 2, 3, 4}->Belt.List.reduceReverse(10, (a, b) => a - b), 0)
 
-list{1, 2, 3, 4}->Belt.List.reduceReverse(list{}, Belt.List.add) // list{1, 2, 3, 4}
+assertEqual(list{1, 2, 3, 4}->Belt.List.reduceReverse(list{}, Belt.List.add), list{1, 2, 3, 4})
 ```
 */
 let reduceReverse: (t<'a>, 'b, ('b, 'a) => 'b) => 'b
@@ -508,8 +511,7 @@ Equivalent to: `zipBy(xs, ys, f)->reverse`
 ## Examples
 
 ```rescript
-
-Belt.List.mapReverse2(list{1, 2, 3}, list{1, 2}, (a, b) => a + b) // list{4, 2}
+assertEqual(Belt.List.mapReverse2(list{1, 2, 3}, list{1, 2}, (a, b) => a + b), list{4, 2})
 ```
 */
 let mapReverse2: (t<'a>, t<'b>, ('a, 'b) => 'c) => t<'c>
@@ -545,7 +547,10 @@ Applies `f` to each element of `firstList` and `secondList` from beginning to en
 ## Examples
 
 ```rescript
-Belt.List.reduce2(list{1, 2, 3}, list{4, 5}, 0, (acc, x, y) => acc + x * x + y) /* 0 + (1 * 1 + 4) + (2 * 2 + 5) */
+assertEqual(
+  Belt.List.reduce2(list{1, 2, 3}, list{4, 5}, 0, (acc, x, y) => acc + x * x + y),
+  0 + (1 * 1 + 4) + (2 * 2 + 5)
+)
 ```
 */
 let reduce2: (t<'b>, t<'c>, 'a, ('a, 'b, 'c) => 'a) => 'a
@@ -564,7 +569,10 @@ accumulator.
 ## Examples
 
 ```rescript
-Belt.List.reduceReverse2(list{1, 2, 3}, list{4, 5}, 0, (acc, x, y) => acc + x * x + y) /*  + (1 * 1 + 4) + (2 * 2 + 5) */
+assertEqual(
+  Belt.List.reduceReverse2(list{1, 2, 3}, list{4, 5}, 0, (acc, x, y) => acc + x * x + y),
+  0 + (1 * 1 + 4) + (2 * 2 + 5)
+)
 ```
 */
 let reduceReverse2: (t<'a>, t<'b>, 'c, ('c, 'a, 'b) => 'c) => 'c
@@ -581,9 +589,9 @@ Returns `true` if all elements satisfy `pred`, where `pred` is a predicate: a fu
 ```rescript
 let isBelow10 = value => value < 10
 
-list{1, 9, 8, 2}->Belt.List.every(isBelow10) /* true */
+assertEqual(list{1, 9, 8, 2}->Belt.List.every(isBelow10), true)
 
-list{1, 99, 8, 2}->Belt.List.every(isBelow10) /* false */
+assertEqual(list{1, 99, 8, 2}->Belt.List.every(isBelow10), false)
 ```
 */
 let every: (t<'a>, 'a => bool) => bool
@@ -602,9 +610,9 @@ returning a bool.
 ```rescript
 let isAbove100 = value => value > 100
 
-list{101, 1, 2, 3}->Belt.List.some(isAbove100) /* true */
+assertEqual(list{101, 1, 2, 3}->Belt.List.some(isAbove100), true)
 
-list{1, 2, 3, 4}->Belt.List.some(isAbove100) /* false */
+assertEqual(list{1, 2, 3, 4}->Belt.List.some(isAbove100), false)
 ```
 */
 let some: (t<'a>, 'a => bool) => bool
@@ -620,13 +628,13 @@ up to the shorter length (i.e. `min(length(firstList), length(secondList))`)
 ## Examples
 
 ```rescript
-Belt.List.every2(list{1, 2, 3}, list{0, 1}, (a, b) => a > b) /* true */
+assertEqual(Belt.List.every2(list{1, 2, 3}, list{0, 1}, (a, b) => a > b), true)
 
-Belt.List.every2(list{}, list{1}, (a, b) => a > b) /* true */
+assertEqual(Belt.List.every2(list{}, list{1}, (a, b) => a > b), true)
 
-Belt.List.every2(list{2, 3}, list{1}, (a, b) => a > b) /* true */
+assertEqual(Belt.List.every2(list{2, 3}, list{1}, (a, b) => a > b), true)
 
-Belt.List.every2(list{0, 1}, list{5, 0}, (a, b) => a > b) /* false */
+assertEqual(Belt.List.every2(list{0, 1}, list{5, 0}, (a, b) => a > b), false)
 ```
 */
 let every2: (t<'a>, t<'b>, ('a, 'b) => bool) => bool
@@ -642,13 +650,13 @@ to the shorter length (i.e. `min(length(firstList), length(secondList))`)
 ## Examples
 
 ```rescript
-Belt.List.some2(list{1, 2, 3}, list{0, 1}, (a, b) => a > b) /* true */
+assertEqual(Belt.List.some2(list{1, 2, 3}, list{0, 1}, (a, b) => a > b), true)
 
-Belt.List.some2(list{}, list{1}, (a, b) => a > b) /* false */
+assertEqual(Belt.List.some2(list{}, list{1}, (a, b) => a > b), false)
 
-Belt.List.some2(list{2, 3}, list{1}, (a, b) => a > b) /* true */
+assertEqual(Belt.List.some2(list{2, 3}, list{1}, (a, b) => a > b), true)
 
-Belt.List.some2(list{0, 1}, list{5, 0}, (a, b) => a > b) /* true */
+assertEqual(Belt.List.some2(list{0, 1}, list{5, 0}, (a, b) => a > b), true)
 ```
 */
 let some2: (t<'a>, t<'b>, ('a, 'b) => bool) => bool
@@ -662,11 +670,11 @@ less than `length(secondList)`, `0` if `length(firstList)` equals
 ## Examples
 
 ```rescript
-Belt.List.cmpByLength(list{1, 2}, list{3, 4, 5, 6}) /* -1 */
+assertEqual(Belt.List.cmpByLength(list{1, 2}, list{3, 4, 5, 6}), -1)
 
-Belt.List.cmpByLength(list{1, 2, 3}, list{4, 5, 6}) /* = 0 */
+assertEqual(Belt.List.cmpByLength(list{1, 2, 3}, list{4, 5, 6}), 0)
 
-Belt.List.cmpByLength(list{1, 2, 3, 4}, list{5, 6}) /* = 1 */
+assertEqual(Belt.List.cmpByLength(list{1, 2, 3, 4}, list{5, 6}), 1)
 ```
 */
 let cmpByLength: (t<'a>, t<'a>) => int
@@ -686,15 +694,15 @@ If all items have compared equal, but `secondList` is exhausted first, return `1
 ## Examples
 
 ```rescript
-Belt.List.cmp(list{3}, list{3, 7}, (a, b) => compare(a, b)) /* (-1) */
+assertEqual(Belt.List.cmp(list{3}, list{3, 7}, (a, b) => compare(a, b)), (-1))
 
-Belt.List.cmp(list{5, 3}, list{5}, (a, b) => compare(a, b)) /* 1 */
+assertEqual(Belt.List.cmp(list{5, 3}, list{5}, (a, b) => compare(a, b)), 1)
 
-Belt.List.cmp(list{1, 3, 5}, list{1, 4, 2}, (a, b) => compare(a, b)) /* (-1) */
+assertEqual(Belt.List.cmp(list{1, 3, 5}, list{1, 4, 2}, (a, b) => compare(a, b)), (-1))
 
-Belt.List.cmp(list{1, 3, 5}, list{1, 2, 3}, (a, b) => compare(a, b)) /* 1 */
+assertEqual(Belt.List.cmp(list{1, 3, 5}, list{1, 2, 3}, (a, b) => compare(a, b)), 1)
 
-Belt.List.cmp(list{1, 3, 5}, list{1, 3, 5}, (a, b) => compare(a, b)) /* 0 */
+assertEqual(Belt.List.cmp(list{1, 3, 5}, list{1, 3, 5}, (a, b) => compare(a, b)), 0)
 ```
 
 **Please note:** The total ordering of List is different from Array,
@@ -716,11 +724,11 @@ of `firstList` and `secondList` are not the same.
 ## Examples
 
 ```rescript
-Belt.List.eq(list{1, 2, 3}, list{1, 2}, (a, b) => a == b) /* false */
+assertEqual(Belt.List.eq(list{1, 2, 3}, list{1, 2}, (a, b) => a == b), false)
 
-Belt.List.eq(list{1, 2}, list{1, 2}, (a, b) => a == b) /* true */
+assertEqual(Belt.List.eq(list{1, 2}, list{1, 2}, (a, b) => a == b), true)
 
-Belt.List.eq(list{1, 2, 3}, list{(-1), (-2), (-3)}, (a, b) => abs(a) == abs(b)) /* true */
+assertEqual(Belt.List.eq(list{1, 2, 3}, list{(-1), (-2), (-3)}, (a, b) => abs(a) == abs(b)), true)
 ```
 */
 let eq: (t<'a>, t<'a>, ('a, 'a) => bool) => bool
@@ -736,11 +744,11 @@ Returns `true` if the list contains at least one element for which
 ## Examples
 
 ```rescript
-list{1, 2, 3}->Belt.List.has(2, (a, b) => a == b) /* true */
+assertEqual(list{1, 2, 3}->Belt.List.has(2, (a, b) => a == b), true)
 
-list{1, 2, 3}->Belt.List.has(4, (a, b) => a == b) /* false */
+assertEqual(list{1, 2, 3}->Belt.List.has(4, (a, b) => a == b), false)
 
-list{(-1), (-2), (-3)}->Belt.List.has(2, (a, b) => abs(a) == abs(b)) /* true */
+assertEqual(list{(-1), (-2), (-3)}->Belt.List.has(2, (a, b) => abs(a) == abs(b)), true)
 ```
 */
 let has: (t<'a>, 'b, ('a, 'b) => bool) => bool
@@ -756,9 +764,9 @@ predicate function `pred`. Returns `None` if no element satisfies the function.
 ## Examples
 
 ```rescript
-Belt.List.getBy(list{1, 4, 3, 2}, x => x > 3) /* Some(4) */
+assertEqual(Belt.List.getBy(list{1, 4, 3, 2}, x => x > 3), Some(4))
 
-Belt.List.getBy(list{1, 4, 3, 2}, x => x > 4) /* None */
+assertEqual(Belt.List.getBy(list{1, 4, 3, 2}, x => x > 4), None)
 ```
 */
 let getBy: (t<'a>, 'a => bool) => option<'a>
@@ -775,9 +783,9 @@ Returns a list of all elements in `someList` which satisfy the predicate functio
 ```rescript
 let isEven = x => mod(x, 2) == 0
 
-Belt.List.keep(list{1, 2, 3, 4}, isEven) /* list{2, 4} */
+assertEqual(Belt.List.keep(list{1, 2, 3, 4}, isEven), list{2, 4})
 
-Belt.List.keep(list{None, Some(2), Some(3), None}, Belt.Option.isSome) /* list{Some(2), Some(3)} */
+assertEqual(Belt.List.keep(list{None, Some(2), Some(3), None}, Belt.Option.isSome), list{Some(2), Some(3)})
 ```
 */
 let keep: (t<'a>, 'a => bool) => t<'a>
@@ -791,9 +799,9 @@ Returns a list of all elements in `someList` which satisfy the predicate functio
 ```rescript
 let isEven = x => mod(x, 2) == 0
 
-Belt.List.filter(list{1, 2, 3, 4}, isEven) /* list{2, 4} */
+assertEqual(Belt.List.filter(list{1, 2, 3, 4}, isEven), list{2, 4})
 
-Belt.List.filter(list{None, Some(2), Some(3), None}, Belt.Option.isSome) /* list{Some(2), Some(3)} */
+assertEqual(Belt.List.filter(list{None, Some(2), Some(3), None}, Belt.Option.isSome), list{Some(2), Some(3)})
 ```
 */
 let filter: (t<'a>, 'a => bool) => t<'a>
@@ -810,7 +818,7 @@ Returns a list of all elements in `someList` which satisfy the predicate functio
 ```rescript
 let isEven = x => mod(x, 2) == 0
 
-Belt.List.keepWithIndex(list{1, 2, 3, 4}, (_x, index) => isEven(index)) /* list{1, 3} */
+assertEqual(Belt.List.keepWithIndex(list{1, 2, 3, 4}, (_x, index) => isEven(index)), list{1, 3})
 ```
 */
 let keepWithIndex: (t<'a>, ('a, int) => bool) => t<'a>
@@ -827,7 +835,7 @@ Returns a list of all elements in `someList` which satisfy the predicate functio
 ```rescript
 let isEven = x => mod(x, 2) == 0
 
-Belt.List.filterWithIndex(list{1, 2, 3, 4}, (_x, index) => isEven(index)) /* list{1, 3} */
+assertEqual(Belt.List.filterWithIndex(list{1, 2, 3, 4}, (_x, index) => isEven(index)), list{1, 3})
 ```
 */
 let filterWithIndex: (t<'a>, ('a, int) => bool) => t<'a>
@@ -854,7 +862,7 @@ list{1, 2, 3, 4}
     }
   ) /* list{2, 4} */
 
-list{Some(1), Some(2), None}->Belt.List.keepMap(x => x) /* list{1, 2} */
+assertEqual(list{Some(1), Some(2), None}->Belt.List.keepMap(x => x), list{1, 2})
 ```
 */
 let keepMap: (t<'a>, 'a => option<'b>) => t<'b>
@@ -888,10 +896,12 @@ Takes a list of pairs and creates a pair of lists. The first list contains all t
 ## Examples
 
 ```rescript
-Belt.List.unzip(list{(1, 2), (3, 4)}) /* (list{1, 3}, list{2, 4}) */
+assertEqual(Belt.List.unzip(list{(1, 2), (3, 4)}), (list{1, 3}, list{2, 4}))
 
-Belt.List.unzip(list{("H", "W"), ("e", "o"), ("l", "r"), ("l", "l"), ("o", "d"), (" ", "!")})
-/* (list{"H", "e", "l", "l", "o", " "}, list{"W", "o", "r", "l", "d", "!"}) */
+assertEqual(
+  Belt.List.unzip(list{("H", "W"), ("e", "o"), ("l", "r"), ("l", "l"), ("o", "d"), (" ", "!")}),
+  (list{"H", "e", "l", "l", "o", " "}, list{"W", "o", "r", "l", "d", "!"})
+)
 ```
 */
 let unzip: t<('a, 'b)> => (t<'a>, t<'b>)
@@ -908,9 +918,11 @@ Return the second element of a pair in `someList` where the first element equals
 ```rescript
 list{(1, "a"), (2, "b"), (3, "c")}->Belt.List.getAssoc(3, (a, b) => a == b) /* Some("c") */
 
-list{(9, "morning"), (15, "afternoon"), (22, "night")}
-->Belt.List.getAssoc(15, (k, item) => k /* 15 */ == item /* 9, 5, 22 */)
-/* Some("afternoon") */
+assertEqual(
+  list{(9, "morning"), (15, "afternoon"), (22, "night")}
+  ->Belt.List.getAssoc(15, (k, item) => k /* 15 */ == item /* 9, 5, 22 */),
+  Some("afternoon")
+)
 ```
 */
 let getAssoc: (t<('a, 'c)>, 'b, ('a, 'b) => bool) => option<'c>
@@ -925,10 +937,15 @@ Returns `true` if there is a pair in `someList` where the first element equals `
 ## Examples
 
 ```rescript
-list{(1, "a"), (2, "b"), (3, "c")}->Belt.List.hasAssoc(1, (a, b) => a == b) /* true */
+assertEqual(
+  list{(1, "a"), (2, "b"), (3, "c")}->Belt.List.hasAssoc(1, (a, b) => a == b),
+  true
+)
 
-list{(9, "morning"), (15, "afternoon"), (22, "night")}
-->Belt.List.hasAssoc(25, (k, item) => k /* 25 */ == item /* 9, 5, 22 */) /* false */
+assertEqual(
+  list{(9, "morning"), (15, "afternoon"), (22, "night")}->Belt.List.hasAssoc(25, (k, item) => k /* 25 */ == item /* 9, 5, 22 */),
+  false
+)
 ```
 */
 let hasAssoc: (t<('a, 'c)>, 'b, ('a, 'b) => bool) => bool
@@ -943,11 +960,16 @@ Return a list after removing the first pair whose first value is `k` per the equ
 ## Examples
 
 ```rescript
-list{(1, "a"), (2, "b"), (3, "c")}->Belt.List.removeAssoc(1, (a, b) => a == b) /* list{(2, "b"), (3, "c")} */
+assertEqual(
+  list{(1, "a"), (2, "b"), (3, "c")}->Belt.List.removeAssoc(1, (a, b) => a == b),
+  list{(2, "b"), (3, "c")}
+)
 
-list{(9, "morning"), (15, "afternoon"), (22, "night")}
-->Belt.List.removeAssoc(9, (k, item) => k /* 9 */ == item /* 9, 5, 22 */)
-/* list{(15, "afternoon"), (22, "night")} */
+assertEqual(
+  list{(9, "morning"), (15, "afternoon"), (22, "night")}
+  ->Belt.List.removeAssoc(9, (k, item) => k /* 9 */ == item /* 9, 5, 22 */),
+  list{(15, "afternoon"), (22, "night")}
+)
 ```
 */
 let removeAssoc: (t<('a, 'c)>, 'b, ('a, 'b) => bool) => t<('a, 'c)>
@@ -962,13 +984,21 @@ If `k` exists in `someList` by satisfying the `eqFunction` predicate, return a n
 ## Examples
 
 ```rescript
-list{(1, "a"), (2, "b"), (3, "c")}->Belt.List.setAssoc(2, "x", (a, b) => a == b) /* list{(1, "a"), (2, "x"), (3, "c")} */
+assertEqual(
+  list{(1, "a"), (2, "b"), (3, "c")}->Belt.List.setAssoc(2, "x", (a, b) => a == b),
+  list{(1, "a"), (2, "x"), (3, "c")}
+)
 
-list{(1, "a"), (3, "c")}->Belt.List.setAssoc(2, "b", (a, b) => a == b) /* list{(2, "b"), (1, "a"), (3, "c")} */
+assertEqual(
+  list{(1, "a"), (3, "c")}->Belt.List.setAssoc(2, "b", (a, b) => a == b),
+  list{(2, "b"), (1, "a"), (3, "c")}
+)
 
-list{(9, "morning"), (3, "morning?!"), (22, "night")}
-->Belt.List.setAssoc(15, "afternoon", (a, b) => mod(a, 12) == mod(b, 12))
-/* list{(9, "morning"), (15, "afternoon"), (22, "night")} */
+assertEqual(
+  list{(9, "morning"), (3, "morning?!"), (22, "night")}
+  ->Belt.List.setAssoc(15, "afternoon", (a, b) => mod(a, 12) == mod(b, 12)),
+  list{(9, "morning"), (15, "afternoon"), (22, "night")}
+)
 ```
 
 **Please note**
@@ -989,7 +1019,10 @@ Returns a sorted list.
 ## Examples
 
 ```rescript
-Belt.List.sort(list{5, 4, 9, 3, 7}, (a, b) => a - b) // list{3, 4, 5, 7, 9}
+assertEqual(
+  Belt.List.sort(list{5, 4, 9, 3, 7}, (a, b) => a - b),
+  list{3, 4, 5, 7, 9}
+)
 ```
 */
 let sort: (t<'a>, ('a, 'a) => int) => t<'a>

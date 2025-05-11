@@ -293,8 +293,8 @@ module E = struct
       fun_ ~loc ~attrs ~arity ~async lab
         (map_opt (sub.expr sub) def)
         (sub.pat sub p) (sub.expr sub e)
-    | Pexp_apply {funct = e; args = l; partial} ->
-      apply ~loc ~attrs ~partial (sub.expr sub e)
+    | Pexp_apply {funct = e; args = l; partial; transformed_jsx} ->
+      apply ~loc ~attrs ~partial ~transformed_jsx (sub.expr sub e)
         (List.map (map_snd (sub.expr sub)) l)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)

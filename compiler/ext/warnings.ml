@@ -583,7 +583,6 @@ let descriptions =
     ( 5,
       "Partially applied function: expression whose result has function\n\
       \    type and is ignored." );
-    (6, "Label omitted in function application.");
     (7, "Method overridden.");
     (8, "Partial match: missing cases in pattern-matching.");
     (9, "Missing fields in a record pattern.");
@@ -604,8 +603,8 @@ let descriptions =
     (22, "Preprocessor warning.");
     (23, "Useless record \"with\" clause.");
     ( 24,
-      "Bad module name: the source file name is not a valid OCaml module name."
-    );
+      "Bad module name: the source file name is not a valid ReScript module \
+       name." );
     (25, "Deprecated: now part of warning 8.");
     ( 26,
       "Suspicious unused variable: unused variable that is bound\n\
@@ -638,7 +637,6 @@ let descriptions =
     (48, "Implicit elimination of optional arguments.");
     (49, "Absent cmi file when looking up module alias.");
     (50, "Unexpected documentation comment.");
-    (51, "Warning on non-tail calls if @tailcall present.");
     (52, "Fragile constant pattern.");
     (53, "Attribute cannot appear in this context");
     (54, "Attribute used more than once on an expression");
@@ -647,7 +645,6 @@ let descriptions =
     (57, "Ambiguous or-pattern variables under guard");
     (59, "Assignment to non-mutable value");
     (60, "Unused module declaration");
-    (61, "Unboxable type in primitive declaration");
     (62, "Type constraint on GADT type declaration");
     (101, "Unused bs attributes");
     (102, "Polymorphic comparison introduced (maybe unsafe)");

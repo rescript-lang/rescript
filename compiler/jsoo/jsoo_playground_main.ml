@@ -45,7 +45,7 @@
  * -----------------------------
  * Version History: * v2: Remove refmt support (removes compiler.reason apis)
  * v3: Switched to Uncurried mode by default (requires third party packages
- to be built with uncurried: true in bsconfig.json). Also added
+ to be built with uncurried: true in rescript.json). Also added
  `config.uncurried` to the BundleConfig.
  * v4: Added `config.open_modules` to the BundleConfig to enable implicitly opened
  * modules in the playground.

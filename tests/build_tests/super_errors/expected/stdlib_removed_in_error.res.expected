@@ -13,4 +13,4 @@
   The incompatible parts:
     [1;31mstring[0m vs [1;33mint[0m
   
-  You can convert [1;33mstring[0m to [1;33mint[0m with [1;33mBelt.Int.fromString[0m.
+  You can convert [1;33mstring[0m to [1;33mint[0m with [1;33mInt.fromString[0m.

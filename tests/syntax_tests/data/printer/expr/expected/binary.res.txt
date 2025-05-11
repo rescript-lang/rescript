@@ -81,11 +81,11 @@ let () = x.left = logMutation(value)
 let () = x.left = (x.right = process(value))(process(value))
 let () = (print_int: int => unit)((x: int))
 
-// math
 x + y / z
 x / y + z
 x % y * z
 x ^ y + z
+x & y + z
 x << y + z
 x >> y + z
 x >>> y + z

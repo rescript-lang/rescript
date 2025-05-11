@@ -251,11 +251,12 @@ and expression i ppf x =
     option i expression ppf eo;
     pattern i ppf p;
     expression i ppf e
-  | Pexp_apply {funct = e; args = l; partial} ->
+  | Pexp_apply {funct = e; args = l; partial; transformed_jsx} ->
     line i ppf "Pexp_apply\n";
     if partial then line i ppf "partial\n";
     expression i ppf e;
-    list i label_x_expression ppf l
+    list i label_x_expression ppf l;
+    line i ppf "transformed_jsx: %b\n" transformed_jsx
   | Pexp_match (e, l) ->
     line i ppf "Pexp_match\n";
     expression i ppf e;

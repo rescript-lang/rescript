@@ -50,6 +50,7 @@ let force_cmi = ref false
 let force_cmj = ref false
 let jsx_version = ref None
 let jsx_module = ref React
+let jsx_preserve = ref false
 let js_stdout = ref true
 let all_module_aliases = ref false
 let no_stdlib = ref false
