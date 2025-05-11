@@ -54,9 +54,7 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
       match decl.type_kind with
       | exception _ -> false
       | Type_abstract ->
-        List.exists
-          (fun ({txt}, _) -> txt = "notUndefined")
-          decl.type_attributes
+        List.exists Typedecl.is_not_undefined_attr decl.type_attributes
       | Type_open -> false
       | Type_record _ -> true
       | Type_variant

@@ -289,6 +289,11 @@ let make_constructor env type_path type_params sargs sret_type =
     widen z;
     (targs, Some tret_type, args, Some ret_type, params)
 
+let is_not_undefined_attr (attr : attribute) =
+  match attr with
+  | {Location.txt = "notUndefined"; _}, _ -> true
+  | _ -> false
+
 (* Check that all the variables found in [ty] are in [univ].
    Because [ty] is the argument to an abstract type, the representation
    of that abstract type could be any subexpression of [ty], in particular
@@ -298,7 +303,7 @@ let make_constructor env type_path type_params sargs sret_type =
 let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
   (* Check for @notUndefined attribute *)
   let has_not_undefined =
-    List.exists (fun ({txt}, _) -> txt = "notUndefined") sdecl.ptype_attributes
+    List.exists is_not_undefined_attr sdecl.ptype_attributes
   in
   (if has_not_undefined then
      match (sdecl.ptype_kind, sdecl.ptype_manifest) with
