@@ -49,7 +49,7 @@ type error =
   | Unbound_type_var_ext of type_expr * extension_constructor
   | Varying_anonymous
   | Val_in_structure
-  | InvalidAttribute of string
+  | Invalid_attribute of string
   | Bad_immediate_attribute
   | Bad_unboxed_attribute of string
   | Boxed_and_unboxed
@@ -307,7 +307,7 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
        raise
          (Error
             ( sdecl.ptype_loc,
-              InvalidAttribute
+              Invalid_attribute
                 "@notUndefined can only be used on abstract types" )));
 
   (* Bind type parameters *)
@@ -2105,7 +2105,7 @@ let report_error ppf = function
       "The field @{<info>%s@} is defined several times in this record. Fields \
        can only be added once to a record."
       s
-  | InvalidAttribute msg -> fprintf ppf "%s" msg
+  | Invalid_attribute msg -> fprintf ppf "%s" msg
   | Duplicate_label (s, Some record_name) ->
     fprintf ppf
       "The field @{<info>%s@} is defined several times in the record \
