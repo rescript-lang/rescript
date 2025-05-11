@@ -22,20 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. */
 
-// Define this as a private empty record so that the compiler does not
-// unnecessarily add `Primitive_option.some` calls for optional props.
-type element = private {}
-
-@val external null: element = "null"
-
-external float: float => element = "%identity"
-external int: int => element = "%identity"
-external string: string => element = "%identity"
-
-external array: array<element> => element = "%identity"
-
-type componentLike<'props, 'return> = 'props => 'return
-type component<'props> = componentLike<'props, element>
-
-/* this function exists to prepare for making `component` abstract */
-external component: componentLike<'props, element> => component<'props> = "%identity"
+include Jsx_common
+module DOMStyle = JsxDOMStyle
+module Event = JsxEvent
+module DOM = JsxDOM
