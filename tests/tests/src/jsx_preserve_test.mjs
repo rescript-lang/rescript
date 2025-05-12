@@ -204,7 +204,7 @@ let _optional_props = <Jsx_preserve_test$ComponentWithOptionalProps
 />;
 
 let _props_with_hypen = <label
-  ariaLabel="close sidebar"
+  aria-label="close sidebar"
 />;
 
 export {
