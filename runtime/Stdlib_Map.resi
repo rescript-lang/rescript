@@ -7,6 +7,7 @@ See [`Map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Gl
 /**
 Type representing an instance of `Map`.
 */
+@notUndefined
 type t<'k, 'v>
 
 /**

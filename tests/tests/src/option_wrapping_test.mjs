@@ -24,6 +24,8 @@ let x21 = new Date();
 
 let x22 = /test/;
 
+let x23 = new Map();
+
 let x1 = "hello";
 
 let x2 = 1;
