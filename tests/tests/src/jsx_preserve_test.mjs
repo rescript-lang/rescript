@@ -203,7 +203,7 @@ let _optional_props = <Jsx_preserve_test$ComponentWithOptionalProps
   element={<div />}
 />;
 
-let _props_with_hypen = <label
+let _props_with_hyphen = <label
   aria-label="close sidebar"
   data-testid="test"
 />;
@@ -233,6 +233,6 @@ export {
   _large_component,
   ComponentWithOptionalProps,
   _optional_props,
-  _props_with_hypen,
+  _props_with_hyphen,
 }
 /* _single_element_child Not a pure module */
