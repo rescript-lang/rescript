@@ -18,13 +18,59 @@
 open Asttypes
 open Types
 
-exception Unify of (type_expr * type_expr) list
+type type_pairs = (type_expr * type_expr) list
+
+type subtype_context =
+  | Generic of {errorCode: string}
+  | Primitive_coercion_target_variant_not_unboxed of {
+      variant_name: Path.t;
+      primitive: Path.t;
+    }
+  | Primitive_coercion_target_variant_no_catch_all of {
+      variant_name: Path.t;
+      primitive: Path.t;
+    }
+  | Variant_constructor_runtime_representation_mismatch of {
+      variant_name: Path.t;
+      issues: Variant_coercion.variant_runtime_representation_issue list;
+    }
+  | Variant_configurations_mismatch of {
+      left_variant_name: Path.t;
+      right_variant_name: Path.t;
+      issue: Variant_coercion.variant_configuration_issue;
+    }
+  | Different_type_kinds of {
+      left_typename: Path.t;
+      right_typename: Path.t;
+      left_type_kind: type_kind;
+      right_type_kind: type_kind;
+    }
+  | Record_fields_mismatch of {
+      left_record_name: Path.t;
+      right_record_name: Path.t;
+      issues: Record_coercion.record_field_subtype_violation list;
+    }
+
+type subtype_type_position =
+  | RecordField of {
+      field_name: string;
+      left_record_name: Path.t;
+      right_record_name: Path.t;
+    }
+  | TupleElement of {index: int}
+
+exception Unify of type_pairs
 exception Tags of label * label
-exception Subtype of (type_expr * type_expr) list * (type_expr * type_expr) list
+exception
+  Subtype of
+    type_pairs
+    * type_pairs
+    * subtype_context option
+    * subtype_type_position option
 exception Cannot_expand
 exception Cannot_apply
 exception Recursive_abbrev
-exception Unification_recursive_abbrev of (type_expr * type_expr) list
+exception Unification_recursive_abbrev of type_pairs
 
 val init_def : int -> unit
 (* Set the initial variable level *)
