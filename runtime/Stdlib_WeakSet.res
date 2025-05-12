@@ -1,3 +1,4 @@
+@notUndefined
 type t<'a>
 
 @new external make: unit => t<'a> = "WeakSet"

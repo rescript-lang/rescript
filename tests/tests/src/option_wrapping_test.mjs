@@ -28,6 +28,10 @@ let x23 = new Map();
 
 let x24 = new Set();
 
+let x25 = new WeakMap();
+
+let x26 = new WeakSet();
+
 let x1 = "hello";
 
 let x2 = 1;
@@ -60,5 +64,9 @@ export {
   x20,
   x21,
   x22,
+  x23,
+  x24,
+  x25,
+  x26,
 }
 /* x20 Not a pure module */
