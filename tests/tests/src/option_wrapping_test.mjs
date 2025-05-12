@@ -26,6 +26,8 @@ let x22 = /test/;
 
 let x23 = new Map();
 
+let x24 = new Set();
+
 let x1 = "hello";
 
 let x2 = 1;
