@@ -7,6 +7,7 @@ See [`iterator protocols`](https://developer.mozilla.org/en-US/docs/Web/JavaScri
 /**
 The type representing an iterator.
 */
+@notUndefined
 type t<'a>
 
 /**

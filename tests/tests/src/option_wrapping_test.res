@@ -25,6 +25,7 @@ let x28 = Some(Symbol.make(""))
 let x29 = Some(JsError.make(""))
 let x30 = Some(ArrayBuffer.make(0))
 let x31 = Some(ArrayBuffer.make(0)->DataView.fromBuffer)
+let x32 = Some((Map.make(): Map.t<string, string>)->Map.values)
 
 let x98 = Some(list{})
 let x99 = Some((Dict.make(): dict<string>))

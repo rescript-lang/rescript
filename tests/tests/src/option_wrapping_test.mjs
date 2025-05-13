@@ -42,6 +42,8 @@ let x30 = new ArrayBuffer(0);
 
 let x31 = new DataView(new ArrayBuffer(0));
 
+let x32 = new Map().values();
+
 let x99 = {};
 
 let x1 = "hello";
@@ -87,6 +89,7 @@ export {
   x29,
   x30,
   x31,
+  x32,
   x98,
   x99,
 }
