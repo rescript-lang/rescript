@@ -34,6 +34,8 @@ let x26 = new WeakSet();
 
 let x27 = new Float32Array([1.0]);
 
+let x28 = Symbol("");
+
 let x99 = {};
 
 let x1 = "hello";
@@ -75,6 +77,7 @@ export {
   x25,
   x26,
   x27,
+  x28,
   x98,
   x99,
 }

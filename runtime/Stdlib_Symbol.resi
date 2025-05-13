@@ -7,6 +7,7 @@ Compiles to a regular JavaScript Symbol.
 /**
 Type representing a Symbol.
 */
+@notUndefined
 type t
 
 /**
@@ -28,7 +29,7 @@ external make: string => t = "Symbol"
 /**
 `getFor(key)`
 
-Searches for existing registered Symbols in the global Symbol registry with the given key and returns it if found. 
+Searches for existing registered Symbols in the global Symbol registry with the given key and returns it if found.
 Otherwise a new Symbol gets created and registered with key.
 
 ## Examples

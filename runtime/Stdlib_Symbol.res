@@ -1,3 +1,4 @@
+@notUndefined
 type t
 
 @val external make: string => t = "Symbol"
