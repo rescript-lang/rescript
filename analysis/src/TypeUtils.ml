@@ -1265,4 +1265,9 @@ let completionPathFromMaybeBuiltin path =
   | Some ("result", _) -> Some ["Stdlib"; "Result"]
   | Some ("dict", _) -> Some ["Stdlib"; "Dict"]
   | Some ("char", _) -> Some ["Stdlib"; "Char"]
-  | _ -> None
+  | _ -> (
+    match path |> Utils.expandPath |> List.rev with
+    | [mainModule; "t"] when String.starts_with ~prefix:"Stdlib_" mainModule ->
+      (* Route Stdlib_X to Stdlib.X for proper completions without the Stdlib_ prefix *)
+      Some (String.split_on_char '_' mainModule)
+    | _ -> None)
