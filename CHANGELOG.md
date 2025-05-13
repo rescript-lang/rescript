@@ -45,6 +45,7 @@
 
 - In type errors, recommend stdlib over Belt functions for converting between float/int/string. https://github.com/rescript-lang/rescript/pull/7453
 - Remove unused type `Jsx.ref`. https://github.com/rescript-lang/rescript/pull/7459
+- Add `@notUndefined` attribute to all relevant abstract types in `Stdlib`. https://github.com/rescript-lang/rescript/pull/7464
 
 # 12.0.0-alpha.12
 
