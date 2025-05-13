@@ -147,7 +147,7 @@ let _external_component_with_children = <QueryClientProvider>
 function Jsx_preserve_test$MyWeirdComponent(props) {
   return <p>
     {"foo"}
-    {props["\\\"MyWeirdProp\""]}
+    {props.MyWeirdProp}
   </p>;
 }
 
