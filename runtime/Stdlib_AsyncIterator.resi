@@ -70,7 +70,7 @@ let asyncIterator = AsyncIterator.make(async () => {
   let currentValue = context.contents
   // Increment current value
   context := currentValue + 1
-
+  
   if currentValue >= 3 {
     AsyncIterator.done()
   } else {
@@ -94,7 +94,7 @@ let value: 'value => value<'value>
     let currentValue = context.contents
     // Increment current value
     context := currentValue + 1
-
+    
     if currentValue >= 3 {
       AsyncIterator.done()
     } else {

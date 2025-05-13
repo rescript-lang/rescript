@@ -30,7 +30,7 @@ See [`Error.prototype.message`](https://developer.mozilla.org/en-US/docs/Web/Jav
 ## Example
 ```rescript
 let error = JsError.SyntaxError.make("Some message here")
-error->JsError.message->assertEqual("Some message here")
+error->JsError.message->assertEqual("Some message here") 
 ```
 */
 @get
@@ -66,8 +66,8 @@ See [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/
 ## Example
 ```rescript
 let error = JsError.make("Some message here")
-error->JsError.message->assertEqual("Some message here")
-error->JsError.name->assertEqual("Error")
+error->JsError.message->assertEqual("Some message here") 
+error->JsError.name->assertEqual("Error") 
 ````
 */
 @new
@@ -102,7 +102,7 @@ module RangeError: {
 
   /**
   Creates a new `RangeError` with the provided `message` and throws it.
-
+  
   `JsError.RangeError.throwWithMessage("message")` is equivalent to `JsError.RangeError.make("message")->JsError.throw`.
 
   See [`RangeError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RangeError) on MDN.
@@ -138,9 +138,9 @@ module SyntaxError: {
 
   /**
   Creates a new `SyntaxError` with the provided `message` and throws it.
-
+  
   `JsError.SyntaxError.throwWithMessage("message")` is equivalent to `JsError.SyntaxError.make("message")->JsError.throw`.
-
+  
   See [`SyntaxError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SyntaxError) on MDN.
   */
   let throwWithMessage: string => 'a
@@ -231,7 +231,7 @@ try {
 let panic: string => 'a
 
 /**
-Casts a `JsError.t` to a `JsExn.t`.
+Casts a `JsError.t` to a `JsExn.t`. 
 
 This is useful when you want to compare a JS exception and a JS error.
 */
