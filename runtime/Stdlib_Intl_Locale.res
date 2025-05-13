@@ -1,3 +1,4 @@
+@notUndefined
 type t
 
 type options = {

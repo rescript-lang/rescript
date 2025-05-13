@@ -1,3 +1,4 @@
+@notUndefined
 type t
 
 type parsed = [#bool(bool) | #always | #auto | #min2]

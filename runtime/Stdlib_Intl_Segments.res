@@ -2,6 +2,7 @@
  A Segments instance is an object that represents the segments of a specific string, subject to the locale and options of its constructing Intl.Segmenter instance.
 https://tc39.es/ecma402/#sec-segments-objects
 */
+@notUndefined
 type t
 
 type segmentData = {

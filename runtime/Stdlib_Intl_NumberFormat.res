@@ -1,5 +1,6 @@
 module Grouping = Stdlib_Intl_NumberFormat_Grouping
 
+@notUndefined
 type t
 
 /**
@@ -211,7 +212,7 @@ external formatBigIntRangeToParts: (t, ~start: bigint, ~end: bigint) => array<nu
 external formatStringToParts: (t, string) => array<numberFormatRangePart> = "formatToParts"
 
 /**
-  `ignore(numberGrouping)` ignores the provided numberGrouping and returns unit.
+  `ignore(numberFormat)` ignores the provided numberFormat and returns unit.
 
   This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
   without having to store or process it further.

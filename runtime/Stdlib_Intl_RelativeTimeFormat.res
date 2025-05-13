@@ -1,3 +1,4 @@
+@notUndefined
 type t
 
 type numeric = [#always | #auto]
