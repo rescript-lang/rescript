@@ -1,6 +1,3 @@
-/***
-Not supported in Firefox
-*/
 type t
 
 type granularity = [#grapheme | #word | #sentence]
