@@ -6,6 +6,7 @@ See [async iterator protocols](https://developer.mozilla.org/en-US/docs/Web/Java
 /**
 The type representing an async iterator.
 */
+@notUndefined
 type t<'a>
 
 type value<'a> = {
@@ -69,7 +70,7 @@ let asyncIterator = AsyncIterator.make(async () => {
   let currentValue = context.contents
   // Increment current value
   context := currentValue + 1
-  
+
   if currentValue >= 3 {
     AsyncIterator.done()
   } else {
@@ -93,7 +94,7 @@ let value: 'value => value<'value>
     let currentValue = context.contents
     // Increment current value
     context := currentValue + 1
-    
+
     if currentValue >= 3 {
       AsyncIterator.done()
     } else {
