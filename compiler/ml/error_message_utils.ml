@@ -233,8 +233,7 @@ let type_clash_context_maybe_option ty_expected ty_res =
   | ( {Types.desc = Tconstr (expected_path, _, _)},
       {Types.desc = Tconstr (type_path, _, _)} )
     when Path.same Predef.path_option type_path
-         && Path.same expected_path Predef.path_option = false
-         && Path.same expected_path Predef.path_uncurried = false ->
+         && Path.same expected_path Predef.path_option = false ->
     Some MaybeUnwrapOption
   | _ -> None
 

@@ -63,16 +63,14 @@ and ident_unknown = ident_create "unknown"
 
 and ident_promise = ident_create "promise"
 
-and ident_uncurried = ident_create "function$"
-
 type test = For_sure_yes | For_sure_no | NA
 
 let type_is_builtin_path_but_option (p : Path.t) : test =
   match p with
   | Pident {stamp} when stamp = ident_option.stamp -> For_sure_no
   | Pident {stamp} when stamp = ident_unit.stamp -> For_sure_no
-  | Pident {stamp}
-    when stamp >= ident_int.stamp && stamp <= ident_uncurried.stamp ->
+  | Pident {stamp} when stamp >= ident_int.stamp && stamp <= ident_promise.stamp
+    ->
     For_sure_yes
   | _ -> NA
 
@@ -109,8 +107,6 @@ and path_unkonwn = Pident ident_unknown
 and path_extension_constructor = Pident ident_extension_constructor
 
 and path_promise = Pident ident_promise
-
-and path_uncurried = Pident ident_uncurried
 
 let type_int = newgenty (Tconstr (path_int, [], ref Mnil))
 
@@ -233,8 +229,6 @@ and ident_some = ident_create "Some"
 
 and ident_ctor_unknown = ident_create "Unknown"
 
-and ident_ctor_uncurried = ident_create "Function$"
-
 let common_initial_env add_type add_extension empty_env =
   let decl_bool =
     {
@@ -319,16 +313,6 @@ let common_initial_env add_type add_extension empty_env =
             ],
             Record_regular );
     }
-  and decl_uncurried =
-    let tvar1 = newgenvar () in
-    {
-      decl_abstr with
-      type_params = [tvar1];
-      type_arity = 1;
-      type_kind = Type_variant [cstr ident_ctor_uncurried [tvar1]];
-      type_variance = [Variance.covariant];
-      type_unboxed = Types.unboxed_true_default_false;
-    }
   and decl_unknown =
     let tvar = newgenvar () in
     {
@@ -395,7 +379,6 @@ let common_initial_env add_type add_extension empty_env =
   |> add_type ident_unit decl_unit
   |> add_type ident_extension_constructor decl_abstr
   |> add_type ident_exn decl_exn
-  |> add_type ident_uncurried decl_uncurried
   |> add_type ident_option decl_option
   |> add_type ident_result decl_result
   |> add_type ident_lazy_t decl_lazy_t
