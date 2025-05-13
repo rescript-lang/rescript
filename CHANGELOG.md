@@ -36,6 +36,7 @@
 - Fix missing checks for duplicate literals in variants with payloads. https://github.com/rescript-lang/rescript/pull/7441
 - Fix printer removing private for empty record. https://github.com/rescript-lang/rescript/pull/7448
 - Fix: handle dynamic imports with module aliases. https://github.com/rescript-lang/rescript/pull/7452
+- Fix missing unescaping when accessing prop with exotic name. https://github.com/rescript-lang/rescript/pull/7469
 
 #### :house: Internal
 
