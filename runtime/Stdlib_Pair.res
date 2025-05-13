@@ -27,7 +27,7 @@ Pair.second((1, 2))->assertEqual(2)
 external second: (('a, 'b)) => 'b = "%field1"
 
 /**
-  `ignore(option)` ignores the provided pair and returns unit.
+  `ignore(pair)` ignores the provided pair and returns unit.
 
   This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
   without having to store or process it further.
