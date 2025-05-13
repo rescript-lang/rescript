@@ -23,6 +23,7 @@ let x26 = Some((WeakSet.make(): WeakSet.t<string>))
 let x27 = Some(Float32Array.fromArray([1.0]))
 let x28 = Some(Symbol.make(""))
 let x29 = Some(JsError.make(""))
+let x30 = Some(ArrayBuffer.make(0))
 
 let x98 = Some(list{})
 let x99 = Some((Dict.make(): dict<string>))

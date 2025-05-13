@@ -38,6 +38,8 @@ let x28 = Symbol("");
 
 let x29 = new Error("");
 
+let x30 = new ArrayBuffer(0);
+
 let x99 = {};
 
 let x1 = "hello";
@@ -81,6 +83,7 @@ export {
   x27,
   x28,
   x29,
+  x30,
   x98,
   x99,
 }
