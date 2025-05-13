@@ -36,6 +36,8 @@ let x27 = new Float32Array([1.0]);
 
 let x28 = Symbol("");
 
+let x29 = new Error("");
+
 let x99 = {};
 
 let x1 = "hello";
@@ -78,6 +80,7 @@ export {
   x26,
   x27,
   x28,
+  x29,
   x98,
   x99,
 }

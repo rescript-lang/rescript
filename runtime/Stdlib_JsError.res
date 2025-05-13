@@ -1,3 +1,4 @@
+@notUndefined
 type t
 
 @get external stack: t => option<string> = "stack"
