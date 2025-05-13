@@ -1,3 +1,4 @@
+@notUndefined
 type t
 
 @new external fromBuffer: Stdlib_ArrayBuffer.t => t = "DataView"

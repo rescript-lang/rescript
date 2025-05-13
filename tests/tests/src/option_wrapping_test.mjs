@@ -40,6 +40,8 @@ let x29 = new Error("");
 
 let x30 = new ArrayBuffer(0);
 
+let x31 = new DataView(new ArrayBuffer(0));
+
 let x99 = {};
 
 let x1 = "hello";
@@ -84,6 +86,7 @@ export {
   x28,
   x29,
   x30,
+  x31,
   x98,
   x99,
 }
