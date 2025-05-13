@@ -1,3 +1,4 @@
+@notUndefined
 type t<'a>
 
 @get_index external get: (t<'a>, int) => option<'a> = ""

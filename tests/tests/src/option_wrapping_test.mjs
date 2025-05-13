@@ -32,6 +32,10 @@ let x25 = new WeakMap();
 
 let x26 = new WeakSet();
 
+let x27 = new Float32Array([1.0]);
+
+let x99 = {};
+
 let x1 = "hello";
 
 let x2 = 1;
@@ -48,6 +52,8 @@ let x5 = {
 };
 
 let x12 = "test";
+
+let x98 = /* [] */0;
 
 export {
   x1,
@@ -68,5 +74,8 @@ export {
   x24,
   x25,
   x26,
+  x27,
+  x98,
+  x99,
 }
 /* x20 Not a pure module */
