@@ -195,7 +195,7 @@ let is_field_decl_start = function
   | _ -> false
 
 let is_record_decl_start = function
-  | Token.At | Mutable | Lident _ | DotDotDot | String _ -> true
+  | Token.At | Mutable | Lident _ | DotDotDot -> true
   | _ -> false
 
 let is_typ_expr_start = function

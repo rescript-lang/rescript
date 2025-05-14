@@ -4228,8 +4228,8 @@ and parse_record_or_object_type ?current_type_name_path ?inline_types_context
       Asttypes.Closed
     | _ -> Asttypes.Closed
   in
-  match (p.token, inline_types_context, current_type_name_path) with
-  | Lident _, Some inline_types_context, Some current_type_name_path ->
+  match (inline_types_context, current_type_name_path) with
+  | Some inline_types_context, Some current_type_name_path when Grammar.is_record_decl_start p.token ->
     let labels =
       parse_comma_delimited_region ~grammar:Grammar.RecordDecl ~closing:Rbrace
         ~f:
