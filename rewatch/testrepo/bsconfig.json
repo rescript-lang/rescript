@@ -18,13 +18,17 @@
     "@testrepo/main",
     "@testrepo/dep01",
     "@testrepo/dep02",
-    "@testrepo/new-namespace"
+    "@testrepo/new-namespace",
+    "@testrepo/namespace-casing",
+    "@testrepo/with-dev-deps"
   ],
   "bs-dependencies": [
     "@testrepo/main",
     "@testrepo/dep01",
     "@testrepo/dep02",
-    "@testrepo/new-namespace"
+    "@testrepo/new-namespace",
+    "@testrepo/namespace-casing",
+    "@testrepo/with-dev-deps"
   ],
   "reason": {
     "react-jsx": 3

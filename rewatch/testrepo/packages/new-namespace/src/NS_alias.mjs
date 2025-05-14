@@ -9,6 +9,6 @@ function hello_world() {
 Other_module$$atNewNamespace.bla();
 
 export {
-  hello_world,
+  hello_world ,
 }
 /*  Not a pure module */

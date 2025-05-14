@@ -6,11 +6,13 @@
       "packages/main",
       "packages/dep01",
       "packages/dep02",
-      "packages/new-namespace"
+      "packages/new-namespace",
+      "packages/namespace-casing",
+      "packages/with-dev-deps"
     ]
   },
   "dependencies": {
-    "rescript": "ci"
+    "rescript": "11.1.4"
   },
   "scripts": {
     "build": "../target/release/rewatch build .",

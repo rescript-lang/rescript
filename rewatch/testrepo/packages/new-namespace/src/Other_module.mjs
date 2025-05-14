@@ -6,6 +6,6 @@ function bla() {
 }
 
 export {
-  bla,
+  bla ,
 }
 /* No side effect */

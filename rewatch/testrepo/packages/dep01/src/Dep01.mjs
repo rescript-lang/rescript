@@ -8,6 +8,6 @@ function log() {
 }
 
 export {
-  log,
+  log ,
 }
 /* Dep02 Not a pure module */
