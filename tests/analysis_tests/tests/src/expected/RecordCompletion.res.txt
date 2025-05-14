@@ -12,8 +12,10 @@ ContextPath Value[t]
 Path t
 CPPipe pathFromEnv: found:true
 Path RecordCompletion.n
+Path n
 Path Stdlib.Array.m
 Path ArrayUtils.m
+Path m
 [{
     "label": "Array.map",
     "kind": 12,
@@ -43,6 +45,7 @@ ContextPath Value[t2]
 Path t2
 CPPipe pathFromEnv: found:true
 Path RecordCompletion.n2
+Path n2
 ContextPath Value[t2].n2->n
 ContextPath Value[t2].n2
 ContextPath Value[t2]
@@ -52,10 +55,13 @@ ContextPath Value[t2]
 Path t2
 CPPipe pathFromEnv: found:true
 Path RecordCompletion.n2
+Path n2
 CPPipe pathFromEnv: found:true
 Path RecordCompletion.n
+Path n
 Path Stdlib.Array.m
 Path ArrayUtils.m
+Path m
 [{
     "label": "Array.map",
     "kind": 12,

@@ -7,6 +7,7 @@ ContextPath Value[someString]->st
 ContextPath Value[someString]
 Path someString
 Path Stdlib.String.st
+Path st
 [{
     "label": "String.startsWith",
     "kind": 12,
@@ -36,6 +37,7 @@ ContextPath Value[someString]->st <<jsx>>
 ContextPath Value[someString]
 Path someString
 Path Stdlib.String.st
+Path st
 [{
     "label": "React.string",
     "kind": 12,
@@ -74,6 +76,7 @@ ContextPath Value[someString]->st <<jsx>>
 ContextPath Value[someString]
 Path someString
 Path Stdlib.String.st
+Path st
 [{
     "label": "React.string",
     "kind": 12,
@@ -111,6 +114,7 @@ Resolved opens 1 Stdlib
 ContextPath string->st <<jsx>>
 ContextPath string
 Path Stdlib.String.st
+Path st
 [{
     "label": "React.string",
     "kind": 12,
@@ -150,6 +154,7 @@ ContextPath Value[String, trim](Nolabel)
 ContextPath Value[String, trim]
 Path String.trim
 Path Stdlib.String.st
+Path st
 [{
     "label": "React.string",
     "kind": 12,
@@ -188,6 +193,7 @@ ContextPath Value[someInt]-> <<jsx>>
 ContextPath Value[someInt]
 Path someInt
 Path Stdlib.Int.
+Path 
 [{
     "label": "React.int",
     "kind": 12,
@@ -357,6 +363,7 @@ Resolved opens 1 Stdlib
 ContextPath int-> <<jsx>>
 ContextPath int
 Path Stdlib.Int.
+Path 
 [{
     "label": "React.int",
     "kind": 12,
@@ -528,6 +535,7 @@ ContextPath Value[someArr]
 Path someArr
 Path Stdlib.Array.a
 Path ArrayUtils.a
+Path a
 [{
     "label": "React.array",
     "kind": 12,
@@ -763,6 +771,7 @@ ContextPath string
 ContextPath string->s <<jsx>>
 ContextPath string
 Path Stdlib.String.s
+Path s
 [{
     "label": "->React.string",
     "kind": 12,

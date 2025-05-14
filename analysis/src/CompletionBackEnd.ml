@@ -1173,8 +1173,15 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
               ~full ~rawOpens typ
           else []
         in
+        (* Add completions from the current module. *)
+        let currentModuleCompletions =
+          completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom
+            ~opens:[] ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full []
+          |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
+               ~targetTypeId:mainTypeId
+        in
         jsxCompletions @ pipeCompletions @ extraCompletions
-        @ globallyConfiguredCompletions))
+        @ currentModuleCompletions @ globallyConfiguredCompletions))
   | CTuple ctxPaths ->
     if Debug.verbose () then print_endline "[ctx_path]--> CTuple";
     (* Turn a list of context paths into a list of type expressions. *)

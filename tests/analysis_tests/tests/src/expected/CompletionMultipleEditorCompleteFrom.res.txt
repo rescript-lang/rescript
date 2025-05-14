@@ -14,6 +14,7 @@ CPPipe pathFromEnv:A found:true
 Path A.
 Path B.
 Path C.
+Path 
 [{
     "label": "->B.b",
     "kind": 12,

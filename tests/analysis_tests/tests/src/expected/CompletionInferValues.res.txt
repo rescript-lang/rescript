@@ -10,6 +10,7 @@ ContextPath Value[x]
 Path x
 ContextPath int
 Path Stdlib.Int.t
+Path t
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -92,6 +93,7 @@ ContextPath Value[getSomeRecord]
 Path getSomeRecord
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
+Path 
 [{
     "label": "name",
     "kind": 5,
@@ -130,6 +132,7 @@ ContextPath Value[getSomeRecord]
 Path getSomeRecord
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
+Path 
 [{
     "label": "name",
     "kind": 5,
@@ -171,6 +174,7 @@ ContextPath Value[someFnWithCallback]
 Path someFnWithCallback
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
+Path 
 [{
     "label": "name",
     "kind": 5,
@@ -216,6 +220,7 @@ ContextPath Value[someFnWithCallback]
 Path someFnWithCallback
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
+Path 
 [{
     "label": "name",
     "kind": 5,
@@ -247,6 +252,7 @@ ContextPath Value[reactEventFn]
 Path reactEventFn
 CPPipe pathFromEnv:ReactEvent.Mouse found:false
 Path ReactEvent.Mouse.pr
+Path pr
 [{
     "label": "ReactEvent.Mouse.preventDefault",
     "kind": 12,
@@ -272,6 +278,7 @@ Path ReactDOM.domProps
 Path JsxDOM.domProps
 CPPipe pathFromEnv:JsxEvent.Mouse found:false
 Path JsxEvent.Mouse.pr
+Path pr
 [{
     "label": "JsxEvent.Mouse.preventDefault",
     "kind": 12,
@@ -296,6 +303,7 @@ ContextPath CJsxPropValue [Div] onMouseEnter
 Path Div.make
 CPPipe pathFromEnv:JsxEvent.Mouse found:false
 Path JsxEvent.Mouse.pr
+Path pr
 [{
     "label": "JsxEvent.Mouse.preventDefault",
     "kind": 12,
@@ -320,6 +328,7 @@ ContextPath Value[JsxEvent, Mouse, button](Nolabel)
 ContextPath Value[JsxEvent, Mouse, button]
 Path JsxEvent.Mouse.button
 Path Stdlib.Int.t
+Path t
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -416,6 +425,7 @@ ContextPath Value[String, split]
 Path String.split
 Path Stdlib.Array.ma
 Path ArrayUtils.ma
+Path ma
 [{
     "label": "Array.map",
     "kind": 12,
@@ -454,6 +464,7 @@ ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
+Path 
 [{
     "label": "name",
     "kind": 5,
@@ -492,6 +503,7 @@ ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
+Path 
 [{
     "label": "someRecord",
     "kind": 5,
@@ -524,6 +536,7 @@ ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
+Path 
 [{
     "label": "name",
     "kind": 5,
@@ -552,6 +565,7 @@ Path x
 ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
 Path Stdlib.String.slic
+Path slic
 [{
     "label": "String.slice",
     "kind": 12,
@@ -580,6 +594,7 @@ Path x
 ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
 Path Stdlib.Int.toS
+Path toS
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -611,6 +626,7 @@ Path x
 ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
 Path Stdlib.Int.toS
+Path toS
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -643,6 +659,7 @@ Path x
 ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
 Path Stdlib.Int.toS
+Path toS
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -671,6 +688,7 @@ Path x
 ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
 Path Stdlib.String.slic
+Path slic
 [{
     "label": "String.slice",
     "kind": 12,
@@ -699,6 +717,7 @@ Path x
 ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
 Path Stdlib.String.slic
+Path slic
 [{
     "label": "String.slice",
     "kind": 12,
@@ -727,6 +746,7 @@ Path x
 ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
 Path Stdlib.String.slic
+Path slic
 [{
     "label": "String.slice",
     "kind": 12,
@@ -753,6 +773,7 @@ ContextPath Value[x]
 Path x
 ContextPath int
 Path Stdlib.Int.toSt
+Path toSt
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -813,6 +834,7 @@ ContextPath Value[fn2]
 Path fn2
 CPPipe pathFromEnv:ReactDOM.Client.Root found:false
 Path ReactDOM.Client.Root.
+Path 
 [{
     "label": "ReactDOM.Client.Root.unmount",
     "kind": 12,
@@ -846,6 +868,7 @@ ContextPath Value[fn3]
 Path fn3
 CPPipe pathFromEnv:CompletionSupport.Test found:false
 Path CompletionSupport.Test.
+Path 
 [{
     "label": "CompletionSupport.Test.add",
     "kind": 12,
@@ -925,6 +948,7 @@ ContextPath Value[CompletionSupport2, makeRenderer]
 Path CompletionSupport2.makeRenderer
 CPPipe pathFromEnv:CompletionSupport.Nested found:false
 Path CompletionSupport.Nested.
+Path 
 [{
     "label": "root",
     "kind": 5,
@@ -952,6 +976,7 @@ ContextPath Value[CompletionSupport2, makeRenderer]
 Path CompletionSupport2.makeRenderer
 CPPipe pathFromEnv:ReactDOM.Client.Root found:false
 Path ReactDOM.Client.Root.
+Path 
 [{
     "label": "ReactDOM.Client.Root.unmount",
     "kind": 12,

@@ -8,6 +8,7 @@ ContextPath Value[x]
 Path x
 Path Stdlib.Array.em
 Path ArrayUtils.em
+Path em
 [{
     "label": "ArrayUtils.empty",
     "kind": 12,
@@ -27,6 +28,7 @@ Path fastify
 CPPipe pathFromEnv:Fastify found:false
 Path Fastify.doSt
 Path FastifyExt.doSt
+Path doSt
 [{
     "label": "FastifyExt.doStuff",
     "kind": 12,

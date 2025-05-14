@@ -21,6 +21,7 @@ Path merge
 CPPipe pathFromEnv:Observable found:true
 Path Rxjs.Observable.
 Path Rxjs.
+Path 
 [{
     "label": "->Observable.subscribe",
     "kind": 12,
@@ -103,6 +104,7 @@ Path Rxjs.combineLatest
 CPPipe pathFromEnv:Observable found:true
 Path Rxjs.Observable.
 Path Rxjs.
+Path 
 [{
     "label": "->Rxjs.Observable.subscribe",
     "kind": 12,

@@ -438,6 +438,7 @@ ContextPath Value[thisGetsBrokenLoc]
 Path thisGetsBrokenLoc
 CPPipe pathFromEnv:JsxEvent.Mouse found:false
 Path JsxEvent.Mouse.a
+Path a
 [{
     "label": "JsxEvent.Mouse.altKey",
     "kind": 12,
@@ -461,6 +462,7 @@ ContextPath Value[reassignedWorks]
 Path reassignedWorks
 CPPipe pathFromEnv:JsxEvent.Mouse found:false
 Path JsxEvent.Mouse.a
+Path a
 [{
     "label": "JsxEvent.Mouse.altKey",
     "kind": 12,
@@ -482,6 +484,7 @@ ContextPath Value[fineModuleVal]
 Path fineModuleVal
 CPPipe pathFromEnv:FineModule found:true
 Path FineModule.
+Path 
 [{
     "label": "FineModule.setToFalse",
     "kind": 12,
