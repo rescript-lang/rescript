@@ -63,6 +63,7 @@ ContextPath Value[someString]->st <<jsx>>
 ContextPath Value[someString]
 Path someString
 Path Stdlib.String.st
+Path st
 [{
     "label": "GenericJsx.string",
     "kind": 12,
@@ -104,6 +105,7 @@ ContextPath Value[someString]->st <<jsx>>
 ContextPath Value[someString]
 Path someString
 Path Stdlib.String.st
+Path st
 [{
     "label": "string",
     "kind": 12,
