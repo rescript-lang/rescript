@@ -37,6 +37,7 @@
 - Fix printer removing private for empty record. https://github.com/rescript-lang/rescript/pull/7448
 - Fix: handle dynamic imports with module aliases. https://github.com/rescript-lang/rescript/pull/7452
 - Fix missing unescaping when accessing prop with exotic name. https://github.com/rescript-lang/rescript/pull/7469
+- Fix syntax error with mutable nested record. https://github.com/rescript-lang/rescript/pull/7470
 
 #### :house: Internal
 
