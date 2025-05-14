@@ -6,6 +6,6 @@ function add(a, b) {
 }
 
 export {
-  add ,
+  add,
 }
 /* No side effect */

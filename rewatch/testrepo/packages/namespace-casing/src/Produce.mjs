@@ -6,6 +6,6 @@ function meh(param) {
 }
 
 export {
-  meh ,
+  meh,
 }
 /* No side effect */
