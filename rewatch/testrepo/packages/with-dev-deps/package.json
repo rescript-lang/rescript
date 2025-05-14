@@ -7,7 +7,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "rescript": "*",
-    "@rescript/core": "*"
+    "@rescript/core": "*",
+    "rescript": "*"
   }
 }
