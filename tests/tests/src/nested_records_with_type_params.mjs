@@ -3,6 +3,9 @@
 
 let options = {
   extra: {
+    extraField: {
+      theField: true
+    },
     name: "test",
     superExtra: {
       age: 2222
@@ -18,6 +21,9 @@ let options = {
 
 let opts2 = {
   extra: {
+    extraField: {
+      theField: true
+    },
     name: "test",
     superExtra: {
       age: "1234"
