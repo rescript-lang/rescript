@@ -29,12 +29,12 @@ check_statically_linked() {
 mv lib-ocaml lib/ocaml
 
 # @rescript/{target}
-chmod +x binaries-*/*.exe rewatch-*/*.exe
-mv -f binaries-darwin-x64/* rewatch-darwin-x64/* "packages/@rescript/darwin-x64/bin"
-mv -f binaries-darwin-arm64/* rewatch-darwin-arm64/* "packages/@rescript/darwin-arm64/bin"
-mv -f binaries-linux-x64/* rewatch-linux-x64/* "packages/@rescript/linux-x64/bin"
-mv -f binaries-linux-arm64/* rewatch-linux-arm64/* "packages/@rescript/linux-arm64/bin"
-mv -f binaries-win32-x64/* rewatch-win32-x64/* "packages/@rescript/win32-x64/bin"
+chmod +x binaries-*/*.exe
+mv -f binaries-darwin-x64/* "packages/@rescript/darwin-x64/bin"
+mv -f binaries-darwin-arm64/* "packages/@rescript/darwin-arm64/bin"
+mv -f binaries-linux-x64/* "packages/@rescript/linux-x64/bin"
+mv -f binaries-linux-arm64/* "packages/@rescript/linux-arm64/bin"
+mv -f binaries-win32-x64/* "packages/@rescript/win32-x64/bin"
 check_statically_linked "packages/@rescript/linux-x64/bin"
 check_statically_linked "packages/@rescript/linux-arm64/bin"
 

@@ -46,81 +46,6 @@ jobs:
         run: |
           make test-rewatch-ci
 
-  build-rewatch:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-13 # x64
-            rust-target: x86_64-apple-darwin
-            node-target: darwin-x64
-          - os: macos-14 # ARM
-            rust-target: aarch64-apple-darwin
-            node-target: darwin-arm64
-          - os: ubuntu-24.04 # x64
-            rust-target: x86_64-unknown-linux-musl
-            node-target: linux-x64
-          - os: ubuntu-24.04-arm # ARM
-            rust-target: aarch64-unknown-linux-musl
-            node-target: linux-arm64
-          - os: windows-latest
-            rust-target: x86_64-pc-windows-gnu
-            node-target: win32-x64
-
-    runs-on: ${{matrix.os}}
-
-    env:
-      RUST_BACKTRACE: "1"
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-
-      - name: Restore build cache
-        id: build-cache
-        uses: actions/cache@v4
-        with:
-          path: rewatch/target
-          key: rewatch-build-v2-${{ matrix.rust-target }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
-
-      - name: Install musl gcc
-        if: steps.build-cache.outputs.cache-hit != 'true' && runner.os == 'Linux'
-        run: sudo apt-get install -y --no-install-recommends musl-tools
-
-      - name: Install rust toolchain
-        if: steps.build-cache.outputs.cache-hit != 'true'
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-          targets: ${{ matrix.rust-target }}
-
-      - name: Build rewatch
-        if: steps.build-cache.outputs.cache-hit != 'true'
-        run: |
-          cargo build --manifest-path rewatch/Cargo.toml --target ${{ matrix.rust-target }} --release
-
-      - name: Run rewatch unit tests
-        if: steps.build-cache.outputs.cache-hit != 'true'
-        run: |
-          cargo test --manifest-path rewatch/Cargo.toml
-
-      - name: Copy rewatch binary
-        run: |
-          cp rewatch/target/${{ matrix.rust-target }}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch.exe
-        shell: bash
-
-      - name: "Upload artifact: rewatch binary"
-        uses: actions/upload-artifact@v4
-        with:
-          name: rewatch-${{ matrix.node-target }}
-          path: rewatch.exe
-          if-no-files-found: error
-
   build-compiler:
     strategy:
       fail-fast: false
@@ -131,6 +56,7 @@ jobs:
             upload_binaries: true
             upload_libs: true
             node-target: linux-x64
+            rust-target: x86_64-unknown-linux-musl
           - os: ubuntu-24.04-arm # ARM
             ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
             upload_binaries: true
@@ -138,26 +64,36 @@ jobs:
             build_playground: true
             benchmarks: true
             node-target: linux-arm64
+            rust-target: aarch64-unknown-linux-musl
           - os: macos-13 # x64
             ocaml_compiler: 5.3.0
             upload_binaries: true
             node-target: darwin-x64
+            rust-target: x86_64-apple-darwin
           - os: macos-14 # ARM
             ocaml_compiler: 5.3.0
             upload_binaries: true
             node-target: darwin-arm64
+            rust-target: aarch64-apple-darwin
           - os: windows-latest
             ocaml_compiler: 5.3.0
             upload_binaries: true
             node-target: win32-x64
+            rust-target: x86_64-pc-windows-gnu
 
           # Verify that the compiler still builds with older OCaml versions
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.5.2.1+options,ocaml-option-static
+            node-target: linux-x64
+            rust-target: x86_64-unknown-linux-musl
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
+            node-target: linux-x64
+            rust-target: x86_64-unknown-linux-musl
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.4.14.2+options,ocaml-option-static
+            node-target: linux-x64
+            rust-target: x86_64-unknown-linux-musl
 
     runs-on: ${{matrix.os}}
 
@@ -166,6 +102,7 @@ jobs:
       # we do track its version manually
       OPAM_VERSION: 2.3.0
       DUNE_PROFILE: release
+      RUST_BACKTRACE: "1"
 
     steps:
       - name: "Windows: Set git config"
@@ -184,6 +121,9 @@ jobs:
           cache: yarn
           node-version-file: .nvmrc
 
+      - name: Install npm packages
+        run: yarn install
+
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
         uses: awalsh128/cache-apt-pkgs-action@v1.4.3
@@ -191,6 +131,36 @@ jobs:
           # See https://github.com/ocaml/setup-ocaml/blob/b2105f9/packages/setup-ocaml/src/unix.ts#L9
           packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync
           version: v3
+
+      - name: Restore rewatch build cache
+        id: rewatch-build-cache
+        uses: actions/cache@v4
+        with:
+          path: rewatch/target
+          key: rewatch-build-v2-${{ matrix.rust-target }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
+
+      - name: Install rust toolchain
+        if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: ${{ matrix.rust-target }}
+
+      - name: Build rewatch
+        if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
+        run: |
+          cargo build --manifest-path rewatch/Cargo.toml --target ${{ matrix.rust-target }} --release
+
+      - name: Run rewatch unit tests
+        if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
+        run: |
+          cargo test --manifest-path rewatch/Cargo.toml
+
+      - name: Copy rewatch binary
+        run: |
+          cp rewatch/target/${{ matrix.rust-target }}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch
+          ./scripts/copyExes.js --rewatch
+        shell: bash
 
       # matrix.ocaml_compiler may contain commas
       - name: Get OPAM cache key
@@ -336,9 +306,6 @@ jobs:
             _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
 
-      - name: Install npm packages
-        run: yarn install
-
       - name: Copy compiler exes to platform bin dir
         run: node scripts/copyExes.js --compiler
 
@@ -472,7 +439,6 @@ jobs:
 
   pkg-pr-new:
     needs:
-      - build-rewatch
       - build-compiler
     runs-on: ubuntu-24.04-arm
     steps:
@@ -488,7 +454,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: "@(binaries-*|rewatch-*|lib-ocaml)"
+          pattern: "@(binaries-*|lib-ocaml)"
 
       - name: Move artifacts into packages
         run: .github/workflows/moveArtifacts.sh
@@ -554,7 +520,6 @@ jobs:
 
   publish:
     needs:
-      - build-rewatch
       - build-compiler
       - installationTest
     if: startsWith(github.ref, 'refs/tags/v')
@@ -573,7 +538,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: "@(binaries-*|rewatch-*|lib-ocaml)"
+          pattern: "@(binaries-*|lib-ocaml)"
 
       - name: Move artifacts into packages
         run: .github/workflows/moveArtifacts.sh
