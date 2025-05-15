@@ -398,11 +398,11 @@ jobs:
 
       - name: Setup Rclone
         if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
-        uses: cometkim/rclone-actions/setup-rclone@cab9535d853695b38b25c84e069c5d8a261267e4
+        uses: cometkim/rclone-actions/setup-rclone@89de8311dd0ca0b43143329d3daeb1041852ad9f
 
       - name: Configure Rclone remote
         if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
-        uses: cometkim/rclone-actions/configure-remote/s3@cab9535d853695b38b25c84e069c5d8a261267e4
+        uses: cometkim/rclone-actions/configure-remote/s3-provider@89de8311dd0ca0b43143329d3daeb1041852ad9f
         with:
           name: rescript
           provider: Cloudflare
