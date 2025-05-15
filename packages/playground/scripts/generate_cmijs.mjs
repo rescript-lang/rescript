@@ -13,92 +13,54 @@
  * playground bundle.
  */
 
-import * as child_process from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
 import resConfig from "../rescript.json" with { type: "json" };
+import {
+  exec,
+  compilerRootDir,
+  playgroundPackagesDir,
+} from "./common.mjs";
 
-const RESCRIPT_COMPILER_ROOT_DIR = path.join(
-  import.meta.dirname,
-  "..",
-  "..",
-  "..",
-);
-
-// The playground-bundling root dir
-const PLAYGROUND_DIR = path.join(import.meta.dirname, "..");
-
-// Final target output directory where all the cmijs will be stored
-const PACKAGES_DIR = path.join(PLAYGROUND_DIR, "packages");
-
-// Making sure this directory exists, since it's not checked in to git
-fs.mkdirSync(PACKAGES_DIR, { recursive: true });
-
-/**
- * @param {string} cmd
- */
-function e(cmd) {
-  console.log(`>>>>>> running command: ${cmd}`);
-  child_process.execSync(cmd, {
-    cwd: PLAYGROUND_DIR,
-    encoding: "utf8",
-    stdio: [0, 1, 2],
-  });
-  console.log("<<<<<<");
-}
-
-e("yarn rescript clean");
-e("yarn rescript");
-
-const packages = resConfig["bs-dependencies"];
+exec("yarn rescript clean");
+exec("yarn rescript");
 
 // We need to build the compiler's builtin modules as a separate cmij.
 // Otherwise we can't use them for compilation within the playground.
-function buildCompilerCmij() {
-  const rescriptLibOcamlFolder = path.join(
-    RESCRIPT_COMPILER_ROOT_DIR,
+buildCmij(compilerRootDir, "compiler-builtins");
+
+const packages = resConfig["bs-dependencies"];
+for (const pkgName of packages) {
+  buildCmij(
+    path.join(compilerRootDir, "node_modules", pkgName),
+    pkgName,
+  );
+}
+
+/**
+ * @param {string} pkgDir
+ * @param {string} pkgName
+ */
+function buildCmij(pkgDir, pkgName) {
+  const libOcamlFolder = path.join(
+    pkgDir,
     "lib",
     "ocaml",
   );
 
-  const outputFolder = path.join(PACKAGES_DIR, "compiler-builtins");
+  const outputFolder = path.join(playgroundPackagesDir, pkgName);
   fs.mkdirSync(outputFolder, { recursive: true });
 
   const cmijFile = path.join(outputFolder, "cmij.js");
-
-  e(
-    `find ${rescriptLibOcamlFolder} -name "*.cmi" -or -name "*.cmj" | xargs -n1 basename | xargs js_of_ocaml build-fs -o ${cmijFile} -I ${rescriptLibOcamlFolder}`,
-  );
+  const inputFiles = fs.readdirSync(libOcamlFolder).filter(isCmij).join(" ");
+  exec(`js_of_ocaml build-fs -o ${cmijFile} -I ${libOcamlFolder} ${inputFiles}`);
 }
 
-function buildThirdPartyCmijs() {
-  for (const pkg of packages) {
-    const libOcamlFolder = path.join(
-      RESCRIPT_COMPILER_ROOT_DIR,
-      "node_modules",
-      pkg,
-      "lib",
-      "ocaml",
-    );
-    const libEs6Folder = path.join(
-      RESCRIPT_COMPILER_ROOT_DIR,
-      "node_modules",
-      pkg,
-      "lib",
-      "es6",
-    );
-    const outputFolder = path.join(PACKAGES_DIR, pkg);
-    fs.mkdirSync(outputFolder, { recursive: true });
-
-    const cmijFile = path.join(outputFolder, "cmij.js");
-
-    e(`find ${libEs6Folder} -name '*.js' -exec cp {} ${outputFolder} \\;`);
-    e(
-      `find ${libOcamlFolder} -name "*.cmi" -or -name "*.cmj" | xargs -n1 basename | xargs js_of_ocaml build-fs -o ${cmijFile} -I ${libOcamlFolder}`,
-    );
-  }
+/**
+ * @param {string} basename 
+ * @return {boolean}
+ */
+function isCmij(basename) {
+  return /\.cm(i|j)$/.test(basename);
 }
-
-buildCompilerCmij();
-buildThirdPartyCmijs();

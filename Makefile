@@ -69,7 +69,7 @@ artifacts: lib
 # Builds the core playground bundle (without the relevant cmijs files for the runtime)
 playground:
 	dune build --profile browser
-	cp ./_build/default/compiler/jsoo/jsoo_playground_main.bc.js packages/playground/compiler.js
+	cp -f ./_build/default/compiler/jsoo/jsoo_playground_main.bc.js packages/playground/compiler.js
 
 # Creates all the relevant core and third party cmij files to side-load together with the playground bundle
 playground-cmijs: artifacts
