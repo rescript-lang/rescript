@@ -76,7 +76,7 @@ playground-cmijs: artifacts
 	yarn workspace playground build
 
 # Builds the playground, runs some e2e tests and releases the playground to the
-# CDN (requires KEYCDN_USER and KEYCDN_PASSWORD set in the env variables)
+# Cloudflare R2 (requires Rclone `rescript:` remote)
 playground-release: playground playground-cmijs
 	yarn workspace playground test
 	yarn workspace playground upload-bundle
