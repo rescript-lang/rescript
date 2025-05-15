@@ -384,7 +384,7 @@ jobs:
         run: opam exec -- make test-syntax
 
       - name: Build runtime/stdlib
-        run: ./scripts/buildRuntime.sh
+        run: ./scripts/buildRuntimeRewatch.sh
         shell: bash
 
       - name: Check for changes in lib folder
