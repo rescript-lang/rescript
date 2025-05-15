@@ -62,7 +62,6 @@ const rcloneOpts = (process.env.CI
 
 const remote = process.env.RCLONE_REMOTE || "rescript";
 const bucket = "cdn-assets";
-const dest = `${remote}:${bucket}/${tag}`;
 
 // Create a temporary directory for bundling
 const tmpDir = path.join(playgroundDir, ".tmp");
@@ -91,11 +90,11 @@ exec(`tar \\
 console.log(`Uploading v${version} artifacts...`);
 exec(`rclone sync ${rcloneOpts} --fast-list \\
   "${artifactsDir}" \\
-  "${dest}"
+  "${remote}:${bucket}/${tag}"
 `);
 
 console.log("Uploading archive...");
 exec(`rclone copyto ${rcloneOpts} \\
   "${archivePath}" \\
-  "${dest}.tar.zst"
+  "${remote}:${bucket}/playground-bundles/${tag}.tar.zst"
 `);
