@@ -29,21 +29,21 @@ let _single_element_fragment = <>
 
 let _multiple_element_fragment = <>
   <input
-    type="text"
+    type={"text"}
   />
   <input
-    type="number"
+    type={"number"}
   />
 </>;
 
 let _unary_element_with_props = <input
-  className="foo"
-  type="text"
+  className={"foo"}
+  type={"text"}
 />;
 
 let _container_element_with_props_and_children = <div
-  className="foo"
-  title="foo"
+  className={"foo"}
+  title={"foo"}
 >
   {"Hello, world!"}
 </div>;
@@ -57,19 +57,19 @@ let newrecord = {...baseProps};
 
 let _unary_element_with_spread_props = <input
   {...newrecord} 
-  type="text"
+  type={"text"}
 />;
 
 let newrecord$1 = {...baseProps};
 
 let _container_with_spread_props = <div
   {...newrecord$1} 
-  title="barry"
-  className="barry"
+  title={"barry"}
+  className={"barry"}
 >
   {"Hello, world!"}
   <input
-    type="text"
+    type={"text"}
   />
 </div>;
 
@@ -83,8 +83,8 @@ let baseChildren = [
 ];
 
 let _container_with_spread_children = <div
-  className="barry"
-  title="barry"
+  className={"barry"}
+  title={"barry"}
 >
   {baseChildren}
 </div>;
@@ -93,8 +93,8 @@ let newrecord$2 = {...baseProps};
 
 let _container_with_spread_props_and_children = <div
   {...newrecord$2} 
-  title="barry"
-  className="barry"
+  title={"barry"}
+  className={"barry"}
 >
   {baseChildren}
 </div>;
@@ -102,22 +102,22 @@ let _container_with_spread_props_and_children = <div
 let newrecord$3 = {...baseProps};
 
 let _unary_element_with_spread_props_keyed = <input
-  key="barry-key"
+  key={"barry-key"} 
   {...newrecord$3} 
-  type="text"
+  type={"text"}
 />;
 
 let newrecord$4 = {...baseProps};
 
 let _container_with_spread_props_keyed = <div
-  key="barry-key"
+  key={"barry-key"} 
   {...newrecord$4} 
-  title="barry"
-  className="barry"
+  title={"barry"}
+  className={"barry"}
 >
   {"Hello, world!"}
   <input
-    type="text"
+    type={"text"}
   />
 </div>;
 
@@ -156,29 +156,29 @@ let MyWeirdComponent = {
 };
 
 let _escaped_jsx_prop = <Jsx_preserve_test$MyWeirdComponent
-  MyWeirdProp="bar"
+  MyWeirdProp={"bar"}
 />;
 
 let _large_component = <div
-  className="bar"
+  className={"bar"}
   tabIndex={1}
-  title="foo"
+  title={"foo"}
   onClick={param => {}}
   onMouseDown={param => {}}
 >
   <p
-    className="bar"
+    className={"bar"}
     tabIndex={1}
-    title="foo"
+    title={"foo"}
     onClick={param => {}}
     onMouseDown={param => {}}
   >
     {"Hello, world!"}
   </p>
   <strong
-    className="bar"
+    className={"bar"}
     tabIndex={1}
-    title="foo"
+    title={"foo"}
     onClick={param => {}}
     onMouseDown={param => {}}
   >
@@ -199,13 +199,13 @@ let ComponentWithOptionalProps = {
 
 let _optional_props = <Jsx_preserve_test$ComponentWithOptionalProps
   i={1}
-  s="test"
+  s={"test"}
   element={<div />}
 />;
 
 let _props_with_hyphen = <label
-  aria-label="close sidebar"
-  data-testid="test"
+  aria-label={"close sidebar"}
+  data-testid={"test"}
 />;
 
 export {
