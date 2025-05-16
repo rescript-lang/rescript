@@ -201,8 +201,7 @@ end = struct
     | Tpat_array list -> List.iter iter_pattern list
     | Tpat_or (p1, p2, _) ->
       iter_pattern p1;
-      iter_pattern p2
-    | Tpat_lazy p -> iter_pattern p);
+      iter_pattern p2);
     Iter.leave_pattern pat
 
   and option f x =
@@ -291,7 +290,6 @@ end = struct
       iter_extension_constructor cd;
       iter_expression exp
     | Texp_assert exp -> iter_expression exp
-    | Texp_lazy exp -> iter_expression exp
     | Texp_pack mexpr -> iter_module_expr mexpr
     | Texp_extension_constructor _ -> ());
     Iter.leave_expression exp

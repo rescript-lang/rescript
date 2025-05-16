@@ -241,10 +241,7 @@ and pattern i ppf x =
     | Tpat_or (p1, p2, _) ->
       line i ppf "Tpat_or\n";
       pattern i ppf p1;
-      pattern i ppf p2
-    | Tpat_lazy p ->
-      line i ppf "Tpat_lazy\n";
-      pattern i ppf p)
+      pattern i ppf p2)
 
 and expression_extra i ppf x attrs =
   match x with
@@ -366,9 +363,6 @@ and expression i ppf x =
     expression i ppf e
   | Texp_assert e ->
     line i ppf "Texp_assert";
-    expression i ppf e
-  | Texp_lazy e ->
-    line i ppf "Texp_lazy";
     expression i ppf e
   | Texp_pack me ->
     line i ppf "Texp_pack";

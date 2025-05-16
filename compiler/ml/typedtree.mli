@@ -97,7 +97,6 @@ and pattern_desc =
             [row_desc] = [Some _] when translating [Ppat_type _],
                          [None] otherwise.
          *)
-  | Tpat_lazy of pattern  (** lazy P *)
 
 and expression = {
   exp_desc: expression_desc;
@@ -223,7 +222,6 @@ and expression_desc =
   | Texp_letmodule of Ident.t * string loc * module_expr * expression
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression
-  | Texp_lazy of expression
   | Texp_pack of module_expr
   | Texp_extension_constructor of Longident.t loc * Path.t
 

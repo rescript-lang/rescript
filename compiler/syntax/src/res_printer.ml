@@ -2529,17 +2529,6 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
         (Doc.concat docs)
     | Ppat_extension ext ->
       print_extension ~state ~at_module_lvl:false ext cmt_tbl
-    | Ppat_lazy p ->
-      let needs_parens =
-        match p.ppat_desc with
-        | Ppat_or (_, _) | Ppat_alias (_, _) -> true
-        | _ -> false
-      in
-      let pat =
-        let p = print_pattern ~state p cmt_tbl in
-        if needs_parens then Doc.concat [Doc.text "("; p; Doc.text ")"] else p
-      in
-      Doc.concat [Doc.text "lazy "; pat]
     | Ppat_alias (p, alias_loc) ->
       let needs_parens =
         match p.ppat_desc with
@@ -3382,15 +3371,6 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
     | Pexp_assert expr ->
       let expr = print_expression_with_comments ~state expr cmt_tbl in
       Doc.concat [Doc.text "assert("; expr; Doc.text ")"]
-    | Pexp_lazy expr ->
-      let rhs =
-        let doc = print_expression_with_comments ~state expr cmt_tbl in
-        match Parens.lazy_or_assert_or_await_expr_rhs expr with
-        | Parens.Parenthesized -> add_parens doc
-        | Braced braces -> print_braces doc expr braces
-        | Nothing -> doc
-      in
-      Doc.group (Doc.concat [Doc.text "lazy "; rhs])
     | Pexp_open (_overrideFlag, _longidentLoc, _expr) ->
       print_expression_block ~state ~braces:true e cmt_tbl
     | Pexp_pack mod_expr ->
@@ -3464,7 +3444,7 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
       in
       let rhs =
         match
-          Parens.lazy_or_assert_or_await_expr_rhs ~in_await:true
+          Parens.assert_or_await_expr_rhs ~in_await:true
             {
               e with
               pexp_attributes =

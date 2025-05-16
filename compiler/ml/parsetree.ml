@@ -193,7 +193,6 @@ and pattern_desc =
   | Ppat_or of pattern * pattern (* P1 | P2 *)
   | Ppat_constraint of pattern * core_type (* (P : T) *)
   | Ppat_type of Longident.t loc (* #tconst *)
-  | Ppat_lazy of pattern (* lazy P *)
   | Ppat_unpack of string loc
     (* (module P)
        Note: (module P : S) is represented as
@@ -302,7 +301,6 @@ and expression_desc =
     (* assert E
        Note: "assert false" is treated in a special way by the
        type-checker. *)
-  | Pexp_lazy of expression (* lazy E *)
   | Pexp_newtype of string loc * expression (* fun (type t) -> E *)
   | Pexp_pack of module_expr
     (* (module ME)

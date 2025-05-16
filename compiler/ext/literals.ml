@@ -164,8 +164,4 @@ let hd = "hd"
 
 let tl = "tl"
 
-let lazy_done = "LAZY_DONE"
-
-let lazy_val = "VAL"
-
 let pure = "@__PURE__"

@@ -16,8 +16,6 @@
 (* Auxiliaries for type-based optimizations, e.g. array kinds *)
 
 open Types
-open Asttypes
-open Typedtree
 open Lambda
 
 let scrape_ty env ty =
@@ -105,64 +103,3 @@ let is_base_type env ty base_ty_path =
 
 let maybe_pointer_type env ty =
   if Ctype.maybe_pointer_type env ty then Pointer else Immediate
-
-type classification =
-  | Int
-  | Float
-  | Lazy
-  | Addr (* anything except a float or a lazy *)
-  | Any
-
-let classify env ty =
-  let ty = scrape_ty env ty in
-  if maybe_pointer_type env ty = Immediate then Int
-  else
-    match ty.desc with
-    | Tvar _ | Tunivar _ -> Any
-    | Tconstr (p, _args, _abbrev) -> (
-      if Path.same p Predef.path_float then Float
-      else if Path.same p Predef.path_lazy_t then Lazy
-      else if Path.same p Predef.path_string || Path.same p Predef.path_array
-      then Addr
-      else
-        try
-          match (Env.find_type p env).type_kind with
-          | Type_abstract -> Any
-          | Type_record _ | Type_variant _ | Type_open -> Addr
-        with Not_found ->
-          (* This can happen due to e.g. missing -I options,
-             causing some .cmi files to be unavailable.
-             Maybe we should emit a warning. *)
-          Any)
-    | Tarrow _ | Ttuple _ | Tpackage _ | Tobject _ | Tnil | Tvariant _ -> Addr
-    | Tlink _ | Tsubst _ | Tpoly _ | Tfield _ -> assert false
-
-(** Whether a forward block is needed for a lazy thunk on a value, i.e.
-    if the value can be represented as a float/forward/lazy *)
-let lazy_val_requires_forward env ty =
-  match classify env ty with
-  | Any | Lazy -> true
-  | Float (*-> Config.flat_float_array*) | Addr | Int -> false
-
-(** The compilation of the expression [lazy e] depends on the form of e:
-    constants, floats and identifiers are optimized.  The optimization must be
-    taken into account when determining whether a recursive binding is safe. *)
-let classify_lazy_argument :
-    Typedtree.expression ->
-    [ `Constant_or_function
-    | `Float
-    | `Identifier of [`Forward_value | `Other]
-    | `Other ] =
- fun e ->
-  match e.exp_desc with
-  | Texp_constant
-      ( Const_int _ | Const_char _ | Const_string _ | Const_int32 _
-      | Const_int64 _ | Const_bigint _ )
-  | Texp_function _
-  | Texp_construct (_, {cstr_arity = 0}, _) ->
-    `Constant_or_function
-  | Texp_constant (Const_float _) -> `Float
-  | Texp_ident _ when lazy_val_requires_forward e.exp_env e.exp_type ->
-    `Identifier `Forward_value
-  | Texp_ident _ -> `Identifier `Other
-  | _ -> `Other

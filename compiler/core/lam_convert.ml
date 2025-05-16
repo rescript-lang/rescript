@@ -31,13 +31,6 @@ let prim = Lam.prim
 let lam_extension_id loc (head : Lam.t) =
   prim ~primitive:lam_caml_id ~args:[head] loc
 
-let lazy_block_info : Lam_tag_info.t =
-  Blk_record
-    {
-      fields = [|(Literals.lazy_done, false); (Literals.lazy_val, false)|];
-      mutable_flag = Mutable;
-    }
-
 (** A conservative approach to avoid packing exceptions
     for lambda expression like {[
       try { ... }catch(id){body}
@@ -197,22 +190,6 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
           ~primitive:(Pmakeblock (tag, info, mutable_flag))
           ~args:[Lam.const tag_val; value]
           loc
-      | _ -> assert false)
-    | Blk_lazy_general -> (
-      match args with
-      | [((Lvar _ | Lconst _ | Lfunction _) as result)] ->
-        let args = [Lam.const Const_js_true; result] in
-        prim ~primitive:(Pmakeblock (tag, lazy_block_info, Mutable)) ~args loc
-      | [computation] ->
-        let args =
-          [
-            Lam.const Const_js_false;
-            (* FIXME: arity 0 does not get proper supported*)
-            Lam.function_ ~arity:0 ~params:[] ~body:computation
-              ~attr:Lambda.default_function_attribute;
-          ]
-        in
-        prim ~primitive:(Pmakeblock (tag, lazy_block_info, Mutable)) ~args loc
       | _ -> assert false))
   | Pfn_arity -> prim ~primitive:Pfn_arity ~args loc
   | Pdebugger -> prim ~primitive:Pdebugger ~args loc

@@ -527,7 +527,7 @@ module E = struct
         (sub.extension_constructor sub cd)
         (sub.expr sub e)
     | Pexp_assert e -> assert_ ~loc ~attrs (sub.expr sub e)
-    | Pexp_lazy e -> lazy_ ~loc ~attrs (sub.expr sub e)
+    | Pexp_lazy _ -> failwith "Pexp_lazy is no longer present in ReScript"
     | Pexp_poly _ -> failwith "Pexp_poly is no longer present in ReScript"
     | Pexp_object () -> assert false
     | Pexp_newtype (s, e) ->
@@ -572,7 +572,7 @@ module P = struct
     | Ppat_constraint (p, t) ->
       constraint_ ~loc ~attrs (sub.pat sub p) (sub.typ sub t)
     | Ppat_type s -> type_ ~loc ~attrs (map_loc sub s)
-    | Ppat_lazy p -> lazy_ ~loc ~attrs (sub.pat sub p)
+    | Ppat_lazy _ -> failwith "Ppat_lazy is no longer present in ReScript"
     | Ppat_unpack s -> unpack ~loc ~attrs (map_loc sub s)
     | Ppat_open (lid, p) -> open_ ~loc ~attrs (map_loc sub lid) (sub.pat sub p)
     | Ppat_exception p -> exception_ ~loc ~attrs (sub.pat sub p)

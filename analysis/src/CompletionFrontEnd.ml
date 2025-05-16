@@ -538,7 +538,6 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
         ?contextPath:(TypeUtils.contextPathFromCoreType coreType)
         p
     | Ppat_type _ -> ()
-    | Ppat_lazy p -> scopePattern ~patternPath ?contextPath p
     | Ppat_unpack {txt; loc} ->
       scope :=
         !scope |> Scope.addValue ~name:txt ~loc ?contextPath:contextPathToSave

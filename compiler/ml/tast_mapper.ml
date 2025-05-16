@@ -176,7 +176,6 @@ let pat sub x =
     | Tpat_array l -> Tpat_array (List.map (sub.pat sub) l)
     | Tpat_or (p1, p2, rd) -> Tpat_or (sub.pat sub p1, sub.pat sub p2, rd)
     | Tpat_alias (p, id, s) -> Tpat_alias (sub.pat sub p, id, s)
-    | Tpat_lazy p -> Tpat_lazy (sub.pat sub p)
   in
   {x with pat_extra; pat_desc; pat_env}
 
@@ -251,7 +250,6 @@ let expr sub x =
     | Texp_letexception (cd, exp) ->
       Texp_letexception (sub.extension_constructor sub cd, sub.expr sub exp)
     | Texp_assert exp -> Texp_assert (sub.expr sub exp)
-    | Texp_lazy exp -> Texp_lazy (sub.expr sub exp)
     | Texp_pack mexpr -> Texp_pack (sub.module_expr sub mexpr)
     | Texp_extension_constructor _ as e -> e
   in

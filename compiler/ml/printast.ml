@@ -207,9 +207,6 @@ and pattern i ppf x =
     line i ppf "Ppat_or\n";
     pattern i ppf p1;
     pattern i ppf p2
-  | Ppat_lazy p ->
-    line i ppf "Ppat_lazy\n";
-    pattern i ppf p
   | Ppat_constraint (p, ct) ->
     line i ppf "Ppat_constraint\n";
     pattern i ppf p;
@@ -330,9 +327,6 @@ and expression i ppf x =
     expression i ppf e
   | Pexp_assert e ->
     line i ppf "Pexp_assert\n";
-    expression i ppf e
-  | Pexp_lazy e ->
-    line i ppf "Pexp_lazy\n";
     expression i ppf e
   | Pexp_newtype (s, e) ->
     line i ppf "Pexp_newtype \"%s\"\n" s.txt;

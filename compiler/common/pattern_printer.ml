@@ -38,7 +38,6 @@ let untype typed =
       in
       mkpat (Ppat_record (fields, closed_flag))
     | Tpat_array lst -> mkpat (Ppat_array (List.map loop lst))
-    | Tpat_lazy p -> mkpat (Ppat_lazy (loop p))
   in
   loop typed
 

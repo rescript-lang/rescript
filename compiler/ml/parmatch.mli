@@ -18,7 +18,6 @@ open Asttypes
 open Typedtree
 open Types
 
-val pretty_const : constant -> string
 val top_pretty : Format.formatter -> pattern -> unit
 val pretty_pat : pattern -> unit
 val pretty_line : pattern list -> unit
@@ -38,17 +37,12 @@ val const_compare : constant -> constant -> int
 val le_pat : pattern -> pattern -> bool
 val le_pats : pattern list -> pattern list -> bool
 
-(* Exported compatibility functor, abstracted over constructor equality *)
-module Compat : functor
-  (Constr : sig
-     val equal :
-       Types.constructor_description -> Types.constructor_description -> bool
-   end)
-  -> sig
-  val compat : pattern -> pattern -> bool
-  val compats : pattern list -> pattern list -> bool
+(* Exported compatibility, abstracted over constructor equality *)
+module Compat : sig
+  type eq_cd = constructor_description -> constructor_description -> bool
+  val compat : equal_cd:eq_cd -> pattern -> pattern -> bool
+  val compats : equal_cd:eq_cd -> pattern list -> pattern list -> bool
 end
-[@@warning "-67"]
 
 exception Empty
 val lub : pattern -> pattern -> pattern
@@ -61,7 +55,6 @@ val get_mins : ('a -> 'a -> bool) -> 'a list -> 'a list
      (_,_)::p1::p2::rem -> (p1, p2)::rem
    The second one will replace mutable arguments by '_'
 *)
-val set_args : pattern -> pattern list -> pattern list
 val set_args_erase_mutable : pattern -> pattern list -> pattern list
 
 val pat_of_constr : pattern -> constructor_description -> pattern

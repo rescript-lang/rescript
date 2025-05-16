@@ -114,7 +114,6 @@ module Pat : sig
   val or_ : ?loc:loc -> ?attrs:attrs -> pattern -> pattern -> pattern
   val constraint_ : ?loc:loc -> ?attrs:attrs -> pattern -> core_type -> pattern
   val type_ : ?loc:loc -> ?attrs:attrs -> lid -> pattern
-  val lazy_ : ?loc:loc -> ?attrs:attrs -> pattern -> pattern
   val unpack : ?loc:loc -> ?attrs:attrs -> str -> pattern
   val open_ : ?loc:loc -> ?attrs:attrs -> lid -> pattern -> pattern
   val exception_ : ?loc:loc -> ?attrs:attrs -> pattern -> pattern
@@ -203,7 +202,6 @@ module Exp : sig
     expression ->
     expression
   val assert_ : ?loc:loc -> ?attrs:attrs -> expression -> expression
-  val lazy_ : ?loc:loc -> ?attrs:attrs -> expression -> expression
   val newtype : ?loc:loc -> ?attrs:attrs -> str -> expression -> expression
   val pack : ?loc:loc -> ?attrs:attrs -> module_expr -> expression
   val open_ :

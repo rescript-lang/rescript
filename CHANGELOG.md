@@ -43,6 +43,7 @@
 #### :house: Internal
 
 - AST: Add bar location to `case`. https://github.com/rescript-lang/rescript/pull/7407
+- Clean up lazy from ASTs and back-end. https://github.com/rescript-lang/rescript/pull/7474
 
 #### :nail_care: Polish
 

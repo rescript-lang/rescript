@@ -350,7 +350,6 @@ module E = struct
       sub.extension_constructor sub cd;
       sub.expr sub e
     | Pexp_assert e -> sub.expr sub e
-    | Pexp_lazy e -> sub.expr sub e
     | Pexp_newtype (_s, e) -> sub.expr sub e
     | Pexp_pack me -> sub.module_expr sub me
     | Pexp_open (_ovf, lid, e) ->
@@ -407,7 +406,6 @@ module P = struct
       sub.pat sub p;
       sub.typ sub t
     | Ppat_type s -> iter_loc sub s
-    | Ppat_lazy p -> sub.pat sub p
     | Ppat_unpack s -> iter_loc sub s
     | Ppat_exception p -> sub.pat sub p
     | Ppat_extension x -> sub.extension sub x

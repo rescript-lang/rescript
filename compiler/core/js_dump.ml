@@ -969,12 +969,8 @@ and expression_desc cxt ~(level : int) f x : cxt =
       | _ -> J.Object (None, objs)
     in
     expression_desc cxt ~level f exp
-  | Caml_block
-      ( _,
-        _,
-        _,
-        (Blk_module_export _ | Blk_some | Blk_some_not_nested | Blk_lazy_general)
-      ) ->
+  | Caml_block (_, _, _, (Blk_module_export _ | Blk_some | Blk_some_not_nested))
+    ->
     assert false
   | Caml_block (el, mutable_flag, _tag, Blk_tuple) ->
     expression_desc cxt ~level f (Array (el, mutable_flag))

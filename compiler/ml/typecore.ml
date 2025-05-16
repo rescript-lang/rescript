@@ -154,7 +154,6 @@ let iter_expression f e =
       List.iter (fun (_, e, _) -> expr e) iel
     | Pexp_open (_, _, e)
     | Pexp_newtype (_, e)
-    | Pexp_lazy e
     | Pexp_assert e
     | Pexp_send (e, _)
     | Pexp_constraint (e, _)
@@ -517,8 +516,7 @@ let rec build_as_type env p =
     | Some row ->
       let row = row_repr row in
       newty (Tvariant {row with row_closed = false; row_more = newvar ()}))
-  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_array _ | Tpat_lazy _ ->
-    p.pat_type
+  | Tpat_any | Tpat_var _ | Tpat_constant _ | Tpat_array _ -> p.pat_type
 
 let build_or_pat env loc lid =
   let path, decl = Typetexp.find_type env lid.loc lid.txt in
@@ -1601,20 +1599,6 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
       with Error _ ->
         set_state state env;
         type_pat ~mode sp2 expected_ty k))
-  | Ppat_lazy sp1 ->
-    let nv = newvar () in
-    unify_pat_types loc !env (instance_def (Predef.type_lazy_t nv)) expected_ty;
-    (* do not explode under lazy: PR#7421 *)
-    type_pat ~explode:0 sp1 nv (fun p1 ->
-        rp k
-          {
-            pat_desc = Tpat_lazy p1;
-            pat_loc = loc;
-            pat_extra = [];
-            pat_type = expected_ty;
-            pat_attributes = sp.ppat_attributes;
-            pat_env = !env;
-          })
   | Ppat_constraint (sp, sty) ->
     (* Separate when not already separated by !principal *)
     let separate = true in
@@ -1818,7 +1802,6 @@ let rec is_nonexpansive exp =
     is_nonexpansive ifso && is_nonexpansive_opt ifnot
   | Texp_sequence (_e1, e2) -> is_nonexpansive e2 (* PR#4354 *)
   (* Note: nonexpansive only means no _observable_ side effects *)
-  | Texp_lazy e -> is_nonexpansive e
   | Texp_letmodule (_, _, mexp, e) ->
     is_nonexpansive_mod mexp && is_nonexpansive e
   | Texp_pack mexp -> is_nonexpansive_mod mexp
@@ -2055,8 +2038,7 @@ let iter_ppat f p =
   | Ppat_exception p
   | Ppat_alias (p, _)
   | Ppat_open (_, p)
-  | Ppat_constraint (p, _)
-  | Ppat_lazy p ->
+  | Ppat_constraint (p, _) ->
     f p
   | Ppat_record (args, _flag) -> List.iter (fun (_, p, _) -> f p) args
 
@@ -3071,20 +3053,6 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         exp_loc = loc;
         exp_extra = [];
         exp_type;
-        exp_attributes = sexp.pexp_attributes;
-        exp_env = env;
-      }
-  | Pexp_lazy e ->
-    let ty = newgenvar () in
-    let to_unify = Predef.type_lazy_t ty in
-    unify_exp_types loc env to_unify ty_expected;
-    let arg = type_expect env e ty in
-    re
-      {
-        exp_desc = Texp_lazy arg;
-        exp_loc = loc;
-        exp_extra = [];
-        exp_type = instance env ty_expected;
         exp_attributes = sexp.pexp_attributes;
         exp_env = env;
       }

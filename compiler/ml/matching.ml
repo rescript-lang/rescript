@@ -40,12 +40,11 @@ let dbg = false
    returns true when they may have a common instance.
 *)
 
-module MayCompat = Parmatch.Compat (struct
-  let equal = Types.may_equal_constr
-end)
-let may_compat = MayCompat.compat
+let equal_cd c1 c2 = Types.may_equal_constr c1 c2
 
-and may_compats = MayCompat.compats
+let may_compat = Parmatch.Compat.compat ~equal_cd
+
+and may_compats = Parmatch.Compat.compats ~equal_cd
 
 (*
    Many functions on the various data structures of the algorithm :
@@ -224,12 +223,6 @@ let ctx_matcher p =
         let l' = all_record_args l' in
         (p, List.fold_right (fun (_, _, p, _) r -> p :: r) l' rem)
       | Tpat_any -> (p, List.fold_right (fun (_, _, p, _) r -> p :: r) l rem)
-      | _ -> raise NoMatch)
-  | Tpat_lazy omega -> (
-    fun q rem ->
-      match q.pat_desc with
-      | Tpat_lazy arg -> (p, arg :: rem)
-      | Tpat_any -> (p, omega :: rem)
       | _ -> raise NoMatch)
   | _ -> fatal_error "Matching.ctx_matcher"
 
@@ -627,7 +620,6 @@ let rec extract_vars r p =
   | Tpat_construct (_, _, pats) -> List.fold_left extract_vars r pats
   | Tpat_array pats -> List.fold_left extract_vars r pats
   | Tpat_variant (_, Some p, _) -> extract_vars r p
-  | Tpat_lazy p -> extract_vars r p
   | Tpat_or (p, _, _) -> extract_vars r p
   | Tpat_constant _ | Tpat_any | Tpat_variant (_, None, _) -> r
 
@@ -696,10 +688,6 @@ and group_array = function
   | {pat_desc = Tpat_array _} -> true
   | _ -> false
 
-and group_lazy = function
-  | {pat_desc = Tpat_lazy _} -> true
-  | _ -> false
-
 let get_group p =
   match p.pat_desc with
   | Tpat_any -> group_var
@@ -709,7 +697,6 @@ let get_group p =
   | Tpat_record _ -> group_record
   | Tpat_array _ -> group_array
   | Tpat_variant (_, _, _) -> group_variant
-  | Tpat_lazy _ -> group_lazy
   | _ -> fatal_error "Matching.get_group"
 
 let is_or p =
@@ -1389,79 +1376,6 @@ let make_var_matching def = function
 
 let divide_var ctx pm =
   divide_line ctx_lshift make_var_matching get_args_var omega ctx pm
-
-(* Matching and forcing a lazy value *)
-
-let get_arg_lazy p rem =
-  match p with
-  | {pat_desc = Tpat_any} -> omega :: rem
-  | {pat_desc = Tpat_lazy arg} -> arg :: rem
-  | _ -> assert false
-
-let matcher_lazy p rem =
-  match p.pat_desc with
-  | Tpat_or (_, _, _) -> raise OrPat
-  | Tpat_any | Tpat_var _ -> omega :: rem
-  | Tpat_lazy arg -> arg :: rem
-  | _ -> raise NoMatch
-
-(* Inlining the tag tests before calling the primitive that works on
-   lazy blocks. This is also used in translcore.ml.
-   No other call than Obj.tag when the value has been forced before.
-*)
-
-let get_mod_field modname field =
-  lazy
-    (try
-       let mod_ident = Ident.create_persistent modname in
-       let env = Env.open_pers_signature modname Env.initial_safe_string in
-       let p =
-         try
-           match Env.lookup_value (Longident.Lident field) env with
-           | Path.Pdot (_, _, i), _ -> i
-           | _ ->
-             fatal_error ("Primitive " ^ modname ^ "." ^ field ^ " not found.")
-         with Not_found ->
-           fatal_error ("Primitive " ^ modname ^ "." ^ field ^ " not found.")
-       in
-       Lprim
-         ( Pfield (p, Fld_module {name = field}),
-           [Lprim (Pgetglobal mod_ident, [], Location.none)],
-           Location.none )
-     with Not_found -> fatal_error ("Module " ^ modname ^ " unavailable."))
-
-let code_force = get_mod_field Primitive_modules.lazy_ "force"
-
-(* inline_lazy_force inlines the beginning of the code of Lazy.force. When
-   the value argument is tagged as:
-   - forward, take field 0
-   - lazy, call the primitive that forces (without testing again the tag)
-   - anything else, return it
-
-   Using Lswitch below relies on the fact that the GC does not shortcut
-   Forward(val_out_of_heap).
-*)
-
-let inline_lazy_force arg loc =
-  Lapply
-    {
-      ap_func = Lazy.force code_force;
-      ap_inlined = Default_inline;
-      ap_args = [arg];
-      ap_loc = loc;
-      ap_transformed_jsx = false;
-    }
-let make_lazy_matching def = function
-  | [] -> fatal_error "Matching.make_lazy_matching"
-  | (arg, _mut) :: argl ->
-    {
-      cases = [];
-      args = (inline_lazy_force arg Location.none, Strict) :: argl;
-      default = make_default matcher_lazy def;
-    }
-
-let divide_lazy p ctx pm =
-  divide_line (filter_ctx p) make_lazy_matching get_arg_lazy p ctx pm
 
 (* Matching against a tuple pattern *)
 
@@ -2669,10 +2583,6 @@ and do_compile_matching repr partial ctx arg pmh =
         partial divide_array
         (combine_array names pat.pat_loc arg partial)
         ctx pm
-    | Tpat_lazy _ ->
-      compile_no_test
-        (divide_lazy (normalize_pat pat))
-        ctx_combine repr partial ctx pm
     | Tpat_variant (_, _, row) ->
       let names = None in
       compile_test
@@ -2720,8 +2630,7 @@ let find_in_pat pred =
     pred p.pat_desc
     ||
     match p.pat_desc with
-    | Tpat_alias (p, _, _) | Tpat_variant (_, Some p, _) | Tpat_lazy p ->
-      find_rec p
+    | Tpat_alias (p, _, _) | Tpat_variant (_, Some p, _) -> find_rec p
     | Tpat_tuple ps | Tpat_construct (_, _, ps) | Tpat_array ps ->
       List.exists find_rec ps
     | Tpat_record (lpats, _) ->
@@ -2732,15 +2641,6 @@ let find_in_pat pred =
   in
   find_rec
 
-let is_lazy_pat = function
-  | Tpat_lazy _ -> true
-  | Tpat_alias _ | Tpat_variant _ | Tpat_record _ | Tpat_tuple _
-  | Tpat_construct _ | Tpat_array _ | Tpat_or _ | Tpat_constant _ | Tpat_var _
-  | Tpat_any ->
-    false
-
-let is_lazy p = find_in_pat is_lazy_pat p
-
 let have_mutable_field p =
   match p with
   | Tpat_record (lps, _) ->
@@ -2750,9 +2650,8 @@ let have_mutable_field p =
         | Mutable -> true
         | Immutable -> false)
       lps
-  | Tpat_alias _ | Tpat_variant _ | Tpat_lazy _ | Tpat_tuple _
-  | Tpat_construct _ | Tpat_array _ | Tpat_or _ | Tpat_constant _ | Tpat_var _
-  | Tpat_any ->
+  | Tpat_alias _ | Tpat_variant _ | Tpat_tuple _ | Tpat_construct _
+  | Tpat_array _ | Tpat_or _ | Tpat_constant _ | Tpat_var _ | Tpat_any ->
     false
 
 let is_mutable p = find_in_pat have_mutable_field p
@@ -2762,7 +2661,7 @@ let is_mutable p = find_in_pat have_mutable_field p
    2. And there are  guards or lazy patterns.
 *)
 
-let check_partial is_mutable is_lazy pat_act_list = function
+let check_partial is_mutable pat_act_list = function
   | Partial -> Partial
   | Total ->
     if
@@ -2770,14 +2669,13 @@ let check_partial is_mutable is_lazy pat_act_list = function
       ||
       (* allow empty case list *)
       List.exists
-        (fun (pats, lam) -> is_mutable pats && (is_guarded lam || is_lazy pats))
+        (fun (pats, lam) -> is_mutable pats && is_guarded lam)
         pat_act_list
     then Partial
     else Total
 
-let check_partial_list =
-  check_partial (List.exists is_mutable) (List.exists is_lazy)
-let check_partial = check_partial is_mutable is_lazy
+let check_partial_list = check_partial (List.exists is_mutable)
+let check_partial = check_partial is_mutable
 
 (* have toplevel handler when appropriate *)
 

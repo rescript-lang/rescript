@@ -11,8 +11,7 @@ val rhs_binary_expr_operand : string -> Parsetree.expression -> bool
 val flatten_operand_rhs : string -> Parsetree.expression -> bool
 
 val binary_operator_inside_await_needs_parens : string -> bool
-val lazy_or_assert_or_await_expr_rhs :
-  ?in_await:bool -> Parsetree.expression -> kind
+val assert_or_await_expr_rhs : ?in_await:bool -> Parsetree.expression -> kind
 
 val field_expr : Parsetree.expression -> kind
 

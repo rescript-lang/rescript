@@ -46,7 +46,6 @@ type tag_info =
       fields: string array;
       mutable_flag: Asttypes.mutable_flag;
     }
-  | Blk_lazy_general
 
 let tag_of_tag_info (tag : tag_info) =
   match tag with
@@ -54,7 +53,6 @@ let tag_of_tag_info (tag : tag_info) =
   | Blk_tuple | Blk_poly_var _ | Blk_record _ | Blk_module _
   | Blk_module_export _ | Blk_extension | Blk_some (* tag not make sense *)
   | Blk_some_not_nested (* tag not make sense *)
-  | Blk_lazy_general (* tag not make sense 248 *)
   | Blk_record_ext _ (* similar to Blk_extension*) ->
     0
 
@@ -64,7 +62,6 @@ let mutable_flag_of_tag_info (tag : tag_info) =
   | Blk_record {mutable_flag}
   | Blk_record_ext {mutable_flag} ->
     mutable_flag
-  | Blk_lazy_general -> Mutable
   | Blk_tuple | Blk_constructor _ | Blk_poly_var _ | Blk_module _
   | Blk_module_export _ | Blk_extension | Blk_some_not_nested | Blk_some ->
     Immutable

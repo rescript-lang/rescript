@@ -46,7 +46,6 @@ and traversePattern (pat : Parsetree.pattern) ~patternPath ~locHasCursor
   in
   match pat.ppat_desc with
   | Ppat_constant _ | Ppat_interval _ -> None
-  | Ppat_lazy p
   | Ppat_constraint (p, _)
   | Ppat_alias (p, _)
   | Ppat_exception p

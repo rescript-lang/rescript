@@ -198,7 +198,6 @@ let rec add_pattern bv pat =
     add_type bv ty
   | Ppat_variant (_, op) -> add_opt add_pattern bv op
   | Ppat_type li -> add bv li
-  | Ppat_lazy p -> add_pattern bv p
   | Ppat_unpack id -> pattern_bv := StringMap.add id.txt bound !pattern_bv
   | Ppat_open (m, p) ->
     let bv = open_module bv m.txt in
@@ -276,7 +275,6 @@ let rec add_expr bv exp =
     add_expr (StringMap.add id.txt b bv) e
   | Pexp_letexception (_, e) -> add_expr bv e
   | Pexp_assert e -> add_expr bv e
-  | Pexp_lazy e -> add_expr bv e
   | Pexp_newtype (_, e) -> add_expr bv e
   | Pexp_pack m -> add_module bv m
   | Pexp_open (_ovf, m, e) ->

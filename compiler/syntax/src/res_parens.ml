@@ -50,9 +50,9 @@ let call_expr expr =
       Nothing
     | {
      pexp_desc =
-       ( Pexp_lazy _ | Pexp_assert _ | Pexp_fun _ | Pexp_newtype _
-       | Pexp_constraint _ | Pexp_setfield _ | Pexp_match _ | Pexp_try _
-       | Pexp_while _ | Pexp_for _ | Pexp_ifthenelse _ );
+       ( Pexp_assert _ | Pexp_fun _ | Pexp_newtype _ | Pexp_constraint _
+       | Pexp_setfield _ | Pexp_match _ | Pexp_try _ | Pexp_while _ | Pexp_for _
+       | Pexp_ifthenelse _ );
     } ->
       Parenthesized
     | _ when Ast_uncurried.expr_is_uncurried_fun expr -> Parenthesized
@@ -101,10 +101,10 @@ let unary_expr_operand expr =
       Nothing
     | {
      pexp_desc =
-       ( Pexp_lazy _ | Pexp_assert _ | Pexp_fun _ | Pexp_newtype _
-       | Pexp_constraint _ | Pexp_setfield _
-       | Pexp_extension _ (* readability? maybe remove *) | Pexp_match _
-       | Pexp_try _ | Pexp_while _ | Pexp_for _ | Pexp_ifthenelse _ );
+       ( Pexp_assert _ | Pexp_fun _ | Pexp_newtype _ | Pexp_constraint _
+       | Pexp_setfield _ | Pexp_extension _ (* readability? maybe remove *)
+       | Pexp_match _ | Pexp_try _ | Pexp_while _ | Pexp_for _
+       | Pexp_ifthenelse _ );
     } ->
       Parenthesized
     | _ when ParsetreeViewer.expr_is_await expr -> Parenthesized
@@ -130,7 +130,7 @@ let binary_expr_operand ~is_lhs expr =
     | expr when ParsetreeViewer.is_binary_expression expr -> Parenthesized
     | expr when ParsetreeViewer.is_ternary_expr expr -> Parenthesized
     | expr when ParsetreeViewer.is_unary_bitnot_expression expr -> Parenthesized
-    | {pexp_desc = Pexp_lazy _ | Pexp_assert _} when is_lhs -> Parenthesized
+    | {pexp_desc = Pexp_assert _} when is_lhs -> Parenthesized
     | _ when ParsetreeViewer.expr_is_await expr -> Parenthesized
     | {Parsetree.pexp_attributes = attrs} ->
       if ParsetreeViewer.has_printable_attributes attrs then Parenthesized
@@ -191,7 +191,7 @@ let binary_operator_inside_await_needs_parens operator =
   ParsetreeViewer.operator_precedence operator
   < ParsetreeViewer.operator_precedence "->"
 
-let lazy_or_assert_or_await_expr_rhs ?(in_await = false) expr =
+let assert_or_await_expr_rhs ?(in_await = false) expr =
   let opt_braces, _ = ParsetreeViewer.process_braces_attr expr in
   match opt_braces with
   | Some ({Location.loc = braces_loc}, _) -> Braced braces_loc
@@ -221,9 +221,9 @@ let lazy_or_assert_or_await_expr_rhs ?(in_await = false) expr =
       Nothing
     | {
      pexp_desc =
-       ( Pexp_lazy _ | Pexp_assert _ | Pexp_fun _ | Pexp_newtype _
-       | Pexp_constraint _ | Pexp_setfield _ | Pexp_match _ | Pexp_try _
-       | Pexp_while _ | Pexp_for _ | Pexp_ifthenelse _ );
+       ( Pexp_assert _ | Pexp_fun _ | Pexp_newtype _ | Pexp_constraint _
+       | Pexp_setfield _ | Pexp_match _ | Pexp_try _ | Pexp_while _ | Pexp_for _
+       | Pexp_ifthenelse _ );
     } ->
       Parenthesized
     | _ when (not in_await) && ParsetreeViewer.expr_is_await expr ->
@@ -266,10 +266,10 @@ let field_expr expr =
       Nothing
     | {
      pexp_desc =
-       ( Pexp_lazy _ | Pexp_assert _
-       | Pexp_extension _ (* %extension.x vs (%extension).x *) | Pexp_fun _
-       | Pexp_newtype _ | Pexp_constraint _ | Pexp_setfield _ | Pexp_match _
-       | Pexp_try _ | Pexp_while _ | Pexp_for _ | Pexp_ifthenelse _ );
+       ( Pexp_assert _ | Pexp_extension _ (* %extension.x vs (%extension).x *)
+       | Pexp_fun _ | Pexp_newtype _ | Pexp_constraint _ | Pexp_setfield _
+       | Pexp_match _ | Pexp_try _ | Pexp_while _ | Pexp_for _
+       | Pexp_ifthenelse _ );
     } ->
       Parenthesized
     | _ when ParsetreeViewer.expr_is_await expr -> Parenthesized

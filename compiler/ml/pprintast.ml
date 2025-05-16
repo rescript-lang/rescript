@@ -478,7 +478,6 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
     | Ppat_variant (l, None) -> pp f "`%s" l
     | Ppat_constraint (p, ct) ->
       pp f "@[<2>(%a@;:@;%a)@]" (pattern1 ctxt) p (core_type ctxt) ct
-    | Ppat_lazy p -> pp f "@[<2>(lazy@;%a)@]" (pattern1 ctxt) p
     | Ppat_exception p -> pp f "@[<2>exception@;%a@]" (pattern1 ctxt) p
     | Ppat_extension e -> extension ctxt f e
     | Ppat_open (lid, p) ->
@@ -716,7 +715,6 @@ and expression ctxt f x =
         (extension_constructor ctxt)
         cd (expression ctxt) e
     | Pexp_assert e -> pp f "@[<hov2>assert@ %a@]" (simple_expr ctxt) e
-    | Pexp_lazy e -> pp f "@[<hov2>lazy@ %a@]" (simple_expr ctxt) e
     | Pexp_open (ovf, lid, e) ->
       pp f "@[<2>let open%s %a in@;%a@]" (override ovf) longident_loc lid
         (expression ctxt) e

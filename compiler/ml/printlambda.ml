@@ -96,7 +96,6 @@ let print_taginfo ppf = function
   | Blk_module ss -> fprintf ppf "[%s]" (String.concat ";" ss)
   | Blk_some -> fprintf ppf "some"
   | Blk_some_not_nested -> fprintf ppf "some_not_nested"
-  | Blk_lazy_general -> fprintf ppf "lazy_general"
   | Blk_module_export _ -> fprintf ppf "module/exports"
   | Blk_record_inlined {fields = ss} ->
     fprintf ppf "[%s]" (String.concat ";" (List.map fst (Array.to_list ss)))

@@ -166,8 +166,7 @@ let all_coherent column =
     | Tpat_record ([], _), Tpat_record (_, _)
     | Tpat_record (_, _), Tpat_record ([], _)
     | Tpat_variant _, Tpat_variant _
-    | Tpat_array _, Tpat_array _
-    | Tpat_lazy _, Tpat_lazy _ ->
+    | Tpat_array _, Tpat_array _ ->
       true
     | _, _ -> false
   in
@@ -282,56 +281,51 @@ let records_args l1 l2 =
   in
   combine [] [] l1 l2
 
-module Compat (Constr : sig
-  val equal :
-    Types.constructor_description -> Types.constructor_description -> bool
-end) =
-struct
-  let rec compat p q =
+module Compat = struct
+  type eq_cd = constructor_description -> constructor_description -> bool
+
+  let rec compat ~(equal_cd : eq_cd) p q =
     match (p.pat_desc, q.pat_desc) with
     (* Variables match any value *)
     | (Tpat_any | Tpat_var _), _ | _, (Tpat_any | Tpat_var _) -> true
     (* Structural induction *)
-    | Tpat_alias (p, _, _), _ -> compat p q
-    | _, Tpat_alias (q, _, _) -> compat p q
-    | Tpat_or (p1, p2, _), _ -> compat p1 q || compat p2 q
-    | _, Tpat_or (q1, q2, _) -> compat p q1 || compat p q2
+    | Tpat_alias (p, _, _), _ -> compat ~equal_cd p q
+    | _, Tpat_alias (q, _, _) -> compat ~equal_cd p q
+    | Tpat_or (p1, p2, _), _ -> compat ~equal_cd p1 q || compat ~equal_cd p2 q
+    | _, Tpat_or (q1, q2, _) -> compat ~equal_cd p q1 || compat ~equal_cd p q2
     (* Constructors, with special case for extension *)
     | Tpat_construct (_, c1, ps1), Tpat_construct (_, c2, ps2) ->
-      Constr.equal c1 c2 && compats ps1 ps2
+      equal_cd c1 c2 && compats ~equal_cd ps1 ps2
     (* More standard stuff *)
     | Tpat_variant (l1, op1, _), Tpat_variant (l2, op2, _) ->
-      l1 = l2 && ocompat op1 op2
+      l1 = l2 && ocompat ~equal_cd op1 op2
     | Tpat_constant c1, Tpat_constant c2 -> const_compare c1 c2 = 0
-    | Tpat_tuple ps, Tpat_tuple qs -> compats ps qs
-    | Tpat_lazy p, Tpat_lazy q -> compat p q
+    | Tpat_tuple ps, Tpat_tuple qs -> compats ~equal_cd ps qs
     | Tpat_record (l1, _), Tpat_record (l2, _) ->
       let ps, qs = records_args l1 l2 in
-      compats ps qs
+      compats ~equal_cd ps qs
     | Tpat_array ps, Tpat_array qs ->
-      List.length ps = List.length qs && compats ps qs
+      List.length ps = List.length qs && compats ~equal_cd ps qs
     | _, _ -> false
 
-  and ocompat op oq =
+  and ocompat ~equal_cd op oq =
     match (op, oq) with
     | None, None -> true
-    | Some p, Some q -> compat p q
+    | Some p, Some q -> compat ~equal_cd p q
     | None, Some _ | Some _, None -> false
 
-  and compats ps qs =
+  and compats ~equal_cd ps qs =
     match (ps, qs) with
     | [], [] -> true
-    | p :: ps, q :: qs -> compat p q && compats ps qs
+    | p :: ps, q :: qs -> compat ~equal_cd p q && compats ~equal_cd ps qs
     | _, _ -> false
 end
 
-module SyntacticCompat = Compat (struct
-  let equal c1 c2 = Types.equal_tag c1.cstr_tag c2.cstr_tag
-end)
+let equal_tag c1 c2 = Types.equal_tag c1.cstr_tag c2.cstr_tag
 
-let compat = SyntacticCompat.compat
+let compat = Compat.compat ~equal_cd:equal_tag
 
-and compats = SyntacticCompat.compats
+and compats = Compat.compats ~equal_cd:equal_tag
 
 (* Due to (potential) rebinding, two extension constructors
    of the same arity type may equal *)
@@ -417,7 +411,6 @@ let rec pretty_val ppf v =
         let elision_mark _ = () in
         fprintf ppf "@[{%a%t}@]" pretty_lvals filtered_lvs elision_mark)
     | Tpat_array vs -> fprintf ppf "@[[%a]@]" (pretty_vals ",") vs
-    | Tpat_lazy v -> fprintf ppf "@[<2>lazy@ %a@]" pretty_arg v
     | Tpat_alias (v, x, _) ->
       fprintf ppf "@[(%a@ as %a)@]" pretty_val v Ident.print x
     | Tpat_or (v, w, _) -> fprintf ppf "@[%a | @,%a@]" pretty_or v pretty_or w)
@@ -493,7 +486,6 @@ let simple_match p1 p2 =
     Types.equal_tag c1.cstr_tag c2.cstr_tag
   | Tpat_variant (l1, _, _), Tpat_variant (l2, _, _) -> l1 = l2
   | Tpat_constant c1, Tpat_constant c2 -> const_compare c1 c2 = 0
-  | Tpat_lazy _, Tpat_lazy _ -> true
   | Tpat_record _, Tpat_record _ -> true
   | Tpat_tuple p1s, Tpat_tuple p2s | Tpat_array p1s, Tpat_array p2s ->
     List.length p1s = List.length p2s
@@ -579,7 +571,6 @@ let rec simple_match_args p1 p2 =
   | Tpat_tuple args -> args
   | Tpat_record (args, _) -> extract_fields (record_arg p1) args
   | Tpat_array args -> args
-  | Tpat_lazy arg -> [arg]
   | Tpat_any | Tpat_var _ -> (
     match p1.pat_desc with
     | Tpat_construct (_, _, args) -> omega_list args
@@ -587,7 +578,6 @@ let rec simple_match_args p1 p2 =
     | Tpat_tuple args -> omega_list args
     | Tpat_record (args, _) -> omega_list args
     | Tpat_array args -> omega_list args
-    | Tpat_lazy _ -> [omega]
     | _ -> [])
   | _ -> []
 
@@ -617,7 +607,6 @@ let rec normalize_pat q =
          ( List.map (fun (lid, lbl, _, opt) -> (lid, lbl, omega, opt)) largs,
            closed ))
       q.pat_type q.pat_env
-  | Tpat_lazy _ -> make_pat (Tpat_lazy omega) q.pat_type q.pat_env
   | Tpat_or _ -> fatal_error "Parmatch.normalize_pat"
 
 (*
@@ -634,7 +623,6 @@ let discr_pat q pss =
       acc_pat acc ((p1 :: ps) :: (p2 :: ps) :: pss)
     | ({pat_desc = Tpat_any | Tpat_var _} :: _) :: pss -> acc_pat acc pss
     | (({pat_desc = Tpat_tuple _} as p) :: _) :: _ -> normalize_pat p
-    | (({pat_desc = Tpat_lazy _} as p) :: _) :: _ -> normalize_pat p
     | (({pat_desc = Tpat_record (largs, closed)} as p) :: _) :: pss ->
       let new_omegas =
         List.fold_right
@@ -702,10 +690,6 @@ let do_set_args erase_mutable q r =
       | _ -> assert false
     in
     make_pat (Tpat_variant (l, arg, row)) q.pat_type q.pat_env :: rest
-  | {pat_desc = Tpat_lazy _omega} -> (
-    match r with
-    | arg :: rest -> make_pat (Tpat_lazy arg) q.pat_type q.pat_env :: rest
-    | _ -> fatal_error "Parmatch.do_set_args (lazy)")
   | {pat_desc = Tpat_array omegas} ->
     let args, rest = read_args omegas r in
     make_pat (Tpat_array args) q.pat_type q.pat_env :: rest
@@ -798,7 +782,7 @@ let filter_all pat0 pss =
   filter_omega
     (filter_rec
        (match pat0.pat_desc with
-       | Tpat_record _ | Tpat_tuple _ | Tpat_lazy _ -> [(pat0, [])]
+       | Tpat_record _ | Tpat_tuple _ -> [(pat0, [])]
        | _ -> [])
        pss)
     pss
@@ -892,7 +876,6 @@ let full_match closing env =
   | ({pat_desc = Tpat_tuple _}, _) :: _ -> true
   | ({pat_desc = Tpat_record _}, _) :: _ -> true
   | ({pat_desc = Tpat_array _}, _) :: _ -> false
-  | ({pat_desc = Tpat_lazy _}, _) :: _ -> true
   | ({pat_desc = Tpat_any | Tpat_var _ | Tpat_alias _ | Tpat_or _}, _) :: _ | []
     ->
     assert false
@@ -912,7 +895,7 @@ let should_extend ext env =
         Path.same path ext
       | Tpat_construct (_, {cstr_tag = Cstr_extension _}, _) -> false
       | Tpat_constant _ | Tpat_tuple _ | Tpat_variant _ | Tpat_record _
-      | Tpat_array _ | Tpat_lazy _ ->
+      | Tpat_array _ ->
         false
       | Tpat_any | Tpat_var _ | Tpat_alias _ | Tpat_or _ -> assert false))
 
@@ -1187,7 +1170,6 @@ let rec has_instance p =
   | Tpat_construct (_, _, ps) | Tpat_tuple ps | Tpat_array ps ->
     has_instances ps
   | Tpat_record (lps, _) -> has_instances (List.map (fun (_, _, x, _) -> x) lps)
-  | Tpat_lazy p -> has_instance p
 
 and has_instances = function
   | [] -> true
@@ -1790,7 +1772,6 @@ let rec le_pat p q =
   | Tpat_variant (l1, None, _r1), Tpat_variant (l2, None, _) -> l1 = l2
   | Tpat_variant (_, _, _), Tpat_variant (_, _, _) -> false
   | Tpat_tuple ps, Tpat_tuple qs -> le_pats ps qs
-  | Tpat_lazy p, Tpat_lazy q -> le_pat p q
   | Tpat_record (l1, _), Tpat_record (l2, _) ->
     let ps, qs = records_args l1 l2 in
     le_pats ps qs
@@ -1829,9 +1810,6 @@ let rec lub p q =
   | Tpat_tuple ps, Tpat_tuple qs ->
     let rs = lubs ps qs in
     make_pat (Tpat_tuple rs) p.pat_type p.pat_env
-  | Tpat_lazy p, Tpat_lazy q ->
-    let r = lub p q in
-    make_pat (Tpat_lazy r) p.pat_type p.pat_env
   | Tpat_construct (lid, c1, ps1), Tpat_construct (_, c2, ps2)
     when Types.equal_tag c1.cstr_tag c2.cstr_tag ->
     let rs = lubs ps1 ps2 in
@@ -2013,7 +1991,6 @@ module Conv = struct
         in
         mkpat (Ppat_record (fields, Open))
       | Tpat_array lst -> mkpat (Ppat_array (List.map loop lst))
-      | Tpat_lazy p -> mkpat (Ppat_lazy (loop p))
     in
     let ps = loop typed in
     (ps, constrs, labels)
@@ -2146,7 +2123,6 @@ let rec collect_paths_from_pat r p =
     collect_paths_from_pat r p
   | Tpat_or (p1, p2, _) ->
     collect_paths_from_pat (collect_paths_from_pat r p1) p2
-  | Tpat_lazy p -> collect_paths_from_pat r p
 
 (*
   Actual fragile check
@@ -2248,7 +2224,7 @@ let inactive ~partial pat =
   | Total ->
     let rec loop pat =
       match pat.pat_desc with
-      | Tpat_lazy _ | Tpat_array _ -> false
+      | Tpat_array _ -> false
       | Tpat_any | Tpat_var _ | Tpat_variant (_, None, _) -> true
       | Tpat_constant c -> (
         match c with

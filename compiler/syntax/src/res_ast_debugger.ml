@@ -691,7 +691,6 @@ module SexpAst = struct
             expression expr;
           ]
       | Pexp_assert expr -> Sexp.list [Sexp.atom "Pexp_assert"; expression expr]
-      | Pexp_lazy expr -> Sexp.list [Sexp.atom "Pexp_lazy"; expression expr]
       | Pexp_newtype (lbl, expr) ->
         Sexp.list
           [Sexp.atom "Pexp_newtype"; string lbl.Asttypes.txt; expression expr]
@@ -818,7 +817,6 @@ module SexpAst = struct
         Sexp.list [Sexp.atom "Ppat_constraint"; pattern p; core_type typexpr]
       | Ppat_type longident_loc ->
         Sexp.list [Sexp.atom "Ppat_type"; longident longident_loc.Location.txt]
-      | Ppat_lazy p -> Sexp.list [Sexp.atom "Ppat_lazy"; pattern p]
       | Ppat_unpack string_loc ->
         Sexp.list [Sexp.atom "Ppat_unpack"; string string_loc.Location.txt]
       | Ppat_exception p -> Sexp.list [Sexp.atom "Ppat_exception"; pattern p]

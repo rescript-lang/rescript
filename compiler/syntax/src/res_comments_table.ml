@@ -1158,7 +1158,7 @@ and walk_expression expr t comments =
       attach t.leading expr2.pexp_loc leading;
       walk_expression expr2 t inside;
       attach t.trailing expr2.pexp_loc trailing
-  | Pexp_assert expr | Pexp_lazy expr ->
+  | Pexp_assert expr ->
     if is_block_expr expr then walk_expression expr t comments
     else
       let leading, inside, trailing = partition_by_loc comments expr.pexp_loc in
@@ -2092,7 +2092,7 @@ and walk_pattern pat t comments =
     attach t.leading typ.ptyp_loc before_typ;
     walk_core_type typ t inside_typ;
     attach t.trailing typ.ptyp_loc after_typ
-  | Ppat_lazy pattern | Ppat_exception pattern ->
+  | Ppat_exception pattern ->
     let leading, inside, trailing =
       partition_by_loc comments pattern.ppat_loc
     in
