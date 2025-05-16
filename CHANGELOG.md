@@ -25,6 +25,7 @@
 - Significantly reduced the download size by splitting binaries into optional platform-specific dependencies (e.g, `@rescript/linux-x64`). https://github.com/rescript-lang/rescript/pull/7395
 - JSX: do not error on ref as prop anymore (which is allowed in React 19). https://github.com/rescript-lang/rescript/pull/7420
 - Add new attribute `@notUndefined` for abstract types to prevent unnecessary wrapping with `Primitive_option.some` in JS output. https://github.com/rescript-lang/rescript/pull/7458
+- Preserve JSX: enable by adding `"-bs-jsx-preserve"` to `"bsc-flags"` (Does require `"jsx": { "version": 4 }`). https://github.com/rescript-lang/rescript/pull/7387
 
 #### :bug: Bug fix
 
@@ -48,6 +49,7 @@
 - In type errors, recommend stdlib over Belt functions for converting between float/int/string. https://github.com/rescript-lang/rescript/pull/7453
 - Remove unused type `Jsx.ref`. https://github.com/rescript-lang/rescript/pull/7459
 - Add `@notUndefined` attribute to all relevant abstract types in `Stdlib`. https://github.com/rescript-lang/rescript/pull/7464
+- Editor: Add pipe completions from current module. https://github.com/rescript-lang/rescript/pull/7471
 
 # 12.0.0-alpha.12
 
