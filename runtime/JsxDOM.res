@@ -533,6 +533,7 @@ type domProps = {
   seed?: string,
   shapeRendering?: string,
   slope?: string,
+  slot?: string,
   spacing?: string,
   specularConstant?: string,
   specularExponent?: string,
