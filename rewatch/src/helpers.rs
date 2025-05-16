@@ -60,37 +60,24 @@ impl LexicalAbsolute for Path {
     }
 }
 
-pub fn package_path(root: &str, package_name: &str) -> String {
-    format!("{}/node_modules/{}", root, package_name)
+pub fn package_path(root: &Path, package_name: &str) -> PathBuf {
+    root.join("node_modules").join(package_name)
 }
 
-pub fn get_abs_path(path: &str) -> String {
+pub fn get_abs_path(path: &Path) -> PathBuf {
     let abs_path_buf = PathBuf::from(path);
 
     return abs_path_buf
         .to_lexical_absolute()
-        .expect("Could not canonicalize")
-        .to_str()
-        .expect("Could not canonicalize")
-        .to_string();
+        .expect("Could not canonicalize");
 }
 
-pub fn get_basename(path: &str) -> String {
-    let path_buf = PathBuf::from(path);
-    return path_buf
+pub fn get_basename(path: &Path) -> String {
+    return path
         .file_stem()
         .expect("Could not get basename")
         .to_str()
         .expect("Could not get basename 2")
-        .to_string();
-}
-
-pub fn change_extension(path: &str, new_extension: &str) -> String {
-    let path_buf = PathBuf::from(path);
-    return path_buf
-        .with_extension(new_extension)
-        .to_str()
-        .expect("Could not change extension")
         .to_string();
 }
 
@@ -121,12 +108,12 @@ pub fn module_name_with_namespace(module_name: &str, namespace: &packages::Names
 
 // this doesn't capitalize the module name! if the rescript name of the file is "foo.res" the
 // compiler assets are foo-Namespace.cmt and foo-Namespace.cmj, but the module name is Foo
-pub fn file_path_to_compiler_asset_basename(path: &str, namespace: &packages::Namespace) -> String {
+pub fn file_path_to_compiler_asset_basename(path: &Path, namespace: &packages::Namespace) -> String {
     let base = get_basename(path);
     add_suffix(&base, namespace)
 }
 
-pub fn file_path_to_module_name(path: &str, namespace: &packages::Namespace) -> String {
+pub fn file_path_to_module_name(path: &Path, namespace: &packages::Namespace) -> String {
     capitalize(&file_path_to_compiler_asset_basename(path, namespace))
 }
 
@@ -139,18 +126,15 @@ pub fn contains_ascii_characters(str: &str) -> bool {
     false
 }
 
-pub fn create_path(path: &str) {
-    fs::DirBuilder::new()
-        .recursive(true)
-        .create(PathBuf::from(path.to_string()))
-        .unwrap();
+pub fn create_path(path: &Path) {
+    fs::DirBuilder::new().recursive(true).create(path).unwrap();
 }
 
 pub fn create_path_for_path(path: &Path) {
     fs::DirBuilder::new().recursive(true).create(path).unwrap();
 }
 
-pub fn get_bsc(root_path: &str, workspace_root: Option<String>) -> String {
+pub fn get_bsc(root_path: &Path, workspace_root: &Option<PathBuf>) -> PathBuf {
     let subfolder = match (std::env::consts::OS, std::env::consts::ARCH) {
         ("macos", "aarch64") => "darwin-arm64",
         ("macos", _) => "darwin-x64",
@@ -162,25 +146,27 @@ pub fn get_bsc(root_path: &str, workspace_root: Option<String>) -> String {
     };
 
     match (
-        PathBuf::from(format!(
-            "{}/node_modules/@rescript/{}/bin/bsc.exe",
-            root_path, subfolder
-        ))
-        .canonicalize(),
-        workspace_root.map(|workspace_root| {
-            PathBuf::from(format!(
-                "{}/node_modules/rescript/{}/bsc.exe",
-                workspace_root, subfolder
-            ))
-            .canonicalize()
+        root_path
+            .join("node_modules")
+            .join("@rescript")
+            .join(subfolder)
+            .join("bin")
+            .join("bsc.exe")
+            .canonicalize(),
+        workspace_root.as_ref().map(|workspace_root| {
+            workspace_root
+                .join("node_modules")
+                .join("@rescript")
+                .join(subfolder)
+                .join("bin")
+                .join("bsc.exe")
+                .canonicalize()
         }),
     ) {
         (Ok(path), _) => path,
         (_, Some(Ok(path))) => path,
         _ => panic!("Could not find bsc.exe"),
     }
-    .to_string_lossy()
-    .to_string()
 }
 
 pub fn string_ends_with_any(s: &Path, suffixes: &[&str]) -> bool {
@@ -198,8 +184,8 @@ fn path_to_ast_extension(path: &Path) -> &str {
     }
 }
 
-pub fn get_ast_path(source_file: &str) -> PathBuf {
-    let source_path = Path::new(source_file);
+pub fn get_ast_path(source_file: &Path) -> PathBuf {
+    let source_path = source_file;
 
     source_path.parent().unwrap().join(
         file_path_to_compiler_asset_basename(source_file, &packages::Namespace::NoNamespace)
@@ -210,18 +196,16 @@ pub fn get_ast_path(source_file: &str) -> PathBuf {
 pub fn get_compiler_asset(
     package: &packages::Package,
     namespace: &packages::Namespace,
-    source_file: &str,
+    source_file: &Path,
     extension: &str,
-) -> String {
+) -> PathBuf {
     let namespace = match extension {
         "ast" | "iast" => &packages::Namespace::NoNamespace,
         _ => namespace,
     };
-    package.get_ocaml_build_path()
-        + "/"
-        + &file_path_to_compiler_asset_basename(source_file, namespace)
-        + "."
-        + extension
+    package
+        .get_ocaml_build_path()
+        .join(file_path_to_compiler_asset_basename(source_file, namespace) + "." + extension)
 }
 
 pub fn canonicalize_string_path(path: &str) -> Option<PathBuf> {
@@ -231,7 +215,7 @@ pub fn canonicalize_string_path(path: &str) -> Option<PathBuf> {
 pub fn get_bs_compiler_asset(
     package: &packages::Package,
     namespace: &packages::Namespace,
-    source_file: &str,
+    source_file: &Path,
     extension: &str,
 ) -> String {
     let namespace = match extension {
@@ -255,11 +239,11 @@ pub fn get_namespace_from_module_name(module_name: &str) -> Option<String> {
     split.next().map(|s| s.to_string())
 }
 
-pub fn is_interface_ast_file(file: &str) -> bool {
+pub fn is_interface_ast_file(file: &Path) -> bool {
     file.ends_with(".iast")
 }
 
-pub fn read_lines(filename: String) -> io::Result<io::Lines<io::BufReader<fs::File>>> {
+pub fn read_lines(filename: &Path) -> io::Result<io::Lines<io::BufReader<fs::File>>> {
     let file = fs::File::open(filename)?;
     Ok(io::BufReader::new(file).lines())
 }
@@ -290,7 +274,7 @@ pub fn is_non_exotic_module_name(module_name: &str) -> bool {
     false
 }
 
-pub fn get_extension(path: &str) -> String {
+pub fn get_extension(path: &Path) -> String {
     let path_buf = PathBuf::from(path);
     return path_buf
         .extension()
@@ -324,18 +308,18 @@ fn has_rescript_config(path: &Path) -> bool {
     path.join("bsconfig.json").exists() || path.join("rescript.json").exists()
 }
 
-pub fn get_workspace_root(package_root: &str) -> Option<String> {
+pub fn get_workspace_root(package_root: &Path) -> Option<PathBuf> {
     std::path::PathBuf::from(&package_root)
         .parent()
         .and_then(get_nearest_config)
 }
 
 // traverse up the directory tree until we find a config.json, if not return None
-pub fn get_nearest_config(path_buf: &Path) -> Option<String> {
+pub fn get_nearest_config(path_buf: &Path) -> Option<PathBuf> {
     let mut current_dir = path_buf.to_owned();
     loop {
         if has_rescript_config(&current_dir) {
-            return Some(current_dir.to_string_lossy().to_string());
+            return Some(current_dir);
         }
         match current_dir.parent() {
             None => return None,
@@ -344,7 +328,7 @@ pub fn get_nearest_config(path_buf: &Path) -> Option<String> {
     }
 }
 
-pub fn get_rescript_version(bsc_path: &str) -> String {
+pub fn get_rescript_version(bsc_path: &Path) -> String {
     let version_cmd = Command::new(bsc_path)
         .args(["-v"])
         .output()

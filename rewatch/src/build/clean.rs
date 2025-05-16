@@ -7,9 +7,10 @@ use anyhow::Result;
 use console::style;
 use rayon::prelude::*;
 use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-fn remove_ast(package: &packages::Package, source_file: &str) {
+fn remove_ast(package: &packages::Package, source_file: &Path) {
     let _ = std::fs::remove_file(helpers::get_compiler_asset(
         package,
         &packages::Namespace::NoNamespace,
@@ -18,7 +19,7 @@ fn remove_ast(package: &packages::Package, source_file: &str) {
     ));
 }
 
-fn remove_iast(package: &packages::Package, source_file: &str) {
+fn remove_iast(package: &packages::Package, source_file: &Path) {
     let _ = std::fs::remove_file(helpers::get_compiler_asset(
         package,
         &packages::Namespace::NoNamespace,
@@ -27,15 +28,14 @@ fn remove_iast(package: &packages::Package, source_file: &str) {
     ));
 }
 
-fn remove_mjs_file(source_file: &str, suffix: &String) {
-    let _ = std::fs::remove_file(helpers::change_extension(
-        source_file,
+fn remove_mjs_file(source_file: &Path, suffix: &String) {
+    let _ = std::fs::remove_file(source_file.with_extension(
         // suffix.to_string includes the ., so we need to remove it
         &suffix.to_string()[1..],
     ));
 }
 
-fn remove_compile_asset(package: &packages::Package, source_file: &str, extension: &str) {
+fn remove_compile_asset(package: &packages::Package, source_file: &Path, extension: &str) {
     let _ = std::fs::remove_file(helpers::get_compiler_asset(
         package,
         &package.namespace,
@@ -50,7 +50,7 @@ fn remove_compile_asset(package: &packages::Package, source_file: &str, extensio
     ));
 }
 
-pub fn remove_compile_assets(package: &packages::Package, source_file: &str) {
+pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
     // optimization
     // only issue cmti if there is an interfacce file
     for extension in &["cmj", "cmi", "cmt", "cmti"] {
@@ -79,23 +79,20 @@ pub fn clean_mjs_files(build_state: &BuildState) {
                         .filter_map(|spec| {
                             if spec.in_source {
                                 Some((
-                                    std::path::PathBuf::from(package.path.to_string())
-                                        .join(&source_file.implementation.path)
-                                        .to_string_lossy()
-                                        .to_string(),
+                                    package.path.join(&source_file.implementation.path),
                                     root_package.config.get_suffix(spec),
                                 ))
                             } else {
                                 None
                             }
                         })
-                        .collect::<Vec<(String, String)>>(),
+                        .collect::<Vec<(PathBuf, String)>>(),
                 )
             }
             _ => None,
         })
         .flatten()
-        .collect::<Vec<(String, String)>>();
+        .collect::<Vec<(PathBuf, String)>>();
 
     rescript_file_locations
         .par_iter()
@@ -118,7 +115,7 @@ pub fn cleanup_previous_build(
     let diff = compile_assets_state
         .ast_rescript_file_locations
         .difference(&compile_assets_state.rescript_file_locations)
-        .collect::<Vec<&String>>();
+        .collect::<Vec<&PathBuf>>();
 
     let diff_len = diff.len();
 
@@ -133,7 +130,7 @@ pub fn cleanup_previous_build(
                 ..
             } = compile_assets_state
                 .ast_modules
-                .get(&res_file_location.to_string())
+                .get(*res_file_location)
                 .expect("Could not find module name for ast file");
 
             let package = build_state
@@ -338,7 +335,12 @@ pub fn cleanup_after_build(build_state: &BuildState) {
     });
 }
 
-pub fn clean(path: &str, show_progress: bool, bsc_path: Option<String>, build_dev_deps: bool) -> Result<()> {
+pub fn clean(
+    path: &Path,
+    show_progress: bool,
+    bsc_path: &Option<PathBuf>,
+    build_dev_deps: bool,
+) -> Result<()> {
     let project_root = helpers::get_abs_path(path);
     let workspace_root = helpers::get_workspace_root(&project_root);
     let packages = packages::make(
@@ -352,7 +354,7 @@ pub fn clean(path: &str, show_progress: bool, bsc_path: Option<String>, build_de
     let root_config_name = packages::read_package_name(&project_root)?;
     let bsc_path = match bsc_path {
         Some(bsc_path) => helpers::get_abs_path(&bsc_path),
-        None => helpers::get_bsc(&project_root, workspace_root.to_owned()),
+        None => helpers::get_bsc(&project_root, &workspace_root),
     };
 
     let rescript_version = helpers::get_rescript_version(&bsc_path);

@@ -9,7 +9,7 @@ use crate::queue::*;
 use futures_timer::Delay;
 use notify::event::ModifyKind;
 use notify::{Config, Error, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -48,23 +48,17 @@ fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
 
 async fn async_watch(
     q: Arc<FifoQueue<Result<Event, Error>>>,
-    path: &str,
+    path: &Path,
     show_progress: bool,
     filter: &Option<regex::Regex>,
     after_build: Option<String>,
     create_sourcedirs: bool,
     build_dev_deps: bool,
-    bsc_path: Option<String>,
+    bsc_path: Option<PathBuf>,
 ) -> notify::Result<()> {
-    let mut build_state = build::initialize_build(
-        None,
-        filter,
-        show_progress,
-        path,
-        bsc_path.clone(),
-        build_dev_deps,
-    )
-    .expect("Can't initialize build");
+    let mut build_state =
+        build::initialize_build(None, filter, show_progress, path, &bsc_path, build_dev_deps)
+            .expect("Can't initialize build");
     let mut needs_compile_type = CompileType::Incremental;
     // create a mutex to capture if ctrl-c was pressed
     let ctrlc_pressed = Arc::new(Mutex::new(false));
@@ -153,8 +147,7 @@ async fn async_watch(
                                             .get(&module.package_name)
                                             .expect("Package not found");
                                         let canonicalized_implementation_file =
-                                            std::path::PathBuf::from(package.path.to_string())
-                                                .join(&source_file.implementation.path);
+                                            package.path.join(&source_file.implementation.path);
                                         if canonicalized_path_buf == canonicalized_implementation_file {
                                             if let Ok(modified) =
                                                 canonicalized_path_buf.metadata().and_then(|x| x.modified())
@@ -168,8 +161,7 @@ async fn async_watch(
                                         // mark the interface file dirty
                                         if let Some(ref mut interface) = source_file.interface {
                                             let canonicalized_interface_file =
-                                                std::path::PathBuf::from(package.path.to_string())
-                                                    .join(&interface.path);
+                                                package.path.join(&interface.path);
                                             if canonicalized_path_buf == canonicalized_interface_file {
                                                 if let Ok(modified) = canonicalized_path_buf
                                                     .metadata()
@@ -236,15 +228,9 @@ async fn async_watch(
             }
             CompileType::Full => {
                 let timing_total = Instant::now();
-                build_state = build::initialize_build(
-                    None,
-                    filter,
-                    show_progress,
-                    path,
-                    bsc_path.clone(),
-                    build_dev_deps,
-                )
-                .expect("Can't initialize build");
+                build_state =
+                    build::initialize_build(None, filter, show_progress, path, &bsc_path, build_dev_deps)
+                        .expect("Can't initialize build");
                 let _ = build::incremental_build(
                     &mut build_state,
                     None,
@@ -301,15 +287,18 @@ pub fn start(
             .watch(folder.as_ref(), RecursiveMode::Recursive)
             .expect("Could not start watcher");
 
+        let path = Path::new(folder);
+        let bsc_path_buf = bsc_path.map(PathBuf::from);
+
         if let Err(e) = async_watch(
             consumer,
-            folder,
+            path,
             show_progress,
             filter,
             after_build,
             create_sourcedirs,
             build_dev_deps,
-            bsc_path,
+            bsc_path_buf,
         )
         .await
         {

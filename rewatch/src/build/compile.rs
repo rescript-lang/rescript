@@ -12,7 +12,7 @@ use anyhow::anyhow;
 use console::style;
 use log::{debug, trace};
 use rayon::prelude::*;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::SystemTime;
 
@@ -162,7 +162,7 @@ pub fn compile(
                                     let result = compile_file(
                                         package,
                                         root_package,
-                                        &helpers::get_ast_path(&path).to_string_lossy(),
+                                        &helpers::get_ast_path(&path),
                                         module,
                                         &build_state.rescript_version,
                                         true,
@@ -179,7 +179,7 @@ pub fn compile(
                             let result = compile_file(
                                 package,
                                 root_package,
-                                &helpers::get_ast_path(&source_file.implementation.path).to_string_lossy(),
+                                &helpers::get_ast_path(&source_file.implementation.path),
                                 module,
                                 &build_state.rescript_version,
                                 false,
@@ -352,13 +352,13 @@ pub fn compile(
 pub fn compiler_args(
     config: &config::Config,
     root_config: &config::Config,
-    ast_path: &str,
+    ast_path: &Path,
     version: &str,
-    file_path: &str,
+    file_path: &Path,
     is_interface: bool,
     has_interface: bool,
-    project_root: &str,
-    workspace_root: &Option<String>,
+    project_root: &Path,
+    workspace_root: &Option<PathBuf>,
     // if packages are known, we pass a reference here
     // this saves us a scan to find their paths
     packages: &Option<&AHashMap<String, packages::Package>>,
@@ -494,7 +494,7 @@ pub fn compiler_args(
         //     abs_node_modules_path.to_string() + "/rescript/ocaml",
         // ],
         vec!["-bs-v".to_string(), format!("{}", version)],
-        vec![ast_path.to_string()],
+        vec![ast_path.to_string_lossy().to_string()],
     ]
     .concat()
 }
@@ -523,8 +523,8 @@ impl DependentPackage {
 
 fn get_dependency_paths(
     config: &config::Config,
-    project_root: &str,
-    workspace_root: &Option<String>,
+    project_root: &Path,
+    workspace_root: &Option<PathBuf>,
     packages: &Option<&AHashMap<String, packages::Package>>,
     build_dev_deps: bool,
 ) -> Vec<Vec<String>> {
@@ -553,14 +553,19 @@ fn get_dependency_paths(
         .filter_map(|dependent_package| {
             let package_name = dependent_package.name();
             let dependency_path = if let Some(packages) = packages {
-                packages.get(package_name).map(|package| package.path.to_string())
+                packages
+                    .get(package_name)
+                    .as_ref()
+                    .map(|package| package.path.clone())
             } else {
                 packages::read_dependency(package_name, project_root, project_root, workspace_root).ok()
             }
             .map(|canonicalized_path| {
                 vec![
                     "-I".to_string(),
-                    packages::get_ocaml_build_path(&canonicalized_path),
+                    packages::get_ocaml_build_path(&canonicalized_path)
+                        .to_string_lossy()
+                        .to_string(),
                 ]
             });
 
@@ -579,14 +584,14 @@ fn get_dependency_paths(
 fn compile_file(
     package: &packages::Package,
     root_package: &packages::Package,
-    ast_path: &str,
+    ast_path: &Path,
     module: &Module,
     version: &str,
     is_interface: bool,
-    bsc_path: &str,
+    bsc_path: &Path,
     packages: &AHashMap<String, packages::Package>,
-    project_root: &str,
-    workspace_root: &Option<String>,
+    project_root: &Path,
+    workspace_root: &Option<PathBuf>,
     build_dev_deps: bool,
 ) -> Result<Option<String>, String> {
     let ocaml_build_path_abs = package.get_ocaml_build_path();
@@ -595,7 +600,8 @@ fn compile_file(
         SourceType::SourceFile(ref source_file) => Ok(&source_file.implementation.path),
         sourcetype => Err(format!(
             "Tried to compile a file that is not a source file ({}). Path to AST: {}. ",
-            sourcetype, ast_path
+            sourcetype,
+            ast_path.to_string_lossy()
         )),
     }?;
     let module_name = helpers::file_path_to_module_name(implementation_file_path, &package.namespace);
@@ -615,7 +621,7 @@ fn compile_file(
     );
 
     let to_mjs = Command::new(bsc_path)
-        .current_dir(helpers::canonicalize_string_path(&build_path_abs.to_owned()).unwrap())
+        .current_dir(build_path_abs.canonicalize().ok().unwrap())
         .args(to_mjs_args)
         .output();
 
@@ -644,14 +650,14 @@ fn compile_file(
                         // because editor tooling doesn't support namespace entries yet
                         // we just remove the @ for now. This makes sure the editor support
                         // doesn't break
-                        .join(module_name.to_owned() + ".cmi"),
-                    ocaml_build_path_abs.to_string() + "/" + &module_name + ".cmi",
+                        .join(module_name.to_string() + ".cmi"),
+                    ocaml_build_path_abs.join(module_name.to_string() + ".cmi"),
                 );
                 let _ = std::fs::copy(
                     std::path::Path::new(&package.get_build_path())
                         .join(dir)
-                        .join(module_name.to_owned() + ".cmj"),
-                    ocaml_build_path_abs.to_string() + "/" + &module_name + ".cmj",
+                        .join(module_name.to_string() + ".cmj"),
+                    ocaml_build_path_abs.join(module_name.to_string() + ".cmj"),
                 );
                 let _ = std::fs::copy(
                     std::path::Path::new(&package.get_build_path())
@@ -659,21 +665,21 @@ fn compile_file(
                         // because editor tooling doesn't support namespace entries yet
                         // we just remove the @ for now. This makes sure the editor support
                         // doesn't break
-                        .join(module_name.to_owned() + ".cmt"),
-                    ocaml_build_path_abs.to_string() + "/" + &module_name + ".cmt",
+                        .join(module_name.to_string() + ".cmt"),
+                    ocaml_build_path_abs.join(module_name.to_string() + ".cmt"),
                 );
             } else {
                 let _ = std::fs::copy(
                     std::path::Path::new(&package.get_build_path())
                         .join(dir)
-                        .join(module_name.to_owned() + ".cmti"),
-                    ocaml_build_path_abs.to_string() + "/" + &module_name + ".cmti",
+                        .join(module_name.to_string() + ".cmti"),
+                    ocaml_build_path_abs.join(module_name.to_string() + ".cmti"),
                 );
                 let _ = std::fs::copy(
                     std::path::Path::new(&package.get_build_path())
                         .join(dir)
-                        .join(module_name.to_owned() + ".cmi"),
-                    ocaml_build_path_abs.to_string() + "/" + &module_name + ".cmi",
+                        .join(module_name.to_string() + ".cmi"),
+                    ocaml_build_path_abs.join(module_name.to_string() + ".cmi"),
                 );
             }
 

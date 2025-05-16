@@ -21,7 +21,7 @@ use serde::Serialize;
 use std::fmt;
 use std::fs::File;
 use std::io::{stdout, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use self::compile::compiler_args;
@@ -55,15 +55,14 @@ pub struct CompilerArgs {
 }
 
 pub fn get_compiler_args(
-    path: &str,
+    path: &Path,
     rescript_version: Option<String>,
-    bsc_path: Option<String>,
+    bsc_path: &Option<PathBuf>,
     build_dev_deps: bool,
 ) -> Result<String> {
     let filename = &helpers::get_abs_path(path);
-    let package_root = helpers::get_abs_path(
-        &helpers::get_nearest_config(&std::path::PathBuf::from(path)).expect("Couldn't find package root"),
-    );
+    let package_root =
+        helpers::get_abs_path(&helpers::get_nearest_config(&path).expect("Couldn't find package root"));
     let workspace_root = get_workspace_root(&package_root).map(|p| helpers::get_abs_path(&p));
     let root_rescript_config =
         packages::read_config(&workspace_root.to_owned().unwrap_or(package_root.to_owned()))?;
@@ -73,17 +72,13 @@ pub fn get_compiler_args(
     } else {
         let bsc_path = match bsc_path {
             Some(bsc_path) => helpers::get_abs_path(&bsc_path),
-            None => helpers::get_bsc(&package_root, workspace_root.to_owned()),
+            None => helpers::get_bsc(&package_root, &workspace_root),
         };
         helpers::get_rescript_version(&bsc_path)
     };
 
     // make PathBuf from package root and get the relative path for filename
-    let relative_filename = PathBuf::from(&filename)
-        .strip_prefix(PathBuf::from(&package_root))
-        .unwrap()
-        .to_string_lossy()
-        .to_string();
+    let relative_filename = filename.strip_prefix(PathBuf::from(&package_root)).unwrap();
 
     let file_path = PathBuf::from(&package_root).join(filename);
     let contents = helpers::read_file(&file_path).expect("Error reading file");
@@ -97,18 +92,18 @@ pub fn get_compiler_args(
         workspace_root.as_ref().unwrap_or(&package_root),
         &contents,
     );
-    let is_interface = filename.ends_with('i');
+    let is_interface = filename.to_string_lossy().ends_with('i');
     let has_interface = if is_interface {
         true
     } else {
-        let mut interface_filename = filename.to_string();
+        let mut interface_filename = filename.to_string_lossy().to_string();
         interface_filename.push('i');
         PathBuf::from(&interface_filename).exists()
     };
     let compiler_args = compiler_args(
         &rescript_config,
         &root_rescript_config,
-        &ast_path.to_string_lossy(),
+        &ast_path,
         &rescript_version,
         &relative_filename,
         is_interface,
@@ -131,15 +126,15 @@ pub fn initialize_build(
     default_timing: Option<Duration>,
     filter: &Option<regex::Regex>,
     show_progress: bool,
-    path: &str,
-    bsc_path: Option<String>,
+    path: &Path,
+    bsc_path: &Option<PathBuf>,
     build_dev_deps: bool,
 ) -> Result<BuildState> {
     let project_root = helpers::get_abs_path(path);
     let workspace_root = helpers::get_workspace_root(&project_root);
     let bsc_path = match bsc_path {
         Some(bsc_path) => helpers::get_abs_path(&bsc_path),
-        None => helpers::get_bsc(&project_root, workspace_root.to_owned()),
+        None => helpers::get_bsc(&project_root, &workspace_root),
     };
     let root_config_name = packages::read_package_name(&project_root)?;
     let rescript_version = helpers::get_rescript_version(&bsc_path);
@@ -453,11 +448,11 @@ pub fn write_build_ninja(build_state: &BuildState) {
 
 pub fn build(
     filter: &Option<regex::Regex>,
-    path: &str,
+    path: &Path,
     show_progress: bool,
     no_timing: bool,
     create_sourcedirs: bool,
-    bsc_path: Option<String>,
+    bsc_path: &Option<PathBuf>,
     build_dev_deps: bool,
 ) -> Result<BuildState> {
     let default_timing: Option<std::time::Duration> = if no_timing {
