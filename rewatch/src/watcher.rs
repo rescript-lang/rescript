@@ -153,8 +153,7 @@ async fn async_watch(
                                             .get(&module.package_name)
                                             .expect("Package not found");
                                         let canonicalized_implementation_file =
-                                            std::path::PathBuf::from(package.path.to_string())
-                                                .join(&source_file.implementation.path);
+                                            package.path.join(&source_file.implementation.path);
                                         if canonicalized_path_buf == canonicalized_implementation_file {
                                             if let Ok(modified) =
                                                 canonicalized_path_buf.metadata().and_then(|x| x.modified())

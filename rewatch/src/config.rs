@@ -246,7 +246,7 @@ pub fn flatten_flags(flags: &Option<Vec<OneOrMore<String>>>) -> Vec<String> {
 /// Since ppx-flags could be one or more, and could be nested potentiall, this function takes the
 /// flags and flattens them outright.
 pub fn flatten_ppx_flags(
-    node_modules_dir: &String,
+    node_modules_dir: &Path,
     flags: &Option<Vec<OneOrMore<String>>>,
     package_name: &String,
 ) -> Vec<String> {
@@ -289,8 +289,8 @@ pub fn flatten_ppx_flags(
 }
 
 /// Try to convert a bsconfig from a certain path to a bsconfig struct
-pub fn read(path: String) -> Result<Config> {
-    let read = fs::read_to_string(path.clone())?;
+pub fn read(path: &Path) -> Result<Config> {
+    let read = fs::read_to_string(path)?;
     let parse = serde_json::from_str::<Config>(&read)?;
 
     Ok(parse)
