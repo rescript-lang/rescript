@@ -245,7 +245,6 @@ Js.Array.pop(empty) == None
 ```
 */
 @send
-@return(undefined_to_opt)
 external pop: t<'a> => option<'a> = "pop"
 
 /**
@@ -308,7 +307,6 @@ Js.Array.shift(empty) == None
 ```
 */
 @send
-@return(undefined_to_opt)
 external shift: t<'a> => option<'a> = "shift"
 
 /**
@@ -781,7 +779,6 @@ Js.Array.find(x => x < 0, [33, 22, 55, 77, 44]) == None
 ```
 */
 @send
-@return(undefined_to_opt)
 external find: (t<'a>, 'a => bool) => option<'a> = "find"
 let find = (arg1, obj) => find(obj, arg1)
 
@@ -799,7 +796,6 @@ Js.Array.findi(positiveOddElement, [66, -33, 55, -88, 22]) == None
 ```
 */
 @send
-@return(undefined_to_opt)
 external findi: (t<'a>, ('a, int) => bool) => option<'a> = "find"
 let findi = (arg1, obj) => findi(obj, arg1)
 
