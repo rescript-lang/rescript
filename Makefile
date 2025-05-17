@@ -71,14 +71,14 @@ artifacts: lib
 # Builds the core playground bundle (without the relevant cmijs files for the runtime)
 playground:
 	dune build --profile browser
-	cp ./_build/default/compiler/jsoo/jsoo_playground_main.bc.js packages/playground/compiler.js
+	cp -f ./_build/default/compiler/jsoo/jsoo_playground_main.bc.js packages/playground/compiler.js
 
 # Creates all the relevant core and third party cmij files to side-load together with the playground bundle
 playground-cmijs: artifacts
 	yarn workspace playground build
 
 # Builds the playground, runs some e2e tests and releases the playground to the
-# CDN (requires KEYCDN_USER and KEYCDN_PASSWORD set in the env variables)
+# Cloudflare R2 (requires Rclone `rescript:` remote)
 playground-release: playground playground-cmijs
 	yarn workspace playground test
 	yarn workspace playground upload-bundle

@@ -396,11 +396,23 @@ jobs:
         if: matrix.build_playground
         run: yarn workspace playground test
 
+      - name: Setup Rclone
+        if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
+        uses: cometkim/rclone-actions/setup-rclone@89de8311dd0ca0b43143329d3daeb1041852ad9f
+
+      - name: Configure Rclone remote
+        if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
+        uses: cometkim/rclone-actions/configure-remote/s3-provider@89de8311dd0ca0b43143329d3daeb1041852ad9f
+        with:
+          name: rescript
+          provider: Cloudflare
+          endpoint: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          access-key-id: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          secret-access-key: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          acl: private
+
       - name: Upload playground compiler to CDN
         if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
-        env:
-          KEYCDN_USER: ${{ secrets.KEYCDN_USER }}
-          KEYCDN_PASSWORD: ${{ secrets.KEYCDN_PASSWORD }}
         run: yarn workspace playground upload-bundle
 
       - name: "Upload artifacts: binaries"
