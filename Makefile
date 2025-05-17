@@ -59,11 +59,9 @@ reanalyze:
 
 lib-bsb:
 	./scripts/buildRuntime.sh
-	./scripts/prebuilt.js
 
 lib:
 	./scripts/buildRuntimeRewatch.sh
-	./scripts/prebuilt.js
 
 artifacts: lib
 	./scripts/npmPack.js --updateArtifactList

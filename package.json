@@ -84,10 +84,9 @@
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "@types/node": "^20.14.9",
-    "@types/semver": "^7.5.8",
+    "@yarnpkg/types": "^4.0.1",
     "mocha": "10.8.2",
     "nyc": "15.0.0",
-    "semver": "7.6.2",
     "typescript": "5.8.2"
   },
   "workspaces": [

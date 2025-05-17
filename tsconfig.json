@@ -19,6 +19,7 @@
     "packages/**",
     "tests/**/input.js",
     ".github/workflows/*.js",
+    "yarn.config.cjs",
     "package.json"
   ],
   "exclude": ["*.res.js", "*.res.mjs"]

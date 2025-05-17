@@ -440,12 +440,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rescript/react@workspace:tests/dependencies/rescript-react":
-  version: 0.0.0-use.local
-  resolution: "@rescript/react@workspace:tests/dependencies/rescript-react"
-  languageName: unknown
-  linkType: soft
-
 "@rescript/std@workspace:packages/std":
   version: 0.0.0-use.local
   resolution: "@rescript/std@workspace:packages/std"
@@ -689,6 +683,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@tests/rescript-react@workspace:tests/dependencies/rescript-react":
+  version: 0.0.0-use.local
+  resolution: "@tests/rescript-react@workspace:tests/dependencies/rescript-react"
+  languageName: unknown
+  linkType: soft
+
 "@tests/tools@workspace:tests/tools_tests":
   version: 0.0.0-use.local
   resolution: "@tests/tools@workspace:tests/tools_tests"
@@ -747,10 +747,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/semver@npm:^7.5.8":
-  version: 7.5.8
-  resolution: "@types/semver@npm:7.5.8"
-  checksum: 10c0/8663ff927234d1c5fcc04b33062cb2b9fcfbe0f5f351ed26c4d1e1581657deebd506b41ff7fdf89e787e3d33ce05854bc01686379b89e9c49b564c4cfa988efa
+"@yarnpkg/types@npm:^4.0.1":
+  version: 4.0.1
+  resolution: "@yarnpkg/types@npm:4.0.1"
+  dependencies:
+    tslib: "npm:^2.4.0"
+  checksum: 10c0/90226789475680ba599833571dd76c0718dd5b4c5022481263ef309d6a628f6246671cd6ca86e49c966ddefa7aca6ccef82240dc1476d2cea702ea5bee2a6b72
   languageName: node
   linkType: hard
 
@@ -2481,10 +2483,9 @@ __metadata:
     "@rescript/linux-x64": "workspace:packages/@rescript/linux-x64"
     "@rescript/win32-x64": "workspace:packages/@rescript/win32-x64"
     "@types/node": "npm:^20.14.9"
-    "@types/semver": "npm:^7.5.8"
+    "@yarnpkg/types": "npm:^4.0.1"
     mocha: "npm:10.8.2"
     nyc: "npm:15.0.0"
-    semver: "npm:7.6.2"
     typescript: "npm:5.8.2"
   dependenciesMeta:
     "@rescript/darwin-arm64":
@@ -2663,15 +2664,6 @@ __metadata:
   dependencies:
     loose-envify: "npm:^1.1.0"
   checksum: 10c0/26383305e249651d4c58e6705d5f8425f153211aef95f15161c151f7b8de885f24751b377e4a0b3dd42cce09aad3f87a61dab7636859c0d89b7daf1a1e2a5c78
-  languageName: node
-  linkType: hard
-
-"semver@npm:7.6.2":
-  version: 7.6.2
-  resolution: "semver@npm:7.6.2"
-  bin:
-    semver: bin/semver.js
-  checksum: 10c0/97d3441e97ace8be4b1976433d1c32658f6afaff09f143e52c593bae7eef33de19e3e369c88bd985ce1042c6f441c80c6803078d1de2a9988080b66684cbb30c
   languageName: node
   linkType: hard
 
@@ -2921,6 +2913,13 @@ __metadata:
   dependencies:
     is-number: "npm:^7.0.0"
   checksum: 10c0/487988b0a19c654ff3e1961b87f471702e708fa8a8dd02a298ef16da7206692e8552a0250e8b3e8759270f62e9d8314616f6da274734d3b558b1fc7b7724e892
+  languageName: node
+  linkType: hard
+
+"tslib@npm:^2.4.0":
+  version: 2.8.1
+  resolution: "tslib@npm:2.8.1"
+  checksum: 10c0/9c4759110a19c53f992d9aae23aac5ced636e99887b51b9e61def52611732872ff7668757d4e4c61f19691e36f4da981cd9485e869b4a7408d689f6bf1f14e62
   languageName: node
   linkType: hard
 

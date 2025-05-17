@@ -388,8 +388,8 @@ To build a new version and release it on NPM, follow these steps:
    - `npm dist-tag add @rescript/std@<version> <tag>`
 1. Create a release entry for the version tag on the [Github Releases page](https://github.com/rescript-lang/rescript-compiler/releases), copying the changes from `CHANGELOG.md`.
 1. Create a PR with the following changes to prepare for development of the next version:
-   - Increment the version number in `package.json` for the next version.
-   - Run `node scripts/setVersion.js` to take that version number over into other files.
+   - Increment the `EXPECTED_VERSION` number in `yarn.config.cjs` for the next version.
+   - Run `yarn constraints --fix` to take that version number over into other files.
    - Update `CHANGELOG.md` and add an entry for the next version, e.g., "10.0.0-beta.2 (Unreleased)"
 1. Coordinate any forum/blog posts with [@ryyppy](https://github.com/ryyppy).
 

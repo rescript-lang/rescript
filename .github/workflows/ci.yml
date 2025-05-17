@@ -338,7 +338,7 @@ jobs:
         run: git diff --exit-code lib/js lib/es6
 
       - name: Version Check
-        run: ./scripts/prebuilt.js
+        run: yarn constraints
 
       - name: Run tests
         run: node scripts/test.js -all
