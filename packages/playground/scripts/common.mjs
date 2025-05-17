@@ -1,7 +1,6 @@
 // @ts-check
 
 import * as child_process from "node:child_process";
-import * as fs from "node:fs";
 import * as path from "node:path";
 
 export const compilerRootDir = path.join(
@@ -19,13 +18,16 @@ export const playgroundPackagesDir = path.join(playgroundDir, "packages");
 
 /**
  * @param {string} cmd
+ * @param {child_process.ExecSyncOptions} [opts={}]
  */
-export function exec(cmd) {
+export function exec(cmd, opts = {}) {
   console.log(`>>>>>> running command: ${cmd}`);
-  child_process.execSync(cmd, {
+  const result = child_process.execSync(cmd, {
     cwd: playgroundDir,
-    encoding: "utf8",
     stdio: "inherit",
+    ...opts,
+    encoding: "utf8",
   });
   console.log("<<<<<<");
+  return result || "";
 }

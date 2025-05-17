@@ -10,6 +10,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as readline from "node:readline/promises";
 import { createRequire } from "node:module";
+import semver from "semver";
 
 import {
   exec,
@@ -98,3 +99,30 @@ exec(`rclone copyto ${rcloneOpts} \\
   "${archivePath}" \\
   "${remote}:${bucket}/playground-bundles/${tag}.tar.zst"
 `);
+
+console.log("Update versions.json");
+{
+  const bundles = exec(
+    `rclone lsf --include="*.tar.zst" rescript:cdn-assets/playground-bundles`,
+    { stdio: ['ignore', 'pipe', 'pipe'] },
+  ).trimEnd().split("\n");
+
+  /** @type {string[]} */
+  let playgroundVersions = [];
+  for (const bundle of bundles) {
+    playgroundVersions.push(bundle.replace(".tar.zst", ""));
+  }
+  playgroundVersions = semver.sort(playgroundVersions);
+
+  console.log('Versions: ', playgroundVersions);
+
+  const versionsPath = path.join(tmpDir, "versions.json");
+  fs.writeFileSync(
+    versionsPath,
+    JSON.stringify(playgroundVersions),
+  );
+  exec(`rclone copyto ${rcloneOpts} \\
+    "${versionsPath}" \\
+    "${remote}:${bucket}/playground-bundles/versions.json"
+  `);
+}
