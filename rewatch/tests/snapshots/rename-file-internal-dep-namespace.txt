@@ -1,15 +1,10 @@
-[1/7] 📦 Building package tree...
-[2K[1/7] 📦 Built package tree in 0.00s
-[2/7] 🕵️ Finding source files...
-[2K[2/7] 🕵️ Found source files in 0.00s
-[3/7] 📝 Reading compile state...
-[2K[3/7] 📝 Read compile state 0.00s
-[4/7] 🧹 Cleaning up previous build...
-[2K[4/7] 🧹 Cleaned 2/11 0.00s
+[1/7] 📦 Building package tree...[2K[1/7] 📦 Built package tree in 0.00s
+[2/7] 👀 Finding source files...[2K[2/7] 👀 Found source files in 0.00s
+[3/7] 📝 Reading compile state...[2K[3/7] 📝 Read compile state 0.00s
+[4/7] 🧹 Cleaning up previous build...[2K[4/7] 🧹 Cleaned 2/94 0.00s
 [2K[5/7] 🧱 Parsed 2 source files in 0.00s
-[2K[6/7] ️🌴 Collected deps in 0.00s
-[2K[7/7] ️🛑 Compiled 3 modules in 0.00s
-ERROR:
+[2K[6/7] 🌴 Collected deps in 0.00s
+[2K[7/7] ❌ Compiled 3 modules in 0.00s
 
   [1;31mWe've found a bug for you![0m
   [36m/packages/new-namespace/src/NS_alias.res[0m:[2m2:1-16[0m
@@ -27,5 +22,4 @@ ERROR:
   [1;33mHint: Did you mean Other_module2?[0m
 
 
-ERROR:
-Incremental build failed. Error: [2K  ️🛑 Failed to Compile. See Errors Above
+Incremental build failed. Error: [2K  ❌ Failed to Compile. See Errors Above

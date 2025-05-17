@@ -7,9 +7,10 @@ use anyhow::Result;
 use console::style;
 use rayon::prelude::*;
 use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-fn remove_ast(package: &packages::Package, source_file: &str) {
+fn remove_ast(package: &packages::Package, source_file: &Path) {
     let _ = std::fs::remove_file(helpers::get_compiler_asset(
         package,
         &packages::Namespace::NoNamespace,
@@ -18,7 +19,7 @@ fn remove_ast(package: &packages::Package, source_file: &str) {
     ));
 }
 
-fn remove_iast(package: &packages::Package, source_file: &str) {
+fn remove_iast(package: &packages::Package, source_file: &Path) {
     let _ = std::fs::remove_file(helpers::get_compiler_asset(
         package,
         &packages::Namespace::NoNamespace,
@@ -27,7 +28,7 @@ fn remove_iast(package: &packages::Package, source_file: &str) {
     ));
 }
 
-fn remove_mjs_file(source_file: &str, suffix: &String) {
+fn remove_mjs_file(source_file: &Path, suffix: &String) {
     let _ = std::fs::remove_file(helpers::change_extension(
         source_file,
         // suffix.to_string includes the ., so we need to remove it
@@ -35,7 +36,7 @@ fn remove_mjs_file(source_file: &str, suffix: &String) {
     ));
 }
 
-fn remove_compile_asset(package: &packages::Package, source_file: &str, extension: &str) {
+fn remove_compile_asset(package: &packages::Package, source_file: &Path, extension: &str) {
     let _ = std::fs::remove_file(helpers::get_compiler_asset(
         package,
         &package.namespace,
@@ -50,7 +51,7 @@ fn remove_compile_asset(package: &packages::Package, source_file: &str, extensio
     ));
 }
 
-pub fn remove_compile_assets(package: &packages::Package, source_file: &str) {
+pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
     // optimization
     // only issue cmti if there is an interfacce file
     for extension in &["cmj", "cmi", "cmt", "cmti"] {
@@ -70,17 +71,29 @@ pub fn clean_mjs_files(build_state: &BuildState) {
                     .packages
                     .get(&build_state.root_config_name)
                     .expect("Could not find root package");
-                Some((
-                    std::path::PathBuf::from(package.path.to_string())
-                        .join(&source_file.implementation.path)
-                        .to_string_lossy()
-                        .to_string(),
-                    root_package.config.get_suffix(),
-                ))
+
+                Some(
+                    root_package
+                        .config
+                        .get_package_specs()
+                        .iter()
+                        .filter_map(|spec| {
+                            if spec.in_source {
+                                Some((
+                                    package.path.join(&source_file.implementation.path),
+                                    root_package.config.get_suffix(spec),
+                                ))
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<(PathBuf, String)>>(),
+                )
             }
             _ => None,
         })
-        .collect::<Vec<(String, String)>>();
+        .flatten()
+        .collect::<Vec<(PathBuf, String)>>();
 
     rescript_file_locations
         .par_iter()
@@ -103,7 +116,7 @@ pub fn cleanup_previous_build(
     let diff = compile_assets_state
         .ast_rescript_file_locations
         .difference(&compile_assets_state.rescript_file_locations)
-        .collect::<Vec<&String>>();
+        .collect::<Vec<&PathBuf>>();
 
     let diff_len = diff.len();
 
@@ -118,7 +131,7 @@ pub fn cleanup_previous_build(
                 ..
             } = compile_assets_state
                 .ast_modules
-                .get(&res_file_location.to_string())
+                .get(*res_file_location)
                 .expect("Could not find module name for ast file");
 
             let package = build_state
@@ -158,7 +171,11 @@ pub fn cleanup_previous_build(
                 .get_mut(module_name)
                 .expect("Could not find module for ast file");
 
-            let compile_dirty = compile_assets_state.cmi_modules.get(module_name);
+            let compile_dirty = compile_assets_state.cmt_modules.get(module_name);
+            // if there is a new AST but it has not been compiled yet, we mark the module as compile dirty
+            // we do this by checking if the cmt file is newer than the AST file. We always compile the
+            // interface AND implementation. For some reason the CMI file is not always rewritten if it
+            // doesn't have any changes, that's why we just look at the CMT file.
             if let Some(compile_dirty) = compile_dirty {
                 let last_modified = Some(ast_last_modified);
 
@@ -319,21 +336,33 @@ pub fn cleanup_after_build(build_state: &BuildState) {
     });
 }
 
-pub fn clean(path: &str, show_progress: bool, bsc_path: Option<String>) -> Result<()> {
+pub fn clean(
+    path: &Path,
+    show_progress: bool,
+    bsc_path: &Option<PathBuf>,
+    build_dev_deps: bool,
+) -> Result<()> {
     let project_root = helpers::get_abs_path(path);
     let workspace_root = helpers::get_workspace_root(&project_root);
-    let packages = packages::make(&None, &project_root, &workspace_root, show_progress)?;
-    let root_config_name = packages::get_package_name(&project_root)?;
+    let packages = packages::make(
+        &None,
+        &project_root,
+        &workspace_root,
+        show_progress,
+        // Always clean dev dependencies
+        build_dev_deps,
+    )?;
+    let root_config_name = packages::read_package_name(&project_root)?;
     let bsc_path = match bsc_path {
-        Some(bsc_path) => bsc_path,
-        None => helpers::get_bsc(&project_root, workspace_root.to_owned()),
+        Some(bsc_path) => helpers::get_abs_path(&bsc_path),
+        None => helpers::get_bsc(&project_root, &workspace_root),
     };
 
     let rescript_version = helpers::get_rescript_version(&bsc_path);
 
     let timing_clean_compiler_assets = Instant::now();
     if show_progress {
-        println!(
+        print!(
             "{} {}Cleaning compiler assets...",
             style("[1/2]").bold().dim(),
             SWEEP
@@ -342,7 +371,7 @@ pub fn clean(path: &str, show_progress: bool, bsc_path: Option<String>) -> Resul
     };
     packages.iter().for_each(|(_, package)| {
         if show_progress {
-            println!(
+            print!(
                 "{}{} {}Cleaning {}...",
                 LINE_CLEAR,
                 style("[1/2]").bold().dim(),
@@ -356,7 +385,7 @@ pub fn clean(path: &str, show_progress: bool, bsc_path: Option<String>) -> Resul
         let path = std::path::Path::new(&path_str);
         let _ = std::fs::remove_dir_all(path);
 
-        let path_str = package.get_bs_build_path();
+        let path_str = package.get_ocaml_build_path();
         let path = std::path::Path::new(&path_str);
         let _ = std::fs::remove_dir_all(path);
     });

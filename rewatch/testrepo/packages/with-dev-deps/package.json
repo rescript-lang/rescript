@@ -1,0 +1,12 @@
+{
+  "name": "@testrepo/with-dev-deps",
+  "version": "0.0.1",
+  "keywords": [
+    "rescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@rescript/core": "*"
+  }
+}

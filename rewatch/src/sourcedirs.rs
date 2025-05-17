@@ -6,7 +6,7 @@ use serde::Serialize;
 use serde_json::json;
 use std::fs::File;
 use std::io::prelude::*;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 type Dir = String;
 type PackageName = String;
@@ -20,8 +20,9 @@ pub struct SourceDirs<'a> {
     pub generated: &'a Vec<String>,
 }
 
-fn package_to_dirs(package: &Package, root_package_path: &String) -> AHashSet<Dir> {
-    let relative_path = PathBuf::from(&package.path)
+fn package_to_dirs(package: &Package, root_package_path: &Path) -> AHashSet<Dir> {
+    let relative_path = package
+        .path
         .strip_prefix(PathBuf::from(&root_package_path))
         .unwrap()
         .to_string_lossy()
@@ -47,13 +48,13 @@ fn deps_to_pkgs<'a>(
         .filter_map(|name| {
             packages
                 .get(name)
-                .map(|package| (name.to_owned(), package.path.to_owned()))
+                .map(|package| (name.to_owned(), package.path.to_string_lossy().to_string()))
         })
         .collect::<AHashSet<Pkg>>()
 }
 
-fn write_sourcedirs_files(path: String, source_dirs: &SourceDirs) -> Result<usize, std::io::Error> {
-    let mut source_dirs_json = File::create(path + "/.sourcedirs.json")?;
+fn write_sourcedirs_files(path: &Path, source_dirs: &SourceDirs) -> Result<usize, std::io::Error> {
+    let mut source_dirs_json = File::create(path.join("/.sourcedirs.json"))?;
     source_dirs_json.write(json!(source_dirs).to_string().as_bytes())
 }
 
@@ -85,7 +86,7 @@ pub fn print(buildstate: &BuildState) {
 
             // Write sourcedirs.json
             write_sourcedirs_files(
-                package.get_bs_build_path(),
+                &package.get_build_path(),
                 &SourceDirs {
                     dirs: &dirs.clone().into_iter().collect::<Vec<Dir>>(),
                     pkgs: &pkgs.clone().flatten().collect::<Vec<Pkg>>(),
@@ -109,7 +110,7 @@ pub fn print(buildstate: &BuildState) {
 
     // Write sourcedirs.json
     write_sourcedirs_files(
-        root_package.get_bs_build_path(),
+        &root_package.get_build_path(),
         &SourceDirs {
             dirs: &merged_dirs.into_iter().collect::<Vec<Dir>>(),
             pkgs: &merged_pkgs.into_iter().collect::<Vec<Pkg>>(),

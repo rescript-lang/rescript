@@ -5,7 +5,7 @@ use crate::config;
 use crate::helpers;
 use crate::helpers::emojis::*;
 use ahash::{AHashMap, AHashSet};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use console::style;
 use log::{debug, error};
 use rayon::prelude::*;
@@ -41,7 +41,7 @@ impl Namespace {
 struct Dependency {
     name: String,
     config: config::Config,
-    path: String,
+    path: PathBuf,
     is_pinned: bool,
     dependencies: Vec<Dependency>,
 }
@@ -52,55 +52,66 @@ pub struct Package {
     pub config: config::Config,
     pub source_folders: AHashSet<config::PackageSource>,
     // these are the relative file paths (relative to the package root)
-    pub source_files: Option<AHashMap<String, SourceFileMeta>>,
+    pub source_files: Option<AHashMap<PathBuf, SourceFileMeta>>,
     pub namespace: Namespace,
     pub modules: Option<AHashSet<String>>,
     // canonicalized dir of the package
-    pub path: String,
+    pub path: PathBuf,
     pub dirs: Option<AHashSet<PathBuf>>,
     pub is_pinned_dep: bool,
+    pub is_local_dep: bool,
     pub is_root: bool,
 }
 
-pub fn get_build_path(canonical_path: &str) -> String {
-    format!("{}/lib/ocaml", canonical_path)
+pub fn get_build_path(canonical_path: &Path) -> PathBuf {
+    canonical_path.join("lib").join("bs")
+}
+
+pub fn get_js_path(canonical_path: &Path) -> PathBuf {
+    canonical_path.join("lib").join("js")
+}
+
+pub fn get_es6_path(canonical_path: &Path) -> PathBuf {
+    canonical_path.join("lib").join("es6")
+}
+
+pub fn get_ocaml_build_path(canonical_path: &Path) -> PathBuf {
+    canonical_path.join("lib").join("ocaml")
 }
 
 impl Package {
-    pub fn get_bs_build_path(&self) -> String {
-        format!("{}/lib/bs", self.path)
+    pub fn get_ocaml_build_path(&self) -> PathBuf {
+        get_ocaml_build_path(&self.path)
     }
 
-    pub fn get_build_path(&self) -> String {
+    pub fn get_build_path(&self) -> PathBuf {
         get_build_path(&self.path)
     }
 
-    pub fn get_mlmap_path(&self) -> String {
-        self.get_build_path()
-            + "/"
-            + &self
-                .namespace
+    pub fn get_js_path(&self) -> PathBuf {
+        get_js_path(&self.path)
+    }
+
+    pub fn get_es6_path(&self) -> PathBuf {
+        get_es6_path(&self.path)
+    }
+
+    pub fn get_mlmap_path(&self) -> PathBuf {
+        self.get_build_path().join(
+            self.namespace
                 .to_suffix()
                 .expect("namespace should be set for mlmap module")
-            + ".mlmap"
+                + ".mlmap",
+        )
     }
 
-    pub fn get_mlmap_compile_path(&self) -> String {
-        self.get_build_path()
-            + "/"
-            + &self
-                .namespace
+    pub fn get_mlmap_compile_path(&self) -> PathBuf {
+        self.get_build_path().join(
+            self.namespace
                 .to_suffix()
                 .expect("namespace should be set for mlmap module")
-            + ".cmi"
-    }
-
-    pub fn get_ast_path(&self, source_file: &str) -> String {
-        helpers::get_compiler_asset(self, &packages::Namespace::NoNamespace, source_file, "ast")
-    }
-
-    pub fn get_iast_path(&self, source_file: &str) -> String {
-        helpers::get_compiler_asset(self, &packages::Namespace::NoNamespace, source_file, "iast")
+                + ".cmi",
+        )
     }
 }
 
@@ -128,8 +139,8 @@ pub fn read_folders(
     package_dir: &Path,
     path: &Path,
     recurse: bool,
-) -> Result<AHashMap<String, SourceFileMeta>, Box<dyn error::Error>> {
-    let mut map: AHashMap<String, SourceFileMeta> = AHashMap::new();
+) -> Result<AHashMap<PathBuf, SourceFileMeta>, Box<dyn error::Error>> {
+    let mut map: AHashMap<PathBuf, SourceFileMeta> = AHashMap::new();
     let path_buf = PathBuf::from(path);
     let meta = fs::metadata(package_dir.join(path));
     let path_with_meta = meta.map(|meta| {
@@ -161,7 +172,7 @@ pub fn read_folders(
                     let mut path = path.to_owned();
                     path.push(&name);
                     map.insert(
-                        path.to_string_lossy().to_string(),
+                        path,
                         SourceFileMeta {
                             modified: metadata.modified().unwrap(),
                         },
@@ -217,29 +228,23 @@ fn get_source_dirs(source: config::Source, sub_path: Option<PathBuf>) -> AHashSe
     source_folders
 }
 
-pub fn read_config(package_dir: &str) -> Result<config::Config> {
-    let prefix = if package_dir.is_empty() {
-        "".to_string()
-    } else {
-        package_dir.to_string() + "/"
-    };
-
-    let rescript_json_path = prefix.to_string() + "rescript.json";
-    let bsconfig_json_path = prefix.to_string() + "bsconfig.json";
+pub fn read_config(package_dir: &Path) -> Result<config::Config> {
+    let rescript_json_path = package_dir.join("rescript.json");
+    let bsconfig_json_path = package_dir.join("bsconfig.json");
 
     if Path::new(&rescript_json_path).exists() {
-        config::read(rescript_json_path)
+        config::read(&rescript_json_path)
     } else {
-        config::read(bsconfig_json_path)
+        config::read(&bsconfig_json_path)
     }
 }
 
 pub fn read_dependency(
     package_name: &str,
-    parent_path: &str,
-    project_root: &str,
-    workspace_root: &Option<String>,
-) -> Result<String, String> {
+    parent_path: &Path,
+    project_root: &Path,
+    workspace_root: &Option<PathBuf>,
+) -> Result<PathBuf, String> {
     let path_from_parent = PathBuf::from(helpers::package_path(parent_path, package_name));
     let path_from_project_root = PathBuf::from(helpers::package_path(project_root, package_name));
     let maybe_path_from_workspace_root = workspace_root
@@ -263,7 +268,7 @@ pub fn read_dependency(
     }?;
 
     let canonical_path = match path.canonicalize() {
-        Ok(canonical_path) => Ok(canonical_path.to_string_lossy().to_string()),
+        Ok(canonical_path) => Ok(canonical_path),
         Err(e) => {
             Err(format!(
                 "Failed canonicalizing the package \"{}\" path \"{}\" (are node_modules up-to-date?)...\nMore details: {}",
@@ -288,9 +293,9 @@ pub fn read_dependency(
 fn read_dependencies(
     registered_dependencies_set: &mut AHashSet<String>,
     parent_config: &config::Config,
-    parent_path: &str,
-    project_root: &str,
-    workspace_root: Option<String>,
+    parent_path: &Path,
+    project_root: &Path,
+    workspace_root: &Option<PathBuf>,
     show_progress: bool,
 ) -> Vec<Dependency> {
     return parent_config
@@ -322,8 +327,9 @@ fn read_dependencies(
                         );
                     }
 
+                        let parent_path_str = parent_path.to_string_lossy();
                         log::error!(
-                            "We could not build package tree reading depencency '{package_name}', at path '{parent_path}'. Error: {error}",
+                            "We could not build package tree reading depencency '{package_name}', at path '{parent_path_str}'. Error: {error}",
                         );
 
                         std::process::exit(2)
@@ -332,8 +338,9 @@ fn read_dependencies(
                         match read_config(&canonical_path) {
                             Ok(config) => (config, canonical_path),
                             Err(error) => {
+                                let parent_path_str = parent_path.to_string_lossy();
                                 log::error!(
-                                    "We could not build package tree  '{package_name}', at path '{parent_path}', Error: {error}",
+                                    "We could not build package tree  '{package_name}', at path '{parent_path_str}'. Error: {error}",
                                 );
                                 std::process::exit(2)
                                     }
@@ -352,7 +359,7 @@ fn read_dependencies(
                 &config,
                 &canonical_path,
                 project_root,
-                workspace_root.to_owned(),
+                workspace_root,
                 show_progress
             );
 
@@ -377,7 +384,22 @@ fn flatten_dependencies(dependencies: Vec<Dependency>) -> Vec<Dependency> {
     flattened
 }
 
-fn make_package(config: config::Config, package_path: &str, is_pinned_dep: bool, is_root: bool) -> Package {
+pub fn read_package_name(package_dir: &Path) -> Result<String> {
+    let package_json_path = package_dir.join("package.json");
+
+    let package_json_contents =
+        fs::read_to_string(&package_json_path).map_err(|e| anyhow!("Could not read package.json: {}", e))?;
+
+    let package_json: serde_json::Value = serde_json::from_str(&package_json_contents)
+        .map_err(|e| anyhow!("Could not parse package.json: {}", e))?;
+
+    package_json["name"]
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| anyhow!("No name field found in package.json"))
+}
+
+fn make_package(config: config::Config, package_path: &Path, is_pinned_dep: bool, is_root: bool) -> Package {
     let source_folders = match config.sources.to_owned() {
         Some(config::OneOrMore::Single(source)) => get_source_dirs(source, None),
         Some(config::OneOrMore::Multiple(sources)) => {
@@ -392,45 +414,42 @@ fn make_package(config: config::Config, package_path: &str, is_pinned_dep: bool,
         }
         None => {
             if !is_root {
-                log::warn!("Package '{}' has not defined any sources, but is not the root package. This is likely a mistake. It is located: {}", config.name, package_path);
+                let package_path_str = package_path.to_string_lossy();
+                log::warn!("Package '{}' has not defined any sources, but is not the root package. This is likely a mistake. It is located: {}", config.name, package_path_str);
             }
 
             AHashSet::new()
         }
     };
 
+    let package_name = read_package_name(package_path).expect("Could not read package name");
     Package {
-        name: config.name.to_owned(),
+        name: package_name,
         config: config.to_owned(),
         source_folders,
         source_files: None,
         namespace: config.get_namespace(),
         modules: None,
         // we canonicalize the path name so it's always the same
-        path: PathBuf::from(package_path)
-            .canonicalize()
-            .expect("Could not canonicalize")
-            .to_string_lossy()
-            .to_string(),
+        path: package_path.canonicalize().expect("Could not canonicalize"),
         dirs: None,
         is_pinned_dep,
+        is_local_dep: !package_path.components().any(|c| c.as_os_str() == "node_modules"),
         is_root,
     }
 }
 
 fn read_packages(
-    project_root: &str,
-    workspace_root: Option<String>,
+    project_root: &Path,
+    workspace_root: &Option<PathBuf>,
     show_progress: bool,
 ) -> Result<AHashMap<String, Package>> {
     let root_config = read_config(project_root)?;
 
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
-    map.insert(
-        root_config.name.to_owned(),
-        make_package(root_config.to_owned(), project_root, false, true),
-    );
+    let root_package = make_package(root_config.to_owned(), project_root, false, true);
+    map.insert(root_package.name.to_string(), root_package);
 
     let mut registered_dependencies_set: AHashSet<String> = AHashSet::new();
     let dependencies = flatten_dependencies(read_dependencies(
@@ -443,10 +462,8 @@ fn read_packages(
     ));
     dependencies.iter().for_each(|d| {
         if !map.contains_key(&d.name) {
-            map.insert(
-                d.name.to_owned(),
-                make_package(d.config.to_owned(), &d.path, d.is_pinned, false),
-            );
+            let package = make_package(d.config.to_owned(), &d.path, d.is_pinned, false);
+            map.insert(package.name.to_string(), package);
         }
     });
 
@@ -466,8 +483,9 @@ pub fn get_source_files(
     package_dir: &Path,
     filter: &Option<regex::Regex>,
     source: &config::PackageSource,
-) -> AHashMap<String, SourceFileMeta> {
-    let mut map: AHashMap<String, SourceFileMeta> = AHashMap::new();
+    build_dev_deps: bool,
+) -> AHashMap<PathBuf, SourceFileMeta> {
+    let mut map: AHashMap<PathBuf, SourceFileMeta> = AHashMap::new();
 
     let (recurse, type_) = match source {
         config::PackageSource {
@@ -479,24 +497,19 @@ pub fn get_source_files(
     };
 
     let path_dir = Path::new(&source.dir);
-    // don't include dev sources for now
-    if type_ != &Some("dev".to_string()) {
-        match read_folders(filter, package_dir, path_dir, recurse) {
+    match (build_dev_deps, type_) {
+        (false, Some(type_)) if type_ == "dev" => (),
+        _ => match read_folders(filter, package_dir, path_dir, recurse) {
             Ok(files) => map.extend(files),
-            // Err(_e) if type_ == &Some("dev".to_string()) => {
-            //     log::warn!(
-            //         "Could not read folder: {}... Probably ok as type is dev",
-            //         path_dir.to_string_lossy()
-            //     )
-            // }
+
             Err(_e) => log::error!(
                 "Could not read folder: {:?}. Specified in dependency: {}, located {:?}...",
                 path_dir.to_path_buf().into_os_string(),
                 package_name,
                 package_dir
             ),
-        }
-    }
+        },
+    };
 
     map
 }
@@ -506,14 +519,23 @@ pub fn get_source_files(
 fn extend_with_children(
     filter: &Option<regex::Regex>,
     mut build: AHashMap<String, Package>,
+    build_dev_deps: bool,
 ) -> AHashMap<String, Package> {
     for (_key, package) in build.iter_mut() {
-        let mut map: AHashMap<String, SourceFileMeta> = AHashMap::new();
+        let mut map: AHashMap<PathBuf, SourceFileMeta> = AHashMap::new();
         package
             .source_folders
             .par_iter()
-            .map(|source| get_source_files(&package.name, Path::new(&package.path), filter, source))
-            .collect::<Vec<AHashMap<String, SourceFileMeta>>>()
+            .map(|source| {
+                get_source_files(
+                    &package.name,
+                    Path::new(&package.path),
+                    filter,
+                    source,
+                    build_dev_deps,
+                )
+            })
+            .collect::<Vec<AHashMap<PathBuf, SourceFileMeta>>>()
             .into_iter()
             .for_each(|source| map.extend(source));
 
@@ -551,31 +573,18 @@ fn extend_with_children(
 /// The two step process is there to reduce IO overhead
 pub fn make(
     filter: &Option<regex::Regex>,
-    root_folder: &str,
-    workspace_root: &Option<String>,
+    root_folder: &Path,
+    workspace_root: &Option<PathBuf>,
     show_progress: bool,
+    build_dev_deps: bool,
 ) -> Result<AHashMap<String, Package>> {
-    let map = read_packages(root_folder, workspace_root.to_owned(), show_progress)?;
+    let map = read_packages(root_folder, workspace_root, show_progress)?;
 
     /* Once we have the deduplicated packages, we can add the source files for each - to minimize
      * the IO */
-    let result = extend_with_children(filter, map);
-
-    result.values().for_each(|package| {
-        if let Some(dirs) = &package.dirs {
-            dirs.iter().for_each(|dir| {
-                let _ = std::fs::create_dir_all(std::path::Path::new(&package.get_bs_build_path()).join(dir));
-            })
-        }
-    });
+    let result = extend_with_children(filter, map, build_dev_deps);
 
     Ok(result)
-}
-
-pub fn get_package_name(path: &str) -> Result<String> {
-    let config = read_config(path)?;
-
-    Ok(config.name)
 }
 
 pub fn parse_packages(build_state: &mut BuildState) {
@@ -589,9 +598,49 @@ pub fn parse_packages(build_state: &mut BuildState) {
                 build_state.module_names.extend(package_modules)
             }
             let build_path_abs = package.get_build_path();
-            let bs_build_path = package.get_bs_build_path();
-            helpers::create_build_path(&build_path_abs);
-            helpers::create_build_path(&bs_build_path);
+            let bs_build_path = package.get_ocaml_build_path();
+            helpers::create_path(&build_path_abs);
+            helpers::create_path(&bs_build_path);
+            let root_config = build_state
+                .get_package(&build_state.root_config_name)
+                .expect("cannot find root config");
+
+            root_config.config.get_package_specs().iter().for_each(|spec| {
+                if !spec.in_source {
+                    // we don't want to calculate this if we don't have out of source specs
+                    // we do this twice, but we almost never have multiple package specs
+                    // so this optimization is less important
+                    let relative_dirs: AHashSet<PathBuf> = match &package.source_files {
+                        Some(source_files) => source_files
+                            .keys()
+                            .map(|source_file| {
+                                Path::new(source_file)
+                                    .parent()
+                                    .expect("parent dir not found")
+                                    .to_owned()
+                            })
+                            .collect(),
+                        _ => AHashSet::new(),
+                    };
+                    if spec.is_common_js() {
+                        helpers::create_path(&package.get_js_path());
+                        relative_dirs.iter().for_each(|path_buf| {
+                            helpers::create_path_for_path(&Path::join(
+                                &PathBuf::from(package.get_js_path()),
+                                path_buf,
+                            ))
+                        })
+                    } else {
+                        helpers::create_path(&package.get_es6_path());
+                        relative_dirs.iter().for_each(|path_buf| {
+                            helpers::create_path_for_path(&Path::join(
+                                &PathBuf::from(package.get_es6_path()),
+                                path_buf,
+                            ))
+                        })
+                    }
+                }
+            });
 
             package.namespace.to_suffix().iter().for_each(|namespace| {
                 // generate the mlmap "AST" file for modules that have a namespace configured
@@ -599,7 +648,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
                     Some(source_files) => source_files
                         .keys()
                         .map(|key| key.to_owned())
-                        .collect::<Vec<String>>(),
+                        .collect::<Vec<PathBuf>>(),
                     None => unreachable!(),
                 };
                 let entry = match &package.namespace {
@@ -645,6 +694,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
                 build_state.insert_module(
                     &helpers::file_path_to_module_name(&mlmap.to_owned(), &packages::Namespace::NoNamespace),
                     Module {
+                        deps_dirty: false,
                         source_type: SourceType::MlMap(MlMap { parse_dirty: false }),
                         deps,
                         dependents: AHashSet::new(),
@@ -664,7 +714,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
 
                     let file_buf = PathBuf::from(file);
                     let extension = file_buf.extension().unwrap().to_str().unwrap();
-                    let module_name = helpers::file_path_to_module_name(&file.to_owned(), &namespace);
+                    let module_name = helpers::file_path_to_module_name(&file_buf, &namespace);
 
                     if helpers::is_implementation_file(extension) {
                         build_state
@@ -674,8 +724,11 @@ pub fn parse_packages(build_state: &mut BuildState) {
                                 if let SourceType::SourceFile(ref mut source_file) = module.source_type {
                                     if &source_file.implementation.path != file {
                                         error!("Duplicate files found for module: {}", &module_name);
-                                        error!("file 1: {}", &source_file.implementation.path);
-                                        error!("file 2: {}", &file);
+                                        error!(
+                                            "file 1: {}",
+                                            source_file.implementation.path.to_string_lossy()
+                                        );
+                                        error!("file 2: {}", file.to_string_lossy());
 
                                         panic!("Unable to continue... See log output above...");
                                     }
@@ -685,6 +738,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
                                 }
                             })
                             .or_insert(Module {
+                                deps_dirty: true,
                                 source_type: SourceType::SourceFile(SourceFile {
                                     implementation: Implementation {
                                         path: file.to_owned(),
@@ -711,7 +765,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
                                 log::warn!(
                                     "{} No implementation file found for interface file (skipping): {}",
                                     LINE_CLEAR,
-                                    file
+                                    file.to_string_lossy()
                                 )
                             }
                             Some(_) => {
@@ -732,10 +786,11 @@ pub fn parse_packages(build_state: &mut BuildState) {
                                         }
                                     })
                                     .or_insert(Module {
+                                        deps_dirty: true,
                                         source_type: SourceType::SourceFile(SourceFile {
                                             // this will be overwritten later
                                             implementation: Implementation {
-                                                path: implementation_filename.to_string(),
+                                                path: implementation_filename,
                                                 parse_state: ParseState::Pending,
                                                 compile_state: CompileState::Pending,
                                                 last_modified: metadata.modified,
@@ -803,7 +858,7 @@ fn get_unallowed_dependents(
 struct UnallowedDependency {
     bs_deps: Vec<String>,
     pinned_deps: Vec<String>,
-    bs_dev_deps: Vec<String>,
+    bs_build_dev_deps: Vec<String>,
 }
 
 pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> bool {
@@ -827,7 +882,7 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
                 let empty_unallowed_deps = UnallowedDependency {
                     bs_deps: vec![],
                     pinned_deps: vec![],
-                    bs_dev_deps: vec![],
+                    bs_build_dev_deps: vec![],
                 };
 
                 let unallowed_dependency = detected_unallowed_dependencies.entry(String::from(package_name));
@@ -835,7 +890,7 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
                 match *dependency_type {
                     "bs-dependencies" => value.bs_deps.push(unallowed_dependency_name),
                     "pinned-dependencies" => value.pinned_deps.push(unallowed_dependency_name),
-                    "bs-dev-dependencies" => value.bs_dev_deps.push(unallowed_dependency_name),
+                    "bs-dev-dependencies" => value.bs_build_dev_deps.push(unallowed_dependency_name),
                     _ => (),
                 }
             }
@@ -851,7 +906,7 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
         [
             ("bs-dependencies", unallowed_deps.bs_deps.to_owned()),
             ("pinned-dependencies", unallowed_deps.pinned_deps.to_owned()),
-            ("bs-dev-dependencies", unallowed_deps.bs_dev_deps.to_owned()),
+            ("bs-dev-dependencies", unallowed_deps.bs_build_dev_deps.to_owned()),
         ]
         .iter()
         .for_each(|(deps_type, map)| {
@@ -878,16 +933,16 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
 
 #[cfg(test)]
 mod test {
+    use super::{Namespace, Package};
     use crate::config::Source;
     use ahash::{AHashMap, AHashSet};
-
-    use super::{Namespace, Package};
+    use std::path::PathBuf;
 
     fn create_package(
         name: String,
         bs_deps: Vec<String>,
         pinned_deps: Vec<String>,
-        dev_deps: Vec<String>,
+        build_dev_deps: Vec<String>,
         allowed_dependents: Option<Vec<String>>,
     ) -> Package {
         Package {
@@ -902,7 +957,7 @@ mod test {
                 suffix: None,
                 pinned_dependencies: Some(pinned_deps),
                 bs_dependencies: Some(bs_deps),
-                bs_dev_dependencies: Some(dev_deps),
+                bs_dev_dependencies: Some(build_dev_deps),
                 ppx_flags: None,
                 bsc_flags: None,
                 reason: None,
@@ -917,10 +972,11 @@ mod test {
             source_files: None,
             namespace: Namespace::Namespace(String::from("Package1")),
             modules: None,
-            path: String::from("./something"),
+            path: PathBuf::from("./something"),
             dirs: None,
             is_pinned_dep: false,
             is_root: false,
+            is_local_dep: false,
         }
     }
     #[test]

@@ -1,30 +1,30 @@
 [package]
 name = "rewatch"
-version = "1.0.10"
+version = "1.2.0"
 edition = "2021"
 
 [dependencies]
+ahash = "0.8.3"
+anyhow = "1.0.93"
+blake3 = "1.3.3"
+clap = { version = "4.3", features = ["derive"] }
+clap-verbosity-flag = "2.2"
+console = "0.15.5"
+convert_case = "0.6.0"
+ctrlc = "3.4.4"
+env_logger = "0.10"
+futures = "0.3.25"
+futures-timer = "3.0.2"
+indicatif = "0.17.3"
+log = { version = "0.4.17" }
 notify = { version = "5.1.0", features = ["serde"] }
+notify-debouncer-mini = { version = "0.2.0" }
+rayon = "1.6.1"
+regex = "1.7.1"
 serde = { version = "1.0.152", features = ["derive"] }
 serde_derive = "1.0.152"
 serde_json = { version = "1.0.93" }
-ahash = "0.8.3"
-convert_case = "0.6.0"
-rayon = "1.6.1"
-log = { version = "0.4.17" }
-env_logger = "0.10.0"
-indicatif = "0.17.3"
-console = "0.15.5"
-blake3 = "1.3.3"
-notify-debouncer-mini = { version = "0.2.0" }
-regex = "1.7.1"
-futures = "0.3.25"
-futures-timer = "3.0.2"
-clap = { version = "4.3.17", features = ["derive"] }
 sysinfo = "0.29.10"
-ctrlc = "3.4.4"
-clap-verbosity-flag = "2.2.2"
-anyhow = "1.0.93"
 
 
 [profile.release]

@@ -53,9 +53,18 @@ async fn async_watch(
     filter: &Option<regex::Regex>,
     after_build: Option<String>,
     create_sourcedirs: bool,
+    build_dev_deps: bool,
+    bsc_path: Option<String>,
 ) -> notify::Result<()> {
-    let mut build_state =
-        build::initialize_build(None, filter, show_progress, path, None).expect("Can't initialize build");
+    let mut build_state = build::initialize_build(
+        None,
+        filter,
+        show_progress,
+        path,
+        bsc_path.clone(),
+        build_dev_deps,
+    )
+    .expect("Can't initialize build");
     let mut needs_compile_type = CompileType::Incremental;
     // create a mutex to capture if ctrl-c was pressed
     let ctrlc_pressed = Arc::new(Mutex::new(false));
@@ -90,6 +99,20 @@ async fn async_watch(
         }
 
         for event in events {
+            // if there is a file named rewatch.lock in the events path, we can quit the watcher
+            if let Some(_) = event.paths.iter().find(|path| path.ends_with("rewatch.lock")) {
+                match event.kind {
+                    EventKind::Remove(_) => {
+                        if show_progress {
+                            println!("\nExiting... (lockfile removed)");
+                        }
+                        clean::cleanup_after_build(&build_state);
+                        return Ok(());
+                    }
+                    _ => (),
+                }
+            }
+
             let paths = event
                 .paths
                 .iter()
@@ -130,8 +153,7 @@ async fn async_watch(
                                             .get(&module.package_name)
                                             .expect("Package not found");
                                         let canonicalized_implementation_file =
-                                            std::path::PathBuf::from(package.path.to_string())
-                                                .join(&source_file.implementation.path);
+                                            package.path.join(&source_file.implementation.path);
                                         if canonicalized_path_buf == canonicalized_implementation_file {
                                             if let Ok(modified) =
                                                 canonicalized_path_buf.metadata().and_then(|x| x.modified())
@@ -190,6 +212,7 @@ async fn async_watch(
                     show_progress,
                     !initial_build,
                     create_sourcedirs,
+                    build_dev_deps,
                 )
                 .is_ok()
                 {
@@ -212,8 +235,15 @@ async fn async_watch(
             }
             CompileType::Full => {
                 let timing_total = Instant::now();
-                build_state = build::initialize_build(None, filter, show_progress, path, None)
-                    .expect("Can't initialize build");
+                build_state = build::initialize_build(
+                    None,
+                    filter,
+                    show_progress,
+                    path,
+                    bsc_path.clone(),
+                    build_dev_deps,
+                )
+                .expect("Can't initialize build");
                 let _ = build::incremental_build(
                     &mut build_state,
                     None,
@@ -221,6 +251,7 @@ async fn async_watch(
                     show_progress,
                     false,
                     create_sourcedirs,
+                    build_dev_deps,
                 );
                 if let Some(a) = after_build.clone() {
                     cmd::run(a)
@@ -255,6 +286,8 @@ pub fn start(
     folder: &str,
     after_build: Option<String>,
     create_sourcedirs: bool,
+    build_dev_deps: bool,
+    bsc_path: Option<String>,
 ) {
     futures::executor::block_on(async {
         let queue = Arc::new(FifoQueue::<Result<Event, Error>>::new());
@@ -274,10 +307,12 @@ pub fn start(
             filter,
             after_build,
             create_sourcedirs,
+            build_dev_deps,
+            bsc_path,
         )
         .await
         {
-            log::error!("{:?}", e)
+            println!("{:?}", e)
         }
     })
 }

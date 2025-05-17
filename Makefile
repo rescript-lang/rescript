@@ -16,8 +16,8 @@ dce:
 	reanalyze.exe -dce-cmt _build/default/compiler
 
 rewatch:
-	cargo build --manifest-path rewatch/Cargo.toml
-	cp rewatch/target/debug/rewatch rewatch
+	cargo build --manifest-path rewatch/Cargo.toml --release
+	cp rewatch/target/release/rewatch rewatch
 	./scripts/copyExes.js --rewatch
 
 ninja/ninja:
@@ -46,13 +46,23 @@ test-syntax-roundtrip:
 test-gentype:
 	make -C tests/gentype_tests/typescript-react-example clean test
 
-test-all: test test-gentype test-analysis test-tools
+test-rewatch:
+	bash ./rewatch/tests/suite-ci.sh
+
+test-rewatch-ci:
+	bash ./rewatch/tests/suite-ci.sh node_modules/.bin/rewatch
+
+test-all: test test-gentype test-analysis test-tools test-rewatch
 
 reanalyze:
 	reanalyze.exe -set-exit-code -all-cmt _build/default/compiler _build/default/tests -exclude-paths compiler/outcome_printer,compiler/ml,compiler/frontend,compiler/ext,compiler/depends,compiler/core,compiler/common,compiler/cmij,compiler/bsb_helper,compiler/bsb
 
-lib:
+lib-bsb:
 	./scripts/buildRuntime.sh
+	./scripts/prebuilt.js
+
+lib:
+	./scripts/buildRuntimeRewatch.sh
 	./scripts/prebuilt.js
 
 artifacts: lib

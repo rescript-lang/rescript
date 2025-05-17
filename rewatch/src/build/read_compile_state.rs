@@ -52,7 +52,7 @@ pub fn read(build_state: &mut BuildState) -> CompileAssetsState {
         .packages
         .par_iter()
         .map(|(_, package)| {
-            let read_dir = fs::read_dir(std::path::Path::new(&package.get_build_path())).unwrap();
+            let read_dir = fs::read_dir(std::path::Path::new(&package.get_ocaml_build_path())).unwrap();
             read_dir
                 .filter_map(|entry| match entry {
                     Ok(entry) => {
@@ -103,7 +103,9 @@ pub fn read(build_state: &mut BuildState) -> CompileAssetsState {
                                 last_modified: last_modified.to_owned(),
                                 ast_file_path,
                                 is_root: *package_is_root,
-                                suffix: root_package.config.get_suffix(),
+                                suffix: root_package
+                                    .config
+                                    .get_suffix(root_package.config.get_package_specs().first().unwrap()),
                             },
                         );
                         let _ = ast_rescript_file_locations.insert(res_file_path);
