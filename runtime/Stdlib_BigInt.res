@@ -75,14 +75,6 @@ external toLocaleString: bigint => string = "toLocaleString"
 
 let toInt = t => t->toFloat->Stdlib_Int.fromFloat
 
-external \"+": (bigint, bigint) => bigint = "%addbigint"
-external \"-": (bigint, bigint) => bigint = "%subbigint"
-external \"*": (bigint, bigint) => bigint = "%mulbigint"
-external \"/": (bigint, bigint) => bigint = "%divbigint"
-external \"~-": bigint => bigint = "%negbigint"
-external \"~+": bigint => bigint = "%identity"
-external \"**": (bigint, bigint) => bigint = "%powbigint"
-
 external add: (bigint, bigint) => bigint = "%addbigint"
 external sub: (bigint, bigint) => bigint = "%subbigint"
 external mul: (bigint, bigint) => bigint = "%mulbigint"
@@ -93,7 +85,6 @@ external mod: (bigint, bigint) => bigint = "%modbigint"
 external bitwiseAnd: (bigint, bigint) => bigint = "%andbigint"
 external bitwiseOr: (bigint, bigint) => bigint = "%orbigint"
 external bitwiseXor: (bigint, bigint) => bigint = "%xorbigint"
-
 external bitwiseNot: bigint => bigint = "%bitnot_bigint"
 
 external shiftLeft: (bigint, bigint) => bigint = "%lslbigint"
@@ -106,3 +97,21 @@ external shiftRight: (bigint, bigint) => bigint = "%asrbigint"
   without having to store or process it further.
 */
 external ignore: bigint => unit = "%ignore"
+
+@deprecated("Use `&` operator or `bitwiseAnd` instead.")
+external land: (bigint, bigint) => bigint = "%andbigint"
+
+@deprecated("Use `bitwiseOr` instead.")
+external lor: (bigint, bigint) => bigint = "%orbigint"
+
+@deprecated("Use `^` operator or `bitwiseXor` instead.")
+external lxor: (bigint, bigint) => bigint = "%xorbigint"
+
+@deprecated("Use `~` operator or `bitwiseNot` instead.")
+external lnot: bigint => bigint = "%bitnot_bigint"
+
+@deprecated("Use `<<` operator or `shiftLeft` instead.")
+external lsl: (bigint, bigint) => bigint = "%lslbigint"
+
+@deprecated("Use `>>` operator or `shiftRight` instead.")
+external asr: (bigint, bigint) => bigint = "%asrbigint"
