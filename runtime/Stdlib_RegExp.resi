@@ -300,9 +300,24 @@ Console.log(regexp2->RegExp.unicode) // Logs `true`, since `u` is set
 external unicode: t => bool = "unicode"
 
 /**
+`flags(regexp)` returns a string consisting of all the flags set on this `RegExp`.
+
+See [`RegExp.flags`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/flags) on MDN.
+
+## Examples
+```rescript
+let regexp = RegExp.fromString("\\w+", ~flags="gi")
+Console.log(regexp->RegExp.flags) // Logs "gi", all the flags set on the RegExp
+```
+*/
+@get
+external flags: t => string = "flags"
+
+/**
   `ignore(regExp)` ignores the provided regExp and returns unit.
 
   This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
   without having to store or process it further.
 */
 external ignore: t => unit = "%ignore"
+//
