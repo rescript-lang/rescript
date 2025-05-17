@@ -350,7 +350,13 @@ jobs:
         if: ${{ runner.os == 'Windows' }}
         run: opam exec -- make test-syntax
 
-      - name: Build runtime/stdlib
+      - name: Build runtime/stdlib with rewatch
+        if: ${{ runner.os != 'Windows' }}
+        run: ./scripts/buildRuntimeRewatch.sh
+        shell: bash
+
+      - name: Build runtime/stdlib with bsb (Windows)
+        if: ${{ runner.os == 'Windows' }}
         run: ./scripts/buildRuntime.sh
         shell: bash
 
