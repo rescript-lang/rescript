@@ -44,6 +44,7 @@
 
 - AST: Add bar location to `case`. https://github.com/rescript-lang/rescript/pull/7407
 - Clean up lazy from ASTs and back-end. https://github.com/rescript-lang/rescript/pull/7474
+- Compile runtime with rewatch and add rewatch tests to the compiler repo. https://github.com/rescript-lang/rescript/pull/7422/files
 
 #### :nail_care: Polish
 
