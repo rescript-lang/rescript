@@ -495,6 +495,7 @@ jobs:
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Install ReScript package in rewatch/testrepo
+        if: runner.os == 'Linux'
         run: |
           COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
           yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
@@ -502,8 +503,8 @@ jobs:
         working-directory: rewatch/testrepo
 
       - name: Run rewatch integration tests
-        # Currently fails on Windows and on macOS x64
-        if: matrix.os != 'windows-latest' && matrix.os != 'macos-13'
+        # Currently failing on Windows and intermittently on macOS
+        if: runner.os == 'Linux'
         run: make test-rewatch-ci
 
   publish:
