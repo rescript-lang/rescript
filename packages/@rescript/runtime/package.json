@@ -1,0 +1,20 @@
+{
+  "name": "@rescript/runtime",
+  "version": "12.0.0-alpha.13",
+  "description": "ReScript runtime modules",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rescript-lang/rescript.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "lib"
+  ],
+  "devDependencies": {
+    "rescript": "workspace:^"
+  },
+  "preferUnplugged": true
+}
