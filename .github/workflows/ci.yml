@@ -552,7 +552,5 @@ jobs:
             npm publish --tag ci
 
       - name: Update Website Playground
-        env:
-          NEXT_REVALIDATE_SECRET_TOKEN: ${{ secrets.NEXT_REVALIDATE_SECRET_TOKEN }}
-        run: yarn workspace playground revalidate
+        run: curl -X POST "${{ secrets.CLOUDFLARE_PAGES_DEPLOYMENT_HOOK }}"
         shell: bash
