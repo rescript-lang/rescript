@@ -41,6 +41,7 @@
     "bsc": "cli/bsc.js",
     "bstracing": "cli/bstracing.js",
     "rescript": "cli/rescript.js",
+    "rescript-editor-analysis": "cli/rescript-editor-analysis.js",
     "rescript-tools": "cli/rescript-tools.js",
     "rewatch": "cli/rewatch.js"
   },
