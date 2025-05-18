@@ -440,6 +440,14 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rescript/runtime@workspace:packages/@rescript/runtime":
+  version: 0.0.0-use.local
+  resolution: "@rescript/runtime@workspace:packages/@rescript/runtime"
+  dependencies:
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "@rescript/std@workspace:packages/std":
   version: 0.0.0-use.local
   resolution: "@rescript/std@workspace:packages/std"

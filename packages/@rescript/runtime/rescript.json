@@ -1,5 +1,5 @@
 {
-  "name": "rescript-runtime",
+  "name": "@rescript/runtime",
   "sources": [
     {
       "dir": "."
