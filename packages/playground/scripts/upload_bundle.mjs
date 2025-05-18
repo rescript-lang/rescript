@@ -85,7 +85,7 @@ console.log("Creating archive...");
 exec(`tar \\
   --use-compress-program="zstd -T0 --adapt --exclude-compressed" \\
   -cf "${archivePath}" \\
-  "${artifactsDir}"
+  -C "${artifactsDir}" .
 `);
 
 console.log(`Uploading v${version} artifacts...`);
