@@ -1,4 +1,4 @@
-type t<+'a> = Primitive_lazy.lazy_t<'a>
+type t<+'a> = Primitive_lazy.t<'a>
 
 exception Undefined = Primitive_lazy.Undefined
 

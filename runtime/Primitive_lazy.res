@@ -24,10 +24,10 @@
 
 @@config({flags: ["-bs-no-cross-module-opt"]})
 
-type lazy_t<+'a>
+type t<+'a>
 
 /* Internals of forcing lazy values. */
-type t<'a> = {
+type internal<'a> = {
   @as("LAZY_DONE") mutable tag: bool,
   /* Invariant: name */
   @as("VAL") mutable value: 'a,
@@ -36,15 +36,15 @@ type t<'a> = {
 
 %%private(external fnToVal: (unit => 'a) => 'a = "%identity")
 %%private(external valToFn: 'a => unit => 'a = "%identity")
-%%private(external castToConcrete: lazy_t<'a> => t<'a> = "%identity")
-%%private(external castFromConcrete: t<'a> => lazy_t<'a> = "%identity")
+%%private(external castToConcrete: t<'a> => internal<'a> = "%identity")
+%%private(external castFromConcrete: internal<'a> => t<'a> = "%identity")
 
-let is_val = (type a, l: lazy_t<a>): bool => castToConcrete(l).tag
+let is_val = (type a, l: t<a>): bool => castToConcrete(l).tag
 
 exception Undefined
 
 %%private(
-  let forward_with_closure = (type a, blk: t<a>, closure: unit => a): a => {
+  let forward_with_closure = (type a, blk: internal<a>, closure: unit => a): a => {
     let result = closure()
     blk.value = result
     blk.tag = true
@@ -56,7 +56,7 @@ exception Undefined
 
 /* Assume [blk] is a block with tag lazy */
 %%private(
-  let force_lazy_block = (type a, blk: t<a>): a => {
+  let force_lazy_block = (type a, blk: internal<a>): a => {
     let closure = valToFn(blk.value)
     blk.value = fnToVal(raise_undefined)
     try forward_with_closure(blk, closure) catch {
@@ -69,15 +69,15 @@ exception Undefined
 
 /* Assume [blk] is a block with tag lazy */
 %%private(
-  let force_val_lazy_block = (type a, blk: t<a>): a => {
+  let force_val_lazy_block = (type a, blk: internal<a>): a => {
     let closure = valToFn(blk.value)
     blk.value = fnToVal(raise_undefined)
     forward_with_closure(blk, closure)
   }
 )
 
-let force = (type a, lzv: lazy_t<a>): a => {
-  let lzv: t<_> = castToConcrete(lzv)
+let force = (type a, lzv: t<a>): a => {
+  let lzv: internal<_> = castToConcrete(lzv)
   if lzv.tag {
     lzv.value
   } else {
@@ -85,8 +85,8 @@ let force = (type a, lzv: lazy_t<a>): a => {
   }
 }
 
-let force_val = (type a, lzv: lazy_t<a>): a => {
-  let lzv: t<_> = castToConcrete(lzv)
+let force_val = (type a, lzv: t<a>): a => {
+  let lzv: internal<_> = castToConcrete(lzv)
   if lzv.tag {
     lzv.value
   } else {
@@ -94,7 +94,7 @@ let force_val = (type a, lzv: lazy_t<a>): a => {
   }
 }
 
-let from_fun = (type a, closure: unit => a): lazy_t<a> => {
+let from_fun = (type a, closure: unit => a): t<a> => {
   let blk = {
     tag: false,
     value: fnToVal(closure),
@@ -102,7 +102,7 @@ let from_fun = (type a, closure: unit => a): lazy_t<a> => {
   castFromConcrete(blk)
 }
 
-let from_val = (type a, value: a): lazy_t<a> => {
+let from_val = (type a, value: a): t<a> => {
   let blk = {
     tag: true,
     value,
