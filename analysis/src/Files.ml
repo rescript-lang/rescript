@@ -84,14 +84,24 @@ let rec collectDirs path =
        |> List.concat)
   | _ -> []
 
-let rec collect ?(checkDir = fun _ -> true) path test =
-  match maybeStat path with
-  | None -> []
-  | Some {Unix.st_kind = Unix.S_DIR} ->
+let rec collect ?(checkDir = fun _ -> true) ?maxDepth path test =
+  match (maxDepth, maybeStat path) with
+  | None, None -> []
+  | Some 0, _ -> []
+  | None, Some {Unix.st_kind = Unix.S_DIR} ->
     if checkDir path then
       readDirectory path
       |> List.map (fun name ->
              collect ~checkDir (Filename.concat path name) test)
+      |> List.concat
+    else []
+  | Some n, Some {Unix.st_kind = Unix.S_DIR} ->
+    if checkDir path then
+      readDirectory path
+      |> List.map (fun name ->
+             collect ~checkDir ~maxDepth:(n - 1)
+               (Filename.concat path name)
+               test)
       |> List.concat
     else []
   | _ -> if test path then [path] else []

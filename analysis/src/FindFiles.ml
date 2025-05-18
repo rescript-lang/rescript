@@ -142,7 +142,7 @@ let findProjectFiles ~public ~namespace ~path ~sourceDirectories ~libBs =
   in
   let files =
     dirs |> StringSet.elements
-    |> List.map (fun name -> Files.collect name isSourceFile)
+    |> List.map (fun name -> Files.collect ~maxDepth:1 name isSourceFile)
     |> List.concat |> StringSet.of_list
   in
   dirs

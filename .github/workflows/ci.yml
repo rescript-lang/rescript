@@ -326,16 +326,21 @@ jobs:
 
       - name: Build runtime/stdlib with rewatch
         if: ${{ runner.os != 'Windows' }}
-        run: ./scripts/buildRuntimeRewatch.sh
+        run: |
+          yarn workspace @rescript/runtime clean:rewatch
+          yarn workspace @rescript/runtime build:rewatch
         shell: bash
 
       - name: Build runtime/stdlib with bsb (Windows)
         if: ${{ runner.os == 'Windows' }}
-        run: ./scripts/buildRuntime.sh
+        run: | 
+          yarn workspace @rescript/runtime clean:bsb
+          yarn workspace @rescript/runtime build:bsb
         shell: bash
 
       - name: Check for changes in lib folder
         run: git diff --exit-code lib/js lib/es6
+        working-directory: packages/@rescript/runtime
 
       - name: Version Check
         run: yarn constraints

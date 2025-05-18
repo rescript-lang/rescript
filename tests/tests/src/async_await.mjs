@@ -35,11 +35,11 @@ async function f(value) {
 }
 
 async function f0() {
-  return (await import("rescript/lib/es6/Belt_Option.js")).forEach;
+  return (await import("@rescript/runtime/lib/es6/Belt_Option.js")).forEach;
 }
 
 async function f1() {
-  return (await import("rescript/lib/es6/Belt_Option.js")).forEach;
+  return (await import("@rescript/runtime/lib/es6/Belt_Option.js")).forEach;
 }
 
 export {
