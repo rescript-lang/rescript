@@ -6,14 +6,14 @@ import * as Nodeurl from "node:url";
 import * as Nodepath from "node:path";
 import * as ArrayUtils from "./ArrayUtils.res.js";
 import * as SpawnAsync from "./SpawnAsync.res.js";
-import * as Stdlib_Int from "rescript/lib/es6/Stdlib_Int.js";
-import * as Stdlib_Dict from "rescript/lib/es6/Stdlib_Dict.js";
-import * as Stdlib_Array from "rescript/lib/es6/Stdlib_Array.js";
-import * as Stdlib_Option from "rescript/lib/es6/Stdlib_Option.js";
-import * as Stdlib_JsError from "rescript/lib/es6/Stdlib_JsError.js";
-import * as Primitive_string from "rescript/lib/es6/Primitive_string.js";
+import * as Stdlib_Int from "@rescript/runtime/lib/es6/Stdlib_Int.js";
+import * as Stdlib_Dict from "@rescript/runtime/lib/es6/Stdlib_Dict.js";
+import * as Stdlib_Array from "@rescript/runtime/lib/es6/Stdlib_Array.js";
+import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.js";
+import * as Stdlib_JsError from "@rescript/runtime/lib/es6/Stdlib_JsError.js";
+import * as Primitive_string from "@rescript/runtime/lib/es6/Primitive_string.js";
 import * as Promises from "node:fs/promises";
-import * as Primitive_exceptions from "rescript/lib/es6/Primitive_exceptions.js";
+import * as Primitive_exceptions from "@rescript/runtime/lib/es6/Primitive_exceptions.js";
 
 let nodeVersion = Stdlib_Option.getOrThrow(Stdlib_Int.fromString(Stdlib_Option.getOrThrow(process.version.replace("v", "").split(".")[0], "Failed to find major version of Node"), undefined), "Failed to convert node version to Int");
 
@@ -69,8 +69,10 @@ async function extractDocFromFile(file) {
 
 let batchSize = Nodeos.cpus().length;
 
+let runtimePath = Nodepath.join("packages", "@rescript", "runtime");
+
 async function extractExamples() {
-  let files = Nodefs.readdirSync("runtime");
+  let files = Nodefs.readdirSync(runtimePath);
   let docFiles = files.filter(f => {
     if (f.startsWith("Js") || f.startsWith("RescriptTools")) {
       return false;
@@ -85,7 +87,7 @@ async function extractExamples() {
   console.log("Extracting examples from " + docFiles.length.toString() + " runtime files...");
   let examples = [];
   await ArrayUtils.forEachAsyncInBatches(docFiles, batchSize, async f => {
-    let doc = await extractDocFromFile(Nodepath.join("runtime", f));
+    let doc = await extractDocFromFile(Nodepath.join(runtimePath, f));
     if (doc.TAG === "Ok") {
       examples.push(...doc._0.filter(d => d.code.includes("assertEqual(")));
       return;

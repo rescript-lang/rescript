@@ -6,8 +6,8 @@ import { createServer } from "node:http";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { WebSocket } from "./minisocket.js";
 import { rescript_legacy_exe } from "./bins.js";
+import { WebSocket } from "./minisocket.js";
 
 const cwd = process.cwd();
 const lockFileName = path.join(cwd, ".bsb.lock");

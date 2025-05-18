@@ -62,7 +62,6 @@
     "CREDITS.md",
     "ninja.COPYING",
     "docs/docson/build-schema.json",
-    "lib",
     "cli"
   ],
   "exports": {
@@ -74,6 +73,9 @@
     "#cli/*": "./cli/common/*.js",
     "#dev/*": "./lib_dev/*.js",
     "#lib/minisocket": "./lib/minisocket.js"
+  },
+  "dependencies": {
+    "@rescript/runtime": "workspace:packages/@rescript/runtime"
   },
   "optionalDependencies": {
     "@rescript/darwin-arm64": "workspace:packages/@rescript/darwin-arm64",
