@@ -21,10 +21,6 @@
     "./lib/js/*": "./lib/js/*",
     "./package.json": "./package.json"
   },
-  "scripts": {
-    "build": "rescript build",
-    "clean": "rescript clean"
-  },
   "devDependencies": {
     "rescript": "workspace:^"
   },
