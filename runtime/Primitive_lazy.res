@@ -32,47 +32,41 @@ type internal<'a> = {
   /* its type is ['a] or [unit -> 'a ] */
 }
 
-%%private(external fnToVal: (unit => 'a) => 'a = "%identity")
-%%private(external valToFn: 'a => unit => 'a = "%identity")
-%%private(external castToConcrete: t<'a> => internal<'a> = "%identity")
-%%private(external castFromConcrete: internal<'a> => t<'a> = "%identity")
+external fnToVal: (unit => 'a) => 'a = "%identity"
+external valToFn: 'a => unit => 'a = "%identity"
+external castToConcrete: t<'a> => internal<'a> = "%identity"
+external castFromConcrete: internal<'a> => t<'a> = "%identity"
 
 let is_val = (type a, l: t<a>): bool => castToConcrete(l).tag
 
 exception Undefined
 
-%%private(
-  let forward_with_closure = (type a, blk: internal<a>, closure: unit => a): a => {
-    let result = closure()
-    blk.value = result
-    blk.tag = true
-    result
-  }
-)
+let forward_with_closure = (type a, blk: internal<a>, closure: unit => a): a => {
+  let result = closure()
+  blk.value = result
+  blk.tag = true
+  result
+}
 
-%%private(let raise_undefined = () => throw(Undefined))
+let raise_undefined = () => throw(Undefined)
 
 /* Assume [blk] is a block with tag lazy */
-%%private(
-  let force_lazy_block = (type a, blk: internal<a>): a => {
-    let closure = valToFn(blk.value)
-    blk.value = fnToVal(raise_undefined)
-    try forward_with_closure(blk, closure) catch {
-    | e =>
-      blk.value = fnToVal(() => throw(e))
-      throw(e)
-    }
+let force_lazy_block = (type a, blk: internal<a>): a => {
+  let closure = valToFn(blk.value)
+  blk.value = fnToVal(raise_undefined)
+  try forward_with_closure(blk, closure) catch {
+  | e =>
+    blk.value = fnToVal(() => throw(e))
+    throw(e)
   }
-)
+}
 
 /* Assume [blk] is a block with tag lazy */
-%%private(
-  let force_val_lazy_block = (type a, blk: internal<a>): a => {
-    let closure = valToFn(blk.value)
-    blk.value = fnToVal(raise_undefined)
-    forward_with_closure(blk, closure)
-  }
-)
+let force_val_lazy_block = (type a, blk: internal<a>): a => {
+  let closure = valToFn(blk.value)
+  blk.value = fnToVal(raise_undefined)
+  forward_with_closure(blk, closure)
+}
 
 let force = (type a, lzv: t<a>): a => {
   let lzv: internal<_> = castToConcrete(lzv)
