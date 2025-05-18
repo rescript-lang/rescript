@@ -94,7 +94,7 @@ clean-rewatch:
 	cargo clean --manifest-path rewatch/Cargo.toml && rm -f rewatch/rewatch
 
 clean:
-	yarn workspace @rescript/runtime clean
+	yarn workspace @rescript/runtime clean:rewatch
 	dune clean
 
 clean-all: clean clean-gentype clean-rewatch 

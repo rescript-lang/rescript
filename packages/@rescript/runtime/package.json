@@ -22,9 +22,10 @@
     "./package.json": "./package.json"
   },
   "scripts": {
+    "clean:rewatch": "rewatch clean",
     "build:rewatch": "rewatch build",
-    "build:bsb": "rescript build",
-    "clean": "rewatch clean"
+    "clean:bsb": "rescript clean",
+    "build:bsb": "rescript build"
   },
   "devDependencies": {
     "rescript": "workspace:^"
