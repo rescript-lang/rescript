@@ -53,7 +53,7 @@ and ident_dict = ident_create "dict"
 
 and ident_bigint = ident_create "bigint"
 
-and ident_lazy_t = ident_create "lazy_t"
+and ident_lazy_t = ident_create "lazy_t_to_remove"
 
 and ident_string = ident_create "string"
 

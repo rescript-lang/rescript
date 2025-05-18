@@ -24,25 +24,6 @@ module rec Int3: {
   let u: int => int
 } = Int3
 
-module rec Inta: {
-  let a: Lazy.t<int>
-} = {
-  let a = Lazy.make(() => Lazy.get(Intb.a))
-}
-and Intb: {
-  let a: Lazy.t<int>
-} = {
-  let a = Lazy.make(() => Lazy.get(Inta.a) + 1)
-}
-
-eq(
-  __LOC__,
-  -1,
-  try Lazy.get(Intb.a) catch {
-  | Lazy.Undefined => -1
-  },
-)
-
 module A = {
   module rec Inta: {
     let a: Lazy.t<int>

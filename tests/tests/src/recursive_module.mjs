@@ -41,139 +41,40 @@ Primitive_module.update({
     ]]
 }, Int3, Int3);
 
-let Inta = Primitive_module.init([
-  "recursive_module.res",
-  29,
-  4
-], {
-  TAG: "Module",
-  _0: [[
-      "Lazy",
-      "a"
-    ]]
-});
+let a = Stdlib_Lazy.make(() => 2);
 
-let Intb = Primitive_module.init([
-  "recursive_module.res",
-  34,
-  4
-], {
-  TAG: "Module",
-  _0: [[
-      "Lazy",
-      "a"
-    ]]
-});
-
-let a = Stdlib_Lazy.make(() => Stdlib_Lazy.get(Intb.a));
-
-Primitive_module.update({
-  TAG: "Module",
-  _0: [[
-      "Lazy",
-      "a"
-    ]]
-}, Inta, {
+let Intb = {
   a: a
-});
+};
 
-let a$1 = Stdlib_Lazy.make(() => Stdlib_Lazy.get(Inta.a) + 1 | 0);
+let a$1 = Stdlib_Lazy.make(() => Stdlib_Lazy.get(Intb.a) + 1 | 0);
 
-Primitive_module.update({
-  TAG: "Module",
-  _0: [[
-      "Lazy",
-      "a"
-    ]]
-}, Intb, {
+let Inta = {
   a: a$1
-});
+};
+
+let A = {
+  Inta: Inta,
+  Intb: Intb
+};
+
+eq("File \"recursive_module.res\", line 40, characters 3-10", Stdlib_Lazy.get(a$1), 3);
 
 let tmp;
 
 try {
-  tmp = Stdlib_Lazy.get(Intb.a);
+  Int3.u(3);
+  tmp = 3;
 } catch (raw_exn) {
   let exn = Primitive_exceptions.internalToException(raw_exn);
-  if (exn.RE_EXN_ID === Stdlib_Lazy.Undefined) {
-    tmp = -1;
+  if (exn.RE_EXN_ID === "Undefined_recursive_module") {
+    tmp = 4;
   } else {
     throw exn;
   }
 }
 
-eq("File \"recursive_module.res\", line 39, characters 2-9", -1, tmp);
-
-let Inta$1 = Primitive_module.init([
-  "recursive_module.res",
-  49,
-  6
-], {
-  TAG: "Module",
-  _0: [[
-      "Lazy",
-      "a"
-    ]]
-});
-
-let Intb$1 = Primitive_module.init([
-  "recursive_module.res",
-  54,
-  6
-], {
-  TAG: "Module",
-  _0: [[
-      "Lazy",
-      "a"
-    ]]
-});
-
-let a$2 = Stdlib_Lazy.make(() => Stdlib_Lazy.get(Intb$1.a) + 1 | 0);
-
-Primitive_module.update({
-  TAG: "Module",
-  _0: [[
-      "Lazy",
-      "a"
-    ]]
-}, Inta$1, {
-  a: a$2
-});
-
-let a$3 = Stdlib_Lazy.make(() => 2);
-
-Primitive_module.update({
-  TAG: "Module",
-  _0: [[
-      "Lazy",
-      "a"
-    ]]
-}, Intb$1, {
-  a: a$3
-});
-
-let A = {
-  Inta: Inta$1,
-  Intb: Intb$1
-};
-
-eq("File \"recursive_module.res\", line 59, characters 3-10", Stdlib_Lazy.get(Inta$1.a), 3);
-
-let tmp$1;
-
-try {
-  Int3.u(3);
-  tmp$1 = 3;
-} catch (raw_exn$1) {
-  let exn$1 = Primitive_exceptions.internalToException(raw_exn$1);
-  if (exn$1.RE_EXN_ID === "Undefined_recursive_module") {
-    tmp$1 = 4;
-  } else {
-    throw exn$1;
-  }
-}
-
-eq("File \"recursive_module.res\", line 62, characters 2-9", 4, tmp$1);
+eq("File \"recursive_module.res\", line 43, characters 2-9", 4, tmp);
 
 Mt.from_pair_suites("Recursive_module", suites.contents);
 
@@ -189,8 +90,6 @@ export {
   Xx,
   uuu,
   Int3,
-  Inta,
-  Intb,
   A,
 }
 /* Int3 Not a pure module */

@@ -24,6 +24,8 @@
 
 @@config({flags: ["-bs-no-cross-module-opt"]})
 
+type lazy_t<+'a>
+
 /* Internals of forcing lazy values. */
 type t<'a> = {
   @as("LAZY_DONE") mutable tag: bool,

@@ -12,7 +12,8 @@
     subsequent accesses.  If the computation raises an exception,
     the same exception is raised again on subsequent accesses.
  */
-type t<'a> = lazy_t<'a>
+@notUndefined
+type t<+'a>
 
 /** 
     `Lazy.make(f)` creates a lazy value from `f` which is the

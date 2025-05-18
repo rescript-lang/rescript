@@ -1,5 +1,7 @@
 exception Undefined
 
+type lazy_t<+'a>
+
 /** [force x] forces the suspension [x] and returns its result.
    If [x] has already been forced, [Lazy.force x] returns the
    same value again without recomputing it.  If it raised an exception,
