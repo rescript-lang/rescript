@@ -62,7 +62,7 @@ async function enforceCompilerMeta({ Yarn }) {
     const foundVersion = versionMatch?.groups?.version;
     if (foundVersion !== EXPECTED_VERSION) {
       Yarn.workspace().error(
-        `compiler/common/bs_version.ml file need to be fiexed; expected ${EXPECTED_VERSION}, found ${foundVersion}.`,
+        `compiler/common/bs_version.ml file need to be fixed; expected ${EXPECTED_VERSION}, found ${foundVersion}.`,
       );
     }
   }
