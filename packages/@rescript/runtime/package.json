@@ -44,7 +44,8 @@
     "clean:rewatch": "rewatch clean",
     "build:rewatch": "rewatch build",
     "clean:bsb": "rescript clean",
-    "build:bsb": "rescript build"
+    "build:bsb": "rescript build",
+    "cppo": "node scripts/cppo.js"
   },
   "devDependencies": {
     "rescript": "workspace:^"
