@@ -116,7 +116,6 @@ lib/es6/Primitive_hash.js
 lib/es6/Primitive_int.js
 lib/es6/Primitive_int_extern.js
 lib/es6/Primitive_js_extern.js
-lib/es6/Primitive_lazy.js
 lib/es6/Primitive_module.js
 lib/es6/Primitive_object.js
 lib/es6/Primitive_object_extern.js
@@ -291,7 +290,6 @@ lib/js/Primitive_hash.js
 lib/js/Primitive_int.js
 lib/js/Primitive_int_extern.js
 lib/js/Primitive_js_extern.js
-lib/js/Primitive_lazy.js
 lib/js/Primitive_module.js
 lib/js/Primitive_object.js
 lib/js/Primitive_object_extern.js
@@ -869,12 +867,6 @@ lib/ocaml/Primitive_js_extern.cmi
 lib/ocaml/Primitive_js_extern.cmj
 lib/ocaml/Primitive_js_extern.cmt
 lib/ocaml/Primitive_js_extern.res
-lib/ocaml/Primitive_lazy.cmi
-lib/ocaml/Primitive_lazy.cmj
-lib/ocaml/Primitive_lazy.cmt
-lib/ocaml/Primitive_lazy.cmti
-lib/ocaml/Primitive_lazy.res
-lib/ocaml/Primitive_lazy.resi
 lib/ocaml/Primitive_module.cmi
 lib/ocaml/Primitive_module.cmj
 lib/ocaml/Primitive_module.cmt
