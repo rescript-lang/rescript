@@ -674,9 +674,14 @@ module Export = struct
 end
 
 let () =
-  Js.export "rescript_compiler"
-    (object%js
-       val api_version = api_version
-       val version = Bs_version.version
-       method make = Export.make ()
-    end)
+  let compiler =
+    object%js
+      val api_version = api_version
+      val version = Bs_version.version
+      method make = Export.make ()
+    end
+  in
+  Js.export "rescript_compiler" compiler;
+
+  (* Prefer module export, but keep global variable for playground compatibility *)
+  Js.Unsafe.set Js.Unsafe.global "rescript_compiler" compiler
