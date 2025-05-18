@@ -2,8 +2,8 @@
 
 import * as Mt from "./mt.mjs";
 import * as Mt_global from "./mt_global.mjs";
-import * as Primitive_bigint from "rescript/lib/es6/Primitive_bigint.js";
-import * as Primitive_object from "rescript/lib/es6/Primitive_object.js";
+import * as Primitive_bigint from "@rescript/runtime/lib/es6/Primitive_bigint.js";
+import * as Primitive_object from "@rescript/runtime/lib/es6/Primitive_object.js";
 
 let test_id = {
   contents: 0

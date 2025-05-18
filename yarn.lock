@@ -2489,6 +2489,7 @@ __metadata:
     "@rescript/darwin-x64": "workspace:packages/@rescript/darwin-x64"
     "@rescript/linux-arm64": "workspace:packages/@rescript/linux-arm64"
     "@rescript/linux-x64": "workspace:packages/@rescript/linux-x64"
+    "@rescript/runtime": "workspace:packages/@rescript/runtime"
     "@rescript/win32-x64": "workspace:packages/@rescript/win32-x64"
     "@types/node": "npm:^20.14.9"
     "@yarnpkg/types": "npm:^4.0.1"

@@ -147,8 +147,10 @@ let getCodeBlocks = example => {
 
 let batchSize = OS.cpus()->Array.length
 
+let runtimePath = Path.join(["packages", "@rescript", "runtime"])
+
 let extractExamples = async () => {
-  let files = Fs.readdirSync("runtime")
+  let files = Fs.readdirSync(runtimePath)
 
   let docFiles = files->Array.filter(f =>
     switch f {
@@ -168,7 +170,7 @@ let extractExamples = async () => {
 
   let examples = []
   await docFiles->ArrayUtils.forEachAsyncInBatches(~batchSize, async f => {
-    let doc = await extractDocFromFile(Path.join(["runtime", f]))
+    let doc = await extractDocFromFile(Path.join([runtimePath, f]))
     examples->Array.pushMany(doc->getExamples)
   })
 

@@ -11,11 +11,20 @@
     "access": "public"
   },
   "files": [
-    "lib"
+    "lib/es6",
+    "lib/js",
+    "*.res",
+    "*.resi"
   ],
+  "exports": {
+    "./lib/es6/*": "./lib/es6/*",
+    "./lib/js/*": "./lib/js/*",
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "build:rewatch": "rewatch build",
-    "build:bsb": "rescript build"
+    "build:bsb": "rescript build",
+    "clean": "rewatch clean"
   },
   "devDependencies": {
     "rescript": "workspace:^"

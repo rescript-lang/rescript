@@ -3,7 +3,7 @@
 import * as Fs from "fs";
 import * as Path from "path";
 import * as Util from "util";
-import * as Stdlib_Option from "rescript/lib/es6/Stdlib_Option.js";
+import * as Stdlib_Option from "@rescript/runtime/lib/es6/Stdlib_Option.js";
 import * as CodeFrame from "@babel/code-frame";
 
 let dirname = (new URL('.', import.meta.url).pathname);

@@ -37,5 +37,3 @@ val ast_impl_magic_number : string
 (* Magic number for file holding an implementation syntax tree *)
 val cmt_magic_number : string
 (* Magic number for compiled interface files *)
-
-val print_config : out_channel -> unit

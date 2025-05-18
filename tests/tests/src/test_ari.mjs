@@ -2,7 +2,7 @@
 
 import * as U from "U";
 import * as VV from "VV";
-import * as Belt_List from "rescript/lib/es6/Belt_List.js";
+import * as Belt_List from "@rescript/runtime/lib/es6/Belt_List.js";
 
 function f(x, y) {
   return x + y | 0;

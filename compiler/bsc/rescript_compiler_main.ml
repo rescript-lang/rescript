@@ -184,12 +184,6 @@ let define_variable s =
       Bsc_args.bad_arg ("illegal definition: " ^ s)
   | _ -> Bsc_args.bad_arg ("illegal definition: " ^ s)
 
-let print_standard_library () =
-  let standard_library = Config.standard_library in
-  print_string standard_library;
-  print_newline ();
-  exit 0
-
 let bs_version_string = "ReScript " ^ Bs_version.version
 
 let print_version_string () =
@@ -366,9 +360,6 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
     ( "-ignore-parse-errors",
       set Clflags.ignore_parse_errors,
       "*internal* continue after parse errors" );
-    ( "-where",
-      unit_call print_standard_library,
-      "*internal* Print location of standard library and exit" );
     ( "-verbose",
       set Clflags.verbose,
       "*internal* Print calls to external commands" );
