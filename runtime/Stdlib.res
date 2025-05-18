@@ -57,6 +57,8 @@ type date = Date.t
 type null<+'a> = Primitive_js_extern.null<'a>
 type undefined<+'a> = Primitive_js_extern.undefined<'a>
 type nullable<+'a> = Primitive_js_extern.nullable<'a>
+@deprecated("Use Lazy.t instead")
+type lazy_t<+'a> = Lazy.t<'a>
 
 @deprecated("Use rescript-webapi instead") @val external window: Dom.window = "window"
 @deprecated("Use rescript-webapi instead") @val external document: Dom.document = "document"
