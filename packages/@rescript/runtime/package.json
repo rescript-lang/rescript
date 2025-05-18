@@ -40,6 +40,11 @@
     "./lib/js/*": "./lib/js/*",
     "./package.json": "./package.json"
   },
+  "scripts": {
+    "clean": "rescript clean",
+    "build": "rescript build",
+    "cppo": "node scripts/cppo.js"
+  },
   "devDependencies": {
     "rescript": "workspace:^"
   },
