@@ -342,6 +342,7 @@ jobs:
 
       - name: Check for changes in lib folder
         run: git diff --exit-code lib/js lib/es6
+        working-directory: packages/@rescript/runtime
 
       - name: Version Check
         run: yarn constraints
