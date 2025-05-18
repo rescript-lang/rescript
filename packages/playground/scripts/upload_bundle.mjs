@@ -88,6 +88,7 @@ exec(`tar \\
   -C "${artifactsDir}" .
 `);
 
+// TODO: This will no longer be needed after the KeyCDN to Cloudflare transition is complete.
 console.log(`Uploading v${version} artifacts...`);
 exec(`rclone sync ${rcloneOpts} --fast-list \\
   "${artifactsDir}" \\
