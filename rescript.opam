@@ -33,7 +33,6 @@ depends: [
 
   # Test dependencies that would be broken on Windows runners
   "js_of_ocaml" {os != "win32" & with-test & = "6.0.1"}
-  "js_of_ocaml-ppx" {os != "win32" & with-test & = "6.0.1"}
   "wasm_of_ocaml-compiler" {os != "win32" & with-test & = "6.0.1"}
 ]
 pin-depends: [

@@ -675,8 +675,10 @@ end
 
 let () =
   Js.export "rescript_compiler"
-    (object%js
-       val api_version = api_version
-       val version = Bs_version.version
-       method make = Export.make ()
-    end)
+    Js.Unsafe.(
+      obj
+        [|
+          ("api_version", inject @@ Js.string api_version);
+          ("version", inject @@ Js.string Bs_version.version);
+          ("make", inject @@ Export.make);
+        |])
