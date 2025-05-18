@@ -5,8 +5,8 @@ import * as fs from "node:fs";
 import { createServer } from "node:http";
 import * as os from "node:os";
 import * as path from "node:path";
-import { WebSocket } from "#lib/minisocket";
 
+import { WebSocket } from "./minisocket.js";
 import { rescript_exe } from "./bins.js";
 
 const cwd = process.cwd();
