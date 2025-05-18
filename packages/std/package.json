@@ -7,8 +7,12 @@
     "functional programming"
   ],
   "license": "SEE LICENSE IN LICENSE",
-  "homepage": "http://rescript-lang.org",
-  "bugs": "https://github.com/rescript-compiler/issues",
+  "homepage": "https://rescript-lang.org",
+  "bugs": "https://github.com/rescript-lang/rescript/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rescript-lang/rescript.git"
+  },
   "author": {
     "name": "Hongbo Zhang",
     "email": "bobzhang1988@gmail.com"
@@ -28,5 +32,6 @@
   ],
   "files": [
     "lib"
-  ]
+  ],
+  "preferUnplugged": true
 }

@@ -11,11 +11,11 @@
     "Language"
   ],
   "license": "SEE LICENSE IN LICENSE",
-  "homepage": "http://rescript-lang.org",
-  "bugs": "https://github.com/rescript-lang/rescript-compiler/issues",
+  "homepage": "https://rescript-lang.org",
+  "bugs": "https://github.com/rescript-lang/rescript/issues",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rescript-lang/rescript-compiler.git"
+    "url": "git+https://github.com/rescript-lang/rescript.git"
   },
   "author": {
     "name": "Hongbo Zhang",
@@ -97,5 +97,6 @@
     "tests/gentype_tests/**",
     "tests/tools_tests"
   ],
-  "packageManager": "yarn@4.7.0"
+  "packageManager": "yarn@4.7.0",
+  "preferUnplugged": true
 }
