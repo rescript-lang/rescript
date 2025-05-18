@@ -336,8 +336,8 @@ jobs:
         run: ./scripts/test_syntax.sh
         shell: bash
 
-      - name: Build runtime/stdlib
-        run: ./scripts/buildRuntime.sh
+      - name: Build runtime/stdlib with rewatch
+        run: yarn workspace @rescript/runtime rescript build
         shell: bash
 
       - name: Check for changes in lib folder
