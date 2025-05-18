@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import * as ImportHooks from "./ImportHooks.res.js";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
+import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.js";
 import * as ImportHookDefault from "./ImportHookDefault.res.js";
 import * as JsxRuntime from "react/jsx-runtime";
 
