@@ -42,7 +42,7 @@ let rec type_cannot_contain_undefined (typ : Types.type_expr) (env : Env.t) =
   | Tconstr (p, _, _) -> (
     (* all built in types could not inhabit none-like values:
        int, char, float, bool, unit, exn, array, list, nativeint,
-       int32, int64, lazy_t, bytes
+       int32, int64, bytes
     *)
     match Predef.type_is_builtin_path_but_option p with
     | For_sure_yes -> true

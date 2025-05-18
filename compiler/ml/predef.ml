@@ -53,8 +53,6 @@ and ident_dict = ident_create "dict"
 
 and ident_bigint = ident_create "bigint"
 
-and ident_lazy_t = ident_create "lazy_t_to_remove"
-
 and ident_string = ident_create "string"
 
 and ident_extension_constructor = ident_create "extension_constructor"
@@ -98,8 +96,6 @@ and path_dict = Pident ident_dict
 
 and path_bigint = Pident ident_bigint
 
-and path_lazy_t = Pident ident_lazy_t
-
 and path_string = Pident ident_string
 
 and path_unkonwn = Pident ident_unknown
@@ -131,8 +127,6 @@ and type_result t1 t2 = newgenty (Tconstr (path_result, [t1; t2], ref Mnil))
 and type_dict t = newgenty (Tconstr (path_dict, [t], ref Mnil))
 
 and type_bigint = newgenty (Tconstr (path_bigint, [], ref Mnil))
-
-and type_lazy_t t = newgenty (Tconstr (path_lazy_t, [t], ref Mnil))
 
 and type_string = newgenty (Tconstr (path_string, [], ref Mnil))
 
@@ -332,14 +326,6 @@ let common_initial_env add_type add_extension empty_env =
           ];
       type_unboxed = Types.unboxed_true_default_false;
     }
-  and decl_lazy_t =
-    let tvar = newgenvar () in
-    {
-      decl_abstr with
-      type_params = [tvar];
-      type_arity = 1;
-      type_variance = [Variance.covariant];
-    }
   and decl_promise =
     let tvar = newgenvar () in
     {
@@ -381,7 +367,6 @@ let common_initial_env add_type add_extension empty_env =
   |> add_type ident_exn decl_exn
   |> add_type ident_option decl_option
   |> add_type ident_result decl_result
-  |> add_type ident_lazy_t decl_lazy_t
   |> add_type ident_promise decl_promise
   |> add_type ident_array decl_array
   |> add_type ident_list decl_list
