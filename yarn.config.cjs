@@ -7,8 +7,6 @@
 const fs = require("node:fs/promises");
 const { defineConfig } = require("@yarnpkg/types");
 
-const { compilerVersionFile } = require("#dev/paths");
-
 /**
  * @param {Yarn.Constraints.Context} ctx
  */
@@ -46,23 +44,21 @@ async function enforceCompilerMeta({ Yarn }) {
     }
   }
 
+  const { compilerVersionFile } = await import("#dev/paths");
   const versionFile = await fs.readFile(compilerVersionFile, "utf8");
   const versionPattern = /^let version = "(?<version>[^"]+)"$/m;
 
   if (process.argv.includes("--fix")) {
     await fs.writeFile(
       compilerVersionFile,
-      versionFile.replace(
-        versionPattern,
-        `let version = "${EXPECTED_VERSION}"`,
-      ),
+      versionFile.replace(versionPattern, `let version = "${EXPECTED_VERSION}"`)
     );
   } else {
     const versionMatch = versionFile.match(versionPattern);
     const foundVersion = versionMatch?.groups?.version;
     if (foundVersion !== EXPECTED_VERSION) {
       Yarn.workspace().error(
-        `compiler/common/bs_version.ml file need to be fixed; expected ${EXPECTED_VERSION}, found ${foundVersion}.`,
+        `compiler/common/bs_version.ml file need to be fixed; expected ${EXPECTED_VERSION}, found ${foundVersion}.`
       );
     }
   }
