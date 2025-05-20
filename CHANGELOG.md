@@ -26,6 +26,7 @@
 - JSX: do not error on ref as prop anymore (which is allowed in React 19). https://github.com/rescript-lang/rescript/pull/7420
 - Add new attribute `@notUndefined` for abstract types to prevent unnecessary wrapping with `Primitive_option.some` in JS output. https://github.com/rescript-lang/rescript/pull/7458
 - Preserve JSX: enable by adding `"-bs-jsx-preserve"` to `"bsc-flags"` (Does require `"jsx": { "version": 4 }`). https://github.com/rescript-lang/rescript/pull/7387
+- Add slot prop to `JsxDOM.domProps`. https://github.com/rescript-lang/rescript/pull/7487
 
 #### :bug: Bug fix
 
