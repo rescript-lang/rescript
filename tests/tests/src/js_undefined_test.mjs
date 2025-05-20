@@ -8,7 +8,7 @@ let suites_0 = [
   param => ({
     TAG: "Eq",
     _0: undefined,
-    _1: undefined
+    _1: Js_undefined.toOption(undefined)
   })
 ];
 
@@ -18,7 +18,7 @@ let suites_1 = {
     param => ({
       TAG: "Eq",
       _0: undefined,
-      _1: undefined
+      _1: Js_undefined.toOption()
     })
   ],
   tl: {
@@ -27,7 +27,7 @@ let suites_1 = {
       param => ({
         TAG: "Eq",
         _0: "something",
-        _1: "something"
+        _1: Js_undefined.toOption("something")
       })
     ],
     tl: {
