@@ -10,7 +10,7 @@
 > - :house: [Internal]
 > - :nail_care: [Polish]
 
-# 12.0.0-alpha.13 (Unreleased)
+# 12.0.0-alpha.13
 
 #### :boom: Breaking Change
 
@@ -25,7 +25,7 @@
 - Significantly reduced the download size by splitting binaries into optional platform-specific dependencies (e.g, `@rescript/linux-x64`). https://github.com/rescript-lang/rescript/pull/7395
 - JSX: do not error on ref as prop anymore (which is allowed in React 19). https://github.com/rescript-lang/rescript/pull/7420
 - Add new attribute `@notUndefined` for abstract types to prevent unnecessary wrapping with `Primitive_option.some` in JS output. https://github.com/rescript-lang/rescript/pull/7458
-- Preserve JSX: enable by adding `"-bs-jsx-preserve"` to `"bsc-flags"` (Does require `"jsx": { "version": 4 }`). https://github.com/rescript-lang/rescript/pull/7387
+- Preserve JSX: enable by adding `"-bs-jsx-preserve"` to `"bsc-flags"` (does require `"jsx": { "version": 4 }`). https://github.com/rescript-lang/rescript/pull/7387
 - Add slot prop to `JsxDOM.domProps`. https://github.com/rescript-lang/rescript/pull/7487
 
 #### :bug: Bug fix
@@ -33,7 +33,7 @@
 - Fix broken `bstracing` CLI location. https://github.com/rescript-lang/rescript/pull/7398
 - Fix field flattening optimization to avoid creating unnecessary copies of allocating constants. https://github.com/rescript-lang/rescript-compiler/pull/7421
 - Fix leading comments removed when braces inside JSX contains `let` assignment. https://github.com/rescript-lang/rescript/pull/7424
-- Fix JSON escaping in code editor analysis: JSON was not always escaped properly, which prevented code actions from being available in certain situations https://github.com/rescript-lang/rescript/pull/7435
+- Fix JSON escaping in code editor analysis: JSON was not always escaped properly, which prevented code actions from being available in certain situations. https://github.com/rescript-lang/rescript/pull/7435
 - Fix regression in pattern matching for optional fields containing variants. https://github.com/rescript-lang/rescript/pull/7440
 - Fix missing checks for duplicate literals in variants with payloads. https://github.com/rescript-lang/rescript/pull/7441
 - Fix printer removing private for empty record. https://github.com/rescript-lang/rescript/pull/7448
@@ -45,7 +45,7 @@
 
 - AST: Add bar location to `case`. https://github.com/rescript-lang/rescript/pull/7407
 - Clean up lazy from ASTs and back-end. https://github.com/rescript-lang/rescript/pull/7474
-- Compile runtime with rewatch and add rewatch tests to the compiler repo. https://github.com/rescript-lang/rescript/pull/7422/files
+- Compile runtime with rewatch and add rewatch tests to the compiler repo. https://github.com/rescript-lang/rescript/pull/7422
 
 #### :nail_care: Polish
 
