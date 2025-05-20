@@ -90,6 +90,6 @@ Maps `Js.undefined<'a>` to `option<'a>`
 `a` => `Some(a)`
 `empty` => `None`
 */
-external toOption: t<'a> => option<'a> = "%identity"
+let toOption: t<'a> => option<'a>
 
-@deprecated("use toOption instead") external to_opt: t<'a> => option<'a> = "%identity"
+@deprecated("use toOption instead") let to_opt: t<'a> => option<'a>
