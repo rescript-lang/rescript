@@ -99,6 +99,6 @@
     "tests/gentype_tests/**",
     "tests/tools_tests"
   ],
-  "packageManager": "yarn@4.7.0",
+  "packageManager": "yarn@4.9.1",
   "preferUnplugged": true
 }
