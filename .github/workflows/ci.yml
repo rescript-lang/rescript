@@ -397,12 +397,12 @@ jobs:
         run: yarn workspace playground test
 
       - name: Setup Rclone
-        # if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
-        uses: cometkim/rclone-actions/setup-rclone@31e186bc99f9ebd4da14c4cc02df1cb5e4d81c72
+        if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
+        uses: cometkim/rclone-actions/setup-rclone@9366427d9694ff042e7603c9b8ad38e96a907130
 
       - name: Configure Rclone remote
-        # if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
-        uses: cometkim/rclone-actions/configure-remote/s3-provider@31e186bc99f9ebd4da14c4cc02df1cb5e4d81c72
+        if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
+        uses: cometkim/rclone-actions/configure-remote/s3-provider@9366427d9694ff042e7603c9b8ad38e96a907130
         with:
           name: rescript
           provider: Cloudflare
