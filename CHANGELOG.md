@@ -12,6 +12,10 @@
 
 # 12.0.0-alpha.14 (Unreleased)
 
+#### :bug: Bug fix
+
+- `rescript-tools doc` no longer includes shadowed bindings in its output. https://github.com/rescript-lang/rescript/pull/7497
+
 # 12.0.0-alpha.13
 
 #### :boom: Breaking Change
