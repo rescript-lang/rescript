@@ -16,6 +16,10 @@
 
 - `rescript-tools doc` no longer includes shadowed bindings in its output. https://github.com/rescript-lang/rescript/pull/7497
 
+#### :nail_care: Polish
+
+- Suggest awaiting promise before using it when types mismatch. https://github.com/rescript-lang/rescript/pull/7498
+
 # 12.0.0-alpha.13
 
 #### :boom: Breaking Change
