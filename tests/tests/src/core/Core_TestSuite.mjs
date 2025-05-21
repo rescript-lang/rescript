@@ -7,6 +7,7 @@ import * as Core_TestTests from "./Core_TestTests.mjs";
 import * as Core_ArrayTests from "./Core_ArrayTests.mjs";
 import * as Core_ErrorTests from "./Core_ErrorTests.mjs";
 import * as Core_FloatTests from "./Core_FloatTests.mjs";
+import * as Core_RegExpTest from "./Core_RegExpTest.mjs";
 import * as Core_ObjectTests from "./Core_ObjectTests.mjs";
 import * as Core_PromiseTest from "./Core_PromiseTest.mjs";
 import * as Core_ResultTests from "./Core_ResultTests.mjs";
@@ -84,8 +85,6 @@ let PatternMatching = Core_DictTests.PatternMatching;
 
 let Has = Core_DictTests.Has;
 
-let eq = Core_IteratorTests.eq;
-
 let iterator = Core_IteratorTests.iterator;
 
 let syncResult = Core_IteratorTests.syncResult;
@@ -93,6 +92,8 @@ let syncResult = Core_IteratorTests.syncResult;
 let asyncResult = Core_IteratorTests.asyncResult;
 
 let asyncIterator = Core_IteratorTests.asyncIterator;
+
+let eq = Core_RegExpTest.eq;
 
 export {
   bign,
@@ -130,10 +131,10 @@ export {
   intDict,
   PatternMatching,
   Has,
-  eq,
   iterator,
   syncResult,
   asyncResult,
   asyncIterator,
+  eq,
 }
 /* Core_IntTests Not a pure module */

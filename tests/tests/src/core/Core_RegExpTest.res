@@ -1,3 +1,5 @@
+let eq = (a, b) => a == b
+
 // Test for RegExp.flags
 Test.run(
   __POS_OF__("RegExp.flags basic"),
