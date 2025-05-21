@@ -1,6 +1,4 @@
-type record = {
-  one: string
-}
+type record = {one: string}
 
 external getRecord: unit => promise<record> = "getRecord"
 
