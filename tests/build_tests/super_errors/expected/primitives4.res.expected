@@ -8,4 +8,4 @@
   4 [2m│[0m 
 
   This can't be called, it's not a function.
-  It has type: int
+  The function has type: int

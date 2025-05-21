@@ -6,8 +6,8 @@
   [1;31m2[0m [2m│[0m let y = [1;31mx[0m(~a=2) + 2
   3 [2m│[0m 
 
-  This function call is incorrect:
-  - Missing arguments that must be provided: ~b
-  
+  This function call is incorrect.
   The function has type:
   (~a: int, ~b: int) => int
+  
+  - Missing arguments that must be provided: ~b

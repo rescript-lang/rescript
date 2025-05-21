@@ -4259,15 +4259,18 @@ let report_error env ppf error =
     | _ ->
       fprintf ppf
         "@[<v>@[<2>This can't be called, it's not a function.@]@,\
-         It has type: %a@]"
+         The function has type: %a@]"
         type_expr typ)
   | Apply_wrong_label (l, ty) ->
-    let print_label ppf = function
-      | Noloc.Nolabel -> fprintf ppf "an unlabelled argument at this position"
-      | l -> fprintf ppf "the argument @{<info>%s@}" (prefixed_label_name l)
+    let print_message ppf = function
+      | Noloc.Nolabel ->
+        fprintf ppf "The argument at this position should be labelled."
+      | l ->
+        fprintf ppf "This function does not take the argument @{<info>%s@}."
+          (prefixed_label_name l)
     in
-    fprintf ppf "@[<v>@[<2>This function does not take %a.@]@,It has type: %a@]"
-      print_label l type_expr ty
+    fprintf ppf "@[<v>@[<2>%a@]@,This function has type: %a@]" print_message l
+      type_expr ty
   | Label_multiply_defined {label; jsx_component_info = Some jsx_component_info}
     ->
     fprintf ppf
@@ -4482,9 +4485,10 @@ let report_error env ppf error =
       && mismatch_in_unlabelled_args = false
     in
 
-    if is_fallback then
-      fprintf ppf "@[<v>@[<2>This function call is incorrect.@]"
-    else fprintf ppf "@[<v>@[<2>This function call is incorrect:@]";
+    fprintf ppf "@[<v>@[<2>This function call is incorrect.@]";
+    fprintf ppf "@,The function has type:@ %a" type_expr typ;
+
+    if not is_fallback then fprintf ppf "@,";
 
     if List.length missing_required_args > 0 then
       fprintf ppf "@,- Missing arguments that must be provided: %s"
@@ -4496,21 +4500,22 @@ let report_error env ppf error =
       fprintf ppf "@,- Called with arguments it does not take: %s"
         (superfluous_args |> String.concat ", ");
 
+    let unlabelled_msg a b pos =
+      match (a, pos) with
+      | 0, `left -> "no"
+      | 0, `right -> "none"
+      | _ when a > b -> string_of_int a
+      | _ -> "just " ^ string_of_int a
+    in
+
     if mismatch_in_unlabelled_args then
       fprintf ppf
         "@,\
-         - It takes @{<info>%s@} unlabelled argument%s, but is called with \
-         @{<error>%s@}"
-        (if args_from_type_unlabelled > sargs_unlabelled then
-           string_of_int args_from_type_unlabelled
-         else "just " ^ string_of_int args_from_type_unlabelled)
+         - The function takes @{<info>%s@} unlabelled argument%s, but is \
+         called with @{<error>%s@}"
+        (unlabelled_msg args_from_type_unlabelled sargs_unlabelled `left)
         (if args_from_type_unlabelled = 1 then "" else "s")
-        (if sargs_unlabelled > args_from_type_unlabelled then
-           string_of_int sargs_unlabelled
-         else "just " ^ string_of_int sargs_unlabelled);
-
-    if not is_fallback then fprintf ppf "@,";
-    fprintf ppf "@,The function has type:@ %a" type_expr typ;
+        (unlabelled_msg sargs_unlabelled args_from_type_unlabelled `right);
 
     (* Print fallback if nothing above matched *)
     if is_fallback then
