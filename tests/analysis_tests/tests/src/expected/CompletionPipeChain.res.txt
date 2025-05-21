@@ -582,8 +582,7 @@ Resolved opens 1 Stdlib
 ContextPath Value[r]->la
 ContextPath Value[r]
 Path r
-CPPipe pathFromEnv:Js.Re found:false
-Path Js.Re.la
+Path Stdlib.RegExp.la
 Path la
 [{
     "label": "RegExp.lastIndex",
