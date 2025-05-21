@@ -75,7 +75,8 @@ type error =
   | Unknown_literal of string * char
   | Illegal_letrec_pat
   | Empty_record_literal
-  | Uncurried_arity_mismatch of type_expr * int * int
+  | Uncurried_arity_mismatch of
+      type_expr * int * int * Asttypes.Noloc.arg_label list
   | Field_not_optional of string * type_expr
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
@@ -3466,7 +3467,10 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
              ( funct.exp_loc,
                env,
                Uncurried_arity_mismatch
-                 (funct.exp_type, arity, List.length sargs) ));
+                 ( funct.exp_type,
+                   arity,
+                   List.length sargs,
+                   sargs |> List.map (fun (a, _) -> to_noloc a) ) ));
       arity
     | None -> max_int
   in
@@ -3482,7 +3486,10 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
               ( funct.exp_loc,
                 env,
                 Uncurried_arity_mismatch
-                  (funct.exp_type, required_args + newarity, required_args) )));
+                  ( funct.exp_type,
+                    required_args + newarity,
+                    required_args,
+                    sargs |> List.map (fun (a, _) -> to_noloc a) ) )));
       let new_t =
         if fully_applied then new_t
         else
@@ -4250,17 +4257,17 @@ let report_error env ppf error =
         accepts_count
         (if accepts_count == 1 then "argument" else "arguments")
     | _ ->
-      fprintf ppf "@[<v>@[<2>This expression has type@ %a@]@ %s@]" type_expr typ
-        "It is not a function.")
+      fprintf ppf
+        "@[<v>@[<2>This can't be called, it's not a function.@]@,\
+         It has type: %a@]"
+        type_expr typ)
   | Apply_wrong_label (l, ty) ->
     let print_label ppf = function
-      | Noloc.Nolabel -> fprintf ppf "without label"
-      | l -> fprintf ppf "with label %s" (prefixed_label_name l)
+      | Noloc.Nolabel -> fprintf ppf "an unlabelled argument at this position"
+      | l -> fprintf ppf "the argument @{<info>%s@}" (prefixed_label_name l)
     in
-    fprintf ppf
-      "@[<v>@[<2>The function applied to this argument has type@ %a@]@.This \
-       argument cannot be applied %a@]"
-      type_expr ty print_label l
+    fprintf ppf "@[<v>@[<2>This function does not take %a.@]@,It has type: %a@]"
+      print_label l type_expr ty
   | Label_multiply_defined {label; jsx_component_info = Some jsx_component_info}
     ->
     fprintf ppf
@@ -4410,14 +4417,114 @@ let report_error env ppf error =
     fprintf ppf
       "Empty record literal {} should be type annotated or used in a record \
        context."
-  | Uncurried_arity_mismatch (typ, arity, args) ->
-    fprintf ppf "@[<v>@[<2>This function has type@ %a@]" type_expr typ;
-    fprintf ppf
-      "@ @[It is applied with @{<error>%d@} argument%s but it requires \
-       @{<info>%d@}.@]@]"
-      args
-      (if args = 1 then "" else "s")
-      arity
+  | Uncurried_arity_mismatch (typ, arity, args, sargs) ->
+    (* We need:
+    - Any arg that's required but isn't passed 
+    - Any arg that is passed but isn't in the fn definition (optional or labelled)
+    - Any mismatch in the number of unlabelled args (since all of them are required)  
+    *)
+    let rec collect_args ?(acc = []) typ =
+      match typ.desc with
+      | Tarrow (arg, _, next, _, _) -> collect_args ~acc:(arg :: acc) next
+      | _ -> acc
+    in
+    let args_from_type = collect_args typ in
+
+    (* Unlabelled arg counts *)
+    let args_from_type_unlabelled =
+      args_from_type
+      |> List.filter (fun arg -> arg = Noloc.Nolabel)
+      |> List.length
+    in
+    let sargs_unlabelled =
+      sargs |> List.filter (fun arg -> arg = Noloc.Nolabel) |> List.length
+    in
+    let mismatch_in_unlabelled_args =
+      args_from_type_unlabelled <> sargs_unlabelled
+    in
+
+    (* Required args that aren't passed *)
+    let required_args =
+      args_from_type
+      |> List.filter_map (fun arg ->
+             match arg with
+             | Noloc.Labelled n -> Some n
+             | Optional _ | Nolabel -> None)
+    in
+    let passed_named_args =
+      sargs
+      |> List.filter_map (fun arg ->
+             match arg with
+             | Noloc.Labelled n | Optional n -> Some n
+             | Nolabel -> None)
+    in
+    let missing_required_args =
+      required_args
+      |> List.filter (fun arg -> not (List.mem arg passed_named_args))
+    in
+
+    (* Passed args that the fn does not take *)
+    let named_args_of_fn_type =
+      args_from_type
+      |> List.filter_map (fun arg ->
+             match arg with
+             | Noloc.Labelled n | Optional n -> Some n
+             | Nolabel -> None)
+    in
+    let superfluous_args =
+      passed_named_args
+      |> List.filter (fun arg -> not (List.mem arg named_args_of_fn_type))
+    in
+
+    let is_fallback =
+      List.length missing_required_args = 0
+      && List.length superfluous_args = 0
+      && mismatch_in_unlabelled_args = false
+    in
+
+    if is_fallback then
+      fprintf ppf "@[<v>@[<2>This function call is incorrect.@]"
+    else fprintf ppf "@[<v>@[<2>This function call is incorrect:@]";
+
+    if List.length missing_required_args > 0 then
+      fprintf ppf "@,- Missing arguments that must be provided: %s"
+        (missing_required_args
+        |> List.map (fun v -> "~" ^ v)
+        |> String.concat ", ");
+
+    if List.length superfluous_args > 0 then
+      fprintf ppf "@,- Called with arguments it does not take: %s"
+        (superfluous_args |> String.concat ", ");
+
+    if mismatch_in_unlabelled_args then
+      fprintf ppf
+        "@,\
+         - It takes @{<info>%s@} unlabelled argument%s, but is called with \
+         @{<error>%s@}"
+        (if args_from_type_unlabelled > sargs_unlabelled then
+           string_of_int args_from_type_unlabelled
+         else "just " ^ string_of_int args_from_type_unlabelled)
+        (if args_from_type_unlabelled = 1 then "" else "s")
+        (if sargs_unlabelled > args_from_type_unlabelled then
+           string_of_int sargs_unlabelled
+         else "just " ^ string_of_int sargs_unlabelled);
+
+    if not is_fallback then fprintf ppf "@,";
+    fprintf ppf "@,The function has type:@ %a" type_expr typ;
+
+    (* Print fallback if nothing above matched *)
+    if is_fallback then
+      fprintf ppf
+        "@,\
+         @,\
+         It is called with @{<error>%d@} argument%s but requires%s \
+         @{<info>%d@}."
+        args
+        (if args > arity then " just" else "")
+        (if args = 1 then "" else "s")
+        arity;
+
+    fprintf ppf "@]"
   | Field_not_optional (name, typ) ->
     fprintf ppf "Field @{<info>%s@} is not optional in type %a. Use without ?"
       name type_expr typ
