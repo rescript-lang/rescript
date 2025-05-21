@@ -784,8 +784,8 @@ let print_expr_type_clash ?type_clash_context env trace ppf =
       (function
         | ppf -> error_type_text ppf type_clash_context)
       (function ppf -> error_expected_type_text ppf type_clash_context);
-    print_extra_type_clash_help ~extract_concrete_typedecl ~env ppf trace
-      type_clash_context;
+    print_extra_type_clash_help ~extract_concrete_typedecl ~env ppf
+      bottom_aliases_result type_clash_context;
     show_extra_help ppf env trace
 
 let report_arity_mismatch ~arity_a ~arity_b ppf =

@@ -62,9 +62,10 @@ let is_record_type ~extract_concrete_typedecl ~env ty =
     | _ -> false
   with _ -> false
 
-let print_extra_type_clash_help ~extract_concrete_typedecl ~env ppf trace
+let print_extra_type_clash_help ~extract_concrete_typedecl ~env ppf
+    (bottom_aliases : (Types.type_expr * Types.type_expr) option)
     type_clash_context =
-  match (type_clash_context, trace) with
+  match (type_clash_context, bottom_aliases) with
   | Some (MathOperator {for_float; operator; is_constant}), _ -> (
     let operator_for_other_type =
       match operator with
@@ -86,12 +87,8 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env ppf trace
       | _ -> "compute"
     in
     (* TODO check int vs float explicitly before showing this *)
-    (match (operator, trace) with
-    | ( "+",
-        [
-          ({Types.desc = Tconstr (p1, _, _)}, _);
-          ({desc = Tconstr (p2, _, _)}, _);
-        ] )
+    (match (operator, bottom_aliases) with
+    | "+", Some ({Types.desc = Tconstr (p1, _, _)}, {desc = Tconstr (p2, _, _)})
       when Path.same Predef.path_string p1 || Path.same Predef.path_string p2 ->
       fprintf ppf
         "\n\n\
@@ -111,7 +108,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env ppf trace
          @{<info>Belt.Float.toInt@} and @{<info>Belt.Int.fromFloat@}."
         operator_text
         (if for_float then "float" else "int"));
-    match (is_constant, trace) with
+    match (is_constant, bottom_aliases) with
     | Some constant, _ ->
       if for_float then
         fprintf ppf
@@ -125,11 +122,8 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env ppf trace
           \  - Make @{<info>%s@} an @{<info>int@} by removing the dot or \
            explicitly converting to int"
           constant
-    | ( _,
-        [
-          ({Types.desc = Tconstr (p1, _, _)}, _);
-          ({desc = Tconstr (p2, _, _)}, _);
-        ] ) -> (
+    | _, Some ({Types.desc = Tconstr (p1, _, _)}, {desc = Tconstr (p2, _, _)})
+      -> (
       match (Path.name p1, Path.name p2) with
       | "float", "int" | "int", "float" ->
         fprintf ppf
@@ -171,10 +165,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env ppf trace
       \  - Use a tuple, if your array is of fixed length. Tuples can mix types \
        freely, and compiles to a JavaScript array. Example of a tuple: `let \
        myTuple = (10, \"hello\", 15.5, true)"
-  | ( _,
-      [
-        ({Types.desc = Tconstr (_p1, _, _)}, _); ({desc = Tconstr (p2, _, _)}, _);
-      ] )
+  | _, Some ({Types.desc = Tconstr (_p1, _, _)}, {desc = Tconstr (p2, _, _)})
     when Path.same Predef.path_unit p2 ->
     fprintf ppf
       "\n\n\
@@ -182,7 +173,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env ppf trace
       \  - If you don't care about the result of this expression, you can \
        assign it to @{<info>_@} via @{<info>let _ = ...@} or pipe it to \
        @{<info>ignore@} via @{<info>expression->ignore@}\n\n"
-  | _, [({desc = Tobject _}, _); (({Types.desc = Tconstr _} as t1), _)]
+  | _, Some ({desc = Tobject _}, ({Types.desc = Tconstr _} as t1))
     when is_record_type ~extract_concrete_typedecl ~env t1 ->
     fprintf ppf
       "\n\n\
@@ -191,6 +182,9 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env ppf trace
       \  - Did you mean to pass a record instead of an object? Objects are \
        written with quoted keys, and records with unquoted keys. Remove the \
        quotes from the object keys to pass it as a record instead of object. \n\n"
+  | _, Some ({Types.desc = Tconstr (p1, _, _)}, _)
+    when Path.same p1 Predef.path_promise ->
+    fprintf ppf "\n\n  - Did you mean to await this promise before using it?\n"
   | _ -> ()
 
 let type_clash_context_from_function sexp sfunct =
