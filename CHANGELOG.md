@@ -19,6 +19,7 @@
 #### :nail_care: Polish
 
 - Suggest awaiting promise before using it when types mismatch. https://github.com/rescript-lang/rescript/pull/7498
+- Complete from `RegExp` stdlib module for regexes. https://github.com/rescript-lang/rescript/pull/7425
 
 # 12.0.0-alpha.13
 
