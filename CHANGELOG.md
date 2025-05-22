@@ -15,6 +15,7 @@
 #### :rocket: New Feature
 
 - Add `RegExp.flags`. https://github.com/rescript-lang/rescript/pull/7461
+- Add `options` argument to `Console.dir`. https://github.com/rescript-lang/rescript/pull/7504
 
 #### :bug: Bug fix
 
