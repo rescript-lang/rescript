@@ -15,6 +15,7 @@
 #### :rocket: New Feature
 
 - Add `RegExp.flags`. https://github.com/rescript-lang/rescript/pull/7461
+- Add `Array.findLast`, `Array.findLastWithIndex`, `Array.findLastIndex`, `Array.findLastIndexWithIndex` and `Array.findLastIndexOpt`. https://github.com/rescript-lang/rescript/pull/7503
 
 #### :bug: Bug fix
 
