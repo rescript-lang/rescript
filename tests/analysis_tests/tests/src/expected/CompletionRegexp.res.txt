@@ -74,5 +74,11 @@ Path
     "tags": [],
     "detail": "t => string",
     "documentation": {"kind": "markdown", "value": "\n`source(regexp)` returns the source text for this `RegExp`, without the two forward slashes (if present), and without any set flags.\n\nSee [`RegExp.source`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/source) on MDN.\n\n## Examples\n```rescript\nlet regexp = RegExp.fromStringWithFlags(\"\\\\w+\", ~flags=\"g\")\nConsole.log(regexp->RegExp.source) // Logs `\\w+`, the source text of the `RegExp`\n```\n"}
+  }, {
+    "label": "RegExp.flags",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": {"kind": "markdown", "value": "\n`flags(regexp)` returns a string consisting of all the flags set on this `RegExp`.\n\nSee [`RegExp.flags`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/flags) on MDN.\n\n## Examples\n```rescript\nlet regexp = RegExp.fromString(\"\\\\w+\", ~flags=\"gi\")\nConsole.log(regexp->RegExp.flags) // Logs \"gi\", all the flags set on the RegExp\n```\n"}
   }]
 
