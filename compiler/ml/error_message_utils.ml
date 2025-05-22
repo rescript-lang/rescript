@@ -1,11 +1,56 @@
 type extract_concrete_typedecl =
   Env.t -> Types.type_expr -> Path.t * Path.t * Types.type_declaration
 
-type comment
-let parse_source : (string -> Parsetree.structure * comment list) ref =
-  ref (fun _ -> ([], []))
-let reprint_source : (Parsetree.structure -> comment list -> string) ref =
-  ref (fun _ _ -> "")
+module Parser : sig
+  type comment
+
+  val parse_source : (string -> Parsetree.structure * comment list) ref
+
+  val reprint_source : (Parsetree.structure -> comment list -> string) ref
+
+  val parse_expr_at_loc :
+    Warnings.loc -> (Parsetree.expression * comment list) option
+
+  val reprint_expr_at_loc :
+    ?mapper:(Parsetree.expression -> Parsetree.expression option) ->
+    Warnings.loc ->
+    string option
+end = struct
+  type comment
+
+  let parse_source : (string -> Parsetree.structure * comment list) ref =
+    ref (fun _ -> ([], []))
+
+  let reprint_source : (Parsetree.structure -> comment list -> string) ref =
+    ref (fun _ _ -> "")
+
+  let extract_location_string ~src (loc : Location.t) =
+    let start_pos = loc.loc_start in
+    let end_pos = loc.loc_end in
+    let start_offset = start_pos.pos_cnum in
+    let end_offset = end_pos.pos_cnum in
+    String.sub src start_offset (end_offset - start_offset)
+
+  let parse_expr_at_loc loc =
+    (* TODO: Maybe cache later on *)
+    let src = Ext_io.load_file loc.Location.loc_start.pos_fname in
+    let sub_src = extract_location_string ~src loc in
+    let parsed, comments = !parse_source sub_src in
+    match parsed with
+    | [{Parsetree.pstr_desc = Pstr_eval (exp, _)}] -> Some (exp, comments)
+    | _ -> None
+
+  let wrap_in_structure exp =
+    [{Parsetree.pstr_desc = Pstr_eval (exp, []); pstr_loc = Location.none}]
+
+  let reprint_expr_at_loc ?(mapper = fun _ -> None) loc =
+    match parse_expr_at_loc loc with
+    | Some (exp, comments) -> (
+      match mapper exp with
+      | Some exp -> Some (!reprint_source (wrap_in_structure exp) comments)
+      | None -> None)
+    | None -> None
+end
 
 type type_clash_statement = FunctionCall
 type type_clash_context =
@@ -67,13 +112,6 @@ let is_record_type ~extract_concrete_typedecl ~env ty =
     | _, _, {Types.type_kind = Type_record _; _} -> true
     | _ -> false
   with _ -> false
-
-let extract_location_string ~src (loc : Location.t) =
-  let start_pos = loc.loc_start in
-  let end_pos = loc.loc_end in
-  let start_offset = start_pos.pos_cnum in
-  let end_offset = end_pos.pos_cnum in
-  String.sub src start_offset (end_offset - start_offset)
 
 let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     (bottom_aliases : (Types.type_expr * Types.type_expr) option)
@@ -200,28 +238,12 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     fprintf ppf "\n\n  - Did you mean to await this promise before using it?\n"
   | _, Some ({Types.desc = Tconstr (p1, _, _)}, {Types.desc = Ttuple _})
     when Path.same p1 Predef.path_array ->
-    let src = Ext_io.load_file loc.Location.loc_start.pos_fname in
-    let sub_src = extract_location_string ~src loc in
-    let parsed, comments = !parse_source sub_src in
     let suggested_rewrite =
-      match parsed with
-      | [
-       ({
-          Parsetree.pstr_desc =
-            Pstr_eval (({pexp_desc = Pexp_array items} as exp), l);
-        } as str_item);
-      ] ->
-        Some
-          (!reprint_source
-             [
-               {
-                 str_item with
-                 pstr_desc =
-                   Pstr_eval ({exp with pexp_desc = Pexp_tuple items}, l);
-               };
-             ]
-             comments)
-      | _ -> None
+      Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
+          match exp.Parsetree.pexp_desc with
+          | Pexp_array items ->
+            Some {exp with Parsetree.pexp_desc = Pexp_tuple items}
+          | _ -> None)
     in
     fprintf ppf
       "\n\n  - Fix this by passing a tuple instead of an array%s@{<info>%s@}\n"
