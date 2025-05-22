@@ -721,6 +721,42 @@ array
 external findWithIndex: (array<'a>, ('a, int) => bool) => option<'a> = "find"
 
 /**
+`findLast(array, checker)` returns the last element of `array` where the provided `checker` function returns true.
+
+See [`Array.findLast`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLast) on MDN.
+
+## Examples
+
+```rescript
+let array = [1, 2, 3]
+
+array
+->Array.findLast(item => item > 0)
+->assertEqual(Some(3))
+```
+*/
+@send
+external findLast: (array<'a>, 'a => bool) => option<'a> = "findLast"
+
+/**
+`findLastWithIndex(array, checker)` returns the last element of `array` where the provided `checker` function returns true.
+
+See [`Array.findLast`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLast) on MDN.
+
+## Examples
+
+```rescript
+let array = [1, 2, 3]
+
+array
+->Array.findLastWithIndex((item, index) => index < 2 && item > 0)
+->assertEqual(Some(2))
+```
+*/
+@send
+external findLastWithIndex: (array<'a>, ('a, int) => bool) => option<'a> = "findLast"
+
+/**
 `findIndex(array, checker)` returns the index of the first element of `array` where the provided `checker` function returns true.
 
 Returns `-1` if the item does not exist. Consider using `Array.findIndexOpt` if you want an option instead (where `-1` would be `None`).
@@ -768,6 +804,55 @@ assertEqual(isTypeScriptFirst, -1)
 */
 @send
 external findIndexWithIndex: (array<'a>, ('a, int) => bool) => int = "findIndex"
+
+/**
+`findLastIndex(array, checker)` returns the index of the last element of `array` where the provided `checker` function returns true.
+
+Returns `-1` if the item does not exist. Consider using `Array.findLastIndexOpt` if you want an option instead (where `-1` would be `None`).
+
+See [`Array.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex) on MDN.
+
+## Examples
+
+```rescript
+type languages = ReScript | TypeScript | JavaScript
+
+let array = [ReScript, JavaScript, ReScript]
+
+array
+->Array.findLastIndex(item => item == ReScript)
+->assertEqual(2)
+
+array->Array.findLastIndex(item => item == TypeScript)
+->assertEqual(-1)
+```
+*/
+@send
+external findLastIndex: (array<'a>, 'a => bool) => int = "findLastIndex"
+
+/**
+`findLastIndexWithIndex(array, checker)` returns the index of the last element of `array` where the provided `checker` function returns true.
+
+Returns `-1` if the item does not exist. Consider using `Array.findLastIndexOpt` if you want an option instead (where `-1` would be `None`).
+
+See [`Array.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex) on MDN.
+
+## Examples
+
+```rescript
+type languages = ReScript | TypeScript | JavaScript
+
+let array = [ReScript, JavaScript, JavaScript, ReScript]
+
+let isReScriptLast = array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == ReScript)
+let isTypeScriptLast = array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == TypeScript)
+
+assertEqual(isReScriptLast, 3)
+assertEqual(isTypeScriptLast, -1)
+```
+*/
+@send
+external findLastIndexWithIndex: (array<'a>, ('a, int) => bool) => int = "findLastIndex"
 
 /**
 `forEach(array, fn)` runs the provided `fn` on every element of `array`.
@@ -1063,6 +1148,25 @@ array
 ```
 */
 let findIndexOpt: (array<'a>, 'a => bool) => option<int>
+
+/**
+`findIndexOpt(array, checker)` returns the index of the last element of `array` where the provided `checker` function returns true.
+
+Returns `None` if no item matches.
+
+See [`Array.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex) on MDN.
+
+## Examples
+
+```rescript
+let array = ["hello", "world", "!"]
+
+array
+->Array.findLastIndexOpt(item => item->String.includes("o"))
+->assertEqual(Some(1))
+```
+*/
+let findLastIndexOpt: (array<'a>, 'a => bool) => option<int>
 
 /**
 `toReversed(array)` creates a new array with all items from `array` in reversed order.

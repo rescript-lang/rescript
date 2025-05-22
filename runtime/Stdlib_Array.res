@@ -169,8 +169,14 @@ let lastIndexOfOpt = (arr, item) =>
 @send external find: (array<'a>, 'a => bool) => option<'a> = "find"
 @send external findWithIndex: (array<'a>, ('a, int) => bool) => option<'a> = "find"
 
+@send external findLast: (t<'a>, 'a => bool) => option<'a> = "findLast"
+@send external findLastWithIndex: (t<'a>, ('a, int) => bool) => option<'a> = "findLast"
+
 @send external findIndex: (array<'a>, 'a => bool) => int = "findIndex"
 @send external findIndexWithIndex: (array<'a>, ('a, int) => bool) => int = "findIndex"
+
+@send external findLastIndex: (t<'a>, 'a => bool) => int = "findLastIndex"
+@send external findLastIndexWithIndex: (t<'a>, ('a, int) => bool) => int = "findLastIndex"
 
 @send external forEach: (array<'a>, 'a => unit) => unit = "forEach"
 @send external forEachWithIndex: (array<'a>, ('a, int) => unit) => unit = "forEach"
@@ -201,6 +207,12 @@ let reduceRightWithIndex = (arr, init, f) => reduceRightWithIndex(arr, f, init)
 
 let findIndexOpt = (array: array<'a>, finder: 'a => bool): option<int> =>
   switch findIndex(array, finder) {
+  | -1 => None
+  | index => Some(index)
+  }
+
+let findLastIndexOpt = (array: array<'a>, finder: 'a => bool): option<int> =>
+  switch findLastIndex(array, finder) {
   | -1 => None
   | index => Some(index)
   }

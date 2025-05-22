@@ -59,8 +59,14 @@ external copyWithin: (t<'a>, ~target: int, ~start: int, ~end: int) => array<'a> 
 @send external find: (t<'a>, 'a => bool) => option<'a> = "find"
 @send external findWithIndex: (t<'a>, ('a, int) => bool) => option<'a> = "find"
 
+@send external findLast: (t<'a>, 'a => bool) => option<'a> = "findLast"
+@send external findLastWithIndex: (t<'a>, ('a, int) => bool) => option<'a> = "findLast"
+
 @send external findIndex: (t<'a>, 'a => bool) => int = "findIndex"
 @send external findIndexWithIndex: (t<'a>, ('a, int) => bool) => int = "findIndex"
+
+@send external findLastIndex: (t<'a>, 'a => bool) => int = "findLastIndex"
+@send external findLastIndexWithIndex: (t<'a>, ('a, int) => bool) => int = "findLastIndex"
 
 @send external forEach: (t<'a>, 'a => unit) => unit = "forEach"
 @send external forEachWithIndex: (t<'a>, ('a, int) => unit) => unit = "forEach"
