@@ -728,7 +728,7 @@ let rec collect_missing_arguments env type1 type2 =
     | None -> None)
   | _ -> None
 
-let print_expr_type_clash ?type_clash_context env trace ppf =
+let print_expr_type_clash ?type_clash_context env loc trace ppf =
   (* this is the most frequent error. We should do whatever we can to provide
       specific guidance to this generic error before giving up *)
   let bottom_aliases_result = bottom_aliases trace in
@@ -785,7 +785,7 @@ let print_expr_type_clash ?type_clash_context env trace ppf =
       (function
         | ppf -> error_type_text ppf type_clash_context)
       (function ppf -> error_expected_type_text ppf type_clash_context);
-    print_extra_type_clash_help ~extract_concrete_typedecl ~env ppf
+    print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       bottom_aliases_result type_clash_context;
     show_extra_help ppf env trace
 
@@ -4173,7 +4173,7 @@ let type_expr ppf typ =
   Printtyp.reset_and_mark_loops typ;
   Printtyp.type_expr ppf typ
 
-let report_error env ppf error =
+let report_error env loc ppf error =
   match error with
   | Polymorphic_label lid ->
     fprintf ppf "@[The record field %a is polymorphic.@ %s@]" longident lid
@@ -4237,7 +4237,7 @@ let report_error env ppf error =
   | Expr_type_clash (trace, type_clash_context) ->
     (* modified *)
     fprintf ppf "@[<v>";
-    print_expr_type_clash ?type_clash_context env trace ppf;
+    print_expr_type_clash ?type_clash_context env loc trace ppf;
     fprintf ppf "@]"
   | Apply_non_function typ -> (
     (* modified *)
@@ -4542,13 +4542,13 @@ let report_error env ppf error =
     fprintf ppf
       "Direct field access on a dict is not supported. Use Dict.get instead."
 
-let report_error env ppf err =
-  Printtyp.wrap_printing_env env (fun () -> report_error env ppf err)
+let report_error env loc ppf err =
+  Printtyp.wrap_printing_env env (fun () -> report_error env loc ppf err)
 
 let () =
   Location.register_error_of_exn (function
     | Error (loc, env, err) ->
-      Some (Location.error_of_printer loc (report_error env) err)
+      Some (Location.error_of_printer loc (report_error env loc) err)
     | Error_forward err -> Some err
     | _ -> None)
 

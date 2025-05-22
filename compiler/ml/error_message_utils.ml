@@ -1,6 +1,12 @@
 type extract_concrete_typedecl =
   Env.t -> Types.type_expr -> Path.t * Path.t * Types.type_declaration
 
+type comment
+let parse_source : (string -> Parsetree.structure * comment list) ref =
+  ref (fun _ -> ([], []))
+let reprint_source : (Parsetree.structure -> comment list -> string) ref =
+  ref (fun _ _ -> "")
+
 type type_clash_statement = FunctionCall
 type type_clash_context =
   | SetRecordField
@@ -62,7 +68,14 @@ let is_record_type ~extract_concrete_typedecl ~env ty =
     | _ -> false
   with _ -> false
 
-let print_extra_type_clash_help ~extract_concrete_typedecl ~env ppf
+let extract_location_string ~src (loc : Location.t) =
+  let start_pos = loc.loc_start in
+  let end_pos = loc.loc_end in
+  let start_offset = start_pos.pos_cnum in
+  let end_offset = end_pos.pos_cnum in
+  String.sub src start_offset (end_offset - start_offset)
+
+let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     (bottom_aliases : (Types.type_expr * Types.type_expr) option)
     type_clash_context =
   match (type_clash_context, bottom_aliases) with
@@ -185,6 +198,39 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env ppf
   | _, Some ({Types.desc = Tconstr (p1, _, _)}, _)
     when Path.same p1 Predef.path_promise ->
     fprintf ppf "\n\n  - Did you mean to await this promise before using it?\n"
+  | _, Some ({Types.desc = Tconstr (p1, _, _)}, {Types.desc = Ttuple _})
+    when Path.same p1 Predef.path_array ->
+    let src = Ext_io.load_file loc.Location.loc_start.pos_fname in
+    let sub_src = extract_location_string ~src loc in
+    let parsed, comments = !parse_source sub_src in
+    let suggested_rewrite =
+      match parsed with
+      | [
+       ({
+          Parsetree.pstr_desc =
+            Pstr_eval (({pexp_desc = Pexp_array items} as exp), l);
+        } as str_item);
+      ] ->
+        Some
+          (!reprint_source
+             [
+               {
+                 str_item with
+                 pstr_desc =
+                   Pstr_eval ({exp with pexp_desc = Pexp_tuple items}, l);
+               };
+             ]
+             comments)
+      | _ -> None
+    in
+    fprintf ppf
+      "\n\n  - Fix this by passing a tuple instead of an array%s@{<info>%s@}\n"
+      (match suggested_rewrite with
+      | Some _ -> ", like: "
+      | None -> "")
+      (match suggested_rewrite with
+      | Some rewrite -> rewrite
+      | None -> "")
   | _ -> ()
 
 let type_clash_context_from_function sexp sfunct =
