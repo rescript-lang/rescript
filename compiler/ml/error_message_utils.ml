@@ -155,8 +155,8 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
          you cannot %s a float and an int without converting between the two.\n\n\
         \  Possible solutions:\n\
         \  - Ensure all values in this calculation has the type @{<info>%s@}. \
-         You can convert between floats and ints via \
-         @{<info>Belt.Float.toInt@} and @{<info>Belt.Int.fromFloat@}."
+         You can convert between floats and ints via @{<info>Float.toInt@} and \
+         @{<info>Int.fromFloat@}."
         operator_text
         (if for_float then "float" else "int"));
     match (is_constant, bottom_aliases) with
@@ -204,7 +204,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       "\n\n\
       \  Possible solutions:\n\
       \  - Unwrap the option to its underlying value using \
-       `yourValue->Belt.Option.getWithDefault(someDefaultValue)`"
+       `yourValue->Option.getOr(someDefaultValue)`"
   | Some ComparisonOperator, _ ->
     fprintf ppf "\n\n  You can only compare things of the same type."
   | Some ArrayValue, _ ->
