@@ -227,12 +227,35 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
   | _, Some ({desc = Tobject _}, ({Types.desc = Tconstr _} as t1))
     when is_record_type ~extract_concrete_typedecl ~env t1 ->
     fprintf ppf
-      "\n\n\
-      \  You're passing a @{<error>ReScript object@} where a @{<info>record@} \
-       is expected. \n\n\
-      \  - Did you mean to pass a record instead of an object? Objects are \
-       written with quoted keys, and records with unquoted keys. Remove the \
-       quotes from the object keys to pass it as a record instead of object. \n\n"
+      "@,\
+       @,\
+       You're passing a @{<error>ReScript object@} where a @{<info>record@} is \
+       expected. Objects are written with quoted keys, and records with \
+       unquoted keys.";
+
+    let suggested_rewrite =
+      Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
+          match exp.Parsetree.pexp_desc with
+          | Pexp_extension
+              ( {txt = "obj"},
+                PStr
+                  [
+                    {
+                      pstr_desc =
+                        Pstr_eval (({pexp_desc = Pexp_record _} as record), _);
+                    };
+                  ] ) ->
+            Some record
+          | _ -> None)
+    in
+    fprintf ppf
+      "@,\
+       @,\
+       Possible solutions: @,\
+       - Rewrite the object to a record, like: @{<info>%s@}@,"
+      (match suggested_rewrite with
+      | Some rewrite -> rewrite
+      | None -> "")
   | _, Some ({Types.desc = Tconstr (p1, _, _)}, _)
     when Path.same p1 Predef.path_promise ->
     fprintf ppf "\n\n  - Did you mean to await this promise before using it?\n"
