@@ -244,8 +244,13 @@ Console.debugMany([1, 2, 3])
 @variadic
 external debugMany: array<_> => unit = "console.debug"
 
+type dirOptions = {
+  colors?: bool,
+  depth?: Stdlib_Nullable.t<int>,
+  showHidden?: bool
+}
 /**
-`dir(object)` displays an interactive view of the object in the console.
+`dir(object, options)` displays an interactive view of the object in the console.
 
 See [`console.dir`](https://developer.mozilla.org/en-US/docs/Web/API/console/dir)
 on MDN.
@@ -254,10 +259,11 @@ on MDN.
 
 ```rescript
 Console.dir({"language": "rescript", "version": "10.1.2"})
+Console.dir({"language": "rescript", "version": {"major": "10", "minor": "1", "patch": "2"}}, ~options={depth: null})
 ```
 */
 @val
-external dir: 'a => unit = "console.dir"
+external dir: ('a, ~options: dirOptions=?) => unit = "console.dir"
 
 /**
 `dirxml(object)` displays an interactive tree view of an XML/HTML element in the console.
