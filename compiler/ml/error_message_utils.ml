@@ -259,7 +259,10 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       "@,\
        @,\
        Possible solutions: @,\
-       - Rewrite the object to a record, like: @{<info>%s@}@,"
+       - Rewrite the object to a record%s@{<info>%s@}@,"
+      (match suggested_rewrite with
+      | Some _ -> ", like: "
+      | None -> "")
       (match suggested_rewrite with
       | Some rewrite -> rewrite
       | None -> "")
@@ -312,6 +315,15 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       print_jsx_msg "string" (with_configured_jsx_module "string")
     | _ when Path.same p Predef.path_float ->
       print_jsx_msg "float" (with_configured_jsx_module "float")
+    | [_] when Path.same p Predef.path_option ->
+      fprintf ppf
+        "@,\
+         @,\
+         You need to unwrap this option to its underlying value first, then \
+         turn that value into a JSX element.@,\
+         For @{<info>None@}, you can use @{<info>%s@} to output nothing into \
+         JSX.@,"
+        (with_configured_jsx_module "null")
     | [tp] when Path.same p Predef.path_array && is_jsx_element tp ->
       print_jsx_msg
         ~extra:
