@@ -12,30 +12,33 @@
 
 let absname = ref false
 
-(* TODO: Maybe there's a better place to do this init. *)
 module Error_message_utils_support = struct
   external to_comment : Res_comment.t -> Error_message_utils.Parser.comment
     = "%identity"
   external from_comment : Error_message_utils.Parser.comment -> Res_comment.t
     = "%identity"
+
+  let setup () =
+    (Error_message_utils.Parser.parse_source :=
+       fun source ->
+         let res =
+           Res_driver.parse_implementation_from_source ~for_printer:false
+             ~display_filename:"<none>" ~source
+         in
+         (res.parsetree, res.comments |> List.map to_comment));
+
+    (Error_message_utils.Parser.reprint_source :=
+       fun parsetree comments ->
+         Res_printer.print_implementation parsetree
+           ~comments:(comments |> List.map from_comment)
+           ~width:80);
+
+    Error_message_utils.configured_jsx_module :=
+      Some
+        (match !Js_config.jsx_module with
+        | React -> "React"
+        | Generic {module_name} -> module_name)
 end
-
-let () =
-  Error_message_utils.Parser.parse_source :=
-    fun source ->
-      let res =
-        Res_driver.parse_implementation_from_source ~for_printer:false
-          ~display_filename:"<none>" ~source
-      in
-      ( res.parsetree,
-        res.comments |> List.map Error_message_utils_support.to_comment )
-
-let () =
-  Error_message_utils.Parser.reprint_source :=
-    fun parsetree comments ->
-      Res_printer.print_implementation parsetree
-        ~comments:(comments |> List.map Error_message_utils_support.from_comment)
-        ~width:80
 
 let set_abs_input_name sourcefile =
   let sourcefile =
@@ -66,6 +69,7 @@ let process_file sourcefile ?kind ppf =
      properly
   *)
   setup_outcome_printer ();
+  Error_message_utils_support.setup ();
   let kind =
     match kind with
     | None ->

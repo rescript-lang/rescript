@@ -1,6 +1,13 @@
 type extract_concrete_typedecl =
   Env.t -> Types.type_expr -> Path.t * Path.t * Types.type_declaration
 
+let configured_jsx_module : string option ref = ref None
+
+let with_configured_jsx_module s =
+  match !configured_jsx_module with
+  | None -> s
+  | Some module_name -> module_name ^ "." ^ s
+
 module Parser : sig
   type comment
 
@@ -276,6 +283,52 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       (match suggested_rewrite with
       | Some rewrite -> rewrite
       | None -> "")
+  | ( _,
+      Some
+        ( {desc = Tconstr (p, type_params, _)},
+          {desc = Tconstr (Pdot (Pident {name = "Jsx"}, "element", _), _, _)} )
+    ) -> (
+    (* Looking for a JSX element but got something else *)
+    let is_jsx_element ty =
+      match Ctype.expand_head env ty with
+      | {desc = Tconstr (Pdot (Pident {name = "Jsx"}, "element", _), _, _)} ->
+        true
+      | _ -> false
+    in
+
+    let print_jsx_msg ?(extra = "") name target_fn =
+      fprintf ppf
+        "@,\
+         @,\
+         In JSX, all content must be JSX elements. You can convert %s to a JSX \
+         element with @{<info>%s@}%s.@,"
+        name target_fn extra
+    in
+
+    match type_params with
+    | _ when Path.same p Predef.path_int ->
+      print_jsx_msg "int" (with_configured_jsx_module "int")
+    | _ when Path.same p Predef.path_string ->
+      print_jsx_msg "string" (with_configured_jsx_module "string")
+    | _ when Path.same p Predef.path_float ->
+      print_jsx_msg "float" (with_configured_jsx_module "float")
+    | [tp] when Path.same p Predef.path_array && is_jsx_element tp ->
+      print_jsx_msg
+        ~extra:
+          (" (for example by using a pipe: ->"
+          ^ with_configured_jsx_module "array"
+          ^ ".")
+        "array"
+        (with_configured_jsx_module "array")
+    | [_] when Path.same p Predef.path_array ->
+      fprintf ppf
+        "@,\
+         @,\
+         You need to convert each item in this array to a JSX element first, \
+         then use @{<info>%s@} to convert the array of JSX elements into a \
+         single JSX element.@,"
+        (with_configured_jsx_module "array")
+    | _ -> ())
   | _ -> ()
 
 let type_clash_context_from_function sexp sfunct =
