@@ -161,7 +161,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
         \  Floats and ints have their own mathematical operators. This means \
          you cannot %s a float and an int without converting between the two.\n\n\
         \  Possible solutions:\n\
-        \  - Ensure all values in this calculation has the type @{<info>%s@}. \
+        \  - Ensure all values in this calculation have the type @{<info>%s@}. \
          You can convert between floats and ints via @{<info>Float.toInt@} and \
          @{<info>Int.fromFloat@}."
         operator_text
