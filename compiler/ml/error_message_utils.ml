@@ -64,7 +64,6 @@ end = struct
     | None -> None
 end
 
-(* TODO: Move this to appropriate place where it can be shared with typecore.ml *)
 let type_expr ppf typ =
   (* print a type and avoid infinite loops *)
   Printtyp.reset_and_mark_loops typ;

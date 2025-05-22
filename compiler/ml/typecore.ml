@@ -4168,10 +4168,8 @@ let longident = Printtyp.longident
 let super_report_unification_error = Printtyp.super_report_unification_error
 let report_ambiguous_type_error = Printtyp.report_ambiguous_type_error
 let report_subtyping_error = Printtyp.report_subtyping_error
-let type_expr ppf typ =
-  (* print a type and avoid infinite loops *)
-  Printtyp.reset_and_mark_loops typ;
-  Printtyp.type_expr ppf typ
+
+let type_expr = Error_message_utils.type_expr
 
 let report_error env loc ppf error =
   match error with
