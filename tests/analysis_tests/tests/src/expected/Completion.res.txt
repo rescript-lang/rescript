@@ -65,6 +65,18 @@ Path Array.
     "detail": "(array<'a>, 'a => option<'b>) => array<'b>",
     "documentation": {"kind": "markdown", "value": "\n`filterMap(array, fn)`\n\nCalls `fn` for each element and returns a new array containing results of the `fn` calls which are not `None`.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]\n->Array.filterMap(item =>\n  switch item {\n  | \"Hello\" => Some(item->String.length)\n  | _ => None\n  }\n)\n->assertEqual([5])\n\n[1, 2, 3, 4, 5, 6]\n->Array.filterMap(n => mod(n, 2) == 0 ? Some(n * n) : None)\n->assertEqual([4, 16, 36])\n\nArray.filterMap([1, 2, 3, 4, 5, 6], _ => None)->assertEqual([])\n\nArray.filterMap([], n => mod(n, 2) == 0 ? Some(n * n) : None)->assertEqual([])\n```\n"}
   }, {
+    "label": "findLastWithIndex",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, ('a, int) => bool) => option<'a>",
+    "documentation": {"kind": "markdown", "value": "\n`findLastWithIndex(array, checker)` returns the last element of `array` where the provided `checker` function returns true.\n\nSee [`Array.findLast`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLast) on MDN.\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3]\n\narray\n->Array.findLastWithIndex((item, index) => index < 2 && item > 0)\n->assertEqual(Some(2))\n```\n"}
+  }, {
+    "label": "findLast",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, 'a => bool) => option<'a>",
+    "documentation": {"kind": "markdown", "value": "\n`findLast(array, checker)` returns the last element of `array` where the provided `checker` function returns true.\n\nSee [`Array.findLast`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLast) on MDN.\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3]\n\narray\n->Array.findLast(item => item > 0)\n->assertEqual(Some(3))\n```\n"}
+  }, {
     "label": "shift",
     "kind": 12,
     "tags": [],
@@ -178,6 +190,12 @@ Path Array.
     "tags": [],
     "detail": "(array<'a>, 'a) => bool",
     "documentation": {"kind": "markdown", "value": "\n`includes(array, item)` checks whether `array` includes `item`, by doing a [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality).\n\nSee [`Array.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/includes) on MDN.\n\n## Examples\n\n```rescript\n[1, 2]->Array.includes(1)->assertEqual(true)\n[1, 2]->Array.includes(3)->assertEqual(false)\n\n[{\"language\": \"ReScript\"}]\n->Array.includes({\"language\": \"ReScript\"})\n->assertEqual(false) // false, because of strict equality\n```\n"}
+  }, {
+    "label": "findLastIndex",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, 'a => bool) => int",
+    "documentation": {"kind": "markdown", "value": "\n`findLastIndex(array, checker)` returns the index of the last element of `array` where the provided `checker` function returns true.\n\nReturns `-1` if the item does not exist. Consider using `Array.findLastIndexOpt` if you want an option instead (where `-1` would be `None`).\n\nSee [`Array.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex) on MDN.\n\n## Examples\n\n```rescript\ntype languages = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, JavaScript, ReScript]\n\narray\n->Array.findLastIndex(item => item == ReScript)\n->assertEqual(2)\n\narray->Array.findLastIndex(item => item == TypeScript)\n->assertEqual(-1)\n```\n"}
   }, {
     "label": "fromInitializer",
     "kind": 12,
@@ -298,6 +316,12 @@ Path Array.
     "tags": [],
     "detail": "array<'a> => unit",
     "documentation": {"kind": "markdown", "value": "\n`reverse(array)` reverses the order of the items in `array`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.reverse`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reverse) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.reverse\n\nsomeArray->assertEqual([\"hello\", \"hi\"])\n```\n"}
+  }, {
+    "label": "findLastIndexWithIndex",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, ('a, int) => bool) => int",
+    "documentation": {"kind": "markdown", "value": "\n`findLastIndexWithIndex(array, checker)` returns the index of the last element of `array` where the provided `checker` function returns true.\n\nReturns `-1` if the item does not exist. Consider using `Array.findLastIndexOpt` if you want an option instead (where `-1` would be `None`).\n\nSee [`Array.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex) on MDN.\n\n## Examples\n\n```rescript\ntype languages = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, JavaScript, JavaScript, ReScript]\n\nlet isReScriptLast = array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == ReScript)\nlet isTypeScriptLast = array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == TypeScript)\n\nassertEqual(isReScriptLast, 3)\nassertEqual(isTypeScriptLast, -1)\n```\n"}
   }, {
     "label": "getUnsafe",
     "kind": 12,
@@ -520,6 +544,12 @@ Path Array.
     "tags": [],
     "detail": "(array<'a>, int) => unit",
     "documentation": {"kind": "markdown", "value": "\n`removeInPlace(array, index)` removes the item at the specified `index` from `array`.\n\nBeware this will *mutate* the array.\n\n## Examples\n\n```rescript\nlet array = []\narray->Array.removeInPlace(0)\nassertEqual(array, []) // Removing from an empty array does nothing\n\nlet array2 = [\"Hello\", \"Hi\", \"Good bye\"]\narray2->Array.removeInPlace(1)\nassertEqual(array2, [\"Hello\", \"Good bye\"]) // Removes the item at index 1\n```\n "}
+  }, {
+    "label": "findLastIndexOpt",
+    "kind": 12,
+    "tags": [],
+    "detail": "(array<'a>, 'a => bool) => option<int>",
+    "documentation": {"kind": "markdown", "value": "\n`findIndexOpt(array, checker)` returns the index of the last element of `array` where the provided `checker` function returns true.\n\nReturns `None` if no item matches.\n\nSee [`Array.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"hello\", \"world\", \"!\"]\n\narray\n->Array.findLastIndexOpt(item => item->String.includes(\"o\"))\n->assertEqual(Some(1))\n```\n"}
   }, {
     "label": "pushMany",
     "kind": 12,
