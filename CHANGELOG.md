@@ -25,6 +25,7 @@
 - Suggest awaiting promise before using it when types mismatch. https://github.com/rescript-lang/rescript/pull/7498
 - Complete from `RegExp` stdlib module for regexes. https://github.com/rescript-lang/rescript/pull/7425
 - Allow oneliner formatting when including module with single type alias. https://github.com/rescript-lang/rescript/pull/7502
+- Improve error messages for JSX type mismatches, passing objects where record is expected, passing array literal where tuple is expected, and more. https://github.com/rescript-lang/rescript/pull/7500
 
 # 12.0.0-alpha.13
 
