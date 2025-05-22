@@ -223,6 +223,10 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       \  - Use a tuple, if your array is of fixed length. Tuples can mix types \
        freely, and compiles to a JavaScript array. Example of a tuple: `let \
        myTuple = (10, \"hello\", 15.5, true)"
+  | _, Some (_, {desc = Tconstr (p2, _, _)}) when Path.same Predef.path_dict p2
+    ->
+    fprintf ppf
+      "@,@,Dicts are written like: @{<info>dict{\"a\": 1, \"b\": 2}@}@,"
   | _, Some ({Types.desc = Tconstr (_p1, _, _)}, {desc = Tconstr (p2, _, _)})
     when Path.same Predef.path_unit p2 ->
     fprintf ppf
