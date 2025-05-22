@@ -1081,7 +1081,50 @@ and print_include_declaration ~state
       print_attributes ~state include_declaration.pincl_attributes cmt_tbl;
       Doc.text "include ";
       (let include_doc =
-         print_mod_expr ~state include_declaration.pincl_mod cmt_tbl
+         match include_declaration.pincl_mod.pmod_desc with
+         (* 
+           include Module.Name({ type t = t })
+           try as oneliner if there is a single type alias declaration
+          *)
+         | Pmod_apply
+             ( {pmod_desc = Pmod_ident longident_loc},
+               {
+                 pmod_desc =
+                   Pmod_structure
+                     [
+                       ({
+                          pstr_desc =
+                            Pstr_type
+                              ( _,
+                                [
+                                  {
+                                    ptype_kind = Ptype_abstract;
+                                    ptype_manifest = Some _;
+                                  };
+                                ] );
+                        } as structure_item);
+                     ];
+               } ) ->
+           Doc.concat
+             [
+               print_longident_location longident_loc cmt_tbl;
+               Doc.lparen;
+               Doc.breakable_group ~force_break:false
+                 (Doc.concat
+                    [
+                      Doc.lbrace;
+                      Doc.indent
+                        (Doc.concat
+                           [
+                             Doc.soft_line;
+                             print_structure_item ~state structure_item cmt_tbl;
+                           ]);
+                      Doc.soft_line;
+                      Doc.rbrace;
+                    ]);
+               Doc.rparen;
+             ]
+         | _ -> print_mod_expr ~state include_declaration.pincl_mod cmt_tbl
        in
        if Parens.include_mod_expr include_declaration.pincl_mod then
          add_parens include_doc
