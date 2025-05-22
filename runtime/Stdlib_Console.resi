@@ -247,7 +247,7 @@ external debugMany: array<_> => unit = "console.debug"
 type dirOptions = {
   colors?: bool,
   depth?: Stdlib_Nullable.t<int>,
-  showHidden?: bool
+  showHidden?: bool,
 }
 /**
 `dir(object, options)` displays an interactive view of the object in the console.
