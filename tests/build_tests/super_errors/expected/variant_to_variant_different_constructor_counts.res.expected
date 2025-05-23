@@ -9,5 +9,5 @@
 
   Type x is not a subtype of y 
 
-  Variant [1;33mx[0m has [1;33m4[0m constructors that variant [1;33my[0m does not have: [1;33mTwo[0m, [1;33mThree[0m, [1;33mFour[0m (+1 more)
+  [1;33mx[0m has 4 constructors that [1;33my[0m does not have: [1;33mTwo[0m, [1;33mThree[0m, [1;33mFour[0m (+1 more)
   Therefore, it is not possible for [1;33my[0m to represent [1;33mx[0m.

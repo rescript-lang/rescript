@@ -18,8 +18,6 @@
 open Asttypes
 open Types
 
-type type_pairs = (type_expr * type_expr) list
-
 type subtype_context =
   | Generic of {errorCode: string}
   | Primitive_coercion_target_variant_not_unboxed of {
@@ -51,26 +49,17 @@ type subtype_context =
       issues: Record_coercion.record_field_subtype_violation list;
     }
 
-type subtype_type_position =
-  | RecordField of {
-      field_name: string;
-      left_record_name: Path.t;
-      right_record_name: Path.t;
-    }
-  | TupleElement of {index: int}
-
-exception Unify of type_pairs
+exception Unify of (type_expr * type_expr) list
 exception Tags of label * label
 exception
   Subtype of
-    type_pairs
-    * type_pairs
+    (type_expr * type_expr) list
+    * (type_expr * type_expr) list
     * subtype_context option
-    * subtype_type_position option
 exception Cannot_expand
 exception Cannot_apply
 exception Recursive_abbrev
-exception Unification_recursive_abbrev of type_pairs
+exception Unification_recursive_abbrev of (type_expr * type_expr) list
 
 val init_def : int -> unit
 (* Set the initial variable level *)
