@@ -1397,13 +1397,13 @@ See [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaS
 
 ```rescript
 let array = [5, 6, 7]
-let iterator : Iterator.t<int> = array->Array.entries
-Console.log(iterator->Iterator.next) // {done: false, value: [0,5]}
-Console.log(iterator->Iterator.next) // {done: false, value: [1,6]}
+let iterator : Iterator.t<(int, int)> = array->Array.entries
+iterator->Iterator.next->assertEqual({done: false, value: Some((0, 5))})
+iterator->Iterator.next->assertEqual({done: false, value: Some((1, 6))})
 ```
 */
 @send
-external entries: array<'a> => Stdlib_Iterator.t<'a> = "entries"
+external entries: array<'a> => Stdlib_Iterator.t<(int, 'a)> = "entries"
 
 /**
 `values(array)` returns a new array iterator object that contains the values for each index in the array.
@@ -1415,8 +1415,8 @@ See [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 ```rescript
 let array = [5, 6, 7]
 let iterator : Iterator.t<int> = array->Array.values
-Console.log(iterator->Iterator.next) // {done: false, value: 5}
-Console.log(iterator->Iterator.next) // {done: false, value: 6}
+iterator->Iterator.next->assertEqual({done: false, value: Some(5)})
+iterator->Iterator.next->assertEqual({done: false, value: Some(6)})
 ```
  */
 @send

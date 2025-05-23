@@ -61,7 +61,7 @@ map->Map.set("someKey2", "someValue2")
 // `Map.keys` returns all keys of the map as an iterator.
 let mapKeysAsArray = map->Map.keys->Iterator.toArray
 
-Console.log(mapKeysAsArray) // Logs ["someKey", "someKey2"] to the console.
+mapKeysAsArray->assertEqual(["someKey", "someKey2"])
 ```
 */
 @send
@@ -84,7 +84,7 @@ let mapKeysAsArray = map
   ->Map.keys
   ->Iterator.toArrayWithMapper(key => key->String.length)
 
-Console.log(mapKeysAsArray) // Logs [7, 8] to the console.
+mapKeysAsArray->assertEqual([7, 8])
 ```
 */
 external toArrayWithMapper: (t<'a>, 'a => 'b) => array<'b> = "Array.from"
@@ -97,13 +97,12 @@ See [iterator protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript
 ## Examples
 ```rescript
 let iterator: Iterator.t<string> = ["a", "b", "c"]->Array.values
+let acc = ref("")
 iterator->Iterator.forEach(v => {
-  Console.log(v)
+  acc := acc.contents ++ v
 })
 
-// "a"
-// "b"
-// "c"
+acc.contents->assertEqual("abc")
 ```
 */
 @send
@@ -124,11 +123,11 @@ See [Iterator.prototype.drop](https://developer.mozilla.org/en-US/docs/Web/JavaS
 
 ## Examples
 ```rescript
-let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.entries
+let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.values
 
 let seq = fibonacci->Iterator.drop(2)
-Console.log(seq->Iterator.next) // {done: false, value: Some(2)}
-Console.log(seq->Iterator.next) // {done: false, value: Some(3)}
+seq->Iterator.next->assertEqual({done: false, value: Some(2)})
+seq->Iterator.next->assertEqual({done: false, value: Some(3)})
 ```
 */
 @send
@@ -141,10 +140,10 @@ See [Iterator.prototype.every](https://developer.mozilla.org/en-US/docs/Web/Java
 
 ## Examples
 ```rescript
-let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.entries
+let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.values
 
 let areAllEven = fibonacci->Iterator.every(n => n % 2 == 0)
-Console.log(areAllEven) // false
+areAllEven->assertEqual(false)
 ```
 */
 @send
@@ -157,11 +156,11 @@ See [Iterator.prototype.filter](https://developer.mozilla.org/en-US/docs/Web/Jav
 
 ## Examples
 ```rescript
-let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.entries
+let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.values
 
 let seq = fibonacci->Iterator.filter(n => n % 2 == 0)
-Console.log(seq->Iterator.next) // {done: false, value: Some(2)}
-Console.log(seq->Iterator.next) // {done: false, value: Some(8)}
+seq->Iterator.next->assertEqual({done: false, value: Some(2)})
+seq->Iterator.next->assertEqual({done: false, value: Some(8)})
 ```
 */
 @send
@@ -174,10 +173,10 @@ See [Iterator.prototype.find](https://developer.mozilla.org/en-US/docs/Web/JavaS
 
 ## Examples
 ```rescript
-let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.entries
+let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.values
 
 let seq = fibonacci->Iterator.find(n => n % 2 == 0)
-Console.log(seq) // Some(2)
+seq->assertEqual(Some(2))
 ```
 */
 @send
@@ -198,7 +197,7 @@ let letters =
   ->Array.values
   ->Iterator.flatMap(m => Map.keys(m))
   ->Array.fromIterator
-Console.log(letters) // ["a", "b", "c", "d", "e", "f"]
+letters->assertEqual(["a", "b", "c", "d", "e", "f"])
 ```
  */
 @send
@@ -213,7 +212,7 @@ See [Iterator.prototype.map](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 ```rescript
 let map = Map.fromArray([("a", 1), ("b", 2), ("c", 3)])
 let letters = map->Map.keys->Iterator.map(v => v->String.toUpperCase)->Array.fromIterator
-Console.log(letters) // ["A", "B", "C"]
+letters->assertEqual(["A", "B", "C"])
 ```
 */
 @send
@@ -226,10 +225,10 @@ See [Iterator.prototype.reduce](https://developer.mozilla.org/en-US/docs/Web/Jav
 
 ## Examples
 ```rescript
-let numbers: Iterator.t<int> = [ 1, 2, 3 ]->Array.entries
+let numbers: Iterator.t<int> = [ 1, 2, 3 ]->Array.values
 
 let sum = numbers->Iterator.reduce((acc, n) => acc + n, ~initialValue=0)
-Console.log(sum) // 6
+sum->assertEqual(6)
 ```
 */
 @send
@@ -247,7 +246,7 @@ See [Iterator.prototype.some](https://developer.mozilla.org/en-US/docs/Web/JavaS
 let numbers: Iterator.t<int> = [ 1, 2, 3 ]->Array.values
 
 let hasEven = numbers->Iterator.some(n => n % 2 == 0)
-Console.log(hasEven) // true
+hasEven->assertEqual(true)
 ```
  */
 @send
@@ -263,9 +262,9 @@ See [Iterator.prototype.take](https://developer.mozilla.org/en-US/docs/Web/JavaS
 let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.values
 
 let seq = fibonacci->Iterator.take(2)
-Console.log(seq->Iterator.next) // {done: false, value: Some(1)}
-Console.log(seq->Iterator.next) // {done: false, value: Some(1)}
-Console.log(seq->Iterator.next) // {done: true, value: None}
+seq->Iterator.next->assertEqual({done: false, value: Some(1)})
+seq->Iterator.next->assertEqual({done: false, value: Some(1)})
+seq->Iterator.next->assertEqual({done: true, value: None})
 ```
 */
 @send
