@@ -177,31 +177,31 @@ module WeakMap = Js_weakmap
 type t<'a> = {..} as 'a
 
 /** JS global object reference */
-@deprecated("Use Stdlib.globalThis instead")
+@deprecated("Use globalThis instead")
 @val
 external globalThis: t<'a> = "globalThis"
 
-@deprecated("Use Stdlib.null instead") @unboxed
+@deprecated("Use null instead") @unboxed
 type null<+'a> = Js_null.t<'a> = Value('a) | @as(null) Null
 
-@deprecated("Use Stdlib.undefined instead")
+@deprecated("Use undefined instead")
 type undefined<+'a> = Js_undefined.t<'a>
 
-@deprecated("Use Stdlib.nullable instead") @unboxed
+@deprecated("Use nullable instead") @unboxed
 type nullable<+'a> = Js_null_undefined.t<'a> = Value('a) | @as(null) Null | @as(undefined) Undefined
 
-@deprecated("Use Stdlib.nullable instead")
+@deprecated("Use nullable instead")
 type null_undefined<+'a> = nullable<'a>
 
-@deprecated("Use Stdlib.Nullable.toOption instead")
+@deprecated("Use Nullable.toOption instead")
 external toOption: nullable<'a> => option<'a> = "%nullable_to_opt"
 @deprecated("FIXME: No equivalent in Stdlib, just Primitive_option.fromUndefined")
 external undefinedToOption: undefined<'a> => option<'a> = "%undefined_to_opt"
-@deprecated("Use Stdlib.Null.toOption instead")
+@deprecated("Use Null.toOption instead")
 external nullToOption: null<'a> => option<'a> = "%null_to_opt"
 @deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.isNullable")
 external isNullable: nullable<'a> => bool = "%is_nullable"
-@deprecated("Use Stdlib.import instead")
+@deprecated("Use import instead")
 external import: 'a => promise<'a> = "%import"
 
 /** The same as {!test} except that it is more permissive on the types of input */
@@ -211,43 +211,43 @@ external testAny: 'a => bool = "%is_nullable"
 /**
   The promise type, defined here for interoperation across packages.
 */
-@deprecated("Use Stdlib.Promise.t instead")
+@deprecated("Use Promise.t instead")
 type promise<+'a, +'e>
 
 /**
   The same as empty in `Js.Null`. Compiles to `null`.
 */
-@deprecated("Use Stdlib.null instead")
+@deprecated("Use null instead")
 external null: null<'a> = "%null"
 
 /**
   The same as empty `Js.Undefined`. Compiles to `undefined`.
 */
-@deprecated("Use Stdlib.undefined instead")
+@deprecated("Use undefined instead")
 external undefined: undefined<'a> = "%undefined"
 
 /**
 `typeof x` will be compiled as `typeof x` in JS. Please consider functions in
 `Js.Types` for a type safe way of reflection.
 */
-@deprecated("Use Stdlib.typeof instead")
+@deprecated("Use typeof instead")
 external typeof: 'a => string = "%typeof"
 
 /** Equivalent to console.log any value. */
-@deprecated("Use Stdlib.Console.log instead")
+@deprecated("Use Console.log instead")
 @val
 @scope("console")
 external log: 'a => unit = "log"
 
-@deprecated("Use Stdlib.Console.log2 instead") @val @scope("console")
+@deprecated("Use Console.log2 instead") @val @scope("console")
 external log2: ('a, 'b) => unit = "log"
-@deprecated("Use Stdlib.Console.log3 instead") @val @scope("console")
+@deprecated("Use Console.log3 instead") @val @scope("console")
 external log3: ('a, 'b, 'c) => unit = "log"
-@deprecated("Use Stdlib.Console.log4 instead") @val @scope("console")
+@deprecated("Use Console.log4 instead") @val @scope("console")
 external log4: ('a, 'b, 'c, 'd) => unit = "log"
 
 /** A convenience function to console.log more than 4 arguments */
-@deprecated("Use Stdlib.Console.logMany instead")
+@deprecated("Use Console.logMany instead")
 @val
 @scope("console")
 @variadic
