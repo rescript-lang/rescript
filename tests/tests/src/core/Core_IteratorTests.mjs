@@ -16,6 +16,24 @@ let syncResult = {
   contents: undefined
 };
 
+if (!Iterator.prototype.forEach) {
+  Iterator.prototype.forEach = function forEach(callback, thisArg) {
+    if (typeof callback !== 'function') {
+      throw new TypeError(callback + ' is not a function');
+    }
+
+    let index = 0;
+    let result = this.next();
+
+    while (!result.done) {
+      callback.call(thisArg, result.value, index, this);
+      result = this.next();
+      index++;
+    }
+  };
+}
+;
+
 iterator.forEach(v => {
   if (v === "b") {
     syncResult.contents = "b";
@@ -27,7 +45,7 @@ iterator.forEach(v => {
 Test.run([
   [
     "Core_IteratorTests.res",
-    19,
+    38,
     20,
     34
   ],
@@ -59,7 +77,7 @@ await Stdlib_AsyncIterator.forEach(asyncIterator, v => {
 Test.run([
   [
     "Core_IteratorTests.res",
-    42,
+    61,
     20,
     35
   ],
@@ -95,7 +113,7 @@ await Stdlib_AsyncIterator.forEach(asyncIterator$1, v => {
 Test.run([
   [
     "Core_IteratorTests.res",
-    67,
+    86,
     20,
     54
   ],

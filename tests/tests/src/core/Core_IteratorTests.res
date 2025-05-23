@@ -10,6 +10,25 @@ let iterator: Iterator.t<string> = %raw(`
 
 let syncResult = ref(None)
 
+%%raw(`
+if (!Iterator.prototype.forEach) {
+  Iterator.prototype.forEach = function forEach(callback, thisArg) {
+    if (typeof callback !== 'function') {
+      throw new TypeError(callback + ' is not a function');
+    }
+
+    let index = 0;
+    let result = this.next();
+
+    while (!result.done) {
+      callback.call(thisArg, result.value, index, this);
+      result = this.next();
+      index++;
+    }
+  };
+}
+`)
+
 iterator->Iterator.forEach(v => {
   if v == "b" {
     syncResult.contents = Some("b")
