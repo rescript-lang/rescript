@@ -1184,12 +1184,11 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         in
         (* Add completions from current fully qualified path module *)
         let currentFullyQualifiedPathModuleCompletions =
-          []
-          (* completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom
+          completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom
             ~opens:[] ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full cursorPath
            
           |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
-               ~targetTypeId:mainTypeId *)
+               ~targetTypeId:mainTypeId
         in
         jsxCompletions @ pipeCompletions @ extraCompletions
         @ currentModuleCompletions @ globallyConfiguredCompletions

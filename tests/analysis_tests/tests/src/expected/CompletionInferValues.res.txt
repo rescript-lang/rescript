@@ -308,7 +308,17 @@ Path event
 ContextPath CArgument CJsxPropValue [Div] onMouseEnter($0)
 ContextPath CJsxPropValue [Div] onMouseEnter
 Path Div.make
-[]
+CPPipe pathFromEnv:JsxEvent.Mouse found:false
+Path JsxEvent.Mouse.pr
+Path pr
+Path CompletionInferValues.pr
+[{
+    "label": "JsxEvent.Mouse.preventDefault",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => unit",
+    "documentation": null
+  }]
 
 Complete src/CompletionInferValues.res 47:87
 posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:11->47:93]

@@ -6,7 +6,17 @@ Resolved opens 1 Stdlib
 ContextPath Value[A, B1, xx]->
 ContextPath Value[A, B1, xx]
 Path A.B1.xx
-[]
+CPPipe pathFromEnv:A.B1 found:true
+Path A.B1.
+Path 
+Path CompletionPipeSubmodules.
+[{
+    "label": "A.B1.d",
+    "kind": 12,
+    "tags": [],
+    "detail": "b1 => string",
+    "documentation": null
+  }]
 
 Complete src/CompletionPipeSubmodules.res 17:18
 posCursor:[17:18] posNoWhite:[17:17] Found expr:[17:11->21:8]
@@ -17,7 +27,24 @@ ContextPath Value[A, x].v->
 ContextPath Value[A, x].v
 ContextPath Value[A, x]
 Path A.x
-[]
+ContextPath Value[A, x]->v
+ContextPath Value[A, x]
+Path A.x
+CPPipe pathFromEnv:A found:true
+Path A.v
+Path v
+Path CompletionPipeSubmodules.v
+CPPipe pathFromEnv:A.B1 found:true
+Path A.B1.
+Path 
+Path CompletionPipeSubmodules.
+[{
+    "label": "A.B1.d",
+    "kind": 12,
+    "tags": [],
+    "detail": "b1 => string",
+    "documentation": null
+  }]
 
 Complete src/CompletionPipeSubmodules.res 41:20
 posCursor:[41:20] posNoWhite:[41:19] Found expr:[41:11->0:-1]
@@ -29,7 +56,39 @@ ContextPath Value[E, e].v.v
 ContextPath Value[E, e].v
 ContextPath Value[E, e]
 Path E.e
-[]
+ContextPath Value[E, e]->v
+ContextPath Value[E, e]
+Path E.e
+CPPipe pathFromEnv:E found:true
+Path E.v
+Path v
+Path CompletionPipeSubmodules.v
+ContextPath Value[E, e].v->v
+ContextPath Value[E, e].v
+ContextPath Value[E, e]
+Path E.e
+ContextPath Value[E, e]->v
+ContextPath Value[E, e]
+Path E.e
+CPPipe pathFromEnv:E found:true
+Path E.v
+Path v
+Path CompletionPipeSubmodules.v
+CPPipe pathFromEnv:D found:true
+Path D.v
+Path v
+Path CompletionPipeSubmodules.v
+CPPipe pathFromEnv:C found:false
+Path C.
+Path 
+Path CompletionPipeSubmodules.
+[{
+    "label": "C.do",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null
+  }]
 
 Complete src/CompletionPipeSubmodules.res 45:21
 posCursor:[45:21] posNoWhite:[45:20] Found expr:[45:11->0:-1]
@@ -41,5 +100,37 @@ ContextPath Value[E, e].v.v2
 ContextPath Value[E, e].v
 ContextPath Value[E, e]
 Path E.e
-[]
+ContextPath Value[E, e]->v
+ContextPath Value[E, e]
+Path E.e
+CPPipe pathFromEnv:E found:true
+Path E.v
+Path v
+Path CompletionPipeSubmodules.v
+ContextPath Value[E, e].v->v2
+ContextPath Value[E, e].v
+ContextPath Value[E, e]
+Path E.e
+ContextPath Value[E, e]->v
+ContextPath Value[E, e]
+Path E.e
+CPPipe pathFromEnv:E found:true
+Path E.v
+Path v
+Path CompletionPipeSubmodules.v
+CPPipe pathFromEnv:D found:true
+Path D.v2
+Path v2
+Path CompletionPipeSubmodules.v2
+CPPipe pathFromEnv:D.C2 found:true
+Path D.C2.
+Path 
+Path CompletionPipeSubmodules.
+[{
+    "label": "D.C2.do",
+    "kind": 12,
+    "tags": [],
+    "detail": "t2 => string",
+    "documentation": null
+  }]
 

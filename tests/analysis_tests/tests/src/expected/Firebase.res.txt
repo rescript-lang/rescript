@@ -27,5 +27,17 @@ Path Firebase.Sample.
     "tags": [],
     "detail": "string",
     "documentation": {"kind": "markdown", "value": "```rescript\npath: string\n```\n\n```rescript\ntype documentReference<'documentdata> = {\n  id: string,\n  path: string,\n}\n```"}
+  }, {
+    "label": "->Firestore.getDoc",
+    "kind": 12,
+    "tags": [],
+    "detail": "documentReference<\n  'documentdata,\n> => Promise.t<documentSnapshot<'documentdata>>",
+    "documentation": null,
+    "sortText": "getDoc",
+    "insertText": "->Firestore.getDoc",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 30, "character": 8}, "end": {"line": 30, "character": 9}},
+      "newText": ""
+      }]
   }]
 

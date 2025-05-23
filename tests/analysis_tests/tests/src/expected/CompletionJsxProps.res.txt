@@ -389,5 +389,21 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [CompletableComponentLazy] status
 Path CompletableComponentLazy.make
-[]
+[{
+    "label": "On",
+    "kind": 4,
+    "tags": [],
+    "detail": "On",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOn\n```\n\n```rescript\ntype status = On | Off\n```"},
+    "insertText": "{On}",
+    "insertTextFormat": 2
+  }, {
+    "label": "Off",
+    "kind": 4,
+    "tags": [],
+    "detail": "Off",
+    "documentation": {"kind": "markdown", "value": "```rescript\nOff\n```\n\n```rescript\ntype status = On | Off\n```"},
+    "insertText": "{Off}",
+    "insertTextFormat": 2
+  }]
 

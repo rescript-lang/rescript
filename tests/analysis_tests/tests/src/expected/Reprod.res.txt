@@ -7,7 +7,16 @@ Resolved opens 1 Stdlib
 ContextPath CArgument Value[Query, use](~variables)
 ContextPath Value[Query, use]
 Path Query.use
-[]
+[{
+    "label": "{}",
+    "kind": 12,
+    "tags": [],
+    "detail": "input_ByAddress",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype input_ByAddress = {city: string}\n```"},
+    "sortText": "A",
+    "insertText": "{$0}",
+    "insertTextFormat": 2
+  }]
 
 Complete src/Reprod.res 33:28
 posCursor:[33:28] posNoWhite:[33:27] Found pattern:[33:21->33:31]

@@ -42,5 +42,29 @@ Path CompletionPipeProperty.
     "tags": [],
     "detail": "int",
     "documentation": {"kind": "markdown", "value": "```rescript\ny: int\n```\n\n```rescript\ntype op = {mutable x: int, mutable y: int}\n```"}
+  }, {
+    "label": "->ObservablePoint.setBoth",
+    "kind": 12,
+    "tags": [],
+    "detail": "(op, float) => unit",
+    "documentation": null,
+    "sortText": "setBoth",
+    "insertText": "->ObservablePoint.setBoth",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 21, "character": 16}, "end": {"line": 21, "character": 17}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->ObservablePoint.set",
+    "kind": 12,
+    "tags": [],
+    "detail": "(op, float, float) => unit",
+    "documentation": null,
+    "sortText": "set",
+    "insertText": "->ObservablePoint.set",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 21, "character": 16}, "end": {"line": 21, "character": 17}},
+      "newText": ""
+      }]
   }]
 

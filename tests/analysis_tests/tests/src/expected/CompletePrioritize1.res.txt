@@ -10,5 +10,11 @@ CPPipe pathFromEnv:Test found:true
 Path Test.
 Path 
 Path CompletePrioritize1.
-[]
+[{
+    "label": "Test.name",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => int",
+    "documentation": null
+  }]
 

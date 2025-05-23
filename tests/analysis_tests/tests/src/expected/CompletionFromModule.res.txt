@@ -20,6 +20,18 @@ Path CompletionFromModule.
     "tags": [],
     "detail": "string",
     "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype t = {name: string}\n```"}
+  }, {
+    "label": "->SomeModule.getName",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null,
+    "sortText": "getName",
+    "insertText": "->SomeModule.getName",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 10, "character": 4}, "end": {"line": 10, "character": 5}},
+      "newText": ""
+      }]
   }]
 
 Complete src/CompletionFromModule.res 30:6
@@ -69,6 +81,30 @@ Path CompletionFromModule.
       "range": {"start": {"line": 30, "character": 5}, "end": {"line": 30, "character": 6}},
       "newText": ""
       }]
+  }, {
+    "label": "->SomeOtherModule.getNName",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null,
+    "sortText": "getNName",
+    "insertText": "->SomeOtherModule.getNName",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 30, "character": 5}, "end": {"line": 30, "character": 6}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->SomeOtherModule.getNName2",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => string",
+    "documentation": null,
+    "sortText": "getNName2",
+    "insertText": "->SomeOtherModule.getNName2",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 30, "character": 5}, "end": {"line": 30, "character": 6}},
+      "newText": ""
+      }]
   }]
 
 Complete src/CompletionFromModule.res 33:32
@@ -78,7 +114,13 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Module[SomeOthe]
 Path SomeOthe
-[]
+[{
+    "label": "SomeOtherModule",
+    "kind": 9,
+    "tags": [],
+    "detail": "module SomeOtherModule",
+    "documentation": null
+  }]
 
 Complete src/CompletionFromModule.res 38:8
 posCursor:[38:8] posNoWhite:[38:7] Found expr:[38:3->0:-1]

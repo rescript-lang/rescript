@@ -11,6 +11,24 @@ Path Integer.
 Path 
 Path CompletionPipeChain.
 [{
+    "label": "Integer.toInt",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => int",
+    "documentation": null
+  }, {
+    "label": "Integer.increment",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, int) => t",
+    "documentation": null
+  }, {
+    "label": "Integer.decrement",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, int => int) => t",
+    "documentation": null
+  }, {
     "label": "toFlt",
     "kind": 12,
     "tags": [],
@@ -37,7 +55,13 @@ CPPipe pathFromEnv:SuperFloat found:true
 Path SuperFloat.
 Path 
 Path CompletionPipeChain.
-[]
+[{
+    "label": "SuperFloat.toInteger",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => Integer.t",
+    "documentation": null
+  }]
 
 Complete src/CompletionPipeChain.res 33:38
 posCursor:[33:38] posNoWhite:[33:37] Found expr:[33:11->0:-1]
@@ -48,7 +72,41 @@ ContextPath Value[Integer, increment](Nolabel, Nolabel)->
 ContextPath Value[Integer, increment](Nolabel, Nolabel)
 ContextPath Value[Integer, increment]
 Path Integer.increment
-[]
+CPPipe pathFromEnv:Integer found:true
+Path Integer.
+Path 
+Path CompletionPipeChain.
+[{
+    "label": "Integer.toInt",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => int",
+    "documentation": null
+  }, {
+    "label": "Integer.increment",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, int) => t",
+    "documentation": null
+  }, {
+    "label": "Integer.decrement",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, int => int) => t",
+    "documentation": null
+  }, {
+    "label": "toFlt",
+    "kind": 12,
+    "tags": [],
+    "detail": "Integer.t => SuperFloat.t",
+    "documentation": null
+  }, {
+    "label": "toFlt",
+    "kind": 12,
+    "tags": [],
+    "detail": "Integer.t => SuperFloat.t",
+    "documentation": null
+  }]
 
 Complete src/CompletionPipeChain.res 36:38
 posCursor:[36:38] posNoWhite:[36:37] Found expr:[36:11->0:-1]
@@ -59,7 +117,41 @@ ContextPath Value[Integer, increment](Nolabel, Nolabel)->
 ContextPath Value[Integer, increment](Nolabel, Nolabel)
 ContextPath Value[Integer, increment]
 Path Integer.increment
-[]
+CPPipe pathFromEnv:Integer found:true
+Path Integer.
+Path 
+Path CompletionPipeChain.
+[{
+    "label": "Integer.toInt",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => int",
+    "documentation": null
+  }, {
+    "label": "Integer.increment",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, int) => t",
+    "documentation": null
+  }, {
+    "label": "Integer.decrement",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, int => int) => t",
+    "documentation": null
+  }, {
+    "label": "toFlt",
+    "kind": 12,
+    "tags": [],
+    "detail": "Integer.t => SuperFloat.t",
+    "documentation": null
+  }, {
+    "label": "toFlt",
+    "kind": 12,
+    "tags": [],
+    "detail": "Integer.t => SuperFloat.t",
+    "documentation": null
+  }]
 
 Complete src/CompletionPipeChain.res 39:47
 posCursor:[39:47] posNoWhite:[39:46] Found expr:[39:11->0:-1]
@@ -70,7 +162,41 @@ ContextPath Value[Integer, decrement](Nolabel, Nolabel)->
 ContextPath Value[Integer, decrement](Nolabel, Nolabel)
 ContextPath Value[Integer, decrement]
 Path Integer.decrement
-[]
+CPPipe pathFromEnv:Integer found:true
+Path Integer.
+Path 
+Path CompletionPipeChain.
+[{
+    "label": "Integer.toInt",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => int",
+    "documentation": null
+  }, {
+    "label": "Integer.increment",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, int) => t",
+    "documentation": null
+  }, {
+    "label": "Integer.decrement",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, int => int) => t",
+    "documentation": null
+  }, {
+    "label": "toFlt",
+    "kind": 12,
+    "tags": [],
+    "detail": "Integer.t => SuperFloat.t",
+    "documentation": null
+  }, {
+    "label": "toFlt",
+    "kind": 12,
+    "tags": [],
+    "detail": "Integer.t => SuperFloat.t",
+    "documentation": null
+  }]
 
 Complete src/CompletionPipeChain.res 42:69
 posCursor:[42:69] posNoWhite:[42:68] Found expr:[42:11->0:-1]
@@ -81,7 +207,41 @@ ContextPath Value[Integer, decrement](Nolabel, Nolabel)->
 ContextPath Value[Integer, decrement](Nolabel, Nolabel)
 ContextPath Value[Integer, decrement]
 Path Integer.decrement
-[]
+CPPipe pathFromEnv:Integer found:true
+Path Integer.
+Path 
+Path CompletionPipeChain.
+[{
+    "label": "Integer.toInt",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => int",
+    "documentation": null
+  }, {
+    "label": "Integer.increment",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, int) => t",
+    "documentation": null
+  }, {
+    "label": "Integer.decrement",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, int => int) => t",
+    "documentation": null
+  }, {
+    "label": "toFlt",
+    "kind": 12,
+    "tags": [],
+    "detail": "Integer.t => SuperFloat.t",
+    "documentation": null
+  }, {
+    "label": "toFlt",
+    "kind": 12,
+    "tags": [],
+    "detail": "Integer.t => SuperFloat.t",
+    "documentation": null
+  }]
 
 Complete src/CompletionPipeChain.res 45:62
 posCursor:[45:62] posNoWhite:[45:61] Found expr:[45:11->0:-1]
@@ -92,7 +252,17 @@ ContextPath Value[SuperFloat, fromInteger](Nolabel)->
 ContextPath Value[SuperFloat, fromInteger](Nolabel)
 ContextPath Value[SuperFloat, fromInteger]
 Path SuperFloat.fromInteger
-[]
+CPPipe pathFromEnv:SuperFloat found:true
+Path SuperFloat.
+Path 
+Path CompletionPipeChain.
+[{
+    "label": "SuperFloat.toInteger",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => Integer.t",
+    "documentation": null
+  }]
 
 Complete src/CompletionPipeChain.res 48:63
 posCursor:[48:63] posNoWhite:[48:62] Found expr:[48:11->48:63]
@@ -103,7 +273,17 @@ ContextPath Value[SuperFloat, fromInteger](Nolabel)->t
 ContextPath Value[SuperFloat, fromInteger](Nolabel)
 ContextPath Value[SuperFloat, fromInteger]
 Path SuperFloat.fromInteger
-[]
+CPPipe pathFromEnv:SuperFloat found:true
+Path SuperFloat.t
+Path t
+Path CompletionPipeChain.t
+[{
+    "label": "SuperFloat.toInteger",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => Integer.t",
+    "documentation": null
+  }]
 
 Complete src/CompletionPipeChain.res 51:82
 posCursor:[51:82] posNoWhite:[51:81] Found expr:[51:11->0:-1]
@@ -392,6 +572,24 @@ Path Integer.
 Path 
 Path CompletionPipeChain.
 [{
+    "label": "Integer.toInt",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => int",
+    "documentation": null
+  }, {
+    "label": "Integer.increment",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, int) => t",
+    "documentation": null
+  }, {
+    "label": "Integer.decrement",
+    "kind": 12,
+    "tags": [],
+    "detail": "(t, int => int) => t",
+    "documentation": null
+  }, {
     "label": "toFlt",
     "kind": 12,
     "tags": [],
@@ -420,6 +618,12 @@ Path Integer.t
 Path t
 Path CompletionPipeChain.t
 [{
+    "label": "Integer.toInt",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => int",
+    "documentation": null
+  }, {
     "label": "toFlt",
     "kind": 12,
     "tags": [],
@@ -464,5 +668,11 @@ CPPipe pathFromEnv:Xyz found:true
 Path Xyz.
 Path 
 Path CompletionPipeChain.
-[]
+[{
+    "label": "Xyz.do",
+    "kind": 12,
+    "tags": [],
+    "detail": "xx => string",
+    "documentation": null
+  }]
 

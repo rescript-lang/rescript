@@ -172,6 +172,12 @@ Path someFnTakingVariant
     "insertText": "One",
     "insertTextFormat": 2
   }, {
+    "label": "OIncludeMeInCompletions",
+    "kind": 9,
+    "tags": [],
+    "detail": "module OIncludeMeInCompletions",
+    "documentation": null
+  }, {
     "label": "Option",
     "kind": 9,
     "tags": [],
@@ -248,6 +254,12 @@ Path someFnTakingVariant
     "sortText": "A One",
     "insertText": "One",
     "insertTextFormat": 2
+  }, {
+    "label": "OIncludeMeInCompletions",
+    "kind": 9,
+    "tags": [],
+    "detail": "module OIncludeMeInCompletions",
+    "documentation": null
   }, {
     "label": "Option",
     "kind": 9,
@@ -476,5 +488,11 @@ CPPipe pathFromEnv:FineModule found:true
 Path FineModule.
 Path 
 Path CompletionFunctionArguments.
-[]
+[{
+    "label": "FineModule.setToFalse",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => t",
+    "documentation": null
+  }]
 

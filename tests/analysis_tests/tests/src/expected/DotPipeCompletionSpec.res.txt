@@ -20,6 +20,30 @@ Path DotPipeCompletionSpec.
     "tags": [],
     "detail": "string",
     "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype t = {name: string}\n```"}
+  }, {
+    "label": "->SomeModule.withUnlabelledArgumentNotFirst",
+    "kind": 12,
+    "tags": [],
+    "detail": "(~name: string=?, t) => unit",
+    "documentation": null,
+    "sortText": "withUnlabelledArgumentNotFirst",
+    "insertText": "->SomeModule.withUnlabelledArgumentNotFirst",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 15, "character": 4}, "end": {"line": 15, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->SomeModule.getName",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null,
+    "sortText": "getName",
+    "insertText": "->SomeModule.getName",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 15, "character": 4}, "end": {"line": 15, "character": 5}},
+      "newText": ""
+      }]
   }]
 
 Complete src/DotPipeCompletionSpec.res 44:6
@@ -46,6 +70,30 @@ Path DotPipeCompletionSpec.
     "tags": [],
     "detail": "string",
     "documentation": {"kind": "markdown", "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"}
+  }, {
+    "label": "->SomeOtherModule.getNName",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => string",
+    "documentation": null,
+    "sortText": "getNName",
+    "insertText": "->SomeOtherModule.getNName",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->SomeOtherModule.getNName2",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => string",
+    "documentation": null,
+    "sortText": "getNName2",
+    "insertText": "->SomeOtherModule.getNName2",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
+      "newText": ""
+      }]
   }, {
     "label": "->CompleteFromThisToo.a",
     "kind": 12,
@@ -149,7 +197,31 @@ Path A.
 Path B.
 Path 
 Path DotPipeCompletionSpec.
-[]
+[{
+    "label": "->A.withA",
+    "kind": 12,
+    "tags": [],
+    "detail": "a => unit",
+    "documentation": null,
+    "sortText": "withA",
+    "insertText": "->A.withA",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 62, "character": 4}, "end": {"line": 62, "character": 5}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->B.b",
+    "kind": 12,
+    "tags": [],
+    "detail": "A.a => int",
+    "documentation": null,
+    "sortText": "b",
+    "insertText": "->B.b",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 62, "character": 4}, "end": {"line": 62, "character": 5}},
+      "newText": ""
+      }]
+  }]
 
 Complete src/DotPipeCompletionSpec.res 67:6
 posCursor:[67:6] posNoWhite:[67:5] Found expr:[67:3->67:6]
