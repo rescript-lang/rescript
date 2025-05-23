@@ -177,87 +177,87 @@ module WeakMap = Js_weakmap
 type t<'a> = {..} as 'a
 
 /** JS global object reference */
-@deprecated("Use globalThis instead")
+@deprecated("Use `globalThis` instead")
 @val
 external globalThis: t<'a> = "globalThis"
 
-@deprecated("Use null instead") @unboxed
+@deprecated("Use `null` instead") @unboxed
 type null<+'a> = Js_null.t<'a> = Value('a) | @as(null) Null
 
-@deprecated("Use undefined instead")
+@deprecated("Use `undefined` instead")
 type undefined<+'a> = Js_undefined.t<'a>
 
-@deprecated("Use nullable instead") @unboxed
+@deprecated("Use `nullable` instead") @unboxed
 type nullable<+'a> = Js_null_undefined.t<'a> = Value('a) | @as(null) Null | @as(undefined) Undefined
 
-@deprecated("Use nullable instead")
+@deprecated("Use `nullable` instead")
 type null_undefined<+'a> = nullable<'a>
 
-@deprecated("Use Nullable.toOption instead")
+@deprecated("Use `Nullable.toOption` instead")
 external toOption: nullable<'a> => option<'a> = "%nullable_to_opt"
-@deprecated("Will be removed in v13")
+@deprecated("Do not use. This will be removed in v13")
 external undefinedToOption: undefined<'a> => option<'a> = "%undefined_to_opt"
-@deprecated("Use Null.toOption instead")
+@deprecated("Use `Null.toOption` instead")
 external nullToOption: null<'a> => option<'a> = "%null_to_opt"
-@deprecated("Use Null.isNullable instead")
+@deprecated("Use `Null.isNullable` instead")
 external isNullable: nullable<'a> => bool = "%is_nullable"
-@deprecated("Use import instead")
+@deprecated("Use `import` instead")
 external import: 'a => promise<'a> = "%import"
 
 /** The same as {!test} except that it is more permissive on the types of input */
-@deprecated("Will be removed in v13")
+@deprecated("Do not use. This will be removed in v13")
 external testAny: 'a => bool = "%is_nullable"
 
 /**
   The promise type, defined here for interoperation across packages.
 */
-@deprecated("Use Promise.t instead")
+@deprecated("Use `Promise.t` instead")
 type promise<+'a, +'e>
 
 /**
   The same as empty in `Js.Null`. Compiles to `null`.
 */
-@deprecated("Use null instead")
+@deprecated("Use `null` instead")
 external null: null<'a> = "%null"
 
 /**
   The same as empty `Js.Undefined`. Compiles to `undefined`.
 */
-@deprecated("Use undefined instead")
+@deprecated("Use `undefined` instead")
 external undefined: undefined<'a> = "%undefined"
 
 /**
 `typeof x` will be compiled as `typeof x` in JS. Please consider functions in
 `Js.Types` for a type safe way of reflection.
 */
-@deprecated("Use typeof instead")
+@deprecated("Use `typeof` instead")
 external typeof: 'a => string = "%typeof"
 
 /** Equivalent to console.log any value. */
-@deprecated("Use Console.log instead")
+@deprecated("Use `Console.log` instead")
 @val
 @scope("console")
 external log: 'a => unit = "log"
 
-@deprecated("Use Console.log2 instead") @val @scope("console")
+@deprecated("Use `Console.log2` instead") @val @scope("console")
 external log2: ('a, 'b) => unit = "log"
-@deprecated("Use Console.log3 instead") @val @scope("console")
+@deprecated("Use `Console.log3` instead") @val @scope("console")
 external log3: ('a, 'b, 'c) => unit = "log"
-@deprecated("Use Console.log4 instead") @val @scope("console")
+@deprecated("Use `Console.log4` instead") @val @scope("console")
 external log4: ('a, 'b, 'c, 'd) => unit = "log"
 
 /** A convenience function to console.log more than 4 arguments */
-@deprecated("Use Console.logMany instead")
+@deprecated("Use `Console.logMany` instead")
 @val
 @scope("console")
 @variadic
 external logMany: array<'a> => unit = "log"
 
-@deprecated("Will be removed in v13")
+@deprecated("Do not use. This will be removed in v13")
 external eqNull: ('a, null<'a>) => bool = "%equal_null"
-@deprecated("Will be removed in v13")
+@deprecated("Do not use. This will be removed in v13")
 external eqUndefined: ('a, undefined<'a>) => bool = "%equal_undefined"
-@deprecated("Will be removed in v13")
+@deprecated("Do not use. This will be removed in v13")
 external eqNullable: ('a, nullable<'a>) => bool = "%equal_nullable"
 
 /* ## Operators */
@@ -267,26 +267,26 @@ external eqNullable: ('a, nullable<'a>) => bool = "%equal_nullable"
     It is marked as unsafe, since it is impossible
     to give a proper semantics for comparision which applies to any type
 */
-@deprecated("Will be removed in v13")
+@deprecated("Do not use. This will be removed in v13")
 external unsafe_lt: ('a, 'a) => bool = "%unsafe_lt"
 
 /**
    `unsafe_le(a, b)` will be compiled as `a <= b`.
    See also `Js.unsafe_lt`.
 */
-@deprecated("Will be removed in v13")
+@deprecated("Do not use. This will be removed in v13")
 external unsafe_le: ('a, 'a) => bool = "%unsafe_le"
 
 /**
    `unsafe_gt(a, b)` will be compiled as `a > b`.
     See also `Js.unsafe_lt`.
 */
-@deprecated("Will be removed in v13")
+@deprecated("Do not use. This will be removed in v13")
 external unsafe_gt: ('a, 'a) => bool = "%unsafe_gt"
 
 /**
    `unsafe_ge(a, b)` will be compiled as `a >= b`.
    See also `Js.unsafe_lt`.
 */
-@deprecated("Will be removed in v13")
+@deprecated("Do not use. This will be removed in v13")
 external unsafe_ge: ('a, 'a) => bool = "%unsafe_ge"
