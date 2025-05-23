@@ -757,7 +757,13 @@ pub fn parse_packages(build_state: &mut BuildState) {
                     } else {
                         // remove last character of string: resi -> res, rei -> re, mli -> ml
                         let mut implementation_filename = file.to_owned();
-                        implementation_filename.pop();
+                        let extension = implementation_filename.extension().unwrap().to_str().unwrap();
+                        implementation_filename = match extension {
+                            "resi" => implementation_filename.with_extension("res"),
+                            "rei" => implementation_filename.with_extension("re"),
+                            "mli" => implementation_filename.with_extension("ml"),
+                            _ => implementation_filename,
+                        };
                         match source_files.get(&implementation_filename) {
                             None => {
                                 log::warn!(
