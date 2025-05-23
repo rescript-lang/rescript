@@ -3,7 +3,7 @@ type x = {
   y: int,
 }
 type y = {
-  @as("z")x: int,
+  @as("z") x: int,
   y: int,
 }
 
