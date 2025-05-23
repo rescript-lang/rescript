@@ -74,17 +74,13 @@ pub fn generate_asts(
                     } else {
                         (
                             Ok((
-                                Path::new(
-                                    &(helpers::get_basename(&source_file.implementation.path).to_string()
-                                        + ".ast"),
-                                )
-                                .to_path_buf(),
+                                PathBuf::from(helpers::get_basename(&source_file.implementation.path))
+                                    .with_extension("ast"),
                                 None,
                             )),
                             Ok(source_file.interface.as_ref().map(|i| {
                                 (
-                                    Path::new(&(helpers::get_basename(&i.path).to_string() + ".iast"))
-                                        .to_path_buf(),
+                                    PathBuf::from(helpers::get_basename(&i.path)).with_extension("iast"),
                                     None,
                                 )
                             })),
@@ -359,7 +355,7 @@ fn generate_ast(
     if let Ok((ast_path, _)) = &result {
         let _ = std::fs::copy(
             Path::new(&build_path_abs).join(&ast_path),
-            std::path::Path::new(&package.get_ocaml_build_path()).join(ast_path.file_name().unwrap()),
+            package.get_ocaml_build_path().join(ast_path.file_name().unwrap()),
         );
     }
     result

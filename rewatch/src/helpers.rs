@@ -186,11 +186,13 @@ fn path_to_ast_extension(path: &Path) -> &str {
 
 pub fn get_ast_path(source_file: &Path) -> PathBuf {
     let source_path = source_file;
+    let basename = file_path_to_compiler_asset_basename(source_file, &packages::Namespace::NoNamespace);
+    let extension = path_to_ast_extension(source_path);
 
-    source_path.parent().unwrap().join(
-        file_path_to_compiler_asset_basename(source_file, &packages::Namespace::NoNamespace)
-            + path_to_ast_extension(source_path),
-    )
+    source_path
+        .parent()
+        .unwrap()
+        .join(format!("{}{}", basename, extension))
 }
 
 pub fn get_compiler_asset(
@@ -203,9 +205,10 @@ pub fn get_compiler_asset(
         "ast" | "iast" => &packages::Namespace::NoNamespace,
         _ => namespace,
     };
+    let basename = file_path_to_compiler_asset_basename(source_file, namespace);
     package
         .get_ocaml_build_path()
-        .join(file_path_to_compiler_asset_basename(source_file, namespace) + "." + extension)
+        .join(format!("{}.{}", basename, extension))
 }
 
 pub fn canonicalize_string_path(path: &str) -> Option<PathBuf> {
@@ -223,11 +226,13 @@ pub fn get_bs_compiler_asset(
         _ => namespace,
     };
 
-    let dir = std::path::Path::new(&source_file).parent().unwrap();
+    let dir = source_file.parent().unwrap();
+    let basename = file_path_to_compiler_asset_basename(source_file, namespace);
 
-    std::path::Path::new(&package.get_build_path())
+    package
+        .get_build_path()
         .join(dir)
-        .join(file_path_to_compiler_asset_basename(source_file, namespace) + extension)
+        .join(format!("{}{}", basename, extension))
         .to_str()
         .unwrap()
         .to_owned()
