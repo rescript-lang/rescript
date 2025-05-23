@@ -4,6 +4,7 @@ use clap_verbosity_flag::InfoLevel;
 use log::LevelFilter;
 use regex::Regex;
 use std::io::Write;
+use std::path::{Path, PathBuf};
 
 use rewatch::{build, cmd, lock, watcher};
 
@@ -102,7 +103,12 @@ fn main() -> Result<()> {
         Some(path) => {
             println!(
                 "{}",
-                build::get_compiler_args(&path, args.rescript_version, args.bsc_path, args.dev)?
+                build::get_compiler_args(
+                    Path::new(&path),
+                    args.rescript_version,
+                    &args.bsc_path.map(PathBuf::from),
+                    args.dev
+                )?
             );
             std::process::exit(0);
         }
@@ -118,15 +124,20 @@ fn main() -> Result<()> {
             std::process::exit(1)
         }
         lock::Lock::Aquired(_) => match command {
-            Command::Clean => build::clean::clean(&folder, show_progress, args.bsc_path, args.dev),
+            Command::Clean => build::clean::clean(
+                Path::new(&folder),
+                show_progress,
+                &args.bsc_path.map(PathBuf::from),
+                args.dev,
+            ),
             Command::Build => {
                 match build::build(
                     &filter,
-                    &folder,
+                    Path::new(&folder),
                     show_progress,
                     args.no_timing,
                     args.create_sourcedirs,
-                    args.bsc_path,
+                    &args.bsc_path.map(PathBuf::from),
                     args.dev,
                 ) {
                     Err(e) => {

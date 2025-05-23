@@ -323,7 +323,8 @@ fn generate_ast(
     );
 
     // generate the dir of the ast_path (it mirrors the source file dir)
-    helpers::create_path(&(package.get_build_path() + "/" + &ast_path.parent().unwrap().to_string_lossy()));
+    let ast_parent_path = package.get_build_path().join(ast_path.parent().unwrap());
+    helpers::create_path(&ast_parent_path);
 
     /* Create .ast */
     let result = if let Some(res_to_ast) = Some(
@@ -344,11 +345,12 @@ fn generate_ast(
             Ok((ast_path, None))
         }
     } else {
-        log::info!("Parsing file {}...", filename);
+        log::info!("Parsing file {}...", filename.display());
 
         Err(format!(
             "Could not find canonicalize_string_path for file {} in package {}",
-            filename, package.name
+            filename.display(),
+            package.name
         ))
     };
     if let Ok((ast_path, _)) = &result {

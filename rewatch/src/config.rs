@@ -252,7 +252,7 @@ pub fn flatten_ppx_flags(
 ) -> Vec<String> {
     match flags {
         None => vec![],
-        Some(xs) => xs
+        Some(flags) => flags
             .iter()
             .flat_map(|x| match x {
                 OneOrMore::Single(y) => {
@@ -261,18 +261,29 @@ pub fn flatten_ppx_flags(
                         Some('.') => {
                             vec![
                                 "-ppx".to_string(),
-                                node_modules_dir.to_owned() + "/" + package_name + "/" + y,
+                                node_modules_dir
+                                    .join(package_name)
+                                    .join(y)
+                                    .to_string_lossy()
+                                    .to_string(),
                             ]
                         }
-                        _ => vec!["-ppx".to_string(), node_modules_dir.to_owned() + "/" + y],
+                        _ => vec![
+                            "-ppx".to_string(),
+                            node_modules_dir.join(y).to_string_lossy().to_string(),
+                        ],
                     }
                 }
                 OneOrMore::Multiple(ys) if ys.is_empty() => vec![],
                 OneOrMore::Multiple(ys) => {
                     let first_character = ys[0].chars().next();
                     let ppx = match first_character {
-                        Some('.') => node_modules_dir.to_owned() + "/" + package_name + "/" + &ys[0],
-                        _ => node_modules_dir.to_owned() + "/" + &ys[0],
+                        Some('.') => node_modules_dir
+                            .join(package_name)
+                            .join(&ys[0])
+                            .to_string_lossy()
+                            .to_string(),
+                        _ => node_modules_dir.join(&ys[0]).to_string_lossy().to_string(),
                     };
                     vec![
                         "-ppx".to_string(),
