@@ -194,14 +194,15 @@ let map1 = Map.fromArray([("a", 1), ("b", 2), ("c", 3)])
 let map2 = Map.fromArray([("d", 4), ("e", 5), ("f", 6)])
 
 let letters =
-  [map1->Map.values, map2->Map.values]
-  ->Iterator.flatMap(m => Map.values(m))
+  [map1, map2]
+  ->Array.values
+  ->Iterator.flatMap(m => Map.keys(m))
   ->Array.fromIterator
 Console.log(letters) // ["a", "b", "c", "d", "e", "f"]
 ```
  */
 @send
-external flatMap: (t<'a>, 'a => array<'b>) => t<'b> = "flatMap"
+external flatMap: (t<'a>, 'a => t<'b>) => t<'b> = "flatMap"
 
 /**
 `map(iterator, fn)` returns a new iterator helper object that yields elements of the iterator, each transformed by a mapping function.

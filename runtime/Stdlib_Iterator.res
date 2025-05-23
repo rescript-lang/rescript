@@ -29,7 +29,7 @@ external filter: (t<'a>, 'a => bool) => t<'a> = "filter"
 external find: (t<'a>, 'a => bool) => option<'a> = "find"
 
 @send
-external flatMap: (t<'a>, 'a => array<'b>) => t<'b> = "flatMap"
+external flatMap: (t<'a>, 'a => t<'b>) => t<'b> = "flatMap"
 
 @send
 external map: (t<'a>, 'a => 'b) => t<'b> = "map"
