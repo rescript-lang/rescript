@@ -195,17 +195,17 @@ type null_undefined<+'a> = nullable<'a>
 
 @deprecated("Use Nullable.toOption instead")
 external toOption: nullable<'a> => option<'a> = "%nullable_to_opt"
-@deprecated("FIXME: No equivalent in Stdlib, just Primitive_option.fromUndefined")
+@deprecated("Will be removed in v13")
 external undefinedToOption: undefined<'a> => option<'a> = "%undefined_to_opt"
 @deprecated("Use Null.toOption instead")
 external nullToOption: null<'a> => option<'a> = "%null_to_opt"
-@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.isNullable")
+@deprecated("Use Null.isNullable instead")
 external isNullable: nullable<'a> => bool = "%is_nullable"
 @deprecated("Use import instead")
 external import: 'a => promise<'a> = "%import"
 
 /** The same as {!test} except that it is more permissive on the types of input */
-@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.testAny")
+@deprecated("Will be removed in v13")
 external testAny: 'a => bool = "%is_nullable"
 
 /**
@@ -253,11 +253,11 @@ external log4: ('a, 'b, 'c, 'd) => unit = "log"
 @variadic
 external logMany: array<'a> => unit = "log"
 
-@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.eqNull")
+@deprecated("Will be removed in v13")
 external eqNull: ('a, null<'a>) => bool = "%equal_null"
-@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.eqUndefined")
+@deprecated("Will be removed in v13")
 external eqUndefined: ('a, undefined<'a>) => bool = "%equal_undefined"
-@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.eqNullable")
+@deprecated("Will be removed in v13")
 external eqNullable: ('a, nullable<'a>) => bool = "%equal_nullable"
 
 /* ## Operators */
@@ -267,26 +267,26 @@ external eqNullable: ('a, nullable<'a>) => bool = "%equal_nullable"
     It is marked as unsafe, since it is impossible
     to give a proper semantics for comparision which applies to any type
 */
-@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.lt")
+@deprecated("Will be removed in v13")
 external unsafe_lt: ('a, 'a) => bool = "%unsafe_lt"
 
 /**
    `unsafe_le(a, b)` will be compiled as `a <= b`.
    See also `Js.unsafe_lt`.
 */
-@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.le")
+@deprecated("Will be removed in v13")
 external unsafe_le: ('a, 'a) => bool = "%unsafe_le"
 
 /**
    `unsafe_gt(a, b)` will be compiled as `a > b`.
     See also `Js.unsafe_lt`.
 */
-@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.gt")
+@deprecated("Will be removed in v13")
 external unsafe_gt: ('a, 'a) => bool = "%unsafe_gt"
 
 /**
    `unsafe_ge(a, b)` will be compiled as `a >= b`.
    See also `Js.unsafe_lt`.
 */
-@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.ge")
+@deprecated("Will be removed in v13")
 external unsafe_ge: ('a, 'a) => bool = "%unsafe_ge"
