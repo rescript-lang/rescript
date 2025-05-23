@@ -30,7 +30,7 @@ pub fn gen_mlmap(
     // recompile in a different way but we need to put it in the file for it to
     // be readable.
 
-    let path = build_path_abs.join(namespace.to_string() + ".mlmap");
+    let path = build_path_abs.join(format!("{}.mlmap", namespace));
     let mut file = File::create(&path).expect("Unable to create mlmap");
 
     file.write_all(b"randjbuildsystem\n")

@@ -97,21 +97,19 @@ impl Package {
     }
 
     pub fn get_mlmap_path(&self) -> PathBuf {
-        self.get_build_path().join(
-            self.namespace
-                .to_suffix()
-                .expect("namespace should be set for mlmap module")
-                + ".mlmap",
-        )
+        let suffix = self
+            .namespace
+            .to_suffix()
+            .expect("namespace should be set for mlmap module");
+        self.get_build_path().join(format!("{}.mlmap", suffix))
     }
 
     pub fn get_mlmap_compile_path(&self) -> PathBuf {
-        self.get_build_path().join(
-            self.namespace
-                .to_suffix()
-                .expect("namespace should be set for mlmap module")
-                + ".cmi",
-        )
+        let suffix = self
+            .namespace
+            .to_suffix()
+            .expect("namespace should be set for mlmap module");
+        self.get_build_path().join(format!("{}.cmi", suffix))
     }
 }
 
