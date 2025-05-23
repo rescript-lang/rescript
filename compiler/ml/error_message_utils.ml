@@ -388,16 +388,10 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
          @,\
          Possible solutions: @,\
          - These types are compatible at runtime. You can use the coercion \
-         operator @{<info>:>@} to convert to the expected type @{<info>%s@}."
-        target_type_string;
+         operator to convert to the expected type";
       match suggested_rewrite with
-      | Some rewrite ->
-        fprintf ppf
-          "@,\
-          \  If you want to use coercion, rewrite the highlighted code to: \
-           @{<info>%s@}@,"
-          rewrite
-      | None -> ())
+      | Some rewrite -> fprintf ppf ": @{<info>%s@}@," rewrite
+      | None -> fprintf ppf ": @{<info>:>@}@,")
   | _ -> ()
 
 let type_clash_context_from_function sexp sfunct =

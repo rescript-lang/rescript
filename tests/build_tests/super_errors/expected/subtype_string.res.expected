@@ -11,6 +11,5 @@
   But it's expected to have type: [1;33mstring[0m
   
   Possible solutions: 
-  - These types are compatible at runtime. You can use the coercion operator [1;33m:>[0m to convert to the expected type [1;33mstring[0m.
-    If you want to use coercion, rewrite the highlighted code to: [1;33m(One :> string)
+  - These types are compatible at runtime. You can use the coercion operator to convert to the expected type: [1;33m(One :> string)
 [0m
