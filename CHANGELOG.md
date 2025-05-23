@@ -33,6 +33,7 @@
 - Show in error messages when coercion can be used to fix a type mismatch. https://github.com/rescript-lang/rescript/pull/7505
 - Remove deprecated pipe last (`|>`) syntax. https://github.com/rescript-lang/rescript/pull/7512
 - Improve error message for pipe (`->`) syntax. https://github.com/rescript-lang/rescript/pull/7520
+- Improve a few error messages around various subtyping issues. https://github.com/rescript-lang/rescript/pull/7404
 
 # 12.0.0-alpha.13
 
