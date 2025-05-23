@@ -373,7 +373,16 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       | structure, comments -> Some (!Parser.reprint_source structure comments)
     in
 
-    if is_subtype then (
+    (* Suggesting coercion only makes sense for non-constant values. *)
+    let is_constant =
+      match !Parser.parse_source target_expr_text with
+      | ( [{Parsetree.pstr_desc = Pstr_eval ({pexp_desc = Pexp_constant _}, _)}],
+          _ ) ->
+        true
+      | _ -> false
+    in
+
+    if is_subtype && not is_constant then (
       fprintf ppf
         "@,\
          @,\
