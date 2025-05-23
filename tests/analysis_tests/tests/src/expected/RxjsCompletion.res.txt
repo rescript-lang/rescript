@@ -22,6 +22,7 @@ CPPipe pathFromEnv:Observable found:true
 Path Rxjs.Observable.
 Path Rxjs.
 Path 
+Path RxjsCompletion.
 [{
     "label": "->Observable.subscribe",
     "kind": 12,
@@ -105,6 +106,7 @@ CPPipe pathFromEnv:Observable found:true
 Path Rxjs.Observable.
 Path Rxjs.
 Path 
+Path RxjsCompletion.
 [{
     "label": "->Rxjs.Observable.subscribe",
     "kind": 12,

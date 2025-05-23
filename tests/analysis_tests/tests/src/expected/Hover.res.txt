@@ -120,6 +120,7 @@ Path x1
 CPPipe pathFromEnv: found:true
 Path Hover.content
 Path content
+Path Hover.TypeSubstitutionRecords.content
 ContextPath Value[x1].content->
 ContextPath Value[x1].content
 ContextPath Value[x1]
@@ -130,9 +131,11 @@ Path x1
 CPPipe pathFromEnv: found:true
 Path Hover.content
 Path content
+Path Hover.TypeSubstitutionRecords.content
 CPPipe pathFromEnv: found:true
 Path Hover.
 Path 
+Path Hover.TypeSubstitutionRecords.
 [{
     "label": "age",
     "kind": 5,
@@ -157,6 +160,7 @@ Path x2
 CPPipe pathFromEnv: found:true
 Path Hover.content
 Path content
+Path Hover.TypeSubstitutionRecords.content
 ContextPath Value[x2].content->
 ContextPath Value[x2].content
 ContextPath Value[x2]
@@ -167,9 +171,11 @@ Path x2
 CPPipe pathFromEnv: found:true
 Path Hover.content
 Path content
+Path Hover.TypeSubstitutionRecords.content
 CPPipe pathFromEnv: found:true
 Path Hover.
 Path 
+Path Hover.TypeSubstitutionRecords.
 [{
     "label": "age",
     "kind": 5,
@@ -194,6 +200,7 @@ Path y1
 CPPipe pathFromEnv: found:true
 Path Hover.content
 Path content
+Path Hover.TypeSubstitutionRecords.content
 ContextPath Value[y1].content->
 ContextPath Value[y1].content
 ContextPath Value[y1]
@@ -204,9 +211,11 @@ Path y1
 CPPipe pathFromEnv: found:true
 Path Hover.content
 Path content
+Path Hover.TypeSubstitutionRecords.content
 CPPipe pathFromEnv: found:true
 Path Hover.
 Path 
+Path Hover.TypeSubstitutionRecords.
 [{
     "label": "age",
     "kind": 5,
@@ -231,6 +240,7 @@ Path y2
 CPPipe pathFromEnv: found:true
 Path Hover.content
 Path content
+Path Hover.TypeSubstitutionRecords.content
 ContextPath Value[y2].content->
 ContextPath Value[y2].content
 ContextPath Value[y2]
@@ -241,9 +251,11 @@ Path y2
 CPPipe pathFromEnv: found:true
 Path Hover.content
 Path content
+Path Hover.TypeSubstitutionRecords.content
 CPPipe pathFromEnv: found:true
 Path Hover.
 Path 
+Path Hover.TypeSubstitutionRecords.
 [{
     "label": "age",
     "kind": 5,
@@ -293,6 +305,7 @@ Path x
 CPPipe pathFromEnv: found:true
 Path Hover.someField
 Path someField
+Path Hover.someField
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 {"contents": {"kind": "markdown", "value": " Mighty fine field here. \n\n```rescript\nbool\n```"}}

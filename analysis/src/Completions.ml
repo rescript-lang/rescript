@@ -8,15 +8,16 @@ let getCompletions ~debug ~path ~pos ~currentFile ~forHover =
         ~currentFile ~text
     with
     | None -> None
-    | Some (completable, scope) -> (
+    | Some (completable, scope, cursorPath) -> (
       (* Only perform expensive ast operations if there are completables *)
       match Cmt.loadFullCmtFromPath ~path with
       | None -> None
       | Some full ->
         let env = SharedTypes.QueryEnv.fromFile full.file in
+        let cursorPath = full.file.moduleName :: cursorPath in
         let completables =
           completable
           |> CompletionBackEnd.processCompletable ~debug ~full ~pos ~scope ~env
-               ~forHover
+               ~forHover ~cursorPath
         in
-        Some (completables, full, scope)))
+        Some (completables, full, scope, cursorPath)))

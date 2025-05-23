@@ -13,9 +13,11 @@ Path t
 CPPipe pathFromEnv: found:true
 Path RecordCompletion.n
 Path n
+Path RecordCompletion.n
 Path Stdlib.Array.m
 Path ArrayUtils.m
 Path m
+Path RecordCompletion.m
 [{
     "label": "Array.map",
     "kind": 12,
@@ -46,6 +48,7 @@ Path t2
 CPPipe pathFromEnv: found:true
 Path RecordCompletion.n2
 Path n2
+Path RecordCompletion.n2
 ContextPath Value[t2].n2->n
 ContextPath Value[t2].n2
 ContextPath Value[t2]
@@ -56,12 +59,15 @@ Path t2
 CPPipe pathFromEnv: found:true
 Path RecordCompletion.n2
 Path n2
+Path RecordCompletion.n2
 CPPipe pathFromEnv: found:true
 Path RecordCompletion.n
 Path n
+Path RecordCompletion.n
 Path Stdlib.Array.m
 Path ArrayUtils.m
 Path m
+Path RecordCompletion.m
 [{
     "label": "Array.map",
     "kind": 12,
@@ -84,13 +90,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Module[R].""
 Path R.
-[{
-    "label": "name",
-    "kind": 5,
-    "tags": [],
-    "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype t = {name: string}\n```"}
-  }]
+[]
 
 Complete src/RecordCompletion.res 22:7
 posCursor:[22:7] posNoWhite:[22:6] Found expr:[22:3->22:10]
@@ -100,11 +100,5 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Module[R].""
 Path R.
-[{
-    "label": "name",
-    "kind": 5,
-    "tags": [],
-    "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype t = {name: string}\n```"}
-  }]
+[]
 

@@ -9,6 +9,7 @@ Path x
 Path Stdlib.Array.em
 Path ArrayUtils.em
 Path em
+Path CompletionConfiguredBuiltins.em
 [{
     "label": "ArrayUtils.empty",
     "kind": 12,
@@ -29,6 +30,7 @@ CPPipe pathFromEnv:Fastify found:false
 Path Fastify.doSt
 Path FastifyExt.doSt
 Path doSt
+Path CompletionConfiguredBuiltins.doSt
 [{
     "label": "FastifyExt.doStuff",
     "kind": 12,

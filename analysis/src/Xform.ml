@@ -8,12 +8,12 @@ let extractTypeFromExpr expr ~debug ~path ~currentFile ~full ~pos =
     |> CompletionFrontEnd.findTypeOfExpressionAtLoc ~debug ~path ~currentFile
          ~posCursor:(Pos.ofLexing expr.Parsetree.pexp_loc.loc_start)
   with
-  | Some (completable, scope) -> (
+  | Some (completable, scope, cursorPath) -> (
     let env = SharedTypes.QueryEnv.fromFile full.SharedTypes.file in
     let completions =
       completable
       |> CompletionBackEnd.processCompletable ~debug ~full ~pos ~scope ~env
-           ~forHover:true
+           ~forHover:true ~cursorPath
     in
     let rawOpens = Scope.getRawOpens scope in
     match completions with
@@ -23,7 +23,7 @@ let extractTypeFromExpr expr ~debug ~path ~currentFile ~full ~pos =
       in
       match
         CompletionBackEnd.completionsGetCompletionType2 ~debug ~full ~rawOpens
-          ~opens ~pos completions
+          ~opens ~pos completions ~cursorPath
       with
       | Some (typ, _env) ->
         let extractedType =

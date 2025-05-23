@@ -13,6 +13,7 @@ Path CompletionFromModule.n
 CPPipe pathFromEnv:SomeModule found:true
 Path CompletionFromModule.SomeModule.
 Path 
+Path CompletionFromModule2.
 [{
     "label": "name",
     "kind": 5,
@@ -49,6 +50,7 @@ CPPipe pathFromEnv:SomeOtherModule found:true
 Path CompletionFromModule.SomeOtherModule.
 Path CompletionFromModule.SomeOtherModule.
 Path 
+Path CompletionFromModule2.
 [{
     "label": "nname",
     "kind": 5,
@@ -117,6 +119,7 @@ CPPipe pathFromEnv: found:true
 Path CompletionFromModule.
 Path CompletionFromModule.SomeOtherModule.
 Path 
+Path CompletionFromModule2.
 [{
     "label": "CompletionFromModule.SomeOtherModule.getNName",
     "kind": 12,
@@ -144,6 +147,7 @@ CPPipe pathFromEnv: found:true
 Path CompletionFromModule.
 Path CompletionFromModule.SomeOtherModule.
 Path 
+Path CompletionFromModule2.
 [{
     "label": "getNName",
     "kind": 12,

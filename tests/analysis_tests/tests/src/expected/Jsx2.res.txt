@@ -18,19 +18,7 @@ Completable: Cjsx([M], f, [second, f])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M.make
-[{
-    "label": "first",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }, {
-    "label": "fun",
-    "kind": 4,
-    "tags": [],
-    "detail": "option<string>",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 14:13
 posCursor:[14:13] posNoWhite:[14:12] Found expr:[14:11->14:13]
@@ -41,12 +29,6 @@ Resolved opens 1 Stdlib
 ContextPath Module[M]
 Path M
 [{
-    "label": "M",
-    "kind": 9,
-    "tags": [],
-    "detail": "module M",
-    "documentation": null
-  }, {
     "label": "Math",
     "kind": 9,
     "tags": [],
@@ -77,13 +59,7 @@ Completable: Cjsx([M], k, [prop, k])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M.make
-[{
-    "label": "key",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 25:17
 posCursor:[25:17] posNoWhite:[25:16] Found expr:[25:3->25:17]
@@ -92,13 +68,7 @@ Completable: Cjsx([M], k, [prop, k])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M.make
-[{
-    "label": "key",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 28:21
 posCursor:[28:21] posNoWhite:[28:20] Found expr:[28:3->28:21]
@@ -107,13 +77,7 @@ Completable: Cjsx([M], k, [prop, k])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M.make
-[{
-    "label": "key",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 31:24
 posCursor:[31:24] posNoWhite:[31:23] Found expr:[31:3->31:24]
@@ -122,13 +86,7 @@ Completable: Cjsx([M], k, [prop, k])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M.make
-[{
-    "label": "key",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 34:18
 posCursor:[34:18] posNoWhite:[34:17] Found expr:[34:3->34:18]
@@ -137,13 +95,7 @@ Completable: Cjsx([M], k, [prop, k])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M.make
-[{
-    "label": "key",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 37:16
 posCursor:[37:16] posNoWhite:[37:15] Found expr:[37:3->37:16]
@@ -152,13 +104,7 @@ Completable: Cjsx([M], k, [prop, k])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M.make
-[{
-    "label": "key",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 40:17
 posCursor:[40:17] posNoWhite:[40:16] Found expr:[40:3->40:17]
@@ -167,13 +113,7 @@ Completable: Cjsx([M], k, [prop, k])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M.make
-[{
-    "label": "key",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 43:18
 posCursor:[43:18] posNoWhite:[43:17] Found expr:[43:3->43:18]
@@ -182,13 +122,7 @@ Completable: Cjsx([M], k, [prop, k])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M.make
-[{
-    "label": "key",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 46:16
 posCursor:[46:16] posNoWhite:[46:15] Found expr:[46:3->46:16]
@@ -197,13 +131,7 @@ Completable: Cjsx([M], k, [prop, k])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M.make
-[{
-    "label": "key",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 49:27
 posCursor:[49:27] posNoWhite:[49:26] Found expr:[49:3->49:27]
@@ -212,13 +140,7 @@ Completable: Cjsx([M], k, [prop, k])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M.make
-[{
-    "label": "key",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 52:38
 posCursor:[52:38] posNoWhite:[52:37] Found expr:[52:3->52:38]
@@ -227,13 +149,7 @@ Completable: Cjsx([M], k, [prop, k])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M.make
-[{
-    "label": "key",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 55:25
 posCursor:[55:25] posNoWhite:[55:24] Found expr:[55:3->55:25]
@@ -242,13 +158,7 @@ Completable: Cjsx([M], k, [prop, k])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M.make
-[{
-    "label": "key",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Definition src/Jsx2.res 58:11
 {"uri": "Component.res", "range": {"start": {"line": 1, "character": 4}, "end": {"line": 1, "character": 8}}}
@@ -260,13 +170,7 @@ Completable: Cjsx([Ext], al, [al])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path Ext.make
-[{
-    "label": "align",
-    "kind": 4,
-    "tags": [],
-    "detail": "option<string>",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 71:11
 posCursor:[71:11] posNoWhite:[71:10] Found expr:[71:3->71:11]
@@ -284,13 +188,7 @@ Completable: Cjsx([M], k, [first, k])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M.make
-[{
-    "label": "key",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 77:23
 posCursor:[77:23] posNoWhite:[77:22] Found expr:[77:3->77:23]
@@ -299,13 +197,7 @@ Completable: Cjsx([M], k, [first, k])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path M.make
-[{
-    "label": "key",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 80:6
 posCursor:[80:6] posNoWhite:[80:5] Found expr:[80:3->85:69]
@@ -324,13 +216,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Module[WithChildren]
 Path WithChildren
-[{
-    "label": "WithChildren",
-    "kind": 9,
-    "tags": [],
-    "detail": "module WithChildren",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 91:18
 posCursor:[91:18] posNoWhite:[91:17] Found expr:[91:3->91:18]
@@ -339,13 +225,7 @@ Completable: Cjsx([WithChildren], n, [n])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path WithChildren.make
-[{
-    "label": "name",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 94:18
 posCursor:[94:18] posNoWhite:[94:17] Found pattern:[94:7->94:18]
@@ -396,13 +276,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[DefineSomeFields, ""]
 Path DefineSomeFields.
-[{
-    "label": "thisValue",
-    "kind": 12,
-    "tags": [],
-    "detail": "int",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 108:36
 posCursor:[108:36] posNoWhite:[108:35] Found expr:[108:11->108:36]
@@ -414,19 +288,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Module[DefineSomeFields].th
 Path DefineSomeFields.th
-[{
-    "label": "thisField",
-    "kind": 5,
-    "tags": [],
-    "detail": "int",
-    "documentation": {"kind": "markdown", "value": "```rescript\nthisField: int\n```\n\n```rescript\ntype r = {thisField: int, thatField: string}\n```"}
-  }, {
-    "label": "thatField",
-    "kind": 5,
-    "tags": [],
-    "detail": "string",
-    "documentation": {"kind": "markdown", "value": "```rescript\nthatField: string\n```\n\n```rescript\ntype r = {thisField: int, thatField: string}\n```"}
-  }]
+[]
 
 Complete src/Jsx2.res 122:20
 posCursor:[122:20] posNoWhite:[122:19] Found expr:[121:2->125:4]
@@ -438,13 +300,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[Outer, Inner, h]
 Path Outer.Inner.h
-[{
-    "label": "hello",
-    "kind": 12,
-    "tags": [],
-    "detail": "int",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 129:19
 posCursor:[129:19] posNoWhite:[129:18] Found expr:[128:2->131:9]
@@ -456,13 +312,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[Outer, Inner, ""]
 Path Outer.Inner.
-[{
-    "label": "hello",
-    "kind": 12,
-    "tags": [],
-    "detail": "int",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 136:7
 posCursor:[136:7] posNoWhite:[136:6] Found expr:[135:2->138:9]
@@ -492,13 +342,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Module[Nested, Co]
 Path Nested.Co
-[{
-    "label": "Comp",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Comp",
-    "documentation": null
-  }]
+[]
 
 Complete src/Jsx2.res 153:19
 posCursor:[153:19] posNoWhite:[153:18] Found expr:[153:11->153:25]
@@ -508,13 +352,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Module[Nested, ""]
 Path Nested.
-[{
-    "label": "Comp",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Comp",
-    "documentation": null
-  }]
+[]
 
 Hover src/Jsx2.res 162:12
 {"contents": {"kind": "markdown", "value": "```rescript\nComp.props<int>\n```\n\n---\n\n```\n \n```\n```rescript\ntype Comp.props<'age> = {age: 'age}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Jsx2.res%22%2C157%2C2%5D)\n"}}

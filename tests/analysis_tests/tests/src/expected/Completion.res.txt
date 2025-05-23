@@ -6,37 +6,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[MyList, m]
 Path MyList.m
-[{
-    "label": "mapReverse",
-    "kind": 12,
-    "tags": [],
-    "detail": "(list<'a>, 'a => 'b) => list<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`mapReverse(list, f)` is equivalent to `map` function.\n\n## Examples\n\n```rescript\nlet f = x => x * x\nlet l = list{3, 4, 5}\n\nlet withMap = List.map(l, f)->List.reverse\nlet withMapReverse = l->List.mapReverse(f)\n\nConsole.log(withMap == withMapReverse) // true\n```\n"}
-  }, {
-    "label": "mapReverse2",
-    "kind": 12,
-    "tags": [],
-    "detail": "(list<'a>, list<'b>, ('a, 'b) => 'c) => list<'c>",
-    "documentation": {"kind": "markdown", "value": "\n`mapReverse2(list1, list2, f)` is equivalent to `List.zipBy(list1, list2, f)->List.reverse`.\n\n## Examples\n\n```rescript\nassertEqual(List.mapReverse2(list{1, 2, 3}, list{1, 2}, (a, b) => a + b), list{4, 2})\n```\n"}
-  }, {
-    "label": "make",
-    "kind": 12,
-    "tags": [],
-    "detail": "(~length: int, 'a) => list<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`make(length, value)` returns a list of length `length` with each element filled\nwith `value`. Returns an empty list if `value` is negative.\n\n## Examples\n\n```rescript\nassertEqual(List.make(~length=3, 1), list{1, 1, 1})\n```\n"}
-  }, {
-    "label": "mapWithIndex",
-    "kind": 12,
-    "tags": [],
-    "detail": "(list<'a>, ('a, int) => 'b) => list<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(list, f)` applies `f` to each element of `list`. Function `f`\ntakes two arguments: the index starting from 0 and the element from `list`, in\nthat order.\n\n## Examples\n\n```rescript\nassertEqual(list{1, 2, 3}->List.mapWithIndex((x, index) => index + x), list{1, 3, 5})\n```\n"}
-  }, {
-    "label": "map",
-    "kind": 12,
-    "tags": [],
-    "detail": "(list<'a>, 'a => 'b) => list<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`map(list, f)` returns a new list with `f` applied to each element of `list`.\n\n## Examples\n\n```rescript\nassertEqual(list{1, 2}->List.map(x => x + 1), list{2, 3})\n```\n"}
-  }]
+[]
 
 Complete src/Completion.res 3:9
 posCursor:[3:9] posNoWhite:[3:8] Found expr:[3:3->3:9]
@@ -624,13 +594,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[Dep, c]
 Path Dep.c
-[{
-    "label": "customDouble",
-    "kind": 12,
-    "tags": [1],
-    "detail": "int => int",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use customDouble instead\n\nSome doc comment"}
-  }]
+[]
 
 Complete src/Completion.res 23:20
 posCursor:[23:20] posNoWhite:[23:19] Found expr:[23:11->23:20]
@@ -640,20 +604,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[Lib, foo]
 Path Lib.foo
-Found type for function (~age: int, ~name: string) => string
-[{
-    "label": "age",
-    "kind": 4,
-    "tags": [],
-    "detail": "int",
-    "documentation": null
-  }, {
-    "label": "name",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 26:13
 posCursor:[26:13] posNoWhite:[26:12] Found expr:[26:3->26:13]
@@ -665,6 +616,7 @@ ContextPath array<int>
 Path Stdlib.Array.m
 Path ArrayUtils.m
 Path m
+Path Completion.m
 [{
     "label": "Array.map",
     "kind": 12,
@@ -688,6 +640,7 @@ ContextPath string->toU
 ContextPath string
 Path Stdlib.String.toU
 Path toU
+Path Completion.toU
 [{
     "label": "String.toUpperCase",
     "kind": 12,
@@ -706,6 +659,7 @@ ContextPath Value[op]
 Path op
 Path Stdlib.Option.e
 Path e
+Path Completion.e
 [{
     "label": "Option.equal",
     "kind": 12,
@@ -727,17 +681,18 @@ Path fa
 CPPipe pathFromEnv:ForAuto found:true
 Path ForAuto.
 Path 
+Path Completion.
 [{
-    "label": "ForAuto.abc",
+    "label": "myAmazingFunction",
     "kind": 12,
     "tags": [],
-    "detail": "(t, int) => t",
+    "detail": "(int, int) => int",
     "documentation": null
   }, {
-    "label": "ForAuto.abd",
+    "label": "uncurried",
     "kind": 12,
     "tags": [],
-    "detail": "(t, int) => t",
+    "detail": "int => int",
     "documentation": null
   }]
 
@@ -768,13 +723,7 @@ Completable: Cjsx([O, Comp], z, [z])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path O.Comp.make
-[{
-    "label": "zoo",
-    "kind": 4,
-    "tags": [],
-    "detail": "option<int>",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 65:8
 Attribute id:reac:[65:3->65:8] label:reac
@@ -814,14 +763,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[Lib, foo]
 Path Lib.foo
-Found type for function (~age: int, ~name: string) => string
-[{
-    "label": "age",
-    "kind": 4,
-    "tags": [],
-    "detail": "int",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 74:26
 posCursor:[74:26] posNoWhite:[74:25] Found expr:[74:11->74:26]
@@ -831,14 +773,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[Lib, foo]
 Path Lib.foo
-Found type for function (~age: int, ~name: string) => string
-[{
-    "label": "name",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 77:32
 posCursor:[77:32] posNoWhite:[77:31] Found expr:[77:11->77:32]
@@ -848,14 +783,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[Lib, foo]
 Path Lib.foo
-Found type for function (~age: int, ~name: string) => string
-[{
-    "label": "name",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 82:5
 posCursor:[82:5] posNoWhite:[82:4] Found expr:[80:8->86:1]
@@ -865,7 +793,6 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[Lib, foo]
 Path Lib.foo
-Found type for function (~age: int, ~name: string) => string
 []
 
 Complete src/Completion.res 90:13
@@ -967,6 +894,7 @@ Path r
 CPPipe pathFromEnv: found:true
 Path Completion.
 Path 
+Path Completion.
 [{
     "label": "x",
     "kind": 5,
@@ -996,6 +924,7 @@ Path Objects.Rec.recordVal
 CPPipe pathFromEnv:Rec found:true
 Path Objects.Rec.
 Path 
+Path Completion.
 [{
     "label": "xx",
     "kind": 5,
@@ -1059,13 +988,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Module[O, ""]
 Path O.
-[{
-    "label": "Comp",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Comp",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 157:8
 posCursor:[157:8] posNoWhite:[157:7] Found expr:[157:3->157:8]
@@ -1083,6 +1006,7 @@ Path q
 CPPipe pathFromEnv: found:true
 Path Completion.aa
 Path aa
+Path Completion.aa
 ContextPath Value[q].aa->
 ContextPath Value[q].aa
 ContextPath Value[q]
@@ -1093,9 +1017,11 @@ Path q
 CPPipe pathFromEnv: found:true
 Path Completion.aa
 Path aa
+Path Completion.aa
 CPPipe pathFromEnv: found:true
 Path Completion.
 Path 
+Path Completion.
 [{
     "label": "x",
     "kind": 5,
@@ -1126,6 +1052,7 @@ Path q
 CPPipe pathFromEnv: found:true
 Path Completion.aa
 Path aa
+Path Completion.aa
 ContextPath Value[q].aa->n
 ContextPath Value[q].aa
 ContextPath Value[q]
@@ -1136,9 +1063,11 @@ Path q
 CPPipe pathFromEnv: found:true
 Path Completion.aa
 Path aa
+Path Completion.aa
 CPPipe pathFromEnv: found:true
 Path Completion.n
 Path n
+Path Completion.n
 [{
     "label": "name",
     "kind": 5,
@@ -1171,13 +1100,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Module[WithChildren]
 Path WithChildren
-[{
-    "label": "WithChildren",
-    "kind": 9,
-    "tags": [],
-    "detail": "module WithChildren",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 172:17
 posCursor:[172:17] posNoWhite:[172:16] Found type:[172:12->172:17]
@@ -1203,13 +1126,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Type[ForAuto, ""]
 Path ForAuto.
-[{
-    "label": "t",
-    "kind": 22,
-    "tags": [],
-    "detail": "type t",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype t = int\n```"}
-  }]
+[]
 
 Complete src/Completion.res 179:13
 posCursor:[179:13] posNoWhite:[179:12] Found expr:[179:11->179:13]
@@ -1240,13 +1157,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Module[For]
 Path For
-[{
-    "label": "ForAuto",
-    "kind": 9,
-    "tags": [],
-    "detail": "module ForAuto",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 190:11
 posCursor:[190:11] posNoWhite:[190:10] Found expr:[190:3->190:11]
@@ -1256,13 +1167,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath Value[Private, ""]
 Path Private.
-[{
-    "label": "b",
-    "kind": 12,
-    "tags": [],
-    "detail": "int",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 202:6
 posCursor:[202:6] posNoWhite:[202:5] Found expr:[202:3->202:6]
@@ -1318,19 +1223,7 @@ Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[FAO, forAutoObject][""]
 ContextPath Value[FAO, forAutoObject]
 Path FAO.forAutoObject
-[{
-    "label": "age",
-    "kind": 4,
-    "tags": [],
-    "detail": "int",
-    "documentation": null
-  }, {
-    "label": "forAutoLabel",
-    "kind": 4,
-    "tags": [],
-    "detail": "FAR.forAutoRecord",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 224:37
 posCursor:[224:37] posNoWhite:[224:36] Found expr:[224:3->224:37]
@@ -1343,26 +1236,7 @@ ContextPath Value[FAO, forAutoObject]["forAutoLabel"].""
 ContextPath Value[FAO, forAutoObject]["forAutoLabel"]
 ContextPath Value[FAO, forAutoObject]
 Path FAO.forAutoObject
-ContextPath Value[FAO, forAutoObject]["forAutoLabel"]->
-ContextPath Value[FAO, forAutoObject]["forAutoLabel"]
-ContextPath Value[FAO, forAutoObject]
-Path FAO.forAutoObject
-CPPipe pathFromEnv:FAR found:true
-Path FAR.
-Path 
-[{
-    "label": "forAuto",
-    "kind": 5,
-    "tags": [],
-    "detail": "ForAuto.t",
-    "documentation": {"kind": "markdown", "value": "```rescript\nforAuto: ForAuto.t\n```\n\n```rescript\ntype forAutoRecord = {\n  forAuto: ForAuto.t,\n  something: option<int>,\n}\n```"}
-  }, {
-    "label": "something",
-    "kind": 5,
-    "tags": [],
-    "detail": "option<int>",
-    "documentation": {"kind": "markdown", "value": "```rescript\nsomething: option<int>\n```\n\n```rescript\ntype forAutoRecord = {\n  forAuto: ForAuto.t,\n  something: option<int>,\n}\n```"}
-  }]
+[]
 
 Complete src/Completion.res 227:46
 posCursor:[227:46] posNoWhite:[227:45] Found expr:[227:3->0:-1]
@@ -1375,35 +1249,7 @@ ContextPath Value[FAO, forAutoObject]["forAutoLabel"].forAuto
 ContextPath Value[FAO, forAutoObject]["forAutoLabel"]
 ContextPath Value[FAO, forAutoObject]
 Path FAO.forAutoObject
-ContextPath Value[FAO, forAutoObject]["forAutoLabel"]->forAuto
-ContextPath Value[FAO, forAutoObject]["forAutoLabel"]
-ContextPath Value[FAO, forAutoObject]
-Path FAO.forAutoObject
-CPPipe pathFromEnv:FAR found:true
-Path FAR.forAuto
-Path forAuto
-CPPipe pathFromEnv:ForAuto found:false
-Path ForAuto.
-Path 
-[{
-    "label": "ForAuto.abc",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, int) => t",
-    "documentation": null
-  }, {
-    "label": "ForAuto.abd",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, int) => t",
-    "documentation": null
-  }, {
-    "label": "myAmazingFunction",
-    "kind": 12,
-    "tags": [],
-    "detail": "(int, int) => int",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 230:55
 posCursor:[230:55] posNoWhite:[230:54] Found expr:[230:3->230:55]
@@ -1415,19 +1261,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[ForAuto, a]
 Path ForAuto.a
-[{
-    "label": "abc",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, int) => t",
-    "documentation": null
-  }, {
-    "label": "abd",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, int) => t",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 234:34
 posCursor:[234:34] posNoWhite:[234:33] Found expr:[234:18->234:36]
@@ -1476,6 +1310,7 @@ Path _z
 CPPipe pathFromEnv: found:true
 Path Completion.
 Path 
+Path Completion.
 [{
     "label": "x",
     "kind": 5,
@@ -1499,13 +1334,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[SomeLo]
 Path SomeLo
-[{
-    "label": "SomeLocalModule",
-    "kind": 9,
-    "tags": [],
-    "detail": "module SomeLocalModule",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 256:29
 posCursor:[256:29] posNoWhite:[256:28] Found type:[256:13->256:29]
@@ -1516,13 +1345,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 3 Stdlib Completion Completion
 ContextPath Type[SomeLocalModule, ""]
 Path SomeLocalModule.
-[{
-    "label": "zz",
-    "kind": 22,
-    "tags": [],
-    "detail": "type zz",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype zz = int\n```"}
-  }]
+[]
 
 Complete src/Completion.res 261:33
 posCursor:[261:33] posNoWhite:[261:32] Found type:[261:17->263:11]
@@ -1533,13 +1356,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 3 Stdlib Completion Completion
 ContextPath Type[SomeLocalModule, ""]
 Path SomeLocalModule.
-[{
-    "label": "zz",
-    "kind": 22,
-    "tags": [],
-    "detail": "type zz",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype zz = int\n```"}
-  }]
+[]
 
 Complete src/Completion.res 268:21
 Ptype_variant unary SomeLocal:[268:12->268:21]
@@ -1555,12 +1372,6 @@ Path SomeLocal
     "tags": [],
     "detail": "SomeLocalVariantItem",
     "documentation": {"kind": "markdown", "value": "```rescript\nSomeLocalVariantItem\n```\n\n```rescript\ntype someLocalVariant = SomeLocalVariantItem\n```"}
-  }, {
-    "label": "SomeLocalModule",
-    "kind": 9,
-    "tags": [],
-    "detail": "module SomeLocalModule",
-    "documentation": null
   }]
 
 Complete src/Completion.res 271:20
@@ -1573,13 +1384,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 3 Stdlib Completion Completion
 ContextPath Type[SomeLocal]
 Path SomeLocal
-[{
-    "label": "SomeLocalModule",
-    "kind": 9,
-    "tags": [],
-    "detail": "module SomeLocalModule",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 275:15
 posCursor:[275:15] posNoWhite:[275:14] Found expr:[274:11->278:1]
@@ -1639,6 +1444,7 @@ Path funRecord
 CPPipe pathFromEnv: found:true
 Path Completion.someFun
 Path someFun
+Path Completion.someFun
 Found type for function (~name: string) => unit
 [{
     "label": "name",
@@ -1666,6 +1472,7 @@ Path retAA
 CPPipe pathFromEnv: found:true
 Path Completion.
 Path 
+Path Completion.
 [{
     "label": "x",
     "kind": 5,
@@ -2022,10 +1829,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[FAO, forAutoObject]
 Path FAO.forAutoObject
-Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-{"contents": {"kind": "markdown", "value": "```rescript\n{\"age\": int, \"forAutoLabel\": FAR.forAutoRecord}\n```"}}
+null
 
 Hover src/Completion.res 355:17
 Nothing at that position. Now trying to use completion.
@@ -2163,13 +1967,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[AndThatOther, T]
 Path AndThatOther.T
-[{
-    "label": "ThatOther",
-    "kind": 4,
-    "tags": [],
-    "detail": "ThatOther",
-    "documentation": {"kind": "markdown", "value": "```rescript\nThatOther\n```\n\n```rescript\ntype v = And | ThatOther\n```"}
-  }]
+[]
 
 Complete src/Completion.res 381:24
 posCursor:[381:24] posNoWhite:[381:23] Found expr:[381:12->381:26]
@@ -2184,19 +1982,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[ForAuto, ""]
 Path ForAuto.
-[{
-    "label": "abc",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, int) => t",
-    "documentation": null
-  }, {
-    "label": "abd",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, int) => t",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 384:38
 posCursor:[384:38] posNoWhite:[384:37] Found expr:[384:12->384:41]
@@ -2212,19 +1998,7 @@ Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[FAO, forAutoObject][""]
 ContextPath Value[FAO, forAutoObject]
 Path FAO.forAutoObject
-[{
-    "label": "age",
-    "kind": 4,
-    "tags": [],
-    "detail": "int",
-    "documentation": null
-  }, {
-    "label": "forAutoLabel",
-    "kind": 4,
-    "tags": [],
-    "detail": "FAR.forAutoRecord",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 387:24
 posCursor:[387:24] posNoWhite:[387:23] Found expr:[387:11->387:26]
@@ -2246,6 +2020,7 @@ Path funRecord
 CPPipe pathFromEnv: found:true
 Path Completion.
 Path 
+Path Completion.
 [{
     "label": "someFun",
     "kind": 5,
@@ -2273,6 +2048,7 @@ ContextPath array
 Path Stdlib.Array.ma
 Path ArrayUtils.ma
 Path ma
+Path Completion.ma
 [{
     "label": "Array.map",
     "kind": 12,
@@ -2375,19 +2151,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[SomeLocalModule, ""]
 Path SomeLocalModule.
-[{
-    "label": "bb",
-    "kind": 12,
-    "tags": [],
-    "detail": "int",
-    "documentation": null
-  }, {
-    "label": "aa",
-    "kind": 12,
-    "tags": [],
-    "detail": "int",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 414:21
 posCursor:[414:21] posNoWhite:[414:20] Found expr:[410:14->417:1]
@@ -2402,19 +2166,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 3 Stdlib Completion Completion
 ContextPath Value[SomeLocalModule, ""]
 Path SomeLocalModule.
-[{
-    "label": "bb",
-    "kind": 12,
-    "tags": [],
-    "detail": "int",
-    "documentation": null
-  }, {
-    "label": "aa",
-    "kind": 12,
-    "tags": [],
-    "detail": "int",
-    "documentation": null
-  }]
+[]
 
 Complete src/Completion.res 419:17
 posCursor:[419:17] posNoWhite:[419:16] Found expr:[419:11->419:17]
@@ -2426,6 +2178,7 @@ ContextPath int->t
 ContextPath int
 Path Stdlib.Int.t
 Path t
+Path Completion.t
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -2498,6 +2251,7 @@ ContextPath float->t
 ContextPath float
 Path Stdlib.Float.t
 Path t
+Path Completion.t
 [{
     "label": "Float.toStringWithRadix",
     "kind": 12,
@@ -2571,6 +2325,7 @@ ContextPath Value[ok]
 Path ok
 Path Stdlib.Result.g
 Path g
+Path Completion.g
 [{
     "label": "Result.getExn",
     "kind": 12,
@@ -2607,6 +2362,7 @@ Path rWithDepr
 CPPipe pathFromEnv: found:true
 Path Completion.so
 Path so
+Path Completion.so
 [{
     "label": "someInt",
     "kind": 5,
@@ -2667,6 +2423,7 @@ ContextPath Value[uncurried]
 Path uncurried
 Path Stdlib.Int.toS
 Path toS
+Path Completion.toS
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -2709,23 +2466,5 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 3 Stdlib Completion Completion
 ContextPath ValueOrField[FAR, ""]
 Path FAR.
-[{
-    "label": "forAutoRecord",
-    "kind": 12,
-    "tags": [],
-    "detail": "forAutoRecord",
-    "documentation": {"kind": "markdown", "value": "```rescript\ntype forAutoRecord = {\n  forAuto: ForAuto.t,\n  something: option<int>,\n}\n```"}
-  }, {
-    "label": "forAuto",
-    "kind": 5,
-    "tags": [],
-    "detail": "ForAuto.t",
-    "documentation": {"kind": "markdown", "value": "```rescript\nforAuto: ForAuto.t\n```\n\n```rescript\ntype forAutoRecord = {\n  forAuto: ForAuto.t,\n  something: option<int>,\n}\n```"}
-  }, {
-    "label": "something",
-    "kind": 5,
-    "tags": [],
-    "detail": "option<int>",
-    "documentation": {"kind": "markdown", "value": "```rescript\nsomething: option<int>\n```\n\n```rescript\ntype forAutoRecord = {\n  forAuto: ForAuto.t,\n  something: option<int>,\n}\n```"}
-  }]
+[]
 

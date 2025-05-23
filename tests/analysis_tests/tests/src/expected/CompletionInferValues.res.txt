@@ -11,6 +11,7 @@ Path x
 ContextPath int
 Path Stdlib.Int.t
 Path t
+Path CompletionInferValues.t
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -94,6 +95,7 @@ Path getSomeRecord
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
 Path 
+Path CompletionInferValues.
 [{
     "label": "name",
     "kind": 5,
@@ -133,6 +135,7 @@ Path getSomeRecord
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
 Path 
+Path CompletionInferValues.
 [{
     "label": "name",
     "kind": 5,
@@ -175,6 +178,7 @@ Path someFnWithCallback
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
 Path 
+Path CompletionInferValues.
 [{
     "label": "name",
     "kind": 5,
@@ -221,6 +225,7 @@ Path someFnWithCallback
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
 Path 
+Path CompletionInferValues.
 [{
     "label": "name",
     "kind": 5,
@@ -253,6 +258,7 @@ Path reactEventFn
 CPPipe pathFromEnv:ReactEvent.Mouse found:false
 Path ReactEvent.Mouse.pr
 Path pr
+Path CompletionInferValues.pr
 [{
     "label": "ReactEvent.Mouse.preventDefault",
     "kind": 12,
@@ -279,6 +285,7 @@ Path JsxDOM.domProps
 CPPipe pathFromEnv:JsxEvent.Mouse found:false
 Path JsxEvent.Mouse.pr
 Path pr
+Path CompletionInferValues.pr
 [{
     "label": "JsxEvent.Mouse.preventDefault",
     "kind": 12,
@@ -301,16 +308,7 @@ Path event
 ContextPath CArgument CJsxPropValue [Div] onMouseEnter($0)
 ContextPath CJsxPropValue [Div] onMouseEnter
 Path Div.make
-CPPipe pathFromEnv:JsxEvent.Mouse found:false
-Path JsxEvent.Mouse.pr
-Path pr
-[{
-    "label": "JsxEvent.Mouse.preventDefault",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => unit",
-    "documentation": null
-  }]
+[]
 
 Complete src/CompletionInferValues.res 47:87
 posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:11->47:93]
@@ -329,6 +327,7 @@ ContextPath Value[JsxEvent, Mouse, button]
 Path JsxEvent.Mouse.button
 Path Stdlib.Int.t
 Path t
+Path CompletionInferValues.t
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -426,6 +425,7 @@ Path String.split
 Path Stdlib.Array.ma
 Path ArrayUtils.ma
 Path ma
+Path CompletionInferValues.ma
 [{
     "label": "Array.map",
     "kind": 12,
@@ -465,6 +465,7 @@ Path someRecordWithNestedStuff
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
 Path 
+Path CompletionInferValues.
 [{
     "label": "name",
     "kind": 5,
@@ -504,6 +505,7 @@ Path someRecordWithNestedStuff
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
 Path 
+Path CompletionInferValues.
 [{
     "label": "someRecord",
     "kind": 5,
@@ -537,6 +539,7 @@ Path someRecordWithNestedStuff
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
 Path 
+Path CompletionInferValues.
 [{
     "label": "name",
     "kind": 5,
@@ -566,6 +569,7 @@ ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
 Path Stdlib.String.slic
 Path slic
+Path CompletionInferValues.slic
 [{
     "label": "String.slice",
     "kind": 12,
@@ -595,6 +599,7 @@ ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
 Path Stdlib.Int.toS
 Path toS
+Path CompletionInferValues.toS
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -627,6 +632,7 @@ ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
 Path Stdlib.Int.toS
 Path toS
+Path CompletionInferValues.toS
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -660,6 +666,7 @@ ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
 Path Stdlib.Int.toS
 Path toS
+Path CompletionInferValues.toS
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -689,6 +696,7 @@ ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
 Path Stdlib.String.slic
 Path slic
+Path CompletionInferValues.slic
 [{
     "label": "String.slice",
     "kind": 12,
@@ -718,6 +726,7 @@ ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
 Path Stdlib.String.slic
 Path slic
+Path CompletionInferValues.slic
 [{
     "label": "String.slice",
     "kind": 12,
@@ -747,6 +756,7 @@ ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
 Path Stdlib.String.slic
 Path slic
+Path CompletionInferValues.slic
 [{
     "label": "String.slice",
     "kind": 12,
@@ -774,6 +784,7 @@ Path x
 ContextPath int
 Path Stdlib.Int.toSt
 Path toSt
+Path CompletionInferValues.toSt
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -835,6 +846,7 @@ Path fn2
 CPPipe pathFromEnv:ReactDOM.Client.Root found:false
 Path ReactDOM.Client.Root.
 Path 
+Path CompletionInferValues.
 [{
     "label": "ReactDOM.Client.Root.unmount",
     "kind": 12,
@@ -869,6 +881,7 @@ Path fn3
 CPPipe pathFromEnv:CompletionSupport.Test found:false
 Path CompletionSupport.Test.
 Path 
+Path CompletionInferValues.
 [{
     "label": "CompletionSupport.Test.add",
     "kind": 12,
@@ -949,6 +962,7 @@ Path CompletionSupport2.makeRenderer
 CPPipe pathFromEnv:CompletionSupport.Nested found:false
 Path CompletionSupport.Nested.
 Path 
+Path CompletionInferValues.
 [{
     "label": "root",
     "kind": 5,
@@ -977,6 +991,7 @@ Path CompletionSupport2.makeRenderer
 CPPipe pathFromEnv:ReactDOM.Client.Root found:false
 Path ReactDOM.Client.Root.
 Path 
+Path CompletionInferValues.
 [{
     "label": "ReactDOM.Client.Root.unmount",
     "kind": 12,

@@ -152,7 +152,7 @@ let getHoverViaCompletions ~debug ~path ~pos ~currentFile ~forHover
     ~supportsMarkdownLinks =
   match Completions.getCompletions ~debug ~path ~pos ~currentFile ~forHover with
   | None -> None
-  | Some (completions, ({file; package} as full), scope) -> (
+  | Some (completions, ({file; package} as full), scope, cursorPath) -> (
     let rawOpens = Scope.getRawOpens scope in
     match completions with
     | {kind = Label typString; docstring} :: _ ->
@@ -166,7 +166,7 @@ let getHoverViaCompletions ~debug ~path ~pos ~currentFile ~forHover
       let opens = CompletionBackEnd.getOpens ~debug ~rawOpens ~package ~env in
       match
         CompletionBackEnd.completionsGetTypeEnv2 ~debug ~full ~rawOpens ~opens
-          ~pos completions
+          ~pos completions ~cursorPath
       with
       | Some (typ, _env) ->
         let typeString =
@@ -179,7 +179,7 @@ let getHoverViaCompletions ~debug ~path ~pos ~currentFile ~forHover
       let opens = CompletionBackEnd.getOpens ~debug ~rawOpens ~package ~env in
       match
         CompletionBackEnd.completionsGetTypeEnv2 ~debug ~full ~rawOpens ~opens
-          ~pos completions
+          ~pos completions ~cursorPath
       with
       | Some (typ, _env) ->
         let typeString =

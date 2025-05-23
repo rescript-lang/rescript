@@ -357,6 +357,7 @@ let completePipeChain ~(inJsxContext : bool) (exp : Parsetree.expression) =
 
 let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
     ?findThisExprLoc text =
+  let cursorPath = Stack.create () in
   let offsetNoWhite = Utils.skipWhite text (offset - 1) in
   let posNoWhite =
     let line, col = posCursor in
@@ -737,8 +738,10 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
       if recFlag = Nonrecursive then decls |> List.iter scopeTypeDeclaration;
       processed := true
     | Pstr_module mb ->
+      if Loc.hasPos mb.pmb_loc ~pos:posCursor then Stack.push mb.pmb_name.txt cursorPath;
       iterator.module_binding iterator mb;
       scopeModuleBinding mb;
+      (* if Loc.hasPos mb.pmb_loc ~pos:posCursor then Stack.pop cursorPath |> ignore; *)
       processed := true
     | Pstr_recmodule mbs ->
       mbs |> List.iter scopeModuleBinding;
@@ -1737,7 +1740,8 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
         (Cpath
            (CPId {loc = Location.none; path = [""]; completionContext = Value})));
     if !found = false then if debug then Printf.printf "XXX Not found!\n";
-    !result)
+    let cursorPath = Stack.to_seq cursorPath |> List.of_seq |> List.rev in
+    !result |> Option.map (fun (c, s) -> (c, s, cursorPath)))
   else if Filename.check_suffix path ".resi" then (
     let parser = Res_driver.parsing_engine.parse_interface ~for_printer:false in
     let {Res_driver.parsetree = signature} = parser ~filename:currentFile in
@@ -1748,7 +1752,8 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
         (Cpath
            (CPId {loc = Location.none; path = [""]; completionContext = Type})));
     if !found = false then if debug then Printf.printf "XXX Not found!\n";
-    !result)
+    let cursorPath = Stack.to_seq cursorPath |> List.of_seq |> List.rev in
+    !result |> Option.map (fun (c, s) -> (c, s, cursorPath)))
   else None
 
 let completionWithParser ~debug ~path ~posCursor ~currentFile ~text =

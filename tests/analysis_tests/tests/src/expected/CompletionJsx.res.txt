@@ -8,6 +8,7 @@ ContextPath Value[someString]
 Path someString
 Path Stdlib.String.st
 Path st
+Path CompletionJsx.st
 [{
     "label": "String.startsWith",
     "kind": 12,
@@ -38,6 +39,7 @@ ContextPath Value[someString]
 Path someString
 Path Stdlib.String.st
 Path st
+Path CompletionJsx.SomeComponent.st
 [{
     "label": "React.string",
     "kind": 12,
@@ -77,6 +79,7 @@ ContextPath Value[someString]
 Path someString
 Path Stdlib.String.st
 Path st
+Path CompletionJsx.SomeComponent.st
 [{
     "label": "React.string",
     "kind": 12,
@@ -115,6 +118,7 @@ ContextPath string->st <<jsx>>
 ContextPath string
 Path Stdlib.String.st
 Path st
+Path CompletionJsx.SomeComponent.st
 [{
     "label": "React.string",
     "kind": 12,
@@ -155,6 +159,7 @@ ContextPath Value[String, trim]
 Path String.trim
 Path Stdlib.String.st
 Path st
+Path CompletionJsx.SomeComponent.st
 [{
     "label": "React.string",
     "kind": 12,
@@ -194,6 +199,7 @@ ContextPath Value[someInt]
 Path someInt
 Path Stdlib.Int.
 Path 
+Path CompletionJsx.SomeComponent.
 [{
     "label": "React.int",
     "kind": 12,
@@ -364,6 +370,7 @@ ContextPath int-> <<jsx>>
 ContextPath int
 Path Stdlib.Int.
 Path 
+Path CompletionJsx.SomeComponent.
 [{
     "label": "React.int",
     "kind": 12,
@@ -536,6 +543,7 @@ Path someArr
 Path Stdlib.Array.a
 Path ArrayUtils.a
 Path a
+Path CompletionJsx.SomeComponent.a
 [{
     "label": "React.array",
     "kind": 12,
@@ -595,13 +603,7 @@ Completable: Cjsx([CompWithoutJsxPpx], n, [n])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path CompWithoutJsxPpx.make
-[{
-    "label": "name",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/CompletionJsx.res 48:27
 posCursor:[48:27] posNoWhite:[48:26] Found expr:[48:3->48:28]
@@ -611,16 +613,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [SomeComponent] someProp
 Path SomeComponent.make
-[{
-    "label": "\"\"",
-    "kind": 12,
-    "tags": [],
-    "detail": "string",
-    "documentation": null,
-    "sortText": "A",
-    "insertText": "{\"$0\"}",
-    "insertTextFormat": 2
-  }]
+[]
 
 Complete src/CompletionJsx.res 51:11
 posCursor:[51:11] posNoWhite:[51:10] Found expr:[51:3->51:11]
@@ -645,25 +638,7 @@ Completable: Cjsx([IntrinsicElementLowercase], "", [])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path IntrinsicElementLowercase.make
-[{
-    "label": "name",
-    "kind": 4,
-    "tags": [],
-    "detail": "option<string>",
-    "documentation": null
-  }, {
-    "label": "age",
-    "kind": 4,
-    "tags": [],
-    "detail": "option<int>",
-    "documentation": null
-  }, {
-    "label": "key",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/CompletionJsx.res 73:36
 posCursor:[73:36] posNoWhite:[73:35] Found expr:[73:3->73:41]
@@ -673,23 +648,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [MultiPropComp] time
 Path MultiPropComp.make
-[{
-    "label": "Now",
-    "kind": 4,
-    "tags": [],
-    "detail": "Now",
-    "documentation": {"kind": "markdown", "value": "```rescript\nNow\n```\n\n```rescript\ntype time = Now | Later\n```"},
-    "insertText": "{Now}",
-    "insertTextFormat": 2
-  }, {
-    "label": "Later",
-    "kind": 4,
-    "tags": [],
-    "detail": "Later",
-    "documentation": {"kind": "markdown", "value": "```rescript\nLater\n```\n\n```rescript\ntype time = Now | Later\n```"},
-    "insertText": "{Later}",
-    "insertTextFormat": 2
-  }]
+[]
 
 Complete src/CompletionJsx.res 76:36
 posCursor:[76:36] posNoWhite:[76:35] Found expr:[76:3->76:40]
@@ -699,23 +658,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [MultiPropComp] time
 Path MultiPropComp.make
-[{
-    "label": "Now",
-    "kind": 4,
-    "tags": [],
-    "detail": "Now",
-    "documentation": {"kind": "markdown", "value": "```rescript\nNow\n```\n\n```rescript\ntype time = Now | Later\n```"},
-    "insertText": "{Now}",
-    "insertTextFormat": 2
-  }, {
-    "label": "Later",
-    "kind": 4,
-    "tags": [],
-    "detail": "Later",
-    "documentation": {"kind": "markdown", "value": "```rescript\nLater\n```\n\n```rescript\ntype time = Now | Later\n```"},
-    "insertText": "{Later}",
-    "insertTextFormat": 2
-  }]
+[]
 
 Complete src/CompletionJsx.res 79:28
 posCursor:[79:28] posNoWhite:[79:27] Found expr:[79:3->79:32]
@@ -725,23 +668,7 @@ Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CJsxPropValue [MultiPropComp] time
 Path MultiPropComp.make
-[{
-    "label": "Now",
-    "kind": 4,
-    "tags": [],
-    "detail": "Now",
-    "documentation": {"kind": "markdown", "value": "```rescript\nNow\n```\n\n```rescript\ntype time = Now | Later\n```"},
-    "insertText": "{Now}",
-    "insertTextFormat": 2
-  }, {
-    "label": "Later",
-    "kind": 4,
-    "tags": [],
-    "detail": "Later",
-    "documentation": {"kind": "markdown", "value": "```rescript\nLater\n```\n\n```rescript\ntype time = Now | Later\n```"},
-    "insertText": "{Later}",
-    "insertTextFormat": 2
-  }]
+[]
 
 Complete src/CompletionJsx.res 89:26
 posCursor:[89:26] posNoWhite:[89:24] Found expr:[89:3->89:27]
@@ -750,13 +677,7 @@ Completable: Cjsx([Info], "", [_type])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 Path Info.make
-[{
-    "label": "key",
-    "kind": 4,
-    "tags": [],
-    "detail": "string",
-    "documentation": null
-  }]
+[]
 
 Complete src/CompletionJsx.res 93:19
 posCursor:[93:19] posNoWhite:[93:18] Found expr:[93:11->93:24]
@@ -772,6 +693,7 @@ ContextPath string->s <<jsx>>
 ContextPath string
 Path Stdlib.String.s
 Path s
+Path CompletionJsx.s
 [{
     "label": "->React.string",
     "kind": 12,

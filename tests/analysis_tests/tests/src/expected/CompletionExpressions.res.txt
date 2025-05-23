@@ -1013,6 +1013,7 @@ Path fff
 CPPipe pathFromEnv: found:true
 Path CompletionExpressions.someOpt
 Path someOpt
+Path CompletionExpressions.someOpt
 [{
     "label": "someOptField",
     "kind": 5,
@@ -1488,6 +1489,7 @@ Path someTyp
 CPPipe pathFromEnv: found:true
 Path CompletionExpressions.
 Path 
+Path CompletionExpressions.
 [{
     "label": "test",
     "kind": 5,
@@ -1549,6 +1551,7 @@ Path someTyp
 CPPipe pathFromEnv: found:true
 Path CompletionExpressions.
 Path 
+Path CompletionExpressions.
 [{
     "label": "test",
     "kind": 5,

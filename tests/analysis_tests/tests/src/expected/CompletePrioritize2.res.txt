@@ -9,13 +9,8 @@ Path ax
 CPPipe pathFromEnv:Test found:true
 Path Test.
 Path 
-[{
-    "label": "Test.add",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => int",
-    "documentation": null
-  }]
+Path CompletePrioritize2.
+[]
 
 Complete src/CompletePrioritize2.res 12:5
 posCursor:[12:5] posNoWhite:[12:4] Found expr:[12:3->12:5]

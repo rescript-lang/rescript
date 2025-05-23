@@ -13,36 +13,13 @@ Path n
 CPPipe pathFromEnv:SomeModule found:true
 Path SomeModule.
 Path 
+Path DotPipeCompletionSpec.
 [{
     "label": "name",
     "kind": 5,
     "tags": [],
     "detail": "string",
     "documentation": {"kind": "markdown", "value": "```rescript\nname: string\n```\n\n```rescript\ntype t = {name: string}\n```"}
-  }, {
-    "label": "->SomeModule.withUnlabelledArgumentNotFirst",
-    "kind": 12,
-    "tags": [],
-    "detail": "(~name: string=?, t) => unit",
-    "documentation": null,
-    "sortText": "withUnlabelledArgumentNotFirst",
-    "insertText": "->SomeModule.withUnlabelledArgumentNotFirst",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 15, "character": 4}, "end": {"line": 15, "character": 5}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->SomeModule.getName",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => string",
-    "documentation": null,
-    "sortText": "getName",
-    "insertText": "->SomeModule.getName",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 15, "character": 4}, "end": {"line": 15, "character": 5}},
-      "newText": ""
-      }]
   }]
 
 Complete src/DotPipeCompletionSpec.res 44:6
@@ -62,36 +39,13 @@ Path SomeOtherModule.
 Path DotPipeCompletionSpec.CompleteFromThisToo.
 Path DotPipeCompletionSpec.SomeOtherModule.
 Path 
+Path DotPipeCompletionSpec.
 [{
     "label": "nname",
     "kind": 5,
     "tags": [],
     "detail": "string",
     "documentation": {"kind": "markdown", "value": "```rescript\nnname: string\n```\n\n```rescript\ntype typeOutsideModule = {nname: string}\n```"}
-  }, {
-    "label": "->SomeOtherModule.getNName",
-    "kind": 12,
-    "tags": [],
-    "detail": "t => string",
-    "documentation": null,
-    "sortText": "getNName",
-    "insertText": "->SomeOtherModule.getNName",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->SomeOtherModule.getNName2",
-    "kind": 12,
-    "tags": [],
-    "detail": "typeOutsideModule => string",
-    "documentation": null,
-    "sortText": "getNName2",
-    "insertText": "->SomeOtherModule.getNName2",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
-      "newText": ""
-      }]
   }, {
     "label": "->CompleteFromThisToo.a",
     "kind": 12,
@@ -140,6 +94,42 @@ Path
       "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
       "newText": ""
       }]
+  }, {
+    "label": "->outOfScope",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => typeOutsideModule",
+    "documentation": null,
+    "sortText": "outOfScope",
+    "insertText": "->outOfScope",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->doWithTypeOutsideModule",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => string",
+    "documentation": null,
+    "sortText": "doWithTypeOutsideModule",
+    "insertText": "->doWithTypeOutsideModule",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->cc",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => typeOutsideModule",
+    "documentation": null,
+    "sortText": "cc",
+    "insertText": "->cc",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 44, "character": 5}, "end": {"line": 44, "character": 6}},
+      "newText": ""
+      }]
   }]
 
 Complete src/DotPipeCompletionSpec.res 62:5
@@ -158,31 +148,8 @@ CPPipe pathFromEnv:A found:true
 Path A.
 Path B.
 Path 
-[{
-    "label": "->A.withA",
-    "kind": 12,
-    "tags": [],
-    "detail": "a => unit",
-    "documentation": null,
-    "sortText": "withA",
-    "insertText": "->A.withA",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 62, "character": 4}, "end": {"line": 62, "character": 5}},
-      "newText": ""
-      }]
-  }, {
-    "label": "->B.b",
-    "kind": 12,
-    "tags": [],
-    "detail": "A.a => int",
-    "documentation": null,
-    "sortText": "b",
-    "insertText": "->B.b",
-    "additionalTextEdits": [{
-      "range": {"start": {"line": 62, "character": 4}, "end": {"line": 62, "character": 5}},
-      "newText": ""
-      }]
-  }]
+Path DotPipeCompletionSpec.
+[]
 
 Complete src/DotPipeCompletionSpec.res 67:6
 posCursor:[67:6] posNoWhite:[67:5] Found expr:[67:3->67:6]
@@ -199,6 +166,7 @@ Path xx
 CPPipe pathFromEnv:CompletionFromModule.SomeModule found:false
 Path CompletionFromModule.SomeModule.
 Path 
+Path DotPipeCompletionSpec.
 [{
     "label": "name",
     "kind": 5,
@@ -234,6 +202,7 @@ Path ffff
 Path Stdlib.Array.u
 Path ArrayUtils.u
 Path u
+Path DotPipeCompletionSpec.u
 [{
     "label": "->Array.unshiftMany",
     "kind": 12,
@@ -288,6 +257,7 @@ CPPipe pathFromEnv: found:true
 Path DotPipeCompletionSpec.
 Path DotPipeCompletionSpec.SomeOtherModule.
 Path 
+Path DotPipeCompletionSpec.
 [{
     "label": "nname",
     "kind": 5,
@@ -342,6 +312,42 @@ Path
       "range": {"start": {"line": 80, "character": 6}, "end": {"line": 80, "character": 7}},
       "newText": ""
       }]
+  }, {
+    "label": "->outOfScope",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => typeOutsideModule",
+    "documentation": null,
+    "sortText": "outOfScope",
+    "insertText": "->outOfScope",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 80, "character": 6}, "end": {"line": 80, "character": 7}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->doWithTypeOutsideModule",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => string",
+    "documentation": null,
+    "sortText": "doWithTypeOutsideModule",
+    "insertText": "->doWithTypeOutsideModule",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 80, "character": 6}, "end": {"line": 80, "character": 7}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->cc",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => typeOutsideModule",
+    "documentation": null,
+    "sortText": "cc",
+    "insertText": "->cc",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 80, "character": 6}, "end": {"line": 80, "character": 7}},
+      "newText": ""
+      }]
   }]
 
 Complete src/DotPipeCompletionSpec.res 86:39
@@ -362,6 +368,7 @@ Path Array.filter
 Path Stdlib.Array.filt
 Path ArrayUtils.filt
 Path filt
+Path DotPipeCompletionSpec.filt
 [{
     "label": "->Array.filterMap",
     "kind": 12,
@@ -417,6 +424,7 @@ ContextPath Value[Array, joinWith]
 Path Array.joinWith
 Path Stdlib.String.includ
 Path includ
+Path DotPipeCompletionSpec.includ
 [{
     "label": "->String.includes",
     "kind": 12,
@@ -459,6 +467,7 @@ ContextPath Value[String, toLowerCase]
 Path String.toLowerCase
 Path Stdlib.String.toUpperCa
 Path toUpperCa
+Path DotPipeCompletionSpec.toUpperCa
 [{
     "label": "->String.toUpperCase",
     "kind": 12,
@@ -489,6 +498,7 @@ ContextPath Value[String, toUpperCase]
 Path String.toUpperCase
 Path Stdlib.String.toLowerC
 Path toLowerC
+Path DotPipeCompletionSpec.toLowerC
 [{
     "label": "->String.toLowerCase",
     "kind": 12,
@@ -520,6 +530,7 @@ CPPipe pathFromEnv: found:true
 Path DotPipeCompletionSpec.
 Path DotPipeCompletionSpec.SomeOtherModule.
 Path 
+Path DotPipeCompletionSpec.
 [{
     "label": "nname",
     "kind": 5,
@@ -570,6 +581,42 @@ Path
     "documentation": null,
     "sortText": "doWithTypeOutsideModule",
     "insertText": "->doWithTypeOutsideModule",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 101, "character": 6}, "end": {"line": 101, "character": 7}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->outOfScope",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => typeOutsideModule",
+    "documentation": null,
+    "sortText": "outOfScope",
+    "insertText": "->outOfScope",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 101, "character": 6}, "end": {"line": 101, "character": 7}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->doWithTypeOutsideModule",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => string",
+    "documentation": null,
+    "sortText": "doWithTypeOutsideModule",
+    "insertText": "->doWithTypeOutsideModule",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 101, "character": 6}, "end": {"line": 101, "character": 7}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->cc",
+    "kind": 12,
+    "tags": [],
+    "detail": "typeOutsideModule => typeOutsideModule",
+    "documentation": null,
+    "sortText": "cc",
+    "insertText": "->cc",
     "additionalTextEdits": [{
       "range": {"start": {"line": 101, "character": 6}, "end": {"line": 101, "character": 7}},
       "newText": ""
@@ -754,6 +801,7 @@ CPPipe pathFromEnv:DOMAPI found:true
 Path DOMAPI.
 Path DotPipeCompletionSpec.HTMLButtonElement.
 Path 
+Path DotPipeCompletionSpec.
 [{
     "label": "disabled",
     "kind": 5,

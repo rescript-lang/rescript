@@ -16,6 +16,7 @@ Path x
 CPPipe pathFromEnv:X found:true
 Path X.
 Path 
+Path DotPipeCompleteFromCurrentModule.Y.
 [{
     "label": "->z",
     "kind": 12,
@@ -26,6 +27,118 @@ Path
     "insertText": "->z",
     "additionalTextEdits": [{
       "range": {"start": {"line": 10, "character": 12}, "end": {"line": 10, "character": 13}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Y.b",
+    "kind": 12,
+    "tags": [],
+    "detail": "X.t => int",
+    "documentation": null,
+    "sortText": "b",
+    "insertText": "->Y.b",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 10, "character": 12}, "end": {"line": 10, "character": 13}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Y.z",
+    "kind": 12,
+    "tags": [],
+    "detail": "X.t => string",
+    "documentation": null,
+    "sortText": "z",
+    "insertText": "->Y.z",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 10, "character": 12}, "end": {"line": 10, "character": 13}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Y.a",
+    "kind": 12,
+    "tags": [],
+    "detail": "X.t => unit",
+    "documentation": null,
+    "sortText": "a",
+    "insertText": "->Y.a",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 10, "character": 12}, "end": {"line": 10, "character": 13}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/DotPipeCompleteFromCurrentModule.res 59:17
+posCursor:[59:17] posNoWhite:[59:16] Found expr:[57:15->62:5]
+posCursor:[59:17] posNoWhite:[59:16] Found expr:[58:8->61:9]
+posCursor:[59:17] posNoWhite:[59:16] Found expr:[59:15->59:17]
+Pexp_field [59:15->59:16] _:[61:8->59:17]
+Completable: Cpath Value[k].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[k].""
+ContextPath Value[k]
+Path k
+ContextPath Value[k]->
+ContextPath Value[k]
+Path k
+CPPipe pathFromEnv:Types found:true
+Path Types.
+Path 
+Path DotPipeCompleteFromCurrentModule.Wall.
+[{
+    "label": "->Wall.addPos",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, float, float) => Types.comp",
+    "documentation": null,
+    "sortText": "addPos",
+    "insertText": "->Wall.addPos",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 59, "character": 16}, "end": {"line": 59, "character": 17}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->Wall.addPosFromVec2",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, Types.vec2) => Types.comp",
+    "documentation": null,
+    "sortText": "addPosFromVec2",
+    "insertText": "->Wall.addPosFromVec2",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 59, "character": 16}, "end": {"line": 59, "character": 17}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/DotPipeCompleteFromCurrentModule.res 71:21
+posCursor:[71:21] posNoWhite:[71:20] Found expr:[69:19->74:9]
+posCursor:[71:21] posNoWhite:[71:20] Found expr:[70:12->73:13]
+posCursor:[71:21] posNoWhite:[71:20] Found expr:[71:19->71:21]
+Pexp_field [71:19->71:20] _:[73:12->71:21]
+Completable: Cpath Value[k].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[k].""
+ContextPath Value[k]
+Path k
+ContextPath Value[k]->
+ContextPath Value[k]
+Path k
+CPPipe pathFromEnv:Types found:true
+Path Types.
+Path 
+Path DotPipeCompleteFromCurrentModule.Wall.Poster.
+[{
+    "label": "->Wall.Poster.addSprite",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, string) => Types.comp",
+    "documentation": null,
+    "sortText": "addSprite",
+    "insertText": "->Wall.Poster.addSprite",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 71, "character": 20}, "end": {"line": 71, "character": 21}},
       "newText": ""
       }]
   }]

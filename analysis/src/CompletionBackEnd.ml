@@ -774,7 +774,7 @@ let completionsGetCompletionType ~full completions =
   | _ -> None
 
 let rec completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
-    completions =
+    ~cursorPath completions =
   let firstNonSyntheticCompletion =
     List.find_opt (fun c -> not c.Completion.synthetic) completions
   in
@@ -787,8 +787,9 @@ let rec completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
   | Some {Completion.kind = FollowContextPath (ctxPath, scope); env} ->
     ctxPath
     |> getCompletionsForContextPath ~debug ~full ~env ~exact:true ~opens
-         ~rawOpens ~pos ~scope
+         ~rawOpens ~pos ~scope ~cursorPath
     |> completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
+         ~cursorPath
   | Some {Completion.kind = Type typ; env} -> (
     match TypeUtils.extractTypeFromResolvedType typ ~env ~full with
     | None -> None
@@ -798,7 +799,7 @@ let rec completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
   | _ -> None
 
 and completionsGetTypeEnv2 ~debug (completions : Completion.t list) ~full ~opens
-    ~rawOpens ~pos =
+    ~rawOpens ~pos ~cursorPath =
   let firstNonSyntheticCompletion =
     List.find_opt (fun c -> not c.Completion.synthetic) completions
   in
@@ -809,12 +810,12 @@ and completionsGetTypeEnv2 ~debug (completions : Completion.t list) ~full ~opens
   | Some {Completion.kind = FollowContextPath (ctxPath, scope); env} ->
     ctxPath
     |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-         ~exact:true ~scope
-    |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+         ~exact:true ~scope ~cursorPath
+    |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos ~cursorPath
   | _ -> None
 
 and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
-    ~scope ?(mode = Regular) contextPath =
+    ~scope ?(mode = Regular) ~cursorPath contextPath =
   let envCompletionIsMadeFrom = env in
   if debug then
     Printf.printf "ContextPath %s\n"
@@ -847,7 +848,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       match
         cp
         |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-             ~exact:true ~scope
+             ~exact:true ~scope ~cursorPath
         |> completionsGetCompletionType ~full
       with
       | None -> []
@@ -869,7 +870,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     match
       cp
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-           ~exact:true ~scope
+           ~exact:true ~scope ~cursorPath
       |> completionsGetCompletionType ~full
     with
     | None -> []
@@ -884,7 +885,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     match
       cp
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-           ~exact:true ~scope
+           ~exact:true ~scope ~cursorPath
       |> completionsGetCompletionType ~full
     with
     | Some (Tpromise (env, typ), _env) ->
@@ -934,8 +935,9 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     match
       cp
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-           ~exact:true ~scope
+           ~exact:true ~scope ~cursorPath
       |> completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
+           ~cursorPath
     with
     | Some ((TypeExpr typ | ExtractedType (Tfunction {typ})), env) -> (
       let rec reconstructFunctionType args tRet =
@@ -985,11 +987,11 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     let completionsFromCtxPath =
       cp
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-           ~exact:true ~scope
+           ~exact:true ~scope ~cursorPath
     in
     let mainTypeCompletionEnv =
       completionsFromCtxPath
-      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos ~cursorPath
     in
     match mainTypeCompletionEnv with
     | None ->
@@ -1021,7 +1023,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       let pipeCompletions =
         cpAsPipeCompletion
         |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos
-             ~env:envCompletionIsMadeFrom ~exact ~scope
+             ~env:envCompletionIsMadeFrom ~exact ~scope ~cursorPath
         |> List.filter_map (fun c ->
                TypeUtils.transformCompletionToPipeCompletion ~synthetic:true
                  ~env ?posOfDot c)
@@ -1033,8 +1035,8 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     match
       cp
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-           ~exact:true ~scope
-      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+           ~exact:true ~scope ~cursorPath
+      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos ~cursorPath
     with
     | Some (typ, env) -> (
       match typ |> TypeUtils.extractObjectType ~env ~package with
@@ -1052,8 +1054,8 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     match
       cp
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-           ~exact:true ~scope ~mode:Pipe
-      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+           ~exact:true ~scope ~mode:Pipe ~cursorPath
+      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos ~cursorPath
     with
     | None ->
       if Debug.verbose () then
@@ -1180,8 +1182,18 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
           |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
                ~targetTypeId:mainTypeId
         in
+        (* Add completions from current fully qualified path module *)
+        let currentFullyQualifiedPathModuleCompletions =
+          []
+          (* completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom
+            ~opens:[] ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full cursorPath
+           
+          |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
+               ~targetTypeId:mainTypeId *)
+        in
         jsxCompletions @ pipeCompletions @ extraCompletions
-        @ currentModuleCompletions @ globallyConfiguredCompletions))
+        @ currentModuleCompletions @ globallyConfiguredCompletions
+        @ currentFullyQualifiedPathModuleCompletions))
   | CTuple ctxPaths ->
     if Debug.verbose () then print_endline "[ctx_path]--> CTuple";
     (* Turn a list of context paths into a list of type expressions. *)
@@ -1190,7 +1202,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       |> List.map (fun contextPath ->
              contextPath
              |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos
-                  ~env ~exact:true ~scope)
+                  ~env ~exact:true ~scope ~cursorPath)
       |> List.filter_map (fun completionItems ->
              match completionItems with
              | {Completion.kind = Value typ} :: _ -> Some typ
@@ -1208,7 +1220,7 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       path
       |> getCompletionsForPath ~debug ~completionContext:Value ~exact:true
            ~opens ~full ~pos ~env ~scope
-      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos ~cursorPath
     in
     let lowercaseComponent =
       match pathToComponent with
@@ -1283,8 +1295,9 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
       match
         functionContextPath
         |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-             ~exact:true ~scope
+             ~exact:true ~scope ~cursorPath
         |> completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
+             ~cursorPath
       with
       | Some ((TypeExpr typ | ExtractedType (Tfunction {typ})), env) ->
         if Debug.verbose () then print_endline "--> found function type";
@@ -1330,8 +1343,9 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     match
       rootCtxPath
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-           ~exact:true ~scope
+           ~exact:true ~scope ~cursorPath
       |> completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
+           ~cursorPath
     with
     | Some (typ, env) -> (
       match typ |> TypeUtils.resolveNestedPatternPath ~env ~full ~nested with
@@ -1846,7 +1860,8 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
 
 module StringSet = Set.Make (String)
 
-let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
+let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover ~cursorPath
+    completable =
   if debug then
     Printf.printf "Completable: %s\n" (Completable.toString completable);
   let package = full.package in
@@ -1857,14 +1872,14 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
     path
     |> getCompletionsForPath ~debug ~completionContext:Value ~exact:true ~opens
          ~full ~pos ~env ~scope
-    |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+    |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos ~cursorPath
   in
   match completable with
   | Cnone -> []
   | Cpath contextPath ->
     contextPath
     |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-         ~exact:forHover ~scope
+         ~exact:forHover ~scope ~cursorPath
   | Cjsx ([id], prefix, identsSeen) when String.uncapitalize_ascii id = id -> (
     (* Lowercase JSX tag means builtin *)
     let mkLabel (name, typString) =
@@ -2115,8 +2130,8 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
       match
         cp
         |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-             ~exact:true ~scope
-        |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+             ~exact:true ~scope ~cursorPath
+        |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos ~cursorPath
       with
       | Some (typ, _env) ->
         if debug then
@@ -2144,15 +2159,17 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
     let fallbackOrEmpty ?items () =
       match (fallback, items) with
       | Some fallback, (None | Some []) ->
-        fallback |> processCompletable ~debug ~full ~scope ~env ~pos ~forHover
+        fallback
+        |> processCompletable ~debug ~full ~scope ~env ~pos ~forHover
+             ~cursorPath
       | _, Some items -> items
       | None, None -> []
     in
     match
       contextPath
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-           ~exact:true ~scope
-      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos
+           ~exact:true ~scope ~cursorPath
+      |> completionsGetTypeEnv2 ~debug ~full ~opens ~rawOpens ~pos ~cursorPath
     with
     | Some (typ, env) -> (
       match
@@ -2200,7 +2217,7 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
     match
       contextPath
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-           ~exact:true ~scope
+           ~exact:true ~scope ~cursorPath
       |> completionsGetCompletionType ~full
     with
     | None ->
@@ -2301,7 +2318,7 @@ let rec processCompletable ~debug ~full ~scope ~env ~pos ~forHover completable =
     let completionsForContextPath =
       contextPath
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
-           ~exact:forHover ~scope
+           ~exact:forHover ~scope ~cursorPath
     in
     completionsForContextPath
     |> List.map (fun (c : Completion.t) ->

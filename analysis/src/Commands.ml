@@ -4,7 +4,7 @@ let completion ~debug ~path ~pos ~currentFile =
       Completions.getCompletions ~debug ~path ~pos ~currentFile ~forHover:false
     with
     | None -> []
-    | Some (completions, full, _) ->
+    | Some (completions, full, _, _) ->
       completions
       |> List.map (CompletionBackEnd.completionToItem ~full)
       |> List.map Protocol.stringifyCompletionItem

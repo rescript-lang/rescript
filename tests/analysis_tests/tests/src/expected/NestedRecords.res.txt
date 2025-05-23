@@ -27,6 +27,7 @@ Path options
 CPPipe pathFromEnv: found:true
 Path NestedRecords.extra
 Path extra
+Path NestedRecords.extra
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 {"contents": {"kind": "markdown", "value": "```rescript\ntype options.extra = {name: string, superExtra: {age: int}}\n```"}}
@@ -48,6 +49,7 @@ Path options
 CPPipe pathFromEnv: found:true
 Path NestedRecords.extra
 Path extra
+Path NestedRecords.extra
 ContextPath Value[options].extra->superExtra
 ContextPath Value[options].extra
 ContextPath Value[options]
@@ -58,9 +60,11 @@ Path options
 CPPipe pathFromEnv: found:true
 Path NestedRecords.extra
 Path extra
+Path NestedRecords.extra
 CPPipe pathFromEnv: found:true
 Path NestedRecords.superExtra
 Path superExtra
+Path NestedRecords.superExtra
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 {"contents": {"kind": "markdown", "value": "```rescript\ntype options.extra.superExtra = {age: int}\n```"}}
@@ -83,6 +87,7 @@ Path options
 CPPipe pathFromEnv: found:true
 Path NestedRecords.extra
 Path extra
+Path NestedRecords.extra
 ContextPath Value[options].extra->superExtra
 ContextPath Value[options].extra
 ContextPath Value[options]
@@ -93,9 +98,11 @@ Path options
 CPPipe pathFromEnv: found:true
 Path NestedRecords.extra
 Path extra
+Path NestedRecords.extra
 CPPipe pathFromEnv: found:true
 Path NestedRecords.superExtra
 Path superExtra
+Path NestedRecords.superExtra
 ContextPath Value[options].extra.superExtra->age
 ContextPath Value[options].extra.superExtra
 ContextPath Value[options].extra
@@ -107,6 +114,7 @@ Path options
 CPPipe pathFromEnv: found:true
 Path NestedRecords.extra
 Path extra
+Path NestedRecords.extra
 ContextPath Value[options].extra->superExtra
 ContextPath Value[options].extra
 ContextPath Value[options]
@@ -117,12 +125,15 @@ Path options
 CPPipe pathFromEnv: found:true
 Path NestedRecords.extra
 Path extra
+Path NestedRecords.extra
 CPPipe pathFromEnv: found:true
 Path NestedRecords.superExtra
 Path superExtra
+Path NestedRecords.superExtra
 CPPipe pathFromEnv: found:true
 Path NestedRecords.age
 Path age
+Path NestedRecords.age
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 {"contents": {"kind": "markdown", "value": "```rescript\nint\n```"}}

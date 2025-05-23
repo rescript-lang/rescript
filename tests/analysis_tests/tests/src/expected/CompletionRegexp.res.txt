@@ -8,6 +8,7 @@ ContextPath Value[emailPattern]
 Path emailPattern
 Path Stdlib.RegExp.
 Path 
+Path CompletionRegexp.
 [{
     "label": "RegExp.lastIndex",
     "kind": 12,

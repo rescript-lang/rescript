@@ -84,11 +84,11 @@ let findFunctionType ~currentFile ~debug ~path ~pos =
               ~currentFile ~text
           with
           | None -> None
-          | Some (completable, scope) ->
+          | Some (completable, scope, cursorPath) ->
             Some
               ( completable
                 |> CompletionBackEnd.processCompletable ~debug ~full ~pos ~scope
-                     ~env ~forHover:true,
+                     ~env ~forHover:true ~cursorPath,
                 env,
                 package,
                 file ))
