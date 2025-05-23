@@ -3793,10 +3793,17 @@ let rec subtype_rec env trace t1 t2 cstrs =
                              try
                                let lst = subtype_list env trace tl1 tl2 cstrs in
                                if List.length lst = List.length cstrs then None
-                               else Some [ (* TODO(subtype-errors) *) ]
-                             with _ -> Some [ (* TODO(subtype-errors) *) ])
+                               else
+                                 Some
+                                   [ (* TODO(subtype-errors) Variant constructor inline record mismatch *) ]
+                             with _ ->
+                               Some
+                                 [ (* TODO(subtype-errors) Variant constructor inline record mismatch *) ]
+                             )
                            | violations -> Some violations
-                         else Some [ (* TODO(subtype-errors) *) ]
+                         else
+                           Some
+                             [ (* TODO(subtype-errors) Variant constructor representation mismatch*) ]
                        | ( {
                              Types.cd_args = Cstr_tuple tl1;
                              cd_attributes = c1_attributes;
@@ -3813,16 +3820,22 @@ let rec subtype_rec env trace t1 t2 cstrs =
                            try
                              let lst = subtype_list env trace tl1 tl2 cstrs in
                              if List.length lst = List.length cstrs then None
-                             else Some [ (* TODO(subtype-errors) *) ]
-                           with _ -> Some [ (* TODO(subtype-errors) *) ]
-                         else Some [ (* TODO(subtype-errors) *) ]
-                       | _ -> Some [ (* TODO(subtype-errors) *) ])
+                             else
+                               Some
+                                 [ (* TODO(subtype-errors) Variant constructor tuple mismatch *) ]
+                           with _ ->
+                             Some
+                               [ (* TODO(subtype-errors) Variant constructor tuple mismatch *) ]
+                         else
+                           Some
+                             [ (* TODO(subtype-errors) Variant constructor tuple mismatch *) ]
+                       | _ ->
+                         Some [ (* TODO(subtype-errors) Variant other issue *) ])
               in
               if field_subtype_violations = [] then cstrs
               else (trace, t1, t2, !univar_pairs, None) :: cstrs)
         | ( (p1, _, {type_kind = Type_record (fields1, repr1)}),
             (p2, _, {type_kind = Type_record (fields2, repr2)}) ) ->
-          (* TODO(subtype-errors) Record representation *)
           let same_repr =
             match (repr1, repr2) with
             | Record_regular, Record_regular ->
@@ -3850,7 +3863,13 @@ let rec subtype_rec env trace t1 t2 cstrs =
                      }) )
               :: cstrs
             else subtype_list env trace tl1 tl2 cstrs
-          else (trace, t1, t2, !univar_pairs, None) :: cstrs
+          else
+            ( trace,
+              t1,
+              t2,
+              !univar_pairs,
+              None (* TODO(subtype-errors) Record representation *) )
+            :: cstrs
         | (p1, _, {type_kind = tk1}), (p2, _, {type_kind = tk2}) ->
           ( trace,
             t1,
@@ -3880,7 +3899,6 @@ let rec subtype_rec env trace t1 t2 cstrs =
         when extract_concrete_typedecl_opt env t2
              |> Variant_coercion.type_is_variant -> (
         (* TODO(subtype-errors) Polyvariant to variant *)
-        (* TODO(subtype-errors) Add Variant to polyvariant while we're at it? *)
         match extract_concrete_typedecl env t2 with
         | _, _, {type_kind = Type_variant variant_constructors; type_attributes}
           -> (
