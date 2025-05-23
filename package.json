@@ -86,7 +86,6 @@
     "@types/node": "^20.14.9",
     "@types/semver": "^7.7.0",
     "@yarnpkg/types": "^4.0.1",
-    "es-iterator-helpers": "1.2.1",
     "mocha": "10.8.2",
     "nyc": "15.0.0",
     "semver": "^7.7.2",

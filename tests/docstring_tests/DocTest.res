@@ -235,12 +235,7 @@ let main = async () => {
     })
 
     if codeExamples->Array.length > 0 {
-      let content = `
-%%raw(\`
-import 'es-iterator-helpers/auto';
-\`)
-
-describe("${key}", () => {
+      let content = `describe("${key}", () => {
 ${codeExamples->Array.join("\n")}
  })`
       output->Array.push(content)
