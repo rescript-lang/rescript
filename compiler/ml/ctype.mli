@@ -20,34 +20,37 @@ open Types
 
 type subtype_context =
   | Generic of {errorCode: string}
+      (** A generic subtype error, intended to be extended to be handled later. *)
   | Primitive_coercion_target_variant_not_unboxed of {
       variant_name: Path.t;
       primitive: Path.t;
-    }
+    }  (** Coercing a primitive to a variant that is not unboxed. *)
   | Primitive_coercion_target_variant_no_catch_all of {
       variant_name: Path.t;
       primitive: Path.t;
     }
+      (** Coercing a primitive to a variant that does not have a catch-all case. *)
   | Variant_constructor_runtime_representation_mismatch of {
       variant_name: Path.t;
       issues: Variant_coercion.variant_runtime_representation_issue list;
     }
+      (** A variant constructor's runtime representation does not match the target variant. *)
   | Variant_configurations_mismatch of {
       left_variant_name: Path.t;
       right_variant_name: Path.t;
       issue: Variant_coercion.variant_configuration_issue;
-    }
+    }  (** Variants are configured differently. *)
   | Different_type_kinds of {
       left_typename: Path.t;
       right_typename: Path.t;
       left_type_kind: type_kind;
       right_type_kind: type_kind;
-    }
+    }  (** The types are of different kinds. *)
   | Record_fields_mismatch of {
       left_record_name: Path.t;
       right_record_name: Path.t;
       issues: Record_coercion.record_field_subtype_violation list;
-    }
+    }  (** Records have fields that are not compatible. *)
 
 type type_pairs = (type_expr * type_expr) list
 exception Unify of type_pairs
