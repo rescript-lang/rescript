@@ -3719,7 +3719,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
             (p2, _, {type_kind = Type_variant c2; type_attributes = t2attrs}) )
           -> (
           match
-            Variant_coercion.variant_configuration_can_be_coerced2 t1attrs
+            Variant_coercion.variant_configuration_can_be_coerced t1attrs
               t2attrs
           with
           | Error issue ->
