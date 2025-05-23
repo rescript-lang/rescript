@@ -263,7 +263,7 @@ async function main() {
     if (codeExamples.length <= 0) {
       return;
     }
-    let content = "describe(\"" + key + "\", () => {\n" + codeExamples.join("\n") + "\n })";
+    let content = "\n%%raw(\`\nimport 'es-iterator-helpers/auto';\n\`)\n\ndescribe(\"" + key + "\", () => {\n" + codeExamples.join("\n") + "\n })";
     output.push(content);
   });
   let dirname = Nodepath.dirname(Nodeurl.fileURLToPath(import.meta.url));

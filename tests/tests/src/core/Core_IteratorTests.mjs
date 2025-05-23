@@ -4,6 +4,9 @@ import * as Test from "./Test.mjs";
 import * as Primitive_object from "rescript/lib/es6/Primitive_object.js";
 import * as Stdlib_AsyncIterator from "rescript/lib/es6/Stdlib_AsyncIterator.js";
 
+import 'es-iterator-helpers/auto';
+;
+
 let eq = Primitive_object.equal;
 
 let iterator = ((() => {
@@ -16,24 +19,6 @@ let syncResult = {
   contents: undefined
 };
 
-if (!Iterator.prototype.forEach) {
-  Iterator.prototype.forEach = function forEach(callback, thisArg) {
-    if (typeof callback !== 'function') {
-      throw new TypeError(callback + ' is not a function');
-    }
-
-    let index = 0;
-    let result = this.next();
-
-    while (!result.done) {
-      callback.call(thisArg, result.value, index, this);
-      result = this.next();
-      index++;
-    }
-  };
-}
-;
-
 iterator.forEach(v => {
   if (v === "b") {
     syncResult.contents = "b";
@@ -45,7 +30,7 @@ iterator.forEach(v => {
 Test.run([
   [
     "Core_IteratorTests.res",
-    38,
+    23,
     20,
     34
   ],
@@ -77,7 +62,7 @@ await Stdlib_AsyncIterator.forEach(asyncIterator, v => {
 Test.run([
   [
     "Core_IteratorTests.res",
-    61,
+    46,
     20,
     35
   ],
@@ -113,7 +98,7 @@ await Stdlib_AsyncIterator.forEach(asyncIterator$1, v => {
 Test.run([
   [
     "Core_IteratorTests.res",
-    86,
+    71,
     20,
     54
   ],
@@ -127,4 +112,4 @@ export {
   asyncResult,
   asyncIterator$1 as asyncIterator,
 }
-/* iterator Not a pure module */
+/*  Not a pure module */
