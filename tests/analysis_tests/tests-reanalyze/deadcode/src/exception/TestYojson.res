@@ -4,7 +4,7 @@ let foo = x => Yojson.Basic.from_string(x)
 let bar = (str, json) =>
   switch {
     open Yojson.Basic.Util
-    json |> member(str)
+    member(str, json)
   } {
   | j => j
   | exception Yojson.Basic.Util.Type_error("a", d) when d == json => json
