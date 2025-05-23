@@ -49,17 +49,14 @@ type subtype_context =
       issues: Record_coercion.record_field_subtype_violation list;
     }
 
-exception Unify of (type_expr * type_expr) list
+type type_pairs = (type_expr * type_expr) list
+exception Unify of type_pairs
 exception Tags of label * label
-exception
-  Subtype of
-    (type_expr * type_expr) list
-    * (type_expr * type_expr) list
-    * subtype_context option
+exception Subtype of type_pairs * type_pairs * subtype_context option
 exception Cannot_expand
 exception Cannot_apply
 exception Recursive_abbrev
-exception Unification_recursive_abbrev of (type_expr * type_expr) list
+exception Unification_recursive_abbrev of type_pairs
 
 val init_def : int -> unit
 (* Set the initial variable level *)
