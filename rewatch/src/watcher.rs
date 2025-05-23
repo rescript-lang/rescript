@@ -32,10 +32,17 @@ fn is_rescript_file(path_buf: &Path) -> bool {
 }
 
 fn is_in_build_path(path_buf: &Path) -> bool {
-    path_buf
-        .to_str()
-        .map(|x| x.contains("/lib/bs/") || x.contains("/lib/ocaml/"))
-        .unwrap_or(false)
+    let mut prev_component: Option<&std::ffi::OsStr> = None;
+    for component in path_buf.components() {
+        let comp_os = component.as_os_str();
+        if let Some(prev) = prev_component {
+            if prev == "lib" && (comp_os == "bs" || comp_os == "ocaml") {
+                return true;
+            }
+        }
+        prev_component = Some(comp_os);
+    }
+    false
 }
 
 fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
