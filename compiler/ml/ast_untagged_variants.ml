@@ -100,7 +100,7 @@ type tag = {name: string; tag_type: tag_type option}
 type block = {tag: tag; tag_name: string option; block_type: block_type option}
 type switch_names = {consts: tag array; blocks: block array}
 
-let tag_type_to_type_string = function
+let tag_type_to_string = function
   | String _ -> "string"
   | Int _ -> "int"
   | Float _ -> "float"

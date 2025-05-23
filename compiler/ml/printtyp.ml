@@ -1550,7 +1550,7 @@ let print_variant_runtime_representation_issue ppf variant_name
        @{<info>%s@}, which is not compatible with the expected of \
        @{<info>%s@}."
       constructor_name (Path.name variant_name)
-      (Ast_untagged_variants.tag_type_to_type_string as_payload)
+      (Ast_untagged_variants.tag_type_to_string as_payload)
       (Path.name expected_typename)
   | Mismatched_unboxed_payload _ -> ()
   | Mismatched_as_payload {constructor_name; expected_typename; as_payload} ->
@@ -1565,7 +1565,7 @@ let print_variant_runtime_representation_issue ppf variant_name
       fprintf ppf
         "an @{<info>@as@} payload that gives it the runtime type of \
          @{<info>%s@}."
-        (Ast_untagged_variants.tag_type_to_type_string payload));
+        (Ast_untagged_variants.tag_type_to_string payload));
     fprintf ppf
       "@ That runtime representation is not compatible with the expected \
        runtime representation of @{<info>%s@}."
