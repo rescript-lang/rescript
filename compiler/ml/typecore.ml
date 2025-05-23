@@ -51,10 +51,9 @@ type error =
   | Private_type of type_expr
   | Private_label of Longident.t * type_expr
   | Not_subtype of
-      Ctype.type_pairs
-      * Ctype.type_pairs
+      (type_expr * type_expr) list
+      * (type_expr * type_expr) list
       * Ctype.subtype_context option
-      * Ctype.subtype_type_position option
   | Too_many_arguments of bool * type_expr
   | Abstract_wrong_label of Noloc.arg_label * type_expr
   | Scoping_let_module of string * type_expr
@@ -605,8 +604,8 @@ let extract_type_from_pat_variant_spread env lid expected_ty =
       raise (Error (lid.loc, env, Type_params_not_supported lid.txt));
     let ty = newgenty (Tconstr (path, [], ref Mnil)) in
     (try Ctype.subtype env ty expected_ty ()
-     with Ctype.Subtype (tr1, tr2, ctx, type_position) ->
-       raise (Error (lid.loc, env, Not_subtype (tr1, tr2, ctx, type_position))));
+     with Ctype.Subtype (tr1, tr2, ctx) ->
+       raise (Error (lid.loc, env, Not_subtype (tr1, tr2, ctx))));
     (path, decl, constructors, ty)
   | _ -> raise (Error (lid.loc, env, Not_a_variant_type lid.txt))
 
@@ -2937,9 +2936,9 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
            let force' = subtype env arg.exp_type ty' in
            force ();
            force' ()
-         with Subtype (tr1, tr2, ctx, type_position) ->
+         with Subtype (tr1, tr2, ctx) ->
            (* prerr_endline "coercion failed"; *)
-           raise (Error (loc, env, Not_subtype (tr1, tr2, ctx, type_position))));
+           raise (Error (loc, env, Not_subtype (tr1, tr2, ctx))));
       (arg, ty', cty')
     in
     rue
@@ -4333,9 +4332,8 @@ let report_error env loc ppf error =
     match valid_methods with
     | None -> ()
     | Some valid_methods -> spellcheck ppf me valid_methods)
-  | Not_subtype (tr1, tr2, ctx, type_position) ->
+  | Not_subtype (tr1, tr2, ctx) ->
     report_subtyping_error ppf env tr1 "is not a subtype of" tr2 ctx
-      type_position
   | Too_many_arguments (in_function, ty) ->
     if
       (* modified *)

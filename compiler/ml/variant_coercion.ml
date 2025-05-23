@@ -178,7 +178,7 @@ type variant_configuration_issue =
   | Tag_name_not_matching of {left_tag: string option; right_tag: string option}
   | Incompatible_constructor_count of {constructor_names: string list}
 
-let variant_configuration_can_be_coerced (a1 : Parsetree.attributes)
+let variant_configuration_can_be_coerced2 (a1 : Parsetree.attributes)
     (a2 : Parsetree.attributes) =
   let unboxed =
     match
@@ -204,6 +204,29 @@ let variant_configuration_can_be_coerced (a1 : Parsetree.attributes)
   match (unboxed, tag) with
   | Ok (), Ok () -> Ok ()
   | Error e, _ | _, Error e -> Error e
+
+let variant_configuration_can_be_coerced (a1 : Parsetree.attributes)
+    (a2 : Parsetree.attributes) =
+  let unboxed =
+    match
+      ( Ast_untagged_variants.process_untagged a1,
+        Ast_untagged_variants.process_untagged a2 )
+    with
+    | true, true | false, false -> true
+    | _ -> false
+  in
+  if not unboxed then false
+  else
+    let tag =
+      match
+        ( Ast_untagged_variants.process_tag_name a1,
+          Ast_untagged_variants.process_tag_name a2 )
+      with
+      | Some tag1, Some tag2 when tag1 = tag2 -> true
+      | None, None -> true
+      | _ -> false
+    in
+    if not tag then false else true
 
 let variant_configuration_can_be_coerced_raises ~is_spread_context ~left_loc
     ~right_loc ~(left_attributes : Parsetree.attributes)

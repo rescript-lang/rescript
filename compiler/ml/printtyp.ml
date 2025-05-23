@@ -1525,17 +1525,6 @@ let trace fst keep_last txt ppf tr =
     | _ -> ()
   with exn -> raise exn
 
-let add_context_text type_position left ppf =
-  match type_position with
-  | None -> ()
-  | Some type_position -> (
-    match type_position with
-    | RecordField {field_name; left_record_name; right_record_name} ->
-      fprintf ppf " (the type of field @{<info>%s@} in @{<info>%s@})" field_name
-        (Path.name (if left then left_record_name else right_record_name))
-    | TupleElement {index} ->
-      if left then fprintf ppf "(tuple element at position %i)" (index + 1))
-
 let print_variant_runtime_representation_issue ppf variant_name
     (issue : Variant_coercion.variant_runtime_representation_issue) =
   match issue with
@@ -1588,7 +1577,7 @@ let print_variant_runtime_representation_issue ppf variant_name
       (Path.name variant_name)
       (Path.name expected_typename)
 
-let print_variant_configuration_issue ?type_position ppf
+let print_variant_configuration_issue ppf
     (issue : Variant_coercion.variant_configuration_issue) ~left_variant_name
     ~right_variant_name =
   match issue with
@@ -1634,14 +1623,11 @@ let print_variant_configuration_issue ?type_position ppf
       total_constructor_count - List.length constructor_names_to_print
     in
     fprintf ppf
-      "@ Variant @{<info>%s@}%t has @{<info>%i@} constructor%s that variant \
-       @{<info>%s@}%t does not have: "
+      "@ @{<info>%s@} has %i constructor%s that @{<info>%s@} does not have: "
       (Path.name left_variant_name)
-      (add_context_text type_position true)
       total_constructor_count
       (if total_constructor_count = 1 then "" else "s")
-      (Path.name right_variant_name)
-      (add_context_text type_position false);
+      (Path.name right_variant_name);
 
     constructor_names_to_print
     |> List.iteri (fun index name ->
@@ -1701,42 +1687,22 @@ let print_record_field_subtype_violation ppf
       (Path.name right_record_name)
       (Path.name left_record_name)
 
-let report_subtyping_error ppf env tr1 txt1 tr2 ctx
-    (type_position : subtype_type_position option) =
+let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
   wrap_printing_env env (fun () ->
       reset ();
       let tr1 = List.map prepare_expansion tr1
       and tr2 = List.map prepare_expansion tr2 in
-      (fprintf ppf "@[<v>%a" (trace true (tr2 = []) txt1) tr1;
-       if tr2 = [] then fprintf ppf "@]"
+      fprintf ppf "@[<v>%a" (trace true (tr2 = []) txt1) tr1;
+      (if tr2 = [] then fprintf ppf "@]"
        else
          let mis = mismatch tr2 in
          fprintf ppf "%a%t@]"
            (trace false (mis = None) "is not compatible with type")
            tr2 (explanation true mis));
-      (match type_position with
-      | None -> ()
-      | Some type_position ->
-        fprintf ppf "@,@[<v> @ ";
-        (match type_position with
-        | RecordField {field_name; left_record_name; right_record_name} ->
-          fprintf ppf
-            "Field @{<info>%s@} is not compatible between @{<info>%s@} and \
-             @{<info>%s@}:"
-            field_name
-            (Path.name left_record_name)
-            (Path.name right_record_name)
-        | TupleElement {index} ->
-          fprintf ppf "In the tuple element at position @{<info>%i@}."
-            (index + 1));
-        fprintf ppf "@]");
-
       match ctx with
-      | Some ctx ->
-        (match type_position with
-        | None -> fprintf ppf "@,@[<v 2>"
-        | Some _ -> fprintf ppf "@,@[<v 4>");
-        (match ctx with
+      | Some ctx -> (
+        fprintf ppf "@,@,@[<v 2>";
+        match ctx with
         | Generic {errorCode} -> fprintf ppf "Error: %s" errorCode
         | Primitive_coercion_target_variant_not_unboxed
             {variant_name; primitive} ->
@@ -1766,8 +1732,8 @@ let report_subtyping_error ppf env tr1 txt1 tr2 ctx
             issues
         | Variant_configurations_mismatch
             {left_variant_name; right_variant_name; issue} ->
-          print_variant_configuration_issue ?type_position ppf issue
-            ~left_variant_name ~right_variant_name
+          print_variant_configuration_issue ppf issue ~left_variant_name
+            ~right_variant_name
         | Different_type_kinds
             {left_typename; right_typename; left_type_kind; right_type_kind} ->
           let type_kind_to_string = function
@@ -1795,8 +1761,7 @@ let report_subtyping_error ppf env tr1 txt1 tr2 ctx
               fprintf ppf "@ - ";
               print_record_field_subtype_violation ppf issue ~left_record_name
                 ~right_record_name)
-            issues);
-        fprintf ppf "@]"
+            issues)
       | None -> ())
 
 let report_ambiguous_type_error ppf env (tp0, tp0') tpl txt1 txt2 txt3 =
