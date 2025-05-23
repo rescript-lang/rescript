@@ -173,65 +173,91 @@ module Map = Js_map
 module WeakMap = Js_weakmap
 
 /** JS object type */
+@deprecated("Use `{..}` instead")
 type t<'a> = {..} as 'a
 
 /** JS global object reference */
+@deprecated("Use Stdlib.globalThis instead")
 @val
 external globalThis: t<'a> = "globalThis"
 
-@unboxed
+@deprecated("Use Stdlib.null instead") @unboxed
 type null<+'a> = Js_null.t<'a> = Value('a) | @as(null) Null
 
+@deprecated("Use Stdlib.undefined instead")
 type undefined<+'a> = Js_undefined.t<'a>
 
-@unboxed
+@deprecated("Use Stdlib.nullable instead") @unboxed
 type nullable<+'a> = Js_null_undefined.t<'a> = Value('a) | @as(null) Null | @as(undefined) Undefined
 
+@deprecated("Use Stdlib.nullable instead")
 type null_undefined<+'a> = nullable<'a>
 
+@deprecated("Use Stdlib.Nullable.toOption instead")
 external toOption: nullable<'a> => option<'a> = "%nullable_to_opt"
+@deprecated("FIXME: No equivalent in Stdlib, just Primitive_option.fromUndefined")
 external undefinedToOption: undefined<'a> => option<'a> = "%undefined_to_opt"
+@deprecated("Use Stdlib.Null.toOption instead")
 external nullToOption: null<'a> => option<'a> = "%null_to_opt"
+@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.isNullable")
 external isNullable: nullable<'a> => bool = "%is_nullable"
+@deprecated("Use Stdlib.import instead")
 external import: 'a => promise<'a> = "%import"
 
 /** The same as {!test} except that it is more permissive on the types of input */
+@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.testAny")
 external testAny: 'a => bool = "%is_nullable"
 
 /**
   The promise type, defined here for interoperation across packages.
 */
+@deprecated("Use Stdlib.Promise.t instead")
 type promise<+'a, +'e>
 
 /**
   The same as empty in `Js.Null`. Compiles to `null`.
 */
+@deprecated("Use Stdlib.null instead")
 external null: null<'a> = "%null"
 
 /**
   The same as empty `Js.Undefined`. Compiles to `undefined`.
 */
+@deprecated("Use Stdlib.undefined instead")
 external undefined: undefined<'a> = "%undefined"
 
 /**
 `typeof x` will be compiled as `typeof x` in JS. Please consider functions in
 `Js.Types` for a type safe way of reflection.
 */
+@deprecated("Use Stdlib.typeof instead")
 external typeof: 'a => string = "%typeof"
 
-@val @scope("console") /** Equivalent to console.log any value. */
+/** Equivalent to console.log any value. */
+@deprecated("Use Stdlib.Console.log instead")
+@val
+@scope("console")
 external log: 'a => unit = "log"
 
-@val @scope("console") external log2: ('a, 'b) => unit = "log"
-@val @scope("console") external log3: ('a, 'b, 'c) => unit = "log"
+@deprecated("Use Stdlib.Console.log2 instead") @val @scope("console")
+external log2: ('a, 'b) => unit = "log"
+@deprecated("Use Stdlib.Console.log3 instead") @val @scope("console")
+external log3: ('a, 'b, 'c) => unit = "log"
+@deprecated("Use Stdlib.Console.log4 instead") @val @scope("console")
+external log4: ('a, 'b, 'c, 'd) => unit = "log"
 
-@val @scope("console") external log4: ('a, 'b, 'c, 'd) => unit = "log"
-
-@val @scope("console") @variadic /** A convenience function to console.log more than 4 arguments */
+/** A convenience function to console.log more than 4 arguments */
+@deprecated("Use Stdlib.Console.logMany instead")
+@val
+@scope("console")
+@variadic
 external logMany: array<'a> => unit = "log"
 
+@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.eqNull")
 external eqNull: ('a, null<'a>) => bool = "%equal_null"
+@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.eqUndefined")
 external eqUndefined: ('a, undefined<'a>) => bool = "%equal_undefined"
+@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.eqNullable")
 external eqNullable: ('a, nullable<'a>) => bool = "%equal_nullable"
 
 /* ## Operators */
@@ -241,22 +267,26 @@ external eqNullable: ('a, nullable<'a>) => bool = "%equal_nullable"
     It is marked as unsafe, since it is impossible
     to give a proper semantics for comparision which applies to any type
 */
+@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.lt")
 external unsafe_lt: ('a, 'a) => bool = "%unsafe_lt"
 
 /**
    `unsafe_le(a, b)` will be compiled as `a <= b`.
    See also `Js.unsafe_lt`.
 */
+@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.le")
 external unsafe_le: ('a, 'a) => bool = "%unsafe_le"
 
 /**
    `unsafe_gt(a, b)` will be compiled as `a > b`.
     See also `Js.unsafe_lt`.
 */
+@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.gt")
 external unsafe_gt: ('a, 'a) => bool = "%unsafe_gt"
 
 /**
    `unsafe_ge(a, b)` will be compiled as `a >= b`.
    See also `Js.unsafe_lt`.
 */
+@deprecated("FIXME: No equivalent in Stdlib, just Primitive_js_extern.ge")
 external unsafe_ge: ('a, 'a) => bool = "%unsafe_ge"
