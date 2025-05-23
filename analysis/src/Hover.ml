@@ -270,17 +270,13 @@ let newHover ~full:{file; package} ~supportsMarkdownLinks locItem =
         | `Declared ->
           let typeString, docstring = t |> fromType ~docstring in
           typeString :: docstring
-        | `Constructor {cname = {txt}; args; docstring} ->
-          let typeString, docstring = t |> fromType ~docstring in
-          let argsString =
-            match args with
-            | InlineRecord _ | Args [] -> ""
-            | Args args ->
-              args
-              |> List.map (fun (t, _) -> Shared.typeToString t)
-              |> String.concat ", " |> Printf.sprintf "(%s)"
+        | `Constructor constructor ->
+          let typeString, docstring =
+            t |> fromType ~docstring:constructor.docstring
           in
-          typeString :: Markdown.codeBlock (txt ^ argsString) :: docstring
+          typeString
+          :: Markdown.codeBlock (CompletionBackEnd.showConstructor constructor)
+          :: docstring
         | `Field ->
           let typeString, docstring = t |> fromType ~docstring in
           typeString :: docstring)
