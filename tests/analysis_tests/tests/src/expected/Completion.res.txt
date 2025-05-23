@@ -332,8 +332,8 @@ Path Array.
     "label": "entries",
     "kind": 12,
     "tags": [],
-    "detail": "array<'a> => Iterator.t<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`entries(array)` returns a new array iterator object that contains the key/value pairs for each index in the array.\n\nSee [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/entries) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator : Iterator.t<int> = array->Array.entries\nConsole.log(iterator->Iterator.next) // {done: false, value: [0,5]}\nConsole.log(iterator->Iterator.next) // {done: false, value: [1,6]}\n```\n"}
+    "detail": "array<'a> => Iterator.t<(int, 'a)>",
+    "documentation": {"kind": "markdown", "value": "\n`entries(array)` returns a new array iterator object that contains the key/value pairs for each index in the array.\n\nSee [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/entries) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator : Iterator.t<(int, int)> = array->Array.entries\niterator->Iterator.next->assertEqual({done: false, value: Some((0, 5))})\niterator->Iterator.next->assertEqual({done: false, value: Some((1, 6))})\n```\n"}
   }, {
     "label": "unshiftMany",
     "kind": 12,
@@ -387,7 +387,7 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "array<'a> => Iterator.t<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`values(array)` returns a new array iterator object that contains the values for each index in the array.\n\nSee [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/values) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator : Iterator.t<int> = array->Array.values\nConsole.log(iterator->Iterator.next) // {done: false, value: 5}\nConsole.log(iterator->Iterator.next) // {done: false, value: 6}\n```\n "}
+    "documentation": {"kind": "markdown", "value": "\n`values(array)` returns a new array iterator object that contains the values for each index in the array.\n\nSee [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/values) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator : Iterator.t<int> = array->Array.values\niterator->Iterator.next->assertEqual({done: false, value: Some(5)})\niterator->Iterator.next->assertEqual({done: false, value: Some(6)})\n```\n "}
   }, {
     "label": "indexOfOpt",
     "kind": 12,

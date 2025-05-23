@@ -4,9 +4,6 @@ import * as Test from "./Test.mjs";
 import * as Primitive_object from "rescript/lib/es6/Primitive_object.js";
 import * as Stdlib_AsyncIterator from "rescript/lib/es6/Stdlib_AsyncIterator.js";
 
-import 'es-iterator-helpers/auto';
-;
-
 let eq = Primitive_object.equal;
 
 let iterator = ((() => {
@@ -30,7 +27,7 @@ iterator.forEach(v => {
 Test.run([
   [
     "Core_IteratorTests.res",
-    23,
+    19,
     20,
     34
   ],
@@ -62,7 +59,7 @@ await Stdlib_AsyncIterator.forEach(asyncIterator, v => {
 Test.run([
   [
     "Core_IteratorTests.res",
-    46,
+    42,
     20,
     35
   ],
@@ -98,7 +95,7 @@ await Stdlib_AsyncIterator.forEach(asyncIterator$1, v => {
 Test.run([
   [
     "Core_IteratorTests.res",
-    71,
+    67,
     20,
     54
   ],
@@ -112,4 +109,4 @@ export {
   asyncResult,
   asyncIterator$1 as asyncIterator,
 }
-/*  Not a pure module */
+/* iterator Not a pure module */

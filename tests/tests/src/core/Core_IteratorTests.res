@@ -1,7 +1,3 @@
-%%raw(`
-import 'es-iterator-helpers/auto';
-`)
-
 let eq = (a, b) => a == b
 
 let iterator: Iterator.t<string> = %raw(`
