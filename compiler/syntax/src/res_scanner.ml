@@ -820,9 +820,6 @@ let rec scan scanner =
       | '|' ->
         next2 scanner;
         Token.Lor
-      | '>' ->
-        next2 scanner;
-        Token.BarGreater
       | _ ->
         next scanner;
         Token.Bar)
