@@ -33,6 +33,22 @@ let fromString: string => option<bool>
 
 /**
 Converts a string to a boolean.
+Throws an `Invalid_argument` exception if the string is not a valid boolean.
+
+## Examples
+```rescript
+Bool.fromStringOrThrow("true")->assertEqual(true)
+Bool.fromStringOrThrow("false")->assertEqual(false)
+switch Bool.fromStringOrThrow("notAValidBoolean") {
+| exception Invalid_argument(_) => assert(true)
+| _ => assert(false)
+}
+```
+*/
+let fromStringOrThrow: string => bool
+
+/**
+Converts a string to a boolean.
 Beware, this function will throw an `Invalid_argument` exception 
 if the string is not a valid boolean.
 
@@ -46,6 +62,7 @@ switch Bool.fromStringExn("notAValidBoolean") {
 }
 ```
 */
+@deprecated("Use `fromStringOrThrow` instead")
 let fromStringExn: string => bool
 
 external compare: (bool, bool) => Stdlib_Ordering.t = "%compare"
