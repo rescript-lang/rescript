@@ -7,6 +7,8 @@ type t<'a>
 
 @get external size: t<'a> => int = "size"
 
+let isEmpty = set => set->size === 0
+
 @send external clear: t<'a> => unit = "clear"
 
 @send external add: (t<'a>, 'a) => unit = "add"
