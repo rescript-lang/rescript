@@ -75,6 +75,7 @@ type type_clash_context =
   | ArrayValue
   | MaybeUnwrapOption
   | IfCondition
+  | AssertCondition
   | IfReturn
   | SwitchReturn
   | TryReturn
@@ -118,6 +119,7 @@ let error_expected_type_text ppf type_clash_context =
     fprintf ppf "But a @{<info>for@} loop bounds must always be of type:"
   | Some IfCondition ->
     fprintf ppf "But @{<info>if@} conditions must always be of type:"
+  | Some AssertCondition -> fprintf ppf "But assertions must always be of type:"
   | Some IfReturn ->
     fprintf ppf "But this @{<info>if@} statement is expected to return:"
   | Some ArrayValue ->
