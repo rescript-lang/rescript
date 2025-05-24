@@ -254,6 +254,14 @@ type variant = | /** Cool variant! */ CoolVariant | /** Other cool variant */ Ot
 let coolVariant = CoolVariant
 //                  ^hov
 
+type payloadVariants = InlineRecord({field1: int, field2: bool}) | Args(int, bool)
+
+let payloadVariant = InlineRecord({field1: 1, field2: true})
+//                    ^hov
+
+let payloadVariant2 = Args(1, true)
+//                     ^hov
+
 // Hover on unsaved
 // let fff = "hello"; fff
 //                     ^hov
