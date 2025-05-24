@@ -59,7 +59,7 @@ module Wall = {
     let make = () => {
         [
             // k.
-            //   ^com
+            //   com
         ]
     }
 
@@ -71,7 +71,7 @@ module Wall = {
         let make = () => {
             [
                 // k.
-                //   com
+                //   ^com
             ]
         }
     }

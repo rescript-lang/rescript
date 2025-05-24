@@ -661,9 +661,7 @@ let getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
              then
                Some
                  (Completion.create name ~env ~kind:(Completion.FileModule name))
-             else (
-               print_endline ("filterMap name: " ^ name);
-               None))
+             else None)
     in
     localCompletionsWithOpens @ fileModules
   | moduleName :: path -> (
@@ -813,6 +811,33 @@ let completionsGetCompletionType ~full completions =
     | Some extractedType -> Some (extractedType, env))
   | Some {Completion.kind = ExtractedType (typ, _); env} -> Some (typ, env)
   | _ -> None
+
+(**
+  Returns completions from the current module where `include OtherModule` is present.
+*)
+let completionsFromIncludedModule ~full ~env ~pos =
+  (* Get the path of the module where the cursor is.*)
+  let ownModule = TypeUtils.find_module_path_at_pos ~full ~pos in
+
+  env.file.stamps |> Stamps.getEntries
+  |> List.filter_map (fun (_stamp, kind) ->
+         match kind with
+         | SharedTypes.Stamps.KValue
+             {
+               modulePath =
+                 SharedTypes.ModulePath.IncludedModule (_path, ownerPath);
+               name;
+               item;
+             } ->
+           let ownerPath =
+             ModulePath.toPathWithPrefix ownerPath full.file.File.moduleName
+           in
+           Format.printf "ownerPath: %s \n" (ownerPath |> String.concat ".");
+           if ownerPath = ownModule then (
+             print_endline "hit";
+             Some (Completion.create name.txt ~env ~kind:(Value item)))
+           else None
+         | _ -> None)
 
 let rec completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
     completions =
@@ -1214,40 +1239,21 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
               ~full ~rawOpens typ
           else []
         in
-        let ownModule = TypeUtils.find_module_path_at_pos ~full ~pos in
-        Format.printf "ownModule: %s\n" (String.concat "." ownModule);
-        (* Add completions from the current module. *)
-        let allModuleValueCompletions ~env =
-          let completions = ref [] in
-          Stamps.iterValues
-            (fun _stamp declared ->
-              match declared.modulePath with
-              | SharedTypes.ModulePath.IncludedModule (_path, ownerPath) ->
-                let ownerPath =
-                  ModulePath.toPathWithPrefix ownerPath
-                    full.file.File.moduleName
-                in
-                Format.printf "ownerPath: %s \n" (ownerPath |> String.concat ".");
-                if ownerPath = ownModule then
-                  completions :=
-                    Completion.create declared.name.txt ~env
-                      ~kind:(Value declared.item)
-                    :: !completions
-              | _ -> ())
-            env.file.stamps;
-          !completions
-        in
         let currentModuleCompletions =
-          allModuleValueCompletions ~env |> fun tap ->
-          print_endline
-            ("Unfiltered pipe completions: "
-            ^ String.concat ", " (List.map (fun c -> c.Completion.name) tap));
-          tap
+          completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom
+            ~opens:[] ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full []
           |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
                ~targetTypeId:mainTypeId
         in
+        let ownIncludedModuleCompletions =
+          []
+          (* completionsFromIncludedModule ~full ~env ~pos
+          |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
+               ~targetTypeId:mainTypeId *)
+        in
         jsxCompletions @ pipeCompletions @ extraCompletions
-        @ currentModuleCompletions @ globallyConfiguredCompletions))
+        @ currentModuleCompletions @ ownIncludedModuleCompletions
+        @ globallyConfiguredCompletions))
   | CTuple ctxPaths ->
     if Debug.verbose () then print_endline "[ctx_path]--> CTuple";
     (* Turn a list of context paths into a list of type expressions. *)
