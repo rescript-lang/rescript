@@ -1,5 +1,9 @@
 include Core_IntlTests
 
+%%raw(`
+import 'es-iterator-helpers/auto';
+`)
+
 Console.info("")
 Console.info("Array")
 Console.info("---")

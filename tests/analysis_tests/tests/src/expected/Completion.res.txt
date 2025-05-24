@@ -329,6 +329,12 @@ Path Array.
     "detail": "(array<'a>, int) => 'a",
     "documentation": {"kind": "markdown", "value": "\n`getUnsafe(array, index)` returns the element at `index` of `array`.\n\nThis is _unsafe_, meaning it will return `undefined` value if `index` does not exist in `array`.\n\nUse `Array.getUnsafe` only when you are sure the `index` exists (i.e. when using for-loop).\n\n## Examples\n```rescript\nlet array = [1, 2, 3]\nfor index in 0 to array->Array.length - 1 {\n  let value = array->Array.getUnsafe(index)\n  Console.log(value)\n}\n```\n"}
   }, {
+    "label": "entries",
+    "kind": 12,
+    "tags": [],
+    "detail": "array<'a> => Iterator.t<(int, 'a)>",
+    "documentation": {"kind": "markdown", "value": "\n`entries(array)` returns a new array iterator object that contains the key/value pairs for each index in the array.\n\nSee [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/entries) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator : Iterator.t<(int, int)> = array->Array.entries\niterator->Iterator.next->assertEqual({done: false, value: Some((0, 5))})\niterator->Iterator.next->assertEqual({done: false, value: Some((1, 6))})\n```\n"}
+  }, {
     "label": "unshiftMany",
     "kind": 12,
     "tags": [],
@@ -376,6 +382,12 @@ Path Array.
     "tags": [],
     "detail": "'a => bool",
     "documentation": null
+  }, {
+    "label": "values",
+    "kind": 12,
+    "tags": [],
+    "detail": "array<'a> => Iterator.t<'a>",
+    "documentation": {"kind": "markdown", "value": "\n`values(array)` returns a new array iterator object that contains the values for each index in the array.\n\nSee [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/values) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator : Iterator.t<int> = array->Array.values\niterator->Iterator.next->assertEqual({done: false, value: Some(5)})\niterator->Iterator.next->assertEqual({done: false, value: Some(6)})\n```\n "}
   }, {
     "label": "indexOfOpt",
     "kind": 12,

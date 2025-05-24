@@ -11,6 +11,9 @@ import * as Core_IntlTests from "./intl/Core_IntlTests.mjs";
 import * as Primitive_bigint from "rescript/lib/es6/Primitive_bigint.js";
 import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
+import 'es-iterator-helpers/auto';
+;
+
 console.info("");
 
 console.info("Array");
@@ -249,7 +252,7 @@ let x = Symbol.for("Foo");
 
 console.log(x);
 
-let array$1 = Array.from("foo"[Symbol.iterator]());
+let array$1 = "foo"[Symbol.iterator]().toArray();
 
 console.log(array$1);
 
