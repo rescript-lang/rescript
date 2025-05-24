@@ -24,22 +24,31 @@ let delete = (dict, string) => {
 
 @val external copy: (@as(json`{}`) _, dict<'a>) => dict<'a> = "Object.assign"
 
-let forEach = (dict, f) => {
-  dict->valuesToArray->Stdlib_Array.forEach(value => f(value))
-}
+let forEach: (dict<'a>, 'a => unit) => unit = %raw(`
+  (dict, f) => {
+    for (var key in dict) {
+      f(dict[key]);
+    }
+  }
+`)
 
-@inline
-let forEachWithKey = (dict, f) => {
-  dict->keysToArray->Stdlib_Array.forEach(key => f(dict->getUnsafe(key), key))
-}
+let forEachWithKey: (dict<'a>, ('a, string) => unit) => unit = %raw(`
+  (dict, f) => {
+    for (var key in dict) {
+      f(dict[key], key);
+    }
+  }
+`)
 
-let mapValues = (dict, f) => {
-  let target = make()
-  dict->forEachWithKey((value, key) => {
-    target->set(key, f(value))
-  })
-  target
-}
+let mapValues: (dict<'a>, 'a => 'b) => dict<'b> = %raw(`
+  (dict, f) => {
+    var target = {};
+    for (var key in dict) {
+      target[key] = f(dict[key]);
+    }
+    return target;
+  }
+`)
 
 external has: (dict<'a>, string) => bool = "%dict_has"
 
