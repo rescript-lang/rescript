@@ -3071,8 +3071,9 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         exp_env = env;
       }
   | Pexp_assert e ->
-    (* TODO: Add explicit AssertCondition *)
-    let cond = type_expect ~context:(Some IfCondition) env e Predef.type_bool in
+    let cond =
+      type_expect ~context:(Some AssertCondition) env e Predef.type_bool
+    in
     let exp_type =
       match cond.exp_desc with
       | Texp_construct (_, {cstr_name = "false"}, _) -> instance env ty_expected
