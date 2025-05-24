@@ -12,7 +12,7 @@ let isMale = !user["female"]
 
 !(!a)
 !(!(!a))
-!(a |> f(b))
+!(a->f(b))
 
 (-1)->add
 -1->add

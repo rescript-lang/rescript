@@ -61,7 +61,7 @@ let bottomLink = (path, shrunk, iconClasses, text) => {
   <li>
     <a ?title href=path className={bottomLinkClasses(shrunk)}>
       <i className={iconClasses ++ " fa-fw"} />
-      {shrunk ? React.null : <span className="ml-2"> {text |> str} </span>}
+      {shrunk ? React.null : <span className="ml-2"> {text->str} </span>}
     </a>
   </li>
 }
@@ -75,7 +75,7 @@ let topLink = (selectedOption, currentOption, path, shrunk, iconClasses, text) =
   let title = shrunk ? Some(text) : None
   <a href=path className=classes ?title>
     <i className={iconClasses ++ " fa-fw text-lg"} />
-    {shrunk ? React.null : <span className="ml-2"> {text |> str} </span>}
+    {shrunk ? React.null : <span className="ml-2"> {text->str} </span>}
   </a>
 }
 
@@ -83,7 +83,7 @@ let secondaryNavOption = (path, currentSelection, inspectedSelection, text) => {
   let defaultClasses = "flex text-indigo-800 text-sm py-3 px-4 hover:bg-gray-400 focus:bg-gray-400 font-semibold rounded items-center my-1"
   let classes = defaultClasses ++ (currentSelection == inspectedSelection ? " bg-gray-400" : "")
 
-  <li key=text> <a href=path className=classes> {text |> str} </a> </li>
+  <li key=text> <a href=path className=classes> {text->str} </a> </li>
 }
 
 let secondaryNav = (courses, userRole, selectedOption) =>
@@ -136,7 +136,7 @@ let secondaryNav = (courses, userRole, selectedOption) =>
               Authors,
               "Authors",
             ),
-          ] |> React.array
+          ]->React.array
         | CourseAuthor => React.null
         }}
         {secondaryNavOption(
@@ -200,7 +200,7 @@ let make = (~schoolName, ~schoolLogoPath, ~schoolIconPath, ~courses, ~isCourseAu
   | _ =>
     Rollbar.critical(
       "Unknown path encountered by SA navbar: " ++
-      (url.path |> Array.of_list |> Js.Array.joinWith("/")),
+      (url.path->Array.of_list->Js.Array.joinWith("/")),
     )
     raise(UnknownPathEncountered(url.path))
   }
@@ -267,17 +267,17 @@ let make = (~schoolName, ~schoolLogoPath, ~schoolIconPath, ~courses, ~isCourseAu
                 ? React.null
                 : <ul className="pr-4 pb-4 ml-10 mt-1">
                     {courses
-                    |> List.map(course =>
-                      <li key={course |> Course.id}>
+                    ->List.map(course =>
+                      <li key={course->Course.id}>
                         <a
-                          href={"/school/courses/" ++ ((course |> Course.id) ++ "/curriculum")}
+                          href={"/school/courses/" ++ ((course->Course.id) ++ "/curriculum")}
                           className="block text-white py-3 px-4 hover:bg-primary-800 rounded font-semibold text-xs">
-                          {course |> Course.name |> str}
+                          {course->Course.name->str}
                         </a>
                       </li>
                     )
-                    |> Array.of_list
-                    |> React.array}
+                    ->Array.of_list
+                    ->React.array}
                   </ul>}
             </li>
             <li>
@@ -303,11 +303,11 @@ let make = (~schoolName, ~schoolLogoPath, ~schoolIconPath, ~courses, ~isCourseAu
             rel="nofollow"
             href="/users/sign_out">
             <i className="fas fa-sign-out-alt fa-fw" />
-            {shrunk ? React.null : <span className="ml-2"> {"Sign Out" |> str} </span>}
+            {shrunk ? React.null : <span className="ml-2"> {"Sign Out"->str} </span>}
           </a>
         </li>
       </ul>
     </div>,
-    selectedOption |> secondaryNav(courses, userRole),
-  ] |> React.array
+    selectedOption->secondaryNav(courses, userRole),
+  ]->React.array
 }

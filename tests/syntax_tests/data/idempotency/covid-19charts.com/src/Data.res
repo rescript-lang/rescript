@@ -44,7 +44,7 @@ let countryIds = Map.keys(locations)
 let startDate = Js.Date.fromString(days[0])
 let endDate = Js.Date.fromString(days[Js.Array.length(days) - 1])
 
-let dayToIndex = Js.Array.mapi((day, index) => (day, index), days) |> Map.fromArray
+let dayToIndex = Js.Array.mapi((day, index) => (day, index), days)->Map.fromArray
 
 type xValue =
   | Date(Js.Date.t)
@@ -56,7 +56,7 @@ type value =
 
 let dataWithGrowth =
   Map.entries(data)
-  |> Js.Array.map(((countryId, dataPoints)) => {
+  ->Js.Array.map(((countryId, dataPoints)) => {
     let data = Lazy.from_fun(() => {
       let countryDataWithGrowth = Map.empty()
       let _ = Js.Array.reduce((prevRecord, day) => {
@@ -75,7 +75,7 @@ let dataWithGrowth =
     })
     (countryId, data)
   })
-  |> Belt.Map.String.fromArray
+  ->Belt.Map.String.fromArray
 
 type item = {
   x: xValue,
@@ -92,7 +92,7 @@ let calendar: t = Js.Array.mapi((day, index) => {
       Belt.HashMap.String.set(
         values,
         Map.get(locations, countryId).name,
-        Lazy.from_fun(() => Map.get(Belt.Map.String.getExn(dataWithGrowth, countryId) |> Lazy.force, day)),
+        Lazy.from_fun(() => Map.get(Belt.Map.String.getExn(dataWithGrowth, countryId)->Lazy.force, day)),
       ),
     countryIds,
   )
@@ -100,7 +100,7 @@ let calendar: t = Js.Array.mapi((day, index) => {
     x: Date(Js.Date.fromString(day)),
     index: index,
     values: countryId =>
-      Belt.HashMap.String.get(values, countryId) |> Js.Option.map((. x) => Lazy.force(x)),
+      Belt.HashMap.String.get(values, countryId)->Js.Option.map((. x) => Lazy.force(x)),
   }
 }, days)
 
@@ -143,12 +143,12 @@ let alignToDay0 = (dataType, threshold) => {
     Lazy.from_fun(() => {
       let dataPoints = Lazy.force(dataPoints)
       Map.entries(dataPoints)
-      |> Js.Array.map(((date, value)) => (Map.get(dayToIndex, date), value))
-      |> Js.Array.sortInPlaceWith((a, b) => compare(a |> fst, b |> fst))
-      |> Js.Array.map(((_, value)) => value)
-      |> Js.Array.filter(value => getValue(dataType, value) >= threshold)
-      |> Js.Array.mapi((value, index) => (index, value))
-      |> Belt.Map.Int.fromArray
+      ->Js.Array.map(((date, value)) => (Map.get(dayToIndex, date), value))
+      ->Js.Array.sortInPlaceWith((a, b) => compare(a->fst, b->fst))
+      ->Js.Array.map(((_, value)) => value)
+      ->Js.Array.filter(value => getValue(dataType, value) >= threshold)
+      ->Js.Array.mapi((value, index) => (index, value))
+      ->Belt.Map.Int.fromArray
     })
   )
 
@@ -156,7 +156,7 @@ let alignToDay0 = (dataType, threshold) => {
     x: Day(day),
     index: day,
     values: countryId =>
-      Belt.Map.String.get(data, countryId) |> Js.Option.andThen((. countryData) =>
+      Belt.Map.String.get(data, countryId)->Js.Option.andThen((. countryData) =>
         Belt.Map.Int.get(Lazy.force(countryData), day)
       ),
   })
@@ -202,7 +202,7 @@ let getDailyMortailityRate = x => {
 /*
  * let allLocations =
  *   Map.entries(locations)
- *   |> Js.Array.map(((locationId, value)) =>
+ *   ->Js.Array.map(((locationId, value)) =>
  *        {ReactSelect.label: value.name, value: locationId}
  *      );
  */

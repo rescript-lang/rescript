@@ -288,17 +288,15 @@ let x =
 let x = <MyComponent sidebar={<div> test </div>} nav={<Navbar />} />
 
 <div>
-  {ReasonReact.array(
-    Array.of_list(
-      List.map(
-        possibleGradeValue =>
-          <option key={string_of_int(possibleGradeValue)} value={string_of_int(possibleGradeValue)}>
-            {str(string_of_int(possibleGradeValue))}
-          </option>,
-        List.filter(g => g <= state.maxGrade, possibleGradeValues),
-      ),
-    ),
-  )}
+  {possibleGradeValues
+  ->List.filter(g => g <= state.maxGrade)
+  ->List.map(possibleGradeValue =>
+    <option key={possibleGradeValue->string_of_int} value={possibleGradeValue->string_of_int}>
+      {possibleGradeValue->string_of_int->str}
+    </option>
+  )
+  ->Array.of_list
+  ->ReasonReact.array}
 </div>
 
 // https://github.com/rescript-lang/syntax/issues/113

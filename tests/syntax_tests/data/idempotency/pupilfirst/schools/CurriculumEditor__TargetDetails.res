@@ -70,11 +70,11 @@ let makeFromJs = targetData => {
   targetGroupId: targetData["targetGroupId"],
   evaluationCriteria: targetData["evaluationCriteria"],
   prerequisiteTargets: targetData["prerequisiteTargets"],
-  quiz: targetData["quiz"] |> Array.map(quizQuestion =>
-    quizQuestion |> CurriculumEditor__QuizQuestion.makeFromJs
+  quiz: targetData["quiz"]->Array.map(quizQuestion =>
+    quizQuestion->CurriculumEditor__QuizQuestion.makeFromJs
   ),
   linkToComplete: targetData["linkToComplete"],
   completionInstructions: targetData["completionInstructions"],
-  checklist: targetData["checklist"] |> Json.Decode.array(TargetChecklistItem.decode),
+  checklist: targetData["checklist"]->Json.Decode.array(TargetChecklistItem.decode),
   visibility: visibilityFromJs(targetData["visibility"]),
 }

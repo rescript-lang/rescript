@@ -27,22 +27,22 @@ let updateSchoolQuery = (state, send, updateDetailsCB) => {
   send(UpdateSaving(true))
 
   UpdateSchoolQuery.make(~name=state.name, ~about=state.about, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
     response["updateSchool"]["success"]
       ? updateDetailsCB(state.name, optionAbout(state.about))
       : send(UpdateSaving(false))
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let updateButtonDisabled = state =>
-  !state.formDirty || (state.saving || state.name |> String.length < 1)
+  !state.formDirty || (state.saving || state.name->String.length < 1)
 
 let initialState = (name, about) => {
   name: name,
-  about: about |> OptionUtils.default(""),
+  about: about->OptionUtils.default(""),
   saving: false,
   formDirty: false,
 }
@@ -65,14 +65,14 @@ let make = (~name, ~about, ~updateDetailsCB) => {
 
   <div className="mx-8 pt-8">
     <h5 className="uppercase text-center border-b border-gray-400 pb-2">
-      {"Update Details" |> str}
+      {"Update Details"->str}
     </h5>
     <DisablingCover disabled=state.saving>
       <div className="mt-3">
         <label
           className="inline-block tracking-wide text-xs font-semibold"
           htmlFor="details-editor__name">
-          {"School Name" |> str}
+          {"School Name"->str}
         </label>
         <input
           type_="text"
@@ -85,15 +85,15 @@ let make = (~name, ~about, ~updateDetailsCB) => {
         />
         <School__InputGroupError
           message="name should be greater than 2 characters in length"
-          active={state.name |> String.length < 2}
+          active={state.name->String.length < 2}
         />
       </div>
       <div className="mt-3">
         <label
           className="inline-block tracking-wide text-xs font-semibold"
           htmlFor="details-editor__about">
-          {"About" |> str}
-          <span className="font-normal"> {" (Maximum 500 characters)" |> str} </span>
+          {"About"->str}
+          <span className="font-normal"> {" (Maximum 500 characters)"->str} </span>
         </label>
         <textarea
           maxLength=500
@@ -110,7 +110,7 @@ let make = (~name, ~about, ~updateDetailsCB) => {
         onClick={_ => updateSchoolQuery(state, send, updateDetailsCB)}
         disabled={updateButtonDisabled(state)}
         className="w-full bg-indigo-600 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded focus:outline-none mt-3">
-        {updateButtonText(state.saving) |> str}
+        {updateButtonText(state.saving)->str}
       </button>
     </DisablingCover>
   </div>

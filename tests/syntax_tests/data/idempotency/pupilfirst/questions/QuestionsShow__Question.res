@@ -11,13 +11,13 @@ type t = {
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    title: json |> field("title", string),
-    description: json |> field("description", string),
-    creatorId: json |> field("creatorId", string),
-    editorId: json |> field("editorId", nullable(string)) |> Js.Null.toOption,
-    createdAt: json |> field("createdAt", string),
-    updatedAt: json |> field("updatedAt", string),
+    id: json->field("id", string),
+    title: json->field("title", string),
+    description: json->field("description", string),
+    creatorId: json->field("creatorId", string),
+    editorId: json->field("editorId", nullable(string))->Js.Null.toOption,
+    createdAt: json->field("createdAt", string),
+    updatedAt: json->field("updatedAt", string),
   }
 }
 

@@ -127,10 +127,10 @@ module Impl = (
     selectionDirection,
     element,
   ) =>
-    element |> setSelectionRangeWithDirection_(
+    element->setSelectionRangeWithDirection_(
       selectionStart,
       selectionEnd,
-      selectionDirection |> SelectionDirection.toString,
+      selectionDirection->SelectionDirection.toString,
     )
 
   module SelectionMode = {
@@ -156,11 +156,11 @@ module Impl = (
     selectionMode,
     element,
   ) =>
-    element |> setRangeTextWithinIntervalWithSelectionMode_(
+    element->setRangeTextWithinIntervalWithSelectionMode_(
       text,
       selectionStart,
       selectionEnd,
-      selectionMode |> SelectionMode.toString,
+      selectionMode->SelectionMode.toString,
     )
 
 }

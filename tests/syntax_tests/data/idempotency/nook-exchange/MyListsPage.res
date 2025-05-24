@@ -63,14 +63,14 @@ module WithViewer = {
           let json = Fetch.Response.json(Belt.Result.getExn(response))
           let lists = {
             open Json.Decode
-            json |> array(json => {
-              id: json |> field("id", string),
-              createTime: json |> field("createTime", date),
-              itemIds: json |> field("itemIds", array(tuple2(int, int))),
-              title: (json |> optional(field("title", string)))
+            json->array(json => {
+              id: json->field("id", string),
+              createTime: json->field("createTime", date),
+              itemIds: json->field("itemIds", array(tuple2(int, int))),
+              title: (json->optional(field("title", string)))
                 ->Belt.Option.flatMap(title => title == "" ? None : Some(title)),
             })
-          } |> Js.Array.sortInPlaceWith((a, b) =>
+          }->Js.Array.sortInPlaceWith((a, b) =>
             int_of_float({
               open Js.Date
               getTime(b.createTime) -. getTime(a.createTime)
@@ -83,7 +83,7 @@ module WithViewer = {
           )
           Promise.resolved()
         })
-      }) |> ignore
+      })->ignore
       None
     })
     <div className=Styles.root>
@@ -117,7 +117,7 @@ module WithViewer = {
         <div>
           <div className=Styles.body>
             {lists
-            |> Js.Array.map(list =>
+            ->Js.Array.map(list =>
               <Link path={"/l/" ++ list.id} className=Styles.listItem key=list.id>
                 <div className=Styles.listTitleRow>
                   <div className=Styles.listTitle>
@@ -137,8 +137,8 @@ module WithViewer = {
                 </div>
                 <div className=Styles.listItemImages>
                   {list.itemIds
-                  |> Js.Array.slice(~start=0, ~end_=8)
-                  |> Js.Array.mapi(((itemId, variant), i) => {
+                  ->Js.Array.slice(~start=0, ~end_=8)
+                  ->Js.Array.mapi(((itemId, variant), i) => {
                     let item = Item.getItem(~itemId)
                     <img
                       src={Item.getImageUrl(~item, ~variant)}
@@ -146,11 +146,11 @@ module WithViewer = {
                       key={string_of_int(i)}
                     />
                   })
-                  |> React.array}
+                  ->React.array}
                 </div>
               </Link>
             )
-            |> React.array}
+            ->React.array}
             {if Js.Array.length(lists) == 0 {
               <div className=Styles.noLists>
                 {React.string("You have no custom lists. ")}

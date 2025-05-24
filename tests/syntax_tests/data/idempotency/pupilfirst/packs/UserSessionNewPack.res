@@ -8,10 +8,10 @@ type props = {
 let decodeProps = json => {
   open Json.Decode
   {
-    schoolName: json |> field("schoolName", string),
-    authenticityToken: json |> field("authenticityToken", string),
-    fqdn: json |> field("fqdn", string),
-    oauthHost: json |> field("oauthHost", string),
+    schoolName: json->field("schoolName", string),
+    authenticityToken: json->field("authenticityToken", string),
+    fqdn: json->field("fqdn", string),
+    oauthHost: json->field("oauthHost", string),
   }
 }
 
@@ -20,7 +20,7 @@ let props =
     ~id="user-session-new",
     ~attribute="data-json-props",
     (),
-  ) |> decodeProps
+  )->decodeProps
 
 ReactDOMRe.renderToElementWithId(
   <UserSessionNew

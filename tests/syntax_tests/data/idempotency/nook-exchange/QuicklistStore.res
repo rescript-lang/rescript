@@ -62,7 +62,7 @@ let startList = () => {
     ~eventProperties={
       "path": {
         open Webapi.Dom
-        location |> Location.pathname
+        location->Location.pathname
       },
       "isLoggedIn": UserStore.isLoggedIn(),
       "isViewingSelf": switch UserStore.getUserOption() {
@@ -117,7 +117,7 @@ let saveList = () => {
       let response = Belt.Result.getExn(responseResult)
       %Repromise.JsExn({
         let json = Fetch.Response.json(response)
-        let listId = json |> {
+        let listId = json->{
           open Json.Decode
           field("id", string)
         }
@@ -140,7 +140,7 @@ let addItem = (~itemId, ~variant) => {
   switch api.getState() {
   | Some(quicklist) =>
     switch quicklist.id {
-    | Some(_listId) => saveList() |> ignore
+    | Some(_listId) => saveList()->ignore
     | None =>
       if !hasLoggedItemAdd.contents {
         Analytics.Amplitude.logEventWithProperties(
@@ -160,7 +160,7 @@ let removeItem = (~itemId, ~variant) => {
   switch api.getState() {
   | Some(quicklist) =>
     switch quicklist.id {
-    | Some(_listId) => saveList() |> ignore
+    | Some(_listId) => saveList()->ignore
     | None =>
       if !hasLoggedItemRemove.contents {
         Analytics.Amplitude.logEventWithProperties(

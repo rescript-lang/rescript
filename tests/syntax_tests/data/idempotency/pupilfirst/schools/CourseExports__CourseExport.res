@@ -32,26 +32,26 @@ let filePath = file => file.path
 let decodeFile = json => {
   open Json.Decode
   {
-    path: json |> field("path", string),
-    createdAt: json |> field("createdAt", string),
+    path: json->field("path", string),
+    createdAt: json->field("createdAt", string),
   }
 }
 
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    createdAt: json |> field("createdAt", string),
-    file: json |> field("file", nullable(decodeFile)) |> Js.Null.toOption,
-    tags: json |> field("tags", array(string)),
-    exportType: switch json |> field("exportType", string) {
+    id: json->field("id", string),
+    createdAt: json->field("createdAt", string),
+    file: json->field("file", nullable(decodeFile))->Js.Null.toOption,
+    tags: json->field("tags", array(string)),
+    exportType: switch json->field("exportType", string) {
     | "Students" => Students
     | "Teams" => Teams
     | otherExportType =>
       Rollbar.error("Unexpected exportType encountered: " ++ otherExportType)
       raise(UnexpectedExportType(otherExportType))
     },
-    reviewedOnly: json |> field("reviewedOnly", bool),
+    reviewedOnly: json->field("reviewedOnly", bool),
   }
 }
 

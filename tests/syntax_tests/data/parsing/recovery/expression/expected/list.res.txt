@@ -37,7 +37,7 @@ let flags =
                 ((Belt.Array.concatMany)[@res.spread ]) [|[|x|];(loop rest)|]
             | [||] -> [||])
           [@res.braces ]) in
-        String.concat {js| |js} (loop parts))
+        (loop parts) -> (String.concat {js| |js}))
       [@res.braces ])
     else flags)
   [@res.ternary ])

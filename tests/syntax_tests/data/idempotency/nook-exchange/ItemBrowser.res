@@ -51,7 +51,7 @@ module Styles = {
 
 let getNumResultsPerPage = () => {
   open Webapi.Dom
-  let windowWidth = window |> Window.innerWidth
+  let windowWidth = window->Window.innerWidth
   if windowWidth >= 1520 {
     50
   } else if windowWidth >= 1200 {
@@ -105,7 +105,7 @@ let make = (~showLogin, ~url: ReasonReactRouter.url) => {
     )
     ReasonReactRouter.push(getUrl(~url, ~urlSearchParams))
   }
-  let excludeString = filters.exclude |> Js.Array.joinWith(",")
+  let excludeString = filters.exclude->Js.Array.joinWith(",")
   let excludeUserItemIds = React.useMemo2(() =>
     if isLoggedIn && Js.Array.length(filters.exclude) > 0 {
       let userItems = UserStore.getUser().items
@@ -115,13 +115,13 @@ let make = (~showLogin, ~url: ReasonReactRouter.url) => {
       ->Belt.Array.forEach(((itemKey, userItem)) =>
         if (
           switch userItem.status {
-          | Wishlist => filters.exclude |> Js.Array.includes(ItemFilters.Wishlist)
+          | Wishlist => filters.exclude->Js.Array.includes(ItemFilters.Wishlist)
           | CanCraft =>
-            filters.exclude |> Js.Array.includes(ItemFilters.Catalog) ||
-              filters.exclude |> Js.Array.includes(ItemFilters.CanCraft)
+            filters.exclude->Js.Array.includes(ItemFilters.Catalog) ||
+              filters.exclude->Js.Array.includes(ItemFilters.CanCraft)
           | CatalogOnly
           | ForTrade =>
-            filters.exclude |> Js.Array.includes(ItemFilters.Catalog)
+            filters.exclude->Js.Array.includes(ItemFilters.Catalog)
           }
         ) {
           let (itemId, variant) = User.fromItemKey(~key=itemKey)->Belt.Option.getExn
@@ -132,7 +132,7 @@ let make = (~showLogin, ~url: ReasonReactRouter.url) => {
             userItemMap->Js.Dict.set(string_of_int(itemId), list)
             list
           }
-          itemVariantList |> Js.Array.push(variant) |> ignore
+          itemVariantList->Js.Array.push(variant)->ignore
         }
       )
       userItemMap
@@ -160,7 +160,7 @@ let make = (~showLogin, ~url: ReasonReactRouter.url) => {
           Js.Array.includes(Item.getItemIdForRecipe(~recipe=item), excludeUserItemIds))
         ) &&
         ItemFilters.doesItemMatchFilters(~item, ~filters)
-      ) |> Js.Array.sortInPlaceWith(ItemFilters.getSort(~sort=filters.sort)),
+      )->Js.Array.sortInPlaceWith(ItemFilters.getSort(~sort=filters.sort)),
     (filters, excludeUserItemIds),
   )
   let numResults = filteredItems->Belt.Array.length
@@ -169,12 +169,12 @@ let make = (~showLogin, ~url: ReasonReactRouter.url) => {
   React.useEffect1(() => {
     open Webapi.Dom
     if React.Ref.current(isInitialLoadRef) {
-      window |> Window.scrollTo(0., 0.)
+      window->Window.scrollTo(0., 0.)
       React.Ref.setCurrent(isInitialLoadRef, false)
     } else {
       let rootElement = Utils.getElementForDomRef(rootRef)
       let boundingRect = Element.getBoundingClientRect(rootElement)
-      window |> Window.scrollBy(
+      window->Window.scrollBy(
         0.,
         DomRect.top(boundingRect) -. float_of_int(Constants.headerHeight),
       )

@@ -40,7 +40,7 @@ let user = makeJsUser({
 let x = @attr callFunction()
 let x = @attrWithLongName @attrWithLongName @attrWithLongName @attrWithLongName callFunction()
 
-(a |> f)(b, c)
+(a->f)(b, c)
 
 call(~a: int)
 call(~\"let": int)

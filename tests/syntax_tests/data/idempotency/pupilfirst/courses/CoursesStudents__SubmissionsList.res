@@ -38,8 +38,8 @@ let updateStudentSubmissions = (
   let updatedSubmissions = Array.append(
     switch nodes {
     | None => []
-    | Some(submissionsArray) => submissionsArray |> Submission.makeFromJs
-    } |> ArrayUtils.flatten,
+    | Some(submissionsArray) => submissionsArray->Submission.makeFromJs
+    }->ArrayUtils.flatten,
     submissions,
   )
 
@@ -60,9 +60,9 @@ let getStudentSubmissions = (studentId, cursor, setState, submissions, updateSub
   | Some(cursor) => StudentSubmissionsQuery.make(~studentId, ~after=cursor, ())
   | None => StudentSubmissionsQuery.make(~studentId, ())
   }
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
-    response["studentSubmissions"]["nodes"] |> updateStudentSubmissions(
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
+    response["studentSubmissions"]["nodes"]->updateStudentSubmissions(
       setState,
       updateSubmissionsCB,
       response["studentSubmissions"]["pageInfo"]["endCursor"],
@@ -71,70 +71,70 @@ let getStudentSubmissions = (studentId, cursor, setState, submissions, updateSub
     )
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let showSubmissionStatus = failed =>
   failed
     ? <div
         className="bg-red-100 border border-red-500 flex-shrink-0 leading-normal text-red-800 font-semibold px-3 py-px rounded">
-        {"Failed" |> str}
+        {"Failed"->str}
       </div>
     : <div
         className="bg-green-100 border border-green-500 flex-shrink-0 leading-normal text-green-800 font-semibold px-3 py-px rounded">
-        {"Passed" |> str}
+        {"Passed"->str}
       </div>
 
 let submissionCardClasses = submission =>
   "flex flex-col md:flex-row items-start md:items-center justify-between bg-white border-l-3 p-3 md:py-6 md:px-5 mt-4 cursor-pointer rounded-r-lg shadow hover:border-primary-500 hover:text-primary-500 hover:shadow-md " ++ (
-    submission |> Submission.failed ? "border-red-500" : "border-green-500"
+    submission->Submission.failed ? "border-red-500" : "border-green-500"
   )
 
 let showSubmission = (submissions, levels) =>
   <div>
     {submissions
-    |> Submission.sort
-    |> Array.map(submission =>
+    ->Submission.sort
+    ->Array.map(submission =>
       <a
-        key={submission |> Submission.id}
-        href={"/submissions/" ++ (submission |> Submission.id)}
+        key={submission->Submission.id}
+        href={"/submissions/" ++ (submission->Submission.id)}
         target="_blank">
         <div
-          key={submission |> Submission.id}
-          ariaLabel={"student-submission-card-" ++ (submission |> Submission.id)}
+          key={submission->Submission.id}
+          ariaLabel={"student-submission-card-" ++ (submission->Submission.id)}
           className={submissionCardClasses(submission)}>
           <div className="w-full md:w-3/4">
             <div className="block text-sm md:pr-2">
               <span className="bg-gray-300 text-xs font-semibold px-2 py-px rounded">
                 {submission
-                |> Submission.levelId
-                |> Level.unsafeLevelNumber(levels, "StudentSubmissionsList")
-                |> str}
+                ->Submission.levelId
+                ->Level.unsafeLevelNumber(levels, "StudentSubmissionsList")
+                ->str}
               </span>
               <span className="ml-2 font-semibold text-base">
-                {submission |> Submission.title |> str}
+                {submission->Submission.title->str}
               </span>
             </div>
             <div className="mt-1 ml-px text-xs text-gray-900">
               <span className="ml-1">
-                {"Submitted on " ++ (submission |> Submission.createdAtPretty) |> str}
+                {"Submitted on " ++ (submission->Submission.createdAtPretty)->str}
               </span>
             </div>
           </div>
           <div className="w-auto md:w-1/4 text-xs flex justify-end mt-2 md:mt-0">
-            {showSubmissionStatus(submission |> Submission.failed)}
+            {showSubmissionStatus(submission->Submission.failed)}
           </div>
         </div>
       </a>
     )
-    |> React.array}
+    ->React.array}
   </div>
 
 let showSubmissions = (submissions, levels) =>
-  submissions |> ArrayUtils.isEmpty
+  submissions->ArrayUtils.isEmpty
     ? <div className="course-review__reviewed-empty text-lg font-semibold text-center py-4">
         <h5 className="py-4 mt-4 bg-gray-200 text-gray-800 font-semibold">
-          {"No Reviewed Submission" |> str}
+          {"No Reviewed Submission"->str}
         </h5>
         <img className="w-3/4 md:w-1/2 mx-auto mt-2" src=reviewedEmptyImage />
       </div>
@@ -170,7 +170,7 @@ let make = (~studentId, ~levels, ~submissions, ~updateSubmissionsCB) => {
                   submissions,
                   updateSubmissionsCB,
                 )}>
-              {"Load More..." |> str}
+              {"Load More..."->str}
             </button>}
       </div>
     | FullyLoaded(submissions) => showSubmissions(submissions, levels)

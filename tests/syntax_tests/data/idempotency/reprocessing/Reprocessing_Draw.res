@@ -11,8 +11,8 @@ open Reprocessing_Common
  * [@val] external containerDiv: 'node = \"\";
  * [@send] external addEventListener: ('node, string, 'eventT => unit) => unit = \"addEventListener\";
  * let id = sandboxCanvasId;
- * addEventListener(containerDiv, \"mouseleave\", (_) => Reprocessing.playPause(id, false) |> ignore);
- * addEventListener(containerDiv, \"mouseenter\", (_) => Reprocessing.playPause(id, true) |> ignore);
+ * addEventListener(containerDiv, \"mouseleave\", (_) => Reprocessing.playPause(id, false)->ignore);
+ * addEventListener(containerDiv, \"mouseenter\", (_) => Reprocessing.playPause(id, true)->ignore);
  * Reprocessing.setScreenId(sandboxCanvasId);
  * ```
  *

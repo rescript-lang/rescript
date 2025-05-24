@@ -83,7 +83,7 @@ let reducer = (state, action) =>
   | UpdateFilterString(filterString) => {...state, filterString: filterString}
   | LoadTeams(endCursor, hasNextPage, newTeams) =>
     let updatedTeams = switch state.loading {
-    | LoadingMore => newTeams |> Array.append(state.teams |> Teams.toArray)
+    | LoadingMore => newTeams->Array.append(state.teams->Teams.toArray)
     | Reloading => newTeams
     | NotLoading => newTeams
     }
@@ -127,15 +127,15 @@ module TeamsQuery = %graphql(`
   `)
 
 let getTeams = (send, courseId, cursor, filter) => {
-  let levelId = filter.level |> OptionUtils.map(Level.id)
-  let coachId = filter.coach |> OptionUtils.map(Coach.id)
+  let levelId = filter.level->OptionUtils.map(Level.id)
+  let coachId = filter.coach->OptionUtils.map(Coach.id)
 
   TeamsQuery.make(~courseId, ~after=?cursor, ~levelId?, ~coachId?, ~search=?filter.nameOrEmail, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
     let newTeams = switch response["teams"]["nodes"] {
     | None => []
-    | Some(teamsArray) => teamsArray |> TeamInfo.makeArrayFromJs
+    | Some(teamsArray) => teamsArray->TeamInfo.makeArrayFromJs
     }
 
     send(
@@ -148,10 +148,10 @@ let getTeams = (send, courseId, cursor, filter) => {
 
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
-let applicableLevels = levels => levels |> Js.Array.filter(level => Level.number(level) != 0)
+let applicableLevels = levels => levels->Js.Array.filter(level => Level.number(level) != 0)
 
 module Selectable = {
   type t =
@@ -161,28 +161,28 @@ module Selectable = {
 
   let label = t =>
     switch t {
-    | Level(level) => Some("Level " ++ (level |> Level.number |> string_of_int))
+    | Level(level) => Some("Level " ++ (level->Level.number->string_of_int))
     | AssignedToCoach(_) => Some("Assigned to")
     | NameOrEmail(_) => Some("Name or Email")
     }
 
   let value = t =>
     switch t {
-    | Level(level) => level |> Level.name
+    | Level(level) => level->Level.name
     | AssignedToCoach(coach, currentCoachId) =>
-      coach |> Coach.id == currentCoachId ? "Me" : coach |> Coach.name
+      coach->Coach.id == currentCoachId ? "Me" : coach->Coach.name
     | NameOrEmail(search) => search
     }
 
   let searchString = t =>
     switch t {
     | Level(level) =>
-      "level " ++ ((level |> Level.number |> string_of_int) ++ (" " ++ (level |> Level.name)))
+      "level " ++ ((level->Level.number->string_of_int) ++ (" " ++ (level->Level.name)))
     | AssignedToCoach(coach, currentCoachId) =>
-      if coach |> Coach.id == currentCoachId {
-        (coach |> Coach.name) ++ " assigned to me"
+      if coach->Coach.id == currentCoachId {
+        (coach->Coach.name) ++ " assigned to me"
       } else {
-        "assigned to " ++ (coach |> Coach.name)
+        "assigned to " ++ (coach->Coach.name)
       }
     | NameOrEmail(search) => search
     }
@@ -198,50 +198,50 @@ module Multiselect = MultiselectDropdown.Make(Selectable)
 let unselected = (levels, coaches, currentCoachId, state) => {
   let unselectedLevels =
     levels
-    |> Js.Array.filter(level =>
-      state.filter.level |> OptionUtils.mapWithDefault(
-        selectedLevel => level |> Level.id != (selectedLevel |> Level.id),
+    ->Js.Array.filter(level =>
+      state.filter.level->OptionUtils.mapWithDefault(
+        selectedLevel => level->Level.id != (selectedLevel->Level.id),
         true,
       )
     )
-    |> Array.map(Selectable.level)
+    ->Array.map(Selectable.level)
 
   let unselectedCoaches =
     coaches
-    |> Js.Array.filter(coach =>
-      state.filter.coach |> OptionUtils.mapWithDefault(
-        selectedCoach => coach |> Coach.id != Coach.id(selectedCoach),
+    ->Js.Array.filter(coach =>
+      state.filter.coach->OptionUtils.mapWithDefault(
+        selectedCoach => coach->Coach.id != Coach.id(selectedCoach),
         true,
       )
     )
-    |> Array.map(coach => Selectable.assignedToCoach(coach, currentCoachId))
+    ->Array.map(coach => Selectable.assignedToCoach(coach, currentCoachId))
 
-  let trimmedFilterString = state.filterString |> String.trim
+  let trimmedFilterString = state.filterString->String.trim
   let nameOrEmail = trimmedFilterString == "" ? [] : [Selectable.nameOrEmail(trimmedFilterString)]
 
-  unselectedLevels |> Array.append(unselectedCoaches) |> Array.append(nameOrEmail)
+  unselectedLevels->Array.append(unselectedCoaches)->Array.append(nameOrEmail)
 }
 
 let selected = (state, currentCoachId) => {
   let selectedLevel =
-    state.filter.level |> OptionUtils.mapWithDefault(
+    state.filter.level->OptionUtils.mapWithDefault(
       selectedLevel => [Selectable.level(selectedLevel)],
       [],
     )
 
   let selectedCoach =
-    state.filter.coach |> OptionUtils.mapWithDefault(
+    state.filter.coach->OptionUtils.mapWithDefault(
       selectedCoach => [Selectable.assignedToCoach(selectedCoach, currentCoachId)],
       [],
     )
 
   let selectedSearchString =
-    state.filter.nameOrEmail |> OptionUtils.mapWithDefault(
+    state.filter.nameOrEmail->OptionUtils.mapWithDefault(
       nameOrEmail => [Selectable.nameOrEmail(nameOrEmail)],
       [],
     )
 
-  selectedLevel |> Array.append(selectedCoach) |> Array.append(selectedSearchString)
+  selectedLevel->Array.append(selectedCoach)->Array.append(selectedSearchString)
 }
 
 let onSelectFilter = (send, selectable) =>
@@ -267,24 +267,24 @@ let filterPlaceholder = state =>
 let restoreFilterNotice = (send, currentCoach, message) =>
   <div
     className="mt-2 text-sm italic flex flex-col md:flex-row items-center justify-between p-3 border border-gray-300 bg-white rounded-lg">
-    <span> {message |> str} </span>
+    <span> {message->str} </span>
     <button
       className="px-2 py-1 rounded text-xs overflow-hidden border border-gray-300 bg-gray-200 text-gray-800 border-gray-300 bg-gray-200 hover:bg-gray-300 mt-1 md:mt-0"
       onClick={_ => send(SelectCoach(currentCoach))}>
-      {"Assigned to: Me" |> str} <i className="fas fa-level-up-alt ml-2" />
+      {"Assigned to: Me"->str} <i className="fas fa-level-up-alt ml-2" />
     </button>
   </div>
 
 let restoreAssignedToMeFilter = (state, send, currentTeamCoach) =>
-  currentTeamCoach |> OptionUtils.mapWithDefault(currentCoach =>
+  currentTeamCoach->OptionUtils.mapWithDefault(currentCoach =>
     switch state.filter.coach {
     | None => restoreFilterNotice(send, currentCoach, "Now showing all students in this course.")
-    | Some(selectedCoach) if selectedCoach |> Coach.id == Coach.id(currentCoach) => React.null
+    | Some(selectedCoach) if selectedCoach->Coach.id == Coach.id(currentCoach) => React.null
     | Some(selectedCoach) =>
       restoreFilterNotice(
         send,
         currentCoach,
-        "Now showing students assigned to " ++ ((selectedCoach |> Coach.name) ++ "."),
+        "Now showing students assigned to " ++ ((selectedCoach->Coach.name) ++ "."),
       )
     }
   , React.null)
@@ -303,14 +303,14 @@ let computeInitialState = currentTeamCoach => {
 @react.component
 let make = (~levels, ~course, ~userId, ~teamCoaches, ~currentCoach) => {
   let (currentTeamCoach, _) = React.useState(() =>
-    teamCoaches->Belt.Array.some(coach => coach |> Coach.id == (currentCoach |> Coach.id))
+    teamCoaches->Belt.Array.some(coach => coach->Coach.id == (currentCoach->Coach.id))
       ? Some(currentCoach)
       : None
   )
 
   let (state, send) = React.useReducerWithMapState(reducer, currentTeamCoach, computeInitialState)
 
-  let courseId = course |> Course.id
+  let courseId = course->Course.id
 
   let url = ReasonReactRouter.useUrl()
 
@@ -335,8 +335,8 @@ let make = (~levels, ~course, ~userId, ~teamCoaches, ~currentCoach) => {
         <div className="max-w-3xl mx-auto bg-gray-100 sticky md:static md:top-0">
           <Multiselect
             id="filter"
-            unselected={unselected(levels, teamCoaches, currentCoach |> Coach.id, state)}
-            selected={selected(state, currentCoach |> Coach.id)}
+            unselected={unselected(levels, teamCoaches, currentCoach->Coach.id, state)}
+            selected={selected(state, currentCoach->Coach.id)}
             onSelect={onSelectFilter(send)}
             onDeselect={onDeselectFilter(send)}
             value=state.filterString
@@ -361,7 +361,7 @@ let make = (~levels, ~course, ~userId, ~teamCoaches, ~currentCoach) => {
                   send(BeginLoadingMore)
                   getTeams(send, courseId, Some(cursor), state.filter)
                 }}>
-                {"Load More..." |> str}
+                {"Load More..."->str}
               </button>
             | Reloading => React.null
             }}

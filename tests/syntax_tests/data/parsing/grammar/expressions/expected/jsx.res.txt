@@ -289,15 +289,15 @@ let _ = <div callback=((reduce (fun [arity:1]() -> not state))
   [@res.braces ]) />
 let _ =
   <button ?id className=((Cn.make [|{js|button|js};{js|is-fullwidth|js}|])
-  [@res.braces ]) onClick>((ste {js|Submit|js})[@res.braces ])</button>
+  [@res.braces ]) onClick>(({js|Submit|js} -> ste)[@res.braces ])</button>
 let _ =
   <button ?id className=((Cn.make [{js|button|js}; {js|is-fullwidth|js}])
-  [@res.braces ]) onClick>((ste {js|Submit|js})[@res.braces ])</button>
+  [@res.braces ]) onClick>(({js|Submit|js} -> ste)[@res.braces ])</button>
 let _ =
   <button ?id className=((Cn.make ({js|button|js}, {js|is-fullwidth|js}))
-  [@res.braces ]) onClick>((ste {js|Submit|js})[@res.braces ])</button>
+  [@res.braces ]) onClick>(({js|Submit|js} -> ste)[@res.braces ])</button>
 let _ = <button ?id className=((Cn.make { a = b })
-  [@res.braces ]) onClick>((ste {js|Submit|js})[@res.braces ])</button>
+  [@res.braces ]) onClick>(({js|Submit|js} -> ste)[@res.braces ])</button>
 let _ = <X y=((z -> (Belt.Option.getWithDefault {js||js}))[@res.braces ]) />
 let _ = <div style=((getStyle ())
   [@res.braces ])>((ReasonReact.string {js|BugTest|js})[@res.braces ])</div>
@@ -313,16 +313,19 @@ let _ =
                                                 <Image resizeMode=Contain style=(
                                                   styles#backgroundImage) uri />)
   [@res.braces ])</View>
-;;<div>((ReasonReact.array
-           (Array.of_list
-              (List.map
-                 (fun [arity:1]possibleGradeValue ->
-                    <option key=((string_of_int possibleGradeValue)
-                    [@res.braces ]) value=((string_of_int possibleGradeValue)
-                    [@res.braces ])>((str (string_of_int possibleGradeValue))
-                    [@res.braces ])</option>)
-                 (List.filter (fun [arity:1]g -> g <= state.maxGrade)
-                    possibleGradeValues))))[@res.braces ])</div>
+;;<div>(((((possibleGradeValues ->
+              (List.filter (fun [arity:1]g -> g <= state.maxGrade)))
+             ->
+             (List.map
+                (fun [arity:1]possibleGradeValue ->
+                   <option key=((possibleGradeValue -> string_of_int)
+                   [@res.braces ]) value=((possibleGradeValue ->
+                                             string_of_int)
+                   [@res.braces ])>(((possibleGradeValue -> string_of_int) ->
+                                       str)
+                   [@res.braces ])</option>)))
+            -> Array.of_list)
+           -> ReasonReact.array)[@res.braces ])</div>
 ;;<div>((Js.log (a <= 10))[@res.braces ])</div>
 ;;<div><div>((Js.log (a <= 10))[@res.braces ])</div></div>
 ;;<div><div onClick=((fun [arity:1]_ -> Js.log (a <= 10))

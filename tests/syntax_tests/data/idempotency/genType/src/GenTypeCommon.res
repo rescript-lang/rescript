@@ -28,12 +28,12 @@ type labelJS =
   | StringLabel(string)
 
 let labelJSToString = (~alwaysQuotes=false, labelJS) => {
-  let addQuotes = x => alwaysQuotes ? x |> EmitText.quotes : x
+  let addQuotes = x => alwaysQuotes ? x->EmitText.quotes : x
   switch labelJS {
-  | BoolLabel(b) => b |> string_of_bool |> addQuotes
-  | FloatLabel(s) => s |> addQuotes
-  | IntLabel(i) => i |> addQuotes
-  | StringLabel(s) => s |> EmitText.quotes
+  | BoolLabel(b) => b->string_of_bool->addQuotes
+  | FloatLabel(s) => s->addQuotes
+  | IntLabel(i) => i->addQuotes
+  | StringLabel(s) => s->EmitText.quotes
   }
 }
 
@@ -158,14 +158,14 @@ module ScopedPackage = {
   // @demo/some-library -> DemoSomelibrary
   let packageNameToGeneratedModuleName = packageName =>
     if String.contains(packageName, '/') {
-      Some(packageName |> namespace_of_package_name)
+      Some(packageName->namespace_of_package_name)
     } else {
       None
     }
 
   let isGeneratedModule = (id, ~config) =>
-    config.bsDependencies |> List.exists(packageName =>
-      packageName |> packageNameToGeneratedModuleName == Some(id |> Ident.name)
+    config.bsDependencies->List.exists(packageName =>
+      packageName->packageNameToGeneratedModuleName == Some(id->Ident.name)
     )
 
   // (Common, DemoSomelibrary) -> Common-DemoSomelibrary
@@ -173,7 +173,7 @@ module ScopedPackage = {
 
   // Common-DemoSomelibrary -> Common
   let removeGeneratedModule = s =>
-    switch s |> String.split_on_char('-') {
+    switch s->String.split_on_char('-') {
     | list{name, _scope} => name
     | _ => s
     }
@@ -181,21 +181,21 @@ module ScopedPackage = {
 
 let rec depToString = dep =>
   switch dep {
-  | External(name) => name |> ScopedPackage.removeGeneratedModule
-  | Internal(resolvedName) => resolvedName |> ResolvedName.toString
+  | External(name) => name->ScopedPackage.removeGeneratedModule
+  | Internal(resolvedName) => resolvedName->ResolvedName.toString
   | Dot(d, s) => depToString(d) ++ ("_" ++ s)
   }
 
 let rec depToResolvedName = (dep: dep) =>
   switch dep {
-  | External(name) => name |> ResolvedName.fromString
+  | External(name) => name->ResolvedName.fromString
   | Internal(resolvedName) => resolvedName
-  | Dot(p, s) => ResolvedName.dot(s, p |> depToResolvedName)
+  | Dot(p, s) => ResolvedName.dot(s, p->depToResolvedName)
   }
 
 let createVariant = (~noPayloads, ~payloads, ~polymorphic) => {
   let hash =
-    noPayloads |> List.map(case => (case.label, case.labelJS)) |> Array.of_list |> Hashtbl.hash
+    noPayloads->List.map(case => (case.label, case.labelJS))->Array.of_list->Hashtbl.hash
 
   let unboxed = payloads == list{}
   Variant({
@@ -247,7 +247,7 @@ module NodeFilename = {
 
     let normalize = (path): t =>
       switch Sys.os_type {
-      | "Win32" => path |> Str.split(Str.regexp("\\")) |> String.concat(dirSep)
+      | "Win32" => path->Str.split(Str.regexp("\\"))->String.concat(dirSep)
       | _ => path
       }
 
@@ -270,6 +270,6 @@ module NodeFilename = {
 
   let concat = (dirname: string, filename) => {
     open Path
-    Path.concat(normalize(dirname), filename) |> toString
+    Path.concat(normalize(dirname), filename)->toString
   }
 }

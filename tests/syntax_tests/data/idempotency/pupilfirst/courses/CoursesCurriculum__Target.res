@@ -18,18 +18,18 @@ type t = {
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    role: switch json |> field("role", string) {
+    id: json->field("id", string),
+    role: switch json->field("role", string) {
     | "student" => Student
     | "team" => Team
     | unknownRole => raise(CannotParseUnknownRole(unknownRole))
     },
-    title: json |> field("title", string),
-    targetGroupId: json |> field("targetGroupId", string),
-    sortIndex: json |> field("sortIndex", int),
-    resubmittable: json |> field("resubmittable", bool),
-    prerequisiteTargetIds: json |> field("prerequisiteTargetIds", list(string)),
-    reviewed: json |> field("reviewed", bool),
+    title: json->field("title", string),
+    targetGroupId: json->field("targetGroupId", string),
+    sortIndex: json->field("sortIndex", int),
+    resubmittable: json->field("resubmittable", bool),
+    prerequisiteTargetIds: json->field("prerequisiteTargetIds", list(string)),
+    reviewed: json->field("reviewed", bool),
   }
 }
 

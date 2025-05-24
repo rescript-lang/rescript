@@ -97,9 +97,9 @@ let controlIcon = (~icon, ~title, ~color, ~handler) => {
 
 let onMove = (contentBlock, cb, direction, _event) => {
   // We don't actually handle the response for this query.
-  MoveContentBlockMutation.make(~id=contentBlock |> ContentBlock.id, ~direction, ())
-  |> GraphqlQuery.sendQuery
-  |> ignore
+  MoveContentBlockMutation.make(~id=contentBlock->ContentBlock.id, ~direction, ())
+  ->GraphqlQuery.sendQuery
+  ->ignore
 
   cb(contentBlock)
 }
@@ -107,11 +107,11 @@ let onMove = (contentBlock, cb, direction, _event) => {
 let onDelete = (contentBlock, removeContentBlockCB, send, _event) =>
   WindowUtils.confirm("Are you sure you want to delete this block?", () => {
     send(StartSaving("Deleting..."))
-    let id = contentBlock |> ContentBlock.id
+    let id = contentBlock->ContentBlock.id
 
     DeleteContentBlockMutation.make(~id, ())
-    |> GraphqlQuery.sendQuery
-    |> Js.Promise.then_(result => {
+    ->GraphqlQuery.sendQuery
+    ->Js.Promise.then_(result => {
       if result["deleteContentBlock"]["success"] {
         removeContentBlockCB(id)
       } else {
@@ -120,15 +120,15 @@ let onDelete = (contentBlock, removeContentBlockCB, send, _event) =>
 
       Js.Promise.resolve()
     })
-    |> Js.Promise.catch(_error => {
+    ->Js.Promise.catch(_error => {
       send(FinishSaving)
       Js.Promise.resolve()
     })
-    |> ignore
+    ->ignore
   })
 
 let onUndo = (originalContentBlock, setDirtyCB, send, event) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
 
   WindowUtils.confirm("Are you sure you want to undo your changes to this block?", () => {
     setDirtyCB(false)
@@ -139,7 +139,7 @@ let onUndo = (originalContentBlock, setDirtyCB, send, event) => {
 let handleUpdateResult = (updateContentBlockCB, setDirtyCB, send, contentBlock) => {
   switch contentBlock {
   | Some(contentBlock) =>
-    contentBlock |> ContentBlock.makeFromJs |> updateContentBlockCB
+    contentBlock->ContentBlock.makeFromJs->updateContentBlockCB
     send(FinishSaving)
     setDirtyCB(false)
   | None => send(FailSaving)
@@ -157,22 +157,22 @@ let updateContentBlockBlock = (
   send(StartSaving("Updating..."))
 
   mutation
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(result =>
-    result |> contentBlockExtractor |> handleUpdateResult(updateContentBlockCB, setDirtyCB, send)
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(result =>
+    result->contentBlockExtractor->handleUpdateResult(updateContentBlockCB, setDirtyCB, send)
   )
-  |> Js.Promise.catch(_error => {
+  ->Js.Promise.catch(_error => {
     send(FinishSaving)
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let onSave = (contentBlock, updateContentBlockCB, setDirtyCB, send, event) => {
-  event |> ReactEvent.Mouse.preventDefault
-  let id = contentBlock |> ContentBlock.id
+  event->ReactEvent.Mouse.preventDefault
+  let id = contentBlock->ContentBlock.id
 
-  switch contentBlock |> ContentBlock.blockType {
+  switch contentBlock->ContentBlock.blockType {
   | ContentBlock.File(_url, title, _filename) =>
     let mutation = UpdateFileBlockMutation.make(~id, ~title, ())
     let extractor = result => result["updateFileBlock"]["contentBlock"]
@@ -202,7 +202,7 @@ let updateContentBlockCB = (originalContentBlock, setDirtyCB, state, send, newCo
 let innerEditor = (originalContentBlock, contentBlock, setDirtyCB, state, send) => {
   let updateContentBlockCB = updateContentBlockCB(originalContentBlock, setDirtyCB, state, send)
 
-  switch contentBlock |> ContentBlock.blockType {
+  switch contentBlock->ContentBlock.blockType {
   | ContentBlock.Embed(_url, embedCode) => TargetContentView.embedContentBlock("", embedCode)
   | Markdown(markdown) =>
     <CurriculumEditor__MarkdownBlockEditor markdown contentBlock updateContentBlockCB />
@@ -227,7 +227,7 @@ let make = (
   <DisablingCover disabled={state.saving != None} message=?state.saving>
     <div
       className="flex items-start"
-      ariaLabel={"Editor for content block " ++ (contentBlock |> ContentBlock.id)}>
+      ariaLabel={"Editor for content block " ++ (contentBlock->ContentBlock.id)}>
       <div className="flex-grow self-stretch">
         {innerEditor(contentBlock, state.contentBlock, setDirtyCB, state, send)}
       </div>
@@ -237,25 +237,25 @@ let make = (
           ~icon="fa-arrow-up",
           ~title="Move Up",
           ~color=#Grey,
-          ~handler=moveContentBlockUpCB |> OptionUtils.map(cb => onMove(contentBlock, cb, #Up)),
+          ~handler=moveContentBlockUpCB->OptionUtils.map(cb => onMove(contentBlock, cb, #Up)),
         )}
         {controlIcon(
           ~icon="fa-arrow-down",
           ~title="Move Down",
           ~color=#Grey,
-          ~handler=moveContentBlockDownCB |> OptionUtils.map(cb => onMove(contentBlock, cb, #Down)),
+          ~handler=moveContentBlockDownCB->OptionUtils.map(cb => onMove(contentBlock, cb, #Down)),
         )}
         {controlIcon(
           ~icon="fa-trash-alt",
           ~title="Delete",
           ~color=#Grey,
-          ~handler=removeContentBlockCB |> OptionUtils.map(cb => onDelete(contentBlock, cb, send)),
+          ~handler=removeContentBlockCB->OptionUtils.map(cb => onDelete(contentBlock, cb, send)),
         )}
         {controlIcon(
           ~icon="fa-undo-alt",
           ~title="Undo Changes",
           ~color=#Grey,
-          ~handler=updateContentBlockCB |> OptionUtils.map(_cb =>
+          ~handler=updateContentBlockCB->OptionUtils.map(_cb =>
             onUndo(contentBlock, setDirtyCB, send)
           ),
         )}
@@ -263,7 +263,7 @@ let make = (
           ~icon="fa-check",
           ~title="Save Changes",
           ~color=#Green,
-          ~handler=updateContentBlockCB |> OptionUtils.map(cb =>
+          ~handler=updateContentBlockCB->OptionUtils.map(cb =>
             onSave(state.contentBlock, cb, setDirtyCB, send)
           ),
         )}

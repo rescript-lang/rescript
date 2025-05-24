@@ -109,25 +109,25 @@ let serializeSort = (~sort, ~defaultSort) =>
 let serialize = (~filters, ~defaultSort, ~pageOffset) => {
   let p = []
   switch serializeSort(~sort=filters.sort, ~defaultSort) {
-  | Some(param) => p |> Js.Array.push(param) |> ignore
+  | Some(param) => p->Js.Array.push(param)->ignore
   | None => ()
   }
   if filters.text != "" {
-    p |> Js.Array.push(("q", filters.text)) |> ignore
+    p->Js.Array.push(("q", filters.text))->ignore
   }
   switch filters.mask {
-  | Some(Orderable) => p |> Js.Array.push(("orderable", "")) |> ignore
-  | Some(NotOrderable) => p |> Js.Array.push(("not-orderable", "")) |> ignore
-  | Some(Craftable) => p |> Js.Array.push(("craftable", "")) |> ignore
+  | Some(Orderable) => p->Js.Array.push(("orderable", ""))->ignore
+  | Some(NotOrderable) => p->Js.Array.push(("not-orderable", ""))->ignore
+  | Some(Craftable) => p->Js.Array.push(("craftable", ""))->ignore
   | None => ()
   }
   switch filters.category {
-  | Some(category) => p |> Js.Array.push(("c", category)) |> ignore
+  | Some(category) => p->Js.Array.push(("c", category))->ignore
   | None => ()
   }
   if Js.Array.length(filters.exclude) > 0 {
     p
-    |> Js.Array.push((
+    ->Js.Array.push((
       "e",
       filters.exclude->Belt.Array.map(exclude =>
         switch exclude {
@@ -135,19 +135,19 @@ let serialize = (~filters, ~defaultSort, ~pageOffset) => {
         | CanCraft => "can-craft"
         | Wishlist => "wishlist"
         }
-      ) |> Js.Array.joinWith(","),
+      )->Js.Array.joinWith(","),
     ))
-    |> ignore
+    ->ignore
   }
   if pageOffset != 0 {
-    p |> Js.Array.push(("p", string_of_int(pageOffset + 1))) |> ignore
+    p->Js.Array.push(("p", string_of_int(pageOffset + 1)))->ignore
   }
   p
 }
 
 let sortFromUrlSearch = (~searchParams, ~defaultSort) => {
   open Webapi.Url.URLSearchParams
-  switch searchParams |> get("s") {
+  switch searchParams->get("s") {
   | Some("abc") => ABC
   | Some("pd") => SellPriceDesc
   | Some("pa") => SellPriceAsc
@@ -163,24 +163,24 @@ let fromUrlSearch = (~urlSearch, ~defaultSort) => {
   let searchParams = make(urlSearch)
   (
     {
-      text: (searchParams |> get("q"))->Option.getWithDefault(""),
-      mask: searchParams |> has("orderable")
+      text: (searchParams->get("q"))->Option.getWithDefault(""),
+      mask: searchParams->has("orderable")
         ? Some(Orderable)
-        : searchParams |> has("craftable")
+        : searchParams->has("craftable")
         ? Some(Craftable)
-        : searchParams |> has("not-orderable")
+        : searchParams->has("not-orderable")
         ? Some(NotOrderable)
         : None,
-      category: Option.flatMap(searchParams |> get("c"), category =>
-        if Item.validCategoryStrings |> Js.Array.includes(category) {
+      category: Option.flatMap(searchParams->get("c"), category =>
+        if Item.validCategoryStrings->Js.Array.includes(category) {
           Some(category)
         } else {
           None
         }
       ),
-      exclude: switch searchParams |> get("e") {
+      exclude: switch searchParams->get("e") {
       | Some(e) =>
-        (e |> Js.String.split(","))
+        (e->Js.String.split(","))
           ->Belt.Array.keepMap(fragment =>
             switch fragment {
             | "wishlist" => Some(Wishlist)
@@ -193,20 +193,20 @@ let fromUrlSearch = (~urlSearch, ~defaultSort) => {
       },
       sort: sortFromUrlSearch(~searchParams, ~defaultSort),
     },
-    Option.map(searchParams |> get("p"), s => int_of_string(s) - 1)->Option.getWithDefault(0),
+    Option.map(searchParams->get("p"), s => int_of_string(s) - 1)->Option.getWithDefault(0),
   )
 }
 
 let doesItemMatchCategory = (~item: Item.t, ~category: string) =>
   switch category {
-  | "furniture" => Item.furnitureCategories |> Js.Array.includes(item.category)
-  | "clothing" => Item.clothingCategories |> Js.Array.includes(item.category)
+  | "furniture" => Item.furnitureCategories->Js.Array.includes(item.category)
+  | "clothing" => Item.clothingCategories->Js.Array.includes(item.category)
   | "recipes" => Item.isRecipe(~item)
   | category => item.category == category
   }
 
 let removeAccents = str =>
-  str |> Js.String.normalizeByForm("NFD") |> Js.String.replaceByRe(/[\u0300-\u036f]/g, "")
+  str->Js.String.normalizeByForm("NFD")->Js.String.replaceByRe(/[\u0300-\u036f]/g, "")
 
 let doesItemMatchFilters = (~item: Item.t, ~filters: t) =>
   switch filters.text {
@@ -218,11 +218,11 @@ let doesItemMatchFilters = (~item: Item.t, ~filters: t) =>
     | None => false
     } || {
       let fragments =
-        (textLower |> Js.String.splitByRe(/[\s-]+/))->Belt.Array.keepMap(x => x)
+        (textLower->Js.String.splitByRe(/[\s-]+/))->Belt.Array.keepMap(x => x)
       fragments->Belt.Array.every(fragment =>
         Js.String.toLowerCase(Item.getName(item))
-        |> removeAccents
-        |> Js.String.includes(removeAccents(fragment)) || item.tags |> Js.Array.includes(fragment)
+        ->removeAccents
+        ->Js.String.includes(removeAccents(fragment)) || item.tags->Js.Array.includes(fragment)
       )
     }
   } &&
@@ -253,8 +253,8 @@ let compareArrays = (a, b) => {
 
 let compareItemsABC = (a: Item.t, b: Item.t) => {
   // hack to sort "wooden-" before "wooden "
-  let aName = Item.getName(a) |> Js.String.replaceByRe(/-/g, " ")
-  let bName = Item.getName(b) |> Js.String.replaceByRe(/-/g, " ")
+  let aName = Item.getName(a)->Js.String.replaceByRe(/-/g, " ")
+  let bName = Item.getName(b)->Js.String.replaceByRe(/-/g, " ")
   int_of_float(Js.String.localeCompare(bName, aName))
 }
 let compareItemsSellPriceDesc = (a: Item.t, b: Item.t) =>
@@ -316,21 +316,21 @@ let getUserItemSort = (~prioritizeViewerStatuses: array<User.itemStatus>=[], ~so
         [
           switch UserStore.getItem(~itemId=aId, ~variation=aVariant) {
           | Some(aUserItem) =>
-            prioritizeViewerStatuses |> Js.Array.includes(aUserItem.status) ? -1. : 0.
+            prioritizeViewerStatuses->Js.Array.includes(aUserItem.status) ? -1. : 0.
           | None => 0.
           },
           -.Belt.Option.getWithDefault(aPriorityTimestamp, 0.),
-          Item.categories |> Js.Array.indexOf(aItem.category) |> float_of_int,
+          Item.categories->Js.Array.indexOf(aItem.category)->float_of_int,
           float_of_int(compareItemsABC(aItem, bItem)),
         ],
         [
           switch UserStore.getItem(~itemId=bId, ~variation=bVariant) {
           | Some(bUserItem) =>
-            prioritizeViewerStatuses |> Js.Array.includes(bUserItem.status) ? -1. : 0.
+            prioritizeViewerStatuses->Js.Array.includes(bUserItem.status) ? -1. : 0.
           | None => 0.
           },
           -.Belt.Option.getWithDefault(bPriorityTimestamp, 0.),
-          Item.categories |> Js.Array.indexOf(bItem.category) |> float_of_int,
+          Item.categories->Js.Array.indexOf(bItem.category)->float_of_int,
           0.,
         ],
       )
@@ -356,7 +356,7 @@ let getUserItemSort = (~prioritizeViewerStatuses: array<User.itemStatus>=[], ~so
           switch (aUserItem.note, bUserItem.note) {
           | ("", _) => 1
           | (_, "") => -1
-          | (a, b) => int_of_float(a |> Js.String.localeCompare(b))
+          | (a, b) => int_of_float(a->Js.String.localeCompare(b))
           },
           compareItemsABC(aItem, bItem),
         ],
@@ -486,7 +486,7 @@ module CategoryButtons = {
       {renderButton("clothing")}
       <select
         value={switch filters.category {
-        | Some(category) => selectCategories |> Js.Array.includes(category) ? category : ""
+        | Some(category) => selectCategories->Js.Array.includes(category) ? category : ""
         | None => ""
         }}
         onChange={e => {
@@ -506,7 +506,7 @@ module CategoryButtons = {
           Cn.ifTrue(
             CategoryStyles.selectSelected,
             switch filters.category {
-            | Some(category) => selectCategories |> Js.Array.includes(category)
+            | Some(category) => selectCategories->Js.Array.includes(category)
             | None => false
             },
           ),
@@ -562,7 +562,7 @@ module AdvancedFilter = {
         if checked {
           onChange({
             ...filters,
-            exclude: if filters.exclude |> Js.Array.includes(excludable) {
+            exclude: if filters.exclude->Js.Array.includes(excludable) {
               filters.exclude
             } else {
               filters.exclude->Belt.Array.concat([excludable])
@@ -585,7 +585,7 @@ module AdvancedFilter = {
               <input
                 type_="checkbox"
                 value="catalog"
-                checked={filters.exclude |> Js.Array.includes(Catalog)}
+                checked={filters.exclude->Js.Array.includes(Catalog)}
                 onChange={onChangeCheckbox(Catalog)}
               />
             </label>
@@ -596,7 +596,7 @@ module AdvancedFilter = {
               <input
                 type_="checkbox"
                 value="can-craft"
-                checked={filters.exclude |> Js.Array.includes(CanCraft)}
+                checked={filters.exclude->Js.Array.includes(CanCraft)}
                 onChange={onChangeCheckbox(CanCraft)}
               />
             </label>
@@ -607,7 +607,7 @@ module AdvancedFilter = {
               <input
                 type_="checkbox"
                 value="wishlist"
-                checked={filters.exclude |> Js.Array.includes(Wishlist)}
+                checked={filters.exclude->Js.Array.includes(Wishlist)}
                 onChange={onChangeCheckbox(Wishlist)}
               />
             </label>
@@ -798,7 +798,7 @@ let make = (
       | "Escape" =>
         let url = ReasonReactRouter.dangerouslyGetInitialUrl()
         // don't trigger if ItemDetailOverlay is shown
-        if !(url.hash |> Js.Re.test_(/i(-?\d+)(:(\d+))?/g)) {
+        if !(url.hash->Js.Re.test_(/i(-?\d+)(:(\d+))?/g)) {
           onChange({...filters, text: ""})
         }
       | "/" =>
@@ -809,12 +809,12 @@ let make = (
               ->unsafeAsHtmlInputElement
               ->HtmlInputElement.focus,
             20,
-          ) |> ignore
+          )->ignore
         }
       | _ => ()
       }
-    window |> Window.addKeyDownEventListener(onKeyDown)
-    Some(() => window |> Window.removeKeyDownEventListener(onKeyDown))
+    window->Window.addKeyDownEventListener(onKeyDown)
+    Some(() => window->Window.removeKeyDownEventListener(onKeyDown))
   })
 
   <div className={Cn.make(list{Styles.root, Cn.unpack(className)})}>

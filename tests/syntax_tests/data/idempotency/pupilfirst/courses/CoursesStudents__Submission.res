@@ -21,8 +21,8 @@ let levelId = t => t.levelId
 let title = t => t.title
 
 let sort = submissions =>
-  submissions |> ArrayUtils.copyAndSort((x, y) =>
-    DateFns.differenceInSeconds(y.createdAt, x.createdAt) |> int_of_float
+  submissions->ArrayUtils.copyAndSort((x, y) =>
+    DateFns.differenceInSeconds(y.createdAt, x.createdAt)->int_of_float
   )
 
 let failed = t =>
@@ -31,15 +31,15 @@ let failed = t =>
   | None => true
   }
 
-let createdAtPretty = t => t.createdAt |> DateFns.format("MMMM D, YYYY")
+let createdAtPretty = t => t.createdAt->DateFns.format("MMMM D, YYYY")
 
 let makeFromJs = submissions =>
-  submissions |> Js.Array.map(submission =>
+  submissions->Js.Array.map(submission =>
     switch submission {
     | Some(submission) =>
-      let createdAt = submission["createdAt"] |> Json.Decode.string |> DateFns.parseString
+      let createdAt = submission["createdAt"]->Json.Decode.string->DateFns.parseString
       let passedAt = switch submission["passedAt"] {
-      | Some(passedAt) => Some(passedAt |> Json.Decode.string |> DateFns.parseString)
+      | Some(passedAt) => Some(passedAt->Json.Decode.string->DateFns.parseString)
       | None => None
       }
       list{

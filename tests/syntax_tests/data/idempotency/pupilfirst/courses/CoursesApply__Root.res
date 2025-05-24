@@ -16,10 +16,10 @@ let emailSentMessage = () =>
   <div>
     <img className="mx-auto w-44 sm:w-48" src=emailSentIcon />
     <div className="text-xl font-bold text-center mt-4">
-      {"We've sent you a verification mail." |> str}
+      {"We've sent you a verification mail."->str}
     </div>
     <p className="mt-4 text-center">
-      {"It should reach you in less than a minute. Click the link in the email to sign up, and get started." |> str}
+      {"It should reach you in less than a minute. Click the link in the email to sign up, and get started."->str}
     </p>
   </div>
 
@@ -60,7 +60,7 @@ let make = (~courseName, ~courseId, ~thumbnailUrl, ~email, ~name, ~privacyPolicy
             ? <a
                 href="/agreements/terms-of-use"
                 className="text-xs cursor-pointer hover:text-primary-500">
-                {"Terms of Use" |> str}
+                {"Terms of Use"->str}
               </a>
             : React.null}
           {termsOfUse && privacyPolicy
@@ -70,7 +70,7 @@ let make = (~courseName, ~courseId, ~thumbnailUrl, ~email, ~name, ~privacyPolicy
             ? <a
                 href="/agreements/privacy-policy"
                 className="text-xs cursor-pointer hover:text-primary-500">
-                {"Privacy Policy" |> str}
+                {"Privacy Policy"->str}
               </a>
             : React.null}
         </div>

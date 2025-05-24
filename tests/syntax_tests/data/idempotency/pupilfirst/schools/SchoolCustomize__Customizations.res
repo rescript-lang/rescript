@@ -46,7 +46,7 @@ let privacyPolicy = t => t.schoolStrings.privacyPolicy
 let termsOfUse = t => t.schoolStrings.termsOfUse
 
 let headerLinks = t =>
-  t.links |> List.filter(l =>
+  t.links->List.filter(l =>
     switch l {
     | HeaderLink(_, _, _) => true
     | FooterLink(_, _, _) => false
@@ -55,7 +55,7 @@ let headerLinks = t =>
   )
 
 let footerLinks = t =>
-  t.links |> List.filter(l =>
+  t.links->List.filter(l =>
     switch l {
     | HeaderLink(_, _, _) => false
     | FooterLink(_, _, _) => true
@@ -64,7 +64,7 @@ let footerLinks = t =>
   )
 
 let socialLinks = t =>
-  t.links |> List.filter(l =>
+  t.links->List.filter(l =>
     switch l {
     | HeaderLink(_, _, _) => false
     | FooterLink(_, _, _) => false
@@ -73,7 +73,7 @@ let socialLinks = t =>
   )
 
 let unpackLinks = links =>
-  links |> List.map(l =>
+  links->List.map(l =>
     switch l {
     | HeaderLink(id, title, url)
     | FooterLink(id, title, url) => (id, title, url)
@@ -85,7 +85,7 @@ let addLink = (link, t) => {...t, links: \"@"(t.links, list{link})}
 
 let removeLink = (linkId, t) => {
   ...t,
-  links: t.links |> List.filter(l =>
+  links: t.links->List.filter(l =>
     switch l {
     | HeaderLink(id, _, _)
     | FooterLink(id, _, _) =>
@@ -96,7 +96,7 @@ let removeLink = (linkId, t) => {
 }
 
 let optionalString = s =>
-  switch s |> String.trim {
+  switch s->String.trim {
   | "" => None
   | nonEmptyString => Some(nonEmptyString)
   }
@@ -105,7 +105,7 @@ let updatePrivacyPolicy = (privacyPolicy, t) => {
   ...t,
   schoolStrings: {
     ...t.schoolStrings,
-    privacyPolicy: privacyPolicy |> optionalString,
+    privacyPolicy: privacyPolicy->optionalString,
   },
 }
 
@@ -113,7 +113,7 @@ let updateTermsOfUse = (termsOfUse, t) => {
   ...t,
   schoolStrings: {
     ...t.schoolStrings,
-    termsOfUse: termsOfUse |> optionalString,
+    termsOfUse: termsOfUse->optionalString,
   },
 }
 
@@ -121,7 +121,7 @@ let updateAddress = (address, t) => {
   ...t,
   schoolStrings: {
     ...t.schoolStrings,
-    address: address |> optionalString,
+    address: address->optionalString,
   },
 }
 
@@ -129,36 +129,36 @@ let updateEmailAddress = (emailAddress, t) => {
   ...t,
   schoolStrings: {
     ...t.schoolStrings,
-    emailAddress: emailAddress |> optionalString,
+    emailAddress: emailAddress->optionalString,
   },
 }
 
 let decodeFile = json => {
   open Json.Decode
   {
-    url: json |> field("url", string),
-    filename: json |> field("filename", string),
+    url: json->field("url", string),
+    filename: json->field("filename", string),
   }
 }
 
 let decodeImages = json => {
   open Json.Decode
   {
-    logoOnLightBg: json |> field("logoOnLightBg", optional(decodeFile)),
-    coverImage: json |> field("coverImage", optional(decodeFile)),
-    icon: json |> field("icon", decodeFile),
+    logoOnLightBg: json->field("logoOnLightBg", optional(decodeFile)),
+    coverImage: json->field("coverImage", optional(decodeFile)),
+    icon: json->field("icon", decodeFile),
   }
 }
 
-let updateImages = (json, t) => {...t, schoolImages: json |> decodeImages}
+let updateImages = (json, t) => {...t, schoolImages: json->decodeImages}
 
 let decodeStrings = json => {
   open Json.Decode
   {
-    address: json |> field("address", optional(string)),
-    emailAddress: json |> field("emailAddress", optional(string)),
-    privacyPolicy: json |> field("privacyPolicy", optional(string)),
-    termsOfUse: json |> field("termsOfUse", optional(string)),
+    address: json->field("address", optional(string)),
+    emailAddress: json->field("emailAddress", optional(string)),
+    privacyPolicy: json->field("privacyPolicy", optional(string)),
+    termsOfUse: json->field("termsOfUse", optional(string)),
   }
 }
 
@@ -187,8 +187,8 @@ let decodeLink = json => {
 let decode = json => {
   open Json.Decode
   {
-    schoolStrings: json |> field("strings", decodeStrings),
-    schoolImages: json |> field("images", decodeImages),
-    links: json |> field("links", list(decodeLink)),
+    schoolStrings: json->field("strings", decodeStrings),
+    schoolImages: json->field("images", decodeImages),
+    links: json->field("links", list(decodeLink)),
   }
 }

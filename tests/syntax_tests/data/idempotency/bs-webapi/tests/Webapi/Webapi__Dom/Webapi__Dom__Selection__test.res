@@ -1,12 +1,12 @@
 open Webapi.Dom
 open Selection
 
-let node = document |> Document.createElement("strong")
+let node = document->Document.createElement("strong")
 let sel =
   document
-  |> Document.asHtmlDocument
-  |> TestHelpers.unsafelyUnwrapOption
-  |> HtmlDocument.getSelection
+  ->Document.asHtmlDocument
+  ->TestHelpers.unsafelyUnwrapOption
+  ->HtmlDocument.getSelection
 
 let range = Range.make()
 
