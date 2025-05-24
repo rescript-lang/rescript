@@ -6,5 +6,7 @@ let fnExpectingCleanup = (cb: unit => cleanup) => {
 }
 
 let x = fnExpectingCleanup(() => {
+  Console.log("Hello, world!")
+  let _f = 2
   123
 })

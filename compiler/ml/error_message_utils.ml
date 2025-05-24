@@ -76,7 +76,8 @@ type type_clash_context =
   | MaybeUnwrapOption
   | IfCondition
   | IfReturn
-  | Switch
+  | SwitchReturn
+  | TryReturn
   | StringConcat
   | ComparisonOperator
   | MathOperator of {
@@ -107,7 +108,8 @@ let error_expected_type_text ppf type_clash_context =
     fprintf ppf "But this function argument is expecting:"
   | Some ComparisonOperator ->
     fprintf ppf "But it's being compared to something of type:"
-  | Some Switch -> fprintf ppf "But this switch is expected to return:"
+  | Some SwitchReturn -> fprintf ppf "But this switch is expected to return:"
+  | Some TryReturn -> fprintf ppf "But this try/catch is expected to return:"
   | Some IfCondition ->
     fprintf ppf "But @{<info>if@} conditions must always be of type:"
   | Some IfReturn ->
@@ -121,7 +123,8 @@ let error_expected_type_text ppf type_clash_context =
       "But it's being used with the @{<info>%s@} operator, which works on:"
       operator
   | Some StringConcat -> fprintf ppf "But string concatenation is expecting:"
-  | _ -> fprintf ppf "But it's expected to have type:"
+  | Some MaybeUnwrapOption | None ->
+    fprintf ppf "But it's expected to have type:"
 
 let is_record_type ~extract_concrete_typedecl ~env ty =
   try
@@ -201,11 +204,17 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
           (if for_float then "int" else "float")
       | _ -> ())
     | _ -> ())
-  | Some Switch, _ ->
+  | Some SwitchReturn, _ ->
     fprintf ppf
       "\n\n\
-      \  All branches in a @{<info>switch@} must return the same type. To fix \
-       this, change your branch to return the expected type."
+      \  All branches in a @{<info>switch@} must return the same type.@,\
+       To fix this, change your branch to return the expected type."
+  | Some TryReturn, _ ->
+    fprintf ppf
+      "\n\n\
+      \  The @{<info>try@} body and the @{<info>catch@} block must return the \
+       same type.@,\
+       To fix this, change your try/catch blocks to return the expected type."
   | Some IfCondition, _ ->
     fprintf ppf
       "\n\n\

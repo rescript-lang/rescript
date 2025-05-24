@@ -1356,7 +1356,7 @@ and type_module_aux ~alias sttn funct_body anchor env smod =
         mod_attributes = smod.pmod_attributes;
       }
   | Pmod_unpack sexp ->
-    let exp = Typecore.type_exp env sexp in
+    let exp = Typecore.type_exp ~context:None env sexp in
     let mty =
       match Ctype.expand_head env exp.exp_type with
       | {desc = Tpackage (p, nl, tl)} ->
@@ -1391,7 +1391,7 @@ and type_structure ?(toplevel = false) funct_body anchor env sstr scope =
     | Pstr_eval (sexpr, attrs) ->
       let expr =
         Builtin_attributes.warning_scope attrs (fun () ->
-            Typecore.type_expression env sexpr)
+            Typecore.type_expression ~context:None env sexpr)
       in
       (Tstr_eval (expr, attrs), [], env)
     | Pstr_value (rec_flag, sdefs) ->
@@ -1408,7 +1408,9 @@ and type_structure ?(toplevel = false) funct_body anchor env sstr scope =
           in
           Some (Annot.Idef {scope with Location.loc_start = start})
       in
-      let defs, newenv = Typecore.type_binding env rec_flag sdefs scope in
+      let defs, newenv =
+        Typecore.type_binding ~context:None env rec_flag sdefs scope
+      in
       let () =
         if rec_flag = Recursive then Rec_check.check_recursive_bindings defs
       in
