@@ -264,28 +264,22 @@ let newHover ~full:{file; package} ~supportsMarkdownLinks locItem =
          | Const_int64 _ -> "int64"
          | Const_bigint _ -> "bigint"))
   | Typed (_, t, locKind) ->
-    let fromType ~docstring ?constructor typ =
-      ( hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks
-          ?constructor typ,
-        docstring )
+    let fromType ?constructor typ =
+      hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks ?constructor
+        typ
     in
     let parts =
       match References.definedForLoc ~file ~package locKind with
       | None ->
-        let typeString, docstring = t |> fromType ~docstring:[] in
-        typeString :: docstring
+        let typeString = t |> fromType in
+        [typeString]
       | Some (docstring, res) -> (
         match res with
-        | `Declared ->
-          let typeString, docstring = t |> fromType ~docstring in
+        | `Declared | `Field ->
+          let typeString = t |> fromType in
           typeString :: docstring
         | `Constructor constructor ->
-          let typeString, docstring =
-            t |> fromType ~docstring:constructor.docstring ~constructor
-          in
-          typeString :: docstring
-        | `Field ->
-          let typeString, docstring = t |> fromType ~docstring in
-          typeString :: docstring)
+          let typeString = t |> fromType ~constructor in
+          typeString :: constructor.docstring)
     in
     Some (String.concat Markdown.divider parts)
