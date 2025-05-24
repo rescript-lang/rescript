@@ -96,13 +96,6 @@ let completionForExportedModules ~env ~prefix ~exact ~namesUsed =
         {docstring = declared.docstring; module_ = declared.item})
 
 let completionForExportedValues ~env ~prefix ~exact ~namesUsed =
-  (* dump the contents of env.QueryEnv.file.stamps *)
-  Stamps.iterValues
-    (fun stamp declared ->
-      Format.printf "stamp: %d name: %s loc: %s\n" stamp declared.name.txt
-        (Loc.toString declared.extentLoc))
-    env.QueryEnv.file.stamps;
-
   completionForExporteds (Exported.iter env.QueryEnv.exported Exported.Value)
     (Stamps.findValue env.file.stamps) ~prefix ~exact ~env ~namesUsed
     (fun declared -> Completion.Value declared.item)
@@ -359,33 +352,36 @@ let findAllCompletions ~(env : QueryEnv.t) ~prefix ~exact ~namesUsed
 
 let processLocalValue name loc contextPath scope ~prefix ~exact ~env
     ~(localTables : LocalTables.t) =
-  if Utils.checkName name ~prefix ~exact then
+  if Utils.checkName name ~prefix ~exact then (
     print_endline
       ("processLocalValue name: " ^ name ^ " loc: " ^ Loc.toString loc);
-  match Hashtbl.find_opt localTables.valueTable (name, Loc.start loc) with
-  | Some declared ->
-    if not (Hashtbl.mem localTables.namesUsed name) then (
-      Hashtbl.add localTables.namesUsed name ();
+    match Hashtbl.find_opt localTables.valueTable (name, Loc.start loc) with
+    | Some declared ->
+      if not (Hashtbl.mem localTables.namesUsed name) then (
+        Hashtbl.add localTables.namesUsed name ();
+        localTables.resultRev <-
+          {
+            (Completion.create declared.name.txt ~env ~kind:(Value declared.item))
+            with
+            deprecated = declared.deprecated;
+            docstring = declared.docstring;
+          }
+          :: localTables.resultRev)
+    | None ->
+      if !Cfg.debugFollowCtxPath then
+        Printf.printf "Completion Value Not Found %s loc:%s\n" name
+          (Loc.toString loc);
       localTables.resultRev <-
-        {
-          (Completion.create declared.name.txt ~env ~kind:(Value declared.item)) with
-          deprecated = declared.deprecated;
-          docstring = declared.docstring;
-        }
+        Completion.create name ~env
+          ~kind:
+            (match contextPath with
+            | Some contextPath -> FollowContextPath (contextPath, scope)
+            | None ->
+              Value
+                (Ctype.newconstr
+                   (Path.Pident (Ident.create "Type Not Known"))
+                   []))
         :: localTables.resultRev)
-  | None ->
-    if !Cfg.debugFollowCtxPath then
-      Printf.printf "Completion Value Not Found %s loc:%s\n" name
-        (Loc.toString loc);
-    localTables.resultRev <-
-      Completion.create name ~env
-        ~kind:
-          (match contextPath with
-          | Some contextPath -> FollowContextPath (contextPath, scope)
-          | None ->
-            Value
-              (Ctype.newconstr (Path.Pident (Ident.create "Type Not Known")) []))
-      :: localTables.resultRev
 
 let processLocalConstructor name loc ~prefix ~exact ~env
     ~(localTables : LocalTables.t) =
@@ -474,20 +470,6 @@ let findLocalCompletionsForValuesAndConstructors ~(localTables : LocalTables.t)
   localTables |> LocalTables.populateConstructors ~env;
   localTables |> LocalTables.populateModules ~env;
 
-  (* dump the contents of localTables.valueTable *)
-  Hashtbl.iter
-    (fun (name, (l, c)) declared ->
-      Format.printf "name: %s loc: %d %d type: %s\n" name l c
-        (Shared.typeToString declared.Declared.item))
-    localTables.valueTable;
-
-  scope
-  |> List.iter (fun scope_item ->
-         match scope_item with
-         | ScopeTypes.Value (name, _, _, _) ->
-           Format.printf "scope_item: %s\n" name
-         | _ -> ());
-
   scope
   |> Scope.iterValuesBeforeFirstOpen
        (processLocalValue ~prefix ~exact ~env ~localTables);
@@ -512,12 +494,6 @@ let findLocalCompletionsForValuesAndConstructors ~(localTables : LocalTables.t)
   scope
   |> Scope.iterModulesAfterFirstOpen
        (processLocalModule ~prefix ~exact ~env ~localTables);
-
-  (* dump the contents of localTables.valueTable *)
-  List.iter
-    (fun completion ->
-      Format.printf "resultRev name: %s\n" completion.Completion.name)
-    localTables.resultRev;
 
   List.rev_append localTables.resultRev valuesFromOpens
 
@@ -1246,10 +1222,9 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
                ~targetTypeId:mainTypeId
         in
         let ownIncludedModuleCompletions =
-          []
-          (* completionsFromIncludedModule ~full ~env ~pos
+          completionsFromIncludedModule ~full ~env ~pos
           |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
-               ~targetTypeId:mainTypeId *)
+               ~targetTypeId:mainTypeId
         in
         jsxCompletions @ pipeCompletions @ extraCompletions
         @ currentModuleCompletions @ ownIncludedModuleCompletions

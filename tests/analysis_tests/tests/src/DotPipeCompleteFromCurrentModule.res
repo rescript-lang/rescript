@@ -9,7 +9,7 @@ module Y = {
 
     let a = (x:t) => {
         // x.
-        //   com
+        //   ^com
         ()
     }
 
@@ -59,7 +59,7 @@ module Wall = {
     let make = () => {
         [
             // k.
-            //   com
+            //   ^com
         ]
     }
 
