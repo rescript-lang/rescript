@@ -17,6 +17,7 @@
 - Add `RegExp.flags`. https://github.com/rescript-lang/rescript/pull/7461
 - Add `Array.findLast`, `Array.findLastWithIndex`, `Array.findLastIndex`, `Array.findLastIndexWithIndex` and `Array.findLastIndexOpt`. https://github.com/rescript-lang/rescript/pull/7503
 - Add `options` argument to `Console.dir`. https://github.com/rescript-lang/rescript/pull/7504
+- Show variant constructor's inline record types on hover. https://github.com/rescript-lang/rescript/pull/7519
 
 #### :bug: Bug fix
 
