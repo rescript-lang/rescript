@@ -80,6 +80,7 @@ type type_clash_context =
   | TryReturn
   | StringConcat
   | ComparisonOperator
+  | WhileCondition
   | MathOperator of {
       for_float: bool;
       operator: string;
@@ -110,6 +111,8 @@ let error_expected_type_text ppf type_clash_context =
     fprintf ppf "But it's being compared to something of type:"
   | Some SwitchReturn -> fprintf ppf "But this switch is expected to return:"
   | Some TryReturn -> fprintf ppf "But this try/catch is expected to return:"
+  | Some WhileCondition ->
+    fprintf ppf "But a @{<info>while@} loop condition must always be of type:"
   | Some IfCondition ->
     fprintf ppf "But @{<info>if@} conditions must always be of type:"
   | Some IfReturn ->
