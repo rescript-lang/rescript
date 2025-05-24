@@ -24,7 +24,7 @@ let reducer = (state, action) =>
   }
 
 let handleResponseJSON = (filename, send, attachFileCB, json) => {
-  let id = json |> {
+  let id = json->{
     open Json.Decode
     field("id", string)
   }
@@ -48,19 +48,19 @@ let uploadFile = (filename, send, attachFileCB, formData) => {
       (),
     ),
   )
-  |> then_(response =>
+  ->then_(response =>
     if Fetch.Response.ok(response) {
-      response |> Fetch.Response.json
+      response->Fetch.Response.json
     } else {
-      Js.Promise.reject(UnexpectedResponse(response |> Fetch.Response.status))
+      Js.Promise.reject(UnexpectedResponse(response->Fetch.Response.status))
     }
   )
-  |> then_(json => handleResponseJSON(filename, send, attachFileCB, json) |> resolve)
-  |> catch(error =>
-    switch error |> handleApiError {
+  ->then_(json => handleResponseJSON(filename, send, attachFileCB, json)->resolve)
+  ->catch(error =>
+    switch error->handleApiError {
     | Some(code) =>
       Notification.error(
-        "Error " ++ (code |> string_of_int),
+        "Error " ++ (code->string_of_int),
         "Please reload the page and try again.",
       )
     | None =>
@@ -68,16 +68,16 @@ let uploadFile = (filename, send, attachFileCB, formData) => {
         "Something went wrong!",
         "Our team has been notified of this error. Please reload the page and try again.",
       )
-    } |> resolve
+    }->resolve
   )
-  |> ignore
+  ->ignore
 }
 
 let submitForm = (filename, formId, send, addFileAttachmentCB) => {
   let element = ReactDOMRe._getElementById(formId)
   switch element {
   | Some(element) =>
-    DomUtils.FormData.create(element) |> uploadFile(filename, send, addFileAttachmentCB)
+    DomUtils.FormData.create(element)->uploadFile(filename, send, addFileAttachmentCB)
   | None => raise(FormNotFound(formId))
   }
 }
@@ -93,7 +93,7 @@ let attachFile = (state, send, attachingCB, attachFileCB, preview, event) =>
 
         let errors = file["size"] > maxFileSize ? list{"The maximum file size is 5 MB."} : list{}
 
-        if errors |> ListUtils.isEmpty {
+        if errors->ListUtils.isEmpty {
           let filename = file["name"]
           attachingCB(true)
           send(AttachFile(filename))
@@ -108,7 +108,7 @@ let make = (~attachFileCB, ~attachingCB, ~preview) => {
   let (state, send) = React.useReducer(
     reducer,
     {
-      formId: Random.int(99999) |> string_of_int,
+      formId: Random.int(99999)->string_of_int,
       filename: defaultTitle,
       errors: list{},
     },
@@ -131,22 +131,22 @@ let make = (~attachFileCB, ~attachingCB, ~preview) => {
         htmlFor="attachment_file">
         <span className="w-full">
           <i className="fas fa-upload mr-2 text-lg" />
-          <span className="truncate"> {state.filename |> str} </span>
+          <span className="truncate"> {state.filename->str} </span>
         </span>
       </label>
     </form>
     {state.errors
-    |> List.map(error =>
+    ->List.map(error =>
       <div className="mt-2 text-red-700 text-sm" key=error>
-        <i className="fas fa-exclamation-circle mr-2" /> <span> {error |> str} </span>
+        <i className="fas fa-exclamation-circle mr-2" /> <span> {error->str} </span>
       </div>
     )
-    |> Array.of_list
-    |> React.array}
-    {state.errors |> ListUtils.isEmpty
+    ->Array.of_list
+    ->React.array}
+    {state.errors->ListUtils.isEmpty
       ? React.null
       : <div className="px-4 mt-2 text-sm">
-          {"Please choose another file for upload." |> str}
+          {"Please choose another file for upload."->str}
         </div>}
   </div>
 }

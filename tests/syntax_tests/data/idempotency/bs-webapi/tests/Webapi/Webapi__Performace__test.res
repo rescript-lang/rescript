@@ -1,1 +1,1 @@
-let _ = Webapi.Dom.window |> Webapi.Dom.Window.performance |> Webapi.Performance.now
+let _ = Webapi.Dom.window->Webapi.Dom.Window.performance->Webapi.Performance.now

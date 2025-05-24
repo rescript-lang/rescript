@@ -33,7 +33,7 @@ let reducer = (state, action) =>
   }
 
 let updateName = (send, name) => {
-  let hasError = name |> String.length < 2
+  let hasError = name->String.length < 2
   send(UpdateName(name, hasError))
 }
 
@@ -42,11 +42,11 @@ let saveDisabled = state => state.hasNameError || (!state.dirty || state.saving)
 let setPayload = (authenticityToken, state) => {
   let payload = Js.Dict.empty()
   let milestone = state.milestone == true ? "true" : "false"
-  Js.Dict.set(payload, "authenticity_token", authenticityToken |> Js.Json.string)
-  Js.Dict.set(payload, "archived", state.isArchived |> Js.Json.boolean)
-  Js.Dict.set(payload, "name", state.name |> Js.Json.string)
-  Js.Dict.set(payload, "description", state.description |> Js.Json.string)
-  Js.Dict.set(payload, "milestone", milestone |> Js.Json.string)
+  Js.Dict.set(payload, "authenticity_token", authenticityToken->Js.Json.string)
+  Js.Dict.set(payload, "archived", state.isArchived->Js.Json.boolean)
+  Js.Dict.set(payload, "name", state.name->Js.Json.string)
+  Js.Dict.set(payload, "description", state.description->Js.Json.string)
+  Js.Dict.set(payload, "milestone", milestone->Js.Json.string)
   payload
 }
 
@@ -60,15 +60,15 @@ let formClasses = value =>
 let computeInitialState = targetGroup =>
   switch targetGroup {
   | Some(targetGroup) => {
-      name: targetGroup |> TargetGroup.name,
-      description: switch targetGroup |> TargetGroup.description {
+      name: targetGroup->TargetGroup.name,
+      description: switch targetGroup->TargetGroup.description {
       | Some(description) => description
       | None => ""
       },
-      milestone: targetGroup |> TargetGroup.milestone,
+      milestone: targetGroup->TargetGroup.milestone,
       hasNameError: false,
       dirty: false,
-      isArchived: targetGroup |> TargetGroup.archived,
+      isArchived: targetGroup->TargetGroup.archived,
       saving: false,
     }
   | None => {
@@ -93,11 +93,11 @@ let make = (
   let (state, send) = React.useReducerWithMapState(reducer, targetGroup, computeInitialState)
   let handleErrorCB = () => send(UpdateSaving)
   let handleResponseCB = json => {
-    let id = json |> {
+    let id = json->{
       open Json.Decode
       field("id", string)
     }
-    let sortIndex = json |> {
+    let sortIndex = json->{
       open Json.Decode
       field("sortIndex", int)
     }
@@ -147,13 +147,13 @@ let make = (
           <div className="mx-auto bg-white">
             <div className="max-w-2xl pt-6 px-6 mx-auto">
               <h5 className="uppercase text-center border-b border-gray-400 pb-2">
-                {"Target Group Details" |> str}
+                {"Target Group Details"->str}
               </h5>
               <div className="mt-5">
                 <label className="inline-block tracking-wide text-xs font-semibold" htmlFor="name">
-                  {"Title" |> str}
+                  {"Title"->str}
                 </label>
-                <span> {"*" |> str} </span>
+                <span> {"*"->str} </span>
                 <input
                   className="appearance-none block w-full bg-white border border-gray-400 rounded py-3 px-4 mt-2 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
                   id="name"
@@ -165,13 +165,13 @@ let make = (
                 {state.hasNameError
                   ? <div className="drawer-right-form__error-msg">
                       <span className="mr-2"> <i className="fas fa-exclamation-triangle" /> </span>
-                      <span> {"not a valid Title" |> str} </span>
+                      <span> {"not a valid Title"->str} </span>
                     </div>
                   : ReasonReact.null}
               </div>
               <div className="mt-5">
                 <label className="block tracking-wide text-xs font-semibold" htmlFor="description">
-                  {" Description" |> str}
+                  {" Description"->str}
                 </label>
                 <textarea
                   className="appearance-none block w-full bg-white border border-gray-400 rounded py-3 px-4 mt-2 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
@@ -187,7 +187,7 @@ let make = (
               <div className="mt-5">
                 <div className="flex items-center flex-shrink-0">
                   <label className="block tracking-wide text-xs font-semibold mr-3">
-                    {"Is this a milestone target group?" |> str}
+                    {"Is this a milestone target group?"->str}
                   </label>
                   <div
                     className="milestone flex-shrink-0 rounded-lg overflow-hidden border border-gray-400">
@@ -197,7 +197,7 @@ let make = (
                         send(UpdateMilestone(true))
                       }}
                       className={booleanButtonClasses(state.milestone == true)}>
-                      {"Yes" |> str}
+                      {"Yes"->str}
                     </button>
                     <button
                       onClick={_event => {
@@ -205,7 +205,7 @@ let make = (
                         send(UpdateMilestone(false))
                       }}
                       className={booleanButtonClasses(state.milestone == false)}>
-                      {"No" |> str}
+                      {"No"->str}
                     </button>
                   </div>
                 </div>
@@ -217,7 +217,7 @@ let make = (
                 | Some(_) =>
                   <div className="flex items-center mr-2">
                     <label className="block tracking-wide text-xs font-semibold mr-6">
-                      {"Is this target group archived?" |> str}
+                      {"Is this target group archived?"->str}
                     </label>
                     <div
                       className="toggle-button__group archived inline-flex flex-shrink-0 rounded-lg overflow-hidden">
@@ -227,7 +227,7 @@ let make = (
                           send(UpdateIsArchived(true))
                         }}
                         className={booleanButtonClasses(state.isArchived == true)}>
-                        {"Yes" |> str}
+                        {"Yes"->str}
                       </button>
                       <button
                         onClick={_event => {
@@ -235,7 +235,7 @@ let make = (
                           send(UpdateIsArchived(false))
                         }}
                         className={booleanButtonClasses(state.isArchived == false)}>
-                        {"No" |> str}
+                        {"No"->str}
                       </button>
                     </div>
                   </div>
@@ -243,13 +243,13 @@ let make = (
                 }}
                 {switch targetGroup {
                 | Some(targetGroup) =>
-                  let id = targetGroup |> TargetGroup.id
+                  let id = targetGroup->TargetGroup.id
                   <div className="w-auto">
                     <button
                       disabled={saveDisabled(state)}
                       onClick={_e => updateTargetGroup(id)}
                       className="btn btn-primary btn-large">
-                      {"Update Target Group" |> str}
+                      {"Update Target Group"->str}
                     </button>
                   </div>
 
@@ -259,7 +259,7 @@ let make = (
                       disabled={saveDisabled(state)}
                       onClick={_e => createTargetGroup()}
                       className="w-full btn btn-primary btn-large">
-                      {"Create Target Group" |> str}
+                      {"Create Target Group"->str}
                     </button>
                   </div>
                 }}

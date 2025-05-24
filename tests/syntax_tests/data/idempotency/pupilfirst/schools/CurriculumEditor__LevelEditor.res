@@ -28,7 +28,7 @@ let reducer = (state, action) =>
   }
 
 let updateName = (send, name) => {
-  let hasError = name |> String.trim |> String.length < 2
+  let hasError = name->String.trim->String.length < 2
   send(UpdateName(name, hasError))
 }
 
@@ -37,12 +37,12 @@ let saveDisabled = state => state.hasNameError || (!state.dirty || state.saving)
 let setPayload = (authenticityToken, state) => {
   let payload = Js.Dict.empty()
 
-  Js.Dict.set(payload, "authenticity_token", authenticityToken |> Js.Json.string)
-  Js.Dict.set(payload, "name", state.name |> Js.Json.string)
+  Js.Dict.set(payload, "authenticity_token", authenticityToken->Js.Json.string)
+  Js.Dict.set(payload, "name", state.name->Js.Json.string)
 
   switch state.unlockOn {
-  | Some(date) => Js.Dict.set(payload, "unlock_on", date |> Date.iso8601 |> Js.Json.string)
-  | None => Js.Dict.set(payload, "unlock_on", "" |> Js.Json.string)
+  | Some(date) => Js.Dict.set(payload, "unlock_on", date->Date.iso8601->Js.Json.string)
+  | None => Js.Dict.set(payload, "unlock_on", ""->Js.Json.string)
   }
   payload
 }
@@ -52,8 +52,8 @@ let formClasses = value =>
 let computeInitialState = level =>
   switch level {
   | Some(level) => {
-      name: level |> Level.name,
-      unlockOn: level |> Level.unlockOn,
+      name: level->Level.name,
+      unlockOn: level->Level.unlockOn,
       hasNameError: false,
       dirty: false,
       saving: false,
@@ -72,11 +72,11 @@ let make = (~level, ~course, ~authenticityToken, ~hideEditorActionCB, ~updateLev
   let (state, send) = React.useReducerWithMapState(reducer, level, computeInitialState)
   let handleErrorCB = () => send(UpdateSaving)
   let handleResponseCB = json => {
-    let id = json |> {
+    let id = json->{
       open Json.Decode
       field("id", string)
     }
-    let number = json |> {
+    let number = json->{
       open Json.Decode
       field("number", int)
     }
@@ -90,7 +90,7 @@ let make = (~level, ~course, ~authenticityToken, ~hideEditorActionCB, ~updateLev
 
   let createLevel = (authenticityToken, course, state) => {
     send(UpdateSaving)
-    let course_id = course |> Course.id
+    let course_id = course->Course.id
     let url = "/school/courses/" ++ (course_id ++ "/levels")
     Api.create(url, setPayload(authenticityToken, state), handleResponseCB, handleErrorCB)
   }
@@ -117,13 +117,13 @@ let make = (~level, ~course, ~authenticityToken, ~hideEditorActionCB, ~updateLev
           <div className="mx-auto bg-white">
             <div className="max-w-2xl p-6 mx-auto">
               <h5 className="uppercase text-center border-b pb-2 mb-4">
-                {"Level Details" |> str}
+                {"Level Details"->str}
               </h5>
               <div className="mt-5">
                 <label className="inline-block tracking-wide text-xs font-semibold" htmlFor="name">
-                  {"Level Name" |> str}
+                  {"Level Name"->str}
                 </label>
-                <span> {"*" |> str} </span>
+                <span> {"*"->str} </span>
                 <input
                   className="appearance-none block w-full bg-white border border-gray-400 rounded py-3 px-4 mt-2 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
                   id="name"
@@ -134,14 +134,14 @@ let make = (~level, ~course, ~authenticityToken, ~hideEditorActionCB, ~updateLev
                 />
                 {state.hasNameError
                   ? <div className="drawer-right-form__error-msg">
-                      {"not a valid name" |> str}
+                      {"not a valid name"->str}
                     </div>
                   : ReasonReact.null}
               </div>
               <div className="mt-5">
                 <label
                   className="block tracking-wide text-xs font-semibold" htmlFor="unlock-on-input">
-                  {"Unlock level on" |> str}
+                  {"Unlock level on"->str}
                 </label>
                 <DatePicker
                   id="unlock-on-input"
@@ -152,12 +152,12 @@ let make = (~level, ~course, ~authenticityToken, ~hideEditorActionCB, ~updateLev
               <div className="flex mt-5">
                 {switch level {
                 | Some(level) =>
-                  let id = level |> Level.id
+                  let id = level->Level.id
                   <button
                     disabled={saveDisabled(state)}
                     onClick={_event => updateLevel(authenticityToken, id, state)}
                     className="w-full btn btn-large btn-primary">
-                    {"Update Level" |> str}
+                    {"Update Level"->str}
                   </button>
 
                 | None =>
@@ -165,7 +165,7 @@ let make = (~level, ~course, ~authenticityToken, ~hideEditorActionCB, ~updateLev
                     disabled={saveDisabled(state)}
                     onClick={_event => createLevel(authenticityToken, course, state)}
                     className="w-full btn btn-large btn-primary">
-                    {"Create New Level" |> str}
+                    {"Create New Level"->str}
                   </button>
                 }}
               </div>

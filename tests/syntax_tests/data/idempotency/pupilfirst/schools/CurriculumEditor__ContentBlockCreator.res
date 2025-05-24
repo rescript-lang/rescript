@@ -91,7 +91,7 @@ let containerClasses = (visible, isAboveTarget) => {
 let handleGraphqlCreateResponse = (aboveContentBlock, send, addContentBlockCB, contentBlock) => {
   switch contentBlock {
   | Some(contentBlock) =>
-    contentBlock |> ContentBlock.makeFromJs |> addContentBlockCB
+    contentBlock->ContentBlock.makeFromJs->addContentBlockCB
     send(FinishSaving(aboveContentBlock != None))
   | None => send(ToggleSaving)
   }
@@ -101,11 +101,11 @@ let handleGraphqlCreateResponse = (aboveContentBlock, send, addContentBlockCB, c
 
 let createMarkdownContentBlock = (target, aboveContentBlock, send, addContentBlockCB) => {
   send(ToggleSaving)
-  let aboveContentBlockId = aboveContentBlock |> OptionUtils.map(ContentBlock.id)
-  let targetId = target |> Target.id
+  let aboveContentBlockId = aboveContentBlock->OptionUtils.map(ContentBlock.id)
+  let targetId = target->Target.id
   CreateMarkdownContentBlock.make(~targetId, ~aboveContentBlockId?, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(result =>
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(result =>
     handleGraphqlCreateResponse(
       aboveContentBlock,
       send,
@@ -113,25 +113,25 @@ let createMarkdownContentBlock = (target, aboveContentBlock, send, addContentBlo
       result["createMarkdownContentBlock"]["contentBlock"],
     )
   )
-  |> Js.Promise.catch(_ => {
+  ->Js.Promise.catch(_ => {
     send(FailedToCreate)
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let elementId = (prefix, aboveContentBlock) =>
   prefix ++
   switch aboveContentBlock {
-  | Some(contentBlock) => contentBlock |> ContentBlock.id
+  | Some(contentBlock) => contentBlock->ContentBlock.id
   | None => "bottom"
   }
 
-let fileInputId = aboveContentBlock => aboveContentBlock |> elementId("markdown-block-file-input-")
+let fileInputId = aboveContentBlock => aboveContentBlock->elementId("markdown-block-file-input-")
 let imageInputId = aboveContentBlock =>
-  aboveContentBlock |> elementId("markdown-block-image-input-")
-let fileFormId = aboveContentBlock => aboveContentBlock |> elementId("markdown-block-file-form-")
-let imageFormId = aboveContentBlock => aboveContentBlock |> elementId("markdown-block-image-form-")
+  aboveContentBlock->elementId("markdown-block-image-input-")
+let fileFormId = aboveContentBlock => aboveContentBlock->elementId("markdown-block-file-form-")
+let imageFormId = aboveContentBlock => aboveContentBlock->elementId("markdown-block-image-form-")
 
 let onBlockTypeSelect = (target, aboveContentBlock, send, addContentBlockCB, blockType, _event) =>
   switch blockType {
@@ -142,8 +142,8 @@ let onBlockTypeSelect = (target, aboveContentBlock, send, addContentBlockCB, blo
   }
 
 let button = (target, aboveContentBlock, send, addContentBlockCB, blockType) => {
-  let fileId = aboveContentBlock |> fileInputId
-  let imageId = aboveContentBlock |> imageInputId
+  let fileId = aboveContentBlock->fileInputId
+  let imageId = aboveContentBlock->imageInputId
 
   let (faIcon, buttonText, htmlFor) = switch blockType {
   | #Markdown => ("fab fa-markdown", "Markdown", None)
@@ -157,7 +157,7 @@ let button = (target, aboveContentBlock, send, addContentBlockCB, blockType) => 
     key=buttonText
     className="content-block-creator__block-content-type-picker px-3 pt-4 pb-3 flex-1 text-center text-primary-200"
     onClick={onBlockTypeSelect(target, aboveContentBlock, send, addContentBlockCB, blockType)}>
-    <i className={faIcon ++ " text-2xl"} /> <p className="font-semibold"> {buttonText |> str} </p>
+    <i className={faIcon ++ " text-2xl"} /> <p className="font-semibold"> {buttonText->str} </p>
   </label>
 }
 
@@ -171,15 +171,15 @@ let isInvalidImageFile = image =>
   | "image/png" => false
   | _ => true
   } ||
-  image |> isInvalidFile
+  image->isInvalidFile
 
 let uploadFile = (target, send, addContentBlockCB, isAboveContentBlock, formData) =>
   Api.sendFormData(
-    "/school/targets/" ++ ((target |> Target.id) ++ "/content_block"),
+    "/school/targets/" ++ ((target->Target.id) ++ "/content_block"),
     formData,
     json => {
       Notification.success("Done!", "File uploaded successfully.")
-      let contentBlock = json |> ContentBlock.decode
+      let contentBlock = json->ContentBlock.decode
       addContentBlockCB(contentBlock)
       send(FinishSaving(isAboveContentBlock))
     },
@@ -196,7 +196,7 @@ let submitForm = (target, aboveContentBlock, send, addContentBlockCB, blockType)
 
   switch element {
   | Some(element) =>
-    DomUtils.FormData.create(element) |> uploadFile(
+    DomUtils.FormData.create(element)->uploadFile(
       target,
       send,
       addContentBlockCB,
@@ -216,7 +216,7 @@ let handleFileInputChange = (
   blockType,
   event,
 ) => {
-  event |> ReactEvent.Form.preventDefault
+  event->ReactEvent.Form.preventDefault
 
   switch ReactEvent.Form.target(event)["files"] {
   | [] => ()
@@ -225,9 +225,9 @@ let handleFileInputChange = (
 
     let error = switch blockType {
     | #File =>
-      file |> isInvalidFile ? Some("Please select a file with a size less than 5 MB.") : None
+      file->isInvalidFile ? Some("Please select a file with a size less than 5 MB.") : None
     | #Image =>
-      file |> isInvalidImageFile
+      file->isInvalidImageFile
         ? Some(
             "Please select an image (PNG, JPEG, GIF) with a size less than 5 MB, and less than 4096px wide or high.",
           )
@@ -273,7 +273,7 @@ let uploadForm = (target, aboveContentBlock, send, addContentBlockCB, blockType)
     <input type_="file" name="file" id=fileId onChange required=true multiple=false />
     {switch aboveContentBlock {
     | Some(contentBlock) =>
-      <input type_="hidden" name="above_content_block_id" value={contentBlock |> ContentBlock.id} />
+      <input type_="hidden" name="above_content_block_id" value={contentBlock->ContentBlock.id} />
     | None => React.null
     }}
   </form>
@@ -301,18 +301,18 @@ let embedUrlRegexes = [
 let validEmbedUrl = url => Belt.Array.some(embedUrlRegexes, regex => regex->Js.Re.test_(url))
 
 let onEmbedFormSave = (target, aboveContentBlock, url, send, addContentBlockCB, event) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
 
-  if url |> validEmbedUrl {
+  if url->validEmbedUrl {
     send(ToggleSaving)
 
-    let aboveContentBlockId = aboveContentBlock |> OptionUtils.map(ContentBlock.id)
+    let aboveContentBlockId = aboveContentBlock->OptionUtils.map(ContentBlock.id)
 
-    let targetId = target |> Target.id
+    let targetId = target->Target.id
 
     CreateEmbedContentBlock.make(~targetId, ~aboveContentBlockId?, ~url, ())
-    |> GraphqlQuery.sendQuery
-    |> Js.Promise.then_(result =>
+    ->GraphqlQuery.sendQuery
+    ->Js.Promise.then_(result =>
       handleGraphqlCreateResponse(
         aboveContentBlock,
         send,
@@ -320,11 +320,11 @@ let onEmbedFormSave = (target, aboveContentBlock, url, send, addContentBlockCB, 
         result["createEmbedContentBlock"]["contentBlock"],
       )
     )
-    |> Js.Promise.catch(_ => {
+    ->Js.Promise.catch(_ => {
       send(FailedToCreate)
       Js.Promise.resolve()
     })
-    |> ignore
+    ->ignore
   } else {
     send(
       SetError(
@@ -346,7 +346,7 @@ let topButton = (handler, id, title, icon) =>
   </div>
 
 let closeEmbedFormButton = (send, aboveContentBlock) => {
-  let id = aboveContentBlock |> OptionUtils.map(ContentBlock.id) |> OptionUtils.default("bottom")
+  let id = aboveContentBlock->OptionUtils.map(ContentBlock.id)->OptionUtils.default("bottom")
 
   topButton(_e => send(HideEmbedForm), id, "Close Embed Form", "fa-level-up-alt")
 }
@@ -354,7 +354,7 @@ let closeEmbedFormButton = (send, aboveContentBlock) => {
 let toggleVisibilityButton = (send, contentBlock) =>
   topButton(
     _e => send(ToggleVisibility),
-    contentBlock |> ContentBlock.id,
+    contentBlock->ContentBlock.id,
     "Toggle Content Block Form",
     "fa-plus content-block-creator__plus-button-icon",
   )
@@ -372,7 +372,7 @@ let buttonAboveContentBlock = (state, send, aboveContentBlock) =>
 let make = (~target, ~aboveContentBlock=?, ~addContentBlockCB) => {
   let (embedInputId, isAboveContentBlock) = switch aboveContentBlock {
   | Some(contentBlock) =>
-    let id = "embed-" ++ (contentBlock |> ContentBlock.id)
+    let id = "embed-" ++ (contentBlock->ContentBlock.id)
     (id, true)
   | None => ("embed-bottom", false)
   }
@@ -386,7 +386,7 @@ let make = (~target, ~aboveContentBlock=?, ~addContentBlockCB) => {
   <DisablingCover disabled=state.saving message="Creating...">
     {uploadForm(target, aboveContentBlock, send, addContentBlockCB, #File)}
     {uploadForm(target, aboveContentBlock, send, addContentBlockCB, #Image)}
-    <div className={containerClasses(state |> visible, isAboveContentBlock)}>
+    <div className={containerClasses(state->visible, isAboveContentBlock)}>
       {buttonAboveContentBlock(state, send, aboveContentBlock)}
       <div className="content-block-creator__inner-container">
         {switch state.ui {
@@ -395,19 +395,19 @@ let make = (~target, ~aboveContentBlock=?, ~addContentBlockCB) => {
           <div
             className="content-block-creator__block-content-type text-sm hidden shadow-lg mx-auto relative bg-primary-900 rounded-lg -mt-4 z-10">
             {[#Markdown, #Image, #Embed, #File]
-            |> Array.map(button(target, aboveContentBlock, send, addContentBlockCB))
-            |> React.array}
+            ->Array.map(button(target, aboveContentBlock, send, addContentBlockCB))
+            ->React.array}
           </div>
         | EmbedForm(url) =>
           <div
             className="clearfix border-2 border-gray-400 bg-gray-200 border-dashed rounded-lg px-3 pb-3 pt-2 -mt-4 z-10">
             <label htmlFor=embedInputId className="text-xs font-semibold">
-              {"URL to Embed" |> str}
+              {"URL to Embed"->str}
             </label>
             <HelpIcon
               className="ml-2 text-xs"
               link="https://docs.pupilfirst.com/#/curriculum_editor?id=content-block-types">
-              {"We support YouTube, Vimeo, and Slideshare URLs. Just copy & paste the full URL to the page that contains the resource that you'd like to embed." |> str}
+              {"We support YouTube, Vimeo, and Slideshare URLs. Just copy & paste the full URL to the page that contains the resource that you'd like to embed."->str}
             </HelpIcon>
             <div className="flex mt-1">
               <input
@@ -421,14 +421,14 @@ let make = (~target, ~aboveContentBlock=?, ~addContentBlockCB) => {
               <button
                 className="ml-2 btn btn-success"
                 onClick={onEmbedFormSave(target, aboveContentBlock, url, send, addContentBlockCB)}>
-                {"Save" |> str}
+                {"Save"->str}
               </button>
             </div>
           </div>
         }}
       </div>
       {switch state.error {
-      | Some(error) => <School__InputGroupError message=error active={state |> visible} />
+      | Some(error) => <School__InputGroupError message=error active={state->visible} />
       | None => React.null
       }}
     </div>

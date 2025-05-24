@@ -13,13 +13,13 @@ type action =
   | FollowUser(string)
   | UnfollowUser(string)
 
-let sessionId = ref(Dom.Storage.localStorage |> Dom.Storage.getItem("sessionId"))
+let sessionId = ref(Dom.Storage.localStorage->Dom.Storage.getItem("sessionId"))
 let updateSessionId = newValue => {
   sessionId := newValue
   open Dom.Storage
   switch newValue {
-  | Some(sessionId) => localStorage |> setItem("sessionId", sessionId)
-  | None => localStorage |> removeItem("sessionId")
+  | Some(sessionId) => localStorage->setItem("sessionId", sessionId)
+  | None => localStorage->removeItem("sessionId")
   }
 }
 
@@ -187,7 +187,7 @@ let setItemStatus = (~itemId: int, ~variation: int, ~status: User.itemStatus) =>
     )
     handleServerResponse("/@me/items/status", responseResult)
     Promise.resolved()
-  }) |> ignore
+  })->ignore
   if numItemUpdatesLogged.contents < 2 || updatedUser.items->Js.Dict.keys->Js.Array.length < 4 {
     Analytics.Amplitude.logEventWithProperties(
       ~eventName="Item Status Updated",
@@ -208,7 +208,7 @@ let setItemStatusBatch = (~items: array<(int, int)>, ~status) => {
     ...user,
     items: {
       let clone = Utils.cloneJsDict(user.items)
-      items |> Js.Array.forEach(((itemId, variant)) => {
+      items->Js.Array.forEach(((itemId, variant)) => {
         let itemKey = User.getItemKey(~itemId, ~variation=variant)
         clone->Js.Dict.set(
           itemKey,
@@ -242,7 +242,7 @@ let setItemStatusBatch = (~items: array<(int, int)>, ~status) => {
       },
     )
     Promise.resolved()
-  }) |> ignore
+  })->ignore
   Analytics.Amplitude.setItemCount(~itemCount=Js.Dict.keys(updatedUser.items)->Js.Array.length)
 }
 
@@ -277,7 +277,7 @@ let setItemNote = (~itemId: int, ~variation: int, ~note: string) => {
     )
     handleServerResponse("/@me/items/note", responseResult)
     Promise.resolved()
-  }) |> ignore
+  })->ignore
   if numItemUpdatesLogged.contents < 2 || updatedUser.items->Js.Dict.keys->Js.Array.length < 4 {
     Analytics.Amplitude.logEventWithProperties(
       ~eventName="Item Note Updated",
@@ -318,7 +318,7 @@ let setItemPriority = (~itemId: int, ~variant: int, ~isPriority: bool) => {
     )
     handleServerResponse("/@me/items/priority", responseResult)
     Promise.resolved()
-  }) |> ignore
+  })->ignore
   if !didLogItemPriority.contents {
     Analytics.Amplitude.logEventWithProperties(
       ~eventName="Item Priority Updated",
@@ -363,7 +363,7 @@ let removeItem = (~itemId, ~variation) => {
       )
       handleServerResponse("/@me/items/remove", responseResult)
       Promise.resolved()
-    }) |> ignore
+    })->ignore
     Analytics.Amplitude.setItemCount(~itemCount=Js.Dict.keys(updatedUser.items)->Js.Array.length)
   }
 }
@@ -374,7 +374,7 @@ let removeItems = (~items: array<(int, int)>) => {
     ...user,
     items: {
       let clone = Utils.cloneJsDict(user.items)
-      items |> Js.Array.forEach(((itemId, variant)) => {
+      items->Js.Array.forEach(((itemId, variant)) => {
         let key = User.getItemKey(~itemId, ~variation=variant)
         Utils.deleteJsDictKey(clone, key)
       })
@@ -390,7 +390,7 @@ let removeItems = (~items: array<(int, int)>) => {
       ~eventProperties={"numItems": Js.Array.length(items)},
     )
     Promise.resolved()
-  }) |> ignore
+  })->ignore
   Analytics.Amplitude.setItemCount(~itemCount=Js.Dict.keys(updatedUser.items)->Js.Array.length)
 }
 
@@ -406,7 +406,7 @@ let updateProfileText = (~profileText) => {
     )
     handleServerResponse("/@me/profileText", responseResult)
     Promise.resolved()
-  }) |> ignore
+  })->ignore
   Analytics.Amplitude.logEventWithProperties(
     ~eventName="Profile Text Updated",
     ~eventProperties={"text": profileText},
@@ -470,7 +470,7 @@ let toggleCatalogCheckboxSetting = (~enabled) => {
     )
     handleServerResponse("/@me/toggleCatalogCheckboxSetting", responseResult)
     Promise.resolved()
-  }) |> ignore
+  })->ignore
   Analytics.Amplitude.logEventWithProperties(
     ~eventName="Catalog Checkbox Setting Toggled",
     ~eventProperties={"enabled": enabled},
@@ -506,7 +506,7 @@ let register = (~username, ~email, ~password) =>
       %Repromise.JsExn({
         let json = Fetch.Response.json(response)
         updateSessionId(
-          json |> {
+          json->{
             open Json.Decode
             optional(field("sessionId", string))
           },
@@ -520,7 +520,7 @@ let register = (~username, ~email, ~password) =>
     } else {
       %Repromise.JsExn({
         let text = Fetch.Response.text(response)
-        let result = text |> Js.Re.exec_(errorQuotationMarksRegex)
+        let result = text->Js.Re.exec_(errorQuotationMarksRegex)
         let text = switch result {
         | Some(match_) =>
           let captures = Js.Re.captures(match_)
@@ -559,7 +559,7 @@ let loginWithDiscord = (~code, ~isRegister) =>
       %Repromise.JsExn({
         let json = Fetch.Response.json(response)
         updateSessionId(
-          json |> {
+          json->{
             open Json.Decode
             optional(field("sessionId", string))
           },
@@ -572,7 +572,7 @@ let loginWithDiscord = (~code, ~isRegister) =>
           ~email=user.email->Belt.Option.getWithDefault(""),
         )
         let isRegister =
-          (json |> {
+          (json->{
             open Json.Decode
             optional(field("isRegister", bool))
           })->Belt.Option.getWithDefault(false)
@@ -591,7 +591,7 @@ let loginWithDiscord = (~code, ~isRegister) =>
     } else {
       %Repromise.JsExn({
         let text = Fetch.Response.text(response)
-        let result = text |> Js.Re.exec_(errorQuotationMarksRegex)
+        let result = text->Js.Re.exec_(errorQuotationMarksRegex)
         let text = switch result {
         | Some(match_) =>
           let captures = Js.Re.captures(match_)
@@ -652,7 +652,7 @@ let login = (~username, ~password) =>
       %Repromise.JsExn({
         let json = Fetch.Response.json(response)
         updateSessionId(
-          json |> {
+          json->{
             open Json.Decode
             optional(field("sessionId", string))
           },
@@ -669,7 +669,7 @@ let login = (~username, ~password) =>
 
 let logout = () => {
   api.dispatch(Logout)
-  Dom.Storage.localStorage |> Dom.Storage.removeItem("sessionId")
+  Dom.Storage.localStorage->Dom.Storage.removeItem("sessionId")
   Analytics.Amplitude.setUserId(~userId=None)
   ReasonReactRouter.push("/")
   let sessionId = sessionId.contents
@@ -720,7 +720,7 @@ let deleteAccount = () => {
     | Ok(response) =>
       if Fetch.Response.status(response) < 300 {
         api.dispatch(Logout)
-        Dom.Storage.localStorage |> Dom.Storage.removeItem("sessionId")
+        Dom.Storage.localStorage->Dom.Storage.removeItem("sessionId")
         Analytics.Amplitude.setUserId(~userId=None)
         ReasonReactRouter.push("/")
         updateSessionId(None)
@@ -740,7 +740,7 @@ let connectDiscordAccount = (~code) => {
       )
       %Repromise.JsExn({
         let json = Fetch.Response.json(response)
-        let discordId = json |> {
+        let discordId = json->{
           open Json.Decode
           field("discordId", string)
         }
@@ -748,7 +748,7 @@ let connectDiscordAccount = (~code) => {
         ReasonReactRouter.push("/settings")
         Promise.resolved()
       })
-    }) |> ignore
+    })->ignore
   // TODO: error
   let processNotLoggedIn = () => ()
   switch api.getState() {
@@ -790,7 +790,7 @@ let init = () =>
       if Fetch.Response.status(response) < 400 {
         %Repromise.JsExn({
           let json = Fetch.Response.json(response)
-          switch json |> {
+          switch json->{
             open Json.Decode
             optional(field("sessionId", string))
           } {
@@ -806,6 +806,6 @@ let init = () =>
         api.dispatch(FetchMeFailed)
         Promise.resolved()
       }
-    }) |> ignore
+    })->ignore
   | None => ()
   }

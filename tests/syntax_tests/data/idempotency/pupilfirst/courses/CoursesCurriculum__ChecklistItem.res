@@ -27,10 +27,10 @@ let optional = t => t.optional
 let make = (~result, ~title, ~optional) => {result: result, title: title, optional: optional}
 
 let fromTargetChecklistItem = targetChecklist =>
-  targetChecklist |> Array.map(tc => {
-    let title = tc |> TargetChecklistItem.title
-    let optional = tc |> TargetChecklistItem.optional
-    let result = switch tc |> TargetChecklistItem.kind {
+  targetChecklist->Array.map(tc => {
+    let title = tc->TargetChecklistItem.title
+    let optional = tc->TargetChecklistItem.optional
+    let result = switch tc->TargetChecklistItem.kind {
     | Files => Files([])
     | Link => Link("")
     | ShortText => ShortText("")
@@ -41,7 +41,7 @@ let fromTargetChecklistItem = targetChecklist =>
   })
 
 let updateResultAtIndex = (index, result, checklist) =>
-  checklist |> Array.mapi((i, c) => i == index ? {...c, result: result} : c)
+  checklist->Array.mapi((i, c) => i == index ? {...c, result: result} : c)
 
 let makeFile = (id, name) => {id: id, name: name}
 
@@ -51,13 +51,13 @@ let fileId = file => file.id
 
 let fileIds = checklist =>
   checklist
-  |> Array.map(c =>
+  ->Array.map(c =>
     switch c.result {
-    | Files(files) => files |> Array.map(a => a.id) |> Array.to_list
+    | Files(files) => files->Array.map(a => a.id)->Array.to_list
     | _anyOtherResult => list{}
     }
   )
-  |> ArrayUtils.flatten
+  ->ArrayUtils.flatten
 
 let kindAsString = t =>
   switch t.result {
@@ -75,11 +75,11 @@ let resultAsString = t =>
   | ShortText(t)
   | LongText(t) => t
   | MultiChoice(choices, index) =>
-    index |> OptionUtils.flatMap(i => choices |> ArrayUtils.getOpt(i)) |> OptionUtils.default("")
+    index->OptionUtils.flatMap(i => choices->ArrayUtils.getOpt(i))->OptionUtils.default("")
   }
 
 let validString = (s, maxLength) => {
-  let length = s |> String.trim |> String.length
+  let length = s->String.trim->String.length
   length >= 1 && length <= maxLength
 }
 
@@ -87,19 +87,19 @@ let validShortText = s => validString(s, 250)
 
 let validLongText = s => validString(s, 5000)
 
-let validFiles = files => files != [] && files |> Array.length < 3
+let validFiles = files => files != [] && files->Array.length < 3
 
 let validMultiChoice = (choices, index) =>
-  index |> OptionUtils.mapWithDefault(i => choices |> Array.length > i, false)
+  index->OptionUtils.mapWithDefault(i => choices->Array.length > i, false)
 
 let validResponse = (response, allowBlank) => {
   let optional = allowBlank ? response.optional : false
 
   switch (response.result, optional) {
   | (Files(files), false) => validFiles(files)
-  | (Files(files), true) => files |> ArrayUtils.isEmpty || validFiles(files)
-  | (Link(link), false) => link |> UrlUtils.isValid(false)
-  | (Link(link), true) => link |> UrlUtils.isValid(true)
+  | (Files(files), true) => files->ArrayUtils.isEmpty || validFiles(files)
+  | (Link(link), false) => link->UrlUtils.isValid(false)
+  | (Link(link), true) => link->UrlUtils.isValid(true)
   | (ShortText(t), false) => validShortText(t)
   | (ShortText(t), true) => validShortText(t) || t == ""
   | (LongText(t), false) => validLongText(t)
@@ -111,43 +111,43 @@ let validResponse = (response, allowBlank) => {
 
 let validChecklist = checklist =>
   checklist
-  |> Array.map(c => validResponse(c, true))
-  |> Js.Array.filter(c => !c)
-  |> ArrayUtils.isEmpty
+  ->Array.map(c => validResponse(c, true))
+  ->Js.Array.filter(c => !c)
+  ->ArrayUtils.isEmpty
 
-let validResonses = responses => responses |> Js.Array.filter(c => validResponse(c, false))
+let validResonses = responses => responses->Js.Array.filter(c => validResponse(c, false))
 
 let encode = t => {
   open Json.Encode
   object_(list{
-    ("title", t.title |> string),
-    ("kind", kindAsString(t) |> string),
-    ("status", "noAnswer" |> string),
-    ("result", resultAsString(t) |> string),
+    ("title", t.title->string),
+    ("kind", kindAsString(t)->string),
+    ("status", "noAnswer"->string),
+    ("result", resultAsString(t)->string),
   })
 }
 
 let encodeArray = checklist =>
-  validResonses(checklist) |> {
+  validResonses(checklist)->{
     open Json.Encode
     array(encode)
   }
 
 let makeFiles = checklist =>
   checklist
-  |> Js.Array.find(c =>
+  ->Js.Array.find(c =>
     switch c.result {
     | Files(_files) => true
     | _anyOtherResult => false
     }
   )
-  |> OptionUtils.mapWithDefault(c =>
+  ->OptionUtils.mapWithDefault(c =>
     switch c.result {
     | Files(files) => files
     | _anyOtherResult => []
     }
   , [])
-  |> Array.map(f => {
+  ->Array.map(f => {
     let url = "/timeline_event_files/" ++ (f.id ++ "/download")
     SubmissionChecklistItem.makeFile(~name=f.name, ~id=f.id, ~url)
   })

@@ -9,39 +9,39 @@ let make = (
   ~questionCanBeRemoved,
 ) => {
   let answerOptionId = (questionId, index) =>
-    questionId ++ ("-answer-option-" ++ (index + 1 |> string_of_int))
+    questionId ++ ("-answer-option-" ++ (index + 1->string_of_int))
 
   let updateQuestion = question =>
     updateQuizQuestionCB(
-      quizQuestion |> CurriculumEditor__QuizQuestion.id,
-      quizQuestion |> CurriculumEditor__QuizQuestion.updateQuestion(question),
+      quizQuestion->CurriculumEditor__QuizQuestion.id,
+      quizQuestion->CurriculumEditor__QuizQuestion.updateQuestion(question),
     )
 
   let updateAnswerOptionCB = (id, answer) =>
     updateQuizQuestionCB(
-      quizQuestion |> CurriculumEditor__QuizQuestion.id,
-      quizQuestion |> CurriculumEditor__QuizQuestion.replace(id, answer),
+      quizQuestion->CurriculumEditor__QuizQuestion.id,
+      quizQuestion->CurriculumEditor__QuizQuestion.replace(id, answer),
     )
   let removeAnswerOptionCB = id =>
     updateQuizQuestionCB(
-      quizQuestion |> CurriculumEditor__QuizQuestion.id,
-      quizQuestion |> CurriculumEditor__QuizQuestion.removeAnswerOption(id),
+      quizQuestion->CurriculumEditor__QuizQuestion.id,
+      quizQuestion->CurriculumEditor__QuizQuestion.removeAnswerOption(id),
     )
   let markAsCorrectCB = id =>
     updateQuizQuestionCB(
-      quizQuestion |> CurriculumEditor__QuizQuestion.id,
-      quizQuestion |> CurriculumEditor__QuizQuestion.markAsCorrect(id),
+      quizQuestion->CurriculumEditor__QuizQuestion.id,
+      quizQuestion->CurriculumEditor__QuizQuestion.markAsCorrect(id),
     )
 
   let addAnswerOption = () =>
     updateQuizQuestionCB(
-      quizQuestion |> CurriculumEditor__QuizQuestion.id,
-      quizQuestion |> CurriculumEditor__QuizQuestion.newAnswerOption(
-        Js.Date.now() |> Js.Float.toString,
+      quizQuestion->CurriculumEditor__QuizQuestion.id,
+      quizQuestion->CurriculumEditor__QuizQuestion.newAnswerOption(
+        Js.Date.now()->Js.Float.toString,
       ),
     )
   let canBeDeleted =
-    quizQuestion |> CurriculumEditor__QuizQuestion.answerOptions |> Array.length > 2
+    quizQuestion->CurriculumEditor__QuizQuestion.answerOptions->Array.length > 2
   let questionId = "quiz-question-" ++ questionNumber
 
   <div className="quiz-maker__question-container p-4 bg-gray-100 rounded-lg border mt-4">
@@ -49,7 +49,7 @@ let make = (
       <label
         className="block tracking-wide uppercase text-gray-800 text-sm font-bold"
         htmlFor=questionId>
-        {"Question " ++ questionNumber |> str}
+        {"Question " ++ questionNumber->str}
       </label>
       <div className="quiz-maker__question-remove-button invisible">
         {questionCanBeRemoved
@@ -59,7 +59,7 @@ let make = (
               title="Remove Quiz Question"
               onClick={event => {
                 ReactEvent.Mouse.preventDefault(event)
-                removeQuizQuestionCB(quizQuestion |> CurriculumEditor__QuizQuestion.id)
+                removeQuizQuestionCB(quizQuestion->CurriculumEditor__QuizQuestion.id)
               }}>
               <i className="fas fa-trash-alt text-lg" />
             </button>
@@ -70,17 +70,17 @@ let make = (
       <MarkdownEditor
         textareaId=questionId
         placeholder="Type the question here (supports markdown)"
-        value={quizQuestion |> CurriculumEditor__QuizQuestion.question}
+        value={quizQuestion->CurriculumEditor__QuizQuestion.question}
         onChange=updateQuestion
         profile=Markdown.Permissive
       />
     </div>
     <div className="quiz-maker__answers-container relative">
       {quizQuestion
-      |> CurriculumEditor__QuizQuestion.answerOptions
-      |> Array.mapi((index, answerOption) =>
+      ->CurriculumEditor__QuizQuestion.answerOptions
+      ->Array.mapi((index, answerOption) =>
         <CurriculumEditor__TargetQuizAnswer
-          key={answerOption |> CurriculumEditor__AnswerOption.id}
+          key={answerOption->CurriculumEditor__AnswerOption.id}
           answerOption
           updateAnswerOptionCB
           removeAnswerOptionCB
@@ -89,7 +89,7 @@ let make = (
           answerOptionId={answerOptionId(questionId, index)}
         />
       )
-      |> React.array}
+      ->React.array}
       <div
         onClick={_event => {
           ReactEvent.Mouse.preventDefault(_event)
@@ -102,7 +102,7 @@ let make = (
         </div>
         <a
           className="quiz-maker__add-answer-option-button flex items-center h-11 text-gray-900 bg-gray-200 border border-dashed border-primary-400 hover:bg-white hover:text-primary-500 hover:shadow-md rounded-lg ml-12 py-3 px-4">
-          <p className="text-xs"> {"Add another Answer Option" |> str} </p>
+          <p className="text-xs"> {"Add another Answer Option"->str} </p>
         </a>
       </div>
     </div>

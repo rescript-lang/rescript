@@ -5,27 +5,27 @@ exception RootAttributeMissing(string)
 open Webapi.Dom
 
 let parseJsonTag = (~id="react-root-data", ()) =>
-  switch document |> Document.getElementById(id) {
-  | Some(rootElement) => rootElement |> Element.innerHTML
+  switch document->Document.getElementById(id) {
+  | Some(rootElement) => rootElement->Element.innerHTML
   | None => raise(DataElementMissing(id))
-  } |> Json.parseOrRaise
+  }->Json.parseOrRaise
 
 let parseJsonAttribute = (~id="react-root", ~attribute="data-json-props", ()) =>
-  switch document |> Document.getElementById(id) {
+  switch document->Document.getElementById(id) {
   | Some(rootElement) =>
-    switch rootElement |> Element.getAttribute(attribute) {
+    switch rootElement->Element.getAttribute(attribute) {
     | Some(props) => props
     | None => raise(RootAttributeMissing(attribute))
     }
   | None => raise(RootElementMissing(id))
-  } |> Json.parseOrRaise
+  }->Json.parseOrRaise
 
-let redirect = path => path |> Webapi.Dom.Window.setLocation(window)
+let redirect = path => path->Webapi.Dom.Window.setLocation(window)
 
-let reload = () => location |> Location.reload
+let reload = () => location->Location.reload
 
 let isDevelopment = () =>
-  switch document |> Document.documentElement |> Element.getAttribute("data-env") {
+  switch document->Document.documentElement->Element.getAttribute("data-env") {
   | Some(props) if props == "development" => true
   | Some(_)
   | None => false

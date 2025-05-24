@@ -92,17 +92,15 @@ let add2 = (y: coll, e: key) =>
     list{e, ...y}
   }
 
-let test = doStuff(
-  ~x,
-  ~y,
-  TranslateSignature.translateModuleTypeDeclaration(
+let test =
+  moduleTypeDeclaration
+  ->TranslateSignature.translateModuleTypeDeclaration(
     ~config,
     ~outputFileRelative,
     ~resolver,
     ~typeEnv,
-    moduleTypeDeclaration,
-  ),
-)
+  )
+  ->doStuff(~x, ~y)
 
 // labelled arguments
 // callback in last position

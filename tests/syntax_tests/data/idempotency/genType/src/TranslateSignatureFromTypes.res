@@ -9,9 +9,9 @@ let translateTypeDeclarationFromTypes = (
   ~id,
   {type_params, type_kind, type_attributes, type_manifest}: Types.type_declaration,
 ): list<CodeItem.typeDeclaration> => {
-  typeEnv |> TypeEnv.newType(~name=id |> Ident.name)
+  typeEnv->TypeEnv.newType(~name=id->Ident.name)
   let typeName = Ident.name(id)
-  let typeVars = type_params |> TypeVars.extractFromTypeExpr
+  let typeVars = type_params->TypeVars.extractFromTypeExpr
   if Debug.translation.contents {
     Log_.item("Translate Types.type_declaration %s\n", typeName)
   }
@@ -29,7 +29,7 @@ let translateTypeDeclarationFromTypes = (
   | _ => NoDeclaration
   }
 
-  declarationKind |> TranslateTypeDeclarations.traslateDeclarationKind(
+  declarationKind->TranslateTypeDeclarations.traslateDeclarationKind(
     ~config,
     ~outputFileRelative,
     ~resolver,
@@ -51,15 +51,15 @@ let rec translateModuleDeclarationFromTypes = (
 ): Translation.t =>
   switch moduleDeclaration.md_type {
   | Mty_signature(signature) =>
-    let name = id |> Ident.name
+    let name = id->Ident.name
     signature
-    |> translateSignatureFromTypes(
+    ->translateSignatureFromTypes(
       ~config,
       ~outputFileRelative,
       ~resolver,
-      ~typeEnv=typeEnv |> TypeEnv.newModule(~name),
+      ~typeEnv=typeEnv->TypeEnv.newModule(~name),
     )
-    |> Translation.combine
+    ->Translation.combine
 
   | Mty_ident(_) =>
     logNotImplemented("Mty_ident " ++ __LOC__)
@@ -84,7 +84,7 @@ and translateSignatureItemFromTypes = (
   | Types.Sig_type(id, typeDeclaration, _) => {
       importTypes: list{},
       codeItems: list{},
-      typeDeclarations: typeDeclaration |> translateTypeDeclarationFromTypes(
+      typeDeclarations: typeDeclaration->translateTypeDeclarationFromTypes(
         ~config,
         ~outputFileRelative,
         ~resolver,
@@ -94,9 +94,9 @@ and translateSignatureItemFromTypes = (
     }
 
   | Types.Sig_module(id, moduleDeclaration, _) =>
-    let moduleItem = moduleItemGen |> Runtime.newModuleItem(~name=id |> Ident.name)
-    typeEnv |> TypeEnv.updateModuleItem(~moduleItem)
-    moduleDeclaration |> translateModuleDeclarationFromTypes(
+    let moduleItem = moduleItemGen->Runtime.newModuleItem(~name=id->Ident.name)
+    typeEnv->TypeEnv.updateModuleItem(~moduleItem)
+    moduleDeclaration->translateModuleDeclarationFromTypes(
       ~config,
       ~outputFileRelative,
       ~resolver,
@@ -132,7 +132,7 @@ and translateSignatureFromTypes = (
     Log_.item("Translate Types.signature\n")
   }
   let moduleItemGen = Runtime.moduleItemGen()
-  signature |> List.map(
+  signature->List.map(
     translateSignatureItemFromTypes(
       ~config,
       ~outputFileRelative,

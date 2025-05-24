@@ -11,17 +11,17 @@ type props = {
 let decodeProps = json => {
   open Json.Decode
   {
-    courseName: json |> field("courseName", string),
-    courseId: json |> field("courseId", string),
-    thumbnailUrl: json |> field("thumbnailUrl", optional(string)),
-    email: json |> field("email", optional(string)),
-    name: json |> field("name", optional(string)),
-    privacyPolicy: json |> field("privacyPolicy", bool),
-    termsOfUse: json |> field("termsOfUse", bool),
+    courseName: json->field("courseName", string),
+    courseId: json->field("courseId", string),
+    thumbnailUrl: json->field("thumbnailUrl", optional(string)),
+    email: json->field("email", optional(string)),
+    name: json->field("name", optional(string)),
+    privacyPolicy: json->field("privacyPolicy", bool),
+    termsOfUse: json->field("termsOfUse", bool),
   }
 }
 
-let props = DomUtils.parseJsonTag() |> decodeProps
+let props = DomUtils.parseJsonTag()->decodeProps
 
 ReactDOMRe.renderToElementWithId(
   <CoursesApply__Root

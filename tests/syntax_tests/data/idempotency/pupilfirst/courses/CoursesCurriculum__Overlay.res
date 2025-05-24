@@ -38,27 +38,27 @@ let reducer = (state, action) =>
     | Target.Student => state
     | Team => {
         ...state,
-        targetDetails: state.targetDetails |> OptionUtils.map(TargetDetails.clearPendingUserIds),
+        targetDetails: state.targetDetails->OptionUtils.map(TargetDetails.clearPendingUserIds),
       }
     }
   }
 
 let closeOverlay = course =>
-  ReasonReactRouter.push("/courses/" ++ ((course |> Course.id) ++ "/curriculum"))
+  ReasonReactRouter.push("/courses/" ++ ((course->Course.id) ++ "/curriculum"))
 
 let loadTargetDetails = (target, send, ()) => {
   {
     open Js.Promise
-    Fetch.fetch("/targets/" ++ ((target |> Target.id) ++ "/details_v2"))
-    |> then_(Fetch.Response.json)
-    |> then_(json => send(SetTargetDetails(json |> TargetDetails.decode)) |> resolve)
-  } |> ignore
+    Fetch.fetch("/targets/" ++ ((target->Target.id) ++ "/details_v2"))
+    ->then_(Fetch.Response.json)
+    ->then_(json => send(SetTargetDetails(json->TargetDetails.decode))->resolve)
+  }->ignore
 
   None
 }
 
 let completionTypeToString = (completionType, targetStatus) =>
-  switch (targetStatus |> TargetStatus.status, (completionType: TargetDetails.completionType)) {
+  switch (targetStatus->TargetStatus.status, (completionType: TargetDetails.completionType)) {
   | (Pending, Evaluated) => "Complete"
   | (Pending, TakeQuiz) => "Take Quiz"
   | (Pending, LinkToComplete) => "Visit Link to Complete"
@@ -79,7 +79,7 @@ let tabToString = (targetStatus, tab) =>
   }
 
 let selectableTabs = targetDetails =>
-  targetDetails |> TargetDetails.communities |> ListUtils.isNotEmpty
+  targetDetails->TargetDetails.communities->ListUtils.isNotEmpty
     ? list{Learn, Discuss}
     : list{Learn}
 
@@ -91,14 +91,14 @@ let tabClasses = (selection, tab) =>
   )
 
 let scrollCompleteButtonIntoViewEventually = () => Js.Global.setTimeout(() => {
-    let element = Webapi.Dom.document |> Webapi.Dom.Document.getElementById("auto-verify-target")
+    let element = Webapi.Dom.document->Webapi.Dom.Document.getElementById("auto-verify-target")
     switch element {
     | Some(e) =>
       Webapi.Dom.Element.scrollIntoView(e)
       e->Webapi.Dom.Element.setClassName("mt-4 complete-button-selected")
     | None => Rollbar.error("Could not find the 'Complete' button to scroll to.")
     }
-  }, 50) |> ignore
+  }, 50)->ignore
 
 let handleTablink = (send, _event) => {
   send(Select(Learn))
@@ -107,30 +107,30 @@ let handleTablink = (send, _event) => {
 
 let tabButton = (tab, state, send, targetStatus) =>
   <span
-    key={"select-" ++ (tab |> tabToString(targetStatus))}
+    key={"select-" ++ (tab->tabToString(targetStatus))}
     className={tabClasses(tab, state.tab)}
     onClick={_e => send(Select(tab))}>
-    {tab |> tabToString(targetStatus) |> str}
+    {tab->tabToString(targetStatus)->str}
   </span>
 
 let tabLink = (tab, state, send, targetStatus) =>
   <span onClick={handleTablink(send)} className={tabClasses(tab, state.tab)}>
-    {tab |> tabToString(targetStatus) |> str}
+    {tab->tabToString(targetStatus)->str}
   </span>
 
 let tabOptions = (state, send, targetDetails, targetStatus) => {
-  let completionType = targetDetails |> TargetDetails.computeCompletionType
+  let completionType = targetDetails->TargetDetails.computeCompletionType
 
   <div className="flex justify-between max-w-3xl mx-auto -mb-px mt-5 md:mt-7">
     {selectableTabs(targetDetails)
-    |> List.map(selection => tabButton(selection, state, send, targetStatus))
-    |> Array.of_list
-    |> React.array}
-    {switch (targetStatus |> TargetStatus.status, completionType) {
+    ->List.map(selection => tabButton(selection, state, send, targetStatus))
+    ->Array.of_list
+    ->React.array}
+    {switch (targetStatus->TargetStatus.status, completionType) {
     | (Pending | Submitted | Passed | Failed, Evaluated | TakeQuiz) =>
       tabButton(Complete(completionType), state, send, targetStatus)
     | (Locked(CourseLocked | AccessLocked), Evaluated | TakeQuiz) =>
-      targetDetails |> TargetDetails.submissions |> ListUtils.isNotEmpty
+      targetDetails->TargetDetails.submissions->ListUtils.isNotEmpty
         ? tabButton(Complete(completionType), state, send, targetStatus)
         : React.null
     | (Pending | Submitted | Passed | Failed, LinkToComplete | MarkAsComplete) =>
@@ -143,16 +143,16 @@ let tabOptions = (state, send, targetDetails, targetStatus) => {
 let addSubmission = (target, state, send, addSubmissionCB, submission) => {
   switch state.targetDetails {
   | Some(targetDetails) =>
-    let newTargetDetails = targetDetails |> TargetDetails.addSubmission(submission)
+    let newTargetDetails = targetDetails->TargetDetails.addSubmission(submission)
 
     send(SetTargetDetails(newTargetDetails))
   | None => ()
   }
 
-  switch submission |> Submission.status {
+  switch submission->Submission.status {
   | MarkedAsComplete =>
-    addSubmissionCB(LatestSubmission.make(~pending=false, ~targetId=target |> Target.id))
-  | Pending => addSubmissionCB(LatestSubmission.make(~pending=true, ~targetId=target |> Target.id))
+    addSubmissionCB(LatestSubmission.make(~pending=false, ~targetId=target->Target.id))
+  | Pending => addSubmissionCB(LatestSubmission.make(~pending=true, ~targetId=target->Target.id))
   | Passed =>
     raise(
       UnexpectedSubmissionStatus(
@@ -171,16 +171,16 @@ let addSubmission = (target, state, send, addSubmissionCB, submission) => {
 let addVerifiedSubmission = (target, state, send, addSubmissionCB, submission) => {
   switch state.targetDetails {
   | Some(targetDetails) =>
-    let newTargetDetails = targetDetails |> TargetDetails.addSubmission(submission)
+    let newTargetDetails = targetDetails->TargetDetails.addSubmission(submission)
     send(SetTargetDetails(newTargetDetails))
   | None => ()
   }
 
-  addSubmissionCB(LatestSubmission.make(~pending=false, ~targetId=target |> Target.id))
+  addSubmissionCB(LatestSubmission.make(~pending=false, ~targetId=target->Target.id))
 }
 
 let targetStatusClass = (prefix, targetStatus) =>
-  prefix ++ (targetStatus |> TargetStatus.statusToString |> Js.String.toLowerCase)
+  prefix ++ (targetStatus->TargetStatus.statusToString->Js.String.toLowerCase)
 
 let targetStatusClasses = targetStatus =>
   "curriculum__target-status bg-white text-xs mt-2 md:mt-0 py-1 px-2 md:px-4 " ++
@@ -193,7 +193,7 @@ let overlayHeaderTitleCardClasses = targetStatus =>
 let renderLocked = text =>
   <div
     className="mx-auto text-center bg-gray-900 text-white max-w-fc px-4 py-2 text-sm font-semibold relative z-10 rounded-b-lg">
-    <i className="fas fa-lock text-lg" /> <span className="ml-2"> {text |> str} </span>
+    <i className="fas fa-lock text-lg" /> <span className="ml-2"> {text->str} </span>
   </div>
 let overlayStatus = (course, target, targetStatus, preview) =>
   <div>
@@ -203,14 +203,14 @@ let overlayStatus = (course, target, targetStatus, preview) =>
         targetStatusClass("course-overlay__close--", targetStatus)}
         onClick={_e => closeOverlay(course)}>
         <Icon className="if i-times-regular text-xl lg:text-2xl mt-1 lg:mt-0" />
-        <span className="text-xs hidden lg:inline-block mt-px"> {"Close" |> str} </span>
+        <span className="text-xs hidden lg:inline-block mt-px"> {"Close"->str} </span>
       </button>
       <div className="w-full flex flex-wrap md:flex-no-wrap items-center justify-between relative">
         <h1 className="text-base leading-snug md:mr-6 md:text-xl">
-          {target |> Target.title |> str}
+          {target->Target.title->str}
         </h1>
         <div className={targetStatusClasses(targetStatus)}>
-          {targetStatus |> TargetStatus.statusToString |> str}
+          {targetStatus->TargetStatus.statusToString->str}
         </div>
       </div>
     </div>
@@ -219,42 +219,42 @@ let overlayStatus = (course, target, targetStatus, preview) =>
       : React.null}
   </div>
 
-let renderLockReason = reason => renderLocked(reason |> TargetStatus.lockReasonToString)
+let renderLockReason = reason => renderLocked(reason->TargetStatus.lockReasonToString)
 
 let prerequisitesIncomplete = (reason, target, targets, statusOfTargets) => {
-  let prerequisiteTargetIds = target |> Target.prerequisiteTargetIds
+  let prerequisiteTargetIds = target->Target.prerequisiteTargetIds
   let prerequisiteTargets =
-    targets |> List.filter(target => (target |> Target.id)->List.mem(prerequisiteTargetIds))
+    targets->List.filter(target => (target->Target.id)->List.mem(prerequisiteTargetIds))
   <div className="relative px-3 md:px-0">
     {renderLockReason(reason)}
     <div
       className="course-overlay__prerequisite-targets z-10 max-w-3xl mx-auto bg-white text-center rounded-lg overflow-hidden shadow mt-6">
       {prerequisiteTargets
-      |> List.map(target => {
+      ->List.map(target => {
         let targetStatus =
-          statusOfTargets |> List.find(ts => ts |> TargetStatus.targetId == (target |> Target.id))
+          statusOfTargets->List.find(ts => ts->TargetStatus.targetId == (target->Target.id))
 
         <Link
-          href={"/targets/" ++ (target |> Target.id)}
-          ariaLabel={"Select Target " ++ (target |> Target.id)}
-          key={target |> Target.id}
+          href={"/targets/" ++ (target->Target.id)}
+          ariaLabel={"Select Target " ++ (target->Target.id)}
+          key={target->Target.id}
           className="bg-white border-t px-6 py-4 relative z-10 flex items-center justify-between hover:bg-gray-200 hover:text-primary-500 cursor-pointer">
           <span className="font-semibold text-left leading-snug">
-            {target |> Target.title |> str}
+            {target->Target.title->str}
           </span>
           <span className={targetStatusClasses(targetStatus)}>
-            {targetStatus |> TargetStatus.statusToString |> str}
+            {targetStatus->TargetStatus.statusToString->str}
           </span>
         </Link>
       })
-      |> Array.of_list
-      |> React.array}
+      ->Array.of_list
+      ->React.array}
     </div>
   </div>
 }
 
 let handleLocked = (target, targets, targetStatus, statusOfTargets) =>
-  switch targetStatus |> TargetStatus.status {
+  switch targetStatus->TargetStatus.status {
   | Locked(reason) =>
     switch reason {
     | PrerequisitesIncomplete => prerequisitesIncomplete(reason, target, targets, statusOfTargets)
@@ -279,7 +279,7 @@ let learnSection = (targetDetails, tab) =>
 let discussSection = (target, targetDetails, tab) =>
   <div className={overlayContentClasses(tab == Discuss)}>
     <CoursesCurriculum__Discuss
-      targetId={target |> Target.id} communities={targetDetails |> TargetDetails.communities}
+      targetId={target->Target.id} communities={targetDetails->TargetDetails.communities}
     />
   </div>
 
@@ -303,12 +303,12 @@ let completeSection = (
   users,
   preview,
 ) => {
-  let completionType = targetDetails |> TargetDetails.computeCompletionType
+  let completionType = targetDetails->TargetDetails.computeCompletionType
 
   let addVerifiedSubmissionCB = addVerifiedSubmission(target, state, send, addSubmissionCB)
 
   <div className={completeSectionClasses(state.tab, completionType)}>
-    {switch (targetStatus |> TargetStatus.status, completionType) {
+    {switch (targetStatus->TargetStatus.status, completionType) {
     | (Pending, Evaluated) =>
       [
         <CoursesCurriculum__CompletionInstructions
@@ -317,11 +317,11 @@ let completeSection = (
         <CoursesCurriculum__SubmissionBuilder
           key="courses-curriculum-submission-form"
           target
-          checklist={targetDetails |> TargetDetails.checklist}
+          checklist={targetDetails->TargetDetails.checklist}
           addSubmissionCB={addSubmission(target, state, send, addSubmissionCB)}
           preview
         />,
-      ] |> React.array
+      ]->React.array
     | (Pending, TakeQuiz) =>
       [
         <CoursesCurriculum__CompletionInstructions
@@ -334,7 +334,7 @@ let completeSection = (
           addSubmissionCB=addVerifiedSubmissionCB
           preview
         />,
-      ] |> React.array
+      ]->React.array
 
     | (Submitted | Passed | Failed | Locked(CourseLocked | AccessLocked), Evaluated | TakeQuiz) =>
       <CoursesCurriculum__SubmissionsAndFeedback
@@ -346,7 +346,7 @@ let completeSection = (
         coaches
         users
         preview
-        checklist={targetDetails |> TargetDetails.checklist}
+        checklist={targetDetails->TargetDetails.checklist}
       />
     | (Pending | Submitted | Passed | Failed, LinkToComplete | MarkAsComplete) =>
       <CoursesCurriculum__AutoVerify
@@ -360,33 +360,33 @@ let completeSection = (
 let renderPendingStudents = (pendingUserIds, users) =>
   <div className="max-w-3xl mx-auto text-center mt-4">
     <div className="font-semibold text-md">
-      {"You have team members who are yet to complete this target:" |> str}
+      {"You have team members who are yet to complete this target:"->str}
     </div>
     <div className="flex justify-center flex-wrap">
       {pendingUserIds
-      |> List.map(studentId => {
+      ->List.map(studentId => {
         let user =
-          users |> ListUtils.unsafeFind(
-            u => u |> User.id == studentId,
+          users->ListUtils.unsafeFind(
+            u => u->User.id == studentId,
             "Unable to find user with id " ++ (studentId ++ "in CoursesCurriculum__Overlay"),
           )
 
         <div
-          title={(user |> User.name) ++ " has not completed this target."}
+          title={(user->User.name) ++ " has not completed this target."}
           className="w-10 h-10 rounded-full border border-yellow-400 flex items-center justify-center overflow-hidden mx-1 shadow-md flex-shrink-0 mt-2">
-          <img src={user |> User.avatarUrl} />
+          <img src={user->User.avatarUrl} />
         </div>
       })
-      |> Array.of_list
-      |> React.array}
+      ->Array.of_list
+      ->React.array}
     </div>
   </div>
 
 let handlePendingStudents = (targetStatus, targetDetails, users) =>
-  switch (targetDetails, targetStatus |> TargetStatus.status) {
+  switch (targetDetails, targetStatus->TargetStatus.status) {
   | (Some(targetDetails), Submitted | Passed) =>
-    let pendingUserIds = targetDetails |> TargetDetails.pendingUserIds
-    pendingUserIds |> ListUtils.isNotEmpty
+    let pendingUserIds = targetDetails->TargetDetails.pendingUserIds
+    pendingUserIds->ListUtils.isNotEmpty
       ? renderPendingStudents(pendingUserIds, users)
       : React.null
   | (Some(_) | None, Locked(_) | Pending | Submitted | Passed | Failed) => React.null
@@ -396,7 +396,7 @@ let performQuickNavigation = (send, _event) => {
   {
     open // Scroll to the top of the overlay before pushing the new URL.
     Webapi.Dom
-    switch document |> Document.getElementById("target-overlay") {
+    switch document->Document.getElementById("target-overlay") {
     | Some(element) => Webapi.Dom.Element.setScrollTop(element, 0.0)
     | None => ()
     }
@@ -420,7 +420,7 @@ let navigationLink = (direction, url, send) => {
     onClick={performQuickNavigation(send)}
     className="block p-2 md:p-4 text-center border rounded-lg bg-gray-100 hover:bg-gray-200">
     {arrow(leftIcon)}
-    <span className="mx-2 hidden md:inline"> {text |> str} </span>
+    <span className="mx-2 hidden md:inline"> {text->str} </span>
     {arrow(rightIcon)}
   </Link>
 }
@@ -428,13 +428,13 @@ let navigationLink = (direction, url, send) => {
 let scrollOverlayToTop = _event => {
   let element = {
     open Webapi.Dom
-    document |> Document.getElementById("target-overlay")
+    document->Document.getElementById("target-overlay")
   }
   element->Belt.Option.mapWithDefault((), element => element->Webapi.Dom.Element.setScrollTop(0.0))
 }
 
 let quickNavigationLinks = (targetDetails, send) => {
-  let (previous, next) = targetDetails |> TargetDetails.navigation
+  let (previous, next) = targetDetails->TargetDetails.navigation
 
   <div className="pb-6">
     <hr className="my-6" />
@@ -448,7 +448,7 @@ let quickNavigationLinks = (targetDetails, send) => {
         <button
           onClick=scrollOverlayToTop
           className="block w-full focus:outline-none p-2 md:p-4 text-center border rounded-lg bg-gray-100 hover:bg-gray-200">
-          <span className="mx-2 hidden md:inline"> {"Scroll to Top" |> str} </span>
+          <span className="mx-2 hidden md:inline"> {"Scroll to Top"->str} </span>
           <span className="mx-2 md:hidden"> <i className="fas fa-arrow-up" /> </span>
         </button>
       </div>
@@ -462,7 +462,7 @@ let quickNavigationLinks = (targetDetails, send) => {
 }
 
 let updatePendingUserIdsWhenAddingSubmission = (send, target, addSubmissionCB, submission) => {
-  send(AddSubmission(target |> Target.role))
+  send(AddSubmission(target->Target.role))
   addSubmissionCB(submission)
 }
 
@@ -481,7 +481,7 @@ let make = (
 ) => {
   let (state, send) = React.useReducer(reducer, initialState)
 
-  React.useEffect1(loadTargetDetails(target, send), [target |> Target.id])
+  React.useEffect1(loadTargetDetails(target, send), [target->Target.id])
 
   React.useEffect(() => {
     ScrollLock.activate()

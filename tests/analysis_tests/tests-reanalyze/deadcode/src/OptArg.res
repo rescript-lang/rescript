@@ -13,7 +13,7 @@ Js.log(threeArgs(~a=4, 1))
 
 let twoArgs = (~a=1, ~b=2, c) => a + b + c
 
-Js.log(1 |> twoArgs)
+Js.log(1->twoArgs)
 
 let oneArg = (~a=1, ~z, b) => a + b
 

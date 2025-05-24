@@ -83,24 +83,24 @@ let reducer = (state, action) =>
 
 let str = React.string
 
-let nameOrTitleInvalid = name => name |> String.length < 2
+let nameOrTitleInvalid = name => name->String.length < 2
 
-let updateName = (send, name) => send(UpdateName(name, name |> nameOrTitleInvalid))
+let updateName = (send, name) => send(UpdateName(name, name->nameOrTitleInvalid))
 
-let emailInvalid = email => email |> EmailUtils.isInvalid(false)
+let emailInvalid = email => email->EmailUtils.isInvalid(false)
 
-let updateEmail = (send, email) => send(UpdateEmail(email, email |> emailInvalid))
+let updateEmail = (send, email) => send(UpdateEmail(email, email->emailInvalid))
 
-let updateTitle = (send, title) => send(UpdateTitle(title, title |> nameOrTitleInvalid))
+let updateTitle = (send, title) => send(UpdateTitle(title, title->nameOrTitleInvalid))
 
 let updateLinkedInUrl = (send, linkedinUrl) => {
   let regex = /(https?)?:?(\/\/)?(([w]{3}||\w\w)\.)?linkedin.com(\w+:{0,1}\w*@)?(\S+)(:([0-9])+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/
-  let hasError = linkedinUrl |> String.length < 1 ? false : !Js.Re.test_(regex, linkedinUrl)
+  let hasError = linkedinUrl->String.length < 1 ? false : !Js.Re.test_(regex, linkedinUrl)
   send(UpdateLinkedInUrl(linkedinUrl, hasError))
 }
 
 let updateConnectLink = (send, connectLink) =>
-  send(UpdateConnectLink(connectLink, connectLink |> UrlUtils.isInvalid(true)))
+  send(UpdateConnectLink(connectLink, connectLink->UrlUtils.isInvalid(true)))
 
 let booleanButtonClasses = selected => {
   let classes = "toggle-button__button"
@@ -108,11 +108,11 @@ let booleanButtonClasses = selected => {
 }
 
 let saveDisabled = state =>
-  state.title |> nameOrTitleInvalid ||
-    (state.name |> nameOrTitleInvalid ||
-    (state.email |> emailInvalid ||
+  state.title->nameOrTitleInvalid ||
+    (state.name->nameOrTitleInvalid ||
+    (state.email->emailInvalid ||
       (state.hasLinkedInUrlError ||
-      (state.connectLink |> UrlUtils.isInvalid(true) || (!state.dirty || state.saving)))))
+      (state.connectLink->UrlUtils.isInvalid(true) || (!state.dirty || state.saving)))))
 
 let computeInitialState = coach =>
   switch coach {
@@ -135,19 +135,19 @@ let computeInitialState = coach =>
       affiliation: "",
     }
   | Some(coach) => {
-      name: coach |> Coach.name,
-      email: coach |> Coach.email,
-      title: coach |> Coach.title,
-      linkedinUrl: switch coach |> Coach.linkedinUrl {
+      name: coach->Coach.name,
+      email: coach->Coach.email,
+      title: coach->Coach.title,
+      linkedinUrl: switch coach->Coach.linkedinUrl {
       | Some(linkedinUrl) => linkedinUrl
       | None => ""
       },
-      public: coach |> Coach.public,
-      connectLink: switch coach |> Coach.connectLink {
+      public: coach->Coach.public,
+      connectLink: switch coach->Coach.connectLink {
       | Some(connectLink) => connectLink
       | None => ""
       },
-      exited: coach |> Coach.exited,
+      exited: coach->Coach.exited,
       dirty: false,
       saving: false,
       hasNameError: false,
@@ -155,11 +155,11 @@ let computeInitialState = coach =>
       hasTitleError: false,
       hasLinkedInUrlError: false,
       hasConnectLinkError: false,
-      imageFileName: switch coach |> Coach.imageFileName {
+      imageFileName: switch coach->Coach.imageFileName {
       | Some(imageFileName) => imageFileName
       | None => ""
       },
-      affiliation: coach |> Coach.affiliation |> OptionUtils.toString,
+      affiliation: coach->Coach.affiliation->OptionUtils.toString,
     }
   }
 
@@ -169,11 +169,11 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
 
   let formId = "coach-create-form"
   let addCoach = json => {
-    let id = json |> {
+    let id = json->{
       open Json.Decode
       field("id", int)
     }
-    let imageUrl = json |> {
+    let imageUrl = json->{
       open Json.Decode
       field("image_url", string)
     }
@@ -205,11 +205,11 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
   let handleResponseJSON = json => {
     let error =
       json
-      |> {
+      ->{
         open Json.Decode
         field("error", nullable(string))
       }
-      |> Js.Null.toOption
+      ->Js.Null.toOption
     switch error {
     | Some(err) =>
       send(UpdateSaving)
@@ -219,7 +219,7 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
   }
   let sendCoach = formData => {
     let endPoint = switch coach {
-    | Some(coach) => "/school/coaches/" ++ (coach |> Coach.id |> string_of_int)
+    | Some(coach) => "/school/coaches/" ++ (coach->Coach.id->string_of_int)
     | None => "/school/coaches/"
     }
     let httpMethod = switch coach {
@@ -236,25 +236,25 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
         (),
       ),
     )
-    |> then_(response =>
+    ->then_(response =>
       if Fetch.Response.ok(response) || Fetch.Response.status(response) == 422 {
-        response |> Fetch.Response.json
+        response->Fetch.Response.json
       } else {
-        Js.Promise.reject(UnexpectedResponse(response |> Fetch.Response.status))
+        Js.Promise.reject(UnexpectedResponse(response->Fetch.Response.status))
       }
     )
-    |> then_(json => handleResponseJSON(json) |> resolve)
-    |> catch(error =>
-      switch error |> handleApiError {
+    ->then_(json => handleResponseJSON(json)->resolve)
+    ->catch(error =>
+      switch error->handleApiError {
       | Some(code) =>
         send(UpdateSaving)
-        Notification.error(code |> string_of_int, "Please try again")
+        Notification.error(code->string_of_int, "Please try again")
       | None =>
         send(UpdateSaving)
         Notification.error("Something went wrong!", "Please try again")
-      } |> resolve
+      }->resolve
     )
-    |> ignore
+    ->ignore
   }
   let submitForm = event => {
     ReactEvent.Form.preventDefault(event)
@@ -281,9 +281,9 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
             <div className="max-w-2xl px-6 pt-5 mx-auto">
               <h5 className="uppercase text-center border-b border-gray-400 pb-2">
                 {switch coach {
-                | Some(coach) => coach |> Coach.name
+                | Some(coach) => coach->Coach.name
                 | None => "Add New Coach"
-                } |> str}
+                }->str}
               </h5>
             </div>
             <form key="xxx" id=formId onSubmit={event => submitForm(event)}>
@@ -293,9 +293,9 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
                   <label
                     className="inline-block tracking-wide text-gray-900 text-xs font-semibold"
                     htmlFor="name">
-                    {"Name" |> str}
+                    {"Name"->str}
                   </label>
-                  <span> {"*" |> str} </span>
+                  <span> {"*"->str} </span>
                   <input
                     className="appearance-none block w-full bg-white text-gray-800 border border-gray-400 rounded py-3 px-4 mt-2 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
                     id="name"
@@ -315,9 +315,9 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
                   <div className="mt-5">
                     <label
                       className="inline-block tracking-wide text-xs font-semibold" htmlFor="email">
-                      {"Email" |> str}
+                      {"Email"->str}
                     </label>
-                    <span> {"*" |> str} </span>
+                    <span> {"*"->str} </span>
                     <input
                       className="appearance-none block w-full bg-white border border-gray-400 rounded py-3 px-4 mt-2 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
                       id="email"
@@ -335,9 +335,9 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
                 <div className="mt-5">
                   <label
                     className="inline-block tracking-wide text-xs font-semibold" htmlFor="title">
-                    {"Title" |> str}
+                    {"Title"->str}
                   </label>
-                  <span> {"*" |> str} </span>
+                  <span> {"*"->str} </span>
                   <input
                     className="appearance-none block w-full bg-white border border-gray-400 rounded py-3 px-4 mt-2 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
                     id="title"
@@ -355,7 +355,7 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
                   <label
                     className="inline-block tracking-wide text-xs font-semibold"
                     htmlFor="affiliation">
-                    {"Affiliation" |> str}
+                    {"Affiliation"->str}
                   </label>
                   <input
                     value=state.affiliation
@@ -371,7 +371,7 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
                 <div className="mt-5">
                   <label
                     className="inline-block tracking-wide text-xs font-semibold" htmlFor="linkedIn">
-                    {"LinkedIn" |> str}
+                    {"LinkedIn"->str}
                   </label>
                   <input
                     className="appearance-none block w-full bg-white border border-gray-400 rounded py-3 px-4 mt-2 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
@@ -391,7 +391,7 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
                   <label
                     className="inline-block tracking-wide text-xs font-semibold"
                     htmlFor="connectLink">
-                    {"Connect Link" |> str}
+                    {"Connect Link"->str}
                   </label>
                   <input
                     className="appearance-none block w-full bg-white border border-gray-400 rounded py-3 px-4 mt-2 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
@@ -412,7 +412,7 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
                     <label
                       className="block tracking-wide text-xs font-semibold mr-3"
                       htmlFor="evaluated">
-                      {"Should the coach profile be public?" |> str}
+                      {"Should the coach profile be public?"->str}
                     </label>
                     <div
                       id="notification"
@@ -426,7 +426,7 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
                         name="faculty[public]"
                         value="true"
                         className={booleanButtonClasses(state.public)}>
-                        {"Yes" |> str}
+                        {"Yes"->str}
                       </button>
                       <button
                         onClick={_event => {
@@ -434,10 +434,10 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
                           send(UpdatePublic(false))
                         }}
                         className={booleanButtonClasses(!state.public)}>
-                        {"No" |> str}
+                        {"No"->str}
                       </button>
                       <input
-                        type_="hidden" name="faculty[public]" value={state.public |> string_of_bool}
+                        type_="hidden" name="faculty[public]" value={state.public->string_of_bool}
                       />
                     </div>
                   </div>
@@ -445,7 +445,7 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
                 <div className="mt-5">
                   <label
                     className="block tracking-wide text-xs font-semibold" htmlFor="avatarUploader">
-                    {"Avatar" |> str}
+                    {"Avatar"->str}
                   </label>
                   <input
                     disabled=state.saving
@@ -460,7 +460,7 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
                   />
                   <label className="file-input-label mt-2" htmlFor="sa-coach-editor__file-input">
                     <i className="fas fa-upload mr-2 text-gray-600 text-lg" />
-                    <span className="truncate"> {avatarUploaderText() |> str} </span>
+                    <span className="truncate"> {avatarUploaderText()->str} </span>
                   </label>
                 </div>
               </div>
@@ -473,7 +473,7 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
                         <label
                           className="block tracking-wide  text-xs font-semibold mr-3"
                           htmlFor="evaluated">
-                          {"Has the coach left the school?" |> str}
+                          {"Has the coach left the school?"->str}
                         </label>
                         <div
                           id="exited"
@@ -485,7 +485,7 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
                             }}
                             name="faculty[exited]"
                             className={booleanButtonClasses(state.exited)}>
-                            {"Yes" |> str}
+                            {"Yes"->str}
                           </button>
                           <button
                             onClick={_event => {
@@ -493,12 +493,12 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
                               send(UpdateExited(false))
                             }}
                             className={booleanButtonClasses(!state.exited)}>
-                            {"No" |> str}
+                            {"No"->str}
                           </button>
                           <input
                             type_="hidden"
                             name="faculty[exited]"
-                            value={state.exited |> string_of_bool}
+                            value={state.exited->string_of_bool}
                           />
                         </div>
                       </div>
@@ -509,7 +509,7 @@ let make = (~coach, ~closeFormCB, ~updateCoachCB, ~authenticityToken) => {
                       {switch coach {
                       | Some(_coach) => "Update Coach"
                       | None => "Add Coach"
-                      } |> str}
+                      }->str}
                     </button>
                   </div>
                 </div>

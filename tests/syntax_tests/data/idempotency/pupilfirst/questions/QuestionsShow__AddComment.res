@@ -60,14 +60,14 @@ let make = (~commentableType, ~commentableId, ~addCommentCB, ~currentUserId) => 
   }
 
   let handleCreateComment = event => {
-    event |> ReactEvent.Mouse.preventDefault
+    event->ReactEvent.Mouse.preventDefault
 
     if validComment {
       setSaving(_ => true)
 
       CreateCommentQuery.make(~value, ~commentableId, ~commentableType, ())
-      |> GraphqlQuery.sendQuery
-      |> Js.Promise.then_(response =>
+      ->GraphqlQuery.sendQuery
+      ->Js.Promise.then_(response =>
         switch response["createComment"] {
         | #CommentId(commentId) =>
           handleResponseCB(commentId)
@@ -76,8 +76,8 @@ let make = (~commentableType, ~commentableId, ~addCommentCB, ~currentUserId) => 
         | #Errors(errors) => Js.Promise.reject(CreateCommentErrorHandler.Errors(errors))
         }
       )
-      |> CreateCommentErrorHandler.catch(() => setSaving(_ => false))
-      |> ignore
+      ->CreateCommentErrorHandler.catch(() => setSaving(_ => false))
+      ->ignore
     } else {
       ()
     }
@@ -97,7 +97,7 @@ let make = (~commentableType, ~commentableId, ~addCommentCB, ~currentUserId) => 
           ? <button
               onClick=handleCreateComment
               className="flex items-center whitespace-no-wrap text-sm font-semibold py-2 px-4 btn-primary appearance-none focus:outline-none text-center">
-              {"Comment" |> str}
+              {"Comment"->str}
             </button>
           : ReasonReact.null}
       </DisablingCover>

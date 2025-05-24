@@ -6,8 +6,8 @@ type t = {
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    title: json |> field("title", string),
+    id: json->field("id", string),
+    title: json->field("title", string),
   }
 }
 

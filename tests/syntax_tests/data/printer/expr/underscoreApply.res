@@ -10,25 +10,25 @@ let x = f(~a=_, ~b=_, ~c=g(~x=2, ~y=_, ~z=_))
 let nested = x => List.length(_);
 let nested2 = (x, y, z) => List.length(_);
 
-let l = [1,2,3] |> List.map (i => i+1, _) |> List.filter (i => i>0, _);
+let l = [1,2,3]->List.map (i => i+1, _)->List.filter (i => i>0, _);
 
-let l = (i => i+1) |> List.map(_, [1,2,3]);
+let l = (i => i+1)->List.map(_, [1,2,3]);
 
 let x = List.length(_);
 
 let incr = (~v) => v+1;
 
-let l1 = [1,2,3] |> List.map(incr(~v=_)) |> List.length;
+let l1 = [1,2,3]->List.map(incr(~v=_))->List.length;
 
-let l2 = [1,2,3] |> List.map(incr(~v =_)) |> List.length;
+let l2 = [1,2,3]->List.map(incr(~v =_))->List.length;
 
 let optParam = (~v=?, ()) => v == None ? 0 : 1;
 
 let l1 =
- [Some(1), None, Some(2)] |> List.map(optParam(~v=?_, ())) |> List.length;
+ [Some(1), None, Some(2)]->List.map(optParam(~v=?_, ()))->List.length;
 
 let l2 =
- [Some(1), None, Some(2)] |> List.map(optParam(~v =?_, ())) |> List.length;
+ [Some(1), None, Some(2)]->List.map(optParam(~v =?_, ()))->List.length;
 
 // callback in last position
 f(a, b, (a, b) => List.length(_))
@@ -54,14 +54,14 @@ f(a, b, _)[ix] = 2
 
 getDirector(a, b, _).name = "Steve"
 
-filterNone |> Array.get(_, 0)
+filterNone->Array.get(_, 0)
 filterNone->Array.get(_, 0)
 Array.get(_, 0)
 1 + Array.get(_, 0)
 Array.get(_, 1) + Array.get(_, 0)
 let f = Array.get(_, 0)
 
-let photo = pricedRoom["room"]["photos"] |> filterNone |> Array.get(_, 0)
+let photo = pricedRoom["room"]["photos"]->filterNone->Array.get(_, 0)
 
 underscoreWithComments(
   // Comment 1

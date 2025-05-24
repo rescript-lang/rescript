@@ -9,15 +9,15 @@ let translateSignatureValue = (
 ): Translation.t => {
   let {Typedtree.val_id: val_id, val_desc, val_attributes} = valueDescription
   if Debug.translation.contents {
-    Log_.item("Translate Signature Value %s\n", val_id |> Ident.name)
+    Log_.item("Translate Signature Value %s\n", val_id->Ident.name)
   }
   let typeExpr = val_desc.ctyp_type
   let addAnnotationsToFunction = type_ => type_
   switch (val_id, Annotation.fromAttributes(val_attributes)) {
   | (id, GenType) =>
     id
-    |> Ident.name
-    |> {
+    ->Ident.name
+    ->{
       open Translation
       Ident.name(id) == "make" ? translateComponent : translateValue
     }(
@@ -41,25 +41,25 @@ let rec translateModuleDeclaration = (
   ~typeEnv,
   {md_id, md_type}: Typedtree.module_declaration,
 ) => {
-  let name = md_id |> Ident.name
+  let name = md_id->Ident.name
   if Debug.translation.contents {
     Log_.item("Translate Module Declaration %s\n", name)
   }
-  let typeEnv = typeEnv |> TypeEnv.newModule(~name)
+  let typeEnv = typeEnv->TypeEnv.newModule(~name)
 
   switch md_type.mty_desc {
   | Tmty_signature(signature) =>
     signature
-    |> translateSignature(~config, ~outputFileRelative, ~resolver, ~typeEnv)
-    |> Translation.combine
+    ->translateSignature(~config, ~outputFileRelative, ~resolver, ~typeEnv)
+    ->Translation.combine
 
   | Tmty_ident(path, _) =>
-    switch typeEnv |> TypeEnv.lookupModuleTypeSignature(~path) {
+    switch typeEnv->TypeEnv.lookupModuleTypeSignature(~path) {
     | None => Translation.empty
     | Some((signature, _)) =>
       signature
-      |> translateSignature(~config, ~outputFileRelative, ~resolver, ~typeEnv)
-      |> Translation.combine
+      ->translateSignature(~config, ~outputFileRelative, ~resolver, ~typeEnv)
+      ->Translation.combine
     }
 
   | Tmty_functor(_) =>
@@ -84,23 +84,23 @@ and translateModuleTypeDeclaration = (
   moduleTypeDeclaration: Typedtree.module_type_declaration,
 ) => {
   if Debug.translation.contents {
-    Log_.item("Translate Module Type Declaration %s\n", moduleTypeDeclaration.mtd_id |> Ident.name)
+    Log_.item("Translate Module Type Declaration %s\n", moduleTypeDeclaration.mtd_id->Ident.name)
   }
   switch moduleTypeDeclaration {
   | {mtd_type: None} => Translation.empty
   | {mtd_id, mtd_type: Some(mtd_type)} =>
     switch mtd_type.mty_desc {
     | Tmty_signature(signature) =>
-      let name = mtd_id |> Ident.name
+      let name = mtd_id->Ident.name
       let translation =
         signature
-        |> translateSignature(
+        ->translateSignature(
           ~config,
           ~outputFileRelative,
           ~resolver,
-          ~typeEnv=typeEnv |> TypeEnv.newModuleType(~name, ~signature),
+          ~typeEnv=typeEnv->TypeEnv.newModuleType(~name, ~signature),
         )
-        |> Translation.combine
+        ->Translation.combine
       translation
 
     | Tmty_ident(_) =>
@@ -133,7 +133,7 @@ and translateSignatureItem = (
   | {Typedtree.sig_desc: Typedtree.Tsig_type(_, typeDeclarations)} => {
       importTypes: list{},
       codeItems: list{},
-      typeDeclarations: typeDeclarations |> TranslateTypeDeclarations.translateTypeDeclarations(
+      typeDeclarations: typeDeclarations->TranslateTypeDeclarations.translateTypeDeclarations(
         ~config,
         ~outputFileRelative,
         ~resolver,
@@ -143,7 +143,7 @@ and translateSignatureItem = (
 
   | {Typedtree.sig_desc: Tsig_value(valueDescription)} =>
     if valueDescription.val_prim != list{} {
-      valueDescription |> Translation.translatePrimitive(
+      valueDescription->Translation.translatePrimitive(
         ~config,
         ~outputFileRelative,
         ~resolver,
@@ -151,13 +151,13 @@ and translateSignatureItem = (
       )
     } else {
       let moduleItem =
-        moduleItemGen |> Runtime.newModuleItem(~name=valueDescription.val_id |> Ident.name)
-      typeEnv |> TypeEnv.updateModuleItem(~moduleItem)
-      valueDescription |> translateSignatureValue(~config, ~outputFileRelative, ~resolver, ~typeEnv)
+        moduleItemGen->Runtime.newModuleItem(~name=valueDescription.val_id->Ident.name)
+      typeEnv->TypeEnv.updateModuleItem(~moduleItem)
+      valueDescription->translateSignatureValue(~config, ~outputFileRelative, ~resolver, ~typeEnv)
     }
 
   | {Typedtree.sig_desc: Typedtree.Tsig_module(moduleDeclaration)} =>
-    moduleDeclaration |> translateModuleDeclaration(
+    moduleDeclaration->translateModuleDeclaration(
       ~config,
       ~outputFileRelative,
       ~resolver,
@@ -166,9 +166,9 @@ and translateSignatureItem = (
 
   | {Typedtree.sig_desc: Typedtree.Tsig_modtype(moduleTypeDeclaration)} =>
     let moduleItem =
-      moduleItemGen |> Runtime.newModuleItem(~name=moduleTypeDeclaration.mtd_id |> Ident.name)
-    typeEnv |> TypeEnv.updateModuleItem(~moduleItem)
-    moduleTypeDeclaration |> translateModuleTypeDeclaration(
+      moduleItemGen->Runtime.newModuleItem(~name=moduleTypeDeclaration.mtd_id->Ident.name)
+    typeEnv->TypeEnv.updateModuleItem(~moduleItem)
+    moduleTypeDeclaration->translateModuleTypeDeclaration(
       ~config,
       ~outputFileRelative,
       ~resolver,
@@ -207,7 +207,7 @@ and translateSignature = (~config, ~outputFileRelative, ~resolver, ~typeEnv, sig
     Log_.item("Translate Signature\n")
   }
   let moduleItemGen = Runtime.moduleItemGen()
-  signature.Typedtree.sig_items |> List.map(
+  signature.Typedtree.sig_items->List.map(
     translateSignatureItem(~config, ~outputFileRelative, ~resolver, ~moduleItemGen, ~typeEnv),
   )
 }

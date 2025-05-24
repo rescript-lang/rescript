@@ -22,49 +22,49 @@ and id = string
 
 let decodeMarkdownContent = json => {
   open Json.Decode
-  json |> field("markdown", string)
+  json->field("markdown", string)
 }
 let decodeFileContent = json => {
   open Json.Decode
-  json |> field("title", string)
+  json->field("title", string)
 }
 let decodeImageContent = json => {
   open Json.Decode
-  json |> field("caption", string)
+  json->field("caption", string)
 }
 let decodeEmbedContent = json => {
   open Json.Decode
-  (json |> field("url", string), json |> field("embedCode", string))
+  (json->field("url", string), json->field("embedCode", string))
 }
 
 let decode = json => {
   open Json.Decode
 
-  let blockType = switch json |> field("blockType", string) {
-  | "markdown" => Markdown(json |> field("content", decodeMarkdownContent))
+  let blockType = switch json->field("blockType", string) {
+  | "markdown" => Markdown(json->field("content", decodeMarkdownContent))
   | "file" =>
-    let title = json |> field("content", decodeFileContent)
-    let url = json |> field("fileUrl", string)
-    let filename = json |> field("filename", string)
+    let title = json->field("content", decodeFileContent)
+    let url = json->field("fileUrl", string)
+    let filename = json->field("filename", string)
     File(url, title, filename)
   | "image" =>
-    let caption = json |> field("content", decodeImageContent)
-    let url = json |> field("fileUrl", string)
+    let caption = json->field("content", decodeImageContent)
+    let url = json->field("fileUrl", string)
     Image(url, caption)
   | "embed" =>
-    let (url, embedCode) = json |> field("content", decodeEmbedContent)
+    let (url, embedCode) = json->field("content", decodeEmbedContent)
     Embed(url, embedCode)
   | unknownBlockType => raise(UnexpectedBlockType(unknownBlockType))
   }
 
   {
-    id: json |> field("id", string),
+    id: json->field("id", string),
     blockType: blockType,
-    sortIndex: json |> field("sortIndex", int),
+    sortIndex: json->field("sortIndex", int),
   }
 }
 
-let sort = blocks => blocks |> ArrayUtils.copyAndSort((x, y) => x.sortIndex - y.sortIndex)
+let sort = blocks => blocks->ArrayUtils.copyAndSort((x, y) => x.sortIndex - y.sortIndex)
 
 let id = t => t.id
 let blockType = t => t.blockType
@@ -100,13 +100,13 @@ let blockTypeAsString = blockType =>
 
 let incrementSortIndex = t => {...t, sortIndex: t.sortIndex + 1}
 
-let reindex = ts => ts |> List.mapi((sortIndex, t) => {...t, sortIndex: sortIndex})
+let reindex = ts => ts->List.mapi((sortIndex, t) => {...t, sortIndex: sortIndex})
 
 let moveUp = (t, ts) =>
-  ts |> sort |> Array.to_list |> ListUtils.swapUp(t) |> reindex |> Array.of_list
+  ts->sort->Array.to_list->ListUtils.swapUp(t)->reindex->Array.of_list
 
 let moveDown = (t, ts) =>
-  ts |> sort |> Array.to_list |> ListUtils.swapDown(t) |> reindex |> Array.of_list
+  ts->sort->Array.to_list->ListUtils.swapDown(t)->reindex->Array.of_list
 
 let updateFile = (title, t) =>
   switch t.blockType {

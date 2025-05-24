@@ -2111,7 +2111,7 @@ include (
 
     let createElementVariadic = (domClassName, ~props=?, children) => {
       let variadicArguments =
-        [Obj.magic(domClassName), Obj.magic(props)] |> Js.Array.concat(children)
+        [Obj.magic(domClassName), Obj.magic(props)]->Js.Array.concat(children)
       createElementInternalHack->apply(Js.Nullable.null, variadicArguments)
     }
   }: {
@@ -2543,7 +2543,7 @@ module Style = {
   let combine: (style, style) => style = (a, b) => {
     let a: Js.t<{..}> = Obj.magic(a)
     let b: Js.t<{..}> = Obj.magic(b)
-    Js.Obj.assign(Js.Obj.assign(Js.Obj.empty(), a), b) |> Obj.magic
+    Js.Obj.assign(Js.Obj.assign(Js.Obj.empty(), a), b)->Obj.magic
   }
   let unsafeAddProp: (style, string, string) => style = (style, property, value) => {
     let propStyle: style = {

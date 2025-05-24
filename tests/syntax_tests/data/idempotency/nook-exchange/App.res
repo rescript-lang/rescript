@@ -59,7 +59,7 @@ let make = () => {
   let url = ReasonReactRouter.useUrl()
   let (showLogin, setShowLogin) = React.useState(() => false)
   let itemDetails = {
-    let result = url.hash |> Js.Re.exec_(/i(-?\d+)(:(\d+))?/g)
+    let result = url.hash->Js.Re.exec_(/i(-?\d+)(:(\d+))?/g)
     switch result {
     | Some(match_) =>
       let captures = Js.Re.captures(match_)
@@ -129,24 +129,24 @@ let make = () => {
       let (code, state) = {
         open Webapi.Url.URLSearchParams
         let searchParams = make(url.search)
-        (searchParams |> get("code"), searchParams |> get("state"))
+        (searchParams->get("code"), searchParams->get("state"))
       }
       switch (code, state) {
       | (Some(code), Some(state)) =>
         if (
           {
             open Dom.Storage
-            localStorage |> getItem("discord_state")
+            localStorage->getItem("discord_state")
           } != Some(state)
         ) {
           raise(DiscordOauthStateMismatch(state))
         }
         DiscordOauth.process(
           ~code,
-          ~isLogin=state |> Js.String.startsWith("login"),
-          ~isRegister=state |> Js.String.startsWith("register"),
-          ~isConnect=state |> Js.String.startsWith("connect"),
-        ) |> ignore
+          ~isLogin=state->Js.String.startsWith("login"),
+          ~isRegister=state->Js.String.startsWith("register"),
+          ~isConnect=state->Js.String.startsWith("connect"),
+        )->ignore
         ReasonReactRouter.replace("/")
       | _ => ()
       }

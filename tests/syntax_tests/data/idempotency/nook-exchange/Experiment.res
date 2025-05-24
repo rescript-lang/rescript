@@ -1,11 +1,11 @@
 let key = "bucket_hash"
 let bucketHash = ref(
-  (Dom.Storage.localStorage |> Dom.Storage.getItem(key))->Belt.Option.flatMap(int_of_string_opt),
+  (Dom.Storage.localStorage->Dom.Storage.getItem(key))->Belt.Option.flatMap(int_of_string_opt),
 )
 
 let triggerKey = "triggered_experiments"
 let triggeredMap = ref(
-  (Dom.Storage.localStorage |> Dom.Storage.getItem(triggerKey))
+  (Dom.Storage.localStorage->Dom.Storage.getItem(triggerKey))
   ->Belt.Option.map(value => {
     let json = Js.Json.parseExn(value)
     open Json.Decode
@@ -16,7 +16,7 @@ let triggeredMap = ref(
 let addTrigger = (key, value) => {
   triggeredMap.contents->Js.Dict.set(key, value)
   open Dom.Storage
-  localStorage |> setItem(
+  localStorage->setItem(
     triggerKey,
     Js.Json.stringify({
       open Json.Encode
@@ -32,7 +32,7 @@ let getBucketHash = () =>
   | None =>
     let value = Js.Math.random_int(0, max_int)
     bucketHash := Some(value)
-    Dom.Storage.localStorage |> Dom.Storage.setItem(key, string_of_int(value))
+    Dom.Storage.localStorage->Dom.Storage.setItem(key, string_of_int(value))
     value
   }
 

@@ -56,7 +56,7 @@ describe("Pseudo classes", () => {
         r(valid(list{ruleSelector})),
         r(visited(list{ruleSelector})),
       )->Js.Json.stringifyAny,
-    ) |> toBeJson((
+    )->toBeJson((
       {":active": ruleJson},
       {":checked": ruleJson},
       {":default": ruleJson},
@@ -97,11 +97,11 @@ describe("Pseudo classes", () => {
         r(host(list{ruleSelector})),
         r(host(~selector=".special-custom-element", list{ruleSelector})),
       )->Js.Json.stringifyAny,
-    ) |> toBeJson(({":host": ruleJson}, {":host(.special-custom-element)": ruleJson}))
+    )->toBeJson(({":host": ruleJson}, {":host(.special-custom-element)": ruleJson}))
   )
 
   test("test not", () =>
-    expect(r(not__("p", list{ruleSelector}))->Js.Json.stringifyAny) |> toBeJson({
+    expect(r(not__("p", list{ruleSelector}))->Js.Json.stringifyAny)->toBeJson({
       ":not(p)": ruleJson,
     })
   )
@@ -114,7 +114,7 @@ describe("Pseudo classes", () => {
         r(nthChild(#n(2), list{ruleSelector})),
         r(nthChild(#add(3, 4), list{ruleSelector})),
       )->Js.Json.stringifyAny,
-    ) |> toBeJson((
+    )->toBeJson((
       {":nth-child(odd)": ruleJson},
       {":nth-child(even)": ruleJson},
       {":nth-child(2n)": ruleJson},
@@ -130,7 +130,7 @@ describe("Pseudo classes", () => {
         r(nthLastChild(#n(2), list{ruleSelector})),
         r(nthLastChild(#add(3, 4), list{ruleSelector})),
       )->Js.Json.stringifyAny,
-    ) |> toBeJson((
+    )->toBeJson((
       {":nth-last-child(odd)": ruleJson},
       {":nth-last-child(even)": ruleJson},
       {":nth-last-child(2n)": ruleJson},
@@ -146,7 +146,7 @@ describe("Pseudo classes", () => {
         r(nthLastOfType(#n(2), list{ruleSelector})),
         r(nthLastOfType(#add(3, 4), list{ruleSelector})),
       )->Js.Json.stringifyAny,
-    ) |> toBeJson((
+    )->toBeJson((
       {":nth-last-of-type(odd)": ruleJson},
       {":nth-last-of-type(even)": ruleJson},
       {":nth-last-of-type(2n)": ruleJson},
@@ -162,7 +162,7 @@ describe("Pseudo classes", () => {
         r(nthOfType(#n(2), list{ruleSelector})),
         r(nthOfType(#add(3, 4), list{ruleSelector})),
       )->Js.Json.stringifyAny,
-    ) |> toBeJson((
+    )->toBeJson((
       {":nth-of-type(odd)": ruleJson},
       {":nth-of-type(even)": ruleJson},
       {":nth-of-type(2n)": ruleJson},
@@ -182,7 +182,7 @@ describe("Pseudo classes", () =>
         r(placeholder(list{ruleSelector})),
         r(selection(list{ruleSelector})),
       )->Js.Json.stringifyAny,
-    ) |> toBeJson((
+    )->toBeJson((
       {"::after": ruleJson},
       {"::before": ruleJson},
       {"::first-letter": ruleJson},
@@ -202,6 +202,6 @@ describe("Combinators", () =>
         r(siblings(list{ruleSelector})),
         r(directSibling(list{ruleSelector})),
       )->Js.Json.stringifyAny,
-    ) |> toBeJson(({" > li": ruleJson}, {" > *": ruleJson}, {" ~ ": ruleJson}, {" + ": ruleJson}))
+    )->toBeJson(({" > li": ruleJson}, {" > *": ruleJson}, {" ~ ": ruleJson}, {" + ": ruleJson}))
   )
 )

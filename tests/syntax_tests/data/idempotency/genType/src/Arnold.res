@@ -3,7 +3,7 @@ let verbose = DeadCommon.verbose
 let printPos = (ppf, pos: Lexing.position) => {
   let file = pos.Lexing.pos_fname
   let line = pos.Lexing.pos_lnum
-  Format.fprintf(ppf, "@{<filename>%s@} @{<dim>%i@}", file |> Filename.basename, line)
+  Format.fprintf(ppf, "@{<filename>%s@} @{<dim>%i@}", file->Filename.basename, line)
 }
 
 module StringSet = Set.Make(String)
@@ -29,10 +29,10 @@ module FunctionArgs = {
   let toString = functionArgs =>
     functionArgs == list{}
       ? ""
-      : "<" ++ ((functionArgs |> List.map(argToString) |> String.concat(",")) ++ ">")
+      : "<" ++ ((functionArgs->List.map(argToString)->String.concat(",")) ++ ">")
 
   let find = (t: t, ~label) =>
-    switch t |> List.find_opt(arg => arg.label == label) {
+    switch t->List.find_opt(arg => arg.label == label) {
     | Some({functionName}) => Some(functionName)
     | None => None
     }
@@ -68,7 +68,7 @@ module FunctionCall = {
   }
 
   let substituteName = (~sub, name) =>
-    switch sub |> FunctionArgs.find(~label=name) {
+    switch sub->FunctionArgs.find(~label=name) {
     | Some(functionName) => functionName
     | None => name
     }
@@ -78,10 +78,10 @@ module FunctionCall = {
       t
     } else {
       {
-        functionName: t.functionName |> substituteName(~sub),
-        functionArgs: t.functionArgs |> List.map((arg: FunctionArgs.arg) => {
+        functionName: t.functionName->substituteName(~sub),
+        functionArgs: t.functionArgs->List.map((arg: FunctionArgs.arg) => {
           ...arg,
-          functionName: arg.functionName |> substituteName(~sub),
+          functionName: arg.functionName->substituteName(~sub),
         }),
       }
     }
@@ -273,14 +273,14 @@ module Trace = {
       Path.name(progressFunction) ++ (":" ++ Progress.toString(progress))
     | Tcall(FunctionCall(functionCall), progress) =>
       FunctionCall.toString(functionCall) ++ (":" ++ Progress.toString(progress))
-    | Tnondet(traces) => "[" ++ ((traces |> List.map(toString) |> String.concat(" || ")) ++ "]")
-    | Toption(retOption) => retOption |> retOptionToString
+    | Tnondet(traces) => "[" ++ ((traces->List.map(toString)->String.concat(" || ")) ++ "]")
+    | Toption(retOption) => retOption->retOptionToString
     | Tseq(traces) =>
-      let tracesNotEmpty = traces |> List.filter(\"<>"(empty))
+      let tracesNotEmpty = traces->List.filter(\"<>"(empty))
       switch tracesNotEmpty {
       | list{} => "_"
-      | list{t} => t |> toString
-      | list{_, ..._} => tracesNotEmpty |> List.map(toString) |> String.concat("; ")
+      | list{t} => t->toString
+      | list{_, ..._} => tracesNotEmpty->List.map(toString)->String.concat("; ")
       }
     }
 }
@@ -312,7 +312,7 @@ module Values: {
       | None => list{}
       | Some(p) => list{"none: " ++ Progress.toString(p)}
       },
-    ) |> String.concat(", ")
+    )->String.concat(", ")
 
   let none = (~progress) => {none: Some(progress), some: None}
   let some = (~progress) => {none: None, some: Some(progress)}
@@ -342,8 +342,8 @@ module State = {
 
   let toString = ({progress, trace, valuesOpt}) => {
     let progressStr = switch valuesOpt {
-    | None => progress |> Progress.toString
-    | Some(values) => "{" ++ ((values |> Values.toString) ++ "}")
+    | None => progress->Progress.toString
+    | Some(values) => "{" ++ ((values->Values.toString) ++ "}")
     }
     progressStr ++ (" with trace " ++ Trace.toString(trace))
   }
@@ -386,7 +386,7 @@ module State = {
     | list{s, ...nextStates} => List.fold_left(nd, s, nextStates)
     }
 
-  let unorderedSequence = states => {...states |> sequence, valuesOpt: None}
+  let unorderedSequence = states => {...states->sequence, valuesOpt: None}
 
   let none = (~progress) =>
     init(~progress, ~trace=Trace.none, ~valuesOpt=Some(Values.none(~progress)), ())
@@ -411,17 +411,17 @@ module Command = {
 
   let rec toString = command =>
     switch command {
-    | Call(call, _pos) => call |> Call.toString
-    | ConstrOption(r) => r |> Trace.retOptionToString
-    | Nondet(commands) => "[" ++ ((commands |> List.map(toString) |> String.concat(" || ")) ++ "]")
+    | Call(call, _pos) => call->Call.toString
+    | ConstrOption(r) => r->Trace.retOptionToString
+    | Nondet(commands) => "[" ++ ((commands->List.map(toString)->String.concat(" || ")) ++ "]")
     | Nothing => "_"
-    | Sequence(commands) => commands |> List.map(toString) |> String.concat("; ")
+    | Sequence(commands) => commands->List.map(toString)->String.concat("; ")
     | SwitchOption({functionCall, some: cSome, none: cNone}) =>
       "switch " ++
       (FunctionCall.toString(functionCall) ++
       (" {some: " ++ (toString(cSome) ++ (", none: " ++ (toString(cNone) ++ "}")))))
     | UnorderedSequence(commands) =>
-      "{" ++ ((commands |> List.map(toString) |> String.concat(", ")) ++ "}")
+      "{" ++ ((commands->List.map(toString)->String.concat(", ")) ++ "}")
     }
 
   let nothing = Nothing
@@ -454,7 +454,7 @@ module Command = {
   let \"+++" = (c1, c2) => sequence(list{c1, c2})
 
   let unorderedSequence = commands => {
-    let relevantCommands = commands |> List.filter(x => x != nothing)
+    let relevantCommands = commands->List.filter(x => x != nothing)
     switch relevantCommands {
     | list{} => nothing
     | list{c} => c
@@ -472,16 +472,16 @@ module Kind = {
 
   let empty: t = list{}
 
-  let hasLabel = (~label, k: t) => k |> List.exists(entry => entry.label == label)
+  let hasLabel = (~label, k: t) => k->List.exists(entry => entry.label == label)
 
-  let rec entryToString = ({label, k}) => k == list{} ? label : label ++ (":" ++ (k |> toString))
+  let rec entryToString = ({label, k}) => k == list{} ? label : label ++ (":" ++ (k->toString))
 
   and toString = (kind: t) =>
-    kind == list{} ? "" : "<" ++ ((kind |> List.map(entryToString) |> String.concat(", ")) ++ ">")
+    kind == list{} ? "" : "<" ++ ((kind->List.map(entryToString)->String.concat(", ")) ++ ">")
 
   let addLabelWithEmptyKind = (~label, kind) =>
-    if !(kind |> hasLabel(~label)) {
-      list{{label: label, k: empty}, ...kind} |> List.sort(compare)
+    if !(kind->hasLabel(~label)) {
+      list{{label: label, k: empty}, ...kind}->List.sort(compare)
     } else {
       kind
     }
@@ -507,8 +507,8 @@ module FunctionTable = {
         },
         tbl,
         list{},
-      ) |> List.sort(((fn1, _, _), (fn2, _, _)) => String.compare(fn1, fn2))
-    definitions |> List.iteri((i, (functionName, kind, body)) =>
+      )->List.sort(((fn1, _, _), (fn2, _, _)) => String.compare(fn1, fn2))
+    definitions->List.iteri((i, (functionName, kind, body)) =>
       Format.fprintf(
         ppf,
         "@,@{<dim>%d@} @{<info>%s%s@}: %s",
@@ -543,18 +543,18 @@ module FunctionTable = {
   }
 
   let addLabelToKind = (~functionName, ~label, tbl: t) => {
-    let functionDefinition = tbl |> getFunctionDefinition(~functionName)
-    functionDefinition.kind = functionDefinition.kind |> Kind.addLabelWithEmptyKind(~label)
+    let functionDefinition = tbl->getFunctionDefinition(~functionName)
+    functionDefinition.kind = functionDefinition.kind->Kind.addLabelWithEmptyKind(~label)
   }
 
   let addBody = (~body, ~functionName, tbl: t) => {
-    let functionDefinition = tbl |> getFunctionDefinition(~functionName)
+    let functionDefinition = tbl->getFunctionDefinition(~functionName)
     functionDefinition.body = body
   }
 
   let functionGetKindOfLabel = (~functionName, ~label, tbl: t) =>
     switch Hashtbl.find(tbl, functionName) {
-    | {kind} => kind |> Kind.hasLabel(~label) ? Some(Kind.empty) : None
+    | {kind} => kind->Kind.hasLabel(~label) ? Some(Kind.empty) : None
     | exception Not_found => None
     }
 }
@@ -585,7 +585,7 @@ module FindFunctionsCalled = {
     let callees = ref(StringSet.empty)
     let traverseExpr = traverseExpr(~callees)
     if isFunction {
-      expression |> traverseExpr.expr(traverseExpr) |> ignore
+      expression->traverseExpr.expr(traverseExpr)->ignore
     }
     callees.contents
   }
@@ -615,10 +615,10 @@ module ExtendFunctionTable = {
       let checkArg = ((argLabel: Asttypes.arg_label, _argOpt)) =>
         switch (argLabel, kindOpt) {
         | (Labelled(l) | Optional(l), Some(kind)) =>
-          kind |> List.for_all(({Kind.label: label}) => label != l)
+          kind->List.for_all(({Kind.label: label}) => label != l)
         | _ => true
         }
-      if args |> List.for_all(checkArg) {
+      if args->List.for_all(checkArg) {
         Some((path, loc))
       } else {
         None
@@ -638,8 +638,8 @@ module ExtendFunctionTable = {
         | Some((id_pos, _, callees)) =>
           if !StringSet.is_empty(StringSet.inter(Lazy.force(callees), progressFunctions)) {
             let functionName = Path.name(callee)
-            if !(callee |> FunctionTable.isInFunctionInTable(~functionTable)) {
-              functionTable |> FunctionTable.addFunction(~functionName)
+            if !(callee->FunctionTable.isInFunctionInTable(~functionTable)) {
+              functionTable->FunctionTable.addFunction(~functionName)
               if verbose {
                 Log_.info(~loc, ~name="Termination Analysis", (ppf, ()) =>
                   Format.fprintf(
@@ -655,13 +655,13 @@ module ExtendFunctionTable = {
           }
         }
       | Texp_apply({exp_desc: Texp_ident(callee, _, _)}, args)
-        if callee |> FunctionTable.isInFunctionInTable(~functionTable) =>
+        if callee->FunctionTable.isInFunctionInTable(~functionTable) =>
         let functionName = Path.name(callee)
-        args |> List.iter(((argLabel: Asttypes.arg_label, argOpt)) =>
-          switch (argLabel, argOpt |> extractLabelledArgument) {
+        args->List.iter(((argLabel: Asttypes.arg_label, argOpt)) =>
+          switch (argLabel, argOpt->extractLabelledArgument) {
           | (Labelled(label), Some((path, loc)))
-            if path |> FunctionTable.isInFunctionInTable(~functionTable) =>
-            functionTable |> FunctionTable.addLabelToKind(~functionName, ~label)
+            if path->FunctionTable.isInFunctionInTable(~functionTable) =>
+            functionTable->FunctionTable.addLabelToKind(~functionName, ~label)
             if verbose {
               Log_.info(~loc, ~name="Termination Analysis", (ppf, ()) =>
                 Format.fprintf(
@@ -693,7 +693,7 @@ module ExtendFunctionTable = {
     expression: Typedtree.expression,
   ) => {
     let traverseExpr = traverseExpr(~functionTable, ~progressFunctions, ~valueBindingsTable)
-    expression |> traverseExpr.expr(traverseExpr) |> ignore
+    expression->traverseExpr.expr(traverseExpr)->ignore
   }
 }
 
@@ -702,7 +702,7 @@ module CheckExpressionWellFormed = {
     let super = Tast_mapper.default
 
     let checkIdent = (~path, ~loc) =>
-      if path |> FunctionTable.isInFunctionInTable(~functionTable) {
+      if path->FunctionTable.isInFunctionInTable(~functionTable) {
         Stats.logHygieneOnlyCallDirectly(~path, ~loc)
       }
 
@@ -713,24 +713,24 @@ module CheckExpressionWellFormed = {
         e
       | Texp_apply({exp_desc: Texp_ident(functionPath, _, _)}, args) =>
         let functionName = Path.name(functionPath)
-        args |> List.iter(((argLabel: Asttypes.arg_label, argOpt)) =>
-          switch argOpt |> ExtendFunctionTable.extractLabelledArgument {
+        args->List.iter(((argLabel: Asttypes.arg_label, argOpt)) =>
+          switch argOpt->ExtendFunctionTable.extractLabelledArgument {
           | Some((path, loc)) =>
             switch argLabel {
             | Labelled(label) =>
               if (
-                functionTable |> FunctionTable.functionGetKindOfLabel(~functionName, ~label) != None
+                functionTable->FunctionTable.functionGetKindOfLabel(~functionName, ~label) != None
               ) {
                 ()
               } else {
                 switch Hashtbl.find_opt(valueBindingsTable, functionName) {
                 | Some((_pos, body: Typedtree.expression, _))
-                  if path |> FunctionTable.isInFunctionInTable(~functionTable) =>
-                  let inTable = functionPath |> FunctionTable.isInFunctionInTable(~functionTable)
+                  if path->FunctionTable.isInFunctionInTable(~functionTable) =>
+                  let inTable = functionPath->FunctionTable.isInFunctionInTable(~functionTable)
                   if !inTable {
-                    functionTable |> FunctionTable.addFunction(~functionName)
+                    functionTable->FunctionTable.addFunction(~functionName)
                   }
-                  functionTable |> FunctionTable.addLabelToKind(~functionName, ~label)
+                  functionTable->FunctionTable.addLabelToKind(~functionName, ~label)
                   if verbose {
                     Log_.info(~loc=body.exp_loc, ~name="Termination Analysis", (ppf, ()) =>
                       Format.fprintf(
@@ -766,7 +766,7 @@ module CheckExpressionWellFormed = {
 
   let run = (~functionTable, ~valueBindingsTable, expression: Typedtree.expression) => {
     let traverseExpr = traverseExpr(~functionTable, ~valueBindingsTable)
-    expression |> traverseExpr.expr(traverseExpr) |> ignore
+    expression->traverseExpr.expr(traverseExpr)->ignore
   }
 }
 
@@ -791,8 +791,8 @@ module Compile = {
       ) {
       | Some(innerFunctionName) =>
         let innerFunctionDefinition =
-          functionTable |> FunctionTable.getFunctionDefinition(~functionName=innerFunctionName)
-        let argsFromKind = innerFunctionDefinition.kind |> List.map((entry: Kind.entry) => (
+          functionTable->FunctionTable.getFunctionDefinition(~functionName=innerFunctionName)
+        let argsFromKind = innerFunctionDefinition.kind->List.map((entry: Kind.entry) => (
           Asttypes.Labelled(entry.label),
           Some({
             ...expr,
@@ -802,12 +802,12 @@ module Compile = {
         (Path.Pident(Ident.create(innerFunctionName)), \"@"(argsFromKind, argsToExtend))
       | None => (calleeToRename, argsToExtend)
       }
-      if callee |> FunctionTable.isInFunctionInTable(~functionTable) {
+      if callee->FunctionTable.isInFunctionInTable(~functionTable) {
         let functionName = Path.name(callee)
-        let functionDefinition = functionTable |> FunctionTable.getFunctionDefinition(~functionName)
+        let functionDefinition = functionTable->FunctionTable.getFunctionDefinition(~functionName)
         exception ArgError
         let getFunctionArg = ({Kind.label: label}) => {
-          let argOpt = args |> List.find_opt(arg =>
+          let argOpt = args->List.find_opt(arg =>
             switch arg {
             | (Asttypes.Labelled(s), Some(_)) => s == label
             | _ => false
@@ -817,20 +817,20 @@ module Compile = {
           | Some((_, Some(e))) => Some(e)
           | _ => None
           }
-          let functionArg = switch argOpt |> ExtendFunctionTable.extractLabelledArgument(
+          let functionArg = switch argOpt->ExtendFunctionTable.extractLabelledArgument(
             ~kindOpt=Some(functionDefinition.kind),
           ) {
           | None =>
             Stats.logHygieneMustHaveNamedArgument(~label, ~loc)
             raise(ArgError)
 
-          | Some((path, _pos)) if path |> FunctionTable.isInFunctionInTable(~functionTable) =>
+          | Some((path, _pos)) if path->FunctionTable.isInFunctionInTable(~functionTable) =>
             let functionName = Path.name(path)
             {FunctionArgs.label: label, functionName: functionName}
 
           | Some((path, _pos))
             if functionTable
-            |> FunctionTable.functionGetKindOfLabel(
+            ->FunctionTable.functionGetKindOfLabel(
               ~functionName=currentFunctionName,
               ~label=Path.name(path),
             ) ==
@@ -844,7 +844,7 @@ module Compile = {
           }
           functionArg
         }
-        let functionArgsOpt = try Some(functionDefinition.kind |> List.map(getFunctionArg)) catch {
+        let functionArgsOpt = try Some(functionDefinition.kind->List.map(getFunctionArg)) catch {
         | ArgError => None
         }
         switch functionArgsOpt {
@@ -853,17 +853,17 @@ module Compile = {
           Command.Call(
             FunctionCall({functionName: functionName, functionArgs: functionArgs}),
             loc,
-          ) |> evalArgs(~args, ~ctx)
+          )->evalArgs(~args, ~ctx)
         }
-      } else if callee |> isProgressFunction {
-        Command.Call(ProgressFunction(callee), loc) |> evalArgs(~args, ~ctx)
+      } else if callee->isProgressFunction {
+        Command.Call(ProgressFunction(callee), loc)->evalArgs(~args, ~ctx)
       } else {
-        switch functionTable |> FunctionTable.functionGetKindOfLabel(
+        switch functionTable->FunctionTable.functionGetKindOfLabel(
           ~functionName=currentFunctionName,
           ~label=Path.name(callee),
         ) {
         | Some(kind) if kind == Kind.empty =>
-          Command.Call(FunctionCall(Path.name(callee) |> FunctionCall.noArgs), loc) |> evalArgs(
+          Command.Call(FunctionCall(Path.name(callee)->FunctionCall.noArgs), loc)->evalArgs(
             ~args,
             ~ctx,
           )
@@ -871,50 +871,50 @@ module Compile = {
           // TODO when kinds are extended in future: check that args matches with kind
           // and create a function call with the appropriate arguments
           assert(false)
-        | None => expr |> expression(~ctx) |> evalArgs(~args, ~ctx)
+        | None => expr->expression(~ctx)->evalArgs(~args, ~ctx)
         }
       }
-    | Texp_apply(expr, args) => expr |> expression(~ctx) |> evalArgs(~args, ~ctx)
+    | Texp_apply(expr, args) => expr->expression(~ctx)->evalArgs(~args, ~ctx)
     | Texp_let(Recursive, list{{vb_pat: {pat_desc: Tpat_var(id, _), pat_loc}, vb_expr}}, inExpr) =>
       let oldFunctionName = Ident.name(id)
       let newFunctionName = currentFunctionName ++ ("$" ++ oldFunctionName)
-      functionTable |> FunctionTable.addFunction(~functionName=newFunctionName)
+      functionTable->FunctionTable.addFunction(~functionName=newFunctionName)
       let newFunctionDefinition =
-        functionTable |> FunctionTable.getFunctionDefinition(~functionName=newFunctionName)
+        functionTable->FunctionTable.getFunctionDefinition(~functionName=newFunctionName)
       let currentFunctionDefinition =
-        functionTable |> FunctionTable.getFunctionDefinition(~functionName=currentFunctionName)
+        functionTable->FunctionTable.getFunctionDefinition(~functionName=currentFunctionName)
       newFunctionDefinition.kind = currentFunctionDefinition.kind
       let newCtx = {...ctx, currentFunctionName: newFunctionName}
       Hashtbl.replace(ctx.innerRecursiveFunctions, oldFunctionName, newFunctionName)
-      newFunctionDefinition.body = Some(vb_expr |> expression(~ctx=newCtx))
+      newFunctionDefinition.body = Some(vb_expr->expression(~ctx=newCtx))
       if verbose {
         Log_.info(~loc=pat_loc, ~name="Termination Analysis", (ppf, ()) =>
           Format.fprintf(ppf, "Adding recursive definition @{<info>%s@}", newFunctionName)
         )
       }
-      inExpr |> expression(~ctx)
+      inExpr->expression(~ctx)
 
     | Texp_let(recFlag, valueBindings, inExpr) =>
       if recFlag == Recursive {
         Stats.logHygieneNoNestedLetRec(~loc)
       }
       let commands = \"@"(
-        valueBindings |> List.map((vb: Typedtree.value_binding) => vb.vb_expr |> expression(~ctx)),
-        list{inExpr |> expression(~ctx)},
+        valueBindings->List.map((vb: Typedtree.value_binding) => vb.vb_expr->expression(~ctx)),
+        list{inExpr->expression(~ctx)},
       )
       Command.sequence(commands)
     | Texp_sequence(e1, e2) =>
       open Command
       \"+++"(expression(~ctx, e1), expression(~ctx, e2))
     | Texp_ifthenelse(e1, e2, eOpt) =>
-      let c1 = e1 |> expression(~ctx)
-      let c2 = e2 |> expression(~ctx)
-      let c3 = eOpt |> expressionOpt(~ctx)
+      let c1 = e1->expression(~ctx)
+      let c2 = e2->expression(~ctx)
+      let c3 = eOpt->expressionOpt(~ctx)
       open Command
       \"+++"(c1, nondet(list{c2, c3}))
     | Texp_constant(_) => Command.nothing
     | Texp_construct({loc: {loc_ghost}}, {cstr_name}, expressions) =>
-      let c = expressions |> List.map(e => e |> expression(~ctx)) |> Command.unorderedSequence
+      let c = expressions->List.map(e => e->expression(~ctx))->Command.unorderedSequence
       switch cstr_name {
       | "Some" if loc_ghost == false =>
         open Command
@@ -924,11 +924,11 @@ module Compile = {
         \"+++"(c, ConstrOption(Rnone))
       | _ => c
       }
-    | Texp_function({cases}) => cases |> List.map(case(~ctx)) |> Command.nondet
+    | Texp_function({cases}) => cases->List.map(case(~ctx))->Command.nondet
 
     | Texp_match(e, cases, list{}, _) =>
-      let cE = e |> expression(~ctx)
-      let cCases = cases |> List.map(case(~ctx))
+      let cE = e->expression(~ctx)
+      let cCases = cases->List.map(case(~ctx))
       switch (cE, cases) {
       | (
           Call(FunctionCall(functionCall), loc),
@@ -947,28 +947,28 @@ module Compile = {
 
     | Texp_match(_, _, list{_, ..._} as _casesExn, _) => assert(false)
 
-    | Texp_field(e, _lid, _desc) => e |> expression(~ctx)
+    | Texp_field(e, _lid, _desc) => e->expression(~ctx)
 
     | Texp_record({fields, extended_expression}) =>
       list{
         extended_expression,
         ...fields
-        |> Array.to_list
-        |> List.map(((_desc, recordLabelDefinition: Typedtree.record_label_definition)) =>
+        ->Array.to_list
+        ->List.map(((_desc, recordLabelDefinition: Typedtree.record_label_definition)) =>
           switch recordLabelDefinition {
           | Kept(_typeExpr) => None
           | Overridden(_loc, e) => Some(e)
           }
         ),
       }
-      |> List.map(expressionOpt(~ctx))
-      |> Command.unorderedSequence
+      ->List.map(expressionOpt(~ctx))
+      ->Command.unorderedSequence
 
     | Texp_setfield(e1, _loc, _desc, e2) =>
-      list{e1, e2} |> List.map(expression(~ctx)) |> Command.unorderedSequence
+      list{e1, e2}->List.map(expression(~ctx))->Command.unorderedSequence
 
     | Texp_tuple(expressions) =>
-      expressions |> List.map(expression(~ctx)) |> Command.unorderedSequence
+      expressions->List.map(expression(~ctx))->Command.unorderedSequence
 
     | Texp_assert(_) => Command.nothing
 
@@ -994,17 +994,17 @@ module Compile = {
   and expressionOpt = (~ctx, eOpt) =>
     switch eOpt {
     | None => Command.nothing
-    | Some(e) => e |> expression(~ctx)
+    | Some(e) => e->expression(~ctx)
     }
   and evalArgs = (~args, ~ctx, command) => {
     // Don't assume any evaluation order on the arguments
-    let commands = args |> List.map(((_, eOpt)) => eOpt |> expressionOpt(~ctx))
+    let commands = args->List.map(((_, eOpt)) => eOpt->expressionOpt(~ctx))
     open Command
     \"+++"(unorderedSequence(commands), command)
   }
   and case = (~ctx, {c_guard, c_rhs}: Typedtree.case) =>
     switch c_guard {
-    | None => c_rhs |> expression(~ctx)
+    | None => c_rhs->expression(~ctx)
     | Some(e) =>
       open Command
       \"+++"(expression(~ctx, e), expression(~ctx, c_rhs))
@@ -1049,8 +1049,8 @@ module CallStack = {
         },
         t.tbl,
         list{},
-      ) |> List.sort(((_, i1, _), (_, i2, _)) => i2 - i1)
-    frames |> List.iter(((functionCall: FunctionCall.t, i, pos)) =>
+      )->List.sort(((_, i1, _), (_, i2, _)) => i2 - i1)
+    frames->List.iter(((functionCall: FunctionCall.t, i, pos)) =>
       Format.fprintf(
         ppf,
         "@,@{<dim>%d@} %s (%a)",
@@ -1074,14 +1074,14 @@ module Eval = {
   let lookupCache = (~functionCall, cache: cache) => Hashtbl.find_opt(cache, functionCall)
 
   let updateCache = (~functionCall, ~loc, ~state, cache: cache) => {
-    Stats.logResult(~functionCall, ~resString=state |> State.toString, ~loc)
+    Stats.logResult(~functionCall, ~resString=state->State.toString, ~loc)
     if !Hashtbl.mem(cache, functionCall) {
       Hashtbl.replace(cache, functionCall, state)
     }
   }
 
   let hasInfiniteLoop = (~callStack, ~functionCallToInstantiate, ~functionCall, ~loc, ~state) =>
-    if callStack |> CallStack.hasFunctionCall(~functionCall) {
+    if callStack->CallStack.hasFunctionCall(~functionCall) {
       if state.State.progress == NoProgress {
         Log_.error(~loc, ~name="Error Termination", (ppf, ()) => {
           Format.fprintf(ppf, "Possible infinite loop when calling ")
@@ -1089,13 +1089,13 @@ module Eval = {
             ? Format.fprintf(
                 ppf,
                 "@{<error>%s@}",
-                functionCallToInstantiate |> FunctionCall.toString,
+                functionCallToInstantiate->FunctionCall.toString,
               )
             : Format.fprintf(
                 ppf,
                 "@{<error>%s@} which is @{<error>%s@}",
-                functionCallToInstantiate |> FunctionCall.toString,
-                functionCall |> FunctionCall.toString,
+                functionCallToInstantiate->FunctionCall.toString,
+                functionCall->FunctionCall.toString,
               )
           Format.fprintf(ppf, "@,%a", CallStack.print, callStack)
         })
@@ -1118,10 +1118,10 @@ module Eval = {
   ): State.t => {
     let pos = loc.Location.loc_start
     let functionCall =
-      functionCallToInstantiate |> FunctionCall.applySubstitution(~sub=functionArgs)
+      functionCallToInstantiate->FunctionCall.applySubstitution(~sub=functionArgs)
     let functionName = functionCall.functionName
     let call = Call.FunctionCall(functionCall)
-    let stateAfterCall = switch cache |> lookupCache(~functionCall) {
+    let stateAfterCall = switch cache->lookupCache(~functionCall) {
     | Some(stateAfterCall) =>
       Stats.logCache(~functionCall, ~hit=true, ~loc)
       {
@@ -1140,14 +1140,14 @@ module Eval = {
         }
       } else {
         Stats.logCache(~functionCall, ~hit=false, ~loc)
-        let functionDefinition = functionTable |> FunctionTable.getFunctionDefinition(~functionName)
-        callStack |> CallStack.addFunctionCall(~functionCall, ~pos)
+        let functionDefinition = functionTable->FunctionTable.getFunctionDefinition(~functionName)
+        callStack->CallStack.addFunctionCall(~functionCall, ~pos)
         let body = switch functionDefinition.body {
         | Some(body) => body
         | None => assert(false)
         }
         let stateAfterCall =
-          body |> run(
+          body->run(
             ~cache,
             ~callStack,
             ~functionArgs=functionCall.functionArgs,
@@ -1155,9 +1155,9 @@ module Eval = {
             ~madeProgressOn,
             ~state=State.init(),
           )
-        cache |> updateCache(~functionCall, ~loc, ~state=stateAfterCall)
+        cache->updateCache(~functionCall, ~loc, ~state=stateAfterCall)
         // Invariant: run should restore the callStack
-        callStack |> CallStack.removeFunctionCall(~functionCall)
+        callStack->CallStack.removeFunctionCall(~functionCall)
         let trace = Trace.Tcall(call, stateAfterCall.progress)
         {...stateAfterCall, trace: trace}
       }
@@ -1175,7 +1175,7 @@ module Eval = {
   ): State.t =>
     switch command {
     | Call(FunctionCall(functionCall), loc) =>
-      functionCall |> runFunctionCall(
+      functionCall->runFunctionCall(
         ~cache,
         ~callStack,
         ~functionArgs,
@@ -1204,11 +1204,11 @@ module Eval = {
         | list{} => state
         | list{c, ...nextCommands} =>
           let state1 =
-            c |> run(~cache, ~callStack, ~functionArgs, ~functionTable, ~madeProgressOn, ~state)
+            c->run(~cache, ~callStack, ~functionArgs, ~functionTable, ~madeProgressOn, ~state)
           let (madeProgressOn, callStack) = switch state1.progress {
           | Progress => // look for infinite loops in the rest of the sequence, remembering what has made progress
             (
-              FunctionCallSet.union(madeProgressOn, callStack |> CallStack.toSet),
+              FunctionCallSet.union(madeProgressOn, callStack->CallStack.toSet),
               CallStack.create(),
             )
           | NoProgress => (madeProgressOn, callStack)
@@ -1221,8 +1221,8 @@ module Eval = {
       let stateNoTrace = {...state, trace: Trace.empty}
       // the commands could be executed in any order: progess if any one does
       let states =
-        commands |> List.map(c =>
-          c |> run(
+        commands->List.map(c =>
+          c->run(
             ~cache,
             ~callStack,
             ~functionArgs,
@@ -1231,14 +1231,14 @@ module Eval = {
             ~state=stateNoTrace,
           )
         )
-      State.seq(state, states |> State.unorderedSequence)
+      State.seq(state, states->State.unorderedSequence)
 
     | Nondet(commands) =>
       let stateNoTrace = {...state, trace: Trace.empty}
       // the commands could be executed in any order: progess if any one does
       let states =
-        commands |> List.map(c =>
-          c |> run(
+        commands->List.map(c =>
+          c->run(
             ~cache,
             ~callStack,
             ~functionArgs,
@@ -1247,11 +1247,11 @@ module Eval = {
             ~state=stateNoTrace,
           )
         )
-      State.seq(state, states |> State.nondet)
+      State.seq(state, states->State.nondet)
 
     | SwitchOption({functionCall, loc, some, none}) =>
       let stateAfterCall =
-        functionCall |> runFunctionCall(
+        functionCall->runFunctionCall(
           ~cache,
           ~callStack,
           ~functionArgs,
@@ -1262,7 +1262,7 @@ module Eval = {
         )
       switch stateAfterCall.valuesOpt {
       | None =>
-        Command.nondet(list{some, none}) |> run(
+        Command.nondet(list{some, none})->run(
           ~cache,
           ~callStack,
           ~functionArgs,
@@ -1275,7 +1275,7 @@ module Eval = {
           switch progressOpt {
           | None => State.init(~progress=Progress, ())
           | Some(progress) =>
-            c |> run(
+            c->run(
               ~cache,
               ~callStack,
               ~functionArgs,
@@ -1284,8 +1284,8 @@ module Eval = {
               ~state=State.init(~progress, ()),
             )
           }
-        let stateNone = values |> Values.getNone |> runOpt(none)
-        let stateSome = values |> Values.getSome |> runOpt(some)
+        let stateNone = values->Values.getNone->runOpt(none)
+        let stateSome = values->Values.getSome->runOpt(some)
         State.seq(stateAfterCall, State.nondet(list{stateSome, stateNone}))
       }
     }
@@ -1298,8 +1298,8 @@ module Eval = {
     let callStack = CallStack.create()
     let functionArgs = FunctionArgs.empty
     let functionCall = FunctionCall.noArgs(functionName)
-    callStack |> CallStack.addFunctionCall(~functionCall, ~pos)
-    let functionDefinition = functionTable |> FunctionTable.getFunctionDefinition(~functionName)
+    callStack->CallStack.addFunctionCall(~functionCall, ~pos)
+    let functionDefinition = functionTable->FunctionTable.getFunctionDefinition(~functionName)
     if functionDefinition.kind != Kind.empty {
       Stats.logHygieneParametric(~functionName, ~loc)
     } else {
@@ -1308,7 +1308,7 @@ module Eval = {
       | None => assert(false)
       }
       let state =
-        body |> run(
+        body->run(
           ~cache,
           ~callStack,
           ~functionArgs,
@@ -1316,28 +1316,28 @@ module Eval = {
           ~madeProgressOn=FunctionCallSet.empty,
           ~state=State.init(),
         )
-      cache |> updateCache(~functionCall, ~loc, ~state)
+      cache->updateCache(~functionCall, ~loc, ~state)
     }
   }
 }
 
 let progressFunctionsFromAttributes = attributes => {
-  let lidToString = lid => lid |> Longident.flatten |> String.concat(".")
+  let lidToString = lid => lid->Longident.flatten->String.concat(".")
   let isProgress = \"="("progress")
-  if attributes |> Annotation.hasAttribute(isProgress) {
+  if attributes->Annotation.hasAttribute(isProgress) {
     Some(
-      switch attributes |> Annotation.getAttributePayload(isProgress) {
+      switch attributes->Annotation.getAttributePayload(isProgress) {
       | None => list{}
       | Some(IdentPayload(lid)) => list{lidToString(lid)}
       | Some(TuplePayload(l)) =>
         l
-        |> List.filter(x =>
+        ->List.filter(x =>
           switch x {
           | Annotation.IdentPayload(_) => true
           | _ => false
           }
         )
-        |> List.map(x =>
+        ->List.map(x =>
           switch x {
           | Annotation.IdentPayload(lid) => lidToString(lid)
           | _ => assert(false)
@@ -1356,7 +1356,7 @@ let traverseAst = (~valueBindingsTable) => {
 
   let value_bindings = (self: Tast_mapper.mapper, (recFlag, valueBindings)) => {
     // Update the table of value bindings for variables
-    valueBindings |> List.iter((vb: Typedtree.value_binding) =>
+    valueBindings->List.iter((vb: Typedtree.value_binding) =>
       switch vb.vb_pat.pat_desc {
       | Tpat_var(id, {loc: {loc_start: pos}}) =>
         let callees = Lazy.from_fun(() => FindFunctionsCalled.findCallees(vb.vb_expr))
@@ -1369,7 +1369,7 @@ let traverseAst = (~valueBindingsTable) => {
       (StringSet.empty, list{})
     } else {
       let (progressFunctions0, functionsToAnalyze0) =
-        valueBindings |> List.fold_left(
+        valueBindings->List.fold_left(
           ((progressFunctions, functionsToAnalyze), valueBinding: Typedtree.value_binding) =>
             switch progressFunctionsFromAttributes(valueBinding.vb_attributes) {
             | None => (progressFunctions, functionsToAnalyze)
@@ -1386,7 +1386,7 @@ let traverseAst = (~valueBindingsTable) => {
             },
           (StringSet.empty, list{}),
         )
-      (progressFunctions0, functionsToAnalyze0 |> List.rev)
+      (progressFunctions0, functionsToAnalyze0->List.rev)
     }
 
     if functionsToAnalyze != list{} {
@@ -1398,8 +1398,8 @@ let traverseAst = (~valueBindingsTable) => {
         | Tpat_var(id, _) => list{Ident.name(id), ...defs}
         | _ => defs
         }
-      , list{}, valueBindings) |> List.rev
-      let recursiveDefinitions = recursiveFunctions |> List.map(functionName => (
+      , list{}, valueBindings)->List.rev
+      let recursiveDefinitions = recursiveFunctions->List.map(functionName => (
         functionName,
         {
           let (_pos, e, _set) = Hashtbl.find(valueBindingsTable, functionName)
@@ -1407,27 +1407,27 @@ let traverseAst = (~valueBindingsTable) => {
         },
       ))
 
-      recursiveDefinitions |> List.iter(((functionName, _body)) =>
-        functionTable |> FunctionTable.addFunction(~functionName)
+      recursiveDefinitions->List.iter(((functionName, _body)) =>
+        functionTable->FunctionTable.addFunction(~functionName)
       )
 
-      recursiveDefinitions |> List.iter(((_, body)) =>
-        body |> ExtendFunctionTable.run(~functionTable, ~progressFunctions, ~valueBindingsTable)
+      recursiveDefinitions->List.iter(((_, body)) =>
+        body->ExtendFunctionTable.run(~functionTable, ~progressFunctions, ~valueBindingsTable)
       )
 
-      recursiveDefinitions |> List.iter(((_, body)) =>
-        body |> CheckExpressionWellFormed.run(~functionTable, ~valueBindingsTable)
+      recursiveDefinitions->List.iter(((_, body)) =>
+        body->CheckExpressionWellFormed.run(~functionTable, ~valueBindingsTable)
       )
 
-      functionTable |> Hashtbl.iter((
+      functionTable->Hashtbl.iter((
         functionName,
         functionDefinition: FunctionTable.functionDefinition,
       ) =>
         if functionDefinition.body == None {
           let (_pos, body, _) = Hashtbl.find(valueBindingsTable, functionName)
-          functionTable |> FunctionTable.addBody(
+          functionTable->FunctionTable.addBody(
             ~body=Some(
-              body |> Compile.expression(
+              body->Compile.expression(
                 ~ctx={
                   currentFunctionName: functionName,
                   functionTable: functionTable,
@@ -1446,13 +1446,13 @@ let traverseAst = (~valueBindingsTable) => {
       }
 
       let cache = Eval.createCache()
-      functionsToAnalyze |> List.iter(((functionName, loc)) =>
-        functionName |> Eval.analyzeFunction(~cache, ~functionTable, ~loc)
+      functionsToAnalyze->List.iter(((functionName, loc)) =>
+        functionName->Eval.analyzeFunction(~cache, ~functionTable, ~loc)
       )
       Stats.newRecursiveFunctions(~numFunctions=Hashtbl.length(functionTable))
     }
 
-    valueBindings |> List.iter(valueBinding => super.value_binding(self, valueBinding) |> ignore)
+    valueBindings->List.iter(valueBinding => super.value_binding(self, valueBinding)->ignore)
 
     (recFlag, valueBindings)
   }
@@ -1465,7 +1465,7 @@ let processStructure = (structure: Typedtree.structure) => {
   Stats.newFile()
   let valueBindingsTable = Hashtbl.create(1)
   let traverseAst = traverseAst(~valueBindingsTable)
-  structure |> traverseAst.structure(traverseAst) |> ignore
+  structure->traverseAst.structure(traverseAst)->ignore
 }
 
 let reportResults = () =>

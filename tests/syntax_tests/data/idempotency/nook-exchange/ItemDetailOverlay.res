@@ -486,16 +486,16 @@ module FriendsSection = {
         %Repromise.JsExn({
           let json = Fetch.Response.json(response)
           open Json.Decode
-          let friendItems = json |> array(json => {
-            userId: json |> field("userId", string),
-            username: json |> field("username", string),
-            variant: json |> field("variant", int),
-            status: json |> field("status", int) |> User.itemStatusFromJs |> Belt.Option.getExn,
+          let friendItems = json->array(json => {
+            userId: json->field("userId", string),
+            username: json->field("username", string),
+            variant: json->field("variant", int),
+            status: json->field("status", int)->User.itemStatusFromJs->Belt.Option.getExn,
           })
           setFriendItems(_ => Some(friendItems))
           Promise.resolved()
         })
-      }) |> ignore
+      })->ignore
       None
     })
 
@@ -505,8 +505,8 @@ module FriendsSection = {
         <div className=Styles.friendSection>
           <div className=Styles.friendItemList>
             {friendItems
-            |> Js.Array.slice(~start=0, ~end_=showLimit)
-            |> Js.Array.map(friendItem =>
+            ->Js.Array.slice(~start=0, ~end_=showLimit)
+            ->Js.Array.map(friendItem =>
               <div
                 className=Styles.friendItem
                 key={friendItem.userId ++ string_of_int(friendItem.variant)}>
@@ -536,7 +536,7 @@ module FriendsSection = {
                 </span>
               </div>
             )
-            |> React.array}
+            ->React.array}
             {Js.Array.length(friendItems) > showLimit
               ? <div className=Styles.showAllRow>
                   <button
@@ -575,7 +575,7 @@ let make = (~item: Item.t, ~variant, ~isInitialLoad) => {
   let variant = variant->Belt.Option.getWithDefault(0)
   let (transitionIn, setTransitionIn) = React.useState(() => isInitialLoad)
   React.useEffect0(() => {
-    Js.Global.setTimeout(() => setTransitionIn(_ => true), 20) |> ignore
+    Js.Global.setTimeout(() => setTransitionIn(_ => true), 20)->ignore
     if !hasLoggedDetailOverlay.contents {
       Analytics.Amplitude.logEventWithProperties(
         ~eventName="Item Detail Overlay Shown",
@@ -585,7 +585,7 @@ let make = (~item: Item.t, ~variant, ~isInitialLoad) => {
           "variant": variant,
           "pathname": {
             open Webapi.Dom
-            location |> Location.pathname
+            location->Location.pathname
           },
         },
       )

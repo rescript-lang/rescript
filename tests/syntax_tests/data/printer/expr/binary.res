@@ -33,22 +33,22 @@ let x = foo ++ bar
 let x = 1 + 1
 let x = (a => a + 1) + (b => b + 2)
 let x = -1 + -1
-let x = switch z { | Red => 1 } |> switch y { | Blue => 2 }
-let x = try z catch { | Exit => 1 } |> try y catch { | Blue => 2 }
+let x = switch z { | Red => 1 }->switch y { | Blue => 2 }
+let x = try z catch { | Exit => 1 }->try y catch { | Blue => 2 }
 let x = if true { 1 } else { 2 } + if false { 2 } else { 3 }
-let x = for i in 0 to 10 { () } |> for i in 0 to 10 { () }
+let x = for i in 0 to 10 { () }->for i in 0 to 10 { () }
 
 let x = (a, b) + (b, c)
 let x = Vec3(a, b, c) + Vec4(a, b, c, d)
 let x = {x: 1, y: 2} + {x: 2, y :3}
 let x = user.firstName ++ user.lastName
-let x = x.left = value |> x.right = value
-let x = (x.left = value) |> x.right = value
-let x = (x.left = value) |> (x.right = value)
-let () = (x.left = value) |> logMutation
-let () = x.left = value |> logMutation
-let () = x.left = (value |> process) |> x.right = value |> process
-let () = (x: int) |> (print_int: int => unit)
+let x = x.left = value->x.right = value
+let x = (x.left = value)->x.right = value
+let x = (x.left = value)->(x.right = value)
+let () = (x.left = value)->logMutation
+let () = x.left = value->logMutation
+let () = x.left = (value->process)->x.right = value->process
+let () = (x: int)->(print_int: int => unit)
 
 x + y / z
 x / y + z
@@ -167,8 +167,8 @@ let x = @attr a && @attr b && @attr c
 let x = a && @attr (b && c)
 let x = a && @attr (b && c) && @attr (d && e)
 
-let x = a && @attr (x |> f(g))
-let x = a && @attr (x |> f(g)) && @attr (y |> f(h))
+let x = a && @attr (x->f(g))
+let x = a && @attr (x->f(g)) && @attr (y->f(h))
 
 let x = a && a.b
 let x = a && x.y && g.h
@@ -189,8 +189,8 @@ let x = a && f(b) && f(c)
 let x = a && f(. b)
 let x = a && f(. b) && f(. c)
 
-let x = a && x |> f(g)
-let x = a && x |> f(g) && y |> f(h)
+let x = a && x->f(g)
+let x = a && x->f(g) && y->f(h)
 
 let x = a && switch color {
   | Blue => "blue"
@@ -271,8 +271,8 @@ let x = a && module(Foo: Bool) && module(Bar: Bool)
 let x = a && truths[0]
 let x = a && truths[0] && truths[1]
 
-let () = node.left := value |> process |> node.right = value |> process
-let () = (node.left := value |> process) |> node.right = value |> process
+let () = node.left := value->process->node.right = value->process
+let () = (node.left := value->process)->node.right = value->process
 
 let x = (true ? 0 : 1) + (false ? 1 : 0)
 let x = (true ? 0 : 1) + (false ? 1 : 0) +  (false ? 1 : 0)
@@ -332,20 +332,20 @@ x->(y->(z->w))
 x->(y &&(w && z))
 (x->y)->z
 
-(x |> y) |> z
-x |> (y |> z)
-x |> (y |> (z |> w))
+(x->y)->z
+x->(y->z)
+x->(y->(z->w))
 
-let x = "z" ++ (a |> f) ++ "x"
+let x = "z" ++ (a->f) ++ "x"
 let toString = functionArgs => {
   functionArgs == []
     ? ""
     : "<"
-      ++ (functionArgs |> List.map(argToString) |> String.concat(","))
+      ++ (functionArgs->List.map(argToString)->String.concat(","))
       ++ ">"
 }
 
-a |> Author.id != (author |> Author.id)
+a->Author.id != (author->Author.id)
 
 // should indent the switch
 foo :=
@@ -353,13 +353,13 @@ foo :=
   | _ => 1
   }
 
-<div> {possibleGradeValues |> List.filter(g =>
+<div> {possibleGradeValues->List.filter(g =>
     g < state.maxGrade
-  ) |> List.map(possibleGradeValue =>
-    <option key={possibleGradeValue |> string_of_int} value={possibleGradeValue |> string_of_int}>
-      {possibleGradeValue |> string_of_int |> str}
+  )->List.map(possibleGradeValue =>
+    <option key={possibleGradeValue->string_of_int} value={possibleGradeValue->string_of_int}>
+      {possibleGradeValue->string_of_int->str}
     </option>
-  ) |> Array.of_list |> ReasonReact.array} </div>
+  )->Array.of_list->ReasonReact.array} </div>
 
 let aggregateTotal = (forecast, ~audienceType) =>
   Js.Nullable.toOption(forecast["audiences"])

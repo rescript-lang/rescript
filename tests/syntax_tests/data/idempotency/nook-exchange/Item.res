@@ -87,47 +87,47 @@ let spaceRegex = /\s/g
 exception Unexpected
 let jsonToItems = (json: Js.Json.t) => {
   open Json.Decode
-  let flags = json |> field("flags", int)
-  let recipeInfo = json |> optional(
+  let flags = json->field("flags", int)
+  let recipeInfo = json->optional(
     field("recipe", json => {
       let jsonArray = Js.Json.decodeArray(json)->Belt.Option.getExn
       (
         -int(jsonArray[0]),
         string(jsonArray[1]),
         jsonArray
-        |> Js.Array.sliceFrom(2)
-        |> Js.Array.map(json => {
-          let (quantity, itemName) = json |> tuple2(int, string)
+        ->Js.Array.sliceFrom(2)
+        ->Js.Array.map(json => {
+          let (quantity, itemName) = json->tuple2(int, string)
           (itemName, quantity)
         }),
       )
     }),
   )
   let item = {
-    id: json |> field("id", int),
+    id: json->field("id", int),
     type_: Item(recipeInfo->Belt.Option.map(((recipeId, _, _)) => recipeId)),
-    name: json |> field("name", string),
-    image: json |> field(
+    name: json->field("name", string),
+    image: json->field(
       "image",
       oneOf(list{json => Base(string(json)), json => Array(array(string, json))}),
     ),
-    variations: switch json |> field("variants", array(int)) {
+    variations: switch json->field("variants", array(int)) {
     | [] => Single
     | [a] => OneDimension(a)
     | [a, b] => TwoDimensions(a, b)
     | _ => raise(Unexpected)
     },
-    sellPrice: json |> optional(field("sell", int)),
-    buyPrice: json |> optional(field("buy", int)),
+    sellPrice: json->optional(field("sell", int)),
+    buyPrice: json->optional(field("buy", int)),
     recipe: recipeInfo->Belt.Option.map(((_, _, recipe)) => recipe),
     orderable: land(flags, 2) !== 0,
-    source: json |> optional(field("source", string)),
+    source: json->optional(field("source", string)),
     bodyCustomizable: land(flags, 4) != 0,
     patternCustomizable: land(flags, 8) != 0,
-    customizeCost: json |> optional(field("kitCost", int)),
-    category: json |> field("category", string),
-    version: json |> optional(field("v", string)),
-    tags: (json |> optional(field("tags", array(string))))->Belt.Option.getWithDefault([]),
+    customizeCost: json->optional(field("kitCost", int)),
+    category: json->field("category", string),
+    version: json->optional(field("v", string)),
+    tags: (json->optional(field("tags", array(string))))->Belt.Option.getWithDefault([]),
   }
   let items = switch recipeInfo {
   | Some((recipeId, recipeSource, _)) => [
@@ -148,20 +148,20 @@ let jsonToItems = (json: Js.Json.t) => {
     ]
   | None => [item]
   }
-  items |> Js.Array.map((item: t) => {
+  items->Js.Array.map((item: t) => {
     let extraTags = []
     switch item.source {
     | Some(source) =>
       if source == "Jolly Redd's Treasure Trawler" {
-        extraTags |> Js.Array.push("redd") |> ignore
+        extraTags->Js.Array.push("redd")->ignore
       }
     | None => ()
     }
-    {...item, tags: item.tags |> Js.Array.concat(extraTags)}
+    {...item, tags: item.tags->Js.Array.concat(extraTags)}
   })
 }
 
-let all = itemsJson |> Json.Decode.array(jsonToItems) |> Belt.Array.concatMany
+let all = itemsJson->Json.Decode.array(jsonToItems)->Belt.Array.concatMany
 
 let itemMap = {
   let itemMap = Js.Dict.empty()
@@ -243,12 +243,12 @@ let getCanonicalVariant = (~item, ~variant) =>
 type variantNames =
   | NameOneDimension(array<string>)
   | NameTwoDimensions((array<string>, array<string>))
-let variantNames: dict<variantNames> = variantsJson |> {
+let variantNames: dict<variantNames> = variantsJson->{
   open Json.Decode
   dict(
     oneOf(list{
-      json => NameTwoDimensions(json |> tuple2(array(string), array(string))),
-      json => NameOneDimension(json |> array(string)),
+      json => NameTwoDimensions(json->tuple2(array(string), array(string))),
+      json => NameOneDimension(json->array(string)),
     }),
   )
 }
@@ -269,22 +269,22 @@ let setTranslations = json => {
   open Json.Decode
   translations :=
     Some({
-      items: json |> field(
+      items: json->field(
         "items",
         dict(json => {
           let row = Js.Json.decodeArray(json)->Belt.Option.getExn
           {
             name: string(row[0]),
             variants: Belt.Option.map(Belt.Array.get(row, 1), json =>
-              json |> oneOf(list{
-                json => NameTwoDimensions(json |> tuple2(array(string), array(string))),
-                json => NameOneDimension(json |> array(string)),
+              json->oneOf(list{
+                json => NameTwoDimensions(json->tuple2(array(string), array(string))),
+                json => NameOneDimension(json->array(string)),
               })
             ),
           }
         }),
       ),
-      materials: json |> field("materials", dict(string)),
+      materials: json->field("materials", dict(string)),
     })
 }
 let clearTranslations = () => translations := None
@@ -353,7 +353,7 @@ let getMaterialName = (material: string) => {
   ->Option.getWithDefault(material)
 }
 
-let getCanonicalName = text => Js.String.toLowerCase(text) |> Js.String.replaceByRe(spaceRegex, "-")
+let getCanonicalName = text => Js.String.toLowerCase(text)->Js.String.replaceByRe(spaceRegex, "-")
 let getByName = (~name: string) => {
   let searchName = getCanonicalName(name)
   all->Belt.Array.getBy((item: t) =>

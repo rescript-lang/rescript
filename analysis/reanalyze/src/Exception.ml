@@ -304,17 +304,6 @@ let traverseAst () =
       let exceptions = [arg] |> raiseArgs in
       currentEvents := {Event.exceptions; loc; kind = Raises} :: !currentEvents;
       arg |> snd |> iterExprOpt self
-    | Texp_apply
-        {
-          funct = {exp_desc = Texp_ident (atat, _, _)};
-          args = [arg; (_lbl1, Some {exp_desc = Texp_ident (callee, _, _)})];
-        }
-      when (*  Exn(...) |> raise *)
-           atat |> Path.name = "Pervasives.|>" && callee |> Path.name |> isRaise
-      ->
-      let exceptions = [arg] |> raiseArgs in
-      currentEvents := {Event.exceptions; loc; kind = Raises} :: !currentEvents;
-      arg |> snd |> iterExprOpt self
     | Texp_apply {funct = {exp_desc = Texp_ident (callee, _, _)} as e; args} ->
       let calleeName = Path.name callee in
       if calleeName |> isRaise then

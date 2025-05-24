@@ -1,10 +1,10 @@
 module PersistConfig = {
   let key = "dismiss_discord_bot_notice"
-  let value = ref(Dom.Storage.localStorage |> Dom.Storage.getItem(key))
+  let value = ref(Dom.Storage.localStorage->Dom.Storage.getItem(key))
   let dismiss = () => {
     let nowString = Js.Date.now()->Js.Float.toString
     value := Some(nowString)
-    Dom.Storage.localStorage |> Dom.Storage.setItem(key, nowString)
+    Dom.Storage.localStorage->Dom.Storage.setItem(key, nowString)
   }
 }
 
@@ -57,8 +57,8 @@ module Component = {
             )
             open Webapi.Dom
             window
-            |> Window.open_(~url="https://discord.gg/9sh66CX", ~name="", ~features=?None)
-            |> ignore
+            ->Window.open_(~url="https://discord.gg/9sh66CX", ~name="", ~features=?None)
+            ->ignore
           }}>
           {React.string("Discord bot")}
         </a>
@@ -79,8 +79,8 @@ module Component = {
           onClick={_ => {
             open Webapi.Dom
             window
-            |> Window.open_(~url="https://discord.gg/9sh66CX", ~name="", ~features=?None)
-            |> ignore
+            ->Window.open_(~url="https://discord.gg/9sh66CX", ~name="", ~features=?None)
+            ->ignore
             onDismiss()
             Analytics.Amplitude.logEventWithProperties(
               ~eventName="Discord Bot Notice Accepted",

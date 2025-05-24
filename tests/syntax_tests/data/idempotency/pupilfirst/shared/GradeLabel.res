@@ -8,8 +8,8 @@ type t = {
 let decode = json => {
   open Json.Decode
   {
-    label: json |> field("label", string),
-    grade: json |> field("grade", int),
+    label: json->field("label", string),
+    grade: json->field("grade", int),
   }
 }
 
@@ -17,7 +17,7 @@ let grade = t => t.grade
 let label = t => t.label
 
 let labelFor = (gradeLabels, grade) =>
-  gradeLabels |> List.find(gradeLabel => gradeLabel.grade == grade) |> label
+  gradeLabels->List.find(gradeLabel => gradeLabel.grade == grade)->label
 
 let create = (grade, label) => {grade: grade, label: label}
 
@@ -27,7 +27,7 @@ let update = (label, t) => {...t, label: label}
 
 let asJsObject = t => {"grade": t.grade, "label": t.label}
 
-let valid = t => t.label |> Js.String.trim |> Js.String.length >= 1
+let valid = t => t.label->Js.String.trim->Js.String.length >= 1
 
 let makeFromJs = rawGradeLabel => {
   label: rawGradeLabel["label"],

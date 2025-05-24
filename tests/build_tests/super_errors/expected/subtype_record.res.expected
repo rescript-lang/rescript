@@ -1,0 +1,15 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/subtype_record.res[0m:[2m23:23[0m
+
+  21 [2m│[0m }
+  22 [2m│[0m 
+  [1;31m23[0m [2m│[0m let x = takesSomeType([1;31mv[0m)
+  24 [2m│[0m 
+
+  This has type: [1;31msomeOtherType[0m
+  But this function argument is expecting: [1;33mSomeModule.someType[0m
+  
+  Possible solutions: 
+  - These types are compatible at runtime. You can use the coercion operator to convert to the expected type: [1;33m(v :> SomeModule.someType)
+[0m

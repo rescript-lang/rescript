@@ -95,7 +95,7 @@ let computeInitialState = ((value, textareaId, mode)) => {
   | None => DateTime.randomId()
   }
 
-  let length = value |> String.length
+  let length = value->String.length
 
   {id: id, mode: mode, selection: (length, length), uploadState: ReadyToUpload(None)}
 }
@@ -149,7 +149,7 @@ let onClickSplit = (state, send, _event) => {
 
 let insertAt = (textToInsert, position, sourceText) => {
   let head = sourceText->String.sub(0, position)
-  let tail = sourceText->String.sub(position, (sourceText |> String.length) - position)
+  let tail = sourceText->String.sub(position, (sourceText->String.length) - position)
 
   head ++ (textToInsert ++ tail)
 }
@@ -157,7 +157,7 @@ let insertAt = (textToInsert, position, sourceText) => {
 let wrapWith = (wrapper, selectionStart, selectionEnd, sourceText) => {
   let head = sourceText->String.sub(0, selectionStart)
   let selection = sourceText->String.sub(selectionStart, selectionEnd - selectionStart)
-  let tail = sourceText->String.sub(selectionEnd, (sourceText |> String.length) - selectionEnd)
+  let tail = sourceText->String.sub(selectionEnd, (sourceText->String.length) - selectionEnd)
 
   head ++ (wrapper ++ (selection ++ (wrapper ++ tail)))
 }
@@ -182,26 +182,26 @@ let updateTextareaAfterDelay = (state, cursorPosition) => {
 
   switch state.mode {
   | Windowed(_) =>
-    Js.Global.setTimeout(() => TextareaAutosize.update(state.id), renderDelay) |> ignore
+    Js.Global.setTimeout(() => TextareaAutosize.update(state.id), renderDelay)->ignore
   | Fullscreen(_) => () // Autosizing is turned off in full-screen mode.
   }
 
   open Webapi.Dom
-  switch document |> Document.getElementById(state.id) {
+  switch document->Document.getElementById(state.id) {
   | Some(element) =>
     Js.Global.setTimeout(
       () =>
         element
-        |> DomUtils.Element.unsafeToHtmlInputElement
-        |> HtmlInputElement.setSelectionRange(cursorPosition, cursorPosition),
+        ->DomUtils.Element.unsafeToHtmlInputElement
+        ->HtmlInputElement.setSelectionRange(cursorPosition, cursorPosition),
       renderDelay,
-    ) |> ignore
+    )->ignore
   | None => () // Avoid messing with the DOM if the textarea can't be found.
   }
 }
 
 let finalizeChange = (~oldValue, ~newValue, ~state, ~send, ~onChange) => {
-  let offset = (newValue |> String.length) - (oldValue |> String.length)
+  let offset = (newValue->String.length) - (oldValue->String.length)
   let (_, selectionEnd) = state.selection
 
   // The cursor needs to be bumped to account for changed value.
@@ -228,12 +228,12 @@ let insertAndWrapper = phraseModifer =>
 
 let modifyPhrase = (oldValue, state, send, onChange, phraseModifer) => {
   let (selectionStart, selectionEnd) = state.selection
-  let (insert, wrapper) = phraseModifer |> insertAndWrapper
+  let (insert, wrapper) = phraseModifer->insertAndWrapper
 
   let newValue = if selectionStart == selectionEnd {
-    oldValue |> insertAt(insert, selectionStart)
+    oldValue->insertAt(insert, selectionStart)
   } else {
-    oldValue |> wrapWith(wrapper, selectionStart, selectionEnd)
+    oldValue->wrapWith(wrapper, selectionStart, selectionEnd)
   }
 
   finalizeChange(~oldValue, ~newValue, ~state, ~send, ~onChange)
@@ -289,7 +289,7 @@ let controls = (value, state, send, onChange) => {
         {modeIcon(#Fullscreen, mode)}
         {switch mode {
         | Fullscreen(_) =>
-          <span className="ml-2 text-xs font-semibold"> {"Exit full-screen" |> str} </span>
+          <span className="ml-2 text-xs font-semibold"> {"Exit full-screen"->str} </span>
         | Windowed(_) => React.null
         }}
       </button>
@@ -325,7 +325,7 @@ let previewType = mode =>
 
 let previewContainerClasses = mode =>
   "border-gray-400 bg-gray-100 " ++
-  switch mode |> previewType {
+  switch mode->previewType {
   | #WindowedPreview => "markdown-editor__windowed-preview-container border-l border-r border-b rounded-b px-2 md:px-3"
   | #FullscreenPreview => "w-screen mx-auto"
   | #FullscreenSplit => "w-1/2 relative"
@@ -341,35 +341,35 @@ let previewClasses = mode =>
 let focusOnEditor = id => {
   open Webapi.Dom
   document
-  |> Document.getElementById(id)
-  |> OptionUtils.flatMap(HtmlElement.ofElement)
-  |> OptionUtils.mapWithDefault(element => element |> HtmlElement.focus, ())
+  ->Document.getElementById(id)
+  ->OptionUtils.flatMap(HtmlElement.ofElement)
+  ->OptionUtils.mapWithDefault(element => element->HtmlElement.focus, ())
 }
 
 let handleUploadFileResponse = (oldValue, state, send, onChange, json) => {
-  let errors = json |> {
+  let errors = json->{
     open Json.Decode
     field("errors", array(string))
   }
 
   if errors == [] {
-    let markdownEmbedCode = json |> {
+    let markdownEmbedCode = json->{
       open Json.Decode
       field("markdownEmbedCode", string)
     }
 
     let insert = "\n" ++ (markdownEmbedCode ++ "\n")
     let (_, selectionEnd) = state.selection
-    let newValue = oldValue |> insertAt(insert, selectionEnd)
+    let newValue = oldValue->insertAt(insert, selectionEnd)
     finalizeChange(~oldValue, ~newValue, ~state, ~send, ~onChange)
     send(FinishUploading)
   } else {
-    send(SetUploadError(Some("Failed to attach file! " ++ (errors |> Js.Array.joinWith(", ")))))
+    send(SetUploadError(Some("Failed to attach file! " ++ (errors->Js.Array.joinWith(", ")))))
   }
 }
 
 let submitForm = (formId, oldValue, state, send, onChange) =>
-  ReactDOMRe._getElementById(formId) |> OptionUtils.mapWithDefault(element => {
+  ReactDOMRe._getElementById(formId)->OptionUtils.mapWithDefault(element => {
     let formData = DomUtils.FormData.create(element)
 
     Api.sendFormData(
@@ -441,18 +441,18 @@ let footer = (oldValue, state, send, onChange) => {
             {switch error {
             | Some(error) =>
               <span className="text-red-500">
-                <i className="fas fa-exclamation-triangle mr-2" /> {error |> str}
+                <i className="fas fa-exclamation-triangle mr-2" /> {error->str}
               </span>
             | None =>
               <span>
-                <i className="far fa-file-image mr-2" /> {"Click here to attach a file." |> str}
+                <i className="far fa-file-image mr-2" /> {"Click here to attach a file."->str}
               </span>
             }}
           </label>
         | Uploading =>
           <span className="text-xs px-3 py-2 flex-grow cursor-wait">
             <i className="fas fa-spinner fa-pulse mr-2" />
-            {"Please wait for the file to upload..." |> str}
+            {"Please wait for the file to upload..."->str}
           </span>
         }}
       </form>
@@ -461,7 +461,7 @@ let footer = (oldValue, state, send, onChange) => {
         target="_blank"
         className="flex items-center px-3 py-2 hover:bg-gray-300 hover:text-secondary-500 cursor-pointer">
         <i className="fab fa-markdown text-sm" />
-        <span className="text-xs ml-1 font-semibold hidden sm:inline"> {"Need help?" |> str} </span>
+        <span className="text-xs ml-1 font-semibold hidden sm:inline"> {"Need help?"->str} </span>
       </a>
     </div>
   }
@@ -481,13 +481,13 @@ let onChangeWrapper = (onChange, event) => {
 
 let onSelect = (send, event) => {
   let htmlInputElement =
-    ReactEvent.Selection.target(event) |> DomUtils.EventTarget.unsafeToHtmlInputElement
+    ReactEvent.Selection.target(event)->DomUtils.EventTarget.unsafeToHtmlInputElement
 
   let selection = {
     open Webapi.Dom
     (
-      htmlInputElement |> HtmlInputElement.selectionStart,
-      htmlInputElement |> HtmlInputElement.selectionEnd,
+      htmlInputElement->HtmlInputElement.selectionStart,
+      htmlInputElement->HtmlInputElement.selectionEnd,
     )
   }
 
@@ -495,7 +495,7 @@ let onSelect = (send, event) => {
 }
 
 let handleEscapeKey = (send, event) =>
-  switch event |> Webapi.Dom.KeyboardEvent.key {
+  switch event->Webapi.Dom.KeyboardEvent.key {
   | "Escape" => send(PressEscapeKey)
   | _anyOtherKey => ()
   }
@@ -505,9 +505,9 @@ let handleKeyboardControls = (value, state, send, onChange, event) => {
   let metaKey = Webapi.Dom.KeyboardEvent.metaKey
   let curriedModifyPhrase = modifyPhrase(value, state, send, onChange)
 
-  switch event |> Webapi.Dom.KeyboardEvent.key {
-  | "b" if event |> ctrlKey || event |> metaKey => curriedModifyPhrase(Bold)
-  | "i" if event |> ctrlKey || event |> metaKey => curriedModifyPhrase(Italic)
+  switch event->Webapi.Dom.KeyboardEvent.key {
+  | "b" if event->ctrlKey || event->metaKey => curriedModifyPhrase(Bold)
+  | "i" if event->ctrlKey || event->metaKey => curriedModifyPhrase(Italic)
   | _anyOtherKey => ()
   }
 }
@@ -524,16 +524,16 @@ module ScrollSync = {
    * position to the other.
    */
   let scrollTargetToSource = (~source, ~target, _event) => {
-    let sourceScrollTop = source |> Element.scrollTop
-    let sourceOffsetHeight = source |> Element.unsafeAsHtmlElement |> HtmlElement.offsetHeight
-    let sourceScrollHeight = source |> Element.scrollHeight
+    let sourceScrollTop = source->Element.scrollTop
+    let sourceOffsetHeight = source->Element.unsafeAsHtmlElement->HtmlElement.offsetHeight
+    let sourceScrollHeight = source->Element.scrollHeight
 
     let scrollFraction =
-      sourceScrollTop /. (sourceScrollHeight - sourceOffsetHeight |> float_of_int)
+      sourceScrollTop /. (sourceScrollHeight - sourceOffsetHeight->float_of_int)
 
     let maxTargetScrollTop =
-      (target |> Element.scrollHeight) -
-        (target |> Element.unsafeAsHtmlElement |> HtmlElement.offsetHeight) |> float_of_int
+      (target->Element.scrollHeight) -
+        (target->Element.unsafeAsHtmlElement->HtmlElement.offsetHeight)->float_of_int
 
     target->Element.setScrollTop(scrollFraction *. maxTargetScrollTop)
   }
@@ -571,14 +571,14 @@ let make = (
     let curriedHandler = handleEscapeKey(send)
     let documentEventTarget = {
       open Webapi.Dom
-      document |> Document.asEventTarget
+      document->Document.asEventTarget
     }
 
-    documentEventTarget |> Webapi.Dom.EventTarget.addKeyDownEventListener(curriedHandler)
+    documentEventTarget->Webapi.Dom.EventTarget.addKeyDownEventListener(curriedHandler)
 
     Some(
       () =>
-        documentEventTarget |> Webapi.Dom.EventTarget.removeKeyDownEventListener(curriedHandler),
+        documentEventTarget->Webapi.Dom.EventTarget.removeKeyDownEventListener(curriedHandler),
     )
   })
 
@@ -587,17 +587,17 @@ let make = (
     let curriedHandler = handleKeyboardControls(value, state, send, onChange)
     let textareaEventTarget = {
       open Webapi.Dom
-      document |> Document.getElementById(state.id) |> OptionUtils.map(Element.asEventTarget)
+      document->Document.getElementById(state.id)->OptionUtils.map(Element.asEventTarget)
     }
 
-    textareaEventTarget |> OptionUtils.mapWithDefault(
+    textareaEventTarget->OptionUtils.mapWithDefault(
       Webapi.Dom.EventTarget.addKeyDownEventListener(curriedHandler),
       (),
     )
 
     Some(
       () =>
-        textareaEventTarget |> OptionUtils.mapWithDefault(
+        textareaEventTarget->OptionUtils.mapWithDefault(
           Webapi.Dom.EventTarget.removeKeyDownEventListener(curriedHandler),
           (),
         ),
@@ -607,11 +607,11 @@ let make = (
   React.useEffect1(() => {
     let textarea = {
       open Webapi.Dom
-      document |> Document.getElementById(state.id)
+      document->Document.getElementById(state.id)
     }
     let preview = {
       open Webapi.Dom
-      document |> Document.getElementById(state.id ++ "-preview")
+      document->Document.getElementById(state.id ++ "-preview")
     }
 
     switch (textarea, preview) {
@@ -620,11 +620,11 @@ let make = (
 
       switch state.mode {
       | Fullscreen(#Split) =>
-        textarea |> Webapi.Dom.Element.addEventListener("scroll", scrollCallback)
+        textarea->Webapi.Dom.Element.addEventListener("scroll", scrollCallback)
 
-        Some(() => textarea |> Webapi.Dom.Element.removeEventListener("scroll", scrollCallback))
+        Some(() => textarea->Webapi.Dom.Element.removeEventListener("scroll", scrollCallback))
       | _anyOtherMode =>
-        textarea |> Webapi.Dom.Element.removeEventListener("scroll", scrollCallback)
+        textarea->Webapi.Dom.Element.removeEventListener("scroll", scrollCallback)
         None
       }
     | (_, _) => None

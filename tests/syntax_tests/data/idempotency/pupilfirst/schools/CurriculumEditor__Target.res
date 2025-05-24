@@ -34,17 +34,17 @@ let decodeVisbility = visibilityString =>
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    targetGroupId: json |> field("targetGroupId", string),
-    title: json |> field("title", string),
-    sortIndex: json |> field("sortIndex", int),
-    visibility: decodeVisbility(json |> field("visibility", string)),
+    id: json->field("id", string),
+    targetGroupId: json->field("targetGroupId", string),
+    title: json->field("title", string),
+    sortIndex: json->field("sortIndex", int),
+    visibility: decodeVisbility(json->field("visibility", string)),
   }
 }
 
 let updateList = (targets, target) => {
-  let oldTargets = targets |> List.filter(t => t.id !== target.id)
-  oldTargets |> List.rev |> List.append(list{target}) |> List.rev
+  let oldTargets = targets->List.filter(t => t.id !== target.id)
+  oldTargets->List.rev->List.append(list{target})->List.rev
 }
 
 let create = (~id, ~targetGroupId, ~title, ~sortIndex, ~visibility) => {
@@ -55,7 +55,7 @@ let create = (~id, ~targetGroupId, ~title, ~sortIndex, ~visibility) => {
   visibility: visibility,
 }
 
-let sort = targets => targets |> List.sort((x, y) => x.sortIndex - y.sortIndex)
+let sort = targets => targets->List.sort((x, y) => x.sortIndex - y.sortIndex)
 
 let archive = t => {...t, visibility: Archived}
 
@@ -66,13 +66,13 @@ let archived = t =>
   | Draft => false
   }
 
-let removeTarget = (target, targets) => targets |> List.filter(t => t.id != target.id)
+let removeTarget = (target, targets) => targets->List.filter(t => t.id != target.id)
 
 let targetIdsInTargetGroup = (id, targets) =>
-  targets |> List.filter(t => t.targetGroupId == id) |> List.map(t => t.id)
+  targets->List.filter(t => t.targetGroupId == id)->List.map(t => t.id)
 
 let updateSortIndex = sortedTargets =>
-  sortedTargets |> List.mapi((sortIndex, t) =>
+  sortedTargets->List.mapi((sortIndex, t) =>
     create(
       ~id=t.id,
       ~targetGroupId=t.targetGroupId,

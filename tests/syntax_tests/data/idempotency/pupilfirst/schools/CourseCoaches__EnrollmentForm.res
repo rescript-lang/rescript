@@ -23,12 +23,12 @@ let reducer = (state, action) =>
 let makePayload = state => {
   let payload = Js.Dict.empty()
 
-  Js.Dict.set(payload, "authenticity_token", AuthenticityToken.fromHead() |> Js.Json.string)
+  Js.Dict.set(payload, "authenticity_token", AuthenticityToken.fromHead()->Js.Json.string)
 
   Js.Dict.set(
     payload,
     "coach_ids",
-    state.courseCoaches |> {
+    state.courseCoaches->{
       open Json.Encode
       array(string)
     },
@@ -40,20 +40,20 @@ let makePayload = state => {
 module SelectableCourseCoaches = {
   type t = SchoolCoach.t
 
-  let value = t => t |> SchoolCoach.name
+  let value = t => t->SchoolCoach.name
   let searchString = value
 }
 
 let setCoachSearchInput = (send, value) => send(UpdateCoachSearchInput(value))
 
 let selectCoach = (send, state, coach) => {
-  let updatedCoaches = state.courseCoaches |> Js.Array.concat([coach |> SchoolCoach.id])
+  let updatedCoaches = state.courseCoaches->Js.Array.concat([coach->SchoolCoach.id])
   send(UpdateCoachesList(updatedCoaches))
 }
 
 let deSelectCoach = (send, state, coach) => {
   let updatedCoaches =
-    state.courseCoaches |> Js.Array.filter(coachId => coachId != SchoolCoach.id(coach))
+    state.courseCoaches->Js.Array.filter(coachId => coachId != SchoolCoach.id(coach))
   send(UpdateCoachesList(updatedCoaches))
 }
 
@@ -61,9 +61,9 @@ module MultiselectForCourseCoaches = MultiselectInline.Make(SelectableCourseCoac
 
 let courseCoachEditor = (coaches, state, send) => {
   let selected =
-    coaches |> Js.Array.filter(coach => state.courseCoaches |> Array.mem(SchoolCoach.id(coach)))
+    coaches->Js.Array.filter(coach => state.courseCoaches->Array.mem(SchoolCoach.id(coach)))
   let unselected =
-    coaches |> Js.Array.filter(coach => !(state.courseCoaches |> Array.mem(SchoolCoach.id(coach))))
+    coaches->Js.Array.filter(coach => !(state.courseCoaches->Array.mem(SchoolCoach.id(coach))))
   <MultiselectForCourseCoaches
     placeholder="Search coaches"
     emptySelectionMessage="No coaches selected"
@@ -78,7 +78,7 @@ let courseCoachEditor = (coaches, state, send) => {
 }
 
 let handleResponseCB = (updateCoachesCB, json) => {
-  let courseCoaches = json |> {
+  let courseCoaches = json->{
     open Json.Decode
     field("course_coaches", array(CourseCoach.decode))
   }
@@ -96,8 +96,8 @@ let updateCourseCoaches = (state, send, courseId, updateCoachesCB) => {
 }
 
 let computeAvailableCoaches = (schoolCoaches, courseCoaches) => {
-  let courseCoachIds = courseCoaches |> Array.map(CourseCoach.id)
-  schoolCoaches |> Js.Array.filter(coach => !(courseCoachIds |> Array.mem(coach |> SchoolCoach.id)))
+  let courseCoachIds = courseCoaches->Array.map(CourseCoach.id)
+  schoolCoaches->Js.Array.filter(coach => !(courseCoachIds->Array.mem(coach->SchoolCoach.id)))
 }
 
 @react.component
@@ -109,20 +109,20 @@ let make = (~schoolCoaches, ~courseCoaches, ~courseId, ~updateCoachesCB) => {
 
   let coaches = computeAvailableCoaches(schoolCoaches, courseCoaches)
 
-  let saveDisabled = state.courseCoaches |> ArrayUtils.isEmpty || state.saving
+  let saveDisabled = state.courseCoaches->ArrayUtils.isEmpty || state.saving
 
   <div className="w-full">
     <div className="w-full">
       <div className="mx-auto bg-white">
         <div className="max-w-2xl pt-6 px-6 mx-auto">
           <h5 className="uppercase text-center border-b border-gray-400 pb-2 mb-4">
-            {"ASSIGN COACHES TO THE COURSE" |> str}
+            {"ASSIGN COACHES TO THE COURSE"->str}
           </h5>
-          {coaches |> Array.length > 0
+          {coaches->Array.length > 0
             ? <div>
                 <div id="course_coaches">
                   <span className="inline-block mr-1 mb-2 text-xs font-semibold">
-                    {"Select coaches:" |> str}
+                    {"Select coaches:"->str}
                   </span>
                   {courseCoachEditor(coaches, state, send)}
                 </div>
@@ -134,7 +134,7 @@ let make = (~schoolCoaches, ~courseCoaches, ~courseId, ~updateCoachesCB) => {
             disabled=saveDisabled
             onClick={_e => updateCourseCoaches(state, send, courseId, updateCoachesCB)}
             className="w-full btn btn-primary btn-large">
-            {"Add Course Coaches" |> str}
+            {"Add Course Coaches"->str}
           </button>
         </div>
       </div>

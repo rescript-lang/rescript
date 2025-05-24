@@ -12,7 +12,7 @@ let students = t => t.students
 let makeFromJS = teamData => {
   id: teamData["id"],
   name: teamData["name"],
-  students: teamData["students"] |> Array.map(student => student["name"]),
+  students: teamData["students"]->Array.map(student => student["name"]),
 }
 
 let makeArrayFromJs = detailsOfTeams =>
@@ -21,8 +21,8 @@ let makeArrayFromJs = detailsOfTeams =>
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    name: json |> field("name", string),
-    students: json |> field("students", array(string)),
+    id: json->field("id", string),
+    name: json->field("name", string),
+    students: json->field("students", array(string)),
   }
 }
