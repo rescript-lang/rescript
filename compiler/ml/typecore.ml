@@ -32,7 +32,10 @@ type error =
   | Or_pattern_type_clash of Ident.t * (type_expr * type_expr) list
   | Multiply_bound_variable of string
   | Orpat_vars of Ident.t * Ident.t list
-  | Expr_type_clash of (type_expr * type_expr) list * type_clash_context option
+  | Expr_type_clash of {
+      trace: (type_expr * type_expr) list;
+      context: type_clash_context option;
+    }
   | Apply_non_function of type_expr
   | Apply_wrong_label of Noloc.arg_label * type_expr
   | Label_multiply_defined of {
@@ -308,10 +311,9 @@ let unify_pat_types loc env ty ty' =
     raise (Typetexp.Error (loc, env, Typetexp.Variant_tags (l1, l2)))
 
 (* unification inside type_exp and type_expect *)
-let unify_exp_types ?type_clash_context loc env ty expected_ty =
+let unify_exp_types ~context loc env ty expected_ty =
   try unify env ty expected_ty with
-  | Unify trace ->
-    raise (Error (loc, env, Expr_type_clash (trace, type_clash_context)))
+  | Unify trace -> raise (Error (loc, env, Expr_type_clash {trace; context}))
   | Tags (l1, l2) ->
     raise (Typetexp.Error (loc, env, Typetexp.Variant_tags (l1, l2)))
 
@@ -729,7 +731,7 @@ let rec collect_missing_arguments env type1 type2 =
     | None -> None)
   | _ -> None
 
-let print_expr_type_clash ?type_clash_context env loc trace ppf =
+let print_expr_type_clash ~context env loc trace ppf =
   (* this is the most frequent error. We should do whatever we can to provide
       specific guidance to this generic error before giving up *)
   let bottom_aliases_result = bottom_aliases trace in
@@ -784,10 +786,10 @@ let print_expr_type_clash ?type_clash_context env loc trace ppf =
 
     Printtyp.super_report_unification_error ppf env trace
       (function
-        | ppf -> error_type_text ppf type_clash_context)
-      (function ppf -> error_expected_type_text ppf type_clash_context);
+        | ppf -> error_type_text ppf context)
+      (function ppf -> error_expected_type_text ppf context);
     print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
-      bottom_aliases_result type_clash_context;
+      bottom_aliases_result context;
     show_extra_help ppf env trace
 
 let report_arity_mismatch ~arity_a ~arity_b ppf =
@@ -1885,6 +1887,7 @@ let rec approx_type env sty =
   | Ptyp_poly (_, sty) -> approx_type env sty
   | _ -> newvar ()
 
+(* TODO: Needs type clash context? *)
 let rec type_approx env sexp =
   match sexp.pexp_desc with
   | Pexp_let (_, _, e) -> type_approx env e
@@ -1902,7 +1905,8 @@ let rec type_approx env sexp =
     let ty1 = approx_type env sty in
     (try unify env ty ty1
      with Unify trace ->
-       raise (Error (sexp.pexp_loc, env, Expr_type_clash (trace, None))));
+       raise
+         (Error (sexp.pexp_loc, env, Expr_type_clash {trace; context = None})));
     ty1
   | Pexp_coerce (e, (), sty2) ->
     let approx_ty_opt = function
@@ -1914,7 +1918,8 @@ let rec type_approx env sexp =
     and ty2 = approx_type env sty2 in
     (try unify env ty ty1
      with Unify trace ->
-       raise (Error (sexp.pexp_loc, env, Expr_type_clash (trace, None))));
+       raise
+         (Error (sexp.pexp_loc, env, Expr_type_clash {trace; context = None})));
     ty2
   | _ -> newvar ()
 
@@ -2179,9 +2184,9 @@ let rec name_pattern default = function
 
 (* Typing of expressions *)
 
-let unify_exp ?type_clash_context env exp expected_ty =
+let unify_exp ~context env exp expected_ty =
   let loc = proper_exp_loc exp in
-  unify_exp_types ?type_clash_context loc env exp.exp_type expected_ty
+  unify_exp_types ~context loc env exp.exp_type expected_ty
 
 let is_ignore ~env ~arity funct =
   match funct.exp_desc with
@@ -2217,9 +2222,9 @@ type lazy_args =
   (Asttypes.Noloc.arg_label * (unit -> Typedtree.expression) option) list
 
 type targs = (Asttypes.Noloc.arg_label * Typedtree.expression option) list
-let rec type_exp ?recarg env sexp =
+let rec type_exp ~context ?recarg env sexp =
   (* We now delegate everything to type_expect *)
-  type_expect ?recarg env sexp (newvar ())
+  type_expect ~context ?recarg env sexp (newvar ())
 
 (* Typing of an expression with an expected type.
    This provide better error messages, and allows controlled
@@ -2227,23 +2232,22 @@ let rec type_exp ?recarg env sexp =
    In the principal case, [type_expected'] may be at generic_level.
 *)
 
-and type_expect ?type_clash_context ?in_function ?recarg env sexp ty_expected =
+and type_expect ~context ?in_function ?recarg env sexp ty_expected =
   let previous_saved_types = Cmt_format.get_saved_types () in
   let exp =
     Builtin_attributes.warning_scope sexp.pexp_attributes (fun () ->
-        type_expect_ ?type_clash_context ?in_function ?recarg env sexp
-          ty_expected)
+        type_expect_ ~context ?in_function ?recarg env sexp ty_expected)
   in
   Cmt_format.set_saved_types
     (Cmt_format.Partial_expression exp :: previous_saved_types);
   exp
 
-and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
-    ty_expected =
+and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
+    =
   let loc = sexp.pexp_loc in
   (* Record the expression type before unifying it with the expected type *)
   let rue exp =
-    unify_exp ?type_clash_context env (re exp) (instance env ty_expected);
+    unify_exp ~context env (re exp) (instance env ty_expected);
     exp
   in
   let process_optional_label (id, ld, e, opt) =
@@ -2302,7 +2306,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         sbody )
     when contains_gadt env spat ->
     (* TODO: allow non-empty attributes? *)
-    type_expect ?in_function env
+    type_expect ~context:None ?in_function env
       {
         sexp with
         pexp_desc = Pexp_match (sval, [Ast_helper.Exp.case spat sbody]);
@@ -2316,9 +2320,11 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
       | _, Nonrecursive -> Some (Annot.Idef sbody.pexp_loc)
     in
     let pat_exp_list, new_env, unpacks =
-      type_let env rec_flag spat_sexp_list scp true
+      type_let ~context:None env rec_flag spat_sexp_list scp true
     in
-    let body = type_expect new_env (wrap_unpacks sbody unpacks) ty_expected in
+    let body =
+      type_expect ~context:None new_env (wrap_unpacks sbody unpacks) ty_expected
+    in
     let () =
       if rec_flag = Recursive then
         Rec_check.check_recursive_bindings pat_exp_list
@@ -2379,30 +2385,30 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         [Vb.mk spat smatch]
         sbody
     in
-    type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
-      ty_expected l
+    type_function ~context:None ?in_function ~arity ~async loc
+      sexp.pexp_attributes env ty_expected l
       [Exp.case pat body]
   | Pexp_fun
       {arg_label = l; default = None; lhs = spat; rhs = sbody; arity; async} ->
     let l = Asttypes.to_noloc l in
-    type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
-      ty_expected l
+    type_function ~context:None ?in_function ~arity ~async loc
+      sexp.pexp_attributes env ty_expected l
       [Ast_helper.Exp.case spat sbody]
   | Pexp_apply {funct = sfunct; args = sargs; partial; transformed_jsx} ->
     assert (sargs <> []);
     begin_def ();
     (* one more level for non-returning functions *)
-    let funct = type_exp env sfunct in
+    let funct = type_exp ~context:None env sfunct in
     let ty = instance env funct.exp_type in
     end_def ();
     wrap_trace_gadt_instances env (lower_args env []) ty;
     begin_def ();
     let total_app = not partial in
-    let type_clash_context = type_clash_context_from_function sexp sfunct in
+    let context = type_clash_context_from_function sexp sfunct in
     let args, ty_res, fully_applied =
-      match translate_unified_ops env funct sargs with
+      match translate_unified_ops ~context:None env funct sargs with
       | Some (targs, result_type) -> (targs, result_type, true)
-      | None -> type_application ?type_clash_context total_app env funct sargs
+      | None -> type_application ~context total_app env funct sargs
     in
     end_def ();
     unify_var env (newvar ()) funct.exp_type;
@@ -2429,7 +2435,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     else rue (mk_apply funct args)
   | Pexp_match (sarg, caselist) ->
     begin_def ();
-    let arg = type_exp env sarg in
+    let arg = type_exp ~context:None env sarg in
     end_def ();
     if not (is_nonexpansive arg) then generalize_expansive env arg.exp_type;
     generalize arg.exp_type;
@@ -2446,12 +2452,12 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
        empty pattern matching can be generated by Camlp4 with its
        revised syntax.  Let's accept it for backward compatibility. *)
     let val_cases, partial =
-      type_cases ~root_type_clash_context:Switch env arg.exp_type ty_expected
-        true loc val_caselist
+      type_cases ~call_context:`Switch env arg.exp_type ty_expected true loc
+        val_caselist
     in
     let exn_cases, _ =
-      type_cases ~root_type_clash_context:Switch env Predef.type_exn ty_expected
-        false loc exn_caselist
+      type_cases ~call_context:`Switch env Predef.type_exn ty_expected false loc
+        exn_caselist
     in
     re
       {
@@ -2463,9 +2469,10 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         exp_env = env;
       }
   | Pexp_try (sbody, caselist) ->
-    let body = type_expect env sbody ty_expected in
+    let body = type_expect ~context:None env sbody ty_expected in
     let cases, _ =
-      type_cases env Predef.type_exn ty_expected false loc caselist
+      type_cases ~call_context:`Try env Predef.type_exn ty_expected false loc
+        caselist
     in
     re
       {
@@ -2480,9 +2487,11 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     assert (List.length sexpl >= 2);
     let subtypes = List.map (fun _ -> newgenvar ()) sexpl in
     let to_unify = newgenty (Ttuple subtypes) in
-    unify_exp_types loc env to_unify ty_expected;
+    unify_exp_types ~context:None loc env to_unify ty_expected;
     let expl =
-      List.map2 (fun body ty -> type_expect env body ty) sexpl subtypes
+      List.map2
+        (fun body ty -> type_expect ~context:None env body ty)
+        sexpl subtypes
     in
     re
       {
@@ -2495,7 +2504,8 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         exp_env = env;
       }
   | Pexp_construct (lid, sarg) ->
-    type_construct env loc lid sarg ty_expected sexp.pexp_attributes
+    type_construct ~context:None env loc lid sarg ty_expected
+      sexp.pexp_attributes
   | Pexp_variant (l, sarg) -> (
     (* Keep sharing *)
     let ty_expected0 = instance env ty_expected in
@@ -2510,7 +2520,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
             row_field_repr (List.assoc l row0.row_fields) )
         with
         | Rpresent (Some ty), Rpresent (Some ty0) ->
-          let arg = type_argument env sarg ty ty0 in
+          let arg = type_argument ~context env sarg ty ty0 in
           re
             {
               exp_desc = Texp_variant (l, Some arg);
@@ -2523,7 +2533,11 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         | _ -> raise Not_found)
       | _ -> raise Not_found
     with Not_found ->
-      let arg = may_map (type_exp env) sarg in
+      let arg =
+        may_map
+          (fun sarg -> type_expect ~context:None env sarg (newvar ()))
+          sarg
+      in
       let arg_type = may_map (fun arg -> arg.exp_type) arg in
       rue
         {
@@ -2563,11 +2577,12 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         (type_record_elem_list loc true env
            (fun e k ->
              k
-               (type_label_exp true env loc ty_record (process_optional_label e)))
+               (type_label_exp ~context:None true env loc ty_record
+                  (process_optional_label e)))
            opath lid_sexp_list)
         (fun x -> x)
     in
-    unify_exp_types loc env ty_record (instance env ty_expected);
+    unify_exp_types ~context:None loc env ty_record (instance env ty_expected);
     check_duplicates ~get_jsx_component_error_info loc env lbl_exp_list;
     let label_descriptions, representation =
       match (lbl_exp_list, repr_opt) with
@@ -2640,7 +2655,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
       }
   | Pexp_record (lid_sexp_list, Some sexp) ->
     assert (lid_sexp_list <> []);
-    let exp = type_exp ~recarg env sexp in
+    let exp = type_expect ~context:None ~recarg env sexp (newvar ()) in
     let ty_record, opath =
       let get_path ty =
         try
@@ -2672,11 +2687,12 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         (type_record_elem_list loc closed env
            (fun e k ->
              k
-               (type_label_exp true env loc ty_record (process_optional_label e)))
+               (type_label_exp ~context:None true env loc ty_record
+                  (process_optional_label e)))
            opath lid_sexp_list)
         (fun x -> x)
     in
-    unify_exp_types loc env ty_record (instance env ty_expected);
+    unify_exp_types ~context:None loc env ty_record (instance env ty_expected);
     check_duplicates ~get_jsx_component_error_info loc env lbl_exp_list;
     let opt_exp, label_definitions =
       let _lid, lbl, _lbl_exp, _opt = List.hd lbl_exp_list in
@@ -2688,15 +2704,16 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
       let ty_exp = instance env exp.exp_type in
       let unify_kept lbl =
         let _, ty_arg1, ty_res1 = instance_label false lbl in
-        unify_exp_types exp.exp_loc env ty_exp ty_res1;
+        unify_exp_types ~context:None exp.exp_loc env ty_exp ty_res1;
         match matching_label lbl with
         | lid, _lbl, lbl_exp, _ ->
           (* do not connect result types for overridden labels *)
           Overridden (lid, lbl_exp)
         | exception Not_found ->
           let _, ty_arg2, ty_res2 = instance_label false lbl in
-          unify_exp_types loc env ty_arg1 ty_arg2;
-          unify_exp_types loc env (instance env ty_expected) ty_res2;
+          unify_exp_types ~context:None loc env ty_arg1 ty_arg2;
+          unify_exp_types ~context:None loc env (instance env ty_expected)
+            ty_res2;
           Kept ty_arg1
       in
       let label_definitions = Array.map unify_kept lbl.lbl_all in
@@ -2733,9 +2750,9 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         exp_env = env;
       }
   | Pexp_field (srecord, lid) ->
-    let record, label, _ = type_label_access env srecord lid in
+    let record, label, _ = type_label_access ~context:None env srecord lid in
     let _, ty_arg, ty_res = instance_label false label in
-    unify_exp env record ty_res;
+    unify_exp ~context:None env record ty_res;
     rue
       {
         exp_desc = Texp_field (record, lid, label);
@@ -2746,13 +2763,15 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         exp_env = env;
       }
   | Pexp_setfield (srecord, lid, snewval) ->
-    let record, label, opath = type_label_access env srecord lid in
+    let record, label, opath =
+      type_label_access ~context:None env srecord lid
+    in
     let ty_record = if opath = None then newvar () else record.exp_type in
     let label_loc, label, newval, _ =
-      type_label_exp ~type_clash_context:SetRecordField false env loc ty_record
+      type_label_exp ~context:(Some SetRecordField) false env loc ty_record
         (lid, label, snewval, false)
     in
-    unify_exp env record ty_record;
+    unify_exp ~context:None env record ty_record;
     if label.lbl_mut = Immutable then
       raise (Error (loc, env, Label_not_mutable lid.txt));
     Builtin_attributes.check_deprecated_mutable lid.loc label.lbl_attributes
@@ -2769,10 +2788,10 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
   | Pexp_array sargl ->
     let ty = newgenvar () in
     let to_unify = Predef.type_array ty in
-    unify_exp_types loc env to_unify ty_expected;
+    unify_exp_types ~context:None loc env to_unify ty_expected;
     let argl =
       List.map
-        (fun sarg -> type_expect ~type_clash_context:ArrayValue env sarg ty)
+        (fun sarg -> type_expect ~context:(Some ArrayValue) env sarg ty)
         sargl
     in
     re
@@ -2786,12 +2805,12 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
       }
   | Pexp_ifthenelse (scond, sifso, sifnot) -> (
     let cond =
-      type_expect ~type_clash_context:IfCondition env scond Predef.type_bool
+      type_expect ~context:(Some IfCondition) env scond Predef.type_bool
     in
     match sifnot with
     | None ->
       let ifso =
-        type_expect ~type_clash_context:IfReturn env sifso Predef.type_unit
+        type_expect ~context:(Some IfReturn) env sifso Predef.type_unit
       in
       rue
         {
@@ -2803,14 +2822,10 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
           exp_env = env;
         }
     | Some sifnot ->
-      let ifso =
-        type_expect ~type_clash_context:IfReturn env sifso ty_expected
-      in
-      let ifnot =
-        type_expect ~type_clash_context:IfReturn env sifnot ty_expected
-      in
+      let ifso = type_expect ~context:(Some IfReturn) env sifso ty_expected in
+      let ifnot = type_expect ~context:(Some IfReturn) env sifnot ty_expected in
       (* Keep sharing *)
-      unify_exp ~type_clash_context:IfReturn env ifnot ifso.exp_type;
+      unify_exp ~context:(Some IfReturn) env ifnot ifso.exp_type;
       re
         {
           exp_desc = Texp_ifthenelse (cond, ifso, Some ifnot);
@@ -2821,8 +2836,8 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
           exp_env = env;
         })
   | Pexp_sequence (sexp1, sexp2) ->
-    let exp1 = type_statement env sexp1 in
-    let exp2 = type_expect env sexp2 ty_expected in
+    let exp1 = type_statement ~context:None env sexp1 in
+    let exp2 = type_expect ~context env sexp2 ty_expected in
     re
       {
         exp_desc = Texp_sequence (exp1, exp2);
@@ -2833,8 +2848,11 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         exp_env = env;
       }
   | Pexp_while (scond, sbody) ->
-    let cond = type_expect env scond Predef.type_bool in
-    let body = type_statement env sbody in
+    let cond =
+      (* TODO: Add explicit WhileCondition *)
+      type_expect ~context:(Some IfCondition) env scond Predef.type_bool
+    in
+    let body = type_statement ~context:None env sbody in
     rue
       {
         exp_desc = Texp_while (cond, body);
@@ -2845,8 +2863,9 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         exp_env = env;
       }
   | Pexp_for (param, slow, shigh, dir, sbody) ->
-    let low = type_expect env slow Predef.type_int in
-    let high = type_expect env shigh Predef.type_int in
+    (* TODO: Add explicit ForCondition *)
+    let low = type_expect ~context:None env slow Predef.type_int in
+    let high = type_expect ~context:None env shigh Predef.type_int in
     let id, new_env =
       match param.ppat_desc with
       | Ppat_any -> (Ident.create "_for", env)
@@ -2862,7 +2881,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
           ~check:(fun s -> Warnings.Unused_for_index s)
       | _ -> raise (Error (param.ppat_loc, env, Invalid_for_loop_index))
     in
-    let body = type_statement new_env sbody in
+    let body = type_statement ~context:None new_env sbody in
     rue
       {
         exp_desc = Texp_for (id, param, low, high, dir, body);
@@ -2882,8 +2901,9 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
       if separate then (
         end_def ();
         generalize_structure ty;
-        (type_argument env sarg ty (instance env ty), instance env ty))
-      else (type_argument env sarg ty ty, ty)
+        ( type_argument ~context:None env sarg ty (instance env ty),
+          instance env ty ))
+      else (type_argument ~context:None env sarg ty ty, ty)
     in
     rue
       {
@@ -2904,7 +2924,9 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
       let cty', force = Typetexp.transl_simple_type_delayed env sty' in
       let ty' = cty'.ctyp_type in
       if separate then begin_def ();
-      let arg = type_exp env sarg in
+      (* TODO: What should this be?*)
+      let type_clash_context = None in
+      let arg = type_exp ~context env sarg in
       let gen =
         if separate then (
           end_def ();
@@ -2914,7 +2936,9 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
            with Unify trace ->
              raise
                (Error
-                  (arg.exp_loc, env, Expr_type_clash (trace, type_clash_context))));
+                  ( arg.exp_loc,
+                    env,
+                    Expr_type_clash {trace; context = type_clash_context} )));
           gen)
         else true
       in
@@ -2953,7 +2977,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
           (Texp_coerce cty', loc, sexp.pexp_attributes) :: arg.exp_extra;
       }
   | Pexp_send (e, {txt = met}) -> (
-    let obj = type_exp env e in
+    let obj = type_exp ~context:None env e in
     let obj_meths = ref None in
     try
       let meth, exp, typ =
@@ -3010,7 +3034,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     let id, new_env = Env.enter_module name.txt modl.mod_type env in
     Ctype.init_def (Ident.current_time ());
     Typetexp.widen context;
-    let body = type_expect new_env sbody ty_expected in
+    let body = type_expect ~context:None new_env sbody ty_expected in
     (* go back to original level *)
     end_def ();
     (* Unification of body.exp_type with the fresh variable ty
@@ -3035,7 +3059,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
       }
   | Pexp_letexception (cd, sbody) ->
     let cd, newenv = Typedecl.transl_exception env cd in
-    let body = type_expect newenv sbody ty_expected in
+    let body = type_expect ~context:None newenv sbody ty_expected in
     re
       {
         exp_desc = Texp_letexception (cd, body);
@@ -3046,7 +3070,8 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
         exp_env = env;
       }
   | Pexp_assert e ->
-    let cond = type_expect env e Predef.type_bool in
+    (* TODO: Add explicit AssertCondition *)
+    let cond = type_expect ~context:(Some IfCondition) env e Predef.type_bool in
     let exp_type =
       match cond.exp_desc with
       | Texp_construct (_, {cstr_name = "false"}, _) -> instance env ty_expected
@@ -3087,7 +3112,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     let id, new_env = Env.enter_type name decl env in
     Ctype.init_def (Ident.current_time ());
 
-    let body = type_exp new_env sbody in
+    let body = type_exp ~context:None new_env sbody in
     (* Replace every instance of this type constructor in the resulting
        type. *)
     let seen = Hashtbl.create 8 in
@@ -3136,7 +3161,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
       }
   | Pexp_open (ovf, lid, e) ->
     let path, newenv = !type_open ovf env sexp.pexp_loc lid in
-    let exp = type_expect newenv e ty_expected in
+    let exp = type_expect ~context:None newenv e ty_expected in
     {
       exp with
       exp_extra =
@@ -3175,8 +3200,8 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
   | Pexp_jsx_element _ ->
     failwith "Pexp_jsx_element is expected to be transformed at this point"
 
-and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
-    caselist =
+and type_function ~context ?in_function ~arity ~async loc attrs env ty_expected_
+    l caselist =
   let state = Warnings.backup () in
   (* Disable Unerasable_optional_argument for uncurried functions *)
   let unerasable_optional_argument =
@@ -3188,7 +3213,7 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
     | None -> ty_expected_
     | Some arity ->
       let fun_t = newty (Tarrow (l, newvar (), newvar (), Cok, Some arity)) in
-      unify_exp_types loc env fun_t ty_expected_;
+      unify_exp_types ~context loc env fun_t ty_expected_;
       fun_t
   in
   let loc_fun, ty_fun =
@@ -3220,8 +3245,8 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
     generalize_structure ty_arg;
     generalize_structure ty_res);
   let cases, partial =
-    type_cases ~in_function:(loc_fun, ty_fun) env ty_arg ty_res true loc
-      caselist
+    type_cases ~call_context:`Function ~in_function:(loc_fun, ty_fun) env ty_arg
+      ty_res true loc caselist
   in
   let case = List.hd cases in
   if is_optional l && not_function env ty_res then
@@ -3243,8 +3268,8 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
       exp_env = env;
     }
 
-and type_label_access env srecord lid =
-  let record = type_exp ~recarg:Allowed env srecord in
+and type_label_access ~context env srecord lid =
+  let record = type_exp ~context ~recarg:Allowed env srecord in
   let ty_exp = record.exp_type in
   let opath =
     try
@@ -3272,8 +3297,7 @@ and type_label_access env srecord lid =
 (* Typing format strings for printing or reading.
    These formats are used by functions in modules Printf, Format, and Scanf.
    (Handling of * modifiers contributed by Thorsten Ohl.) *)
-and type_label_exp ?type_clash_context create env loc ty_expected
-    (lid, label, sarg, opt) =
+and type_label_exp ~context create env loc ty_expected (lid, label, sarg, opt) =
   (* Here also ty_expected may be at generic_level *)
   begin_def ();
   let separate = Env.has_local_constraints env in
@@ -3300,9 +3324,7 @@ and type_label_exp ?type_clash_context create env loc ty_expected
     else raise (Error (lid.loc, env, Private_label (lid.txt, ty_expected)));
   let arg =
     let snap = if vars = [] then None else Some (Btype.snapshot ()) in
-    let arg =
-      type_argument ?type_clash_context env sarg ty_arg (instance env ty_arg)
-    in
+    let arg = type_argument ~context env sarg ty_arg (instance env ty_arg) in
     end_def ();
     try
       check_univars env (vars <> []) "field value" arg label.lbl_arg vars;
@@ -3312,10 +3334,10 @@ and type_label_exp ?type_clash_context create env loc ty_expected
         (* Try to retype without propagating ty_arg, cf PR#4862 *)
         may Btype.backtrack snap;
         begin_def ();
-        let arg = type_exp env sarg in
+        let arg = type_exp ~context env sarg in
         end_def ();
         generalize_expansive env arg.exp_type;
-        unify_exp env arg ty_arg;
+        unify_exp ~context env arg ty_arg;
         check_univars env false "field value" arg label.lbl_arg vars;
         arg
       with
@@ -3324,23 +3346,23 @@ and type_label_exp ?type_clash_context create env loc ty_expected
   in
   (lid, label, {arg with exp_type = instance env arg.exp_type}, opt)
 
-and type_argument ?type_clash_context ?recarg env sarg ty_expected' ty_expected
-    =
-  let texp = type_expect ?type_clash_context ?recarg env sarg ty_expected' in
-  unify_exp ?type_clash_context env texp ty_expected;
+and type_argument ~context ?recarg env sarg ty_expected' ty_expected =
+  let texp = type_expect ~context ?recarg env sarg ty_expected' in
+  unify_exp ~context env texp ty_expected;
   texp
 
 (** This is ad-hoc translation for unifying specific primitive operations
      See [Unified_ops] module for detailed explanation.
   *)
-and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
+and translate_unified_ops ~context (env : Env.t) (funct : Typedtree.expression)
     (sargs : sargs) : (targs * Types.type_expr) option =
+  ignore context;
   match funct.exp_desc with
   | Texp_ident (path, _, _) -> (
     let entry = Hashtbl.find_opt Unified_ops.index_by_path (Path.name path) in
     match (entry, sargs) with
     | Some {form = Unary; specialization}, [(lhs_label, lhs_expr)] ->
-      let lhs = type_exp env lhs_expr in
+      let lhs = type_exp ~context:None env lhs_expr in
       let lhs_type = expand_head env lhs.exp_type in
       let result_type =
         match (lhs_type.desc, specialization) with
@@ -3366,58 +3388,64 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
       Some (targs, result_type)
     | ( Some {form = Binary; specialization},
         [(lhs_label, lhs_expr); (rhs_label, rhs_expr)] ) ->
-      let lhs = type_exp env lhs_expr in
+      let lhs = type_exp ~context:None env lhs_expr in
       let lhs_type = expand_head env lhs.exp_type in
-      let rhs = type_exp env rhs_expr in
+      let rhs = type_exp ~context:None env rhs_expr in
       let rhs_type = expand_head env rhs.exp_type in
       let lhs, rhs, result_type =
         (* Rule 1. Try unifying to lhs *)
         match (lhs_type.desc, specialization) with
         | Tconstr (path, _, _), _ when Path.same path Predef.path_int ->
-          let rhs = type_expect env rhs_expr Predef.type_int in
+          let rhs = type_expect ~context:None env rhs_expr Predef.type_int in
           (lhs, rhs, instance_def Predef.type_int)
         | Tconstr (path, _, _), {bool = Some _}
           when Path.same path Predef.path_bool ->
-          let rhs = type_expect env rhs_expr Predef.type_bool in
+          let rhs = type_expect ~context:None env rhs_expr Predef.type_bool in
           (lhs, rhs, instance_def Predef.type_bool)
         | Tconstr (path, _, _), {float = Some _}
           when Path.same path Predef.path_float ->
-          let rhs = type_expect env rhs_expr Predef.type_float in
+          let rhs = type_expect ~context:None env rhs_expr Predef.type_float in
           (lhs, rhs, instance_def Predef.type_float)
         | Tconstr (path, _, _), {bigint = Some _}
           when Path.same path Predef.path_bigint ->
-          let rhs = type_expect env rhs_expr Predef.type_bigint in
+          let rhs = type_expect ~context:None env rhs_expr Predef.type_bigint in
           (lhs, rhs, instance_def Predef.type_bigint)
         | Tconstr (path, _, _), {string = Some _}
           when Path.same path Predef.path_string ->
-          let rhs = type_expect env rhs_expr Predef.type_string in
+          let rhs = type_expect ~context:None env rhs_expr Predef.type_string in
           (lhs, rhs, instance_def Predef.type_string)
         | _ -> (
           (* Rule 2. Try unifying to rhs *)
           match (rhs_type.desc, specialization) with
           | Tconstr (path, _, _), _ when Path.same path Predef.path_int ->
-            let lhs = type_expect env lhs_expr Predef.type_int in
+            let lhs = type_expect ~context:None env lhs_expr Predef.type_int in
             (lhs, rhs, instance_def Predef.type_int)
           | Tconstr (path, _, _), {bool = Some _}
             when Path.same path Predef.path_bool ->
-            let lhs = type_expect env lhs_expr Predef.type_bool in
+            let lhs = type_expect ~context:None env lhs_expr Predef.type_bool in
             (lhs, rhs, instance_def Predef.type_bool)
           | Tconstr (path, _, _), {float = Some _}
             when Path.same path Predef.path_float ->
-            let lhs = type_expect env lhs_expr Predef.type_float in
+            let lhs =
+              type_expect ~context:None env lhs_expr Predef.type_float
+            in
             (lhs, rhs, instance_def Predef.type_float)
           | Tconstr (path, _, _), {bigint = Some _}
             when Path.same path Predef.path_bigint ->
-            let lhs = type_expect env lhs_expr Predef.type_bigint in
+            let lhs =
+              type_expect ~context:None env lhs_expr Predef.type_bigint
+            in
             (lhs, rhs, instance_def Predef.type_bigint)
           | Tconstr (path, _, _), {string = Some _}
             when Path.same path Predef.path_string ->
-            let lhs = type_expect env lhs_expr Predef.type_string in
+            let lhs =
+              type_expect ~context:None env lhs_expr Predef.type_string
+            in
             (lhs, rhs, instance_def Predef.type_string)
           | _ ->
             (* Rule 3. Fallback to int *)
-            let lhs = type_expect env lhs_expr Predef.type_int in
-            let rhs = type_expect env rhs_expr Predef.type_int in
+            let lhs = type_expect ~context:None env lhs_expr Predef.type_int in
+            let rhs = type_expect ~context:None env rhs_expr Predef.type_int in
             (lhs, rhs, instance_def Predef.type_int))
       in
       let targs =
@@ -3427,7 +3455,7 @@ and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
     | _ -> None)
   | _ -> None
 
-and type_application ?type_clash_context total_app env funct (sargs : sargs) :
+and type_application ~context total_app env funct (sargs : sargs) :
     targs * Types.type_expr * bool =
   let result_type omitted ty_fun =
     List.fold_left
@@ -3578,14 +3606,14 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
       in
       let optional = is_optional l1 in
       let arg1 () =
-        let arg1 = type_expect env sarg1 ty1 in
-        if optional then unify_exp env arg1 (type_option (newvar ()));
+        let arg1 = type_expect ~context env sarg1 ty1 in
+        if optional then unify_exp ~context env arg1 (type_option (newvar ()));
         arg1
       in
       type_unknown_args max_arity ~args:((l1, Some arg1) :: args)
         ~top_arity:None omitted ty2 sargl
   in
-  let rec type_args ?type_clash_context max_arity args omitted ~ty_fun ty_fun0
+  let rec type_args ~context max_arity args omitted ~ty_fun ty_fun0
       ~(sargs : sargs) ~top_arity =
     match (expand_head env ty_fun, expand_head env ty_fun0) with
     | ( {desc = Tarrow (l, ty, ty_fun, com, _); level = lv},
@@ -3611,18 +3639,17 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
             Some
               (if (not optional) || is_optional_loc l' then fun () ->
                  type_argument
-                   ?type_clash_context:
-                     (type_clash_context_for_function_argument
-                        type_clash_context sarg0)
+                   ~context:
+                     (type_clash_context_for_function_argument context sarg0)
                    env sarg0 ty ty0
                else fun () ->
                  option_some
-                   (type_argument ?type_clash_context env sarg0
+                   (type_argument ~context env sarg0
                       (extract_option_type env ty)
                       (extract_option_type env ty0))) )
       in
-      type_args ?type_clash_context max_arity ((l, arg) :: args) omitted ~ty_fun
-        ty_fun0 ~sargs ~top_arity
+      type_args ~context max_arity ((l, arg) :: args) omitted ~ty_fun ty_fun0
+        ~sargs ~top_arity
     | _ ->
       type_unknown_args max_arity ~args ~top_arity omitted ty_fun0
         sargs (* This is the hot path for non-labeled function*)
@@ -3636,7 +3663,7 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
     let ty_arg, ty_res =
       filter_arrow ~env ~arity:top_arity (instance env funct.exp_type) Nolabel
     in
-    let exp = type_expect env sarg ty_arg in
+    let exp = type_expect ~context env sarg ty_arg in
     (match (expand_head env exp.exp_type).desc with
     | Tarrow _ when not total_app ->
       Location.prerr_warning exp.exp_loc Warnings.Partial_application
@@ -3647,7 +3674,7 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
     ([(Nolabel, Some exp)], ty_res, false)
   | _ ->
     let targs, ret_t =
-      type_args ?type_clash_context max_arity [] [] ~ty_fun:funct.exp_type
+      type_args ~context max_arity [] [] ~ty_fun:funct.exp_type
         (instance env funct.exp_type)
         ~sargs ~top_arity
     in
@@ -3658,7 +3685,9 @@ and type_application ?type_clash_context total_app env funct (sargs : sargs) :
     in
     (targs, ret_t, fully_applied)
 
-and type_construct env loc lid sarg ty_expected attrs =
+and type_construct ~context env loc lid sarg ty_expected attrs =
+  (* TODO: Fix this *)
+  ignore context;
   let opath =
     try
       let p0, p, _ = extract_concrete_variant env ty_expected in
@@ -3705,11 +3734,11 @@ and type_construct env loc lid sarg ty_expected attrs =
         exp_env = env;
       }
   in
-  let type_clash_context = type_clash_context_maybe_option ty_expected ty_res in
+  let context = type_clash_context_maybe_option ty_expected ty_res in
   if separate then (
     end_def ();
     generalize_structure ty_res;
-    unify_exp ?type_clash_context env
+    unify_exp ~context env
       {texp with exp_type = instance_def ty_res}
       (instance env ty_expected);
     end_def ();
@@ -3721,8 +3750,7 @@ and type_construct env loc lid sarg ty_expected attrs =
     | _ -> assert false
   in
   let texp = {texp with exp_type = ty_res} in
-  if not separate then
-    unify_exp ?type_clash_context env texp (instance env ty_expected);
+  if not separate then unify_exp ~context env texp (instance env ty_expected);
   let recarg =
     match constr.cstr_inlined with
     | None -> Rejected
@@ -3740,7 +3768,7 @@ and type_construct env loc lid sarg ty_expected attrs =
   in
   let args =
     List.map2
-      (fun e (t, t0) -> type_argument ~recarg env e t t0)
+      (fun e (t, t0) -> type_argument ~context ~recarg env e t t0)
       sargs
       (List.combine ty_args ty_args0)
   in
@@ -3751,23 +3779,23 @@ and type_construct env loc lid sarg ty_expected attrs =
 
 (* Typing of statements (expressions whose values are discarded) *)
 
-and type_statement env sexp =
+and type_statement ~context env sexp =
   let loc = (final_subexpression sexp).pexp_loc in
   begin_def ();
-  let exp = type_exp env sexp in
+  let exp = type_exp ~context env sexp in
   end_def ();
   let ty = expand_head env exp.exp_type and tv = newvar () in
   if is_Tvar ty && ty.level > tv.level then
     Location.prerr_warning loc Warnings.Nonreturning_statement;
   let expected_ty = instance_def Predef.type_unit in
-  let type_clash_context = type_clash_context_in_statement sexp in
-  unify_exp ?type_clash_context env exp expected_ty;
+  let context = type_clash_context_in_statement sexp in
+  unify_exp ~context env exp expected_ty;
   exp
 
 (* Typing of match cases *)
 
-and type_cases ?root_type_clash_context ?in_function env ty_arg ty_res
-    partial_flag loc caselist : _ * Typedtree.partial =
+and type_cases ~(call_context : [`Switch | `Function | `Try]) ?in_function env
+    ty_arg ty_res partial_flag loc caselist : _ * Typedtree.partial =
   (* ty_arg is _fully_ generalized *)
   let patterns = List.map (fun {pc_lhs = p} -> p) caselist in
   let contains_polyvars = List.exists contains_polymorphic_variant patterns in
@@ -3874,19 +3902,20 @@ and type_cases ?root_type_clash_context ?in_function env ty_arg ty_res
           match pc_guard with
           | None -> None
           | Some scond ->
+            (* TODO: Add explicit SwitchIfCondition *)
             Some
-              (type_expect
-                 ?type_clash_context:
-                   (if Option.is_some root_type_clash_context then
-                      Some IfCondition
-                    else None)
-                 ext_env
+              (type_expect ~context:(Some IfCondition) ext_env
                  (wrap_unpacks scond unpacks)
                  Predef.type_bool)
         in
         let exp =
-          type_expect ?type_clash_context:root_type_clash_context ?in_function
-            ext_env sexp ty_res'
+          type_expect
+            ~context:
+              (match call_context with
+              | `Switch -> Some SwitchReturn
+              | `Try -> Some TryReturn
+              | `Function -> None)
+            ?in_function ext_env sexp ty_res'
         in
         {
           c_lhs = pat;
@@ -3897,7 +3926,7 @@ and type_cases ?root_type_clash_context ?in_function env ty_arg ty_res
   in
   (if has_gadts then
      let ty_res' = instance env ty_res in
-     List.iter (fun c -> unify_exp env c.c_rhs ty_res') cases);
+     List.iter (fun c -> unify_exp ~context:None env c.c_rhs ty_res') cases);
   let do_init = has_gadts || needs_exhaust_check in
   let lev, env = if do_init && not has_gadts then init_env () else (lev, env) in
   let ty_arg_check =
@@ -3922,12 +3951,12 @@ and type_cases ?root_type_clash_context ?in_function env ty_arg ty_res
   if do_init then (
     end_def ();
     (* Ensure that existential types do not escape *)
-    unify_exp_types loc env (instance env ty_res) (newvar ()));
+    unify_exp_types ~context:None loc env (instance env ty_res) (newvar ()));
   (cases, partial)
 
 (* Typing of let bindings *)
 
-and type_let ?(check = fun s -> Warnings.Unused_var s)
+and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
     ?(check_strict = fun s -> Warnings.Unused_var_strict s) env rec_flag
     spat_sexp_list scope allow =
   begin_def ();
@@ -4060,14 +4089,14 @@ and type_let ?(check = fun s -> Warnings.Unused_var s)
           let vars, ty' = instance_poly ~keep_names:true true tl ty in
           let exp =
             Builtin_attributes.warning_scope pvb_attributes (fun () ->
-                type_expect exp_env sexp ty')
+                type_expect ~context exp_env sexp ty')
           in
           end_def ();
           check_univars env true "definition" exp pat.pat_type vars;
           {exp with exp_type = instance env exp.exp_type}
         | _ ->
           Builtin_attributes.warning_scope pvb_attributes (fun () ->
-              type_expect exp_env sexp pat.pat_type))
+              type_expect ~context exp_env sexp pat.pat_type))
       spat_sexp_list pat_slot_list
   in
   current_slot := None;
@@ -4118,22 +4147,22 @@ and type_let ?(check = fun s -> Warnings.Unused_var s)
 
 (* Typing of toplevel bindings *)
 
-let type_binding env rec_flag spat_sexp_list scope =
+let type_binding ~context env rec_flag spat_sexp_list scope =
   Typetexp.reset_type_variables ();
   let pat_exp_list, new_env, _unpacks =
     type_let
       ~check:(fun s -> Warnings.Unused_value_declaration s)
       ~check_strict:(fun s -> Warnings.Unused_value_declaration s)
-      env rec_flag spat_sexp_list scope false
+      ~context env rec_flag spat_sexp_list scope false
   in
   (pat_exp_list, new_env)
 
 (* Typing of toplevel expressions *)
 
-let type_expression env sexp =
+let type_expression ~context env sexp =
   Typetexp.reset_type_variables ();
   begin_def ();
-  let exp = type_exp env sexp in
+  let exp = type_exp ~context env sexp in
   (if Warnings.is_active (Bs_toplevel_expression_unit None) then
      try unify env exp.exp_type (instance_def Predef.type_unit) with
      | Unify _ ->
@@ -4220,26 +4249,30 @@ let report_error env loc ppf error =
       (Ident.name id);
     spellcheck_idents ppf id valid_idents
   | Expr_type_clash
-      ( (_, {desc = Tarrow (_, _, _, _, None)})
-        :: (_, {desc = Tarrow (_, _, _, _, Some _)})
-        :: _,
-        _ ) ->
+      {
+        trace =
+          (_, {desc = Tarrow (_, _, _, _, None)})
+          :: (_, {desc = Tarrow (_, _, _, _, Some _)})
+          :: _;
+      } ->
     fprintf ppf
       "This function is a curried function where an uncurried function is \
        expected"
   | Expr_type_clash
-      ( (_, {desc = Tarrow (_, _, _, _, Some arity_a)})
-        :: (_, {desc = Tarrow (_, _, _, _, Some arity_b)})
-        :: _,
-        _ )
+      {
+        trace =
+          (_, {desc = Tarrow (_, _, _, _, Some arity_a)})
+          :: (_, {desc = Tarrow (_, _, _, _, Some arity_b)})
+          :: _;
+      }
     when arity_a <> arity_b ->
     let arity_a = arity_a |> string_of_int in
     let arity_b = arity_b |> string_of_int in
     report_arity_mismatch ~arity_a ~arity_b ppf
-  | Expr_type_clash (trace, type_clash_context) ->
+  | Expr_type_clash {trace; context} ->
     (* modified *)
     fprintf ppf "@[<v>";
-    print_expr_type_clash ?type_clash_context env loc trace ppf;
+    print_expr_type_clash ~context env loc trace ppf;
     fprintf ppf "@]"
   | Apply_non_function typ -> (
     (* modified *)
