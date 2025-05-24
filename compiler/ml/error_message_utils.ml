@@ -88,6 +88,7 @@ type type_clash_context =
     }
   | FunctionArgument
   | Statement of type_clash_statement
+  | ForLoopCondition
 
 let fprintf = Format.fprintf
 
@@ -113,6 +114,8 @@ let error_expected_type_text ppf type_clash_context =
   | Some TryReturn -> fprintf ppf "But this try/catch is expected to return:"
   | Some WhileCondition ->
     fprintf ppf "But a @{<info>while@} loop condition must always be of type:"
+  | Some ForLoopCondition ->
+    fprintf ppf "But a @{<info>for@} loop bounds must always be of type:"
   | Some IfCondition ->
     fprintf ppf "But @{<info>if@} conditions must always be of type:"
   | Some IfReturn ->

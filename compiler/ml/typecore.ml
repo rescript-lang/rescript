@@ -2861,9 +2861,12 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         exp_env = env;
       }
   | Pexp_for (param, slow, shigh, dir, sbody) ->
-    (* TODO: Add explicit ForCondition *)
-    let low = type_expect ~context:None env slow Predef.type_int in
-    let high = type_expect ~context:None env shigh Predef.type_int in
+    let low =
+      type_expect ~context:(Some ForLoopCondition) env slow Predef.type_int
+    in
+    let high =
+      type_expect ~context:(Some ForLoopCondition) env shigh Predef.type_int
+    in
     let id, new_env =
       match param.ppat_desc with
       | Ppat_any -> (Ident.create "_for", env)
