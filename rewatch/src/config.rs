@@ -246,13 +246,13 @@ pub fn flatten_flags(flags: &Option<Vec<OneOrMore<String>>>) -> Vec<String> {
 /// Since ppx-flags could be one or more, and could be nested potentiall, this function takes the
 /// flags and flattens them outright.
 pub fn flatten_ppx_flags(
-    node_modules_dir: &String,
+    node_modules_dir: &Path,
     flags: &Option<Vec<OneOrMore<String>>>,
     package_name: &String,
 ) -> Vec<String> {
     match flags {
         None => vec![],
-        Some(xs) => xs
+        Some(flags) => flags
             .iter()
             .flat_map(|x| match x {
                 OneOrMore::Single(y) => {
@@ -261,18 +261,29 @@ pub fn flatten_ppx_flags(
                         Some('.') => {
                             vec![
                                 "-ppx".to_string(),
-                                node_modules_dir.to_owned() + "/" + package_name + "/" + y,
+                                node_modules_dir
+                                    .join(package_name)
+                                    .join(y)
+                                    .to_string_lossy()
+                                    .to_string(),
                             ]
                         }
-                        _ => vec!["-ppx".to_string(), node_modules_dir.to_owned() + "/" + y],
+                        _ => vec![
+                            "-ppx".to_string(),
+                            node_modules_dir.join(y).to_string_lossy().to_string(),
+                        ],
                     }
                 }
                 OneOrMore::Multiple(ys) if ys.is_empty() => vec![],
                 OneOrMore::Multiple(ys) => {
                     let first_character = ys[0].chars().next();
                     let ppx = match first_character {
-                        Some('.') => node_modules_dir.to_owned() + "/" + package_name + "/" + &ys[0],
-                        _ => node_modules_dir.to_owned() + "/" + &ys[0],
+                        Some('.') => node_modules_dir
+                            .join(package_name)
+                            .join(&ys[0])
+                            .to_string_lossy()
+                            .to_string(),
+                        _ => node_modules_dir.join(&ys[0]).to_string_lossy().to_string(),
                     };
                     vec![
                         "-ppx".to_string(),
@@ -289,8 +300,8 @@ pub fn flatten_ppx_flags(
 }
 
 /// Try to convert a bsconfig from a certain path to a bsconfig struct
-pub fn read(path: String) -> Result<Config> {
-    let read = fs::read_to_string(path.clone())?;
+pub fn read(path: &Path) -> Result<Config> {
+    let read = fs::read_to_string(path)?;
     let parse = serde_json::from_str::<Config>(&read)?;
 
     Ok(parse)
