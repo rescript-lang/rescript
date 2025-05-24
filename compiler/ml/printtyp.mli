@@ -94,9 +94,10 @@ val super_report_unification_error :
 val report_subtyping_error :
   formatter ->
   Env.t ->
-  (type_expr * type_expr) list ->
+  Ctype.type_pairs ->
   string ->
-  (type_expr * type_expr) list ->
+  Ctype.type_pairs ->
+  Ctype.subtype_context option ->
   unit
 val report_ambiguous_type_error :
   formatter ->
