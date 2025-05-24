@@ -602,6 +602,31 @@ let getComplementaryCompletionsForTypedValue ~opens ~allFiles ~scope ~env prefix
   in
   localCompletionsWithOpens @ fileModules
 
+(**
+  Returns completions from the current module where `include OtherModule()` is present.
+*)
+let completionsFromIncludedModule ~full ~env ~pos =
+  (* Get the path of the module where the cursor is.*)
+  let ownModule = TypeUtils.find_module_path_at_pos ~full ~pos in
+
+  env.file.stamps |> Stamps.getEntries
+  |> List.filter_map (fun (_stamp, kind) ->
+         match kind with
+         | SharedTypes.Stamps.KValue
+             {
+               modulePath =
+                 SharedTypes.ModulePath.IncludedModule (_path, ownerPath);
+               name;
+               item;
+             } ->
+           let ownerPath =
+             ModulePath.toPathWithPrefix ownerPath full.file.File.moduleName
+           in
+           if ownerPath = ownModule then
+             Some (Completion.create name.txt ~env ~kind:(Value item))
+           else None
+         | _ -> None)
+
 let getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
     ~completionContext ~env path =
   if debug then Printf.printf "Path %s\n" (path |> String.concat ".");
@@ -613,6 +638,7 @@ let getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
       findLocalCompletionsWithOpens ~pos ~env ~prefix ~exact ~opens ~scope
         ~completionContext
     in
+    let includedCompletions = completionsFromIncludedModule ~full ~env ~pos in
     let fileModules =
       allFiles |> FileSet.elements
       |> Utils.filterMap (fun name ->
@@ -626,7 +652,7 @@ let getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
                  (Completion.create name ~env ~kind:(Completion.FileModule name))
              else None)
     in
-    localCompletionsWithOpens @ fileModules
+    localCompletionsWithOpens @ includedCompletions @ fileModules
   | moduleName :: path -> (
     Log.log ("Path " ^ pathToString path);
     match
@@ -774,31 +800,6 @@ let completionsGetCompletionType ~full completions =
     | Some extractedType -> Some (extractedType, env))
   | Some {Completion.kind = ExtractedType (typ, _); env} -> Some (typ, env)
   | _ -> None
-
-(**
-  Returns completions from the current module where `include OtherModule()` is present.
-*)
-let completionsFromIncludedModule ~full ~env ~pos =
-  (* Get the path of the module where the cursor is.*)
-  let ownModule = TypeUtils.find_module_path_at_pos ~full ~pos in
-
-  env.file.stamps |> Stamps.getEntries
-  |> List.filter_map (fun (_stamp, kind) ->
-         match kind with
-         | SharedTypes.Stamps.KValue
-             {
-               modulePath =
-                 SharedTypes.ModulePath.IncludedModule (_path, ownerPath);
-               name;
-               item;
-             } ->
-           let ownerPath =
-             ModulePath.toPathWithPrefix ownerPath full.file.File.moduleName
-           in
-           if ownerPath = ownModule then
-             Some (Completion.create name.txt ~env ~kind:(Value item))
-           else None
-         | _ -> None)
 
 let rec completionsGetCompletionType2 ~debug ~full ~opens ~rawOpens ~pos
     completions =
@@ -1200,20 +1201,15 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
               ~full ~rawOpens typ
           else []
         in
+        (* Add completions from the current module. *)
         let currentModuleCompletions =
           completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom
             ~opens:[] ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full []
           |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
                ~targetTypeId:mainTypeId
         in
-        let ownIncludedModuleCompletions =
-          completionsFromIncludedModule ~full ~env ~pos
-          |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
-               ~targetTypeId:mainTypeId
-        in
         jsxCompletions @ pipeCompletions @ extraCompletions
-        @ currentModuleCompletions @ ownIncludedModuleCompletions
-        @ globallyConfiguredCompletions))
+        @ currentModuleCompletions @ globallyConfiguredCompletions))
   | CTuple ctxPaths ->
     if Debug.verbose () then print_endline "[ctx_path]--> CTuple";
     (* Turn a list of context paths into a list of type expressions. *)

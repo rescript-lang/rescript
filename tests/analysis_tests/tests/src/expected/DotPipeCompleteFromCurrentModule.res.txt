@@ -31,10 +31,10 @@ Path
   }]
 
 Complete src/DotPipeCompleteFromCurrentModule.res 60:17
-posCursor:[60:17] posNoWhite:[60:16] Found expr:[58:15->63:5]
-posCursor:[60:17] posNoWhite:[60:16] Found expr:[59:8->62:9]
+posCursor:[60:17] posNoWhite:[60:16] Found expr:[58:15->66:5]
+posCursor:[60:17] posNoWhite:[60:16] Found expr:[59:8->65:9]
 posCursor:[60:17] posNoWhite:[60:16] Found expr:[60:15->60:17]
-Pexp_field [60:15->60:16] _:[62:8->60:17]
+Pexp_field [60:15->60:16] _:[65:8->60:17]
 Completable: Cpath Value[k].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -73,11 +73,35 @@ Path
       }]
   }]
 
-Complete src/DotPipeCompleteFromCurrentModule.res 72:21
-posCursor:[72:21] posNoWhite:[72:20] Found expr:[70:19->75:9]
-posCursor:[72:21] posNoWhite:[72:20] Found expr:[71:12->74:13]
-posCursor:[72:21] posNoWhite:[72:20] Found expr:[72:19->72:21]
-Pexp_field [72:19->72:20] _:[74:12->72:21]
+Complete src/DotPipeCompleteFromCurrentModule.res 63:19
+posCursor:[63:19] posNoWhite:[63:18] Found expr:[58:15->66:5]
+posCursor:[63:19] posNoWhite:[63:18] Found expr:[59:8->65:9]
+posCursor:[63:19] posNoWhite:[63:18] Found expr:[63:15->63:19]
+Pexp_ident addV:[63:15->63:19]
+Completable: Cpath Value[addV]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[addV]
+Path addV
+[{
+    "label": "addPosFromVec2",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, Types.vec2) => Types.comp",
+    "documentation": null
+  }, {
+    "label": "addPos",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, float, float) => Types.comp",
+    "documentation": null
+  }]
+
+Complete src/DotPipeCompleteFromCurrentModule.res 75:21
+posCursor:[75:21] posNoWhite:[75:20] Found expr:[73:19->78:9]
+posCursor:[75:21] posNoWhite:[75:20] Found expr:[74:12->77:13]
+posCursor:[75:21] posNoWhite:[75:20] Found expr:[75:19->75:21]
+Pexp_field [75:19->75:20] _:[77:12->75:21]
 Completable: Cpath Value[k].""
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -99,7 +123,7 @@ Path
     "sortText": "addSprite",
     "insertText": "->addSprite",
     "additionalTextEdits": [{
-      "range": {"start": {"line": 72, "character": 20}, "end": {"line": 72, "character": 21}},
+      "range": {"start": {"line": 75, "character": 20}, "end": {"line": 75, "character": 21}},
       "newText": ""
       }]
   }]
