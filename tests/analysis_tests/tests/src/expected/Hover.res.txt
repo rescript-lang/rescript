@@ -301,7 +301,7 @@ Hover src/Hover.res 248:19
 {"contents": {"kind": "markdown", "value": "```rescript\nbool\n```\n---\n Mighty fine field here. "}}
 
 Hover src/Hover.res 253:20
-{"contents": {"kind": "markdown", "value": "```rescript\nvariant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n\n---\n```rescript\nCoolVariant\n```\n---\n Cool variant! "}}
+{"contents": {"kind": "markdown", "value": "```rescript\nvariant\nCoolVariant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n\n---\n Cool variant! "}}
 
 Hover src/Hover.res 257:23
 Nothing at that position. Now trying to use completion.

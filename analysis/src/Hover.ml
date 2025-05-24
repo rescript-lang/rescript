@@ -137,13 +137,21 @@ let expandTypes ~file ~package ~supportsMarkdownLinks typ =
       `Default )
 
 (* Produces a hover with relevant types expanded in the main type being hovered. *)
-let hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks typ =
-  let typeString = Markdown.codeBlock (typ |> Shared.typeToString) in
+let hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks ?constructor
+    typ =
   let expandedTypes, expansionType =
     expandTypes ~file ~package ~supportsMarkdownLinks typ
   in
   match expansionType with
-  | `Default -> typeString :: expandedTypes |> String.concat "\n"
+  | `Default ->
+    let typeString = Shared.typeToString typ in
+    let typeString =
+      match constructor with
+      | Some constructor ->
+        typeString ^ "\n" ^ CompletionBackEnd.showConstructor constructor
+      | None -> typeString
+    in
+    Markdown.codeBlock typeString :: expandedTypes |> String.concat "\n"
   | `InlineType -> expandedTypes |> String.concat "\n"
 
 (* Leverages autocomplete functionality to produce a hover for a position. This
@@ -256,8 +264,9 @@ let newHover ~full:{file; package} ~supportsMarkdownLinks locItem =
          | Const_int64 _ -> "int64"
          | Const_bigint _ -> "bigint"))
   | Typed (_, t, locKind) ->
-    let fromType ~docstring typ =
-      ( hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks typ,
+    let fromType ~docstring ?constructor typ =
+      ( hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks
+          ?constructor typ,
         docstring )
     in
     let parts =
@@ -272,11 +281,9 @@ let newHover ~full:{file; package} ~supportsMarkdownLinks locItem =
           typeString :: docstring
         | `Constructor constructor ->
           let typeString, docstring =
-            t |> fromType ~docstring:constructor.docstring
+            t |> fromType ~docstring:constructor.docstring ~constructor
           in
-          typeString
-          :: Markdown.codeBlock (CompletionBackEnd.showConstructor constructor)
-          :: docstring
+          typeString :: docstring
         | `Field ->
           let typeString, docstring = t |> fromType ~docstring in
           typeString :: docstring)
