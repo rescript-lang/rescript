@@ -30,6 +30,7 @@
 - Improve error messages for JSX type mismatches, passing objects where record is expected, passing array literal where tuple is expected, and more. https://github.com/rescript-lang/rescript/pull/7500
 - Show in error messages when coercion can be used to fix a type mismatch. https://github.com/rescript-lang/rescript/pull/7505
 - Remove deprecated pipe last (|>) syntax. https://github.com/rescript-lang/rescript/pull/7512
+- Make `Dict` iterators more performant. https://github.com/rescript-lang/rescript/pull/7517
 
 # 12.0.0-alpha.13
 
