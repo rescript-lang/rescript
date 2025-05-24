@@ -1887,7 +1887,6 @@ let rec approx_type env sty =
   | Ptyp_poly (_, sty) -> approx_type env sty
   | _ -> newvar ()
 
-(* TODO: Needs type clash context? *)
 let rec type_approx env sexp =
   match sexp.pexp_desc with
   | Pexp_let (_, _, e) -> type_approx env e
@@ -2849,8 +2848,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
       }
   | Pexp_while (scond, sbody) ->
     let cond =
-      (* TODO: Add explicit WhileCondition *)
-      type_expect ~context:(Some IfCondition) env scond Predef.type_bool
+      type_expect ~context:(Some WhileCondition) env scond Predef.type_bool
     in
     let body = type_statement ~context:None env sbody in
     rue
@@ -3902,7 +3900,6 @@ and type_cases ~(call_context : [`Switch | `Function | `Try]) ?in_function env
           match pc_guard with
           | None -> None
           | Some scond ->
-            (* TODO: Add explicit SwitchIfCondition *)
             Some
               (type_expect ~context:(Some IfCondition) ext_env
                  (wrap_unpacks scond unpacks)
