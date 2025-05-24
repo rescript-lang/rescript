@@ -12,6 +12,16 @@
 
 # 12.0.0-alpha.14 (Unreleased)
 
+#### :boom: Breaking Change
+
+- Rename functions ending with `Exn` to end with `OrThrow`. The old `Exn` functions are now deprecated:
+  - `Bool.fromStringExn` → `Bool.fromStringOrThrow`
+  - `BigInt.fromStringExn` → `BigInt.fromStringOrThrow`
+  - `JSON.parseExn` → `JSON.parseOrThrow`
+  - Changed `BigInt.fromFloat` to return an option rather than throwing an error.
+  - Added `BigInt.fromFloatOrThrow`
+  - Old functions remain available but are marked as deprecated with guidance to use the new `OrThrow` variants.
+
 #### :rocket: New Feature
 
 - Add `RegExp.flags`. https://github.com/rescript-lang/rescript/pull/7461
