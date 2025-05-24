@@ -451,6 +451,36 @@ let processLocalModule name loc ~prefix ~exact ~env
         (Printf.sprintf "Completion Module Not Found %s loc:%s\n" name
            (Loc.toString loc))
 
+let processLocalInclude includePath _loc ~prefix ~exact ~(env : QueryEnv.t)
+    ~(localTables : LocalTables.t) =
+  (* process only values for now *)
+  localTables.valueTable
+  |> Hashtbl.iter (fun (name, _) (declared : Types.type_expr Declared.t) ->
+         (* We check all the values if their origin is the same as the include path. *)
+         match declared.modulePath with
+         | SharedTypes.ModulePath.IncludedModule (source, _) ->
+           let source_module_path =
+             match Path.flatten source with
+             | `Contains_apply -> ""
+             | `Ok (ident, path) -> ident.name :: path |> String.concat "."
+           in
+
+           if source_module_path = includePath then
+             (* If this is the case we perform a similar check for the prefix *)
+             if Utils.checkName name ~prefix ~exact then
+               if not (Hashtbl.mem localTables.namesUsed name) then (
+                 Hashtbl.add localTables.namesUsed name ();
+                 localTables.resultRev <-
+                   {
+                     (Completion.create declared.name.txt ~env
+                        ~kind:(Value declared.item))
+                     with
+                     deprecated = declared.deprecated;
+                     docstring = declared.docstring;
+                   }
+                   :: localTables.resultRev)
+         | _ -> ())
+
 let getItemsFromOpens ~opens ~localTables ~prefix ~exact ~completionContext =
   opens
   |> List.fold_left
@@ -477,6 +507,9 @@ let findLocalCompletionsForValuesAndConstructors ~(localTables : LocalTables.t)
   scope
   |> Scope.iterModulesBeforeFirstOpen
        (processLocalModule ~prefix ~exact ~env ~localTables);
+  scope
+  |> Scope.iterIncludesBeforeFirstOpen
+       (processLocalInclude ~prefix ~exact ~env ~localTables);
 
   let valuesFromOpens =
     getItemsFromOpens ~opens ~localTables ~prefix ~exact
@@ -492,6 +525,10 @@ let findLocalCompletionsForValuesAndConstructors ~(localTables : LocalTables.t)
   scope
   |> Scope.iterModulesAfterFirstOpen
        (processLocalModule ~prefix ~exact ~env ~localTables);
+
+  scope
+  |> Scope.iterIncludesAfterFirstOpen
+       (processLocalInclude ~prefix ~exact ~env ~localTables);
 
   List.rev_append localTables.resultRev valuesFromOpens
 
@@ -602,31 +639,6 @@ let getComplementaryCompletionsForTypedValue ~opens ~allFiles ~scope ~env prefix
   in
   localCompletionsWithOpens @ fileModules
 
-(**
-  Returns completions from the current module where `include OtherModule()` is present.
-*)
-let completionsFromIncludedModule ~full ~env ~pos =
-  (* Get the path of the module where the cursor is.*)
-  let ownModule = TypeUtils.find_module_path_at_pos ~full ~pos in
-
-  env.file.stamps |> Stamps.getEntries
-  |> List.filter_map (fun (_stamp, kind) ->
-         match kind with
-         | SharedTypes.Stamps.KValue
-             {
-               modulePath =
-                 SharedTypes.ModulePath.IncludedModule (_path, ownerPath);
-               name;
-               item;
-             } ->
-           let ownerPath =
-             ModulePath.toPathWithPrefix ownerPath full.file.File.moduleName
-           in
-           if ownerPath = ownModule then
-             Some (Completion.create name.txt ~env ~kind:(Value item))
-           else None
-         | _ -> None)
-
 let getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
     ~completionContext ~env path =
   if debug then Printf.printf "Path %s\n" (path |> String.concat ".");
@@ -638,7 +650,6 @@ let getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
       findLocalCompletionsWithOpens ~pos ~env ~prefix ~exact ~opens ~scope
         ~completionContext
     in
-    let includedCompletions = completionsFromIncludedModule ~full ~env ~pos in
     let fileModules =
       allFiles |> FileSet.elements
       |> Utils.filterMap (fun name ->
@@ -652,7 +663,7 @@ let getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
                  (Completion.create name ~env ~kind:(Completion.FileModule name))
              else None)
     in
-    localCompletionsWithOpens @ includedCompletions @ fileModules
+    localCompletionsWithOpens @ fileModules
   | moduleName :: path -> (
     Log.log ("Path " ^ pathToString path);
     match

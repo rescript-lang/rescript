@@ -800,6 +800,7 @@ module ScopeTypes = struct
     | Open of string list
     | Type of string * Location.t
     | Value of string * Location.t * Completable.contextPath option * item list
+    | Include of string * Location.t
 end
 
 module Completion = struct

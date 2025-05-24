@@ -56,13 +56,15 @@ module Wall = {
 
     include PosComp({ type t = t })
 
+    let blah = (k: Types.context) => ""
+
     let make = () => {
         [
             // k.
             //   ^com
 
-            // addV
-            //     ^com
+            // add
+            //    ^com
         ]
     }
 
