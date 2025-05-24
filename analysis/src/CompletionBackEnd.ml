@@ -352,9 +352,7 @@ let findAllCompletions ~(env : QueryEnv.t) ~prefix ~exact ~namesUsed
 
 let processLocalValue name loc contextPath scope ~prefix ~exact ~env
     ~(localTables : LocalTables.t) =
-  if Utils.checkName name ~prefix ~exact then (
-    print_endline
-      ("processLocalValue name: " ^ name ^ " loc: " ^ Loc.toString loc);
+  if Utils.checkName name ~prefix ~exact then
     match Hashtbl.find_opt localTables.valueTable (name, Loc.start loc) with
     | Some declared ->
       if not (Hashtbl.mem localTables.namesUsed name) then (
@@ -381,7 +379,7 @@ let processLocalValue name loc contextPath scope ~prefix ~exact ~env
                 (Ctype.newconstr
                    (Path.Pident (Ident.create "Type Not Known"))
                    []))
-        :: localTables.resultRev)
+        :: localTables.resultRev
 
 let processLocalConstructor name loc ~prefix ~exact ~env
     ~(localTables : LocalTables.t) =
@@ -564,13 +562,12 @@ let findLocalCompletionsForModules ~(localTables : LocalTables.t) ~env ~prefix
 let findLocalCompletionsWithOpens ~pos ~(env : QueryEnv.t) ~prefix ~exact ~opens
     ~scope ~(completionContext : Completable.completionContext) =
   (* TODO: handle arbitrary interleaving of opens and local bindings correctly *)
-  print_endline
+  Log.log
     ("findLocalCompletionsWithOpens uri:" ^ Uri.toString env.file.uri ^ " pos:"
    ^ Pos.toString pos);
   let localTables = LocalTables.create () in
   match completionContext with
   | Value | ValueOrField ->
-    print_endline "Value or Field";
     findLocalCompletionsForValuesAndConstructors ~localTables ~env ~prefix
       ~exact ~opens ~scope
   | Type ->
@@ -616,16 +613,6 @@ let getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
       findLocalCompletionsWithOpens ~pos ~env ~prefix ~exact ~opens ~scope
         ~completionContext
     in
-    print_endline
-      ("localCompletionsWithOpens: "
-      ^ (List.map
-           (fun c ->
-             match c.Completion.sortText with
-             | None -> c.Completion.name
-             | Some insertText -> c.Completion.name ^ " " ^ insertText)
-           localCompletionsWithOpens
-        |> String.concat ","));
-
     let fileModules =
       allFiles |> FileSet.elements
       |> Utils.filterMap (fun name ->
@@ -789,7 +776,7 @@ let completionsGetCompletionType ~full completions =
   | _ -> None
 
 (**
-  Returns completions from the current module where `include OtherModule` is present.
+  Returns completions from the current module where `include OtherModule()` is present.
 *)
 let completionsFromIncludedModule ~full ~env ~pos =
   (* Get the path of the module where the cursor is.*)
@@ -808,10 +795,8 @@ let completionsFromIncludedModule ~full ~env ~pos =
            let ownerPath =
              ModulePath.toPathWithPrefix ownerPath full.file.File.moduleName
            in
-           Format.printf "ownerPath: %s \n" (ownerPath |> String.concat ".");
-           if ownerPath = ownModule then (
-             print_endline "hit";
-             Some (Completion.create name.txt ~env ~kind:(Value item)))
+           if ownerPath = ownModule then
+             Some (Completion.create name.txt ~env ~kind:(Value item))
            else None
          | _ -> None)
 
