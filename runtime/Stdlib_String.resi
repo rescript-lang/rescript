@@ -802,7 +802,7 @@ let searchOpt: (string, Stdlib_RegExp.t) => option<int>
 ```rescript
 String.isEmpty("") == true
 String.isEmpty("hello") == false
-String.isEmpty("  ") == true
+String.isEmpty("  ") == false
 ```
 */
 let isEmpty: string => bool
