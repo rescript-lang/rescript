@@ -30,3 +30,149 @@ Path
       }]
   }]
 
+Complete src/DotPipeCompleteFromCurrentModule.res 62:17
+posCursor:[62:17] posNoWhite:[62:16] Found expr:[60:15->68:5]
+posCursor:[62:17] posNoWhite:[62:16] Found expr:[61:8->67:9]
+posCursor:[62:17] posNoWhite:[62:16] Found expr:[62:15->62:17]
+Pexp_field [62:15->62:16] _:[67:8->62:17]
+Completable: Cpath Value[k].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[k].""
+ContextPath Value[k]
+Path k
+ContextPath Value[k]->
+ContextPath Value[k]
+Path k
+CPPipe pathFromEnv:Types found:true
+Path Types.
+Path 
+[{
+    "label": "->blah",
+    "kind": 12,
+    "tags": [],
+    "detail": "Types.context => string",
+    "documentation": null,
+    "sortText": "blah",
+    "insertText": "->blah",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 62, "character": 16}, "end": {"line": 62, "character": 17}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->addPosFromVec2",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, Types.vec2) => Types.comp",
+    "documentation": null,
+    "sortText": "addPosFromVec2",
+    "insertText": "->addPosFromVec2",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 62, "character": 16}, "end": {"line": 62, "character": 17}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->addPos",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, float, float) => Types.comp",
+    "documentation": null,
+    "sortText": "addPos",
+    "insertText": "->addPos",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 62, "character": 16}, "end": {"line": 62, "character": 17}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/DotPipeCompleteFromCurrentModule.res 65:18
+posCursor:[65:18] posNoWhite:[65:17] Found expr:[60:15->68:5]
+posCursor:[65:18] posNoWhite:[65:17] Found expr:[61:8->67:9]
+posCursor:[65:18] posNoWhite:[65:17] Found expr:[65:15->65:18]
+Pexp_ident add:[65:15->65:18]
+Completable: Cpath Value[add]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[add]
+Path add
+[{
+    "label": "addPosFromVec2",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, Types.vec2) => Types.comp",
+    "documentation": null
+  }, {
+    "label": "addPos",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, float, float) => Types.comp",
+    "documentation": null
+  }]
+
+Complete src/DotPipeCompleteFromCurrentModule.res 77:21
+posCursor:[77:21] posNoWhite:[77:20] Found expr:[75:19->80:9]
+posCursor:[77:21] posNoWhite:[77:20] Found expr:[76:12->79:13]
+posCursor:[77:21] posNoWhite:[77:20] Found expr:[77:19->77:21]
+Pexp_field [77:19->77:20] _:[79:12->77:21]
+Completable: Cpath Value[k].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[k].""
+ContextPath Value[k]
+Path k
+ContextPath Value[k]->
+ContextPath Value[k]
+Path k
+CPPipe pathFromEnv:Types found:true
+Path Types.
+Path 
+[{
+    "label": "->blah",
+    "kind": 12,
+    "tags": [],
+    "detail": "Types.context => string",
+    "documentation": null,
+    "sortText": "blah",
+    "insertText": "->blah",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 77, "character": 20}, "end": {"line": 77, "character": 21}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->addSprite",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, string) => Types.comp",
+    "documentation": null,
+    "sortText": "addSprite",
+    "insertText": "->addSprite",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 77, "character": 20}, "end": {"line": 77, "character": 21}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->addPosFromVec2",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, Types.vec2) => Types.comp",
+    "documentation": null,
+    "sortText": "addPosFromVec2",
+    "insertText": "->addPosFromVec2",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 77, "character": 20}, "end": {"line": 77, "character": 21}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->addPos",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, float, float) => Types.comp",
+    "documentation": null,
+    "sortText": "addPos",
+    "insertText": "->addPos",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 77, "character": 20}, "end": {"line": 77, "character": 21}},
+      "newText": ""
+      }]
+  }]
+
