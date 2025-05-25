@@ -22,6 +22,7 @@
 #### :bug: Bug fix
 
 - `rescript-tools doc` no longer includes shadowed bindings in its output. https://github.com/rescript-lang/rescript/pull/7497
+- Treat `throw` like `raise` in analysis. https://github.com/rescript-lang/rescript/pull/7521
 
 #### :nail_care: Polish
 
