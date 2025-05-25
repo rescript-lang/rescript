@@ -465,7 +465,7 @@ let processLocalInclude includePath _loc ~prefix ~exact ~(env : QueryEnv.t)
              | `Ok (ident, path) -> ident.name :: path |> String.concat "."
            in
 
-           if source_module_path = includePath then
+           if String.ends_with ~suffix:includePath source_module_path then
              (* If this is the case we perform a similar check for the prefix *)
              if Utils.checkName name ~prefix ~exact then
                if not (Hashtbl.mem localTables.namesUsed name) then (
