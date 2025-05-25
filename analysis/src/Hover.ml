@@ -1,5 +1,7 @@
 open SharedTypes
 
+module StringSet = Set.Make (String)
+
 let showModuleTopLevel ~docstring ~isType ~name (topLevel : Module.item list) =
   let contents =
     topLevel
@@ -115,7 +117,18 @@ let expandTypes ~file ~package ~supportsMarkdownLinks typ =
       ],
       `InlineType )
   | all ->
+    let typesSeen = ref StringSet.empty in
+    let typeId ~(env : QueryEnv.t) ~name =
+      env.file.moduleName :: List.rev (name :: env.pathRev) |> String.concat "."
+    in
     ( all
+      (* Don't produce duplicate type definitions for recursive types *)
+      |> List.filter (fun {env; name} ->
+             let typeId = typeId ~env ~name in
+             if StringSet.mem typeId !typesSeen then false
+             else (
+               typesSeen := StringSet.add typeId !typesSeen;
+               true))
       |> List.map (fun {decl; env; loc; path} ->
              let linkToTypeDefinitionStr =
                if
