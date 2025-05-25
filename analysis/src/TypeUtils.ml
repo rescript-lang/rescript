@@ -1,6 +1,20 @@
 open SharedTypes
 
-let modulePathFromEnv env = env.QueryEnv.file.moduleName :: List.rev env.pathRev
+let modulePathFromEnv env =
+  let moduleName = env.QueryEnv.file.moduleName in
+  let transformedModuleName =
+    (* Transform namespaced module names from internal format (Context-Kaplay) 
+       to user-facing format (Kaplay.Context) *)
+    match String.rindex_opt moduleName '-' with
+    | None -> moduleName
+    | Some i ->
+      let namespace =
+        String.sub moduleName (i + 1) (String.length moduleName - i - 1)
+      in
+      let module_ = String.sub moduleName 0 i in
+      namespace ^ "." ^ module_
+  in
+  transformedModuleName :: List.rev env.pathRev
 
 let fullTypeIdFromDecl ~env ~name ~modulePath =
   env.QueryEnv.file.moduleName :: ModulePath.toPath modulePath name
