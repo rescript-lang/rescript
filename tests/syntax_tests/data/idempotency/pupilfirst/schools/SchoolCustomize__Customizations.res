@@ -180,7 +180,7 @@ let decodeLink = json => {
   | "header" => HeaderLink(id, title, url)
   | "footer" => FooterLink(id, title, url)
   | "social" => SocialLink(id, url)
-  | unknownKind => raise(UnknownKindOfLink(unknownKind))
+  | unknownKind => throw(UnknownKindOfLink(unknownKind))
   }
 }
 

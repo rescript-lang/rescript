@@ -52,10 +52,10 @@ let f006: Lazy.t<unit => int> = Lazy.make(() => {
   _ => x
 })
 
-let f007 = Lazy.make(() => raise(Not_found))
+let f007 = Lazy.make(() => throw(Not_found))
 let f008 = Lazy.make(() => {
   Js.log("hi")
-  raise(Not_found)
+  throw(Not_found)
 })
 
 let a2 = x => Lazy.from_val(x)
@@ -93,7 +93,7 @@ Mt.from_pair_suites(
       (__FILE__, _ => Eq(a7, None)),
       (__FILE__, _ => Eq(a8, ())),
       (__LOC__, _ => Ok(Lazy.isEvaluated(Lazy.from_val(3)))),
-      (__LOC__, _ => Ok(!Lazy.isEvaluated(Lazy.make(() => raise(Not_found))))),
+      (__LOC__, _ => Ok(!Lazy.isEvaluated(Lazy.make(() => throw(Not_found))))),
     }
   },
 )

@@ -78,7 +78,7 @@ let submitForm = (filename, formId, send, addFileAttachmentCB) => {
   switch element {
   | Some(element) =>
     DomUtils.FormData.create(element)->uploadFile(filename, send, addFileAttachmentCB)
-  | None => raise(FormNotFound(formId))
+  | None => throw(FormNotFound(formId))
   }
 }
 

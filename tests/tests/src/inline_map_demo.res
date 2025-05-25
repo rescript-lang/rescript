@@ -118,7 +118,7 @@ let m = Belt.List.reduceReverse(list{(10, 'a'), (3, 'b'), (7, 'c'), (20, 'd')}, 
 
 let rec find = (px, x) =>
   switch x {
-  | Empty => raise(Not_found)
+  | Empty => throw(Not_found)
   | Node(l, v, d, r, _) =>
     let c = compare(px, v)
     if c == 0 {

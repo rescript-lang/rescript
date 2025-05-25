@@ -250,8 +250,8 @@ let x = a && (truth: bool) && (otherTruth: bool)
 let x = a && {module L = Log; L.log()}
 let x = a && {module L = Log; L.log()} && {module L = Log; L.log()}
 
-let x = a && {exception Exit; raise(Exit)}
-let x = a && {exception Exit; raise(Exit)} && {exception Exit; raise(Exit)}
+let x = a && {exception Exit; throw(Exit)}
+let x = a && {exception Exit; throw(Exit)} && {exception Exit; throw(Exit)}
 
 let x = a && assert(false)
 let x = a && assert(false) && assert(true)

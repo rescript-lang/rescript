@@ -41,7 +41,7 @@ let visibilityFromJs = visibilityString =>
   | "draft" => Draft
   | "live" => Live
   | "archived" => Archived
-  | _ => raise(InvalidVisibilityValue("Unknown Value"))
+  | _ => throw(InvalidVisibilityValue("Unknown Value"))
   }
 
 let visibilityAsString = visibility =>
@@ -61,7 +61,7 @@ let roleFromJs = roleString =>
   switch roleString {
   | "student" => Student
   | "team" => Team
-  | role => raise(InvalidRoleValue("Unknown Value :" ++ role))
+  | role => throw(InvalidRoleValue("Unknown Value :" ++ role))
   }
 
 let makeFromJs = targetData => {

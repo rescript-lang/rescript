@@ -10,7 +10,7 @@ module DomUtils = {
   let focus = id =>
     (switch document->Document.getElementById(id) {
     | Some(el) => el
-    | None => raise(RootElementMissing(id))
+    | None => throw(RootElementMissing(id))
     }->Element.asHtmlElement)->Belt.Option.map(HtmlElement.focus)->ignore
 }
 

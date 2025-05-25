@@ -76,7 +76,7 @@ let push = add
 
 let peek = q =>
   if q.length == 0 {
-    raise(Empty)
+    throw(Empty)
   } else {
     q.tail.next.content
   }
@@ -85,7 +85,7 @@ let top = peek
 
 let take = q => {
   if q.length == 0 {
-    raise(Empty)
+    throw(Empty)
   }
   q.length = q.length - 1
   let tail = q.tail

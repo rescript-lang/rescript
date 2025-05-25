@@ -70,7 +70,7 @@ f(. {
 f(. {expr})
 f(. {
   exception Exit
-  raise(Exit)
+  throw(Exit)
 })
 
 resolve(.)

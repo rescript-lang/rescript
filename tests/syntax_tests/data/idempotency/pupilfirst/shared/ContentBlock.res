@@ -54,7 +54,7 @@ let decode = json => {
   | "embed" =>
     let (url, embedCode) = json->field("content", decodeEmbedContent)
     Embed(url, embedCode)
-  | unknownBlockType => raise(UnexpectedBlockType(unknownBlockType))
+  | unknownBlockType => throw(UnexpectedBlockType(unknownBlockType))
   }
 
   {

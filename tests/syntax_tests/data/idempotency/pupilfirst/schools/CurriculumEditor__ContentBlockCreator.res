@@ -204,7 +204,7 @@ let submitForm = (target, aboveContentBlock, send, addContentBlockCB, blockType)
     )
   | None =>
     Rollbar.error("Could not find form to upload file for content block: " ++ formId)
-    raise(FormNotFound(formId))
+    throw(FormNotFound(formId))
   }
 }
 

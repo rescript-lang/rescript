@@ -154,13 +154,13 @@ let addSubmission = (target, state, send, addSubmissionCB, submission) => {
     addSubmissionCB(LatestSubmission.make(~pending=false, ~targetId=target->Target.id))
   | Pending => addSubmissionCB(LatestSubmission.make(~pending=true, ~targetId=target->Target.id))
   | Passed =>
-    raise(
+    throw(
       UnexpectedSubmissionStatus(
         "CoursesCurriculum__Overlay.addSubmission cannot handle a submsision with status Passed",
       ),
     )
   | Failed =>
-    raise(
+    throw(
       UnexpectedSubmissionStatus(
         "CoursesCurriculum__Overlay.addSubmission cannot handle a submsision with status Failed",
       ),

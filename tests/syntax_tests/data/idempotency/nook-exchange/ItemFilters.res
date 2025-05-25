@@ -278,7 +278,7 @@ let getSort = (~sort) =>
   | UserTimeUpdated
   | UserNote
   | UserDefault =>
-    raise(UnexpectedSort(sort))
+    throw(UnexpectedSort(sort))
   }
 
 let wrapWithVariantSort = (sort, a, b) => {
@@ -363,7 +363,7 @@ let getUserItemSort = (~prioritizeViewerStatuses: array<User.itemStatus>=[], ~so
         [0, 0],
       )
     })
-  | ListTimeAdded => raise(UnexpectedSort(sort))
+  | ListTimeAdded => throw(UnexpectedSort(sort))
   }
 
 module Pager = {
