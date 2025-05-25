@@ -6,7 +6,7 @@ let b =
   ((let open Belt.Array in
       ([|1;2|] -> (map (fun [arity:1]x -> x + 1))) -> Js.log)
   [@res.braces ])
-let b = ((let exception QuitEarly  in raise QuitEarly)[@res.braces ])
+let b = ((let exception QuitEarly  in throw QuitEarly)[@res.braces ])
 let b = ((let a = 1 in let b = 2 in a + b)[@res.braces ])
 let b = ((let _ = sideEffect () in ())[@res.braces ])
 let b = ((let _ = sideEffect () in ())[@res.braces ])
@@ -21,7 +21,7 @@ let b =
           let b = 2 in
           sideEffect ();
           (let x = (1 + 2) -> (fun [arity:1]x -> x + 1) in
-           raise (Terminate x)))
+           throw (Terminate x)))
   [@res.braces ])
 let b = ((f (); g (); h (); (let arr = [|1;2;3|] in ()))[@res.braces ])
 let res =
@@ -64,7 +64,7 @@ let reifyStyle (type a) [arity:1](x : 'a) =
              if Internal.instanceOf x Internal.canvasPattern
              then Obj.magic Pattern
              else
-               raise
+               throw
                  (Invalid_argument
                     {js|Unknown canvas style kind. Known values are: String, CanvasGradient, CanvasPattern|js})),
          (Obj.magic x)))
