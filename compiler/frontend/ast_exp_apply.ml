@@ -197,7 +197,8 @@ let app_exp_mapper (e : exp) (self : Bs_ast_mapper.mapper) : exp =
       | _ -> Location.raise_errorf ~loc "invalid #= assignment"))
   | Some {op = "->"; loc} ->
     Location.raise_errorf ~loc
-      "invalid |. syntax, it can only be used as binary operator"
+      "Invalid pipe syntax. The pipe symbol (->) can only be used as a binary \
+       operator."
   | Some {op = "##"; loc} ->
     Location.raise_errorf ~loc
       "Js object ## expect syntax like obj##(paint (a,b)) "
