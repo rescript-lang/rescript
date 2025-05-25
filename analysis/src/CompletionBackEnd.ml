@@ -477,6 +477,7 @@ let processLocalInclude includePath _loc ~prefix ~exact ~(env : QueryEnv.t)
                      with
                      deprecated = declared.deprecated;
                      docstring = declared.docstring;
+                     synthetic = true;
                    }
                    :: localTables.resultRev)
          | _ -> ())
@@ -507,9 +508,6 @@ let findLocalCompletionsForValuesAndConstructors ~(localTables : LocalTables.t)
   scope
   |> Scope.iterModulesBeforeFirstOpen
        (processLocalModule ~prefix ~exact ~env ~localTables);
-  scope
-  |> Scope.iterIncludesBeforeFirstOpen
-       (processLocalInclude ~prefix ~exact ~env ~localTables);
 
   let valuesFromOpens =
     getItemsFromOpens ~opens ~localTables ~prefix ~exact
@@ -527,8 +525,7 @@ let findLocalCompletionsForValuesAndConstructors ~(localTables : LocalTables.t)
        (processLocalModule ~prefix ~exact ~env ~localTables);
 
   scope
-  |> Scope.iterIncludesAfterFirstOpen
-       (processLocalInclude ~prefix ~exact ~env ~localTables);
+  |> Scope.iterIncludes (processLocalInclude ~prefix ~exact ~env ~localTables);
 
   List.rev_append localTables.resultRev valuesFromOpens
 
@@ -1088,6 +1085,8 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     | None -> [])
   | CPPipe {contextPath = cp; id = prefix; lhsLoc; inJsx; synthetic} -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPPipe";
+    (* The environment at the cursor is the environment we're completing from. *)
+    let env_at_cursor = env in
     match
       cp
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
@@ -1214,8 +1213,8 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         in
         (* Add completions from the current module. *)
         let currentModuleCompletions =
-          completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom
-            ~opens:[] ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full []
+          getCompletionsForPath ~debug ~completionContext:Value ~exact:false
+            ~opens:[] ~full ~pos ~env:env_at_cursor ~scope [prefix]
           |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
                ~targetTypeId:mainTypeId
         in
