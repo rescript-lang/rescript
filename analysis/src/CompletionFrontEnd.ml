@@ -869,7 +869,8 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
        match
          (Pos.positionToOffset text posStart, Pos.positionToOffset text posEnd)
        with
-       | Some offsetStart, Some offsetEnd ->
+       | Some offsetStart, Some offsetEnd
+         when offsetStart >= 0 && offsetEnd >= offsetStart ->
          (* Can't trust the parser's location
             E.g. @foo. let x... gives as label @foo.let *)
          let label =
