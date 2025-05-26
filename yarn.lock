@@ -412,39 +412,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/react@link:../../../dependencies/rescript-react::locator=%40tests%2Freanalyze-deadcode%40workspace%3Atests%2Fanalysis_tests%2Ftests-reanalyze%2Fdeadcode":
-  version: 0.0.0-use.local
-  resolution: "@rescript/react@link:../../../dependencies/rescript-react::locator=%40tests%2Freanalyze-deadcode%40workspace%3Atests%2Fanalysis_tests%2Ftests-reanalyze%2Fdeadcode"
-  languageName: node
-  linkType: soft
-
-"@rescript/react@link:../../dependencies/rescript-react::locator=%40tests%2Fanalysis%40workspace%3Atests%2Fanalysis_tests%2Ftests":
-  version: 0.0.0-use.local
-  resolution: "@rescript/react@link:../../dependencies/rescript-react::locator=%40tests%2Fanalysis%40workspace%3Atests%2Fanalysis_tests%2Ftests"
-  languageName: node
-  linkType: soft
-
 "@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Fdocstring-tests%40workspace%3Atests%2Fdocstring_tests":
   version: 0.0.0-use.local
   resolution: "@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Fdocstring-tests%40workspace%3Atests%2Fdocstring_tests"
   languageName: node
   linkType: soft
 
-"@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Ftools%40workspace%3Atests%2Ftools_tests":
+"@rescript/react@workspace:^, @rescript/react@workspace:packages/react":
   version: 0.0.0-use.local
-  resolution: "@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Ftools%40workspace%3Atests%2Ftools_tests"
-  languageName: node
-  linkType: soft
-
-"@rescript/react@npm:^0.13.1":
-  version: 0.13.1
-  resolution: "@rescript/react@npm:0.13.1"
+  resolution: "@rescript/react@workspace:packages/react"
+  dependencies:
+    rescript: "workspace:^"
   peerDependencies:
-    react: ">=18.0.0"
-    react-dom: ">=18.0.0"
-  checksum: 10c0/c4d04536daf7acc3f6452890665333211ad08723ecb9e9efdd66ea7bf7de6503f513d6dabad400415fcae7625740431f1c121fa3abbc4b7446b60e2e7052df32
-  languageName: node
-  linkType: hard
+    react: ">=19.0.0"
+    react-dom: ">=19.0.0"
+  languageName: unknown
+  linkType: soft
 
 "@rescript/runtime@workspace:packages/@rescript/runtime":
   version: 0.0.0-use.local
@@ -638,7 +621,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/analysis@workspace:tests/analysis_tests/tests"
   dependencies:
-    "@rescript/react": "link:../../dependencies/rescript-react"
+    "@rescript/react": "workspace:^"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft
@@ -665,7 +648,7 @@ __metadata:
   resolution: "@tests/gentype-react-example@workspace:tests/gentype_tests/typescript-react-example"
   dependencies:
     "@biomejs/biome": "npm:1.9.4"
-    "@rescript/react": "npm:^0.13.1"
+    "@rescript/react": "workspace:^"
     "@types/react": "npm:^18.3.3"
     "@types/react-dom": "npm:^18.3.0"
     react: "npm:^18.3.1"
@@ -696,7 +679,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/reanalyze-deadcode@workspace:tests/analysis_tests/tests-reanalyze/deadcode"
   dependencies:
-    "@rescript/react": "link:../../../dependencies/rescript-react"
+    "@rescript/react": "workspace:^"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft
@@ -719,7 +702,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@tests/tools@workspace:tests/tools_tests"
   dependencies:
-    "@rescript/react": "link:../dependencies/rescript-react"
+    "@rescript/react": "workspace:^"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft
@@ -2449,7 +2432,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "playground@workspace:packages/playground"
   dependencies:
-    "@rescript/react": "npm:^0.13.1"
+    "@rescript/react": "workspace:^"
     "@rollup/plugin-node-resolve": "npm:^16.0.0"
     glob: "npm:^11.0.1"
     h3: "npm:2.0.0-beta.4"
