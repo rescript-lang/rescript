@@ -9,4 +9,4 @@
 
   Type x is not a subtype of string 
 
-  The constructor [1;33mOne[0m of variant [1;33mx[0m has an inline record as payload. Inline records cannot be coerced.
+  The constructor [1;33mOne[0m of variant [1;33mx[0m has an inline record as payload. Currently, inline records cannot be coerced.

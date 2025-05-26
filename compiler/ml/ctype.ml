@@ -72,11 +72,11 @@ let () =
 
 type subtype_context =
   | Generic of {errorCode: string}
-  | Primitive_coercion_target_variant_not_unboxed of {
+  | Coercion_target_variant_not_unboxed of {
       variant_name: Path.t;
       primitive: Path.t;
     }
-  | Primitive_coercion_target_variant_no_catch_all of {
+  | Coercion_target_variant_does_not_cover_type of {
       variant_name: Path.t;
       primitive: Path.t;
     }
@@ -3660,13 +3660,13 @@ let rec subtype_rec env trace t1 t2 cstrs =
             t2,
             !univar_pairs,
             Some
-              (Primitive_coercion_target_variant_not_unboxed
+              (Coercion_target_variant_not_unboxed
                  {variant_name = p; primitive = path}) )
           :: cstrs
         | Some (p, constructors, true) ->
           if
-            Variant_coercion.variant_has_catch_all_case constructors (fun p ->
-                Path.same p path)
+            Variant_coercion.variant_has_case_covering_type constructors
+              ~path_is_same_fn:(fun p -> Path.same p path)
           then cstrs
           else
             ( trace,
@@ -3674,7 +3674,7 @@ let rec subtype_rec env trace t1 t2 cstrs =
               t2,
               !univar_pairs,
               Some
-                (Primitive_coercion_target_variant_no_catch_all
+                (Coercion_target_variant_does_not_cover_type
                    {variant_name = p; primitive = path}) )
             :: cstrs
         | None ->

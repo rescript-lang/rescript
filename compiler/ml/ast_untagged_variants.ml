@@ -71,7 +71,7 @@ type block_type =
   | ObjectType
   | UnknownType
 
-let block_type_to_string = function
+let block_type_to_user_visible_string = function
   | IntType -> "int"
   | StringType -> "string"
   | FloatType -> "float"
@@ -100,7 +100,7 @@ type tag = {name: string; tag_type: tag_type option}
 type block = {tag: tag; tag_name: string option; block_type: block_type option}
 type switch_names = {consts: tag array; blocks: block array}
 
-let tag_type_to_string = function
+let tag_type_to_user_visible_string = function
   | String _ -> "string"
   | Int _ -> "int"
   | Float _ -> "float"
@@ -108,7 +108,7 @@ let tag_type_to_string = function
   | Bool _ -> "bool"
   | Null -> "null"
   | Undefined -> "undefined"
-  | Untagged block_type -> block_type_to_string block_type
+  | Untagged block_type -> block_type_to_user_visible_string block_type
 
 let untagged = "unboxed"
 

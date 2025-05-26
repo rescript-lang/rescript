@@ -1540,17 +1540,16 @@ let print_variant_runtime_representation_issue ppf variant_name
   | Inline_record_cannot_be_coerced {constructor_name} ->
     fprintf ppf
       "The constructor @{<info>%s@} of variant @{<info>%s@} has an inline \
-       record as payload. Inline records cannot be coerced."
+       record as payload. Currently, inline records cannot be coerced."
       constructor_name (Path.name variant_name)
-  | As_payload_cannot_be_coerced
+  | As_payload_not_elgible_for_coercion
       {constructor_name; as_payload; expected_typename} ->
     fprintf ppf
       "The constructor @{<info>%s@} of variant @{<info>%s@} has an \
        @{<info>@as@} payload that has a runtime representation of \
-       @{<info>%s@}, which is not compatible with the expected of \
-       @{<info>%s@}."
+       @{<info>%s@}, which is not compatible with the expected @{<info>%s@}."
       constructor_name (Path.name variant_name)
-      (Ast_untagged_variants.tag_type_to_string as_payload)
+      (Ast_untagged_variants.tag_type_to_user_visible_string as_payload)
       (Path.name expected_typename)
   | Mismatched_unboxed_payload _ -> ()
   | Mismatched_as_payload {constructor_name; expected_typename; as_payload} ->
@@ -1565,7 +1564,7 @@ let print_variant_runtime_representation_issue ppf variant_name
       fprintf ppf
         "an @{<info>@as@} payload that gives it the runtime type of \
          @{<info>%s@}."
-        (Ast_untagged_variants.tag_type_to_string payload));
+        (Ast_untagged_variants.tag_type_to_user_visible_string payload));
     fprintf ppf
       "@ That runtime representation is not compatible with the expected \
        runtime representation of @{<info>%s@}."
@@ -1704,16 +1703,15 @@ let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
         fprintf ppf "@,@,@[<v 2>";
         match ctx with
         | Generic {errorCode} -> fprintf ppf "Error: %s" errorCode
-        | Primitive_coercion_target_variant_not_unboxed
-            {variant_name; primitive} ->
+        | Coercion_target_variant_not_unboxed {variant_name; primitive} ->
           fprintf ppf
             "@ The variant @{<info>%s@} is not unboxed, so it cannot be \
              coerced to a @{<info>%s@}. @ Fix this by adding the \
              @{<info>@unboxed@} attribute to the variant @{<info>%s@}."
             (Path.name variant_name) (Path.name primitive)
             (Path.name variant_name)
-        | Primitive_coercion_target_variant_no_catch_all
-            {variant_name; primitive} ->
+        | Coercion_target_variant_does_not_cover_type {variant_name; primitive}
+          ->
           fprintf ppf
             "@ The variant @{<info>%s@} is unboxed, but has no catch-all case \
              for the primitive @{<info>%s@}, and therefore does not cover all \

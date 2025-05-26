@@ -8,7 +8,7 @@ type variant_runtime_representation_issue =
       expected_typename: Path.t;
       as_payload: Ast_untagged_variants.tag_type option;
     }
-  | As_payload_cannot_be_coerced of {
+  | As_payload_not_elgible_for_coercion of {
       constructor_name: string;
       expected_typename: Path.t;
       as_payload: Ast_untagged_variants.tag_type;
@@ -29,12 +29,12 @@ let can_coerce_primitive (path : Path.t) =
 let check_paths_same p1 p2 target_path =
   Path.same p1 target_path && Path.same p2 target_path
 
-let variant_has_catch_all_case
-    (constructors : Types.constructor_declaration list) path_is_same =
+let variant_has_case_covering_type
+    (constructors : Types.constructor_declaration list) ~path_is_same_fn =
   let has_catch_all_string_case (c : Types.constructor_declaration) =
     let args = c.cd_args in
     match args with
-    | Cstr_tuple [{desc = Tconstr (p, [], _)}] -> path_is_same p
+    | Cstr_tuple [{desc = Tconstr (p, [], _)}] -> path_is_same_fn p
     | _ -> false
   in
 
@@ -114,7 +114,7 @@ let variant_has_same_runtime_representation_as_target ~(target_path : Path.t)
                })
       | Some ((Null | Undefined | Bool _ | Untagged _) as as_payload) ->
         Some
-          (As_payload_cannot_be_coerced
+          (As_payload_not_elgible_for_coercion
              {
                constructor_name = Ident.name c.cd_id;
                as_payload;

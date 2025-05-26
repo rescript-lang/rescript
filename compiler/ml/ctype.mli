@@ -21,11 +21,11 @@ open Types
 type subtype_context =
   | Generic of {errorCode: string}
       (** A generic subtype error, intended to be extended to be handled later. *)
-  | Primitive_coercion_target_variant_not_unboxed of {
+  | Coercion_target_variant_not_unboxed of {
       variant_name: Path.t;
       primitive: Path.t;
     }  (** Coercing a primitive to a variant that is not unboxed. *)
-  | Primitive_coercion_target_variant_no_catch_all of {
+  | Coercion_target_variant_does_not_cover_type of {
       variant_name: Path.t;
       primitive: Path.t;
     }
