@@ -216,8 +216,8 @@ pub fn generate_asts(
                     let base_build_path = package.get_build_path().join(&suffix);
                     let base_ocaml_build_path = package.get_ocaml_build_path().join(&suffix);
                     let _ = std::fs::copy(
-                        base_build_path.with_extension(".cmi"),
-                        base_ocaml_build_path.with_extension(".cmi"),
+                        base_build_path.with_extension("cmi"),
+                        base_ocaml_build_path.with_extension("cmi"),
                     );
                     let _ = std::fs::copy(
                         base_build_path.with_extension("cmt"),
