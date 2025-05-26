@@ -516,7 +516,6 @@ jobs:
 
       - name: Run rewatch integration tests
         # Currently failing on Windows and intermittently on macOS
-        if: runner.os == 'Linux'
         run: make test-rewatch-ci
 
   publish:
