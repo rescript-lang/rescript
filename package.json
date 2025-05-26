@@ -100,7 +100,6 @@
   "workspaces": [
     "packages/playground",
     "packages/@rescript/*",
-    "tests/dependencies/**",
     "tests/analysis_tests/**",
     "tests/docstring_tests",
     "tests/gentype_tests/**",
