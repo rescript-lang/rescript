@@ -62,8 +62,8 @@ let u = f =>
   | _ => -1
   }
 
-eq(__LOC__, u(() => raise(A({name: 1, x: 1}))), 2)
-eq(__LOC__, u(() => raise(B(1, 2))), 3)
-eq(__LOC__, u(() => raise(C({name: 4}))), 4)
+eq(__LOC__, u(() => throw(A({name: 1, x: 1}))), 2)
+eq(__LOC__, u(() => throw(B(1, 2))), 3)
+eq(__LOC__, u(() => throw(C({name: 4}))), 4)
 
 let () = Mt.from_pair_suites(__LOC__, suites.contents)

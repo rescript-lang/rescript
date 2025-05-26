@@ -192,7 +192,7 @@ module Section = {
     let url = ReasonReactRouter.useUrl()
     let showMini = {
       open Webapi.Url.URLSearchParams
-      make(url.search) |> has("thumbnails")
+      make(url.search)->has("thumbnails")
     }
     let url = ReasonReactRouter.useUrl()
     let sort = React.useMemo1(() => {
@@ -213,7 +213,7 @@ module Section = {
           : None,
         ~sort,
       )
-      userItems |> Js.Array.sortInPlaceWith((aUserItem, bUserItem) => sortFn(aUserItem, bUserItem))
+      userItems->Js.Array.sortInPlaceWith((aUserItem, bUserItem) => sortFn(aUserItem, bUserItem))
     }, [userItems])
     let viewingListUrl =
       "/u/" ++
@@ -224,7 +224,7 @@ module Section = {
       | "" => ""
       | search => "?" ++ search
       })))
-    let numResults = userItems |> Js.Array.length
+    let numResults = userItems->Js.Array.length
 
     <div className={Cn.make(list{Styles.root, Cn.ifTrue(Styles.rootMini, showMini)})}>
       <div className=Styles.sectionTitle>

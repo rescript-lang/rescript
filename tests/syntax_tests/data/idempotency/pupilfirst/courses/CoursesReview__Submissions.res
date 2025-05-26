@@ -7,12 +7,12 @@ type filter = {
 
 let makeFilter = (level, coach) => {level: level, coach: coach}
 
-let filterLevelId = level => level |> OptionUtils.mapWithDefault(Level.id, "none")
-let filterCoachId = coach => coach |> OptionUtils.mapWithDefault(UserProxy.id, "none")
+let filterLevelId = level => level->OptionUtils.mapWithDefault(Level.id, "none")
+let filterCoachId = coach => coach->OptionUtils.mapWithDefault(UserProxy.id, "none")
 
 let filterEq = (level, coach, filter) =>
-  filter.level |> filterLevelId == filterLevelId(level) &&
-    filter.coach |> filterCoachId == filterCoachId(coach)
+  filter.level->filterLevelId == filterLevelId(level) &&
+    filter.coach->filterCoachId == filterCoachId(coach)
 
 type sortDirection = [#Ascending | #Descending]
 
@@ -63,7 +63,7 @@ let needsReloading = (selectedLevel, selectedCoach, sortDirection, t) =>
   | Unloaded => true
   | FullyLoaded(data)
   | PartiallyLoaded(data, _) =>
-    !(data.filter |> filterEq(selectedLevel, selectedCoach) && data.sortDirection == sortDirection)
+    !(data.filter->filterEq(selectedLevel, selectedCoach) && data.sortDirection == sortDirection)
   }
 
 let toArray = t =>

@@ -9,24 +9,24 @@ module Make = (Sortable: Sortable) => {
   let dropdown = (criteria, selectedCriterion, onCriterionChange) => {
     let selectedForDropdown =
       <button
-        title={"Order by " ++ (selectedCriterion |> Sortable.criterion)}
+        title={"Order by " ++ (selectedCriterion->Sortable.criterion)}
         className="inline-flex flex-1 md:flex-auto items-center bg-white leading-relaxed font-semibold border border-gray-400 rounded focus:outline-none focus:bg-white focus:border-gray-500 px-3 py-2 text-xs ">
-        <span className="ml-2"> {selectedCriterion |> Sortable.criterion |> str} </span>
+        <span className="ml-2"> {selectedCriterion->Sortable.criterion->str} </span>
         <i className="fas fa-caret-down ml-3" />
       </button>
     let dropDownContents =
       criteria
-      |> Js.Array.filter(criterion =>
+      ->Js.Array.filter(criterion =>
         Sortable.criterion(criterion) != Sortable.criterion(selectedCriterion)
       )
-      |> Array.map(criterion =>
+      ->Array.map(criterion =>
         <button
           key={Sortable.criterion(criterion)}
           title={"Order by " ++ Sortable.criterion(criterion)}
           onClick={_ => onCriterionChange(criterion)}
           className="inline-flex items-center w-full font-semibold text-xs p-3 text-left focus:outline-none ">
           <Icon className="if i-clock-regular text-sm if-fw text-gray-700" />
-          <span className="ml-2"> {Sortable.criterion(criterion) |> str} </span>
+          <span className="ml-2"> {Sortable.criterion(criterion)->str} </span>
         </button>
       )
     <Dropdown selected=selectedForDropdown contents=dropDownContents />
@@ -43,12 +43,12 @@ module Make = (Sortable: Sortable) => {
   @react.component
   let make = (~criteria, ~selectedCriterion, ~direction, ~onDirectionChange, ~onCriterionChange) =>
     <div className="flex mt-1">
-      {criteria |> Array.length > 1
+      {criteria->Array.length > 1
         ? dropdown(criteria, selectedCriterion, onCriterionChange)
         : <div
-            title={"Order by " ++ (selectedCriterion |> Sortable.criterion)}
+            title={"Order by " ++ (selectedCriterion->Sortable.criterion)}
             className="inline-flex flex-1 md:flex-auto items-center bg-gray-100 leading-relaxed font-semibold text-gray-700 border border-gray-400 rounded focus:outline-none px-3 py-2 text-xs ">
-            <span> {selectedCriterion |> Sortable.criterion |> str} </span>
+            <span> {selectedCriterion->Sortable.criterion->str} </span>
           </div>}
       <span className="flex ml-1">
         <button

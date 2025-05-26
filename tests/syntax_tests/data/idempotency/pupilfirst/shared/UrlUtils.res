@@ -25,7 +25,7 @@ let urlRegex = Js.Re.fromStringWithFlags(
 )
 
 let isInvalid = (allowBlank, url) =>
-  if url |> String.trim |> String.length > 0 {
+  if url->String.trim->String.length > 0 {
     !Js.Re.test_(urlRegex, url)
   } else {
     !allowBlank

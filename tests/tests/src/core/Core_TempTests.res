@@ -28,8 +28,8 @@ Console.info("---")
 let f = () => {
   let error = Error.make("hello")
   let typeError = Error.TypeError.make("error")
-  let g = () => Error.raise(error)
-  let h = () => Error.raise(typeError)
+  let g = () => Error.throw(error)
+  let h = () => Error.throw(typeError)
   (g, h)
 }
 

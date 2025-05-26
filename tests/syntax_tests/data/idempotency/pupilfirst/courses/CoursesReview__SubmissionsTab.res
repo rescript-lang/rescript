@@ -48,14 +48,14 @@ let updateSubmissions = (
   nodes,
 ) => {
   updateSubmissionsCB(
-    ~submissions=submissions |> Array.append(
+    ~submissions=submissions->Array.append(
       switch nodes {
       | None => []
-      | Some(submissionsArray) => submissionsArray |> IndexSubmission.decodeJs
+      | Some(submissionsArray) => submissionsArray->IndexSubmission.decodeJs
       }
-      |> Array.to_list
-      |> List.flatten
-      |> Array.of_list,
+      ->Array.to_list
+      ->List.flatten
+      ->Array.of_list,
     ),
     ~selectedTab,
     ~hasNextPage,
@@ -86,8 +86,8 @@ let getSubmissions = (
     }
   )
 
-  let levelId = selectedLevel |> OptionUtils.map(level => level |> Level.id)
-  let coachId = selectedCoach |> OptionUtils.map(coach => coach |> Coach.id)
+  let levelId = selectedLevel->OptionUtils.map(level => level->Level.id)
+  let coachId = selectedCoach->OptionUtils.map(coach => coach->Coach.id)
 
   SubmissionsQuery.make(
     ~courseId,
@@ -98,9 +98,9 @@ let getSubmissions = (
     ~after=?cursor,
     (),
   )
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
-    response["submissions"]["nodes"] |> updateSubmissions(
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
+    response["submissions"]["nodes"]->updateSubmissions(
       setState,
       response["submissions"]["pageInfo"]["endCursor"],
       response["submissions"]["pageInfo"]["hasNextPage"],
@@ -111,37 +111,37 @@ let getSubmissions = (
     )
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let submissionStatus = submission => {
   let classes = "border flex-shrink-0 leading-normal font-semibold px-3 py-px rounded "
 
-  let (className, text) = if submission |> IndexSubmission.pendingReview {
-    (classes ++ "bg-orange-100 text-orange-600", submission |> IndexSubmission.timeDistance)
-  } else if submission |> IndexSubmission.failed {
+  let (className, text) = if submission->IndexSubmission.pendingReview {
+    (classes ++ "bg-orange-100 text-orange-600", submission->IndexSubmission.timeDistance)
+  } else if submission->IndexSubmission.failed {
     (classes ++ "bg-red-100 border-red-500 text-red-800", "Failed")
   } else {
     ("bg-green-100 border-green-500 text-green-800", "Passed")
   }
 
-  <div className> {text |> str} </div>
+  <div className> {text->str} </div>
 }
 
 let feedbackSentNotice = feedbackSent =>
   feedbackSent
     ? <div
         className="bg-primary-100 text-primary-600 border border-transparent flex-shrink-0 leading-normal font-semibold px-3 py-px rounded mr-3">
-        {"Feedback Sent" |> str}
+        {"Feedback Sent"->str}
       </div>
     : React.null
 
 let submissionCardClasses = submission =>
   "flex flex-col md:flex-row items-start md:items-center justify-between bg-white border-l-3 p-3 md:py-6 md:px-5 mb-4 cursor-pointer rounded-r-lg shadow hover:border-primary-500 hover:text-primary-500 hover:shadow-md " ++ if (
-    submission |> IndexSubmission.pendingReview
+    submission->IndexSubmission.pendingReview
   ) {
     "border-orange-400"
-  } else if submission |> IndexSubmission.failed {
+  } else if submission->IndexSubmission.failed {
     "border-red-500"
   } else {
     "border-green-500"
@@ -150,42 +150,42 @@ let submissionCardClasses = submission =>
 let showSubmission = (submissions, levels, sortDirection) =>
   <div id="submissions">
     {submissions
-    |> IndexSubmission.sortArray(sortDirection)
-    |> Array.map(submission =>
+    ->IndexSubmission.sortArray(sortDirection)
+    ->Array.map(submission =>
       <Link
-        href={"/submissions/" ++ (submission |> IndexSubmission.id)}
-        key={submission |> IndexSubmission.id}
-        ariaLabel={"Submission " ++ (submission |> IndexSubmission.id)}
+        href={"/submissions/" ++ (submission->IndexSubmission.id)}
+        key={submission->IndexSubmission.id}
+        ariaLabel={"Submission " ++ (submission->IndexSubmission.id)}
         className={submissionCardClasses(submission)}>
         <div className="w-full md:w-3/4">
           <div className="block text-sm md:pr-2">
             <span className="bg-gray-300 text-xs font-semibold px-2 py-px rounded">
               {submission
-              |> IndexSubmission.levelId
-              |> Level.unsafeLevelNumber(levels, "SubmissionsTab")
-              |> str}
+              ->IndexSubmission.levelId
+              ->Level.unsafeLevelNumber(levels, "SubmissionsTab")
+              ->str}
             </span>
             <span className="ml-2 font-semibold text-base">
-              {submission |> IndexSubmission.title |> str}
+              {submission->IndexSubmission.title->str}
             </span>
           </div>
           <div className="mt-1 ml-px text-xs text-gray-900">
-            <span> {"Submitted by " |> str} </span>
+            <span> {"Submitted by "->str} </span>
             <span className="font-semibold">
-              {submission |> IndexSubmission.userNames |> str}
+              {submission->IndexSubmission.userNames->str}
             </span>
             <span className="ml-1">
-              {"on " ++ (submission |> IndexSubmission.createdAtPretty) |> str}
+              {"on " ++ (submission->IndexSubmission.createdAtPretty)->str}
             </span>
           </div>
         </div>
         <div className="w-auto md:w-1/4 text-xs flex justify-end mt-2 md:mt-0">
-          {feedbackSentNotice(submission |> IndexSubmission.feedbackSent)}
+          {feedbackSentNotice(submission->IndexSubmission.feedbackSent)}
           {submissionStatus(submission)}
         </div>
       </Link>
     )
-    |> React.array}
+    ->React.array}
   </div>
 
 let showSubmissions = (submissions, selectedTab, levels, sortDirection) => {
@@ -194,10 +194,10 @@ let showSubmissions = (submissions, selectedTab, levels, sortDirection) => {
   | #Reviewed => reviewedEmptyImage
   }
 
-  submissions |> ArrayUtils.isEmpty
+  submissions->ArrayUtils.isEmpty
     ? <div className="course-review__submissions-empty text-lg font-semibold text-center py-4">
         <h5 className="py-4 mt-4 bg-gray-200 text-gray-800 font-semibold">
-          {"No submissions found" |> str}
+          {"No submissions found"->str}
         </h5>
         <img className="w-3/4 md:w-1/2 mx-auto mt-2" src=imageSrc />
       </div>
@@ -218,7 +218,7 @@ let make = (
 ) => {
   let (state, setState) = React.useState(() => Loading)
   React.useEffect5(() => {
-    if submissions |> Submissions.needsReloading(selectedLevel, selectedCoach, sortDirection) {
+    if submissions->Submissions.needsReloading(selectedLevel, selectedCoach, sortDirection) {
       setState(_ => Reloading)
 
       getSubmissions(
@@ -260,7 +260,7 @@ let make = (
                   submissions,
                   updateSubmissionsCB,
                 )}>
-              {"Load More..." |> str}
+              {"Load More..."->str}
             </button>}
       </div>
     | FullyLoaded({submissions}) => showSubmissions(submissions, selectedTab, levels, sortDirection)

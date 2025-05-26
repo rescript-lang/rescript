@@ -38,7 +38,7 @@ let make = (~id) => {
       </span>
     </div>
   React.useEffect0(() => {
-    StoryData.fetchStoryWithComments(id, data => dispatch(Loaded(data))) |> ignore
+    StoryData.fetchStoryWithComments(id, data => dispatch(Loaded(data)))->ignore
     None
   })
 

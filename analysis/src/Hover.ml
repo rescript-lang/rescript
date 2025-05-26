@@ -137,13 +137,21 @@ let expandTypes ~file ~package ~supportsMarkdownLinks typ =
       `Default )
 
 (* Produces a hover with relevant types expanded in the main type being hovered. *)
-let hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks typ =
-  let typeString = Markdown.codeBlock (typ |> Shared.typeToString) in
+let hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks ?constructor
+    typ =
   let expandedTypes, expansionType =
     expandTypes ~file ~package ~supportsMarkdownLinks typ
   in
   match expansionType with
-  | `Default -> typeString :: expandedTypes |> String.concat "\n"
+  | `Default ->
+    let typeString = Shared.typeToString typ in
+    let typeString =
+      match constructor with
+      | Some constructor ->
+        typeString ^ "\n" ^ CompletionBackEnd.showConstructor constructor
+      | None -> typeString
+    in
+    Markdown.codeBlock typeString :: expandedTypes |> String.concat "\n"
   | `InlineType -> expandedTypes |> String.concat "\n"
 
 (* Leverages autocomplete functionality to produce a hover for a position. This
@@ -256,33 +264,22 @@ let newHover ~full:{file; package} ~supportsMarkdownLinks locItem =
          | Const_int64 _ -> "int64"
          | Const_bigint _ -> "bigint"))
   | Typed (_, t, locKind) ->
-    let fromType ~docstring typ =
-      ( hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks typ,
-        docstring )
+    let fromType ?constructor typ =
+      hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks ?constructor
+        typ
     in
     let parts =
       match References.definedForLoc ~file ~package locKind with
       | None ->
-        let typeString, docstring = t |> fromType ~docstring:[] in
-        typeString :: docstring
+        let typeString = t |> fromType in
+        [typeString]
       | Some (docstring, res) -> (
         match res with
-        | `Declared ->
-          let typeString, docstring = t |> fromType ~docstring in
+        | `Declared | `Field ->
+          let typeString = t |> fromType in
           typeString :: docstring
-        | `Constructor {cname = {txt}; args; docstring} ->
-          let typeString, docstring = t |> fromType ~docstring in
-          let argsString =
-            match args with
-            | InlineRecord _ | Args [] -> ""
-            | Args args ->
-              args
-              |> List.map (fun (t, _) -> Shared.typeToString t)
-              |> String.concat ", " |> Printf.sprintf "(%s)"
-          in
-          typeString :: Markdown.codeBlock (txt ^ argsString) :: docstring
-        | `Field ->
-          let typeString, docstring = t |> fromType ~docstring in
-          typeString :: docstring)
+        | `Constructor constructor ->
+          let typeString = t |> fromType ~constructor in
+          typeString :: constructor.docstring)
     in
     Some (String.concat Markdown.divider parts)

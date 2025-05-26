@@ -10,7 +10,7 @@ let test_js_error2 = () =>
   try Js.Json.parseExn(` {"x" : }`) catch {
   | Js.Exn.Error(err) as e =>
     Js.log(Js.Exn.stack(err))
-    raise(e)
+    throw(e)
   }
 
 let example1 = () =>

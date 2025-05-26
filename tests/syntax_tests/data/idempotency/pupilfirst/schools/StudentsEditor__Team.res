@@ -19,7 +19,7 @@ let levelId = t => t.levelId
 
 let students = t => t.students
 
-let isSingleStudent = t => t.students |> Array.length == 1
+let isSingleStudent = t => t.students->Array.length == 1
 
 let make = (~id, ~name, ~students, ~coachIds, ~levelId, ~accessEndsAt) => {
   id: id,
@@ -31,14 +31,14 @@ let make = (~id, ~name, ~students, ~coachIds, ~levelId, ~accessEndsAt) => {
 }
 
 let makeFromJS = teamDetails =>
-  teamDetails |> Js.Array.map(team =>
+  teamDetails->Js.Array.map(team =>
     switch team {
     | Some(team) =>
       let students =
-        team["students"] |> Array.map(studentDetails =>
+        team["students"]->Array.map(studentDetails =>
           StudentsEditor__Student.makeFromJS(studentDetails)
         )
-      let coachIds = team["coachIds"] |> Array.map(cids => cids)
+      let coachIds = team["coachIds"]->Array.map(cids => cids)
       list{
         make(
           ~id=team["id"],
@@ -46,7 +46,7 @@ let makeFromJS = teamDetails =>
           ~levelId=team["levelId"],
           ~students,
           ~coachIds,
-          ~accessEndsAt=team["accessEndsAt"] |> OptionUtils.map(DateFns.parseString),
+          ~accessEndsAt=team["accessEndsAt"]->OptionUtils.map(DateFns.parseString),
         ),
       }
     | None => list{}
@@ -55,23 +55,23 @@ let makeFromJS = teamDetails =>
 
 let update = (~name, ~student, ~coachIds, ~accessEndsAt, ~team) => {
   let students =
-    team.students |> Array.map(s =>
-      s |> StudentsEditor__Student.id == (student |> StudentsEditor__Student.id) ? student : s
+    team.students->Array.map(s =>
+      s->StudentsEditor__Student.id == (student->StudentsEditor__Student.id) ? student : s
     )
 
   {...team, name: name, coachIds: coachIds, accessEndsAt: accessEndsAt, students: students}
 }
 
-let replaceTeam = (team, teams) => teams |> Array.map(t => t.id == team.id ? team : t)
+let replaceTeam = (team, teams) => teams->Array.map(t => t.id == team.id ? team : t)
 
 let unsafeFind = (teams, componentName, teamId) =>
-  teams |> ArrayUtils.unsafeFind(
+  teams->ArrayUtils.unsafeFind(
     team => team.id == teamId,
     "Unable to find team with id: " ++ (teamId ++ ("in StudentdEditor__" ++ componentName)),
   )
 
 let active = t =>
   switch t.accessEndsAt {
-  | Some(date) => date |> DateFns.isAfter(Js.Date.make())
+  | Some(date) => date->DateFns.isAfter(Js.Date.make())
   | None => true
   }

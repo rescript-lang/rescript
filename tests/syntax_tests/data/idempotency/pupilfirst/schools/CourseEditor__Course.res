@@ -40,16 +40,16 @@ let cover = t => t.cover
 
 let thumbnail = t => t.thumbnail
 
-let imageUrl = image => image |> Image.url
+let imageUrl = image => image->Image.url
 
-let filename = image => image |> Image.filename
+let filename = image => image->Image.filename
 
 let sort = courses =>
-  courses |> List.sort((x, y) => (x.id |> int_of_string) - (y.id |> int_of_string))
+  courses->List.sort((x, y) => (x.id->int_of_string) - (y.id->int_of_string))
 
 let updateList = (courses, course) => {
-  let oldCourses = courses |> List.filter(c => c.id !== course.id)
-  oldCourses |> List.rev |> List.append(list{course}) |> List.rev
+  let oldCourses = courses->List.filter(c => c.id !== course.id)
+  oldCourses->List.rev->List.append(list{course})->List.rev
 }
 
 let makeImageFromJs = data =>
@@ -96,7 +96,7 @@ let replaceImages = (cover, thumbnail, t) => {...t, cover: cover, thumbnail: thu
 
 let makeFromJs = rawCourse => {
   let endsAt = switch rawCourse["endsAt"] {
-  | Some(endsAt) => Some(endsAt |> Json.Decode.string) |> OptionUtils.map(DateFns.parseString)
+  | Some(endsAt) => Some(endsAt->Json.Decode.string)->OptionUtils.map(DateFns.parseString)
   | None => None
   }
   create(

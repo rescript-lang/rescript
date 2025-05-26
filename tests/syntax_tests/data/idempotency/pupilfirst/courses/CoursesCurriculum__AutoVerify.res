@@ -17,7 +17,7 @@ module AutoVerifySubmissionQuery = %graphql(`
 let redirect = link => {
   let window = Webapi.Dom.window
 
-  window |> Webapi.Dom.Window.open_(~url=link, ~name="_blank", ~features="") |> ignore
+  window->Webapi.Dom.Window.open_(~url=link, ~name="_blank", ~features="")->ignore
 }
 
 let handleSuccess = (submission, linkToComplete, addSubmissionCB) => {
@@ -36,30 +36,30 @@ let handleSuccess = (submission, linkToComplete, addSubmissionCB) => {
 }
 
 let createAutoVerifySubmission = (target, linkToComplete, setSaving, addSubmissionCB, event) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
   setSaving(_ => true)
 
-  AutoVerifySubmissionQuery.make(~targetId=target |> Target.id, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
+  AutoVerifySubmissionQuery.make(~targetId=target->Target.id, ())
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
     switch response["autoVerifySubmission"]["submission"] {
     | Some(details) => handleSuccess(details, linkToComplete, addSubmissionCB)
     | None => setSaving(_ => false)
     }
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let completeButtonText = (title, iconClasses) =>
-  <span> <FaIcon classes={iconClasses ++ " mr-2"} /> {title |> str} </span>
+  <span> <FaIcon classes={iconClasses ++ " mr-2"} /> {title->str} </span>
 
 let previewLinkToComplete = link =>
   <a
     href=link
     target="_blank"
     className="block text-primary-500 w-full text-center bg-gray-200 hover:bg-gray-300 hover:text-primary-600 p-4 rounded text-lg font-bold">
-    <span> <FaIcon classes="fas fa-external-link-alt mr-2" /> {"Visit Link " |> str} </span>
+    <span> <FaIcon classes="fas fa-external-link-alt mr-2" /> {"Visit Link "->str} </span>
   </a>
 
 let autoVerify = (target, linkToComplete, saving, setSaving, addSubmissionCB, preview) =>
@@ -87,11 +87,11 @@ let statusBar = (string, linkToComplete) => {
         <i className="fas fa-certificate fa-stack-2x" />
         <i className="fas fa-check fa-stack-1x fa-inverse" />
       </span>
-      <span> {string |> str} </span>
+      <span> {string->str} </span>
     </div>
   let visitLink = link =>
     <a className="text-right w-full" href=link target="_blank">
-      <i className="fas fa-external-link-alt mr-2" /> {"Visit Link" |> str}
+      <i className="fas fa-external-link-alt mr-2" /> {"Visit Link"->str}
     </a>
 
   <div className=defaultClasses>
@@ -112,17 +112,17 @@ let completionInstructionText = linkToComplete =>
 @react.component
 let make = (~target, ~targetDetails, ~targetStatus, ~addSubmissionCB, ~preview) => {
   let (saving, setSaving) = React.useState(() => false)
-  let linkToComplete = targetDetails |> TargetDetails.linkToComplete
+  let linkToComplete = targetDetails->TargetDetails.linkToComplete
   [
     <CoursesCurriculum__CompletionInstructions
       key="completion-instructions" targetDetails title={completionInstructionText(linkToComplete)}
     />,
     <div className="mt-5" id="auto-verify-target" key="completion-button">
-      {switch targetStatus |> TargetStatus.status {
+      {switch targetStatus->TargetStatus.status {
       | Pending => autoVerify(target, linkToComplete, saving, setSaving, addSubmissionCB, preview)
       | Locked(_) => React.null
       | _ => statusBar("Completed", linkToComplete)
       }}
     </div>,
-  ] |> React.array
+  ]->React.array
 }

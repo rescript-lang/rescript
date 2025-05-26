@@ -25,15 +25,15 @@ let enableLeaderboard = t => t.enableLeaderboard
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    name: json |> field("name", string),
-    description: json |> field("description", string),
-    exited: json |> field("exited", bool),
-    review: json |> field("review", bool),
-    author: json |> field("author", bool),
-    enableLeaderboard: json |> field("enableLeaderboard", bool),
-    thumbnailUrl: json |> field("thumbnailUrl", nullable(string)) |> Js.Null.toOption,
-    linkedCommunities: json |> field("linkedCommunities", array(string)),
-    ended: json |> field("ended", bool),
+    id: json->field("id", string),
+    name: json->field("name", string),
+    description: json->field("description", string),
+    exited: json->field("exited", bool),
+    review: json->field("review", bool),
+    author: json->field("author", bool),
+    enableLeaderboard: json->field("enableLeaderboard", bool),
+    thumbnailUrl: json->field("thumbnailUrl", nullable(string))->Js.Null.toOption,
+    linkedCommunities: json->field("linkedCommunities", array(string)),
+    ended: json->field("ended", bool),
   }
 }

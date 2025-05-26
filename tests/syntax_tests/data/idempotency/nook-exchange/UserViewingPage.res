@@ -94,7 +94,7 @@ module FollowLink = {
                     )
                   }
                   Promise.resolved()
-                }) |> ignore
+                })->ignore
               } else {
                 showLogin()
               }
@@ -130,7 +130,7 @@ let make = (~username, ~urlRest, ~url: ReasonReactRouter.url, ~showLogin) => {
     switch (me, user) {
     | (Some(me), Some(user: User.t)) =>
       switch me.followeeIds {
-      | Some(followeeIds) => followeeIds |> Js.Array.includes(user.id)
+      | Some(followeeIds) => followeeIds->Js.Array.includes(user.id)
       | None => false
       }
     | _ => false
@@ -138,7 +138,7 @@ let make = (~username, ~urlRest, ~url: ReasonReactRouter.url, ~showLogin) => {
   , (isLoggedIn, user))
   React.useEffect0(() => {
     open Webapi.Dom
-    window |> Window.scrollTo(0., 0.)
+    window->Window.scrollTo(0., 0.)
     Some(() => React.Ref.setCurrent(isMountedRef, false))
   })
   React.useEffect1(() => {
@@ -163,7 +163,7 @@ let make = (~username, ~urlRest, ~url: ReasonReactRouter.url, ~showLogin) => {
         })
       | _ => Promise.resolved()
       }
-    }) |> ignore
+    })->ignore
     None
   }, [username])
   React.useEffect0(() => {

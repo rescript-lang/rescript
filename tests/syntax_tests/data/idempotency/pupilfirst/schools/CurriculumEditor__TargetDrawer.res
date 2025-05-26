@@ -39,12 +39,12 @@ let tab = (page, selectedPage, pathPrefix, dirty, setDirty) => {
     : None
 
   <Link href=path ?confirm onClick={_e => setDirty(_ => false)} className=classes>
-    <i className={"fas " ++ iconClass} /> <span className="ml-2"> {title |> str} </span>
+    <i className={"fas " ++ iconClass} /> <span className="ml-2"> {title->str} </span>
   </Link>
 }
 
 let closeDrawer = course =>
-  ReasonReactRouter.push("/school/courses/" ++ ((course |> Course.id) ++ "/curriculum"))
+  ReasonReactRouter.push("/school/courses/" ++ ((course->Course.id) ++ "/curriculum"))
 
 @react.component
 let make = (~targets, ~targetGroups, ~evaluationCriteria, ~course, ~updateTargetCB) => {
@@ -54,13 +54,13 @@ let make = (~targets, ~targetGroups, ~evaluationCriteria, ~course, ~updateTarget
   switch url.path {
   | list{"school", "courses", _courseId, "targets", targetId, pageName} =>
     let target =
-      targets |> ListUtils.unsafeFind(
-        t => t |> Target.id == targetId,
+      targets->ListUtils.unsafeFind(
+        t => t->Target.id == targetId,
         "Could not find target for editor drawer with the ID " ++ targetId,
       )
 
     let pathPrefix =
-      "/school/courses/" ++ ((course |> Course.id) ++ ("/targets/" ++ (targetId ++ "/")))
+      "/school/courses/" ++ ((course->Course.id) ++ ("/targets/" ++ (targetId ++ "/")))
 
     let (innerComponent, selectedPage) = switch pageName {
     | "content" => (
@@ -81,7 +81,7 @@ let make = (~targets, ~targetGroups, ~evaluationCriteria, ~course, ~updateTarget
     | "versions" => (<CurriculumEditor__VersionsEditor targetId />, Versions)
     | otherPage =>
       Rollbar.warning("Unexpected page requested for target editor drawer: " ++ otherPage)
-      (<div> {"Unexpected error. Please reload the page." |> str} </div>, Content)
+      (<div> {"Unexpected error. Please reload the page."->str} </div>, Content)
     }
 
     <SchoolAdmin__EditorDrawer
@@ -89,7 +89,7 @@ let make = (~targets, ~targetGroups, ~evaluationCriteria, ~course, ~updateTarget
       closeDrawerCB={() => confirmDirtyAction(dirty, () => closeDrawer(course))}>
       <div>
         <div className="bg-gray-200 pt-6">
-          <div className="max-w-3xl px-3 mx-auto"> <h3> {target |> Target.title |> str} </h3> </div>
+          <div className="max-w-3xl px-3 mx-auto"> <h3> {target->Target.title->str} </h3> </div>
           <div className="flex w-full max-w-3xl mx-auto px-3 text-sm -mb-px mt-2">
             {tab(Content, selectedPage, pathPrefix, dirty, setDirty)}
             {tab(Details, selectedPage, pathPrefix, dirty, setDirty)}

@@ -12,17 +12,17 @@ type props = {
 let decodeProps = json => {
   open Json.Decode
   {
-    course: json |> field("course", Course.decode),
-    evaluationCriteria: json |> field("evaluationCriteria", list(EvaluationCriteria.decode)),
-    levels: json |> field("levels", list(Level.decode)),
-    targetGroups: json |> field("targetGroups", list(TargetGroup.decode)),
-    targets: json |> field("targets", list(Target.decode)),
-    authenticityToken: json |> field("authenticityToken", string),
+    course: json->field("course", Course.decode),
+    evaluationCriteria: json->field("evaluationCriteria", list(EvaluationCriteria.decode)),
+    levels: json->field("levels", list(Level.decode)),
+    targetGroups: json->field("targetGroups", list(TargetGroup.decode)),
+    targets: json->field("targets", list(Target.decode)),
+    authenticityToken: json->field("authenticityToken", string),
   }
 }
 
 let props =
-  DomUtils.parseJsonAttribute(~id="curriculum-editor", ~attribute="data-props", ()) |> decodeProps
+  DomUtils.parseJsonAttribute(~id="curriculum-editor", ~attribute="data-props", ())->decodeProps
 
 ReactDOMRe.renderToElementWithId(
   <CurriculumEditor

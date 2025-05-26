@@ -22,12 +22,12 @@ let affiliation = t => t.affiliation
 let encode = t => {
   open Json.Encode
   object_(list{
-    ("name", t.name |> string),
-    ("email", t.email |> string),
-    ("title", t.title |> string),
-    ("affiliation", t.affiliation |> string),
-    ("tags", t.tags |> array(string)),
-    ("team_name", t.teamName |> nullable(string)),
+    ("name", t.name->string),
+    ("email", t.email->string),
+    ("title", t.title->string),
+    ("affiliation", t.affiliation->string),
+    ("tags", t.tags->array(string)),
+    ("team_name", t.teamName->nullable(string)),
   })
 }
 

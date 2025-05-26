@@ -115,7 +115,7 @@ module WithUser = {
           }
           Promise.resolved()
         })
-      } |> ignore
+      }->ignore
     }
 
     <div className=Styles.root>
@@ -140,7 +140,7 @@ module WithUser = {
 
                     {
                       open Dom.Storage
-                      localStorage |> setItem("discord_state", state)
+                      localStorage->setItem("discord_state", state)
                     }
 
                     open Webapi.Dom
@@ -230,7 +230,7 @@ module WithUser = {
                   ~bodyText="Are you sure you want to remove ALL ITEMS from your account? This includes all items in your For Trade, Can Craft, Wishlist, and Catalog.",
                   ~confirmLabel="Remove items",
                   ~cancelLabel="Never mind",
-                  ~onConfirm=() => UserStore.removeAllItems() |> ignore,
+                  ~onConfirm=() => UserStore.removeAllItems()->ignore,
                   (),
                 )
               }}
@@ -247,7 +247,7 @@ module WithUser = {
                   ~bodyText="Are you sure you want to delete your account? THIS CANNOT BE UNDONE!",
                   ~confirmLabel="Delete account",
                   ~cancelLabel="Never mind",
-                  ~onConfirm=() => UserStore.deleteAccount() |> ignore,
+                  ~onConfirm=() => UserStore.deleteAccount()->ignore,
                   (),
                 )
               }}

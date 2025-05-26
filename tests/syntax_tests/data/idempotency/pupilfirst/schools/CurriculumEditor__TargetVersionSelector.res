@@ -1,25 +1,25 @@
 let str = React.string
 
 let handleClick = (setShowDropdown, versions, event) => {
-  event |> ReactEvent.Mouse.preventDefault
-  if versions |> Array.length > 1 {
+  event->ReactEvent.Mouse.preventDefault
+  if versions->Array.length > 1 {
     setShowDropdown(showDropdown => !showDropdown)
   }
 }
 
 let handleVersionSelect = (setShowDropdown, selectVersionCB, selectedVersion, event) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
   setShowDropdown(showDropdown => !showDropdown)
   selectVersionCB(selectedVersion)
 }
 
 let handleViewMode = (switchViewModeCB, previewMode, event) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
   switchViewModeCB(previewMode)
 }
 
 let handleRestoreVersion = (handleRestoreVersionCB, versionOn, event) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
   handleRestoreVersionCB(versionOn)
 }
 
@@ -46,7 +46,7 @@ let make = (
                   ? previewModeButtonEnableClass
                   : "bg-white shadow-md hover:shadow hover:text-primary-500 hover:bg-gray-100"
               )}>
-              {"Preview" |> str}
+              {"Preview"->str}
             </button>
             <button
               onClick={handleViewMode(switchViewModeCB, false)}
@@ -55,7 +55,7 @@ let make = (
                   ? "bg-white shadow-md hover:shadow hover:text-primary-500 hover:bg-gray-100"
                   : previewModeButtonEnableClass
               )}>
-              {"Edit" |> str}
+              {"Edit"->str}
             </button>
           </div>
         : React.null}
@@ -66,29 +66,29 @@ let make = (
         : <button
             onClick={handleRestoreVersion(
               handleRestoreVersionCB,
-              selectedVersion |> Js.Json.string,
+              selectedVersion->Js.Json.string,
             )}
             className="btn btn-warning border border-orange-500 mr-4">
-            {"Restore this version" |> str}
+            {"Restore this version"->str}
           </button>}
       <div className="relative">
         <div className="inline-block">
           <label className="text-xs block text-gray-600 mb-1">
-            {(versions |> Array.length > 1 ? "Versions" : "Version") |> str}
+            {(versions->Array.length > 1 ? "Versions" : "Version")->str}
           </label>
           <button
             onClick={handleClick(setShowDropdown, versions)}
             className={"target-editor__version-dropdown-button text-sm appearance-none bg-white border inline-flex items-center justify-between focus:outline-none font-semibold relative rounded " ++ (
-              versions |> Array.length > 1
+              versions->Array.length > 1
                 ? "px-3 border-gray-400 hover:bg-gray-100 hover:shadow-lg"
                 : "border-transparent cursor-auto"
             )}>
             <span className="flex items-center py-2">
               <span className="truncate text-left">
-                {selectedVersion |> DateTime.stingToFormatedTime(DateTime.OnlyDate) |> str}
+                {selectedVersion->DateTime.stingToFormatedTime(DateTime.OnlyDate)->str}
               </span>
             </span>
-            {versions |> Array.length > 1
+            {versions->Array.length > 1
               ? <span className="text-right pl-3 py-2 border-l border-gray-400">
                   <i className="fas fa-chevron-down text-sm" />
                 </span>
@@ -100,19 +100,19 @@ let make = (
               id="version-selection-list"
               className="target-editor__version-dropdown-list text-sm bg-white font-semibold border border-gray-400 mt-1 shadow-lg rounded-lg border absolute overflow-auto h-auto w-full z-20">
               {versions
-              |> Array.to_list
-              |> List.filter(version => version != selectedVersion)
-              |> List.map(version =>
+              ->Array.to_list
+              ->List.filter(version => version != selectedVersion)
+              ->List.map(version =>
                 <li
                   id=version
                   key=version
                   onClick={handleVersionSelect(setShowDropdown, selectVersionCB, version)}
                   className="target-editor__version-dropdown-list-item flex justify-between whitespace-no-wrap px-3 py-2 cursor-pointer hover:bg-gray-100 hover:text-primary-500">
-                  {version |> DateTime.stingToFormatedTime(DateTime.OnlyDate) |> str}
+                  {version->DateTime.stingToFormatedTime(DateTime.OnlyDate)->str}
                 </li>
               )
-              |> Array.of_list
-              |> React.array}
+              ->Array.of_list
+              ->React.array}
             </ul>
           : React.null}
       </div>

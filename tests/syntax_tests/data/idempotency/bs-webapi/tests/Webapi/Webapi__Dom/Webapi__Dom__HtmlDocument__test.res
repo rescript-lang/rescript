@@ -1,8 +1,8 @@
 open Webapi.Dom
 open! HtmlDocument
 
-let el = document |> Document.createElement("strong")
-let htmlDocument = document |> Document.asHtmlDocument |> TestHelpers.unsafelyUnwrapOption
+let el = document->Document.createElement("strong")
+let htmlDocument = document->Document.asHtmlDocument->TestHelpers.unsafelyUnwrapOption
 
 let _ = activeElement(htmlDocument)
 let _ = body(htmlDocument)

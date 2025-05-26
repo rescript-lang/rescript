@@ -146,7 +146,7 @@ module Catching = {
 
     resolve()
     ->then(_ => {
-      raise(TestError("Thrown exn"))
+      throw(TestError("Thrown exn"))
     })
     ->catch(e => {
       let isTestErr = switch e {

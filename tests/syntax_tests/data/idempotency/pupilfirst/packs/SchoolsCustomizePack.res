@@ -8,14 +8,14 @@ type props = {
 let decodeProps = json => {
   open Json.Decode
   {
-    authenticityToken: json |> field("authenticityToken", string),
-    customizations: json |> field("customizations", SchoolCustomize__Customizations.decode),
-    schoolName: json |> field("schoolName", string),
-    schoolAbout: json |> field("schoolAbout", optional(string)),
+    authenticityToken: json->field("authenticityToken", string),
+    customizations: json->field("customizations", SchoolCustomize__Customizations.decode),
+    schoolName: json->field("schoolName", string),
+    schoolAbout: json->field("schoolAbout", optional(string)),
   }
 }
 
-let props = DomUtils.parseJsonTag(~id="school-customize-data", ()) |> decodeProps
+let props = DomUtils.parseJsonTag(~id="school-customize-data", ())->decodeProps
 
 ReactDOMRe.renderToElementWithId(
   <SchoolCustomize__Root

@@ -466,7 +466,7 @@ let make = (~chain) => {
   // let hasApprovedFullBalance =
   //   amountApproved
   //   |||| BN.new_("0")
-  //   |>| (
+  //   ->| (
   //     redeemedLoyaltyTokenBalanceBn |||| BN.new_("10000000000000000000000")
   //   );
 
