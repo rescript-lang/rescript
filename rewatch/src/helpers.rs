@@ -240,7 +240,9 @@ pub fn get_namespace_from_module_name(module_name: &str) -> Option<String> {
 }
 
 pub fn is_interface_ast_file(file: &Path) -> bool {
-    file.ends_with(".iast")
+    file.extension()
+        .map(|extension| extension.eq_ignore_ascii_case("iast"))
+        .unwrap_or(false)
 }
 
 pub fn read_lines(filename: &Path) -> io::Result<io::Lines<io::BufReader<fs::File>>> {
@@ -275,8 +277,7 @@ pub fn is_non_exotic_module_name(module_name: &str) -> bool {
 }
 
 pub fn get_extension(path: &Path) -> String {
-    let path_buf = PathBuf::from(path);
-    return path_buf
+    return path
         .extension()
         .expect("Could not get extension")
         .to_str()
