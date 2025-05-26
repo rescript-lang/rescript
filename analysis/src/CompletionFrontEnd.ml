@@ -373,7 +373,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
   in
   let posOfDot = Pos.posOfDot text ~pos:posCursor ~offset in
   let charAtCursor =
-    if offset < String.length text then text.[offset] else '\n'
+    if offset >= 0 && offset < String.length text then text.[offset] else '\n'
   in
   let posBeforeCursor = Pos.posBeforeCursor posCursor in
   let charBeforeCursor, blankAfterCursor =
