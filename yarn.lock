@@ -423,9 +423,6 @@ __metadata:
   resolution: "@rescript/react@workspace:packages/react"
   dependencies:
     rescript: "workspace:^"
-  peerDependencies:
-    react: ">=19.0.0"
-    react-dom: ">=19.0.0"
   languageName: unknown
   linkType: soft
 
