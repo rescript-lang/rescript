@@ -22,6 +22,7 @@
 #### :bug: Bug fix
 
 - `rescript-tools doc` no longer includes shadowed bindings in its output. https://github.com/rescript-lang/rescript/pull/7497
+- Fix `index out of bounds` exception thrown in rare cases by `rescript-editor-analysis.exe codeAction` command. https://github.com/rescript-lang/rescript/pull/7523
 
 #### :nail_care: Polish
 
