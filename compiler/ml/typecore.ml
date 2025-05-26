@@ -2653,7 +2653,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
       }
   | Pexp_record (lid_sexp_list, Some sexp) ->
     assert (lid_sexp_list <> []);
-    let exp = type_expect ~context:None ~recarg env sexp (newvar ()) in
+    let exp = type_exp ~context:None ~recarg env sexp in
     let ty_record, opath =
       let get_path ty =
         try
