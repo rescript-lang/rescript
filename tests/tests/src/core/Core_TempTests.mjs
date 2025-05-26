@@ -11,9 +11,6 @@ import * as Core_IntlTests from "./intl/Core_IntlTests.mjs";
 import * as Primitive_bigint from "rescript/lib/es6/Primitive_bigint.js";
 import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
-import 'es-iterator-helpers/auto';
-;
-
 console.info("");
 
 console.info("Array");
