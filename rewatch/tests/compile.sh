@@ -13,7 +13,7 @@ else
   exit 1
 fi
 
-if rewatch &> /dev/null;
+if rewatch ;
 then
   success "Repo Built"
 else
