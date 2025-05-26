@@ -692,6 +692,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@tests/tests@workspace:tests/tests":
+  version: 0.0.0-use.local
+  resolution: "@tests/tests@workspace:tests/tests"
+  dependencies:
+    "@rescript/react": "workspace:^"
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "@tests/tools@workspace:tests/tools_tests":
   version: 0.0.0-use.local
   resolution: "@tests/tools@workspace:tests/tools_tests"
