@@ -1,0 +1,12 @@
+{
+  "name": "@rescript/react",
+  "jsx": {
+    "version": 4,
+    "mode": "classic"
+  },
+  "sources": [{ "dir": "src", "subdirs": true }],
+  "package-specs": [{ "module": "commonjs", "in-source": true }],
+  "suffix": ".bs.js",
+  "bs-dev-dependencies": [],
+  "bsc-flags": []
+}
