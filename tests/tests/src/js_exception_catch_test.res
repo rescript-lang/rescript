@@ -42,14 +42,14 @@ let test = f =>
 
 let () = {
   eq(__LOC__, test(_ => ()), #No_error)
-  eq(__LOC__, test(_ => raise(Not_found)), #Not_found)
+  eq(__LOC__, test(_ => throw(Not_found)), #Not_found)
   eq(__LOC__, test(_ => invalid_arg("x")), #Invalid_argument)
   eq(__LOC__, test(_ => invalid_arg("")), #Invalid_any)
-  eq(__LOC__, test(_ => raise(A(2))), #A2)
-  eq(__LOC__, test(_ => raise(A(3))), #A_any)
-  eq(__LOC__, test(_ => raise(B)), #B)
-  eq(__LOC__, test(_ => raise(C(1, 2))), #C)
-  eq(__LOC__, test(_ => raise(C(0, 2))), #C_any)
+  eq(__LOC__, test(_ => throw(A(2))), #A2)
+  eq(__LOC__, test(_ => throw(A(3))), #A_any)
+  eq(__LOC__, test(_ => throw(B)), #B)
+  eq(__LOC__, test(_ => throw(C(1, 2))), #C)
+  eq(__LOC__, test(_ => throw(C(0, 2))), #C_any)
   eq(__LOC__, test(_ => Js.Exn.raiseError("x")), #Js_error)
   eq(__LOC__, test(_ => failwith("x")), #Any)
 }

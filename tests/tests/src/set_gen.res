@@ -37,14 +37,14 @@ let rec height = x =>
 
 let rec min_elt = x =>
   switch x {
-  | Empty => raise(Not_found)
+  | Empty => throw(Not_found)
   | Node(Empty, v, r, _) => v
   | Node(l, v, r, _) => min_elt(l)
   }
 
 let rec max_elt = x =>
   switch x {
-  | Empty => raise(Not_found)
+  | Empty => throw(Not_found)
   | Node(l, v, Empty, _) => v
   | Node(l, v, r, _) => max_elt(r)
   }
@@ -131,11 +131,11 @@ let rec check_height_and_diff = x =>
     let hl = check_height_and_diff(l)
     let hr = check_height_and_diff(r)
     if h != max_int_2(hl, hr) + 1 {
-      raise(Height_invariant_broken)
+      throw(Height_invariant_broken)
     } else {
       let diff = abs(hl - hr)
       if diff > 2 {
-        raise(Height_diff_borken)
+        throw(Height_diff_borken)
       } else {
         h
       }

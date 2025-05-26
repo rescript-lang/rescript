@@ -1,4 +1,4 @@
-let raises = () => raise(Not_found)
+let raises = () => throw(Not_found)
 
 let catches1 = try () catch {
 | Not_found => ()
@@ -9,12 +9,12 @@ let catches2 = switch () {
 | exception Not_found => ()
 }
 
-let raiseAndCatch = try raise(Not_found) catch {
+let raiseAndCatch = try throw(Not_found) catch {
 | _ => ()
 }
 
 @raises(Not_found)
-let raisesWithAnnotaion = () => raise(Not_found)
+let raisesWithAnnotaion = () => throw(Not_found)
 
 let callsRaiseWithAnnotation = raisesWithAnnotaion()
 
@@ -31,28 +31,28 @@ exception B
 
 let twoRaises = (x, y) => {
   if x {
-    raise(A)
+    throw(A)
   }
   if y {
-    raise(B)
+    throw(B)
   }
 }
 
 let sequencing = () => {
-  raise(A)
-  try raise(B) catch {
+  throw(A)
+  try throw(B) catch {
   | _ => ()
   }
 }
 
 let wrongCatch = () =>
-  try raise(B) catch {
+  try throw(B) catch {
   | A => ()
   }
 
 exception C
 let wrongCatch2 = b =>
-  switch b ? raise(B) : raise(C) {
+  switch b ? throw(B) : throw(C) {
   | exception A => ()
   | exception B => ()
   | list{} => ()
@@ -61,10 +61,10 @@ let wrongCatch2 = b =>
 @raises([A, B, C])
 let raise2Annotate3 = (x, y) => {
   if x {
-    raise(A)
+    throw(A)
   }
   if y {
-    raise(B)
+    throw(B)
   }
 }
 
@@ -72,24 +72,24 @@ exception Error(string, string, int)
 
 let parse_json_from_file = s => {
   switch 34 {
-  | exception Error(p1, p2, e) => raise(Error(p1, p2, e))
+  | exception Error(p1, p2, e) => throw(Error(p1, p2, e))
   | v => v
   }
 }
 
 let reRaise = () =>
-  switch raise(A) {
-  | exception A => raise(B)
+  switch throw(A) {
+  | exception A => throw(B)
   | _ => 11
   }
 
-let switchWithCatchAll = switch raise(A) {
+let switchWithCatchAll = switch throw(A) {
 | exception _ => 1
 | _ => 2
 }
 
 let raiseInInternalLet = b => {
-  let a = b ? raise(A) : 22
+  let a = b ? throw(A) : 22
   a + 34
 }
 
@@ -110,7 +110,7 @@ let tryChar = v => {
 let raiseAtAt = () => \"@@"(raise, Not_found)
 
 @raises(Not_found)
-let raisePipe = raise(Not_found)
+let raisePipe = throw(Not_found)
 
 @raises(Not_found)
 let raiseArrow = Not_found->raise
@@ -127,18 +127,18 @@ let severalCases = cases =>
   }
 
 @raises(genericException)
-let genericRaiseIsNotSupported = exn => raise(exn)
+let genericRaiseIsNotSupported = exn => throw(exn)
 
 @raises(Invalid_argument)
 let redundantAnnotation = () => ()
 
-let _x = raise(A)
+let _x = throw(A)
 
-let _ = raise(A)
+let _ = throw(A)
 
-let () = raise(A)
+let () = throw(A)
 
-raise(Not_found)
+throw(Not_found)
 
 // Examples with pipe
 

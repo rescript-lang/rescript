@@ -7,10 +7,10 @@ let fromHead = () => {
   let metaTag = document->Document.querySelector("meta[name='csrf-token']")
 
   switch metaTag {
-  | None => raise(CSRFTokenMissing)
+  | None => throw(CSRFTokenMissing)
   | Some(tag) =>
     switch tag->Element.getAttribute("content") {
-    | None => raise(CSRFTokenEmpty)
+    | None => throw(CSRFTokenEmpty)
     | Some(token) => token
     }
   }

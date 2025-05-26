@@ -1832,7 +1832,7 @@ module Token = {
     | "catch" => Catch
     | "import" => Import
     | "export" => Export
-    | _ => raise(Not_found)
+    | _ => throw(Not_found)
     }
 
   let isKeyword = x =>

@@ -39,7 +39,7 @@ let decode = json => {
     | "pending" => Pending
     | "passed" => Passed
     | "failed" => Failed
-    | unknownValue => raise(UnexpectedStatusValue(unknownValue))
+    | unknownValue => throw(UnexpectedStatusValue(unknownValue))
     },
     checklist: json->field(
       "checklist",

@@ -91,7 +91,7 @@ exception ExpectedUser
 let getUser = () =>
   switch api.getState() {
   | LoggedIn(user) => user
-  | _ => raise(ExpectedUser)
+  | _ => throw(ExpectedUser)
   }
 let getItem = (~itemId, ~variation) =>
   switch api.getState() {
@@ -159,7 +159,7 @@ let numItemUpdatesLogged = ref(0)
 let setItemStatus = (~itemId: int, ~variation: int, ~status: User.itemStatus) => {
   let item = Item.getItem(~itemId)
   if Item.getCanonicalVariant(~item, ~variant=variation) != variation {
-    raise(NotCanonicalVariant(itemId, variation))
+    throw(NotCanonicalVariant(itemId, variation))
   }
   let user = getUser()
   let itemKey = User.getItemKey(~itemId, ~variation)
@@ -249,7 +249,7 @@ let setItemStatusBatch = (~items: array<(int, int)>, ~status) => {
 let setItemNote = (~itemId: int, ~variation: int, ~note: string) => {
   let item = Item.getItem(~itemId)
   if Item.getCanonicalVariant(~item, ~variant=variation) != variation {
-    raise(NotCanonicalVariant(itemId, variation))
+    throw(NotCanonicalVariant(itemId, variation))
   }
   let user = getUser()
   let itemKey = User.getItemKey(~itemId, ~variation)

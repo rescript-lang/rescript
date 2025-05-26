@@ -249,7 +249,7 @@ let traverseAst () =
            case.c_guard |> iterExprOpt self;
            case.c_rhs |> iterExpr self)
   in
-  let isRaise s = s = "Pervasives.raise" || s = "Pervasives.raise_notrace" in
+  let isRaise s = s = "Pervasives.raise" || s = "Pervasives.throw" in
   let raiseArgs args =
     match args with
     | [(_, Some {Typedtree.exp_desc = Texp_construct ({txt}, _, _)})] ->

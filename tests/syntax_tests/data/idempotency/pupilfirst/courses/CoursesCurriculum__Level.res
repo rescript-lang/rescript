@@ -34,7 +34,7 @@ let first = levels =>
   switch levels->sort {
   | list{} =>
     Rollbar.error("Failed to find the first level from a course's levels.")
-    raise(Not_found)
+    throw(Not_found)
   | list{firstLevel, ..._rest} => firstLevel
   }
 

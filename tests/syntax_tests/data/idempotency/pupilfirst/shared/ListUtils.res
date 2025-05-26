@@ -17,7 +17,7 @@ let unsafeFind = (p, message, l) =>
   try List.find(p, l) catch {
   | Not_found =>
     Rollbar.error(message)
-    raise(UnsafeFindFailed(message))
+    throw(UnsafeFindFailed(message))
   }
 
 let distinct = l => {

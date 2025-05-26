@@ -245,7 +245,7 @@ let rec memq = (x, param) =>
 
 let rec assoc = (x, param) =>
   switch param {
-  | list{} => raise(Not_found)
+  | list{} => throw(Not_found)
   | list{(a, b), ...l} =>
     if compare(a, x) == 0 {
       b
@@ -267,7 +267,7 @@ let rec assoc_opt = (x, param) =>
 
 let rec assq = (x, param) =>
   switch param {
-  | list{} => raise(Not_found)
+  | list{} => throw(Not_found)
   | list{(a, b), ...l} =>
     if a === x {
       b
@@ -323,7 +323,7 @@ let rec remove_assq = (x, param) =>
 
 let rec find = (p, param) =>
   switch param {
-  | list{} => raise(Not_found)
+  | list{} => throw(Not_found)
   | list{x, ...l} =>
     if p(x) {
       x

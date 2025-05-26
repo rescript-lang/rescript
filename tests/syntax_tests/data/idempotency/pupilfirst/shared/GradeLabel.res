@@ -44,7 +44,7 @@ let maxGrade = gradeLabels => {
   switch aux(0, gradeLabels) {
   | 0 =>
     Rollbar.error("GradeLabel.maxGrade received an empty list of gradeLabels")
-    raise(GradeLabelsEmpty)
+    throw(GradeLabelsEmpty)
   | validGrade => validGrade
   }
 }

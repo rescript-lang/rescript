@@ -51,7 +51,7 @@ let getBucketIdForExperiment = (~experimentId) =>
   } else if experimentId == ExperimentIds.quicklistOverlay {
     string_of_int(land(lsr(getBucketHash(), 3), 1))
   } else {
-    raise(UnexpectedExperimentId(experimentId))
+    throw(UnexpectedExperimentId(experimentId))
   }
 
 let trigger = (~experimentId, ~bucketId) =>

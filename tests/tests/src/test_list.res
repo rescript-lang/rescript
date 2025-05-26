@@ -210,7 +210,7 @@ let rec memq = (x, x_) =>
 
 let rec assoc = (x, x_) =>
   switch x_ {
-  | list{} => raise(Not_found)
+  | list{} => throw(Not_found)
   | list{(a, b), ...l} =>
     if compare(a, x) == 0 {
       b
@@ -221,7 +221,7 @@ let rec assoc = (x, x_) =>
 
 let rec assq = (x, x_) =>
   switch x_ {
-  | list{} => raise(Not_found)
+  | list{} => throw(Not_found)
   | list{(a, b), ...l} =>
     if a === x {
       b
@@ -266,7 +266,7 @@ let rec remove_assq = (x, x_) =>
 
 let rec find = (p, x) =>
   switch x {
-  | list{} => raise(Not_found)
+  | list{} => throw(Not_found)
   | list{x, ...l} =>
     if p(x) {
       x

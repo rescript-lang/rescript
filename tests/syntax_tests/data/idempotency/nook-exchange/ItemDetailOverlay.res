@@ -394,7 +394,7 @@ module MyStatusSection = {
                     | Wishlist => `In your Wishlist`
                     | ForTrade => `In your For Trade list`
                     | CanCraft => `In your Can Craft list`
-                    | _ => raise(Constants.Uhoh)
+                    | _ => throw(Constants.Uhoh)
                     },
                   )}
                 </div>

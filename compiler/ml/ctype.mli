@@ -18,13 +18,48 @@
 open Asttypes
 open Types
 
-exception Unify of (type_expr * type_expr) list
+type subtype_context =
+  | Generic of {errorCode: string}
+      (** A generic subtype error, intended to be extended to be handled later. *)
+  | Coercion_target_variant_not_unboxed of {
+      variant_name: Path.t;
+      primitive: Path.t;
+    }  (** Coercing a primitive to a variant that is not unboxed. *)
+  | Coercion_target_variant_does_not_cover_type of {
+      variant_name: Path.t;
+      primitive: Path.t;
+    }
+      (** Coercing a primitive to a variant that does not have a catch-all case. *)
+  | Variant_constructor_runtime_representation_mismatch of {
+      variant_name: Path.t;
+      issues: Variant_coercion.variant_runtime_representation_issue list;
+    }
+      (** A variant constructor's runtime representation does not match the target variant. *)
+  | Variant_configurations_mismatch of {
+      left_variant_name: Path.t;
+      right_variant_name: Path.t;
+      issue: Variant_coercion.variant_configuration_issue;
+    }  (** Variants are configured differently. *)
+  | Different_type_kinds of {
+      left_typename: Path.t;
+      right_typename: Path.t;
+      left_type_kind: type_kind;
+      right_type_kind: type_kind;
+    }  (** The types are of different kinds. *)
+  | Record_fields_mismatch of {
+      left_record_name: Path.t;
+      right_record_name: Path.t;
+      issues: Record_coercion.record_field_subtype_violation list;
+    }  (** Records have fields that are not compatible. *)
+
+type type_pairs = (type_expr * type_expr) list
+exception Unify of type_pairs
 exception Tags of label * label
-exception Subtype of (type_expr * type_expr) list * (type_expr * type_expr) list
+exception Subtype of type_pairs * type_pairs * subtype_context option
 exception Cannot_expand
 exception Cannot_apply
 exception Recursive_abbrev
-exception Unification_recursive_abbrev of (type_expr * type_expr) list
+exception Unification_recursive_abbrev of type_pairs
 
 val init_def : int -> unit
 (* Set the initial variable level *)

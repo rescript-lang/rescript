@@ -1525,18 +1525,242 @@ let trace fst keep_last txt ppf tr =
     | _ -> ()
   with exn -> raise exn
 
-let report_subtyping_error ppf env tr1 txt1 tr2 =
+let print_variant_runtime_representation_issue ppf variant_name
+    (issue : Variant_coercion.variant_runtime_representation_issue) =
+  match issue with
+  | Cannot_coerce_non_unboxed_with_payload {constructor_name; expected_typename}
+    ->
+    fprintf ppf
+      "The constructor @{<info>%s@} of variant @{<info>%s@} has a payload, but \
+       the variant itself is not unboxed. @ This means that the constructor \
+       @{<info>%s@} will be encoded as an object at runtime, which is not \
+       compatible with @{<info>%s@}."
+      constructor_name (Path.name variant_name) constructor_name
+      (Path.name expected_typename)
+  | Inline_record_cannot_be_coerced {constructor_name} ->
+    fprintf ppf
+      "The constructor @{<info>%s@} of variant @{<info>%s@} has an inline \
+       record as payload. Currently, inline records cannot be coerced."
+      constructor_name (Path.name variant_name)
+  | As_payload_not_elgible_for_coercion
+      {constructor_name; as_payload; expected_typename} ->
+    fprintf ppf
+      "The constructor @{<info>%s@} of variant @{<info>%s@} has an \
+       @{<info>@as@} payload that has a runtime representation of \
+       @{<info>%s@}, which is not compatible with the expected @{<info>%s@}."
+      constructor_name (Path.name variant_name)
+      (Ast_untagged_variants.tag_type_to_user_visible_string as_payload)
+      (Path.name expected_typename)
+  | Mismatched_unboxed_payload _ -> ()
+  | Mismatched_as_payload {constructor_name; expected_typename; as_payload} ->
+    fprintf ppf "The constructor @{<info>%s@} of variant @{<info>%s@} has "
+      constructor_name (Path.name variant_name);
+    (match as_payload with
+    | None ->
+      fprintf ppf
+        "no @{<info>@as@} payload, which makes it a @{<info>string@} at \
+         runtime."
+    | Some payload ->
+      fprintf ppf
+        "an @{<info>@as@} payload that gives it the runtime type of \
+         @{<info>%s@}."
+        (Ast_untagged_variants.tag_type_to_user_visible_string payload));
+    fprintf ppf
+      "@ That runtime representation is not compatible with the expected \
+       runtime representation of @{<info>%s@}."
+      (Path.name expected_typename);
+    fprintf ppf
+      "@,\
+       @ Fix this by making sure all constructors in variant @{<info>%s@} has \
+       a runtime representation of @{<info>%s@}."
+      (Path.name variant_name)
+      (Path.name expected_typename)
+
+let print_variant_configuration_issue ppf
+    (issue : Variant_coercion.variant_configuration_issue) ~left_variant_name
+    ~right_variant_name =
+  match issue with
+  | Unboxed_config_not_matching {left_unboxed; right_unboxed} ->
+    fprintf ppf
+      "@ The variants have different @{<info>@unboxed@} configurations.";
+    let print_unboxed_status ppf unboxed name =
+      fprintf ppf "@ - Variant @{<info>%s@} is @{<error>%s@}unboxed."
+        (Path.name name)
+        (if unboxed then "not " else "")
+    in
+    print_unboxed_status ppf left_unboxed left_variant_name;
+    print_unboxed_status ppf right_unboxed right_variant_name;
+    fprintf ppf
+      "@,\
+       @ Fix this by making sure the variants either both have, or don't have, \
+       the @{<info>@unboxed@} attribute."
+  | Tag_name_not_matching {left_tag; right_tag} ->
+    fprintf ppf "@ The variants have different @{<info>@tag@} configurations.";
+    let print_tag ppf tag variant_name =
+      match tag with
+      | Some tag ->
+        fprintf ppf "@ - @{<info>%s@} has tag @{<info>%s@}."
+          (Path.name variant_name) tag
+      | None ->
+        fprintf ppf "@ - @{<info>%s@} has no explicit tag."
+          (Path.name variant_name)
+    in
+    print_tag ppf left_tag left_variant_name;
+    print_tag ppf right_tag right_variant_name;
+    fprintf ppf
+      "@,\
+       @ Fix this by making sure the variants either have the exact same \
+       @{<info>@tag@} configuration, or no @{<info>@tag@} at all."
+  | Incompatible_constructor_count {constructor_names} ->
+    let total_constructor_count = List.length constructor_names in
+    let constructor_names_to_print =
+      match constructor_names with
+      | a :: b :: c :: _ -> [a; b; c]
+      | names -> names
+    in
+    let not_printed_constructor_count =
+      total_constructor_count - List.length constructor_names_to_print
+    in
+    fprintf ppf
+      "@ @{<info>%s@} has %i constructor%s that @{<info>%s@} does not have: "
+      (Path.name left_variant_name)
+      total_constructor_count
+      (if total_constructor_count = 1 then "" else "s")
+      (Path.name right_variant_name);
+
+    constructor_names_to_print
+    |> List.iteri (fun index name ->
+           if index = 0 then () else fprintf ppf ", ";
+           fprintf ppf "@{<info>%s@}" name);
+    if not_printed_constructor_count > 0 then
+      fprintf ppf " (+%i more)" not_printed_constructor_count;
+
+    fprintf ppf
+      "@ Therefore, it is not possible for @{<info>%s@} to represent \
+       @{<info>%s@}."
+      (Path.name right_variant_name)
+      (Path.name left_variant_name)
+
+let print_record_field_subtype_violation ppf
+    (issue : Record_coercion.record_field_subtype_violation) ~left_record_name
+    ~right_record_name =
+  match issue with
+  | Optional_mismatch {label; left_optional; right_optional} -> (
+    fprintf ppf "The field @{<info>%s@} " label;
+    match (left_optional, right_optional) with
+    | true, false ->
+      fprintf ppf
+        "is optional in record @{<info>%s@}, but is not optional in record \
+         @{<info>%s@}"
+        (Path.name left_record_name)
+        (Path.name right_record_name)
+    | false, true ->
+      fprintf ppf
+        "is not optional in record @{<info>%s@}, but is optional in record \
+         @{<info>%s@}"
+        (Path.name left_record_name)
+        (Path.name right_record_name)
+    | _ -> failwith "Invalid optional mismatch")
+  | Field_runtime_name_mismatch {label; left_as; right_as} ->
+    fprintf ppf "Field @{<info>%s@} runtime representation" label;
+    (match left_as with
+    | Some as_name ->
+      fprintf ppf
+        " is configured to be @{<info>\"%s\"@} (via the @as attribute)" as_name
+    | None -> fprintf ppf " is @{<info>\"%s\"@}" label);
+    fprintf ppf " in record @{<info>%s@}, but in record @{<info>%s@}"
+      (Path.name right_record_name)
+      (Path.name left_record_name);
+    (match right_as with
+    | Some as_name ->
+      fprintf ppf
+        " it is configured to be @{<info>\"%s\"@} (via the @as attribute)."
+        as_name
+    | None -> fprintf ppf " it is @{<info>\"%s\"@}." label);
+    fprintf ppf " Runtime representations must match."
+  | Field_missing {label} ->
+    fprintf ppf
+      "The field @{<info>%s@} is missing in record @{<info>%s@}, but present \
+       in record @{<info>%s@}"
+      label
+      (Path.name right_record_name)
+      (Path.name left_record_name)
+
+let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
   wrap_printing_env env (fun () ->
       reset ();
       let tr1 = List.map prepare_expansion tr1
       and tr2 = List.map prepare_expansion tr2 in
       fprintf ppf "@[<v>%a" (trace true (tr2 = []) txt1) tr1;
-      if tr2 = [] then fprintf ppf "@]"
-      else
-        let mis = mismatch tr2 in
-        fprintf ppf "%a%t@]"
-          (trace false (mis = None) "is not compatible with type")
-          tr2 (explanation true mis))
+      (if tr2 = [] then fprintf ppf "@]"
+       else
+         let mis = mismatch tr2 in
+         fprintf ppf "%a%t@]"
+           (trace false (mis = None) "is not compatible with type")
+           tr2 (explanation true mis));
+      match ctx with
+      | Some ctx -> (
+        fprintf ppf "@,@,@[<v 2>";
+        match ctx with
+        | Generic {errorCode} -> fprintf ppf "Error: %s" errorCode
+        | Coercion_target_variant_not_unboxed {variant_name; primitive} ->
+          fprintf ppf
+            "@ The variant @{<info>%s@} is not unboxed, so it cannot be \
+             coerced to a @{<info>%s@}. @ Fix this by adding the \
+             @{<info>@unboxed@} attribute to the variant @{<info>%s@}."
+            (Path.name variant_name) (Path.name primitive)
+            (Path.name variant_name)
+        | Coercion_target_variant_does_not_cover_type {variant_name; primitive}
+          ->
+          fprintf ppf
+            "@ The variant @{<info>%s@} is unboxed, but has no catch-all case \
+             for the primitive @{<info>%s@}, and therefore does not cover all \
+             values of type @{<info>%s@}. @ Fix this by adding a catch-all for \
+             @{<info>%s@} to @{<info>%s@}, like @{<info>%s(%s)@}."
+            (Path.name variant_name) (Path.name primitive) (Path.name primitive)
+            (Path.name variant_name) (Path.name primitive)
+            (String.capitalize_ascii (Path.name primitive))
+            (Path.name primitive)
+        | Variant_constructor_runtime_representation_mismatch
+            {variant_name; issues} ->
+          List.iter
+            (fun issue ->
+              fprintf ppf "@ ";
+              print_variant_runtime_representation_issue ppf variant_name issue)
+            issues
+        | Variant_configurations_mismatch
+            {left_variant_name; right_variant_name; issue} ->
+          print_variant_configuration_issue ppf issue ~left_variant_name
+            ~right_variant_name
+        | Different_type_kinds
+            {left_typename; right_typename; left_type_kind; right_type_kind} ->
+          let type_kind_to_string = function
+            | Type_abstract -> "an abstract type"
+            | Type_record _ -> "a record"
+            | Type_variant _ -> "a variant"
+            | Type_open -> "an open type"
+          in
+          fprintf ppf
+            "@ The types of @{<info>%s@} and @{<info>%s@} are different:"
+            (Path.name left_typename) (Path.name right_typename);
+          fprintf ppf "@ - @{<info>%s@} is %s" (Path.name left_typename)
+            (type_kind_to_string left_type_kind);
+          fprintf ppf "@ - @{<info>%s@} is %s" (Path.name right_typename)
+            (type_kind_to_string right_type_kind)
+        | Record_fields_mismatch {left_record_name; right_record_name; issues}
+          ->
+          fprintf ppf
+            "@ The record @{<info>%s@} cannot be coerced to the record \
+             @{<info>%s@} because:"
+            (Path.name left_record_name)
+            (Path.name right_record_name);
+          List.iter
+            (fun issue ->
+              fprintf ppf "@ - ";
+              print_record_field_subtype_violation ppf issue ~left_record_name
+                ~right_record_name)
+            issues)
+      | None -> ())
 
 let report_ambiguous_type_error ppf env (tp0, tp0') tpl txt1 txt2 txt3 =
   wrap_printing_env env (fun () ->

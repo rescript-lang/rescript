@@ -109,7 +109,7 @@ let rec add = (x, data, x_) =>
 
 let rec find = (x, x_) =>
   switch x_ {
-  | Empty => raise(Not_found)
+  | Empty => throw(Not_found)
   | Node(l, v, d, r, _) =>
     let c = compare(x, v)
     if c == 0 {
@@ -144,14 +144,14 @@ let rec mem = (x, x_) =>
 
 let rec min_binding = x =>
   switch x {
-  | Empty => raise(Not_found)
+  | Empty => throw(Not_found)
   | Node(Empty, x, d, r, _) => (x, d)
   | Node(l, x, d, r, _) => min_binding(l)
   }
 
 let rec max_binding = x =>
   switch x {
-  | Empty => raise(Not_found)
+  | Empty => throw(Not_found)
   | Node(l, x, d, Empty, _) => (x, d)
   | Node(l, x, d, r, _) => max_binding(r)
   }

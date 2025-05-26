@@ -146,7 +146,7 @@ let make = (~courseId, ~authors) => {
               updateAuthorCB={author => send(UpdateAuthor(author))}
             />
           </SchoolAdmin__EditorDrawer>
-        | otherPath => raise(UnexpectedPathOnAuthorsInterface(otherPath))
+        | otherPath => throw(UnexpectedPathOnAuthorsInterface(otherPath))
         }
       }
       <DisablingCover disabled=state.deleting message="Deleting...">

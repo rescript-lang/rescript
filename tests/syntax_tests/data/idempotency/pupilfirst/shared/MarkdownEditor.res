@@ -317,7 +317,7 @@ let previewType = mode =>
   switch mode {
   | Windowed(#Editor)
   | Fullscreen(#Editor) =>
-    raise(InvalidModeForPreview)
+    throw(InvalidModeForPreview)
   | Windowed(#Preview) => #WindowedPreview
   | Fullscreen(#Split) => #FullscreenSplit
   | Fullscreen(#Preview) => #FullscreenPreview

@@ -7,7 +7,7 @@ open Webapi.Dom
 let parseJsonTag = (~id="react-root-data", ()) =>
   switch document->Document.getElementById(id) {
   | Some(rootElement) => rootElement->Element.innerHTML
-  | None => raise(DataElementMissing(id))
+  | None => throw(DataElementMissing(id))
   }->Json.parseOrRaise
 
 let parseJsonAttribute = (~id="react-root", ~attribute="data-json-props", ()) =>
@@ -15,9 +15,9 @@ let parseJsonAttribute = (~id="react-root", ~attribute="data-json-props", ()) =>
   | Some(rootElement) =>
     switch rootElement->Element.getAttribute(attribute) {
     | Some(props) => props
-    | None => raise(RootAttributeMissing(attribute))
+    | None => throw(RootAttributeMissing(attribute))
     }
-  | None => raise(RootElementMissing(id))
+  | None => throw(RootElementMissing(id))
   }->Json.parseOrRaise
 
 let redirect = path => path->Webapi.Dom.Window.setLocation(window)

@@ -4,11 +4,11 @@ include Css_Colors
 include Css_Legacy_Core.Make({
   exception NotImplemented
 
-  let make = (. _) => raise(NotImplemented)
-  let mergeStyles = (. _) => raise(NotImplemented)
+  let make = (. _) => throw(NotImplemented)
+  let mergeStyles = (. _) => throw(NotImplemented)
   let injectRule = (. _) => ()
   let injectRaw = (. _) => ()
-  let makeKeyFrames = (. _) => raise(NotImplemented)
+  let makeKeyFrames = (. _) => throw(NotImplemented)
 })
 
 external unsafeJsonToStyles: Js.Json.t => ReactDOMRe.Style.t = "%identity"

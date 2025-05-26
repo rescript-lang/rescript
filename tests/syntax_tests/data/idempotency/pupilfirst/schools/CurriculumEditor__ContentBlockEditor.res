@@ -185,7 +185,7 @@ let onSave = (contentBlock, updateContentBlockCB, setDirtyCB, send, event) => {
     let mutation = UpdateImageBlockMutation.make(~id, ~caption, ())
     let extractor = result => result["updateImageBlock"]["contentBlock"]
     updateContentBlockBlock(mutation, extractor, updateContentBlockCB, setDirtyCB, send)
-  | Embed(_) => raise(InvalidBlockTypeForUpdate)
+  | Embed(_) => throw(InvalidBlockTypeForUpdate)
   }
 }
 

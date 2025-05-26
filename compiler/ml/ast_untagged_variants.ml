@@ -71,6 +71,17 @@ type block_type =
   | ObjectType
   | UnknownType
 
+let block_type_to_user_visible_string = function
+  | IntType -> "int"
+  | StringType -> "string"
+  | FloatType -> "float"
+  | BigintType -> "bigint"
+  | BooleanType -> "bool"
+  | InstanceType i -> Instance.to_string i
+  | FunctionType -> "function"
+  | ObjectType -> "object"
+  | UnknownType -> "unknown"
+
 (*
   Type of the runtime representation of a tag.
   Can be a literal (case with no payload), or a block (case with payload).
@@ -88,6 +99,16 @@ type tag_type =
 type tag = {name: string; tag_type: tag_type option}
 type block = {tag: tag; tag_name: string option; block_type: block_type option}
 type switch_names = {consts: tag array; blocks: block array}
+
+let tag_type_to_user_visible_string = function
+  | String _ -> "string"
+  | Int _ -> "int"
+  | Float _ -> "float"
+  | BigInt _ -> "bigint"
+  | Bool _ -> "bool"
+  | Null -> "null"
+  | Undefined -> "undefined"
+  | Untagged block_type -> block_type_to_user_visible_string block_type
 
 let untagged = "unboxed"
 
