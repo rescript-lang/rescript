@@ -27,10 +27,8 @@
     "url": "git+https://github.com/rescript-lang/rescript-react.git"
   },
   "homepage": "https://rescript-lang.org/docs/react/latest/introduction",
-  "devDependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "rescript": "^11.0.0"
+  "dependencies": {
+    "rescript": "workspace:^"
   },
   "peerDependencies": {
     "react": ">=19.0.0",
