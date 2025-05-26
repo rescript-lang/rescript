@@ -17,6 +17,7 @@
 - Add `RegExp.flags`. https://github.com/rescript-lang/rescript/pull/7461
 - Add `Array.findLast`, `Array.findLastWithIndex`, `Array.findLastIndex`, `Array.findLastIndexWithIndex` and `Array.findLastIndexOpt`. https://github.com/rescript-lang/rescript/pull/7503
 - Add `options` argument to `Console.dir`. https://github.com/rescript-lang/rescript/pull/7504
+- Add additional `Iterator.prototype` bindings to `runtime/Stdlib_Iterator.res`. https://github.com/rescript-lang/rescript/pull/7506
 
 #### :bug: Bug fix
 
@@ -28,6 +29,9 @@
 - Complete from `RegExp` stdlib module for regexes. https://github.com/rescript-lang/rescript/pull/7425
 - Allow oneliner formatting when including module with single type alias. https://github.com/rescript-lang/rescript/pull/7502
 - Improve error messages for JSX type mismatches, passing objects where record is expected, passing array literal where tuple is expected, and more. https://github.com/rescript-lang/rescript/pull/7500
+
+#### :boom: Breaking Change
+- `Iterator.forEach` now emits `Iterator.prototype.forEach` call. https://github.com/rescript-lang/rescript/pull/7506
 
 # 12.0.0-alpha.13
 
