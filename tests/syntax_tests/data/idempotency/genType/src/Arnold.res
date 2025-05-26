@@ -822,7 +822,7 @@ module Compile = {
           ) {
           | None =>
             Stats.logHygieneMustHaveNamedArgument(~label, ~loc)
-            raise(ArgError)
+            throw(ArgError)
 
           | Some((path, _pos)) if path->FunctionTable.isInFunctionInTable(~functionTable) =>
             let functionName = Path.name(path)
@@ -840,7 +840,7 @@ module Compile = {
 
           | _ =>
             Stats.logHygieneNamedArgValue(~label, ~loc)
-            raise(ArgError)
+            throw(ArgError)
           }
           functionArg
         }

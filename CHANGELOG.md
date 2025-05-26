@@ -22,6 +22,7 @@
 #### :bug: Bug fix
 
 - `rescript-tools doc` no longer includes shadowed bindings in its output. https://github.com/rescript-lang/rescript/pull/7497
+- Treat `throw` like `raise` in analysis. https://github.com/rescript-lang/rescript/pull/7521
 
 #### :nail_care: Polish
 
@@ -30,7 +31,9 @@
 - Allow oneliner formatting when including module with single type alias. https://github.com/rescript-lang/rescript/pull/7502
 - Improve error messages for JSX type mismatches, passing objects where record is expected, passing array literal where tuple is expected, and more. https://github.com/rescript-lang/rescript/pull/7500
 - Show in error messages when coercion can be used to fix a type mismatch. https://github.com/rescript-lang/rescript/pull/7505
-- Remove deprecated pipe last (|>) syntax. https://github.com/rescript-lang/rescript/pull/7512
+- Remove deprecated pipe last (`|>`) syntax. https://github.com/rescript-lang/rescript/pull/7512
+- Improve error message for pipe (`->`) syntax. https://github.com/rescript-lang/rescript/pull/7520
+- Improve a few error messages around various subtyping issues. https://github.com/rescript-lang/rescript/pull/7404
 
 # 12.0.0-alpha.13
 

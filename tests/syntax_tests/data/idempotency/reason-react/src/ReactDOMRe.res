@@ -16,7 +16,7 @@ external _getElementById: string => option<Dom.element> = "document.getElementBy
 let renderToElementWithClassName = (reactElement, className) =>
   switch _getElementsByClassName(className) {
   | [] =>
-    raise(
+    throw(
       Invalid_argument(
         "ReactDOMRe.renderToElementWithClassName: no element of class " ++
         (className ++
@@ -29,7 +29,7 @@ let renderToElementWithClassName = (reactElement, className) =>
 let renderToElementWithId = (reactElement, id) =>
   switch _getElementById(id) {
   | None =>
-    raise(
+    throw(
       Invalid_argument(
         "ReactDOMRe.renderToElementWithId : no element of id " ++ (id ++ " found in the HTML."),
       ),
@@ -43,7 +43,7 @@ external hydrate: (React.element, Dom.element) => unit = "hydrate"
 let hydrateToElementWithClassName = (reactElement, className) =>
   switch _getElementsByClassName(className) {
   | [] =>
-    raise(
+    throw(
       Invalid_argument(
         "ReactDOMRe.hydrateToElementWithClassName: no element of class " ++
         (className ++
@@ -56,7 +56,7 @@ let hydrateToElementWithClassName = (reactElement, className) =>
 let hydrateToElementWithId = (reactElement, id) =>
   switch _getElementById(id) {
   | None =>
-    raise(
+    throw(
       Invalid_argument(
         "ReactDOMRe.hydrateToElementWithId : no element of id " ++ (id ++ " found in the HTML."),
       ),

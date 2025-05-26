@@ -28,7 +28,7 @@ let decodeVisbility = visibilityString =>
   | "draft" => Draft
   | "live" => Live
   | "archived" => Archived
-  | _ => raise(InvalidVisibilityValue("Unknown Value"))
+  | _ => throw(InvalidVisibilityValue("Unknown Value"))
   }
 
 let decode = json => {

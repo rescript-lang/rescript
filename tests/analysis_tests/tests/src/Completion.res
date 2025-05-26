@@ -143,7 +143,7 @@ let foo = {
     let v = 44
   }
   exception MyException(int, string, float, array<JSON.t>)
-  let _ = raise(MyException(2, "", 1.0, []))
+  let _ = throw(MyException(2, "", 1.0, []))
   add((x: Inner.z), Inner.v + y)
 }
 

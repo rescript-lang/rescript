@@ -249,7 +249,7 @@ let keywordTable = x =>
   | "type" => Typ
   | "when" => When
   | "while" => While
-  | _ => raise(Not_found)
+  | _ => throw(Not_found)
   }
 
 let isKeyword = x =>

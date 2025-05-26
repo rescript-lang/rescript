@@ -139,7 +139,7 @@ let make = () => {
             localStorage->getItem("discord_state")
           } != Some(state)
         ) {
-          raise(DiscordOauthStateMismatch(state))
+          throw(DiscordOauthStateMismatch(state))
         }
         DiscordOauth.process(
           ~code,

@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/record_coercion_missing_field.res[0m:[2m16:10-15[0m
+
+  14 [2m│[0m }
+  15 [2m│[0m 
+  [1;31m16[0m [2m│[0m let y = ([1;31mx :> y[0m)
+  17 [2m│[0m 
+
+  Type x is not a subtype of y 
+
+  The record [1;33mx[0m cannot be coerced to the record [1;33my[0m because:
+  - The field [1;33mz[0m is missing in record [1;33my[0m, but present in record [1;33mx[0m

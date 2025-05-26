@@ -29,7 +29,7 @@ let unsafeFind = (p, message, l) =>
       "An unexpected error occurred",
       "Our team has been notified about this error. Please try reloading this page.",
     )
-    raise(UnsafeFindFailed(message))
+    throw(UnsafeFindFailed(message))
   }
 
 let flatten = t => t->Array.to_list->List.flatten->Array.of_list

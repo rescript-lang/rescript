@@ -115,7 +115,7 @@ let jsonToItems = (json: Js.Json.t) => {
     | [] => Single
     | [a] => OneDimension(a)
     | [a, b] => TwoDimensions(a, b)
-    | _ => raise(Unexpected)
+    | _ => throw(Unexpected)
     },
     sellPrice: json->optional(field("sell", int)),
     buyPrice: json->optional(field("buy", int)),
@@ -195,13 +195,13 @@ let isRecipe = (~item: t) =>
 let getRecipeIdForItem = (~item: t) =>
   switch item.type_ {
   | Item(recipeId) => recipeId
-  | Recipe(_) => raise(Constants.Uhoh)
+  | Recipe(_) => throw(Constants.Uhoh)
   }
 
 let getItemIdForRecipe = (~recipe: t) =>
   switch recipe.type_ {
   | Recipe(itemId) => itemId
-  | Item(_) => raise(Constants.Uhoh)
+  | Item(_) => throw(Constants.Uhoh)
   }
 
 let getNumVariations = (~item) =>

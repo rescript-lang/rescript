@@ -202,7 +202,7 @@ let make = (~schoolName, ~schoolLogoPath, ~schoolIconPath, ~courses, ~isCourseAu
       "Unknown path encountered by SA navbar: " ++
       (url.path->Array.of_list->Js.Array.joinWith("/")),
     )
-    raise(UnknownPathEncountered(url.path))
+    throw(UnknownPathEncountered(url.path))
   }
 
   [

@@ -22,7 +22,7 @@ let decode = json => {
     role: switch json->field("role", string) {
     | "student" => Student
     | "team" => Team
-    | unknownRole => raise(CannotParseUnknownRole(unknownRole))
+    | unknownRole => throw(CannotParseUnknownRole(unknownRole))
     },
     title: json->field("title", string),
     targetGroupId: json->field("targetGroupId", string),

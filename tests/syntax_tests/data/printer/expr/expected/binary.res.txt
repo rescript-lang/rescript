@@ -363,16 +363,16 @@ let x =
 let x =
   a && {
     exception Exit
-    raise(Exit)
+    throw(Exit)
   }
 let x =
   a &&
   {
     exception Exit
-    raise(Exit)
+    throw(Exit)
   } && {
     exception Exit
-    raise(Exit)
+    throw(Exit)
   }
 
 let x = a && assert(false)

@@ -237,7 +237,7 @@ let mk_lazy = f => {
     } catch {
     | exn =>
       restore(prev)
-      raise(exn)
+      throw(exn)
     }
   }
 }
@@ -249,7 +249,7 @@ let parse_opt = (error, active, flags, s) => {
     active[i] = true
     error[i] = true
   }
-  let error = () => raise(Arg.Bad("Ill-formed list of warnings"))
+  let error = () => throw(Arg.Bad("Ill-formed list of warnings"))
   let rec get_num = (n, i) =>
     if i >= String.length(s) {
       (i, n)
@@ -601,7 +601,7 @@ let reset_fatal = () => nerrors := 0
 let check_fatal = () =>
   if nerrors.contents > 0 {
     nerrors := 0
-    raise(Errors)
+    throw(Errors)
   }
 
 let descriptions = list{

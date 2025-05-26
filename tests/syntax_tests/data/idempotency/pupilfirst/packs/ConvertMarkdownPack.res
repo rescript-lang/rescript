@@ -19,7 +19,7 @@ let decodeProps = json => {
 let parseElement = (element, attribute) =>
   switch element->Element.getAttribute(attribute) {
   | Some(props) => props
-  | None => raise(RootAttributeMissing(attribute))
+  | None => throw(RootAttributeMissing(attribute))
   }
   ->Json.parseOrRaise
   ->decodeProps
@@ -30,7 +30,7 @@ let profileType = profile =>
   | "questionAndAnswer" => Markdown.QuestionAndAnswer
   | "permissive" => Markdown.Permissive
   | "areaOfText" => Markdown.AreaOfText
-  | profile => raise(InvalidProfile(profile))
+  | profile => throw(InvalidProfile(profile))
   }
 
 let parseMarkdown = (~attributeName="convert-markdown", ~attribute="data-json-props", ()) =>

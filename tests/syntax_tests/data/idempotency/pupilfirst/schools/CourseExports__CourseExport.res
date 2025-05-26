@@ -49,7 +49,7 @@ let decode = json => {
     | "Teams" => Teams
     | otherExportType =>
       Rollbar.error("Unexpected exportType encountered: " ++ otherExportType)
-      raise(UnexpectedExportType(otherExportType))
+      throw(UnexpectedExportType(otherExportType))
     },
     reviewedOnly: json->field("reviewedOnly", bool),
   }

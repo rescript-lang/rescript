@@ -174,7 +174,7 @@ let x =
     }}
     letException={{
       exception Exit;
-      raise(Exit)
+      throw(Exit)
     }}
     assertExpr={assert(true)}
     pack=module(Foo)
@@ -245,7 +245,7 @@ let x =
     }}
     {{
       exception Exit;
-      raise(Exit)
+      throw(Exit)
     }}
     {assert(true)}
     {module(Foo)}
