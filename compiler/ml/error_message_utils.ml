@@ -91,6 +91,24 @@ type type_clash_context =
   | Statement of type_clash_statement
   | ForLoopCondition
 
+let context_to_string = function
+  | Some WhileCondition -> "WhileCondition"
+  | Some ForLoopCondition -> "ForLoopCondition"
+  | Some AssertCondition -> "AssertCondition"
+  | Some IfCondition -> "IfCondition"
+  | Some (Statement _) -> "Statement"
+  | Some (MathOperator _) -> "MathOperator"
+  | Some ArrayValue -> "ArrayValue"
+  | Some SetRecordField -> "SetRecordField"
+  | Some MaybeUnwrapOption -> "MaybeUnwrapOption"
+  | Some SwitchReturn -> "SwitchReturn"
+  | Some TryReturn -> "TryReturn"
+  | Some StringConcat -> "StringConcat"
+  | Some FunctionArgument -> "FunctionArgument"
+  | Some ComparisonOperator -> "ComparisonOperator"
+  | Some IfReturn -> "IfReturn"
+  | None -> "None"
+
 let fprintf = Format.fprintf
 
 let error_type_text ppf type_clash_context =

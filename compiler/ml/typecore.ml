@@ -2384,14 +2384,14 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         [Vb.mk spat smatch]
         sbody
     in
-    type_function ~context:None ?in_function ~arity ~async loc
-      sexp.pexp_attributes env ty_expected l
+    type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
+      ty_expected l
       [Exp.case pat body]
   | Pexp_fun
       {arg_label = l; default = None; lhs = spat; rhs = sbody; arity; async} ->
     let l = Asttypes.to_noloc l in
-    type_function ~context:None ?in_function ~arity ~async loc
-      sexp.pexp_attributes env ty_expected l
+    type_function ?in_function ~arity ~async loc sexp.pexp_attributes env
+      ty_expected l
       [Ast_helper.Exp.case spat sbody]
   | Pexp_apply {funct = sfunct; args = sargs; partial; transformed_jsx} ->
     assert (sargs <> []);
@@ -2405,7 +2405,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
     let total_app = not partial in
     let context = type_clash_context_from_function sexp sfunct in
     let args, ty_res, fully_applied =
-      match translate_unified_ops ~context:None env funct sargs with
+      match translate_unified_ops env funct sargs with
       | Some (targs, result_type) -> (targs, result_type, true)
       | None -> type_application ~context total_app env funct sargs
     in
@@ -2503,8 +2503,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         exp_env = env;
       }
   | Pexp_construct (lid, sarg) ->
-    type_construct ~context:None env loc lid sarg ty_expected
-      sexp.pexp_attributes
+    type_construct env loc lid sarg ty_expected sexp.pexp_attributes
   | Pexp_variant (l, sarg) -> (
     (* Keep sharing *)
     let ty_expected0 = instance env ty_expected in
@@ -2519,7 +2518,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
             row_field_repr (List.assoc l row0.row_fields) )
         with
         | Rpresent (Some ty), Rpresent (Some ty0) ->
-          let arg = type_argument ~context env sarg ty ty0 in
+          let arg = type_argument ~context:None env sarg ty ty0 in
           re
             {
               exp_desc = Texp_variant (l, Some arg);
@@ -2749,7 +2748,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         exp_env = env;
       }
   | Pexp_field (srecord, lid) ->
-    let record, label, _ = type_label_access ~context:None env srecord lid in
+    let record, label, _ = type_label_access env srecord lid in
     let _, ty_arg, ty_res = instance_label false label in
     unify_exp ~context:None env record ty_res;
     rue
@@ -2762,9 +2761,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         exp_env = env;
       }
   | Pexp_setfield (srecord, lid, snewval) ->
-    let record, label, opath =
-      type_label_access ~context:None env srecord lid
-    in
+    let record, label, opath = type_label_access env srecord lid in
     let ty_record = if opath = None then newvar () else record.exp_type in
     let label_loc, label, newval, _ =
       type_label_exp ~context:(Some SetRecordField) false env loc ty_record
@@ -2836,7 +2833,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         })
   | Pexp_sequence (sexp1, sexp2) ->
     let exp1 = type_statement ~context:None env sexp1 in
-    let exp2 = type_expect ~context env sexp2 ty_expected in
+    let exp2 = type_expect ~context:None env sexp2 ty_expected in
     re
       {
         exp_desc = Texp_sequence (exp1, exp2);
@@ -2927,7 +2924,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
       if separate then begin_def ();
       (* TODO: What should this be?*)
       let type_clash_context = None in
-      let arg = type_exp ~context env sarg in
+      let arg = type_exp ~context:None env sarg in
       let gen =
         if separate then (
           end_def ();
@@ -3202,8 +3199,8 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
   | Pexp_jsx_element _ ->
     failwith "Pexp_jsx_element is expected to be transformed at this point"
 
-and type_function ~context ?in_function ~arity ~async loc attrs env ty_expected_
-    l caselist =
+and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
+    caselist =
   let state = Warnings.backup () in
   (* Disable Unerasable_optional_argument for uncurried functions *)
   let unerasable_optional_argument =
@@ -3215,7 +3212,7 @@ and type_function ~context ?in_function ~arity ~async loc attrs env ty_expected_
     | None -> ty_expected_
     | Some arity ->
       let fun_t = newty (Tarrow (l, newvar (), newvar (), Cok, Some arity)) in
-      unify_exp_types ~context loc env fun_t ty_expected_;
+      unify_exp_types ~context:None loc env fun_t ty_expected_;
       fun_t
   in
   let loc_fun, ty_fun =
@@ -3270,8 +3267,8 @@ and type_function ~context ?in_function ~arity ~async loc attrs env ty_expected_
       exp_env = env;
     }
 
-and type_label_access ~context env srecord lid =
-  let record = type_exp ~context ~recarg:Allowed env srecord in
+and type_label_access env srecord lid =
+  let record = type_exp ~context:None ~recarg:Allowed env srecord in
   let ty_exp = record.exp_type in
   let opath =
     try
@@ -3356,9 +3353,8 @@ and type_argument ~context ?recarg env sarg ty_expected' ty_expected =
 (** This is ad-hoc translation for unifying specific primitive operations
      See [Unified_ops] module for detailed explanation.
   *)
-and translate_unified_ops ~context (env : Env.t) (funct : Typedtree.expression)
+and translate_unified_ops (env : Env.t) (funct : Typedtree.expression)
     (sargs : sargs) : (targs * Types.type_expr) option =
-  ignore context;
   match funct.exp_desc with
   | Texp_ident (path, _, _) -> (
     let entry = Hashtbl.find_opt Unified_ops.index_by_path (Path.name path) in
@@ -3687,9 +3683,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
     in
     (targs, ret_t, fully_applied)
 
-and type_construct ~context env loc lid sarg ty_expected attrs =
-  (* TODO: Fix this *)
-  ignore context;
+and type_construct env loc lid sarg ty_expected attrs =
   let opath =
     try
       let p0, p, _ = extract_concrete_variant env ty_expected in
