@@ -354,6 +354,9 @@ jobs:
         if: runner.os != 'Windows'
         run: make -C tests/gentype_tests/typescript-react-example clean test
 
+      - name: Run rewatch tests
+        run: make test-rewatch
+
       - name: Run syntax benchmarks
         if: matrix.benchmarks
         run: ./_build/install/default/bin/syntax_benchmarks | tee tests/benchmark-output.json
@@ -515,7 +518,7 @@ jobs:
 
       - name: Run rewatch integration tests
         # Currently failing on Windows and intermittently on macOS
-        run: make test-rewatch-ci
+        run: make test-rewatch-integration
 
   publish:
     needs:
