@@ -67,7 +67,8 @@
   "exports": {
     "./lib/es6/*": "./lib/es6/*",
     "./lib/js/*": "./lib/js/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./binaries": "./cli/common/bins.js"
   },
   "imports": {
     "#cli/*": "./cli/common/*.js",
