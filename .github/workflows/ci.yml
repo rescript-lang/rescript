@@ -98,6 +98,9 @@ jobs:
       - name: Install npm packages
         run: yarn install
 
+      - name: Install testrepo deps
+        run: cd rewatch/testrepo && yarn install
+
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
         uses: awalsh128/cache-apt-pkgs-action@v1.4.3
