@@ -507,7 +507,6 @@ jobs:
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Install ReScript package in rewatch/testrepo
-        if: runner.os == 'Linux'
         run: |
           COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
           yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
