@@ -2575,7 +2575,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         (type_record_elem_list loc true env
            (fun e k ->
              k
-               (type_label_exp ~context:None true env loc ty_record
+               (type_label_exp ~call_context:`Regular true env loc ty_record
                   (process_optional_label e)))
            opath lid_sexp_list)
         (fun x -> x)
@@ -2685,7 +2685,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         (type_record_elem_list loc closed env
            (fun e k ->
              k
-               (type_label_exp ~context:None true env loc ty_record
+               (type_label_exp ~call_context:`Regular true env loc ty_record
                   (process_optional_label e)))
            opath lid_sexp_list)
         (fun x -> x)
@@ -2764,7 +2764,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
     let record, label, opath = type_label_access env srecord lid in
     let ty_record = if opath = None then newvar () else record.exp_type in
     let label_loc, label, newval, _ =
-      type_label_exp ~context:(Some SetRecordField) false env loc ty_record
+      type_label_exp ~call_context:`SetRecordField false env loc ty_record
         (lid, label, snewval, false)
     in
     unify_exp ~context:None env record ty_record;
@@ -3296,7 +3296,8 @@ and type_label_access env srecord lid =
 (* Typing format strings for printing or reading.
    These formats are used by functions in modules Printf, Format, and Scanf.
    (Handling of * modifiers contributed by Thorsten Ohl.) *)
-and type_label_exp ~context create env loc ty_expected (lid, label, sarg, opt) =
+and type_label_exp ~(call_context : [`SetRecordField | `Regular]) create env loc
+    ty_expected (lid, label, sarg, opt) =
   (* Here also ty_expected may be at generic_level *)
   begin_def ();
   let separate = Env.has_local_constraints env in
@@ -3323,7 +3324,15 @@ and type_label_exp ~context create env loc ty_expected (lid, label, sarg, opt) =
     else raise (Error (lid.loc, env, Private_label (lid.txt, ty_expected)));
   let arg =
     let snap = if vars = [] then None else Some (Btype.snapshot ()) in
-    let arg = type_argument ~context env sarg ty_arg (instance env ty_arg) in
+    let field_name = Longident.last lid.txt in
+    let field_context =
+      match call_context with
+      | `SetRecordField -> Some (Error_message_utils.SetRecordField field_name)
+      | `Regular -> Some (Error_message_utils.RecordField field_name)
+    in
+    let arg =
+      type_argument ~context:field_context env sarg ty_arg (instance env ty_arg)
+    in
     end_def ();
     try
       check_univars env (vars <> []) "field value" arg label.lbl_arg vars;
@@ -3333,10 +3342,10 @@ and type_label_exp ~context create env loc ty_expected (lid, label, sarg, opt) =
         (* Try to retype without propagating ty_arg, cf PR#4862 *)
         may Btype.backtrack snap;
         begin_def ();
-        let arg = type_exp ~context env sarg in
+        let arg = type_exp ~context:field_context env sarg in
         end_def ();
         generalize_expansive env arg.exp_type;
-        unify_exp ~context env arg ty_arg;
+        unify_exp ~context:field_context env arg ty_arg;
         check_univars env false "field value" arg label.lbl_arg vars;
         arg
       with

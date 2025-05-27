@@ -71,7 +71,8 @@ let type_expr ppf typ =
 
 type type_clash_statement = FunctionCall
 type type_clash_context =
-  | SetRecordField
+  | SetRecordField of string (* field name *)
+  | RecordField of string (* field name *)
   | ArrayValue
   | MaybeUnwrapOption
   | IfCondition
@@ -99,7 +100,8 @@ let context_to_string = function
   | Some (Statement _) -> "Statement"
   | Some (MathOperator _) -> "MathOperator"
   | Some ArrayValue -> "ArrayValue"
-  | Some SetRecordField -> "SetRecordField"
+  | Some (SetRecordField _) -> "SetRecordField"
+  | Some (RecordField _) -> "RecordField"
   | Some MaybeUnwrapOption -> "MaybeUnwrapOption"
   | Some SwitchReturn -> "SwitchReturn"
   | Some TryReturn -> "TryReturn"
@@ -117,7 +119,7 @@ let error_type_text ppf type_clash_context =
     | Some (Statement FunctionCall) -> "This function call returns:"
     | Some (MathOperator {is_constant = Some _}) -> "This value has type:"
     | Some ArrayValue -> "This array item has type:"
-    | Some SetRecordField ->
+    | Some (SetRecordField _) ->
       "You're assigning something to this field that has type:"
     | _ -> "This has type:"
   in
@@ -142,7 +144,10 @@ let error_expected_type_text ppf type_clash_context =
     fprintf ppf "But this @{<info>if@} statement is expected to return:"
   | Some ArrayValue ->
     fprintf ppf "But this array is expected to have items of type:"
-  | Some SetRecordField -> fprintf ppf "But this record field is of type:"
+  | Some (SetRecordField _) -> fprintf ppf "But this record field is of type:"
+  | Some (RecordField field_name) ->
+    fprintf ppf "But this record field @{<info>%s@} is expected to have type:"
+      field_name
   | Some (Statement FunctionCall) -> fprintf ppf "But it's expected to return:"
   | Some (MathOperator {operator}) ->
     fprintf ppf
