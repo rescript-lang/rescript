@@ -94,6 +94,7 @@
   "workspaces": [
     "packages/*",
     "packages/@rescript/*",
+    "tests/dependencies/**",
     "tests/analysis_tests/**",
     "tests/gentype_tests/**",
     "tests/tests",
