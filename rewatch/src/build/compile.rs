@@ -7,6 +7,7 @@ use super::logs;
 use super::packages;
 use crate::config;
 use crate::helpers;
+use crate::helpers::StrippedVerbatimPath;
 use ahash::{AHashMap, AHashSet};
 use anyhow::anyhow;
 use console::style;
@@ -448,17 +449,12 @@ pub fn compiler_args(
                         "{}:{}:{}",
                         spec.module,
                         if spec.in_source {
-                            Path::new(file_path)
-                                .parent()
-                                .unwrap()
-                                .to_str()
-                                .unwrap()
-                                .to_string()
+                            file_path.parent().unwrap().to_str().unwrap().to_string()
                         } else {
                             Path::new("lib")
                                 .join(Path::join(
                                     Path::new(&spec.get_out_of_source_dir()),
-                                    Path::new(file_path).parent().unwrap(),
+                                    file_path.parent().unwrap(),
                                 ))
                                 .to_str()
                                 .unwrap()
@@ -623,7 +619,13 @@ fn compile_file(
     );
 
     let to_mjs = Command::new(bsc_path)
-        .current_dir(build_path_abs.canonicalize().ok().unwrap())
+        .current_dir(
+            build_path_abs
+                .canonicalize()
+                .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+                .ok()
+                .unwrap(),
+        )
         .args(to_mjs_args)
         .output();
 

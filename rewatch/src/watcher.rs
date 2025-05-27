@@ -4,6 +4,7 @@ use crate::build::clean;
 use crate::cmd;
 use crate::helpers;
 use crate::helpers::emojis::*;
+use crate::helpers::StrippedVerbatimPath;
 use crate::queue::FifoQueue;
 use crate::queue::*;
 use futures_timer::Delay;
@@ -144,7 +145,10 @@ async fn async_watch(
                     ) => {
                         // if we are going to compile incrementally, we need to mark the exact files
                         // dirty
-                        if let Ok(canonicalized_path_buf) = path_buf.canonicalize() {
+                        if let Ok(canonicalized_path_buf) = path_buf
+                            .canonicalize()
+                            .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+                        {
                             for module in build_state.modules.values_mut() {
                                 match module.source_type {
                                     SourceType::SourceFile(ref mut source_file) => {

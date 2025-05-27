@@ -1,4 +1,5 @@
 use crate::build::packages;
+use crate::helpers::StrippedVerbatimPath;
 use ahash::AHashSet;
 use std::fs::File;
 use std::io::Write;
@@ -56,7 +57,13 @@ pub fn compile_mlmap(package: &packages::Package, namespace: &str, bsc_path: &Pa
     let args = vec!["-w", "-49", "-color", "always", "-no-alias-deps", &mlmap_name];
 
     let _ = Command::new(bsc_path)
-        .current_dir(build_path_abs.canonicalize().ok().unwrap())
+        .current_dir(
+            build_path_abs
+                .canonicalize()
+                .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+                .ok()
+                .unwrap(),
+        )
         .args(args)
         .output()
         .expect("err");

@@ -4,6 +4,7 @@ use super::packages;
 use crate::config;
 use crate::helpers;
 use crate::helpers::emojis::*;
+use crate::helpers::StrippedVerbatimPath;
 use ahash::{AHashMap, AHashSet};
 use anyhow::{anyhow, Result};
 use console::style;
@@ -265,7 +266,7 @@ pub fn read_dependency(
         )),
     }?;
 
-    let canonical_path = match path.canonicalize() {
+    let canonical_path = match path.canonicalize().map(StrippedVerbatimPath::to_stripped_verbatim_path) {
         Ok(canonical_path) => Ok(canonical_path),
         Err(e) => {
             Err(format!(
@@ -429,7 +430,10 @@ fn make_package(config: config::Config, package_path: &Path, is_pinned_dep: bool
         namespace: config.get_namespace(),
         modules: None,
         // we canonicalize the path name so it's always the same
-        path: package_path.canonicalize().expect("Could not canonicalize"),
+        path: package_path
+            .canonicalize()
+            .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+            .expect("Could not canonicalize"),
         dirs: None,
         is_pinned_dep,
         is_local_dep: !package_path.components().any(|c| c.as_os_str() == "node_modules"),

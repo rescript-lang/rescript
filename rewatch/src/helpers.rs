@@ -36,6 +36,53 @@ pub mod emojis {
     pub static LINE_CLEAR: &str = "\x1b[2K\r";
 }
 
+/// This trait is used to strip the verbatim prefix from a Windows path.
+/// On non-Windows systems, it simply returns the original path.
+/// This is needed until the rescript compiler can handle such paths.
+pub trait StrippedVerbatimPath {
+    fn to_stripped_verbatim_path(self) -> PathBuf;
+}
+
+impl StrippedVerbatimPath for PathBuf {
+    fn to_stripped_verbatim_path(self) -> PathBuf {
+        if cfg!(not(target_os = "windows")) {
+            return self;
+        }
+
+        let mut stripped = PathBuf::new();
+        for component in self.components() {
+            match component {
+                Component::Prefix(prefix_component) => {
+                    if prefix_component.kind().is_verbatim() {
+                        stripped.push(
+                            prefix_component
+                                .as_os_str()
+                                .to_string_lossy()
+                                .strip_prefix("\\\\?\\")
+                                .unwrap(),
+                        );
+                    } else {
+                        stripped.push(prefix_component.as_os_str());
+                    }
+                }
+                Component::RootDir => {
+                    stripped.push(Component::RootDir);
+                }
+                Component::CurDir => {
+                    stripped.push(Component::CurDir);
+                }
+                Component::ParentDir => {
+                    stripped.push(Component::ParentDir);
+                }
+                Component::Normal(os_str) => {
+                    stripped.push(os_str);
+                }
+            }
+        }
+        stripped
+    }
+}
+
 pub trait LexicalAbsolute {
     fn to_lexical_absolute(&self) -> std::io::Result<PathBuf>;
 }
@@ -152,7 +199,8 @@ pub fn get_bsc(root_path: &Path, workspace_root: &Option<PathBuf>) -> PathBuf {
             .join(subfolder)
             .join("bin")
             .join("bsc.exe")
-            .canonicalize(),
+            .canonicalize()
+            .map(StrippedVerbatimPath::to_stripped_verbatim_path),
         workspace_root.as_ref().map(|workspace_root| {
             workspace_root
                 .join("node_modules")
@@ -161,6 +209,7 @@ pub fn get_bsc(root_path: &Path, workspace_root: &Option<PathBuf>) -> PathBuf {
                 .join("bin")
                 .join("bsc.exe")
                 .canonicalize()
+                .map(StrippedVerbatimPath::to_stripped_verbatim_path)
         }),
     ) {
         (Ok(path), _) => path,
@@ -212,7 +261,10 @@ pub fn get_compiler_asset(
 }
 
 pub fn canonicalize_string_path(path: &str) -> Option<PathBuf> {
-    return Path::new(path).canonicalize().ok();
+    return Path::new(path)
+        .canonicalize()
+        .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+        .ok();
 }
 
 pub fn get_bs_compiler_asset(
