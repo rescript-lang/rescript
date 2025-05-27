@@ -475,7 +475,10 @@ pub fn compiler_args(
     vec![
         namespace_args,
         read_cmi_args,
-        vec!["-I".to_string(), "../ocaml".to_string()],
+        vec![
+            "-I".to_string(),
+            Path::new("..").join("ocaml").to_string_lossy().to_string(),
+        ],
         dependency_paths.concat(),
         uncurried_args,
         bsc_flags.to_owned(),
