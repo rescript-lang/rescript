@@ -61,9 +61,11 @@ let to_method_callback loc (self : Bs_ast_mapper.mapper) label
             Exp.constraint_ ~loc
               (Exp.record ~loc
                  [
-                   ( {loc; txt = Ast_literal.Lid.hidden_field arity_s},
-                     body,
-                     false );
+                   {
+                     lid = {loc; txt = Ast_literal.Lid.hidden_field arity_s};
+                     x = body;
+                     opt = false;
+                   };
                  ]
                  None)
               (Typ.constr ~loc

@@ -1986,7 +1986,7 @@ module Conv = struct
             (fun (_, lbl, p, optional) ->
               let id = fresh lbl.lbl_name in
               Hashtbl.add labels id lbl;
-              (mknoloc (Longident.Lident id), loop p, optional))
+              {lid = mknoloc (Longident.Lident id); x = loop p; opt = optional})
             subpatterns
         in
         mkpat (Ppat_record (fields, Open))

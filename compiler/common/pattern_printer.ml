@@ -33,7 +33,7 @@ let untype typed =
       let fields =
         List.map
           (fun (_, lbl, p, opt) ->
-            (mknoloc (Longident.Lident lbl.lbl_name), loop p, opt))
+            {lid = mknoloc (Longident.Lident lbl.lbl_name); x = loop p; opt})
           subpatterns
       in
       mkpat (Ppat_record (fields, closed_flag))

@@ -24,6 +24,7 @@
 - `rescript-tools doc` no longer includes shadowed bindings in its output. https://github.com/rescript-lang/rescript/pull/7497
 - Treat `throw` like `raise` in analysis. https://github.com/rescript-lang/rescript/pull/7521
 - Fix `index out of bounds` exception thrown in rare cases by `rescript-editor-analysis.exe codeAction` command. https://github.com/rescript-lang/rescript/pull/7523
+- Don't produce duplicate type definitions for recursive types on hover. https://github.com/rescript-lang/rescript/pull/7524
 
 #### :nail_care: Polish
 
@@ -35,6 +36,7 @@
 - Remove deprecated pipe last (`|>`) syntax. https://github.com/rescript-lang/rescript/pull/7512
 - Improve error message for pipe (`->`) syntax. https://github.com/rescript-lang/rescript/pull/7520
 - Improve a few error messages around various subtyping issues. https://github.com/rescript-lang/rescript/pull/7404
+- Refactor the ast for record expressions and patterns. https://github.com/rescript-lang/rescript/pull/7528
 - Editor: add completions from included modules. https://github.com/rescript-lang/rescript/pull/7515
 
 # 12.0.0-alpha.13

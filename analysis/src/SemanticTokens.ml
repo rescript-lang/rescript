@@ -223,9 +223,8 @@ let command ~debug ~emitter ~path =
       (* Don't emit true or false *)
       Ast_iterator.default_iterator.pat iterator p
     | Ppat_record (cases, _) ->
-      cases
-      |> List.iter (fun (label, _, _) ->
-             emitter |> emitRecordLabel ~label ~debug);
+      Ext_list.iter cases (fun {lid = label} ->
+          emitter |> emitRecordLabel ~label ~debug);
       Ast_iterator.default_iterator.pat iterator p
     | Ppat_construct (name, _) ->
       emitter |> emitVariant ~name ~debug;
@@ -320,12 +319,11 @@ let command ~debug ~emitter ~path =
       emitter |> emitFromLoc ~loc ~type_:Operator;
       Ast_iterator.default_iterator.expr iterator e
     | Pexp_record (cases, _) ->
-      cases
-      |> List.filter_map (fun ((label : Longident.t Location.loc), _, _) ->
-             match label.txt with
-             | Longident.Lident s when not (Utils.isFirstCharUppercase s) ->
-               Some label
-             | _ -> None)
+      Ext_list.filter_map cases (fun {lid} ->
+          match lid.txt with
+          | Longident.Lident s when not (Utils.isFirstCharUppercase s) ->
+            Some lid
+          | _ -> None)
       |> List.iter (fun label -> emitter |> emitRecordLabel ~label ~debug);
       Ast_iterator.default_iterator.expr iterator e
     | Pexp_field (_, label) | Pexp_setfield (_, label, _) ->

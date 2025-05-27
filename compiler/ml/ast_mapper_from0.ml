@@ -492,7 +492,11 @@ module E = struct
              let optional, attrs =
                Parsetree0.get_optional_attr e1.pexp_attributes
              in
-             (lid1, {e1 with pexp_attributes = attrs}, optional)))
+             {
+               Pt.lid = lid1;
+               x = {e1 with pexp_attributes = attrs};
+               opt = optional;
+             }))
         (map_opt (sub.expr sub) eo)
     | Pexp_field (e, lid) ->
       field ~loc ~attrs (sub.expr sub e) (map_loc sub lid)
@@ -565,7 +569,11 @@ module P = struct
              let optional, attrs =
                Parsetree0.get_optional_attr p1.ppat_attributes
              in
-             (lid1, {p1 with ppat_attributes = attrs}, optional)))
+             {
+               Pt.lid = lid1;
+               x = {p1 with ppat_attributes = attrs};
+               opt = optional;
+             }))
         cf
     | Ppat_array pl -> array ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_or (p1, p2) -> or_ ~loc ~attrs (sub.pat sub p1) (sub.pat sub p2)

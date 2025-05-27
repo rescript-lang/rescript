@@ -677,12 +677,15 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
         in
         if is_labelled arg_label || is_optional arg_label then
           returned_expression
-            (( {loc = ppat_loc; txt = Lident (get_label arg_label)},
-               {
-                 pattern_with_safe_label with
-                 ppat_attributes = pattern.ppat_attributes;
-               },
-               is_optional arg_label )
+            ({
+               lid = {loc = ppat_loc; txt = Lident (get_label arg_label)};
+               x =
+                 {
+                   pattern_with_safe_label with
+                   ppat_attributes = pattern.ppat_attributes;
+                 };
+               opt = is_optional arg_label;
+             }
             :: patterns_with_label)
             patterns_with_nolabel expr
         else
@@ -1151,13 +1154,17 @@ let mk_record_from_props mapper (jsx_expr_loc : Location.t) (props : jsx_props)
     props
     |> List.map (function
          | JSXPropPunning (is_optional, name) ->
-           ( {txt = Lident name.txt; loc = name.loc},
-             Exp.ident {txt = Lident name.txt; loc = name.loc},
-             is_optional )
+           {
+             lid = {txt = Lident name.txt; loc = name.loc};
+             x = Exp.ident {txt = Lident name.txt; loc = name.loc};
+             opt = is_optional;
+           }
          | JSXPropValue (name, is_optional, value) ->
-           ( {txt = Lident name.txt; loc = name.loc},
-             mapper.expr mapper value,
-             is_optional )
+           {
+             lid = {txt = Lident name.txt; loc = name.loc};
+             x = mapper.expr mapper value;
+             opt = is_optional;
+           }
          | JSXPropSpreading (loc, _) ->
            (* There can only be one spread expression and it is expected to be the first prop *)
            Jsx_common.raise_error ~loc

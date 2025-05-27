@@ -107,7 +107,7 @@ module Pat : sig
   val record :
     ?loc:loc ->
     ?attrs:attrs ->
-    (lid * pattern * bool) list ->
+    pattern record_element list ->
     closed_flag ->
     pattern
   val array : ?loc:loc -> ?attrs:attrs -> pattern list -> pattern
@@ -162,7 +162,7 @@ module Exp : sig
   val record :
     ?loc:loc ->
     ?attrs:attrs ->
-    (lid * expression * bool) list ->
+    expression record_element list ->
     expression option ->
     expression
   val field : ?loc:loc -> ?attrs:attrs -> expression -> lid -> expression

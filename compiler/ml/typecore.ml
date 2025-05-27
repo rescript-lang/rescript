@@ -153,7 +153,7 @@ let iter_expression f e =
     | Pexp_construct (_, eo) | Pexp_variant (_, eo) -> may expr eo
     | Pexp_record (iel, eo) ->
       may expr eo;
-      List.iter (fun (_, e, _) -> expr e) iel
+      List.iter (fun {x = e} -> expr e) iel
     | Pexp_open (_, _, e)
     | Pexp_newtype (_, e)
     | Pexp_assert e
@@ -973,8 +973,8 @@ let disambiguate_label_by_ids closed ids labels =
     if labels'' = [] then (false, labels') else (true, labels'')
 
 (* Only issue warnings once per record constructor/pattern *)
-let disambiguate_lid_a_list loc closed env opath lid_a_list =
-  let ids = List.map (fun (lid, _, _) -> Longident.last lid.txt) lid_a_list in
+let disambiguate_record_elem_list loc closed env opath record_elem_list =
+  let ids = List.map (fun {lid} -> Longident.last lid.txt) record_elem_list in
   let w_amb = ref [] in
   let warn loc msg =
     let open Warnings in
@@ -1005,7 +1005,9 @@ let disambiguate_lid_a_list loc closed env opath lid_a_list =
     (* will fail later *)
   in
   let lbl_a_list =
-    List.map (fun (lid, a, opt) -> (lid, process_label lid, a, opt)) lid_a_list
+    List.map
+      (fun {lid; x; opt} -> (lid, process_label lid, x, opt))
+      record_elem_list
   in
   (match List.rev !w_amb with
   | (_, types) :: _ as amb ->
@@ -1026,7 +1028,7 @@ let disambiguate_lid_a_list loc closed env opath lid_a_list =
 
 let rec find_record_qual = function
   | [] -> None
-  | ({txt = Longident.Ldot (modname, _)}, _, _) :: _ -> Some modname
+  | {lid = {txt = Longident.Ldot (modname, _)}} :: _ -> Some modname
   | _ :: rest -> find_record_qual rest
 
 let map_fold_cont f xs k =
@@ -1036,33 +1038,34 @@ let map_fold_cont f xs k =
     (fun ys -> k (List.rev ys))
     []
 
-let type_label_a_list ?labels loc closed env type_lbl_a opath lid_a_list k =
+let type_record_elem_list ?labels loc closed env type_lbl_a opath
+    record_elem_list k =
   let lbl_a_list =
-    match (lid_a_list, labels) with
-    | ({txt = Longident.Lident s}, _, _) :: _, Some labels
+    match (record_elem_list, labels) with
+    | {lid = {txt = Longident.Lident s}} :: _, Some labels
       when Hashtbl.mem labels s ->
       (* Special case for rebuilt syntax trees *)
       List.map
         (function
-          | lid, a, opt -> (
+          | {lid; x = a; opt} -> (
             match lid.txt with
             | Longident.Lident s -> (lid, Hashtbl.find labels s, a, opt)
             | _ -> assert false))
-        lid_a_list
+        record_elem_list
     | _ ->
-      let lid_a_list =
-        match find_record_qual lid_a_list with
-        | None -> lid_a_list
+      let record_elem_list =
+        match find_record_qual record_elem_list with
+        | None -> record_elem_list
         | Some modname ->
           List.map
-            (fun ((lid, a, opt) as lid_a) ->
+            (fun ({lid; x = a; opt} as el) ->
               match lid.txt with
               | Longident.Lident s ->
-                ({lid with txt = Longident.Ldot (modname, s)}, a, opt)
-              | _ -> lid_a)
-            lid_a_list
+                {lid = {lid with txt = Longident.Ldot (modname, s)}; x = a; opt}
+              | _ -> el)
+            record_elem_list
       in
-      disambiguate_lid_a_list loc closed env opath lid_a_list
+      disambiguate_record_elem_list loc closed env opath record_elem_list
   in
   (* Invariant: records are sorted in the typed tree *)
   let lbl_a_list =
@@ -1530,12 +1533,12 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     if constrs = None then
       k
         (wrap_disambiguate "This record pattern is expected to have" expected_ty
-           (type_label_a_list ?labels loc false !env type_label_pat opath
+           (type_record_elem_list ?labels loc false !env type_label_pat opath
               lid_sp_list)
            (k' (fun x -> x)))
     else
-      type_label_a_list ?labels loc false !env type_label_pat opath lid_sp_list
-        (k' k)
+      type_record_elem_list ?labels loc false !env type_label_pat opath
+        lid_sp_list (k' k)
   | Ppat_array spl ->
     let ty_elt = newvar () in
     unify_pat_types loc !env
@@ -2042,7 +2045,7 @@ let iter_ppat f p =
   | Ppat_open (_, p)
   | Ppat_constraint (p, _) ->
     f p
-  | Ppat_record (args, _flag) -> List.iter (fun (_, p, _) -> f p) args
+  | Ppat_record (args, _flag) -> List.iter (fun {x = p} -> f p) args
 
 let contains_polymorphic_variant p =
   let rec loop p =
@@ -2557,7 +2560,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     in
     let lbl_exp_list =
       wrap_disambiguate "This record expression is expected to have" ty_record
-        (type_label_a_list loc true env
+        (type_record_elem_list loc true env
            (fun e k ->
              k
                (type_label_exp true env loc ty_record (process_optional_label e)))
@@ -2666,7 +2669,7 @@ and type_expect_ ?type_clash_context ?in_function ?(recarg = Rejected) env sexp
     let closed = false in
     let lbl_exp_list =
       wrap_disambiguate "This record expression is expected to have" ty_record
-        (type_label_a_list loc closed env
+        (type_record_elem_list loc closed env
            (fun e k ->
              k
                (type_label_exp true env loc ty_record (process_optional_label e)))

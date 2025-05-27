@@ -28,10 +28,11 @@
     - convert a uncuried application to normal 
 *)
 
-type label_exprs = (Longident.t Asttypes.loc * Parsetree.expression * bool) list
-
 val record_as_js_object :
-  Location.t -> Bs_ast_mapper.mapper -> label_exprs -> Parsetree.expression_desc
+  Location.t ->
+  Bs_ast_mapper.mapper ->
+  Parsetree.expression Parsetree.record_element list ->
+  Parsetree.expression_desc
 
 val js_property :
   Location.t -> Parsetree.expression -> string -> Parsetree.expression_desc

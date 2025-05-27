@@ -19,7 +19,7 @@ type config_key = Int | String
 let get_jsx_config_by_key ~key ~type_ record_fields =
   let values =
     List.filter_map
-      (fun ((lid, expr, _) : Longident.t Location.loc * expression * bool) ->
+      (fun ({lid; x = expr} : expression record_element) ->
         match (type_, lid, expr) with
         | ( Int,
             {txt = Lident k},

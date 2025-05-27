@@ -212,7 +212,7 @@ type fundef_parameter =
 
 type record_pattern_item =
   | PatUnderscore
-  | PatField of (Ast_helper.lid * Parsetree.pattern * bool (* optional *))
+  | PatField of Parsetree.pattern Parsetree.record_element
 
 type context = OrdinaryExpr | TernaryTrueBranchExpr | WhenExpr
 
@@ -1246,7 +1246,7 @@ and parse_record_pattern_row_field ~attrs p =
           (Location.mkloc (Longident.last label.txt) label.loc),
         false )
   in
-  (label, pattern, optional)
+  {Parsetree.lid = label; x = pattern; opt = optional}
 
 (* TODO: there are better representations than PatField|Underscore ? *)
 and parse_record_pattern_row p =
@@ -1261,8 +1261,8 @@ and parse_record_pattern_row p =
     Parser.next p;
     match p.token with
     | Uident _ | Lident _ ->
-      let lid, pat, _ = parse_record_pattern_row_field ~attrs p in
-      Some (false, PatField (lid, pat, true))
+      let {Parsetree.lid; x = pat} = parse_record_pattern_row_field ~attrs p in
+      Some (false, PatField {lid; x = pat; opt = true})
     | _ -> None)
   | Underscore ->
     Parser.next p;
@@ -1289,7 +1289,7 @@ and parse_record_pattern ~attrs p =
         match field with
         | PatField field ->
           (if has_spread then
-             let _, pattern, _ = field in
+             let pattern = field.x in
              Parser.err ~start_pos:pattern.Parsetree.ppat_loc.loc_start p
                (Diagnostics.message ErrorMessages.record_pattern_spread));
           (field :: fields, flag)
@@ -1389,7 +1389,7 @@ and parse_dict_pattern_row p =
     Parser.expect Colon p;
     let optional = parse_optional_label p in
     let pat = parse_pattern p in
-    Some (fieldName, pat, optional)
+    Some {Parsetree.lid = fieldName; x = pat; opt = optional}
   | _ -> None
 
 and parse_dict_pattern ~start_pos ~attrs (p : Parser.t) =
@@ -2885,7 +2885,8 @@ and parse_braced_or_record_expr p =
       let field_expr = parse_expr p in
       Parser.optional p Comma |> ignore;
       let expr =
-        parse_record_expr_with_string_keys ~start_pos (field, field_expr, false)
+        parse_record_expr_with_string_keys ~start_pos
+          {Parsetree.lid = field; x = field_expr; opt = false}
           p
       in
       Parser.expect Rbrace p;
@@ -2956,7 +2957,9 @@ and parse_braced_or_record_expr p =
         in
         let expr =
           parse_record_expr ~start_pos
-            [(path_ident, value_or_constructor, false)]
+            [
+              {Parsetree.lid = path_ident; x = value_or_constructor; opt = false};
+            ]
             p
         in
         Parser.expect Rbrace p;
@@ -2969,11 +2972,15 @@ and parse_braced_or_record_expr p =
         | Rbrace ->
           Parser.next p;
           let loc = mk_loc start_pos p.prev_end_pos in
-          Ast_helper.Exp.record ~loc [(path_ident, field_expr, optional)] None
+          Ast_helper.Exp.record ~loc
+            [{lid = path_ident; x = field_expr; opt = optional}]
+            None
         | _ ->
           Parser.expect Comma p;
           let expr =
-            parse_record_expr ~start_pos [(path_ident, field_expr, optional)] p
+            parse_record_expr ~start_pos
+              [{lid = path_ident; x = field_expr; opt = optional}]
+              p
           in
           Parser.expect Rbrace p;
           expr)
@@ -2983,7 +2990,7 @@ and parse_braced_or_record_expr p =
           Parser.expect Comma p;
           let expr =
             parse_record_expr ~start_pos
-              [(path_ident, value_or_constructor, false)]
+              [{lid = path_ident; x = value_or_constructor; opt = false}]
               p
           in
           Parser.expect Rbrace p;
@@ -2992,7 +2999,7 @@ and parse_braced_or_record_expr p =
           Parser.expect Colon p;
           let expr =
             parse_record_expr ~start_pos
-              [(path_ident, value_or_constructor, false)]
+              [{lid = path_ident; x = value_or_constructor; opt = false}]
               p
           in
           Parser.expect Rbrace p;
@@ -3107,7 +3114,8 @@ and parse_braced_or_record_expr p =
     let braces = make_braces_attr loc in
     {expr with pexp_attributes = braces :: expr.pexp_attributes}
 
-and parse_record_expr_row_with_string_key p =
+and parse_record_expr_row_with_string_key p :
+    Parsetree.expression Parsetree.record_element option =
   match p.Parser.token with
   | String s -> (
     let loc = mk_loc p.start_pos p.end_pos in
@@ -3117,11 +3125,18 @@ and parse_record_expr_row_with_string_key p =
     | Colon ->
       Parser.next p;
       let field_expr = parse_expr p in
-      Some (field, field_expr, false)
-    | _ -> Some (field, Ast_helper.Exp.ident ~loc:field.loc field, false))
+      Some {lid = field; x = field_expr; opt = false}
+    | _ ->
+      Some
+        {
+          lid = field;
+          x = Ast_helper.Exp.ident ~loc:field.loc field;
+          opt = false;
+        })
   | _ -> None
 
-and parse_record_expr_row p =
+and parse_record_expr_row p :
+    Parsetree.expression Parsetree.record_element option =
   let attrs = parse_attributes p in
   let () =
     match p.Parser.token with
@@ -3139,7 +3154,7 @@ and parse_record_expr_row p =
       Parser.next p;
       let optional = parse_optional_label p in
       let field_expr = parse_expr p in
-      Some (field, field_expr, optional)
+      Some {lid = field; x = field_expr; opt = optional}
     | _ ->
       let value = Ast_helper.Exp.ident ~loc:field.loc ~attrs field in
       let value =
@@ -3147,7 +3162,7 @@ and parse_record_expr_row p =
         | Uident _ -> remove_module_name_from_punned_field_value value
         | _ -> value
       in
-      Some (field, value, false))
+      Some {lid = field; x = value; opt = false})
   | Question -> (
     Parser.next p;
     match p.Parser.token with
@@ -3160,7 +3175,7 @@ and parse_record_expr_row p =
         | Uident _ -> remove_module_name_from_punned_field_value value
         | _ -> value
       in
-      Some (field, value, true)
+      Some {lid = field; x = value; opt = true}
     | _ -> None)
   | _ -> None
 

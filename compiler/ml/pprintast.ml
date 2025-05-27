@@ -458,7 +458,7 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
     | Ppat_unpack s -> pp f "(module@ %s)@ " s.txt
     | Ppat_type li -> pp f "#%a" longident_loc li
     | Ppat_record (l, closed) -> (
-      let longident_x_pattern f (li, p, opt) =
+      let longident_x_pattern f {lid = li; x = p; opt} =
         let opt_str = if opt then "?" else "" in
         match (li, p) with
         | ( {txt = Lident s; _},
@@ -764,7 +764,7 @@ and simple_expr ctxt f x =
       pp f "(%a :> %a)" (expression ctxt) e (core_type ctxt) ct
     | Pexp_variant (l, None) -> pp f "`%s" l
     | Pexp_record (l, eo) ->
-      let longident_x_expression f (li, e, opt) =
+      let longident_x_expression f {lid = li; x = e; opt} =
         let opt_str = if opt then "?" else "" in
         match e with
         | {pexp_desc = Pexp_ident {txt; _}; pexp_attributes = []; _}
