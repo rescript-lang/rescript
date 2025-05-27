@@ -1,4 +1,8 @@
 {
-  "name": "@tests/rescript-react",
-  "private": true
+  "name": "@rescript/react",
+  "version": "0.14.0-rc.1",
+  "private": true,
+  "dependencies": {
+    "rescript": "workspace:^"
+  }
 }
