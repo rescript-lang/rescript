@@ -1,7 +1,7 @@
 open Webapi.Dom
 
-let el = document |> Document.createElement("strong")
-let event = document |> Document.createEvent("my-event")
+let el = document->Document.createElement("strong")
+let event = document->Document.createEvent("my-event")
 let handleClick = _ => print_endline("asd")
 
 let _ = Window.console(window)

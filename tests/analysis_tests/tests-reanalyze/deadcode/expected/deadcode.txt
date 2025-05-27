@@ -1216,7 +1216,7 @@
   addValueReference OptArg.res:14:4 --> OptArg.res:14:21
   addValueReference OptArg.res:14:4 --> OptArg.res:14:27
   DeadOptionalArgs.addReferences twoArgs called with optional argNames: argNamesMaybe: OptArg.res:16:7
-  addValueReference OptArg.res:16:12 --> OptArg.res:14:4
+  addValueReference OptArg.res:16:10 --> OptArg.res:14:4
   addValueReference OptArg.res:18:4 --> OptArg.res:18:17
   addValueReference OptArg.res:18:4 --> OptArg.res:18:14
   addValueReference OptArg.res:18:4 --> OptArg.res:18:24
@@ -2510,7 +2510,7 @@ File References
   Live Value +OptArg.+fourArgs: 1 references (OptArg.res:26:4) [0]
   Live Value +OptArg.+wrapOneArg: 1 references (OptArg.res:22:7) [0]
   Live Value +OptArg.+oneArg: 1 references (OptArg.res:20:4) [0]
-  Live Value +OptArg.+twoArgs: 1 references (OptArg.res:16:12) [0]
+  Live Value +OptArg.+twoArgs: 1 references (OptArg.res:16:10) [0]
   Live Value +OptArg.+threeArgs: 2 references (OptArg.res:11:7, OptArg.res:12:7) [0]
   Live Value +OptArg.+bar: 2 references (OptArg.res:7:7, OptArg.resi:2:0) [0]
   Live Value +OptArg.+foo: 1 references (OptArg.res:5:7) [0]

@@ -10,16 +10,16 @@ type t = {
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    levelId: json |> field("levelId", string),
-    name: json |> field("name", string),
-    description: json |> field("description", string),
-    sortIndex: json |> field("sortIndex", int),
-    milestone: json |> field("milestone", bool),
+    id: json->field("id", string),
+    levelId: json->field("levelId", string),
+    name: json->field("name", string),
+    description: json->field("description", string),
+    sortIndex: json->field("sortIndex", int),
+    milestone: json->field("milestone", bool),
   }
 }
 
-let sort = targetGroups => targetGroups |> List.sort((x, y) => x.sortIndex - y.sortIndex)
+let sort = targetGroups => targetGroups->List.sort((x, y) => x.sortIndex - y.sortIndex)
 
 let id = t => t.id
 let name = t => t.name

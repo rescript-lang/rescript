@@ -233,12 +233,12 @@ module RecipeIcon = {
           Cn.ifTrue(MetaIconStyles.iconClickable, onClick !== None),
           Cn.unpack(className),
         })}
-        onMouseEnter={_ => Js.Global.setTimeout(() => setShowLayer(_ => true), 10) |> ignore}
+        onMouseEnter={_ => Js.Global.setTimeout(() => setShowLayer(_ => true), 10)->ignore}
         onMouseLeave={_ => Js.Global.setTimeout(() =>
             if React.Ref.current(isMountedRef) {
               setShowLayer(_ => false)
             }
-          , 10) |> ignore}
+          , 10)->ignore}
         onClick=?{Belt.Option.map(onClick, (onClick, e) =>
           if Utils.browserSupportsHover {
             onClick()
@@ -302,21 +302,21 @@ module StatusButtons = {
         if UserStore.isLoggedIn() {
           UserStore.setItemStatus(~itemId, ~variation, ~status)
         } else {
-          Option.map(showLogin, showLogin => showLogin()) |> ignore
+          Option.map(showLogin, showLogin => showLogin())->ignore
         }}
       className=Styles.statusButton
       title={switch status {
       | Wishlist => "Add to Wishlist"
       | ForTrade => "Add to For Trade list"
       | CanCraft => "Add to Can Craft list"
-      | CatalogOnly => raise(Constants.Uhoh)
+      | CatalogOnly => throw(Constants.Uhoh)
       }}>
       {React.string(
         switch status {
         | Wishlist => "+ Wishlist"
         | ForTrade => "+ For Trade"
         | CanCraft => "+ Can Craft"
-        | CatalogOnly => raise(Constants.Uhoh)
+        | CatalogOnly => throw(Constants.Uhoh)
         },
       )}
     </button>
@@ -438,7 +438,7 @@ let make = (~item: Item.t, ~isLoggedIn, ~showLogin) => {
     switch item.type_ {
     | Recipe(itemId) => Item.getItem(~itemId)
     | Item(Some(recipeId)) => Item.getItem(~itemId=recipeId)
-    | Item(None) => raise(Constants.Uhoh)
+    | Item(None) => throw(Constants.Uhoh)
     }
   } else {
     item
@@ -547,7 +547,7 @@ let make = (~item: Item.t, ~isLoggedIn, ~showLogin) => {
                     | Wishlist => `In your Wishlist`
                     | ForTrade => `In your For Trade list`
                     | CanCraft => `In your Can Craft list`
-                    | _ => raise(Constants.Uhoh)
+                    | _ => throw(Constants.Uhoh)
                     },
                   )}
                 </div>

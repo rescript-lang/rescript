@@ -217,7 +217,7 @@ let () = condition
     }
   : {
       exception Exit
-      raise(Exit)
+      throw(Exit)
     }
 let () = condition ? foo() : assert(false)
 

@@ -12,17 +12,17 @@ type t = {
 let decodeQuestion = json => {
   open Json.Decode
   {
-    questionId: json |> field("id", string),
-    questionTitle: json |> field("title", string),
+    questionId: json->field("id", string),
+    questionTitle: json->field("title", string),
   }
 }
 
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    name: json |> field("name", string),
-    questions: json |> field("questions", list(decodeQuestion)),
+    id: json->field("id", string),
+    name: json->field("name", string),
+    questions: json->field("questions", list(decodeQuestion)),
   }
 }
 

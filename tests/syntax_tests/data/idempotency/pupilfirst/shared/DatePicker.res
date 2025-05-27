@@ -9,4 +9,4 @@ module JsComponent = {
 
 @react.component
 let make = (~onChange, ~selected=?, ~id=?) =>
-  <JsComponent ?id onChange={date => onChange(date |> Js.Nullable.toOption)} ?selected />
+  <JsComponent ?id onChange={date => onChange(date->Js.Nullable.toOption)} ?selected />

@@ -28,20 +28,20 @@ let make = (
   ~className,
   ~coaches,
 ) =>
-  if coaches |> ArrayUtils.isNotEmpty {
+  if coaches->ArrayUtils.isNotEmpty {
     let listedCoaches =
-      coaches |> Array.length <= 4 ? coaches : coaches |> Js.Array.slice(~start=0, ~end_=3)
+      coaches->Array.length <= 4 ? coaches : coaches->Js.Array.slice(~start=0, ~end_=3)
 
-    let otherCoaches = if coaches |> Array.length > 4 {
+    let otherCoaches = if coaches->Array.length > 4 {
       let names =
         coaches
-        |> Js.Array.sliceFrom(3)
-        |> Js.Array.map(coach =>
-          <div key={coach |> UserProxy.userId}> {coach |> UserProxy.name |> str} </div>
+        ->Js.Array.sliceFrom(3)
+        ->Js.Array.map(coach =>
+          <div key={coach->UserProxy.userId}> {coach->UserProxy.name->str} </div>
         )
-        |> React.array
+        ->React.array
 
-      let count = (coaches |> Array.length) - 3
+      let count = (coaches->Array.length) - 3
       Some((names, count))
     } else {
       None
@@ -51,25 +51,25 @@ let make = (
       <div className="text-xs"> title </div>
       <div className="inline-flex">
         {listedCoaches
-        |> Array.map(coach =>
+        ->Array.map(coach =>
           <Tooltip
             position=tooltipPosition
-            tip={coach |> UserProxy.name |> str}
+            tip={coach->UserProxy.name->str}
             className="-mr-1"
-            key={coach |> UserProxy.userId}>
+            key={coach->UserProxy.userId}>
             {avatar(
               ~size=(defaultAvatarSize, mdAvatarSize),
-              coach |> UserProxy.avatarUrl,
-              coach |> UserProxy.name,
+              coach->UserProxy.avatarUrl,
+              coach->UserProxy.name,
             )}
           </Tooltip>
         )
-        |> React.array}
-        {otherCoaches |> OptionUtils.mapWithDefault(
+        ->React.array}
+        {otherCoaches->OptionUtils.mapWithDefault(
           ((names, count)) =>
             <Tooltip tip=names className="-mr-1">
               <Avatar
-                name={"+ " ++ (count |> string_of_int)}
+                name={"+ " ++ (count->string_of_int)}
                 className={avatarClasses((defaultAvatarSize, mdAvatarSize))}
                 colors=("#EEE", "#000")
               />

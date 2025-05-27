@@ -2,7 +2,7 @@
 external nodeEnv: option<string> = "NODE_ENV"
 @val @scope(("process", "env"))
 external gitCommitRef: option<string> = "COMMIT_REF"
-let gitCommitRef = Belt.Option.getWithDefault(gitCommitRef, "") |> Js.String.slice(~from=0, ~to_=8)
+let gitCommitRef = Belt.Option.getWithDefault(gitCommitRef, "")->Js.String.slice(~from=0, ~to_=8)
 
 let apiUrl =
   nodeEnv === Some("paul-development") ? "http://localhost:3000" : "https://a.nook.exchange"
@@ -22,7 +22,7 @@ let discordOauthRedirectUri = state =>
   (encodeURIComponent(
     {
       open Webapi.Dom
-      location |> Location.origin
+      location->Location.origin
     } ++ "/discord_oauth2",
   ) ++
   ("&response_type=code&scope=guilds.join%20identify&prompt=none&state=" ++ state))

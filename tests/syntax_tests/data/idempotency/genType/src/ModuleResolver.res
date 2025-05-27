@@ -11,7 +11,7 @@ let readBsDependenciesDirs = (~root) => {
     let absDir = dir == "" ? root : \"+++"(root, dir)
     if Sys.file_exists(absDir) && Sys.is_directory(absDir) {
       dirs := list{dir, ...dirs.contents}
-      absDir |> Sys.readdir |> Array.iter(d => findSubDirs(\"+++"(dir, d)))
+      absDir->Sys.readdir->Array.iter(d => findSubDirs(\"+++"(dir, d)))
     }
   }
   findSubDirs("")
@@ -33,23 +33,23 @@ let readDirsFromConfig = (~configSources) => {
     if Sys.file_exists(absDir) && Sys.is_directory(absDir) {
       dirs := list{dir, ...dirs.contents}
       if subdirs {
-        absDir |> Sys.readdir |> Array.iter(d => processDir(~subdirs, \"+++"(dir, d)))
+        absDir->Sys.readdir->Array.iter(d => processDir(~subdirs, \"+++"(dir, d)))
       }
     }
   }
 
   let rec processSourceItem = (sourceItem: Ext_json_types.t) =>
     switch sourceItem {
-    | Str({str}) => str |> processDir(~subdirs=false)
+    | Str({str}) => str->processDir(~subdirs=false)
     | Obj({map}) =>
-      switch map |> String_map.find_opt("dir") {
+      switch map->String_map.find_opt("dir") {
       | Some(Str({str})) =>
-        let subdirs = switch map |> String_map.find_opt("subdirs") {
+        let subdirs = switch map->String_map.find_opt("subdirs") {
         | Some(True(_)) => true
         | Some(False(_)) => false
         | _ => false
         }
-        str |> processDir(~subdirs)
+        str->processDir(~subdirs)
       | _ => ()
       }
     | Arr({content}) => Array.iter(processSourceItem, content)
@@ -65,16 +65,16 @@ let readDirsFromConfig = (~configSources) => {
 
 let readSourceDirs = (~configSources) => {
   let sourceDirs =
-    list{"lib", "bs", ".sourcedirs.json"} |> List.fold_left(\"+++", bsbProjectRoot.contents)
+    list{"lib", "bs", ".sourcedirs.json"}->List.fold_left(\"+++", bsbProjectRoot.contents)
   let dirs = ref(list{})
   let pkgs = Hashtbl.create(1)
 
   let readDirs = json =>
     switch json {
     | Ext_json_types.Obj({map}) =>
-      switch map |> String_map.find_opt("dirs") {
+      switch map->String_map.find_opt("dirs") {
       | Some(Arr({content})) =>
-        content |> Array.iter(x =>
+        content->Array.iter(x =>
           switch x {
           | Ext_json_types.Str({str}) => dirs := list{str, ...dirs.contents}
           | _ => ()
@@ -89,9 +89,9 @@ let readSourceDirs = (~configSources) => {
   let readPkgs = json =>
     switch json {
     | Ext_json_types.Obj({map}) =>
-      switch map |> String_map.find_opt("pkgs") {
+      switch map->String_map.find_opt("pkgs") {
       | Some(Arr({content})) =>
-        content |> Array.iter(x =>
+        content->Array.iter(x =>
           switch x {
           | Ext_json_types.Arr({content: [Str({str: name}), Str({str: path})]}) =>
             Hashtbl.add(pkgs, name, path)
@@ -104,9 +104,9 @@ let readSourceDirs = (~configSources) => {
     | _ => ()
     }
 
-  if sourceDirs |> Sys.file_exists {
+  if sourceDirs->Sys.file_exists {
     try {
-      let json = sourceDirs |> Ext_json_parse.parse_json_from_file
+      let json = sourceDirs->Ext_json_parse.parse_json_from_file
       if bsbProjectRoot.contents != projectRoot.contents {
         dirs := readDirsFromConfig(~configSources)
       } else {
@@ -129,8 +129,8 @@ let readSourceDirs = (~configSources) => {
    back to the directory where they belong. */
 let sourcedirsJsonToMap = (~config, ~extensions, ~excludeFile) => {
   let rec chopExtensions = fname =>
-    switch fname |> Filename.chop_extension {
-    | fnameChopped => fnameChopped |> chopExtensions
+    switch fname->Filename.chop_extension {
+    | fnameChopped => fnameChopped->chopExtensions
     | exception _ => fname
     }
 
@@ -138,22 +138,22 @@ let sourcedirsJsonToMap = (~config, ~extensions, ~excludeFile) => {
   let bsDependenciesFileMap = ref(ModuleNameMap.empty)
 
   let filterGivenExtension = fileName =>
-    extensions |> List.exists(ext => Filename.check_suffix(fileName, ext)) && !excludeFile(fileName)
+    extensions->List.exists(ext => Filename.check_suffix(fileName, ext)) && !excludeFile(fileName)
 
   let addDir = (~dirOnDisk, ~dirEmitted, ~filter, ~map) =>
     dirOnDisk
-    |> Sys.readdir
-    |> Array.iter(fname =>
-      if fname |> filter {
+    ->Sys.readdir
+    ->Array.iter(fname =>
+      if fname->filter {
         map :=
-          map.contents |> ModuleNameMap.add(
-            fname |> chopExtensions |> ModuleName.fromStringUnsafe,
+          map.contents->ModuleNameMap.add(
+            fname->chopExtensions->ModuleName.fromStringUnsafe,
             dirEmitted,
           )
       }
     )
   let {dirs, pkgs} = readSourceDirs(~configSources=config.sources)
-  dirs |> List.iter(dir =>
+  dirs->List.iter(dir =>
     addDir(
       ~dirEmitted=dir,
       ~dirOnDisk=\"+++"(projectRoot.contents, dir),
@@ -162,13 +162,13 @@ let sourcedirsJsonToMap = (~config, ~extensions, ~excludeFile) => {
     )
   )
 
-  config.bsDependencies |> List.iter(packageName =>
+  config.bsDependencies->List.iter(packageName =>
     switch Hashtbl.find(pkgs, packageName) {
     | path =>
-      let root = list{"lib", "bs"} |> List.fold_left(\"+++", path)
+      let root = list{"lib", "bs"}->List.fold_left(\"+++", path)
       let filter = fileName =>
-        list{".cmt", ".cmti"} |> List.exists(ext => Filename.check_suffix(fileName, ext))
-      readBsDependenciesDirs(~root) |> List.iter(dir => {
+        list{".cmt", ".cmti"}->List.exists(ext => Filename.check_suffix(fileName, ext))
+      readBsDependenciesDirs(~root)->List.iter(dir => {
         let dirOnDisk = \"+++"(root, dir)
         let dirEmitted = \"+++"(packageName, dir)
         addDir(~dirEmitted, ~dirOnDisk, ~filter, ~map=bsDependenciesFileMap)
@@ -196,25 +196,25 @@ let createLazyResolver = (~config, ~extensions, ~excludeFile) => {
       ~excludeFile,
     )
     let find = (~bsDependencies, ~map, moduleName) =>
-      switch map |> ModuleNameMap.find(moduleName) {
+      switch map->ModuleNameMap.find(moduleName) {
       | resolvedModuleDir => Some((resolvedModuleDir, Uppercase, bsDependencies))
       | exception Not_found =>
-        switch map |> ModuleNameMap.find(moduleName |> ModuleName.uncapitalize) {
+        switch map->ModuleNameMap.find(moduleName->ModuleName.uncapitalize) {
         | resolvedModuleDir => Some((resolvedModuleDir, Lowercase, bsDependencies))
         | exception Not_found => None
         }
       }
     (~useBsDependencies, moduleName) =>
-      switch moduleName |> find(~bsDependencies=false, ~map=moduleNameMap) {
+      switch moduleName->find(~bsDependencies=false, ~map=moduleNameMap) {
       | None if useBsDependencies =>
-        moduleName |> find(~bsDependencies=true, ~map=bsDependenciesFileMap)
+        moduleName->find(~bsDependencies=true, ~map=bsDependenciesFileMap)
       | res => res
       }
   }),
 }
 
 let apply = (~resolver, ~useBsDependencies, moduleName) =>
-  moduleName |> Lazy.force(resolver.lazyFind, ~useBsDependencies)
+  moduleName->Lazy.force(resolver.lazyFind, ~useBsDependencies)
 
 /* Resolve a reference to ModuleName, and produce a path suitable for require.
  E.g. require "../foo/bar/ModuleName.ext" where ext is ".re" or ".js". */
@@ -232,17 +232,17 @@ let resolveModule = (
    So if e.g. project_root/src/ModuleName.re exists. */
   \"+++"(outputFileAbsoluteDir, ModuleName.toString(moduleName) ++ ".re")
   let candidate = /* e.g. import "./Modulename.ext" */
-  moduleName |> ImportPath.fromModule(~dir=Filename.current_dir_name, ~importExtension)
+  moduleName->ImportPath.fromModule(~dir=Filename.current_dir_name, ~importExtension)
   if Sys.file_exists(moduleNameReFile) {
     candidate
   } else {
     let rec pathToList = path => {
-      let isRoot = path |> Filename.basename == path
+      let isRoot = path->Filename.basename == path
       isRoot
         ? list{path}
-        : list{path |> Filename.basename, ...path |> Filename.dirname |> pathToList}
+        : list{path->Filename.basename, ...path->Filename.dirname->pathToList}
     }
-    switch moduleName |> apply(~resolver, ~useBsDependencies) {
+    switch moduleName->apply(~resolver, ~useBsDependencies) {
     | None => candidate
     | Some((resolvedModuleDir, case, bsDependencies)) =>
       /* e.g. "dst" in case of dst/ModuleName.re */
@@ -250,13 +250,13 @@ let resolveModule = (
       let walkUpOutputDir =
         /* e.g. ".." in case dst is a path of length 1 */
         outputFileRelativeDir
-        |> pathToList
-        |> List.map(_ => Filename.parent_dir_name)
-        |> (
+        ->pathToList
+        ->List.map(_ => Filename.parent_dir_name)
+        ->(
           l =>
             switch l {
             | list{} => ""
-            | list{_, ...rest} => rest |> List.fold_left(\"+++", Filename.parent_dir_name)
+            | list{_, ...rest} => rest->List.fold_left(\"+++", Filename.parent_dir_name)
             }
         )
 
@@ -266,15 +266,15 @@ let resolveModule = (
       /* e.g. import "../dst/ModuleName.ext" */
 
       (
-        case == Uppercase ? moduleName : moduleName |> ModuleName.uncapitalize
-      ) |> ImportPath.fromModule(~dir=fromOutputDirToModuleDir, ~importExtension)
+        case == Uppercase ? moduleName : moduleName->ModuleName.uncapitalize
+      )->ImportPath.fromModule(~dir=fromOutputDirToModuleDir, ~importExtension)
     }
   }
 }
 
 let resolveGeneratedModule = (~config, ~outputFileRelative, ~resolver, moduleName) => {
   if Debug.moduleResolution.contents {
-    Log_.item("Resolve Generated Module: %s\n", moduleName |> ModuleName.toString)
+    Log_.item("Resolve Generated Module: %s\n", moduleName->ModuleName.toString)
   }
   let importPath = resolveModule(
     ~importExtension=EmitType.generatedModuleExtension(~config),
@@ -284,7 +284,7 @@ let resolveGeneratedModule = (~config, ~outputFileRelative, ~resolver, moduleNam
     moduleName,
   )
   if Debug.moduleResolution.contents {
-    Log_.item("Import Path: %s\n", importPath |> ImportPath.dump)
+    Log_.item("Import Path: %s\n", importPath->ImportPath.dump)
   }
   importPath
 }
@@ -294,12 +294,12 @@ let resolveGeneratedModule = (~config, ~outputFileRelative, ~resolver, moduleNam
  ")
 let importPathForReasonModuleName = (~config, ~outputFileRelative, ~resolver, moduleName) => {
   if Debug.moduleResolution.contents {
-    Log_.item("Resolve Reason Module: %s\n", moduleName |> ModuleName.toString)
+    Log_.item("Resolve Reason Module: %s\n", moduleName->ModuleName.toString)
   }
-  switch config.shimsMap |> ModuleNameMap.find(moduleName) {
+  switch config.shimsMap->ModuleNameMap.find(moduleName) {
   | shimModuleName =>
     if Debug.moduleResolution.contents {
-      Log_.item("ShimModuleName: %s\n", shimModuleName |> ModuleName.toString)
+      Log_.item("ShimModuleName: %s\n", shimModuleName->ModuleName.toString)
     }
     let importPath = resolveModule(
       ~importExtension=".shim",
@@ -309,10 +309,10 @@ let importPathForReasonModuleName = (~config, ~outputFileRelative, ~resolver, mo
       shimModuleName,
     )
     if Debug.moduleResolution.contents {
-      Log_.item("Import Path: %s\n", importPath |> ImportPath.dump)
+      Log_.item("Import Path: %s\n", importPath->ImportPath.dump)
     }
     importPath
   | exception Not_found =>
-    moduleName |> resolveGeneratedModule(~config, ~outputFileRelative, ~resolver)
+    moduleName->resolveGeneratedModule(~config, ~outputFileRelative, ~resolver)
   }
 }

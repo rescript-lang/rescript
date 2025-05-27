@@ -3753,13 +3753,10 @@ and print_unary_expression ~state expr cmt_tbl =
 and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
   let print_binary_operator ~inline_rhs operator =
     let spacing_before_operator =
-      if operator = "->" then Doc.soft_line
-      else if operator = "|>" then Doc.line
-      else Doc.space
+      if operator = "->" then Doc.soft_line else Doc.space
     in
     let spacing_after_operator =
       if operator = "->" then Doc.nil
-      else if operator = "|>" then Doc.space
       else if inline_rhs then Doc.space
       else Doc.line
     in
@@ -3930,10 +3927,7 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
   match expr.pexp_desc with
   | Pexp_apply
       {
-        funct =
-          {
-            pexp_desc = Pexp_ident {txt = Longident.Lident (("->" | "|>") as op)};
-          };
+        funct = {pexp_desc = Pexp_ident {txt = Longident.Lident ("->" as op)}};
         args = [(Nolabel, lhs); (Nolabel, rhs)];
       }
     when not
@@ -3952,8 +3946,6 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
            (match (lhs_has_comment_below, op) with
            | true, "->" -> Doc.concat [Doc.soft_line; Doc.text "->"]
            | false, "->" -> Doc.text "->"
-           | true, "|>" -> Doc.concat [Doc.line; Doc.text "|> "]
-           | false, "|>" -> Doc.text " |> "
            | _ -> Doc.nil);
            rhs_doc;
          ])

@@ -169,7 +169,7 @@ let rec subset = (s1: Set_gen.t<_>, s2: Set_gen.t<_>) =>
 
 let rec find = (x, tree: Set_gen.t<_>) =>
   switch tree {
-  | Empty => raise(Not_found)
+  | Empty => throw(Not_found)
   | Node(l, v, r, _) =>
     let c = compare_elt(x, v)
     if c == 0 {

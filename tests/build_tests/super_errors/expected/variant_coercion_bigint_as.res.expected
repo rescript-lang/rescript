@@ -7,4 +7,9 @@
   [1;31m5[0m [2m│[0m let y = ([1;31mx :> bigint[0m)
   6 [2m│[0m 
 
-  Type x is not a subtype of bigint
+  Type x is not a subtype of bigint 
+
+  The constructor [1;33mTwo[0m of variant [1;33mx[0m has no [1;33m@as[0m payload, which makes it a [1;33mstring[0m at runtime.
+  That runtime representation is not compatible with the expected runtime representation of [1;33mbigint[0m.
+  
+  Fix this by making sure all constructors in variant [1;33mx[0m has a runtime representation of [1;33mbigint[0m.

@@ -10,12 +10,12 @@ type t = {
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    value: json |> field("value", string),
-    creatorId: json |> field("creatorId", string),
-    commentableId: json |> field("commentableId", string),
-    commentableType: json |> field("commentableType", string),
-    createdAt: json |> field("createdAt", string),
+    id: json->field("id", string),
+    value: json->field("value", string),
+    creatorId: json->field("creatorId", string),
+    commentableId: json->field("commentableId", string),
+    commentableType: json->field("commentableType", string),
+    createdAt: json->field("createdAt", string),
   }
 }
 
@@ -27,17 +27,17 @@ let id = t => t.id
 
 let createdAt = t => t.createdAt
 let commentsForQuestion = comments =>
-  comments |> List.filter(comment => comment.commentableType == "Question")
+  comments->List.filter(comment => comment.commentableType == "Question")
 
 let commentsForAnswer = (answerId, comments) =>
   comments
-  |> List.filter(comment => comment.commentableType == "Answer")
-  |> List.filter(comment => comment.commentableId == answerId)
+  ->List.filter(comment => comment.commentableType == "Answer")
+  ->List.filter(comment => comment.commentableId == answerId)
 
 let addComment = (comments, comment) =>
-  comments |> List.rev |> List.append(list{comment}) |> List.rev
+  comments->List.rev->List.append(list{comment})->List.rev
 
-let delete = (id, comments) => comments |> List.filter(c => c.id != id)
+let delete = (id, comments) => comments->List.filter(c => c.id != id)
 
 let create = (id, value, creatorId, commentableId, commentableType, createdAt) => {
   id: id,
@@ -49,4 +49,4 @@ let create = (id, value, creatorId, commentableId, commentableType, createdAt) =
 }
 
 let sort = comments =>
-  comments |> List.sort((c1, c2) => (c1.id |> int_of_string) - (c2.id |> int_of_string))
+  comments->List.sort((c1, c2) => (c1.id->int_of_string) - (c2.id->int_of_string))

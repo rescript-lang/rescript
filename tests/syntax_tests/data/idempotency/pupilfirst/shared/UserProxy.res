@@ -15,16 +15,16 @@ let title = t => t.title
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    userId: json |> field("userId", string),
-    name: json |> field("name", string),
-    avatarUrl: json |> optional(field("avatarUrl", string)),
-    title: json |> field("title", string),
+    id: json->field("id", string),
+    userId: json->field("userId", string),
+    name: json->field("name", string),
+    avatarUrl: json->optional(field("avatarUrl", string)),
+    title: json->field("title", string),
   }
 }
 
 let findById = (id, proxies) =>
-  proxies |> ListUtils.unsafeFind(
+  proxies->ListUtils.unsafeFind(
     proxy => proxy.id == id,
     "Unable to find a UserProxy with ID " ++ id,
   )

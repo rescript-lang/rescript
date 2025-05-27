@@ -28,7 +28,7 @@ let getElementForDomRef = domRef =>
   domRef->React.Ref.current->Js.Nullable.toOption->Belt.Option.getExn
 
 let capitalizeFirstLetter = input =>
-  Js.String.toUpperCase(Js.String.charAt(0, input)) ++ (input |> Js.String.sliceToEnd(~from=1))
+  Js.String.toUpperCase(Js.String.charAt(0, input)) ++ (input->Js.String.sliceToEnd(~from=1))
 
 let throttle = (fn, ms) => {
   let timeoutRef = ref(None)
@@ -47,14 +47,14 @@ let throttle = (fn, ms) => {
 let useViewportWidth = () => {
   let (viewportWidth, setViewportWidth) = React.useState(() => {
     open Webapi.Dom
-    window |> Window.innerWidth
+    window->Window.innerWidth
   })
   React.useEffect0(() => {
     open Webapi.Dom
-    let onResize = _ => setViewportWidth(_ => window |> Window.innerWidth)
+    let onResize = _ => setViewportWidth(_ => window->Window.innerWidth)
     let onResize = throttle(onResize, 300)
-    window |> Window.addEventListener("resize", onResize)
-    Some(() => window |> Window.removeEventListener("resize", onResize))
+    window->Window.addEventListener("resize", onResize)
+    Some(() => window->Window.removeEventListener("resize", onResize))
   })
   viewportWidth
 }
@@ -63,15 +63,15 @@ let useViewportWidth = () => {
 external mediaQueryListMatches: Webapi.Dom.Window.mediaQueryList => bool = "matches"
 let browserSupportsHover = {
   open Webapi.Dom
-  window |> Window.matchMedia("(hover: hover)")
+  window->Window.matchMedia("(hover: hover)")
 }->mediaQueryListMatches
 
 let getPath = (~url: ReasonReactRouter.url) =>
-  "/" ++ (Belt.List.toArray(url.path) |> Js.Array.joinWith("/"))
+  "/" ++ (Belt.List.toArray(url.path)->Js.Array.joinWith("/"))
 
 let getPathWithSearch = (~url: ReasonReactRouter.url) =>
   "/" ++
-  ((Belt.List.toArray(url.path) |> Js.Array.joinWith("/")) ++
+  ((Belt.List.toArray(url.path)->Js.Array.joinWith("/")) ++
   switch url.search {
   | "" => ""
   | search => "?" ++ search

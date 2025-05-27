@@ -12,6 +12,6 @@ let make = (~id, ~label, ~onChange, ~checked=false) =>
           <circle cx="8" cy="8" r="3" fill="white" />
         </svg>
       </span>
-      <span className="text-sm flex-1 font-semibold leading-loose"> {label |> str} </span>
+      <span className="text-sm flex-1 font-semibold leading-loose"> {label->str} </span>
     </label>
   </div>

@@ -12,14 +12,14 @@ let rec removeOption = (~label: Asttypes.arg_label, typeExpr: Types.type_expr) =
   | (Tconstr(Pdot(Path.Pident(nameSpace), id, _), list{t}, _), Optional(lbl))
     if Ident.name(nameSpace) == "FB" && id == "option" =>
     Some((lbl, t))
-  | (Tlink(t), _) => t |> removeOption(~label)
+  | (Tlink(t), _) => t->removeOption(~label)
   | _ => None
   }
 
 let rec pathToList = path =>
   switch path {
-  | Path.Pident(id) => list{id |> Ident.name}
-  | Path.Pdot(p, s, _) => list{s, ...p |> pathToList}
+  | Path.Pident(id) => list{id->Ident.name}
+  | Path.Pdot(p, s, _) => list{s, ...p->pathToList}
   | Path.Papply(_) => list{}
   }
 
@@ -32,21 +32,21 @@ let translateConstr = (
   ~typeEnv,
 ) => {
   let defaultCase = () => {
-    let typeArgs = paramsTranslation |> List.map(({type_}: translation) => type_)
+    let typeArgs = paramsTranslation->List.map(({type_}: translation) => type_)
     let typeParamDeps =
-      paramsTranslation |> List.map(({dependencies}) => dependencies) |> List.concat
+      paramsTranslation->List.map(({dependencies}) => dependencies)->List.concat
 
-    switch typeEnv |> TypeEnv.applyTypeEquations(~config, ~path) {
+    switch typeEnv->TypeEnv.applyTypeEquations(~config, ~path) {
     | Some(type_) => {dependencies: typeParamDeps, type_: type_}
     | None =>
-      let dep = path |> Dependencies.fromPath(~config, ~typeEnv)
+      let dep = path->Dependencies.fromPath(~config, ~typeEnv)
       {
         dependencies: list{dep, ...typeParamDeps},
-        type_: Ident({builtin: false, name: dep |> depToString, typeArgs: typeArgs}),
+        type_: Ident({builtin: false, name: dep->depToString, typeArgs: typeArgs}),
       }
     }
   }
-  switch (path |> pathToList |> List.rev, paramsTranslation) {
+  switch (path->pathToList->List.rev, paramsTranslation) {
   | (list{"FB", "bool"} | list{"bool"}, list{}) => {dependencies: list{}, type_: booleanT}
 
   | (list{"FB", "int"} | list{"int"}, list{}) => {dependencies: list{}, type_: numberT}
@@ -194,7 +194,7 @@ let translateConstr = (
     ) => {
       dependencies: \"@"(argsDependencies, ret.dependencies),
       type_: Function({
-        argTypes: ts |> List.map(type_ => {aName: "", aType: type_}),
+        argTypes: ts->List.map(type_ => {aName: "", aType: type_}),
         componentName: None,
         retType: ret.type_,
         typeVars: list{},
@@ -268,7 +268,7 @@ let translateConstr = (
     | Variant({payloads: list{(_, _, Tuple(argTypes))}}) => argTypes
     | Variant({payloads: list{(_, _, type_)}}) => list{type_}
     | _ => list{singleT}
-    } |> List.map(type_ => {aName: "", aType: type_})
+    }->List.map(type_ => {aName: "", aType: type_})
     {
       dependencies: \"@"(argsDependencies, ret.dependencies),
       type_: Function({
@@ -307,7 +307,7 @@ let translateConstr = (
     ) => {
       dependencies: \"@"(argsDependencies, ret.dependencies),
       type_: Function({
-        argTypes: ts |> List.map(type_ => {aName: "", aType: type_}),
+        argTypes: ts->List.map(type_ => {aName: "", aType: type_}),
         componentName: None,
         retType: ret.type_,
         typeVars: list{},
@@ -316,26 +316,26 @@ let translateConstr = (
     }
   | (list{"Js", "t"}, _) =>
     let dependencies =
-      fieldsTranslations |> List.map(((_, {dependencies})) => dependencies) |> List.concat
+      fieldsTranslations->List.map(((_, {dependencies})) => dependencies)->List.concat
     let rec checkMutableField = (~acc=list{}, fields) =>
       switch fields {
       | list{(previousName, {type_: _}), (name, {type_}), ...rest}
         if Runtime.checkMutableObjectField(~previousName, ~name) =>
         /* The field was annotated "@set" */
-        rest |> checkMutableField(~acc=list{(name, type_, Mutable), ...acc})
+        rest->checkMutableField(~acc=list{(name, type_, Mutable), ...acc})
       | list{(name, {type_}), ...rest} =>
-        rest |> checkMutableField(~acc=list{(name, type_, Immutable), ...acc})
-      | list{} => acc |> List.rev
+        rest->checkMutableField(~acc=list{(name, type_, Immutable), ...acc})
+      | list{} => acc->List.rev
       }
     let fields =
       fieldsTranslations
-      |> checkMutableField
-      |> List.map(((name, t, mutable_)) => {
+      ->checkMutableField
+      ->List.map(((name, t, mutable_)) => {
         let (optional, type_) = switch t {
         | Option(t) => (Optional, t)
         | _ => (Mandatory, t)
         }
-        let name = name |> Runtime.mangleObjectField
+        let name = name->Runtime.mangleObjectField
         {mutable_: mutable_, nameJS: name, nameRE: name, optional: optional, type_: type_}
       })
     let type_ = Object(closedFlag, fields)
@@ -362,18 +362,18 @@ let processVariant = rowFields => {
         ),
         ...otherFields,
       } =>
-      otherFields |> loop(~noPayloads=list{label, ...noPayloads}, ~payloads, ~unknowns)
+      otherFields->loop(~noPayloads=list{label, ...noPayloads}, ~payloads, ~unknowns)
     | list{(label, Rpresent(Some(payload))), ...otherFields} =>
-      otherFields |> loop(~noPayloads, ~payloads=list{(label, payload), ...payloads}, ~unknowns)
+      otherFields->loop(~noPayloads, ~payloads=list{(label, payload), ...payloads}, ~unknowns)
     | list{(label, Rabsent | Reither(false, _, _, _)), ...otherFields} =>
-      otherFields |> loop(~noPayloads, ~payloads, ~unknowns=list{label, ...unknowns})
+      otherFields->loop(~noPayloads, ~payloads, ~unknowns=list{label, ...unknowns})
     | list{} => {
-        noPayloads: noPayloads |> List.rev,
-        payloads: payloads |> List.rev,
-        unknowns: unknowns |> List.rev,
+        noPayloads: noPayloads->List.rev,
+        payloads: payloads->List.rev,
+        unknowns: unknowns->List.rev,
       }
     }
-  rowFields |> loop(~noPayloads=list{}, ~payloads=list{}, ~unknowns=list{})
+  rowFields->loop(~noPayloads=list{}, ~payloads=list{}, ~unknowns=list{})
 }
 
 let rec translateArrowType = (
@@ -398,9 +398,9 @@ let rec translateArrowType = (
     )
   | Tarrow(Nolabel, typeExpr1, typeExpr2, _) =>
     let {dependencies, type_} =
-      typeExpr1 |> translateTypeExprFromTypes_(~config, ~typeVarsGen, ~typeEnv, _)
+      typeExpr1->translateTypeExprFromTypes_(~config, ~typeVarsGen, ~typeEnv, _)
     let nextRevDeps = List.rev_append(dependencies, revArgDeps)
-    typeExpr2 |> translateArrowType(
+    typeExpr2->translateArrowType(
       ~config,
       ~typeVarsGen,
       ~noFunctionReturnDependencies,
@@ -409,39 +409,39 @@ let rec translateArrowType = (
       ~revArgs=list{(Nolabel, type_), ...revArgs},
     )
   | Tarrow((Labelled(lbl) | Optional(lbl)) as label, typeExpr1, typeExpr2, _) =>
-    switch typeExpr1 |> removeOption(~label) {
+    switch typeExpr1->removeOption(~label) {
     | None =>
       let {dependencies, type_: type1} =
-        typeExpr1 |> translateTypeExprFromTypes_(~config, ~typeVarsGen, ~typeEnv)
+        typeExpr1->translateTypeExprFromTypes_(~config, ~typeVarsGen, ~typeEnv)
       let nextRevDeps = List.rev_append(dependencies, revArgDeps)
-      typeExpr2 |> translateArrowType(
+      typeExpr2->translateArrowType(
         ~config,
         ~typeVarsGen,
         ~noFunctionReturnDependencies,
         ~typeEnv,
         ~revArgDeps=nextRevDeps,
-        ~revArgs=list{(Label(lbl |> Runtime.mangleObjectField), type1), ...revArgs},
+        ~revArgs=list{(Label(lbl->Runtime.mangleObjectField), type1), ...revArgs},
       )
     | Some((lbl, t1)) =>
       let {dependencies, type_: type1} =
-        t1 |> translateTypeExprFromTypes_(~config, ~typeVarsGen, ~typeEnv)
+        t1->translateTypeExprFromTypes_(~config, ~typeVarsGen, ~typeEnv)
       let nextRevDeps = List.rev_append(dependencies, revArgDeps)
-      typeExpr2 |> translateArrowType(
+      typeExpr2->translateArrowType(
         ~config,
         ~typeVarsGen,
         ~noFunctionReturnDependencies,
         ~typeEnv,
         ~revArgDeps=nextRevDeps,
-        ~revArgs=list{(OptLabel(lbl |> Runtime.mangleObjectField), type1), ...revArgs},
+        ~revArgs=list{(OptLabel(lbl->Runtime.mangleObjectField), type1), ...revArgs},
       )
     }
   | _ =>
     let {dependencies, type_: retType} =
-      typeExpr |> translateTypeExprFromTypes_(~config, ~typeVarsGen, ~typeEnv)
+      typeExpr->translateTypeExprFromTypes_(~config, ~typeVarsGen, ~typeEnv)
     let allDeps = List.rev_append(revArgDeps, noFunctionReturnDependencies ? list{} : dependencies)
 
-    let labeledConvertableTypes = revArgs |> List.rev
-    let argTypes = labeledConvertableTypes |> NamedArgs.group
+    let labeledConvertableTypes = revArgs->List.rev
+    let argTypes = labeledConvertableTypes->NamedArgs.group
 
     let functionType = Function({
       argTypes: argTypes,
@@ -471,24 +471,24 @@ and translateTypeExprFromTypes_ = (
     let rec getFieldTypes = (texp: Types.type_expr) =>
       switch texp.desc {
       | Tfield(name, _, t1, t2) =>
-        let (closedFlafg, fields) = t2 |> getFieldTypes
+        let (closedFlafg, fields) = t2->getFieldTypes
         (
           closedFlafg,
           list{
             (
               name,
-              name |> Runtime.isMutableObjectField
+              name->Runtime.isMutableObjectField
                 ? {dependencies: list{}, type_: ident("")}
-                : t1 |> translateTypeExprFromTypes_(~config, ~typeVarsGen, ~typeEnv),
+                : t1->translateTypeExprFromTypes_(~config, ~typeVarsGen, ~typeEnv),
             ),
             ...fields,
           },
         )
-      | Tlink(te) => te |> getFieldTypes
+      | Tlink(te) => te->getFieldTypes
       | Tvar(None) => (Open, list{})
       | _ => (Closed, list{})
       }
-    let (closedFlag, fieldsTranslations) = tObj |> getFieldTypes
+    let (closedFlag, fieldsTranslations) = tObj->getFieldTypes
     translateConstr(
       ~config,
       ~fieldsTranslations,
@@ -499,7 +499,7 @@ and translateTypeExprFromTypes_ = (
     )
 
   | Tconstr(path, list{{desc: Tlink(te)}}, r) =>
-    {...typeExpr, desc: Types.Tconstr(path, list{te}, r)} |> translateTypeExprFromTypes_(
+    {...typeExpr, desc: Types.Tconstr(path, list{te}, r)}->translateTypeExprFromTypes_(
       ~config,
       ~typeVarsGen,
       ~noFunctionReturnDependencies=false,
@@ -508,7 +508,7 @@ and translateTypeExprFromTypes_ = (
 
   | Tconstr(path, typeParams, _) =>
     let paramsTranslation =
-      typeParams |> translateTypeExprsFromTypes_(~config, ~typeVarsGen, ~typeEnv)
+      typeParams->translateTypeExprsFromTypes_(~config, ~typeVarsGen, ~typeEnv)
     translateConstr(
       ~config,
       ~fieldsTranslations=list{},
@@ -519,10 +519,10 @@ and translateTypeExprFromTypes_ = (
     )
 
   | Tpoly(t, list{}) =>
-    t |> translateTypeExprFromTypes_(~config, ~typeVarsGen, ~noFunctionReturnDependencies, ~typeEnv)
+    t->translateTypeExprFromTypes_(~config, ~typeVarsGen, ~noFunctionReturnDependencies, ~typeEnv)
 
   | Tarrow(_) =>
-    typeExpr |> translateArrowType(
+    typeExpr->translateArrowType(
       ~config,
       ~typeVarsGen,
       ~noFunctionReturnDependencies,
@@ -532,29 +532,29 @@ and translateTypeExprFromTypes_ = (
     )
   | Ttuple(listExp) =>
     let innerTypesTranslation =
-      listExp |> translateTypeExprsFromTypes_(~config, ~typeVarsGen, ~typeEnv)
-    let innerTypes = innerTypesTranslation |> List.map(({type_}) => type_)
+      listExp->translateTypeExprsFromTypes_(~config, ~typeVarsGen, ~typeEnv)
+    let innerTypes = innerTypesTranslation->List.map(({type_}) => type_)
     let innerTypesDeps =
-      innerTypesTranslation |> List.map(({dependencies}) => dependencies) |> List.concat
+      innerTypesTranslation->List.map(({dependencies}) => dependencies)->List.concat
 
     let tupleType = Tuple(innerTypes)
 
     {dependencies: innerTypesDeps, type_: tupleType}
 
   | Tlink(t) =>
-    t |> translateTypeExprFromTypes_(~config, ~typeVarsGen, ~noFunctionReturnDependencies, ~typeEnv)
+    t->translateTypeExprFromTypes_(~config, ~typeVarsGen, ~noFunctionReturnDependencies, ~typeEnv)
 
   | Tvariant(rowDesc) =>
-    switch rowDesc.row_fields |> processVariant {
+    switch rowDesc.row_fields->processVariant {
     | {noPayloads, payloads: list{}, unknowns: list{}} =>
-      let noPayloads = noPayloads |> List.map(label => {label: label, labelJS: StringLabel(label)})
+      let noPayloads = noPayloads->List.map(label => {label: label, labelJS: StringLabel(label)})
       let type_ = createVariant(~noPayloads, ~payloads=list{}, ~polymorphic=true)
       {dependencies: list{}, type_: type_}
 
     | {noPayloads: list{}, payloads: list{(_label, t)}, unknowns: list{}} =>
       /* Handle ReScript's "Arity_" encoding in first argument of Js.Internal.fn(_,_) for uncurried functions.
        Return the argument tuple. */
-      t |> translateTypeExprFromTypes_(
+      t->translateTypeExprFromTypes_(
         ~config,
         ~typeVarsGen,
         ~noFunctionReturnDependencies,
@@ -562,19 +562,19 @@ and translateTypeExprFromTypes_ = (
       )
 
     | {noPayloads, payloads, unknowns: list{}} =>
-      let noPayloads = noPayloads |> List.map(label => {label: label, labelJS: StringLabel(label)})
+      let noPayloads = noPayloads->List.map(label => {label: label, labelJS: StringLabel(label)})
       let payloadTranslations =
-        payloads |> List.map(((label, payload)) => (
+        payloads->List.map(((label, payload)) => (
           label,
-          payload |> translateTypeExprFromTypes_(~config, ~typeVarsGen, ~typeEnv),
+          payload->translateTypeExprFromTypes_(~config, ~typeVarsGen, ~typeEnv),
         ))
-      let payloads = payloadTranslations |> List.map(((label, translation)) => {
+      let payloads = payloadTranslations->List.map(((label, translation)) => {
         let numArgs = 1
         ({label: label, labelJS: StringLabel(label)}, numArgs, translation.type_)
       })
       let type_ = createVariant(~noPayloads, ~payloads, ~polymorphic=true)
       let dependencies =
-        payloadTranslations |> List.map(((_, {dependencies})) => dependencies) |> List.concat
+        payloadTranslations->List.map(((_, {dependencies})) => dependencies)->List.concat
       {dependencies: dependencies, type_: type_}
 
     | {unknowns: list{_, ..._}} => {
@@ -584,22 +584,22 @@ and translateTypeExprFromTypes_ = (
     }
 
   | Tpackage(path, ids, types) =>
-    switch typeEnv |> TypeEnv.lookupModuleTypeSignature(~path) {
+    switch typeEnv->TypeEnv.lookupModuleTypeSignature(~path) {
     | Some((signature, typeEnv)) =>
       let typeEquationsTranslation =
-        List.combine(ids, types) |> List.map(((x, t)) => (
+        List.combine(ids, types)->List.map(((x, t)) => (
           x,
-          t |> translateTypeExprFromTypes_(~config, ~typeVarsGen, ~typeEnv),
+          t->translateTypeExprFromTypes_(~config, ~typeVarsGen, ~typeEnv),
         ))
       let typeEquations =
-        typeEquationsTranslation |> List.map(((x, translation)) => (x, translation.type_))
+        typeEquationsTranslation->List.map(((x, translation)) => (x, translation.type_))
       let dependenciesFromTypeEquations =
         typeEquationsTranslation
-        |> List.map(((_, translation)) => translation.dependencies)
-        |> List.flatten
-      let typeEnv1 = typeEnv |> TypeEnv.addTypeEquations(~typeEquations)
+        ->List.map(((_, translation)) => translation.dependencies)
+        ->List.flatten
+      let typeEnv1 = typeEnv->TypeEnv.addTypeEquations(~typeEquations)
       let (dependenciesFromRecordType, type_) =
-        signature.sig_type |> signatureToModuleRuntimeRepresentation(
+        signature.sig_type->signatureToModuleRuntimeRepresentation(
           ~config,
           ~typeVarsGen,
           ~typeEnv=typeEnv1,
@@ -620,14 +620,14 @@ and translateTypeExprFromTypes_ = (
   }
 and translateTypeExprsFromTypes_ = (~config, ~typeVarsGen, ~typeEnv, typeExprs): list<
   translation,
-> => typeExprs |> List.map(translateTypeExprFromTypes_(~config, ~typeVarsGen, ~typeEnv))
+> => typeExprs->List.map(translateTypeExprFromTypes_(~config, ~typeVarsGen, ~typeEnv))
 and signatureToModuleRuntimeRepresentation = (~config, ~typeVarsGen, ~typeEnv, signature) => {
-  let dependenciesAndFields = signature |> List.map(signatureItem =>
+  let dependenciesAndFields = signature->List.map(signatureItem =>
     switch signatureItem {
     | Types.Sig_value(_id, {val_kind: Val_prim(_)}) => (list{}, list{})
     | Types.Sig_value(id, {val_type: typeExpr}) =>
       let {dependencies, type_} =
-        typeExpr |> translateTypeExprFromTypes_(
+        typeExpr->translateTypeExprFromTypes_(
           ~config,
           ~typeVarsGen,
           ~noFunctionReturnDependencies=false,
@@ -635,21 +635,21 @@ and signatureToModuleRuntimeRepresentation = (~config, ~typeVarsGen, ~typeEnv, s
         )
       let field = {
         mutable_: Immutable,
-        nameJS: id |> Ident.name,
-        nameRE: id |> Ident.name,
+        nameJS: id->Ident.name,
+        nameRE: id->Ident.name,
         optional: Mandatory,
         type_: type_,
       }
       (dependencies, list{field})
 
     | Types.Sig_module(id, moduleDeclaration, _recStatus) =>
-      let typeEnv1 = switch typeEnv |> TypeEnv.getModule(~name=id |> Ident.name) {
+      let typeEnv1 = switch typeEnv->TypeEnv.getModule(~name=id->Ident.name) {
       | Some(typeEnv1) => typeEnv1
       | None => typeEnv
       }
       let (dependencies, type_) = switch moduleDeclaration.md_type {
       | Mty_signature(signature) =>
-        signature |> signatureToModuleRuntimeRepresentation(
+        signature->signatureToModuleRuntimeRepresentation(
           ~config,
           ~typeVarsGen,
           ~typeEnv=typeEnv1,
@@ -660,8 +660,8 @@ and signatureToModuleRuntimeRepresentation = (~config, ~typeVarsGen, ~typeEnv, s
       }
       let field = {
         mutable_: Immutable,
-        nameJS: id |> Ident.name,
-        nameRE: id |> Ident.name,
+        nameJS: id->Ident.name,
+        nameRE: id->Ident.name,
         optional: Mandatory,
         type_: type_,
       }
@@ -675,8 +675,8 @@ and signatureToModuleRuntimeRepresentation = (~config, ~typeVarsGen, ~typeEnv, s
     }
   )
   let (dependencies, fields) = {
-    let (dl, fl) = dependenciesAndFields |> List.split
-    (dl |> List.concat, fl |> List.concat)
+    let (dl, fl) = dependenciesAndFields->List.split
+    (dl->List.concat, fl->List.concat)
   }
   (dependencies, config.modulesAsObjects ? Object(Closed, fields) : Record(fields))
 }
@@ -684,7 +684,7 @@ and signatureToModuleRuntimeRepresentation = (~config, ~typeVarsGen, ~typeEnv, s
 let translateTypeExprFromTypes = (~config, ~noFunctionReturnDependencies=?, ~typeEnv, typeExpr) => {
   let typeVarsGen = GenIdent.createTypeVarsGen()
   let translation =
-    typeExpr |> translateTypeExprFromTypes_(
+    typeExpr->translateTypeExprFromTypes_(
       ~config,
       ~typeVarsGen,
       ~noFunctionReturnDependencies?,
@@ -692,19 +692,19 @@ let translateTypeExprFromTypes = (~config, ~noFunctionReturnDependencies=?, ~typ
     )
 
   if Debug.dependencies.contents {
-    translation.dependencies |> List.iter(dep => Log_.item("Dependency: %s\n", dep |> depToString))
+    translation.dependencies->List.iter(dep => Log_.item("Dependency: %s\n", dep->depToString))
   }
   translation
 }
 
 let translateTypeExprsFromTypes = (~config, ~typeEnv, typeExprs) => {
   let typeVarsGen = GenIdent.createTypeVarsGen()
-  let translations = typeExprs |> translateTypeExprsFromTypes_(~config, ~typeVarsGen, ~typeEnv)
+  let translations = typeExprs->translateTypeExprsFromTypes_(~config, ~typeVarsGen, ~typeEnv)
 
   if Debug.dependencies.contents {
-    translations |> List.iter(translation =>
-      translation.dependencies |> List.iter(dep =>
-        Log_.item("Dependency: %s\n", dep |> depToString)
+    translations->List.iter(translation =>
+      translation.dependencies->List.iter(dep =>
+        Log_.item("Dependency: %s\n", dep->depToString)
       )
     )
   }

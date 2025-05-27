@@ -137,32 +137,32 @@ jobs:
         shell: bash
 
       # matrix.ocaml_compiler may contain commas
-      # - name: Get OPAM cache key
-      #   shell: bash
-      #   run: echo "opam_cache_key=opam-env-v8-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" | sed 's/,/-/g' >> $GITHUB_ENV
+      - name: Get OPAM cache key
+        shell: bash
+        run: echo "opam_cache_key=opam-env-v8-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" | sed 's/,/-/g' >> $GITHUB_ENV
 
-      # - name: Restore OPAM environment
-      #   id: cache-opam-env
-      #   uses: actions/cache/restore@v4
-      #   with:
-      #     path: |
-      #       ${{ runner.tool_cache }}/opam
-      #       ~/.opam
-      #       _opam
-      #       .opam-path
-      #       D:\cygwin
-      #       D:\.opam
-      #     key: ${{ env.opam_cache_key }}
+      - name: Restore OPAM environment
+        id: cache-opam-env
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ runner.tool_cache }}/opam
+            ~/.opam
+            _opam
+            .opam-path
+            D:\cygwin
+            D:\.opam
+          key: ${{ env.opam_cache_key }}
 
       - name: Use OCaml ${{matrix.ocaml_compiler}}
         uses: ocaml/setup-ocaml@v3.3.2
-        # if: steps.cache-opam-env.outputs.cache-hit != 'true'
+        if: steps.cache-opam-env.outputs.cache-hit != 'true'
         with:
           ocaml-compiler: ${{matrix.ocaml_compiler}}
           opam-pin: false
 
       - name: Get OPAM executable path
-        # if: steps.cache-opam-env.outputs.cache-hit != 'true'
+        if: steps.cache-opam-env.outputs.cache-hit != 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -174,63 +174,63 @@ jobs:
             console.log('stored path to .opam-path');
 
       - name: Install OPAM dependencies
-        # if: steps.cache-opam-env.outputs.cache-hit != 'true'
+        if: steps.cache-opam-env.outputs.cache-hit != 'true'
         run: opam install . --deps-only --with-test
 
-      # - name: Cache OPAM environment
-      #   # if: steps.cache-opam-env.outputs.cache-hit != 'true'
-      #   uses: actions/cache/save@v4
-      #   with:
-      #     path: |
-      #       ${{ runner.tool_cache }}/opam
-      #       ~/.opam
-      #       _opam
-      #       .opam-path
-      #       D:\cygwin
-      #       D:\.opam
-      #     key: ${{ env.opam_cache_key }}
+      - name: Cache OPAM environment
+        if: steps.cache-opam-env.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ runner.tool_cache }}/opam
+            ~/.opam
+            _opam
+            .opam-path
+            D:\cygwin
+            D:\.opam
+          key: ${{ env.opam_cache_key }}
 
-      # - name: Use cached OPAM environment
-      #   if: steps.cache-opam-env.outputs.cache-hit == 'true'
-      #   run: |
-      #     # https://github.com/ocaml/setup-ocaml/blob/b2105f9/packages/setup-ocaml/src/installer.ts#L33
-      #     echo "OPAMVERBOSE=$RUNNER_DEBUG"   >> "$GITHUB_ENV"
-      #     echo "OPAMCOLOR=always"            >> "$GITHUB_ENV"
-      #     echo "OPAMCONFIRMLEVEL=unsafe-yes" >> "$GITHUB_ENV"
-      #     echo "OPAMERRLOGLEN=0"             >> "$GITHUB_ENV"
-      #     echo "OPAMPRECISETRACKING=1"       >> "$GITHUB_ENV"
-      #     echo "OPAMYES=1"                   >> "$GITHUB_ENV"
+      - name: Use cached OPAM environment
+        if: steps.cache-opam-env.outputs.cache-hit == 'true'
+        run: |
+          # https://github.com/ocaml/setup-ocaml/blob/b2105f9/packages/setup-ocaml/src/installer.ts#L33
+          echo "OPAMVERBOSE=$RUNNER_DEBUG"   >> "$GITHUB_ENV"
+          echo "OPAMCOLOR=always"            >> "$GITHUB_ENV"
+          echo "OPAMCONFIRMLEVEL=unsafe-yes" >> "$GITHUB_ENV"
+          echo "OPAMERRLOGLEN=0"             >> "$GITHUB_ENV"
+          echo "OPAMPRECISETRACKING=1"       >> "$GITHUB_ENV"
+          echo "OPAMYES=1"                   >> "$GITHUB_ENV"
 
-      #     if [[ "$RUNNER_OS" != "Windows" ]]; then
-      #       echo "OPAMROOT=$HOME/.opam"      >> "$GITHUB_ENV"
-      #     else
-      #       echo "OPAMROOT=D:\\.opam"        >> "$GITHUB_ENV"
-      #     fi
+          if [[ "$RUNNER_OS" != "Windows" ]]; then
+            echo "OPAMROOT=$HOME/.opam"      >> "$GITHUB_ENV"
+          else
+            echo "OPAMROOT=D:\\.opam"        >> "$GITHUB_ENV"
+          fi
 
-      #     OPAM_PATH="$(cat .opam-path)"
-      #     chmod +x "$OPAM_PATH"
-      #     dirname "$OPAM_PATH" >> "$GITHUB_PATH"
+          OPAM_PATH="$(cat .opam-path)"
+          chmod +x "$OPAM_PATH"
+          dirname "$OPAM_PATH" >> "$GITHUB_PATH"
 
-      #     if [[ "$RUNNER_OS" == "Windows" ]]; then
-      #       fsutil behavior query SymlinkEvaluation
-      #       fsutil behavior set symlinkEvaluation R2L:1 R2R:1
-      #       fsutil behavior query SymlinkEvaluation
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            fsutil behavior query SymlinkEvaluation
+            fsutil behavior set symlinkEvaluation R2L:1 R2R:1
+            fsutil behavior query SymlinkEvaluation
 
-      #       CYGWIN="winsymlinks:native"
-      #       CYGWIN_ROOT="D:\\cygwin"
-      #       CYGWIN_ROOT_BIN="D:\\cygwin\\bin"
-      #       CYGWIN_ROOT_WRAPPERBIN="D:\\cygwin\\wrapperbin"
+            CYGWIN="winsymlinks:native"
+            CYGWIN_ROOT="D:\\cygwin"
+            CYGWIN_ROOT_BIN="D:\\cygwin\\bin"
+            CYGWIN_ROOT_WRAPPERBIN="D:\\cygwin\\wrapperbin"
 
-      #       echo "HOME=$USERPROFILE" >> "$GITHUB_ENV"
-      #       echo "MSYS=winsymlinks:native" >> "$GITHUB_ENV"
-      #       echo "CYGWIN=$CYGWIN" >> "$GITHUB_ENV"
-      #       echo "CYGWIN_ROOT=$CYGWIN_ROOT" >> "$GITHUB_ENV"
-      #       echo "CYGWIN_ROOT_BIN=$CYGWIN_ROOT_BIN" >> "$GITHUB_ENV"
-      #       echo "CYGWIN_ROOT_WRAPPERBIN=$CYGWIN_ROOT_WRAPPERBIN" >> "$GITHUB_ENV"
+            echo "HOME=$USERPROFILE" >> "$GITHUB_ENV"
+            echo "MSYS=winsymlinks:native" >> "$GITHUB_ENV"
+            echo "CYGWIN=$CYGWIN" >> "$GITHUB_ENV"
+            echo "CYGWIN_ROOT=$CYGWIN_ROOT" >> "$GITHUB_ENV"
+            echo "CYGWIN_ROOT_BIN=$CYGWIN_ROOT_BIN" >> "$GITHUB_ENV"
+            echo "CYGWIN_ROOT_WRAPPERBIN=$CYGWIN_ROOT_WRAPPERBIN" >> "$GITHUB_ENV"
 
-      #       echo "$CYGWIN_ROOT_WRAPPERBIN" >> "$GITHUB_PATH"
-      #     fi
-      #   shell: bash
+            echo "$CYGWIN_ROOT_WRAPPERBIN" >> "$GITHUB_PATH"
+          fi
+        shell: bash
 
       - name: Compiler build state key
         id: compiler-build-state-key

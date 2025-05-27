@@ -11,6 +11,8 @@ let with_configured_jsx_module s =
 module Parser : sig
   type comment
 
+  val extract_text_at_loc : Location.t -> string
+
   val parse_source : (string -> Parsetree.structure * comment list) ref
 
   val reprint_source : (Parsetree.structure -> comment list -> string) ref
@@ -38,10 +40,13 @@ end = struct
     let end_offset = end_pos.pos_cnum in
     String.sub src start_offset (end_offset - start_offset)
 
-  let parse_expr_at_loc loc =
+  let extract_text_at_loc loc =
     (* TODO: Maybe cache later on *)
     let src = Ext_io.load_file loc.Location.loc_start.pos_fname in
-    let sub_src = extract_location_string ~src loc in
+    extract_location_string ~src loc
+
+  let parse_expr_at_loc loc =
+    let sub_src = extract_text_at_loc loc in
     let parsed, comments = !parse_source sub_src in
     match parsed with
     | [{Parsetree.pstr_desc = Pstr_eval (exp, _)}] -> Some (exp, comments)
@@ -58,6 +63,11 @@ end = struct
       | None -> None)
     | None -> None
 end
+
+let type_expr ppf typ =
+  (* print a type and avoid infinite loops *)
+  Printtyp.reset_and_mark_loops typ;
+  Printtyp.type_expr ppf typ
 
 type type_clash_statement = FunctionCall
 type type_clash_context =
@@ -345,6 +355,43 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
          single JSX element.@,"
         (with_configured_jsx_module "array")
     | _ -> ())
+  | _, Some (t1, t2) ->
+    let is_subtype =
+      try
+        Ctype.subtype env t1 t2 ();
+        true
+      with _ -> false
+    in
+    let target_type_string = Format.asprintf "%a" type_expr t2 in
+    let target_expr_text = Parser.extract_text_at_loc loc in
+    let suggested_rewrite =
+      match
+        !Parser.parse_source
+          (Printf.sprintf "(%s :> %s)" target_expr_text target_type_string)
+      with
+      | [], _ -> None
+      | structure, comments -> Some (!Parser.reprint_source structure comments)
+    in
+
+    (* Suggesting coercion only makes sense for non-constant values. *)
+    let is_constant =
+      match !Parser.parse_source target_expr_text with
+      | ( [{Parsetree.pstr_desc = Pstr_eval ({pexp_desc = Pexp_constant _}, _)}],
+          _ ) ->
+        true
+      | _ -> false
+    in
+
+    if is_subtype && not is_constant then (
+      fprintf ppf
+        "@,\
+         @,\
+         Possible solutions: @,\
+         - These types are compatible at runtime. You can use the coercion \
+         operator to convert to the expected type";
+      match suggested_rewrite with
+      | Some rewrite -> fprintf ppf ": @{<info>%s@}@," rewrite
+      | None -> fprintf ppf ": @{<info>:>@}@,")
   | _ -> ()
 
 let type_clash_context_from_function sexp sfunct =

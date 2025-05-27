@@ -94,7 +94,6 @@ type t =
   | TemplateTail of string * Lexing.position
   | TemplatePart of string * Lexing.position
   | Backtick
-  | BarGreater
   | Try
   | DocComment of Location.t * string
   | ModuleComment of Location.t * string
@@ -109,7 +108,7 @@ let precedence = function
   | Caret -> 4
   | Band -> 5
   | Equal | EqualEqual | EqualEqualEqual | LessThan | GreaterThan | BangEqual
-  | BangEqualEqual | LessEqual | GreaterEqual | BarGreater ->
+  | BangEqualEqual | LessEqual | GreaterEqual ->
     6
   | LeftShift | RightShift | RightShiftUnsigned -> 7
   | Plus | PlusDot | Minus | MinusDot | PlusPlus -> 8
@@ -213,7 +212,6 @@ let to_string = function
   | TemplatePart (text, _) -> text ^ "${"
   | TemplateTail (text, _) -> "TemplateTail(" ^ text ^ ")"
   | Backtick -> "`"
-  | BarGreater -> "|>"
   | Try -> "try"
   | DocComment (_loc, s) -> "DocComment " ^ s
   | ModuleComment (_loc, s) -> "ModuleComment " ^ s

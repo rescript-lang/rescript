@@ -7,8 +7,8 @@ external autosizeDestroy: Dom.element => unit = "destroy"
 external autosizeUpdate: Dom.element => unit = "update"
 
 let perform = (f, id) =>
-  document |> Document.getElementById(id) |> OptionUtils.mapWithDefault(element => element |> f, ())
+  document->Document.getElementById(id)->OptionUtils.mapWithDefault(element => element->f, ())
 
-let create = id => id |> perform(autosize)
-let update = id => id |> perform(autosizeUpdate)
-let destroy = id => id |> perform(autosizeDestroy)
+let create = id => id->perform(autosize)
+let update = id => id->perform(autosizeUpdate)
+let destroy = id => id->perform(autosizeDestroy)

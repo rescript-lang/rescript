@@ -53,10 +53,10 @@ for ((i as x) in 0 to 10) { () }
 
 switch listPatterns {
 | list{(true, pattern), ...patterns} =>
-  let patterns = patterns |> List.map(filterSpread) |> List.rev
+  let patterns = patterns->List.map(filterSpread)->List.rev
   makeListPattern(loc, patterns, Some(pattern))
 | patterns =>
-  let patterns = patterns |> List.map(filterSpread) |> List.rev
+  let patterns = patterns->List.map(filterSpread)->List.rev
   makeListPattern(loc, patterns, None)
 }
 

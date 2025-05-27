@@ -22,15 +22,15 @@ let make = (~student, ~team, ~studentTags, ~courseCoaches, ~updateFormCB, ~reloa
     <div className="pt-6 border-b border-gray-400 bg-gray-100">
       <div className="max-w-2xl mx-auto">
         <div className="flex">
-          {switch student |> Student.avatarUrl {
+          {switch student->Student.avatarUrl {
           | Some(avatarUrl) => <img className="w-12 h-12 rounded-full mr-4" src=avatarUrl />
-          | None => <Avatar name={student |> Student.name} className="w-12 h-12 mr-4" />
+          | None => <Avatar name={student->Student.name} className="w-12 h-12 mr-4" />
           }}
           <div className="text-sm flex flex-col justify-center">
             <div className="text-black font-bold inline-block">
-              {student |> Student.name |> str}
+              {student->Student.name->str}
             </div>
-            <div className="text-gray-600 inline-block"> {student |> Student.email |> str} </div>
+            <div className="text-gray-600 inline-block"> {student->Student.email->str} </div>
           </div>
         </div>
         <div className="w-full pt-6">
@@ -38,12 +38,12 @@ let make = (~student, ~team, ~studentTags, ~courseCoaches, ~updateFormCB, ~reloa
             <button
               className={selectedTabClasses(view == DetailsTab)}
               onClick={_ => setView(_ => DetailsTab)}>
-              <i className="fa fa-edit" /> <span className="ml-2"> {"Details" |> str} </span>
+              <i className="fa fa-edit" /> <span className="ml-2"> {"Details"->str} </span>
             </button>
             <button
               className={"-ml-px " ++ selectedTabClasses(view == ActionsTab)}
               onClick={_ => setView(_ => ActionsTab)}>
-              <i className="fa fa-cog" /> <span className="ml-2"> {"Actions" |> str} </span>
+              <i className="fa fa-cog" /> <span className="ml-2"> {"Actions"->str} </span>
             </button>
           </div>
         </div>

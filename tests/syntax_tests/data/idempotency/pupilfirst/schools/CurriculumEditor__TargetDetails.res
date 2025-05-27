@@ -41,7 +41,7 @@ let visibilityFromJs = visibilityString =>
   | "draft" => Draft
   | "live" => Live
   | "archived" => Archived
-  | _ => raise(InvalidVisibilityValue("Unknown Value"))
+  | _ => throw(InvalidVisibilityValue("Unknown Value"))
   }
 
 let visibilityAsString = visibility =>
@@ -61,7 +61,7 @@ let roleFromJs = roleString =>
   switch roleString {
   | "student" => Student
   | "team" => Team
-  | role => raise(InvalidRoleValue("Unknown Value :" ++ role))
+  | role => throw(InvalidRoleValue("Unknown Value :" ++ role))
   }
 
 let makeFromJs = targetData => {
@@ -70,11 +70,11 @@ let makeFromJs = targetData => {
   targetGroupId: targetData["targetGroupId"],
   evaluationCriteria: targetData["evaluationCriteria"],
   prerequisiteTargets: targetData["prerequisiteTargets"],
-  quiz: targetData["quiz"] |> Array.map(quizQuestion =>
-    quizQuestion |> CurriculumEditor__QuizQuestion.makeFromJs
+  quiz: targetData["quiz"]->Array.map(quizQuestion =>
+    quizQuestion->CurriculumEditor__QuizQuestion.makeFromJs
   ),
   linkToComplete: targetData["linkToComplete"],
   completionInstructions: targetData["completionInstructions"],
-  checklist: targetData["checklist"] |> Json.Decode.array(TargetChecklistItem.decode),
+  checklist: targetData["checklist"]->Json.Decode.array(TargetChecklistItem.decode),
   visibility: visibilityFromJs(targetData["visibility"]),
 }
