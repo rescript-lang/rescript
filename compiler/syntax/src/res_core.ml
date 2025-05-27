@@ -6541,10 +6541,15 @@ and parse_module_declaration_or_alias ~attrs p =
     | Colon ->
       Parser.next p;
       parse_module_type p
-    | Equal ->
+    | Equal -> (
       Parser.next p;
-      let lident = parse_module_long_ident ~lowercase:false p in
-      Ast_helper.Mty.alias lident
+      match p.Parser.token with
+      | Lbrace ->
+        (* Parse `module M = {` as `module M : {` *)
+        parse_module_type p
+      | _ ->
+        let lident = parse_module_long_ident ~lowercase:false p in
+        Ast_helper.Mty.alias lident)
     | token ->
       Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
       Recover.default_module_type ()
