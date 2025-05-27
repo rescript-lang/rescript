@@ -5,7 +5,7 @@ cd ../testrepo
 
 bold "Test: It should compile"
 
-if rewatch clean &> /dev/null;
+if rewatch clean ;
 then
   success "Repo Cleaned"
 else
