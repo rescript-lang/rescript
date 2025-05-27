@@ -126,6 +126,8 @@ jobs:
       - name: Build rewatch
         if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
         run: |
+          cargo build --manifest-path rewatch/Cargo.toml --release 
+          # build specific target
           cargo build --manifest-path rewatch/Cargo.toml --target ${{ matrix.rust-target }} --release
 
       - name: Run rewatch unit tests
