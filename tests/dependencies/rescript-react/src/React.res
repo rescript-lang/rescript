@@ -5,6 +5,7 @@ type element = Jsx.element
 external float: float => element = "%identity"
 external int: int => element = "%identity"
 external string: string => element = "%identity"
+external promise: promise<element> => element = "%identity"
 
 external array: array<element> => element = "%identity"
 
@@ -250,6 +251,9 @@ external useCallback7: ('callback, ('a, 'b, 'c, 'd, 'e, 'f, 'g)) => 'callback = 
 @module("react")
 external useContext: Context.t<'any> => 'any = "useContext"
 
+@module("react")
+external usePromise: promise<'a> => 'a = "use"
+
 @module("react") external useRef: 'value => ref<'value> = "useRef"
 
 @module("react")
@@ -309,10 +313,9 @@ external useImperativeHandle7: (
 
 @module("react") external useId: unit => string = "useId"
 
-@module("react") external useDeferredValue: 'value => 'value = "useDeferredValue"
-
+/** `useDeferredValue` is a React Hook that lets you defer updating a part of the UI. */
 @module("react")
-external useTransition: unit => (bool, (unit => unit) => unit) = "useTransition"
+external useDeferredValue: ('value, ~initialValue: 'value=?) => 'value = "useDeferredValue"
 
 @module("react")
 external useInsertionEffectOnEveryRender: (unit => option<unit => unit>) => unit =
@@ -405,3 +408,36 @@ external setDisplayName: (component<'props>, string) => unit = "displayName"
 
 @get @return(nullable)
 external displayName: component<'props> => option<string> = "displayName"
+
+// Actions
+
+type transitionFunction = unit => promise<unit>
+
+type transitionStartFunction = transitionFunction => unit
+
+/** `useTransition` is a React Hook that lets you render a part of the UI in the background. */
+@module("react")
+external useTransition: unit => (bool, transitionStartFunction) = "useTransition"
+
+type action<'state, 'payload> = ('state, 'payload) => promise<'state>
+
+type formAction<'formData> = 'formData => promise<unit>
+
+/** `useActionState` is a Hook that allows you to update state based on the result of a form action. */
+@module("react")
+external useActionState: (
+  action<'state, 'payload>,
+  'state,
+  ~permalink: string=?,
+) => ('state, formAction<'payload>, bool) = "useActionState"
+
+/** `useOptimistic` is a React Hook that lets you optimistically update the UI. */
+@module("react")
+external useOptimistic: (
+  'state,
+  ~updateFn: ('state, 'action) => 'state=?,
+) => ('state, 'action => unit) = "useOptimistic"
+
+/** `act` is a test helper to apply pending React updates before making assertions. */
+@module("react")
+external act: (unit => promise<unit>) => promise<unit> = "act"
