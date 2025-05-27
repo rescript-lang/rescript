@@ -11,7 +11,7 @@ let iterator: Iterator.t<string> = %raw(`
 let syncResult = ref(None)
 
 iterator->Iterator.forEach(v => {
-  if v === Some("b") {
+  if v == "b" {
     syncResult.contents = Some("b")
   }
 })

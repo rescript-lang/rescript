@@ -18,6 +18,7 @@
 - Add `Array.findLast`, `Array.findLastWithIndex`, `Array.findLastIndex`, `Array.findLastIndexWithIndex` and `Array.findLastIndexOpt`. https://github.com/rescript-lang/rescript/pull/7503
 - Add `options` argument to `Console.dir`. https://github.com/rescript-lang/rescript/pull/7504
 - Show variant constructor's inline record types on hover. https://github.com/rescript-lang/rescript/pull/7519
+- Add additional `Iterator.prototype` bindings to `runtime/Stdlib_Iterator.res`. https://github.com/rescript-lang/rescript/pull/7506
 
 #### :bug: Bug fix
 
@@ -37,6 +38,9 @@
 - Improve error message for pipe (`->`) syntax. https://github.com/rescript-lang/rescript/pull/7520
 - Improve a few error messages around various subtyping issues. https://github.com/rescript-lang/rescript/pull/7404
 - Refactor the ast for record expressions and patterns. https://github.com/rescript-lang/rescript/pull/7528
+
+#### :boom: Breaking Change
+- `Iterator.forEach` now emits `Iterator.prototype.forEach` call. https://github.com/rescript-lang/rescript/pull/7506
 
 # 12.0.0-alpha.13
 
