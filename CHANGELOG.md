@@ -38,6 +38,10 @@
 - Improve a few error messages around various subtyping issues. https://github.com/rescript-lang/rescript/pull/7404
 - Refactor the ast for record expressions and patterns. https://github.com/rescript-lang/rescript/pull/7528
 
+#### :house: Internal
+
+- Export binary paths from rescript package. https://github.com/rescript-lang/rescript/pull/7530
+
 # 12.0.0-alpha.13
 
 #### :boom: Breaking Change
