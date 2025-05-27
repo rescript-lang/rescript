@@ -551,6 +551,10 @@ let findLocalCompletionsForValues ~(localTables : LocalTables.t) ~env ~prefix
   scope
   |> Scope.iterModulesAfterFirstOpen
        (processLocalModule ~prefix ~exact ~env ~localTables);
+
+  scope
+  |> Scope.iterIncludes (processLocalInclude ~prefix ~exact ~env ~localTables);
+
   List.rev_append localTables.resultRev valuesFromOpens
 
 let findLocalCompletionsForTypes ~(localTables : LocalTables.t) ~env ~prefix

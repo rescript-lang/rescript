@@ -51,6 +51,9 @@ module SpriteComp = (
 
 external k: Types.context = "k"
 
+@send
+external add: (Types.context, array<Types.comp>) => 't = "add"
+
 module Wall = {
     type t
 
@@ -66,6 +69,14 @@ module Wall = {
             // add
             //    ^com
         ]
+    }
+
+    let makeWith = (x) => {
+        k->add([
+            k->addPos(1.0, 2.0),
+            // addP
+            //     ^com
+        ])
     }
 
     module Poster = {
