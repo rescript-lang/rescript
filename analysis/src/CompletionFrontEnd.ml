@@ -518,16 +518,15 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
           :: patternPath)
         ?contextPath p
     | Ppat_record (fields, _) ->
-      fields
-      |> List.iter (fun (fname, p, _) ->
-             match fname with
-             | {Location.txt = Longident.Lident fname} ->
-               scopePattern
-                 ~patternPath:
-                   (Completable.NFollowRecordField {fieldName = fname}
-                   :: patternPath)
-                 ?contextPath p
-             | _ -> ())
+      Ext_list.iter fields (fun {lid = fname; x = p} ->
+          match fname with
+          | {Location.txt = Longident.Lident fname} ->
+            scopePattern
+              ~patternPath:
+                (Completable.NFollowRecordField {fieldName = fname}
+                :: patternPath)
+              ?contextPath p
+          | _ -> ())
     | Ppat_array pl ->
       pl
       |> List.iter
@@ -926,7 +925,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                    ( {
                        pexp_desc =
                          Pexp_record
-                           (({txt = Lident "from"}, fromExpr, _) :: _, _);
+                           ({lid = {txt = Lident "from"}; x = fromExpr} :: _, _);
                      },
                      _ );
              };

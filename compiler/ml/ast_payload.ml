@@ -210,12 +210,13 @@ let ident_or_record_as_config loc (x : t) :
     | None ->
       Ext_list.map label_exprs (fun u ->
           match u with
-          | ( {txt = Lident name; loc},
-              {Parsetree.pexp_desc = Pexp_ident {txt = Lident name2}},
-              _ )
+          | {
+           lid = {txt = Lident name; loc};
+           x = {Parsetree.pexp_desc = Pexp_ident {txt = Lident name2}};
+          }
             when name2 = name ->
             ({Asttypes.txt = name; loc}, None)
-          | {txt = Lident name; loc}, y, _ ->
+          | {lid = {txt = Lident name; loc}; x = y} ->
             ({Asttypes.txt = name; loc}, Some y)
           | _ -> Location.raise_errorf ~loc "Qualified label is not allowed")
     | Some _ ->

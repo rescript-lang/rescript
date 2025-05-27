@@ -672,7 +672,7 @@ and label_decl i ppf {pld_name; pld_mutable; pld_type; pld_loc; pld_attributes}
   line (i + 1) ppf "%a" fmt_string_loc pld_name;
   core_type (i + 1) ppf pld_type
 
-and longident_x_pattern i ppf (li, p, opt) =
+and longident_x_pattern i ppf {lid = li; x = p; opt} =
   line i ppf "%a%s\n" fmt_longident_loc li (if opt then "?" else "");
   pattern (i + 1) ppf p
 
@@ -694,7 +694,7 @@ and value_binding i ppf x =
   pattern (i + 1) ppf x.pvb_pat;
   expression (i + 1) ppf x.pvb_expr
 
-and longident_x_expression i ppf (li, e, opt) =
+and longident_x_expression i ppf {lid = li; x = e; opt} =
   line i ppf "%a%s\n" fmt_longident_loc li (if opt then "?" else "");
   expression (i + 1) ppf e
 

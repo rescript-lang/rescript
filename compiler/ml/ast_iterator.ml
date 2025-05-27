@@ -310,7 +310,11 @@ module E = struct
       iter_opt (sub.expr sub) arg
     | Pexp_variant (_lab, eo) -> iter_opt (sub.expr sub) eo
     | Pexp_record (l, eo) ->
-      List.iter (iter_tuple3 (iter_loc sub) (sub.expr sub) (fun _ -> ())) l;
+      List.iter
+        (fun {lid; x = exp} ->
+          iter_loc sub lid;
+          sub.expr sub exp)
+        l;
       iter_opt (sub.expr sub) eo
     | Pexp_field (e, lid) ->
       sub.expr sub e;
@@ -397,7 +401,11 @@ module P = struct
       iter_opt (sub.pat sub) p
     | Ppat_variant (_l, p) -> iter_opt (sub.pat sub) p
     | Ppat_record (lpl, _cf) ->
-      List.iter (iter_tuple3 (iter_loc sub) (sub.pat sub) (fun _ -> ())) lpl
+      List.iter
+        (fun {lid; x = pat} ->
+          iter_loc sub lid;
+          sub.pat sub pat)
+        lpl
     | Ppat_array pl -> List.iter (sub.pat sub) pl
     | Ppat_or (p1, p2) ->
       sub.pat sub p1;

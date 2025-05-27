@@ -35,6 +35,7 @@
 - Remove deprecated pipe last (`|>`) syntax. https://github.com/rescript-lang/rescript/pull/7512
 - Improve error message for pipe (`->`) syntax. https://github.com/rescript-lang/rescript/pull/7520
 - Improve a few error messages around various subtyping issues. https://github.com/rescript-lang/rescript/pull/7404
+- Refactor the ast for record expressions and patterns. https://github.com/rescript-lang/rescript/pull/7528
 
 # 12.0.0-alpha.13
 

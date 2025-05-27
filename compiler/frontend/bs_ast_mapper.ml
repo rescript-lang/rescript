@@ -69,7 +69,6 @@ type mapper = {
   with_constraint: mapper -> with_constraint -> with_constraint;
 }
 
-let id x = x
 let map_fst f (x, y) = (f x, y)
 let map_snd f (x, y) = (x, f y)
 let map_tuple f1 f2 (x, y) = (f1 x, f2 y)
@@ -343,7 +342,10 @@ module E = struct
       variant ~loc ~attrs lab (map_opt (sub.expr sub) eo)
     | Pexp_record (l, eo) ->
       record ~loc ~attrs
-        (List.map (map_tuple3 (map_loc sub) (sub.expr sub) id) l)
+        (List.map
+           (fun {lid; x = e; opt} ->
+             {lid = map_loc sub lid; x = sub.expr sub e; opt})
+           l)
         (map_opt (sub.expr sub) eo)
     | Pexp_field (e, lid) ->
       field ~loc ~attrs (sub.expr sub e) (map_loc sub lid)
@@ -426,7 +428,10 @@ module P = struct
     | Ppat_variant (l, p) -> variant ~loc ~attrs l (map_opt (sub.pat sub) p)
     | Ppat_record (lpl, cf) ->
       record ~loc ~attrs
-        (List.map (map_tuple3 (map_loc sub) (sub.pat sub) id) lpl)
+        (List.map
+           (fun {lid; x = p; opt} ->
+             {lid = map_loc sub lid; x = sub.pat sub p; opt})
+           lpl)
         cf
     | Ppat_array pl -> array ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_or (p1, p2) -> or_ ~loc ~attrs (sub.pat sub p1) (sub.pat sub p2)

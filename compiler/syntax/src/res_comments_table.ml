@@ -1107,7 +1107,7 @@ and walk_expression expr t comments =
         PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_record (rows, _)}, [])}]
       ) ->
     walk_list
-      (rows |> List.map (fun (li, e, _) -> ExprRecordRow (li, e)))
+      (Ext_list.map rows (fun {lid; x = e} -> ExprRecordRow (lid, e)))
       t comments
   | Pexp_extension extension -> walk_extension extension t comments
   | Pexp_letexception (extension_constructor, expr2) ->
@@ -1227,7 +1227,7 @@ and walk_expression expr t comments =
           rest
       in
       walk_list
-        (rows |> List.map (fun (li, e, _) -> ExprRecordRow (li, e)))
+        (Ext_list.map rows (fun {lid; x = e} -> ExprRecordRow (lid, e)))
         t comments
   | Pexp_field (expr, longident) ->
     let leading, inside, trailing = partition_by_loc comments expr.pexp_loc in
@@ -2068,7 +2068,7 @@ and walk_pattern pat t comments =
   | Ppat_type _ -> ()
   | Ppat_record (record_rows, _) ->
     walk_list
-      (record_rows |> List.map (fun (li, p, _) -> PatternRecordRow (li, p)))
+      (Ext_list.map record_rows (fun {lid; x = p} -> PatternRecordRow (lid, p)))
       t comments
   | Ppat_or _ ->
     walk_list

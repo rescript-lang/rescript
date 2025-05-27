@@ -2501,9 +2501,8 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
                  Doc.soft_line;
                  Doc.join
                    ~sep:(Doc.concat [Doc.text ","; Doc.line])
-                   (List.map
-                      (fun row -> print_pattern_dict_row ~state row cmt_tbl)
-                      rows);
+                   (Ext_list.map rows (fun row ->
+                        print_pattern_dict_row ~state row cmt_tbl));
                ]);
           Doc.if_breaks (Doc.text ",") Doc.nil;
           Doc.soft_line;
@@ -2633,9 +2632,11 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
 and print_pattern_record_row ~state row cmt_tbl =
   match row with
   (* punned {x}*)
-  | ( ({Location.txt = Longident.Lident ident} as longident),
-      {Parsetree.ppat_desc = Ppat_var {txt; _}; ppat_attributes},
-      opt )
+  | {
+   lid = {Location.txt = Longident.Lident ident} as longident;
+   x = {Parsetree.ppat_desc = Ppat_var {txt; _}; ppat_attributes};
+   opt;
+  }
     when ident = txt ->
     Doc.concat
       [
@@ -2643,7 +2644,7 @@ and print_pattern_record_row ~state row cmt_tbl =
         print_attributes ~state ppat_attributes cmt_tbl;
         print_lident_path longident cmt_tbl;
       ]
-  | longident, pattern, opt ->
+  | {lid = longident; x = pattern; opt} ->
     let loc_for_comments =
       {longident.loc with loc_end = pattern.Parsetree.ppat_loc.loc_end}
     in
@@ -2668,8 +2669,8 @@ and print_pattern_record_row ~state row cmt_tbl =
     print_comments doc cmt_tbl loc_for_comments
 
 and print_pattern_dict_row ~state
-    ((longident, pattern, opt) :
-      Longident.t Location.loc * Parsetree.pattern * bool) cmt_tbl =
+    ({lid = longident; x = pattern; opt} :
+      Parsetree.pattern Parsetree.record_element) cmt_tbl =
   let loc_for_comments =
     {longident.loc with loc_end = pattern.ppat_loc.loc_end}
   in
@@ -3228,10 +3229,8 @@ and print_expression ~state (e : Parsetree.expression) cmt_tbl =
                       Doc.soft_line;
                       Doc.join
                         ~sep:(Doc.concat [Doc.text ","; Doc.line])
-                        (List.map
-                           (fun (loc, e, _opt) ->
-                             print_bs_object_row ~state (loc, e) cmt_tbl)
-                           rows);
+                        (Ext_list.map rows (fun {lid; x = e} ->
+                             print_bs_object_row ~state (lid, e) cmt_tbl));
                     ]);
                Doc.trailing_comma;
                Doc.soft_line;
@@ -5517,8 +5516,8 @@ and print_direction_flag flag =
   | Asttypes.Downto -> Doc.text " downto "
   | Asttypes.Upto -> Doc.text " to "
 
-and print_expression_record_row ~state (lbl, expr, optional) cmt_tbl
-    punning_allowed =
+and print_expression_record_row ~state {lid = lbl; x = expr; opt = optional}
+    cmt_tbl punning_allowed =
   let cmt_loc = {lbl.loc with loc_end = expr.pexp_loc.loc_end} in
   let doc =
     Doc.group
