@@ -97,6 +97,7 @@
     "tests/dependencies/**",
     "tests/analysis_tests/**",
     "tests/gentype_tests/**",
+    "tests/tests",
     "tests/tools_tests"
   ],
   "packageManager": "yarn@4.9.1",
