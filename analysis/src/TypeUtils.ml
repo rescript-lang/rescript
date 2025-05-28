@@ -1285,22 +1285,3 @@ let completionPathFromMaybeBuiltin path =
       (* Route Stdlib_X to Stdlib.X for proper completions without the Stdlib_ prefix *)
       Some (String.split_on_char '_' mainModule)
     | _ -> None)
-
-let find_module_path_at_pos ~(full : SharedTypes.full) ~(pos : int * int) =
-  let rec aux (structure : Module.structure) (path_acc : string list) =
-    let found =
-      structure.Module.items
-      |> List.find_map (fun item ->
-             match item.Module.kind with
-             | SharedTypes.Module.Module {type_ = Structure substructure; _} ->
-               let loc = item.loc in
-               if CursorPosition.locHasCursor loc ~pos then
-                 Some (aux substructure (path_acc @ [item.name]))
-               else None
-             | _ -> None)
-    in
-    match found with
-    | Some path -> path
-    | None -> path_acc
-  in
-  aux full.file.File.structure [full.file.File.moduleName]
