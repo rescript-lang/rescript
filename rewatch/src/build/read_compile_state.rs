@@ -79,13 +79,11 @@ pub fn read(build_state: &mut BuildState) -> CompileAssetsState {
                 "iast" | "ast" => {
                     let module_name = helpers::file_path_to_module_name(path, package_namespace);
 
-                    let res_file_path = get_res_path_from_ast(&path);
                     let root_package = build_state
                         .packages
                         .get(&build_state.root_config_name)
                         .expect("Could not find root package");
-                    if let Some(res_file_path) = res_file_path {
-                        let res_file_path_buf = PathBuf::from(res_file_path);
+                    if let Some(res_file_path_buf) = get_res_path_from_ast(&path) {
                         let _ = ast_modules.insert(
                             res_file_path_buf.clone(),
                             AstModule {
@@ -137,15 +135,15 @@ pub fn read(build_state: &mut BuildState) -> CompileAssetsState {
     }
 }
 
-fn get_res_path_from_ast(ast_file: &Path) -> Option<String> {
+fn get_res_path_from_ast(ast_file: &Path) -> Option<PathBuf> {
     if let Ok(lines) = helpers::read_lines(ast_file) {
         // we skip the first line with is some null characters
         // the following lines in the AST are the dependency modules
-        // we stop when we hit a line that starts with a "/", this is the path of the file.
+        // we stop when we hit a line that is an absolute path, this is the path of the file.
         // this is the point where the dependencies end and the actual AST starts
         for line in lines.skip(1) {
             match line {
-                Ok(line) if line.trim_start().starts_with('/') => return Some(line),
+                Ok(line) if Path::new(&line).is_absolute() => return Some(PathBuf::from(line)),
                 _ => (),
             }
         }

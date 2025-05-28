@@ -136,6 +136,7 @@ impl BuildState {
     }
 }
 
+#[derive(Debug)]
 pub struct AstModule {
     pub module_name: String,
     pub package_name: String,
@@ -146,6 +147,7 @@ pub struct AstModule {
     pub suffix: String,
 }
 
+#[derive(Debug)]
 pub struct CompileAssetsState {
     pub ast_modules: AHashMap<PathBuf, AstModule>,
     pub cmi_modules: AHashMap<String, SystemTime>,

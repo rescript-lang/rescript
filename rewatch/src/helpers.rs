@@ -75,7 +75,7 @@ impl StrippedVerbatimPath for PathBuf {
                     stripped.push(Component::ParentDir);
                 }
                 Component::Normal(os_str) => {
-                    stripped.push(os_str);
+                    stripped.push(Component::Normal(os_str));
                 }
             }
         }
