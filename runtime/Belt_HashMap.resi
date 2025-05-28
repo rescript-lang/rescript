@@ -174,7 +174,7 @@ let s1 = Belt.HashMap.copy(s0)
 
 Belt.HashMap.set(s0, 2, "3")
 
-assertEqual(Belt.HashMap.get(s0, 2) == Belt.HashMap.get(s1, 2), false)
+assertEqual(Belt.HashMap.get(s0, 2) != Belt.HashMap.get(s1, 2), true)
 ```
 */
 let copy: t<'key, 'value, 'id> => t<'key, 'value, 'id>
