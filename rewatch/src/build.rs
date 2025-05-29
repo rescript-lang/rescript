@@ -129,6 +129,7 @@ pub fn initialize_build(
     path: &Path,
     bsc_path: &Option<PathBuf>,
     build_dev_deps: bool,
+    snapshot_output: bool,
 ) -> Result<BuildState> {
     let project_root = helpers::get_abs_path(path);
     let workspace_root = helpers::get_workspace_root(&project_root);
@@ -139,7 +140,7 @@ pub fn initialize_build(
     let root_config_name = packages::read_package_name(&project_root)?;
     let rescript_version = helpers::get_rescript_version(&bsc_path);
 
-    if show_progress {
+    if !snapshot_output && show_progress {
         print!("{} {}Building package tree...", style("[1/7]").bold().dim(), TREE);
         let _ = stdout().flush();
     }
@@ -154,7 +155,7 @@ pub fn initialize_build(
     )?;
     let timing_package_tree_elapsed = timing_package_tree.elapsed();
 
-    if show_progress {
+    if !snapshot_output && show_progress {
         println!(
             "{}{} {}Built package tree in {:.2}s",
             LINE_CLEAR,
@@ -172,7 +173,7 @@ pub fn initialize_build(
 
     let timing_source_files = Instant::now();
 
-    if show_progress {
+    if !snapshot_output && show_progress {
         print!(
             "{} {}Finding source files...",
             style("[2/7]").bold().dim(),
@@ -192,7 +193,7 @@ pub fn initialize_build(
     packages::parse_packages(&mut build_state);
     let timing_source_files_elapsed = timing_source_files.elapsed();
 
-    if show_progress {
+    if !snapshot_output && show_progress {
         println!(
             "{}{} {}Found source files in {:.2}s",
             LINE_CLEAR,
@@ -214,7 +215,7 @@ pub fn initialize_build(
     let compile_assets_state = read_compile_state::read(&mut build_state);
     let timing_compile_state_elapsed = timing_compile_state.elapsed();
 
-    if show_progress {
+    if !snapshot_output && show_progress {
         println!(
             "{}{} {}Read compile state {:.2}s",
             LINE_CLEAR,
@@ -236,15 +237,19 @@ pub fn initialize_build(
     let timing_cleanup_elapsed = timing_cleanup.elapsed();
 
     if show_progress {
-        println!(
-            "{}{} {}Cleaned {}/{} {:.2}s",
-            LINE_CLEAR,
-            style("[4/7]").bold().dim(),
-            SWEEP,
-            diff_cleanup,
-            total_cleanup,
-            default_timing.unwrap_or(timing_cleanup_elapsed).as_secs_f64()
-        );
+        if snapshot_output {
+            println!("Cleant {}/{}", diff_cleanup, total_cleanup)
+        } else {
+            println!(
+                "{}{} {}Cleant {}/{} {:.2}s",
+                LINE_CLEAR,
+                style("[4/7]").bold().dim(),
+                SWEEP,
+                diff_cleanup,
+                total_cleanup,
+                default_timing.unwrap_or(timing_cleanup_elapsed).as_secs_f64()
+            );
+        }
     }
 
     Ok(build_state)
@@ -282,10 +287,11 @@ pub fn incremental_build(
     only_incremental: bool,
     create_sourcedirs: bool,
     build_dev_deps: bool,
+    snapshot_output: bool,
 ) -> Result<(), IncrementalBuildError> {
     logs::initialize(&build_state.packages);
     let num_dirty_modules = build_state.modules.values().filter(|m| is_dirty(m)).count() as u64;
-    let pb = if show_progress {
+    let pb = if !snapshot_output && show_progress {
         ProgressBar::new(num_dirty_modules)
     } else {
         ProgressBar::hidden()
@@ -308,20 +314,25 @@ pub fn incremental_build(
     match result_asts {
         Ok(_ast) => {
             if show_progress {
-                println!(
-                    "{}{} {}Parsed {} source files in {:.2}s",
-                    LINE_CLEAR,
-                    format_step(current_step, total_steps),
-                    CODE,
-                    num_dirty_modules,
-                    default_timing.unwrap_or(timing_ast_elapsed).as_secs_f64()
-                );
-                pb.finish();
+                if snapshot_output {
+                    println!("Parsed {} source files", num_dirty_modules)
+                } else {
+                    println!(
+                        "{}{} {}Parsed {} source files in {:.2}s",
+                        LINE_CLEAR,
+                        format_step(current_step, total_steps),
+                        CODE,
+                        num_dirty_modules,
+                        default_timing.unwrap_or(timing_ast_elapsed).as_secs_f64()
+                    );
+                    pb.finish();
+                }
             }
         }
         Err(err) => {
             logs::finalize(&build_state.packages);
-            if show_progress {
+
+            if !snapshot_output && show_progress {
                 println!(
                     "{}{} {}Error parsing source files in {:.2}s",
                     LINE_CLEAR,
@@ -332,7 +343,7 @@ pub fn incremental_build(
                 pb.finish();
             }
 
-            println!("Could not parse source files: {}", &err);
+            println!("{}", &err);
             return Err(IncrementalBuildError::SourceFileParseError);
         }
     }
@@ -341,7 +352,7 @@ pub fn incremental_build(
     let timing_deps_elapsed = timing_deps.elapsed();
     current_step += 1;
 
-    if show_progress {
+    if !snapshot_output && show_progress {
         println!(
             "{}{} {}Collected deps in {:.2}s",
             LINE_CLEAR,
@@ -365,7 +376,7 @@ pub fn incremental_build(
     };
 
     let start_compiling = Instant::now();
-    let pb = if show_progress {
+    let pb = if !snapshot_output && show_progress {
         ProgressBar::new(build_state.modules.len().try_into().unwrap())
     } else {
         ProgressBar::hidden()
@@ -397,14 +408,18 @@ pub fn incremental_build(
     pb.finish();
     if !compile_errors.is_empty() {
         if show_progress {
-            println!(
-                "{}{} {}Compiled {} modules in {:.2}s",
-                LINE_CLEAR,
-                format_step(current_step, total_steps),
-                CROSS,
-                num_compiled_modules,
-                default_timing.unwrap_or(compile_duration).as_secs_f64()
-            );
+            if snapshot_output {
+                println!("Compiled {} modules", num_compiled_modules)
+            } else {
+                println!(
+                    "{}{} {}Compiled {} modules in {:.2}s",
+                    LINE_CLEAR,
+                    format_step(current_step, total_steps),
+                    CROSS,
+                    num_compiled_modules,
+                    default_timing.unwrap_or(compile_duration).as_secs_f64()
+                );
+            }
         }
         if helpers::contains_ascii_characters(&compile_warnings) {
             println!("{}", &compile_warnings);
@@ -415,14 +430,18 @@ pub fn incremental_build(
         Err(IncrementalBuildError::CompileError(None))
     } else {
         if show_progress {
-            println!(
-                "{}{} {}Compiled {} modules in {:.2}s",
-                LINE_CLEAR,
-                format_step(current_step, total_steps),
-                SWORDS,
-                num_compiled_modules,
-                default_timing.unwrap_or(compile_duration).as_secs_f64()
-            );
+            if snapshot_output {
+                println!("Compiled {} modules", num_compiled_modules)
+            } else {
+                println!(
+                    "{}{} {}Compiled {} modules in {:.2}s",
+                    LINE_CLEAR,
+                    format_step(current_step, total_steps),
+                    SWORDS,
+                    num_compiled_modules,
+                    default_timing.unwrap_or(compile_duration).as_secs_f64()
+                );
+            }
         }
 
         if helpers::contains_ascii_characters(&compile_warnings) {
@@ -453,6 +472,7 @@ pub fn build(
     create_sourcedirs: bool,
     bsc_path: &Option<PathBuf>,
     build_dev_deps: bool,
+    snapshot_output: bool,
 ) -> Result<BuildState> {
     let default_timing: Option<std::time::Duration> = if no_timing {
         Some(std::time::Duration::new(0.0 as u64, 0.0 as u32))
@@ -467,6 +487,7 @@ pub fn build(
         path,
         bsc_path,
         build_dev_deps,
+        snapshot_output,
     )
     .map_err(|e| anyhow!("Could not initialize build. Error: {e}"))?;
 
@@ -478,9 +499,10 @@ pub fn build(
         false,
         create_sourcedirs,
         build_dev_deps,
+        snapshot_output,
     ) {
         Ok(_) => {
-            if show_progress {
+            if !snapshot_output && show_progress {
                 let timing_total_elapsed = timing_total.elapsed();
                 println!(
                     "\n{}{}Finished Compilation in {:.2}s",

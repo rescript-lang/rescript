@@ -46,6 +46,10 @@ struct Args {
     #[arg(short, long, default_value = "false", num_args = 0..=1)]
     no_timing: bool,
 
+    // simple output for snapshot testing
+    #[arg(short, long, default_value = "false", num_args = 0..=1)]
+    snapshot_output: bool,
+
     /// Verbosity:
     /// -v -> Debug
     /// -vv -> Trace
@@ -129,6 +133,7 @@ fn main() -> Result<()> {
                 show_progress,
                 &args.bsc_path.map(PathBuf::from),
                 args.dev,
+                args.snapshot_output,
             ),
             Command::Build => {
                 match build::build(
@@ -139,6 +144,7 @@ fn main() -> Result<()> {
                     args.create_sourcedirs,
                     &args.bsc_path.map(PathBuf::from),
                     args.dev,
+                    args.snapshot_output,
                 ) {
                     Err(e) => {
                         println!("{e}");
@@ -161,6 +167,7 @@ fn main() -> Result<()> {
                     args.create_sourcedirs,
                     args.dev,
                     args.bsc_path,
+                    args.snapshot_output,
                 );
 
                 Ok(())

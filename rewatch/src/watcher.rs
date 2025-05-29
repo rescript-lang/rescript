@@ -63,10 +63,18 @@ async fn async_watch(
     create_sourcedirs: bool,
     build_dev_deps: bool,
     bsc_path: Option<PathBuf>,
+    snapshot_output: bool,
 ) -> notify::Result<()> {
-    let mut build_state =
-        build::initialize_build(None, filter, show_progress, path, &bsc_path, build_dev_deps)
-            .expect("Can't initialize build");
+    let mut build_state = build::initialize_build(
+        None,
+        filter,
+        show_progress,
+        path,
+        &bsc_path,
+        build_dev_deps,
+        snapshot_output,
+    )
+    .expect("Can't initialize build");
     let mut needs_compile_type = CompileType::Incremental;
     // create a mutex to capture if ctrl-c was pressed
     let ctrlc_pressed = Arc::new(Mutex::new(false));
@@ -217,6 +225,7 @@ async fn async_watch(
                     !initial_build,
                     create_sourcedirs,
                     build_dev_deps,
+                    snapshot_output,
                 )
                 .is_ok()
                 {
@@ -225,13 +234,18 @@ async fn async_watch(
                     }
                     let timing_total_elapsed = timing_total.elapsed();
                     if show_progress {
-                        println!(
-                            "\n{}{}Finished {} compilation in {:.2}s\n",
-                            LINE_CLEAR,
-                            SPARKLES,
-                            if initial_build { "initial" } else { "incremental" },
-                            timing_total_elapsed.as_secs_f64()
-                        );
+                        let compilation_type = if initial_build { "initial" } else { "incremental" };
+                        if snapshot_output {
+                            println!("Finished {} compilation", compilation_type)
+                        } else {
+                            println!(
+                                "\n{}{}Finished {} compilation in {:.2}s\n",
+                                LINE_CLEAR,
+                                SPARKLES,
+                                compilation_type,
+                                timing_total_elapsed.as_secs_f64()
+                            );
+                        }
                     }
                 }
                 needs_compile_type = CompileType::None;
@@ -239,9 +253,16 @@ async fn async_watch(
             }
             CompileType::Full => {
                 let timing_total = Instant::now();
-                build_state =
-                    build::initialize_build(None, filter, show_progress, path, &bsc_path, build_dev_deps)
-                        .expect("Can't initialize build");
+                build_state = build::initialize_build(
+                    None,
+                    filter,
+                    show_progress,
+                    path,
+                    &bsc_path,
+                    build_dev_deps,
+                    snapshot_output,
+                )
+                .expect("Can't initialize build");
                 let _ = build::incremental_build(
                     &mut build_state,
                     None,
@@ -250,6 +271,7 @@ async fn async_watch(
                     false,
                     create_sourcedirs,
                     build_dev_deps,
+                    snapshot_output,
                 );
                 if let Some(a) = after_build.clone() {
                     cmd::run(a)
@@ -258,7 +280,7 @@ async fn async_watch(
                 build::write_build_ninja(&build_state);
 
                 let timing_total_elapsed = timing_total.elapsed();
-                if show_progress {
+                if !snapshot_output && show_progress {
                     println!(
                         "\n{}{}Finished compilation in {:.2}s\n",
                         LINE_CLEAR,
@@ -286,6 +308,7 @@ pub fn start(
     create_sourcedirs: bool,
     build_dev_deps: bool,
     bsc_path: Option<String>,
+    snapshot_output: bool,
 ) {
     futures::executor::block_on(async {
         let queue = Arc::new(FifoQueue::<Result<Event, Error>>::new());
@@ -310,6 +333,7 @@ pub fn start(
             create_sourcedirs,
             build_dev_deps,
             bsc_path_buf,
+            snapshot_output,
         )
         .await
         {

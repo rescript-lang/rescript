@@ -769,7 +769,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
                         };
                         match source_files.get(&implementation_filename) {
                             None => {
-                                log::warn!(
+                                println!(
                                     "{} No implementation file found for interface file (skipping): {}",
                                     LINE_CLEAR,
                                     file.to_string_lossy()

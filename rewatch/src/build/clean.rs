@@ -336,6 +336,7 @@ pub fn clean(
     show_progress: bool,
     bsc_path: &Option<PathBuf>,
     build_dev_deps: bool,
+    snapshot_output: bool,
 ) -> Result<()> {
     let project_root = helpers::get_abs_path(path);
     let workspace_root = helpers::get_workspace_root(&project_root);
@@ -356,7 +357,7 @@ pub fn clean(
     let rescript_version = helpers::get_rescript_version(&bsc_path);
 
     let timing_clean_compiler_assets = Instant::now();
-    if show_progress {
+    if !snapshot_output && show_progress {
         print!(
             "{} {}Cleaning compiler assets...",
             style("[1/2]").bold().dim(),
@@ -366,13 +367,17 @@ pub fn clean(
     };
     packages.iter().for_each(|(_, package)| {
         if show_progress {
-            print!(
-                "{}{} {}Cleaning {}...",
-                LINE_CLEAR,
-                style("[1/2]").bold().dim(),
-                SWEEP,
-                package.name
-            );
+            if snapshot_output {
+                println!("Cleaning {}", package.name)
+            } else {
+                print!(
+                    "{}{} {}Cleaning {}...",
+                    LINE_CLEAR,
+                    style("[1/2]").bold().dim(),
+                    SWEEP,
+                    package.name
+                );
+            }
             let _ = std::io::stdout().flush();
         }
 
@@ -386,9 +391,9 @@ pub fn clean(
     });
     let timing_clean_compiler_assets_elapsed = timing_clean_compiler_assets.elapsed();
 
-    if show_progress {
+    if !snapshot_output && show_progress {
         println!(
-            "{}{} {}Cleaned compiler assets in {:.2}s",
+            "{}{} {}Cleant compiler assets in {:.2}s",
             LINE_CLEAR,
             style("[1/2]").bold().dim(),
             SWEEP,
@@ -398,7 +403,7 @@ pub fn clean(
     }
 
     let timing_clean_mjs = Instant::now();
-    if show_progress {
+    if !snapshot_output && show_progress {
         println!("{} {}Cleaning mjs files...", style("[2/2]").bold().dim(), SWEEP);
         let _ = std::io::stdout().flush();
     }
@@ -414,7 +419,7 @@ pub fn clean(
     clean_mjs_files(&build_state);
     let timing_clean_mjs_elapsed = timing_clean_mjs.elapsed();
 
-    if show_progress {
+    if !snapshot_output && show_progress {
         println!(
             "{}{} {}Cleaned mjs files in {:.2}s",
             LINE_CLEAR,
