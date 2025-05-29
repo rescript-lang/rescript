@@ -42,4 +42,3 @@ type typath =
 
 val constructor_typath : t -> typath
 val is_constructor_typath : t -> bool
-val to_string : t -> string

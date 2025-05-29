@@ -95,7 +95,7 @@ let dump ?filter rescript_json cmt_path =
         dump_module indent m
     and dump_module indent (module_ : Module.t) =
       match module_ with
-      | Ident path -> Printf.printf "Module (Ident) %s\n" (Path.to_string path)
+      | Ident path -> Printf.printf "Module (Ident) %s\n" (Path.name path)
       | Structure structure -> dump_structure indent structure
       | Constraint (m1, m2) ->
         dump_module indent m1;
