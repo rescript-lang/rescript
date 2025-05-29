@@ -1131,7 +1131,7 @@ let mk_record_from_props mapper (jsx_expr_loc : Location.t) (props : jsx_props)
       {
         loc_start = first_item.loc_start;
         loc_end = last_item.loc_end;
-        loc_ghost = true;
+        loc_ghost = false;
       }
   in
   (* key should be filtered out *)
@@ -1156,7 +1156,7 @@ let mk_record_from_props mapper (jsx_expr_loc : Location.t) (props : jsx_props)
          | JSXPropPunning (is_optional, name) ->
            {
              lid = {txt = Lident name.txt; loc = name.loc};
-             x = Exp.ident {txt = Lident name.txt; loc = name.loc};
+             x = Exp.ident ~loc:name.loc {txt = Lident name.txt; loc = name.loc};
              opt = is_optional;
            }
          | JSXPropValue (name, is_optional, value) ->
@@ -1303,7 +1303,6 @@ let expr ~(config : Jsx_common.jsx_config) mapper expression =
    pexp_loc = loc;
    pexp_attributes = attrs;
   } -> (
-    let loc = {loc with loc_ghost = true} in
     match jsx_element with
     | Jsx_fragment {jsx_fragment_children = children} ->
       let fragment =
