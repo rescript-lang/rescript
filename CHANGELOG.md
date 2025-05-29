@@ -25,6 +25,7 @@
 - Treat `throw` like `raise` in analysis. https://github.com/rescript-lang/rescript/pull/7521
 - Fix `index out of bounds` exception thrown in rare cases by `rescript-editor-analysis.exe codeAction` command. https://github.com/rescript-lang/rescript/pull/7523
 - Don't produce duplicate type definitions for recursive types on hover. https://github.com/rescript-lang/rescript/pull/7524
+- Prop punning when types don't match results in I/O error: _none_: No such file or directory. https://github.com/rescript-lang/rescript/pull/7533
 
 #### :nail_care: Polish
 
