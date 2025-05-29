@@ -454,28 +454,26 @@ let processLocalModule name loc ~prefix ~exact ~env
 let processLocalInclude includePath _loc ~prefix ~exact ~(env : QueryEnv.t)
     ~(localTables : LocalTables.t) =
   (* process only values for now *)
-  localTables.valueTable
-  |> Hashtbl.iter (fun (name, _) (declared : Types.type_expr Declared.t) ->
+  localTables.includedValueTable
+  |> Hashtbl.iter
+       (fun (name, _) (declared : (string * Types.type_expr) Declared.t) ->
          (* We check all the values if their origin is the same as the include path. *)
-         match declared.modulePath with
-         | ModulePath.IncludedModule (source, _) ->
-           let source_module_path = Path.name source in
-           if String.ends_with ~suffix:includePath source_module_path then
-             (* If this is the case we perform a similar check for the prefix *)
-             if Utils.checkName name ~prefix ~exact then
-               if not (Hashtbl.mem localTables.namesUsed name) then (
-                 Hashtbl.add localTables.namesUsed name ();
-                 localTables.resultRev <-
-                   {
-                     (Completion.create declared.name.txt ~env
-                        ~kind:(Value declared.item))
-                     with
-                     deprecated = declared.deprecated;
-                     docstring = declared.docstring;
-                     synthetic = true;
-                   }
-                   :: localTables.resultRev)
-         | _ -> ())
+         let source_module_path = fst declared.item in
+         if String.ends_with ~suffix:includePath source_module_path then
+           (* If this is the case we perform a similar check for the prefix *)
+           if Utils.checkName name ~prefix ~exact then
+             if not (Hashtbl.mem localTables.namesUsed name) then (
+               Hashtbl.add localTables.namesUsed name ();
+               localTables.resultRev <-
+                 {
+                   (Completion.create declared.name.txt ~env
+                      ~kind:(Value (snd declared.item)))
+                   with
+                   deprecated = declared.deprecated;
+                   docstring = declared.docstring;
+                   synthetic = true;
+                 }
+                 :: localTables.resultRev))
 
 let getItemsFromOpens ~opens ~localTables ~prefix ~exact ~completionContext =
   opens
@@ -491,6 +489,7 @@ let getItemsFromOpens ~opens ~localTables ~prefix ~exact ~completionContext =
 let findLocalCompletionsForValuesAndConstructors ~(localTables : LocalTables.t)
     ~env ~prefix ~exact ~opens ~scope =
   localTables |> LocalTables.populateValues ~env;
+  localTables |> LocalTables.populateIncludedValues ~env;
   localTables |> LocalTables.populateConstructors ~env;
   localTables |> LocalTables.populateModules ~env;
 
@@ -527,6 +526,7 @@ let findLocalCompletionsForValuesAndConstructors ~(localTables : LocalTables.t)
 let findLocalCompletionsForValues ~(localTables : LocalTables.t) ~env ~prefix
     ~exact ~opens ~scope =
   localTables |> LocalTables.populateValues ~env;
+  localTables |> LocalTables.populateIncludedValues ~env;
   localTables |> LocalTables.populateModules ~env;
   scope
   |> Scope.iterValuesBeforeFirstOpen
