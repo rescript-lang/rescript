@@ -104,3 +104,8 @@ let is_constructor_typath p =
   match constructor_typath p with
   | Regular _ -> false
   | _ -> true
+
+let rec to_string = function
+  | Pident id -> Ident.name id
+  | Pdot (p, s, _) -> to_string p ^ "." ^ s
+  | Papply (p1, p2) -> to_string p1 ^ "(" ^ to_string p2 ^ ")"

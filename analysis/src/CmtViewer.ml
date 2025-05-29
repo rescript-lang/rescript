@@ -1,5 +1,5 @@
 let loc_to_string (loc : Warnings.loc) : string =
-  Format.sprintf "(%03d,%03d--%03d,%03d)" loc.loc_start.pos_lnum
+  Format.sprintf "(%02d,%02d--%02d,%02d)" loc.loc_start.pos_lnum
     (loc.loc_start.pos_cnum - loc.loc_start.pos_bol)
     loc.loc_end.pos_lnum
     (loc.loc_end.pos_cnum - loc.loc_end.pos_bol)
@@ -47,6 +47,9 @@ let dump ?filter rescript_json cmt_path =
     | Some (Cursor (line, col)) ->
       Printf.printf "Filtering by cursor %d,%d\n" line col
     | Some (Loc loc) -> Printf.printf "Filtering by loc %s\n" (Loc.toString loc));
+
+    Printf.printf "file moduleName: %s\n\n" full.file.moduleName;
+
     let stamps =
       full.file.stamps |> getEntries
       |> List.filter (fun (_, stamp) -> applyFilter (locOfKind stamp))
@@ -77,6 +80,34 @@ let dump ?filter rescript_json cmt_path =
            | KConstructor t ->
              Printf.printf "%d kconstructor %s\n" stamp
                (loc_to_string t.extentLoc));
+
+    (* dump the structure *)
+    let rec dump_structure indent (structure : Module.structure) =
+      if indent > 0 then Printf.printf "%s" (String.make indent ' ');
+      Printf.printf "Structure %s:\n" structure.name;
+      structure.items |> List.iter (dump_structure_item (indent + 2))
+    and dump_structure_item indent item =
+      if indent > 0 then Printf.printf "%s" (String.make indent ' ');
+      let open Module in
+      match item.kind with
+      | Value _typedExpr ->
+        Printf.printf "Value %s %s\n" item.name (loc_to_string item.loc)
+      | Type _ ->
+        Printf.printf "Type %s %s\n" item.name (loc_to_string item.loc)
+      | Module {type_ = m} ->
+        Printf.printf "Module %s %s\n" item.name (loc_to_string item.loc);
+        dump_module indent m
+    and dump_module indent (module_ : Module.t) =
+      match module_ with
+      | Ident path -> Printf.printf "Module (Ident) %s\n" (Path.to_string path)
+      | Structure structure -> dump_structure indent structure
+      | Constraint (m1, m2) ->
+        dump_module indent m1;
+        dump_module indent m2
+    in
+
+    print_newline ();
+    dump_structure 0 full.file.structure;
 
     (* Dump all locItems (typed nodes) *)
     let locItems =
