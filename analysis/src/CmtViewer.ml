@@ -1,9 +1,3 @@
-let loc_to_string (loc : Warnings.loc) : string =
-  Format.sprintf "(%02d,%02d--%02d,%02d)" loc.loc_start.pos_lnum
-    (loc.loc_start.pos_cnum - loc.loc_start.pos_bol)
-    loc.loc_end.pos_lnum
-    (loc.loc_end.pos_cnum - loc.loc_end.pos_bol)
-
 let filter_by_cursor cursor (loc : Warnings.loc) : bool =
   match cursor with
   | None -> true
@@ -70,16 +64,16 @@ let dump ?filter rescript_json cmt_path =
            match kind with
            | KType t ->
              Printf.printf "%d ktype        %s\n" stamp
-               (loc_to_string t.extentLoc)
+               (Warnings.loc_to_string t.extentLoc)
            | KValue t ->
              Printf.printf "%d kvalue       %s\n" stamp
-               (loc_to_string t.extentLoc)
+               (Warnings.loc_to_string t.extentLoc)
            | KModule t ->
              Printf.printf "%d kmodule      %s\n" stamp
-               (loc_to_string t.extentLoc)
+               (Warnings.loc_to_string t.extentLoc)
            | KConstructor t ->
              Printf.printf "%d kconstructor %s\n" stamp
-               (loc_to_string t.extentLoc));
+               (Warnings.loc_to_string t.extentLoc));
 
     (* dump the structure *)
     let rec dump_structure indent (structure : Module.structure) =
@@ -91,11 +85,13 @@ let dump ?filter rescript_json cmt_path =
       let open Module in
       match item.kind with
       | Value _typedExpr ->
-        Printf.printf "Value %s %s\n" item.name (loc_to_string item.loc)
+        Printf.printf "Value %s %s\n" item.name
+          (Warnings.loc_to_string item.loc)
       | Type _ ->
-        Printf.printf "Type %s %s\n" item.name (loc_to_string item.loc)
+        Printf.printf "Type %s %s\n" item.name (Warnings.loc_to_string item.loc)
       | Module {type_ = m} ->
-        Printf.printf "Module %s %s\n" item.name (loc_to_string item.loc);
+        Printf.printf "Module %s %s\n" item.name
+          (Warnings.loc_to_string item.loc);
         dump_module indent m
     and dump_module indent (module_ : Module.t) =
       match module_ with
@@ -127,6 +123,6 @@ let dump ?filter rescript_json cmt_path =
            | 0 -> compare aLoc.pos_cnum bLoc.pos_cnum
            | c -> c)
     |> List.iter (fun {loc; locType} ->
-           let locStr = loc_to_string loc in
+           let locStr = Warnings.loc_to_string loc in
            let kindStr = SharedTypes.locTypeToString locType in
            Printf.printf "%s %s\n" locStr kindStr)

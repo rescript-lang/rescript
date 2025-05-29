@@ -676,3 +676,9 @@ let help_warnings () =
         (String.concat ", " (List.map string_of_int l))
   done;
   exit 0
+
+let loc_to_string (loc : loc) : string =
+  Format.sprintf "(%02d,%02d--%02d,%02d)" loc.loc_start.pos_lnum
+    (loc.loc_start.pos_cnum - loc.loc_start.pos_bol)
+    loc.loc_end.pos_lnum
+    (loc.loc_end.pos_cnum - loc.loc_end.pos_bol)

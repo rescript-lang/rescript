@@ -801,6 +801,18 @@ module ScopeTypes = struct
     | Type of string * Location.t
     | Value of string * Location.t * Completable.contextPath option * item list
     | Include of string * Location.t
+
+  let item_to_string = function
+    | Constructor (name, loc) ->
+      "Constructor " ^ name ^ " " ^ Warnings.loc_to_string loc
+    | Field (name, loc) -> "Field " ^ name ^ " " ^ Warnings.loc_to_string loc
+    | Module (name, loc) -> "Module " ^ name ^ " " ^ Warnings.loc_to_string loc
+    | Open path -> "Open " ^ (path |> String.concat ".")
+    | Type (name, loc) -> "Type " ^ name ^ " " ^ Warnings.loc_to_string loc
+    | Value (name, loc, _, _) ->
+      "Value " ^ name ^ " " ^ Warnings.loc_to_string loc
+    | Include (name, loc) ->
+      "Include " ^ name ^ " " ^ Warnings.loc_to_string loc
 end
 
 module Completion = struct
