@@ -31,9 +31,7 @@ let populateValues ~env localTables =
              Hashtbl.find_opt localTables.valueTable
                (declared.name.txt, declared.name.loc |> Loc.start)
            with
-           | Some
-               {modulePath = ModulePath.IncludedModule _; name = existingName}
-             when declared.name.txt = existingName.txt ->
+           | Some {modulePath = ModulePath.IncludedModule _} ->
              (* Don't override an included module declared item with an Exported one *)
              ()
            | _ ->
