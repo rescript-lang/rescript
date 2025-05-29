@@ -458,7 +458,22 @@ let processLocalInclude includePath _loc ~prefix ~exact ~(env : QueryEnv.t)
   |> Hashtbl.iter (fun (name, _) (declared : Types.type_expr Declared.t) ->
          (* We check all the values if their origin is the same as the include path. *)
          match declared.modulePath with
-         | SharedTypes.ModulePath.IncludedModule (source, _) ->
+         | ModulePath.ExportedModule {name = exportedName}
+           when exportedName = includePath ->
+           if Utils.checkName name ~prefix ~exact then
+             if not (Hashtbl.mem localTables.namesUsed name) then (
+               Hashtbl.add localTables.namesUsed name ();
+               localTables.resultRev <-
+                 {
+                   (Completion.create declared.name.txt ~env
+                      ~kind:(Value declared.item))
+                   with
+                   deprecated = declared.deprecated;
+                   docstring = declared.docstring;
+                   synthetic = true;
+                 }
+                 :: localTables.resultRev)
+         | ModulePath.IncludedModule (source, _) ->
            let source_module_path =
              match Path.flatten source with
              | `Contains_apply -> ""

@@ -745,6 +745,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
       processed := true
     | Pstr_include {pincl_mod = {pmod_desc = med}} -> (
       match med with
+      | Pmod_ident {txt = lid; loc}
       | Pmod_apply ({pmod_desc = Pmod_ident {txt = lid; loc}}, _) ->
         let module_name = Longident.flatten lid |> String.concat "." in
         scope := !scope |> Scope.addInclude ~name:module_name ~loc

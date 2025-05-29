@@ -9,7 +9,8 @@ let getCompletions ~debug ~path ~pos ~currentFile ~forHover =
     with
     | None -> None
     | Some (completable, scope) -> (
-      if debug then (
+      (* uncomment when debugging *)
+      if false then (
         Printf.printf "\nScope from frontend:\n";
         List.iter
           (fun item ->
