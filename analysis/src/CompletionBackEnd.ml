@@ -459,12 +459,7 @@ let processLocalInclude includePath _loc ~prefix ~exact ~(env : QueryEnv.t)
          (* We check all the values if their origin is the same as the include path. *)
          match declared.modulePath with
          | ModulePath.IncludedModule (source, _) ->
-           let source_module_path =
-             match Path.flatten source with
-             | `Contains_apply -> ""
-             | `Ok (ident, path) -> ident.name :: path |> String.concat "."
-           in
-
+           let source_module_path = Path.name source in
            if String.ends_with ~suffix:includePath source_module_path then
              (* If this is the case we perform a similar check for the prefix *)
              if Utils.checkName name ~prefix ~exact then
