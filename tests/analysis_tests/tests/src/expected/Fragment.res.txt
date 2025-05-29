@@ -2,9 +2,5 @@ Hover src/Fragment.res 6:19
 {"contents": {"kind": "markdown", "value": "```rescript\nReact.component<SectionHeader.props<React.element>>\n```\n\n---\n\n```\n \n```\n```rescript\ntype React.component<'props> = Jsx.component<'props>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C12%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype SectionHeader.props<'children> = {children: 'children}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Fragment.res%22%2C1%2C2%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.element = Jsx.element\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C0%2C0%5D)\n"}}
 
 Hover src/Fragment.res 9:56
-Nothing at that position. Now trying to use completion.
-posCursor:[9:56] posNoWhite:[9:55] Found expr:[9:9->9:70]
-posCursor:[9:56] posNoWhite:[9:55] Found expr:[9:12->9:66]
-JSX <SectionHeader:[9:13->9:26] > _children:9:29
-null
+{"contents": {"kind": "markdown", "value": "```rescript\nReact.component<React.fragmentProps>\n```\n\n---\n\n```\n \n```\n```rescript\ntype React.component<'props> = Jsx.component<'props>\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C12%2C0%5D)\n\n\n---\n\n```\n \n```\n```rescript\ntype React.fragmentProps = {children?: element}\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22React.res%22%2C41%2C0%5D)\n"}}
 
