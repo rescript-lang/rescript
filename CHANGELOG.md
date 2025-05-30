@@ -43,6 +43,10 @@
 - Refactor the ast for record expressions and patterns. https://github.com/rescript-lang/rescript/pull/7528
 - Editor: add completions from included modules. https://github.com/rescript-lang/rescript/pull/7515
 
+#### :house: Internal
+
+- Export binary paths from rescript package. https://github.com/rescript-lang/rescript/pull/7530
+
 # 12.0.0-alpha.13
 
 #### :boom: Breaking Change
