@@ -19,10 +19,11 @@ exit_watcher() {
 }
 
 rewatch_bg watch > /dev/null 2>&1 &
+success "Watcher Started"
 
 sleep 1
 
-if rewatch watch | grep 'Could not start Rewatch:' &> /dev/null; 
+if rewatch build | grep 'Could not start Rewatch:' &> /dev/null; 
 then
   # rm output.txt
   success "Lock is correctly set"
