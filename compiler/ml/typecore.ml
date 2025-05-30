@@ -3657,7 +3657,9 @@ and type_application ~context total_app env funct (sargs : sargs) :
                    env sarg0 ty ty0
                else fun () ->
                  option_some
-                   (type_argument ~context env sarg0
+                   (type_argument
+                      ~context:(Some (FunctionArgument {optional = true}))
+                      env sarg0
                       (extract_option_type env ty)
                       (extract_option_type env ty0))) )
       in

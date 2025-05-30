@@ -527,6 +527,7 @@ let type_clash_context_for_function_argument type_clash_context sarg0 =
                Some txt
              | _ -> None);
          })
+  | None -> Some (FunctionArgument {optional = false})
   | type_clash_context -> type_clash_context
 
 let type_clash_context_maybe_option ty_expected ty_res =
