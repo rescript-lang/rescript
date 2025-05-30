@@ -802,7 +802,7 @@ Path s
     "kind": 12,
     "tags": [],
     "detail": "(string, RegExp.t, ~limit: int) => array<option<string>>",
-    "documentation": {"kind": "markdown", "value": "\n`splitByRegExpAtMost(str, regexp, ~limit)` splits the given `str` at every\noccurrence of `regexp` and returns an array of the first `limit` resulting\nsubstrings. If `limit` is negative or greater than the number of substrings, the\narray will contain all the substrings.\nSee [`String.split`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/split) on MDN.\n\n## Examples\n\n```rescript\nString.splitByRegExpAtMost(\"Hello World. How are you doing?\", %re(\"/ /\"), ~limit=3) == [\n  Some(\"Hello\"),\n  Some(\"World.\"),\n  Some(\"How\"),\n]\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`splitByRegExpAtMost(str, regexp, ~limit)` splits the given `str` at every\noccurrence of `regexp` and returns an array of the first `limit` resulting\nsubstrings. If `limit` is negative or greater than the number of substrings, the\narray will contain all the substrings.\nSee [`String.split`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/split) on MDN.\n\n## Examples\n\n```rescript\nString.splitByRegExpAtMost(\"Hello World. How are you doing?\", / /, ~limit=3) ==\n  [Some(\"Hello\"), Some(\"World.\"), Some(\"How\")]\n```\n"},
     "sortText": "splitByRegExpAtMost",
     "insertText": "->String.splitByRegExpAtMost",
     "additionalTextEdits": [{

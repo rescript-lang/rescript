@@ -112,6 +112,96 @@ let getCodeBlocks = example => {
     }
   }
 
+  // Transform lines that contain == patterns to use assertEqual
+  let transformEqualityAssertions = code => {
+    let lines = code->String.split("\n")
+    lines
+    ->Array.mapWithIndex((line, idx) => {
+      let trimmedLine = line->String.trim
+
+      // Check if the line contains == and is not inside a comment
+      if (
+        trimmedLine->String.includes("==") &&
+        !(trimmedLine->String.startsWith("//")) &&
+        !(trimmedLine->String.startsWith("/*")) &&
+        // Not an expression line
+        !(trimmedLine->String.startsWith("if")) &&
+        !(trimmedLine->String.startsWith("|")) &&
+        !(trimmedLine->String.startsWith("let")) &&
+        !(trimmedLine->String.startsWith("~")) &&
+        !(trimmedLine->String.startsWith("module")) &&
+        !(trimmedLine->String.startsWith("->")) &&
+        !(trimmedLine->String.endsWith(","))
+      ) {
+        // Split string at == (not ===) and transform to assertEqual
+        let parts = {
+          let rec searchFrom = (currentLine: string, startIndex: int): option<(string, string)> => {
+            if startIndex >= currentLine->String.length {
+              // Base case: reached end of string without finding a suitable "=="
+              None
+            } else {
+              let lineSuffix = currentLine->String.sliceToEnd(~start=startIndex)
+              let idxEqEqInSuffix = lineSuffix->String.indexOfOpt("==")
+              let idxEqEqEqInSuffix = lineSuffix->String.indexOfOpt("===")
+
+              switch (idxEqEqInSuffix, idxEqEqEqInSuffix) {
+              | (None, _) =>
+                // No "==" found in the rest of the string.
+                None
+              | (Some(iEqEq), None) =>
+                // Found "==" but no "===" in the suffix.
+                // This "==" must be standalone.
+                // Calculate its absolute index in the original `currentLine`.
+                let actualIdx = startIndex + iEqEq
+                let left = currentLine->String.slice(~start=0, ~end=actualIdx)
+                let right = currentLine->String.sliceToEnd(~start=actualIdx + 2)
+                Some((left, right))
+              | (Some(iEqEq), Some(iEqEqEq)) =>
+                // Found both "==" and "===" in the suffix.
+                if iEqEq < iEqEqEq {
+                  // The "==" occurs before "===". This "==" is standalone.
+                  // Example: "a == b === c". In suffix "a == b === c", iEqEq is for "a ==".
+                  let actualIdx = startIndex + iEqEq
+                  let left = currentLine->String.slice(~start=0, ~end=actualIdx)
+                  let right = currentLine->String.sliceToEnd(~start=actualIdx + 2)
+                  Some((left, right))
+                } else {
+                  // iEqEq >= iEqEqEq
+                  // This means the first "==" encountered (at iEqEq relative to suffix)
+                  // is part of or comes after the first "===" encountered (at iEqEqEq relative to suffix).
+                  // Example: "a === b". In suffix "a === b", iEqEqEq is for "a ===", iEqEq is also for "a ==".
+                  // We must skip over the "===" found at iEqEqEq and search again.
+                  // The next search should start after this "===".
+                  // The "===" starts at (startIndex + iEqEqEq) in the original line. It has length 3.
+                  searchFrom(currentLine, startIndex + iEqEqEq + 3)
+                }
+              }
+            }
+          }
+          searchFrom(line, 0)
+        }
+        let parts = switch parts {
+        | Some((left, right)) if right->String.trim->String.length === 0 =>
+          Some((
+            left,
+            lines
+            ->Array.get(idx + 1)
+            ->Option.getExn(~message="Expected to have an expected expression on the next line"),
+          ))
+        | _ => parts
+        }
+        switch parts {
+        | Some((left, right)) if !(right->String.includes(")") || right->String.includes("//")) =>
+          `(${left->String.trim})->assertEqual(${right->String.trim})`
+        | _ => line
+        }
+      } else {
+        line
+      }
+    })
+    ->Array.join("\n")
+  }
+
   let rec loop = (lines: list<string>, acc: list<string>) => {
     switch lines {
     | list{hd, ...rest} =>
@@ -120,16 +210,13 @@ let getCodeBlocks = example => {
       ->String.startsWith("```res") {
       | true =>
         let code = loopEndCodeBlock(rest, list{})
-        loop(
-          rest,
-          list{
-            code
-            ->List.reverse
-            ->List.toArray
-            ->Array.join("\n"),
-            ...acc,
-          },
-        )
+        let codeString =
+          code
+          ->List.reverse
+          ->List.toArray
+          ->Array.join("\n")
+          ->transformEqualityAssertions
+        loop(rest, list{codeString, ...acc})
       | false => loop(rest, acc)
       }
     | list{} => acc

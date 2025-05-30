@@ -21,7 +21,7 @@ case "$(uname -s)" in
     if ./cli/rescript.js format -check $files; then
       printf "${successGreen}✅ ReScript code formatting ok.${reset}\n"
     else
-      printf "${warningYellow}⚠️ ReScript code formatting issues found.${reset}\n"
+      printf "${warningYellow}⚠️ ReScript code formatting issues found. Run 'make format' to fix.${reset}\n"
       exit 1
     fi
     ;;

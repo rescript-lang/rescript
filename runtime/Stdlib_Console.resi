@@ -14,7 +14,7 @@ on MDN.
 
 ```rescript
 Console.assert_(false, "Hello World!")
-Console.assert_(42 == 42, "The answer")
+Console.assert_(42 === 42, "The answer")
 ```
 */
 @val
@@ -27,7 +27,7 @@ external assert_: (bool, 'a) => unit = "console.assert"
 
 ```rescript
 Console.assert2(false, "Hello", "World")
-Console.assert2(42 == 42, [1, 2, 3], '4')
+Console.assert2(42 === 42, [1, 2, 3], '4')
 ```
 */
 @val
@@ -40,7 +40,7 @@ external assert2: (bool, 'a, 'b) => unit = "console.assert"
 
 ```rescript
 Console.assert3(false, "Hello", "World", "ReScript")
-Console.assert3(42 == 42, "One", 2, #3)
+Console.assert3(42 === 42, "One", 2, #3)
 ```
 */
 @val
@@ -54,7 +54,7 @@ external assert3: (bool, 'a, 'b, 'c) => unit = "console.assert"
 ```rescript
 let value = 42
 Console.assert4(false, "Hello", "World", "ReScript", "!!!")
-Console.assert4(value == 42, [1, 2], (3, 4), [#5, #6], #"polyvar")
+Console.assert4(value === 42, [1, 2], (3, 4), [#5, #6], #"polyvar")
 ```
 */
 @val
@@ -68,7 +68,7 @@ external assert4: (bool, 'a, 'b, 'c, 'd) => unit = "console.assert"
 ```rescript
 let value = 42
 Console.assert5(false, "Hello", "World", "JS", '!', '!')
-Console.assert5(value == 42, [1, 2], (3, 4), [#5, #6], #"polyvar", {"name": "ReScript"})
+Console.assert5(value === 42, [1, 2], (3, 4), [#5, #6], #"polyvar", {"name": "ReScript"})
 ```
 */
 @val
@@ -82,7 +82,7 @@ external assert5: (bool, 'a, 'b, 'c, 'd, 'e) => unit = "console.assert"
 ```rescript
 let value = 42
 Console.assert6(false, "Hello", "World", "JS", '!', '!', '?')
-Console.assert6(value == 42, [1, 2], (3, 4), [#5, #6], #"polyvar", {"name": "ReScript"}, 42)
+Console.assert6(value === 42, [1, 2], (3, 4), [#5, #6], #"polyvar", {"name": "ReScript"}, 42)
 ```
 */
 @val
@@ -96,7 +96,7 @@ external assert6: (bool, 'a, 'b, 'c, 'd, 'e, 'f) => unit = "console.assert"
 ```rescript
 let value = 42
 Console.assertMany(false, ["Hello", "World"])
-Console.assertMany(value == 42, [1, 2, 3])
+Console.assertMany(value === 42, [1, 2, 3])
 ```
 */
 @val
