@@ -1,0 +1,10 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/while_condition.res[0m:[2m1:7-13[0m
+
+  [1;31m1[0m [2m│[0m while [1;31m"horse"[0m {
+  2 [2m│[0m   Console.log("What")
+  3 [2m│[0m }
+
+  This has type: [1;31mstring[0m
+  But a [1;33mwhile[0m loop condition must always be of type: [1;33mbool[0m
