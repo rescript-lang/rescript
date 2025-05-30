@@ -21,7 +21,7 @@ success "Watcher Started"
 
 echo 'Js.log("added-by-test")' >> ./packages/main/src/Main.res
 
-sleep 1
+sleep 2
 
 if node ./packages/main/src/Main.mjs | grep 'added-by-test' &> /dev/null; 
 then
