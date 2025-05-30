@@ -9,4 +9,4 @@ Dep01
  → NewNamespace.NS_alias
  → Dep01
 
-Incremental build failed. Error: [2K  ❌ Failed to Compile. See Errors Above
+Incremental build failed. Error: [2K  Failed to Compile. See Errors Above

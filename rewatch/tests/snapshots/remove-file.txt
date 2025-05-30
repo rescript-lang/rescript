@@ -18,4 +18,4 @@ Compiled 1 modules
   
 
 
-Incremental build failed. Error: [2K  ❌ Failed to Compile. See Errors Above
+Incremental build failed. Error: [2K  Failed to Compile. See Errors Above
