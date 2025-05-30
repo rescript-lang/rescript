@@ -20,9 +20,8 @@ exit_watcher() {
 
 rewatch_bg watch > /dev/null 2>&1 &
 success "Watcher Started"
-ps
 
-sleep 1
+sleep 2
 
 if rewatch build | grep 'Could not start Rewatch:' &> /dev/null; 
 then
@@ -40,7 +39,7 @@ touch tmp.txt
 rewatch_bg watch > tmp.txt 2>&1 &
 success "Watcher Started"
 
-sleep 1
+sleep 2
 
 if cat tmp.txt | grep 'Could not start Rewatch:' &> /dev/null; 
 then
