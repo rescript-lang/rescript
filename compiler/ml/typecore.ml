@@ -2503,7 +2503,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         exp_env = env;
       }
   | Pexp_construct (lid, sarg) ->
-    type_construct env loc lid sarg ty_expected sexp.pexp_attributes
+    type_construct ~context env loc lid sarg ty_expected sexp.pexp_attributes
   | Pexp_variant (l, sarg) -> (
     (* Keep sharing *)
     let ty_expected0 = instance env ty_expected in
@@ -2570,13 +2570,15 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         get_jsx_component_props ~extract_concrete_typedecl env ty_record p
       | None -> None
     in
+    (* React.fragmentProps, JSXDOM.domProps *)
+    let jsx_component_error_info = get_jsx_component_error_info () in
     let lbl_exp_list =
       wrap_disambiguate "This record expression is expected to have" ty_record
         (type_record_elem_list loc true env
            (fun e k ->
              k
-               (type_label_exp ~call_context:`Regular true env loc ty_record
-                  (process_optional_label e)))
+               (type_label_exp ~call_context:(`Regular jsx_component_error_info)
+                  true env loc ty_record (process_optional_label e)))
            opath lid_sexp_list)
         (fun x -> x)
     in
@@ -2601,7 +2603,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
                  Labels_missing
                    {
                      labels = labels_missing;
-                     jsx_component_info = get_jsx_component_error_info ();
+                     jsx_component_info = jsx_component_error_info;
                    } ));
         ([||], representation)
       | [], _ ->
@@ -2634,7 +2636,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
              Labels_missing
                {
                  labels = List.rev !labels_missing;
-                 jsx_component_info = get_jsx_component_error_info ();
+                 jsx_component_info = jsx_component_error_info;
                } ));
     let fields =
       Array.map2
@@ -2680,13 +2682,14 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         ty_record
     in
     let closed = false in
+    let jsx_component_error_info = get_jsx_component_error_info () in
     let lbl_exp_list =
       wrap_disambiguate "This record expression is expected to have" ty_record
         (type_record_elem_list loc closed env
            (fun e k ->
              k
-               (type_label_exp ~call_context:`Regular true env loc ty_record
-                  (process_optional_label e)))
+               (type_label_exp ~call_context:(`Regular jsx_component_error_info)
+                  true env loc ty_record (process_optional_label e)))
            opath lid_sexp_list)
         (fun x -> x)
     in
@@ -3296,8 +3299,8 @@ and type_label_access env srecord lid =
 (* Typing format strings for printing or reading.
    These formats are used by functions in modules Printf, Format, and Scanf.
    (Handling of * modifiers contributed by Thorsten Ohl.) *)
-and type_label_exp ~(call_context : [`SetRecordField | `Regular]) create env loc
-    ty_expected (lid, label, sarg, opt) =
+and type_label_exp ~call_context create env loc ty_expected
+    (lid, label, sarg, opt) =
   (* Here also ty_expected may be at generic_level *)
   begin_def ();
   let separate = Env.has_local_constraints env in
@@ -3328,7 +3331,10 @@ and type_label_exp ~(call_context : [`SetRecordField | `Regular]) create env loc
     let field_context =
       match call_context with
       | `SetRecordField -> Some (Error_message_utils.SetRecordField field_name)
-      | `Regular -> Some (Error_message_utils.RecordField field_name)
+      | `Regular jsx ->
+        Some
+          (Error_message_utils.RecordField
+             {jsx; record_type = ty_expected; field_name; optional = false})
     in
     let arg =
       type_argument ~context:field_context env sarg ty_arg (instance env ty_arg)
@@ -3692,7 +3698,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
     in
     (targs, ret_t, fully_applied)
 
-and type_construct env loc lid sarg ty_expected attrs =
+and type_construct ~context env loc lid sarg ty_expected attrs =
   let opath =
     try
       let p0, p, _ = extract_concrete_variant env ty_expected in
@@ -3739,7 +3745,21 @@ and type_construct env loc lid sarg ty_expected attrs =
         exp_env = env;
       }
   in
-  let context = type_clash_context_maybe_option ty_expected ty_res in
+  (* Forward context if this is a Some constructor injected (meaning it's 
+    an optional field or an optional argument) *)
+  let context =
+    match lid.txt with
+    | Longident.Ldot (Lident "*predef*", "Some") -> (
+      match context with
+      | Some (RecordField {record_type; jsx; field_name}) ->
+        Some
+          (Error_message_utils.RecordField
+             {record_type; jsx; field_name; optional = true})
+      | Some (FunctionArgument _) ->
+        Some (Error_message_utils.FunctionArgument {optional = true})
+      | _ -> None)
+    | _ -> None
+  in
   if separate then (
     end_def ();
     generalize_structure ty_res;
