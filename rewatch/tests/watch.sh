@@ -12,7 +12,7 @@ else
 fi
 
 exit_watcher() { 
-  # we need to kill the parent process (rewatch)
+  # kill watcher by removing lock file
   rm lib/rewatch.lock
 }
 
