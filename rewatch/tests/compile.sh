@@ -3,6 +3,8 @@ cd $(dirname $0)
 source "./utils.sh"
 cd ../testrepo
 
+bash --version
+
 bold "Test: It should compile"
 
 if rewatch clean &> /dev/null;
