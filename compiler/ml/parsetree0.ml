@@ -546,6 +546,7 @@ and module_expr_desc =
   | Pmod_apply of module_expr * module_expr (* ME1(ME2) *)
   | Pmod_constraint of module_expr * module_type (* (ME : MT) *)
   | Pmod_unpack of expression (* (val E) *)
+  | Pmod_await of module_expr (* @await ME *)
   | Pmod_extension of extension
 (* [%id] *)
 
