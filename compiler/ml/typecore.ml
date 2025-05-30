@@ -2570,7 +2570,6 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         get_jsx_component_props ~extract_concrete_typedecl env ty_record p
       | None -> None
     in
-    (* React.fragmentProps, JSXDOM.domProps *)
     let jsx_component_error_info = get_jsx_component_error_info () in
     let lbl_exp_list =
       wrap_disambiguate "This record expression is expected to have" ty_record
@@ -2925,8 +2924,6 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
       let cty', force = Typetexp.transl_simple_type_delayed env sty' in
       let ty' = cty'.ctyp_type in
       if separate then begin_def ();
-      (* TODO: What should this be?*)
-      let type_clash_context = None in
       let arg = type_exp ~context:None env sarg in
       let gen =
         if separate then (
@@ -2936,10 +2933,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
           (try unify_var env tv arg.exp_type
            with Unify trace ->
              raise
-               (Error
-                  ( arg.exp_loc,
-                    env,
-                    Expr_type_clash {trace; context = type_clash_context} )));
+               (Error (arg.exp_loc, env, Expr_type_clash {trace; context = None})));
           gen)
         else true
       in
@@ -3748,7 +3742,7 @@ and type_construct ~context env loc lid sarg ty_expected attrs =
       }
   in
   (* Forward context if this is a Some constructor injected (meaning it's 
-    an optional field or an optional argument) *)
+    an optional field) *)
   let context =
     match lid.txt with
     | Longident.Ldot (Lident "*predef*", "Some") -> (
@@ -3757,8 +3751,6 @@ and type_construct ~context env loc lid sarg ty_expected attrs =
         Some
           (Error_message_utils.RecordField
              {record_type; jsx; field_name; optional = true})
-      | Some (FunctionArgument _) ->
-        Some (Error_message_utils.FunctionArgument {optional = true})
       | _ -> None)
     | _ -> None
   in
