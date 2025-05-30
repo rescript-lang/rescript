@@ -260,20 +260,40 @@ fn format_step(current: usize, total: usize) -> console::StyledObject<String> {
 }
 
 #[derive(Debug, Clone)]
-pub enum IncrementalBuildError {
+pub enum IncrementalBuildErrorKind {
     SourceFileParseError,
     CompileError(Option<String>),
 }
 
+#[derive(Debug, Clone)]
+pub struct IncrementalBuildError {
+    pub snapshot_output: bool,
+    pub kind: IncrementalBuildErrorKind,
+}
+
 impl fmt::Display for IncrementalBuildError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::SourceFileParseError => write!(f, "{}  {}Could not parse Source Files", LINE_CLEAR, CROSS,),
-            Self::CompileError(Some(e)) => {
-                write!(f, "{}  {}Failed to Compile. Error: {e}", LINE_CLEAR, CROSS,)
+        match &self.kind {
+            IncrementalBuildErrorKind::SourceFileParseError => {
+                if self.snapshot_output {
+                    write!(f, "{}  Could not parse Source Files", LINE_CLEAR,)
+                } else {
+                    write!(f, "{}  {}Could not parse Source Files", LINE_CLEAR, CROSS,)
+                }
             }
-            Self::CompileError(None) => {
-                write!(f, "{}  {}Failed to Compile. See Errors Above", LINE_CLEAR, CROSS,)
+            IncrementalBuildErrorKind::CompileError(Some(e)) => {
+                if self.snapshot_output {
+                    write!(f, "{}  Failed to Compile. Error: {e}", LINE_CLEAR,)
+                } else {
+                    write!(f, "{}  {}Failed to Compile. Error: {e}", LINE_CLEAR, CROSS,)
+                }
+            }
+            IncrementalBuildErrorKind::CompileError(None) => {
+                if self.snapshot_output {
+                    write!(f, "{}  Failed to Compile. See Errors Above", LINE_CLEAR,)
+                } else {
+                    write!(f, "{}  {}Failed to Compile. See Errors Above", LINE_CLEAR, CROSS,)
+                }
             }
         }
     }
@@ -344,7 +364,10 @@ pub fn incremental_build(
             }
 
             println!("{}", &err);
-            return Err(IncrementalBuildError::SourceFileParseError);
+            return Err(IncrementalBuildError {
+                kind: IncrementalBuildErrorKind::SourceFileParseError,
+                snapshot_output,
+            });
         }
     }
     let timing_deps = Instant::now();
@@ -397,7 +420,10 @@ pub fn incremental_build(
         |size| pb.set_length(size),
         build_dev_deps,
     )
-    .map_err(|e| IncrementalBuildError::CompileError(Some(e.to_string())))?;
+    .map_err(|e| IncrementalBuildError {
+        kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
+        snapshot_output,
+    })?;
 
     let compile_duration = start_compiling.elapsed();
 
@@ -427,7 +453,10 @@ pub fn incremental_build(
         if helpers::contains_ascii_characters(&compile_errors) {
             println!("{}", &compile_errors);
         }
-        Err(IncrementalBuildError::CompileError(None))
+        Err(IncrementalBuildError {
+            kind: IncrementalBuildErrorKind::CompileError(None),
+            snapshot_output,
+        })
     } else {
         if show_progress {
             if snapshot_output {
