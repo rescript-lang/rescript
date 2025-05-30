@@ -12,8 +12,8 @@ fn get_dep_modules(
     package: &packages::Package,
 ) -> AHashSet<String> {
     let mut deps = AHashSet::new();
-    let ast_file = package.get_build_path() + "/" + ast_file;
-    if let Ok(lines) = helpers::read_lines(ast_file.to_string()) {
+    let ast_file = package.get_build_path().join(ast_file);
+    if let Ok(lines) = helpers::read_lines(&ast_file) {
         // we skip the first line with is some null characters
         // the following lines in the AST are the dependency modules
         // we stop when we hit a line that starts with a "/", this is the path of the file.
@@ -27,7 +27,7 @@ fn get_dep_modules(
             }
         }
     } else {
-        panic!("Could not read file {}", ast_file);
+        panic!("Could not read file {}", ast_file.to_string_lossy());
     }
 
     return deps

@@ -98,6 +98,9 @@ jobs:
       - name: Install npm packages
         run: yarn install
 
+      - name: Install testrepo deps
+        run: cd rewatch/testrepo && yarn install
+
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
         uses: awalsh128/cache-apt-pkgs-action@v1.4.3
@@ -133,6 +136,8 @@ jobs:
       - name: Copy rewatch binary
         run: |
           cp rewatch/target/${{ matrix.rust-target }}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch
+          mkdir -p rewatch/target/release
+          cp rewatch/target/${{ matrix.rust-target }}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch/target/release 
           ./scripts/copyExes.js --rewatch
         shell: bash
 
@@ -354,6 +359,9 @@ jobs:
         if: runner.os != 'Windows'
         run: make -C tests/gentype_tests/typescript-react-example clean test
 
+      - name: Run rewatch tests
+        run: make test-rewatch
+
       - name: Run syntax benchmarks
         if: matrix.benchmarks
         run: ./_build/install/default/bin/syntax_benchmarks | tee tests/benchmark-output.json
@@ -507,7 +515,6 @@ jobs:
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Install ReScript package in rewatch/testrepo
-        if: runner.os == 'Linux'
         run: |
           COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
           yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
@@ -516,8 +523,7 @@ jobs:
 
       - name: Run rewatch integration tests
         # Currently failing on Windows and intermittently on macOS
-        if: runner.os == 'Linux'
-        run: make test-rewatch-ci
+        run: make test-rewatch-integration
 
   publish:
     needs:

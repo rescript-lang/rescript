@@ -5,8 +5,5 @@
     "rescript"
   ],
   "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "@rescript/core": "*"
-  }
+  "license": "MIT"
 }

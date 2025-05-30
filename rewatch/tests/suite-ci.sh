@@ -6,7 +6,7 @@ cd $(dirname $0)
 if [ -n "$1" ]; then
   REWATCH_EXECUTABLE="$1"
 else
-  REWATCH_EXECUTABLE="../target/release/rewatch"
+  REWATCH_EXECUTABLE="../target/release/rewatch --bsc-path ../../_build/install/default/bin/bsc"
 fi
 export REWATCH_EXECUTABLE
 

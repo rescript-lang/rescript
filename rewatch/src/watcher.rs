@@ -4,12 +4,13 @@ use crate::build::clean;
 use crate::cmd;
 use crate::helpers;
 use crate::helpers::emojis::*;
+use crate::helpers::StrippedVerbatimPath;
 use crate::queue::FifoQueue;
 use crate::queue::*;
 use futures_timer::Delay;
 use notify::event::ModifyKind;
 use notify::{Config, Error, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -32,10 +33,17 @@ fn is_rescript_file(path_buf: &Path) -> bool {
 }
 
 fn is_in_build_path(path_buf: &Path) -> bool {
-    path_buf
-        .to_str()
-        .map(|x| x.contains("/lib/bs/") || x.contains("/lib/ocaml/"))
-        .unwrap_or(false)
+    let mut prev_component: Option<&std::ffi::OsStr> = None;
+    for component in path_buf.components() {
+        let comp_os = component.as_os_str();
+        if let Some(prev) = prev_component {
+            if prev == "lib" && (comp_os == "bs" || comp_os == "ocaml") {
+                return true;
+            }
+        }
+        prev_component = Some(comp_os);
+    }
+    false
 }
 
 fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
@@ -48,21 +56,23 @@ fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
 
 async fn async_watch(
     q: Arc<FifoQueue<Result<Event, Error>>>,
-    path: &str,
+    path: &Path,
     show_progress: bool,
     filter: &Option<regex::Regex>,
     after_build: Option<String>,
     create_sourcedirs: bool,
     build_dev_deps: bool,
-    bsc_path: Option<String>,
+    bsc_path: Option<PathBuf>,
+    snapshot_output: bool,
 ) -> notify::Result<()> {
     let mut build_state = build::initialize_build(
         None,
         filter,
         show_progress,
         path,
-        bsc_path.clone(),
+        &bsc_path,
         build_dev_deps,
+        snapshot_output,
     )
     .expect("Can't initialize build");
     let mut needs_compile_type = CompileType::Incremental;
@@ -143,7 +153,10 @@ async fn async_watch(
                     ) => {
                         // if we are going to compile incrementally, we need to mark the exact files
                         // dirty
-                        if let Ok(canonicalized_path_buf) = path_buf.canonicalize() {
+                        if let Ok(canonicalized_path_buf) = path_buf
+                            .canonicalize()
+                            .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+                        {
                             for module in build_state.modules.values_mut() {
                                 match module.source_type {
                                     SourceType::SourceFile(ref mut source_file) => {
@@ -153,8 +166,7 @@ async fn async_watch(
                                             .get(&module.package_name)
                                             .expect("Package not found");
                                         let canonicalized_implementation_file =
-                                            std::path::PathBuf::from(package.path.to_string())
-                                                .join(&source_file.implementation.path);
+                                            package.path.join(&source_file.implementation.path);
                                         if canonicalized_path_buf == canonicalized_implementation_file {
                                             if let Ok(modified) =
                                                 canonicalized_path_buf.metadata().and_then(|x| x.modified())
@@ -168,8 +180,7 @@ async fn async_watch(
                                         // mark the interface file dirty
                                         if let Some(ref mut interface) = source_file.interface {
                                             let canonicalized_interface_file =
-                                                std::path::PathBuf::from(package.path.to_string())
-                                                    .join(&interface.path);
+                                                package.path.join(&interface.path);
                                             if canonicalized_path_buf == canonicalized_interface_file {
                                                 if let Ok(modified) = canonicalized_path_buf
                                                     .metadata()
@@ -214,6 +225,7 @@ async fn async_watch(
                     !initial_build,
                     create_sourcedirs,
                     build_dev_deps,
+                    snapshot_output,
                 )
                 .is_ok()
                 {
@@ -222,13 +234,18 @@ async fn async_watch(
                     }
                     let timing_total_elapsed = timing_total.elapsed();
                     if show_progress {
-                        println!(
-                            "\n{}{}Finished {} compilation in {:.2}s\n",
-                            LINE_CLEAR,
-                            SPARKLES,
-                            if initial_build { "initial" } else { "incremental" },
-                            timing_total_elapsed.as_secs_f64()
-                        );
+                        let compilation_type = if initial_build { "initial" } else { "incremental" };
+                        if snapshot_output {
+                            println!("Finished {} compilation", compilation_type)
+                        } else {
+                            println!(
+                                "\n{}{}Finished {} compilation in {:.2}s\n",
+                                LINE_CLEAR,
+                                SPARKLES,
+                                compilation_type,
+                                timing_total_elapsed.as_secs_f64()
+                            );
+                        }
                     }
                 }
                 needs_compile_type = CompileType::None;
@@ -241,8 +258,9 @@ async fn async_watch(
                     filter,
                     show_progress,
                     path,
-                    bsc_path.clone(),
+                    &bsc_path,
                     build_dev_deps,
+                    snapshot_output,
                 )
                 .expect("Can't initialize build");
                 let _ = build::incremental_build(
@@ -253,6 +271,7 @@ async fn async_watch(
                     false,
                     create_sourcedirs,
                     build_dev_deps,
+                    snapshot_output,
                 );
                 if let Some(a) = after_build.clone() {
                     cmd::run(a)
@@ -261,7 +280,7 @@ async fn async_watch(
                 build::write_build_ninja(&build_state);
 
                 let timing_total_elapsed = timing_total.elapsed();
-                if show_progress {
+                if !snapshot_output && show_progress {
                     println!(
                         "\n{}{}Finished compilation in {:.2}s\n",
                         LINE_CLEAR,
@@ -289,6 +308,7 @@ pub fn start(
     create_sourcedirs: bool,
     build_dev_deps: bool,
     bsc_path: Option<String>,
+    snapshot_output: bool,
 ) {
     futures::executor::block_on(async {
         let queue = Arc::new(FifoQueue::<Result<Event, Error>>::new());
@@ -301,15 +321,19 @@ pub fn start(
             .watch(folder.as_ref(), RecursiveMode::Recursive)
             .expect("Could not start watcher");
 
+        let path = Path::new(folder);
+        let bsc_path_buf = bsc_path.map(PathBuf::from);
+
         if let Err(e) = async_watch(
             consumer,
-            folder,
+            path,
             show_progress,
             filter,
             after_build,
             create_sourcedirs,
             build_dev_deps,
-            bsc_path,
+            bsc_path_buf,
+            snapshot_output,
         )
         .await
         {

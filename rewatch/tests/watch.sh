@@ -12,7 +12,7 @@ else
 fi
 
 exit_watcher() { 
-  # we need to kill the parent process (rewatch)
+  # kill watcher by removing lock file
   rm lib/rewatch.lock
 }
 
@@ -21,7 +21,7 @@ success "Watcher Started"
 
 echo 'Js.log("added-by-test")' >> ./packages/main/src/Main.res
 
-sleep 1
+sleep 2
 
 if node ./packages/main/src/Main.mjs | grep 'added-by-test' &> /dev/null; 
 then

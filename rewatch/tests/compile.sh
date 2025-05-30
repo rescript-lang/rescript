@@ -39,32 +39,36 @@ mv ./packages/main/src/Main2.res ./packages/main/src/Main.res
 # Rename a file with a dependent - this should trigger an error
 mv ./packages/main/src/InternalDep.res ./packages/main/src/InternalDep2.res
 rewatch build &> ../tests/snapshots/rename-file-internal-dep.txt
-# replace the absolute path so the snapshot is the same on all machines
-replace "s/$(pwd | sed "s/\//\\\\\//g")//g" ../tests/snapshots/rename-file-internal-dep.txt
+# normalize paths so the snapshot is the same on all machines
+normalize_paths ../tests/snapshots/rename-file-internal-dep.txt
 mv ./packages/main/src/InternalDep2.res ./packages/main/src/InternalDep.res
 
 # Rename a file with a dependent in a namespaced package - this should trigger an error (regression)
 mv ./packages/new-namespace/src/Other_module.res ./packages/new-namespace/src/Other_module2.res
 rewatch build &> ../tests/snapshots/rename-file-internal-dep-namespace.txt
-# replace the absolute path so the snapshot is the same on all machines
-replace "s/$(pwd | sed "s/\//\\\\\//g")//g" ../tests/snapshots/rename-file-internal-dep-namespace.txt
+# normalize paths so the snapshot is the same on all machines
+normalize_paths ../tests/snapshots/rename-file-internal-dep-namespace.txt
 mv ./packages/new-namespace/src/Other_module2.res ./packages/new-namespace/src/Other_module.res
 
 rewatch build &>  /dev/null
 mv ./packages/main/src/ModuleWithInterface.resi ./packages/main/src/ModuleWithInterface2.resi
 rewatch build &> ../tests/snapshots/rename-interface-file.txt
+# normalize paths so the snapshot is the same on all machines
+normalize_paths ../tests/snapshots/rename-interface-file.txt
 mv ./packages/main/src/ModuleWithInterface2.resi ./packages/main/src/ModuleWithInterface.resi
 rewatch build &> /dev/null
 mv ./packages/main/src/ModuleWithInterface.res ./packages/main/src/ModuleWithInterface2.res
 rewatch build &> ../tests/snapshots/rename-file-with-interface.txt
+# normalize paths so the snapshot is the same on all machines
+normalize_paths ../tests/snapshots/rename-file-with-interface.txt
 mv ./packages/main/src/ModuleWithInterface2.res ./packages/main/src/ModuleWithInterface.res
 rewatch build &> /dev/null
 
 # when deleting a file that other files depend on, the compile should fail
 rm packages/dep02/src/Dep02.res
 rewatch build &> ../tests/snapshots/remove-file.txt
-# replace the absolute path so the snapshot is the same on all machines
-replace "s/$(pwd | sed "s/\//\\\\\//g")//g" ../tests/snapshots/remove-file.txt
+# normalize paths so the snapshot is the same on all machines
+normalize_paths ../tests/snapshots/remove-file.txt
 git checkout -- packages/dep02/src/Dep02.res
 rewatch build &> /dev/null
 

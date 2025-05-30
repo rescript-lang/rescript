@@ -1,6 +1,6 @@
 use crate::build::packages::{Namespace, Package};
 use ahash::{AHashMap, AHashSet};
-use std::{fmt::Display, time::SystemTime};
+use std::{fmt::Display, path::PathBuf, time::SystemTime};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParseState {
@@ -19,7 +19,7 @@ pub enum CompileState {
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct Interface {
-    pub path: String,
+    pub path: PathBuf,
     pub parse_state: ParseState,
     pub compile_state: CompileState,
     pub last_modified: SystemTime,
@@ -28,7 +28,7 @@ pub struct Interface {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Implementation {
-    pub path: String,
+    pub path: PathBuf,
     pub parse_state: ParseState,
     pub compile_state: CompileState,
     pub last_modified: SystemTime,
@@ -91,12 +91,12 @@ pub struct BuildState {
     pub modules: AHashMap<String, Module>,
     pub packages: AHashMap<String, Package>,
     pub module_names: AHashSet<String>,
-    pub project_root: String,
+    pub project_root: PathBuf,
     pub root_config_name: String,
     pub deleted_modules: AHashSet<String>,
     pub rescript_version: String,
-    pub bsc_path: String,
-    pub workspace_root: Option<String>,
+    pub bsc_path: PathBuf,
+    pub workspace_root: Option<PathBuf>,
     pub deps_initialized: bool,
 }
 
@@ -109,12 +109,12 @@ impl BuildState {
         self.modules.get(module_name)
     }
     pub fn new(
-        project_root: String,
+        project_root: PathBuf,
         root_config_name: String,
         packages: AHashMap<String, Package>,
-        workspace_root: Option<String>,
+        workspace_root: Option<PathBuf>,
         rescript_version: String,
-        bsc_path: String,
+        bsc_path: PathBuf,
     ) -> Self {
         Self {
             module_names: AHashSet::new(),
@@ -136,20 +136,22 @@ impl BuildState {
     }
 }
 
+#[derive(Debug)]
 pub struct AstModule {
     pub module_name: String,
     pub package_name: String,
     pub namespace: Namespace,
     pub last_modified: SystemTime,
-    pub ast_file_path: String,
+    pub ast_file_path: PathBuf,
     pub is_root: bool,
     pub suffix: String,
 }
 
+#[derive(Debug)]
 pub struct CompileAssetsState {
-    pub ast_modules: AHashMap<String, AstModule>,
+    pub ast_modules: AHashMap<PathBuf, AstModule>,
     pub cmi_modules: AHashMap<String, SystemTime>,
     pub cmt_modules: AHashMap<String, SystemTime>,
-    pub ast_rescript_file_locations: AHashSet<String>,
-    pub rescript_file_locations: AHashSet<String>,
+    pub ast_rescript_file_locations: AHashSet<PathBuf>,
+    pub rescript_file_locations: AHashSet<PathBuf>,
 }
