@@ -352,8 +352,7 @@ let print_listi ~get_loc ~nodes ~print ?(force_break = false) t =
         | Some comment -> (Comment.loc comment).loc_start
       in
       let sep =
-        if start_pos.pos_lnum - prev_loc.loc_end.pos_lnum > 1 then
-          Doc.concat [Doc.hard_line; Doc.hard_line]
+        if start_pos.pos_lnum - prev_loc.loc_end.pos_lnum > 1 then Doc.hard_line
         else Doc.line
       in
       let doc = print_comments (print node t i) t loc in
@@ -1550,12 +1549,35 @@ and print_constructor_declarations ~state ~private_flag
 and print_constructor_declaration2 ~state i
     (cd : Parsetree.constructor_declaration) cmt_tbl =
   let comment_attrs, attrs =
-    ParsetreeViewer.partition_doc_comment_attributes cd.pcd_attributes
+    List.partition
+      (fun ((id, payload) : Parsetree.attribute) ->
+        match (id, payload) with
+        | ( {txt = "res.doc"},
+            PStr
+              [
+                {
+                  pstr_desc =
+                    Pstr_eval
+                      ({pexp_desc = Pexp_constant (Pconst_string (_, _))}, _);
+                };
+              ] ) ->
+          true
+        | _ -> false)
+      cd.pcd_attributes
   in
   let comment_doc =
     match comment_attrs with
     | [] -> Doc.nil
-    | comment_attrs -> print_doc_comments ~state cmt_tbl comment_attrs
+    | comment_attrs ->
+      Doc.concat
+        [
+          Doc.group
+            (Doc.join_with_sep
+               (List.map
+                  (fun attr -> print_attribute ~state attr cmt_tbl)
+                  comment_attrs));
+          Doc.hard_line;
+        ]
   in
   let attrs = print_attributes ~state attrs cmt_tbl in
   let is_dot_dot_dot = cd.pcd_name.txt = "..." in
@@ -1579,8 +1601,8 @@ and print_constructor_declaration2 ~state i
   in
   Doc.concat
     [
-      bar;
       comment_doc;
+      bar;
       Doc.group
         (Doc.concat
            [
