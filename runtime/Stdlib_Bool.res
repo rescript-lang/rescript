@@ -15,12 +15,15 @@ let fromString = s => {
   }
 }
 
-let fromStringExn = param =>
+let fromStringOrThrow = param =>
   switch param {
   | "true" => true
   | "false" => false
-  | _ => throw(Invalid_argument(`Bool.fromStringExn: value is neither "true" nor "false"`))
+  | _ => throw(Invalid_argument(`Bool.fromStringOrThrow: value is neither "true" nor "false"`))
   }
+
+@deprecated("Use `fromStringOrThrow` instead")
+let fromStringExn = fromStringOrThrow
 
 external compare: (bool, bool) => Stdlib_Ordering.t = "%compare"
 

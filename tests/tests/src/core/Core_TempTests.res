@@ -44,7 +44,7 @@ Console.log("0.1"->Float.fromString)
 Console.info("")
 Console.info("JSON")
 Console.info("---")
-let json = JSON.parseExn(`{"foo": "bar"}`)
+let json = JSON.parseOrThrow(`{"foo": "bar"}`)
 Console.log(
   switch JSON.Classify.classify(json) {
   | Object(json) =>
@@ -182,7 +182,7 @@ if globalThis["hello"] !== undefined {
 
 let z = Float.mod(1.2, 1.4)
 
-let intFromBigInt = BigInt.fromString("10000000000")->BigInt.toInt
+let intFromBigInt = BigInt.fromStringOrThrow("10000000000")->BigInt.toInt
 
 module Bugfix = {
   @obj external foo: (~bar: string=?, unit) => _ = ""

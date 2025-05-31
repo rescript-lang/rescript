@@ -54,7 +54,7 @@ let extractDocFromFile = async file => {
   try {
     stdout
     ->getOutput
-    ->JSON.parseExn
+    ->JSON.parseOrThrow
     ->Docgen.decodeFromJson
   } catch {
   | JsExn(_) => JsError.panic(`Failed to generate docstrings from ${file}`)

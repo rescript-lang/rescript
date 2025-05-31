@@ -18,6 +18,53 @@ type rec t =
 type replacer = Keys(array<string>) | Replacer((string, t) => t)
 
 /** 
+`parseOrThrow(string, ~reviver=?)` 
+
+Parses a JSON string or throws a JavaScript exception (SyntaxError), if the string isn't valid.
+The reviver describes how the value should be transformed. It is a function which receives a key and a value.
+It returns a JSON type.
+
+## Examples
+```rescript
+try {
+  let _ = JSON.parseOrThrow(`{"foo":"bar","hello":"world"}`)
+  // { foo: 'bar', hello: 'world' }
+
+  let _ = JSON.parseOrThrow("")
+  // error
+} catch {
+| JsExn(_) => Console.log("error")
+}
+
+let reviver = (_, value: JSON.t) =>
+  switch value {
+  | String(string) => string->String.toUpperCase->JSON.Encode.string
+  | Number(number) => (number *. 2.0)->JSON.Encode.float
+  | _ => value
+  }
+
+let jsonString = `{"hello":"world","someNumber":21}`
+
+try {
+  JSON.parseOrThrow(jsonString, ~reviver)->Console.log
+  // { hello: 'WORLD', someNumber: 42 }
+
+  JSON.parseOrThrow("", ~reviver)->Console.log
+  // error
+} catch {
+| JsExn(_) => Console.log("error")
+}
+```
+
+## Exceptions 
+
+- Raises a SyntaxError (Exn.t) if the string isn't valid JSON.
+*/
+@raises(Exn.t)
+@val
+external parseOrThrow: (string, ~reviver: (string, t) => t=?) => t = "JSON.parse"
+
+/** 
 `parseExn(string, ~reviver=?)` 
 
 Parses a JSON string or throws a JavaScript exception (SyntaxError), if the string isn't valid.
@@ -60,47 +107,10 @@ try {
 
 - Raises a SyntaxError (Exn.t) if the string isn't valid JSON.
 */
+@deprecated("Use `parseOrThrow` instead")
 @raises(Exn.t)
 @val
 external parseExn: (string, ~reviver: (string, t) => t=?) => t = "JSON.parse"
-
-/** 
-`parseExnWithReviver(string, reviver)` 
-
-Parses a JSON string or throws a JavaScript exception (SyntaxError), if the string isn't valid.
-The reviver describes how the value should be transformed. It is a function which receives a key and a value.
-It returns a JSON type.
-
-## Examples
-```rescript
-let reviver = (_, value: JSON.t) =>
-  switch value {
-  | String(string) => string->String.toUpperCase->JSON.Encode.string
-  | Number(number) => (number *. 2.0)->JSON.Encode.float
-  | _ => value
-  }
-
-let jsonString = `{"hello":"world","someNumber":21}`
-
-try {
-  JSON.parseExnWithReviver(jsonString, reviver)->Console.log
-  // { hello: 'WORLD', someNumber: 42 }
-
-  JSON.parseExnWithReviver("", reviver)->Console.log
-  // error
-} catch {
-| JsExn(_) => Console.log("error")
-}
-```
-
-## Exceptions 
-
-- Raises a SyntaxError if the string isn't valid JSON.
-*/
-@deprecated("Use `parseExn` with optional parameter instead")
-@raises(Exn.t)
-@val
-external parseExnWithReviver: (string, (string, t) => t) => t = "JSON.parse"
 
 /** 
 `stringify(json, ~replacer=?, ~space=?)` 
@@ -719,10 +729,10 @@ module Decode: {
 
   ## Examples
   ```rescript
-  JSON.parseExn(`true`)->JSON.Decode.bool
+  JSON.parseOrThrow(`true`)->JSON.Decode.bool
   // Some(true)
 
-  JSON.parseExn(`"hello world"`)->JSON.Decode.bool
+  JSON.parseOrThrow(`"hello world"`)->JSON.Decode.bool
   // None
   ```
   */
@@ -733,10 +743,10 @@ module Decode: {
 
   ## Examples
   ```rescript
-  JSON.parseExn(`null`)->JSON.Decode.null
+  JSON.parseOrThrow(`null`)->JSON.Decode.null
   // Some(null)
 
-  JSON.parseExn(`"hello world"`)->JSON.Decode.null
+  JSON.parseOrThrow(`"hello world"`)->JSON.Decode.null
   // None
   ```
   */
@@ -747,10 +757,10 @@ module Decode: {
 
   ## Examples
   ```rescript
-  JSON.parseExn(`"hello world"`)->JSON.Decode.string
+  JSON.parseOrThrow(`"hello world"`)->JSON.Decode.string
   // Some("hello world")
 
-  JSON.parseExn(`42`)->JSON.Decode.string
+  JSON.parseOrThrow(`42`)->JSON.Decode.string
   // None 
   ```
   */
@@ -761,10 +771,10 @@ module Decode: {
 
   ## Examples
   ```rescript
-  JSON.parseExn(`42.0`)->JSON.Decode.float
+  JSON.parseOrThrow(`42.0`)->JSON.Decode.float
   // Some(42.0)
 
-  JSON.parseExn(`"hello world"`)->JSON.Decode.float
+  JSON.parseOrThrow(`"hello world"`)->JSON.Decode.float
   // None
   ```
   */
@@ -775,10 +785,10 @@ module Decode: {
 
   ## Examples
   ```rescript
-  JSON.parseExn(`{"foo":"bar"}`)->JSON.Decode.object
+  JSON.parseOrThrow(`{"foo":"bar"}`)->JSON.Decode.object
   // Some({ foo: 'bar' })
 
-  JSON.parseExn(`"hello world"`)->JSON.Decode.object
+  JSON.parseOrThrow(`"hello world"`)->JSON.Decode.object
   // None
   ```
   */
@@ -789,10 +799,10 @@ module Decode: {
 
   ## Examples
   ```rescript
-  JSON.parseExn(`["foo", "bar"]`)->JSON.Decode.array
+  JSON.parseOrThrow(`["foo", "bar"]`)->JSON.Decode.array
   // Some([ 'foo', 'bar' ])
 
-  JSON.parseExn(`"hello world"`)->JSON.Decode.array
+  JSON.parseOrThrow(`"hello world"`)->JSON.Decode.array
   // None
   ```
   */

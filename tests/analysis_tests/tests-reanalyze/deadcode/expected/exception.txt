@@ -95,5 +95,13 @@
   Exception Analysis
   ExternalTest.res:7:5-24
   bigIntFromStringExn2 might raise JsExn (ExternalTest.res:7:35) and is not annotated with @raises(JsExn)
+
+  Exception Analysis
+  StdlibTest.res:11:5-23
+  bigIntFromStringExn raises nothing and is annotated with redundant @raises(JsExn)
+
+  Exception Analysis
+  StdlibTest.res:14:5-16
+  jsonParseExn raises nothing and is annotated with redundant @raises(JsExn)
   
-  Analysis reported 24 issues (Exception Analysis:24)
+  Analysis reported 26 issues (Exception Analysis:26)
