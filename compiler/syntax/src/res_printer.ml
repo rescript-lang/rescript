@@ -352,7 +352,8 @@ let print_listi ~get_loc ~nodes ~print ?(force_break = false) t =
         | Some comment -> (Comment.loc comment).loc_start
       in
       let sep =
-        if start_pos.pos_lnum - prev_loc.loc_end.pos_lnum > 1 then Doc.hard_line
+        if start_pos.pos_lnum - prev_loc.loc_end.pos_lnum > 1 then
+          Doc.concat [Doc.hard_line; Doc.hard_line]
         else Doc.line
       in
       let doc = print_comments (print node t i) t loc in

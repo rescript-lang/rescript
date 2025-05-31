@@ -4893,16 +4893,30 @@ and parse_type_constructor_declaration_with_bar p =
       [doc_comment_to_attribute loc s]
     | _ -> []
   in
+  let has_doc_comment = not (doc_comment_attrs = []) in
   match p.Parser.token with
   | Bar ->
     let start_pos = p.Parser.start_pos in
     Parser.next p;
     let constr = parse_type_constructor_declaration ~start_pos p in
+    let pcd_loc =
+      if has_doc_comment then
+        {
+          constr.Parsetree.pcd_loc with
+          loc_end =
+            {
+              constr.pcd_loc.loc_end with
+              pos_lnum = constr.pcd_loc.loc_end.pos_lnum + 1;
+            };
+        }
+      else constr.pcd_loc
+    in
     Some
       {
         constr with
         Parsetree.pcd_attributes =
           doc_comment_attrs @ constr.Parsetree.pcd_attributes;
+        pcd_loc;
       }
   | _ -> None
 
@@ -4940,10 +4954,27 @@ and parse_type_constructor_declarations ?first p =
           [doc_comment_to_attribute loc s]
         | _ -> []
       in
+      let has_doc_comment = not (doc_comment_attrs = []) in
       let start_pos = p.Parser.start_pos in
       ignore (Parser.optional p Token.Bar);
       let constr = parse_type_constructor_declaration ~start_pos p in
-      {constr with pcd_attributes = doc_comment_attrs @ constr.pcd_attributes}
+      let pcd_loc =
+        if has_doc_comment then
+          {
+            constr.Parsetree.pcd_loc with
+            loc_end =
+              {
+                constr.pcd_loc.loc_end with
+                pos_lnum = constr.pcd_loc.loc_end.pos_lnum + 1;
+              };
+          }
+        else constr.pcd_loc
+      in
+      {
+        constr with
+        pcd_attributes = doc_comment_attrs @ constr.pcd_attributes;
+        pcd_loc;
+      }
     | Some first_constr_decl -> first_constr_decl
   in
   first_constr_decl
