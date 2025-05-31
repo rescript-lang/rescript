@@ -4886,11 +4886,19 @@ and parse_constr_decl_args p =
  *  | constr-name const-args
  *  | attrs constr-name const-args *)
 and parse_type_constructor_declaration_with_bar p =
+  let doc_comment_attrs = match p.Parser.token with
+  | DocComment (loc, s) -> 
+      Parser.next p;
+      [doc_comment_to_attribute loc s]
+  | _ -> []
+  in
   match p.Parser.token with
   | Bar ->
     let start_pos = p.Parser.start_pos in
     Parser.next p;
-    Some (parse_type_constructor_declaration ~start_pos p)
+    let () = print_endline "3" in
+    let constr = parse_type_constructor_declaration ~start_pos p in
+    Some ({constr with Parsetree.pcd_attributes = doc_comment_attrs @ constr.Parsetree.pcd_attributes})
   | _ -> None
 
 and parse_type_constructor_declaration ~start_pos p =
@@ -4917,12 +4925,20 @@ and parse_type_constructor_declaration ~start_pos p =
 
 (* [|] constr-decl  { | constr-decl }   *)
 and parse_type_constructor_declarations ?first p =
+  let () = print_endline "2" in
   let first_constr_decl =
     match first with
     | None ->
+      let doc_comment_attrs = match p.Parser.token with
+      | DocComment (loc, s) -> 
+          Parser.next p;
+          [doc_comment_to_attribute loc s]
+      | _ -> []
+      in
       let start_pos = p.Parser.start_pos in
       ignore (Parser.optional p Token.Bar);
-      parse_type_constructor_declaration ~start_pos p
+      let constr = parse_type_constructor_declaration ~start_pos p in
+      {constr with  pcd_attributes = doc_comment_attrs @ constr.pcd_attributes}
     | Some first_constr_decl -> first_constr_decl
   in
   first_constr_decl
@@ -4948,7 +4964,8 @@ and parse_type_representation ?current_type_name_path ?inline_types_context p =
   in
   let kind =
     match p.Parser.token with
-    | Bar | Uident _ ->
+    | Bar | Uident _ | DocComment _ ->
+      let () = print_endline "1" in
       Parsetree.Ptype_variant (parse_type_constructor_declarations p)
     | Lbrace ->
       Parsetree.Ptype_record
@@ -5501,7 +5518,11 @@ and parse_type_equation_and_representation ?current_type_name_path
       parse_record_or_object_decl ?current_type_name_path ?inline_types_context
         p
     | Private -> parse_private_eq_or_repr p
-    | Bar | DotDot ->
+    | Bar | DotDot | DocComment _ ->
+      let () = print_endline "xxx" in
+      (* DOCCOMMENT: Reached here if the first variant starts with |. 
+         It is possible that the first variant may not have | (with multiple variants)
+       *)
       let priv, kind = parse_type_representation p in
       (None, priv, kind)
     | _ -> (
@@ -5607,6 +5628,7 @@ and parse_type_definitions ~current_type_name_path ~inline_types_context ~attrs
  * implemented for now. Needed to get a feel for the complexities of
  * this territory of the grammar *)
 and parse_type_definition_or_extension ~attrs p =
+  let () = print_endline "0" in
   let start_pos = p.Parser.start_pos in
   Parser.expect Token.Typ p;
   let rec_flag =
