@@ -212,8 +212,7 @@ module Int: {
   assertEqual(Math.Int.minMany([])->Int.toFloat->Float.isFinite, false)
   ```
   */
-  @variadic
-  @val
+  @variadic @val
   external minMany: array<int> => int = "Math.min"
 
   /**
@@ -243,8 +242,7 @@ module Int: {
   assertEqual(Math.Int.maxMany([])->Int.toFloat->Float.isFinite, false)
   ```
   */
-  @variadic
-  @val
+  @variadic @val
   external maxMany: array<int> => int = "Math.max"
 
   /**
@@ -599,8 +597,7 @@ assertEqual(Math.hypotMany([3.0, 4.0, 5.0]), 7.0710678118654755)
 assertEqual(Math.hypotMany([]), 0.0)
 ```
 */
-@variadic
-@val
+@variadic @val
 external hypotMany: array<float> => float = "Math.hypot"
 
 /**
@@ -698,8 +695,7 @@ assertEqual(Math.minMany([-1.0, -2.0]), -2.0)
 assertEqual(Math.minMany([])->Float.isFinite, false)
 ```
 */
-@variadic
-@val
+@variadic @val
 external minMany: array<float> => float = "Math.min"
 
 /**
@@ -729,8 +725,7 @@ assertEqual(Math.maxMany([-1.0, -2.0]), -1.0)
 assertEqual(Math.maxMany([])->Float.isFinite, false)
 ```
 */
-@variadic
-@val
+@variadic @val
 external maxMany: array<float> => float = "Math.max"
 
 /**

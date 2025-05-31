@@ -76,8 +76,7 @@ String.fromCharCodeMany([189, 43, 190, 61]) == "½+¾="
 String.fromCharCodeMany([65, 66, 67]) == "ABC"
 ```
 */
-@variadic
-@val
+@variadic @val
 external fromCharCodeMany: array<int> => string = "String.fromCharCode"
 
 /**
@@ -119,8 +118,7 @@ String.fromCodePointMany([0xd55c, 0xae00, 0x1f63a]) == `한글😺`
 `fromCharCode([1, -5])`.
 
 */
-@variadic
-@val
+@variadic @val
 external fromCodePointMany: array<int> => string = "String.fromCodePoint"
 
 external equal: (string, string) => bool = "%equal"
@@ -250,8 +248,7 @@ See [`String.concat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 String.concatMany("1st", ["2nd", "3rd", "4th"]) == "1st2nd3rd4th"
 ```
 */
-@variadic
-@send
+@variadic @send
 external concatMany: (string, array<string>) => string = "concat"
 
 /**
@@ -442,8 +439,7 @@ String.match("The optional example", %re("/(foo)?(example)/")) == Some([Some("ex
 String.match("The large container.", %re("/b[aeiou]g/")) == None
 ```
 */
-@return(nullable)
-@send
+@return(nullable) @send
 external match: (string, Stdlib_RegExp.t) => option<Stdlib_RegExp.Result.t> = "match"
 
 /**
@@ -595,8 +591,7 @@ let matchFn = (~match, ~offset as _, ~input as _) => String.toUpperCase(match)
 String.unsafeReplaceRegExpBy0(str, re, matchFn) == "bEAUtIfUl vOwEls"
 ```
 */
-@deprecated("Use `replaceRegExpBy0Unsafe` instead")
-@send
+@deprecated("Use `replaceRegExpBy0Unsafe` instead") @send
 external unsafeReplaceRegExpBy0: (
   string,
   Stdlib_RegExp.t,
@@ -619,8 +614,7 @@ let matchFn = (~match as _, ~group1, ~offset as _, ~input as _) => {
 String.unsafeReplaceRegExpBy1(str, re, matchFn) == "Jony is 41"
 ```
 */
-@deprecated("Use `replaceRegExpBy1Unsafe` instead")
-@send
+@deprecated("Use `replaceRegExpBy1Unsafe` instead") @send
 external unsafeReplaceRegExpBy1: (
   string,
   Stdlib_RegExp.t,
@@ -646,8 +640,7 @@ let matchFn = (~match as _, ~group1, ~group2, ~offset as _, ~input as _) => {
 String.unsafeReplaceRegExpBy2(str, re, matchFn) == "42"
 ```
 */
-@deprecated("Use `replaceRegExpBy2Unsafe` instead")
-@send
+@deprecated("Use `replaceRegExpBy2Unsafe` instead") @send
 external unsafeReplaceRegExpBy2: (
   string,
   Stdlib_RegExp.t,
@@ -659,8 +652,7 @@ external unsafeReplaceRegExpBy2: (
 has three group parameters.
 See [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace) on MDN.
 */
-@deprecated("Use `replaceRegExpBy3Unsafe` instead")
-@send
+@deprecated("Use `replaceRegExpBy3Unsafe` instead") @send
 external unsafeReplaceRegExpBy3: (
   string,
   Stdlib_RegExp.t,

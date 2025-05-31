@@ -86,10 +86,10 @@ module Dict = {
   @set_index
   external set: (dict<'a>, string, 'a) => unit = ""
 
-  @get_index
   /**
     It's the same as `Js.Dict.get` but it doesn't have runtime overhead to check if the key exists.
    */
+  @get_index
   external dangerouslyGetNonOption: (dict<'a>, string) => option<'a> = ""
 }
 

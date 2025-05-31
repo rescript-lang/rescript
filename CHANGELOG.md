@@ -37,6 +37,7 @@
 - Improve error message for pipe (`->`) syntax. https://github.com/rescript-lang/rescript/pull/7520
 - Improve a few error messages around various subtyping issues. https://github.com/rescript-lang/rescript/pull/7404
 - In module declarations, accept the invalid syntax `M = {...}` and format it to `M : {...}`. https://github.com/rescript-lang/rescript/pull/7527
+- Improve doc comment formatting to match the style of multiline comments. https://github.com/rescript-lang/rescript/pull/7529
 
 #### :house: Internal
 

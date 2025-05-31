@@ -567,6 +567,23 @@ let filter_printable_attributes attrs = List.filter is_printable_attribute attrs
 let partition_printable_attributes attrs =
   List.partition is_printable_attribute attrs
 
+let partition_doc_comment_attributes attrs =
+  List.partition
+    (fun ((id, payload) : Parsetree.attribute) ->
+      match (id, payload) with
+      | ( {txt = "res.doc"},
+          PStr
+            [
+              {
+                pstr_desc =
+                  Pstr_eval
+                    ({pexp_desc = Pexp_constant (Pconst_string (_, _))}, _);
+              };
+            ] ) ->
+        true
+      | _ -> false)
+    attrs
+
 let is_fun_newtype expr =
   match expr.pexp_desc with
   | Pexp_fun _ | Pexp_newtype _ -> true

@@ -59,7 +59,6 @@ Js.Dict.get(ages, "Paul") == None
 */
 let get: (t<'a>, key) => option<'a>
 
-@get_index
 /**
 `Js.Dict.unsafeGet(key)` returns the value if the key exists, otherwise an `undefined` value is returned. Use this only when you are sure the key exists (i.e. when having used the `keys()` function to check that the key is valid).
 
@@ -70,9 +69,9 @@ Js.Dict.unsafeGet(ages, "Fred") == 49
 Js.Dict.unsafeGet(ages, "Paul") // returns undefined
 ```
 */
+@get_index
 external unsafeGet: (t<'a>, key) => 'a = ""
 
-@set_index
 /**
 `Js.Dict.set(dict, key, value)` sets the key/value in the dictionary `dict`. If
 the key does not exist, and entry will be created for it.
@@ -89,9 +88,9 @@ Js.Dict.set(ages, "David", 66)
 Js.log(ages == Js.Dict.fromList(list{("Maria", 31), ("Vinh", 22), ("Fred", 49), ("David", 66)}))
 ```
 */
+@set_index
 external set: (t<'a>, key, 'a) => unit = ""
 
-@val
 /**
 Returns all the keys in the dictionary `dict`.
 
@@ -101,9 +100,11 @@ Returns all the keys in the dictionary `dict`.
 Js.Dict.keys(ages) == ["Maria", "Vinh", "Fred"]
 ```
 */
+@val
 external keys: t<'a> => array<string> = "Object.keys"
 
-@obj /** Returns an empty dictionary. */
+/** Returns an empty dictionary. */
+@obj
 external empty: unit => t<'a> = ""
 
 /** Experimental internal function */

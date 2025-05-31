@@ -35,8 +35,7 @@ let error = Error.make("error")
 Console.log(error->Error.stack) // Logs `stack` if it exists on `someError`
 ```
 */
-@deprecated("Use `JsError.stack` instead")
-@get
+@deprecated("Use `JsError.stack` instead") @get
 external stack: t => option<string> = "stack"
 
 /**
@@ -50,8 +49,7 @@ let error = Error.SyntaxError.make("Some message here")
 Console.log(error->Error.message) // Logs "Some message here" to the console
 ```
 */
-@deprecated("Use `JsError.message` instead")
-@get
+@deprecated("Use `JsError.message` instead") @get
 external message: t => option<string> = "message"
 
 /**
@@ -65,8 +63,7 @@ let error = Error.SyntaxError.make("Some message here")
 Console.log(error->Error.name) // Logs "SyntaxError" to the console
 ```
 */
-@deprecated("Use `JsError.name` instead")
-@get
+@deprecated("Use `JsError.name` instead") @get
 external name: t => option<string> = "name"
 
 /**
@@ -74,8 +71,7 @@ external name: t => option<string> = "name"
 
 See [`Error.prototype.fileName`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/fileName) on MDN.
 */
-@deprecated("Use `JsError.fileName` instead")
-@get
+@deprecated("Use `JsError.fileName` instead") @get
 external fileName: t => option<string> = "fileName"
 
 /**
@@ -90,8 +86,7 @@ Console.log(error->Error.message) // Logs "Some message here" to the console
 Console.log(error->Error.name) // Logs "Error" to the console, because this is a regular error
 ```
 */
-@deprecated("Use `JsError.make` instead")
-@new
+@deprecated("Use `JsError.make` instead") @new
 external make: string => t = "Error"
 
 module EvalError: {
@@ -100,8 +95,7 @@ module EvalError: {
 
   See [`EvalError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/EvalError) on MDN.
   */
-  @deprecated("Use `JsError.EvalError.make` instead")
-  @new
+  @deprecated("Use `JsError.EvalError.make` instead") @new
   external make: string => t = "EvalError"
 }
 module RangeError: {
@@ -110,8 +104,7 @@ module RangeError: {
 
   See [`RangeError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RangeError) on MDN.
   */
-  @deprecated("Use `JsError.RangeError.make` instead")
-  @new
+  @deprecated("Use `JsError.RangeError.make` instead") @new
   external make: string => t = "RangeError"
 }
 module ReferenceError: {
@@ -120,8 +113,7 @@ module ReferenceError: {
 
   See [`ReferenceError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ReferenceError) on MDN.
   */
-  @deprecated("Use `JsError.ReferenceError.make` instead")
-  @new
+  @deprecated("Use `JsError.ReferenceError.make` instead") @new
   external make: string => t = "ReferenceError"
 }
 module SyntaxError: {
@@ -130,8 +122,7 @@ module SyntaxError: {
 
   See [`SyntaxError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SyntaxError) on MDN.
   */
-  @deprecated("Use `JsError.SyntaxError.make` instead")
-  @new
+  @deprecated("Use `JsError.SyntaxError.make` instead") @new
   external make: string => t = "SyntaxError"
 }
 module TypeError: {
@@ -140,8 +131,7 @@ module TypeError: {
 
   See [`TypeError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypeError) on MDN.
   */
-  @deprecated("Use `JsError.TypeError.make` instead")
-  @new
+  @deprecated("Use `JsError.TypeError.make` instead") @new
   external make: string => t = "TypeError"
 }
 module URIError: {
@@ -150,8 +140,7 @@ module URIError: {
 
   See [`URIError`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/URIError) on MDN.
   */
-  @deprecated("Use `JsError.URIError.make` instead")
-  @new
+  @deprecated("Use `JsError.URIError.make` instead") @new
   external make: string => t = "URIError"
 }
 

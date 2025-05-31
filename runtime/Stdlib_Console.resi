@@ -99,8 +99,7 @@ Console.assertMany(false, ["Hello", "World"])
 Console.assertMany(value == 42, [1, 2, 3])
 ```
 */
-@val
-@variadic
+@val @variadic
 external assertMany: (bool, array<_>) => unit = "console.assert"
 
 /**
@@ -240,8 +239,7 @@ Console.debugMany(["Hello", "World"])
 Console.debugMany([1, 2, 3])
 ```
 */
-@val
-@variadic
+@val @variadic
 external debugMany: array<_> => unit = "console.debug"
 
 type dirOptions = {
@@ -403,8 +401,7 @@ Console.errorMany(["Hello", "World"])
 Console.errorMany([1, 2, 3])
 ```
 */
-@val
-@variadic
+@val @variadic
 external errorMany: array<_> => unit = "console.error"
 
 /**
@@ -498,8 +495,7 @@ Console.infoMany(["Hello", "World"])
 Console.infoMany([1, 2, 3])
 ```
 */
-@val
-@variadic
+@val @variadic
 external infoMany: array<_> => unit = "console.info"
 
 /**
@@ -594,8 +590,7 @@ Console.logMany(["Hello", "World"])
 Console.logMany([1, 2, 3])
 ```
 */
-@val
-@variadic
+@val @variadic
 external logMany: array<_> => unit = "console.log"
 
 /**
@@ -787,6 +782,5 @@ Console.warnMany(["Hello", "World"])
 Console.warnMany([1, 2, 3])
 ```
 */
-@val
-@variadic
+@val @variadic
 external warnMany: array<_> => unit = "console.warn"

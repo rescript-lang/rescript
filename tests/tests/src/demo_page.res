@@ -42,7 +42,8 @@ type component
 type attrs
 type component_class
 
-@obj /** make a json object */
+/** make a json object */
+@obj
 external config: (~display_name: string=?, ~render: unit => component, unit) => config = ""
 /** make a json object */
 @obj

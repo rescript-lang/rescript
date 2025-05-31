@@ -28,7 +28,12 @@ let \"SomeConstant" = 12
 module SomeInnerModule = {
   /*** Another module level docstring here.*/
   type status =
-    | /** If this is started or not */ Started(t) | /** Stopped? */ Stopped | /** Now idle.*/ Idle
+    | /** If this is started or not */
+    Started(t)
+    | /** Stopped? */
+    Stopped
+    | /** Now idle.*/
+    Idle
 
   /** These are all the valid inputs.*/
   type validInputs = [#something | #"needs-escaping" | #withPayload(int) | #status(status)]
@@ -53,7 +58,8 @@ module AnotherModule = {
     | /** This has inline records...*/
     SomeStuff({
         offline: bool,
-        /** Is the user online? */ online?: bool,
+        /** Is the user online? */
+        online?: bool,
       })
 
   open ReactDOM

@@ -30,8 +30,8 @@ type t<+'a> = Primitive_js_extern.undefined<'a>
 /** Constructs a value of `Js.undefined<'a>` containing a value of `'a`. */
 external return: 'a => t<'a> = "%identity"
 
-@deprecated("Use = Js.undefined directly")
 /** Returns `true` if the given value is empty (undefined), `false` otherwise. */
+@deprecated("Use = Js.undefined directly")
 let test: t<'a> => bool
 
 /**

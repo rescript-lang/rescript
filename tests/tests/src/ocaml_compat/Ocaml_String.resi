@@ -12,8 +12,7 @@ external length: string => int = "%string_length"
    You can also write [s.[n]] instead of [String.get s n].
 
    Raise [Invalid_argument] if [n] not a valid index in [s]. */
-@deprecated("Use Core instead. This will be removed in v13")
-@send
+@deprecated("Use Core instead. This will be removed in v13") @send
 external get: (string, int) => char = "codePointAt"
 
 /** [String.make n c] returns a fresh string of length [n],
@@ -78,8 +77,7 @@ let mapi: ((int, char) => char, string) => string
    trailing whitespace character in the argument, return the original
    string itself, not a copy.
    @since 4.00.0 */
-@deprecated("Use Core instead. This will be removed in v13")
-@send
+@deprecated("Use Core instead. This will be removed in v13") @send
 external trim: string => string = "trim"
 
 /** Return a copy of the argument, with special characters

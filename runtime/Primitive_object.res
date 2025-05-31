@@ -41,8 +41,6 @@ module O = {
         for (var x in o) { foo(x) }}
       `)
 
-  @scope(("Object", "prototype", "hasOwnProperty"))
-  @val
   /**
      JS objects are not guaranteed to have `Object` in their prototype
      chain so calling `some_obj.hasOwnProperty(key)` can sometimes throw
@@ -50,6 +48,7 @@ module O = {
      objects are created via `Object.create(null)`. The only safe way
      to call this function is directly, e.g. `Object.prototype.hasOwnProperty.call(some_obj, key)`.
   */
+  @scope(("Object", "prototype", "hasOwnProperty")) @val
   external hasOwnProperty: (t, key) => bool = "call"
 
   @get_index external get_value: (t, key) => t = ""

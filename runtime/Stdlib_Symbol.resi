@@ -38,8 +38,7 @@ Otherwise a new Symbol gets created and registered with key.
 Symbol.getFor("sym1")->assertEqual(Symbol.getFor("sym1"))
 ```
 */
-@val
-@scope("Symbol")
+@val @scope("Symbol")
 external getFor: string => option<t> = "for"
 
 /**
@@ -55,8 +54,7 @@ let globalSym = Symbol.getFor("sym1") // Global symbol
 globalSym->Option.flatMap(Symbol.description)->assertEqual(Some("sym1"))
 ```
 */
-@val
-@scope("Symbol")
+@val @scope("Symbol")
 external keyFor: t => option<string> = "keyFor"
 
 /**

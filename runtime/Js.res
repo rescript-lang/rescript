@@ -219,7 +219,8 @@ external undefined: undefined<'a> = "%undefined"
 */
 external typeof: 'a => string = "%typeof"
 
-@val @scope("console") /** Equivalent to console.log any value. */
+/** Equivalent to console.log any value. */
+@val @scope("console")
 external log: 'a => unit = "log"
 
 @val @scope("console") external log2: ('a, 'b) => unit = "log"
@@ -227,7 +228,8 @@ external log: 'a => unit = "log"
 
 @val @scope("console") external log4: ('a, 'b, 'c, 'd) => unit = "log"
 
-@val @scope("console") @variadic /** A convenience function to console.log more than 4 arguments */
+/** A convenience function to console.log more than 4 arguments */
+@val @scope("console") @variadic
 external logMany: array<'a> => unit = "log"
 
 external eqNull: ('a, null<'a>) => bool = "%equal_null"

@@ -30,8 +30,8 @@ type t<+'a> = Primitive_js_extern.null<'a> = Value('a) | @as(null) Null
 /** Constructs a value of `Js.null<'a>` containing a value of `'a`. */
 external return: 'a => t<'a> = "%identity"
 
-@deprecated("Use = Js.null directly ")
 /** Returns `true` if the given value is empty (`null`), `false` otherwise. */
+@deprecated("Use = Js.null directly ")
 let test: t<'a> => bool
 
 /** The empty value, `null` */

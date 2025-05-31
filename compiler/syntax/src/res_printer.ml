@@ -1549,7 +1549,15 @@ and print_constructor_declarations ~state ~private_flag
 
 and print_constructor_declaration2 ~state i
     (cd : Parsetree.constructor_declaration) cmt_tbl =
-  let attrs = print_attributes ~state cd.pcd_attributes cmt_tbl in
+  let comment_attrs, attrs =
+    ParsetreeViewer.partition_doc_comment_attributes cd.pcd_attributes
+  in
+  let comment_doc =
+    match comment_attrs with
+    | [] -> Doc.nil
+    | comment_attrs -> print_doc_comments ~state cmt_tbl comment_attrs
+  in
+  let attrs = print_attributes ~state attrs cmt_tbl in
   let is_dot_dot_dot = cd.pcd_name.txt = "..." in
   let bar =
     if i > 0 || cd.pcd_attributes <> [] || is_dot_dot_dot then Doc.text "| "
@@ -1572,6 +1580,7 @@ and print_constructor_declaration2 ~state i
   Doc.concat
     [
       bar;
+      comment_doc;
       Doc.group
         (Doc.concat
            [
@@ -1934,8 +1943,20 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
   let doc =
     match typ_expr.ptyp_attributes with
     | _ :: _ as attrs when not should_print_its_own_attributes ->
-      Doc.group
-        (Doc.concat [print_attributes ~state attrs cmt_tbl; rendered_type])
+      let doc_comment_attr, attrs =
+        ParsetreeViewer.partition_doc_comment_attributes attrs
+      in
+      let comment_doc =
+        match doc_comment_attr with
+        | [] -> Doc.nil
+        | _ -> print_doc_comments ~state ~sep:Doc.space cmt_tbl doc_comment_attr
+      in
+      let attrs_doc =
+        match attrs with
+        | [] -> Doc.nil
+        | _ -> print_attributes ~state attrs cmt_tbl
+      in
+      Doc.group (Doc.concat [comment_doc; attrs_doc; rendered_type])
     | _ -> rendered_type
   in
   print_comments doc cmt_tbl typ_expr.ptyp_loc
@@ -5568,6 +5589,15 @@ and print_bs_object_row ~state (lbl, expr) cmt_tbl =
   in
   print_comments doc cmt_tbl cmt_loc
 
+and print_doc_comments ~state ?(sep = Doc.hard_line) cmt_tbl attrs =
+  Doc.concat
+    [
+      Doc.group
+        (Doc.join_with_sep
+           (List.map (fun attr -> print_attribute ~state attr cmt_tbl) attrs));
+      sep;
+    ]
+
 (* The optional loc indicates whether we need to print the attributes in
  * relation to some location. In practise this means the following:
  *  `@attr type t = string` -> on the same line, print on the same line
@@ -5579,6 +5609,9 @@ and print_attributes ?loc ?(inline = false) ~state
   match ParsetreeViewer.filter_parsing_attrs attrs with
   | [] -> Doc.nil
   | attrs ->
+    let comment_attrs, attrs =
+      ParsetreeViewer.partition_doc_comment_attributes attrs
+    in
     let line_break =
       match loc with
       | None -> Doc.line
@@ -5587,15 +5620,30 @@ and print_attributes ?loc ?(inline = false) ~state
         | ({loc = first_loc}, _) :: _
           when loc.loc_start.pos_lnum > first_loc.loc_end.pos_lnum ->
           Doc.hard_line
-        | _ -> Doc.line)
+        | _ ->
+          let has_comment_attrs = not (comment_attrs = []) in
+          if has_comment_attrs then Doc.space else Doc.line)
     in
-    Doc.concat
-      [
-        Doc.group
-          (Doc.join_with_sep
-             (List.map (fun attr -> print_attribute ~state attr cmt_tbl) attrs));
-        (if inline then Doc.space else line_break);
-      ]
+    let comment_doc =
+      match comment_attrs with
+      | [] -> Doc.nil
+      | comment_attrs -> print_doc_comments ~state cmt_tbl comment_attrs
+    in
+    let attrs_doc =
+      match attrs with
+      | [] -> Doc.nil
+      | _ ->
+        Doc.concat
+          [
+            Doc.group
+              (Doc.join_with_sep
+                 (List.map
+                    (fun attr -> print_attribute ~state attr cmt_tbl)
+                    attrs));
+            (if inline then Doc.space else line_break);
+          ]
+    in
+    Doc.concat [comment_doc; attrs_doc]
 
 and print_payload ~state (payload : Parsetree.payload) cmt_tbl =
   match payload with

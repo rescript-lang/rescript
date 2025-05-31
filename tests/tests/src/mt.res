@@ -18,9 +18,10 @@
 
 @val @variadic external dump: array<'a> => unit = "console.log"
 
-@val @module("assert") /** There is a problem --
+/** There is a problem --
     it does not return [unit]
 */
+@val @module("assert")
 external throws: (unit => unit) => unit = "throws"
 
 let assert_equal = eq

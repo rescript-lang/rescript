@@ -1356,8 +1356,7 @@ Date.fromString("")->Date.toJSON
 // None
 ```
 */
-@return(nullable)
-@send
+@return(nullable) @send
 external toJSON: t => option<string> = "toJSON"
 
 /**
