@@ -190,7 +190,6 @@ let init_st =
 
 let return_wrapper loc (txt : string) : External_ffi_types.return_wrapper =
   match txt with
-  | "undefined_to_opt" -> Return_undefined_to_opt
   | "null_to_opt" -> Return_null_to_opt
   | "nullable" | "null_undefined_to_opt" -> Return_null_undefined_to_opt
   | "identity" -> Return_identity
@@ -395,8 +394,7 @@ let check_return_wrapper loc (wrapper : External_ffi_types.return_wrapper)
   | Return_unset ->
     if Ast_core_type.is_unit result_type then Return_replaced_with_unit
     else wrapper
-  | Return_undefined_to_opt | Return_null_to_opt | Return_null_undefined_to_opt
-    ->
+  | Return_null_to_opt | Return_null_undefined_to_opt ->
     if Ast_core_type.is_user_option result_type then wrapper
     else Bs_syntaxerr.err loc Expect_opt_in_bs_return_to_opt
   | Return_replaced_with_unit -> assert false

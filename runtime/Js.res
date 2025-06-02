@@ -190,7 +190,7 @@ type nullable<+'a> = Js_null_undefined.t<'a> = Value('a) | @as(null) Null | @as(
 type null_undefined<+'a> = nullable<'a>
 
 external toOption: nullable<'a> => option<'a> = "%nullable_to_opt"
-external undefinedToOption: undefined<'a> => option<'a> = "%undefined_to_opt"
+let undefinedToOption: undefined<'a> => option<'a> = Primitive_option.fromUndefined
 external nullToOption: null<'a> => option<'a> = "%null_to_opt"
 external isNullable: nullable<'a> => bool = "%is_nullable"
 external import: 'a => promise<'a> = "%import"
