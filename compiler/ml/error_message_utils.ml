@@ -99,7 +99,7 @@ type type_clash_context =
       operator: string;
       is_constant: string option;
     }
-  | FunctionArgument of {optional: bool}
+  | FunctionArgument of {optional: bool; name: string option}
   | Statement of type_clash_statement
   | ForLoopCondition
 
@@ -138,11 +138,17 @@ let error_type_text ppf type_clash_context =
 
 let error_expected_type_text ppf type_clash_context =
   match type_clash_context with
-  | Some (FunctionArgument {optional}) ->
-    fprintf ppf "But this%s function argument is expecting:"
+  | Some (FunctionArgument {optional; name}) ->
+    fprintf ppf "But this%s function argument"
       (match optional with
       | false -> ""
-      | true -> " optional")
+      | true -> " optional");
+
+    (match name with
+    | Some name -> fprintf ppf " @{<info>~%s@}" name
+    | None -> ());
+
+    fprintf ppf " is expecting:"
   | Some ComparisonOperator ->
     fprintf ppf "But it's being compared to something of type:"
   | Some SwitchReturn -> fprintf ppf "But this switch is expected to return:"
@@ -158,21 +164,21 @@ let error_expected_type_text ppf type_clash_context =
     fprintf ppf "But this @{<info>if@} statement is expected to return:"
   | Some ArrayValue ->
     fprintf ppf "But this array is expected to have items of type:"
-  | Some (SetRecordField _) -> fprintf ppf "But this record field is of type:"
+  | Some (SetRecordField _) -> fprintf ppf "But the record field is of type:"
   | Some
       (RecordField {field_name = "children"; jsx = Some {jsx_type = `Fragment}})
     ->
-    fprintf ppf "But children of JSX fragments is expected to have type:"
+    fprintf ppf "But children of JSX fragments are expected to have type:"
   | Some
       (RecordField
          {field_name = "children"; jsx = Some {jsx_type = `CustomComponent}}) ->
     fprintf ppf
-      "But children passed to this component is expected to have type:"
+      "But children passed to this component are expected to have type:"
   | Some (RecordField {field_name; jsx = Some _}) ->
-    fprintf ppf "But this component prop @{<info>%s@} is expected to have type:"
+    fprintf ppf "But the component prop @{<info>%s@} is expected to have type:"
       field_name
   | Some (RecordField {field_name}) ->
-    fprintf ppf "But this record field @{<info>%s@} is expected to have type:"
+    fprintf ppf "But the record field @{<info>%s@} is expected to have type:"
       field_name
   | Some (Statement FunctionCall) -> fprintf ppf "But it's expected to return:"
   | Some (MathOperator {operator}) ->
@@ -429,9 +435,8 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        @,\
        @{<info>%s@} is an optional record field, and you're passing an \
        optional value to it.@,\
-       Optional fields expect you to pass the concrete value, not an option, \
-       when passed directly.\n\
-      \             @,\
+       Optional fields expect you to pass the concrete value, not an option.\n\
+      \       @,\
        Possible solutions: @,\
        - Unwrap the option and pass a concrete value directly@,\
        - If you really do want to pass the optional value, prepend the value \
@@ -447,8 +452,8 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        @,\
        You're passing an optional value into an optional function argument.@,\
        Optional function arguments expect you to pass the concrete value, not \
-       an option, when passed directly.\n\
-      \             @,\
+       an option.\n\
+      \       @,\
        Possible solutions: @,\
        - Unwrap the option and pass a concrete value directly@,\
        - If you really do want to pass the optional value, prepend the value \
@@ -510,9 +515,9 @@ let type_clash_context_from_function sexp sfunct =
     Some (MathOperator {for_float = true; operator; is_constant})
   | Pexp_ident {txt = Lident (("/" | "*" | "+" | "-") as operator)} ->
     Some (MathOperator {for_float = false; operator; is_constant})
-  | _ -> Some (FunctionArgument {optional = false})
+  | _ -> None
 
-let type_clash_context_for_function_argument type_clash_context sarg0 =
+let type_clash_context_for_function_argument ~label type_clash_context sarg0 =
   match type_clash_context with
   | Some (MathOperator {for_float; operator}) ->
     Some
@@ -527,7 +532,16 @@ let type_clash_context_for_function_argument type_clash_context sarg0 =
                Some txt
              | _ -> None);
          })
-  | None -> Some (FunctionArgument {optional = false})
+  | None ->
+    Some
+      (FunctionArgument
+         {
+           optional = false;
+           name =
+             (match label with
+             | Asttypes.Nolabel -> None
+             | Optional {txt = l} | Labelled {txt = l} -> Some l);
+         })
   | type_clash_context -> type_clash_context
 
 let type_clash_context_maybe_option ty_expected ty_res =

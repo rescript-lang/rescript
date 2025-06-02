@@ -3647,12 +3647,22 @@ and type_application ~context total_app env funct (sargs : sargs) :
               (if (not optional) || is_optional_loc l' then fun () ->
                  type_argument
                    ~context:
-                     (type_clash_context_for_function_argument context sarg0)
+                     (type_clash_context_for_function_argument ~label:l' context
+                        sarg0)
                    env sarg0 ty ty0
                else fun () ->
                  option_some
                    (type_argument
-                      ~context:(Some (FunctionArgument {optional = true}))
+                      ~context:
+                        (Some
+                           (FunctionArgument
+                              {
+                                optional = true;
+                                name =
+                                  (match l' with
+                                  | Nolabel -> None
+                                  | Optional l | Labelled l -> Some l.txt);
+                              }))
                       env sarg0
                       (extract_option_type env ty)
                       (extract_option_type env ty0))) )
