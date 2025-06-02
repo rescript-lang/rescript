@@ -11,7 +11,7 @@
   But the record field [1;33mtest[0m is expected to have type: [1;33mbool[0m
   
   [1;33mtest[0m is an optional record field, and you're passing an optional value to it.
-  Optional fields expect you to pass the concrete value, not an option.
+  Optional fields expect you to pass a non-optional value.
        
   Possible solutions: 
   - Unwrap the option and pass a concrete value directly

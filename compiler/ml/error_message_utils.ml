@@ -168,12 +168,11 @@ let error_expected_type_text ppf type_clash_context =
   | Some
       (RecordField {field_name = "children"; jsx = Some {jsx_type = `Fragment}})
     ->
-    fprintf ppf "But children of JSX fragments are expected to have type:"
+    fprintf ppf "But children of JSX fragments must be of type:"
   | Some
       (RecordField
          {field_name = "children"; jsx = Some {jsx_type = `CustomComponent}}) ->
-    fprintf ppf
-      "But children passed to this component are expected to have type:"
+    fprintf ppf "But children passed to this component must be of type:"
   | Some (RecordField {field_name; jsx = Some _}) ->
     fprintf ppf "But the component prop @{<info>%s@} is expected to have type:"
       field_name
@@ -435,7 +434,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        @,\
        @{<info>%s@} is an optional record field, and you're passing an \
        optional value to it.@,\
-       Optional fields expect you to pass the concrete value, not an option.\n\
+       Optional fields expect you to pass a non-optional value.\n\
       \       @,\
        Possible solutions: @,\
        - Unwrap the option and pass a concrete value directly@,\
@@ -451,8 +450,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       "@,\
        @,\
        You're passing an optional value into an optional function argument.@,\
-       Optional function arguments expect you to pass the concrete value, not \
-       an option.\n\
+       Optional function arguments expect you to pass a non-optional value.\n\
       \       @,\
        Possible solutions: @,\
        - Unwrap the option and pass a concrete value directly@,\
