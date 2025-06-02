@@ -22,6 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. */
 
+@@deprecated("Use `Jsx.DOM` instead.")
 type style = JsxDOMStyle.t
 type domRef
 /**
@@ -38,7 +39,7 @@ type popoverTargetAction = | @as("toggle") Toggle | @as("show") Show | @as("hide
 */
 type domProps = {
   key?: string,
-  children?: Jsx.element,
+  children?: Jsx_common.element,
   ref?: domRef,
   /* accessibility */
   /* https://www.w3.org/TR/wai-aria-1.1/ */
