@@ -6,7 +6,6 @@ type t = bigint
 @val external asIntN: (~width: int, bigint) => bigint = "BigInt.asIntN"
 @val external asUintN: (~width: int, bigint) => bigint = "BigInt.asUintN"
 
-@val
 /**
 Parses the given `string` into a `bigint` using JavaScript semantics. Return the
 number as a `bigint` if successfully parsed. Throws a syntax exception otherwise.
@@ -31,6 +30,7 @@ switch BigInt.fromStringOrThrow("a") {
 }
 ```
 */
+@val
 external fromStringOrThrow: string => bigint = "BigInt"
 
 /**
@@ -64,7 +64,6 @@ external fromStringExn: string => bigint = "BigInt"
 
 @val external fromInt: int => bigint = "BigInt"
 
-@val
 /**
 Converts a `float` to a `bigint` using JavaScript semantics. 
 Throws an exception if the float is not an integer or is infinite/NaN.
@@ -85,6 +84,7 @@ switch BigInt.fromFloatOrThrow(123.5) {
 }
 ```
 */
+@val
 external fromFloatOrThrow: float => bigint = "BigInt"
 
 let fromFloat = (value: float) => {

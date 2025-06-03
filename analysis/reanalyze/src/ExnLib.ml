@@ -50,8 +50,19 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
       ("float_of_string", [failure]);
     ]
   in
-  let stdlibBigInt = [("fromStringExn", [jsExn])] in
-  let stdlibBool = [("fromStringExn", [invalidArgument])] in
+  let stdlibBigInt =
+    [
+      ("fromStringExn", [jsExn]);
+      ("fromStringOrThrow", [jsExn]);
+      ("fromFloatOrThrow", [jsExn]);
+    ]
+  in
+  let stdlibBool =
+    [
+      ("fromStringExn", [invalidArgument]);
+      ("fromStringOrThrow", [invalidArgument]);
+    ]
+  in
   let stdlibError = [("raise", [jsExn])] in
   let stdlibExn =
     [
@@ -68,6 +79,7 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
     [
       ("parseExn", [jsExn]);
       ("parseExnWithReviver", [jsExn]);
+      ("parseOrThrow", [jsExn]);
       ("stringifyAny", [jsExn]);
       ("stringifyAnyWithIndent", [jsExn]);
       ("stringifyAnyWithReplacer", [jsExn]);
