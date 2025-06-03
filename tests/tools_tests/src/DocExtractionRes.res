@@ -34,6 +34,8 @@ module SomeInnerModule = {
     | Stopped
     /** Now idle.*/
     | Idle
+
+  /** These are all the valid inputs.*/
   type validInputs = [#something | #"needs-escaping" | #withPayload(int) | #status(status)]
 
   type callback = (t, ~status: status) => unit

@@ -4886,16 +4886,27 @@ and parse_constr_decl_args p =
  *  | constr-name const-args
  *  | attrs constr-name const-args *)
 and parse_type_constructor_declaration_with_bar p =
-  let doc_comment_attrs =
-    match p.Parser.token with
-    | DocComment (loc, s) ->
-      Parser.next p;
-      [doc_comment_to_attribute loc s]
-    | _ -> []
+  let is_constructor_with_bar p =
+    Parser.lookahead p (fun state ->
+        match state.Parser.token with
+        | DocComment _ -> (
+          Parser.next state;
+          match state.token with
+          | Bar -> true
+          | _ -> false)
+        | Bar -> true
+        | _ -> false)
   in
-  let has_doc_comment = not (doc_comment_attrs = []) in
   match p.Parser.token with
-  | Bar ->
+  | _ when is_constructor_with_bar p ->
+    let doc_comment_attrs =
+      match p.Parser.token with
+      | DocComment (loc, s) ->
+        Parser.next p;
+        [doc_comment_to_attribute loc s]
+      | _ -> []
+    in
+    let has_doc_comment = not (doc_comment_attrs = []) in
     let start_pos = p.Parser.start_pos in
     Parser.next p;
     let constr = parse_type_constructor_declaration ~start_pos p in
@@ -4947,6 +4958,7 @@ and parse_type_constructor_declarations ?first p =
   let first_constr_decl =
     match first with
     | None ->
+      (* bar *)
       let doc_comment_attrs =
         match p.Parser.token with
         | DocComment (loc, s) ->
