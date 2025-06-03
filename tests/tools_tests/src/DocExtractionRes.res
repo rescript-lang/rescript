@@ -28,14 +28,12 @@ let \"SomeConstant" = 12
 module SomeInnerModule = {
   /*** Another module level docstring here.*/
   type status =
-    | /** If this is started or not */
-    Started(t)
-    | /** Stopped? */
-    Stopped
-    | /** Now idle.*/
-    Idle
-
-  /** These are all the valid inputs.*/
+    /** If this is started or not */
+    | Started(t)
+    /** Stopped? */
+    | Stopped
+    /** Now idle.*/
+    | Idle
   type validInputs = [#something | #"needs-escaping" | #withPayload(int) | #status(status)]
 
   type callback = (t, ~status: status) => unit
@@ -55,8 +53,8 @@ module AnotherModule = {
 
   /** Trying how it looks with an inline record in a variant. */
   type someVariantWithInlineRecords =
-    | /** This has inline records...*/
-    SomeStuff({
+    /** This has inline records...*/
+    | SomeStuff({
         offline: bool,
         /** Is the user online? */
         online?: bool,
