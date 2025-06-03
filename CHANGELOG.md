@@ -39,6 +39,7 @@
 - Improve a few error messages around various subtyping issues. https://github.com/rescript-lang/rescript/pull/7404
 - In module declarations, accept the invalid syntax `M = {...}` and format it to `M : {...}`. https://github.com/rescript-lang/rescript/pull/7527
 - Improve doc comment formatting to match the style of multiline comments. https://github.com/rescript-lang/rescript/pull/7529
+- Improve error messages around type mismatches for try/catch, if, for, while, and optional record fields + optional function arguments. https://github.com/rescript-lang/rescript/pull/7522
 
 #### :house: Internal
 
