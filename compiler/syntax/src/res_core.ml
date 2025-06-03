@@ -4958,7 +4958,6 @@ and parse_type_constructor_declarations ?first p =
   let first_constr_decl =
     match first with
     | None ->
-      (* bar *)
       let doc_comment_attrs =
         match p.Parser.token with
         | DocComment (loc, s) ->
@@ -5566,9 +5565,6 @@ and parse_type_equation_and_representation ?current_type_name_path
         p
     | Private -> parse_private_eq_or_repr p
     | Bar | DotDot | DocComment _ ->
-      (* DOCCOMMENT: Reached here if the first variant starts with |. 
-         It is possible that the first variant may not have | (with multiple variants)
-       *)
       let priv, kind = parse_type_representation p in
       (None, priv, kind)
     | _ -> (
