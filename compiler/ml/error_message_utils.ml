@@ -434,10 +434,11 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        @,\
        @{<info>%s@} is an optional record field, and you're passing an \
        optional value to it.@,\
-       Optional fields expect you to pass a non-optional value.\n\
+       Values passed to an optional record field don't need to be wrapped in \
+       an option. You might need to adjust the type of the value supplied.\n\
       \       @,\
        Possible solutions: @,\
-       - Unwrap the option and pass a concrete value directly@,\
+       - Unwrap the option from the value you're passing in@,\
        - If you really do want to pass the optional value, prepend the value \
        with @{<info>?@} to show you want to pass the option, like: \
        @{<info>{%s: ?%s@}}"
@@ -450,10 +451,11 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       "@,\
        @,\
        You're passing an optional value into an optional function argument.@,\
-       Optional function arguments expect you to pass a non-optional value.\n\
+       Values passed to an optional function argument don't need to be wrapped \
+       in an option. You might need to adjust the type of the value supplied.\n\
       \       @,\
        Possible solutions: @,\
-       - Unwrap the option and pass a concrete value directly@,\
+       - Unwrap the option from the value you're passing in@,\
        - If you really do want to pass the optional value, prepend the value \
        with @{<info>?@} to show you want to pass the option, like: \
        @{<info>?%s@}"
