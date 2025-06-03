@@ -426,7 +426,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
          single JSX element.@,"
         (with_configured_jsx_module "array")
     | _ -> ())
-  | ( Some (RecordField {optional = true; field_name}),
+  | ( Some (RecordField {optional = true; field_name; jsx = None}),
       Some ({desc = Tconstr (p, _, _)}, _) )
     when Path.same Predef.path_option p ->
     fprintf ppf
@@ -442,6 +442,24 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        - If you really do want to pass the optional value, prepend the value \
        with @{<info>?@} to show you want to pass the option, like: \
        @{<info>{%s: ?%s@}}"
+      field_name field_name
+      (Parser.extract_text_at_loc loc)
+  | ( Some (RecordField {optional = true; field_name; jsx = Some _}),
+      Some ({desc = Tconstr (p, _, _)}, _) )
+    when Path.same Predef.path_option p ->
+    fprintf ppf
+      "@,\
+       @,\
+       @{<info>%s@} is an optional component prop, and you're passing an \
+       optional value to it.@,\
+       Values passed to an optional component prop don't need to be wrapped in \
+       an option. You might need to adjust the type of the value supplied.\n\
+      \       @,\
+       Possible solutions: @,\
+       - Unwrap the option from the value you're passing in@,\
+       - If you really do want to pass the optional value, prepend the value \
+       with @{<info>?@} to show you want to pass the option, like: \
+       @{<info>%s=?%s@}"
       field_name field_name
       (Parser.extract_text_at_loc loc)
   | ( Some (FunctionArgument {optional = true}),
