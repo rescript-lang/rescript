@@ -790,7 +790,6 @@ assertEqual(Belt.List.keep(list{None, Some(2), Some(3), None}, Belt.Option.isSom
 */
 let keep: (t<'a>, 'a => bool) => t<'a>
 
-@deprecated("This function will soon be deprecated. Please, use `List.keep` instead.")
 /**
 Returns a list of all elements in `someList` which satisfy the predicate function `pred`.
 
@@ -804,6 +803,7 @@ assertEqual(Belt.List.filter(list{1, 2, 3, 4}, isEven), list{2, 4})
 assertEqual(Belt.List.filter(list{None, Some(2), Some(3), None}, Belt.Option.isSome), list{Some(2), Some(3)})
 ```
 */
+@deprecated("This function will soon be deprecated. Please, use `List.keep` instead.")
 let filter: (t<'a>, 'a => bool) => t<'a>
 
 /** Uncurried version of [keepWithIndex](#keepWithIndex). */
@@ -823,10 +823,6 @@ assertEqual(Belt.List.keepWithIndex(list{1, 2, 3, 4}, (_x, index) => isEven(inde
 */
 let keepWithIndex: (t<'a>, ('a, int) => bool) => t<'a>
 
-@deprecated(
-  "This function will soon be deprecated. Please, use `List.keepWithIndex` \
-     instead."
-)
 /**
 Returns a list of all elements in `someList` which satisfy the predicate function `pred`.
 
@@ -838,6 +834,10 @@ let isEven = x => mod(x, 2) == 0
 assertEqual(Belt.List.filterWithIndex(list{1, 2, 3, 4}, (_x, index) => isEven(index)), list{1, 3})
 ```
 */
+@deprecated(
+  "This function will soon be deprecated. Please, use `List.keepWithIndex` \
+     instead."
+)
 let filterWithIndex: (t<'a>, ('a, int) => bool) => t<'a>
 
 /** Uncurried version of [keepMap](#keepMap). */

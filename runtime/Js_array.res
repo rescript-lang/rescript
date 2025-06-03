@@ -69,7 +69,6 @@ type array_like<'a> = Js_array2.array_like<'a>
    type 'a array_iter = 'a array_like
 */
 
-@val
 /**
 Creates a shallow copy of an array from an array-like object. See [`Array.from`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from) on MDN.
 
@@ -80,11 +79,11 @@ let strArr = Js.String.castToArrayLike("abcd")
 Js.Array.from(strArr) == ["a", "b", "c", "d"]
 ```
 */
+@val
 external from: array_like<'a> => array<'a> = "Array.from"
 
 /* ES2015 */
 
-@val
 /**
 Creates a new array by applying a function (the second argument) to each item
 in the `array_like` first argument.  See
@@ -99,6 +98,7 @@ let code = s => Js.String.charCodeAt(0, s)
 Js.Array.fromMap(strArr, code) == [97.0, 98.0, 99.0, 100.0]
 ```
 */
+@val
 external fromMap: (array_like<'a>, 'a => 'b) => array<'b> = "Array.from"
 
 /* ES2015 */
@@ -119,10 +119,10 @@ Js.Array.isArray("abcd") == false
 ```
 */
 
-@get
 /**
 Returns the number of elements in the array. See [`Array.length`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/length) on MDN.
 */
+@get
 external length: array<'a> => int = "length"
 
 /* Mutator functions */
@@ -244,8 +244,7 @@ let empty: array<int> = []
 Js.Array.pop(empty) == None
 ```
 */
-@send
-@return(undefined_to_opt)
+@send @return(undefined_to_opt)
 external pop: t<'a> => option<'a> = "pop"
 
 /**
@@ -274,8 +273,7 @@ Js.Array.pushMany(["dog", "elk"], arr) == 5
 arr == ["ant", "bee", "cat", "dog", "elk"]
 ```
 */
-@send
-@variadic
+@send @variadic
 external pushMany: (t<'a>, array<'a>) => int = "push"
 let pushMany = (arg1, obj) => pushMany(obj, arg1)
 
@@ -307,8 +305,7 @@ let empty: array<int> = []
 Js.Array.shift(empty) == None
 ```
 */
-@send
-@return(undefined_to_opt)
+@send @return(undefined_to_opt)
 external shift: t<'a> => option<'a> = "shift"
 
 /**
@@ -382,8 +379,7 @@ Js.Array.spliceInPlace(~pos=9, ~remove=2, ~add=["x", "y", "z"], arr3) == []
 arr3 == ["a", "b", "c", "d", "e", "f", "x", "y", "z"]
 ```
 */
-@send
-@variadic
+@send @variadic
 external spliceInPlace: (t<'a>, ~pos: int, ~remove: int, ~add: array<'a>) => 'this = "splice"
 let spliceInPlace = (~pos, ~remove, ~add, obj) => spliceInPlace(obj, ~pos, ~remove, ~add)
 
@@ -458,8 +454,7 @@ Js.Array.unshiftMany(["a", "b", "c"], arr) == 5
 arr == ["a", "b", "c", "d", "e"]
 ```
 */
-@send
-@variadic
+@send @variadic
 external unshiftMany: (t<'a>, array<'a>) => int = "unshift"
 let unshiftMany = (arg1, obj) => unshiftMany(obj, arg1)
 
@@ -502,8 +497,7 @@ Js.Array.concatMany([["d", "e"], ["f", "g", "h"]], ["a", "b", "c"]) == [
   ]
 ```
 */
-@send
-@variadic
+@send @variadic
 external concatMany: (t<'a>, array<'this>) => 'this = "concat"
 let concatMany = (arg1, obj) => concatMany(obj, arg1)
 
@@ -780,8 +774,7 @@ Js.Array.find(x => x < 0, [33, 22, -55, 77, -44]) == Some(-55)
 Js.Array.find(x => x < 0, [33, 22, 55, 77, 44]) == None
 ```
 */
-@send
-@return(undefined_to_opt)
+@send @return(undefined_to_opt)
 external find: (t<'a>, 'a => bool) => option<'a> = "find"
 let find = (arg1, obj) => find(obj, arg1)
 
@@ -798,8 +791,7 @@ Js.Array.findi(positiveOddElement, [66, -33, 55, 88, 22]) == Some(88)
 Js.Array.findi(positiveOddElement, [66, -33, 55, -88, 22]) == None
 ```
 */
-@send
-@return(undefined_to_opt)
+@send @return(undefined_to_opt)
 external findi: (t<'a>, ('a, int) => bool) => option<'a> = "find"
 let findi = (arg1, obj) => findi(obj, arg1)
 

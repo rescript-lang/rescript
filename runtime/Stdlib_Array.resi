@@ -212,8 +212,7 @@ someArray->Array.pushMany(["yay", "wehoo"])
 someArray->assertEqual(["hi", "hello", "yay", "wehoo"])
 ```
 */
-@variadic
-@send
+@variadic @send
 external pushMany: (array<'a>, array<'a>) => unit = "push"
 
 /**
@@ -357,8 +356,7 @@ someArray->Array.unshiftMany(["yay", "wehoo"])
 someArray->assertEqual(["yay", "wehoo", "hi", "hello"])
 ```
 */
-@variadic
-@send
+@variadic @send
 external unshiftMany: (array<'a>, array<'a>) => unit = "unshift"
 
 /**
@@ -396,8 +394,7 @@ let someArray = array1->Array.concatMany([array2, array3])
 Console.log(someArray) // ["hi", "hello", "yay", "wehoo"]
 ```
 */
-@variadic
-@send
+@variadic @send
 external concatMany: (array<'a>, array<array<'a>>) => array<'a> = "concat"
 
 /**
@@ -501,8 +498,7 @@ external join: (array<string>, string) => string = "join"
 ->assertEqual("One -- Two -- Three")
 ```
 */
-@deprecated("Use `join` instead")
-@send
+@deprecated("Use `join` instead") @send
 external joinWith: (array<string>, string) => string = "join"
 
 /**
@@ -532,8 +528,7 @@ external joinUnsafe: (array<'a>, string) => string = "join"
 ->assertEqual("1 -- 2 -- 3")
 ```
 */
-@deprecated("Use `joinUnsafe` instead")
-@send
+@deprecated("Use `joinUnsafe` instead") @send
 external joinWithUnsafe: (array<'a>, string) => string = "join"
 @send external lastIndexOf: (array<'a>, 'a) => int = "lastIndexOf"
 let lastIndexOfOpt: (array<'a>, 'a) => option<int>

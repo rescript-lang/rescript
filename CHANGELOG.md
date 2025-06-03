@@ -35,6 +35,7 @@
 - Treat `throw` like `raise` in analysis. https://github.com/rescript-lang/rescript/pull/7521
 - Fix `index out of bounds` exception thrown in rare cases by `rescript-editor-analysis.exe codeAction` command. https://github.com/rescript-lang/rescript/pull/7523
 - Don't produce duplicate type definitions for recursive types on hover. https://github.com/rescript-lang/rescript/pull/7524
+- Prop punning when types don't match results in I/O error: _none_: No such file or directory. https://github.com/rescript-lang/rescript/pull/7533
 
 #### :nail_care: Polish
 
@@ -47,10 +48,12 @@
 - Improve error message for pipe (`->`) syntax. https://github.com/rescript-lang/rescript/pull/7520
 - Improve a few error messages around various subtyping issues. https://github.com/rescript-lang/rescript/pull/7404
 - In module declarations, accept the invalid syntax `M = {...}` and format it to `M : {...}`. https://github.com/rescript-lang/rescript/pull/7527
+- Improve doc comment formatting to match the style of multiline comments. https://github.com/rescript-lang/rescript/pull/7529
 
 #### :house: Internal
 
 - Refactor the ast for record expressions and patterns. https://github.com/rescript-lang/rescript/pull/7528
+- Editor: add completions from included modules. https://github.com/rescript-lang/rescript/pull/7515
 
 # 12.0.0-alpha.13
 

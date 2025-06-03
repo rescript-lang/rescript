@@ -98,6 +98,8 @@ val has_printable_attributes : Parsetree.attributes -> bool
 val filter_printable_attributes : Parsetree.attributes -> Parsetree.attributes
 val partition_printable_attributes :
   Parsetree.attributes -> Parsetree.attributes * Parsetree.attributes
+val partition_doc_comment_attributes :
+  Parsetree.attributes -> Parsetree.attributes * Parsetree.attributes
 
 val requires_special_callback_printing_last_arg :
   (Asttypes.arg_label * Parsetree.expression) list -> bool

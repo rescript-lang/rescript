@@ -65,7 +65,6 @@ type array_like<'a> = Stdlib_Array.arrayLike<'a>
    type 'a array_iter = 'a array_like
 */
 
-@val
 /**
 Creates a shallow copy of an array from an array-like object. See
 [`Array.from`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from)
@@ -78,11 +77,11 @@ let strArr = Js.String.castToArrayLike("abcd")
 Js.Array2.from(strArr) == ["a", "b", "c", "d"]
 ```
 */
+@val
 external from: array_like<'a> => array<'a> = "Array.from"
 
 /* ES2015 */
 
-@val
 /**
 Creates a new array by applying a function (the second argument) to each item
 in the `array_like` first argument.  See
@@ -97,11 +96,11 @@ let code = s => Js.String.charCodeAt(0, s)
 Js.Array2.fromMap(strArr, code) == [97.0, 98.0, 99.0, 100.0]
 ```
 */
+@val
 external fromMap: (array_like<'a>, 'a => 'b) => array<'b> = "Array.from"
 
 /* ES2015 */
 
-@val
 /**
 Returns `true` if its argument is an array; `false` otherwise. This is a runtime check, which is why the second example returns `true`---a list is internally represented as a nested JavaScript array.
 
@@ -113,19 +112,19 @@ Js.Array2.isArray(list{5, 2, 3, 1, 4}) == true
 Js.Array2.isArray("abcd") == false
 ```
 */
+@val
 external isArray: 'a => bool = "Array.isArray"
 
-@get
 /**
 Returns the number of elements in the array. See
 [`Array.length`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/length)
 on MDN.
 */
+@get
 external length: array<'a> => int = "length"
 
 /* Mutator functions */
 
-@send
 /**
 Copies from the first element in the given array to the designated `~to_`
 position, returning the resulting array. *This function modifies the original
@@ -141,11 +140,11 @@ Js.Array2.copyWithin(arr, ~to_=2) == [100, 101, 100, 101, 102]
 arr == [100, 101, 100, 101, 102]
 ```
 */
+@send
 external copyWithin: (t<'a>, ~to_: int) => t<'a> = "copyWithin"
 
 /* ES2015 */
 
-@send
 /**
 Copies starting at element `~from` in the given array to the designated `~to_`
 position, returning the resulting array. *This function modifies the original
@@ -161,11 +160,11 @@ Js.Array2.copyWithinFrom(arr, ~from=2, ~to_=0) == [102, 103, 104, 103, 104]
 arr == [102, 103, 104, 103, 104]
 ```
 */
+@send
 external copyWithinFrom: (t<'a>, ~to_: int, ~from: int) => t<'a> = "copyWithin"
 
 /* ES2015 */
 
-@send
 /**
 Copies starting at element `~start` in the given array up to but not including
 `~end_` to the designated `~to_` position, returning the resulting array. *This
@@ -181,11 +180,11 @@ Js.Array2.copyWithinFromRange(arr, ~start=2, ~end_=5, ~to_=1) == [100, 102, 103,
 arr == [100, 102, 103, 104, 104, 105]
 ```
 */
+@send
 external copyWithinFromRange: (t<'a>, ~to_: int, ~start: int, ~end_: int) => t<'a> = "copyWithin"
 
 /* ES2015 */
 
-@send
 /**
 Sets all elements of the given array (the first arumgent) to the designated
 value (the secon argument), returning the resulting array. *This function
@@ -203,11 +202,11 @@ Js.Array2.fillInPlace(arr, 99) == [99, 99, 99, 99, 99]
 arr == [99, 99, 99, 99, 99]
 ```
 */
+@send
 external fillInPlace: (t<'a>, 'a) => t<'a> = "fill"
 
 /* ES2015 */
 
-@send
 /**
 Sets all elements of the given array (the first arumgent) from position `~from`
 to the end to the designated value (the second argument), returning the
@@ -223,11 +222,11 @@ Js.Array2.fillFromInPlace(arr, 99, ~from=2) == [100, 101, 99, 99, 99]
 arr == [100, 101, 99, 99, 99]
 ```
 */
+@send
 external fillFromInPlace: (t<'a>, 'a, ~from: int) => t<'a> = "fill"
 
 /* ES2015 */
 
-@send
 /**
 Sets the elements of the given array (the first arumgent) from position
 `~start` up to but not including position `~end_` to the designated value (the
@@ -244,12 +243,11 @@ Js.Array2.fillRangeInPlace(arr, 99, ~start=1, ~end_=4) == [100, 99, 99, 99, 104]
 arr == [100, 99, 99, 99, 104]
 ```
 */
+@send
 external fillRangeInPlace: (t<'a>, 'a, ~start: int, ~end_: int) => t<'a> = "fill"
 
 /* ES2015 */
 
-@send
-@return(undefined_to_opt)
 /**
 If the array is not empty, removes the last element and returns it as
 `Some(value)`; returns `None` if the array is empty. *This function modifies
@@ -268,9 +266,9 @@ let empty: array<int> = []
 Js.Array2.pop(empty) == None
 ```
 */
+@send @return(undefined_to_opt)
 external pop: t<'a> => option<'a> = "pop"
 
-@send
 /**
 Appends the given value to the array, returning the number of elements in the
 updated array. *This function modifies the original array.* See
@@ -285,10 +283,9 @@ Js.Array2.push(arr, "dog") == 4
 arr == ["ant", "bee", "cat", "dog"]
 ```
 */
+@send
 external push: (t<'a>, 'a) => int = "push"
 
-@send
-@variadic
 /**
 Appends the values from one array (the second argument) to another (the first
 argument), returning the number of elements in the updated array. *This
@@ -304,9 +301,9 @@ Js.Array2.pushMany(arr, ["dog", "elk"]) == 5
 arr == ["ant", "bee", "cat", "dog", "elk"]
 ```
 */
+@send @variadic
 external pushMany: (t<'a>, array<'a>) => int = "push"
 
-@send
 /**
 Returns an array with the elements of the input array in reverse order. *This
 function modifies the original array.* See
@@ -321,10 +318,9 @@ Js.Array2.reverseInPlace(arr) == ["cat", "bee", "ant"]
 arr == ["cat", "bee", "ant"]
 ```
 */
+@send
 external reverseInPlace: t<'a> => t<'a> = "reverse"
 
-@send
-@return(undefined_to_opt)
 /**
 If the array is not empty, removes the first element and returns it as
 `Some(value)`; returns `None` if the array is empty. *This function modifies
@@ -343,9 +339,9 @@ let empty: array<int> = []
 Js.Array2.shift(empty) == None
 ```
 */
+@send @return(undefined_to_opt)
 external shift: t<'a> => option<'a> = "shift"
 
-@send
 /**
 Sorts the given array in place and returns the sorted array. JavaScript sorts
 the array by converting the arguments to UTF-16 strings and sorting them. See
@@ -366,9 +362,9 @@ Js.Array2.sortInPlace(numbers) == [1, 10, 2, 20, 3, 30]
 numbers == [1, 10, 2, 20, 3, 30]
 ```
 */
+@send
 external sortInPlace: t<'a> => t<'a> = "sort"
 
-@send
 /**
 Sorts the given array in place and returns the sorted array. *This function
   modifies the original array.*
@@ -399,10 +395,9 @@ let reverseNumeric = (n1, n2) => n2 - n1
 Js.Array2.sortInPlaceWith(numbers, reverseNumeric) == [30, 20, 10, 3, 2, 1]
 ```
 */
+@send
 external sortInPlaceWith: (t<'a>, ('a, 'a) => int) => t<'a> = "sort"
 
-@send
-@variadic
 /**
 Starting at position `~pos`, remove `~remove` elements and then add the
 elements from the `~add` array. Returns an array consisting of the removed
@@ -426,9 +421,9 @@ Js.Array2.spliceInPlace(arr3, ~pos=9, ~remove=2, ~add=["x", "y", "z"]) == []
 arr3 == ["a", "b", "c", "d", "e", "f", "x", "y", "z"]
 ```
 */
+@send @variadic
 external spliceInPlace: (t<'a>, ~pos: int, ~remove: int, ~add: array<'a>) => t<'a> = "splice"
 
-@send
 /**
 Removes elements from the given array starting at position `~pos` to the end of
 the array, returning the removed elements. *This function modifies the original
@@ -444,9 +439,9 @@ Js.Array2.removeFromInPlace(arr, ~pos=4) == ["e", "f"]
 arr == ["a", "b", "c", "d"]
 ```
 */
+@send
 external removeFromInPlace: (t<'a>, ~pos: int) => t<'a> = "splice"
 
-@send
 /**
 Removes `~count` elements from the given array starting at position `~pos`,
 returning the removed elements. *This function modifies the original array.*
@@ -462,9 +457,9 @@ Js.Array2.removeCountInPlace(arr, ~pos=2, ~count=3) == ["c", "d", "e"]
 arr == ["a", "b", "f"]
 ```
 */
+@send
 external removeCountInPlace: (t<'a>, ~pos: int, ~count: int) => t<'a> = "splice"
 
-@send
 /**
 Adds the given element to the array, returning the new number of elements in
 the array. *This function modifies the original array.* See
@@ -479,10 +474,9 @@ Js.Array2.unshift(arr, "a") == 4
 arr == ["a", "b", "c", "d"]
 ```
 */
+@send
 external unshift: (t<'a>, 'a) => int = "unshift"
 
-@send
-@variadic
 /**
 Adds the elements in the second array argument at the beginning of the first
 array argument, returning the new number of elements in the array. *This
@@ -498,6 +492,7 @@ Js.Array2.unshiftMany(arr, ["a", "b", "c"]) == 5
 arr == ["a", "b", "c", "d", "e"]
 ```
 */
+@send @variadic
 external unshiftMany: (t<'a>, array<'a>) => int = "unshift"
 
 /* Accessor functions
@@ -505,7 +500,6 @@ external unshiftMany: (t<'a>, array<'a>) => int = "unshift"
 @send @deprecated("`append` is not type-safe. Use `concat` instead.")
 external append: (t<'a>, 'a) => t<'a> = "concat"
 
-@send
 /**
 Concatenates the second array argument to the first array argument, returning a
 new array. The original arrays are not modified. See
@@ -518,10 +512,9 @@ on MDN.
 Js.Array2.concat(["a", "b"], ["c", "d", "e"]) == ["a", "b", "c", "d", "e"]
 ```
 */
+@send
 external concat: (t<'a>, t<'a>) => t<'a> = "concat"
 
-@send
-@variadic
 /**
 The second argument to `concatMany()` is an array of arrays; these are added at
 the end of the first argument, returning a new array. See
@@ -543,9 +536,9 @@ Js.Array2.concatMany(["a", "b", "c"], [["d", "e"], ["f", "g", "h"]]) == [
   ]
 ```
 */
+@send @variadic
 external concatMany: (t<'a>, array<t<'a>>) => t<'a> = "concat"
 
-@send
 /**
 Returns true if the given value is in the array, `false` otherwise. See
 [`Array.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/includes)
@@ -558,9 +551,9 @@ Js.Array2.includes(["a", "b", "c"], "b") == true
 Js.Array2.includes(["a", "b", "c"], "x") == false
 ```
 */
+@send
 external includes: (t<'a>, 'a) => bool = "includes"
 
-@send
 /**
 Returns the index of the first element in the array that has the given value.
 If the value is not in the array, returns -1. See
@@ -574,9 +567,9 @@ Js.Array2.indexOf([100, 101, 102, 103], 102) == 2
 Js.Array2.indexOf([100, 101, 102, 103], 999) == -1
 ```
 */
+@send
 external indexOf: (t<'a>, 'a) => int = "indexOf"
 
-@send
 /**
 Returns the index of the first element in the array with the given value. The
 search starts at position `~from`. See
@@ -591,9 +584,9 @@ Js.Array2.indexOfFrom(["a", "b", "a", "c", "a"], "a", ~from=3) == 4
 Js.Array2.indexOfFrom(["a", "b", "a", "c", "a"], "b", ~from=2) == -1
 ```
 */
+@send
 external indexOfFrom: (t<'a>, 'a, ~from: int) => int = "indexOf"
 
-@send
 /**
 This function converts each element of the array to a string (via JavaScript)
 and concatenates them, separated by the string given in the first argument,
@@ -610,9 +603,9 @@ Js.Array2.joinWith([2020, 9, 4], "/") == "2020/9/4"
 Js.Array2.joinWith([2.5, 3.6, 3e-2], ";") == "2.5;3.6;0.03"
 ```
 */
+@send
 external joinWith: (t<'a>, string) => string = "join"
 
-@send
 /**
 Returns the index of the last element in the array that has the given value. If
 the value is not in the array, returns -1. See
@@ -626,9 +619,9 @@ Js.Array2.lastIndexOf(["a", "b", "a", "c"], "a") == 2
 Js.Array2.lastIndexOf(["a", "b", "a", "c"], "x") == -1
 ```
 */
+@send
 external lastIndexOf: (t<'a>, 'a) => int = "lastIndexOf"
 
-@send
 /**
 Returns the index of the last element in the array that has the given value,
 searching from position `~from` down to the start of the array. If the value is
@@ -643,9 +636,9 @@ Js.Array2.lastIndexOfFrom(["a", "b", "a", "c", "a", "d"], "a", ~from=3) == 2
 Js.Array2.lastIndexOfFrom(["a", "b", "a", "c", "a", "d"], "c", ~from=2) == -1
 ```
 */
+@send
 external lastIndexOfFrom: (t<'a>, 'a, ~from: int) => int = "lastIndexOf"
 
-@send
 /**
 Returns a shallow copy of the given array from the `~start` index up to but not
 including the `~end_` position. Negative numbers indicate an offset from the
@@ -662,26 +655,26 @@ Js.Array2.slice(arr, ~start=-3, ~end_=-1) == [104, 105]
 Js.Array2.slice(arr, ~start=9, ~end_=10) == []
 ```
 */
+@send
 external slice: (t<'a>, ~start: int, ~end_: int) => t<'a> = "slice"
 
-@send
 /**
 Returns a copy of the entire array. Same as `Js.Array2.Slice(arr, ~start=0,
 ~end_=Js.Array2.length(arr))`. See
 [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice)
 on MDN.
 */
+@send
 external copy: t<'a> => t<'a> = "slice"
 
-@send
 /**
 Returns a shallow copy of the given array from the given index to the end. See
 [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice)
 on MDN.
 */
+@send
 external sliceFrom: (t<'a>, int) => t<'a> = "slice"
 
-@send
 /**
 Converts the array to a string. Each element is converted to a string using
 JavaScript. Unlike the JavaScript `Array.toString()`, all elements in a
@@ -696,9 +689,9 @@ Js.Array2.toString([3.5, 4.6, 7.8]) == "3.5,4.6,7.8"
 Js.Array2.toString(["a", "b", "c"]) == "a,b,c"
 ```
 */
+@send
 external toString: t<'a> => string = "toString"
 
-@send
 /**
 Converts the array to a string using the conventions of the current locale.
 Each element is converted to a string using JavaScript. Unlike the JavaScript
@@ -715,6 +708,7 @@ Js.Array2.toLocaleString([Js.Date.make()])
 // returns "2020-3-19 10:52:11" for locale de_DE.utf8
 ```
 */
+@send
 external toLocaleString: t<'a> => string = "toLocaleString"
 
 /* Iteration functions
@@ -723,7 +717,6 @@ external toLocaleString: t<'a> => string = "toLocaleString"
    external entries : 'a t -> (int * 'a) array_iter = "" [@@send] (* ES2015 *)
 */
 
-@send
 /**
 The first argument to `every()` is an array. The second argument is a predicate
 function that returns a boolean. The `every()` function returns `true` if the
@@ -740,9 +733,9 @@ Js.Array2.every([6, 22, 8, 4], isEven) == true
 Js.Array2.every([6, 22, 7, 4], isEven) == false
 ```
 */
+@send
 external every: (t<'a>, 'a => bool) => bool = "every"
 
-@send
 /**
 The first argument to `everyi()` is an array. The second argument is a
 predicate function with two arguments: an array element and that element’s
@@ -762,9 +755,9 @@ Js.Array2.everyi([6, -3, 5, 8], evenIndexPositive) == true
 Js.Array2.everyi([6, 3, -5, 8], evenIndexPositive) == false
 ```
 */
+@send
 external everyi: (t<'a>, ('a, int) => bool) => bool = "every"
 
-@send
 /**
 Applies the given predicate function (the second argument) to each element in
 the array; the result is an array of those elements for which the predicate
@@ -779,9 +772,9 @@ let nonEmpty = s => s != ""
 Js.Array2.filter(["abc", "", "", "def", "ghi"], nonEmpty) == ["abc", "def", "ghi"]
 ```
 */
+@send
 external filter: (t<'a>, 'a => bool) => t<'a> = "filter"
 
-@send
 /**
 Each element of the given array are passed to the predicate function. The
 return value is an array of all those elements for which the predicate function
@@ -800,10 +793,9 @@ let positiveOddElement = (item, index) => mod(index, 2) == 1 && item > 0
 Js.Array2.filteri([6, 3, 5, 8, 7, -4, 1], positiveOddElement) == [3, 8]
 ```
 */
+@send
 external filteri: (t<'a>, ('a, int) => bool) => t<'a> = "filter"
 
-@send
-@return({undefined_to_opt: undefined_to_opt})
 /**
 Returns `Some(value)` for the first element in the array that satisifies the
 given predicate function, or `None` if no element satisifies the predicate. See
@@ -818,12 +810,11 @@ Js.Array2.find([33, 22, -55, 77, -44], x => x < 0) == Some(-55)
 Js.Array2.find([33, 22, 55, 77, 44], x => x < 0) == None
 ```
 */
+@send @return({undefined_to_opt: undefined_to_opt})
 external find: (t<'a>, 'a => bool) => option<'a> = "find"
 
 /* ES2015 */
 
-@send
-@return({undefined_to_opt: undefined_to_opt})
 /**
 Returns `Some(value)` for the first element in the array that satisifies the
 given predicate function, or `None` if no element satisifies the predicate. The
@@ -841,11 +832,11 @@ Js.Array2.findi([66, -33, 55, 88, 22], positiveOddElement) == Some(88)
 Js.Array2.findi([66, -33, 55, -88, 22], positiveOddElement) == None
 ```
 */
+@send @return({undefined_to_opt: undefined_to_opt})
 external findi: (t<'a>, ('a, int) => bool) => option<'a> = "find"
 
 /* ES2015 */
 
-@send
 /**
 Returns the index of the first element in the array that satisifies the given
 predicate function, or -1 if no element satisifies the predicate. See
@@ -859,11 +850,11 @@ Js.Array2.findIndex([33, 22, -55, 77, -44], x => x < 0) == 2
 Js.Array2.findIndex([33, 22, 55, 77, 44], x => x < 0) == -1
 ```
 */
+@send
 external findIndex: (t<'a>, 'a => bool) => int = "findIndex"
 
 /* ES2015 */
 
-@send
 /**
 Returns `Some(value)` for the first element in the array that satisifies the
 given predicate function, or `None` if no element satisifies the predicate. The
@@ -881,11 +872,11 @@ Js.Array2.findIndexi([66, -33, 55, 88, 22], positiveOddElement) == 3
 Js.Array2.findIndexi([66, -33, 55, -88, 22], positiveOddElement) == -1
 ```
 */
+@send
 external findIndexi: (t<'a>, ('a, int) => bool) => int = "findIndex"
 
 /* ES2015 */
 
-@send
 /**
 The `forEach()` function applies the function given as the second argument to
 each element in the array. The function you provide returns `unit`, and the
@@ -902,9 +893,9 @@ on MDN.
 Js.Array2.forEach(["a", "b", "c"], x => Js.log(x)) == ()
 ```
 */
+@send
 external forEach: (t<'a>, 'a => unit) => unit = "forEach"
 
-@send
 /**
 The `forEachi()` function applies the function given as the second argument to
 each element in the array. The function you provide takes an item in the array
@@ -922,13 +913,13 @@ on MDN.
 Js.Array2.forEachi(["a", "b", "c"], (item, index) => Js.log2(index + 1, item)) == ()
 ```
 */
+@send
 external forEachi: (t<'a>, ('a, int) => unit) => unit = "forEach"
 
 /* commented out until bs has a plan for iterators
    external keys : 'a t -> int array_iter = "" [@@send] (* ES2015 *)
 */
 
-@send
 /**
 Applies the function (the second argument) to each item in the array, returning
 a new array. The result array does not have to have elements of the same type
@@ -943,9 +934,9 @@ Js.Array2.map([12, 4, 8], x => x * x) == [144, 16, 64]
 Js.Array2.map(["animal", "vegetable", "mineral"], Js.String.length) == [6, 9, 7]
 ```
 */
+@send
 external map: (t<'a>, 'a => 'b) => t<'b> = "map"
 
-@send
 /**
 Applies the function (the second argument) to each item in the array, returning
 a new array. The function acceps two arguments: an item from the array and its
@@ -962,9 +953,9 @@ let product = (item, index) => item * index
 Js.Array2.mapi([10, 11, 12], product) == [0, 11, 24]
 ```
 */
+@send
 external mapi: (t<'a>, ('a, int) => 'b) => t<'b> = "map"
 
-@send
 /**
 The `reduce()` function takes three parameters: an array, a *reducer function*,
 and a beginning accumulator value. The reducer function has two parameters: an
@@ -996,9 +987,9 @@ Js.Array2.reduce(
 Js.Array2.reduce([2.0, 4.0], (acc, item) => item /. acc, 1.0) == 2.0 // 4.0 / (2.0 / 1.0)
 ```
 */
+@send
 external reduce: (t<'a>, ('b, 'a) => 'b, 'b) => 'b = "reduce"
 
-@send
 /**
 The `reducei()` function takes three parameters: an array, a *reducer
 function*, and a beginning accumulator value. The reducer function has three
@@ -1031,9 +1022,9 @@ let sumOfEvens = (accumulator, item, index) =>
 Js.Array2.reducei([2, 5, 1, 4, 3], sumOfEvens, 0) == 6
 ```
 */
+@send
 external reducei: (t<'a>, ('b, 'a, int) => 'b, 'b) => 'b = "reduce"
 
-@send
 /**
 The `reduceRight()` function takes three parameters: an array, a *reducer
 function*, and a beginning accumulator value. The reducer function has two
@@ -1063,9 +1054,9 @@ Js.Array2.reduceRight([10, 2, 4], sumOfSquares, 0) == 120
 Js.Array2.reduceRight([2.0, 4.0], (acc, item) => item /. acc, 1.0) == 0.5 // 2.0 / (4.0 / 1.0)
 ```
 */
+@send
 external reduceRight: (t<'a>, ('b, 'a) => 'b, 'b) => 'b = "reduceRight"
 
-@send
 /**
 The `reduceRighti()` function takes three parameters: an array, a *reducer
 function*, and a beginning accumulator value. The reducer function has three
@@ -1100,9 +1091,9 @@ let sumOfEvens = (accumulator, item, index) =>
 Js.Array2.reduceRighti([2, 5, 1, 4, 3], sumOfEvens, 0) == 6
 ```
 */
+@send
 external reduceRighti: (t<'a>, ('b, 'a, int) => 'b, 'b) => 'b = "reduceRight"
 
-@send
 /**
 Returns `true` if the predicate function given as the second argument to
 `some()` returns `true` for any element in the array; `false` otherwise.
@@ -1116,9 +1107,9 @@ Js.Array2.some([3, 7, 5, 2, 9], isEven) == true
 Js.Array2.some([3, 7, 5, 1, 9], isEven) == false
 ```
 */
+@send
 external some: (t<'a>, 'a => bool) => bool = "some"
 
-@send
 /**
 Returns `true` if the predicate function given as the second argument to
 `somei()` returns `true` for any element in the array; `false` otherwise. The
@@ -1139,6 +1130,7 @@ Js.Array2.somei(["ab", "cd", "ef", "gh"], sameLength) == true
 Js.Array2.somei(["a", "bc", "def", "gh"], sameLength) == false
 ```
 */
+@send
 external somei: (t<'a>, ('a, int) => bool) => bool = "some"
 
 /* commented out until bs has a plan for iterators

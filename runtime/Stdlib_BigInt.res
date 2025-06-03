@@ -93,7 +93,6 @@ let fromFloat = (value: float) => {
   }
 }
 
-@send
 /**
 Formats a `bigint` as a string. Return a `string` representing the given value.
 See [`toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.
@@ -104,12 +103,12 @@ See [`toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 BigInt.toString(123n)->assertEqual("123")
 ```
 */
+@send
 external toString: (bigint, ~radix: int=?) => string = "toString"
 
 @deprecated("Use `toString` with `~radix` instead") @send
 external toStringWithRadix: (bigint, ~radix: int) => string = "toString"
 
-@send
 /**
 Returns a string with a language-sensitive representation of this BigInt value.
 
@@ -119,6 +118,7 @@ Returns a string with a language-sensitive representation of this BigInt value.
 BigInt.toString(123n)->assertEqual("123")
 ```
 */
+@send
 external toLocaleString: bigint => string = "toLocaleString"
 
 @val external toFloat: bigint => float = "Number"

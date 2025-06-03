@@ -21,3 +21,9 @@ let rangeOfLoc (loc : t) =
   let start = loc |> start |> mkPosition in
   let end_ = loc |> end_ |> mkPosition in
   {Protocol.start; end_}
+
+let isInside (x : t) (y : t) =
+  x.loc_start.pos_cnum >= y.loc_start.pos_cnum
+  && x.loc_end.pos_cnum <= y.loc_end.pos_cnum
+  && x.loc_start.pos_lnum >= y.loc_start.pos_lnum
+  && x.loc_end.pos_lnum <= y.loc_end.pos_lnum
