@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "ocamllsp": {
+      "type": "stdio",
+      "command": "mcp-language-server",
+      "args": [
+        "--workspace",
+        "/Users/shulhi/Dev/rescript/rescript-compiler",
+        "--lsp",
+        "ocamllsp"
+      ],
+      "env": {}
+    }
+  }
+}
