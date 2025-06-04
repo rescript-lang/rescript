@@ -238,10 +238,10 @@ pub fn initialize_build(
 
     if show_progress {
         if snapshot_output {
-            println!("Cleant {}/{}", diff_cleanup, total_cleanup)
+            println!("Cleaned {}/{}", diff_cleanup, total_cleanup)
         } else {
             println!(
-                "{}{} {}Cleant {}/{} {:.2}s",
+                "{}{} {}Cleaned {}/{} {:.2}s",
                 LINE_CLEAR,
                 style("[4/7]").bold().dim(),
                 SWEEP,

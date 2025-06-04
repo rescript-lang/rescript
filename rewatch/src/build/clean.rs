@@ -393,7 +393,7 @@ pub fn clean(
 
     if !snapshot_output && show_progress {
         println!(
-            "{}{} {}Cleant compiler assets in {:.2}s",
+            "{}{} {}Cleaned compiler assets in {:.2}s",
             LINE_CLEAR,
             style("[1/2]").bold().dim(),
             SWEEP,
