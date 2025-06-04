@@ -1,4 +1,4 @@
-Cleant 2/14
+Cleaned 2/14
 Parsed 2 source files
 Compiled 2 modules
 
