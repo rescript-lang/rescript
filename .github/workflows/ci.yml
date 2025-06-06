@@ -364,7 +364,9 @@ jobs:
 
       - name: Run syntax benchmarks
         if: matrix.benchmarks
-        run: ./_build/install/default/bin/syntax_benchmarks | tee tests/benchmark-output.json
+        run: |
+          set -o pipefail
+          ./_build/install/default/bin/syntax_benchmarks | tee tests/benchmark-output.json
 
       # Benchmarking is disabled for now because of inconsistent run times on different runners
       #
