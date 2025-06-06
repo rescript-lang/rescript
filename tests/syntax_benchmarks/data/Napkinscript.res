@@ -406,7 +406,7 @@ module Doc = {
       }
 
     let doc = toDoc(t)
-    toString(~width=10, doc) |> print_endline
+    toString(~width=10, doc)->print_endline
   }
 }
 
@@ -1558,7 +1558,7 @@ module Comment: {
         decr(j)
       }
       if j.contents >= i.contents {
-        (@doesNotRaise Bytes.sub)(b, i.contents, j.contents - i.contents + 1) |> Bytes.to_string
+        (@doesNotRaise Bytes.sub)(b, i.contents, j.contents - i.contents + 1)->Bytes.to_string
       } else {
         ""
       }
@@ -2540,7 +2540,7 @@ module Reporting = {
       min(len, startPos.pos_lnum + 3)
     } /* 2 lines after */
 
-    let lines = lines |> drop(startLine) |> take(endLine - startLine) |> Array.of_list
+    let lines = lines->drop(startLine)->take(endLine - startLine)->Array.of_list
 
     let renderLine = (x, ix) => {
       let x = if ix == startPos.pos_lnum {
@@ -2581,7 +2581,7 @@ module Reporting = {
         switch missing {
         | Some(len) =>
           underline(
-            ~from=startCol + String.length(String.length(string_of_int(ix)) |> string_of_int) + 5,
+            ~from=startCol + String.length(String.length(string_of_int(ix))->string_of_int) + 5,
             ~len,
             x,
           )
@@ -4242,8 +4242,8 @@ module CommentTable = {
         Doc.line,
       }),
     )
-    |> Doc.toString(~width=80)
-    |> print_endline
+   ->Doc.toString(~width=80)
+   ->print_endline
   }
   let attach = (tbl, loc, comments) =>
     switch comments {
@@ -5981,7 +5981,7 @@ module Printer = {
         } else {
           Doc.nil
         }
-        List.rev(list{trailingSpace, doc, ...acc}) |> Doc.concat
+        List.rev(list{trailingSpace, doc, ...acc})->Doc.concat
       | list{line, ...lines} =>
         let line = String.trim(line)
         let len = String.length(line)
@@ -9851,7 +9851,7 @@ module Printer = {
           switch props {
           | list{} => Doc.nil
           | props =>
-            Doc.concat(list{Doc.line, Doc.group(Doc.join(~sep=Doc.line, props |> List.rev))})
+            Doc.concat(list{Doc.line, Doc.group(Doc.join(~sep=Doc.line, props->List.rev))})
           },
         )
         let (children, _) = ParsetreeViewer.collectListExpressions(children)
@@ -9965,7 +9965,7 @@ module Printer = {
 
       let callback = Doc.concat(list{lblDoc, printPexpFun(~inCallback=true, expr, cmtTbl)})
       let printedArgs =
-        List.map(arg => printArgument(arg, cmtTbl), args) |> Doc.join(
+        List.map(arg => printArgument(arg, cmtTbl), args)->Doc.join(
           ~sep=Doc.concat(list{Doc.comma, Doc.line}),
         )
 
@@ -11818,7 +11818,7 @@ module Scanner = {
       false
     } else {
       let leftOk = {
-        let c = startCnum - 1 |> (@doesNotRaise Bytes.get)(src) |> Char.code
+        let c = startCnum - 1->(@doesNotRaise Bytes.get)(src)->Char.code
 
         c === CharacterCodes.space || (c === CharacterCodes.tab || CharacterCodes.isLineBreak(c))
       }
@@ -11827,7 +11827,7 @@ module Scanner = {
         let c = if endCnum === Bytes.length(src) {
           -1
         } else {
-          endCnum |> (@doesNotRaise Bytes.get)(src) |> Char.code
+          endCnum->(@doesNotRaise Bytes.get)(src)->Char.code
         }
 
         c === CharacterCodes.space ||
@@ -11888,17 +11888,17 @@ module JsFfi = {
      * @genType.import(/"./MyMath", "default"/) */
     | Module(s) =>
       let structure = list{
-        Parsetree.Pconst_string(s, None) |> Ast_helper.Exp.constant |> Ast_helper.Str.eval,
+        Parsetree.Pconst_string(s, None)->Ast_helper.Exp.constant->Ast_helper.Str.eval,
       }
       let genType = (Location.mknoloc("genType.import"), Parsetree.PStr(structure))
       list{genType}
     | Scope(longident) =>
       let structureItem = {
-        let expr = switch Longident.flatten(longident) |> List.map(s =>
+        let expr = switch Longident.flatten(longident)->List.map(s =>
           Ast_helper.Exp.constant(Parsetree.Pconst_string(s, None))
         ) {
         | list{expr} => expr
-        | list{} as exprs | _ as exprs => exprs |> Ast_helper.Exp.tuple
+        | list{} as exprs | _ as exprs => exprs->Ast_helper.Exp.tuple
         }
 
         Ast_helper.Str.eval(expr)
@@ -11911,16 +11911,16 @@ module JsFfi = {
     let valueDescrs = switch importDescr.jid_spec {
     | Default(decl) =>
       let prim = list{decl.jld_name}
-      let allAttrs = List.concat(list{attrs, importDescr.jid_attributes}) |> List.map(attr =>
+      let allAttrs = List.concat(list{attrs, importDescr.jid_attributes})->List.map(attr =>
         switch attr {
         | (
             {Location.txt: "genType.import"} as id,
             Parsetree.PStr(list{{pstr_desc: Parsetree.Pstr_eval(moduleName, _)}}),
           ) =>
-          let default = Parsetree.Pconst_string("default", None) |> Ast_helper.Exp.constant
+          let default = Parsetree.Pconst_string("default", None)->Ast_helper.Exp.constant
 
           let structureItem =
-            list{moduleName, default} |> Ast_helper.Exp.tuple |> Ast_helper.Str.eval
+            list{moduleName, default}->Ast_helper.Exp.tuple->Ast_helper.Str.eval
 
           (id, Parsetree.PStr(list{structureItem}))
         | attr => attr
@@ -11934,7 +11934,7 @@ module JsFfi = {
           ~attrs=allAttrs,
           Location.mknoloc(decl.jld_alias),
           decl.jld_type,
-        ) |> Ast_helper.Str.primitive,
+        )->Ast_helper.Str.primitive,
       }
     | Spec(decls) => List.map(decl => {
         let prim = list{decl.jld_name}
@@ -11945,14 +11945,14 @@ module JsFfi = {
           ~attrs=allAttrs,
           Location.mknoloc(decl.jld_alias),
           decl.jld_type,
-        ) |> Ast_helper.Str.primitive(~loc=decl.jld_loc)
+        )->Ast_helper.Str.primitive(~loc=decl.jld_loc)
       }, decls)
     }
 
     let jsFfiAttr = (Location.mknoloc("ns.jsFfi"), Parsetree.PStr(list{}))
     Ast_helper.Mod.structure(~loc=importDescr.jid_loc, valueDescrs)
-    |> Ast_helper.Incl.mk(~attrs=list{jsFfiAttr}, ~loc=importDescr.jid_loc)
-    |> Ast_helper.Str.include_(~loc=importDescr.jid_loc)
+   ->Ast_helper.Incl.mk(~attrs=list{jsFfiAttr}, ~loc=importDescr.jid_loc)
+   ->Ast_helper.Str.include_(~loc=importDescr.jid_loc)
   }
 }
 
@@ -11960,7 +11960,7 @@ module ParsetreeCompatibility = {
   let concatLongidents = (l1, l2) => {
     let parts1 = Longident.flatten(l1)
     let parts2 = Longident.flatten(l2)
-    switch List.concat(list{parts1, parts2}) |> Longident.unflatten {
+    switch List.concat(list{parts1, parts2})->Longident.unflatten {
     | Some(longident) => longident
     | None => l2
     }
@@ -12312,7 +12312,7 @@ module ParsetreeCompatibility = {
     open Ast_mapper
     {
       ...default_mapper,
-      attributes: (mapper, attrs) => attrs |> List.filter(attr =>
+      attributes: (mapper, attrs) => attrs->List.filter(attr =>
           switch attr {
           | (
               {Location.txt: "reason.preserve_braces" | "explicit_arity" | "implicity_arity"},
@@ -12320,7 +12320,7 @@ module ParsetreeCompatibility = {
             ) => false
           | _ => true
           }
-        ) |> default_mapper.attributes(mapper),
+        )->default_mapper.attributes(mapper),
       pat: (mapper, p) =>
         switch p.ppat_desc {
         | Ppat_open({txt: longidentOpen}, pattern) =>
@@ -13108,7 +13108,7 @@ Solution: directly use `concat`."
 
   /* TODO: diagnostic reporting */
   let lidentOfPath = longident =>
-    switch Longident.flatten(longident) |> List.rev {
+    switch Longident.flatten(longident)->List.rev {
     | list{} => ""
     | list{ident, ..._} => ident
     }
@@ -13398,7 +13398,7 @@ Solution: directly use `concat`."
     | Pexp_ident(openingIdent) =>
       let opening = {
         let withoutCreateElement =
-          Longident.flatten(openingIdent.txt) |> List.filter(s => s != "createElement")
+          Longident.flatten(openingIdent.txt)->List.filter(s => s != "createElement")
 
         switch Longident.unflatten(withoutCreateElement) {
         | Some(li) => li
@@ -13415,8 +13415,8 @@ Solution: directly use `concat`."
     switch nameExpr.Parsetree.pexp_desc {
     | Pexp_ident(openingIdent) =>
       Longident.flatten(openingIdent.txt)
-      |> List.filter(s => s != "createElement")
-      |> String.concat(".")
+     ->List.filter(s => s != "createElement")
+     ->String.concat(".")
     | _ => ""
     }
 
@@ -14162,11 +14162,11 @@ Solution: directly use `concat`."
 
     switch listPatterns {
     | list{(true, pattern), ...patterns} =>
-      let patterns = patterns |> List.map(filterSpread) |> List.rev
+      let patterns = patterns->List.map(filterSpread)->List.rev
       let pat = makeListPattern(loc, patterns, Some(pattern))
       {...pat, ppat_loc: loc, ppat_attributes: attrs}
     | patterns =>
-      let patterns = patterns |> List.map(filterSpread) |> List.rev
+      let patterns = patterns->List.map(filterSpread)->List.rev
       let pat = makeListPattern(loc, patterns, None)
       {...pat, ppat_loc: loc, ppat_attributes: attrs}
     }
@@ -15150,7 +15150,7 @@ Solution: directly use `concat`."
         | Pexp_ident(longident) =>
           Ast_helper.Pat.var(
             ~loc=expr.pexp_loc,
-            Location.mkloc(Longident.flatten(longident.txt) |> String.concat("."), longident.loc),
+            Location.mkloc(Longident.flatten(longident.txt)->String.concat("."), longident.loc),
           )
         /* TODO: can we convert more expressions to patterns? */
         | _ => Ast_helper.Pat.var(~loc=expr.pexp_loc, Location.mkloc("pattern", expr.pexp_loc))
@@ -15188,7 +15188,7 @@ Solution: directly use `concat`."
                 }),
               ),
             }),
-          ) |> Doc.toString(~width=80)
+          )->Doc.toString(~width=80)
 
         Parser.err(
           ~startPos=expr.pexp_loc.loc_start,
@@ -15217,7 +15217,7 @@ Solution: directly use `concat`."
                   }),
                 ),
               }),
-            ) |> Doc.toString(~width=80),
+            )->Doc.toString(~width=80),
           ),
         )
 
@@ -15332,7 +15332,7 @@ Solution: directly use `concat`."
   /* definition	::=	let [rec] let-binding  { and let-binding } */
   and parseLetBindings = (~attrs, p) => {
     let startPos = p.Parser.startPos
-    Parser.optional(p, Let) |> ignore
+    Parser.optional(p, Let)->ignore
     let recFlag = if Parser.optional(p, Token.Rec) {
       Asttypes.Recursive
     } else {
@@ -15649,7 +15649,7 @@ Solution: directly use `concat`."
       | Colon =>
         Parser.next(p)
         let fieldExpr = parseExpr(p)
-        Parser.optional(p, Comma) |> ignore
+        Parser.optional(p, Comma)->ignore
         let expr = parseRecordExprWithStringKeys(~startPos, (field, fieldExpr), p)
         Parser.expect(Rbrace, p)
         expr
@@ -15928,20 +15928,20 @@ Solution: directly use `concat`."
         }
 
         let body = parseModuleBindingBody(p)
-        Parser.optional(p, Semicolon) |> ignore
+        Parser.optional(p, Semicolon)->ignore
         let expr = parseExprBlock(p)
         let loc = mkLoc(startPos, p.prevEndPos)
         Ast_helper.Exp.letmodule(~loc, name, body, expr)
       }
     | Exception =>
       let extensionConstructor = parseExceptionDef(~attrs, p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let blockExpr = parseExprBlock(p)
       let loc = mkLoc(startPos, p.prevEndPos)
       Ast_helper.Exp.letexception(~loc, extensionConstructor, blockExpr)
     | Open =>
       let od = parseOpenDescription(~attrs, p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let blockExpr = parseExprBlock(p)
       let loc = mkLoc(startPos, p.prevEndPos)
       Ast_helper.Exp.open_(~loc, od.popen_override, od.popen_lid, blockExpr)
@@ -16524,15 +16524,15 @@ Solution: directly use `concat`."
     let loc = mkLoc(startPos, p.prevEndPos)
     switch listExprs {
     | list{(true, expr), ...exprs} =>
-      let exprs = exprs |> List.map(snd) |> List.rev
+      let exprs = exprs->List.map(snd)->List.rev
       makeListExpression(loc, exprs, Some(expr))
     | exprs =>
-      let exprs = exprs |> List.map(((spread, expr)) => {
+      let exprs = exprs->List.map(((spread, expr)) => {
         if spread {
           Parser.err(p, Diagnostics.message(ErrorMessages.listExprSpread))
         }
         expr
-      }) |> List.rev
+      })->List.rev
 
       makeListExpression(loc, exprs, None)
     }
@@ -17034,7 +17034,7 @@ Solution: directly use `concat`."
               Doc.text("Type parameters require angle brackets:"),
               Doc.indent(Doc.concat(list{Doc.line, Printer.printTypExpr(typ, CommentTable.empty)})),
             }),
-          ) |> Doc.toString(~width=80)
+          )->Doc.toString(~width=80)
 
         Parser.err(~startPos=openingStartPos, p, Diagnostics.message(msg))
         Parser.next(p)
@@ -17191,7 +17191,7 @@ Solution: directly use `concat`."
           Parser.expect(Rbrace, p)
           let loc = mkLoc(startPos, p.prevEndPos)
           let typ = makeBsObjType(~attrs=list{}, ~loc, ~closed=closedFlag, fields)
-          Parser.optional(p, Comma) |> ignore
+          Parser.optional(p, Comma)->ignore
           let moreArgs = parseCommaDelimitedRegion(
             ~grammar=Grammar.TypExprList,
             ~closing=Rparen,
@@ -17249,7 +17249,7 @@ Solution: directly use `concat`."
             Parser.expect(Rbrace, p)
             let loc = mkLoc(startPos, p.prevEndPos)
             let typ = makeBsObjType(~attrs=list{}, ~loc, ~closed=closedFlag, fields)
-            Parser.optional(p, Comma) |> ignore
+            Parser.optional(p, Comma)->ignore
             let moreArgs = parseCommaDelimitedRegion(
               ~grammar=Grammar.TypExprList,
               ~closing=Rparen,
@@ -17297,7 +17297,7 @@ Solution: directly use `concat`."
             }
 
             Parser.expect(Rbrace, p)
-            Parser.optional(p, Comma) |> ignore
+            Parser.optional(p, Comma)->ignore
             Parser.expect(Rparen, p)
             Parsetree.Pcstr_record(fields)
           }
@@ -17486,7 +17486,7 @@ Solution: directly use `concat`."
                 }),
               ),
             }),
-          ) |> Doc.toString(~width=80)
+          )->Doc.toString(~width=80)
 
         Parser.err(~startPos=openingStartPos, p, Diagnostics.message(msg))
         Parser.next(p)
@@ -17615,7 +17615,7 @@ Solution: directly use `concat`."
 
       Parser.expect(Rbrace, p)
       let loc = mkLoc(startPos, p.prevEndPos)
-      let typ = makeBsObjType(~attrs=list{}, ~loc, ~closed=closedFlag, fields) |> parseTypeAlias(p)
+      let typ = makeBsObjType(~attrs=list{}, ~loc, ~closed=closedFlag, fields)->parseTypeAlias(p)
 
       let typ = parseArrowTypeRest(~es6Arrow=true, ~startPos, typ, p)
       (Some(typ), Asttypes.Public, Parsetree.Ptype_abstract)
@@ -17668,7 +17668,7 @@ Solution: directly use `concat`."
         Parser.expect(Rbrace, p)
         let loc = mkLoc(startPos, p.prevEndPos)
         let typ =
-          makeBsObjType(~attrs=list{}, ~loc, ~closed=closedFlag, fields) |> parseTypeAlias(p)
+          makeBsObjType(~attrs=list{}, ~loc, ~closed=closedFlag, fields)->parseTypeAlias(p)
 
         let typ = parseArrowTypeRest(~es6Arrow=true, ~startPos, typ, p)
         (Some(typ), Asttypes.Public, Parsetree.Ptype_abstract)
@@ -17685,13 +17685,13 @@ Solution: directly use `concat`."
         | list{attr, ..._} as attrs =>
           let first = {
             let field = parseFieldDeclaration(p)
-            Parser.optional(p, Comma) |> ignore
+            Parser.optional(p, Comma)->ignore
             {
               ...field,
               Parsetree.pld_attributes: attrs,
               pld_loc: {
                 ...field.Parsetree.pld_loc,
-                loc_start: (attr |> fst).loc.loc_start,
+                loc_start: (attr->fst).loc.loc_start,
               },
             }
           }
@@ -17780,7 +17780,7 @@ Solution: directly use `concat`."
       variant
     | LessThan =>
       Parser.next(p)
-      Parser.optional(p, Bar) |> ignore
+      Parser.optional(p, Bar)->ignore
       let rowField = parseTagSpecFull(p)
       let rowFields = parseTagSpecFulls(p)
       let tagNames = if p.token === GreaterThan {
@@ -17980,7 +17980,7 @@ Solution: directly use `concat`."
     }
 
     let constrStart = p.Parser.startPos
-    Parser.optional(p, Bar) |> ignore
+    Parser.optional(p, Bar)->ignore
     let first = {
       let (attrs, name, kind) = switch p.Parser.token {
       | Bar =>
@@ -18179,73 +18179,73 @@ Solution: directly use `concat`."
     switch p.Parser.token {
     | Open =>
       let openDescription = parseOpenDescription(~attrs, p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Some(Ast_helper.Str.open_(~loc, openDescription))
     | Let =>
       let (recFlag, letBindings) = parseLetBindings(~attrs, p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Some(Ast_helper.Str.value(~loc, recFlag, letBindings))
     | Typ =>
       Parser.beginRegion(p)
       switch parseTypeDefinitionOrExtension(~attrs, p) {
       | TypeDef({recFlag, types}) =>
-        Parser.optional(p, Semicolon) |> ignore
+        Parser.optional(p, Semicolon)->ignore
         let loc = mkLoc(startPos, p.prevEndPos)
         Parser.endRegion(p)
         Some(Ast_helper.Str.type_(~loc, recFlag, types))
       | TypeExt(ext) =>
-        Parser.optional(p, Semicolon) |> ignore
+        Parser.optional(p, Semicolon)->ignore
         let loc = mkLoc(startPos, p.prevEndPos)
         Parser.endRegion(p)
         Some(Ast_helper.Str.type_extension(~loc, ext))
       }
     | External =>
       let externalDef = parseExternalDef(~attrs, p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Some(Ast_helper.Str.primitive(~loc, externalDef))
     | Import =>
       let importDescr = parseJsImport(~startPos, ~attrs, p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       let structureItem = JsFfi.toParsetree(importDescr)
       Some({...structureItem, pstr_loc: loc})
     | Exception =>
       let exceptionDef = parseExceptionDef(~attrs, p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Some(Ast_helper.Str.exception_(~loc, exceptionDef))
     | Include =>
       let includeStatement = parseIncludeStatement(~attrs, p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Some(Ast_helper.Str.include_(~loc, includeStatement))
     | Export =>
       let structureItem = parseJsExport(~attrs, p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Some({...structureItem, pstr_loc: loc})
     | Module =>
       let structureItem = parseModuleOrModuleTypeImplOrPackExpr(~attrs, p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Some({...structureItem, pstr_loc: loc})
     | AtAt =>
       let attr = parseStandaloneAttribute(p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Some(Ast_helper.Str.attribute(~loc, attr))
     | PercentPercent =>
       let extension = parseExtension(~moduleLanguage=true, p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Some(Ast_helper.Str.extension(~attrs, ~loc, extension))
     | token when Grammar.isExprStart(token) =>
       let prevEndPos = p.Parser.endPos
       let exp = parseExpr(p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Parser.checkProgress(~prevEndPos, ~result=Ast_helper.Str.eval(~loc, ~attrs, exp), p)
     | _ => None
@@ -18928,7 +18928,7 @@ Solution: directly use `concat`."
     | Let =>
       Parser.beginRegion(p)
       let valueDesc = parseSignLetDesc(~attrs, p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Parser.endRegion(p)
       Some(Ast_helper.Sig.value(~loc, valueDesc))
@@ -18936,29 +18936,29 @@ Solution: directly use `concat`."
       Parser.beginRegion(p)
       switch parseTypeDefinitionOrExtension(~attrs, p) {
       | TypeDef({recFlag, types}) =>
-        Parser.optional(p, Semicolon) |> ignore
+        Parser.optional(p, Semicolon)->ignore
         let loc = mkLoc(startPos, p.prevEndPos)
         Parser.endRegion(p)
         Some(Ast_helper.Sig.type_(~loc, recFlag, types))
       | TypeExt(ext) =>
-        Parser.optional(p, Semicolon) |> ignore
+        Parser.optional(p, Semicolon)->ignore
         let loc = mkLoc(startPos, p.prevEndPos)
         Parser.endRegion(p)
         Some(Ast_helper.Sig.type_extension(~loc, ext))
       }
     | External =>
       let externalDef = parseExternalDef(~attrs, p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Some(Ast_helper.Sig.value(~loc, externalDef))
     | Exception =>
       let exceptionDef = parseExceptionDef(~attrs, p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Some(Ast_helper.Sig.exception_(~loc, exceptionDef))
     | Open =>
       let openDescription = parseOpenDescription(~attrs, p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Some(Ast_helper.Sig.open_(~loc, openDescription))
     | Include =>
@@ -18970,7 +18970,7 @@ Solution: directly use `concat`."
         moduleType,
       )
 
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Some(Ast_helper.Sig.include_(~loc, includeDescription))
     | Module =>
@@ -18978,29 +18978,29 @@ Solution: directly use `concat`."
       switch p.Parser.token {
       | Uident(_) =>
         let modDecl = parseModuleDeclarationOrAlias(~attrs, p)
-        Parser.optional(p, Semicolon) |> ignore
+        Parser.optional(p, Semicolon)->ignore
         let loc = mkLoc(startPos, p.prevEndPos)
         Some(Ast_helper.Sig.module_(~loc, modDecl))
       | Rec =>
         let recModule = parseRecModuleSpec(~attrs, ~startPos, p)
-        Parser.optional(p, Semicolon) |> ignore
+        Parser.optional(p, Semicolon)->ignore
         let loc = mkLoc(startPos, p.prevEndPos)
         Some(Ast_helper.Sig.rec_module(~loc, recModule))
       | Typ => Some(parseModuleTypeDeclaration(~attrs, ~startPos, p))
       | _t =>
         let modDecl = parseModuleDeclarationOrAlias(~attrs, p)
-        Parser.optional(p, Semicolon) |> ignore
+        Parser.optional(p, Semicolon)->ignore
         let loc = mkLoc(startPos, p.prevEndPos)
         Some(Ast_helper.Sig.module_(~loc, modDecl))
       }
     | AtAt =>
       let attr = parseStandaloneAttribute(p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Some(Ast_helper.Sig.attribute(~loc, attr))
     | PercentPercent =>
       let extension = parseExtension(~moduleLanguage=true, p)
-      Parser.optional(p, Semicolon) |> ignore
+      Parser.optional(p, Semicolon)->ignore
       let loc = mkLoc(startPos, p.prevEndPos)
       Some(Ast_helper.Sig.extension(~attrs, ~loc, extension))
     | Import =>
@@ -20337,7 +20337,7 @@ module Driver: {
 
   let extractOcamlStringData = filename => {
     let lexbuf = if String.length(filename) > 0 {
-      IO.readFile(filename) |> Lexing.from_string
+      IO.readFile(filename)->Lexing.from_string
     } else {
       Lexing.from_channel(stdin)
     }
@@ -20370,7 +20370,7 @@ module Driver: {
 
   let parseOcaml = (type a, kind: file_kind<a>, filename): a => {
     let lexbuf = if String.length(filename) > 0 {
-      IO.readFile(filename) |> Lexing.from_string
+      IO.readFile(filename)->Lexing.from_string
     } else {
       Lexing.from_channel(stdin)
     }
@@ -20379,12 +20379,12 @@ module Driver: {
     switch kind {
     | Structure =>
       Parse.implementation(lexbuf)
-      |> ParsetreeCompatibility.replaceStringLiteralStructure(stringData)
-      |> ParsetreeCompatibility.structure
+     ->ParsetreeCompatibility.replaceStringLiteralStructure(stringData)
+     ->ParsetreeCompatibility.structure
     | Signature =>
       Parse.interface(lexbuf)
-      |> ParsetreeCompatibility.replaceStringLiteralSignature(stringData)
-      |> ParsetreeCompatibility.signature
+     ->ParsetreeCompatibility.replaceStringLiteralSignature(stringData)
+     ->ParsetreeCompatibility.signature
     }
   }
 
@@ -20415,7 +20415,7 @@ module Driver: {
   let parseOcamlFile = (kind, filename) => {
     let ast = parseOcaml(kind, filename)
     let lexbuf2 = if String.length(filename) > 0 {
-      IO.readFile(filename) |> Lexing.from_string
+      IO.readFile(filename)->Lexing.from_string
     } else {
       Lexing.from_channel(stdin)
     }
@@ -20500,14 +20500,14 @@ module Driver: {
     switch kind {
     | Structure =>
       ast
-      |> ParsetreeCompatibility.replaceStringLiteralStructure(stringData.contents)
-      |> ParsetreeCompatibility.normalizeReasonArityStructure(~forPrinter=true)
-      |> ParsetreeCompatibility.structure
+     ->ParsetreeCompatibility.replaceStringLiteralStructure(stringData.contents)
+     ->ParsetreeCompatibility.normalizeReasonArityStructure(~forPrinter=true)
+     ->ParsetreeCompatibility.structure
     | Signature =>
       ast
-      |> ParsetreeCompatibility.replaceStringLiteralSignature(stringData.contents)
-      |> ParsetreeCompatibility.normalizeReasonAritySignature(~forPrinter=true)
-      |> ParsetreeCompatibility.signature
+     ->ParsetreeCompatibility.replaceStringLiteralSignature(stringData.contents)
+     ->ParsetreeCompatibility.normalizeReasonAritySignature(~forPrinter=true)
+     ->ParsetreeCompatibility.signature
     }
   }
 
@@ -20583,7 +20583,7 @@ module Driver: {
     | "ns" | "napkinscript" =>
       Printer.printImplementation(~width, ast, List.rev(_parserState.Parser.comments))
     | "ast" => Printast.implementation(Format.std_formatter, ast)
-    | "sexp" => ast |> SexpAst.implementation |> Sexp.toString |> print_string
+    | "sexp" => ast->SexpAst.implementation->Sexp.toString->print_string
     | _ =>
       /* default binary */
       output_string(stdout, Config.ast_impl_magic_number)
@@ -20597,7 +20597,7 @@ module Driver: {
     | "ns" | "napkinscript" =>
       Printer.printInterface(~width, ast, List.rev(_parserState.Parser.comments))
     | "ast" => Printast.interface(Format.std_formatter, ast)
-    | "sexp" => ast |> SexpAst.interface |> Sexp.toString |> print_string
+    | "sexp" => ast->SexpAst.interface->Sexp.toString->print_string
     | _ =>
       /* default binary */
       output_string(stdout, Config.ast_intf_magic_number)
