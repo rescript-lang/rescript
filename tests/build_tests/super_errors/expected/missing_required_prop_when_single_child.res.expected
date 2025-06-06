@@ -1,0 +1,12 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/missing_required_prop_when_single_child.res[0m:[2m28:7-37[0m
+
+  26 [2m┆[0m let make = () => {
+  27 [2m┆[0m   <Wrapper>
+  [1;31m28[0m [2m┆[0m     [1;31m<div> {""->React.string} </div>[0m
+  29 [2m┆[0m   </Wrapper>
+  30 [2m┆[0m }
+
+  The component [1;33m<Wrapper />[0m is missing these required props:
+   value
