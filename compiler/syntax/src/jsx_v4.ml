@@ -1208,7 +1208,7 @@ let append_children_prop (config : Jsx_common.jsx_config) mapper
           | "react" -> Lident "ReactDOM"
           | _generic -> module_access_name config "Elements"
         in
-        Exp.apply ~loc:child.pexp_loc
+        Exp.apply
           (Exp.ident
              {txt = Ldot (element_binding, "someElement"); loc = Location.none})
           [(Nolabel, mapper.expr mapper child)]
