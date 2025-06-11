@@ -55,6 +55,7 @@
 
 - Refactor the ast for record expressions and patterns. https://github.com/rescript-lang/rescript/pull/7528
 - Editor: add completions from included modules. https://github.com/rescript-lang/rescript/pull/7515
+- Add `-editor-mode` arg to `bsc` for doing special optimizations only relevant to the editor tooling. https://github.com/rescript-lang/rescript/pull/7541
 
 # 12.0.0-alpha.13
 
