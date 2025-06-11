@@ -25,6 +25,7 @@ val dont_write_files : bool ref
 val keep_locs : bool ref
 val only_parse : bool ref
 val ignore_parse_errors : bool ref
+val editor_mode : bool ref
 
 val parse_color_setting : string -> Misc.Color.setting option
 val color : Misc.Color.setting option ref
