@@ -4885,12 +4885,35 @@ and parse_constr_decl_args p =
  *  | constr-name const-args
  *  | attrs constr-name const-args *)
 and parse_type_constructor_declaration_with_bar p =
-  match p.Parser.token with
-  | Bar ->
+  let is_constructor_with_bar p =
+    Parser.lookahead p (fun state ->
+        match state.Parser.token with
+        | DocComment _ -> (
+          Parser.next state;
+          match state.token with
+          | Bar -> true
+          | _ -> false)
+        | Bar -> true
+        | _ -> false)
+  in
+  if is_constructor_with_bar p then (
+    let doc_comment_attrs =
+      match p.Parser.token with
+      | DocComment (loc, s) ->
+        Parser.next p;
+        [doc_comment_to_attribute loc s]
+      | _ -> []
+    in
     let start_pos = p.Parser.start_pos in
     Parser.next p;
-    Some (parse_type_constructor_declaration ~start_pos p)
-  | _ -> None
+    let constr = parse_type_constructor_declaration ~start_pos p in
+    Some
+      {
+        constr with
+        Parsetree.pcd_attributes =
+          doc_comment_attrs @ constr.Parsetree.pcd_attributes;
+      })
+  else None
 
 and parse_type_constructor_declaration ~start_pos p =
   Parser.leave_breadcrumb p Grammar.ConstructorDeclaration;
@@ -4919,9 +4942,17 @@ and parse_type_constructor_declarations ?first p =
   let first_constr_decl =
     match first with
     | None ->
+      let doc_comment_attrs =
+        match p.Parser.token with
+        | DocComment (loc, s) ->
+          Parser.next p;
+          [doc_comment_to_attribute loc s]
+        | _ -> []
+      in
       let start_pos = p.Parser.start_pos in
       ignore (Parser.optional p Token.Bar);
-      parse_type_constructor_declaration ~start_pos p
+      let constr = parse_type_constructor_declaration ~start_pos p in
+      {constr with pcd_attributes = doc_comment_attrs @ constr.pcd_attributes}
     | Some first_constr_decl -> first_constr_decl
   in
   first_constr_decl
@@ -4947,7 +4978,7 @@ and parse_type_representation ?current_type_name_path ?inline_types_context p =
   in
   let kind =
     match p.Parser.token with
-    | Bar | Uident _ ->
+    | Bar | Uident _ | DocComment _ ->
       Parsetree.Ptype_variant (parse_type_constructor_declarations p)
     | Lbrace ->
       Parsetree.Ptype_record
@@ -5500,7 +5531,7 @@ and parse_type_equation_and_representation ?current_type_name_path
       parse_record_or_object_decl ?current_type_name_path ?inline_types_context
         p
     | Private -> parse_private_eq_or_repr p
-    | Bar | DotDot ->
+    | Bar | DotDot | DocComment _ ->
       let priv, kind = parse_type_representation p in
       (None, priv, kind)
     | _ -> (

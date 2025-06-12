@@ -34,7 +34,7 @@ let area;
 
 area = myShape.TAG === "Circle" ? 100 * 3.14 : 10 * myShape._1 | 0;
 
-eq("File \"gpr_1822_test.res\", line 23, characters 3-10", area, 314);
+eq("File \"gpr_1822_test.res\", line 22, characters 3-10", area, 314);
 
 Mt.from_pair_suites("Gpr_1822_test", suites.contents);
 
