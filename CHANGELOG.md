@@ -12,6 +12,9 @@
 
 # 12.0.0-alpha.15 (Unreleased)
 
+#### :bug: Bug fix
+- ignore inferred arity in functions inside `%raw` functions, leaving to `%ffi` the responsibility to check the arity since it gives an error in case of mismatch. https://github.com/rescript-lang/rescript/pull/7542
+
 #### :nail_care: Polish
 
 - Better error message for when trying to await something that is not a promise. https://github.com/rescript-lang/rescript/pull/7561
