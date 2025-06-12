@@ -68,7 +68,8 @@ let collect_info (meta : Lam_stats.t) (lam : Lam.t) =
         {
           primitive = Praw_js_code {code_info = Exp (Js_function {arity})};
           args = _;
-        } ->
+        }
+      when false ->
       Hash_ident.replace meta.ident_tbl ident
         (FunctionId {arity = Lam_arity.info [arity] false; lambda = None})
     | Lprim {primitive = Pnull_to_opt; args = [(Lvar _ as l)]; _} ->
