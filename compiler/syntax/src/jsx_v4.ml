@@ -1220,18 +1220,24 @@ let append_children_prop (config : Jsx_common.jsx_config) mapper
     in
     props
     @ [
-        JSXPropValue ({txt = "children"; loc = Location.none}, is_optional, expr);
+        JSXPropValue
+          ({txt = "children"; loc = child.pexp_loc}, is_optional, expr);
       ]
-  | JSXChildrenItems xs ->
+  | JSXChildrenItems (head :: _ as xs) ->
+    let loc =
+      match List.rev xs with
+      | [] -> head.pexp_loc
+      | lastChild :: _ ->
+        {head.pexp_loc with loc_end = lastChild.pexp_loc.loc_end}
+    in
     (* this is a hack to support react components that introspect into their children *)
     props
     @ [
         JSXPropValue
-          ( {txt = "children"; loc = Location.none},
+          ( {txt = "children"; loc},
             false,
-            Exp.apply
-              (Exp.ident
-                 {txt = module_access_name config "array"; loc = Location.none})
+            Exp.apply ~loc
+              (Exp.ident {txt = module_access_name config "array"; loc})
               [(Nolabel, Exp.array (List.map (mapper.expr mapper) xs))] );
       ]
 

@@ -28,16 +28,6 @@
   addValueReference ComponentAsProp.res:12:24 --> ComponentAsProp.res:12:13
   addValueReference ComponentAsProp.res:13:16 --> React.res:3:0
   addValueReference ComponentAsProp.res:11:14 --> ComponentAsProp.res:6:34
-  addValueReference ComponentAsProp.res:9:6 --> ComponentAsProp.res:6:12
-  addValueReference ComponentAsProp.res:10:6 --> ComponentAsProp.res:6:20
-  addValueReference ComponentAsProp.res:12:24 --> ComponentAsProp.res:12:13
-  addValueReference ComponentAsProp.res:13:16 --> React.res:3:0
-  addValueReference ComponentAsProp.res:11:14 --> ComponentAsProp.res:6:34
-  addValueReference ComponentAsProp.res:9:6 --> ComponentAsProp.res:6:12
-  addValueReference ComponentAsProp.res:10:6 --> ComponentAsProp.res:6:20
-  addValueReference ComponentAsProp.res:12:24 --> ComponentAsProp.res:12:13
-  addValueReference ComponentAsProp.res:13:16 --> React.res:3:0
-  addValueReference ComponentAsProp.res:11:14 --> ComponentAsProp.res:6:34
   addTypeReference _none_:1:-1 --> ComponentAsProp.res:6:12
   addTypeReference _none_:1:-1 --> ComponentAsProp.res:6:20
   addTypeReference _none_:1:-1 --> ComponentAsProp.res:6:34
@@ -433,39 +423,9 @@
   addValueReference Hooks.res:14:5 --> ImportHooks.res:13:0
   addValueReference Hooks.res:15:7 --> React.res:7:0
   addValueReference Hooks.res:15:32 --> React.res:7:0
-  addValueReference Hooks.res:15:7 --> React.res:7:0
-  addValueReference Hooks.res:15:32 --> React.res:7:0
   addValueReference Hooks.res:14:76 --> Hooks.res:14:57
   addValueReference Hooks.res:14:63 --> React.res:7:0
   addValueReference Hooks.res:17:5 --> ImportHookDefault.res:6:0
-  addValueReference Hooks.res:19:7 --> React.res:7:0
-  addValueReference Hooks.res:19:32 --> React.res:7:0
-  addValueReference Hooks.res:19:7 --> React.res:7:0
-  addValueReference Hooks.res:19:32 --> React.res:7:0
-  addValueReference Hooks.res:18:74 --> Hooks.res:18:55
-  addValueReference Hooks.res:18:61 --> React.res:7:0
-  addTypeReference Hooks.res:10:29 --> Hooks.res:1:16
-  addValueReference Hooks.res:10:29 --> Hooks.res:4:12
-  addValueReference Hooks.res:10:75 --> Hooks.res:5:7
-  addValueReference Hooks.res:9:7 --> React.res:7:0
-  addTypeReference Hooks.res:10:29 --> Hooks.res:1:16
-  addValueReference Hooks.res:10:29 --> Hooks.res:4:12
-  addValueReference Hooks.res:10:75 --> Hooks.res:5:7
-  addValueReference Hooks.res:9:7 --> React.res:7:0
-  addValueReference Hooks.res:13:54 --> React.res:7:0
-  addValueReference Hooks.res:13:54 --> React.res:7:0
-  addValueReference Hooks.res:13:40 --> Hooks.res:5:7
-  addValueReference Hooks.res:13:26 --> Hooks.res:5:14
-  addValueReference Hooks.res:14:5 --> ImportHooks.res:13:0
-  addValueReference Hooks.res:15:7 --> React.res:7:0
-  addValueReference Hooks.res:15:32 --> React.res:7:0
-  addValueReference Hooks.res:15:7 --> React.res:7:0
-  addValueReference Hooks.res:15:32 --> React.res:7:0
-  addValueReference Hooks.res:14:76 --> Hooks.res:14:57
-  addValueReference Hooks.res:14:63 --> React.res:7:0
-  addValueReference Hooks.res:17:5 --> ImportHookDefault.res:6:0
-  addValueReference Hooks.res:19:7 --> React.res:7:0
-  addValueReference Hooks.res:19:32 --> React.res:7:0
   addValueReference Hooks.res:19:7 --> React.res:7:0
   addValueReference Hooks.res:19:32 --> React.res:7:0
   addValueReference Hooks.res:18:74 --> Hooks.res:18:55
