@@ -52,6 +52,7 @@
 - Improve doc comment formatting to match the style of multiline comments. https://github.com/rescript-lang/rescript/pull/7529
 - Improve error messages around type mismatches for try/catch, if, for, while, and optional record fields + optional function arguments. https://github.com/rescript-lang/rescript/pull/7522
 - sync Reanalyze with the new APIs around exception. https://github.com/rescript-lang/rescript/pull/7536
+- Improve array pattern spread error message. https://github.com/rescript-lang/rescript/pull/7549
 
 #### :house: Internal
 
