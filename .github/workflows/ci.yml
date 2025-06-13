@@ -137,7 +137,7 @@ jobs:
         run: |
           cp rewatch/target/${{ matrix.rust-target }}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch
           mkdir -p rewatch/target/release
-          cp rewatch/target/${{ matrix.rust-target }}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch/target/release 
+          cp rewatch/target/${{ matrix.rust-target }}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch/target/release
           ./scripts/copyExes.js --rewatch
         shell: bash
 
@@ -360,6 +360,8 @@ jobs:
         run: make -C tests/gentype_tests/typescript-react-example clean test
 
       - name: Run rewatch tests
+        env:
+          CLICOLOR_FORCE: 0
         run: make test-rewatch
 
       - name: Run syntax benchmarks
