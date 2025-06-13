@@ -625,6 +625,35 @@ mod tests {
                 module: Some(JsxModule::Other(String::from("Voby.JSX"))),
                 mode: None,
                 v3_dependencies: None,
+                preserve: None,
+            },
+        );
+    }
+
+    #[test]
+    fn test_jsx_preserve() {
+        let json = r#"
+        {
+            "name": "my-monorepo",
+            "sources": [ { "dir": "src/", "subdirs": true } ],
+            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "suffix": ".mjs",
+            "pinned-dependencies": [ "@teamwalnut/app" ],
+            "bs-dependencies": [ "@teamwalnut/app" ],
+            "jsx": { "version": 4, "preserve": true }
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert!(config.jsx.is_some());
+        assert_eq!(
+            config.jsx.unwrap(),
+            JsxSpecs {
+                version: Some(4),
+                module: None,
+                mode: None,
+                v3_dependencies: None,
+                preserve: Some(true),
             },
         );
     }
