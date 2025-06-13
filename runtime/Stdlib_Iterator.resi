@@ -62,6 +62,11 @@ map->Map.set("someKey2", "someValue2")
 let mapKeysAsArray = map->Map.keys->Iterator.toArray
 
 mapKeysAsArray->assertEqual(["someKey", "someKey2"])
+
+## Remark
+
+Since March 2025, this feature works across the latest devices and browser versions.
+This feature might not work in older devices or browsers.
 ```
 */
 @send
@@ -104,6 +109,11 @@ iterator->Iterator.forEach(v => {
 
 acc.contents->assertEqual("abc")
 ```
+
+## Remark
+
+Since March 2025, this feature works across the latest devices and browser versions.
+This feature might not work in older devices or browsers.
 */
 @send
 external forEach: (t<'a>, 'a => unit) => unit = "forEach"
@@ -128,6 +138,11 @@ let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.values
 let seq = fibonacci->Iterator.drop(2)
 seq->Iterator.next->assertEqual({done: false, value: Some(2)})
 seq->Iterator.next->assertEqual({done: false, value: Some(3)})
+
+## Remark
+
+Since March 2025, this feature works across the latest devices and browser versions.
+This feature might not work in older devices or browsers.
 ```
 */
 @send
@@ -145,6 +160,11 @@ let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.values
 let areAllEven = fibonacci->Iterator.every(n => n % 2 == 0)
 areAllEven->assertEqual(false)
 ```
+
+## Remark
+
+Since March 2025, this feature works across the latest devices and browser versions.
+This feature might not work in older devices or browsers.
 */
 @send
 external every: (t<'a>, 'a => bool) => bool = "every"
@@ -162,6 +182,11 @@ let seq = fibonacci->Iterator.filter(n => n % 2 == 0)
 seq->Iterator.next->assertEqual({done: false, value: Some(2)})
 seq->Iterator.next->assertEqual({done: false, value: Some(8)})
 ```
+
+## Remark
+
+Since March 2025, this feature works across the latest devices and browser versions.
+This feature might not work in older devices or browsers.
 */
 @send
 external filter: (t<'a>, 'a => bool) => t<'a> = "filter"
@@ -178,6 +203,11 @@ let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.values
 let seq = fibonacci->Iterator.find(n => n % 2 == 0)
 seq->assertEqual(Some(2))
 ```
+
+## Remark
+
+Since March 2025, this feature works across the latest devices and browser versions.
+This feature might not work in older devices or browsers.
 */
 @send
 external find: (t<'a>, 'a => bool) => option<'a> = "find"
@@ -199,6 +229,11 @@ let letters =
   ->Array.fromIterator
 letters->assertEqual(["a", "b", "c", "d", "e", "f"])
 ```
+
+## Remark
+
+Since March 2025, this feature works across the latest devices and browser versions.
+This feature might not work in older devices or browsers.
  */
 @send
 external flatMap: (t<'a>, 'a => t<'b>) => t<'b> = "flatMap"
@@ -214,6 +249,11 @@ let map = Map.fromArray([("a", 1), ("b", 2), ("c", 3)])
 let letters = map->Map.keys->Iterator.map(v => v->String.toUpperCase)->Array.fromIterator
 letters->assertEqual(["A", "B", "C"])
 ```
+
+## Remark
+
+Since March 2025, this feature works across the latest devices and browser versions.
+This feature might not work in older devices or browsers.
 */
 @send
 external map: (t<'a>, 'a => 'b) => t<'b> = "map"
@@ -230,6 +270,11 @@ let numbers: Iterator.t<int> = [ 1, 2, 3 ]->Array.values
 let sum = numbers->Iterator.reduce((acc, n) => acc + n, ~initialValue=0)
 sum->assertEqual(6)
 ```
+
+## Remark
+
+Since March 2025, this feature works across the latest devices and browser versions.
+This feature might not work in older devices or browsers.
 */
 @send
 external reduce: (t<'a>, ('acc, 'a) => 'acc, ~initialValue: 'acc=?) => 'acc = "reduce"
@@ -248,6 +293,11 @@ let numbers: Iterator.t<int> = [ 1, 2, 3 ]->Array.values
 let hasEven = numbers->Iterator.some(n => n % 2 == 0)
 hasEven->assertEqual(true)
 ```
+
+## Remark
+
+Since March 2025, this feature works across the latest devices and browser versions.
+This feature might not work in older devices or browsers.
  */
 @send
 external some: (t<'a>, 'a => bool) => bool = "some"
@@ -266,6 +316,11 @@ seq->Iterator.next->assertEqual({done: false, value: Some(1)})
 seq->Iterator.next->assertEqual({done: false, value: Some(1)})
 seq->Iterator.next->assertEqual({done: true, value: None})
 ```
+
+## Remark
+
+Since March 2025, this feature works across the latest devices and browser versions.
+This feature might not work in older devices or browsers.
 */
 @send
 external take: (t<'a>, int) => t<'a> = "take"
