@@ -61,7 +61,7 @@ module ErrorMessages = struct
      matching currently guarantees to never create new intermediate data."
 
   let record_pattern_spread =
-    "Record's `...` spread is not supported in pattern matches.\n\
+    "Record spread (`...`) is not supported in pattern matches.\n\
      Explanation: you can't collect a subset of a record's field into its own \
      record, since a record needs an explicit declaration and that subset \
      wouldn't have one.\n\
@@ -70,7 +70,7 @@ module ErrorMessages = struct
   [@@live]
 
   let array_pattern_spread =
-    "Array's `...` spread is not supported in pattern matches.\n\
+    "Array spread (`...`) is not supported in pattern matches.\n\
      Explanation: such spread would create a subarray; out of performance \
      concern, our pattern matching currently guarantees to never create new \
      intermediate data.\n\
