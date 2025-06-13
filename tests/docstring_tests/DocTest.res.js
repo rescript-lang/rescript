@@ -14,6 +14,7 @@ import * as Stdlib_Dict from "rescript/lib/es6/Stdlib_Dict.js";
 import * as Stdlib_List from "rescript/lib/es6/Stdlib_List.js";
 import * as Stdlib_Array from "rescript/lib/es6/Stdlib_Array.js";
 import * as Stdlib_Option from "rescript/lib/es6/Stdlib_Option.js";
+import * as Stdlib_String from "rescript/lib/es6/Stdlib_String.js";
 import * as Stdlib_JsError from "rescript/lib/es6/Stdlib_JsError.js";
 import * as Primitive_string from "rescript/lib/es6/Primitive_string.js";
 import * as Promises from "node:fs/promises";
@@ -179,6 +180,63 @@ function getCodeBlocks(example) {
       continue;
     };
   };
+  let transformEqualityAssertions = code => {
+    let lines = code.split("\n");
+    return lines.map((line, idx) => {
+      let trimmedLine = line.trim();
+      if (!(trimmedLine.includes("==") && !trimmedLine.startsWith("//") && !trimmedLine.startsWith("/*") && !trimmedLine.startsWith("if") && !trimmedLine.startsWith("|") && !trimmedLine.startsWith("let") && !trimmedLine.startsWith("~") && !trimmedLine.startsWith("module") && !trimmedLine.startsWith("->") && !trimmedLine.endsWith(","))) {
+        return line;
+      }
+      let searchFrom = (currentLine, _startIndex) => {
+        while (true) {
+          let startIndex = _startIndex;
+          if (startIndex >= currentLine.length) {
+            return;
+          }
+          let lineSuffix = currentLine.slice(startIndex);
+          let idxEqEqInSuffix = Stdlib_String.indexOfOpt(lineSuffix, "==");
+          let idxEqEqEqInSuffix = Stdlib_String.indexOfOpt(lineSuffix, "===");
+          if (idxEqEqInSuffix === undefined) {
+            return;
+          }
+          if (idxEqEqEqInSuffix !== undefined) {
+            if (idxEqEqInSuffix < idxEqEqEqInSuffix) {
+              let actualIdx = startIndex + idxEqEqInSuffix | 0;
+              let left = currentLine.slice(0, actualIdx);
+              let right = currentLine.slice(actualIdx + 2 | 0);
+              return [
+                left,
+                right
+              ];
+            }
+            _startIndex = (startIndex + idxEqEqEqInSuffix | 0) + 3 | 0;
+            continue;
+          }
+          let actualIdx$1 = startIndex + idxEqEqInSuffix | 0;
+          let left$1 = currentLine.slice(0, actualIdx$1);
+          let right$1 = currentLine.slice(actualIdx$1 + 2 | 0);
+          return [
+            left$1,
+            right$1
+          ];
+        };
+      };
+      let parts = searchFrom(line, 0);
+      let parts$1 = parts !== undefined && parts[1].trim().length === 0 ? [
+          parts[0],
+          Stdlib_Option.getExn(lines[idx + 1 | 0], "Expected to have an expected expression on the next line")
+        ] : parts;
+      if (parts$1 === undefined) {
+        return line;
+      }
+      let right = parts$1[1];
+      if (right.includes(")") || right.includes("//")) {
+        return line;
+      } else {
+        return "(" + parts$1[0].trim() + ")->assertEqual(" + right.trim() + ")";
+      }
+    }).join("\n");
+  };
   let loop = (_lines, _acc) => {
     while (true) {
       let acc = _acc;
@@ -189,8 +247,9 @@ function getCodeBlocks(example) {
       let rest = lines.tl;
       if (lines.hd.trim().startsWith("```res")) {
         let code = loopEndCodeBlock(rest, /* [] */0);
+        let codeString = transformEqualityAssertions(Stdlib_List.toArray(Stdlib_List.reverse(code)).join("\n"));
         _acc = {
-          hd: Stdlib_List.toArray(Stdlib_List.reverse(code)).join("\n"),
+          hd: codeString,
           tl: acc
         };
         _lines = rest;

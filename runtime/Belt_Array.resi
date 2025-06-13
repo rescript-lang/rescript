@@ -126,7 +126,6 @@ assertEqual(Belt.Array.reverse([10, 11, 12, 13, 14]), [14, 13, 12, 11, 10])
 */
 let reverse: t<'a> => t<'a>
 
-@new
 /**
 `makeUninitialized(n)` creates an array of length `n` filled with the undefined
 value. You must specify the type of data that will eventually fill the array.
@@ -139,9 +138,9 @@ let arr: array<Js.undefined<string>> = Belt.Array.makeUninitialized(5)
 assertEqual(Belt.Array.getExn(arr, 0), Js.undefined)
 ```
 */
+@new
 external makeUninitialized: int => array<Js.undefined<'a>> = "Array"
 
-@new
 /**
 **Unsafe**
 
@@ -157,6 +156,7 @@ Belt.Array.setExn(arr, 0, "example")
 assertEqual(Belt.Array.getExn(arr, 0), "example")
 ```
 */
+@new
 external makeUninitializedUnsafe: int => t<'a> = "Array"
 
 /**
@@ -335,11 +335,11 @@ assertEqual(Belt.Array.sliceToEnd([10, 11, 12, 13, 14, 15, 16], -4), [13, 14, 15
 */
 let sliceToEnd: (t<'a>, int) => t<'a>
 
-@send
 /**
 `copy(a)` returns a copy of `a`; that is; a fresh array containing the same
 elements as `a`.
 */
+@send
 external copy: (t<'a>, @as(0) _) => t<'a> = "slice"
 
 /**
@@ -770,7 +770,6 @@ assertEqual(Belt.Array.eq([1, 2, 3], [(-1), (-2), (-3)], (a, b) => abs(a) == abs
 */
 let eq: (t<'a>, t<'a>, ('a, 'a) => bool) => bool
 
-@set
 /**
 Unsafe `truncateToLengthUnsafe(xs, n)` sets length of array `xs` to `n`. If `n`
 is greater than the length of `xs`; the extra elements are set to `Js.Null_undefined.null`.
@@ -786,6 +785,7 @@ Belt.Array.truncateToLengthUnsafe(arr, 3)
 assertEqual(arr, ["ant", "bee", "cat"])
 ```
 */
+@set
 external truncateToLengthUnsafe: (t<'a>, int) => unit = "length"
 
 @deprecated("Use `init` instead")

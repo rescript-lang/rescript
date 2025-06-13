@@ -1,6 +1,5 @@
 /*** JavaScript BigInt API */
 
-@val
 /**
 Parses the given `string` into a `bigint` using JavaScript semantics. Return the
 number as a `bigint` if successfully parsed. Uncaught syntax exception otherwise.
@@ -31,6 +30,7 @@ try {
 }
 ```
 */
+@val
 external fromStringExn: string => bigint = "BigInt"
 
 // Operations
@@ -53,7 +53,6 @@ let lnot = x => lxor(x, -1n)
 external lsl: (bigint, bigint) => bigint = "%lslbigint"
 external asr: (bigint, bigint) => bigint = "%asrbigint"
 
-@send
 /**
 Formats a `bigint` as a string. Return a `string` representing the given value.
 See [`toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.
@@ -65,9 +64,9 @@ See [`toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 Js.BigInt.toString(123n)->Js.log
 ```
 */
+@send
 external toString: bigint => string = "toString"
 
-@send
 /**
 Returns a string with a language-sensitive representation of this BigInt value.
 
@@ -78,4 +77,5 @@ Returns a string with a language-sensitive representation of this BigInt value.
 Js.BigInt.toString(123n)->Js.log
 ```
 */
+@send
 external toLocaleString: bigint => string = "toLocaleString"

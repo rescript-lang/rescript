@@ -392,6 +392,12 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
        print the transformed ReScript code to stdout" );
     ("-format", string_call format_file, "*internal* Format as Res syntax");
     ("-only-parse", set Clflags.only_parse, "*internal* stop after parsing");
+    ( "-editor-mode",
+      unit_call (fun () ->
+          Clflags.editor_mode := true;
+          Clflags.ignore_parse_errors := true;
+          Js_config.cmi_only := true),
+      "*internal* Enable editor mode." );
     ( "-ignore-parse-errors",
       set Clflags.ignore_parse_errors,
       "*internal* continue after parse errors" );

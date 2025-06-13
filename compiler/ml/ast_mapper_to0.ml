@@ -424,7 +424,7 @@ module E = struct
       variant ~loc ~attrs lab (map_opt (sub.expr sub) eo)
     | Pexp_record (l, eo) ->
       record ~loc ~attrs
-        (Ext_list.map l (fun (lid, e, optional) ->
+        (Ext_list.map l (fun {lid; x = e; opt = optional} ->
              let lid1 = map_loc sub lid in
              let e1 = sub.expr sub e in
              let attr =
@@ -554,7 +554,7 @@ module P = struct
     | Ppat_variant (l, p) -> variant ~loc ~attrs l (map_opt (sub.pat sub) p)
     | Ppat_record (lpl, cf) ->
       record ~loc ~attrs
-        (Ext_list.map lpl (fun (lid, p, optional) ->
+        (Ext_list.map lpl (fun {lid; x = p; opt = optional} ->
              let lid1 = map_loc sub lid in
              let p1 = sub.pat sub p in
              let attr =

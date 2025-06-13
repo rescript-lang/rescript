@@ -21,7 +21,7 @@ use serde::Serialize;
 use std::fmt;
 use std::fs::File;
 use std::io::{stdout, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use self::compile::compiler_args;
@@ -55,15 +55,14 @@ pub struct CompilerArgs {
 }
 
 pub fn get_compiler_args(
-    path: &str,
+    path: &Path,
     rescript_version: Option<String>,
-    bsc_path: Option<String>,
+    bsc_path: &Option<PathBuf>,
     build_dev_deps: bool,
 ) -> Result<String> {
     let filename = &helpers::get_abs_path(path);
-    let package_root = helpers::get_abs_path(
-        &helpers::get_nearest_config(&std::path::PathBuf::from(path)).expect("Couldn't find package root"),
-    );
+    let package_root =
+        helpers::get_abs_path(&helpers::get_nearest_config(&path).expect("Couldn't find package root"));
     let workspace_root = get_workspace_root(&package_root).map(|p| helpers::get_abs_path(&p));
     let root_rescript_config =
         packages::read_config(&workspace_root.to_owned().unwrap_or(package_root.to_owned()))?;
@@ -73,17 +72,13 @@ pub fn get_compiler_args(
     } else {
         let bsc_path = match bsc_path {
             Some(bsc_path) => helpers::get_abs_path(&bsc_path),
-            None => helpers::get_bsc(&package_root, workspace_root.to_owned()),
+            None => helpers::get_bsc(&package_root, &workspace_root),
         };
         helpers::get_rescript_version(&bsc_path)
     };
 
     // make PathBuf from package root and get the relative path for filename
-    let relative_filename = PathBuf::from(&filename)
-        .strip_prefix(PathBuf::from(&package_root))
-        .unwrap()
-        .to_string_lossy()
-        .to_string();
+    let relative_filename = filename.strip_prefix(PathBuf::from(&package_root)).unwrap();
 
     let file_path = PathBuf::from(&package_root).join(filename);
     let contents = helpers::read_file(&file_path).expect("Error reading file");
@@ -97,18 +92,18 @@ pub fn get_compiler_args(
         workspace_root.as_ref().unwrap_or(&package_root),
         &contents,
     );
-    let is_interface = filename.ends_with('i');
+    let is_interface = filename.to_string_lossy().ends_with('i');
     let has_interface = if is_interface {
         true
     } else {
-        let mut interface_filename = filename.to_string();
+        let mut interface_filename = filename.to_string_lossy().to_string();
         interface_filename.push('i');
         PathBuf::from(&interface_filename).exists()
     };
     let compiler_args = compiler_args(
         &rescript_config,
         &root_rescript_config,
-        &ast_path.to_string_lossy(),
+        &ast_path,
         &rescript_version,
         &relative_filename,
         is_interface,
@@ -131,20 +126,21 @@ pub fn initialize_build(
     default_timing: Option<Duration>,
     filter: &Option<regex::Regex>,
     show_progress: bool,
-    path: &str,
-    bsc_path: Option<String>,
+    path: &Path,
+    bsc_path: &Option<PathBuf>,
     build_dev_deps: bool,
+    snapshot_output: bool,
 ) -> Result<BuildState> {
     let project_root = helpers::get_abs_path(path);
     let workspace_root = helpers::get_workspace_root(&project_root);
     let bsc_path = match bsc_path {
         Some(bsc_path) => helpers::get_abs_path(&bsc_path),
-        None => helpers::get_bsc(&project_root, workspace_root.to_owned()),
+        None => helpers::get_bsc(&project_root, &workspace_root),
     };
     let root_config_name = packages::read_package_name(&project_root)?;
     let rescript_version = helpers::get_rescript_version(&bsc_path);
 
-    if show_progress {
+    if !snapshot_output && show_progress {
         print!("{} {}Building package tree...", style("[1/7]").bold().dim(), TREE);
         let _ = stdout().flush();
     }
@@ -159,7 +155,7 @@ pub fn initialize_build(
     )?;
     let timing_package_tree_elapsed = timing_package_tree.elapsed();
 
-    if show_progress {
+    if !snapshot_output && show_progress {
         println!(
             "{}{} {}Built package tree in {:.2}s",
             LINE_CLEAR,
@@ -177,7 +173,7 @@ pub fn initialize_build(
 
     let timing_source_files = Instant::now();
 
-    if show_progress {
+    if !snapshot_output && show_progress {
         print!(
             "{} {}Finding source files...",
             style("[2/7]").bold().dim(),
@@ -197,7 +193,7 @@ pub fn initialize_build(
     packages::parse_packages(&mut build_state);
     let timing_source_files_elapsed = timing_source_files.elapsed();
 
-    if show_progress {
+    if !snapshot_output && show_progress {
         println!(
             "{}{} {}Found source files in {:.2}s",
             LINE_CLEAR,
@@ -219,7 +215,7 @@ pub fn initialize_build(
     let compile_assets_state = read_compile_state::read(&mut build_state);
     let timing_compile_state_elapsed = timing_compile_state.elapsed();
 
-    if show_progress {
+    if !snapshot_output && show_progress {
         println!(
             "{}{} {}Read compile state {:.2}s",
             LINE_CLEAR,
@@ -241,15 +237,19 @@ pub fn initialize_build(
     let timing_cleanup_elapsed = timing_cleanup.elapsed();
 
     if show_progress {
-        println!(
-            "{}{} {}Cleaned {}/{} {:.2}s",
-            LINE_CLEAR,
-            style("[4/7]").bold().dim(),
-            SWEEP,
-            diff_cleanup,
-            total_cleanup,
-            default_timing.unwrap_or(timing_cleanup_elapsed).as_secs_f64()
-        );
+        if snapshot_output {
+            println!("Cleaned {}/{}", diff_cleanup, total_cleanup)
+        } else {
+            println!(
+                "{}{} {}Cleaned {}/{} {:.2}s",
+                LINE_CLEAR,
+                style("[4/7]").bold().dim(),
+                SWEEP,
+                diff_cleanup,
+                total_cleanup,
+                default_timing.unwrap_or(timing_cleanup_elapsed).as_secs_f64()
+            );
+        }
     }
 
     Ok(build_state)
@@ -260,20 +260,40 @@ fn format_step(current: usize, total: usize) -> console::StyledObject<String> {
 }
 
 #[derive(Debug, Clone)]
-pub enum IncrementalBuildError {
+pub enum IncrementalBuildErrorKind {
     SourceFileParseError,
     CompileError(Option<String>),
 }
 
+#[derive(Debug, Clone)]
+pub struct IncrementalBuildError {
+    pub snapshot_output: bool,
+    pub kind: IncrementalBuildErrorKind,
+}
+
 impl fmt::Display for IncrementalBuildError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::SourceFileParseError => write!(f, "{}  {}Could not parse Source Files", LINE_CLEAR, CROSS,),
-            Self::CompileError(Some(e)) => {
-                write!(f, "{}  {}Failed to Compile. Error: {e}", LINE_CLEAR, CROSS,)
+        match &self.kind {
+            IncrementalBuildErrorKind::SourceFileParseError => {
+                if self.snapshot_output {
+                    write!(f, "{}  Could not parse Source Files", LINE_CLEAR,)
+                } else {
+                    write!(f, "{}  {}Could not parse Source Files", LINE_CLEAR, CROSS,)
+                }
             }
-            Self::CompileError(None) => {
-                write!(f, "{}  {}Failed to Compile. See Errors Above", LINE_CLEAR, CROSS,)
+            IncrementalBuildErrorKind::CompileError(Some(e)) => {
+                if self.snapshot_output {
+                    write!(f, "{}  Failed to Compile. Error: {e}", LINE_CLEAR,)
+                } else {
+                    write!(f, "{}  {}Failed to Compile. Error: {e}", LINE_CLEAR, CROSS,)
+                }
+            }
+            IncrementalBuildErrorKind::CompileError(None) => {
+                if self.snapshot_output {
+                    write!(f, "{}  Failed to Compile. See Errors Above", LINE_CLEAR,)
+                } else {
+                    write!(f, "{}  {}Failed to Compile. See Errors Above", LINE_CLEAR, CROSS,)
+                }
             }
         }
     }
@@ -287,10 +307,11 @@ pub fn incremental_build(
     only_incremental: bool,
     create_sourcedirs: bool,
     build_dev_deps: bool,
+    snapshot_output: bool,
 ) -> Result<(), IncrementalBuildError> {
     logs::initialize(&build_state.packages);
     let num_dirty_modules = build_state.modules.values().filter(|m| is_dirty(m)).count() as u64;
-    let pb = if show_progress {
+    let pb = if !snapshot_output && show_progress {
         ProgressBar::new(num_dirty_modules)
     } else {
         ProgressBar::hidden()
@@ -313,20 +334,25 @@ pub fn incremental_build(
     match result_asts {
         Ok(_ast) => {
             if show_progress {
-                println!(
-                    "{}{} {}Parsed {} source files in {:.2}s",
-                    LINE_CLEAR,
-                    format_step(current_step, total_steps),
-                    CODE,
-                    num_dirty_modules,
-                    default_timing.unwrap_or(timing_ast_elapsed).as_secs_f64()
-                );
-                pb.finish();
+                if snapshot_output {
+                    println!("Parsed {} source files", num_dirty_modules)
+                } else {
+                    println!(
+                        "{}{} {}Parsed {} source files in {:.2}s",
+                        LINE_CLEAR,
+                        format_step(current_step, total_steps),
+                        CODE,
+                        num_dirty_modules,
+                        default_timing.unwrap_or(timing_ast_elapsed).as_secs_f64()
+                    );
+                    pb.finish();
+                }
             }
         }
         Err(err) => {
             logs::finalize(&build_state.packages);
-            if show_progress {
+
+            if !snapshot_output && show_progress {
                 println!(
                     "{}{} {}Error parsing source files in {:.2}s",
                     LINE_CLEAR,
@@ -337,8 +363,11 @@ pub fn incremental_build(
                 pb.finish();
             }
 
-            println!("Could not parse source files: {}", &err);
-            return Err(IncrementalBuildError::SourceFileParseError);
+            println!("{}", &err);
+            return Err(IncrementalBuildError {
+                kind: IncrementalBuildErrorKind::SourceFileParseError,
+                snapshot_output,
+            });
         }
     }
     let timing_deps = Instant::now();
@@ -346,7 +375,7 @@ pub fn incremental_build(
     let timing_deps_elapsed = timing_deps.elapsed();
     current_step += 1;
 
-    if show_progress {
+    if !snapshot_output && show_progress {
         println!(
             "{}{} {}Collected deps in {:.2}s",
             LINE_CLEAR,
@@ -370,7 +399,7 @@ pub fn incremental_build(
     };
 
     let start_compiling = Instant::now();
-    let pb = if show_progress {
+    let pb = if !snapshot_output && show_progress {
         ProgressBar::new(build_state.modules.len().try_into().unwrap())
     } else {
         ProgressBar::hidden()
@@ -391,7 +420,10 @@ pub fn incremental_build(
         |size| pb.set_length(size),
         build_dev_deps,
     )
-    .map_err(|e| IncrementalBuildError::CompileError(Some(e.to_string())))?;
+    .map_err(|e| IncrementalBuildError {
+        kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
+        snapshot_output,
+    })?;
 
     let compile_duration = start_compiling.elapsed();
 
@@ -402,14 +434,18 @@ pub fn incremental_build(
     pb.finish();
     if !compile_errors.is_empty() {
         if show_progress {
-            println!(
-                "{}{} {}Compiled {} modules in {:.2}s",
-                LINE_CLEAR,
-                format_step(current_step, total_steps),
-                CROSS,
-                num_compiled_modules,
-                default_timing.unwrap_or(compile_duration).as_secs_f64()
-            );
+            if snapshot_output {
+                println!("Compiled {} modules", num_compiled_modules)
+            } else {
+                println!(
+                    "{}{} {}Compiled {} modules in {:.2}s",
+                    LINE_CLEAR,
+                    format_step(current_step, total_steps),
+                    CROSS,
+                    num_compiled_modules,
+                    default_timing.unwrap_or(compile_duration).as_secs_f64()
+                );
+            }
         }
         if helpers::contains_ascii_characters(&compile_warnings) {
             println!("{}", &compile_warnings);
@@ -417,17 +453,24 @@ pub fn incremental_build(
         if helpers::contains_ascii_characters(&compile_errors) {
             println!("{}", &compile_errors);
         }
-        Err(IncrementalBuildError::CompileError(None))
+        Err(IncrementalBuildError {
+            kind: IncrementalBuildErrorKind::CompileError(None),
+            snapshot_output,
+        })
     } else {
         if show_progress {
-            println!(
-                "{}{} {}Compiled {} modules in {:.2}s",
-                LINE_CLEAR,
-                format_step(current_step, total_steps),
-                SWORDS,
-                num_compiled_modules,
-                default_timing.unwrap_or(compile_duration).as_secs_f64()
-            );
+            if snapshot_output {
+                println!("Compiled {} modules", num_compiled_modules)
+            } else {
+                println!(
+                    "{}{} {}Compiled {} modules in {:.2}s",
+                    LINE_CLEAR,
+                    format_step(current_step, total_steps),
+                    SWORDS,
+                    num_compiled_modules,
+                    default_timing.unwrap_or(compile_duration).as_secs_f64()
+                );
+            }
         }
 
         if helpers::contains_ascii_characters(&compile_warnings) {
@@ -445,20 +488,20 @@ pub fn incremental_build(
 pub fn write_build_ninja(build_state: &BuildState) {
     for package in build_state.packages.values() {
         // write empty file:
-        let mut f = File::create(std::path::Path::new(&package.get_build_path()).join("build.ninja"))
-            .expect("Unable to write file");
+        let mut f = File::create(package.get_build_path().join("build.ninja")).expect("Unable to write file");
         f.write_all(b"").expect("unable to write to ninja file");
     }
 }
 
 pub fn build(
     filter: &Option<regex::Regex>,
-    path: &str,
+    path: &Path,
     show_progress: bool,
     no_timing: bool,
     create_sourcedirs: bool,
-    bsc_path: Option<String>,
+    bsc_path: &Option<PathBuf>,
     build_dev_deps: bool,
+    snapshot_output: bool,
 ) -> Result<BuildState> {
     let default_timing: Option<std::time::Duration> = if no_timing {
         Some(std::time::Duration::new(0.0 as u64, 0.0 as u32))
@@ -473,6 +516,7 @@ pub fn build(
         path,
         bsc_path,
         build_dev_deps,
+        snapshot_output,
     )
     .map_err(|e| anyhow!("Could not initialize build. Error: {e}"))?;
 
@@ -484,9 +528,10 @@ pub fn build(
         false,
         create_sourcedirs,
         build_dev_deps,
+        snapshot_output,
     ) {
         Ok(_) => {
-            if show_progress {
+            if !snapshot_output && show_progress {
                 let timing_total_elapsed = timing_total.elapsed();
                 println!(
                     "\n{}{}Finished Compilation in {:.2}s",

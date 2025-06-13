@@ -8,6 +8,7 @@
   18 [2m│[0m 
 
   This has type: [1;31mstring[0m
-  But it's expected to have type: [1;33mReact.element[0m [2m(defined as[0m [1;33mJsx.element[0m[2m)[0m
+  But children of JSX fragments must be of type:
+    [1;33mReact.element[0m [2m(defined as[0m [1;33mJsx.element[0m[2m)[0m
   
   In JSX, all content must be JSX elements. You can convert string to a JSX element with [1;33mReact.string[0m.

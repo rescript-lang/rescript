@@ -22,8 +22,14 @@ impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let msg = match self {
             Error::Locked(pid) => format!("Rewatch is already running. The process ID (PID) is {}", pid),
-            Error::ParsingLockfile(e) => format!("Could not parse lockfile: \n {} \n  (try removing it and running the command again)", e),
-            Error::ReadingLockfile(e) => format!("Could not read lockfile: \n {} \n  (try removing it and running the command again)", e),
+            Error::ParsingLockfile(e) => format!(
+                "Could not parse lockfile: \n {} \n  (try removing it and running the command again)",
+                e
+            ),
+            Error::ReadingLockfile(e) => format!(
+                "Could not read lockfile: \n {} \n  (try removing it and running the command again)",
+                e
+            ),
             Error::WritingLockfile(e) => format!("Could not write lockfile: \n {}", e),
         };
         write!(f, "{}", msg)
@@ -54,15 +60,14 @@ fn create(lockfile_location: &Path, pid: u32) -> Lock {
 }
 
 pub fn get(folder: &str) -> Lock {
-    let location = format!("{}/lib/{}", folder, LOCKFILE);
-    let path = Path::new(&location);
+    let location = Path::new(folder).join("lib").join(LOCKFILE);
     let pid = process::id();
 
     match fs::read_to_string(&location) {
-        Err(e) if (e.kind() == std::io::ErrorKind::NotFound) => create(path, pid),
+        Err(e) if (e.kind() == std::io::ErrorKind::NotFound) => create(&location, pid),
         Err(e) => Lock::Error(Error::ReadingLockfile(e)),
         Ok(s) => match s.parse::<u32>() {
-            Ok(parsed_pid) if !exists(parsed_pid) => create(path, pid),
+            Ok(parsed_pid) if !exists(parsed_pid) => create(&location, pid),
             Ok(parsed_pid) => Lock::Error(Error::Locked(parsed_pid)),
             Err(e) => Lock::Error(Error::ParsingLockfile(e)),
         },

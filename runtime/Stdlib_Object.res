@@ -88,8 +88,7 @@ external assign: ({..}, {..}) => {..} = "Object.assign"
 
 See [Object.assign on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign) or [ECMAScript Language Specification](https://tc39.es/ecma262/multipage/fundamental-objects.html#sec-object.assign).
 */
-@variadic
-@val
+@variadic @val
 external assignMany: ({..}, array<{..}>) => {..} = "Object.assign"
 
 @val external copy: (@as(json`{}`) _, {..} as 'a) => 'a = "Object.assign"

@@ -4,9 +4,9 @@ let eq = (a, b) => a == b
 
 Test.run(__POS_OF__("bytes per element is 8"), BigInt64Array.Constants.bytesPerElement, eq, 8)
 
-let num1 = BigInt.fromString("123456789")
-let num2 = BigInt.fromString("987654321")
-let num3 = BigInt.fromString("555555555")
+let num1 = BigInt.fromStringOrThrow("123456789")
+let num2 = BigInt.fromStringOrThrow("987654321")
+let num3 = BigInt.fromStringOrThrow("555555555")
 
 let assertTrue = (message, predicate) => {
   try {

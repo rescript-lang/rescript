@@ -309,10 +309,13 @@ Hover src/Hover.res 258:22
 Hover src/Hover.res 261:23
 {"contents": {"kind": "markdown", "value": "```rescript\npayloadVariants\nArgs(int, bool)\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C256%2C0%5D)\n"}}
 
-Hover src/Hover.res 265:23
+Hover src/Hover.res 268:42
+{"contents": {"kind": "markdown", "value": "```rescript\nRecursiveVariants.t\nAction1(int)\n```\n\n---\n\n```\n \n```\n```rescript\ntype RecursiveVariants.t =\n  | Action1(int)\n  | Action2(float)\n  | Batch(array<t>)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C265%2C2%5D)\n"}}
+
+Hover src/Hover.res 272:23
 Nothing at that position. Now trying to use completion.
-posCursor:[265:23] posNoWhite:[265:22] Found expr:[265:22->265:25]
-Pexp_ident fff:[265:22->265:25]
+posCursor:[272:23] posNoWhite:[272:22] Found expr:[272:22->272:25]
+Pexp_ident fff:[272:22->272:25]
 Completable: Cpath Value[fff]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -323,10 +326,10 @@ Resolved opens 1 Stdlib
 ContextPath string
 {"contents": {"kind": "markdown", "value": "```rescript\nstring\n```"}}
 
-Hover src/Hover.res 268:33
+Hover src/Hover.res 275:33
 Nothing at that position. Now trying to use completion.
-posCursor:[268:33] posNoWhite:[268:32] Found expr:[268:31->268:40]
-Pexp_ident someField:[268:31->268:40]
+posCursor:[275:33] posNoWhite:[275:32] Found expr:[275:31->275:40]
+Pexp_ident someField:[275:31->275:40]
 Completable: Cpath Value[someField]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -339,9 +342,9 @@ ContextPath Value[x]
 Path x
 {"contents": {"kind": "markdown", "value": "```rescript\nbool\n```"}}
 
-Hover src/Hover.res 271:8
+Hover src/Hover.res 278:8
 {"contents": {"kind": "markdown", "value": "\n [`Belt.Array`]()\n\n  **mutable array**: Utilities functions\n\n```rescript\nmodule Array: {\n  module Id\n  module Array\n  module SortArray\n  module MutableQueue\n  module MutableStack\n  module List\n  module Range\n  module Set\n  module Map\n  module MutableSet\n  module MutableMap\n  module HashSet\n  module HashMap\n  module Option\n  module Result\n  module Int\n  module Float\n}\n```"}}
 
-Hover src/Hover.res 274:6
+Hover src/Hover.res 281:6
 {"contents": {"kind": "markdown", "value": "```rescript\ntype aliased = variant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n"}}
 

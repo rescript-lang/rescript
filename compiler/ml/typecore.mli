@@ -22,12 +22,17 @@ open Format
 val is_nonexpansive : Typedtree.expression -> bool
 
 val type_binding :
+  context:Error_message_utils.type_clash_context option ->
   Env.t ->
   rec_flag ->
   Parsetree.value_binding list ->
   Annot.ident option ->
   Typedtree.value_binding list * Env.t
-val type_expression : Env.t -> Parsetree.expression -> Typedtree.expression
+val type_expression :
+  context:Error_message_utils.type_clash_context option ->
+  Env.t ->
+  Parsetree.expression ->
+  Typedtree.expression
 val check_partial :
   ?lev:int ->
   Env.t ->
@@ -35,7 +40,11 @@ val check_partial :
   Location.t ->
   Typedtree.case list ->
   Typedtree.partial
-val type_exp : Env.t -> Parsetree.expression -> Typedtree.expression
+val type_exp :
+  Env.t ->
+  Parsetree.expression ->
+  context:Error_message_utils.type_clash_context option ->
+  Typedtree.expression
 val type_approx : Env.t -> Parsetree.expression -> type_expr
 
 val option_some : Typedtree.expression -> Typedtree.expression
@@ -55,9 +64,10 @@ type error =
   | Or_pattern_type_clash of Ident.t * (type_expr * type_expr) list
   | Multiply_bound_variable of string
   | Orpat_vars of Ident.t * Ident.t list
-  | Expr_type_clash of
-      (type_expr * type_expr) list
-      * Error_message_utils.type_clash_context option
+  | Expr_type_clash of {
+      trace: (type_expr * type_expr) list;
+      context: Error_message_utils.type_clash_context option;
+    }
   | Apply_non_function of type_expr
   | Apply_wrong_label of Noloc.arg_label * type_expr
   | Label_multiply_defined of {
@@ -75,7 +85,8 @@ type error =
   | Undefined_method of type_expr * string * string list option
   | Private_type of type_expr
   | Private_label of Longident.t * type_expr
-  | Not_subtype of (type_expr * type_expr) list * (type_expr * type_expr) list
+  | Not_subtype of
+      Ctype.type_pairs * Ctype.type_pairs * Ctype.subtype_context option
   | Too_many_arguments of bool * type_expr
   | Abstract_wrong_label of Noloc.arg_label * type_expr
   | Scoping_let_module of string * type_expr

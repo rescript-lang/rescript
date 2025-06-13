@@ -49,7 +49,7 @@ test-gentype:
 test-rewatch:
 	bash ./rewatch/tests/suite-ci.sh
 
-test-rewatch-ci:
+test-rewatch-integration:
 	bash ./rewatch/tests/suite-ci.sh node_modules/.bin/rewatch
 
 test-all: test test-gentype test-analysis test-tools test-rewatch

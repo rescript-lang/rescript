@@ -13,6 +13,5 @@
     "module": "es6",
     "in-source": true
   },
-  "bs-dependencies": ["@rescript/core"],
   "suffix": ".res.js"
 }

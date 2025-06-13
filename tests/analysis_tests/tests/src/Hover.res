@@ -262,6 +262,13 @@ let payloadVariant = InlineRecord({field1: 1, field2: true})
 let payloadVariant2 = Args(1, true)
 //                     ^hov
 
+module RecursiveVariants = {
+  type rec t = Action1(int) | Action2(float) | Batch(array<t>)
+}
+
+let recursiveVariant = RecursiveVariants.Action1(1)
+//                                        ^hov
+
 // Hover on unsaved
 // let fff = "hello"; fff
 //                     ^hov

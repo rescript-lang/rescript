@@ -61,7 +61,6 @@ type mapper = {
   with_constraint: mapper -> with_constraint -> with_constraint;
 }
 
-let id x = x
 let map_fst f (x, y) = (f x, y)
 let map_snd f (x, y) = (x, f y)
 let map_tuple f1 f2 (x, y) = (f1 x, f2 y)
@@ -306,7 +305,10 @@ module E = struct
       variant ~loc ~attrs lab (map_opt (sub.expr sub) eo)
     | Pexp_record (l, eo) ->
       record ~loc ~attrs
-        (List.map (map_tuple3 (map_loc sub) (sub.expr sub) id) l)
+        (List.map
+           (fun {lid; x = exp; opt} ->
+             {lid = map_loc sub lid; x = sub.expr sub exp; opt})
+           l)
         (map_opt (sub.expr sub) eo)
     | Pexp_field (e, lid) ->
       field ~loc ~attrs (sub.expr sub e) (map_loc sub lid)
@@ -390,7 +392,10 @@ module P = struct
     | Ppat_variant (l, p) -> variant ~loc ~attrs l (map_opt (sub.pat sub) p)
     | Ppat_record (lpl, cf) ->
       record ~loc ~attrs
-        (List.map (map_tuple3 (map_loc sub) (sub.pat sub) (fun x -> x)) lpl)
+        (List.map
+           (fun {lid; x = pat; opt} ->
+             {lid = map_loc sub lid; x = sub.pat sub pat; opt})
+           lpl)
         cf
     | Ppat_array pl -> array ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_or (p1, p2) -> or_ ~loc ~attrs (sub.pat sub p1) (sub.pat sub p2)
@@ -555,11 +560,14 @@ module PpxContext = struct
   let make_pair f1 f2 (x1, x2) = Exp.tuple [f1 x1; f2 x2]
 
   let get_cookies () =
-    ( lid "cookies",
-      make_list
-        (make_pair make_string (fun x -> x))
-        (StringMap.bindings !cookies),
-      false )
+    {
+      lid = lid "cookies";
+      x =
+        make_list
+          (make_pair make_string (fun x -> x))
+          (StringMap.bindings !cookies);
+      opt = false;
+    }
 
   let mk fields =
     ( {txt = "ocaml.ppx.context"; loc = Location.none},
@@ -568,11 +576,23 @@ module PpxContext = struct
   let make ~tool_name () =
     let fields =
       [
-        (lid "tool_name", make_string tool_name, false);
-        (lid "include_dirs", make_list make_string !Clflags.include_dirs, false);
-        (lid "load_path", make_list make_string !Config.load_path, false);
-        (lid "open_modules", make_list make_string !Clflags.open_modules, false);
-        (lid "debug", make_bool !Clflags.debug, false);
+        {lid = lid "tool_name"; x = make_string tool_name; opt = false};
+        {
+          lid = lid "include_dirs";
+          x = make_list make_string !Clflags.include_dirs;
+          opt = false;
+        };
+        {
+          lid = lid "load_path";
+          x = make_list make_string !Config.load_path;
+          opt = false;
+        };
+        {
+          lid = lid "open_modules";
+          x = make_list make_string !Clflags.open_modules;
+          opt = false;
+        };
+        {lid = lid "debug"; x = make_bool !Clflags.debug; opt = false};
         get_cookies ();
       ]
     in
@@ -641,14 +661,14 @@ module PpxContext = struct
     in
     List.iter
       (function
-        | {txt = Lident name}, x, _ -> field name x
+        | {lid = {txt = Lident name}; x} -> field name x
         | _ -> ())
       fields
 
   let update_cookies fields =
     let fields =
       Ext_list.filter fields (function
-        | {txt = Lident "cookies"}, _, _ -> false
+        | {lid = {txt = Lident "cookies"}} -> false
         | _ -> true)
     in
     fields @ [get_cookies ()]

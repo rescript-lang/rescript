@@ -24,6 +24,16 @@ module ModulePath = struct
       | NotVisible -> current
     in
     loop modulePath [tipName]
+
+  let toPathWithPrefix modulePath prefix : path =
+    let rec loop modulePath current =
+      match modulePath with
+      | File _ -> current
+      | IncludedModule (_, inner) -> loop inner current
+      | ExportedModule {name; modulePath = inner} -> loop inner (name :: current)
+      | NotVisible -> current
+    in
+    prefix :: loop modulePath []
 end
 
 type field = {
@@ -155,6 +165,14 @@ module Declared = struct
 end
 
 module Stamps : sig
+  type kind =
+    | KType of Type.t Declared.t
+    | KValue of Types.type_expr Declared.t
+    | KModule of Module.t Declared.t
+    | KConstructor of Constructor.t Declared.t
+
+  val locOfKind : kind -> Warnings.loc
+
   type t
 
   val addConstructor : t -> int -> Constructor.t Declared.t -> unit
@@ -169,6 +187,7 @@ module Stamps : sig
   val iterModules : (int -> Module.t Declared.t -> unit) -> t -> unit
   val iterTypes : (int -> Type.t Declared.t -> unit) -> t -> unit
   val iterValues : (int -> Types.type_expr Declared.t -> unit) -> t -> unit
+  val getEntries : t -> (int * kind) list
 end = struct
   type 't stampMap = (int, 't Declared.t) Hashtbl.t
 
@@ -177,6 +196,12 @@ end = struct
     | KValue of Types.type_expr Declared.t
     | KModule of Module.t Declared.t
     | KConstructor of Constructor.t Declared.t
+
+  let locOfKind = function
+    | KType declared -> declared.extentLoc
+    | KValue declared -> declared.extentLoc
+    | KModule declared -> declared.extentLoc
+    | KConstructor declared -> declared.extentLoc
 
   type t = (int, kind) Hashtbl.t
 
@@ -239,6 +264,8 @@ end = struct
         | KConstructor d -> f stamp d
         | _ -> ())
       stamps
+
+  let getEntries t = t |> Hashtbl.to_seq |> List.of_seq
 end
 
 module File = struct
@@ -773,6 +800,19 @@ module ScopeTypes = struct
     | Open of string list
     | Type of string * Location.t
     | Value of string * Location.t * Completable.contextPath option * item list
+    | Include of string * Location.t
+
+  let item_to_string = function
+    | Constructor (name, loc) ->
+      "Constructor " ^ name ^ " " ^ Warnings.loc_to_string loc
+    | Field (name, loc) -> "Field " ^ name ^ " " ^ Warnings.loc_to_string loc
+    | Module (name, loc) -> "Module " ^ name ^ " " ^ Warnings.loc_to_string loc
+    | Open path -> "Open " ^ (path |> String.concat ".")
+    | Type (name, loc) -> "Type " ^ name ^ " " ^ Warnings.loc_to_string loc
+    | Value (name, loc, _, _) ->
+      "Value " ^ name ^ " " ^ Warnings.loc_to_string loc
+    | Include (name, loc) ->
+      "Include " ^ name ^ " " ^ Warnings.loc_to_string loc
 end
 
 module Completion = struct

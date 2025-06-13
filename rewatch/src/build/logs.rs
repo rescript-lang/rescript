@@ -6,6 +6,7 @@ use rayon::prelude::*;
 use regex::Regex;
 use std::fs::File;
 use std::io::prelude::*;
+use std::path::PathBuf;
 
 use super::packages;
 
@@ -14,13 +15,13 @@ enum Location {
     Ocaml,
 }
 
-fn get_log_file_path(package: &packages::Package, subfolder: Location) -> String {
+fn get_log_file_path(package: &packages::Package, subfolder: Location) -> PathBuf {
     let build_folder = match subfolder {
         Location::Bs => package.get_build_path(),
         Location::Ocaml => package.get_ocaml_build_path(),
     };
 
-    build_folder.to_owned() + "/.compiler.log"
+    build_folder.join(".compiler.log")
 }
 
 fn escape_colours(str: &str) -> String {
@@ -59,7 +60,10 @@ pub fn append(package: &packages::Package, str: &str) {
         .append(true)
         .open(get_log_file_path(package, Location::Bs))
         .map(|file| write_to_log_file(file, &package.name, str))
-        .expect(&("Cannot write compilerlog: ".to_owned() + &get_log_file_path(package, Location::Bs)));
+        .expect(
+            &("Cannot write compilerlog: ".to_owned()
+                + &get_log_file_path(package, Location::Bs).to_string_lossy()),
+        );
 }
 
 pub fn finalize(packages: &AHashMap<String, Package>) {

@@ -38,14 +38,16 @@ let handle_config (config : Parsetree.expression option) =
     match config.pexp_desc with
     | Pexp_record
         ( [
-            ( {txt = Lident "newType"},
-              {
-                pexp_desc =
-                  ( Pexp_construct
-                      ({txt = Lident (("true" | "false") as x)}, None)
-                  | Pexp_ident {txt = Lident ("newType" as x)} );
-              },
-              _ );
+            {
+              lid = {txt = Lident "newType"};
+              x =
+                {
+                  pexp_desc =
+                    ( Pexp_construct
+                        ({txt = Lident (("true" | "false") as x)}, None)
+                    | Pexp_ident {txt = Lident ("newType" as x)} );
+                };
+            };
           ],
           None ) ->
       not (x = "false")
@@ -196,7 +198,11 @@ let init () =
                                            txt = Longident.Lident txt;
                                          }
                                        in
-                                       (label, Exp.field exp_param label, false)))
+                                       {
+                                         Parsetree.lid = label;
+                                         x = Exp.field exp_param label;
+                                         opt = false;
+                                       }))
                                   None);
                            ] ))
                 in
@@ -208,7 +214,11 @@ let init () =
                          let label =
                            {Asttypes.loc; txt = Longident.Lident txt}
                          in
-                         (label, js_field exp_param label, false)))
+                         {
+                           Parsetree.lid = label;
+                           x = js_field exp_param label;
+                           opt = false;
+                         }))
                     None
                 in
                 let from_js =

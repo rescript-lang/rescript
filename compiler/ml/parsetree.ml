@@ -182,8 +182,7 @@ and pattern_desc =
     (* `A             (None)
        `A P           (Some P)
     *)
-  | Ppat_record of
-      (Longident.t loc * pattern * bool (* optional *)) list * closed_flag
+  | Ppat_record of pattern record_element list * closed_flag
     (* { l1=P1; ...; ln=Pn }     (flag = Closed)
        { l1=P1; ...; ln=Pn; _}   (flag = Open)
 
@@ -203,8 +202,9 @@ and pattern_desc =
   | Ppat_open of Longident.t loc * pattern
 (* M.(P) *)
 
-(* Value expressions *)
+and pat_record_label = Longident.t loc * pattern * bool (* optional *)
 
+(* Value expressions *)
 and expression = {
   pexp_desc: expression_desc;
   pexp_loc: Location.t;
@@ -269,9 +269,7 @@ and expression_desc =
     (* `A             (None)
        `A E           (Some E)
     *)
-  | Pexp_record of
-      (Longident.t loc * expression * bool (* optional *)) list
-      * expression option
+  | Pexp_record of expression record_element list * expression option
     (* { l1=P1; ...; ln=Pn }     (None)
        { E0 with l1=P1; ...; ln=Pn }   (Some E0)
 
@@ -316,6 +314,9 @@ and expression_desc =
   (* . *)
   | Pexp_await of expression
   | Pexp_jsx_element of jsx_element
+
+(* an element of a record pattern or expression *)
+and 'a record_element = {lid: Longident.t loc; x: 'a; opt: bool (* optional *)}
 
 and jsx_element =
   | Jsx_fragment of jsx_fragment

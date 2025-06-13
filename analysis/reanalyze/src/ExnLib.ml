@@ -50,9 +50,35 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
       ("float_of_string", [failure]);
     ]
   in
-  let stdlibBigInt = [("fromStringExn", [jsExn])] in
-  let stdlibBool = [("fromStringExn", [invalidArgument])] in
-  let stdlibError = [("raise", [jsExn])] in
+  let stdlibBigInt =
+    [
+      ("fromStringExn", [jsExn]);
+      ("fromStringOrThrow", [jsExn]);
+      ("fromFloatOrThrow", [jsExn]);
+    ]
+  in
+  let stdlibBool =
+    [
+      ("fromStringExn", [invalidArgument]);
+      ("fromStringOrThrow", [invalidArgument]);
+    ]
+  in
+  let stdlibJsError =
+    [
+      ("EvalError.throwWithMessage", [jsExn]);
+      ("RangeError.throwWithMessage", [jsExn]);
+      ("ReferenceError.throwWithMessage", [jsExn]);
+      ("SyntaxError.throwWithMessage", [jsExn]);
+      ("TypeError.throwWithMessage", [jsExn]);
+      ("URIError.throwWithMessage", [jsExn]);
+      ("panic", [jsExn]);
+      ("throw", [jsExn]);
+      ("throwWithMessage", [jsExn]);
+    ]
+  in
+  let stdlibError =
+    [("raise", [jsExn]); ("panic", [jsExn]); ("throw", [jsExn])]
+  in
   let stdlibExn =
     [
       ("raiseError", [jsExn]);
@@ -68,6 +94,7 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
     [
       ("parseExn", [jsExn]);
       ("parseExnWithReviver", [jsExn]);
+      ("parseOrThrow", [jsExn]);
       ("stringifyAny", [jsExn]);
       ("stringifyAnyWithIndent", [jsExn]);
       ("stringifyAnyWithReplacer", [jsExn]);
@@ -144,6 +171,7 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
     ("Bool", stdlibBool);
     ("Error", stdlibError);
     ("Exn", stdlibExn);
+    ("JsError", stdlibJsError);
     ("Js.Json", [("parseExn", [jsExn])]);
     ("JSON", stdlibJson);
     ("Json_decode", bsJson);
@@ -166,6 +194,8 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
     ("Stdlib.Error", stdlibError);
     ("Stdlib_Exn", stdlibExn);
     ("Stdlib.Exn", stdlibExn);
+    ("Stdlib_JsError", stdlibJsError);
+    ("Stdlib.JsError", stdlibJsError);
     ("Stdlib_JSON", stdlibJson);
     ("Stdlib.JSON", stdlibJson);
     ("Stdlib_List", stdlibList);

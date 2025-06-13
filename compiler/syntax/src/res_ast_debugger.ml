@@ -618,7 +618,7 @@ module SexpAst = struct
             Sexp.atom "Pexp_record";
             Sexp.list
               (map_empty
-                 ~f:(fun (longident_loc, expr, _) ->
+                 ~f:(fun {lid = longident_loc; x = expr} ->
                    Sexp.list
                      [longident longident_loc.Asttypes.txt; expression expr])
                  rows);
@@ -804,7 +804,7 @@ module SexpAst = struct
             closed_flag flag;
             Sexp.list
               (map_empty
-                 ~f:(fun (longident_loc, p, _) ->
+                 ~f:(fun {lid = longident_loc; x = p} ->
                    Sexp.list [longident longident_loc.Location.txt; pattern p])
                  rows);
           ]

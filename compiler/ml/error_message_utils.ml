@@ -69,23 +69,58 @@ let type_expr ppf typ =
   Printtyp.reset_and_mark_loops typ;
   Printtyp.type_expr ppf typ
 
+type jsx_prop_error_info = {
+  fields: Types.label_declaration list;
+  props_record_path: Path.t;
+  jsx_type: [`Fragment | `CustomComponent | `LowercaseComponent];
+}
+
 type type_clash_statement = FunctionCall
 type type_clash_context =
-  | SetRecordField
+  | SetRecordField of string (* field name *)
+  | RecordField of {
+      jsx: jsx_prop_error_info option;
+      record_type: Types.type_expr;
+      field_name: string;
+      optional: bool;
+    }
   | ArrayValue
   | MaybeUnwrapOption
   | IfCondition
+  | AssertCondition
   | IfReturn
-  | Switch
+  | SwitchReturn
+  | TryReturn
   | StringConcat
   | ComparisonOperator
+  | WhileCondition
   | MathOperator of {
       for_float: bool;
       operator: string;
       is_constant: string option;
     }
-  | FunctionArgument
+  | FunctionArgument of {optional: bool; name: string option}
   | Statement of type_clash_statement
+  | ForLoopCondition
+
+let context_to_string = function
+  | Some WhileCondition -> "WhileCondition"
+  | Some ForLoopCondition -> "ForLoopCondition"
+  | Some AssertCondition -> "AssertCondition"
+  | Some IfCondition -> "IfCondition"
+  | Some (Statement _) -> "Statement"
+  | Some (MathOperator _) -> "MathOperator"
+  | Some ArrayValue -> "ArrayValue"
+  | Some (SetRecordField _) -> "SetRecordField"
+  | Some (RecordField _) -> "RecordField"
+  | Some MaybeUnwrapOption -> "MaybeUnwrapOption"
+  | Some SwitchReturn -> "SwitchReturn"
+  | Some TryReturn -> "TryReturn"
+  | Some StringConcat -> "StringConcat"
+  | Some (FunctionArgument _) -> "FunctionArgument"
+  | Some ComparisonOperator -> "ComparisonOperator"
+  | Some IfReturn -> "IfReturn"
+  | None -> "None"
 
 let fprintf = Format.fprintf
 
@@ -95,7 +130,7 @@ let error_type_text ppf type_clash_context =
     | Some (Statement FunctionCall) -> "This function call returns:"
     | Some (MathOperator {is_constant = Some _}) -> "This value has type:"
     | Some ArrayValue -> "This array item has type:"
-    | Some SetRecordField ->
+    | Some (SetRecordField _) ->
       "You're assigning something to this field that has type:"
     | _ -> "This has type:"
   in
@@ -103,25 +138,55 @@ let error_type_text ppf type_clash_context =
 
 let error_expected_type_text ppf type_clash_context =
   match type_clash_context with
-  | Some FunctionArgument ->
-    fprintf ppf "But this function argument is expecting:"
+  | Some (FunctionArgument {optional; name}) ->
+    fprintf ppf "But this%s function argument"
+      (match optional with
+      | false -> ""
+      | true -> " optional");
+
+    (match name with
+    | Some name -> fprintf ppf " @{<info>~%s@}" name
+    | None -> ());
+
+    fprintf ppf " is expecting:"
   | Some ComparisonOperator ->
     fprintf ppf "But it's being compared to something of type:"
-  | Some Switch -> fprintf ppf "But this switch is expected to return:"
+  | Some SwitchReturn -> fprintf ppf "But this switch is expected to return:"
+  | Some TryReturn -> fprintf ppf "But this try/catch is expected to return:"
+  | Some WhileCondition ->
+    fprintf ppf "But a @{<info>while@} loop condition must always be of type:"
+  | Some ForLoopCondition ->
+    fprintf ppf "But a @{<info>for@} loop bounds must always be of type:"
   | Some IfCondition ->
     fprintf ppf "But @{<info>if@} conditions must always be of type:"
+  | Some AssertCondition -> fprintf ppf "But assertions must always be of type:"
   | Some IfReturn ->
     fprintf ppf "But this @{<info>if@} statement is expected to return:"
   | Some ArrayValue ->
     fprintf ppf "But this array is expected to have items of type:"
-  | Some SetRecordField -> fprintf ppf "But this record field is of type:"
+  | Some (SetRecordField _) -> fprintf ppf "But the record field is of type:"
+  | Some
+      (RecordField {field_name = "children"; jsx = Some {jsx_type = `Fragment}})
+    ->
+    fprintf ppf "But children of JSX fragments must be of type:"
+  | Some
+      (RecordField
+         {field_name = "children"; jsx = Some {jsx_type = `CustomComponent}}) ->
+    fprintf ppf "But children passed to this component must be of type:"
+  | Some (RecordField {field_name; jsx = Some _}) ->
+    fprintf ppf "But the component prop @{<info>%s@} is expected to have type:"
+      field_name
+  | Some (RecordField {field_name}) ->
+    fprintf ppf "But the record field @{<info>%s@} is expected to have type:"
+      field_name
   | Some (Statement FunctionCall) -> fprintf ppf "But it's expected to return:"
   | Some (MathOperator {operator}) ->
     fprintf ppf
       "But it's being used with the @{<info>%s@} operator, which works on:"
       operator
   | Some StringConcat -> fprintf ppf "But string concatenation is expecting:"
-  | _ -> fprintf ppf "But it's expected to have type:"
+  | Some MaybeUnwrapOption | None ->
+    fprintf ppf "But it's expected to have type:"
 
 let is_record_type ~extract_concrete_typedecl ~env ty =
   try
@@ -201,11 +266,17 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
           (if for_float then "int" else "float")
       | _ -> ())
     | _ -> ())
-  | Some Switch, _ ->
+  | Some SwitchReturn, _ ->
     fprintf ppf
       "\n\n\
-      \  All branches in a @{<info>switch@} must return the same type. To fix \
-       this, change your branch to return the expected type."
+      \  All branches in a @{<info>switch@} must return the same type.@,\
+       To fix this, change your branch to return the expected type."
+  | Some TryReturn, _ ->
+    fprintf ppf
+      "\n\n\
+      \  The @{<info>try@} body and the @{<info>catch@} block must return the \
+       same type.@,\
+       To fix this, change your try/catch blocks to return the expected type."
   | Some IfCondition, _ ->
     fprintf ppf
       "\n\n\
@@ -355,6 +426,58 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
          single JSX element.@,"
         (with_configured_jsx_module "array")
     | _ -> ())
+  | ( Some (RecordField {optional = true; field_name; jsx = None}),
+      Some ({desc = Tconstr (p, _, _)}, _) )
+    when Path.same Predef.path_option p ->
+    fprintf ppf
+      "@,\
+       @,\
+       @{<info>%s@} is an optional record field, and you're passing an \
+       optional value to it.@,\
+       Values passed to an optional record field don't need to be wrapped in \
+       an option. You might need to adjust the type of the value supplied.\n\
+      \       @,\
+       Possible solutions: @,\
+       - Unwrap the option from the value you're passing in@,\
+       - If you really do want to pass the optional value, prepend the value \
+       with @{<info>?@} to show you want to pass the option, like: \
+       @{<info>{%s: ?%s@}}"
+      field_name field_name
+      (Parser.extract_text_at_loc loc)
+  | ( Some (RecordField {optional = true; field_name; jsx = Some _}),
+      Some ({desc = Tconstr (p, _, _)}, _) )
+    when Path.same Predef.path_option p ->
+    fprintf ppf
+      "@,\
+       @,\
+       @{<info>%s@} is an optional component prop, and you're passing an \
+       optional value to it.@,\
+       Values passed to an optional component prop don't need to be wrapped in \
+       an option. You might need to adjust the type of the value supplied.\n\
+      \       @,\
+       Possible solutions: @,\
+       - Unwrap the option from the value you're passing in@,\
+       - If you really do want to pass the optional value, prepend the value \
+       with @{<info>?@} to show you want to pass the option, like: \
+       @{<info>%s=?%s@}"
+      field_name field_name
+      (Parser.extract_text_at_loc loc)
+  | ( Some (FunctionArgument {optional = true}),
+      Some ({desc = Tconstr (p, _, _)}, _) )
+    when Path.same Predef.path_option p ->
+    fprintf ppf
+      "@,\
+       @,\
+       You're passing an optional value into an optional function argument.@,\
+       Values passed to an optional function argument don't need to be wrapped \
+       in an option. You might need to adjust the type of the value supplied.\n\
+      \       @,\
+       Possible solutions: @,\
+       - Unwrap the option from the value you're passing in@,\
+       - If you really do want to pass the optional value, prepend the value \
+       with @{<info>?@} to show you want to pass the option, like: \
+       @{<info>?%s@}"
+      (Parser.extract_text_at_loc loc)
   | _, Some (t1, t2) ->
     let is_subtype =
       try
@@ -410,9 +533,9 @@ let type_clash_context_from_function sexp sfunct =
     Some (MathOperator {for_float = true; operator; is_constant})
   | Pexp_ident {txt = Lident (("/" | "*" | "+" | "-") as operator)} ->
     Some (MathOperator {for_float = false; operator; is_constant})
-  | _ -> Some FunctionArgument
+  | _ -> None
 
-let type_clash_context_for_function_argument type_clash_context sarg0 =
+let type_clash_context_for_function_argument ~label type_clash_context sarg0 =
   match type_clash_context with
   | Some (MathOperator {for_float; operator}) ->
     Some
@@ -426,6 +549,16 @@ let type_clash_context_for_function_argument type_clash_context sarg0 =
                ->
                Some txt
              | _ -> None);
+         })
+  | None ->
+    Some
+      (FunctionArgument
+         {
+           optional = false;
+           name =
+             (match label with
+             | Asttypes.Nolabel -> None
+             | Optional {txt = l} | Labelled {txt = l} -> Some l);
          })
   | type_clash_context -> type_clash_context
 
@@ -468,11 +601,6 @@ let print_contextual_unification_error ppf t1 t2 =
        the highlighted pattern in @{<info>Some()@} to make it work.@]"
   | _ -> ()
 
-type jsx_prop_error_info = {
-  fields: Types.label_declaration list;
-  props_record_path: Path.t;
-}
-
 let attributes_include_jsx_component_props (attrs : Parsetree.attributes) =
   attrs
   |> List.exists (fun ({Location.txt}, _) -> txt = "res.jsxComponentProps")
@@ -484,18 +612,24 @@ let path_to_jsx_component_name p =
 
 let get_jsx_component_props
     ~(extract_concrete_typedecl : extract_concrete_typedecl) env ty p =
-  match Path.last p with
-  | "props" -> (
-    try
-      match extract_concrete_typedecl env ty with
-      | ( _p0,
-          _p,
-          {Types.type_kind = Type_record (fields, _repr); type_attributes} )
-        when attributes_include_jsx_component_props type_attributes ->
-        Some {props_record_path = p; fields}
-      | _ -> None
-    with _ -> None)
-  | _ -> None
+  match p with
+  | Path.Pdot (Path.Pident {Ident.name = jsx_module_name}, "fragmentProps", _)
+    when Some jsx_module_name = !configured_jsx_module ->
+    Some {props_record_path = p; fields = []; jsx_type = `Fragment}
+  | _ -> (
+    (* TODO: handle lowercase components using JSXDOM.domProps *)
+    match Path.last p with
+    | "props" -> (
+      try
+        match extract_concrete_typedecl env ty with
+        | ( _p0,
+            _p,
+            {Types.type_kind = Type_record (fields, _repr); type_attributes} )
+          when attributes_include_jsx_component_props type_attributes ->
+          Some {props_record_path = p; fields; jsx_type = `CustomComponent}
+        | _ -> None
+      with _ -> None)
+    | _ -> None)
 
 let print_component_name ppf (p : Path.t) =
   match path_to_jsx_component_name p with

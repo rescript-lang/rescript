@@ -451,6 +451,30 @@ let processLocalModule name loc ~prefix ~exact ~env
         (Printf.sprintf "Completion Module Not Found %s loc:%s\n" name
            (Loc.toString loc))
 
+let processLocalInclude includePath _loc ~prefix ~exact ~(env : QueryEnv.t)
+    ~(localTables : LocalTables.t) =
+  (* process only values for now *)
+  localTables.includedValueTable
+  |> Hashtbl.iter
+       (fun (name, _) (declared : (string * Types.type_expr) Declared.t) ->
+         (* We check all the values if their origin is the same as the include path. *)
+         let source_module_path = fst declared.item in
+         if String.ends_with ~suffix:includePath source_module_path then
+           (* If this is the case we perform a similar check for the prefix *)
+           if Utils.checkName name ~prefix ~exact then
+             if not (Hashtbl.mem localTables.namesUsed name) then (
+               Hashtbl.add localTables.namesUsed name ();
+               localTables.resultRev <-
+                 {
+                   (Completion.create declared.name.txt ~env
+                      ~kind:(Value (snd declared.item)))
+                   with
+                   deprecated = declared.deprecated;
+                   docstring = declared.docstring;
+                   synthetic = true;
+                 }
+                 :: localTables.resultRev))
+
 let getItemsFromOpens ~opens ~localTables ~prefix ~exact ~completionContext =
   opens
   |> List.fold_left
@@ -465,8 +489,10 @@ let getItemsFromOpens ~opens ~localTables ~prefix ~exact ~completionContext =
 let findLocalCompletionsForValuesAndConstructors ~(localTables : LocalTables.t)
     ~env ~prefix ~exact ~opens ~scope =
   localTables |> LocalTables.populateValues ~env;
+  localTables |> LocalTables.populateIncludedValues ~env;
   localTables |> LocalTables.populateConstructors ~env;
   localTables |> LocalTables.populateModules ~env;
+
   scope
   |> Scope.iterValuesBeforeFirstOpen
        (processLocalValue ~prefix ~exact ~env ~localTables);
@@ -491,11 +517,16 @@ let findLocalCompletionsForValuesAndConstructors ~(localTables : LocalTables.t)
   scope
   |> Scope.iterModulesAfterFirstOpen
        (processLocalModule ~prefix ~exact ~env ~localTables);
+
+  scope
+  |> Scope.iterIncludes (processLocalInclude ~prefix ~exact ~env ~localTables);
+
   List.rev_append localTables.resultRev valuesFromOpens
 
 let findLocalCompletionsForValues ~(localTables : LocalTables.t) ~env ~prefix
     ~exact ~opens ~scope =
   localTables |> LocalTables.populateValues ~env;
+  localTables |> LocalTables.populateIncludedValues ~env;
   localTables |> LocalTables.populateModules ~env;
   scope
   |> Scope.iterValuesBeforeFirstOpen
@@ -515,6 +546,10 @@ let findLocalCompletionsForValues ~(localTables : LocalTables.t) ~env ~prefix
   scope
   |> Scope.iterModulesAfterFirstOpen
        (processLocalModule ~prefix ~exact ~env ~localTables);
+
+  scope
+  |> Scope.iterIncludes (processLocalInclude ~prefix ~exact ~env ~localTables);
+
   List.rev_append localTables.resultRev valuesFromOpens
 
 let findLocalCompletionsForTypes ~(localTables : LocalTables.t) ~env ~prefix
@@ -1049,6 +1084,8 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
     | None -> [])
   | CPPipe {contextPath = cp; id = prefix; lhsLoc; inJsx; synthetic} -> (
     if Debug.verbose () then print_endline "[ctx_path]--> CPPipe";
+    (* The environment at the cursor is the environment we're completing from. *)
+    let env_at_cursor = env in
     match
       cp
       |> getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env
@@ -1175,8 +1212,8 @@ and getCompletionsForContextPath ~debug ~full ~opens ~rawOpens ~pos ~env ~exact
         in
         (* Add completions from the current module. *)
         let currentModuleCompletions =
-          completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom
-            ~opens:[] ~pos ~scope ~debug ~prefix ~env ~rawOpens ~full []
+          getCompletionsForPath ~debug ~completionContext:Value ~exact:false
+            ~opens:[] ~full ~pos ~env:env_at_cursor ~scope [prefix]
           |> TypeUtils.filterPipeableFunctions ~synthetic:true ~env ~full
                ~targetTypeId:mainTypeId
         in
