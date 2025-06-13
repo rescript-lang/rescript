@@ -74,9 +74,9 @@ module ErrorMessages = struct
      Explanation: such spread would create a subarray; out of performance \
      concern, our pattern matching currently guarantees to never create new \
      intermediate data.\n\
-     Solution: if it's to validate the first few elements, use a `when` clause \
-     + Array size check + `get` checks on the current pattern. If it's to \
-     obtain a subarray, use `Array.sub` or `Belt.Array.slice`."
+     Solution: if it's to validate the first few elements, use an `if` clause \
+     + Array length check + `get` checks on the current pattern. If it's to \
+     obtain a subarray, use `Array.slice`."
 
   let record_expr_spread =
     "Records can only have one `...` spread, at the beginning.\n\
