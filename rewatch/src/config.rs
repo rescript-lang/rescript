@@ -184,6 +184,7 @@ pub struct JsxSpecs {
     pub mode: Option<JsxMode>,
     #[serde(rename = "v3-dependencies")]
     pub v3_dependencies: Option<Vec<String>>,
+    pub preserve: Option<bool>,
 }
 
 /// We do not care about the internal structure because the gentype config is loaded by bsc.
@@ -429,6 +430,16 @@ impl Config {
                     vec!["-bs-jsx-module".to_string(), module]
                 }
                 None => vec![],
+            },
+            _ => vec![],
+        }
+    }
+
+    pub fn get_jsx_preserve_args(&self) -> Vec<String> {
+        match self.jsx.to_owned() {
+            Some(jsx) => match jsx.preserve {
+                Some(true) => vec!["-bs-jsx-preserve".to_string()],
+                _ => vec![],
             },
             _ => vec![],
         }
