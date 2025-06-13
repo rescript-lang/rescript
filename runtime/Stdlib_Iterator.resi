@@ -62,6 +62,7 @@ map->Map.set("someKey2", "someValue2")
 let mapKeysAsArray = map->Map.keys->Iterator.toArray
 
 mapKeysAsArray->assertEqual(["someKey", "someKey2"])
+```
 
 ## Remark
 
@@ -138,6 +139,7 @@ let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.values
 let seq = fibonacci->Iterator.drop(2)
 seq->Iterator.next->assertEqual({done: false, value: Some(2)})
 seq->Iterator.next->assertEqual({done: false, value: Some(3)})
+```
 
 ## Remark
 
