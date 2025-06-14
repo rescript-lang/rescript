@@ -321,13 +321,11 @@ jobs:
         if: steps.ninja-build-cache.outputs.cache-hit != 'true'
         run: node scripts/copyExes.js --ninja
 
-      - name: "Syntax: Run roundtrip tests"
-        if: ${{ runner.os != 'Windows' }}
-        run: opam exec -- make test-syntax-roundtrip
-
-      - name: "Syntax: Run tests (Windows)"
-        if: ${{ runner.os == 'Windows' }}
-        run: opam exec -- make test-syntax
+      - name: "Syntax: Run tests"
+        env:
+          ROUNDTRIP_TEST: ${{ runner.os == 'Windows' && '0' || '1' }}
+        run: ./scripts/test_syntax.sh
+        shell: bash
 
       - name: Build runtime/stdlib with rewatch
         if: ${{ runner.os != 'Windows' }}
@@ -362,7 +360,8 @@ jobs:
       - name: Run rewatch tests
         env:
           CLICOLOR_FORCE: 0
-        run: make test-rewatch
+        run: ./rewatch/tests/suite-ci.sh
+        shell: bash
 
       - name: Run syntax benchmarks
         if: matrix.benchmarks
@@ -526,7 +525,6 @@ jobs:
         working-directory: rewatch/testrepo
 
       - name: Run rewatch integration tests
-        # Currently failing on Windows and intermittently on macOS
         run: make test-rewatch-integration
 
   publish:

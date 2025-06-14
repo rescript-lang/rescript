@@ -37,11 +37,9 @@ test-tools:
 
 test-syntax:
 	./scripts/test_syntax.sh
-	./scripts/testok.sh
 
 test-syntax-roundtrip:
 	ROUNDTRIP_TEST=1 ./scripts/test_syntax.sh
-	./scripts/testok.sh
 
 test-gentype:
 	make -C tests/gentype_tests/typescript-react-example clean test
