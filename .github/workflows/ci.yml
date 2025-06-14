@@ -358,8 +358,6 @@ jobs:
         run: make -C tests/gentype_tests/typescript-react-example clean test
 
       - name: Run rewatch tests
-        env:
-          CLICOLOR_FORCE: 0
         run: ./rewatch/tests/suite-ci.sh
         shell: bash
 
@@ -525,7 +523,8 @@ jobs:
         working-directory: rewatch/testrepo
 
       - name: Run rewatch integration tests
-        run: make test-rewatch-integration
+        run: ./rewatch/tests/suite-ci.sh node_modules/.bin/rewatch
+        shell: bash
 
   publish:
     needs:

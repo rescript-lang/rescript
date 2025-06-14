@@ -47,9 +47,6 @@ test-gentype:
 test-rewatch:
 	./rewatch/tests/suite-ci.sh
 
-test-rewatch-integration:
-	./rewatch/tests/suite-ci.sh node_modules/.bin/rewatch
-
 test-all: test test-gentype test-analysis test-tools test-rewatch
 
 reanalyze:
