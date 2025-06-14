@@ -487,7 +487,8 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          # Run integration tests with the oldest supported node version.
+          node-version: 20
 
       - name: Make test directory
         id: tmp-dir

@@ -249,7 +249,7 @@ let x = Symbol.for("Foo");
 
 console.log(x);
 
-let array$1 = Array.from("foo"[Symbol.iterator]());
+let array$1 = "foo"[Symbol.iterator]().toArray();
 
 console.log(array$1);
 
