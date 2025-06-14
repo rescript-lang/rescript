@@ -6,9 +6,13 @@
   2 │ 
   3 │ let record = {...x, ...y}
 
-  Array's `...` spread is not supported in pattern matches.
-Explanation: such spread would create a subarray; out of performance concern, our pattern matching currently guarantees to never create new intermediate data.
-Solution: if it's to validate the first few elements, use a `when` clause + Array size check + `get` checks on the current pattern. If it's to obtain a subarray, use `Array.sub` or `Belt.Array.slice`.
+  Array spread (`...`) is not supported in pattern matches.
+
+Explanation: Allowing `...` here would require creating a new subarray at match time, but for performance reasons pattern matching is guaranteed to never create intermediate data.
+
+Possible solutions:
+- To validate specific elements: Use `if` with length checks and `Array.get`
+- To extract a subarray: Use `Array.slice`
 
 
   Syntax error!
@@ -33,7 +37,7 @@ Explanation: since records have a known, fixed shape, a spread like `{a, ...b}` 
   5 │ 
   6 │ let list{...x, ...y} = myList
 
-  Record's `...` spread is not supported in pattern matches.
+  Record spread (`...`) is not supported in pattern matches.
 Explanation: you can't collect a subset of a record's field into its own record, since a record needs an explicit declaration and that subset wouldn't have one.
 Solution: you need to pull out each field you want explicitly.
 

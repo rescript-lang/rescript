@@ -61,7 +61,7 @@ module ErrorMessages = struct
      matching currently guarantees to never create new intermediate data."
 
   let record_pattern_spread =
-    "Record's `...` spread is not supported in pattern matches.\n\
+    "Record spread (`...`) is not supported in pattern matches.\n\
      Explanation: you can't collect a subset of a record's field into its own \
      record, since a record needs an explicit declaration and that subset \
      wouldn't have one.\n\
@@ -70,13 +70,14 @@ module ErrorMessages = struct
   [@@live]
 
   let array_pattern_spread =
-    "Array's `...` spread is not supported in pattern matches.\n\
-     Explanation: such spread would create a subarray; out of performance \
-     concern, our pattern matching currently guarantees to never create new \
-     intermediate data.\n\
-     Solution: if it's to validate the first few elements, use a `when` clause \
-     + Array size check + `get` checks on the current pattern. If it's to \
-     obtain a subarray, use `Array.sub` or `Belt.Array.slice`."
+    "Array spread (`...`) is not supported in pattern matches.\n\n\
+     Explanation: Allowing `...` here would require creating a new subarray at \
+     match time, but for performance reasons pattern matching is guaranteed to \
+     never create intermediate data.\n\n\
+     Possible solutions:\n\
+     - To validate specific elements: Use `if` with length checks and \
+     `Array.get`\n\
+     - To extract a subarray: Use `Array.slice`"
 
   let record_expr_spread =
     "Records can only have one `...` spread, at the beginning.\n\
