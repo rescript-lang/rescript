@@ -33,32 +33,32 @@ fi
 node ./packages/main/src/Main.mjs > ./packages/main/src/output.txt
 
 mv ./packages/main/src/Main.res ./packages/main/src/Main2.res
-rewatch build &> ../tests/snapshots/rename-file.txt
+rewatch build --no-timing --snapshot-output &> ../tests/snapshots/rename-file.txt
 mv ./packages/main/src/Main2.res ./packages/main/src/Main.res
 
 # Rename a file with a dependent - this should trigger an error
 mv ./packages/main/src/InternalDep.res ./packages/main/src/InternalDep2.res
-rewatch build &> ../tests/snapshots/rename-file-internal-dep.txt
+rewatch build --no-timing --snapshot-output &> ../tests/snapshots/rename-file-internal-dep.txt
 # normalize paths so the snapshot is the same on all machines
 normalize_paths ../tests/snapshots/rename-file-internal-dep.txt
 mv ./packages/main/src/InternalDep2.res ./packages/main/src/InternalDep.res
 
 # Rename a file with a dependent in a namespaced package - this should trigger an error (regression)
 mv ./packages/new-namespace/src/Other_module.res ./packages/new-namespace/src/Other_module2.res
-rewatch build &> ../tests/snapshots/rename-file-internal-dep-namespace.txt
+rewatch build --no-timing --snapshot-output &> ../tests/snapshots/rename-file-internal-dep-namespace.txt
 # normalize paths so the snapshot is the same on all machines
 normalize_paths ../tests/snapshots/rename-file-internal-dep-namespace.txt
 mv ./packages/new-namespace/src/Other_module2.res ./packages/new-namespace/src/Other_module.res
 
 rewatch build &>  /dev/null
 mv ./packages/main/src/ModuleWithInterface.resi ./packages/main/src/ModuleWithInterface2.resi
-rewatch build &> ../tests/snapshots/rename-interface-file.txt
+rewatch build --no-timing --snapshot-output &> ../tests/snapshots/rename-interface-file.txt
 # normalize paths so the snapshot is the same on all machines
 normalize_paths ../tests/snapshots/rename-interface-file.txt
 mv ./packages/main/src/ModuleWithInterface2.resi ./packages/main/src/ModuleWithInterface.resi
 rewatch build &> /dev/null
 mv ./packages/main/src/ModuleWithInterface.res ./packages/main/src/ModuleWithInterface2.res
-rewatch build &> ../tests/snapshots/rename-file-with-interface.txt
+rewatch build --no-timing --snapshot-output &> ../tests/snapshots/rename-file-with-interface.txt
 # normalize paths so the snapshot is the same on all machines
 normalize_paths ../tests/snapshots/rename-file-with-interface.txt
 mv ./packages/main/src/ModuleWithInterface2.res ./packages/main/src/ModuleWithInterface.res
@@ -66,7 +66,7 @@ rewatch build &> /dev/null
 
 # when deleting a file that other files depend on, the compile should fail
 rm packages/dep02/src/Dep02.res
-rewatch build &> ../tests/snapshots/remove-file.txt
+rewatch build --no-timing --snapshot-output &> ../tests/snapshots/remove-file.txt
 # normalize paths so the snapshot is the same on all machines
 normalize_paths ../tests/snapshots/remove-file.txt
 git checkout -- packages/dep02/src/Dep02.res
@@ -74,7 +74,7 @@ rewatch build &> /dev/null
 
 # it should show an error when we have a dependency cycle
 echo 'Dep01.log()' >> packages/new-namespace/src/NS_alias.res
-rewatch build &> ../tests/snapshots/dependency-cycle.txt
+rewatch build --no-timing --snapshot-output &> ../tests/snapshots/dependency-cycle.txt
 git checkout -- packages/new-namespace/src/NS_alias.res
 
 # it should compile dev dependencies with the --dev flag
@@ -95,7 +95,7 @@ else
   exit 1
 fi
 
-rewatch clean --dev &> /dev/null
+rewatch clean &> /dev/null
 file_count=$(find ./packages/with-dev-deps -name *.mjs | wc -l)
 if [ "$file_count" -eq 0 ];
 then
