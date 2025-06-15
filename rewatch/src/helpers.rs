@@ -218,6 +218,41 @@ pub fn get_bsc(root_path: &Path, workspace_root: &Option<PathBuf>) -> PathBuf {
     }
 }
 
+pub fn get_rescript_legacy(root_path: &Path, workspace_root: Option<PathBuf>) -> PathBuf {
+    let subfolder = match (std::env::consts::OS, std::env::consts::ARCH) {
+        ("macos", "aarch64") => "darwin-arm64",
+        ("macos", _) => "darwin-x64",
+        ("linux", "aarch64") => "linux-arm64",
+        ("linux", _) => "linux-x64",
+        ("windows", "aarch64") => "win-arm64",
+        ("windows", _) => "win-x64",
+        _ => panic!("Unsupported architecture"),
+    };
+
+    let legacy_path_fragment = Path::new("node_modules")
+        .join("@rescript")
+        .join(subfolder)
+        .join("bin")
+        .join("rescript-legacy");
+
+    match (
+        root_path
+            .join(&legacy_path_fragment)
+            .canonicalize()
+            .map(StrippedVerbatimPath::to_stripped_verbatim_path),
+        workspace_root.map(|workspace_root| {
+            workspace_root
+                .join(&legacy_path_fragment)
+                .canonicalize()
+                .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+        }),
+    ) {
+        (Ok(path), _) => path,
+        (_, Some(Ok(path))) => path,
+        _ => panic!("Could not find rescript-legacy"),
+    }
+}
+
 pub fn string_ends_with_any(s: &Path, suffixes: &[&str]) -> bool {
     suffixes
         .iter()
