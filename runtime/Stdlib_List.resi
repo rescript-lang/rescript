@@ -149,18 +149,22 @@ switch List.tailExn(list{}) {
 let tailExn: list<'a> => list<'a>
 
 /**
-  `tailOrThrow(list)` same as [`tail`](#tail).
-  Raises an Error if list is empty.
+`tailOrThrow(list)` same as [`tail`](#tail).
 
-  ## Examples
-  ```res
-  List.tailOrThrow(list{1, 2, 3})->assertEqual(list{2, 3})
+## Examples
 
-  switch List.tailOrThrow(list{}) {
-  | _ => Console.log("never happens")
-  | exception _ => Console.log("error")
-  }
-  ```
+```rescript
+List.tailOrThrow(list{1, 2, 3})->assertEqual(list{2, 3})
+
+switch List.tailOrThrow(list{}) {
+| exception Not_found => assert(true)
+| _ => assert(false)
+}
+```
+
+## Exceptions
+
+- Raises an Error if list is empty.
 */
 let tailOrThrow: list<'a> => list<'a>
 
@@ -219,19 +223,26 @@ switch abc->List.getExn(4) {
 let getExn: (list<'a>, int) => 'a
 
 /**
-  `getOrThrow(list, index)` same as [`get`](#get).
-  Raises an Error if `index` is larger than the length of list.
+`getOrThrow(list, index)` same as [`get`](#get).
 
-  ## Examples
-  ```res
-  let abc = list{"A", "B", "C"}
-  abc->List.getOrThrow(1)->assertEqual("B")
+## Examples
 
-  switch abc->List.getOrThrow(4) {
-  | _ => Console.log("never happens")
-  | exception _ => Console.log("error")
-  }
-  ```
+```rescript
+let abc = list{"A", "B", "C"}
+
+abc
+->List.getOrThrow(1)
+->assertEqual("B")
+
+switch abc->List.getOrThrow(4) {
+| exception Not_found => assert(true)
+| _ => assert(false)
+}
+```
+
+## Exceptions
+
+- Raises an Error if `index` is larger than the length of list.
 */
 let getOrThrow: (list<'a>, int) => 'a
 

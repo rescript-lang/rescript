@@ -15,9 +15,9 @@ let nodeVersion =
   ->String.replace("v", "")
   ->String.split(".")
   ->Array.get(0)
-  ->Option.getExn(~message="Failed to find major version of Node")
+  ->Option.getOrThrow(~message="Failed to find major version of Node")
   ->Int.fromString
-  ->Option.getExn(~message="Failed to convert node version to Int")
+  ->Option.getOrThrow(~message="Failed to convert node version to Int")
 
 let ignoreRuntimeTests = [
   (
@@ -186,7 +186,9 @@ let getCodeBlocks = example => {
             left,
             lines
             ->Array.get(idx + 1)
-            ->Option.getExn(~message="Expected to have an expected expression on the next line"),
+            ->Option.getOrThrow(
+              ~message="Expected to have an expected expression on the next line",
+            ),
           ))
         | _ => parts
         }

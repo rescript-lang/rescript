@@ -20,7 +20,15 @@
   - `JSON.parseExn` → `JSON.parseOrThrow`
   - Changed `BigInt.fromFloat` to return an option rather than throwing an error.
   - Added `BigInt.fromFloatOrThrow`
+  - `Option.getExn` → `Option.getOrThrow`
+  - `Null.getExn` → `Null.getOrThrow`
+  - `Nullable.getExn` → `Nullable.getOrThrow`
+  - `Result.getExn` → `Result.getOrThrow`
+  - `List.getExn` → `List.getOrThrow`
+  - `List.tailExn` → `List.tailOrThrow`
+  - `List.headExn` → `List.headOrThrow`
   - Old functions remain available but are marked as deprecated with guidance to use the new `OrThrow` variants.
+  - https://github.com/rescript-lang/rescript/pull/7518, https://github.com/rescript-lang/rescript/pull/7554
 
 #### :rocket: New Feature
 
