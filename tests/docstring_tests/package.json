@@ -1,0 +1,13 @@
+{
+  "name": "@tests/docstring-tests",
+  "private": true,
+  "scripts": {
+    "build": "rescript",
+    "clean": "rescript clean -with-deps",
+    "dev": "rescript -w"
+  },
+  "dependencies": {
+    "@rescript/react": "link:../dependencies/rescript-react",
+    "rescript": "workspace:^"
+  }
+}

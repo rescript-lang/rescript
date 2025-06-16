@@ -52,7 +52,9 @@
     "check:all": "biome check .",
     "format": "biome check --changed --no-errors-on-unmatched . --fix",
     "coverage": "nyc --timeout=3000 --reporter=html mocha tests/tests/src/*_test.js && open ./coverage/index.html",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "scripts:build": "rescript",
+    "apidocs:generate": "yarn workspace @rescript/scripts apidocs:generate"
   },
   "files": [
     "CHANGELOG.md",
@@ -96,8 +98,10 @@
     "packages/@rescript/*",
     "tests/dependencies/**",
     "tests/analysis_tests/**",
+    "tests/docstring_tests",
     "tests/gentype_tests/**",
-    "tests/tools_tests"
+    "tests/tools_tests",
+    "scripts/res"
   ],
   "packageManager": "yarn@4.9.1",
   "preferUnplugged": true

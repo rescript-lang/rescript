@@ -21,6 +21,8 @@ env:
 
 jobs:
   build-compiler:
+    outputs:
+      api-docs-artifact-id: ${{ steps.upload-api-docs.outputs.artifact-id }}
     strategy:
       fail-fast: false
       matrix:
@@ -36,6 +38,7 @@ jobs:
             upload_binaries: true
             # Build the playground compiler and run the benchmarks on the fastest runner
             build_playground: true
+            generate_api_docs: true
             benchmarks: true
             node-target: linux-arm64
             rust-target: aarch64-unknown-linux-musl
@@ -438,6 +441,18 @@ jobs:
           name: lib-ocaml
           path: lib/ocaml
 
+      - name: Generate API Docs
+        if: ${{ matrix.generate_api_docs }}
+        run: yarn apidocs:generate
+
+      - name: "Upload artifacts: scripts/res/apiDocs"
+        id: upload-api-docs
+        if: ${{ matrix.generate_api_docs && startsWith(github.ref, 'refs/tags/v') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-docs
+          path: scripts/res/apiDocs/
+
   pkg-pr-new:
     needs:
       - build-compiler
@@ -464,6 +479,52 @@ jobs:
       - name: Publish packages to pkg.pr.new
         run: |
           yarn dlx pkg-pr-new publish "." "./packages/@rescript/*"
+
+  sync-api-docs:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    needs:
+      - build-compiler
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout rescript-lang.org
+        uses: actions/checkout@v4
+        with:
+          repository: rescript-lang/rescript-lang.org
+          token: ${{ secrets.RESCRIPT_LANG_ORG_REPO_TOKEN }}
+
+      - name: Set up Git config
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Authenticate GitHub CLI
+        env:
+          GH_TOKEN: ${{ secrets.RESCRIPT_LANG_ORG_REPO_TOKEN }}
+        run: echo "$GH_TOKEN" | gh auth login --with-token
+
+      - name: create-new-branch
+        run: git checkout -b sync-api-docs-${{ github.ref_name }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ needs.build-compiler.outputs.api-docs-artifact-id }}
+          path: data/api
+
+      - name: Commit and push
+        run: |
+          git add data/api
+          git commit -m "Update API docs for ${{ github.ref_name }}"
+          git push --set-upstream origin sync-api-docs-${{ github.ref_name }}
+
+      - name: Create Pull Request
+        run: |
+          cd repo-b
+          gh pr create \
+            --title "Sync API docs for ${{ github.ref_name }}" \
+            --body "Sync API docs for ${{ github.ref_name }}. This PR was created via GitHub Actions using gh CLI." \
+            --head sync-api-docs-${{ github.ref_name }} \
+            --base master
 
   test-integration:
     needs:

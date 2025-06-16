@@ -424,6 +424,12 @@ __metadata:
   languageName: node
   linkType: soft
 
+"@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Fdocstring-tests%40workspace%3Atests%2Fdocstring_tests":
+  version: 0.0.0-use.local
+  resolution: "@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Fdocstring-tests%40workspace%3Atests%2Fdocstring_tests"
+  languageName: node
+  linkType: soft
+
 "@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Ftools%40workspace%3Atests%2Ftools_tests":
   version: 0.0.0-use.local
   resolution: "@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Ftools%40workspace%3Atests%2Ftools_tests"
@@ -439,6 +445,15 @@ __metadata:
   checksum: 10c0/c4d04536daf7acc3f6452890665333211ad08723ecb9e9efdd66ea7bf7de6503f513d6dabad400415fcae7625740431f1c121fa3abbc4b7446b60e2e7052df32
   languageName: node
   linkType: hard
+
+"@rescript/scripts@workspace:scripts/res":
+  version: 0.0.0-use.local
+  resolution: "@rescript/scripts@workspace:scripts/res"
+  dependencies:
+    "@tests/docstring-tests": "workspace:^"
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
 
 "@rescript/std@workspace:packages/std":
   version: 0.0.0-use.local
@@ -631,6 +646,15 @@ __metadata:
   resolution: "@tests/analysis@workspace:tests/analysis_tests/tests"
   dependencies:
     "@rescript/react": "link:../../dependencies/rescript-react"
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"@tests/docstring-tests@workspace:^, @tests/docstring-tests@workspace:tests/docstring_tests":
+  version: 0.0.0-use.local
+  resolution: "@tests/docstring-tests@workspace:tests/docstring_tests"
+  dependencies:
+    "@rescript/react": "link:../dependencies/rescript-react"
     rescript: "workspace:^"
   languageName: unknown
   linkType: soft
