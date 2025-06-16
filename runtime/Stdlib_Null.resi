@@ -120,9 +120,33 @@ switch Null.getExn(%raw("null")) {
 
 ## Exceptions
 
-- Raises `Invalid_argument` if `value` is `null`,
+- Raises `Invalid_argument` if `value` is `null`
 */
+@deprecated("Use `getOrThrow` instead")
 let getExn: t<'a> => 'a
+
+/**
+`getOrThrow(value)` raises an exception if `null`, otherwise returns the value.
+
+```rescript
+Null.getOrThrow(Null.make(3))->assertEqual(3)
+
+switch Null.getOrThrow(%raw("'ReScript'")) {
+| exception Invalid_argument(_) => assert(false)
+| value => assertEqual(value, "ReScript")
+}
+
+switch Null.getOrThrow(%raw("null")) {
+| exception Invalid_argument(_) => assert(true)
+| _ => assert(false)
+}
+```
+
+## Exceptions
+
+- Raises `Invalid_argument` if `value` is `null`
+*/
+let getOrThrow: t<'a> => 'a
 
 /**
 `getUnsafe(value)` returns `value`.
