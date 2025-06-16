@@ -1,0 +1,13 @@
+MCP loc info src/MCP.res 26:4
+<main_types>
+TestType.second
+
+type second = {first: first, variant: variant}
+</main_types>
+
+<related_types>
+type first = {one: bool, two?: string}
+
+type variant = One | Two(string) | Three(bool)
+</related_types>
+

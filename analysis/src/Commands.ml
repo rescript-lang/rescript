@@ -432,6 +432,13 @@ let test ~path =
               ("TypeDefinition " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
             typeDefinition ~path ~pos:(line, col) ~debug:true
+          | "mli" ->
+            print_endline
+              ("MCP loc info " ^ path ^ " " ^ string_of_int line ^ ":"
+             ^ string_of_int col);
+            let currentFile = createCurrentFile () in
+            Mcp.LocInfo.locInfo ~path ~pos:(line, col) |> print_endline;
+            Sys.remove currentFile
           | "xfm" ->
             let currentFile = createCurrentFile () in
             (* +2 is to ensure that the character ^ points to is what's considered the end of the selection. *)

@@ -1,0 +1,16 @@
+{
+  "name": "rescript-mcp",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.12.1",
+    "typescript": "5.8.3",
+    "@types/node": "^22.0.0"
+  }
+}

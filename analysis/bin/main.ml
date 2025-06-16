@@ -110,6 +110,9 @@ let main () =
         path line col
   in
   match args with
+  | [_; "mcp"; "loc-info"; path; line; col] ->
+    Mcp.LocInfo.locInfo ~path ~pos:(int_of_string line, int_of_string col)
+    |> print_endline
   | [_; "cache-project"; rootPath] -> (
     Cfg.readProjectConfigCache := false;
     let uri = Uri.fromPath rootPath in

@@ -59,6 +59,16 @@ Path M
     "detail": "module Map",
     "documentation": null
   }, {
+    "label": "MCP",
+    "kind": 9,
+    "tags": [],
+    "detail": "module MCP",
+    "documentation": null,
+    "data": {
+      "modulePath": "MCP",
+      "filePath": "src/Jsx2.res"
+    }
+  }, {
     "label": "ModuleStuff",
     "kind": 9,
     "tags": [],
