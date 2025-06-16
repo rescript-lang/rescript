@@ -127,7 +127,7 @@ external forEach: (t<'a>, 'a => unit) => unit = "forEach"
 external ignore: t<'a> => unit = "%ignore"
 
 /**
-`drop((iterator, n))` returns a new iterator helper object that skips the given number of elements at the start of this iterator.
+`drop(iterator, n)` returns a new iterator helper object that skips the given number of elements at the start of this iterator.
 
 See [Iterator.prototype.drop](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Iterator/drop) on MDN.
 
