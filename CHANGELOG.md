@@ -10,10 +10,11 @@
 > - :house: [Internal]
 > - :nail_care: [Polish]
 
-# 12.0.0-alpha.14 (Unreleased)
+# 12.0.0-alpha.14
 
 #### :boom: Breaking Change
 
+- `Iterator.forEach` now emits `Iterator.prototype.forEach` call. https://github.com/rescript-lang/rescript/pull/7506
 - Rename functions ending with `Exn` to end with `OrThrow`. The old `Exn` functions are now deprecated:
   - `Bool.fromStringExn` → `Bool.fromStringOrThrow`
   - `BigInt.fromStringExn` → `BigInt.fromStringOrThrow`
@@ -44,7 +45,7 @@
 - Treat `throw` like `raise` in analysis. https://github.com/rescript-lang/rescript/pull/7521
 - Fix `index out of bounds` exception thrown in rare cases by `rescript-editor-analysis.exe codeAction` command. https://github.com/rescript-lang/rescript/pull/7523
 - Don't produce duplicate type definitions for recursive types on hover. https://github.com/rescript-lang/rescript/pull/7524
-- Prop punning when types don't match results in I/O error: _none_: No such file or directory. https://github.com/rescript-lang/rescript/pull/7533
+- Prop punning when types don't match results in `I/O error: _none_: No such file or directory`. https://github.com/rescript-lang/rescript/pull/7533
 - Fix partial application with user-defined function types. https://github.com/rescript-lang/rescript/pull/7548
 - Fix doc comment before variant throwing syntax error. https://github.com/rescript-lang/rescript/pull/7535
 
@@ -61,7 +62,7 @@
 - In module declarations, accept the invalid syntax `M = {...}` and format it to `M : {...}`. https://github.com/rescript-lang/rescript/pull/7527
 - Improve doc comment formatting to match the style of multiline comments. https://github.com/rescript-lang/rescript/pull/7529
 - Improve error messages around type mismatches for try/catch, if, for, while, and optional record fields + optional function arguments. https://github.com/rescript-lang/rescript/pull/7522
-- sync Reanalyze with the new APIs around exception. https://github.com/rescript-lang/rescript/pull/7536
+- Sync reanalyze with the new APIs around exception. https://github.com/rescript-lang/rescript/pull/7536
 - Improve array pattern spread error message. https://github.com/rescript-lang/rescript/pull/7549
 - Sync API docs with rescript-lang.org on release. https://github.com/rescript-lang/rescript/pull/7555
 
@@ -70,10 +71,6 @@
 - Refactor the ast for record expressions and patterns. https://github.com/rescript-lang/rescript/pull/7528
 - Editor: add completions from included modules. https://github.com/rescript-lang/rescript/pull/7515
 - Add `-editor-mode` arg to `bsc` for doing special optimizations only relevant to the editor tooling. https://github.com/rescript-lang/rescript/pull/7541
-
-#### :boom: Breaking Change
-
-- `Iterator.forEach` now emits `Iterator.prototype.forEach` call. https://github.com/rescript-lang/rescript/pull/7506
 
 # 12.0.0-alpha.13
 
