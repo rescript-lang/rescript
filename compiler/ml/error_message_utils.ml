@@ -195,6 +195,17 @@ let is_record_type ~extract_concrete_typedecl ~env ty =
     | _ -> false
   with _ -> false
 
+let is_variant_and_has_constructor ~env ~extract_concrete_typedecl
+    ~constructor_name ty =
+  try
+    match extract_concrete_typedecl env ty with
+    | _, _, {Types.type_kind = Type_variant constructors; _} ->
+      List.exists
+        (fun {Types.cd_id = {name = cname; _}; _} -> cname = constructor_name)
+        constructors
+    | _ -> false
+  with _ -> false
+
 let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     (bottom_aliases : (Types.type_expr * Types.type_expr) option)
     type_clash_context =
@@ -354,6 +365,43 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
   | _, Some ({Types.desc = Tconstr (p1, _, _)}, _)
     when Path.same p1 Predef.path_promise ->
     fprintf ppf "\n\n  - Did you mean to await this promise before using it?\n"
+  | ( _,
+      Some
+        ( {
+            Types.desc =
+              Tvariant
+                {row_fields = [(constructor_name, _)]; row_closed = false};
+          },
+          ty ) )
+    when is_variant_and_has_constructor ~env ~extract_concrete_typedecl
+           ~constructor_name ty ->
+    (* This does not take into account whether the constructor actually 
+       takes a payload, but it should be good enough. *)
+    let suggested_rewrite =
+      Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
+          match exp.Parsetree.pexp_desc with
+          | Pexp_variant (constructor_name, payload) ->
+            Some
+              {
+                exp with
+                Parsetree.pexp_desc =
+                  Pexp_construct
+                    ( Location.mknoloc (Longident.Lident constructor_name),
+                      payload );
+              }
+          | _ -> None)
+    in
+    fprintf ppf
+      "\n\n\
+      \  The type expected is a variant (not polymorphic variant). The \
+       expected variant has a constructor named @{<info>%s@}, did you mean to \
+       use that?\n\n\
+       Possible solutions:\n\
+      \  - Change the code to use the variant constructor, like: @{<info>%s@}\n"
+      constructor_name
+      (match suggested_rewrite with
+      | Some rewrite -> rewrite
+      | None -> constructor_name)
   | _, Some ({Types.desc = Tconstr (p1, _, _)}, {Types.desc = Ttuple _})
     when Path.same p1 Predef.path_array ->
     let suggested_rewrite =
