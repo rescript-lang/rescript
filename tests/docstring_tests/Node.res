@@ -18,7 +18,7 @@ module Fs = {
   @module("node:fs") external existsSync: string => bool = "existsSync"
   @module("node:fs") external mkdirSync: string => unit = "mkdirSync"
   @module("node:fs") external writeFileSync: (string, string) => unit = "writeFileSync"
-  @module("node:fs") external readFileSync: (string, ~encoding:string) => string = "readFileSync"
+  @module("node:fs") external readFileSync: (string, ~encoding: string) => string = "readFileSync"
 }
 
 module Buffer = {
