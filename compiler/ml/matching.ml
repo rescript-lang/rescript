@@ -1808,7 +1808,10 @@ let reintroduce_fail sw =
     let i_max = ref (-1) and max = ref (-1) in
     Hashtbl.iter
       (fun i c ->
-        if c > !max then (
+        if
+          c > !max || (c = !max && i > !i_max)
+          (* tie-break for determinism: choose the smallest index*)
+        then (
           i_max := i;
           max := c))
       t;

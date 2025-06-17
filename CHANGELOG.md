@@ -39,6 +39,7 @@
 - Prop punning when types don't match results in I/O error: _none_: No such file or directory. https://github.com/rescript-lang/rescript/pull/7533
 - Fix partial application with user-defined function types. https://github.com/rescript-lang/rescript/pull/7548
 - Fix doc comment before variant throwing syntax error. https://github.com/rescript-lang/rescript/pull/7535
+- Fix apparent non-determinism in generated code for pattern matching. https://github.com/rescript-lang/rescript/pull/7557
 
 #### :nail_care: Polish
 

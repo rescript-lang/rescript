@@ -134,19 +134,22 @@ function f8(x) {
 
 function f9(x) {
   if (typeof x !== "object") {
-    if (x === "T63") {
-      return 3;
-    } else {
-      return 1;
+    switch (x) {
+      case "T60" :
+      case "T61" :
+      case "T62" :
+        return 1;
+      default:
+        return 3;
     }
-  }
-  switch (x.TAG) {
-    case "T64" :
-    case "T65" :
-      return 2;
-    case "T66" :
-    case "T68" :
-      return 3;
+  } else {
+    switch (x.TAG) {
+      case "T64" :
+      case "T65" :
+        return 2;
+      default:
+        return 3;
+    }
   }
 }
 
