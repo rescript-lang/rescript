@@ -447,7 +447,7 @@ jobs:
 
       - name: "Upload artifacts: scripts/res/apiDocs"
         id: upload-api-docs
-        if: ${{ matrix.generate_api_docs && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ matrix.generate_api_docs }}
         uses: actions/upload-artifact@v4
         with:
           name: api-docs
@@ -492,39 +492,37 @@ jobs:
           repository: rescript-lang/rescript-lang.org
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Git config
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Authenticate GitHub CLI
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: echo "$GH_TOKEN" | gh auth login --with-token
-
-      - name: create-new-branch
-        run: git checkout -b sync-api-docs-${{ github.ref_name }}
-
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           artifact-ids: ${{ needs.build-compiler.outputs.api-docs-artifact-id }}
           path: data/api
 
-      - name: Commit and push
+      - name: Check if repo is clean
+        id: diffcheck
         run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "clean=true" >> $GITHUB_OUTPUT
+          else
+            echo "clean=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build website
+        if: steps.diffcheck.outputs.clean == 'false'
+        run: |
+          npm ci 
+          npx rescript
+          npm run build
+
+      - name: Commit and push
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions@rescript-lang.org"
           git add data/api
           git commit -m "Update API docs for ${{ github.ref_name }}"
-          git push --set-upstream origin sync-api-docs-${{ github.ref_name }}
-
-      - name: Create Pull Request
-        run: |
-          cd repo-b
-          gh pr create \
-            --title "Sync API docs for ${{ github.ref_name }}" \
-            --body "Sync API docs for ${{ github.ref_name }}. This PR was created via GitHub Actions using gh CLI." \
-            --head sync-api-docs-${{ github.ref_name }} \
-            --base master
+          git push
 
   test-integration:
     needs:
