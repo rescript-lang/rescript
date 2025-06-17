@@ -11,9 +11,7 @@ type t<'a> = array<'a>
 type arrayLike<'a>
 
 /**
-`fromIterator(iterator)`
-
-Creates an array from the provided `iterator`
+`fromIterator(iterator)` creates an array from the provided `iterator`
 
 ## Examples
 
@@ -35,9 +33,7 @@ external fromIterator: Stdlib_Iterator.t<'a> => array<'a> = "Array.from"
 external fromArrayLikeWithMap: (arrayLike<'a>, 'a => 'b) => array<'b> = "Array.from"
 
 /**
-`make(~length, init)`
-
-Creates an array of length `length` initialized with the value of `init`.
+`make(~length, init)` creates an array of length `length` initialized with the value of `init`.
 
 ## Examples
 

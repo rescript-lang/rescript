@@ -213,7 +213,7 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(~length: int, 'a) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`make(~length, init)`\n\nCreates an array of length `length` initialized with the value of `init`.\n\n## Examples\n\n```rescript\nArray.make(~length=3, #apple)->assertEqual([#apple, #apple, #apple])\nArray.make(~length=6, 7)->assertEqual([7, 7, 7, 7, 7, 7])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`make(~length, init)` creates an array of length `length` initialized with the value of `init`.\n\n## Examples\n\n```rescript\nArray.make(~length=3, #apple)->assertEqual([#apple, #apple, #apple])\nArray.make(~length=6, 7)->assertEqual([7, 7, 7, 7, 7, 7])\n```\n"}
   }, {
     "label": "lastIndexOfFrom",
     "kind": 12,
@@ -573,7 +573,7 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "Iterator.t<'a> => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`fromIterator(iterator)`\n\nCreates an array from the provided `iterator`\n\n## Examples\n\n```rescript\nMap.fromArray([(\"foo\", 1), (\"bar\", 2)])\n->Map.values\n->Array.fromIterator\n->assertEqual([1, 2])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`fromIterator(iterator)` creates an array from the provided `iterator`\n\n## Examples\n\n```rescript\nMap.fromArray([(\"foo\", 1), (\"bar\", 2)])\n->Map.values\n->Array.fromIterator\n->assertEqual([1, 2])\n```\n"}
   }, {
     "label": "forEach",
     "kind": 12,
@@ -613,7 +613,7 @@ Path Array.m
     "kind": 12,
     "tags": [],
     "detail": "(~length: int, 'a) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`make(~length, init)`\n\nCreates an array of length `length` initialized with the value of `init`.\n\n## Examples\n\n```rescript\nArray.make(~length=3, #apple)->assertEqual([#apple, #apple, #apple])\nArray.make(~length=6, 7)->assertEqual([7, 7, 7, 7, 7, 7])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`make(~length, init)` creates an array of length `length` initialized with the value of `init`.\n\n## Examples\n\n```rescript\nArray.make(~length=3, #apple)->assertEqual([#apple, #apple, #apple])\nArray.make(~length=6, 7)->assertEqual([7, 7, 7, 7, 7, 7])\n```\n"}
   }, {
     "label": "map",
     "kind": 12,
