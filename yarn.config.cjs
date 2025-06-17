@@ -11,7 +11,7 @@ const { defineConfig } = require("@yarnpkg/types");
  * @param {Yarn.Constraints.Context} ctx
  */
 async function enforceCompilerMeta({ Yarn }) {
-  const EXPECTED_VERSION = "12.0.0-alpha.14";
+  const EXPECTED_VERSION = "12.0.0-alpha.15";
 
   for (const workspace of Yarn.workspaces()) {
     const { ident } = workspace.pkg;
