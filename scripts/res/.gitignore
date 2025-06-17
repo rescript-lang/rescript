@@ -1,3 +1,4 @@
 *.res.js
 lib
-apiDocs
+apiDocs/**/*
+!.gitkeep
