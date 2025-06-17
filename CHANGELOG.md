@@ -12,6 +12,10 @@
 
 # 12.0.0-alpha.15 (Unreleased)
 
+#### :nail_care: Polish
+
+- Better error message for when trying to await something that is not a promise. https://github.com/rescript-lang/rescript/pull/7561
+
 # 12.0.0-alpha.14
 
 #### :boom: Breaking Change
