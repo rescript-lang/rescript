@@ -2586,9 +2586,15 @@ Path g
 [{
     "label": "Result.getExn",
     "kind": 12,
+    "tags": [1],
+    "detail": "result<'a, 'b> => 'a",
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use 'getOrThrow' instead\n\n\n  `getExn(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, raise an exception\n\n  ```res example\n  Result.getExn(Result.Ok(42)) == 42\n\n  switch Result.getExn(Error(\"Invalid data\")) {\n  | exception Not_found => assert(true)\n  | _ => assert(false)\n  }\n  ```\n"}
+  }, {
+    "label": "Result.getOrThrow",
+    "kind": 12,
     "tags": [],
     "detail": "result<'a, 'b> => 'a",
-    "documentation": {"kind": "markdown", "value": "\n  `getExn(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, raise an exception\n\n  ```res example\n  Result.getExn(Result.Ok(42)) == 42\n\n  switch Result.getExn(Error(\"Invalid data\")) {\n  | exception Not_found => assert(true)\n  | _ => assert(false)\n  }\n  ```\n"}
+    "documentation": {"kind": "markdown", "value": "\n  `getOrThrow(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, raise an exception\n\n  ```res example\n  Result.getOrThrow(Result.Ok(42)) == 42\n\n  switch Result.getOrThrow(Error(\"Invalid data\")) {\n  | exception Not_found => assert(true)\n  | _ => assert(false)\n  }\n  ```\n"}
   }, {
     "label": "Result.getOr",
     "kind": 12,
