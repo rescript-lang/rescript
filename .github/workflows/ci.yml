@@ -489,7 +489,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: rescript-lang/rescript-lang.org
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ssh-key: ${{ secrets.RESCRIPT_LANG_ORG_DEPLOY_KEY }}
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -516,7 +516,6 @@ jobs:
       - name: Commit and push
         if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions@rescript-lang.org"
           git add data/api
