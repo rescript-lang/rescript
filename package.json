@@ -53,7 +53,6 @@
     "format": "biome check --changed --no-errors-on-unmatched . --fix",
     "coverage": "nyc --timeout=3000 --reporter=html mocha tests/tests/src/*_test.js && open ./coverage/index.html",
     "typecheck": "tsc",
-    "scripts:build": "rescript",
     "apidocs:generate": "yarn workspace @utils/scripts apidocs:generate"
   },
   "files": [
