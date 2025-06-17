@@ -51,14 +51,17 @@ async function enforceCompilerMeta({ Yarn }) {
   if (process.argv.includes("--fix")) {
     await fs.writeFile(
       compilerVersionFile,
-      versionFile.replace(versionPattern, `let version = "${EXPECTED_VERSION}"`)
+      versionFile.replace(
+        versionPattern,
+        `let version = "${EXPECTED_VERSION}"`,
+      ),
     );
   } else {
     const versionMatch = versionFile.match(versionPattern);
     const foundVersion = versionMatch?.groups?.version;
     if (foundVersion !== EXPECTED_VERSION) {
       Yarn.workspace().error(
-        `compiler/common/bs_version.ml file need to be fixed; expected ${EXPECTED_VERSION}, found ${foundVersion}.`
+        `compiler/common/bs_version.ml file need to be fixed; expected ${EXPECTED_VERSION}, found ${foundVersion}.`,
       );
     }
   }
