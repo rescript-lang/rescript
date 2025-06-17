@@ -500,6 +500,7 @@ jobs:
       - name: Check if repo is clean
         id: diffcheck
         run: |
+          git status
           if [ -z "$(git status --porcelain)" ]; then
             echo "clean=true" >> $GITHUB_OUTPUT
           else
