@@ -365,14 +365,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
   | _, Some ({Types.desc = Tconstr (p1, _, _)}, _)
     when Path.same p1 Predef.path_promise ->
     fprintf ppf "\n\n  - Did you mean to await this promise before using it?\n"
-  | ( _,
-      Some
-        ( {
-            Types.desc =
-              Tvariant
-                {row_fields = [(constructor_name, _)]; row_closed = false};
-          },
-          ty ) )
+  | _, Some ({Types.desc = Tvariant {row_fields = [(constructor_name, _)]}}, ty)
     when is_variant_and_has_constructor ~env ~extract_concrete_typedecl
            ~constructor_name ty ->
     (* This does not take into account whether the constructor actually 
