@@ -446,15 +446,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rescript/scripts@workspace:scripts/res":
-  version: 0.0.0-use.local
-  resolution: "@rescript/scripts@workspace:scripts/res"
-  dependencies:
-    "@tests/docstring-tests": "workspace:^"
-    rescript: "workspace:^"
-  languageName: unknown
-  linkType: soft
-
 "@rescript/std@workspace:packages/std":
   version: 0.0.0-use.local
   resolution: "@rescript/std@workspace:packages/std"
@@ -777,6 +768,15 @@ __metadata:
   checksum: 10c0/6b5f65f647474338abbd6ee91a6bbab434662ddb8fe39464edcbcfc96484d388baad9eb506dff217b6fc1727a88894930eb1f308617161ac0f376fe06be4e1ee
   languageName: node
   linkType: hard
+
+"@utils/scripts@workspace:scripts/res":
+  version: 0.0.0-use.local
+  resolution: "@utils/scripts@workspace:scripts/res"
+  dependencies:
+    "@tests/docstring-tests": "workspace:^"
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
 
 "@yarnpkg/types@npm:^4.0.1":
   version: 4.0.1

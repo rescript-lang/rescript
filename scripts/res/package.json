@@ -1,5 +1,5 @@
 {
-  "name": "@rescript/scripts",
+  "name": "@utils/scripts",
   "type": "module",
   "private": true,
   "scripts": {
