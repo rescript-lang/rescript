@@ -480,7 +480,7 @@ jobs:
         run: |
           yarn dlx pkg-pr-new publish "." "./packages/@rescript/*"
 
-  sync-api-docs:
+  api-docs:
     needs:
       - build-compiler
     runs-on: ubuntu-24.04-arm
