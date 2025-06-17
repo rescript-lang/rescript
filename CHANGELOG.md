@@ -55,6 +55,7 @@
 - Improve error messages around type mismatches for try/catch, if, for, while, and optional record fields + optional function arguments. https://github.com/rescript-lang/rescript/pull/7522
 - sync Reanalyze with the new APIs around exception. https://github.com/rescript-lang/rescript/pull/7536
 - Improve array pattern spread error message. https://github.com/rescript-lang/rescript/pull/7549
+- Sync API docs with rescript-lang.org on release. https://github.com/rescript-lang/rescript/pull/7555
 
 #### :house: Internal
 
@@ -63,6 +64,7 @@
 - Add `-editor-mode` arg to `bsc` for doing special optimizations only relevant to the editor tooling. https://github.com/rescript-lang/rescript/pull/7541
 
 #### :boom: Breaking Change
+
 - `Iterator.forEach` now emits `Iterator.prototype.forEach` call. https://github.com/rescript-lang/rescript/pull/7506
 
 # 12.0.0-alpha.13
