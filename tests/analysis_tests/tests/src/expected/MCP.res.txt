@@ -1,4 +1,4 @@
-MCP loc info src/MCP.res 26:4
+MCP loc info src/MCP.res 28:4
 <main_types>
 TestType.second
 
@@ -10,4 +10,31 @@ type first = {one: bool, two?: string}
 
 type variant = One | Two(string) | Three(bool)
 </related_types>
+
+MCP identifier info src/MCP.res 30:3
+Value MCP.xx:
+<value>
+<main_types>
+TestType.second
+
+type second = {first: first, variant: variant}
+</main_types>
+
+<related_types>
+type first = {one: bool, two?: string}
+
+type variant = One | Two(string) | Three(bool)
+</related_types>
+</value>
+
+Type MCP.xx:
+<type>
+type xx = Hello
+</type>
+
+MCP identifier info src/MCP.res 31:3
+Type Rxjs.Subscriber.t:
+<type>
+type t<'t> = {next: 't => unit}
+</type>
 

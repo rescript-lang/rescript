@@ -22,7 +22,12 @@ let xx = {
   variant: One,
 }
 
+type xx = Hello
+
 let ft = () => xx
 
 let ff = ft()
 //  ^mli
+
+// ^mif MCP.xx
+// ^mif Rxjs.Subscriber.t
