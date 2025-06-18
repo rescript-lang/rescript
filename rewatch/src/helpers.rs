@@ -233,7 +233,7 @@ pub fn get_rescript_legacy(root_path: &Path, workspace_root: Option<PathBuf>) ->
         .join("@rescript")
         .join(subfolder)
         .join("bin")
-        .join("rescript-legacy");
+        .join("rescript.exe");
 
     match (
         root_path
