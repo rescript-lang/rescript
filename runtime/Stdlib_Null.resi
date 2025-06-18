@@ -57,9 +57,9 @@ let a = Null.Value(1)
 let b = Null.null
 let c = Null.Value(2)
 
-assertEqual(Null.equal(a, b, Int.equal), false)
-assertEqual(Null.equal(a, c, Int.equal), false)
-assertEqual(Null.equal(Null.null, Null.null, Int.equal), true)
+Null.equal(a, b, Int.equal) == false
+Null.equal(a, c, Int.equal) == false
+Null.equal(Null.null, Null.null, Int.equal) == true
 ```
  */
 let equal: (t<'a>, t<'b>, ('a, 'b) => bool) => bool
@@ -75,13 +75,13 @@ let b = Null.null
 let c = Null.Value(2)
 
 // A value is greater than null
-assertEqual(Null.compare(a, b, Int.compare), Stdlib_Ordering.greater)
+Null.compare(a, b, Int.compare) == Stdlib_Ordering.greater
 // A value is less than null
-assertEqual(Null.compare(b, a, Int.compare), Stdlib_Ordering.less)
+Null.compare(b, a, Int.compare) == Stdlib_Ordering.less
 // A null is equal to null
-assertEqual(Null.compare(Null.null, Null.null, Int.compare), Stdlib_Ordering.equal)
+Null.compare(Null.null, Null.null, Int.compare) == Stdlib_Ordering.equal
 // The compare function is used if both are `Null.Value`
-assertEqual(Null.compare(a, c, Int.compare), Stdlib_Ordering.less)
+Null.compare(a, c, Int.compare) == Stdlib_Ordering.less
 ```
 */
 let compare: (t<'a>, t<'b>, ('a, 'b) => Stdlib_Ordering.t) => Stdlib_Ordering.t
