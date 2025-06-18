@@ -31,3 +31,6 @@ let ff = ft()
 
 // ^mif MCP.xx
 // ^mif Rxjs.Subscriber.t
+
+// ^mdp src/MCPDocs.res
+// ^mdl @rescript/react

@@ -69,6 +69,16 @@ Path M
       "filePath": "src/Jsx2.res"
     }
   }, {
+    "label": "MCPDocs",
+    "kind": 9,
+    "tags": [],
+    "detail": "module MCPDocs",
+    "documentation": null,
+    "data": {
+      "modulePath": "MCPDocs",
+      "filePath": "src/Jsx2.res"
+    }
+  }, {
     "label": "ModuleStuff",
     "kind": 9,
     "tags": [],

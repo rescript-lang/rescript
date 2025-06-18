@@ -38,3 +38,9 @@ Type Rxjs.Subscriber.t:
 type t<'t> = {next: 't => unit}
 </type>
 
+MCP docs for project file
+No result.
+
+MCP docs for library
+No result.
+

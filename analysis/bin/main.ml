@@ -117,6 +117,12 @@ let main () =
     Mcp.IdentifierInfo.identifierInfo ~identifier ~path ~maybe_line:None
       ~maybe_col:None
     |> print_endline
+  | [_; "mcp"; "docs"; called_from; typ; identifier] -> (
+    match Mcp.Docs.docs_type_from_string typ with
+    | None ->
+      print_endline
+        "Not a valid type. Should be either 'ProjectFile' or 'Library'."
+    | Some typ -> Mcp.Docs.docs ~called_from ~typ ~identifier |> print_endline)
   | [_; "cache-project"; rootPath] -> (
     Cfg.readProjectConfigCache := false;
     let uri = Uri.fromPath rootPath in

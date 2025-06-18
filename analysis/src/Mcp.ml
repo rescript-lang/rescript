@@ -224,3 +224,21 @@ module IdentifierInfo = struct
     | None -> "No result."
     | Some s -> s
 end
+
+module Docs = struct
+  type docsType = ProjectFile | Library
+  let docs_type_from_string = function
+    | "ProjectFile" -> Some ProjectFile
+    | "Library" -> Some Library
+    | _ -> None
+
+  let docs ~called_from ~(typ : docsType) ~identifier =
+    let result =
+      match Cmt.loadFullCmtFromPath ~path:called_from with
+      | None -> None
+      | Some full -> None
+    in
+    match result with
+    | None -> "No result."
+    | Some s -> s
+end

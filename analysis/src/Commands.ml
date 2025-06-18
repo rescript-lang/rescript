@@ -450,6 +450,18 @@ let test ~path =
               ~maybe_col:None
             |> print_endline;
             Sys.remove currentFile
+          | "mdp" ->
+            print_endline "MCP docs for project file";
+            let identifier = String.sub rest 3 (String.length rest - 3) in
+            let identifier = String.trim identifier in
+            Mcp.Docs.docs ~called_from:path ~typ:ProjectFile ~identifier
+            |> print_endline
+          | "mdl" ->
+            print_endline "MCP docs for library";
+            let identifier = String.sub rest 3 (String.length rest - 3) in
+            let identifier = String.trim identifier in
+            Mcp.Docs.docs ~called_from:path ~typ:Library ~identifier
+            |> print_endline
           | "xfm" ->
             let currentFile = createCurrentFile () in
             (* +2 is to ensure that the character ^ points to is what's considered the end of the selection. *)
