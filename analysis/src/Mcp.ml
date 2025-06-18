@@ -235,10 +235,14 @@ module Docs = struct
   let docs ~called_from ~(typ : docsType) ~identifier =
     let result =
       match Cmt.loadFullCmtFromPath ~path:called_from with
-      | None -> None
-      | Some full -> None
+      | None -> Error "Could not load cmt file"
+      | Some _full -> (
+        match typ with
+        | ProjectFile ->
+          DocGen.extractDocsToMd ~entryPointFile:identifier ~debug:false
+        | Library -> Ok "TODO")
     in
     match result with
-    | None -> "No result."
-    | Some s -> s
+    | Error e -> "Error: " ^ e
+    | Ok s -> s
 end

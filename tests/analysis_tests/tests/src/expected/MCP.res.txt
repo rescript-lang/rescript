@@ -39,8 +39,71 @@ type t<'t> = {next: 't => unit}
 </type>
 
 MCP docs for project file
-No result.
+# MCPDocs
+
+**KIND:** MODULE
+
+**SOURCE:** src/MCPDocs.res:1:1
+
+## TYPES
+
+### x
+
+**KIND:** TYPE
+
+**SIGNATURE:** `type x = {test: bool}`
+
+**SOURCE:** src/MCPDocs.res:1:1
+
+
+**RECORD_FIELDS:**
+- **FIELD:** `test`
+  - **TYPE:** `bool`
+  - **OPTIONAL:** false
+
+
+
+## MODULES
+
+### SomeModule
+
+**KIND:** MODULE
+
+**SOURCE:** src/MCPDocs.res:3:8
+
+**MODULE_CONTENTS:**
+
+#### ff
+
+**KIND:** VALUE
+
+**SIGNATURE:** `let ff: x`
+
+**SOURCE:** src/MCPDocs.res:4:7
+
+
+
+#### someVariant
+
+**KIND:** TYPE
+
+**SIGNATURE:** `@unboxed type someVariant = One(int) | Two(string)`
+
+**SOURCE:** src/MCPDocs.res:7:3
+
+
+**VARIANT_CONSTRUCTORS:**
+- **CONSTRUCTOR:** `One`
+  - **SIGNATURE:** `One(int)`
+
+- **CONSTRUCTOR:** `Two`
+  - **SIGNATURE:** `Two(string)`
+
+
+
+
+
 
 MCP docs for library
-No result.
+TODO
 

@@ -324,7 +324,290 @@ module JsonOutput = struct
       ]
 end
 
-module MdOutput = struct end
+module MdOutput = struct
+  let stringifyDocstrings docstrings =
+    match docstrings with
+    | [] -> ""
+    | docstrings ->
+      docstrings |> List.map String.trim
+      |> List.filter (fun s -> s <> "")
+      |> String.concat "\n\n"
+
+  let stringifyFieldDoc (fieldDoc : fieldDoc) =
+    let buffer = Buffer.create 256 in
+    Buffer.add_string buffer
+      (Printf.sprintf "- **FIELD:** `%s`\n" fieldDoc.fieldName);
+    Buffer.add_string buffer
+      (Printf.sprintf "  - **TYPE:** `%s`\n" fieldDoc.signature);
+    Buffer.add_string buffer
+      (Printf.sprintf "  - **OPTIONAL:** %s\n"
+         (string_of_bool fieldDoc.optional));
+    (match fieldDoc.deprecated with
+    | Some d ->
+      Buffer.add_string buffer (Printf.sprintf "  - **DEPRECATED:** %s\n" d)
+    | None -> ());
+    (match stringifyDocstrings fieldDoc.docstrings with
+    | "" -> ()
+    | docs ->
+      Buffer.add_string buffer (Printf.sprintf "  - **DESCRIPTION:** %s\n" docs));
+    Buffer.contents buffer
+
+  let stringifyConstructorDoc (constructorDoc : constructorDoc) =
+    let buffer = Buffer.create 256 in
+    Buffer.add_string buffer
+      (Printf.sprintf "- **CONSTRUCTOR:** `%s`\n" constructorDoc.constructorName);
+    Buffer.add_string buffer
+      (Printf.sprintf "  - **SIGNATURE:** `%s`\n" constructorDoc.signature);
+    (match constructorDoc.deprecated with
+    | Some d ->
+      Buffer.add_string buffer (Printf.sprintf "  - **DEPRECATED:** %s\n" d)
+    | None -> ());
+    (match stringifyDocstrings constructorDoc.docstrings with
+    | "" -> ()
+    | docs ->
+      Buffer.add_string buffer (Printf.sprintf "  - **DESCRIPTION:** %s\n" docs));
+    (match constructorDoc.items with
+    | None -> ()
+    | Some (InlineRecord {fieldDocs}) ->
+      Buffer.add_string buffer "  - **INLINE_RECORD_FIELDS:**\n";
+      fieldDocs
+      |> List.iter (fun field ->
+             let field_lines =
+               stringifyFieldDoc field |> String.split_on_char '\n'
+             in
+             field_lines
+             |> List.iter (fun line ->
+                    if String.trim line <> "" then
+                      Buffer.add_string buffer ("    " ^ line ^ "\n"))));
+    Buffer.contents buffer
+
+  let stringifyDetail (detail : docItemDetail) =
+    match detail with
+    | Record {fieldDocs} ->
+      let buffer = Buffer.create 512 in
+      Buffer.add_string buffer "\n**RECORD_FIELDS:**\n";
+      fieldDocs
+      |> List.iter (fun field ->
+             Buffer.add_string buffer (stringifyFieldDoc field ^ "\n"));
+      Buffer.contents buffer
+    | Variant {constructorDocs} ->
+      let buffer = Buffer.create 512 in
+      Buffer.add_string buffer "\n**VARIANT_CONSTRUCTORS:**\n";
+      constructorDocs
+      |> List.iter (fun constructor ->
+             Buffer.add_string buffer
+               (stringifyConstructorDoc constructor ^ "\n"));
+      Buffer.contents buffer
+    | Signature {parameters = _; returnType = _} ->
+      (* For function signatures, we could add parameter details, but for now keep it simple *)
+      ""
+
+  let stringifySource (source : source) =
+    Printf.sprintf "**SOURCE:** %s:%d:%d" source.filepath source.line source.col
+
+  let rec stringifyDocItem ?(depth = 2) (item : docItem) =
+    let heading = String.make depth '#' ^ " " in
+
+    match item with
+    | Value {name; docstring; signature; deprecated; detail; source} ->
+      let buffer = Buffer.create 1024 in
+      Buffer.add_string buffer (Printf.sprintf "%s%s\n\n" heading name);
+      Buffer.add_string buffer "**KIND:** VALUE\n\n";
+      Buffer.add_string buffer
+        (Printf.sprintf "**SIGNATURE:** `%s`\n\n" signature);
+      Buffer.add_string buffer
+        (Printf.sprintf "%s\n\n" (stringifySource source));
+      (match deprecated with
+      | Some d ->
+        Buffer.add_string buffer (Printf.sprintf "**DEPRECATED:** %s\n\n" d)
+      | None -> ());
+      (match stringifyDocstrings docstring with
+      | "" -> ()
+      | docs ->
+        Buffer.add_string buffer
+          (Printf.sprintf "**DESCRIPTION:**\n%s\n\n" docs));
+      (match detail with
+      | None -> ()
+      | Some d -> Buffer.add_string buffer (stringifyDetail d ^ "\n"));
+      Buffer.contents buffer
+    | Type {name; docstring; signature; deprecated; detail; source} ->
+      let buffer = Buffer.create 1024 in
+      Buffer.add_string buffer (Printf.sprintf "%s%s\n\n" heading name);
+      Buffer.add_string buffer "**KIND:** TYPE\n\n";
+      Buffer.add_string buffer
+        (Printf.sprintf "**SIGNATURE:** `%s`\n\n" signature);
+      Buffer.add_string buffer
+        (Printf.sprintf "%s\n\n" (stringifySource source));
+      (match deprecated with
+      | Some d ->
+        Buffer.add_string buffer (Printf.sprintf "**DEPRECATED:** %s\n\n" d)
+      | None -> ());
+      (match stringifyDocstrings docstring with
+      | "" -> ()
+      | docs ->
+        Buffer.add_string buffer
+          (Printf.sprintf "**DESCRIPTION:**\n%s\n\n" docs));
+      (match detail with
+      | None -> ()
+      | Some d -> Buffer.add_string buffer (stringifyDetail d ^ "\n"));
+      Buffer.contents buffer
+    | Module m ->
+      let buffer = Buffer.create 1024 in
+      Buffer.add_string buffer (Printf.sprintf "%s%s\n\n" heading m.name);
+      Buffer.add_string buffer "**KIND:** MODULE\n\n";
+      Buffer.add_string buffer
+        (Printf.sprintf "%s\n\n" (stringifySource m.source));
+      (match m.moduletypeid with
+      | Some id ->
+        Buffer.add_string buffer
+          (Printf.sprintf "**MODULE_TYPE_ID:** %s\n\n" id)
+      | None -> ());
+      (match m.deprecated with
+      | Some d ->
+        Buffer.add_string buffer (Printf.sprintf "**DEPRECATED:** %s\n\n" d)
+      | None -> ());
+      (match stringifyDocstrings m.docstring with
+      | "" -> ()
+      | docs ->
+        Buffer.add_string buffer
+          (Printf.sprintf "**DESCRIPTION:**\n%s\n\n" docs));
+      (match m.items with
+      | [] -> ()
+      | items ->
+        Buffer.add_string buffer "**MODULE_CONTENTS:**\n\n";
+        items
+        |> List.iter (fun item ->
+               Buffer.add_string buffer
+                 (stringifyDocItem ~depth:(depth + 1) item ^ "\n")));
+      Buffer.contents buffer
+    | ModuleType m ->
+      let buffer = Buffer.create 1024 in
+      Buffer.add_string buffer (Printf.sprintf "%s%s\n\n" heading m.name);
+      Buffer.add_string buffer "**KIND:** MODULE_TYPE\n\n";
+      Buffer.add_string buffer
+        (Printf.sprintf "%s\n\n" (stringifySource m.source));
+      (match m.deprecated with
+      | Some d ->
+        Buffer.add_string buffer (Printf.sprintf "**DEPRECATED:** %s\n\n" d)
+      | None -> ());
+      (match stringifyDocstrings m.docstring with
+      | "" -> ()
+      | docs ->
+        Buffer.add_string buffer
+          (Printf.sprintf "**DESCRIPTION:**\n%s\n\n" docs));
+      (match m.items with
+      | [] -> ()
+      | items ->
+        Buffer.add_string buffer "**MODULE_TYPE_CONTENTS:**\n\n";
+        items
+        |> List.iter (fun item ->
+               Buffer.add_string buffer
+                 (stringifyDocItem ~depth:(depth + 1) item ^ "\n")));
+      Buffer.contents buffer
+    | ModuleAlias m ->
+      let buffer = Buffer.create 1024 in
+      Buffer.add_string buffer (Printf.sprintf "%s%s\n\n" heading m.name);
+      Buffer.add_string buffer "**KIND:** MODULE_ALIAS\n\n";
+      Buffer.add_string buffer
+        (Printf.sprintf "%s\n\n" (stringifySource m.source));
+      (match stringifyDocstrings m.docstring with
+      | "" -> ()
+      | docs ->
+        Buffer.add_string buffer
+          (Printf.sprintf "**DESCRIPTION:**\n%s\n\n" docs));
+      (match m.items with
+      | [] -> ()
+      | items ->
+        Buffer.add_string buffer "**ALIASED_MODULE_CONTENTS:**\n\n";
+        items
+        |> List.iter (fun item ->
+               Buffer.add_string buffer
+                 (stringifyDocItem ~depth:(depth + 1) item ^ "\n")));
+      Buffer.contents buffer
+
+  let stringifyDocsForModule (docs : docsForModule) =
+    let buffer = Buffer.create 4096 in
+
+    (* Header with metadata *)
+    Buffer.add_string buffer (Printf.sprintf "# %s\n\n" docs.name);
+    Buffer.add_string buffer "**KIND:** MODULE\n\n";
+    Buffer.add_string buffer
+      (Printf.sprintf "%s\n\n" (stringifySource docs.source));
+
+    (match docs.deprecated with
+    | Some d ->
+      Buffer.add_string buffer (Printf.sprintf "**DEPRECATED:** %s\n\n" d)
+    | None -> ());
+
+    (match stringifyDocstrings docs.docstring with
+    | "" -> ()
+    | docs_str ->
+      Buffer.add_string buffer
+        (Printf.sprintf "**DESCRIPTION:**\n%s\n\n" docs_str));
+
+    (* Group items by type for better organization *)
+    let values, types, modules, module_types, module_aliases =
+      docs.items
+      |> List.fold_left
+           (fun (vals, typs, mods, mod_typs, mod_aliases) item ->
+             match item with
+             | Value _ -> (item :: vals, typs, mods, mod_typs, mod_aliases)
+             | Type _ -> (vals, item :: typs, mods, mod_typs, mod_aliases)
+             | Module _ -> (vals, typs, item :: mods, mod_typs, mod_aliases)
+             | ModuleType _ -> (vals, typs, mods, item :: mod_typs, mod_aliases)
+             | ModuleAlias _ -> (vals, typs, mods, mod_typs, item :: mod_aliases))
+           ([], [], [], [], [])
+    in
+
+    let values = List.rev values in
+    let types = List.rev types in
+    let modules = List.rev modules in
+    let module_types = List.rev module_types in
+    let module_aliases = List.rev module_aliases in
+
+    (* Content sections with clear headers *)
+    (match values with
+    | [] -> ()
+    | _ ->
+      Buffer.add_string buffer "## VALUES\n\n";
+      values
+      |> List.iter (fun item ->
+             Buffer.add_string buffer (stringifyDocItem ~depth:3 item ^ "\n")));
+
+    (match types with
+    | [] -> ()
+    | _ ->
+      Buffer.add_string buffer "## TYPES\n\n";
+      types
+      |> List.iter (fun item ->
+             Buffer.add_string buffer (stringifyDocItem ~depth:3 item ^ "\n")));
+
+    (match modules with
+    | [] -> ()
+    | _ ->
+      Buffer.add_string buffer "## MODULES\n\n";
+      modules
+      |> List.iter (fun item ->
+             Buffer.add_string buffer (stringifyDocItem ~depth:3 item ^ "\n")));
+
+    (match module_types with
+    | [] -> ()
+    | _ ->
+      Buffer.add_string buffer "## MODULE_TYPES\n\n";
+      module_types
+      |> List.iter (fun item ->
+             Buffer.add_string buffer (stringifyDocItem ~depth:3 item ^ "\n")));
+
+    (match module_aliases with
+    | [] -> ()
+    | _ ->
+      Buffer.add_string buffer "## MODULE_ALIASES\n\n";
+      module_aliases
+      |> List.iter (fun item ->
+             Buffer.add_string buffer (stringifyDocItem ~depth:3 item ^ "\n")));
+
+    Buffer.contents buffer
+end
 
 let fieldToFieldDoc (field : SharedTypes.field) : fieldDoc =
   {
@@ -655,5 +938,5 @@ let extractDocsToJson ~entryPointFile ~debug =
 
 let extractDocsToMd ~entryPointFile ~debug =
   match extractDocs ~entryPointFile ~debug with
-  | Ok (_docs, _env) -> Ok "wip"
+  | Ok (docs, _env) -> Ok (MdOutput.stringifyDocsForModule docs)
   | Error e -> Error e
