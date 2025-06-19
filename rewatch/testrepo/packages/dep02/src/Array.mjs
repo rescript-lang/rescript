@@ -264,7 +264,7 @@ function drop(t, i) {
 }
 
 function unsafePop(prim) {
-  return Primitive_option.fromUndefined(prim.pop());
+  return prim.pop();
 }
 
 function sum(xs) {
