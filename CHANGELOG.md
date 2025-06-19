@@ -13,7 +13,9 @@
 # 12.0.0-alpha.15 (Unreleased)
 
 #### :bug: Bug fix
-- ignore inferred arity in functions inside `%raw` functions, leaving to `%ffi` the responsibility to check the arity since it gives an error in case of mismatch. https://github.com/rescript-lang/rescript/pull/7542
+
+- Ignore inferred arity in functions inside `%raw` functions, leaving to `%ffi` the responsibility to check the arity since it gives an error in case of mismatch. https://github.com/rescript-lang/rescript/pull/7542
+- Pass the rewatch exit code through in wrapper script. https://github.com/rescript-lang/rescript/pull/7565
 
 #### :nail_care: Polish
 
