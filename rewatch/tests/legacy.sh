@@ -3,19 +3,25 @@ cd ../testrepo/packages/compiled-by-legacy
 
 bold "Test: It should use the legacy build system"
 
-if rewatch_legacy clean &> /dev/null;
+error_output=$(rewatch_legacy clean 2>&1 >/dev/null)
+
+if [ $? -eq 0 ];
 then
     success "Test package cleaned"
 else
     error "Error cleaning test package"
+    printf "%s\n" "$error_output" >&2
     exit 1
 fi
 
-if rewatch_legacy build &> /dev/null;
+error_output=$(rewatch_legacy build 2>&1 >/dev/null)
+
+if [ $? -eq 0 ];
 then
     success "Test package built"
 else
     error "Error building test package"
+    printf "%s\n" "$error_output" >&2
     exit 1
 fi
 
