@@ -13,8 +13,8 @@ Converts a boolean to a string.
 
 ## Examples
 ```rescript
-Bool.toString(true)->assertEqual("true")
-Bool.toString(false)->assertEqual("false")
+Bool.toString(true) == "true"
+Bool.toString(false) == "false"
 ```
 */
 let toString: bool => string
@@ -24,9 +24,9 @@ Converts a string to a boolean.
 
 ## Examples
 ```rescript
-Bool.fromString("true")->assertEqual(Some(true))
-Bool.fromString("false")->assertEqual(Some(false))
-Bool.fromString("notAValidBoolean")->assertEqual(None)
+Bool.fromString("true") == Some(true)
+Bool.fromString("false") == Some(false)
+Bool.fromString("notAValidBoolean") == None
 ```
 */
 let fromString: string => option<bool>
@@ -37,8 +37,8 @@ Throws an `Invalid_argument` exception if the string is not a valid boolean.
 
 ## Examples
 ```rescript
-Bool.fromStringOrThrow("true")->assertEqual(true)
-Bool.fromStringOrThrow("false")->assertEqual(false)
+Bool.fromStringOrThrow("true") == true
+Bool.fromStringOrThrow("false") == false
 switch Bool.fromStringOrThrow("notAValidBoolean") {
 | exception Invalid_argument(_) => assert(true)
 | _ => assert(false)
@@ -54,8 +54,8 @@ if the string is not a valid boolean.
 
 ## Examples
 ```rescript
-Bool.fromStringExn("true")->assertEqual(true)
-Bool.fromStringExn("false")->assertEqual(false)
+Bool.fromStringExn("true") == true
+Bool.fromStringExn("false") == false
 switch Bool.fromStringExn("notAValidBoolean") {
 | exception Invalid_argument(_) => assert(true)
 | _ => assert(false)
@@ -70,10 +70,10 @@ Compares two booleans, returns an `Ordering.t` value.
 
 ## Examples
 ```rescript
-Bool.compare(true, true)->assertEqual(Ordering.equal)
-Bool.compare(false, false)->assertEqual(Ordering.equal)
-Bool.compare(true, false)->assertEqual(Ordering.greater)
-Bool.compare(false, true)->assertEqual(Ordering.less)
+Bool.compare(true, true) == Ordering.equal
+Bool.compare(false, false) == Ordering.equal
+Bool.compare(true, false) == Ordering.greater
+Bool.compare(false, true) == Ordering.less
 ```
 */
 external compare: (bool, bool) => Stdlib_Ordering.t = "%compare"
@@ -83,10 +83,10 @@ Checks if two booleans are equal and have the same value.
 
 ## Examples
 ```rescript
-Bool.equal(true, true)->assertEqual(true)
-Bool.equal(false, false)->assertEqual(true)
-Bool.equal(true, false)->assertEqual(false)
-Bool.equal(false, true)->assertEqual(false)
+Bool.equal(true, true) == true
+Bool.equal(false, false) == true
+Bool.equal(true, false) == false
+Bool.equal(false, true) == false
 ```
 */
 external equal: (bool, bool) => bool = "%equal"
