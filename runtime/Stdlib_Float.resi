@@ -114,8 +114,27 @@ module Constants: {
   external maxValue: float = "Number.MAX_VALUE"
 }
 
+/**
+Checks if two floating point numbers are equal.
+
+## Examples
+```rescript
+Float.equal(1.0, 1.0) == true
+Float.equal(1.0, 2.0) == false
+```
+*/
 external equal: (float, float) => bool = "%equal"
 
+/**
+Compares two floating point numbers, returns an `Ordering.t` value.
+
+## Examples
+```rescript
+Float.compare(1.0, 1.0) == Ordering.equal
+Float.compare(1.0, 2.0) == Ordering.less
+Float.compare(2.0, 1.0) == Ordering.greater
+```
+*/
 external compare: (float, float) => Stdlib_Ordering.t = "%compare"
 
 /**
