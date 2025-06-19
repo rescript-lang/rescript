@@ -181,7 +181,7 @@ pub fn create_path_for_path(path: &Path) {
     fs::DirBuilder::new().recursive(true).create(path).unwrap();
 }
 
-pub fn get_bsc(root_path: &Path, workspace_root: &Option<PathBuf>) -> PathBuf {
+fn get_bin_dir() -> PathBuf {
     let subfolder = match (std::env::consts::OS, std::env::consts::ARCH) {
         ("macos", "aarch64") => "darwin-arm64",
         ("macos", _) => "darwin-x64",
@@ -192,21 +192,24 @@ pub fn get_bsc(root_path: &Path, workspace_root: &Option<PathBuf>) -> PathBuf {
         _ => panic!("Unsupported architecture"),
     };
 
+    Path::new("node_modules")
+        .join("@rescript")
+        .join(subfolder)
+        .join("bin")
+}
+
+pub fn get_bsc(root_path: &Path, workspace_root: &Option<PathBuf>) -> PathBuf {
+    let bin_dir = get_bin_dir();
+
     match (
         root_path
-            .join("node_modules")
-            .join("@rescript")
-            .join(subfolder)
-            .join("bin")
+            .join(&bin_dir)
             .join("bsc.exe")
             .canonicalize()
             .map(StrippedVerbatimPath::to_stripped_verbatim_path),
         workspace_root.as_ref().map(|workspace_root| {
             workspace_root
-                .join("node_modules")
-                .join("@rescript")
-                .join(subfolder)
-                .join("bin")
+                .join(&bin_dir)
                 .join("bsc.exe")
                 .canonicalize()
                 .map(StrippedVerbatimPath::to_stripped_verbatim_path)
@@ -219,37 +222,25 @@ pub fn get_bsc(root_path: &Path, workspace_root: &Option<PathBuf>) -> PathBuf {
 }
 
 pub fn get_rescript_legacy(root_path: &Path, workspace_root: Option<PathBuf>) -> PathBuf {
-    let subfolder = match (std::env::consts::OS, std::env::consts::ARCH) {
-        ("macos", "aarch64") => "darwin-arm64",
-        ("macos", _) => "darwin-x64",
-        ("linux", "aarch64") => "linux-arm64",
-        ("linux", _) => "linux-x64",
-        ("windows", "aarch64") => "win-arm64",
-        ("windows", _) => "win-x64",
-        _ => panic!("Unsupported architecture"),
-    };
-
-    let legacy_path_fragment = Path::new("node_modules")
-        .join("@rescript")
-        .join(subfolder)
-        .join("bin")
-        .join("rescript.exe");
+    let bin_dir = get_bin_dir();
 
     match (
         root_path
-            .join(&legacy_path_fragment)
+            .join(&bin_dir)
+            .join("rescript.exe")
             .canonicalize()
             .map(StrippedVerbatimPath::to_stripped_verbatim_path),
         workspace_root.map(|workspace_root| {
             workspace_root
-                .join(&legacy_path_fragment)
+                .join(&bin_dir)
+                .join("rescript.exe")
                 .canonicalize()
                 .map(StrippedVerbatimPath::to_stripped_verbatim_path)
         }),
     ) {
         (Ok(path), _) => path,
         (_, Some(Ok(path))) => path,
-        _ => panic!("Could not find rescript-legacy"),
+        _ => panic!("Could not find rescript.exe"),
     }
 }
 
