@@ -3481,10 +3481,9 @@ and type_application ~context total_app env funct (sargs : sargs) :
     | _ -> false
   in
   let has_arity funct =
-    let t = funct.exp_type in
     if force_tvar then Some (List.length sargs)
     else
-      match (Ctype.repr t).desc with
+      match (expand_head env funct.exp_type).desc with
       | Tarrow (_, _, _, _, Some arity) -> Some arity
       | _ -> None
   in
@@ -3538,7 +3537,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
           | _ -> new_t
       in
       (fully_applied, new_t)
-    | _ -> (false, new_t)
+    | None -> (false, new_t)
   in
   let rec type_unknown_args max_arity ~(args : lazy_args) ~top_arity omitted
       ty_fun (syntax_args : sargs) : targs * _ =

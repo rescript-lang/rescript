@@ -11,7 +11,7 @@ const { defineConfig } = require("@yarnpkg/types");
  * @param {Yarn.Constraints.Context} ctx
  */
 async function enforceCompilerMeta({ Yarn }) {
-  const EXPECTED_VERSION = "12.0.0-alpha.14";
+  const EXPECTED_VERSION = "12.0.0-alpha.15";
 
   for (const workspace of Yarn.workspaces()) {
     const { ident } = workspace.pkg;
@@ -51,14 +51,17 @@ async function enforceCompilerMeta({ Yarn }) {
   if (process.argv.includes("--fix")) {
     await fs.writeFile(
       compilerVersionFile,
-      versionFile.replace(versionPattern, `let version = "${EXPECTED_VERSION}"`)
+      versionFile.replace(
+        versionPattern,
+        `let version = "${EXPECTED_VERSION}"`,
+      ),
     );
   } else {
     const versionMatch = versionFile.match(versionPattern);
     const foundVersion = versionMatch?.groups?.version;
     if (foundVersion !== EXPECTED_VERSION) {
       Yarn.workspace().error(
-        `compiler/common/bs_version.ml file need to be fixed; expected ${EXPECTED_VERSION}, found ${foundVersion}.`
+        `compiler/common/bs_version.ml file need to be fixed; expected ${EXPECTED_VERSION}, found ${foundVersion}.`,
       );
     }
   }

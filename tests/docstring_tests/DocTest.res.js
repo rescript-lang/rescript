@@ -21,7 +21,7 @@ import * as Promises from "node:fs/promises";
 import * as Primitive_exceptions from "rescript/lib/es6/Primitive_exceptions.js";
 import * as RescriptTools_Docgen from "rescript/lib/es6/RescriptTools_Docgen.js";
 
-let nodeVersion = Stdlib_Option.getExn(Stdlib_Int.fromString(Stdlib_Option.getExn(process.version.replace("v", "").split(".")[0], "Failed to find major version of Node"), undefined), "Failed to convert node version to Int");
+let nodeVersion = Stdlib_Option.getOrThrow(Stdlib_Int.fromString(Stdlib_Option.getOrThrow(process.version.replace("v", "").split(".")[0], "Failed to find major version of Node"), undefined), "Failed to convert node version to Int");
 
 let ignoreRuntimeTests = [
   [
@@ -224,7 +224,7 @@ function getCodeBlocks(example) {
       let parts = searchFrom(line, 0);
       let parts$1 = parts !== undefined && parts[1].trim().length === 0 ? [
           parts[0],
-          Stdlib_Option.getExn(lines[idx + 1 | 0], "Expected to have an expected expression on the next line")
+          Stdlib_Option.getOrThrow(lines[idx + 1 | 0], "Expected to have an expected expression on the next line")
         ] : parts;
       if (parts$1 === undefined) {
         return line;

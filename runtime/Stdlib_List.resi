@@ -90,7 +90,28 @@ switch List.headExn(list{}) {
 - Raises an Error if list is empty.
 
 */
+@deprecated("Use `headOrThrow` instead")
 let headExn: list<'a> => 'a
+
+/**
+`headOrThrow(list)` same as [`head`](#head).
+
+## Examples
+
+```rescript
+List.headOrThrow(list{1, 2, 3})->assertEqual(1)
+
+switch List.headOrThrow(list{}) {
+| exception Not_found => assert(true)
+| _ => assert(false)
+}
+```
+
+## Exceptions
+
+- Raises an Error if list is empty.
+*/
+let headOrThrow: list<'a> => 'a
 
 /**
 `tail(list)` returns `None` if `list` is empty, otherwise it returns `Some(tail)`
@@ -124,7 +145,28 @@ switch List.tailExn(list{}) {
 
 - Raises an Error if list is empty.
 */
+@deprecated("Use `tailOrThrow` instead")
 let tailExn: list<'a> => list<'a>
+
+/**
+`tailOrThrow(list)` same as [`tail`](#tail).
+
+## Examples
+
+```rescript
+List.tailOrThrow(list{1, 2, 3})->assertEqual(list{2, 3})
+
+switch List.tailOrThrow(list{}) {
+| exception Not_found => assert(true)
+| _ => assert(false)
+}
+```
+
+## Exceptions
+
+- Raises an Error if list is empty.
+*/
+let tailOrThrow: list<'a> => list<'a>
 
 /**
 `add(list, value)` adds a `value` to the beginning of list `list`.
@@ -177,7 +219,32 @@ switch abc->List.getExn(4) {
 
 - Raises an Error if `index` is larger than the length of list.
 */
+@deprecated("Use `getOrThrow` instead")
 let getExn: (list<'a>, int) => 'a
+
+/**
+`getOrThrow(list, index)` same as [`get`](#get).
+
+## Examples
+
+```rescript
+let abc = list{"A", "B", "C"}
+
+abc
+->List.getOrThrow(1)
+->assertEqual("B")
+
+switch abc->List.getOrThrow(4) {
+| exception Not_found => assert(true)
+| _ => assert(false)
+}
+```
+
+## Exceptions
+
+- Raises an Error if `index` is larger than the length of list.
+*/
+let getOrThrow: (list<'a>, int) => 'a
 
 /**
 `make(length, value)` returns a list of length `length` with each element filled

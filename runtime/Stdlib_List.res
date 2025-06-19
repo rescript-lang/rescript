@@ -106,11 +106,13 @@ let head = x =>
   | list{x, ..._} => Some(x)
   }
 
-let headExn = x =>
+let headOrThrow = x =>
   switch x {
   | list{} => throw(Not_found)
   | list{x, ..._} => x
   }
+
+let headExn = headOrThrow
 
 let tail = x =>
   switch x {
@@ -118,11 +120,13 @@ let tail = x =>
   | list{_, ...xs} => Some(xs)
   }
 
-let tailExn = x =>
+let tailOrThrow = x =>
   switch x {
   | list{} => throw(Not_found)
   | list{_, ...t} => t
   }
+
+let tailExn = tailOrThrow
 
 let add = (xs, x) => list{x, ...xs}
 
@@ -156,12 +160,14 @@ let get = (x, n) =>
     nthAux(x, n)
   }
 
-let getExn = (x, n) =>
+let getOrThrow = (x, n) =>
   if n < 0 {
     throw(Not_found)
   } else {
     nthAuxAssert(x, n)
   }
+
+let getExn = getOrThrow
 
 let rec partitionAux = (p, cell, precX, precY) =>
   switch cell {

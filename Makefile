@@ -31,26 +31,21 @@ test: build lib
 
 test-analysis:
 	make -C tests/analysis_tests clean test
-	
+
 test-tools:
 	make -C tests/tools_tests clean test
 
 test-syntax:
-	bash ./scripts/test_syntax.sh
-	bash ./scripts/testok.sh
+	./scripts/test_syntax.sh
 
 test-syntax-roundtrip:
-	ROUNDTRIP_TEST=1 bash ./scripts/test_syntax.sh
-	bash ./scripts/testok.sh
+	ROUNDTRIP_TEST=1 ./scripts/test_syntax.sh
 
 test-gentype:
 	make -C tests/gentype_tests/typescript-react-example clean test
 
 test-rewatch:
-	bash ./rewatch/tests/suite-ci.sh
-
-test-rewatch-integration:
-	bash ./rewatch/tests/suite-ci.sh node_modules/.bin/rewatch
+	./rewatch/tests/suite-ci.sh
 
 test-all: test test-gentype test-analysis test-tools test-rewatch
 
@@ -82,10 +77,10 @@ playground-release: playground playground-cmijs
 	yarn workspace playground upload-bundle
 
 format:
-	bash scripts/format.sh
+	./scripts/format.sh
 
 checkformat:
-	bash scripts/format_check.sh
+	./scripts/format_check.sh
 
 clean-gentype:
 	make -C tests/gentype_tests/typescript-react-example clean
@@ -97,7 +92,7 @@ clean:
 	(cd runtime && ../cli/rescript.js clean)
 	dune clean
 
-clean-all: clean clean-gentype clean-rewatch 
+clean-all: clean clean-gentype clean-rewatch
 
 dev-container:
 	docker build -t rescript-dev-container docker

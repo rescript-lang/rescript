@@ -102,6 +102,7 @@ type type_clash_context =
   | FunctionArgument of {optional: bool; name: string option}
   | Statement of type_clash_statement
   | ForLoopCondition
+  | Await
 
 let context_to_string = function
   | Some WhileCondition -> "WhileCondition"
@@ -120,6 +121,7 @@ let context_to_string = function
   | Some (FunctionArgument _) -> "FunctionArgument"
   | Some ComparisonOperator -> "ComparisonOperator"
   | Some IfReturn -> "IfReturn"
+  | Some Await -> "Await"
   | None -> "None"
 
 let fprintf = Format.fprintf
@@ -185,6 +187,10 @@ let error_expected_type_text ppf type_clash_context =
       "But it's being used with the @{<info>%s@} operator, which works on:"
       operator
   | Some StringConcat -> fprintf ppf "But string concatenation is expecting:"
+  | Some Await ->
+    fprintf ppf
+      "But you're using @{<info>await@} on this expression, so it is expected \
+       to be of type:"
   | Some MaybeUnwrapOption | None ->
     fprintf ppf "But it's expected to have type:"
 
@@ -282,6 +288,14 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       "\n\n\
       \  To fix this, change the highlighted code so it evaluates to a \
        @{<info>bool@}."
+  | Some Await, _ ->
+    fprintf ppf
+      "\n\n\
+      \  You're trying to await something that is not a promise.\n\n\
+       Possible solutions:\n\
+      \  - Remove the @{<info>await@} if this is not expected to be a promise\n\
+      \  - Wrap the expression in @{<info>Promise.resolve@} to convert the \
+       expression to a promise"
   | Some IfReturn, _ ->
     fprintf ppf
       "\n\n\
@@ -533,7 +547,7 @@ let type_clash_context_from_function sexp sfunct =
     Some (MathOperator {for_float = true; operator; is_constant})
   | Pexp_ident {txt = Lident (("/" | "*" | "+" | "-") as operator)} ->
     Some (MathOperator {for_float = false; operator; is_constant})
-  | _ -> None
+  | _ -> if Ast_await.is_await_expr sexp then Some Await else None
 
 let type_clash_context_for_function_argument ~label type_clash_context sarg0 =
   match type_clash_context with

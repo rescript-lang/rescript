@@ -287,3 +287,9 @@ let findMap = (arr, f) => {
 let last = a => a->get(a->length - 1)
 
 external ignore: array<'a> => unit = "%ignore"
+
+@send
+external entries: array<'a> => Stdlib_Iterator.t<(int, 'a)> = "entries"
+
+@send
+external values: array<'a> => Stdlib_Iterator.t<'a> = "values"

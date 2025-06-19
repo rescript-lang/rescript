@@ -47,8 +47,43 @@ let asNullValue = myStr->Null.make // The compiler now thinks this can be `strin
 */
 external make: 'a => t<'a> = "%identity"
 
+/**
+`equal(a, b, eq)` checks if `a` and `b` are equal.
+If both are `Null.Value`, it will use function `eq` to check if the values are equal.
+
+## Examples
+```rescript
+let a = Null.Value(1)
+let b = Null.null
+let c = Null.Value(2)
+
+Null.equal(a, b, Int.equal) == false
+Null.equal(a, c, Int.equal) == false
+Null.equal(Null.null, Null.null, Int.equal) == true
+```
+ */
 let equal: (t<'a>, t<'b>, ('a, 'b) => bool) => bool
 
+/**
+`compare(a, b, cmp)` compares `a` and `b`.
+If both are `Null.Value`, it will use function `cmp` to compare the values.
+
+## Examples
+```rescript
+let a = Null.Value(1)
+let b = Null.null
+let c = Null.Value(2)
+
+// A value is greater than null
+Null.compare(a, b, Int.compare) == Stdlib_Ordering.greater
+// A value is less than null
+Null.compare(b, a, Int.compare) == Stdlib_Ordering.less
+// A null is equal to null
+Null.compare(Null.null, Null.null, Int.compare) == Stdlib_Ordering.equal
+// The compare function is used if both are `Null.Value`
+Null.compare(a, c, Int.compare) == Stdlib_Ordering.less
+```
+*/
 let compare: (t<'a>, t<'b>, ('a, 'b) => Stdlib_Ordering.t) => Stdlib_Ordering.t
 
 /**
@@ -120,9 +155,33 @@ switch Null.getExn(%raw("null")) {
 
 ## Exceptions
 
-- Raises `Invalid_argument` if `value` is `null`,
+- Raises `Invalid_argument` if `value` is `null`
 */
+@deprecated("Use `getOrThrow` instead")
 let getExn: t<'a> => 'a
+
+/**
+`getOrThrow(value)` raises an exception if `null`, otherwise returns the value.
+
+```rescript
+Null.getOrThrow(Null.make(3))->assertEqual(3)
+
+switch Null.getOrThrow(%raw("'ReScript'")) {
+| exception Invalid_argument(_) => assert(false)
+| value => assertEqual(value, "ReScript")
+}
+
+switch Null.getOrThrow(%raw("null")) {
+| exception Invalid_argument(_) => assert(true)
+| _ => assert(false)
+}
+```
+
+## Exceptions
+
+- Raises `Invalid_argument` if `value` is `null`
+*/
+let getOrThrow: t<'a> => 'a
 
 /**
 `getUnsafe(value)` returns `value`.

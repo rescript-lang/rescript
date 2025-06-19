@@ -424,6 +424,12 @@ __metadata:
   languageName: node
   linkType: soft
 
+"@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Fdocstring-tests%40workspace%3Atests%2Fdocstring_tests":
+  version: 0.0.0-use.local
+  resolution: "@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Fdocstring-tests%40workspace%3Atests%2Fdocstring_tests"
+  languageName: node
+  linkType: soft
+
 "@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Ftools%40workspace%3Atests%2Ftools_tests":
   version: 0.0.0-use.local
   resolution: "@rescript/react@link:../dependencies/rescript-react::locator=%40tests%2Ftools%40workspace%3Atests%2Ftools_tests"
@@ -635,6 +641,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@tests/docstring-tests@workspace:^, @tests/docstring-tests@workspace:tests/docstring_tests":
+  version: 0.0.0-use.local
+  resolution: "@tests/docstring-tests@workspace:tests/docstring_tests"
+  dependencies:
+    "@rescript/react": "link:../dependencies/rescript-react"
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "@tests/generic-jsx-transform@workspace:tests/analysis_tests/tests-generic-jsx-transform":
   version: 0.0.0-use.local
   resolution: "@tests/generic-jsx-transform@workspace:tests/analysis_tests/tests-generic-jsx-transform"
@@ -753,6 +768,15 @@ __metadata:
   checksum: 10c0/6b5f65f647474338abbd6ee91a6bbab434662ddb8fe39464edcbcfc96484d388baad9eb506dff217b6fc1727a88894930eb1f308617161ac0f376fe06be4e1ee
   languageName: node
   linkType: hard
+
+"@utils/scripts@workspace:scripts/res":
+  version: 0.0.0-use.local
+  resolution: "@utils/scripts@workspace:scripts/res"
+  dependencies:
+    "@tests/docstring-tests": "workspace:^"
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
 
 "@yarnpkg/types@npm:^4.0.1":
   version: 4.0.1

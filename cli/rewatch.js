@@ -7,6 +7,14 @@ import { rewatch_exe, bsc_exe } from "./common/bins.js";
 
 const args = process.argv.slice(2);
 
-child_process.spawnSync(rewatch_exe, [...args, "--bsc-path", bsc_exe], {
-  stdio: "inherit",
-});
+try {
+  child_process.execFileSync(rewatch_exe, [...args, "--bsc-path", bsc_exe], {
+    stdio: "inherit",
+  });
+} catch (err) {
+  if (err.status !== undefined) {
+    process.exit(err.status); // Pass through the exit code
+  } else {
+    process.exit(1); // Generic error
+  }
+}

@@ -340,7 +340,8 @@ let print_list ~get_loc ~nodes ~print ?(force_break = false) t =
     in
     Doc.breakable_group ~force_break docs
 
-let print_listi ~get_loc ~nodes ~print ?(force_break = false) t =
+let print_listi ~get_loc ~nodes ~print ?(ignore_empty_lines = false)
+    ?(force_break = false) t =
   let rec loop i (prev_loc : Location.t) acc nodes =
     match nodes with
     | [] -> (prev_loc, Doc.concat (List.rev acc))
@@ -352,8 +353,10 @@ let print_listi ~get_loc ~nodes ~print ?(force_break = false) t =
         | Some comment -> (Comment.loc comment).loc_start
       in
       let sep =
-        if start_pos.pos_lnum - prev_loc.loc_end.pos_lnum > 1 then
-          Doc.concat [Doc.hard_line; Doc.hard_line]
+        if
+          start_pos.pos_lnum - prev_loc.loc_end.pos_lnum > 1
+          && not ignore_empty_lines
+        then Doc.concat [Doc.hard_line; Doc.hard_line]
         else Doc.line
       in
       let doc = print_comments (print node t i) t loc in
@@ -1542,7 +1545,7 @@ and print_constructor_declarations ~state ~private_flag
       ~print:(fun cd cmt_tbl i ->
         let doc = print_constructor_declaration2 ~state i cd cmt_tbl in
         print_comments doc cmt_tbl cd.Parsetree.pcd_loc)
-      ~force_break cmt_tbl
+      ~force_break cmt_tbl ~ignore_empty_lines:true
   in
   Doc.breakable_group ~force_break
     (Doc.indent (Doc.concat [Doc.line; private_flag; rows]))
@@ -1555,7 +1558,8 @@ and print_constructor_declaration2 ~state i
   let comment_doc =
     match comment_attrs with
     | [] -> Doc.nil
-    | comment_attrs -> print_doc_comments ~state cmt_tbl comment_attrs
+    | comment_attrs ->
+      print_doc_comments ~sep:Doc.hard_line ~state cmt_tbl comment_attrs
   in
   let attrs = print_attributes ~state attrs cmt_tbl in
   let is_dot_dot_dot = cd.pcd_name.txt = "..." in
@@ -1579,8 +1583,8 @@ and print_constructor_declaration2 ~state i
   in
   Doc.concat
     [
-      bar;
       comment_doc;
+      bar;
       Doc.group
         (Doc.concat
            [

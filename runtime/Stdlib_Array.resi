@@ -11,9 +11,7 @@ type t<'a> = array<'a>
 type arrayLike<'a>
 
 /**
-`fromIterator(iterator)`
-
-Creates an array from the provided `iterator`
+`fromIterator(iterator)` creates an array from the provided `iterator`
 
 ## Examples
 
@@ -35,9 +33,7 @@ external fromIterator: Stdlib_Iterator.t<'a> => array<'a> = "Array.from"
 external fromArrayLikeWithMap: (arrayLike<'a>, 'a => 'b) => array<'b> = "Array.from"
 
 /**
-`make(~length, init)`
-
-Creates an array of length `length` initialized with the value of `init`.
+`make(~length, init)` creates an array of length `length` initialized with the value of `init`.
 
 ## Examples
 
@@ -1382,3 +1378,37 @@ let last: array<'a> => option<'a>
   without having to store or process it further.
 */
 external ignore: array<'a> => unit = "%ignore"
+
+/**
+`entries(array)` returns a new array iterator object that contains the key/value pairs for each index in the array.
+
+See [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/entries) on MDN.
+
+## Examples
+
+```rescript
+let array = [5, 6, 7]
+let iterator : Iterator.t<(int, int)> = array->Array.entries
+iterator->Iterator.next->assertEqual({done: false, value: Some((0, 5))})
+iterator->Iterator.next->assertEqual({done: false, value: Some((1, 6))})
+```
+*/
+@send
+external entries: array<'a> => Stdlib_Iterator.t<(int, 'a)> = "entries"
+
+/**
+`values(array)` returns a new array iterator object that contains the values for each index in the array.
+
+See [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/values) on MDN.
+
+## Examples
+
+```rescript
+let array = [5, 6, 7]
+let iterator : Iterator.t<int> = array->Array.values
+iterator->Iterator.next->assertEqual({done: false, value: Some(5)})
+iterator->Iterator.next->assertEqual({done: false, value: Some(6)})
+```
+ */
+@send
+external values: array<'a> => Stdlib_Iterator.t<'a> = "values"

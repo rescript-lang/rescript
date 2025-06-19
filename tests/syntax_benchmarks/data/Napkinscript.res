@@ -1926,15 +1926,12 @@ module Grammar = {
     | PatternList
     | PatternOcamlList
     | PatternRecord
-
     | TypeDef
     | TypeConstrName
     | TypeParams
     | @live TypeParam
     | PackageConstraint
-
     | TypeRepresentation
-
     | RecordDecl
     | ConstructorDeclaration
     | ParameterList

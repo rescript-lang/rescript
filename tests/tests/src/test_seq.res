@@ -29,7 +29,6 @@ type rec spec =
   | Set_float(ref<float>) /* Set the reference to the float argument */
   | Tuple(list<spec>) /* Take several arguments according to the
    spec list */
-
   | Symbol(list<string>, string => unit)
   /* Take one of the symbols as argument and
    call the function with the symbol. */

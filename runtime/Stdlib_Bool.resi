@@ -65,6 +65,28 @@ switch Bool.fromStringExn("notAValidBoolean") {
 @deprecated("Use `fromStringOrThrow` instead")
 let fromStringExn: string => bool
 
+/**
+Compares two booleans, returns an `Ordering.t` value.
+
+## Examples
+```rescript
+Bool.compare(true, true)->assertEqual(Ordering.equal)
+Bool.compare(false, false)->assertEqual(Ordering.equal)
+Bool.compare(true, false)->assertEqual(Ordering.greater)
+Bool.compare(false, true)->assertEqual(Ordering.less)
+```
+*/
 external compare: (bool, bool) => Stdlib_Ordering.t = "%compare"
 
+/**
+Checks if two booleans are equal and have the same value.
+
+## Examples
+```rescript
+Bool.equal(true, true)->assertEqual(true)
+Bool.equal(false, false)->assertEqual(true)
+Bool.equal(true, false)->assertEqual(false)
+Bool.equal(false, true)->assertEqual(false)
+```
+*/
 external equal: (bool, bool) => bool = "%equal"
