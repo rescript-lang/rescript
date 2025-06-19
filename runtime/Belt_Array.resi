@@ -14,15 +14,6 @@
 
 /***
 Utilities for `Array` functions.
-
-### Note about index syntax
-
-Code like `arr[0]` does *not* compile to JavaScript `arr[0]`. Reason transforms
-the `[]` index syntax into a function: `Array.get(arr, 0)`. By default, this
-uses the default standard library's `Array.get` function, which may raise an
-exception if the index isn't found. If you `open Belt`, it will use the
-`Belt.Array.get` function which returns options instead of raising exceptions. 
-[See this for more information](../belt.mdx#array-access-runtime-safety).
 */
 
 type t<'a> = array<'a>
