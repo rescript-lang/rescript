@@ -73,6 +73,41 @@ server.tool(
   }
 );
 
+server.tool(
+  "find_type_of_global_identifier",
+  {
+    filePath: z.string().describe("Absolute path to the ReScript file"),
+    identifier: z.string().describe("The identifier to find the type of"),
+  },
+  {
+    destructiveHint: false,
+    idempotentHint: true,
+    readOnlyHint: true,
+    title: `Finds the type of a global identifier, like \`SomeModule.SomeNestedModule.someValue\` or \`React.createElement\`.
+      
+      - **Always** use the fully qualified global path. Even if you are in \`SomeModule.res\` and are looking for \`x\` in that file, use the fully qualified path \`SomeModule.x\`.`,
+  },
+  ({ filePath, identifier }) => {
+    try {
+      const result = execAnalysis([
+        "mcp",
+        "identifier-info",
+        filePath,
+        identifier,
+      ]);
+      return {
+        content: [{ type: "text", text: result ?? "No result." }],
+      };
+    } catch (error) {
+      return {
+        content: [
+          { type: "text", text: `Error finding type definition: ${error}` },
+        ],
+      };
+    }
+  }
+);
+
 // Main function to start the server
 async function main() {
   try {

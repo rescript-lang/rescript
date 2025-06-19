@@ -113,7 +113,7 @@ let main () =
   | [_; "mcp"; "loc-info"; path; line; col] ->
     Mcp.LocInfo.locInfo ~path ~pos:(int_of_string line, int_of_string col)
     |> print_endline
-  | [_; "mcp"; "identifier-info"; identifier; path] ->
+  | [_; "mcp"; "identifier-info"; path; identifier] ->
     Mcp.IdentifierInfo.identifierInfo ~identifier ~path ~maybe_line:None
       ~maybe_col:None
     |> print_endline
