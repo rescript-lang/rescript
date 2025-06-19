@@ -23,6 +23,10 @@
 
 - Better error message for when trying to await something that is not a promise. https://github.com/rescript-lang/rescript/pull/7561
 
+#### :house: Internal
+
+- Remove `@return(undefined_to_opt)` and `%undefined_to_opt` primitive. https://github.com/rescript-lang/rescript/pull/7462
+
 # 12.0.0-alpha.14
 
 #### :boom: Breaking Change
