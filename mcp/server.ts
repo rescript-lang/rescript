@@ -54,12 +54,11 @@ server.tool(
   ({ filePath, line, col }) => {
     try {
       const result = execAnalysis([
-        "hover",
+        "mcp",
+        "loc-info",
         filePath,
         line.toString(),
         col.toString(),
-        filePath,
-        "true",
       ]);
       return {
         content: [{ type: "text", text: result ?? "No result." }],
