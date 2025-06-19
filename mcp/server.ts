@@ -2,6 +2,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { execFileSync, ExecFileSyncOptions } from "child_process";
+import * as fs from "fs";
+import * as path from "path";
 
 // Create an MCP server
 const server = new McpServer({
@@ -108,9 +110,57 @@ server.tool(
   }
 );
 
+server.tool(
+  "language_docs_file_path",
+  {},
+  {
+    destructiveHint: false,
+    idempotentHint: true,
+    readOnlyHint: true,
+    title: `Gets the path to a markdown file containing the full language docs for ReScript the language, including examples.
+      
+      - **Always** use this to grep or search as needed when you have questions about ReScript the language.`,
+  },
+  async () => {
+    try {
+      const cacheDir = path.resolve(__dirname, ".cache");
+      const docsFileName = "rescript-lang-docs-12.0.0.md";
+      const docsFilePath = path.join(cacheDir, docsFileName);
+
+      if (!fs.existsSync(cacheDir)) {
+        fs.mkdirSync(cacheDir, { recursive: true });
+      }
+
+      if (!fs.existsSync(docsFilePath)) {
+        const res = await fetch(
+          "https://rescript-lang.org/llms/manual/v12.0.0/llm-full.txt"
+        );
+        const text = await res.text();
+        fs.writeFileSync(docsFilePath, text);
+      }
+
+      return {
+        content: [{ type: "text", text: docsFilePath }],
+      };
+    } catch (e) {
+      return {
+        content: [
+          { type: "text", text: `Error getting language docs file path: ${e}` },
+        ],
+      };
+    }
+  }
+);
+
 // Main function to start the server
 async function main() {
   try {
+    // Clear the cache directory
+    fs.rmSync(path.resolve(__dirname, ".cache"), {
+      recursive: true,
+      force: true,
+    });
+
     // Start receiving messages on stdin and sending messages on stdout
     const transport = new StdioServerTransport();
     await server.connect(transport);
