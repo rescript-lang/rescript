@@ -2515,13 +2515,13 @@ Path t
     "kind": 12,
     "tags": [1],
     "detail": "(float, ~radix: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` with `~radix` instead\n\n\n`toStringWithRadix(v, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.\n\n## Examples\n\n```rescript\nFloat.toStringWithRadix(6.0, ~radix=2) // \"110\"\nFloat.toStringWithRadix(3735928559.0, ~radix=16) // \"deadbeef\"\nFloat.toStringWithRadix(123456.0, ~radix=36) // \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toString` with `~radix` instead\n\n\n`toStringWithRadix(v, ~radix)` return a `string` representing the given value.\n`~radix` specifies the radix base to use for the formatted number.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.\n\n## Examples\n\n```rescript\nFloat.toStringWithRadix(6.0, ~radix=2) == \"110\"\nFloat.toStringWithRadix(3735928559.0, ~radix=16) == \"deadbeef\"\nFloat.toStringWithRadix(123456.0, ~radix=36) == \"2n9c\"\n```\n\n## Exceptions\n\n`RangeError`: if `radix` is less than 2 or greater than 36.\n"}
   }, {
     "label": "Float.toExponentialWithPrecision",
     "kind": 12,
     "tags": [1],
     "detail": "(float, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(v, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point.\nSee [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.\n\n## Examples\n\n```rescript\nFloat.toExponentialWithPrecision(77.0, ~digits=2) // \"7.70e+1\"\nFloat.toExponentialWithPrecision(5678.0, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toExponential` instead\n\n\n`toExponential(v, ~digits)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point.\nSee [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.\n\n## Examples\n\n```rescript\nFloat.toExponentialWithPrecision(77.0, ~digits=2) == \"7.70e+1\"\nFloat.toExponentialWithPrecision(5678.0, ~digits=2) == \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
   }, {
     "label": "Float.toInt",
     "kind": 12,
@@ -2533,25 +2533,25 @@ Path t
     "kind": 12,
     "tags": [1],
     "detail": "(float, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(v, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point.\nSee [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed) on MDN.\n\n## Examples\n\n```rescript\nFloat.toFixedWithPrecision(300.0, ~digits=4) // \"300.0000\"\nFloat.toFixedWithPrecision(300.0, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toFixed` instead\n\n\n`toFixedWithPrecision(v, ~digits)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point.\nSee [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed) on MDN.\n\n## Examples\n\n```rescript\nFloat.toFixedWithPrecision(300.0, ~digits=4) == \"300.0000\"\nFloat.toFixedWithPrecision(300.0, ~digits=1) == \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
   }, {
     "label": "Float.toPrecisionWithPrecision",
     "kind": 12,
     "tags": [1],
     "detail": "(float, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(v, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits.\nSee [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nFloat.toPrecisionWithPrecision(100.0, ~digits=2) // \"1.0e+2\"\nFloat.toPrecisionWithPrecision(1.0, ~digits=1) // \"1\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\nImplementations are allowed to support larger and smaller values as well.\nECMA-262 only requires a precision of up to 21 significant digits.\n\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(v, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits.\nSee [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nFloat.toPrecisionWithPrecision(100.0, ~digits=2) == \"1.0e+2\"\nFloat.toPrecisionWithPrecision(1.0, ~digits=1) == \"1\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\nImplementations are allowed to support larger and smaller values as well.\nECMA-262 only requires a precision of up to 21 significant digits.\n\n"}
   }, {
     "label": "Float.toPrecision",
     "kind": 12,
     "tags": [],
     "detail": "(float, ~digits: int=?) => string",
-    "documentation": {"kind": "markdown", "value": "\n`toPrecision(v, ~digits=?)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits.\nSee [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nFloat.toPrecision(100.0) // \"100\"\nFloat.toPrecision(1.0) // \"1\"\nFloat.toPrecision(100.0, ~digits=2) // \"1.0e+2\"\nFloat.toPrecision(1.0, ~digits=1) // \"1\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\nImplementations are allowed to support larger and smaller values as well.\nECMA-262 only requires a precision of up to 21 significant digits.\n"}
+    "documentation": {"kind": "markdown", "value": "\n`toPrecision(v, ~digits=?)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits.\nSee [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nFloat.toPrecision(100.0) == \"100\"\nFloat.toPrecision(1.0) == \"1\"\nFloat.toPrecision(100.0, ~digits=2) == \"1.0e+2\"\nFloat.toPrecision(1.0, ~digits=1) == \"1\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\nImplementations are allowed to support larger and smaller values as well.\nECMA-262 only requires a precision of up to 21 significant digits.\n"}
   }, {
     "label": "Float.toString",
     "kind": 12,
     "tags": [],
     "detail": "(float, ~radix: int=?) => string",
-    "documentation": {"kind": "markdown", "value": "\n`toString(v)` return a `string` representing the given value.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.\n\n## Examples\n\n```rescript\nFloat.toString(1000.0) // \"1000\"\nFloat.toString(-1000.0) // \"-1000\"\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`toString(v)` return a `string` representing the given value.\nSee [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.\n\n## Examples\n\n```rescript\nFloat.toString(1000.0) == \"1000\"\nFloat.toString(-1000.0) == \"-1000\"\n```\n"}
   }, {
     "label": "Float.toLocaleString",
     "kind": 12,
@@ -2563,13 +2563,13 @@ Path t
     "kind": 12,
     "tags": [],
     "detail": "(float, ~digits: int=?) => string",
-    "documentation": {"kind": "markdown", "value": "\n`toExponential(v, ~digits=?)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point.\nSee [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.\n\n## Examples\n\n```rescript\nFloat.toExponential(1000.0) // \"1e+3\"\nFloat.toExponential(-1000.0) // \"-1e+3\"\nFloat.toExponential(77.0, ~digits=2) // \"7.70e+1\"\nFloat.toExponential(5678.0, ~digits=2) // \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
+    "documentation": {"kind": "markdown", "value": "\n`toExponential(v, ~digits=?)` return a `string` representing the given value in\nexponential notation. `digits` specifies how many digits should appear after\nthe decimal point.\nSee [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.\n\n## Examples\n\n```rescript\nFloat.toExponential(1000.0) == \"1e+3\"\nFloat.toExponential(-1000.0) == \"-1e+3\"\nFloat.toExponential(77.0, ~digits=2) == \"7.70e+1\"\nFloat.toExponential(5678.0, ~digits=2) == \"5.68e+3\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` less than 0 or greater than 10.\n"}
   }, {
     "label": "Float.toFixed",
     "kind": 12,
     "tags": [],
     "detail": "(float, ~digits: int=?) => string",
-    "documentation": {"kind": "markdown", "value": "\n`toFixed(v, ~digits=?)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point.\nSee [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed) on MDN.\n\n## Examples\n\n```rescript\nFloat.toFixed(123456.0) // \"123456.00\"\nFloat.toFixed(10.0) // \"10.00\"\nFloat.toFixed(300.0, ~digits=4) // \"300.0000\"\nFloat.toFixed(300.0, ~digits=1) // \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
+    "documentation": {"kind": "markdown", "value": "\n`toFixed(v, ~digits=?)` return a `string` representing the given\nvalue using fixed-point notation. `digits` specifies how many digits should\nappear after the decimal point.\nSee [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed) on MDN.\n\n## Examples\n\n```rescript\nFloat.toFixed(123456.0) == \"123456\"\nFloat.toFixed(10.0) == \"10\"\nFloat.toFixed(300.0, ~digits=4) == \"300.0000\"\nFloat.toFixed(300.0, ~digits=1) == \"300.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is less than 0 or larger than 100.\n"}
   }]
 
 Complete src/Completion.res 427:8
