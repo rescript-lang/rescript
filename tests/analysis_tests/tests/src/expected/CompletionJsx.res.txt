@@ -874,7 +874,7 @@ Path s
     "kind": 12,
     "tags": [],
     "detail": "(string, Symbol.t, 'a) => unit",
-    "documentation": null,
+    "documentation": {"kind": "markdown", "value": "\n`setSymbol(str, symbol, value)` sets the given symbol property on the string to the specified value.\n\n## Examples\n\n```rescript\nlet mySymbol = Symbol.make(\"test\")\nlet h = String.make(\"hello\")\nString.setSymbol(h, mySymbol, 42)\nString.getSymbol(h, mySymbol) == Some(42)\n```\n"},
     "sortText": "setSymbol",
     "insertText": "->String.setSymbol",
     "additionalTextEdits": [{
