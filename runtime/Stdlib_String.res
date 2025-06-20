@@ -1,6 +1,6 @@
 type t = string
 
-@val external make: 'a => string = "String"
+@new external make: 'a => string = "String"
 
 @val external fromCharCode: int => string = "String.fromCharCode"
 @variadic @val external fromCharCodeMany: array<int> => string = "String.fromCharCode"
