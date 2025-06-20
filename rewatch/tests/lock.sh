@@ -14,21 +14,20 @@ else
 fi
 
 exit_watcher() { 
-  # Try to find child process, if not found just kill the process directly
+  # kill watcher by removing lock file
   rm lib/rewatch.lock
 }
 
 rewatch_bg watch > /dev/null 2>&1 &
+success "Watcher Started"
 
-sleep 1
+sleep 2
 
-if rewatch watch | grep 'Could not start Rewatch:' &> /dev/null; 
+if rewatch build | grep 'Could not start Rewatch:' &> /dev/null; 
 then
-  # rm output.txt
   success "Lock is correctly set"
   exit_watcher
 else 
-  # rm output.txt
   error "Not setting lock correctly"
   exit_watcher
   exit 1
@@ -40,7 +39,7 @@ touch tmp.txt
 rewatch_bg watch > tmp.txt 2>&1 &
 success "Watcher Started"
 
-sleep 1
+sleep 2
 
 if cat tmp.txt | grep 'Could not start Rewatch:' &> /dev/null; 
 then

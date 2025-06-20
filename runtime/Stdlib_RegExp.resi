@@ -117,8 +117,7 @@ switch regexp->RegExp.exec("ReScript is pretty cool, right?") {
 }
 ```
 */
-@deprecated("Use `fromString` instead")
-@new
+@deprecated("Use `fromString` instead") @new
 external fromStringWithFlags: (string, ~flags: string) => t = "RegExp"
 
 /**
@@ -155,8 +154,7 @@ switch regexp->RegExp.exec("ReScript is pretty cool, right?") {
 }
 ```
 */
-@return(nullable)
-@send
+@return(nullable) @send
 external exec: (t, string) => option<Result.t> = "exec"
 
 /**

@@ -18,6 +18,52 @@ type rec t =
 type replacer = Keys(array<string>) | Replacer((string, t) => t)
 
 /** 
+`parseOrThrow(string, ~reviver=?)` 
+
+Parses a JSON string or throws a JavaScript exception (SyntaxError), if the string isn't valid.
+The reviver describes how the value should be transformed. It is a function which receives a key and a value.
+It returns a JSON type.
+
+## Examples
+```rescript
+try {
+  let _ = JSON.parseOrThrow(`{"foo":"bar","hello":"world"}`)
+  // { foo: 'bar', hello: 'world' }
+
+  let _ = JSON.parseOrThrow("")
+  // error
+} catch {
+| JsExn(_) => Console.log("error")
+}
+
+let reviver = (_, value: JSON.t) =>
+  switch value {
+  | String(string) => string->String.toUpperCase->JSON.Encode.string
+  | Number(number) => (number *. 2.0)->JSON.Encode.float
+  | _ => value
+  }
+
+let jsonString = `{"hello":"world","someNumber":21}`
+
+try {
+  JSON.parseOrThrow(jsonString, ~reviver)->Console.log
+  // { hello: 'WORLD', someNumber: 42 }
+
+  JSON.parseOrThrow("", ~reviver)->Console.log
+  // error
+} catch {
+| JsExn(_) => Console.log("error")
+}
+```
+
+## Exceptions 
+
+- Raises a SyntaxError (Exn.t) if the string isn't valid JSON.
+*/
+@raises(Exn.t) @val
+external parseOrThrow: (string, ~reviver: (string, t) => t=?) => t = "JSON.parse"
+
+/** 
 `parseExn(string, ~reviver=?)` 
 
 Parses a JSON string or throws a JavaScript exception (SyntaxError), if the string isn't valid.
@@ -60,8 +106,7 @@ try {
 
 - Raises a SyntaxError (Exn.t) if the string isn't valid JSON.
 */
-@raises(Exn.t)
-@val
+@deprecated("Use `parseOrThrow` instead") @raises(Exn.t) @val
 external parseExn: (string, ~reviver: (string, t) => t=?) => t = "JSON.parse"
 
 /** 
@@ -82,10 +127,10 @@ let reviver = (_, value: JSON.t) =>
 
 let jsonString = `{"hello":"world","someNumber":21}`
 
-try {
-  JSON.parseExnWithReviver(jsonString, reviver)->Console.log
-  // { hello: 'WORLD', someNumber: 42 }
+JSON.parseExnWithReviver(jsonString, reviver)->Console.log
+// { hello: 'WORLD', someNumber: 42 }
 
+try {
   JSON.parseExnWithReviver("", reviver)->Console.log
   // error
 } catch {
@@ -95,11 +140,9 @@ try {
 
 ## Exceptions 
 
-- Raises a SyntaxError if the string isn't valid JSON.
+- Raises a SyntaxError if the string is not a valid JSON.
 */
-@deprecated("Use `parseExn` with optional parameter instead")
-@raises(Exn.t)
-@val
+@deprecated("Use `parseOrThrow` with optional parameter instead") @raises(Exn.t) @val
 external parseExnWithReviver: (string, (string, t) => t) => t = "JSON.parse"
 
 /** 
@@ -171,8 +214,7 @@ JSON.stringifyWithIndent(json, 2)
 // }
 ```
 */
-@deprecated("Use `stringify` with optional parameter instead")
-@val
+@deprecated("Use `stringify` with optional parameter instead") @val
 external stringifyWithIndent: (t, @as(json`null`) _, int) => string = "JSON.stringify"
 
 /** 
@@ -204,8 +246,7 @@ JSON.stringifyWithReplacer(json, replacer)
 // {"foo":"BAR","hello":"WORLD","someNumber":42}
 ```
 */
-@deprecated("Use `stringify` with optional parameter instead")
-@val
+@deprecated("Use `stringify` with optional parameter instead") @val
 external stringifyWithReplacer: (t, (string, t) => t) => string = "JSON.stringify"
 
 /** 
@@ -241,8 +282,7 @@ JSON.stringifyWithReplacerAndIndent(json, replacer, 2)
 // }
 ```
 */
-@deprecated("Use `stringify` with optional parameters instead")
-@val
+@deprecated("Use `stringify` with optional parameters instead") @val
 external stringifyWithReplacerAndIndent: (t, (string, t) => t, int) => string = "JSON.stringify"
 
 /** 
@@ -265,8 +305,7 @@ JSON.stringifyWithFilter(json, ["foo", "someNumber"])
 // {"foo":"bar","someNumber":42}
 ```
 */
-@deprecated("Use `stringify` with optional parameter instead")
-@val
+@deprecated("Use `stringify` with optional parameter instead") @val
 external stringifyWithFilter: (t, array<string>) => string = "JSON.stringify"
 
 /** 
@@ -292,8 +331,7 @@ JSON.stringifyWithFilterAndIndent(json, ["foo", "someNumber"], 2)
 // }
 ```
 */
-@deprecated("Use `stringify` with optional parameters instead")
-@val
+@deprecated("Use `stringify` with optional parameters instead") @val
 external stringifyWithFilterAndIndent: (t, array<string>, int) => string = "JSON.stringify"
 
 /** 
@@ -362,8 +400,7 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 - Raises a TypeError if the value contains circular references.
 - Raises a TypeError if the value contains `BigInt`s.
 */
-@raises(Exn.t)
-@val
+@raises(Exn.t) @val
 external stringifyAny: ('a, ~replacer: replacer=?, ~space: int=?) => option<string> =
   "JSON.stringify"
 
@@ -406,9 +443,7 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 - Raises a TypeError if the value contains circular references.
 - Raises a TypeError if the value contains `BigInt`s.
 */
-@deprecated("Use `stringifyAny` with optional parameter instead")
-@raises(Exn.t)
-@val
+@deprecated("Use `stringifyAny` with optional parameter instead") @raises(Exn.t) @val
 external stringifyAnyWithIndent: ('a, @as(json`null`) _, int) => option<string> = "JSON.stringify"
 
 /** 
@@ -455,9 +490,7 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 - Raises a TypeError if the value contains circular references.
 - Raises a TypeError if the value contains `BigInt`s.
 */
-@deprecated("Use `stringifyAny` with optional parameter instead")
-@raises
-@val
+@deprecated("Use `stringifyAny` with optional parameter instead") @raises @val
 external stringifyAnyWithReplacer: ('a, (string, t) => t) => option<string> = "JSON.stringify"
 
 /** 
@@ -505,9 +538,7 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 - Raises a TypeError if the value contains circular references.
 - Raises a TypeError if the value contains `BigInt`s.
 */
-@deprecated("Use `stringifyAny` with optional parameters instead")
-@raises
-@val
+@deprecated("Use `stringifyAny` with optional parameters instead") @raises @val
 external stringifyAnyWithReplacerAndIndent: ('a, (string, t) => t, int) => option<string> =
   "JSON.stringify"
 
@@ -546,9 +577,7 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 - Raises a TypeError if the value contains circular references.
 - Raises a TypeError if the value contains `BigInt`s.
 */
-@deprecated("Use `stringifyAny` with optional parameter instead")
-@raises
-@val
+@deprecated("Use `stringifyAny` with optional parameter instead") @raises @val
 external stringifyAnyWithFilter: ('a, array<string>) => string = "JSON.stringify"
 
 /** 
@@ -601,9 +630,7 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 - Raises a TypeError if the value contains circular references.
 - Raises a TypeError if the value contains `BigInt`s.
 */
-@deprecated("Use `stringifyAny` with optional parameters instead")
-@raises
-@val
+@deprecated("Use `stringifyAny` with optional parameters instead") @raises @val
 external stringifyAnyWithFilterAndIndent: ('a, array<string>, int) => string = "JSON.stringify"
 
 module Classify: {
@@ -719,10 +746,10 @@ module Decode: {
 
   ## Examples
   ```rescript
-  JSON.parseExn(`true`)->JSON.Decode.bool
+  JSON.parseOrThrow(`true`)->JSON.Decode.bool
   // Some(true)
 
-  JSON.parseExn(`"hello world"`)->JSON.Decode.bool
+  JSON.parseOrThrow(`"hello world"`)->JSON.Decode.bool
   // None
   ```
   */
@@ -733,10 +760,10 @@ module Decode: {
 
   ## Examples
   ```rescript
-  JSON.parseExn(`null`)->JSON.Decode.null
+  JSON.parseOrThrow(`null`)->JSON.Decode.null
   // Some(null)
 
-  JSON.parseExn(`"hello world"`)->JSON.Decode.null
+  JSON.parseOrThrow(`"hello world"`)->JSON.Decode.null
   // None
   ```
   */
@@ -747,10 +774,10 @@ module Decode: {
 
   ## Examples
   ```rescript
-  JSON.parseExn(`"hello world"`)->JSON.Decode.string
+  JSON.parseOrThrow(`"hello world"`)->JSON.Decode.string
   // Some("hello world")
 
-  JSON.parseExn(`42`)->JSON.Decode.string
+  JSON.parseOrThrow(`42`)->JSON.Decode.string
   // None 
   ```
   */
@@ -761,10 +788,10 @@ module Decode: {
 
   ## Examples
   ```rescript
-  JSON.parseExn(`42.0`)->JSON.Decode.float
+  JSON.parseOrThrow(`42.0`)->JSON.Decode.float
   // Some(42.0)
 
-  JSON.parseExn(`"hello world"`)->JSON.Decode.float
+  JSON.parseOrThrow(`"hello world"`)->JSON.Decode.float
   // None
   ```
   */
@@ -775,10 +802,10 @@ module Decode: {
 
   ## Examples
   ```rescript
-  JSON.parseExn(`{"foo":"bar"}`)->JSON.Decode.object
+  JSON.parseOrThrow(`{"foo":"bar"}`)->JSON.Decode.object
   // Some({ foo: 'bar' })
 
-  JSON.parseExn(`"hello world"`)->JSON.Decode.object
+  JSON.parseOrThrow(`"hello world"`)->JSON.Decode.object
   // None
   ```
   */
@@ -789,10 +816,10 @@ module Decode: {
 
   ## Examples
   ```rescript
-  JSON.parseExn(`["foo", "bar"]`)->JSON.Decode.array
+  JSON.parseOrThrow(`["foo", "bar"]`)->JSON.Decode.array
   // Some([ 'foo', 'bar' ])
 
-  JSON.parseExn(`"hello world"`)->JSON.Decode.array
+  JSON.parseOrThrow(`"hello world"`)->JSON.Decode.array
   // None
   ```
   */

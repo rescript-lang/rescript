@@ -21,6 +21,8 @@ env:
 
 jobs:
   build-compiler:
+    outputs:
+      api-docs-artifact-id: ${{ steps.upload-api-docs.outputs.artifact-id }}
     strategy:
       fail-fast: false
       matrix:
@@ -36,6 +38,7 @@ jobs:
             upload_binaries: true
             # Build the playground compiler and run the benchmarks on the fastest runner
             build_playground: true
+            generate_api_docs: true
             benchmarks: true
             node-target: linux-arm64
             rust-target: aarch64-unknown-linux-musl
@@ -98,6 +101,9 @@ jobs:
       - name: Install npm packages
         run: yarn install
 
+      - name: Install testrepo deps
+        run: cd rewatch/testrepo && yarn install
+
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
         uses: awalsh128/cache-apt-pkgs-action@v1.4.3
@@ -133,6 +139,8 @@ jobs:
       - name: Copy rewatch binary
         run: |
           cp rewatch/target/${{ matrix.rust-target }}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch
+          mkdir -p rewatch/target/release
+          cp rewatch/target/${{ matrix.rust-target }}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch/target/release
           ./scripts/copyExes.js --rewatch
         shell: bash
 
@@ -316,13 +324,11 @@ jobs:
         if: steps.ninja-build-cache.outputs.cache-hit != 'true'
         run: node scripts/copyExes.js --ninja
 
-      - name: "Syntax: Run roundtrip tests"
-        if: ${{ runner.os != 'Windows' }}
-        run: opam exec -- make test-syntax-roundtrip
-
-      - name: "Syntax: Run tests (Windows)"
-        if: ${{ runner.os == 'Windows' }}
-        run: opam exec -- make test-syntax
+      - name: "Syntax: Run tests"
+        env:
+          ROUNDTRIP_TEST: ${{ runner.os == 'Windows' && '0' || '1' }}
+        run: ./scripts/test_syntax.sh
+        shell: bash
 
       - name: Build runtime/stdlib with rewatch
         if: ${{ runner.os != 'Windows' }}
@@ -354,9 +360,15 @@ jobs:
         if: runner.os != 'Windows'
         run: make -C tests/gentype_tests/typescript-react-example clean test
 
+      - name: Run rewatch tests
+        run: ./rewatch/tests/suite-ci.sh
+        shell: bash
+
       - name: Run syntax benchmarks
         if: matrix.benchmarks
-        run: ./_build/install/default/bin/syntax_benchmarks | tee tests/benchmark-output.json
+        run: |
+          set -o pipefail
+          ./_build/install/default/bin/syntax_benchmarks | tee tests/benchmark-output.json
 
       # Benchmarking is disabled for now because of inconsistent run times on different runners
       #
@@ -429,6 +441,18 @@ jobs:
           name: lib-ocaml
           path: lib/ocaml
 
+      - name: Generate API Docs
+        if: ${{ matrix.generate_api_docs }}
+        run: yarn apidocs:generate
+
+      - name: "Upload artifacts: scripts/res/apiDocs"
+        id: upload-api-docs
+        if: ${{ matrix.generate_api_docs }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: api
+          path: scripts/res/apiDocs/
+
   pkg-pr-new:
     needs:
       - build-compiler
@@ -456,6 +480,49 @@ jobs:
         run: |
           yarn dlx pkg-pr-new publish "." "./packages/@rescript/*"
 
+  api-docs:
+    needs:
+      - build-compiler
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout rescript-lang.org
+        uses: actions/checkout@v4
+        with:
+          repository: rescript-lang/rescript-lang.org
+          ssh-key: ${{ secrets.RESCRIPT_LANG_ORG_DEPLOY_KEY }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ needs.build-compiler.outputs.api-docs-artifact-id }}
+          path: data
+
+      - name: Check if repo is clean
+        id: diffcheck
+        run: |
+          git status
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "clean=true" >> $GITHUB_OUTPUT
+          else
+            echo "clean=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build website
+        if: steps.diffcheck.outputs.clean == 'false'
+        run: |
+          npm ci 
+          npx rescript
+          npm run build
+
+      - name: Commit and push
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions@rescript-lang.org"
+          git add data/api
+          git commit -m "Update API docs for ${{ github.ref_name }}"
+          git push
+
   test-integration:
     needs:
       - pkg-pr-new
@@ -478,7 +545,8 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          # Run integration tests with the oldest supported node version.
+          node-version: 20
 
       - name: Make test directory
         id: tmp-dir
@@ -507,7 +575,6 @@ jobs:
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Install ReScript package in rewatch/testrepo
-        if: runner.os == 'Linux'
         run: |
           COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
           yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
@@ -515,9 +582,8 @@ jobs:
         working-directory: rewatch/testrepo
 
       - name: Run rewatch integration tests
-        # Currently failing on Windows and intermittently on macOS
-        if: runner.os == 'Linux'
-        run: make test-rewatch-ci
+        run: ./rewatch/tests/suite-ci.sh node_modules/.bin/rewatch
+        shell: bash
 
   publish:
     needs:

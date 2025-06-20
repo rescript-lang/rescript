@@ -91,7 +91,31 @@ switch Option.getExn(None, ~message="was None!") {
 
 - Raises an error if `opt` is `None`
 */
+@deprecated("Use `getOrThrow` instead")
 let getExn: (option<'a>, ~message: string=?) => 'a
+
+/**
+`getOrThrow(opt, ~message=?)` returns `value` if `opt` is `Some(value)`, otherwise raises an exception with the message provided, or a generic message if no message was provided.
+
+```rescript
+Option.getOrThrow(Some(3))->assertEqual(3)
+
+switch Option.getOrThrow(None) {
+| exception _ => assert(true)
+| _ => assert(false)
+}
+
+switch Option.getOrThrow(None, ~message="was None!") {
+| exception _ => assert(true) // Raises an Error with the message "was None!"
+| _ => assert(false)
+}
+```
+
+## Exceptions
+
+- Raises an error if `opt` is `None`
+*/
+let getOrThrow: (option<'a>, ~message: string=?) => 'a
 
 /**
 `getUnsafe(opt)` returns `value` if `opt` is `Some(value)`, otherwise `undefined`.

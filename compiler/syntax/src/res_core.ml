@@ -61,7 +61,7 @@ module ErrorMessages = struct
      matching currently guarantees to never create new intermediate data."
 
   let record_pattern_spread =
-    "Record's `...` spread is not supported in pattern matches.\n\
+    "Record spread (`...`) is not supported in pattern matches.\n\
      Explanation: you can't collect a subset of a record's field into its own \
      record, since a record needs an explicit declaration and that subset \
      wouldn't have one.\n\
@@ -70,13 +70,14 @@ module ErrorMessages = struct
   [@@live]
 
   let array_pattern_spread =
-    "Array's `...` spread is not supported in pattern matches.\n\
-     Explanation: such spread would create a subarray; out of performance \
-     concern, our pattern matching currently guarantees to never create new \
-     intermediate data.\n\
-     Solution: if it's to validate the first few elements, use a `when` clause \
-     + Array size check + `get` checks on the current pattern. If it's to \
-     obtain a subarray, use `Array.sub` or `Belt.Array.slice`."
+    "Array spread (`...`) is not supported in pattern matches.\n\n\
+     Explanation: Allowing `...` here would require creating a new subarray at \
+     match time, but for performance reasons pattern matching is guaranteed to \
+     never create intermediate data.\n\n\
+     Possible solutions:\n\
+     - To validate specific elements: Use `if` with length checks and \
+     `Array.get`\n\
+     - To extract a subarray: Use `Array.slice`"
 
   let record_expr_spread =
     "Records can only have one `...` spread, at the beginning.\n\
@@ -4885,12 +4886,35 @@ and parse_constr_decl_args p =
  *  | constr-name const-args
  *  | attrs constr-name const-args *)
 and parse_type_constructor_declaration_with_bar p =
-  match p.Parser.token with
-  | Bar ->
+  let is_constructor_with_bar p =
+    Parser.lookahead p (fun state ->
+        match state.Parser.token with
+        | DocComment _ -> (
+          Parser.next state;
+          match state.token with
+          | Bar -> true
+          | _ -> false)
+        | Bar -> true
+        | _ -> false)
+  in
+  if is_constructor_with_bar p then (
+    let doc_comment_attrs =
+      match p.Parser.token with
+      | DocComment (loc, s) ->
+        Parser.next p;
+        [doc_comment_to_attribute loc s]
+      | _ -> []
+    in
     let start_pos = p.Parser.start_pos in
     Parser.next p;
-    Some (parse_type_constructor_declaration ~start_pos p)
-  | _ -> None
+    let constr = parse_type_constructor_declaration ~start_pos p in
+    Some
+      {
+        constr with
+        Parsetree.pcd_attributes =
+          doc_comment_attrs @ constr.Parsetree.pcd_attributes;
+      })
+  else None
 
 and parse_type_constructor_declaration ~start_pos p =
   Parser.leave_breadcrumb p Grammar.ConstructorDeclaration;
@@ -4919,9 +4943,17 @@ and parse_type_constructor_declarations ?first p =
   let first_constr_decl =
     match first with
     | None ->
+      let doc_comment_attrs =
+        match p.Parser.token with
+        | DocComment (loc, s) ->
+          Parser.next p;
+          [doc_comment_to_attribute loc s]
+        | _ -> []
+      in
       let start_pos = p.Parser.start_pos in
       ignore (Parser.optional p Token.Bar);
-      parse_type_constructor_declaration ~start_pos p
+      let constr = parse_type_constructor_declaration ~start_pos p in
+      {constr with pcd_attributes = doc_comment_attrs @ constr.pcd_attributes}
     | Some first_constr_decl -> first_constr_decl
   in
   first_constr_decl
@@ -4947,7 +4979,7 @@ and parse_type_representation ?current_type_name_path ?inline_types_context p =
   in
   let kind =
     match p.Parser.token with
-    | Bar | Uident _ ->
+    | Bar | Uident _ | DocComment _ ->
       Parsetree.Ptype_variant (parse_type_constructor_declarations p)
     | Lbrace ->
       Parsetree.Ptype_record
@@ -5500,7 +5532,7 @@ and parse_type_equation_and_representation ?current_type_name_path
       parse_record_or_object_decl ?current_type_name_path ?inline_types_context
         p
     | Private -> parse_private_eq_or_repr p
-    | Bar | DotDot ->
+    | Bar | DotDot | DocComment _ ->
       let priv, kind = parse_type_representation p in
       (None, priv, kind)
     | _ -> (

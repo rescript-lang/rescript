@@ -57,7 +57,6 @@ assertEqual(Belt.Float.fromString("1.0"), Some(1.0))
 */
 let fromString: string => option<float>
 
-@val
 /**
 Converts a given `float` to a `string`. Uses the JavaScript `String` constructor under the hood.
 
@@ -67,6 +66,7 @@ Converts a given `float` to a `string`. Uses the JavaScript `String` constructor
 assertEqual(Belt.Float.toString(1.0), "1")
 ```
 */
+@val
 external toString: float => string = "String"
 
 /**

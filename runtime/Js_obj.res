@@ -26,10 +26,10 @@
 Provides functions for inspecting and manipulating native JavaScript objects
 */
 
-@obj /** `empty()` returns the empty object `{}` */
+/** `empty()` returns the empty object `{}` */
+@obj
 external empty: unit => {..} = ""
 
-@val
 /**
 `assign(target, source)` copies properties from source to target.
 Properties in `target` will be overwritten by properties in `source` if they have the same key.
@@ -63,6 +63,7 @@ Js.log(obj)
 Js.log(target)
 ```
 */
+@val
 external assign: ({..}, {..}) => {..} = "Object.assign"
 
 /* TODO:

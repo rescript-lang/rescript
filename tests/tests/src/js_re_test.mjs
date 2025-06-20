@@ -5,121 +5,114 @@ import * as Primitive_array from "rescript/lib/es6/Primitive_array.js";
 import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 let suites_0 = [
-  "captures",
+  "fromString",
   param => {
-    let re = /(\d+)-(?:(\d+))?/g;
-    let result = re.exec("3-");
-    if (result === null) {
-      return {
-        TAG: "Fail",
-        _0: undefined
-      };
-    }
-    let defined = Primitive_array.get(result, 1);
-    let $$undefined = Primitive_array.get(result, 2);
+    let contentOf = (tag, xmlString) => {
+      let x = Primitive_option.fromNull(new RegExp("<" + (tag + (">(.*?)<\\/" + (tag + ">")))).exec(xmlString));
+      if (x !== undefined) {
+        return Primitive_option.fromNullable(Primitive_array.get(Primitive_option.valFromOption(x), 1));
+      }
+      
+    };
     return {
       TAG: "Eq",
-      _0: [
-        "3",
-        null
-      ],
-      _1: [
-        defined,
-        $$undefined
-      ]
+      _0: contentOf("div", "<div>Hi</div>"),
+      _1: "Hi"
     };
   }
 ];
 
 let suites_1 = {
   hd: [
-    "fromString",
+    "exec_literal",
     param => {
-      let contentOf = (tag, xmlString) => {
-        let x = Primitive_option.fromNull(new RegExp("<" + (tag + (">(.*?)<\\/" + (tag + ">")))).exec(xmlString));
-        if (x !== undefined) {
-          return Primitive_option.fromNullable(Primitive_array.get(Primitive_option.valFromOption(x), 1));
-        }
-        
-      };
-      return {
-        TAG: "Eq",
-        _0: contentOf("div", "<div>Hi</div>"),
-        _1: "Hi"
-      };
+      let res = /[^.]+/.exec("http://xxx.domain.com");
+      if (res !== null) {
+        return {
+          TAG: "Eq",
+          _0: "http://xxx",
+          _1: Primitive_array.get(res, 0)
+        };
+      } else {
+        return {
+          TAG: "FailWith",
+          _0: "regex should match"
+        };
+      }
     }
   ],
   tl: {
     hd: [
-      "exec_literal",
+      "exec_no_match",
       param => {
-        let res = /[^.]+/.exec("http://xxx.domain.com");
-        if (res !== null) {
+        let match = /https:\/\/(.*)/.exec("http://xxx.domain.com");
+        if (match !== null) {
           return {
-            TAG: "Eq",
-            _0: "http://xxx",
-            _1: Primitive_array.get(res, 0)
+            TAG: "FailWith",
+            _0: "regex should not match"
           };
         } else {
           return {
-            TAG: "FailWith",
-            _0: "regex should match"
+            TAG: "Ok",
+            _0: true
           };
         }
       }
     ],
     tl: {
       hd: [
-        "exec_no_match",
+        "test_str",
         param => {
-          let match = /https:\/\/(.*)/.exec("http://xxx.domain.com");
-          if (match !== null) {
-            return {
-              TAG: "FailWith",
-              _0: "regex should not match"
-            };
-          } else {
-            return {
-              TAG: "Ok",
-              _0: true
-            };
-          }
+          let res = new RegExp("foo").test("#foo#");
+          return {
+            TAG: "Eq",
+            _0: true,
+            _1: res
+          };
         }
       ],
       tl: {
         hd: [
-          "test_str",
+          "fromStringWithFlags",
           param => {
-            let res = new RegExp("foo").test("#foo#");
+            let res = new RegExp("foo", "g");
             return {
               TAG: "Eq",
               _0: true,
-              _1: res
+              _1: res.global
             };
           }
         ],
         tl: {
           hd: [
-            "fromStringWithFlags",
+            "result_index",
             param => {
-              let res = new RegExp("foo", "g");
-              return {
-                TAG: "Eq",
-                _0: true,
-                _1: res.global
-              };
+              let res = new RegExp("zbar").exec("foobarbazbar");
+              if (res !== null) {
+                return {
+                  TAG: "Eq",
+                  _0: 8,
+                  _1: res.index
+                };
+              } else {
+                return {
+                  TAG: "Fail",
+                  _0: undefined
+                };
+              }
             }
           ],
           tl: {
             hd: [
-              "result_index",
+              "result_input",
               param => {
-                let res = new RegExp("zbar").exec("foobarbazbar");
+                let input = "foobar";
+                let res = /foo/g.exec(input);
                 if (res !== null) {
                   return {
                     TAG: "Eq",
-                    _0: 8,
-                    _1: res.index
+                    _0: input,
+                    _1: res.input
                   };
                 } else {
                   return {
@@ -131,123 +124,102 @@ let suites_1 = {
             ],
             tl: {
               hd: [
-                "result_input",
-                param => {
-                  let input = "foobar";
-                  let res = /foo/g.exec(input);
-                  if (res !== null) {
-                    return {
-                      TAG: "Eq",
-                      _0: input,
-                      _1: res.input
-                    };
-                  } else {
-                    return {
-                      TAG: "Fail",
-                      _0: undefined
-                    };
-                  }
-                }
+                "t_flags",
+                param => ({
+                  TAG: "Eq",
+                  _0: "gi",
+                  _1: /./ig.flags
+                })
               ],
               tl: {
                 hd: [
-                  "t_flags",
+                  "t_global",
                   param => ({
                     TAG: "Eq",
-                    _0: "gi",
-                    _1: /./ig.flags
+                    _0: true,
+                    _1: /./ig.global
                   })
                 ],
                 tl: {
                   hd: [
-                    "t_global",
+                    "t_ignoreCase",
                     param => ({
                       TAG: "Eq",
                       _0: true,
-                      _1: /./ig.global
+                      _1: /./ig.ignoreCase
                     })
                   ],
                   tl: {
                     hd: [
-                      "t_ignoreCase",
-                      param => ({
-                        TAG: "Eq",
-                        _0: true,
-                        _1: /./ig.ignoreCase
-                      })
+                      "t_lastIndex",
+                      param => {
+                        let re = /na/g;
+                        re.exec("banana");
+                        return {
+                          TAG: "Eq",
+                          _0: 4,
+                          _1: re.lastIndex
+                        };
+                      }
                     ],
                     tl: {
                       hd: [
-                        "t_lastIndex",
+                        "t_setLastIndex",
                         param => {
                           let re = /na/g;
-                          re.exec("banana");
+                          let before = re.lastIndex;
+                          re.lastIndex = 42;
+                          let after = re.lastIndex;
                           return {
                             TAG: "Eq",
-                            _0: 4,
-                            _1: re.lastIndex
+                            _0: [
+                              0,
+                              42
+                            ],
+                            _1: [
+                              before,
+                              after
+                            ]
                           };
                         }
                       ],
                       tl: {
                         hd: [
-                          "t_setLastIndex",
-                          param => {
-                            let re = /na/g;
-                            let before = re.lastIndex;
-                            re.lastIndex = 42;
-                            let after = re.lastIndex;
-                            return {
-                              TAG: "Eq",
-                              _0: [
-                                0,
-                                42
-                              ],
-                              _1: [
-                                before,
-                                after
-                              ]
-                            };
-                          }
+                          "t_multiline",
+                          param => ({
+                            TAG: "Eq",
+                            _0: false,
+                            _1: /./ig.multiline
+                          })
                         ],
                         tl: {
                           hd: [
-                            "t_multiline",
+                            "t_source",
                             param => ({
                               TAG: "Eq",
-                              _0: false,
-                              _1: /./ig.multiline
+                              _0: "f.+o",
+                              _1: /f.+o/ig.source
                             })
                           ],
                           tl: {
                             hd: [
-                              "t_source",
+                              "t_sticky",
                               param => ({
                                 TAG: "Eq",
-                                _0: "f.+o",
-                                _1: /f.+o/ig.source
+                                _0: true,
+                                _1: /./yg.sticky
                               })
                             ],
                             tl: {
                               hd: [
-                                "t_sticky",
+                                "t_unicode",
                                 param => ({
                                   TAG: "Eq",
-                                  _0: true,
-                                  _1: /./yg.sticky
+                                  _0: false,
+                                  _1: /./yg.unicode
                                 })
                               ],
-                              tl: {
-                                hd: [
-                                  "t_unicode",
-                                  param => ({
-                                    TAG: "Eq",
-                                    _0: false,
-                                    _1: /./yg.unicode
-                                  })
-                                ],
-                                tl: /* [] */0
-                              }
+                              tl: /* [] */0
                             }
                           }
                         }

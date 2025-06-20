@@ -160,7 +160,9 @@ end = struct
   let parse_rescript src filename =
     let p = Parser.make src filename in
     let structure = ResParser.parse_implementation p in
-    assert (p.diagnostics == []);
+    if p.diagnostics != [] then (
+      Res_diagnostics.print_report p.diagnostics src;
+      assert false);
     structure
 
   let data_dir = "tests/syntax_benchmarks/data"

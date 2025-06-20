@@ -10,7 +10,43 @@
 > - :house: [Internal]
 > - :nail_care: [Polish]
 
-# 12.0.0-alpha.14 (Unreleased)
+# 12.0.0-alpha.15 (Unreleased)
+
+#### :bug: Bug fix
+
+- Ignore inferred arity in functions inside `%raw` functions, leaving to `%ffi` the responsibility to check the arity since it gives an error in case of mismatch. https://github.com/rescript-lang/rescript/pull/7542
+- Pass the rewatch exit code through in wrapper script. https://github.com/rescript-lang/rescript/pull/7565
+- Prop punning when types don't match results in I/O error: _none_: No such file or directory. https://github.com/rescript-lang/rescript/pull/7533
+- Pass location to children prop in jsx ppx. https://github.com/rescript-lang/rescript/pull/7540
+
+#### :nail_care: Polish
+
+- Better error message for when trying to await something that is not a promise. https://github.com/rescript-lang/rescript/pull/7561
+
+#### :house: Internal
+
+- Remove `@return(undefined_to_opt)` and `%undefined_to_opt` primitive. https://github.com/rescript-lang/rescript/pull/7462
+
+# 12.0.0-alpha.14
+
+#### :boom: Breaking Change
+
+- `Iterator.forEach` now emits `Iterator.prototype.forEach` call. https://github.com/rescript-lang/rescript/pull/7506
+- Rename functions ending with `Exn` to end with `OrThrow`. The old `Exn` functions are now deprecated:
+  - `Bool.fromStringExn` → `Bool.fromStringOrThrow`
+  - `BigInt.fromStringExn` → `BigInt.fromStringOrThrow`
+  - `JSON.parseExn` → `JSON.parseOrThrow`
+  - Changed `BigInt.fromFloat` to return an option rather than throwing an error.
+  - Added `BigInt.fromFloatOrThrow`
+  - `Option.getExn` → `Option.getOrThrow`
+  - `Null.getExn` → `Null.getOrThrow`
+  - `Nullable.getExn` → `Nullable.getOrThrow`
+  - `Result.getExn` → `Result.getOrThrow`
+  - `List.getExn` → `List.getOrThrow`
+  - `List.tailExn` → `List.tailOrThrow`
+  - `List.headExn` → `List.headOrThrow`
+  - Old functions remain available but are marked as deprecated with guidance to use the new `OrThrow` variants.
+  - https://github.com/rescript-lang/rescript/pull/7518, https://github.com/rescript-lang/rescript/pull/7554
 
 #### :rocket: New Feature
 
@@ -18,6 +54,7 @@
 - Add `Array.findLast`, `Array.findLastWithIndex`, `Array.findLastIndex`, `Array.findLastIndexWithIndex` and `Array.findLastIndexOpt`. https://github.com/rescript-lang/rescript/pull/7503
 - Add `options` argument to `Console.dir`. https://github.com/rescript-lang/rescript/pull/7504
 - Show variant constructor's inline record types on hover. https://github.com/rescript-lang/rescript/pull/7519
+- Add additional `Iterator.prototype` bindings to `runtime/Stdlib_Iterator.res`. https://github.com/rescript-lang/rescript/pull/7506
 
 #### :bug: Bug fix
 
@@ -25,6 +62,10 @@
 - Treat `throw` like `raise` in analysis. https://github.com/rescript-lang/rescript/pull/7521
 - Fix `index out of bounds` exception thrown in rare cases by `rescript-editor-analysis.exe codeAction` command. https://github.com/rescript-lang/rescript/pull/7523
 - Don't produce duplicate type definitions for recursive types on hover. https://github.com/rescript-lang/rescript/pull/7524
+- Prop punning when types don't match results in `I/O error: _none_: No such file or directory`. https://github.com/rescript-lang/rescript/pull/7533
+- Fix partial application with user-defined function types. https://github.com/rescript-lang/rescript/pull/7548
+- Fix doc comment before variant throwing syntax error. https://github.com/rescript-lang/rescript/pull/7535
+- Fix apparent non-determinism in generated code for pattern matching. https://github.com/rescript-lang/rescript/pull/7557
 
 #### :nail_care: Polish
 
@@ -37,11 +78,17 @@
 - Improve error message for pipe (`->`) syntax. https://github.com/rescript-lang/rescript/pull/7520
 - Improve a few error messages around various subtyping issues. https://github.com/rescript-lang/rescript/pull/7404
 - In module declarations, accept the invalid syntax `M = {...}` and format it to `M : {...}`. https://github.com/rescript-lang/rescript/pull/7527
+- Improve doc comment formatting to match the style of multiline comments. https://github.com/rescript-lang/rescript/pull/7529
+- Improve error messages around type mismatches for try/catch, if, for, while, and optional record fields + optional function arguments. https://github.com/rescript-lang/rescript/pull/7522
+- Sync reanalyze with the new APIs around exception. https://github.com/rescript-lang/rescript/pull/7536
+- Improve array pattern spread error message. https://github.com/rescript-lang/rescript/pull/7549
+- Sync API docs with rescript-lang.org on release. https://github.com/rescript-lang/rescript/pull/7555
 
 #### :house: Internal
 
 - Refactor the ast for record expressions and patterns. https://github.com/rescript-lang/rescript/pull/7528
 - Editor: add completions from included modules. https://github.com/rescript-lang/rescript/pull/7515
+- Add `-editor-mode` arg to `bsc` for doing special optimizations only relevant to the editor tooling. https://github.com/rescript-lang/rescript/pull/7541
 
 # 12.0.0-alpha.13
 

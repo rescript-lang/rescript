@@ -30,8 +30,8 @@ type t<+'a> = Primitive_js_extern.undefined<'a>
 /** Constructs a value of `Js.undefined<'a>` containing a value of `'a`. */
 external return: 'a => t<'a> = "%identity"
 
-@deprecated("Use = Js.undefined directly")
 /** Returns `true` if the given value is empty (undefined), `false` otherwise. */
+@deprecated("Use = Js.undefined directly")
 let test: t<'a> => bool
 
 /**
@@ -90,6 +90,6 @@ Maps `Js.undefined<'a>` to `option<'a>`
 `a` => `Some(a)`
 `empty` => `None`
 */
-external toOption: t<'a> => option<'a> = "%undefined_to_opt"
+let toOption: t<'a> => option<'a>
 
-@deprecated("use toOption instead") external to_opt: t<'a> => option<'a> = "%undefined_to_opt"
+@deprecated("use toOption instead") let to_opt: t<'a> => option<'a>

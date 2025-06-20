@@ -10,8 +10,17 @@ function f(u) {
   return extra => f$1(1, extra);
 }
 
+function add$1(a, b) {
+  return a + b | 0;
+}
+
+function add5(extra) {
+  return 5 + extra | 0;
+}
+
 export {
-  add,
   f,
+  add$1 as add,
+  add5,
 }
 /* No side effect */

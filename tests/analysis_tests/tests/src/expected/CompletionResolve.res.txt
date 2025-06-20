@@ -1,5 +1,5 @@
 Completion resolve: Belt_Array
-"\nUtilities for `Array` functions.\n\n### Note about index syntax\n\nCode like `arr[0]` does *not* compile to JavaScript `arr[0]`. Reason transforms\nthe `[]` index syntax into a function: `Array.get(arr, 0)`. By default, this\nuses the default standard library's `Array.get` function, which may raise an\nexception if the index isn't found. If you `open Belt`, it will use the\n`Belt.Array.get` function which returns options instead of raising exceptions. \n[See this for more information](../belt.mdx#array-access-runtime-safety).\n"
+"\nUtilities for `Array` functions.\n"
 
 Completion resolve: ModuleStuff
 " This is a top level module doc. "

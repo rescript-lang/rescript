@@ -1,4 +1,7 @@
 #!/bin/bash
+
+unset CLICOLOR_FORCE
+
 # Make sure we are in the right directory
 cd $(dirname $0)
 
@@ -6,7 +9,7 @@ cd $(dirname $0)
 if [ -n "$1" ]; then
   REWATCH_EXECUTABLE="$1"
 else
-  REWATCH_EXECUTABLE="../target/release/rewatch"
+  REWATCH_EXECUTABLE="../target/release/rewatch --bsc-path ../../_build/install/default/bin/bsc"
 fi
 export REWATCH_EXECUTABLE
 
@@ -23,11 +26,11 @@ git checkout ../testrepo/package.json &> /dev/null
 success "Reset package.json and yarn.lock"
 
 bold "Make sure the testrepo is clean"
-if git diff --exit-code ../testrepo &> diff.txt; 
+if git diff --exit-code ../testrepo &> diff.txt;
 then
   rm diff.txt
   success "Testrepo has no changes"
-else 
+else
   error "Testrepo is not clean to start with"
   cat diff.txt
   rm diff.txt

@@ -1,5 +1,5 @@
 {
-  "name": "doc-test-examples",
+  "name": "@tests/docstring-tests",
   "sources": {
     "dir": "."
   },

@@ -74,17 +74,13 @@ pub fn generate_asts(
                     } else {
                         (
                             Ok((
-                                Path::new(
-                                    &(helpers::get_basename(&source_file.implementation.path).to_string()
-                                        + ".ast"),
-                                )
-                                .to_path_buf(),
+                                PathBuf::from(helpers::get_basename(&source_file.implementation.path))
+                                    .with_extension("ast"),
                                 None,
                             )),
                             Ok(source_file.interface.as_ref().map(|i| {
                                 (
-                                    Path::new(&(helpers::get_basename(&i.path).to_string() + ".iast"))
-                                        .to_path_buf(),
+                                    PathBuf::from(helpers::get_basename(&i.path)).with_extension("iast"),
                                     None,
                                 )
                             })),
@@ -213,23 +209,23 @@ pub fn generate_asts(
                         .namespace
                         .to_suffix()
                         .expect("namespace should be set for mlmap module");
-                    let base_build_path = package.get_build_path() + "/" + &suffix;
-                    let base_ocaml_build_path = package.get_ocaml_build_path() + "/" + &suffix;
+                    let base_build_path = package.get_build_path().join(&suffix);
+                    let base_ocaml_build_path = package.get_ocaml_build_path().join(&suffix);
                     let _ = std::fs::copy(
-                        base_build_path.to_string() + ".cmi",
-                        base_ocaml_build_path.to_string() + ".cmi",
+                        base_build_path.with_extension("cmi"),
+                        base_ocaml_build_path.with_extension("cmi"),
                     );
                     let _ = std::fs::copy(
-                        base_build_path.to_string() + ".cmt",
-                        base_ocaml_build_path.to_string() + ".cmt",
+                        base_build_path.with_extension("cmt"),
+                        base_ocaml_build_path.with_extension("cmt"),
                     );
                     let _ = std::fs::copy(
-                        base_build_path.to_string() + ".cmj",
-                        base_ocaml_build_path.to_string() + ".cmj",
+                        base_build_path.with_extension("cmj"),
+                        base_ocaml_build_path.with_extension("cmj"),
                     );
                     let _ = std::fs::copy(
-                        base_build_path.to_string() + ".mlmap",
-                        base_ocaml_build_path.to_string() + ".mlmap",
+                        base_build_path.with_extension("mlmap"),
+                        base_ocaml_build_path.with_extension("mlmap"),
                     );
                     match (mlmap_hash, mlmap_hash_after) {
                         (Some(digest), Some(digest_after)) => !digest.eq(&digest_after),
@@ -256,19 +252,19 @@ pub fn generate_asts(
 pub fn parser_args(
     config: &config::Config,
     root_config: &config::Config,
-    filename: &str,
+    filename: &Path,
     version: &str,
-    workspace_root: &Option<String>,
-    root_path: &str,
+    workspace_root: &Option<PathBuf>,
+    root_path: &Path,
     contents: &str,
 ) -> (PathBuf, Vec<String>) {
-    let file = &filename.to_string();
+    let file = &filename;
     let ast_path = helpers::get_ast_path(file);
     let ppx_flags = config::flatten_ppx_flags(
         &if let Some(workspace_root) = workspace_root {
-            format!("{}/node_modules", &workspace_root)
+            workspace_root.join("node_modules")
         } else {
-            format!("{}/node_modules", &root_path)
+            root_path.join("node_modules")
         },
         &filter_ppx_flags(&config.ppx_flags, contents),
         &config.name,
@@ -279,7 +275,8 @@ pub fn parser_args(
     let uncurried_args = root_config.get_uncurried_args(version);
     let bsc_flags = config::flatten_flags(&config.bsc_flags);
 
-    let file = "../../".to_string() + file;
+    let file = PathBuf::from("..").join("..").join(file);
+
     (
         ast_path.to_owned(),
         [
@@ -295,7 +292,7 @@ pub fn parser_args(
                 "-bs-ast".to_string(),
                 "-o".to_string(),
                 ast_path.to_string_lossy().to_string(),
-                file,
+                file.to_string_lossy().to_string(),
             ],
         ]
         .concat(),
@@ -305,10 +302,10 @@ pub fn parser_args(
 fn generate_ast(
     package: packages::Package,
     root_package: packages::Package,
-    filename: &str,
+    filename: &Path,
     version: &str,
-    bsc_path: &str,
-    workspace_root: &Option<String>,
+    bsc_path: &PathBuf,
+    workspace_root: &Option<PathBuf>,
 ) -> Result<(PathBuf, Option<helpers::StdErr>), String> {
     let file_path = PathBuf::from(&package.path).join(filename);
     let contents = helpers::read_file(&file_path).expect("Error reading file");
@@ -325,7 +322,8 @@ fn generate_ast(
     );
 
     // generate the dir of the ast_path (it mirrors the source file dir)
-    helpers::create_path(&(package.get_build_path() + "/" + &ast_path.parent().unwrap().to_string_lossy()));
+    let ast_parent_path = package.get_build_path().join(ast_path.parent().unwrap());
+    helpers::create_path(&ast_parent_path);
 
     /* Create .ast */
     let result = if let Some(res_to_ast) = Some(
@@ -346,17 +344,18 @@ fn generate_ast(
             Ok((ast_path, None))
         }
     } else {
-        log::info!("Parsing file {}...", filename);
+        log::info!("Parsing file {}...", filename.display());
 
         Err(format!(
             "Could not find canonicalize_string_path for file {} in package {}",
-            filename, package.name
+            filename.display(),
+            package.name
         ))
     };
     if let Ok((ast_path, _)) = &result {
         let _ = std::fs::copy(
             Path::new(&build_path_abs).join(&ast_path),
-            std::path::Path::new(&package.get_ocaml_build_path()).join(ast_path.file_name().unwrap()),
+            package.get_ocaml_build_path().join(ast_path.file_name().unwrap()),
         );
     }
     result

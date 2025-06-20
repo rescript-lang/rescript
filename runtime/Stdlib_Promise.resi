@@ -24,8 +24,7 @@ See [`Promise.resolve`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/
 let p = Promise.resolve(5) // promise<int>
 ```
 */
-@val
-@scope("Promise")
+@val @scope("Promise")
 external resolve: 'a => t<'a> = "resolve"
 
 /**
@@ -49,8 +48,7 @@ TestError("some rejected value")
 ->ignore
 ```
 */
-@scope("Promise")
-@val
+@scope("Promise") @val
 external reject: exn => t<_> = "reject"
 
 /**
@@ -111,8 +109,7 @@ promise
 ->ignore
 ```
 */
-@scope("Promise")
-@val
+@scope("Promise") @val
 external withResolvers: unit => promiseAndResolvers<_> = "withResolvers"
 
 /**
@@ -268,8 +265,7 @@ race(promises)->then(winner => {
 })
 ```
 */
-@scope("Promise")
-@val
+@scope("Promise") @val
 external race: array<t<'a>> => t<'a> = "race"
 
 /**
@@ -295,8 +291,7 @@ any(promises)->then(winner => {
 })
 ```
 */
-@scope("Promise")
-@val
+@scope("Promise") @val
 external any: array<t<'a>> => t<'a> = "any"
 
 /**
@@ -317,43 +312,37 @@ all(promises)
 ->ignore
 ```
 */
-@scope("Promise")
-@val
+@scope("Promise") @val
 external all: array<t<'a>> => t<array<'a>> = "all"
 
 /**
 `all2((p1, p2))`. Like `all()`, but with a fixed size tuple of 2
 */
-@scope("Promise")
-@val
+@scope("Promise") @val
 external all2: ((t<'a>, t<'b>)) => t<('a, 'b)> = "all"
 
 /**
 `all3((p1, p2, p3))`. Like `all()`, but with a fixed size tuple of 3
 */
-@scope("Promise")
-@val
+@scope("Promise") @val
 external all3: ((t<'a>, t<'b>, t<'c>)) => t<('a, 'b, 'c)> = "all"
 
 /**
 `all4((p1, p2, p3, p4))`. Like `all()`, but with a fixed size tuple of 4
 */
-@scope("Promise")
-@val
+@scope("Promise") @val
 external all4: ((t<'a>, t<'b>, t<'c>, t<'d>)) => t<('a, 'b, 'c, 'd)> = "all"
 
 /**
 `all5((p1, p2, p3, p4, p5))`. Like `all()`, but with a fixed size tuple of 5
 */
-@scope("Promise")
-@val
+@scope("Promise") @val
 external all5: ((t<'a>, t<'b>, t<'c>, t<'d>, t<'e>)) => t<('a, 'b, 'c, 'd, 'e)> = "all"
 
 /**
 `all6((p1, p2, p4, p5, p6))`. Like `all()`, but with a fixed size tuple of 6
 ")*/
-@scope("Promise")
-@val
+@scope("Promise") @val
 external all6: ((t<'a>, t<'b>, t<'c>, t<'d>, t<'e>, t<'f>)) => t<('a, 'b, 'c, 'd, 'e, 'f)> = "all"
 
 @tag("status")
@@ -386,22 +375,19 @@ allSettled(promises)
 ->ignore
 ```
 */
-@scope("Promise")
-@val
+@scope("Promise") @val
 external allSettled: array<t<'a>> => t<array<settledResult<'a>>> = "allSettled"
 
 /**
 `allSettled2((p1, p2))`. Like `allSettled()`, but with a fixed size tuple of 2
 */
-@scope("Promise")
-@val
+@scope("Promise") @val
 external allSettled2: ((t<'a>, t<'b>)) => t<(settledResult<'a>, settledResult<'b>)> = "allSettled"
 
 /**
 `allSettled3((p1, p2, p3))`. Like `allSettled()`, but with a fixed size tuple of 3
 */
-@scope("Promise")
-@val
+@scope("Promise") @val
 external allSettled3: ((t<'a>, t<'b>, t<'c>)) => t<(
   settledResult<'a>,
   settledResult<'b>,
@@ -411,8 +397,7 @@ external allSettled3: ((t<'a>, t<'b>, t<'c>)) => t<(
 /**
 `allSettled4((p1, p2, p3, p4))`. Like `allSettled()`, but with a fixed size tuple of 4
 */
-@scope("Promise")
-@val
+@scope("Promise") @val
 external allSettled4: ((t<'a>, t<'b>, t<'c>, t<'d>)) => t<(
   settledResult<'a>,
   settledResult<'b>,
@@ -423,8 +408,7 @@ external allSettled4: ((t<'a>, t<'b>, t<'c>, t<'d>)) => t<(
 /**
 `allSettled5((p1, p2, p3, p4, p5))`. Like `allSettled()`, but with a fixed size tuple of 5
 */
-@scope("Promise")
-@val
+@scope("Promise") @val
 external allSettled5: ((t<'a>, t<'b>, t<'c>, t<'d>, t<'e>)) => t<(
   settledResult<'a>,
   settledResult<'b>,
@@ -436,8 +420,7 @@ external allSettled5: ((t<'a>, t<'b>, t<'c>, t<'d>, t<'e>)) => t<(
 /**
 `allSettled6((p1, p2, p4, p5, p6))`. Like `allSettled()`, but with a fixed size tuple of 6
 ")*/
-@scope("Promise")
-@val
+@scope("Promise") @val
 external allSettled6: ((t<'a>, t<'b>, t<'c>, t<'d>, t<'e>, t<'f>)) => t<(
   settledResult<'a>,
   settledResult<'b>,

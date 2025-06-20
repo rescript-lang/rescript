@@ -4,6 +4,7 @@ use clap_verbosity_flag::InfoLevel;
 use log::LevelFilter;
 use regex::Regex;
 use std::io::Write;
+use std::path::{Path, PathBuf};
 
 use rewatch::{build, cmd, lock, watcher};
 
@@ -44,6 +45,10 @@ struct Args {
     // Disable timing on the output
     #[arg(short, long, default_value = "false", num_args = 0..=1)]
     no_timing: bool,
+
+    // simple output for snapshot testing
+    #[arg(short, long, default_value = "false", num_args = 0..=1)]
+    snapshot_output: bool,
 
     /// Verbosity:
     /// -v -> Debug
@@ -102,7 +107,12 @@ fn main() -> Result<()> {
         Some(path) => {
             println!(
                 "{}",
-                build::get_compiler_args(&path, args.rescript_version, args.bsc_path, args.dev)?
+                build::get_compiler_args(
+                    Path::new(&path),
+                    args.rescript_version,
+                    &args.bsc_path.map(PathBuf::from),
+                    args.dev
+                )?
             );
             std::process::exit(0);
         }
@@ -118,16 +128,23 @@ fn main() -> Result<()> {
             std::process::exit(1)
         }
         lock::Lock::Aquired(_) => match command {
-            Command::Clean => build::clean::clean(&folder, show_progress, args.bsc_path, args.dev),
+            Command::Clean => build::clean::clean(
+                Path::new(&folder),
+                show_progress,
+                &args.bsc_path.map(PathBuf::from),
+                args.dev,
+                args.snapshot_output,
+            ),
             Command::Build => {
                 match build::build(
                     &filter,
-                    &folder,
+                    Path::new(&folder),
                     show_progress,
                     args.no_timing,
                     args.create_sourcedirs,
-                    args.bsc_path,
+                    &args.bsc_path.map(PathBuf::from),
                     args.dev,
+                    args.snapshot_output,
                 ) {
                     Err(e) => {
                         println!("{e}");
@@ -150,6 +167,7 @@ fn main() -> Result<()> {
                     args.create_sourcedirs,
                     args.dev,
                     args.bsc_path,
+                    args.snapshot_output,
                 );
 
                 Ok(())

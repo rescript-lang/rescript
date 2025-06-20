@@ -14,7 +14,7 @@ Happy hacking!
 
 > Most of our contributors are working on Apple machines, so all our instructions are currently macOS / Linux centric. Contributions for Windows development welcome!
 
-- [Node.js](https://nodejs.org/) v20.x
+- [Node.js](https://nodejs.org/) v22.x
 - [Yarn CLI](https://yarnpkg.com/getting-started/install) (can be installed with `corepack`, Homebrew, etc)
 - C compiler toolchain (usually installed with `xcode` on Mac)
 - Python <= 3.11 (required to build ninja)
