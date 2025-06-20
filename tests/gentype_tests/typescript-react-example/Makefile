@@ -9,7 +9,7 @@ test:
 		|| exit 1
 
 clean:
-	rm -rf lib src/*.res.js src/*.gen.tsx
+	yarn clean
 
 .DEFAULT_GOAL := test
 
