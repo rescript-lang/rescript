@@ -188,7 +188,7 @@ fn get_bin_dir() -> PathBuf {
         ("linux", "aarch64") => "linux-arm64",
         ("linux", _) => "linux-x64",
         ("windows", "aarch64") => "win-arm64",
-        ("windows", _) => "win-x64",
+        ("windows", _) => "win32-x64",
         _ => panic!("Unsupported architecture"),
     };
 
