@@ -117,3 +117,5 @@ fi
 
 rm -r temp/
 popd
+
+printf "${successGreen}✅ All syntax tests passed.${reset}\n"

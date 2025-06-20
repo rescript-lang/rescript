@@ -66,16 +66,6 @@ let init_shape modl =
                   non_const = cstr_non_const;
                   attrs = [];
                 } )
-        | {desc = Tconstr (p, _, _)} when Path.same p Predef.path_lazy_t ->
-          Const_pointer
-            ( 1,
-              Pt_constructor
-                {
-                  name = "Lazy";
-                  const = cstr_const;
-                  non_const = cstr_non_const;
-                  attrs = [];
-                } )
         | _ -> raise Not_found
       in
       add_name init_v id :: init_shape_struct env rem

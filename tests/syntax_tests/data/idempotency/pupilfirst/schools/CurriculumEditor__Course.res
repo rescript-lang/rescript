@@ -4,5 +4,5 @@ let id = t => t.id
 
 let decode = json => {
   open Json.Decode
-  {id: json |> field("id", string)}
+  {id: json->field("id", string)}
 }

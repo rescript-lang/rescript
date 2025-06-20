@@ -17,7 +17,7 @@ include (
 
     let createElementVariadic = (domClassName, ~props=?, children) => {
       let variadicArguments =
-        [Obj.magic(domClassName), Obj.magic(props)] |> Js.Array.concat(children)
+        [Obj.magic(domClassName), Obj.magic(props)]->Js.Array.concat(children)
       createElementInternalHack->apply(Js.Nullable.null, variadicArguments)
     }
   }: {

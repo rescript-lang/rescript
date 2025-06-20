@@ -67,7 +67,7 @@ module DetailedExample = {
         "Bangalore",
         "Cochin",
         "Chennai",
-      ] |> Array.map(t => Selectable.makeCity(t))
+      ]->Array.map(t => Selectable.makeCity(t))
 
     let stateSuggestions =
       [
@@ -78,30 +78,30 @@ module DetailedExample = {
         "Kerala",
         "Karnataka",
         "Tamil Nadu",
-      ] |> Array.map(l => Selectable.makeState(l))
+      ]->Array.map(l => Selectable.makeState(l))
 
     let countrySuggestions =
-      ["India", "USA", "Canada", "China", "Japan", "Egypt", "Korea"] |> Array.map(l =>
+      ["India", "USA", "Canada", "China", "Japan", "Egypt", "Korea"]->Array.map(l =>
         Selectable.makeCountry(l)
       )
 
     let searchSuggestion =
-      searchInput |> Js.String.trim == "" ? [] : [Selectable.makeSearch(searchInput)]
+      searchInput->Js.String.trim == "" ? [] : [Selectable.makeSearch(searchInput)]
 
     searchSuggestion
-    |> Array.append(citySuggestions)
-    |> Array.append(stateSuggestions)
-    |> Array.append(countrySuggestions)
+    ->Array.append(citySuggestions)
+    ->Array.append(stateSuggestions)
+    ->Array.append(countrySuggestions)
   }
 
   let select = (setState, selectable) =>
     setState(s => {
       searchInput: "",
-      selected: [selectable] |> Array.append(s.selected),
+      selected: [selectable]->Array.append(s.selected),
     })
 
   let deselect = (selected, setState, selectable) => {
-    let newSelected = selected |> Js.Array.filter(s => s != selectable)
+    let newSelected = selected->Js.Array.filter(s => s != selectable)
     setState(_ => {searchInput: "", selected: newSelected})
   }
 
@@ -111,12 +111,12 @@ module DetailedExample = {
   let make = () => {
     let (state, setState) = React.useState(() => {searchInput: "", selected: []})
     <div className="mt-4">
-      <h2 className="text-xl font-semibold"> {"Detailed Example" |> str} </h2>
+      <h2 className="text-xl font-semibold"> {"Detailed Example"->str} </h2>
       <div className="mt-4">
         <label
           className="block text-xs font-semibold"
           htmlFor="MultiselectDropdown__search-input-detailed-example">
-          {"Filter by:" |> str}
+          {"Filter by:"->str}
         </label>
       </div>
       <Multiselect
@@ -149,7 +149,7 @@ module MinimalExample = {
       | Country(_countryCode, name) => name
       }
 
-    let searchString = t => t |> value
+    let searchString = t => t->value
     let color = _t => "gray"
 
     let makeCountry = (~name, ~countryCode) => Country(countryCode, name)
@@ -172,7 +172,7 @@ module MinimalExample = {
   ]
 
   let deselect = (selected, setState, selectable) => {
-    let newSelected = selected |> Js.Array.filter(s => s != selectable)
+    let newSelected = selected->Js.Array.filter(s => s != selectable)
     setState(_ => {searchString: "", selected: newSelected})
   }
 
@@ -180,10 +180,10 @@ module MinimalExample = {
   let make = () => {
     let (state, setState) = React.useState(() => {searchString: "", selected: []})
     <div className="mt-4">
-      <h2 className="text-xl font-semibold"> {"Minimal Example" |> str} </h2>
+      <h2 className="text-xl font-semibold"> {"Minimal Example"->str} </h2>
       <div className="mt-4">
         <label className="block text-xs font-semibold" htmlFor="MultiselectDropdown__search-input">
-          {"Filter by:" |> str}
+          {"Filter by:"->str}
         </label>
       </div>
       <Multiselect
@@ -192,7 +192,7 @@ module MinimalExample = {
         onSelect={selectable =>
           setState(s => {
             searchString: "",
-            selected: [selectable] |> Array.append(s.selected),
+            selected: [selectable]->Array.append(s.selected),
           })}
         onDeselect={deselect(state.selected, setState)}
         value=state.searchString

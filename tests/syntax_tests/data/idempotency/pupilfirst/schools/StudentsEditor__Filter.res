@@ -25,7 +25,7 @@ let empty = () => {
   sortBy: Name,
 }
 
-let addTag = (tag, t) => {...t, tags: t.tags |> Array.append([tag])}
+let addTag = (tag, t) => {...t, tags: t.tags->Array.append([tag])}
 
 let changeLevelId = (levelId, t) => {...t, levelId: levelId}
 
@@ -33,7 +33,7 @@ let changeSearchString = (searchString, t) => {...t, searchString: searchString}
 
 let removeTag = (tag, t) => {
   ...t,
-  tags: t.tags |> Js.Array.filter(ts => ts != tag),
+  tags: t.tags->Js.Array.filter(ts => ts != tag),
 }
 
 let removeLevelId = t => {...t, levelId: None}
@@ -71,7 +71,7 @@ let sortByIcon = sortBy =>
   }
 
 let isEmpty = t =>
-  switch (t.searchString, t.levelId, t.tags |> ArrayUtils.isEmpty) {
+  switch (t.searchString, t.levelId, t.tags->ArrayUtils.isEmpty) {
   | (None, None, true) => true
   | (_, _, _) => false
   }

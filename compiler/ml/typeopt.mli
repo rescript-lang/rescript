@@ -21,11 +21,4 @@ val is_base_type : Env.t -> Types.type_expr -> Path.t -> bool
 
 val maybe_pointer_type : Env.t -> Types.type_expr -> Lambda.immediate_or_pointer
 
-val classify_lazy_argument :
-  Typedtree.expression ->
-  [ `Constant_or_function
-  | `Float
-  | `Identifier of [`Forward_value | `Other]
-  | `Other ]
-
 val type_cannot_contain_undefined : Types.type_expr -> Env.t -> bool

@@ -4,13 +4,13 @@ exception CSRFTokenEmpty
 open Webapi.Dom
 
 let fromHead = () => {
-  let metaTag = document |> Document.querySelector("meta[name='csrf-token']")
+  let metaTag = document->Document.querySelector("meta[name='csrf-token']")
 
   switch metaTag {
-  | None => raise(CSRFTokenMissing)
+  | None => throw(CSRFTokenMissing)
   | Some(tag) =>
-    switch tag |> Element.getAttribute("content") {
-    | None => raise(CSRFTokenEmpty)
+    switch tag->Element.getAttribute("content") {
+    | None => throw(CSRFTokenEmpty)
     | Some(token) => token
     }
   }

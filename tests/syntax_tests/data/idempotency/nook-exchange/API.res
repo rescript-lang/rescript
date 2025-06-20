@@ -91,7 +91,7 @@ let importItems = (~sessionId, ~updates: array<((int, int), User.itemStatus)>) =
       ~bodyJson=list{
         (
           "updates",
-          updates |> {
+          updates->{
             open Json.Encode
             array((((itemId, variant), status)) =>
               tuple3(int, int, int, (itemId, variant, User.itemStatusToJs(status)))

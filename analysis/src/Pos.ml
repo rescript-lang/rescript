@@ -22,8 +22,8 @@ let positionToOffset text (line, character) =
   match offsetOfLine text line with
   | None -> None
   | Some bol ->
-    if bol + character <= String.length text then Some (bol + character)
-    else None
+    let offset = bol + character in
+    if offset >= 0 && offset <= String.length text then Some offset else None
 
 let posBeforeCursor pos = (fst pos, max 0 (snd pos - 1))
 

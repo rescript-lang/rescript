@@ -69,7 +69,7 @@ function fact(n) {
   if (n <= 1) {
     return 1;
   } else {
-    return Math.imul(n, M.fact(n - 1 | 0));
+    return n * M.fact(n - 1 | 0) | 0;
   }
 }
 

@@ -83,5 +83,4 @@ let rec convert_constant (const : Lambda.structured_constant) : Lam_constant.t =
           else Const_string {s; unicode = false}
         in
         Const_block (tag, t, [tag_val; convert_constant value])
-      | _ -> assert false)
-    | Blk_lazy_general -> assert false)
+      | _ -> assert false))

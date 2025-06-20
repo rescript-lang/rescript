@@ -10,8 +10,8 @@ let headerLink = (key, link) =>
     className="md:ml-5 text-sm font-semibold text-center cursor-default flex w-1/2 sm:w-1/3 md:w-auto justify-center border-r border-b md:border-0">
     <a
       className="no-underline bg-gray-100 md:bg-white text-black hover:text-primary-500 w-full p-4 md:p-2"
-      href={link |> NavLink.url}>
-      {link |> NavLink.title |> str}
+      href={link->NavLink.url}>
+      {link->NavLink.title->str}
     </a>
   </div>
 
@@ -24,7 +24,7 @@ let signOutLink = () =>
         href="/users/sign_out"
         rel="nofollow"
         className="border border-primary-500 rounded px-2 py-1 text-primary-500 text-xs md:text-sm md:leading-normal m-4 md:m-0 no-underline font-semibold text-black">
-        <FaIcon classes="fas fa-power-off" /> <span className="ml-2"> {"Sign Out" |> str} </span>
+        <FaIcon classes="fas fa-power-off" /> <span className="ml-2"> {"Sign Out"->str} </span>
       </a>
     </div>
   </div>
@@ -37,11 +37,11 @@ let signInLink = () =>
       <a
         className="border border-primary-500 rounded px-2 py-1 text-primary-500 text-xs md:text-sm md:leading-normal m-4 md:m-0 no-underline font-semibold text-black"
         href="/users/sign_in">
-        <FaIcon classes="fas fa-power-off" /> <span className="ml-2"> {"Sign In" |> str} </span>
+        <FaIcon classes="fas fa-power-off" /> <span className="ml-2"> {"Sign In"->str} </span>
       </a>
     </div>
   </div>
-let isMobile = () => Webapi.Dom.window |> Webapi.Dom.Window.innerWidth < 768
+let isMobile = () => Webapi.Dom.window->Webapi.Dom.Window.innerWidth < 768
 
 let headerLinks = (links, isLoggedIn) => {
   let (visibleLinks, dropdownLinks) = switch (links, isMobile()) {
@@ -52,11 +52,11 @@ let headerLinks = (links, isLoggedIn) => {
 
   switch visibleLinks {
   | visibleLinks =>
-    (visibleLinks |> List.mapi((index, l) => headerLink(index |> string_of_int, l)))
+    (visibleLinks->List.mapi((index, l) => headerLink(index->string_of_int, l)))
     ->List.append(list{<StudentTopNav__DropDown links=dropdownLinks key="more-links" />})
     ->List.append(list{isLoggedIn ? signOutLink() : signInLink()})
-    |> Array.of_list
-    |> ReasonReact.array
+    ->Array.of_list
+    ->ReasonReact.array
   }
 }
 
@@ -66,7 +66,7 @@ let make = (~schoolName, ~logoUrl, ~links, ~isLoggedIn) => {
 
   React.useEffect(() => {
     let resizeCB = _ => toggleMenuHidden(_ => isMobile())
-    Webapi.Dom.Window.asEventTarget(Webapi.Dom.window) |> Webapi.Dom.EventTarget.addEventListener(
+    Webapi.Dom.Window.asEventTarget(Webapi.Dom.window)->Webapi.Dom.EventTarget.addEventListener(
       "resize",
       resizeCB,
     )
@@ -84,7 +84,7 @@ let make = (~schoolName, ~logoUrl, ~links, ~isLoggedIn) => {
             | None =>
               <div
                 className="p-2 rounded-lg bg-white text-gray-900 hover:bg-gray-100 hover:text-primary-600">
-                <span className="text-xl font-bold leading-tight"> {schoolName |> str} </span>
+                <span className="text-xl font-bold leading-tight"> {schoolName->str} </span>
               </div>
             }}
           </a>

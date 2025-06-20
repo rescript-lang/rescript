@@ -8,5 +8,8 @@
   4 [2m│[0m   10
   5 [2m│[0m }
 
-  This function has type (int, int) => int
-  It is applied with [1;31m1[0m argument but it requires [1;33m2[0m.
+  This function call is incorrect.
+  The function has type:
+  (int, int) => int
+  
+  - The function takes [1;33m2[0m unlabelled arguments, but is called with [1;31mjust 1[0m

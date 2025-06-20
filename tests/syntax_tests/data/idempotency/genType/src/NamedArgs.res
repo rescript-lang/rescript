@@ -71,4 +71,4 @@ let rec reverse = (~soFar=list{}, lst) =>
   }
 
 let group = labeledTypes =>
-  labeledTypes |> groupReversed(~revCurGroup=list{}, ~revResult=list{}) |> reverse
+  labeledTypes->groupReversed(~revCurGroup=list{}, ~revResult=list{})->reverse

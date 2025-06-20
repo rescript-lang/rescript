@@ -54,7 +54,6 @@ and pattern_desc =
       * closed_flag
   | Tpat_array of pattern list
   | Tpat_or of pattern * pattern * row_desc option
-  | Tpat_lazy of pattern
 
 and expression = {
   exp_desc: expression_desc;
@@ -87,6 +86,7 @@ and expression_desc =
       funct: expression;
       args: (Noloc.arg_label * expression option) list;
       partial: bool;
+      transformed_jsx: bool;
     }
   | Texp_match of expression * case list * case list * partial
   | Texp_try of expression * case list
@@ -121,7 +121,6 @@ and expression_desc =
   | Texp_letmodule of Ident.t * string loc * module_expr * expression
   | Texp_letexception of extension_constructor * expression
   | Texp_assert of expression
-  | Texp_lazy of expression
   | Texp_pack of module_expr
   | Texp_extension_constructor of Longident.t loc * Path.t
 
@@ -418,7 +417,6 @@ let iter_pattern_desc f = function
   | Tpat_or (p1, p2, _) ->
     f p1;
     f p2
-  | Tpat_lazy p -> f p
   | Tpat_any | Tpat_var _ | Tpat_constant _ -> ()
 
 let map_pattern_desc f d =
@@ -429,7 +427,6 @@ let map_pattern_desc f d =
     Tpat_record (List.map (fun (lid, l, p, o) -> (lid, l, f p, o)) lpats, closed)
   | Tpat_construct (lid, c, pats) -> Tpat_construct (lid, c, List.map f pats)
   | Tpat_array pats -> Tpat_array (List.map f pats)
-  | Tpat_lazy p1 -> Tpat_lazy (f p1)
   | Tpat_variant (x1, Some p1, x2) -> Tpat_variant (x1, Some (f p1), x2)
   | Tpat_or (p1, p2, path) -> Tpat_or (f p1, f p2, path)
   | Tpat_var _ | Tpat_constant _ | Tpat_any | Tpat_variant (_, None, _) -> d

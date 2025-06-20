@@ -1,6 +1,6 @@
 address["street"] = "Brusselsestraat"
-address["street"] = getExpensiveStreet(newYork)
+address["street"] = newYork->getExpensiveStreet
 
 let () = @attr address["street"] = "Brusselsestraat"
-let () = node["left"] = \"#="(node["right"], process(value), process(value))
-let () = \"#="(node["right"], process(value), node["left"] = process(value))
+let () = node["left"] = value->process->node["right"] = value->process
+let () = (node["left"] = value->process)->node["right"] = value->process

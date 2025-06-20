@@ -19,7 +19,7 @@ module type Empty = {}
     in the lambda layer
 */
 let init = (loc: (string, int, int), shape: shape) => {
-  let undef_module = _ => raise(Undefined_recursive_module(loc))
+  let undef_module = _ => throw(Undefined_recursive_module(loc))
   let rec loop = (shape: shape, struct_: Obj.t, idx) =>
     switch shape {
     | Function => Obj.setField(struct_, idx, Obj.magic(undef_module))

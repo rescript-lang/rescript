@@ -1,5 +1,5 @@
 module Uncurried = {
-  let raise = e => raise(e)
+  let raise = e => throw(e)
 
   module List = {
     let map = (l, f) => Belt.List.map(l, f)
@@ -11,7 +11,7 @@ exception E
 module StandardNotation = {
   open Uncurried
 
-  let testRaise = () => raise(E)
+  let testRaise = () => throw(E)
 
   let l = List.map(list{1, 2}, x => x + 1)
   let partial = x => List.map(list{1, 2}, x)
@@ -23,7 +23,7 @@ module StandardNotation = {
 
 open Uncurried
 
-let testRaise = () => raise(E)
+let testRaise = () => throw(E)
 
 let l = List.map(list{1, 2}, x => x + 1)
 let partial = List.map(list{1, 2}, ...)

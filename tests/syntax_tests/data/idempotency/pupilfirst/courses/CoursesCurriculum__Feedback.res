@@ -15,9 +15,9 @@ let feedback = t => t.feedback
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    coachId: json |> field("coachId", string),
-    submissionId: json |> field("submissionId", string),
-    feedback: json |> field("feedback", string),
+    id: json->field("id", string),
+    coachId: json->field("coachId", string),
+    submissionId: json->field("submissionId", string),
+    feedback: json->field("feedback", string),
   }
 }

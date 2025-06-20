@@ -8,11 +8,11 @@ let handleErrorCB = (setSaving, ()) => setSaving(_ => false)
 let handleUpdatePasswordCB = response => {
   let path =
     response
-    |> {
+    ->{
       open Json.Decode
       field("path", nullable(string))
     }
-    |> Js.Null.toOption
+    ->Js.Null.toOption
   switch path {
   | Some(path) => DomUtils.redirect(path)
   | None => ()
@@ -20,15 +20,15 @@ let handleUpdatePasswordCB = response => {
 }
 
 let validPassword = password => {
-  let length = password |> String.length
+  let length = password->String.length
   length >= 8 && length < 128
 }
 let updatePassword = (authenticityToken, token, newPassword, confirmPassword, setSaving) => {
   let payload = Js.Dict.empty()
-  Js.Dict.set(payload, "authenticity_token", authenticityToken |> Js.Json.string)
-  Js.Dict.set(payload, "token", token |> Js.Json.string)
-  Js.Dict.set(payload, "new_password", newPassword |> Js.Json.string)
-  Js.Dict.set(payload, "confirm_password", confirmPassword |> Js.Json.string)
+  Js.Dict.set(payload, "authenticity_token", authenticityToken->Js.Json.string)
+  Js.Dict.set(payload, "token", token->Js.Json.string)
+  Js.Dict.set(payload, "new_password", newPassword->Js.Json.string)
+  Js.Dict.set(payload, "confirm_password", confirmPassword->Js.Json.string)
 
   let url = "/users/update_password"
   setSaving(_ => true)
@@ -66,7 +66,7 @@ let renderUpdatePassword = (
   let labelClasses = "inline-block tracking-wide text-gray-900 text-xs font-semibold"
   <div className="pt-4 pb-5 md:px-9 items-center max-w-sm mx-auto">
     <div>
-      <label className=labelClasses htmlFor="new-password"> {"New Password" |> str} </label>
+      <label className=labelClasses htmlFor="new-password"> {"New Password"->str} </label>
       <input
         className=inputClasses
         id="new-password"
@@ -79,7 +79,7 @@ let renderUpdatePassword = (
     </div>
     <div className="mt-4">
       <label className={labelClasses ++ " mt-2"} htmlFor="confirm password">
-        {"Confirm Password" |> str}
+        {"Confirm Password"->str}
       </label>
       <input
         className=inputClasses
@@ -98,7 +98,7 @@ let renderUpdatePassword = (
       className="btn btn-success btn-large text-center w-full mt-4">
       <FaIcon classes={saving ? "fas fa-spinner fa-spin" : "fas fa-lock"} />
       <span className="ml-2">
-        {submitButtonText(saving, newPassword, confirmPassword) |> str}
+        {submitButtonText(saving, newPassword, confirmPassword)->str}
       </span>
     </button>
   </div>
@@ -113,7 +113,7 @@ let make = (~token, ~authenticityToken) => {
     <div className="container mx-auto max-w-lg px-4 py-6 sm:py-8 bg-white rounded-lg shadow">
       <img className="mx-auto h-20 sm:h-32" src=resetPasswordIcon />
       <div className="text-lg sm:text-2xl font-bold text-center mt-4">
-        {"Set new password" |> str}
+        {"Set new password"->str}
       </div>
       {renderUpdatePassword(
         authenticityToken,

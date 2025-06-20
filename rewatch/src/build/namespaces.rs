@@ -1,8 +1,10 @@
 use crate::build::packages;
-use crate::helpers;
+use crate::helpers::StrippedVerbatimPath;
 use ahash::AHashSet;
 use std::fs::File;
 use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
 
 // Namespaces work like the following: The build system will generate a file
@@ -23,13 +25,13 @@ pub fn gen_mlmap(
     package: &packages::Package,
     namespace: &str,
     depending_modules: &AHashSet<String>,
-) -> String {
+) -> PathBuf {
     let build_path_abs = package.get_build_path();
     // we don't really need to create a digest, because we track if we need to
     // recompile in a different way but we need to put it in the file for it to
     // be readable.
 
-    let path = build_path_abs.to_string() + "/" + namespace + ".mlmap";
+    let path = build_path_abs.join(format!("{}.mlmap", namespace));
     let mut file = File::create(&path).expect("Unable to create mlmap");
 
     file.write_all(b"randjbuildsystem\n")
@@ -46,16 +48,22 @@ pub fn gen_mlmap(
         file.write_all(b"\n").unwrap();
     }
 
-    path.to_string()
+    path
 }
 
-pub fn compile_mlmap(package: &packages::Package, namespace: &str, bsc_path: &str) {
+pub fn compile_mlmap(package: &packages::Package, namespace: &str, bsc_path: &Path) {
     let build_path_abs = package.get_build_path();
     let mlmap_name = format!("{}.mlmap", namespace);
     let args = vec!["-w", "-49", "-color", "always", "-no-alias-deps", &mlmap_name];
 
     let _ = Command::new(bsc_path)
-        .current_dir(helpers::canonicalize_string_path(&build_path_abs).unwrap())
+        .current_dir(
+            build_path_abs
+                .canonicalize()
+                .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+                .ok()
+                .unwrap(),
+        )
         .args(args)
         .output()
         .expect("err");

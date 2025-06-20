@@ -127,8 +127,8 @@ module Menu = {
       setAnimateIn(_ => true)
       let onClick = _ => onClose()
       open Webapi.Dom
-      window |> Window.addClickEventListener(onClick)
-      Some(() => window |> Window.removeClickEventListener(onClick))
+      window->Window.addClickEventListener(onClick)
+      Some(() => window->Window.removeClickEventListener(onClick))
     })
     <div className={Cn.make(list{MenuStyles.root, Cn.ifTrue(MenuStyles.rootAppear, animateIn)})}>
       <Link path="/" className={Cn.make(list{MenuStyles.menuItem, Styles.smallViewport})}>
@@ -157,7 +157,7 @@ module Menu = {
             href="#"
             className=MenuStyles.menuItem
             onClick={e => {
-              UserStore.logout() |> ignore
+              UserStore.logout()->ignore
               ReactEvent.Mouse.preventDefault(e)
             }}>
             {React.string("Logout")}
@@ -195,12 +195,12 @@ let make = (~onLogin) => {
   let user = UserStore.useMe()
   let (isNearTop, setIsNearTop) = React.useState(() => {
     open Webapi.Dom
-    window |> Window.pageYOffset < nearTopThreshold
+    window->Window.pageYOffset < nearTopThreshold
   })
   let (isScrollingUp, setIsScrollingUp) = React.useState(() => false)
   React.useEffect0(() => {
     open Webapi.Dom
-    let scrollTop = ref(window |> Window.pageYOffset)
+    let scrollTop = ref(window->Window.pageYOffset)
     let isScrollingUp = ref(false)
     let newIsNearTop = scrollTop.contents < nearTopThreshold
     if newIsNearTop != isNearTop {
@@ -208,7 +208,7 @@ let make = (~onLogin) => {
     }
     let isNearTop = ref(newIsNearTop)
     let onScroll = e => {
-      let newScrollTop = window |> Window.pageYOffset
+      let newScrollTop = window->Window.pageYOffset
       let newIsScrollingUp =
         newScrollTop < scrollTop.contents && newScrollTop > scrollTop.contents -. 300.
       let newIsNearTop = newScrollTop < nearTopThreshold
@@ -222,8 +222,8 @@ let make = (~onLogin) => {
       isScrollingUp := newIsScrollingUp
       isNearTop := newIsNearTop
     }
-    window |> Window.addEventListener("scroll", onScroll)
-    Some(() => window |> Window.removeEventListener("scroll", onScroll))
+    window->Window.addEventListener("scroll", onScroll)
+    Some(() => window->Window.removeEventListener("scroll", onScroll))
   })
   let (showMenu, setShowMenu) = React.useState(() => false)
   <div className=Styles.wrapper>

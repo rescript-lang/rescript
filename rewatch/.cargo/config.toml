@@ -1,0 +1,4 @@
+[alias]
+build-m1-release = "RUSTFLAGS=\"-C target-cpu=apple-m1\" cargo build --release"
+build-docs = "cargo doc --no-deps --document-private-items --target-dir ./docs"
+

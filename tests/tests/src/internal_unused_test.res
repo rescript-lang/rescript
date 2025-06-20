@@ -17,7 +17,7 @@ module P1 = {
 }
 open! P1
 
-let f = () => raise(A)
+let f = () => throw(A)
 
 %%private(let b = 3)
 

@@ -37,7 +37,7 @@ let forEach = (opt, f) =>
 let getExn = x =>
   switch x {
   | Some(x) => x
-  | None => raise(Not_found)
+  | None => throw(Not_found)
   }
 
 external getUnsafe: option<'a> => 'a = "%identity"

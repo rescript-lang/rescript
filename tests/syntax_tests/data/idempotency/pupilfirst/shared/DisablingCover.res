@@ -19,11 +19,11 @@ let make = (~disabled, ~message="Loading...", ~containerClasses="", ~children) =
               <div className="disabling-cover__loading-box-3" />
             </div>
             <span className="block pt-2 font-semibold max-w-sm text-center text-sm">
-              {message |> React.string}
+              {message->React.string}
             </span>
           </div>
         </div>,
-      ] |> React.array
+      ]->React.array
     } else {
       React.null
     }}

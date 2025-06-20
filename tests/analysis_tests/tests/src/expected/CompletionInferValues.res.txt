@@ -10,6 +10,7 @@ ContextPath Value[x]
 Path x
 ContextPath int
 Path Stdlib.Int.t
+Path t
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -92,6 +93,7 @@ ContextPath Value[getSomeRecord]
 Path getSomeRecord
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
+Path 
 [{
     "label": "name",
     "kind": 5,
@@ -130,6 +132,7 @@ ContextPath Value[getSomeRecord]
 Path getSomeRecord
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
+Path 
 [{
     "label": "name",
     "kind": 5,
@@ -171,6 +174,7 @@ ContextPath Value[someFnWithCallback]
 Path someFnWithCallback
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
+Path 
 [{
     "label": "name",
     "kind": 5,
@@ -216,6 +220,7 @@ ContextPath Value[someFnWithCallback]
 Path someFnWithCallback
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
+Path 
 [{
     "label": "name",
     "kind": 5,
@@ -247,6 +252,7 @@ ContextPath Value[reactEventFn]
 Path reactEventFn
 CPPipe pathFromEnv:ReactEvent.Mouse found:false
 Path ReactEvent.Mouse.pr
+Path pr
 [{
     "label": "ReactEvent.Mouse.preventDefault",
     "kind": 12,
@@ -256,8 +262,8 @@ Path ReactEvent.Mouse.pr
   }]
 
 Complete src/CompletionInferValues.res 41:50
-posCursor:[41:50] posNoWhite:[41:49] Found expr:[41:12->41:56]
-JSX <div:[41:12->41:15] onMouseEnter[41:16->41:28]=...[41:36->41:52]> _children:41:54
+posCursor:[41:50] posNoWhite:[41:49] Found expr:[41:11->41:56]
+JSX <div:[41:12->41:15] onMouseEnter[41:16->41:28]=...[41:36->41:52]> _children:None
 posCursor:[41:50] posNoWhite:[41:49] Found expr:[41:36->41:52]
 posCursor:[41:50] posNoWhite:[41:49] Found expr:[41:41->41:50]
 Completable: Cpath Value[event]->pr <<jsx>>
@@ -272,6 +278,7 @@ Path ReactDOM.domProps
 Path JsxDOM.domProps
 CPPipe pathFromEnv:JsxEvent.Mouse found:false
 Path JsxEvent.Mouse.pr
+Path pr
 [{
     "label": "JsxEvent.Mouse.preventDefault",
     "kind": 12,
@@ -281,8 +288,8 @@ Path JsxEvent.Mouse.pr
   }]
 
 Complete src/CompletionInferValues.res 44:50
-posCursor:[44:50] posNoWhite:[44:49] Found expr:[44:12->44:56]
-JSX <Div:[44:12->44:15] onMouseEnter[44:16->44:28]=...[44:36->44:52]> _children:44:54
+posCursor:[44:50] posNoWhite:[44:49] Found expr:[44:11->44:56]
+JSX <Div:[44:12->44:15] onMouseEnter[44:16->44:28]=...[44:36->44:52]> _children:None
 posCursor:[44:50] posNoWhite:[44:49] Found expr:[44:36->44:52]
 posCursor:[44:50] posNoWhite:[44:49] Found expr:[44:41->44:50]
 Completable: Cpath Value[event]->pr <<jsx>>
@@ -296,6 +303,7 @@ ContextPath CJsxPropValue [Div] onMouseEnter
 Path Div.make
 CPPipe pathFromEnv:JsxEvent.Mouse found:false
 Path JsxEvent.Mouse.pr
+Path pr
 [{
     "label": "JsxEvent.Mouse.preventDefault",
     "kind": 12,
@@ -305,8 +313,8 @@ Path JsxEvent.Mouse.pr
   }]
 
 Complete src/CompletionInferValues.res 47:87
-posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:12->47:93]
-JSX <div:[47:12->47:15] onMouseEnter[47:16->47:28]=...[47:36->47:89]> _children:47:91
+posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:11->47:93]
+JSX <div:[47:12->47:15] onMouseEnter[47:16->47:28]=...[47:36->47:89]> _children:None
 posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:36->47:89]
 posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:41->47:87]
 posCursor:[47:87] posNoWhite:[47:86] Found expr:[47:81->47:87]
@@ -320,6 +328,7 @@ ContextPath Value[JsxEvent, Mouse, button](Nolabel)
 ContextPath Value[JsxEvent, Mouse, button]
 Path JsxEvent.Mouse.button
 Path Stdlib.Int.t
+Path t
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -383,8 +392,8 @@ Path Stdlib.Int.t
   }]
 
 Complete src/CompletionInferValues.res 50:103
-posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:12->50:109]
-JSX <div:[50:12->50:15] onMouseEnter[50:16->50:28]=...[50:36->50:105]> _children:50:107
+posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:11->50:109]
+JSX <div:[50:12->50:15] onMouseEnter[50:16->50:28]=...[50:36->50:105]> _children:None
 posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:36->50:105]
 posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:41->50:103]
 posCursor:[50:103] posNoWhite:[50:102] Found expr:[50:95->50:103]
@@ -400,8 +409,8 @@ Path Int.toString
 []
 
 Complete src/CompletionInferValues.res 53:121
-posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:12->53:127]
-JSX <div:[53:12->53:15] onMouseEnter[53:16->53:28]=...[53:36->53:123]> _children:53:125
+posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:11->53:127]
+JSX <div:[53:12->53:15] onMouseEnter[53:16->53:28]=...[53:36->53:123]> _children:None
 posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:36->53:123]
 posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:41->53:121]
 posCursor:[53:121] posNoWhite:[53:120] Found expr:[53:114->53:121]
@@ -415,6 +424,8 @@ ContextPath Value[String, split](Nolabel, Nolabel)
 ContextPath Value[String, split]
 Path String.split
 Path Stdlib.Array.ma
+Path ArrayUtils.ma
+Path ma
 [{
     "label": "Array.map",
     "kind": 12,
@@ -453,6 +464,7 @@ ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
+Path 
 [{
     "label": "name",
     "kind": 5,
@@ -491,6 +503,7 @@ ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
+Path 
 [{
     "label": "someRecord",
     "kind": 5,
@@ -523,6 +536,7 @@ ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
 CPPipe pathFromEnv: found:true
 Path CompletionInferValues.
+Path 
 [{
     "label": "name",
     "kind": 5,
@@ -551,6 +565,7 @@ Path x
 ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
 Path Stdlib.String.slic
+Path slic
 [{
     "label": "String.slice",
     "kind": 12,
@@ -579,6 +594,7 @@ Path x
 ContextPath Type[someRecordWithNestedStuff]
 Path someRecordWithNestedStuff
 Path Stdlib.Int.toS
+Path toS
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -610,6 +626,7 @@ Path x
 ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
 Path Stdlib.Int.toS
+Path toS
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -642,6 +659,7 @@ Path x
 ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
 Path Stdlib.Int.toS
+Path toS
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -670,6 +688,7 @@ Path x
 ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
 Path Stdlib.String.slic
+Path slic
 [{
     "label": "String.slice",
     "kind": 12,
@@ -698,6 +717,7 @@ Path x
 ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
 Path Stdlib.String.slic
+Path slic
 [{
     "label": "String.slice",
     "kind": 12,
@@ -726,6 +746,7 @@ Path x
 ContextPath Type[otherNestedRecord]
 Path otherNestedRecord
 Path Stdlib.String.slic
+Path slic
 [{
     "label": "String.slice",
     "kind": 12,
@@ -752,6 +773,7 @@ ContextPath Value[x]
 Path x
 ContextPath int
 Path Stdlib.Int.toSt
+Path toSt
 [{
     "label": "Int.toStringWithRadix",
     "kind": 12,
@@ -812,6 +834,7 @@ ContextPath Value[fn2]
 Path fn2
 CPPipe pathFromEnv:ReactDOM.Client.Root found:false
 Path ReactDOM.Client.Root.
+Path 
 [{
     "label": "ReactDOM.Client.Root.unmount",
     "kind": 12,
@@ -845,6 +868,7 @@ ContextPath Value[fn3]
 Path fn3
 CPPipe pathFromEnv:CompletionSupport.Test found:false
 Path CompletionSupport.Test.
+Path 
 [{
     "label": "CompletionSupport.Test.add",
     "kind": 12,
@@ -924,6 +948,7 @@ ContextPath Value[CompletionSupport2, makeRenderer]
 Path CompletionSupport2.makeRenderer
 CPPipe pathFromEnv:CompletionSupport.Nested found:false
 Path CompletionSupport.Nested.
+Path 
 [{
     "label": "root",
     "kind": 5,
@@ -951,6 +976,7 @@ ContextPath Value[CompletionSupport2, makeRenderer]
 Path CompletionSupport2.makeRenderer
 CPPipe pathFromEnv:ReactDOM.Client.Root found:false
 Path ReactDOM.Client.Root.
+Path 
 [{
     "label": "ReactDOM.Client.Root.unmount",
     "kind": 12,

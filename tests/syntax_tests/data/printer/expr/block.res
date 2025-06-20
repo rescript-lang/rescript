@@ -31,7 +31,7 @@ let reifyStyle = (type a, x: 'a): (style<a>, a) => {
     } else if Internal.instanceOf(x, Internal.canvasPattern) {
       Obj.magic(Pattern)
     } else {
-      raise(
+      throw(
         Invalid_argument(
           "Unknown canvas style kind. Known values are: String, CanvasGradient, CanvasPattern",
         ),

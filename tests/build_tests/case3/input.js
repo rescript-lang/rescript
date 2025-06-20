@@ -1,14 +1,13 @@
-//@ts-check
+// @ts-check
 
-var p = require("child_process");
-var fs = require("fs");
-var path = require("path");
-var assert = require("assert");
-var { rescript_exe } = require("#cli/bin_path");
-p.spawnSync(`${rescript_exe} clean && ${rescript_exe} build`, {
-  encoding: "utf8",
-  cwd: __dirname,
-});
+import assert from "node:assert";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { setup } from "#dev/process";
 
-var o = fs.readFileSync(path.join(__dirname, "src", "hello.bs.js"), "ascii");
+const { execBuild } = setup(import.meta.dirname);
+
+await execBuild();
+
+const o = await fs.readFile(path.join("src", "hello.res.js"), "ascii");
 assert.ok(/HelloGen\.f/.test(o));

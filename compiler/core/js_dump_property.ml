@@ -68,6 +68,7 @@ let obj_property_no_need_quot s =
     ]}
 *)
 let property_access f s =
+  let s = Ext_ident.unwrap_uppercase_exotic s in
   if obj_property_no_need_quot s then (
     P.string f L.dot;
     P.string f s)

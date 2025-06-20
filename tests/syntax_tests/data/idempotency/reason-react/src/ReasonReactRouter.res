@@ -63,7 +63,7 @@ let path = () =>
   switch %external(window) {
   | None => list{}
   | Some(window: Dom.window) =>
-    switch window |> location |> pathname {
+    switch window->location->pathname {
     | ""
     | "/" => list{}
     | raw =>
@@ -74,32 +74,32 @@ let path = () =>
       | "/" => Js.String.slice(~from=0, ~to_=-1, raw)
       | _ => raw
       }
-      raw |> Js.String.split("/") |> arrayToList
+      raw->Js.String.split("/")->arrayToList
     }
   }
 let hash = () =>
   switch %external(window) {
   | None => ""
   | Some(window: Dom.window) =>
-    switch window |> location |> hash {
+    switch window->location->hash {
     | ""
     | "#" => ""
     | raw =>
       /* remove the preceeding #, which every hash seems to have.
        Why is this even included in location.hash?? */
-      raw |> Js.String.sliceToEnd(~from=1)
+      raw->Js.String.sliceToEnd(~from=1)
     }
   }
 let search = () =>
   switch %external(window) {
   | None => ""
   | Some(window: Dom.window) =>
-    switch window |> location |> search {
+    switch window->location->search {
     | ""
     | "?" => ""
     | raw =>
       /* remove the preceeding ?, which every search seems to have. */
-      raw |> Js.String.sliceToEnd(~from=1)
+      raw->Js.String.sliceToEnd(~from=1)
     }
   }
 let push = path =>

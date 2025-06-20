@@ -94,6 +94,41 @@ external unsafeReplaceRegExpBy3: (
   ) => string,
 ) => string = "replace"
 
+@send
+external replaceRegExpBy0Unsafe: (
+  string,
+  Stdlib_RegExp.t,
+  (~match: string, ~offset: int, ~input: string) => string,
+) => string = "replace"
+
+@send
+external replaceRegExpBy1Unsafe: (
+  string,
+  Stdlib_RegExp.t,
+  (~match: string, ~group1: string, ~offset: int, ~input: string) => string,
+) => string = "replace"
+
+@send
+external replaceRegExpBy2Unsafe: (
+  string,
+  Stdlib_RegExp.t,
+  (~match: string, ~group1: string, ~group2: string, ~offset: int, ~input: string) => string,
+) => string = "replace"
+
+@send
+external replaceRegExpBy3Unsafe: (
+  string,
+  Stdlib_RegExp.t,
+  (
+    ~match: string,
+    ~group1: string,
+    ~group2: string,
+    ~group3: string,
+    ~offset: int,
+    ~input: string,
+  ) => string,
+) => string = "replace"
+
 @send external search: (string, Stdlib_RegExp.t) => int = "search"
 let searchOpt = (s, re) =>
   switch search(s, re) {
@@ -134,3 +169,5 @@ external splitByRegExpAtMost: (string, Stdlib_RegExp.t, ~limit: int) => array<op
 @set_index external setSymbol: (string, Stdlib_Symbol.t, 'a) => unit = ""
 
 @send external localeCompare: (string, string) => float = "localeCompare"
+
+external ignore: string => unit = "%ignore"

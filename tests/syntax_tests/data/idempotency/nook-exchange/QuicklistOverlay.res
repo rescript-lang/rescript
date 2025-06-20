@@ -209,7 +209,7 @@ module CreateDialog = {
             let url =
               {
                 open Webapi.Dom
-                location |> Location.origin
+                location->Location.origin
               } ++
               ("/l/" ++
               listId)
@@ -514,7 +514,7 @@ let make = () => {
                     QuicklistStore.removeList()
                     Promise.resolved()
                   })
-                } |> ignore}
+                }->ignore}
               disabled={switch quicklist {
               | Some(quicklist) => Js.Array.length(quicklist.itemIds) == 0 || isSubmitting
               | None => true

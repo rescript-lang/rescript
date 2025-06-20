@@ -32,11 +32,13 @@ let getOr = (value, default) =>
 
 let getWithDefault = getOr
 
-let getExn: t<'a> => 'a = value =>
+let getOrThrow: t<'a> => 'a = value =>
   switch value->toOption {
   | Some(x) => x
-  | None => raise(Invalid_argument("Nullable.getExn: value is null or undefined"))
+  | None => throw(Invalid_argument("Nullable.getOrThrow: value is null or undefined"))
   }
+
+let getExn = getOrThrow
 
 external getUnsafe: t<'a> => 'a = "%identity"
 
@@ -65,3 +67,5 @@ let flatMap = (value, f) =>
   | Some(x) => f(x)
   | None => Obj.magic(value)
   }
+
+external ignore: t<'a> => unit = "%ignore"

@@ -20,15 +20,15 @@ module UpdateReviewChecklistMutation = %graphql(`
 let updateReviewChecklist = (targetId, reviewChecklist, setState, updateReviewChecklistCB) => {
   setState(state => {...state, saving: true})
 
-  let trimmedChecklist = reviewChecklist |> Array.map(ReviewChecklistItem.trim)
+  let trimmedChecklist = reviewChecklist->Array.map(ReviewChecklistItem.trim)
 
   UpdateReviewChecklistMutation.make(
     ~targetId,
     ~reviewChecklist=ReviewChecklistItem.encodeArray(trimmedChecklist),
     (),
   )
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
     if response["updateReviewChecklist"]["success"] {
       updateReviewChecklistCB(trimmedChecklist)
     }
@@ -36,13 +36,13 @@ let updateReviewChecklist = (targetId, reviewChecklist, setState, updateReviewCh
     setState(state => {...state, saving: false})
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let updateChecklistItem = (checklistItem, itemIndex, setState) =>
   setState(state => {
     ...state,
-    reviewChecklist: state.reviewChecklist |> ReviewChecklistItem.replace(checklistItem, itemIndex),
+    reviewChecklist: state.reviewChecklist->ReviewChecklistItem.replace(checklistItem, itemIndex),
   })
 
 let updateChecklistItemTitle = (itemIndex, title, checklistItem, setState) =>
@@ -57,10 +57,10 @@ let updateChecklistResultTitle = (
   setState,
 ) => {
   let newReviewChecklistItem =
-    reviewChecklistItem |> ReviewChecklistItem.updateChecklist(
+    reviewChecklistItem->ReviewChecklistItem.updateChecklist(
       reviewChecklistItem
-      |> ReviewChecklistItem.result
-      |> ReviewChecklistResult.updateTitle(title, resultItem, resultIndex),
+      ->ReviewChecklistItem.result
+      ->ReviewChecklistResult.updateTitle(title, resultItem, resultIndex),
     )
   updateChecklistItem(newReviewChecklistItem, itemIndex, setState)
 }
@@ -74,17 +74,17 @@ let updateChecklistResultFeedback = (
   setState,
 ) => {
   let newReviewChecklistItem =
-    reviewChecklistItem |> ReviewChecklistItem.updateChecklist(
+    reviewChecklistItem->ReviewChecklistItem.updateChecklist(
       reviewChecklistItem
-      |> ReviewChecklistItem.result
-      |> ReviewChecklistResult.updateFeedback(feedback, resultItem, resultIndex),
+      ->ReviewChecklistItem.result
+      ->ReviewChecklistResult.updateFeedback(feedback, resultItem, resultIndex),
     )
   updateChecklistItem(newReviewChecklistItem, itemIndex, setState)
 }
 
 let addEmptyResultItem = (reviewChecklistItem, itemIndex, setState) =>
   updateChecklistItem(
-    reviewChecklistItem |> ReviewChecklistItem.appendEmptyChecklistItem,
+    reviewChecklistItem->ReviewChecklistItem.appendEmptyChecklistItem,
     itemIndex,
     setState,
   )
@@ -92,12 +92,12 @@ let addEmptyResultItem = (reviewChecklistItem, itemIndex, setState) =>
 let addEmptyChecklistItem = setState =>
   setState(state => {
     ...state,
-    reviewChecklist: ReviewChecklistItem.empty() |> Array.append(state.reviewChecklist),
+    reviewChecklist: ReviewChecklistItem.empty()->Array.append(state.reviewChecklist),
   })
 
 let removeChecklistResult = (itemIndex, resultIndex, reviewChecklistItem, setState) =>
   updateChecklistItem(
-    reviewChecklistItem |> ReviewChecklistItem.deleteResultItem(resultIndex),
+    reviewChecklistItem->ReviewChecklistItem.deleteResultItem(resultIndex),
     itemIndex,
     setState,
   )
@@ -105,41 +105,41 @@ let removeChecklistResult = (itemIndex, resultIndex, reviewChecklistItem, setSta
 let removeChecklistItem = (itemIndex, setState) =>
   setState(state => {
     ...state,
-    reviewChecklist: state.reviewChecklist |> Js.Array.filteri((_el, i) => i != itemIndex),
+    reviewChecklist: state.reviewChecklist->Js.Array.filteri((_el, i) => i != itemIndex),
   })
 
 let initialStateForReviewChecklist = reviewChecklist =>
-  reviewChecklist |> ArrayUtils.isEmpty ? ReviewChecklistItem.emptyTemplate() : reviewChecklist
+  reviewChecklist->ArrayUtils.isEmpty ? ReviewChecklistItem.emptyTemplate() : reviewChecklist
 
-let invalidTitle = title => title |> String.trim == ""
+let invalidTitle = title => title->String.trim == ""
 
 let invalidChecklist = reviewChecklist =>
   reviewChecklist
-  |> Array.map(reviewChecklistItem =>
-    reviewChecklistItem |> ReviewChecklistItem.title |> invalidTitle ||
+  ->Array.map(reviewChecklistItem =>
+    reviewChecklistItem->ReviewChecklistItem.title->invalidTitle ||
       reviewChecklistItem
-      |> ReviewChecklistItem.result
-      |> Js.Array.filter(resultItem => resultItem |> ReviewChecklistResult.title |> invalidTitle)
-      |> ArrayUtils.isNotEmpty
+      ->ReviewChecklistItem.result
+      ->Js.Array.filter(resultItem => resultItem->ReviewChecklistResult.title->invalidTitle)
+      ->ArrayUtils.isNotEmpty
   )
-  |> Js.Array.filter(valid => valid)
-  |> ArrayUtils.isNotEmpty
+  ->Js.Array.filter(valid => valid)
+  ->ArrayUtils.isNotEmpty
 
 @react.component
 let make = (~reviewChecklist, ~updateReviewChecklistCB, ~closeEditModeCB, ~targetId) => {
   let (state, setState) = React.useState(() => {
-    reviewChecklist: reviewChecklist |> initialStateForReviewChecklist,
+    reviewChecklist: reviewChecklist->initialStateForReviewChecklist,
     saving: false,
   })
   <div
     className="bg-gray-100 border border-primary-200 shadow-inner rounded-lg p-2 pt-0 md:p-4 md:pt-0">
     <DisablingCover disabled=state.saving>
       {state.reviewChecklist
-      |> Array.mapi((itemIndex, reviewChecklistItem) =>
+      ->Array.mapi((itemIndex, reviewChecklistItem) =>
         <div
           className="pt-5"
-          key={itemIndex |> string_of_int}
-          ariaLabel={"checklist-item-" ++ (itemIndex |> string_of_int)}>
+          key={itemIndex->string_of_int}
+          ariaLabel={"checklist-item-" ++ (itemIndex->string_of_int)}>
           <div className="flex">
             <div className="w-full">
               <input
@@ -147,7 +147,7 @@ let make = (~reviewChecklist, ~updateReviewChecklistCB, ~closeEditModeCB, ~targe
                 id="checklist_title"
                 type_="text"
                 placeholder="Add an item to the checklist"
-                value={reviewChecklistItem |> ReviewChecklistItem.title}
+                value={reviewChecklistItem->ReviewChecklistItem.title}
                 onChange={event =>
                   updateChecklistItemTitle(
                     itemIndex,
@@ -158,7 +158,7 @@ let make = (~reviewChecklist, ~updateReviewChecklistCB, ~closeEditModeCB, ~targe
               />
               <School__InputGroupError
                 message="A checklist item cannot be blank"
-                active={reviewChecklistItem |> ReviewChecklistItem.title |> invalidTitle}
+                active={reviewChecklistItem->ReviewChecklistItem.title->invalidTitle}
               />
             </div>
             <button
@@ -170,16 +170,16 @@ let make = (~reviewChecklist, ~updateReviewChecklistCB, ~closeEditModeCB, ~targe
           </div>
           <div>
             {reviewChecklistItem
-            |> ReviewChecklistItem.result
-            |> Array.mapi((resultIndex, resultItem) => {
-              let feedback = switch resultItem |> ReviewChecklistResult.feedback {
+            ->ReviewChecklistItem.result
+            ->Array.mapi((resultIndex, resultItem) => {
+              let feedback = switch resultItem->ReviewChecklistResult.feedback {
               | Some(f) => f
               | None => ""
               }
               <div
-                ariaLabel={"result-item-" ++ (resultIndex |> string_of_int)}
+                ariaLabel={"result-item-" ++ (resultIndex->string_of_int)}
                 className="pl-2 md:pl-4 mt-2"
-                key={(itemIndex |> string_of_int) ++ (resultIndex |> string_of_int)}>
+                key={(itemIndex->string_of_int) ++ (resultIndex->string_of_int)}>
                 <div className="flex">
                   <label
                     title="Disabled"
@@ -189,10 +189,10 @@ let make = (~reviewChecklist, ~updateReviewChecklistCB, ~closeEditModeCB, ~targe
                     <div className="relative">
                       <input
                         className="checklist-editor__checklist-result-item-title h-10 pr-12 focus:outline-none focus:bg-white focus:border-primary-300"
-                        id={"result_" ++ ((resultIndex |> string_of_int) ++ "_title")}
+                        id={"result_" ++ ((resultIndex->string_of_int) ++ "_title")}
                         type_="text"
                         placeholder="Add a result for this check"
-                        value={resultItem |> ReviewChecklistResult.title}
+                        value={resultItem->ReviewChecklistResult.title}
                         onChange={event =>
                           updateChecklistResultTitle(
                             itemIndex,
@@ -223,7 +223,7 @@ let make = (~reviewChecklist, ~updateReviewChecklistCB, ~closeEditModeCB, ~targe
                       rows=2
                       cols=33
                       className="appearance-none border border-gray-400 bg-transparent rounded-b text-xs align-top py-2 px-4 leading-relaxed w-full focus:outline-none focus:bg-white focus:border-primary-300"
-                      id={"result_" ++ ((resultIndex |> string_of_int) ++ "_feedback")}
+                      id={"result_" ++ ((resultIndex->string_of_int) ++ "_feedback")}
                       type_="text"
                       placeholder="Add feedback (optional)"
                       value=feedback
@@ -239,13 +239,13 @@ let make = (~reviewChecklist, ~updateReviewChecklistCB, ~closeEditModeCB, ~targe
                     />
                     <School__InputGroupError
                       message="A check's result cannot be blank"
-                      active={resultItem |> ReviewChecklistResult.title |> invalidTitle}
+                      active={resultItem->ReviewChecklistResult.title->invalidTitle}
                     />
                   </div>
                 </div>
               </div>
             })
-            |> React.array}
+            ->React.array}
             <button
               onClick={_ => addEmptyResultItem(reviewChecklistItem, itemIndex, setState)}
               className="checklist-editor__add-result-btn ml-2 md:ml-4 mt-3 flex items-center focus:outline-none">
@@ -255,19 +255,19 @@ let make = (~reviewChecklist, ~updateReviewChecklistCB, ~closeEditModeCB, ~targe
               />
               <span
                 className="checklist-editor__add-result-btn-text flex items-center text-sm font-semibold bg-gray-200 px-3 py-1 rounded border border-dashed border-gray-600">
-                <i className="fas fa-plus text-xs mr-2" /> {"Add Result" |> str}
+                <i className="fas fa-plus text-xs mr-2" /> {"Add Result"->str}
               </span>
             </button>
           </div>
         </div>
       )
-      |> React.array}
+      ->React.array}
       <div className="pt-5">
         <button
           className="flex items-center text-sm font-semibold bg-gray-200 rounded border border-dashed border-gray-600 w-full hover:text-primary-500 hover:bg-white hover:border-primary-500 hover:shadow-md focus:outline-none"
           onClick={_ => addEmptyChecklistItem(setState)}>
           <span className="bg-gray-300 py-2 w-10"> <i className="fas fa-plus text-sm" /> </span>
-          <span className="px-3 py-2"> {"Add Checklist Item" |> str} </span>
+          <span className="px-3 py-2"> {"Add Checklist Item"->str} </span>
         </button>
       </div>
       <div className="py-2 mt-4 flex flex-row-reverse">
@@ -281,10 +281,10 @@ let make = (~reviewChecklist, ~updateReviewChecklistCB, ~closeEditModeCB, ~targe
               updateReviewChecklistCB,
             )}
           className="btn btn-success w-1/2 md:w-auto">
-          {"Save Checklist" |> str}
+          {"Save Checklist"->str}
         </button>
         <button className="btn btn-subtle w-1/2 md:w-auto mr-4" onClick={_ => closeEditModeCB()}>
-          {"Cancel" |> str}
+          {"Cancel"->str}
         </button>
       </div>
     </DisablingCover>

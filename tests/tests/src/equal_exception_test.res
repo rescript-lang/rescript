@@ -7,7 +7,7 @@ let is_equal = () => {
 }
 
 let is_exception = () =>
-  try raise(Not_found) catch {
+  try throw(Not_found) catch {
   | Not_found => ()
   }
 
@@ -16,7 +16,7 @@ let is_normal_exception = _x => {
     exception A(int)
   }
   let v = E.A(3)
-  try raise(v) catch {
+  try throw(v) catch {
   | E.A(3) => ()
   }
 }
@@ -25,7 +25,7 @@ let is_arbitrary_exception = () => {
   module E = {
     exception A
   }
-  try raise(E.A) catch {
+  try throw(E.A) catch {
   | _ => ()
   }
 }

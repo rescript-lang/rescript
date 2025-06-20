@@ -1,10 +1,10 @@
-var child_process = require("child_process");
-var assert = require("assert");
-var { rescript_exe } = require("#cli/bin_path");
+import * as assert from "node:assert";
+import { setup } from "#dev/process";
 
-child_process.execSync(`${rescript_exe} clean && ${rescript_exe} build`, {
-  cwd: __dirname,
-});
+const { execClean, execBuild } = setup(import.meta.dirname);
 
-var x = require("./src/demo.bs.js");
+await execClean();
+await execBuild();
+
+const x = await import("./src/demo.res.js");
 assert.equal(x.v, 42);

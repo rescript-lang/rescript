@@ -1,29 +1,20 @@
-var p = require("child_process");
-var fs = require("fs");
-var path = require("path");
-var assert = require("assert");
-var { rescript_exe } = require("#cli/bin_path");
+// @ts-check
 
-p.spawnSync(rescript_exe, [`clean`], {
-  encoding: "utf8",
-  cwd: __dirname,
-});
-p.spawnSync(rescript_exe, [`build`, `-install`], {
-  encoding: "utf8",
-  cwd: __dirname,
-});
+import * as assert from "node:assert";
+import { existsSync } from "node:fs";
+import * as path from "node:path";
+import { setup } from "#dev/process";
 
-var fooExists = fs.existsSync(path.join(__dirname, "lib", "ocaml", "Foo.cmi"));
-assert.ok(fooExists == false);
+const { execBuild, execClean } = setup(import.meta.dirname);
 
-p.spawnSync(rescript_exe, {
-  encoding: "utf8",
-  cwd: __dirname,
-});
-p.spawnSync(rescript_exe, [`build`, `-install`], {
-  encoding: "utf8",
-  cwd: __dirname,
-});
+await execClean();
+await execBuild(["-install"]);
 
-fooExists = fs.existsSync(path.join(__dirname, "lib", "ocaml", "Foo.cmi"));
+let fooExists = existsSync(path.join("lib", "ocaml", "Foo.cmi"));
+assert.ok(!fooExists);
+
+await execBuild();
+await execBuild(["-install"]);
+
+fooExists = existsSync(path.join("lib", "ocaml", "Foo.cmi"));
 assert.ok(fooExists);

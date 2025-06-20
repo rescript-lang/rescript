@@ -67,15 +67,15 @@ type state = {
 let computeInitialState = ((community, connections)) => {
   let (name, targetLinkable, selectedCourseIds) = switch community {
   | Some(community) => (
-      community |> Community.name,
-      community |> Community.targetLinkable,
+      community->Community.name,
+      community->Community.targetLinkable,
       connections
-      |> List.filter(connection =>
-        connection |> Connection.communityId == (community |> Community.id)
+      ->List.filter(connection =>
+        connection->Connection.communityId == (community->Community.id)
       )
-      |> List.map(connection => connection |> Connection.courseId)
-      |> Array.of_list
-      |> Belt.Set.String.fromArray,
+      ->List.map(connection => connection->Connection.courseId)
+      ->Array.of_list
+      ->Belt.Set.String.fromArray,
     )
   | None => ("", false, Belt.Set.String.empty)
   }
@@ -126,10 +126,10 @@ let reducer = (state, action) =>
 
 let handleConnections = (communityId, connections, courseIds) => {
   let oldConnections =
-    connections |> List.filter(connection => connection |> Connection.communityId != communityId)
+    connections->List.filter(connection => connection->Connection.communityId != communityId)
   let newConnectionsForCommunity =
-    courseIds |> Array.map(courseId => Connection.create(communityId, courseId)) |> Array.to_list
-  oldConnections |> List.append(newConnectionsForCommunity)
+    courseIds->Array.map(courseId => Connection.create(communityId, courseId))->Array.to_list
+  oldConnections->List.append(newConnectionsForCommunity)
 }
 
 let handleQuery = (
@@ -141,10 +141,10 @@ let handleQuery = (
   updateCommunitiesCB,
   event,
 ) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
 
   let {name, targetLinkable} = state
-  let courseIds = state.selectedCourseIds |> Belt.Set.String.toArray
+  let courseIds = state.selectedCourseIds->Belt.Set.String.toArray
 
   if name != "" {
     send(BeginSaving)
@@ -152,14 +152,14 @@ let handleQuery = (
     switch community {
     | Some(community) =>
       UpdateCommunityQuery.make(
-        ~id=community |> Community.id,
+        ~id=community->Community.id,
         ~name,
         ~targetLinkable,
         ~courseIds,
         (),
       )
-      |> GraphqlQuery.sendQuery
-      |> Js.Promise.then_(response =>
+      ->GraphqlQuery.sendQuery
+      ->Js.Promise.then_(response =>
         switch response["updateCommunity"] {
         | #CommunityId(communityId) =>
           send(FinishSaving)
@@ -172,12 +172,12 @@ let handleQuery = (
         | #Errors(errors) => Js.Promise.reject(UpdateCommunityErrorHandler.Errors(errors))
         }
       )
-      |> UpdateCommunityErrorHandler.catch(() => send(FailSaving))
-      |> ignore
+      ->UpdateCommunityErrorHandler.catch(() => send(FailSaving))
+      ->ignore
     | None =>
       CreateCommunityQuery.make(~name, ~targetLinkable, ~courseIds, ())
-      |> GraphqlQuery.sendQuery
-      |> Js.Promise.then_(response =>
+      ->GraphqlQuery.sendQuery
+      ->Js.Promise.then_(response =>
         switch response["createCommunity"] {
         | #CommunityId(communityId) =>
           send(FinishSaving)
@@ -190,8 +190,8 @@ let handleQuery = (
         | #Errors(errors) => Js.Promise.reject(CreateCommunityErrorHandler.Errors(errors))
         }
       )
-      |> CreateCommunityErrorHandler.catch(() => send(FailSaving))
-      |> ignore
+      ->CreateCommunityErrorHandler.catch(() => send(FailSaving))
+      ->ignore
     }
   } else {
     Notification.error("Empty", "Answer cant be blank")
@@ -205,7 +205,7 @@ let booleanButtonClasses = bool => {
 
 module Selectable = {
   type t = Course.t
-  let value = t => t |> Course.name
+  let value = t => t->Course.name
   let searchString = value
 }
 
@@ -213,9 +213,9 @@ module CourseSelector = MultiselectInline.Make(Selectable)
 
 let selectedCourses = (~invert=false, courses, selectedCourseIds) =>
   courses
-  |> Array.of_list
-  |> Js.Array.filter(course => {
-    let condition = selectedCourseIds->Belt.Set.String.has(course |> Course.id)
+  ->Array.of_list
+  ->Js.Array.filter(course => {
+    let condition = selectedCourseIds->Belt.Set.String.has(course->Course.id)
     invert ? !condition : condition
   })
 
@@ -224,9 +224,9 @@ let unselectedCourses = (courses, selectedCourseIds) =>
 
 let onChangeCourseSearch = (send, value) => send(UpdateCourseSearch(value))
 
-let onSelectCourse = (send, course) => send(SelectCourse(course |> Course.id))
+let onSelectCourse = (send, course) => send(SelectCourse(course->Course.id))
 
-let onDeselectCourse = (send, course) => send(DeselectCourse(course |> Course.id))
+let onDeselectCourse = (send, course) => send(DeselectCourse(course->Course.id))
 
 @react.component
 let make = (~courses, ~community, ~connections, ~addCommunityCB, ~updateCommunitiesCB) => {
@@ -236,11 +236,11 @@ let make = (~courses, ~community, ~connections, ~addCommunityCB, ~updateCommunit
     computeInitialState,
   )
 
-  let saveDisabled = state.name |> String.trim == "" || !state.dirty
+  let saveDisabled = state.name->String.trim == "" || !state.dirty
 
   <div className="mx-8 pt-8">
     <h5 className="uppercase text-center border-b border-gray-400 pb-2">
-      {"Community Editor" |> str}
+      {"Community Editor"->str}
     </h5>
     <DisablingCover disabled=state.saving>
       <div key="communities-editor" className="mt-3">
@@ -248,7 +248,7 @@ let make = (~courses, ~community, ~connections, ~addCommunityCB, ~updateCommunit
           <label
             className="inline-block tracking-wide text-gray-700 text-xs font-semibold"
             htmlFor="communities-editor__name">
-            {"What do you want to call this community?" |> str}
+            {"What do you want to call this community?"->str}
           </label>
           <input
             placeholder="This community needs a name!"
@@ -262,25 +262,25 @@ let make = (~courses, ~community, ~connections, ~addCommunityCB, ~updateCommunit
           />
           <School__InputGroupError
             message="is not a valid name"
-            active={state.dirty ? state.name |> String.trim == "" : false}
+            active={state.dirty ? state.name->String.trim == "" : false}
           />
         </div>
         <div className="flex items-center mt-6">
           <label
             className="inline-block tracking-wide text-gray-700 text-xs font-semibold"
             htmlFor="communities-editor__course-list">
-            {"Should students be allowed to discuss targets in this community?" |> str}
+            {"Should students be allowed to discuss targets in this community?"->str}
           </label>
           <div className="flex toggle-button__group flex-no-shrink rounded-lg overflow-hidden ml-2">
             <button
               onClick={_ => send(SetTargetLinkable(true))}
               className={booleanButtonClasses(state.targetLinkable)}>
-              {"Yes" |> str}
+              {"Yes"->str}
             </button>
             <button
               onClick={_ => send(SetTargetLinkable(false))}
               className={booleanButtonClasses(!state.targetLinkable)}>
-              {"No" |> str}
+              {"No"->str}
             </button>
           </div>
         </div>
@@ -288,7 +288,7 @@ let make = (~courses, ~community, ~connections, ~addCommunityCB, ~updateCommunit
           <label
             className="inline-block tracking-wide text-gray-700 text-xs font-semibold mb-2"
             htmlFor="communities-editor__course-targetLinkable">
-            {"Give access to students from:" |> str}
+            {"Give access to students from:"->str}
           </label>
           <CourseSelector
             placeholder="Search for a course"
@@ -318,13 +318,13 @@ let make = (~courses, ~community, ~connections, ~addCommunityCB, ~updateCommunit
         {switch community {
         | Some(_) => "Update Community"
         | None => "Create a new community"
-        } |> str}
+        }->str}
       </button>
     </DisablingCover>
     <div className="mt-3 mb-3 text-xs">
       <span className="leading-normal">
-        <strong> {"Note:" |> str} </strong>
-        {" Coaches in your school have access to all communities." |> str}
+        <strong> {"Note:"->str} </strong>
+        {" Coaches in your school have access to all communities."->str}
       </span>
     </div>
   </div>

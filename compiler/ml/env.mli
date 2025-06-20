@@ -155,8 +155,6 @@ val open_signature :
   t ->
   t option
 
-val open_pers_signature : string -> t -> t
-
 (* Insertion by name *)
 
 val enter_value :

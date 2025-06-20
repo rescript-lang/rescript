@@ -160,7 +160,6 @@ let rec pattern_variables : Typedtree.pattern -> Ident.t list =
     List.concat (List.map (fun (_, _, p, _) -> pattern_variables p) fields)
   | Tpat_array pats -> List.concat (List.map pattern_variables pats)
   | Tpat_or (l, r, _) -> pattern_variables l @ pattern_variables r
-  | Tpat_lazy p -> pattern_variables p
 
 open Rec_context
 open Asttypes
@@ -197,8 +196,8 @@ let rec classify_expression : Typedtree.expression -> sd =
     classify_expression e
   | Texp_ident _ | Texp_for _ | Texp_constant _ | Texp_tuple _ | Texp_array _
   | Texp_construct _ | Texp_variant _ | Texp_record _ | Texp_setfield _
-  | Texp_while _ | Texp_pack _ | Texp_function _ | Texp_lazy _
-  | Texp_extension_constructor _ ->
+  | Texp_while _ | Texp_pack _ | Texp_function _ | Texp_extension_constructor _
+    ->
     Static
   | Texp_apply {funct = {exp_desc = Texp_ident (_, _, vd)}} when is_ref vd ->
     Static
@@ -291,10 +290,6 @@ let rec expression : Env.env -> Typedtree.expression -> Use.t =
     Use.join (expression env e) (list case env cases)
   | Texp_function {case = case_} ->
     Use.delay (list (case ~scrutinee:Use.empty) env [case_])
-  | Texp_lazy e -> (
-    match Typeopt.classify_lazy_argument e with
-    | `Constant_or_function | `Identifier _ | `Float -> expression env e
-    | `Other -> Use.delay (expression env e))
   | Texp_extension_constructor _ -> Use.empty
 
 and option : 'a. (Env.env -> 'a -> Use.t) -> Env.env -> 'a option -> Use.t =
@@ -431,7 +426,6 @@ and is_destructuring_pattern : Typedtree.pattern -> bool =
   | Tpat_array _ -> true
   | Tpat_or (l, r, _) ->
     is_destructuring_pattern l || is_destructuring_pattern r
-  | Tpat_lazy _ -> true
 
 let check_recursive_expression idlist expr =
   let ty = expression (build_unguarded_env idlist) expr in

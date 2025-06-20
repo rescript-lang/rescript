@@ -13,10 +13,10 @@ let email = t => t.email
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    email: json |> field("email", string),
-    name: json |> field("name", string),
-    avatarUrl: json |> optional(field("avatarUrl", string)),
+    id: json->field("id", string),
+    email: json->field("email", string),
+    name: json->field("name", string),
+    avatarUrl: json->optional(field("avatarUrl", string)),
   }
 }
 
@@ -27,6 +27,6 @@ let create = (~id, ~name, ~email, ~avatarUrl) => {
   avatarUrl: avatarUrl,
 }
 
-let sort = l => l |> ArrayUtils.copyAndSort((x, y) => x.name < y.name ? -1 : 1)
+let sort = l => l->ArrayUtils.copyAndSort((x, y) => x.name < y.name ? -1 : 1)
 
 let updateName = (name, t) => {...t, name: name}

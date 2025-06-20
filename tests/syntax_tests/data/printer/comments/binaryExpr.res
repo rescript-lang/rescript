@@ -79,18 +79,18 @@ promise
 
 promise
 // TODO: This comment needs to be here
-|> Js.Promise.then(payload => {
+->Js.Promise.then(payload => {
   Js.log2("this payload was received", payload);
   Js.Promise.resolve(""->Obj.magic);
 })
 
 promise
 // comment
-|> Js.Promise.then(payload => {
+->Js.Promise.then(payload => {
   Js.Promise.resolve(""->Obj.magic);
 })
 // comment 2
-|> Js.Promise.catch(err => {
+->Js.Promise.catch(err => {
   Js.log2("this error was caught", err);
   Js.Promise.resolve(""->Obj.magic);
 })

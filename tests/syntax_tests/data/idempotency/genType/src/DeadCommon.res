@@ -21,7 +21,7 @@ let checkPrefix = prefix_ => {
     GenTypeCommon.projectRoot.contents == ""
       ? prefix_
       : Filename.concat(GenTypeCommon.projectRoot.contents, prefix_)
-  let prefixLen = prefix |> String.length
+  let prefixLen = prefix->String.length
   sourceDir =>
     String.length(sourceDir) >= prefixLen && String.sub(sourceDir, 0, prefixLen) == prefix
 }
@@ -42,7 +42,7 @@ let whitelistSourceDir = lazy (
   }
 )
 
-let posInWhitelist = (pos: Lexing.position) => pos.pos_fname |> Lazy.force(whitelistSourceDir)
+let posInWhitelist = (pos: Lexing.position) => pos.pos_fname->Lazy.force(whitelistSourceDir)
 
 // Blacklist=prefix don't report on source dirs with the given prefix
 let blacklistSourceDir = lazy (
@@ -52,7 +52,7 @@ let blacklistSourceDir = lazy (
   }
 )
 
-let posInBlacklist = (pos: Lexing.position) => pos.pos_fname |> Lazy.force(blacklistSourceDir)
+let posInBlacklist = (pos: Lexing.position) => pos.pos_fname->Lazy.force(blacklistSourceDir)
 
 let write = Sys.getenv_opt("Write") != None
 
@@ -64,7 +64,7 @@ let posToString = (~printCol=true, ~shortFile=true, pos: Lexing.position) => {
   let file = pos.Lexing.pos_fname
   let line = pos.Lexing.pos_lnum
   let col = pos.Lexing.pos_cnum - pos.Lexing.pos_bol
-  (shortFile ? file |> Filename.basename : file) ++
+  (shortFile ? file->Filename.basename : file) ++
   (":" ++
   (string_of_int(line) ++ (printCol ? ":" ++ string_of_int(col) : ": ")))
 }
@@ -175,7 +175,7 @@ let declGetLoc = decl => {
 let getPosOfValue = (~moduleName, ~valueName) =>
   switch Hashtbl.find_opt(moduleDecls, moduleName) {
   | Some(posSet) =>
-    posSet |> PosSet.find_first_opt(pos =>
+    posSet->PosSet.find_first_opt(pos =>
       switch PosHash.find_opt(decls, pos) {
       | Some({declKind: Value, path: list{name, ..._}}) if name == valueName => true
       | _ => false
@@ -202,8 +202,8 @@ let addValueReference = (~addFileReference, ~locFrom: Location.t, ~locTo: Locati
     if verbose {
       Log_.item(
         "addValueReference %s --> %s@.",
-        locFrom.loc_start |> posToString,
-        locTo.loc_start |> posToString,
+        locFrom.loc_start->posToString,
+        locTo.loc_start->posToString,
       )
     }
     PosHash.addSet(valueReferences, locTo.loc_start, locFrom.loc_start)
@@ -269,30 +269,30 @@ let iterFilesFromRootsToLeaves = iterFun => {
       removeIncomingEdge(toFile)
     }
 
-  fileReferences |> FileHash.iter((fromFile, set) => {
+  fileReferences->FileHash.iter((fromFile, set) => {
     if getNum(fromFile) == 0 {
       Hashtbl.replace(referencesByNumber, 0, FileSet.add(fromFile, getSet(0)))
     }
-    set |> FileSet.iter(toFile => addEdge(fromFile, toFile))
+    set->FileSet.iter(toFile => addEdge(fromFile, toFile))
   })
 
   while getSet(0) != FileSet.empty {
     let filesWithNoIncomingReferences = getSet(0)
     Hashtbl.remove(referencesByNumber, 0)
-    filesWithNoIncomingReferences |> FileSet.iter(fileName => {
+    filesWithNoIncomingReferences->FileSet.iter(fileName => {
       iterFun(fileName)
       let references = try FileHash.find(fileReferences, fileName) catch {
       | Not_found => FileSet.empty
       }
-      references |> FileSet.iter(toFile => removeEdge(fileName, toFile))
+      references->FileSet.iter(toFile => removeEdge(fileName, toFile))
     })
   }
   // Process any remaining items in case of circular references
-  referencesByNumber |> Hashtbl.iter((_num, set) =>
+  referencesByNumber->Hashtbl.iter((_num, set) =>
     if FileSet.is_empty(set) {
       ()
     } else {
-      set |> FileSet.iter(fileName => {
+      set->FileSet.iter(fileName => {
         let pos = {...Lexing.dummy_pos, pos_fname: fileName}
         let loc = {...Location.none, loc_start: pos, loc_end: pos}
         Log_.info(~loc, ~name="Warning Dead Analysis Cycle", (ppf, ()) =>
@@ -310,9 +310,9 @@ let iterFilesFromRootsToLeaves = iterFun => {
 
 /* *******   PROCESSING  ******* */
 
-let pathToString = path => path |> List.rev |> String.concat(".")
+let pathToString = path => path->List.rev->String.concat(".")
 
-let pathWithoutHead = path => path |> List.rev |> List.tl |> String.concat(".")
+let pathWithoutHead = path => path->List.rev->List.tl->String.concat(".")
 
 let annotateAtEnd = (~pos) => !posIsReason(pos)
 
@@ -337,7 +337,7 @@ let addDeclaration_ = (~sideEffects=false, ~declKind, ~path, ~loc: Location.t, n
         "add%sDeclaration %s %s@.",
         declKind == Value ? "Value" : "Type",
         name,
-        pos |> posToString,
+        pos->posToString,
       )
     }
 
@@ -363,7 +363,7 @@ let addDeclaration_ = (~sideEffects=false, ~declKind, ~path, ~loc: Location.t, n
 let addTypeDeclaration = addDeclaration_
 
 let addValueDeclaration = (~sideEffects, ~path, ~loc: Location.t, name) =>
-  name |> addDeclaration_(~sideEffects, ~declKind=Value, ~path, ~loc)
+  name->addDeclaration_(~sideEffects, ~declKind=Value, ~path, ~loc)
 
 /* *** REPORTING *** */
 
@@ -401,14 +401,14 @@ module ProcessDeadAnnotations = {
   let processAttributes = (~pos, attributes) => {
     if (
       attributes
-      |> Annotation.getAttributePayload(Annotation.tagIsOneOfTheGenTypeAnnotations) != None
+      ->Annotation.getAttributePayload(Annotation.tagIsOneOfTheGenTypeAnnotations) != None
     ) {
-      pos |> annotateGenType
+      pos->annotateGenType
     }
-    if attributes |> Annotation.getAttributePayload(\"="(deadAnnotation)) != None {
-      pos |> annotateDead
-    } else if attributes |> Annotation.getAttributePayload(\"="(liveAnnotation)) != None {
-      pos |> annotateLive
+    if attributes->Annotation.getAttributePayload(\"="(deadAnnotation)) != None {
+      pos->annotateDead
+    } else if attributes->Annotation.getAttributePayload(\"="(liveAnnotation)) != None {
+      pos->annotateLive
     }
   }
 
@@ -419,7 +419,7 @@ module ProcessDeadAnnotations = {
       {vb_attributes, vb_pat} as value_binding: Typedtree.value_binding,
     ) => {
       switch vb_pat.pat_desc {
-      | Tpat_var(_id, pLoc) => vb_attributes |> processAttributes(~pos=pLoc.loc.loc_start)
+      | Tpat_var(_id, pLoc) => vb_attributes->processAttributes(~pos=pLoc.loc.loc_start)
 
       | _ => ()
       }
@@ -428,13 +428,13 @@ module ProcessDeadAnnotations = {
     let type_kind = (self, typeKind: Typedtree.type_kind) => {
       switch typeKind {
       | Ttype_record(labelDeclarations) =>
-        labelDeclarations |> List.iter(({ld_attributes, ld_loc}: Typedtree.label_declaration) =>
-          ld_attributes |> processAttributes(~pos=ld_loc.loc_start)
+        labelDeclarations->List.iter(({ld_attributes, ld_loc}: Typedtree.label_declaration) =>
+          ld_attributes->processAttributes(~pos=ld_loc.loc_start)
         )
       | Ttype_variant(constructorDeclarations) =>
-        constructorDeclarations |> List.iter((
+        constructorDeclarations->List.iter((
           {cd_attributes, cd_loc}: Typedtree.constructor_declaration,
-        ) => cd_attributes |> processAttributes(~pos=cd_loc.loc_start))
+        ) => cd_attributes->processAttributes(~pos=cd_loc.loc_start))
       | _ => ()
       }
       super.type_kind(self, typeKind)
@@ -443,7 +443,7 @@ module ProcessDeadAnnotations = {
       self,
       {val_attributes, val_val} as value_description: Typedtree.value_description,
     ) => {
-      val_attributes |> processAttributes(~pos=val_val.val_loc.loc_start)
+      val_attributes->processAttributes(~pos=val_val.val_loc.loc_start)
       super.value_description(self, value_description)
     }
     {
@@ -456,11 +456,11 @@ module ProcessDeadAnnotations = {
 
   let structure = structure => {
     let collectExportLocations = collectExportLocations()
-    structure |> collectExportLocations.structure(collectExportLocations) |> ignore
+    structure->collectExportLocations.structure(collectExportLocations)->ignore
   }
   let signature = signature => {
     let collectExportLocations = collectExportLocations()
-    signature |> collectExportLocations.signature(collectExportLocations) |> ignore
+    signature->collectExportLocations.signature(collectExportLocations)->ignore
   }
 }
 
@@ -480,8 +480,8 @@ module WriteDeadAnnotations = {
         ("[" ++
         ((isReason || declKind != Value ? "@" : "@@") ++
         (deadAnnotation ++
-        (" \"" ++ ((path |> pathWithoutHead) ++ "\"] ")))))
-      let posAnnotation = decl |> getPosAnnotation
+        (" \"" ++ ((path->pathWithoutHead) ++ "\"] ")))))
+      let posAnnotation = decl->getPosAnnotation
       let col = posAnnotation.pos_cnum - posAnnotation.pos_bol
       let originalLen = String.length(original)
       {
@@ -495,12 +495,12 @@ module WriteDeadAnnotations = {
           original ++ annotationStr
         },
         declarations: nextDeclarations,
-      } |> lineToString_
+      }->lineToString_
     }
 
   let lineToString = ({original, declarations}) => {
     let declarations =
-      declarations |> List.sort((decl1, decl2) =>
+      declarations->List.sort((decl1, decl2) =>
         getPosAnnotation(decl2).pos_cnum - getPosAnnotation(decl1).pos_cnum
       )
     lineToString_({original: original, declarations: declarations})
@@ -520,7 +520,7 @@ module WriteDeadAnnotations = {
     try loop() catch {
     | End_of_file =>
       close_in(channel)
-      lines.contents |> List.rev |> Array.of_list
+      lines.contents->List.rev->Array.of_list
     }
   }
 
@@ -528,8 +528,8 @@ module WriteDeadAnnotations = {
     if fileName != "" && write {
       let channel = open_out(fileName)
       let lastLine = Array.length(lines)
-      lines |> Array.iteri((n, line) => {
-        output_string(channel, line |> lineToString)
+      lines->Array.iteri((n, line) => {
+        output_string(channel, line->lineToString)
         if n < lastLine - 1 {
           output_char(channel, '\n')
         }
@@ -546,12 +546,12 @@ module WriteDeadAnnotations = {
         currentFileLines := readFile(fileName)
       }
 
-      let indexInLines = (decl |> getPosAnnotation).pos_lnum - 1
+      let indexInLines = (decl->getPosAnnotation).pos_lnum - 1
 
       if indexInLines < Array.length(currentFileLines.contents) {
         let line = currentFileLines.contents[indexInLines]
         line.declarations = list{decl, ...line.declarations}
-        Format.fprintf(ppf, "  <-- line %d@.  %s@.", decl.pos.pos_lnum, line |> lineToString)
+        Format.fprintf(ppf, "  <-- line %d@.  %s@.", decl.pos.pos_lnum, line->lineToString)
       } else {
         Format.fprintf(ppf, "  <-- Can't find line %d@.", decl.pos.pos_lnum)
       }
@@ -564,8 +564,8 @@ module WriteDeadAnnotations = {
 }
 
 let declIsDead = (~refs, decl) => {
-  let liveRefs = refs |> PosSet.filter(p => !ProcessDeadAnnotations.isAnnotatedDead(p))
-  liveRefs |> PosSet.cardinal == 0 && !ProcessDeadAnnotations.isAnnotatedGenTypeOrLive(decl.pos)
+  let liveRefs = refs->PosSet.filter(p => !ProcessDeadAnnotations.isAnnotatedDead(p))
+  liveRefs->PosSet.cardinal == 0 && !ProcessDeadAnnotations.isAnnotatedGenTypeOrLive(decl.pos)
 }
 
 let doReportDead = pos =>
@@ -586,41 +586,41 @@ let rec resolveRecursiveRefs = (
   switch decl.pos {
   | _ if decl.resolved =>
     if recursiveDebug {
-      Log_.item("recursiveDebug %s [%d] already resolved@.", decl.path |> pathToString, level)
+      Log_.item("recursiveDebug %s [%d] already resolved@.", decl.path->pathToString, level)
     }
-    decl.pos |> ProcessDeadAnnotations.isAnnotatedDead
+    decl.pos->ProcessDeadAnnotations.isAnnotatedDead
   | _ if PosSet.mem(decl.pos, refsBeingResolved.contents) =>
     if recursiveDebug {
       Log_.item(
         "recursiveDebug %s [%d] is being resolved: assume dead@.",
-        decl.path |> pathToString,
+        decl.path->pathToString,
         level,
       )
     }
     true
   | _ =>
     if recursiveDebug {
-      Log_.item("recursiveDebug resolving %s [%d]@.", decl.path |> pathToString, level)
+      Log_.item("recursiveDebug resolving %s [%d]@.", decl.path->pathToString, level)
     }
     refsBeingResolved := PosSet.add(decl.pos, refsBeingResolved.contents)
     let allDepsResolved = ref(true)
-    let newRefs = refs |> PosSet.filter(x =>
+    let newRefs = refs->PosSet.filter(x =>
       if x == decl.pos {
         if recursiveDebug {
-          Log_.item("recursiveDebug %s ignoring reference to self@.", decl.path |> pathToString)
+          Log_.item("recursiveDebug %s ignoring reference to self@.", decl.path->pathToString)
         }
         false
       } else {
         switch PosHash.find_opt(decls, x) {
         | None =>
           if recursiveDebug {
-            Log_.item("recursiveDebug can't find decl for %s@.", x |> posToString)
+            Log_.item("recursiveDebug can't find decl for %s@.", x->posToString)
           }
           true
         | Some(xDecl) =>
           let xRefs = PosHash.findSet(xDecl.declKind == Value ? valueReferences : typeReferences, x)
           let xDeclIsDead =
-            xDecl |> resolveRecursiveRefs(
+            xDecl->resolveRecursiveRefs(
               ~deadDeclarations,
               ~level=level + 1,
               ~orderedFiles,
@@ -635,29 +635,29 @@ let rec resolveRecursiveRefs = (
       }
     )
 
-    let isDead = decl |> declIsDead(~refs=newRefs)
+    let isDead = decl->declIsDead(~refs=newRefs)
     let isResolved = !isDead || (allDepsResolved.contents || level == 0)
 
     if isResolved {
       decl.resolved = true
 
       if isDead {
-        if decl.pos |> doReportDead {
+        if decl.pos->doReportDead {
           deadDeclarations := list{decl, ...deadDeclarations.contents}
         }
-        if decl |> checkSideEffects {
-          decl.pos |> ProcessDeadAnnotations.annotateDead
+        if decl->checkSideEffects {
+          decl.pos->ProcessDeadAnnotations.annotateDead
         }
       }
 
       if verbose {
-        let refsString = newRefs |> PosSet.elements |> List.map(posToString) |> String.concat(", ")
+        let refsString = newRefs->PosSet.elements->List.map(posToString)->String.concat(", ")
         Log_.item(
           "%s %s %s: %d references (%s) [%d]@.",
           isDead ? "Dead" : "Live",
           decl.declKind == Value ? "Value" : "Type",
-          decl.path |> pathToString,
-          newRefs |> PosSet.cardinal,
+          decl.path->pathToString,
+          newRefs->PosSet.cardinal,
           refsString,
           level,
         )
@@ -695,7 +695,7 @@ module Decl = {
 
     /* From the root of the file dependency DAG to the leaves.
      From the bottom of the file to the top. */
-    let (position1, position2) = (fname1 |> findPosition, fname2 |> findPosition)
+    let (position1, position2) = (fname1->findPosition, fname2->findPosition)
     let (p1, p2) = pathIsImplementationOf(path1, path2)
       ? (1, 0)
       : pathIsImplementationOf(path2, path1)
@@ -711,7 +711,7 @@ module Decl = {
 
   let emitWarning = (~message, ~loc, ~name, ~path) =>
     Log_.info(~loc, ~name, (ppf, ()) =>
-      Format.fprintf(ppf, "@{<info>%s@} %s", path |> pathWithoutHead, message)
+      Format.fprintf(ppf, "@{<info>%s@} %s", path->pathWithoutHead, message)
     )
 
   let isInsideReportedValue = decl => {
@@ -736,8 +736,8 @@ module Decl = {
   let report = (~ppf, decl) => {
     let noSideEffectsOrUnderscore =
       !decl.sideEffects || {
-        let name = decl.path |> List.hd
-        name |> String.length >= 2 &&
+        let name = decl.path->List.hd
+        name->String.length >= 2 &&
           (String.get(name, 0) == '_' || (String.get(name, 0) == '+' && String.get(name, 1) == '_'))
       }
 
@@ -753,15 +753,15 @@ module Decl = {
     | VariantCase => ("Warning Dead Type", "is a variant case which is never constructed")
     }
 
-    let insideReportedValue = decl |> isInsideReportedValue
+    let insideReportedValue = decl->isInsideReportedValue
 
     let shouldEmitWarning = !insideReportedValue
-    let shouldWriteAnnotation = shouldEmitWarning && decl |> checkSideEffects
+    let shouldWriteAnnotation = shouldEmitWarning && decl->checkSideEffects
     if shouldEmitWarning {
-      emitWarning(~message, ~loc=decl |> declGetLoc, ~name, ~path=decl.path)
+      emitWarning(~message, ~loc=decl->declGetLoc, ~name, ~path=decl.path)
     }
     if shouldWriteAnnotation {
-      decl |> WriteDeadAnnotations.onDeadDecl(~ppf)
+      decl->WriteDeadAnnotations.onDeadDecl(~ppf)
     }
   }
 }
@@ -769,7 +769,7 @@ module Decl = {
 let reportDead = () => {
   let iterDeclInOrder = (~orderedFiles, ~deadDeclarations, decl) => {
     let refs =
-      decl.pos |> PosHash.findSet(decl.declKind == Value ? valueReferences : typeReferences)
+      decl.pos->PosHash.findSet(decl.declKind == Value ? valueReferences : typeReferences)
     resolveRecursiveRefs(
       ~deadDeclarations,
       ~level=0,
@@ -777,16 +777,16 @@ let reportDead = () => {
       ~refsBeingResolved=ref(PosSet.empty),
       ~refs,
       decl,
-    ) |> ignore
+    )->ignore
   }
 
   if verbose {
     Log_.item("@.File References@.@.")
-    fileReferences |> FileHash.iter((file, files) =>
+    fileReferences->FileHash.iter((file, files) =>
       Log_.item(
         "%s -->> %s@.",
-        file |> Filename.basename,
-        files |> FileSet.elements |> List.map(Filename.basename) |> String.concat(", "),
+        file->Filename.basename,
+        files->FileSet.elements->List.map(Filename.basename)->String.concat(", "),
       )
     )
   }
@@ -807,14 +807,14 @@ let reportDead = () => {
   })
 
   let orderedDeclarations =
-    declarations |> List.fast_sort(
+    declarations->List.fast_sort(
       Decl.compareUsingDependencies(~orderedFiles),
     ) /* analyze in reverse order */
 
   let deadDeclarations = ref(list{})
-  orderedDeclarations |> List.iter(iterDeclInOrder(~orderedFiles, ~deadDeclarations))
+  orderedDeclarations->List.iter(iterDeclInOrder(~orderedFiles, ~deadDeclarations))
 
   let ppf = Format.std_formatter
-  let sortedDeadDeclarations = deadDeclarations.contents |> List.fast_sort(Decl.compareForReporting)
-  sortedDeadDeclarations |> List.iter(Decl.report(~ppf))
+  let sortedDeadDeclarations = deadDeclarations.contents->List.fast_sort(Decl.compareForReporting)
+  sortedDeadDeclarations->List.iter(Decl.report(~ppf))
 }

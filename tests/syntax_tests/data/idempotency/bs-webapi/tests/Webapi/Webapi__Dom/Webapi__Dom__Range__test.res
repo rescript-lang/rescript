@@ -1,7 +1,7 @@
 open Webapi.Dom
 open Range
 
-let node = document |> Document.createElement("strong")
+let node = document->Document.createElement("strong")
 
 let range = make()
 

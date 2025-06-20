@@ -55,49 +55,49 @@ let make = (
 
 let decodeJs = details =>
   make(
-    ~submissions=details["submissions"] |> OverlaySubmission.makeFromJs,
+    ~submissions=details["submissions"]->OverlaySubmission.makeFromJs,
     ~targetId=details["targetId"],
     ~targetTitle=details["targetTitle"],
-    ~students=details["students"] |> Array.map(Student.makeFromJs),
+    ~students=details["students"]->Array.map(Student.makeFromJs),
     ~levelNumber=details["levelNumber"],
     ~levelId=details["levelId"],
     ~targetEvaluationCriteriaIds=details["targetEvaluationCriteriaIds"],
     ~inactiveStudents=details["inactiveStudents"],
-    ~evaluationCriteria=details["evaluationCriteria"] |> Js.Array.map(ec =>
+    ~evaluationCriteria=details["evaluationCriteria"]->Js.Array.map(ec =>
       EvaluationCriterion.make(
         ~id=ec["id"],
         ~name=ec["name"],
         ~maxGrade=ec["maxGrade"],
         ~passGrade=ec["passGrade"],
-        ~gradesAndLabels=ec["gradeLabels"] |> Array.map(gradeAndLabel =>
+        ~gradesAndLabels=ec["gradeLabels"]->Array.map(gradeAndLabel =>
           GradeLabel.makeFromJs(gradeAndLabel)
         ),
       )
     ),
-    ~reviewChecklist=details["reviewChecklist"] |> ReviewChecklistItem.makeFromJs,
+    ~reviewChecklist=details["reviewChecklist"]->ReviewChecklistItem.makeFromJs,
     ~coachIds=details["coachIds"],
   )
 
 let updateSubmission = (submission, t) => {
   ...t,
   submissions: t.submissions
-  |> Js.Array.filter(s => s |> OverlaySubmission.id != (submission |> OverlaySubmission.id))
-  |> Array.append([submission]),
+  ->Js.Array.filter(s => s->OverlaySubmission.id != (submission->OverlaySubmission.id))
+  ->Array.append([submission]),
 }
 
 let makeIndexSubmission = (overlaySubmission, t) =>
   IndexSubmission.make(
-    ~id=overlaySubmission |> OverlaySubmission.id,
+    ~id=overlaySubmission->OverlaySubmission.id,
     ~title=t.targetTitle,
-    ~createdAt=overlaySubmission |> OverlaySubmission.createdAt,
+    ~createdAt=overlaySubmission->OverlaySubmission.createdAt,
     ~levelId=t.levelId,
     ~userNames=t.students
-    |> Array.map(student => student |> CoursesReview__Student.name)
-    |> Js.Array.joinWith(", "),
+    ->Array.map(student => student->CoursesReview__Student.name)
+    ->Js.Array.joinWith(", "),
     ~status=Some(
       IndexSubmission.makeStatus(
-        ~passedAt=overlaySubmission |> OverlaySubmission.passedAt,
-        ~feedbackSent=overlaySubmission |> OverlaySubmission.feedbackSent,
+        ~passedAt=overlaySubmission->OverlaySubmission.passedAt,
+        ~feedbackSent=overlaySubmission->OverlaySubmission.feedbackSent,
       ),
     ),
     ~coachIds=t.coachIds,

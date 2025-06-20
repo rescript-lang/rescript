@@ -39,7 +39,7 @@ let ff = (g, x) => {
 @@warning("-21")
 
 let u = () => {
-  raise(Not_found)
+  throw(Not_found)
   let f = 3 + 3
   f + f
 }

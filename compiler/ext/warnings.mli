@@ -126,3 +126,8 @@ val message : t -> string
 val number : t -> int
 
 val reset : unit -> unit
+
+val loc_to_string : loc -> string
+(**
+Turn the location into a string with (line,column--line,column) format.
+*)

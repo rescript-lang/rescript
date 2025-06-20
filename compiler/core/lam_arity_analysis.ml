@@ -69,8 +69,6 @@ let rec get_arity (meta : Lam_stats.t) (lam : Lam.t) : Lam_arity.t =
     with
     | Submodule subs -> subs.(m) (* TODO: shall we store it as array?*)
     | Single _ -> Lam_arity.na)
-  | Lprim {primitive = Praw_js_code {code_info = Exp (Js_function {arity})}} ->
-    Lam_arity.info [arity] false
   | Lprim {primitive = Praise; _} -> Lam_arity.raise_arity_info
   | Lglobal_module _ (* TODO: fix me never going to happen *) | Lprim _ ->
     Lam_arity.na (* CHECK*)

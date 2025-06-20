@@ -88,21 +88,21 @@ module TargetDetailsQuery = %graphql(`
 
 let loadTargetDetails = (targetId, send) =>
   TargetDetailsQuery.make(~targetId, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(result => {
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(result => {
     let targetDetails = TargetDetails.makeFromJs(result["targetDetails"])
     send(SaveTargetDetails(targetDetails))
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 
 let defaultChecklist = [
   ChecklistItem.make(~title="Describe your submission", ~kind=LongText, ~optional=false),
 ]
 
 let computeMethodOfCompletion = targetDetails => {
-  let hasQuiz = targetDetails |> TargetDetails.quiz |> ArrayUtils.isNotEmpty
-  let hasEvaluationCriteria = targetDetails.evaluationCriteria |> ArrayUtils.isNotEmpty
+  let hasQuiz = targetDetails->TargetDetails.quiz->ArrayUtils.isNotEmpty
+  let hasEvaluationCriteria = targetDetails.evaluationCriteria->ArrayUtils.isNotEmpty
   let hasLinkToComplete = switch targetDetails.linkToComplete {
   | Some(_) => true
   | None => false
@@ -120,9 +120,9 @@ let reducer = (state, action) =>
   | SaveTargetDetails(targetDetails) =>
     let methodOfCompletion = computeMethodOfCompletion(targetDetails)
     let checklist =
-      targetDetails.checklist |> ArrayUtils.isNotEmpty ? targetDetails.checklist : defaultChecklist
+      targetDetails.checklist->ArrayUtils.isNotEmpty ? targetDetails.checklist : defaultChecklist
     let quiz =
-      targetDetails.quiz |> ArrayUtils.isNotEmpty ? targetDetails.quiz : [QuizQuestion.empty("0")]
+      targetDetails.quiz->ArrayUtils.isNotEmpty ? targetDetails.quiz : [QuizQuestion.empty("0")]
     {
       ...state,
       title: targetDetails.title,
@@ -182,18 +182,18 @@ let reducer = (state, action) =>
     }
   | UpdateTargetRole(role) => {...state, role: role, dirty: true}
   | AddQuizQuestion =>
-    let quiz = Array.append(state.quiz, [QuizQuestion.empty(Js.Date.now() |> Js.Float.toString)])
+    let quiz = Array.append(state.quiz, [QuizQuestion.empty(Js.Date.now()->Js.Float.toString)])
     {...state, quiz: quiz, dirty: true}
   | UpdateQuizQuestion(id, quizQuestion) =>
-    let quiz = state.quiz |> Array.map(q => QuizQuestion.id(q) == id ? quizQuestion : q)
+    let quiz = state.quiz->Array.map(q => QuizQuestion.id(q) == id ? quizQuestion : q)
     {...state, quiz: quiz, dirty: true}
   | RemoveQuizQuestion(id) =>
-    let quiz = state.quiz |> Js.Array.filter(q => QuizQuestion.id(q) != id)
+    let quiz = state.quiz->Js.Array.filter(q => QuizQuestion.id(q) != id)
     {...state, quiz: quiz, dirty: true}
   | UpdateVisibility(visibility) => {...state, visibility: visibility, dirty: true}
   | UpdateChecklistItem(indexToChange, newItem) => {
       ...state,
-      checklist: state.checklist |> Array.mapi((index, checklistItem) =>
+      checklist: state.checklist->Array.mapi((index, checklistItem) =>
         index == indexToChange ? newItem : checklistItem
       ),
       dirty: true,
@@ -205,22 +205,22 @@ let reducer = (state, action) =>
     }
   | RemoveChecklistItem(index) => {
       ...state,
-      checklist: state.checklist |> ChecklistItem.removeItem(index),
+      checklist: state.checklist->ChecklistItem.removeItem(index),
       dirty: true,
     }
   | MoveChecklistItemUp(index) => {
       ...state,
-      checklist: state.checklist |> ChecklistItem.moveUp(index),
+      checklist: state.checklist->ChecklistItem.moveUp(index),
       dirty: true,
     }
   | MoveChecklistItemDown(index) => {
       ...state,
-      checklist: state.checklist |> ChecklistItem.moveDown(index),
+      checklist: state.checklist->ChecklistItem.moveDown(index),
       dirty: true,
     }
   | CopyChecklistItem(index) => {
       ...state,
-      checklist: state.checklist |> ChecklistItem.copy(index),
+      checklist: state.checklist->ChecklistItem.copy(index),
       dirty: true,
     }
   | UpdateSaving => {...state, saving: !state.saving}
@@ -235,47 +235,47 @@ let updateTitle = (send, event) => {
 let eligiblePrerequisiteTargets = (targetId, targets, targetGroups) => {
   let targetGroupId =
     targets
-    |> ListUtils.unsafeFind(
+    ->ListUtils.unsafeFind(
       target => targetId == Target.id(target),
       "Unable to find target with ID: " ++ targetId,
     )
-    |> Target.targetGroupId
+    ->Target.targetGroupId
   let targetGroup =
     targetGroups
-    |> Array.of_list
-    |> ArrayUtils.unsafeFind(
+    ->Array.of_list
+    ->ArrayUtils.unsafeFind(
       tg => TargetGroup.id(tg) == targetGroupId,
       "Cannot find target group with ID: " ++ targetGroupId,
     )
-  let levelId = targetGroup |> TargetGroup.levelId
+  let levelId = targetGroup->TargetGroup.levelId
   let targetGroupsInSameLevel =
     targetGroups
-    |> List.filter(tg => TargetGroup.levelId(tg) == levelId)
-    |> List.map(tg => TargetGroup.id(tg))
+    ->List.filter(tg => TargetGroup.levelId(tg) == levelId)
+    ->List.map(tg => TargetGroup.id(tg))
   targets
-  |> List.filter(target => !(target |> Target.archived))
-  |> List.filter(target => targetGroupsInSameLevel |> List.mem(Target.targetGroupId(target)))
-  |> List.filter(target => Target.id(target) != targetId)
-  |> Array.of_list
+  ->List.filter(target => !(target->Target.archived))
+  ->List.filter(target => targetGroupsInSameLevel->List.mem(Target.targetGroupId(target)))
+  ->List.filter(target => Target.id(target) != targetId)
+  ->Array.of_list
 }
 
 let setPrerequisiteSearch = (send, value) => send(UpdatePrerequisiteSearchInput(value))
 
 let selectPrerequisiteTarget = (send, state, target) => {
-  let updatedPrerequisites = state.prerequisiteTargets |> Js.Array.concat([target |> Target.id])
+  let updatedPrerequisites = state.prerequisiteTargets->Js.Array.concat([target->Target.id])
   send(UpdatePrerequisiteTargets(updatedPrerequisites))
 }
 
 let deSelectPrerequisiteTarget = (send, state, target) => {
   let updatedPrerequisites =
-    state.prerequisiteTargets |> Js.Array.filter(targetId => targetId != Target.id(target))
+    state.prerequisiteTargets->Js.Array.filter(targetId => targetId != Target.id(target))
   send(UpdatePrerequisiteTargets(updatedPrerequisites))
 }
 
 module SelectablePrerequisiteTargets = {
   type t = Target.t
 
-  let value = t => t |> Target.title
+  let value = t => t->Target.title
   let searchString = value
 }
 
@@ -283,19 +283,19 @@ module MultiSelectForPrerequisiteTargets = MultiselectInline.Make(SelectablePrer
 
 let prerequisiteTargetEditor = (send, eligiblePrerequisiteTargets, state) => {
   let selected =
-    eligiblePrerequisiteTargets |> Js.Array.filter(target =>
-      state.prerequisiteTargets |> Array.mem(Target.id(target))
+    eligiblePrerequisiteTargets->Js.Array.filter(target =>
+      state.prerequisiteTargets->Array.mem(Target.id(target))
     )
   let unselected =
-    eligiblePrerequisiteTargets |> Js.Array.filter(target =>
-      !(state.prerequisiteTargets |> Array.mem(Target.id(target)))
+    eligiblePrerequisiteTargets->Js.Array.filter(target =>
+      !(state.prerequisiteTargets->Array.mem(Target.id(target)))
     )
-  eligiblePrerequisiteTargets |> ArrayUtils.isNotEmpty
+  eligiblePrerequisiteTargets->ArrayUtils.isNotEmpty
     ? <div className="mb-6">
         <label
           className="block tracking-wide text-sm font-semibold mb-2" htmlFor="prerequisite_targets">
           <span className="mr-2"> <i className="fas fa-list text-base" /> </span>
-          {"Are there any prerequisite targets?" |> str}
+          {"Are there any prerequisite targets?"->str}
         </label>
         <div id="prerequisite_targets" className="mb-6 ml-6">
           <MultiSelectForPrerequisiteTargets
@@ -334,19 +334,19 @@ let targetEvaluated = methodOfCompletion =>
   | MarkAsComplete => false
   }
 
-let validNumberOfEvaluationCriteria = state => state.evaluationCriteria |> ArrayUtils.isNotEmpty
+let validNumberOfEvaluationCriteria = state => state.evaluationCriteria->ArrayUtils.isNotEmpty
 
 let setEvaluationCriteriaSearch = (send, value) => send(UpdateEvaluationCriteriaSearchInput(value))
 
 let selectEvaluationCriterion = (send, state, evaluationCriterion) => {
   let updatedEvaluationCriteria =
-    state.evaluationCriteria |> Js.Array.concat([evaluationCriterion |> EvaluationCriteria.id])
+    state.evaluationCriteria->Js.Array.concat([evaluationCriterion->EvaluationCriteria.id])
   send(UpdateEvaluationCriteria(updatedEvaluationCriteria))
 }
 
 let deSelectEvaluationCriterion = (send, state, evaluationCriterion) => {
   let updatedEvaluationCriteria =
-    state.evaluationCriteria |> Js.Array.filter(ecId =>
+    state.evaluationCriteria->Js.Array.filter(ecId =>
       ecId != EvaluationCriteria.id(evaluationCriterion)
     )
   send(UpdateEvaluationCriteria(updatedEvaluationCriteria))
@@ -354,7 +354,7 @@ let deSelectEvaluationCriterion = (send, state, evaluationCriterion) => {
 module SelectableEvaluationCriteria = {
   type t = EvaluationCriteria.t
 
-  let value = t => t |> EvaluationCriteria.name
+  let value = t => t->EvaluationCriteria.name
   let searchString = value
 
   let make = (evaluationCriterion): t => evaluationCriterion
@@ -365,23 +365,23 @@ module MultiSelectForEvaluationCriteria = MultiselectInline.Make(SelectableEvalu
 let evaluationCriteriaEditor = (state, evaluationCriteria, send) => {
   let selected =
     evaluationCriteria
-    |> Js.Array.filter(ec => state.evaluationCriteria |> Array.mem(EvaluationCriteria.id(ec)))
-    |> Array.map(ec => SelectableEvaluationCriteria.make(ec))
+    ->Js.Array.filter(ec => state.evaluationCriteria->Array.mem(EvaluationCriteria.id(ec)))
+    ->Array.map(ec => SelectableEvaluationCriteria.make(ec))
   let unselected =
     evaluationCriteria
-    |> Js.Array.filter(ec => !(state.evaluationCriteria |> Array.mem(EvaluationCriteria.id(ec))))
-    |> Array.map(ec => SelectableEvaluationCriteria.make(ec))
+    ->Js.Array.filter(ec => !(state.evaluationCriteria->Array.mem(EvaluationCriteria.id(ec))))
+    ->Array.map(ec => SelectableEvaluationCriteria.make(ec))
   <div id="evaluation_criteria" className="mb-6">
     <label
       className="block tracking-wide text-sm font-semibold mr-6 mb-2" htmlFor="evaluation_criteria">
       <span className="mr-2"> <i className="fas fa-list text-base" /> </span>
-      {"Choose evaluation criteria from your list" |> str}
+      {"Choose evaluation criteria from your list"->str}
     </label>
     <div className="ml-6">
       {validNumberOfEvaluationCriteria(state)
         ? React.null
         : <div className="drawer-right-form__error-msg mb-2">
-            {"Atleast one has to be selected" |> str}
+            {"Atleast one has to be selected"->str}
           </div>}
       <MultiSelectForEvaluationCriteria
         placeholder="Search evaluation criteria"
@@ -423,7 +423,7 @@ let linkEditor = (state, send) =>
   <div className="mb-6">
     <label className="inline-block tracking-wide text-sm font-semibold" htmlFor="link_to_complete">
       <span className="mr-2"> <i className="fas fa-list text-base" /> </span>
-      {"Link to complete" |> str}
+      {"Link to complete"->str}
     </label>
     <div className="ml-6">
       <input
@@ -434,7 +434,7 @@ let linkEditor = (state, send) =>
         value=state.linkToComplete
         onChange={updateLinkToComplete(send)}
       />
-      {state.linkToComplete |> UrlUtils.isInvalid(false)
+      {state.linkToComplete->UrlUtils.isInvalid(false)
         ? <School__InputGroupError message="Enter a valid link" active=true />
         : React.null}
     </div>
@@ -474,11 +474,11 @@ let methodOfCompletionButton = (methodOfCompletion, state, send, index) => {
   | #MarkAsComplete => markIcon
   }
 
-  <div key={index |> string_of_int} className="w-1/3 px-2">
+  <div key={index->string_of_int} className="w-1/3 px-2">
     <button
-      onClick={updateMethodOfCompletion(methodOfCompletion |> methodOfCompletionSelection, send)}
+      onClick={updateMethodOfCompletion(methodOfCompletion->methodOfCompletionSelection, send)}
       className={methodOfCompletionButtonClasses(selected)}>
-      <div className="mb-1"> <img className="w-12 h-12" src=icon /> </div> {buttonString |> str}
+      <div className="mb-1"> <img className="w-12 h-12" src=icon /> </div> {buttonString->str}
     </button>
   </div>
 }
@@ -490,27 +490,27 @@ let methodOfCompletionSelector = (state, send) =>
         className="block tracking-wide text-sm font-semibold mr-6 mb-3"
         htmlFor="method_of_completion">
         <span className="mr-2"> <i className="fas fa-list text-base" /> </span>
-        {"How do you want the student to complete the target?" |> str}
+        {"How do you want the student to complete the target?"->str}
       </label>
       <div id="method_of_completion" className="flex -mx-2 pl-6">
         {[#MarkAsComplete, #VisitLink, #TakeQuiz]
-        |> Array.mapi((index, methodOfCompletion) =>
+        ->Array.mapi((index, methodOfCompletion) =>
           methodOfCompletionButton(methodOfCompletion, state, send, index)
         )
-        |> React.array}
+        ->React.array}
       </div>
     </div>
   </div>
 
 let isValidQuiz = quiz =>
   quiz
-  |> Js.Array.filter(quizQuestion => quizQuestion |> QuizQuestion.isValidQuizQuestion != true)
-  |> ArrayUtils.isEmpty
+  ->Js.Array.filter(quizQuestion => quizQuestion->QuizQuestion.isValidQuizQuestion != true)
+  ->ArrayUtils.isEmpty
 
 let isValidChecklist = checklist =>
   checklist
-  |> Js.Array.filter(checklistItem => checklistItem |> ChecklistItem.isValidChecklistItem != true)
-  |> ArrayUtils.isEmpty
+  ->Js.Array.filter(checklistItem => checklistItem->ChecklistItem.isValidChecklistItem != true)
+  ->ArrayUtils.isEmpty
 
 let addQuizQuestion = (send, event) => {
   ReactEvent.Mouse.preventDefault(event)
@@ -519,14 +519,14 @@ let addQuizQuestion = (send, event) => {
 let updateQuizQuestionCB = (send, id, quizQuestion) => send(UpdateQuizQuestion(id, quizQuestion))
 
 let removeQuizQuestionCB = (send, id) => send(RemoveQuizQuestion(id))
-let questionCanBeRemoved = state => state.quiz |> Array.length > 1
+let questionCanBeRemoved = state => state.quiz->Array.length > 1
 
 let quizEditor = (state, send) =>
   <div>
     <label
       className="block tracking-wide text-sm font-semibold mr-6 mb-3" htmlFor="Quiz question 1">
       <span className="mr-2"> <i className="fas fa-list text-base" /> </span>
-      {"Prepare the quiz now." |> str}
+      {"Prepare the quiz now."->str}
     </label>
     <div className="ml-6">
       {isValidQuiz(state.quiz)
@@ -536,45 +536,45 @@ let quizEditor = (state, send) =>
             active=true
           />}
       {state.quiz
-      |> Array.mapi((index, quizQuestion) =>
+      ->Array.mapi((index, quizQuestion) =>
         <CurriculumEditor__TargetQuizQuestion
-          key={quizQuestion |> QuizQuestion.id}
-          questionNumber={index + 1 |> string_of_int}
+          key={quizQuestion->QuizQuestion.id}
+          questionNumber={index + 1->string_of_int}
           quizQuestion
           updateQuizQuestionCB={updateQuizQuestionCB(send)}
           removeQuizQuestionCB={removeQuizQuestionCB(send)}
           questionCanBeRemoved={questionCanBeRemoved(state)}
         />
       )
-      |> ReasonReact.array}
+      ->ReasonReact.array}
       <a
         onClick={addQuizQuestion(send)}
         className="flex items-center bg-gray-200 border border-dashed border-primary-400 hover:bg-white hover:text-primary-500 hover:shadow-md rounded-lg p-3 cursor-pointer my-5">
         <i className="fas fa-plus-circle text-lg" />
-        <h5 className="font-semibold ml-2"> {"Add another Question" |> str} </h5>
+        <h5 className="font-semibold ml-2"> {"Add another Question"->str} </h5>
       </a>
     </div>
   </div>
 
 let doRequiredStepsHaveUniqueTitles = checklist => {
-  let requiredSteps = checklist |> Js.Array.filter(item => !(item |> ChecklistItem.optional))
+  let requiredSteps = checklist->Js.Array.filter(item => !(item->ChecklistItem.optional))
 
   requiredSteps
-  |> Array.map(ChecklistItem.title)
-  |> Array.map(String.trim)
-  |> ArrayUtils.distinct
-  |> Array.length == Array.length(requiredSteps)
+  ->Array.map(ChecklistItem.title)
+  ->Array.map(String.trim)
+  ->ArrayUtils.distinct
+  ->Array.length == Array.length(requiredSteps)
 }
 
-let isValidTitle = title => title |> String.trim |> String.length > 0
+let isValidTitle = title => title->String.trim->String.length > 0
 
 let isValidMethodOfCompletion = state =>
   switch state.methodOfCompletion {
   | TakeQuiz => isValidQuiz(state.quiz)
   | MarkAsComplete => true
   | Evaluated =>
-    state.evaluationCriteria |> ArrayUtils.isNotEmpty && isValidChecklist(state.checklist)
-  | VisitLink => !(state.linkToComplete |> UrlUtils.isInvalid(false))
+    state.evaluationCriteria->ArrayUtils.isNotEmpty && isValidChecklist(state.checklist)
+  | VisitLink => !(state.linkToComplete->UrlUtils.isInvalid(false))
   }
 
 let saveDisabled = (
@@ -599,14 +599,14 @@ module UpdateTargetQuery = %graphql(`
 let updateTarget = (target, state, send, updateTargetCB, event) => {
   ReactEvent.Mouse.preventDefault(event)
   send(UpdateSaving)
-  let id = target |> Target.id
-  let sortIndex = target |> Target.sortIndex
-  let role = state.role |> TargetDetails.roleAsString
-  let visibilityAsString = state.visibility |> TargetDetails.visibilityAsString
+  let id = target->Target.id
+  let sortIndex = target->Target.sortIndex
+  let role = state.role->TargetDetails.roleAsString
+  let visibilityAsString = state.visibility->TargetDetails.visibilityAsString
   let quizAsJs =
     state.quiz
-    |> Js.Array.filter(question => QuizQuestion.isValidQuizQuestion(question))
-    |> QuizQuestion.quizAsJsObject
+    ->Js.Array.filter(question => QuizQuestion.isValidQuizQuestion(question))
+    ->QuizQuestion.quizAsJsObject
 
   let (quiz, evaluationCriteria, linkToComplete, checklist) = switch state.methodOfCompletion {
   | Evaluated => ([], state.evaluationCriteria, "", state.checklist)
@@ -640,11 +640,11 @@ let updateTarget = (target, state, send, updateTargetCB, event) => {
     ~completionInstructions=state.completionInstructions,
     ~linkToComplete,
     ~visibility=visibilityAsString,
-    ~checklist=checklist |> ChecklistItem.encodeChecklist,
+    ~checklist=checklist->ChecklistItem.encodeChecklist,
     (),
   )
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(result => {
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(result => {
     result["updateTarget"]["success"]
       ? {
           send(ResetEditor)
@@ -653,7 +653,7 @@ let updateTarget = (target, state, send, updateTargetCB, event) => {
       : send(UpdateSaving)
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
   ()
 }
 
@@ -687,7 +687,7 @@ let make = (
       completionInstructions: "",
     },
   )
-  let targetId = target |> Target.id
+  let targetId = target->Target.id
   React.useEffect1(() => {
     loadTargetDetails(targetId, send)
     None
@@ -715,7 +715,7 @@ let make = (
                   className="flex items-center inline-block tracking-wide text-sm font-semibold mb-2"
                   htmlFor="title">
                   <span className="mr-2"> <i className="fas fa-list text-base" /> </span>
-                  {"Title" |> str}
+                  {"Title"->str}
                 </label>
                 <div className="ml-6">
                   <input
@@ -738,7 +738,7 @@ let make = (
                 <label
                   className="block tracking-wide text-sm font-semibold mr-6" htmlFor="evaluated">
                   <span className="mr-2"> <i className="fas fa-list text-base" /> </span>
-                  {"Will a coach review submissions on this target?" |> str}
+                  {"Will a coach review submissions on this target?"->str}
                 </label>
                 <div
                   id="evaluated"
@@ -746,12 +746,12 @@ let make = (
                   <button
                     onClick={updateMethodOfCompletion(Evaluated, send)}
                     className={booleanButtonClasses(targetEvaluated(state.methodOfCompletion))}>
-                    {"Yes" |> str}
+                    {"Yes"->str}
                   </button>
                   <button
                     onClick={updateMethodOfCompletion(MarkAsComplete, send)}
                     className={booleanButtonClasses(!targetEvaluated(state.methodOfCompletion))}>
-                    {"No" |> str}
+                    {"No"->str}
                   </button>
                 </div>
               </div>
@@ -760,21 +760,21 @@ let make = (
                 <div className="mb-6">
                   <label className="tracking-wide text-sm font-semibold" htmlFor="target_checklist">
                     <span className="mr-2"> <i className="fas fa-list text-base" /> </span>
-                    {"What steps should the student take to complete this target?" |> str}
+                    {"What steps should the student take to complete this target?"->str}
                   </label>
                   <HelpIcon
                     className="ml-1"
                     link="https://docs.pupilfirst.com/#/curriculum_editor?id=defining-steps-to-complete-a-target">
-                    {"These are the steps that a student must complete to submit work on a target. This information will be shown to the coach for review." |> str}
+                    {"These are the steps that a student must complete to submit work on a target. This information will be shown to the coach for review."->str}
                   </HelpIcon>
                   <div className="ml-6 mb-6">
                     {
                       let allowFileKind =
                         state.checklist
-                        |> Js.Array.filter(item => item |> ChecklistItem.isFilesKind)
-                        |> ArrayUtils.isEmpty
+                        ->Js.Array.filter(item => item->ChecklistItem.isFilesKind)
+                        ->ArrayUtils.isEmpty
                       state.checklist
-                      |> Array.mapi((index, checklistItem) => {
+                      ->Array.mapi((index, checklistItem) => {
                         let moveChecklistItemUpCB =
                           index > 0 ? Some(() => send(MoveChecklistItemUp(index))) : None
 
@@ -785,7 +785,7 @@ let make = (
 
                         <CurriculumEditor__TargetChecklistItemEditor
                           checklist=state.checklist
-                          key={index |> string_of_int}
+                          key={index->string_of_int}
                           checklistItem
                           index
                           updateChecklistItemCB={newChecklistItem =>
@@ -797,28 +797,28 @@ let make = (
                           allowFileKind
                         />
                       })
-                      |> React.array
+                      ->React.array
                     }
-                    {state.checklist |> ArrayUtils.isEmpty
+                    {state.checklist->ArrayUtils.isEmpty
                       ? <div
                           className="border border-orange-500 bg-orange-100 text-orange-800 px-2 py-1 rounded my-2 text-sm text-center">
                           <i className="fas fa-info-circle mr-2" />
-                          {"This target has no steps. Students will be able to submit target without any action!" |> str}
+                          {"This target has no steps. Students will be able to submit target without any action!"->str}
                         </div>
                       : React.null}
-                    {state.checklist |> Array.length >= 15
+                    {state.checklist->Array.length >= 15
                       ? <div
                           className="border border-orange-500 bg-orange-100 text-orange-800 px-2 py-1 rounded my-2 text-sm text-center">
                           <i className="fas fa-info-circle mr-2" />
-                          {"Maximum allowed checklist items is 15!" |> str}
+                          {"Maximum allowed checklist items is 15!"->str}
                         </div>
                       : React.null}
                     <button
                       className="flex justify-center items-center w-full rounded-lg border border-dashed border-primary-500 mt-2 p-2 text-sm text-primary-500 focus:outline-none hover:shadow-lg"
-                      disabled={state.checklist |> Array.length >= 15}
+                      disabled={state.checklist->Array.length >= 15}
                       onClick={_ => send(AddNewChecklistItem)}>
                       <PfIcon className="fas fa-plus-circle text-lg" />
-                      <span className="font-semibold ml-2"> {"Add a Step" |> str} </span>
+                      <span className="font-semibold ml-2"> {"Add a Step"->str} </span>
                     </button>
                   </div>
                 </div>
@@ -831,7 +831,7 @@ let make = (
                 : methodOfCompletionSelector(state, send)}
               {switch state.methodOfCompletion {
               | Evaluated =>
-                evaluationCriteriaEditor(state, evaluationCriteria |> Array.of_list, send)
+                evaluationCriteriaEditor(state, evaluationCriteria->Array.of_list, send)
               | MarkAsComplete => React.null
               | TakeQuiz => quizEditor(state, send)
               | VisitLink => linkEditor(state, send)
@@ -839,12 +839,12 @@ let make = (
               <div className="mb-6">
                 <label className="inline-block tracking-wide text-sm font-semibold" htmlFor="role">
                   <span className="mr-2"> <i className="fas fa-list text-base" /> </span>
-                  {"How should teams tackle this target?" |> str}
+                  {"How should teams tackle this target?"->str}
                 </label>
                 <HelpIcon
                   className="ml-1"
                   link="https://docs.pupilfirst.com/#/curriculum_editor?id=setting-the-method-of-completion">
-                  {"Should students in a team submit work on a target individually, or together?" |> str}
+                  {"Should students in a team submit work on a target individually, or together?"->str}
                 </HelpIcon>
                 <div id="role" className="flex mt-4 ml-6">
                   <button
@@ -860,7 +860,7 @@ let make = (
                       <Icon className="if i-users-check-light text-3xl" />
                     </span>
                     <span className="text-sm">
-                      {"All students must submit individually." |> str}
+                      {"All students must submit individually."->str}
                     </span>
                   </button>
                   <button
@@ -875,7 +875,7 @@ let make = (
                       <Icon className="if i-user-check-light text-2xl" />
                     </span>
                     <span className="text-sm">
-                      {"Only one student in a team" |> str} <br /> {" needs to submit." |> str}
+                      {"Only one student in a team"->str} <br /> {" needs to submit."->str}
                     </span>
                   </button>
                 </div>
@@ -884,13 +884,13 @@ let make = (
                 <label
                   className="tracking-wide text-sm font-semibold" htmlFor="completion-instructions">
                   <span className="mr-2"> <i className="fas fa-list text-base" /> </span>
-                  {"Do you have any completion instructions for the student?" |> str}
-                  <span className="ml-1 text-xs font-normal"> {"(optional)" |> str} </span>
+                  {"Do you have any completion instructions for the student?"->str}
+                  <span className="ml-1 text-xs font-normal"> {"(optional)"->str} </span>
                 </label>
                 <HelpIcon
                   link="https://docs.pupilfirst.com/#/curriculum_editor?id=setting-the-method-of-completion"
                   className="ml-1">
-                  {"Use this to remind the student about something important. These instructions will be displayed close to where students complete the target." |> str}
+                  {"Use this to remind the student about something important. These instructions will be displayed close to where students complete the target."->str}
                 </HelpIcon>
                 <div className="ml-6">
                   <input
@@ -910,15 +910,15 @@ let make = (
                   <label
                     className="block tracking-wide text-sm font-semibold mr-3" htmlFor="archived">
                     <span className="mr-2"> <i className="fas fa-list text-base" /> </span>
-                    {"Target Visibility" |> str}
+                    {"Target Visibility"->str}
                   </label>
                   <div
                     id="visibility"
                     className="flex toggle-button__group flex-shrink-0 rounded-lg overflow-hidden">
                     {[TargetDetails.Live, Archived, Draft]
-                    |> Array.mapi((index, visibility) =>
+                    ->Array.mapi((index, visibility) =>
                       <button
-                        key={index |> string_of_int}
+                        key={index->string_of_int}
                         onClick={updateVisibility(visibility, send)}
                         className={booleanButtonClasses(
                           switch (state.visibility, visibility) {
@@ -932,10 +932,10 @@ let make = (
                         | Live => "Live"
                         | Archived => "Archived"
                         | Draft => "Draft"
-                        } |> str}
+                        }->str}
                       </button>
                     )
-                    |> React.array}
+                    ->React.array}
                   </div>
                 </div>
                 <div className="w-auto">
@@ -950,7 +950,7 @@ let make = (
                     )}
                     onClick={updateTarget(target, state, send, updateTargetCB)}
                     className="btn btn-primary w-full text-white font-bold py-3 px-6 shadow rounded focus:outline-none">
-                    {"Update Target" |> str}
+                    {"Update Target"->str}
                   </button>
                 </div>
               </div>

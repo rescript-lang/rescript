@@ -66,6 +66,28 @@ let newBsPackage ~rootPath =
           | _ -> None)
         | None -> None
       in
+      let autocomplete =
+        match config |> Json.get "editor" with
+        | Some editorConfig -> (
+          match editorConfig |> Json.get "autocomplete" with
+          | Some (Object map) ->
+            map
+            |> List.fold_left
+                 (fun acc (key, value) ->
+                   match value with
+                   | Json.Array items ->
+                     let values =
+                       items
+                       |> List.filter_map (function
+                            | Json.String s -> Some s
+                            | _ -> None)
+                     in
+                     Misc.StringMap.add key values acc
+                   | _ -> acc)
+                 Misc.StringMap.empty
+          | _ -> Misc.StringMap.empty)
+        | None -> Misc.StringMap.empty
+      in
       let uncurried = uncurried = Some true in
       match libBs with
       | None -> None
@@ -158,6 +180,7 @@ let newBsPackage ~rootPath =
              opens;
              namespace;
              uncurried;
+             autocomplete;
            }))
     | None -> None
   in

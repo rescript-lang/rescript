@@ -164,7 +164,7 @@ Example `@raises(Exn)` or `@raises([E1, E2, E3])` for multiple exceptions.
 
 You will need this decorator whenever you want to use a ReScript / React component in ReScript JSX expressions.
 
-Note: The `@react.component` decorator requires the `jsx` config to be set in your `rescript.json`/`bsconfig.json` to enable the required React transformations.
+Note: The `@react.component` decorator requires the `jsx` config to be set in your `rescript.json` to enable the required React transformations.
 
 [Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#react-component-decorator).|};
       ] );
@@ -296,5 +296,18 @@ let toplevel =
         {|The `@@jsxConfig` decorator is used to change the config for JSX on the fly.
 
 [Read more and see examples in the documentation](https://rescript-lang.org/docs/manual/latest/jsx#file-level-configuration).|};
+      ] );
+    ( "notUndefined",
+      None,
+      [
+        {|The `@notUndefined` decorator marks an abstract type as one that can never be `undefined` in JavaScript. This allows the compiler to generate more efficient code when the type is used inside an `option`.
+
+Example usage:
+```rescript
+@notUndefined
+type t
+```
+
+[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#notundefined-decorator).|};
       ] );
   ]

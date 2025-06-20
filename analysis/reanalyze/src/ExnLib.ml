@@ -38,8 +38,8 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
   in
   let stdlib =
     [
-      ("panic", [jsExnError]);
-      ("assertEqual", [jsExnError]);
+      ("panic", [jsExn]);
+      ("assertEqual", [jsExn]);
       ("invalid_arg", [invalidArgument]);
       ("failwith", [failure]);
       ("/", [divisionByZero]);
@@ -50,29 +50,57 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
       ("float_of_string", [failure]);
     ]
   in
-  let stdlibBigInt = [("fromStringExn", [jsExnError])] in
-  let stdlibError = [("raise", [jsExnError])] in
+  let stdlibBigInt =
+    [
+      ("fromStringExn", [jsExn]);
+      ("fromStringOrThrow", [jsExn]);
+      ("fromFloatOrThrow", [jsExn]);
+    ]
+  in
+  let stdlibBool =
+    [
+      ("fromStringExn", [invalidArgument]);
+      ("fromStringOrThrow", [invalidArgument]);
+    ]
+  in
+  let stdlibJsError =
+    [
+      ("EvalError.throwWithMessage", [jsExn]);
+      ("RangeError.throwWithMessage", [jsExn]);
+      ("ReferenceError.throwWithMessage", [jsExn]);
+      ("SyntaxError.throwWithMessage", [jsExn]);
+      ("TypeError.throwWithMessage", [jsExn]);
+      ("URIError.throwWithMessage", [jsExn]);
+      ("panic", [jsExn]);
+      ("throw", [jsExn]);
+      ("throwWithMessage", [jsExn]);
+    ]
+  in
+  let stdlibError =
+    [("raise", [jsExn]); ("panic", [jsExn]); ("throw", [jsExn])]
+  in
   let stdlibExn =
     [
-      ("raiseError", [jsExnError]);
-      ("raiseEvalError", [jsExnError]);
-      ("raiseRangeError", [jsExnError]);
-      ("raiseReferenceError", [jsExnError]);
-      ("raiseSyntaxError", [jsExnError]);
-      ("raiseTypeError", [jsExnError]);
-      ("raiseUriError", [jsExnError]);
+      ("raiseError", [jsExn]);
+      ("raiseEvalError", [jsExn]);
+      ("raiseRangeError", [jsExn]);
+      ("raiseReferenceError", [jsExn]);
+      ("raiseSyntaxError", [jsExn]);
+      ("raiseTypeError", [jsExn]);
+      ("raiseUriError", [jsExn]);
     ]
   in
   let stdlibJson =
     [
-      ("parseExn", [jsExnError]);
-      ("parseExnWithReviver", [jsExnError]);
-      ("stringifyAny", [jsExnError]);
-      ("stringifyAnyWithIndent", [jsExnError]);
-      ("stringifyAnyWithReplacer", [jsExnError]);
-      ("stringifyAnyWithReplacerAndIndent", [jsExnError]);
-      ("stringifyAnyWithFilter", [jsExnError]);
-      ("stringifyAnyWithFilterAndIndent", [jsExnError]);
+      ("parseExn", [jsExn]);
+      ("parseExnWithReviver", [jsExn]);
+      ("parseOrThrow", [jsExn]);
+      ("stringifyAny", [jsExn]);
+      ("stringifyAnyWithIndent", [jsExn]);
+      ("stringifyAnyWithReplacer", [jsExn]);
+      ("stringifyAnyWithReplacerAndIndent", [jsExn]);
+      ("stringifyAnyWithFilter", [jsExn]);
+      ("stringifyAnyWithFilterAndIndent", [jsExn]);
     ]
   in
   let stdlibList =
@@ -80,7 +108,7 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
   in
   let stdlibNull = [("getExn", [invalidArgument])] in
   let stdlibNullable = [("getExn", [invalidArgument])] in
-  let stdlibOption = [("getExn", [jsExnError])] in
+  let stdlibOption = [("getExn", [jsExn])] in
   let stdlibResult = [("getExn", [notFound])] in
   let yojsonBasic = [("from_string", [yojsonJsonError])] in
   let yojsonBasicUtil =
@@ -140,10 +168,11 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
     ("Belt_SetInt", beltSet);
     ("Belt_SetString", beltSet);
     ("BigInt", stdlibBigInt);
-    ("Char", [("chr", [invalidArgument])]);
+    ("Bool", stdlibBool);
     ("Error", stdlibError);
     ("Exn", stdlibExn);
-    ("Js.Json", [("parseExn", [jsExnError])]);
+    ("JsError", stdlibJsError);
+    ("Js.Json", [("parseExn", [jsExn])]);
     ("JSON", stdlibJson);
     ("Json_decode", bsJson);
     ("Json.Decode", bsJson);
@@ -159,10 +188,14 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
     ("Stdlib", stdlib);
     ("Stdlib_BigInt", stdlibBigInt);
     ("Stdlib.BigInt", stdlibBigInt);
+    ("Stdlib_Bool", stdlibBool);
+    ("Stdlib.Bool", stdlibBool);
     ("Stdlib_Error", stdlibError);
     ("Stdlib.Error", stdlibError);
     ("Stdlib_Exn", stdlibExn);
     ("Stdlib.Exn", stdlibExn);
+    ("Stdlib_JsError", stdlibJsError);
+    ("Stdlib.JsError", stdlibJsError);
     ("Stdlib_JSON", stdlibJson);
     ("Stdlib.JSON", stdlibJson);
     ("Stdlib_List", stdlibList);

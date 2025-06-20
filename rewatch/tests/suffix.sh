@@ -25,13 +25,13 @@ else
 fi
 
 # Count files with new extension
-file_count=$(find . -name *.res.js | wc -l)
+file_count=$(find ./packages -name *.res.js | wc -l)
 
-if [ "$file_count" -eq 10 ];
+if [ "$file_count" -eq 24 ];
 then
   success "Found files with correct suffix"
 else
-  error "Suffix not correctly used"
+  error "Suffix not correctly used, got $file_count files"
   exit 1
 fi
 

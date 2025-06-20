@@ -458,7 +458,7 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
     | Ppat_unpack s -> pp f "(module@ %s)@ " s.txt
     | Ppat_type li -> pp f "#%a" longident_loc li
     | Ppat_record (l, closed) -> (
-      let longident_x_pattern f (li, p, opt) =
+      let longident_x_pattern f {lid = li; x = p; opt} =
         let opt_str = if opt then "?" else "" in
         match (li, p) with
         | ( {txt = Lident s; _},
@@ -478,7 +478,6 @@ and simple_pattern ctxt (f : Format.formatter) (x : pattern) : unit =
     | Ppat_variant (l, None) -> pp f "`%s" l
     | Ppat_constraint (p, ct) ->
       pp f "@[<2>(%a@;:@;%a)@]" (pattern1 ctxt) p (core_type ctxt) ct
-    | Ppat_lazy p -> pp f "@[<2>(lazy@;%a)@]" (pattern1 ctxt) p
     | Ppat_exception p -> pp f "@[<2>exception@;%a@]" (pattern1 ctxt) p
     | Ppat_extension e -> extension ctxt f e
     | Ppat_open (lid, p) ->
@@ -652,7 +651,7 @@ and expression ctxt f x =
         | `Prefix s -> (
           let s =
             if
-              List.mem s ["~+"; "~-"; "~+."; "~-."]
+              List.mem s ["~+"; "~-"; "~+."; "~-."; "~~"]
               &&
               match l with
               (* See #7200: avoid turning (~- 1) into (- 1) which is
@@ -716,12 +715,12 @@ and expression ctxt f x =
         (extension_constructor ctxt)
         cd (expression ctxt) e
     | Pexp_assert e -> pp f "@[<hov2>assert@ %a@]" (simple_expr ctxt) e
-    | Pexp_lazy e -> pp f "@[<hov2>lazy@ %a@]" (simple_expr ctxt) e
     | Pexp_open (ovf, lid, e) ->
       pp f "@[<2>let open%s %a in@;%a@]" (override ovf) longident_loc lid
         (expression ctxt) e
     | Pexp_variant (l, Some eo) -> pp f "@[<2>`%s@;%a@]" l (simple_expr ctxt) eo
     | Pexp_extension e -> extension ctxt f e
+    | Pexp_await e -> pp f "@[<hov2>await@ %a@]" (simple_expr ctxt) e
     | _ -> expression1 ctxt f x
 
 and expression1 ctxt f x =
@@ -765,7 +764,7 @@ and simple_expr ctxt f x =
       pp f "(%a :> %a)" (expression ctxt) e (core_type ctxt) ct
     | Pexp_variant (l, None) -> pp f "`%s" l
     | Pexp_record (l, eo) ->
-      let longident_x_expression f (li, e, opt) =
+      let longident_x_expression f {lid = li; x = e; opt} =
         let opt_str = if opt then "?" else "" in
         match e with
         | {pexp_desc = Pexp_ident {txt; _}; pexp_attributes = []; _}
@@ -794,7 +793,53 @@ and simple_expr ctxt f x =
       let expression = expression ctxt in
       pp f fmt (pattern ctxt) s expression e1 direction_flag df expression e2
         expression e3
+    | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
+      pp f "<>%a</>" (list (simple_expr ctxt)) (collect_jsx_children children)
+    | Pexp_jsx_element
+        (Jsx_unary_element
+           {
+             jsx_unary_element_tag_name = tag_name;
+             jsx_unary_element_props = props;
+           }) -> (
+      let name = Longident.flatten tag_name.txt |> String.concat "." in
+      match props with
+      | [] -> pp f "<%s />" name
+      | _ -> pp f "<%s %a />" name (print_jsx_props ctxt) props)
+    | Pexp_jsx_element
+        (Jsx_container_element
+           {
+             jsx_container_element_tag_name_start = tag_name;
+             jsx_container_element_props = props;
+             jsx_container_element_children = children;
+           }) -> (
+      let name = Longident.flatten tag_name.txt |> String.concat "." in
+      match props with
+      | [] ->
+        pp f "<%s>%a</%s>" name
+          (list (simple_expr ctxt))
+          (collect_jsx_children children)
+          name
+      | _ ->
+        pp f "<%s %a>%a</%s>" name (print_jsx_props ctxt) props
+          (list (simple_expr ctxt))
+          (collect_jsx_children children)
+          name)
     | _ -> paren true (expression ctxt) f x
+
+and collect_jsx_children = function
+  | JSXChildrenSpreading e -> [e]
+  | JSXChildrenItems xs -> xs
+
+and print_jsx_prop ctxt f = function
+  | JSXPropPunning (is_optional, name) ->
+    pp f "%s" (if is_optional then "?" ^ name.txt else name.txt)
+  | JSXPropValue (name, is_optional, value) ->
+    pp f "%s=%s%a" name.txt
+      (if is_optional then "?" else "")
+      (simple_expr ctxt) value
+  | JSXPropSpreading (_, expr) -> pp f "{...%a}" (simple_expr ctxt) expr
+
+and print_jsx_props ctxt f = list ~sep:" " (print_jsx_prop ctxt) f
 
 and attributes ctxt f l = List.iter (attribute ctxt f) l
 

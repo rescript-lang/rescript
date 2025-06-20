@@ -2,7 +2,7 @@
 
 (executables
  (names jsoo_playground_main)
- (modes js)
+ (modes js wasm)
  (enabled_if
   (= %{profile} browser))
  (flags

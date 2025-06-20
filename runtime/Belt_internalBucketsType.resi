@@ -30,7 +30,7 @@ type container<'hash, 'eq, 'c> = {
   eq: 'eq,
 }
 
-external toOpt: opt<'a> => option<'a> = "%undefined_to_opt"
+external toOpt: opt<'a> => option<'a> = "%identity"
 external return: 'a => opt<'a> = "%identity"
 
 let emptyOpt: Js.undefined<'a>

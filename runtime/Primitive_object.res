@@ -41,8 +41,6 @@ module O = {
         for (var x in o) { foo(x) }}
       `)
 
-  @scope(("Object", "prototype", "hasOwnProperty"))
-  @val
   /**
      JS objects are not guaranteed to have `Object` in their prototype
      chain so calling `some_obj.hasOwnProperty(key)` can sometimes throw
@@ -50,6 +48,7 @@ module O = {
      objects are created via `Object.create(null)`. The only safe way
      to call this function is directly, e.g. `Object.prototype.hasOwnProperty.call(some_obj, key)`.
   */
+  @scope(("Object", "prototype", "hasOwnProperty")) @val
   external hasOwnProperty: (t, key) => bool = "call"
 
   @get_index external get_value: (t, key) => t = ""
@@ -94,7 +93,7 @@ let rec compare = (a: t, b: t): int =>
     | ("boolean", "boolean") => Pervasives.compare((magic(a): bool), magic(b))
     | ("boolean", _) => 1
     | (_, "boolean") => -1
-    | ("function", "function") => raise(Invalid_argument("compare: functional value"))
+    | ("function", "function") => throw(Invalid_argument("compare: functional value"))
     | ("function", _) => 1
     | (_, "function") => -1
     | ("bigint", "bigint")
@@ -261,7 +260,7 @@ let rec equal = (a: t, b: t): bool =>
     } else {
       let b_type = Js.typeof(b)
       if a_type == "function" || b_type == "function" {
-        raise(Invalid_argument("equal: functional value"))
+        throw(Invalid_argument("equal: functional value"))
       } /* first, check using reference equality */
       else if (
         /* a_type = "object" || "symbol" */

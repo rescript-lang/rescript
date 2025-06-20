@@ -8,7 +8,7 @@
   },
   "package-specs": {
     "module": "esmodule",
-    "in-source": true
-  },
-  "suffix": ".bs.js"
+    "in-source": true,
+    "suffix": ".res.js"
+  }
 }

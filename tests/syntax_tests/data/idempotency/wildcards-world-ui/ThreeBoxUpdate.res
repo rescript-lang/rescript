@@ -328,8 +328,8 @@ module TwitterVerification = {
             (),
           ),
         )
-        |> then_(Fetch.Response.text)
-        |> then_(text => {
+        ->then_(Fetch.Response.text)
+        ->then_(text => {
           let optTwitterProof = getResult(text)
           switch optTwitterProof {
           | Some(twitterProof) =>

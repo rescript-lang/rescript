@@ -23,11 +23,13 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. */
 type t<'res, 'err> = result<'res, 'err> = Ok('res) | Error('err)
 
-let getExn = x =>
+let getOrThrow = x =>
   switch x {
   | Ok(x) => x
-  | Error(_) => raise(Not_found)
+  | Error(_) => throw(Not_found)
   }
+
+let getExn = getOrThrow
 
 let mapOr = (opt, default, f) =>
   switch opt {
@@ -164,3 +166,5 @@ let all6 = ((a, b, c, d, e, f)) => {
   | (_, _, _, _, _, Error(f)) => Error(f)
   }
 }
+
+external ignore: result<'res, 'err> => unit = "%ignore"

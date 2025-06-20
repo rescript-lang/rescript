@@ -76,19 +76,19 @@ module Make = (
       | exception Not_found =>
         switch S.Value.of_string(value) {
         | value => set_user_default(value, acc)
-        | exception exn => raise(Parse_failure(exn))
+        | exception exn => throw(Parse_failure(exn))
         }
       | equals =>
         let key_value_pair = value
         let length = String.length(key_value_pair)
         assert (equals >= 0 && equals < length)
         if equals == 0 {
-          raise(Parse_failure(Failure("Missing key in argument specification")))
+          throw(Parse_failure(Failure("Missing key in argument specification")))
         }
         let key = {
           let key = String.sub(key_value_pair, 0, equals)
           try S.Key.of_string(key) catch {
-          | exn => raise(Parse_failure(exn))
+          | exn => throw(Parse_failure(exn))
           }
         }
 
@@ -96,7 +96,7 @@ module Make = (
           let value = String.sub(key_value_pair, equals + 1, length - equals - 1)
 
           try S.Value.of_string(value) catch {
-          | exn => raise(Parse_failure(exn))
+          | exn => throw(Parse_failure(exn))
           }
         }
 

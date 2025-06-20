@@ -7,12 +7,10 @@
     "dir": "src",
     "subdirs": true
   },
-  "package-specs": [
-    {
-      "module": "commonjs",
-      "in-source": true
-    }
-  ],
-  "suffix": ".bs.js",
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true,
+    "suffix": ".res.js"
+  },
   "namespace": true
 }

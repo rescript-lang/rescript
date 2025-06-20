@@ -1,5 +1,7 @@
 open SharedTypes
 
+module StringSet = Set.Make (String)
+
 let showModuleTopLevel ~docstring ~isType ~name (topLevel : Module.item list) =
   let contents =
     topLevel
@@ -101,26 +103,69 @@ let findRelevantTypesFromType ~file ~package typ =
   constructors |> List.filter_map (fromConstructorPath ~env:envToSearch)
 
 let expandTypes ~file ~package ~supportsMarkdownLinks typ =
-  findRelevantTypesFromType typ ~file ~package
-  |> List.map (fun {decl; env; loc; path} ->
-         let linkToTypeDefinitionStr =
-           if supportsMarkdownLinks then
-             Markdown.goToDefinitionText ~env ~pos:loc.Warnings.loc_start
-           else ""
-         in
-         Markdown.divider
-         ^ (if supportsMarkdownLinks then Markdown.spacing else "")
-         ^ Markdown.codeBlock
-             (decl
-             |> Shared.declToString ~printNameAsIs:true
-                  (SharedTypes.pathIdentToString path))
-         ^ linkToTypeDefinitionStr ^ "\n")
+  match findRelevantTypesFromType typ ~file ~package with
+  | {decl; path} :: _
+    when Res_parsetree_viewer.has_inline_record_definition_attribute
+           decl.type_attributes ->
+    (* We print inline record types just with their definition, not the constr pointing 
+    to them, since that doesn't make sense to show the user. *)
+    ( [
+        Markdown.codeBlock
+          (decl
+          |> Shared.declToString ~printNameAsIs:true
+               (SharedTypes.pathIdentToString path));
+      ],
+      `InlineType )
+  | all ->
+    let typesSeen = ref StringSet.empty in
+    let typeId ~(env : QueryEnv.t) ~name =
+      env.file.moduleName :: List.rev (name :: env.pathRev) |> String.concat "."
+    in
+    ( all
+      (* Don't produce duplicate type definitions for recursive types *)
+      |> List.filter (fun {env; name} ->
+             let typeId = typeId ~env ~name in
+             if StringSet.mem typeId !typesSeen then false
+             else (
+               typesSeen := StringSet.add typeId !typesSeen;
+               true))
+      |> List.map (fun {decl; env; loc; path} ->
+             let linkToTypeDefinitionStr =
+               if
+                 supportsMarkdownLinks
+                 && not
+                      (Res_parsetree_viewer
+                       .has_inline_record_definition_attribute
+                         decl.type_attributes)
+               then Markdown.goToDefinitionText ~env ~pos:loc.Warnings.loc_start
+               else ""
+             in
+             Markdown.divider
+             ^ (if supportsMarkdownLinks then Markdown.spacing else "")
+             ^ Markdown.codeBlock
+                 (decl
+                 |> Shared.declToString ~printNameAsIs:true
+                      (SharedTypes.pathIdentToString path))
+             ^ linkToTypeDefinitionStr ^ "\n"),
+      `Default )
 
 (* Produces a hover with relevant types expanded in the main type being hovered. *)
-let hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks typ =
-  let typeString = Markdown.codeBlock (typ |> Shared.typeToString) in
-  typeString :: expandTypes ~file ~package ~supportsMarkdownLinks typ
-  |> String.concat "\n"
+let hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks ?constructor
+    typ =
+  let expandedTypes, expansionType =
+    expandTypes ~file ~package ~supportsMarkdownLinks typ
+  in
+  match expansionType with
+  | `Default ->
+    let typeString = Shared.typeToString typ in
+    let typeString =
+      match constructor with
+      | Some constructor ->
+        typeString ^ "\n" ^ CompletionBackEnd.showConstructor constructor
+      | None -> typeString
+    in
+    Markdown.codeBlock typeString :: expandedTypes |> String.concat "\n"
+  | `InlineType -> expandedTypes |> String.concat "\n"
 
 (* Leverages autocomplete functionality to produce a hover for a position. This
    makes it (most often) work with unsaved content. *)
@@ -171,10 +216,13 @@ let newHover ~full:{file; package} ~supportsMarkdownLinks locItem =
     let typeDef = Markdown.codeBlock (Shared.declToString name decl) in
     match decl.type_manifest with
     | None -> Some typeDef
-    | Some typ ->
-      Some
-        (typeDef :: expandTypes ~file ~package ~supportsMarkdownLinks typ
-        |> String.concat "\n"))
+    | Some typ -> (
+      let expandedTypes, expansionType =
+        expandTypes ~file ~package ~supportsMarkdownLinks typ
+      in
+      match expansionType with
+      | `Default -> Some (typeDef :: expandedTypes |> String.concat "\n")
+      | `InlineType -> Some (expandedTypes |> String.concat "\n")))
   | LModule (Definition (stamp, _tip)) | LModule (LocalReference (stamp, _tip))
     -> (
     match Stamps.findModule file.stamps stamp with
@@ -229,33 +277,22 @@ let newHover ~full:{file; package} ~supportsMarkdownLinks locItem =
          | Const_int64 _ -> "int64"
          | Const_bigint _ -> "bigint"))
   | Typed (_, t, locKind) ->
-    let fromType ~docstring typ =
-      ( hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks typ,
-        docstring )
+    let fromType ?constructor typ =
+      hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks ?constructor
+        typ
     in
     let parts =
       match References.definedForLoc ~file ~package locKind with
       | None ->
-        let typeString, docstring = t |> fromType ~docstring:[] in
-        typeString :: docstring
+        let typeString = t |> fromType in
+        [typeString]
       | Some (docstring, res) -> (
         match res with
-        | `Declared ->
-          let typeString, docstring = t |> fromType ~docstring in
+        | `Declared | `Field ->
+          let typeString = t |> fromType in
           typeString :: docstring
-        | `Constructor {cname = {txt}; args; docstring} ->
-          let typeString, docstring = t |> fromType ~docstring in
-          let argsString =
-            match args with
-            | InlineRecord _ | Args [] -> ""
-            | Args args ->
-              args
-              |> List.map (fun (t, _) -> Shared.typeToString t)
-              |> String.concat ", " |> Printf.sprintf "(%s)"
-          in
-          typeString :: Markdown.codeBlock (txt ^ argsString) :: docstring
-        | `Field ->
-          let typeString, docstring = t |> fromType ~docstring in
-          typeString :: docstring)
+        | `Constructor constructor ->
+          let typeString = t |> fromType ~constructor in
+          typeString :: constructor.docstring)
     in
     Some (String.concat Markdown.divider parts)

@@ -1,3 +1,4 @@
+@notUndefined
 type t
 
 @new external fromBuffer: Stdlib_ArrayBuffer.t => t = "DataView"
@@ -35,3 +36,11 @@ external fromBufferWithRange: (Stdlib_ArrayBuffer.t, ~byteOffset: int, ~length: 
 
 @send external setBigInt64: (t, int, bigint) => unit = "setBigInt64"
 @send external setBigUint64: (t, int, bigint) => unit = "setBigUint64"
+
+/**
+  `ignore(dataView)` ignores the provided dataView and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: t => unit = "%ignore"

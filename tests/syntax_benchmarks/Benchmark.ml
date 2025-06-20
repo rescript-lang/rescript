@@ -33,16 +33,16 @@ module Time : sig
 
   val now : unit -> t
 
-  val to_uint64 : t -> int64 [@@live]
+  val [@warning "-32"] to_uint64 : t -> int64
 
   (* let of_uint64_ns ns = ns *)
 
-  val nanosecond : t [@@live]
-  val microsecond : t [@@live]
-  val millisecond : t [@@live]
-  val second : t [@@live]
-  val minute : t [@@live]
-  val hour : t [@@live]
+  val [@warning "-32"] nanosecond : t
+  val [@warning "-32"] microsecond : t
+  val [@warning "-32"] millisecond : t
+  val [@warning "-32"] second : t
+  val [@warning "-32"] minute : t
+  val [@warning "-32"] hour : t
 
   val zero : t
 
@@ -160,7 +160,9 @@ end = struct
   let parse_rescript src filename =
     let p = Parser.make src filename in
     let structure = ResParser.parse_implementation p in
-    assert (p.diagnostics == []);
+    if p.diagnostics != [] then (
+      Res_diagnostics.print_report p.diagnostics src;
+      assert false);
     structure
 
   let data_dir = "tests/syntax_benchmarks/data"

@@ -55,7 +55,7 @@ function $star$colon(_f, _g) {
       if (g.TAG === "Int") {
         return {
           TAG: "Int",
-          _0: Math.imul(n, g._0)
+          _0: n * g._0 | 0
         };
       }
       if (n === 0) {

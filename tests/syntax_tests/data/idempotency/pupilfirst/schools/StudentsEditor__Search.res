@@ -10,7 +10,7 @@ module Selectable = {
 
   let label = t => {
     let labelString = switch t {
-    | Level(level) => "Level " ++ (level |> Level.number |> string_of_int)
+    | Level(level) => "Level " ++ (level->Level.number->string_of_int)
     | Tag(_) => "Tag"
     | NameOrEmail(_) => "Name or Email"
     }
@@ -19,14 +19,14 @@ module Selectable = {
 
   let value = t =>
     switch t {
-    | Level(level) => level |> Level.name
+    | Level(level) => level->Level.name
     | Tag(tag) => tag
     | NameOrEmail(input) => input
     }
 
   let searchString = t =>
     switch t {
-    | Level(level) => level |> Level.title
+    | Level(level) => level->Level.title
     | Tag(tag) => "tag " ++ tag
     | NameOrEmail(input) => input
     }
@@ -51,47 +51,47 @@ let updateFilter = (setSearchInput, updateFilterCB, filter) => {
 }
 
 let selected = (filter, levels) => {
-  let level = switch filter |> Filter.levelId {
-  | Some(id) => [Selectable.makeLevel(id |> Level.unsafeFind(levels, "Search"))]
+  let level = switch filter->Filter.levelId {
+  | Some(id) => [Selectable.makeLevel(id->Level.unsafeFind(levels, "Search"))]
   | None => []
   }
-  let searchString = switch filter |> Filter.searchString {
-  | Some(s) => s |> Js.String.trim == "" ? [] : [Selectable.makeNameOrEmail(s)]
+  let searchString = switch filter->Filter.searchString {
+  | Some(s) => s->Js.String.trim == "" ? [] : [Selectable.makeNameOrEmail(s)]
   | None => []
   }
 
-  let tags = filter |> Filter.tags |> Array.map(t => Selectable.makeTag(t))
+  let tags = filter->Filter.tags->Array.map(t => Selectable.makeTag(t))
 
-  searchString |> Array.append(tags) |> Array.append(level)
+  searchString->Array.append(tags)->Array.append(level)
 }
 
 let unselected = (tags, levels, filter, searchInput) => {
   let tagSuggestions =
     tags
-    |> Js.Array.filter(t => !(filter |> Filter.tags |> Array.mem(t)))
-    |> Array.map(t => Selectable.makeTag(t))
-  let levelSuggestions = switch filter |> Filter.levelId {
-  | Some(levelId) => levels |> Js.Array.filter(l => l |> Level.id != levelId)
+    ->Js.Array.filter(t => !(filter->Filter.tags->Array.mem(t)))
+    ->Array.map(t => Selectable.makeTag(t))
+  let levelSuggestions = switch filter->Filter.levelId {
+  | Some(levelId) => levels->Js.Array.filter(l => l->Level.id != levelId)
   | None => levels
-  } |> Array.map(l => Selectable.makeLevel(l))
+  }->Array.map(l => Selectable.makeLevel(l))
   let searchSuggestion =
-    searchInput |> Js.String.trim == "" ? [] : [Selectable.makeNameOrEmail(searchInput)]
+    searchInput->Js.String.trim == "" ? [] : [Selectable.makeNameOrEmail(searchInput)]
 
-  searchSuggestion |> Array.append(tagSuggestions) |> Array.append(levelSuggestions)
+  searchSuggestion->Array.append(tagSuggestions)->Array.append(levelSuggestions)
 }
 
 let select = (filter, updateFilterCB, setSearchInput, selectable) =>
   switch (selectable: Selectable.t) {
-  | Level(level) => filter |> Filter.changeLevelId(Some(level |> Level.id))
-  | Tag(tag) => filter |> Filter.addTag(tag)
-  | NameOrEmail(input) => filter |> Filter.changeSearchString(Some(input))
-  } |> updateFilter(setSearchInput, updateFilterCB)
+  | Level(level) => filter->Filter.changeLevelId(Some(level->Level.id))
+  | Tag(tag) => filter->Filter.addTag(tag)
+  | NameOrEmail(input) => filter->Filter.changeSearchString(Some(input))
+  }->updateFilter(setSearchInput, updateFilterCB)
 
 let deselect = (filter, updateFilterCB, selectable) => {
   let newFilter = switch (selectable: Selectable.t) {
-  | Level(_level) => filter |> Filter.removeLevelId
-  | Tag(tag) => filter |> Filter.removeTag(tag)
-  | NameOrEmail(_) => filter |> Filter.removeSearchString
+  | Level(_level) => filter->Filter.removeLevelId
+  | Tag(tag) => filter->Filter.removeTag(tag)
+  | NameOrEmail(_) => filter->Filter.removeSearchString
   }
 
   updateFilterCB(newFilter)
@@ -104,7 +104,7 @@ let make = (~filter, ~updateFilterCB, ~tags, ~levels) => {
   let id = "search"
   <div className="inline-block w-full">
     <label className="block text-tiny font-semibold uppercase" htmlFor=id>
-      {"Filter by:" |> str}
+      {"Filter by:"->str}
     </label>
     <MultiselectDropdown
       unselected={unselected(tags, levels, filter, searchInput)}

@@ -94,6 +94,6 @@
 
   Exception Analysis
   ExternalTest.res:7:5-24
-  bigIntFromStringExn2 might raise Exn.Error (ExternalTest.res:7:35) and is not annotated with @raises(Exn.Error)
+  bigIntFromStringExn2 might raise JsExn (ExternalTest.res:7:35) and is not annotated with @raises(JsExn)
   
   Analysis reported 24 issues (Exception Analysis:24)

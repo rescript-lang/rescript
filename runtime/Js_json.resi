@@ -30,7 +30,8 @@ Efficient JSON encoding using JavaScript API
 
 /* ## Types */
 
-@unboxed /** The JSON data structure */
+/** The JSON data structure */
+@unboxed
 type rec t = Stdlib_JSON.t =
   | Boolean(bool)
   | @as(null) Null
@@ -106,7 +107,8 @@ let decodeNull: t => option<Js_null.t<'a>>
    JSON values.
 */
 
-@val /** `null` is the singleton null JSON value. */
+/** `null` is the singleton null JSON value. */
+@val
 external null: t = "null"
 
 /** `string(s)` makes a JSON string of the `string` `s`. */
@@ -144,8 +146,6 @@ external objectArray: array<dict<t>> => t = "%identity"
 
 /* ## String conversion */
 
-@val
-@scope("JSON")
 /**
 `parseExn(s)` parses the `string` `s` into a JSON data structure.
 Returns a JSON data structure.
@@ -196,10 +196,9 @@ let getIds = s => {
 Js.log(getIds(` { "ids" : [1, 2, 3 ] } `))
 ```
 */
+@val @scope("JSON")
 external parseExn: string => t = "parse"
 
-@val
-@scope("JSON")
 /**
 `stringify(json)` formats the JSON data structure as a `string`.
 Returns the string representation of a given JSON data structure.
@@ -219,10 +218,9 @@ Js.Dict.set(dict, "likes", Js.Json.stringArray(["ReScript", "ocaml", "js"]))
 Js.log(Js.Json.stringify(Js.Json.object_(dict)))
 ```
 */
+@val @scope("JSON")
 external stringify: t => string = "stringify"
 
-@val
-@scope("JSON")
 /**
 `stringifyWithSpace(json)` formats the JSON data structure as a `string`.
 Returns the string representation of a given JSON data structure with spacing.
@@ -242,10 +240,9 @@ Js.Dict.set(dict, "likes", Js.Json.stringArray(["ReScript", "ocaml", "js"]))
 Js.log(Js.Json.stringifyWithSpace(Js.Json.object_(dict), 2))
 ```
 */
+@val @scope("JSON")
 external stringifyWithSpace: (t, @as(json`null`) _, int) => string = "stringify"
 
-@val
-@scope("JSON")
 /**
 `stringifyAny(value)` formats any value into a JSON string.
 
@@ -256,6 +253,7 @@ external stringifyWithSpace: (t, @as(json`null`) _, int) => string = "stringify"
 Js.log(Js.Json.stringifyAny(["hello", "world"]))
 ```
 */
+@val @scope("JSON")
 external stringifyAny: 'a => option<string> = "stringify"
 
 /**

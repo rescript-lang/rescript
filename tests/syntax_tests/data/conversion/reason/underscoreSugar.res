@@ -1,1 +1,1 @@
-let photo = pricedRoom["room"]["photos"] |> filterNone |> Array.get(_, 0)
+let photo = pricedRoom["room"]["photos"]->filterNone->Array.get(_, 0)

@@ -1,3 +1,4 @@
+@notUndefined
 type t<'a>
 
 @new external make: unit => t<'a> = "Set"
@@ -25,3 +26,5 @@ type t<'a>
 @send external isDisjointFrom: (t<'a>, t<'a>) => bool = "isDisjointFrom"
 
 external toArray: t<'a> => array<'a> = "Array.from"
+
+external ignore: t<'a> => unit = "%ignore"

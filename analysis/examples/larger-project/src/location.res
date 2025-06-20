@@ -257,5 +257,5 @@ let () = register_error_of_exn(x =>
 @raises(Error)
 let raise_errorf = (~loc=none, ~sub=list{}, ~if_highlight="") =>
   pp_ksprintf(~before=print_phanton_error_prefix, msg =>
-    raise(Error({loc: loc, msg: msg, sub: sub, if_highlight: if_highlight}))
+    throw(Error({loc: loc, msg: msg, sub: sub, if_highlight: if_highlight}))
   )

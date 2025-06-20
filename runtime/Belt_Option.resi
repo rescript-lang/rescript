@@ -50,9 +50,9 @@ If `optionValue` is `Some(value)` and `p(value) = true`, it returns `Some(value)
 ## Examples
 
 ```rescript
-Belt.Option.keep(Some(10), x => x > 5) /* returns `Some(10)` */
-Belt.Option.keep(Some(4), x => x > 5) /* returns `None` */
-Belt.Option.keep(None, x => x > 5) /* returns `None` */
+assertEqual(Belt.Option.keep(Some(10), x => x > 5), Some(10))
+assertEqual(Belt.Option.keep(Some(4), x => x > 5), None)
+assertEqual(Belt.Option.keep(None, x => x > 5), None)
 ```
 */
 let keep: (option<'a>, 'a => bool) => option<'a>
@@ -113,10 +113,10 @@ If `optionValue` is `None`, the default is returned.
 
 ```rescript
 let someValue = Some(3)
-someValue->Belt.Option.mapWithDefault(0, x => x + 5) /* 8 */
+assertEqual(someValue->Belt.Option.mapWithDefault(0, x => x + 5), 8)
 
 let noneValue = None
-noneValue->Belt.Option.mapWithDefault(0, x => x + 5) /* 0 */
+assertEqual(noneValue->Belt.Option.mapWithDefault(0, x => x + 5), 0)
 ```
 */
 let mapWithDefault: (option<'a>, 'b, 'a => 'b) => 'b
@@ -131,9 +131,9 @@ If `optionValue` is `Some(value)` this returns `f(value)`, otherwise it returns 
 ## Examples
 
 ```rescript
-Belt.Option.map(Some(3), x => x * x) /* Some(9) */
+assertEqual(Belt.Option.map(Some(3), x => x * x), Some(9))
 
-Belt.Option.map(None, x => x * x) /* None */
+assertEqual(Belt.Option.map(None, x => x * x), None)
 ```
 */
 let map: (option<'a>, 'a => 'b) => option<'b>
@@ -157,11 +157,11 @@ let addIfAboveOne = value =>
       None
    }
 
-Belt.Option.flatMap(Some(2), addIfAboveOne) /* Some(3) */
+assertEqual(Belt.Option.flatMap(Some(2), addIfAboveOne), Some(3))
 
-Belt.Option.flatMap(Some(-4), addIfAboveOne) /* None */
+assertEqual(Belt.Option.flatMap(Some(-4), addIfAboveOne), None)
 
-Belt.Option.flatMap(None, addIfAboveOne) /* None */
+assertEqual(Belt.Option.flatMap(None, addIfAboveOne), None)
 ```
 */
 let flatMap: (option<'a>, 'a => option<'b>) => option<'b>
@@ -172,18 +172,18 @@ If `optionalValue` is `Some(value)`, returns `value`, otherwise default.
 ## Examples
 
 ```rescript
-Belt.Option.getWithDefault(None, "Banana") /* Banana */
+assertEqual(Belt.Option.getWithDefault(None, "Banana"), "Banana")
 
-Belt.Option.getWithDefault(Some("Apple"), "Banana") /* Apple */
+assertEqual(Belt.Option.getWithDefault(Some("Apple"), "Banana"), "Apple")
 ```
 
 ```rescript
 let greet = (firstName: option<string>) =>
    "Greetings " ++ firstName->Belt.Option.getWithDefault("Anonymous")
 
-Some("Jane")->greet /* "Greetings Jane" */
+assertEqual(Some("Jane")->greet, "Greetings Jane")
 
-None->greet /* "Greetings Anonymous" */
+assertEqual(None->greet, "Greetings Anonymous")
 ```
 */
 let getWithDefault: (option<'a>, 'a) => 'a
@@ -195,9 +195,9 @@ returns `Some(value)`, otherwise `otherOptional`
 ## Examples
 
 ```rescript
-Belt.Option.orElse(Some(1812), Some(1066)) == Some(1812)
-Belt.Option.orElse(None, Some(1066)) == Some(1066)
-Belt.Option.orElse(None, None) == None
+assertEqual(Belt.Option.orElse(Some(1812), Some(1066)), Some(1812))
+assertEqual(Belt.Option.orElse(None, Some(1066)), Some(1066))
+assertEqual(Belt.Option.orElse(None, None), None)
 ```
 */
 let orElse: (option<'a>, option<'a>) => option<'a>
@@ -208,9 +208,9 @@ Returns `true` if the argument is `Some(value)`, `false` otherwise.
 ## Examples
 
 ```rescript
-Belt.Option.isSome(None) /* false */
+assertEqual(Belt.Option.isSome(None), false)
 
-Belt.Option.isSome(Some(1)) /* true */
+assertEqual(Belt.Option.isSome(Some(1)), true)
 ```
 */
 let isSome: option<'a> => bool
@@ -221,9 +221,9 @@ Returns `true` if the argument is `None`, `false` otherwise.
 ## Examples
 
 ```rescript
-Belt.Option.isNone(None) /* true */
+assertEqual(Belt.Option.isNone(None), true)
 
-Belt.Option.isNone(Some(1)) /* false */
+assertEqual(Belt.Option.isNone(Some(1)), false)
 ```
 */
 let isNone: option<'a> => bool
@@ -250,13 +250,13 @@ let clockEqual = (a, b) => mod(a, 12) == mod(b, 12)
 
 open Belt.Option
 
-eq(Some(3), Some(15), clockEqual) /* true */
+assertEqual(eq(Some(3), Some(15), clockEqual), true)
 
-eq(Some(3), None, clockEqual) /* false */
+assertEqual(eq(Some(3), None, clockEqual), false)
 
-eq(None, Some(3), clockEqual) /* false */
+assertEqual(eq(None, Some(3), clockEqual), false)
 
-eq(None, None, clockEqual) /* true */
+assertEqual(eq(None, None, clockEqual), true)
 ```
 */
 let eq: (option<'a>, option<'b>, ('a, 'b) => bool) => bool
@@ -291,17 +291,17 @@ let clockCompare = (a, b) => compare(mod(a, 12), mod(b, 12))
 
 open Belt.Option
 
-cmp(Some(3), Some(15), clockCompare) /* 0 */
+assertEqual(cmp(Some(3), Some(15), clockCompare), 0)
 
-cmp(Some(3), Some(14), clockCompare) /* 1 */
+assertEqual(cmp(Some(3), Some(14), clockCompare), 1)
 
-cmp(Some(2), Some(15), clockCompare) /* (-1) */
+assertEqual(cmp(Some(2), Some(15), clockCompare), (-1))
 
-cmp(None, Some(15), clockCompare) /* (-1) */
+assertEqual(cmp(None, Some(15), clockCompare), (-1))
 
-cmp(Some(14), None, clockCompare) /* 1 */
+assertEqual(cmp(Some(14), None, clockCompare), 1)
 
-cmp(None, None, clockCompare) /* 0 */
+assertEqual(cmp(None, None, clockCompare), 0)
 ```
 */
 let cmp: (option<'a>, option<'b>, ('a, 'b) => int) => int

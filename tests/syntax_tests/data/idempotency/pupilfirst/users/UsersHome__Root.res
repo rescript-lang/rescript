@@ -25,14 +25,14 @@ let headerSectiom = (userName, userTitle, avatarUrl, showUserEdit) =>
         />
       }}
       <div className="text-sm flex flex-col justify-center">
-        <div className="text-black font-bold inline-block"> {userName |> str} </div>
-        <div className="text-gray-600 inline-block"> {userTitle |> str} </div>
+        <div className="text-black font-bold inline-block"> {userName->str} </div>
+        <div className="text-gray-600 inline-block"> {userTitle->str} </div>
       </div>
     </div>
     {showUserEdit
       ? <a className="btn" href="/user/edit">
           <i className="fas fa-edit text-xs md:text-sm mr-2" />
-          <span> {"Edit Profile" |> str} </span>
+          <span> {"Edit Profile"->str} </span>
         </a>
       : React.null}
   </div>
@@ -47,14 +47,14 @@ let navSection = (view, setView, communities) =>
     <div className="flex max-w-4xl mx-auto px-3 lg:px-0">
       <button
         className={navButtonClasses(view == ShowCourses)} onClick={_ => setView(_ => ShowCourses)}>
-        <i className="fas fa-book text-xs md:text-sm mr-2" /> <span> {"My Courses" |> str} </span>
+        <i className="fas fa-book text-xs md:text-sm mr-2" /> <span> {"My Courses"->str} </span>
       </button>
-      {communities |> ArrayUtils.isNotEmpty
+      {communities->ArrayUtils.isNotEmpty
         ? <button
             className={navButtonClasses(view == ShowCommunities)}
             onClick={_ => setView(_ => ShowCommunities)}>
             <i className="fas fa-users text-xs md:text-sm mr-2" />
-            <span> {"Communities" |> str} </span>
+            <span> {"Communities"->str} </span>
           </button>
         : React.null}
     </div>
@@ -65,21 +65,21 @@ let courseLink = (href, title, icon) =>
     key=href
     href
     className="px-2 py-1 mr-2 mt-2 rounded text-sm bg-gray-100 text-gray-800 hover:bg-gray-200 hover:text-primary-500">
-    <i className=icon /> <span className="font-semibold ml-2"> {title |> str} </span>
+    <i className=icon /> <span className="font-semibold ml-2"> {title->str} </span>
   </a>
 
 let ctaButton = (title, href) =>
   <a
     href
     className="w-full bg-gray-200 mt-4 px-6 py-4 flex text-sm font-semibold justify-between items-center cursor-pointer text-primary-500 hover:bg-gray-300">
-    <span> <i className="fas fa-book" /> <span className="ml-2"> {title |> str} </span> </span>
+    <span> <i className="fas fa-book" /> <span className="ml-2"> {title->str} </span> </span>
     <i className="fas fa-arrow-right" />
   </a>
 
 let ctaText = (message, icon) =>
   <div
     className="w-full bg-red-100 text-red-600 mt-4 px-6 py-4 flex text-sm font-semibold justify-center items-center ">
-    <span> <i className=icon /> <span className="ml-2"> {message |> str} </span> </span>
+    <span> <i className=icon /> <span className="ml-2"> {message->str} </span> </span>
   </div>
 
 let studentLink = (courseId, suffix) => "/courses/" ++ (courseId ++ ("/" ++ suffix))
@@ -87,20 +87,20 @@ let studentLink = (courseId, suffix) => "/courses/" ++ (courseId ++ ("/" ++ suff
 let callToAction = (course, currentSchoolAdmin) =>
   if currentSchoolAdmin {
     #ViewCourse
-  } else if course |> Course.author {
+  } else if course->Course.author {
     #EditCourse
-  } else if course |> Course.review {
+  } else if course->Course.review {
     #ReviewSubmissions
-  } else if course |> Course.exited {
+  } else if course->Course.exited {
     #DroppedOut
-  } else if course |> Course.ended {
+  } else if course->Course.ended {
     #CourseEnded
   } else {
     #ViewCourse
   }
 
 let ctaFooter = (course, currentSchoolAdmin) => {
-  let courseId = course |> Course.id
+  let courseId = course->Course.id
 
   switch callToAction(course, currentSchoolAdmin) {
   | #ViewCourse => ctaButton("View Course", studentLink(courseId, "curriculum"))
@@ -113,28 +113,28 @@ let ctaFooter = (course, currentSchoolAdmin) => {
 
 let communityLinks = (communityIds, communities) =>
   communityIds
-  |> Array.map(id => {
-    let community = communities |> Js.Array.find(c => c |> Community.id == id)
+  ->Array.map(id => {
+    let community = communities->Js.Array.find(c => c->Community.id == id)
     switch community {
     | Some(c) =>
       <a
-        key={c |> Community.id}
-        href={"/communities/" ++ (c |> Community.id)}
+        key={c->Community.id}
+        href={"/communities/" ++ (c->Community.id)}
         className="px-2 py-1 mr-2 mt-2 rounded text-sm bg-gray-100 text-gray-800 hover:bg-gray-200 hover:text-primary-500">
         <i className="fas fa-users" />
-        <span className="font-semibold ml-2"> {c |> Community.name |> str} </span>
+        <span className="font-semibold ml-2"> {c->Community.name->str} </span>
       </a>
     | None => React.null
     }
   })
-  |> React.array
+  ->React.array
 
 let courseLinks = (course, currentSchoolAdmin, communities) => {
-  let courseId = course |> Course.id
+  let courseId = course->Course.id
   let cta = callToAction(course, currentSchoolAdmin)
 
   <div className="flex flex-wrap px-4 mt-2">
-    {course |> Course.author && cta != #EditCourse
+    {course->Course.author && cta != #EditCourse
       ? courseLink(
           "/school/courses/" ++ (courseId ++ "/curriculum"),
           "Edit Curriculum",
@@ -144,16 +144,16 @@ let courseLinks = (course, currentSchoolAdmin, communities) => {
     {cta != #ViewCourse
       ? courseLink(studentLink(courseId, "curriculum"), "View Curriculum", "fas fa-book")
       : React.null}
-    {course |> Course.enableLeaderboard
+    {course->Course.enableLeaderboard
       ? courseLink(studentLink(courseId, "leaderboard"), "Leaderboard", "fas fa-calendar-alt")
       : React.null}
-    {course |> Course.review && cta != #ReviewSubmissions
+    {course->Course.review && cta != #ReviewSubmissions
       ? courseLink(studentLink(courseId, "review"), "Review Submissions", "fas fa-check-square")
       : React.null}
-    {course |> Course.review
+    {course->Course.review
       ? courseLink(studentLink(courseId, "students"), "My Students", "fas fa-user-friends")
       : React.null}
-    {communityLinks(course |> Course.linkedCommunities, communities)}
+    {communityLinks(course->Course.linkedCommunities, communities)}
   </div>
 }
 
@@ -161,18 +161,18 @@ let coursesSection = (courses, communities, currentSchoolAdmin) =>
   <div className="w-full max-w-4xl mx-auto">
     <div className="flex flex-wrap flex-1 lg:-mx-5">
       {courses
-      |> Array.map(course =>
+      ->Array.map(course =>
         <div
-          key={course |> Course.id}
-          ariaLabel={course |> Course.name}
+          key={course->Course.id}
+          ariaLabel={course->Course.name}
           className="w-full px-3 lg:px-5 md:w-1/2 mt-6 md:mt-10">
           <div
-            key={course |> Course.id}
+            key={course->Course.id}
             className="flex overflow-hidden shadow bg-white rounded-lg flex flex-col justify-between h-full">
             <div>
               <div className="relative">
                 <div className="relative pb-1/2 bg-gray-800">
-                  {switch course |> Course.thumbnailUrl {
+                  {switch course->Course.thumbnailUrl {
                   | Some(url) => <img className="absolute h-full w-full object-cover" src=url />
                   | None =>
                     <div
@@ -182,20 +182,20 @@ let coursesSection = (courses, communities, currentSchoolAdmin) =>
                 </div>
                 <div
                   className="user-home-course__title-container absolute w-full flex items-center h-16 bottom-0 z-50"
-                  key={course |> Course.id}>
+                  key={course->Course.id}>
                   <h4
                     className="user-home-course__title text-white font-semibold leading-tight pl-6 pr-4 text-lg md:text-xl">
-                    {course |> Course.name |> str}
+                    {course->Course.name->str}
                   </h4>
                 </div>
               </div>
               <div
                 className="user-home-course__description text-sm px-6 pt-4 w-full leading-relaxed">
-                {course |> Course.description |> str}
+                {course->Course.description->str}
               </div>
-              {if course |> Course.exited {
+              {if course->Course.exited {
                 <div className="text-sm py-4 bg-red-100 rounded mt-2 px-6">
-                  {"Your student profile for this course is locked, and cannot be updated." |> str}
+                  {"Your student profile for this course is locked, and cannot be updated."->str}
                 </div>
               } else {
                 <div> {courseLinks(course, currentSchoolAdmin, communities)} </div>
@@ -205,7 +205,7 @@ let coursesSection = (courses, communities, currentSchoolAdmin) =>
           </div>
         </div>
       )
-      |> React.array}
+      ->React.array}
     </div>
   </div>
 
@@ -213,28 +213,28 @@ let communitiesSection = communities =>
   <div className="w-full max-w-4xl mx-auto">
     <div className="flex flex-wrap flex-1 lg:-mx-5">
       {communities
-      |> Array.map(community =>
+      ->Array.map(community =>
         <div
-          key={community |> Community.id}
+          key={community->Community.id}
           className="flex w-full px-3 lg:px-5 md:w-1/2 mt-6 md:mt-10">
           <a
             className="w-full h-full shadow rounded-lg hover:shadow-lg"
-            href={"communities/" ++ (community |> Community.id)}>
+            href={"communities/" ++ (community->Community.id)}>
             <div
               className="user-home-community__cover flex w-full bg-gray-600 h-40 svg-bg-pattern-5 items-center justify-center p-4 shadow rounded-t-lg"
             />
             <div className="w-full flex justify-between items-center flex-wrap px-4 pt-2 pb-4">
               <h4 className="font-bold text-sm pt-2 leading-tight">
-                {community |> Community.name |> str}
+                {community->Community.name->str}
               </h4>
               <div className="btn btn-small btn-primary-ghost mt-2">
-                {"Visit Community" |> str}
+                {"Visit Community"->str}
               </div>
             </div>
           </a>
         </div>
       )
-      |> React.array}
+      ->React.array}
     </div>
   </div>
 

@@ -35,7 +35,6 @@ comes with `NAN`
 
 /* + conversion */
 
-@send
 /**
 Formats an `int` using exponential (scientific) notation.
 Returns a `string` representing the given value in exponential notation.
@@ -50,9 +49,9 @@ See [`toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 Js.log(Js.Int.toExponential(77))
 ```
 */
+@send
 external toExponential: int => string = "toExponential"
 
-@send
 /**
 Formats an `int` using exponential (scientific) notation.
 `digits` specifies how many digits should appear after the decimal point. The value must be in the range \[0, 20\] (inclusive).
@@ -74,9 +73,9 @@ Js.log(Js.Int.toExponentialWithPrecision(77, ~digits=2))
 Js.log(Js.Int.toExponentialWithPrecision(5678, ~digits=2))
 ```
 */
+@send
 external toExponentialWithPrecision: (int, ~digits: int) => string = "toExponential"
 
-@send
 /**
 Formats an `int` using some fairly arbitrary rules.
 Returns a `string` representing the given value in fixed-point (usually).
@@ -93,9 +92,9 @@ See [`toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 Js.log(Js.Int.toPrecision(123456789))
 ```
 */
+@send
 external toPrecision: int => string = "toPrecision"
 
-@send
 /**
 Formats an `int` using some fairly arbitrary rules.
 `digits` specifies how many digits should appear in total. The value must between 0 and some arbitrary number that's hopefully at least larger than 20 (for Node it's 21. Why? Who knows).
@@ -121,9 +120,9 @@ Js.log(Js.Int.toPrecisionWithPrecision(123456789, ~digits=2))
 Js.log(Js.Int.toPrecisionWithPrecision(0, ~digits=2))
 ```
 */
+@send
 external toPrecisionWithPrecision: (int, ~digits: int) => string = "toPrecision"
 
-@send
 /**
 Formats an `int` as a `string`. Returns a `string` representing the given value
 in fixed-point (usually).
@@ -137,9 +136,9 @@ See [`toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 Js.log(Js.Int.toString(123456789))
 ```
 */
+@send
 external toString: int => string = "toString"
 
-@send
 /**
 Formats an `int` as a `string`. `radix` specifies the radix base to use for the
 formatted number. The value must be in the range \[2, 36\] (inclusive). Returns
@@ -162,6 +161,7 @@ Js.log(Js.Int.toStringWithRadix(3735928559, ~radix=16))
 Js.log(Js.Int.toStringWithRadix(123456, ~radix=36))
 ```
 */
+@send
 external toStringWithRadix: (int, ~radix: int) => string = "toString"
 
 external toFloat: int => float = "%floatofint"

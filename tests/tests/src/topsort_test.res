@@ -121,7 +121,7 @@ let pathsort = graph => {
   let empty_path = (String_set.empty, list{})
   let \"+>" = (node, (set, stack)) =>
     if String_set.has(set, node) {
-      raise(Cycle(list{node, ...stack}))
+      throw(Cycle(list{node, ...stack}))
     } else {
       (String_set.add(set, node), list{node, ...stack})
     }

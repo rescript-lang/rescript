@@ -35,17 +35,19 @@ let forEach = (opt, f) =>
   | None => ()
   }
 
-let getExn = (x, ~message=?) =>
+let getOrThrow = (x, ~message=?) =>
   switch x {
   | Some(x) => x
   | None =>
     Stdlib_Error.panic(
       switch message {
-      | None => "Option.getExn called for None value"
+      | None => "Option.getOrThrow called for None value"
       | Some(message) => message
       },
     )
   }
+
+let getExn = getOrThrow
 
 external getUnsafe: option<'a> => 'a = "%identity"
 
@@ -155,3 +157,5 @@ let all6 = ((a, b, c, d, e, f)) => {
   | _ => None
   }
 }
+
+external ignore: option<'a> => unit = "%ignore"

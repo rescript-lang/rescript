@@ -460,7 +460,6 @@ let rec forStructureItem ~env ~(exported : Exported.t) item =
       | Tpat_or (p, _, _) -> handlePattern [] p
       | Tpat_record (items, _) ->
         items |> List.iter (fun (_, _, p, _) -> handlePattern [] p)
-      | Tpat_lazy p -> handlePattern [] p
       | Tpat_variant (_, Some p, _) -> handlePattern [] p
       | Tpat_variant (_, None, _) | Tpat_any | Tpat_constant _ -> ()
     in

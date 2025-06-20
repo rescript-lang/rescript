@@ -42,8 +42,6 @@ let promise = "Primitive_promise"
 
 let module_ = "Primitive_module"
 
-let lazy_ = "Primitive_lazy"
-
 let option = "Primitive_option"
 
 let hash = "Primitive_hash"

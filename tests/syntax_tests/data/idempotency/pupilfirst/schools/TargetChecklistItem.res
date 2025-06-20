@@ -56,25 +56,25 @@ let updateOptional = (optional, t) => {
   optional: optional,
 }
 
-let removeItem = (index, list) => list |> Js.Array.filteri((_item, i) => i != index)
+let removeItem = (index, list) => list->Js.Array.filteri((_item, i) => i != index)
 
-let moveUp = (index, list) => list |> ArrayUtils.swapUp(index)
+let moveUp = (index, list) => list->ArrayUtils.swapUp(index)
 
-let moveDown = (index, list) => list |> ArrayUtils.swapDown(index)
+let moveDown = (index, list) => list->ArrayUtils.swapDown(index)
 
 let copy = (i, list) =>
   list
-  |> Array.mapi((index, item) => i == index ? list{item, item} : list{item})
-  |> ArrayUtils.flatten
+  ->Array.mapi((index, item) => i == index ? list{item, item} : list{item})
+  ->ArrayUtils.flatten
 
 let removeMultichoiceOption = (choiceIndex, t) =>
   switch t.kind {
   | MultiChoice(choices) =>
     let updatedChoices =
       choices
-      |> Array.mapi((i, choice) => i == choiceIndex ? list{} : list{choice})
-      |> ArrayUtils.flatten
-    t |> updateKind(MultiChoice(updatedChoices))
+      ->Array.mapi((i, choice) => i == choiceIndex ? list{} : list{choice})
+      ->ArrayUtils.flatten
+    t->updateKind(MultiChoice(updatedChoices))
   | Files
   | Link
   | ShortText
@@ -84,8 +84,8 @@ let removeMultichoiceOption = (choiceIndex, t) =>
 let addMultichoiceOption = t =>
   switch t.kind {
   | MultiChoice(choices) =>
-    let updatedChoices = [""] |> Array.append(choices)
-    t |> updateKind(MultiChoice(updatedChoices))
+    let updatedChoices = [""]->Array.append(choices)
+    t->updateKind(MultiChoice(updatedChoices))
   | Files
   | Link
   | ShortText
@@ -95,8 +95,8 @@ let addMultichoiceOption = t =>
 let updateMultichoiceOption = (choiceIndex, newOption, t) =>
   switch t.kind {
   | MultiChoice(choices) =>
-    let updatedChoices = choices |> Array.mapi((i, choice) => i == choiceIndex ? newOption : choice)
-    t |> updateKind(MultiChoice(updatedChoices))
+    let updatedChoices = choices->Array.mapi((i, choice) => i == choiceIndex ? newOption : choice)
+    t->updateKind(MultiChoice(updatedChoices))
   | Files
   | Link
   | ShortText
@@ -117,19 +117,19 @@ let isFilesKind = t =>
 let isValidChecklistItem = t =>
   switch t.kind {
   | MultiChoice(choices) =>
-    choices |> Js.Array.filter(choice => choice |> String.trim == "") |> ArrayUtils.isEmpty &&
-      t.title |> String.trim |> String.length >= 1
+    choices->Js.Array.filter(choice => choice->String.trim == "")->ArrayUtils.isEmpty &&
+      t.title->String.trim->String.length >= 1
   | Files
   | Link
   | ShortText
   | LongText =>
-    t.title |> String.trim |> String.length >= 1
+    t.title->String.trim->String.length >= 1
   }
 
 let decodeMetadata = (kind, json) =>
   switch kind {
   | #MultiChoice =>
-    json |> {
+    json->{
       open Json.Decode
       field("choices", array(string))
     }
@@ -138,20 +138,20 @@ let decodeMetadata = (kind, json) =>
 let decode = json => {
   open Json.Decode
   {
-    kind: switch json |> field("kind", string) {
+    kind: switch json->field("kind", string) {
     | "files" => Files
     | "link" => Link
     | "shortText" => ShortText
     | "longText" => LongText
-    | "multiChoice" => MultiChoice(json |> field("metadata", decodeMetadata(#MultiChoice)))
+    | "multiChoice" => MultiChoice(json->field("metadata", decodeMetadata(#MultiChoice)))
     | otherKind =>
       Rollbar.error(
         "Unkown kind: " ++ (otherKind ++ "received in CurriculumEditor__TargetChecklistItem"),
       )
       LongText
     },
-    optional: json |> field("optional", bool),
-    title: json |> field("title", string),
+    optional: json->field("optional", bool),
+    title: json->field("title", string),
   }
 }
 
@@ -159,7 +159,7 @@ let encodeMetadata = kind =>
   switch kind {
   | MultiChoice(choices) =>
     open Json.Encode
-    object_(list{("choices", choices |> stringArray)})
+    object_(list{("choices", choices->stringArray)})
   | Files
   | Link
   | ShortText
@@ -171,15 +171,15 @@ let encodeMetadata = kind =>
 let encode = t => {
   open Json.Encode
   object_(list{
-    ("kind", t.kind |> kindAsString |> string),
-    ("title", t.title |> string),
-    ("optional", t.optional |> bool),
-    ("metadata", t.kind |> encodeMetadata),
+    ("kind", t.kind->kindAsString->string),
+    ("title", t.title->string),
+    ("optional", t.optional->bool),
+    ("metadata", t.kind->encodeMetadata),
   })
 }
 
 let encodeChecklist = checklist =>
-  checklist |> {
+  checklist->{
     open Json.Encode
     array(encode)
   }

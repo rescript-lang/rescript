@@ -31,7 +31,7 @@ type container<'hash, 'eq, 'c> = {
 }
 
 module A = Belt_Array
-external toOpt: opt<'a> => option<'a> = "%undefined_to_opt"
+external toOpt: opt<'a> => option<'a> = "%identity"
 external return: 'a => opt<'a> = "%identity"
 
 let emptyOpt = Js.undefined

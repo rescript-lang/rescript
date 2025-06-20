@@ -12,6 +12,34 @@
 
 let absname = ref false
 
+module Error_message_utils_support = struct
+  external to_comment : Res_comment.t -> Error_message_utils.Parser.comment
+    = "%identity"
+  external from_comment : Error_message_utils.Parser.comment -> Res_comment.t
+    = "%identity"
+
+  let setup () =
+    (Error_message_utils.Parser.parse_source :=
+       fun source ->
+         let res =
+           Res_driver.parse_implementation_from_source ~for_printer:false
+             ~display_filename:"<none>" ~source
+         in
+         (res.parsetree, res.comments |> List.map to_comment));
+
+    (Error_message_utils.Parser.reprint_source :=
+       fun parsetree comments ->
+         Res_printer.print_implementation parsetree
+           ~comments:(comments |> List.map from_comment)
+           ~width:80);
+
+    Error_message_utils.configured_jsx_module :=
+      Some
+        (match !Js_config.jsx_module with
+        | React -> "React"
+        | Generic {module_name} -> module_name)
+end
+
 let set_abs_input_name sourcefile =
   let sourcefile =
     if !absname && Filename.is_relative sourcefile then
@@ -41,6 +69,7 @@ let process_file sourcefile ?kind ppf =
      properly
   *)
   setup_outcome_printer ();
+  Error_message_utils_support.setup ();
   let kind =
     match kind with
     | None ->
@@ -185,11 +214,7 @@ let define_variable s =
   | _ -> Bsc_args.bad_arg ("illegal definition: " ^ s)
 
 let print_standard_library () =
-  let ( // ) = Filename.concat in
-  let standard_library =
-    Filename.dirname Sys.executable_name
-    // Filename.parent_dir_name // "lib" // "ocaml"
-  in
+  let standard_library = Config.standard_library in
   print_string standard_library;
   print_newline ();
   exit 0
@@ -259,6 +284,7 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
     ( "-bs-jsx-mode",
       string_call ignore,
       "*internal* Set jsx mode, this is no longer used and is a no-op." );
+    ("-bs-jsx-preserve", set Js_config.jsx_preserve, "*internal* Preserve jsx");
     ( "-bs-package-output",
       string_call Js_packages_state.update_npm_package_path,
       "*internal* Set npm-output-path: [opt_module]:path, for example: \
@@ -366,6 +392,12 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
        print the transformed ReScript code to stdout" );
     ("-format", string_call format_file, "*internal* Format as Res syntax");
     ("-only-parse", set Clflags.only_parse, "*internal* stop after parsing");
+    ( "-editor-mode",
+      unit_call (fun () ->
+          Clflags.editor_mode := true;
+          Clflags.ignore_parse_errors := true;
+          Js_config.cmi_only := true),
+      "*internal* Enable editor mode." );
     ( "-ignore-parse-errors",
       set Clflags.ignore_parse_errors,
       "*internal* continue after parse errors" );
@@ -454,8 +486,5 @@ let _ : unit =
     Format.eprintf "%s@." msg;
     exit 2
   | x ->
-    (*
-        Ext_obj.bt ();
-*)
     Location.report_exception ppf x;
     exit 2

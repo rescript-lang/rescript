@@ -86,5 +86,5 @@ let location_of_error = x =>
   | Expecting(l, _) => l
   }
 
-let ill_formed_ast = (loc, s) => raise(Error(Ill_formed_ast(loc, s)))
+let ill_formed_ast = (loc, s) => throw(Error(Ill_formed_ast(loc, s)))
 

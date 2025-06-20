@@ -9,7 +9,7 @@ done
 
 for file in ppx/*.res; do
   output="src/expected/$(basename $file).jsout"
-  ../../cli/bsc -ppx "../../_build/install/default/bin/rescript-tools ppx" $file > $output
+  ../../cli/bsc.js -ppx "../../_build/install/default/bin/rescript-tools ppx" $file > $output
   # # CI. We use LF, and the CI OCaml fork prints CRLF. Convert.
   if [ "$RUNNER_OS" == "Windows" ]; then
     perl -pi -e 's/\r\n/\n/g' -- $output

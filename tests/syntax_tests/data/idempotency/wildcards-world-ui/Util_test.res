@@ -13,6 +13,6 @@ describe("Expect", () => {
       ("-5", false),
       ("", false),
     },
-    ((num, result)) => expect(Helper.isPositiveStringInteger(num)) |> toBe(result),
+    ((num, result)) => expect(Helper.isPositiveStringInteger(num))->toBe(result),
   )
 })

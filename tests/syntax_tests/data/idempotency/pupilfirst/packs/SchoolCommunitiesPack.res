@@ -7,9 +7,9 @@ type props = {
 let decodeProps = json => {
   open Json.Decode
   {
-    communities: json |> field("communities", list(SchoolCommunities__Community.decode)),
-    courses: json |> field("courses", list(SchoolCommunities__Course.decode)),
-    connections: json |> field("connections", list(SchoolCommunities__Connection.decode)),
+    communities: json->field("communities", list(SchoolCommunities__Community.decode)),
+    courses: json->field("courses", list(SchoolCommunities__Course.decode)),
+    connections: json->field("connections", list(SchoolCommunities__Connection.decode)),
   }
 }
 
@@ -18,7 +18,7 @@ let props =
     ~id="school-communities",
     ~attribute="data-json-props",
     (),
-  ) |> decodeProps
+  )->decodeProps
 
 ReactDOMRe.renderToElementWithId(
   <SchoolCommunities__Index

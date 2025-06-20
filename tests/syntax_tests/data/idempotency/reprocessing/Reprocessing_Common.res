@@ -189,7 +189,7 @@ let read = (name: string) => {
       close_in(ic)
       List.rev(acc)
     }
-  loop(list{}) |> String.concat("")
+  loop(list{})->String.concat("")
 }
 
 let append_char = (s: string, c: char): string => s ++ String.make(1, c)

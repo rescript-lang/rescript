@@ -16,7 +16,7 @@ Intl.getCanonicalLocalesManyExn(["EN-US", "Fr"])->Console.log
 try {
   Intl.getCanonicalLocalesExn("bloop")->Console.log
 } catch {
-| Exn.Error(e) => Console.error(e)
+| JsExn(e) => Console.error(e)
 }
 
 try {
@@ -27,7 +27,7 @@ try {
   Intl.supportedValuesOfExn("timeZone")->Console.log
   Intl.supportedValuesOfExn("unit")->Console.log
 } catch {
-| Exn.Error(e) => Console.error(e)
+| JsExn(e) => Console.error(e)
 }
 
 try {
@@ -35,17 +35,17 @@ try {
 
   Console.error("Shouldn't have been hit")
 } catch {
-| Exn.Error(e) =>
-  switch Error.message(e)->Option.map(String.toLowerCase) {
+| JsExn(e) =>
+  switch JsExn.message(e)->Option.map(String.toLowerCase) {
   | Some("invalid key : someinvalidkey") => Console.log("Caught expected error")
   | message => {
       Console.warn(`Unexpected error message: "${message->Option.getUnsafe}"`)
-      Error.raise(e)
+      JsExn.throw(e)
     }
   }
 | e =>
-  switch Error.fromException(e) {
-  | Some(e) => Error.raise(e)
+  switch JsExn.fromException(e) {
+  | Some(e) => JsExn.throw(e)
   | None => Console.error("Unexpected error")
   }
 }

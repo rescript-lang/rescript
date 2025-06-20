@@ -115,5 +115,5 @@ let contents = () =>
 
 let multiple = (~count, ~element) =>
   Array.make(count, element)
-  |> Array.mapi((key, element) => <div key={key |> string_of_int}> element </div>)
-  |> React.array
+  ->Array.mapi((key, element) => <div key={key->string_of_int}> element </div>)
+  ->React.array

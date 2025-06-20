@@ -8,6 +8,7 @@ ContextPath Value[A, B1, xx]
 Path A.B1.xx
 CPPipe pathFromEnv:A.B1 found:true
 Path A.B1.
+Path 
 [{
     "label": "A.B1.d",
     "kind": 12,
@@ -30,8 +31,10 @@ ContextPath Value[A, x]
 Path A.x
 CPPipe pathFromEnv:A found:true
 Path A.v
+Path v
 CPPipe pathFromEnv:A.B1 found:true
 Path A.B1.
+Path 
 [{
     "label": "A.B1.d",
     "kind": 12,
@@ -55,6 +58,7 @@ ContextPath Value[E, e]
 Path E.e
 CPPipe pathFromEnv:E found:true
 Path E.v
+Path v
 ContextPath Value[E, e].v->v
 ContextPath Value[E, e].v
 ContextPath Value[E, e]
@@ -64,10 +68,13 @@ ContextPath Value[E, e]
 Path E.e
 CPPipe pathFromEnv:E found:true
 Path E.v
+Path v
 CPPipe pathFromEnv:D found:true
 Path D.v
+Path v
 CPPipe pathFromEnv:C found:false
 Path C.
+Path 
 [{
     "label": "C.do",
     "kind": 12,
@@ -91,6 +98,7 @@ ContextPath Value[E, e]
 Path E.e
 CPPipe pathFromEnv:E found:true
 Path E.v
+Path v
 ContextPath Value[E, e].v->v2
 ContextPath Value[E, e].v
 ContextPath Value[E, e]
@@ -100,10 +108,13 @@ ContextPath Value[E, e]
 Path E.e
 CPPipe pathFromEnv:E found:true
 Path E.v
+Path v
 CPPipe pathFromEnv:D found:true
 Path D.v2
+Path v2
 CPPipe pathFromEnv:D.C2 found:true
 Path D.C2.
+Path 
 [{
     "label": "D.C2.do",
     "kind": 12,

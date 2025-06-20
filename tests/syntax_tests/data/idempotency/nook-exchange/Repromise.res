@@ -14,7 +14,7 @@ module JsExn = {
         | Ok(result) => result
         | Error(error) =>
           Js.log2("Repromise.JsExn", error)
-          raise(Unexpected(error))
+          throw(Unexpected(error))
         },
       )
     )

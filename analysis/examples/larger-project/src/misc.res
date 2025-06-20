@@ -23,7 +23,7 @@ exception Fatal_error
 let fatal_error = msg => {
   print_string(">> Fatal error: ")
   prerr_endline(msg)
-  raise(Fatal_error)
+  throw(Fatal_error)
 }
 
 @raises(Fatal_error)
@@ -36,7 +36,7 @@ let try_finally = (work, cleanup) => {
   let result = try work() catch {
   | e =>
     cleanup()
-    raise(e)
+    throw(e)
   }
   cleanup()
   result
@@ -56,7 +56,7 @@ let protect_refs = {
       x
     | exception e =>
       set_refs(backup)
-      raise(e)
+      throw(e)
     }
   }
 }
@@ -149,7 +149,7 @@ module Stdlib = {
       let rec aux = (acc, l1, l2) =>
         switch (l1, l2) {
         | (list{}, _) => (List.rev(acc), l2)
-        | (list{_, ..._}, list{}) => raise(Invalid_argument("map2_prefix"))
+        | (list{_, ..._}, list{}) => throw(Invalid_argument("map2_prefix"))
         | (list{h1, ...t1}, list{h2, ...t2}) =>
           let h = f(h1, h2)
           aux(list{h, ...acc}, t1, t2)
@@ -179,7 +179,7 @@ module Stdlib = {
           (List.rev(acc), l)
         } else {
           switch l {
-          | list{} => raise(Invalid_argument("split_at"))
+          | list{} => throw(Invalid_argument("split_at"))
           | list{t, ...q} => aux(n - 1, list{t, ...acc}, q)
           }
         }
@@ -254,13 +254,13 @@ let find_in_path = (path, name) =>
     if Sys.file_exists(name) {
       name
     } else {
-      raise(Not_found)
+      throw(Not_found)
     }
   } else {
     @raises(Not_found)
     let rec try_dir = x =>
       switch x {
-      | list{} => raise(Not_found)
+      | list{} => throw(Not_found)
       | list{dir, ...rem} =>
         let fullname = Filename.concat(dir, name)
         if Sys.file_exists(fullname) {
@@ -290,7 +290,7 @@ let find_in_path_rel = (path, name) => {
   @raises(Not_found)
   let rec try_dir = x =>
     switch x {
-    | list{} => raise(Not_found)
+    | list{} => throw(Not_found)
     | list{dir, ...rem} =>
       let fullname = simplify(Filename.concat(dir, name))
       if Sys.file_exists(fullname) {
@@ -309,7 +309,7 @@ let find_in_path_uncap = (path, name) => {
   @raises(Not_found)
   let rec try_dir = x =>
     switch x {
-    | list{} => raise(Not_found)
+    | list{} => throw(Not_found)
     | list{dir, ...rem} =>
       let fullname = Filename.concat(dir, name)
       and ufullname = Filename.concat(dir, uname)
@@ -381,7 +381,7 @@ let copy_file_chunk = (ic, oc, len) => {
     } else {
       let r = input(ic, buff, 0, min(n, 0x1000))
       if r == 0 {
-        raise(End_of_file)
+        throw(End_of_file)
       } else {
         output(oc, buff, 0, r)
         copy(n - r)
@@ -435,12 +435,12 @@ let output_to_file_via_temporary = (~mode=list{Open_text}, filename, fn) => {
     } catch {
     | exn =>
       remove_file(temp_filename)
-      raise(exn)
+      throw(exn)
     }
   | exception exn =>
     close_out(oc)
     remove_file(temp_filename)
-    raise(exn)
+    throw(exn)
   }
 }
 
@@ -514,7 +514,7 @@ let search_substring = (pat, str, start) => {
     if j >= String.length(pat) {
       i
     } else if i + j >= String.length(str) {
-      raise(Not_found)
+      throw(Not_found)
     } else if String.get(str, i + j) == String.get(pat, j) {
       search(i, j + 1)
     } else {
@@ -831,7 +831,7 @@ module Color = {
     | "error" => cur_styles.contents.error
     | "warning" => cur_styles.contents.warning
     | "loc" => cur_styles.contents.loc
-    | _ => raise(Not_found)
+    | _ => throw(Not_found)
     }
 
   let color_enabled = ref(true)
@@ -957,15 +957,15 @@ exception HookExnWrapper({error: exn, hook_name: string, hook_info: hook_info})
 exception HookExn(exn)
 
 @raises(HookExn)
-let raise_direct_hook_exn = e => raise(HookExn(e))
+let raise_direct_hook_exn = e => throw(HookExn(e))
 
 @raises([HookExnWrapper, genericException])
 let fold_hooks = (list, hook_info, ast) =>
   List.fold_left(
     (ast, (hook_name, f)) =>
       try f(hook_info, ast) catch {
-      | HookExn(e) => raise(e)
-      | error => raise(HookExnWrapper({error: error, hook_name: hook_name, hook_info: hook_info}))
+      | HookExn(e) => throw(e)
+      | error => throw(HookExnWrapper({error: error, hook_name: hook_name, hook_info: hook_info}))
       },
     /* when explicit reraise with backtrace will be available,
      it should be used here */

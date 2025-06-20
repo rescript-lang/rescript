@@ -6,9 +6,9 @@
       "dir": "npm"
     }
   ],
-  "suffix": ".bs.js",
+  "suffix": ".res.js",
   "package-specs": {
-    "module": "commonjs",
+    "module": "esmodule",
     "in-source": false
   }
 }

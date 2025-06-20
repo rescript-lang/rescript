@@ -618,7 +618,7 @@ module SexpAst = struct
             Sexp.atom "Pexp_record";
             Sexp.list
               (map_empty
-                 ~f:(fun (longident_loc, expr, _) ->
+                 ~f:(fun {lid = longident_loc; x = expr} ->
                    Sexp.list
                      [longident longident_loc.Asttypes.txt; expression expr])
                  rows);
@@ -691,7 +691,6 @@ module SexpAst = struct
             expression expr;
           ]
       | Pexp_assert expr -> Sexp.list [Sexp.atom "Pexp_assert"; expression expr]
-      | Pexp_lazy expr -> Sexp.list [Sexp.atom "Pexp_lazy"; expression expr]
       | Pexp_newtype (lbl, expr) ->
         Sexp.list
           [Sexp.atom "Pexp_newtype"; string lbl.Asttypes.txt; expression expr]
@@ -707,8 +706,49 @@ module SexpAst = struct
           ]
       | Pexp_extension ext ->
         Sexp.list [Sexp.atom "Pexp_extension"; extension ext]
+      | Pexp_await e -> Sexp.list [Sexp.atom "Pexp_await"; expression e]
+      | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
+        let xs =
+          match children with
+          | JSXChildrenSpreading e -> [e]
+          | JSXChildrenItems xs -> xs
+        in
+        Sexp.list
+          [
+            Sexp.atom "Pexp_jsx_fragment"; Sexp.list (map_empty ~f:expression xs);
+          ]
+      | Pexp_jsx_element (Jsx_unary_element {jsx_unary_element_props = props})
+        ->
+        Sexp.list
+          [
+            Sexp.atom "Pexp_jsx_unary_element";
+            Sexp.list (map_empty ~f:jsx_prop props);
+          ]
+      | Pexp_jsx_element
+          (Jsx_container_element
+             {
+               jsx_container_element_props = props;
+               jsx_container_element_children = children;
+             }) ->
+        let xs =
+          match children with
+          | JSXChildrenSpreading e -> [e]
+          | JSXChildrenItems xs -> xs
+        in
+        Sexp.list
+          [
+            Sexp.atom "Pexp_jsx_container_element";
+            Sexp.list (map_empty ~f:jsx_prop props);
+            Sexp.list (map_empty ~f:expression xs);
+          ]
     in
     Sexp.list [Sexp.atom "expression"; desc]
+
+  and jsx_prop = function
+    | JSXPropPunning (_, name) -> Sexp.atom name.txt
+    | JSXPropValue (name, _, expr) ->
+      Sexp.list [Sexp.atom name.txt; expression expr]
+    | JSXPropSpreading (_, expr) -> expression expr
 
   and case c =
     Sexp.list
@@ -764,7 +804,7 @@ module SexpAst = struct
             closed_flag flag;
             Sexp.list
               (map_empty
-                 ~f:(fun (longident_loc, p, _) ->
+                 ~f:(fun {lid = longident_loc; x = p} ->
                    Sexp.list [longident longident_loc.Location.txt; pattern p])
                  rows);
           ]
@@ -777,7 +817,6 @@ module SexpAst = struct
         Sexp.list [Sexp.atom "Ppat_constraint"; pattern p; core_type typexpr]
       | Ppat_type longident_loc ->
         Sexp.list [Sexp.atom "Ppat_type"; longident longident_loc.Location.txt]
-      | Ppat_lazy p -> Sexp.list [Sexp.atom "Ppat_lazy"; pattern p]
       | Ppat_unpack string_loc ->
         Sexp.list [Sexp.atom "Ppat_unpack"; string string_loc.Location.txt]
       | Ppat_exception p -> Sexp.list [Sexp.atom "Ppat_exception"; pattern p]

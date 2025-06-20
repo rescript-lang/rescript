@@ -1,5 +1,0 @@
-*.o
-*.log
-*.ninja
-.ninja_log
-bs/.project-files-cache

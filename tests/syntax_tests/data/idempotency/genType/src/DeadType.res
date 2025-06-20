@@ -6,7 +6,7 @@ let typeDependencies = ref(list{})
 
 let addTypeReference = (~posFrom, ~posTo) => {
   if verbose {
-    Log_.item("addTypeReference %s --> %s@.", posFrom |> posToString, posTo |> posToString)
+    Log_.item("addTypeReference %s --> %s@.", posFrom->posToString, posTo->posToString)
   }
   PosHash.addSet(typeReferences, posTo, posFrom)
 }
@@ -15,7 +15,7 @@ let addDeclaration = (~path as path_, {type_kind, type_manifest}: Types.type_dec
   let save = (~declKind, ~loc: Location.t, ~name) => {
     let isInterfaceFile = Filename.check_suffix(loc.loc_start.pos_fname, "i")
     let name = isInterfaceFile ? name : "+" ++ name
-    let path = list{name, ...path_} |> pathToString
+    let path = list{name, ...path_}->pathToString
     if type_manifest == None {
       addTypeDeclaration(~declKind, ~path=path_, ~loc, name)
     }
@@ -45,8 +45,8 @@ let processTypeDeclaration = (typeDeclaration: Typedtree.type_declaration) => {
       if verbose {
         Log_.item(
           "extendTypeDependencies %s --> %s@.",
-          loc1.loc_start |> posToString,
-          loc2.loc_start |> posToString,
+          loc1.loc_start->posToString,
+          loc2.loc_start->posToString,
         )
       }
 
@@ -61,7 +61,7 @@ let processTypeDeclaration = (typeDeclaration: Typedtree.type_declaration) => {
           typeDeclaration.typ_name.txt,
           ...currentModulePath.contents,
         }),
-      } |> String.concat(".")
+      }->String.concat(".")
 
     try switch typeDeclaration.typ_manifest {
     | Some({ctyp_desc: Ttyp_constr(_, {txt}, _)}) =>
@@ -69,7 +69,7 @@ let processTypeDeclaration = (typeDeclaration: Typedtree.type_declaration) => {
         \"@"(
           list{currentModuleName.contents, ...Longident.flatten(txt)},
           list{name.Asttypes.txt},
-        ) |> String.concat(".")
+        )->String.concat(".")
       let loc1 = Hashtbl.find(fields, path1)
       let loc2 = Hashtbl.find(fields, path2)
       extendTypeDependencies(loc, loc1)
@@ -86,10 +86,10 @@ let processTypeDeclaration = (typeDeclaration: Typedtree.type_declaration) => {
 
   switch typeDeclaration.typ_kind {
   | Ttype_record(l) =>
-    l |> List.iter(({Typedtree.ld_name: ld_name, ld_loc}) => updateDependencies(ld_name, ld_loc))
+    l->List.iter(({Typedtree.ld_name: ld_name, ld_loc}) => updateDependencies(ld_name, ld_loc))
 
   | Ttype_variant(l) =>
-    l |> List.iter(({Typedtree.cd_name: cd_name, cd_loc}) => updateDependencies(cd_name, cd_loc))
+    l->List.iter(({Typedtree.cd_name: cd_name, cd_loc}) => updateDependencies(cd_name, cd_loc))
 
   | _ => ()
   }

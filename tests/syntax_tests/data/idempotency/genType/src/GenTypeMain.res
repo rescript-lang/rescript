@@ -6,8 +6,8 @@ module StringSet = Set.Make(String)
 
 let cmtCheckAnnotations = (~checkAnnotation, inputCMT) =>
   switch inputCMT.Cmt_format.cmt_annots {
-  | Implementation(structure) => structure |> Annotation.structureCheckAnnotation(~checkAnnotation)
-  | Interface(signature) => signature |> Annotation.signatureCheckAnnotation(~checkAnnotation)
+  | Implementation(structure) => structure->Annotation.structureCheckAnnotation(~checkAnnotation)
+  | Interface(signature) => signature->Annotation.signatureCheckAnnotation(~checkAnnotation)
   | _ => false
   }
 
@@ -45,22 +45,22 @@ let inputCmtTranslateTypeDeclarations = (
   | Implementation(structure) =>
     {
       ...structure,
-      str_items: structure.str_items |> List.filter(structureItemIsDeclaration),
-    } |> TranslateStructure.translateStructure(~config, ~outputFileRelative, ~resolver, ~typeEnv)
+      str_items: structure.str_items->List.filter(structureItemIsDeclaration),
+    }->TranslateStructure.translateStructure(~config, ~outputFileRelative, ~resolver, ~typeEnv)
 
   | Interface(signature) =>
     {
       ...signature,
-      sig_items: signature.sig_items |> List.filter(signatureItemIsDeclaration),
-    } |> TranslateSignature.translateSignature(~config, ~outputFileRelative, ~resolver, ~typeEnv)
+      sig_items: signature.sig_items->List.filter(signatureItemIsDeclaration),
+    }->TranslateSignature.translateSignature(~config, ~outputFileRelative, ~resolver, ~typeEnv)
 
   | Packed(_)
   | Partial_implementation(_)
   | Partial_interface(_) => list{}
   }
   translations
-  |> Translation.combine
-  |> Translation.addTypeDeclarationsFromModuleEquations(~typeEnv)
+  ->Translation.combine
+  ->Translation.addTypeDeclarationsFromModuleEquations(~typeEnv)
 }
 
 let translateCMT = (~config, ~outputFileRelative, ~resolver, inputCMT): Translation.t => {
@@ -68,14 +68,14 @@ let translateCMT = (~config, ~outputFileRelative, ~resolver, inputCMT): Translat
   let typeEnv = TypeEnv.root()
   let translations = switch cmt_annots {
   | Implementation(structure) =>
-    structure |> TranslateStructure.translateStructure(
+    structure->TranslateStructure.translateStructure(
       ~config,
       ~outputFileRelative,
       ~resolver,
       ~typeEnv,
     )
   | Interface(signature) =>
-    signature |> TranslateSignature.translateSignature(
+    signature->TranslateSignature.translateSignature(
       ~config,
       ~outputFileRelative,
       ~resolver,
@@ -84,8 +84,8 @@ let translateCMT = (~config, ~outputFileRelative, ~resolver, inputCMT): Translat
   | _ => list{}
   }
   translations
-  |> Translation.combine
-  |> Translation.addTypeDeclarationsFromModuleEquations(~typeEnv)
+  ->Translation.combine
+  ->Translation.addTypeDeclarationsFromModuleEquations(~typeEnv)
 }
 
 let emitTranslation = (
@@ -99,7 +99,7 @@ let emitTranslation = (
   translation,
 ) => {
   let codeText =
-    translation |> EmitJs.emitTranslationAsString(
+    translation->EmitJs.emitTranslationAsString(
       ~config,
       ~fileName,
       ~outputFileRelative,
@@ -109,7 +109,7 @@ let emitTranslation = (
   let fileContents = signFile(
     EmitType.fileHeader(
       ~config,
-      ~sourceFile=(fileName |> ModuleName.toString) ++ (isInterface ? ".rei" : ".re"),
+      ~sourceFile=(fileName->ModuleName.toString) ++ (isInterface ? ".rei" : ".re"),
     ) ++
     ("\n" ++
     (codeText ++ "\n")),
@@ -131,11 +131,11 @@ let readCmt = cmtFile =>
   }
 
 let processCmtFile = (~signFile, ~config, cmt) => {
-  let cmtFile = cmt |> Paths.getCmtFile
+  let cmtFile = cmt->Paths.getCmtFile
   if cmtFile != "" {
-    let outputFile = cmt |> Paths.getOutputFile(~config)
-    let outputFileRelative = cmt |> Paths.getOutputFileRelative(~config)
-    let fileName = cmt |> Paths.getModuleName
+    let outputFile = cmt->Paths.getOutputFile(~config)
+    let outputFileRelative = cmt->Paths.getOutputFileRelative(~config)
+    let fileName = cmt->Paths.getModuleName
     let isInterface = Filename.check_suffix(cmtFile, ".cmti")
     let resolver = ModuleResolver.createLazyResolver(
       ~config,
@@ -148,23 +148,23 @@ let processCmtFile = (~signFile, ~config, cmt) => {
       let checkAnnotation = (~loc as _, attributes) => {
         if (
           attributes
-          |> Annotation.getAttributePayload(Annotation.tagIsGenTypeIgnoreInterface) != None
+          ->Annotation.getAttributePayload(Annotation.tagIsGenTypeIgnoreInterface) != None
         ) {
           ignoreInterface := true
         }
         attributes
-        |> Annotation.getAttributePayload(Annotation.tagIsOneOfTheGenTypeAnnotations) != None
+        ->Annotation.getAttributePayload(Annotation.tagIsOneOfTheGenTypeAnnotations) != None
       }
 
-      let hasGenTypeAnnotations = inputCMT |> cmtCheckAnnotations(~checkAnnotation)
+      let hasGenTypeAnnotations = inputCMT->cmtCheckAnnotations(~checkAnnotation)
       if isInterface {
-        let cmtFileImpl = (cmtFile |> Filename.chop_extension) ++ ".cmt"
+        let cmtFileImpl = (cmtFile->Filename.chop_extension) ++ ".cmt"
         let inputCMTImpl = readCmt(cmtFileImpl)
-        let hasGenTypeAnnotationsImpl = inputCMTImpl |> cmtCheckAnnotations(~checkAnnotation=(
+        let hasGenTypeAnnotationsImpl = inputCMTImpl->cmtCheckAnnotations(~checkAnnotation=(
           ~loc,
           attributes,
         ) =>
-          if attributes |> checkAnnotation(~loc) {
+          if attributes->checkAnnotation(~loc) {
             if !ignoreInterface.contents {
               Log_.Color.setup()
               Log_.info(~loc, ~name="Warning genType", (ppf, ()) =>
@@ -186,8 +186,8 @@ let processCmtFile = (~signFile, ~config, cmt) => {
     }
     if hasGenTypeAnnotations {
       inputCMT
-      |> translateCMT(~config, ~outputFileRelative, ~resolver)
-      |> emitTranslation(
+      ->translateCMT(~config, ~outputFileRelative, ~resolver)
+      ->emitTranslation(
         ~config,
         ~fileName,
         ~isInterface,
@@ -196,10 +196,10 @@ let processCmtFile = (~signFile, ~config, cmt) => {
         ~resolver,
         ~signFile,
       )
-    } else if inputCMT |> cmtHasTypeErrors {
-      outputFile |> GeneratedFiles.logFileAction(TypeError)
+    } else if inputCMT->cmtHasTypeErrors {
+      outputFile->GeneratedFiles.logFileAction(TypeError)
     } else {
-      outputFile |> GeneratedFiles.logFileAction(NoMatch)
+      outputFile->GeneratedFiles.logFileAction(NoMatch)
       if Sys.file_exists(outputFile) {
         Unix.unlink(outputFile)
       }

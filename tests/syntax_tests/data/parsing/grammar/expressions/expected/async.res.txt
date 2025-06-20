@@ -1,5 +1,5 @@
 let greetUser async [arity:1]userId =
-  ((let name = ((getUserName userId)[@res.await ]) in
+  ((let name = await (getUserName userId) in
     ({js|Hello |js} ++ name) ++ {js|!|js})
   [@res.braces ])
 ;;async fun [arity:1]() -> 123
@@ -23,10 +23,10 @@ let f =
   [@res.ternary ])
 let foo = async ~a:34
 let bar async [arity:1]~a  = a + 1
-let ex1 = ((3)[@res.await ]) + ((4)[@res.await ])
-let ex2 = ((3)[@res.await ]) ** ((4)[@res.await ])
-let ex3 = ((foo -> (bar ~arg))[@res.await ])
-let ex4 = (((foo.bar).baz)[@res.await ])
+let ex1 = (await 3) + (await 4)
+let ex2 = (await 3) ** (await 4)
+let ex3 = await (foo -> (bar ~arg))
+let ex4 = await ((foo.bar).baz)
 let attr1 = ((async fun [arity:1]x -> x + 1)[@a ])
 let attr2 = ((fun (type a) ->
   async fun [arity:1]() -> fun (type b) -> fun (type c) ->

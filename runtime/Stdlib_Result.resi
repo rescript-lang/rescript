@@ -59,7 +59,22 @@ type t<'res, 'err> = result<'res, 'err> = Ok('res) | Error('err)
   }
   ```
 */
+@deprecated("Use 'getOrThrow' instead")
 let getExn: result<'a, 'b> => 'a
+
+/**
+  `getOrThrow(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, raise an exception
+
+  ```res example
+  Result.getOrThrow(Result.Ok(42)) == 42
+
+  switch Result.getOrThrow(Error("Invalid data")) {
+  | exception Not_found => assert(true)
+  | _ => assert(false)
+  }
+  ```
+*/
+let getOrThrow: result<'a, 'b> => 'a
 
 /**
 `mapOr(res, default, f)`: When res is `Ok(n)`, returns `f(n)`, otherwise `default`.
@@ -288,3 +303,11 @@ let all6: (
     result<'r6, 'e>,
   )
 ) => result<('r1, 'r2, 'r3, 'r4, 'r5, 'r6), 'e>
+
+/**
+  `ignore(result)` ignores the provided result and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: result<'res, 'err> => unit = "%ignore"

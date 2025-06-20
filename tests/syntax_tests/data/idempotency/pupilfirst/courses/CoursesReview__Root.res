@@ -85,7 +85,7 @@ let reducer = (state, action) =>
       | Unloaded => Unloaded
       | PartiallyLoaded({submissions, totalCount}, cursor) =>
         Submissions.partiallyLoaded(
-          ~submissions=submissions |> IndexSubmission.replace(submission),
+          ~submissions=submissions->IndexSubmission.replace(submission),
           ~filter,
           ~sortDirection=state.sortDirection,
           ~totalCount,
@@ -93,7 +93,7 @@ let reducer = (state, action) =>
         )
       | FullyLoaded({submissions, totalCount}) =>
         Submissions.fullyLoaded(
-          ~submissions=submissions |> IndexSubmission.replace(submission),
+          ~submissions=submissions->IndexSubmission.replace(submission),
           ~filter,
           ~totalCount,
           ~sortDirection=state.sortDirection,
@@ -113,13 +113,13 @@ let reducer = (state, action) =>
   | SyncSubmissionStatus(overlaySubmission) =>
     let skipReload =
       state.pendingSubmissions
-      |> Submissions.toArray
-      |> Array.append(state.reviewedSubmissions |> Submissions.toArray)
-      |> Js.Array.find(indexSubmission =>
-        indexSubmission |> IndexSubmission.id == OverlaySubmission.id(overlaySubmission)
+      ->Submissions.toArray
+      ->Array.append(state.reviewedSubmissions->Submissions.toArray)
+      ->Js.Array.find(indexSubmission =>
+        indexSubmission->IndexSubmission.id == OverlaySubmission.id(overlaySubmission)
       )
-      |> OptionUtils.mapWithDefault(
-        indexSubmission => indexSubmission |> IndexSubmission.statusEq(overlaySubmission),
+      ->OptionUtils.mapWithDefault(
+        indexSubmission => indexSubmission->IndexSubmission.statusEq(overlaySubmission),
         true,
       )
 
@@ -149,14 +149,14 @@ let computeInitialState = currentTeamCoach => {
 }
 
 let openOverlay = (submissionId, event) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
   ReasonReactRouter.push("/submissions/" ++ submissionId)
 }
 
 let dropdownElementClasses = (level, selectedLevel) =>
   "p-3 w-full text-left font-semibold focus:outline-none " ++
   switch (selectedLevel, level) {
-  | (Some(sl), Some(l)) if l |> Level.id == (sl |> Level.id) => "bg-gray-200 text-primary-500"
+  | (Some(sl), Some(l)) if l->Level.id == (sl->Level.id) => "bg-gray-200 text-primary-500"
   | (None, None) => "bg-gray-200 text-primary-500"
   | _ => ""
   }
@@ -175,26 +175,26 @@ module Selectable = {
 
   let label = t =>
     switch t {
-    | Level(level) => Some("Level " ++ (level |> Level.number |> string_of_int))
+    | Level(level) => Some("Level " ++ (level->Level.number->string_of_int))
     | AssignedToCoach(_) => Some("Assigned to")
     }
 
   let value = t =>
     switch t {
-    | Level(level) => level |> Level.name
+    | Level(level) => level->Level.name
     | AssignedToCoach(coach, currentCoachId) =>
-      coach |> Coach.id == currentCoachId ? "Me" : coach |> Coach.name
+      coach->Coach.id == currentCoachId ? "Me" : coach->Coach.name
     }
 
   let searchString = t =>
     switch t {
     | Level(level) =>
-      "level " ++ ((level |> Level.number |> string_of_int) ++ (" " ++ (level |> Level.name)))
+      "level " ++ ((level->Level.number->string_of_int) ++ (" " ++ (level->Level.name)))
     | AssignedToCoach(coach, currentCoachId) =>
-      if coach |> Coach.id == currentCoachId {
-        (coach |> Coach.name) ++ " assigned to me"
+      if coach->Coach.id == currentCoachId {
+        (coach->Coach.name) ++ " assigned to me"
       } else {
-        "assigned to " ++ (coach |> Coach.name)
+        "assigned to " ++ (coach->Coach.name)
       }
     }
 
@@ -208,41 +208,41 @@ module Multiselect = MultiselectDropdown.Make(Selectable)
 let unselected = (levels, coaches, currentCoachId, state) => {
   let unselectedLevels =
     levels
-    |> Js.Array.filter(level =>
-      state.selectedLevel |> OptionUtils.mapWithDefault(
-        selectedLevel => level |> Level.id != (selectedLevel |> Level.id),
+    ->Js.Array.filter(level =>
+      state.selectedLevel->OptionUtils.mapWithDefault(
+        selectedLevel => level->Level.id != (selectedLevel->Level.id),
         true,
       )
     )
-    |> Array.map(Selectable.level)
+    ->Array.map(Selectable.level)
 
   let unselectedCoaches =
     coaches
-    |> Js.Array.filter(coach =>
-      state.selectedCoach |> OptionUtils.mapWithDefault(
-        selectedCoach => coach |> Coach.id != Coach.id(selectedCoach),
+    ->Js.Array.filter(coach =>
+      state.selectedCoach->OptionUtils.mapWithDefault(
+        selectedCoach => coach->Coach.id != Coach.id(selectedCoach),
         true,
       )
     )
-    |> Array.map(coach => Selectable.assignedToCoach(coach, currentCoachId))
+    ->Array.map(coach => Selectable.assignedToCoach(coach, currentCoachId))
 
-  unselectedLevels |> Array.append(unselectedCoaches)
+  unselectedLevels->Array.append(unselectedCoaches)
 }
 
 let selected = (state, currentCoachId) => {
   let selectedLevel =
-    state.selectedLevel |> OptionUtils.mapWithDefault(
+    state.selectedLevel->OptionUtils.mapWithDefault(
       selectedLevel => [Selectable.level(selectedLevel)],
       [],
     )
 
   let selectedCoach =
-    state.selectedCoach |> OptionUtils.mapWithDefault(
+    state.selectedCoach->OptionUtils.mapWithDefault(
       selectedCoach => [Selectable.assignedToCoach(selectedCoach, currentCoachId)],
       [],
     )
 
-  selectedLevel |> Array.append(selectedCoach)
+  selectedLevel->Array.append(selectedCoach)
 }
 
 let onSelectFilter = (send, selectable) =>
@@ -268,16 +268,16 @@ let filterPlaceholder = state =>
 let restoreFilterNotice = (send, currentCoach, message) =>
   <div
     className="mb-4 text-sm italic flex flex-col md:flex-row items-center justify-between p-3 border border-gray-300 bg-white rounded-lg">
-    <span> {message |> str} </span>
+    <span> {message->str} </span>
     <button
       className="px-2 py-1 rounded text-xs overflow-hidden border border-gray-300 bg-gray-200 text-gray-800 border-gray-300 bg-gray-200 hover:bg-gray-300 mt-1 md:mt-0"
       onClick={_ => send(SelectCoach(currentCoach))}>
-      {"Assigned to: Me" |> str} <i className="fas fa-level-up-alt ml-2" />
+      {"Assigned to: Me"->str} <i className="fas fa-level-up-alt ml-2" />
     </button>
   </div>
 
 let restoreAssignedToMeFilter = (state, send, currentTeamCoach) =>
-  currentTeamCoach |> OptionUtils.mapWithDefault(currentCoach =>
+  currentTeamCoach->OptionUtils.mapWithDefault(currentCoach =>
     switch state.selectedCoach {
     | None =>
       restoreFilterNotice(
@@ -285,28 +285,28 @@ let restoreAssignedToMeFilter = (state, send, currentTeamCoach) =>
         currentCoach,
         "Now showing submissions from all students in this course.",
       )
-    | Some(selectedCoach) if selectedCoach |> Coach.id == Coach.id(currentCoach) => React.null
+    | Some(selectedCoach) if selectedCoach->Coach.id == Coach.id(currentCoach) => React.null
     | Some(selectedCoach) =>
       restoreFilterNotice(
         send,
         currentCoach,
-        "Now showing submissions assigned to " ++ ((selectedCoach |> Coach.name) ++ "."),
+        "Now showing submissions assigned to " ++ ((selectedCoach->Coach.name) ++ "."),
       )
     }
   , React.null)
 
 let filterSubmissions = (selectedLevel, selectedCoach, submissions) => {
   let levelFiltered =
-    selectedLevel |> OptionUtils.mapWithDefault(
+    selectedLevel->OptionUtils.mapWithDefault(
       level =>
-        submissions |> Js.Array.filter(l => l |> IndexSubmission.levelId == (level |> Level.id)),
+        submissions->Js.Array.filter(l => l->IndexSubmission.levelId == (level->Level.id)),
       submissions,
     )
 
-  selectedCoach |> OptionUtils.mapWithDefault(
+  selectedCoach->OptionUtils.mapWithDefault(
     coach =>
-      levelFiltered |> Js.Array.filter(l =>
-        l |> IndexSubmission.coachIds |> Array.mem(coach |> Coach.id)
+      levelFiltered->Js.Array.filter(l =>
+        l->IndexSubmission.coachIds->Array.mem(coach->Coach.id)
       ),
     levelFiltered,
   )
@@ -324,7 +324,7 @@ module SubmissionsSorter = Sorter.Make(Sortable)
 let submissionsSorter = (state, send) => {
   let criteria = [{criterion: "Submitted At", criterionType: #Number}]
   <div ariaLabel="Change submissions sorting" className="flex-shrink-0 mt-3 md:mt-0 md:ml-2">
-    <label className="block text-tiny font-semibold uppercase"> {"Sort by:" |> str} </label>
+    <label className="block text-tiny font-semibold uppercase"> {"Sort by:"->str} </label>
     <SubmissionsSorter
       criteria
       selectedCriterion=state.sortBy
@@ -343,12 +343,12 @@ let displayedSubmissions = state =>
 
 let submissionsCount = submissions =>
   submissions
-  |> Submissions.totalCount
-  |> OptionUtils.mapWithDefault(
+  ->Submissions.totalCount
+  ->OptionUtils.mapWithDefault(
     count =>
       <span
         className="course-review__status-tab-badge ml-2 text-white text-xs bg-red-500 w-auto h-5 px-1 inline-flex items-center justify-center rounded-full">
-        {count |> string_of_int |> str}
+        {count->string_of_int->str}
       </span>,
     React.null,
   )
@@ -356,7 +356,7 @@ let submissionsCount = submissions =>
 @react.component
 let make = (~levels, ~courseId, ~teamCoaches, ~currentCoach) => {
   let (currentTeamCoach, _) = React.useState(() =>
-    teamCoaches->Belt.Array.some(coach => coach |> Coach.id == (currentCoach |> Coach.id))
+    teamCoaches->Belt.Array.some(coach => coach->Coach.id == (currentCoach->Coach.id))
       ? Some(currentCoach)
       : None
   )
@@ -389,24 +389,24 @@ let make = (~levels, ~courseId, ~teamCoaches, ~currentCoach) => {
               <button
                 className={buttonClasses(state.selectedTab == #Pending)}
                 onClick={_ => send(SelectPendingTab)}>
-                {"Pending" |> str} {submissionsCount(state.pendingSubmissions)}
+                {"Pending"->str} {submissionsCount(state.pendingSubmissions)}
               </button>
               <button
                 className={buttonClasses(state.selectedTab == #Reviewed)}
                 onClick={_ => send(SelectReviewedTab)}>
-                {"Reviewed" |> str}
+                {"Reviewed"->str}
               </button>
             </div>
           </div>
           <div className="md:flex w-full items-start pb-4">
             <div className="flex-1">
               <label className="block text-tiny font-semibold uppercase">
-                {"Filter by:" |> str}
+                {"Filter by:"->str}
               </label>
               <Multiselect
                 id="filter"
-                unselected={unselected(levels, teamCoaches, currentCoach |> Coach.id, state)}
-                selected={selected(state, currentCoach |> Coach.id)}
+                unselected={unselected(levels, teamCoaches, currentCoach->Coach.id, state)}
+                selected={selected(state, currentCoach->Coach.id)}
                 onSelect={onSelectFilter(send)}
                 onDeselect={onDeselectFilter(send)}
                 value=state.filterString

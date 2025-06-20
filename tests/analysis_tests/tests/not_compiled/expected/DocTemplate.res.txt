@@ -24,8 +24,7 @@ newText:
 /**
 
 */
-@unboxed
-type name = Name(string)
+@unboxed type name = Name(string)
 
 Xform not_compiled/DocTemplate.res 8:4
 can't find module DocTemplate

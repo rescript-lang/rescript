@@ -19,7 +19,7 @@
    9 │ let f = (x: {a: int, b: int}) => ()
   10 │ 
 
-  An inline record type declaration is only allowed in a variant constructor's declaration
+  An inline record type declaration is only allowed in a variant constructor's declaration or nested inside of a record type declaration
 
 type nonrec u = {
   ...: a ;

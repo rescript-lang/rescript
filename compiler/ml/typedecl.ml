@@ -49,6 +49,7 @@ type error =
   | Unbound_type_var_ext of type_expr * extension_constructor
   | Varying_anonymous
   | Val_in_structure
+  | Invalid_attribute of string
   | Bad_immediate_attribute
   | Bad_unboxed_attribute of string
   | Boxed_and_unboxed
@@ -107,6 +108,7 @@ let enter_type rec_flag env sdecl id =
         type_attributes = sdecl.ptype_attributes;
         type_immediate = false;
         type_unboxed = unboxed_false_default_false;
+        type_inlined_types = [];
       }
     in
     Env.add_type ~check:true id decl env
@@ -287,6 +289,11 @@ let make_constructor env type_path type_params sargs sret_type =
     widen z;
     (targs, Some tret_type, args, Some ret_type, params)
 
+let is_not_undefined_attr (attr : attribute) =
+  match attr with
+  | {Location.txt = "notUndefined"; _}, _ -> true
+  | _ -> false
+
 (* Check that all the variables found in [ty] are in [univ].
    Because [ty] is the argument to an abstract type, the representation
    of that abstract type could be any subexpression of [ty], in particular
@@ -294,6 +301,20 @@ let make_constructor env type_path type_params sargs sret_type =
 *)
 
 let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
+  (* Check for @notUndefined attribute *)
+  let has_not_undefined =
+    List.exists is_not_undefined_attr sdecl.ptype_attributes
+  in
+  (if has_not_undefined then
+     match (sdecl.ptype_kind, sdecl.ptype_manifest) with
+     | Ptype_abstract, None -> ()
+     | _ ->
+       raise
+         (Error
+            ( sdecl.ptype_loc,
+              Invalid_attribute
+                "@notUndefined can only be used on abstract types" )));
+
   (* Bind type parameters *)
   reset_type_variables ();
   Ctype.begin_def ();
@@ -683,6 +704,7 @@ let transl_declaration ~type_record_as_object ~untagged_wfc env sdecl id =
       type_attributes = sdecl.ptype_attributes;
       type_immediate = false;
       type_unboxed = unboxed_status;
+      type_inlined_types = [];
     }
   in
 
@@ -1481,7 +1503,25 @@ let transl_type_decl env rec_flag sdecl_list =
   let tdecls =
     List.map2 transl_declaration sdecl_list (List.map id_slots id_list)
   in
-  let decls = List.map (fun tdecl -> (tdecl.typ_id, tdecl.typ_type)) tdecls in
+  let inline_types =
+    tdecls
+    |> List.filter (fun tdecl ->
+           tdecl.typ_attributes
+           |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
+                  txt = "res.inlineRecordDefinition")
+           |> Option.is_some)
+    |> List.filter_map (fun tdecl ->
+           match tdecl.typ_type.type_kind with
+           | Type_record (labels, _) ->
+             Some (Record {type_name = tdecl.typ_name.txt; labels})
+           | _ -> None)
+  in
+  let decls =
+    List.map
+      (fun tdecl ->
+        (tdecl.typ_id, {tdecl.typ_type with type_inlined_types = inline_types}))
+      tdecls
+  in
   let sdecl_list =
     Variant_type_spread.expand_dummy_constructor_args sdecl_list decls
   in
@@ -1935,6 +1975,7 @@ let transl_with_constraint env id row_path orig_decl sdecl =
       type_attributes = sdecl.ptype_attributes;
       type_immediate = false;
       type_unboxed;
+      type_inlined_types = [];
     }
   in
   (match row_path with
@@ -1985,6 +2026,7 @@ let abstract_type_decl arity =
       type_attributes = [];
       type_immediate = false;
       type_unboxed = unboxed_false_default_false;
+      type_inlined_types = [];
     }
   in
   Ctype.end_def ();
@@ -2068,6 +2110,7 @@ let report_error ppf = function
       "The field @{<info>%s@} is defined several times in this record. Fields \
        can only be added once to a record."
       s
+  | Invalid_attribute msg -> fprintf ppf "%s" msg
   | Duplicate_label (s, Some record_name) ->
     fprintf ppf
       "The field @{<info>%s@} is defined several times in the record \

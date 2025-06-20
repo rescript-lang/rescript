@@ -1,2 +1,4 @@
 lib
 .merlin
+package-lock.json
+yarn.lock

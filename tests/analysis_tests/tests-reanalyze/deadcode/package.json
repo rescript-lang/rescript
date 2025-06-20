@@ -1,11 +1,12 @@
 {
-  "name": "deadcode",
-  "version": "0.1.0",
+  "name": "@tests/reanalyze-deadcode",
   "private": true,
-  "devDependencies": {
-    "rescript": "file:../../../.."
+  "scripts": {
+    "build": "rescript",
+    "clean": "rescript clean -with-deps"
   },
   "dependencies": {
-    "@rescript/react": "^0.13.0"
+    "@rescript/react": "link:../../../dependencies/rescript-react",
+    "rescript": "workspace:^"
   }
 }

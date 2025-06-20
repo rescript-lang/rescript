@@ -98,7 +98,7 @@ let () = condition1 ? for i in 0 to 10 { () } : for i in 10 to 20 { () }
 
 let () = (truth : bool) ? (10: int) : (20: int)
 
-let () = condition ? {module L = Logger; L.log()} : {exception Exit; raise(Exit)}
+let () = condition ? {module L = Logger; L.log()} : {exception Exit; throw(Exit)}
 let () = condition ? foo() : assert(false)
 
 let x = condition ? module(Foo) : module(Int : Number)

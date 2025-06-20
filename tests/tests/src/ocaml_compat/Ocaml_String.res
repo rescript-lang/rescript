@@ -91,7 +91,7 @@ let escaped = s => {
 /* duplicated in bytes.ml */
 let rec index_rec = (s, lim, i, c) =>
   if i >= lim {
-    raise(Not_found)
+    throw(Not_found)
   } else if unsafe_get(s, i) == c {
     i
   } else {
@@ -137,7 +137,7 @@ let index_from_opt = (s, i, c) => {
 /* duplicated in bytes.ml */
 let rec rindex_rec = (s, i, c) =>
   if i < 0 {
-    raise(Not_found)
+    throw(Not_found)
   } else if unsafe_get(s, i) == c {
     i
   } else {

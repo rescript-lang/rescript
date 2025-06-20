@@ -13,6 +13,7 @@ ContextPath Value[sprite]
 Path sprite
 CPPipe pathFromEnv:Sprite found:true
 Path Sprite.anchor
+Path anchor
 ContextPath Value[sprite].anchor->
 ContextPath Value[sprite].anchor
 ContextPath Value[sprite]
@@ -22,8 +23,10 @@ ContextPath Value[sprite]
 Path sprite
 CPPipe pathFromEnv:Sprite found:true
 Path Sprite.anchor
+Path anchor
 CPPipe pathFromEnv:ObservablePoint found:true
 Path ObservablePoint.
+Path 
 [{
     "label": "x",
     "kind": 5,

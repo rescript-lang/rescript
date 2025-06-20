@@ -28,7 +28,6 @@
 
 type t = string
 
-@val
 /**
 `make(value)` converts the given value to a `string`.
 
@@ -39,9 +38,9 @@ Js.String2.make(3.5) == "3.5"
 Js.String2.make([1, 2, 3]) == "1,2,3"
 ```
 */
+@val
 external make: 'a => t = "String"
 
-@val
 /**
 `fromCharCode(n)` creates a `string` containing the character corresponding to that number; `n` ranges from 0 to 65535.
 If out of range, the lower 16 bits of the value are used. Thus, `fromCharCode(0x1F63A)` gives the same result as `fromCharCode(0xF63A)`. See [`String.fromCharCode`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/fromCharCode) on MDN.
@@ -55,19 +54,18 @@ Js.String2.fromCharCode(0xd55c) == `한`
 Js.String2.fromCharCode(-64568) == `ψ`
 ```
 */
+@val
 external fromCharCode: int => t = "String.fromCharCode"
 
-@val
-@variadic
 /**
 `fromCharCodeMany([n1, n2, n3])` creates a `string` from the characters
 corresponding to the given numbers, using the same rules as `fromCharCode`. See
 [`String.fromCharCode`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/fromCharCode)
 on MDN.
 */
+@val @variadic
 external fromCharCodeMany: array<int> => t = "String.fromCharCode"
 
-@val
 /**
 `fromCodePoint(n)` creates a `string` containing the character corresponding to
 that numeric code point. If the number is not a valid code point, it raises
@@ -87,10 +85,9 @@ Js.String2.fromCodePoint(0xd55c) == `한`
 Js.String2.fromCodePoint(0x1f63a) == `😺`
 ```
 */
+@val
 external fromCodePoint: int => t = "String.fromCodePoint"
 
-@val
-@variadic
 /**
 `fromCodePointMany([n1, n2, n3])` creates a `string` from the characters
 corresponding to the given code point numbers, using the same rules as
@@ -105,11 +102,11 @@ on MDN.
 Js.String2.fromCodePointMany([0xd55c, 0xae00, 0x1f63a]) == `한글😺`
 ```
 */
+@val @variadic
 external fromCodePointMany: array<int> => t = "String.fromCodePoint"
 
 /* String.raw: ES2015, meant to be used with template strings, not directly */
 
-@get
 /**
 `length(s)` returns the length of the given `string`. See
 [`String.length`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length)
@@ -121,9 +118,9 @@ on MDN.
 Js.String2.length("abcd") == 4
 ```
 */
+@get
 external length: t => int = "length"
 
-@get_index
 /**
 `get(s, n)` returns as a `string` the character at the given index number. If
 `n` is out of range, this function returns `undefined`, so at some point this
@@ -137,6 +134,7 @@ Js.String2.get("Reason", 4) == "o"
 Js.String2.get(`Rẽasöń`, 5) == `ń`
 ```
 */
+@get_index
 external get: (t, int) => t = ""
 
 /**
@@ -231,8 +229,7 @@ on MDN.
 Js.String.concatMany(["2nd", "3rd", "4th"], "1st") == "1st2nd3rd4th"
 ```
 */
-@send
-@variadic
+@send @variadic
 external concatMany: (t, array<t>) => t = "concat"
 let concatMany = (arg1, obj) => concatMany(obj, arg1)
 
@@ -447,8 +444,7 @@ Js.String.match_(/(\d+)-(\d+)-(\d+)/, "Today is 2018-04-05.") ==
 Js.String.match_(/b[aeiou]g/, "The large container.") == None
 ```
 */
-@send
-@return(null_to_opt)
+@send @return(null_to_opt)
 external match_: (t, Js_re.t) => option<array<option<t>>> = "match"
 let match_ = (arg1, obj) => match_(obj, arg1)
 

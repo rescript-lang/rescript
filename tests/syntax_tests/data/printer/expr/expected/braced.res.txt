@@ -318,5 +318,5 @@ let x = {
 }
 
 // string constant should be printed correct
-(<> {"\n"->React.string} </>)
-(<> {"\""->React.string} </>)
+<> {"\n"->React.string} </>
+<> {"\""->React.string} </>

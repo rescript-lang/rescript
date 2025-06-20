@@ -8,5 +8,5 @@ let flags = reasonFormat ? {
       | [] => []
     }
   };
-  loop(parts) |> String.concat(" ")
+  loop(parts)->String.concat(" ")
 } : flags

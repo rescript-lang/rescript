@@ -10,9 +10,9 @@ let showNotice = (
   (),
 ) =>
   <div className=classes>
-    <img className="h-50 mx-auto" src={notice |> Notice.icon} />
-    <div className="max-w-xl font-bold text-xl mx-auto mt-2 leading-tight"> {title |> str} </div>
-    <div className="text-sm max-w-lg mx-auto mt-2"> {description |> str} </div>
+    <img className="h-50 mx-auto" src={notice->Notice.icon} />
+    <div className="max-w-xl font-bold text-xl mx-auto mt-2 leading-tight"> {title->str} </div>
+    <div className="text-sm max-w-lg mx-auto mt-2"> {description->str} </div>
   </div>
 
 let courseCompletedMessage = () => {
@@ -32,9 +32,9 @@ let showPreviewMessage = () =>
     className="flex max-w-lg md:mx-auto mx-3 mt-4 rounded-lg px-3 py-2 shadow-lg items-center border border-primary-300 bg-gray-200 ">
     <img className="w-20 md:w-22 flex-no-shrink" src=Notice.previewModeImage />
     <div className="flex-1 text-left ml-4">
-      <h4 className="font-bold text-lg leading-tight"> {"Preview Mode" |> str} </h4>
+      <h4 className="font-bold text-lg leading-tight"> {"Preview Mode"->str} </h4>
       <p className="text-sm mt-1">
-        {"You are accessing the preview mode for this course" |> str}
+        {"You are accessing the preview mode for this course"->str}
       </p>
     </div>
   </div>
@@ -47,8 +47,8 @@ let accessEndedMessage = () => {
 
 let levelUpBlockedMessage = levelNumber => {
   let title = "Level Up Blocked"
-  let currentLevel = levelNumber |> string_of_int
-  let lastLevel = levelNumber - 1 |> string_of_int
+  let currentLevel = levelNumber->string_of_int
+  let lastLevel = levelNumber - 1->string_of_int
   let description =
     "You're at Level " ++
     (currentLevel ++

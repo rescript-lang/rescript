@@ -16,7 +16,7 @@ function $$finally(v, action, f) {
 function hash_variant(s) {
   let accu = 0;
   for (let i = 0, i_finish = s.length; i < i_finish; ++i) {
-    accu = Math.imul(223, accu) + s.codePointAt(i) | 0;
+    accu = (223 * accu | 0) + s.codePointAt(i) | 0;
   }
   accu = accu & 2147483647;
   if (accu > 1073741823) {

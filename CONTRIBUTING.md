@@ -14,7 +14,8 @@ Happy hacking!
 
 > Most of our contributors are working on Apple machines, so all our instructions are currently macOS / Linux centric. Contributions for Windows development welcome!
 
-- [NodeJS v18](https://nodejs.org/)
+- [Node.js](https://nodejs.org/) v22.x
+- [Yarn CLI](https://yarnpkg.com/getting-started/install) (can be installed with `corepack`, Homebrew, etc)
 - C compiler toolchain (usually installed with `xcode` on Mac)
 - Python <= 3.11 (required to build ninja)
 - Rust toolchain (required to build rewatch; follow the instructions at https://www.rust-lang.org/tools/install)
@@ -58,7 +59,7 @@ opam install . --deps-only --with-test --with-dev-setup -y
 
 #### npm install
 
-Run `npm install --ignore-scripts`. This will install the npm dependencies required for the build scripts.
+Run `yarn install`. This will install the npm dependencies required for the build scripts.
 
 ### B. Devcontainer
 
@@ -122,19 +123,19 @@ After adding a new file to the repository that should go into the npm package - 
 
 ```sh
 make lib # Build compiler and standard library
-./cli/bsc myTestFile.res
+./cli/bsc.js myTestFile.res
 ```
 
 To view the untyped tree of the file run:
 
 ```sh
-./cli/bsc -dparsetree myTestFile.res
+./cli/bsc.js -dparsetree myTestFile.res
 ```
 
 To view the typed tree of the file run:
 
 ```sh
-./cli/bsc -dtypedtree myTestFile.res
+./cli/bsc.js -dtypedtree myTestFile.res
 ```
 
 ### Project
@@ -240,29 +241,28 @@ make playground
 make playground-cmijs
 ```
 
-Note that building the cmijs is based on the dependencies defined in `packages/playground-bundling/package.json`. In case you want to build some different version of e.g. `@rescript/react` or just want to add a new package, change the definition within the `package.json` file and run `make playground-cmijs` again.
+Note that building the cmijs is based on the dependencies defined in `packages/playground/package.json`. In case you want to build some different version of e.g. `@rescript/react` or just want to add a new package, change the definition within the `package.json` file and run `yarn workspace playground build` again.
 
 After a successful compilation, you will find following files in your project:
 
 - `playground/compiler.js` -> This is the ReScript compiler, which binds the ReScript API to the `window` object.
-- `playground/packages` -> Contains third party deps with cmij.js files (as defined in `packages/playground-bundling/bsconfig.json`)
-- `playground/compilerCmij.js` -> The compiler base cmij containing all the relevant core modules (`Js`, `Belt`, `Pervasives`, etc.)
+- `playground/packages/compiler-builtins` -> The compiler base cmij containing all the relevant core modules (`Js`, `Belt`, `Pervasives`, etc.)
+- `playground/packages/*` -> Contains third party deps with cmij.js files (as defined in `packages/playground/rescript.json`)
 
 You can now use the `compiler.js` file either directly by using a `<script src="/path/to/compiler.js"/>` and `<script src="/path/to/packages/compilerCmij.js"/>` inside a html file, use a browser bundler infrastructure to optimize it, or use `nodejs` to run it on a command line:
 
 ```
 $ node
-> require("./compiler.js");
-> require("./packages/compilerCmij.js")
-> let compiler = rescript_compiler.make()
-> let result = compiler.rescript.compile(`Js.log(Sys.ocaml_version)`);
+> let { rescript_compiler } = require("./compiler.js");
+> require("./packages/compiler-builtins/cmij.js")
+> let { rescript } = rescript_compiler.make()
+> let result = rescript.compile(`Console.log(${rescript.version})`);
 > eval(result.js_code);
-4.06.2+BS
 ```
 
 ### Testing the Playground bundle
 
-Run `node playground/playground_test.js` for a quick sanity check to see if all the build artifacts are working together correctly. When releasing the playground bundle, the test will always be executed before publishing to catch regressions.
+Run `yarn workspace playground test` for a quick sanity check to see if all the build artifacts are working together correctly. When releasing the playground bundle, the test will always be executed before publishing to catch regressions.
 
 ### Working on the Playground JS API
 
@@ -270,9 +270,10 @@ Whenever you are modifying any files in the ReScript compiler, or in the `jsoo_p
 
 ```
 make playground
+yarn workspace playground build
 
 # optionally run your test / arbitrary node script to verify your changes
-node playground/playground_test.js
+yarn workspace playground test
 ```
 
 ### Publishing the Playground Bundle on our KeyCDN
@@ -387,26 +388,31 @@ To build a new version and release it on NPM, follow these steps:
    - `npm dist-tag add @rescript/std@<version> <tag>`
 1. Create a release entry for the version tag on the [Github Releases page](https://github.com/rescript-lang/rescript-compiler/releases), copying the changes from `CHANGELOG.md`.
 1. Create a PR with the following changes to prepare for development of the next version:
-   - Increment the version number in `package.json` for the next version.
-   - Run `node scripts/setVersion.js` to take that version number over into other files.
+   - Increment the `EXPECTED_VERSION` number in `yarn.config.cjs` for the next version.
+   - Run `yarn constraints --fix` to take that version number over into other files.
    - Update `CHANGELOG.md` and add an entry for the next version, e.g., "10.0.0-beta.2 (Unreleased)"
 1. Coordinate any forum/blog posts with [@ryyppy](https://github.com/ryyppy).
 
 ## Debugging issues from CI builds
 
-To reproduce issues, it can be helpful to the team to install a specific version of the compiler. To do so:
+To reproduce issues, it can be helpful to the team to install a specific version of the compiler.
 
-1. Go to [Actions CI for master](https://github.com/rescript-lang/rescript-compiler/actions/workflows/ci.yml?query=branch%3Amaster)
-   - If you need a specific branch, select a different one to filter to in the GitHub UI.
-1. Select a specific run (likely the latest)
-1. Under "Artifacts", download the `npm-packages` artifact and extract it to a folder.
-1. In your repository run:
+ReScript uses [pkg.pr.new](https://github.com/stackblitz-labs/pkg.pr.new) for continuous releases. Once tests are passed successfully, the bot comment is available. 
 
-```console
-npm i <path_to_download>npm-packages/rescript-*.tgz
+Follow the instructions from the comment, which are like:
+
+```bash
+# Use NPM
+npm i "https://pkg.pr.new/rescript-lang/rescript@${PR_NUMBER}"
+
+# Use Yarn
+yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${PR_NUMBER}"
+
+# Use pnpm
+pnpm add "https://pkg.pr.new/rescript-lang/rescript@${PR_NUMBER}"
 ```
 
-1. Then attempt to rebuild your project as you would normally.
+Then attempt to rebuild your project as you would normally.
 
 ## Contribution Licensing
 

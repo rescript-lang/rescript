@@ -6,10 +6,10 @@
     "subdirs": true
   },
   "package-specs": {
-    "module": "commonjs",
+    "module": "esmodule",
     "in-source": true
   },
-  "suffix": ".bs.js",
+  "suffix": ".res.js",
   "bs-dependencies": [],
   "warnings": { "error": "+101" }
 }

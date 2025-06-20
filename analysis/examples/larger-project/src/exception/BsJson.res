@@ -1,5 +1,5 @@
-@raise(DecodeError)
+@throw(DecodeError)
 let testBsJson = x => Json_decode.string(x)
 
-@raise(DecodeError)
+@throw(DecodeError)
 let testBsJson2 = x => Json.Decode.string(x)

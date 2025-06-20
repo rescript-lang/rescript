@@ -3,11 +3,11 @@ let f0 = x =>
     if x > 3 {
       x => x + 1
     } else {
-      raise(Not_found)
+      throw(Not_found)
     }
   )(3)
 
-let f1 = x => (raise(Not_found): _ => _)(x)
+let f1 = x => (throw(Not_found): _ => _)(x)
 
 let f3 = x =>
   (
@@ -16,6 +16,6 @@ let f3 = x =>
     | 1 => x => x + 2
     | 2 => x => x + 3
     | 3 => x => x + 4
-    | _ => raise(Not_found)
+    | _ => throw(Not_found)
     }
   )(3)

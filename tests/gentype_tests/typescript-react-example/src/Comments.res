@@ -1,4 +1,5 @@
-@genType /** A module for deciding on a subject matter for a poem.*/
+/** A module for deciding on a subject matter for a poem.*/
+@genType
 module DecideSubject = {
   type payload = {
     /** A hint to use as a guide when thinking of your poem.*/
@@ -16,7 +17,8 @@ module DecideSubject = {
     systemPrompt: string,
   }
 
-  @genType /** Decide on a subject matter for a poem.*/
+  /** Decide on a subject matter for a poem.*/
+  @genType
   let _placeholder = (
     @ocaml.doc("The runner specification") run: string,
     @ocaml.doc("The number of times to cycle through the runner") times: int,

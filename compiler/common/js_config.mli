@@ -80,6 +80,8 @@ val jsx_version : jsx_version option ref
 
 val jsx_module : jsx_module ref
 
+val jsx_preserve : bool ref
+
 val js_stdout : bool ref
 
 val all_module_aliases : bool ref

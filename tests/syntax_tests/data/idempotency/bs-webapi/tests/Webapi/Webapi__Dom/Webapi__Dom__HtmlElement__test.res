@@ -3,15 +3,15 @@ open HtmlElement
 
 let el =
   document
-  |> Document.createElement("strong")
-  |> Element.asHtmlElement
-  |> TestHelpers.unsafelyUnwrapOption
+  ->Document.createElement("strong")
+  ->Element.asHtmlElement
+  ->TestHelpers.unsafelyUnwrapOption
 let el2 =
   document
-  |> Document.createElement("small")
-  |> Element.asHtmlElement
-  |> TestHelpers.unsafelyUnwrapOption
-let event = document |> Document.createEvent("my-event")
+  ->Document.createElement("small")
+  ->Element.asHtmlElement
+  ->TestHelpers.unsafelyUnwrapOption
+let event = document->Document.createEvent("my-event")
 
 let _ = accessKey(el)
 let _ = setAccessKey(el, "")

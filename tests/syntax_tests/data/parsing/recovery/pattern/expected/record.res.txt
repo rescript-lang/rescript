@@ -19,7 +19,7 @@
   4 │ | {a, _, b} => ()
   5 │ }
 
-  Record's `...` spread is not supported in pattern matches.
+  Record spread (`...`) is not supported in pattern matches.
 Explanation: you can't collect a subset of a record's field into its own record, since a record needs an explicit declaration and that subset wouldn't have one.
 Solution: you need to pull out each field you want explicitly.
 

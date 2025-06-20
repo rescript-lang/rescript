@@ -33,7 +33,7 @@ let make = (~title, ~result, ~status) => {title: title, result: result, status: 
 let makeFile = (~name, ~url, ~id) => {name: name, url: url, id: id}
 
 let makeFiles = data =>
-  data |> Js.Array.map(a => makeFile(~url=a["url"], ~name=a["title"], ~id=a["id"]))
+  data->Js.Array.map(a => makeFile(~url=a["url"], ~name=a["title"], ~id=a["id"]))
 
 let makeResult = (result, kind, files) =>
   switch kind {
@@ -62,7 +62,7 @@ let makeStatus = data =>
   }
 
 let makeArrayFromJs = (files, checklist) =>
-  checklist |> Js.Array.map(c =>
+  checklist->Js.Array.map(c =>
     make(
       ~title=c["title"],
       ~result=makeResult(c["result"], c["kind"], makeFiles(files)),
@@ -73,23 +73,23 @@ let makeArrayFromJs = (files, checklist) =>
 let decodeFile = json => {
   open Json.Decode
   {
-    name: json |> field("name", string),
-    url: json |> field("url", string),
-    id: json |> field("id", string),
+    name: json->field("name", string),
+    url: json->field("url", string),
+    id: json->field("id", string),
   }
 }
 
 let decode = (files, json) => {
   open Json.Decode
   {
-    result: makeResult(json |> field("result", string), json |> field("kind", string), files),
-    status: makeStatus(json |> field("status", string)),
-    title: json |> field("title", string),
+    result: makeResult(json->field("result", string), json->field("kind", string), files),
+    status: makeStatus(json->field("status", string)),
+    title: json->field("title", string),
   }
 }
 
 let updateStatus = (checklist, index, status) =>
-  checklist |> Array.mapi((i, t) =>
+  checklist->Array.mapi((i, t) =>
     i == index ? make(~title=t.title, ~result=t.result, ~status) : t
   )
 
@@ -127,15 +127,15 @@ let encodeStatus = t =>
 let encode = t => {
   open Json.Encode
   object_(list{
-    ("title", t.title |> string),
-    ("kind", encodeKind(t) |> string),
-    ("status", encodeStatus(t) |> string),
-    ("result", encodeResult(t) |> string),
+    ("title", t.title->string),
+    ("kind", encodeKind(t)->string),
+    ("status", encodeStatus(t)->string),
+    ("result", encodeResult(t)->string),
   })
 }
 
 let encodeArray = checklist =>
-  checklist |> {
+  checklist->{
     open Json.Encode
     array(encode)
   }

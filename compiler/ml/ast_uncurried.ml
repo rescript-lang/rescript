@@ -19,8 +19,3 @@ let expr_is_uncurried_fun (expr : Parsetree.expression) =
   match expr.pexp_desc with
   | Pexp_fun {arity = Some _} -> true
   | _ -> false
-
-let expr_extract_uncurried_fun (expr : Parsetree.expression) =
-  match expr.pexp_desc with
-  | Pexp_fun {arity = Some _} -> expr
-  | _ -> assert false

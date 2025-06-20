@@ -38,6 +38,7 @@ type binop =
   | Le
   | Gt
   | Ge
+  | Bnot
   | Bor
   | Bxor
   | Band
@@ -105,7 +106,8 @@ type int_op =
   | Div
   (* x / y | 0 *)
   | Mod
-(* x  % y *)
+  (* x  % y *)
+  | Pow (* x ** y | 0 *)
 
 (* https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_Operators#Bitwise_operators
    {[

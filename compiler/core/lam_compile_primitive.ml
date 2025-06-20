@@ -54,17 +54,15 @@ let get_module_system () =
   | [module_system] -> module_system
   | _ -> Commonjs
 
+let call_info =
+  {Js_call_info.arity = Full; call_info = Call_na; call_transformed_jsx = false}
+
 let import_of_path path =
-  E.call
-    ~info:{arity = Full; call_info = Call_na}
-    (E.js_global "import")
-    [E.str path]
+  E.call ~info:call_info (E.js_global "import") [E.str path]
 
 let wrap_then import value =
   let arg = Ident.create "m" in
-  E.call
-    ~info:{arity = Full; call_info = Call_na}
-    (E.dot import "then")
+  E.call ~info:call_info (E.dot import "then")
     [
       E.ocaml_fun ~return_unit:false ~async:false ~one_unit_arg:false [arg]
         [{statement_desc = J.Return (E.dot (E.var arg) value); comment = None}];
@@ -88,7 +86,7 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     | _ -> assert false)
   | Pjs_apply -> (
     match args with
-    | fn :: rest -> E.call ~info:{arity = Full; call_info = Call_na} fn rest
+    | fn :: rest -> E.call ~info:call_info fn rest
     | _ -> assert false)
   | Pnull_to_opt -> (
     match args with
@@ -96,13 +94,6 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
       match e.expression_desc with
       | Var _ | Undefined _ | Null -> Js_of_lam_option.null_to_opt e
       | _ -> E.runtime_call Primitive_modules.option "fromNull" args)
-    | _ -> assert false)
-  | Pundefined_to_opt -> (
-    match args with
-    | [e] -> (
-      match e.expression_desc with
-      | Var _ | Undefined _ | Null -> Js_of_lam_option.undef_to_opt e
-      | _ -> E.runtime_call Primitive_modules.option "fromUndefined" args)
     | _ -> assert false)
   | Pnull_undefined_to_opt -> (
     match args with
@@ -250,6 +241,14 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
     match args with
     | [e1; e2] -> E.bigint_mod ~checked:!Js_config.check_div_by_zero e1 e2
     | _ -> assert false)
+  | Ppowint -> (
+    match args with
+    | [e1; e2] -> E.int32_pow e1 e2
+    | _ -> assert false)
+  | Ppowfloat -> (
+    match args with
+    | [e1; e2] -> E.float_pow e1 e2
+    | _ -> assert false)
   | Ppowbigint -> (
     match args with
     | [e1; e2] -> E.bigint_op Pow e1 e2
@@ -274,6 +273,14 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
   | Pasrbigint -> (
     match args with
     | [e1; e2] -> E.bigint_op Asr e1 e2
+    | _ -> assert false)
+  | Pnotint -> (
+    match args with
+    | [e] -> E.int_bnot e
+    | _ -> assert false)
+  | Pnotbigint -> (
+    match args with
+    | [e] -> E.int_bnot e
     | _ -> assert false)
   | Pandint -> (
     match args with
@@ -566,6 +573,13 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
                  Some (Js_op.Lit txt, expr)
                | _ -> None))
     | _ -> assert false)
+  | Pdict_has -> (
+    match args with
+    | [obj; prop] -> E.in_ prop obj
+    | _ ->
+      Location.raise_errorf ~loc
+        "Invalid external \"%%dict_has\" type signature. Expected to have two \
+         arguments.")
   | Parraysetu -> (
     match args with
     (* wrong*)
@@ -579,9 +593,9 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
   (* Lam_compile_external_call.translate loc cxt prim args *)
   (* Test if the argument is a block or an immediate integer *)
   | Pjs_object_create _ -> assert false
-  | Pjs_call {arg_types; ffi; dynamic_import} ->
+  | Pjs_call {arg_types; ffi; dynamic_import; transformed_jsx} ->
     Lam_compile_external_call.translate_ffi cxt arg_types ffi args
-      ~dynamic_import
+      ~dynamic_import ~transformed_jsx
   (* FIXME, this can be removed later *)
   | Pisint -> E.is_type_number (Ext_list.singleton_exn args)
   | Pis_poly_var_block -> E.is_type_object (Ext_list.singleton_exn args)

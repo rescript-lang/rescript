@@ -11,12 +11,12 @@ let eq = (loc, x, y) => {
 
 let f = x =>
   switch x {
-  | y => Lazy.force(y) ++ "abc"
+  | y => Lazy.get(y) ++ "abc"
   }
 
 let u = {
   let x = Lazy.from_fun(() => "def")
-  ignore(Lazy.force(x))
+  ignore(Lazy.get(x))
   f(x)
 }
 

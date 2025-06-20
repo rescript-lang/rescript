@@ -174,7 +174,7 @@ let x =
     }}
     letException={{
       exception Exit;
-      raise(Exit)
+      throw(Exit)
     }}
     assertExpr={assert(true)}
     pack=module(Foo)
@@ -245,7 +245,7 @@ let x =
     }}
     {{
       exception Exit;
-      raise(Exit)
+      throw(Exit)
     }}
     {assert(true)}
     {module(Foo)}
@@ -262,16 +262,16 @@ let x = <MyComponent sidebar=<div> test </div> nav=<Navbar /> />
 
 <div>
   {possibleGradeValues
-  |> List.filter(g => g <= state.maxGrade)
-  |> List.map(possibleGradeValue =>
+  ->List.filter(g => g <= state.maxGrade)
+  ->List.map(possibleGradeValue =>
       <option
-        key={possibleGradeValue |> string_of_int}
-        value={possibleGradeValue |> string_of_int}>
-        {possibleGradeValue |> string_of_int |> str}
+        key={possibleGradeValue->string_of_int}
+        value={possibleGradeValue->string_of_int}>
+        {possibleGradeValue->string_of_int->str}
       </option>
     )
-  |> Array.of_list
-  |> ReasonReact.array}
+  ->Array.of_list
+  ->ReasonReact.array}
 </div>
 
 // https://github.com/rescript-lang/syntax/issues/113
@@ -509,3 +509,41 @@ let x =
       }}
     />
   </div>
+
+let moo =
+  <div>
+    <p> {React.string("moo")} </p>
+    // c1
+    <p> {React.string("moo")} </p>
+    // c2
+    // c3
+    <p> {React.string("moo")} </p>
+    // c4
+
+    <p> {React.string("moo")} </p>
+  </div>
+
+let fragmented_moo =
+  <>
+    <p> {React.string("moo")} </p>
+    // c1
+    <p> {React.string("moo")} </p>
+    // c2
+    // c3
+    <p> {React.string("moo")} </p>
+    // c4
+
+    <p> {React.string("moo")} </p>
+  </>
+
+let arrow_with_fragment = el => <>
+  {t(nbsp ++ "(")}
+  el
+  {t(")")}
+</>
+
+let arrow_with_container_tag = el => <div>
+  {t(nbsp ++ "(")}
+  el
+  {t(")")}
+</div>

@@ -1,13 +1,12 @@
 {
+  "name": "@tests/analysis",
+  "private": true,
   "scripts": {
     "build": "rescript",
     "clean": "rescript clean -with-deps"
   },
-  "private": true,
-  "devDependencies": {
-    "@rescript/react": "0.13.0"
-  },
   "dependencies": {
-    "rescript": "../../.."
+    "@rescript/react": "link:../../dependencies/rescript-react",
+    "rescript": "workspace:^"
   }
 }

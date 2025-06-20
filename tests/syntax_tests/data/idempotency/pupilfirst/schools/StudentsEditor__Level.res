@@ -13,16 +13,16 @@ let id = t => t.id
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    name: json |> field("name", string),
-    number: json |> field("number", int),
+    id: json->field("id", string),
+    name: json->field("name", string),
+    number: json->field("number", int),
   }
 }
 
 let unsafeFind = (levels, componentName, levelId) =>
-  levels |> ArrayUtils.unsafeFind(
+  levels->ArrayUtils.unsafeFind(
     l => l.id == levelId,
     "Unable to find level with id: " ++ (levelId ++ ("in StudentdEditor__" ++ componentName)),
   )
 
-let title = t => "Level " ++ ((t.number |> string_of_int) ++ (": " ++ t.name))
+let title = t => "Level " ++ ((t.number->string_of_int) ++ (": " ++ t.name))

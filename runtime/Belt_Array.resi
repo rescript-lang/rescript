@@ -14,15 +14,6 @@
 
 /***
 Utilities for `Array` functions.
-
-### Note about index syntax
-
-Code like `arr[0]` does *not* compile to JavaScript `arr[0]`. Reason transforms
-the `[]` index syntax into a function: `Array.get(arr, 0)`. By default, this
-uses the default standard library's `Array.get` function, which may raise an
-exception if the index isn't found. If you `open Belt`, it will use the
-`Belt.Array.get` function which returns options instead of raising exceptions. 
-[See this for more information](../belt.mdx#array-access-runtime-safety).
 */
 
 type t<'a> = array<'a>
@@ -33,8 +24,7 @@ Return the size of the array
 ## Examples
 
 ```rescript
-// Returns 1
-Belt.Array.length(["test"])
+assertEqual(Belt.Array.length(["test"]), 1)
 ```
 */
 external length: t<'a> => int = "%array_length"
@@ -49,9 +39,9 @@ If `i` is out of range returns `None`.
 ## Examples
 
 ```rescript
-Belt.Array.get(["a", "b", "c"], 0) == Some("a")
-Belt.Array.get(["a", "b", "c"], 3) == None
-Belt.Array.get(["a", "b", "c"], -1) == None
+assertEqual(Belt.Array.get(["a", "b", "c"], 0), Some("a"))
+assertEqual(Belt.Array.get(["a", "b", "c"], 3), None)
+assertEqual(Belt.Array.get(["a", "b", "c"], -1), None)
 ```
 */
 let get: (t<'a>, int) => option<'a>
@@ -111,7 +101,7 @@ let arr = [10, 11, 12, 13, 14]
 
 let () = Belt.Array.reverseInPlace(arr)
 
-arr == [14, 13, 12, 11, 10]
+assertEqual(arr, [14, 13, 12, 11, 10])
 ```
 */
 let reverseInPlace: t<'a> => unit
@@ -122,12 +112,11 @@ let reverseInPlace: t<'a> => unit
 ## Examples
 
 ```rescript
-Belt.Array.reverse([10, 11, 12, 13, 14]) == [14, 13, 12, 11, 10]
+assertEqual(Belt.Array.reverse([10, 11, 12, 13, 14]), [14, 13, 12, 11, 10])
 ```
 */
 let reverse: t<'a> => t<'a>
 
-@new
 /**
 `makeUninitialized(n)` creates an array of length `n` filled with the undefined
 value. You must specify the type of data that will eventually fill the array.
@@ -137,12 +126,12 @@ value. You must specify the type of data that will eventually fill the array.
 ```rescript
 let arr: array<Js.undefined<string>> = Belt.Array.makeUninitialized(5)
 
-Belt.Array.getExn(arr, 0) == Js.undefined
+assertEqual(Belt.Array.getExn(arr, 0), Js.undefined)
 ```
 */
+@new
 external makeUninitialized: int => array<Js.undefined<'a>> = "Array"
 
-@new
 /**
 **Unsafe**
 
@@ -155,9 +144,10 @@ Js.log(Belt.Array.getExn(arr, 0)) // undefined
 
 Belt.Array.setExn(arr, 0, "example")
 
-Js.log(Belt.Array.getExn(arr, 0) == "example")
+assertEqual(Belt.Array.getExn(arr, 0), "example")
 ```
 */
+@new
 external makeUninitializedUnsafe: int => t<'a> = "Array"
 
 /**
@@ -172,11 +162,11 @@ let make: (int, 'a) => t<'a>
 ## Examples
 
 ```rescript
-Belt.Array.range(0, 3) == [0, 1, 2, 3]
+assertEqual(Belt.Array.range(0, 3), [0, 1, 2, 3])
 
-Belt.Array.range(3, 0) == []
+assertEqual(Belt.Array.range(3, 0), [])
 
-Belt.Array.range(3, 3) == [3]
+assertEqual(Belt.Array.range(3, 3), [3])
 ```
 */
 let range: (int, int) => array<int>
@@ -188,19 +178,19 @@ It also return an empty array when `start > finish`.
 ## Examples
 
 ```rescript
-Belt.Array.rangeBy(0, 10, ~step=3) == [0, 3, 6, 9]
+assertEqual(Belt.Array.rangeBy(0, 10, ~step=3), [0, 3, 6, 9])
 
-Belt.Array.rangeBy(0, 12, ~step=3) == [0, 3, 6, 9, 12]
+assertEqual(Belt.Array.rangeBy(0, 12, ~step=3), [0, 3, 6, 9, 12])
 
-Belt.Array.rangeBy(33, 0, ~step=1) == []
+assertEqual(Belt.Array.rangeBy(33, 0, ~step=1), [])
 
-Belt.Array.rangeBy(33, 0, ~step=-1) == []
+assertEqual(Belt.Array.rangeBy(33, 0, ~step=-1), [])
 
-Belt.Array.rangeBy(3, 12, ~step=-1) == []
+assertEqual(Belt.Array.rangeBy(3, 12, ~step=-1), [])
 
-Belt.Array.rangeBy(3, 3, ~step=0) == []
+assertEqual(Belt.Array.rangeBy(3, 3, ~step=0), [])
 
-Belt.Array.rangeBy(3, 3, ~step=1) == [3]
+assertEqual(Belt.Array.rangeBy(3, 3, ~step=1), [3])
 ```
 */
 let rangeBy: (int, int, ~step: int) => array<int>
@@ -214,9 +204,9 @@ n populated by `f(i)` start from `0` to `n - 1`.
 ## Examples
 
 ```rescript
-Belt.Array.makeBy(5, (i) => i) == [0, 1, 2, 3, 4]
+assertEqual(Belt.Array.makeBy(5, (i) => i), [0, 1, 2, 3, 4])
 
-Belt.Array.makeBy(5, (i) => i * i) == [0, 1, 4, 9, 16]
+assertEqual(Belt.Array.makeBy(5, (i) => i * i), [0, 1, 4, 9, 16])
 ```
 */
 let makeBy: (int, int => 'a) => t<'a>
@@ -235,7 +225,7 @@ Stop with the shorter array.
 ## Examples
 
 ```rescript
-Belt.Array.zip([1, 2], [3, 4, 5]) == [(1, 3), (2, 4)]
+assertEqual(Belt.Array.zip([1, 2], [3, 4, 5]), [(1, 3), (2, 4)])
 ```
 */
 let zip: (t<'a>, array<'b>) => array<('a, 'b)>
@@ -251,7 +241,7 @@ Equivalent to `map(zip(xs, ys), ((a, b)) => f(a, b))`
 ## Examples
 
 ```rescript
-Belt.Array.zipBy([1, 2, 3], [4, 5], (a, b) => 2 * a + b) == [6, 9]
+assertEqual(Belt.Array.zipBy([1, 2, 3], [4, 5], (a, b) => 2 * a + b), [6, 9])
 ```
 */
 let zipBy: (t<'a>, array<'b>, ('a, 'b) => 'c) => array<'c>
@@ -264,9 +254,9 @@ second items.
 ## Examples
 
 ```rescript
-Belt.Array.unzip([(1, 2), (3, 4)]) == ([1, 3], [2, 4])
+assertEqual(Belt.Array.unzip([(1, 2), (3, 4)]), ([1, 3], [2, 4]))
 
-Belt.Array.unzip([(1, 2), (3, 4), (5, 6), (7, 8)]) == ([1, 3, 5, 7], [2, 4, 6, 8])
+assertEqual(Belt.Array.unzip([(1, 2), (3, 4), (5, 6), (7, 8)]), ([1, 3, 5, 7], [2, 4, 6, 8]))
 ```
 */
 let unzip: array<('a, 'b)> => (t<'a>, array<'b>)
@@ -278,9 +268,9 @@ let unzip: array<('a, 'b)> => (t<'a>, array<'b>)
 ## Examples
 
 ```rescript
-Belt.Array.concat([1, 2, 3], [4, 5]) == [1, 2, 3, 4, 5]
+assertEqual(Belt.Array.concat([1, 2, 3], [4, 5]), [1, 2, 3, 4, 5])
 
-Belt.Array.concat([], ["a", "b", "c"]) == ["a", "b", "c"]
+assertEqual(Belt.Array.concat([], ["a", "b", "c"]), ["a", "b", "c"])
 ```
 */
 let concat: (t<'a>, t<'a>) => t<'a>
@@ -291,7 +281,7 @@ let concat: (t<'a>, t<'a>) => t<'a>
 ## Examples
 
 ```rescript
-Belt.Array.concatMany([[1, 2, 3], [4, 5, 6], [7, 8]]) == [1, 2, 3, 4, 5, 6, 7, 8]
+assertEqual(Belt.Array.concatMany([[1, 2, 3], [4, 5, 6], [7, 8]]), [1, 2, 3, 4, 5, 6, 7, 8])
 ```
 */
 let concatMany: array<t<'a>> => t<'a>
@@ -308,11 +298,11 @@ if `len` is negative; returns the empty array.
 ## Examples
 
 ```rescript
-Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=2, ~len=3) == [12, 13, 14]
+assertEqual(Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=2, ~len=3), [12, 13, 14])
 
-Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=-4, ~len=3) == [13, 14, 15]
+assertEqual(Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=-4, ~len=3), [13, 14, 15])
 
-Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=4, ~len=9) == [14, 15, 16]
+assertEqual(Belt.Array.slice([10, 11, 12, 13, 14, 15, 16], ~offset=4, ~len=9), [14, 15, 16])
 ```
 */
 let slice: (t<'a>, ~offset: int, ~len: int) => t<'a>
@@ -329,18 +319,18 @@ means get the last element as a singleton array
 ## Examples
 
 ```rescript
-Belt.Array.sliceToEnd([10, 11, 12, 13, 14, 15, 16], 2) == [12, 13, 14, 15, 16]
+assertEqual(Belt.Array.sliceToEnd([10, 11, 12, 13, 14, 15, 16], 2), [12, 13, 14, 15, 16])
 
-Belt.Array.sliceToEnd([10, 11, 12, 13, 14, 15, 16], -4) == [13, 14, 15, 16]
+assertEqual(Belt.Array.sliceToEnd([10, 11, 12, 13, 14, 15, 16], -4), [13, 14, 15, 16])
 ```
 */
 let sliceToEnd: (t<'a>, int) => t<'a>
 
-@send
 /**
 `copy(a)` returns a copy of `a`; that is; a fresh array containing the same
 elements as `a`.
 */
+@send
 external copy: (t<'a>, @as(0) _) => t<'a> = "slice"
 
 /**
@@ -357,11 +347,11 @@ let arr = Belt.Array.makeBy(5, (i) => i)
 
 Belt.Array.fill(arr, ~offset=2, ~len=2, 9)
 
-arr == [0, 1, 9, 9, 4]
+assertEqual(arr, [0, 1, 9, 9, 4])
 
 Belt.Array.fill(arr, ~offset=7, ~len=2, 8)
 
-arr == [0, 1, 9, 9, 4]
+assertEqual(arr, [0, 1, 9, 9, 4])
 ```
 */
 let fill: (t<'a>, ~offset: int, ~len: int, 'a) => unit
@@ -383,10 +373,10 @@ let v1 = [10, 11, 12, 13, 14, 15, 16, 17]
 let v2 = [20, 21, 22, 23, 24, 25, 26, 27]
 
 Belt.Array.blit(~src=v1, ~srcOffset=4, ~dst=v2, ~dstOffset=2, ~len=3)
-v2 == [20, 21, 14, 15, 16, 25, 26, 27]
+assertEqual(v2, [20, 21, 14, 15, 16, 25, 26, 27])
 
 Belt.Array.blit(~src=v1, ~srcOffset=4, ~dst=v1, ~dstOffset=2, ~len=3)
-v1 == [10, 11, 14, 15, 16, 15, 16, 17]
+assertEqual(v1, [10, 11, 14, 15, 16, 15, 16, 17])
 ```
 */
 let blit: (~src: t<'a>, ~srcOffset: int, ~dst: t<'a>, ~dstOffset: int, ~len: int) => unit
@@ -420,7 +410,7 @@ let total = ref(0)
 
 Belt.Array.forEach([1, 2, 3, 4], x => total := total.contents + x)
 
-total.contents == 1 + 2 + 3 + 4
+assertEqual(total.contents, 1 + 2 + 3 + 4)
 ```
 */
 let forEach: (t<'a>, 'a => unit) => unit
@@ -434,7 +424,7 @@ the beginning to end.
 ## Examples
 
 ```rescript
-Belt.Array.map([1, 2], (x) => x + 1) == [3, 4]
+assertEqual(Belt.Array.map([1, 2], (x) => x + 1), [2, 3])
 ```
 */
 let map: (t<'a>, 'a => 'b) => array<'b>
@@ -448,7 +438,7 @@ the beginning to end, concatenating the results.
 ## Examples
 
 ```rescript
-Belt.Array.flatMap([1, 2], x => [x + 10, x + 20]) == [11, 21, 12, 22]
+assertEqual(Belt.Array.flatMap([1, 2], x => [x + 10, x + 20]), [11, 21, 12, 22])
 ```
 */
 let flatMap: (t<'a>, 'a => array<'b>) => array<'b>
@@ -462,8 +452,8 @@ the predicate function `p`; returns `None` if no element satisifies the function
 ## Examples
 
 ```rescript
-Belt.Array.getBy([1, 4, 3, 2], (x) => mod(x, 2) == 0) == Some(4)
-Belt.Array.getBy([15, 13, 11], (x) => mod(x, 2) == 0) == None
+assertEqual(Belt.Array.getBy([1, 4, 3, 2], (x) => mod(x, 2) == 0), Some(4))
+assertEqual(Belt.Array.getBy([15, 13, 11], (x) => mod(x, 2) == 0), None)
 ```
 */
 let getBy: (t<'a>, 'a => bool) => option<'a>
@@ -478,8 +468,8 @@ the function.
 ## Examples
 
 ```rescript
-Belt.Array.getIndexBy([1, 4, 3, 2], (x) => mod(x, 2) == 0) == Some(1)
-Belt.Array.getIndexBy([15, 13, 11], (x) => mod(x, 2) == 0) == None
+assertEqual(Belt.Array.getIndexBy([1, 4, 3, 2], (x) => mod(x, 2) == 0), Some(1))
+assertEqual(Belt.Array.getIndexBy([15, 13, 11], (x) => mod(x, 2) == 0), None)
 ```
 */
 let getIndexBy: (t<'a>, 'a => bool) => option<int>
@@ -499,7 +489,7 @@ let keepWithIndexU: (t<'a>, ('a, int) => bool) => t<'a>
 ## Examples
 
 ```rescript
-Belt.Array.keepWithIndex([1, 2, 3], (_x, i) => i == 1) == [2]
+assertEqual(Belt.Array.keepWithIndex([1, 2, 3], (_x, i) => i == 1), [2])
 ```
 */
 let keepWithIndex: (t<'a>, ('a, int) => bool) => t<'a>
@@ -513,14 +503,16 @@ None applied `p`.
 ## Examples
 
 ```rescript
-Belt.Array.keepMap([1, 2, 3], x =>
-  if mod(x, 2) == 0 {
-    Some(x)
-  } else {
-    None
-  }
+assertEqual(
+  Belt.Array.keepMap([1, 2, 3], x =>
+    if mod(x, 2) == 0 {
+      Some(x)
+    } else {
+      None
+    }
+  ),
+  [2]
 )
-== [2]
 ```
 */
 let keepMap: (t<'a>, 'a => option<'b>) => array<'b>
@@ -546,7 +538,7 @@ let total = ref(0)
 
 Belt.Array.forEachWithIndex([10, 11, 12, 13], (i, x) => total := total.contents + x + i)
 
-total.contents == 0 + 10 + 1 + 11 + 2 + 12 + 3 + 13
+assertEqual(total.contents, 0 + 10 + 1 + 11 + 2 + 12 + 3 + 13)
 ```
 */
 let forEachWithIndex: (t<'a>, (int, 'a) => unit) => unit
@@ -560,7 +552,7 @@ two arguments: the index starting from 0 and the element from `xs`.
 ## Examples
 
 ```rescript
-Belt.Array.mapWithIndex([1, 2, 3], (i, x) => i + x) == [0 + 1, 1 + 2, 2 + 3]
+assertEqual(Belt.Array.mapWithIndex([1, 2, 3], (i, x) => i + x), [0 + 1, 1 + 2, 2 + 3])
 ```
 */
 let mapWithIndex: (t<'a>, (int, 'a) => 'b) => array<'b>
@@ -574,9 +566,9 @@ first of tuple where predicate cause true, second where predicate cause false
 ## Examples
 
 ```rescript
-Belt.Array.partition([1, 2, 3, 4, 5], (x) => mod(x, 2) == 0) == ([2, 4], [1, 3, 5])
+assertEqual(Belt.Array.partition([1, 2, 3, 4, 5], (x) => mod(x, 2) == 0), ([2, 4], [1, 3, 5]))
 
-Belt.Array.partition([1, 2, 3, 4, 5], (x) => mod(x, 2) != 0) == ([1, 3, 5], [2, 4])
+assertEqual(Belt.Array.partition([1, 2, 3, 4, 5], (x) => mod(x, 2) != 0), ([1, 3, 5], [2, 4]))
 ```
 */
 let partition: (t<'a>, 'a => bool) => (t<'a>, t<'a>)
@@ -592,9 +584,9 @@ accumulator.
 ## Examples
 
 ```rescript
-Belt.Array.reduce([2, 3, 4], 1, (a, b) => a + b) == 10
+assertEqual(Belt.Array.reduce([2, 3, 4], 1, (a, b) => a + b), 10)
 
-Belt.Array.reduce(["a", "b", "c", "d"], "", (a, b) => a ++ b) == "abcd"
+assertEqual(Belt.Array.reduce(["a", "b", "c", "d"], "", (a, b) => a ++ b), "abcd")
 ```
 */
 let reduce: (array<'b>, 'a, ('a, 'b) => 'a) => 'a
@@ -608,7 +600,7 @@ function `f` is applied to each item of `xs` from the last back to the first.
 ## Examples
 
 ```rescript
-Belt.Array.reduceReverse(["a", "b", "c", "d"], "", (a, b) => a ++ b) == "dcba"
+assertEqual(Belt.Array.reduceReverse(["a", "b", "c", "d"], "", (a, b) => a ++ b), "dcba")
 ```
 */
 let reduceReverse: (array<'b>, 'a, ('a, 'b) => 'a) => 'a
@@ -622,7 +614,7 @@ starting at `min(length(xs), length(ys))` down to and including zero.
 ## Examples
 
 ```rescript
-Belt.Array.reduceReverse2([1, 2, 3], [1, 2], 0, (acc, x, y) => acc + x + y) == 6
+assertEqual(Belt.Array.reduceReverse2([1, 2, 3], [1, 2], 0, (acc, x, y) => acc + x + y), 6)
 ```
 */
 let reduceReverse2: (t<'a>, array<'b>, 'c, ('c, 'a, 'b) => 'c) => 'c
@@ -638,7 +630,7 @@ the final value of the accumulator.
 ## Examples
 
 ```rescript
-Belt.Array.reduceWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i) == 16
+assertEqual(Belt.Array.reduceWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i), 16)
 ```
 */
 let reduceWithIndex: (t<'a>, 'b, ('b, 'a, int) => 'b) => 'b
@@ -656,9 +648,9 @@ using the separator. If the array is empty, the empty string will be returned.
 ## Examples
 
 ```rescript
-Belt.Array.joinWith([0, 1], ", ", Js.Int.toString) == "0, 1"
-Belt.Array.joinWith([], " ", Js.Int.toString) == ""
-Belt.Array.joinWith([1], " ", Js.Int.toString) == "1"
+assertEqual(Belt.Array.joinWith([0, 1], ", ", Js.Int.toString), "0, 1")
+assertEqual(Belt.Array.joinWith([], " ", Js.Int.toString), "")
+assertEqual(Belt.Array.joinWith([1], " ", Js.Int.toString), "1")
 ```
 */
 let joinWith: (t<'a>, string, 'a => string) => string
@@ -672,9 +664,9 @@ where `p` is a predicate: a function taking an element and returning a `bool`.
 ## Examples
 
 ```rescript
-Belt.Array.some([2, 3, 4], (x) => mod(x, 2) == 1) == true
+assertEqual(Belt.Array.some([2, 3, 4], (x) => mod(x, 2) == 1), true)
 
-Belt.Array.some([(-1), (-3), (-5)], (x) => x > 0) == false
+assertEqual(Belt.Array.some([(-1), (-3), (-5)], (x) => x > 0), false)
 ```
 */
 let some: (t<'a>, 'a => bool) => bool
@@ -688,9 +680,9 @@ predicate: a function taking an element and returning a `bool`.
 ## Examples
 
 ```rescript
-Belt.Array.every([1, 3, 5], (x) => mod(x, 2) == 1) == true
+assertEqual(Belt.Array.every([1, 3, 5], (x) => mod(x, 2) == 1), true)
 
-Belt.Array.every([1, (-3), 5], (x) => x > 0) == false
+assertEqual(Belt.Array.every([1, (-3), 5], (x) => x > 0), false)
 ```
 */
 let every: (t<'a>, 'a => bool) => bool
@@ -704,13 +696,13 @@ elements up to the shorter length (i.e. `min(length(xs), length(ys))`)
 ## Examples
 
 ```rescript
-Belt.Array.every2([1, 2, 3], [0, 1], (a, b) => a > b) == true
+assertEqual(Belt.Array.every2([1, 2, 3], [0, 1], (a, b) => a > b), true)
 
-Belt.Array.every2([], [1], (x, y) => x > y) == true
+assertEqual(Belt.Array.every2([], [1], (x, y) => x > y), true)
 
-Belt.Array.every2([2, 3], [1], (x, y) => x > y) == true
+assertEqual(Belt.Array.every2([2, 3], [1], (x, y) => x > y), true)
 
-Belt.Array.every2([0, 1], [5, 0], (x, y) => x > y) == false
+assertEqual(Belt.Array.every2([0, 1], [5, 0], (x, y) => x > y), false)
 ```
 */
 let every2: (t<'a>, array<'b>, ('a, 'b) => bool) => bool
@@ -724,11 +716,11 @@ up to the shorter length (i.e. `min(length(xs), length(ys))`)
 ## Examples
 
 ```rescript
-Belt.Array.some2([0, 2], [1, 0, 3], (a, b) => a > b) == true
+assertEqual(Belt.Array.some2([0, 2], [1, 0, 3], (a, b) => a > b), true)
 
-Belt.Array.some2([], [1], (x, y) => x > y) == false
+assertEqual(Belt.Array.some2([], [1], (x, y) => x > y), false)
 
-Belt.Array.some2([2, 3], [1, 4], (x, y) => x > y) == true
+assertEqual(Belt.Array.some2([2, 3], [1, 4], (x, y) => x > y), true)
 ```
 */
 let some2: (t<'a>, array<'b>, ('a, 'b) => bool) => bool
@@ -746,11 +738,11 @@ returns zero for all `x` and `y`.
 ## Examples
 
 ```rescript
-Belt.Array.cmp([1, 3, 5], [1, 4, 2], (a, b) => compare(a, b)) == -1
+assertEqual(Belt.Array.cmp([1, 3, 5], [1, 4, 2], (a, b) => compare(a, b)), -1)
 
-Belt.Array.cmp([1, 3, 5], [1, 2, 3], (a, b) => compare(a, b)) == 1
+assertEqual(Belt.Array.cmp([1, 3, 5], [1, 2, 3], (a, b) => compare(a, b)), 1)
 
-Belt.Array.cmp([1, 3, 5], [1, 3, 5], (a, b) => compare(a, b)) == 0
+assertEqual(Belt.Array.cmp([1, 3, 5], [1, 3, 5], (a, b) => compare(a, b)), 0)
 ```
 */
 let cmp: (t<'a>, t<'a>, ('a, 'a) => int) => int
@@ -764,12 +756,11 @@ one by one using `f(xi, yi)`; and return true if all results are true false othe
 ## Examples
 
 ```rescript
-Belt.Array.eq([1, 2, 3], [(-1), (-2), (-3)], (a, b) => abs(a) == abs(b)) == true
+assertEqual(Belt.Array.eq([1, 2, 3], [(-1), (-2), (-3)], (a, b) => abs(a) == abs(b)), true)
 ```
 */
 let eq: (t<'a>, t<'a>, ('a, 'a) => bool) => bool
 
-@set
 /**
 Unsafe `truncateToLengthUnsafe(xs, n)` sets length of array `xs` to `n`. If `n`
 is greater than the length of `xs`; the extra elements are set to `Js.Null_undefined.null`.
@@ -782,9 +773,10 @@ let arr = ["ant", "bee", "cat", "dog", "elk"]
 
 Belt.Array.truncateToLengthUnsafe(arr, 3)
 
-arr == ["ant", "bee", "cat"]
+assertEqual(arr, ["ant", "bee", "cat"])
 ```
 */
+@set
 external truncateToLengthUnsafe: (t<'a>, int) => unit = "length"
 
 @deprecated("Use `init` instead")

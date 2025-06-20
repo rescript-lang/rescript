@@ -47,7 +47,7 @@ let with_default_loc = (l, f) => {
   } catch {
   | exn =>
     default_loc := old
-    raise(exn)
+    throw(exn)
   }
 }
 
@@ -94,7 +94,7 @@ module Typ = {
     @raises(Error)
     let check_variable = (vl, loc, v) =>
       if List.mem(v, vl) {
-        raise({
+        throw({
           open Syntaxerr
           Error(Variable_in_scope(loc, v))
         })

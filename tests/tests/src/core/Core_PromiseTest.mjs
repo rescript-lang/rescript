@@ -2,6 +2,7 @@
 
 import * as Test from "./Test.mjs";
 import * as Stdlib_Exn from "rescript/lib/es6/Stdlib_Exn.js";
+import * as Stdlib_JsExn from "rescript/lib/es6/Stdlib_JsExn.js";
 import * as Stdlib_Promise from "rescript/lib/es6/Stdlib_Promise.js";
 import * as Primitive_object from "rescript/lib/es6/Primitive_object.js";
 import * as Primitive_exceptions from "rescript/lib/es6/Primitive_exceptions.js";
@@ -149,7 +150,7 @@ let asyncParseFail = (function() {
 
 function testExternalPromiseThrow() {
   return Stdlib_Promise.$$catch(asyncParseFail().then(param => Promise.resolve()), e => {
-    let success = e.RE_EXN_ID === Stdlib_Exn.$$Error ? Primitive_object.equal(e._1.name, "SyntaxError") : false;
+    let success = e.RE_EXN_ID === "JsExn" ? Primitive_object.equal(Stdlib_JsExn.name(e._1), "SyntaxError") : false;
     Test.run([
       [
         "Core_PromiseTest.res",
@@ -187,7 +188,7 @@ function testExnThrow() {
 
 function testRaiseErrorThrow() {
   return Stdlib_Promise.$$catch(Promise.resolve().then(() => Stdlib_Exn.raiseError("Some JS error")), e => {
-    let isTestErr = e.RE_EXN_ID === Stdlib_Exn.$$Error ? Primitive_object.equal(e._1.message, "Some JS error") : false;
+    let isTestErr = e.RE_EXN_ID === "JsExn" ? Primitive_object.equal(Stdlib_JsExn.message(e._1), "Some JS error") : false;
     Test.run([
       [
         "Core_PromiseTest.res",

@@ -135,8 +135,8 @@ let build_subcommand ~start argv argv_len =
       ( "-regen",
         unit_set_spec force_regenerate,
         "*internal* \n\
-         Always regenerate build.ninja no matter bsconfig.json is changed or \
-         not" );
+         Always regenerate build.ninja no matter if rescript.json is changed \
+         or not" );
       ( "-no-deps",
         unit_set_spec no_deps_mode,
         "*internal* Needed for watcher to build without dependencies on file \

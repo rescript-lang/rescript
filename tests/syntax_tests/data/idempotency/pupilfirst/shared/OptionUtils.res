@@ -5,7 +5,7 @@ let default = (e, v) =>
   }
 
 // TODO: Remove all use of toString. Use `default("")` instead.
-let toString = option => option |> default("")
+let toString = option => option->default("")
 
 let map = (f, v) =>
   switch v {
@@ -13,6 +13,6 @@ let map = (f, v) =>
   | None => None
   }
 
-let flatMap = (f, v) => v |> map(f) |> default(None)
+let flatMap = (f, v) => v->map(f)->default(None)
 
-let mapWithDefault = (f, d, v) => v |> map(f) |> default(d)
+let mapWithDefault = (f, d, v) => v->map(f)->default(d)

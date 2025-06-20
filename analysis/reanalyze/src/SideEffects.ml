@@ -45,7 +45,6 @@ let rec exprNoSideEffects (expr : Typedtree.expression) =
     partial = Total && e |> exprNoSideEffects
     && cases |> List.for_all caseNoSideEffects
   | Texp_letmodule _ -> false
-  | Texp_lazy e -> e |> exprNoSideEffects
   | Texp_try (e, cases) ->
     e |> exprNoSideEffects && cases |> List.for_all caseNoSideEffects
   | Texp_tuple el -> el |> List.for_all exprNoSideEffects

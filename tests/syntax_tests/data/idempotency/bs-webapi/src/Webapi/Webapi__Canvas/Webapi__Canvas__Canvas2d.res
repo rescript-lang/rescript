@@ -128,7 +128,7 @@ let reifyStyle = (type a, x: 'a): (style<a>, a) => {
     } else if Internal.instanceOf(x, Internal.canvasPattern) {
       Obj.magic(Pattern)
     } else {
-      raise(
+      throw(
         Invalid_argument(
           "Unknown canvas style kind. Known values are: String, CanvasGradient, CanvasPattern",
         ),
@@ -141,9 +141,9 @@ let reifyStyle = (type a, x: 'a): (style<a>, a) => {
 @get external fillStyle: t => 'a = ""
 @get external strokeStyle: t => 'a = ""
 
-let fillStyle = (ctx: t) => ctx |> fillStyle |> reifyStyle
+let fillStyle = (ctx: t) => ctx->fillStyle->reifyStyle
 
-let strokeStyle = (ctx: t) => ctx |> strokeStyle |> reifyStyle
+let strokeStyle = (ctx: t) => ctx->strokeStyle->reifyStyle
 
 @set external shadowOffsetX: (t, float) => unit = ""
 @set external shadowOffsetY: (t, float) => unit = ""

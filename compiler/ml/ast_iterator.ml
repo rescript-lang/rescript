@@ -267,6 +267,19 @@ module M = struct
 end
 
 module E = struct
+  let iter_jsx_children sub = function
+    | JSXChildrenSpreading e -> sub.expr sub e
+    | JSXChildrenItems xs -> List.iter (sub.expr sub) xs
+
+  let iter_jsx_prop sub = function
+    | JSXPropPunning (_, name) -> iter_loc sub name
+    | JSXPropValue (name, _, value) ->
+      iter_loc sub name;
+      sub.expr sub value
+    | JSXPropSpreading (_, e) -> sub.expr sub e
+
+  let iter_jsx_props sub = List.iter (iter_jsx_prop sub)
+
   (* Value expressions for the core language *)
 
   let iter sub {pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} =
@@ -297,7 +310,11 @@ module E = struct
       iter_opt (sub.expr sub) arg
     | Pexp_variant (_lab, eo) -> iter_opt (sub.expr sub) eo
     | Pexp_record (l, eo) ->
-      List.iter (iter_tuple3 (iter_loc sub) (sub.expr sub) (fun _ -> ())) l;
+      List.iter
+        (fun {lid; x = exp} ->
+          iter_loc sub lid;
+          sub.expr sub exp)
+        l;
       iter_opt (sub.expr sub) eo
     | Pexp_field (e, lid) ->
       sub.expr sub e;
@@ -337,13 +354,31 @@ module E = struct
       sub.extension_constructor sub cd;
       sub.expr sub e
     | Pexp_assert e -> sub.expr sub e
-    | Pexp_lazy e -> sub.expr sub e
     | Pexp_newtype (_s, e) -> sub.expr sub e
     | Pexp_pack me -> sub.module_expr sub me
     | Pexp_open (_ovf, lid, e) ->
       iter_loc sub lid;
       sub.expr sub e
     | Pexp_extension x -> sub.extension sub x
+    | Pexp_await e -> sub.expr sub e
+    | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
+      iter_jsx_children sub children
+    | Pexp_jsx_element
+        (Jsx_unary_element
+           {jsx_unary_element_tag_name = name; jsx_unary_element_props = props})
+      ->
+      iter_loc sub name;
+      iter_jsx_props sub props
+    | Pexp_jsx_element
+        (Jsx_container_element
+           {
+             jsx_container_element_tag_name_start = name;
+             jsx_container_element_props = props;
+             jsx_container_element_children = children;
+           }) ->
+      iter_loc sub name;
+      iter_jsx_props sub props;
+      iter_jsx_children sub children
 end
 
 module P = struct
@@ -366,7 +401,11 @@ module P = struct
       iter_opt (sub.pat sub) p
     | Ppat_variant (_l, p) -> iter_opt (sub.pat sub) p
     | Ppat_record (lpl, _cf) ->
-      List.iter (iter_tuple3 (iter_loc sub) (sub.pat sub) (fun _ -> ())) lpl
+      List.iter
+        (fun {lid; x = pat} ->
+          iter_loc sub lid;
+          sub.pat sub pat)
+        lpl
     | Ppat_array pl -> List.iter (sub.pat sub) pl
     | Ppat_or (p1, p2) ->
       sub.pat sub p1;
@@ -375,7 +414,6 @@ module P = struct
       sub.pat sub p;
       sub.typ sub t
     | Ppat_type s -> iter_loc sub s
-    | Ppat_lazy p -> sub.pat sub p
     | Ppat_unpack s -> iter_loc sub s
     | Ppat_exception p -> sub.pat sub p
     | Ppat_extension x -> sub.extension sub x

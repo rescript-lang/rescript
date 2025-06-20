@@ -207,9 +207,6 @@ and pattern i ppf x =
     line i ppf "Ppat_or\n";
     pattern i ppf p1;
     pattern i ppf p2
-  | Ppat_lazy p ->
-    line i ppf "Ppat_lazy\n";
-    pattern i ppf p
   | Ppat_constraint (p, ct) ->
     line i ppf "Ppat_constraint\n";
     pattern i ppf p;
@@ -251,11 +248,12 @@ and expression i ppf x =
     option i expression ppf eo;
     pattern i ppf p;
     expression i ppf e
-  | Pexp_apply {funct = e; args = l; partial} ->
+  | Pexp_apply {funct = e; args = l; partial; transformed_jsx} ->
     line i ppf "Pexp_apply\n";
     if partial then line i ppf "partial\n";
     expression i ppf e;
-    list i label_x_expression ppf l
+    list i label_x_expression ppf l;
+    line i ppf "transformed_jsx: %b\n" transformed_jsx
   | Pexp_match (e, l) ->
     line i ppf "Pexp_match\n";
     expression i ppf e;
@@ -330,9 +328,6 @@ and expression i ppf x =
   | Pexp_assert e ->
     line i ppf "Pexp_assert\n";
     expression i ppf e
-  | Pexp_lazy e ->
-    line i ppf "Pexp_lazy\n";
-    expression i ppf e
   | Pexp_newtype (s, e) ->
     line i ppf "Pexp_newtype \"%s\"\n" s.txt;
     expression i ppf e
@@ -345,6 +340,51 @@ and expression i ppf x =
   | Pexp_extension (s, arg) ->
     line i ppf "Pexp_extension \"%s\"\n" s.txt;
     payload i ppf arg
+  | Pexp_await e ->
+    line i ppf "Pexp_await\n";
+    expression i ppf e
+  | Pexp_jsx_element (Jsx_fragment {jsx_fragment_children = children}) ->
+    line i ppf "Pexp_jsx_fragment";
+    jsx_children i ppf children
+  | Pexp_jsx_element
+      (Jsx_unary_element
+         {jsx_unary_element_tag_name = name; jsx_unary_element_props = props})
+    ->
+    line i ppf "Pexp_jsx_unary_element %a\n" fmt_longident_loc name;
+    jsx_props i ppf props
+  | Pexp_jsx_element
+      (Jsx_container_element
+         {
+           jsx_container_element_tag_name_start = name;
+           jsx_container_element_props = props;
+           jsx_container_element_opening_tag_end = gt;
+           jsx_container_element_children = children;
+         }) ->
+    line i ppf "Pexp_jsx_container_element %a\n" fmt_longident_loc name;
+    jsx_props i ppf props;
+    if !Clflags.dump_location then line i ppf "> %a\n" (fmt_position false) gt;
+    jsx_children i ppf children
+
+and jsx_children i ppf children =
+  line i ppf "jsx_children =\n";
+  match children with
+  | JSXChildrenSpreading e -> expression (i + 1) ppf e
+  | JSXChildrenItems xs -> list (i + 1) expression ppf xs
+
+and jsx_prop i ppf = function
+  | JSXPropPunning (opt, name) ->
+    line i ppf "%s%s" (if opt then "?" else "") name.txt
+  | JSXPropValue (name, opt, expr) ->
+    line i ppf "%s=%s" name.txt (if opt then "?" else "");
+    expression i ppf expr
+  | JSXPropSpreading (loc, e) ->
+    line i ppf "{... %a\n" fmt_location loc;
+    expression (i + 1) ppf e;
+    line i ppf "}\n"
+
+and jsx_props i ppf xs =
+  line i ppf "jsx_props =\n";
+  list (i + 1) jsx_prop ppf xs
 
 and value_description i ppf x =
   line i ppf "value_description %a %a\n" fmt_string_loc x.pval_name fmt_location
@@ -632,12 +672,14 @@ and label_decl i ppf {pld_name; pld_mutable; pld_type; pld_loc; pld_attributes}
   line (i + 1) ppf "%a" fmt_string_loc pld_name;
   core_type (i + 1) ppf pld_type
 
-and longident_x_pattern i ppf (li, p, opt) =
+and longident_x_pattern i ppf {lid = li; x = p; opt} =
   line i ppf "%a%s\n" fmt_longident_loc li (if opt then "?" else "");
   pattern (i + 1) ppf p
 
-and case i ppf {pc_lhs; pc_guard; pc_rhs} =
+and case i ppf {pc_bar; pc_lhs; pc_guard; pc_rhs} =
   line i ppf "<case>\n";
+  pc_bar
+  |> Option.iter (fun bar -> line i ppf "| %a\n" (fmt_position false) bar);
   pattern (i + 1) ppf pc_lhs;
   (match pc_guard with
   | None -> ()
@@ -652,7 +694,7 @@ and value_binding i ppf x =
   pattern (i + 1) ppf x.pvb_pat;
   expression (i + 1) ppf x.pvb_expr
 
-and longident_x_expression i ppf (li, e, opt) =
+and longident_x_expression i ppf {lid = li; x = e; opt} =
   line i ppf "%a%s\n" fmt_longident_loc li (if opt then "?" else "");
   expression (i + 1) ppf e
 

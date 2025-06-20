@@ -15,7 +15,7 @@ let make = (~loading, ~message="Loading...") => {
   let (shouldRender, setRender) = React.useState(() => loading)
   let initialRender = React.useRef(true)
   React.useEffect1(() => {
-    if initialRender |> React.Ref.current {
+    if initialRender->React.Ref.current {
       initialRender->React.Ref.setCurrent(false)
     } else if loading {
       setRender(_ => true)
@@ -40,7 +40,7 @@ let make = (~loading, ~message="Loading...") => {
             </svg>
           </div>
           <span className="inline-block ml-2 text-xs text-white font-semibold tracking-wide">
-            {message |> str}
+            {message->str}
           </span>
         </div>
       </div>

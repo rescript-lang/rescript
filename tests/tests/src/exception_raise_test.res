@@ -137,7 +137,7 @@ let () = try %raw(`()=>{throw 2}`)() catch {
 | e => eq(__LOC__, Js.Exn.asJsExn(e) != None, true)
 }
 
-let () = try raise(Not_found) catch {
+let () = try throw(Not_found) catch {
 | e => eq(__LOC__, Js.Exn.asJsExn(e) != None, false)
 }
 

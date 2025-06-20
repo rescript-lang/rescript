@@ -4,7 +4,7 @@ import * as Mt from "./mt.mjs";
 
 function f(v) {
   if (v % 2 === 0) {
-    return v => Math.imul(v, v);
+    return v => v * v | 0;
   } else {
     return v => v + v | 0;
   }

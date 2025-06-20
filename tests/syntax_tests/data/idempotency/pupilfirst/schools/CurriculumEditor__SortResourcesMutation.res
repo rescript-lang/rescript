@@ -18,6 +18,6 @@ let resourceTypeToString = resourceType =>
 
 let sort = (resourceType, resourceIds) =>
   SortResourceMutation.make(~resourceIds, ~resourceType=resourceTypeToString(resourceType), ())
-  |> GraphqlQuery.sendQuery(~notify=false)
-  |> Js.Promise.then_(_response => Js.Promise.resolve())
-  |> ignore
+  ->GraphqlQuery.sendQuery(~notify=false)
+  ->Js.Promise.then_(_response => Js.Promise.resolve())
+  ->ignore

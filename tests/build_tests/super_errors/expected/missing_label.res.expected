@@ -7,5 +7,5 @@
   [1;31m3[0m [2m│[0m let _ = f([1;31m""[0m)
   4 [2m│[0m 
 
-  The function applied to this argument has type (~a: string) => string
-This argument cannot be applied without label
+  The argument at this position should be labelled.
+  This function has type: (~a: string) => string

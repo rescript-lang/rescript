@@ -20,8 +20,8 @@ let buttonContents = (formState, checklist) => {
   let text = switch formState {
   | Attaching => "Attaching..."
   | Saving => "Submitting..."
-  | Ready => checklist |> ArrayUtils.isEmpty ? "Complete" : "Submit"
-  } |> str
+  | Ready => checklist->ArrayUtils.isEmpty ? "Complete" : "Submit"
+  }->str
 
   <span> icon text </span>
 }
@@ -74,24 +74,24 @@ let isButtonDisabled = state =>
   | Saving => true
   | Ready => false
   } ||
-  !(state.checklist |> ChecklistItem.validChecklist)
+  !(state.checklist->ChecklistItem.validChecklist)
 
 let submit = (state, send, target, addSubmissionCB, event) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
 
   send(SetSaving)
 
-  let fileIds = state.checklist |> ChecklistItem.fileIds
-  let checklist = state.checklist |> ChecklistItem.encodeArray
+  let fileIds = state.checklist->ChecklistItem.fileIds
+  let checklist = state.checklist->ChecklistItem.encodeArray
 
-  CreateSubmissionQuery.make(~targetId=target |> Target.id, ~fileIds, ~checklist, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
+  CreateSubmissionQuery.make(~targetId=target->Target.id, ~fileIds, ~checklist, ())
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
     switch response["createSubmission"]["submission"] {
     | Some(submission) =>
-      let files = state.checklist |> ChecklistItem.makeFiles
+      let files = state.checklist->ChecklistItem.makeFiles
       let submissionChecklist =
-        checklist |> Json.Decode.array(SubmissionChecklistItem.decode(files))
+        checklist->Json.Decode.array(SubmissionChecklistItem.decode(files))
       let newSubmission = Submission.make(
         ~id=submission["id"],
         ~createdAt=submission["createdAt"],
@@ -105,19 +105,19 @@ let submit = (state, send, target, addSubmissionCB, event) => {
     }
     Js.Promise.resolve()
   })
-  |> Js.Promise.catch(_error => {
+  ->Js.Promise.catch(_error => {
     /* Enable the form again in case of server crash. */
     send(SetReady)
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let updateResult = (state, send, index, result) =>
-  send(UpdateResponse(state.checklist |> ChecklistItem.updateResultAtIndex(index, result)))
+  send(UpdateResponse(state.checklist->ChecklistItem.updateResultAtIndex(index, result)))
 
 let buttonClasses = checklist =>
-  "flex mt-3 " ++ (checklist |> ArrayUtils.isEmpty ? "justify-center" : "justify-end")
+  "flex mt-3 " ++ (checklist->ArrayUtils.isEmpty ? "justify-center" : "justify-end")
 
 let setAttaching = (send, bool) => send(bool ? SetAttaching : SetReady)
 
@@ -130,10 +130,10 @@ let statusText = formState =>
 
 let tooltipText = preview =>
   if preview {
-    <span> {"You are accessing the preview mode" |> str} <br /> {"for this course" |> str} </span>
+    <span> {"You are accessing the preview mode"->str} <br /> {"for this course"->str} </span>
   } else {
     <span>
-      {"Please complete all the required" |> str} <br /> {"steps to submit this target" |> str}
+      {"Please complete all the required"->str} <br /> {"steps to submit this target"->str}
     </span>
   }
 
@@ -142,14 +142,14 @@ let make = (~target, ~addSubmissionCB, ~preview, ~checklist) => {
   let (state, send) = React.useReducer(reducer, initialState(checklist))
   <div className="bg-gray-100 p-4 my-4 border rounded-lg">
     <DisablingCover disabled={isBusy(state.formState)} message={statusText(state.formState)}>
-      {state.checklist |> ArrayUtils.isEmpty
+      {state.checklist->ArrayUtils.isEmpty
         ? <div className="text-center">
-            {"This target has no actions. Click submit to complete the target" |> str}
+            {"This target has no actions. Click submit to complete the target"->str}
           </div>
         : state.checklist
-          |> Array.mapi((index, checklistItem) =>
+          ->Array.mapi((index, checklistItem) =>
             <CoursesCurriculum__SubmissionItem
-              key={index |> string_of_int}
+              key={index->string_of_int}
               index
               checklistItem
               updateResultCB={updateResult(state, send, index)}
@@ -157,7 +157,7 @@ let make = (~target, ~addSubmissionCB, ~preview, ~checklist) => {
               preview
             />
           )
-          |> React.array}
+          ->React.array}
       <div className={buttonClasses(state.checklist)}>
         <Tooltip tip={tooltipText(preview)} position=#Left disabled={!isButtonDisabled(state)}>
           <button

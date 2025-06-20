@@ -131,7 +131,7 @@ module ProfileTextarea = {
 let make = (~user: User.t, ~urlRest, ~url) => {
   React.useEffect0(() => {
     open Webapi.Dom
-    window |> Window.scrollTo(0., 0.)
+    window->Window.scrollTo(0., 0.)
     None
   })
   let list = switch urlRest {

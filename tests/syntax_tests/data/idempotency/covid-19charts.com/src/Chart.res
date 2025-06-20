@@ -14,8 +14,8 @@ let calculateMaxValue = (dataType, locations, data) =>
       Js.Array.reduce(
         (maxValue, location) =>
           values(location.Location.id)
-          |> Js.Option.map((. value) => Js.Math.max_int(maxValue, Data.getValue(dataType, value)))
-          |> Js.Option.getWithDefault(maxValue),
+          ->Js.Option.map((. value) => Js.Math.max_int(maxValue, Data.getValue(dataType, value)))
+          ->Js.Option.getWithDefault(maxValue),
         maxValue,
         locations,
       ),
@@ -40,8 +40,8 @@ let ordinalSuffix = i => {
 
 let renderTooltipValues = (~chartType, ~payload, ~separator) =>
   payload
-  |> Js.Array.filter(payload => payload.R.Tooltip.name !== "daily-growth-indicator")
-  |> Js.Array.map(payload => {
+  ->Js.Array.filter(payload => payload.R.Tooltip.name !== "daily-growth-indicator")
+  ->Js.Array.map(payload => {
     let currentDataItem = (payload: R.Tooltip.payload).payload.Data.values(payload.R.Tooltip.name)
     <span className="text-base font-bold" key=payload.R.Tooltip.name>
       <span style={ReactDOMRe.Style.make(~color=payload.stroke, ())}>
@@ -52,32 +52,32 @@ let renderTooltipValues = (~chartType, ~payload, ~separator) =>
         | Filters.Number(dataType) =>
           let growthString =
             currentDataItem
-            |> Js.Option.map((. dataItem) =>
-              " (+" ++ ((Data.getGrowth(dataType, dataItem) *. 100. |> Js.Float.toFixed) ++ "%)")
+            ->Js.Option.map((. dataItem) =>
+              " (+" ++ ((Data.getGrowth(dataType, dataItem) *. 100.->Js.Float.toFixed) ++ "%)")
             )
-            |> Js.Option.getWithDefault("")
+            ->Js.Option.getWithDefault("")
           (separator ++ Js.Int.toString(R.Line.toInt(payload.value)), growthString)
         | Filters.PercentageGrowthOfCases =>
           let growthString =
             currentDataItem
-            |> Js.Option.map((. dataItem) =>
-              " (+" ++ ((Data.getDailyNewCases(dataItem).confirmed |> Js.Int.toString) ++ ")")
+            ->Js.Option.map((. dataItem) =>
+              " (+" ++ ((Data.getDailyNewCases(dataItem).confirmed->Js.Int.toString) ++ ")")
             )
-            |> Js.Option.getWithDefault("")
+            ->Js.Option.getWithDefault("")
           (
             separator ++
             ("+" ++
-            ((R.Line.toFloat(payload.value) *. 100. |> Js.Float.toFixed) ++ "%")),
+            ((R.Line.toFloat(payload.value) *. 100.->Js.Float.toFixed) ++ "%")),
             growthString,
           )
         | Filters.TotalMortalityRate =>
           let growthString =
             currentDataItem
-            |> Js.Option.map((. dataItem) => {
+            ->Js.Option.map((. dataItem) => {
               let {Data.confirmed: confirmed, deaths} = Data.getRecord(dataItem)
               " (" ++ (Js.Int.toString(deaths) ++ ("/" ++ Js.Int.toString(confirmed)) ++ ")")
             })
-            |> Js.Option.getWithDefault("")
+            ->Js.Option.getWithDefault("")
           (
             separator ++
             (Js.Float.toFixedWithPrecision(R.Line.toFloat(payload.value) *. 100., ~digits=2) ++
@@ -92,7 +92,7 @@ let renderTooltipValues = (~chartType, ~payload, ~separator) =>
       }
     </span>
   })
-  |> React.array
+  ->React.array
 
 @react.component
 let make = (
@@ -133,7 +133,7 @@ let make = (
     let exponent = {
       let threshold = Js.Int.toFloat(threshold)
       let maxValue = calculateMaxValue(Data.Confirmed, locations, data)
-      log((maxValue |> Belt.Int.toFloat) /. threshold) /. log(dailyGrowth) |> Js.Math.ceil
+      log((maxValue->Belt.Int.toFloat) /. threshold) /. log(dailyGrowth)->Js.Math.ceil
     }
     <R.Line
       dot={Dot.bool(false)}
@@ -147,9 +147,9 @@ let make = (
         if item.Data.index <= exponent {
           Js.Null.return(
             Js.Int.toFloat(threshold) *.
-            Js.Math.pow_float(~base=dailyGrowth, ~exp=item.Data.index |> Belt.Int.toFloat)
-            |> int_of_float
-            |> R.Line.int,
+            Js.Math.pow_float(~base=dailyGrowth, ~exp=item.Data.index->Belt.Int.toFloat)
+            ->int_of_float
+            ->R.Line.int,
           )
         } else {
           Js.null
@@ -162,7 +162,7 @@ let make = (
   let divRef = React.useRef(Js.Nullable.null)
   let (dot, setDot) = React.useState(() => true)
   React.useEffect1(() => {
-    let opt = divRef |> React.Ref.current |> Js.Nullable.toOption
+    let opt = divRef->React.Ref.current->Js.Nullable.toOption
     switch opt {
     | Some(ref) => setDot(_ => clientHeight(ref) > 500.)
     | None => ()
@@ -223,7 +223,7 @@ let make = (
                 "stroke": primaryColor,
               })}
             />
-          , locations) |> Js.Array.reverseInPlace |> React.array}
+          , locations)->Js.Array.reverseInPlace->React.array}
           <R.Tooltip
             content={({R.Tooltip.payload: payload, label, separator}) =>
               switch Js.Null.toOption(payload) {
@@ -267,13 +267,13 @@ let make = (
             | (Filters.Number(_), Filters.Logarithmic) => #log
             | _ => #linear
             }}
-            domain=("dataMin" |> R.YAxis.string, "dataMax" |> R.YAxis.string)
+            domain=("dataMin"->R.YAxis.string, "dataMax"->R.YAxis.string)
             tickFormatter={x =>
               switch chartType {
               | Filters.Number(_) => Js.Int.toString(R.Line.toInt(x))
               | Filters.TotalMortalityRate
               | Filters.PercentageGrowthOfCases =>
-                (R.Line.toFloat(x) *. 100. |> Js.Float.toFixed) ++ "%"
+                (R.Line.toFloat(x) *. 100.->Js.Float.toFixed) ++ "%"
               }}
           />
         </R.LineChart>

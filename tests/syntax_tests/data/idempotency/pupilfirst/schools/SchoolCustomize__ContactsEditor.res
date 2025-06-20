@@ -41,12 +41,12 @@ module UpdateSchoolStringErrorHandler = GraphqlErrorHandler.Make(
 )
 
 let handleUpdateContactDetails = (state, send, updateAddressCB, updateEmailAddressCB, event) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
   send(BeginUpdate)
 
   UpdateContactDetailsQuery.make(~address=state.address, ~emailAddress=state.emailAddress, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(result =>
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(result =>
     switch (result["updateAddress"]["errors"], result["updateEmailAddress"]["errors"]) {
     | ([], []) =>
       Notification.success("Done!", "Contact details have been updated.")
@@ -61,12 +61,12 @@ let handleUpdateContactDetails = (state, send, updateAddressCB, updateEmailAddre
       Notification.notice("Partial success!", "We were only able to update the email address.")
       Js.Promise.reject(UpdateSchoolStringErrorHandler.Errors(errors))
     | (addressErrors, emailAddressErrors) =>
-      let errors = addressErrors |> Array.append(emailAddressErrors)
+      let errors = addressErrors->Array.append(emailAddressErrors)
       Js.Promise.reject(UpdateSchoolStringErrorHandler.Errors(errors))
     }
   )
-  |> UpdateSchoolStringErrorHandler.catch(() => send(ErrorOccured))
-  |> ignore
+  ->UpdateSchoolStringErrorHandler.catch(() => send(ErrorOccured))
+  ->ignore
   ()
 }
 
@@ -78,8 +78,8 @@ let updateButtonDisabled = state =>
   }
 
 let initialState = customizations => {
-  address: customizations |> Customizations.address |> OptionUtils.default(""),
-  emailAddress: customizations |> Customizations.emailAddress |> OptionUtils.default(""),
+  address: customizations->Customizations.address->OptionUtils.default(""),
+  emailAddress: customizations->Customizations.emailAddress->OptionUtils.default(""),
   emailAddressInvalid: false,
   updating: false,
   formDirty: false,
@@ -105,14 +105,14 @@ let make = (~customizations, ~updateAddressCB, ~updateEmailAddressCB) => {
 
   <div className="mx-8 pt-8">
     <h5 className="uppercase text-center border-b border-gray-400 pb-2">
-      {"Manage Contact Details" |> str}
+      {"Manage Contact Details"->str}
     </h5>
     <DisablingCover disabled=state.updating>
       <div key="contacts-editor__address-input-group" className="mt-3">
         <label
           className="inline-block tracking-wide text-xs font-semibold"
           htmlFor="contacts-editor__address">
-          {"Contact Address " |> str} <i className="fab fa-markdown text-base" />
+          {"Contact Address "->str} <i className="fab fa-markdown text-base" />
         </label>
         <textarea
           maxLength=1000
@@ -127,7 +127,7 @@ let make = (~customizations, ~updateAddressCB, ~updateEmailAddressCB) => {
         <label
           className="inline-block tracking-wide text-xs font-semibold"
           htmlFor="contacts-editor__email-address">
-          {"Email Address" |> str}
+          {"Email Address"->str}
         </label>
         <input
           type_="text"
@@ -136,7 +136,7 @@ let make = (~customizations, ~updateAddressCB, ~updateEmailAddressCB) => {
           id="contacts-editor__email-address"
           placeholder="Leave the email address empty to hide the footer link."
           onChange={handleInputChange(emailAddress =>
-            send(UpdateEmailAddress(emailAddress, emailAddress |> EmailUtils.isInvalid(true)))
+            send(UpdateEmailAddress(emailAddress, emailAddress->EmailUtils.isInvalid(true)))
           )}
           value=state.emailAddress
         />
@@ -149,7 +149,7 @@ let make = (~customizations, ~updateAddressCB, ~updateEmailAddressCB) => {
         disabled={updateButtonDisabled(state)}
         onClick={handleUpdateContactDetails(state, send, updateAddressCB, updateEmailAddressCB)}
         className="w-full bg-indigo-600 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded focus:outline-none mt-3">
-        {updateContactDetailsButtonText(state.updating) |> str}
+        {updateContactDetailsButtonText(state.updating)->str}
       </button>
     </DisablingCover>
   </div>

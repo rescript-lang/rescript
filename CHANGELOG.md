@@ -10,34 +10,209 @@
 > - :house: [Internal]
 > - :nail_care: [Polish]
 
-# 12.0.0-alpha.10 (Unreleased)
+# 12.0.0-alpha.15 (Unreleased)
+
+#### :bug: Bug fix
+
+- Ignore inferred arity in functions inside `%raw` functions, leaving to `%ffi` the responsibility to check the arity since it gives an error in case of mismatch. https://github.com/rescript-lang/rescript/pull/7542
+- Pass the rewatch exit code through in wrapper script. https://github.com/rescript-lang/rescript/pull/7565
+- Prop punning when types don't match results in I/O error: _none_: No such file or directory. https://github.com/rescript-lang/rescript/pull/7533
+- Pass location to children prop in jsx ppx. https://github.com/rescript-lang/rescript/pull/7540
+
+#### :nail_care: Polish
+
+- Better error message for when trying to await something that is not a promise. https://github.com/rescript-lang/rescript/pull/7561
+
+#### :house: Internal
+
+- Remove `@return(undefined_to_opt)` and `%undefined_to_opt` primitive. https://github.com/rescript-lang/rescript/pull/7462
+
+# 12.0.0-alpha.14
+
+#### :boom: Breaking Change
+
+- `Iterator.forEach` now emits `Iterator.prototype.forEach` call. https://github.com/rescript-lang/rescript/pull/7506
+- Rename functions ending with `Exn` to end with `OrThrow`. The old `Exn` functions are now deprecated:
+  - `Bool.fromStringExn` → `Bool.fromStringOrThrow`
+  - `BigInt.fromStringExn` → `BigInt.fromStringOrThrow`
+  - `JSON.parseExn` → `JSON.parseOrThrow`
+  - Changed `BigInt.fromFloat` to return an option rather than throwing an error.
+  - Added `BigInt.fromFloatOrThrow`
+  - `Option.getExn` → `Option.getOrThrow`
+  - `Null.getExn` → `Null.getOrThrow`
+  - `Nullable.getExn` → `Nullable.getOrThrow`
+  - `Result.getExn` → `Result.getOrThrow`
+  - `List.getExn` → `List.getOrThrow`
+  - `List.tailExn` → `List.tailOrThrow`
+  - `List.headExn` → `List.headOrThrow`
+  - Old functions remain available but are marked as deprecated with guidance to use the new `OrThrow` variants.
+  - https://github.com/rescript-lang/rescript/pull/7518, https://github.com/rescript-lang/rescript/pull/7554
+
+#### :rocket: New Feature
+
+- Add `RegExp.flags`. https://github.com/rescript-lang/rescript/pull/7461
+- Add `Array.findLast`, `Array.findLastWithIndex`, `Array.findLastIndex`, `Array.findLastIndexWithIndex` and `Array.findLastIndexOpt`. https://github.com/rescript-lang/rescript/pull/7503
+- Add `options` argument to `Console.dir`. https://github.com/rescript-lang/rescript/pull/7504
+- Show variant constructor's inline record types on hover. https://github.com/rescript-lang/rescript/pull/7519
+- Add additional `Iterator.prototype` bindings to `runtime/Stdlib_Iterator.res`. https://github.com/rescript-lang/rescript/pull/7506
+
+#### :bug: Bug fix
+
+- `rescript-tools doc` no longer includes shadowed bindings in its output. https://github.com/rescript-lang/rescript/pull/7497
+- Treat `throw` like `raise` in analysis. https://github.com/rescript-lang/rescript/pull/7521
+- Fix `index out of bounds` exception thrown in rare cases by `rescript-editor-analysis.exe codeAction` command. https://github.com/rescript-lang/rescript/pull/7523
+- Don't produce duplicate type definitions for recursive types on hover. https://github.com/rescript-lang/rescript/pull/7524
+- Prop punning when types don't match results in `I/O error: _none_: No such file or directory`. https://github.com/rescript-lang/rescript/pull/7533
+- Fix partial application with user-defined function types. https://github.com/rescript-lang/rescript/pull/7548
+- Fix doc comment before variant throwing syntax error. https://github.com/rescript-lang/rescript/pull/7535
+- Fix apparent non-determinism in generated code for pattern matching. https://github.com/rescript-lang/rescript/pull/7557
+
+#### :nail_care: Polish
+
+- Suggest awaiting promise before using it when types mismatch. https://github.com/rescript-lang/rescript/pull/7498
+- Complete from `RegExp` stdlib module for regexes. https://github.com/rescript-lang/rescript/pull/7425
+- Allow oneliner formatting when including module with single type alias. https://github.com/rescript-lang/rescript/pull/7502
+- Improve error messages for JSX type mismatches, passing objects where record is expected, passing array literal where tuple is expected, and more. https://github.com/rescript-lang/rescript/pull/7500
+- Show in error messages when coercion can be used to fix a type mismatch. https://github.com/rescript-lang/rescript/pull/7505
+- Remove deprecated pipe last (`|>`) syntax. https://github.com/rescript-lang/rescript/pull/7512
+- Improve error message for pipe (`->`) syntax. https://github.com/rescript-lang/rescript/pull/7520
+- Improve a few error messages around various subtyping issues. https://github.com/rescript-lang/rescript/pull/7404
+- In module declarations, accept the invalid syntax `M = {...}` and format it to `M : {...}`. https://github.com/rescript-lang/rescript/pull/7527
+- Improve doc comment formatting to match the style of multiline comments. https://github.com/rescript-lang/rescript/pull/7529
+- Improve error messages around type mismatches for try/catch, if, for, while, and optional record fields + optional function arguments. https://github.com/rescript-lang/rescript/pull/7522
+- Sync reanalyze with the new APIs around exception. https://github.com/rescript-lang/rescript/pull/7536
+- Improve array pattern spread error message. https://github.com/rescript-lang/rescript/pull/7549
+- Sync API docs with rescript-lang.org on release. https://github.com/rescript-lang/rescript/pull/7555
+
+#### :house: Internal
+
+- Refactor the ast for record expressions and patterns. https://github.com/rescript-lang/rescript/pull/7528
+- Editor: add completions from included modules. https://github.com/rescript-lang/rescript/pull/7515
+- Add `-editor-mode` arg to `bsc` for doing special optimizations only relevant to the editor tooling. https://github.com/rescript-lang/rescript/pull/7541
+
+# 12.0.0-alpha.13
+
+#### :boom: Breaking Change
+
+- Rename `JsError` to `JsExn` and error modules cleanup. https://github.com/rescript-lang/rescript/pull/7408
+- Make `BigInt.fromFloat` return an option rather than throwing an error in case it's passed a value with a decimal value. https://github.com/rescript-lang/rescript/pull/7419
+
+#### :rocket: New Feature
+
+- Add shift (`<<`, `>>`, `>>>`) operators for `int` and `bigint`. https://github.com/rescript-lang/rescript/pull/7183
+- Add bitwise AND (`&`) operator for `int` and `bigint`. https://github.com/rescript-lang/rescript/pull/7415
+- Add bitwise NOT (`~`) operator for `int` and `bigint`. https://github.com/rescript-lang/rescript/pull/7418
+- Significantly reduced the download size by splitting binaries into optional platform-specific dependencies (e.g, `@rescript/linux-x64`). https://github.com/rescript-lang/rescript/pull/7395
+- JSX: do not error on ref as prop anymore (which is allowed in React 19). https://github.com/rescript-lang/rescript/pull/7420
+- Add new attribute `@notUndefined` for abstract types to prevent unnecessary wrapping with `Primitive_option.some` in JS output. https://github.com/rescript-lang/rescript/pull/7458
+- Preserve JSX: enable by adding `"-bs-jsx-preserve"` to `"bsc-flags"` (does require `"jsx": { "version": 4 }`). https://github.com/rescript-lang/rescript/pull/7387
+- Add slot prop to `JsxDOM.domProps`. https://github.com/rescript-lang/rescript/pull/7487
+
+#### :bug: Bug fix
+
+- Fix broken `bstracing` CLI location. https://github.com/rescript-lang/rescript/pull/7398
+- Fix field flattening optimization to avoid creating unnecessary copies of allocating constants. https://github.com/rescript-lang/rescript-compiler/pull/7421
+- Fix leading comments removed when braces inside JSX contains `let` assignment. https://github.com/rescript-lang/rescript/pull/7424
+- Fix JSON escaping in code editor analysis: JSON was not always escaped properly, which prevented code actions from being available in certain situations. https://github.com/rescript-lang/rescript/pull/7435
+- Fix regression in pattern matching for optional fields containing variants. https://github.com/rescript-lang/rescript/pull/7440
+- Fix missing checks for duplicate literals in variants with payloads. https://github.com/rescript-lang/rescript/pull/7441
+- Fix printer removing private for empty record. https://github.com/rescript-lang/rescript/pull/7448
+- Fix: handle dynamic imports with module aliases. https://github.com/rescript-lang/rescript/pull/7452
+- Fix missing unescaping when accessing prop with exotic name. https://github.com/rescript-lang/rescript/pull/7469
+- Fix syntax error with mutable nested record. https://github.com/rescript-lang/rescript/pull/7470
+
+#### :house: Internal
+
+- AST: Add bar location to `case`. https://github.com/rescript-lang/rescript/pull/7407
+- Clean up lazy from ASTs and back-end. https://github.com/rescript-lang/rescript/pull/7474
+- Compile runtime with rewatch and add rewatch tests to the compiler repo. https://github.com/rescript-lang/rescript/pull/7422
+
+#### :nail_care: Polish
+
+- In type errors, recommend stdlib over Belt functions for converting between float/int/string. https://github.com/rescript-lang/rescript/pull/7453
+- Remove unused type `Jsx.ref`. https://github.com/rescript-lang/rescript/pull/7459
+- Add `@notUndefined` attribute to all relevant abstract types in `Stdlib`. https://github.com/rescript-lang/rescript/pull/7464
+- Editor: Add pipe completions from current module. https://github.com/rescript-lang/rescript/pull/7471
+
+# 12.0.0-alpha.12
+
+#### :bug: Bug fix
+
+- Fix node.js `ExperimentalWarning`. https://github.com/rescript-lang/rescript/pull/7379
+- Fix issue with gentype and stdlib json. https://github.com/rescript-lang/rescript/pull/7378
+- Fix type of `RegExp.Result.matches`. https://github.com/rescript-lang/rescript/pull/7393
+- Add optional `flags` argument to `RegExp.fromString` and deprecate `RegExp.fromStringWithFlags`. https://github.com/rescript-lang/rescript/pull/7393
+
+#### :house: Internal
+
+- Better representation of JSX in AST. https://github.com/rescript-lang/rescript/pull/7286
+- Clean up default warnings. https://github.com/rescript-lang/rescript/pull/7413
+
+#### :nail_care: Polish
+
+- Improve error message for missing value when the identifier is also the name of a module in scope. https://github.com/rescript-lang/rescript/pull/7384
+- Upgrade Flow parser to 0.267.0. https://github.com/rescript-lang/rescript/pull/7390
+- Move `Lazy` module to Stdlib. https://github.com/rescript-lang/rescript/pull/7399
+
+# 12.0.0-alpha.11
+
+#### :bug: Bug fix
+
+- Fix `Error.fromException`. https://github.com/rescript-lang/rescript/pull/7364
+- Fix signature of `throw`. https://github.com/rescript-lang/rescript/pull/7365
+- Fix formatter adds superfluous parens in pipe chain. https://github.com/rescript-lang/rescript/pull/7370
+
+#### :house: Internal
+
+- Remove `Stdlib_Char` module for now. https://github.com/rescript-lang/rescript/pull/7367
+- Convert internal JavaScript codebase into ESM, ReScript package itself is now ESM (`"type": "module"`). https://github.com/rescript-lang/rescript/pull/6899
+- Add built-in support for the JavaScript `in` operator. https://github.com/rescript-lang/rescript/pull/7342
+- AST cleanup: add `Pexp_await` ast node instead of `res.await` attribute. (The attribute is still used for await on modules currently). https://github.com/rescript-lang/rescript/pull/7368
+
+#### :nail_care: Polish
+
+- More deprecations in `Pervasives`; add `Stdlib.Pair` and `Stdlib.Int.Ref`. https://github.com/rescript-lang/rescript/pull/7371
+
+# 12.0.0-alpha.10
 
 #### :rocket: New Feature
 
 - Add `Dict.has` and double `Dict.forEachWithKey`/`Dict.mapValues` performance. https://github.com/rescript-lang/rescript/pull/7316
-- Add popover attributes to JsxDOM.domProps. https://github.com/rescript-lang/rescript/pull/7317
+- Add popover attributes to `JsxDOM.domProps`. https://github.com/rescript-lang/rescript/pull/7317
+- Add `Array.removeInPlace` helper based on `splice`. https://github.com/rescript-lang/rescript/pull/7321
 - Add `inert` attribute to `JsxDOM.domProps`. https://github.com/rescript-lang/rescript/pull/7326
 - Make reanalyze exception tracking work with the new stdlib. https://github.com/rescript-lang/rescript/pull/7328
-- Fix Pervasive.max using boolean comparison for floats. https://github.com/rescript-lang/rescript/pull/7333
+- Fix `Pervasive.max` using boolean comparison for floats. https://github.com/rescript-lang/rescript/pull/7333
+- Experimental: Support nested/inline record types - records defined inside of other records, without needing explicit separate type definitions. https://github.com/rescript-lang/rescript/pull/7241
+- Add unified exponentiation (`**`) operator for numeric types using ES7 `**`. https://github.com/rescript-lang/rescript-compiler/pull/7153
+- Rename `raise` to `throw` to align with JavaScript vocabulary. `raise` has been deprecated. https://github.com/rescript-lang/rescript/pull/7346
+- Add unified bitwise (`^`) operator. https://github.com/rescript-lang/rescript/pull/7216
+- Stdlib: rename binary operations to match JavaScript terms. https://github.com/rescript-lang/rescript/pull/7353
 
 #### :boom: Breaking Change
 
-- Replace ~date with ~day in Date.make\*. https://github.com/rescript-lang/rescript/pull/7324
+- Replace `~date` with `~day` in `Date.make`. https://github.com/rescript-lang/rescript/pull/7324
 - Remove `-bs-jsx-mode`. https://github.com/rescript-lang/rescript/pull/7327
+- Drop Node.js version <20 support, as it is reaching End-of-Life. https://github.com/rescript-lang/rescript-compiler/pull/7354
+- Treat `int` multiplication as a normal int32 operation instead of using `Math.imul`. https://github.com/rescript-lang/rescript/pull/7358
 
 #### :house: Internal
 
 - Clean up legacy tags handling. https://github.com/rescript-lang/rescript/pull/7309
+- Use Yarn (Berry) workspaces for internal tooling. https://github.com/rescript-lang/rescript/pull/7309
 
 #### :nail_care: Polish
 
-- Deprecate JSON.Classify.classify. https://github.com/rescript-lang/rescript/pull/7315
+- Deprecate `JSON.Classify.classify`. https://github.com/rescript-lang/rescript/pull/7315
 - Hide stdlib modules in output. https://github.com/rescript-lang/rescript/pull/7305
 - Deprecate unsafe host-specific bindings from stdlib. https://github.com/rescript-lang/rescript/pull/7334
+- Make unsafe function names consistent in `Stdlib.String`. https://github.com/rescript-lang/rescript/pull/7337
+- `rescript` package does not trigger `postinstall` script anymore. https://github.com/rescript-lang/rescript/pull/7350
+- Add Stdlib `Bool` and `Char` modules and improve Pervasives deprecation messages. https://github.com/rescript-lang/rescript/pull/7361
 
 #### :bug: Bug fix
 
-- Fix recursive untagged variant type checking by delaying well-formedness checks until environment construction completes. [#7320](https://github.com/rescript-lang/rescript/pull/7320)
+- Fix recursive untagged variant type checking by delaying well-formedness checks until environment construction completes. https://github.com/rescript-lang/rescript/pull/7320
 - Fix incorrect expansion of polymorphic return types in uncurried function applications. https://github.com/rescript-lang/rescript/pull/7338
 
 # 12.0.0-alpha.9

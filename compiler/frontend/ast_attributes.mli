@@ -59,8 +59,6 @@ val get_index : attr
 
 val set : attr
 
-val bs_return_undefined : attr
-
 val internal_expansive : attr
 (* val deprecated : string -> attr *)
 

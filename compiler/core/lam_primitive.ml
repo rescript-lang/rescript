@@ -46,6 +46,7 @@ type t =
       arg_types: External_arg_spec.params;
       ffi: External_ffi_types.external_spec;
       dynamic_import: bool;
+      transformed_jsx: bool;
     }
   | Pjs_object_create of External_arg_spec.obj_params
   (* Exceptions *)
@@ -73,9 +74,11 @@ type t =
   | Pmulint
   | Pdivint
   | Pmodint
+  | Ppowint
   | Pandint
   | Porint
   | Pxorint
+  | Pnotint
   | Plslint
   | Plsrint
   | Pasrint
@@ -94,6 +97,7 @@ type t =
   | Pmulfloat
   | Pdivfloat
   | Pmodfloat
+  | Ppowfloat
   | Pfloatcomp of Lam_compat.comparison
   | Pfloatorder
   | Pfloatmin
@@ -109,6 +113,7 @@ type t =
   | Pandbigint
   | Porbigint
   | Pxorbigint
+  | Pnotbigint
   | Plslbigint
   | Pasrbigint
   | Pbigintcomp of Lam_compat.comparison
@@ -135,6 +140,7 @@ type t =
   | Pmakelist
   (* dict primitives *)
   | Pmakedict
+  | Pdict_has
   (* promise *)
   | Pawait
   (* etc or deprecated *)
@@ -155,7 +161,6 @@ type t =
      play safe first
   *)
   | Pjs_fn_method
-  | Pundefined_to_opt
   | Pnull_to_opt
   | Pnull_undefined_to_opt
   | Pis_null
@@ -197,33 +202,33 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
   (* bool primitives *)
   | Psequand | Psequor | Pnot | Pboolcomp _ | Pboolorder | Pboolmin | Pboolmax
   (* int primitives *)
-  | Pisint | Pnegint | Paddint | Psubint | Pmulint | Pdivint | Pmodint | Pandint
-  | Porint | Pxorint | Plslint | Plsrint | Pasrint | Pintorder | Pintmin
-  | Pintmax
+  | Pisint | Pnegint | Paddint | Psubint | Pmulint | Pdivint | Pmodint | Ppowint
+  | Pnotint | Pandint | Porint | Pxorint | Plslint | Plsrint | Pasrint
+  | Pintorder | Pintmin | Pintmax
   (* float primitives *)
   | Pintoffloat | Pfloatofint | Pnegfloat | Paddfloat | Psubfloat | Pmulfloat
-  | Pdivfloat | Pmodfloat | Pfloatorder | Pfloatmin | Pfloatmax
+  | Pdivfloat | Pmodfloat | Ppowfloat | Pfloatorder | Pfloatmin | Pfloatmax
   (* bigint primitives *)
   | Pnegbigint | Paddbigint | Psubbigint | Pmulbigint | Pdivbigint | Pmodbigint
-  | Ppowbigint | Pandbigint | Porbigint | Pxorbigint | Plslbigint | Pasrbigint
-  | Pbigintorder | Pbigintmin | Pbigintmax
+  | Ppowbigint | Pnotbigint | Pandbigint | Porbigint | Pxorbigint | Plslbigint
+  | Pasrbigint | Pbigintorder | Pbigintmin | Pbigintmax
   (* string primitives *)
   | Pstringlength | Pstringrefu | Pstringrefs | Pstringadd | Pstringcomp _
   | Pstringorder | Pstringmin | Pstringmax
   (* List primitives *)
   | Pmakelist
   (* dict primitives *)
-  | Pmakedict
+  | Pmakedict | Pdict_has
   (* promise *)
   | Pawait
   (* etc *)
   | Pjs_apply | Pjs_runtime_apply | Pval_from_option | Pval_from_option_not_nest
-  | Pundefined_to_opt | Pnull_to_opt | Pnull_undefined_to_opt | Pis_null
-  | Pis_not_none | Psome | Psome_not_nest | Pis_undefined | Pis_null_undefined
-  | Pimport | Ptypeof | Pfn_arity | Pis_poly_var_block | Pdebugger | Pinit_mod
-  | Pupdate_mod | Pduprecord | Pmakearray | Parraylength | Parrayrefu
-  | Parraysetu | Parrayrefs | Parraysets | Pjs_fn_make_unit | Pjs_fn_method
-  | Phash | Phash_mixstring | Phash_mixint | Phash_finalmix ->
+  | Pnull_to_opt | Pnull_undefined_to_opt | Pis_null | Pis_not_none | Psome
+  | Psome_not_nest | Pis_undefined | Pis_null_undefined | Pimport | Ptypeof
+  | Pfn_arity | Pis_poly_var_block | Pdebugger | Pinit_mod | Pupdate_mod
+  | Pduprecord | Pmakearray | Parraylength | Parrayrefu | Parraysetu
+  | Parrayrefs | Parraysets | Pjs_fn_make_unit | Pjs_fn_method | Phash
+  | Phash_mixstring | Phash_mixint | Phash_finalmix ->
     rhs = lhs
   | Pcreate_extension a -> (
     match rhs with
@@ -247,7 +252,7 @@ let eq_primitive_approx (lhs : t) (rhs : t) =
     | Pmakeblock (i1, info1, flag1) ->
       i0 = i1 && flag0 = flag1 && eq_tag_info info0 info1
     | _ -> false)
-  | Pjs_call {prim_name; arg_types; ffi; dynamic_import} -> (
+  | Pjs_call {prim_name; arg_types; ffi; dynamic_import; _} -> (
     match rhs with
     | Pjs_call rhs ->
       prim_name = rhs.prim_name && arg_types = rhs.arg_types && ffi = rhs.ffi

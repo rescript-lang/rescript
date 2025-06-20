@@ -11,15 +11,15 @@ type props = {
 let decodeProps = json => {
   open Json.Decode
   {
-    courseId: json |> field("courseId", string),
-    courseCoachIds: json |> field("courseCoachIds", array(string)),
-    schoolCoaches: json |> field("schoolCoaches", array(Coach.decode)),
-    levels: json |> field("levels", array(Level.decode)),
-    studentTags: json |> field("studentTags", array(string)),
+    courseId: json->field("courseId", string),
+    courseCoachIds: json->field("courseCoachIds", array(string)),
+    schoolCoaches: json->field("schoolCoaches", array(Coach.decode)),
+    levels: json->field("levels", array(Level.decode)),
+    studentTags: json->field("studentTags", array(string)),
   }
 }
 
-let props = DomUtils.parseJsonTag(~id="sa-students-panel-data", ()) |> decodeProps
+let props = DomUtils.parseJsonTag(~id="sa-students-panel-data", ())->decodeProps
 
 ReactDOMRe.renderToElementWithId(
   <StudentsEditor__Root

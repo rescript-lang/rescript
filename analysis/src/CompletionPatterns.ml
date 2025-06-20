@@ -46,7 +46,6 @@ and traversePattern (pat : Parsetree.pattern) ~patternPath ~locHasCursor
   in
   match pat.ppat_desc with
   | Ppat_constant _ | Ppat_interval _ -> None
-  | Ppat_lazy p
   | Ppat_constraint (p, _)
   | Ppat_alias (p, _)
   | Ppat_exception p
@@ -111,24 +110,21 @@ and traversePattern (pat : Parsetree.pattern) ~patternPath ~locHasCursor
   | Ppat_record (fields, _) -> (
     let fieldWithCursor = ref None in
     let fieldWithPatHole = ref None in
-    fields
-    |> List.iter (fun (fname, f, _) ->
-           match
-             ( fname.Location.txt,
-               f.Parsetree.ppat_loc
-               |> CursorPosition.classifyLoc ~pos:posBeforeCursor )
-           with
-           | Longident.Lident fname, HasCursor ->
-             fieldWithCursor := Some (fname, f)
-           | Lident fname, _ when isPatternHole f ->
-             fieldWithPatHole := Some (fname, f)
-           | _ -> ());
+    Ext_list.iter fields (fun {lid = fname; x = f} ->
+        match
+          ( fname.Location.txt,
+            f.Parsetree.ppat_loc
+            |> CursorPosition.classifyLoc ~pos:posBeforeCursor )
+        with
+        | Longident.Lident fname, HasCursor -> fieldWithCursor := Some (fname, f)
+        | Lident fname, _ when isPatternHole f ->
+          fieldWithPatHole := Some (fname, f)
+        | _ -> ());
     let seenFields =
-      fields
-      |> List.filter_map (fun (fieldName, _f, _) ->
-             match fieldName with
-             | {Location.txt = Longident.Lident fieldName} -> Some fieldName
-             | _ -> None)
+      Ext_list.filter_map fields (fun {lid = fieldName} ->
+          match fieldName with
+          | {Location.txt = Longident.Lident fieldName} -> Some fieldName
+          | _ -> None)
     in
     match (!fieldWithCursor, !fieldWithPatHole) with
     | Some (fname, f), _ | None, Some (fname, f) -> (

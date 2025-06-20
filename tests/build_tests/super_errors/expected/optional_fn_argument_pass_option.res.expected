@@ -1,0 +1,18 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/optional_fn_argument_pass_option.res[0m:[2m5:18[0m
+
+  3 [2m│[0m let t = Some(1)
+  4 [2m│[0m 
+  [1;31m5[0m [2m│[0m let f = optFn(~x=[1;31mt[0m)
+  6 [2m│[0m 
+
+  This has type: [1;31moption<int>[0m
+  But this optional function argument [1;33m~x[0m is expecting: [1;33mint[0m
+  
+  You're passing an optional value into an optional function argument.
+  Values passed to an optional function argument don't need to be wrapped in an option. You might need to adjust the type of the value supplied.
+       
+  Possible solutions: 
+  - Unwrap the option from the value you're passing in
+  - If you really do want to pass the optional value, prepend the value with [1;33m?[0m to show you want to pass the option, like: [1;33m?t[0m

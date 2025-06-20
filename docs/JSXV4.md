@@ -5,7 +5,7 @@ The V4 representation is part of the spec, so `@react.component` is effectively 
 
 ## Turn On V4
 
-To build an entire project in V4 mode, including all its dependencies, use the new `"jsx"` configuration in `bsconfig.json` instead of the old `"reason"`:
+To build an entire project in V4 mode, including all its dependencies, use the new `"jsx"` configuration in `rescript.json` instead of the old `"reason"`:
 
 ```json
 "jsx": { "version": 4 }

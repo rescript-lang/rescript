@@ -6,7 +6,7 @@ import * as Belt_Option from "rescript/lib/es6/Belt_Option.js";
 import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 function computeArea(param) {
-  return Math.imul(Math.imul(param.x, param.y), Belt_Option.mapWithDefault(param.z, 1, n => n));
+  return (param.x * param.y | 0) * Belt_Option.mapWithDefault(param.z, 1, n => n) | 0;
 }
 
 function coord2d(x, y) {
@@ -80,11 +80,11 @@ let someBusiness2 = {
 };
 
 function computeArea3(o) {
-  return Math.imul(Math.imul(o.x, o.y), Belt_Option.mapWithDefault(Primitive_option.fromNullable(o.z), 1, n => n));
+  return (o.x * o.y | 0) * Belt_Option.mapWithDefault(Primitive_option.fromNullable(o.z), 1, n => n) | 0;
 }
 
 function computeArea4(o) {
-  return Math.imul(Math.imul(o.x, o.y), Belt_Option.mapWithDefault(o.z, 1, n => n));
+  return (o.x * o.y | 0) * Belt_Option.mapWithDefault(o.z, 1, n => n) | 0;
 }
 
 function testMyRec(x) {

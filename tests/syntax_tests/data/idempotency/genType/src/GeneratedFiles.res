@@ -31,7 +31,7 @@ let readLines = (file: string): list<string> => {
   } catch {
   | End_of_file =>
     close_in(chan)
-    lines.contents |> List.rev
+    lines.contents->List.rev
   }
   finished_lines
 }
@@ -49,12 +49,12 @@ let writeFileIfRequired = (~outputFile, ~fileContents) =>
     let oldContents = readFile(outputFile)
     let identical = oldContents == fileContents
     if identical {
-      outputFile |> logFileAction(Identical)
+      outputFile->logFileAction(Identical)
     } else {
-      outputFile |> logFileAction(Replace)
+      outputFile->logFileAction(Replace)
       writeFile(outputFile, fileContents)
     }
   } else {
-    outputFile |> logFileAction(Write)
+    outputFile->logFileAction(Write)
     writeFile(outputFile, fileContents)
   }

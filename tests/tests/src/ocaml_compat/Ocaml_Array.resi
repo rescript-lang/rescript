@@ -80,8 +80,7 @@ let sub: (array<'a>, int, int) => array<'a>
 
 /** [Array.copy a] returns a copy of [a], that is, a fresh array
    containing the same elements as [a]. */
-@deprecated("Use Core instead. This will be removed in v13")
-@send
+@deprecated("Use Core instead. This will be removed in v13") @send
 external copy: array<'a> => array<'a> = "slice"
 
 /** [Array.fill a ofs len x] modifies the array [a] in place,

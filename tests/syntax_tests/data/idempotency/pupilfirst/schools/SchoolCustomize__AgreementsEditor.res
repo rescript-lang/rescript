@@ -60,12 +60,12 @@ let handleUpdateAgreement = (
   updateTermsOfUseCB,
   event,
 ) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
   send(BeginUpdate)
 
-  UpdateSchoolStringQuery.make(~key=kind |> kindToKey, ~value=state.agreement, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(result =>
+  UpdateSchoolStringQuery.make(~key=kind->kindToKey, ~value=state.agreement, ())
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(result =>
     switch result["updateSchoolString"]["errors"] {
     | [] =>
       Notification.success("Done!", kindToString(kind) ++ " has been updated.")
@@ -78,8 +78,8 @@ let handleUpdateAgreement = (
     | errors => Js.Promise.reject(UpdateSchoolStringErrorHandler.Errors(errors))
     }
   )
-  |> UpdateSchoolStringErrorHandler.catch(() => send(ErrorOccured))
-  |> ignore
+  ->UpdateSchoolStringErrorHandler.catch(() => send(ErrorOccured))
+  ->ignore
   ()
 }
 
@@ -87,8 +87,8 @@ let updateAgreementDisabled = state => !state.formDirty
 
 let initialState = (kind, customizations) => {
   let agreement = switch kind {
-  | PrivacyPolicy => customizations |> Customizations.privacyPolicy
-  | TermsOfUse => customizations |> Customizations.termsOfUse
+  | PrivacyPolicy => customizations->Customizations.privacyPolicy
+  | TermsOfUse => customizations->Customizations.termsOfUse
   }
 
   {
@@ -114,14 +114,14 @@ let make = (~kind, ~customizations, ~updatePrivacyPolicyCB, ~updateTermsOfUseCB)
   let (state, send) = React.useReducer(reducer, initialState(kind, customizations))
   <div className="mx-8 pt-8 flex flex-col agreements-editor__container">
     <h5 className="uppercase text-center border-b border-gray-400 pb-2">
-      {"Manage " ++ (kind |> kindToString) |> str}
+      {"Manage " ++ (kind->kindToString)->str}
     </h5>
     <DisablingCover disabled=state.updating containerClasses="flex flex-col flex-1">
       <div key="agreements-editor__input-group" className="mt-3 flex flex-col flex-1">
         <label
           className="inline-block tracking-wide text-xs font-semibold"
           htmlFor="agreements-editor__value">
-          {"Body of Agreement " |> str} <i className="fab fa-markdown text-base" />
+          {"Body of Agreement "->str} <i className="fab fa-markdown text-base" />
         </label>
         <textarea
           maxLength=10000
@@ -143,7 +143,7 @@ let make = (~kind, ~customizations, ~updatePrivacyPolicyCB, ~updateTermsOfUseCB)
           updateTermsOfUseCB,
         )}
         className="w-full btn btn-large btn-primary mt-4">
-        {updateAgreementText(state.updating, kind) |> str}
+        {updateAgreementText(state.updating, kind)->str}
       </button>
     </DisablingCover>
   </div>

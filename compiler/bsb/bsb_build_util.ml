@@ -172,7 +172,7 @@ let rec walk_all_deps_aux (visited : string Hash_string.t) (paths : string list)
               "package name is expected to be %s but got %s" s str);
         str
       | Some _ | None ->
-        Bsb_exception.errorf ~loc "package name missing in %s/bsconfig.json" dir
+        Bsb_exception.errorf ~loc "package name missing in %s/rescript.json" dir
     in
     if Ext_list.mem_string paths cur_package_name then (
       Bsb_log.error "@{<error>Cyclic dependencies in package stack@}@.";

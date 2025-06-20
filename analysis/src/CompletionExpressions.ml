@@ -59,23 +59,21 @@ let rec traverseExpr (exp : Parsetree.expression) ~exprPath ~pos
   | Pexp_record (fields, _) -> (
     let fieldWithCursor = ref None in
     let fieldWithExprHole = ref None in
-    fields
-    |> List.iter (fun (fname, exp, _) ->
-           match
-             ( fname.Location.txt,
-               exp.Parsetree.pexp_loc |> CursorPosition.classifyLoc ~pos )
-           with
-           | Longident.Lident fname, HasCursor ->
-             fieldWithCursor := Some (fname, exp)
-           | Lident fname, _ when isExprHole exp ->
-             fieldWithExprHole := Some (fname, exp)
-           | _ -> ());
+    Ext_list.iter fields (fun {lid = fname; x = exp} ->
+        match
+          ( fname.Location.txt,
+            exp.Parsetree.pexp_loc |> CursorPosition.classifyLoc ~pos )
+        with
+        | Longident.Lident fname, HasCursor ->
+          fieldWithCursor := Some (fname, exp)
+        | Lident fname, _ when isExprHole exp ->
+          fieldWithExprHole := Some (fname, exp)
+        | _ -> ());
     let seenFields =
-      fields
-      |> List.filter_map (fun (fieldName, _f, _) ->
-             match fieldName with
-             | {Location.txt = Longident.Lident fieldName} -> Some fieldName
-             | _ -> None)
+      Ext_list.filter_map fields (fun {lid = fieldName} ->
+          match fieldName with
+          | {Location.txt = Longident.Lident fieldName} -> Some fieldName
+          | _ -> None)
     in
     match (!fieldWithCursor, !fieldWithExprHole) with
     | Some (fname, f), _ | None, Some (fname, f) -> (

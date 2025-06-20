@@ -57,9 +57,9 @@ let tuple_type_pair ?loc kind arity =
         result )
     | [] -> assert false
 
-let re_id = Ast_literal.Lid.js_re_id
+let regexp_id = Ast_literal.Lid.regexp_id
 
-let to_js_re_type loc = Typ.constr ~loc {txt = re_id; loc} []
+let to_regexp_type loc = Typ.constr ~loc {txt = regexp_id; loc} []
 
 let to_undefined_type loc x =
   Typ.constr ~loc {txt = Ast_literal.Lid.js_undefined; loc} [x]

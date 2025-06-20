@@ -98,7 +98,7 @@ module CloseButton = {
 let make = (~children, ~onBackdropClick=?, ()) => {
   let (transitionIn, setTransitionIn) = React.useState(() => false)
   React.useEffect0(() => {
-    Js.Global.setTimeout(() => setTransitionIn(_ => true), 20) |> ignore
+    Js.Global.setTimeout(() => setTransitionIn(_ => true), 20)->ignore
     None
   })
 

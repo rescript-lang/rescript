@@ -19,7 +19,12 @@
 @val external debug6: ('a, 'b, 'c, 'd, 'e, 'f) => unit = "console.debug"
 @val @variadic external debugMany: array<_> => unit = "console.debug"
 
-@val external dir: 'a => unit = "console.dir"
+type dirOptions = {
+  colors?: bool,
+  depth?: Stdlib_Nullable.t<int>,
+  showHidden?: bool,
+}
+@val external dir: ('a, ~options: dirOptions=?) => unit = "console.dir"
 @val external dirxml: 'a => unit = "console.dirxml"
 
 @val external error: 'a => unit = "console.error"

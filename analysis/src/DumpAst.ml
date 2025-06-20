@@ -103,13 +103,12 @@ let rec printPattern pattern ~pos ~indentation =
     "Ppat_record(\n"
     ^ addIndentation (indentation + 1)
     ^ "fields:\n"
-    ^ (fields
-      |> List.map (fun ((Location.{txt} as loc), pat, _) ->
-             addIndentation (indentation + 2)
-             ^ (loc |> printLocDenominatorLoc ~pos)
-             ^ (Utils.flattenLongIdent txt |> ident |> str)
-             ^ ": "
-             ^ printPattern pat ~pos ~indentation:(indentation + 2))
+    ^ (Ext_list.map fields (fun {lid; x = pat} ->
+           addIndentation (indentation + 2)
+           ^ (lid |> printLocDenominatorLoc ~pos)
+           ^ (Utils.flattenLongIdent lid.txt |> ident |> str)
+           ^ ": "
+           ^ printPattern pat ~pos ~indentation:(indentation + 2))
       |> String.concat "\n")
     ^ "\n" ^ addIndentation indentation ^ ")"
   | Ppat_tuple patterns ->
@@ -244,13 +243,12 @@ and printExprItem expr ~pos ~indentation =
     "Pexp_record(\n"
     ^ addIndentation (indentation + 1)
     ^ "fields:\n"
-    ^ (fields
-      |> List.map (fun ((Location.{txt} as loc), expr, _) ->
-             addIndentation (indentation + 2)
-             ^ (loc |> printLocDenominatorLoc ~pos)
-             ^ (Utils.flattenLongIdent txt |> ident |> str)
-             ^ ": "
-             ^ printExprItem expr ~pos ~indentation:(indentation + 2))
+    ^ (Ext_list.map fields (fun {lid; x = expr} ->
+           addIndentation (indentation + 2)
+           ^ (lid |> printLocDenominatorLoc ~pos)
+           ^ (Utils.flattenLongIdent lid.txt |> ident |> str)
+           ^ ": "
+           ^ printExprItem expr ~pos ~indentation:(indentation + 2))
       |> String.concat "\n")
     ^ "\n" ^ addIndentation indentation ^ ")"
   | Pexp_tuple exprs ->

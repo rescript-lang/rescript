@@ -1,8 +1,11 @@
 {
-  "name": "termination",
-  "version": "0.1.0",
+  "name": "@tests/reanalyze-termination",
   "private": true,
-  "devDependencies": {
-    "rescript": "file:../../../.."
+  "scripts": {
+    "build": "rescript",
+    "clean": "rescript clean -with-deps"
+  },
+  "dependencies": {
+    "rescript": "workspace:^"
   }
 }

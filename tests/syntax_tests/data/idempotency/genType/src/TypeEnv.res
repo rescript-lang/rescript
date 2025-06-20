@@ -20,7 +20,7 @@ and entry =
   | Type(string)
 
 let createTypeEnv = (~name, parent) => {
-  let moduleItem = Runtime.moduleItemGen() |> Runtime.newModuleItem(~name)
+  let moduleItem = Runtime.moduleItemGen()->Runtime.newModuleItem(~name)
   {
     componentModuleItem: moduleItem,
     map: StringMap.empty,
@@ -33,51 +33,51 @@ let createTypeEnv = (~name, parent) => {
   }
 }
 
-let root = () => None |> createTypeEnv(~name="__root__")
+let root = () => None->createTypeEnv(~name="__root__")
 
 let toString = typeEnv => typeEnv.name
 
 let newModule = (~name, typeEnv) => {
   if Debug.typeEnv.contents {
-    Log_.item("TypeEnv.newModule %s %s\n", typeEnv |> toString, name)
+    Log_.item("TypeEnv.newModule %s %s\n", typeEnv->toString, name)
   }
-  let newTypeEnv = Some(typeEnv) |> createTypeEnv(~name)
-  typeEnv.map = typeEnv.map |> StringMap.add(name, Module(newTypeEnv))
+  let newTypeEnv = Some(typeEnv)->createTypeEnv(~name)
+  typeEnv.map = typeEnv.map->StringMap.add(name, Module(newTypeEnv))
   newTypeEnv
 }
 
 let newModuleType = (~name, ~signature, typeEnv) => {
   if Debug.typeEnv.contents {
-    Log_.item("TypeEnv.newModuleType %s %s\n", typeEnv |> toString, name)
+    Log_.item("TypeEnv.newModuleType %s %s\n", typeEnv->toString, name)
   }
-  let newTypeEnv = Some(typeEnv) |> createTypeEnv(~name)
-  typeEnv.mapModuleTypes = typeEnv.mapModuleTypes |> StringMap.add(name, (signature, newTypeEnv))
+  let newTypeEnv = Some(typeEnv)->createTypeEnv(~name)
+  typeEnv.mapModuleTypes = typeEnv.mapModuleTypes->StringMap.add(name, (signature, newTypeEnv))
   newTypeEnv
 }
 
 let newType = (~name, typeEnv) => {
   if Debug.typeEnv.contents {
-    Log_.item("TypeEnv.newType %s %s\n", typeEnv |> toString, name)
+    Log_.item("TypeEnv.newType %s %s\n", typeEnv->toString, name)
   }
-  typeEnv.map = typeEnv.map |> StringMap.add(name, Type(name))
+  typeEnv.map = typeEnv.map->StringMap.add(name, Type(name))
 }
 
 let getModule = (~name, typeEnv) =>
-  switch typeEnv.map |> StringMap.find(name) {
+  switch typeEnv.map->StringMap.find(name) {
   | Module(typeEnv1) => Some(typeEnv1)
   | Type(_) => None
   | exception Not_found => None
   }
 
 let expandAliasToExternalModule = (~name, typeEnv) =>
-  switch typeEnv |> getModule(~name) {
+  switch typeEnv->getModule(~name) {
   | Some({moduleEquation: Some({internal: false, dep})}) =>
     if Debug.typeEnv.contents {
       Log_.item(
         "TypeEnv.expandAliasToExternalModule %s %s aliased to %s\n",
-        typeEnv |> toString,
+        typeEnv->toString,
         name,
-        dep |> depToString,
+        dep->depToString,
       )
     }
     Some(dep)
@@ -88,9 +88,9 @@ let addModuleEquation = (~dep, ~internal, typeEnv) => {
   if Debug.typeEnv.contents {
     Log_.item(
       "Typenv.addModuleEquation %s %s dep:%s\n",
-      typeEnv |> toString,
+      typeEnv->toString,
       internal ? "Internal" : "External",
-      dep |> depToString,
+      dep->depToString,
     )
   }
   typeEnv.moduleEquation = Some({internal: internal, dep: dep})
@@ -100,15 +100,15 @@ let rec addTypeEquation = (~flattened, ~type_, typeEnv) =>
   switch flattened {
   | list{name} => {
       ...typeEnv,
-      typeEquations: typeEnv.typeEquations |> StringMap.add(name, type_),
+      typeEquations: typeEnv.typeEquations->StringMap.add(name, type_),
     }
   | list{moduleName, ...rest} =>
-    switch typeEnv |> getModule(~name=moduleName) {
+    switch typeEnv->getModule(~name=moduleName) {
     | Some(typeEnv1) => {
         ...typeEnv,
-        map: typeEnv.map |> StringMap.add(
+        map: typeEnv.map->StringMap.add(
           moduleName,
-          Module(typeEnv1 |> addTypeEquation(~flattened=rest, ~type_)),
+          Module(typeEnv1->addTypeEquation(~flattened=rest, ~type_)),
         ),
       }
     | None => typeEnv
@@ -117,23 +117,23 @@ let rec addTypeEquation = (~flattened, ~type_, typeEnv) =>
   }
 
 let addTypeEquations = (~typeEquations, typeEnv) =>
-  typeEquations |> List.fold_left(
+  typeEquations->List.fold_left(
     (te, (longIdent, type_)) =>
-      te |> addTypeEquation(~flattened=longIdent |> Longident.flatten, ~type_),
+      te->addTypeEquation(~flattened=longIdent->Longident.flatten, ~type_),
     typeEnv,
   )
 
 let applyTypeEquations = (~config, ~path, typeEnv) =>
   switch path {
   | Path.Pident(id) =>
-    switch typeEnv.typeEquations |> StringMap.find(id |> Ident.name) {
+    switch typeEnv.typeEquations->StringMap.find(id->Ident.name) {
     | type_ =>
       if Debug.typeResolution.contents {
         Log_.item(
           "Typenv.applyTypeEquations %s name:%s type_:%s\n",
-          typeEnv |> toString,
-          id |> Ident.name,
-          type_ |> EmitType.typeToString(~config, ~typeNameIsInterface=_ => false),
+          typeEnv->toString,
+          id->Ident.name,
+          type_->EmitType.typeToString(~config, ~typeNameIsInterface=_ => false),
         )
       }
 
@@ -144,12 +144,12 @@ let applyTypeEquations = (~config, ~path, typeEnv) =>
   }
 
 let rec lookup = (~name, typeEnv) =>
-  switch typeEnv.map |> StringMap.find(name) {
+  switch typeEnv.map->StringMap.find(name) {
   | _ => Some(typeEnv)
   | exception Not_found =>
     switch typeEnv.parent {
     | None => None
-    | Some(parent) => parent |> lookup(~name)
+    | Some(parent) => parent->lookup(~name)
     }
   }
 
@@ -159,29 +159,29 @@ let rec lookupModuleType = (~path, typeEnv) =>
     if Debug.typeEnv.contents {
       Log_.item(
         "Typenv.lookupModuleType %s moduleTypeName:%s\n",
-        typeEnv |> toString,
+        typeEnv->toString,
         moduleTypeName,
       )
     }
-    switch typeEnv.mapModuleTypes |> StringMap.find(moduleTypeName) {
+    switch typeEnv.mapModuleTypes->StringMap.find(moduleTypeName) {
     | x => Some(x)
     | exception Not_found =>
       switch typeEnv.parent {
       | None => None
-      | Some(parent) => parent |> lookupModuleType(~path)
+      | Some(parent) => parent->lookupModuleType(~path)
       }
     }
   | list{moduleName, ...path1} =>
     if Debug.typeEnv.contents {
-      Log_.item("Typenv.lookupModuleType %s moduleName:%s\n", typeEnv |> toString, moduleName)
+      Log_.item("Typenv.lookupModuleType %s moduleName:%s\n", typeEnv->toString, moduleName)
     }
-    switch typeEnv.map |> StringMap.find(moduleName) {
-    | Module(typeEnv1) => typeEnv1 |> lookupModuleType(~path=path1)
+    switch typeEnv.map->StringMap.find(moduleName) {
+    | Module(typeEnv1) => typeEnv1->lookupModuleType(~path=path1)
     | Type(_) => None
     | exception Not_found =>
       switch typeEnv.parent {
       | None => None
-      | Some(parent) => parent |> lookupModuleType(~path)
+      | Some(parent) => parent->lookupModuleType(~path)
       }
     }
   | list{} => None
@@ -189,21 +189,21 @@ let rec lookupModuleType = (~path, typeEnv) =>
 
 let rec pathToList = path =>
   switch path {
-  | Path.Pident(id) => list{id |> Ident.name}
-  | Path.Pdot(p, s, _) => list{s, ...p |> pathToList}
+  | Path.Pident(id) => list{id->Ident.name}
+  | Path.Pdot(p, s, _) => list{s, ...p->pathToList}
   | Path.Papply(_) => list{}
   }
 
 let lookupModuleTypeSignature = (~path, typeEnv) => {
   if Debug.typeEnv.contents {
-    Log_.item("TypeEnv.lookupModuleTypeSignature %s %s\n", typeEnv |> toString, path |> Path.name)
+    Log_.item("TypeEnv.lookupModuleTypeSignature %s %s\n", typeEnv->toString, path->Path.name)
   }
 
-  typeEnv |> lookupModuleType(~path=path |> pathToList |> List.rev)
+  typeEnv->lookupModuleType(~path=path->pathToList->List.rev)
 }
 
 let getNestedModuleName = typeEnv =>
-  typeEnv.parent == None ? None : Some(typeEnv.name |> ModuleName.fromStringUnsafe)
+  typeEnv.parent == None ? None : Some(typeEnv.name->ModuleName.fromStringUnsafe)
 
 let updateModuleItem = (~nameOpt=None, ~moduleItem, typeEnv) => {
   switch nameOpt {
@@ -215,26 +215,26 @@ let updateModuleItem = (~nameOpt=None, ~moduleItem, typeEnv) => {
 
 let rec addModulePath = (~typeEnv, name) =>
   switch typeEnv.parent {
-  | None => name |> ResolvedName.fromString
-  | Some(parent) => typeEnv.name |> addModulePath(~typeEnv=parent) |> ResolvedName.dot(name)
+  | None => name->ResolvedName.fromString
+  | Some(parent) => typeEnv.name->addModulePath(~typeEnv=parent)->ResolvedName.dot(name)
   }
 
 let rec getModuleEquations = (typeEnv): list<ResolvedName.eq> => {
   let subEquations =
     typeEnv.map
-    |> StringMap.bindings
-    |> List.map(((_, entry)) =>
+    ->StringMap.bindings
+    ->List.map(((_, entry)) =>
       switch entry {
-      | Module(te) => te |> getModuleEquations
+      | Module(te) => te->getModuleEquations
       | Type(_) => list{}
       }
     )
-    |> List.concat
+    ->List.concat
   switch (typeEnv.moduleEquation, typeEnv.parent) {
   | (None, _)
   | (_, None) => subEquations
   | (Some({dep}), Some(parent)) => list{
-      (dep |> depToResolvedName, typeEnv.name |> addModulePath(~typeEnv=parent)),
+      (dep->depToResolvedName, typeEnv.name->addModulePath(~typeEnv=parent)),
     }
   }
 }
@@ -245,9 +245,9 @@ let getModuleAccessPath = (~component=false, ~name, typeEnv) => {
     | None => Runtime.Root(name) /* not nested */
     | Some(parent) =>
       Dot(
-        parent.parent == None ? Root(typeEnv.name) : parent |> accessPath,
+        parent.parent == None ? Root(typeEnv.name) : parent->accessPath,
         component ? typeEnv.componentModuleItem : typeEnv.moduleItem,
       )
     }
-  typeEnv |> accessPath
+  typeEnv->accessPath
 }

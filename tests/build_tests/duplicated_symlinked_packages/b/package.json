@@ -1,15 +1,4 @@
 {
   "name": "b",
-  "version": "0.1.0",
-  "scripts": {
-    "build": "rescript build",
-    "start": "rescript build -w",
-    "clean": "rescript clean"
-  },
-  "keywords": [
-    "ReScript"
-  ],
-  "author": "",
-  "license": "MIT",
-  "devDependencies": {}
+  "version": "0.1.0"
 }

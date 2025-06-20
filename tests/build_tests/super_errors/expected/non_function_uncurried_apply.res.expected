@@ -6,5 +6,5 @@
   [1;31m2[0m [2m│[0m let _ = [1;31mnonfun[0m(3)
   3 [2m│[0m 
 
-  This expression has type int
-  It is not a function.
+  This can't be called, it's not a function.
+  The function has type: int

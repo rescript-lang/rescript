@@ -51,7 +51,7 @@ type topstories = array<story>
 module Decode = {
   let idsArray = (json): array<int> => {
     open Json.Decode
-    json |> array(int)
+    json->array(int)
   }
   let getCommentId = comment =>
     switch comment {
@@ -61,7 +61,7 @@ module Decode = {
   let comment = (json): comment => {
     let deletedMaybe = {
       open Json.Decode
-      json |> optional(field("deleted", bool))
+      json->optional(field("deleted", bool))
     }
     let deleted = switch deletedMaybe {
     | Some(v) => v == true
@@ -70,18 +70,18 @@ module Decode = {
     if deleted {
       CommentDeleted({
         open Json.Decode
-        {id: json |> field("id", int)}
+        {id: json->field("id", int)}
       })
     } else {
       CommentPresent({
         open Json.Decode
         {
-          by: json |> field("by", string),
-          id: json |> field("id", int),
-          parent: json |> field("parent", int),
-          kids: json |> optional(field("kids", idsArray)),
-          text: json |> optional(field("text", string)),
-          time: json |> field("time", int),
+          by: json->field("by", string),
+          id: json->field("id", int),
+          parent: json->field("parent", int),
+          kids: json->optional(field("kids", idsArray)),
+          text: json->optional(field("text", string)),
+          time: json->field("time", int),
         }
       })
     }
@@ -93,66 +93,66 @@ module Decode = {
   let storyWithComments = (json): story_with_comments => {
     open Json.Decode
     {
-      by: json |> field("by", string),
-      descendants: json |> field("descendants", int),
-      descendentIds: json |> field("descendentIds", idsArray),
-      comments: json |> field("comments", commentsArray),
-      id: json |> field("id", int),
-      kids: json |> optional(field("kids", idsArray)),
-      score: json |> field("score", int),
-      time: json |> field("time", int),
-      title: json |> field("title", string),
-      url: json |> optional(field("url", string)),
+      by: json->field("by", string),
+      descendants: json->field("descendants", int),
+      descendentIds: json->field("descendentIds", idsArray),
+      comments: json->field("comments", commentsArray),
+      id: json->field("id", int),
+      kids: json->optional(field("kids", idsArray)),
+      score: json->field("score", int),
+      time: json->field("time", int),
+      title: json->field("title", string),
+      url: json->optional(field("url", string)),
     }
   }
   let story = (json): story => {
     open Json.Decode
     {
-      by: json |> field("by", string),
-      descendants: json |> field("descendants", int),
-      id: json |> field("id", int),
-      score: json |> field("score", int),
-      time: json |> field("time", int),
-      title: json |> field("title", string),
-      url: json |> optional(field("url", string)),
+      by: json->field("by", string),
+      descendants: json->field("descendants", int),
+      id: json->field("id", int),
+      score: json->field("score", int),
+      time: json->field("time", int),
+      title: json->field("title", string),
+      url: json->optional(field("url", string)),
     }
   }
   let stories = (json): array<story> => {
     open Json.Decode
-    json |> array(story)
+    json->array(story)
   }
 }
 
 let fetchTopStories = (page, callback) => {
   open Js.Promise
   Fetch.fetch(topStoriesUrl(page))
-  |> then_(Fetch.Response.json)
-  |> then_(json =>
+  ->then_(Fetch.Response.json)
+  ->then_(json =>
     json
-    |> Decode.stories
-    |> (
+    ->Decode.stories
+    ->(
       stories => {
         callback((page, stories))
         resolve()
       }
     )
   )
-  |> ignore
+  ->ignore
 } /* TODO: error handling */
 
 let fetchStoryWithComments = (id, callback) => {
   open Js.Promise
   Fetch.fetch(storyUrl(id))
-  |> then_(Fetch.Response.json)
-  |> then_(json =>
+  ->then_(Fetch.Response.json)
+  ->then_(json =>
     json
-    |> Decode.storyWithComments
-    |> (
+    ->Decode.storyWithComments
+    ->(
       stories => {
         callback(stories)
         resolve()
       }
     )
   )
-  |> ignore
+  ->ignore
 } /* TODO: error handling */

@@ -1878,11 +1878,6 @@ let open_signature slot root env0 =
 
 (* Open a signature from a file *)
 
-let open_pers_signature name env =
-  match open_signature None (Pident (Ident.create_persistent name)) env with
-  | Some env -> env
-  | None -> assert false (* a compilation unit cannot refer to a functor *)
-
 let open_signature ?(used_slot = ref false) ?(loc = Location.none)
     ?(toplevel = false) ovf root env =
   if

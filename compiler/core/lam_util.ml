@@ -66,7 +66,7 @@ let refine_let
   (*     let v= subst_lambda (Map_ident.singleton param arg ) l in *)
   (*     Ext_log.err "@[substitution << @]@."; *)
   (* v *)
-  | _, _, Lapply {ap_func=fn; ap_args = [Lvar w]; ap_info} when
+  | _, _, Lapply {ap_func=fn; ap_args = [Lvar w]; ap_info; ap_transformed_jsx} when
       Ident.same w param &&
       (not (Lam_hit.hit_variable param fn ))
     -> 
@@ -79,7 +79,7 @@ let refine_let
        ]}
         #1667 make sure body does not hit k 
     *)
-    Lam.apply fn [arg] ap_info
+    Lam.apply fn [arg] ap_info ~ap_transformed_jsx
   | (Strict | StrictOpt ),
     ( Lvar _    | Lconst  _ | 
       Lprim {primitive = Pfield (_ , Fld_module _) ;  
@@ -200,14 +200,15 @@ let field_flatten_get
         for i = 0 to Array.length fields - 1 do
           if fst(fields.(i)) = name then found := Ext_list.nth_opt ls i done;
         (match !found with
-        | Some c -> Lam.const c
-        | None  -> lam())
+        | Some c when not (Lam_constant.is_allocating c) -> Lam.const c
+        | _ -> lam())
       | _ -> lam ()
     )
   | Some (Constant (Const_block (_,_,ls))) ->
     begin match Ext_list.nth_opt ls i with 
       | None -> lam  ()
-      | Some x -> Lam.const x
+      | Some x when not (Lam_constant.is_allocating x) -> Lam.const x
+      | Some _ -> lam ()
     end
   | Some _
   | None -> lam ()

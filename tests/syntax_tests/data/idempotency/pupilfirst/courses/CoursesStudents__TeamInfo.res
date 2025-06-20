@@ -39,7 +39,7 @@ let droppedOutAt = t => t.droppedOutAt
 let accessEndsAt = t => t.accessEndsAt
 
 let studentWithId = (studentId, t) =>
-  t.students |> ArrayUtils.unsafeFind(
+  t.students->ArrayUtils.unsafeFind(
     (student: student) => student.id == studentId,
     "Could not find student with ID " ++ (studentId ++ (" in team with ID " ++ t.id)),
   )
@@ -63,7 +63,7 @@ let make = (~id, ~name, ~levelId, ~students, ~coachUserIds, ~droppedOutAt, ~acce
 
 let makeFromJS = teamDetails => {
   let students =
-    teamDetails["students"] |> Array.map(student =>
+    teamDetails["students"]->Array.map(student =>
       makeStudent(
         ~id=student["id"],
         ~name=student["name"],
@@ -78,8 +78,8 @@ let makeFromJS = teamDetails => {
     ~levelId=teamDetails["levelId"],
     ~students,
     ~coachUserIds=teamDetails["coachUserIds"],
-    ~droppedOutAt=teamDetails["droppedOutAt"] |> OptionUtils.map(DateTime.decode),
-    ~accessEndsAt=teamDetails["accessEndsAt"] |> OptionUtils.map(DateTime.decode),
+    ~droppedOutAt=teamDetails["droppedOutAt"]->OptionUtils.map(DateTime.decode),
+    ~accessEndsAt=teamDetails["accessEndsAt"]->OptionUtils.map(DateTime.decode),
   )
 }
 
@@ -87,9 +87,9 @@ let makeArrayFromJs = detailsOfTeams =>
   detailsOfTeams->Belt.Array.keepMap(OptionUtils.map(makeFromJS))
 
 let otherStudents = (studentId, t) =>
-  t.students |> Js.Array.filter((student: student) => student.id != studentId)
+  t.students->Js.Array.filter((student: student) => student.id != studentId)
 
 let coaches = (allTeamCoaches, t) =>
-  allTeamCoaches |> Js.Array.filter(teamCoach =>
-    t |> coachUserIds |> Array.mem(teamCoach |> UserProxy.userId)
+  allTeamCoaches->Js.Array.filter(teamCoach =>
+    t->coachUserIds->Array.mem(teamCoach->UserProxy.userId)
   )

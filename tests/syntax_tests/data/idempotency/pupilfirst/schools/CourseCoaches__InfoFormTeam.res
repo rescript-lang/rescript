@@ -13,25 +13,25 @@ module DeleteCoachTeamEnrollmentQuery = %graphql(`
 `)
 
 let deleteTeamEnrollment = (team, coach, setDeleting, removeTeamEnrollmentCB, event) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
 
   WindowUtils.confirm(
     "Are you sure you want to remove " ++
-    ((team |> Team.name) ++
+    ((team->Team.name) ++
     " from the list of assigned teams?"),
     () => {
       setDeleting(_ => true)
       DeleteCoachTeamEnrollmentQuery.make(~teamId=Team.id(team), ~coachId=CourseCoach.id(coach), ())
-      |> GraphqlQuery.sendQuery
-      |> Js.Promise.then_(response => {
+      ->GraphqlQuery.sendQuery
+      ->Js.Promise.then_(response => {
         if response["deleteCoachTeamEnrollment"]["success"] {
           removeTeamEnrollmentCB(Team.id(team))
         } else {
           setDeleting(_ => false)
         }
-        response |> Js.Promise.resolve
+        response->Js.Promise.resolve
       })
-      |> ignore
+      ->ignore
     },
   )
 }
@@ -40,22 +40,22 @@ let deleteTeamEnrollment = (team, coach, setDeleting, removeTeamEnrollmentCB, ev
 let make = (~team, ~coach, ~removeTeamEnrollmentCB) => {
   let (deleting, setDeleting) = React.useState(() => false)
   <div
-    ariaLabel={"Team " ++ (team |> Team.name)}
+    ariaLabel={"Team " ++ (team->Team.name)}
     className="flex items-center justify-between bg-gray-100 text-xs text-gray-900 border rounded pl-3 mt-2"
-    key={team |> Team.id}>
+    key={team->Team.id}>
     <div className="flex flex-1 justify-between items-center">
       <div className="font-semibold w-1/2">
         {team
-        |> Team.students
-        |> Js.Array.mapi((student, index) =>
-          <div className="p-1" key={index |> string_of_int}> {student |> str} </div>
+        ->Team.students
+        ->Js.Array.mapi((student, index) =>
+          <div className="p-1" key={index->string_of_int}> {student->str} </div>
         )
-        |> React.array}
+        ->React.array}
       </div>
-      {team |> Team.students |> Array.length > 1
+      {team->Team.students->Array.length > 1
         ? <div className="w-1/2">
-            <p className="text-tiny"> {"Team" |> str} </p>
-            <p className="font-semibold"> {team |> Team.name |> str} </p>
+            <p className="text-tiny"> {"Team"->str} </p>
+            <p className="font-semibold"> {team->Team.name->str} </p>
           </div>
         : React.null}
     </div>

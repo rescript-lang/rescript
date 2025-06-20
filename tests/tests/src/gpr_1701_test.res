@@ -4,7 +4,7 @@ exception Foo
 
 let rec test = n =>
   if n == 0 {
-    raise(Foo)
+    throw(Foo)
   } else {
     try test(n - 1) catch {
     | Foo => ()

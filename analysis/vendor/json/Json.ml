@@ -141,7 +141,10 @@ let escape text =
       | '\b' -> Buffer.add_string buf "\\b"
       | '\r' -> Buffer.add_string buf "\\r"
       | '\t' -> Buffer.add_string buf "\\t"
-      | c -> Buffer.add_char buf c);
+      | c ->
+        let code = Char.code c in
+        if code < 0x20 then Printf.bprintf buf "\\u%04x" code
+        else Buffer.add_char buf c);
       loop (i + 1))
   in
   loop 0;

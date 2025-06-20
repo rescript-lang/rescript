@@ -16,7 +16,7 @@ let aTuple = (1, 2)
 let aRecord = { name = {js|steve|js}; age = 30 }
 let blockExpression = ((let a = 1 in let b = 2 in a + b)[@res.braces ])
 let assertSmthing = assert true
-let jsx = ((div ~className:{js|cx|js} ~children:[foo] ())[@JSX ])
+let jsx = <div className={js|cx|js}>foo</div>
 let ifExpr = if true then Js.log true else Js.log false
 let forExpr = for p = 0 to 10 do () done
 let whileExpr = while true do doSomeImperativeThing () done

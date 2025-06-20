@@ -3,7 +3,6 @@
 import * as Mocha from "mocha";
 import * as Belt_Array from "rescript/lib/es6/Belt_Array.js";
 import * as Belt_Range from "rescript/lib/es6/Belt_Range.js";
-import * as Pervasives from "rescript/lib/es6/Pervasives.js";
 import * as Test_utils from "./test_utils.mjs";
 import * as Belt_SortArray from "rescript/lib/es6/Belt_SortArray.js";
 import * as Array_data_util from "./array_data_util.mjs";
@@ -215,12 +214,12 @@ Mocha.describe("Belt_sortarray_test", () => {
     ]);
   });
   Mocha.test("binarySearchBy", () => {
-    Test_utils.eq("File \"belt_sortarray_test.res\", line 108, characters 7-14", Pervasives.lnot(Belt_SortArray.binarySearchBy([
+    Test_utils.eq("File \"belt_sortarray_test.res\", line 108, characters 7-14", ~Belt_SortArray.binarySearchBy([
       1,
       3,
       5,
       7
-    ], 4, cmp)), 2);
+    ], 4, cmp), 2);
     Test_utils.eq("File \"belt_sortarray_test.res\", line 109, characters 7-14", Belt_SortArray.binarySearchBy([
       1,
       2,
@@ -269,11 +268,11 @@ Mocha.describe("Belt_sortarray_test", () => {
     let aa = Array_data_util.range(0, 1000);
     Test_utils.ok("File \"belt_sortarray_test.res\", line 115, characters 7-14", Belt_Range.every(0, 1000, i => Belt_SortArray.binarySearchBy(aa, i, cmp) === i));
     let cc = Belt_Array.map(Array_data_util.range(0, 2000), x => (x << 1));
-    Test_utils.eq("File \"belt_sortarray_test.res\", line 118, characters 7-14", Pervasives.lnot(Belt_SortArray.binarySearchBy(cc, 5000, cmp)), 2001);
-    Test_utils.eq("File \"belt_sortarray_test.res\", line 119, characters 7-14", Pervasives.lnot(Belt_SortArray.binarySearchBy(cc, -1, cmp)), 0);
+    Test_utils.eq("File \"belt_sortarray_test.res\", line 118, characters 7-14", ~Belt_SortArray.binarySearchBy(cc, 5000, cmp), 2001);
+    Test_utils.eq("File \"belt_sortarray_test.res\", line 119, characters 7-14", ~Belt_SortArray.binarySearchBy(cc, -1, cmp), 0);
     Test_utils.eq("File \"belt_sortarray_test.res\", line 120, characters 7-14", Belt_SortArray.binarySearchBy(cc, 0, cmp), 0);
-    Test_utils.eq("File \"belt_sortarray_test.res\", line 122, characters 7-14", Pervasives.lnot(Belt_SortArray.binarySearchBy(cc, 1, cmp)), 1);
-    Test_utils.ok("File \"belt_sortarray_test.res\", line 124, characters 6-13", Belt_Range.every(0, 1999, i => Pervasives.lnot(Belt_SortArray.binarySearchBy(cc, (i << 1) + 1 | 0, cmp)) === (i + 1 | 0)));
+    Test_utils.eq("File \"belt_sortarray_test.res\", line 122, characters 7-14", ~Belt_SortArray.binarySearchBy(cc, 1, cmp), 1);
+    Test_utils.ok("File \"belt_sortarray_test.res\", line 124, characters 6-13", Belt_Range.every(0, 1999, i => ~Belt_SortArray.binarySearchBy(cc, (i << 1) + 1 | 0, cmp) === (i + 1 | 0)));
   });
   Mocha.test("strictlySortedLength", () => {
     let lt = (x, y) => x < y;

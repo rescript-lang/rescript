@@ -42,6 +42,7 @@ type t =
       arg_types: External_arg_spec.params;
       ffi: External_ffi_types.external_spec;
       dynamic_import: bool;
+      transformed_jsx: bool;
     }
   | Pjs_object_create of External_arg_spec.obj_params
   | Praise
@@ -68,9 +69,11 @@ type t =
   | Pmulint
   | Pdivint
   | Pmodint
+  | Ppowint
   | Pandint
   | Porint
   | Pxorint
+  | Pnotint
   | Plslint
   | Plsrint
   | Pasrint
@@ -89,6 +92,7 @@ type t =
   | Pmulfloat
   | Pdivfloat
   | Pmodfloat
+  | Ppowfloat
   | Pfloatcomp of Lam_compat.comparison
   | Pfloatorder
   | Pfloatmin
@@ -104,6 +108,7 @@ type t =
   | Pandbigint
   | Porbigint
   | Pxorbigint
+  | Pnotbigint
   | Plslbigint
   | Pasrbigint
   | Pbigintcomp of Lam_compat.comparison
@@ -130,6 +135,7 @@ type t =
   | Pmakelist
   (* dict primitives *)
   | Pmakedict
+  | Pdict_has
   (* promise *)
   | Pawait
   (* etc or deprecated *)
@@ -146,7 +152,6 @@ type t =
   | Pjs_fn_make of int
   | Pjs_fn_make_unit
   | Pjs_fn_method
-  | Pundefined_to_opt
   | Pnull_to_opt
   | Pnull_undefined_to_opt
   | Pis_null

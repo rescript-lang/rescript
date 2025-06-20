@@ -1,6 +1,20 @@
 open SharedTypes
 
-let modulePathFromEnv env = env.QueryEnv.file.moduleName :: List.rev env.pathRev
+let modulePathFromEnv env =
+  let moduleName = env.QueryEnv.file.moduleName in
+  let transformedModuleName =
+    (* Transform namespaced module names from internal format (Context-Kaplay) 
+       to user-facing format (Kaplay.Context) *)
+    match String.rindex_opt moduleName '-' with
+    | None -> moduleName
+    | Some i ->
+      let namespace =
+        String.sub moduleName (i + 1) (String.length moduleName - i - 1)
+      in
+      let module_ = String.sub moduleName 0 i in
+      namespace ^ "." ^ module_
+  in
+  transformedModuleName :: List.rev env.pathRev
 
 let fullTypeIdFromDecl ~env ~name ~modulePath =
   env.QueryEnv.file.moduleName :: ModulePath.toPath modulePath name
@@ -1265,4 +1279,9 @@ let completionPathFromMaybeBuiltin path =
   | Some ("result", _) -> Some ["Stdlib"; "Result"]
   | Some ("dict", _) -> Some ["Stdlib"; "Dict"]
   | Some ("char", _) -> Some ["Stdlib"; "Char"]
-  | _ -> None
+  | _ -> (
+    match path |> Utils.expandPath |> List.rev with
+    | [mainModule; "t"] when String.starts_with ~prefix:"Stdlib_" mainModule ->
+      (* Route Stdlib_X to Stdlib.X for proper completions without the Stdlib_ prefix *)
+      Some (String.split_on_char '_' mainModule)
+    | _ -> None)

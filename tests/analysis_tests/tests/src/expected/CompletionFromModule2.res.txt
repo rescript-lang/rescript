@@ -12,6 +12,7 @@ ContextPath Value[CompletionFromModule, n]
 Path CompletionFromModule.n
 CPPipe pathFromEnv:SomeModule found:true
 Path CompletionFromModule.SomeModule.
+Path 
 [{
     "label": "name",
     "kind": 5,
@@ -47,6 +48,7 @@ Path CompletionFromModule.nn
 CPPipe pathFromEnv:SomeOtherModule found:true
 Path CompletionFromModule.SomeOtherModule.
 Path CompletionFromModule.SomeOtherModule.
+Path 
 [{
     "label": "nname",
     "kind": 5,
@@ -114,6 +116,7 @@ Path CompletionFromModule.nnn
 CPPipe pathFromEnv: found:true
 Path CompletionFromModule.
 Path CompletionFromModule.SomeOtherModule.
+Path 
 [{
     "label": "CompletionFromModule.SomeOtherModule.getNName",
     "kind": 12,
@@ -140,6 +143,7 @@ Path CompletionFromModule.nnn
 CPPipe pathFromEnv: found:true
 Path CompletionFromModule.
 Path CompletionFromModule.SomeOtherModule.
+Path 
 [{
     "label": "getNName",
     "kind": 12,

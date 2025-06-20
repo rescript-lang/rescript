@@ -44,6 +44,7 @@ let apply_simple ?(loc = default_loc) ?(attrs = []) (fn : expression)
           funct = fn;
           args = Ext_list.map args (fun x -> (Asttypes.Nolabel, x));
           partial = false;
+          transformed_jsx = false;
         };
   }
 
@@ -52,7 +53,13 @@ let app1 ?(loc = default_loc) ?(attrs = []) fn arg1 : expression =
     pexp_loc = loc;
     pexp_attributes = attrs;
     pexp_desc =
-      Pexp_apply {funct = fn; args = [(Nolabel, arg1)]; partial = false};
+      Pexp_apply
+        {
+          funct = fn;
+          args = [(Nolabel, arg1)];
+          partial = false;
+          transformed_jsx = false;
+        };
   }
 
 let app2 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 : expression =
@@ -61,7 +68,12 @@ let app2 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 : expression =
     pexp_attributes = attrs;
     pexp_desc =
       Pexp_apply
-        {funct = fn; args = [(Nolabel, arg1); (Nolabel, arg2)]; partial = false};
+        {
+          funct = fn;
+          args = [(Nolabel, arg1); (Nolabel, arg2)];
+          partial = false;
+          transformed_jsx = false;
+        };
   }
 
 let app3 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 arg3 : expression =
@@ -74,6 +86,7 @@ let app3 ?(loc = default_loc) ?(attrs = []) fn arg1 arg2 arg3 : expression =
           funct = fn;
           args = [(Nolabel, arg1); (Nolabel, arg2); (Nolabel, arg3)];
           partial = false;
+          transformed_jsx = false;
         };
   }
 
@@ -121,6 +134,7 @@ let apply_labels ?(loc = default_loc) ?(attrs = []) fn
             Ext_list.map args (fun (l, a) ->
                 (Asttypes.Labelled {txt = l; loc = Location.none}, a));
           partial = false;
+          transformed_jsx = false;
         };
   }
 

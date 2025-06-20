@@ -149,6 +149,39 @@ let entries =
         };
     };
     {
+      path = builtin "<<";
+      name = "%lsl";
+      form = Binary;
+      specialization =
+        {
+          int = Plslint;
+          bool = None;
+          float = None;
+          bigint = Some Plslbigint;
+          string = None;
+        };
+    };
+    {
+      path = builtin ">>";
+      name = "%asr";
+      form = Binary;
+      specialization =
+        {
+          int = Pasrint;
+          bool = None;
+          float = None;
+          bigint = Some Pasrbigint;
+          string = None;
+        };
+    };
+    {
+      path = builtin ">>>";
+      name = "%lsr";
+      form = Binary;
+      specialization =
+        {int = Plsrint; bool = None; float = None; bigint = None; string = None};
+    };
+    {
       path = builtin "mod";
       name = "%mod";
       form = Binary;
@@ -158,6 +191,58 @@ let entries =
           bool = None;
           float = Some Pmodfloat;
           bigint = Some Pmodbigint;
+          string = None;
+        };
+    };
+    {
+      path = builtin "**";
+      name = "%pow";
+      form = Binary;
+      specialization =
+        {
+          int = Ppowint;
+          bool = None;
+          float = Some Ppowfloat;
+          bigint = Some Ppowbigint;
+          string = None;
+        };
+    };
+    {
+      path = builtin "~~";
+      name = "%bitnot";
+      form = Unary;
+      specialization =
+        {
+          int = Pnotint;
+          bool = None;
+          float = None;
+          bigint = Some Pnotbigint;
+          string = None;
+        };
+    };
+    {
+      path = builtin "&";
+      name = "%bitand";
+      form = Binary;
+      specialization =
+        {
+          int = Pandint;
+          bool = None;
+          float = None;
+          bigint = Some Pandbigint;
+          string = None;
+        };
+    };
+    {
+      path = builtin "^";
+      name = "%bitxor";
+      form = Binary;
+      specialization =
+        {
+          int = Pxorint;
+          bool = None;
+          float = None;
+          bigint = Some Pxorbigint;
           string = None;
         };
     };

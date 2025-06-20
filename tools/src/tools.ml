@@ -1,5 +1,7 @@
 open Analysis
 
+module StringSet = Set.Make (String)
+
 type fieldDoc = {
   fieldName: string;
   docstrings: string list;
@@ -458,6 +460,7 @@ let extractDocs ~entryPointFile ~debug =
         let env = QueryEnv.fromFile file in
         let rec extractDocsForModule ?(modulePath = [env.file.moduleName])
             (structure : Module.structure) =
+          let valuesSeen = ref StringSet.empty in
           {
             id = modulePath |> List.rev |> ident;
             docstring = structure.docstring |> List.map String.trim;
@@ -611,7 +614,18 @@ let extractDocs ~entryPointFile ~debug =
                                   (makeId ~identifier:(Path.name p)
                                      moduleTypeIdPath);
                             })
-                     | _ -> None);
+                     | _ -> None)
+              (* Filter out shadowed bindings by keeping only the last value associated with an id *)
+              |> List.rev
+              |> List.filter_map (fun (docItem : docItem) ->
+                     match docItem with
+                     | Value {id} ->
+                       if StringSet.mem id !valuesSeen then None
+                       else (
+                         valuesSeen := StringSet.add id !valuesSeen;
+                         Some docItem)
+                     | _ -> Some docItem)
+              |> List.rev;
           }
         in
         let docs = extractDocsForModule structure in

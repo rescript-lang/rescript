@@ -22,16 +22,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-type label_exprs = (Longident.t Asttypes.loc * Parsetree.expression * bool) list
-
 let js_property loc obj (name : string) =
   Parsetree.Pexp_send (obj, {loc; txt = name})
 
 let record_as_js_object loc (self : Bs_ast_mapper.mapper)
-    (label_exprs : label_exprs) : Parsetree.expression_desc =
+    (label_exprs : Parsetree.expression Parsetree.record_element list) :
+    Parsetree.expression_desc =
   let labels, args, arity =
     Ext_list.fold_right label_exprs ([], [], 0)
-      (fun ({txt; loc}, e, _) (labels, args, i) ->
+      (fun {lid = {txt; loc}; x = e} (labels, args, i) ->
         match txt with
         | Lident x ->
           ( {Asttypes.loc; txt = x} :: labels,

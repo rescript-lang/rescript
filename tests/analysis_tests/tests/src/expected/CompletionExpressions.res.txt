@@ -1012,6 +1012,7 @@ ContextPath Value[fff]
 Path fff
 CPPipe pathFromEnv: found:true
 Path CompletionExpressions.someOpt
+Path someOpt
 [{
     "label": "someOptField",
     "kind": 5,
@@ -1384,7 +1385,7 @@ Path mkStuff
     "label": "RegExp.fromString()",
     "kind": 12,
     "tags": [],
-    "detail": "string => t",
+    "detail": "(string, ~flags: string=?) => t",
     "documentation": null,
     "insertText": "RegExp.fromString($0)",
     "insertTextFormat": 2
@@ -1486,6 +1487,7 @@ ContextPath Value[someTyp]
 Path someTyp
 CPPipe pathFromEnv: found:true
 Path CompletionExpressions.
+Path 
 [{
     "label": "test",
     "kind": 5,
@@ -1546,6 +1548,7 @@ ContextPath Value[someTyp]
 Path someTyp
 CPPipe pathFromEnv: found:true
 Path CompletionExpressions.
+Path 
 [{
     "label": "test",
     "kind": 5,

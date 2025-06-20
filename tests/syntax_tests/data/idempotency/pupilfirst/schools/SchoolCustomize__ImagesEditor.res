@@ -26,7 +26,7 @@ let updateButtonText = updating => updating ? "Updating..." : "Update Images"
 let formId = "sc-images-editor__form"
 
 let handleUpdateImages = (send, updateImagesCB, event) => {
-  event |> ReactEvent.Form.preventDefault
+  event->ReactEvent.Form.preventDefault
   send(BeginUpdate)
 
   let element = ReactDOMRe._getElementById(formId)
@@ -65,17 +65,17 @@ let isInvalidImageFile = image =>
 
 let updateLogoOnLightBg = (send, event) => {
   let imageFile = ReactEvent.Form.target(event)["files"][0]
-  send(SelectLogoOnLightBgFile(imageFile["name"], imageFile |> isInvalidImageFile))
+  send(SelectLogoOnLightBgFile(imageFile["name"], imageFile->isInvalidImageFile))
 }
 
 let updateCoverImage = (send, event) => {
   let imageFile = ReactEvent.Form.target(event)["files"][0]
-  send(SelectCoverImageFile(imageFile["name"], imageFile |> isInvalidImageFile))
+  send(SelectCoverImageFile(imageFile["name"], imageFile->isInvalidImageFile))
 }
 
 let updateIcon = (send, event) => {
   let imageFile = ReactEvent.Form.target(event)["files"][0]
-  send(SelectIconFile(imageFile["name"], imageFile |> isInvalidImageFile))
+  send(SelectIconFile(imageFile["name"], imageFile->isInvalidImageFile))
 }
 
 let imageUploader = (
@@ -90,7 +90,7 @@ let imageUploader = (
 ) =>
   <div key=id className="mt-4">
     <label className="block tracking-wide text-gray-800 text-xs font-semibold" htmlFor=id>
-      {labelText |> str}
+      {labelText->str}
     </label>
     <input
       disabled
@@ -148,9 +148,9 @@ let reducer = (state, action) =>
 @react.component
 let make = (~customizations, ~updateImagesCB, ~authenticityToken) => {
   let (state, send) = React.useReducer(reducer, initialState())
-  let logoOnLightBg = customizations |> Customizations.logoOnLightBg
-  let coverImage = customizations |> Customizations.coverImage
-  let icon = customizations |> Customizations.icon
+  let logoOnLightBg = customizations->Customizations.logoOnLightBg
+  let coverImage = customizations->Customizations.coverImage
+  let icon = customizations->Customizations.icon
 
   <form
     className="mx-8 pt-8"
@@ -159,7 +159,7 @@ let make = (~customizations, ~updateImagesCB, ~authenticityToken) => {
     onSubmit={handleUpdateImages(send, updateImagesCB)}>
     <input name="authenticity_token" type_="hidden" value=authenticityToken />
     <h5 className="uppercase text-center border-b border-gray-400 pb-2">
-      {"Manage Images" |> str}
+      {"Manage Images"->str}
     </h5>
     <DisablingCover disabled=state.updating>
       <SchoolCustomize__ImageFileInput
@@ -168,7 +168,7 @@ let make = (~customizations, ~updateImagesCB, ~authenticityToken) => {
         name="logo_on_light_bg"
         onChange={updateLogoOnLightBg(send)}
         labelText="Logo on a light background"
-        imageName={logoOnLightBg |> OptionUtils.map(Customizations.filename)}
+        imageName={logoOnLightBg->OptionUtils.map(Customizations.filename)}
         selectedImageName=state.logoOnLightBgFilename
         errorState=state.logoOnLightBgInvalid
       />
@@ -178,7 +178,7 @@ let make = (~customizations, ~updateImagesCB, ~authenticityToken) => {
         name="icon"
         onChange={updateIcon(send)}
         labelText="Icon"
-        imageName=Some(icon |> Customizations.filename)
+        imageName=Some(icon->Customizations.filename)
         selectedImageName=state.iconFilename
         errorState=state.iconInvalid
       />
@@ -188,7 +188,7 @@ let make = (~customizations, ~updateImagesCB, ~authenticityToken) => {
         name="cover_image"
         onChange={updateCoverImage(send)}
         labelText="Cover image"
-        imageName={coverImage |> OptionUtils.map(Customizations.filename)}
+        imageName={coverImage->OptionUtils.map(Customizations.filename)}
         selectedImageName=state.coverImageFilename
         errorState=state.coverImageInvalid
       />
@@ -198,7 +198,7 @@ let make = (~customizations, ~updateImagesCB, ~authenticityToken) => {
           key="sc-images-editor__update-button"
           disabled={updateButtonDisabled(state)}
           className="btn btn-primary btn-large mt-6">
-          {updateButtonText(state.updating) |> str}
+          {updateButtonText(state.updating)->str}
         </button>
       </div>
     </DisablingCover>

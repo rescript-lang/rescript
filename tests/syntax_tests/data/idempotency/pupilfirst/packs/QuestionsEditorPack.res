@@ -8,8 +8,8 @@ type props = {
 let decodeProps = json => {
   open Json.Decode
   {
-    communityId: json |> field("communityId", string),
-    target: json |> field("target", nullable(LinkedTarget.decode)) |> Js.Null.toOption,
+    communityId: json->field("communityId", string),
+    target: json->field("target", nullable(LinkedTarget.decode))->Js.Null.toOption,
   }
 }
 
@@ -18,7 +18,7 @@ let props =
     ~id="questions-editor",
     ~attribute="data-json-props",
     (),
-  ) |> decodeProps
+  )->decodeProps
 
 ReactDOMRe.renderToElementWithId(
   <QuestionsShow__QuestionEditor communityId=props.communityId target=props.target />,

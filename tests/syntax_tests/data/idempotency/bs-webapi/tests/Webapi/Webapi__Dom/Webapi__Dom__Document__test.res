@@ -1,7 +1,7 @@
 open Webapi.Dom
 open Document
 
-let el = document |> createElement("strong")
+let el = document->createElement("strong")
 
 let _ = characterSet(document)
 let _ = compatMode(document)
