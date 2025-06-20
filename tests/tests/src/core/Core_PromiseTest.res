@@ -130,7 +130,7 @@ module Catching = {
     ->then(_ => resolve()) // Since our asyncParse will fail anyways, we convert to promise<unit> for our catch later
     ->catch(e => {
       let success = switch e {
-      | Exn.Error(err) => Exn.name(err) == Some("SyntaxError")
+      | JsExn(err) => JsExn.name(err) == Some("SyntaxError")
       | _ => false
       }
 
@@ -146,7 +146,7 @@ module Catching = {
 
     resolve()
     ->then(_ => {
-      raise(TestError("Thrown exn"))
+      throw(TestError("Thrown exn"))
     })
     ->catch(e => {
       let isTestErr = switch e {
@@ -173,7 +173,7 @@ module Catching = {
     })
     ->catch(e => {
       let isTestErr = switch e {
-      | Exn.Error(err) => Exn.message(err) == Some("Some JS error")
+      | JsExn(err) => JsExn.message(err) == Some("Some JS error")
       | _ => false
       }
       Test.run(__POS_OF__("Should be some JS error"), isTestErr, equal, true)
@@ -267,7 +267,7 @@ module Concurrently = {
         setTimeout(() => {
           place := place.contents + 1
           resolve((place.contents, msg))
-        }, ms)->ignore
+        }, ms)->TimeoutId.ignore
       })
     }
 
@@ -289,7 +289,7 @@ module Concurrently = {
       Promise.make((resolve, _) => {
         setTimeout(() => {
           resolve(name)
-        }, ms)->ignore
+        }, ms)->TimeoutId.ignore
       })
     }
 
@@ -311,7 +311,7 @@ module Concurrently = {
         setTimeout(() => {
           place := place.contents + 1
           resolve((place.contents, msg))
-        }, ms)->ignore
+        }, ms)->TimeoutId.ignore
       })
     }
 
@@ -335,7 +335,7 @@ module Concurrently = {
         setTimeout(() => {
           place := place.contents + 1
           resolve((place.contents, msg))
-        }, ms)->ignore
+        }, ms)->TimeoutId.ignore
       })
     }
 
@@ -360,7 +360,7 @@ module Concurrently = {
         setTimeout(() => {
           place := place.contents + 1
           resolve((place.contents, msg))
-        }, ms)->ignore
+        }, ms)->TimeoutId.ignore
       })
     }
 
@@ -386,7 +386,7 @@ module Concurrently = {
         setTimeout(() => {
           place := place.contents + 1
           resolve((place.contents, msg))
-        }, ms)->ignore
+        }, ms)->TimeoutId.ignore
       })
     }
 
@@ -413,7 +413,7 @@ module Concurrently = {
         setTimeout(() => {
           place := place.contents + 1
           resolve((place.contents, msg))
-        }, ms)->ignore
+        }, ms)->TimeoutId.ignore
       })
     }
 

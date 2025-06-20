@@ -16,9 +16,9 @@ let avatarUrl = t => t.avatarUrl
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    teamId: json |> field("teamId", string),
-    name: json |> field("name", string),
-    avatarUrl: json |> field("avatarUrl", string),
+    id: json->field("id", string),
+    teamId: json->field("teamId", string),
+    name: json->field("name", string),
+    avatarUrl: json->field("avatarUrl", string),
   }
 }

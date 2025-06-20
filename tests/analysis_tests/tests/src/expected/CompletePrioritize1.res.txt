@@ -8,6 +8,7 @@ ContextPath Value[a]
 Path a
 CPPipe pathFromEnv:Test found:true
 Path Test.
+Path 
 [{
     "label": "Test.name",
     "kind": 12,

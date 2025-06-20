@@ -36,19 +36,19 @@ let reducer = (state, action) =>
 
 let passed = (grades, evaluationCriteria) =>
   grades
-  |> Js.Array.filter(g => {
+  ->Js.Array.filter(g => {
     let passGrade =
       evaluationCriteria
-      |> ArrayUtils.unsafeFind(
-        ec => EvaluationCriterion.id(ec) == (g |> Grade.evaluationCriterionId),
+      ->ArrayUtils.unsafeFind(
+        ec => EvaluationCriterion.id(ec) == (g->Grade.evaluationCriterionId),
         "CoursesReview__GradeCard: Unable to find evaluation criterion with id - " ++
-        (g |> Grade.evaluationCriterionId),
+        (g->Grade.evaluationCriterionId),
       )
-      |> EvaluationCriterion.passGrade
+      ->EvaluationCriterion.passGrade
 
-    g |> Grade.value < passGrade
+    g->Grade.value < passGrade
   })
-  |> ArrayUtils.isEmpty
+  ->ArrayUtils.isEmpty
 
 module CreateGradingMutation = %graphql(`
     mutation CreateGradingMutation($submissionId: ID!, $feedback: String, $grades: [GradeInput!]!, $note: String,  $checklist: JSON!) {
@@ -70,28 +70,28 @@ let undoGrading = (submissionId, send) => {
   send(BeginSaving)
 
   UndoGradingMutation.make(~submissionId, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
-    response["undoGrading"]["success"] ? DomUtils.reload() |> ignore : send(FinishSaving)
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
+    response["undoGrading"]["success"] ? DomUtils.reload()->ignore : send(FinishSaving)
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let trimToOption = s =>
-  switch s |> String.trim {
+  switch s->String.trim {
   | "" => None
   | s => Some(s)
   }
 
 let gradeSubmissionQuery = (submissionId, state, send, evaluationCriteria, addGradingCB) => {
-  let jsGradesArray = state.grades |> Array.map(g => g |> Grade.asJsType)
+  let jsGradesArray = state.grades->Array.map(g => g->Grade.asJsType)
 
-  let checklist = state.checklist |> SubmissionChecklistItem.encodeArray
+  let checklist = state.checklist->SubmissionChecklistItem.encodeArray
   send(BeginSaving)
 
-  let feedback = state.newFeedback |> trimToOption
-  let note = state.note |> OptionUtils.flatMap(trimToOption)
+  let feedback = state.newFeedback->trimToOption
+  let note = state.note->OptionUtils.flatMap(trimToOption)
 
   CreateGradingMutation.make(
     ~submissionId,
@@ -101,8 +101,8 @@ let gradeSubmissionQuery = (submissionId, state, send, evaluationCriteria, addGr
     ~checklist,
     (),
   )
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
     response["createGrading"]["success"]
       ? addGradingCB(
           ~newFeedback=state.newFeedback,
@@ -114,22 +114,22 @@ let gradeSubmissionQuery = (submissionId, state, send, evaluationCriteria, addGr
     send(FinishSaving)
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let updateGrading = (grade, state, send) => {
   let newGrades =
     state.grades
-    |> Js.Array.filter(g =>
-      g |> Grade.evaluationCriterionId != (grade |> Grade.evaluationCriterionId)
+    ->Js.Array.filter(g =>
+      g->Grade.evaluationCriterionId != (grade->Grade.evaluationCriterionId)
     )
-    |> Array.append([grade])
+    ->Array.append([grade])
 
   send(UpdateGrades(newGrades))
 }
 
 let handleGradePillClick = (evaluationCriterionId, value, state, send, event) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
   switch send {
   | Some(send) => updateGrading(Grade.make(~evaluationCriterionId, ~value), state, send)
   | None => ()
@@ -137,8 +137,8 @@ let handleGradePillClick = (evaluationCriterionId, value, state, send, event) =>
 }
 
 let findEvaluationCriterion = (evaluationCriteria, evaluationCriterionId) =>
-  switch evaluationCriteria |> Js.Array.find(ec =>
-    ec |> EvaluationCriterion.id == evaluationCriterionId
+  switch evaluationCriteria->Js.Array.find(ec =>
+    ec->EvaluationCriterion.id == evaluationCriterionId
   ) {
   | Some(ec) => ec
   | None =>
@@ -152,11 +152,11 @@ let findEvaluationCriterion = (evaluationCriteria, evaluationCriterionId) =>
 
 let gradePillHeader = (evaluationCriteriaName, selectedGrade, gradeLabels) =>
   <div className="flex justify-between">
-    <p className="text-xs font-semibold"> {evaluationCriteriaName |> str} </p>
+    <p className="text-xs font-semibold"> {evaluationCriteriaName->str} </p>
     <p className="text-xs font-semibold">
-      {(selectedGrade |> string_of_int) ++
+      {(selectedGrade->string_of_int) ++
         ("/" ++
-        (GradeLabel.maxGrade(gradeLabels |> Array.to_list) |> string_of_int)) |> str}
+        (GradeLabel.maxGrade(gradeLabels->Array.to_list)->string_of_int))->str}
     </p>
   </div>
 
@@ -185,81 +185,81 @@ let gradePillClasses = (selectedGrade, currentGrade, passgrade, send) => {
 
 let showGradePill = (key, evaluationCriterion, gradeValue, passGrade, state, send) =>
   <div
-    ariaLabel={"evaluation-criterion-" ++ (evaluationCriterion |> EvaluationCriterion.id)}
-    key={key |> string_of_int}
+    ariaLabel={"evaluation-criterion-" ++ (evaluationCriterion->EvaluationCriterion.id)}
+    key={key->string_of_int}
     className="md:pr-8 mt-4">
     {gradePillHeader(
-      evaluationCriterion |> EvaluationCriterion.name,
+      evaluationCriterion->EvaluationCriterion.name,
       gradeValue,
-      evaluationCriterion |> EvaluationCriterion.gradesAndLabels,
+      evaluationCriterion->EvaluationCriterion.gradesAndLabels,
     )}
     <div className="course-review-grade-card__grade-bar inline-flex w-full text-center mt-1">
       {evaluationCriterion
-      |> EvaluationCriterion.gradesAndLabels
-      |> Array.map(gradeLabel => {
-        let gradeLabelGrade = gradeLabel |> GradeLabel.grade
+      ->EvaluationCriterion.gradesAndLabels
+      ->Array.map(gradeLabel => {
+        let gradeLabelGrade = gradeLabel->GradeLabel.grade
 
         <div
-          key={gradeLabelGrade |> string_of_int}
+          key={gradeLabelGrade->string_of_int}
           onClick={handleGradePillClick(
-            evaluationCriterion |> EvaluationCriterion.id,
+            evaluationCriterion->EvaluationCriterion.id,
             gradeLabelGrade,
             state,
             send,
           )}
-          title={gradeLabel |> GradeLabel.label}
+          title={gradeLabel->GradeLabel.label}
           className={gradePillClasses(gradeValue, gradeLabelGrade, passGrade, send)}>
           {switch send {
-          | Some(_) => gradeLabelGrade |> string_of_int |> str
+          | Some(_) => gradeLabelGrade->string_of_int->str
           | None => React.null
           }}
         </div>
       })
-      |> React.array}
+      ->React.array}
     </div>
   </div>
 
 let showGrades = (grades, evaluationCriteria, state) =>
   <div>
     {grades
-    |> Grade.sort(evaluationCriteria)
-    |> Array.mapi((key, grade) => {
+    ->Grade.sort(evaluationCriteria)
+    ->Array.mapi((key, grade) => {
       let gradeEcId = Grade.evaluationCriterionId(grade)
       let ec =
-        evaluationCriteria |> ArrayUtils.unsafeFind(
-          ec => ec |> EvaluationCriterion.id == gradeEcId,
+        evaluationCriteria->ArrayUtils.unsafeFind(
+          ec => ec->EvaluationCriterion.id == gradeEcId,
           "Unable to find evaluation Criterion with id: " ++
           (gradeEcId ++
           "in CoursesRevew__GradeCard"),
         )
 
-      showGradePill(key, ec, grade |> Grade.value, ec |> EvaluationCriterion.passGrade, state, None)
+      showGradePill(key, ec, grade->Grade.value, ec->EvaluationCriterion.passGrade, state, None)
     })
-    |> React.array}
+    ->React.array}
   </div>
 let renderGradePills = (evaluationCriteria, targetEvaluationCriteriaIds, state, send) =>
   targetEvaluationCriteriaIds
-  |> Array.mapi((key, evaluationCriterionId) => {
+  ->Array.mapi((key, evaluationCriterionId) => {
     let ec =
-      evaluationCriteria |> ArrayUtils.unsafeFind(
-        e => e |> EvaluationCriterion.id == evaluationCriterionId,
+      evaluationCriteria->ArrayUtils.unsafeFind(
+        e => e->EvaluationCriterion.id == evaluationCriterionId,
         "CoursesReview__GradeCard: Unable to find evaluation criterion with id - " ++
         evaluationCriterionId,
       )
     let grade =
-      state.grades |> Js.Array.find(g =>
-        g |> Grade.evaluationCriterionId == (ec |> EvaluationCriterion.id)
+      state.grades->Js.Array.find(g =>
+        g->Grade.evaluationCriterionId == (ec->EvaluationCriterion.id)
       )
     let gradeValue = switch grade {
-    | Some(g) => g |> Grade.value
+    | Some(g) => g->Grade.value
     | None => 0
     }
 
-    let passGrade = ec |> EvaluationCriterion.passGrade
+    let passGrade = ec->EvaluationCriterion.passGrade
 
     showGradePill(key, ec, gradeValue, passGrade, state, Some(send))
   })
-  |> React.array
+  ->React.array
 let gradeStatusClasses = (color, status) =>
   "w-12 h-10 p-1 mr-2 md:mr-0 md:w-24 md:h-20 rounded md:rounded-lg border flex justify-center items-center bg-" ++
   (color ++
@@ -285,22 +285,22 @@ let submissionStatusIcon = (status, overlaySubmission, send) => {
     className="flex w-full md:w-3/6 flex-col items-center justify-center md:border-l mt-4 md:mt-0">
     <div
       className="flex flex-col-reverse md:flex-row items-start md:items-stretch justify-center w-full md:pl-6">
-      {switch (overlaySubmission |> OverlaySubmission.evaluatedAt, status) {
+      {switch (overlaySubmission->OverlaySubmission.evaluatedAt, status) {
       | (Some(date), Graded(_)) =>
         <div
           className="bg-gray-200 block md:flex flex-col w-full justify-between rounded-lg pt-3 mr-2 mt-4 md:mt-0">
           <div>
-            <p className="text-xs px-3"> {"Evaluated By" |> str} </p>
+            <p className="text-xs px-3"> {"Evaluated By"->str} </p>
             <p className="text-sm font-semibold px-3 pb-3">
-              {switch overlaySubmission |> OverlaySubmission.evaluatorName {
-              | Some(name) => name |> str
-              | None => <em> {"Deleted Coach" |> str} </em>
+              {switch overlaySubmission->OverlaySubmission.evaluatorName {
+              | Some(name) => name->str
+              | None => <em> {"Deleted Coach"->str} </em>
               }}
             </p>
           </div>
           <div
             className="text-xs bg-gray-300 flex items-center rounded-b-lg px-3 py-2 md:px-3 md:py-1">
-            {"on " ++ (date |> DateFns.format("MMMM D, YYYY")) |> str}
+            {"on " ++ (date->DateFns.format("MMMM D, YYYY"))->str}
           </div>
         </div>
       | (None, Graded(_))
@@ -325,17 +325,17 @@ let submissionStatusIcon = (status, overlaySubmission, send) => {
           (color ++
           ("-400 " ++
           ("bg-" ++ (color ++ ("-100 " ++ ("text-" ++ (color ++ "-800 "))))))))}>
-          {text |> str}
+          {text->str}
         </p>
       </div>
     </div>
-    {switch (overlaySubmission |> OverlaySubmission.evaluatedAt, status) {
+    {switch (overlaySubmission->OverlaySubmission.evaluatedAt, status) {
     | (Some(_), Graded(_)) =>
       <div className="mt-4 md:pl-6 w-full">
         <button
-          onClick={_ => undoGrading(overlaySubmission |> OverlaySubmission.id, send)}
+          onClick={_ => undoGrading(overlaySubmission->OverlaySubmission.id, send)}
           className="btn btn-danger btn-small">
-          <i className="fas fa-undo" /> <span className="ml-2"> {"Undo Grading" |> str} </span>
+          <i className="fas fa-undo" /> <span className="ml-2"> {"Undo Grading"->str} </span>
         </button>
       </div>
     | (None, Graded(_))
@@ -354,7 +354,7 @@ let gradeSubmission = (
   status,
   event,
 ) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
   switch status {
   | Graded(_) => gradeSubmissionQuery(submissionId, state, send, evaluationCriteria, addGradingCB)
   | Grading
@@ -385,15 +385,15 @@ let reviewButtonDisabled = status =>
 
 let computeStatus = (overlaySubmission, selectedGrades, evaluationCriteria) =>
   switch (
-    overlaySubmission |> OverlaySubmission.passedAt,
-    overlaySubmission |> OverlaySubmission.grades |> ArrayUtils.isNotEmpty,
+    overlaySubmission->OverlaySubmission.passedAt,
+    overlaySubmission->OverlaySubmission.grades->ArrayUtils.isNotEmpty,
   ) {
   | (Some(_), _) => Graded(true)
   | (None, true) => Graded(false)
   | (_, _) =>
     if selectedGrades == [] {
       Ungraded
-    } else if selectedGrades |> Array.length != (evaluationCriteria |> Array.length) {
+    } else if selectedGrades->Array.length != (evaluationCriteria->Array.length) {
       Grading
     } else {
       Graded(passed(selectedGrades, evaluationCriteria))
@@ -401,7 +401,7 @@ let computeStatus = (overlaySubmission, selectedGrades, evaluationCriteria) =>
   }
 
 let submitButtonText = (feedback, grades) =>
-  switch (feedback != "", grades |> ArrayUtils.isNotEmpty) {
+  switch (feedback != "", grades->ArrayUtils.isNotEmpty) {
   | (false, false)
   | (false, true) => "Save grades"
   | (true, false)
@@ -409,7 +409,7 @@ let submitButtonText = (feedback, grades) =>
   }
 
 let noteForm = (overlaySubmission, teamSubmission, note, send) =>
-  switch overlaySubmission |> OverlaySubmission.grades {
+  switch overlaySubmission->OverlaySubmission.grades {
   | [] =>
     let (noteAbout, additionalHelp) = teamSubmission
       ? (
@@ -423,10 +423,10 @@ let noteForm = (overlaySubmission, teamSubmission, note, send) =>
         {"Notes can be used to keep track of a " ++
         (noteAbout ++
         ("'s progress. These notes are shown only to coaches in a student's report." ++
-        additionalHelp)) |> str}
+        additionalHelp))->str}
       </HelpIcon>
 
-    let textareaId = "note-for-submission-" ++ (overlaySubmission |> OverlaySubmission.id)
+    let textareaId = "note-for-submission-" ++ (overlaySubmission->OverlaySubmission.id)
 
     <div className="text-sm">
       <h5 className="font-semibold text-sm flex items-center">
@@ -434,19 +434,19 @@ let noteForm = (overlaySubmission, teamSubmission, note, send) =>
         {switch note {
         | Some(_) =>
           <span className="ml-2 md:ml-3 tracking-wide">
-            <label htmlFor=textareaId> {"Write a Note" |> str} </label> help
+            <label htmlFor=textareaId> {"Write a Note"->str} </label> help
           </span>
         | None =>
           <div className="ml-2 md:ml-3 tracking-wide flex justify-between items-center w-full">
             <span>
               <span>
-                {"Would you like to write a note about this " ++ (noteAbout ++ "?") |> str}
+                {"Would you like to write a note about this " ++ (noteAbout ++ "?")->str}
               </span>
               help
             </span>
             <button
               className="btn btn-small btn-primary-ghost ml-1" onClick={_ => send(UpdateNote(""))}>
-              {"Write a Note" |> str}
+              {"Write a Note"->str}
             </button>
           </div>
         }}
@@ -487,17 +487,17 @@ let make = (
       newFeedback: "",
       saving: false,
       note: None,
-      checklist: overlaySubmission |> OverlaySubmission.checklist,
+      checklist: overlaySubmission->OverlaySubmission.checklist,
     },
   )
 
   let status = computeStatus(overlaySubmission, state.grades, evaluationCriteria)
 
-  let updateChecklistCB = switch overlaySubmission |> OverlaySubmission.grades {
+  let updateChecklistCB = switch overlaySubmission->OverlaySubmission.grades {
   | [] => Some(checklist => send(UpdateChecklist(checklist)))
   | _ => None
   }
-  let pending = overlaySubmission |> OverlaySubmission.grades |> ArrayUtils.isEmpty
+  let pending = overlaySubmission->OverlaySubmission.grades->ArrayUtils.isEmpty
 
   <DisablingCover disabled=state.saving>
     <div>
@@ -505,7 +505,7 @@ let make = (
         <SubmissionChecklistShow checklist=state.checklist updateChecklistCB pending />
       </div>
       {showFeedbackForm(
-        overlaySubmission |> OverlaySubmission.grades,
+        overlaySubmission->OverlaySubmission.grades,
         reviewChecklist,
         updateReviewChecklistCB,
         state,
@@ -516,12 +516,12 @@ let make = (
         {noteForm(overlaySubmission, teamSubmission, state.note, send)}
         <h5 className="font-semibold text-sm flex items-center mt-4 md:mt-6">
           <Icon className="if i-tachometer-regular text-gray-800 text-base" />
-          <span className="ml-2 md:ml-3 tracking-wide"> {"Grade Card" |> str} </span>
+          <span className="ml-2 md:ml-3 tracking-wide"> {"Grade Card"->str} </span>
         </h5>
         <div
           className="flex md:flex-row flex-col border md:ml-7 bg-gray-100 p-2 md:p-4 rounded-lg mt-2">
           <div className="w-full md:w-3/6">
-            {switch overlaySubmission |> OverlaySubmission.grades {
+            {switch overlaySubmission->OverlaySubmission.grades {
             | [] => renderGradePills(evaluationCriteria, targetEvaluationCriteriaIds, state, send)
 
             | grades => showGrades(grades, evaluationCriteria, state)
@@ -531,21 +531,21 @@ let make = (
         </div>
       </div>
     </div>
-    {switch overlaySubmission |> OverlaySubmission.grades {
+    {switch overlaySubmission->OverlaySubmission.grades {
     | [] =>
       <div className="bg-white pt-4 mr-4 ml-4 md:mr-6 md:ml-13">
         <button
           disabled={reviewButtonDisabled(status)}
           className="btn btn-success btn-large w-full border border-green-600"
           onClick={gradeSubmission(
-            overlaySubmission |> OverlaySubmission.id,
+            overlaySubmission->OverlaySubmission.id,
             state,
             send,
             evaluationCriteria,
             addGradingCB,
             status,
           )}>
-          {submitButtonText(state.newFeedback, state.grades) |> str}
+          {submitButtonText(state.newFeedback, state.grades)->str}
         </button>
       </div>
 

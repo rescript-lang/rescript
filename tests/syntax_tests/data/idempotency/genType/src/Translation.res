@@ -12,21 +12,21 @@ let getImportTypeUniqueName = ({typeName, asTypeName}: CodeItem.importType) =>
   }
 
 let importTypeCompare = (i1, i2) =>
-  compare(i1 |> getImportTypeUniqueName, i2 |> getImportTypeUniqueName)
+  compare(i1->getImportTypeUniqueName, i2->getImportTypeUniqueName)
 
 let combine = (translations: list<t>): t =>
   translations
-  |> List.map(({CodeItem.importTypes: importTypes, codeItems, typeDeclarations}) => (
+  ->List.map(({CodeItem.importTypes: importTypes, codeItems, typeDeclarations}) => (
     (importTypes, codeItems),
     typeDeclarations,
   ))
-  |> List.split
-  |> (((x, y)) => (x |> List.split, y))
-  |> (
+  ->List.split
+  ->(((x, y)) => (x->List.split, y))
+  ->(
     (((importTypes, codeItems), typeDeclarations)) => {
-      CodeItem.importTypes: importTypes |> List.concat,
-      codeItems: codeItems |> List.concat,
-      typeDeclarations: typeDeclarations |> List.concat,
+      CodeItem.importTypes: importTypes->List.concat,
+      codeItems: codeItems->List.concat,
+      typeDeclarations: typeDeclarations->List.concat,
     }
   )
 
@@ -39,12 +39,12 @@ let abstractTheTypeParameters = (~typeVars, type_) =>
 
 let depToImportType = (~config, ~outputFileRelative, ~resolver, dep: dep) =>
   switch dep {
-  | _ if dep |> Dependencies.isInternal => list{}
+  | _ if dep->Dependencies.isInternal => list{}
   | External(name) if name == "list" => list{
       {
         CodeItem.typeName: "list",
         asTypeName: None,
-        importPath: ModuleName.reasonPervasives |> ModuleResolver.importPathForReasonModuleName(
+        importPath: ModuleName.reasonPervasives->ModuleResolver.importPathForReasonModuleName(
           ~config,
           ~outputFileRelative,
           ~resolver,
@@ -55,11 +55,11 @@ let depToImportType = (~config, ~outputFileRelative, ~resolver, dep: dep) =>
   | Internal(_) => list{}
 
   | Dot(_) =>
-    let moduleName = dep |> Dependencies.getOuterModuleName
-    let typeName = dep |> Dependencies.removeExternalOuterModule |> depToString
-    let asTypeName = dep |> Dependencies.isInternal ? None : Some(dep |> depToString)
+    let moduleName = dep->Dependencies.getOuterModuleName
+    let typeName = dep->Dependencies.removeExternalOuterModule->depToString
+    let asTypeName = dep->Dependencies.isInternal ? None : Some(dep->depToString)
     let importPath =
-      moduleName |> ModuleResolver.importPathForReasonModuleName(
+      moduleName->ModuleResolver.importPathForReasonModuleName(
         ~config,
         ~outputFileRelative,
         ~resolver,
@@ -70,7 +70,7 @@ let depToImportType = (~config, ~outputFileRelative, ~resolver, dep: dep) =>
 let translateDependencies = (~config, ~outputFileRelative, ~resolver, dependencies): list<
   CodeItem.importType,
 > =>
-  dependencies |> List.map(depToImportType(~config, ~outputFileRelative, ~resolver)) |> List.concat
+  dependencies->List.map(depToImportType(~config, ~outputFileRelative, ~resolver))->List.concat
 
 let translateValue = (
   ~attributes,
@@ -88,13 +88,13 @@ let translateValue = (
   | _ => name
   }
   let typeExprTranslation =
-    typeExpr |> TranslateTypeExprFromTypes.translateTypeExprFromTypes(~config, ~typeEnv)
-  let typeVars = typeExprTranslation.type_ |> TypeVars.free
+    typeExpr->TranslateTypeExprFromTypes.translateTypeExprFromTypes(~config, ~typeEnv)
+  let typeVars = typeExprTranslation.type_->TypeVars.free
   let type_ =
-    typeExprTranslation.type_ |> abstractTheTypeParameters(~typeVars) |> addAnnotationsToFunction
-  let resolvedNameOriginal = name |> TypeEnv.addModulePath(~typeEnv) |> ResolvedName.toString
-  let resolvedName = nameAs |> TypeEnv.addModulePath(~typeEnv)
-  let moduleAccessPath = typeEnv |> TypeEnv.getModuleAccessPath(~name=resolvedNameOriginal)
+    typeExprTranslation.type_->abstractTheTypeParameters(~typeVars)->addAnnotationsToFunction
+  let resolvedNameOriginal = name->TypeEnv.addModulePath(~typeEnv)->ResolvedName.toString
+  let resolvedName = nameAs->TypeEnv.addModulePath(~typeEnv)
+  let moduleAccessPath = typeEnv->TypeEnv.getModuleAccessPath(~name=resolvedNameOriginal)
 
   let codeItems = list{
     CodeItem.ExportValue({
@@ -106,7 +106,7 @@ let translateValue = (
     }),
   }
   {
-    importTypes: typeExprTranslation.dependencies |> translateDependencies(
+    importTypes: typeExprTranslation.dependencies->translateDependencies(
       ~config,
       ~outputFileRelative,
       ~resolver,
@@ -148,7 +148,7 @@ let translateComponent = (
   ~addAnnotationsToFunction: type_ => type_,
   name,
 ): t => {
-  let typeExprTranslation_ = typeExpr |> TranslateTypeExprFromTypes.translateTypeExprFromTypes(
+  let typeExprTranslation_ = typeExpr->TranslateTypeExprFromTypes.translateTypeExprFromTypes(
     ~config,
     /* Only get the dependencies for the prop types.
      The return type is a ReasonReact component. */
@@ -157,16 +157,16 @@ let translateComponent = (
   )
   let typeExprTranslation = {
     ...typeExprTranslation_,
-    type_: typeExprTranslation_.type_ |> addAnnotationsToFunction,
+    type_: typeExprTranslation_.type_->addAnnotationsToFunction,
   }
 
-  let freeTypeVarsSet = typeExprTranslation.type_ |> TypeVars.free_
+  let freeTypeVarsSet = typeExprTranslation.type_->TypeVars.free_
 
   /* Replace type variables in props/children with any. */
   let (typeVars, type_) = (
     list{},
-    typeExprTranslation.type_ |> TypeVars.substitute(~f=s =>
-      if freeTypeVarsSet |> StringSet.mem(s) {
+    typeExprTranslation.type_->TypeVars.substitute(~f=s =>
+      if freeTypeVarsSet->StringSet.mem(s) {
         Some(mixedOrUnknown(~config))
       } else {
         None
@@ -226,13 +226,13 @@ let translateComponent = (
       | t => t
       }
     }
-    let resolvedTypeName = "Props" |> TypeEnv.addModulePath(~typeEnv)
+    let resolvedTypeName = "Props"->TypeEnv.addModulePath(~typeEnv)
 
-    let nestedModuleName = typeEnv |> TypeEnv.getNestedModuleName
+    let nestedModuleName = typeEnv->TypeEnv.getNestedModuleName
 
-    let moduleAccessPath = typeEnv |> TypeEnv.getModuleAccessPath(~name="make")
+    let moduleAccessPath = typeEnv->TypeEnv.getModuleAccessPath(~name="make")
     let componentAccessPath =
-      typeEnv |> TypeEnv.getModuleAccessPath(~component=true, ~name="component")
+      typeEnv->TypeEnv.getModuleAccessPath(~component=true, ~name="component")
 
     let codeItems = list{
       CodeItem.ExportComponent({
@@ -250,7 +250,7 @@ let translateComponent = (
       }),
     }
     {
-      importTypes: typeExprTranslation.dependencies |> translateDependencies(
+      importTypes: typeExprTranslation.dependencies->translateDependencies(
         ~config,
         ~outputFileRelative,
         ~resolver,
@@ -261,7 +261,7 @@ let translateComponent = (
 
   | _ =>
     /* not a component: treat make as a normal function */
-    name |> translateValue(
+    name->translateValue(
       ~attributes,
       ~config,
       ~docString,
@@ -291,16 +291,16 @@ let translatePrimitive = (
   let valueName = switch valueDescription.val_prim {
   | list{"", ..._}
   | list{} =>
-    valueDescription.val_id |> Ident.name
+    valueDescription.val_id->Ident.name
   | list{nameOfExtern, ..._} => /* extern foo : someType = "abc"
      The first element of val_prim is "abc" */
     nameOfExtern
   }
   let typeExprTranslation =
-    valueDescription.val_desc |> TranslateCoreType.translateCoreType(~config, ~typeEnv)
+    valueDescription.val_desc->TranslateCoreType.translateCoreType(~config, ~typeEnv)
 
   let (attributeImport, attributeRenaming) =
-    valueDescription.val_attributes |> Annotation.getAttributeImportRenaming
+    valueDescription.val_attributes->Annotation.getAttributeImportRenaming
   switch (typeExprTranslation.type_, attributeImport) {
   | (
       Function({
@@ -321,7 +321,7 @@ let translatePrimitive = (
     | Some(asPath) => asPath
     | None => ""
     }
-    let typeExprTranslation = valueDescription.val_desc |> TranslateCoreType.translateCoreType(
+    let typeExprTranslation = valueDescription.val_desc->TranslateCoreType.translateCoreType(
       ~config,
       /* Only get the dependencies for the prop types.
        The return type is a ReasonReact component. */
@@ -329,13 +329,13 @@ let translatePrimitive = (
       ~typeEnv,
     )
 
-    let freeTypeVarsSet = typeExprTranslation.type_ |> TypeVars.free_
+    let freeTypeVarsSet = typeExprTranslation.type_->TypeVars.free_
 
     /* Replace type variables in props/children with any. */
     let (typeVars, type_) = (
       list{},
-      typeExprTranslation.type_ |> TypeVars.substitute(~f=s =>
-        if freeTypeVarsSet |> StringSet.mem(s) {
+      typeExprTranslation.type_->TypeVars.substitute(~f=s =>
+        if freeTypeVarsSet->StringSet.mem(s) {
           Some(mixedOrUnknown(~config))
         } else {
           None
@@ -350,7 +350,7 @@ let translatePrimitive = (
       | list{{aType: children}, ..._} =>
         switch propOrChildren {
         | {aType: GroupOfLabeledArgs(fields)} => (
-            fields |> List.map(({optional, type_} as field) =>
+            fields->List.map(({optional, type_} as field) =>
               switch (type_, optional) {
               | (Option(type1), Optional) => {
                   ...field,
@@ -368,8 +368,8 @@ let translatePrimitive = (
     | _ => (list{}, mixedOrUnknown(~config))
     }
     let propsTyp = Object(Closed, propsFields)
-    let resolvedTypeName = "Props" |> TypeEnv.addModulePath(~typeEnv)
-    let propsTypeName = resolvedTypeName |> ResolvedName.toString
+    let resolvedTypeName = "Props"->TypeEnv.addModulePath(~typeEnv)
+    let propsTypeName = resolvedTypeName->ResolvedName.toString
 
     let codeItems = list{
       CodeItem.ImportComponent({
@@ -382,13 +382,13 @@ let translatePrimitive = (
           typeVars: typeVars,
           resolvedTypeName: resolvedTypeName,
         },
-        importAnnotation: importString |> Annotation.importFromString,
+        importAnnotation: importString->Annotation.importFromString,
         propsFields: propsFields,
         propsTypeName: propsTypeName,
       }),
     }
     {
-      importTypes: typeExprTranslation.dependencies |> translateDependencies(
+      importTypes: typeExprTranslation.dependencies->translateDependencies(
         ~config,
         ~outputFileRelative,
         ~resolver,
@@ -403,11 +403,11 @@ let translatePrimitive = (
     | None => valueName
     }
 
-    let typeVars = typeExprTranslation.type_ |> TypeVars.free
-    let type_ = typeExprTranslation.type_ |> abstractTheTypeParameters(~typeVars)
+    let typeVars = typeExprTranslation.type_->TypeVars.free
+    let type_ = typeExprTranslation.type_->abstractTheTypeParameters(~typeVars)
 
     {
-      importTypes: typeExprTranslation.dependencies |> translateDependencies(
+      importTypes: typeExprTranslation.dependencies->translateDependencies(
         ~config,
         ~outputFileRelative,
         ~resolver,
@@ -415,7 +415,7 @@ let translatePrimitive = (
       codeItems: list{
         ImportValue({
           asPath: asPath,
-          importAnnotation: importString |> Annotation.importFromString,
+          importAnnotation: importString->Annotation.importFromString,
           type_: type_,
           valueName: valueName,
         }),
@@ -428,19 +428,19 @@ let translatePrimitive = (
 }
 
 let addTypeDeclarationsFromModuleEquations = (~typeEnv, translation: t) => {
-  let eqs = typeEnv |> TypeEnv.getModuleEquations
+  let eqs = typeEnv->TypeEnv.getModuleEquations
   let newTypeDeclarations =
     translation.typeDeclarations
-    |> List.map((typeDeclaration: CodeItem.typeDeclaration) => {
+    ->List.map((typeDeclaration: CodeItem.typeDeclaration) => {
       let exportType = typeDeclaration.exportFromTypeDeclaration.exportType
-      let equations = exportType.resolvedTypeName |> ResolvedName.applyEquations(~eqs)
-      equations |> List.map(((x, y)) => {
+      let equations = exportType.resolvedTypeName->ResolvedName.applyEquations(~eqs)
+      equations->List.map(((x, y)) => {
         let newExportType = {
           ...exportType,
           nameAs: None,
           type_: y
-          |> ResolvedName.toString
-          |> ident(~builtin=false, ~typeArgs=exportType.typeVars |> List.map(s => TypeVar(s))),
+          ->ResolvedName.toString
+          ->ident(~builtin=false, ~typeArgs=exportType.typeVars->List.map(s => TypeVar(s))),
           resolvedTypeName: x,
         }
         {
@@ -452,7 +452,7 @@ let addTypeDeclarationsFromModuleEquations = (~typeEnv, translation: t) => {
         }
       })
     })
-    |> List.concat
+    ->List.concat
   newTypeDeclarations == list{}
     ? translation
     : {

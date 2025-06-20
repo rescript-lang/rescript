@@ -2,7 +2,7 @@ open Webapi.Dom
 
 let handleSelection = _ => print_endline("change")
 
-let elm = document |> Document.createElement("strong")
+let elm = document->Document.createElement("strong")
 
 Element.addSelectionChangeEventListenerWithOptions(
   handleSelection,
@@ -20,9 +20,9 @@ Element.removeSelectionChangeEventListenerUseCapture(handleSelection, elm)
 
 let htmlElm =
   document
-  |> Document.createElement("strong")
-  |> HtmlElement.ofElement
-  |> TestHelpers.unsafelyUnwrapOption
+  ->Document.createElement("strong")
+  ->HtmlElement.ofElement
+  ->TestHelpers.unsafelyUnwrapOption
 
 HtmlElement.addSelectionChangeEventListenerWithOptions(
   handleSelection,
@@ -38,7 +38,7 @@ HtmlElement.removeSelectionChangeEventListenerWithOptions(
 )
 HtmlElement.removeSelectionChangeEventListenerUseCapture(handleSelection, htmlElm)
 
-let htmlDoc = document |> Document.asHtmlDocument |> TestHelpers.unsafelyUnwrapOption
+let htmlDoc = document->Document.asHtmlDocument->TestHelpers.unsafelyUnwrapOption
 
 HtmlDocument.addSelectionChangeEventListenerWithOptions(
   handleSelection,

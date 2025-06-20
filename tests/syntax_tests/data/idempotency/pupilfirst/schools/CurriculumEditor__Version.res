@@ -21,27 +21,27 @@ let make = (id, number, createdAt, updatedAt) => {
 }
 
 let makeArrayFromJs = js => {
-  let length = js |> Array.length
+  let length = js->Array.length
   js
-  |> ArrayUtils.copyAndSort((x, y) =>
+  ->ArrayUtils.copyAndSort((x, y) =>
     DateFns.differenceInSeconds(
-      y["createdAt"] |> Json.Decode.string |> DateFns.parseString,
-      x["createdAt"] |> Json.Decode.string |> DateFns.parseString,
-    ) |> int_of_float
+      y["createdAt"]->Json.Decode.string->DateFns.parseString,
+      x["createdAt"]->Json.Decode.string->DateFns.parseString,
+    )->int_of_float
   )
-  |> Array.mapi((number, c) =>
+  ->Array.mapi((number, c) =>
     make(
       c["id"],
       length - number,
-      c["createdAt"] |> Json.Decode.string |> DateFns.parseString,
-      c["updatedAt"] |> Json.Decode.string |> DateFns.parseString,
+      c["createdAt"]->Json.Decode.string->DateFns.parseString,
+      c["updatedAt"]->Json.Decode.string->DateFns.parseString,
     )
   )
 }
 
-let versionAt = t => t.createdAt |> DateFns.format("MMM D, YYYY HH:MM")
+let versionAt = t => t.createdAt->DateFns.format("MMM D, YYYY HH:MM")
 
 let isLatestTargetVersion = (versions, t) => {
-  let length = versions |> Array.length
+  let length = versions->Array.length
   t.number == length
 }

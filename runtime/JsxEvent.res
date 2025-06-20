@@ -95,9 +95,7 @@ module Clipboard = {
   type tag
   type t = synthetic<tag>
 
-  include MakeEventWithType({
-    type t = t
-  })
+  include MakeEventWithType({type t = t})
 
   @get external clipboardData: t => {..} = "clipboardData"
   /* Should return Dom.dataTransfer */
@@ -107,9 +105,7 @@ module Composition = {
   type tag
   type t = synthetic<tag>
 
-  include MakeEventWithType({
-    type t = t
-  })
+  include MakeEventWithType({type t = t})
 
   @get external data: t => string = "data"
 }
@@ -118,9 +114,7 @@ module Keyboard = {
   type tag
   type t = synthetic<tag>
 
-  include MakeEventWithType({
-    type t = t
-  })
+  include MakeEventWithType({type t = t})
 
   @get external altKey: t => bool = "altKey"
   @get external charCode: t => int = "charCode"
@@ -142,9 +136,7 @@ module Focus = {
   type tag
   type t = synthetic<tag>
 
-  include MakeEventWithType({
-    type t = t
-  })
+  include MakeEventWithType({type t = t})
 
   @get @return(nullable) external relatedTarget: t => option<{..}> = "relatedTarget"
   /* Should return Dom.eventTarget */
@@ -154,18 +146,14 @@ module Form = {
   type tag
   type t = synthetic<tag>
 
-  include MakeEventWithType({
-    type t = t
-  })
+  include MakeEventWithType({type t = t})
 }
 
 module Mouse = {
   type tag
   type t = synthetic<tag>
 
-  include MakeEventWithType({
-    type t = t
-  })
+  include MakeEventWithType({type t = t})
 
   @get external altKey: t => bool = "altKey"
   @get external button: t => int = "button"
@@ -194,9 +182,7 @@ module Pointer = {
   type tag
   type t = synthetic<tag>
 
-  include MakeEventWithType({
-    type t = t
-  })
+  include MakeEventWithType({type t = t})
 
   /* UIEvent */
   @get @get
@@ -244,18 +230,14 @@ module Selection = {
   type tag
   type t = synthetic<tag>
 
-  include MakeEventWithType({
-    type t = t
-  })
+  include MakeEventWithType({type t = t})
 }
 
 module Touch = {
   type tag
   type t = synthetic<tag>
 
-  include MakeEventWithType({
-    type t = t
-  })
+  include MakeEventWithType({type t = t})
 
   @get external altKey: t => bool = "altKey"
   @get external changedTouches: t => {..} = "changedTouches"
@@ -278,9 +260,7 @@ module UI = {
   type tag
   type t = synthetic<tag>
 
-  include MakeEventWithType({
-    type t = t
-  })
+  include MakeEventWithType({type t = t})
 
   @get external detail: t => int = "detail"
   /* external view : t -> Dom.window = "view" [@@get] */
@@ -291,9 +271,7 @@ module Wheel = {
   type tag
   type t = synthetic<tag>
 
-  include MakeEventWithType({
-    type t = t
-  })
+  include MakeEventWithType({type t = t})
 
   @get external deltaMode: t => int = "deltaMode"
   @get external deltaX: t => float = "deltaX"
@@ -305,27 +283,21 @@ module Media = {
   type tag
   type t = synthetic<tag>
 
-  include MakeEventWithType({
-    type t = t
-  })
+  include MakeEventWithType({type t = t})
 }
 
 module Image = {
   type tag
   type t = synthetic<tag>
 
-  include MakeEventWithType({
-    type t = t
-  })
+  include MakeEventWithType({type t = t})
 }
 
 module Animation = {
   type tag
   type t = synthetic<tag>
 
-  include MakeEventWithType({
-    type t = t
-  })
+  include MakeEventWithType({type t = t})
 
   @get external animationName: t => string = "animationName"
   @get external pseudoElement: t => string = "pseudoElement"
@@ -336,9 +308,7 @@ module Transition = {
   type tag
   type t = synthetic<tag>
 
-  include MakeEventWithType({
-    type t = t
-  })
+  include MakeEventWithType({type t = t})
 
   @get external propertyName: t => string = "propertyName"
   @get external pseudoElement: t => string = "pseudoElement"

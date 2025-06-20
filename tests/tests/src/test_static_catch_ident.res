@@ -7,5 +7,5 @@ let scanf_bad_input = (ib, x) =>
       Js.log(s) /* necessary */
       Js.log("don't inlinie")
     }
-  | x => raise(x)
+  | x => throw(x)
   }

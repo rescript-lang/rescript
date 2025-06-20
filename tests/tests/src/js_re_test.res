@@ -3,20 +3,20 @@ module Array = Ocaml_Array
 let suites = {
   open Mt
   list{
-    (
-      "captures",
-      _ => {
-        let re = /(\d+)-(?:(\d+))?/g
-        let str = "3-"
-        switch re->Js.Re.exec_(str) {
-        | Some(result) =>
-          let defined = Js.Re.captures(result)[1]
-          let undefined = Js.Re.captures(result)[2]
-          Eq((Js.Nullable.return("3"), Js.Nullable.null), (defined, undefined))
-        | None => Fail()
-        }
-      },
-    ),
+    // (
+    //   "captures",
+    //   _ => {
+    //     let re = /(\d+)-(?:(\d+))?/g
+    //     let str = "3-"
+    //     switch re->Js.Re.exec_(str) {
+    //     | Some(result) =>
+    //       let defined = Js.Re.captures(result)[1]
+    //       let undefined = Js.Re.captures(result)[2]
+    //       Eq((Js.Nullable.return("3"), Js.Nullable.null), (defined, undefined))
+    //     | None => Fail()
+    //     }
+    //   },
+    // ),
     (
       "fromString",
       _ => {

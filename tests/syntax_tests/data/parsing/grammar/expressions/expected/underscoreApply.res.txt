@@ -6,15 +6,19 @@ let l =
 let x [arity:1]__x = List.length __x
 let nested [arity:1]x [arity:1]__x = List.length __x
 let incr [arity:1]~v  = v + 1
-let l1 = List.length (List.map (fun [arity:1]__x -> incr ~v:__x) [1; 2; 3])
-let l2 = List.length (List.map (fun [arity:1]__x -> incr ~v:__x) [1; 2; 3])
+let l1 =
+  ([1; 2; 3] -> (List.map (fun [arity:1]__x -> incr ~v:__x))) -> List.length
+let l2 =
+  ([1; 2; 3] -> (List.map (fun [arity:1]__x -> incr ~v:__x))) -> List.length
 let optParam [arity:2]?v  () = ((if v == None then 0 else 1)[@res.ternary ])
 let l1 =
-  List.length
-    (List.map (fun [arity:1]__x -> optParam ?v:__x ()) [Some 1; None; Some 2])
+  ([Some 1; None; Some 2] ->
+     (List.map (fun [arity:1]__x -> optParam ?v:__x ())))
+    -> List.length
 let l2 =
-  List.length
-    (List.map (fun [arity:1]__x -> optParam ?v:__x ()) [Some 1; None; Some 2])
+  ([Some 1; None; Some 2] ->
+     (List.map (fun [arity:1]__x -> optParam ?v:__x ())))
+    -> List.length
 ;;fun [arity:1]__x ->
     underscoreWithComments (fun [arity:1]x -> ((something ())[@res.braces ]))
       __x

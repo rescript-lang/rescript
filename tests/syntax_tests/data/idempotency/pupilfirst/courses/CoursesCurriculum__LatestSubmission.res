@@ -7,9 +7,9 @@ type t = {
 let decode = json => {
   open Json.Decode
   {
-    targetId: json |> field("targetId", string),
-    passedAt: json |> field("passedAt", nullable(string)) |> Js.Null.toOption,
-    evaluatorId: json |> field("evaluatorId", nullable(string)) |> Js.Null.toOption,
+    targetId: json->field("targetId", string),
+    passedAt: json->field("passedAt", nullable(string))->Js.Null.toOption,
+    evaluatorId: json->field("evaluatorId", nullable(string))->Js.Null.toOption,
   }
 }
 
@@ -29,6 +29,6 @@ let hasBeenEvaluated = t =>
 
 let make = (~pending, ~targetId) => {
   targetId: targetId,
-  passedAt: pending ? None : Some(Js.Date.make() |> Js.Date.toISOString),
+  passedAt: pending ? None : Some(Js.Date.make()->Js.Date.toISOString),
   evaluatorId: None,
 }

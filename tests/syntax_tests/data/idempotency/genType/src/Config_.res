@@ -91,7 +91,7 @@ let getBsCurryPath = (~config) =>
 let getBool = (s, json) =>
   switch json {
   | Ext_json_types.Obj({map}) =>
-    switch map |> String_map.find_opt(s) {
+    switch map->String_map.find_opt(s) {
     | Some(True(_)) => Some(true)
     | Some(False(_)) => Some(false)
     | _ => None
@@ -102,7 +102,7 @@ let getBool = (s, json) =>
 let getString = (s, json) =>
   switch json {
   | Ext_json_types.Obj({map}) =>
-    switch map |> String_map.find_opt(s) {
+    switch map->String_map.find_opt(s) {
     | Some(Str({str})) => str
     | _ => ""
     }
@@ -112,7 +112,7 @@ let getString = (s, json) =>
 let getStringOption = (s, json) =>
   switch json {
   | Ext_json_types.Obj({map}) =>
-    switch map |> String_map.find_opt(s) {
+    switch map->String_map.find_opt(s) {
     | Some(Str({str})) => Some(str)
     | _ => None
     }
@@ -123,9 +123,9 @@ let getShims = json => {
   let shims = ref(list{})
   switch json {
   | Ext_json_types.Obj({map}) =>
-    switch map |> String_map.find_opt("shims") {
+    switch map->String_map.find_opt("shims") {
     | Some(Ext_json_types.Obj({map: shimsMap})) =>
-      shimsMap |> String_map.iter((fromModule, toModule) =>
+      shimsMap->String_map.iter((fromModule, toModule) =>
         switch toModule {
         | Ext_json_types.Str({str}) => shims := list{(fromModule, str), ...shims.contents}
         | _ => ()
@@ -133,10 +133,10 @@ let getShims = json => {
       )
     | Some(Arr({content})) =>
       /* To be deprecated: array of strings */
-      content |> Array.iter(x =>
+      content->Array.iter(x =>
         switch x {
         | Ext_json_types.Str({str}) =>
-          let fromTo = Str.split(Str.regexp("="), str) |> Array.of_list
+          let fromTo = Str.split(Str.regexp("="), str)->Array.of_list
           assert (Array.length(fromTo) === 2)
           shims := list{(fromTo[0], fromTo[1]), ...shims.contents}
         | _ => ()
@@ -152,8 +152,8 @@ let getShims = json => {
 let getDebug = json =>
   switch json {
   | Ext_json_types.Obj({map}) =>
-    switch map |> String_map.find_opt("debug") {
-    | Some(Ext_json_types.Obj({map})) => map |> String_map.iter(Debug.setItem)
+    switch map->String_map.find_opt("debug") {
+    | Some(Ext_json_types.Obj({map})) => map->String_map.iter(Debug.setItem)
     | _ => ()
     }
   | _ => ()
@@ -161,22 +161,22 @@ let getDebug = json =>
 
 let readConfig = (~bsVersion, ~getConfigFile, ~getBsConfigFile, ~namespace) => {
   let fromJson = json => {
-    let languageString = json |> getString("language")
-    let moduleString = json |> getString("module")
-    let importPathString = json |> getString("importPath")
-    let reasonReactPathString = json |> getString("reasonReactPath")
-    let fileHeader = json |> getStringOption("fileHeader")
-    let bsBlockPathString = json |> getString("bsBlockPath")
-    let bsCurryPathString = json |> getString("bsCurryPath")
-    let exportInterfacesBool = json |> getBool("exportInterfaces")
-    let generatedFileExtensionStringOption = json |> getStringOption("generatedFileExtension")
-    let propTypesBool = json |> getBool("propTypes")
-    let shimsMap = json |> getShims |> List.fold_left((map, (fromModule, toModule)) => {
-        let moduleName: ModuleName.t = fromModule |> ModuleName.fromStringUnsafe
-        let shimModuleName = toModule |> ModuleName.fromStringUnsafe
+    let languageString = json->getString("language")
+    let moduleString = json->getString("module")
+    let importPathString = json->getString("importPath")
+    let reasonReactPathString = json->getString("reasonReactPath")
+    let fileHeader = json->getStringOption("fileHeader")
+    let bsBlockPathString = json->getString("bsBlockPath")
+    let bsCurryPathString = json->getString("bsCurryPath")
+    let exportInterfacesBool = json->getBool("exportInterfaces")
+    let generatedFileExtensionStringOption = json->getStringOption("generatedFileExtension")
+    let propTypesBool = json->getBool("propTypes")
+    let shimsMap = json->getShims->List.fold_left((map, (fromModule, toModule)) => {
+        let moduleName: ModuleName.t = fromModule->ModuleName.fromStringUnsafe
+        let shimModuleName = toModule->ModuleName.fromStringUnsafe
         ModuleNameMap.add(moduleName, shimModuleName, map)
       }, ModuleNameMap.empty)
-    json |> getDebug
+    json->getDebug
     let language = switch languageString {
     | "typescript" => TypeScript
     | "untyped" => Untyped
@@ -217,11 +217,11 @@ let readConfig = (~bsVersion, ~getConfigFile, ~getBsConfigFile, ~namespace) => {
     let bsVersion = switch bsVersion {
     | None => (0, 0, 0)
     | Some(s) =>
-      switch s |> Str.split(Str.regexp(Str.quote("."))) {
+      switch s->Str.split(Str.regexp(Str.quote("."))) {
       | list{x1, x2, x3, ..._} =>
         let v1 = int_of_string(x1)
         let v2 = int_of_string(x2)
-        let v3 = switch x3 |> Str.split(Str.regexp("-")) {
+        let v3 = switch x3->Str.split(Str.regexp("-")) {
         | list{x3, ..._} => int_of_string(x3)
         | _ => 0
         }
@@ -254,7 +254,7 @@ let readConfig = (~bsVersion, ~getConfigFile, ~getBsConfigFile, ~namespace) => {
         languageString,
         moduleString,
         importPathString,
-        shimsMap |> ModuleNameMap.cardinal,
+        shimsMap->ModuleNameMap.cardinal,
         v1,
         v2,
         v3,
@@ -291,18 +291,18 @@ let readConfig = (~bsVersion, ~getConfigFile, ~getBsConfigFile, ~namespace) => {
   let fromBsConfig = json =>
     switch json {
     | Ext_json_types.Obj({map}) =>
-      let config = switch map |> String_map.find_opt("gentypeconfig") {
-      | Some(jsonGenFlowConfig) => jsonGenFlowConfig |> fromJson
+      let config = switch map->String_map.find_opt("gentypeconfig") {
+      | Some(jsonGenFlowConfig) => jsonGenFlowConfig->fromJson
       | _ => default
       }
-      let config = switch map |> String_map.find_opt("namespace") {
+      let config = switch map->String_map.find_opt("namespace") {
       | Some(True(_)) => {...config, namespace: namespace}
       | _ => config
       }
-      let config = switch map |> String_map.find_opt("bs-dependencies") {
+      let config = switch map->String_map.find_opt("bs-dependencies") {
       | Some(Arr({content})) =>
         let strings = ref(list{})
-        content |> Array.iter(x =>
+        content->Array.iter(x =>
           switch x {
           | Ext_json_types.Str({str}) => strings := list{str, ...strings.contents}
           | _ => ()
@@ -311,7 +311,7 @@ let readConfig = (~bsVersion, ~getConfigFile, ~getBsConfigFile, ~namespace) => {
         {...config, bsDependencies: strings.contents}
       | _ => config
       }
-      let config = switch map |> String_map.find_opt("sources") {
+      let config = switch map->String_map.find_opt("sources") {
       | Some(sourceItem) => {...config, sources: Some(sourceItem)}
       | _ => config
       }
@@ -320,13 +320,13 @@ let readConfig = (~bsVersion, ~getConfigFile, ~getBsConfigFile, ~namespace) => {
     }
   switch getConfigFile() {
   | Some(configFile) =>
-    try configFile |> Ext_json_parse.parse_json_from_file |> fromJson catch {
+    try configFile->Ext_json_parse.parse_json_from_file->fromJson catch {
     | _ => default
     }
   | None =>
     switch getBsConfigFile() {
     | Some(bsConfigFile) =>
-      try bsConfigFile |> Ext_json_parse.parse_json_from_file |> fromBsConfig catch {
+      try bsConfigFile->Ext_json_parse.parse_json_from_file->fromBsConfig catch {
       | _ => default
       }
     | None => default

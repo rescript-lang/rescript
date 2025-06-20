@@ -17,9 +17,9 @@ module Input = {
       onChange
       value={switch value {
       | Float(float) =>
-        float |> Js.Option.map((. int) => Js.Float.toString(int)) |> Js.Option.getWithDefault("")
+        float->Js.Option.map((. int) => Js.Float.toString(int))->Js.Option.getWithDefault("")
       | Number(int) =>
-        int |> Js.Option.map((. int) => Js.Int.toString(int)) |> Js.Option.getWithDefault("")
+        int->Js.Option.map((. int) => Js.Int.toString(int))->Js.Option.getWithDefault("")
       | Text(text) => text
       }}
       placeholder=label
@@ -103,7 +103,7 @@ module Radio = {
           <Circle selected={value == selectedValue} />
           <span className={"text-black text-base pl-2 " ++ fontWeight}> {React.string(text)} </span>
         </button>
-      }) |> React.array}
+      })->React.array}
     </div>
 }
 
@@ -167,7 +167,7 @@ module Locations = {
           onClick={removedId =>
             setLocations(locations => Js.Array.filter(id => id != removedId, locations))}
         />
-      ) |> React.array}
+      )->React.array}
       <div className="pt-1">
         <ReactSelect
           value={Belt.Array.mapU(locations, (. {Location.text: text, id}) => {
@@ -226,7 +226,7 @@ module ThresholdInput = {
           value=Input.Number(threshold)
           onBlur=ignore
           onChange={ev => {
-            let value = ReactEvent.Form.target(ev)["value"] |> int_of_string_opt
+            let value = ReactEvent.Form.target(ev)["value"]->int_of_string_opt
             setThreshold(_ => value)
           }}
           label="1"
@@ -248,7 +248,7 @@ module CalendarInput = {
           ref=?{Belt.Option.map(Js.Nullable.toOption(forwardedRef), ReactDOMRe.Ref.domRef)}
           className="bg-bggray text-base border-bggray border date-range-button"
           onClick>
-          {React.string(Js.Date.fromString(value) |> Js.Date.toLocaleDateString)}
+          {React.string(Js.Date.fromString(value)->Js.Date.toLocaleDateString)}
         </button>
       </div>
     )

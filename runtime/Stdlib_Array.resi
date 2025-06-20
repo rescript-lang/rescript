@@ -11,9 +11,7 @@ type t<'a> = array<'a>
 type arrayLike<'a>
 
 /**
-`fromIterator(iterator)`
-
-Creates an array from the provided `iterator`
+`fromIterator(iterator)` creates an array from the provided `iterator`
 
 ## Examples
 
@@ -35,9 +33,7 @@ external fromIterator: Stdlib_Iterator.t<'a> => array<'a> = "Array.from"
 external fromArrayLikeWithMap: (arrayLike<'a>, 'a => 'b) => array<'b> = "Array.from"
 
 /**
-`make(~length, init)`
-
-Creates an array of length `length` initialized with the value of `init`.
+`make(~length, init)` creates an array of length `length` initialized with the value of `init`.
 
 ## Examples
 
@@ -212,8 +208,7 @@ someArray->Array.pushMany(["yay", "wehoo"])
 someArray->assertEqual(["hi", "hello", "yay", "wehoo"])
 ```
 */
-@variadic
-@send
+@variadic @send
 external pushMany: (array<'a>, array<'a>) => unit = "push"
 
 /**
@@ -302,6 +297,26 @@ external splice: (array<'a>, ~start: int, ~remove: int, ~insert: array<'a>) => u
 external toSpliced: (array<'a>, ~start: int, ~remove: int, ~insert: array<'a>) => array<'a> =
   "toSpliced"
 
+/**
+`removeInPlace(array, index)` removes the item at the specified `index` from `array`.
+
+Beware this will *mutate* the array.
+
+## Examples
+
+```rescript
+let array = []
+array->Array.removeInPlace(0)
+assertEqual(array, []) // Removing from an empty array does nothing
+
+let array2 = ["Hello", "Hi", "Good bye"]
+array2->Array.removeInPlace(1)
+assertEqual(array2, ["Hello", "Good bye"]) // Removes the item at index 1
+```
+ */
+@send
+external removeInPlace: (array<'a>, int, @as(1) _) => unit = "splice"
+
 @send external with: (array<'a>, int, 'a) => array<'a> = "with"
 
 /**
@@ -337,8 +352,7 @@ someArray->Array.unshiftMany(["yay", "wehoo"])
 someArray->assertEqual(["yay", "wehoo", "hi", "hello"])
 ```
 */
-@variadic
-@send
+@variadic @send
 external unshiftMany: (array<'a>, array<'a>) => unit = "unshift"
 
 /**
@@ -376,8 +390,7 @@ let someArray = array1->Array.concatMany([array2, array3])
 Console.log(someArray) // ["hi", "hello", "yay", "wehoo"]
 ```
 */
-@variadic
-@send
+@variadic @send
 external concatMany: (array<'a>, array<array<'a>>) => array<'a> = "concat"
 
 /**
@@ -481,8 +494,7 @@ external join: (array<string>, string) => string = "join"
 ->assertEqual("One -- Two -- Three")
 ```
 */
-@deprecated("Use `join` instead")
-@send
+@deprecated("Use `join` instead") @send
 external joinWith: (array<string>, string) => string = "join"
 
 /**
@@ -512,8 +524,7 @@ external joinUnsafe: (array<'a>, string) => string = "join"
 ->assertEqual("1 -- 2 -- 3")
 ```
 */
-@deprecated("Use `joinUnsafe` instead")
-@send
+@deprecated("Use `joinUnsafe` instead") @send
 external joinWithUnsafe: (array<'a>, string) => string = "join"
 @send external lastIndexOf: (array<'a>, 'a) => int = "lastIndexOf"
 let lastIndexOfOpt: (array<'a>, 'a) => option<int>
@@ -701,6 +712,42 @@ array
 external findWithIndex: (array<'a>, ('a, int) => bool) => option<'a> = "find"
 
 /**
+`findLast(array, checker)` returns the last element of `array` where the provided `checker` function returns true.
+
+See [`Array.findLast`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLast) on MDN.
+
+## Examples
+
+```rescript
+let array = [1, 2, 3]
+
+array
+->Array.findLast(item => item > 0)
+->assertEqual(Some(3))
+```
+*/
+@send
+external findLast: (array<'a>, 'a => bool) => option<'a> = "findLast"
+
+/**
+`findLastWithIndex(array, checker)` returns the last element of `array` where the provided `checker` function returns true.
+
+See [`Array.findLast`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLast) on MDN.
+
+## Examples
+
+```rescript
+let array = [1, 2, 3]
+
+array
+->Array.findLastWithIndex((item, index) => index < 2 && item > 0)
+->assertEqual(Some(2))
+```
+*/
+@send
+external findLastWithIndex: (array<'a>, ('a, int) => bool) => option<'a> = "findLast"
+
+/**
 `findIndex(array, checker)` returns the index of the first element of `array` where the provided `checker` function returns true.
 
 Returns `-1` if the item does not exist. Consider using `Array.findIndexOpt` if you want an option instead (where `-1` would be `None`).
@@ -748,6 +795,55 @@ assertEqual(isTypeScriptFirst, -1)
 */
 @send
 external findIndexWithIndex: (array<'a>, ('a, int) => bool) => int = "findIndex"
+
+/**
+`findLastIndex(array, checker)` returns the index of the last element of `array` where the provided `checker` function returns true.
+
+Returns `-1` if the item does not exist. Consider using `Array.findLastIndexOpt` if you want an option instead (where `-1` would be `None`).
+
+See [`Array.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex) on MDN.
+
+## Examples
+
+```rescript
+type languages = ReScript | TypeScript | JavaScript
+
+let array = [ReScript, JavaScript, ReScript]
+
+array
+->Array.findLastIndex(item => item == ReScript)
+->assertEqual(2)
+
+array->Array.findLastIndex(item => item == TypeScript)
+->assertEqual(-1)
+```
+*/
+@send
+external findLastIndex: (array<'a>, 'a => bool) => int = "findLastIndex"
+
+/**
+`findLastIndexWithIndex(array, checker)` returns the index of the last element of `array` where the provided `checker` function returns true.
+
+Returns `-1` if the item does not exist. Consider using `Array.findLastIndexOpt` if you want an option instead (where `-1` would be `None`).
+
+See [`Array.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex) on MDN.
+
+## Examples
+
+```rescript
+type languages = ReScript | TypeScript | JavaScript
+
+let array = [ReScript, JavaScript, JavaScript, ReScript]
+
+let isReScriptLast = array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == ReScript)
+let isTypeScriptLast = array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == TypeScript)
+
+assertEqual(isReScriptLast, 3)
+assertEqual(isTypeScriptLast, -1)
+```
+*/
+@send
+external findLastIndexWithIndex: (array<'a>, ('a, int) => bool) => int = "findLastIndex"
 
 /**
 `forEach(array, fn)` runs the provided `fn` on every element of `array`.
@@ -1045,6 +1141,25 @@ array
 let findIndexOpt: (array<'a>, 'a => bool) => option<int>
 
 /**
+`findIndexOpt(array, checker)` returns the index of the last element of `array` where the provided `checker` function returns true.
+
+Returns `None` if no item matches.
+
+See [`Array.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex) on MDN.
+
+## Examples
+
+```rescript
+let array = ["hello", "world", "!"]
+
+array
+->Array.findLastIndexOpt(item => item->String.includes("o"))
+->assertEqual(Some(1))
+```
+*/
+let findLastIndexOpt: (array<'a>, 'a => bool) => option<int>
+
+/**
 `toReversed(array)` creates a new array with all items from `array` in reversed order.
 
 See [`Array.toReversed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toReversed) on MDN.
@@ -1255,3 +1370,45 @@ Returns `None` if the array is empty.
 ```
 */
 let last: array<'a> => option<'a>
+
+/**
+  `ignore(array)` ignores the provided array and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: array<'a> => unit = "%ignore"
+
+/**
+`entries(array)` returns a new array iterator object that contains the key/value pairs for each index in the array.
+
+See [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/entries) on MDN.
+
+## Examples
+
+```rescript
+let array = [5, 6, 7]
+let iterator : Iterator.t<(int, int)> = array->Array.entries
+iterator->Iterator.next->assertEqual({done: false, value: Some((0, 5))})
+iterator->Iterator.next->assertEqual({done: false, value: Some((1, 6))})
+```
+*/
+@send
+external entries: array<'a> => Stdlib_Iterator.t<(int, 'a)> = "entries"
+
+/**
+`values(array)` returns a new array iterator object that contains the values for each index in the array.
+
+See [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/values) on MDN.
+
+## Examples
+
+```rescript
+let array = [5, 6, 7]
+let iterator : Iterator.t<int> = array->Array.values
+iterator->Iterator.next->assertEqual({done: false, value: Some(5)})
+iterator->Iterator.next->assertEqual({done: false, value: Some(6)})
+```
+ */
+@send
+external values: array<'a> => Stdlib_Iterator.t<'a> = "values"

@@ -12,7 +12,7 @@ module LevelUpQuery = %graphql(`
 
 let handleSubmitButton = saving => {
   let submitButtonText = (title, iconClasses) =>
-    <span> <FaIcon classes={iconClasses ++ " mr-2"} /> {title |> str} </span>
+    <span> <FaIcon classes={iconClasses ++ " mr-2"} /> {title->str} </span>
 
   saving
     ? submitButtonText("Saving", "fas fa-spinner fa-spin")
@@ -21,20 +21,20 @@ let handleSubmitButton = saving => {
 
 let refreshPage = () => {
   open Webapi.Dom
-  location |> Location.reload
+  location->Location.reload
 }
 
 let createLevelUpQuery = (course, setSaving, event) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
   setSaving(_ => true)
 
-  LevelUpQuery.make(~courseId=course |> Course.id, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
+  LevelUpQuery.make(~courseId=course->Course.id, ())
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
     response["levelUp"]["success"] ? refreshPage() : setSaving(_ => false)
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 @react.component

@@ -24,8 +24,8 @@ module UpdateCourseAuthorQuery = %graphql(`
 let createCourseAuthorQuery = (courseId, rootPath, email, name, setSaving, addAuthorCB) => {
   setSaving(_ => true)
   CreateCourseAuthorQuery.make(~courseId, ~email, ~name, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
     switch response["createCourseAuthor"]["courseAuthor"] {
     | Some(courseAuthor) =>
       addAuthorCB(
@@ -37,21 +37,21 @@ let createCourseAuthorQuery = (courseId, rootPath, email, name, setSaving, addAu
     }
     Js.Promise.resolve()
   })
-  |> Js.Promise.catch(_ => {
+  ->Js.Promise.catch(_ => {
     setSaving(_ => false)
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let updateCourseAuthorQuery = (rootPath, author, name, setSaving, updateAuthorCB) => {
   setSaving(_ => true)
-  let id = author |> Author.id
+  let id = author->Author.id
   UpdateCourseAuthorQuery.make(~id, ~name, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
     if response["updateCourseAuthor"]["success"] {
-      updateAuthorCB(author |> Author.updateName(name))
+      updateAuthorCB(author->Author.updateName(name))
       ReasonReactRouter.push(rootPath)
     } else {
       setSaving(_ => false)
@@ -59,11 +59,11 @@ let updateCourseAuthorQuery = (rootPath, author, name, setSaving, updateAuthorCB
 
     Js.Promise.resolve()
   })
-  |> Js.Promise.catch(_ => {
+  ->Js.Promise.catch(_ => {
     setSaving(_ => false)
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let handleButtonClick = (
@@ -77,14 +77,14 @@ let handleButtonClick = (
   updateAuthorCB,
   event,
 ) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
   switch author {
   | Some(author) => updateCourseAuthorQuery(rootPath, author, name, setSaving, updateAuthorCB)
   | None => createCourseAuthorQuery(courseId, rootPath, email, name, setSaving, addAuthorCB)
   }
 }
 
-let isInvalidEmail = email => email |> EmailUtils.isInvalid(false)
+let isInvalidEmail = email => email->EmailUtils.isInvalid(false)
 
 let showInvalidEmailError = (email, author) =>
   switch author {
@@ -102,7 +102,7 @@ let saveDisabled = (email, name, saving, author) =>
   (saving ||
   (name == "" ||
     switch author {
-    | Some(author) => author |> Author.name == name && author |> Author.email == email
+    | Some(author) => author->Author.name == name && author->Author.email == email
     | None => false
     }))
 
@@ -125,14 +125,14 @@ let make = (~courseId, ~rootPath, ~author, ~addAuthorCB, ~updateAuthorCB) => {
 
   let (name, setName) = React.useState(() =>
     switch author {
-    | Some(author) => author |> Author.name
+    | Some(author) => author->Author.name
     | None => ""
     }
   )
 
   let (email, setEmail) = React.useState(() =>
     switch author {
-    | Some(author) => author |> Author.email
+    | Some(author) => author->Author.email
     | None => ""
     }
   )
@@ -143,15 +143,15 @@ let make = (~courseId, ~rootPath, ~author, ~addAuthorCB, ~updateAuthorCB) => {
         <div className="max-w-2xl p-6 mx-auto">
           <h5 className="uppercase text-center border-b border-gray-400 pb-2 mb-4">
             {switch author {
-            | Some(author) => author |> Author.name
+            | Some(author) => author->Author.name
             | None => "Add new author"
-            } |> str}
+            }->str}
           </h5>
           <div>
             <label
               className="inline-block tracking-wide text-xs font-semibold mb-2 leading-tight"
               htmlFor="email">
-              {"Email" |> str}
+              {"Email"->str}
             </label>
             <input
               value=email
@@ -170,7 +170,7 @@ let make = (~courseId, ~rootPath, ~author, ~addAuthorCB, ~updateAuthorCB) => {
             <label
               className="inline-block tracking-wide text-xs font-semibold mb-2 leading-tight"
               htmlFor="name">
-              {"Name" |> str}
+              {"Name"->str}
             </label>
             <input
               value=name
@@ -198,7 +198,7 @@ let make = (~courseId, ~rootPath, ~author, ~addAuthorCB, ~updateAuthorCB) => {
                 updateAuthorCB,
               )}
               className="w-full btn btn-large btn-primary">
-              {buttonText(saving, author) |> str}
+              {buttonText(saving, author)->str}
             </button>
           </div>
         </div>

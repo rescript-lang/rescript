@@ -6,7 +6,7 @@ type rec tree<'a> =
 
 let rec sub = (tr: tree<_>, k) =>
   switch tr {
-  | Lf => raise(Not_found)
+  | Lf => throw(Not_found)
   | Br(v, l, r) =>
     if k == 1 {
       v
@@ -23,7 +23,7 @@ let rec update = (tr: tree<_>, k, w) =>
     if k == 1 {
       Br(w, Lf, Lf)
     } else {
-      raise(Not_found)
+      throw(Not_found)
     }
   | Br(v, l, r) =>
     if k == 1 {
@@ -37,7 +37,7 @@ let rec update = (tr: tree<_>, k, w) =>
 
 let rec delete = (tr: tree<_>, n) =>
   switch tr {
-  | Lf => raise(Not_found)
+  | Lf => throw(Not_found)
   | Br(v, l, r) =>
     if n == 1 {
       Lf
@@ -73,7 +73,7 @@ let rec loext = (tr: tree<_>, w) =>
 /* pop_back */
 let rec lorem = (tr: tree<_>) =>
   switch tr {
-  | Lf => raise(Not_found)
+  | Lf => throw(Not_found)
   | Br(w, Lf, Lf) => Lf
   /* length = 1 */
   | Br(w, Br(v, ll, lr) as l, r) =>

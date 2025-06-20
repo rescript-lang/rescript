@@ -30,7 +30,7 @@ let responsiveAlignmentClass = responsiveAlignment =>
   switch responsiveAlignment {
   | NonResponsive(alignment) => alignmentClass(alignment)
   | Responsive(mobileAlignment, desktopAlignment) =>
-    let mobileClass = mobileAlignment |> alignmentClass
+    let mobileClass = mobileAlignment->alignmentClass
 
     let desktopClass = switch desktopAlignment {
     | AlignLeft => " md:right-auto md:left-0"
@@ -65,18 +65,18 @@ let make = (~className="", ~link=?, ~responsiveAlignment=NonResponsive(AlignCent
     <FaIcon classes="fas fa-question-circle hover:text-gray-700 cursor-pointer" />
     {helpVisible
       ? <div
-          onClick={event => event |> ReactEvent.Mouse.stopPropagation}
+          onClick={event => event->ReactEvent.Mouse.stopPropagation}
           className={"help-icon__help-container overflow-y-auto mt-1 border border-gray-900 absolute z-50 px-4 py-3 shadow-lg leading-snug rounded-lg bg-gray-900 text-white max-w-xs text-center" ++
-          (responsiveAlignment |> responsiveAlignmentClass)}>
+          (responsiveAlignment->responsiveAlignmentClass)}>
           children
           {link
-          |> OptionUtils.map(link =>
+          ->OptionUtils.map(link =>
             <a href=link target="_blank" className="block mt-1 text-blue-300 hover:text-blue:200">
               <FaIcon classes="fas fa-external-link-square-alt" />
-              <span className="ml-1"> {"Read more" |> str} </span>
+              <span className="ml-1"> {"Read more"->str} </span>
             </a>
           )
-          |> OptionUtils.default(React.null)}
+          ->OptionUtils.default(React.null)}
         </div>
       : React.null}
   </div>

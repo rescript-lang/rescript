@@ -16,14 +16,14 @@ let unlockOn = t => t.unlockOn
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    name: json |> field("name", string),
-    number: json |> field("number", int),
-    unlockOn: json |> optional(field("unlockOn", string)) |> OptionUtils.map(DateFns.parseString),
+    id: json->field("id", string),
+    name: json->field("name", string),
+    number: json->field("number", int),
+    unlockOn: json->optional(field("unlockOn", string))->OptionUtils.map(DateFns.parseString),
   }
 }
 
-let selectLevel = (levels, level_name) => levels |> List.find(q => q.name == level_name)
+let selectLevel = (levels, level_name) => levels->List.find(q => q.name == level_name)
 
 let create = (id, name, number, unlockOn) => {
   id: id,
@@ -33,8 +33,8 @@ let create = (id, name, number, unlockOn) => {
 }
 
 let updateList = (levels, level) => {
-  let oldLevels = levels |> List.filter(l => l.id !== level.id)
-  oldLevels |> List.rev |> List.append(list{level}) |> List.rev
+  let oldLevels = levels->List.filter(l => l.id !== level.id)
+  oldLevels->List.rev->List.append(list{level})->List.rev
 }
 
-let sort = levels => levels |> List.sort((x, y) => x.number - y.number)
+let sort = levels => levels->List.sort((x, y) => x.number - y.number)

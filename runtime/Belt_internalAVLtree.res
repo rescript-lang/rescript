@@ -713,7 +713,7 @@ let rec getUndefined = (n, x, ~cmp) =>
 
 let rec getExn = (n, x, ~cmp) =>
   switch n {
-  | None => raise(Not_found)
+  | None => throw(Not_found)
   | Some(n) /* Node(l, v, d, r, _) */ =>
     let v = n.key
     let c = Belt_Id.getCmpInternal(cmp)(x, v)

@@ -34,10 +34,10 @@ let updateTeams = (updateTeamsCB, endCursor, hasNextPage, teams, nodes) => {
   let updatedTeams =
     switch nodes {
     | None => []
-    | Some(teamsArray) => teamsArray |> Team.makeFromJS
+    | Some(teamsArray) => teamsArray->Team.makeFromJS
     }
-    |> ArrayUtils.flatten
-    |> Array.append(teams)
+    ->ArrayUtils.flatten
+    ->Array.append(teams)
 
   let teams = switch (hasNextPage, endCursor) {
   | (_, None)
@@ -50,10 +50,10 @@ let updateTeams = (updateTeamsCB, endCursor, hasNextPage, teams, nodes) => {
 }
 
 let getTeams = (courseId, cursor, updateTeamsCB, teams, filter, setLoadingCB, loading) => {
-  let tags = filter |> Filter.tags
-  let selectedLevelId = filter |> Filter.levelId
-  let search = filter |> Filter.searchString
-  let sortBy = filter |> Filter.sortByToString
+  let tags = filter->Filter.tags
+  let selectedLevelId = filter->Filter.levelId
+  let search = filter->Filter.searchString
+  let sortBy = filter->Filter.sortByToString
   setLoadingCB(loading)
   switch (selectedLevelId, search, cursor) {
   | (Some(levelId), Some(search), Some(cursor)) =>
@@ -70,9 +70,9 @@ let getTeams = (courseId, cursor, updateTeamsCB, teams, filter, setLoadingCB, lo
     CourseTeamsQuery.make(~courseId, ~after=cursor, ~tags, ~sortBy, ())
   | (None, None, None) => CourseTeamsQuery.make(~courseId, ~tags, ~sortBy, ())
   }
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
-    response["courseTeams"]["nodes"] |> updateTeams(
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
+    response["courseTeams"]["nodes"]->updateTeams(
       updateTeamsCB,
       response["courseTeams"]["pageInfo"]["endCursor"],
       response["courseTeams"]["pageInfo"]["hasNextPage"],
@@ -80,11 +80,11 @@ let getTeams = (courseId, cursor, updateTeamsCB, teams, filter, setLoadingCB, lo
     )
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let studentAvatar = student =>
-  switch student |> Student.avatarUrl {
+  switch student->Student.avatarUrl {
   | Some(avatarUrl) =>
     <img
       className="w-8 h-8 md:w-10 md:h-10 text-xs border rounded-full overflow-hidden flex-shrink-0 mt-1 md:mt-0 mr-2 md:mr-3 object-cover"
@@ -92,7 +92,7 @@ let studentAvatar = student =>
     />
   | None =>
     <Avatar
-      name={student |> Student.name}
+      name={student->Student.name}
       className="w-8 h-8 md:w-10 md:h-10 text-xs border rounded-full overflow-hidden flex-shrink-0 mt-1 md:mt-0 mr-2 md:mr-3 object-cover"
     />
   }
@@ -100,14 +100,14 @@ let studentAvatar = student =>
 let levelInfo = (levels, team) =>
   <span
     className="inline-flex flex-col items-center rounded bg-orange-100 border border-orange-300 px-2 pt-2 pb-1 border">
-    <div className="text-xs font-semibold"> {"Level" |> str} </div>
+    <div className="text-xs font-semibold"> {"Level"->str} </div>
     <div className="font-bold">
       {team
-      |> Team.levelId
-      |> Level.unsafeFind(levels, "TeamsList")
-      |> Level.number
-      |> string_of_int
-      |> str}
+      ->Team.levelId
+      ->Level.unsafeFind(levels, "TeamsList")
+      ->Level.number
+      ->string_of_int
+      ->str}
     </div>
   </span>
 
@@ -119,23 +119,23 @@ let teamCard = (
   showEditFormCB,
   levels,
 ) => {
-  let isSingleStudent = team |> Team.isSingleStudent
-  let teamId = team |> Team.id
+  let isSingleStudent = team->Team.isSingleStudent
+  let teamId = team->Team.id
   <div
     key=teamId
-    id={team |> Team.name}
+    id={team->Team.name}
     className="student-team-container flex items-strecth shadow bg-white rounded-lg mb-3 overflow-hidden">
     <div className="flex flex-col flex-1 w-3/5">
       {team
-      |> Team.students
-      |> Array.map(student => {
-        let studentId = student |> Student.id
-        let isChecked = selectedStudentIds |> Array.mem(studentId)
+      ->Team.students
+      ->Array.map(student => {
+        let studentId = student->Student.id
+        let isChecked = selectedStudentIds->Array.mem(studentId)
         let checkboxId = "select-student-" ++ studentId
 
         <div
           key=studentId
-          id={student |> Student.name}
+          id={student->Student.name}
           className="student-team__card h-full cursor-pointer flex items-center bg-white">
           <div className="flex flex-1 w-3/5 h-full">
             <div className="flex items-center w-full">
@@ -154,35 +154,35 @@ let teamCard = (
               </label>
               <a
                 className="flex flex-1 items-center py-4 px-4 hover:bg-gray-100 justify-between"
-                id={(student |> Student.name) ++ "_edit"}
+                id={(student->Student.name) ++ "_edit"}
                 onClick={_e => showEditFormCB(student, teamId)}>
                 <div className="flex">
                   {studentAvatar(student)}
                   <div className="text-sm flex flex-col">
                     <p className="text-black font-semibold inline-block ">
-                      {student |> Student.name |> str}
+                      {student->Student.name->str}
                     </p>
                     <div className="flex flex-wrap">
                       {student
-                      |> Student.tags
-                      |> Array.map(tag =>
+                      ->Student.tags
+                      ->Array.map(tag =>
                         <div
                           key=tag
                           className="bg-gray-300 rounded mt-1 mr-1 py-px px-2 text-xs text-gray-900">
-                          {tag |> str}
+                          {tag->str}
                         </div>
                       )
-                      |> React.array}
+                      ->React.array}
                     </div>
                   </div>
                 </div>
-                {isSingleStudent ? team |> levelInfo(levels) : React.null}
+                {isSingleStudent ? team->levelInfo(levels) : React.null}
               </a>
             </div>
           </div>
         </div>
       })
-      |> React.array}
+      ->React.array}
     </div>
     {isSingleStudent
       ? React.null
@@ -190,29 +190,29 @@ let teamCard = (
           <div className="w-4/6 py-4 pl-5 pr-4">
             <div className="students-team--name mb-5">
               <p className="inline-block text-xs bg-green-200 leading-tight px-1 py-px rounded">
-                {"Team" |> str}
+                {"Team"->str}
               </p>
-              <h4> {team |> Team.name |> str} </h4>
+              <h4> {team->Team.name->str} </h4>
             </div>
           </div>
-          <div className="w-2/6 text-right pr-4"> {team |> levelInfo(levels)} </div>
+          <div className="w-2/6 text-right pr-4"> {team->levelInfo(levels)} </div>
         </div>}
   </div>
 }
 
 let showEmpty = (filter, loading, updateFilterCB) =>
-  loading == Loading.NotLoading && filter |> Filter.isEmpty
-    ? <div className="text-center"> {"No students here." |> str} </div>
+  loading == Loading.NotLoading && filter->Filter.isEmpty
+    ? <div className="text-center"> {"No students here."->str} </div>
     : <div className="flex">
         <div className="w-1/2 px-3">
-          <p className="text-xl font-semibold mt-4"> {"Sorry, no results found." |> str} </p>
+          <p className="text-xl font-semibold mt-4"> {"Sorry, no results found."->str} </p>
           <ul className="list-disc text-gray-800 text-sm ml-5 mt-2">
-            <li className="py-1"> {"Make sure the spelling is correct." |> str} </li>
-            <li className="py-1"> {"Try removing the search filter options." |> str} </li>
+            <li className="py-1"> {"Make sure the spelling is correct."->str} </li>
+            <li className="py-1"> {"Try removing the search filter options."->str} </li>
           </ul>
           <button
-            className="btn btn-default mt-4" onClick={_ => updateFilterCB(filter |> Filter.clear)}>
-            {"Clear Filter" |> str}
+            className="btn btn-default mt-4" onClick={_ => updateFilterCB(filter->Filter.clear)}>
+            {"Clear Filter"->str}
           </button>
         </div>
         <div className="w-1/2"> <img className="w-full" src=notFoundIcon /> </div>
@@ -233,10 +233,10 @@ let showTeams = (
   | [] => showEmpty(filter, loading, updateFilterCB)
   | teams =>
     teams
-    |> Array.map(team =>
+    ->Array.map(team =>
       teamCard(team, selectedStudentIds, selectStudentCB, deselectStudentCB, showEditFormCB, levels)
     )
-    |> React.array
+    ->React.array
   }
 
 @react.component
@@ -269,8 +269,8 @@ let make = (
         | PartiallyLoaded(_, _)
         | FullyLoaded(_) =>
           pagedTeams
-          |> Page.teams
-          |> showTeams(
+          ->Page.teams
+          ->showTeams(
             selectedStudentIds,
             selectStudentCB,
             deselectStudentCB,
@@ -301,7 +301,7 @@ let make = (
                     setLoadingCB,
                     Loading.LoadingMore,
                   )}>
-                {"Load More" |> str}
+                {"Load More"->str}
               </button>
             </div>
       }}

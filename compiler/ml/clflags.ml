@@ -40,6 +40,8 @@ and dump_lambda = ref false (* -dlambda *)
 
 and only_parse = ref false (* -only-parse *)
 
+and editor_mode = ref false (* -editor-mode *)
+
 and ignore_parse_errors = ref false (* -ignore-parse-errors *)
 
 let dont_write_files = ref false (* set to true under ocamldoc *)

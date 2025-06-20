@@ -988,9 +988,6 @@ module Compile = struct
     | Texp_letexception _ ->
       notImplemented "Texp_letexception";
       assert false
-    | Texp_lazy _ ->
-      notImplemented "Texp_lazy";
-      assert false
     | Texp_pack _ ->
       notImplemented "Texp_pack";
       assert false

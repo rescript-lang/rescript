@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/jsx_type_mismatch_array_element.res[0m:[2m19:13-30[0m
+
+  17 [2m│[0m }
+  18 [2m│[0m 
+  [1;31m19[0m [2m│[0m let x = <> {[1;31m[React.string("")][0m} </>
+  20 [2m│[0m 
+
+  This has type: [1;31marray<'a>[0m
+  But it's expected to have type: [1;33mReact.element[0m [2m(defined as[0m [1;33mJsx.element[0m[2m)[0m
+  
+  You need to convert each item in this array to a JSX element first, then use [1;33mReact.array[0m to convert the array of JSX elements into a single JSX element.

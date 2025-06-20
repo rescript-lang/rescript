@@ -74,7 +74,6 @@ type external_spec =
 type return_wrapper =
   | Return_unset
   | Return_identity
-  | Return_undefined_to_opt
   | Return_null_to_opt
   | Return_null_undefined_to_opt
   | Return_replaced_with_unit

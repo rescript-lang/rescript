@@ -55,7 +55,7 @@ let hud = (canvas, score, coins) => {
 
 /* Displays the fps. */
 let fps = (canvas, fps_val) => {
-  let fps_str = int_of_float(fps_val) |> string_of_int
+  let fps_str = int_of_float(fps_val)->string_of_int
   let canvas = Dom_html.canvasElementToJsObj(canvas)
   let context = Dom_html.canvasRenderingContext2DToJsObj(canvas["getContext"]("2d"))
   ignore(context["fillText"](fps_str, 10., 18.))

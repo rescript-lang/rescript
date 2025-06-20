@@ -267,33 +267,35 @@ let rec exprToContextPathInner ~(inJsxContext : bool) (e : Parsetree.expression)
           };
         args =
           [(_, lhs); (_, {pexp_desc = Pexp_apply {funct = d; args; partial}})];
+        transformed_jsx;
       } ->
     (* Transform away pipe with apply call *)
     exprToContextPath ~inJsxContext
       {
         pexp_desc =
-          Pexp_apply {funct = d; args = (Nolabel, lhs) :: args; partial};
+          Pexp_apply
+            {funct = d; args = (Nolabel, lhs) :: args; partial; transformed_jsx};
         pexp_loc;
         pexp_attributes;
       }
   | Pexp_apply
-      {
-        funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};
-        args =
-          [
-            (_, lhs); (_, {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes});
-          ];
-        partial;
-      } ->
+      ({
+         funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};
+         args =
+           [
+             (_, lhs);
+             (_, {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes});
+           ];
+       } as app) ->
     (* Transform away pipe with identifier *)
     exprToContextPath ~inJsxContext
       {
         pexp_desc =
           Pexp_apply
             {
+              app with
               funct = {pexp_desc = Pexp_ident id; pexp_loc; pexp_attributes};
               args = [(Nolabel, lhs)];
-              partial;
             };
         pexp_loc;
         pexp_attributes;
@@ -312,11 +314,12 @@ let rec exprToContextPathInner ~(inJsxContext : bool) (e : Parsetree.expression)
     if List.length exprs = List.length exprsAsContextPaths then
       Some (CTuple exprsAsContextPaths)
     else None
+  | Pexp_await e -> exprToContextPathInner ~inJsxContext e
   | _ -> None
 
 and exprToContextPath ~(inJsxContext : bool) (e : Parsetree.expression) =
   match
-    ( Res_parsetree_viewer.has_await_attribute e.pexp_attributes,
+    ( Res_parsetree_viewer.expr_is_await e,
       exprToContextPathInner ~inJsxContext e )
   with
   | true, Some ctxPath -> Some (CPAwait ctxPath)
@@ -370,7 +373,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
   in
   let posOfDot = Pos.posOfDot text ~pos:posCursor ~offset in
   let charAtCursor =
-    if offset < String.length text then text.[offset] else '\n'
+    if offset >= 0 && offset < String.length text then text.[offset] else '\n'
   in
   let posBeforeCursor = Pos.posBeforeCursor posCursor in
   let charBeforeCursor, blankAfterCursor =
@@ -515,16 +518,15 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
           :: patternPath)
         ?contextPath p
     | Ppat_record (fields, _) ->
-      fields
-      |> List.iter (fun (fname, p, _) ->
-             match fname with
-             | {Location.txt = Longident.Lident fname} ->
-               scopePattern
-                 ~patternPath:
-                   (Completable.NFollowRecordField {fieldName = fname}
-                   :: patternPath)
-                 ?contextPath p
-             | _ -> ())
+      Ext_list.iter fields (fun {lid = fname; x = p} ->
+          match fname with
+          | {Location.txt = Longident.Lident fname} ->
+            scopePattern
+              ~patternPath:
+                (Completable.NFollowRecordField {fieldName = fname}
+                :: patternPath)
+              ?contextPath p
+          | _ -> ())
     | Ppat_array pl ->
       pl
       |> List.iter
@@ -535,7 +537,6 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
         ?contextPath:(TypeUtils.contextPathFromCoreType coreType)
         p
     | Ppat_type _ -> ()
-    | Ppat_lazy p -> scopePattern ~patternPath ?contextPath p
     | Ppat_unpack {txt; loc} ->
       scope :=
         !scope |> Scope.addValue ~name:txt ~loc ?contextPath:contextPathToSave
@@ -742,6 +743,13 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
       mbs |> List.iter scopeModuleBinding;
       mbs |> List.iter (fun b -> iterator.module_binding iterator b);
       processed := true
+    | Pstr_include {pincl_mod = {pmod_desc = med}} -> (
+      match med with
+      | Pmod_ident {txt = lid; loc}
+      | Pmod_apply ({pmod_desc = Pmod_ident {txt = lid; loc}}, _) ->
+        let module_name = Longident.flatten lid |> String.concat "." in
+        scope := !scope |> Scope.addInclude ~name:module_name ~loc
+      | _ -> ())
     | _ -> ());
     if not !processed then
       Ast_iterator.default_iterator.structure_item iterator item
@@ -867,7 +875,8 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
        match
          (Pos.positionToOffset text posStart, Pos.positionToOffset text posEnd)
        with
-       | Some offsetStart, Some offsetEnd ->
+       | Some offsetStart, Some offsetEnd
+         when offsetStart >= 0 && offsetEnd >= offsetStart ->
          (* Can't trust the parser's location
             E.g. @foo. let x... gives as label @foo.let *)
          let label =
@@ -923,7 +932,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                    ( {
                        pexp_desc =
                          Pexp_record
-                           (({txt = Lident "from"}, fromExpr, _) :: _, _);
+                           ({lid = {txt = Lident "from"}; x = fromExpr} :: _, _);
                      },
                      _ );
              };
@@ -1232,8 +1241,6 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                          then ValueOrField
                          else Value);
                     }))
-        | Pexp_construct ({txt = Lident ("::" | "()")}, _) ->
-          (* Ignore list expressions, used in JSX, unit, and more *) ()
         | Pexp_construct (lid, eOpt) -> (
           let lidPath = flattenLidCheckDot lid in
           if debug then
@@ -1324,10 +1331,29 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                         inJsx = !inJsxContext;
                       }))
             | None -> ())
-        | Pexp_apply {funct = {pexp_desc = Pexp_ident compName}; args}
-          when Res_parsetree_viewer.is_jsx_expression expr ->
+        | Pexp_jsx_element
+            ( Jsx_unary_element
+                {
+                  jsx_unary_element_tag_name = compName;
+                  jsx_unary_element_props = props;
+                }
+            | Jsx_container_element
+                {
+                  jsx_container_element_tag_name_start = compName;
+                  jsx_container_element_props = props;
+                } ) ->
           inJsxContext := true;
-          let jsxProps = CompletionJsx.extractJsxProps ~compName ~args in
+          let children =
+            match expr.pexp_desc with
+            | Pexp_jsx_element
+                (Jsx_container_element
+                   {jsx_container_element_children = children}) ->
+              children
+            | _ -> JSXChildrenItems []
+          in
+          let jsxProps =
+            CompletionJsx.extractJsxProps ~compName ~props ~children
+          in
           let compNamePath = flattenLidCheckDot ~jsx:true compName in
           if debug then
             Printf.printf "JSX <%s:%s %s> _children:%s\n"
@@ -1344,10 +1370,21 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
               | None -> "None"
               | Some childrenPosStart -> Pos.toString childrenPosStart);
           let jsxCompletable =
-            CompletionJsx.findJsxPropsCompletable ~jsxProps
-              ~endPos:(Loc.end_ expr.pexp_loc) ~posBeforeCursor
-              ~posAfterCompName:(Loc.end_ compName.loc)
-              ~firstCharBeforeCursorNoWhite ~charAtCursor
+            match expr.pexp_desc with
+            | Pexp_jsx_element
+                (Jsx_container_element
+                   {
+                     jsx_container_element_closing_tag = None;
+                     jsx_container_element_children =
+                       JSXChildrenSpreading _ | JSXChildrenItems (_ :: _);
+                   }) ->
+              (* This is a weird edge case where there is no closing tag but there are children *)
+              None
+            | _ ->
+              CompletionJsx.findJsxPropsCompletable ~jsxProps
+                ~endPos:(Loc.end_ expr.pexp_loc) ~posBeforeCursor
+                ~posAfterCompName:(Loc.end_ compName.loc)
+                ~firstCharBeforeCursorNoWhite ~charAtCursor
           in
           if jsxCompletable <> None then setResultOpt jsxCompletable
           else if compName.loc |> Loc.hasPos ~pos:posBeforeCursor then

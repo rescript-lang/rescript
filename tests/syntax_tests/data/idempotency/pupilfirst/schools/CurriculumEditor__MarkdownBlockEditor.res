@@ -1,7 +1,7 @@
 let str = React.string
 
 let onChange = (contentBlock, updateContentBlockCB, value) => {
-  let newContentBlock = contentBlock |> ContentBlock.updateMarkdown(value)
+  let newContentBlock = contentBlock->ContentBlock.updateMarkdown(value)
   updateContentBlockCB(newContentBlock)
 }
 

@@ -15,7 +15,7 @@ module PrioQueue = {
   exception Queue_is_empty
   let rec remove_top = x =>
     switch x {
-    | Empty => raise(Queue_is_empty)
+    | Empty => throw(Queue_is_empty)
     | Node(prio, elt, left, Empty) => left
     | Node(prio, elt, Empty, right) => right
     | Node(prio, elt, Node(lprio, lelt, _, _) as left, Node(rprio, relt, _, _) as right) =>
@@ -27,7 +27,7 @@ module PrioQueue = {
     }
   let extract = x =>
     switch x {
-    | Empty => raise(Queue_is_empty)
+    | Empty => throw(Queue_is_empty)
     | Node(prio, elt, _, _) as queue => (prio, elt, remove_top(queue))
     }
 }

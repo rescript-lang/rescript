@@ -78,9 +78,9 @@ let handleAnswerUpdateResponseCB = (
   let newAnswer = Answer.create(
     id,
     description,
-    answer |> Answer.creatorId,
+    answer->Answer.creatorId,
     Some(currentUserId),
-    answer |> Answer.createdAt,
+    answer->Answer.createdAt,
     dateTime,
     false,
   )
@@ -99,17 +99,17 @@ let handleAnswer = (
   answer,
   event,
 ) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
   if description != "" {
     setSaving(_ => true)
 
     switch answer {
     | Some(answer) =>
-      let answerId = answer |> Answer.id
+      let answerId = answer->Answer.id
 
       UpdateAnswerQuery.make(~description, ~id=answerId, ())
-      |> GraphqlQuery.sendQuery
-      |> Js.Promise.then_(response =>
+      ->GraphqlQuery.sendQuery
+      ->Js.Promise.then_(response =>
         switch response["updateAnswer"] {
         | #Success(answerUpdated) =>
           answerUpdated
@@ -128,12 +128,12 @@ let handleAnswer = (
         | #Errors(errors) => Js.Promise.reject(UpdateAnswerErrorHandler.Errors(errors))
         }
       )
-      |> UpdateAnswerErrorHandler.catch(() => setSaving(_ => false))
-      |> ignore
+      ->UpdateAnswerErrorHandler.catch(() => setSaving(_ => false))
+      ->ignore
     | None =>
-      CreateAnswerQuery.make(~description, ~questionId=question |> Question.id, ())
-      |> GraphqlQuery.sendQuery
-      |> Js.Promise.then_(response =>
+      CreateAnswerQuery.make(~description, ~questionId=question->Question.id, ())
+      ->GraphqlQuery.sendQuery
+      ->Js.Promise.then_(response =>
         switch response["createAnswer"] {
         | #AnswerId(answerId) =>
           handleAnswerCreateCB(
@@ -149,8 +149,8 @@ let handleAnswer = (
         | #Errors(errors) => Js.Promise.reject(CreateAnswerErrorHandler.Errors(errors))
         }
       )
-      |> CreateAnswerErrorHandler.catch(() => setSaving(_ => false))
-      |> ignore
+      ->CreateAnswerErrorHandler.catch(() => setSaving(_ => false))
+      ->ignore
     }
   } else {
     Notification.error("Empty", "Answer cant be blank")
@@ -161,7 +161,7 @@ let handleAnswer = (
 let make = (~question, ~currentUserId, ~handleAnswerCB, ~answer=?, ~handleCloseCB=?) => {
   let (description, setDescription) = React.useState(() =>
     switch answer {
-    | Some(answer) => answer |> Answer.description
+    | Some(answer) => answer->Answer.description
     | None => ""
     }
   )
@@ -174,7 +174,7 @@ let make = (~question, ~currentUserId, ~handleAnswerCB, ~answer=?, ~handleCloseC
           <label
             className="inline-block tracking-wide text-gray-900 text-lg font-semibold mb-2"
             htmlFor="new-answer">
-            {"Your Answer" |> str}
+            {"Your Answer"->str}
           </label>
           <MarkdownEditor
             placeholder="Type in your answer. You can use Markdown to format your response."
@@ -189,7 +189,7 @@ let make = (~question, ~currentUserId, ~handleAnswerCB, ~answer=?, ~handleCloseC
             | Some(handleCloseCB) =>
               <button
                 disabled=saving onClick={_ => handleCloseCB()} className="btn btn-default mr-2">
-                {"Cancel" |> str}
+                {"Cancel"->str}
               </button>
             | None => React.null
             }}
@@ -208,7 +208,7 @@ let make = (~question, ~currentUserId, ~handleAnswerCB, ~answer=?, ~handleCloseC
               {switch answer {
               | Some(_) => "Update Your Answer"
               | None => "Post Your Answer"
-              } |> str}
+              }->str}
             </button>
           </div>
         </div>

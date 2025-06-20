@@ -45,26 +45,26 @@ let colors = [
 
 let initials = name =>
   name
-  |> Js.String.split(" ")
-  |> Js.Array.slice(~start=0, ~end_=2)
-  |> Js.Array.map(word => word |> Js.String.slice(~from=0, ~to_=1))
-  |> Js.Array.joinWith("")
+  ->Js.String.split(" ")
+  ->Js.Array.slice(~start=0, ~end_=2)
+  ->Js.Array.map(word => word->Js.String.slice(~from=0, ~to_=1))
+  ->Js.Array.joinWith("")
 
 let stringToInt = name => {
   let rec aux = (sum, remains) =>
     switch remains {
     | "" => sum
     | remains =>
-      let firstCharacter = remains |> Js.String.slice(~from=0, ~to_=1)
-      let remains = remains |> Js.String.sliceToEnd(~from=1)
-      aux(sum +. (firstCharacter |> Js.String.charCodeAt(0)), remains)
+      let firstCharacter = remains->Js.String.slice(~from=0, ~to_=1)
+      let remains = remains->Js.String.sliceToEnd(~from=1)
+      aux(sum +. (firstCharacter->Js.String.charCodeAt(0)), remains)
     }
 
-  aux(0.0, name) |> int_of_float
+  aux(0.0, name)->int_of_float
 }
 
 let computeColors = name => {
-  let index = mod(name |> stringToInt, 42)
+  let index = mod(name->stringToInt, 42)
   let (backgroundColor, blackText) = colors[index]
   (backgroundColor, blackText ? "#000000" : "#FFFFFF")
 }
@@ -87,7 +87,7 @@ let make = (~colors=?, ~name, ~className=?) => {
       textAnchor="middle"
       dominantBaseline="middle"
       alignmentBaseline="middle">
-      {initials(name) |> React.string}
+      {initials(name)->React.string}
     </text>
   </svg>
 }

@@ -2,7 +2,7 @@ open DeadCommon
 
 let \"+++" = Filename.concat
 
-let getModuleName = fn => fn |> Paths.getModuleName |> ModuleName.toString
+let getModuleName = fn => fn->Paths.getModuleName->ModuleName.toString
 
 let rec getSignature = (~isfunc=false, moduleType: Types.module_type) =>
   switch moduleType {
@@ -28,7 +28,7 @@ let rec collectExportFromSignatureItem = (~path, si: Types.signature_item) =>
     }
   | Sig_type(id, t, _) =>
     if analyzeTypes.contents {
-      DeadType.addDeclaration(~path=list{id |> Ident.name, ...path}, t)
+      DeadType.addDeclaration(~path=list{id->Ident.name, ...path}, t)
     }
   | (Sig_module(id, {Types.md_type: moduleType}, _)
     | Sig_modtype(id, {Types.mtd_type: Some(moduleType)})) as s =>
@@ -37,8 +37,8 @@ let rec collectExportFromSignatureItem = (~path, si: Types.signature_item) =>
     | _ => true
     }
     if collect {
-      getSignature(moduleType) |> List.iter(
-        collectExportFromSignatureItem(~path=list{id |> Ident.name, ...path}),
+      getSignature(moduleType)->List.iter(
+        collectExportFromSignatureItem(~path=list{id->Ident.name, ...path}),
       )
     }
   | _ => ()
@@ -46,7 +46,7 @@ let rec collectExportFromSignatureItem = (~path, si: Types.signature_item) =>
 
 let processSignature = (signature: Types.signature) => {
   let module_id = currentModuleName.contents
-  signature |> List.iter(sig_item =>
+  signature->List.iter(sig_item =>
     collectExportFromSignatureItem(~path=list{module_id}, sig_item)
   )
 }
@@ -84,7 +84,7 @@ let loadCmtFile = cmtFilePath => {
         ProcessDeadAnnotations.signature(signature)
         processSignature(signature.sig_type)
       | Implementation(structure) =>
-        let cmtiExists = Sys.file_exists((cmtFilePath |> Filename.chop_extension) ++ ".cmti")
+        let cmtiExists = Sys.file_exists((cmtFilePath->Filename.chop_extension) ++ ".cmti")
         if !cmtiExists {
           ProcessDeadAnnotations.structure(structure)
         }
@@ -116,9 +116,9 @@ let runAnalysis = (~cmtRoot) => {
       let absDir = dir == "" ? root : \"+++"(root, dir)
       if Sys.file_exists(absDir) {
         if Sys.is_directory(absDir) {
-          absDir |> Sys.readdir |> Array.iter(d => walkSubDirs(\"+++"(dir, d)))
+          absDir->Sys.readdir->Array.iter(d => walkSubDirs(\"+++"(dir, d)))
         } else if Filename.check_suffix(absDir, ".cmt") || Filename.check_suffix(absDir, ".cmti") {
-          absDir |> loadCmtFile
+          absDir->loadCmtFile
         }
       }
     }
@@ -135,19 +135,19 @@ let runAnalysis = (~cmtRoot) => {
     let lib_bs = \"+++"(GenTypeCommon.projectRoot.contents, \"+++"("lib", "bs"))
 
     let sourceDirs = ModuleResolver.readSourceDirs(~configSources=None)
-    sourceDirs.dirs |> List.iter(sourceDir => {
+    sourceDirs.dirs->List.iter(sourceDir => {
       let libBsSourceDir = Filename.concat(lib_bs, sourceDir)
-      let files = switch Sys.readdir(libBsSourceDir) |> Array.to_list {
+      let files = switch Sys.readdir(libBsSourceDir)->Array.to_list {
       | files => files
       | exception Sys_error(_) => list{}
       }
       let cmtFiles =
-        files |> List.filter(x =>
+        files->List.filter(x =>
           Filename.check_suffix(x, ".cmt") || Filename.check_suffix(x, ".cmti")
         )
-      cmtFiles |> List.iter(cmtFile => {
+      cmtFiles->List.iter(cmtFile => {
         let cmtFilePath = Filename.concat(libBsSourceDir, cmtFile)
-        cmtFilePath |> loadCmtFile
+        cmtFilePath->loadCmtFile
       })
     })
 

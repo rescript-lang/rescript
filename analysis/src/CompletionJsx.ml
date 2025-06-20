@@ -455,40 +455,39 @@ let findJsxPropsCompletable ~jsxProps ~endPos ~posBeforeCursor
   in
   loop jsxProps.props
 
-let extractJsxProps ~(compName : Longident.t Location.loc) ~args =
-  let thisCaseShouldNotHappen =
-    {
-      compName = Location.mknoloc (Longident.Lident "");
-      props = [];
-      childrenStart = None;
-    }
+let extractJsxProps ~(compName : Longident.t Location.loc) ~props ~children =
+  let open Parsetree in
+  let childrenStart =
+    match children with
+    | JSXChildrenItems [] -> None
+    | JSXChildrenSpreading child | JSXChildrenItems (child :: _) ->
+      if child.pexp_loc.loc_ghost then None else Some (Loc.start child.pexp_loc)
   in
-  let rec processProps ~acc args =
-    match args with
-    | (Asttypes.Labelled {txt = "children"}, {Parsetree.pexp_loc}) :: _ ->
-      {
-        compName;
-        props = List.rev acc;
-        childrenStart =
-          (if pexp_loc.loc_ghost then None else Some (Loc.start pexp_loc));
-      }
-    | ( (Labelled {txt = s; loc} | Optional {txt = s; loc}),
-        (eProp : Parsetree.expression) )
-      :: rest -> (
-      let namedArgLoc = if loc = Location.none then None else Some loc in
-      match namedArgLoc with
-      | Some loc ->
-        processProps
-          ~acc:
-            ({
-               name = s;
-               posStart = Loc.start loc;
-               posEnd = Loc.end_ loc;
-               exp = eProp;
-             }
-            :: acc)
-          rest
-      | None -> processProps ~acc rest)
-    | _ -> thisCaseShouldNotHappen
+  let props =
+    props
+    |> List.map (function
+         | JSXPropPunning (_, name) ->
+           {
+             name = name.txt;
+             posStart = Loc.start name.loc;
+             posEnd = Loc.end_ name.loc;
+             exp =
+               Ast_helper.Exp.ident ~loc:name.loc
+                 {txt = Longident.Lident name.txt; loc = name.loc};
+           }
+         | JSXPropValue (name, _, value) ->
+           {
+             name = name.txt;
+             posStart = Loc.start name.loc;
+             posEnd = Loc.end_ name.loc;
+             exp = value;
+           }
+         | JSXPropSpreading (loc, expr) ->
+           {
+             name = "_spreadProps";
+             posStart = Loc.start loc;
+             posEnd = Loc.end_ loc;
+             exp = expr;
+           })
   in
-  args |> processProps ~acc:[]
+  {compName; props; childrenStart}

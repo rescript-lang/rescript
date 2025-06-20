@@ -443,19 +443,19 @@ let _ = <Animated initialValue=0.0 value>
 let _ = <div callback={reduce(() => !state)} />
 
 let _ = <button ?id className={Cn.make(["button", "is-fullwidth"])} onClick>
-  {"Submit" |> ste}
+  {"Submit"->ste}
 </button>
 
 let _ = <button ?id className={Cn.make(list{"button", "is-fullwidth"})} onClick>
-  {"Submit" |> ste}
+  {"Submit"->ste}
 </button>
 
 let _ = <button ?id className={Cn.make(("button", "is-fullwidth"))} onClick>
-  {"Submit" |> ste}
+  {"Submit"->ste}
 </button>
 
 let _ = <button ?id className={Cn.make({a: b})} onClick>
-  {"Submit" |> ste}
+  {"Submit"->ste}
 </button>
 
 let _ = <X y={z->Belt.Option.getWithDefault("")} />
@@ -483,16 +483,16 @@ let _ = <View style=styles["backgroundImageWrapper"]>
 
 <div>
   {possibleGradeValues
-  |> List.filter(g => g <= state.maxGrade)
-  |> List.map(possibleGradeValue =>
+  ->List.filter(g => g <= state.maxGrade)
+  ->List.map(possibleGradeValue =>
       <option
-        key={possibleGradeValue |> string_of_int}
-        value={possibleGradeValue |> string_of_int}>
-        {possibleGradeValue |> string_of_int |> str}
+        key={possibleGradeValue->string_of_int}
+        value={possibleGradeValue->string_of_int}>
+        {possibleGradeValue->string_of_int->str}
       </option>
     )
-  |> Array.of_list
-  |> ReasonReact.array}
+  ->Array.of_list
+  ->ReasonReact.array}
 </div>;
 
 // https://github.com/rescript-lang/syntax/issues/113

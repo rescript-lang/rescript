@@ -13,7 +13,7 @@ let fileHeader = (~config, ~sourceFile) => {
     switch lines {
     | list{line} => "/* " ++ (line ++ " */\n")
     | _ =>
-      "/** \n" ++ ((lines |> List.map(line => " * " ++ line) |> String.concat("\n")) ++ "\n */\n")
+      "/** \n" ++ ((lines->List.map(line => " * " ++ line)->String.concat("\n")) ++ "\n */\n")
     }
   }
 
@@ -60,13 +60,13 @@ let shimExtension = (~config) =>
 let interfaceName = (~config, name) => config.exportInterfaces ? "I" ++ name : name
 
 let typeReactComponent = (~config, ~propsType) =>
-  (config.language == Flow ? "React$ComponentType" : "React.ComponentType") |> ident(
+  (config.language == Flow ? "React$ComponentType" : "React.ComponentType")->ident(
     ~builtin=true,
     ~typeArgs=list{propsType},
   )
 
 let typeReactContext = (~config, ~type_) =>
-  (config.language == Flow ? "React$Context" : "React.Context") |> ident(
+  (config.language == Flow ? "React$Context" : "React.Context")->ident(
     ~builtin=true,
     ~typeArgs=list{type_},
   )
@@ -86,7 +86,7 @@ let typeReactChild = (~config) =>
 let isTypeReactElement = (~config, type_) => type_ === typeReactElement(~config)
 
 let typeReactDOMReDomRef = (~config) =>
-  (config.language == Flow ? "React$Ref" : "React.Ref") |> ident(
+  (config.language == Flow ? "React$Ref" : "React.Ref")->ident(
     ~builtin=true,
     ~typeArgs=list{mixedOrUnknown(~config)},
   )
@@ -106,8 +106,8 @@ let typeReactRef = (~type_) => Object(
 
 let componentExportName = (~config, ~fileName, ~moduleName) =>
   switch config.language {
-  | Flow => fileName == moduleName ? "component" : moduleName |> ModuleName.toString
-  | _ => moduleName |> ModuleName.toString
+  | Flow => fileName == moduleName ? "component" : moduleName->ModuleName.toString
+  | _ => moduleName->ModuleName.toString
   }
 
 let typeAny = (~config) =>
@@ -131,7 +131,7 @@ let rec renderType = (~config, ~indent=None, ~typeNameIsInterface, ~inFunType, t
     }
 
     if config.language == TypeScript && (typeIsSimple && arrayKind == Mutable) {
-      (t |> renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)) ++ "[]"
+      (t->renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)) ++ "[]"
     } else {
       let arrayName =
         arrayKind == Mutable
@@ -141,15 +141,15 @@ let rec renderType = (~config, ~indent=None, ~typeNameIsInterface, ~inFunType, t
           : "ReadonlyArray"
       arrayName ++
       ("<" ++
-      ((t |> renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)) ++ ">"))
+      ((t->renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)) ++ ">"))
     }
 
   | Function({argTypes: list{{aType: Object(closedFlag, fields)}}, retType, typeVars})
-    if retType |> isTypeReactElement(~config) =>
-    let fields = fields |> List.map(field => {
+    if retType->isTypeReactElement(~config) =>
+    let fields = fields->List.map(field => {
       ...field,
-      type_: field.type_ |> TypeVars.substitute(~f=s =>
-        if typeVars |> List.mem(s) {
+      type_: field.type_->TypeVars.substitute(~f=s =>
+        if typeVars->List.mem(s) {
           Some(typeAny(~config))
         } else {
           None
@@ -157,7 +157,7 @@ let rec renderType = (~config, ~indent=None, ~typeNameIsInterface, ~inFunType, t
       ),
     })
     let componentType = typeReactComponent(~config, ~propsType=Object(closedFlag, fields))
-    componentType |> renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)
+    componentType->renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)
 
   | Function({argTypes, retType, typeVars}) =>
     renderFunType(~config, ~indent, ~inFunType, ~typeNameIsInterface, ~typeVars, argTypes, retType)
@@ -165,7 +165,7 @@ let rec renderType = (~config, ~indent=None, ~typeNameIsInterface, ~inFunType, t
   | GroupOfLabeledArgs(fields)
   | Object(_, fields)
   | Record(fields) =>
-    let indent1 = fields |> Indent.heuristicFields(~indent)
+    let indent1 = fields->Indent.heuristicFields(~indent)
     let config = switch type0 {
     | GroupOfLabeledArgs(_) => {...config, exportInterfaces: false}
     | _ => config
@@ -174,21 +174,21 @@ let rec renderType = (~config, ~indent=None, ~typeNameIsInterface, ~inFunType, t
     | Object(closedFlag, _) => closedFlag
     | _ => Closed
     }
-    fields |> renderFields(~closedFlag, ~config, ~indent=indent1, ~inFunType, ~typeNameIsInterface)
+    fields->renderFields(~closedFlag, ~config, ~indent=indent1, ~inFunType, ~typeNameIsInterface)
 
   | Ident({builtin, name, typeArgs}) =>
     (
-      !builtin && (config.exportInterfaces && name |> typeNameIsInterface)
-        ? name |> interfaceName(~config)
+      !builtin && (config.exportInterfaces && name->typeNameIsInterface)
+        ? name->interfaceName(~config)
         : name
     ) ++
     EmitText.genericsString(
-      ~typeVars=typeArgs |> List.map(
+      ~typeVars=typeArgs->List.map(
         renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType),
       ),
     )
   | Null(type_) =>
-    "(null | " ++ ((type_ |> renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)) ++ ")")
+    "(null | " ++ ((type_->renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)) ++ ")")
   | Nullable(type_)
   | Option(type_) =>
     switch config.language {
@@ -200,28 +200,28 @@ let rec renderType = (~config, ~indent=None, ~typeNameIsInterface, ~inFunType, t
       }
       "?" ++
       ((isComplex ? " (" : "") ++
-      ((type_ |> renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)) ++ (
+      ((type_->renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)) ++ (
           isComplex ? ")" : ""
         )))
     | TypeScript =>
       "(null | undefined | " ++
-      ((type_ |> renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)) ++
+      ((type_->renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)) ++
       ")")
     }
   | Promise(type_) =>
     "Promise" ++
     ("<" ++
-    ((type_ |> renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)) ++ ">"))
+    ((type_->renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)) ++ ">"))
   | Tuple(innerTypes) =>
     "[" ++
     ((innerTypes
-    |> List.map(renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType))
-    |> String.concat(", ")) ++
+    ->List.map(renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType))
+    ->String.concat(", ")) ++
     "]")
   | TypeVar(s) => s
 
   | Variant({noPayloads, payloads, unboxed}) =>
-    let noPayloadsRendered = noPayloads |> List.map(case => case.labelJS |> labelJSToString)
+    let noPayloadsRendered = noPayloads->List.map(case => case.labelJS->labelJSToString)
     let field = (~name, value) => {
       mutable_: Mutable,
       nameJS: name,
@@ -230,20 +230,20 @@ let rec renderType = (~config, ~indent=None, ~typeNameIsInterface, ~inFunType, t
       type_: TypeVar(value),
     }
     let fields = fields =>
-      fields |> renderFields(~closedFlag=Closed, ~config, ~indent, ~inFunType, ~typeNameIsInterface)
-    let payloadsRendered = payloads |> List.map(((case, _numArgs, type_)) => {
-      let typeRendered = type_ |> renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)
+      fields->renderFields(~closedFlag=Closed, ~config, ~indent, ~inFunType, ~typeNameIsInterface)
+    let payloadsRendered = payloads->List.map(((case, _numArgs, type_)) => {
+      let typeRendered = type_->renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)
       unboxed
         ? typeRendered
         : list{
-            case.labelJS |> labelJSToString |> field(~name=Runtime.jsVariantTag),
-            typeRendered |> field(~name=Runtime.jsVariantValue),
-          } |> fields
+            case.labelJS->labelJSToString->field(~name=Runtime.jsVariantTag),
+            typeRendered->field(~name=Runtime.jsVariantValue),
+          }->fields
     })
     let rendered = \"@"(noPayloadsRendered, payloadsRendered)
-    let indent1 = rendered |> Indent.heuristicVariants(~indent)
+    let indent1 = rendered->Indent.heuristicVariants(~indent)
     (indent1 == None ? "" : Indent.break(~indent=indent1) ++ "  ") ++
-    (rendered |> String.concat((indent1 == None ? " " : Indent.break(~indent=indent1)) ++ "| "))
+    (rendered->String.concat((indent1 == None ? " " : Indent.break(~indent=indent1)) ++ "| "))
   }
 and renderField = (
   ~config,
@@ -258,14 +258,14 @@ and renderField = (
   (mutMarker ++
   (lbl ++
   (optMarker ++
-  (": " ++ (type_ |> renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType))))))
+  (": " ++ (type_->renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType))))))
 }
 and renderFields = (~closedFlag, ~config, ~indent, ~inFunType, ~typeNameIsInterface, fields) => {
-  let indent1 = indent |> Indent.more
+  let indent1 = indent->Indent.more
   let exact = config.language == Flow && (!config.exportInterfaces && closedFlag == Closed)
   let space = indent == None && fields != list{} ? " " : ""
   let renderedFields =
-    fields |> List.map(renderField(~config, ~indent=indent1, ~typeNameIsInterface, ~inFunType))
+    fields->List.map(renderField(~config, ~indent=indent1, ~typeNameIsInterface, ~inFunType))
   let dotdotdot =
     config.language == Flow && !exact ? list{Indent.break(~indent=indent1) ++ "..."} : list{}
   (exact ? "{|" : "{") ++
@@ -291,18 +291,18 @@ and renderFunType = (
         (aName == "" ? "_" ++ string_of_int(i + 1) : aName) ++ ":"
       }
       parameterName ++
-      (aType |> renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType=true))
+      (aType->renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType=true))
     }, argTypes)) ++ (") => " ++
-  ((retType |> renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)) ++
+  ((retType->renderType(~config, ~indent, ~typeNameIsInterface, ~inFunType)) ++
   (inFunType ? ")" : ""))))))
 
 let typeToString = (~config, ~typeNameIsInterface, type_) =>
-  type_ |> renderType(~config, ~typeNameIsInterface, ~inFunType=false)
+  type_->renderType(~config, ~typeNameIsInterface, ~inFunType=false)
 
 let ofType = (~config, ~typeNameIsInterface=_ => false, ~type_, s) =>
   config.language == Untyped
     ? s
-    : s ++ (": " ++ (type_ |> typeToString(~config, ~typeNameIsInterface)))
+    : s ++ (": " ++ (type_->typeToString(~config, ~typeNameIsInterface)))
 
 let emitHookTypeAsFunction = (
   ~config,
@@ -321,11 +321,11 @@ let emitHookTypeAsFunction = (
   (EmitText.genericsString(~typeVars) ++
   ("(" ++
   ("_: " ++
-  (propsType |> renderType(~config, ~typeNameIsInterface, ~inFunType=true)) ++
+  (propsType->renderType(~config, ~typeNameIsInterface, ~inFunType=true)) ++
   (")" ++
-  ((" " |> ofType(~config, ~typeNameIsInterface, ~type_=retType)) ++
+  ((" "->ofType(~config, ~typeNameIsInterface, ~type_=retType)) ++
     (" { return " ++
-    (retValue ++ " };")))))))))) |> Emitters.\"export"(~emitters)
+    (retValue ++ " };"))))))))))->Emitters.\"export"(~emitters)
 
 let emitExportConst_ = (
   ~early,
@@ -343,12 +343,12 @@ let emitExportConst_ = (
   switch (config.module_, config.language) {
   | (_, TypeScript)
   | (ES6, _) =>
-    "export const " ++ ((name |> ofType(~config, ~typeNameIsInterface, ~type_)) ++ (" = " ++ line))
+    "export const " ++ ((name->ofType(~config, ~typeNameIsInterface, ~type_)) ++ (" = " ++ line))
   | (CommonJS, _) =>
     "const " ++
-    ((name |> ofType(~config, ~typeNameIsInterface, ~type_)) ++
+    ((name->ofType(~config, ~typeNameIsInterface, ~type_)) ++
     (" = " ++ (line ++ (";\nexports." ++ (name ++ (" = " ++ name))))))
-  }) |> (early ? Emitters.exportEarly : Emitters.\"export")(~emitters)
+  })->(early ? Emitters.exportEarly : Emitters.\"export")(~emitters)
 
 let emitExportConst = emitExportConst_(~early=false)
 
@@ -362,14 +362,14 @@ let emitExportFunction = (~early, ~comment, ~emitters, ~name, ~config, line) =>
   | (ES6, _) =>
     "export function " ++ (name ++ line)
   | (CommonJS, _) => "function " ++ (name ++ (line ++ (";\nexports." ++ (name ++ (" = " ++ name)))))
-  } |> (early ? Emitters.exportEarly : Emitters.\"export")(~emitters)
+  }->(early ? Emitters.exportEarly : Emitters.\"export")(~emitters)
 
 let emitExportDefault = (~emitters, ~config, name) =>
   switch (config.module_, config.language) {
   | (_, TypeScript)
   | (ES6, _) =>
-    "export default " ++ (name ++ ";") |> Emitters.\"export"(~emitters)
-  | (CommonJS, _) => "exports.default = " ++ (name ++ ";") |> Emitters.\"export"(~emitters)
+    "export default " ++ (name ++ ";")->Emitters.\"export"(~emitters)
+  | (CommonJS, _) => "exports.default = " ++ (name ++ ";")->Emitters.\"export"(~emitters)
   }
 
 let emitExportType = (
@@ -385,10 +385,10 @@ let emitExportType = (
 ) => {
   let \"export" = early ? Emitters.exportEarly : Emitters.\"export"
   let typeParamsString = EmitText.genericsString(~typeVars)
-  let isInterface = resolvedTypeName |> typeNameIsInterface
+  let isInterface = resolvedTypeName->typeNameIsInterface
   let resolvedTypeName =
     config.exportInterfaces && isInterface
-      ? resolvedTypeName |> interfaceName(~config)
+      ? resolvedTypeName->interfaceName(~config)
       : resolvedTypeName
   let exportNameAs = switch nameAs {
   | None => ""
@@ -405,10 +405,10 @@ let emitExportType = (
       (resolvedTypeName ++
       (typeParamsString ++
       (" " ++
-      (((opaque ? mixedOrUnknown(~config) : type_) |> typeToString(
+      (((opaque ? mixedOrUnknown(~config) : type_)->typeToString(
         ~config,
         ~typeNameIsInterface,
-      )) ++ (";" ++ exportNameAs))))) |> \"export"(~emitters)
+      )) ++ (";" ++ exportNameAs)))))->\"export"(~emitters)
     } else {
       "export" ++
       ((opaque ? " opaque " : " ") ++
@@ -416,17 +416,17 @@ let emitExportType = (
       (resolvedTypeName ++
       (typeParamsString ++
       (" = " ++
-      (((opaque ? mixedOrUnknown(~config) : type_) |> typeToString(
+      (((opaque ? mixedOrUnknown(~config) : type_)->typeToString(
         ~config,
         ~typeNameIsInterface,
-      )) ++ (";" ++ exportNameAs))))))) |> \"export"(~emitters)
+      )) ++ (";" ++ exportNameAs)))))))->\"export"(~emitters)
     }
   | TypeScript =>
     if opaque {
       /* Represent an opaque type as an absract class with a field called 'opaque'.
          Any type parameters must occur in the type of opaque, so that different
          instantiations are considered different types. */
-      let typeOfOpaqueField = typeVars == list{} ? "any" : typeVars |> String.concat(" | ")
+      let typeOfOpaqueField = typeVars == list{} ? "any" : typeVars->String.concat(" | ")
       "// tslint:disable-next-line:max-classes-per-file \n" ++
       ((
         String.capitalize_ascii(resolvedTypeName) != resolvedTypeName
@@ -438,7 +438,7 @@ let emitExportType = (
       (typeParamsString ++
       (" { protected opaque!: " ++
       (typeOfOpaqueField ++ (" }; /* simulate opaque types */" ++ exportNameAs)))))))
-        |> \"export"(~emitters)
+        ->\"export"(~emitters)
     } else {
       if isInterface && config.exportInterfaces {
         "export interface " ++ (resolvedTypeName ++ (typeParamsString ++ " "))
@@ -448,9 +448,9 @@ let emitExportType = (
         (resolvedTypeName ++ (typeParamsString ++ " = ")))
       } ++
       (switch type_ {
-      | _ => type_ |> typeToString(~config, ~typeNameIsInterface)
+      | _ => type_->typeToString(~config, ~typeNameIsInterface)
       } ++
-      (";" ++ exportNameAs)) |> \"export"(~emitters)
+      (";" ++ exportNameAs))->\"export"(~emitters)
     }
   | Untyped => emitters
   }
@@ -466,7 +466,7 @@ let emitImportValueAsEarly = (~config, ~emitters, ~name, ~nameAs, importPath) =>
   | None => name
   } ++
   (" from " ++
-  ("'" ++ ((importPath |> ImportPath.emit(~config)) ++ "';"))))) |> Emitters.requireEarly(~emitters)
+  ("'" ++ ((importPath->ImportPath.emit(~config)) ++ "';")))))->Emitters.requireEarly(~emitters)
 }
 
 let emitRequire = (
@@ -489,15 +489,15 @@ let emitRequire = (
     ("import * as " ++
     (ModuleName.toString(moduleName) ++
     (" from '" ++
-    ((importPath |> ImportPath.emit(~config)) ++ "';"))))
-      |> (early ? Emitters.requireEarly : Emitters.require)(~emitters)
+    ((importPath->ImportPath.emit(~config)) ++ "';"))))
+      ->(early ? Emitters.requireEarly : Emitters.require)(~emitters)
   | _ =>
     commentBeforeRequire ++
     ("const " ++
     (ModuleName.toString(moduleName) ++
     (" = require('" ++
-    ((importPath |> ImportPath.emit(~config)) ++ "');"))))
-      |> (early ? Emitters.requireEarly : Emitters.require)(~emitters)
+    ((importPath->ImportPath.emit(~config)) ++ "');"))))
+      ->(early ? Emitters.requireEarly : Emitters.require)(~emitters)
   }
 }
 
@@ -516,28 +516,28 @@ let emitImportReact = (~emitters, ~config) =>
       ~strict=false,
       ImportPath.react,
     )
-  | TypeScript => "import * as React from 'react';" |> require(~early=true, ~emitters)
+  | TypeScript => "import * as React from 'react';"->require(~early=true, ~emitters)
   }
 
 let emitPropTypes = (~config, ~emitters, ~indent, ~name, fields) => {
-  let indent1 = indent |> Indent.more
+  let indent1 = indent->Indent.more
   let prefix = s => "PropTypes." ++ s
   let rec emitType = (~indent, type_: type_) =>
     switch type_ {
-    | Array(t, _) => prefix("arrayOf") ++ ("(" ++ ((t |> emitType(~indent)) ++ ")"))
-    | Ident({name: ("bool" | "number" | "string") as id}) => id |> prefix
-    | Function(_) => "func" |> prefix
+    | Array(t, _) => prefix("arrayOf") ++ ("(" ++ ((t->emitType(~indent)) ++ ")"))
+    | Ident({name: ("bool" | "number" | "string") as id}) => id->prefix
+    | Function(_) => "func"->prefix
     | GroupOfLabeledArgs(fields)
     | Object(_, fields)
     | Record(fields) =>
-      let indent1 = indent |> Indent.more
+      let indent1 = indent->Indent.more
       prefix("shape") ++
       ("({" ++
       (Indent.break(~indent=indent1) ++
       ((fields
-      |> List.filter(({nameJS}: field) => nameJS != "children")
-      |> List.map(emitField(~indent=indent1))
-      |> String.concat("," ++ Indent.break(~indent=indent1))) ++
+      ->List.filter(({nameJS}: field) => nameJS != "children")
+      ->List.map(emitField(~indent=indent1))
+      ->String.concat("," ++ Indent.break(~indent=indent1))) ++
       (Indent.break(~indent) ++ "})"))))
 
     | Ident(_)
@@ -548,12 +548,12 @@ let emitPropTypes = (~config, ~emitters, ~indent, ~name, fields) => {
     | Tuple(_)
     | TypeVar(_)
     | Variant(_) =>
-      "any" |> prefix
+      "any"->prefix
     }
   and emitField = (~indent, {nameJS, optional, type_}: field) =>
     nameJS ++
     (" : " ++
-    ((type_ |> emitType(~indent)) ++ (optional == Mandatory ? ".isRequired" : "")))
+    ((type_->emitType(~indent)) ++ (optional == Mandatory ? ".isRequired" : "")))
 
   config.emitImportPropTypes = true
 
@@ -562,10 +562,10 @@ let emitPropTypes = (~config, ~emitters, ~indent, ~name, fields) => {
   ("{" ++
   (Indent.break(~indent=indent1) ++
   ((fields
-  |> List.filter(({nameJS}: field) => nameJS != "children")
-  |> List.map(emitField(~indent=indent1))
-  |> String.concat("," ++ Indent.break(~indent=indent1))) ++ (Indent.break(~indent) ++ "};")))))
-    |> Emitters.\"export"(~emitters)
+  ->List.filter(({nameJS}: field) => nameJS != "children")
+  ->List.map(emitField(~indent=indent1))
+  ->String.concat("," ++ Indent.break(~indent=indent1))) ++ (Indent.break(~indent) ++ "};")))))
+    ->Emitters.\"export"(~emitters)
 }
 
 let emitImportTypeAs = (
@@ -578,8 +578,8 @@ let emitImportTypeAs = (
 ) => {
   let (typeName, asTypeName) = switch asTypeName {
   | Some(asName) =>
-    asName |> typeNameIsInterface
-      ? (typeName |> interfaceName(~config), Some(asName |> interfaceName(~config)))
+    asName->typeNameIsInterface
+      ? (typeName->interfaceName(~config), Some(asName->interfaceName(~config)))
       : (typeName, asTypeName)
   | None => (typeName, asTypeName)
   }
@@ -597,17 +597,17 @@ let emitImportTypeAs = (
     | Some(asT) => " as " ++ asT
     | None => ""
     } ++
-    ("} from '" ++ ((importPath |> ImportPath.emit(~config)) ++ "';")))))))
-      |> Emitters.\"import"(~emitters)
+    ("} from '" ++ ((importPath->ImportPath.emit(~config)) ++ "';")))))))
+      ->Emitters.\"import"(~emitters)
   | Untyped => emitters
   }
 }
 
-let ofTypeAny = (~config, s) => s |> ofType(~config, ~type_=typeAny(~config))
+let ofTypeAny = (~config, s) => s->ofType(~config, ~type_=typeAny(~config))
 
 let emitTypeCast = (~config, ~type_, ~typeNameIsInterface, s) =>
   switch config.language {
-  | TypeScript => s ++ (" as " ++ (type_ |> typeToString(~config, ~typeNameIsInterface)))
+  | TypeScript => s ++ (" as " ++ (type_->typeToString(~config, ~typeNameIsInterface)))
   | Untyped
   | Flow => s
   }

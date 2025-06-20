@@ -66,7 +66,7 @@ let differentHeightLengths = {
     vmax(1.0),
     vmin(1.0),
     zero,
-  ] |> Array.map(x => {
+  ]->Array.map(x => {
     let className = style(\"@"(redBox, list{height(x)}))
     <div style=className key="x" />
   })
@@ -2026,28 +2026,28 @@ let make = () =>
               open Css
               style(redBox)
             }>
-            {"1" |> text}
+            {"1"->text}
           </div>
           <div
             style={
               open Css
               style(redBox)
             }>
-            {"2" |> text}
+            {"2"->text}
           </div>
           <div
             style={
               open Css
               style(redBox)
             }>
-            {"3" |> text}
+            {"3"->text}
           </div>
           <div
             style={
               open Css
               style(redBox)
             }>
-            {"4" |> text}
+            {"4"->text}
           </div>
         </div>
       </Section>
@@ -2062,28 +2062,28 @@ let make = () =>
               open Css
               style(redBox)
             }>
-            {"1" |> text}
+            {"1"->text}
           </div>
           <div
             style={
               open Css
               style(redBox)
             }>
-            {"2" |> text}
+            {"2"->text}
           </div>
           <div
             style={
               open Css
               style(redBox)
             }>
-            {"3" |> text}
+            {"3"->text}
           </div>
           <div
             style={
               open Css
               style(redBox)
             }>
-            {"4" |> text}
+            {"4"->text}
           </div>
         </div>
       </Section>
@@ -2098,28 +2098,28 @@ let make = () =>
               open Css
               style(redBox)
             }>
-            {"1" |> text}
+            {"1"->text}
           </div>
           <div
             style={
               open Css
               style(redBox)
             }>
-            {"2" |> text}
+            {"2"->text}
           </div>
           <div
             style={
               open Css
               style(redBox)
             }>
-            {"3" |> text}
+            {"3"->text}
           </div>
           <div
             style={
               open Css
               style(redBox)
             }>
-            {"4" |> text}
+            {"4"->text}
           </div>
         </div>
       </Section>

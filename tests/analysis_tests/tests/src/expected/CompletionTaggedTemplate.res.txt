@@ -12,6 +12,7 @@ ContextPath Value[w]
 Path w
 CPPipe pathFromEnv:M found:true
 Path M.
+Path 
 [{
     "label": "->M.xyz",
     "kind": 12,
@@ -65,6 +66,7 @@ ContextPath Value[meh]
 Path meh
 CPPipe pathFromEnv:M found:true
 Path M.
+Path 
 [{
     "label": "->M.xyz",
     "kind": 12,

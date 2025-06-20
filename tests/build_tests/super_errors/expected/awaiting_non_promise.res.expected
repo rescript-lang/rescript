@@ -1,0 +1,18 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/awaiting_non_promise.res[0m:[2m3:15[0m
+
+  1 [2m│[0m let x = 1
+  2 [2m│[0m 
+  [1;31m3[0m [2m│[0m let f = await [1;31mx[0m
+  4 [2m│[0m 
+
+  This has type: [1;31mint[0m
+  But you're using [1;33mawait[0m on this expression, so it is expected to be of type:
+    [1;33mpromise<'a>[0m
+
+  You're trying to await something that is not a promise.
+
+Possible solutions:
+  - Remove the [1;33mawait[0m if this is not expected to be a promise
+  - Wrap the expression in [1;33mPromise.resolve[0m to convert the expression to a promise

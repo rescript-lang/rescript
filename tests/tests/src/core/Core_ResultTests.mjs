@@ -63,7 +63,7 @@ Test.run([
 ], Stdlib_Result.mapError({
   TAG: "Ok",
   _0: 5
-}, i => Math.imul(i, 3)), eq, {
+}, i => i * 3 | 0), eq, {
   TAG: "Ok",
   _0: 5
 });
@@ -79,7 +79,7 @@ Test.run([
 ], Stdlib_Result.mapError({
   TAG: "Error",
   _0: 5
-}, i => Math.imul(i, 3)), eq, {
+}, i => i * 3 | 0), eq, {
   TAG: "Error",
   _0: 15
 });

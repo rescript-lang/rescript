@@ -1,3 +1,4 @@
+@notUndefined
 type t
 
 @new external make: int => t = "ArrayBuffer"

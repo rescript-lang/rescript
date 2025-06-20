@@ -1,15 +1,18 @@
-var cp = require("child_process");
-var assert = require("assert");
-var path = require("path");
-var { rescript_exe } = require("#cli/bin_path");
+// @ts-check
 
-var out = cp.spawnSync(rescript_exe, { encoding: "utf8" });
+import * as assert from "node:assert";
+import * as path from "node:path";
+import { setup } from "#dev/process";
+
+const { execBuild } = setup(import.meta.dirname);
+
+const out = await execBuild();
 
 if (out.stderr !== "") {
   assert.fail(out.stderr);
 }
 
-let files = [
+const files = [
   "_app.res",
   "[...params_max_3].res",
   "[...params].res",
@@ -19,8 +22,8 @@ let files = [
   "utils.test.res",
 ];
 
-for (let f of files) {
-  let { name } = path.parse(f);
-  let m = `./lib/js/src/${name}.js`;
-  assert.deepEqual(require(m).a, 1);
+for (const f of files) {
+  const { name } = path.parse(f);
+  const mod = await import(`./lib/es6/src/${name}.js`);
+  assert.deepEqual(mod.a, 1);
 }

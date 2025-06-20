@@ -112,7 +112,7 @@ let first = Some({
 
 let first = Some({
   exception Exit
-  raise(Exit)
+  throw(Exit)
 })
 
 let first = Some({

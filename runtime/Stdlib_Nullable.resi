@@ -157,7 +157,34 @@ switch Nullable.getExn(%raw("undefined")) {
 
 - Raises `Invalid_argument` if `value` is `null` or `undefined`
 */
+@deprecated("Use `getOrThrow` instead")
 let getExn: t<'a> => 'a
+
+/**
+`getOrThrow(value)` raises an exception if `null` or `undefined`, otherwise returns the value.
+
+```rescript
+switch Nullable.getOrThrow(%raw("'Hello'")) {
+| exception Invalid_argument(_) => assert(false)
+| value => assertEqual(value, "Hello")
+}
+
+switch Nullable.getOrThrow(%raw("null")) {
+| exception Invalid_argument(_) => assert(true)
+| _ => assert(false)
+}
+
+switch Nullable.getOrThrow(%raw("undefined")) {
+| exception Invalid_argument(_) => assert(true)
+| _ => assert(false)
+}
+```
+
+## Exceptions
+
+- Raises `Invalid_argument` if `value` is `null` or `undefined`
+*/
+let getOrThrow: t<'a> => 'a
 
 /**
 `getUnsafe(value)` returns `value`.
@@ -241,3 +268,11 @@ Nullable.flatMap(Nullable.null, addIfAboveOne) // undefined
 ```
 */
 let flatMap: (t<'a>, 'a => t<'b>) => t<'b>
+
+/**
+  `ignore(nullable)` ignores the provided nullable and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: t<'a> => unit = "%ignore"

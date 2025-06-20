@@ -256,10 +256,10 @@ module ResultRowWithItem = {
       </div>
       <div className=Styles.itemRowVariants>
         {variants
-        |> Js.Array.map(variant =>
+        ->Js.Array.map(variant =>
           <VariantRow item variant itemsState onChange key={string_of_int(variant)} />
         )
-        |> React.array}
+        ->React.array}
       </div>
     </div>
   }
@@ -305,9 +305,9 @@ module BulkActions = {
                     ReactEvent.Mouse.preventDefault(e)
                     setItemStates(itemStates =>
                       itemStates
-                      |> Js.Dict.entries
-                      |> Js.Array.map(((key, _value)) => (key, #Ignore))
-                      |> Js.Dict.fromArray
+                      ->Js.Dict.entries
+                      ->Js.Array.map(((key, _value)) => (key, #Ignore))
+                      ->Js.Dict.fromArray
                     )
                     setShowPopup(_ => false)
                     Analytics.Amplitude.logEventWithProperties(
@@ -323,9 +323,9 @@ module BulkActions = {
                     ReactEvent.Mouse.preventDefault(e)
                     setItemStates(itemStates =>
                       itemStates
-                      |> Js.Dict.entries
-                      |> Js.Array.map(((key, _value)) => (key, #ForTrade))
-                      |> Js.Dict.fromArray
+                      ->Js.Dict.entries
+                      ->Js.Array.map(((key, _value)) => (key, #ForTrade))
+                      ->Js.Dict.fromArray
                     )
                     setShowPopup(_ => false)
                     Analytics.Amplitude.logEventWithProperties(
@@ -341,9 +341,9 @@ module BulkActions = {
                     ReactEvent.Mouse.preventDefault(e)
                     setItemStates(itemStates =>
                       itemStates
-                      |> Js.Dict.entries
-                      |> Js.Array.map(((key, _value)) => (key, #CatalogOnly))
-                      |> Js.Dict.fromArray
+                      ->Js.Dict.entries
+                      ->Js.Array.map(((key, _value)) => (key, #CatalogOnly))
+                      ->Js.Dict.fromArray
                     )
                     setShowPopup(_ => false)
                     Analytics.Amplitude.logEventWithProperties(
@@ -359,8 +359,8 @@ module BulkActions = {
                     ReactEvent.Mouse.preventDefault(e)
                     setItemStates(itemStates =>
                       itemStates
-                      |> Js.Dict.entries
-                      |> Js.Array.map(((key, value)) => {
+                      ->Js.Dict.entries
+                      ->Js.Array.map(((key, value)) => {
                         let (itemId, _variant) = User.fromItemKey(~key)->Option.getExn
                         let item = Item.getItem(~itemId)
                         (
@@ -372,7 +372,7 @@ module BulkActions = {
                           },
                         )
                       })
-                      |> Js.Dict.fromArray
+                      ->Js.Dict.fromArray
                     )
                     setShowPopup(_ => false)
                     Analytics.Amplitude.logEventWithProperties(
@@ -388,9 +388,9 @@ module BulkActions = {
                     ReactEvent.Mouse.preventDefault(e)
                     setItemStates(itemStates =>
                       itemStates
-                      |> Js.Dict.entries
-                      |> Js.Array.map(((key, _value)) => (key, #Wishlist))
-                      |> Js.Dict.fromArray
+                      ->Js.Dict.entries
+                      ->Js.Array.map(((key, _value)) => (key, #Wishlist))
+                      ->Js.Dict.fromArray
                     )
                     setShowPopup(_ => false)
                     Analytics.Amplitude.logEventWithProperties(
@@ -630,7 +630,7 @@ module Results = {
                       setSubmitState(_ => Some(Error("Something went wrong. Sorry!")))
                       Promise.resolved()
                     }
-                  }) |> ignore
+                  })->ignore
                 },
                 (),
               )
@@ -648,13 +648,13 @@ module Results = {
 let process = value => {
   let rows =
     value
-    |> Js.String.split("\n")
-    |> Js.Array.map(str => str |> Js.String.trim)
-    |> Js.Array.filter(x => x != "")
+    ->Js.String.split("\n")
+    ->Js.Array.map(str => str->Js.String.trim)
+    ->Js.Array.filter(x => x != "")
   let resultMap = Js.Dict.empty()
   let missingQueries = []
   rows->Array.forEach(row => {
-    let result = row |> Js.Re.exec_(/(.*?) \[(.*?)\]$/g)
+    let result = row->Js.Re.exec_(/(.*?) \[(.*?)\]$/g)
     let itemWithVariant = switch result {
     | Some(match_) =>
       let captures = Js.Re.captures(match_)
@@ -683,19 +683,19 @@ let process = value => {
         resultMap->Js.Dict.set(string_of_int(item.id), arr)
         arr
       }
-      variants |> Js.Array.forEach(variant =>
-        if !(resultMapVariants |> Js.Array.includes(variant)) {
-          resultMapVariants |> Js.Array.push(variant) |> ignore
+      variants->Js.Array.forEach(variant =>
+        if !(resultMapVariants->Js.Array.includes(variant)) {
+          resultMapVariants->Js.Array.push(variant)->ignore
         }
       )
-    | None => missingQueries |> Js.Array.push(row) |> ignore
+    | None => missingQueries->Js.Array.push(row)->ignore
     }
   })
   (
     resultMap
     ->Js.Dict.entries
     ->Array.map(((itemId, variants)) => (Item.getItem(~itemId=int_of_string(itemId)), variants))
-      |> Js.Array.sortInPlaceWith(((aItem, _), (bItem, _)) =>
+      ->Js.Array.sortInPlaceWith(((aItem, _), (bItem, _)) =>
         ItemFilters.compareItemsABC(aItem, bItem)
       ),
     missingQueries,
@@ -723,7 +723,7 @@ let make = (~showLogin, ~url: ReasonReactRouter.url) => {
   React.useEffect0(() => {
     open Webapi.Url.URLSearchParams
     let searchParams = make(url.search)
-    let catalogScannerId = searchParams |> get("cs")
+    let catalogScannerId = searchParams->get("cs")
     switch catalogScannerId {
     | Some(catalogScannerId) =>
       setIsFetchingFromCatalogScanner(_ => true)
@@ -748,7 +748,7 @@ let make = (~showLogin, ~url: ReasonReactRouter.url) => {
         }
       })
     | None => Promise.resolved()
-    } |> ignore
+    }->ignore
     Analytics.Amplitude.logEvent(~eventName="Import Page Viewed")
     None
   })

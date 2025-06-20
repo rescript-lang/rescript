@@ -1,11 +1,13 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.8.3/schema.json",
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "extends": ["../../../biome.json"],
   "linter": {
-    "enabled": true,
-    "rules": {
-      "recommended": true
-    },
+    "ignore": ["**/*.res.js", "**/*.gen.ts*"]
+  },
+  "organizeImports": {
+    "ignore": ["**/*.res.js", "**/*.gen.ts*"]
+  },
+  "formatter": {
     "ignore": ["**/*.res.js", "**/*.gen.ts*"]
   }
 }

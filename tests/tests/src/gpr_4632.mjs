@@ -15,10 +15,7 @@ if (myList !== 0) {
   T0 = {
     myList: myList,
     head: 1,
-    tail: {
-      hd: 2,
-      tl: /* [] */0
-    }
+    tail: myList.tl
   };
 } else {
   throw {
@@ -47,11 +44,7 @@ if (myList$1 !== 0) {
   if (/* [] */0 !== 0) {
     T1 = {
       myList: myList$1,
-      h0: [
-        1,
-        2,
-        3
-      ],
+      h0: myList$1.hd,
       h1: /* [] */(0).hd,
       h2: /* [] */(0).tl
     };

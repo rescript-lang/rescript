@@ -1,13 +1,13 @@
 exception Local(int)
 
-let f = () => raise(Local(3))
+let f = () => throw(Local(3))
 
-let g = () => raise(Not_found)
+let g = () => throw(Not_found)
 
-let h = () => raise(Test_common.U(3))
-let x = () => raise(Test_common.H)
+let h = () => throw(Test_common.U(3))
+let x = () => throw(Test_common.H)
 
-let xx = () => raise(Invalid_argument("x"))
+let xx = () => throw(Invalid_argument("x"))
 
 exception Nullary
 

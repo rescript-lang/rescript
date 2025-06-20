@@ -190,7 +190,7 @@ let x =
     }
     letException={
       exception Exit
-      raise(Exit)
+      throw(Exit)
     }
     assertExpr={assert(true)}
     pack=module(Foo)
@@ -269,7 +269,7 @@ let x =
     }
     {
       exception Exit
-      raise(Exit)
+      throw(Exit)
     }
     {assert(true)}
     {module(Foo)}
@@ -288,17 +288,15 @@ let x =
 let x = <MyComponent sidebar={<div> test </div>} nav={<Navbar />} />
 
 <div>
-  {ReasonReact.array(
-    Array.of_list(
-      List.map(
-        possibleGradeValue =>
-          <option key={string_of_int(possibleGradeValue)} value={string_of_int(possibleGradeValue)}>
-            {str(string_of_int(possibleGradeValue))}
-          </option>,
-        List.filter(g => g <= state.maxGrade, possibleGradeValues),
-      ),
-    ),
-  )}
+  {possibleGradeValues
+  ->List.filter(g => g <= state.maxGrade)
+  ->List.map(possibleGradeValue =>
+    <option key={possibleGradeValue->string_of_int} value={possibleGradeValue->string_of_int}>
+      {possibleGradeValue->string_of_int->str}
+    </option>
+  )
+  ->Array.of_list
+  ->ReasonReact.array}
 </div>
 
 // https://github.com/rescript-lang/syntax/issues/113
@@ -333,7 +331,9 @@ module App = {
   amount={
     // ->BN.new_("86400")
     // There are 86400 seconds in a day.
-    amount->BN.div(BN.new_("86400"))->BN.toString
+    amount
+    ->BN.div(BN.new_("86400"))
+    ->BN.toString
   }
 />
 
@@ -435,7 +435,7 @@ let x = <C> ...{() => msg->React.string} </C>
 
 let x = <C> ...{array->Array.map(React.string)} </C>
 
-let x = <> {array->Array.map(React.string)} </>
+let x = <> ...{array->Array.map(React.string)} </>
 
 let x = {
   let _ = <div />
@@ -524,4 +524,45 @@ let x =
         ()
       }}
     />
+  </div>
+
+let moo =
+  <div>
+    <p> {React.string("moo")} </p>
+    // c1
+    <p> {React.string("moo")} </p>
+    // c2
+    // c3
+    <p> {React.string("moo")} </p>
+
+    // c4
+
+    <p> {React.string("moo")} </p>
+  </div>
+
+let fragmented_moo =
+  <>
+    <p> {React.string("moo")} </p>
+    // c1
+    <p> {React.string("moo")} </p>
+    // c2
+    // c3
+    <p> {React.string("moo")} </p>
+
+    // c4
+
+    <p> {React.string("moo")} </p>
+  </>
+
+let arrow_with_fragment = el => <>
+  {t(nbsp ++ "(")}
+  el
+  {t(")")}
+</>
+
+let arrow_with_container_tag = el =>
+  <div>
+    {t(nbsp ++ "(")}
+    el
+    {t(")")}
   </div>

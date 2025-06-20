@@ -23,14 +23,17 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 let alpha_conversion (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
-  let rec populate_apply_info (args_arity : int list) (len : int) (fn : Lam.t)
-      (args : Lam.t list) ap_info : Lam.t =
+  let rec populate_apply_info ?(ap_transformed_jsx = false)
+      (args_arity : int list) (len : int) (fn : Lam.t) (args : Lam.t list)
+      ap_info : Lam.t =
     match args_arity with
-    | 0 :: _ | [] -> Lam.apply (simpl fn) (Ext_list.map args simpl) ap_info
+    | 0 :: _ | [] ->
+      Lam.apply (simpl fn) (Ext_list.map args simpl) ap_info ~ap_transformed_jsx
     | x :: _ ->
       if x = len then
         Lam.apply (simpl fn) (Ext_list.map args simpl)
           {ap_info with ap_status = App_infer_full}
+          ~ap_transformed_jsx
       else if x > len then
         let fn = simpl fn in
         let args = Ext_list.map args simpl in
@@ -39,7 +42,7 @@ let alpha_conversion (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
           fn args
       else
         let first, rest = Ext_list.split_at args x in
-        Lam.apply
+        Lam.apply ~ap_transformed_jsx
           (Lam.apply (simpl fn) (Ext_list.map first simpl)
              {ap_info with ap_status = App_infer_full})
           (Ext_list.map rest simpl) ap_info
@@ -48,13 +51,14 @@ let alpha_conversion (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
     match lam with
     | Lconst _ -> lam
     | Lvar _ -> lam
-    | Lapply {ap_func; ap_args; ap_info} ->
+    | Lapply {ap_func; ap_args; ap_info; ap_transformed_jsx} ->
       (* detect functor application *)
       let args_arity =
         Lam_arity.extract_arity (Lam_arity_analysis.get_arity meta ap_func)
       in
       let len = List.length ap_args in
-      populate_apply_info args_arity len ap_func ap_args ap_info
+      populate_apply_info ~ap_transformed_jsx args_arity len ap_func ap_args
+        ap_info
     | Llet (str, v, l1, l2) -> Lam.let_ str v (simpl l1) (simpl l2)
     | Lletrec (bindings, body) ->
       let bindings = Ext_list.map_snd bindings simpl in

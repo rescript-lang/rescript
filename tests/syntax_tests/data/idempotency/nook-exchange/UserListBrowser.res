@@ -290,7 +290,7 @@ let make = (~user: User.t, ~list: ViewingList.t, ~url: ReasonReactRouter.url, ~m
   let url = ReasonReactRouter.useUrl()
   let showMini = {
     open Webapi.Url.URLSearchParams
-    make(url.search) |> has("thumbnails")
+    make(url.search)->has("thumbnails")
   }
   let (showRecipes, setShowRecipes) = React.useState(() => false)
   let (filters, pageOffset) = React.useMemo1(
@@ -303,7 +303,7 @@ let make = (~user: User.t, ~list: ViewingList.t, ~url: ReasonReactRouter.url, ~m
       ItemFilters.serialize(~filters, ~defaultSort=UserDefault, ~pageOffset=0),
     )
     if showMini {
-      urlSearchParams |> Webapi.Url.URLSearchParams.append("thumbnails", "")
+      urlSearchParams->Webapi.Url.URLSearchParams.append("thumbnails", "")
     }
     let url = ReasonReactRouter.dangerouslyGetInitialUrl()
     let newUrl = getUrl(~url, ~urlSearchParams)
@@ -344,7 +344,7 @@ let make = (~user: User.t, ~list: ViewingList.t, ~url: ReasonReactRouter.url, ~m
     )
     userItems->Belt.Array.keep((((itemId, _), _)) =>
       ItemFilters.doesItemMatchFilters(~item=Item.getItem(~itemId), ~filters)
-    ) |> Js.Array.sortInPlaceWith((aUserItem, bUserItem) => sortFn(aUserItem, bUserItem))
+    )->Js.Array.sortInPlaceWith((aUserItem, bUserItem) => sortFn(aUserItem, bUserItem))
   }, (userItems, filters))
   let numResults = filteredItems->Belt.Array.length
 
@@ -382,10 +382,10 @@ let make = (~user: User.t, ~list: ViewingList.t, ~url: ReasonReactRouter.url, ~m
       let rootElement = Utils.getElementForDomRef(rootRef)
       open Webapi.Dom
       let boundingRect = Element.getBoundingClientRect(rootElement)
-      window |> Window.scrollBy(0., DomRect.top(boundingRect) -. 32.)
+      window->Window.scrollBy(0., DomRect.top(boundingRect) -. 32.)
     } else {
       open Webapi.Dom
-      window |> Window.scrollTo(0., 0.)
+      window->Window.scrollTo(0., 0.)
     }
     None
   })
@@ -445,7 +445,7 @@ let make = (~user: User.t, ~list: ViewingList.t, ~url: ReasonReactRouter.url, ~m
                 ItemFilters.serialize(~filters, ~defaultSort=UserDefault, ~pageOffset=0),
               )
               if checked {
-                urlSearchParams |> Webapi.Url.URLSearchParams.append("thumbnails", "")
+                urlSearchParams->Webapi.Url.URLSearchParams.append("thumbnails", "")
               }
               let url = ReasonReactRouter.dangerouslyGetInitialUrl()
               let newUrl = getUrl(~url, ~urlSearchParams)
@@ -523,7 +523,7 @@ let make = (~user: User.t, ~list: ViewingList.t, ~url: ReasonReactRouter.url, ~m
                       let rootElement = Utils.getElementForDomRef(rootRef)
                       open Webapi.Dom
                       let boundingRect = Element.getBoundingClientRect(rootElement)
-                      window |> Window.scrollBy(0., DomRect.top(boundingRect))
+                      window->Window.scrollBy(0., DomRect.top(boundingRect))
                     }}
                   />
                 </div>

@@ -100,7 +100,7 @@ let () = {
 
 let () = {
   /* c0 */ exception /* inside */ Exit /* c1 */
-  /* c2 */ raise(Exit) /* c3 */
+  /* c2 */ throw(Exit) /* c3 */
 }
 
 let () = {
@@ -108,13 +108,13 @@ let () = {
   // k
 
   // k2
-  /* c2 */ raise(Exit) // c3
+  /* c2 */ throw(Exit) // c3
 }
 
 let () = {
   /* c0 */ exception /* inside */ Exit /* c1 */
   /* c2 */ exception /* inside */ Terminate /* c3 */
-  /* c4 */ raise(Exit) /* c5 */
+  /* c4 */ throw(Exit) /* c5 */
 }
 
 let () = {
@@ -130,14 +130,14 @@ let () = {
   // k2
 
   // k3
-  /* c4 */ raise(Exit) /* c5 */
+  /* c4 */ throw(Exit) /* c5 */
 }
 
 let () = {
   /* c0 */ exception /* inside */ Exit /* c1 */
   /* c2 */ exception /* inside */ Terminate /* c3 */
   /* c4 */ exception /* inside */ Oom /* c5 */
-  /* c6 */ raise(Exit) /* c7 */
+  /* c6 */ throw(Exit) /* c7 */
 }
 
 let () = {

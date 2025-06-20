@@ -67,12 +67,12 @@ module UpdateCourseQuery = %graphql(`
    `)
 
 let updateName = (send, name) => {
-  let hasError = name |> String.trim |> String.length < 2
+  let hasError = name->String.trim->String.length < 2
   send(UpdateName(name, hasError))
 }
 
 let updateDescription = (send, description) => {
-  let lengthOfDescription = description |> String.trim |> String.length
+  let lengthOfDescription = description->String.trim->String.length
   let hasError = lengthOfDescription < 2 || lengthOfDescription >= 150
   send(UpdateDescription(description, hasError))
 }
@@ -89,7 +89,7 @@ let formClasses = value =>
 
 let handleResponseCB = (id, state, updateCourseCB, course) => {
   let (thumbnail, cover) = switch course {
-  | Some(c) => (c |> Course.thumbnail, c |> Course.cover)
+  | Some(c) => (c->Course.thumbnail, c->Course.cover)
   | None => (None, None)
   }
 
@@ -114,7 +114,7 @@ let createCourse = (state, send, updateCourseCB) => {
   let createCourseQuery = CreateCourseQuery.make(
     ~name=state.name,
     ~description=state.description,
-    ~endsAt=?state.endsAt |> OptionUtils.map(Date.iso8601) |> OptionUtils.map(Js.Json.string),
+    ~endsAt=?state.endsAt->OptionUtils.map(Date.iso8601)->OptionUtils.map(Js.Json.string),
     ~about=state.about,
     ~publicSignup=state.publicSignup,
     ~featured=state.featured,
@@ -122,22 +122,22 @@ let createCourse = (state, send, updateCourseCB) => {
   )
 
   createCourseQuery
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(result => {
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(result => {
     handleResponseCB(result["createCourse"]["course"]["id"], state, updateCourseCB, None)
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let updateCourse = (state, send, updateCourseCB, course) => {
   send(UpdateSaving)
 
   let updateCourseQuery = UpdateCourseQuery.make(
-    ~id=course |> Course.id,
+    ~id=course->Course.id,
     ~name=state.name,
     ~description=state.description,
-    ~endsAt=?state.endsAt |> OptionUtils.map(Date.iso8601) |> OptionUtils.map(Js.Json.string),
+    ~endsAt=?state.endsAt->OptionUtils.map(Date.iso8601)->OptionUtils.map(Js.Json.string),
     ~about=state.about,
     ~publicSignup=state.publicSignup,
     ~featured=state.featured,
@@ -145,12 +145,12 @@ let updateCourse = (state, send, updateCourseCB, course) => {
   )
 
   updateCourseQuery
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(result => {
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(result => {
     handleResponseCB(result["updateCourse"]["course"]["id"], state, updateCourseCB, Some(course))
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let booleanButtonClasses = bool => {
@@ -161,7 +161,7 @@ let booleanButtonClasses = bool => {
 let enablePublicSignupButton = (publicSignup, send) =>
   <div className="flex items-center mt-5">
     <label className="block tracking-wide text-xs font-semibold mr-6" htmlFor="public-signup">
-      {"Enable public signup for this course?" |> str}
+      {"Enable public signup for this course?"->str}
     </label>
     <div
       id="public-signup"
@@ -169,12 +169,12 @@ let enablePublicSignupButton = (publicSignup, send) =>
       <button
         className={booleanButtonClasses(publicSignup)}
         onClick={_ => send(UpdatePublicSignup(true))}>
-        {"Yes" |> str}
+        {"Yes"->str}
       </button>
       <button
         className={booleanButtonClasses(!publicSignup)}
         onClick={_ => send(UpdatePublicSignup(false))}>
-        {"No" |> str}
+        {"No"->str}
       </button>
     </div>
   </div>
@@ -182,22 +182,22 @@ let enablePublicSignupButton = (publicSignup, send) =>
 let featuredButton = (featured, send) =>
   <div className="flex items-center mt-5">
     <label className="block tracking-wide text-xs font-semibold mr-6" htmlFor="featured">
-      {"Feature course in school homepage?" |> str}
+      {"Feature course in school homepage?"->str}
     </label>
     <div
       id="featured" className="flex toggle-button__group flex-shrink-0 rounded-lg overflow-hidden">
       <button className={booleanButtonClasses(featured)} onClick={_ => send(UpdateFeatured(true))}>
-        {"Yes" |> str}
+        {"Yes"->str}
       </button>
       <button
         className={booleanButtonClasses(!featured)} onClick={_ => send(UpdateFeatured(false))}>
-        {"No" |> str}
+        {"No"->str}
       </button>
     </div>
   </div>
 
 let about = course =>
-  switch course |> Course.about {
+  switch course->Course.about {
   | Some(about) => about
   | None => ""
   }
@@ -207,17 +207,17 @@ let updateAboutCB = (send, about) => send(UpdateAbout(about))
 let computeInitialState = course =>
   switch course {
   | Some(course) => {
-      name: course |> Course.name,
-      description: course |> Course.description,
-      endsAt: course |> Course.endsAt,
+      name: course->Course.name,
+      description: course->Course.description,
+      endsAt: course->Course.endsAt,
       hasNameError: false,
       hasDateError: false,
       hasDescriptionError: false,
       dirty: false,
       saving: false,
       about: about(course),
-      publicSignup: course |> Course.publicSignup,
-      featured: course |> Course.featured,
+      publicSignup: course->Course.publicSignup,
+      featured: course->Course.featured,
     }
   | None => {
       name: "",
@@ -253,11 +253,11 @@ let make = (~course, ~hideEditorActionCB, ~updateCourseCB) => {
           <div className="mx-auto bg-white">
             <div className="max-w-2xl p-6 mx-auto">
               <h5 className="uppercase text-center border-b border-gray-400 pb-2">
-                {(course == None ? "Add New Course" : "Edit Course Details") |> str}
+                {(course == None ? "Add New Course" : "Edit Course Details")->str}
               </h5>
               <div className="mt-5">
                 <label className="inline-block tracking-wide text-xs font-semibold " htmlFor="name">
-                  {"Course name" |> str}
+                  {"Course name"->str}
                 </label>
                 <input
                   className="appearance-none block w-full bg-white border border-gray-400 rounded py-3 px-4 mt-2 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
@@ -276,7 +276,7 @@ let make = (~course, ~hideEditorActionCB, ~updateCourseCB) => {
                 <label
                   className="inline-block tracking-wide text-xs font-semibold"
                   htmlFor="description">
-                  {"Course description" |> str}
+                  {"Course description"->str}
                 </label>
                 <input
                   className="appearance-none block w-full bg-white border border-gray-400 rounded py-3 px-4 mt-2 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
@@ -296,11 +296,11 @@ let make = (~course, ~hideEditorActionCB, ~updateCourseCB) => {
               <div className="mt-5">
                 <label
                   className="tracking-wide text-xs font-semibold" htmlFor="course-ends-at-input">
-                  {"Course end date" |> str}
+                  {"Course end date"->str}
                 </label>
-                <span className="ml-1 text-xs"> {"(optional)" |> str} </span>
+                <span className="ml-1 text-xs"> {"(optional)"->str} </span>
                 <HelpIcon className="ml-2" link="https://docs.pupilfirst.com/#/courses">
-                  {"If specified, course will appear as closed to students on this date. Students will not be able to make any more submissions." |> str}
+                  {"If specified, course will appear as closed to students on this date. Students will not be able to make any more submissions."->str}
                 </HelpIcon>
                 <DatePicker
                   onChange={date => send(UpdateEndsAt(date))}
@@ -331,7 +331,7 @@ let make = (~course, ~hideEditorActionCB, ~updateCourseCB) => {
                     disabled={saveDisabled(state)}
                     onClick={_ => updateCourse(state, send, updateCourseCB, course)}
                     className="w-full btn btn-large btn-primary mt-3">
-                    {"Update Course" |> str}
+                    {"Update Course"->str}
                   </button>
 
                 | None =>
@@ -339,7 +339,7 @@ let make = (~course, ~hideEditorActionCB, ~updateCourseCB) => {
                     disabled={saveDisabled(state)}
                     onClick={_ => createCourse(state, send, updateCourseCB)}
                     className="w-full btn btn-large btn-primary mt-3">
-                    {"Create Course" |> str}
+                    {"Create Course"->str}
                   </button>
                 }}
               </div>

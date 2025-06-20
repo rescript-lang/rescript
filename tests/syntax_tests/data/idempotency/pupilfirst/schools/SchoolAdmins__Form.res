@@ -22,8 +22,8 @@ module UpdateSchoolAdminQuery = %graphql(`
 let createSchoolAdminQuery = (email, name, setSaving, updateCB) => {
   setSaving(_ => true)
   CreateSchoolAdminQuery.make(~email, ~name, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
     switch response["createSchoolAdmin"]["schoolAdmin"] {
     | Some(schoolAdmin) =>
       updateCB(
@@ -39,36 +39,36 @@ let createSchoolAdminQuery = (email, name, setSaving, updateCB) => {
     }
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
   ()
 }
 
 let updateSchoolAdminQuery = (admin, name, setSaving, updateCB) => {
   setSaving(_ => true)
-  let id = admin |> SchoolAdmin.id
+  let id = admin->SchoolAdmin.id
   UpdateSchoolAdminQuery.make(~id, ~name, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
     response["updateSchoolAdmin"]["success"]
       ? {
-          updateCB(admin |> SchoolAdmin.updateName(name))
+          updateCB(admin->SchoolAdmin.updateName(name))
           Notification.success("Success", "School Admin updated successfully.")
         }
       : setSaving(_ => false)
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let handleButtonClick = (admin, setSaving, name, email, updateCB, event) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
   switch admin {
   | Some(admin) => updateSchoolAdminQuery(admin, name, setSaving, updateCB)
   | None => createSchoolAdminQuery(email, name, setSaving, updateCB)
   }
 }
 
-let isInvalidEmail = email => email |> EmailUtils.isInvalid(false)
+let isInvalidEmail = email => email->EmailUtils.isInvalid(false)
 
 let showInvalidEmailError = (email, admin) =>
   switch admin {
@@ -86,7 +86,7 @@ let saveDisabled = (email, name, saving, admin) =>
   (saving ||
   (name == "" ||
     switch admin {
-    | Some(admin) => admin |> SchoolAdmin.name == name && admin |> SchoolAdmin.email == email
+    | Some(admin) => admin->SchoolAdmin.name == name && admin->SchoolAdmin.email == email
     | None => false
     }))
 
@@ -109,14 +109,14 @@ let make = (~admin, ~updateCB) => {
 
   let (name, setName) = React.useState(() =>
     switch admin {
-    | Some(admin) => admin |> SchoolAdmin.name
+    | Some(admin) => admin->SchoolAdmin.name
     | None => ""
     }
   )
 
   let (email, setEmail) = React.useState(() =>
     switch admin {
-    | Some(admin) => admin |> SchoolAdmin.email
+    | Some(admin) => admin->SchoolAdmin.email
     | None => ""
     }
   )
@@ -127,15 +127,15 @@ let make = (~admin, ~updateCB) => {
         <div className="max-w-2xl p-6 mx-auto">
           <h5 className="uppercase text-center border-b border-gray-400 pb-2 mb-4">
             {switch admin {
-            | Some(admin) => admin |> SchoolAdmin.name
+            | Some(admin) => admin->SchoolAdmin.name
             | None => "Add new school admin"
-            } |> str}
+            }->str}
           </h5>
           <div>
             <label
               className="inline-block tracking-wide text-xs font-semibold mb-2 leading-tight"
               htmlFor="email">
-              {"Email" |> str}
+              {"Email"->str}
             </label>
             <input
               value=email
@@ -154,7 +154,7 @@ let make = (~admin, ~updateCB) => {
             <label
               className="inline-block tracking-wide text-xs font-semibold mb-2 leading-tight"
               htmlFor="name">
-              {"Name" |> str}
+              {"Name"->str}
             </label>
             <input
               value=name
@@ -173,7 +173,7 @@ let make = (~admin, ~updateCB) => {
               disabled={saveDisabled(email, name, saving, admin)}
               onClick={handleButtonClick(admin, setSaving, name, email, updateCB)}
               className="w-full btn btn-large btn-primary">
-              {buttonText(saving, admin) |> str}
+              {buttonText(saving, admin)->str}
             </button>
           </div>
         </div>

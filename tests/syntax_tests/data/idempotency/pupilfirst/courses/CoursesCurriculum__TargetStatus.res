@@ -50,18 +50,18 @@ type cachedTarget = {
 
 let isPast = dateString =>
   switch dateString {
-  | Some(date) => date |> DateFns.parseString |> DateFns.isBefore(Js.Date.make())
+  | Some(date) => date->DateFns.parseString->DateFns.isBefore(Js.Date.make())
   | None => false
   }
 
-let makePending = targets => targets |> List.map(t => {targetId: t |> Target.id, status: Pending})
+let makePending = targets => targets->List.map(t => {targetId: t->Target.id, status: Pending})
 
 let lockTargets = (targets, reason) =>
-  targets |> List.map(t => {targetId: t |> Target.id, status: Locked(reason)})
+  targets->List.map(t => {targetId: t->Target.id, status: Locked(reason)})
 
 let allTargetsComplete = (targetCache, targetIds) =>
-  targetIds |> List.for_all(targetId => {
-    let cachedTarget = targetCache |> List.find(ct => ct.targetId == targetId)
+  targetIds->List.for_all(targetId => {
+    let cachedTarget = targetCache->List.find(ct => ct.targetId == targetId)
     cachedTarget.submissionStatus == SubmissionPassed
   })
 
@@ -69,37 +69,37 @@ let compute = (preview, team, course, levels, targetGroups, targets, submissions
   /* Eliminate the two course ended and student access ended conditions. */
   if preview {
     makePending(targets)
-  } else if course |> Course.endsAt |> isPast {
+  } else if course->Course.endsAt->isPast {
     lockTargets(targets, CourseLocked)
-  } else if team |> Team.accessEndsAt |> isPast {
+  } else if team->Team.accessEndsAt->isPast {
     lockTargets(targets, AccessLocked)
   } else {
     /* Cache level number of the student. */
     let studentLevelNumber =
-      levels |> List.find(l => l |> Level.id == (team |> Team.levelId)) |> Level.number
+      levels->List.find(l => l->Level.id == (team->Team.levelId))->Level.number
 
     /* Cache level number, milestone boolean, and submission status for all targets. */
-    let targetsCache = targets |> List.map(target => {
-      let targetId = target |> Target.id
+    let targetsCache = targets->List.map(target => {
+      let targetId = target->Target.id
 
       let targetGroup =
-        targetGroups |> List.find(tg => tg |> TargetGroup.id == (target |> Target.targetGroupId))
+        targetGroups->List.find(tg => tg->TargetGroup.id == (target->Target.targetGroupId))
 
-      let milestone = targetGroup |> TargetGroup.milestone
+      let milestone = targetGroup->TargetGroup.milestone
 
       let levelNumber =
         levels
-        |> List.find(l => l |> Level.id == (targetGroup |> TargetGroup.levelId))
-        |> Level.number
+        ->List.find(l => l->Level.id == (targetGroup->TargetGroup.levelId))
+        ->Level.number
 
       let submission =
-        submissions |> ListUtils.findOpt(s => s |> LatestSubmission.targetId == targetId)
+        submissions->ListUtils.findOpt(s => s->LatestSubmission.targetId == targetId)
 
       let submissionStatus = switch submission {
       | Some(s) =>
-        if s |> LatestSubmission.hasPassed {
+        if s->LatestSubmission.hasPassed {
           SubmissionPassed
-        } else if s |> LatestSubmission.hasBeenEvaluated {
+        } else if s->LatestSubmission.hasBeenEvaluated {
           SubmissionFailed
         } else {
           SubmissionPendingReview
@@ -109,16 +109,16 @@ let compute = (preview, team, course, levels, targetGroups, targets, submissions
 
       {
         targetId: targetId,
-        targetReviewed: target |> Target.reviewed,
+        targetReviewed: target->Target.reviewed,
         levelNumber: levelNumber,
         milestone: milestone,
         submissionStatus: submissionStatus,
-        prerequisiteTargetIds: target |> Target.prerequisiteTargetIds,
+        prerequisiteTargetIds: target->Target.prerequisiteTargetIds,
       }
     })
 
     /* Scan the targets cache again to form final list of target statuses. */
-    targetsCache |> List.map(ct => {
+    targetsCache->List.map(ct => {
       let status = switch ct.submissionStatus {
       | SubmissionPendingReview => Submitted
       | SubmissionPassed => Passed
@@ -126,7 +126,7 @@ let compute = (preview, team, course, levels, targetGroups, targets, submissions
       | SubmissionMissing =>
         if ct.levelNumber > studentLevelNumber && ct.targetReviewed {
           Locked(LevelLocked)
-        } else if !(ct.prerequisiteTargetIds |> allTargetsComplete(targetsCache)) {
+        } else if !(ct.prerequisiteTargetIds->allTargetsComplete(targetsCache)) {
           Locked(PrerequisitesIncomplete)
         } else {
           Pending
@@ -171,7 +171,7 @@ let currentLevelStatuses = list{Submitted, Passed}
 let lastLevelStatuses = list{Passed}
 
 let matchesStatuses = (statuses, ts) => {
-  let matchedTargetStatuses = ts |> List.filter(t => t.status->List.mem(statuses))
+  let matchedTargetStatuses = ts->List.filter(t => t.status->List.mem(statuses))
 
   ts == matchedTargetStatuses
 }

@@ -10,4 +10,4 @@
   This has type: [1;31mint[0m
   But this function argument is expecting: [1;33mstring[0m
   
-  You can convert [1;33mint[0m to [1;33mstring[0m with [1;33mBelt.Int.toString[0m.
+  You can convert [1;33mint[0m to [1;33mstring[0m with [1;33mInt.toString[0m.

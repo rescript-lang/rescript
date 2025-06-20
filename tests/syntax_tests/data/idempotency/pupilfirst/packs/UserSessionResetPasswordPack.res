@@ -6,8 +6,8 @@ type props = {
 let decodeProps = json => {
   open Json.Decode
   {
-    token: json |> field("token", string),
-    authenticityToken: json |> field("authenticityToken", string),
+    token: json->field("token", string),
+    authenticityToken: json->field("authenticityToken", string),
   }
 }
 
@@ -16,7 +16,7 @@ let props =
     ~id="user-session-reset-password",
     ~attribute="data-json-props",
     (),
-  ) |> decodeProps
+  )->decodeProps
 
 ReactDOMRe.renderToElementWithId(
   <UserSessionResetPassword token=props.token authenticityToken=props.authenticityToken />,

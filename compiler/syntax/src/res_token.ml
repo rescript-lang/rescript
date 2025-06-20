@@ -78,6 +78,7 @@ type t =
   | Land
   | Lor
   | Band (* Bitwise and: & *)
+  | Caret
   | BangEqual
   | BangEqualEqual
   | LessEqual
@@ -93,23 +94,28 @@ type t =
   | TemplateTail of string * Lexing.position
   | TemplatePart of string * Lexing.position
   | Backtick
-  | BarGreater
   | Try
   | DocComment of Location.t * string
   | ModuleComment of Location.t * string
+  | LeftShift
+  | RightShift
+  | RightShiftUnsigned
 
 let precedence = function
   | HashEqual | ColonEqual -> 1
   | Lor -> 2
   | Land -> 3
+  | Caret -> 4
+  | Band -> 5
   | Equal | EqualEqual | EqualEqualEqual | LessThan | GreaterThan | BangEqual
-  | BangEqualEqual | LessEqual | GreaterEqual | BarGreater ->
-    4
-  | Plus | PlusDot | Minus | MinusDot | PlusPlus -> 5
-  | Asterisk | AsteriskDot | Forwardslash | ForwardslashDot | Percent -> 6
-  | Exponentiation -> 7
-  | MinusGreater -> 8
-  | Dot -> 9
+  | BangEqualEqual | LessEqual | GreaterEqual ->
+    6
+  | LeftShift | RightShift | RightShiftUnsigned -> 7
+  | Plus | PlusDot | Minus | MinusDot | PlusPlus -> 8
+  | Asterisk | AsteriskDot | Forwardslash | ForwardslashDot | Percent -> 9
+  | Exponentiation -> 10
+  | MinusGreater -> 11
+  | Dot -> 12
   | _ -> 0
 
 let to_string = function
@@ -168,7 +174,7 @@ let to_string = function
   | AsteriskDot -> "*."
   | Exponentiation -> "**"
   | Assert -> "assert"
-  | Tilde -> "tilde"
+  | Tilde -> "~"
   | Question -> "?"
   | If -> "if"
   | Else -> "else"
@@ -189,6 +195,7 @@ let to_string = function
   | Of -> "of"
   | Lor -> "||"
   | Band -> "&"
+  | Caret -> "^"
   | Land -> "&&"
   | BangEqual -> "!="
   | BangEqualEqual -> "!=="
@@ -205,10 +212,12 @@ let to_string = function
   | TemplatePart (text, _) -> text ^ "${"
   | TemplateTail (text, _) -> "TemplateTail(" ^ text ^ ")"
   | Backtick -> "`"
-  | BarGreater -> "|>"
   | Try -> "try"
   | DocComment (_loc, s) -> "DocComment " ^ s
   | ModuleComment (_loc, s) -> "ModuleComment " ^ s
+  | LeftShift -> "<<"
+  | RightShift -> ">>"
+  | RightShiftUnsigned -> ">>>"
 
 let keyword_table = function
   | "and" -> And

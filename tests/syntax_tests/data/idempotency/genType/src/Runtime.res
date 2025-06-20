@@ -20,7 +20,7 @@ type rec moduleAccessPath =
   | Root(string)
   | Dot(moduleAccessPath, moduleItem)
 
-let recordValueToString = recordValue => recordValue |> string_of_int
+let recordValueToString = recordValue => recordValue->string_of_int
 
 let recordGen = () => {unboxed: 0, boxed: 0}
 
@@ -48,8 +48,8 @@ let rec emitModuleAccessPath = (~config, moduleAccessPath) =>
   | Root(s) => s
   | Dot(p, moduleItem) =>
     p
-    |> emitModuleAccessPath(~config)
-    |> (
+    ->emitModuleAccessPath(~config)
+    ->(
       config.modulesAsObjects
         ? EmitText.fieldAccess(~label=moduleItem.name)
         : EmitText.arrayAccess(~index=moduleItem.index)
@@ -58,46 +58,46 @@ let rec emitModuleAccessPath = (~config, moduleAccessPath) =>
 
 let emitVariantLabel = (~comment=true, ~polymorphic, label) =>
   if polymorphic {
-    (comment ? label |> EmitText.comment : "") ++ (label |> Btype.hash_variant |> string_of_int)
+    (comment ? label->EmitText.comment : "") ++ (label->Btype.hash_variant->string_of_int)
   } else {
     label
   }
 
 let emitVariantGetLabel = (~polymorphic, x) =>
   if polymorphic {
-    x |> EmitText.arrayAccess(~index=0)
+    x->EmitText.arrayAccess(~index=0)
   } else {
-    x |> EmitText.fieldAccess(~label="tag")
+    x->EmitText.fieldAccess(~label="tag")
   }
 
 let emitVariantGetPayload = (~numArgs, ~polymorphic, x) =>
   if polymorphic {
-    x |> EmitText.arrayAccess(~index=1)
+    x->EmitText.arrayAccess(~index=1)
   } else if numArgs == 1 {
-    x |> EmitText.arrayAccess(~index=0)
+    x->EmitText.arrayAccess(~index=0)
   } else if numArgs == 0 {
     /* inline record */
     x
   } else {
     /* to convert a runtime block to a tuple, remove the tag */
-    x |> EmitText.arraySlice
+    x->EmitText.arraySlice
   }
 
 let emitVariantWithPayload = (~config, ~label, ~numArgs, ~polymorphic, x) =>
   if polymorphic {
-    EmitText.array(list{label |> emitVariantLabel(~polymorphic), x})
+    EmitText.array(list{label->emitVariantLabel(~polymorphic), x})
   } else {
     config.emitCreateBucklescriptBlock = true
-    let args = numArgs == 1 ? list{x} |> EmitText.array : x
-    createRescriptBlock |> EmitText.funCall(~args=list{label, args})
+    let args = numArgs == 1 ? list{x}->EmitText.array : x
+    createRescriptBlock->EmitText.funCall(~args=list{label, args})
   }
 
 let jsVariantTag = "tag"
 let jsVariantValue = "value"
 
-let emitJSVariantGetLabel = x => x |> EmitText.fieldAccess(~label=jsVariantTag)
+let emitJSVariantGetLabel = x => x->EmitText.fieldAccess(~label=jsVariantTag)
 
-let emitJSVariantGetPayload = x => x |> EmitText.fieldAccess(~label=jsVariantValue)
+let emitJSVariantGetPayload = x => x->EmitText.fieldAccess(~label=jsVariantValue)
 
 let emitJSVariantWithPayload = (~label, x) =>
   "{" ++ (jsVariantTag ++ (":" ++ (label ++ (", " ++ (jsVariantValue ++ (":" ++ (x ++ "}")))))))
@@ -172,8 +172,8 @@ module Mangle = {
     "asr",
   ]
 
-  let table = Hashtbl.create(keywords |> Array.length)
-  keywords |> Array.iter(x => Hashtbl.add(table, "_" ++ x, x))
+  let table = Hashtbl.create(keywords->Array.length)
+  keywords->Array.iter(x => Hashtbl.add(table, "_" ++ x, x))
 
   /*
      Apply ReScript's mangling rules for object field names:
@@ -181,7 +181,7 @@ module Mangle = {
      Otherwise remove leading "_" when followed by an uppercase letter, or keyword.
  */
   let translate = x => {
-    let len = x |> String.length
+    let len = x->String.length
     if len > 2 && (String.get(x, len - 1) == '_' && String.get(x, len - 2) == '_') {
       /* "foo__" -> "foo" */
       String.sub(x, 0, len - 2)

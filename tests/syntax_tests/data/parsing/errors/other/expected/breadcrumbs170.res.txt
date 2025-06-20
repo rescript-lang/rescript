@@ -10,7 +10,7 @@
 
   I'm not sure what to parse here when looking at "}".
 
-let l = Obj.magic (Some [1; 2; 3])
+let l = (Some [1; 2; 3]) -> Obj.magic
 module M = struct ;;match l with | None -> [] | Some l -> l#prop end
 ;;from
 ;;now

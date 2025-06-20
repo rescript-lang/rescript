@@ -1,14 +1,18 @@
 {
   "name": "@rescript/std",
-  "version": "12.0.0-alpha.10",
+  "version": "12.0.0-alpha.15",
   "keywords": [
     "rescript",
     "stdlib",
     "functional programming"
   ],
   "license": "SEE LICENSE IN LICENSE",
-  "homepage": "http://rescript-lang.org",
-  "bugs": "https://github.com/rescript-compiler/issues",
+  "homepage": "https://rescript-lang.org",
+  "bugs": "https://github.com/rescript-lang/rescript/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rescript-lang/rescript.git"
+  },
   "author": {
     "name": "Hongbo Zhang",
     "email": "bobzhang1988@gmail.com"
@@ -16,6 +20,7 @@
   "maintainers": [
     "Christoph Knittel (https://github.com/cknitt)",
     "Cristiano Calcagno (https://github.com/cristianoc)",
+    "Dmitry Zakharov (https://github.com/DZakh)",
     "Florian Hammerschmidt (https://github.com/fhammerschmidt)",
     "Gabriel Nordeborn (https://github.com/zth)",
     "Hyeseong Kim (https://github.com/cometkim)",
@@ -25,7 +30,11 @@
     "Paul Tsnobiladzé (https://github.com/tsnobip)",
     "Woonki Moon (https://github.com/mununki)"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "lib"
-  ]
+  ],
+  "preferUnplugged": true
 }

@@ -7,6 +7,7 @@ See [`RegExp`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference
 /**
 Type representing an instantiated `RegExp`.
 */
+@notUndefined
 type t
 
 module Result: {
@@ -43,7 +44,7 @@ module Result: {
   // This below will log "ReScript" and "is" to the console.
   switch regexp->RegExp.exec("ReScript is pretty cool, right?") {
   | None => Console.log("Nope, no match...")
-  | Some(result) => switch result->RegExp.Result.matches {
+  | Some(result) => switch result->RegExp.Result.matches->Array.keepSome {
     | [firstWord, secondWord] => Console.log2(firstWord, secondWord)
     | _ => Console.log("Didn't find exactly two words...")
     }
@@ -51,7 +52,7 @@ module Result: {
   ```
   */
   @send
-  external matches: (t, @as(1) _) => array<string> = "slice"
+  external matches: (t, @as(1) _) => array<option<string>> = "slice"
   @get external index: t => int = "index"
 
   /**
@@ -87,10 +88,18 @@ switch regexp->RegExp.exec("ReScript is pretty cool, right?") {
 | None => Console.log("Nope, no match...")
 | Some(result) => Console.log(result->RegExp.Result.fullMatch) // Prints "ReScript"
 }
+
+// Match 'foo' with case insensitive flag
+let regexp = RegExp.fromString("foo", ~flags="i")
+
+switch regexp->RegExp.exec("FOO") {
+| None => Console.log("Nope, no match...")
+| Some(result) => Console.log(result->RegExp.Result.fullMatch) // Prints "FOO"
+}
 ```
 */
 @new
-external fromString: string => t = "RegExp"
+external fromString: (string, ~flags: string=?) => t = "RegExp"
 
 /**
 `fromStringWithFlags(string)` creates a `RegExp.t` from the provided string, using the provided `flags`. This can then be used to match on strings using `RegExp.exec`.
@@ -108,7 +117,7 @@ switch regexp->RegExp.exec("ReScript is pretty cool, right?") {
 }
 ```
 */
-@new
+@deprecated("Use `fromString` instead") @new
 external fromStringWithFlags: (string, ~flags: string) => t = "RegExp"
 
 /**
@@ -145,8 +154,7 @@ switch regexp->RegExp.exec("ReScript is pretty cool, right?") {
 }
 ```
 */
-@return(nullable)
-@send
+@return(nullable) @send
 external exec: (t, string) => option<Result.t> = "exec"
 
 /**
@@ -288,3 +296,25 @@ Console.log(regexp2->RegExp.unicode) // Logs `true`, since `u` is set
 */
 @get
 external unicode: t => bool = "unicode"
+
+/**
+`flags(regexp)` returns a string consisting of all the flags set on this `RegExp`.
+
+See [`RegExp.flags`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/flags) on MDN.
+
+## Examples
+```rescript
+let regexp = RegExp.fromString("\\w+", ~flags="gi")
+Console.log(regexp->RegExp.flags) // Logs "gi", all the flags set on the RegExp
+```
+*/
+@get
+external flags: t => string = "flags"
+
+/**
+  `ignore(regExp)` ignores the provided regExp and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: t => unit = "%ignore"

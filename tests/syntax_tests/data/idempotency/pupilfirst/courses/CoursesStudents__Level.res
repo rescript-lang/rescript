@@ -21,31 +21,31 @@ let teamsInLevel = t => t.teamsInLevel
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    name: json |> field("name", string),
-    number: json |> field("number", int),
-    studentsInLevel: json |> field("studentsInLevel", int),
-    teamsInLevel: json |> field("teamsInLevel", int),
-    unlocked: json |> field("unlocked", bool),
+    id: json->field("id", string),
+    name: json->field("name", string),
+    number: json->field("number", int),
+    studentsInLevel: json->field("studentsInLevel", int),
+    teamsInLevel: json->field("teamsInLevel", int),
+    unlocked: json->field("unlocked", bool),
   }
 }
 
 let percentageStudents = (t, totalStudents) =>
   float_of_int(t.studentsInLevel) /. float_of_int(totalStudents) *. 100.0
 
-let shortName = t => "L" ++ (t.number |> string_of_int)
+let shortName = t => "L" ++ (t.number->string_of_int)
 
-let sort = levels => levels |> ArrayUtils.copyAndSort((x, y) => x.number - y.number)
+let sort = levels => levels->ArrayUtils.copyAndSort((x, y) => x.number - y.number)
 
 let unsafeLevelNumber = (levels, componentName, levelId) =>
   "Level " ++
   (levels
-  |> ArrayUtils.unsafeFind(
+  ->ArrayUtils.unsafeFind(
     l => l.id == levelId,
     "Unable to find level with id: " ++ (levelId ++ (" in CoursesStudents__" ++ componentName)),
   )
-  |> number
-  |> string_of_int)
+  ->number
+  ->string_of_int)
 
 let levelsCompletedByAllStudents = levels => {
   let rec aux = (completedLevels, levels) =>
@@ -59,6 +59,6 @@ let levelsCompletedByAllStudents = levels => {
       }
     }
 
-  let ls = levels |> sort |> Array.to_list |> aux([])
-  ls |> Array.length == (levels |> Array.length) ? [] : ls
+  let ls = levels->sort->Array.to_list->aux([])
+  ls->Array.length == (levels->Array.length) ? [] : ls
 }

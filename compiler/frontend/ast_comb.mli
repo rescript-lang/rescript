@@ -39,7 +39,7 @@ val tuple_type_pair :
 
 val to_undefined_type : Location.t -> Parsetree.core_type -> Parsetree.core_type
 
-val to_js_re_type : Location.t -> Parsetree.core_type
+val to_regexp_type : Location.t -> Parsetree.core_type
 
 val single_non_rec_value :
   ?attrs:Parsetree.attributes ->

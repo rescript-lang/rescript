@@ -3,11 +3,11 @@ module CssForTest = {
   include Css_Legacy_Core.Make({
     exception NotImplemented
 
-    let mergeStyles = (. _) => raise(NotImplemented)
-    let make = (. _) => raise(NotImplemented)
-    let injectRule = (. _) => raise(NotImplemented)
-    let injectRaw = (. _) => raise(NotImplemented)
-    let makeKeyFrames = (. _) => raise(NotImplemented)
+    let mergeStyles = (. _) => throw(NotImplemented)
+    let make = (. _) => throw(NotImplemented)
+    let injectRule = (. _) => throw(NotImplemented)
+    let injectRaw = (. _) => throw(NotImplemented)
+    let makeKeyFrames = (. _) => throw(NotImplemented)
   })
 }
 
@@ -28,7 +28,7 @@ describe("Fill", () =>
         r(SVG.fill(#contextStroke)),
         r(SVG.fill(#none)),
       )->Js.Json.stringifyAny,
-    ) |> toBeJson((
+    )->toBeJson((
       {"fill": "#FF0044"},
       {"fill": "url(#mydef)"},
       {"fill": "context-fill"},
@@ -48,7 +48,7 @@ describe("strokeDasharray", () =>
         r(SVG.strokeDasharray(#dasharray(list{1.->pct, 2->px, 3.->pct, 4->px}))),
         r(SVG.strokeDasharray(#none)),
       )->Js.Json.stringifyAny,
-    ) |> toBeJson((
+    )->toBeJson((
       {"stroke-dasharray": "1px 2px 3px 4px"},
       {"stroke-dasharray": "1% 2% 3% 4%"},
       {"stroke-dasharray": "1px 2% 3px 4%"},

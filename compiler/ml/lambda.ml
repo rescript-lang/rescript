@@ -46,7 +46,6 @@ type tag_info =
       fields: string array;
       mutable_flag: Asttypes.mutable_flag;
     }
-  | Blk_lazy_general
 
 let tag_of_tag_info (tag : tag_info) =
   match tag with
@@ -54,7 +53,6 @@ let tag_of_tag_info (tag : tag_info) =
   | Blk_tuple | Blk_poly_var _ | Blk_record _ | Blk_module _
   | Blk_module_export _ | Blk_extension | Blk_some (* tag not make sense *)
   | Blk_some_not_nested (* tag not make sense *)
-  | Blk_lazy_general (* tag not make sense 248 *)
   | Blk_record_ext _ (* similar to Blk_extension*) ->
     0
 
@@ -64,7 +62,6 @@ let mutable_flag_of_tag_info (tag : tag_info) =
   | Blk_record {mutable_flag}
   | Blk_record_ext {mutable_flag} ->
     mutable_flag
-  | Blk_lazy_general -> Mutable
   | Blk_tuple | Blk_constructor _ | Blk_poly_var _ | Blk_module _
   | Blk_module_export _ | Blk_extension | Blk_some_not_nested | Blk_some ->
     Immutable
@@ -206,9 +203,11 @@ type primitive =
   | Pmulint
   | Pdivint
   | Pmodint
+  | Ppowint
   | Pandint
   | Porint
   | Pxorint
+  | Pnotint
   | Plslint
   | Plsrint
   | Pasrint
@@ -228,6 +227,7 @@ type primitive =
   | Psubfloat
   | Pmulfloat
   | Pdivfloat
+  | Ppowfloat
   | Pfloatcomp of comparison
   | Pfloatorder
   | Pfloatmin
@@ -243,6 +243,7 @@ type primitive =
   | Pandbigint
   | Porbigint
   | Pxorbigint
+  | Pnotbigint
   | Plslbigint
   | Pasrbigint
   | Pbigintcomp of comparison
@@ -269,6 +270,7 @@ type primitive =
   | Pmakelist of Asttypes.mutable_flag
   (* dict primitives *)
   | Pmakedict
+  | Pdict_has
   (* promise *)
   | Pawait
   (* module *)
@@ -293,7 +295,6 @@ type primitive =
   (* js *)
   | Pcurry_apply of int
   | Pjscomp of comparison
-  | Pundefined_to_opt
   | Pnull_to_opt
   | Pnullable_to_opt
   | Pis_not_none
@@ -380,6 +381,7 @@ and lambda_apply = {
   ap_args: lambda list;
   ap_loc: Location.t;
   ap_inlined: inline_attribute;
+  ap_transformed_jsx: bool;
 }
 
 and lambda_switch = {

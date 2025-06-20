@@ -9,19 +9,19 @@ module CreateApplicantQuery = %graphql(`
  `)
 
 let createApplicant = (courseId, email, name, setSaving, setViewEmailSent, event) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
   setSaving(_ => true)
 
   CreateApplicantQuery.make(~courseId, ~email, ~name, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
     response["createApplicant"]["success"] ? setViewEmailSent() : setSaving(_ => false)
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
-let isInvalidEmail = email => email |> EmailUtils.isInvalid(false)
+let isInvalidEmail = email => email->EmailUtils.isInvalid(false)
 let saveDisabled = (email, name, saving) => isInvalidEmail(email) || (saving || name == "")
 
 let buttonText = (email, name, saving) =>
@@ -35,15 +35,15 @@ let buttonText = (email, name, saving) =>
 
 @react.component
 let make = (~courseName, ~courseId, ~setViewEmailSent, ~email, ~name) => {
-  let (email, setEmail) = React.useState(() => email |> OptionUtils.default(""))
-  let (name, setName) = React.useState(() => name |> OptionUtils.default(""))
+  let (email, setEmail) = React.useState(() => email->OptionUtils.default(""))
+  let (name, setName) = React.useState(() => name->OptionUtils.default(""))
   let (saving, setSaving) = React.useState(() => false)
   <div className="flex flex-col">
-    <h4 className="font-bold"> {"Enroll to " ++ (courseName ++ " course") |> str} </h4>
+    <h4 className="font-bold"> {"Enroll to " ++ (courseName ++ " course")->str} </h4>
     <div className="w-full">
       <div className="mt-4">
         <label htmlFor="email" className="inline-block tracking-wide text-xs font-semibold">
-          {"Email" |> str}
+          {"Email"->str}
         </label>
         <input
           className="appearance-none h-10 mt-1 block w-full border border-gray-400 rounded py-2 px-4 text-sm bg-gray-100 hover:bg-gray-200 focus:outline-none focus:bg-white focus:border-primary-400"
@@ -58,7 +58,7 @@ let make = (~courseName, ~courseId, ~setViewEmailSent, ~email, ~name) => {
       </div>
       <div className="mt-4">
         <label htmlFor="name" className="inline-block tracking-wide text-xs font-semibold">
-          {"Name" |> str}
+          {"Name"->str}
         </label>
         <input
           className="appearance-none h-10 mt-1 block w-full border border-gray-400 rounded py-2 px-4 text-sm bg-gray-100 hover:bg-gray-200 focus:outline-none focus:bg-white focus:border-primary-400"
@@ -77,7 +77,7 @@ let make = (~courseName, ~courseId, ~setViewEmailSent, ~email, ~name) => {
       onClick={createApplicant(courseId, email, name, setSaving, setViewEmailSent)}
       className="btn btn-primary btn-large text-center w-full mt-6">
       {saving ? <FaIcon classes="fas fa-spinner fa-spin mr-2" /> : ReasonReact.null}
-      <span> {buttonText(email, name, saving) |> str} </span>
+      <span> {buttonText(email, name, saving)->str} </span>
     </button>
   </div>
 }

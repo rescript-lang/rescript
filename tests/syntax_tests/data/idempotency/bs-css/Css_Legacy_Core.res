@@ -1492,7 +1492,7 @@ let gridLengthToJs = x =>
   }
 
 let string_of_dimensions = dimensions =>
-  dimensions |> List.map(gridLengthToJs) |> String.concat(" ")
+  dimensions->List.map(gridLengthToJs)->String.concat(" ")
 
 let gridTemplateColumns = dimensions => D("gridTemplateColumns", string_of_dimensions(dimensions))
 
@@ -1699,13 +1699,13 @@ let fontFace = (~fontFamily, ~src, ~fontStyle=?, ~fontWeight=?, ~fontDisplay=?, 
   let fontStyle = Js.Option.map((. value) => FontStyle.toString(value), fontStyle)
   let src =
     src
-    |> List.map(x =>
+    ->List.map(x =>
       switch x {
       | #localUrl(value) => `local("$(value)")`
       | #url(value) => `url("$(value)")`
       }
     )
-    |> String.concat(", ")
+    ->String.concat(", ")
 
   let fontStyle = Belt.Option.mapWithDefault(fontStyle, "", s => "font-style: " ++ (s ++ ";"))
   let fontWeight = Belt.Option.mapWithDefault(fontWeight, "", w =>

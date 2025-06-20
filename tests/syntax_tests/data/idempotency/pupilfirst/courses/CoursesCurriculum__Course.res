@@ -6,8 +6,8 @@ type t = {
 let decode = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    endsAt: json |> field("endsAt", nullable(string)) |> Js.Null.toOption,
+    id: json->field("id", string),
+    endsAt: json->field("endsAt", nullable(string))->Js.Null.toOption,
   }
 }
 
@@ -16,6 +16,6 @@ let id = t => t.id
 
 let hasEnded = t =>
   switch t.endsAt {
-  | Some(date) => date |> DateFns.parseString |> DateFns.isPast
+  | Some(date) => date->DateFns.parseString->DateFns.isPast
   | None => false
   }

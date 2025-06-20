@@ -53,8 +53,6 @@ and ident_dict = ident_create "dict"
 
 and ident_bigint = ident_create "bigint"
 
-and ident_lazy_t = ident_create "lazy_t"
-
 and ident_string = ident_create "string"
 
 and ident_extension_constructor = ident_create "extension_constructor"
@@ -63,16 +61,14 @@ and ident_unknown = ident_create "unknown"
 
 and ident_promise = ident_create "promise"
 
-and ident_uncurried = ident_create "function$"
-
 type test = For_sure_yes | For_sure_no | NA
 
 let type_is_builtin_path_but_option (p : Path.t) : test =
   match p with
   | Pident {stamp} when stamp = ident_option.stamp -> For_sure_no
   | Pident {stamp} when stamp = ident_unit.stamp -> For_sure_no
-  | Pident {stamp}
-    when stamp >= ident_int.stamp && stamp <= ident_uncurried.stamp ->
+  | Pident {stamp} when stamp >= ident_int.stamp && stamp <= ident_promise.stamp
+    ->
     For_sure_yes
   | _ -> NA
 
@@ -100,8 +96,6 @@ and path_dict = Pident ident_dict
 
 and path_bigint = Pident ident_bigint
 
-and path_lazy_t = Pident ident_lazy_t
-
 and path_string = Pident ident_string
 
 and path_unkonwn = Pident ident_unknown
@@ -109,8 +103,6 @@ and path_unkonwn = Pident ident_unknown
 and path_extension_constructor = Pident ident_extension_constructor
 
 and path_promise = Pident ident_promise
-
-and path_uncurried = Pident ident_uncurried
 
 let type_int = newgenty (Tconstr (path_int, [], ref Mnil))
 
@@ -136,8 +128,6 @@ and type_dict t = newgenty (Tconstr (path_dict, [t], ref Mnil))
 
 and type_bigint = newgenty (Tconstr (path_bigint, [], ref Mnil))
 
-and type_lazy_t t = newgenty (Tconstr (path_lazy_t, [t], ref Mnil))
-
 and type_string = newgenty (Tconstr (path_string, [], ref Mnil))
 
 and type_unknown = newgenty (Tconstr (path_unkonwn, [], ref Mnil))
@@ -158,7 +148,7 @@ and ident_error = ident_create_predef_exn "Error"
 and ident_dict_magic_field_name =
   ident_create Dict_type_helpers.dict_magic_field_name
 
-and ident_js_error = ident_create_predef_exn "JsError"
+and ident_js_exn = ident_create_predef_exn "JsExn"
 
 and ident_not_found = ident_create_predef_exn "Not_found"
 
@@ -176,7 +166,7 @@ let all_predef_exns =
     ident_match_failure;
     ident_invalid_argument;
     ident_failure;
-    ident_js_error;
+    ident_js_exn;
     ident_not_found;
     ident_end_of_file;
     ident_division_by_zero;
@@ -203,6 +193,7 @@ let decl_abstr =
     type_attributes = [];
     type_immediate = false;
     type_unboxed = unboxed_false_default_false;
+    type_inlined_types = [];
   }
 
 let decl_abstr_imm = {decl_abstr with type_immediate = true}
@@ -231,8 +222,6 @@ and ident_none = ident_create "None"
 and ident_some = ident_create "Some"
 
 and ident_ctor_unknown = ident_create "Unknown"
-
-and ident_ctor_uncurried = ident_create "Function$"
 
 let common_initial_env add_type add_extension empty_env =
   let decl_bool =
@@ -318,16 +307,6 @@ let common_initial_env add_type add_extension empty_env =
             ],
             Record_regular );
     }
-  and decl_uncurried =
-    let tvar1 = newgenvar () in
-    {
-      decl_abstr with
-      type_params = [tvar1];
-      type_arity = 1;
-      type_kind = Type_variant [cstr ident_ctor_uncurried [tvar1]];
-      type_variance = [Variance.covariant];
-      type_unboxed = Types.unboxed_true_default_false;
-    }
   and decl_unknown =
     let tvar = newgenvar () in
     {
@@ -346,14 +325,6 @@ let common_initial_env add_type add_extension empty_env =
             };
           ];
       type_unboxed = Types.unboxed_true_default_false;
-    }
-  and decl_lazy_t =
-    let tvar = newgenvar () in
-    {
-      decl_abstr with
-      type_params = [tvar];
-      type_arity = 1;
-      type_variance = [Variance.covariant];
     }
   and decl_promise =
     let tvar = newgenvar () in
@@ -394,10 +365,8 @@ let common_initial_env add_type add_extension empty_env =
   |> add_type ident_unit decl_unit
   |> add_type ident_extension_constructor decl_abstr
   |> add_type ident_exn decl_exn
-  |> add_type ident_uncurried decl_uncurried
   |> add_type ident_option decl_option
   |> add_type ident_result decl_result
-  |> add_type ident_lazy_t decl_lazy_t
   |> add_type ident_promise decl_promise
   |> add_type ident_array decl_array
   |> add_type ident_list decl_list
@@ -411,7 +380,7 @@ let common_initial_env add_type add_extension empty_env =
   |> add_exception ident_end_of_file []
   |> add_exception ident_not_found []
   |> add_exception ident_failure [type_string]
-  |> add_exception ident_js_error [type_unknown]
+  |> add_exception ident_js_exn [type_unknown]
   |> add_exception ident_invalid_argument [type_string]
   |> add_exception ident_match_failure
        [newgenty (Ttuple [type_string; type_int; type_int])]
@@ -432,7 +401,7 @@ let builtin_values =
       ident_match_failure;
       ident_invalid_argument;
       ident_failure;
-      ident_js_error;
+      ident_js_exn;
       ident_not_found;
       ident_end_of_file;
       ident_division_by_zero;

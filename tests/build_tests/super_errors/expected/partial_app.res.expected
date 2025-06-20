@@ -7,5 +7,8 @@
   [1;31m5[0m [2m│[0m [1;31mf[0m(1, 2)
   6 [2m│[0m 
 
-  This function has type (int, int, int) => int
-  It is applied with [1;31m2[0m arguments but it requires [1;33m3[0m.
+  This function call is incorrect.
+  The function has type:
+  (int, int, int) => int
+  
+  - The function takes [1;33m3[0m unlabelled arguments, but is called with [1;31mjust 2[0m

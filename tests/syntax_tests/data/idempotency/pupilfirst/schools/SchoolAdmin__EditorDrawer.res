@@ -20,7 +20,7 @@ let make = (~closeDrawerCB, ~closeButtonTitle="Close Editor", ~size=Normal, ~chi
       <div className="drawer-right__close absolute">
         <button
           onClick={e => {
-            e |> ReactEvent.Mouse.preventDefault
+            e->ReactEvent.Mouse.preventDefault
             closeDrawerCB()
           }}
           title=closeButtonTitle

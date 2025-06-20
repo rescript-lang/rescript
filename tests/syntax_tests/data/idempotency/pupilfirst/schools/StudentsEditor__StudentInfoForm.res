@@ -24,7 +24,7 @@ type action =
 let str = React.string
 
 let updateName = (send, name) => {
-  let hasError = name |> String.length < 2
+  let hasError = name->String.length < 2
   send(UpdateName(name, hasError))
 }
 
@@ -35,7 +35,7 @@ let updateEmail = (send, email) => {
 }
 
 let hasEmailDuplication = (email, emailsToAdd) =>
-  emailsToAdd |> Array.exists(emailToAdd => email == emailToAdd)
+  emailsToAdd->Array.exists(emailToAdd => email == emailToAdd)
 
 let formInvalid = (state, emailsToAdd) =>
   state.name == "" ||
@@ -43,7 +43,7 @@ let formInvalid = (state, emailsToAdd) =>
     (state.hasNameError || (state.hasEmailError || hasEmailDuplication(state.email, emailsToAdd))))
 
 let handleAdd = (state, send, emailsToAdd, addToListCB) => {
-  let teamName = state.teamName |> String.trim == "" ? None : Some(state.teamName)
+  let teamName = state.teamName->String.trim == "" ? None : Some(state.teamName)
 
   if !formInvalid(state, emailsToAdd) {
     addToListCB(
@@ -87,11 +87,11 @@ let reducer = (state, action) =>
     }
   | AddTag(tag) => {
       ...state,
-      tagsToApply: state.tagsToApply |> Array.append([tag]),
+      tagsToApply: state.tagsToApply->Array.append([tag]),
     }
   | RemoveTag(tag) => {
       ...state,
-      tagsToApply: state.tagsToApply |> Js.Array.filter(t => t != tag),
+      tagsToApply: state.tagsToApply->Js.Array.filter(t => t != tag),
     }
   }
 
@@ -101,7 +101,7 @@ let make = (~addToListCB, ~studentTags, ~emailsToAdd) => {
   <div className="bg-gray-100 p-4">
     <div>
       <label className="inline-block tracking-wide text-xs font-semibold" htmlFor="name">
-        {"Name" |> str}
+        {"Name"->str}
       </label>
       <input
         value=state.name
@@ -115,7 +115,7 @@ let make = (~addToListCB, ~studentTags, ~emailsToAdd) => {
     </div>
     <div className="mt-5">
       <label className="inline-block tracking-wide text-xs font-semibold" htmlFor="email">
-        {"Email" |> str}
+        {"Email"->str}
       </label>
       <input
         value=state.email
@@ -138,9 +138,9 @@ let make = (~addToListCB, ~studentTags, ~emailsToAdd) => {
       <label
         className="inline-block tracking-wide text-xs font-semibold mb-2 leading-tight"
         htmlFor="title">
-        {"Title" |> str}
+        {"Title"->str}
       </label>
-      <span className="text-xs ml-1"> {"(optional)" |> str} </span>
+      <span className="text-xs ml-1"> {"(optional)"->str} </span>
       <input
         value=state.title
         onChange={event => send(UpdateTitle(ReactEvent.Form.target(event)["value"]))}
@@ -154,9 +154,9 @@ let make = (~addToListCB, ~studentTags, ~emailsToAdd) => {
       <label
         className="inline-block tracking-wide text-xs font-semibold mb-2 leading-tight"
         htmlFor="affiliation">
-        {"Affiliation" |> str}
+        {"Affiliation"->str}
       </label>
-      <span className="text-xs ml-1"> {"(optional)" |> str} </span>
+      <span className="text-xs ml-1"> {"(optional)"->str} </span>
       <input
         value=state.affiliation
         onChange={event => send(UpdateAffiliation(ReactEvent.Form.target(event)["value"]))}
@@ -170,11 +170,11 @@ let make = (~addToListCB, ~studentTags, ~emailsToAdd) => {
       <label
         className="inline-block tracking-wide text-xs font-semibold mb-2 leading-tight"
         htmlFor="team_name">
-        {"Team Name" |> str}
+        {"Team Name"->str}
       </label>
-      <span className="text-xs ml-1"> {"(optional)" |> str} </span>
+      <span className="text-xs ml-1"> {"(optional)"->str} </span>
       <HelpIcon className="ml-1">
-        {"Students with same team name will be grouped together; this will not affect existing teams in the course." |> str}
+        {"Students with same team name will be grouped together; this will not affect existing teams in the course."->str}
       </HelpIcon>
       <input
         value=state.teamName
@@ -188,12 +188,12 @@ let make = (~addToListCB, ~studentTags, ~emailsToAdd) => {
     </div>
     <div className="mt-5">
       <label className="inline-block tracking-wide text-xs font-semibold" htmlFor="tags">
-        {"Tags" |> str}
+        {"Tags"->str}
       </label>
-      <span className="text-xs ml-1"> {"(optional)" |> str} </span>
+      <span className="text-xs ml-1"> {"(optional)"->str} </span>
     </div>
     <StudentsEditor__SearchableTagList
-      unselectedTags={studentTags |> Js.Array.filter(tag => !(state.tagsToApply |> Array.mem(tag)))}
+      unselectedTags={studentTags->Js.Array.filter(tag => !(state.tagsToApply->Array.mem(tag)))}
       selectedTags=state.tagsToApply
       addTagCB={tag => send(AddTag(tag))}
       removeTagCB={tag => send(RemoveTag(tag))}
@@ -203,7 +203,7 @@ let make = (~addToListCB, ~studentTags, ~emailsToAdd) => {
       onClick={_e => handleAdd(state, send, emailsToAdd, addToListCB)}
       disabled={formInvalid(state, emailsToAdd)}
       className={"btn btn-primary mt-5" ++ (formInvalid(state, emailsToAdd) ? " disabled" : "")}>
-      {"Add to List" |> str}
+      {"Add to List"->str}
     </button>
   </div>
 }

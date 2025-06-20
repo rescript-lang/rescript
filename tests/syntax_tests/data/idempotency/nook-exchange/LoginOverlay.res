@@ -166,7 +166,7 @@ module PasswordReset = {
           setIsSubmitting(_ => false)
           Promise.resolved()
         })
-      }) |> ignore
+      })->ignore
     }
 
     <form onSubmit>
@@ -242,7 +242,7 @@ let make = (~onClose) => {
         }
         Promise.resolved()
       })
-    } |> ignore
+    }->ignore
   }
 
   let onRegisterSubmit = e => {
@@ -269,7 +269,7 @@ let make = (~onClose) => {
         setIsSubmitting(_ => false)
         Promise.resolved()
       })
-    } |> ignore
+    }->ignore
   }
 
   let usernameRef = React.useRef(Js.Nullable.null)
@@ -293,7 +293,7 @@ let make = (~onClose) => {
 
                 {
                   open Dom.Storage
-                  localStorage |> setItem("discord_state", state)
+                  localStorage->setItem("discord_state", state)
                 }
 
                 open Webapi.Dom
@@ -388,7 +388,7 @@ let make = (~onClose) => {
 
                     {
                       open Dom.Storage
-                      localStorage |> setItem("discord_state", state)
+                      localStorage->setItem("discord_state", state)
                     }
 
                     open Webapi.Dom

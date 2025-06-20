@@ -32,7 +32,6 @@ type intervalId = Stdlib_Global.intervalId
 /** Identify timeout started by `Js.Global.setTimeout`. */
 type timeoutId = Stdlib_Global.timeoutId
 
-@val
 /**
 Clear an interval started by `Js.Global.setInterval`
 
@@ -57,9 +56,9 @@ let cancel = () =>
   Js.Nullable.iter(interval.contents, (. intervalId) => Js.Global.clearInterval(intervalId))
 ```
 */
+@val
 external clearInterval: intervalId => unit = "clearInterval"
 
-@val
 /**
 Clear a timeout started by `Js.Global.setTimeout`.
 
@@ -80,9 +79,9 @@ let procrastinate = mins => {
 }
 ```
 */
+@val
 external clearTimeout: timeoutId => unit = "clearTimeout"
 
-@val
 /**
 Repeatedly executes a callback with a specified interval (in milliseconds)
 between calls. Returns a `Js.Global.intervalId` that can be passed to
@@ -103,9 +102,9 @@ let tick = () => {
 Js.Global.setInterval(tick, 1000)
 ```
 */
+@val
 external setInterval: (unit => unit, int) => intervalId = "setInterval"
 
-@val
 /**
 Repeatedly executes a callback with a specified interval (in milliseconds)
 between calls. Returns a `Js.Global.intervalId` that can be passed to
@@ -126,9 +125,9 @@ let tick = () => {
 Js.Global.setIntervalFloat(tick, 1000.0)
 ```
 */
+@val
 external setIntervalFloat: (unit => unit, float) => intervalId = "setInterval"
 
-@val
 /**
 Execute a callback after a specified delay (in milliseconds). Returns a
 `Js.Global.timeoutId` that can be passed to `Js.Global.clearTimeout` to cancel
@@ -144,9 +143,9 @@ let message = "Timed out!"
 Js.Global.setTimeout(() => Js.log(message), 1000)
 ```
 */
+@val
 external setTimeout: (unit => unit, int) => timeoutId = "setTimeout"
 
-@val
 /**
 Execute a callback after a specified delay (in milliseconds). Returns a
 `Js.Global.timeoutId` that can be passed to `Js.Global.clearTimeout` to cancel
@@ -162,36 +161,37 @@ let message = "Timed out!"
 Js.Global.setTimeoutFloat(() => Js.log(message), 1000.0)
 ```
 */
+@val
 external setTimeoutFloat: (unit => unit, float) => timeoutId = "setTimeout"
 
-@val
 /**
 URL-encodes a string.
 
 See [`encodeURI`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURI) on MDN.
 */
+@val
 external encodeURI: string => string = "encodeURI"
 
-@val
 /**
 Decodes a URL-enmcoded string produced by `encodeURI`
 
 See [`decodeURI`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/decodeURI) on MDN.
 */
+@val
 external decodeURI: string => string = "decodeURI"
 
-@val
 /**
 URL-encodes a string, including characters with special meaning in a URI.
 
 See [`encodeURIComponent`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent) on MDN.
 */
+@val
 external encodeURIComponent: string => string = "encodeURIComponent"
 
-@val
 /**
 Decodes a URL-enmcoded string produced by `encodeURIComponent`
 
 See [`decodeURIComponent`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/decodeURIComponent) on MDN.
 */
+@val
 external decodeURIComponent: string => string = "decodeURIComponent"

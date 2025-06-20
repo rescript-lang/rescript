@@ -1,4 +1,4 @@
-let f = () => raise(Not_found)
+let f = () => throw(Not_found)
 
 let assert_f = x => {
   let () = assert(x > 3)
@@ -6,7 +6,7 @@ let assert_f = x => {
 }
 
 let hh = () => {
-  let v = raise(Not_found)
+  let v = throw(Not_found)
   v + 3
 }
 /* TODO: comment for line column number */
@@ -26,7 +26,7 @@ let test_js_error2 = () =>
   try Js.Json.parseExn(` {"x" : }`) catch {
   | Js.Exn.Error(err) as e =>
     Js.log(Js.Exn.stack(err))
-    raise(e)
+    throw(e)
   }
 
 let test_js_error3 = () =>

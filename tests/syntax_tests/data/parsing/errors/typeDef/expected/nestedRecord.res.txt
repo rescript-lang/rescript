@@ -1,0 +1,21 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typeDef/nestedRecord.res:3:11-47
+
+  1 │ type options = {
+  2 │   extra?: {
+  3 │     name: result<{first: bool}, {second: bool}>,
+  4 │   },
+  5 │ }
+
+  Only one inline record definition is allowed per record field. This defines more than one inline record.
+
+type options.extra = {
+  name: (options.extra.name, options.extra.name) result }[@@res.inlineRecordDefinition
+                                                           ]
+and options.extra.name = {
+  second: bool }[@@res.inlineRecordDefinition ]
+and options.extra.name = {
+  first: bool }[@@res.inlineRecordDefinition ]
+and options = {
+  extra?: options.extra }

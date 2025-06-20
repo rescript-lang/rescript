@@ -49,14 +49,14 @@ let print (fmt : Format.formatter) (x : error) =
     let name = Bsb_pkg_types.to_string name in
     if Ext_string.equal name !Bs_version.package_name then
       Format.fprintf fmt
-        "File \"bsconfig.json\", line 1\n\
+        "File \"rescript.json\", line 1\n\
          @{<error>Error:@} package @{<error>%s@} is not found\n\
          It's the basic, required package. If you have it installed globally,\n\
          Please run `npm link rescript` to make it available"
         name
     else
       Format.fprintf fmt
-        "File \"bsconfig.json\", line 1\n\
+        "File \"rescript.json\", line 1\n\
          @{<error>Error:@} package @{<error>%s@} not found or built\n\
          - Did you install it?"
         name
@@ -68,7 +68,7 @@ let print (fmt : Format.formatter) (x : error) =
        https://rescript-lang.org/docs/manual/latest/build-configuration-schema"
       pos.pos_fname pos.pos_lnum s
   | Invalid_spec s ->
-    Format.fprintf fmt "@{<error>Error: Invalid bsconfig.json %s@}" s
+    Format.fprintf fmt "@{<error>Error: Invalid rescript.json: %s@}" s
 
 let conflict_module modname dir1 dir2 =
   Error (Conflict_module (modname, dir1, dir2))

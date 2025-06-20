@@ -16,22 +16,22 @@ let kindIconClasses = result =>
 let showFiles = files =>
   <div className="flex flex-wrap">
     {files
-    |> Array.map(file =>
+    ->Array.map(file =>
       <a
-        key={"file-" ++ (file |> ChecklistItem.fileUrl)}
-        href={file |> ChecklistItem.fileUrl}
+        key={"file-" ++ (file->ChecklistItem.fileUrl)}
+        href={file->ChecklistItem.fileUrl}
         target="_blank"
         className="mt-1 mr-3 flex border overflow-hidden rounded hover:shadow-md border-pink-400 bg-white text-pink-700 hover:border-pink-600 hover:text-pink-700">
         <span
           className="course-show-attachments__attachment-title rounded text-xs font-semibold inline-block whitespace-normal truncate w-32 md:w-42 h-full px-3 py-2 leading-loose">
-          {file |> ChecklistItem.fileName |> str}
+          {file->ChecklistItem.fileName->str}
         </span>
         <span className="flex w-10 justify-center items-center p-2 bg-pink-700 text-white">
           <PfIcon className="if i-download-regular" />
         </span>
       </a>
     )
-    |> React.array}
+    ->React.array}
   </div>
 
 let showlink = link =>
@@ -41,7 +41,7 @@ let showlink = link =>
     className="max-w-fc mt-1 mr-3 flex border overflow-hidden rounded hover:shadow-md border-indigo-400 bg-white text-indigo-700 hover:border-blue-600 hover:text-indigo-800">
     <span
       className="course-show-attachments__attachment-title rounded text-xs font-semibold inline-block whitespace-normal truncate w-32 md:w-42 h-full px-3 py-2 leading-loose">
-      {link |> str}
+      {link->str}
     </span>
     <span className="flex w-10 justify-center items-center p-2 bg-indigo-700 text-white">
       <PfIcon className="if i-external-link-regular" />
@@ -61,11 +61,11 @@ let showStatus = status =>
   switch (status: ChecklistItem.status) {
   | Passed =>
     <div className="bg-green-200 rounded px-1 py-px text-green-800 text-tiny">
-      {"Correct" |> str}
+      {"Correct"->str}
     </div>
   | Failed =>
     <div className="bg-red-200 rounded px-1 py-px text-red-800 text-tiny">
-      {"Incorrect" |> str}
+      {"Incorrect"->str}
     </div>
   | NoAnswer => React.null
   }
@@ -91,8 +91,8 @@ let statusButtonIcon = bool =>
 
 let statusButtonOnClick = (bool, callback, checklist, index, _event) =>
   bool
-    ? callback(checklist |> ChecklistItem.makeNoAnswer(index))
-    : callback(checklist |> ChecklistItem.makeFailed(index))
+    ? callback(checklist->ChecklistItem.makeNoAnswer(index))
+    : callback(checklist->ChecklistItem.makeFailed(index))
 
 let statusButton = (index, status, callback, checklist) =>
   <div className="mt-2">
@@ -103,12 +103,12 @@ let statusButton = (index, status, callback, checklist) =>
       <span className="w-8 p-2 border-r border-gray-500 flex items-center justify-center">
         <PfIcon className={statusButtonIcon(status == ChecklistItem.Failed)} />
       </span>
-      <span className="p-2"> {"Mark as incorrect" |> str} </span>
+      <span className="p-2"> {"Mark as incorrect"->str} </span>
     </button>
   </div>
 
 let computeShowResult = (pending, checklistItem) =>
-  switch (pending, checklistItem |> ChecklistItem.status) {
+  switch (pending, checklistItem->ChecklistItem.status) {
   | (true, NoAnswer | Passed | Failed) => true
   | (false, Failed) => true
   | (false, NoAnswer | Passed) => false
@@ -133,17 +133,17 @@ let make = (~index, ~checklistItem, ~updateChecklistCB, ~checklist, ~pending) =>
     newShowResult == showResult ? () : setShowResult(_ => newShowResult)
     None
   }, [updateChecklistCB])
-  let status = checklistItem |> ChecklistItem.status
+  let status = checklistItem->ChecklistItem.status
 
   <div
     className={cardClasses(pending)}
-    ariaLabel={checklistItem |> ChecklistItem.title}
+    ariaLabel={checklistItem->ChecklistItem.title}
     onClick={_ => setShowResult(_ => true)}>
     <div className={cardHeaderClasses(pending)}>
       <div className="inline-flex items-center">
         {statusIcon(updateChecklistCB, status)}
-        <PfIcon className={kindIconClasses(checklistItem |> ChecklistItem.result)} />
-        <p className="pl-2 tracking-wide"> {checklistItem |> ChecklistItem.title |> str} </p>
+        <PfIcon className={kindIconClasses(checklistItem->ChecklistItem.result)} />
+        <p className="pl-2 tracking-wide"> {checklistItem->ChecklistItem.title->str} </p>
       </div>
       <div className="inline-block">
         {showResult ? showStatus(status) : <button> <i className="fas fa-chevron-down" /> </button>}
@@ -152,11 +152,11 @@ let make = (~index, ~checklistItem, ~updateChecklistCB, ~checklist, ~pending) =>
     {showResult
       ? <div className={cardBodyClasses(pending)}>
           <div>
-            {switch checklistItem |> ChecklistItem.result {
-            | ShortText(text) => <div> {text |> str} </div>
+            {switch checklistItem->ChecklistItem.result {
+            | ShortText(text) => <div> {text->str} </div>
             | LongText(markdown) => <MarkdownBlock profile=Markdown.Permissive markdown />
             | Link(link) => showlink(link)
-            | MultiChoice(text) => <div> {text |> str} </div>
+            | MultiChoice(text) => <div> {text->str} </div>
             | Files(files) => showFiles(files)
             }}
           </div>

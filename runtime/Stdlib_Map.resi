@@ -7,6 +7,7 @@ See [`Map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Gl
 /**
 Type representing an instance of `Map`.
 */
+@notUndefined
 type t<'k, 'v>
 
 /**
@@ -277,3 +278,11 @@ Console.log(map->Map.entries->Iterator.toArray)
 */
 @send
 external entries: t<'k, 'v> => Stdlib_Iterator.t<('k, 'v)> = "entries"
+
+/**
+  `ignore(map)` ignores the provided map and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: t<'k, 'v> => unit = "%ignore"

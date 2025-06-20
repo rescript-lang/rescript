@@ -54,8 +54,8 @@ let rec getAttributePayload = (checkText, attributes: Typedtree.attributes) => {
     | {pexp_desc: Pexp_construct({txt: Lident(("true" | "false") as s)}, _), _} =>
       Some(BoolPayload(s == "true"))
     | {pexp_desc: Pexp_tuple(exprs)} =>
-      let payloads = exprs |> List.rev |> List.fold_left((payloads, expr) =>
-          switch expr |> fromExpr {
+      let payloads = exprs->List.rev->List.fold_left((payloads, expr) =>
+          switch expr->fromExpr {
           | Some(payload) => list{payload, ...payloads}
           | None => payloads
           }
@@ -69,7 +69,7 @@ let rec getAttributePayload = (checkText, attributes: Typedtree.attributes) => {
   | list{({Asttypes.txt: txt}, payload), ..._tl} if checkText(txt) =>
     switch payload {
     | PStr(list{}) => Some(UnrecognizedPayload)
-    | PStr(list{{pstr_desc: Pstr_eval(expr, _)}, ..._}) => expr |> fromExpr
+    | PStr(list{{pstr_desc: Pstr_eval(expr, _)}, ..._}) => expr->fromExpr
     | PStr(list{{pstr_desc: Pstr_extension(_)}, ..._}) => Some(UnrecognizedPayload)
     | PStr(list{{pstr_desc: Pstr_value(_)}, ..._}) => Some(UnrecognizedPayload)
     | PStr(list{{pstr_desc: Pstr_primitive(_)}, ..._}) => Some(UnrecognizedPayload)
@@ -93,10 +93,10 @@ let rec getAttributePayload = (checkText, attributes: Typedtree.attributes) => {
 }
 
 let getGenTypeAsRenaming = attributes =>
-  switch attributes |> getAttributePayload(tagIsGenTypeAs) {
+  switch attributes->getAttributePayload(tagIsGenTypeAs) {
   | Some(StringPayload(s)) => Some(s)
   | None =>
-    switch attributes |> getAttributePayload(tagIsGenType) {
+    switch attributes->getAttributePayload(tagIsGenType) {
     | Some(StringPayload(s)) => Some(s)
     | _ => None
     }
@@ -104,14 +104,14 @@ let getGenTypeAsRenaming = attributes =>
   }
 
 let getAsRenaming = attributes =>
-  switch attributes |> getAttributePayload(tagIsAs) {
+  switch attributes->getAttributePayload(tagIsAs) {
   | Some(StringPayload(s)) => Some(s)
   | _ => None
   }
 
 let getAttributeImportRenaming = attributes => {
-  let attributeImport = attributes |> getAttributePayload(tagIsGenTypeImport)
-  let genTypeAsRenaming = attributes |> getGenTypeAsRenaming
+  let attributeImport = attributes->getAttributePayload(tagIsGenTypeImport)
+  let genTypeAsRenaming = attributes->getGenTypeAsRenaming
   switch (attributeImport, genTypeAsRenaming) {
   | (Some(StringPayload(importString)), _) => (Some(importString), genTypeAsRenaming)
   | (Some(TuplePayload(list{StringPayload(importString), StringPayload(renameString)})), _) => (
@@ -123,7 +123,7 @@ let getAttributeImportRenaming = attributes => {
 }
 
 let getDocString = attributes => {
-  let docPayload = attributes |> getAttributePayload(tagIsOcamlDoc)
+  let docPayload = attributes->getAttributePayload(tagIsOcamlDoc)
   switch docPayload {
   | Some(StringPayload(docString)) => "/** " ++ (docString ++ " */\n")
   | _ => ""
@@ -144,7 +144,7 @@ let fromAttributes = (attributes: Typedtree.attributes) =>
 
 let rec moduleTypeCheckAnnotation = (~checkAnnotation, {mty_desc}: Typedtree.module_type) =>
   switch mty_desc {
-  | Tmty_signature(signature) => signature |> signatureCheckAnnotation(~checkAnnotation)
+  | Tmty_signature(signature) => signature->signatureCheckAnnotation(~checkAnnotation)
   | Tmty_ident(_)
   | Tmty_functor(_)
   | Tmty_with(_)
@@ -155,22 +155,22 @@ and moduleDeclarationCheckAnnotation = (
   ~checkAnnotation,
   {md_attributes, md_type, md_loc: loc}: Typedtree.module_declaration,
 ) =>
-  md_attributes |> checkAnnotation(~loc) || md_type |> moduleTypeCheckAnnotation(~checkAnnotation)
+  md_attributes->checkAnnotation(~loc) || md_type->moduleTypeCheckAnnotation(~checkAnnotation)
 and signatureItemCheckAnnotation = (~checkAnnotation, signatureItem: Typedtree.signature_item) =>
   switch signatureItem {
   | {Typedtree.sig_desc: Typedtree.Tsig_type(_, typeDeclarations)} =>
-    typeDeclarations |> List.exists(({typ_attributes, typ_loc: loc}: Typedtree.type_declaration) =>
-      typ_attributes |> checkAnnotation(~loc)
+    typeDeclarations->List.exists(({typ_attributes, typ_loc: loc}: Typedtree.type_declaration) =>
+      typ_attributes->checkAnnotation(~loc)
     )
   | {sig_desc: Tsig_value({val_attributes, val_loc: loc})} =>
-    val_attributes |> checkAnnotation(~loc)
+    val_attributes->checkAnnotation(~loc)
   | {sig_desc: Tsig_module(moduleDeclaration)} =>
-    moduleDeclaration |> moduleDeclarationCheckAnnotation(~checkAnnotation)
-  | {sig_desc: Tsig_attribute(attribute), sig_loc: loc} => list{attribute} |> checkAnnotation(~loc)
+    moduleDeclaration->moduleDeclarationCheckAnnotation(~checkAnnotation)
+  | {sig_desc: Tsig_attribute(attribute), sig_loc: loc} => list{attribute}->checkAnnotation(~loc)
   | _ => false
   }
 and signatureCheckAnnotation = (~checkAnnotation, signature: Typedtree.signature) =>
-  signature.sig_items |> List.exists(signatureItemCheckAnnotation(~checkAnnotation))
+  signature.sig_items->List.exists(signatureItemCheckAnnotation(~checkAnnotation))
 
 let rec structureItemCheckAnnotation = (
   ~checkAnnotation,
@@ -178,29 +178,29 @@ let rec structureItemCheckAnnotation = (
 ) =>
   switch structureItem {
   | {Typedtree.str_desc: Typedtree.Tstr_type(_, typeDeclarations)} =>
-    typeDeclarations |> List.exists(({typ_attributes, typ_loc: loc}: Typedtree.type_declaration) =>
-      typ_attributes |> checkAnnotation(~loc)
+    typeDeclarations->List.exists(({typ_attributes, typ_loc: loc}: Typedtree.type_declaration) =>
+      typ_attributes->checkAnnotation(~loc)
     )
   | {str_desc: Tstr_value(_loc, valueBindings)} =>
-    valueBindings |> List.exists(({vb_attributes, vb_loc: loc}: Typedtree.value_binding) =>
-      vb_attributes |> checkAnnotation(~loc)
+    valueBindings->List.exists(({vb_attributes, vb_loc: loc}: Typedtree.value_binding) =>
+      vb_attributes->checkAnnotation(~loc)
     )
   | {str_desc: Tstr_primitive({val_attributes, val_loc: loc})} =>
-    val_attributes |> checkAnnotation(~loc)
+    val_attributes->checkAnnotation(~loc)
   | {str_desc: Tstr_module(moduleBinding)} =>
-    moduleBinding |> moduleBindingCheckAnnotation(~checkAnnotation)
+    moduleBinding->moduleBindingCheckAnnotation(~checkAnnotation)
   | {str_desc: Tstr_recmodule(moduleBindings)} =>
-    moduleBindings |> List.exists(moduleBindingCheckAnnotation(~checkAnnotation))
+    moduleBindings->List.exists(moduleBindingCheckAnnotation(~checkAnnotation))
   | {str_desc: Tstr_include({incl_attributes, incl_mod, incl_loc: loc})} =>
-    incl_attributes |> checkAnnotation(~loc) ||
-      incl_mod |> moduleExprCheckAnnotation(~checkAnnotation)
+    incl_attributes->checkAnnotation(~loc) ||
+      incl_mod->moduleExprCheckAnnotation(~checkAnnotation)
   | _ => false
   }
 and moduleExprCheckAnnotation = (~checkAnnotation, moduleExpr: Typedtree.module_expr) =>
   switch moduleExpr.mod_desc {
   | Tmod_structure(structure)
   | Tmod_constraint({mod_desc: Tmod_structure(structure)}, _, _, _) =>
-    structure |> structureCheckAnnotation(~checkAnnotation)
+    structure->structureCheckAnnotation(~checkAnnotation)
   | Tmod_constraint(_)
   | Tmod_ident(_)
   | Tmod_functor(_)
@@ -211,18 +211,18 @@ and moduleBindingCheckAnnotation = (
   ~checkAnnotation,
   {mb_expr, mb_attributes, mb_loc: loc}: Typedtree.module_binding,
 ) =>
-  mb_attributes |> checkAnnotation(~loc) || mb_expr |> moduleExprCheckAnnotation(~checkAnnotation)
+  mb_attributes->checkAnnotation(~loc) || mb_expr->moduleExprCheckAnnotation(~checkAnnotation)
 and structureCheckAnnotation = (~checkAnnotation, structure: Typedtree.structure) =>
-  structure.str_items |> List.exists(structureItemCheckAnnotation(~checkAnnotation))
+  structure.str_items->List.exists(structureItemCheckAnnotation(~checkAnnotation))
 
-let sanitizeVariableName = name => name |> Str.global_replace(Str.regexp("-"), "_")
+let sanitizeVariableName = name => name->Str.global_replace(Str.regexp("-"), "_")
 
 let importFromString = (importString): \"import" => {
   let name = {
-    let base = importString |> Filename.basename
-    try base |> Filename.chop_extension catch {
+    let base = importString->Filename.basename
+    try base->Filename.chop_extension catch {
     | Invalid_argument(_) => base
-    } |> sanitizeVariableName
+    }->sanitizeVariableName
   }
   let importPath = ImportPath.fromStringUnsafe(importString)
   {name: name, importPath: importPath}

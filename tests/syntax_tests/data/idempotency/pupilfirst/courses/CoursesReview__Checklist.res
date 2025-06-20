@@ -26,10 +26,10 @@ let handleEmpty = setState =>
     </span>
     <span className="block text-left ml-4">
       <span className="block text-base font-semibold text-primary-500">
-        {"Create a review checklist" |> str}
+        {"Create a review checklist"->str}
       </span>
       <span className="text-sm block">
-        {"Prepare for your review by creating a checklist" |> str}
+        {"Prepare for your review by creating a checklist"->str}
       </span>
     </span>
   </button>
@@ -49,7 +49,7 @@ let make = (
         <PfIcon
           className="if i-check-square-alt-regular text-gray-800 text-base md:text-lg inline-block"
         />
-        <span className="ml-2 md:ml-3 tracking-wide"> {"Review Checklist" |> str} </span>
+        <span className="ml-2 md:ml-3 tracking-wide"> {"Review Checklist"->str} </span>
       </h5>
     </div>
     <div className="mt-2 md:ml-7">
@@ -62,7 +62,7 @@ let make = (
           targetId
         />
       | Show =>
-        reviewChecklist |> ArrayUtils.isEmpty
+        reviewChecklist->ArrayUtils.isEmpty
           ? handleEmpty(setState)
           : <CoursesReview__ChecklistShow
               reviewChecklist feedback updateFeedbackCB showEditorCB={showEditor(setState)}

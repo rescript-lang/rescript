@@ -26,14 +26,12 @@
 Provide utilities for JS float.
 */
 
-@val
 /**
 The special value "Not a Number". See [`NaN`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN) on MDN.
 */
+@val
 external _NaN: float = "NaN"
 
-@val
-@scope("Number")
 /**
 Tests if the given value is `_NaN`
 
@@ -41,10 +39,9 @@ Note that both `_NaN = _NaN` and `_NaN == _NaN` will return `false`. `isNaN` is
 therefore necessary to test for `_NaN`. Return `true` if the given value is
 `_NaN`, `false` otherwise. See [`isNaN`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isNaN) on MDN.
 */
+@val @scope("Number")
 external isNaN: float => bool = "isNaN"
 
-@val
-@scope("Number")
 /**
 Tests if the given value is finite. Return `true` if the given value is a finite
 number, `false` otherwise. See [`isFinite`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isFinite) on MDN.
@@ -65,9 +62,9 @@ Js.Float.isFinite(Js.Float._NaN)
 Js.Float.isFinite(1234.)
 ```
 */
+@val @scope("Number")
 external isFinite: float => bool = "isFinite"
 
-@send
 /**
 Formats a `float` using exponential (scientific) notation. Return a
 `string` representing the given value in exponential notation. Raise
@@ -83,9 +80,9 @@ Js.Float.toExponential(77.1234)->Js.log
 Js.Float.toExponential(77.)->Js.log
 ```
 */
+@send
 external toExponential: float => string = "toExponential"
 
-@send
 /**
 Formats a `float` using exponential (scientific) notation. `digits` specifies
 how many digits should appear after the decimal point. The value must be in
@@ -101,9 +98,9 @@ See [`toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 Js.Float.toExponentialWithPrecision(77.1234, ~digits=2)->Js.log
 ```
 */
+@send
 external toExponentialWithPrecision: (float, ~digits: int) => string = "toExponential"
 
-@send
 /**
 Formats a `float` using fixed point notation. Return a `string` representing the
 given value in fixed-point notation (usually). Raise RangeError if digits is not
@@ -119,9 +116,9 @@ Js.Float.toFixed(12345.6789)->Js.log
 Js.Float.toFixed(1.2e21)->Js.log
 ```
 */
+@send
 external toFixed: float => string = "toFixed"
 
-@send
 /**
 Formats a `float` using fixed point notation. `digits` specifies how many digits
 should appear after the decimal point. The value must be in the range [0, 20]
@@ -142,9 +139,9 @@ Js.Float.toFixedWithPrecision(12345.6789, ~digits=1)->Js.log
 Js.Float.toFixedWithPrecision(0., ~digits=2)->Js.log
 ```
 */
+@send
 external toFixedWithPrecision: (float, ~digits: int) => string = "toFixed"
 
-@send
 /**
 Formats a `float` using some fairly arbitrary rules. Return a `string`
 representing the given value in fixed-point (usually). `toPrecision` differs
@@ -164,11 +161,11 @@ Js.Float.toPrecision(12345.6789)->Js.log
 Js.Float.toPrecision(1.2e21)->Js.log
 ```
 */
+@send
 external toPrecision: float => string = "toPrecision"
 
 /* equivalent to `toString` I think */
 
-@send
 /**
 Formats a `float` using some fairly arbitrary rules. `digits` specifies how many
 digits should appear in total. The value must between 0 and some arbitrary number
@@ -196,9 +193,9 @@ Js.Float.toPrecisionWithPrecision(12345.6789, ~digits=1)->Js.log
 Js.Float.toPrecisionWithPrecision(0., ~digits=2)->Js.log
 ```
 */
+@send
 external toPrecisionWithPrecision: (float, ~digits: int) => string = "toPrecision"
 
-@send
 /**
 Formats a `float` as a string. Return a `string` representing the given value in
 fixed-point (usually). See [`toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.
@@ -210,9 +207,9 @@ fixed-point (usually). See [`toString`](https://developer.mozilla.org/en-US/docs
 Js.Float.toString(12345.6789)->Js.log
 ```
 */
+@send
 external toString: float => string = "toString"
 
-@send
 /**
 Formats a `float` as a string. `radix` specifies the radix base to use for the
 formatted number. The value must be in the range [2, 36] (inclusive). Return a
@@ -236,9 +233,9 @@ Js.Float.toStringWithRadix(3735928559., ~radix=16)->Js.log
 Js.Float.toStringWithRadix(123.456, ~radix=36)->Js.log
 ```
 */
+@send
 external toStringWithRadix: (float, ~radix: int) => string = "toString"
 
-@val
 /**
 Parses the given `string` into a `float` using JavaScript semantics. Return the
 number as a `float` if successfully parsed, `_NaN` otherwise.
@@ -271,4 +268,5 @@ Js.Float.fromString("hello")
 Js.Float.fromString("100a")
 ```
 */
+@val
 external fromString: string => float = "Number"

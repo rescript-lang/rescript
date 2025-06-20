@@ -11,7 +11,7 @@ let make = (
   ~targetId,
 ) => {
   let (checklistVisible, setChecklistVisible) = React.useState(() => checklistVisible)
-  let reviewChecklistIsNotEmpty = reviewChecklist |> ArrayUtils.isNotEmpty
+  let reviewChecklistIsNotEmpty = reviewChecklist->ArrayUtils.isNotEmpty
   <div>
     <div>
       {switch (checklistVisible, reviewChecklistIsNotEmpty) {
@@ -30,7 +30,7 @@ let make = (
               className="inline-flex w-10 h-10 border border-white items-center justify-center rounded-full bg-primary-100 text-primary-500">
               <i className="fas fa-list" />
             </span>
-            <span className="ml-3"> {"Show Review Checklist" |> str} </span>
+            <span className="ml-3"> {"Show Review Checklist"->str} </span>
           </button>
         </div>
       }}
@@ -40,7 +40,7 @@ let make = (
         <PfIcon
           className="if i-comment-alt-regular text-gray-800 text-base md:text-lg inline-block"
         />
-        <span className="ml-2 md:ml-3 tracking-wide"> {label |> str} </span>
+        <span className="ml-2 md:ml-3 tracking-wide"> {label->str} </span>
       </h5>
       <div className="mt-2 md:ml-7" ariaLabel="feedback">
         <MarkdownEditor

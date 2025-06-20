@@ -41,4 +41,4 @@ module ErrorPopup = {
 }
 
 let showPopup = (~message) =>
-  ReactAtmosphere.API.pushLayer(~render=_ => <ErrorPopup message />) |> ignore
+  ReactAtmosphere.API.pushLayer(~render=_ => <ErrorPopup message />)->ignore

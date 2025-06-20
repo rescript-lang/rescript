@@ -46,8 +46,8 @@ let rec no_side_effects (lam : Lam.t) : bool =
       | _ -> false)
     | Pcreate_extension _ | Ptypeof | Pis_null | Pis_not_none | Psome
     | Psome_not_nest | Pis_undefined | Pis_null_undefined | Pnull_to_opt
-    | Pundefined_to_opt | Pnull_undefined_to_opt | Pjs_fn_make _
-    | Pjs_fn_make_unit | Pjs_object_create _ | Pimport
+    | Pnull_undefined_to_opt | Pjs_fn_make _ | Pjs_fn_make_unit
+    | Pjs_object_create _ | Pimport
     (* TODO: check *)
     | Pmakeblock _
     (* whether it's mutable or not *)
@@ -59,15 +59,16 @@ let rec no_side_effects (lam : Lam.t) : bool =
     (* bool primitives *)
     | Psequand | Psequor | Pnot | Pboolcomp _ | Pboolorder | Pboolmin | Pboolmax
     (* int primitives *)
-    | Pnegint | Paddint | Psubint | Pmulint | Pandint | Porint | Pxorint
-    | Plslint | Plsrint | Pasrint | Pintcomp _ | Pintorder | Pintmin | Pintmax
+    | Pnegint | Paddint | Psubint | Pmulint | Ppowint | Pnotint | Pandint
+    | Porint | Pxorint | Plslint | Plsrint | Pasrint | Pintcomp _ | Pintorder
+    | Pintmin | Pintmax
     (* float primitives *)
     | Pintoffloat | Pfloatofint | Pnegfloat | Paddfloat | Psubfloat | Pmulfloat
-    | Pdivfloat | Pmodfloat | Pfloatcomp _ | Pjscomp _ | Pfloatorder | Pfloatmin
-    | Pfloatmax
+    | Ppowfloat | Pdivfloat | Pmodfloat | Pfloatcomp _ | Pjscomp _ | Pfloatorder
+    | Pfloatmin | Pfloatmax
     (* bigint primitives *)
     | Pnegbigint | Paddbigint | Psubbigint | Pmulbigint | Ppowbigint
-    | Pandbigint | Porbigint | Pxorbigint | Plslbigint | Pasrbigint
+    | Pnotbigint | Pandbigint | Porbigint | Pxorbigint | Plslbigint | Pasrbigint
     | Pbigintcomp _ | Pbigintorder | Pbigintmin | Pbigintmax
     (* string primitives *)
     | Pstringlength | Pstringrefu | Pstringrefs | Pstringcomp _ | Pstringorder
@@ -77,7 +78,7 @@ let rec no_side_effects (lam : Lam.t) : bool =
     (* list primitives *)
     | Pmakelist
     (* dict primitives *)
-    | Pmakedict
+    | Pmakedict | Pdict_has
     (* Test if the argument is a block or an immediate integer *)
     | Pisint | Pis_poly_var_block
     (* Test if the (integer) argument is outside an interval *)

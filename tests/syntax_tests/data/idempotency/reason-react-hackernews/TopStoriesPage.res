@@ -25,7 +25,7 @@ let make = () => {
   , initialState)
   // Using useEffect0 to run this effect one time and prevent multiple reloads of same data which crashes browser
   React.useEffect0(() => {
-    StoryData.fetchTopStories(state.page, payload => dispatch(Loaded(payload))) |> ignore
+    StoryData.fetchTopStories(state.page, payload => dispatch(Loaded(payload)))->ignore
     None
   })
 
@@ -33,16 +33,16 @@ let make = () => {
     let nearTheBottom = () => distanceFromBottom() < 100
     let loadNextPage = () =>
       if state.page < 4 {
-        StoryData.fetchTopStories(state.page, payload => dispatch(Loaded(payload))) |> ignore
+        StoryData.fetchTopStories(state.page, payload => dispatch(Loaded(payload)))->ignore
         dispatch(Loading)
       }
     let scrollHander = _e =>
       if nearTheBottom() && !state.loading {
         loadNextPage()
       }
-    Webapi.Dom.window |> Webapi.Dom.Window.addEventListener("scroll", scrollHander)
+    Webapi.Dom.window->Webapi.Dom.Window.addEventListener("scroll", scrollHander)
 
-    Some(() => Webapi.Dom.window |> Webapi.Dom.Window.removeEventListener("scroll", scrollHander))
+    Some(() => Webapi.Dom.window->Webapi.Dom.Window.removeEventListener("scroll", scrollHander))
   })
 
   <div>

@@ -40,7 +40,8 @@ module ArrayBuffer = {
 
   type t = array_buffer
 
-  @new /** takes length. initializes elements to 0 */
+  /** takes length. initializes elements to 0 */
+  @new
   external make: int => t = "ArrayBuffer"
 
   /* ArrayBuffer.isView: seems pointless with a type system */
@@ -105,13 +106,15 @@ module Int8Array = {
   @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
   @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
   @send external copy: t => t = "slice"
   @send external sliceFrom: (t, int) => t = "slice"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
 
   @send external subarrayFrom: (t, int) => t = "subarray"
@@ -157,22 +160,24 @@ module Int8Array = {
   @val external _BYTES_PER_ELEMENT: int = "Int8Array.BYTES_PER_ELEMENT"
 
   @new external make: array<elt> => t = "Int8Array"
-  @new /** can throw */
+  /** can throw */
+  @new
   external fromBuffer: array_buffer => t = "Int8Array"
 
-  @new /**
+  /**
   **raise** Js.Exn.Error raise Js exception
 
   **param** offset is in bytes
   */
+  @new
   external fromBufferOffset: (array_buffer, int) => t = "Int8Array"
 
-  @new
   /**
   **raise** Js.Exn.Error raises Js exception
 
   **param** offset is in bytes, length in elements
   */
+  @new
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Int8Array"
 
   @new external fromLength: int => t = "Int8Array"
@@ -226,13 +231,15 @@ module Uint8Array = {
   @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
   @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
   @send external copy: t => t = "slice"
   @send external sliceFrom: (t, int) => t = "slice"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
 
   @send external subarrayFrom: (t, int) => t = "subarray"
@@ -278,22 +285,24 @@ module Uint8Array = {
   @val external _BYTES_PER_ELEMENT: int = "Uint8Array.BYTES_PER_ELEMENT"
 
   @new external make: array<elt> => t = "Uint8Array"
-  @new /** can throw */
+  /** can throw */
+  @new
   external fromBuffer: array_buffer => t = "Uint8Array"
 
-  @new /**
+  /**
   **raise** Js.Exn.Error raise Js exception
 
   **param** offset is in bytes
   */
+  @new
   external fromBufferOffset: (array_buffer, int) => t = "Uint8Array"
 
-  @new
   /**
   **raise** Js.Exn.Error raises Js exception
 
   **param** offset is in bytes, length in elements
   */
+  @new
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Uint8Array"
 
   @new external fromLength: int => t = "Uint8Array"
@@ -347,13 +356,15 @@ module Uint8ClampedArray = {
   @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
   @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
   @send external copy: t => t = "slice"
   @send external sliceFrom: (t, int) => t = "slice"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
 
   @send external subarrayFrom: (t, int) => t = "subarray"
@@ -399,22 +410,24 @@ module Uint8ClampedArray = {
   @val external _BYTES_PER_ELEMENT: int = "Uint8ClampedArray.BYTES_PER_ELEMENT"
 
   @new external make: array<elt> => t = "Uint8ClampedArray"
-  @new /** can throw */
+  /** can throw */
+  @new
   external fromBuffer: array_buffer => t = "Uint8ClampedArray"
 
-  @new /**
+  /**
   **raise** Js.Exn.Error raise Js exception
 
   **param** offset is in bytes
   */
+  @new
   external fromBufferOffset: (array_buffer, int) => t = "Uint8ClampedArray"
 
-  @new
   /**
   **raise** Js.Exn.Error raises Js exception
 
   **param** offset is in bytes, length in elements
   */
+  @new
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Uint8ClampedArray"
 
   @new external fromLength: int => t = "Uint8ClampedArray"
@@ -468,13 +481,15 @@ module Int16Array = {
   @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
   @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
   @send external copy: t => t = "slice"
   @send external sliceFrom: (t, int) => t = "slice"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
 
   @send external subarrayFrom: (t, int) => t = "subarray"
@@ -520,22 +535,24 @@ module Int16Array = {
   @val external _BYTES_PER_ELEMENT: int = "Int16Array.BYTES_PER_ELEMENT"
 
   @new external make: array<elt> => t = "Int16Array"
-  @new /** can throw */
+  /** can throw */
+  @new
   external fromBuffer: array_buffer => t = "Int16Array"
 
-  @new /**
+  /**
   **raise** Js.Exn.Error raise Js exception
 
   **param** offset is in bytes
   */
+  @new
   external fromBufferOffset: (array_buffer, int) => t = "Int16Array"
 
-  @new
   /**
   **raise** Js.Exn.Error raises Js exception
 
   **param** offset is in bytes, length in elements
   */
+  @new
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Int16Array"
 
   @new external fromLength: int => t = "Int16Array"
@@ -589,13 +606,15 @@ module Uint16Array = {
   @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
   @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
   @send external copy: t => t = "slice"
   @send external sliceFrom: (t, int) => t = "slice"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
 
   @send external subarrayFrom: (t, int) => t = "subarray"
@@ -641,22 +660,24 @@ module Uint16Array = {
   @val external _BYTES_PER_ELEMENT: int = "Uint16Array.BYTES_PER_ELEMENT"
 
   @new external make: array<elt> => t = "Uint16Array"
-  @new /** can throw */
+  /** can throw */
+  @new
   external fromBuffer: array_buffer => t = "Uint16Array"
 
-  @new /**
+  /**
   **raise** Js.Exn.Error raise Js exception
 
   **param** offset is in bytes
   */
+  @new
   external fromBufferOffset: (array_buffer, int) => t = "Uint16Array"
 
-  @new
   /**
   **raise** Js.Exn.Error raises Js exception
 
   **param** offset is in bytes, length in elements
   */
+  @new
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Uint16Array"
 
   @new external fromLength: int => t = "Uint16Array"
@@ -710,13 +731,15 @@ module Int32Array = {
   @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
   @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
   @send external copy: t => t = "slice"
   @send external sliceFrom: (t, int) => t = "slice"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
 
   @send external subarrayFrom: (t, int) => t = "subarray"
@@ -762,22 +785,24 @@ module Int32Array = {
   @val external _BYTES_PER_ELEMENT: int = "Int32Array.BYTES_PER_ELEMENT"
 
   @new external make: array<elt> => t = "Int32Array"
-  @new /** can throw */
+  /** can throw */
+  @new
   external fromBuffer: array_buffer => t = "Int32Array"
 
-  @new /**
+  /**
   **raise** Js.Exn.Error raise Js exception
 
   **param** offset is in bytes
   */
+  @new
   external fromBufferOffset: (array_buffer, int) => t = "Int32Array"
 
-  @new
   /**
   **raise** Js.Exn.Error raises Js exception
 
   **param** offset is in bytes, length in elements
   */
+  @new
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Int32Array"
 
   @new external fromLength: int => t = "Int32Array"
@@ -831,13 +856,15 @@ module Uint32Array = {
   @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
   @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
   @send external copy: t => t = "slice"
   @send external sliceFrom: (t, int) => t = "slice"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
 
   @send external subarrayFrom: (t, int) => t = "subarray"
@@ -883,22 +910,24 @@ module Uint32Array = {
   @val external _BYTES_PER_ELEMENT: int = "Uint32Array.BYTES_PER_ELEMENT"
 
   @new external make: array<elt> => t = "Uint32Array"
-  @new /** can throw */
+  /** can throw */
+  @new
   external fromBuffer: array_buffer => t = "Uint32Array"
 
-  @new /**
+  /**
   **raise** Js.Exn.Error raise Js exception
 
   **param** offset is in bytes
   */
+  @new
   external fromBufferOffset: (array_buffer, int) => t = "Uint32Array"
 
-  @new
   /**
   **raise** Js.Exn.Error raises Js exception
 
   **param** offset is in bytes, length in elements
   */
+  @new
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Uint32Array"
 
   @new external fromLength: int => t = "Uint32Array"
@@ -955,13 +984,15 @@ module Float32Array = {
   @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
   @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
   @send external copy: t => t = "slice"
   @send external sliceFrom: (t, int) => t = "slice"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
 
   @send external subarrayFrom: (t, int) => t = "subarray"
@@ -1007,22 +1038,24 @@ module Float32Array = {
   @val external _BYTES_PER_ELEMENT: int = "Float32Array.BYTES_PER_ELEMENT"
 
   @new external make: array<elt> => t = "Float32Array"
-  @new /** can throw */
+  /** can throw */
+  @new
   external fromBuffer: array_buffer => t = "Float32Array"
 
-  @new /**
+  /**
   **raise** Js.Exn.Error raise Js exception
 
   **param** offset is in bytes
   */
+  @new
   external fromBufferOffset: (array_buffer, int) => t = "Float32Array"
 
-  @new
   /**
   **raise** Js.Exn.Error raises Js exception
 
   **param** offset is in bytes, length in elements
   */
+  @new
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Float32Array"
 
   @new external fromLength: int => t = "Float32Array"
@@ -1076,13 +1109,15 @@ module Float64Array = {
   @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
   @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
   @send external copy: t => t = "slice"
   @send external sliceFrom: (t, int) => t = "slice"
 
-  @send /** `start` is inclusive, `end_` exclusive */
+  /** `start` is inclusive, `end_` exclusive */
+  @send
   external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
 
   @send external subarrayFrom: (t, int) => t = "subarray"
@@ -1128,22 +1163,24 @@ module Float64Array = {
   @val external _BYTES_PER_ELEMENT: int = "Float64Array.BYTES_PER_ELEMENT"
 
   @new external make: array<elt> => t = "Float64Array"
-  @new /** can throw */
+  /** can throw */
+  @new
   external fromBuffer: array_buffer => t = "Float64Array"
 
-  @new /**
+  /**
   **raise** Js.Exn.Error raise Js exception
 
   **param** offset is in bytes
   */
+  @new
   external fromBufferOffset: (array_buffer, int) => t = "Float64Array"
 
-  @new
   /**
   **raise** Js.Exn.Error raises Js exception
 
   **param** offset is in bytes, length in elements
   */
+  @new
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Float64Array"
 
   @new external fromLength: int => t = "Float64Array"

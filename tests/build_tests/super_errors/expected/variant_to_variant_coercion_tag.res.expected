@@ -7,4 +7,10 @@
   [1;31m6[0m [2m│[0m let y = ([1;31mx :> y[0m)
   7 [2m│[0m 
 
-  Type x is not a subtype of y
+  Type x is not a subtype of y 
+
+  The variants have different [1;33m@tag[0m configurations.
+  - [1;33mx[0m has tag [1;33mkind[0m.
+  - [1;33my[0m has no explicit tag.
+  
+  Fix this by making sure the variants either have the exact same [1;33m@tag[0m configuration, or no [1;33m@tag[0m at all.

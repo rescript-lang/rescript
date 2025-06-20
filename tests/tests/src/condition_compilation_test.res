@@ -15,11 +15,8 @@ type open_flag =
   | O_DSYNC
   | O_SYNC
   | O_RSYNC
-
   | O_SHARE_DELETE
-
   | O_CLOEXEC
-
   | O_KEEPEXEC
 
 let vv = 3

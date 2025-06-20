@@ -10,24 +10,24 @@ module type Selectable = {
 
 module Make = (Selectable: Selectable) => {
   let search = (searchString, selections) =>
-    (selections |> Js.Array.filter(selection =>
+    (selections->Js.Array.filter(selection =>
       selection
-      |> Selectable.searchString
-      |> String.lowercase_ascii
-      |> Js.String.includes(searchString |> String.lowercase_ascii)
+      ->Selectable.searchString
+      ->String.lowercase_ascii
+      ->Js.String.includes(searchString->String.lowercase_ascii)
     ))
       ->Belt.SortArray.stableSortBy((x, y) =>
-        String.compare(x |> Selectable.value, y |> Selectable.value)
+        String.compare(x->Selectable.value, y->Selectable.value)
       )
 
   let searchUnselected = (searchInput, unselectedData) => {
     let normalizedString =
       searchInput
-      |> Js.String.trim
-      |> Js.String.replaceByRe(Js.Re.fromStringWithFlags("\\s+", ~flags="g"), " ")
+      ->Js.String.trim
+      ->Js.String.replaceByRe(Js.Re.fromStringWithFlags("\\s+", ~flags="g"), " ")
     switch normalizedString {
     | "" => unselectedData
-    | searchString => unselectedData |> search(searchString)
+    | searchString => unselectedData->search(searchString)
     }
   }
 
@@ -36,7 +36,7 @@ module Make = (Selectable: Selectable) => {
   let selectedItemClasses = colorForSelected =>
     "bg-" ++ (colorForSelected ++ ("-200 " ++ borderColor(colorForSelected)))
 
-  let searchVisible = (unselected, value) => value != "" || unselected |> Array.length > 3
+  let searchVisible = (unselected, value) => value != "" || unselected->Array.length > 3
 
   @react.component
   let make = (
@@ -57,8 +57,8 @@ module Make = (Selectable: Selectable) => {
       | Some(id) => id
       | None =>
         "re-multiselect-" ++
-        ((Js.Date.now() |> Js.Float.toString) ++
-        ("-" ++ (Js.Math.random_int(100000, 999999) |> string_of_int)))
+        ((Js.Date.now()->Js.Float.toString) ++
+        ("-" ++ (Js.Math.random_int(100000, 999999)->string_of_int)))
       }
     )
 
@@ -67,16 +67,16 @@ module Make = (Selectable: Selectable) => {
 
     <div className="p-6 border rounded bg-gray-100">
       <div>
-        {selected |> Array.length > 0
+        {selected->Array.length > 0
           ? selected
-            |> Array.mapi((index, selected) =>
+            ->Array.mapi((index, selected) =>
               <span
-                key={index |> string_of_int}
+                key={index->string_of_int}
                 className="inline-flex font-semibold text-xs rounded mb-2 mr-2">
                 <span
                   className={"px-2 py-1 flex-1 rounded-l " ++
                   selectedItemClasses(colorForSelected)}>
-                  {selected |> Selectable.value |> str}
+                  {selected->Selectable.value->str}
                 </span>
                 <button
                   className={"inline-flex flex-shrink-0 px-2 py-1 text-sm border-l-0 rounded-r items-center text-gray-800 hover:bg-gray-200 hover:text-gray-900 focus:outline-none " ++
@@ -91,21 +91,21 @@ module Make = (Selectable: Selectable) => {
                 </button>
               </span>
             )
-            |> React.array
+            ->React.array
           : <div
               className="flex flex-col items-center justify-center bg-gray-100 text-gray-800 rounded px-3 pt-3 ">
               <i className="fas fa-inbox text-3xl" />
-              <h5 className="mt-1 font-semibold"> {emptySelectionMessage |> str} </h5>
+              <h5 className="mt-1 font-semibold"> {emptySelectionMessage->str} </h5>
             </div>}
         <div className="text-xs font-semibold mt-2">
           {(
-            unselected |> Array.length > 0
+            unselected->Array.length > 0
               ? "Add more from the list below:"
               : allItemsSelectedMessage
-          ) |> str}
+          )->str}
         </div>
       </div>
-      {unselected |> Array.length > 0
+      {unselected->Array.length > 0
         ? <div className="flex relative pt-3">
             <div
               className={"text-sm bg-white rounded shadow w-full" ++ (
@@ -125,14 +125,14 @@ module Make = (Selectable: Selectable) => {
                 : React.null}
               <div className={showSearchForm ? "multiselect-inline__list overflow-y-scroll" : ""}>
                 {searchResults
-                |> Array.mapi((index, item) =>
+                ->Array.mapi((index, item) =>
                   <div
-                    key={index |> string_of_int}
+                    key={index->string_of_int}
                     onClick={_event => {
                       ReactEvent.Mouse.preventDefault(_event)
                       onSelect(item)
                     }}
-                    title={"Select " ++ (item |> Selectable.value)}
+                    title={"Select " ++ (item->Selectable.value)}
                     className="flex multiselect-inline__list-item  items-center px-3 py-2 font-semibold hover:bg-primary-100 hover:text-primary-500 cursor-pointer">
                     <i
                       className="far fa-square multiselect-inline__list-item-select-icon-unselected text-gray-400 text-xl"
@@ -140,10 +140,10 @@ module Make = (Selectable: Selectable) => {
                     <i
                       className="far fa-plus-square multiselect-inline__list-item-select-icon-selected text-xl"
                     />
-                    <span className="ml-2"> {item |> Selectable.value |> str} </span>
+                    <span className="ml-2"> {item->Selectable.value->str} </span>
                   </div>
                 )
-                |> React.array}
+                ->React.array}
               </div>
             </div>
           </div>

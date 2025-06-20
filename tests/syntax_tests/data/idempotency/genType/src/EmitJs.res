@@ -12,7 +12,7 @@ type env = {
 
 let requireModule = (~\"import", ~env, ~importPath, ~strict=false, moduleName) => {
   let requires = \"import" ? env.requiresEarly : env.requires
-  let requiresNew = requires |> ModuleNameMap.add(moduleName, (importPath, strict))
+  let requiresNew = requires->ModuleNameMap.add(moduleName, (importPath, strict))
   \"import" ? {...env, requiresEarly: requiresNew} : {...env, requires: requiresNew}
 }
 
@@ -32,24 +32,24 @@ let createExportTypeMap = (
       if Debug.codeItems.contents {
         Log_.item(
           "Type Map: %s%s%s\n",
-          resolvedTypeName |> ResolvedName.toString,
-          typeVars == list{} ? "" : "(" ++ ((typeVars |> String.concat(",")) ++ ")"),
+          resolvedTypeName->ResolvedName.toString,
+          typeVars == list{} ? "" : "(" ++ ((typeVars->String.concat(",")) ++ ")"),
           " " ++
-          ((annotation |> Annotation.toString |> EmitText.comment) ++
-          (" = " ++ (type_ |> EmitType.typeToString(~config, ~typeNameIsInterface=_ => false)))),
+          ((annotation->Annotation.toString->EmitText.comment) ++
+          (" = " ++ (type_->EmitType.typeToString(~config, ~typeNameIsInterface=_ => false)))),
         )
       }
 
-      exportTypeMap |> StringMap.add(
-        resolvedTypeName |> ResolvedName.toString,
+      exportTypeMap->StringMap.add(
+        resolvedTypeName->ResolvedName.toString,
         {CodeItem.typeVars: typeVars, type_: type_, annotation: annotation},
       )
     }
     switch typeDeclaration.exportFromTypeDeclaration {
-    | {exportType, annotation} => exportType |> addExportType(~annotation)
+    | {exportType, annotation} => exportType->addExportType(~annotation)
     }
   }
-  typeDeclarations |> List.fold_left(updateExportTypeMap, StringMap.empty)
+  typeDeclarations->List.fold_left(updateExportTypeMap, StringMap.empty)
 }
 
 let codeItemToString = (~config, ~typeNameIsInterface, codeItem: CodeItem.t) =>
@@ -57,7 +57,7 @@ let codeItemToString = (~config, ~typeNameIsInterface, codeItem: CodeItem.t) =>
   | ExportComponent({nestedModuleName}) =>
     "ExportComponent nestedModuleName:" ++
     switch nestedModuleName {
-    | Some(moduleName) => moduleName |> ModuleName.toString
+    | Some(moduleName) => moduleName->ModuleName.toString
     | None => ""
     }
   | ExportValue({resolvedName, type_}) =>
@@ -67,9 +67,9 @@ let codeItemToString = (~config, ~typeNameIsInterface, codeItem: CodeItem.t) =>
     (" type:" ++
     EmitType.typeToString(~config, ~typeNameIsInterface, type_))))
   | ImportComponent({importAnnotation}) =>
-    "ImportComponent " ++ (importAnnotation.importPath |> ImportPath.dump)
+    "ImportComponent " ++ (importAnnotation.importPath->ImportPath.dump)
   | ImportValue({importAnnotation}) =>
-    "ImportValue " ++ (importAnnotation.importPath |> ImportPath.dump)
+    "ImportValue " ++ (importAnnotation.importPath->ImportPath.dump)
   }
 
 let emitExportType = (
@@ -83,12 +83,12 @@ let emitExportType = (
   let (opaque, type_) = switch opaque {
   | Some(opaque) => (opaque, type_)
   | None =>
-    let normalized = type_ |> typeGetNormalized
+    let normalized = type_->typeGetNormalized
     (false, normalized)
   }
   resolvedTypeName
-  |> ResolvedName.toString
-  |> EmitType.emitExportType(
+  ->ResolvedName.toString
+  ->EmitType.emitExportType(
     ~early?,
     ~config,
     ~emitters,
@@ -111,11 +111,11 @@ let typeNameIsInterface = (
     | Record(_) => true
     | _ => false
     }
-  switch exportTypeMap |> StringMap.find(typeName) {
-  | {type_} => type_ |> typeIsInterface
+  switch exportTypeMap->StringMap.find(typeName) {
+  | {type_} => type_->typeIsInterface
   | exception Not_found =>
-    switch exportTypeMapFromOtherFiles |> StringMap.find(typeName) {
-    | {type_} => type_ |> typeIsInterface
+    switch exportTypeMapFromOtherFiles->StringMap.find(typeName) {
+    | {type_} => type_->typeIsInterface
     | exception Not_found => false
     }
   }
@@ -130,7 +130,7 @@ let emitExportFromTypeDeclaration = (
   exportFromTypeDeclaration: CodeItem.exportFromTypeDeclaration,
 ) => (
   env,
-  exportFromTypeDeclaration.exportType |> emitExportType(
+  exportFromTypeDeclaration.exportType->emitExportType(
     ~emitters,
     ~config,
     ~typeGetNormalized,
@@ -146,7 +146,7 @@ let emitExportFromTypeDeclarations = (
   ~typeNameIsInterface,
   exportFromTypeDeclarations,
 ) =>
-  exportFromTypeDeclarations |> List.fold_left(
+  exportFromTypeDeclarations->List.fold_left(
     ((env, emitters)) =>
       emitExportFromTypeDeclaration(
         ~config,
@@ -175,7 +175,7 @@ let rec emitCodeItem = (
 ) => {
   let language = config.language
   if Debug.codeItems.contents {
-    Log_.item("Code Item: %s\n", codeItem |> codeItemToString(~config, ~typeNameIsInterface))
+    Log_.item("Code Item: %s\n", codeItem->codeItemToString(~config, ~typeNameIsInterface))
   }
   let indent = Some("")
 
@@ -197,17 +197,17 @@ let rec emitCodeItem = (
     | (Flow | Untyped, _) => false
     }
 
-    let (firstNameInPath, restOfPath, lastNameInPath) = switch asPath |> Str.split(
+    let (firstNameInPath, restOfPath, lastNameInPath) = switch asPath->Str.split(
       Str.regexp("\\."),
     ) {
     | list{x, ...y} =>
-      let lastNameInPath = switch y |> List.rev {
+      let lastNameInPath = switch y->List.rev {
       | list{last, ..._} => last
       | list{} => x
       }
       es6
-        ? (x, list{"", ...y} |> String.concat("."), lastNameInPath)
-        : (name, list{"", x, ...y} |> String.concat("."), lastNameInPath)
+        ? (x, list{"", ...y}->String.concat("."), lastNameInPath)
+        : (name, list{"", x, ...y}->String.concat("."), lastNameInPath)
     | _ => (name, "", name)
     }
 
@@ -218,7 +218,7 @@ let rec emitCodeItem = (
     let (emitters, env) = if es6 {
       /* emit an import {... as ...} immediately */
       let emitters =
-        importPath |> EmitType.emitImportValueAsEarly(
+        importPath->EmitType.emitImportValueAsEarly(
           ~config,
           ~emitters,
           ~name=firstNameInPath,
@@ -229,8 +229,8 @@ let rec emitCodeItem = (
       /* add an early require(...) */
       let env =
         firstNameInPath
-        |> ModuleName.fromStringUnsafe
-        |> requireModule(~\"import"=true, ~env, ~importPath, ~strict=true)
+        ->ModuleName.fromStringUnsafe
+        ->requireModule(~\"import"=true, ~env, ~importPath, ~strict=true)
       (emitters, env)
     }
     let componentNameTypeChecked = lastNameInPath ++ "TypeChecked"
@@ -249,18 +249,18 @@ let rec emitCodeItem = (
       config.language == Untyped
         ? emitters
         : ("(" ++
-          (("props" |> EmitType.ofType(
+          (("props"->EmitType.ofType(
             ~config,
             ~typeNameIsInterface,
             ~type_=ident(propsTypeName),
           )) ++
           ")")
-            |> EmitType.ofType(
+            ->EmitType.ofType(
               ~config,
               ~typeNameIsInterface,
               ~type_=EmitType.typeReactElement(~config),
             )) ++ (" {\n  return <" ++ (componentPath ++ " {...props}/>;\n}"))
-            |> EmitType.emitExportFunction(
+            ->EmitType.emitExportFunction(
               ~early=true,
               ~emitters,
               ~name=componentNameTypeChecked,
@@ -268,17 +268,17 @@ let rec emitCodeItem = (
               ~comment="In case of type error, check the type of '" ++
               ("make" ++
               ("' in '" ++
-              ((fileName |> ModuleName.toString) ++
+              ((fileName->ModuleName.toString) ++
               (".re'" ++
               (" and the props of '" ++
-              ((importPath |> ImportPath.emit(~config)) ++ "'.")))))),
+              ((importPath->ImportPath.emit(~config)) ++ "'.")))))),
             )
 
     /* Wrap the component */
     let emitters =
       "function " ++
       (EmitText.parens(
-        \"@"(propsFields |> List.map(({nameJS}: field) => nameJS), list{"children"}) |> List.map(
+        \"@"(propsFields->List.map(({nameJS}: field) => nameJS), list{"children"})->List.map(
           EmitType.ofTypeAny(~config),
         ),
       ) ++
@@ -287,28 +287,28 @@ let rec emitCodeItem = (
         componentPath,
         "{" ++
         ((propsFields
-        |> List.map(({nameJS: propName, optional, type_: propTyp}) =>
+        ->List.map(({nameJS: propName, optional, type_: propTyp}) =>
           propName ++
           (": " ++
-          (propName |> Converter.toJS(
+          (propName->Converter.toJS(
             ~config,
-            ~converter=(optional == Mandatory ? propTyp : Option(propTyp)) |> typeGetConverter,
+            ~converter=(optional == Mandatory ? propTyp : Option(propTyp))->typeGetConverter,
             ~indent,
             ~nameGen,
             ~variantTables,
           )))
         )
-        |> String.concat(", ")) ++
+        ->String.concat(", ")) ++
         "}"),
-        "children" |> Converter.toJS(
+        "children"->Converter.toJS(
           ~config,
-          ~converter=childrenTyp |> typeGetConverter,
+          ~converter=childrenTyp->typeGetConverter,
           ~indent,
           ~nameGen,
           ~variantTables,
         ),
       }) ++ "; }"))) ++ ";"
-        |> EmitType.emitExportConstEarly(
+        ->EmitType.emitExportConstEarly(
           ~comment="Export '" ++
           ("make" ++
           "' early to allow circular import from the '.bs.js' file."),
@@ -319,7 +319,7 @@ let rec emitCodeItem = (
           ~typeNameIsInterface,
         )
     let env =
-      ModuleName.reasonReact |> requireModule(
+      ModuleName.reasonReact->requireModule(
         ~\"import"=true,
         ~env,
         ~importPath=ImportPath.reasonReactPath(~config),
@@ -334,8 +334,8 @@ let rec emitCodeItem = (
     let (firstNameInPath, restOfPath) =
       valueName == asPath
         ? (valueName, "")
-        : switch asPath |> Str.split(Str.regexp("\\.")) {
-          | list{x, ...y} => (x, list{"", ...y} |> String.concat("."))
+        : switch asPath->Str.split(Str.regexp("\\.")) {
+          | list{x, ...y} => (x, list{"", ...y}->String.concat("."))
           | _ => (asPath, "")
           }
     let importFileVariable = "$$" ++ importFile
@@ -345,7 +345,7 @@ let rec emitCodeItem = (
       /* emit an import {... as ...} immediately */
       let valueNameNotChecked = valueName ++ "NotChecked"
       let emitters =
-        importPath |> EmitType.emitImportValueAsEarly(
+        importPath->EmitType.emitImportValueAsEarly(
           ~config,
           ~emitters,
           ~name=firstNameInPath,
@@ -360,14 +360,14 @@ let rec emitCodeItem = (
           : importFileVariable ++ ("." ++ firstNameInPath)
       let env =
         importFileVariable
-        |> ModuleName.fromStringUnsafe
-        |> requireModule(~\"import"=true, ~env, ~importPath, ~strict=true)
+        ->ModuleName.fromStringUnsafe
+        ->requireModule(~\"import"=true, ~env, ~importPath, ~strict=true)
       (emitters, importedAsName, env)
     }
 
     let type_ = switch type_ {
     | Function({argTypes: list{{aType: Object(_)}}, retType} as function_)
-      if retType |> EmitType.isTypeReactElement(~config) =>
+      if retType->EmitType.isTypeReactElement(~config) =>
       let componentName = switch importFile {
       | "."
       | ".." =>
@@ -378,19 +378,19 @@ let rec emitCodeItem = (
     | _ => type_
     }
 
-    let converter = type_ |> typeGetConverter
+    let converter = type_->typeGetConverter
 
     let valueNameTypeChecked = valueName ++ "TypeChecked"
 
     let emitters =
       importedAsName ++ restOfPath ++ ";"
-        |> EmitType.emitExportConstEarly(
+        ->EmitType.emitExportConstEarly(
           ~config,
           ~comment="In case of type error, check the type of '" ++
           (valueName ++
           ("' in '" ++
-          ((fileName |> ModuleName.toString) ++
-          (".re'" ++ (" and '" ++ ((importPath |> ImportPath.emit(~config)) ++ "'.")))))),
+          ((fileName->ModuleName.toString) ++
+          (".re'" ++ (" and '" ++ ((importPath->ImportPath.emit(~config)) ++ "'.")))))),
           ~emitters,
           ~name=valueNameTypeChecked,
           ~type_,
@@ -399,9 +399,9 @@ let rec emitCodeItem = (
     let valueNameNotDefault = valueName == "default" ? Runtime.default : valueName
     let emitters =
       (valueNameTypeChecked
-      |> Converter.toReason(~config, ~converter, ~indent, ~nameGen, ~variantTables)
-      |> EmitType.emitTypeCast(~config, ~type_, ~typeNameIsInterface)) ++ ";"
-        |> EmitType.emitExportConstEarly(
+      ->Converter.toReason(~config, ~converter, ~indent, ~nameGen, ~variantTables)
+      ->EmitType.emitTypeCast(~config, ~type_, ~typeNameIsInterface)) ++ ";"
+        ->EmitType.emitExportConstEarly(
           ~comment="Export '" ++
           (valueNameNotDefault ++
           "' early to allow circular import from the '.bs.js' file."),
@@ -420,20 +420,20 @@ let rec emitCodeItem = (
 
   | ExportComponent({componentAccessPath, exportType, moduleAccessPath, nestedModuleName, type_}) =>
     let nameGen = EmitText.newNameGen()
-    let converter = type_ |> typeGetConverter
+    let converter = type_->typeGetConverter
     let importPath =
-      fileName |> ModuleResolver.resolveModule(
+      fileName->ModuleResolver.resolveModule(
         ~importExtension=".bs",
         ~outputFileRelative,
         ~resolver,
         ~useBsDependencies=false,
       )
-    let moduleNameBs = fileName |> ModuleName.forBsFile
+    let moduleNameBs = fileName->ModuleName.forBsFile
     let moduleName = switch nestedModuleName {
     | Some(moduleName) => moduleName
     | None => fileName
     }
-    let propsTypeName = exportType.resolvedTypeName |> ResolvedName.toString
+    let propsTypeName = exportType.resolvedTypeName->ResolvedName.toString
     let componentType = EmitType.typeReactComponent(~config, ~propsType=ident(propsTypeName))
 
     let name = EmitType.componentExportName(~config, ~fileName, ~moduleName)
@@ -456,11 +456,11 @@ let rec emitCodeItem = (
     }
 
     let args = \"@"(
-      propConverters |> List.map(((s, optional, argConverter)) =>
-        jsPropsDot(s) |> Converter.toReason(
+      propConverters->List.map(((s, optional, argConverter)) =>
+        jsPropsDot(s)->Converter.toReason(
           ~config,
           ~converter=optional == Optional &&
-            !(argConverter |> Converter.converterIsIdentity(~toJS=false))
+            !(argConverter->Converter.converterIsIdentity(~toJS=false))
             ? OptionC(argConverter)
             : argConverter,
           ~indent,
@@ -469,7 +469,7 @@ let rec emitCodeItem = (
         )
       ),
       list{
-        jsPropsDot("children") |> Converter.toReason(
+        jsPropsDot("children")->Converter.toReason(
           ~config,
           ~converter=childrenConverter,
           ~indent,
@@ -497,28 +497,28 @@ let rec emitCodeItem = (
         "ReasonReact.wrapReasonForJs(",
         "  " ++
         (ModuleName.toString(moduleNameBs) ++
-        ("." ++ ((componentAccessPath |> Runtime.emitModuleAccessPath(~config)) ++ ","))),
+        ("." ++ ((componentAccessPath->Runtime.emitModuleAccessPath(~config)) ++ ","))),
         "  (function _(" ++
         (EmitType.ofType(~config, ~typeNameIsInterface, ~type_=ident(propsTypeName), jsProps) ++
         ") {"),
         "     return " ++
         ((ModuleName.toString(moduleNameBs) ++
         ("." ++
-        (moduleAccessPath |> Runtime.emitModuleAccessPath(~config)))
-          |> EmitText.curry(~args, ~numArgs=args |> List.length)) ++
+        (moduleAccessPath->Runtime.emitModuleAccessPath(~config)))
+          ->EmitText.curry(~args, ~numArgs=args->List.length)) ++
         ";"),
         "  }));",
-      } |> String.concat("\n"),
+      }->String.concat("\n"),
     )
 
     let emitters = switch exportType.type_ {
     | GroupOfLabeledArgs(fields) if config.language == Untyped && config.propTypes =>
       fields
-      |> List.map((field: field) => {
-        let type_ = field.type_ |> typeGetInlined
+      ->List.map((field: field) => {
+        let type_ = field.type_->typeGetInlined
         {...field, type_: type_}
       })
-      |> EmitType.emitPropTypes(~config, ~name, ~emitters, ~indent)
+      ->EmitType.emitPropTypes(~config, ~name, ~emitters, ~indent)
     | _ => emitters
     }
 
@@ -526,33 +526,33 @@ let rec emitCodeItem = (
       /* only export default for the top level component in the file */
       fileName == moduleName ? EmitType.emitExportDefault(~emitters, ~config, name) : emitters
 
-    let env = moduleNameBs |> requireModule(~\"import"=false, ~env, ~importPath)
+    let env = moduleNameBs->requireModule(~\"import"=false, ~env, ~importPath)
 
     let env =
-      ModuleName.reasonReact |> requireModule(
+      ModuleName.reasonReact->requireModule(
         ~\"import"=false,
         ~env,
         ~importPath=ImportPath.reasonReactPath(~config),
       )
 
-    let numArgs = args |> List.length
+    let numArgs = args->List.length
     let useCurry = numArgs >= 2
     config.emitImportCurry = config.emitImportCurry || useCurry
     (env, emitters)
 
   | ExportValue({docString, moduleAccessPath, originalName, resolvedName, type_}) =>
-    resolvedName |> ExportModule.extendExportModules(~moduleItemsEmitter, ~type_)
+    resolvedName->ExportModule.extendExportModules(~moduleItemsEmitter, ~type_)
     let resolvedName = ResolvedName.toString(resolvedName)
     let nameGen = EmitText.newNameGen()
     let importPath =
-      fileName |> ModuleResolver.resolveModule(
+      fileName->ModuleResolver.resolveModule(
         ~importExtension=".bs",
         ~outputFileRelative,
         ~resolver,
         ~useBsDependencies=false,
       )
-    let fileNameBs = fileName |> ModuleName.forBsFile
-    let envWithRequires = fileNameBs |> requireModule(~\"import"=false, ~env, ~importPath)
+    let fileNameBs = fileName->ModuleName.forBsFile
+    let envWithRequires = fileNameBs->requireModule(~\"import"=false, ~env, ~importPath)
 
     let default = "default"
     let make = "make"
@@ -571,11 +571,11 @@ let rec emitCodeItem = (
     let (type_, hookType) = switch type_ {
     | Function(
         {argTypes: list{{aType: Object(closedFlags, fields)}}, retType, typeVars} as function_,
-      ) if retType |> EmitType.isTypeReactElement(~config) =>
+      ) if retType->EmitType.isTypeReactElement(~config) =>
       let propsType = {
         let fields =
-          fields |> List.map((field: field) =>
-            field.nameJS == "children" && field.type_ |> EmitType.isTypeReactElement(~config)
+          fields->List.map((field: field) =>
+            field.nameJS == "children" && field.type_->EmitType.isTypeReactElement(~config)
               ? {...field, type_: EmitType.typeReactChild(~config)}
               : field
           )
@@ -598,14 +598,14 @@ let rec emitCodeItem = (
       } else {
         resolvedName
       }
-      let hookName = (fileName |> ModuleName.toString) ++ (suffix == "" ? suffix : "_" ++ suffix)
+      let hookName = (fileName->ModuleName.toString) ++ (suffix == "" ? suffix : "_" ++ suffix)
       let resolvedTypeName = if (
         !config.emitTypePropDone && (originalName == default || originalName == make)
       ) {
         config.emitTypePropDone = true
         ResolvedName.fromString("Props")
       } else {
-        ResolvedName.fromString(name) |> ResolvedName.dot("Props")
+        ResolvedName.fromString(name)->ResolvedName.dot("Props")
       }
 
       (
@@ -623,7 +623,7 @@ let rec emitCodeItem = (
      If type annotated direcly, they are not checked. But typeof() works. */
     let flowFunctionTypeWorkaround = hookType != None && config.language == Flow
 
-    let converter = type_ |> typeGetConverter
+    let converter = type_->typeGetConverter
 
     let hookNameForTypeof = name ++ "$$forTypeof"
     let type_ = flowFunctionTypeWorkaround ? ident("typeof(" ++ (hookNameForTypeof ++ ")")) : type_
@@ -660,11 +660,11 @@ let rec emitCodeItem = (
     }
 
     let emitters =
-      ((fileNameBs |> ModuleName.toString) ++
+      ((fileNameBs->ModuleName.toString) ++
         ("." ++
-        (moduleAccessPath |> Runtime.emitModuleAccessPath(~config)))
-        |> Converter.toJS(~config, ~converter, ~indent, ~nameGen, ~variantTables)) ++ ";"
-        |> EmitType.emitExportConst(
+        (moduleAccessPath->Runtime.emitModuleAccessPath(~config)))
+        ->Converter.toJS(~config, ~converter, ~indent, ~nameGen, ~variantTables)) ++ ";"
+        ->EmitType.emitExportConst(
           ~config,
           ~docString,
           ~emitters,
@@ -676,11 +676,11 @@ let rec emitCodeItem = (
     let emitters = switch hookType {
     | Some({propsType: Object(_, fields)}) if config.language == Untyped && config.propTypes =>
       fields
-      |> List.map((field: field) => {
-        let type_ = field.type_ |> typeGetInlined
+      ->List.map((field: field) => {
+        let type_ = field.type_->typeGetInlined
         {...field, type_: type_}
       })
-      |> EmitType.emitPropTypes(~config, ~name, ~emitters, ~indent)
+      ->EmitType.emitPropTypes(~config, ~name, ~emitters, ~indent)
     | _ => emitters
     }
 
@@ -707,7 +707,7 @@ and emitCodeItems = (
   ~variantTables,
   codeItems,
 ) =>
-  codeItems |> List.fold_left(
+  codeItems->List.fold_left(
     ((env, emitters)) =>
       emitCodeItem(
         ~config,
@@ -729,7 +729,7 @@ and emitCodeItems = (
 let emitRequires = (~importedValueOrComponent, ~early, ~config, ~requires, emitters) =>
   ModuleNameMap.fold(
     (moduleName, (importPath, strict), emitters) =>
-      importPath |> EmitType.emitRequire(
+      importPath->EmitType.emitRequire(
         ~importedValueOrComponent,
         ~early,
         ~emitters,
@@ -749,32 +749,32 @@ let emitVariantTables = (~config, ~emitters, variantTables) => {
     (typeAnnotation ++
     (" = {" ++
     ((variantC.noPayloads
-    |> List.map(case => {
-      let js = case.labelJS |> labelJSToString(~alwaysQuotes=!toJS)
+    ->List.map(case => {
+      let js = case.labelJS->labelJSToString(~alwaysQuotes=!toJS)
       let re =
-        case.label |> Runtime.emitVariantLabel(~comment=false, ~polymorphic=variantC.polymorphic)
-      toJS ? (re |> EmitText.quotes) ++ (": " ++ js) : js ++ (": " ++ re)
+        case.label->Runtime.emitVariantLabel(~comment=false, ~polymorphic=variantC.polymorphic)
+      toJS ? (re->EmitText.quotes) ++ (": " ++ js) : js ++ (": " ++ re)
     })
-    |> String.concat(", ")) ++ "};"))))
+    ->String.concat(", ")) ++ "};"))))
   Hashtbl.fold(((_, toJS), variantC, l) => list{(variantC, toJS), ...l}, variantTables, list{})
-  |> List.sort(((variantC1, toJS1), (variantC2, toJS2)) => {
+  ->List.sort(((variantC1, toJS1), (variantC2, toJS2)) => {
     let n = compare(variantC1.Converter.hash, variantC2.hash)
     n != 0 ? n : compare(toJS2, toJS1)
   })
-  |> List.fold_left(
+  ->List.fold_left(
     (emitters, (variantC, toJS)) =>
       variantC
-      |> emitTable(~table=variantC.Converter.hash |> variantTable(~toJS), ~toJS)
-      |> Emitters.requireEarly(~emitters),
+      ->emitTable(~table=variantC.Converter.hash->variantTable(~toJS), ~toJS)
+      ->Emitters.requireEarly(~emitters),
     emitters,
   )
 }
 
 let typeGetInlined = (~config, ~exportTypeMap, type_) =>
-  type_ |> Converter.typeGetNormalized(
+  type_->Converter.typeGetNormalized(
     ~config,
     ~inline=true,
-    ~lookupId=s => exportTypeMap |> StringMap.find(s),
+    ~lookupId=s => exportTypeMap->StringMap.find(s),
     ~typeNameIsInterface=_ => false,
   )
 
@@ -789,53 +789,53 @@ let rec readCmtFilesRecursively = (
   {CodeItem.typeName: typeName, asTypeName, importPath},
 ) => {
   let updateTypeMapFromOtherFiles = (~asType, ~exportTypeMapFromCmt, env) =>
-    switch exportTypeMapFromCmt |> StringMap.find(typeName) {
+    switch exportTypeMapFromCmt->StringMap.find(typeName) {
     | (exportTypeItem: CodeItem.exportTypeItem) =>
       let type_ =
-        exportTypeItem.type_ |> typeGetInlined(~config, ~exportTypeMap=exportTypeMapFromCmt)
+        exportTypeItem.type_->typeGetInlined(~config, ~exportTypeMap=exportTypeMapFromCmt)
       {
         ...env,
-        exportTypeMapFromOtherFiles: env.exportTypeMapFromOtherFiles |> StringMap.add(
+        exportTypeMapFromOtherFiles: env.exportTypeMapFromOtherFiles->StringMap.add(
           asType,
           {...exportTypeItem, type_: type_},
         ),
       }
     | exception Not_found => env
     }
-  let cmtFile = importPath |> ImportPath.toCmt(~config, ~outputFileRelative) |> Paths.getCmtFile
+  let cmtFile = importPath->ImportPath.toCmt(~config, ~outputFileRelative)->Paths.getCmtFile
   switch asTypeName {
   | Some(asType) if cmtFile != "" =>
-    switch env.cmtToExportTypeMap |> StringMap.find(cmtFile) {
-    | exportTypeMapFromCmt => env |> updateTypeMapFromOtherFiles(~asType, ~exportTypeMapFromCmt)
+    switch env.cmtToExportTypeMap->StringMap.find(cmtFile) {
+    | exportTypeMapFromCmt => env->updateTypeMapFromOtherFiles(~asType, ~exportTypeMapFromCmt)
 
     | exception Not_found =>
       /* cmt file not read before: this ensures termination */
       let typeDeclarations =
         Cmt_format.read_cmt(cmtFile)
-        |> inputCmtTranslateTypeDeclarations(~config, ~outputFileRelative, ~resolver)
-        |> ((x: CodeItem.translation) => x.typeDeclarations)
+        ->inputCmtTranslateTypeDeclarations(~config, ~outputFileRelative, ~resolver)
+        ->((x: CodeItem.translation) => x.typeDeclarations)
 
       let exportTypeMapFromCmt =
-        typeDeclarations |> createExportTypeMap(
+        typeDeclarations->createExportTypeMap(
           ~config,
-          ~file=cmtFile |> Filename.basename |> Filename.chop_extension,
+          ~file=cmtFile->Filename.basename->Filename.chop_extension,
         )
       let cmtToExportTypeMap =
-        env.cmtToExportTypeMap |> StringMap.add(cmtFile, exportTypeMapFromCmt)
+        env.cmtToExportTypeMap->StringMap.add(cmtFile, exportTypeMapFromCmt)
       let env =
-        {...env, cmtToExportTypeMap: cmtToExportTypeMap} |> updateTypeMapFromOtherFiles(
+        {...env, cmtToExportTypeMap: cmtToExportTypeMap}->updateTypeMapFromOtherFiles(
           ~asType,
           ~exportTypeMapFromCmt,
         )
 
       let newImportTypes =
         typeDeclarations
-        |> List.map((typeDeclaration: CodeItem.typeDeclaration) => typeDeclaration.importTypes)
-        |> List.concat
+        ->List.map((typeDeclaration: CodeItem.typeDeclaration) => typeDeclaration.importTypes)
+        ->List.concat
 
-      newImportTypes |> List.fold_left(
+      newImportTypes->List.fold_left(
         (env, newImportType) =>
-          newImportType |> readCmtFilesRecursively(
+          newImportType->readCmtFilesRecursively(
             ~config,
             ~env,
             ~inputCmtTranslateTypeDeclarations,
@@ -860,7 +860,7 @@ let emitImportType = (
   {CodeItem.typeName: typeName, asTypeName, importPath} as importType,
 ) => {
   let env =
-    importType |> readCmtFilesRecursively(
+    importType->readCmtFilesRecursively(
       ~config,
       ~env,
       ~inputCmtTranslateTypeDeclarations,
@@ -888,7 +888,7 @@ let emitImportTypes = (
   ~typeNameIsInterface,
   importTypes,
 ) =>
-  importTypes |> List.fold_left(
+  importTypes->List.fold_left(
     ((env, emitters)) =>
       emitImportType(
         ~config,
@@ -904,10 +904,10 @@ let emitImportTypes = (
 
 let getAnnotatedTypedDeclarations = (~annotatedSet, typeDeclarations) =>
   typeDeclarations
-  |> List.map(typeDeclaration => {
+  ->List.map(typeDeclaration => {
     let nameInAnnotatedSet =
-      annotatedSet |> StringSet.mem(
-        typeDeclaration.CodeItem.exportFromTypeDeclaration.exportType.resolvedTypeName |> ResolvedName.toString,
+      annotatedSet->StringSet.mem(
+        typeDeclaration.CodeItem.exportFromTypeDeclaration.exportType.resolvedTypeName->ResolvedName.toString,
       )
     if nameInAnnotatedSet {
       {
@@ -921,7 +921,7 @@ let getAnnotatedTypedDeclarations = (~annotatedSet, typeDeclarations) =>
       typeDeclaration
     }
   })
-  |> List.filter(({exportFromTypeDeclaration: {annotation}}: CodeItem.typeDeclaration) =>
+  ->List.filter(({exportFromTypeDeclaration: {annotation}}: CodeItem.typeDeclaration) =>
     annotation != NoGenType
   )
 
@@ -929,9 +929,9 @@ let propagateAnnotationToSubTypes = (~codeItems, typeMap: CodeItem.exportTypeMap
   let annotatedSet = ref(StringSet.empty)
   let initialAnnotatedTypes =
     typeMap
-    |> StringMap.bindings
-    |> List.filter(((_, {CodeItem.annotation: annotation})) => annotation == Annotation.GenType)
-    |> List.map(((_, {CodeItem.type_: type_})) => type_)
+    ->StringMap.bindings
+    ->List.filter(((_, {CodeItem.annotation: annotation})) => annotation == Annotation.GenType)
+    ->List.map(((_, {CodeItem.type_: type_})) => type_)
   let typesOfExportedValue = (codeItem: CodeItem.t) =>
     switch codeItem {
     | ExportComponent({type_})
@@ -939,55 +939,55 @@ let propagateAnnotationToSubTypes = (~codeItems, typeMap: CodeItem.exportTypeMap
     | ImportValue({type_}) => list{type_}
     | _ => list{}
     }
-  let typesOfExportedValues = codeItems |> List.map(typesOfExportedValue) |> List.concat
+  let typesOfExportedValues = codeItems->List.map(typesOfExportedValue)->List.concat
 
   let visitTypAndUpdateMarked = type0 => {
     let visited = ref(StringSet.empty)
     let rec visit = type_ =>
       switch type_ {
       | Ident({name: typeName, typeArgs}) =>
-        if visited.contents |> StringSet.mem(typeName) {
+        if visited.contents->StringSet.mem(typeName) {
           ()
         } else {
-          visited := visited.contents |> StringSet.add(typeName)
-          typeArgs |> List.iter(visit)
-          switch typeMap |> StringMap.find(typeName) {
+          visited := visited.contents->StringSet.add(typeName)
+          typeArgs->List.iter(visit)
+          switch typeMap->StringMap.find(typeName) {
           | {annotation: GenType | GenTypeOpaque} => ()
           | {type_: type1, annotation: NoGenType} =>
             if Debug.translation.contents {
               Log_.item("Marking Type As Annotated %s\n", typeName)
             }
-            annotatedSet := annotatedSet.contents |> StringSet.add(typeName)
-            type1 |> visit
-          | exception Not_found => annotatedSet := annotatedSet.contents |> StringSet.add(typeName)
+            annotatedSet := annotatedSet.contents->StringSet.add(typeName)
+            type1->visit
+          | exception Not_found => annotatedSet := annotatedSet.contents->StringSet.add(typeName)
           }
         }
-      | Array(t, _) => t |> visit
+      | Array(t, _) => t->visit
       | Function({argTypes, retType}) =>
-        argTypes |> List.iter(({aType}) => visit(aType))
-        retType |> visit
+        argTypes->List.iter(({aType}) => visit(aType))
+        retType->visit
       | GroupOfLabeledArgs(fields)
       | Object(_, fields)
       | Record(fields) =>
-        fields |> List.iter(({type_}) => type_ |> visit)
+        fields->List.iter(({type_}) => type_->visit)
       | Option(t)
       | Null(t)
       | Nullable(t)
       | Promise(t) =>
-        t |> visit
-      | Tuple(innerTypes) => innerTypes |> List.iter(visit)
+        t->visit
+      | Tuple(innerTypes) => innerTypes->List.iter(visit)
       | TypeVar(_) => ()
-      | Variant({payloads}) => payloads |> List.iter(((_, _, t)) => t |> visit)
+      | Variant({payloads}) => payloads->List.iter(((_, _, t)) => t->visit)
       }
-    type0 |> visit
+    type0->visit
   }
-  \"@"(initialAnnotatedTypes, typesOfExportedValues) |> List.iter(visitTypAndUpdateMarked)
-  let newTypeMap = typeMap |> StringMap.mapi((
+  \"@"(initialAnnotatedTypes, typesOfExportedValues)->List.iter(visitTypAndUpdateMarked)
+  let newTypeMap = typeMap->StringMap.mapi((
     typeName,
     exportTypeItem: CodeItem.exportTypeItem,
   ) => {
     ...exportTypeItem,
-    annotation: annotatedSet.contents |> StringSet.mem(typeName)
+    annotation: annotatedSet.contents->StringSet.mem(typeName)
       ? Annotation.GenType
       : exportTypeItem.annotation,
   })
@@ -1014,19 +1014,19 @@ let emitTranslationAsString = (
 
   let (exportTypeMap, annotatedSet) =
     translation.typeDeclarations
-    |> createExportTypeMap(~config, ~file=fileName |> ModuleName.toString)
-    |> propagateAnnotationToSubTypes(~codeItems=translation.codeItems)
+    ->createExportTypeMap(~config, ~file=fileName->ModuleName.toString)
+    ->propagateAnnotationToSubTypes(~codeItems=translation.codeItems)
 
   let annotatedTypeDeclarations =
-    translation.typeDeclarations |> getAnnotatedTypedDeclarations(~annotatedSet)
+    translation.typeDeclarations->getAnnotatedTypedDeclarations(~annotatedSet)
 
   let importTypesFromTypeDeclarations =
     annotatedTypeDeclarations
-    |> List.map((typeDeclaration: CodeItem.typeDeclaration) => typeDeclaration.importTypes)
-    |> List.concat
+    ->List.map((typeDeclaration: CodeItem.typeDeclaration) => typeDeclaration.importTypes)
+    ->List.concat
 
   let exportFromTypeDeclarations =
-    annotatedTypeDeclarations |> List.map((typeDeclaration: CodeItem.typeDeclaration) =>
+    annotatedTypeDeclarations->List.map((typeDeclaration: CodeItem.typeDeclaration) =>
       typeDeclaration.exportFromTypeDeclaration
     )
 
@@ -1037,12 +1037,12 @@ let emitTranslationAsString = (
     )
 
   let lookupId_ = (~env, s) =>
-    try exportTypeMap |> StringMap.find(s) catch {
-    | Not_found => env.exportTypeMapFromOtherFiles |> StringMap.find(s)
+    try exportTypeMap->StringMap.find(s) catch {
+    | Not_found => env.exportTypeMapFromOtherFiles->StringMap.find(s)
     }
 
   let typeGetNormalized_ = (~env, ~inline=false, type_) =>
-    type_ |> Converter.typeGetNormalized(
+    type_->Converter.typeGetNormalized(
       ~config,
       ~inline,
       ~lookupId=lookupId_(~env),
@@ -1050,7 +1050,7 @@ let emitTranslationAsString = (
     )
 
   let typeGetConverter_ = (~env, type_) =>
-    type_ |> Converter.typeGetConverter(
+    type_->Converter.typeGetConverter(
       ~config,
       ~lookupId=lookupId_(~env),
       ~typeNameIsInterface=typeNameIsInterface(~env),
@@ -1063,8 +1063,8 @@ let emitTranslationAsString = (
   let (env, emitters) =
     /* imports from type declarations go first to build up type tables */
     \"@"(importTypesFromTypeDeclarations, translation.importTypes)
-    |> List.sort_uniq(Translation.importTypeCompare)
-    |> emitImportTypes(
+    ->List.sort_uniq(Translation.importTypeCompare)
+    ->emitImportTypes(
       ~config,
       ~emitters,
       ~env,
@@ -1075,7 +1075,7 @@ let emitTranslationAsString = (
     )
 
   let (env, emitters) =
-    exportFromTypeDeclarations |> emitExportFromTypeDeclarations(
+    exportFromTypeDeclarations->emitExportFromTypeDeclarations(
       ~config,
       ~emitters,
       ~typeGetNormalized=typeGetNormalized_(~env),
@@ -1084,7 +1084,7 @@ let emitTranslationAsString = (
     )
 
   let (env, emitters) =
-    translation.codeItems |> emitCodeItems(
+    translation.codeItems->emitCodeItems(
       ~config,
       ~emitters,
       ~moduleItemsEmitter,
@@ -1101,7 +1101,7 @@ let emitTranslationAsString = (
   let emitters = config.emitImportReact ? EmitType.emitImportReact(~emitters, ~config) : emitters
 
   let env = config.emitImportCurry
-    ? ModuleName.curry |> requireModule(
+    ? ModuleName.curry->requireModule(
         ~\"import"=true,
         ~env,
         ~importPath=ImportPath.bsCurryPath(~config),
@@ -1109,33 +1109,33 @@ let emitTranslationAsString = (
     : env
 
   let env = config.emitImportPropTypes
-    ? ModuleName.propTypes |> requireModule(~\"import"=true, ~env, ~importPath=ImportPath.propTypes)
+    ? ModuleName.propTypes->requireModule(~\"import"=true, ~env, ~importPath=ImportPath.propTypes)
     : env
 
   let finalEnv = config.emitCreateBucklescriptBlock
-    ? ModuleName.createRescriptBlock |> requireModule(
+    ? ModuleName.createRescriptBlock->requireModule(
         ~\"import"=true,
         ~env,
         ~importPath=ImportPath.bsBlockPath(~config),
       )
     : env
 
-  let emitters = variantTables |> emitVariantTables(~config, ~emitters)
+  let emitters = variantTables->emitVariantTables(~config, ~emitters)
   let emitters =
-    moduleItemsEmitter |> ExportModule.emitAllModuleItems(~config, ~emitters, ~fileName)
+    moduleItemsEmitter->ExportModule.emitAllModuleItems(~config, ~emitters, ~fileName)
 
   emitters
-  |> emitRequires(
+  ->emitRequires(
     ~importedValueOrComponent=false,
     ~early=true,
     ~config,
     ~requires=finalEnv.requiresEarly,
   )
-  |> emitRequires(
+  ->emitRequires(
     ~importedValueOrComponent=finalEnv.importedValueOrComponent,
     ~early=false,
     ~config,
     ~requires=finalEnv.requires,
   )
-  |> Emitters.toString(~separator="\n\n")
+  ->Emitters.toString(~separator="\n\n")
 }

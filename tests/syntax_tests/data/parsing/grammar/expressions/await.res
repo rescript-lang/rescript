@@ -2,7 +2,7 @@ await wait(2)
 
 let maybeSomeValue = switch await fetchData(url) {    
 | data => Some(data)
-| exception JsError(_) => None
+| exception JsExn(_) => None
 }
 
 let x = await 1 + 2

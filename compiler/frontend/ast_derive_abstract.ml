@@ -54,8 +54,7 @@ let is_abstract (xs : Ast_payload.action list) =
 (** For this attributes, its type was wrapped as an option,
     so we can still reuse existing frame work
 *)
-let get_optional_attrs =
-  [Ast_attributes.get; Ast_attributes.bs_return_undefined]
+let get_optional_attrs = [Ast_attributes.get]
 
 let get_attrs = []
 

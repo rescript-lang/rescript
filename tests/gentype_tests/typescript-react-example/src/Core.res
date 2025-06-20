@@ -83,3 +83,9 @@ external someFunWithNullUndefinedArg: (
   Nullable.t<string> /* Can also be Null.t or option as they are subtypes */,
   int,
 ) => string = "someFunWithNullUndefinedArg"
+
+@genType
+let jsonEncodeString1 = JSON.Encode.string("hello")
+
+@genType
+let jsonEncodeString2: JSON.t = JSON.Encode.string("hello")

@@ -77,12 +77,12 @@ let update = (~name, ~tags, ~excludedFromLeaderboard, ~title, ~affiliation, ~stu
 let encode = (teamName, t) => {
   open Json.Encode
   object_(list{
-    ("id", t.id |> string),
-    ("name", t.name |> string),
-    ("team_name", teamName |> string),
-    ("email", t.email |> string),
-    ("excluded_from_leaderboard", t.excludedFromLeaderboard |> bool),
-    ("title", t.title |> string),
-    ("affiliation", t.affiliation |> OptionUtils.toString |> string),
+    ("id", t.id->string),
+    ("name", t.name->string),
+    ("team_name", teamName->string),
+    ("email", t.email->string),
+    ("excluded_from_leaderboard", t.excludedFromLeaderboard->bool),
+    ("title", t.title->string),
+    ("affiliation", t.affiliation->OptionUtils.toString->string),
   })
 }

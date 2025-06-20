@@ -6,32 +6,37 @@ Lident: Component 1:13 Namespace
 Variable: _c [4:4->4:6]
 JsxTag <: 4:9
 Lident: Component 4:10 Namespace
+JsxTag />: 4:20
 Variable: _mc [6:4->6:7]
 JsxTag <: 6:10
 Ldot: M 6:11 Namespace
 Lident: C 6:13 Namespace
+JsxTag />: 6:15
 Variable: _d [8:4->8:6]
 JsxTag <: 8:9
 Lident: div 8:10 JsxLowercase
+JsxTag />: 8:14
 Variable: _d2 [10:4->10:7]
 JsxTag <: 11:2
 Lident: div 11:3 JsxLowercase
-Lident: div 16:4 JsxLowercase
 JsxTag >: 11:6
-JsxTag >: 16:7
 Ldot: React 12:5 Namespace
 Lident: string 12:11 Variable
 JsxTag <: 13:4
 Lident: div 13:5 JsxLowercase
-Lident: div 13:34 JsxLowercase
 JsxTag >: 13:8
-JsxTag >: 13:37
 Ldot: React 13:11 Namespace
 Lident: string 13:17 Variable
+JsxTag </: 13:32
+Lident: div 13:34 JsxLowercase
+JsxTag >: 13:37
 Ldot: React 14:5 Namespace
 Lident: string 14:11 Variable
 Ldot: React 15:5 Namespace
 Lident: string 15:11 Variable
+JsxTag </: 16:2
+Lident: div 16:4 JsxLowercase
+JsxTag >: 16:7
 Lident: pair 18:5 Type
 Lident: looooooooooooooooooooooooooooooooooooooong_int 20:5 Type
 Lident: int 20:54 Type
@@ -84,11 +89,13 @@ Lident: world 69:39 Variable
 Lident: add 71:8 Variable
 JsxTag <: 73:8
 Lident: div 73:9 JsxLowercase
-Lident: div 73:36 JsxLowercase
 JsxTag >: 73:24
-JsxTag >: 73:39
 JsxTag <: 73:26
 Lident: div 73:27 JsxLowercase
+JsxTag />: 73:31
+JsxTag </: 73:34
+Lident: div 73:36 JsxLowercase
+JsxTag >: 73:39
 Lident: SomeComponent 75:7 Namespace
 Lident: Nested 76:9 Namespace
 Variable: make [78:8->78:12]
@@ -97,12 +104,14 @@ Lident: children 79:10 Variable
 JsxTag <: 84:8
 Ldot: SomeComponent 84:9 Namespace
 Lident: Nested 84:23 Namespace
-Ldot: SomeComponent 84:41 Namespace
-Lident: Nested 84:55 Namespace
 JsxTag >: 84:29
-JsxTag >: 84:61
 JsxTag <: 84:31
 Lident: div 84:32 JsxLowercase
+JsxTag />: 84:36
+JsxTag </: 84:39
+Ldot: SomeComponent 84:41 Namespace
+Lident: Nested 84:55 Namespace
+JsxTag >: 84:61
 Variable: toAs [90:4->90:8]
 Variable: x [90:19->90:20]
 Lident: x 90:25 Variable
@@ -121,6 +130,7 @@ Lident: int 101:14 Variable
 Lident: to 101:18 Variable
 JsxTag <: 104:8
 Lident: ToAsProp 104:9 Namespace
+JsxTag />: 104:23
 Variable: true [107:4->107:11]
 Lident: true 108:8->108:15 Variable
 Variable: enumInModule [110:4->110:16]

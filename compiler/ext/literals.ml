@@ -50,8 +50,6 @@ let runtime = "runtime" (* runtime directory *)
 
 let stdlib = "stdlib"
 
-let imul = "imul" (* signed int32 mul *)
-
 let setter_suffix = "#="
 
 let setter_suffix_len = String.length setter_suffix
@@ -165,9 +163,5 @@ let cons = "::"
 let hd = "hd"
 
 let tl = "tl"
-
-let lazy_done = "LAZY_DONE"
-
-let lazy_val = "VAL"
 
 let pure = "@__PURE__"

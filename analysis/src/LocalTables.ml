@@ -10,6 +10,7 @@ type t = {
   modulesTable: Module.t table;
   typesTable: Type.t table;
   valueTable: Types.type_expr table;
+  includedValueTable: (string * Types.type_expr) table;
 }
 
 let create () =
@@ -20,6 +21,7 @@ let create () =
     modulesTable = Hashtbl.create 1;
     typesTable = Hashtbl.create 1;
     valueTable = Hashtbl.create 1;
+    includedValueTable = Hashtbl.create 1;
   }
 
 let populateValues ~env localTables =
@@ -28,6 +30,18 @@ let populateValues ~env localTables =
          Hashtbl.replace localTables.valueTable
            (declared.name.txt, declared.name.loc |> Loc.start)
            declared)
+
+let populateIncludedValues ~env localTables =
+  env.QueryEnv.file.stamps
+  |> Stamps.iterValues (fun _ declared ->
+         match declared.modulePath with
+         | ModulePath.IncludedModule (source, _) ->
+           let path = Path.name source in
+           let declared = {declared with item = (path, declared.item)} in
+           Hashtbl.replace localTables.includedValueTable
+             (declared.name.txt, declared.name.loc |> Loc.start)
+             declared
+         | _ -> ())
 
 let populateConstructors ~env localTables =
   env.QueryEnv.file.stamps

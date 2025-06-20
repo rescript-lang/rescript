@@ -200,14 +200,14 @@ module Make = (Ord: OrderedType) => {
 
   let rec min_elt = x =>
     switch x {
-    | Empty => raise(Not_found)
+    | Empty => throw(Not_found)
     | Node(Empty, v, r, _) => v
     | Node(l, v, r, _) => min_elt(l)
     }
 
   let rec max_elt = x =>
     switch x {
-    | Empty => raise(Not_found)
+    | Empty => throw(Not_found)
     | Node(l, v, Empty, _) => v
     | Node(l, v, r, _) => max_elt(r)
     }
@@ -463,7 +463,7 @@ module Make = (Ord: OrderedType) => {
 
   let rec find = (x, x_) =>
     switch x_ {
-    | Empty => raise(Not_found)
+    | Empty => throw(Not_found)
     | Node(l, v, r, _) =>
       let c = Ord.compare(x, v)
       if c == 0 {

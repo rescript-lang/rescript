@@ -133,7 +133,7 @@ let renderedMarkdown = language => {
   }
 
   <div className="mt-4">
-    <p className="text-xs font-semibold"> {title |> str} </p>
+    <p className="text-xs font-semibold"> {title->str} </p>
     <MarkdownBlock markdown className="mt-2" profile=Markdown.Permissive />
   </div>
 }
@@ -157,14 +157,14 @@ let make = () => {
   let (language, setLanguage) = React.useState(() => ReasonML)
 
   <div>
-    <span> {"Select a language to preview:" |> str} </span>
+    <span> {"Select a language to preview:"->str} </span>
     <select className="ml-2" onChange={handleChange(setLanguage)}>
-      <option value="reasonml"> {"ReasonML" |> str} </option>
-      <option value="ruby"> {"Ruby" |> str} </option>
-      <option value="javascript"> {"Javascript" |> str} </option>
-      <option value="html"> {"HTML" |> str} </option>
-      <option value="css"> {"CSS" |> str} </option>
-      <option value="scss"> {"SCSS" |> str} </option>
+      <option value="reasonml"> {"ReasonML"->str} </option>
+      <option value="ruby"> {"Ruby"->str} </option>
+      <option value="javascript"> {"Javascript"->str} </option>
+      <option value="html"> {"HTML"->str} </option>
+      <option value="css"> {"CSS"->str} </option>
+      <option value="scss"> {"SCSS"->str} </option>
     </select>
     {renderedMarkdown(language)}
   </div>

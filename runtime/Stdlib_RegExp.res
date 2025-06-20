@@ -1,14 +1,15 @@
+@notUndefined
 type t
 
 module Result = {
   type t = array<option<string>>
   @get_index external fullMatch: (t, @as(0) _) => string = ""
-  @send external matches: (t, @as(1) _) => array<string> = "slice"
+  @send external matches: (t, @as(1) _) => array<option<string>> = "slice"
   @get external index: t => int = "index"
   @get external input: t => string = "input"
 }
 
-@new external fromString: string => t = "RegExp"
+@new external fromString: (string, ~flags: string=?) => t = "RegExp"
 @new external fromStringWithFlags: (string, ~flags: string) => t = "RegExp"
 
 @send external test: (t, string) => bool = "test"
@@ -22,3 +23,6 @@ module Result = {
 @get external source: t => string = "source"
 @get external sticky: t => bool = "sticky"
 @get external unicode: t => bool = "unicode"
+@get external flags: t => string = "flags"
+
+external ignore: t => unit = "%ignore"

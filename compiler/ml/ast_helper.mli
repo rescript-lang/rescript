@@ -107,14 +107,13 @@ module Pat : sig
   val record :
     ?loc:loc ->
     ?attrs:attrs ->
-    (lid * pattern * bool) list ->
+    pattern record_element list ->
     closed_flag ->
     pattern
   val array : ?loc:loc -> ?attrs:attrs -> pattern list -> pattern
   val or_ : ?loc:loc -> ?attrs:attrs -> pattern -> pattern -> pattern
   val constraint_ : ?loc:loc -> ?attrs:attrs -> pattern -> core_type -> pattern
   val type_ : ?loc:loc -> ?attrs:attrs -> lid -> pattern
-  val lazy_ : ?loc:loc -> ?attrs:attrs -> pattern -> pattern
   val unpack : ?loc:loc -> ?attrs:attrs -> str -> pattern
   val open_ : ?loc:loc -> ?attrs:attrs -> lid -> pattern -> pattern
   val exception_ : ?loc:loc -> ?attrs:attrs -> pattern -> pattern
@@ -149,6 +148,7 @@ module Exp : sig
     ?loc:loc ->
     ?attrs:attrs ->
     ?partial:bool ->
+    ?transformed_jsx:bool ->
     expression ->
     (arg_label * expression) list ->
     expression
@@ -162,7 +162,7 @@ module Exp : sig
   val record :
     ?loc:loc ->
     ?attrs:attrs ->
-    (lid * expression * bool) list ->
+    expression record_element list ->
     expression option ->
     expression
   val field : ?loc:loc -> ?attrs:attrs -> expression -> lid -> expression
@@ -202,14 +202,40 @@ module Exp : sig
     expression ->
     expression
   val assert_ : ?loc:loc -> ?attrs:attrs -> expression -> expression
-  val lazy_ : ?loc:loc -> ?attrs:attrs -> expression -> expression
   val newtype : ?loc:loc -> ?attrs:attrs -> str -> expression -> expression
   val pack : ?loc:loc -> ?attrs:attrs -> module_expr -> expression
   val open_ :
     ?loc:loc -> ?attrs:attrs -> override_flag -> lid -> expression -> expression
   val extension : ?loc:loc -> ?attrs:attrs -> extension -> expression
+  val jsx_fragment :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    Lexing.position ->
+    Parsetree.jsx_children ->
+    Lexing.position ->
+    expression
+  val jsx_unary_element :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    Longident.t Location.loc ->
+    Parsetree.jsx_props ->
+    expression
+  val jsx_container_element :
+    ?loc:loc ->
+    ?attrs:attrs ->
+    Longident.t Location.loc ->
+    Parsetree.jsx_props ->
+    Lexing.position ->
+    Parsetree.jsx_children ->
+    Parsetree.jsx_closing_container_tag option ->
+    expression
 
-  val case : pattern -> ?guard:expression -> expression -> case
+  val case :
+    ?bar:Lexing.position -> pattern -> ?guard:expression -> expression -> case
+  val await : ?loc:loc -> ?attrs:attrs -> expression -> expression
+
+  val make_list_expression :
+    Location.t -> expression list -> expression option -> expression
 end
 
 (** Value declarations *)

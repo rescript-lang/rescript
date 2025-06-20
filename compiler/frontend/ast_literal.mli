@@ -57,7 +57,7 @@ module Lid : sig
 
   val js_null_undefined : t
 
-  val js_re_id : t
+  val regexp_id : t
 end
 
 type expression_lit = Parsetree.expression lit

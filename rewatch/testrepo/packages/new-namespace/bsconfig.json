@@ -1,0 +1,15 @@
+{
+  "name": "@testrepo/new-namespace",
+  "namespace": "NewNamespace",
+  "namespace-entry": "NS",
+  "sources": {
+    "dir": "src",
+    "subdirs": true
+  },
+  "package-specs": {
+    "module": "es6",
+    "in-source": true
+  },
+  "bs-dependencies": ["@testrepo/dep01"],
+  "suffix": ".bs.js"
+}

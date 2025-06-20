@@ -58,13 +58,13 @@ let browserLanguage = if browserLanguage == "de" {
   #German
 } else if Js.String.toLowerCase(browserLanguage) == "es-es" {
   #SpanishEurope
-} else if browserLanguage |> Js.String.startsWith("es") {
+} else if browserLanguage->Js.String.startsWith("es") {
   #SpanishAmerica
 } else if Js.String.toLowerCase(browserLanguage) == "fr-ca" {
   #FrenchAmerica
-} else if browserLanguage |> Js.String.startsWith("fr") {
+} else if browserLanguage->Js.String.startsWith("fr") {
   #FrenchEurope
-} else if browserLanguage |> Js.String.startsWith("it") {
+} else if browserLanguage->Js.String.startsWith("it") {
   #Italian
 } else if browserLanguage == "ja" {
   #Japanese
@@ -72,11 +72,11 @@ let browserLanguage = if browserLanguage == "de" {
   #Korean
 } else if browserLanguage == "nl" {
   #Dutch
-} else if browserLanguage |> Js.String.startsWith("ru") {
+} else if browserLanguage->Js.String.startsWith("ru") {
   #Russian
 } else if Js.String.toLowerCase(browserLanguage) == "zh-cn" {
   #ChineseSimplified
-} else if browserLanguage |> Js.String.startsWith("zh") {
+} else if browserLanguage->Js.String.startsWith("zh") {
   #ChineseTraditional
 } else if Js.String.toLowerCase(browserLanguage) == "en-gb" {
   #EnglishEurope
@@ -88,7 +88,7 @@ type state = {language: language}
 type action = SetLanguage(language)
 
 let localStorageKey = "language"
-let localStorageLanguage = Dom.Storage.localStorage |> Dom.Storage.getItem(localStorageKey)
+let localStorageLanguage = Dom.Storage.localStorage->Dom.Storage.getItem(localStorageKey)
 
 let api = Restorative.createStore(
   {
@@ -108,9 +108,9 @@ let getLanguage = () => api.getState().language
 let setLanguage = (~language) => {
   api.dispatch(SetLanguage(language))
   if language == browserLanguage {
-    Dom.Storage.localStorage |> Dom.Storage.removeItem(localStorageKey)
+    Dom.Storage.localStorage->Dom.Storage.removeItem(localStorageKey)
   } else {
-    Dom.Storage.localStorage |> Dom.Storage.setItem(localStorageKey, languageToJs(language))
+    Dom.Storage.localStorage->Dom.Storage.setItem(localStorageKey, languageToJs(language))
   }
   Analytics.Amplitude.logEventWithProperties(
     ~eventName="Language Changed",

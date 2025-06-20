@@ -96,7 +96,6 @@ let Pervasives$1 = {
   invalid_arg: Pervasives.invalid_arg,
   Exit: Pervasives.Exit,
   abs: Pervasives.abs,
-  lnot: Pervasives.lnot,
   max_int: Pervasives.max_int,
   min_int: Pervasives.min_int,
   infinity: Pervasives.infinity,
@@ -186,7 +185,7 @@ function a17(prim) {
 }
 
 function a18(prim0, prim1) {
-  return Math.pow(prim0, prim1);
+  return prim0 ** prim1 | 0;
 }
 
 let f = Pervasives.$at;

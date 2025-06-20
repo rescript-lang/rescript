@@ -9,15 +9,15 @@ module Make = (Error: Error) => {
   let handler = ((), x) =>
     switch x {
     | Errors(errors) =>
-      errors |> Array.iter(error => {
+      errors->Array.iter(error => {
         let (title, message) = Error.notification(error)
         Notification.error(title, message)
       })
     }
 
   let catch = (callback, promise) =>
-    promise |> Js.Promise.catch(error => {
-      switch error |> handler() {
+    promise->Js.Promise.catch(error => {
+      switch error->handler() {
       | Some(_x) => callback()
       | None =>
         Notification.error(

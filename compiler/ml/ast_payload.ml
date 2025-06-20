@@ -147,11 +147,13 @@ let raw_as_string_exp_exn ~(kind : Js_raw_info.raw_kind) ?is_function (x : t) :
       (match kind with
       | Raw_re | Raw_exp ->
         let ((_loc, e) as prog), errors =
-          Parser_flow.parse_expression (Parser_env.init_env None str) false
+          let open Parser_flow in
+          let env = Parser_env.init_env None str in
+          do_parse env Parse.expression false
         in
         (if kind = Raw_re then
            match e with
-           | Literal {value = RegExp _} -> ()
+           | RegExpLiteral _ -> ()
            | _ ->
              Location.raise_errorf ~loc
                "Syntax error: a valid JS regex literal expected");
@@ -208,12 +210,13 @@ let ident_or_record_as_config loc (x : t) :
     | None ->
       Ext_list.map label_exprs (fun u ->
           match u with
-          | ( {txt = Lident name; loc},
-              {Parsetree.pexp_desc = Pexp_ident {txt = Lident name2}},
-              _ )
+          | {
+           lid = {txt = Lident name; loc};
+           x = {Parsetree.pexp_desc = Pexp_ident {txt = Lident name2}};
+          }
             when name2 = name ->
             ({Asttypes.txt = name; loc}, None)
-          | {txt = Lident name; loc}, y, _ ->
+          | {lid = {txt = Lident name; loc}; x = y} ->
             ({Asttypes.txt = name; loc}, Some y)
           | _ -> Location.raise_errorf ~loc "Qualified label is not allowed")
     | Some _ ->

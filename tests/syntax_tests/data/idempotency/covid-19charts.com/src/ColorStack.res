@@ -52,7 +52,7 @@ let make = (~locations) => {
 let updateColors = (~locations, {colors, associations}) => {
   let colors = Stack.copy(colors)
   let locations = Set.fromArray(locations)
-  let prevLocations = Map.keysToArray(associations) |> Set.fromArray
+  let prevLocations = Map.keysToArray(associations)->Set.fromArray
   let removed = Set.diff(prevLocations, locations)
 
   Set.forEach(removed, location =>

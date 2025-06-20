@@ -34,20 +34,20 @@ module Example = {
         "Formula 1",
         "Squash",
         "Boxing",
-      ] |> Array.map(sportName => Selectable.makeSport(sportName))
-    searchCollection |> Js.Array.filter(sport => !(selected |> Array.mem(sport)))
+      ]->Array.map(sportName => Selectable.makeSport(sportName))
+    searchCollection->Js.Array.filter(sport => !(selected->Array.mem(sport)))
   }
 
   let setSportSearch = (setState, value) => setState(state => {...state, searchInput: value})
 
   let select = (setState, state, sport) => {
-    let selected = state.selected |> Js.Array.concat([sport])
+    let selected = state.selected->Js.Array.concat([sport])
     setState(_state => {searchInput: "", selected: selected})
   }
 
   let deSelect = (setState, state, sport) => {
     let selected =
-      state.selected |> Js.Array.filter(selected =>
+      state.selected->Js.Array.filter(selected =>
         Selectable.value(sport) != Selectable.value(selected)
       )
     setState(_state => {searchInput: "", selected: selected})
@@ -57,11 +57,11 @@ module Example = {
   let make = () => {
     let (state, setState) = React.useState(() => {searchInput: "", selected: []})
     <div className="mt-4">
-      <h2 className="text-xl font-semibold"> {"Example" |> str} </h2>
+      <h2 className="text-xl font-semibold"> {"Example"->str} </h2>
       <div className="mt-4">
         <label
           className="block text-xs font-semibold" htmlFor="MultiselectInline__search-input-example">
-          {"Select your sports:" |> str}
+          {"Select your sports:"->str}
         </label>
       </div>
       <MultiSelect

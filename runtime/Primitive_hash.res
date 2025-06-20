@@ -29,6 +29,9 @@ module String = Primitive_string_extern
 
 @send external charCodeAt: (string, int) => int = "charCodeAt"
 
+// Multiply int32 with C-style overflow behavior
+external imul: (int, int) => int = "Math.imul"
+
 type rec cell<'a> = {
   content: 'a,
   mutable next: option<cell<'a>>,
@@ -85,9 +88,9 @@ let rotl32 = (x: int, n) => lor(lsl(x, n), lsr(x, 32 - n))
 
 let hash_mix_int = (h, d) => {
   let d = ref(d)
-  d.contents = d.contents * 0xcc9e2d51
+  d.contents = imul(d.contents, 0xcc9e2d51)
   d.contents = rotl32(d.contents, 15)
-  d.contents = d.contents * 0x1b873593
+  d.contents = imul(d.contents, 0x1b873593)
   let h = ref(lxor(h, d.contents))
   h.contents = rotl32(h.contents, 13)
   h.contents + lsl(h.contents, 2) + 0xe6546b64
@@ -95,9 +98,9 @@ let hash_mix_int = (h, d) => {
 
 let hash_final_mix = h => {
   let h = ref(lxor(h, lsr(h, 16)))
-  h.contents = h.contents * 0x85ebca6b
+  h.contents = imul(h.contents, 0x85ebca6b)
   h.contents = lxor(h.contents, lsr(h.contents, 13))
-  h.contents = h.contents * 0xc2b2ae35
+  h.contents = imul(h.contents, 0xc2b2ae35)
   lxor(h.contents, lsr(h.contents, 16))
 }
 

@@ -190,7 +190,6 @@ let init_st =
 
 let return_wrapper loc (txt : string) : External_ffi_types.return_wrapper =
   match txt with
-  | "undefined_to_opt" -> Return_undefined_to_opt
   | "null_to_opt" -> Return_null_to_opt
   | "nullable" | "null_undefined_to_opt" -> Return_null_undefined_to_opt
   | "identity" -> Return_identity
@@ -260,19 +259,14 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                 ] -> (
               let from_name = ref None in
               let with_ = ref None in
-              fields
-              |> List.iter
-                   (fun
-                     ((l, exp, _) :
-                       Longident.t Location.loc * Parsetree.expression * bool)
-                   ->
-                     match (l, exp.pexp_desc) with
-                     | ( {txt = Lident "from"},
-                         Pexp_constant (Pconst_string (s, _)) ) ->
-                       from_name := Some s
-                     | {txt = Lident "with"}, Pexp_record (fields, _) ->
-                       with_ := Some fields
-                     | _ -> ());
+              Ext_list.iter fields (fun {lid = l; x = exp} ->
+                  match (l, exp.pexp_desc) with
+                  | {txt = Lident "from"}, Pexp_constant (Pconst_string (s, _))
+                    ->
+                    from_name := Some s
+                  | {txt = Lident "with"}, Pexp_record (fields, _) ->
+                    with_ := Some fields
+                  | _ -> ());
               match (!from_name, !with_) with
               | None, _ ->
                 Location.raise_errorf ~loc:pexp_loc
@@ -287,25 +281,18 @@ let parse_external_attributes (no_arguments : bool) (prim_name_check : string)
                    the import attributes you want applied to the import."
               | Some from_name, Some with_fields ->
                 let import_attributes_from_record =
-                  with_fields
-                  |> List.filter_map
-                       (fun
-                         ((l, exp, _) :
-                           Longident.t Location.loc
-                           * Parsetree.expression
-                           * bool)
-                       ->
-                         match exp.pexp_desc with
-                         | Pexp_constant (Pconst_string (s, _)) -> (
-                           match l.txt with
-                           | Longident.Lident "type_" -> Some ("type", s)
-                           | Longident.Lident txt -> Some (txt, s)
-                           | _ ->
-                             Location.raise_errorf ~loc:exp.pexp_loc
-                               "Field must be a regular key.")
-                         | _ ->
-                           Location.raise_errorf ~loc:exp.pexp_loc
-                             "Only string values are allowed here.")
+                  Ext_list.filter_map with_fields (fun {lid = l; x = exp} ->
+                      match exp.pexp_desc with
+                      | Pexp_constant (Pconst_string (s, _)) -> (
+                        match l.txt with
+                        | Longident.Lident "type_" -> Some ("type", s)
+                        | Longident.Lident txt -> Some (txt, s)
+                        | _ ->
+                          Location.raise_errorf ~loc:exp.pexp_loc
+                            "Field must be a regular key.")
+                      | _ ->
+                        Location.raise_errorf ~loc:exp.pexp_loc
+                          "Only string values are allowed here.")
                 in
                 let import_attributes =
                   Hashtbl.create (List.length import_attributes_from_record)
@@ -407,8 +394,7 @@ let check_return_wrapper loc (wrapper : External_ffi_types.return_wrapper)
   | Return_unset ->
     if Ast_core_type.is_unit result_type then Return_replaced_with_unit
     else wrapper
-  | Return_undefined_to_opt | Return_null_to_opt | Return_null_undefined_to_opt
-    ->
+  | Return_null_to_opt | Return_null_undefined_to_opt ->
     if Ast_core_type.is_user_option result_type then wrapper
     else Bs_syntaxerr.err loc Expect_opt_in_bs_return_to_opt
   | Return_replaced_with_unit -> assert false

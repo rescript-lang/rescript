@@ -20,68 +20,9 @@ env:
   OCAMLRUNPARAM: b
 
 jobs:
-  build-rewatch:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-13 # x64
-            rust-target: x86_64-apple-darwin
-          - os: macos-14 # ARM
-            rust-target: aarch64-apple-darwin
-          - os: ubuntu-24.04 # x64
-            rust-target: x86_64-unknown-linux-musl
-          - os: ubuntu-24.04-arm # ARM
-            rust-target: aarch64-unknown-linux-musl
-          - os: windows-latest
-            rust-target: x86_64-pc-windows-gnu
-
-    runs-on: ${{matrix.os}}
-
-    env:
-      RUST_BACKTRACE: "1"
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Restore build cache
-        id: build-cache
-        uses: actions/cache@v4
-        with:
-          path: rewatch/target
-          key: rewatch-build-v2-${{ matrix.rust-target }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
-
-      - name: Install musl gcc
-        if: steps.build-cache.outputs.cache-hit != 'true' && runner.os == 'Linux'
-        run: sudo apt-get install -y --no-install-recommends musl-tools
-
-      - name: Install rust toolchain
-        if: steps.build-cache.outputs.cache-hit != 'true'
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-          targets: ${{matrix.rust-target}}
-
-      - name: Build rewatch
-        if: steps.build-cache.outputs.cache-hit != 'true'
-        run: cargo build --manifest-path rewatch/Cargo.toml --target ${{matrix.rust-target}} --release
-
-      - name: Copy rewatch exe to platform bin dir
-        run: |
-          cp rewatch/target/${{matrix.rust-target}}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch
-          node ./scripts/copyExes.js -rewatch
-
-      - name: Get artifact dir name
-        run: node .github/workflows/get_artifact_dir_name.js
-
-      - name: "Upload artifact: rewatch binary"
-        uses: actions/upload-artifact@v4
-        with:
-          name: rewatch-${{env.artifact_dir_name}}
-          path: ${{ env.artifact_dir_name }}
-
   build-compiler:
+    outputs:
+      api-docs-artifact-id: ${{ steps.upload-api-docs.outputs.artifact-id }}
     strategy:
       fail-fast: false
       matrix:
@@ -90,31 +31,46 @@ jobs:
             ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
             upload_binaries: true
             upload_libs: true
+            node-target: linux-x64
+            rust-target: x86_64-unknown-linux-musl
           - os: ubuntu-24.04-arm # ARM
             ocaml_compiler: ocaml-variants.5.3.0+options,ocaml-option-static
             upload_binaries: true
             # Build the playground compiler and run the benchmarks on the fastest runner
             build_playground: true
+            generate_api_docs: true
             benchmarks: true
+            node-target: linux-arm64
+            rust-target: aarch64-unknown-linux-musl
           - os: macos-13 # x64
             ocaml_compiler: 5.3.0
             upload_binaries: true
+            node-target: darwin-x64
+            rust-target: x86_64-apple-darwin
           - os: macos-14 # ARM
             ocaml_compiler: 5.3.0
             upload_binaries: true
+            node-target: darwin-arm64
+            rust-target: aarch64-apple-darwin
           - os: windows-latest
             ocaml_compiler: 5.3.0
             upload_binaries: true
+            node-target: win32-x64
+            rust-target: x86_64-pc-windows-gnu
 
           # Verify that the compiler still builds with older OCaml versions
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.5.2.1+options,ocaml-option-static
-            # Reanalyze does not work on OCaml 5.3.0 anymore, therefore run it on 5.2.1
-            run_reanalyze: true
+            node-target: linux-x64
+            rust-target: x86_64-unknown-linux-musl
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.5.0.0+options,ocaml-option-static
+            node-target: linux-x64
+            rust-target: x86_64-unknown-linux-musl
           - os: ubuntu-24.04
             ocaml_compiler: ocaml-variants.4.14.2+options,ocaml-option-static
+            node-target: linux-x64
+            rust-target: x86_64-unknown-linux-musl
 
     runs-on: ${{matrix.os}}
 
@@ -123,13 +79,15 @@ jobs:
       # we do track its version manually
       OPAM_VERSION: 2.3.0
       DUNE_PROFILE: release
+      RUST_BACKTRACE: "1"
 
     steps:
-      - name: "Windows: Set git to use LF"
+      - name: "Windows: Set git config"
         if: runner.os == 'Windows'
         run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
+          git config --system core.autocrlf false
+          git config --system core.eol lf
+          git config --system core.longpaths true
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -137,10 +95,14 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
+          cache: yarn
           node-version-file: .nvmrc
 
-      - name: Get artifact dir name
-        run: node .github/workflows/get_artifact_dir_name.js
+      - name: Install npm packages
+        run: yarn install
+
+      - name: Install testrepo deps
+        run: cd rewatch/testrepo && yarn install
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
@@ -150,10 +112,42 @@ jobs:
           packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync
           version: v3
 
+      - name: Restore rewatch build cache
+        id: rewatch-build-cache
+        uses: actions/cache@v4
+        with:
+          path: rewatch/target
+          key: rewatch-build-v2-${{ matrix.rust-target }}-${{ hashFiles('rewatch/src/**', 'rewatch/Cargo.lock') }}
+
+      - name: Install rust toolchain
+        if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          targets: ${{ matrix.rust-target }}
+
+      - name: Build rewatch
+        if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
+        run: |
+          cargo build --manifest-path rewatch/Cargo.toml --target ${{ matrix.rust-target }} --release
+
+      - name: Run rewatch unit tests
+        if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
+        run: |
+          cargo test --manifest-path rewatch/Cargo.toml
+
+      - name: Copy rewatch binary
+        run: |
+          cp rewatch/target/${{ matrix.rust-target }}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch
+          mkdir -p rewatch/target/release
+          cp rewatch/target/${{ matrix.rust-target }}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch/target/release
+          ./scripts/copyExes.js --rewatch
+        shell: bash
+
       # matrix.ocaml_compiler may contain commas
       - name: Get OPAM cache key
         shell: bash
-        run: echo "opam_cache_key=opam-env-v7-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('dune-project') }}" | sed 's/,/-/g' >> $GITHUB_ENV
+        run: echo "opam_cache_key=opam-env-v8-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" | sed 's/,/-/g' >> $GITHUB_ENV
 
       - name: Restore OPAM environment
         id: cache-opam-env
@@ -169,7 +163,7 @@ jobs:
           key: ${{ env.opam_cache_key }}
 
       - name: Use OCaml ${{matrix.ocaml_compiler}}
-        uses: ocaml/setup-ocaml@v3.2.5
+        uses: ocaml/setup-ocaml@v3.3.2
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         with:
           ocaml-compiler: ${{matrix.ocaml_compiler}}
@@ -190,10 +184,6 @@ jobs:
       - name: Install OPAM dependencies
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         run: opam install . --deps-only --with-test
-
-      - name: "Install reanalyze"
-        if: steps.cache-opam-env.outputs.cache-hit != 'true' && matrix.run_reanalyze
-        run: opam install reanalyze
 
       - name: Cache OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
@@ -250,6 +240,24 @@ jobs:
           fi
         shell: bash
 
+      - name: Compiler build state key
+        id: compiler-build-state-key
+        shell: bash
+        run: |
+          echo "value=compiler-build-state-v1-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" \
+            | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
+
+      - name: Restore compiler build state
+        if: github.base_ref == 'master' || github.ref == 'refs/heads/master'
+        id: compiler-build-state
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            D:\.cache\dune
+            ~/.cache/dune
+            _build
+          key: ${{ steps.compiler-build-state-key.outputs.value }}
+
       - name: Build compiler
         if: runner.os != 'Linux'
         run: opam exec -- dune build --display quiet --profile release
@@ -258,17 +266,36 @@ jobs:
         if: runner.os == 'Linux'
         run: opam exec -- dune build --display quiet --profile static
 
-      - name: Install npm packages
-        run: npm ci --ignore-scripts
+      - name: Delete stable compiler build state
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        shell: bash
+        run: |
+          gh extension install actions/gh-actions-cache
+          gh actions-cache delete ${{ steps.compiler-build-state-key.outputs.value }} \
+            -R ${{ github.repository }} \
+            -B ${{ github.ref }} \
+            --confirm || echo "not exist"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Save compiler build state
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            D:\.cache\dune
+            ~/.cache/dune
+            _build
+          key: ${{ steps.compiler-build-state-key.outputs.value }}
 
       - name: Copy compiler exes to platform bin dir
-        run: node ./scripts/copyExes.js -compiler
+        run: node scripts/copyExes.js --compiler
 
       - name: Restore ninja build cache
         id: ninja-build-cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.artifact_dir_name }}/ninja.exe
+          path: packages/@rescript/${{ matrix.node-target }}/bin/ninja.exe
           key: ninja-build-v1-${{ matrix.os }}-${{ hashFiles('ninja/src/**') }}
 
       - name: Setup Python for ninja build
@@ -295,21 +322,21 @@ jobs:
 
       - name: Copy ninja exe to platform bin dir
         if: steps.ninja-build-cache.outputs.cache-hit != 'true'
-        run: node ./scripts/copyExes.js -ninja
+        run: node scripts/copyExes.js --ninja
 
-      - name: "Syntax: Run roundtrip tests"
+      - name: "Syntax: Run tests"
+        env:
+          ROUNDTRIP_TEST: ${{ runner.os == 'Windows' && '0' || '1' }}
+        run: ./scripts/test_syntax.sh
+        shell: bash
+
+      - name: Build runtime/stdlib with rewatch
         if: ${{ runner.os != 'Windows' }}
-        run: opam exec -- make test-syntax-roundtrip
+        run: ./scripts/buildRuntimeRewatch.sh
+        shell: bash
 
-      - name: "Syntax: Run tests (Windows)"
+      - name: Build runtime/stdlib with bsb (Windows)
         if: ${{ runner.os == 'Windows' }}
-        run: opam exec -- make test-syntax
-
-      - name: "Syntax: Run reanalyze"
-        if: matrix.run_reanalyze
-        run: opam exec -- make reanalyze
-
-      - name: Build runtime/stdlib
         run: ./scripts/buildRuntime.sh
         shell: bash
 
@@ -317,7 +344,7 @@ jobs:
         run: git diff --exit-code lib/js lib/es6
 
       - name: Version Check
-        run: ./scripts/prebuilt.js
+        run: yarn constraints
 
       - name: Run tests
         run: node scripts/test.js -all
@@ -333,62 +360,79 @@ jobs:
         if: runner.os != 'Windows'
         run: make -C tests/gentype_tests/typescript-react-example clean test
 
+      - name: Run rewatch tests
+        run: ./rewatch/tests/suite-ci.sh
+        shell: bash
+
       - name: Run syntax benchmarks
         if: matrix.benchmarks
-        run: ./_build/install/default/bin/syntax_benchmarks | tee tests/benchmark-output.json
+        run: |
+          set -o pipefail
+          ./_build/install/default/bin/syntax_benchmarks | tee tests/benchmark-output.json
 
-      - name: Restore previous benchmark data
-        if: matrix.benchmarks
-        uses: actions/cache/restore@v4
-        with:
-          path: ./tests/benchmark-cache
-          key: syntax-benchmark-v1
+      # Benchmarking is disabled for now because of inconsistent run times on different runners
+      #
+      # - name: Restore previous benchmark data
+      #   if: matrix.benchmarks
+      #   uses: actions/cache/restore@v4
+      #   with:
+      #     path: ./tests/benchmark-cache
+      #     key: syntax-benchmark-v1
 
-      - name: Create new benchmark data and comment on alert
-        # Do not run for PRs created from other repos as those won't be able to write to the pull request
-        if: ${{ matrix.benchmarks && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.repository.full_name) }}
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Syntax Benchmarks
-          tool: customSmallerIsBetter
-          output-file-path: tests/benchmark-output.json
-          external-data-json-path: ./tests/benchmark-cache/benchmark-data.json
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          alert-threshold: "105%"
-          comment-always: false
-          comment-on-alert: true
+      # - name: Create new benchmark data and comment on alert
+      #   # Do not run for PRs created from other repos as those won't be able to write to the pull request
+      #   if: ${{ matrix.benchmarks && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.repository.full_name) }}
+      #   uses: benchmark-action/github-action-benchmark@v1
+      #   with:
+      #     name: Syntax Benchmarks
+      #     tool: customSmallerIsBetter
+      #     output-file-path: tests/benchmark-output.json
+      #     external-data-json-path: ./tests/benchmark-cache/benchmark-data.json
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     alert-threshold: "105%"
+      #     comment-always: false
+      #     comment-on-alert: true
 
-      - name: Save benchmark data as new baseline
-        if: matrix.benchmarks && github.ref == 'refs/heads/master'
-        uses: actions/cache/save@v4
-        with:
-          path: ./tests/benchmark-cache
-          key: syntax-benchmark-v1
+      # - name: Save benchmark data as new baseline
+      #   if: matrix.benchmarks && github.ref == 'refs/heads/master'
+      #   uses: actions/cache/save@v4
+      #   with:
+      #     path: ./tests/benchmark-cache
+      #     key: syntax-benchmark-v1
 
       - name: Build playground compiler
         if: matrix.build_playground
-        run: |
-          opam exec -- node packages/playground-bundling/scripts/generate_cmijs.js
-          opam exec -- dune build --profile browser
-          cp ./_build/default/compiler/jsoo/jsoo_playground_main.bc.js playground/compiler.js
+        run: opam exec -- make playground playground-cmijs
 
       - name: Test playground compiler
         if: matrix.build_playground
-        run: node playground/playground_test.js
+        run: yarn workspace playground test
+
+      - name: Setup Rclone
+        if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
+        uses: cometkim/rclone-actions/setup-rclone@main
+
+      - name: Configure Rclone remote
+        if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
+        uses: cometkim/rclone-actions/configure-remote/s3-provider@main
+        with:
+          name: rescript
+          provider: Cloudflare
+          endpoint: https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          access-key-id: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          secret-access-key: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          acl: private
 
       - name: Upload playground compiler to CDN
         if: ${{ matrix.build_playground && startsWith(github.ref, 'refs/tags/v') }}
-        env:
-          KEYCDN_USER: ${{ secrets.KEYCDN_USER }}
-          KEYCDN_PASSWORD: ${{ secrets.KEYCDN_PASSWORD }}
-        run: bash playground/upload_bundle.sh
+        run: yarn workspace playground upload-bundle
 
       - name: "Upload artifacts: binaries"
         if: matrix.upload_binaries
         uses: actions/upload-artifact@v4
         with:
-          name: binaries-${{ env.artifact_dir_name }}
-          path: ${{ env.artifact_dir_name }}
+          name: binaries-${{ matrix.node-target }}
+          path: packages/@rescript/${{ matrix.node-target }}/bin
 
       - name: "Upload artifacts: lib/ocaml"
         if: matrix.upload_libs
@@ -397,13 +441,22 @@ jobs:
           name: lib-ocaml
           path: lib/ocaml
 
-  package:
+      - name: Generate API Docs
+        if: ${{ matrix.generate_api_docs }}
+        run: yarn apidocs:generate
+
+      - name: "Upload artifacts: scripts/res/apiDocs"
+        id: upload-api-docs
+        if: ${{ matrix.generate_api_docs }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: api
+          path: scripts/res/apiDocs/
+
+  pkg-pr-new:
     needs:
       - build-compiler
-      - build-rewatch
-
-    runs-on: ubuntu-24.04
-
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -411,59 +464,80 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
+          cache: yarn
           node-version-file: .nvmrc
-
-      - name: NPM install
-        run: npm ci --ignore-scripts
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: "@(binaries-*|rewatch-*|lib-ocaml)"
+          pattern: "@(binaries-*|lib-ocaml)"
 
-      - name: Move artifacts
-        run: ./scripts/moveArtifacts.sh
+      - name: Move artifacts into packages
+        run: .github/workflows/moveArtifacts.sh
+        shell: bash
 
-      - name: npm pack (rescript) + check artifact list
-        run: node ./scripts/npmPack.js
+      - name: Publish packages to pkg.pr.new
+        run: |
+          yarn dlx pkg-pr-new publish "." "./packages/@rescript/*"
 
-      - name: Copy JS files to stdlib package
-        run: mkdir -p packages/std/lib && cp -R lib/es6 lib/js packages/std/lib
-
-      - name: npm pack (@rescript/std)
-        run: npm pack
-        working-directory: packages/std
-
-      - name: Prepare package upload
-        # For pull requests, pass the correct commit SHA explicitly as GITHUB_SHA points to the wrong commit.
-        run: node .github/workflows/prepare_package_upload.js ${{ github.event.pull_request.head.sha }}
-
-      - name: "Upload artifact: npm packages"
-        uses: actions/upload-artifact@v4
+  api-docs:
+    needs:
+      - build-compiler
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout rescript-lang.org
+        uses: actions/checkout@v4
         with:
-          name: npm-packages
-          path: |
-            rescript-${{ env.rescript_version }}.tgz
-            rescript-std-${{ env.rescript_version }}.tgz
+          repository: rescript-lang/rescript-lang.org
+          ssh-key: ${{ secrets.RESCRIPT_LANG_ORG_DEPLOY_KEY }}
 
-    outputs:
-      rescript_version: ${{ env.rescript_version }}
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ needs.build-compiler.outputs.api-docs-artifact-id }}
+          path: data
 
-  installationTest:
-    needs: package
+      - name: Check if repo is clean
+        id: diffcheck
+        run: |
+          git status
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "clean=true" >> $GITHUB_OUTPUT
+          else
+            echo "clean=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build website
+        if: steps.diffcheck.outputs.clean == 'false'
+        run: |
+          npm ci 
+          npx rescript
+          npm run build
+
+      - name: Commit and push
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions@rescript-lang.org"
+          git add data/api
+          git commit -m "Update API docs for ${{ github.ref_name }}"
+          git push
+
+  test-integration:
+    needs:
+      - pkg-pr-new
     strategy:
       fail-fast: false
       matrix:
-        os: [
-            macos-13, # x64
-            macos-14, # ARM
-            ubuntu-24.04,
-            ubuntu-24.04-arm,
-            windows-latest,
-          ]
-
-    runs-on: ${{matrix.os}}
-
+        include:
+          - os: macos-13
+          - os: macos-14
+          - os: ubuntu-24.04
+          - os: ubuntu-24.04-arm
+          - os: windows-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      RUST_BACKTRACE: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -471,33 +545,51 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          # Run integration tests with the oldest supported node version.
+          node-version: 20
 
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: npm-packages
-          path: packages/test
+      - name: Make test directory
+        id: tmp-dir
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            dir=$(powershell -Command "[System.IO.Path]::GetTempPath() + [System.Guid]::NewGuid().ToString()" | tr -d '\r')
+            mkdir -p "$dir"
+          else
+            dir=$(mktemp -d)
+          fi
+          echo "path=$dir" >> "$GITHUB_OUTPUT"
+          cp -r tests/package_tests/installation_test/* "$dir"
 
       - name: Install ReScript package
         run: |
-          npm i --ignore-scripts --no-audit \
-            rescript-${{ needs.package.outputs.rescript_version }}.tgz
+          COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          npm i --no-audit \
+            "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
         shell: bash
-        working-directory: packages/test
+        working-directory: ${{ steps.tmp-dir.outputs.path }}
 
       - name: Test installation
-        run: npx rescript -h && npx rescript build && cat src/Test.bs.js
+        run: npx rescript -h && npx rescript build && cat src/Test.res.js
         shell: bash
-        working-directory: packages/test
+        working-directory: ${{ steps.tmp-dir.outputs.path }}
+
+      - name: Install ReScript package in rewatch/testrepo
+        run: |
+          COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          yarn add "rescript@https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
+        shell: bash
+        working-directory: rewatch/testrepo
+
+      - name: Run rewatch integration tests
+        run: ./rewatch/tests/suite-ci.sh node_modules/.bin/rewatch
+        shell: bash
 
   publish:
-    needs: [package, installationTest]
-
+    needs:
+      - test-integration
     if: startsWith(github.ref, 'refs/tags/v')
-
-    runs-on: ubuntu-24.04
-
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -505,23 +597,26 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
+          cache: yarn
           node-version-file: .nvmrc
           registry-url: https://registry.npmjs.org # Needed to make auth work for publishing
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: npm-packages
+          pattern: "@(binaries-*|lib-ocaml)"
+
+      - name: Move artifacts into packages
+        run: .github/workflows/moveArtifacts.sh
+        shell: bash
 
       - name: Publish packages on npm with tag "ci"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
         run: |
-          npm publish rescript-${{ needs.package.outputs.rescript_version }}.tgz --tag ci
-          npm publish rescript-std-${{ needs.package.outputs.rescript_version }}.tgz --tag ci
+          yarn workspaces foreach -W --no-private \
+            npm publish --tolerate-republish --tag ci
 
       - name: Update Website Playground
-        env:
-          NEXT_REVALIDATE_SECRET_TOKEN: ${{ secrets.NEXT_REVALIDATE_SECRET_TOKEN }}
-        run: ./playground/website_update_playground.sh
+        run: curl -X POST "${{ secrets.CLOUDFLARE_PAGES_DEPLOYMENT_HOOK }}"
         shell: bash

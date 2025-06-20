@@ -1,7 +1,7 @@
 %raw(`require("./MarkdownBlock.css")`)
 
 let randomId = () => {
-  let randomComponent = Js.Math.random() |> Js.Float.toString |> Js.String.substr(~from=2)
+  let randomComponent = Js.Math.random()->Js.Float.toString->Js.String.substr(~from=2)
   "markdown-block-" ++ randomComponent
 }
 
@@ -33,6 +33,6 @@ let make = (~markdown, ~className=?, ~profile) => {
   <div
     className={markdownBlockClasses(profile, className)}
     id
-    dangerouslySetInnerHTML={"__html": markdown |> Markdown.parse(profile)}
+    dangerouslySetInnerHTML={"__html": markdown->Markdown.parse(profile)}
   />
 }

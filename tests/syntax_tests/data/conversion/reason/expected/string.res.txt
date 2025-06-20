@@ -8,7 +8,7 @@ carriage return`
 let x = "\""
 let y = "\n"
 
-(<> {"\n"->React.string} </>)
+<> {"\n"->React.string} </>
 
 // The `//` should not result into an extra comment
 let x = `https://www.apple.com`

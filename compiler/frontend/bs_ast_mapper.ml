@@ -69,7 +69,6 @@ type mapper = {
   with_constraint: mapper -> with_constraint -> with_constraint;
 }
 
-let id x = x
 let map_fst f (x, y) = (f x, y)
 let map_snd f (x, y) = (x, f y)
 let map_tuple f1 f2 (x, y) = (f1 x, f2 y)
@@ -292,6 +291,20 @@ module M = struct
 end
 
 module E = struct
+  let map_jsx_children sub = function
+    | JSXChildrenSpreading e -> JSXChildrenSpreading (sub.expr sub e)
+    | JSXChildrenItems xs -> JSXChildrenItems (List.map (sub.expr sub) xs)
+
+  let map_jsx_prop sub = function
+    | JSXPropPunning (optional, name) ->
+      JSXPropPunning (optional, map_loc sub name)
+    | JSXPropValue (name, optional, value) ->
+      JSXPropValue (map_loc sub name, optional, sub.expr sub value)
+    | JSXPropSpreading (loc, e) ->
+      JSXPropSpreading (sub.location sub loc, sub.expr sub e)
+
+  let map_jsx_props sub = List.map (map_jsx_prop sub)
+
   (* Value expressions for the core language *)
 
   let map sub {pexp_loc = loc; pexp_desc = desc; pexp_attributes = attrs} =
@@ -316,8 +329,8 @@ module E = struct
       fun_ ~loc ~attrs ~arity ~async lab
         (map_opt (sub.expr sub) def)
         (sub.pat sub p) (sub.expr sub e)
-    | Pexp_apply {funct = e; args = l; partial} ->
-      apply ~loc ~attrs ~partial (sub.expr sub e)
+    | Pexp_apply {funct = e; args = l; partial; transformed_jsx} ->
+      apply ~loc ~attrs ~partial ~transformed_jsx (sub.expr sub e)
         (List.map (map_snd (sub.expr sub)) l)
     | Pexp_match (e, pel) ->
       match_ ~loc ~attrs (sub.expr sub e) (sub.cases sub pel)
@@ -329,7 +342,10 @@ module E = struct
       variant ~loc ~attrs lab (map_opt (sub.expr sub) eo)
     | Pexp_record (l, eo) ->
       record ~loc ~attrs
-        (List.map (map_tuple3 (map_loc sub) (sub.expr sub) id) l)
+        (List.map
+           (fun {lid; x = e; opt} ->
+             {lid = map_loc sub lid; x = sub.expr sub e; opt})
+           l)
         (map_opt (sub.expr sub) eo)
     | Pexp_field (e, lid) ->
       field ~loc ~attrs (sub.expr sub e) (map_loc sub lid)
@@ -359,13 +375,38 @@ module E = struct
         (sub.extension_constructor sub cd)
         (sub.expr sub e)
     | Pexp_assert e -> assert_ ~loc ~attrs (sub.expr sub e)
-    | Pexp_lazy e -> lazy_ ~loc ~attrs (sub.expr sub e)
     | Pexp_newtype (s, e) ->
       newtype ~loc ~attrs (map_loc sub s) (sub.expr sub e)
     | Pexp_pack me -> pack ~loc ~attrs (sub.module_expr sub me)
     | Pexp_open (ovf, lid, e) ->
       open_ ~loc ~attrs ovf (map_loc sub lid) (sub.expr sub e)
     | Pexp_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Pexp_await e -> await ~loc ~attrs (sub.expr sub e)
+    | Pexp_jsx_element
+        (Jsx_fragment
+           {
+             jsx_fragment_opening = o;
+             jsx_fragment_children = children;
+             jsx_fragment_closing = c;
+           }) ->
+      jsx_fragment o (map_jsx_children sub children) c
+    | Pexp_jsx_element
+        (Jsx_unary_element
+           {jsx_unary_element_tag_name = name; jsx_unary_element_props = props})
+      ->
+      jsx_unary_element ~loc ~attrs name (map_jsx_props sub props)
+    | Pexp_jsx_element
+        (Jsx_container_element
+           {
+             jsx_container_element_tag_name_start = name;
+             jsx_container_element_opening_tag_end = ote;
+             jsx_container_element_props = props;
+             jsx_container_element_children = children;
+             jsx_container_element_closing_tag = closing_tag;
+           }) ->
+      jsx_container_element ~loc ~attrs name (map_jsx_props sub props) ote
+        (map_jsx_children sub children)
+        closing_tag
 end
 
 module P = struct
@@ -387,14 +428,16 @@ module P = struct
     | Ppat_variant (l, p) -> variant ~loc ~attrs l (map_opt (sub.pat sub) p)
     | Ppat_record (lpl, cf) ->
       record ~loc ~attrs
-        (List.map (map_tuple3 (map_loc sub) (sub.pat sub) id) lpl)
+        (List.map
+           (fun {lid; x = p; opt} ->
+             {lid = map_loc sub lid; x = sub.pat sub p; opt})
+           lpl)
         cf
     | Ppat_array pl -> array ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_or (p1, p2) -> or_ ~loc ~attrs (sub.pat sub p1) (sub.pat sub p2)
     | Ppat_constraint (p, t) ->
       constraint_ ~loc ~attrs (sub.pat sub p) (sub.typ sub t)
     | Ppat_type s -> type_ ~loc ~attrs (map_loc sub s)
-    | Ppat_lazy p -> lazy_ ~loc ~attrs (sub.pat sub p)
     | Ppat_unpack s -> unpack ~loc ~attrs (map_loc sub s)
     | Ppat_open (lid, p) -> open_ ~loc ~attrs (map_loc sub lid) (sub.pat sub p)
     | Ppat_exception p -> exception_ ~loc ~attrs (sub.pat sub p)
@@ -499,8 +542,9 @@ let default_mapper =
           ~attrs:(this.attributes this pld_attributes));
     cases = (fun this l -> List.map (this.case this) l);
     case =
-      (fun this {pc_lhs; pc_guard; pc_rhs} ->
+      (fun this {pc_bar; pc_lhs; pc_guard; pc_rhs} ->
         {
+          pc_bar;
           pc_lhs = this.pat this pc_lhs;
           pc_guard = map_opt (this.expr this) pc_guard;
           pc_rhs = this.expr this pc_rhs;

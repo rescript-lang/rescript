@@ -18,7 +18,7 @@ type state = {
 
 let computeInitialState = question => {
   let (title, description) = switch question {
-  | Some(question) => (question |> Question.title, question |> Question.description)
+  | Some(question) => (question->Question.title, question->Question.description)
   | None => ("", "")
   }
 
@@ -48,7 +48,7 @@ type action =
 let reducer = (state, action) =>
   switch action {
   | UpdateTitle(title) =>
-    let similar = title |> String.trim == "" ? {search: "", suggestions: []} : state.similar
+    let similar = title->String.trim == "" ? {search: "", suggestions: []} : state.similar
 
     {...state, title: title, similar: similar}
   | UpdateTitleAndTimeout(title, timeoutId) => {
@@ -85,16 +85,16 @@ module SimilarQuestionsQuery = %graphql(`
 let searchForSimilarQuestions = (send, title, communityId, ()) => {
   send(BeginSearching)
 
-  let trimmedTitle = title |> String.trim
+  let trimmedTitle = title->String.trim
 
   SimilarQuestionsQuery.make(~communityId, ~title=trimmedTitle, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(result => {
-    let suggestions = result["similarQuestions"] |> Array.map(QuestionSuggestion.makeFromJs)
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(result => {
+    let suggestions = result["similarQuestions"]->Array.map(QuestionSuggestion.makeFromJs)
     send(FinishSearching(trimmedTitle, suggestions))
     Js.Promise.resolve()
   })
-  |> Js.Promise.catch(e => {
+  ->Js.Promise.catch(e => {
     Js.log(e)
     Notification.warn(
       "Oops!",
@@ -103,17 +103,17 @@ let searchForSimilarQuestions = (send, title, communityId, ()) => {
     send(FailSaving)
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
-let isInvalidString = s => s |> String.trim == ""
+let isInvalidString = s => s->String.trim == ""
 
 let updateTitleAndSearch = (state, send, communityId, title) => {
   state.titleTimeoutId->Belt.Option.forEach(Js.Global.clearTimeout)
 
-  let trimmedTitle = title |> String.trim
+  let trimmedTitle = title->String.trim
 
-  if title |> isInvalidString || trimmedTitle == state.similar.search {
+  if title->isInvalidString || trimmedTitle == state.similar.search {
     send(UpdateTitle(title))
   } else {
     let timeoutId = Js.Global.setTimeout(
@@ -183,18 +183,18 @@ module UpdateQuestionError = {
 let handleResponseCB = (id, title) => {
   let window = Webapi.Dom.window
   let parameterizedTitle =
-    title |> Js.String.toLowerCase |> Js.String.replaceByRe(/[^0-9a-zA-Z]+/gi, "-")
+    title->Js.String.toLowerCase->Js.String.replaceByRe(/[^0-9a-zA-Z]+/gi, "-")
   let redirectPath = "/questions/" ++ (id ++ ("/" ++ parameterizedTitle))
-  redirectPath |> Webapi.Dom.Window.setLocation(window)
+  redirectPath->Webapi.Dom.Window.setLocation(window)
 }
 
-let handleBack = () => Webapi.Dom.window |> Webapi.Dom.Window.history |> Webapi.Dom.History.back
+let handleBack = () => Webapi.Dom.window->Webapi.Dom.Window.history->Webapi.Dom.History.back
 
 module CreateQuestionErrorHandler = GraphqlErrorHandler.Make(CreateQuestionError)
 
 module UpdateQuestionErrorHandler = GraphqlErrorHandler.Make(UpdateQuestionError)
 
-let saveDisabled = state => state.description |> isInvalidString || state.title |> isInvalidString
+let saveDisabled = state => state.description->isInvalidString || state.title->isInvalidString
 
 let handleCreateOrUpdateQuestion = (
   state,
@@ -205,17 +205,17 @@ let handleCreateOrUpdateQuestion = (
   updateQuestionCB,
   event,
 ) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
 
   if !saveDisabled(state) {
     send(BeginSaving)
 
     switch question {
     | Some(question) =>
-      let id = question |> Question.id
+      let id = question->Question.id
       UpdateQuestionQuery.make(~id, ~title=state.title, ~description=state.description, ())
-      |> GraphqlQuery.sendQuery
-      |> Js.Promise.then_(response =>
+      ->GraphqlQuery.sendQuery
+      ->Js.Promise.then_(response =>
         switch response["updateQuestion"] {
         | #Success(updated) =>
           switch (updated, updateQuestionCB) {
@@ -229,10 +229,10 @@ let handleCreateOrUpdateQuestion = (
         | #Errors(errors) => Js.Promise.reject(UpdateQuestionErrorHandler.Errors(errors))
         }
       )
-      |> UpdateQuestionErrorHandler.catch(() => send(FailSaving))
-      |> ignore
+      ->UpdateQuestionErrorHandler.catch(() => send(FailSaving))
+      ->ignore
     | None =>
-      let targetId = target |> OptionUtils.map(LinkedTarget.id)
+      let targetId = target->OptionUtils.map(LinkedTarget.id)
 
       CreateQuestionQuery.make(
         ~description=state.description,
@@ -241,8 +241,8 @@ let handleCreateOrUpdateQuestion = (
         ~targetId?,
         (),
       )
-      |> GraphqlQuery.sendQuery
-      |> Js.Promise.then_(response =>
+      ->GraphqlQuery.sendQuery
+      ->Js.Promise.then_(response =>
         switch response["createQuestion"] {
         | #QuestionId(questionId) =>
           handleResponseCB(questionId, state.title)
@@ -251,8 +251,8 @@ let handleCreateOrUpdateQuestion = (
         | #Errors(errors) => Js.Promise.reject(CreateQuestionErrorHandler.Errors(errors))
         }
       )
-      |> CreateQuestionErrorHandler.catch(() => send(FailSaving))
-      |> ignore
+      ->CreateQuestionErrorHandler.catch(() => send(FailSaving))
+      ->ignore
     }
   } else {
     Notification.error("Error!", "Question title and description must be present.")
@@ -262,53 +262,53 @@ let handleCreateOrUpdateQuestion = (
 let suggestions = state => {
   let suggestions = state.similar.suggestions
 
-  suggestions |> ArrayUtils.isNotEmpty
+  suggestions->ArrayUtils.isNotEmpty
     ? <div className="pt-3">
         <span className="tracking-wide text-gray-900 text-xs font-semibold">
-          {"Similar Questions" |> str}
+          {"Similar Questions"->str}
         </span>
         {state.searching
           ? <span className="ml-2"> <FaIcon classes="fa fa-spinner fa-pulse" /> </span>
           : React.null}
         {suggestions
-        |> Array.map(suggestion => {
+        ->Array.map(suggestion => {
           let askedOn =
-            suggestion |> QuestionSuggestion.createdAt |> DateTime.format(DateTime.OnlyDate)
-          let (answersText, answersClasses) = switch suggestion |> QuestionSuggestion.answersCount {
+            suggestion->QuestionSuggestion.createdAt->DateTime.format(DateTime.OnlyDate)
+          let (answersText, answersClasses) = switch suggestion->QuestionSuggestion.answersCount {
           | 0 => ("No answers", "bg-gray-300 text-gray-700")
           | 1 => ("1 answer", "bg-green-500 text-white")
-          | n => ((n |> string_of_int) ++ " answers", "bg-green-500 text-white")
+          | n => ((n->string_of_int) ++ " answers", "bg-green-500 text-white")
           }
 
           <a
-            href={"/questions/" ++ (suggestion |> QuestionSuggestion.id)}
+            href={"/questions/" ++ (suggestion->QuestionSuggestion.id)}
             target="_blank"
-            key={suggestion |> QuestionSuggestion.id}
+            key={suggestion->QuestionSuggestion.id}
             className="flex w-full items-center justify-between mt-1 p-3 rounded cursor-pointer border bg-gray-100 hover:text-primary-500 hover:bg-gray-200">
             <div className="flex flex-col min-w-0">
               <h5
-                title={suggestion |> QuestionSuggestion.title}
+                title={suggestion->QuestionSuggestion.title}
                 className="font-semibold text-sm leading-snug md:text-base pr-1 truncate flex-1">
-                {suggestion |> QuestionSuggestion.title |> str}
+                {suggestion->QuestionSuggestion.title->str}
               </h5>
               <p className="text-xs mt-1 leading-tight text-gray-800">
-                {"Asked on " ++ askedOn |> str}
+                {"Asked on " ++ askedOn->str}
               </p>
             </div>
             <div
               className={"text-xs px-1 py-px ml-2 rounded font-semibold flex-shrink-0 " ++
               answersClasses}>
-              {answersText |> str}
+              {answersText->str}
             </div>
           </a>
         })
-        |> React.array}
+        ->React.array}
       </div>
     : React.null
 }
 
 let searchingIndicator = state =>
-  state.similar.suggestions |> ArrayUtils.isEmpty && state.searching
+  state.similar.suggestions->ArrayUtils.isEmpty && state.searching
     ? <div className="md:flex-1 pl-1 pb-3 md:p-0">
         <FaIcon classes="fas fa-spinner fa-pulse" />
       </div>
@@ -325,7 +325,7 @@ let make = (~communityId, ~showBackButton=true, ~target, ~question=?, ~updateQue
             ? <div className="max-w-3xl w-full mx-auto mt-5 pb-2">
                 <a className="btn btn-subtle" onClick={_ => handleBack()}>
                   <i className="fas fa-arrow-left" />
-                  <span className="ml-2"> {"Back" |> str} </span>
+                  <span className="ml-2"> {"Back"->str} </span>
                 </a>
               </div>
             : React.null}
@@ -336,10 +336,10 @@ let make = (~communityId, ~showBackButton=true, ~target, ~question=?, ~updateQue
             <div
               className="flex py-4 px-4 md:px-5 w-full bg-white border border-primary-500  shadow-md rounded-lg justify-between items-center mb-2">
               <p className="w-3/5 md:w-4/5 text-sm">
-                <span className="font-semibold block text-xs"> {"Linked Target: " |> str} </span>
-                <span> {target |> LinkedTarget.title |> str} </span>
+                <span className="font-semibold block text-xs"> {"Linked Target: "->str} </span>
+                <span> {target->LinkedTarget.title->str} </span>
               </p>
-              <a href="./new_question" className="btn btn-default"> {"Clear" |> str} </a>
+              <a href="./new_question" className="btn btn-default"> {"Clear"->str} </a>
             </div>
           </div>
         | None => React.null
@@ -348,7 +348,7 @@ let make = (~communityId, ~showBackButton=true, ~target, ~question=?, ~updateQue
           {switch question {
           | Some(_) => "Edit question"
           | None => "Ask a new question"
-          } |> str}
+          }->str}
         </h4>
         <div className="md:px-3">
           <div
@@ -357,7 +357,7 @@ let make = (~communityId, ~showBackButton=true, ~target, ~question=?, ~updateQue
               <label
                 className="inline-block tracking-wide text-gray-900 text-xs font-semibold mb-2"
                 htmlFor="title">
-                {"Question" |> str}
+                {"Question"->str}
               </label>
               <input
                 id="title"
@@ -376,7 +376,7 @@ let make = (~communityId, ~showBackButton=true, ~target, ~question=?, ~updateQue
               <label
                 className="inline-block tracking-wide text-gray-900 text-xs font-semibold mb-2"
                 htmlFor="description">
-                {"Description" |> str}
+                {"Description"->str}
               </label>
               <div className="w-full flex flex-col">
                 <MarkdownEditor
@@ -406,7 +406,7 @@ let make = (~communityId, ~showBackButton=true, ~target, ~question=?, ~updateQue
                       {switch question {
                       | Some(_) => "Update Question"
                       | None => "Post Your Question"
-                      } |> str}
+                      }->str}
                     </button>
                   </div>
                 </div>

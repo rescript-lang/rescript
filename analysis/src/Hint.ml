@@ -44,7 +44,7 @@ let inlay ~path ~pos ~maxLength ~debug =
     match pat.ppat_desc with
     | Ppat_tuple pl -> pl |> List.iter processPattern
     | Ppat_record (fields, _) ->
-      fields |> List.iter (fun (_, p, _) -> processPattern p)
+      Ext_list.iter fields (fun {x = p} -> processPattern p)
     | Ppat_array fields -> fields |> List.iter processPattern
     | Ppat_var {loc} -> push loc Type
     | _ -> ()
@@ -59,8 +59,8 @@ let inlay ~path ~pos ~maxLength ~debug =
          pexp_desc =
            ( Pexp_constant _ | Pexp_tuple _ | Pexp_record _ | Pexp_variant _
            | Pexp_apply _ | Pexp_match _ | Pexp_construct _ | Pexp_ifthenelse _
-           | Pexp_array _ | Pexp_ident _ | Pexp_try _ | Pexp_lazy _
-           | Pexp_send _ | Pexp_field _ | Pexp_open _
+           | Pexp_array _ | Pexp_ident _ | Pexp_try _ | Pexp_send _
+           | Pexp_field _ | Pexp_open _
            | Pexp_fun {arity = Some _} );
        };
     } ->

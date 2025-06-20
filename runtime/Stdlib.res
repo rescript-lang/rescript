@@ -2,6 +2,7 @@ include Stdlib_Global
 
 module Array = Stdlib_Array
 module BigInt = Stdlib_BigInt
+module Bool = Stdlib_Bool
 module Console = Stdlib_Console
 module DataView = Stdlib_DataView
 module Date = Stdlib_Date
@@ -11,7 +12,10 @@ module Error = Stdlib_Error
 module Float = Stdlib_Float
 module Int = Stdlib_Int
 module Intl = Stdlib_Intl
+module JsError = Stdlib_JsError
+module JsExn = Stdlib_JsExn
 module JSON = Stdlib_JSON
+module Lazy = Stdlib_Lazy
 module List = Stdlib_List
 module Math = Stdlib_Math
 module Null = Stdlib_Null
@@ -19,6 +23,7 @@ module Nullable = Stdlib_Nullable
 module Object = Stdlib_Object
 module Option = Stdlib_Option
 module Ordering = Stdlib_Ordering
+module Pair = Stdlib_Pair
 module Promise = Stdlib_Promise
 module RegExp = Stdlib_RegExp
 module Result = Stdlib_Result
@@ -52,6 +57,8 @@ type date = Date.t
 type null<+'a> = Primitive_js_extern.null<'a>
 type undefined<+'a> = Primitive_js_extern.undefined<'a>
 type nullable<+'a> = Primitive_js_extern.nullable<'a>
+@deprecated("Use Lazy.t instead")
+type lazy_t<+'a> = Lazy.t<'a>
 
 @deprecated("Use rescript-webapi instead") @val external window: Dom.window = "window"
 @deprecated("Use rescript-webapi instead") @val external document: Dom.document = "document"
@@ -99,7 +106,7 @@ async function main() {
 */
 external import: 'a => promise<'a> = "%import"
 
-let panic = Error.panic
+let panic = JsError.panic
 
 /**
 `assertEqual(a, b)` check if `a` is equal `b`. If not raise a panic exception

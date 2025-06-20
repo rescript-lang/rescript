@@ -38,34 +38,34 @@ let make = (
 }
 
 let makeFromJs = details =>
-  details |> Js.Array.map(s =>
+  details->Js.Array.map(s =>
     make(
       ~id=s["id"],
-      ~createdAt=s["createdAt"] |> DateFns.parseString,
-      ~passedAt=s["passedAt"] |> OptionUtils.map(DateFns.parseString),
+      ~createdAt=s["createdAt"]->DateFns.parseString,
+      ~passedAt=s["passedAt"]->OptionUtils.map(DateFns.parseString),
       ~evaluatorName=s["evaluatorName"],
-      ~evaluatedAt=s["evaluatedAt"] |> OptionUtils.map(DateFns.parseString),
-      ~feedback=s["feedback"] |> Js.Array.map(f =>
+      ~evaluatedAt=s["evaluatedAt"]->OptionUtils.map(DateFns.parseString),
+      ~feedback=s["feedback"]->Js.Array.map(f =>
         CoursesReview__Feedback.make(
           ~coachName=f["coachName"],
           ~coachAvatarUrl=f["coachAvatarUrl"],
           ~coachTitle=f["coachTitle"],
-          ~createdAt=f["createdAt"] |> DateFns.parseString,
+          ~createdAt=f["createdAt"]->DateFns.parseString,
           ~value=f["value"],
         )
       ),
-      ~grades=s["grades"] |> Js.Array.map(g =>
+      ~grades=s["grades"]->Js.Array.map(g =>
         CoursesReview__Grade.make(
           ~evaluationCriterionId=g["evaluationCriterionId"],
           ~value=g["grade"],
         )
       ),
-      ~checklist=s["checklist"] |> Json.Decode.array(
+      ~checklist=s["checklist"]->Json.Decode.array(
         SubmissionChecklistItem.decode(SubmissionChecklistItem.makeFiles(s["files"])),
       ),
     )
   )
 
-let feedbackSent = t => t.feedback |> ArrayUtils.isNotEmpty
+let feedbackSent = t => t.feedback->ArrayUtils.isNotEmpty
 
 let updateFeedback = (feedback, t) => {...t, feedback: feedback}

@@ -86,6 +86,7 @@ let constructor_args priv cd_args cd_res path rep =
         type_attributes = [];
         type_immediate = false;
         type_unboxed;
+        type_inlined_types = [];
       }
     in
     (existentials, [newgenconstr path type_params], Some tdecl)

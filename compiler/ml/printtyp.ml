@@ -25,6 +25,8 @@ open Types
 open Btype
 open Outcometree
 
+type printing_context = {inlined_types: type_inlined_type list}
+
 let print_res_poly_identifier : (string -> string) ref =
   ref (fun _ -> assert false)
 
@@ -577,9 +579,33 @@ let reset_and_mark_loops_list tyl =
   reset ();
   List.iter mark_loops tyl
 
+let filter_params tyl =
+  let params =
+    List.fold_left
+      (fun tyl ty ->
+        let ty = repr ty in
+        if List.memq ty tyl then Btype.newgenty (Tsubst ty) :: tyl
+        else ty :: tyl)
+      [] tyl
+  in
+  List.rev params
+
+let mark_loops_constructor_arguments = function
+  | Cstr_tuple l -> List.iter mark_loops l
+  | Cstr_record l -> List.iter (fun l -> mark_loops l.ld_type) l
+
+let find_inlined_type name (printing_context : printing_context option) =
+  match printing_context with
+  | None -> None
+  | Some {inlined_types} ->
+    inlined_types
+    |> List.find_opt (fun inlined_type ->
+           match inlined_type with
+           | Record {type_name} -> type_name = name)
+
 (* Disabled in classic mode when printing an unification error *)
 
-let rec tree_of_typexp sch ty =
+let rec tree_of_typexp ?(printing_context : printing_context option) sch ty =
   let ty = repr ty in
   let px = proxy ty in
   if List.mem_assq px !names && not (List.memq px !delayed) then
@@ -603,20 +629,33 @@ let rec tree_of_typexp sch ty =
               match (repr ty1).desc with
               | Tconstr (path, [ty], _) when Path.same path Predef.path_option
                 ->
-                tree_of_typexp sch ty
+                tree_of_typexp ?printing_context sch ty
               | _ -> Otyp_stuff "<hidden>"
-            else tree_of_typexp sch ty1
+            else tree_of_typexp ?printing_context sch ty1
           in
           (* should pass arity here? *)
-          Otyp_arrow (lab, t1, tree_of_typexp sch ty2, arity)
+          Otyp_arrow (lab, t1, tree_of_typexp ?printing_context sch ty2, arity)
         in
         pr_arrow l ty1 ty2
-      | Ttuple tyl -> Otyp_tuple (tree_of_typlist sch tyl)
+      | Ttuple tyl -> Otyp_tuple (tree_of_typlist ?printing_context sch tyl)
+      | Tconstr (p, _tyl, _abbrev)
+        when printing_context
+             |> find_inlined_type (Path.name p)
+             |> Option.is_some -> (
+        match
+          find_inlined_type (Path.name p) printing_context |> Option.get
+        with
+        | Record {labels} ->
+          (* Print inlined records as actual inlined record structures, not a reference to the inlined type only. *)
+          Otyp_record (List.map (tree_of_label ?printing_context) labels))
       | Tconstr (p, tyl, _abbrev) ->
         let p', s = best_type_path p in
         let tyl' = apply_subst s tyl in
-        if is_nth s && not (tyl' = []) then tree_of_typexp sch (List.hd tyl')
-        else Otyp_constr (tree_of_path p', tree_of_typlist sch tyl')
+        if is_nth s && not (tyl' = []) then
+          tree_of_typexp ?printing_context sch (List.hd tyl')
+        else
+          Otyp_constr
+            (tree_of_path p', tree_of_typlist ?printing_context sch tyl')
       | Tvariant row -> (
         let row = row_repr row in
         let fields =
@@ -636,7 +675,9 @@ let rec tree_of_typexp sch ty =
         | Some (p, tyl) when namable_row row ->
           let p', s = best_type_path p in
           let id = tree_of_path p' in
-          let args = tree_of_typlist sch (apply_subst s tyl) in
+          let args =
+            tree_of_typlist ?printing_context sch (apply_subst s tyl)
+          in
           let out_variant =
             if is_nth s then List.hd args else Otyp_constr (id, args)
           in
@@ -651,29 +692,31 @@ let rec tree_of_typexp sch ty =
           let non_gen =
             (not (row.row_closed && all_present)) && is_non_gen sch px
           in
-          let fields = List.map (tree_of_row_field sch) fields in
+          let fields =
+            List.map (tree_of_row_field ?printing_context sch) fields
+          in
           let tags =
             if all_present then None else Some (List.map fst present)
           in
           Otyp_variant (non_gen, Ovar_fields fields, row.row_closed, tags))
-      | Tobject (fi, nm) -> tree_of_typobject sch fi !nm
-      | Tnil | Tfield _ -> tree_of_typobject sch ty None
-      | Tsubst ty -> tree_of_typexp sch ty
+      | Tobject (fi, nm) -> tree_of_typobject ?printing_context sch fi !nm
+      | Tnil | Tfield _ -> tree_of_typobject ?printing_context sch ty None
+      | Tsubst ty -> tree_of_typexp ?printing_context sch ty
       | Tlink _ -> fatal_error "Printtyp.tree_of_typexp"
-      | Tpoly (ty, []) -> tree_of_typexp sch ty
+      | Tpoly (ty, []) -> tree_of_typexp ?printing_context sch ty
       | Tpoly (ty, tyl) ->
         (*let print_names () =
           List.iter (fun (_, name) -> prerr_string (name ^ " ")) !names;
           prerr_string "; " in *)
         let tyl = List.map repr tyl in
-        if tyl = [] then tree_of_typexp sch ty
+        if tyl = [] then tree_of_typexp ?printing_context sch ty
         else
           let old_delayed = !delayed in
           (* Make the names delayed, so that the real type is
              printed once when used as proxy *)
           List.iter add_delayed tyl;
           let tl = List.map (name_of_type new_name) tyl in
-          let tr = Otyp_poly (tl, tree_of_typexp sch ty) in
+          let tr = Otyp_poly (tl, tree_of_typexp ?printing_context sch ty) in
           (* Forget names when we leave scope *)
           remove_names tyl;
           delayed := old_delayed;
@@ -683,7 +726,7 @@ let rec tree_of_typexp sch ty =
         let n =
           List.map (fun li -> String.concat "." (Longident.flatten li)) n
         in
-        Otyp_module (Path.name p, n, tree_of_typlist sch tyl)
+        Otyp_module (Path.name p, n, tree_of_typlist ?printing_context sch tyl)
     in
     if List.memq px !delayed then
       delayed := Ext_list.filter !delayed (( != ) px);
@@ -692,19 +735,20 @@ let rec tree_of_typexp sch ty =
       Otyp_alias (pr_typ (), name_of_type new_name px))
     else pr_typ ()
 
-and tree_of_row_field sch (l, f) =
+and tree_of_row_field ?printing_context sch (l, f) =
   match row_field_repr f with
   | Rpresent None | Reither (true, [], _, _) -> (l, false, [])
-  | Rpresent (Some ty) -> (l, false, [tree_of_typexp sch ty])
+  | Rpresent (Some ty) -> (l, false, [tree_of_typexp ?printing_context sch ty])
   | Reither (c, tyl, _, _) ->
     if c (* contradiction: constant constructor with an argument *) then
-      (l, true, tree_of_typlist sch tyl)
-    else (l, false, tree_of_typlist sch tyl)
+      (l, true, tree_of_typlist ?printing_context sch tyl)
+    else (l, false, tree_of_typlist ?printing_context sch tyl)
   | Rabsent -> (l, false, [] (* actually, an error *))
 
-and tree_of_typlist sch tyl = List.map (tree_of_typexp sch) tyl
+and tree_of_typlist ?printing_context sch tyl =
+  List.map ((tree_of_typexp ?printing_context) sch) tyl
 
-and tree_of_typobject sch fi nm =
+and tree_of_typobject ?printing_context sch fi nm =
   match nm with
   | None ->
     let pr_fields fi =
@@ -720,13 +764,13 @@ and tree_of_typobject sch fi nm =
       let sorted_fields =
         List.sort (fun (n, _) (n', _) -> String.compare n n') present_fields
       in
-      tree_of_typfields sch rest sorted_fields
+      tree_of_typfields ?printing_context sch rest sorted_fields
     in
     let fields, rest = pr_fields fi in
     Otyp_object (fields, rest)
   | Some (p, ty :: tyl) ->
     let non_gen = is_non_gen sch (repr ty) in
-    let args = tree_of_typlist sch tyl in
+    let args = tree_of_typlist ?printing_context sch tyl in
     let p', s = best_type_path p in
     assert (s = Id);
     Otyp_class (non_gen, tree_of_path p', args)
@@ -734,7 +778,7 @@ and tree_of_typobject sch fi nm =
 
 and is_non_gen sch ty = sch && is_Tvar ty && ty.level <> generic_level
 
-and tree_of_typfields sch rest = function
+and tree_of_typfields ?printing_context sch rest = function
   | [] ->
     let rest =
       match rest.desc with
@@ -745,60 +789,15 @@ and tree_of_typfields sch rest = function
     in
     ([], rest)
   | (s, t) :: l ->
-    let field = (s, tree_of_typexp sch t) in
-    let fields, rest = tree_of_typfields sch rest l in
+    let field = (s, tree_of_typexp ?printing_context sch t) in
+    let fields, rest = tree_of_typfields ?printing_context sch rest l in
     (field :: fields, rest)
 
-let typexp sch ppf ty = !Oprint.out_type ppf (tree_of_typexp sch ty)
-
-let type_expr ppf ty = typexp false ppf ty
-
-and type_sch ppf ty = typexp true ppf ty
-
-and type_scheme ppf ty =
-  reset_and_mark_loops ty;
-  typexp true ppf ty
-
-(* Maxence *)
-let type_scheme_max ?(b_reset_names = true) ppf ty =
-  if b_reset_names then reset_names ();
-  typexp true ppf ty
-(* End Maxence *)
-
-let tree_of_type_scheme ty =
-  reset_and_mark_loops ty;
-  tree_of_typexp true ty
-
-(* Print one type declaration *)
-
-let tree_of_constraints params =
-  List.fold_right
-    (fun ty list ->
-      let ty' = unalias ty in
-      if proxy ty != proxy ty' then
-        let tr = tree_of_typexp true ty in
-        (tr, tree_of_typexp true ty') :: list
-      else list)
-    params []
-
-let filter_params tyl =
-  let params =
-    List.fold_left
-      (fun tyl ty ->
-        let ty = repr ty in
-        if List.memq ty tyl then Btype.newgenty (Tsubst ty) :: tyl
-        else ty :: tyl)
-      [] tyl
-  in
-  List.rev params
-
-let mark_loops_constructor_arguments = function
-  | Cstr_tuple l -> List.iter mark_loops l
-  | Cstr_record l -> List.iter (fun l -> mark_loops l.ld_type) l
-
-let rec tree_of_type_decl id decl =
+and tree_of_type_decl id decl =
   reset ();
 
+  let inlined_types = decl.type_inlined_types in
+  let printing_context = {inlined_types} in
   let params = filter_params decl.type_params in
 
   (match decl.type_manifest with
@@ -868,29 +867,33 @@ let rec tree_of_type_decl id decl =
     in
     ( Ident.name id,
       List.map2
-        (fun ty cocn -> (type_param (tree_of_typexp false ty), cocn))
+        (fun ty cocn ->
+          (type_param (tree_of_typexp ~printing_context false ty), cocn))
         params vari )
   in
   let tree_of_manifest ty1 =
     match ty_manifest with
     | None -> ty1
-    | Some ty -> Otyp_manifest (tree_of_typexp false ty, ty1)
+    | Some ty -> Otyp_manifest (tree_of_typexp ~printing_context false ty, ty1)
   in
   let name, args = type_defined decl in
-  let constraints = tree_of_constraints params in
+  let constraints = tree_of_constraints ~printing_context params in
   let untagged = ref false in
   let ty, priv =
     match decl.type_kind with
     | Type_abstract -> (
       match ty_manifest with
       | None -> (Otyp_abstract, Public)
-      | Some ty -> (tree_of_typexp false ty, decl.type_private))
+      | Some ty -> (tree_of_typexp ~printing_context false ty, decl.type_private)
+      )
     | Type_variant cstrs ->
       untagged := Ast_untagged_variants.process_untagged decl.type_attributes;
-      ( tree_of_manifest (Otyp_sum (List.map tree_of_constructor cstrs)),
+      ( tree_of_manifest
+          (Otyp_sum (List.map (tree_of_constructor ~printing_context) cstrs)),
         decl.type_private )
     | Type_record (lbls, _rep) ->
-      ( tree_of_manifest (Otyp_record (List.map tree_of_label lbls)),
+      ( tree_of_manifest
+          (Otyp_record (List.map (tree_of_label ~printing_context) lbls)),
         decl.type_private )
     | Type_open -> (tree_of_manifest Otyp_open, decl.type_private)
   in
@@ -905,11 +908,11 @@ let rec tree_of_type_decl id decl =
     otype_cstrs = constraints;
   }
 
-and tree_of_constructor_arguments = function
-  | Cstr_tuple l -> tree_of_typlist false l
+and tree_of_constructor_arguments ?printing_context = function
+  | Cstr_tuple l -> tree_of_typlist ?printing_context false l
   | Cstr_record l -> [Otyp_record (List.map tree_of_label l)]
 
-and tree_of_constructor cd =
+and tree_of_constructor ?printing_context cd =
   let name = Ident.name cd.cd_id in
   let nullary = Ast_untagged_variants.is_nullary_variant cd.cd_args in
   let repr =
@@ -925,25 +928,61 @@ and tree_of_constructor cd =
       | Some (BigInt s) -> Some (Printf.sprintf "@as(%sn)" s)
       | Some (Untagged _) (* should never happen *) | None -> None
   in
-  let arg () = tree_of_constructor_arguments cd.cd_args in
+  let arg () = tree_of_constructor_arguments ?printing_context cd.cd_args in
   match cd.cd_res with
   | None -> (name, arg (), None, repr)
   | Some res ->
     let nm = !names in
     names := [];
-    let ret = tree_of_typexp false res in
+    let ret = tree_of_typexp ?printing_context false res in
     let args = arg () in
     names := nm;
     (name, args, Some ret, repr)
 
-and tree_of_label l =
+and tree_of_label ?printing_context l =
   let opt = l.ld_optional in
   let typ =
     match l.ld_type.desc with
     | Tconstr (p, [t1], _) when opt && Path.same p Predef.path_option -> t1
     | _ -> l.ld_type
   in
-  (Ident.name l.ld_id, l.ld_mutable = Mutable, opt, tree_of_typexp false typ)
+  ( Ident.name l.ld_id,
+    l.ld_mutable = Mutable,
+    opt,
+    tree_of_typexp ?printing_context false typ )
+
+and tree_of_constraints ?printing_context params =
+  List.fold_right
+    (fun ty list ->
+      let ty' = unalias ty in
+      if proxy ty != proxy ty' then
+        let tr = tree_of_typexp ?printing_context true ty in
+        (tr, tree_of_typexp ?printing_context true ty') :: list
+      else list)
+    params []
+
+let typexp ?printing_context sch ppf ty =
+  !Oprint.out_type ppf (tree_of_typexp ?printing_context sch ty)
+
+let type_expr ppf ty = typexp false ppf ty
+
+and type_sch ppf ty = typexp true ppf ty
+
+and type_scheme ppf ty =
+  reset_and_mark_loops ty;
+  typexp true ppf ty
+
+(* Maxence *)
+let type_scheme_max ?(b_reset_names = true) ppf ty =
+  if b_reset_names then reset_names ();
+  typexp true ppf ty
+(* End Maxence *)
+
+let tree_of_type_scheme ty =
+  reset_and_mark_loops ty;
+  tree_of_typexp true ty
+
+(* Print one type declaration *)
 
 let tree_of_type_declaration id decl rs =
   Osig_type (tree_of_type_decl id decl, tree_of_rec rs)
@@ -1055,6 +1094,7 @@ let dummy =
     type_attributes = [];
     type_immediate = false;
     type_unboxed = unboxed_false_default_false;
+    type_inlined_types = [];
   }
 
 let hide_rec_items = function
@@ -1485,18 +1525,242 @@ let trace fst keep_last txt ppf tr =
     | _ -> ()
   with exn -> raise exn
 
-let report_subtyping_error ppf env tr1 txt1 tr2 =
+let print_variant_runtime_representation_issue ppf variant_name
+    (issue : Variant_coercion.variant_runtime_representation_issue) =
+  match issue with
+  | Cannot_coerce_non_unboxed_with_payload {constructor_name; expected_typename}
+    ->
+    fprintf ppf
+      "The constructor @{<info>%s@} of variant @{<info>%s@} has a payload, but \
+       the variant itself is not unboxed. @ This means that the constructor \
+       @{<info>%s@} will be encoded as an object at runtime, which is not \
+       compatible with @{<info>%s@}."
+      constructor_name (Path.name variant_name) constructor_name
+      (Path.name expected_typename)
+  | Inline_record_cannot_be_coerced {constructor_name} ->
+    fprintf ppf
+      "The constructor @{<info>%s@} of variant @{<info>%s@} has an inline \
+       record as payload. Currently, inline records cannot be coerced."
+      constructor_name (Path.name variant_name)
+  | As_payload_not_elgible_for_coercion
+      {constructor_name; as_payload; expected_typename} ->
+    fprintf ppf
+      "The constructor @{<info>%s@} of variant @{<info>%s@} has an \
+       @{<info>@as@} payload that has a runtime representation of \
+       @{<info>%s@}, which is not compatible with the expected @{<info>%s@}."
+      constructor_name (Path.name variant_name)
+      (Ast_untagged_variants.tag_type_to_user_visible_string as_payload)
+      (Path.name expected_typename)
+  | Mismatched_unboxed_payload _ -> ()
+  | Mismatched_as_payload {constructor_name; expected_typename; as_payload} ->
+    fprintf ppf "The constructor @{<info>%s@} of variant @{<info>%s@} has "
+      constructor_name (Path.name variant_name);
+    (match as_payload with
+    | None ->
+      fprintf ppf
+        "no @{<info>@as@} payload, which makes it a @{<info>string@} at \
+         runtime."
+    | Some payload ->
+      fprintf ppf
+        "an @{<info>@as@} payload that gives it the runtime type of \
+         @{<info>%s@}."
+        (Ast_untagged_variants.tag_type_to_user_visible_string payload));
+    fprintf ppf
+      "@ That runtime representation is not compatible with the expected \
+       runtime representation of @{<info>%s@}."
+      (Path.name expected_typename);
+    fprintf ppf
+      "@,\
+       @ Fix this by making sure all constructors in variant @{<info>%s@} has \
+       a runtime representation of @{<info>%s@}."
+      (Path.name variant_name)
+      (Path.name expected_typename)
+
+let print_variant_configuration_issue ppf
+    (issue : Variant_coercion.variant_configuration_issue) ~left_variant_name
+    ~right_variant_name =
+  match issue with
+  | Unboxed_config_not_matching {left_unboxed; right_unboxed} ->
+    fprintf ppf
+      "@ The variants have different @{<info>@unboxed@} configurations.";
+    let print_unboxed_status ppf unboxed name =
+      fprintf ppf "@ - Variant @{<info>%s@} is @{<error>%s@}unboxed."
+        (Path.name name)
+        (if unboxed then "not " else "")
+    in
+    print_unboxed_status ppf left_unboxed left_variant_name;
+    print_unboxed_status ppf right_unboxed right_variant_name;
+    fprintf ppf
+      "@,\
+       @ Fix this by making sure the variants either both have, or don't have, \
+       the @{<info>@unboxed@} attribute."
+  | Tag_name_not_matching {left_tag; right_tag} ->
+    fprintf ppf "@ The variants have different @{<info>@tag@} configurations.";
+    let print_tag ppf tag variant_name =
+      match tag with
+      | Some tag ->
+        fprintf ppf "@ - @{<info>%s@} has tag @{<info>%s@}."
+          (Path.name variant_name) tag
+      | None ->
+        fprintf ppf "@ - @{<info>%s@} has no explicit tag."
+          (Path.name variant_name)
+    in
+    print_tag ppf left_tag left_variant_name;
+    print_tag ppf right_tag right_variant_name;
+    fprintf ppf
+      "@,\
+       @ Fix this by making sure the variants either have the exact same \
+       @{<info>@tag@} configuration, or no @{<info>@tag@} at all."
+  | Incompatible_constructor_count {constructor_names} ->
+    let total_constructor_count = List.length constructor_names in
+    let constructor_names_to_print =
+      match constructor_names with
+      | a :: b :: c :: _ -> [a; b; c]
+      | names -> names
+    in
+    let not_printed_constructor_count =
+      total_constructor_count - List.length constructor_names_to_print
+    in
+    fprintf ppf
+      "@ @{<info>%s@} has %i constructor%s that @{<info>%s@} does not have: "
+      (Path.name left_variant_name)
+      total_constructor_count
+      (if total_constructor_count = 1 then "" else "s")
+      (Path.name right_variant_name);
+
+    constructor_names_to_print
+    |> List.iteri (fun index name ->
+           if index = 0 then () else fprintf ppf ", ";
+           fprintf ppf "@{<info>%s@}" name);
+    if not_printed_constructor_count > 0 then
+      fprintf ppf " (+%i more)" not_printed_constructor_count;
+
+    fprintf ppf
+      "@ Therefore, it is not possible for @{<info>%s@} to represent \
+       @{<info>%s@}."
+      (Path.name right_variant_name)
+      (Path.name left_variant_name)
+
+let print_record_field_subtype_violation ppf
+    (issue : Record_coercion.record_field_subtype_violation) ~left_record_name
+    ~right_record_name =
+  match issue with
+  | Optional_mismatch {label; left_optional; right_optional} -> (
+    fprintf ppf "The field @{<info>%s@} " label;
+    match (left_optional, right_optional) with
+    | true, false ->
+      fprintf ppf
+        "is optional in record @{<info>%s@}, but is not optional in record \
+         @{<info>%s@}"
+        (Path.name left_record_name)
+        (Path.name right_record_name)
+    | false, true ->
+      fprintf ppf
+        "is not optional in record @{<info>%s@}, but is optional in record \
+         @{<info>%s@}"
+        (Path.name left_record_name)
+        (Path.name right_record_name)
+    | _ -> failwith "Invalid optional mismatch")
+  | Field_runtime_name_mismatch {label; left_as; right_as} ->
+    fprintf ppf "Field @{<info>%s@} runtime representation" label;
+    (match left_as with
+    | Some as_name ->
+      fprintf ppf
+        " is configured to be @{<info>\"%s\"@} (via the @as attribute)" as_name
+    | None -> fprintf ppf " is @{<info>\"%s\"@}" label);
+    fprintf ppf " in record @{<info>%s@}, but in record @{<info>%s@}"
+      (Path.name right_record_name)
+      (Path.name left_record_name);
+    (match right_as with
+    | Some as_name ->
+      fprintf ppf
+        " it is configured to be @{<info>\"%s\"@} (via the @as attribute)."
+        as_name
+    | None -> fprintf ppf " it is @{<info>\"%s\"@}." label);
+    fprintf ppf " Runtime representations must match."
+  | Field_missing {label} ->
+    fprintf ppf
+      "The field @{<info>%s@} is missing in record @{<info>%s@}, but present \
+       in record @{<info>%s@}"
+      label
+      (Path.name right_record_name)
+      (Path.name left_record_name)
+
+let report_subtyping_error ppf env tr1 txt1 tr2 ctx =
   wrap_printing_env env (fun () ->
       reset ();
       let tr1 = List.map prepare_expansion tr1
       and tr2 = List.map prepare_expansion tr2 in
       fprintf ppf "@[<v>%a" (trace true (tr2 = []) txt1) tr1;
-      if tr2 = [] then fprintf ppf "@]"
-      else
-        let mis = mismatch tr2 in
-        fprintf ppf "%a%t@]"
-          (trace false (mis = None) "is not compatible with type")
-          tr2 (explanation true mis))
+      (if tr2 = [] then fprintf ppf "@]"
+       else
+         let mis = mismatch tr2 in
+         fprintf ppf "%a%t@]"
+           (trace false (mis = None) "is not compatible with type")
+           tr2 (explanation true mis));
+      match ctx with
+      | Some ctx -> (
+        fprintf ppf "@,@,@[<v 2>";
+        match ctx with
+        | Generic {errorCode} -> fprintf ppf "Error: %s" errorCode
+        | Coercion_target_variant_not_unboxed {variant_name; primitive} ->
+          fprintf ppf
+            "@ The variant @{<info>%s@} is not unboxed, so it cannot be \
+             coerced to a @{<info>%s@}. @ Fix this by adding the \
+             @{<info>@unboxed@} attribute to the variant @{<info>%s@}."
+            (Path.name variant_name) (Path.name primitive)
+            (Path.name variant_name)
+        | Coercion_target_variant_does_not_cover_type {variant_name; primitive}
+          ->
+          fprintf ppf
+            "@ The variant @{<info>%s@} is unboxed, but has no catch-all case \
+             for the primitive @{<info>%s@}, and therefore does not cover all \
+             values of type @{<info>%s@}. @ Fix this by adding a catch-all for \
+             @{<info>%s@} to @{<info>%s@}, like @{<info>%s(%s)@}."
+            (Path.name variant_name) (Path.name primitive) (Path.name primitive)
+            (Path.name variant_name) (Path.name primitive)
+            (String.capitalize_ascii (Path.name primitive))
+            (Path.name primitive)
+        | Variant_constructor_runtime_representation_mismatch
+            {variant_name; issues} ->
+          List.iter
+            (fun issue ->
+              fprintf ppf "@ ";
+              print_variant_runtime_representation_issue ppf variant_name issue)
+            issues
+        | Variant_configurations_mismatch
+            {left_variant_name; right_variant_name; issue} ->
+          print_variant_configuration_issue ppf issue ~left_variant_name
+            ~right_variant_name
+        | Different_type_kinds
+            {left_typename; right_typename; left_type_kind; right_type_kind} ->
+          let type_kind_to_string = function
+            | Type_abstract -> "an abstract type"
+            | Type_record _ -> "a record"
+            | Type_variant _ -> "a variant"
+            | Type_open -> "an open type"
+          in
+          fprintf ppf
+            "@ The types of @{<info>%s@} and @{<info>%s@} are different:"
+            (Path.name left_typename) (Path.name right_typename);
+          fprintf ppf "@ - @{<info>%s@} is %s" (Path.name left_typename)
+            (type_kind_to_string left_type_kind);
+          fprintf ppf "@ - @{<info>%s@} is %s" (Path.name right_typename)
+            (type_kind_to_string right_type_kind)
+        | Record_fields_mismatch {left_record_name; right_record_name; issues}
+          ->
+          fprintf ppf
+            "@ The record @{<info>%s@} cannot be coerced to the record \
+             @{<info>%s@} because:"
+            (Path.name left_record_name)
+            (Path.name right_record_name);
+          List.iter
+            (fun issue ->
+              fprintf ppf "@ - ";
+              print_record_field_subtype_violation ppf issue ~left_record_name
+                ~right_record_name)
+            issues)
+      | None -> ())
 
 let report_ambiguous_type_error ppf env (tp0, tp0') tpl txt1 txt2 txt3 =
   wrap_printing_env env (fun () ->

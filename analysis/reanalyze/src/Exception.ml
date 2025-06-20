@@ -249,7 +249,7 @@ let traverseAst () =
            case.c_guard |> iterExprOpt self;
            case.c_rhs |> iterExpr self)
   in
-  let isRaise s = s = "Pervasives.raise" || s = "Pervasives.raise_notrace" in
+  let isRaise s = s = "Pervasives.raise" || s = "Pervasives.throw" in
   let raiseArgs args =
     match args with
     | [(_, Some {Typedtree.exp_desc = Texp_construct ({txt}, _, _)})] ->
@@ -300,17 +300,6 @@ let traverseAst () =
         }
       when (* raise @@ Exn(...) *)
            atat |> Path.name = "Pervasives.@@" && callee |> Path.name |> isRaise
-      ->
-      let exceptions = [arg] |> raiseArgs in
-      currentEvents := {Event.exceptions; loc; kind = Raises} :: !currentEvents;
-      arg |> snd |> iterExprOpt self
-    | Texp_apply
-        {
-          funct = {exp_desc = Texp_ident (atat, _, _)};
-          args = [arg; (_lbl1, Some {exp_desc = Texp_ident (callee, _, _)})];
-        }
-      when (*  Exn(...) |> raise *)
-           atat |> Path.name = "Pervasives.|>" && callee |> Path.name |> isRaise
       ->
       let exceptions = [arg] |> raiseArgs in
       currentEvents := {Event.exceptions; loc; kind = Raises} :: !currentEvents;

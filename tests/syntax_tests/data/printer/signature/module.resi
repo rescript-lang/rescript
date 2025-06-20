@@ -24,3 +24,6 @@ module LongNaaaaame: MyModule
 
 @attr
 module LinkedList: module type of List
+
+// turn `=` into `:`
+module M = { let x: int }

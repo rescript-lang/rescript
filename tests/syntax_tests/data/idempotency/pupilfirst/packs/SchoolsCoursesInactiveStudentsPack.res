@@ -12,17 +12,17 @@ type props = {
 let decodeProps = json => {
   open Json.Decode
   {
-    teams: json |> field("teams", list(Team.decode)),
-    courseId: json |> field("courseId", string),
-    students: json |> field("students", list(Student.decode)),
-    authenticityToken: json |> field("authenticityToken", string),
-    currentPage: json |> field("currentPage", int),
-    isLastPage: json |> field("isLastPage", bool),
+    teams: json->field("teams", list(Team.decode)),
+    courseId: json->field("courseId", string),
+    students: json->field("students", list(Student.decode)),
+    authenticityToken: json->field("authenticityToken", string),
+    currentPage: json->field("currentPage", int),
+    isLastPage: json->field("isLastPage", bool),
   }
 }
 
 let props =
-  DomUtils.parseJsonAttribute(~id="sa-students-panel", ~attribute="data-props", ()) |> decodeProps
+  DomUtils.parseJsonAttribute(~id="sa-students-panel", ~attribute="data-props", ())->decodeProps
 
 ReactDOMRe.renderToElementWithId(
   <SA_InactiveStudentsPanel

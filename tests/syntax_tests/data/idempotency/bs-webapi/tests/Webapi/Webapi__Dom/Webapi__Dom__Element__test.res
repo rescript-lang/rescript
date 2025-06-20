@@ -1,8 +1,8 @@
 open Webapi.Dom
 open Element
 
-let el = document |> Document.createElement("strong")
-let el2 = document |> Document.createElement("small")
+let el = document->Document.createElement("strong")
+let el2 = document->Document.createElement("small")
 let event = PointerEvent.make("my-event")
 
 let _ = assignedSlot(el)

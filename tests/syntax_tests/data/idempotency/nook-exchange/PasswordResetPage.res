@@ -23,7 +23,7 @@ let make = (~url: ReasonReactRouter.url) => {
   let token = React.useMemo1(() => {
     open Webapi.Url.URLSearchParams
     let searchParams = make(url.search)
-    searchParams |> get("token")
+    searchParams->get("token")
   }, [url.search])
 
   let onSubmit = e => {
@@ -58,7 +58,7 @@ let make = (~url: ReasonReactRouter.url) => {
               let json = Fetch.Response.json(response)
               let username = {
                 open Json.Decode
-                json |> field("username", string)
+                json->field("username", string)
               }
               setStatus(_ => Some(Success(username)))
               Analytics.Amplitude.logEventWithProperties(
@@ -81,7 +81,7 @@ let make = (~url: ReasonReactRouter.url) => {
           setIsSubmitting(_ => false)
           Promise.resolved()
         })
-      }) |> ignore
+      })->ignore
     | None => setStatus(_ => Some(Error("Missing token")))
     }
   }

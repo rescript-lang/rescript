@@ -1,8 +1,5 @@
 {
   "name": "gpr_978",
   "version": "0.0.0",
-  "sources": [
-    "src"
-  ],
-  "bs-dependencies": []
+  "sources": ["src"]
 }

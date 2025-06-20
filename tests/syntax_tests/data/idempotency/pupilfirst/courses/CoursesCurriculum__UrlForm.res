@@ -12,9 +12,9 @@ type action =
   | ResetForm
 
 let validate = url => {
-  let urlLength = url |> String.length
+  let urlLength = url->String.length
 
-  if url |> UrlUtils.isInvalid(false) && urlLength > 0 {
+  if url->UrlUtils.isInvalid(false) && urlLength > 0 {
     list{"does not look like a valid URL"}
   } else {
     list{}
@@ -28,19 +28,19 @@ let reducer = (_state, action) =>
   }
 
 let updateUrl = (send, typingCB, event) => {
-  let value = ReactEvent.Form.target(event)["value"] |> Js.String.trim
-  typingCB(value |> String.length > 0)
+  let value = ReactEvent.Form.target(event)["value"]->Js.String.trim
+  typingCB(value->String.length > 0)
   send(UpdateUrl(value))
 }
 
 let isDisabled = state =>
   switch state.url {
   | "" => true
-  | _someUrl => state.errors |> ListUtils.isNotEmpty
+  | _someUrl => state.errors->ListUtils.isNotEmpty
   }
 
 let attachUrl = (state, send, attachUrlCB, event) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
   !isDisabled(state) ? attachUrlCB(state.url) : ()
   send(ResetForm)
 }
@@ -63,16 +63,16 @@ let make = (~attachUrlCB, ~typingCB) => {
         onClick={attachUrl(state, send, attachUrlCB)}
         disabled={isDisabled(state)}
         className="mt-2 bg-indigo-600 hover:bg-gray-500 text-white text-sm font-semibold py-2 px-6 focus:outline-none">
-        {"Attach link" |> str}
+        {"Attach link"->str}
       </button>
     </div>
     {state.errors
-    |> List.map(error =>
+    ->List.map(error =>
       <div className="mt-2 text-red-600 text-sm" key=error>
-        <i className="fas fa-exclamation-circle mr-2" /> <span> {error |> str} </span>
+        <i className="fas fa-exclamation-circle mr-2" /> <span> {error->str} </span>
       </div>
     )
-    |> Array.of_list
-    |> React.array}
+    ->Array.of_list
+    ->React.array}
   </div>
 }

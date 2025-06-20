@@ -22,55 +22,31 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
-(**
-   See the meanings of the warning codes here: https://caml.inria.fr/pub/docs/manual-ocaml/comp.html#sec281
-
-   - 30 Two labels or constructors of the same name are defined in two mutually recursive types.
-   - 40 Constructor or label name used out of scope.
-
-   - 6 Label omitted in function application.
-   - 7 Method overridden.
-   - 9 Missing fields in a record pattern. (*Not always desired, in some cases need [@@@warning "+9"] *)
-   - 27 Innocuous unused variable: unused variable that is not bound with let nor as, and doesn’t start with an underscore (_) character.
-   - 29 Unescaped end-of-line in a string constant (non-portable code).
-   - 32 .. 39 Unused blabla
-   - 44 Open statement shadows an already defined identifier.
-   - 45 Open statement shadows an already defined label or constructor.
-   - 48 Implicit elimination of optional arguments. https://caml.inria.fr/mantis/view.php?id=6352
-   - 101 (bsb-specific) unsafe polymorphic comparison.
-*)
-
 (*
-  The purpose of default warning set is to make it strict while
-  not annoy user too much
+  The purpose of the default warning set is to make it strict while not annoying the user too much.
 
-  -4 Fragile pattern matching: matching that will remain complete even if additional con- structors are added to one of the variant types matched.
-  We turn it off since common pattern
+  - 4 Fragile pattern matching: matching that will remain complete even if additional constructors are added to one of the variant types matched.
+  We turn it off since the following is a common pattern:
    {[
-     match x with | A -> .. |  _ -> false
+     switch x { | A => .. | _ => false }
    ]}
 
-   -9 Missing fields in a record pattern.
-   only in some special cases that we need all fields being listed
+   - 9 Missing fields in a record pattern.
+   Only in some special cases that we need all fields being listed
 
-   We encourage people to write code based on type based disambigution
-   40,41,42 are enabled for compatiblity reasons  
-   -40 Constructor or label name used out of scope
-   This is intentional, we should never warn it
    - 41 Ambiguous constructor or label name.
      It is turned off since it prevents such cases below:
    {[
-     type a = A |B 
+     type a = A | B
      type b = A | B | C
    ]}
-   - 42 Disambiguated constructor or label name (compatibility warning).
 
    - 50 Unexpected documentation comment.
 
-   - 102 Bs_polymorphic_comparison
+   - 102 Bs_polymorphic_comparison.
 *)
 (* If you change this, don't forget to adapt docs/docson/build-schema.json as well. *)
-let defaults_w = "+a-4-9-20-40-41-42-50-61-102"
+let defaults_w = "+a-4-9-20-41-50-102"
 
 let defaults_warn_error = "-a+5+6+101+109"
 (*TODO: add +10*)

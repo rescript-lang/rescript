@@ -9,10 +9,11 @@ bug-reports: "https://github.com/rescript-lang/rescript-compiler/issues"
 depends: [
   "ocaml" {>= "4.14"}
   "cppo" {= "1.8.0"}
-  "dune"
+  "dune" {>= "3.17"}
+  "odoc" {with-doc}
 ]
 build: [
-  ["dune" "subst"] {pinned}
+  ["dune" "subst"] {dev}
   [
     "dune"
     "build"

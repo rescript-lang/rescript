@@ -160,7 +160,7 @@ let convertPropsIfTheyreFromJs = (props, jsPropsToReason, debugName) => {
   | (Some(props), _) => props
   | (None, Some(toReasonProps)) => Element(toReasonProps(props))
   | (None, None) =>
-    raise(
+    throw(
       Invalid_argument(
         "A JS component called the Reason component " ++
         (debugName ++

@@ -26,10 +26,6 @@ let ( // ) = Filename.concat
 
 type t = Bsb_pkg_types.t
 
-(* TODO: be more restrict
-   [bsconfig.json] does not always make sense,
-   when resolving [ppx-flags]
-*)
 let make_sub_path (x : t) : string =
   Literals.node_modules // Bsb_pkg_types.to_string x
 

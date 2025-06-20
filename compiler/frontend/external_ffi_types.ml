@@ -98,7 +98,6 @@ type external_spec =
 type return_wrapper =
   | Return_unset
   | Return_identity
-  | Return_undefined_to_opt
   | Return_null_to_opt
   | Return_null_undefined_to_opt
   | Return_replaced_with_unit
@@ -246,6 +245,7 @@ let () =
            prim_native_name;
            prim_alloc = _;
            prim_from_constructor = _;
+           transformed_jsx = _;
          } :
           Primitive.description)
       (p2 : Primitive.description)

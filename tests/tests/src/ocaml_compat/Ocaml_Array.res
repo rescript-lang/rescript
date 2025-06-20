@@ -263,7 +263,7 @@ let sort = (cmp, a) => {
     } else if i31 < l {
       i31
     } else {
-      raise(Bottom(i))
+      throw(Bottom(i))
     }
   }
 

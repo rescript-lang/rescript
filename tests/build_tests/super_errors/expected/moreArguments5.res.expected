@@ -7,5 +7,8 @@
   [1;31m5[0m [2m│[0m let y = [1;31mx[0m(2).Sub.a
   6 [2m│[0m 
 
-  This function has type (int, 'a, 'b, 'c) => Sub.a
-  It is applied with [1;31m1[0m argument but it requires [1;33m4[0m.
+  This function call is incorrect.
+  The function has type:
+  (int, 'a, 'b, 'c) => Sub.a
+  
+  - The function takes [1;33m4[0m unlabelled arguments, but is called with [1;31mjust 1[0m

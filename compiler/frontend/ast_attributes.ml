@@ -279,24 +279,6 @@ let set : attr = ({txt = "set"; loc = locg}, Ast_payload.empty)
 let internal_expansive : attr =
   ({txt = "internal.expansive"; loc = locg}, Ast_payload.empty)
 
-let bs_return_undefined : attr =
-  ( {txt = "return"; loc = locg},
-    PStr
-      [
-        {
-          pstr_desc =
-            Pstr_eval
-              ( {
-                  pexp_desc =
-                    Pexp_ident {txt = Lident "undefined_to_opt"; loc = locg};
-                  pexp_loc = locg;
-                  pexp_attributes = [];
-                },
-                [] );
-          pstr_loc = locg;
-        };
-      ] )
-
 let is_gentype (attr : attr) =
   match attr with
   | {Location.txt = "genType" | "gentype"; _}, _ -> true

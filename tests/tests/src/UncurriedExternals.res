@@ -1,6 +1,6 @@
 module StandardNotation = {
   external raise: exn => 'a = "%raise"
-  let dd = () => raise(Not_found)
+  let dd = () => throw(Not_found)
 
   @val external sum: (float, float) => float = "sum"
   let h = sum(1.0, 2.0)

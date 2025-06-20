@@ -209,6 +209,7 @@ let main () =
   | [_; "format"; path] ->
     Printf.printf "\"%s\"" (Json.escape (Commands.format ~path))
   | [_; "test"; path] -> Commands.test ~path
+  | [_; "cmt"; rescript_json; cmt_path] -> CmtViewer.dump rescript_json cmt_path
   | args when List.mem "-h" args || List.mem "--help" args -> prerr_endline help
   | _ ->
     prerr_endline help;

@@ -1,9 +1,9 @@
 open Webapi.Dom
 open Node
 
-let node = document |> Document.createElement("strong") |> Element.rootNode
-let node2 = document |> Document.createElement("small") |> Element.rootNode
-let node3 = document |> Document.createElement("small") |> Element.rootNode
+let node = document->Document.createElement("strong")->Element.rootNode
+let node2 = document->Document.createElement("small")->Element.rootNode
+let node3 = document->Document.createElement("small")->Element.rootNode
 
 let _ = childNodes(node)
 let _ = firstChild(node)

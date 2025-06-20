@@ -6,5 +6,8 @@
   [1;31m2[0m [2m│[0m let y = [1;31mx[0m(2) + 2
   3 [2m│[0m 
 
-  This function has type (int, ~b: int, ~c: 'a, ~d: 'b) => int
-  It is applied with [1;31m1[0m argument but it requires [1;33m4[0m.
+  This function call is incorrect.
+  The function has type:
+  (int, ~b: int, ~c: 'a, ~d: 'b) => int
+  
+  - Missing arguments that must be provided: ~d, ~c, ~b

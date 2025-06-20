@@ -16,7 +16,7 @@ let rec exportModuleValueToType = exportModuleValue =>
   switch exportModuleValue {
   | S(s, type_) => {typeForValue: ident(s), typeForType: type_}
   | M(exportModuleItem) =>
-    let (fieldsForValue, fieldsForType) = exportModuleItem |> exportModuleItemToFields |> List.split
+    let (fieldsForValue, fieldsForType) = exportModuleItem->exportModuleItemToFields->List.split
     {
       typeForValue: Object(Open, fieldsForValue),
       typeForType: Object(Open, fieldsForType),
@@ -24,7 +24,7 @@ let rec exportModuleValueToType = exportModuleValue =>
   }
 and exportModuleItemToFields: exportModuleItem => list<(field, field)> = exportModuleItem =>
   Hashtbl.fold((fieldName, exportModuleValue, fields) => {
-    let {typeForValue, typeForType} = exportModuleValue |> exportModuleValueToType
+    let {typeForValue, typeForType} = exportModuleValue->exportModuleValueToType
     let fieldForType = {
       mutable_: Mutable,
       nameJS: fieldName,
@@ -49,7 +49,7 @@ let rec extendExportModuleItem = (x, ~exportModuleItem: exportModuleItem, ~type_
       Hashtbl.replace(exportModuleItem, fieldName, M(innerExportModuleItem))
       innerExportModuleItem
     }
-    rest |> extendExportModuleItem(~exportModuleItem=innerExportModuleItem, ~valueName, ~type_)
+    rest->extendExportModuleItem(~exportModuleItem=innerExportModuleItem, ~valueName, ~type_)
   }
 
 let extendExportModuleItems = (x, ~exportModuleItems: exportModuleItems, ~type_, ~valueName) =>
@@ -64,7 +64,7 @@ let extendExportModuleItems = (x, ~exportModuleItems: exportModuleItems, ~type_,
       Hashtbl.replace(exportModuleItems, moduleName, exportModuleItem)
       exportModuleItem
     }
-    rest |> extendExportModuleItem(~exportModuleItem, ~type_, ~valueName)
+    rest->extendExportModuleItem(~exportModuleItem, ~type_, ~valueName)
   }
 
 let createModuleItemsEmitter: unit => exportModuleItems = () => Hashtbl.create(1)
@@ -75,16 +75,16 @@ let rev_fold = (f, tbl, base) => {
 }
 
 let emitAllModuleItems = (~config, ~emitters, ~fileName, exportModuleItems: exportModuleItems) =>
-  emitters |> rev_fold((moduleName, exportModuleItem, emitters) => {
-    let {typeForValue, typeForType} = M(exportModuleItem) |> exportModuleValueToType
+  emitters->rev_fold((moduleName, exportModuleItem, emitters) => {
+    let {typeForValue, typeForType} = M(exportModuleItem)->exportModuleValueToType
     let emittedModuleItem = config.modulesAsObjects
-      ? ModuleName.forInnerModule(~fileName, ~innerModuleName=moduleName) |> ModuleName.toString
-      : typeForValue |> EmitType.typeToString(
+      ? ModuleName.forInnerModule(~fileName, ~innerModuleName=moduleName)->ModuleName.toString
+      : typeForValue->EmitType.typeToString(
           /* abuse type to print object */
           ~config={...config, language: Flow},
           ~typeNameIsInterface=_ => false,
         )
-    emittedModuleItem |> EmitType.emitExportConst(
+    emittedModuleItem->EmitType.emitExportConst(
       ~config,
       ~emitters,
       ~name=moduleName,
@@ -95,9 +95,9 @@ let emitAllModuleItems = (~config, ~emitters, ~fileName, exportModuleItems: expo
 
 let extendExportModules = (~moduleItemsEmitter: exportModuleItems, ~type_, resolvedName) =>
   resolvedName
-  |> ResolvedName.toList
-  |> extendExportModuleItems(
+  ->ResolvedName.toList
+  ->extendExportModuleItems(
     ~exportModuleItems=moduleItemsEmitter,
     ~type_,
-    ~valueName=resolvedName |> ResolvedName.toString,
+    ~valueName=resolvedName->ResolvedName.toString,
   )

@@ -10,4 +10,9 @@ let unitUncurried = apply(.)
 
 call(~a: int)
 
+// pass the result of bitwise NOT expression
+call((~a))
+call(~a=a ^ ~a)
+call(~a=~a)
+
 call_partial(3, ...)

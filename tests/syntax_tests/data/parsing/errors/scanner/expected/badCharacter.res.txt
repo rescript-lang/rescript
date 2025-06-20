@@ -4,7 +4,7 @@
 
   1 │ let $ = 1
 
-  Not sure what to do with this character.
+  Not sure what to do with this character: "$".
 
 
   Syntax error!

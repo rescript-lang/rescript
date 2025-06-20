@@ -1,4 +1,23 @@
-(* TODO: Improve error messages? Say why we can't coerce. *)
+type variant_runtime_representation_issue =
+  | Mismatched_unboxed_payload of {
+      constructor_name: string;
+      expected_typename: Path.t;
+    }
+  | Mismatched_as_payload of {
+      constructor_name: string;
+      expected_typename: Path.t;
+      as_payload: Ast_untagged_variants.tag_type option;
+    }
+  | As_payload_not_elgible_for_coercion of {
+      constructor_name: string;
+      expected_typename: Path.t;
+      as_payload: Ast_untagged_variants.tag_type;
+    }
+  | Inline_record_cannot_be_coerced of {constructor_name: string}
+  | Cannot_coerce_non_unboxed_with_payload of {
+      constructor_name: string;
+      expected_typename: Path.t;
+    }
 
 (* Right now we only allow coercing to primitives string/int/float *)
 let can_coerce_primitive (path : Path.t) =
@@ -10,12 +29,12 @@ let can_coerce_primitive (path : Path.t) =
 let check_paths_same p1 p2 target_path =
   Path.same p1 target_path && Path.same p2 target_path
 
-let variant_has_catch_all_case
-    (constructors : Types.constructor_declaration list) path_is_same =
+let variant_has_case_covering_type
+    (constructors : Types.constructor_declaration list) ~path_is_same_fn =
   let has_catch_all_string_case (c : Types.constructor_declaration) =
     let args = c.cd_args in
     match args with
-    | Cstr_tuple [{desc = Tconstr (p, [], _)}] -> path_is_same p
+    | Cstr_tuple [{desc = Tconstr (p, [], _)}] -> path_is_same_fn p
     | _ -> false
   in
 
@@ -31,35 +50,98 @@ let variant_has_same_runtime_representation_as_target ~(target_path : Path.t)
 
     match args with
     | Cstr_tuple [{desc = Tconstr (p, [], _)}] when unboxed ->
+      (* Unboxed type, and the constructor has a single item payload.*)
       let path_same = check_paths_same p target_path in
-      (* unboxed String(string) :> string *)
-      path_same Predef.path_string
-      (* unboxed Number(float) :> float *)
-      || path_same Predef.path_float
-      ||
-      (* unboxed BigInt(bigint) :> bigint *)
-      path_same Predef.path_bigint
+      if
+        (* unboxed String(string) :> string *)
+        path_same Predef.path_string
+        (* unboxed Number(float) :> float *)
+        || path_same Predef.path_float
+        ||
+        (* unboxed BigInt(bigint) :> bigint *)
+        path_same Predef.path_bigint
+      then None
+      else
+        Some
+          (Mismatched_unboxed_payload
+             {
+               constructor_name = Ident.name c.cd_id;
+               expected_typename = target_path;
+             })
     | Cstr_tuple [] -> (
       (* Check that @as payloads match with the target path to coerce to.
            No @as means the default encoding, which is string *)
       match as_payload with
-      | None | Some (String _) -> Path.same target_path Predef.path_string
-      | Some (Int _) -> Path.same target_path Predef.path_int
-      | Some (Float _) -> Path.same target_path Predef.path_float
-      | Some (BigInt _) -> Path.same target_path Predef.path_bigint
-      | Some (Null | Undefined | Bool _ | Untagged _) -> false)
-    | _ -> false
+      | None | Some (String _) ->
+        if Path.same target_path Predef.path_string then None
+        else
+          Some
+            (Mismatched_as_payload
+               {
+                 constructor_name = Ident.name c.cd_id;
+                 expected_typename = target_path;
+                 as_payload;
+               })
+      | Some (Int _) ->
+        if Path.same target_path Predef.path_int then None
+        else
+          Some
+            (Mismatched_as_payload
+               {
+                 constructor_name = Ident.name c.cd_id;
+                 expected_typename = target_path;
+                 as_payload;
+               })
+      | Some (Float _) ->
+        if Path.same target_path Predef.path_float then None
+        else
+          Some
+            (Mismatched_as_payload
+               {
+                 constructor_name = Ident.name c.cd_id;
+                 expected_typename = target_path;
+                 as_payload;
+               })
+      | Some (BigInt _) ->
+        if Path.same target_path Predef.path_bigint then None
+        else
+          Some
+            (Mismatched_as_payload
+               {
+                 constructor_name = Ident.name c.cd_id;
+                 expected_typename = target_path;
+                 as_payload;
+               })
+      | Some ((Null | Undefined | Bool _ | Untagged _) as as_payload) ->
+        Some
+          (As_payload_not_elgible_for_coercion
+             {
+               constructor_name = Ident.name c.cd_id;
+               as_payload;
+               expected_typename = target_path;
+             }))
+    | Cstr_tuple _ ->
+      Some
+        (Cannot_coerce_non_unboxed_with_payload
+           {
+             constructor_name = Ident.name c.cd_id;
+             expected_typename = target_path;
+           })
+    | Cstr_record _ ->
+      Some
+        (Inline_record_cannot_be_coerced {constructor_name = Ident.name c.cd_id})
   in
 
-  List.for_all has_same_runtime_representation constructors
+  List.filter_map has_same_runtime_representation constructors
 
 let can_try_coerce_variant_to_primitive
     ((_, p, typedecl) : Path.t * Path.t * Types.type_declaration) =
   match typedecl with
   | {type_kind = Type_variant constructors; type_params = []; type_attributes}
-    when Path.name p <> "bool" ->
+    when not (Path.same p Predef.path_bool) ->
     (* bool is represented as a variant internally, so we need to account for that *)
-    Some (constructors, type_attributes |> Ast_untagged_variants.has_untagged)
+    (* TODO(subtype-errors) Report about bool? *)
+    Some (p, constructors, type_attributes |> Ast_untagged_variants.has_untagged)
   | _ -> None
 
 let can_try_coerce_variant_to_primitive_opt p =
@@ -91,6 +173,11 @@ type variant_error =
 
 exception VariantConfigurationError of variant_error
 
+type variant_configuration_issue =
+  | Unboxed_config_not_matching of {left_unboxed: bool; right_unboxed: bool}
+  | Tag_name_not_matching of {left_tag: string option; right_tag: string option}
+  | Incompatible_constructor_count of {constructor_names: string list}
+
 let variant_configuration_can_be_coerced (a1 : Parsetree.attributes)
     (a2 : Parsetree.attributes) =
   let unboxed =
@@ -98,21 +185,25 @@ let variant_configuration_can_be_coerced (a1 : Parsetree.attributes)
       ( Ast_untagged_variants.process_untagged a1,
         Ast_untagged_variants.process_untagged a2 )
     with
-    | true, true | false, false -> true
-    | _ -> false
+    | true, true | false, false -> Ok ()
+    | left, right ->
+      Error
+        (Unboxed_config_not_matching
+           {left_unboxed = left; right_unboxed = right})
   in
-  if not unboxed then false
-  else
-    let tag =
-      match
-        ( Ast_untagged_variants.process_tag_name a1,
-          Ast_untagged_variants.process_tag_name a2 )
-      with
-      | Some tag1, Some tag2 when tag1 = tag2 -> true
-      | None, None -> true
-      | _ -> false
-    in
-    if not tag then false else true
+  let tag =
+    match
+      ( Ast_untagged_variants.process_tag_name a1,
+        Ast_untagged_variants.process_tag_name a2 )
+    with
+    | Some tag1, Some tag2 when tag1 = tag2 -> Ok ()
+    | None, None -> Ok ()
+    | tag1, tag2 ->
+      Error (Tag_name_not_matching {left_tag = tag1; right_tag = tag2})
+  in
+  match (unboxed, tag) with
+  | Ok (), Ok () -> Ok ()
+  | Error e, _ | _, Error e -> Error e
 
 let variant_configuration_can_be_coerced_raises ~is_spread_context ~left_loc
     ~right_loc ~(left_attributes : Parsetree.attributes)

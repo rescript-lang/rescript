@@ -1,0 +1,15 @@
+{
+  "name": "@utils/scripts",
+  "namespace": true,
+  "sources": [
+    {
+      "dir": "./"
+    }
+  ],
+  "bs-dependencies": ["@tests/docstring-tests"],
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": true
+  },
+  "suffix": ".res.js"
+}

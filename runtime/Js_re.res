@@ -173,8 +173,7 @@ let result = Js.Re.exec_(re, "The Quick Brown Fox Jumps Over The Lazy Dog")
 See [`RegExp.prototype.exec()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/exec)
 on MDN.
 */
-@send
-@return(null_to_opt)
+@send @return(null_to_opt)
 external exec_: (t, string) => option<result> = "exec"
 
 /**

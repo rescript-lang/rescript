@@ -71,8 +71,6 @@ val flatten_pattern : int -> pattern -> pattern list
 val expand_stringswitch :
   Location.t -> lambda -> (string * lambda) list -> lambda option -> lambda
 
-val inline_lazy_force : lambda -> Location.t -> lambda
-
 (* To be set by Lam_compile *)
 val names_from_construct_pattern :
   (pattern -> Ast_untagged_variants.switch_names option) ref

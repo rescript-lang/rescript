@@ -1,3 +1,4 @@
+@notUndefined
 type t<'a>
 
 type value<'a> = {
@@ -35,3 +36,5 @@ let make: (unit => promise<value<'value>>) => t<'value> = %raw(`function makeAsy
     }
   }
 }`)
+
+external ignore: t<'a> => unit = "%ignore"

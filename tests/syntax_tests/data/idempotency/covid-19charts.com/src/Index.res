@@ -30,7 +30,7 @@ module App = {
       ~queryFragment,
       ~coder={
         encode: x => SerializeQueryParam.string.encode(encode(x)),
-        decode: x => SerializeQueryParam.string.decode(x) |> Js.Option.andThen((. x) => decode(x)),
+        decode: x => SerializeQueryParam.string.decode(x)->Js.Option.andThen((. x) => decode(x)),
       },
     )
 
@@ -101,8 +101,8 @@ module App = {
       () => Some(17),
       ~queryFragment="threshold",
       ~coder={
-        encode: x => Belt.Option.getWithDefault(x, 1) |> SerializeQueryParam.int.encode,
-        decode: x => SerializeQueryParam.int.decode(x) |> Js.Option.map((. x) => Some(x)),
+        encode: x => Belt.Option.getWithDefault(x, 1)->SerializeQueryParam.int.encode,
+        decode: x => SerializeQueryParam.int.decode(x)->Js.Option.map((. x) => Some(x)),
       },
     )
     let startDate = UseQueryParam.hook(
@@ -115,19 +115,19 @@ module App = {
       ~queryFragment="until",
       ~coder=SerializeQueryParam.date,
     )
-    let resetDates = if Data.isInitialRange(startDate |> fst, endDate |> fst) {
+    let resetDates = if Data.isInitialRange(startDate->fst, endDate->fst) {
       None
     } else {
       Some(
         () => {
-          let setStart = startDate |> snd
-          let setEnd = endDate |> snd
+          let setStart = startDate->snd
+          let setEnd = endDate->snd
           setStart(_ => Data.startDate)
           setEnd(_ => Data.endDate)
         },
       )
     }
-    let thresholdOr1 = Belt.Option.getWithDefault(threshold |> fst, 1)
+    let thresholdOr1 = Belt.Option.getWithDefault(threshold->fst, 1)
     <div className="flex bg-white flex-col-reverse md:flex-row">
       <Filters
         startDate
@@ -142,13 +142,13 @@ module App = {
         resetDates
       />
       <Chart
-        chartType={chartType |> fst}
+        chartType={chartType->fst}
         threshold=thresholdOr1
-        timeline={timeline |> fst}
+        timeline={timeline->fst}
         locations
-        scale={scale |> fst}
-        startDate={startDate |> fst}
-        endDate={endDate |> fst}
+        scale={scale->fst}
+        startDate={startDate->fst}
+        endDate={endDate->fst}
       />
     </div>
   }

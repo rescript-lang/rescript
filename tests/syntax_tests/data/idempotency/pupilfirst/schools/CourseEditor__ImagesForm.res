@@ -22,20 +22,20 @@ let updateButtonText = updating => updating ? "Updating..." : "Update Images"
 
 let formId = "course-editor-form-image-form"
 
-let filename = optionalFilename => optionalFilename |> OptionUtils.default("unknown")
+let filename = optionalFilename => optionalFilename->OptionUtils.default("unknown")
 
 let handleUpdateCB = (json, state, course, updateCourseCB) => {
-  let coverUrl = json |> {
+  let coverUrl = json->{
     open Json.Decode
     field("cover_url", optional(string))
   }
-  let thumbnailUrl = json |> {
+  let thumbnailUrl = json->{
     open Json.Decode
     field("thumbnail_url", optional(string))
   }
 
   let newCourse =
-    course |> Course.addImages(
+    course->Course.addImages(
       ~coverUrl,
       ~thumbnailUrl,
       ~coverFilename=filename(state.filenameCover),
@@ -46,14 +46,14 @@ let handleUpdateCB = (json, state, course, updateCourseCB) => {
 }
 
 let handleUpdateImages = (send, state, course, updateCourseCB, event) => {
-  event |> ReactEvent.Form.preventDefault
+  event->ReactEvent.Form.preventDefault
   send(BeginUpdate)
 
   let element = ReactDOMRe._getElementById(formId)
   switch element {
   | Some(element) =>
     Api.sendFormData(
-      "courses/" ++ ((course |> Course.id) ++ "/attach_images"),
+      "courses/" ++ ((course->Course.id) ++ "/attach_images"),
       DomUtils.FormData.create(element),
       json => {
         Notification.success("Done!", "Images have been updated successfully.")
@@ -77,18 +77,18 @@ let optionalImageLabelText = (image, selectedFilename) =>
   switch selectedFilename {
   | Some(name) =>
     <span>
-      {"You have selected " |> str}
-      <code className="mr-1"> {name |> str} </code>
-      {". Click to replace the current image." |> str}
+      {"You have selected "->str}
+      <code className="mr-1"> {name->str} </code>
+      {". Click to replace the current image."->str}
     </span>
   | None =>
     switch image {
     | Some(existingImage) =>
       <span>
-        {"Please pick a file to replace " |> str}
-        <code> {existingImage |> Course.filename |> str} </code>
+        {"Please pick a file to replace "->str}
+        <code> {existingImage->Course.filename->str} </code>
       </span>
-    | None => "Please choose an image file." |> str
+    | None => "Please choose an image file."->str
     }
   }
 
@@ -105,8 +105,8 @@ let isInvalidImageFile = image =>
 let updateImage = (send, isCover, event) => {
   let imageFile = ReactEvent.Form.target(event)["files"][0]
   isCover
-    ? send(SelectCover(imageFile["name"], imageFile |> isInvalidImageFile))
-    : send(SelectThumb(imageFile["name"], imageFile |> isInvalidImageFile))
+    ? send(SelectCover(imageFile["name"], imageFile->isInvalidImageFile))
+    : send(SelectThumb(imageFile["name"], imageFile->isInvalidImageFile))
 }
 
 let initialState = () => {
@@ -141,8 +141,8 @@ let reducer = (state, action) =>
 let make = (~course, ~updateCourseCB, ~closeDrawerCB) => {
   let (state, send) = React.useReducer(reducer, initialState())
 
-  let thumbnail = course |> Course.thumbnail
-  let cover = course |> Course.cover
+  let thumbnail = course->Course.thumbnail
+  let cover = course->Course.cover
   <SchoolAdmin__EditorDrawer closeDrawerCB>
     <form
       id=formId
@@ -151,20 +151,20 @@ let make = (~course, ~updateCourseCB, ~closeDrawerCB) => {
       onSubmit={handleUpdateImages(send, state, course, updateCourseCB)}>
       <input name="authenticity_token" type_="hidden" value={AuthenticityToken.fromHead()} />
       <h5 className="uppercase text-center border-b border-gray-400 pb-2">
-        {"Course Images" |> str}
+        {"Course Images"->str}
       </h5>
       <DisablingCover disabled=state.updating>
         <div key="course-images-editor__thumbnail" className="mt-4">
           <label
             className="tracking-wide text-gray-800 text-xs font-semibold"
             htmlFor="sc-images-editor__logo-on-400-bg-input">
-            {"Thumbnail" |> str}
+            {"Thumbnail"->str}
           </label>
           <HelpIcon
             className="text-xs ml-1"
             responsiveAlignment=HelpIcon.NonResponsive(AlignLeft)
             link="https://docs.pupilfirst.com/#/courses?id=course-images">
-            {"The thumbnail will be displayed on the homepage, and here in the admin courses list." |> str}
+            {"The thumbnail will be displayed on the homepage, and here in the admin courses list."->str}
           </HelpIcon>
           <input
             disabled=state.updating
@@ -191,13 +191,13 @@ let make = (~course, ~updateCourseCB, ~closeDrawerCB) => {
           <label
             className="tracking-wide text-gray-800 text-xs font-semibold"
             htmlFor="sc-images-editor__logo-on-400-bg-input">
-            {"Cover Image" |> str}
+            {"Cover Image"->str}
           </label>
           <HelpIcon
             className="text-xs ml-1"
             responsiveAlignment=HelpIcon.NonResponsive(AlignLeft)
             link="https://docs.pupilfirst.com/#/courses?id=course-images">
-            {"The cover image for a course will be displayed at the top of all student pages within the course." |> str}
+            {"The cover image for a course will be displayed at the top of all student pages within the course."->str}
           </HelpIcon>
           <input
             disabled=state.updating
@@ -225,7 +225,7 @@ let make = (~course, ~updateCourseCB, ~closeDrawerCB) => {
           key="sc-images-editor__update-button"
           disabled={updateButtonDisabled(state)}
           className="btn btn-primary btn-large mt-6">
-          {updateButtonText(state.updating) |> str}
+          {updateButtonText(state.updating)->str}
         </button>
       </DisablingCover>
     </form>

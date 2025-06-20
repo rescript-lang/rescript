@@ -27,45 +27,45 @@ let reducer = (state, action) =>
       dirtyContentBlockIds: Belt.Set.String.empty,
     }
   | AddContentBlock(newContentBlock) =>
-    let newBlockSortIndex = newContentBlock |> ContentBlock.sortIndex
+    let newBlockSortIndex = newContentBlock->ContentBlock.sortIndex
     {
       ...state,
       contentBlocks: state.contentBlocks
-      |> Array.map(contentBlock => {
-        let sortIndex = contentBlock |> ContentBlock.sortIndex
+      ->Array.map(contentBlock => {
+        let sortIndex = contentBlock->ContentBlock.sortIndex
 
         if sortIndex < newBlockSortIndex {
           contentBlock
         } else {
-          contentBlock |> ContentBlock.incrementSortIndex
+          contentBlock->ContentBlock.incrementSortIndex
         }
       })
-      |> Array.append([newContentBlock]),
+      ->Array.append([newContentBlock]),
     }
   | UpdateContentBlock(updatedContentBlock) => {
       ...state,
-      contentBlocks: state.contentBlocks |> Array.map(contentBlock =>
-        contentBlock |> ContentBlock.id == (updatedContentBlock |> ContentBlock.id)
+      contentBlocks: state.contentBlocks->Array.map(contentBlock =>
+        contentBlock->ContentBlock.id == (updatedContentBlock->ContentBlock.id)
           ? updatedContentBlock
           : contentBlock
       ),
       dirtyContentBlockIds: state.dirtyContentBlockIds->Belt.Set.String.remove(
-        updatedContentBlock |> ContentBlock.id,
+        updatedContentBlock->ContentBlock.id,
       ),
     }
   | RemoveContentBlock(contentBlockId) => {
       ...state,
-      contentBlocks: state.contentBlocks |> Js.Array.filter(contentBlock =>
-        contentBlock |> ContentBlock.id != contentBlockId
+      contentBlocks: state.contentBlocks->Js.Array.filter(contentBlock =>
+        contentBlock->ContentBlock.id != contentBlockId
       ),
     }
   | MoveContentBlockUp(contentBlock) => {
       ...state,
-      contentBlocks: state.contentBlocks |> ContentBlock.moveUp(contentBlock),
+      contentBlocks: state.contentBlocks->ContentBlock.moveUp(contentBlock),
     }
   | MoveContentBlockDown(contentBlock) => {
       ...state,
-      contentBlocks: state.contentBlocks |> ContentBlock.moveDown(contentBlock),
+      contentBlocks: state.contentBlocks->ContentBlock.moveDown(contentBlock),
     }
   | SetDirty(contentBlockId, dirty) =>
     let operation = dirty ? Belt.Set.String.add : Belt.Set.String.remove
@@ -77,9 +77,9 @@ let reducer = (state, action) =>
 
 let loadContentBlocks = (targetId, send) =>
   ContentBlock.Query.make(~targetId, ())
-  |> GraphqlQuery.sendQuery(~notify=true)
-  |> Js.Promise.then_(result => {
-    let contentBlocks = result["contentBlocks"] |> Js.Array.map(ContentBlock.makeFromJs)
+  ->GraphqlQuery.sendQuery(~notify=true)
+  ->Js.Promise.then_(result => {
+    let contentBlocks = result["contentBlocks"]->Js.Array.map(ContentBlock.makeFromJs)
 
     let versions = Version.makeArrayFromJs(result["versions"])
 
@@ -87,7 +87,7 @@ let loadContentBlocks = (targetId, send) =>
 
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 
 let addContentBlock = (send, contentBlock) => send(AddContentBlock(contentBlock))
 
@@ -103,52 +103,52 @@ let updateContentBlock = (send, contentBlock) => send(UpdateContentBlock(content
 
 let editor = (target, state, send) => {
   let currentVersion = switch state.versions {
-  | [] => <span className="italic"> {"Not Versioned" |> str} </span>
+  | [] => <span className="italic"> {"Not Versioned"->str} </span>
   | versions =>
     let latestVersion =
-      versions->Array.unsafe_get(0) |> Version.updatedAt |> DateFns.format("MMM D, YYYY HH:MM")
+      versions->Array.unsafe_get(0)->Version.updatedAt->DateFns.format("MMM D, YYYY HH:MM")
 
-    latestVersion |> str
+    latestVersion->str
   }
 
-  let sortedContentBlocks = state.contentBlocks |> ContentBlock.sort
-  let numberOfContentBlocks = state.contentBlocks |> Array.length
+  let sortedContentBlocks = state.contentBlocks->ContentBlock.sort
+  let numberOfContentBlocks = state.contentBlocks->Array.length
 
   let removeContentBlockCB = numberOfContentBlocks > 1 ? Some(removeContentBlock(send)) : None
 
   <div className="mt-2">
     <div className="flex justify-between items-end">
-      {switch target |> Target.visibility {
+      {switch target->Target.visibility {
       | Live =>
         <a
-          href={"/targets/" ++ (target |> Target.id)}
+          href={"/targets/" ++ (target->Target.id)}
           target="_blank"
           className="py-2 px-3 font-semibold rounded-lg text-sm focus:outline-none bg-primary-100 text-primary-500">
           <FaIcon classes="fas fa-external-link-alt" />
-          <span className="ml-2"> {"View as Student" |> str} </span>
+          <span className="ml-2"> {"View as Student"->str} </span>
         </a>
       | Draft
       | Archived => React.null
       }}
       <div className="w-1/6">
-        <label className="text-xs block text-gray-600 mb-1"> {"Last Updated" |> str} </label>
+        <label className="text-xs block text-gray-600 mb-1"> {"Last Updated"->str} </label>
         <span className="truncate text-left"> currentVersion </span>
       </div>
     </div>
     {sortedContentBlocks
-    |> Array.mapi((index, contentBlock) => {
+    ->Array.mapi((index, contentBlock) => {
       let moveContentBlockUpCB = index == 0 ? None : Some(moveContentBlockUp(send))
       let moveContentBlockDownCB =
         index + 1 == numberOfContentBlocks ? None : Some(moveContentBlockDown(send))
-      let isDirty = state.dirtyContentBlockIds->Belt.Set.String.has(contentBlock |> ContentBlock.id)
+      let isDirty = state.dirtyContentBlockIds->Belt.Set.String.has(contentBlock->ContentBlock.id)
       let updateContentBlockCB = isDirty ? Some(updateContentBlock(send)) : None
 
-      <div key={contentBlock |> ContentBlock.id}>
+      <div key={contentBlock->ContentBlock.id}>
         <CurriculumEditor__ContentBlockCreator
           target aboveContentBlock=contentBlock addContentBlockCB={addContentBlock(send)}
         />
         <CurriculumEditor__ContentBlockEditor
-          setDirtyCB={setDirty(contentBlock |> ContentBlock.id, send)}
+          setDirtyCB={setDirty(contentBlock->ContentBlock.id, send)}
           contentBlock
           ?removeContentBlockCB
           ?moveContentBlockUpCB
@@ -157,7 +157,7 @@ let editor = (target, state, send) => {
         />
       </div>
     })
-    |> React.array}
+    ->React.array}
     <CurriculumEditor__ContentBlockCreator target addContentBlockCB={addContentBlock(send)} />
   </div>
 }
@@ -175,12 +175,12 @@ let make = (~target, ~setDirtyCB) => {
   )
 
   React.useEffect0(() => {
-    loadContentBlocks(target |> Target.id, send)
+    loadContentBlocks(target->Target.id, send)
     None
   })
 
   React.useEffect1(() => {
-    let dirty = !(state.dirtyContentBlockIds |> Belt.Set.String.isEmpty)
+    let dirty = !(state.dirtyContentBlockIds->Belt.Set.String.isEmpty)
     setDirtyCB(dirty)
     None
   }, [state.dirtyContentBlockIds])

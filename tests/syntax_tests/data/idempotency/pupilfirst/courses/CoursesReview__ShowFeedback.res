@@ -20,8 +20,8 @@ let createFeedback = (submissionId, feedback, setState, addFeedbackCB) => {
   setState(state => {...state, saving: true})
 
   CreateFeedbackMutation.make(~submissionId, ~feedback, ())
-  |> GraphqlQuery.sendQuery
-  |> Js.Promise.then_(response => {
+  ->GraphqlQuery.sendQuery
+  ->Js.Promise.then_(response => {
     response["createFeedback"]["success"]
       ? {
           addFeedbackCB(feedback)
@@ -30,30 +30,30 @@ let createFeedback = (submissionId, feedback, setState, addFeedbackCB) => {
       : setState(state => {...state, saving: false})
     Js.Promise.resolve()
   })
-  |> ignore
+  ->ignore
 }
 
 let showFeedback = feedback =>
   feedback
-  |> Array.mapi((index, f) =>
-    <div key={index |> string_of_int} className="border-t p-4 md:p-6">
+  ->Array.mapi((index, f) =>
+    <div key={index->string_of_int} className="border-t p-4 md:p-6">
       <div className="flex items-center">
         <div
           className="flex-shrink-0 w-12 h-12 bg-gray-300 rounded-full overflow-hidden mr-3 object-cover">
-          {switch f |> Feedback.coachAvatarUrl {
+          {switch f->Feedback.coachAvatarUrl {
           | Some(avatarUrl) => <img src=avatarUrl />
-          | None => <Avatar name={f |> Feedback.coachName} />
+          | None => <Avatar name={f->Feedback.coachName} />
           }}
         </div>
         <div>
-          <p className="text-xs leading-tight"> {"Feedback from:" |> str} </p>
+          <p className="text-xs leading-tight"> {"Feedback from:"->str} </p>
           <div>
             <h4 className="font-semibold text-base leading-tight block md:inline-flex self-end">
-              {f |> Feedback.coachName |> str}
+              {f->Feedback.coachName->str}
             </h4>
             <span
               className="block md:inline-flex text-xs text-gray-800 md:ml-2 leading-tight self-end">
-              {"(" ++ ((f |> Feedback.coachTitle) ++ ")") |> str}
+              {"(" ++ ((f->Feedback.coachTitle) ++ ")")->str}
             </span>
           </div>
         </div>
@@ -61,15 +61,15 @@ let showFeedback = feedback =>
       <div className="md:ml-15">
         <p
           className="text-xs leading-tight font-semibold inline-block p-1 bg-gray-200 rounded mt-3">
-          {f |> Feedback.createdAtPretty |> str}
+          {f->Feedback.createdAtPretty->str}
         </p>
         <MarkdownBlock
-          className="pt-1 text-sm" profile=Markdown.Permissive markdown={f |> Feedback.value}
+          className="pt-1 text-sm" profile=Markdown.Permissive markdown={f->Feedback.value}
         />
       </div>
     </div>
   )
-  |> React.array
+  ->React.array
 
 let updateFeedbackCB = (setState, newFeedback) =>
   setState(state => {...state, newFeedback: newFeedback})
@@ -112,7 +112,7 @@ let make = (
                     className="btn btn-success border border-green-600 w-full md:w-auto"
                     onClick={_ =>
                       createFeedback(submissionId, state.newFeedback, setState, addFeedbackCB)}>
-                    {"Share Feedback" |> str}
+                    {"Share Feedback"->str}
                   </button>
                 </div>
               </div>
@@ -123,7 +123,7 @@ let make = (
                   {switch feedback {
                   | [] => "Add feedback"
                   | _ => "Add another feedback"
-                  } |> str}
+                  }->str}
                 </button>
               </div>}
         </div>

@@ -1,13 +1,15 @@
-//@ts-check
-const cp = require("child_process");
-const assert = require("assert");
-const fs = require("fs");
-const path = require("path");
-const { rescript_exe } = require("#cli/bin_path");
+// @ts-check
 
-const output = cp.spawnSync(rescript_exe, { encoding: "utf8", shell: true });
-assert(/M is exported twice/.test(output.stdout));
+import * as assert from "node:assert";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { setup } from "#dev/process";
 
-const compilerLogFile = path.join(__dirname, "lib", "bs", ".compiler.log");
-const compilerLog = fs.readFileSync(compilerLogFile, "utf8");
-assert(/M is exported twice/.test(compilerLog));
+const { execBuild } = setup(import.meta.dirname);
+
+const output = await execBuild();
+assert.match(output.stdout, /M is exported twice/);
+
+const compilerLogFile = path.join("lib", "bs", ".compiler.log");
+const compilerLog = await fs.readFile(compilerLogFile, "utf8");
+assert.match(compilerLog, /M is exported twice/);

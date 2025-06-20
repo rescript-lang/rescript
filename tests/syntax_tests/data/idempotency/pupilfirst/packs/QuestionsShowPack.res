@@ -16,20 +16,20 @@ type props = {
 let decodeProps = json => {
   open Json.Decode
   {
-    question: json |> field("questions", Question.decode),
-    answers: json |> field("answers", list(Answer.decode)),
-    comments: json |> field("comments", list(Comment.decode)),
-    users: json |> field("users", list(User.decode)),
-    likes: json |> field("likes", list(Like.decode)),
-    currentUserId: json |> field("currentUserId", string),
-    communityPath: json |> field("communityPath", string),
-    isCoach: json |> field("isCoach", bool),
-    communityId: json |> field("communityId", string),
-    target: json |> field("target", nullable(Target.decode)) |> Js.Null.toOption,
+    question: json->field("questions", Question.decode),
+    answers: json->field("answers", list(Answer.decode)),
+    comments: json->field("comments", list(Comment.decode)),
+    users: json->field("users", list(User.decode)),
+    likes: json->field("likes", list(Like.decode)),
+    currentUserId: json->field("currentUserId", string),
+    communityPath: json->field("communityPath", string),
+    isCoach: json->field("isCoach", bool),
+    communityId: json->field("communityId", string),
+    target: json->field("target", nullable(Target.decode))->Js.Null.toOption,
   }
 }
 
-let props = DomUtils.parseJsonAttribute() |> decodeProps
+let props = DomUtils.parseJsonAttribute()->decodeProps
 
 ReactDOMRe.renderToElementWithId(
   <QuestionsShow

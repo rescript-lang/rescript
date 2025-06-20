@@ -10,19 +10,19 @@ let levelZeroSelectorClasses = isSelected => {
 }
 
 let levelName = level =>
-  "L" ++ ((level |> Level.number |> string_of_int) ++ (": " ++ (level |> Level.name)))
+  "L" ++ ((level->Level.number->string_of_int) ++ (": " ++ (level->Level.name)))
 
 let selectableLevels = (orderedLevels, teamLevel, setSelectedLevelId) => {
-  let teamLevelNumber = teamLevel |> Level.number
+  let teamLevelNumber = teamLevel->Level.number
   orderedLevels
-  |> List.map(level => {
-    let levelNumber = level |> Level.number
+  ->List.map(level => {
+    let levelNumber = level->Level.number
 
     let icon = if levelNumber < teamLevelNumber {
       "fas fa-check text-green-500"
     } else if levelNumber == teamLevelNumber {
       "fas fa-map-marker-alt text-blue-400"
-    } else if level |> Level.isUnlocked {
+    } else if level->Level.isUnlocked {
       "inline-block"
     } else {
       "fas fa-lock text-gray-600"
@@ -30,20 +30,20 @@ let selectableLevels = (orderedLevels, teamLevel, setSelectedLevelId) => {
 
     <button
       className="focus:outline-none p-2 w-full text-left"
-      key={level |> Level.id}
-      onClick={_ => setSelectedLevelId(level |> Level.id)}>
+      key={level->Level.id}
+      onClick={_ => setSelectedLevelId(level->Level.id)}>
       <span className="mr-2"> <FaIcon classes={"fa-fw " ++ icon} /> </span>
-      {levelName(level) |> str}
+      {levelName(level)->str}
     </button>
   })
-  |> Array.of_list
+  ->Array.of_list
 }
 
 let untabbedLevelSelector = (selectedLevel, orderedLevels, teamLevel, setSelectedLevelId) => {
   let selected =
     <button className="font-semibold w-full px-2 h-10 flex items-center justify-between">
       <span className="flex-grow text-center truncate w-0">
-        {selectedLevel |> levelName |> str}
+        {selectedLevel->levelName->str}
       </span>
       <FaIcon classes="fas fa-caret-down ml-1" />
     </button>
@@ -68,7 +68,7 @@ let tabbedLevelSelector = (
     <button
       className="rounded-l-lg font-semibold w-full px-2 h-10 flex items-center justify-between">
       <span className="flex-grow text-center truncate w-0">
-        {selectedLevel |> levelName |> str}
+        {selectedLevel->levelName->str}
       </span>
       <FaIcon classes={"fas fa-caret-down ml-1" ++ (hideCaret ? " invisible" : "")} />
     </button>
@@ -93,9 +93,9 @@ let tabbedLevelSelector = (
       className={"border-l rounded-r-lg bg-white border-gray-400 font-semibold truncate hover:bg-gray-100 hover:text-primary-500 " ++
       levelZeroSelectorClasses(showLevelZero)}
       onClick={_e => setShowLevelZero(true)}>
-      {levelZero |> Level.name |> str}
+      {levelZero->Level.name->str}
     </button>,
-  ] |> React.array
+  ]->React.array
 }
 
 @react.component
@@ -108,7 +108,7 @@ let make = (
   ~setShowLevelZero,
   ~levelZero,
 ) => {
-  let orderedLevels = levels |> List.filter(l => l |> Level.number != 0) |> Level.sort
+  let orderedLevels = levels->List.filter(l => l->Level.number != 0)->Level.sort
 
   <div className="bg-gray-100 px-3 py-2 mt-3 md:px-0 sticky top-0 z-20">
     <div

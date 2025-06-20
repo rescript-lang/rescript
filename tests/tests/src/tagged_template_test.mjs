@@ -26,7 +26,7 @@ function foo(strings, values) {
   let res = "";
   let valueCount = values.length;
   for (let i = 0; i < valueCount; ++i) {
-    res = res + Primitive_array.get(strings, i) + Math.imul(Primitive_array.get(values, i), 10).toString();
+    res = res + Primitive_array.get(strings, i) + (Primitive_array.get(values, i) * 10 | 0).toString();
   }
   return res + Primitive_array.get(strings, valueCount);
 }

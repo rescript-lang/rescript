@@ -43,7 +43,7 @@ let handle_extension e (self : Bs_ast_mapper.mapper)
     in
 
     Exp.apply ~loc
-      (Exp.ident ~loc {txt = Longident.parse "Js.Exn.raiseError"; loc})
+      (Exp.ident ~loc {txt = Longident.parse "JsError.throwWithMessage"; loc})
       [
         ( Nolabel,
           Exp.constant ~loc
@@ -60,7 +60,7 @@ let handle_extension e (self : Bs_ast_mapper.mapper)
   | "re" ->
     Exp.constraint_ ~loc
       (Ast_exp_handle_external.handle_raw ~kind:Raw_re loc payload)
-      (Ast_comb.to_js_re_type loc)
+      (Ast_comb.to_regexp_type loc)
   | "external" -> (
     Location.deprecated loc
       "%external is deprecated, use %raw or regular FFI syntax instead.";

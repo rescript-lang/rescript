@@ -1,12 +1,12 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/function_return_mismatch.res[0m:[2m9:3-5[0m
+  [36m/.../fixtures/function_return_mismatch.res[0m:[2m11:3-5[0m
 
-   7 [2m│[0m 
-   8 [2m│[0m let x = fnExpectingCleanup(() => {
-   [1;31m9[0m [2m│[0m   [1;31m123[0m
-  10 [2m│[0m })
-  11 [2m│[0m 
+   9 [2m│[0m   Console.log("Hello, world!")
+  10 [2m│[0m   let _f = 2
+  [1;31m11[0m [2m│[0m   [1;31m123[0m
+  12 [2m│[0m })
+  13 [2m│[0m 
 
   This has type: [1;31mint[0m
   But it's expected to have type: [1;33mcleanup[0m [2m(defined as[0m [1;33munit => unit[0m[2m)[0m

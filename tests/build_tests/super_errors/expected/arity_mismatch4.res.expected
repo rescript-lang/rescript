@@ -1,0 +1,13 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/arity_mismatch4.res[0m:[2m2:21-27[0m
+
+  1 [2m│[0m let makeVar = (~f) => 34
+  [1;31m2[0m [2m│[0m let makeVariables = [1;31mmakeVar[0m(1, ~f=f => f)
+  3 [2m│[0m 
+
+  This function call is incorrect.
+  The function has type:
+  (~f: 'a) => int
+  
+  - The function takes [1;33mno[0m unlabelled arguments, but is called with [1;31m1[0m

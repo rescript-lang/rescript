@@ -8,7 +8,6 @@ let Pervasives$1 = {
   invalid_arg: Pervasives.invalid_arg,
   Exit: Pervasives.Exit,
   abs: Pervasives.abs,
-  lnot: Pervasives.lnot,
   max_int: Pervasives.max_int,
   min_int: Pervasives.min_int,
   infinity: Pervasives.infinity,

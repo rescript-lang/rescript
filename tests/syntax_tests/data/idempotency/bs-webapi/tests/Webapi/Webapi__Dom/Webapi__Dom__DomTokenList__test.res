@@ -1,7 +1,7 @@
 open Webapi.Dom
 open DomTokenList
 
-let tlist = document |> Document.createElement("div") |> Element.classList
+let tlist = document->Document.createElement("div")->Element.classList
 
 let _ = length(tlist)
 let _ = item(3, tlist)

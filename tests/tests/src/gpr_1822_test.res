@@ -11,7 +11,6 @@ let eq = (loc, x, y) => {
 
 type shape =
   | Circle(int)
-
   | Rectangle(int, int)
 
 let myShape = Circle(10)

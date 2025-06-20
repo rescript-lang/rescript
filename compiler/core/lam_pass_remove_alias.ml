@@ -140,19 +140,23 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
                     | _ -> true)
              && Lam_analysis.lfunction_can_be_inlined lfunction ->
         simpl (Lam_beta_reduce.propagate_beta_reduce meta params body args)
-      | _ -> Lam.apply (simpl l1) (Ext_list.map args simpl) ap_info)
+      | _ ->
+        Lam.apply (simpl l1) (Ext_list.map args simpl) ap_info
+          ?ap_transformed_jsx:None)
     (* Function inlining interact with other optimizations...
 
        - parameter attributes
        - scope issues
        - code bloat
     *)
-    | Lapply {ap_func = Lvar v as fn; ap_args; ap_info} -> (
+    | Lapply {ap_func = Lvar v as fn; ap_args; ap_info; ap_transformed_jsx} -> (
       (* Check info for always inlining *)
 
       (* Ext_log.dwarn __LOC__ "%s/%d" v.name v.stamp;     *)
       let ap_args = Ext_list.map ap_args simpl in
-      let[@local] normal () = Lam.apply (simpl fn) ap_args ap_info in
+      let[@local] normal () =
+        Lam.apply (simpl fn) ap_args ap_info ~ap_transformed_jsx
+      in
       match Hash_ident.find_opt meta.ident_tbl v with
       | Some
           (FunctionId
@@ -221,8 +225,8 @@ let simplify_alias (meta : Lam_stats.t) (lam : Lam.t) : Lam.t =
     (*   *\) *)
     (*   when  Ext_list.same_length params args -> *)
     (*   simpl (Lam_beta_reduce.propogate_beta_reduce meta params body args) *)
-    | Lapply {ap_func = l1; ap_args = ll; ap_info} ->
-      Lam.apply (simpl l1) (Ext_list.map ll simpl) ap_info
+    | Lapply {ap_func = l1; ap_args = ll; ap_info; ap_transformed_jsx} ->
+      Lam.apply (simpl l1) (Ext_list.map ll simpl) ap_info ~ap_transformed_jsx
     | Lfunction {arity; params; body; attr} ->
       Lam.function_ ~arity ~params ~body:(simpl body) ~attr
     | Lswitch

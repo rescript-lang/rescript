@@ -104,12 +104,12 @@ let add2 = (y: coll, e: key) =>
   };
 
 let test =
-moduleTypeDeclaration |> TranslateSignature.translateModuleTypeDeclaration(
+moduleTypeDeclaration->TranslateSignature.translateModuleTypeDeclaration(
          ~config,
          ~outputFileRelative,
          ~resolver,
          ~typeEnv,
-       ) |> doStuff(~x, ~y)
+       )->doStuff(~x, ~y)
 
 // labelled arguments
 // callback in last position

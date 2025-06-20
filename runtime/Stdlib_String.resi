@@ -76,8 +76,7 @@ String.fromCharCodeMany([189, 43, 190, 61]) == "½+¾="
 String.fromCharCodeMany([65, 66, 67]) == "ABC"
 ```
 */
-@variadic
-@val
+@variadic @val
 external fromCharCodeMany: array<int> => string = "String.fromCharCode"
 
 /**
@@ -119,8 +118,7 @@ String.fromCodePointMany([0xd55c, 0xae00, 0x1f63a]) == `한글😺`
 `fromCharCode([1, -5])`.
 
 */
-@variadic
-@val
+@variadic @val
 external fromCodePointMany: array<int> => string = "String.fromCodePoint"
 
 external equal: (string, string) => bool = "%equal"
@@ -250,8 +248,7 @@ See [`String.concat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 String.concatMany("1st", ["2nd", "3rd", "4th"]) == "1st2nd3rd4th"
 ```
 */
-@variadic
-@send
+@variadic @send
 external concatMany: (string, array<string>) => string = "concat"
 
 /**
@@ -442,8 +439,7 @@ String.match("The optional example", %re("/(foo)?(example)/")) == Some([Some("ex
 String.match("The large container.", %re("/b[aeiou]g/")) == None
 ```
 */
-@return(nullable)
-@send
+@return(nullable) @send
 external match: (string, Stdlib_RegExp.t) => option<Stdlib_RegExp.Result.t> = "match"
 
 /**
@@ -595,7 +591,7 @@ let matchFn = (~match, ~offset as _, ~input as _) => String.toUpperCase(match)
 String.unsafeReplaceRegExpBy0(str, re, matchFn) == "bEAUtIfUl vOwEls"
 ```
 */
-@send
+@deprecated("Use `replaceRegExpBy0Unsafe` instead") @send
 external unsafeReplaceRegExpBy0: (
   string,
   Stdlib_RegExp.t,
@@ -618,7 +614,7 @@ let matchFn = (~match as _, ~group1, ~offset as _, ~input as _) => {
 String.unsafeReplaceRegExpBy1(str, re, matchFn) == "Jony is 41"
 ```
 */
-@send
+@deprecated("Use `replaceRegExpBy1Unsafe` instead") @send
 external unsafeReplaceRegExpBy1: (
   string,
   Stdlib_RegExp.t,
@@ -644,7 +640,7 @@ let matchFn = (~match as _, ~group1, ~group2, ~offset as _, ~input as _) => {
 String.unsafeReplaceRegExpBy2(str, re, matchFn) == "42"
 ```
 */
-@send
+@deprecated("Use `replaceRegExpBy2Unsafe` instead") @send
 external unsafeReplaceRegExpBy2: (
   string,
   Stdlib_RegExp.t,
@@ -652,12 +648,104 @@ external unsafeReplaceRegExpBy2: (
 ) => string = "replace"
 
 /**
-`unsafeReplaceRegExpBy3(str, regexp, f)`. Like `unsafeReplaceRegExpBy1`, but `f`
+`unsafeReplaceRegExpBy3(str, regexp, f)`. Like `unsafeReplaceRegExpBy2`, but `f`
+has three group parameters.
+See [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace) on MDN.
+*/
+@deprecated("Use `replaceRegExpBy3Unsafe` instead") @send
+external unsafeReplaceRegExpBy3: (
+  string,
+  Stdlib_RegExp.t,
+  (
+    ~match: string,
+    ~group1: string,
+    ~group2: string,
+    ~group3: string,
+    ~offset: int,
+    ~input: string,
+  ) => string,
+) => string = "replace"
+
+/**
+`replaceRegExpBy0Unsafe(str, regex, f)` returns a new `string` with some or all
+matches of a pattern with no capturing parentheses replaced by the value
+returned from the given function. The function receives as its parameters the
+matched string, the offset at which the match begins, and the whole string being
+matched.
+See [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace) on MDN.
+
+## Examples
+
+```rescript
+let str = "beautiful vowels"
+let re = %re("/[aeiou]/g")
+let matchFn = (~match, ~offset as _, ~input as _) => String.toUpperCase(match)
+String.replaceRegExpBy0Unsafe(str, re, matchFn) == "bEAUtIfUl vOwEls"
+```
+*/
+@send
+external replaceRegExpBy0Unsafe: (
+  string,
+  Stdlib_RegExp.t,
+  (~match: string, ~offset: int, ~input: string) => string,
+) => string = "replace"
+
+/**
+`replaceRegExpBy1Unsafe(str, regexp, f)`. Like `replaceRegExpBy0Unsafe`, but `f`
+has `group1` parameter.
+See [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace) on MDN.
+
+## Examples
+
+```rescript
+let str = "Jony is 40"
+let re = %re("/(Jony is )\d+/g")
+let matchFn = (~match as _, ~group1, ~offset as _, ~input as _) => {
+  group1 ++ "41"
+}
+String.replaceRegExpBy1Unsafe(str, re, matchFn) == "Jony is 41"
+```
+*/
+@send
+external replaceRegExpBy1Unsafe: (
+  string,
+  Stdlib_RegExp.t,
+  (~match: string, ~group1: string, ~offset: int, ~input: string) => string,
+) => string = "replace"
+
+/**
+`replaceRegExpBy2Unsafe(str, regexp, f)`. Like `replaceRegExpBy1Unsafe`, but `f`
+has two group parameters.
+See [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace) on MDN.
+
+## Examples
+
+```rescript
+let str = "7 times 6"
+let re = %re("/(\d+) times (\d+)/")
+let matchFn = (~match as _, ~group1, ~group2, ~offset as _, ~input as _) => {
+  switch (Int.fromString(group1), Int.fromString(group2)) {
+  | (Some(x), Some(y)) => Int.toString(x * y)
+  | _ => "???"
+  }
+}
+String.replaceRegExpBy2Unsafe(str, re, matchFn) == "42"
+```
+*/
+@send
+external replaceRegExpBy2Unsafe: (
+  string,
+  Stdlib_RegExp.t,
+  (~match: string, ~group1: string, ~group2: string, ~offset: int, ~input: string) => string,
+) => string = "replace"
+
+/**
+`replaceRegExpBy3Unsafe(str, regexp, f)`. Like `replaceRegExpBy2Unsafe`, but `f`
 has three group parameters.
 See [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace) on MDN.
 */
 @send
-external unsafeReplaceRegExpBy3: (
+external replaceRegExpBy3Unsafe: (
   string,
   Stdlib_RegExp.t,
   (
@@ -795,11 +883,8 @@ See [`String.split`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Ref
 ## Examples
 
 ```rescript
-String.splitByRegExpAtMost("Hello World. How are you doing?", %re("/ /"), ~limit=3) == [
-  Some("Hello"),
-  Some("World."),
-  Some("How"),
-]
+String.splitByRegExpAtMost("Hello World. How are you doing?", / /, ~limit=3) ==
+  [Some("Hello"), Some("World."), Some("How")]
 ```
 */
 @send
@@ -1027,3 +1112,11 @@ String.localeCompare("a", "a") == 0.0
 */
 @send
 external localeCompare: (string, string) => float = "localeCompare"
+
+/**
+  `ignore(string)` ignores the provided string and returns unit.
+
+  This helper is useful when you want to discard a value (for example, the result of an operation with side effects)
+  without having to store or process it further.
+*/
+external ignore: string => unit = "%ignore"

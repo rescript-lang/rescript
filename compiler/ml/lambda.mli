@@ -56,7 +56,6 @@ type tag_info =
   | Blk_some_not_nested
     (* ['a option] where ['a] can not inhabit a non-like value *)
   | Blk_record_ext of {fields: string array; mutable_flag: mutable_flag}
-  | Blk_lazy_general
 
 val find_name : Parsetree.attribute -> Asttypes.label option
 
@@ -173,9 +172,11 @@ type primitive =
   | Pmulint
   | Pdivint
   | Pmodint
+  | Ppowint
   | Pandint
   | Porint
   | Pxorint
+  | Pnotint
   | Plslint
   | Plsrint
   | Pasrint
@@ -195,6 +196,7 @@ type primitive =
   | Psubfloat
   | Pmulfloat
   | Pdivfloat
+  | Ppowfloat
   | Pfloatcomp of comparison
   | Pfloatorder
   | Pfloatmin
@@ -210,6 +212,7 @@ type primitive =
   | Pandbigint
   | Porbigint
   | Pxorbigint
+  | Pnotbigint
   | Plslbigint
   | Pasrbigint
   | Pbigintcomp of comparison
@@ -236,6 +239,7 @@ type primitive =
   | Pmakelist of Asttypes.mutable_flag
   (* dict primitives *)
   | Pmakedict
+  | Pdict_has
   (* promise *)
   | Pawait
   (* modules *)
@@ -260,7 +264,6 @@ type primitive =
   (* js *)
   | Pcurry_apply of int
   | Pjscomp of comparison
-  | Pundefined_to_opt
   | Pnull_to_opt
   | Pnullable_to_opt
   | Pis_not_none
@@ -349,6 +352,7 @@ and lambda_apply = {
   ap_args: lambda list;
   ap_loc: Location.t;
   ap_inlined: inline_attribute; (* specified with the [@inlined] attribute *)
+  ap_transformed_jsx: bool;
 }
 
 and lambda_switch = {

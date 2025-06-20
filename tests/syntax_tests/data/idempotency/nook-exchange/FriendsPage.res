@@ -35,9 +35,9 @@ let fetchFeed = () =>
       open Json.Decode
       let feed =
         json
-        |> array(json => {
+        ->array(json => {
           let items =
-            (json |> field("items", dict(User.itemFromJson)))
+            (json->field("items", dict(User.itemFromJson)))
             ->Js.Dict.entries
             ->Belt.Array.keepMap(((itemKey, item)) =>
               item->Belt.Option.flatMap(item =>
@@ -48,19 +48,19 @@ let fetchFeed = () =>
                 ))
               )
             )
-              |> Js.Array.sortInPlaceWith(((_, _, aItem: User.item), (_, _, bItem: User.item)) =>
+              ->Js.Array.sortInPlaceWith(((_, _, aItem: User.item), (_, _, bItem: User.item)) =>
                 compareOptionTimestamps(aItem.timeUpdated, bItem.timeUpdated)
               )
           {
-            id: json |> field("id", string),
-            username: json |> field("username", string),
+            id: json->field("id", string),
+            username: json->field("username", string),
             lastUpdate: Belt.Array.get(items, 0)->Belt.Option.flatMap(((_, _, item)) =>
               item.timeUpdated
             ),
             items: items,
           }
         })
-        |> Js.Array.sortInPlaceWith((a, b) => compareOptionTimestamps(a.lastUpdate, b.lastUpdate))
+        ->Js.Array.sortInPlaceWith((a, b) => compareOptionTimestamps(a.lastUpdate, b.lastUpdate))
       Promise.resolved(feed)
     })
   })
@@ -207,7 +207,7 @@ module Followee = {
                   | Error(_) => ()
                   }
                   Promise.resolved()
-                }) |> ignore
+                })->ignore
               }}
               className=Styles.unfollowLink>
               {React.string("Unfollow")}
@@ -217,8 +217,8 @@ module Followee = {
       {!unfollowed
         ? <div className=Styles.items>
             {followee.items
-            |> Js.Array.slice(~start=0, ~end_=numCards - 1)
-            |> Js.Array.map(((itemId, variant, userItem)) =>
+            ->Js.Array.slice(~start=0, ~end_=numCards - 1)
+            ->Js.Array.map(((itemId, variant, userItem)) =>
               <ItemCard
                 itemId
                 variant
@@ -227,7 +227,7 @@ module Followee = {
                 key={string_of_int(itemId) ++ string_of_int(variant)}
               />
             )
-            |> React.array}
+            ->React.array}
             {Js.Array.length(followee.items) > 0
               ? <Link
                   path={"/u/" ++ (followee.username ++ "?s=tu")}
@@ -288,7 +288,7 @@ module WithViewer = {
           ~eventProperties={"numFollowees": Js.Array.length(feed)},
         )
         Promise.resolved()
-      }) |> ignore
+      })->ignore
       None
     })
 
@@ -299,8 +299,8 @@ module WithViewer = {
         Js.Array.length(feed) > 0
           ? <div>
               {feed
-              |> Js.Array.map(followee => <Followee followee key=followee.id />)
-              |> React.array}
+              ->Js.Array.map(followee => <Followee followee key=followee.id />)
+              ->React.array}
             </div>
           : <div className=Styles.emptyFeed>
               {React.string("Visit people's profiles to add them to your friends page!")}

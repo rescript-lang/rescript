@@ -6,13 +6,13 @@ let feedbackClasses = truncated => truncated ? "relative overflow-hidden h-12" :
 
 let optionalStringLength = feedback =>
   switch feedback {
-  | Some(f) => f |> String.length
+  | Some(f) => f->String.length
   | None => 0
   }
 
 @react.component
 let make = (~feedback) => {
-  let truncationRequired = feedback |> optionalStringLength > 150
+  let truncationRequired = feedback->optionalStringLength > 150
 
   let (truncated, setTruncated) = React.useState(() => truncationRequired)
 
@@ -25,7 +25,7 @@ let make = (~feedback) => {
             <button
               className="block w-full text-center rounded-lg text-primary-500 text-xs font-semibold focus:outline-none hover:text-primary-400"
               onClick={_ => setTruncated(_ => false)}>
-              <span className="inline-block bg-gray-100 px-2"> {"Show All" |> str} </span>
+              <span className="inline-block bg-gray-100 px-2"> {"Show All"->str} </span>
             </button>
           </div>
         : React.null}

@@ -1999,7 +1999,7 @@ function process_collision(dir, c1, c2, state) {
               evolve_enemy(o1.dir, typ, s2, o2, context)
             ];
           }
-          let score = Math.imul(100, state.multiplier);
+          let score = 100 * state.multiplier | 0;
           update_score(state, score);
           o2.score = score;
           state.multiplier = (state.multiplier << 1);

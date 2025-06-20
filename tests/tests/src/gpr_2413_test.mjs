@@ -16,7 +16,7 @@ function f(x) {
       break;
   }
   let a$3 = x._0._0;
-  return Math.imul(a$3, a$3);
+  return a$3 * a$3 | 0;
 }
 
 function ff(c) {

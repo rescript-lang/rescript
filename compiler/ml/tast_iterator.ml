@@ -135,7 +135,6 @@ let pat sub {pat_extra; pat_desc; pat_env; _} =
     sub.pat sub p1;
     sub.pat sub p2
   | Tpat_alias (p, _, _) -> sub.pat sub p
-  | Tpat_lazy p -> sub.pat sub p
 
 let expr sub {exp_extra; exp_desc; exp_env; _} =
   let extra = function
@@ -202,7 +201,6 @@ let expr sub {exp_extra; exp_desc; exp_env; _} =
     sub.extension_constructor sub cd;
     sub.expr sub exp
   | Texp_assert exp -> sub.expr sub exp
-  | Texp_lazy exp -> sub.expr sub exp
   | Texp_pack mexpr -> sub.module_expr sub mexpr
   | Texp_extension_constructor _ -> ()
 

@@ -224,7 +224,7 @@ type viewMode =
 let make = (~listId, ~url: ReasonReactRouter.url) => {
   let (showCloneMessage, setShowCloneMessage) = React.useState(() => {
     open Webapi.Url.URLSearchParams
-    make(url.search) |> has("clone")
+    make(url.search)->has("clone")
   })
   let (list, setList) = React.useState(() => None)
   let (editTitle, setEditTitle) = React.useState(() => "")
@@ -235,13 +235,13 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
         let json = Fetch.Response.json(Belt.Result.getExn(response))
         open Json.Decode
         let list: QuicklistStore.t = {
-          id: Some(json |> field("id", string)),
-          title: (json |> optional(field("title", string)))
+          id: Some(json->field("id", string)),
+          title: (json->optional(field("title", string)))
             ->Belt.Option.flatMap(title => title != "" ? Some(title) : None),
-          userId: json |> optional(field("userId", string)),
-          itemIds: json |> field("itemIds", array(tuple2(int, int))),
+          userId: json->optional(field("userId", string)),
+          itemIds: json->field("itemIds", array(tuple2(int, int))),
         }
-        let username = json |> optional(field("username", string))
+        let username = json->optional(field("username", string))
         setList(_ => Some((list, username)))
         setEditTitle(_ => list.title->Belt.Option.getWithDefault(""))
         Analytics.Amplitude.logEventWithProperties(
@@ -253,7 +253,7 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
         )
         Promise.resolved()
       })
-    }) |> ignore
+    })->ignore
     None
   })
   React.useEffect0(() => {
@@ -265,8 +265,8 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
 
   let onTitleSubmit = e => {
     ReactEvent.Form.preventDefault(e)
-    let editTitle = editTitle |> Js.String.slice(~from=0, ~to_=48)
-    QuicklistStore.updateListTitle(~listId, ~title=Some(editTitle)) |> ignore
+    let editTitle = editTitle->Js.String.slice(~from=0, ~to_=48)
+    QuicklistStore.updateListTitle(~listId, ~title=Some(editTitle))->ignore
     setList(list =>
       list->Belt.Option.map(((list, username)) => (
         {...list, title: editTitle != "" ? Some(editTitle) : None},
@@ -396,7 +396,7 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
             onChange={sort => {
               let p = []
               switch ItemFilters.serializeSort(~sort, ~defaultSort=ListTimeAdded) {
-              | Some(param) => p |> Js.Array.push(param) |> ignore
+              | Some(param) => p->Js.Array.push(param)->ignore
               | None => ()
               }
               let urlSearchParams = Webapi.Url.URLSearchParams.makeWithArray(p)
@@ -512,10 +512,10 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
             | Thumbnail => Styles.thumbnails
             }}>
             {list.itemIds
-            |> (sort !== ListTimeAdded
+            ->(sort !== ListTimeAdded
               ? x => {
                   let sortFn = ItemFilters.getSort(~sort)
-                  x |> Js.Array.sortInPlaceWith(((aItemId, aVariant), (bItemId, bVariant)) => {
+                  x->Js.Array.sortInPlaceWith(((aItemId, aVariant), (bItemId, bVariant)) => {
                     let aItem = Item.getItem(~itemId=aItemId)
                     let bItem = Item.getItem(~itemId=bItemId)
                     switch sortFn(aItem, bItem) {
@@ -525,7 +525,7 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
                   })
                 }
               : x => x)
-            |> Js.Array.mapi(((itemId, variant), i) =>
+            ->Js.Array.mapi(((itemId, variant), i) =>
               switch viewMode {
               | Grid =>
                 <UserItemCard
@@ -543,7 +543,7 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
               | List => <ListRow itemId variant key={string_of_int(i)} />
               }
             )
-            |> React.array}
+            ->React.array}
           </div>
         } else {
           React.null
@@ -576,7 +576,7 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
                         let json = Fetch.Response.json(Belt.Result.getExn(response))
                         let newListId = {
                           open Json.Decode
-                          json |> field("id", string)
+                          json->field("id", string)
                         }
                         ReasonReactRouter.push("/l/" ++ (newListId ++ "?clone"))
                         Analytics.Amplitude.logEventWithProperties(
@@ -589,7 +589,7 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
                         )
                         Promise.resolved()
                       })
-                    }) |> ignore
+                    })->ignore
                   }}
                   className=Styles.cloneListLink>
                   {React.string("Clone list")}
@@ -614,7 +614,7 @@ let make = (~listId, ~url: ReasonReactRouter.url) => {
                             UserStore.handleServerResponse("/item-lists/delete", response)
                             ReasonReactRouter.push("/lists")
                             Promise.resolved()
-                          }) |> ignore,
+                          })->ignore,
                         (),
                       )
                     }}

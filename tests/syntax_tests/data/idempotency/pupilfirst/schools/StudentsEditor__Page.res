@@ -8,8 +8,8 @@ let updateTeam = (team, t) =>
   switch t {
   | Unloaded => Unloaded
   | PartiallyLoaded(teams, cursor) =>
-    PartiallyLoaded(teams |> StudentsEditor__Team.replaceTeam(team), cursor)
-  | FullyLoaded(teams) => FullyLoaded(teams |> StudentsEditor__Team.replaceTeam(team))
+    PartiallyLoaded(teams->StudentsEditor__Team.replaceTeam(team), cursor)
+  | FullyLoaded(teams) => FullyLoaded(teams->StudentsEditor__Team.replaceTeam(team))
   }
 
 let teams = t =>

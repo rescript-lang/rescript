@@ -18,15 +18,15 @@ type state = {
 let targetStatusClasses = targetStatus => {
   let statusClasses =
     "curriculum__target-status--" ++
-    (targetStatus |> TargetStatus.statusToString |> Js.String.toLowerCase)
+    (targetStatus->TargetStatus.statusToString->Js.String.toLowerCase)
   "curriculum__target-status px-3 py-px ml-4 h-6 " ++ statusClasses
 }
 
 let rendertarget = (target, statusOfTargets) => {
-  let targetId = target |> Target.id
+  let targetId = target->Target.id
   let targetStatus =
-    statusOfTargets |> ListUtils.unsafeFind(
-      ts => ts |> TargetStatus.targetId == targetId,
+    statusOfTargets->ListUtils.unsafeFind(
+      ts => ts->TargetStatus.targetId == targetId,
       "Could not find targetStatus for listed target with ID " ++ targetId,
     )
 
@@ -35,41 +35,41 @@ let rendertarget = (target, statusOfTargets) => {
     key={"target-" ++ targetId}
     className="bg-white border-t p-6 flex items-center justify-between hover:bg-gray-200 hover:text-primary-500 cursor-pointer"
     ariaLabel={"Select Target " ++ targetId}>
-    <span className="font-semibold text-left leading-snug"> {target |> Target.title |> str} </span>
+    <span className="font-semibold text-left leading-snug"> {target->Target.title->str} </span>
     <span className={targetStatusClasses(targetStatus)}>
-      {targetStatus |> TargetStatus.statusToString |> str}
+      {targetStatus->TargetStatus.statusToString->str}
     </span>
   </Link>
 }
 
 let renderTargetGroup = (targetGroup, targets, statusOfTargets) => {
-  let targetGroupId = targetGroup |> TargetGroup.id
-  let targets = targets |> List.filter(t => t |> Target.targetGroupId == targetGroupId)
+  let targetGroupId = targetGroup->TargetGroup.id
+  let targets = targets->List.filter(t => t->Target.targetGroupId == targetGroupId)
 
   <div
     key={"target-group-" ++ targetGroupId}
     className="curriculum__target-group-container relative mt-5 px-3">
     <div
       className="curriculum__target-group max-w-3xl mx-auto bg-white text-center rounded-lg shadow-md relative z-10 overflow-hidden ">
-      {targetGroup |> TargetGroup.milestone
+      {targetGroup->TargetGroup.milestone
         ? <div
             className="inline-block px-3 py-2 bg-orange-400 font-bold text-xs rounded-b-lg leading-tight text-white uppercase">
-            {"Milestone targets" |> str}
+            {"Milestone targets"->str}
           </div>
         : React.null}
       <div className="p-6 pt-5">
         <div className="text-2xl font-bold leading-snug">
-          {targetGroup |> TargetGroup.name |> str}
+          {targetGroup->TargetGroup.name->str}
         </div>
         <div className="text-sm max-w-md mx-auto leading-snug mt-1">
-          {targetGroup |> TargetGroup.description |> str}
+          {targetGroup->TargetGroup.description->str}
         </div>
       </div>
       {targets
-      |> List.sort((t1, t2) => (t1 |> Target.sortIndex) - (t2 |> Target.sortIndex))
-      |> List.map(target => rendertarget(target, statusOfTargets))
-      |> Array.of_list
-      |> React.array}
+      ->List.sort((t1, t2) => (t1->Target.sortIndex) - (t2->Target.sortIndex))
+      ->List.map(target => rendertarget(target, statusOfTargets))
+      ->Array.of_list
+      ->React.array}
     </div>
   </div>
 }
@@ -77,8 +77,8 @@ let renderTargetGroup = (targetGroup, targets, statusOfTargets) => {
 let addSubmission = (setState, latestSubmission) =>
   setState(state => {
     let withoutSubmissionForThisTarget =
-      state.latestSubmissions |> List.filter(s =>
-        s |> LatestSubmission.targetId != (latestSubmission |> LatestSubmission.targetId)
+      state.latestSubmissions->List.filter(s =>
+        s->LatestSubmission.targetId != (latestSubmission->LatestSubmission.targetId)
       )
 
     {
@@ -89,14 +89,14 @@ let addSubmission = (setState, latestSubmission) =>
 
 let handleLockedLevel = level =>
   <div className="max-w-xl mx-auto text-center mt-4">
-    <div className="font-semibold text-2xl font-bold px-3"> {"Level Locked" |> str} </div>
+    <div className="font-semibold text-2xl font-bold px-3"> {"Level Locked"->str} </div>
     <img className="max-w-sm mx-auto" src=levelLockedImage />
-    {switch level |> Level.unlockOn {
+    {switch level->Level.unlockOn {
     | Some(date) =>
-      let dateString = date |> DateFns.parseString |> DateFns.format("MMMM D, YYYY")
+      let dateString = date->DateFns.parseString->DateFns.format("MMMM D, YYYY")
       <div className="font-semibold text-md px-3">
-        <p> {"The level is currently locked!" |> str} </p>
-        <p> {"You can access the content on " ++ (dateString ++ ".") |> str} </p>
+        <p> {"The level is currently locked!"->str} </p>
+        <p> {"You can access the content on " ++ (dateString ++ ".")->str} </p>
       </div>
     | None => React.null
     }}
@@ -104,23 +104,23 @@ let handleLockedLevel = level =>
 
 let statusOfMilestoneTargets = (targetGroups, targets, level, statusOfTargets) => {
   let targetGroupsInLevel =
-    targetGroups |> List.filter(tg => tg |> TargetGroup.levelId == (level |> Level.id))
+    targetGroups->List.filter(tg => tg->TargetGroup.levelId == (level->Level.id))
   let milestoneTargetGroupIds =
     targetGroupsInLevel
-    |> List.filter(tg => tg |> TargetGroup.milestone)
-    |> List.map(tg => tg |> TargetGroup.id)
+    ->List.filter(tg => tg->TargetGroup.milestone)
+    ->List.map(tg => tg->TargetGroup.id)
 
   let milestoneTargetIds =
     targets
-    |> List.filter(t => (t |> Target.targetGroupId)->List.mem(milestoneTargetGroupIds))
-    |> List.map(t => t |> Target.id)
+    ->List.filter(t => (t->Target.targetGroupId)->List.mem(milestoneTargetGroupIds))
+    ->List.map(t => t->Target.id)
 
-  statusOfTargets |> List.filter(ts => (ts |> TargetStatus.targetId)->List.mem(milestoneTargetIds))
+  statusOfTargets->List.filter(ts => (ts->TargetStatus.targetId)->List.mem(milestoneTargetIds))
 }
 
 let isLevelComplete = (targetStatuses, eligibleStatuses) =>
-  targetStatuses |> ListUtils.isNotEmpty &&
-    targetStatuses |> TargetStatus.matchesStatuses(eligibleStatuses)
+  targetStatuses->ListUtils.isNotEmpty &&
+    targetStatuses->TargetStatus.matchesStatuses(eligibleStatuses)
 
 let computeLevelUp = (
   levels,
@@ -130,11 +130,11 @@ let computeLevelUp = (
   statusOfTargets,
   accessLockedLevels,
 ) => {
-  let lastLevel = switch teamLevel |> Level.number {
+  let lastLevel = switch teamLevel->Level.number {
   | 0
   | 1 =>
     None
-  | levelTwoOrAbove => levels |> ListUtils.findOpt(l => l |> Level.number == levelTwoOrAbove - 1)
+  | levelTwoOrAbove => levels->ListUtils.findOpt(l => l->Level.number == levelTwoOrAbove - 1)
   }
 
   let statusOfCurrentMilestoneTargets = statusOfMilestoneTargets(
@@ -163,13 +163,13 @@ let computeLevelUp = (
   }
 
   let nextLevel =
-    levels |> ListUtils.findOpt(l => l |> Level.number == (teamLevel |> Level.number) + 1)
+    levels->ListUtils.findOpt(l => l->Level.number == (teamLevel->Level.number) + 1)
 
   switch (nextLevel, currentLevelComplete, lastLevelComplete) {
   | (Some(level), true, true) =>
-    level |> Level.isUnlocked || accessLockedLevels ? Notice.LevelUp : Nothing
+    level->Level.isUnlocked || accessLockedLevels ? Notice.LevelUp : Nothing
   | (None, true, true) => CourseComplete
-  | (Some(_), true, false) => LevelUpBlocked(teamLevel |> Level.number)
+  | (Some(_), true, false) => LevelUpBlocked(teamLevel->Level.number)
   | (Some(_) | None, false, false | true)
   | (None, true, false) =>
     Nothing
@@ -187,7 +187,7 @@ let computeNotice = (
   preview,
   accessLockedLevels,
 ) =>
-  switch (preview, course |> Course.hasEnded, team |> Team.accessEnded) {
+  switch (preview, course->Course.hasEnded, team->Team.accessEnded) {
   | (true, _, _) => Notice.Preview
   | (false, true, true | false) => CourseEnded
   | (false, false, true) => AccessEnded
@@ -205,18 +205,18 @@ let navigationLink = (direction, level, setState) => {
     icon->Belt.Option.mapWithDefault(React.null, icon => <FaIcon classes={"fas " ++ icon} />)
 
   <button
-    onClick={_ => setState(state => {...state, selectedLevelId: level |> Level.id})}
+    onClick={_ => setState(state => {...state, selectedLevelId: level->Level.id})}
     className="block w-full focus:outline-none p-4 text-center border rounded-lg bg-gray-100 hover:bg-gray-200 cursor-pointer">
     {arrow(leftIcon)}
-    <span className="mx-2 hidden md:inline"> {longText |> str} </span>
-    <span className="mx-2 inline md:hidden"> {shortText |> str} </span>
+    <span className="mx-2 hidden md:inline"> {longText->str} </span>
+    <span className="mx-2 inline md:hidden"> {shortText->str} </span>
     {arrow(rightIcon)}
   </button>
 }
 
 let quickNavigationLinks = (levels, selectedLevel, setState) => {
-  let previous = selectedLevel |> Level.previous(levels)
-  let next = selectedLevel |> Level.next(levels)
+  let previous = selectedLevel->Level.previous(levels)
+  let next = selectedLevel->Level.next(levels)
 
   <div>
     <hr className="my-6" />
@@ -230,7 +230,7 @@ let quickNavigationLinks = (levels, selectedLevel, setState) => {
           <div key="next" className="w-1/2 ml-2">
             {navigationLink(#Next, nextLevel, setState)}
           </div>,
-        ] |> React.array
+        ]->React.array
 
       | (Some(previousUrl), None) =>
         <div className="w-full"> {navigationLink(#Previous, previousUrl, setState)} </div>
@@ -261,8 +261,8 @@ let make = (
   let selectedTarget = switch url.path {
   | list{"targets", targetId, ..._} =>
     Some(
-      targets |> ListUtils.unsafeFind(
-        t => t |> Target.id == targetId,
+      targets->ListUtils.unsafeFind(
+        t => t->Target.id == targetId,
         "Could not find selectedTarget with ID " ++ targetId,
       ),
     )
@@ -277,26 +277,26 @@ let make = (
    * used to determine currentLevelId, which is the actual level whose contents
    * are shown on the page. */
 
-  let levelZero = levels |> ListUtils.findOpt(l => l |> Level.number == 0)
-  let teamLevelId = team |> Team.levelId
+  let levelZero = levels->ListUtils.findOpt(l => l->Level.number == 0)
+  let teamLevelId = team->Team.levelId
 
   let teamLevel =
-    levels |> ListUtils.unsafeFind(
-      l => l |> Level.id == teamLevelId,
+    levels->ListUtils.unsafeFind(
+      l => l->Level.id == teamLevelId,
       "Could not find teamLevel with ID " ++ teamLevelId,
     )
 
   let targetLevelId = switch selectedTarget {
   | Some(target) =>
-    let targetGroupId = target |> Target.targetGroupId
+    let targetGroupId = target->Target.targetGroupId
 
     let targetGroup =
-      targetGroups |> ListUtils.unsafeFind(
-        t => t |> TargetGroup.id == targetGroupId,
+      targetGroups->ListUtils.unsafeFind(
+        t => t->TargetGroup.id == targetGroupId,
         "Could not find targetGroup with ID " ++ targetGroupId,
       )
 
-    Some(targetGroup |> TargetGroup.levelId)
+    Some(targetGroup->TargetGroup.levelId)
   | None => None
   }
 
@@ -317,14 +317,14 @@ let make = (
 
     {
       selectedLevelId: switch (preview, targetLevelId, levelZero) {
-      | (true, None, None) => levels |> Level.first |> Level.id
+      | (true, None, None) => levels->Level.first->Level.id
       | (_, Some(targetLevelId), Some(levelZero)) =>
-        levelZero |> Level.id == targetLevelId ? teamLevelId : targetLevelId
+        levelZero->Level.id == targetLevelId ? teamLevelId : targetLevelId
       | (_, Some(targetLevelId), None) => targetLevelId
       | (_, None, _) => teamLevelId
       },
       showLevelZero: switch (levelZero, targetLevelId) {
-      | (Some(levelZero), Some(targetLevelId)) => levelZero |> Level.id == targetLevelId
+      | (Some(levelZero), Some(targetLevelId)) => levelZero->Level.id == targetLevelId
       | (Some(_), None)
       | (None, Some(_))
       | (None, None) => false
@@ -346,26 +346,26 @@ let make = (
   })
 
   let currentLevelId = switch (levelZero, state.showLevelZero) {
-  | (Some(levelZero), true) => levelZero |> Level.id
+  | (Some(levelZero), true) => levelZero->Level.id
   | (Some(_), false)
   | (None, true | false) =>
     state.selectedLevelId
   }
 
   let currentLevel =
-    levels |> ListUtils.unsafeFind(
-      l => l |> Level.id == currentLevelId,
+    levels->ListUtils.unsafeFind(
+      l => l->Level.id == currentLevelId,
       "Could not find currentLevel with id " ++ currentLevelId,
     )
 
   let selectedLevel =
-    levels |> ListUtils.unsafeFind(
-      l => l |> Level.id == state.selectedLevelId,
+    levels->ListUtils.unsafeFind(
+      l => l->Level.id == state.selectedLevelId,
       "Could not find selectedLevel with id " ++ state.selectedLevelId,
     )
 
   React.useEffect1(() => {
-    if initialRender |> React.Ref.current {
+    if initialRender->React.Ref.current {
       initialRender->React.Ref.setCurrent(false)
     } else {
       let newStatusOfTargets = computeTargetStatus(state.latestSubmissions)
@@ -390,15 +390,15 @@ let make = (
   }, [state.latestSubmissions])
 
   let targetGroupsInLevel =
-    targetGroups |> List.filter(tg => tg |> TargetGroup.levelId == currentLevelId)
+    targetGroups->List.filter(tg => tg->TargetGroup.levelId == currentLevelId)
 
   <div className="bg-gray-100 pt-11 pb-8 -mt-7">
     {switch selectedTarget {
     | Some(target) =>
       let targetStatus =
-        state.statusOfTargets |> ListUtils.unsafeFind(
-          ts => ts |> TargetStatus.targetId == (target |> Target.id),
-          "Could not find targetStatus for selectedTarget with ID " ++ (target |> Target.id),
+        state.statusOfTargets->ListUtils.unsafeFind(
+          ts => ts->TargetStatus.targetId == (target->Target.id),
+          "Could not find targetStatus for selectedTarget with ID " ++ (target->Target.id),
         )
 
       <CoursesCurriculum__Overlay
@@ -432,21 +432,21 @@ let make = (
             setState(state => {...state, showLevelZero: showLevelZero})}
           levelZero
         />
-        {currentLevel |> Level.isLocked && accessLockedLevels
+        {currentLevel->Level.isLocked && accessLockedLevels
           ? <div className="text-center p-3 mt-5 border rounded-lg bg-blue-100 max-w-3xl mx-auto">
-              {"This level is still locked for students, and will be unlocked on " |> str}
-              <strong> {currentLevel |> Level.unlockDateString |> str} </strong>
-              {"." |> str}
+              {"This level is still locked for students, and will be unlocked on "->str}
+              <strong> {currentLevel->Level.unlockDateString->str} </strong>
+              {"."->str}
             </div>
           : React.null}
-        {currentLevel |> Level.isUnlocked || accessLockedLevels
+        {currentLevel->Level.isUnlocked || accessLockedLevels
           ? targetGroupsInLevel
-            |> TargetGroup.sort
-            |> List.map(targetGroup =>
+            ->TargetGroup.sort
+            ->List.map(targetGroup =>
               renderTargetGroup(targetGroup, targets, state.statusOfTargets)
             )
-            |> Array.of_list
-            |> React.array
+            ->Array.of_list
+            ->React.array
           : handleLockedLevel(currentLevel)}
       </div>
     }}

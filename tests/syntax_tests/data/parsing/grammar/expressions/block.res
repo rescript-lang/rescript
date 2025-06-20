@@ -14,7 +14,7 @@ let b = {
 
 let b = {
   exception QuitEarly
-  raise(QuitEarly)
+  throw(QuitEarly)
 }
 
 // let-bindings
@@ -59,7 +59,7 @@ let b = {
   let b = 2;
   sideEffect();
   let x = (1 + 2)->(x => x + 1);
-  raise(Terminate(x)); 
+  throw(Terminate(x)); 
 }
 
 let b = {
@@ -143,7 +143,7 @@ let reifyStyle = (type a, x: 'a): (style<a>, a) => {
     } else if Internal.instanceOf(x, Internal.canvasPattern) {
       Obj.magic(Pattern)
     } else {
-      raise(
+      throw(
         Invalid_argument(
           "Unknown canvas style kind. Known values are: String, CanvasGradient, CanvasPattern",
         ),

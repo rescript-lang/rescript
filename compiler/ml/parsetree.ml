@@ -182,8 +182,7 @@ and pattern_desc =
     (* `A             (None)
        `A P           (Some P)
     *)
-  | Ppat_record of
-      (Longident.t loc * pattern * bool (* optional *)) list * closed_flag
+  | Ppat_record of pattern record_element list * closed_flag
     (* { l1=P1; ...; ln=Pn }     (flag = Closed)
        { l1=P1; ...; ln=Pn; _}   (flag = Open)
 
@@ -193,7 +192,6 @@ and pattern_desc =
   | Ppat_or of pattern * pattern (* P1 | P2 *)
   | Ppat_constraint of pattern * core_type (* (P : T) *)
   | Ppat_type of Longident.t loc (* #tconst *)
-  | Ppat_lazy of pattern (* lazy P *)
   | Ppat_unpack of string loc
     (* (module P)
        Note: (module P : S) is represented as
@@ -204,8 +202,9 @@ and pattern_desc =
   | Ppat_open of Longident.t loc * pattern
 (* M.(P) *)
 
-(* Value expressions *)
+and pat_record_label = Longident.t loc * pattern * bool (* optional *)
 
+(* Value expressions *)
 and expression = {
   pexp_desc: expression_desc;
   pexp_loc: Location.t;
@@ -244,6 +243,7 @@ and expression_desc =
       funct: expression;
       args: (arg_label * expression) list;
       partial: bool;
+      transformed_jsx: bool;
     }
     (* E0 ~l1:E1 ... ~ln:En
        li can be empty (non labeled argument) or start with '?'
@@ -269,9 +269,7 @@ and expression_desc =
     (* `A             (None)
        `A E           (Some E)
     *)
-  | Pexp_record of
-      (Longident.t loc * expression * bool (* optional *)) list
-      * expression option
+  | Pexp_record of expression record_element list * expression option
     (* { l1=P1; ...; ln=Pn }     (None)
        { E0 with l1=P1; ...; ln=Pn }   (Some E0)
 
@@ -301,7 +299,6 @@ and expression_desc =
     (* assert E
        Note: "assert false" is treated in a special way by the
        type-checker. *)
-  | Pexp_lazy of expression (* lazy E *)
   | Pexp_newtype of string loc * expression (* fun (type t) -> E *)
   | Pexp_pack of module_expr
     (* (module ME)
@@ -313,11 +310,78 @@ and expression_desc =
        let open M in E
        let! open M in E *)
   | Pexp_extension of extension
-(* [%id] *)
-(* . *)
+  (* [%id] *)
+  (* . *)
+  | Pexp_await of expression
+  | Pexp_jsx_element of jsx_element
+
+(* an element of a record pattern or expression *)
+and 'a record_element = {lid: Longident.t loc; x: 'a; opt: bool (* optional *)}
+
+and jsx_element =
+  | Jsx_fragment of jsx_fragment
+  | Jsx_unary_element of jsx_unary_element
+  | Jsx_container_element of jsx_container_element
+
+and jsx_fragment = {
+  (* > *) jsx_fragment_opening: Lexing.position;
+  (* children *) jsx_fragment_children: jsx_children;
+  (* </ *) jsx_fragment_closing: Lexing.position;
+}
+
+and jsx_unary_element = {
+  jsx_unary_element_tag_name: Longident.t loc;
+  jsx_unary_element_props: jsx_props;
+}
+
+and jsx_container_element = {
+  (* jsx_container_element_opening_tag_start: Lexing.position; *)
+  jsx_container_element_tag_name_start: Longident.t loc;
+  (* > *)
+  jsx_container_element_opening_tag_end: Lexing.position;
+  jsx_container_element_props: jsx_props;
+  jsx_container_element_children: jsx_children;
+  jsx_container_element_closing_tag: jsx_closing_container_tag option;
+}
+
+and jsx_prop =
+  (*
+   *   |  lident
+   *   | ?lident
+   *)
+  | JSXPropPunning of (* optional *) bool * (* name *) string loc
+  (*
+   *   |  lident =  jsx_expr
+   *   |  lident = ?jsx_expr
+   *)
+  | JSXPropValue of
+      (* name *) string loc * (* optional *) bool * (* value *) expression
+  (*
+   *   |  {...jsx_expr}
+   *)
+  | JSXPropSpreading of
+      (* entire {...expr} location *)
+      Location.t
+      * expression
+
+and jsx_children =
+  | JSXChildrenSpreading of expression
+  | JSXChildrenItems of expression list
+
+and jsx_props = jsx_prop list
+
+and jsx_closing_container_tag = {
+  (* </ *)
+  jsx_closing_container_tag_start: Lexing.position;
+  (* name *)
+  jsx_closing_container_tag_name: Longident.t loc;
+  (* > *)
+  jsx_closing_container_tag_end: Lexing.position;
+}
 
 and case = {
   (* (P -> E) or (P when E0 -> E) *)
+  pc_bar: Lexing.position option;
   pc_lhs: pattern;
   pc_guard: expression option;
   pc_rhs: expression;

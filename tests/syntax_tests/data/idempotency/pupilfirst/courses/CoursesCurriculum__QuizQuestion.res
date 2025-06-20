@@ -12,17 +12,17 @@ type t = {
 let decodeAnswerOption = json => {
   open Json.Decode
   {
-    id: json |> field("id", string),
-    value: json |> field("value", string),
+    id: json->field("id", string),
+    value: json->field("value", string),
   }
 }
 
 let decode = json => {
   open Json.Decode
   {
-    index: json |> field("index", int),
-    question: json |> field("question", string),
-    answerOptions: json |> field("answerOptions", list(decodeAnswerOption)),
+    index: json->field("index", int),
+    question: json->field("question", string),
+    answerOptions: json->field("answerOptions", list(decodeAnswerOption)),
   }
 }
 
@@ -38,11 +38,11 @@ let answerValue = answerOption => answerOption.value
 
 let lastQuestion = questions => {
   let maxIndex =
-    questions |> List.sort((q1, q2) => q1.index - q2.index) |> List.rev |> List.hd |> index
-  questions |> List.find(q => q.index == maxIndex)
+    questions->List.sort((q1, q2) => q1.index - q2.index)->List.rev->List.hd->index
+  questions->List.find(q => q.index == maxIndex)
 }
 
 let nextQuestion = (questions, question) =>
-  questions |> List.find(q => q.index == question.index + 1)
+  questions->List.find(q => q.index == question.index + 1)
 
-let isLastQuestion = (questions, question) => questions |> lastQuestion == question
+let isLastQuestion = (questions, question) => questions->lastQuestion == question

@@ -13,6 +13,6 @@ let answersCount = t => t.answersCount
 let makeFromJs = jsObject => {
   id: jsObject["id"],
   title: jsObject["title"],
-  createdAt: jsObject["createdAt"] |> Json.Decode.string |> DateFns.parseString,
+  createdAt: jsObject["createdAt"]->Json.Decode.string->DateFns.parseString,
   answersCount: jsObject["answersCount"],
 }

@@ -1,6 +1,6 @@
 type t<+'a> = Js.Promise.t<'a>
 
-exception JsError(Js.Exn.t)
+exception JsExn(Js.Exn.t)
 external unsafeToJsExn: exn => Js.Exn.t = "%identity"
 
 @new

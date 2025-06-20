@@ -1,0 +1,243 @@
+Complete src/IncludeModuleCompletion.res 47:11
+posCursor:[47:11] posNoWhite:[47:10] Found expr:[45:13->52:3]
+posCursor:[47:11] posNoWhite:[47:10] Found expr:[46:4->51:5]
+posCursor:[47:11] posNoWhite:[47:10] Found expr:[47:9->47:11]
+Pexp_field [47:9->47:10] _:[51:4->47:11]
+Completable: Cpath Value[k].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[k].""
+ContextPath Value[k]
+Path k
+ContextPath Value[k]->
+ContextPath Value[k]
+Path k
+CPPipe pathFromEnv:Types found:true
+Path Types.
+Path 
+[{
+    "label": "->blah",
+    "kind": 12,
+    "tags": [],
+    "detail": "Types.context => string",
+    "documentation": null,
+    "sortText": "blah",
+    "insertText": "->blah",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 47, "character": 10}, "end": {"line": 47, "character": 11}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->add",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, array<Types.comp>) => 't",
+    "documentation": null,
+    "sortText": "add",
+    "insertText": "->add",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 47, "character": 10}, "end": {"line": 47, "character": 11}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->addPosFromVec2",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, Types.vec2) => Types.comp",
+    "documentation": null,
+    "sortText": "addPosFromVec2",
+    "insertText": "->addPosFromVec2",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 47, "character": 10}, "end": {"line": 47, "character": 11}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->addPos",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, float, float) => Types.comp",
+    "documentation": null,
+    "sortText": "addPos",
+    "insertText": "->addPos",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 47, "character": 10}, "end": {"line": 47, "character": 11}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/IncludeModuleCompletion.res 49:12
+posCursor:[49:12] posNoWhite:[49:11] Found expr:[45:13->52:3]
+posCursor:[49:12] posNoWhite:[49:11] Found expr:[46:4->51:5]
+posCursor:[49:12] posNoWhite:[49:11] Found expr:[49:9->49:12]
+Pexp_ident add:[49:9->49:12]
+Completable: Cpath Value[add]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[add]
+Path add
+[{
+    "label": "add",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, array<Types.comp>) => 't",
+    "documentation": null
+  }, {
+    "label": "addPosFromVec2",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, Types.vec2) => Types.comp",
+    "documentation": null
+  }, {
+    "label": "addPos",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, float, float) => Types.comp",
+    "documentation": null
+  }]
+
+Complete src/IncludeModuleCompletion.res 58:13
+posCursor:[58:13] posNoWhite:[58:12] Found expr:[54:17->61:3]
+posCursor:[58:13] posNoWhite:[58:12] Found expr:[55:4->60:6]
+Completable: Cexpression CArgument Value[add]($1)=addP->array
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath CArgument Value[add]($1)
+ContextPath Value[add]
+Path add
+[{
+    "label": "addPosFromVec2",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, Types.vec2) => Types.comp",
+    "documentation": null
+  }, {
+    "label": "addPos",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, float, float) => Types.comp",
+    "documentation": null
+  }]
+
+Complete src/IncludeModuleCompletion.res 70:13
+posCursor:[70:13] posNoWhite:[70:12] Found expr:[68:15->73:5]
+posCursor:[70:13] posNoWhite:[70:12] Found expr:[69:6->72:7]
+posCursor:[70:13] posNoWhite:[70:12] Found expr:[70:11->70:13]
+Pexp_field [70:11->70:12] _:[72:6->70:13]
+Completable: Cpath Value[k].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[k].""
+ContextPath Value[k]
+Path k
+ContextPath Value[k]->
+ContextPath Value[k]
+Path k
+CPPipe pathFromEnv:Types found:true
+Path Types.
+Path 
+[{
+    "label": "->blah",
+    "kind": 12,
+    "tags": [],
+    "detail": "Types.context => string",
+    "documentation": null,
+    "sortText": "blah",
+    "insertText": "->blah",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 70, "character": 12}, "end": {"line": 70, "character": 13}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->add",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, array<Types.comp>) => 't",
+    "documentation": null,
+    "sortText": "add",
+    "insertText": "->add",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 70, "character": 12}, "end": {"line": 70, "character": 13}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->addSprite",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, string) => Types.comp",
+    "documentation": null,
+    "sortText": "addSprite",
+    "insertText": "->addSprite",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 70, "character": 12}, "end": {"line": 70, "character": 13}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->addPosFromVec2",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, Types.vec2) => Types.comp",
+    "documentation": null,
+    "sortText": "addPosFromVec2",
+    "insertText": "->addPosFromVec2",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 70, "character": 12}, "end": {"line": 70, "character": 13}},
+      "newText": ""
+      }]
+  }, {
+    "label": "->addPos",
+    "kind": 12,
+    "tags": [],
+    "detail": "(Types.context, float, float) => Types.comp",
+    "documentation": null,
+    "sortText": "addPos",
+    "insertText": "->addPos",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 70, "character": 12}, "end": {"line": 70, "character": 13}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/IncludeModuleCompletion.res 85:16
+posCursor:[85:16] posNoWhite:[85:15] Found expr:[85:13->85:16]
+Pexp_field [85:13->85:14] l:[85:15->85:16]
+Completable: Cpath Value[a].l
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[a].l
+ContextPath Value[a]
+Path a
+ContextPath Value[a]->l
+ContextPath Value[a]
+Path a
+Path Stdlib.Int.l
+Path l
+[{
+    "label": "->lex",
+    "kind": 12,
+    "tags": [],
+    "detail": "int => string",
+    "documentation": null,
+    "sortText": "lex",
+    "insertText": "->lex",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 85, "character": 14}, "end": {"line": 85, "character": 15}},
+      "newText": ""
+      }]
+  }]
+
+Complete src/IncludeModuleCompletion.res 88:14
+posCursor:[88:14] posNoWhite:[88:13] Found expr:[88:13->88:14]
+Pexp_ident l:[88:13->88:14]
+Completable: Cpath Value[l]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[l]
+Path l
+[{
+    "label": "lex",
+    "kind": 12,
+    "tags": [],
+    "detail": "int => string",
+    "documentation": null
+  }]
+

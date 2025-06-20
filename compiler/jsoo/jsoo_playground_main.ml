@@ -45,7 +45,7 @@
  * -----------------------------
  * Version History: * v2: Remove refmt support (removes compiler.reason apis)
  * v3: Switched to Uncurried mode by default (requires third party packages
- to be built with uncurried: true in bsconfig.json). Also added
+ to be built with uncurried: true in rescript.json). Also added
  `config.uncurried` to the BundleConfig.
  * v4: Added `config.open_modules` to the BundleConfig to enable implicitly opened
  * modules in the playground.
@@ -53,8 +53,6 @@
 let api_version = "5"
 
 module Js = Js_of_ocaml.Js
-
-let export (field : string) v = Js.Unsafe.set Js.Unsafe.global field v
 
 module Lang = struct
   type t = Res
@@ -676,7 +674,7 @@ module Export = struct
 end
 
 let () =
-  export "rescript_compiler"
+  Js.export "rescript_compiler"
     Js.Unsafe.(
       obj
         [|

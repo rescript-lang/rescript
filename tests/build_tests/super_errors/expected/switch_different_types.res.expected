@@ -11,4 +11,5 @@
   This has type: [1;31mstring[0m
   But this switch is expected to return: [1;33munit[0m
 
-  All branches in a [1;33mswitch[0m must return the same type. To fix this, change your branch to return the expected type.
+  All branches in a [1;33mswitch[0m must return the same type.
+  To fix this, change your branch to return the expected type.

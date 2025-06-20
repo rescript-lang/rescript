@@ -58,25 +58,25 @@ let handleAnswerLike = (
   addLikeCB,
   event,
 ) => {
-  event |> ReactEvent.Mouse.preventDefault
+  event->ReactEvent.Mouse.preventDefault
   saving
     ? ()
     : {
         setSaving(_ => true)
         if liked {
-          let id = Like.likeByCurrentUser(answerId, currentUserId, likes) |> List.hd |> Like.id
+          let id = Like.likeByCurrentUser(answerId, currentUserId, likes)->List.hd->Like.id
           DestroyAnswerLikeQuery.make(~id, ())
-          |> GraphqlQuery.sendQuery
-          |> Js.Promise.then_(_response => {
+          ->GraphqlQuery.sendQuery
+          ->Js.Promise.then_(_response => {
             removeLikeCB(id)
             setSaving(_ => false)
             Js.Promise.resolve()
           })
-          |> ignore
+          ->ignore
         } else {
           CreateAnswerLikeQuery.make(~answerId, ())
-          |> GraphqlQuery.sendQuery
-          |> Js.Promise.then_(response =>
+          ->GraphqlQuery.sendQuery
+          ->Js.Promise.then_(response =>
             switch response["createAnswerLike"] {
             | #AnswerLikeId(answerLikeId) =>
               handleCreateResponse(answerLikeId, currentUserId, answerId, setSaving, addLikeCB)
@@ -84,15 +84,15 @@ let handleAnswerLike = (
             | #Errors(errors) => Js.Promise.reject(CreateAnswerLikeErrorHandler.Errors(errors))
             }
           )
-          |> CreateAnswerLikeErrorHandler.catch(() => setSaving(_ => false))
-          |> ignore
+          ->CreateAnswerLikeErrorHandler.catch(() => setSaving(_ => false))
+          ->ignore
         }
       }
 }
 
 @react.component
 let make = (~likes, ~answerId, ~currentUserId, ~addLikeCB, ~removeLikeCB) => {
-  let liked = likes |> Like.currentUserLiked(answerId, currentUserId)
+  let liked = likes->Like.currentUserLiked(answerId, currentUserId)
   let (saving, setSaving) = React.useState(() => false)
 
   <div className="mr-1 md:mr-2">
@@ -116,7 +116,7 @@ let make = (~likes, ~answerId, ~currentUserId, ~addLikeCB, ~removeLikeCB) => {
         <i className={iconClasses(liked, saving)} />
       </div>
       <p className="text-xs pb-1">
-        {likes |> Like.likesForAnswer(answerId) |> List.length |> string_of_int |> str}
+        {likes->Like.likesForAnswer(answerId)->List.length->string_of_int->str}
       </p>
     </div>
   </div>

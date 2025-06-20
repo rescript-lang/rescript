@@ -21,13 +21,12 @@
     ((color === Black) && (color === Red)) &&
       ((sibling === None) || (parent === None))
     do () done
-;;((div
-      ~onClick:((fun [arity:1]event ->
+;;<div onClick=((fun [arity:1]event ->
                    ((match videoContainerRect with
                      | Some videoContainerRect ->
                          let newChapter =
                            ({ startTime = (percent *. duration) } : Video.chapter) in
                          { a; b } -> onChange
                      | _ -> ())
-                   [@res.braces ]))[@res.braces ]) ~children:[] ())[@JSX ])
+                   [@res.braces ]))[@res.braces ]) />
 ;;if inclusions.(index) <- (uid, url) then onChange inclusions

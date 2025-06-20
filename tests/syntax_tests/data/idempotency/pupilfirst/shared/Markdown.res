@@ -16,4 +16,4 @@ let profileString = profile =>
   | AreaOfText => "areaOfText"
   }
 
-let parse = (profile, markdown) => markdown |> markdownIt |> sanitize(profileString(profile))
+let parse = (profile, markdown) => markdown->markdownIt->sanitize(profileString(profile))

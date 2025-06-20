@@ -22,8 +22,7 @@ newText:
 /**
 
 */
-@unboxed
-type name = Name(string)
+@unboxed type name = Name(string)
 
 Xform not_compiled/DocTemplate.resi 8:4
 Hit: Add Documentation template

@@ -1,3 +1,4 @@
+@notUndefined
 type t<'k, 'v>
 
 @new external make: unit => t<'k, 'v> = "Map"
@@ -19,3 +20,5 @@ type t<'k, 'v>
 @send external keys: t<'k, 'v> => Stdlib_Iterator.t<'k> = "keys"
 @send external values: t<'k, 'v> => Stdlib_Iterator.t<'v> = "values"
 @send external entries: t<'k, 'v> => Stdlib_Iterator.t<('k, 'v)> = "entries"
+
+external ignore: t<'k, 'v> => unit = "%ignore"

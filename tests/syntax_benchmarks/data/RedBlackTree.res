@@ -38,7 +38,7 @@ type rec node<'value> = {
   mutable right: option<node<'value>>,
   mutable parent: option<node<'value>>,
   mutable sum: float,
-  mutable color : nodeColor,
+  mutable color: nodeColor,
   mutable height: float,
   mutable value: 'value,
 }
@@ -46,15 +46,22 @@ type rec node<'value> = {
 type t<'value> = {
   mutable size: int,
   mutable root: option<node<'value>>,
-  compare: (. 'value, 'value) => int,
+  compare: ('value, 'value) => int,
 }
 
-let createNode = (~color, ~value, ~height) =>
-  {left:None, right:None, parent:None, sum:0., height, value, color}
+let createNode = (~color, ~value, ~height) => {
+  left: None,
+  right: None,
+  parent: None,
+  sum: 0.,
+  height,
+  value,
+  color,
+}
 
 external castNotOption: option<'a> => 'a = "%identity"
 
-let updateSum = (node) => {
+let updateSum = node => {
   let leftSum = switch node.left {
   | None => 0.
   | Some(left) => left.sum
@@ -71,8 +78,7 @@ let rec updateSumRecursive = (rbt, node) => {
   updateSum(node)
   switch node.parent {
   | None => ()
-  | Some(parent) =>
-    rbt->updateSumRecursive(parent)
+  | Some(parent) => rbt->updateSumRecursive(parent)
   }
 }
 
@@ -91,7 +97,7 @@ let isLeft = node => {
 }
 
 let leftOrRightSet = (~node, x, value) => {
-  isLeft(node) ? x.left=value : x.right=value
+  isLeft(node) ? x.left = value : x.right = value
 }
 
 let siblingOf = node => {
@@ -118,7 +124,7 @@ let rec findNode = (rbt, node, value) => {
   switch node {
   | None => None
   | Some(node) =>
-    let cmp = rbt.compare(. value, node.value)
+    let cmp = rbt.compare(value, node.value)
     if cmp === 0 {
       Some(node)
     } else if cmp < 0 {
@@ -131,36 +137,32 @@ let rec findNode = (rbt, node, value) => {
 
 let has = (rbt, value) => findNode(rbt, rbt.root, value) !== None
 
-let rec peekMinNode = node => switch node {
+let rec peekMinNode = node =>
+  switch node {
   | None => None
-  | Some(node) =>
-    node.left === None ? Some(node) : node.left->peekMinNode
-}
+  | Some(node) => node.left === None ? Some(node) : node.left->peekMinNode
+  }
 
-let rec peekMaxNode = node => switch node {
+let rec peekMaxNode = node =>
+  switch node {
   | None => None
-  | Some(node) =>
-    node.right === None ? Some(node) : node.right->peekMaxNode
-}
+  | Some(node) => node.right === None ? Some(node) : node.right->peekMaxNode
+  }
 
 let rotateLeft = (rbt, node) => {
   let parent = node.parent
   let right = node.right
   switch parent {
-    | Some(parent) =>
-      parent->leftOrRightSet(~node, right)
-    | None =>
-      rbt.root = right
+  | Some(parent) => parent->leftOrRightSet(~node, right)
+  | None => rbt.root = right
   }
   node.parent = right
   let right = right->castNotOption // precondition
   let rightLeft = right.left
   node.right = rightLeft
   switch rightLeft {
-    | Some(rightLeft) =>
-      rightLeft.parent = Some(node)
-    | None =>
-      ()
+  | Some(rightLeft) => rightLeft.parent = Some(node)
+  | None => ()
   }
   right.parent = parent
   right.left = Some(node)
@@ -172,20 +174,16 @@ let rotateRight = (rbt, node) => {
   let parent = node.parent
   let left = node.left
   switch parent {
-    | Some(parent) =>
-      parent->leftOrRightSet(~node, left)
-    | None =>
-      rbt.root = left
+  | Some(parent) => parent->leftOrRightSet(~node, left)
+  | None => rbt.root = left
   }
   node.parent = left
   let left = left->castNotOption // precondition
   let leftRight = left.right
   node.left = leftRight
   switch leftRight {
-    | Some(leftRight) =>
-      leftRight.parent = Some(node)
-    | None =>
-      ()
+  | Some(leftRight) => leftRight.parent = Some(node)
+  | None => ()
   }
   left.parent = parent
   left.right = Some(node)
@@ -195,29 +193,25 @@ let rotateRight = (rbt, node) => {
 
 let rec findInsert = (rbt, node, nodeToInsert, value) => {
   switch node {
-    | None => None
-    | Some(node) => {
-      let cmp = rbt.compare(. value, node.value)
+  | None => None
+  | Some(node) => {
+      let cmp = rbt.compare(value, node.value)
       if cmp === 0 {
         Some(node)
-      } else {
-        if cmp < 0 {
-          if node.left !== None {
-            rbt->findInsert(node.left, nodeToInsert, value)
-          } else {
-            nodeToInsert.parent = Some(node)
-            node.left = Some(nodeToInsert)
-            None
-          }
+      } else if cmp < 0 {
+        if node.left !== None {
+          rbt->findInsert(node.left, nodeToInsert, value)
         } else {
-          if node.right !== None {
-            rbt->findInsert(node.right, nodeToInsert, value)
-          } else {
-            nodeToInsert.parent = Some(node)
-            node.right = Some(nodeToInsert)
-            None
-          }
+          nodeToInsert.parent = Some(node)
+          node.left = Some(nodeToInsert)
+          None
         }
+      } else if node.right !== None {
+        rbt->findInsert(node.right, nodeToInsert, value)
+      } else {
+        nodeToInsert.parent = Some(node)
+        node.right = Some(nodeToInsert)
+        None
       }
     }
   }
@@ -232,44 +226,38 @@ let rec _addLoop = (rbt, currentNode) => {
   // Case 1: node is root. Violates 1. Paint it black.
   if Some(currentNode) === rbt.root {
     currentNode.color = Black
-  }
-
-  // Case 2: parent black. No properties violated. After that, parent is sure
+  } // Case 2: parent black. No properties violated. After that, parent is sure
   // to be red.
   else if (currentNode.parent->castNotOption).color === Black {
     ()
-  }
-
-  // Case 3: if node's parent and uncle are red, they are painted black.
+  } // Case 3: if node's parent and uncle are red, they are painted black.
   // Their parent (node's grandparent) should be painted red, and the
   // grandparent red. Note that node certainly has a grandparent, since at
   // this point, its parent's red, which can't be the root.
 
   // After the painting, the grandparent might violate 2 or 4.
-  else if({
-      let uncle = uncleOf(currentNode)
-      uncle !== None && (uncle->castNotOption).color === Red
-    }) {
+  else if {
+    let uncle = uncleOf(currentNode)
+    uncle !== None && (uncle->castNotOption).color === Red
+  } {
     (currentNode.parent->castNotOption).color = Black
     (uncleOf(currentNode)->castNotOption).color = Black
     (grandParentOf(currentNode)->castNotOption).color = Red
     _addLoop(rbt, grandParentOf(currentNode)->castNotOption)
-  }
-  else {
+  } else {
     // At this point, uncle is either black or doesn't exist.
 
     // Case 4: parent red, uncle black, node is right child, parent is left
     // child. Do a left rotation. Then, former parent passes through case 5.
-    let currentNode =
-      if !isLeft(currentNode) && isLeft(currentNode.parent->castNotOption) {
-        rotateLeft(rbt, currentNode.parent->castNotOption)
-        currentNode.left->castNotOption
-      } else if isLeft(currentNode) && !isLeft(currentNode.parent->castNotOption) {
-        rotateRight(rbt, currentNode.parent->castNotOption)
-        currentNode.right->castNotOption
-      } else {
-        currentNode
-      }
+    let currentNode = if !isLeft(currentNode) && isLeft(currentNode.parent->castNotOption) {
+      rotateLeft(rbt, currentNode.parent->castNotOption)
+      currentNode.left->castNotOption
+    } else if isLeft(currentNode) && !isLeft(currentNode.parent->castNotOption) {
+      rotateRight(rbt, currentNode.parent->castNotOption)
+      currentNode.right->castNotOption
+    } else {
+      currentNode
+    }
 
     // Case 5: parent red, uncle black, node is left child, parent is left
     // child. Right rotation. Switch parent and grandparent's color.
@@ -289,15 +277,13 @@ let add = (rbt, value, ~height) => {
   // _Returns:_ value added.
   rbt.size = rbt.size + 1
   let nodeToInsert = createNode(~value, ~color=Red, ~height)
-  let inserted =
-    if rbt.root === None {
-      rbt.root = Some(nodeToInsert)
-      true
-    }
-    else {
-      let foundNode = findInsert(rbt, rbt.root, nodeToInsert, value)
-      foundNode === None
-    }
+  let inserted = if rbt.root === None {
+    rbt.root = Some(nodeToInsert)
+    true
+  } else {
+    let foundNode = findInsert(rbt, rbt.root, nodeToInsert, value)
+    foundNode === None
+  }
   if inserted {
     rbt->updateSumRecursive(nodeToInsert)
 
@@ -308,7 +294,6 @@ let add = (rbt, value, ~height) => {
   }
 }
 
-
 // To simplify removal cases, we can notice this:
 // 1. Node has no child.
 // 2. Node has two children. Select the smallest child on the right branch
@@ -318,34 +303,31 @@ let add = (rbt, value, ~height) => {
 // 3. Node has one child.
 // They all come down to removing a node with maximum one child.
 let removeNode = (rbt, node) => {
-  let nodeToRemove =
-    switch (node.left, node.right) {
-    | (Some(_), Some(_)) =>
-      let successor = peekMinNode(node.right)->castNotOption
-      node.value = successor.value
-      node.height = successor.height
-      successor
-    | _ => node
-    }
+  let nodeToRemove = switch (node.left, node.right) {
+  | (Some(_), Some(_)) =>
+    let successor = peekMinNode(node.right)->castNotOption
+    node.value = successor.value
+    node.height = successor.height
+    successor
+  | _ => node
+  }
   // At this point, the node to remove has only one child.
   let successor = switch nodeToRemove.left {
   | None => nodeToRemove.right
   | left => left
   }
   let (successor, isLeaf) = switch successor {
-    | None =>
-      let leaf = createNode(~value=%raw("0"), ~color=Black, ~height=0.)
-      let isLeaf = (. x) => x === leaf;
-      (leaf, isLeaf)
-    | Some(successor) =>
-      (successor, (. _) => false)
+  | None =>
+    let leaf = createNode(~value=%raw("0"), ~color=Black, ~height=0.)
+    let isLeaf = x => x === leaf
+    (leaf, isLeaf)
+  | Some(successor) => (successor, _ => false)
   }
   let nodeParent = nodeToRemove.parent
   successor.parent = nodeParent
   switch nodeParent {
   | None => ()
-  | Some(parent) =>
-    parent->leftOrRightSet(~node=nodeToRemove, Some(successor))
+  | Some(parent) => parent->leftOrRightSet(~node=nodeToRemove, Some(successor))
   }
 
   rbt->updateSumRecursive(successor)
@@ -386,57 +368,54 @@ let removeNode = (rbt, node) => {
           // sibling red. Rebalance parent.
           let sibling = siblingOf(successor)
           let siblingNN = sibling->castNotOption
-          if
+          if (
             successorParent.color === Black &&
-            ( sibling === None ||
-              ( siblingNN.color === Black &&
-                ( siblingNN.left === None ||
-                  (siblingNN.left->castNotOption).color === Black ) &&
-                ( siblingNN.right === None ||
-                  (siblingNN.right->castNotOption).color === Black)))
-             {
+              (sibling === None ||
+                (siblingNN.color === Black &&
+                (siblingNN.left === None || (siblingNN.left->castNotOption).color === Black) &&
+                (siblingNN.right === None || (siblingNN.right->castNotOption).color === Black)))
+          ) {
             if sibling !== None {
               siblingNN.color = Red
             }
             successorRef.contents = successorParent
             // continue
-          } else if
+          } else if (
             // Case 4: sibling and sibling children black. Node parent red. Swap
             // color of sibling and node parent.
             successorParent.color === Red &&
-            ( sibling === None ||
-              ( siblingNN.color === Black &&
-              ( siblingNN.left === None ||
-                (siblingNN.left->castNotOption).color === Black) &&
-              ( siblingNN.right === None ||
-                (siblingNN.right->castNotOption).color === Black)))
-             {
+              (sibling === None ||
+                (siblingNN.color === Black &&
+                (siblingNN.left === None || (siblingNN.left->castNotOption).color === Black) &&
+                (siblingNN.right === None || (siblingNN.right->castNotOption).color === Black)))
+          ) {
             if sibling !== None {
               siblingNN.color = Red
             }
             successorParent.color = Black
             break.contents = true
-          } else if
+          } else if (
             // Case 5: sibling black, sibling left child red, right child black,
             // node is left child. Rotate right sibling. Swap color of sibling and
             // its new parent.
             sibling !== None && (sibling->castNotOption).color === Black
-             {
+          ) {
             let sibling = sibling->castNotOption
-            if
+            if (
               isLeft(successor) &&
               (sibling.right === None || (sibling.right->castNotOption).color === Black) &&
               sibling.left !== None &&
-              (sibling.left->castNotOption).color === Red {
+              (sibling.left->castNotOption).color === Red
+            ) {
               sibling.color = Red
               (sibling.left->castNotOption).color = Black
               rotateRight(rbt, sibling)
-            } else if
+            } else if (
               !isLeft(successor) &&
               (sibling.left === None || (sibling.left->castNotOption).color === Black) &&
               sibling.right !== None &&
               (sibling.right->castNotOption).color === Red
-               {
+            ) {
               sibling.color = Red
               (sibling.right->castNotOption).color = Black
               rotateLeft(rbt, sibling)
@@ -461,27 +440,26 @@ let removeNode = (rbt, node) => {
       }
     }
   }
+
   // Don't forget to detatch the artificially created leaf.
-  if isLeaf(. successor) {
+  if isLeaf(successor) {
     if rbt.root === Some(successor) {
       rbt.root = None
     }
     switch successor.parent {
     | None => ()
-    | Some(parent) =>
-      parent->leftOrRightSet(~node=successor, None)
+    | Some(parent) => parent->leftOrRightSet(~node=successor, None)
     }
   }
 }
 
 let remove = (rbt, value) => {
   switch findNode(rbt, rbt.root, value) {
-    | Some(node) =>
-      rbt->removeNode(node)
-      rbt.size = rbt.size - 1
-      true
-    | None =>
-      false
+  | Some(node) =>
+    rbt->removeNode(node)
+    rbt.size = rbt.size - 1
+    true
+  | None => false
   }
 }
 
@@ -489,7 +467,7 @@ let rec findNodeThroughCallback = (rbt, node, cb) => {
   switch node {
   | None => None
   | Some(node) =>
-    let cmp = cb(. node)
+    let cmp = cb(node)
     if cmp === 0 {
       Some(node)
     } else if cmp < 0 {
@@ -502,12 +480,11 @@ let rec findNodeThroughCallback = (rbt, node, cb) => {
 
 let removeThroughCallback = (rbt, cb) => {
   switch findNodeThroughCallback(rbt, rbt.root, cb) {
-    | Some(node) =>
-      rbt->removeNode(node)
-      rbt.size = rbt.size - 1
-      true
-    | None =>
-      false
+  | Some(node) =>
+    rbt->removeNode(node)
+    rbt.size = rbt.size - 1
+    true
+  | None => false
   }
 }
 
@@ -515,7 +492,7 @@ let make = (~compare) => {size: 0, root: None, compare}
 
 let makeWith = (array, ~compare) => {
   let rbt = make(~compare)
-  array->Js.Array2.forEach(((value, height)) => add(rbt,value, ~height)->ignore)
+  array->Js.Array2.forEach(((value, height)) => add(rbt, value, ~height)->ignore)
   rbt
 }
 
@@ -528,10 +505,10 @@ let rec heightOfInterval = (rbt, node, lhs, rhs) => {
     //Js.log4("heightOfInterval n:", n.value, lhs, rhs)
     if lhs === None && rhs === None {
       n.sum
-    } else if lhs !== None && rbt.compare(. n.value, lhs->castNotOption) < 0 {
+    } else if lhs !== None && rbt.compare(n.value, lhs->castNotOption) < 0 {
       // to the lhs of the interval
       rbt->heightOfInterval(n.right, lhs, rhs)
-    } else if rhs !== None && rbt.compare(. n.value, rhs->castNotOption) > 0 {
+    } else if rhs !== None && rbt.compare(n.value, rhs->castNotOption) > 0 {
       // to the rhs of the interval
       rbt->heightOfInterval(n.left, lhs, rhs)
     } else {
@@ -555,13 +532,13 @@ let rec firstVisibleNode = (node, top) => {
   | Some(node) =>
     //Js.log4("firstVisibleNode", node.value, "top:", top)
     if node.sum <= top {
-    // no node is visible
-    None
+      // no node is visible
+      None
     } else {
       let nodeHeight = node.height
       let sumLeft = switch node.left {
-        | None => 0.0
-        | Some(left) => left.sum
+      | None => 0.0
+      | Some(left) => left.sum
       }
       if sumLeft > top {
         firstVisibleNode(node.left, top)
@@ -578,8 +555,7 @@ let rec firstVisibleNode = (node, top) => {
 
 let lastVisibleNode = (node, top) => {
   switch firstVisibleNode(node, top) {
-  | None =>
-    node->peekMaxNode
+  | None => node->peekMaxNode
   | first => first
   }
 }
@@ -589,84 +565,84 @@ let firstVisibleValue = (rbt, ~top) =>
   switch firstVisibleNode(rbt.root, top) {
   | None => None
   | Some(node) => Some(node.value)
-}
+  }
 
-let rec leftmost = node => switch node.left {
+let rec leftmost = node =>
+  switch node.left {
   | None => node
   | Some(node) => node->leftmost
-}
+  }
 
 let rec firstRightParent = node => {
   switch node.parent {
-    | None => None
-    | Some(parent) =>
-      isLeft(node) ? Some(parent) : parent->firstRightParent
+  | None => None
+  | Some(parent) => isLeft(node) ? Some(parent) : parent->firstRightParent
   }
 }
 
 let nextNode = node => {
   switch node.right {
-  | None =>
-    node->firstRightParent
-  | Some(right) =>
-    Some(right->leftmost)
+  | None => node->firstRightParent
+  | Some(right) => Some(right->leftmost)
   }
 }
 
 let rec sumLeftSpine = (node, ~fromRightChild) => {
   let leftSpine = switch node.left {
-    | None => node.height
-    | Some(left) => fromRightChild ? node.height +. left.sum : 0.0
+  | None => node.height
+  | Some(left) => fromRightChild ? node.height +. left.sum : 0.0
   }
   switch node.parent {
-  | None =>
-    leftSpine
-  | Some(parent) =>
-    leftSpine +. parent->sumLeftSpine(~fromRightChild = parent.right === Some(node))
+  | None => leftSpine
+  | Some(parent) => leftSpine +. parent->sumLeftSpine(~fromRightChild=parent.right === Some(node))
   }
 }
 
-let getY = node =>
-  node->sumLeftSpine(~fromRightChild=true) -. node.height
+let getY = node => node->sumLeftSpine(~fromRightChild=true) -. node.height
 
 let rec iterate = (~inclusive, firstNode, lastNode, ~callback) => {
   switch firstNode {
-    | None => ()
-    | Some(node) =>
-      if inclusive { callback(. node) }
-      if firstNode !== lastNode {
-        if !inclusive { callback (.node) }
-        iterate(~inclusive, node->nextNode, lastNode, ~callback)
+  | None => ()
+  | Some(node) =>
+    if inclusive {
+      callback(node)
+    }
+    if firstNode !== lastNode {
+      if !inclusive {
+        callback(node)
       }
+      iterate(~inclusive, node->nextNode, lastNode, ~callback)
+    }
   }
 }
 
 let rec iterateWithY = (~y=?, ~inclusive, firstNode, lastNode, ~callback) => {
   switch firstNode {
-    | None => ()
-    | Some(node) =>
-      let y = switch y {
-        | None => node->getY
-        | Some(y) => y
+  | None => ()
+  | Some(node) =>
+    let y = switch y {
+    | None => node->getY
+    | Some(y) => y
+    }
+    if inclusive {
+      callback(node, y)
+    }
+    if firstNode !== lastNode {
+      if !inclusive {
+        callback(node, y)
       }
-      if inclusive {
-        callback(. node, y)
-      }
-      if firstNode !== lastNode {
-        if !inclusive {
-          callback (.node, y)
-        }
-        iterateWithY(~y=y+.node.height, ~inclusive, node->nextNode, lastNode, ~callback)
-      }
+      iterateWithY(~y=y +. node.height, ~inclusive, node->nextNode, lastNode, ~callback)
+    }
   }
 }
 
-let rec updateSum = (node, ~delta) => switch node {
+let rec updateSum = (node, ~delta) =>
+  switch node {
   | None => ()
   | Some(node) =>
     node.sum = node.sum +. delta
     node.parent->updateSum(~delta)
-}
+  }
 
 let updateHeight = (node, ~height) => {
   let delta = height -. node.height
@@ -677,31 +653,29 @@ let updateHeight = (node, ~height) => {
 type oldNewVisible<'value> = {
   mutable old: array<'value>,
   mutable new: array<'value>,
-};
+}
 
 let getAnchorDelta = (rbt, ~anchor) => {
   switch anchor {
+  | None => 0.0
+  | Some((value, y)) =>
+    switch rbt->findNode(rbt.root, value) {
+    | Some(node) => y -. node->getY
     | None => 0.0
-    | Some((value, y)) =>
-      switch rbt->findNode(rbt.root, value) {
-        | Some(node) => y -. node->getY
-        | None => 0.0
-      }
+    }
   }
 }
 
-let onChangedVisible =
-    (
-      ~anchor=None,
-      rbt,
-      ~oldNewVisible,
-      ~top as top_,
-      ~bottom as bottom_,
-      ~appear,
-      ~remained,
-      ~disappear,
-    ) =>
- {
+let onChangedVisible = (
+  ~anchor=None,
+  rbt,
+  ~oldNewVisible,
+  ~top as top_,
+  ~bottom as bottom_,
+  ~appear,
+  ~remained,
+  ~disappear,
+) => {
   let old = oldNewVisible.new
   let new = oldNewVisible.old
   // empty new
@@ -720,32 +694,33 @@ let onChangedVisible =
 
   let oldLen = old->Js.Array2.length
   let oldIter = ref(0)
-  iterateWithY(~inclusive=true, first, last, ~callback=(. node, y_) => {
+  iterateWithY(~inclusive=true, first, last, ~callback=(node, y_) => {
     let y = y_ +. anchorDelta
-    if y >= 0.0 { // anchoring can make y negative
+    if y >= 0.0 {
+      // anchoring can make y negative
       while (
         oldIter.contents < oldLen &&
-        rbt.compare(. Js.Array2.unsafe_get(old, oldIter.contents), node.value) < 0
+          rbt.compare(Js.Array2.unsafe_get(old, oldIter.contents), node.value) < 0
       ) {
-        disappear(. Js.Array2.unsafe_get(old, oldIter.contents))
+        disappear(Js.Array2.unsafe_get(old, oldIter.contents))
         oldIter.contents = oldIter.contents + 1
       }
       new->Js.Array2.push(node.value)->ignore
-      if (oldIter.contents < oldLen) {
-        let cmp = rbt.compare(. Js.Array2.unsafe_get(old, oldIter.contents), node.value)
+      if oldIter.contents < oldLen {
+        let cmp = rbt.compare(Js.Array2.unsafe_get(old, oldIter.contents), node.value)
         if cmp == 0 {
-          remained(. node, y)
+          remained(node, y)
           oldIter.contents = oldIter.contents + 1
         } else {
-          appear(. node, y)
+          appear(node, y)
         }
       } else {
-        appear(. node, y)
+        appear(node, y)
       }
     }
   })
-  while (oldIter.contents < oldLen) {
-    disappear(. Js.Array2.unsafe_get(old, oldIter.contents))
+  while oldIter.contents < oldLen {
+    disappear(Js.Array2.unsafe_get(old, oldIter.contents))
     oldIter.contents = oldIter.contents + 1
   }
-};
+}

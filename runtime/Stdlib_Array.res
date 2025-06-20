@@ -108,6 +108,9 @@ external splice: (array<'a>, ~start: int, ~remove: int, ~insert: array<'a>) => u
 external toSpliced: (array<'a>, ~start: int, ~remove: int, ~insert: array<'a>) => array<'a> =
   "toSpliced"
 
+@send
+external removeInPlace: (array<'a>, int, @as(1) _) => unit = "splice"
+
 @send external with: (array<'a>, int, 'a) => array<'a> = "with"
 
 @send external unshift: (array<'a>, 'a) => unit = "unshift"
@@ -166,8 +169,14 @@ let lastIndexOfOpt = (arr, item) =>
 @send external find: (array<'a>, 'a => bool) => option<'a> = "find"
 @send external findWithIndex: (array<'a>, ('a, int) => bool) => option<'a> = "find"
 
+@send external findLast: (t<'a>, 'a => bool) => option<'a> = "findLast"
+@send external findLastWithIndex: (t<'a>, ('a, int) => bool) => option<'a> = "findLast"
+
 @send external findIndex: (array<'a>, 'a => bool) => int = "findIndex"
 @send external findIndexWithIndex: (array<'a>, ('a, int) => bool) => int = "findIndex"
+
+@send external findLastIndex: (t<'a>, 'a => bool) => int = "findLastIndex"
+@send external findLastIndexWithIndex: (t<'a>, ('a, int) => bool) => int = "findLastIndex"
 
 @send external forEach: (array<'a>, 'a => unit) => unit = "forEach"
 @send external forEachWithIndex: (array<'a>, ('a, int) => unit) => unit = "forEach"
@@ -198,6 +207,12 @@ let reduceRightWithIndex = (arr, init, f) => reduceRightWithIndex(arr, f, init)
 
 let findIndexOpt = (array: array<'a>, finder: 'a => bool): option<int> =>
   switch findIndex(array, finder) {
+  | -1 => None
+  | index => Some(index)
+  }
+
+let findLastIndexOpt = (array: array<'a>, finder: 'a => bool): option<int> =>
+  switch findLastIndex(array, finder) {
   | -1 => None
   | index => Some(index)
   }
@@ -270,3 +285,11 @@ let findMap = (arr, f) => {
 @send external at: (array<'a>, int) => option<'a> = "at"
 
 let last = a => a->get(a->length - 1)
+
+external ignore: array<'a> => unit = "%ignore"
+
+@send
+external entries: array<'a> => Stdlib_Iterator.t<(int, 'a)> = "entries"
+
+@send
+external values: array<'a> => Stdlib_Iterator.t<'a> = "values"

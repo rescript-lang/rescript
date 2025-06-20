@@ -29,7 +29,6 @@ type rec spec =
   | Set_float(ref<float>) /* Set the reference to the float argument */
   | Tuple(list<spec>) /* Take several arguments according to the
    spec list */
-
   | Symbol(list<string>, string => unit)
   /* Take one of the symbols as argument and
    call the function with the symbol. */
@@ -49,7 +48,7 @@ exception Stop(error) /* used internally */
 
 let rec assoc3 = (x, l) =>
   switch l {
-  | list{} => raise(Not_found)
+  | list{} => throw(Not_found)
   | list{(y1, y2, y3), ...t} if y1 == x => y2
   | list{_, ...t} => assoc3(x, t)
   }
@@ -69,7 +68,7 @@ let rec assoc3 = (x, l) =>
 /* bprintf buf "  %s %s\n" key doc */
 /* ;; */
 
-let help_action = () => raise(Stop(Unknown("-help")))
+let help_action = () => throw(Stop(Unknown("-help")))
 let v = speclist => {
   ignore(assoc3("-help", speclist))
   list{}

@@ -15,7 +15,7 @@ let f = async (. a, b) => a + b
 
 let maybeSomeValue = switch await fetchData(url) {    
 | data => Some(data)
-| exception JsError(_) => None
+| exception JsExn(_) => None
 }
 
 (await f)(a, b) 
@@ -66,7 +66,7 @@ let _ = await (assert(x))
 let _ = await promises[0]
 let _ = await promises["resolved"]
 let _ = await (promises["resolved"] = sideEffect())
-let _ = await (@attr expr)
+let _ = @outer await @inner expr
 let _ = await module(Foo)
 let _ = await module(Foo: Bar)
 let _ = await Promise

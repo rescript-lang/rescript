@@ -136,7 +136,6 @@ module Pat = struct
   let or_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_or (a, b))
   let constraint_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_constraint (a, b))
   let type_ ?loc ?attrs a = mk ?loc ?attrs (Ppat_type a)
-  let lazy_ ?loc ?attrs a = mk ?loc ?attrs (Ppat_lazy a)
   let unpack ?loc ?attrs a = mk ?loc ?attrs (Ppat_unpack a)
   let open_ ?loc ?attrs a b = mk ?loc ?attrs (Ppat_open (a, b))
   let exception_ ?loc ?attrs a = mk ?loc ?attrs (Ppat_exception a)
@@ -154,8 +153,9 @@ module Exp = struct
   let fun_ ?loc ?attrs ?(async = false) ~arity a b c d =
     mk ?loc ?attrs
       (Pexp_fun {arg_label = a; default = b; lhs = c; rhs = d; arity; async})
-  let apply ?loc ?attrs ?(partial = false) funct args =
-    mk ?loc ?attrs (Pexp_apply {funct; args; partial})
+  let apply ?loc ?attrs ?(partial = false) ?(transformed_jsx = false) funct args
+      =
+    mk ?loc ?attrs (Pexp_apply {funct; args; partial; transformed_jsx})
   let match_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_match (a, b))
   let try_ ?loc ?attrs a b = mk ?loc ?attrs (Pexp_try (a, b))
   let tuple ?loc ?attrs a = mk ?loc ?attrs (Pexp_tuple a)
@@ -175,13 +175,65 @@ module Exp = struct
   let letmodule ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_letmodule (a, b, c))
   let letexception ?loc ?attrs a b = mk ?loc ?attrs (Pexp_letexception (a, b))
   let assert_ ?loc ?attrs a = mk ?loc ?attrs (Pexp_assert a)
-  let lazy_ ?loc ?attrs a = mk ?loc ?attrs (Pexp_lazy a)
   let newtype ?loc ?attrs a b = mk ?loc ?attrs (Pexp_newtype (a, b))
   let pack ?loc ?attrs a = mk ?loc ?attrs (Pexp_pack a)
   let open_ ?loc ?attrs a b c = mk ?loc ?attrs (Pexp_open (a, b, c))
   let extension ?loc ?attrs a = mk ?loc ?attrs (Pexp_extension a)
+  let await ?loc ?attrs a = mk ?loc ?attrs (Pexp_await a)
+  let jsx_fragment ?loc ?attrs a b c =
+    mk ?loc ?attrs
+      (Pexp_jsx_element
+         (Jsx_fragment
+            {
+              jsx_fragment_opening = a;
+              jsx_fragment_children = b;
+              jsx_fragment_closing = c;
+            }))
+  let jsx_unary_element ?loc ?attrs a b =
+    mk ?loc ?attrs
+      (Pexp_jsx_element
+         (Jsx_unary_element
+            {jsx_unary_element_tag_name = a; jsx_unary_element_props = b}))
 
-  let case lhs ?guard rhs = {pc_lhs = lhs; pc_guard = guard; pc_rhs = rhs}
+  let jsx_container_element ?loc ?attrs a b c d e =
+    mk ?loc ?attrs
+      (Pexp_jsx_element
+         (Jsx_container_element
+            {
+              jsx_container_element_tag_name_start = a;
+              jsx_container_element_props = b;
+              jsx_container_element_opening_tag_end = c;
+              jsx_container_element_children = d;
+              jsx_container_element_closing_tag = e;
+            }))
+
+  let case ?bar lhs ?guard rhs =
+    {pc_bar = bar; pc_lhs = lhs; pc_guard = guard; pc_rhs = rhs}
+
+  let make_list_expression loc seq ext_opt =
+    let rec handle_seq = function
+      | [] -> (
+        match ext_opt with
+        | Some ext -> ext
+        | None ->
+          let loc = {loc with Location.loc_ghost = true} in
+          let nil = Location.mkloc (Longident.Lident "[]") loc in
+          construct ~loc nil None)
+      | e1 :: el ->
+        let exp_el = handle_seq el in
+        let loc =
+          Location.
+            {
+              loc_start = e1.Parsetree.pexp_loc.Location.loc_start;
+              loc_end = exp_el.pexp_loc.loc_end;
+              loc_ghost = false;
+            }
+        in
+        let arg = tuple ~loc [e1; exp_el] in
+        construct ~loc (Location.mkloc (Longident.Lident "::") loc) (Some arg)
+    in
+    let expr = handle_seq seq in
+    {expr with pexp_loc = loc}
 end
 
 module Mty = struct

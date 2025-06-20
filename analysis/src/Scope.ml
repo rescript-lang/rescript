@@ -14,6 +14,7 @@ let itemToString item =
   | Module (s, loc) -> "Module " ^ s ^ " " ^ Loc.toString loc
   | Value (s, loc, _, _) -> "Value " ^ s ^ " " ^ Loc.toString loc
   | Type (s, loc) -> "Type " ^ s ^ " " ^ Loc.toString loc
+  | Include (s, loc) -> "Include " ^ s ^ " " ^ Loc.toString loc
 [@@live]
 
 let create () : t = []
@@ -32,6 +33,7 @@ let addValue ~name ~loc ?contextPath x =
            (SharedTypes.Completable.contextPathToString contextPath));
   Value (name, loc, contextPath, x) :: x
 let addType ~name ~loc x = Type (name, loc) :: x
+let addInclude ~name ~loc x = Include (name, loc) :: x
 
 let iterValuesBeforeFirstOpen f x =
   let rec loop items =
@@ -128,6 +130,17 @@ let iterModulesAfterFirstOpen f x =
     | [] -> ()
   in
   loop false x
+
+let iterIncludes f x =
+  let rec loop items =
+    match items with
+    | [] -> ()
+    | Include (s, loc) :: rest ->
+      f s loc;
+      loop rest
+    | _ :: rest -> loop rest
+  in
+  loop x
 
 let getRawOpens x =
   x

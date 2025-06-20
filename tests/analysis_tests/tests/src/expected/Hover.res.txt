@@ -50,14 +50,14 @@ Hover src/Hover.res 77:7
 
 Hover src/Hover.res 91:10
 Nothing at that position. Now trying to use completion.
-posCursor:[91:10] posNoWhite:[91:8] Found expr:[88:3->91:9]
-JSX <Comp:[88:3->88:7] > _children:88:7
+posCursor:[91:10] posNoWhite:[91:8] Found expr:[88:2->91:9]
+JSX <Comp:[88:3->88:7] > _children:89:4
 null
 
 Hover src/Hover.res 98:10
 Nothing at that position. Now trying to use completion.
-posCursor:[98:10] posNoWhite:[98:9] Found expr:[95:3->98:10]
-JSX <Comp1:[95:3->95:8] > _children:95:8
+posCursor:[98:10] posNoWhite:[98:9] Found expr:[95:2->98:10]
+JSX <Comp1:[95:3->95:8] > _children:96:4
 null
 
 Hover src/Hover.res 103:25
@@ -119,6 +119,7 @@ ContextPath Value[x1]
 Path x1
 CPPipe pathFromEnv: found:true
 Path Hover.content
+Path content
 ContextPath Value[x1].content->
 ContextPath Value[x1].content
 ContextPath Value[x1]
@@ -128,8 +129,10 @@ ContextPath Value[x1]
 Path x1
 CPPipe pathFromEnv: found:true
 Path Hover.content
+Path content
 CPPipe pathFromEnv: found:true
 Path Hover.
+Path 
 [{
     "label": "age",
     "kind": 5,
@@ -153,6 +156,7 @@ ContextPath Value[x2]
 Path x2
 CPPipe pathFromEnv: found:true
 Path Hover.content
+Path content
 ContextPath Value[x2].content->
 ContextPath Value[x2].content
 ContextPath Value[x2]
@@ -162,8 +166,10 @@ ContextPath Value[x2]
 Path x2
 CPPipe pathFromEnv: found:true
 Path Hover.content
+Path content
 CPPipe pathFromEnv: found:true
 Path Hover.
+Path 
 [{
     "label": "age",
     "kind": 5,
@@ -187,6 +193,7 @@ ContextPath Value[y1]
 Path y1
 CPPipe pathFromEnv: found:true
 Path Hover.content
+Path content
 ContextPath Value[y1].content->
 ContextPath Value[y1].content
 ContextPath Value[y1]
@@ -196,8 +203,10 @@ ContextPath Value[y1]
 Path y1
 CPPipe pathFromEnv: found:true
 Path Hover.content
+Path content
 CPPipe pathFromEnv: found:true
 Path Hover.
+Path 
 [{
     "label": "age",
     "kind": 5,
@@ -221,6 +230,7 @@ ContextPath Value[y2]
 Path y2
 CPPipe pathFromEnv: found:true
 Path Hover.content
+Path content
 ContextPath Value[y2].content->
 ContextPath Value[y2].content
 ContextPath Value[y2]
@@ -230,8 +240,10 @@ ContextPath Value[y2]
 Path y2
 CPPipe pathFromEnv: found:true
 Path Hover.content
+Path content
 CPPipe pathFromEnv: found:true
 Path Hover.
+Path 
 [{
     "label": "age",
     "kind": 5,
@@ -280,6 +292,7 @@ ContextPath Value[x]
 Path x
 CPPipe pathFromEnv: found:true
 Path Hover.someField
+Path someField
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 {"contents": {"kind": "markdown", "value": " Mighty fine field here. \n\n```rescript\nbool\n```"}}
@@ -288,12 +301,21 @@ Hover src/Hover.res 248:19
 {"contents": {"kind": "markdown", "value": "```rescript\nbool\n```\n---\n Mighty fine field here. "}}
 
 Hover src/Hover.res 253:20
-{"contents": {"kind": "markdown", "value": "```rescript\nvariant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n\n---\n```rescript\nCoolVariant\n```\n---\n Cool variant! "}}
+{"contents": {"kind": "markdown", "value": "```rescript\nvariant\nCoolVariant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n\n---\n Cool variant! "}}
 
-Hover src/Hover.res 257:23
+Hover src/Hover.res 258:22
+{"contents": {"kind": "markdown", "value": "```rescript\npayloadVariants\nInlineRecord({field1: int, field2: bool})\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C256%2C0%5D)\n"}}
+
+Hover src/Hover.res 261:23
+{"contents": {"kind": "markdown", "value": "```rescript\npayloadVariants\nArgs(int, bool)\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C256%2C0%5D)\n"}}
+
+Hover src/Hover.res 268:42
+{"contents": {"kind": "markdown", "value": "```rescript\nRecursiveVariants.t\nAction1(int)\n```\n\n---\n\n```\n \n```\n```rescript\ntype RecursiveVariants.t =\n  | Action1(int)\n  | Action2(float)\n  | Batch(array<t>)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C265%2C2%5D)\n"}}
+
+Hover src/Hover.res 272:23
 Nothing at that position. Now trying to use completion.
-posCursor:[257:23] posNoWhite:[257:22] Found expr:[257:22->257:25]
-Pexp_ident fff:[257:22->257:25]
+posCursor:[272:23] posNoWhite:[272:22] Found expr:[272:22->272:25]
+Pexp_ident fff:[272:22->272:25]
 Completable: Cpath Value[fff]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -304,10 +326,10 @@ Resolved opens 1 Stdlib
 ContextPath string
 {"contents": {"kind": "markdown", "value": "```rescript\nstring\n```"}}
 
-Hover src/Hover.res 260:33
+Hover src/Hover.res 275:33
 Nothing at that position. Now trying to use completion.
-posCursor:[260:33] posNoWhite:[260:32] Found expr:[260:31->260:40]
-Pexp_ident someField:[260:31->260:40]
+posCursor:[275:33] posNoWhite:[275:32] Found expr:[275:31->275:40]
+Pexp_ident someField:[275:31->275:40]
 Completable: Cpath Value[someField]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -320,9 +342,9 @@ ContextPath Value[x]
 Path x
 {"contents": {"kind": "markdown", "value": "```rescript\nbool\n```"}}
 
-Hover src/Hover.res 263:8
+Hover src/Hover.res 278:8
 {"contents": {"kind": "markdown", "value": "\n [`Belt.Array`]()\n\n  **mutable array**: Utilities functions\n\n```rescript\nmodule Array: {\n  module Id\n  module Array\n  module SortArray\n  module MutableQueue\n  module MutableStack\n  module List\n  module Range\n  module Set\n  module Map\n  module MutableSet\n  module MutableMap\n  module HashSet\n  module HashMap\n  module Option\n  module Result\n  module Int\n  module Float\n}\n```"}}
 
-Hover src/Hover.res 266:6
+Hover src/Hover.res 281:6
 {"contents": {"kind": "markdown", "value": "```rescript\ntype aliased = variant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n"}}
 

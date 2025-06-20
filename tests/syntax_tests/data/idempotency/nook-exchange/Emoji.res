@@ -37,7 +37,7 @@ let parseText = (text: string): React.element => {
   let children = []
   let iter = ref(0)
 
-  let resultRef = ref(text |> Js.Re.exec_(emojiRegex))
+  let resultRef = ref(text->Js.Re.exec_(emojiRegex))
   while resultRef.contents != None {
     let result = Belt.Option.getExn(resultRef.contents)
     let matches = Js.Re.captures(result)
@@ -46,15 +46,15 @@ let parseText = (text: string): React.element => {
       Js.Re.index(result) + Belt.Option.getExn(Js.Nullable.toOption(matches[1]))->Js.String.length
     if iter.contents < offset {
       children
-      |> Js.Array.push(
+      ->Js.Array.push(
         <span key={string_of_int(Js.Array.length(children))}>
-          {React.string(text |> Js.String.substring(~from=iter.contents, ~to_=offset))}
+          {React.string(text->Js.String.substring(~from=iter.contents, ~to_=offset))}
         </span>,
       )
-      |> ignore
+      ->ignore
     }
     children
-    |> Js.Array.push(
+    ->Js.Array.push(
       switch emojiColons {
       | ":nmt:" => <span className=Styles.nmt key={string_of_int(Js.Array.length(children))} />
       | ":bell:" => <span className=Styles.bell key={string_of_int(Js.Array.length(children))} />
@@ -64,19 +64,19 @@ let parseText = (text: string): React.element => {
         </span>
       },
     )
-    |> ignore
+    ->ignore
 
-    resultRef := text |> Js.Re.exec_(emojiRegex)
+    resultRef := text->Js.Re.exec_(emojiRegex)
     iter := offset + Js.String.length(emojiColons)
   }
   if iter.contents < Js.String.length(text) {
     children
-    |> Js.Array.push(
+    ->Js.Array.push(
       <span key={string_of_int(Js.Array.length(children))}>
-        {React.string(text |> Js.String.substringToEnd(~from=iter.contents))}
+        {React.string(text->Js.String.substringToEnd(~from=iter.contents))}
       </span>,
     )
-    |> ignore
+    ->ignore
   }
   React.array(children)
 }

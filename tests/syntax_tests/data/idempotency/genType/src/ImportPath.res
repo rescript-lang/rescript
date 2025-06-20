@@ -12,14 +12,14 @@ let bsCurryPath = (~config) => ("", Config_.getBsCurryPath(~config))
 
 let fromModule = (~dir, ~importExtension, moduleName) => {
   let withNoPath =
-    (moduleName |> ModuleName.toString |> ScopedPackage.removeGeneratedModule) ++ importExtension
+    (moduleName->ModuleName.toString->ScopedPackage.removeGeneratedModule) ++ importExtension
   (dir, withNoPath)
 }
 
 let fromStringUnsafe = s => ("", s)
 
 let chopExtensionSafe = s =>
-  try s |> Filename.chop_extension catch {
+  try s->Filename.chop_extension catch {
   | Invalid_argument(_) => s
   }
 
@@ -28,8 +28,8 @@ let dump = ((dir, s)) => NodeFilename.concat(dir, s)
 let toCmt = (~config, ~outputFileRelative, (dir, s)) => {
   open Filename
   concat(
-    outputFileRelative |> dirname,
-    ((dir, s |> chopExtensionSafe) |> dump) ++
+    outputFileRelative->dirname,
+    ((dir, s->chopExtensionSafe)->dump) ++
       (switch config.namespace {
       | None => ""
       | Some(name) => "-" ++ name
@@ -40,6 +40,6 @@ let toCmt = (~config, ~outputFileRelative, (dir, s)) => {
 
 let emit = (~config, (dir, s)) =>
   switch config.importPath {
-  | Relative => (dir, s) |> dump
+  | Relative => (dir, s)->dump
   | Node => s
   }

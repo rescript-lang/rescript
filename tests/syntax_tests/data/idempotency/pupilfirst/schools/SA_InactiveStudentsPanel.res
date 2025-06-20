@@ -24,23 +24,23 @@ let reducer = (state, action) =>
     }
   | DeselectTeam(team) => {
       ...state,
-      selectedTeams: state.selectedTeams |> List.filter(s => Team.id(s) !== Team.id(team)),
+      selectedTeams: state.selectedTeams->List.filter(s => Team.id(s) !== Team.id(team)),
     }
   | UpdateSearchString(searchString) => {...state, searchString: searchString}
   }
 
 let studentsInTeam = (students, team) =>
-  students |> List.filter(student => Student.teamId(student) === Team.id(team))
+  students->List.filter(student => Student.teamId(student) === Team.id(team))
 
 let markActive = (teams, courseId, responseCB, authenticityToken) => {
   let payload = Js.Dict.empty()
-  Js.Dict.set(payload, "authenticity_token", authenticityToken |> Js.Json.string)
+  Js.Dict.set(payload, "authenticity_token", authenticityToken->Js.Json.string)
   Js.Dict.set(
     payload,
     "team_ids",
     teams
-    |> List.map(s => s |> Team.id |> int_of_string)
-    |> {
+    ->List.map(s => s->Team.id->int_of_string)
+    ->{
       open Json.Encode
       list(int)
     },
@@ -50,13 +50,13 @@ let markActive = (teams, courseId, responseCB, authenticityToken) => {
 }
 
 let handleActiveTeamResponse = (send, state, json) => {
-  let message = json |> {
+  let message = json->{
     open Json.Decode
     field("message", string)
   }
   let updatedTeams =
-    state.teams |> List.filter(team =>
-      !(state.selectedTeams |> List.exists(removedTeam => Team.id(team) === Team.id(removedTeam)))
+    state.teams->List.filter(team =>
+      !(state.selectedTeams->List.exists(removedTeam => Team.id(team) === Team.id(removedTeam)))
     )
   send(RefreshData(updatedTeams))
   Notification.success("Success!", message)
@@ -77,11 +77,11 @@ let make = (~teams, ~courseId, ~students, ~authenticityToken, ~isLastPage, ~curr
           <a
             className="block px-3 py-3 md:py-2 text-gray-800"
             href={"/school/courses/" ++ (courseId ++ "/students")}>
-            {"All Students" |> str}
+            {"All Students"->str}
           </a>
         </li>
         <li className="px-3 py-3 md:py-2 text-primary-500 border-b-3 border-primary-500 -mb-px">
-          <span> {"Inactive Students" |> str} </span>
+          <span> {"Inactive Students"->str} </span>
         </li>
       </ul>
     </div>
@@ -102,10 +102,10 @@ let make = (~teams, ~courseId, ~students, ~authenticityToken, ~isLastPage, ~curr
               href={"/school/courses/" ++
               (courseId ++
               ("/inactive_students?search=" ++ state.searchString))}>
-              {"Search" |> str}
+              {"Search"->str}
             </a>
           </div>
-          {state.selectedTeams |> ListUtils.isEmpty
+          {state.selectedTeams->ListUtils.isEmpty
             ? React.null
             : <button
                 onClick={_e =>
@@ -116,27 +116,27 @@ let make = (~teams, ~courseId, ~students, ~authenticityToken, ~isLastPage, ~curr
                     authenticityToken,
                   )}
                 className="btn btn-success ml-3 mr-3 focus:outline-none">
-                {"Reactivate Students" |> str}
+                {"Reactivate Students"->str}
               </button>}
         </div>
       </div>
     </div>
     <div className="max-w-3xl mx-auto w-full">
-      {state.teams |> List.length > 0
+      {state.teams->List.length > 0
         ? state.teams
-          |> List.sort((team1, team2) =>
-            (team2 |> Team.id |> int_of_string) - (team1 |> Team.id |> int_of_string)
+          ->List.sort((team1, team2) =>
+            (team2->Team.id->int_of_string) - (team1->Team.id->int_of_string)
           )
-          |> List.map(team => {
-            let isSingleFounder = team |> studentsInTeam(state.students) |> List.length == 1
+          ->List.map(team => {
+            let isSingleFounder = team->studentsInTeam(state.students)->List.length == 1
 
             <div
-              key={team |> Team.id}
-              id={team |> Team.name}
+              key={team->Team.id}
+              id={team->Team.name}
               className="student-team-container flex items-center shadow bg-white rounded-lg mb-4 overflow-hidden">
               {
-                let isChecked = state.selectedTeams |> List.mem(team)
-                let checkboxId = "select-team-" ++ (team |> Team.id)
+                let isChecked = state.selectedTeams->List.mem(team)
+                let checkboxId = "select-team-" ++ (team->Team.id)
                 <label
                   className="flex self-stretch items-center text-grey leading-tight font-bold px-4 py-5 hover:bg-gray-100"
                   htmlFor=checkboxId>
@@ -153,24 +153,24 @@ let make = (~teams, ~courseId, ~students, ~authenticityToken, ~isLastPage, ~curr
               }
               <div className="flex-1 w-3/5 order-last border-l">
                 {team
-                |> studentsInTeam(state.students)
-                |> List.map(student =>
+                ->studentsInTeam(state.students)
+                ->List.map(student =>
                   <div
-                    key={student |> Student.id}
-                    id={student |> Student.name}
+                    key={student->Student.id}
+                    id={student->Student.name}
                     className="student-team__card flex items-center bg-white pl-4">
                     <div className="flex-1 w-3/5">
                       <div className="flex items-center">
                         <a
                           className="flex flex-1 self-stretch items-center py-4 pr-4"
-                          id={(student |> Student.name) ++ "_edit"}>
+                          id={(student->Student.name) ++ "_edit"}>
                           <img
                             className="w-10 h-10 rounded-full mr-4 object-cover"
-                            src={student |> Student.avatarUrl}
+                            src={student->Student.avatarUrl}
                           />
                           <div className="text-sm flex flex-col">
                             <p className="text-black font-semibold inline-block ">
-                              {student |> Student.name |> str}
+                              {student->Student.name->str}
                             </p>
                           </div>
                         </a>
@@ -178,36 +178,36 @@ let make = (~teams, ~courseId, ~students, ~authenticityToken, ~isLastPage, ~curr
                     </div>
                   </div>
                 )
-                |> Array.of_list
-                |> React.array}
+                ->Array.of_list
+                ->React.array}
               </div>
               {isSingleFounder
                 ? React.null
                 : <div className="flex w-2/5 items-center">
                     <div className="w-3/5 py-4 px-3">
                       <div className="students-team--name mb-5">
-                        <p className="mb-1 text-xs"> {"Team" |> str} </p>
-                        <h4> {team |> Team.name |> str} </h4>
+                        <p className="mb-1 text-xs"> {"Team"->str} </p>
+                        <h4> {team->Team.name->str} </h4>
                       </div>
                     </div>
                   </div>}
             </div>
           })
-          |> Array.of_list
-          |> React.array
+          ->Array.of_list
+          ->React.array
         : <div className="shadow bg-white rounded-lg mb-4 p-4">
-            {"No inactive student matches your search criteria." |> str}
+            {"No inactive student matches your search criteria."->str}
           </div>}
-      {teams |> ListUtils.isNotEmpty
+      {teams->ListUtils.isNotEmpty
         ? <div className="max-w-3xl w-full flex flex-row mx-auto justify-center pb-8">
             {currentPage > 1
               ? <a
                   className="block btn btn-default no-underline border shadow mx-2"
                   href={"/school/courses/" ++
                   (courseId ++
-                  ("/inactive_students?page=" ++ (currentPage - 1 |> string_of_int)))}>
+                  ("/inactive_students?page=" ++ (currentPage - 1->string_of_int)))}>
                   <i className="fas fa-arrow-left" />
-                  <span className="ml-2"> {"Prev" |> str} </span>
+                  <span className="ml-2"> {"Prev"->str} </span>
                 </a>
               : React.null}
             {isLastPage
@@ -216,8 +216,8 @@ let make = (~teams, ~courseId, ~students, ~authenticityToken, ~isLastPage, ~curr
                   className="block btn btn-default no-underline border shadow mx-2"
                   href={"/school/courses/" ++
                   (courseId ++
-                  ("/inactive_students?page=" ++ (currentPage + 1 |> string_of_int)))}>
-                  <span className="mr-2"> {"Next" |> str} </span>
+                  ("/inactive_students?page=" ++ (currentPage + 1->string_of_int)))}>
+                  <span className="mr-2"> {"Next"->str} </span>
                   <i className="fas fa-arrow-right" />
                 </a>}
           </div>

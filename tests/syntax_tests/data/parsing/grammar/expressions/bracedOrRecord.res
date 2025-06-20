@@ -17,7 +17,7 @@ let e = {-a}
 let e = {a + b}
 // ternary
 let e = {a ? true : false}
-let e = {a |> computation ? true : false}
+let e = {a->computation ? true : false}
 // primary expr
 let e = {a[0]}
 let e = {f(b)}
@@ -26,11 +26,11 @@ let e = {arr[x] = 20}
 
 // es6 arrow
 let e = {
-  x => x + 1 |> doStuff(config)
+  x => x + 1->doStuff(config)
 }
 
 let e = {
-  (x => x + 1) |> doStuff(config)
+  (x => x + 1)->doStuff(config)
 }
 
 let e = {
@@ -39,7 +39,7 @@ let e = {
 
 
 let e = {
-  (x => x + 1) |> sideEffect
+  (x => x + 1)->sideEffect
   logToAnalytics(Shady.ml)
 }
 
