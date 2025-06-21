@@ -1,0 +1,12 @@
+{
+  "name": "@testrepo/compiled-by-legacy",
+  "sources": {
+    "dir": "src",
+    "subdirs": true
+  },
+  "package-specs": {
+    "module": "es6",
+    "in-source": true
+  },
+  "suffix": ".res.js"
+}

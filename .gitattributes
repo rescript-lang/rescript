@@ -1,3 +1,5 @@
+* text=auto eol=lf
+
 *.ml linguist-language=OCaml
 *.mli linguist-language=OCaml
 *.res linguist-language=ReScript
