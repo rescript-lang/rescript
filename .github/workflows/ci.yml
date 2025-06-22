@@ -450,7 +450,7 @@ jobs:
         if: ${{ matrix.generate_api_docs }}
         uses: actions/upload-artifact@v4
         with:
-          name: api-docs
+          name: api
           path: scripts/res/apiDocs/
 
   pkg-pr-new:
@@ -495,11 +495,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           artifact-ids: ${{ needs.build-compiler.outputs.api-docs-artifact-id }}
-          path: data/api
+          path: data
 
       - name: Check if repo is clean
         id: diffcheck
         run: |
+          git status
           if [ -z "$(git status --porcelain)" ]; then
             echo "clean=true" >> $GITHUB_OUTPUT
           else

@@ -123,8 +123,7 @@ let deep_flatten (lam : Lam.t) : Lam.t =
           id,
           (Lprim
              {
-               primitive =
-                 Pnull_to_opt | Pundefined_to_opt | Pnull_undefined_to_opt;
+               primitive = Pnull_to_opt | Pnull_undefined_to_opt;
                args = [Lvar _];
              } as arg),
           body ) ->
@@ -134,9 +133,7 @@ let deep_flatten (lam : Lam.t) : Lam.t =
           id,
           Lprim
             {
-              primitive =
-                (Pnull_to_opt | Pundefined_to_opt | Pnull_undefined_to_opt) as
-                primitive;
+              primitive = (Pnull_to_opt | Pnull_undefined_to_opt) as primitive;
               args = [arg];
             },
           body ) ->

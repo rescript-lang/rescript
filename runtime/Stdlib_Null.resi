@@ -47,8 +47,43 @@ let asNullValue = myStr->Null.make // The compiler now thinks this can be `strin
 */
 external make: 'a => t<'a> = "%identity"
 
+/**
+`equal(a, b, eq)` checks if `a` and `b` are equal.
+If both are `Null.Value`, it will use function `eq` to check if the values are equal.
+
+## Examples
+```rescript
+let a = Null.Value(1)
+let b = Null.null
+let c = Null.Value(2)
+
+Null.equal(a, b, Int.equal) == false
+Null.equal(a, c, Int.equal) == false
+Null.equal(Null.null, Null.null, Int.equal) == true
+```
+ */
 let equal: (t<'a>, t<'b>, ('a, 'b) => bool) => bool
 
+/**
+`compare(a, b, cmp)` compares `a` and `b`.
+If both are `Null.Value`, it will use function `cmp` to compare the values.
+
+## Examples
+```rescript
+let a = Null.Value(1)
+let b = Null.null
+let c = Null.Value(2)
+
+// A value is greater than null
+Null.compare(a, b, Int.compare) == Stdlib_Ordering.greater
+// A value is less than null
+Null.compare(b, a, Int.compare) == Stdlib_Ordering.less
+// A null is equal to null
+Null.compare(Null.null, Null.null, Int.compare) == Stdlib_Ordering.equal
+// The compare function is used if both are `Null.Value`
+Null.compare(a, c, Int.compare) == Stdlib_Ordering.less
+```
+*/
 let compare: (t<'a>, t<'b>, ('a, 'b) => Stdlib_Ordering.t) => Stdlib_Ordering.t
 
 /**

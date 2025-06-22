@@ -264,7 +264,6 @@ type primitive =
   (* js *)
   | Pcurry_apply of int
   | Pjscomp of comparison
-  | Pundefined_to_opt
   | Pnull_to_opt
   | Pnullable_to_opt
   | Pis_not_none

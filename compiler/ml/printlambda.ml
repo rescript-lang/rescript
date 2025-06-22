@@ -252,7 +252,6 @@ let primitive ppf = function
   | Pjscomp Cle -> fprintf ppf "<="
   | Pjscomp Cgt -> fprintf ppf ">"
   | Pjscomp Cge -> fprintf ppf ">="
-  | Pundefined_to_opt -> fprintf ppf "undefined_to_opt"
   | Pnull_to_opt -> fprintf ppf "null_to_opt"
   | Pnullable_to_opt -> fprintf ppf "nullable_to_opt"
   | Pis_not_none -> fprintf ppf "#is_not_none"

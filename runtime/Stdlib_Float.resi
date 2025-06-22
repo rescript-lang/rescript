@@ -114,8 +114,27 @@ module Constants: {
   external maxValue: float = "Number.MAX_VALUE"
 }
 
+/**
+Checks if two floating point numbers are equal.
+
+## Examples
+```rescript
+Float.equal(1.0, 1.0) == true
+Float.equal(1.0, 2.0) == false
+```
+*/
 external equal: (float, float) => bool = "%equal"
 
+/**
+Compares two floating point numbers, returns an `Ordering.t` value.
+
+## Examples
+```rescript
+Float.compare(1.0, 1.0) == Ordering.equal
+Float.compare(1.0, 2.0) == Ordering.less
+Float.compare(2.0, 1.0) == Ordering.greater
+```
+*/
 external compare: (float, float) => Stdlib_Ordering.t = "%compare"
 
 /**
@@ -139,9 +158,9 @@ See [`isFinite`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-Float.isFinite(1.0) // true
-Float.isFinite(Float.Constants.nan) // false
-Float.isFinite(Float.Constants.positiveInfinity) // false
+Float.isFinite(1.0) == true
+Float.isFinite(Float.Constants.nan) == false
+Float.isFinite(Float.Constants.positiveInfinity) == false
 ```
 */
 @val
@@ -156,11 +175,11 @@ See [`parseFloat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ## Examples
 
 ```rescript
-Float.parseFloat("1.0") // 1.0
-Float.parseFloat("  3.14   ") // 3.14
-Float.parseFloat("3.0") // 3.0
-Float.parseFloat("3.14some non-digit characters") // 3.14
-Float.parseFloat("error")->Float.isNaN // true
+Float.parseFloat("1.0") == 1.0
+Float.parseFloat("  3.14   ") == 3.14
+Float.parseFloat("3.0") == 3.0
+Float.parseFloat("3.14some non-digit characters") == 3.14
+Float.parseFloat("error")->Float.isNaN == true
 ```
 */
 @val
@@ -177,15 +196,15 @@ See [`parseInt`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-Float.parseInt("1.0") // 1.0
-Float.parseInt("  3.14   ") // 3.0
-Float.parseInt(3) // 3.0
-Float.parseInt("3.14some non-digit characters") // 3.0
-Float.parseInt("error")->Float.isNaN // true
-Float.parseInt("10.0", ~radix=2) // 2.0
-Float.parseInt("15 * 3", ~radix=10) // 15.0
-Float.parseInt("12", ~radix=13) // 15.0
-Float.parseInt("17", ~radix=40)->Float.isNaN // true
+Float.parseInt("1.0") == 1.0
+Float.parseInt("  3.14   ") == 3.0
+Float.parseInt(3) == 3.0
+Float.parseInt("3.14some non-digit characters") == 3.0
+Float.parseInt("error")->Float.isNaN == true
+Float.parseInt("10.0", ~radix=2) == 2.0
+Float.parseInt("15 * 3", ~radix=10) == 15.0
+Float.parseInt("12", ~radix=13) == 15.0
+Float.parseInt("17", ~radix=40)->Float.isNaN == true
 ```
 */
 @val
@@ -202,10 +221,10 @@ See [`parseInt`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-Float.parseIntWithRadix("10.0", ~radix=2) // 2.0
-Float.parseIntWithRadix("15 * 3", ~radix=10) // 15.0
-Float.parseIntWithRadix("12", ~radix=13) // 15.0
-Float.parseIntWithRadix("17", ~radix=40)->Float.isNaN // true
+Float.parseIntWithRadix("10.0", ~radix=2) == 2.0
+Float.parseIntWithRadix("15 * 3", ~radix=10) == 15.0
+Float.parseIntWithRadix("12", ~radix=13) == 15.0
+Float.parseIntWithRadix("17", ~radix=40)->Float.isNaN == true
 ```
 */
 @deprecated("Use `parseInt` instead") @val
@@ -220,10 +239,10 @@ See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 ## Examples
 
 ```rescript
-Float.toExponential(1000.0) // "1e+3"
-Float.toExponential(-1000.0) // "-1e+3"
-Float.toExponential(77.0, ~digits=2) // "7.70e+1"
-Float.toExponential(5678.0, ~digits=2) // "5.68e+3"
+Float.toExponential(1000.0) == "1e+3"
+Float.toExponential(-1000.0) == "-1e+3"
+Float.toExponential(77.0, ~digits=2) == "7.70e+1"
+Float.toExponential(5678.0, ~digits=2) == "5.68e+3"
 ```
 
 ## Exceptions
@@ -242,8 +261,8 @@ See [`Number.toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 ## Examples
 
 ```rescript
-Float.toExponentialWithPrecision(77.0, ~digits=2) // "7.70e+1"
-Float.toExponentialWithPrecision(5678.0, ~digits=2) // "5.68e+3"
+Float.toExponentialWithPrecision(77.0, ~digits=2) == "7.70e+1"
+Float.toExponentialWithPrecision(5678.0, ~digits=2) == "5.68e+3"
 ```
 
 ## Exceptions
@@ -262,10 +281,10 @@ See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 ## Examples
 
 ```rescript
-Float.toFixed(123456.0) // "123456.00"
-Float.toFixed(10.0) // "10.00"
-Float.toFixed(300.0, ~digits=4) // "300.0000"
-Float.toFixed(300.0, ~digits=1) // "300.0"
+Float.toFixed(123456.0) == "123456"
+Float.toFixed(10.0) == "10"
+Float.toFixed(300.0, ~digits=4) == "300.0000"
+Float.toFixed(300.0, ~digits=1) == "300.0"
 ```
 
 ## Exceptions
@@ -284,8 +303,8 @@ See [`Number.toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 ## Examples
 
 ```rescript
-Float.toFixedWithPrecision(300.0, ~digits=4) // "300.0000"
-Float.toFixedWithPrecision(300.0, ~digits=1) // "300.0"
+Float.toFixedWithPrecision(300.0, ~digits=4) == "300.0000"
+Float.toFixedWithPrecision(300.0, ~digits=1) == "300.0"
 ```
 
 ## Exceptions
@@ -303,10 +322,10 @@ See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScri
 ## Examples
 
 ```rescript
-Float.toPrecision(100.0) // "100"
-Float.toPrecision(1.0) // "1"
-Float.toPrecision(100.0, ~digits=2) // "1.0e+2"
-Float.toPrecision(1.0, ~digits=1) // "1"
+Float.toPrecision(100.0) == "100"
+Float.toPrecision(1.0) == "1"
+Float.toPrecision(100.0, ~digits=2) == "1.0e+2"
+Float.toPrecision(1.0, ~digits=1) == "1"
 ```
 
 ## Exceptions
@@ -326,8 +345,8 @@ See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScri
 ## Examples
 
 ```rescript
-Float.toPrecisionWithPrecision(100.0, ~digits=2) // "1.0e+2"
-Float.toPrecisionWithPrecision(1.0, ~digits=1) // "1"
+Float.toPrecisionWithPrecision(100.0, ~digits=2) == "1.0e+2"
+Float.toPrecisionWithPrecision(1.0, ~digits=1) == "1"
 ```
 
 ## Exceptions
@@ -347,8 +366,8 @@ See [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/
 ## Examples
 
 ```rescript
-Float.toString(1000.0) // "1000"
-Float.toString(-1000.0) // "-1000"
+Float.toString(1000.0) == "1000"
+Float.toString(-1000.0) == "-1000"
 ```
 */
 @send
@@ -362,9 +381,9 @@ See [`Number.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/
 ## Examples
 
 ```rescript
-Float.toStringWithRadix(6.0, ~radix=2) // "110"
-Float.toStringWithRadix(3735928559.0, ~radix=16) // "deadbeef"
-Float.toStringWithRadix(123456.0, ~radix=36) // "2n9c"
+Float.toStringWithRadix(6.0, ~radix=2) == "110"
+Float.toStringWithRadix(3735928559.0, ~radix=16) == "deadbeef"
+Float.toStringWithRadix(123456.0, ~radix=36) == "2n9c"
 ```
 
 ## Exceptions

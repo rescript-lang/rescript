@@ -61,7 +61,6 @@ let primitive ppf (prim : Lam_primitive.t) =
   | Praw_js_code _ -> fprintf ppf "[raw]"
   | Ptypeof -> fprintf ppf "typeof"
   | Pnull_to_opt -> fprintf ppf "[null->opt]"
-  | Pundefined_to_opt -> fprintf ppf "[undefined->opt]"
   | Pnull_undefined_to_opt -> fprintf ppf "[null/undefined->opt]"
   | Pis_null -> fprintf ppf "[?null]"
   | Pis_not_none -> fprintf ppf "[?is-not-none]"

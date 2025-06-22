@@ -428,8 +428,27 @@ Returns the time, in milliseconds, between UNIX epoch (January 1, 1970 00:00:00 
 @val
 external now: unit => msSinceEpoch = "Date.now"
 
+/**
+`equal(date1, date2)` checks if two dates represent the same point in time.
+
+## Examples
+```rescript
+Date.equal(Date.fromString("2023-01-01"), Date.fromString("2023-01-01")) == true
+Date.equal(Date.fromString("2023-01-01"), Date.fromString("2023-01-02")) == false
+```
+*/
 let equal: (t, t) => bool
 
+/**
+`compare(date1, date2)` compares two dates chronologically, returns an `Ordering.t` value.
+
+## Examples
+```rescript
+Date.compare(Date.fromString("2023-01-01"), Date.fromString("2023-01-01")) == Ordering.equal
+Date.compare(Date.fromString("2023-01-01"), Date.fromString("2023-01-02")) == Ordering.less
+Date.compare(Date.fromString("2023-01-02"), Date.fromString("2023-01-01")) == Ordering.greater
+```
+*/
 let compare: (t, t) => Stdlib_Ordering.t
 
 /**

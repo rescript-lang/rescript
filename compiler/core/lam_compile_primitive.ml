@@ -95,13 +95,6 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
       | Var _ | Undefined _ | Null -> Js_of_lam_option.null_to_opt e
       | _ -> E.runtime_call Primitive_modules.option "fromNull" args)
     | _ -> assert false)
-  | Pundefined_to_opt -> (
-    match args with
-    | [e] -> (
-      match e.expression_desc with
-      | Var _ | Undefined _ | Null -> Js_of_lam_option.undef_to_opt e
-      | _ -> E.runtime_call Primitive_modules.option "fromUndefined" args)
-    | _ -> assert false)
   | Pnull_undefined_to_opt -> (
     match args with
     | [e] -> (

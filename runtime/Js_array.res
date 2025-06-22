@@ -127,7 +127,7 @@ external length: array<'a> => int = "length"
 
 /* Mutator functions */
 
-/** 
+/**
 Copies from the first element in the given array to the designated `~to_` position, returning the resulting array. *This function modifies the original array.* See [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.
 
 ## Examples
@@ -244,7 +244,7 @@ let empty: array<int> = []
 Js.Array.pop(empty) == None
 ```
 */
-@send @return(undefined_to_opt)
+@send
 external pop: t<'a> => option<'a> = "pop"
 
 /**
@@ -305,7 +305,7 @@ let empty: array<int> = []
 Js.Array.shift(empty) == None
 ```
 */
-@send @return(undefined_to_opt)
+@send
 external shift: t<'a> => option<'a> = "shift"
 
 /**
@@ -641,7 +641,7 @@ on MDN.
 external copy: t<'a> => 'this = "slice"
 
 /**
-Returns a shallow copy of the given array from the given index to the end. 
+Returns a shallow copy of the given array from the given index to the end.
 See [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) on MDN.
 
 ## Examples
@@ -774,7 +774,7 @@ Js.Array.find(x => x < 0, [33, 22, -55, 77, -44]) == Some(-55)
 Js.Array.find(x => x < 0, [33, 22, 55, 77, 44]) == None
 ```
 */
-@send @return(undefined_to_opt)
+@send
 external find: (t<'a>, 'a => bool) => option<'a> = "find"
 let find = (arg1, obj) => find(obj, arg1)
 
@@ -791,7 +791,7 @@ Js.Array.findi(positiveOddElement, [66, -33, 55, 88, 22]) == Some(88)
 Js.Array.findi(positiveOddElement, [66, -33, 55, -88, 22]) == None
 ```
 */
-@send @return(undefined_to_opt)
+@send
 external findi: (t<'a>, ('a, int) => bool) => option<'a> = "find"
 let findi = (arg1, obj) => findi(obj, arg1)
 

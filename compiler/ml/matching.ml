@@ -1810,7 +1810,7 @@ let reintroduce_fail sw =
       (fun i c ->
         if
           c > !max || (c = !max && i > !i_max)
-          (* tie-break for determinism: choose the smallest index*)
+          (* tie-break for determinism: choose the largest index *)
         then (
           i_max := i;
           max := c))

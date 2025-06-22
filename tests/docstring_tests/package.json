@@ -1,5 +1,6 @@
 {
   "name": "@tests/docstring-tests",
+  "type": "module",
   "private": true,
   "scripts": {
     "build": "rescript",
