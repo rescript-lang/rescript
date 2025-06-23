@@ -164,10 +164,6 @@ external splitByRegExpAtMost: (string, Stdlib_RegExp.t, ~limit: int) => array<op
 @send external padStart: (string, int, string) => string = "padStart"
 @send external padEnd: (string, int, string) => string = "padEnd"
 
-@get_index external getSymbol: (string, Stdlib_Symbol.t) => option<'a> = ""
-@get_index external getSymbolUnsafe: (string, Stdlib_Symbol.t) => 'a = ""
-@set_index external setSymbol: (string, Stdlib_Symbol.t, 'a) => unit = ""
-
 @send external localeCompare: (string, string) => float = "localeCompare"
 
 external ignore: string => unit = "%ignore"
