@@ -27,6 +27,10 @@
 
 - Remove `@return(undefined_to_opt)` and `%undefined_to_opt` primitive. https://github.com/rescript-lang/rescript/pull/7462
 
+#### :boom: Breaking Change
+
+- Remove `String.getSymbol`, `String.getSymbolUnsafe` and `String.setSymbol`. https://github.com/rescript-lang/rescript/pull/7571
+
 # 12.0.0-alpha.14
 
 #### :boom: Breaking Change
