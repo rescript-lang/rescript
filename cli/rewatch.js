@@ -12,7 +12,7 @@ const firstPositionalArgIndex = args.findIndex((arg) => !arg.startsWith("-"));
 try {
   if (firstPositionalArgIndex !== -1) {
     const subcommand = args[firstPositionalArgIndex];
-    const subcommandArgs = args.slice(firstPositionalArgIndex + 1);
+    const subcommandWithArgs = args.slice(firstPositionalArgIndex);
 
     if (
       subcommand === "build" ||
@@ -22,7 +22,7 @@ try {
     ) {
       child_process.execFileSync(
         rewatch_exe,
-        [...subcommandArgs, "--bsc-path", bsc_exe],
+        [...subcommandWithArgs, "--bsc-path", bsc_exe],
         {
           stdio: "inherit",
         }
