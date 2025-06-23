@@ -42,7 +42,7 @@ String.make(3.5) == "3.5"
 String.make([1, 2, 3]) == "1,2,3"
 ```
 */
-@new
+@val
 external make: 'a => string = "String"
 
 /**
@@ -1119,10 +1119,9 @@ Returns `None` if the symbol property doesn't exist.
 ## Examples
 
 ```rescript
-let mySymbol = Symbol.make("test")
 let h = String.make("hello")
-String.setSymbol(h, mySymbol, 42)
-String.getSymbol(h, mySymbol) == Some(42)
+let symbol = String.getSymbol(h, Symbol.iterator)
+Option.isSome(symbol) == true
 ```
 */
 @get_index external getSymbol: (string, Stdlib_Symbol.t) => option<'a> = ""
@@ -1135,10 +1134,10 @@ This is _unsafe_, meaning it will return `undefined` if the symbol property does
 ## Examples
 
 ```rescript
-let mySymbol = Symbol.make("test")
 let h = String.make("hello")
-String.setSymbol(h, mySymbol, 43)
-String.getSymbolUnsafe(h, mySymbol) == 43
+// This does required direct access to the symbol property
+// Storing the iterator in a variable first, will not work.
+String.getSymbolUnsafe(h, Symbol.iterator)()->Iterator.toArray->Array.length == 5
 ```
 */
 @get_index external getSymbolUnsafe: (string, Stdlib_Symbol.t) => 'a = ""
@@ -1150,7 +1149,7 @@ String.getSymbolUnsafe(h, mySymbol) == 43
 
 ```rescript
 let mySymbol = Symbol.make("test")
-let h = String.make("hello")
+let h = %raw(`new String("hello")`)
 String.setSymbol(h, mySymbol, 42)
 String.getSymbol(h, mySymbol) == Some(42)
 ```

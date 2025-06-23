@@ -15,7 +15,7 @@ function print(value) {
   } else if (match === "string") {
     return Stdlib_Option.getExn(JSON.stringify(value), undefined);
   } else {
-    return String(value);
+    return new String(value);
   }
 }
 
