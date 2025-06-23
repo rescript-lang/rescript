@@ -394,6 +394,10 @@ pub fn compiler_args(
     };
 
     let uncurried_args = root_config.get_uncurried_args(version);
+    let jsx_args = root_config.get_jsx_args();
+    let jsx_module_args = root_config.get_jsx_module_args();
+    let jsx_mode_args = root_config.get_jsx_mode_args();
+    let jsx_preserve_args = root_config.get_jsx_preserve_args();
     let gentype_arg = config.get_gentype_arg();
 
     let warning_args: Vec<String> = match config.warnings.to_owned() {
@@ -476,6 +480,10 @@ pub fn compiler_args(
             Path::new("..").join("ocaml").to_string_lossy().to_string(),
         ],
         dependency_paths.concat(),
+        jsx_args,
+        jsx_module_args,
+        jsx_mode_args,
+        jsx_preserve_args,
         uncurried_args,
         bsc_flags.to_owned(),
         warning_args,
