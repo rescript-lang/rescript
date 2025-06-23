@@ -32,6 +32,11 @@ try {
         stdio: "inherit",
       });
     }
+  } else {
+    // no subcommand means build subcommand
+    child_process.execFileSync(rewatch_exe, [...args, "--bsc-path", bsc_exe], {
+      stdio: "inherit",
+    });
   }
 } catch (err) {
   if (err.status !== undefined) {
