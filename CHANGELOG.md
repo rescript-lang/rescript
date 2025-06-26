@@ -18,6 +18,7 @@
 - Pass the rewatch exit code through in wrapper script. https://github.com/rescript-lang/rescript/pull/7565
 - Prop punning when types don't match results in I/O error: _none_: No such file or directory. https://github.com/rescript-lang/rescript/pull/7533
 - Pass location to children prop in jsx ppx. https://github.com/rescript-lang/rescript/pull/7540
+- Fix crash when `bs-g` is used with untagged variants. https://github.com/rescript-lang/rescript/pull/7575
 
 #### :nail_care: Polish
 
