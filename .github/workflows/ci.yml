@@ -511,7 +511,6 @@ jobs:
         if: steps.diffcheck.outputs.clean == 'false'
         run: |
           npm ci 
-          npx rescript
           npm run build
 
       - name: Commit and push
