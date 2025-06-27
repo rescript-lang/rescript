@@ -5,7 +5,7 @@ cd ../testrepo
 
 bold "Test: It should compile"
 
-if rewatch clean &> /dev/null;
+if rewatch clean > /dev/null;
 then
   success "Repo Cleaned"
 else
@@ -13,7 +13,7 @@ else
   exit 1
 fi
 
-if rewatch &> /dev/null;
+if rewatch > /dev/null;
 then
   success "Repo Built"
 else
@@ -50,19 +50,19 @@ rewatch build &> ../tests/snapshots/rename-file-internal-dep-namespace.txt
 normalize_paths ../tests/snapshots/rename-file-internal-dep-namespace.txt
 mv ./packages/new-namespace/src/Other_module2.res ./packages/new-namespace/src/Other_module.res
 
-rewatch build &>  /dev/null
+rewatch build > /dev/null
 mv ./packages/main/src/ModuleWithInterface.resi ./packages/main/src/ModuleWithInterface2.resi
 rewatch build &> ../tests/snapshots/rename-interface-file.txt
 # normalize paths so the snapshot is the same on all machines
 normalize_paths ../tests/snapshots/rename-interface-file.txt
 mv ./packages/main/src/ModuleWithInterface2.resi ./packages/main/src/ModuleWithInterface.resi
-rewatch build &> /dev/null
+rewatch build > /dev/null
 mv ./packages/main/src/ModuleWithInterface.res ./packages/main/src/ModuleWithInterface2.res
 rewatch build &> ../tests/snapshots/rename-file-with-interface.txt
 # normalize paths so the snapshot is the same on all machines
 normalize_paths ../tests/snapshots/rename-file-with-interface.txt
 mv ./packages/main/src/ModuleWithInterface2.res ./packages/main/src/ModuleWithInterface.res
-rewatch build &> /dev/null
+rewatch build > /dev/null
 
 # when deleting a file that other files depend on, the compile should fail
 rm packages/dep02/src/Dep02.res
@@ -70,7 +70,7 @@ rewatch build &> ../tests/snapshots/remove-file.txt
 # normalize paths so the snapshot is the same on all machines
 normalize_paths ../tests/snapshots/remove-file.txt
 git checkout -- packages/dep02/src/Dep02.res
-rewatch build &> /dev/null
+rewatch build > /dev/null
 
 # it should show an error when we have a dependency cycle
 echo 'Dep01.log()' >> packages/new-namespace/src/NS_alias.res
@@ -78,8 +78,8 @@ rewatch build &> ../tests/snapshots/dependency-cycle.txt
 git checkout -- packages/new-namespace/src/NS_alias.res
 
 # it should compile dev dependencies with the --dev flag
-rewatch clean &> /dev/null
-rewatch build --dev &> /dev/null;
+rewatch clean > /dev/null
+rewatch build --dev > /dev/null;
 if [ $? -ne 0 ];
 then
   error "Failed to compile dev dependencies"
@@ -95,7 +95,7 @@ else
   exit 1
 fi
 
-rewatch clean --dev &> /dev/null
+rewatch clean --dev > /dev/null
 file_count=$(find ./packages/with-dev-deps -name *.mjs | wc -l)
 if [ "$file_count" -eq 0 ];
 then
@@ -107,10 +107,10 @@ fi
 
 
 # it should not loop (we had an infinite loop when clean building with a cycle)
-rewatch clean &> /dev/null
+rewatch clean > /dev/null
 echo 'Dep01.log()' >> packages/new-namespace/src/NS_alias.res
 git checkout -- packages/new-namespace/src/NS_alias.res
-rewatch build &> /dev/null
+rewatch build > /dev/null
 
 # make sure we don't have changes in the test repo
 if git diff --exit-code ./;
@@ -136,7 +136,7 @@ fi
 
 # see if the snapshots have changed
 changed_snapshots=$(git ls-files  --modified ../tests/snapshots)
-if git diff --exit-code ../tests/snapshots &> /dev/null;
+if git diff --exit-code ../tests/snapshots > /dev/null;
 then
   success "Snapshots are correct"
 else

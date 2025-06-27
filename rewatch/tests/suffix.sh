@@ -5,7 +5,7 @@ bold "Test: It should support custom suffixes"
 
 # Clean Repo
 sleep 1
-if rewatch clean &> /dev/null;
+if rewatch clean > /dev/null;
 then
   success "Repo Cleaned"
 else
@@ -16,7 +16,7 @@ fi
 # Replace suffix
 replace "s/.mjs/.res.js/g" bsconfig.json
 
-if rewatch build &> /dev/null;
+if rewatch build > /dev/null;
 then
   success "Repo Built"
 else
@@ -35,7 +35,7 @@ else
   exit 1
 fi
 
-if rewatch clean &> /dev/null;
+if rewatch clean > /dev/null;
 then
   success "Repo Cleaned"
 else
@@ -47,7 +47,7 @@ fi
 replace "s/.res.js/.mjs/g" bsconfig.json
 
 # Restore original build
-if rewatch build &> /dev/null;
+if rewatch build > /dev/null;
 then
   success "Repo Built"
 else
