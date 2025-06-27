@@ -121,8 +121,30 @@ String.fromCodePointMany([0xd55c, 0xae00, 0x1f63a]) == `한글😺`
 @variadic @val
 external fromCodePointMany: array<int> => string = "String.fromCodePoint"
 
+/**
+`equal(str1, str2)` checks if two strings are equal.
+
+## Examples
+
+```rescript
+String.equal("hello", "hello") == true
+String.equal("hello", "world") == false
+String.equal("", "") == true
+```
+*/
 external equal: (string, string) => bool = "%equal"
 
+/**
+`compare(str1, str2)` compares two strings, returns an `Ordering.t` value.
+
+## Examples
+
+```rescript
+String.compare("hello", "hello") == Ordering.equal
+String.compare("apple", "banana") == Ordering.less
+String.compare("zebra", "apple") == Ordering.greater
+```
+*/
 external compare: (string, string) => Stdlib_Ordering.t = "%compare"
 
 /**
@@ -1090,9 +1112,48 @@ String.padEnd("abc", 1, "") == "abc"
 @send
 external padEnd: (string, int, string) => string = "padEnd"
 
-// TODO: add docs
+/**
+`getSymbol(str, symbol)` returns the value associated with the given symbol on the string as an `option<'a>`.
+Returns `None` if the symbol property doesn't exist.
+
+## Examples
+
+```rescript
+let h = String.make("hello")
+let symbol = String.getSymbol(h, Symbol.iterator)
+Option.isSome(symbol) == true
+```
+*/
 @get_index external getSymbol: (string, Stdlib_Symbol.t) => option<'a> = ""
+
+/**
+`getSymbolUnsafe(str, symbol)` returns the value associated with the given symbol on the string. 
+
+This is _unsafe_, meaning it will return `undefined` if the symbol property doesn't exist.
+
+## Examples
+
+```rescript
+let h = String.make("hello")
+// This does required direct access to the symbol property
+// Storing the iterator in a variable first, will not work.
+String.getSymbolUnsafe(h, Symbol.iterator)()->Iterator.toArray->Array.length == 5
+```
+*/
 @get_index external getSymbolUnsafe: (string, Stdlib_Symbol.t) => 'a = ""
+
+/**
+`setSymbol(str, symbol, value)` sets the given symbol property on the string to the specified value.
+
+## Examples
+
+```rescript
+let mySymbol = Symbol.make("test")
+let h = %raw(`new String("hello")`)
+String.setSymbol(h, mySymbol, 42)
+String.getSymbol(h, mySymbol) == Some(42)
+```
+*/
 @set_index external setSymbol: (string, Stdlib_Symbol.t, 'a) => unit = ""
 
 /**
