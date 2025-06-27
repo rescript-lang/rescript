@@ -432,6 +432,36 @@ let test ~path =
               ("TypeDefinition " ^ path ^ " " ^ string_of_int line ^ ":"
              ^ string_of_int col);
             typeDefinition ~path ~pos:(line, col) ~debug:true
+          | "mli" ->
+            print_endline
+              ("MCP loc info " ^ path ^ " " ^ string_of_int line ^ ":"
+             ^ string_of_int col);
+            let currentFile = createCurrentFile () in
+            Mcp.LocInfo.locInfo ~path ~pos:(line, col) |> print_endline;
+            Sys.remove currentFile
+          | "mif" ->
+            print_endline
+              ("MCP identifier info " ^ path ^ " " ^ string_of_int line ^ ":"
+             ^ string_of_int col);
+            let currentFile = createCurrentFile () in
+            let identifier = String.sub rest 3 (String.length rest - 3) in
+            let identifier = String.trim identifier in
+            Mcp.IdentifierInfo.identifierInfo ~identifier ~path ~maybe_line:None
+              ~maybe_col:None
+            |> print_endline;
+            Sys.remove currentFile
+          | "mdp" ->
+            print_endline "MCP docs for project file";
+            let identifier = String.sub rest 3 (String.length rest - 3) in
+            let identifier = String.trim identifier in
+            Mcp.Docs.docs ~called_from:path ~typ:ProjectFile ~identifier
+            |> print_endline
+          | "mdl" ->
+            print_endline "MCP docs for library";
+            let identifier = String.sub rest 3 (String.length rest - 3) in
+            let identifier = String.trim identifier in
+            Mcp.Docs.docs ~called_from:path ~typ:Library ~identifier
+            |> print_endline
           | "xfm" ->
             let currentFile = createCurrentFile () in
             (* +2 is to ensure that the character ^ points to is what's considered the end of the selection. *)
