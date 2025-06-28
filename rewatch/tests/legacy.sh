@@ -7,7 +7,7 @@ error_output=$(rewatch_legacy 2>&1 >/dev/null)
 if [ $? -ne 0 ];
 then
     error "Error running rewatch legacy"
-    printf "%s\n" "$error_output" >&2
+    echo $error_output
     exit 1
 fi
 
@@ -18,7 +18,7 @@ then
     success "Test package cleaned"
 else
     error "Error cleaning test package. File count was $file_count."
-    printf "%s\n" "$error_output" >&2
+    echo $error_output
     exit 1
 fi
 
@@ -28,7 +28,7 @@ then
     success "Test package built"
 else
     error "Error building test package"
-    printf "%s\n" "$error_output" >&2
+    echo $error_output
     exit 1
 fi
 
@@ -47,6 +47,6 @@ then
     success "Test package formatted. Got $git_diff_file_count changed files."
 else
     error "Error formatting test package"
-    printf "%s\n" "$error_output" >&2
+    echo $error_output
     exit 1
 fi
