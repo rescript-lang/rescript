@@ -4,9 +4,9 @@ cd ../testrepo/packages/compiled-by-legacy
 bold "Test: It should use the legacy build system"
 
 error_output=$(rewatch_legacy 2>&1 >/dev/null)
-if [ -n "$error_output" ];
+if [ $? -ne 0 ];
 then
-    error "Error running rewatch"
+    error "Error running rewatch legacy"
     printf "%s\n" "$error_output" >&2
     exit 1
 fi
