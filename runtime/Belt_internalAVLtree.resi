@@ -114,7 +114,7 @@ let get: (t<'a, 'b>, 'a, ~cmp: cmp<'a, _>) => option<'b>
 let getUndefined: (t<'a, 'b>, 'a, ~cmp: cmp<'a, _>) => Js.undefined<'b>
 
 let getWithDefault: (t<'a, 'b>, 'a, 'b, ~cmp: cmp<'a, _>) => 'b
-let getExn: (t<'a, 'b>, 'a, ~cmp: cmp<'a, _>) => 'b
+let getOrThrow: (t<'a, 'b>, 'a, ~cmp: cmp<'a, _>) => 'b
 
 let has: (t<'a, 'b>, 'a, ~cmp: cmp<'a, _>) => bool
 

@@ -12,7 +12,7 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
   let beltList =
     [("getExn", [notFound]); ("headExn", [notFound]); ("tailExn", [notFound])]
   in
-  let beltMap = [("getExn", [notFound])] in
+  let beltMap = [("getExn", [notFound]); ("getOrThrow", [notFound])] in
   let beltMutableMap = beltMap in
   let beltMutableQueue = [("peekExn", [notFound]); ("popExn", [notFound])] in
   let beltMutableSet = [("getExn", [notFound])] in
