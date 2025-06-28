@@ -839,6 +839,10 @@ impl Package {
         self.config.get_jsx_module_args()
     }
 
+    pub fn get_jsx_preserve_args(&self) -> Vec<String> {
+        self.config.get_jsx_preserve_args()
+    }
+
     pub fn get_uncurried_args(&self, version: &str, root_package: &packages::Package) -> Vec<String> {
         root_package.config.get_uncurried_args(version)
     }
