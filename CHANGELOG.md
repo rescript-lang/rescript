@@ -47,6 +47,8 @@
   - `List.getExn` → `List.getOrThrow`
   - `List.tailExn` → `List.tailOrThrow`
   - `List.headExn` → `List.headOrThrow`
+  - `Belt.Array.getExn` → `Belt.Array.getOrThrow`
+  - `Belt.Array.setExn` → `Belt.Array.setOrThrow`
   - Old functions remain available but are marked as deprecated with guidance to use the new `OrThrow` variants.
   - https://github.com/rescript-lang/rescript/pull/7518, https://github.com/rescript-lang/rescript/pull/7554
 

@@ -50,7 +50,14 @@ let get: (t<'a>, int) => option<'a>
 Raise an exception if `i` is out of range.
 Otherwise return the value at index `i` in `arr`.
 */
+@deprecated("Use 'getOrThrow' instead")
 let getExn: (t<'a>, int) => 'a
+
+/**
+Raise an exception if `i` is out of range.
+Otherwise return the value at index `i` in `arr`.
+*/
+let getOrThrow: (t<'a>, int) => 'a
 
 /**
 `getUnsafe(arr, i)`
@@ -79,7 +86,13 @@ let set: (t<'a>, int, 'a) => bool
 /**
 `setExn(arr, i, x)` raise an exception if `i` is out of range.
 */
+@deprecated("Use 'setOrThrow' instead")
 let setExn: (t<'a>, int, 'a) => unit
+
+/**
+`setOrThrow(arr, i, x)` raise an exception if `i` is out of range.
+*/
+let setOrThrow: (t<'a>, int, 'a) => unit
 
 external setUnsafe: (t<'a>, int, 'a) => unit = "%array_unsafe_set"
 

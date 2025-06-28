@@ -1,7 +1,14 @@
 let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
   let table = Hashtbl.create 15 in
   let open Exn in
-  let beltArray = [("getExn", [assertFailure]); ("setExn", [assertFailure])] in
+  let beltArray =
+    [
+      ("getExn", [assertFailure]);
+      ("getOrThrow", [assertFailure]);
+      ("setExn", [assertFailure]);
+      ("setOrThrow", [assertFailure]);
+    ]
+  in
   let beltList =
     [("getExn", [notFound]); ("headExn", [notFound]); ("tailExn", [notFound])]
   in

@@ -10,8 +10,10 @@ function f(x) {
 let XX = {
   get: Belt_Array.get,
   getExn: Belt_Array.getExn,
+  getOrThrow: Belt_Array.getOrThrow,
   set: Belt_Array.set,
   setExn: Belt_Array.setExn,
+  setOrThrow: Belt_Array.setOrThrow,
   shuffleInPlace: Belt_Array.shuffleInPlace,
   shuffle: Belt_Array.shuffle,
   reverseInPlace: Belt_Array.reverseInPlace,
