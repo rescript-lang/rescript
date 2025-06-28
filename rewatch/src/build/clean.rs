@@ -334,7 +334,7 @@ pub fn cleanup_after_build(build_state: &BuildState) {
 pub fn clean(
     path: &Path,
     show_progress: bool,
-    bsc_path: &Option<PathBuf>,
+    bsc_path: Option<PathBuf>,
     snapshot_output: bool,
 ) -> Result<()> {
     let project_root = helpers::get_abs_path(path);

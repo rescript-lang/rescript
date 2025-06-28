@@ -222,18 +222,18 @@ pub fn get_bsc(root_path: &Path, workspace_root: &Option<PathBuf>) -> PathBuf {
 }
 
 pub fn get_rescript_legacy(root_path: &Path, workspace_root: Option<PathBuf>) -> PathBuf {
-    let bin_dir = get_bin_dir();
+    let bin_dir = Path::new("node_modules").join("rescript").join("cli");
 
     match (
         root_path
             .join(&bin_dir)
-            .join("rescript.exe")
+            .join("rescript.js")
             .canonicalize()
             .map(StrippedVerbatimPath::to_stripped_verbatim_path),
         workspace_root.map(|workspace_root| {
             workspace_root
                 .join(&bin_dir)
-                .join("rescript.exe")
+                .join("rescript.js")
                 .canonicalize()
                 .map(StrippedVerbatimPath::to_stripped_verbatim_path)
         }),

@@ -59,7 +59,7 @@ pub struct CompilerArgs {
 pub fn get_compiler_args(
     path: &Path,
     rescript_version: Option<String>,
-    bsc_path: &Option<PathBuf>,
+    bsc_path: Option<PathBuf>,
     build_dev_deps: bool,
 ) -> Result<String> {
     let filename = &helpers::get_abs_path(path);
@@ -501,7 +501,7 @@ pub fn build(
     show_progress: bool,
     no_timing: bool,
     create_sourcedirs: bool,
-    bsc_path: &Option<PathBuf>,
+    bsc_path: Option<PathBuf>,
     build_dev_deps: bool,
     snapshot_output: bool,
 ) -> Result<BuildState> {
@@ -516,7 +516,7 @@ pub fn build(
         filter,
         show_progress,
         path,
-        bsc_path,
+        &bsc_path,
         build_dev_deps,
         snapshot_output,
     )
@@ -558,9 +558,9 @@ pub fn pass_through_legacy(args: Vec<OsString>) -> i32 {
     let project_root = helpers::get_abs_path(Path::new("."));
     let workspace_root = helpers::get_workspace_root(&project_root);
 
-    let bsb_path = helpers::get_rescript_legacy(&project_root, workspace_root);
+    let rescript_legacy_path = helpers::get_rescript_legacy(&project_root, workspace_root);
 
-    let status = std::process::Command::new(bsb_path)
+    let status = std::process::Command::new(rescript_legacy_path)
         .args(args)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())

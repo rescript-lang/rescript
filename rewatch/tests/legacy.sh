@@ -3,19 +3,26 @@ cd ../testrepo/packages/compiled-by-legacy
 
 bold "Test: It should use the legacy build system"
 
-error_output=$(rewatch_legacy clean 2>&1 >/dev/null)
+error_output=$(rewatch_legacy 2>&1 >/dev/null)
+if [ -n "$error_output" ];
+then
+    error "Error running rewatch"
+    printf "%s\n" "$error_output" >&2
+    exit 1
+fi
 
-if [ $? -eq 0 ];
+error_output=$(rewatch_legacy clean 2>&1 >/dev/null)
+file_count=$(find . -name "*.res.js" | wc -l)
+if [ $? -eq 0 ] && [ $file_count -eq 0 ];
 then
     success "Test package cleaned"
 else
-    error "Error cleaning test package"
+    error "Error cleaning test package. File count was $file_count."
     printf "%s\n" "$error_output" >&2
     exit 1
 fi
 
 error_output=$(rewatch_legacy build 2>&1 >/dev/null)
-
 if [ $? -eq 0 ];
 then
     success "Test package built"
@@ -31,4 +38,15 @@ then
 else
   error "Build has changed"
   exit 1
+fi
+
+error_output=$(rewatch_legacy format -all 2>&1 >/dev/null)
+git_diff_file_count=$(git diff --name-only ./ | wc -l)
+if [ $? -eq 0 ] && [ $git_diff_file_count -eq 1 ];
+then
+    success "Test package formatted. Got $git_diff_file_count changed files."
+else
+    error "Error formatting test package"
+    printf "%s\n" "$error_output" >&2
+    exit 1
 fi
