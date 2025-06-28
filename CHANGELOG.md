@@ -22,6 +22,7 @@
 #### :nail_care: Polish
 
 - Better error message for when trying to await something that is not a promise. https://github.com/rescript-lang/rescript/pull/7561
+- Better error messages for object field missing and object field type mismatches. https://github.com/rescript-lang/rescript/pull/7580
 
 #### :house: Internal
 
