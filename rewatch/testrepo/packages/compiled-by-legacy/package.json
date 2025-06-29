@@ -1,0 +1,9 @@
+{
+  "name": "@testrepo/compiled-by-legacy",
+  "version": "0.0.1",
+  "keywords": [
+    "rescript"
+  ],
+  "author": "",
+  "license": "MIT"
+}

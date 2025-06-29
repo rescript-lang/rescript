@@ -334,8 +334,7 @@ pub fn cleanup_after_build(build_state: &BuildState) {
 pub fn clean(
     path: &Path,
     show_progress: bool,
-    bsc_path: &Option<PathBuf>,
-    build_dev_deps: bool,
+    bsc_path: Option<PathBuf>,
     snapshot_output: bool,
 ) -> Result<()> {
     let project_root = helpers::get_abs_path(path);
@@ -345,8 +344,9 @@ pub fn clean(
         &project_root,
         &workspace_root,
         show_progress,
-        // Always clean dev dependencies
-        build_dev_deps,
+        // Build the package tree with dev dependencies.
+        // They should always be cleaned if they are there.
+        true,
     )?;
     let root_config_name = packages::read_package_name(&project_root)?;
     let bsc_path = match bsc_path {
