@@ -70,11 +70,13 @@ let peekUndefined = q =>
   | Some(v) => Js.Undefined.return(v.content)
   }
 
-let peekExn = q =>
+let peekOrThrow = q =>
   switch q.first {
   | None => throw(Not_found)
   | Some(v) => v.content
   }
+
+let peekExn = peekOrThrow
 
 let pop = q =>
   switch q.first {
@@ -92,7 +94,7 @@ let pop = q =>
     }
   }
 
-let popExn = q =>
+let popOrThrow = q =>
   /* TO fix */
   switch q.first {
   | None => throw(Not_found)
@@ -108,6 +110,8 @@ let popExn = q =>
       x.content
     }
   }
+
+let popExn = popOrThrow
 
 let popUndefined = q =>
   switch q.first {
