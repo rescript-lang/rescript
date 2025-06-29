@@ -145,6 +145,75 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
         ] ) ->
     default_expr_mapper self
       {e with pexp_desc = Pexp_ifthenelse (b, t_exp, Some f_exp)}
+  (* Transform:
+     - `@let.unwrap let Ok(inner_pat) = expr` 
+     - `@let.unwrap let Some(inner_pat) = expr` 
+     ...into switches *)
+  | Pexp_let
+      ( Nonrecursive,
+        [
+          {
+            pvb_pat =
+              {
+                ppat_desc =
+                  Ppat_construct
+                    ( {txt = Lident (("Ok" | "Some") as variant_name)},
+                      Some _inner_pat );
+              } as pvb_pat;
+            pvb_expr;
+            pvb_attributes;
+          };
+        ],
+        body )
+    when Ast_attributes.has_unwrap_attr pvb_attributes -> (
+    let variant =
+      match variant_name with
+      | "Ok" -> `Result
+      | _ -> `Option
+    in
+    match pvb_expr.pexp_desc with
+    | Pexp_pack _ -> default_expr_mapper self e
+    | _ ->
+      let ok_case =
+        {
+          Parsetree.pc_bar = None;
+          pc_lhs = pvb_pat;
+          pc_guard = None;
+          pc_rhs = body;
+        }
+      in
+      let loc = Location.none in
+      let error_case =
+        match variant with
+        | `Result ->
+          {
+            Parsetree.pc_bar = None;
+            pc_lhs =
+              Ast_helper.Pat.construct ~loc
+                {txt = Lident "Error"; loc}
+                (Some (Ast_helper.Pat.var ~loc {txt = "e"; loc}));
+            pc_guard = None;
+            pc_rhs =
+              Ast_helper.Exp.construct ~loc
+                {txt = Lident "Error"; loc}
+                (Some (Ast_helper.Exp.ident ~loc {txt = Lident "e"; loc}));
+          }
+        | `Option ->
+          {
+            Parsetree.pc_bar = None;
+            pc_lhs =
+              Ast_helper.Pat.construct ~loc {txt = Lident "None"; loc} None;
+            pc_guard = None;
+            pc_rhs =
+              Ast_helper.Exp.construct ~loc {txt = Lident "None"; loc} None;
+          }
+      in
+      default_expr_mapper self
+        {
+          e with
+          pexp_desc = Pexp_match (pvb_expr, [ok_case; error_case]);
+          pexp_attributes = e.pexp_attributes @ pvb_attributes;
+        })
   | Pexp_let
       ( Nonrecursive,
         [
