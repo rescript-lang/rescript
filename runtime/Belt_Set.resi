@@ -60,7 +60,7 @@ module IntCmp =
 ```
 */
 
-/** 
+/**
 Specialized when value type is `int`, more efficient than the generic type, its
 compare behavior is fixed using the built-in comparison
 */
@@ -72,7 +72,7 @@ its compare behavior is fixed using the built-in comparison
 */
 module String = Belt_SetString
 
-/** 
+/**
 This module separates identity from data, it is a bit more verbose but slightly
 more efficient due to the fact that there is no need to pack identity and data back
 after each operation
@@ -697,7 +697,13 @@ let getUndefined: (t<'value, 'id>, 'value) => Js.undefined<'value>
 /**
 Same as [get](#get) but raise when element does not exist.
 */
+@deprecated("Use `getOrThrow` instead")
 let getExn: (t<'value, 'id>, 'value) => 'value
+
+/**
+Same as [get](#get) but raise when element does not exist.
+*/
+let getOrThrow: (t<'value, 'id>, 'value) => 'value
 
 /**
 Returns a tuple `((smaller, larger), present)`, `present` is true when element exist in set.

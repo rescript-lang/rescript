@@ -47,8 +47,21 @@
   - `List.getExn` → `List.getOrThrow`
   - `List.tailExn` → `List.tailOrThrow`
   - `List.headExn` → `List.headOrThrow`
+  - `Belt.Array.getExn` → `Belt.Array.getOrThrow`
+  - `Belt.Array.setExn` → `Belt.Array.setOrThrow`
+  - `Belt.Map.getExn` → `Belt.Map.getOrThrow`
+  - `Belt.MutableMap.getExn` → `Belt.MutableMap.getOrThrow`
+  - `Belt.Set.getExn` → `Belt.Set.getOrThrow`
+  - `Belt.MutableSet.getExn` → `Belt.MutableSet.getOrThrow`
+  - `Belt.List.getExn` → `Belt.List.getOrThrow`
+  - `Belt.List.tailExn` → `Belt.List.tailOrThrow`
+  - `Belt.List.headExn` → `Belt.List.headOrThrow`
+  - `Belt.MutableQueue.peekExn` → `Belt.MutableQueue.peekOrThrow`
+  - `Belt.MutableQueue.popExn` → `Belt.MutableQueue.popOrThrow`
+  - `Belt.Option.getExn` → `Belt.Option.getOrThrow`
+  - `Belt.Result.getExn` → `Belt.Result.getOrThrow`
   - Old functions remain available but are marked as deprecated with guidance to use the new `OrThrow` variants.
-  - https://github.com/rescript-lang/rescript/pull/7518, https://github.com/rescript-lang/rescript/pull/7554
+  - https://github.com/rescript-lang/rescript/pull/7518, https://github.com/rescript-lang/rescript/pull/7554, https://github.com/rescript-lang/rescript/pull/7581
 
 #### :rocket: New Feature
 

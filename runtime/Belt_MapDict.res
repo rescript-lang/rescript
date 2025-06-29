@@ -59,7 +59,8 @@ let maxUndefined = N.maxUndefined
 let get = N.get
 let getUndefined = N.getUndefined
 let getWithDefault = N.getWithDefault
-let getExn = N.getExn
+let getOrThrow = N.getOrThrow
+let getExn = getOrThrow
 
 let mapWithKey = N.mapWithKey
 

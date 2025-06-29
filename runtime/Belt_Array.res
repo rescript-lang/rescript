@@ -32,10 +32,12 @@ let get = (arr, i) =>
     None
   }
 
-let getExn = (arr, i) => {
+let getOrThrow = (arr, i) => {
   assert(i >= 0 && i < length(arr))
   getUnsafe(arr, i)
 }
+
+let getExn = getOrThrow
 
 let set = (arr, i, v) =>
   if i >= 0 && i < length(arr) {
@@ -45,10 +47,12 @@ let set = (arr, i, v) =>
     false
   }
 
-let setExn = (arr, i, v) => {
+let setOrThrow = (arr, i, v) => {
   assert(i >= 0 && i < length(arr))
   setUnsafe(arr, i, v)
 }
+
+let setExn = setOrThrow
 
 @set external truncateToLengthUnsafe: (t<'a>, int) => unit = "length"
 

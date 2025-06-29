@@ -59,9 +59,15 @@ let peek: t<'a> => option<'a>
 let peekUndefined: t<'a> => Js.undefined<'a>
 
 /**
-raise an exception if `q` is empty
+`peekExn(q)` raises an exception if `q` is empty.
 */
+@deprecated("Use `peekOrThrow` instead")
 let peekExn: t<'a> => 'a
+
+/**
+`peekOrThrow(q)` raises an exception if `q` is empty.
+*/
+let peekOrThrow: t<'a> => 'a
 
 /**
 `pop(q)` removes and returns the first element in queue `q`.
@@ -77,7 +83,13 @@ let popUndefined: t<'a> => Js.undefined<'a>
 /**
 `popExn(q)` raise an exception if q is empty.
 */
+@deprecated("Use `popOrThrow` instead")
 let popExn: t<'a> => 'a
+
+/**
+`popOrThrow(q)` raise an exception if q is empty.
+*/
+let popOrThrow: t<'a> => 'a
 
 /**
 `copy(q)` returns a fresh queue.

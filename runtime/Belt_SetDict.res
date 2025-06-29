@@ -251,7 +251,8 @@ let maximum = N.maximum
 let maxUndefined = N.maxUndefined
 let minUndefined = N.minUndefined
 let get = N.get
-let getExn = N.getExn
+let getOrThrow = N.getOrThrow
+let getExn = getOrThrow
 let getUndefined = N.getUndefined
 
 let fromSortedArrayUnsafe = N.fromSortedArrayUnsafe

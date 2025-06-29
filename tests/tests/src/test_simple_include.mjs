@@ -26,9 +26,13 @@ let get = Belt_Array.get;
 
 let getExn = Belt_Array.getExn;
 
+let getOrThrow = Belt_Array.getOrThrow;
+
 let set = Belt_Array.set;
 
 let setExn = Belt_Array.setExn;
+
+let setOrThrow = Belt_Array.setOrThrow;
 
 let shuffleInPlace = Belt_Array.shuffleInPlace;
 
@@ -171,8 +175,10 @@ let a = 3;
 export {
   get,
   getExn,
+  getOrThrow,
   set,
   setExn,
+  setOrThrow,
   shuffleInPlace,
   shuffle,
   reverseInPlace,

@@ -77,7 +77,25 @@ switch Belt.List.headExn(list{}) { // Raises an Error
 }
 ```
 */
+@deprecated("Use `headOrThrow` instead")
 let headExn: t<'a> => 'a
+
+/**
+Same as `Belt.List.head` but raises an exception if `someList` is empty. Use
+with care.
+
+## Examples
+
+```rescript
+Belt.List.headOrThrow(list{1, 2, 3})->assertEqual(1)
+
+switch Belt.List.headOrThrow(list{}) { // Raises an Error
+| exception _ => assert(true)
+| _ => assert(false)
+}
+```
+*/
+let headOrThrow: t<'a> => 'a
 
 /**
 Returns `None` if `someList` is empty, otherwise it returns `Some(tail)`
@@ -108,7 +126,25 @@ switch Belt.List.tailExn(list{}) { // Raises an Error
 }
 ```
 */
+@deprecated("Use `tailOrThrow` instead")
 let tailExn: t<'a> => t<'a>
+
+/**
+Same as `Belt.List.tail` but raises an exception if `someList` is empty. Use
+with care.
+
+## Examples
+
+```rescript
+Belt.List.tailOrThrow(list{1, 2, 3})->assertEqual(list{2, 3})
+
+switch Belt.List.tailOrThrow(list{}) { // Raises an Error
+| exception _ => assert(true)
+| _ => assert(false)
+}
+```
+*/
+let tailOrThrow: t<'a> => t<'a>
 
 /**
 Adds `value` to the beginning of `someList`.
@@ -156,7 +192,27 @@ switch abc->Belt.List.getExn(4) { // Raises an Error
 }
 ```
 */
+@deprecated("Use `getOrThrow` instead")
 let getExn: (t<'a>, int) => 'a
+
+/**
+Same as `Belt.List.get` but raises an exception if `index` is larger than the
+length. Use with care.
+
+## Examples
+
+```rescript
+let abc = list{"A", "B", "C"}
+
+abc->Belt.List.getOrThrow(1)->assertEqual("B")
+
+switch abc->Belt.List.getOrThrow(4) { // Raises an Error
+| exception _ => assert(true)
+| _ => assert(false)
+}
+```
+*/
+let getOrThrow: (t<'a>, int) => 'a
 
 /**
 Returns a list of length `numItems` with each element filled with value `v`. Returns an empty list if `numItems` is negative.

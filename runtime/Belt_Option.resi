@@ -89,7 +89,26 @@ switch Belt.Option.getExn(None) { // Raises an exception
 }
 ```
 */
+@deprecated("Use `getOrThrow` instead")
 let getExn: option<'a> => 'a
+
+/**
+Raises an Error in case `None` is provided. Use with care.
+
+## Examples
+
+```rescript
+Some(3)
+->Belt.Option.getOrThrow
+->assertEqual(3)
+
+switch Belt.Option.getOrThrow(None) { // Raises an exception
+| exception _ => assert(true)
+| _ => assert(false)
+}
+```
+*/
+let getOrThrow: option<'a> => 'a
 
 /**
 `getUnsafe(x)` returns `x`

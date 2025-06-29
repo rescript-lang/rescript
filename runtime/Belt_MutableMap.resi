@@ -120,7 +120,9 @@ let maxUndefined: t<'k, 'a, _> => Js.undefined<('k, 'a)>
 let get: (t<'k, 'a, 'id>, 'k) => option<'a>
 let getUndefined: (t<'k, 'a, 'id>, 'k) => Js.undefined<'a>
 let getWithDefault: (t<'k, 'a, 'id>, 'k, 'a) => 'a
+@deprecated("Use `getOrThrow` instead")
 let getExn: (t<'k, 'a, 'id>, 'k) => 'a
+let getOrThrow: (t<'k, 'a, 'id>, 'k) => 'a
 /** Raise when invariant is not held. */
 let checkInvariantInternal: t<_> => unit
 

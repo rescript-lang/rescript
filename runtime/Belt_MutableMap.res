@@ -190,7 +190,9 @@ let getUndefined = (m, x) => N.getUndefined(~cmp=m.cmp, m.data, x)
 
 let getWithDefault = (m, x, def) => N.getWithDefault(~cmp=m.cmp, m.data, x, def)
 
-let getExn = (m, x) => N.getExn(~cmp=m.cmp, m.data, x)
+let getOrThrow = (m, x) => N.getOrThrow(~cmp=m.cmp, m.data, x)
+
+let getExn = getOrThrow
 
 let has = (m, x) => N.has(~cmp=m.cmp, m.data, x)
 

@@ -130,7 +130,9 @@ let get = (m, e) => Dict.get(~cmp=m.cmp, m.data, e)
 
 let getUndefined = (m, e) => Dict.getUndefined(~cmp=m.cmp, m.data, e)
 
-let getExn = (m, e) => Dict.getExn(~cmp=m.cmp, m.data, e)
+let getOrThrow = (m, e) => Dict.getOrThrow(~cmp=m.cmp, m.data, e)
+
+let getExn = getOrThrow
 
 let has = (m, e) => Dict.has(~cmp=m.cmp, m.data, e)
 

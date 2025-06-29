@@ -379,11 +379,21 @@ let getWithDefault: (t<'k, 'v, 'id>, 'k, 'v) => 'v
 /** 
 `getExn(s, k)`
 
-See `Belt.Map.getExn`
+See `Belt.Map.get`
 
 raise when `k` not exist
 */
+@deprecated("Use `getOrThrow` instead")
 let getExn: (t<'k, 'v, 'id>, 'k) => 'v
+
+/**
+`getOrThrow(s, k)`
+
+See `Belt.Map.get`
+
+raise when `k` not exist
+*/
+let getOrThrow: (t<'k, 'v, 'id>, 'k) => 'v
 
 /* ************************************************************************** */
 

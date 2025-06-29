@@ -109,7 +109,8 @@ let cmp = I.cmp
 let eq = I.eq
 let get = I.get
 let getUndefined = I.getUndefined
-let getExn = I.getExn
+let getOrThrow = I.getOrThrow
+let getExn = getOrThrow
 let subset = I.subset
 let has = I.has
 

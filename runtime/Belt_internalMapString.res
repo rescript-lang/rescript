@@ -63,7 +63,7 @@ let rec getUndefined = (n, x: key) =>
     }
   }
 
-let rec getExn = (n, x: key) =>
+let rec getOrThrow = (n, x: key) =>
   switch n {
   | None => throw(Not_found)
   | Some(n) =>
@@ -71,7 +71,7 @@ let rec getExn = (n, x: key) =>
     if x == v {
       n.N.value
     } else {
-      getExn(
+      getOrThrow(
         if x < v {
           n.N.left
         } else {

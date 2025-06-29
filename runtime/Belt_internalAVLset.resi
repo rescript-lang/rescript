@@ -95,7 +95,7 @@ let eq: (t<'a>, t<'a>, ~cmp: cmp<'a, 'b>) => bool
 let subset: (t<'a>, t<'a>, ~cmp: cmp<'a, 'b>) => bool
 let get: (t<'a>, 'a, ~cmp: cmp<'a, 'b>) => option<'a>
 let getUndefined: (t<'a>, 'a, ~cmp: cmp<'a, 'b>) => Js.undefined<'a>
-let getExn: (t<'a>, 'a, ~cmp: cmp<'a, 'b>) => 'a
+let getOrThrow: (t<'a>, 'a, ~cmp: cmp<'a, 'b>) => 'a
 
 let fromArray: (array<'a>, ~cmp: cmp<'a, 'b>) => t<'a>
 

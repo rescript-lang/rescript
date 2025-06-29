@@ -218,7 +218,8 @@ let cmp = (d0, d1) => I.cmp(d0.data, d1.data)
 let eq = (d0, d1) => I.eq(d0.data, d1.data)
 let get = (d, x) => I.get(d.data, x)
 let getUndefined = (d, x) => I.getUndefined(d.data, x)
-let getExn = (d, x) => I.getExn(d.data, x)
+let getOrThrow = (d, x) => I.getOrThrow(d.data, x)
+let getExn = getOrThrow
 
 let split = (d, key) => {
   let arr = N.toArray(d.data)

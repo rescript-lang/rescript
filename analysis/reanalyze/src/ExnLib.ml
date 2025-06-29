@@ -1,17 +1,38 @@
 let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
   let table = Hashtbl.create 15 in
   let open Exn in
-  let beltArray = [("getExn", [assertFailure]); ("setExn", [assertFailure])] in
-  let beltList =
-    [("getExn", [notFound]); ("headExn", [notFound]); ("tailExn", [notFound])]
+  let beltArray =
+    [
+      ("getExn", [assertFailure]);
+      ("getOrThrow", [assertFailure]);
+      ("setExn", [assertFailure]);
+      ("setOrThrow", [assertFailure]);
+    ]
   in
-  let beltMap = [("getExn", [notFound])] in
+  let beltList =
+    [
+      ("getExn", [notFound]);
+      ("getOrThrow", [notFound]);
+      ("headExn", [notFound]);
+      ("headOrThrow", [notFound]);
+      ("tailExn", [notFound]);
+      ("tailOrThrow", [notFound]);
+    ]
+  in
+  let beltMap = [("getExn", [notFound]); ("getOrThrow", [notFound])] in
   let beltMutableMap = beltMap in
-  let beltMutableQueue = [("peekExn", [notFound]); ("popExn", [notFound])] in
-  let beltMutableSet = [("getExn", [notFound])] in
-  let beltOption = [("getExn", [notFound])] in
-  let beltResult = [("getExn", [notFound])] in
-  let beltSet = [("getExn", [notFound])] in
+  let beltMutableQueue =
+    [
+      ("peekExn", [notFound]);
+      ("peekOrThrow", [notFound]);
+      ("popExn", [notFound]);
+      ("popOrThrow", [notFound]);
+    ]
+  in
+  let beltSet = [("getExn", [notFound]); ("getOrThrow", [notFound])] in
+  let beltMutableSet = beltSet in
+  let beltOption = [("getExn", [notFound]); ("getOrThrow", [notFound])] in
+  let beltResult = [("getExn", [notFound]); ("getOrThrow", [notFound])] in
   let bsJson =
     (* bs-json *)
     [
