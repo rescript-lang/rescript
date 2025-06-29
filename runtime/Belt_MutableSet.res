@@ -235,7 +235,9 @@ let get = (d, x) => N.get(~cmp=d.cmp, d.data, x)
 
 let getUndefined = (d, x) => N.getUndefined(~cmp=d.cmp, d.data, x)
 
-let getExn = (d, x) => N.getExn(~cmp=d.cmp, d.data, x)
+let getOrThrow = (d, x) => N.getOrThrow(~cmp=d.cmp, d.data, x)
+
+let getExn = getOrThrow
 
 let split = (d, key) => {
   let arr = N.toArray(d.data)

@@ -51,6 +51,8 @@
   - `Belt.Array.setExn` → `Belt.Array.setOrThrow`
   - `Belt.Map.getExn` → `Belt.Map.getOrThrow`
   - `Belt.MutableMap.getExn` → `Belt.MutableMap.getOrThrow`
+  - `Belt.Set.getExn` → `Belt.Set.getOrThrow`
+  - `Belt.MutableSet.getExn` → `Belt.MutableSet.getOrThrow`
   - Old functions remain available but are marked as deprecated with guidance to use the new `OrThrow` variants.
   - https://github.com/rescript-lang/rescript/pull/7518, https://github.com/rescript-lang/rescript/pull/7554, https://github.com/rescript-lang/rescript/pull/7581
 

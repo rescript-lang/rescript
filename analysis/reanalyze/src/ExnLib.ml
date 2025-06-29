@@ -15,10 +15,10 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
   let beltMap = [("getExn", [notFound]); ("getOrThrow", [notFound])] in
   let beltMutableMap = beltMap in
   let beltMutableQueue = [("peekExn", [notFound]); ("popExn", [notFound])] in
-  let beltMutableSet = [("getExn", [notFound])] in
+  let beltSet = [("getExn", [notFound]); ("getOrThrow", [notFound])] in
+  let beltMutableSet = beltSet in
   let beltOption = [("getExn", [notFound])] in
   let beltResult = [("getExn", [notFound])] in
-  let beltSet = [("getExn", [notFound])] in
   let bsJson =
     (* bs-json *)
     [
