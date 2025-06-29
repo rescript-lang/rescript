@@ -3,7 +3,6 @@ cd ../testrepo/packages/compiled-by-legacy
 
 bold "Test: It should use the legacy build system"
 
-rewatch_legacy
 error_output=$(rewatch_legacy 2>&1 >/dev/null)
 if [ $? -ne 0 ];
 then

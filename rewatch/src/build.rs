@@ -554,17 +554,24 @@ pub fn build(
     }
 }
 
-pub fn pass_through_legacy(args: Vec<OsString>) -> i32 {
+pub fn pass_through_legacy(mut args: Vec<OsString>) -> i32 {
     let project_root = helpers::get_abs_path(Path::new("."));
     let workspace_root = helpers::get_workspace_root(&project_root);
 
     let rescript_legacy_path = helpers::get_rescript_legacy(&project_root, workspace_root);
 
-    let status = std::process::Command::new(rescript_legacy_path)
+    args.insert(0, rescript_legacy_path.into());
+    let status = std::process::Command::new("node")
         .args(args)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .status();
 
-    status.map(|s| s.code().unwrap_or(1)).unwrap_or(1)
+    match status {
+        Ok(s) => s.code().unwrap_or(0),
+        Err(err) => {
+            eprintln!("Error running the legacy build system: {err}");
+            1
+        }
+    }
 }
