@@ -50,7 +50,27 @@ switch Belt.Result.getExn(Belt.Result.Error("Invalid data")) { // raise a except
 }
 ```
 */
+@deprecated("Use `getOrThrow` instead")
 let getExn: t<'a, 'b> => 'a
+
+/**
+`getOrThrow(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, raise an exception
+
+## Examples
+
+```rescript
+Belt.Result.Ok(42)
+->Belt.Result.getOrThrow
+->assertEqual(42)
+
+
+switch Belt.Result.getOrThrow(Belt.Result.Error("Invalid data")) { // raise a exception
+| exception _ => assert(true)
+| _ => assert(false)
+}
+```
+*/
+let getOrThrow: t<'a, 'b> => 'a
 
 @deprecated("Use `mapWithDefault` instead")
 let mapWithDefaultU: (t<'a, 'c>, 'b, 'a => 'b) => 'b

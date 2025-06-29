@@ -26,11 +26,13 @@ type t<'a, 'b> = result<'a, 'b> =
   | Ok('a)
   | Error('b)
 
-let getExn = x =>
+let getOrThrow = x =>
   switch x {
   | Ok(x) => x
   | Error(_) => throw(Not_found)
   }
+
+let getExn = getOrThrow
 
 let mapWithDefault = (opt, default, f) =>
   switch opt {

@@ -32,7 +32,7 @@ let raisesLibTable : (Name.t, Exceptions.t) Hashtbl.t =
   let beltSet = [("getExn", [notFound]); ("getOrThrow", [notFound])] in
   let beltMutableSet = beltSet in
   let beltOption = [("getExn", [notFound]); ("getOrThrow", [notFound])] in
-  let beltResult = [("getExn", [notFound])] in
+  let beltResult = [("getExn", [notFound]); ("getOrThrow", [notFound])] in
   let bsJson =
     (* bs-json *)
     [
