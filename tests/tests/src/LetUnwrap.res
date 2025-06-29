@@ -1,0 +1,69 @@
+let doStuffWithResult = s =>
+  switch s {
+  | "s" => Ok("hello")
+  | _ => Error(#InvalidString)
+  }
+
+let doNextStuffWithResult = s =>
+  switch s {
+  | "s" => Ok("hello")
+  | _ => Error(#InvalidNext)
+  }
+
+let getXWithResult = s => {
+  @let.unwrap let Ok(y) = doStuffWithResult(s)
+  @let.unwrap let Ok(x) = doNextStuffWithResult(y)
+  Ok(x ++ y)
+}
+
+let someResult = switch getXWithResult("s") {
+| Ok(x) => x
+| Error(#InvalidString) => "nope"
+| Error(#InvalidNext) => "nope!"
+}
+
+let doStuffWithOption = s =>
+  switch s {
+  | "s" => Some("hello")
+  | _ => None
+  }
+
+let doNextStuffWithOption = s =>
+  switch s {
+  | "s" => Some("hello")
+  | _ => None
+  }
+
+let getXWithOption = s => {
+  @let.unwrap let Some(y) = doStuffWithOption(s)
+  @let.unwrap let Some(x) = doNextStuffWithOption(y)
+  Some(x ++ y)
+}
+
+let someOption = switch getXWithOption("s") {
+| Some(x) => x
+| None => "nope"
+}
+
+type res = {s: string}
+
+let doStuffResultAsync = async s => {
+  switch s {
+  | "s" => Ok({s: "hello"})
+  | _ => Error(#FetchError)
+  }
+}
+
+let decodeResAsync = async res => {
+  switch res.s {
+  | "s" => Ok(res.s)
+  | _ => Error(#DecodeError)
+  }
+}
+
+let getXWithResultAsync = async s => {
+  @let.unwrap let Ok({s} as res) = await doStuffResultAsync(s)
+  Console.log(s)
+  @let.unwrap let Ok(x) = await decodeResAsync(res)
+  Ok(x)
+}

@@ -199,6 +199,12 @@ let has_bs_optional (attrs : t) : bool =
         true
       | _ -> false)
 
+let has_unwrap_attr (attrs : t) : bool =
+  Ext_list.exists attrs (fun ({txt}, _) ->
+      match txt with
+      | "let.unwrap" -> true
+      | _ -> false)
+
 let iter_process_bs_int_as (attrs : t) =
   let st = ref None in
   Ext_list.iter attrs (fun (({txt; loc}, payload) as attr) ->
