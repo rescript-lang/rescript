@@ -152,7 +152,10 @@ let get: (t, value) => option<value>
 
 let getUndefined: (t, value) => Js.undefined<value>
 
+@deprecated("Use `getOrThrow` instead")
 let getExn: (t, value) => value
+
+let getOrThrow: (t, value) => value
 
 /**
 `split(x, s)` returns a triple `(l, present, r)`, where `l` is the set of
