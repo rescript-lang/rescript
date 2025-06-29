@@ -49,15 +49,21 @@ let head = Belt_List.head;
 
 let headExn = Belt_List.headExn;
 
+let headOrThrow = Belt_List.headOrThrow;
+
 let tail = Belt_List.tail;
 
 let tailExn = Belt_List.tailExn;
+
+let tailOrThrow = Belt_List.tailOrThrow;
 
 let add = Belt_List.add;
 
 let get = Belt_List.get;
 
 let getExn = Belt_List.getExn;
+
+let getOrThrow = Belt_List.getOrThrow;
 
 let make = Belt_List.make;
 
@@ -230,11 +236,14 @@ export {
   size,
   head,
   headExn,
+  headOrThrow,
   tail,
   tailExn,
+  tailOrThrow,
   add,
   get,
   getExn,
+  getOrThrow,
   make,
   makeByU,
   makeBy,
