@@ -14,7 +14,7 @@
 
 #### :boom: Breaking Change
 
-- The legacy rescript cli can be called through rewatch via `rewatch legacy`. Arguments to rewatch need to be passed after the subcommand. https://github.com/rescript-lang/rescript/pull/7551
+- The legacy rescript cli can be called through rewatch via `rewatch legacy`. Arguments to rewatch need to be passed after the subcommand. Argument `--compiler-args` is now a subcommand `compiler-args`. https://github.com/rescript-lang/rescript/pull/7551
 
 #### :bug: Bug fix
 
