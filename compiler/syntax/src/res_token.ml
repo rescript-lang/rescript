@@ -17,7 +17,7 @@ type t =
   | DotDotDot
   | Bang
   | Semicolon
-  | Let
+  | Let of {unwrap: bool}
   | And
   | Rec
   | Underscore
@@ -134,7 +134,8 @@ let to_string = function
   | Float {f} -> "Float: " ^ f
   | Bang -> "!"
   | Semicolon -> ";"
-  | Let -> "let"
+  | Let {unwrap = true} -> "let?"
+  | Let {unwrap = false} -> "let"
   | And -> "and"
   | Rec -> "rec"
   | Underscore -> "_"
@@ -233,7 +234,8 @@ let keyword_table = function
   | "if" -> If
   | "in" -> In
   | "include" -> Include
-  | "let" -> Let
+  | "let?" -> Let {unwrap = true}
+  | "let" -> Let {unwrap = false}
   | "list{" -> List
   | "dict{" -> Dict
   | "module" -> Module
@@ -253,7 +255,7 @@ let keyword_table = function
 
 let is_keyword = function
   | Await | And | As | Assert | Constraint | Else | Exception | External | False
-  | For | If | In | Include | Land | Let | List | Lor | Module | Mutable | Of
+  | For | If | In | Include | Land | Let _ | List | Lor | Module | Mutable | Of
   | Open | Private | Rec | Switch | True | Try | Typ | When | While | Dict ->
     true
   | _ -> false
