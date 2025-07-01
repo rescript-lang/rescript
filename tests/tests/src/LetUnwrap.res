@@ -11,8 +11,8 @@ let doNextStuffWithResult = s =>
   }
 
 let getXWithResult = s => {
-  @let.unwrap let Ok(y) = doStuffWithResult(s)
-  @let.unwrap let Ok(x) = doNextStuffWithResult(y)
+  let? Ok(y) = doStuffWithResult(s)
+  let? Ok(x) = doNextStuffWithResult(y)
   Ok(x ++ y)
 }
 
@@ -35,8 +35,8 @@ let doNextStuffWithOption = s =>
   }
 
 let getXWithOption = s => {
-  @let.unwrap let Some(y) = doStuffWithOption(s)
-  @let.unwrap let Some(x) = doNextStuffWithOption(y)
+  let? Some(y) = doStuffWithOption(s)
+  let? Some(x) = doNextStuffWithOption(y)
   Some(x ++ y)
 }
 
@@ -62,8 +62,8 @@ let decodeResAsync = async res => {
 }
 
 let getXWithResultAsync = async s => {
-  @let.unwrap let Ok({s} as res) = await doStuffResultAsync(s)
+  let? Ok({s} as res) = await doStuffResultAsync(s)
   Console.log(s)
-  @let.unwrap let Ok(x) = await decodeResAsync(res)
+  let? Ok(x) = await decodeResAsync(res)
   Ok(x)
 }
