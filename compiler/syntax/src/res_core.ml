@@ -117,6 +117,12 @@ module ErrorMessages = struct
       ]
     |> Doc.to_string ~width:80
 
+  let experimental_let_unwrap_rec =
+    "let? is not allowed to be recursive. Use a regular `let` or remove `rec`."
+
+  let experimental_let_unwrap_sig =
+    "let? is not allowed in signatures. Use a regular `let` instead."
+
   let type_param =
     "A type param consists of a singlequote followed by a name like `'a` or \
      `'A`"
@@ -2696,21 +2702,35 @@ and parse_attributes_and_binding (p : Parser.t) =
   | _ -> []
 
 (* definition	::=	let [rec] let-binding  { and let-binding }   *)
-and parse_let_bindings ~attrs ~start_pos p =
-  Parser.optional p Let |> ignore;
+and parse_let_bindings ~unwrap ~attrs ~start_pos p =
+  Parser.optional p (Let {unwrap}) |> ignore;
   let rec_flag =
     if Parser.optional p Token.Rec then Asttypes.Recursive
     else Asttypes.Nonrecursive
   in
+  let end_pos = p.Parser.start_pos in
+  if rec_flag = Asttypes.Recursive && unwrap then
+    Parser.err ~start_pos ~end_pos p
+      (Diagnostics.message ErrorMessages.experimental_let_unwrap_rec);
+  let add_unwrap_attr ~unwrap ~start_pos ~end_pos attrs =
+    if unwrap then
+      ( {Asttypes.txt = "let.unwrap"; loc = mk_loc start_pos end_pos},
+        Ast_payload.empty )
+      :: attrs
+    else attrs
+  in
+  let attrs = add_unwrap_attr ~unwrap ~start_pos ~end_pos attrs in
   let first = parse_let_binding_body ~start_pos ~attrs p in
 
   let rec loop p bindings =
     let start_pos = p.Parser.start_pos in
+    let end_pos = p.Parser.end_pos in
     let attrs = parse_attributes_and_binding p in
+    let attrs = add_unwrap_attr ~unwrap ~start_pos ~end_pos attrs in
     match p.Parser.token with
     | And ->
       Parser.next p;
-      ignore (Parser.optional p Let);
+      ignore (Parser.optional p (Let {unwrap = false}));
       (* overparse for fault tolerance *)
       let let_binding = parse_let_binding_body ~start_pos ~attrs p in
       loop p (let_binding :: bindings)
@@ -3444,8 +3464,10 @@ and parse_expr_block_item p =
     let block_expr = parse_expr_block p in
     let loc = mk_loc start_pos p.prev_end_pos in
     Ast_helper.Exp.open_ ~loc od.popen_override od.popen_lid block_expr
-  | Let ->
-    let rec_flag, let_bindings = parse_let_bindings ~attrs ~start_pos p in
+  | Let {unwrap} ->
+    let rec_flag, let_bindings =
+      parse_let_bindings ~unwrap ~attrs ~start_pos p
+    in
     parse_newline_or_semicolon_expr_block p;
     let next =
       if Grammar.is_block_expr_start p.Parser.token then parse_expr_block p
@@ -3616,7 +3638,7 @@ and parse_if_or_if_let_expression p =
   Parser.expect If p;
   let expr =
     match p.Parser.token with
-    | Let ->
+    | Let _ ->
       Parser.next p;
       let if_let_expr = parse_if_let_expr start_pos p in
       Parser.err ~start_pos:if_let_expr.pexp_loc.loc_start
@@ -6064,8 +6086,10 @@ and parse_structure_item_region p =
     parse_newline_or_semicolon_structure p;
     let loc = mk_loc start_pos p.prev_end_pos in
     Some (Ast_helper.Str.open_ ~loc open_description)
-  | Let ->
-    let rec_flag, let_bindings = parse_let_bindings ~attrs ~start_pos p in
+  | Let {unwrap} ->
+    let rec_flag, let_bindings =
+      parse_let_bindings ~unwrap ~attrs ~start_pos p
+    in
     parse_newline_or_semicolon_structure p;
     let loc = mk_loc start_pos p.prev_end_pos in
     Some (Ast_helper.Str.value ~loc rec_flag let_bindings)
@@ -6694,7 +6718,11 @@ and parse_signature_item_region p =
   let start_pos = p.Parser.start_pos in
   let attrs = parse_attributes p in
   match p.Parser.token with
-  | Let ->
+  | Let {unwrap} ->
+    if unwrap then (
+      Parser.err ~start_pos ~end_pos:p.Parser.end_pos p
+        (Diagnostics.message ErrorMessages.experimental_let_unwrap_sig);
+      Parser.next p);
     Parser.begin_region p;
     let value_desc = parse_sign_let_desc ~attrs p in
     parse_newline_or_semicolon_signature p;
@@ -6894,7 +6922,7 @@ and parse_module_type_declaration ~attrs ~start_pos p =
 
 and parse_sign_let_desc ~attrs p =
   let start_pos = p.Parser.start_pos in
-  Parser.optional p Let |> ignore;
+  Parser.optional p (Let {unwrap = false}) |> ignore;
   let name, loc = parse_lident p in
   let name = Location.mkloc name loc in
   Parser.expect Colon p;
