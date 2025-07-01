@@ -41,10 +41,11 @@ else
 fi
 
 error_output=$(rewatch_legacy format -all 2>&1 >/dev/null)
-git_diff_file_count=$(git diff --name-only ./ | wc -l)
+git_diff_file_count=$(git diff --name-only ./ | wc -l | xargs)
 if [ $? -eq 0 ] && [ $git_diff_file_count -eq 1 ];
 then
     success "Test package formatted. Got $git_diff_file_count changed files."
+    git restore .
 else
     error "Error formatting test package"
     echo $error_output
