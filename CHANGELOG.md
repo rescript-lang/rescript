@@ -12,6 +12,10 @@
 
 # 12.0.0-alpha.15 (Unreleased)
 
+#### :boom: Breaking Change
+
+- The legacy rescript cli can be called through rewatch via `rewatch legacy`. Arguments to rewatch need to be passed after the subcommand. Argument `--compiler-args` is now a subcommand `compiler-args`. https://github.com/rescript-lang/rescript/pull/7551
+
 #### :bug: Bug fix
 
 - Ignore inferred arity in functions inside `%raw` functions, leaving to `%ffi` the responsibility to check the arity since it gives an error in case of mismatch. https://github.com/rescript-lang/rescript/pull/7542

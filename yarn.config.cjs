@@ -6,6 +6,9 @@
 
 const fs = require("node:fs/promises");
 const { defineConfig } = require("@yarnpkg/types");
+const { exec } = require("node:child_process");
+const util = require("node:util");
+const execPromise = util.promisify(exec);
 
 /**
  * @param {Yarn.Constraints.Context} ctx
@@ -62,6 +65,29 @@ async function enforceCompilerMeta({ Yarn }) {
     if (foundVersion !== EXPECTED_VERSION) {
       Yarn.workspace().error(
         `compiler/common/bs_version.ml file need to be fixed; expected ${EXPECTED_VERSION}, found ${foundVersion}.`,
+      );
+    }
+  }
+
+  const rewatchCargoFile = "rewatch/Cargo.toml";
+  const rewatchCargoContent = await fs.readFile(rewatchCargoFile, "utf8");
+  const rewatchVersionPattern = /^version = "(?<version>[^"]+)"$/m;
+
+  if (process.argv.includes("--fix")) {
+    await fs.writeFile(
+      rewatchCargoFile,
+      rewatchCargoContent.replace(
+        rewatchVersionPattern,
+        `version = "${EXPECTED_VERSION}"`,
+      ),
+    );
+    await execPromise("cargo check", { cwd: "rewatch" });
+  } else {
+    const rewatchVersionMatch = rewatchCargoContent.match(rewatchVersionPattern);
+    const foundRewatchVersion = rewatchVersionMatch?.groups?.version;
+    if (foundRewatchVersion !== EXPECTED_VERSION) {
+      Yarn.workspace().error(
+        `rewatch/Cargo.toml file need to be fixed; expected ${EXPECTED_VERSION}, found ${foundRewatchVersion}.`,
       );
     }
   }

@@ -27,7 +27,7 @@ fi
 # Count files with new extension
 file_count=$(find ./packages -name *.res.js | wc -l)
 
-if [ "$file_count" -eq 24 ];
+if [ "$file_count" -eq 26 ];
 then
   success "Found files with correct suffix"
 else
