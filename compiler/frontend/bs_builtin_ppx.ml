@@ -180,7 +180,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
           pc_rhs = body;
         }
       in
-      let loc = Location.none in
+      let loc = {pvb_pat.ppat_loc with loc_ghost = true} in
       let error_case =
         match variant with
         | `Result ->
@@ -209,7 +209,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
       default_expr_mapper self
         {
           e with
-          pexp_desc = Pexp_match (pvb_expr, [ok_case; error_case]);
+          pexp_desc = Pexp_match (pvb_expr, [error_case; ok_case]);
           pexp_attributes = e.pexp_attributes @ pvb_attributes;
         })
   | Pexp_let
