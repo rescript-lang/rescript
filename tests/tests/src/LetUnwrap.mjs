@@ -30,24 +30,24 @@ function doNextStuffWithResult(s) {
 }
 
 function getXWithResult(s) {
-  let y = doStuffWithResult(s);
-  if (y.TAG !== "Ok") {
+  let e = doStuffWithResult(s);
+  if (e.TAG !== "Ok") {
     return {
       TAG: "Error",
-      _0: y._0
+      _0: e._0
     };
   }
-  let y$1 = y._0;
-  let x = doNextStuffWithResult(y$1);
-  if (x.TAG === "Ok") {
+  let y = e._0;
+  let e$1 = doNextStuffWithResult(y);
+  if (e$1.TAG === "Ok") {
     return {
       TAG: "Ok",
-      _0: x._0 + y$1
+      _0: e$1._0 + y
     };
   } else {
     return {
       TAG: "Error",
-      _0: x._0
+      _0: e$1._0
     };
   }
 }
@@ -122,25 +122,25 @@ async function decodeResAsync(res) {
 }
 
 async function getXWithResultAsync(s) {
-  let res = await doStuffResultAsync(s);
-  if (res.TAG !== "Ok") {
+  let e = await doStuffResultAsync(s);
+  if (e.TAG !== "Ok") {
     return {
       TAG: "Error",
-      _0: res._0
+      _0: e._0
     };
   }
-  let res$1 = res._0;
-  console.log(res$1.s);
-  let x = await decodeResAsync(res$1);
-  if (x.TAG === "Ok") {
+  let res = e._0;
+  console.log(res.s);
+  let e$1 = await decodeResAsync(res);
+  if (e$1.TAG === "Ok") {
     return {
       TAG: "Ok",
-      _0: x._0
+      _0: e$1._0
     };
   } else {
     return {
       TAG: "Error",
-      _0: x._0
+      _0: e$1._0
     };
   }
 }
