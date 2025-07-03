@@ -938,7 +938,9 @@ lib/ocaml/Stdlib_AsyncIterator.resi
 lib/ocaml/Stdlib_BigInt.cmi
 lib/ocaml/Stdlib_BigInt.cmj
 lib/ocaml/Stdlib_BigInt.cmt
+lib/ocaml/Stdlib_BigInt.cmti
 lib/ocaml/Stdlib_BigInt.res
+lib/ocaml/Stdlib_BigInt.resi
 lib/ocaml/Stdlib_BigInt64Array.cmi
 lib/ocaml/Stdlib_BigInt64Array.cmj
 lib/ocaml/Stdlib_BigInt64Array.cmt
