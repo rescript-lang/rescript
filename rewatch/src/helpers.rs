@@ -240,7 +240,7 @@ pub fn get_rescript_legacy(root_path: &Path, workspace_root: Option<PathBuf>) ->
     ) {
         (Ok(path), _) => path,
         (_, Some(Ok(path))) => path,
-        _ => panic!("Could not find rescript.exe"),
+        _ => panic!("Could not find rescript-legacy.exe"),
     }
 }
 

@@ -61,7 +61,7 @@ let position scanner =
     }
 
 (* Small debugging util
-   ❯ echo 'let msg = "hello"' | ./lib/rescript.exe
+   ❯ echo 'let msg = "hello"' | ./lib/rescript-legacy.exe
    let msg = "hello"
    ^-^ let 0-3
    let msg = "hello"

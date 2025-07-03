@@ -32,7 +32,7 @@
       "./bin/bsb_helper.exe",
       "./bin/bsc.exe",
       "./bin/ninja.exe",
-      "./bin/rescript.exe",
+      "./bin/rescript-legacy.exe",
       "./bin/rescript-editor-analysis.exe",
       "./bin/rescript-tools.exe",
       "./bin/rewatch.exe"

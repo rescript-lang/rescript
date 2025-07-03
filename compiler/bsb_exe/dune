@@ -5,7 +5,7 @@
 
 (executable
  (name rescript_main)
- (public_name rescript)
+ (public_name rescript-legacy)
  (package rescript)
  (enabled_if
   (<> %{profile} browser))
