@@ -3,11 +3,11 @@
 // @ts-check
 
 import * as child_process from "node:child_process";
-import { rewatch_exe, bsc_exe } from "./common/bins.js";
+import { bsc_exe, rewatch_exe } from "./common/bins.js";
 
 const args = process.argv.slice(2);
 
-const firstPositionalArgIndex = args.findIndex((arg) => !arg.startsWith("-"));
+const firstPositionalArgIndex = args.findIndex(arg => !arg.startsWith("-"));
 
 try {
   if (firstPositionalArgIndex !== -1) {
@@ -25,7 +25,7 @@ try {
         [...subcommandWithArgs, "--bsc-path", bsc_exe],
         {
           stdio: "inherit",
-        }
+        },
       );
     } else {
       child_process.execFileSync(rewatch_exe, [...args], {

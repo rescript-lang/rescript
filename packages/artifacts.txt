@@ -9,11 +9,11 @@ cli/bstracing.js
 cli/common/args.js
 cli/common/bins.js
 cli/common/bsb.js
-cli/rescript-tools.js
 cli/rescript-legacy.js
-cli/rescript/dump.js
-cli/rescript/format.js
-cli/rewatch.js
+cli/rescript-legacy/dump.js
+cli/rescript-legacy/format.js
+cli/rescript-tools.js
+cli/rescript.js
 docs/docson/build-schema.json
 lib/es6/Belt.js
 lib/es6/Belt_Array.js
