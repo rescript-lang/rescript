@@ -20,7 +20,7 @@ const installMacLinuxBinary = (binary) => {
 const installWindowsBinary = () => {
   const source = path.join(__dirname, "rewatch-windows.exe");
   if (fs.existsSync(source)) {
-    const target = path.join(__dirname, "rewatch.exe");
+    const target = path.join(__dirname, "rescript.exe");
     fs.renameSync(source, target);
 
     // windows scripts use a different file extension to executables
