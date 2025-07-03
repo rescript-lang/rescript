@@ -15,21 +15,23 @@
 #### :boom: Breaking Change
 
 - The legacy rescript cli can be called through rewatch via `rewatch legacy`. Arguments to rewatch need to be passed after the subcommand. Argument `--compiler-args` is now a subcommand `compiler-args`. https://github.com/rescript-lang/rescript/pull/7551
-- Rename `Belt` functions ending with `Exn` to end with `OrThrow` https://github.com/rescript-lang/rescript/pull/7581 The following `Exn` functions are now deprecated:
-  - `Belt.Array.getExn` → `Belt.Array.getOrThrow`
-  - `Belt.Array.setExn` → `Belt.Array.setOrThrow`
-  - `Belt.Map.getExn` → `Belt.Map.getOrThrow`
-  - `Belt.MutableMap.getExn` → `Belt.MutableMap.getOrThrow`
-  - `Belt.Set.getExn` → `Belt.Set.getOrThrow`
-  - `Belt.MutableSet.getExn` → `Belt.MutableSet.getOrThrow`
-  - `Belt.List.getExn` → `Belt.List.getOrThrow`
-  - `Belt.List.tailExn` → `Belt.List.tailOrThrow`
-  - `Belt.List.headExn` → `Belt.List.headOrThrow`
-  - `Belt.MutableQueue.peekExn` → `Belt.MutableQueue.peekOrThrow`
-  - `Belt.MutableQueue.popExn` → `Belt.MutableQueue.popOrThrow`
-  - `Belt.Option.getExn` → `Belt.Option.getOrThrow`
-  - `Belt.Result.getExn` → `Belt.Result.getOrThrow`
-  - Old functions remain available but are marked as deprecated with guidance to use the new `OrThrow` variants.
+
+#### :rocket: New Feature
+
+- Add `OrThrow` aliases for `Belt` functions ending with `Exn`. https://github.com/rescript-lang/rescript/pull/7581, https://github.com/rescript-lang/rescript/pull/7590 The following aliases have been added:
+  - `Belt.Array.getOrThrow`
+  - `Belt.Array.setOrThrow`
+  - `Belt.Map.getOrThrow`
+  - `Belt.MutableMap.getOrThrow`
+  - `Belt.Set.getOrThrow`
+  - `Belt.MutableSet.getOrThrow`
+  - `Belt.List.getOrThrow`
+  - `Belt.List.tailOrThrow`
+  - `Belt.List.headOrThrow`
+  - `Belt.MutableQueue.peekOrThrow`
+  - `Belt.MutableQueue.popOrThrow`
+  - `Belt.Option.getOrThrow`
+  - `Belt.Result.getOrThrow`
 
 #### :bug: Bug fix
 
