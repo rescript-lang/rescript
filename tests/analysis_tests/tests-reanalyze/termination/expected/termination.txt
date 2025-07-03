@@ -1,4 +1,3 @@
-
   Scanning TestCyberTruck.cmt Source:TestCyberTruck.res
 
   Function Table
