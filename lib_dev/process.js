@@ -158,7 +158,10 @@ export function setup(cwd = process.cwd()) {
      * @return {Promise<ExecResult>}
      */
     rescript(command, args = [], options = {}) {
-      const cliPath = path.join(import.meta.dirname, "../cli/rescript.js");
+      const cliPath = path.join(
+        import.meta.dirname,
+        "../cli/rescript-legacy.js",
+      );
       return exec("node", [cliPath, command, ...args].filter(Boolean), options);
     },
 

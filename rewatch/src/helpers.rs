@@ -227,13 +227,13 @@ pub fn get_rescript_legacy(root_path: &Path, workspace_root: Option<PathBuf>) ->
     match (
         root_path
             .join(&bin_dir)
-            .join("rescript.js")
+            .join("rescript-legacy.js")
             .canonicalize()
             .map(StrippedVerbatimPath::to_stripped_verbatim_path),
         workspace_root.map(|workspace_root| {
             workspace_root
                 .join(&bin_dir)
-                .join("rescript.js")
+                .join("rescript-legacy.js")
                 .canonicalize()
                 .map(StrippedVerbatimPath::to_stripped_verbatim_path)
         }),

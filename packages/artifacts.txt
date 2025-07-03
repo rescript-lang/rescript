@@ -10,7 +10,7 @@ cli/common/args.js
 cli/common/bins.js
 cli/common/bsb.js
 cli/rescript-tools.js
-cli/rescript.js
+cli/rescript-legacy.js
 cli/rescript/dump.js
 cli/rescript/format.js
 cli/rewatch.js
