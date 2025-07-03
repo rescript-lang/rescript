@@ -332,12 +332,12 @@ jobs:
 
       - name: Build runtime/stdlib with rewatch
         if: ${{ runner.os != 'Windows' }}
-        run: ./scripts/buildRuntimeRewatch.sh
+        run: ./scripts/buildRuntime.sh
         shell: bash
 
       - name: Build runtime/stdlib with bsb (Windows)
         if: ${{ runner.os == 'Windows' }}
-        run: ./scripts/buildRuntime.sh
+        run: ./scripts/buildRuntimeLegacy.sh
         shell: bash
 
       - name: Check for changes in lib folder
@@ -510,7 +510,7 @@ jobs:
       - name: Build website
         if: steps.diffcheck.outputs.clean == 'false'
         run: |
-          npm ci 
+          npm ci
           npm run build
 
       - name: Commit and push
