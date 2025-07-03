@@ -1352,13 +1352,29 @@ let explanation unif t3 t4 ppf =
     fprintf ppf "@,Self type cannot be unified with a closed object type"
   | _, Tfield (lab, _, _, _) when lab = dummy_method ->
     fprintf ppf "@,Self type cannot be unified with a closed object type"
-  | Tfield (l, _, _, {desc = Tnil}), Tfield (l', _, _, {desc = Tnil})
+  | Tfield (l, _, f1, {desc = Tnil}), Tfield (l', _, f2, {desc = Tnil})
     when l = l' ->
-    fprintf ppf "@,Types for method %s are incompatible" l
-  | (Tnil | Tconstr _), Tfield (l, _, _, _) ->
-    fprintf ppf "@,@[The first object type has no field %s@]" l
-  | Tfield (l, _, _, _), (Tnil | Tconstr _) ->
-    fprintf ppf "@,@[The second object type has no field %s@]" l
+    fprintf ppf
+      "@,\
+       @,\
+       Types for field @{<info>\"%s\"@} are incompatible:@,\
+       Field @{<info>\"%s\"@} in the passed object has type @{<error>%a@}, but \
+       is expected to have type @{<info>%a@}."
+      l l type_expr f1 type_expr f2
+  | (Tnil | Tconstr _), Tfield (l, _, f1, _) ->
+    fprintf ppf
+      "@,\
+       @,\
+       @[The first object is expected to have a field @{<info>\"%s\"@} of type \
+       @{<info>%a@}, but it does not.@]"
+      l type_expr f1
+  | Tfield (l, _, f1, _), (Tnil | Tconstr _) ->
+    fprintf ppf
+      "@,\
+       @,\
+       @[The second object is expected to have a field @{<info>\"%s\"@} of \
+       type @{<info>%a@}, but it does not.@]"
+      l type_expr f1
   | Tnil, Tconstr _ | Tconstr _, Tnil ->
     fprintf ppf
       "@,@[The %s object type has an abstract row, it cannot be closed@]"

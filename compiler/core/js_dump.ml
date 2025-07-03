@@ -949,7 +949,8 @@ and expression_desc cxt ~(level : int) f x : cxt =
               | false, 1 -> Js_op.Lit Literals.tl
               | _ -> Js_op.Lit ("_" ^ string_of_int i)),
               e ))
-          (if !Js_config.debug && not_is_cons then [(name_symbol, E.str p.name)]
+          (if !Js_config.debug && (not untagged) && not_is_cons then
+             [(name_symbol, E.str p.name)]
            else [])
       in
       if untagged || (not_is_cons = false && p.num_nonconst = 1) then tails

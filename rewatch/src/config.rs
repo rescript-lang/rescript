@@ -184,6 +184,7 @@ pub struct JsxSpecs {
     pub mode: Option<JsxMode>,
     #[serde(rename = "v3-dependencies")]
     pub v3_dependencies: Option<Vec<String>>,
+    pub preserve: Option<bool>,
 }
 
 /// We do not care about the internal structure because the gentype config is loaded by bsc.
@@ -434,6 +435,16 @@ impl Config {
         }
     }
 
+    pub fn get_jsx_preserve_args(&self) -> Vec<String> {
+        match self.jsx.to_owned() {
+            Some(jsx) => match jsx.preserve {
+                Some(true) => vec!["-bs-jsx-preserve".to_string()],
+                _ => vec![],
+            },
+            _ => vec![],
+        }
+    }
+
     pub fn get_uncurried_args(&self, version: &str) -> Vec<String> {
         match check_if_rescript11_or_higher(version) {
             Ok(true) => match self.uncurried.to_owned() {
@@ -614,6 +625,35 @@ mod tests {
                 module: Some(JsxModule::Other(String::from("Voby.JSX"))),
                 mode: None,
                 v3_dependencies: None,
+                preserve: None,
+            },
+        );
+    }
+
+    #[test]
+    fn test_jsx_preserve() {
+        let json = r#"
+        {
+            "name": "my-monorepo",
+            "sources": [ { "dir": "src/", "subdirs": true } ],
+            "package-specs": [ { "module": "es6", "in-source": true } ],
+            "suffix": ".mjs",
+            "pinned-dependencies": [ "@teamwalnut/app" ],
+            "bs-dependencies": [ "@teamwalnut/app" ],
+            "jsx": { "version": 4, "preserve": true }
+        }
+        "#;
+
+        let config = serde_json::from_str::<Config>(json).unwrap();
+        assert!(config.jsx.is_some());
+        assert_eq!(
+            config.jsx.unwrap(),
+            JsxSpecs {
+                version: Some(4),
+                module: None,
+                mode: None,
+                v3_dependencies: None,
+                preserve: Some(true),
             },
         );
     }

@@ -588,7 +588,7 @@ let rec getUndefined = (n: t<_>, x, ~cmp) =>
     }
   }
 
-let rec getExn = (n: t<_>, x, ~cmp) =>
+let rec getOrThrow = (n: t<_>, x, ~cmp) =>
   switch n {
   | None => throw(Not_found)
   | Some(t) /* Node(l, v, r, _) */ =>
@@ -597,7 +597,7 @@ let rec getExn = (n: t<_>, x, ~cmp) =>
     if c == 0 {
       v
     } else {
-      getExn(
+      getOrThrow(
         ~cmp,
         if c < 0 {
           t.left

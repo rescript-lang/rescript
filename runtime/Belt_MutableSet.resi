@@ -640,6 +640,11 @@ Same as `Belt.MutableSet.get` but raise when element does not exist.
 let getExn: (t<'value, 'id>, 'value) => 'value
 
 /**
+Same as `Belt.MutableSet.get` but raise when element does not exist.
+*/
+let getOrThrow: (t<'value, 'id>, 'value) => 'value
+
+/**
 Returns a tuple `((smaller, larger), present)`, `present` is true when element exist in set.
 
 ## Examples

@@ -155,6 +155,8 @@ let getWithDefault: (t<'k, 'a, 'id>, 'k, 'a, ~cmp: cmp<'k, 'id>) => 'a
 
 let getExn: (t<'k, 'a, 'id>, 'k, ~cmp: cmp<'k, 'id>) => 'a
 
+let getOrThrow: (t<'k, 'a, 'id>, 'k, ~cmp: cmp<'k, 'id>) => 'a
+
 let checkInvariantInternal: t<_> => unit
 
 /**

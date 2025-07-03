@@ -14,9 +14,27 @@
 
 #### :boom: Breaking Change
 
-- Remove `String.getSymbol` from standard library.
-- Remove `String.getSymbolUnsafe` from standard library.
-- Remove `String.setSymbol` from standard library.
+- The legacy rescript cli can be called through rewatch via `rewatch legacy`. Arguments to rewatch need to be passed after the subcommand. Argument `--compiler-args` is now a subcommand `compiler-args`. https://github.com/rescript-lang/rescript/pull/7551
+- Remove `String.getSymbol` from standard library. https://github.com/rescript-lang/rescript/pull/7571
+- Remove `String.getSymbolUnsafe` from standard library. https://github.com/rescript-lang/rescript/pull/7571
+- Remove `String.setSymbol` from standard library. https://github.com/rescript-lang/rescript/pull/7571
+
+#### :rocket: New Feature
+
+- Add `OrThrow` aliases for `Belt` functions ending with `Exn`. https://github.com/rescript-lang/rescript/pull/7581, https://github.com/rescript-lang/rescript/pull/7590 The following aliases have been added:
+  - `Belt.Array.getOrThrow`
+  - `Belt.Array.setOrThrow`
+  - `Belt.Map.getOrThrow`
+  - `Belt.MutableMap.getOrThrow`
+  - `Belt.Set.getOrThrow`
+  - `Belt.MutableSet.getOrThrow`
+  - `Belt.List.getOrThrow`
+  - `Belt.List.tailOrThrow`
+  - `Belt.List.headOrThrow`
+  - `Belt.MutableQueue.peekOrThrow`
+  - `Belt.MutableQueue.popOrThrow`
+  - `Belt.Option.getOrThrow`
+  - `Belt.Result.getOrThrow`
 
 #### :bug: Bug fix
 
@@ -24,10 +42,12 @@
 - Pass the rewatch exit code through in wrapper script. https://github.com/rescript-lang/rescript/pull/7565
 - Prop punning when types don't match results in I/O error: _none_: No such file or directory. https://github.com/rescript-lang/rescript/pull/7533
 - Pass location to children prop in jsx ppx. https://github.com/rescript-lang/rescript/pull/7540
+- Fix crash when `bs-g` is used with untagged variants. https://github.com/rescript-lang/rescript/pull/7575
 
 #### :nail_care: Polish
 
 - Better error message for when trying to await something that is not a promise. https://github.com/rescript-lang/rescript/pull/7561
+- Better error messages for object field missing and object field type mismatches. https://github.com/rescript-lang/rescript/pull/7580
 
 #### :house: Internal
 

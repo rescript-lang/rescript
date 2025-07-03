@@ -123,7 +123,9 @@ let getUndefined = (map, x) => Dict.getUndefined(~cmp=map.cmp, map.data, x)
 
 let getWithDefault = (map, x, def) => Dict.getWithDefault(~cmp=map.cmp, map.data, x, def)
 
-let getExn = (map, x) => Dict.getExn(~cmp=map.cmp, map.data, x)
+let getOrThrow = (map, x) => Dict.getOrThrow(~cmp=map.cmp, map.data, x)
+
+let getExn = getOrThrow
 
 let has = (map, x) => Dict.has(~cmp=map.cmp, map.data, x)
 

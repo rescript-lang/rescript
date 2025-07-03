@@ -116,6 +116,8 @@ let getWithDefault: (t<'v>, key, 'v) => 'v
 
 let getExn: (t<'v>, key) => 'v
 
+let getOrThrow: (t<'v>, key) => 'v
+
 /**
 **raise** when invariant is not held
 */

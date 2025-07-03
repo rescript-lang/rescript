@@ -104,7 +104,7 @@ let rec getUndefined = (n: t, x: value) =>
     }
   }
 
-let rec getExn = (n: t, x: value) =>
+let rec getOrThrow = (n: t, x: value) =>
   switch n {
   | None => throw(Not_found)
   | Some(t) =>
@@ -112,7 +112,7 @@ let rec getExn = (n: t, x: value) =>
     if x == v {
       v
     } else {
-      getExn(
+      getOrThrow(
         if x < v {
           t.left
         } else {

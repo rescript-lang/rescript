@@ -154,6 +154,8 @@ let getUndefined: (t, value) => Js.undefined<value>
 
 let getExn: (t, value) => value
 
+let getOrThrow: (t, value) => value
+
 /**
 `split(x, s)` returns a triple `(l, present, r)`, where `l` is the set of
 elements of `s` that are strictly less than `x`;`r` is the set of elements of

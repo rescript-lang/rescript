@@ -40,6 +40,12 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@testrepo/compiled-by-legacy@npm:*, @testrepo/compiled-by-legacy@workspace:packages/compiled-by-legacy":
+  version: 0.0.0-use.local
+  resolution: "@testrepo/compiled-by-legacy@workspace:packages/compiled-by-legacy"
+  languageName: unknown
+  linkType: soft
+
 "@testrepo/dep01@npm:*, @testrepo/dep01@workspace:packages/dep01":
   version: 0.0.0-use.local
   resolution: "@testrepo/dep01@workspace:packages/dep01"
@@ -58,6 +64,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@testrepo/main@workspace:packages/main"
   dependencies:
+    "@testrepo/compiled-by-legacy": "npm:*"
     "@testrepo/dep01": "npm:*"
   languageName: unknown
   linkType: soft

@@ -106,6 +106,7 @@ let get: (t<'a>, key) => option<'a>
 let getUndefined: (t<'a>, key) => Js.undefined<'a>
 let getWithDefault: (t<'a>, key, 'a) => 'a
 let getExn: (t<'a>, key) => 'a
+let getOrThrow: (t<'a>, key) => 'a
 
 /**
   **raise** when invariant is not held

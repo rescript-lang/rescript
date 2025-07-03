@@ -611,6 +611,11 @@ Same as [get](#get) but raise when element does not exist.
 let getExn: (t<'value, 'id>, 'value, ~cmp: cmp<'value, 'id>) => 'value
 
 /**
+Same as [get](#get) but raise when element does not exist.
+*/
+let getOrThrow: (t<'value, 'id>, 'value, ~cmp: cmp<'value, 'id>) => 'value
+
+/**
 Returns a tuple `((smaller, larger), present)`, `present` is true when element exist in set.
 
 ## Examples

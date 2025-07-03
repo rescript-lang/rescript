@@ -53,6 +53,12 @@ Otherwise return the value at index `i` in `arr`.
 let getExn: (t<'a>, int) => 'a
 
 /**
+Raise an exception if `i` is out of range.
+Otherwise return the value at index `i` in `arr`.
+*/
+let getOrThrow: (t<'a>, int) => 'a
+
+/**
 `getUnsafe(arr, i)`
 
 **Unsafe**
@@ -80,6 +86,11 @@ let set: (t<'a>, int, 'a) => bool
 `setExn(arr, i, x)` raise an exception if `i` is out of range.
 */
 let setExn: (t<'a>, int, 'a) => unit
+
+/**
+`setOrThrow(arr, i, x)` raise an exception if `i` is out of range.
+*/
+let setOrThrow: (t<'a>, int, 'a) => unit
 
 external setUnsafe: (t<'a>, int, 'a) => unit = "%array_unsafe_set"
 

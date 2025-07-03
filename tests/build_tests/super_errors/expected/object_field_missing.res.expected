@@ -1,0 +1,15 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/object_field_missing.res[0m:[2m11:20-22[0m
+
+   9 [2m│[0m   }
+  10 [2m│[0m 
+  [1;31m11[0m [2m│[0m   let _ = doStuff(~[1;31mctx[0m)
+  12 [2m│[0m }
+  13 [2m│[0m 
+
+  This has type: [1;31m{"log": (string, string) => string}[0m
+  But this function argument [1;33m~ctx[0m is expecting:
+    [1;33m{.."multiply": (int, int) => int}[0m
+  
+  The first object is expected to have a field [1;33m"multiply"[0m of type [1;33m(int, int) => int[0m, but it does not.

@@ -165,7 +165,8 @@ let eq = (d0, d1, f) => I.eq(d0.data, d1.data, f)
 let get = (d, x) => I.get(d.data, x)
 let getUndefined = (d, x) => I.getUndefined(d.data, x)
 let getWithDefault = (d, x, def) => I.getWithDefault(d.data, x, def)
-let getExn = (d, x) => I.getExn(d.data, x)
+let getOrThrow = (d, x) => I.getOrThrow(d.data, x)
+let getExn = getOrThrow
 
 let cmpU = cmp
 let eqU = eq
