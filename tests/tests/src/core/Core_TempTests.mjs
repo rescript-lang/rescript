@@ -249,10 +249,6 @@ let x = Symbol.for("Foo");
 
 console.log(x);
 
-let array$1 = "foo"[Symbol.iterator]().toArray();
-
-console.log(array$1);
-
 console.info("");
 
 console.info("Global namespace");
@@ -338,6 +334,7 @@ export {
   _formatter,
   formatter,
   segments,
+  array,
   date,
   dict,
   dict2,
@@ -354,7 +351,6 @@ export {
   set,
   regexp,
   x,
-  array$1 as array,
   timeout,
   z,
   intFromBigInt,

@@ -12,6 +12,12 @@
 
 # 12.0.0-alpha.15 (Unreleased)
 
+#### :boom: Breaking Change
+
+- Remove `String.getSymbol` from standard library.
+- Remove `String.getSymbolUnsafe` from standard library.
+- Remove `String.setSymbol` from standard library.
+
 #### :bug: Bug fix
 
 - Ignore inferred arity in functions inside `%raw` functions, leaving to `%ffi` the responsibility to check the arity since it gives an error in case of mismatch. https://github.com/rescript-lang/rescript/pull/7542

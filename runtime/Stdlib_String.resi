@@ -1113,50 +1113,6 @@ String.padEnd("abc", 1, "") == "abc"
 external padEnd: (string, int, string) => string = "padEnd"
 
 /**
-`getSymbol(str, symbol)` returns the value associated with the given symbol on the string as an `option<'a>`.
-Returns `None` if the symbol property doesn't exist.
-
-## Examples
-
-```rescript
-let h = String.make("hello")
-let symbol = String.getSymbol(h, Symbol.iterator)
-Option.isSome(symbol) == true
-```
-*/
-@get_index external getSymbol: (string, Stdlib_Symbol.t) => option<'a> = ""
-
-/**
-`getSymbolUnsafe(str, symbol)` returns the value associated with the given symbol on the string. 
-
-This is _unsafe_, meaning it will return `undefined` if the symbol property doesn't exist.
-
-## Examples
-
-```rescript
-let h = String.make("hello")
-// This does required direct access to the symbol property
-// Storing the iterator in a variable first, will not work.
-String.getSymbolUnsafe(h, Symbol.iterator)()->Iterator.toArray->Array.length == 5
-```
-*/
-@get_index external getSymbolUnsafe: (string, Stdlib_Symbol.t) => 'a = ""
-
-/**
-`setSymbol(str, symbol, value)` sets the given symbol property on the string to the specified value.
-
-## Examples
-
-```rescript
-let mySymbol = Symbol.make("test")
-let h = %raw(`new String("hello")`)
-String.setSymbol(h, mySymbol, 42)
-String.getSymbol(h, mySymbol) == Some(42)
-```
-*/
-@set_index external setSymbol: (string, Stdlib_Symbol.t, 'a) => unit = ""
-
-/**
 `localeCompare(referenceStr, compareStr)` returns a float than indicatings
 whether a reference string comes before or after, or is the same as the given
 string in sort order. If `referenceStr` occurs before `compareStr` positive if
