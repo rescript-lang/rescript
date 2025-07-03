@@ -1391,6 +1391,8 @@ let explanation unif t3 t4 ppf =
          These polymorphic variants are incompatible - they share no common \
          constructors."
     | [], true, (_ :: _ as fields), _ ->
+      (* TODO(ai) Future opportunity to provide a way for an LLM to lookup the 
+      full polyvariant type definitions if wanted.*)
       let constructors_txt =
         if List.length fields = 1 then "constructor" else "constructors"
       in
