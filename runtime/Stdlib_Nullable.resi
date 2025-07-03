@@ -96,7 +96,7 @@ Nullable.equal(a, c, Int.equal) == false
 Nullable.equal(a, d, Int.equal) == false
 Nullable.equal(Nullable.null, Nullable.null, Int.equal) == true
 Nullable.equal(Nullable.undefined, Nullable.undefined, Int.equal) == true
-Nullable.equal(Nullable.null, Nullable.undefined, Int.equal) == false
+Nullable.equal(Nullable.null, Nullable.undefined, Int.equal) == true
 ```
  */
 let equal: (t<'a>, t<'b>, ('a, 'b) => bool) => bool
