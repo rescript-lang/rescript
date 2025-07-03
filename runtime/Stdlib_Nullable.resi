@@ -80,8 +80,53 @@ switch asNullable->Nullable.toOption {
 */
 external make: 'a => t<'a> = "%identity"
 
+/**
+`equal(a, b, eq)` checks if `a` and `b` are equal.
+If both are `Nullable.Value`, it will use function `eq` to check if the values are equal.
+
+## Examples
+```rescript
+let a = Nullable.make(1)
+let b = Nullable.null
+let c = Nullable.undefined
+let d = Nullable.make(2)
+
+Nullable.equal(a, b, Int.equal) == false
+Nullable.equal(a, c, Int.equal) == false
+Nullable.equal(a, d, Int.equal) == false
+Nullable.equal(Nullable.null, Nullable.null, Int.equal) == true
+Nullable.equal(Nullable.undefined, Nullable.undefined, Int.equal) == true
+Nullable.equal(Nullable.null, Nullable.undefined, Int.equal) == false
+```
+ */
 let equal: (t<'a>, t<'b>, ('a, 'b) => bool) => bool
 
+/**
+`compare(a, b, cmp)` compares `a` and `b`.
+If both are `Nullable.Value`, it will use function `cmp` to compare the values.
+
+## Examples
+```rescript
+let a = Nullable.make(1)
+let b = Nullable.null
+let c = Nullable.undefined
+let d = Nullable.make(2)
+
+// A value is greater than null and undefined
+Nullable.compare(a, b, Int.compare) == Stdlib_Ordering.greater
+Nullable.compare(a, c, Int.compare) == Stdlib_Ordering.greater
+// null and undefined are less than a value
+Nullable.compare(b, a, Int.compare) == Stdlib_Ordering.less
+Nullable.compare(c, a, Int.compare) == Stdlib_Ordering.less
+// null is equal to null, undefined is equal to undefined
+Nullable.compare(Nullable.null, Nullable.null, Int.compare) == Stdlib_Ordering.equal
+Nullable.compare(Nullable.undefined, Nullable.undefined, Int.compare) == Stdlib_Ordering.equal
+// null is less than undefined
+Nullable.compare(Nullable.null, Nullable.undefined, Int.compare) == Stdlib_Ordering.less
+// The compare function is used if both are `Nullable.Value`
+Nullable.compare(a, d, Int.compare) == Stdlib_Ordering.less
+```
+*/
 let compare: (t<'a>, t<'b>, ('a, 'b) => Stdlib_Ordering.t) => Stdlib_Ordering.t
 
 /**
