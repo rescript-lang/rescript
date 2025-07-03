@@ -208,6 +208,12 @@ let _props_with_hyphen = <label
   data-testid={"test"}
 />;
 
+let React = {};
+
+let _fragment = <Fragment>
+  {"Hello, world!"}
+</Fragment>;
+
 export {
   Icon,
   _single_element_child,
@@ -234,5 +240,7 @@ export {
   ComponentWithOptionalProps,
   _optional_props,
   _props_with_hyphen,
+  React,
+  _fragment,
 }
 /* _single_element_child Not a pure module */

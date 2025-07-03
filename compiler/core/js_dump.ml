@@ -533,12 +533,13 @@ and expression_desc cxt ~(level : int) f x : cxt =
       ( ({
            expression_desc =
              J.Var
-               (J.Qualified
-                  ( _,
-                    Some fnName
-                    (* We care about the function name when it is jsxs,
+               ( Id {name = fnName}
+               | J.Qualified
+                   ( _,
+                     Some fnName
+                     (* We care about the function name when it is jsxs,
                        If this is the case, we need to unpack an array later on *)
-                  ));
+                   ) );
          } as e),
         el,
         {call_transformed_jsx = true} )
