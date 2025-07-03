@@ -209,7 +209,7 @@ Options:|}
         "Write @dead annotations directly in the source files" );
     ]
   in
-  Arg.parse speclist (fun _ -> ()) usage;
+  Arg.parse speclist print_endline usage;
   if !analysisKindSet = false then setConfig ();
   let cmtRoot = !cmtRootRef in
   runAnalysisAndReport ~cmtRoot
