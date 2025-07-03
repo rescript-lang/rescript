@@ -47,22 +47,10 @@ See [`ArrayBuffer.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 
 ```rescript
 let buffer = ArrayBuffer.make(16)
-let sliced = ArrayBuffer.slice(buffer, ~start=4, ~end=12)
+let sliced = buffer->ArrayBuffer.slice(~start=4, ~end=12)
 ArrayBuffer.byteLength(sliced) == 8
 ```
 */
-@send external slice: (t, ~start: int, ~end: int) => t = "slice"
+@send external slice: (t, ~start: int=?, ~end: int=?) => t = "slice"
 
-/**
-`sliceToEnd(arrayBuffer, ~start)` returns a new ArrayBuffer whose contents are a copy of this ArrayBuffer's bytes from `start` to the end of the buffer.
-See [`ArrayBuffer.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer/slice) on MDN.
-
-## Examples
-
-```rescript
-let buffer = ArrayBuffer.make(16)
-let sliced = ArrayBuffer.sliceToEnd(buffer, ~start=8)
-ArrayBuffer.byteLength(sliced) == 8
-```
-*/
-@send external sliceToEnd: (t, ~start: int) => t = "slice"
+@deprecated("Use `slice` instead.") @send external sliceToEnd: (t, ~start: int) => t = "slice"
