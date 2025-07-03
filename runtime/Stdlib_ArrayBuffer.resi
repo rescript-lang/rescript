@@ -17,7 +17,7 @@ See [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 
 ```rescript
 let buffer = ArrayBuffer.make(8)
-ArrayBuffer.byteLength(buffer)->assertEqual(8)
+ArrayBuffer.byteLength(buffer) == 8
 ```
 
 ## Exceptions
@@ -34,7 +34,7 @@ See [`ArrayBuffer.byteLength`](https://developer.mozilla.org/en-US/docs/Web/Java
 
 ```rescript
 let buffer = ArrayBuffer.make(16)
-ArrayBuffer.byteLength(buffer)->assertEqual(16)
+ArrayBuffer.byteLength(buffer) == 16
 ```
 */
 @get external byteLength: t => int = "byteLength"
@@ -48,7 +48,7 @@ See [`ArrayBuffer.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 ```rescript
 let buffer = ArrayBuffer.make(16)
 let sliced = ArrayBuffer.slice(buffer, ~start=4, ~end=12)
-ArrayBuffer.byteLength(sliced)->assertEqual(8)
+ArrayBuffer.byteLength(sliced) == 8
 ```
 */
 @send external slice: (t, ~start: int, ~end: int) => t = "slice"
@@ -62,7 +62,7 @@ See [`ArrayBuffer.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 ```rescript
 let buffer = ArrayBuffer.make(16)
 let sliced = ArrayBuffer.sliceToEnd(buffer, ~start=8)
-ArrayBuffer.byteLength(sliced)->assertEqual(8)
+ArrayBuffer.byteLength(sliced) == 8
 ```
 */
 @send external sliceToEnd: (t, ~start: int) => t = "slice"
