@@ -114,7 +114,6 @@ let getUndefined: (t<'v>, key) => Js.undefined<'v>
 
 let getWithDefault: (t<'v>, key, 'v) => 'v
 
-@deprecated("Use `getOrThrow` instead")
 let getExn: (t<'v>, key) => 'v
 
 let getOrThrow: (t<'v>, key) => 'v

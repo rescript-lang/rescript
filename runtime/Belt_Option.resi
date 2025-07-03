@@ -89,7 +89,6 @@ switch Belt.Option.getExn(None) { // Raises an exception
 }
 ```
 */
-@deprecated("Use `getOrThrow` instead")
 let getExn: option<'a> => 'a
 
 /**

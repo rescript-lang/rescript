@@ -50,7 +50,6 @@ switch Belt.Result.getExn(Belt.Result.Error("Invalid data")) { // raise a except
 }
 ```
 */
-@deprecated("Use `getOrThrow` instead")
 let getExn: t<'a, 'b> => 'a
 
 /**

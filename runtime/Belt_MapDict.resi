@@ -153,7 +153,6 @@ let getUndefined: (t<'k, 'a, 'id>, 'k, ~cmp: cmp<'k, 'id>) => Js.undefined<'a>
 
 let getWithDefault: (t<'k, 'a, 'id>, 'k, 'a, ~cmp: cmp<'k, 'id>) => 'a
 
-@deprecated("Use `getOrThrow` instead")
 let getExn: (t<'k, 'a, 'id>, 'k, ~cmp: cmp<'k, 'id>) => 'a
 
 let getOrThrow: (t<'k, 'a, 'id>, 'k, ~cmp: cmp<'k, 'id>) => 'a

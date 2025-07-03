@@ -608,7 +608,6 @@ let getUndefined: (t<'value, 'id>, 'value, ~cmp: cmp<'value, 'id>) => Js.undefin
 /**
 Same as [get](#get) but raise when element does not exist.
 */
-@deprecated("Use `getOrThrow` instead")
 let getExn: (t<'value, 'id>, 'value, ~cmp: cmp<'value, 'id>) => 'value
 
 /**

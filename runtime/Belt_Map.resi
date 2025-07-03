@@ -383,7 +383,6 @@ See `Belt.Map.get`
 
 raise when `k` not exist
 */
-@deprecated("Use `getOrThrow` instead")
 let getExn: (t<'k, 'v, 'id>, 'k) => 'v
 
 /**

@@ -50,7 +50,6 @@ let get: (t<'a>, int) => option<'a>
 Raise an exception if `i` is out of range.
 Otherwise return the value at index `i` in `arr`.
 */
-@deprecated("Use 'getOrThrow' instead")
 let getExn: (t<'a>, int) => 'a
 
 /**
@@ -86,7 +85,6 @@ let set: (t<'a>, int, 'a) => bool
 /**
 `setExn(arr, i, x)` raise an exception if `i` is out of range.
 */
-@deprecated("Use 'setOrThrow' instead")
 let setExn: (t<'a>, int, 'a) => unit
 
 /**

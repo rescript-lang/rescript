@@ -105,7 +105,6 @@ let maxUndefined: t<'a> => Js.undefined<(key, 'a)>
 let get: (t<'a>, key) => option<'a>
 let getUndefined: (t<'a>, key) => Js.undefined<'a>
 let getWithDefault: (t<'a>, key, 'a) => 'a
-@deprecated("Use `getOrThrow` instead")
 let getExn: (t<'a>, key) => 'a
 let getOrThrow: (t<'a>, key) => 'a
 

@@ -77,7 +77,6 @@ switch Belt.List.headExn(list{}) { // Raises an Error
 }
 ```
 */
-@deprecated("Use `headOrThrow` instead")
 let headExn: t<'a> => 'a
 
 /**
@@ -126,7 +125,6 @@ switch Belt.List.tailExn(list{}) { // Raises an Error
 }
 ```
 */
-@deprecated("Use `tailOrThrow` instead")
 let tailExn: t<'a> => t<'a>
 
 /**
@@ -192,7 +190,6 @@ switch abc->Belt.List.getExn(4) { // Raises an Error
 }
 ```
 */
-@deprecated("Use `getOrThrow` instead")
 let getExn: (t<'a>, int) => 'a
 
 /**

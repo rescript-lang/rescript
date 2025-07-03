@@ -61,7 +61,6 @@ let peekUndefined: t<'a> => Js.undefined<'a>
 /**
 `peekExn(q)` raises an exception if `q` is empty.
 */
-@deprecated("Use `peekOrThrow` instead")
 let peekExn: t<'a> => 'a
 
 /**
@@ -83,7 +82,6 @@ let popUndefined: t<'a> => Js.undefined<'a>
 /**
 `popExn(q)` raise an exception if q is empty.
 */
-@deprecated("Use `popOrThrow` instead")
 let popExn: t<'a> => 'a
 
 /**
