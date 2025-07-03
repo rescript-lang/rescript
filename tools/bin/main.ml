@@ -1,11 +1,7 @@
 let docHelp =
-  {|ReScript Tools
+  {|Usage: rescript doc [file]
 
-Output documentation to standard output
-
-Usage: rescript-tools doc <FILE>
-
-Example: rescript-tools doc ./path/to/EntryPointLib.res|}
+`rescript doc` generate documentation and print to standard output|}
 
 let help =
   {|ReScript Tools
@@ -16,7 +12,6 @@ Commands:
 
 doc <file>            Generate documentation
 reanalyze             Reanalyze
--v, --version         Print version
 -h, --help            Print help|}
 
 let logAndExit = function
@@ -26,8 +21,6 @@ let logAndExit = function
   | Error log ->
     Printf.eprintf "%s\n" log;
     exit 1
-
-let version = Version.version
 
 let main () =
   match Sys.argv |> Array.to_list |> List.tl with
@@ -77,7 +70,6 @@ let main () =
     close_out oc;
     exit 0
   | ["-h"] | ["--help"] -> logAndExit (Ok help)
-  | ["-v"] | ["--version"] -> logAndExit (Ok version)
   | _ -> logAndExit (Error help)
 
 let () = main ()

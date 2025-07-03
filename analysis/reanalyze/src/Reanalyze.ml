@@ -106,11 +106,12 @@ let runAnalysisAndReport ~cmtRoot =
 let cli () =
   let analysisKindSet = ref false in
   let cmtRootRef = ref None in
-  let usage = "reanalyze version " ^ Version.version in
-  let versionAndExit () =
-    print_endline usage;
-    exit 0
-      [@@raises exit]
+  let usage =
+    {|Usage: rescript reanalyze [options]
+
+`rescript reanalyze` is powerful dead code analysis tools to maintain a clean, efficient, and distraction-free codebase
+
+Options:|}
   in
   let rec setAll cmtRoot =
     RunConfig.all ();
@@ -203,14 +204,12 @@ let cli () =
         "comma-separated-path-prefixes Report on files whose path has a prefix \
          in the list, overriding -suppress (no-op if -suppress is not \
          specified)" );
-      ("-version", Unit versionAndExit, "Show version information and exit");
-      ("--version", Unit versionAndExit, "Show version information and exit");
       ( "-write",
         Set Common.Cli.write,
         "Write @dead annotations directly in the source files" );
     ]
   in
-  Arg.parse speclist print_endline usage;
+  Arg.parse speclist (fun _ -> ()) usage;
   if !analysisKindSet = false then setConfig ();
   let cmtRoot = !cmtRootRef in
   runAnalysisAndReport ~cmtRoot

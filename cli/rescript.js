@@ -8,8 +8,9 @@
 
 import * as tty from "node:tty";
 import * as fs from "node:fs";
+import * as child_process from "node:child_process";
 
-import { bsc_exe, rescript_exe } from "./common/bins.js";
+import { bsc_exe, rescript_exe, rescript_tools_exe } from "./common/bins.js";
 import * as bsb from "./common/bsb.js";
 
 const cwd = process.cwd();
@@ -44,6 +45,8 @@ Subcommands:
   build
   clean
   format
+  doc
+  reanalyze
   dump
   help
 
@@ -123,6 +126,16 @@ if (
     case "dump": {
       const mod = await import("./rescript/dump.js");
       mod.main(subcmdArgs, rescript_exe, bsc_exe);
+      break;
+    }
+    case "doc": {
+      const args = process.argv.slice(2);
+      child_process.spawnSync(rescript_tools_exe, args, { stdio: "inherit" });
+      break;
+    }
+    case "reanalyze": {
+      const args = process.argv.slice(2);
+      child_process.spawnSync(rescript_tools_exe, args, { stdio: "inherit" });
       break;
     }
     default: {

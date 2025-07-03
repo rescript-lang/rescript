@@ -19,6 +19,8 @@ const cliHelp =
   "  build\n" +
   "  clean\n" +
   "  format\n" +
+  "  doc\n" +
+  "  reanalyze\n" +
   "  dump\n" +
   "  help\n" +
   "\n" +

@@ -1,4 +1,3 @@
-
   Scanning AutoAnnotate.cmt Source:AutoAnnotate.res
   addVariantCaseDeclaration R AutoAnnotate.res:1:15 path:+AutoAnnotate.variant
   addRecordLabelDeclaration variant AutoAnnotate.res:4:15 path:+AutoAnnotate.record
