@@ -11,7 +11,7 @@ See [`BigInt.asIntN`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 ## Examples
 
 ```rescript
-BigInt.asIntN(~width=4, 25n)->assertEqual(9n)
+BigInt.asIntN(~width=4, 25n)->assertEqual(-7n)
 BigInt.asIntN(~width=4, 3n)->assertEqual(3n)
 ```
 */
