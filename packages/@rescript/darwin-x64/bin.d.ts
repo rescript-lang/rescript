@@ -9,5 +9,5 @@ export type BinaryPaths = {
   rescript_legacy_exe: string;
   rescript_tools_exe: string;
   rescript_editor_analysis_exe: string;
-  rewatch_exe: string;
+  rescript_exe: string;
 };

@@ -3,7 +3,7 @@
 // @ts-check
 
 import * as child_process from "node:child_process";
-import { bsc_exe, rewatch_exe } from "./common/bins.js";
+import { bsc_exe, rescript_exe } from "./common/bins.js";
 
 const args = process.argv.slice(2);
 
@@ -21,20 +21,20 @@ try {
       subcommand === "compiler-args"
     ) {
       child_process.execFileSync(
-        rewatch_exe,
+        rescript_exe,
         [...subcommandWithArgs, "--bsc-path", bsc_exe],
         {
           stdio: "inherit",
         },
       );
     } else {
-      child_process.execFileSync(rewatch_exe, [...args], {
+      child_process.execFileSync(rescript_exe, [...args], {
         stdio: "inherit",
       });
     }
   } else {
     // no subcommand means build subcommand
-    child_process.execFileSync(rewatch_exe, [...args, "--bsc-path", bsc_exe], {
+    child_process.execFileSync(rescript_exe, [...args, "--bsc-path", bsc_exe], {
       stdio: "inherit",
     });
   }

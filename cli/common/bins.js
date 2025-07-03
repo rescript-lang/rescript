@@ -23,6 +23,6 @@ export const {
     rescript_editor_analysis_exe,
     rescript_tools_exe,
     rescript_legacy_exe,
-    rewatch_exe,
+    rescript_exe,
   },
 } = mod;

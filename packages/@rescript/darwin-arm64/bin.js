@@ -14,5 +14,5 @@ export const binPaths = {
     binDir,
     "rescript-editor-analysis.exe",
   ),
-  rewatch_exe: path.join(binDir, "rewatch.exe"),
+  rescript_exe: path.join(binDir, "rewatch.exe"),
 };
