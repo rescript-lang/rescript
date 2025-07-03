@@ -17,7 +17,6 @@ dce:
 
 rewatch:
 	cargo build --manifest-path rewatch/Cargo.toml --release
-	cp rewatch/target/release/rewatch rewatch
 	./scripts/copyExes.js --rewatch
 
 ninja/ninja:
