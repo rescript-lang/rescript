@@ -928,7 +928,9 @@ lib/ocaml/Stdlib_Array.resi
 lib/ocaml/Stdlib_ArrayBuffer.cmi
 lib/ocaml/Stdlib_ArrayBuffer.cmj
 lib/ocaml/Stdlib_ArrayBuffer.cmt
+lib/ocaml/Stdlib_ArrayBuffer.cmti
 lib/ocaml/Stdlib_ArrayBuffer.res
+lib/ocaml/Stdlib_ArrayBuffer.resi
 lib/ocaml/Stdlib_AsyncIterator.cmi
 lib/ocaml/Stdlib_AsyncIterator.cmj
 lib/ocaml/Stdlib_AsyncIterator.cmt
