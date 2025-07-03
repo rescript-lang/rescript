@@ -7,7 +7,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { WebSocket } from "#lib/minisocket";
 
-import { rescript_exe } from "./bins.js";
+import { rescript_legacy_exe } from "./bins.js";
 
 const cwd = process.cwd();
 const lockFileName = path.join(cwd, ".bsb.lock");
@@ -50,7 +50,7 @@ function acquireBuild(args, options) {
     return null;
   }
   try {
-    ownerProcess = child_process.spawn(rescript_exe, args, {
+    ownerProcess = child_process.spawn(rescript_legacy_exe, args, {
       stdio: "inherit",
       ...options,
     });

@@ -143,10 +143,10 @@ async function formatFiles(files, bsc_exe, isSupportedFile, checkFormatting) {
 
 /**
  * @param {string[]} argv
- * @param {string} rescript_exe
+ * @param {string} rescript_legacy_exe
  * @param {string} bsc_exe
  */
-export async function main(argv, rescript_exe, bsc_exe) {
+export async function main(argv, rescript_legacy_exe, bsc_exe) {
   const isSupportedFile = hasExtension(formattedFileExtensions);
   const isSupportedStd = hasExtension(formattedStdExtensions);
 
@@ -179,7 +179,7 @@ export async function main(argv, rescript_exe, bsc_exe) {
       // -all
       // TODO: check the rest arguments
       const output = child_process.spawnSync(
-        rescript_exe,
+        rescript_legacy_exe,
         ["info", "-list-files"],
         {
           encoding: "utf-8",

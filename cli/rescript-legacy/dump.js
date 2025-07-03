@@ -16,10 +16,10 @@ const specs = [];
 
 /**
  * @param {string[]} argv
- * @param {string} rescript_exe
+ * @param {string} rescript_legacy_exe
  * @param {string} bsc_exe
  */
-export function main(argv, rescript_exe, bsc_exe) {
+export function main(argv, rescript_legacy_exe, bsc_exe) {
   let target;
   arg.parse_exn(dump_usage, argv, specs, xs => {
     if (xs.length !== 1) {
@@ -34,9 +34,13 @@ export function main(argv, rescript_exe, bsc_exe) {
     process.exit(2);
   }
 
-  let output = child_process.spawnSync(rescript_exe, ["build", "--", target], {
-    encoding: "utf-8",
-  });
+  let output = child_process.spawnSync(
+    rescript_legacy_exe,
+    ["build", "--", target],
+    {
+      encoding: "utf-8",
+    },
+  );
   if (output.status !== 0) {
     console.log(output.stdout);
     console.error(output.stderr);

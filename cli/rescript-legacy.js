@@ -6,10 +6,10 @@
 // It matters since we need read .sourcedirs(location)
 // and its content are file/directories with regard to project root
 
-import * as tty from "node:tty";
 import * as fs from "node:fs";
+import * as tty from "node:tty";
 
-import { bsc_exe, rescript_exe } from "./common/bins.js";
+import { bsc_exe, rescript_legacy_exe } from "./common/bins.js";
 import * as bsb from "./common/bsb.js";
 
 const cwd = process.cwd();
@@ -94,7 +94,7 @@ if (
   console.log(helpMessage);
 } else if (argPatterns.version.includes(args[0])) {
   const packageSpec = JSON.parse(
-    fs.readFileSync(new URL("../package.json", import.meta.url), "utf-8")
+    fs.readFileSync(new URL("../package.json", import.meta.url), "utf-8"),
   );
 
   console.log(packageSpec.version);
@@ -116,13 +116,13 @@ if (
       break;
     }
     case "format": {
-      const mod = await import("./rescript/format.js");
-      await mod.main(subcmdArgs, rescript_exe, bsc_exe);
+      const mod = await import("./rescript-legacy/format.js");
+      await mod.main(subcmdArgs, rescript_legacy_exe, bsc_exe);
       break;
     }
     case "dump": {
-      const mod = await import("./rescript/dump.js");
-      mod.main(subcmdArgs, rescript_exe, bsc_exe);
+      const mod = await import("./rescript-legacy/dump.js");
+      mod.main(subcmdArgs, rescript_legacy_exe, bsc_exe);
       break;
     }
     default: {
