@@ -23,8 +23,8 @@ import {
   playgroundPackagesDir,
 } from "./common.mjs";
 
-exec("yarn rescript clean");
-exec("yarn rescript");
+exec("yarn rescript legacy clean");
+exec("yarn rescript legacy");
 
 // We need to build the compiler's builtin modules as a separate cmij.
 // Otherwise we can't use them for compilation within the playground.
@@ -58,7 +58,7 @@ function buildCmij(pkgDir, pkgName) {
 }
 
 /**
- * @param {string} basename 
+ * @param {string} basename
  * @return {boolean}
  */
 function isCmij(basename) {

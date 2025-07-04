@@ -2,8 +2,8 @@
   "name": "@tests/tools",
   "private": true,
   "scripts": {
-    "build": "rescript",
-    "clean": "rescript clean -with-deps",
+    "build": "rescript legacy build",
+    "clean": "rescript legacy clean",
     "dev": "rescript -w"
   },
   "dependencies": {

@@ -3,9 +3,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "rescript",
-    "clean": "rescript clean -with-deps",
-    "dev": "rescript -w",
+    "build": "rescript legacy build",
+    "clean": "rescript legacy clean",
+    "dev": "rescript legacy -w",
     "apidocs:generate": "yarn build && node GenApiDocs.res.js"
   },
   "dependencies": {

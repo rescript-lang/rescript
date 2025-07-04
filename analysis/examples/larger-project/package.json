@@ -5,7 +5,7 @@
   "scripts": {
     "start": "rescript build -w",
     "build": "rescript build",
-    "clean": "rescript clean -with-deps"
+    "clean": "rescript clean"
   },
   "devDependencies": {
     "react": "^16.13.1",

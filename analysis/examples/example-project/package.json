@@ -6,6 +6,6 @@
   "scripts": {
     "build": "rescript",
     "start": "rescript build -w",
-    "clean": "rescript clean -with-deps"
+    "clean": "rescript clean"
   }
 }
