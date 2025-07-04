@@ -1404,8 +1404,8 @@ let explanation unif t3 t4 ppf =
          @,\
          Possible solutions:\n\
         \  - Either make the first variant @{<info>open@} so it can accept \
-         constructors it hasn't listed itself. To do this, make sure the type \
-         starts with @{<info>[>@} instead of @{<info>[@}\n\
+         additional constructors. To do this, make sure the type starts with \
+         @{<info>[>@} instead of @{<info>[@}\n\
         \  - Or add the missing %s to it."
         constructors_txt print_tags fields constructors_txt
     | (_ :: _ as fields), _, [], true ->
@@ -1420,8 +1420,8 @@ let explanation unif t3 t4 ppf =
          @,\
          Possible solutions:\n\
         \  - Either make the second variant @{<info>open@} so it can accept \
-         constructors it hasn't listed itself. To do this, make sure the type \
-         starts with @{<info>[>@} instead of @{<info>[@}\n\
+         additional constructors. To do this, make sure the type starts with \
+         @{<info>[>@} instead of @{<info>[@}\n\
         \  - Or add the missing %s to it."
         constructors_txt print_tags fields constructors_txt
     | [(l1, _)], true, [(l2, _)], true when l1 = l2 ->
