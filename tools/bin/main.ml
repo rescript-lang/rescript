@@ -7,6 +7,15 @@ Usage: rescript-tools doc <FILE>
 
 Example: rescript-tools doc ./path/to/EntryPointLib.res|}
 
+let formatDocstringsHelp =
+  {|ReScript Tools
+
+Format ReScript code blocks in docstrings
+
+Usage: rescript-tools format-docstrings <FILE> [--stdout]
+
+Example: rescript-tools format-docstrings ./path/to/MyModule.res|}
+
 let help =
   {|ReScript Tools
 
@@ -14,10 +23,11 @@ Usage: rescript-tools [command]
 
 Commands:
 
-doc <file>            Generate documentation
-reanalyze             Reanalyze
--v, --version         Print version
--h, --help            Print help|}
+doc <file>                              Generate documentation
+format-docstrings <file> [--stdout]     Format ReScript code blocks in docstrings
+reanalyze                               Reanalyze
+-v, --version                           Print version
+-h, --help                              Print help|}
 
 let logAndExit = function
   | Ok log ->
@@ -43,6 +53,21 @@ let main () =
       in
       logAndExit (Tools.extractDocs ~entryPointFile:path ~debug:false)
     | _ -> logAndExit (Error docHelp))
+  | "format-docstrings" :: rest -> (
+    match rest with
+    | ["-h"] | ["--help"] -> logAndExit (Ok formatDocstringsHelp)
+    | [path; "--stdout"] -> (
+      match
+        Tools.FormatDocstrings.formatDocstrings ~outputMode:`Stdout
+          ~entryPointFile:path
+      with
+      | Ok content -> print_endline content
+      | Error e -> logAndExit (Error e))
+    | [path] ->
+      Tools.FormatDocstrings.formatDocstrings ~outputMode:`File
+        ~entryPointFile:path
+      |> logAndExit
+    | _ -> logAndExit (Error formatDocstringsHelp))
   | "reanalyze" :: _ ->
     let len = Array.length Sys.argv in
     for i = 1 to len - 2 do

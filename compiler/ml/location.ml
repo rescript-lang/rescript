@@ -231,24 +231,29 @@ let error_of_exn exn =
 
 (* taken from https://github.com/rescript-lang/ocaml/blob/d4144647d1bf9bc7dc3aadc24c25a7efa3a67915/parsing/location.ml#L380 *)
 (* This is the error report entry point. We'll replace the default reporter with this one. *)
-let rec default_error_reporter ?(src = None) ppf {loc; msg; sub} =
+let rec default_error_reporter ?(custom_intro = None) ?(src = None) ppf
+    {loc; msg; sub} =
   setup_colors ();
   (* open a vertical box. Everything in our message is indented 2 spaces *)
   (* If src is given, it will display a syntax error after parsing. *)
   let intro =
-    match src with
-    | Some _ -> "Syntax error!"
-    | None -> "We've found a bug for you!"
+    match (custom_intro, src) with
+    | Some intro, _ -> intro
+    | None, Some _ -> "Syntax error!"
+    | None, None -> "We've found a bug for you!"
   in
   Format.fprintf ppf "@[<v>@,  %a@,  %s@,@]"
     (print ~src ~message_kind:`error intro)
     loc msg;
-  List.iter (Format.fprintf ppf "@,@[%a@]" (default_error_reporter ~src)) sub
+  List.iter
+    (Format.fprintf ppf "@,@[%a@]" (default_error_reporter ~custom_intro ~src))
+    sub
 (* no need to flush here; location's report_exception (which uses this ultimately) flushes *)
 
 let error_reporter = ref default_error_reporter
 
-let report_error ?(src = None) ppf err = !error_reporter ~src ppf err
+let report_error ?(custom_intro = None) ?(src = None) ppf err =
+  !error_reporter ~custom_intro ~src ppf err
 
 let error_of_printer loc print x = errorf ~loc "%a@?" print x
 
@@ -276,7 +281,8 @@ let rec report_exception_rec n ppf exn =
     match error_of_exn exn with
     | None -> reraise exn
     | Some `Already_displayed -> ()
-    | Some (`Ok err) -> fprintf ppf "@[%a@]@." (report_error ~src:None) err
+    | Some (`Ok err) ->
+      fprintf ppf "@[%a@]@." (report_error ~custom_intro:None ~src:None) err
   with exn when n > 0 -> report_exception_rec (n - 1) ppf exn
 
 let report_exception ppf exn = report_exception_rec 5 ppf exn

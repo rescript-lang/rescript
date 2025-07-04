@@ -676,3 +676,169 @@ let extractEmbedded ~extensionPoints ~filename =
              ("loc", Some (Analysis.Utils.cmtLocToRange loc |> stringifyRange));
            ])
   |> List.rev |> array
+
+module FormatDocstrings = struct
+  let mapRescriptCodeBlocks ~colIndent ~(mapper : string -> int -> string)
+      (doc : string) =
+    let indent = String.make colIndent ' ' in
+    let len = String.length doc in
+    let buf = Buffer.create len in
+    let addIndent () = Buffer.add_string buf indent in
+    let currentCodeBlockContents = ref None in
+    let lines = String.split_on_char '\n' doc in
+    let lineCount = ref (-1) in
+    let rec processLines lines =
+      let currentLine = !lineCount in
+      lineCount := currentLine + 1;
+      match (lines, !currentCodeBlockContents) with
+      | l :: rest, None ->
+        if String.trim l = "```rescript" then (
+          currentCodeBlockContents := Some [];
+          processLines rest)
+        else (
+          Buffer.add_string buf l;
+          Buffer.add_char buf '\n';
+          processLines rest)
+      | l :: rest, Some codeBlockContents ->
+        if String.trim l = "```" then (
+          let codeBlockContents =
+            codeBlockContents |> List.rev |> String.concat "\n"
+          in
+          let mappedCodeBlockContents =
+            mapper codeBlockContents currentLine
+            |> String.split_on_char '\n'
+            |> List.map (fun line -> indent ^ line)
+            |> String.concat "\n"
+          in
+          addIndent ();
+          Buffer.add_string buf "```rescript\n";
+          Buffer.add_string buf mappedCodeBlockContents;
+          Buffer.add_char buf '\n';
+          addIndent ();
+          Buffer.add_string buf "```";
+          Buffer.add_char buf '\n';
+          currentCodeBlockContents := None;
+          processLines rest)
+        else (
+          currentCodeBlockContents := Some (l :: codeBlockContents);
+          processLines rest)
+      | [], Some codeBlockContents ->
+        (* EOF, broken, do not format*)
+        let codeBlockContents =
+          codeBlockContents |> List.rev |> String.concat "\n"
+        in
+        addIndent ();
+        Buffer.add_string buf "```rescript\n";
+        Buffer.add_string buf codeBlockContents
+      | [], None -> ()
+    in
+    processLines lines;
+
+    (* Normalize newlines at start/end of the content. *)
+    "\n" ^ indent ^ (buf |> Buffer.contents |> String.trim) ^ indent ^ "\n"
+
+  let formatRescriptCodeBlocks content ~displayFilename ~addError
+      ~(payloadLoc : Location.t) =
+    let newContent =
+      mapRescriptCodeBlocks
+        ~colIndent:(payloadLoc.loc_start.pos_cnum - payloadLoc.loc_start.pos_bol)
+        ~mapper:(fun code currentLine ->
+          (* TODO: Figure out the line offsets here so the error messages line up as intended. *)
+          let newlinesNeeded =
+            payloadLoc.loc_start.pos_lnum + currentLine - 5
+          in
+          let codeOffset = String.make newlinesNeeded '\n' in
+          let codeWithOffset = codeOffset ^ code in
+          let formatted_code =
+            let {Res_driver.parsetree; comments; invalid; diagnostics} =
+              Res_driver.parse_implementation_from_source ~for_printer:true
+                ~display_filename:displayFilename ~source:codeWithOffset
+            in
+            if invalid then (
+              let buf = Buffer.create 32 in
+              let formatter = Format.formatter_of_buffer buf in
+              Res_diagnostics.print_report ~formatter
+                ~custom_intro:(Some "Syntax error in code block in docstring")
+                diagnostics codeWithOffset;
+              addError (Buffer.contents buf);
+              code)
+            else
+              Res_printer.print_implementation ~width:80 parsetree ~comments
+              |> String.trim
+          in
+          formatted_code)
+        content
+    in
+    newContent
+
+  let formatDocstrings ~outputMode ~entryPointFile =
+    let path =
+      match Filename.is_relative entryPointFile with
+      | true -> Unix.realpath entryPointFile
+      | false -> entryPointFile
+    in
+    let errors = ref [] in
+    let addError error = errors := error :: !errors in
+
+    let makeMapper ~displayFilename =
+      {
+        Ast_mapper.default_mapper with
+        attribute =
+          (fun mapper ((name, payload) as attr) ->
+            match (name, Ast_payload.is_single_string payload, payload) with
+            | ( {txt = "res.doc"},
+                Some (contents, None),
+                PStr [{pstr_desc = Pstr_eval ({pexp_loc}, _)}] ) ->
+              let formatted_contents =
+                formatRescriptCodeBlocks ~addError ~displayFilename
+                  ~payloadLoc:pexp_loc contents
+              in
+              if formatted_contents <> contents then
+                ( name,
+                  PStr
+                    [
+                      Ast_helper.Str.eval
+                        (Ast_helper.Exp.constant
+                           (Pconst_string (formatted_contents, None)));
+                    ] )
+              else attr
+            | _ -> Ast_mapper.default_mapper.attribute mapper attr);
+      }
+    in
+    let formatted_content, source =
+      if Filename.check_suffix path ".res" then
+        let parser =
+          Res_driver.parsing_engine.parse_implementation ~for_printer:true
+        in
+        let {Res_driver.parsetree = structure; comments; source; filename} =
+          parser ~filename:path
+        in
+
+        let mapper = makeMapper ~displayFilename:filename in
+        let astMapped = mapper.structure mapper structure in
+        (Res_printer.print_implementation ~width:80 astMapped ~comments, source)
+      else
+        let parser =
+          Res_driver.parsing_engine.parse_interface ~for_printer:true
+        in
+        let {Res_driver.parsetree = signature; comments; source; filename} =
+          parser ~filename:path
+        in
+        let mapper = makeMapper ~displayFilename:filename in
+        let astMapped = mapper.signature mapper signature in
+        (Res_printer.print_interface ~width:80 astMapped ~comments, source)
+    in
+    let errors = !errors in
+    if not (List.is_empty errors) then (
+      errors |> String.concat "\n" |> print_endline;
+      Error (Printf.sprintf "Error formatting docstrings."))
+    else if formatted_content <> source then (
+      match outputMode with
+      | `Stdout -> Ok formatted_content
+      | `File ->
+        let oc = open_out path in
+        Printf.fprintf oc "%s" formatted_content;
+        close_out oc;
+        Ok "Formatted docstrings successfully")
+    else Ok "No formatting needed"
+end
