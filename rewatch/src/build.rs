@@ -12,7 +12,7 @@ use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_w
 use crate::helpers::emojis::*;
 use crate::helpers::{self, get_workspace_root};
 use crate::sourcedirs;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use build_types::*;
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -21,7 +21,7 @@ use serde::Serialize;
 use std::ffi::OsString;
 use std::fmt;
 use std::fs::File;
-use std::io::{stdout, Write};
+use std::io::{Write, stdout};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::{Duration, Instant};
