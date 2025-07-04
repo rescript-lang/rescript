@@ -50,6 +50,7 @@
 - Better error message for when trying to await something that is not a promise. https://github.com/rescript-lang/rescript/pull/7561
 - Better error messages for object field missing and object field type mismatches. https://github.com/rescript-lang/rescript/pull/7580
 - Better error messages for when polymorphic variants does not match for various reasons. https://github.com/rescript-lang/rescript/pull/7596
+- Improved completions for inline records. https://github.com/rescript-lang/rescript/pull/7601
 
 #### :house: Internal
 
