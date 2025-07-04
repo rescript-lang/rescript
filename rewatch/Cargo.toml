@@ -20,11 +20,13 @@ log = { version = "0.4.17" }
 notify = { version = "5.1.0", features = ["serde"] }
 notify-debouncer-mini = { version = "0.2.0" }
 rayon = "1.6.1"
+num_cpus = "1.17.0"
 regex = "1.7.1"
 serde = { version = "1.0.152", features = ["derive"] }
 serde_derive = "1.0.152"
 serde_json = { version = "1.0.93" }
 sysinfo = "0.29.10"
+tempfile = "3.10.1"
 
 
 [profile.release]
