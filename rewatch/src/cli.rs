@@ -176,7 +176,7 @@ pub enum Command {
     },
     /// This prints the compiler arguments. It expects the path to a rescript.json file.
     CompilerArgs {
-        /// Path to a rescript.json file
+        /// Path to a rescript file (.res or .resi)
         #[command()]
         path: String,
 
