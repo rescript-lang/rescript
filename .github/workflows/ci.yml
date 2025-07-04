@@ -302,7 +302,7 @@ jobs:
         if: steps.ninja-build-cache.outputs.cache-hit != 'true'
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.13"
 
       - name: Setup MSVC for ninja build (Windows)
         if: steps.ninja-build-cache.outputs.cache-hit != 'true' && runner.os == 'Windows'
