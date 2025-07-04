@@ -764,7 +764,7 @@ module FormatDocstrings = struct
                 ~display_filename:displayFilename ~source:codeWithOffset
             in
             if invalid then (
-              let buf = Buffer.create 32 in
+              let buf = Buffer.create 1000 in
               let formatter = Format.formatter_of_buffer buf in
               Res_diagnostics.print_report ~formatter
                 ~custom_intro:(Some "Syntax error in code block in docstring")
