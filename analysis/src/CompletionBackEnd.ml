@@ -1443,6 +1443,48 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
   let emptyCase = emptyCase ~mode in
   let printConstructorArgs = printConstructorArgs ~mode in
   let create = Completion.create ?typeArgContext in
+  let getRecordCompletions ~env ~fields ~extractedType =
+    (* As we're completing for a record, we'll need a hint (completionContext)
+       here to figure out whether we should complete for a record field, or
+       the record body itself. *)
+    match completionContext with
+    | Some (Completable.RecordField {seenFields}) ->
+      fields
+      |> List.filter (fun (field : field) ->
+             List.mem field.fname.txt seenFields = false)
+      |> List.map (fun (field : field) ->
+             match (field.optional, mode) with
+             | true, Pattern Destructuring ->
+               create ("?" ^ field.fname.txt) ?deprecated:field.deprecated
+                 ~docstring:
+                   [
+                     field.fname.txt
+                     ^ " is an optional field, and needs to be destructured \
+                        using '?'.";
+                   ]
+                 ~kind:
+                   (Field (field, TypeUtils.extractedTypeToString extractedType))
+                 ~env
+             | _ ->
+               create field.fname.txt ?deprecated:field.deprecated
+                 ~kind:
+                   (Field (field, TypeUtils.extractedTypeToString extractedType))
+                 ~env)
+      |> filterItems ~prefix
+    | _ ->
+      if prefix = "" then
+        [
+          create "{}" ~includesSnippets:true ~insertText:"{$0}" ~sortText:"A"
+            ~kind:
+              (ExtractedType
+                 ( extractedType,
+                   match mode with
+                   | Pattern _ -> `Type
+                   | Expression -> `Value ))
+            ~env;
+        ]
+      else []
+  in
   match t with
   | TtypeT {env; path} when mode = Expression ->
     if Debug.verbose () then
@@ -1710,88 +1752,13 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
         ~insertText:(printConstructorArgs numExprs ~asSnippet:true)
         ~kind:(Value typ) ~env;
     ]
-  | Trecord {env; fields} as extractedType -> (
+  | Trecord {env; fields} as extractedType ->
     if Debug.verbose () then print_endline "[complete_typed_value]--> Trecord";
-    (* As we're completing for a record, we'll need a hint (completionContext)
-       here to figure out whether we should complete for a record field, or
-       the record body itself. *)
-    match completionContext with
-    | Some (Completable.RecordField {seenFields}) ->
-      fields
-      |> List.filter (fun (field : field) ->
-             List.mem field.fname.txt seenFields = false)
-      |> List.map (fun (field : field) ->
-             match (field.optional, mode) with
-             | true, Pattern Destructuring ->
-               create ("?" ^ field.fname.txt) ?deprecated:field.deprecated
-                 ~docstring:
-                   [
-                     field.fname.txt
-                     ^ " is an optional field, and needs to be destructured \
-                        using '?'.";
-                   ]
-                 ~kind:
-                   (Field (field, TypeUtils.extractedTypeToString extractedType))
-                 ~env
-             | _ ->
-               create field.fname.txt ?deprecated:field.deprecated
-                 ~kind:
-                   (Field (field, TypeUtils.extractedTypeToString extractedType))
-                 ~env)
-      |> filterItems ~prefix
-    | _ ->
-      if prefix = "" then
-        [
-          create "{}" ~includesSnippets:true ~insertText:"{$0}" ~sortText:"A"
-            ~kind:
-              (ExtractedType
-                 ( extractedType,
-                   match mode with
-                   | Pattern _ -> `Type
-                   | Expression -> `Value ))
-            ~env;
-        ]
-      else [])
-  | TinlineRecord {env; fields} as extractedType -> (
+    getRecordCompletions ~env ~fields ~extractedType
+  | TinlineRecord {env; fields} as extractedType ->
     if Debug.verbose () then
       print_endline "[complete_typed_value]--> TinlineRecord";
-    match completionContext with
-    | Some (Completable.RecordField {seenFields}) ->
-      fields
-      |> List.filter (fun (field : field) ->
-             List.mem field.fname.txt seenFields = false)
-      |> List.map (fun (field : field) ->
-             match (field.optional, mode) with
-             | true, Pattern Destructuring ->
-               create ("?" ^ field.fname.txt) ?deprecated:field.deprecated
-                 ~docstring:
-                   [
-                     field.fname.txt
-                     ^ " is an optional field, and needs to be destructured \
-                        using '?'.";
-                   ]
-                 ~kind:
-                   (Field (field, TypeUtils.extractedTypeToString extractedType))
-                 ~env
-             | _ ->
-               create field.fname.txt ?deprecated:field.deprecated
-                 ~kind:
-                   (Field (field, TypeUtils.extractedTypeToString extractedType))
-                 ~env)
-      |> filterItems ~prefix
-    | _ ->
-      if prefix = "" then
-        [
-          create "{}" ~includesSnippets:true ~insertText:"{$0}" ~sortText:"A"
-            ~kind:
-              (ExtractedType
-                 ( extractedType,
-                   match mode with
-                   | Pattern _ -> `Type
-                   | Expression -> `Value ))
-            ~env;
-        ]
-      else [])
+    getRecordCompletions ~env ~fields ~extractedType
   | Tarray (env, typ) ->
     if Debug.verbose () then print_endline "[complete_typed_value]--> Tarray";
     if prefix = "" then
