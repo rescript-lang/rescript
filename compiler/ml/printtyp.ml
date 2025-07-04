@@ -1385,17 +1385,54 @@ let explanation unif t3 t4 ppf =
       (row1.row_fields, row1.row_closed, row2.row_fields, row2.row_closed)
     with
     | [], true, [], true ->
-      fprintf ppf "@,These two variant types have no intersection"
+      fprintf ppf
+        "@,\
+         @,\
+         These polymorphic variants are incompatible - they share no common \
+         constructors."
     | [], true, (_ :: _ as fields), _ ->
+      (* TODO(ai) Future opportunity to provide a way for an LLM to lookup the 
+      full polyvariant type definitions if wanted.*)
+      let constructors_txt =
+        if List.length fields = 1 then "constructor" else "constructors"
+      in
       fprintf ppf
-        "@,@[The first variant type does not allow tag(s)@ @[<hov>%a@]@]"
-        print_tags fields
+        "@,\
+         @,\
+         The first polymorphic variant is @{<info>closed@} and doesn't include \
+         the %s: @{<error>%a@}.@,\
+         @,\
+         Possible solutions:\n\
+        \  - Either make the first variant @{<info>open@} so it can accept \
+         additional constructors. To do this, make sure the type starts with \
+         @{<info>[>@} instead of @{<info>[@}\n\
+        \  - Or add the missing %s to it."
+        constructors_txt print_tags fields constructors_txt
     | (_ :: _ as fields), _, [], true ->
+      let constructors_txt =
+        if List.length fields = 1 then "constructor" else "constructors"
+      in
       fprintf ppf
-        "@,@[The second variant type does not allow tag(s)@ @[<hov>%a@]@]"
-        print_tags fields
+        "@,\
+         @,\
+         The second polymorphic variant is @{<info>closed@} and doesn't \
+         include the %s: @{<error>%a@}.@,\
+         @,\
+         Possible solutions:\n\
+        \  - Either make the second variant @{<info>open@} so it can accept \
+         additional constructors. To do this, make sure the type starts with \
+         @{<info>[>@} instead of @{<info>[@}\n\
+        \  - Or add the missing %s to it."
+        constructors_txt print_tags fields constructors_txt
     | [(l1, _)], true, [(l2, _)], true when l1 = l2 ->
-      fprintf ppf "@,Types for tag %s are incompatible"
+      fprintf ppf
+        "@,\
+         @,\
+         Both polymorphic variants have the constructor @{<info>%s@}, but \
+         their payload types are incompatible.@,\
+         Make sure the payload types for @{<info>%s@} match exactly in both \
+         polymorphic variants."
+        (!print_res_poly_identifier l1)
         (!print_res_poly_identifier l1)
     | _ -> ())
   | _ -> ()

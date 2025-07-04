@@ -174,9 +174,9 @@ pub enum Command {
         #[arg(allow_hyphen_values = true, num_args = 0..)]
         dump_args: Vec<OsString>,
     },
-    /// This prints the compiler arguments. It expects the path to a rescript.json file.
+    /// This prints the compiler arguments. It expects the path to a rescript file (.res or .resi).
     CompilerArgs {
-        /// Path to a rescript.json file
+        /// Path to a rescript file (.res or .resi)
         #[command()]
         path: String,
 

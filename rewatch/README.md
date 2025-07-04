@@ -43,62 +43,78 @@ Find this output by running `yarn rewatch --help`.
 ```
 Rewatch is an alternative build system for the Rescript Compiler bsb (which uses Ninja internally). It strives to deliver consistent and faster builds in monorepo setups with multiple packages, where the default build system fails to pick up changed interfaces across multiple packages
 
-Usage: rewatch [OPTIONS] [COMMAND] [FOLDER]
+Usage: rewatch [OPTIONS] [FOLDER]
+       rewatch <COMMAND>
+
+Commands:
+  build          Build using Rewatch
+  watch          Build, then start a watcher
+  clean          Clean the build artifacts
+  format         Alias to `legacy format`
+  dump           Alias to `legacy dump`
+  compiler-args  This prints the compiler arguments. It expects the path to a rescript file (.res or .resi)
+  legacy         Use the legacy build system
+  help           Print this message or the help of the given subcommand(s)
 
 Arguments:
-  [COMMAND]
-          Possible values:
-          - build: Build using Rewatch
-          - watch: Build, then start a watcher
-          - clean: Clean the build artifacts
-
   [FOLDER]
           The relative path to where the main rescript.json resides. IE - the root of your project
+          
+          [default: .]
 
 Options:
-  -f, --filter <FILTER>
-          Filter allows for a regex to be supplied which will filter the files to be compiled. For instance, to filter out test files for compilation while doing feature work
-
-  -a, --after-build <AFTER_BUILD>
-          This allows one to pass an additional command to the watcher, which allows it to run when finished. For instance, to play a sound when done compiling, or to run a test suite. NOTE - You may need to add '--color=always' to your subcommand in case you want to output colour as well
-
-  -n, --no-timing [<NO_TIMING>]
-          [default: false]
-          [possible values: true, false]
-
   -v, --verbose...
           Increase logging verbosity
 
   -q, --quiet...
           Decrease logging verbosity
 
+  -f, --filter <FILTER>
+          Filter files by regex
+          
+          Filter allows for a regex to be supplied which will filter the files to be compiled. For instance, to filter out test files for compilation while doing feature work.
+
+  -a, --after-build <AFTER_BUILD>
+          Action after build
+          
+          This allows one to pass an additional command to the watcher, which allows it to run when finished. For instance, to play a sound when done compiling, or to run a test suite. NOTE - You may need to add '--color=always' to your subcommand in case you want to output color as well
+
   -c, --create-sourcedirs [<CREATE_SOURCEDIRS>]
+          Create source_dirs.json
+          
           This creates a source_dirs.json file at the root of the monorepo, which is needed when you want to use Reanalyze
           
           [default: false]
           [possible values: true, false]
 
-      --compiler-args <COMPILER_ARGS>
-          This prints the compiler arguments. It expects the path to a rescript.json file. This also requires --bsc-path and --rescript-version to be present
-
       --dev [<DEV>]
+          Build development dependencies
+          
           This is the flag to also compile development dependencies It's important to know that we currently do not discern between project src, and dependencies. So enabling this flag will enable building _all_ development dependencies of _all_ packages
           
           [default: false]
           [possible values: true, false]
 
-      --rescript-version <RESCRIPT_VERSION>
-          To be used in conjunction with compiler_args
+  -n, --no-timing [<NO_TIMING>]
+          Disable timing on the output
+          
+          [default: false]
+          [possible values: true, false]
+
+  -s, --snapshot-output [<SNAPSHOT_OUTPUT>]
+          simple output for snapshot testing
+          
+          [default: false]
+          [possible values: true, false]
 
       --bsc-path <BSC_PATH>
-          A custom path to bsc
+          Custom path to bsc
 
   -h, --help
           Print help (see a summary with '-h')
 
   -V, --version
           Print version
-
 ```
 
 # Contributing

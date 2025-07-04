@@ -493,11 +493,22 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        @{<info>?%s@}"
       (Parser.extract_text_at_loc loc)
   | _, Some (t1, t2) ->
-    let is_subtype =
-      try
-        Ctype.subtype env t1 t2 ();
-        true
-      with _ -> false
+    let can_show_coercion_message =
+      match (t1.desc, t2.desc) with
+      | Tvariant _, Tvariant _ ->
+        (* Subtyping polymorphic variants give some weird messages sometimes,
+        so let's turn it off for now. For an example, turn them on again and try:
+        ```
+        let a: [#Resize | #KeyDown] = #Resize
+        let b: [#Click] = a
+        ```
+        *)
+        false
+      | _ -> (
+        try
+          Ctype.subtype env t1 t2 ();
+          true
+        with _ -> false)
     in
     let target_type_string = Format.asprintf "%a" type_expr t2 in
     let target_expr_text = Parser.extract_text_at_loc loc in
@@ -519,7 +530,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       | _ -> false
     in
 
-    if is_subtype && not is_constant then (
+    if can_show_coercion_message && not is_constant then (
       fprintf ppf
         "@,\
          @,\
