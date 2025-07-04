@@ -5,37 +5,37 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
-"@rescript/darwin-arm64@npm:12.0.0-alpha.13":
-  version: 12.0.0-alpha.13
-  resolution: "@rescript/darwin-arm64@npm:12.0.0-alpha.13"
+"@rescript/darwin-arm64@https://pkg.pr.new/rescript-lang/rescript/@rescript/darwin-arm64@6cac813afdfe7b86803256838ac3ce09f7eed641":
+  version: 12.0.0-alpha.15
+  resolution: "@rescript/darwin-arm64@https://pkg.pr.new/rescript-lang/rescript/@rescript/darwin-arm64@6cac813afdfe7b86803256838ac3ce09f7eed641"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@rescript/darwin-x64@npm:12.0.0-alpha.13":
-  version: 12.0.0-alpha.13
-  resolution: "@rescript/darwin-x64@npm:12.0.0-alpha.13"
+"@rescript/darwin-x64@https://pkg.pr.new/rescript-lang/rescript/@rescript/darwin-x64@6cac813afdfe7b86803256838ac3ce09f7eed641":
+  version: 12.0.0-alpha.15
+  resolution: "@rescript/darwin-x64@https://pkg.pr.new/rescript-lang/rescript/@rescript/darwin-x64@6cac813afdfe7b86803256838ac3ce09f7eed641"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@rescript/linux-arm64@npm:12.0.0-alpha.13":
-  version: 12.0.0-alpha.13
-  resolution: "@rescript/linux-arm64@npm:12.0.0-alpha.13"
+"@rescript/linux-arm64@https://pkg.pr.new/rescript-lang/rescript/@rescript/linux-arm64@6cac813afdfe7b86803256838ac3ce09f7eed641":
+  version: 12.0.0-alpha.15
+  resolution: "@rescript/linux-arm64@https://pkg.pr.new/rescript-lang/rescript/@rescript/linux-arm64@6cac813afdfe7b86803256838ac3ce09f7eed641"
   conditions: os=linux & cpu=arm64
   languageName: node
   linkType: hard
 
-"@rescript/linux-x64@npm:12.0.0-alpha.13":
-  version: 12.0.0-alpha.13
-  resolution: "@rescript/linux-x64@npm:12.0.0-alpha.13"
+"@rescript/linux-x64@https://pkg.pr.new/rescript-lang/rescript/@rescript/linux-x64@6cac813afdfe7b86803256838ac3ce09f7eed641":
+  version: 12.0.0-alpha.15
+  resolution: "@rescript/linux-x64@https://pkg.pr.new/rescript-lang/rescript/@rescript/linux-x64@6cac813afdfe7b86803256838ac3ce09f7eed641"
   conditions: os=linux & cpu=x64
   languageName: node
   linkType: hard
 
-"@rescript/win32-x64@npm:12.0.0-alpha.13":
-  version: 12.0.0-alpha.13
-  resolution: "@rescript/win32-x64@npm:12.0.0-alpha.13"
+"@rescript/win32-x64@https://pkg.pr.new/rescript-lang/rescript/@rescript/win32-x64@6cac813afdfe7b86803256838ac3ce09f7eed641":
+  version: 12.0.0-alpha.15
+  resolution: "@rescript/win32-x64@https://pkg.pr.new/rescript-lang/rescript/@rescript/win32-x64@6cac813afdfe7b86803256838ac3ce09f7eed641"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
@@ -87,15 +87,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"rescript@npm:12.0.0-alpha.13":
-  version: 12.0.0-alpha.13
-  resolution: "rescript@npm:12.0.0-alpha.13"
+"rescript@https://pkg.pr.new/rescript-lang/rescript@6cac813":
+  version: 12.0.0-alpha.15
+  resolution: "rescript@https://pkg.pr.new/rescript-lang/rescript@6cac813"
   dependencies:
-    "@rescript/darwin-arm64": "npm:12.0.0-alpha.13"
-    "@rescript/darwin-x64": "npm:12.0.0-alpha.13"
-    "@rescript/linux-arm64": "npm:12.0.0-alpha.13"
-    "@rescript/linux-x64": "npm:12.0.0-alpha.13"
-    "@rescript/win32-x64": "npm:12.0.0-alpha.13"
+    "@rescript/darwin-arm64": "https://pkg.pr.new/rescript-lang/rescript/@rescript/darwin-arm64@6cac813afdfe7b86803256838ac3ce09f7eed641"
+    "@rescript/darwin-x64": "https://pkg.pr.new/rescript-lang/rescript/@rescript/darwin-x64@6cac813afdfe7b86803256838ac3ce09f7eed641"
+    "@rescript/linux-arm64": "https://pkg.pr.new/rescript-lang/rescript/@rescript/linux-arm64@6cac813afdfe7b86803256838ac3ce09f7eed641"
+    "@rescript/linux-x64": "https://pkg.pr.new/rescript-lang/rescript/@rescript/linux-x64@6cac813afdfe7b86803256838ac3ce09f7eed641"
+    "@rescript/win32-x64": "https://pkg.pr.new/rescript-lang/rescript/@rescript/win32-x64@6cac813afdfe7b86803256838ac3ce09f7eed641"
   dependenciesMeta:
     "@rescript/darwin-arm64":
       optional: true
@@ -111,9 +111,9 @@ __metadata:
     bsc: cli/bsc.js
     bstracing: cli/bstracing.js
     rescript: cli/rescript.js
+    rescript-legacy: cli/rescript-legacy.js
     rescript-tools: cli/rescript-tools.js
-    rewatch: cli/rewatch.js
-  checksum: 10c0/97ad8615b1a1cbace61e050b65a10bbe280c77b4fe693b99aee7d3c6bb0b2ebd284db16a7aec3d65179267dc610a9737fdf74197f6322b1281113fd588fe1b32
+  checksum: 10c0/9ffce64bb8d440ba97ac038e7421a2eb92a6902c0a004101533fdd508990c939bcd1b8aa1da6914fcf678aeefd9f98bd613c675adf46ddfcdd81dd56024ae969
   languageName: node
   linkType: hard
 
@@ -121,6 +121,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "testrepo@workspace:."
   dependencies:
-    rescript: "npm:12.0.0-alpha.13"
+    rescript: "https://pkg.pr.new/rescript-lang/rescript@6cac813"
   languageName: unknown
   linkType: soft
