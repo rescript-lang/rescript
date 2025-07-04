@@ -823,7 +823,7 @@ module FormatDocstrings = struct
         let {Res_driver.parsetree = structure; comments; source; filename} =
           parser ~filename:path
         in
-
+        let filename = Filename.basename filename in
         let mapper = makeMapper ~displayFilename:filename in
         let astMapped = mapper.structure mapper structure in
         ( Res_printer.print_implementation
