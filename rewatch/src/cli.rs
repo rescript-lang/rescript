@@ -162,11 +162,21 @@ pub enum Command {
         #[command(flatten)]
         snapshot_output: SnapshotOutputArg,
     },
-    /// Alias to `legacy format`.
-    #[command(disable_help_flag = true)]
+    /// Formats ReScript files.
     Format {
-        #[arg(allow_hyphen_values = true, num_args = 0..)]
-        format_args: Vec<OsString>,
+        /// Read the code from stdin and print the formatted code to stdout.
+        #[arg(long)]
+        stdin: Option<String>,
+        /// Format the whole project.
+        #[arg(short = 'a', long)]
+        all: bool,
+        /// Check formatting for file or the whole project. Use `--all` to check the whole project.
+        #[arg(short = 'c', long)]
+        check: bool,
+        /// Files to format.
+        files: Vec<String>,
+        #[command(flatten)]
+        bsc_path: BscPathArg,
     },
     /// Alias to `legacy dump`.
     #[command(disable_help_flag = true)]
