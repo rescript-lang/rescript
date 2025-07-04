@@ -328,13 +328,13 @@ fn generate_ast(
     helpers::create_path(&ast_parent_path);
 
     /* Create .ast */
-    let result = if let Some(res_to_ast) = Some(
+    let result = match Some(
         Command::new(bsc_path)
             .current_dir(&build_path_abs)
             .args(parser_args)
             .output()
             .expect("Error converting .res to .ast"),
-    ) {
+    ) { Some(res_to_ast) => {
         let stderr = std::str::from_utf8(&res_to_ast.stderr).expect("Expect StdErr to be non-null");
         if helpers::contains_ascii_characters(stderr) {
             if res_to_ast.status.success() {
@@ -345,7 +345,7 @@ fn generate_ast(
         } else {
             Ok((ast_path, None))
         }
-    } else {
+    } _ => {
         log::info!("Parsing file {}...", filename.display());
 
         Err(format!(
@@ -353,7 +353,7 @@ fn generate_ast(
             filename.display(),
             package.name
         ))
-    };
+    }};
     if let Ok((ast_path, _)) = &result {
         let _ = std::fs::copy(
             Path::new(&build_path_abs).join(&ast_path),
