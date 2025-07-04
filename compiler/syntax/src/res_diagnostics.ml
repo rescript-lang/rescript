@@ -131,12 +131,13 @@ let explain t =
 
 let make ~start_pos ~end_pos category = {start_pos; end_pos; category}
 
-let print_report diagnostics src =
+let print_report ?(custom_intro = None) ?(formatter = Format.err_formatter)
+    diagnostics src =
   let rec print diagnostics src =
     match diagnostics with
     | [] -> ()
     | d :: rest ->
-      Location.report_error ~src:(Some src) Format.err_formatter
+      Location.report_error ~custom_intro ~src:(Some src) formatter
         Location.
           {
             loc =
@@ -147,12 +148,12 @@ let print_report diagnostics src =
           };
       (match rest with
       | [] -> ()
-      | _ -> Format.fprintf Format.err_formatter "@.");
+      | _ -> Format.fprintf formatter "@.");
       print rest src
   in
-  Format.fprintf Format.err_formatter "@[<v>";
+  Format.fprintf formatter "@[<v>";
   print (List.rev diagnostics) src;
-  Format.fprintf Format.err_formatter "@]@."
+  Format.fprintf formatter "@]@."
 
 let unexpected token context = Unexpected {token; context}
 
