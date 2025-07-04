@@ -843,7 +843,7 @@ module FormatDocstrings = struct
           source )
     in
     let errors = !errors in
-    if not (List.is_empty errors) then (
+    if List.length errors > 0 then (
       errors |> String.concat "\n" |> print_endline;
       Error (Printf.sprintf "Error formatting docstrings."))
     else if formatted_content <> source then (
