@@ -581,7 +581,7 @@ jobs:
         working-directory: rewatch/testrepo
 
       - name: Run rewatch integration tests
-        run: ./rewatch/tests/suite-ci.sh node_modules/.bin/rewatch
+        run: ./rewatch/tests/suite-ci.sh node_modules/.bin/rescript
         shell: bash
 
   publish:
