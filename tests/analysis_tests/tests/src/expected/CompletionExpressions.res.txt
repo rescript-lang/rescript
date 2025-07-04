@@ -700,10 +700,10 @@ ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
 [{
     "label": "{}",
-    "kind": 4,
+    "kind": 12,
     "tags": [],
-    "detail": "Inline record",
-    "documentation": null,
+    "detail": "{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}",
+    "documentation": {"kind": "markdown", "value": "```rescript\n{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}\n```"},
     "sortText": "A",
     "insertText": "{$0}",
     "insertTextFormat": 2
@@ -720,22 +720,22 @@ ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
 [{
     "label": "someBoolField",
-    "kind": 4,
+    "kind": 5,
     "tags": [],
-    "detail": "Inline record",
-    "documentation": null
+    "detail": "bool",
+    "documentation": {"kind": "markdown", "value": "```rescript\nsomeBoolField: bool\n```\n\n```rescript\n{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}\n```"}
   }, {
     "label": "otherField",
-    "kind": 4,
+    "kind": 5,
     "tags": [],
-    "detail": "Inline record",
-    "documentation": null
+    "detail": "option<bool>",
+    "documentation": {"kind": "markdown", "value": "```rescript\notherField: option<bool>\n```\n\n```rescript\n{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}\n```"}
   }, {
     "label": "nestedRecord",
-    "kind": 4,
+    "kind": 5,
     "tags": [],
-    "detail": "Inline record",
-    "documentation": null
+    "detail": "otherRecord",
+    "documentation": {"kind": "markdown", "value": "```rescript\nnestedRecord: otherRecord\n```\n\n```rescript\n{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}\n```"}
   }]
 
 Complete src/CompletionExpressions.res 132:51
@@ -749,10 +749,10 @@ ContextPath Value[fnTakingInlineRecord]
 Path fnTakingInlineRecord
 [{
     "label": "someBoolField",
-    "kind": 4,
+    "kind": 5,
     "tags": [],
-    "detail": "Inline record",
-    "documentation": null
+    "detail": "bool",
+    "documentation": {"kind": "markdown", "value": "```rescript\nsomeBoolField: bool\n```\n\n```rescript\n{someBoolField: bool, otherField: option<bool>, nestedRecord: otherRecord}\n```"}
   }]
 
 Complete src/CompletionExpressions.res 135:63

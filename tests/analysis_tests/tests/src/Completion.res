@@ -465,3 +465,20 @@ type withUncurried = {fn: int => unit}
 
 // let someRecord = { FAR. }
 //                        ^com
+
+type someRecord = {field1: string, field2: int}
+type someVariantWithRecord = HasRecord(someRecord)
+
+// let v: someVariantWithRecord = HasRecord({})
+//                                           ^com
+
+// let v: someVariantWithRecord = HasRecord({fie})
+//                                              ^com
+
+type someVariantWithInlineRecord = HasInlineRecord({field1: string, field2: int})
+
+// let v: someVariantWithInlineRecord = HasInlineRecord({})
+//                                                       ^com
+
+// let v: someVariantWithInlineRecord = HasInlineRecord({fie})
+//                                                          ^com

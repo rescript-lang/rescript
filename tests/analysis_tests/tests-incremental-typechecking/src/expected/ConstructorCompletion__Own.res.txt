@@ -8,10 +8,10 @@ Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
 [{
     "label": "{}",
-    "kind": 4,
+    "kind": 12,
     "tags": [],
-    "detail": "Inline record",
-    "documentation": null,
+    "detail": "{miss: bool}",
+    "documentation": {"kind": "markdown", "value": "```rescript\n{miss: bool}\n```"},
     "sortText": "A",
     "insertText": "{$0}",
     "insertTextFormat": 2

@@ -1752,7 +1752,7 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
             ~env;
         ]
       else [])
-  | TinlineRecord {env; fields} -> (
+  | TinlineRecord {env; fields} as extractedType -> (
     if Debug.verbose () then
       print_endline "[complete_typed_value]--> TinlineRecord";
     match completionContext with
@@ -1761,14 +1761,35 @@ let rec completeTypedValue ?(typeArgContext : typeArgContext option) ~rawOpens
       |> List.filter (fun (field : field) ->
              List.mem field.fname.txt seenFields = false)
       |> List.map (fun (field : field) ->
-             create field.fname.txt ~kind:(Label "Inline record")
-               ?deprecated:field.deprecated ~env)
+             match (field.optional, mode) with
+             | true, Pattern Destructuring ->
+               create ("?" ^ field.fname.txt) ?deprecated:field.deprecated
+                 ~docstring:
+                   [
+                     field.fname.txt
+                     ^ " is an optional field, and needs to be destructured \
+                        using '?'.";
+                   ]
+                 ~kind:
+                   (Field (field, TypeUtils.extractedTypeToString extractedType))
+                 ~env
+             | _ ->
+               create field.fname.txt ?deprecated:field.deprecated
+                 ~kind:
+                   (Field (field, TypeUtils.extractedTypeToString extractedType))
+                 ~env)
       |> filterItems ~prefix
     | _ ->
       if prefix = "" then
         [
           create "{}" ~includesSnippets:true ~insertText:"{$0}" ~sortText:"A"
-            ~kind:(Label "Inline record") ~env;
+            ~kind:
+              (ExtractedType
+                 ( extractedType,
+                   match mode with
+                   | Pattern _ -> `Type
+                   | Expression -> `Value ))
+            ~env;
         ]
       else [])
   | Tarray (env, typ) ->

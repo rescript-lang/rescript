@@ -2342,8 +2342,8 @@ Path red
   }]
 
 Complete src/Completion.res 407:22
-posCursor:[407:22] posNoWhite:[407:21] Found expr:[407:11->468:0]
-Pexp_apply ...__ghost__[0:-1->0:-1] (...[407:11->425:17], ...[430:0->468:0])
+posCursor:[407:22] posNoWhite:[407:21] Found expr:[407:11->485:0]
+Pexp_apply ...__ghost__[0:-1->0:-1] (...[407:11->425:17], ...[430:0->485:0])
 posCursor:[407:22] posNoWhite:[407:21] Found expr:[407:11->425:17]
 Pexp_apply ...__ghost__[0:-1->0:-1] (...[407:11->407:19], ...[407:21->425:17])
 posCursor:[407:22] posNoWhite:[407:21] Found expr:[407:21->425:17]
@@ -2745,5 +2745,93 @@ Path FAR.
     "tags": [],
     "detail": "option<int>",
     "documentation": {"kind": "markdown", "value": "```rescript\nsomething: option<int>\n```\n\n```rescript\ntype forAutoRecord = {\n  forAuto: ForAuto.t,\n  something: option<int>,\n}\n```"}
+  }]
+
+Complete src/Completion.res 471:45
+XXX Not found!
+Completable: Cexpression Type[someVariantWithRecord]->variantPayload::HasRecord($0), recordBody
+Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 3 Stdlib Completion Completion
+ContextPath Type[someVariantWithRecord]
+Path someVariantWithRecord
+[{
+    "label": "field1",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nfield1: string\n```\n\n```rescript\ntype someRecord = {field1: string, field2: int}\n```"}
+  }, {
+    "label": "field2",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nfield2: int\n```\n\n```rescript\ntype someRecord = {field1: string, field2: int}\n```"}
+  }]
+
+Complete src/Completion.res 474:48
+XXX Not found!
+Completable: Cexpression Type[someVariantWithRecord]=fie->variantPayload::HasRecord($0), recordBody
+Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 3 Stdlib Completion Completion
+ContextPath Type[someVariantWithRecord]
+Path someVariantWithRecord
+[{
+    "label": "field1",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nfield1: string\n```\n\n```rescript\ntype someRecord = {field1: string, field2: int}\n```"}
+  }, {
+    "label": "field2",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nfield2: int\n```\n\n```rescript\ntype someRecord = {field1: string, field2: int}\n```"}
+  }]
+
+Complete src/Completion.res 479:57
+XXX Not found!
+Completable: Cexpression Type[someVariantWithInlineRecord]->variantPayload::HasInlineRecord($0), recordBody
+Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 3 Stdlib Completion Completion
+ContextPath Type[someVariantWithInlineRecord]
+Path someVariantWithInlineRecord
+[{
+    "label": "field1",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nfield1: string\n```\n\n```rescript\n{field1: string, field2: int}\n```"}
+  }, {
+    "label": "field2",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nfield2: int\n```\n\n```rescript\n{field1: string, field2: int}\n```"}
+  }]
+
+Complete src/Completion.res 482:60
+XXX Not found!
+Completable: Cexpression Type[someVariantWithInlineRecord]=fie->variantPayload::HasInlineRecord($0), recordBody
+Raw opens: 2 Shadow.B.place holder ... Shadow.A.place holder
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 3 Stdlib Completion Completion
+ContextPath Type[someVariantWithInlineRecord]
+Path someVariantWithInlineRecord
+[{
+    "label": "field1",
+    "kind": 5,
+    "tags": [],
+    "detail": "string",
+    "documentation": {"kind": "markdown", "value": "```rescript\nfield1: string\n```\n\n```rescript\n{field1: string, field2: int}\n```"}
+  }, {
+    "label": "field2",
+    "kind": 5,
+    "tags": [],
+    "detail": "int",
+    "documentation": {"kind": "markdown", "value": "```rescript\nfield2: int\n```\n\n```rescript\n{field1: string, field2: int}\n```"}
   }]
 
