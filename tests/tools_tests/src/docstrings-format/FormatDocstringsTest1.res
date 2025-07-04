@@ -39,7 +39,8 @@ Third docstring with array and option types.
 
 ```rescript
 let processUsers=(users:array<user>)=>{
-users->Array.map(user=>{...user,active:false})->Array.filter(u=>u.age>21)
+users
+->Array.map(user=>{...user,active:false})->Array.filter(u=>u.age>21)
 }
 
 type status=|Loading|Success(string)|Error(option<string>)

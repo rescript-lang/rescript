@@ -28,7 +28,8 @@ Testing function composition and piping.
 
 ```rescript
 let processData=(data:array<int>)=>{
-data->Array.filter(x=>x>0)->Array.map(x=>x*2)->Array.reduce(0,(acc,x)=>acc+x)
+data
+->Array.filter(x=>x>0)->Array.map(x=>x*2)->Array.reduce(0,(acc,x)=>acc+x)
 }
 
 let asyncExample=async()=>{
