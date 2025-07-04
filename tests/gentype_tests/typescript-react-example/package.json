@@ -2,9 +2,9 @@
   "name": "@tests/gentype-react-example",
   "private": true,
   "scripts": {
-    "start": "rescript build -w",
-    "build": "rescript",
-    "clean": "rescript clean",
+    "start": "rescript legacy build -w",
+    "build": "rescript legacy build",
+    "clean": "rescript legacy clean",
     "typecheck": "tsc",
     "check": "biome check --changed --no-errors-on-unmatched ."
   },
