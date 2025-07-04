@@ -735,7 +735,16 @@ module FormatDocstrings = struct
     processLines lines;
 
     (* Normalize newlines at start/end of the content. *)
-    "\n" ^ indent ^ (buf |> Buffer.contents |> String.trim) ^ indent ^ "\n"
+    let initialWhitespace =
+      let rec findFirstNonWhitespace i =
+        if i >= String.length doc then ""
+        else if not (String.contains " \t\n\r" doc.[i]) then String.sub doc 0 i
+        else findFirstNonWhitespace (i + 1)
+      in
+      findFirstNonWhitespace 0
+    in
+
+    initialWhitespace ^ (buf |> Buffer.contents |> String.trim) ^ indent ^ "\n"
 
   let formatRescriptCodeBlocks content ~displayFilename ~addError
       ~(payloadLoc : Location.t) =
@@ -763,7 +772,8 @@ module FormatDocstrings = struct
               addError (Buffer.contents buf);
               code)
             else
-              Res_printer.print_implementation ~width:80 parsetree ~comments
+              Res_printer.print_implementation
+                ~width:Res_multi_printer.default_print_width parsetree ~comments
               |> String.trim
           in
           formatted_code)
@@ -816,7 +826,9 @@ module FormatDocstrings = struct
 
         let mapper = makeMapper ~displayFilename:filename in
         let astMapped = mapper.structure mapper structure in
-        (Res_printer.print_implementation ~width:80 astMapped ~comments, source)
+        ( Res_printer.print_implementation
+            ~width:Res_multi_printer.default_print_width astMapped ~comments,
+          source )
       else
         let parser =
           Res_driver.parsing_engine.parse_interface ~for_printer:true
@@ -826,7 +838,9 @@ module FormatDocstrings = struct
         in
         let mapper = makeMapper ~displayFilename:filename in
         let astMapped = mapper.signature mapper signature in
-        (Res_printer.print_interface ~width:80 astMapped ~comments, source)
+        ( Res_printer.print_interface
+            ~width:Res_multi_printer.default_print_width astMapped ~comments,
+          source )
     in
     let errors = !errors in
     if not (List.is_empty errors) then (
