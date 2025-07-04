@@ -19,7 +19,7 @@ done
 # Test format-docstrings command
 for file in src/docstrings-format/*.{res,resi}; do
   output="src/expected/$(basename $file).expected"
-  ../../_build/install/default/bin/rescript-tools format-docstrings "$file" --stdout > $output
+  DISABLE_COLOR=true ../../_build/install/default/bin/rescript-tools format-docstrings "$file" --stdout > $output
   # # CI. We use LF, and the CI OCaml fork prints CRLF. Convert.
   if [ "$RUNNER_OS" == "Windows" ]; then
     perl -pi -e 's/\r\n/\n/g' -- $output

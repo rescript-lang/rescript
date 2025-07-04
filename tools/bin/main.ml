@@ -54,6 +54,11 @@ let main () =
       logAndExit (Tools.extractDocs ~entryPointFile:path ~debug:false)
     | _ -> logAndExit (Error docHelp))
   | "format-docstrings" :: rest -> (
+    (try
+       match Sys.getenv "DISABLE_COLOR" with
+       | "true" -> Clflags.color := Some Misc.Color.Never
+       | _ -> ()
+     with Not_found -> ());
     match rest with
     | ["-h"] | ["--help"] -> logAndExit (Ok formatDocstringsHelp)
     | [path; "--stdout"] -> (
