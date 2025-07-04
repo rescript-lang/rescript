@@ -752,12 +752,12 @@ module FormatDocstrings = struct
       mapRescriptCodeBlocks
         ~colIndent:(payloadLoc.loc_start.pos_cnum - payloadLoc.loc_start.pos_bol)
         ~mapper:(fun code currentLine ->
-          (* TODO: Figure out the line offsets here so the error messages line up as intended. *)
+          let codeLines = String.split_on_char '\n' code in
+          let n = List.length codeLines in
           let newlinesNeeded =
-            payloadLoc.loc_start.pos_lnum + currentLine - 5
+            max 0 (payloadLoc.loc_start.pos_lnum + currentLine - n)
           in
-          let codeOffset = String.make newlinesNeeded '\n' in
-          let codeWithOffset = codeOffset ^ code in
+          let codeWithOffset = String.make newlinesNeeded '\n' ^ code in
           let formatted_code =
             let {Res_driver.parsetree; comments; invalid; diagnostics} =
               Res_driver.parse_implementation_from_source ~for_printer:true
