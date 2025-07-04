@@ -686,94 +686,86 @@ module FormatDocstrings = struct
     let addIndent () = Buffer.add_string buf indent in
     let currentCodeBlockContents = ref None in
     let lines = String.split_on_char '\n' doc in
-    let isSingleLine =
-      match lines with
-      | [_] -> true
-      | _ -> false
-    in
-    if isSingleLine then
-      (* No code blocks in single line comments... *)
-      doc
-    else
-      let lineCount = ref (-1) in
-      let rec processLines lines =
-        let currentLine = !lineCount in
-        lineCount := currentLine + 1;
-        match (lines, !currentCodeBlockContents) with
-        | l :: rest, None ->
-          if String.trim l = "```rescript" then (
-            currentCodeBlockContents := Some [];
-            processLines rest)
-          else (
-            Buffer.add_string buf l;
-            Buffer.add_char buf '\n';
-            processLines rest)
-        | l :: rest, Some codeBlockContents ->
-          if String.trim l = "```" then (
-            let codeBlockContents =
-              codeBlockContents |> List.rev |> String.concat "\n"
-            in
-            let mappedCodeBlockContents =
-              mapper codeBlockContents currentLine
-              |> String.split_on_char '\n'
-              |> List.map (fun line -> indent ^ line)
-              |> String.concat "\n"
-            in
-            addIndent ();
-            Buffer.add_string buf "```rescript\n";
-            Buffer.add_string buf mappedCodeBlockContents;
-            Buffer.add_char buf '\n';
-            addIndent ();
-            Buffer.add_string buf "```";
-            Buffer.add_char buf '\n';
-            currentCodeBlockContents := None;
-            processLines rest)
-          else (
-            currentCodeBlockContents := Some (l :: codeBlockContents);
-            processLines rest)
-        | [], Some codeBlockContents ->
-          (* EOF, broken, do not format*)
+    let lineCount = ref (-1) in
+    let rec processLines lines =
+      let currentLine = !lineCount in
+      lineCount := currentLine + 1;
+      match (lines, !currentCodeBlockContents) with
+      | l :: rest, None ->
+        if String.trim l = "```rescript" then (
+          currentCodeBlockContents := Some [];
+          processLines rest)
+        else (
+          Buffer.add_string buf l;
+          Buffer.add_char buf '\n';
+          processLines rest)
+      | l :: rest, Some codeBlockContents ->
+        if String.trim l = "```" then (
           let codeBlockContents =
             codeBlockContents |> List.rev |> String.concat "\n"
           in
+          let mappedCodeBlockContents =
+            mapper codeBlockContents currentLine
+            |> String.split_on_char '\n'
+            |> List.map (fun line -> indent ^ line)
+            |> String.concat "\n"
+          in
           addIndent ();
           Buffer.add_string buf "```rescript\n";
-          Buffer.add_string buf codeBlockContents
-        | [], None -> ()
-      in
-      processLines lines;
-
-      (* Normalize newlines at start/end of the content. *)
-      let initialWhitespace =
-        let rec findFirstNonWhitespace i =
-          if i >= String.length doc then ""
-          else if not (String.contains " \t\n\r" doc.[i]) then
-            String.sub doc 0 i
-          else findFirstNonWhitespace (i + 1)
+          Buffer.add_string buf mappedCodeBlockContents;
+          Buffer.add_char buf '\n';
+          addIndent ();
+          Buffer.add_string buf "```";
+          Buffer.add_char buf '\n';
+          currentCodeBlockContents := None;
+          processLines rest)
+        else (
+          currentCodeBlockContents := Some (l :: codeBlockContents);
+          processLines rest)
+      | [], Some codeBlockContents ->
+        (* EOF, broken, do not format*)
+        let codeBlockContents =
+          codeBlockContents |> List.rev |> String.concat "\n"
         in
-        findFirstNonWhitespace 0
-      in
+        addIndent ();
+        Buffer.add_string buf "```rescript\n";
+        Buffer.add_string buf codeBlockContents
+      | [], None -> ()
+    in
+    processLines lines;
 
-      let endingWhitespace =
-        let rec findLastWhitespace i =
-          if i < 0 then ""
-          else if not (String.contains " \t\n\r" doc.[i]) then
-            String.sub doc (i + 1) (String.length doc - i - 1)
-          else findLastWhitespace (i - 1)
-        in
-        findLastWhitespace (String.length doc - 1)
+    (* Normalize newlines at start/end of the content. *)
+    let initialWhitespace =
+      let rec findFirstNonWhitespace i =
+        if i >= String.length doc then ""
+        else if not (String.contains " \t\n\r" doc.[i]) then String.sub doc 0 i
+        else findFirstNonWhitespace (i + 1)
       in
+      findFirstNonWhitespace 0
+    in
 
-      initialWhitespace
-      ^ (buf |> Buffer.contents |> String.trim)
-      ^ endingWhitespace
+    let endingWhitespace =
+      let rec findLastWhitespace i =
+        if i < 0 then ""
+        else if not (String.contains " \t\n\r" doc.[i]) then
+          String.sub doc (i + 1) (String.length doc - i - 1)
+        else findLastWhitespace (i - 1)
+      in
+      findLastWhitespace (String.length doc - 1)
+    in
+
+    initialWhitespace
+    ^ (buf |> Buffer.contents |> String.trim)
+    ^ endingWhitespace
 
   let formatRescriptCodeBlocks content ~displayFilename ~addError
       ~(payloadLoc : Location.t) =
+    let hadCodeBlocks = ref false in
     let newContent =
       mapRescriptCodeBlocks
         ~colIndent:(payloadLoc.loc_start.pos_cnum - payloadLoc.loc_start.pos_bol)
         ~mapper:(fun code currentLine ->
+          hadCodeBlocks := true;
           let codeLines = String.split_on_char '\n' code in
           let n = List.length codeLines in
           let newlinesNeeded =
@@ -801,7 +793,7 @@ module FormatDocstrings = struct
           formatted_code)
         content
     in
-    newContent
+    (newContent, !hadCodeBlocks)
 
   let formatDocstrings ~outputMode ~entryPointFile =
     let path =
@@ -821,17 +813,17 @@ module FormatDocstrings = struct
             | ( {txt = "res.doc"},
                 Some (contents, None),
                 PStr [{pstr_desc = Pstr_eval ({pexp_loc}, _)}] ) ->
-              let formatted_contents =
+              let formattedContents, hadCodeBlocks =
                 formatRescriptCodeBlocks ~addError ~displayFilename
                   ~payloadLoc:pexp_loc contents
               in
-              if formatted_contents <> contents then
+              if hadCodeBlocks && formattedContents <> contents then
                 ( name,
                   PStr
                     [
                       Ast_helper.Str.eval
                         (Ast_helper.Exp.constant
-                           (Pconst_string (formatted_contents, None)));
+                           (Pconst_string (formattedContents, None)));
                     ] )
               else attr
             | _ -> Ast_mapper.default_mapper.attribute mapper attr);
