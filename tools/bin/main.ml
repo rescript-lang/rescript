@@ -58,11 +58,12 @@ let main () =
     | ["-h"] | ["--help"] -> logAndExit (Ok formatDocstringsHelp)
     | path :: args -> (
       let isStdout = List.mem "--stdout" args in
+      let transformAssertEqual = List.mem "--transform-assert-equal" args in
       let outputMode = if isStdout then `Stdout else `File in
       Clflags.color := Some Misc.Color.Never;
       match
         ( Tools.FormatCodeblocks.formatCodeBlocksInFile ~outputMode
-            ~entryPointFile:path,
+            ~transformAssertEqual ~entryPointFile:path,
           outputMode )
       with
       | Ok content, `Stdout -> print_endline content
