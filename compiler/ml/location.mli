@@ -103,12 +103,28 @@ val register_error_of_exn : (exn -> error option) -> unit
     a location, a message, and optionally sub-messages (each of them
     being located as well). *)
 
-val report_error : ?src:string option -> formatter -> error -> unit
+val report_error :
+  ?custom_intro:string option ->
+  ?src:string option ->
+  formatter ->
+  error ->
+  unit
 
-val error_reporter : (?src:string option -> formatter -> error -> unit) ref
+val error_reporter :
+  (?custom_intro:string option ->
+  ?src:string option ->
+  formatter ->
+  error ->
+  unit)
+  ref
 (** Hook for intercepting error reports. *)
 
-val default_error_reporter : ?src:string option -> formatter -> error -> unit
+val default_error_reporter :
+  ?custom_intro:string option ->
+  ?src:string option ->
+  formatter ->
+  error ->
+  unit
 (** Original error reporter for use in hooks. *)
 
 val report_exception : formatter -> exn -> unit
