@@ -8,7 +8,7 @@ let resultGetExn = r => r->Result.getExn
 let nullGetExn = n => n->Null.getExn
 
 @raises(JsExn)
-let bigIntFromStringExn = s => s->BigInt.fromStringOrThrow
+let bigIntFromStringExn = s => s->BigInt.fromStringExn
 
 @raises(JsExn)
-let jsonParseExn = s => s->JSON.parseOrThrow
+let jsonParseExn = s => s->JSON.parseExn

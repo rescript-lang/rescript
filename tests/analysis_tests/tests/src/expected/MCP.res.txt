@@ -1,0 +1,109 @@
+MCP loc info src/MCP.res 28:4
+<main_types>
+TestType.second
+
+type second = {first: first, variant: variant}
+</main_types>
+
+<related_types>
+type first = {one: bool, two?: string}
+
+type variant = One | Two(string) | Three(bool)
+</related_types>
+
+MCP identifier info src/MCP.res 30:3
+Value MCP.xx:
+<value>
+<main_types>
+TestType.second
+
+type second = {first: first, variant: variant}
+</main_types>
+
+<related_types>
+type first = {one: bool, two?: string}
+
+type variant = One | Two(string) | Three(bool)
+</related_types>
+</value>
+
+Type MCP.xx:
+<type>
+type xx = Hello
+</type>
+
+MCP identifier info src/MCP.res 31:3
+Type Rxjs.Subscriber.t:
+<type>
+type t<'t> = {next: 't => unit}
+</type>
+
+MCP docs for project file
+# MCPDocs
+
+**KIND:** MODULE
+
+**SOURCE:** src/MCPDocs.res:1:1
+
+## TYPES
+
+### x
+
+**KIND:** TYPE
+
+**SIGNATURE:** `type x = {test: bool}`
+
+**SOURCE:** src/MCPDocs.res:1:1
+
+
+**RECORD_FIELDS:**
+- **FIELD:** `test`
+  - **TYPE:** `bool`
+  - **OPTIONAL:** false
+
+
+
+## MODULES
+
+### SomeModule
+
+**KIND:** MODULE
+
+**SOURCE:** src/MCPDocs.res:3:8
+
+**MODULE_CONTENTS:**
+
+#### ff
+
+**KIND:** VALUE
+
+**SIGNATURE:** `let ff: x`
+
+**SOURCE:** src/MCPDocs.res:4:7
+
+
+
+#### someVariant
+
+**KIND:** TYPE
+
+**SIGNATURE:** `@unboxed type someVariant = One(int) | Two(string)`
+
+**SOURCE:** src/MCPDocs.res:7:3
+
+
+**VARIANT_CONSTRUCTORS:**
+- **CONSTRUCTOR:** `One`
+  - **SIGNATURE:** `One(int)`
+
+- **CONSTRUCTOR:** `Two`
+  - **SIGNATURE:** `Two(string)`
+
+
+
+
+
+
+MCP docs for library
+TODO
+
