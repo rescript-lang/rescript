@@ -33,7 +33,7 @@ module Nested: {
     let validate = user => user.age >= 18 && user.name !== ""
     let getName = user => user.name
   }
-  ```  
+  ```
 */
   let testFunction2: unit => string
 }
