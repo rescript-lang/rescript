@@ -7,7 +7,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use rewatch::{build, cli, cmd, lock, watcher};
+use rewatch::{build, cli, cmd, lock, watcher, format_cmd};
 
 fn main() -> Result<()> {
     let args = cli::Cli::parse();
@@ -20,7 +20,8 @@ fn main() -> Result<()> {
         .target(env_logger::fmt::Target::Stdout)
         .init();
 
-    let command = args.command.unwrap_or(cli::Command::Build(args.build_args));
+    
+    let command = args.command.unwrap_or_else(|| cli::Command::Build(args.build_args));
 
     // The 'normal run' mode will show the 'pretty' formatted progress. But if we turn off the log
     // level, we should never show that.
@@ -112,11 +113,14 @@ fn main() -> Result<()> {
             let code = build::pass_through_legacy(legacy_args);
             std::process::exit(code);
         }
-        cli::Command::Format { mut format_args } => {
-            format_args.insert(0, "format".into());
-            let code = build::pass_through_legacy(format_args);
-            std::process::exit(code);
-        }
+        cli::Command::Format {
+            stdin,
+            all,
+            check,
+            files,
+            bsc_path,
+            folder: path,
+        } => format_cmd::run(stdin, all, check, files, bsc_path.as_ref().map(|s| PathBuf::from(s.clone())), PathBuf::from(path.folder)),
         cli::Command::Dump { mut dump_args } => {
             dump_args.insert(0, "dump".into());
             let code = build::pass_through_legacy(dump_args);

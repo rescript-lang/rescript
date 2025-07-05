@@ -7,3 +7,4 @@ pub mod lock;
 pub mod queue;
 pub mod sourcedirs;
 pub mod watcher;
+pub mod format_cmd;

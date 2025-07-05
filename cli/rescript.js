@@ -18,7 +18,8 @@ try {
       subcommand === "build" ||
       subcommand === "watch" ||
       subcommand === "clean" ||
-      subcommand === "compiler-args"
+      subcommand === "compiler-args" ||
+      subcommand === "format"
     ) {
       child_process.execFileSync(
         rescript_exe,
