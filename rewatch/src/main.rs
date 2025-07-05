@@ -119,7 +119,8 @@ fn main() -> Result<()> {
             check,
             files,
             bsc_path,
-        } => format_cmd::run(stdin, all, check, files, bsc_path.as_ref().map(|s| PathBuf::from(s.clone()))),
+            folder: path,
+        } => format_cmd::run(stdin, all, check, files, bsc_path.as_ref().map(|s| PathBuf::from(s.clone())), PathBuf::from(path.folder)),
         cli::Command::Dump { mut dump_args } => {
             dump_args.insert(0, "dump".into());
             let code = build::pass_through_legacy(dump_args);

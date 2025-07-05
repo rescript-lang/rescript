@@ -5,6 +5,7 @@ use std::process::Command;
 use std::io::{self, Read, Write};
 use std::fs;
 use rayon::prelude::*;
+use crate::helpers;
 use num_cpus;
 
 pub fn run(
@@ -12,11 +13,15 @@ pub fn run(
     all: bool,
     check: bool,
     files: Vec<String>,
-    bsc_path_arg: Option<PathBuf>,
+    bsc_path: Option<PathBuf>,
+    path: PathBuf,
 ) -> Result<()> {
-    let bsc_exe = match bsc_path_arg {
-        Some(path) => path,
-        None => find_bsc_exe()?,
+    let project_root = helpers::get_abs_path(&path);
+    let workspace_root = helpers::get_workspace_root(&project_root);
+
+    let bsc_exe = match bsc_path {
+        Some(path) => helpers::get_abs_path(&path),
+        None => helpers::get_bsc(&project_root, &workspace_root),
     };
 
     if check && stdin_path.is_some() {
@@ -37,34 +42,7 @@ pub fn run(
     Ok(())
 }
 
-fn find_bsc_exe() -> Result<PathBuf> {
-    let current_exe = std::env::current_exe()?;
-    let mut current_dir = current_exe.parent().unwrap_or_else(|| Path::new("/"));
 
-    // Traverse up to find node_modules
-    let node_modules_path = loop {
-        let potential_path = current_dir.join("node_modules");
-        if potential_path.exists() {
-            break Some(potential_path);
-        }
-        if current_dir.parent().is_none() {
-            break None;
-        }
-        current_dir = current_dir.parent().unwrap();
-    }
-    .ok_or_else(|| anyhow::anyhow!("Could not find node_modules directory"))?;
-
-    let target = format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH);
-    let bsc_path = node_modules_path
-        .join("@rescript")
-        .join(target)
-        .join("bsc.exe");
-
-    if !bsc_path.exists() {
-        bail!("bsc executable not found at {}", bsc_path.display());
-    }
-    Ok(bsc_path)
-}
 
 fn format_all(bsc_exe: &Path, check: bool) -> Result<()> {
     let output = Command::new(std::env::current_exe()?)

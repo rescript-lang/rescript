@@ -177,6 +177,8 @@ pub enum Command {
         files: Vec<String>,
         #[command(flatten)]
         bsc_path: BscPathArg,
+        #[command(flatten)]
+        folder: FolderArg,
     },
     /// Alias to `legacy dump`.
     #[command(disable_help_flag = true)]
