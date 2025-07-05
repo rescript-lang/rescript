@@ -560,6 +560,7 @@ fn get_dependency_paths(
             let package_name = dependent_package.name();
             let dependency_path = if let Some(packages) = packages {
                 packages
+                    // package name (from rescript.json) is used here.
                     .get(package_name)
                     .as_ref()
                     .map(|package| package.path.clone())
