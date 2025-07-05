@@ -3,10 +3,10 @@ use super::namespaces;
 use super::packages;
 use crate::config;
 use crate::helpers;
-use crate::helpers::emojis::*;
 use crate::helpers::StrippedVerbatimPath;
+use crate::helpers::emojis::*;
 use ahash::{AHashMap, AHashSet};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use console::style;
 use log::{debug, error};
 use rayon::prelude::*;
@@ -266,16 +266,17 @@ pub fn read_dependency(
         )),
     }?;
 
-    let canonical_path = match path.canonicalize().map(StrippedVerbatimPath::to_stripped_verbatim_path) {
+    let canonical_path = match path
+        .canonicalize()
+        .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+    {
         Ok(canonical_path) => Ok(canonical_path),
-        Err(e) => {
-            Err(format!(
-                "Failed canonicalizing the package \"{}\" path \"{}\" (are node_modules up-to-date?)...\nMore details: {}",
-                package_name,
-                path.to_string_lossy(),
-                e
-            ))
-        }
+        Err(e) => Err(format!(
+            "Failed canonicalizing the package \"{}\" path \"{}\" (are node_modules up-to-date?)...\nMore details: {}",
+            package_name,
+            path.to_string_lossy(),
+            e
+        )),
     }?;
 
     Ok(canonical_path)
@@ -414,7 +415,11 @@ fn make_package(config: config::Config, package_path: &Path, is_pinned_dep: bool
         None => {
             if !is_root {
                 let package_path_str = package_path.to_string_lossy();
-                log::warn!("Package '{}' has not defined any sources, but is not the root package. This is likely a mistake. It is located: {}", config.name, package_path_str);
+                log::warn!(
+                    "Package '{}' has not defined any sources, but is not the root package. This is likely a mistake. It is located: {}",
+                    config.name,
+                    package_path_str
+                );
             }
 
             AHashSet::new()

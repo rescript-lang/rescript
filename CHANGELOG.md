@@ -58,6 +58,7 @@
 #### :house: Internal
 
 - Remove `@return(undefined_to_opt)` and `%undefined_to_opt` primitive. https://github.com/rescript-lang/rescript/pull/7462
+- Migrate rewatch to Rust 2024 edition. https://github.com/rescript-lang/rescript/pull/7602
 
 # 12.0.0-alpha.14
 

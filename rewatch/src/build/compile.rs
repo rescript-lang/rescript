@@ -603,7 +603,7 @@ fn compile_file(
     let ocaml_build_path_abs = package.get_ocaml_build_path();
     let build_path_abs = package.get_build_path();
     let implementation_file_path = match &module.source_type {
-        SourceType::SourceFile(ref source_file) => Ok(&source_file.implementation.path),
+        SourceType::SourceFile(source_file) => Ok(&source_file.implementation.path),
         sourcetype => Err(format!(
             "Tried to compile a file that is not a source file ({}). Path to AST: {}. ",
             sourcetype,

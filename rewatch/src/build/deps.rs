@@ -13,21 +13,24 @@ fn get_dep_modules(
 ) -> AHashSet<String> {
     let mut deps = AHashSet::new();
     let ast_file = package.get_build_path().join(ast_file);
-    if let Ok(lines) = helpers::read_lines(&ast_file) {
-        // we skip the first line with is some null characters
-        // the following lines in the AST are the dependency modules
-        // we stop when we hit a line that starts with a "/", this is the path of the file.
-        // this is the point where the dependencies end and the actual AST starts
-        for line in lines.skip(1).flatten() {
-            let line = line.trim().to_string();
-            if line.starts_with('/') {
-                break;
-            } else if !line.is_empty() {
-                deps.insert(line);
+    match helpers::read_lines(&ast_file) {
+        Ok(lines) => {
+            // we skip the first line with is some null characters
+            // the following lines in the AST are the dependency modules
+            // we stop when we hit a line that starts with a "/", this is the path of the file.
+            // this is the point where the dependencies end and the actual AST starts
+            for line in lines.skip(1).flatten() {
+                let line = line.trim().to_string();
+                if line.starts_with('/') {
+                    break;
+                } else if !line.is_empty() {
+                    deps.insert(line);
+                }
             }
         }
-    } else {
-        panic!("Could not read file {}", ast_file.to_string_lossy());
+        _ => {
+            panic!("Could not read file {}", ast_file.to_string_lossy());
+        }
     }
 
     return deps

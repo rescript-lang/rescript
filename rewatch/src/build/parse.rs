@@ -242,11 +242,7 @@ pub fn generate_asts(
         }
     });
 
-    if has_failure {
-        Err(stderr)
-    } else {
-        Ok(stderr)
-    }
+    if has_failure { Err(stderr) } else { Ok(stderr) }
 }
 
 pub fn parser_args(
@@ -328,31 +324,34 @@ fn generate_ast(
     helpers::create_path(&ast_parent_path);
 
     /* Create .ast */
-    let result = if let Some(res_to_ast) = Some(
+    let result = match Some(
         Command::new(bsc_path)
             .current_dir(&build_path_abs)
             .args(parser_args)
             .output()
             .expect("Error converting .res to .ast"),
     ) {
-        let stderr = std::str::from_utf8(&res_to_ast.stderr).expect("Expect StdErr to be non-null");
-        if helpers::contains_ascii_characters(stderr) {
-            if res_to_ast.status.success() {
-                Ok((ast_path, Some(stderr.to_string())))
+        Some(res_to_ast) => {
+            let stderr = std::str::from_utf8(&res_to_ast.stderr).expect("Expect StdErr to be non-null");
+            if helpers::contains_ascii_characters(stderr) {
+                if res_to_ast.status.success() {
+                    Ok((ast_path, Some(stderr.to_string())))
+                } else {
+                    Err(format!("Error in {}:\n{}", package.name, stderr))
+                }
             } else {
-                Err(format!("Error in {}:\n{}", package.name, stderr))
+                Ok((ast_path, None))
             }
-        } else {
-            Ok((ast_path, None))
         }
-    } else {
-        log::info!("Parsing file {}...", filename.display());
+        _ => {
+            log::info!("Parsing file {}...", filename.display());
 
-        Err(format!(
-            "Could not find canonicalize_string_path for file {} in package {}",
-            filename.display(),
-            package.name
-        ))
+            Err(format!(
+                "Could not find canonicalize_string_path for file {} in package {}",
+                filename.display(),
+                package.name
+            ))
+        }
     };
     if let Ok((ast_path, _)) = &result {
         let _ = std::fs::copy(
