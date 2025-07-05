@@ -34,6 +34,8 @@
  (depends
   (ocaml
    (>= 4.14))
+  (cmarkit
+   (>= 0.3.0))
   (cppo
    (= 1.8.0))
   analysis
