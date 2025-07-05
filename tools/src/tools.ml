@@ -678,101 +678,33 @@ let extractEmbedded ~extensionPoints ~filename =
   |> List.rev |> array
 
 module FormatDocstrings = struct
-  let mapRescriptCodeBlocks ~colIndent ~(mapper : string -> int -> string)
-      (doc : string) =
-    let indent = String.make colIndent ' ' in
-    let len = String.length doc in
-    let buf = Buffer.create len in
-    let addIndent () = Buffer.add_string buf indent in
-    let currentCodeBlockContents = ref None in
-    let lines = String.split_on_char '\n' doc in
-    let lineCount = ref (-1) in
-    let rec processLines lines =
-      let currentLine = !lineCount in
-      lineCount := currentLine + 1;
-      match (lines, !currentCodeBlockContents) with
-      | l :: rest, None ->
-        if String.trim l = "```rescript" then (
-          currentCodeBlockContents := Some [];
-          processLines rest)
-        else (
-          Buffer.add_string buf l;
-          Buffer.add_char buf '\n';
-          processLines rest)
-      | l :: rest, Some codeBlockContents ->
-        if String.trim l = "```" then (
-          let codeBlockContents =
-            codeBlockContents |> List.rev |> String.concat "\n"
-          in
-          let mappedCodeBlockContents =
-            mapper codeBlockContents currentLine
-            |> String.split_on_char '\n'
-            |> List.map (fun line -> indent ^ line)
-            |> String.concat "\n"
-          in
-          addIndent ();
-          Buffer.add_string buf "```rescript\n";
-          Buffer.add_string buf mappedCodeBlockContents;
-          Buffer.add_char buf '\n';
-          addIndent ();
-          Buffer.add_string buf "```";
-          Buffer.add_char buf '\n';
-          currentCodeBlockContents := None;
-          processLines rest)
-        else (
-          currentCodeBlockContents := Some (l :: codeBlockContents);
-          processLines rest)
-      | [], Some codeBlockContents ->
-        (* EOF, broken, do not format*)
-        let codeBlockContents =
-          codeBlockContents |> List.rev |> String.concat "\n"
-        in
-        addIndent ();
-        Buffer.add_string buf "```rescript\n";
-        Buffer.add_string buf codeBlockContents
-      | [], None -> ()
-    in
-    processLines lines;
-
-    (* Normalize newlines at start/end of the content. *)
-    let initialWhitespace =
-      let rec findFirstNonWhitespace i =
-        if i >= String.length doc then ""
-        else if not (String.contains " \t\n\r" doc.[i]) then String.sub doc 0 i
-        else findFirstNonWhitespace (i + 1)
-      in
-      findFirstNonWhitespace 0
-    in
-
-    let endingWhitespace =
-      let rec findLastWhitespace i =
-        if i < 0 then ""
-        else if not (String.contains " \t\n\r" doc.[i]) then
-          String.sub doc (i + 1) (String.length doc - i - 1)
-        else findLastWhitespace (i - 1)
-      in
-      findLastWhitespace (String.length doc - 1)
-    in
-
-    initialWhitespace
-    ^ (buf |> Buffer.contents |> String.trim)
-    ^ endingWhitespace
-
   let formatRescriptCodeBlocks content ~displayFilename ~addError
       ~(payloadLoc : Location.t) =
+    let open Cmarkit in
+    (* Detect ReScript code blocks. *)
     let hadCodeBlocks = ref false in
-    let newContent =
-      mapRescriptCodeBlocks
-        ~colIndent:(payloadLoc.loc_start.pos_cnum - payloadLoc.loc_start.pos_bol)
-        ~mapper:(fun code currentLine ->
+    let block _m = function
+      | Block.Code_block (codeBlock, meta) -> (
+        match Block.Code_block.info_string codeBlock with
+        | Some ((("rescript" | "res"), _) as info_string) ->
           hadCodeBlocks := true;
-          let codeLines = String.split_on_char '\n' code in
-          let n = List.length codeLines in
+
+          let currentLine =
+            meta |> Meta.textloc |> Textloc.first_line |> fst |> Int.add 1
+          in
+          let layout = Block.Code_block.layout codeBlock in
+          let code = Block.Code_block.code codeBlock in
+          let codeText =
+            code |> List.map Block_line.to_string |> String.concat "\n"
+          in
+
+          let n = List.length code in
           let newlinesNeeded =
             max 0 (payloadLoc.loc_start.pos_lnum + currentLine - n)
           in
-          let codeWithOffset = String.make newlinesNeeded '\n' ^ code in
-          let formatted_code =
+          let codeWithOffset = String.make newlinesNeeded '\n' ^ codeText in
+
+          let formattedCode =
             let {Res_driver.parsetree; comments; invalid; diagnostics} =
               Res_driver.parse_implementation_from_source ~for_printer:true
                 ~display_filename:displayFilename ~source:codeWithOffset
@@ -788,10 +720,20 @@ module FormatDocstrings = struct
             else
               Res_printer.print_implementation
                 ~width:Res_multi_printer.default_print_width parsetree ~comments
-              |> String.trim
+              |> String.trim |> Block_line.list_of_string
           in
-          formatted_code)
-        content
+
+          let mappedCodeBlock =
+            Block.Code_block.make ~layout ~info_string formattedCode
+          in
+          Mapper.ret (Block.Code_block (mappedCodeBlock, meta))
+        | _ -> Mapper.default)
+      | _ -> Mapper.default
+    in
+    let mapper = Mapper.make ~block () in
+    let newContent =
+      content |> Doc.of_string ~locs:true |> Mapper.map_doc mapper
+      |> Cmarkit_commonmark.of_doc
     in
     (newContent, !hadCodeBlocks)
 
