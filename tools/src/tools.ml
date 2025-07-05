@@ -677,9 +677,9 @@ let extractEmbedded ~extensionPoints ~filename =
            ])
   |> List.rev |> array
 
-module FormatDocstrings = struct
+module FormatCodeblocks = struct
   let formatRescriptCodeBlocks content ~displayFilename ~addError
-      ~(payloadLoc : Location.t) =
+      ~markdownBlockStartLine =
     let open Cmarkit in
     (* Detect ReScript code blocks. *)
     let hadCodeBlocks = ref false in
@@ -700,7 +700,7 @@ module FormatDocstrings = struct
 
           let n = List.length code in
           let newlinesNeeded =
-            max 0 (payloadLoc.loc_start.pos_lnum + currentLine - n)
+            max 0 (markdownBlockStartLine + currentLine - n)
           in
           let codeWithOffset = String.make newlinesNeeded '\n' ^ codeText in
 
@@ -737,7 +737,7 @@ module FormatDocstrings = struct
     in
     (newContent, !hadCodeBlocks)
 
-  let formatDocstrings ~outputMode ~entryPointFile =
+  let formatCodeBlocksInFile ~outputMode ~entryPointFile =
     let path =
       match Filename.is_relative entryPointFile with
       | true -> Unix.realpath entryPointFile
@@ -757,7 +757,7 @@ module FormatDocstrings = struct
                 PStr [{pstr_desc = Pstr_eval ({pexp_loc}, _)}] ) ->
               let formattedContents, hadCodeBlocks =
                 formatRescriptCodeBlocks ~addError ~displayFilename
-                  ~payloadLoc:pexp_loc contents
+                  ~markdownBlockStartLine:pexp_loc.loc_start.pos_lnum contents
               in
               if hadCodeBlocks && formattedContents <> contents then
                 ( name,
@@ -772,7 +772,24 @@ module FormatDocstrings = struct
       }
     in
     let formatted_content, source =
-      if Filename.check_suffix path ".res" then
+      if Filename.check_suffix path ".md" then
+        let content =
+          let ic = open_in path in
+          let n = in_channel_length ic in
+          let s = Bytes.create n in
+          really_input ic s 0 n;
+          close_in ic;
+          Bytes.to_string s
+        in
+        let displayFilename = Filename.basename path in
+        let formattedContents, hadCodeBlocks =
+          formatRescriptCodeBlocks ~addError ~displayFilename
+            ~markdownBlockStartLine:1 content
+        in
+        if hadCodeBlocks && formattedContents <> content then
+          (formattedContents, content)
+        else (content, content)
+      else if Filename.check_suffix path ".res" then
         let parser =
           Res_driver.parsing_engine.parse_implementation ~for_printer:true
         in

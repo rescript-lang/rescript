@@ -30,7 +30,7 @@ module Nested = {
     let getName = user=>user.name
   }
   ```  
-*/
+  */
   let testFunction2 = () => "test2"
 }
 
