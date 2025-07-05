@@ -56,18 +56,18 @@ let main () =
   | "format-codeblocks" :: rest -> (
     match rest with
     | ["-h"] | ["--help"] -> logAndExit (Ok formatDocstringsHelp)
-    | [path; "--stdout"] -> (
+    | path :: args -> (
+      let isStdout = List.mem "--stdout" args in
+      let outputMode = if isStdout then `Stdout else `File in
       Clflags.color := Some Misc.Color.Never;
       match
-        Tools.FormatCodeblocks.formatCodeBlocksInFile ~outputMode:`Stdout
-          ~entryPointFile:path
+        ( Tools.FormatCodeblocks.formatCodeBlocksInFile ~outputMode
+            ~entryPointFile:path,
+          outputMode )
       with
-      | Ok content -> print_endline content
-      | Error e -> logAndExit (Error e))
-    | [path] ->
-      Tools.FormatCodeblocks.formatCodeBlocksInFile ~outputMode:`File
-        ~entryPointFile:path
-      |> logAndExit
+      | Ok content, `Stdout -> print_endline content
+      | result, `File -> logAndExit result
+      | Error e, _ -> logAndExit (Error e))
     | _ -> logAndExit (Error formatDocstringsHelp))
   | "reanalyze" :: _ ->
     let len = Array.length Sys.argv in
