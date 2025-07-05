@@ -678,8 +678,56 @@ let extractEmbedded ~extensionPoints ~filename =
   |> List.rev |> array
 
 module FormatCodeblocks = struct
-  let formatRescriptCodeBlocks content ~displayFilename ~addError
-      ~markdownBlockStartLine =
+  module Transform = struct
+    type transform = AssertEqualFnToEquals  (** assertEqual(a, b) -> a == b *)
+
+    (** Transforms for the code blocks themselves. *)
+    let transform ~transforms ast =
+      match transforms with
+      | [] -> ast
+      | transforms ->
+        let hasTransform transform = transforms |> List.mem transform in
+        let mapper =
+          {
+            Ast_mapper.default_mapper with
+            expr =
+              (fun mapper exp ->
+                match exp.pexp_desc with
+                | Pexp_apply
+                    {
+                      funct =
+                        {
+                          pexp_desc =
+                            Pexp_ident
+                              ({txt = Lident "assertEqual"} as identTxt);
+                        } as ident;
+                      partial = false;
+                      args = [(Nolabel, _arg1); (Nolabel, _arg2)] as args;
+                    }
+                  when hasTransform AssertEqualFnToEquals ->
+                  {
+                    exp with
+                    pexp_desc =
+                      Pexp_apply
+                        {
+                          funct =
+                            {
+                              ident with
+                              pexp_desc =
+                                Pexp_ident {identTxt with txt = Lident "=="};
+                            };
+                          args;
+                          partial = false;
+                          transformed_jsx = false;
+                        };
+                  }
+                | _ -> Ast_mapper.default_mapper.expr mapper exp);
+          }
+        in
+        mapper.structure mapper ast
+  end
+  let formatRescriptCodeBlocks content ~transformAssertEqual ~displayFilename
+      ~addError ~markdownBlockStartLine =
     let open Cmarkit in
     (* Detect ReScript code blocks. *)
     let hadCodeBlocks = ref false in
@@ -718,6 +766,12 @@ module FormatCodeblocks = struct
               addError (Buffer.contents buf);
               code)
             else
+              let parsetree =
+                if transformAssertEqual then
+                  Transform.transform ~transforms:[AssertEqualFnToEquals]
+                    parsetree
+                else parsetree
+              in
               Res_printer.print_implementation
                 ~width:Res_multi_printer.default_print_width parsetree ~comments
               |> String.trim |> Block_line.list_of_string
@@ -737,7 +791,7 @@ module FormatCodeblocks = struct
     in
     (newContent, !hadCodeBlocks)
 
-  let formatCodeBlocksInFile ~outputMode ~entryPointFile =
+  let formatCodeBlocksInFile ~outputMode ~transformAssertEqual ~entryPointFile =
     let path =
       match Filename.is_relative entryPointFile with
       | true -> Unix.realpath entryPointFile
@@ -746,7 +800,7 @@ module FormatCodeblocks = struct
     let errors = ref [] in
     let addError error = errors := error :: !errors in
 
-    let makeMapper ~displayFilename =
+    let makeMapper ~transformAssertEqual ~displayFilename =
       {
         Ast_mapper.default_mapper with
         attribute =
@@ -756,7 +810,8 @@ module FormatCodeblocks = struct
                 Some (contents, None),
                 PStr [{pstr_desc = Pstr_eval ({pexp_loc}, _)}] ) ->
               let formattedContents, hadCodeBlocks =
-                formatRescriptCodeBlocks ~addError ~displayFilename
+                formatRescriptCodeBlocks ~transformAssertEqual ~addError
+                  ~displayFilename
                   ~markdownBlockStartLine:pexp_loc.loc_start.pos_lnum contents
               in
               if hadCodeBlocks && formattedContents <> contents then
@@ -783,8 +838,8 @@ module FormatCodeblocks = struct
         in
         let displayFilename = Filename.basename path in
         let formattedContents, hadCodeBlocks =
-          formatRescriptCodeBlocks ~addError ~displayFilename
-            ~markdownBlockStartLine:1 content
+          formatRescriptCodeBlocks ~transformAssertEqual ~addError
+            ~displayFilename ~markdownBlockStartLine:1 content
         in
         if hadCodeBlocks && formattedContents <> content then
           Ok (formattedContents, content)
@@ -797,7 +852,9 @@ module FormatCodeblocks = struct
           parser ~filename:path
         in
         let filename = Filename.basename filename in
-        let mapper = makeMapper ~displayFilename:filename in
+        let mapper =
+          makeMapper ~transformAssertEqual ~displayFilename:filename
+        in
         let astMapped = mapper.structure mapper structure in
         Ok
           ( Res_printer.print_implementation
@@ -810,7 +867,9 @@ module FormatCodeblocks = struct
         let {Res_driver.parsetree = signature; comments; source; filename} =
           parser ~filename:path
         in
-        let mapper = makeMapper ~displayFilename:filename in
+        let mapper =
+          makeMapper ~transformAssertEqual ~displayFilename:filename
+        in
         let astMapped = mapper.signature mapper signature in
         Ok
           ( Res_printer.print_interface
