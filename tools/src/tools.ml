@@ -771,7 +771,7 @@ module FormatCodeblocks = struct
             | _ -> Ast_mapper.default_mapper.attribute mapper attr);
       }
     in
-    let formatted_content, source =
+    let content =
       if Filename.check_suffix path ".md" then
         let content =
           let ic = open_in path in
@@ -787,8 +787,8 @@ module FormatCodeblocks = struct
             ~markdownBlockStartLine:1 content
         in
         if hadCodeBlocks && formattedContents <> content then
-          (formattedContents, content)
-        else (content, content)
+          Ok (formattedContents, content)
+        else Ok (content, content)
       else if Filename.check_suffix path ".res" then
         let parser =
           Res_driver.parsing_engine.parse_implementation ~for_printer:true
@@ -799,10 +799,11 @@ module FormatCodeblocks = struct
         let filename = Filename.basename filename in
         let mapper = makeMapper ~displayFilename:filename in
         let astMapped = mapper.structure mapper structure in
-        ( Res_printer.print_implementation
-            ~width:Res_multi_printer.default_print_width astMapped ~comments,
-          source )
-      else
+        Ok
+          ( Res_printer.print_implementation
+              ~width:Res_multi_printer.default_print_width astMapped ~comments,
+            source )
+      else if Filename.check_suffix path ".resi" then
         let parser =
           Res_driver.parsing_engine.parse_interface ~for_printer:true
         in
@@ -811,23 +812,32 @@ module FormatCodeblocks = struct
         in
         let mapper = makeMapper ~displayFilename:filename in
         let astMapped = mapper.signature mapper signature in
-        ( Res_printer.print_interface
-            ~width:Res_multi_printer.default_print_width astMapped ~comments,
-          source )
+        Ok
+          ( Res_printer.print_interface
+              ~width:Res_multi_printer.default_print_width astMapped ~comments,
+            source )
+      else
+        Error
+          (Printf.sprintf
+             "File extension not supported. This command accepts .res, .resi, \
+              and .md files")
     in
-    let errors = !errors in
-    if List.length errors > 0 then (
-      errors |> List.rev |> String.concat "\n" |> print_endline;
-      Error
-        (Printf.sprintf "%s: Error formatting docstrings."
-           (Filename.basename path)))
-    else if formatted_content <> source then (
-      match outputMode with
-      | `Stdout -> Ok formatted_content
-      | `File ->
-        let oc = open_out path in
-        Printf.fprintf oc "%s" formatted_content;
-        close_out oc;
-        Ok (Filename.basename path ^ ": formatted successfully"))
-    else Ok (Filename.basename path ^ ": needed no formatting")
+    match content with
+    | Error e -> Error e
+    | Ok (formatted_content, source) ->
+      let errors = !errors in
+      if List.length errors > 0 then (
+        errors |> List.rev |> String.concat "\n" |> print_endline;
+        Error
+          (Printf.sprintf "%s: Error formatting docstrings."
+             (Filename.basename path)))
+      else if formatted_content <> source then (
+        match outputMode with
+        | `Stdout -> Ok formatted_content
+        | `File ->
+          let oc = open_out path in
+          Printf.fprintf oc "%s" formatted_content;
+          close_out oc;
+          Ok (Filename.basename path ^ ": formatted successfully"))
+      else Ok (Filename.basename path ^ ": needed no formatting")
 end
