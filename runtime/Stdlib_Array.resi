@@ -83,6 +83,24 @@ someArray
 @get
 external length: array<'a> => int = "length"
 
+/**
+`isEmpty(array)` returns `true` if the array is empty (has length 0), `false` otherwise.
+
+## Examples
+
+```rescript
+[]->Array.isEmpty->assertEqual(true)
+[1, 2, 3]->Array.isEmpty->assertEqual(false)
+
+let emptyArray = []
+emptyArray->Array.isEmpty->assertEqual(true)
+
+let nonEmptyArray = ["hello"]
+nonEmptyArray->Array.isEmpty->assertEqual(false)
+```
+*/
+let isEmpty: array<'a> => bool
+
 // TODO: Docs
 @send external copyAllWithin: (array<'a>, ~target: int) => array<'a> = "copyWithin"
 
@@ -920,7 +938,7 @@ external mapWithIndex: (array<'a>, ('a, int) => 'b) => array<'b> = "map"
 /**
 `reduce(xs, init, fn)`
 
-Applies `fn` to each element of `xs` from beginning to end. Function `fn` has two parameters: the item from the list and an “accumulator”; which starts with a value of `init`. `reduce` returns the final value of the accumulator.
+Applies `fn` to each element of `xs` from beginning to end. Function `fn` has two parameters: the item from the list and an "accumulator"; which starts with a value of `init`. `reduce` returns the final value of the accumulator.
 
 ## Examples
 
@@ -941,7 +959,7 @@ let reduce: (array<'a>, 'b, ('b, 'a) => 'b) => 'b
 /**
 `reduceWithIndex(x, init, fn)`
 
-Applies `fn` to each element of `xs` from beginning to end. Function `fn` has three parameters: the item from the array and an “accumulator”, which starts with a value of `init` and the index of each element. `reduceWithIndex` returns the final value of the accumulator.
+Applies `fn` to each element of `xs` from beginning to end. Function `fn` has three parameters: the item from the array and an "accumulator", which starts with a value of `init` and the index of each element. `reduceWithIndex` returns the final value of the accumulator.
 
 ## Examples
 
