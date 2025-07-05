@@ -24,7 +24,7 @@ Usage: rescript-tools [command]
 Commands:
 
 doc <file>                              Generate documentation
-format-docstrings <file> [--stdout]     Format ReScript code blocks in docstrings
+format-codeblocks <file> [--stdout]     Format ReScript code blocks
 reanalyze                               Reanalyze
 -v, --version                           Print version
 -h, --help                              Print help|}
@@ -53,19 +53,19 @@ let main () =
       in
       logAndExit (Tools.extractDocs ~entryPointFile:path ~debug:false)
     | _ -> logAndExit (Error docHelp))
-  | "format-docstrings" :: rest -> (
+  | "format-codeblocks" :: rest -> (
     match rest with
     | ["-h"] | ["--help"] -> logAndExit (Ok formatDocstringsHelp)
     | [path; "--stdout"] -> (
       Clflags.color := Some Misc.Color.Never;
       match
-        Tools.FormatDocstrings.formatDocstrings ~outputMode:`Stdout
+        Tools.FormatCodeblocks.formatCodeBlocksInFile ~outputMode:`Stdout
           ~entryPointFile:path
       with
       | Ok content -> print_endline content
       | Error e -> logAndExit (Error e))
     | [path] ->
-      Tools.FormatDocstrings.formatDocstrings ~outputMode:`File
+      Tools.FormatCodeblocks.formatCodeBlocksInFile ~outputMode:`File
         ~entryPointFile:path
       |> logAndExit
     | _ -> logAndExit (Error formatDocstringsHelp))
