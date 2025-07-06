@@ -9,7 +9,7 @@ use sysinfo::{PidExt, System, SystemExt};
  * that's running, when trying to aquire a lock, it checks wether that process is still running. If
  * not, it rewrites the lockfile to have its own PID instead. */
 
-pub static LOCKFILE: &str = "rewatch.lock";
+pub static LOCKFILE: &str = "rescript.lock";
 
 pub enum Error {
     Locked(u32),

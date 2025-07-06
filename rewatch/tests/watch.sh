@@ -15,7 +15,7 @@ fi
 
 exit_watcher() {
   # kill watcher by removing lock file
-  rm lib/rewatch.lock
+  rm lib/rescript.lock
 }
 
 rewatch_bg watch > /dev/null 2>&1 &
