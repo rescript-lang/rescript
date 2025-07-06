@@ -3,9 +3,7 @@ use std::{ffi::OsString, ops::Deref};
 use clap::{Args, Parser, Subcommand};
 use clap_verbosity_flag::InfoLevel;
 
-/// Rewatch is an alternative build system for the Rescript Compiler bsb (which uses Ninja internally). It strives
-/// to deliver consistent and faster builds in monorepo setups with multiple packages, where the
-/// default build system fails to pick up changed interfaces across multiple packages.
+/// ReScript - Fast, Simple, Fully Typed JavaScript from the Future
 #[derive(Parser, Debug)]
 #[command(version)]
 #[command(args_conflicts_with_subcommands = true)]
@@ -147,7 +145,7 @@ pub struct WatchArgs {
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
-    /// Build using Rewatch
+    /// Build the project
     Build(BuildArgs),
     /// Build, then start a watcher
     Watch(WatchArgs),
