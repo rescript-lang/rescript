@@ -1291,3 +1291,256 @@ let completionPathFromMaybeBuiltin path =
       (* Route Stdlib_X to Stdlib.X for proper completions without the Stdlib_ prefix *)
       Some (String.split_on_char '_' mainModule)
     | _ -> None)
+
+module ExpandType = struct
+  type expandTypeInput =
+    | TypeExpr of {
+        typeExpr: Types.type_expr;
+        name: string Location.loc option;
+        env: QueryEnv.t;
+      }
+    | TypeDecl of {
+        typeDecl: Types.type_declaration;
+        name: string Location.loc;
+        env: QueryEnv.t;
+      }
+
+  type expandTypeReturn = {
+    mainTypes: expandTypeInput list;
+    relatedTypes: expandTypeInput list;
+  }
+
+  module TypeIdSet = Set.Make (String)
+
+  let expandTypes (input : expandTypeInput) ~(full : SharedTypes.full) =
+    let rootEnv = QueryEnv.fromFile full.file in
+
+    let expandTypeInputToKey = function
+      | TypeExpr {name; env} ->
+        typeId ~env
+          ~name:
+            (match name with
+            | None -> Location.mkloc "<unknown>" Location.none
+            | Some n -> n)
+      | TypeDecl {name; env} -> typeId ~env ~name
+    in
+
+    let deduplicateAndRemoveAlreadyPresent mainTypes relatedTypes =
+      let mainIds = ref TypeIdSet.empty in
+      let dedupedMain =
+        mainTypes
+        |> List.fold_left
+             (fun acc item ->
+               let id = expandTypeInputToKey item in
+               if TypeIdSet.mem id !mainIds then acc
+               else (
+                 mainIds := TypeIdSet.add id !mainIds;
+                 item :: acc))
+             []
+        |> List.rev
+      in
+
+      let relatedIds = ref TypeIdSet.empty in
+      let dedupedRelated =
+        relatedTypes
+        |> List.fold_left
+             (fun acc item ->
+               let id = expandTypeInputToKey item in
+               if TypeIdSet.mem id !mainIds || TypeIdSet.mem id !relatedIds then
+                 acc
+               else (
+                 relatedIds := TypeIdSet.add id !relatedIds;
+                 item :: acc))
+             []
+        |> List.rev
+      in
+
+      (dedupedMain, dedupedRelated)
+    in
+
+    let rec followTypeAliases acc (typeExpr : Types.type_expr) =
+      match typeExpr.desc with
+      | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> followTypeAliases acc t1
+      | Tconstr (path, typeArgs, _) -> (
+        match
+          References.digConstructor ~env:rootEnv ~package:full.package path
+        with
+        | Some
+            ( env,
+              {
+                name;
+                item = {decl = {type_manifest = Some t1; type_params} as decl};
+              } ) ->
+          let instantiated =
+            instantiateType ~typeParams:type_params ~typeArgs t1
+          in
+          let currentAlias = TypeDecl {typeDecl = decl; name; env} in
+          followTypeAliases (currentAlias :: acc) instantiated
+        | Some (env, {name; item = {decl}}) ->
+          TypeDecl {typeDecl = decl; name; env} :: acc
+        | None -> acc)
+      | _ -> acc
+    in
+
+    let rec findFinalConcreteType (typeExpr : Types.type_expr) =
+      match typeExpr.desc with
+      | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> findFinalConcreteType t1
+      | Tconstr (path, typeArgs, _) -> (
+        match
+          References.digConstructor ~env:rootEnv ~package:full.package path
+        with
+        | Some (_env, {item = {decl = {type_manifest = Some t1; type_params}}})
+          ->
+          let instantiated =
+            instantiateType ~typeParams:type_params ~typeArgs t1
+          in
+          findFinalConcreteType instantiated
+        | _ -> typeExpr)
+      | _ -> typeExpr
+    in
+
+    let rec extractRelevantTypesFromTypeExpr ?(depth = 0)
+        (typeExpr : Types.type_expr) =
+      if depth > 1 then []
+      else
+        match typeExpr.desc with
+        | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
+          extractRelevantTypesFromTypeExpr ~depth t1
+        | Tconstr (path, typeArgs, _) ->
+          let constructorTypes =
+            match
+              References.digConstructor ~env:rootEnv ~package:full.package path
+            with
+            | Some (env, {name; item = {kind = Record fields; decl}}) ->
+              TypeDecl {typeDecl = decl; name; env}
+              ::
+              (if depth = 0 then
+                 fields
+                 |> List.fold_left
+                      (fun acc field ->
+                        acc
+                        @ extractRelevantTypesFromTypeExpr ~depth:(depth + 1)
+                            field.typ)
+                      []
+               else [])
+            | Some (env, {name; item = {kind = Variant constructors; decl}}) ->
+              TypeDecl {typeDecl = decl; name; env}
+              ::
+              (if depth = 0 then
+                 constructors
+                 |> List.fold_left
+                      (fun acc (constructor : Constructor.t) ->
+                        match constructor.args with
+                        | Args args ->
+                          args
+                          |> List.fold_left
+                               (fun acc (argType, _) ->
+                                 acc
+                                 @ extractRelevantTypesFromTypeExpr
+                                     ~depth:(depth + 1) argType)
+                               acc
+                        | InlineRecord fields ->
+                          fields
+                          |> List.fold_left
+                               (fun acc field ->
+                                 acc
+                                 @ extractRelevantTypesFromTypeExpr
+                                     ~depth:(depth + 1) field.typ)
+                               acc)
+                      []
+               else [])
+            | Some (_env, {item = {decl = {type_manifest = Some t1}}}) ->
+              extractRelevantTypesFromTypeExpr ~depth t1
+            | _ -> []
+          in
+          let typeArgTypes =
+            typeArgs
+            |> List.fold_left
+                 (fun acc typeArg ->
+                   acc
+                   @ extractRelevantTypesFromTypeExpr ~depth:(depth + 1) typeArg)
+                 []
+          in
+          constructorTypes @ typeArgTypes
+        | Tvariant {row_fields} when depth = 0 ->
+          row_fields
+          |> List.fold_left
+               (fun acc (_label, field) ->
+                 match field with
+                 | Types.Rpresent (Some typeExpr) ->
+                   acc
+                   @ extractRelevantTypesFromTypeExpr ~depth:(depth + 1)
+                       typeExpr
+                 | Reither (_, typeExprs, _, _) ->
+                   typeExprs
+                   |> List.fold_left
+                        (fun acc typeExpr ->
+                          acc
+                          @ extractRelevantTypesFromTypeExpr ~depth:(depth + 1)
+                              typeExpr)
+                        acc
+                 | _ -> acc)
+               []
+        | _ -> []
+    in
+
+    let extractRelevantTypesFromTypeDecl (typeDecl : Types.type_declaration) =
+      match typeDecl.type_manifest with
+      | Some typeExpr -> extractRelevantTypesFromTypeExpr typeExpr
+      | None -> (
+        match typeDecl.type_kind with
+        | Type_record (label_declarations, _) ->
+          label_declarations
+          |> List.fold_left
+               (fun acc (label_decl : Types.label_declaration) ->
+                 acc
+                 @ extractRelevantTypesFromTypeExpr ~depth:1 label_decl.ld_type)
+               []
+        | Type_variant constructor_declarations ->
+          constructor_declarations
+          |> List.fold_left
+               (fun acc (constructor_decl : Types.constructor_declaration) ->
+                 match constructor_decl.cd_args with
+                 | Cstr_tuple type_exprs ->
+                   type_exprs
+                   |> List.fold_left
+                        (fun acc type_expr ->
+                          acc
+                          @ extractRelevantTypesFromTypeExpr ~depth:1 type_expr)
+                        acc
+                 | Cstr_record label_declarations ->
+                   label_declarations
+                   |> List.fold_left
+                        (fun acc (label_decl : Types.label_declaration) ->
+                          acc
+                          @ extractRelevantTypesFromTypeExpr ~depth:1
+                              label_decl.ld_type)
+                        acc)
+               []
+        | Type_abstract | Type_open -> [])
+    in
+
+    match input with
+    | TypeExpr {typeExpr; name; env} ->
+      let aliases = followTypeAliases [] typeExpr in
+      let mainTypesRaw = TypeExpr {typeExpr; name; env} :: aliases in
+
+      (* Extract related types from the final concrete type *)
+      let finalConcreteType = findFinalConcreteType typeExpr in
+      let relatedTypesRaw =
+        extractRelevantTypesFromTypeExpr finalConcreteType
+      in
+
+      let mainTypes, relatedTypes =
+        deduplicateAndRemoveAlreadyPresent mainTypesRaw relatedTypesRaw
+      in
+      {mainTypes; relatedTypes}
+    | TypeDecl {typeDecl} ->
+      let mainTypes = [input] in
+      let relatedTypesRaw = extractRelevantTypesFromTypeDecl typeDecl in
+
+      let _, relatedTypes =
+        deduplicateAndRemoveAlreadyPresent mainTypes relatedTypesRaw
+      in
+      {mainTypes; relatedTypes}
+end
