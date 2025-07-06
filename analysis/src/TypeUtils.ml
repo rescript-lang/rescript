@@ -1179,6 +1179,12 @@ let transformCompletionToPipeCompletion ?(synthetic = false) ~env ?posOfDot
         | Some posOfDot -> Some (makeAdditionalTextEditsForRemovingDot posOfDot));
     }
 
+(** Light weight type id *)
+let typeId ~(env : QueryEnv.t) ~(name : string Location.loc) =
+  (env.file.moduleName :: List.rev (name.txt :: env.pathRev)
+  |> String.concat ".")
+  ^ ":" ^ Loc.toString name.loc
+
 (** This takes a type expr and the env that type expr was found in, and produces a globally unique 
     id for that specific type. The globally unique id is the full path to the type as seen from the root
     of the project. Example: type x in module SomeModule in file SomeFile would get the globally 
