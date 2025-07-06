@@ -6,6 +6,7 @@ The major contributions from contributors include
 
 - `super_errors` from [Cheng](https://github.com/chenglou) and [Cristiano](https://github.com/cristianoc)
 - `react_jsx_ppx` from [Ricky](https://github.com/rickyvetter)
+- `rewatch` (the new ReScript build system) from [Roland](https://github.com/rolandpeelen) and [Jaap](https://github.com/jfrolich)
 
 Cristiano also contributed to several important patches in the upstream native compiler,
 in particular, the pattern match compilation.
