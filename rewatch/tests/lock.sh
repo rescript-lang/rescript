@@ -5,15 +5,17 @@ bold "Test: It should lock - when watching"
 
 sleep 1
 
-if rewatch clean &> /dev/null;
+error_output=$(rewatch clean 2>&1)
+if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
-else 
+else
   error "Error Cleaning Repo"
+  printf "%s\n" "$error_output" >&2
   exit 1
 fi
 
-exit_watcher() { 
+exit_watcher() {
   # kill watcher by removing lock file
   rm lib/rewatch.lock
 }
@@ -23,11 +25,11 @@ success "Watcher Started"
 
 sleep 2
 
-if rewatch build | grep 'Could not start Rewatch:' &> /dev/null; 
+if rewatch build | grep 'Could not start Rewatch:' &> /dev/null;
 then
   success "Lock is correctly set"
   exit_watcher
-else 
+else
   error "Not setting lock correctly"
   exit_watcher
   exit 1
@@ -41,7 +43,7 @@ success "Watcher Started"
 
 sleep 2
 
-if cat tmp.txt | grep 'Could not start Rewatch:' &> /dev/null; 
+if cat tmp.txt | grep 'Could not start Rewatch:' &> /dev/null;
 then
   error "Lock not removed correctly"
   exit_watcher

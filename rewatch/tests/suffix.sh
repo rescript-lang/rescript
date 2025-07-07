@@ -5,22 +5,26 @@ bold "Test: It should support custom suffixes"
 
 # Clean Repo
 sleep 1
-if rewatch clean &> /dev/null;
+error_output=$(rewatch clean 2>&1)
+if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
 else
   error "Error Cleaning Repo"
+  printf "%s\n" "$error_output" >&2
   exit 1
 fi
 
 # Replace suffix
 replace "s/.mjs/.res.js/g" bsconfig.json
 
-if rewatch build &> /dev/null;
+error_output=$(rewatch build 2>&1)
+if [ $? -eq 0 ];
 then
   success "Repo Built"
 else
-  error "Error building repo"
+  error "Error Building Repo"
+  printf "%s\n" "$error_output" >&2
   exit 1
 fi
 
@@ -35,11 +39,13 @@ else
   exit 1
 fi
 
-if rewatch clean &> /dev/null;
+error_output=$(rewatch clean 2>&1)
+if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
 else
   error "Error Cleaning Repo"
+  printf "%s\n" "$error_output" >&2
   exit 1
 fi
 
@@ -47,10 +53,12 @@ fi
 replace "s/.res.js/.mjs/g" bsconfig.json
 
 # Restore original build
-if rewatch build &> /dev/null;
+error_output=$(rewatch build 2>&1)
+if [ $? -eq 0 ];
 then
   success "Repo Built"
 else
-  error "Error building repo"
+  error "Error Building Repo"
+  printf "%s\n" "$error_output" >&2
   exit 1
 fi

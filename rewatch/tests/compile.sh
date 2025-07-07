@@ -5,19 +5,23 @@ cd ../testrepo
 
 bold "Test: It should compile"
 
-if rewatch clean &> /dev/null;
+error_output=$(rewatch clean 2>&1)
+if [ $? -eq 0 ];
 then
   success "Repo Cleaned"
 else
   error "Error Cleaning Repo"
+  printf "%s\n" "$error_output" >&2
   exit 1
 fi
 
-if rewatch &> /dev/null;
+error_output=$(rewatch 2>&1)
+if [ $? -eq 0 ];
 then
   success "Repo Built"
 else
   error "Error Building Repo"
+  printf "%s\n" "$error_output" >&2
   exit 1
 fi
 
