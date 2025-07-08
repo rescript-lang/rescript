@@ -470,6 +470,37 @@ impl Config {
         }
     }
 
+    pub fn get_warning_args(&self, is_local_dep: bool) -> Vec<String> {
+        // Ignore warning config for non local dependencies (node_module dependencies)
+        if !is_local_dep {
+            return vec![];
+        }
+
+        match self.warnings {
+            None => vec![],
+            Some(ref warnings) => {
+                let warn_number = match warnings.number {
+                    None => vec![],
+                    Some(ref warnings) => {
+                        vec!["-w".to_string(), warnings.to_string()]
+                    }
+                };
+
+                let warn_error = match warnings.error {
+                    Some(Error::Catchall(true)) => {
+                        vec!["-warn-error".to_string(), "A".to_string()]
+                    }
+                    Some(Error::Qualified(ref errors)) => {
+                        vec!["-warn-error".to_string(), errors.to_string()]
+                    }
+                    _ => vec![],
+                };
+
+                [warn_number, warn_error].concat()
+            }
+        }
+    }
+
     pub fn get_package_specs(&self) -> Vec<PackageSpec> {
         match self.package_specs.clone() {
             None => vec![PackageSpec {

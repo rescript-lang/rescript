@@ -287,7 +287,7 @@ pub fn read_dependency(
 /// Given a config, recursively finds all dependencies.
 /// 1. It starts with registering dependencies and
 ///    prevents the operation for the ones which are already
-///    registerd for the parent packages. Especially relevant for peerDependencies.
+///    registered for the parent packages. Especially relevant for peerDependencies.
 /// 2. In parallel performs IO to read the dependencies config and
 ///    recursively continues operation for their dependencies as well.
 fn read_dependencies(
@@ -329,7 +329,7 @@ fn read_dependencies(
 
                         let parent_path_str = parent_path.to_string_lossy();
                         log::error!(
-                            "We could not build package tree reading depencency '{package_name}', at path '{parent_path_str}'. Error: {error}",
+                            "We could not build package tree reading dependency '{package_name}', at path '{parent_path_str}'. Error: {error}",
                         );
 
                         std::process::exit(2)

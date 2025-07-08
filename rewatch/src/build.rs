@@ -114,6 +114,7 @@ pub fn get_compiler_args(
         &workspace_root,
         &None,
         build_dev_deps,
+        true,
     );
 
     let result = serde_json::to_string_pretty(&CompilerArgs {
