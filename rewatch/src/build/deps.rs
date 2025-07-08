@@ -10,6 +10,7 @@ fn get_dep_modules(
     package_modules: &AHashSet<String>,
     valid_modules: &AHashSet<String>,
     package: &packages::Package,
+    build_state: &BuildState,
 ) -> AHashSet<String> {
     let mut deps = AHashSet::new();
     let ast_file = package.get_build_path().join(ast_file);
@@ -32,6 +33,24 @@ fn get_dep_modules(
             panic!("Could not read file {}", ast_file.to_string_lossy());
         }
     }
+
+    // Get the list of allowed dependency packages for this package
+    let allowed_dependencies: AHashSet<String> = package
+        .config
+        .bs_dependencies
+        .as_ref()
+        .unwrap_or(&vec![])
+        .iter()
+        .chain(
+            package
+                .config
+                .bs_dev_dependencies
+                .as_ref()
+                .unwrap_or(&vec![])
+                .iter(),
+        )
+        .cloned()
+        .collect();
 
     return deps
         .iter()
@@ -59,11 +78,28 @@ fn get_dep_modules(
             }
         })
         .filter(|dep| {
-            valid_modules.contains(dep)
+            // First check if the module exists
+            let module_exists = valid_modules.contains(dep)
                 && match namespace.to_owned() {
                     Some(namespace) => !dep.eq(&namespace),
                     None => true,
+                };
+
+            if !module_exists {
+                return false;
+            }
+
+            if let Some(dep_module) = build_state.modules.get(dep) {
+                // If the module exists, check if it's in the same package (always allowed)
+                if dep_module.package_name == package.name {
+                    return true;
                 }
+
+                // If it's in a different package, check if that package is a declared dependency
+                return allowed_dependencies.contains(&dep_module.package_name);
+            }
+
+            true
         })
         .collect::<AHashSet<String>>();
 }
@@ -87,6 +123,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                         package.modules.as_ref().unwrap(),
                         all_mod,
                         &package,
+                        build_state,
                     );
 
                     if let Some(interface) = &source_file.interface {
@@ -98,6 +135,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                             package.modules.as_ref().unwrap(),
                             all_mod,
                             &package,
+                            build_state,
                         ))
                     }
                     match &package.namespace {
