@@ -51,6 +51,7 @@
 - Rewatch: fix non-unicode stderr. https://github.com/rescript-lang/rescript/pull/7613
 - Fix rewatch considering warning configs of non-local dependencies. https://github.com/rescript-lang/rescript/pull/7614
 - Rewatch: fix panic if package.json name different from module name. https://github.com/rescript-lang/rescript/pull/7616
+- Fix finding the standard library for pnpm. https://github.com/rescript-lang/rescript/pull/7615
 
 #### :nail_care: Polish
 
