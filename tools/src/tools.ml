@@ -728,22 +728,23 @@ module FormatCodeblocks = struct
   end
   let formatRescriptCodeBlocks content ~transformAssertEqual ~displayFilename
       ~addError ~markdownBlockStartLine =
-    let open Cmarkit in
     (* Detect ReScript code blocks. *)
     let hadCodeBlocks = ref false in
     let block _m = function
-      | Block.Code_block (codeBlock, meta) -> (
-        match Block.Code_block.info_string codeBlock with
+      | Cmarkit.Block.Code_block (codeBlock, meta) -> (
+        match Cmarkit.Block.Code_block.info_string codeBlock with
         | Some ((("rescript" | "res"), _) as info_string) ->
           hadCodeBlocks := true;
 
           let currentLine =
-            meta |> Meta.textloc |> Textloc.first_line |> fst |> Int.add 1
+            meta |> Cmarkit.Meta.textloc |> Cmarkit.Textloc.first_line |> fst
           in
-          let layout = Block.Code_block.layout codeBlock in
-          let code = Block.Code_block.code codeBlock in
+          (* Account for 0-based line numbers *)
+          let currentLine = currentLine + 1 in
+          let layout = Cmarkit.Block.Code_block.layout codeBlock in
+          let code = Cmarkit.Block.Code_block.code codeBlock in
           let codeText =
-            code |> List.map Block_line.to_string |> String.concat "\n"
+            code |> List.map Cmarkit.Block_line.to_string |> String.concat "\n"
           in
 
           let n = List.length code in
@@ -773,19 +774,21 @@ module FormatCodeblocks = struct
                 else parsetree
               in
               Res_printer.print_implementation parsetree ~comments
-              |> String.trim |> Block_line.list_of_string
+              |> String.trim |> Cmarkit.Block_line.list_of_string
           in
 
           let mappedCodeBlock =
-            Block.Code_block.make ~layout ~info_string formattedCode
+            Cmarkit.Block.Code_block.make ~layout ~info_string formattedCode
           in
-          Mapper.ret (Block.Code_block (mappedCodeBlock, meta))
-        | _ -> Mapper.default)
-      | _ -> Mapper.default
+          Cmarkit.Mapper.ret (Cmarkit.Block.Code_block (mappedCodeBlock, meta))
+        | _ -> Cmarkit.Mapper.default)
+      | _ -> Cmarkit.Mapper.default
     in
-    let mapper = Mapper.make ~block () in
+    let mapper = Cmarkit.Mapper.make ~block () in
     let newContent =
-      content |> Doc.of_string ~locs:true |> Mapper.map_doc mapper
+      content
+      |> Cmarkit.Doc.of_string ~locs:true
+      |> Cmarkit.Mapper.map_doc mapper
       |> Cmarkit_commonmark.of_doc
     in
     (newContent, !hadCodeBlocks)
