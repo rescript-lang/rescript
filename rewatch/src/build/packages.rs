@@ -470,7 +470,7 @@ fn read_packages(
     dependencies.iter().for_each(|d| {
         if !map.contains_key(&d.name) {
             let package = make_package(d.config.to_owned(), &d.path, d.is_pinned, false);
-            map.insert(package.name.to_string(), package);
+            map.insert(d.name.to_string(), package);
         }
     });
 
