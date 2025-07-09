@@ -23,6 +23,7 @@ Usage: rescript-tools [command]
 
 Commands:
 
+migrate <file> [--stdout]               Runs the migration tool on the given file
 doc <file>                              Generate documentation
 format-codeblocks <file>                Format ReScript code blocks
   [--stdout]                              Output to stdout
@@ -55,6 +56,15 @@ let main () =
       in
       logAndExit (Tools.extractDocs ~entryPointFile:path ~debug:false)
     | _ -> logAndExit (Error docHelp))
+  | "migrate" :: file :: opts -> (
+    let isStdout = List.mem "--stdout" opts in
+    let outputMode = if isStdout then `Stdout else `File in
+    match
+      (Tools.Migrate.migrate ~entryPointFile:file ~outputMode, outputMode)
+    with
+    | Ok content, `Stdout -> print_endline content
+    | result, `File -> logAndExit result
+    | Error e, _ -> logAndExit (Error e))
   | "format-codeblocks" :: rest -> (
     match rest with
     | ["-h"] | ["--help"] -> logAndExit (Ok formatDocstringsHelp)
