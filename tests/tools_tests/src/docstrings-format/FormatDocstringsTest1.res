@@ -1,7 +1,7 @@
 /**
 This is the first docstring with unformatted ReScript code.
 
-```rescript
+```res example
 let badly_formatted=(x,y)=>{
 let result=x+y
 if result>0{Console.log("positive")}else{Console.log("negative")}
@@ -24,7 +24,7 @@ module Nested = {
 
   But if I add another line here it should be fine.
 
-  ```rescript
+  ```res info
   module UserService={
     let validate=user => user.age>=18 && user.name !== ""
     let getName = user=>user.name

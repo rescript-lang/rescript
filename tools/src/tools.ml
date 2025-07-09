@@ -726,6 +726,16 @@ module FormatCodeblocks = struct
         in
         mapper.structure mapper ast
   end
+
+  let isResLang lang =
+    match String.lowercase_ascii lang with
+    | "res" | "rescript" | "resi" -> true
+    | lang ->
+      (* Cover ```res example, and similar *)
+      String.starts_with ~prefix:"res " lang
+      || String.starts_with ~prefix:"rescript " lang
+      || String.starts_with ~prefix:"resi " lang
+
   let formatRescriptCodeBlocks content ~transformAssertEqual ~displayFilename
       ~addError ~markdownBlockStartLine =
     (* Detect ReScript code blocks. *)
@@ -733,7 +743,7 @@ module FormatCodeblocks = struct
     let block _m = function
       | Cmarkit.Block.Code_block (codeBlock, meta) -> (
         match Cmarkit.Block.Code_block.info_string codeBlock with
-        | Some ((("rescript" | "res"), _) as info_string) ->
+        | Some ((lang, _) as info_string) when isResLang lang ->
           hadCodeBlocks := true;
 
           let currentLine =
