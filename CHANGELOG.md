@@ -47,7 +47,10 @@
 - Pass location to children prop in jsx ppx. https://github.com/rescript-lang/rescript/pull/7540
 - Fix crash when `bs-g` is used with untagged variants. https://github.com/rescript-lang/rescript/pull/7575
 - Fix issue with preserve mode where `jsx` is declared as an external without a `@module` attribute. https://github.com/rescript-lang/rescript/pull/7591
+- Rewatch: don't add deps to modules that are in packages that are not a dependency. https://github.com/rescript-lang/rescript/pull/7612
+- Rewatch: fix non-unicode stderr. https://github.com/rescript-lang/rescript/pull/7613
 - Fix rewatch considering warning configs of non-local dependencies. https://github.com/rescript-lang/rescript/pull/7614
+- Rewatch: fix panic if package.json name different from module name. https://github.com/rescript-lang/rescript/pull/7616
 
 #### :nail_care: Polish
 
