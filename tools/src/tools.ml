@@ -772,8 +772,7 @@ module FormatCodeblocks = struct
                     parsetree
                 else parsetree
               in
-              Res_printer.print_implementation
-                ~width:Res_multi_printer.default_print_width parsetree ~comments
+              Res_printer.print_implementation parsetree ~comments
               |> String.trim |> Block_line.list_of_string
           in
 
@@ -856,10 +855,7 @@ module FormatCodeblocks = struct
           makeMapper ~transformAssertEqual ~displayFilename:filename
         in
         let astMapped = mapper.structure mapper structure in
-        Ok
-          ( Res_printer.print_implementation
-              ~width:Res_multi_printer.default_print_width astMapped ~comments,
-            source )
+        Ok (Res_printer.print_implementation astMapped ~comments, source)
       else if Filename.check_suffix path ".resi" then
         let parser =
           Res_driver.parsing_engine.parse_interface ~for_printer:true
@@ -871,10 +867,7 @@ module FormatCodeblocks = struct
           makeMapper ~transformAssertEqual ~displayFilename:filename
         in
         let astMapped = mapper.signature mapper signature in
-        Ok
-          ( Res_printer.print_interface
-              ~width:Res_multi_printer.default_print_width astMapped ~comments,
-            source )
+        Ok (Res_printer.print_interface astMapped ~comments, source)
       else
         Error
           (Printf.sprintf

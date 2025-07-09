@@ -5,6 +5,8 @@ module Token = Res_token
 module Parens = Res_parens
 module ParsetreeViewer = Res_parsetree_viewer
 
+let default_print_width = 100
+
 type callback_style =
   (* regular arrow function, example: `let f = x => x + 1` *)
   | NoCallback
@@ -6055,7 +6057,8 @@ let print_typ_expr t = print_typ_expr ~state:(State.init ()) t
 let print_expression e = print_expression ~state:(State.init ()) e
 let print_pattern p = print_pattern ~state:(State.init ()) p
 
-let print_implementation ~width (s : Parsetree.structure) ~comments =
+let print_implementation ?(width = default_print_width)
+    (s : Parsetree.structure) ~comments =
   let cmt_tbl = CommentTable.make () in
   CommentTable.walk_structure s cmt_tbl comments;
   (* CommentTable.log cmt_tbl; *)
@@ -6063,7 +6066,8 @@ let print_implementation ~width (s : Parsetree.structure) ~comments =
   (* Doc.debug doc; *)
   Doc.to_string ~width doc ^ "\n"
 
-let print_interface ~width (s : Parsetree.signature) ~comments =
+let print_interface ?(width = default_print_width) (s : Parsetree.signature)
+    ~comments =
   let cmt_tbl = CommentTable.make () in
   CommentTable.walk_signature s cmt_tbl comments;
   Doc.to_string ~width (print_signature ~state:(State.init ()) s cmt_tbl) ^ "\n"
