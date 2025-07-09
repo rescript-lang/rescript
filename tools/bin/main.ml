@@ -24,7 +24,9 @@ Usage: rescript-tools [command]
 Commands:
 
 doc <file>                              Generate documentation
-format-codeblocks <file> [--stdout]     Format ReScript code blocks
+format-codeblocks <file>                Format ReScript code blocks
+  [--stdout]                              Output to stdout
+  [--transform-assert-equal]              Transform `assertEqual` to `==`
 reanalyze                               Reanalyze
 -v, --version                           Print version
 -h, --help                              Print help|}
