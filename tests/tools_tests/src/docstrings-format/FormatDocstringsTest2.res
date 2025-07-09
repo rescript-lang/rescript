@@ -40,3 +40,17 @@ Console.log(processed)
 ```
 */
 let testPipes = () => "pipes test"
+
+/**
+Testing resi code blocks.
+
+```resi
+type x=int
+let x:int => 
+    string
+module M:{let ff: string => int
+}
+
+```
+ */
+let testResi = () => true

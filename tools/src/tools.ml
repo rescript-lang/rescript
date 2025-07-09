@@ -762,29 +762,43 @@ module FormatCodeblocks = struct
             max 0 (markdownBlockStartLine + currentLine - n)
           in
           let codeWithOffset = String.make newlinesNeeded '\n' ^ codeText in
-
+          let reportParseError diagnostics =
+            let buf = Buffer.create 1000 in
+            let formatter = Format.formatter_of_buffer buf in
+            Res_diagnostics.print_report ~formatter
+              ~custom_intro:(Some "Syntax error in code block in docstring")
+              diagnostics codeWithOffset;
+            addError (Buffer.contents buf)
+          in
           let formattedCode =
-            let {Res_driver.parsetree; comments; invalid; diagnostics} =
-              Res_driver.parse_implementation_from_source ~for_printer:true
-                ~display_filename:displayFilename ~source:codeWithOffset
-            in
-            if invalid then (
-              let buf = Buffer.create 1000 in
-              let formatter = Format.formatter_of_buffer buf in
-              Res_diagnostics.print_report ~formatter
-                ~custom_intro:(Some "Syntax error in code block in docstring")
-                diagnostics codeWithOffset;
-              addError (Buffer.contents buf);
-              code)
-            else
-              let parsetree =
-                if transformAssertEqual then
-                  Transform.transform ~transforms:[AssertEqualFnToEquals]
-                    parsetree
-                else parsetree
+            if lang |> String.split_on_char ' ' |> List.hd = "resi" then
+              let {Res_driver.parsetree; comments; invalid; diagnostics} =
+                Res_driver.parse_interface_from_source ~for_printer:true
+                  ~display_filename:displayFilename ~source:codeWithOffset
               in
-              Res_printer.print_implementation parsetree ~comments
-              |> String.trim |> Cmarkit.Block_line.list_of_string
+              if invalid then (
+                reportParseError diagnostics;
+                code)
+              else
+                Res_printer.print_interface parsetree ~comments
+                |> String.trim |> Cmarkit.Block_line.list_of_string
+            else
+              let {Res_driver.parsetree; comments; invalid; diagnostics} =
+                Res_driver.parse_implementation_from_source ~for_printer:true
+                  ~display_filename:displayFilename ~source:codeWithOffset
+              in
+              if invalid then (
+                reportParseError diagnostics;
+                code)
+              else
+                let parsetree =
+                  if transformAssertEqual then
+                    Transform.transform ~transforms:[AssertEqualFnToEquals]
+                      parsetree
+                  else parsetree
+                in
+                Res_printer.print_implementation parsetree ~comments
+                |> String.trim |> Cmarkit.Block_line.list_of_string
           in
 
           let mappedCodeBlock =
