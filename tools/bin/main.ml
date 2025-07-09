@@ -12,7 +12,7 @@ let formatDocstringsHelp =
 
 Format ReScript code blocks in docstrings
 
-Usage: rescript-tools format-docstrings <FILE> [--stdout]
+Usage: rescript-tools format-docstrings <FILE> [--stdout] [--transform-assert-equal]
 
 Example: rescript-tools format-docstrings ./path/to/MyModule.res|}
 
