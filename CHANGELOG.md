@@ -10,7 +10,7 @@
 > - :house: [Internal]
 > - :nail_care: [Polish]
 
-# 12.0.0-alpha.15 (Unreleased)
+# 12.0.0-alpha.15
 
 #### :boom: Breaking Change
 
@@ -18,12 +18,28 @@
   - The new `rewatch` based build system is now the default and is exposed through the `rescript` command. The `rewatch` command has been removed.
   - The previous Ninja-based build system is now available via the `rescript legacy` subcommand.
   - Argument `--compiler-args` is now a subcommand `compiler-args`.
-- Remove `String.getSymbol` from standard library. https://github.com/rescript-lang/rescript/pull/7571
-- Remove `String.getSymbolUnsafe` from standard library. https://github.com/rescript-lang/rescript/pull/7571
-- Remove `String.setSymbol` from standard library. https://github.com/rescript-lang/rescript/pull/7571
+- Remove `String.getSymbol`, `String.getSymbolUnsafe`, `String.setSymbol` from standard library. https://github.com/rescript-lang/rescript/pull/7571
 
-#### :rocket: New Feature
+#### :bug: Bug fix
 
+- Ignore inferred arity in functions inside `%raw` functions, leaving to `%ffi` the responsibility to check the arity since it gives an error in case of mismatch. https://github.com/rescript-lang/rescript/pull/7542
+- Pass the rewatch exit code through in wrapper script. https://github.com/rescript-lang/rescript/pull/7565
+- Prop punning when types don't match results in `I/O error: _none_: No such file or directory`. https://github.com/rescript-lang/rescript/pull/7533
+- Pass location to children prop in jsx ppx. https://github.com/rescript-lang/rescript/pull/7540
+- Fix crash when `-bs-g` is used with untagged variants. https://github.com/rescript-lang/rescript/pull/7575
+- Fix issue with preserve mode where `jsx` is declared as an external without a `@module` attribute. https://github.com/rescript-lang/rescript/pull/7591
+- Rewatch: don't add deps to modules that are in packages that are not a dependency. https://github.com/rescript-lang/rescript/pull/7612
+- Rewatch: fix non-unicode stderr. https://github.com/rescript-lang/rescript/pull/7613
+- Fix rewatch considering warning configs of non-local dependencies. https://github.com/rescript-lang/rescript/pull/7614
+- Rewatch: fix panic if package.json name different from module name. https://github.com/rescript-lang/rescript/pull/7616
+- Fix finding the standard library for pnpm. https://github.com/rescript-lang/rescript/pull/7615
+
+#### :nail_care: Polish
+
+- Better error message for when trying to await something that is not a promise. https://github.com/rescript-lang/rescript/pull/7561
+- Better error messages for object field missing and object field type mismatches. https://github.com/rescript-lang/rescript/pull/7580
+- Better error messages for when polymorphic variants does not match for various reasons. https://github.com/rescript-lang/rescript/pull/7596
+- Improved completions for inline records. https://github.com/rescript-lang/rescript/pull/7601
 - Add `OrThrow` aliases for `Belt` functions ending with `Exn`. https://github.com/rescript-lang/rescript/pull/7581, https://github.com/rescript-lang/rescript/pull/7590 The following aliases have been added:
   - `Belt.Array.getOrThrow`
   - `Belt.Array.setOrThrow`
@@ -38,27 +54,6 @@
   - `Belt.MutableQueue.popOrThrow`
   - `Belt.Option.getOrThrow`
   - `Belt.Result.getOrThrow`
-
-#### :bug: Bug fix
-
-- Ignore inferred arity in functions inside `%raw` functions, leaving to `%ffi` the responsibility to check the arity since it gives an error in case of mismatch. https://github.com/rescript-lang/rescript/pull/7542
-- Pass the rewatch exit code through in wrapper script. https://github.com/rescript-lang/rescript/pull/7565
-- Prop punning when types don't match results in I/O error: _none_: No such file or directory. https://github.com/rescript-lang/rescript/pull/7533
-- Pass location to children prop in jsx ppx. https://github.com/rescript-lang/rescript/pull/7540
-- Fix crash when `bs-g` is used with untagged variants. https://github.com/rescript-lang/rescript/pull/7575
-- Fix issue with preserve mode where `jsx` is declared as an external without a `@module` attribute. https://github.com/rescript-lang/rescript/pull/7591
-- Rewatch: don't add deps to modules that are in packages that are not a dependency. https://github.com/rescript-lang/rescript/pull/7612
-- Rewatch: fix non-unicode stderr. https://github.com/rescript-lang/rescript/pull/7613
-- Fix rewatch considering warning configs of non-local dependencies. https://github.com/rescript-lang/rescript/pull/7614
-- Rewatch: fix panic if package.json name different from module name. https://github.com/rescript-lang/rescript/pull/7616
-- Fix finding the standard library for pnpm. https://github.com/rescript-lang/rescript/pull/7615
-
-#### :nail_care: Polish
-
-- Better error message for when trying to await something that is not a promise. https://github.com/rescript-lang/rescript/pull/7561
-- Better error messages for object field missing and object field type mismatches. https://github.com/rescript-lang/rescript/pull/7580
-- Better error messages for when polymorphic variants does not match for various reasons. https://github.com/rescript-lang/rescript/pull/7596
-- Improved completions for inline records. https://github.com/rescript-lang/rescript/pull/7601
 
 #### :house: Internal
 
