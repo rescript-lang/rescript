@@ -79,10 +79,46 @@ let rec deprecated_of_attrs = function
     Some (string_of_opt_payload p)
   | _ :: tl -> deprecated_of_attrs tl
 
+let rec deprecated_of_attrs_with_migrate = function
+  | [] -> None
+  | ( {txt = "deprecated"; _},
+      PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_record (fields, _)}, _)}]
+    )
+    :: _ -> (
+    let reason =
+      fields
+      |> List.find_map (fun field ->
+             match field with
+             | {
+              lid = {txt = Lident "reason"};
+              x = {pexp_desc = Pexp_constant (Pconst_string (reason, _))};
+             } ->
+               Some reason
+             | _ -> None)
+    in
+    let migration_template =
+      fields
+      |> List.find_map (fun field ->
+             match field with
+             | {lid = {txt = Lident "migrate"}; x = migration_template} ->
+               Some migration_template
+             | _ -> None)
+    in
+
+    (* TODO: Validate and error if expected shape mismatches *)
+    match reason with
+    | Some reason -> Some (reason, migration_template)
+    | None -> None)
+  | ({txt = "ocaml.deprecated" | "deprecated"; _}, p) :: _ ->
+    Some (string_of_opt_payload p, None)
+  | _ :: tl -> deprecated_of_attrs_with_migrate tl
+
 let check_deprecated loc attrs s =
-  match deprecated_of_attrs attrs with
+  match deprecated_of_attrs_with_migrate attrs with
   | None -> ()
-  | Some txt -> Location.deprecated loc (cat s txt)
+  | Some (txt, migration_template) ->
+    !Cmt_utils.record_deprecated_used loc txt migration_template;
+    Location.deprecated loc (cat s txt)
 
 let check_deprecated_inclusion ~def ~use loc attrs1 attrs2 s =
   match (deprecated_of_attrs attrs1, deprecated_of_attrs attrs2) with

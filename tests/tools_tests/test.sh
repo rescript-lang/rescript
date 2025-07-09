@@ -33,6 +33,16 @@ for file in src/docstrings-format/*.{res,resi,md}; do
   fi
 done
 
+# Test migrate command
+for file in src/migrate/*.{res,resi}; do
+  output="src/expected/$(basename $file).expected"
+  ../../_build/install/default/bin/rescript-tools migrate "$file" --stdout > $output
+  # # CI. We use LF, and the CI OCaml fork prints CRLF. Convert.
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- $output
+  fi
+done
+
 warningYellow='\033[0;33m'
 successGreen='\033[0;32m'
 reset='\033[0m'

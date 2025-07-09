@@ -1,0 +1,6 @@
+let someNiceString = String.slice("abcdefg", ~start=2, ~end=5)
+
+let someNiceString2 = String.slice(String.slice("abcdefg", ~start=0, ~end=1), ~start=2, ~end=5)
+
+let someNiceString3 = "abcdefg"->String.slice(~start=2, ~end=5)
+
