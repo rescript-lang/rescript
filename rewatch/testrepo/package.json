@@ -13,7 +13,7 @@
     ]
   },
   "dependencies": {
-    "rescript": "https://pkg.pr.new/rescript-lang/rescript@6cac813"
+    "rescript": "12.0.0-alpha.15"
   },
   "scripts": {
     "build": "../target/release/rewatch build .",
