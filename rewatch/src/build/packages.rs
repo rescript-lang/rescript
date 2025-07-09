@@ -426,9 +426,9 @@ fn make_package(config: config::Config, package_path: &Path, is_pinned_dep: bool
         }
     };
 
-    let package_name = read_package_name(package_path).expect("Could not read package name");
+    // let package_name = read_package_name(package_path).expect("Could not read package name");
     Package {
-        name: package_name,
+        name: config.name.clone(),
         config: config.to_owned(),
         source_folders,
         source_files: None,
@@ -490,7 +490,7 @@ pub fn get_source_files(
     package_dir: &Path,
     filter: &Option<regex::Regex>,
     source: &config::PackageSource,
-    build_dev_deps: bool,
+    dev_deps: DevDeps,
 ) -> AHashMap<PathBuf, SourceFileMeta> {
     let mut map: AHashMap<PathBuf, SourceFileMeta> = AHashMap::new();
 
@@ -504,17 +504,22 @@ pub fn get_source_files(
     };
 
     let path_dir = Path::new(&source.dir);
-    match (build_dev_deps, type_) {
-        (false, Some(type_)) if type_ == "dev" => (),
+    let is_clean = match dev_deps {
+        DevDeps::Clean => true,
+        _ => false,
+    };
+    match (dev_deps, type_) {
+        (DevDeps::DontBuild, Some(type_)) if type_ == "dev" => (),
         _ => match read_folders(filter, package_dir, path_dir, recurse) {
             Ok(files) => map.extend(files),
 
-            Err(_e) => log::error!(
+            Err(_e) if !is_clean => log::error!(
                 "Could not read folder: {:?}. Specified in dependency: {}, located {:?}...",
                 path_dir.to_path_buf().into_os_string(),
                 package_name,
                 package_dir
             ),
+            Err(_) => {}
         },
     };
 
@@ -526,22 +531,14 @@ pub fn get_source_files(
 fn extend_with_children(
     filter: &Option<regex::Regex>,
     mut build: AHashMap<String, Package>,
-    build_dev_deps: bool,
+    dev_deps: DevDeps,
 ) -> AHashMap<String, Package> {
     for (_key, package) in build.iter_mut() {
         let mut map: AHashMap<PathBuf, SourceFileMeta> = AHashMap::new();
         package
             .source_folders
             .par_iter()
-            .map(|source| {
-                get_source_files(
-                    &package.name,
-                    Path::new(&package.path),
-                    filter,
-                    source,
-                    build_dev_deps,
-                )
-            })
+            .map(|source| get_source_files(&package.name, Path::new(&package.path), filter, source, dev_deps))
             .collect::<Vec<AHashMap<PathBuf, SourceFileMeta>>>()
             .into_iter()
             .for_each(|source| map.extend(source));
@@ -571,6 +568,13 @@ fn extend_with_children(
     build
 }
 
+#[derive(Clone, Copy)]
+pub enum DevDeps {
+    Build,
+    DontBuild,
+    Clean,
+}
+
 /// Make turns a folder, that should contain a config, into a tree of Packages.
 /// It does so in two steps:
 /// 1. Get all the packages parsed, and take all the source folders from the config
@@ -583,13 +587,13 @@ pub fn make(
     root_folder: &Path,
     workspace_root: &Option<PathBuf>,
     show_progress: bool,
-    build_dev_deps: bool,
+    dev_deps: DevDeps,
 ) -> Result<AHashMap<String, Package>> {
     let map = read_packages(root_folder, workspace_root, show_progress)?;
 
     /* Once we have the deduplicated packages, we can add the source files for each - to minimize
      * the IO */
-    let result = extend_with_children(filter, map, build_dev_deps);
+    let result = extend_with_children(filter, map, dev_deps);
 
     Ok(result)
 }
