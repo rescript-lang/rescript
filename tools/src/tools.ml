@@ -1292,3 +1292,164 @@ module ExtractCodeblocks = struct
                    ])
           |> Protocol.array)
 end
+
+module StringMap = Map.Make (String)
+
+module Migrate = struct
+  let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
+    let loc_to_deprecated_use = Hashtbl.create (List.length deprecated_used) in
+    deprecated_used
+    |> List.iter (fun ({Cmt_utils.source_loc} as d) ->
+           Hashtbl.replace loc_to_deprecated_use source_loc d);
+    let mapper =
+      {
+        Ast_mapper.default_mapper with
+        expr =
+          (fun mapper exp ->
+            match exp with
+            | {
+             pexp_desc =
+               Pexp_apply {funct = {pexp_loc = fn_loc}; args = source_args};
+            }
+              when Hashtbl.mem loc_to_deprecated_use fn_loc -> (
+              let deprecated_info = Hashtbl.find loc_to_deprecated_use fn_loc in
+              Hashtbl.remove loc_to_deprecated_use fn_loc;
+
+              let source_args =
+                source_args
+                |> List.map (fun (label, arg) ->
+                       (label, mapper.expr mapper arg))
+              in
+
+              (* TODO: Here we could add strict and partial mode, to control if args are merged or not. *)
+              match deprecated_info.migration_template with
+              | Some
+                  {
+                    pexp_desc =
+                      Pexp_apply
+                        {
+                          funct = template_funct;
+                          args = template_args;
+                          partial;
+                          transformed_jsx;
+                        };
+                  } ->
+                let labelled_args_map =
+                  template_args
+                  |> List.filter_map (fun (label, arg) ->
+                         match (label, arg) with
+                         | ( ( Asttypes.Labelled {txt = label}
+                             | Optional {txt = label} ),
+                             {
+                               Parsetree.pexp_desc =
+                                 Pexp_extension
+                                   ( {txt = "insert.labelledArgument"},
+                                     PStr
+                                       [
+                                         {
+                                           pstr_desc =
+                                             Pstr_eval
+                                               ( {
+                                                   pexp_desc =
+                                                     Pexp_constant
+                                                       (Pconst_string
+                                                          (arg_name, _));
+                                                 },
+                                                 _ );
+                                         };
+                                       ] );
+                             } ) ->
+                           Some (arg_name, label)
+                         | _ -> None)
+                  |> StringMap.of_list
+                in
+                {
+                  exp with
+                  pexp_desc =
+                    Pexp_apply
+                      {
+                        funct = template_funct;
+                        args =
+                          source_args
+                          |> List.map (fun (label, arg) ->
+                                 match label with
+                                 | Asttypes.Labelled {loc; txt = label}
+                                 | Asttypes.Optional {loc; txt = label}
+                                   when StringMap.mem label labelled_args_map ->
+                                   let mapped_label_name =
+                                     StringMap.find label labelled_args_map
+                                   in
+                                   ( Asttypes.Labelled
+                                       {loc; txt = mapped_label_name},
+                                     arg )
+                                 | label -> (label, arg));
+                        partial;
+                        transformed_jsx;
+                      };
+                }
+              | _ ->
+                (* TODO: More elaborate warnings etc *)
+                (* Invalid config. *)
+                exp)
+            | _ -> Ast_mapper.default_mapper.expr mapper exp);
+      }
+    in
+    mapper
+
+  let migrate ~entryPointFile ~outputMode =
+    let path =
+      match Filename.is_relative entryPointFile with
+      | true -> Unix.realpath entryPointFile
+      | false -> entryPointFile
+    in
+    let result =
+      if Filename.check_suffix path ".res" then
+        let parser =
+          Res_driver.parsing_engine.parse_implementation ~for_printer:true
+        in
+        let {Res_driver.parsetree; comments; source} = parser ~filename:path in
+        match Cmt.loadCmtInfosFromPath ~path with
+        | None ->
+          Error
+            (Printf.sprintf
+               "error: failed to run migration for %s because build artifacts \
+                could not be found. try to build the project"
+               path)
+        | Some {cmt_extra_info = {deprecated_used}} ->
+          let mapper = makeMapper deprecated_used in
+          let astMapped = mapper.structure mapper parsetree in
+          Ok
+            ( Res_printer.print_implementation
+                ~width:Res_printer.default_print_width astMapped ~comments,
+              source )
+      else if Filename.check_suffix path ".resi" then
+        let parser =
+          Res_driver.parsing_engine.parse_interface ~for_printer:true
+        in
+        let {Res_driver.parsetree = signature; comments; source} =
+          parser ~filename:path
+        in
+        let mapper = makeMapper [] in
+        let astMapped = mapper.signature mapper signature in
+        Ok
+          ( Res_printer.print_interface ~width:Res_printer.default_print_width
+              astMapped ~comments,
+            source )
+      else
+        Error
+          (Printf.sprintf
+             "File extension not supported. This command accepts .res, .resi \
+              files")
+    in
+    match result with
+    | Error e -> Error e
+    | Ok (contents, source) when contents <> source -> (
+      match outputMode with
+      | `Stdout -> Ok contents
+      | `File ->
+        let oc = open_out path in
+        Printf.fprintf oc "%s" contents;
+        close_out oc;
+        Ok (Filename.basename path ^ ": File migrated successfully"))
+    | Ok _ -> Ok (Filename.basename path ^ ": File did not need migration")
+end
