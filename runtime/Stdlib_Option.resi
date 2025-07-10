@@ -74,7 +74,7 @@ let forEach: (option<'a>, 'a => unit) => unit
 `getExn(opt, ~message=?)` returns `value` if `opt` is `Some(value)`, otherwise raises an exception with the message provided, or a generic message if no message was provided.
 
 ```rescript
-Option.getExn(Some(3))->assertEqual(3)
+Option.getExn(Some(3)) == 3
 
 switch Option.getExn(None) {
 | exception _ => assert(true)
@@ -98,7 +98,7 @@ let getExn: (option<'a>, ~message: string=?) => 'a
 `getOrThrow(opt, ~message=?)` returns `value` if `opt` is `Some(value)`, otherwise raises an exception with the message provided, or a generic message if no message was provided.
 
 ```rescript
-Option.getOrThrow(Some(3))->assertEqual(3)
+Option.getOrThrow(Some(3)) == 3
 
 switch Option.getOrThrow(None) {
 | exception _ => assert(true)

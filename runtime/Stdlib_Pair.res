@@ -10,7 +10,7 @@ type t<'a, 'b> = ('a, 'b)
 ## Examples
 
 ```rescript
-Pair.first((1, 2))->assertEqual(1)
+Pair.first((1, 2)) == 1
 ```
 */
 external first: (('a, 'b)) => 'a = "%field0"
@@ -21,7 +21,7 @@ external first: (('a, 'b)) => 'a = "%field0"
 ## Examples
 
 ```rescript
-Pair.second((1, 2))->assertEqual(2)
+Pair.second((1, 2)) == 2
 ```
 */
 external second: (('a, 'b)) => 'b = "%field1"
@@ -41,9 +41,9 @@ equality on the first element and `f2` for equality on the second element.
 ## Examples
 
 ```rescript
-Pair.equal((1, "test"), (1, "test"), Int.equal, String.equal)->assertEqual(true)
+Pair.equal((1, "test"), (1, "test"), Int.equal, String.equal) == true
 
-Pair.equal((1, "test"), (2, "test"), Int.equal, String.equal)->assertEqual(false)
+Pair.equal((1, "test"), (2, "test"), Int.equal, String.equal) == false
 ```
 */
 let equal = ((a1, a2), (b1, b2), eq1, eq2) => eq1(a1, b1) && eq2(a2, b2)
@@ -56,9 +56,9 @@ if they are equal, the second element is compared.
 ## Examples
 
 ```rescript
-Pair.compare((1, "a"), (1, "a"), Int.compare, String.compare)->assertEqual(Ordering.equal)
-Pair.compare((1, "a"), (1, "b"), Int.compare, String.compare)->assertEqual(Ordering.less)
-Pair.compare((2, "a"), (1, "b"), Int.compare, String.compare)->assertEqual(Ordering.greater)
+Pair.compare((1, "a"), (1, "a"), Int.compare, String.compare) == Ordering.equal
+Pair.compare((1, "a"), (1, "b"), Int.compare, String.compare) == Ordering.less
+Pair.compare((2, "a"), (1, "b"), Int.compare, String.compare) == Ordering.greater
 ```
 */
 let compare = ((a1, a2), (b1, b2), cmp1, cmp2) =>

@@ -79,9 +79,7 @@ Raises an Error in case `None` is provided. Use with care.
 ## Examples
 
 ```rescript
-Some(3)
-->Belt.Option.getExn
-->assertEqual(3)
+Some(3)->Belt.Option.getExn == 3
 
 switch Belt.Option.getExn(None) {
 // Raises an exception
@@ -98,9 +96,7 @@ Raises an Error in case `None` is provided. Use with care.
 ## Examples
 
 ```rescript
-Some(3)
-->Belt.Option.getOrThrow
-->assertEqual(3)
+Some(3)->Belt.Option.getOrThrow == 3
 
 switch Belt.Option.getOrThrow(None) {
 // Raises an exception

@@ -142,9 +142,7 @@ let processMyAsyncIterator = async () => {
     break := done
 
     if done {
-      value
-      ->Option.isNone
-      ->assertEqual(true)
+      value->Option.isNone == true
     }
   }
 }

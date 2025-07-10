@@ -139,7 +139,7 @@ let getWithDefault: (t<'a>, 'a) => 'a
 `getExn(value)` raises an exception if `null`, otherwise returns the value.
 
 ```rescript
-Null.getExn(Null.make(3))->assertEqual(3)
+Null.getExn(Null.make(3)) == 3
 
 switch Null.getExn(%raw("'ReScript'")) {
 | exception Invalid_argument(_) => assert(false)
@@ -163,7 +163,7 @@ let getExn: t<'a> => 'a
 `getOrThrow(value)` raises an exception if `null`, otherwise returns the value.
 
 ```rescript
-Null.getOrThrow(Null.make(3))->assertEqual(3)
+Null.getOrThrow(Null.make(3)) == 3
 
 switch Null.getOrThrow(%raw("'ReScript'")) {
 | exception Invalid_argument(_) => assert(false)

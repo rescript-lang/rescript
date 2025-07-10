@@ -108,8 +108,7 @@ let iterator: Iterator.t<(string, int)> = %raw(`
 `)
 iterator
 ->Dict.fromIterator
-->Dict.valuesToArray
-->assertEqual([1, 2])
+->Dict.valuesToArray == [1, 2]
 ```
 */
 @val
@@ -252,10 +251,10 @@ Be aware that it uses the JavaScript `in` operator under the hood.
 ```rescript
 let dict = dict{"key1": Some(1), "key2": None}
 
-dict->Dict.has("key1")->assertEqual(true)
-dict->Dict.has("key2")->assertEqual(true)
-dict->Dict.has("key3")->assertEqual(false)
-dict->Dict.has("toString")->assertEqual(true)
+dict->Dict.has("key1") == true
+dict->Dict.has("key2") == true
+dict->Dict.has("key3") == false
+dict->Dict.has("toString") == true
 ```
 */
 external has: (dict<'a>, string) => bool = "%dict_has"

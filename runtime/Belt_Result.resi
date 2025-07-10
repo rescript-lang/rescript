@@ -39,9 +39,7 @@ type t<'a, 'b> = result<'a, 'b> =
 ## Examples
 
 ```rescript
-Belt.Result.Ok(42)
-->Belt.Result.getExn
-->assertEqual(42)
+Belt.Result.Ok(42)->Belt.Result.getExn == 42
 
 switch Belt.Result.getExn(Belt.Result.Error("Invalid data")) {
 // raise a exception
@@ -58,9 +56,7 @@ let getExn: t<'a, 'b> => 'a
 ## Examples
 
 ```rescript
-Belt.Result.Ok(42)
-->Belt.Result.getOrThrow
-->assertEqual(42)
+Belt.Result.Ok(42)->Belt.Result.getOrThrow == 42
 
 switch Belt.Result.getOrThrow(Belt.Result.Error("Invalid data")) {
 // raise a exception

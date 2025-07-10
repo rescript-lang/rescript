@@ -69,7 +69,7 @@ with care.
 ## Examples
 
 ```rescript
-Belt.List.headExn(list{1, 2, 3})->assertEqual(1)
+Belt.List.headExn(list{1, 2, 3}) == 1
 
 switch Belt.List.headExn(list{}) {
 // Raises an Error
@@ -87,7 +87,7 @@ with care.
 ## Examples
 
 ```rescript
-Belt.List.headOrThrow(list{1, 2, 3})->assertEqual(1)
+Belt.List.headOrThrow(list{1, 2, 3}) == 1
 
 switch Belt.List.headOrThrow(list{}) {
 // Raises an Error
@@ -119,7 +119,7 @@ with care.
 ## Examples
 
 ```rescript
-Belt.List.tailExn(list{1, 2, 3})->assertEqual(list{2, 3})
+Belt.List.tailExn(list{1, 2, 3}) == list{2, 3}
 
 switch Belt.List.tailExn(list{}) {
 // Raises an Error
@@ -137,7 +137,7 @@ with care.
 ## Examples
 
 ```rescript
-Belt.List.tailOrThrow(list{1, 2, 3})->assertEqual(list{2, 3})
+Belt.List.tailOrThrow(list{1, 2, 3}) == list{2, 3}
 
 switch Belt.List.tailOrThrow(list{}) {
 // Raises an Error
@@ -186,7 +186,7 @@ length. Use with care.
 ```rescript
 let abc = list{"A", "B", "C"}
 
-abc->Belt.List.getExn(1)->assertEqual("B")
+abc->Belt.List.getExn(1) == "B"
 
 switch abc->Belt.List.getExn(4) {
 // Raises an Error
@@ -206,7 +206,7 @@ length. Use with care.
 ```rescript
 let abc = list{"A", "B", "C"}
 
-abc->Belt.List.getOrThrow(1)->assertEqual("B")
+abc->Belt.List.getOrThrow(1) == "B"
 
 switch abc->Belt.List.getOrThrow(4) {
 // Raises an Error
@@ -450,9 +450,7 @@ Equivalent to `Belt.List.map(someList, f)->Belt.List.reverse`
 ## Examples
 
 ```rescript
-list{3, 4, 5}
-->Belt.List.mapReverse(x => x * x)
-->assertEqual(list{25, 16, 9})
+list{3, 4, 5}->Belt.List.mapReverse(x => x * x) == list{25, 16, 9}
 ```
 */
 let mapReverse: (t<'a>, 'a => 'b) => t<'b>
@@ -934,9 +932,7 @@ In other words:
 ## Examples
 
 ```rescript
-list{1, 2, 3, 4}
-->Belt.List.partition(x => x > 2)
-->assertEqual((list{3, 4}, list{1, 2}))
+list{1, 2, 3, 4}->Belt.List.partition(x => x > 2) == (list{3, 4}, list{1, 2})
 ```
 */
 let partition: (t<'a>, 'a => bool) => (t<'a>, t<'a>)
@@ -969,7 +965,8 @@ list{(1, "a"), (2, "b"), (3, "c")}->Belt.List.getAssoc(3, (a, b) => a == b) /* S
 
 list{(9, "morning"), (15, "afternoon"), (22, "night")}->Belt.List.getAssoc(15, (k, item) =>
   k /* 15 */ == item
- /* 9, 5, 22 */) == Some("afternoon")
+) == Some("afternoon")
+/* 9, 5, 22 */
 ```
 */
 let getAssoc: (t<('a, 'c)>, 'b, ('a, 'b) => bool) => option<'c>
@@ -988,7 +985,8 @@ list{(1, "a"), (2, "b"), (3, "c")}->Belt.List.hasAssoc(1, (a, b) => a == b) == t
 
 list{(9, "morning"), (15, "afternoon"), (22, "night")}->Belt.List.hasAssoc(25, (k, item) =>
   k /* 25 */ == item
- /* 9, 5, 22 */) == false
+) == false
+/* 9, 5, 22 */
 ```
 */
 let hasAssoc: (t<('a, 'c)>, 'b, ('a, 'b) => bool) => bool
@@ -1008,7 +1006,8 @@ list{(1, "a"), (2, "b"), (3, "c")}->Belt.List.removeAssoc(1, (a, b) => a == b) =
 
 list{(9, "morning"), (15, "afternoon"), (22, "night")}->Belt.List.removeAssoc(9, (k, item) =>
   k /* 9 */ == item
- /* 9, 5, 22 */) == list{(15, "afternoon"), (22, "night")}
+) == list{(15, "afternoon"), (22, "night")}
+/* 9, 5, 22 */
 ```
 */
 let removeAssoc: (t<('a, 'c)>, 'b, ('a, 'b) => bool) => t<('a, 'c)>

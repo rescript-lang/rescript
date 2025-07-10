@@ -702,7 +702,7 @@ module FormatCodeblocks = struct
                               ({txt = Lident "assertEqual"} as identTxt);
                         } as ident;
                       partial = false;
-                      args = [(Nolabel, _arg1); (Nolabel, _arg2)] as args;
+                      args = [(Nolabel, _); (Nolabel, _)] as args;
                     }
                   when hasTransform AssertEqualFnToEquals ->
                   {
@@ -717,6 +717,49 @@ module FormatCodeblocks = struct
                                 Pexp_ident {identTxt with txt = Lident "=="};
                             };
                           args;
+                          partial = false;
+                          transformed_jsx = false;
+                        };
+                  }
+                  (* Piped *)
+                | Pexp_apply
+                    {
+                      funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};
+                      partial = false;
+                      args =
+                        [
+                          (_, lhs);
+                          ( Nolabel,
+                            {
+                              pexp_desc =
+                                Pexp_apply
+                                  {
+                                    funct =
+                                      {
+                                        pexp_desc =
+                                          Pexp_ident
+                                            ({txt = Lident "assertEqual"} as
+                                             identTxt);
+                                      } as ident;
+                                    partial = false;
+                                    args = [rhs];
+                                  };
+                            } );
+                        ];
+                    }
+                  when hasTransform AssertEqualFnToEquals ->
+                  {
+                    exp with
+                    pexp_desc =
+                      Pexp_apply
+                        {
+                          funct =
+                            {
+                              ident with
+                              pexp_desc =
+                                Pexp_ident {identTxt with txt = Lident "=="};
+                            };
+                          args = [(Nolabel, lhs); rhs];
                           partial = false;
                           transformed_jsx = false;
                         };

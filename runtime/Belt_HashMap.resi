@@ -286,9 +286,7 @@ let s0 = Belt.HashMap.make(~hintSize=10, ~id=module(IntHash))
 Belt.HashMap.set(s0, 1, "value1")
 Belt.HashMap.set(s0, 2, "value2")
 
-s0
-->Belt.HashMap.reduce("", (acc, _, value) => acc ++ (", " ++ value))
-->assertEqual(", value1, value2")
+s0->Belt.HashMap.reduce("", (acc, _, value) => acc ++ (", " ++ value)) == ", value1, value2"
 ```
 
 ## More Examples

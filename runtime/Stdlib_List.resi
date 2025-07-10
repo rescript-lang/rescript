@@ -77,7 +77,7 @@ let head: list<'a> => option<'a>
 ## Examples
 
 ```rescript
-List.headExn(list{1, 2, 3})->assertEqual(1)
+List.headExn(list{1, 2, 3}) == 1
 
 switch List.headExn(list{}) {
 | exception Not_found => assert(true)
@@ -99,7 +99,7 @@ let headExn: list<'a> => 'a
 ## Examples
 
 ```rescript
-List.headOrThrow(list{1, 2, 3})->assertEqual(1)
+List.headOrThrow(list{1, 2, 3}) == 1
 
 switch List.headOrThrow(list{}) {
 | exception Not_found => assert(true)
@@ -133,7 +133,7 @@ let tail: list<'a> => option<list<'a>>
 ## Examples
 
 ```rescript
-List.tailExn(list{1, 2, 3})->assertEqual(list{2, 3})
+List.tailExn(list{1, 2, 3}) == list{2, 3}
 
 switch List.tailExn(list{}) {
 | exception Not_found => assert(true)
@@ -154,7 +154,7 @@ let tailExn: list<'a> => list<'a>
 ## Examples
 
 ```rescript
-List.tailOrThrow(list{1, 2, 3})->assertEqual(list{2, 3})
+List.tailOrThrow(list{1, 2, 3}) == list{2, 3}
 
 switch List.tailOrThrow(list{}) {
 | exception Not_found => assert(true)
@@ -205,9 +205,7 @@ let get: (list<'a>, int) => option<'a>
 ```rescript
 let abc = list{"A", "B", "C"}
 
-abc
-->List.getExn(1)
-->assertEqual("B")
+abc->List.getExn(1) == "B"
 
 switch abc->List.getExn(4) {
 | exception Not_found => assert(true)
@@ -230,9 +228,7 @@ let getExn: (list<'a>, int) => 'a
 ```rescript
 let abc = list{"A", "B", "C"}
 
-abc
-->List.getOrThrow(1)
-->assertEqual("B")
+abc->List.getOrThrow(1) == "B"
 
 switch abc->List.getOrThrow(4) {
 | exception Not_found => assert(true)
@@ -347,7 +343,7 @@ let splitAt: (list<'a>, int) => option<(list<'a>, list<'a>)>
 ## Examples
 
 ```rescript
-List.concat(list{1, 2, 3}, list{4, 5})->assertEqual(list{1, 2, 3, 4, 5})
+List.concat(list{1, 2, 3}, list{4, 5}) == list{1, 2, 3, 4, 5}
 ```
 */
 let concat: (list<'a>, list<'a>) => list<'a>
@@ -892,7 +888,8 @@ list{(1, "a"), (2, "b"), (3, "c")}->List.getAssoc(3, (a, b) => a == b) // Some("
 
 list{(9, "morning"), (15, "afternoon"), (22, "night")}->List.getAssoc(15, (k, item) =>
   k /* 15 */ == item
- /* 9, 5, 22 */) == Some("afternoon")
+) == Some("afternoon")
+/* 9, 5, 22 */
 ```
 */
 @deprecated("Use a `Map` instead")
@@ -909,7 +906,8 @@ list{(1, "a"), (2, "b"), (3, "c")}->List.hasAssoc(1, (a, b) => a == b) // true
 
 list{(9, "morning"), (15, "afternoon"), (22, "night")}->List.hasAssoc(25, (k, item) =>
   k /* 25 */ == item
- /* 9, 5, 22 */) == false
+) == false
+/* 9, 5, 22 */
 ```
 */
 @deprecated("Use a `Map` instead")
@@ -927,7 +925,8 @@ list{(1, "a"), (2, "b"), (3, "c")}->List.removeAssoc(1, (a, b) => a == b) // lis
 
 list{(9, "morning"), (15, "afternoon"), (22, "night")}->List.removeAssoc(9, (k, item) =>
   k /* 9 */ == item
- /* 9, 5, 22 */) == list{(15, "afternoon"), (22, "night")}
+) == list{(15, "afternoon"), (22, "night")}
+/* 9, 5, 22 */
 ```
 */
 @deprecated("Use a `Map` instead")
