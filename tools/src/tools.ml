@@ -1048,7 +1048,7 @@ module Migrate = struct
           let astMapped = mapper.structure mapper parsetree in
           Ok
             ( Res_printer.print_implementation
-                ~width:Res_multi_printer.default_print_width astMapped ~comments,
+                ~width:Res_printer.default_print_width astMapped ~comments,
               source )
       else if Filename.check_suffix path ".resi" then
         let parser =
@@ -1060,8 +1060,8 @@ module Migrate = struct
         let mapper = makeMapper [] in
         let astMapped = mapper.signature mapper signature in
         Ok
-          ( Res_printer.print_interface
-              ~width:Res_multi_printer.default_print_width astMapped ~comments,
+          ( Res_printer.print_interface ~width:Res_printer.default_print_width
+              astMapped ~comments,
             source )
       else
         Error
