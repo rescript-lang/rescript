@@ -22,7 +22,7 @@
     "@testrepo/namespace-casing",
     "@testrepo/with-dev-deps",
     "@testrepo/compiled-by-legacy",
-    "@testrepo/package-name-mismatch"
+    "@testrepo/nonexisting-dev-files"
   ],
   "bs-dependencies": [
     "@testrepo/main",
@@ -32,7 +32,7 @@
     "@testrepo/namespace-casing",
     "@testrepo/with-dev-deps",
     "@testrepo/compiled-by-legacy",
-    "@testrepo/package-name-mismatch"
+    "@testrepo/nonexisting-dev-files"
   ],
   "reason": {
     "react-jsx": 3
