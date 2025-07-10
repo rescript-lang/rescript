@@ -21,7 +21,8 @@
     "@testrepo/new-namespace",
     "@testrepo/namespace-casing",
     "@testrepo/with-dev-deps",
-    "@testrepo/compiled-by-legacy"
+    "@testrepo/compiled-by-legacy",
+    "@testrepo/package-name-mismatch"
   ],
   "bs-dependencies": [
     "@testrepo/main",
@@ -30,7 +31,8 @@
     "@testrepo/new-namespace",
     "@testrepo/namespace-casing",
     "@testrepo/with-dev-deps",
-    "@testrepo/compiled-by-legacy"
+    "@testrepo/compiled-by-legacy",
+    "@testrepo/package-name-mismatch"
   ],
   "reason": {
     "react-jsx": 3
