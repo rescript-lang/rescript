@@ -118,13 +118,12 @@ let expandTypes ~file ~package ~supportsMarkdownLinks typ =
       `InlineType )
   | all ->
     let typesSeen = ref StringSet.empty in
-    let typeId ~(env : QueryEnv.t) ~name =
-      env.file.moduleName :: List.rev (name :: env.pathRev) |> String.concat "."
-    in
     ( all
       (* Don't produce duplicate type definitions for recursive types *)
-      |> List.filter (fun {env; name} ->
-             let typeId = typeId ~env ~name in
+      |> List.filter (fun {env; name; loc} ->
+             let typeId =
+               TypeUtils.typeId ~env ~name:(Location.mkloc name loc)
+             in
              if StringSet.mem typeId !typesSeen then false
              else (
                typesSeen := StringSet.add typeId !typesSeen;
