@@ -252,11 +252,7 @@ pub fn string_ends_with_any(s: &Path, suffixes: &[&str]) -> bool {
 
 fn path_to_ast_extension(path: &Path) -> &str {
     let extension = path.extension().unwrap().to_str().unwrap();
-    if extension.ends_with("i") {
-        ".iast"
-    } else {
-        ".ast"
-    }
+    if extension.ends_with("i") { ".iast" } else { ".ast" }
 }
 
 pub fn get_ast_path(source_file: &Path) -> PathBuf {

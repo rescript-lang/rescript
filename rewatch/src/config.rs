@@ -454,7 +454,10 @@ impl Config {
             },
             Ok(false) => vec![],
             Err(_) => {
-                eprintln!("Could not establish Rescript Version number for uncurried mode. Defaulting to Rescript < 11, disabling uncurried mode. Please specify an exact version if you need > 11 and default uncurried mode. Version: {}", version);
+                eprintln!(
+                    "Could not establish Rescript Version number for uncurried mode. Defaulting to Rescript < 11, disabling uncurried mode. Please specify an exact version if you need > 11 and default uncurried mode. Version: {}",
+                    version
+                );
                 vec![]
             }
         }
@@ -464,6 +467,37 @@ impl Config {
         match &self.gentype_config {
             Some(_) => vec!["-bs-gentype".to_string()],
             None => vec![],
+        }
+    }
+
+    pub fn get_warning_args(&self, is_local_dep: bool) -> Vec<String> {
+        // Ignore warning config for non local dependencies (node_module dependencies)
+        if !is_local_dep {
+            return vec![];
+        }
+
+        match self.warnings {
+            None => vec![],
+            Some(ref warnings) => {
+                let warn_number = match warnings.number {
+                    None => vec![],
+                    Some(ref warnings) => {
+                        vec!["-w".to_string(), warnings.to_string()]
+                    }
+                };
+
+                let warn_error = match warnings.error {
+                    Some(Error::Catchall(true)) => {
+                        vec!["-warn-error".to_string(), "A".to_string()]
+                    }
+                    Some(Error::Qualified(ref errors)) => {
+                        vec!["-warn-error".to_string(), errors.to_string()]
+                    }
+                    _ => vec![],
+                };
+
+                [warn_number, warn_error].concat()
+            }
         }
     }
 

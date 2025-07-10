@@ -128,7 +128,7 @@ fn main() -> Result<()> {
 fn get_lock(folder: &str) -> lock::Lock {
     match lock::get(folder) {
         lock::Lock::Error(error) => {
-            println!("Could not start Rewatch: {error}");
+            println!("Could not start ReScript build: {error}");
             std::process::exit(1);
         }
         acquired_lock => acquired_lock,

@@ -522,7 +522,7 @@ jobs:
           git commit -m "Update API docs for ${{ github.ref_name }}"
           git push
 
-  test-integration:
+  test-installation-npm:
     needs:
       - pkg-pr-new
     strategy:
@@ -573,6 +573,86 @@ jobs:
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
+  test-installation-pnpm:
+    needs:
+      - pkg-pr-new
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-13
+          - os: macos-14
+          - os: ubuntu-24.04
+          - os: ubuntu-24.04-arm
+          - os: windows-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      RUST_BACKTRACE: "1"
+    steps:
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Run integration tests with the oldest supported node version.
+          node-version: 20
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make test directory
+        id: tmp-dir
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            dir=$(powershell -Command "[System.IO.Path]::GetTempPath() + [System.Guid]::NewGuid().ToString()" | tr -d '\r')
+            mkdir -p "$dir"
+          else
+            dir=$(mktemp -d)
+          fi
+          echo "path=$dir" >> "$GITHUB_OUTPUT"
+          cp -r tests/package_tests/installation_test/* "$dir"
+
+      - name: Install ReScript package
+        run: |
+          COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          pnpm i "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.path }}
+
+      - name: Test installation
+        run: pnpm rescript -h && pnpm rescript legacy build && cat src/Test.res.js
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.path }}
+
+  test-integration-rewatch:
+    needs:
+      - pkg-pr-new
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-13
+          - os: macos-14
+          - os: ubuntu-24.04
+          - os: ubuntu-24.04-arm
+          - os: windows-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      RUST_BACKTRACE: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Run integration tests with the oldest supported node version.
+          node-version: 20
+
       - name: Install ReScript package in rewatch/testrepo
         run: |
           COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
@@ -586,7 +666,9 @@ jobs:
 
   publish:
     needs:
-      - test-integration
+      - test-installation-npm
+      - test-installation-pnpm
+      - test-integration-rewatch
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04-arm
     steps:

@@ -102,7 +102,7 @@ let printSignature ~extractor ~signature =
   Printtyp.reset_names ();
   let sigItemToString (item : Outcometree.out_sig_item) =
     item |> Res_outcome_printer.print_out_sig_item_doc
-    |> Res_doc.to_string ~width:Res_multi_printer.default_print_width
+    |> Res_doc.to_string ~width:Res_printer.default_print_width
   in
 
   let genSigStrForInlineAttr lines attributes id vd =

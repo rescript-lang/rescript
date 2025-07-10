@@ -9,7 +9,7 @@ use sysinfo::{PidExt, System, SystemExt};
  * that's running, when trying to aquire a lock, it checks wether that process is still running. If
  * not, it rewrites the lockfile to have its own PID instead. */
 
-pub static LOCKFILE: &str = "rewatch.lock";
+pub static LOCKFILE: &str = "rescript.lock";
 
 pub enum Error {
     Locked(u32),
@@ -21,7 +21,7 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let msg = match self {
-            Error::Locked(pid) => format!("Rewatch is already running. The process ID (PID) is {}", pid),
+            Error::Locked(pid) => format!("A ReScript build is already running. The process ID (PID) is {}", pid),
             Error::ParsingLockfile(e) => format!(
                 "Could not parse lockfile: \n {} \n  (try removing it and running the command again)",
                 e
