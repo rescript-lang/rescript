@@ -32,21 +32,11 @@ different _hash_ functions will have different type.
 ## Examples
 
 ```rescript
-module I0 = unpack(
-  Belt.Id.hashable(
-    ~hash=(a: int) => land(a, 65535),
-    ~eq=(a, b) => a == b,
-  )
-)
+module I0 = unpack(Belt.Id.hashable(~hash=(a: int) => land(a, 65535), ~eq=(a, b) => a == b))
 
 let s0 = Belt.HashSet.make(~id=module(I0), ~hintSize=40)
 
-module I1 = unpack(
-  Belt.Id.hashable(
-    ~hash=(a: int) => land(a, 255),
-    ~eq=(a, b) => a == b,
-  )
-)
+module I1 = unpack(Belt.Id.hashable(~hash=(a: int) => land(a, 255), ~eq=(a, b) => a == b))
 
 let s1 = Belt.HashSet.make(~id=module(I1), ~hintSize=40)
 

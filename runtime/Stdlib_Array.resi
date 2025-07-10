@@ -307,11 +307,11 @@ Beware this will *mutate* the array.
 ```rescript
 let array = []
 array->Array.removeInPlace(0)
-assertEqual(array, []) // Removing from an empty array does nothing
+array == [] // Removing from an empty array does nothing
 
 let array2 = ["Hello", "Hi", "Good bye"]
 array2->Array.removeInPlace(1)
-assertEqual(array2, ["Hello", "Good bye"]) // Removes the item at index 1
+array2 == ["Hello", "Good bye"] // Removes the item at index 1
 ```
  */
 @send
@@ -571,7 +571,7 @@ let myArray = [1, 2, 3]
 let copyOfMyArray = myArray->Array.copy
 
 copyOfMyArray->assertEqual([1, 2, 3])
-assertEqual(myArray === copyOfMyArray, false)
+(myArray === copyOfMyArray) == false
 ```
 */
 @send
@@ -765,7 +765,8 @@ array
 ->Array.findIndex(item => item == ReScript)
 ->assertEqual(0)
 
-array->Array.findIndex(item => item == TypeScript)
+array
+->Array.findIndex(item => item == TypeScript)
 ->assertEqual(-1)
 ```
 */
@@ -786,11 +787,13 @@ type languages = ReScript | TypeScript | JavaScript
 
 let array = [ReScript, JavaScript]
 
-let isReScriptFirst = array->Array.findIndexWithIndex((item, index) => index === 0 && item == ReScript)
-let isTypeScriptFirst = array->Array.findIndexWithIndex((item, index) => index === 0 && item == TypeScript)
+let isReScriptFirst =
+  array->Array.findIndexWithIndex((item, index) => index === 0 && item == ReScript)
+let isTypeScriptFirst =
+  array->Array.findIndexWithIndex((item, index) => index === 0 && item == TypeScript)
 
-assertEqual(isReScriptFirst, 0)
-assertEqual(isTypeScriptFirst, -1)
+isReScriptFirst == 0
+isTypeScriptFirst == -1
 ```
 */
 @send
@@ -814,7 +817,8 @@ array
 ->Array.findLastIndex(item => item == ReScript)
 ->assertEqual(2)
 
-array->Array.findLastIndex(item => item == TypeScript)
+array
+->Array.findLastIndex(item => item == TypeScript)
 ->assertEqual(-1)
 ```
 */
@@ -835,11 +839,13 @@ type languages = ReScript | TypeScript | JavaScript
 
 let array = [ReScript, JavaScript, JavaScript, ReScript]
 
-let isReScriptLast = array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == ReScript)
-let isTypeScriptLast = array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == TypeScript)
+let isReScriptLast =
+  array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == ReScript)
+let isTypeScriptLast =
+  array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == TypeScript)
 
-assertEqual(isReScriptLast, 3)
-assertEqual(isTypeScriptLast, -1)
+isReScriptLast == 3
+isTypeScriptLast == -1
 ```
 */
 @send
@@ -891,7 +897,7 @@ See [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 let array = ["Hello", "Hi", "Good bye"]
 let mappedArray = array->Array.map(greeting => greeting ++ " to you")
 
-assertEqual(mappedArray, ["Hello to you", "Hi to you", "Good bye to you"])
+mappedArray == ["Hello to you", "Hi to you", "Good bye to you"]
 ```
 */
 @send
@@ -907,11 +913,9 @@ See [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 ```rescript
 let array = ["Hello", "Hi", "Good bye"]
 let mappedArray =
-  array->Array.mapWithIndex((greeting, index) =>
-    greeting ++ " at position " ++ Int.toString(index)
-  )
+  array->Array.mapWithIndex((greeting, index) => greeting ++ " at position " ++ Int.toString(index))
 
-assertEqual(mappedArray, ["Hello at position 0", "Hi at position 1", "Good bye at position 2"])
+mappedArray == ["Hello at position 0", "Hi at position 1", "Good bye at position 2"]
 ```
 */
 @send
@@ -948,7 +952,11 @@ Applies `fn` to each element of `xs` from beginning to end. Function `fn` has th
 ```rescript
 Array.reduceWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i)->assertEqual(16)
 
-Array.reduceWithIndex([1, 2, 3], list{}, (acc, v, i) => list{v + i, ...acc})->assertEqual(list{5, 3, 1})
+Array.reduceWithIndex([1, 2, 3], list{}, (acc, v, i) => list{v + i, ...acc})->assertEqual(list{
+  5,
+  3,
+  1,
+})
 
 Array.reduceWithIndex([], list{}, (acc, v, i) => list{v + i, ...acc})->assertEqual(list{})
 ```
@@ -1114,7 +1122,7 @@ Beware this will *mutate* the array, and is *unsafe*.
 let array = ["Hello", "Hi", "Good bye"]
 array->Array.setUnsafe(1, "Hello")
 
-assertEqual(array[1], Some("Hello"))
+array[1] == Some("Hello")
 ```
 */
 external setUnsafe: (array<'a>, int, 'a) => unit = "%array_unsafe_set"
@@ -1298,7 +1306,6 @@ type language = ReScript | TypeScript | JavaScript
 
 let array = [ReScript, TypeScript, JavaScript]
 
-
 array
 ->Array.flatMapWithIndex((item, index) =>
   switch item {
@@ -1388,7 +1395,7 @@ See [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaS
 
 ```rescript
 let array = [5, 6, 7]
-let iterator : Iterator.t<(int, int)> = array->Array.entries
+let iterator: Iterator.t<(int, int)> = array->Array.entries
 iterator->Iterator.next->assertEqual({done: false, value: Some((0, 5))})
 iterator->Iterator.next->assertEqual({done: false, value: Some((1, 6))})
 ```
@@ -1405,7 +1412,7 @@ See [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 
 ```rescript
 let array = [5, 6, 7]
-let iterator : Iterator.t<int> = array->Array.values
+let iterator: Iterator.t<int> = array->Array.values
 iterator->Iterator.next->assertEqual({done: false, value: Some(5)})
 iterator->Iterator.next->assertEqual({done: false, value: Some(6)})
 ```

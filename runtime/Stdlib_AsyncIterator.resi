@@ -39,17 +39,18 @@ let asyncIterator = AsyncIterator.make(async () => {
 
   {
     AsyncIterator.value: Some(currentValue),
-    done: currentValue >= 3
+    done: currentValue >= 3,
   }
 })
 
 // This will log 1, 2, 3
-let main = async () => await asyncIterator->AsyncIterator.forEach(value =>
-  switch value {
-  | Some(value) => Console.log(value)
-  | None => ()
-  }
-)
+let main = async () =>
+  await asyncIterator->AsyncIterator.forEach(value =>
+    switch value {
+    | Some(value) => Console.log(value)
+    | None => ()
+    }
+  )
 
 main()->ignore
 ```
@@ -70,7 +71,7 @@ let asyncIterator = AsyncIterator.make(async () => {
   let currentValue = context.contents
   // Increment current value
   context := currentValue + 1
-  
+
   if currentValue >= 3 {
     AsyncIterator.done()
   } else {
@@ -89,12 +90,12 @@ let value: 'value => value<'value>
   ## Examples
   ```rescript
   let context = ref(0)
-
+  
   let asyncIterator = AsyncIterator.make(async () => {
     let currentValue = context.contents
     // Increment current value
     context := currentValue + 1
-    
+  
     if currentValue >= 3 {
       AsyncIterator.done()
     } else {
@@ -178,7 +179,7 @@ let asyncIterator: AsyncIterator.t<(string, string)> = %raw(`
 let main = async () =>
   await asyncIterator->AsyncIterator.forEach(v => {
     switch v {
-    | Some(("second", value)) => assertEqual(value, "2")
+    | Some(("second", value)) => value == "2"
     | _ => ()
     }
   })

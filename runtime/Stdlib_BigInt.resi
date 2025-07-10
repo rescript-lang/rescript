@@ -59,7 +59,7 @@ switch BigInt.fromStringOrThrow("a") {
 external fromStringOrThrow: string => bigint = "BigInt"
 
 /**
-Parses the given `string` into a `bigint` using JavaScript semantics. Returns 
+Parses the given `string` into a `bigint` using JavaScript semantics. Returns
 `Some(bigint)` if the string can be parsed, `None` otherwise.
 
 ## Examples
@@ -97,7 +97,7 @@ BigInt.fromInt(-456)->assertEqual(-456n)
 @val external fromInt: int => bigint = "BigInt"
 
 /**
-Converts a `float` to a `bigint` using JavaScript semantics. 
+Converts a `float` to a `bigint` using JavaScript semantics.
 Throws an exception if the float is not an integer or is infinite/NaN.
 
 ## Examples

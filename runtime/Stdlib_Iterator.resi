@@ -85,7 +85,8 @@ map->Map.set("someKey", "someValue")
 map->Map.set("someKey2", "someValue2")
 
 // `Map.keys` returns all keys of the map as an iterator.
-let mapKeysAsArray = map
+let mapKeysAsArray =
+  map
   ->Map.keys
   ->Iterator.toArrayWithMapper(key => key->String.length)
 
@@ -133,7 +134,7 @@ See [Iterator.prototype.drop](https://developer.mozilla.org/en-US/docs/Web/JavaS
 
 ## Examples
 ```rescript
-let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.values
+let fibonacci: Iterator.t<int> = [1, 1, 2, 3, 5, 8, 13, 21]->Array.values
 
 let seq = fibonacci->Iterator.drop(2)
 seq->Iterator.next->assertEqual({done: false, value: Some(2)})
@@ -155,7 +156,7 @@ See [Iterator.prototype.every](https://developer.mozilla.org/en-US/docs/Web/Java
 
 ## Examples
 ```rescript
-let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.values
+let fibonacci: Iterator.t<int> = [1, 1, 2, 3, 5, 8, 13, 21]->Array.values
 
 let areAllEven = fibonacci->Iterator.every(n => n % 2 == 0)
 areAllEven->assertEqual(false)
@@ -176,7 +177,7 @@ See [Iterator.prototype.filter](https://developer.mozilla.org/en-US/docs/Web/Jav
 
 ## Examples
 ```rescript
-let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.values
+let fibonacci: Iterator.t<int> = [1, 1, 2, 3, 5, 8, 13, 21]->Array.values
 
 let seq = fibonacci->Iterator.filter(n => n % 2 == 0)
 seq->Iterator.next->assertEqual({done: false, value: Some(2)})
@@ -198,7 +199,7 @@ See [Iterator.prototype.find](https://developer.mozilla.org/en-US/docs/Web/JavaS
 
 ## Examples
 ```rescript
-let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.values
+let fibonacci: Iterator.t<int> = [1, 1, 2, 3, 5, 8, 13, 21]->Array.values
 
 let seq = fibonacci->Iterator.find(n => n % 2 == 0)
 seq->assertEqual(Some(2))
@@ -265,7 +266,7 @@ See [Iterator.prototype.reduce](https://developer.mozilla.org/en-US/docs/Web/Jav
 
 ## Examples
 ```rescript
-let numbers: Iterator.t<int> = [ 1, 2, 3 ]->Array.values
+let numbers: Iterator.t<int> = [1, 2, 3]->Array.values
 
 let sum = numbers->Iterator.reduce((acc, n) => acc + n, ~initialValue=0)
 sum->assertEqual(6)
@@ -280,15 +281,15 @@ This feature might not work in older devices or browsers.
 external reduce: (t<'a>, ('acc, 'a) => 'acc, ~initialValue: 'acc=?) => 'acc = "reduce"
 
 /**
-`some(iterator, fn)` The some() method of Iterator instances is similar to Array.some: 
-it tests whether at least one element produced by the iterator passes the test implemented by the provided function. 
+`some(iterator, fn)` The some() method of Iterator instances is similar to Array.some:
+it tests whether at least one element produced by the iterator passes the test implemented by the provided function.
 It returns a boolean value.
 
 See [Iterator.prototype.some](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Iterator/some) on MDN.
 
 ## Examples
 ```rescript
-let numbers: Iterator.t<int> = [ 1, 2, 3 ]->Array.values
+let numbers: Iterator.t<int> = [1, 2, 3]->Array.values
 
 let hasEven = numbers->Iterator.some(n => n % 2 == 0)
 hasEven->assertEqual(true)
@@ -309,7 +310,7 @@ See [Iterator.prototype.take](https://developer.mozilla.org/en-US/docs/Web/JavaS
 
 ## Examples
 ```rescript
-let fibonacci: Iterator.t<int> = [ 1, 1, 2, 3, 5, 8, 13, 21 ]->Array.values
+let fibonacci: Iterator.t<int> = [1, 1, 2, 3, 5, 8, 13, 21]->Array.values
 
 let seq = fibonacci->Iterator.take(2)
 seq->Iterator.next->assertEqual({done: false, value: Some(1)})

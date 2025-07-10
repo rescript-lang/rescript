@@ -124,7 +124,7 @@ let getOrThrow: (option<'a>, ~message: string=?) => 'a
 
 ```rescript
 Option.getUnsafe(Some(3)) == 3
-Option.getUnsafe(None: option<int>) // Returns `undefined`, which is not a valid `int`
+Option.getUnsafe((None: option<int>)) // Returns `undefined`, which is not a valid `int`
 ```
 
 ## Notes
@@ -170,7 +170,7 @@ let map: (option<'a>, 'a => 'b) => option<'b>
 
 ```rescript
 let addIfAboveOne = value =>
-  if (value > 1) {
+  if value > 1 {
     Some(value + 1)
   } else {
     None
@@ -192,8 +192,7 @@ let flatMap: (option<'a>, 'a => option<'b>) => option<'b>
 Option.getOr(None, "Banana") // Banana
 Option.getOr(Some("Apple"), "Banana") // Apple
 
-let greet = (firstName: option<string>) =>
-  "Greetings " ++ firstName->Option.getOr("Anonymous")
+let greet = (firstName: option<string>) => "Greetings " ++ firstName->Option.getOr("Anonymous")
 
 Some("Jane")->greet // "Greetings Jane"
 None->greet // "Greetings Anonymous"

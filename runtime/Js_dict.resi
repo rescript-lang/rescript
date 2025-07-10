@@ -165,7 +165,7 @@ function `f` to map each value.
 ```rescript
 let prices = Js.Dict.fromList(list{("pen", 1.00), ("book", 5.00), ("stapler", 7.00)})
 
-let discount = (. price) => price *. 0.90
+let discount = price => price *. 0.90
 let salePrices = Js.Dict.map(discount, prices)
 
 salePrices == Js.Dict.fromList(list{("pen", 0.90), ("book", 4.50), ("stapler", 6.30)})

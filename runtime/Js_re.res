@@ -118,7 +118,8 @@ let str = "abbcdefabh"
 let break = ref(false)
 while !break.contents {
   switch Js.Re.exec_(re, str) {
-  | Some(result) => Js.Nullable.iter(Js.Re.captures(result)[0], (. match_) => {
+  | Some(result) =>
+    Js.Nullable.iter(Js.Re.captures(result)[0], match_ => {
       let next = Belt.Int.toString(Js.Re.lastIndex(re))
       Js.log("Found " ++ (match_ ++ (". Next match starts at " ++ next)))
     })
@@ -163,8 +164,8 @@ Returns `Some(Js.Re.result)` if a match is found, `None` otherwise.
 ```rescript
 /* Match "quick brown" followed by "jumps", ignoring characters in between
  * Remember "brown" and "jumps"
-  * Ignore case
-  */
+ * Ignore case
+ */
 
 let re = /quick\s(brown).+?(jumps)/ig
 let result = Js.Re.exec_(re, "The Quick Brown Fox Jumps Over The Lazy Dog")
@@ -187,8 +188,7 @@ Returns true if a match is found, false otherwise.
 
 let str = "hello world!"
 
-let startsWith = (target, substring) =>
-  Js.Re.fromString("^" ++ substring)->Js.Re.test_(target)
+let startsWith = (target, substring) => Js.Re.fromString("^" ++ substring)->Js.Re.test_(target)
 
 Js.log(str->startsWith("hello")) /* prints "true" */
 ```

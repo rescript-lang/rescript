@@ -121,8 +121,7 @@ otherwise return `default`.
 Nullable.getOr(Nullable.null, "Banana") // Banana
 Nullable.getOr(Nullable.make("Apple"), "Banana") // Apple
 
-let greet = (firstName: option<string>) =>
-  "Greetings " ++ firstName->Option.getOr("Anonymous")
+let greet = (firstName: option<string>) => "Greetings " ++ firstName->Option.getOr("Anonymous")
 
 Nullable.make("Jane")->Nullable.toOption->greet // "Greetings Jane"
 Nullable.null->Nullable.toOption->greet // "Greetings Anonymous"
@@ -139,7 +138,7 @@ let getWithDefault: (t<'a>, 'a) => 'a
 ```rescript
 switch Nullable.getExn(%raw("'Hello'")) {
 | exception Invalid_argument(_) => assert(false)
-| value => assertEqual(value, "Hello")
+| value => value == "Hello"
 }
 
 switch Nullable.getExn(%raw("null")) {
@@ -166,7 +165,7 @@ let getExn: t<'a> => 'a
 ```rescript
 switch Nullable.getOrThrow(%raw("'Hello'")) {
 | exception Invalid_argument(_) => assert(false)
-| value => assertEqual(value, "Hello")
+| value => value == "Hello"
 }
 
 switch Nullable.getOrThrow(%raw("null")) {
@@ -203,7 +202,7 @@ Nullable.getUnsafe(Nullable.null) // Raises an error
 external getUnsafe: t<'a> => 'a = "%identity"
 
 /**
-`forEach(value, f)` call `f` on `value`. if `value` is not `null` or `undefined`, 
+`forEach(value, f)` call `f` on `value`. if `value` is not `null` or `undefined`,
 then if calls `f`, otherwise returns `unit`.
 
 ## Examples
@@ -256,7 +255,7 @@ otherwise returns `value` unchanged.
 
 ```rescript
 let addIfAboveOne = value =>
-  if (value > 1) {
+  if value > 1 {
     Nullable.make(value + 1)
   } else {
     Nullable.null

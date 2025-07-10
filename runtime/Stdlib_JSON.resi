@@ -18,7 +18,7 @@ type rec t =
 type replacer = Keys(array<string>) | Replacer((string, t) => t)
 
 /** 
-`parseOrThrow(string, ~reviver=?)` 
+`parseOrThrow(string, ~reviver=?)`
 
 Parses a JSON string or throws a JavaScript exception (SyntaxError), if the string isn't valid.
 The reviver describes how the value should be transformed. It is a function which receives a key and a value.
@@ -56,7 +56,7 @@ try {
 }
 ```
 
-## Exceptions 
+## Exceptions
 
 - Raises a SyntaxError (Exn.t) if the string isn't valid JSON.
 */
@@ -64,7 +64,7 @@ try {
 external parseOrThrow: (string, ~reviver: (string, t) => t=?) => t = "JSON.parse"
 
 /** 
-`parseExn(string, ~reviver=?)` 
+`parseExn(string, ~reviver=?)`
 
 Parses a JSON string or throws a JavaScript exception (SyntaxError), if the string isn't valid.
 The reviver describes how the value should be transformed. It is a function which receives a key and a value.
@@ -102,7 +102,7 @@ try {
 }
 ```
 
-## Exceptions 
+## Exceptions
 
 - Raises a SyntaxError (Exn.t) if the string isn't valid JSON.
 */
@@ -110,7 +110,7 @@ try {
 external parseExn: (string, ~reviver: (string, t) => t=?) => t = "JSON.parse"
 
 /** 
-`parseExnWithReviver(string, reviver)` 
+`parseExnWithReviver(string, reviver)`
 
 Parses a JSON string or throws a JavaScript exception (SyntaxError), if the string isn't valid.
 The reviver describes how the value should be transformed. It is a function which receives a key and a value.
@@ -138,7 +138,7 @@ try {
 }
 ```
 
-## Exceptions 
+## Exceptions
 
 - Raises a SyntaxError if the string is not a valid JSON.
 */
@@ -146,7 +146,7 @@ try {
 external parseExnWithReviver: (string, (string, t) => t) => t = "JSON.parse"
 
 /** 
-`stringify(json, ~replacer=?, ~space=?)` 
+`stringify(json, ~replacer=?, ~space=?)`
 
 Converts a JSON object to a JSON string.
 The replacer describes how the value should be transformed. It is a function which receives a key and a value,
@@ -175,14 +175,16 @@ JSON.stringify(json, ~space=2)
 JSON.stringify(json, ~replacer=Keys(["foo", "someNumber"]))
 // {"foo":"bar","someNumber":42}
 
-let replacer = JSON.Replacer((_, value) => {
-  let decodedValue = value->JSON.Decode.string
+let replacer = JSON.Replacer(
+  (_, value) => {
+    let decodedValue = value->JSON.Decode.string
 
-  switch decodedValue {
-  | Some(string) => string->String.toUpperCase->JSON.Encode.string
-  | None => value
-  }
-})
+    switch decodedValue {
+    | Some(string) => string->String.toUpperCase->JSON.Encode.string
+    | None => value
+    }
+  },
+)
 
 JSON.stringify(json, ~replacer)
 // {"foo":"BAR","hello":"WORLD","someNumber":42}
@@ -192,7 +194,7 @@ JSON.stringify(json, ~replacer)
 external stringify: (t, ~replacer: replacer=?, ~space: int=?) => string = "JSON.stringify"
 
 /** 
-`stringifyWithIndent(json, indentation)` 
+`stringifyWithIndent(json, indentation)`
 
 Converts a JSON object to a JSON string. The output will be indented.
 If you want to stringify any type, use `JSON.stringifyAnyWithIndent` instead.
@@ -218,7 +220,7 @@ JSON.stringifyWithIndent(json, 2)
 external stringifyWithIndent: (t, @as(json`null`) _, int) => string = "JSON.stringify"
 
 /** 
-`stringifyWithReplacer(json, replacer)` 
+`stringifyWithReplacer(json, replacer)`
 
 Converts a JSON object to a JSON string.
 The replacer describes how the value should be transformed. It is a function which receives a key and a value.
@@ -286,7 +288,7 @@ JSON.stringifyWithReplacerAndIndent(json, replacer, 2)
 external stringifyWithReplacerAndIndent: (t, (string, t) => t, int) => string = "JSON.stringify"
 
 /** 
-`stringifyWithFilter(json, filter)` 
+`stringifyWithFilter(json, filter)`
 
 Converts a JSON object to a JSON string.
 The filter is an array of keys, which should be included in the output.
@@ -309,7 +311,7 @@ JSON.stringifyWithFilter(json, ["foo", "someNumber"])
 external stringifyWithFilter: (t, array<string>) => string = "JSON.stringify"
 
 /** 
-`stringifyWithFilterAndIndent(json, filter, indentation)` 
+`stringifyWithFilterAndIndent(json, filter, indentation)`
 
 Converts a JSON object to a JSON string. The output will be indented.
 The filter is an array of keys, which should be included in the output.
@@ -371,22 +373,23 @@ dict
 ->Option.getUnsafe
 ->assertEqual(`{"foo":"bar","someNumber":42}`)
 
-let replacer = JSON.Replacer((_, value) => {
-  let decodedValue = value->JSON.Decode.string
+let replacer = JSON.Replacer(
+  (_, value) => {
+    let decodedValue = value->JSON.Decode.string
 
-  switch decodedValue {
-  | Some(string) => string->String.toUpperCase->JSON.Encode.string
-  | None => value
-  }
-})
+    switch decodedValue {
+    | Some(string) => string->String.toUpperCase->JSON.Encode.string
+    | None => value
+    }
+  },
+)
 
 dict
 ->JSON.stringifyAny(~replacer)
 ->Option.getUnsafe
 ->assertEqual(`{"foo":"BAR","hello":"WORLD","someNumber":42}`)
 
-JSON.stringifyAny(() => "hello world")
-->assertEqual(None)
+JSON.stringifyAny(() => "hello world")->assertEqual(None)
 
 // Raise a exception
 switch BigInt.fromInt(0)->JSON.stringifyAny {
@@ -438,7 +441,7 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 }
 ```
 
-## Exceptions 
+## Exceptions
 
 - Raises a TypeError if the value contains circular references.
 - Raises a TypeError if the value contains `BigInt`s.
@@ -533,7 +536,7 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 }
 ```
 
-## Exceptions 
+## Exceptions
 
 - Raises a TypeError if the value contains circular references.
 - Raises a TypeError if the value contains `BigInt`s.
@@ -625,7 +628,7 @@ switch BigInt.fromInt(0)->JSON.stringifyAny {
 }
 ```
 
-## Exceptions 
+## Exceptions
 
 - Raises a TypeError if the value contains circular references.
 - Raises a TypeError if the value contains `BigInt`s.
@@ -652,7 +655,7 @@ module Classify: {
   ```rescript
   JSON.Classify.classify("hello world")
   // String("hello world")
-
+  
   JSON.Classify.classify(42)
   // Number(42)
   ```
@@ -721,7 +724,7 @@ module Encode: {
     ("foo", JSON.Encode.string("bar")),
     ("hello", JSON.Encode.string("world")),
   ])
-
+  
   JSON.Encode.object(dict)
   ```
   */
@@ -733,7 +736,7 @@ module Encode: {
   ## Examples
   ```rescript
   let array = [JSON.Encode.string("hello world"), JSON.Encode.int(42)]
-
+  
   JSON.Encode.array(array)
   ```
   */
@@ -748,7 +751,7 @@ module Decode: {
   ```rescript
   JSON.parseOrThrow(`true`)->JSON.Decode.bool
   // Some(true)
-
+  
   JSON.parseOrThrow(`"hello world"`)->JSON.Decode.bool
   // None
   ```
@@ -762,7 +765,7 @@ module Decode: {
   ```rescript
   JSON.parseOrThrow(`null`)->JSON.Decode.null
   // Some(null)
-
+  
   JSON.parseOrThrow(`"hello world"`)->JSON.Decode.null
   // None
   ```
@@ -776,9 +779,9 @@ module Decode: {
   ```rescript
   JSON.parseOrThrow(`"hello world"`)->JSON.Decode.string
   // Some("hello world")
-
+  
   JSON.parseOrThrow(`42`)->JSON.Decode.string
-  // None 
+  // None
   ```
   */
   let string: t => option<string>
@@ -790,7 +793,7 @@ module Decode: {
   ```rescript
   JSON.parseOrThrow(`42.0`)->JSON.Decode.float
   // Some(42.0)
-
+  
   JSON.parseOrThrow(`"hello world"`)->JSON.Decode.float
   // None
   ```
@@ -804,7 +807,7 @@ module Decode: {
   ```rescript
   JSON.parseOrThrow(`{"foo":"bar"}`)->JSON.Decode.object
   // Some({ foo: 'bar' })
-
+  
   JSON.parseOrThrow(`"hello world"`)->JSON.Decode.object
   // None
   ```
@@ -818,7 +821,7 @@ module Decode: {
   ```rescript
   JSON.parseOrThrow(`["foo", "bar"]`)->JSON.Decode.array
   // Some([ 'foo', 'bar' ])
-
+  
   JSON.parseOrThrow(`"hello world"`)->JSON.Decode.array
   // None
   ```

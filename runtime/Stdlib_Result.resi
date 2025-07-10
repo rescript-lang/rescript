@@ -30,20 +30,20 @@
 */
 /**
   The type `Result.t(result, err)` describes a variant of two states:
-  `Ok(someResult)` represents a successful operation, whereby
-  ``Error(someError)` signals an erroneous operation.
+`Ok(someResult)` represents a successful operation, whereby
+\``Error(someError)\` signals an erroneous operation.
 
   In this concrete example, we are defining our own `Result` type to reflect an HTTP like
-  query operation:
+query operation:
 
   ```res example
   type responseError = NotAvailable | NotFound
   type queryResult = result<string, responseError>
-
+  
   let failQueryUser = (username: string): queryResult => {
     Error(NotAvailable)
   }
-```
+  ```
 */
 type t<'res, 'err> = result<'res, 'err> = Ok('res) | Error('err)
 
@@ -52,7 +52,7 @@ type t<'res, 'err> = result<'res, 'err> = Ok('res) | Error('err)
 
   ```res example
   Result.getExn(Result.Ok(42)) == 42
-
+  
   switch Result.getExn(Error("Invalid data")) {
   | exception Not_found => assert(true)
   | _ => assert(false)
@@ -67,7 +67,7 @@ let getExn: result<'a, 'b> => 'a
 
   ```res example
   Result.getOrThrow(Result.Ok(42)) == 42
-
+  
   switch Result.getOrThrow(Error("Invalid data")) {
   | exception Not_found => assert(true)
   | _ => assert(false)

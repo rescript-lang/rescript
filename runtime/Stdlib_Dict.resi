@@ -178,7 +178,6 @@ dict2->Dict.set("someKey2", 3)
 let dict1 = dict1->Dict.assign(dict2)
 
 Console.log(dict1->Dict.keysToArray) // Logs `["firstKey", "someKey", "someKey2"]`
-
 ```
 */
 @val

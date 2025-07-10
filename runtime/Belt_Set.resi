@@ -34,15 +34,14 @@ the top level documentation of Belt, **A special encoding for collection safety*
 ## Examples
 
 ```rescript
-module PairComparator =
-  Belt.Id.MakeComparable({
-    type t = (int, int)
-    let cmp = ((a0, a1), (b0, b1)) =>
-      switch (Pervasives.compare(a0, b0)) {
-      | 0 => Pervasives.compare(a1, b1)
-      | c => c
-      }
-  })
+module PairComparator = Belt.Id.MakeComparable({
+  type t = (int, int)
+  let cmp = ((a0, a1), (b0, b1)) =>
+    switch Pervasives.compare(a0, b0) {
+    | 0 => Pervasives.compare(a1, b1)
+    | c => c
+    }
+})
 
 let mySet = Belt.Set.make(~id=module(PairComparator))
 let mySet2 = Belt.Set.add(mySet, (1, 2))
@@ -52,11 +51,10 @@ let mySet2 = Belt.Set.add(mySet, (1, 2))
 called `IntCmp`. It is declared like this:
 
 ```rescript
-module IntCmp =
-  Belt.Id.MakeComparable({
-    type t = int
-    let cmp = Pervasives.compare
-  })
+module IntCmp = Belt.Id.MakeComparable({
+  type t = int
+  let cmp = Pervasives.compare
+})
 ```
 */
 
@@ -193,13 +191,13 @@ s0->Belt.Set.toArray->assertEqual([])
 s1->Belt.Set.toArray->assertEqual([1])
 s2->Belt.Set.toArray->assertEqual([1, 2])
 s3->Belt.Set.toArray->assertEqual([1, 2])
-assertEqual(s2, s3)
+s2 == s3
 ```
 */
 let add: (t<'value, 'id>, 'value) => t<'value, 'id>
 
 /**
-Adds each element of array to set. Unlike `Belt.Set.add`](#add), the reference of return value might be changed even if all values in array already exist in set
+Adds each element of array to set. Unlike `Belt.Set.add`\](\#add), the reference of return value might be changed even if all values in array already exist in set
 
 ## Examples
 
@@ -231,14 +229,14 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = Pervasives.compare
 })
 
-let s0 = Belt.Set.fromArray([2,3,1,4,5], ~id=module(IntCmp))
+let s0 = Belt.Set.fromArray([2, 3, 1, 4, 5], ~id=module(IntCmp))
 let s1 = s0->Belt.Set.remove(1)
 let s2 = s1->Belt.Set.remove(3)
 let s3 = s2->Belt.Set.remove(3)
 
-s1->Belt.Set.toArray->assertEqual([2,3,4,5])
-s2->Belt.Set.toArray->assertEqual([2,4,5])
-assertEqual(s2, s3)
+s1->Belt.Set.toArray->assertEqual([2, 3, 4, 5])
+s2->Belt.Set.toArray->assertEqual([2, 4, 5])
+s2 == s3
 ```
 */
 let remove: (t<'value, 'id>, 'value) => t<'value, 'id>
@@ -254,7 +252,7 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = Pervasives.compare
 })
 
-let set = Belt.Set.fromArray([1, 2, 3, 4],~id=module(IntCmp))
+let set = Belt.Set.fromArray([1, 2, 3, 4], ~id=module(IntCmp))
 
 let newSet = set->Belt.Set.removeMany([5, 4, 3, 2, 1])
 
@@ -276,13 +274,13 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = Pervasives.compare
 })
 
-let s0 = Belt.Set.fromArray([5,2,3,5,6], ~id=module(IntCmp))
-let s1 = Belt.Set.fromArray([5,2,3,1,5,4], ~id=module(IntCmp))
+let s0 = Belt.Set.fromArray([5, 2, 3, 5, 6], ~id=module(IntCmp))
+let s1 = Belt.Set.fromArray([5, 2, 3, 1, 5, 4], ~id=module(IntCmp))
 let union = Belt.Set.union(s0, s1)
 
 union
 ->Belt.Set.toArray
-->assertEqual([1,2,3,4,5,6])
+->assertEqual([1, 2, 3, 4, 5, 6])
 ```
 */
 let union: (t<'value, 'id>, t<'value, 'id>) => t<'value, 'id>
@@ -298,14 +296,14 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = Pervasives.compare
 })
 
-let s0 = Belt.Set.fromArray([5,2,3,5,6], ~id=module(IntCmp))
-let s1 = Belt.Set.fromArray([5,2,3,1,5,4], ~id=module(IntCmp))
+let s0 = Belt.Set.fromArray([5, 2, 3, 5, 6], ~id=module(IntCmp))
+let s1 = Belt.Set.fromArray([5, 2, 3, 1, 5, 4], ~id=module(IntCmp))
 
 let intersect = Belt.Set.intersect(s0, s1)
 
 intersect
 ->Belt.Set.toArray
-->assertEqual([2,3,5])
+->assertEqual([2, 3, 5])
 ```
 */
 let intersect: (t<'value, 'id>, t<'value, 'id>) => t<'value, 'id>
@@ -321,16 +319,16 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = Pervasives.compare
 })
 
-let s0 = Belt.Set.fromArray([5,2,3,5,6], ~id=module(IntCmp))
-let s1 = Belt.Set.fromArray([5,2,3,1,5,4], ~id=module(IntCmp))
+let s0 = Belt.Set.fromArray([5, 2, 3, 5, 6], ~id=module(IntCmp))
+let s1 = Belt.Set.fromArray([5, 2, 3, 1, 5, 4], ~id=module(IntCmp))
 
 Belt.Set.diff(s0, s1)
 ->Belt.Set.toArray
 ->assertEqual([6])
 
-Belt.Set.diff(s1,s0)
+Belt.Set.diff(s1, s0)
 ->Belt.Set.toArray
-->assertEqual([1,4])
+->assertEqual([1, 4])
 ```
 */
 let diff: (t<'value, 'id>, t<'value, 'id>) => t<'value, 'id>
@@ -346,8 +344,8 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = Pervasives.compare
 })
 
-let s0 = Belt.Set.fromArray([5,2,3,5,6], ~id=module(IntCmp))
-let s1 = Belt.Set.fromArray([5,2,3,1,5,4], ~id=module(IntCmp))
+let s0 = Belt.Set.fromArray([5, 2, 3, 5, 6], ~id=module(IntCmp))
+let s1 = Belt.Set.fromArray([5, 2, 3, 1, 5, 4], ~id=module(IntCmp))
 let s2 = Belt.Set.intersect(s0, s1)
 
 Belt.Set.subset(s2, s0)->assertEqual(true)
@@ -375,8 +373,8 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = Pervasives.compare
 })
 
-let s0 = Belt.Set.fromArray([5,2,3], ~id=module(IntCmp))
-let s1 = Belt.Set.fromArray([3,2,5], ~id=module(IntCmp))
+let s0 = Belt.Set.fromArray([5, 2, 3], ~id=module(IntCmp))
+let s1 = Belt.Set.fromArray([3, 2, 5], ~id=module(IntCmp))
 
 Belt.Set.eq(s0, s1)->assertEqual(true)
 ```
@@ -400,7 +398,7 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = Pervasives.compare
 })
 
-let s0 = Belt.Set.fromArray([5,2,3,5,6], ~id=module(IntCmp))
+let s0 = Belt.Set.fromArray([5, 2, 3, 5, 6], ~id=module(IntCmp))
 
 let acc = ref(list{})
 
@@ -408,7 +406,7 @@ s0->Belt.Set.forEach(x => {
   acc := Belt.List.add(acc.contents, x)
 })
 
-acc.contents->assertEqual(list{6,5,3,2})
+acc.contents->assertEqual(list{6, 5, 3, 2})
 ```
 */
 let forEach: (t<'value, 'id>, 'value => unit) => unit
@@ -427,11 +425,10 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = Pervasives.compare
 })
 
-let s0 = Belt.Set.fromArray([5,2,3,5,6], ~id=module(IntCmp))
+let s0 = Belt.Set.fromArray([5, 2, 3, 5, 6], ~id=module(IntCmp))
 s0
-->Belt.Set.reduce(list{}, (acc, element) =>
-  acc->Belt.List.add(element)
-)->assertEqual(list{6,5,3,2})
+->Belt.Set.reduce(list{}, (acc, element) => acc->Belt.List.add(element))
+->assertEqual(list{6, 5, 3, 2})
 ```
 */
 let reduce: (t<'value, 'id>, 'a, ('a, 'value) => 'a) => 'a
@@ -452,7 +449,7 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let isEven = x => mod(x, 2) == 0
 
-let s0 = Belt.Set.fromArray([2,4,6,8], ~id=module(IntCmp))
+let s0 = Belt.Set.fromArray([2, 4, 6, 8], ~id=module(IntCmp))
 s0->Belt.Set.every(isEven)->assertEqual(true)
 ```
 */
@@ -474,7 +471,7 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let isOdd = x => mod(x, 2) != 0
 
-let s0 = Belt.Set.fromArray([1,2,4,6,8], ~id=module(IntCmp))
+let s0 = Belt.Set.fromArray([1, 2, 4, 6, 8], ~id=module(IntCmp))
 s0->Belt.Set.some(isOdd)->assertEqual(true)
 ```
 */
@@ -496,7 +493,7 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let isEven = x => mod(x, 2) == 0
 
-let s0 = Belt.Set.fromArray([1,2,3,4,5], ~id=module(IntCmp))
+let s0 = Belt.Set.fromArray([1, 2, 3, 4, 5], ~id=module(IntCmp))
 let s1 = s0->Belt.Set.keep(isEven)
 
 s1->Belt.Set.toArray->assertEqual([2, 4])
@@ -520,11 +517,11 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let isOdd = x => mod(x, 2) != 0
 
-let s0 = Belt.Set.fromArray([1,2,3,4,5], ~id=module(IntCmp))
+let s0 = Belt.Set.fromArray([1, 2, 3, 4, 5], ~id=module(IntCmp))
 let (s1, s2) = s0->Belt.Set.partition(isOdd)
 
-s1->Belt.Set.toArray->assertEqual([1,3,5])
-s2->Belt.Set.toArray->assertEqual([2,4])
+s1->Belt.Set.toArray->assertEqual([1, 3, 5])
+s2->Belt.Set.toArray->assertEqual([2, 4])
 ```
 */
 let partition: (t<'value, 'id>, 'value => bool) => (t<'value, 'id>, t<'value, 'id>)
@@ -540,7 +537,7 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = Pervasives.compare
 })
 
-let s0 = Belt.Set.fromArray([1,2,3,4], ~id=module(IntCmp))
+let s0 = Belt.Set.fromArray([1, 2, 3, 4], ~id=module(IntCmp))
 
 s0->Belt.Set.size->assertEqual(4)
 ```
@@ -558,9 +555,9 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = Pervasives.compare
 })
 
-let s0 = Belt.Set.fromArray([3,2,1,5], ~id=module(IntCmp))
+let s0 = Belt.Set.fromArray([3, 2, 1, 5], ~id=module(IntCmp))
 
-s0->Belt.Set.toArray->assertEqual([1,2,3,5])
+s0->Belt.Set.toArray->assertEqual([1, 2, 3, 5])
 ```
 */
 let toArray: t<'value, 'id> => array<'value>
@@ -576,9 +573,9 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = Pervasives.compare
 })
 
-let s0 = Belt.Set.fromArray([3,2,1,5], ~id=module(IntCmp))
+let s0 = Belt.Set.fromArray([3, 2, 1, 5], ~id=module(IntCmp))
 
-s0->Belt.Set.toList->assertEqual(list{1,2,3,5})
+s0->Belt.Set.toList->assertEqual(list{1, 2, 3, 5})
 ```
 */
 let toList: t<'value, 'id> => list<'value>
@@ -595,7 +592,7 @@ module IntCmp = Belt.Id.MakeComparable({
 })
 
 let s0 = Belt.Set.make(~id=module(IntCmp))
-let s1 = Belt.Set.fromArray([3,2,1,5], ~id=module(IntCmp))
+let s1 = Belt.Set.fromArray([3, 2, 1, 5], ~id=module(IntCmp))
 
 s0->Belt.Set.minimum->assertEqual(None)
 s1->Belt.Set.minimum->assertEqual(Some(1))
@@ -615,7 +612,7 @@ module IntCmp = Belt.Id.MakeComparable({
 })
 
 let s0 = Belt.Set.make(~id=module(IntCmp))
-let s1 = Belt.Set.fromArray([3,2,1,5], ~id=module(IntCmp))
+let s1 = Belt.Set.fromArray([3, 2, 1, 5], ~id=module(IntCmp))
 
 s0->Belt.Set.minUndefined->Js.Undefined.toOption->assertEqual(None)
 s1->Belt.Set.minUndefined->Js.Undefined.toOption->assertEqual(Some(1))
@@ -635,7 +632,7 @@ module IntCmp = Belt.Id.MakeComparable({
 })
 
 let s0 = Belt.Set.make(~id=module(IntCmp))
-let s1 = Belt.Set.fromArray([3,2,1,5], ~id=module(IntCmp))
+let s1 = Belt.Set.fromArray([3, 2, 1, 5], ~id=module(IntCmp))
 
 s0->Belt.Set.maximum->assertEqual(None)
 s1->Belt.Set.maximum->assertEqual(Some(5))
@@ -655,7 +652,7 @@ module IntCmp = Belt.Id.MakeComparable({
 })
 
 let s0 = Belt.Set.make(~id=module(IntCmp))
-let s1 = Belt.Set.fromArray([3,2,1,5], ~id=module(IntCmp))
+let s1 = Belt.Set.fromArray([3, 2, 1, 5], ~id=module(IntCmp))
 
 s0
 ->Belt.Set.maxUndefined
@@ -681,7 +678,7 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = Pervasives.compare
 })
 
-let s0 = Belt.Set.fromArray([1,2,3,4,5], ~id=module(IntCmp))
+let s0 = Belt.Set.fromArray([1, 2, 3, 4, 5], ~id=module(IntCmp))
 
 s0->Belt.Set.get(3)->assertEqual(Some(3))
 s0->Belt.Set.get(20)->assertEqual(None)
@@ -720,8 +717,8 @@ let s0 = Belt.Set.fromArray([1, 2, 3, 4, 5], ~id=module(IntCmp))
 let ((smaller, larger), present) = s0->Belt.Set.split(3)
 
 present->assertEqual(true)
-smaller->Belt.Set.toArray->assertEqual([1,2])
-larger->Belt.Set.toArray->assertEqual([4,5])
+smaller->Belt.Set.toArray->assertEqual([1, 2])
+larger->Belt.Set.toArray->assertEqual([4, 5])
 ```
 */
 let split: (t<'value, 'id>, 'value) => ((t<'value, 'id>, t<'value, 'id>), bool)

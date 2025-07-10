@@ -75,7 +75,7 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = (a, b) => Pervasives.compare(a, b)
 })
 
-assertEqual(Belt.Map.isEmpty(Belt.Map.fromArray([(1, "1")], ~id=module(IntCmp))), false)
+Belt.Map.isEmpty(Belt.Map.fromArray([(1, "1")], ~id=module(IntCmp))) == false
 ```
 */
 let isEmpty: t<_> => bool
@@ -87,11 +87,11 @@ let isEmpty: t<_> => bool
 
 ```rescript
 module IntCmp = Belt.Id.MakeComparable({
-    type t = int
-    let cmp = (a, b) => Pervasives.compare(a, b)
+  type t = int
+  let cmp = (a, b) => Pervasives.compare(a, b)
 })
 
-assertEqual(Belt.Map.has(Belt.Map.fromArray([(1, "1")], ~id=module(IntCmp)), 1), true)
+Belt.Map.has(Belt.Map.fromArray([(1, "1")], ~id=module(IntCmp)), 1) == true
 ```
 */
 let has: (t<'k, 'v, 'id>, 'k) => bool
@@ -160,7 +160,7 @@ let acc = ref(list{})
 
 Belt.Map.forEach(s0, (k, v) => acc := list{(k, v), ...acc.contents})
 
-assertEqual(acc.contents, list{(4, "4"), (3, "3"),  (2, "2"), (1, "1")})
+acc.contents == list{(4, "4"), (3, "3"), (2, "2"), (1, "1")}
 ```
 */
 let forEach: (t<'k, 'v, 'id>, ('k, 'v) => unit) => unit
@@ -182,13 +182,8 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let s0 = Belt.Map.fromArray(~id=module(IntCmp), [(4, "4"), (1, "1"), (2, "2"), (3, "3")])
 
-assertEqual(
-  Belt.Map.reduce(s0, list{}, (acc, k, v) => list{
-      (k, v),
-      ...acc,
-  }),
+Belt.Map.reduce(s0, list{}, (acc, k, v) => list{(k, v), ...acc}) ==
   list{(4, "4"), (3, "3"), (2, "2"), (1, "1")}
-)
 ```
 */
 let reduce: (t<'k, 'v, 'id>, 'acc, ('acc, 'k, 'v) => 'acc) => 'acc
@@ -219,10 +214,7 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = (a, b) => Pervasives.compare(a, b)
 })
 
-assertEqual(
-  Belt.Map.size(Belt.Map.fromArray([(2, "2"), (2, "1"), (3, "3")], ~id=module(IntCmp))),
-  2
-)
+Belt.Map.size(Belt.Map.fromArray([(2, "2"), (2, "1"), (3, "3")], ~id=module(IntCmp))) == 2
 ```
 */
 let size: t<'k, 'v, 'id> => int
@@ -238,14 +230,11 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = (a, b) => Pervasives.compare(a, b)
 })
 
-assertEqual(
-  Belt.Map.toArray(Belt.Map.fromArray([(2, "2"), (1, "1"), (3, "3")], ~id=module(IntCmp))),
-  [
+Belt.Map.toArray(Belt.Map.fromArray([(2, "2"), (1, "1"), (3, "3")], ~id=module(IntCmp))) == [
     (1, "1"),
     (2, "2"),
     (3, "3"),
   ]
-)
 ```
 */
 let toArray: t<'k, 'v, 'id> => array<('k, 'v)>
@@ -264,14 +253,11 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = (a, b) => Pervasives.compare(a, b)
 })
 
-assertEqual(
-  Belt.Map.toArray(Belt.Map.fromArray([(2, "2"), (1, "1"), (3, "3")], ~id=module(IntCmp))),
-  [
+Belt.Map.toArray(Belt.Map.fromArray([(2, "2"), (1, "1"), (3, "3")], ~id=module(IntCmp))) == [
     (1, "1"),
     (2, "2"),
     (3, "3"),
   ]
-)
 ```
 */
 let fromArray: (array<('k, 'v)>, ~id: id<'k, 'id>) => t<'k, 'v, 'id>
@@ -287,10 +273,11 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = (a, b) => Pervasives.compare(a, b)
 })
 
-assertEqual(
-  Belt.Map.keysToArray(Belt.Map.fromArray([(2, "2"), (1, "1"), (3, "3")], ~id=module(IntCmp))),
-  [1, 2, 3]
-)
+Belt.Map.keysToArray(Belt.Map.fromArray([(2, "2"), (1, "1"), (3, "3")], ~id=module(IntCmp))) == [
+    1,
+    2,
+    3,
+  ]
 ```
 */
 let keysToArray: t<'k, 'v, 'id> => array<'k>
@@ -306,12 +293,11 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = (a, b) => Pervasives.compare(a, b)
 })
 
-assertEqual(
-  Belt.Map.valuesToArray(
-    Belt.Map.fromArray([(2, "2"), (1, "1"), (3, "3")], ~id=module(IntCmp)),
-  ),
-  ["1", "2", "3"]
-)
+Belt.Map.valuesToArray(Belt.Map.fromArray([(2, "2"), (1, "1"), (3, "3")], ~id=module(IntCmp))) == [
+    "1",
+    "2",
+    "3",
+  ]
 ```
 */
 let valuesToArray: t<'k, 'v, 'id> => array<'v>
@@ -351,15 +337,9 @@ module IntCmp = Belt.Id.MakeComparable({
   let cmp = (a, b) => Pervasives.compare(a, b)
 })
 
-assertEqual(
-  Belt.Map.get(Belt.Map.fromArray([(2, "2"), (1, "1"), (3, "3")], ~id=module(IntCmp)), 2),
-  Some("2")
-)
+Belt.Map.get(Belt.Map.fromArray([(2, "2"), (1, "1"), (3, "3")], ~id=module(IntCmp)), 2) == Some("2")
 
-assertEqual(
-  Belt.Map.get(Belt.Map.fromArray([(2, "2"), (1, "1"), (3, "3")], ~id=module(IntCmp)), 4),
-  None
-)
+Belt.Map.get(Belt.Map.fromArray([(2, "2"), (1, "1"), (3, "3")], ~id=module(IntCmp)), 4) == None
 ```
 */
 let get: (t<'k, 'v, 'id>, 'k) => option<'v>
@@ -413,9 +393,9 @@ let s1 = Belt.Map.remove(s0, 1)
 
 let s2 = Belt.Map.remove(s1, 1)
 
-assertEqual(s1, s2)
+s1 == s2
 
-assertEqual(Belt.Map.keysToArray(s1), [2, 3])
+Belt.Map.keysToArray(s1) == [2, 3]
 ```
 */
 let remove: (t<'k, 'v, 'id>, 'k) => t<'k, 'v, 'id>
@@ -445,7 +425,7 @@ let s0 = Belt.Map.fromArray([(2, "2"), (1, "1"), (3, "3")], ~id=module(IntCmp))
 
 let s1 = Belt.Map.set(s0, 2, "3")
 
-assertEqual(Belt.Map.valuesToArray(s1), ["1", "3", "3"])
+Belt.Map.valuesToArray(s1) == ["1", "3", "3"]
 ```
 */
 let set: (t<'k, 'v, 'id>, 'k, 'v) => t<'k, 'v, 'id>

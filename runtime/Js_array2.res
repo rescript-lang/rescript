@@ -102,7 +102,7 @@ external fromMap: (array_like<'a>, 'a => 'b) => array<'b> = "Array.from"
 /* ES2015 */
 
 /**
-Returns `true` if its argument is an array; `false` otherwise. This is a runtime check, which is why the second example returns `true`---a list is internally represented as a nested JavaScript array.
+Returns `true` if its argument is an array; `false` otherwise. This is a runtime check, which is why the second example returns `true`\---a list is internally represented as a nested JavaScript array.
 
 ## Examples
 
@@ -188,7 +188,7 @@ external copyWithinFromRange: (t<'a>, ~to_: int, ~start: int, ~end_: int) => t<'
 /**
 Sets all elements of the given array (the first arumgent) to the designated
 value (the secon argument), returning the resulting array. *This function
-  modifies the original array.*
+modifies the original array.*
 
 See
 [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill)
@@ -367,14 +367,14 @@ external sortInPlace: t<'a> => t<'a> = "sort"
 
 /**
 Sorts the given array in place and returns the sorted array. *This function
-  modifies the original array.*
+modifies the original array.*
 
 The first argument to `sortInPlaceWith()` is a function that compares two items
 from the array and returns:
 
-* an integer less than zero if the first item is less than the second item *
-zero if the items are equal * an integer greater than zero if the first item is
-greater than the second item
+* an integer less than zero if the first item is less than the second item \*
+  zero if the items are equal \* an integer greater than zero if the first item is
+  greater than the second item
 
 See
 [`Array.sort`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort)

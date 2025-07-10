@@ -78,7 +78,7 @@ Addition of two `int` values. Same as the addition from `Pervasives`.
 
 ```rescript
 open Belt.Int
-assertEqual(2 + 2, 4)
+2 + 2 == 4
 ```
 */
 external \"+": (int, int) => int = "%addint"
@@ -90,7 +90,7 @@ Subtraction of two `int` values. Same as the subtraction from `Pervasives`.
 
 ```rescript
 open Belt.Int
-assertEqual(2 - 1, 1)
+2 - 1 == 1
 ```
 */
 external \"-": (int, int) => int = "%subint"
@@ -102,7 +102,7 @@ Multiplication of two `int` values. Same as the multiplication from `Pervasives`
 
 ```rescript
 open Belt.Int
-assertEqual(2 * 2, 4)
+2 * 2 == 4
 ```
 */
 external \"*": (int, int) => int = "%mulint"
@@ -114,7 +114,7 @@ Division of two `int` values. Same as the division from `Pervasives`.
 
 ```rescript
 open Belt.Int
-assertEqual(4 / 2, 2)
+4 / 2 == 2
 ```
 */
 external \"/": (int, int) => int = "%divint"
