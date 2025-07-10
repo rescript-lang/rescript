@@ -1,0 +1,1 @@
+["type user = {name: string, age: int, active: bool}\\nlet createUser = (name, age) => {name, age, active: true}", "let badly_formatted = (x, y) => {\\n  let result = x + y\\n  if result > 0 {\\n    Console.log(\\\"positive\\\")\\n  } else {\\n    Console.log(\\\"negative\\\")\\n  }\\n  result\\n}"]
