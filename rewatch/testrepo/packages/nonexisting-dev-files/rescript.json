@@ -3,6 +3,6 @@
   "sources": {
     "dir": "dev",
     "subdirs": true,
-    "dev": true
+    "type": "dev"
   }
 }
