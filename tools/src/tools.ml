@@ -966,9 +966,10 @@ end
 
 module ExtractCodeblocks = struct
   module Transform = struct
-    type transform = EqualsToAssertEqualFn  (** a == b -> assertEqual(a, b) *)
+    type transform =
+      | EqualsToAssertEqualFn
+          (** a == b -> assertEqual(a, b), for structure items only *)
 
-    (* TOOD: Make this only transform structure items, not any expression? *)
     let transform ~transforms ast =
       match transforms with
       | [] -> ast
@@ -977,38 +978,53 @@ module ExtractCodeblocks = struct
         let mapper =
           {
             Ast_mapper.default_mapper with
-            expr =
-              (fun mapper exp ->
-                match exp.pexp_desc with
-                | Pexp_apply
-                    {
-                      funct =
-                        {
-                          pexp_desc =
-                            Pexp_ident ({txt = Lident "=="} as identTxt);
-                        } as ident;
-                      partial = false;
-                      args = [(Nolabel, _); (Nolabel, _)] as args;
-                    }
+            structure_item =
+              (fun mapper str_item ->
+                match str_item.pstr_desc with
+                | Pstr_eval
+                    ( ({
+                         pexp_desc =
+                           Pexp_apply
+                             {
+                               funct =
+                                 {
+                                   pexp_desc =
+                                     Pexp_ident
+                                       ({txt = Lident "=="} as identTxt);
+                                 } as ident;
+                               partial = false;
+                               args = [(Nolabel, _); (Nolabel, _)] as args;
+                             };
+                       } as exp),
+                      x1 )
                   when hasTransform EqualsToAssertEqualFn ->
                   {
-                    exp with
-                    pexp_desc =
-                      Pexp_apply
-                        {
-                          funct =
-                            {
-                              ident with
-                              pexp_desc =
-                                Pexp_ident
-                                  {identTxt with txt = Lident "assertEqual"};
-                            };
-                          args;
-                          partial = false;
-                          transformed_jsx = false;
-                        };
+                    str_item with
+                    pstr_desc =
+                      Pstr_eval
+                        ( {
+                            exp with
+                            pexp_desc =
+                              Pexp_apply
+                                {
+                                  funct =
+                                    {
+                                      ident with
+                                      pexp_desc =
+                                        Pexp_ident
+                                          {
+                                            identTxt with
+                                            txt = Lident "assertEqual";
+                                          };
+                                    };
+                                  args;
+                                  partial = false;
+                                  transformed_jsx = false;
+                                };
+                          },
+                          x1 );
                   }
-                | _ -> Ast_mapper.default_mapper.expr mapper exp);
+                | _ -> Ast_mapper.default_mapper.structure_item mapper str_item);
           }
         in
         mapper.structure mapper ast
