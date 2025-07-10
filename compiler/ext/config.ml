@@ -12,12 +12,30 @@ let standard_library =
     |> List.rev
   with
   (* 1. Packages installed via pnpm
-     - bin:    node_modules/.pnpm/@rescript+darwin-arm64@12.0.0-alpha.13/node_modules/@rescript/darwin-arm64/bin
-     - stdlib: node_modules/rescript/lib/ocaml (symlink)
+     - bin:    node_modules/.pnpm/@rescript+darwin-arm64@12.0.0-alpha.15/node_modules/@rescript/darwin-arm64/bin
+     - stdlib: node_modules/.pnpm/rescript@12.0.0-alpha.15/node_modules/rescript/lib/ocaml
   *)
-  | "bin" :: _platform :: "@rescript" :: "node_modules" :: _package :: ".pnpm"
-    :: "node_modules" :: rest ->
-    build_path rest ["node_modules"; "rescript"; "lib"; "ocaml"]
+  | "bin" :: _platform :: "@rescript" :: "node_modules" :: bin_package
+    :: ".pnpm" :: "node_modules" :: rest -> (
+    match bin_package |> String.split_on_char '@' with
+    | [""; _package_name; version] ->
+      build_path rest
+        [
+          "node_modules";
+          ".pnpm";
+          "rescript@" ^ version;
+          "node_modules";
+          "rescript";
+          "lib";
+          "ocaml";
+        ]
+    | _ ->
+      (* The above might not match, e.g., for the installation test where we have
+         - bin:    node_modules/.pnpm/@rescript+darwin-arm64@https+++pkg.pr.new+rescript-lang+rescript+@rescript+darwin-arm64_dc084c3d4ed1dbfd250a9747e43c07d8/node_modules/@rescript/darwin-arm64/bin/
+         - stdlib: node_modules/.pnpm/rescript@https+++pkg.pr.new+rescript-lang+rescript@324acbeded5d684d89b26ab38d1d86eff5880b1d/node_modules/rescript/lib/ocaml
+         In that case try to fall back to rescript/lib/ocaml which should be present as a symlink.
+      *)
+      build_path rest ["node_modules"; "rescript"; "lib"; "ocaml"])
   (* 2. Packages installed via npm
      - bin:    node_modules/@rescript/{platform}/bin
      - stdlib: node_modules/rescript/lib/ocaml
