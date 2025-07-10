@@ -677,6 +677,14 @@ let extractEmbedded ~extensionPoints ~filename =
            ])
   |> List.rev |> array
 
+let readFile path =
+  let ic = open_in path in
+  let n = in_channel_length ic in
+  let s = Bytes.create n in
+  really_input ic s 0 n;
+  close_in ic;
+  Bytes.to_string s
+
 let isResLang lang =
   match String.lowercase_ascii lang with
   | "res" | "rescript" | "resi" -> true
@@ -897,14 +905,7 @@ module FormatCodeblocks = struct
     in
     let content =
       if Filename.check_suffix path ".md" then
-        let content =
-          let ic = open_in path in
-          let n = in_channel_length ic in
-          let s = Bytes.create n in
-          really_input ic s 0 n;
-          close_in ic;
-          Bytes.to_string s
-        in
+        let content = readFile path in
         let displayFilename = Filename.basename path in
         let formattedContents, hadCodeBlocks =
           formatRescriptCodeBlocks ~transformAssertEqual ~addError
@@ -1136,14 +1137,7 @@ module ExtractCodeblocks = struct
     in
     let content =
       if Filename.check_suffix path ".md" then
-        let content =
-          let ic = open_in path in
-          let n = in_channel_length ic in
-          let s = Bytes.create n in
-          really_input ic s 0 n;
-          close_in ic;
-          Bytes.to_string s
-        in
+        let content = readFile path in
         let displayFilename = Filename.basename path in
         let codeBlocks =
           extractRescriptCodeBlocks ~transformAssertEqual ~addError
