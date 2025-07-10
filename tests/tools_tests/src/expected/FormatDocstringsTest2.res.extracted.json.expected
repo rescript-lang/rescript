@@ -1,4 +1,6 @@
-[{
+{
+    "TAG": "Ok",
+    "_0": [{
     "id": "FormatDocstringsTest2.testResi",
     "name": "testResi",
     "code": "type x = int\nlet x: int => string\nmodule M: {\n  let ff: string => int\n}"
@@ -15,3 +17,4 @@
     "name": "testJsx",
     "code": "let component = () => {\n  <div className=\"container\">\n    <h1> {\"Title\"->React.string} </h1>\n    <button onClick={_ => Console.log(\"clicked\")}> {\"Click me\"->React.string} </button>\n  </div>\n}"
   }]
+  }

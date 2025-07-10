@@ -7,4 +7,4 @@ type codeBlock = {
 /**
 `decodeFromJson(json)` parse JSON generated from `rescript-tools extract-codeblocks` command
 */
-external decodeFromJson: Stdlib_JSON.t => array<codeBlock> = "%identity"
+external decodeFromJson: Stdlib_JSON.t => result<array<codeBlock>, string> = "%identity"

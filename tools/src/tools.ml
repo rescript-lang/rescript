@@ -1275,11 +1275,11 @@ module ExtractCodeblocks = struct
     | Error e -> Error e
     | Ok codeBlocks ->
       let errors = !errors in
-      if List.length errors > 0 then (
-        errors |> List.rev |> String.concat "\n" |> print_endline;
-        Error
-          (Printf.sprintf "%s: Error formatting docstrings."
-             (Filename.basename path)))
+      if List.length errors > 0 then
+        let errors =
+          errors |> List.rev |> String.concat "\n" |> Protocol.wrapInQuotes
+        in
+        Error errors
       else
         Ok
           (codeBlocks

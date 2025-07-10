@@ -1,4 +1,6 @@
-[{
+{
+    "TAG": "Ok",
+    "_0": [{
     "id": "FormatDocstringsTest1.testFunction3",
     "name": "testFunction3",
     "code": "let processUsers = (users: array<user>) => {\n  users\n  ->Array.map(user => {...user, active: false})\n  ->Array.filter(u => u.age > 21)\n}\n\ntype status = Loading | Success(string) | Error(option<string>)"
@@ -15,3 +17,4 @@
     "name": "testFunction1",
     "code": "let badly_formatted = (x, y) => {\n  let result = x + y\n  if result > 0 {\n    Console.log(\"positive\")\n  } else {\n    Console.log(\"negative\")\n  }\n  result\n}"
   }]
+  }
