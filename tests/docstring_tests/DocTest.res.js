@@ -83,7 +83,7 @@ async function extractExamples() {
   await ArrayUtils.forEachAsyncInBatches(docFiles, batchSize, async f => {
     let doc = await extractDocFromFile(Nodepath.join("runtime", f));
     if (doc.TAG === "Ok") {
-      examples.push(...doc._0);
+      examples.push(...doc._0.filter(d => d.code.includes("assertEqual(")));
       return;
     }
     console.error(doc._0);

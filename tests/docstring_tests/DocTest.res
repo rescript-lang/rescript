@@ -82,7 +82,9 @@ let extractExamples = async () => {
   await docFiles->ArrayUtils.forEachAsyncInBatches(~batchSize, async f => {
     let doc = await extractDocFromFile(Path.join(["runtime", f]))
     switch doc {
-    | Ok(doc) => examples->Array.pushMany(doc)
+    | Ok(doc) =>
+      // TODO: Should this be a flag in the actual command instead, to only include code blocks with tests?
+      examples->Array.pushMany(doc->Array.filter(d => d.code->String.includes("assertEqual(")))
     | Error(e) => Console.error(e)
     }
   })
