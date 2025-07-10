@@ -7,6 +7,15 @@ Usage: rescript-tools doc <FILE>
 
 Example: rescript-tools doc ./path/to/EntryPointLib.res|}
 
+let formatDocstringsHelp =
+  {|ReScript Tools
+
+Format ReScript code blocks in docstrings
+
+Usage: rescript-tools format-docstrings <FILE> [--stdout] [--transform-assert-equal]
+
+Example: rescript-tools format-docstrings ./path/to/MyModule.res|}
+
 let help =
   {|ReScript Tools
 
@@ -14,10 +23,13 @@ Usage: rescript-tools [command]
 
 Commands:
 
-doc <file>            Generate documentation
-reanalyze             Reanalyze
--v, --version         Print version
--h, --help            Print help|}
+doc <file>                              Generate documentation
+format-codeblocks <file>                Format ReScript code blocks
+  [--stdout]                              Output to stdout
+  [--transform-assert-equal]              Transform `assertEqual` to `==`
+reanalyze                               Reanalyze
+-v, --version                           Print version
+-h, --help                              Print help|}
 
 let logAndExit = function
   | Ok log ->
@@ -43,6 +55,23 @@ let main () =
       in
       logAndExit (Tools.extractDocs ~entryPointFile:path ~debug:false)
     | _ -> logAndExit (Error docHelp))
+  | "format-codeblocks" :: rest -> (
+    match rest with
+    | ["-h"] | ["--help"] -> logAndExit (Ok formatDocstringsHelp)
+    | path :: args -> (
+      let isStdout = List.mem "--stdout" args in
+      let transformAssertEqual = List.mem "--transform-assert-equal" args in
+      let outputMode = if isStdout then `Stdout else `File in
+      Clflags.color := Some Misc.Color.Never;
+      match
+        ( Tools.FormatCodeblocks.formatCodeBlocksInFile ~outputMode
+            ~transformAssertEqual ~entryPointFile:path,
+          outputMode )
+      with
+      | Ok content, `Stdout -> print_endline content
+      | result, `File -> logAndExit result
+      | Error e, _ -> logAndExit (Error e))
+    | _ -> logAndExit (Error formatDocstringsHelp))
   | "reanalyze" :: _ ->
     let len = Array.length Sys.argv in
     for i = 1 to len - 2 do
