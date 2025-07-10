@@ -426,8 +426,9 @@ fn make_package(config: config::Config, package_path: &Path, is_pinned_dep: bool
         }
     };
 
+    let package_name = read_package_name(package_path).expect("Could not read package name");
     Package {
-        name: config.name.clone(),
+        name: package_name,
         config: config.to_owned(),
         source_folders,
         source_files: None,
