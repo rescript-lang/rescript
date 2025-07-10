@@ -1031,6 +1031,116 @@ module ExtractCodeblocks = struct
         mapper.structure mapper ast
   end
 
+  type codeBlock = {id: string; code: string; name: string}
+
+  let getDocstring = function
+    | d :: _ -> d
+    | _ -> ""
+
+  let extractCodeBlocks ~entryPointFile
+      ~(processDocstrings : id:string -> name:string -> string -> unit) =
+    let path =
+      match Filename.is_relative entryPointFile with
+      | true -> Unix.realpath entryPointFile
+      | false -> entryPointFile
+    in
+    let result =
+      match
+        FindFiles.isImplementation path = false
+        && FindFiles.isInterface path = false
+      with
+      | false -> (
+        let path =
+          if FindFiles.isImplementation path then
+            let pathAsResi =
+              (path |> Filename.dirname) ^ "/"
+              ^ (path |> Filename.basename |> Filename.chop_extension)
+              ^ ".resi"
+            in
+            if Sys.file_exists pathAsResi then pathAsResi else path
+          else path
+        in
+        match Cmt.loadFullCmtFromPath ~path with
+        | None ->
+          Error
+            (Printf.sprintf
+               "error: failed to generate doc for %s, try to build the project"
+               path)
+        | Some full ->
+          let file = full.file in
+          let structure = file.structure in
+          let open SharedTypes in
+          let env = QueryEnv.fromFile file in
+          let rec extractCodeBlocksForModule
+              ?(modulePath = [env.file.moduleName])
+              (structure : Module.structure) =
+            let id = modulePath |> List.rev |> ident in
+            let name = structure.name in
+            processDocstrings ~id ~name (getDocstring structure.docstring);
+
+            structure.items
+            |> List.iter (fun (item : Module.item) ->
+                   match item.kind with
+                   | Value _typ ->
+                     let id = modulePath |> makeId ~identifier:item.name in
+                     let name = item.name in
+                     processDocstrings ~id ~name (getDocstring item.docstring)
+                   | Type (_typ, _) ->
+                     let id = modulePath |> makeId ~identifier:item.name in
+                     let name = item.name in
+                     processDocstrings ~id ~name (getDocstring item.docstring)
+                   | Module {type_ = Ident _p; isModuleType = false} ->
+                     (* module Whatever = OtherModule *)
+                     let id =
+                       (modulePath |> List.rev |> List.hd) ^ "." ^ item.name
+                     in
+                     let name = item.name in
+                     processDocstrings ~id ~name (getDocstring item.docstring)
+                   | Module {type_ = Structure m; isModuleType = false} ->
+                     (* module Whatever = {} in res or module Whatever: {} in resi. *)
+                     let modulePath = m.name :: modulePath in
+                     let id = modulePath |> List.rev |> ident in
+                     let name = m.name in
+                     processDocstrings ~id ~name (getDocstring m.docstring);
+                     extractCodeBlocksForModule ~modulePath m
+                   | Module {type_ = Structure m; isModuleType = true} ->
+                     (* module type Whatever = {} *)
+                     let modulePath = m.name :: modulePath in
+                     let id = modulePath |> List.rev |> ident in
+                     let name = m.name in
+                     processDocstrings ~id ~name (getDocstring m.docstring);
+                     extractCodeBlocksForModule ~modulePath m
+                   | Module
+                       {
+                         type_ =
+                           Constraint (Structure _impl, Structure interface);
+                       } ->
+                     (* module Whatever: { <interface> } = { <impl> }. Prefer the interface. *)
+                     let modulePath = interface.name :: modulePath in
+                     let id = modulePath |> List.rev |> ident in
+                     let name = interface.name in
+                     processDocstrings ~id ~name
+                       (getDocstring interface.docstring);
+                     extractCodeBlocksForModule ~modulePath interface
+                   | Module {type_ = Constraint (Structure m, Ident _p)} ->
+                     (* module M: T = { <impl> }. Print M *)
+                     let modulePath = m.name :: modulePath in
+                     let id = modulePath |> List.rev |> ident in
+                     let name = m.name in
+                     processDocstrings ~id ~name (getDocstring m.docstring);
+                     extractCodeBlocksForModule ~modulePath m
+                   | Module.Module _ -> ())
+          in
+          extractCodeBlocksForModule structure;
+          Ok ())
+      | true ->
+        Error
+          (Printf.sprintf
+             "error: failed to read %s, expected an .res or .resi file" path)
+    in
+
+    result
+
   let extractRescriptCodeBlocks content ~transformAssertEqual ~displayFilename
       ~addError ~markdownBlockStartLine =
     (* Detect ReScript code blocks. *)
@@ -1110,31 +1220,13 @@ module ExtractCodeblocks = struct
       | true -> Unix.realpath entryPointFile
       | false -> entryPointFile
     in
+    let displayFilename = Filename.basename path in
     let errors = ref [] in
     let addError error = errors := error :: !errors in
 
     let codeBlocks = ref [] in
     let addCodeBlock codeBlock = codeBlocks := codeBlock :: !codeBlocks in
 
-    (* Looks for docstrings and extracts code blocks in ReScript files *)
-    let makeIterator ~transformAssertEqual ~displayFilename =
-      {
-        Ast_iterator.default_iterator with
-        attribute =
-          (fun mapper ((name, payload) as attr) ->
-            match (name, Ast_payload.is_single_string payload, payload) with
-            | ( {txt = "res.doc"},
-                Some (contents, None),
-                PStr [{pstr_desc = Pstr_eval ({pexp_loc}, _)}] ) ->
-              let codeBlocks =
-                extractRescriptCodeBlocks ~transformAssertEqual ~addError
-                  ~displayFilename
-                  ~markdownBlockStartLine:pexp_loc.loc_start.pos_lnum contents
-              in
-              codeBlocks |> List.iter addCodeBlock
-            | _ -> Ast_iterator.default_iterator.attribute mapper attr);
-      }
-    in
     let content =
       if Filename.check_suffix path ".md" then
         let content = readFile path in
@@ -1143,37 +1235,41 @@ module ExtractCodeblocks = struct
           extractRescriptCodeBlocks ~transformAssertEqual ~addError
             ~displayFilename ~markdownBlockStartLine:1 content
         in
-        Ok codeBlocks
-      else if Filename.check_suffix path ".res" then (
-        let parser =
-          Res_driver.parsing_engine.parse_implementation ~for_printer:true
-        in
-        let {Res_driver.parsetree = structure; filename} =
-          parser ~filename:path
-        in
-        let filename = Filename.basename filename in
-        let iterator =
-          makeIterator ~transformAssertEqual ~displayFilename:filename
-        in
-        iterator.structure iterator structure;
-        Ok !codeBlocks)
-      else if Filename.check_suffix path ".resi" then (
-        let parser =
-          Res_driver.parsing_engine.parse_interface ~for_printer:true
-        in
-        let {Res_driver.parsetree = signature; filename} =
-          parser ~filename:path
-        in
-        let iterator =
-          makeIterator ~transformAssertEqual ~displayFilename:filename
-        in
-        iterator.signature iterator signature;
-        Ok !codeBlocks)
+        Ok
+          (codeBlocks
+          |> List.mapi (fun index codeBlock ->
+                 {
+                   id = "codeblock-" ^ string_of_int (index + 1);
+                   name = "codeblock-" ^ string_of_int (index + 1);
+                   code = codeBlock;
+                 }))
       else
-        Error
-          (Printf.sprintf
-             "File extension not supported. This command accepts .res, .resi, \
-              and .md files")
+        let extracted =
+          extractCodeBlocks ~entryPointFile
+            ~processDocstrings:(fun ~id ~name code ->
+              let codeBlocks =
+                code
+                |> extractRescriptCodeBlocks ~transformAssertEqual ~addError
+                     ~displayFilename ~markdownBlockStartLine:1
+              in
+              if List.length codeBlocks > 1 then
+                codeBlocks |> List.rev
+                |> List.iteri (fun index codeBlock ->
+                       addCodeBlock
+                         {
+                           id = id ^ "-" ^ string_of_int (index + 1);
+                           name;
+                           code = codeBlock;
+                         })
+              else
+                codeBlocks
+                |> List.iter (fun codeBlock ->
+                       addCodeBlock {id; name; code = codeBlock}))
+        in
+
+        match extracted with
+        | Ok () -> Ok !codeBlocks
+        | Error e -> Error e
     in
     match content with
     | Error e -> Error e
@@ -1188,6 +1284,11 @@ module ExtractCodeblocks = struct
         Ok
           (codeBlocks
           |> List.map (fun codeBlock ->
-                 Protocol.wrapInQuotes (Json.escape codeBlock))
+                 Protocol.stringifyObject
+                   [
+                     ("id", Some (Protocol.wrapInQuotes codeBlock.id));
+                     ("name", Some (Protocol.wrapInQuotes codeBlock.name));
+                     ("code", Some (Protocol.wrapInQuotes codeBlock.code));
+                   ])
           |> Protocol.array)
 end
