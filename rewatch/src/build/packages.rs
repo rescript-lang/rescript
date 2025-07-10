@@ -847,10 +847,6 @@ impl Package {
     pub fn get_jsx_preserve_args(&self) -> Vec<String> {
         self.config.get_jsx_preserve_args()
     }
-
-    pub fn get_uncurried_args(&self, version: &str, root_package: &packages::Package) -> Vec<String> {
-        root_package.config.get_uncurried_args(version)
-    }
 }
 
 fn get_unallowed_dependents(
@@ -979,7 +975,6 @@ mod test {
                 reason: None,
                 namespace: None,
                 jsx: None,
-                uncurried: None,
                 gentype_config: None,
                 namespace_entry: None,
                 allowed_dependents,
