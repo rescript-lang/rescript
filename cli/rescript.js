@@ -3,40 +3,14 @@
 // @ts-check
 
 import * as child_process from "node:child_process";
-import { bsc_exe, rescript_exe } from "./common/bins.js";
+import { rescript_exe } from "./common/bins.js";
 
 const args = process.argv.slice(2);
 
-const firstPositionalArgIndex = args.findIndex(arg => !arg.startsWith("-"));
-
 try {
-  if (firstPositionalArgIndex !== -1) {
-    const subcommand = args[firstPositionalArgIndex];
-    const subcommandWithArgs = args.slice(firstPositionalArgIndex);
-
-    if (
-      subcommand === "build" ||
-      subcommand === "watch" ||
-      subcommand === "clean"
-    ) {
-      child_process.execFileSync(
-        rescript_exe,
-        [...subcommandWithArgs, "--bsc-path", bsc_exe],
-        {
-          stdio: "inherit",
-        },
-      );
-    } else {
-      child_process.execFileSync(rescript_exe, [...args], {
-        stdio: "inherit",
-      });
-    }
-  } else {
-    // no subcommand means build subcommand
-    child_process.execFileSync(rescript_exe, [...args, "--bsc-path", bsc_exe], {
-      stdio: "inherit",
-    });
-  }
+  child_process.execFileSync(rescript_exe, args, {
+    stdio: "inherit",
+  });
 } catch (err) {
   if (err.status !== undefined) {
     process.exit(err.status); // Pass through the exit code

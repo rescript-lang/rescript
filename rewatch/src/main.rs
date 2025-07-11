@@ -2,10 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use log::LevelFilter;
 use regex::Regex;
-use std::{
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::{io::Write, path::Path};
 
 use rewatch::{build, cli, cmd, lock, watcher};
 
@@ -45,7 +42,6 @@ fn main() -> Result<()> {
                 show_progress,
                 build_args.no_timing,
                 *build_args.create_sourcedirs,
-                build_args.bsc_path.as_ref().map(PathBuf::from),
                 *build_args.dev,
                 *build_args.snapshot_output,
             ) {
@@ -75,7 +71,6 @@ fn main() -> Result<()> {
                 (*watch_args.after_build).clone(),
                 *watch_args.create_sourcedirs,
                 *watch_args.dev,
-                (*watch_args.bsc_path).clone(),
                 *watch_args.snapshot_output,
             );
 
@@ -83,17 +78,11 @@ fn main() -> Result<()> {
         }
         cli::Command::Clean {
             folder,
-            bsc_path,
             snapshot_output,
         } => {
             let _lock = get_lock(&folder);
 
-            build::clean::clean(
-                Path::new(&folder as &str),
-                show_progress,
-                bsc_path.as_ref().map(PathBuf::from),
-                *snapshot_output,
-            )
+            build::clean::clean(Path::new(&folder as &str), show_progress, *snapshot_output)
         }
         cli::Command::Legacy { legacy_args } => {
             let code = build::pass_through_legacy(legacy_args);
