@@ -15,6 +15,7 @@
 #### :rocket: New Feature
 
 - Add experimental command to `rescript-tools` for formatting all ReScript code blocks in markdown. Either in a markdown file directly, or inside of docstrings in ReScript code. https://github.com/rescript-lang/rescript/pull/7598
+- Add `String.getSymbolUnsafe` back to Stdlib. https://github.com/rescript-lang/rescript/pull/7626
 
 #### :house: Internal
 
