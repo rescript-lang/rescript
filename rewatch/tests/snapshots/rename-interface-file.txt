@@ -1,10 +1,4 @@
-WARN:
-
-Package name mismatch for /packages/package-name-mismatch:
-The package.json name is "@testrepo/package-name-mismatch", while the rescript.json name is "xyz"
-This inconsistency will cause issues with package resolution.
-
 [2K No implementation file found for interface file (skipping): src/ModuleWithInterface2.resi
-Cleaned 1/16
+Cleaned 1/15
 Parsed 1 source files
 Compiled 2 modules

@@ -1,10 +1,4 @@
-WARN:
-
-Package name mismatch for /packages/package-name-mismatch:
-The package.json name is "@testrepo/package-name-mismatch", while the rescript.json name is "xyz"
-This inconsistency will cause issues with package resolution.
-
-Cleaned 2/16
+Cleaned 2/15
 Parsed 2 source files
 Compiled 2 modules
 
