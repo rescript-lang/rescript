@@ -12,7 +12,13 @@
 
 # 12.0.0-beta.2 (Unreleased)
 
+#### :rocket: New Feature
+
 - Add optional `message` argument to `Result.getOrThrow` and improve default error message. https://github.com/rescript-lang/rescript/pull/7630
+
+#### :house: Internal
+
+- Remove internal/unused `-bs-v` flag. https://github.com/rescript-lang/rescript/pull/7627
 
 # 12.0.0-beta.1
 

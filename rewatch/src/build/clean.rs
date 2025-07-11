@@ -354,7 +354,6 @@ pub fn clean(
         None => helpers::get_bsc(&project_root, &workspace_root),
     };
 
-    let rescript_version = helpers::get_rescript_version(&bsc_path);
 
     let timing_clean_compiler_assets = Instant::now();
     if !snapshot_output && show_progress {
@@ -412,7 +411,6 @@ pub fn clean(
         root_config_name,
         packages,
         workspace_root,
-        rescript_version,
         bsc_path,
     );
     packages::parse_packages(&mut build_state);
