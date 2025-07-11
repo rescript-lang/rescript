@@ -514,11 +514,11 @@ let split: (t<'k, 'v, 'id>, 'k) => ((t<'k, 'v, 'id>, t<'k, 'v, 'id>), option<'v>
 
 @deprecated("Use `map` instead")
 let mapU: (t<'k, 'v, 'id>, 'v => 'v2) => t<'k, 'v2, 'id>
-/** 
-`map(m, f) returns a map with same domain as`m`, where the associated
-value`a`of all bindings of`m`has been replaced by the result of the
-application of`f`to`a`. The bindings are passed to`f` in increasing order
-with respect to the ordering over the type of the keys. 
+/**
+`map(m, f)` returns a map with same domain as `m`, where the associated value `a`
+of all bindings of `m` has been replaced by the result of the application of `f`
+to `a`. The bindings are passed to `f` in increasing order with respect to the
+ordering over the type of the keys.
 */
 let map: (t<'k, 'v, 'id>, 'v => 'v2) => t<'k, 'v2, 'id>
 
