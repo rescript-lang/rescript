@@ -6,7 +6,6 @@
     "number": "-32-26-27-33"
   },
   "bs-dependencies": ["reason-react"],
-  "reason": { "react-jsx": 3 },
   "namespace": "my-namespace",
   "reanalyze": {
     "analysis": ["dce", "exception"]

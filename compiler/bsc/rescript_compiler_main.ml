@@ -228,7 +228,7 @@ let[@inline] string_list_add s : Bsc_args.spec = String (String_list_add s)
 
 (* mostly common used to list in the beginning to make search fast
 *)
-let buckle_script_flags : (string * Bsc_args.spec * string) array =
+let command_line_flags : (string * Bsc_args.spec * string) array =
   [|
     ( "-I",
       string_list_add Clflags.include_dirs,
@@ -258,8 +258,7 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
       "*internal* <module>  Opens the module <module> before typing" );
     ( "-bs-jsx",
       string_call (fun i ->
-          if i <> "3" && i <> "4" then
-            Bsc_args.bad_arg (" Not supported jsx version : " ^ i);
+          if i <> "4" then Bsc_args.bad_arg ("Unsupported jsx version: " ^ i);
           Js_config.jsx_version :=
             Js_config.jsx_version_of_int @@ int_of_string i),
       "*internal* Set jsx version" );
@@ -446,7 +445,7 @@ let file_level_flags_handler (e : Parsetree.expression option) =
                Location.raise_errorf ~loc:e.pexp_loc "string literal expected"))
     in
     try
-      Bsc_args.parse_exn ~start:0 ~argv:args buckle_script_flags
+      Bsc_args.parse_exn ~start:0 ~argv:args command_line_flags
         (fun ~rev_args:_ -> ())
         ~usage
     with _ ->
@@ -460,9 +459,7 @@ let _ : unit =
   let flags = "flags" in
   Ast_config.add_structure flags file_level_flags_handler;
   Ast_config.add_signature flags file_level_flags_handler;
-  try
-    Bsc_args.parse_exn ~argv:Sys.argv buckle_script_flags anonymous ~usage
-  with
+  try Bsc_args.parse_exn ~argv:Sys.argv command_line_flags anonymous ~usage with
   | Bsc_args.Bad msg ->
     Format.eprintf "%s@." msg;
     exit 2

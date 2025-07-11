@@ -91,11 +91,6 @@
       },
       "additionalProperties": false
     },
-    "react-jsx-version": {
-      "title": "jsx-version",
-      "type": "number",
-      "description": "backward compatible mode, true means on with the default to be version 1 (the default value is subject to change)"
-    },
     "ppx-specs": {
       "type": "array",
       "items": {
