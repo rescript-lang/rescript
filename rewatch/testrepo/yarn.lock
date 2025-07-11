@@ -81,6 +81,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@testrepo/nonexisting-dev-files@workspace:packages/nonexisting-dev-files":
+  version: 0.0.0-use.local
+  resolution: "@testrepo/nonexisting-dev-files@workspace:packages/nonexisting-dev-files"
+  languageName: unknown
+  linkType: soft
+
 "@testrepo/with-dev-deps@workspace:packages/with-dev-deps":
   version: 0.0.0-use.local
   resolution: "@testrepo/with-dev-deps@workspace:packages/with-dev-deps"

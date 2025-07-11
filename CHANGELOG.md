@@ -25,6 +25,10 @@
 
 - Add a warning if the name in package.json does not match the name in rescript.json. https://github.com/rescript-lang/rescript/pull/7604
 
+#### :bug: Bug fix
+
+- Don't panic when dev files are not present during clean. https://github.com/rescript-lang/rescript/pull/7622
+
 # 12.0.0-alpha.15
 
 #### :boom: Breaking Change
