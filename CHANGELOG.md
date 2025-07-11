@@ -16,6 +16,7 @@
 
 - Remove internal/unused `-bs-v` flag. https://github.com/rescript-lang/rescript/pull/7627
 - Remove unused `-bs-D` and `-bs-list-conditionals` flags. https://github.com/rescript-lang/rescript/pull/7631
+- Remove obsolete jsx options. https://github.com/rescript-lang/rescript/pull/7633
 
 # 12.0.0-beta.1
 
