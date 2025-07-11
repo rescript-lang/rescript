@@ -66,7 +66,7 @@ let output_static_resources (static_resources : string list) copy_rule oc =
 
 (*
   FIXME: check if the trick still works
-  phony build.ninja : | resources 
+  phony build.ninja : | resources
 *)
 let mark_rescript oc = output_string oc "rescript = 1\n"
 
@@ -197,7 +197,7 @@ let output_ninja_and_namespace_map ~per_proj_dir ~package_kind
       ~dpkg_incls (* dev dependencies *)
       ~lib_incls (* its own libs *)
       ~dev_incls (* its own devs *)
-      ~bs_dependencies ~bs_dev_dependencies generators
+      generators
   in
 
   let oc = open_out_bin (cwd_lib_bs // Literals.build_ninja) in

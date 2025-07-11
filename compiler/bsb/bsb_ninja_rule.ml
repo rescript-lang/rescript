@@ -91,8 +91,8 @@ let make_custom_rules ~(gentype_config : Bsb_config_types.gentype_config)
     ~(jsx : Bsb_jsx.t) ~(digest : string) ~(package_specs : Bsb_package_specs.t)
     ~(namespace : string option) ~package_name ~warnings
     ~(ppx_files : Bsb_config_types.ppx list) ~bsc_flags ~(dpkg_incls : string)
-    ~(lib_incls : string) ~(dev_incls : string) ~bs_dependencies
-    ~bs_dev_dependencies (custom_rules : command Map_string.t) : builtin =
+    ~(lib_incls : string) ~(dev_incls : string)
+    (custom_rules : command Map_string.t) : builtin =
   let bs_dep = Ext_filename.maybe_quote Bsb_global_paths.vendor_bsdep in
   let bsc = Ext_filename.maybe_quote Bsb_global_paths.vendor_bsc in
   (* FIXME: We don't need set [-o ${out}] when building ast
@@ -127,11 +127,6 @@ let make_custom_rules ~(gentype_config : Bsb_config_types.gentype_config)
       Ext_buffer.add_string buf
         (Bsb_package_specs.package_flag_of_package_specs package_specs
            ~dirname:"$in_d"));
-    (match (bs_dependencies, bs_dev_dependencies) with
-    | [], [] -> ()
-    | _, _ ->
-      Ext_buffer.add_string buf " -bs-v";
-      Ext_buffer.add_ninja_prefix_var buf Bsb_ninja_global_vars.g_finger);
     Ext_buffer.add_string buf " $i";
     (match postbuild with
     | None -> ()
@@ -145,8 +140,6 @@ let make_custom_rules ~(gentype_config : Bsb_config_types.gentype_config)
     Ext_buffer.clear buf;
     Ext_buffer.add_string buf bsc;
     Ext_buffer.add_char_string buf ' ' warnings;
-    Ext_buffer.add_string buf " -bs-v ";
-    Ext_buffer.add_string buf Bs_version.version;
     (match ppx_files with
     | [] -> ()
     | _ ->

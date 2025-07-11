@@ -180,13 +180,6 @@ pub enum Command {
 
         #[command(flatten)]
         dev: DevArg,
-
-        /// To be used in conjunction with compiler_args
-        #[arg(long)]
-        rescript_version: Option<String>,
-
-        #[command(flatten)]
-        bsc_path: BscPathArg,
     },
     /// Use the legacy build system.
     ///

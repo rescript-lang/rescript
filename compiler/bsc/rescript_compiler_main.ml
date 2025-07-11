@@ -302,7 +302,6 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
           Js_config.debug := true;
           Pp.replace_directive_bool "DEBUG" true),
       "Debug mode" );
-    ("-bs-v", string_call ignore, "*internal* version check to force a rebuild");
     ( "-bs-package-name",
       string_call Js_packages_state.set_package_name,
       "*internal* Set package name, useful when you want to produce npm \

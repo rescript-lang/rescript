@@ -5,7 +5,6 @@ use std::fs::File;
 use std::io::Read;
 use std::io::{self, BufRead};
 use std::path::{Component, Path, PathBuf};
-use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub type StdErr = String;
@@ -406,18 +405,6 @@ pub fn get_nearest_config(path_buf: &Path) -> Option<PathBuf> {
             Some(parent) => current_dir = parent.to_path_buf(),
         }
     }
-}
-
-pub fn get_rescript_version(bsc_path: &Path) -> String {
-    let version_cmd = Command::new(bsc_path)
-        .args(["-v"])
-        .output()
-        .expect("failed to find version");
-
-    std::str::from_utf8(&version_cmd.stdout)
-        .expect("Could not read version from rescript")
-        .replace('\n', "")
-        .replace("ReScript ", "")
 }
 
 pub fn read_file(path: &Path) -> Result<String, std::io::Error> {

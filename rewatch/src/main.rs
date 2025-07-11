@@ -30,15 +30,11 @@ fn main() -> Result<()> {
         cli::Command::CompilerArgs {
             path,
             dev,
-            rescript_version,
-            bsc_path,
         } => {
             println!(
                 "{}",
                 build::get_compiler_args(
                     Path::new(&path),
-                    rescript_version,
-                    bsc_path.as_ref().map(PathBuf::from),
                     *dev
                 )?
             );
