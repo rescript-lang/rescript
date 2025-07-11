@@ -394,7 +394,6 @@ pub fn compiler_args(
         packages::Namespace::NoNamespace => vec![],
     };
 
-    let uncurried_args = root_config.get_uncurried_args(version);
     let jsx_args = root_config.get_jsx_args();
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
@@ -462,7 +461,6 @@ pub fn compiler_args(
         jsx_module_args,
         jsx_mode_args,
         jsx_preserve_args,
-        uncurried_args,
         bsc_flags.to_owned(),
         warning_args,
         gentype_arg,
