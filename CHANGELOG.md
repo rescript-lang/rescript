@@ -12,6 +12,10 @@
 
 # 12.0.0-beta.2 (Unreleased)
 
+#### :house: Internal
+
+- Remove internal/unused `-bs-v` flag. https://github.com/rescript-lang/rescript/pull/7627
+
 # 12.0.0-beta.1
 
 #### :rocket: New Feature
