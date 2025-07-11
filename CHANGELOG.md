@@ -15,6 +15,7 @@
 #### :house: Internal
 
 - Remove internal/unused `-bs-v` flag. https://github.com/rescript-lang/rescript/pull/7627
+- Remove unused `-bs-D` and `-bs-list-conditionals` flags. https://github.com/rescript-lang/rescript/pull/7631
 
 # 12.0.0-beta.1
 
