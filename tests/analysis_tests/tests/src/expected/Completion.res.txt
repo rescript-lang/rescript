@@ -17,25 +17,25 @@ Path MyList.m
     "kind": 12,
     "tags": [],
     "detail": "(list<'a>, list<'b>, ('a, 'b) => 'c) => list<'c>",
-    "documentation": {"kind": "markdown", "value": "\n`mapReverse2(list1, list2, f)` is equivalent to `List.zipBy(list1, list2, f)->List.reverse`.\n\n## Examples\n\n```rescript\nassertEqual(List.mapReverse2(list{1, 2, 3}, list{1, 2}, (a, b) => a + b), list{4, 2})\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`mapReverse2(list1, list2, f)` is equivalent to `List.zipBy(list1, list2, f)->List.reverse`.\n\n## Examples\n\n```rescript\nList.mapReverse2(list{1, 2, 3}, list{1, 2}, (a, b) => a + b) == list{4, 2}\n```\n"}
   }, {
     "label": "make",
     "kind": 12,
     "tags": [],
     "detail": "(~length: int, 'a) => list<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`make(length, value)` returns a list of length `length` with each element filled\nwith `value`. Returns an empty list if `value` is negative.\n\n## Examples\n\n```rescript\nassertEqual(List.make(~length=3, 1), list{1, 1, 1})\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`make(length, value)` returns a list of length `length` with each element filled\nwith `value`. Returns an empty list if `value` is negative.\n\n## Examples\n\n```rescript\nList.make(~length=3, 1) == list{1, 1, 1}\n```\n"}
   }, {
     "label": "mapWithIndex",
     "kind": 12,
     "tags": [],
     "detail": "(list<'a>, ('a, int) => 'b) => list<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(list, f)` applies `f` to each element of `list`. Function `f`\ntakes two arguments: the index starting from 0 and the element from `list`, in\nthat order.\n\n## Examples\n\n```rescript\nassertEqual(list{1, 2, 3}->List.mapWithIndex((x, index) => index + x), list{1, 3, 5})\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(list, f)` applies `f` to each element of `list`. Function `f`\ntakes two arguments: the index starting from 0 and the element from `list`, in\nthat order.\n\n## Examples\n\n```rescript\nlist{1, 2, 3}->List.mapWithIndex((x, index) => index + x) == list{1, 3, 5}\n```\n"}
   }, {
     "label": "map",
     "kind": 12,
     "tags": [],
     "detail": "(list<'a>, 'a => 'b) => list<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`map(list, f)` returns a new list with `f` applied to each element of `list`.\n\n## Examples\n\n```rescript\nassertEqual(list{1, 2}->List.map(x => x + 1), list{2, 3})\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`map(list, f)` returns a new list with `f` applied to each element of `list`.\n\n## Examples\n\n```rescript\nlist{1, 2}->List.map(x => x + 1) == list{2, 3}\n```\n"}
   }]
 
 Complete src/Completion.res 3:9
@@ -57,37 +57,37 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, array<'a>) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`concat(array1, array2)` concatenates the two arrays, creating a new array.\n\nSee [`Array.concat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/concat) on MDN.\n\n## Examples\n\n```rescript\nlet array1 = [\"hi\", \"hello\"]\nlet array2 = [\"yay\", \"wehoo\"]\n\nlet someArray = array1->Array.concat(array2)\n\nsomeArray->assertEqual([\"hi\", \"hello\", \"yay\", \"wehoo\"])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`concat(array1, array2)` concatenates the two arrays, creating a new array.\n\nSee [`Array.concat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/concat) on MDN.\n\n## Examples\n\n```rescript\nlet array1 = [\"hi\", \"hello\"]\nlet array2 = [\"yay\", \"wehoo\"]\n\nlet someArray = array1->Array.concat(array2)\n\nsomeArray == [\"hi\", \"hello\", \"yay\", \"wehoo\"]\n```\n"}
   }, {
     "label": "filterMap",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => option<'b>) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`filterMap(array, fn)`\n\nCalls `fn` for each element and returns a new array containing results of the `fn` calls which are not `None`.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]\n->Array.filterMap(item =>\n  switch item {\n  | \"Hello\" => Some(item->String.length)\n  | _ => None\n  }\n)\n->assertEqual([5])\n\n[1, 2, 3, 4, 5, 6]\n->Array.filterMap(n => mod(n, 2) == 0 ? Some(n * n) : None)\n->assertEqual([4, 16, 36])\n\nArray.filterMap([1, 2, 3, 4, 5, 6], _ => None)->assertEqual([])\n\nArray.filterMap([], n => mod(n, 2) == 0 ? Some(n * n) : None)->assertEqual([])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`filterMap(array, fn)`\n\nCalls `fn` for each element and returns a new array containing results of the `fn` calls which are not `None`.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]->Array.filterMap(item =>\n  switch item {\n  | \"Hello\" => Some(item->String.length)\n  | _ => None\n  }\n) == [5]\n\n[1, 2, 3, 4, 5, 6]->Array.filterMap(n => mod(n, 2) == 0 ? Some(n * n) : None) == [4, 16, 36]\n\nArray.filterMap([1, 2, 3, 4, 5, 6], _ => None) == []\n\nArray.filterMap([], n => mod(n, 2) == 0 ? Some(n * n) : None) == []\n```\n"}
   }, {
     "label": "findLastWithIndex",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ('a, int) => bool) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`findLastWithIndex(array, checker)` returns the last element of `array` where the provided `checker` function returns true.\n\nSee [`Array.findLast`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLast) on MDN.\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3]\n\narray\n->Array.findLastWithIndex((item, index) => index < 2 && item > 0)\n->assertEqual(Some(2))\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`findLastWithIndex(array, checker)` returns the last element of `array` where the provided `checker` function returns true.\n\nSee [`Array.findLast`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLast) on MDN.\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3]\n\narray->Array.findLastWithIndex((item, index) => index < 2 && item > 0) == Some(2)\n```\n"}
   }, {
     "label": "findLast",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => bool) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`findLast(array, checker)` returns the last element of `array` where the provided `checker` function returns true.\n\nSee [`Array.findLast`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLast) on MDN.\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3]\n\narray\n->Array.findLast(item => item > 0)\n->assertEqual(Some(3))\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`findLast(array, checker)` returns the last element of `array` where the provided `checker` function returns true.\n\nSee [`Array.findLast`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLast) on MDN.\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3]\n\narray->Array.findLast(item => item > 0) == Some(3)\n```\n"}
   }, {
     "label": "shift",
     "kind": 12,
     "tags": [],
     "detail": "array<'a> => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`shift(array)` removes the first item in the array, and returns it.\n\nBeware this will *mutate* the array.\n\nSee [`Array.shift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/shift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\n\nsomeArray\n->Array.shift\n->assertEqual(Some(\"hi\"))\n\nsomeArray->assertEqual([\"hello\"]) // Notice first item is gone.\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`shift(array)` removes the first item in the array, and returns it.\n\nBeware this will *mutate* the array.\n\nSee [`Array.shift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/shift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\n\nsomeArray->Array.shift == Some(\"hi\")\n\nsomeArray == [\"hello\"] // Notice first item is gone.\n```\n"}
   }, {
     "label": "findMap",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => option<'b>) => option<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`findMap(arr, fn)`\n\nCalls `fn` for each element and returns the first value from `fn` that is `Some(_)`.\nOtherwise returns `None`\n\n## Examples\n\n```rescript\nArray.findMap([1, 2, 3], n => mod(n, 2) == 0 ? Some(n - 2) : None)->assertEqual(Some(0))\n\nArray.findMap([1, 2, 3, 4, 5, 6], n => mod(n, 2) == 0 ? Some(n - 8) : None)->assertEqual(Some(-6))\n\nArray.findMap([1, 2, 3, 4, 5, 6], _ => None)->assertEqual(None)\n\nArray.findMap([], n => mod(n, 2) == 0 ? Some(n * n) : None)->assertEqual(None)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`findMap(arr, fn)`\n\nCalls `fn` for each element and returns the first value from `fn` that is `Some(_)`.\nOtherwise returns `None`\n\n## Examples\n\n```rescript\nArray.findMap([1, 2, 3], n => mod(n, 2) == 0 ? Some(n - 2) : None) == Some(0)\n\nArray.findMap([1, 2, 3, 4, 5, 6], n => mod(n, 2) == 0 ? Some(n - 8) : None) == Some(-6)\n\nArray.findMap([1, 2, 3, 4, 5, 6], _ => None) == None\n\nArray.findMap([], n => mod(n, 2) == 0 ? Some(n * n) : None) == None\n```\n"}
   }, {
     "label": "concatMany",
     "kind": 12,
@@ -99,31 +99,31 @@ Path Array.
     "kind": 12,
     "tags": [1],
     "detail": "(array<string>, string) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `join` instead\n\n\n`joinWith(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Array items must be strings, to join number or other arrays, use `joinWithUnsafe`. Under the hood this will run JavaScript's `toString` on all the array items.\n\n## Examples\n\n```rescript\n[\"One\", \"Two\", \"Three\"]\n->Array.joinWith(\" -- \")\n->assertEqual(\"One -- Two -- Three\")\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `join` instead\n\n\n`joinWith(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Array items must be strings, to join number or other arrays, use `joinWithUnsafe`. Under the hood this will run JavaScript's `toString` on all the array items.\n\n## Examples\n\n```rescript\n[\"One\", \"Two\", \"Three\"]->Array.joinWith(\" -- \") == \"One -- Two -- Three\"\n```\n"}
   }, {
     "label": "joinWithUnsafe",
     "kind": 12,
     "tags": [1],
     "detail": "(array<'a>, string) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `joinUnsafe` instead\n\n\n`joinWithUnsafe(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Under the hood this will run JavaScript's `toString` on all the array items.\n\n## Examples\n\n```rescript\n[1, 2, 3]\n->Array.joinWithUnsafe(\" -- \")\n->assertEqual(\"1 -- 2 -- 3\")\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `joinUnsafe` instead\n\n\n`joinWithUnsafe(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Under the hood this will run JavaScript's `toString` on all the array items.\n\n## Examples\n\n```rescript\n[1, 2, 3]->Array.joinWithUnsafe(\" -- \") == \"1 -- 2 -- 3\"\n```\n"}
   }, {
     "label": "reduceRight",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'b, ('b, 'a) => 'b) => 'b",
-    "documentation": {"kind": "markdown", "value": "\n`reduceRight(xs, init, fn)`\n\nWorks like `Array.reduce`; except that function `fn` is applied to each item of `xs` from the last back to the first.\n\n## Examples\n\n```rescript\nArray.reduceRight([\"a\", \"b\", \"c\", \"d\"], \"\", (a, b) => a ++ b)->assertEqual(\"dcba\")\n\nArray.reduceRight([1, 2, 3], list{}, List.add)->assertEqual(list{1, 2, 3})\n\nArray.reduceRight([], list{}, List.add)->assertEqual(list{})\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`reduceRight(xs, init, fn)`\n\nWorks like `Array.reduce`; except that function `fn` is applied to each item of `xs` from the last back to the first.\n\n## Examples\n\n```rescript\nArray.reduceRight([\"a\", \"b\", \"c\", \"d\"], \"\", (a, b) => a ++ b) == \"dcba\"\n\nArray.reduceRight([1, 2, 3], list{}, List.add) == list{1, 2, 3}\n\nArray.reduceRight([], list{}, List.add) == list{}\n```\n"}
   }, {
     "label": "reduceRightWithIndex",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'b, ('b, 'a, int) => 'b) => 'b",
-    "documentation": {"kind": "markdown", "value": "\n`reduceRightWithIndex(xs, init, fn)`\n\nLike `reduceRight`, but with an additional index argument on the callback function.\n\n## Examples\n\n```rescript\nArray.reduceRightWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i)->assertEqual(16)\n\nArray.reduceRightWithIndex([], list{}, (acc, v, i) => list{v + i, ...acc})->assertEqual(list{})\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`reduceRightWithIndex(xs, init, fn)`\n\nLike `reduceRight`, but with an additional index argument on the callback function.\n\n## Examples\n\n```rescript\nArray.reduceRightWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i) == 16\n\nArray.reduceRightWithIndex([], list{}, (acc, v, i) => list{v + i, ...acc}) == list{}\n```\n"}
   }, {
     "label": "toShuffled",
     "kind": 12,
     "tags": [],
     "detail": "array<'a> => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`toShuffled(array)` returns a new array with all items in `array` in a random order.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet shuffledArray = array->Array.toShuffled\nConsole.log(shuffledArray)\n\nArray.toShuffled([1, 2, 3])\n->Array.length\n->assertEqual(3)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`toShuffled(array)` returns a new array with all items in `array` in a random order.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet shuffledArray = array->Array.toShuffled\nConsole.log(shuffledArray)\n\nArray.toShuffled([1, 2, 3])->Array.length == 3\n```\n"}
   }, {
     "label": "getSymbol",
     "kind": 12,
@@ -141,79 +141,79 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => bool) => option<int>",
-    "documentation": {"kind": "markdown", "value": "\n`findIndexOpt(array, checker)` returns the index of the first element of `array` where the provided `checker` function returns true.\n\nReturns `None` if no item matches.\n\nSee [`Array.findIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex) on MDN.\n\n## Examples\n\n```rescript\ntype languages = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, TypeScript, JavaScript]\n\narray\n->Array.findIndexOpt(item => item == ReScript)\n->assertEqual(Some(0))\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`findIndexOpt(array, checker)` returns the index of the first element of `array` where the provided `checker` function returns true.\n\nReturns `None` if no item matches.\n\nSee [`Array.findIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex) on MDN.\n\n## Examples\n\n```rescript\ntype languages = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, TypeScript, JavaScript]\n\narray->Array.findIndexOpt(item => item == ReScript) == Some(0)\n```\n"}
   }, {
     "label": "shuffle",
     "kind": 12,
     "tags": [],
     "detail": "array<'a> => unit",
-    "documentation": {"kind": "markdown", "value": "\n`shuffle(array)` randomizes the position of all items in `array`.\n\nBeware this will *mutate* the array.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\narray->Array.shuffle\nConsole.log(array)\n\nlet array2 = [1, 2, 3]\narray2->Array.shuffle\n\narray2\n->Array.length\n->assertEqual(3)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`shuffle(array)` randomizes the position of all items in `array`.\n\nBeware this will *mutate* the array.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\narray->Array.shuffle\nConsole.log(array)\n\nlet array2 = [1, 2, 3]\narray2->Array.shuffle\n\narray2->Array.length == 3\n```\n"}
   }, {
     "label": "copy",
     "kind": 12,
     "tags": [],
     "detail": "array<'a> => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`copy(array)` makes a copy of the array with the items in it, but does not make copies of the items themselves.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3]\nlet copyOfMyArray = myArray->Array.copy\n\ncopyOfMyArray->assertEqual([1, 2, 3])\nassertEqual(myArray === copyOfMyArray, false)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`copy(array)` makes a copy of the array with the items in it, but does not make copies of the items themselves.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3]\nlet copyOfMyArray = myArray->Array.copy\n\ncopyOfMyArray == [1, 2, 3]\n(myArray === copyOfMyArray) == false\n```\n"}
   }, {
     "label": "setUnsafe",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, int, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`setUnsafe(array, index, item)` sets the provided `item` at `index` of `array`.\n\nBeware this will *mutate* the array, and is *unsafe*.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\narray->Array.setUnsafe(1, \"Hello\")\n\nassertEqual(array[1], Some(\"Hello\"))\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`setUnsafe(array, index, item)` sets the provided `item` at `index` of `array`.\n\nBeware this will *mutate* the array, and is *unsafe*.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\narray->Array.setUnsafe(1, \"Hello\")\n\narray[1] == Some(\"Hello\")\n```\n"}
   }, {
     "label": "findIndexWithIndex",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ('a, int) => bool) => int",
-    "documentation": {"kind": "markdown", "value": "\n`findIndexWithIndex(array, checker)` returns the index of the first element of `array` where the provided `checker` function returns true.\n\nReturns `-1` if the item does not exist. Consider using `Array.findIndexOpt` if you want an option instead (where `-1` would be `None`).\n\nSee [`Array.findIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex) on MDN.\n\n## Examples\n\n```rescript\ntype languages = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, JavaScript]\n\nlet isReScriptFirst = array->Array.findIndexWithIndex((item, index) => index === 0 && item == ReScript)\nlet isTypeScriptFirst = array->Array.findIndexWithIndex((item, index) => index === 0 && item == TypeScript)\n\nassertEqual(isReScriptFirst, 0)\nassertEqual(isTypeScriptFirst, -1)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`findIndexWithIndex(array, checker)` returns the index of the first element of `array` where the provided `checker` function returns true.\n\nReturns `-1` if the item does not exist. Consider using `Array.findIndexOpt` if you want an option instead (where `-1` would be `None`).\n\nSee [`Array.findIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex) on MDN.\n\n## Examples\n\n```rescript\ntype languages = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, JavaScript]\n\nlet isReScriptFirst =\n  array->Array.findIndexWithIndex((item, index) => index === 0 && item == ReScript)\nlet isTypeScriptFirst =\n  array->Array.findIndexWithIndex((item, index) => index === 0 && item == TypeScript)\n\nisReScriptFirst == 0\nisTypeScriptFirst == -1\n```\n"}
   }, {
     "label": "someWithIndex",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ('a, int) => bool) => bool",
-    "documentation": {"kind": "markdown", "value": "\n`someWithIndex(array, checker)` returns true if running the provided `checker` function on any element in `array` returns true.\n\nSee [`Array.some`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/some) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\n\narray\n->Array.someWithIndex((greeting, index) => greeting === \"Hello\" && index === 0)\n->assertEqual(true)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`someWithIndex(array, checker)` returns true if running the provided `checker` function on any element in `array` returns true.\n\nSee [`Array.some`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/some) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\n\narray->Array.someWithIndex((greeting, index) => greeting === \"Hello\" && index === 0) == true\n```\n"}
   }, {
     "label": "slice",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ~start: int, ~end: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`slice(array, ~start, ~end)` creates a new array of items copied from `array` from `start` until (but not including) `end`.\n\nSee [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]\n->Array.slice(~start=1, ~end=3)\n->assertEqual([2, 3])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`slice(array, ~start, ~end)` creates a new array of items copied from `array` from `start` until (but not including) `end`.\n\nSee [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.slice(~start=1, ~end=3) == [2, 3]\n```\n"}
   }, {
     "label": "fillToEnd",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a, ~start: int) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`fillToEnd(array, value, ~start)` fills `array` with `value` from the `start` index.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\nmyArray->Array.fillToEnd(9, ~start=1)\nmyArray->assertEqual([1, 9, 9, 9])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`fillToEnd(array, value, ~start)` fills `array` with `value` from the `start` index.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\nmyArray->Array.fillToEnd(9, ~start=1)\nmyArray == [1, 9, 9, 9]\n```\n"}
   }, {
     "label": "includes",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a) => bool",
-    "documentation": {"kind": "markdown", "value": "\n`includes(array, item)` checks whether `array` includes `item`, by doing a [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality).\n\nSee [`Array.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/includes) on MDN.\n\n## Examples\n\n```rescript\n[1, 2]->Array.includes(1)->assertEqual(true)\n[1, 2]->Array.includes(3)->assertEqual(false)\n\n[{\"language\": \"ReScript\"}]\n->Array.includes({\"language\": \"ReScript\"})\n->assertEqual(false) // false, because of strict equality\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`includes(array, item)` checks whether `array` includes `item`, by doing a [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality).\n\nSee [`Array.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/includes) on MDN.\n\n## Examples\n\n```rescript\n[1, 2]->Array.includes(1) == true\n[1, 2]->Array.includes(3) == false\n\n[{\"language\": \"ReScript\"}]->Array.includes({\"language\": \"ReScript\"}) == false // false, because of strict equality\n```\n"}
   }, {
     "label": "findLastIndex",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => bool) => int",
-    "documentation": {"kind": "markdown", "value": "\n`findLastIndex(array, checker)` returns the index of the last element of `array` where the provided `checker` function returns true.\n\nReturns `-1` if the item does not exist. Consider using `Array.findLastIndexOpt` if you want an option instead (where `-1` would be `None`).\n\nSee [`Array.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex) on MDN.\n\n## Examples\n\n```rescript\ntype languages = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, JavaScript, ReScript]\n\narray\n->Array.findLastIndex(item => item == ReScript)\n->assertEqual(2)\n\narray->Array.findLastIndex(item => item == TypeScript)\n->assertEqual(-1)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`findLastIndex(array, checker)` returns the index of the last element of `array` where the provided `checker` function returns true.\n\nReturns `-1` if the item does not exist. Consider using `Array.findLastIndexOpt` if you want an option instead (where `-1` would be `None`).\n\nSee [`Array.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex) on MDN.\n\n## Examples\n\n```rescript\ntype languages = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, JavaScript, ReScript]\n\narray->Array.findLastIndex(item => item == ReScript) == 2\n\narray->Array.findLastIndex(item => item == TypeScript) == -1\n```\n"}
   }, {
     "label": "fromInitializer",
     "kind": 12,
     "tags": [],
     "detail": "(~length: int, int => 'a) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`fromInitializer(~length, f)`\n\nCreates an array of length `length` initialized with the value returned from `f ` for each index.\n\n## Examples\n\n```rescript\nArray.fromInitializer(~length=3, i => i + 3)->assertEqual([3, 4, 5])\n\nArray.fromInitializer(~length=7, i => i + 3)->assertEqual([3, 4, 5, 6, 7, 8, 9])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`fromInitializer(~length, f)`\n\nCreates an array of length `length` initialized with the value returned from `f ` for each index.\n\n## Examples\n\n```rescript\nArray.fromInitializer(~length=3, i => i + 3) == [3, 4, 5]\n\nArray.fromInitializer(~length=7, i => i + 3) == [3, 4, 5, 6, 7, 8, 9]\n```\n"}
   }, {
     "label": "find",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => bool) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`find(array, checker)` returns the first element of `array` where the provided `checker` function returns true.\n\nSee [`Array.find`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/find) on MDN.\n\n## Examples\n\n```rescript\ntype languages = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, TypeScript, JavaScript]\n\narray\n->Array.find(item => item == ReScript)\n->assertEqual(Some(ReScript))\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`find(array, checker)` returns the first element of `array` where the provided `checker` function returns true.\n\nSee [`Array.find`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/find) on MDN.\n\n## Examples\n\n```rescript\ntype languages = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, TypeScript, JavaScript]\n\narray->Array.find(item => item == ReScript) == Some(ReScript)\n```\n"}
   }, {
     "label": "make",
     "kind": 12,
     "tags": [],
     "detail": "(~length: int, 'a) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`make(~length, init)` creates an array of length `length` initialized with the value of `init`.\n\n## Examples\n\n```rescript\nArray.make(~length=3, #apple)->assertEqual([#apple, #apple, #apple])\nArray.make(~length=6, 7)->assertEqual([7, 7, 7, 7, 7, 7])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`make(~length, init)` creates an array of length `length` initialized with the value of `init`.\n\n## Examples\n\n```rescript\nArray.make(~length=3, #apple) == [#apple, #apple, #apple]\nArray.make(~length=6, 7) == [7, 7, 7, 7, 7, 7]\n```\n"}
   }, {
     "label": "lastIndexOfFrom",
     "kind": 12,
@@ -237,31 +237,31 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ('a, 'a) => Ordering.t) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`sort(array, comparator)` sorts `array` in-place using the `comparator` function.\n\nBeware this will *mutate* the array.\n\nSee [`Array.sort`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort) on MDN.\n\n## Examples\n\n```rescript\nlet array = [3, 2, 1]\narray->Array.sort((a, b) => float(a - b))\narray->assertEqual([1, 2, 3])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`sort(array, comparator)` sorts `array` in-place using the `comparator` function.\n\nBeware this will *mutate* the array.\n\nSee [`Array.sort`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort) on MDN.\n\n## Examples\n\n```rescript\nlet array = [3, 2, 1]\narray->Array.sort((a, b) => float(a - b))\narray == [1, 2, 3]\n```\n"}
   }, {
     "label": "length",
     "kind": 12,
     "tags": [],
     "detail": "array<'a> => int",
-    "documentation": {"kind": "markdown", "value": "\n`length(array)` returns the length of (i.e. number of items in) the array.\n\nSee [`Array.length`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/length) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\n\nsomeArray\n->Array.length\n->assertEqual(2)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`length(array)` returns the length of (i.e. number of items in) the array.\n\nSee [`Array.length`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/length) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\n\nsomeArray->Array.length == 2\n```\n"}
   }, {
     "label": "every",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => bool) => bool",
-    "documentation": {"kind": "markdown", "value": "\n`every(array, predicate)` returns true if `predicate` returns true for all items in `array`.\n\nSee [`Array.every`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/every) on MDN.\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3, 4]\n\narray\n->Array.every(num => num <= 4)\n->assertEqual(true)\n\narray\n->Array.every(num => num === 1)\n->assertEqual(false)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`every(array, predicate)` returns true if `predicate` returns true for all items in `array`.\n\nSee [`Array.every`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/every) on MDN.\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3, 4]\n\narray->Array.every(num => num <= 4) == true\n\narray->Array.every(num => num === 1) == false\n```\n"}
   }, {
     "label": "flat",
     "kind": 12,
     "tags": [],
     "detail": "array<array<'a>> => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`flat(arrays)` concatenates an array of arrays into a single array.\n\nSee [`Array.flat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat) on MDN.\n\n## Examples\n\n```rescript\n[[1], [2], [3, 4]]\n->Array.flat\n->assertEqual([1, 2, 3, 4])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`flat(arrays)` concatenates an array of arrays into a single array.\n\nSee [`Array.flat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat) on MDN.\n\n## Examples\n\n```rescript\n[[1], [2], [3, 4]]->Array.flat == [1, 2, 3, 4]\n```\n"}
   }, {
     "label": "map",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => 'b) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nassertEqual(mappedArray, [\"Hello to you\", \"Hi to you\", \"Good bye to you\"])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nmappedArray == [\"Hello to you\", \"Hi to you\", \"Good bye to you\"]\n```\n"}
   }, {
     "label": "with",
     "kind": 12,
@@ -279,7 +279,7 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "array<'a> => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`toReversed(array)` creates a new array with all items from `array` in reversed order.\n\nSee [`Array.toReversed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toReversed) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nlet reversed = someArray->Array.toReversed\n\nreversed->assertEqual([\"hello\", \"hi\"])\nsomeArray->assertEqual([\"hi\", \"hello\"]) // Original unchanged\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`toReversed(array)` creates a new array with all items from `array` in reversed order.\n\nSee [`Array.toReversed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toReversed) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nlet reversed = someArray->Array.toReversed\n\nreversed == [\"hello\", \"hi\"]\nsomeArray == [\"hi\", \"hello\"] // Original unchanged\n```\n"}
   }, {
     "label": "copyWithin",
     "kind": 12,
@@ -291,37 +291,37 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "array<'a> => string",
-    "documentation": {"kind": "markdown", "value": "\n`toString(array)` stringifies `array` by running `toString` on all of the array elements and joining them with \",\".\n\nSee [`Array.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toString) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]\n->Array.toString\n->assertEqual(\"1,2,3,4\")\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`toString(array)` stringifies `array` by running `toString` on all of the array elements and joining them with \",\".\n\nSee [`Array.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toString) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.toString == \"1,2,3,4\"\n```\n"}
   }, {
     "label": "everyWithIndex",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ('a, int) => bool) => bool",
-    "documentation": {"kind": "markdown", "value": "\n`everyWithIndex(array, checker)` returns true if all items in `array` returns true when running the provided `checker` function.\n\nSee [`Array.every`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/every) on MDN.\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3, 4]\n\narray\n->Array.everyWithIndex((num, index) => index < 5 && num <= 4)\n->assertEqual(true)\n\narray\n->Array.everyWithIndex((num, index) => index < 2 && num >= 2)\n->assertEqual(false)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`everyWithIndex(array, checker)` returns true if all items in `array` returns true when running the provided `checker` function.\n\nSee [`Array.every`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/every) on MDN.\n\n## Examples\n\n```rescript\nlet array = [1, 2, 3, 4]\n\narray->Array.everyWithIndex((num, index) => index < 5 && num <= 4) == true\n\narray->Array.everyWithIndex((num, index) => index < 2 && num >= 2) == false\n```\n"}
   }, {
     "label": "fill",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a, ~start: int, ~end: int) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`fill(array, value, ~start, ~end)` fills `array` with `value` from `start` to `end`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\n\nmyArray->Array.fill(9, ~start=1, ~end=3)\n\nmyArray->assertEqual([1, 9, 9, 4])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`fill(array, value, ~start, ~end)` fills `array` with `value` from `start` to `end`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\n\nmyArray->Array.fill(9, ~start=1, ~end=3)\n\nmyArray == [1, 9, 9, 4]\n```\n"}
   }, {
     "label": "findWithIndex",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ('a, int) => bool) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`findWithIndex(array, checker)` returns the first element of `array` where the provided `checker` function returns true.\n\nSee [`Array.find`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/find) on MDN.\n\n## Examples\n\n```rescript\ntype languages = ReScript | TypeScript | JavaScript\n\nlet array = [TypeScript, JavaScript, ReScript]\n\narray\n->Array.findWithIndex((item, index) => index > 1 && item == ReScript)\n->assertEqual(Some(ReScript))\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`findWithIndex(array, checker)` returns the first element of `array` where the provided `checker` function returns true.\n\nSee [`Array.find`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/find) on MDN.\n\n## Examples\n\n```rescript\ntype languages = ReScript | TypeScript | JavaScript\n\nlet array = [TypeScript, JavaScript, ReScript]\n\narray->Array.findWithIndex((item, index) => index > 1 && item == ReScript) == Some(ReScript)\n```\n"}
   }, {
     "label": "reverse",
     "kind": 12,
     "tags": [],
     "detail": "array<'a> => unit",
-    "documentation": {"kind": "markdown", "value": "\n`reverse(array)` reverses the order of the items in `array`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.reverse`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reverse) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.reverse\n\nsomeArray->assertEqual([\"hello\", \"hi\"])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`reverse(array)` reverses the order of the items in `array`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.reverse`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reverse) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.reverse\n\nsomeArray == [\"hello\", \"hi\"]\n```\n"}
   }, {
     "label": "findLastIndexWithIndex",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ('a, int) => bool) => int",
-    "documentation": {"kind": "markdown", "value": "\n`findLastIndexWithIndex(array, checker)` returns the index of the last element of `array` where the provided `checker` function returns true.\n\nReturns `-1` if the item does not exist. Consider using `Array.findLastIndexOpt` if you want an option instead (where `-1` would be `None`).\n\nSee [`Array.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex) on MDN.\n\n## Examples\n\n```rescript\ntype languages = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, JavaScript, JavaScript, ReScript]\n\nlet isReScriptLast = array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == ReScript)\nlet isTypeScriptLast = array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == TypeScript)\n\nassertEqual(isReScriptLast, 3)\nassertEqual(isTypeScriptLast, -1)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`findLastIndexWithIndex(array, checker)` returns the index of the last element of `array` where the provided `checker` function returns true.\n\nReturns `-1` if the item does not exist. Consider using `Array.findLastIndexOpt` if you want an option instead (where `-1` would be `None`).\n\nSee [`Array.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex) on MDN.\n\n## Examples\n\n```rescript\ntype languages = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, JavaScript, JavaScript, ReScript]\n\nlet isReScriptLast =\n  array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == ReScript)\nlet isTypeScriptLast =\n  array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == TypeScript)\n\nisReScriptLast == 3\nisTypeScriptLast == -1\n```\n"}
   }, {
     "label": "getUnsafe",
     "kind": 12,
@@ -333,13 +333,13 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "array<'a> => Iterator.t<(int, 'a)>",
-    "documentation": {"kind": "markdown", "value": "\n`entries(array)` returns a new array iterator object that contains the key/value pairs for each index in the array.\n\nSee [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/entries) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator : Iterator.t<(int, int)> = array->Array.entries\niterator->Iterator.next->assertEqual({done: false, value: Some((0, 5))})\niterator->Iterator.next->assertEqual({done: false, value: Some((1, 6))})\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`entries(array)` returns a new array iterator object that contains the key/value pairs for each index in the array.\n\nSee [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/entries) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator: Iterator.t<(int, int)> = array->Array.entries\niterator->Iterator.next == {done: false, value: Some((0, 5))}\niterator->Iterator.next == {done: false, value: Some((1, 6))}\n```\n"}
   }, {
     "label": "unshiftMany",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, array<'a>) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`unshiftMany(array, itemsArray)` inserts many new items to the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshiftMany([\"yay\", \"wehoo\"])\nsomeArray->assertEqual([\"yay\", \"wehoo\", \"hi\", \"hello\"])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`unshiftMany(array, itemsArray)` inserts many new items to the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshiftMany([\"yay\", \"wehoo\"])\nsomeArray == [\"yay\", \"wehoo\", \"hi\", \"hello\"]\n```\n"}
   }, {
     "label": "lastIndexOf",
     "kind": 12,
@@ -351,7 +351,7 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => bool) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`filter(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]\n->Array.filter(num => num > 2)\n->assertEqual([3, 4])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`filter(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.filter(num => num > 2) == [3, 4]\n```\n"}
   }, {
     "label": "compare",
     "kind": 12,
@@ -363,13 +363,13 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(array<string>, string) => string",
-    "documentation": {"kind": "markdown", "value": "\n`join(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Array items must be strings, to join number or other arrays, use `joinUnsafe`. Under the hood this will run JavaScript's `toString` on all the array items.\n\nSee [Array.join](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/join)\n\n## Examples\n\n```rescript\n[\"One\", \"Two\", \"Three\"]\n->Array.join(\" -- \")\n->assertEqual(\"One -- Two -- Three\")\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`join(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Array items must be strings, to join number or other arrays, use `joinUnsafe`. Under the hood this will run JavaScript's `toString` on all the array items.\n\nSee [Array.join](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/join)\n\n## Examples\n\n```rescript\n[\"One\", \"Two\", \"Three\"]->Array.join(\" -- \") == \"One -- Two -- Three\"\n```\n"}
   }, {
     "label": "last",
     "kind": 12,
     "tags": [],
     "detail": "array<'a> => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`last(array)` returns the last element of `array`.\n\nReturns `None` if the array is empty.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]\n->Array.last\n->assertEqual(Some(\"Good bye\"))\n\n[]\n->Array.last\n->assertEqual(None)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`last(array)` returns the last element of `array`.\n\nReturns `None` if the array is empty.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]->Array.last == Some(\"Good bye\")\n\n[]->Array.last == None\n```\n"}
   }, {
     "label": "ignore",
     "kind": 12,
@@ -387,13 +387,13 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "array<'a> => Iterator.t<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`values(array)` returns a new array iterator object that contains the values for each index in the array.\n\nSee [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/values) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator : Iterator.t<int> = array->Array.values\niterator->Iterator.next->assertEqual({done: false, value: Some(5)})\niterator->Iterator.next->assertEqual({done: false, value: Some(6)})\n```\n "}
+    "documentation": {"kind": "markdown", "value": "\n`values(array)` returns a new array iterator object that contains the values for each index in the array.\n\nSee [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/values) on MDN.\n\n## Examples\n\n```rescript\nlet array = [5, 6, 7]\nlet iterator: Iterator.t<int> = array->Array.values\niterator->Iterator.next == {done: false, value: Some(5)}\niterator->Iterator.next == {done: false, value: Some(6)}\n```\n "}
   }, {
     "label": "indexOfOpt",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a) => option<int>",
-    "documentation": {"kind": "markdown", "value": "\n`indexOfOpt(array, item)` returns an option of the index of the provided `item` in `array`. Uses [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality) when comparing items.\n\nSee [`Array.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf) on MDN.\n\n## Examples\n\n```rescript\n[1, 2]->Array.indexOfOpt(2)->assertEqual(Some(1))\n[1, 2]->Array.indexOfOpt(3)->assertEqual(None)\n[{\"language\": \"ReScript\"}]\n->Array.indexOfOpt({\"language\": \"ReScript\"})\n->assertEqual(None) // None, because of strict equality\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`indexOfOpt(array, item)` returns an option of the index of the provided `item` in `array`. Uses [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality) when comparing items.\n\nSee [`Array.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf) on MDN.\n\n## Examples\n\n```rescript\n[1, 2]->Array.indexOfOpt(2) == Some(1)\n[1, 2]->Array.indexOfOpt(3) == None\n[{\"language\": \"ReScript\"}]->Array.indexOfOpt({\"language\": \"ReScript\"}) == None // None, because of strict equality\n```\n"}
   }, {
     "label": "forEachWithIndex",
     "kind": 12,
@@ -405,13 +405,13 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'b, ('b, 'a) => 'b) => 'b",
-    "documentation": {"kind": "markdown", "value": "\n`reduce(xs, init, fn)`\n\nApplies `fn` to each element of `xs` from beginning to end. Function `fn` has two parameters: the item from the list and an “accumulator”; which starts with a value of `init`. `reduce` returns the final value of the accumulator.\n\n## Examples\n\n```rescript\nArray.reduce([2, 3, 4], 1, (a, b) => a + b)->assertEqual(10)\n\nArray.reduce([\"a\", \"b\", \"c\", \"d\"], \"\", (a, b) => a ++ b)->assertEqual(\"abcd\")\n\n[1, 2, 3]\n->Array.reduce(list{}, List.add)\n->assertEqual(list{3, 2, 1})\n\nArray.reduce([], list{}, List.add)->assertEqual(list{})\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`reduce(xs, init, fn)`\n\nApplies `fn` to each element of `xs` from beginning to end. Function `fn` has two parameters: the item from the list and an “accumulator”; which starts with a value of `init`. `reduce` returns the final value of the accumulator.\n\n## Examples\n\n```rescript\nArray.reduce([2, 3, 4], 1, (a, b) => a + b) == 10\n\nArray.reduce([\"a\", \"b\", \"c\", \"d\"], \"\", (a, b) => a ++ b) == \"abcd\"\n\n[1, 2, 3]->Array.reduce(list{}, List.add) == list{3, 2, 1}\n\nArray.reduce([], list{}, List.add) == list{}\n```\n"}
   }, {
     "label": "sliceToEnd",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ~start: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`sliceToEnd(array, start)` creates a new array from `array`, with all items from `array` starting from `start`.\n\nSee [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]\n->Array.sliceToEnd(~start=1)\n->assertEqual([2, 3, 4])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`sliceToEnd(array, start)` creates a new array from `array`, with all items from `array` starting from `start`.\n\nSee [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.sliceToEnd(~start=1) == [2, 3, 4]\n```\n"}
   }, {
     "label": "fromArrayLikeWithMap",
     "kind": 12,
@@ -423,25 +423,25 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`fillAll(array, value)` fills the entire `array` with `value`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\nmyArray->Array.fillAll(9)\nmyArray->assertEqual([9, 9, 9, 9])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`fillAll(array, value)` fills the entire `array` with `value`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\nmyArray->Array.fillAll(9)\nmyArray == [9, 9, 9, 9]\n```\n"}
   }, {
     "label": "set",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, int, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`set(array, index, item)` sets the provided `item` at `index` of `array`.\n\nBeware this will *mutate* the array.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\narray->Array.set(1, \"Hello\")\n\narray[1]->assertEqual(Some(\"Hello\"))\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`set(array, index, item)` sets the provided `item` at `index` of `array`.\n\nBeware this will *mutate* the array.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\narray->Array.set(1, \"Hello\")\n\narray[1] == Some(\"Hello\")\n```\n"}
   }, {
     "label": "filterWithIndex",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ('a, int) => bool) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`filterWithIndex(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]\n->Array.filterWithIndex((num, index) => index === 0 || num === 2)\n->assertEqual([1, 2])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`filterWithIndex(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.filterWithIndex((num, index) => index === 0 || num === 2) == [1, 2]\n```\n"}
   }, {
     "label": "findIndex",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => bool) => int",
-    "documentation": {"kind": "markdown", "value": "\n`findIndex(array, checker)` returns the index of the first element of `array` where the provided `checker` function returns true.\n\nReturns `-1` if the item does not exist. Consider using `Array.findIndexOpt` if you want an option instead (where `-1` would be `None`).\n\nSee [`Array.findIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex) on MDN.\n\n## Examples\n\n```rescript\ntype languages = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, JavaScript]\n\narray\n->Array.findIndex(item => item == ReScript)\n->assertEqual(0)\n\narray->Array.findIndex(item => item == TypeScript)\n->assertEqual(-1)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`findIndex(array, checker)` returns the index of the first element of `array` where the provided `checker` function returns true.\n\nReturns `-1` if the item does not exist. Consider using `Array.findIndexOpt` if you want an option instead (where `-1` would be `None`).\n\nSee [`Array.findIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findIndex) on MDN.\n\n## Examples\n\n```rescript\ntype languages = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, JavaScript]\n\narray->Array.findIndex(item => item == ReScript) == 0\n\narray->Array.findIndex(item => item == TypeScript) == -1\n```\n"}
   }, {
     "label": "setSymbol",
     "kind": 12,
@@ -459,19 +459,19 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, string) => string",
-    "documentation": {"kind": "markdown", "value": "\n`joinUnsafe(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Under the hood this will run JavaScript's `toString` on all the array items.\n\nSee [Array.join](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/join)\n\n## Examples\n\n```rescript\n[1, 2, 3]\n->Array.joinUnsafe(\" -- \")\n->assertEqual(\"1 -- 2 -- 3\")\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`joinUnsafe(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Under the hood this will run JavaScript's `toString` on all the array items.\n\nSee [Array.join](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/join)\n\n## Examples\n\n```rescript\n[1, 2, 3]->Array.joinUnsafe(\" -- \") == \"1 -- 2 -- 3\"\n```\n"}
   }, {
     "label": "mapWithIndex",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray =\n  array->Array.mapWithIndex((greeting, index) =>\n    greeting ++ \" at position \" ++ Int.toString(index)\n  )\n\nassertEqual(mappedArray, [\"Hello at position 0\", \"Hi at position 1\", \"Good bye at position 2\"])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray =\n  array->Array.mapWithIndex((greeting, index) => greeting ++ \" at position \" ++ Int.toString(index))\n\nmappedArray == [\"Hello at position 0\", \"Hi at position 1\", \"Good bye at position 2\"]\n```\n"}
   }, {
     "label": "flatMapWithIndex",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ('a, int) => array<'b>) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`flatMapWithIndex(array, mapper)` returns a new array concatenating the arrays returned from running `mapper` on all items in `array`.\n\n## Examples\n\n```rescript\ntype language = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, TypeScript, JavaScript]\n\n\narray\n->Array.flatMapWithIndex((item, index) =>\n  switch item {\n  | ReScript => [index]\n  | TypeScript => [index, index + 1]\n  | JavaScript => [index, index + 1, index + 2]\n  }\n)\n->assertEqual([0, 1, 2, 2, 3, 4])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`flatMapWithIndex(array, mapper)` returns a new array concatenating the arrays returned from running `mapper` on all items in `array`.\n\n## Examples\n\n```rescript\ntype language = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, TypeScript, JavaScript]\n\narray->Array.flatMapWithIndex((item, index) =>\n  switch item {\n  | ReScript => [index]\n  | TypeScript => [index, index + 1]\n  | JavaScript => [index, index + 1, index + 2]\n  }\n) == [0, 1, 2, 2, 3, 4]\n```\n"}
   }, {
     "label": "copyWithinToEnd",
     "kind": 12,
@@ -483,37 +483,37 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`unshift(array, item)` inserts a new item at the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.unshift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshift(\"yay\")\nsomeArray->assertEqual([\"yay\", \"hi\", \"hello\"])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`unshift(array, item)` inserts a new item at the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.unshift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshift(\"yay\")\nsomeArray == [\"yay\", \"hi\", \"hello\"]\n```\n"}
   }, {
     "label": "indexOf",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a) => int",
-    "documentation": {"kind": "markdown", "value": "\n`indexOf(array, item)` returns the index of the provided `item` in `array`. Uses [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality) when comparing items.\n\nReturns `-1` if the item doesn not exist. Check out `Array.indexOfOpt` for a version that returns `None` instead of `-1` if the item does not exist.\n\nSee [`Array.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf) on MDN.\n\n## Examples\n\n```rescript\n[1, 2]->Array.indexOf(2)->assertEqual(1)\n[1, 2]->Array.indexOf(3)->assertEqual(-1)\n\n[{\"language\": \"ReScript\"}]\n->Array.indexOf({\"language\": \"ReScript\"})\n->assertEqual(-1) // -1, because of strict equality\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`indexOf(array, item)` returns the index of the provided `item` in `array`. Uses [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality) when comparing items.\n\nReturns `-1` if the item doesn not exist. Check out `Array.indexOfOpt` for a version that returns `None` instead of `-1` if the item does not exist.\n\nSee [`Array.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf) on MDN.\n\n## Examples\n\n```rescript\n[1, 2]->Array.indexOf(2) == 1\n[1, 2]->Array.indexOf(3) == -1\n\n[{\"language\": \"ReScript\"}]->Array.indexOf({\"language\": \"ReScript\"}) == -1 // -1, because of strict equality\n```\n"}
   }, {
     "label": "push",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`push(array, item)` appends `item` to the end of `array`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/push) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\n\nsomeArray->Array.push(\"yay\")\n\nsomeArray->assertEqual([\"hi\", \"hello\", \"yay\"])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`push(array, item)` appends `item` to the end of `array`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/push) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\n\nsomeArray->Array.push(\"yay\")\n\nsomeArray == [\"hi\", \"hello\", \"yay\"]\n```\n"}
   }, {
     "label": "toSorted",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ('a, 'a) => Ordering.t) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`toSorted(array, comparator)` returns a new, sorted array from `array`, using the `comparator` function.\n\nSee [`Array.toSorted`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toSorted) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [3, 2, 1]\n\nsomeArray\n->Array.toSorted(Int.compare)\n->assertEqual([1, 2, 3])\n\nsomeArray->assertEqual([3, 2, 1]) // Original unchanged\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`toSorted(array, comparator)` returns a new, sorted array from `array`, using the `comparator` function.\n\nSee [`Array.toSorted`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/toSorted) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [3, 2, 1]\n\nsomeArray->Array.toSorted(Int.compare) == [1, 2, 3]\n\nsomeArray == [3, 2, 1] // Original unchanged\n```\n"}
   }, {
     "label": "reduceWithIndex",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'b, ('b, 'a, int) => 'b) => 'b",
-    "documentation": {"kind": "markdown", "value": "\n`reduceWithIndex(x, init, fn)`\n\nApplies `fn` to each element of `xs` from beginning to end. Function `fn` has three parameters: the item from the array and an “accumulator”, which starts with a value of `init` and the index of each element. `reduceWithIndex` returns the final value of the accumulator.\n\n## Examples\n\n```rescript\nArray.reduceWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i)->assertEqual(16)\n\nArray.reduceWithIndex([1, 2, 3], list{}, (acc, v, i) => list{v + i, ...acc})->assertEqual(list{5, 3, 1})\n\nArray.reduceWithIndex([], list{}, (acc, v, i) => list{v + i, ...acc})->assertEqual(list{})\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`reduceWithIndex(x, init, fn)`\n\nApplies `fn` to each element of `xs` from beginning to end. Function `fn` has three parameters: the item from the array and an “accumulator”, which starts with a value of `init` and the index of each element. `reduceWithIndex` returns the final value of the accumulator.\n\n## Examples\n\n```rescript\nArray.reduceWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i) == 16\n\nArray.reduceWithIndex([1, 2, 3], list{}, (acc, v, i) => list{v + i, ...acc}) == list{5, 3, 1}\n\nArray.reduceWithIndex([], list{}, (acc, v, i) => list{v + i, ...acc}) == list{}\n```\n"}
   }, {
     "label": "some",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => bool) => bool",
-    "documentation": {"kind": "markdown", "value": "\n`some(array, predicate)` returns true if `predicate` returns true for any element in `array`.\n\nSee [`Array.some`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/some) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\n\narray\n->Array.some(greeting => greeting === \"Hello\")\n->assertEqual(true)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`some(array, predicate)` returns true if `predicate` returns true for any element in `array`.\n\nSee [`Array.some`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/some) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\n\narray->Array.some(greeting => greeting === \"Hello\") == true\n```\n"}
   }, {
     "label": "unsafe_get",
     "kind": 12,
@@ -531,49 +531,49 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "array<option<'a>> => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`keepSome(arr)`\n\nReturns a new array containing `value` for all elements that are `Some(value)`\nand ignoring every value that is `None`\n\n## Examples\n\n```rescript\nArray.keepSome([Some(1), None, Some(3)])->assertEqual([1, 3])\n\nArray.keepSome([Some(1), Some(2), Some(3)])->assertEqual([1, 2, 3])\n\nArray.keepSome([None, None, None])->assertEqual([])\n\nArray.keepSome([])->assertEqual([])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`keepSome(arr)`\n\nReturns a new array containing `value` for all elements that are `Some(value)`\nand ignoring every value that is `None`\n\n## Examples\n\n```rescript\nArray.keepSome([Some(1), None, Some(3)]) == [1, 3]\n\nArray.keepSome([Some(1), Some(2), Some(3)]) == [1, 2, 3]\n\nArray.keepSome([None, None, None]) == []\n\nArray.keepSome([]) == []\n```\n"}
   }, {
     "label": "at",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, int) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`at(array, index)`\n\nGet an element by its index. Negative indices count backwards from the last item.\n\n## Examples\n\n```rescript\n[\"a\", \"b\", \"c\"]->Array.at(0)->assertEqual(Some(\"a\"))\n[\"a\", \"b\", \"c\"]->Array.at(2)->assertEqual(Some(\"c\"))\n[\"a\", \"b\", \"c\"]->Array.at(3)->assertEqual(None)\n[\"a\", \"b\", \"c\"]->Array.at(-1)->assertEqual(Some(\"c\"))\n[\"a\", \"b\", \"c\"]->Array.at(-3)->assertEqual(Some(\"a\"))\n[\"a\", \"b\", \"c\"]->Array.at(-4)->assertEqual(None)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`at(array, index)`\n\nGet an element by its index. Negative indices count backwards from the last item.\n\n## Examples\n\n```rescript\n[\"a\", \"b\", \"c\"]->Array.at(0) == Some(\"a\")\n[\"a\", \"b\", \"c\"]->Array.at(2) == Some(\"c\")\n[\"a\", \"b\", \"c\"]->Array.at(3) == None\n[\"a\", \"b\", \"c\"]->Array.at(-1) == Some(\"c\")\n[\"a\", \"b\", \"c\"]->Array.at(-3) == Some(\"a\")\n[\"a\", \"b\", \"c\"]->Array.at(-4) == None\n```\n"}
   }, {
     "label": "pop",
     "kind": 12,
     "tags": [],
     "detail": "array<'a> => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`pop(array)` removes the last item from `array` and returns it.\n\nBeware this will *mutate* the array.\n\nSee [`Array.pop`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/pop) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\n\nsomeArray\n->Array.pop\n->assertEqual(Some(\"hello\"))\n\nsomeArray->assertEqual([\"hi\"]) // Notice last item is gone.\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`pop(array)` removes the last item from `array` and returns it.\n\nBeware this will *mutate* the array.\n\nSee [`Array.pop`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/pop) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\n\nsomeArray->Array.pop == Some(\"hello\")\n\nsomeArray == [\"hi\"] // Notice last item is gone.\n```\n"}
   }, {
     "label": "get",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, int) => option<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`get(array, index)` returns the element at `index` of `array`.\n\nReturns `None` if the index does not exist in the array. Equivalent to doing `array[index]` in JavaScript.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\n\narray\n->Array.get(0)\n->assertEqual(Some(\"Hello\"))\n\narray\n->Array.get(3)\n->assertEqual(None)\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`get(array, index)` returns the element at `index` of `array`.\n\nReturns `None` if the index does not exist in the array. Equivalent to doing `array[index]` in JavaScript.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\n\narray->Array.get(0) == Some(\"Hello\")\n\narray->Array.get(3) == None\n```\n"}
   }, {
     "label": "removeInPlace",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, int) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`removeInPlace(array, index)` removes the item at the specified `index` from `array`.\n\nBeware this will *mutate* the array.\n\n## Examples\n\n```rescript\nlet array = []\narray->Array.removeInPlace(0)\nassertEqual(array, []) // Removing from an empty array does nothing\n\nlet array2 = [\"Hello\", \"Hi\", \"Good bye\"]\narray2->Array.removeInPlace(1)\nassertEqual(array2, [\"Hello\", \"Good bye\"]) // Removes the item at index 1\n```\n "}
+    "documentation": {"kind": "markdown", "value": "\n`removeInPlace(array, index)` removes the item at the specified `index` from `array`.\n\nBeware this will *mutate* the array.\n\n## Examples\n\n```rescript\nlet array = []\narray->Array.removeInPlace(0)\narray == [] // Removing from an empty array does nothing\n\nlet array2 = [\"Hello\", \"Hi\", \"Good bye\"]\narray2->Array.removeInPlace(1)\narray2 == [\"Hello\", \"Good bye\"] // Removes the item at index 1\n```\n "}
   }, {
     "label": "findLastIndexOpt",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => bool) => option<int>",
-    "documentation": {"kind": "markdown", "value": "\n`findIndexOpt(array, checker)` returns the index of the last element of `array` where the provided `checker` function returns true.\n\nReturns `None` if no item matches.\n\nSee [`Array.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"hello\", \"world\", \"!\"]\n\narray\n->Array.findLastIndexOpt(item => item->String.includes(\"o\"))\n->assertEqual(Some(1))\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`findIndexOpt(array, checker)` returns the index of the last element of `array` where the provided `checker` function returns true.\n\nReturns `None` if no item matches.\n\nSee [`Array.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/findLastIndex) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"hello\", \"world\", \"!\"]\n\narray->Array.findLastIndexOpt(item => item->String.includes(\"o\")) == Some(1)\n```\n"}
   }, {
     "label": "pushMany",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, array<'a>) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`pushMany(array, itemsArray)` appends many new items to the end of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/push) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\n\nsomeArray->Array.pushMany([\"yay\", \"wehoo\"])\nsomeArray->assertEqual([\"hi\", \"hello\", \"yay\", \"wehoo\"])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`pushMany(array, itemsArray)` appends many new items to the end of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/push) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\n\nsomeArray->Array.pushMany([\"yay\", \"wehoo\"])\nsomeArray == [\"hi\", \"hello\", \"yay\", \"wehoo\"]\n```\n"}
   }, {
     "label": "fromIterator",
     "kind": 12,
     "tags": [],
     "detail": "Iterator.t<'a> => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`fromIterator(iterator)` creates an array from the provided `iterator`\n\n## Examples\n\n```rescript\nMap.fromArray([(\"foo\", 1), (\"bar\", 2)])\n->Map.values\n->Array.fromIterator\n->assertEqual([1, 2])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`fromIterator(iterator)` creates an array from the provided `iterator`\n\n## Examples\n\n```rescript\nMap.fromArray([(\"foo\", 1), (\"bar\", 2)])\n->Map.values\n->Array.fromIterator == [1, 2]\n```\n"}
   }, {
     "label": "forEach",
     "kind": 12,
@@ -585,7 +585,7 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => array<'b>) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`flatMap(array, mapper)` returns a new array concatenating the arrays returned from running `mapper` on all items in `array`.\n\n## Examples\n\n```rescript\ntype language = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, TypeScript, JavaScript]\n\narray\n->Array.flatMap(item =>\n  switch item {\n  | ReScript => [1, 2, 3]\n  | TypeScript => [4, 5, 6]\n  | JavaScript => [7, 8, 9]\n  }\n)\n->assertEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`flatMap(array, mapper)` returns a new array concatenating the arrays returned from running `mapper` on all items in `array`.\n\n## Examples\n\n```rescript\ntype language = ReScript | TypeScript | JavaScript\n\nlet array = [ReScript, TypeScript, JavaScript]\n\narray->Array.flatMap(item =>\n  switch item {\n  | ReScript => [1, 2, 3]\n  | TypeScript => [4, 5, 6]\n  | JavaScript => [7, 8, 9]\n  }\n) == [1, 2, 3, 4, 5, 6, 7, 8, 9]\n```\n"}
   }, {
     "label": "fromArrayLike",
     "kind": 12,
@@ -613,19 +613,19 @@ Path Array.m
     "kind": 12,
     "tags": [],
     "detail": "(~length: int, 'a) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`make(~length, init)` creates an array of length `length` initialized with the value of `init`.\n\n## Examples\n\n```rescript\nArray.make(~length=3, #apple)->assertEqual([#apple, #apple, #apple])\nArray.make(~length=6, 7)->assertEqual([7, 7, 7, 7, 7, 7])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`make(~length, init)` creates an array of length `length` initialized with the value of `init`.\n\n## Examples\n\n```rescript\nArray.make(~length=3, #apple) == [#apple, #apple, #apple]\nArray.make(~length=6, 7) == [7, 7, 7, 7, 7, 7]\n```\n"}
   }, {
     "label": "map",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => 'b) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nassertEqual(mappedArray, [\"Hello to you\", \"Hi to you\", \"Good bye to you\"])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nmappedArray == [\"Hello to you\", \"Hi to you\", \"Good bye to you\"]\n```\n"}
   }, {
     "label": "mapWithIndex",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray =\n  array->Array.mapWithIndex((greeting, index) =>\n    greeting ++ \" at position \" ++ Int.toString(index)\n  )\n\nassertEqual(mappedArray, [\"Hello at position 0\", \"Hi at position 1\", \"Good bye at position 2\"])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray =\n  array->Array.mapWithIndex((greeting, index) => greeting ++ \" at position \" ++ Int.toString(index))\n\nmappedArray == [\"Hello at position 0\", \"Hi at position 1\", \"Good bye at position 2\"]\n```\n"}
   }]
 
 Complete src/Completion.res 15:17
@@ -682,13 +682,13 @@ Path m
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => 'b) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nassertEqual(mappedArray, [\"Hello to you\", \"Hi to you\", \"Good bye to you\"])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nmappedArray == [\"Hello to you\", \"Hi to you\", \"Good bye to you\"]\n```\n"}
   }, {
     "label": "Array.mapWithIndex",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray =\n  array->Array.mapWithIndex((greeting, index) =>\n    greeting ++ \" at position \" ++ Int.toString(index)\n  )\n\nassertEqual(mappedArray, [\"Hello at position 0\", \"Hi at position 1\", \"Good bye at position 2\"])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray =\n  array->Array.mapWithIndex((greeting, index) => greeting ++ \" at position \" ++ Int.toString(index))\n\nmappedArray == [\"Hello at position 0\", \"Hi at position 1\", \"Good bye at position 2\"]\n```\n"}
   }]
 
 Complete src/Completion.res 29:13
@@ -1999,6 +1999,16 @@ Path Res
       "modulePath": "RescriptTools_Docgen",
       "filePath": "src/Completion.res"
     }
+  }, {
+    "label": "RescriptTools_ExtractCodeBlocks",
+    "kind": 9,
+    "tags": [],
+    "detail": "module RescriptTools_ExtractCodeBlocks",
+    "documentation": null,
+    "data": {
+      "modulePath": "RescriptTools_ExtractCodeBlocks",
+      "filePath": "src/Completion.res"
+    }
   }]
 
 Complete src/Completion.res 346:57
@@ -2290,13 +2300,13 @@ Path ma
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => 'b) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nassertEqual(mappedArray, [\"Hello to you\", \"Hi to you\", \"Good bye to you\"])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nmappedArray == [\"Hello to you\", \"Hi to you\", \"Good bye to you\"]\n```\n"}
   }, {
     "label": "Array.mapWithIndex",
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ('a, int) => 'b) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray =\n  array->Array.mapWithIndex((greeting, index) =>\n    greeting ++ \" at position \" ++ Int.toString(index)\n  )\n\nassertEqual(mappedArray, [\"Hello at position 0\", \"Hi at position 1\", \"Good bye at position 2\"])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`mapWithIndex(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray =\n  array->Array.mapWithIndex((greeting, index) => greeting ++ \" at position \" ++ Int.toString(index))\n\nmappedArray == [\"Hello at position 0\", \"Hi at position 1\", \"Good bye at position 2\"]\n```\n"}
   }]
 
 Complete src/Completion.res 399:14
@@ -2461,13 +2471,13 @@ Path t
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\nImplementations are allowed to support larger and smaller values as well.\nECMA-262 only requires a precision of up to 21 significant digits.\n\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n  \n"}
   }, {
     "label": "Int.toPrecision",
     "kind": 12,
     "tags": [],
     "detail": "(int, ~digits: int=?) => string",
-    "documentation": {"kind": "markdown", "value": "\n`toPrecision(n, ~digits=?)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecision(100) // \"100\"\nInt.toPrecision(1) // \"1\"\nInt.toPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\nImplementations are allowed to support larger and smaller values as well.\nECMA-262 only requires a precision of up to 21 significant digits.\n"}
+    "documentation": {"kind": "markdown", "value": "\n`toPrecision(n, ~digits=?)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecision(100) // \"100\"\nInt.toPrecision(1) // \"1\"\nInt.toPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"}
   }, {
     "label": "Int.toString",
     "kind": 12,
@@ -2539,13 +2549,13 @@ Path t
     "kind": 12,
     "tags": [1],
     "detail": "(float, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(v, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits.\nSee [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nFloat.toPrecisionWithPrecision(100.0, ~digits=2) == \"1.0e+2\"\nFloat.toPrecisionWithPrecision(1.0, ~digits=1) == \"1\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\nImplementations are allowed to support larger and smaller values as well.\nECMA-262 only requires a precision of up to 21 significant digits.\n\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(v, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits.\nSee [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nFloat.toPrecisionWithPrecision(100.0, ~digits=2) == \"1.0e+2\"\nFloat.toPrecisionWithPrecision(1.0, ~digits=1) == \"1\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n  \n"}
   }, {
     "label": "Float.toPrecision",
     "kind": 12,
     "tags": [],
     "detail": "(float, ~digits: int=?) => string",
-    "documentation": {"kind": "markdown", "value": "\n`toPrecision(v, ~digits=?)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits.\nSee [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nFloat.toPrecision(100.0) == \"100\"\nFloat.toPrecision(1.0) == \"1\"\nFloat.toPrecision(100.0, ~digits=2) == \"1.0e+2\"\nFloat.toPrecision(1.0, ~digits=1) == \"1\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\nImplementations are allowed to support larger and smaller values as well.\nECMA-262 only requires a precision of up to 21 significant digits.\n"}
+    "documentation": {"kind": "markdown", "value": "\n`toPrecision(v, ~digits=?)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits.\nSee [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nFloat.toPrecision(100.0) == \"100\"\nFloat.toPrecision(1.0) == \"1\"\nFloat.toPrecision(100.0, ~digits=2) == \"1.0e+2\"\nFloat.toPrecision(1.0, ~digits=1) == \"1\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"}
   }, {
     "label": "Float.toString",
     "kind": 12,
@@ -2588,13 +2598,13 @@ Path g
     "kind": 12,
     "tags": [1],
     "detail": "result<'a, 'b> => 'a",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use 'getOrThrow' instead\n\n\n  `getExn(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, raise an exception\n\n  ```res example\n  Result.getExn(Result.Ok(42)) == 42\n\n  switch Result.getExn(Error(\"Invalid data\")) {\n  | exception Not_found => assert(true)\n  | _ => assert(false)\n  }\n  ```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use 'getOrThrow' instead\n\n\n  `getExn(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, raise an exception\n\n  ```res example\n  Result.getExn(Result.Ok(42)) == 42\n  \n  switch Result.getExn(Error(\"Invalid data\")) {\n  | exception Not_found => assert(true)\n  | _ => assert(false)\n  }\n  ```\n"}
   }, {
     "label": "Result.getOrThrow",
     "kind": 12,
     "tags": [],
     "detail": "result<'a, 'b> => 'a",
-    "documentation": {"kind": "markdown", "value": "\n  `getOrThrow(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, raise an exception\n\n  ```res example\n  Result.getOrThrow(Result.Ok(42)) == 42\n\n  switch Result.getOrThrow(Error(\"Invalid data\")) {\n  | exception Not_found => assert(true)\n  | _ => assert(false)\n  }\n  ```\n"}
+    "documentation": {"kind": "markdown", "value": "\n  `getOrThrow(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, raise an exception\n\n  ```res example\n  Result.getOrThrow(Result.Ok(42)) == 42\n  \n  switch Result.getOrThrow(Error(\"Invalid data\")) {\n  | exception Not_found => assert(true)\n  | _ => assert(false)\n  }\n  ```\n"}
   }, {
     "label": "Result.getOr",
     "kind": 12,

@@ -832,7 +832,7 @@ Path fnTakingCallback
     "kind": 12,
     "tags": [],
     "detail": "('a, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`assertEqual(a, b)` check if `a` is equal `b`. If not raise a panic exception\n\n## Examples\n\n```rescript\nlist{1, 2}\n->List.tailExn\n->assertEqual(list{2})\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`assertEqual(a, b)` check if `a` is equal `b`. If not raise a panic exception\n\n## Examples\n\n```rescript\nlist{1, 2}->List.tailExn == list{2}\n```\n"}
   }]
 
 Complete src/CompletionExpressions.res 165:22
