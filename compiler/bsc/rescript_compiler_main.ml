@@ -205,14 +205,6 @@ let eval (s : string) ~suffix =
 
 (* let (//) = Filename.concat *)
 
-module Pp = Rescript_cpp
-let define_variable s =
-  match Ext_string.split ~keep_empty:true s '=' with
-  | [key; v] ->
-    if not (Pp.define_key_value key v) then
-      Bsc_args.bad_arg ("illegal definition: " ^ s)
-  | _ -> Bsc_args.bad_arg ("illegal definition: " ^ s)
-
 let print_standard_library () =
   let standard_library = Config.standard_library in
   print_string standard_library;
@@ -297,11 +289,7 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
     ( "-bs-syntax-only",
       set Js_config.syntax_only,
       "*internal* Only check syntax" );
-    ( "-bs-g",
-      unit_call (fun _ ->
-          Js_config.debug := true;
-          Pp.replace_directive_bool "DEBUG" true),
-      "Debug mode" );
+    ("-bs-g", unit_call (fun _ -> Js_config.debug := true), "Debug mode");
     ( "-bs-package-name",
       string_call Js_packages_state.set_package_name,
       "*internal* Set package name, useful when you want to produce npm \
@@ -323,9 +311,6 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
     ( "-unboxed-types",
       set Clflags.unboxed_types,
       "*internal* Unannotated unboxable types will be unboxed" );
-    ( "-bs-D",
-      string_call define_variable,
-      "Define conditional variable e.g, -D DEBUG=true" );
     ( "-bs-unsafe-empty-array",
       set Config.unsafe_empty_array,
       "*internal* Allow [||] to be polymorphic" );
@@ -341,9 +326,6 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
        The current heuristic for 'auto'\n\
        checks that the TERM environment variable exists and is\n\
        not empty or \"dumb\", and that isatty(stderr) holds." );
-    ( "-bs-list-conditionals",
-      unit_call (fun () -> Pp.list_variables Format.err_formatter),
-      "*internal* List existing conditional variables" );
     ( "-e",
       string_call (fun s -> eval s ~suffix:Literals.suffix_res),
       "(experimental) set the string to be evaluated in ReScript syntax" );
