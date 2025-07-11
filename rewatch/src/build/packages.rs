@@ -427,6 +427,17 @@ fn make_package(config: config::Config, package_path: &Path, is_pinned_dep: bool
     };
 
     let package_name = read_package_name(package_path).expect("Could not read package name");
+    if package_name != config.name {
+        log::warn!(
+            "\nPackage name mismatch for {}:\n\
+The package.json name is \"{}\", while the rescript.json name is \"{}\"\n\
+This inconsistency will cause issues with package resolution.\n",
+            package_path.to_string_lossy(),
+            package_name,
+            config.name,
+        );
+    }
+
     Package {
         name: package_name,
         config: config.to_owned(),

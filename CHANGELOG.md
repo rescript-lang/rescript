@@ -20,6 +20,10 @@
 
 - Remove uncurried handling from rewatch. https://github.com/rescript-lang/rescript/pull/7625
 
+#### :nail_care: Polish
+
+- Add a warning if the name in package.json does not match the name in rescript.json. https://github.com/rescript-lang/rescript/pull/7604
+
 #### :bug: Bug fix
 
 - Don't panic when dev files are not present during clean. https://github.com/rescript-lang/rescript/pull/7622
