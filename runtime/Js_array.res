@@ -26,31 +26,6 @@
 Provides bindings to JavaScript’s `Array` functions. These bindings are
 optimized for pipe-last (`|>`), where the array to be processed is the last
 parameter in the function.
-
-Here is an example to find the sum of squares of all even numbers in an array.
-Without pipe last, we must call the functions in reverse order:
-
-## Examples
-
-```rescript
-let isEven = x => mod(x, 2) == 0
-let square = x => x * x
-let result = {
-  open Js.Array
-  reduce(\"+", 0, map(square, filter(isEven, [5, 2, 3, 4, 1])))
-}
-```
-
-With pipe last, we call the functions in the “natural” order:
-
-```rescript
-let isEven = x => mod(x, 2) == 0
-let square = x => x * x
-let result = {
-  open Js.Array
-  [5, 2, 3, 4, 1] |> filter(isEven) |> map(square) |> reduce("+", 0)
-}
-```
 */
 
 @@warning("-103")
@@ -1090,7 +1065,7 @@ external unsafe_get: (array<'a>, int) => 'a = "%array_unsafe_get"
 /**
 Sets the value at the given position in the array if the position is in bounds.
 If the index is out of bounds, well, “here there be dragons.“ *This function
-  modifies the original array.*
+modifies the original array.*
 
 ## Examples
 
