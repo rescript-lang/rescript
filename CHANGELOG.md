@@ -16,6 +16,10 @@
 
 - Add experimental command to `rescript-tools` for formatting all ReScript code blocks in markdown. Either in a markdown file directly, or inside of docstrings in ReScript code. https://github.com/rescript-lang/rescript/pull/7598
 
+#### :bug: Bug fix
+
+- Don't panic when dev files are not present during clean. https://github.com/rescript-lang/rescript/pull/7622
+
 # 12.0.0-alpha.15
 
 #### :boom: Breaking Change
