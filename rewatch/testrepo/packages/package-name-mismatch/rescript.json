@@ -1,5 +1,5 @@
 {
-  "name": "@testrepo/package-name-mismatch",
+  "name": "xyz",
   "sources": {
     "dir": "src",
     "subdirs": true

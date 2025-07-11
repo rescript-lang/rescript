@@ -1,3 +1,9 @@
-Cleaned 1/15
+WARN:
+
+Package name mismatch for /Users/christoph/projects/cca/rescript/rewatch/testrepo/packages/package-name-mismatch:
+The package.json name is "@testrepo/package-name-mismatch", while the rescript.json name is "xyz"
+This inconsistency will cause issues with package resolution.
+
+Cleaned 1/16
 Parsed 1 source files
 Compiled 1 modules
