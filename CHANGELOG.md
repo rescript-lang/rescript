@@ -16,6 +16,10 @@
 
 - Add experimental command to `rescript-tools` for formatting all ReScript code blocks in markdown. Either in a markdown file directly, or inside of docstrings in ReScript code. https://github.com/rescript-lang/rescript/pull/7598
 
+#### :nail_care: Polish
+
+- Add a warning if the name in package.json does not match the name in rescript.json. https://github.com/rescript-lang/rescript/pull/7604
+
 # 12.0.0-alpha.15
 
 #### :boom: Breaking Change
