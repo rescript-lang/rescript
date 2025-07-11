@@ -19,6 +19,7 @@
 - Remove obsolete jsx options. https://github.com/rescript-lang/rescript/pull/7633
 - Remove obsolete option `-bs-unsafe-empty-array`. https://github.com/rescript-lang/rescript/pull/7635
 - Clean up `config.ml`. https://github.com/rescript-lang/rescript/pull/7636
+- Rewatch: simplify getting bsc path. https://github.com/rescript-lang/rescript/pull/7634
 
 # 12.0.0-beta.1
 
