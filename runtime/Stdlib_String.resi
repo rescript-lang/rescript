@@ -1137,3 +1137,17 @@ external localeCompare: (string, string) => float = "localeCompare"
   without having to store or process it further.
 */
 external ignore: string => unit = "%ignore"
+
+/**
+`getSymbolUnsafe(str, symbol)` returns the value of the symbol property of a string.
+
+## Examples
+
+```rescript
+let it: Iterator.t<string> = ("foo"->String.getSymbolUnsafe(Symbol.iterator))()
+Nullable.make(it)->Nullable.isNullable == false
+```
+
+ */
+@get_index
+external getSymbolUnsafe: (string, Stdlib_Symbol.t) => 'a = ""
