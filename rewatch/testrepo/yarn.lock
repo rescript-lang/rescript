@@ -81,12 +81,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@testrepo/package-name-mismatch@workspace:packages/package-name-mismatch":
-  version: 0.0.0-use.local
-  resolution: "@testrepo/package-name-mismatch@workspace:packages/package-name-mismatch"
-  languageName: unknown
-  linkType: soft
-
 "@testrepo/with-dev-deps@workspace:packages/with-dev-deps":
   version: 0.0.0-use.local
   resolution: "@testrepo/with-dev-deps@workspace:packages/with-dev-deps"
