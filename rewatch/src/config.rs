@@ -215,7 +215,6 @@ pub struct Config {
     pub reason: Option<Reason>,
     pub namespace: Option<NamespaceConfig>,
     pub jsx: Option<JsxSpecs>,
-    pub uncurried: Option<bool>,
     #[serde(rename = "gentypeconfig")]
     pub gentype_config: Option<GenTypeConfig>,
     // this is a new feature of rewatch, and it's not part of the bsconfig.json spec
@@ -306,17 +305,6 @@ pub fn read(path: &Path) -> Result<Config> {
     let parse = serde_json::from_str::<Config>(&read)?;
 
     Ok(parse)
-}
-
-fn check_if_rescript11_or_higher(version: &str) -> Result<bool, String> {
-    version
-        .split('.')
-        .next()
-        .and_then(|s| s.parse::<usize>().ok())
-        .map_or(
-            Err("Could not parse version".to_string()),
-            |major| Ok(major >= 11),
-        )
 }
 
 fn namespace_from_package_name(package_name: &str) -> String {
@@ -442,24 +430,6 @@ impl Config {
                 _ => vec![],
             },
             _ => vec![],
-        }
-    }
-
-    pub fn get_uncurried_args(&self, version: &str) -> Vec<String> {
-        match check_if_rescript11_or_higher(version) {
-            Ok(true) => match self.uncurried.to_owned() {
-                // v11 is always uncurried except iff explicitly set to false in the root rescript.json
-                Some(false) => vec![],
-                _ => vec!["-uncurried".to_string()],
-            },
-            Ok(false) => vec![],
-            Err(_) => {
-                eprintln!(
-                    "Could not establish Rescript Version number for uncurried mode. Defaulting to Rescript < 11, disabling uncurried mode. Please specify an exact version if you need > 11 and default uncurried mode. Version: {}",
-                    version
-                );
-                vec![]
-            }
         }
     }
 
@@ -818,28 +788,5 @@ mod tests {
             config.bs_dev_dependencies,
             Some(vec!["@testrepo/main".to_string()])
         );
-    }
-
-    #[test]
-    fn test_check_if_rescript11_or_higher() {
-        assert_eq!(check_if_rescript11_or_higher("11.0.0"), Ok(true));
-        assert_eq!(check_if_rescript11_or_higher("11.0.1"), Ok(true));
-        assert_eq!(check_if_rescript11_or_higher("11.1.0"), Ok(true));
-
-        assert_eq!(check_if_rescript11_or_higher("12.0.0"), Ok(true));
-
-        assert_eq!(check_if_rescript11_or_higher("10.0.0"), Ok(false));
-        assert_eq!(check_if_rescript11_or_higher("9.0.0"), Ok(false));
-    }
-
-    #[test]
-    fn test_check_if_rescript11_or_higher_misc() {
-        assert_eq!(check_if_rescript11_or_higher("11"), Ok(true));
-        assert_eq!(check_if_rescript11_or_higher("12.0.0-alpha.4"), Ok(true));
-
-        match check_if_rescript11_or_higher("*") {
-            Ok(_) => unreachable!("Should not parse"),
-            Err(_) => assert!(true),
-        }
     }
 }
