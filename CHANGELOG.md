@@ -12,6 +12,8 @@
 
 # 12.0.0-beta.2 (Unreleased)
 
+- Add optional `message` argument to `Result.getOrThrow` and improve default error message. https://github.com/rescript-lang/rescript/pull/7630
+
 # 12.0.0-beta.1
 
 #### :rocket: New Feature
