@@ -289,7 +289,7 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
     ( "-bs-syntax-only",
       set Js_config.syntax_only,
       "*internal* Only check syntax" );
-    ("-bs-g", unit_call (fun _ -> Js_config.debug := true), "Debug mode");
+    ("-bs-g", set Js_config.debug, "Debug mode");
     ( "-bs-package-name",
       string_call Js_packages_state.set_package_name,
       "*internal* Set package name, useful when you want to produce npm \
