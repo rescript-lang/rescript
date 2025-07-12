@@ -11,6 +11,7 @@ cli/common/bins.js
 cli/common/bsb.js
 cli/rescript-legacy.js
 cli/rescript-legacy/dump.js
+cli/rescript-legacy/format.js
 cli/rescript-tools.js
 cli/rescript.js
 docs/docson/build-schema.json
