@@ -16,6 +16,15 @@
 
 - Add missing backtick and spaces to `Belt.Map.map` doc comment. https://github.com/rescript-lang/rescript/pull/7632
 
+#### :house: Internal
+
+- Remove internal/unused `-bs-v` flag. https://github.com/rescript-lang/rescript/pull/7627
+- Remove unused `-bs-D` and `-bs-list-conditionals` flags. https://github.com/rescript-lang/rescript/pull/7631
+- Remove obsolete jsx options. https://github.com/rescript-lang/rescript/pull/7633
+- Remove obsolete option `-bs-unsafe-empty-array`. https://github.com/rescript-lang/rescript/pull/7635
+- Clean up `config.ml`. https://github.com/rescript-lang/rescript/pull/7636
+- Rewatch: simplify getting bsc path. https://github.com/rescript-lang/rescript/pull/7634
+
 # 12.0.0-beta.1
 
 #### :rocket: New Feature

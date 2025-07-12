@@ -31,8 +31,5 @@
     "@testrepo/namespace-casing",
     "@testrepo/with-dev-deps",
     "@testrepo/compiled-by-legacy"
-  ],
-  "reason": {
-    "react-jsx": 3
-  }
+  ]
 }

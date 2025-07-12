@@ -30,5 +30,18 @@ case "$(uname -s)" in
     echo "Code formatting checks skipped for this platform."
 esac
 
-echo "Biome format check"
-yarn check
+echo "Checking JS code formatting..."
+if yarn check; then
+  printf "${successGreen}✅ JS code formatting ok.${reset}\n"
+else
+  printf "${warningYellow}⚠️ JS code formatting issues found.${reset}\n"
+  exit 1
+fi
+
+echo "Checking Rust code formatting..."
+if cargo fmt --check --manifest-path rewatch/Cargo.toml; then
+  printf "${successGreen}✅ Rust code formatting ok.${reset}\n"
+else
+  printf "${warningYellow}⚠️ Rust code formatting issues found.${reset}\n"
+  exit 1
+fi

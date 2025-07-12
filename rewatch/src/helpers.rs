@@ -5,7 +5,6 @@ use std::fs::File;
 use std::io::Read;
 use std::io::{self, BufRead};
 use std::path::{Component, Path, PathBuf};
-use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub type StdErr = String;
@@ -181,44 +180,24 @@ pub fn create_path_for_path(path: &Path) {
     fs::DirBuilder::new().recursive(true).create(path).unwrap();
 }
 
-fn get_bin_dir() -> PathBuf {
-    let subfolder = match (std::env::consts::OS, std::env::consts::ARCH) {
-        ("macos", "aarch64") => "darwin-arm64",
-        ("macos", _) => "darwin-x64",
-        ("linux", "aarch64") => "linux-arm64",
-        ("linux", _) => "linux-x64",
-        ("windows", "aarch64") => "win-arm64",
-        ("windows", _) => "win32-x64",
-        _ => panic!("Unsupported architecture"),
-    };
-
-    Path::new("node_modules")
-        .join("@rescript")
-        .join(subfolder)
-        .join("bin")
+pub fn get_bin_dir() -> PathBuf {
+    let current_exe_path = std::env::current_exe().expect("Could not get current executable path");
+    current_exe_path
+        .parent()
+        .expect("Could not get parent directory of current executable")
+        .to_path_buf()
 }
 
-pub fn get_bsc(root_path: &Path, workspace_root: &Option<PathBuf>) -> PathBuf {
-    let bin_dir = get_bin_dir();
+pub fn get_bsc() -> PathBuf {
+    let bsc_path = match std::env::var("RESCRIPT_BSC_EXE") {
+        Ok(val) => PathBuf::from(val),
+        Err(_) => get_bin_dir().join("bsc.exe"),
+    };
 
-    match (
-        root_path
-            .join(&bin_dir)
-            .join("bsc.exe")
-            .canonicalize()
-            .map(StrippedVerbatimPath::to_stripped_verbatim_path),
-        workspace_root.as_ref().map(|workspace_root| {
-            workspace_root
-                .join(&bin_dir)
-                .join("bsc.exe")
-                .canonicalize()
-                .map(StrippedVerbatimPath::to_stripped_verbatim_path)
-        }),
-    ) {
-        (Ok(path), _) => path,
-        (_, Some(Ok(path))) => path,
-        _ => panic!("Could not find bsc.exe"),
-    }
+    bsc_path
+        .canonicalize()
+        .expect("Could not get bsc path")
+        .to_stripped_verbatim_path()
 }
 
 pub fn get_rescript_legacy(root_path: &Path, workspace_root: Option<PathBuf>) -> PathBuf {
@@ -406,18 +385,6 @@ pub fn get_nearest_config(path_buf: &Path) -> Option<PathBuf> {
             Some(parent) => current_dir = parent.to_path_buf(),
         }
     }
-}
-
-pub fn get_rescript_version(bsc_path: &Path) -> String {
-    let version_cmd = Command::new(bsc_path)
-        .args(["-v"])
-        .output()
-        .expect("failed to find version");
-
-    std::str::from_utf8(&version_cmd.stdout)
-        .expect("Could not read version from rescript")
-        .replace('\n', "")
-        .replace("ReScript ", "")
 }
 
 pub fn read_file(path: &Path) -> Result<String, std::io::Error> {

@@ -1804,7 +1804,7 @@ let rec is_nonexpansive exp =
       fields
     && is_nonexpansive_opt extended_expression
   | Texp_field (exp, _, _) -> is_nonexpansive exp
-  | Texp_array [] -> !Config.unsafe_empty_array
+  | Texp_array [] -> false
   | Texp_ifthenelse (_cond, ifso, ifnot) ->
     is_nonexpansive ifso && is_nonexpansive_opt ifnot
   | Texp_sequence (_e1, e2) -> is_nonexpansive e2 (* PR#4354 *)
@@ -3750,7 +3750,7 @@ and type_construct ~context env loc lid sarg ty_expected attrs =
         exp_env = env;
       }
   in
-  (* Forward context if this is a Some constructor injected (meaning it's 
+  (* Forward context if this is a Some constructor injected (meaning it's
     an optional field) *)
   let context =
     match lid.txt with
@@ -4484,9 +4484,9 @@ let report_error env loc ppf error =
        context."
   | Uncurried_arity_mismatch (typ, arity, args, sargs) ->
     (* We need:
-    - Any arg that's required but isn't passed 
+    - Any arg that's required but isn't passed
     - Any arg that is passed but isn't in the fn definition (optional or labelled)
-    - Any mismatch in the number of unlabelled args (since all of them are required)  
+    - Any mismatch in the number of unlabelled args (since all of them are required)
     *)
     let rec collect_args ?(acc = []) typ =
       match typ.desc with

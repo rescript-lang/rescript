@@ -52,7 +52,6 @@ pub fn generate_asts(
                             package.to_owned(),
                             root_package.to_owned(),
                             &source_file.implementation.path.to_owned(),
-                            &build_state.rescript_version,
                             &build_state.bsc_path,
                             &build_state.workspace_root,
                         );
@@ -62,7 +61,6 @@ pub fn generate_asts(
                                 package.to_owned(),
                                 root_package.to_owned(),
                                 &interface_file_path.to_owned(),
-                                &build_state.rescript_version,
                                 &build_state.bsc_path,
                                 &build_state.workspace_root,
                             )
@@ -249,7 +247,6 @@ pub fn parser_args(
     config: &config::Config,
     root_config: &config::Config,
     filename: &Path,
-    version: &str,
     workspace_root: &Option<PathBuf>,
     root_path: &Path,
     contents: &str,
@@ -276,7 +273,6 @@ pub fn parser_args(
     (
         ast_path.to_owned(),
         [
-            vec!["-bs-v".to_string(), format!("{}", version)],
             ppx_flags,
             jsx_args,
             jsx_module_args,
@@ -299,7 +295,6 @@ fn generate_ast(
     package: packages::Package,
     root_package: packages::Package,
     filename: &Path,
-    version: &str,
     bsc_path: &PathBuf,
     workspace_root: &Option<PathBuf>,
 ) -> Result<(PathBuf, Option<helpers::StdErr>), String> {
@@ -311,7 +306,6 @@ fn generate_ast(
         &package.config,
         &root_package.config,
         filename,
-        version,
         workspace_root,
         &root_package.path,
         &contents,
