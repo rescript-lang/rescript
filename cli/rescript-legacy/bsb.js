@@ -7,7 +7,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { WebSocket } from "#lib/minisocket";
 
-import { rescript_legacy_exe } from "./bins.js";
+import { rescript_legacy_exe } from "../common/bins.js";
 
 const cwd = process.cwd();
 const lockFileName = path.join(cwd, ".bsb.lock");
