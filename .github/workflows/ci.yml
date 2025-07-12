@@ -476,6 +476,9 @@ jobs:
         run: .github/workflows/moveArtifacts.sh
         shell: bash
 
+      - name: Check artifact list
+        run: node ./scripts/npmPack.js
+
       - name: Publish packages to pkg.pr.new
         run: |
           yarn dlx pkg-pr-new publish "." "./packages/@rescript/*"
