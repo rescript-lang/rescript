@@ -8,6 +8,7 @@ import * as path from "node:path";
 import { WebSocket } from "#lib/minisocket";
 
 import { rescript_legacy_exe } from "../common/bins.js";
+import { stdlibDir } from "../common/stdlib.js";
 
 const cwd = process.cwd();
 const lockFileName = path.join(cwd, ".bsb.lock");
@@ -52,6 +53,7 @@ function acquireBuild(args, options) {
   try {
     ownerProcess = child_process.spawn(rescript_legacy_exe, args, {
       stdio: "inherit",
+      env: { ...process.env, RESCRIPT_STDLIB: stdlibDir },
       ...options,
     });
     fs.writeFileSync(lockFileName, ownerProcess.pid.toString(), {
