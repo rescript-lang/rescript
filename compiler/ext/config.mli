@@ -15,9 +15,6 @@
 
 (* System configuration *)
 
-val version : string
-(* The current version number of the system *)
-
 val standard_library : string
 (* The directory containing the standard libraries *)
 
@@ -35,5 +32,3 @@ val ast_impl_magic_number : string
 (* Magic number for file holding an implementation syntax tree *)
 val cmt_magic_number : string
 (* Magic number for compiled interface files *)
-
-val print_config : out_channel -> unit
