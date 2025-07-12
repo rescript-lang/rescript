@@ -189,10 +189,15 @@ pub fn get_bin_dir() -> PathBuf {
 }
 
 pub fn get_bsc() -> PathBuf {
-    match std::env::var("RESCRIPT_BSC_EXE") {
+    let bsc_path = match std::env::var("RESCRIPT_BSC_EXE") {
         Ok(val) => PathBuf::from(val),
         Err(_) => get_bin_dir().join("bsc.exe"),
-    }
+    };
+
+    bsc_path
+        .canonicalize()
+        .expect("Could not get bsc path")
+        .to_stripped_verbatim_path()
 }
 
 pub fn get_rescript_legacy(root_path: &Path, workspace_root: Option<PathBuf>) -> PathBuf {
