@@ -21,8 +21,6 @@ val version : string
 val standard_library : string
 (* The directory containing the standard libraries *)
 
-val unsafe_empty_array : bool ref
-
 val load_path : string list ref
 (* Directories in the search path for .cmi and .cmo files *)
 

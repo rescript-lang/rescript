@@ -310,9 +310,6 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ( "-unboxed-types",
       set Clflags.unboxed_types,
       "*internal* Unannotated unboxable types will be unboxed" );
-    ( "-bs-unsafe-empty-array",
-      set Config.unsafe_empty_array,
-      "*internal* Allow [||] to be polymorphic" );
     ("-nostdlib", set Js_config.no_stdlib, "*internal* Don't use stdlib");
     ( "-color",
       string_call set_color_option,
