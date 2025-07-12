@@ -95,6 +95,25 @@ let size = set->Set.size // 2
 external size: t<'a> => int = "size"
 
 /**
+`isEmpty(set)` returns `true` if the set has no values, `false` otherwise.
+
+## Examples
+```rescript
+let emptySet = Set.make()
+emptySet->Set.isEmpty->assertEqual(true)
+
+let set = Set.make()
+set->Set.add("someValue")
+set->Set.isEmpty->assertEqual(false)
+
+// After clearing the set
+set->Set.clear
+set->Set.isEmpty->assertEqual(true)
+```
+*/
+let isEmpty: t<'a> => bool
+
+/**
 Clears all entries in the set.
 
 See [`Set.clear`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set/clear) on MDN.
