@@ -12,6 +12,10 @@
 
 # 12.0.0-beta.2 (Unreleased)
 
+#### :bug: Bug fix
+
+- Reliably determine standard lib dir. This should fix remaining cases where the stdlib is not found when using pnpm. https://github.com/rescript-lang/rescript/pull/7637
+
 #### :house: Internal
 
 - Remove internal/unused `-bs-v` flag. https://github.com/rescript-lang/rescript/pull/7627
