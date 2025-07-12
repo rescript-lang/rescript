@@ -12,6 +12,10 @@
 
 # 12.0.0-beta.2 (Unreleased)
 
+#### :bug: Bug fix
+
+- Reliably determine standard lib dir. This should fix remaining cases where the stdlib is not found when using pnpm. https://github.com/rescript-lang/rescript/pull/7637
+
 #### :nail_care: Polish
 
 - Add missing backtick and spaces to `Belt.Map.map` doc comment. https://github.com/rescript-lang/rescript/pull/7632
