@@ -56,10 +56,7 @@ pub struct CompilerArgs {
     pub parser_args: Vec<String>,
 }
 
-pub fn get_compiler_args(
-    path: &Path,
-    build_dev_deps: bool,
-) -> Result<String> {
+pub fn get_compiler_args(path: &Path, build_dev_deps: bool) -> Result<String> {
     let filename = &helpers::get_abs_path(path);
     let package_root =
         helpers::get_abs_path(&helpers::get_nearest_config(&path).expect("Couldn't find package root"));
@@ -171,13 +168,7 @@ pub fn initialize_build(
         let _ = stdout().flush();
     }
 
-    let mut build_state = BuildState::new(
-        project_root,
-        root_config_name,
-        packages,
-        workspace_root,
-        bsc_path,
-    );
+    let mut build_state = BuildState::new(project_root, root_config_name, packages, workspace_root, bsc_path);
     packages::parse_packages(&mut build_state);
     let timing_source_files_elapsed = timing_source_files.elapsed();
 

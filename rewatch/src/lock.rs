@@ -21,7 +21,10 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let msg = match self {
-            Error::Locked(pid) => format!("A ReScript build is already running. The process ID (PID) is {}", pid),
+            Error::Locked(pid) => format!(
+                "A ReScript build is already running. The process ID (PID) is {}",
+                pid
+            ),
             Error::ParsingLockfile(e) => format!(
                 "Could not parse lockfile: \n {} \n  (try removing it and running the command again)",
                 e

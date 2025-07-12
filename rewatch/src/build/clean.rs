@@ -354,7 +354,6 @@ pub fn clean(
         None => helpers::get_bsc(&project_root, &workspace_root),
     };
 
-
     let timing_clean_compiler_assets = Instant::now();
     if !snapshot_output && show_progress {
         print!(

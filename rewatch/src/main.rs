@@ -27,17 +27,8 @@ fn main() -> Result<()> {
     let show_progress = log_level_filter == LevelFilter::Info;
 
     match command.clone() {
-        cli::Command::CompilerArgs {
-            path,
-            dev,
-        } => {
-            println!(
-                "{}",
-                build::get_compiler_args(
-                    Path::new(&path),
-                    *dev
-                )?
-            );
+        cli::Command::CompilerArgs { path, dev } => {
+            println!("{}", build::get_compiler_args(Path::new(&path), *dev)?);
             std::process::exit(0);
         }
         cli::Command::Build(build_args) => {
