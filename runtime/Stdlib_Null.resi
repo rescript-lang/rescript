@@ -124,8 +124,7 @@ let fromOption: option<'a> => t<'a>
 Null.getOr(Null.null, "Banana") // Banana
 Null.getOr(Null.make("Apple"), "Banana") // Apple
 
-let greet = (firstName: option<string>) =>
-  "Greetings " ++ firstName->Option.getOr("Anonymous")
+let greet = (firstName: option<string>) => "Greetings " ++ firstName->Option.getOr("Anonymous")
 
 Null.make("Jane")->Null.toOption->greet // "Greetings Jane"
 Null.null->Null.toOption->greet // "Greetings Anonymous"
@@ -140,11 +139,11 @@ let getWithDefault: (t<'a>, 'a) => 'a
 `getExn(value)` raises an exception if `null`, otherwise returns the value.
 
 ```rescript
-Null.getExn(Null.make(3))->assertEqual(3)
+Null.getExn(Null.make(3)) == 3
 
 switch Null.getExn(%raw("'ReScript'")) {
 | exception Invalid_argument(_) => assert(false)
-| value => assertEqual(value, "ReScript")
+| value => value == "ReScript"
 }
 
 switch Null.getExn(%raw("null")) {
@@ -164,11 +163,11 @@ let getExn: t<'a> => 'a
 `getOrThrow(value)` raises an exception if `null`, otherwise returns the value.
 
 ```rescript
-Null.getOrThrow(Null.make(3))->assertEqual(3)
+Null.getOrThrow(Null.make(3)) == 3
 
 switch Null.getOrThrow(%raw("'ReScript'")) {
 | exception Invalid_argument(_) => assert(false)
-| value => assertEqual(value, "ReScript")
+| value => value == "ReScript"
 }
 
 switch Null.getOrThrow(%raw("null")) {
@@ -252,7 +251,7 @@ returns `value` unchanged.
 
 ```rescript
 let addIfAboveOne = value =>
-  if (value > 1) {
+  if value > 1 {
     Null.make(value + 1)
   } else {
     Null.null

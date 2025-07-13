@@ -52,7 +52,6 @@ pub fn generate_asts(
                             package.to_owned(),
                             root_package.to_owned(),
                             &source_file.implementation.path.to_owned(),
-                            &build_state.rescript_version,
                             &build_state.bsc_path,
                             &build_state.workspace_root,
                         );
@@ -62,7 +61,6 @@ pub fn generate_asts(
                                 package.to_owned(),
                                 root_package.to_owned(),
                                 &interface_file_path.to_owned(),
-                                &build_state.rescript_version,
                                 &build_state.bsc_path,
                                 &build_state.workspace_root,
                             )
@@ -242,18 +240,13 @@ pub fn generate_asts(
         }
     });
 
-    if has_failure {
-        Err(stderr)
-    } else {
-        Ok(stderr)
-    }
+    if has_failure { Err(stderr) } else { Ok(stderr) }
 }
 
 pub fn parser_args(
     config: &config::Config,
     root_config: &config::Config,
     filename: &Path,
-    version: &str,
     workspace_root: &Option<PathBuf>,
     root_path: &Path,
     contents: &str,
@@ -273,7 +266,6 @@ pub fn parser_args(
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
-    let uncurried_args = root_config.get_uncurried_args(version);
     let bsc_flags = config::flatten_flags(&config.bsc_flags);
 
     let file = PathBuf::from("..").join("..").join(file);
@@ -281,13 +273,11 @@ pub fn parser_args(
     (
         ast_path.to_owned(),
         [
-            vec!["-bs-v".to_string(), format!("{}", version)],
             ppx_flags,
             jsx_args,
             jsx_module_args,
             jsx_mode_args,
             jsx_preserve_args,
-            uncurried_args,
             bsc_flags,
             vec![
                 "-absname".to_string(),
@@ -305,7 +295,6 @@ fn generate_ast(
     package: packages::Package,
     root_package: packages::Package,
     filename: &Path,
-    version: &str,
     bsc_path: &PathBuf,
     workspace_root: &Option<PathBuf>,
 ) -> Result<(PathBuf, Option<helpers::StdErr>), String> {
@@ -317,7 +306,6 @@ fn generate_ast(
         &package.config,
         &root_package.config,
         filename,
-        version,
         workspace_root,
         &root_package.path,
         &contents,
@@ -328,31 +316,35 @@ fn generate_ast(
     helpers::create_path(&ast_parent_path);
 
     /* Create .ast */
-    let result = if let Some(res_to_ast) = Some(
+    let result = match Some(
         Command::new(bsc_path)
             .current_dir(&build_path_abs)
             .args(parser_args)
             .output()
             .expect("Error converting .res to .ast"),
     ) {
-        let stderr = std::str::from_utf8(&res_to_ast.stderr).expect("Expect StdErr to be non-null");
-        if helpers::contains_ascii_characters(stderr) {
-            if res_to_ast.status.success() {
-                Ok((ast_path, Some(stderr.to_string())))
-            } else {
-                Err(format!("Error in {}:\n{}", package.name, stderr))
-            }
-        } else {
-            Ok((ast_path, None))
-        }
-    } else {
-        log::info!("Parsing file {}...", filename.display());
+        Some(res_to_ast) => {
+            let stderr = String::from_utf8_lossy(&res_to_ast.stderr).to_string();
 
-        Err(format!(
-            "Could not find canonicalize_string_path for file {} in package {}",
-            filename.display(),
-            package.name
-        ))
+            if helpers::contains_ascii_characters(&stderr) {
+                if res_to_ast.status.success() {
+                    Ok((ast_path, Some(stderr.to_string())))
+                } else {
+                    Err(format!("Error in {}:\n{}", package.name, stderr))
+                }
+            } else {
+                Ok((ast_path, None))
+            }
+        }
+        _ => {
+            log::info!("Parsing file {}...", filename.display());
+
+            Err(format!(
+                "Could not find canonicalize_string_path for file {} in package {}",
+                filename.display(),
+                package.name
+            ))
+        }
     };
     if let Ok((ast_path, _)) = &result {
         let _ = std::fs::copy(

@@ -62,7 +62,7 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let s0 = Belt.Set.Dict.fromArray([1, 3, 2, 4], ~cmp=IntCmp.cmp)
 
-assertEqual(s0->Belt.Set.Dict.toArray, [1, 2, 3, 4])
+s0->Belt.Set.Dict.toArray == [1, 2, 3, 4]
 ```
 */
 let fromArray: (array<'value>, ~cmp: cmp<'value, 'id>) => t<'value, 'id>
@@ -87,8 +87,8 @@ module IntCmp = Belt.Id.MakeComparable({
 let empty = Belt.Set.Dict.fromArray([], ~cmp=IntCmp.cmp)
 let notEmpty = Belt.Set.Dict.fromArray([1], ~cmp=IntCmp.cmp)
 
-assertEqual(Belt.Set.Dict.isEmpty(empty), true)
-assertEqual(Belt.Set.Dict.isEmpty(notEmpty), false)
+Belt.Set.Dict.isEmpty(empty) == true
+Belt.Set.Dict.isEmpty(notEmpty) == false
 ```
 */
 let isEmpty: t<_> => bool
@@ -106,8 +106,8 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let set = Belt.Set.Dict.fromArray([1, 4, 2, 5], ~cmp=IntCmp.cmp)
 
-assertEqual(set->Belt.Set.Dict.has(3, ~cmp=IntCmp.cmp), false)
-assertEqual(set->Belt.Set.Dict.has(1, ~cmp=IntCmp.cmp), true)
+set->Belt.Set.Dict.has(3, ~cmp=IntCmp.cmp) == false
+set->Belt.Set.Dict.has(1, ~cmp=IntCmp.cmp) == true
 ```
 */
 let has: (t<'value, 'id>, 'value, ~cmp: cmp<'value, 'id>) => bool
@@ -127,11 +127,11 @@ let s0 = Belt.Set.Dict.empty
 let s1 = s0->Belt.Set.Dict.add(1, ~cmp=IntCmp.cmp)
 let s2 = s1->Belt.Set.Dict.add(2, ~cmp=IntCmp.cmp)
 let s3 = s2->Belt.Set.Dict.add(2, ~cmp=IntCmp.cmp)
-assertEqual(s0->Belt.Set.Dict.toArray, [])
-assertEqual(s1->Belt.Set.Dict.toArray, [1])
-assertEqual(s2->Belt.Set.Dict.toArray, [1, 2])
-assertEqual(s3->Belt.Set.Dict.toArray, [1, 2])
-assertEqual(s2, s3)
+s0->Belt.Set.Dict.toArray == []
+s1->Belt.Set.Dict.toArray == [1]
+s2->Belt.Set.Dict.toArray == [1, 2]
+s3->Belt.Set.Dict.toArray == [1, 2]
+s2 == s3
 ```
 */
 let add: (t<'value, 'id>, 'value, ~cmp: cmp<'value, 'id>) => t<'value, 'id>
@@ -150,7 +150,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let set = Belt.Set.Dict.empty
 
 let newSet = set->Belt.Set.Dict.mergeMany([5, 4, 3, 2, 1], ~cmp=IntCmp.cmp)
-assertEqual(newSet->Belt.Set.Dict.toArray, [1, 2, 3, 4, 5])
+newSet->Belt.Set.Dict.toArray == [1, 2, 3, 4, 5]
 ```
 */
 let mergeMany: (t<'value, 'id>, array<'value>, ~cmp: cmp<'value, 'id>) => t<'value, 'id>
@@ -171,9 +171,9 @@ let s1 = s0->Belt.Set.Dict.remove(1, ~cmp=IntCmp.cmp)
 let s2 = s1->Belt.Set.Dict.remove(3, ~cmp=IntCmp.cmp)
 let s3 = s2->Belt.Set.Dict.remove(3, ~cmp=IntCmp.cmp)
 
-assertEqual(s1->Belt.Set.Dict.toArray, [2,3,4,5])
-assertEqual(s2->Belt.Set.Dict.toArray, [2,4,5])
-assertEqual(s2, s3)
+s1->Belt.Set.Dict.toArray == [2, 3, 4, 5]
+s2->Belt.Set.Dict.toArray == [2, 4, 5]
+s2 == s3
 ```
 */
 let remove: (t<'value, 'id>, 'value, ~cmp: cmp<'value, 'id>) => t<'value, 'id>
@@ -192,7 +192,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let set = Belt.Set.Dict.fromArray([1, 2, 3, 4], ~cmp=IntCmp.cmp)
 
 let newSet = set->Belt.Set.Dict.removeMany([5, 4, 3, 2, 1], ~cmp=IntCmp.cmp)
-assertEqual(newSet->Belt.Set.Dict.toArray, [])
+newSet->Belt.Set.Dict.toArray == []
 ```
 */
 let removeMany: (t<'value, 'id>, array<'value>, ~cmp: cmp<'value, 'id>) => t<'value, 'id>
@@ -211,7 +211,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.Set.Dict.fromArray([5, 2, 3, 5, 6], ~cmp=IntCmp.cmp)
 let s1 = Belt.Set.Dict.fromArray([5, 2, 3, 1, 5, 4], ~cmp=IntCmp.cmp)
 let union = Belt.Set.Dict.union(s0, s1, ~cmp=IntCmp.cmp)
-assertEqual(union->Belt.Set.Dict.toArray, [1,2,3,4,5,6])
+union->Belt.Set.Dict.toArray == [1, 2, 3, 4, 5, 6]
 ```
 */
 let union: (t<'value, 'id>, t<'value, 'id>, ~cmp: cmp<'value, 'id>) => t<'value, 'id>
@@ -230,7 +230,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.Set.Dict.fromArray([5, 2, 3, 5, 6], ~cmp=IntCmp.cmp)
 let s1 = Belt.Set.Dict.fromArray([5, 2, 3, 1, 5, 4], ~cmp=IntCmp.cmp)
 let intersect = Belt.Set.Dict.intersect(s0, s1, ~cmp=IntCmp.cmp)
-assertEqual(intersect->Belt.Set.Dict.toArray, [2,3,5])
+intersect->Belt.Set.Dict.toArray == [2, 3, 5]
 ```
 */
 let intersect: (t<'value, 'id>, t<'value, 'id>, ~cmp: cmp<'value, 'id>) => t<'value, 'id>
@@ -252,8 +252,8 @@ let s1 = Belt.Set.Dict.fromArray([5, 2, 3, 1, 5, 4], ~cmp=IntCmp.cmp)
 let diff1 = Belt.Set.Dict.diff(s0, s1, ~cmp=IntCmp.cmp)
 let diff2 = Belt.Set.Dict.diff(s1, s0, ~cmp=IntCmp.cmp)
 
-assertEqual(diff1->Belt.Set.Dict.toArray, [6])
-assertEqual(diff2->Belt.Set.Dict.toArray, [1,4])
+diff1->Belt.Set.Dict.toArray == [6]
+diff2->Belt.Set.Dict.toArray == [1, 4]
 ```
 */
 let diff: (t<'value, 'id>, t<'value, 'id>, ~cmp: cmp<'value, 'id>) => t<'value, 'id>
@@ -272,9 +272,9 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.Set.Dict.fromArray([5, 2, 3, 5, 6], ~cmp=IntCmp.cmp)
 let s1 = Belt.Set.Dict.fromArray([5, 2, 3, 1, 5, 4], ~cmp=IntCmp.cmp)
 let s2 = Belt.Set.Dict.intersect(s0, s1, ~cmp=IntCmp.cmp)
-assertEqual(Belt.Set.Dict.subset(s2, s0, ~cmp=IntCmp.cmp), true)
-assertEqual(Belt.Set.Dict.subset(s2, s1, ~cmp=IntCmp.cmp), true)
-assertEqual(Belt.Set.Dict.subset(s1, s0, ~cmp=IntCmp.cmp), false)
+Belt.Set.Dict.subset(s2, s0, ~cmp=IntCmp.cmp) == true
+Belt.Set.Dict.subset(s2, s1, ~cmp=IntCmp.cmp) == true
+Belt.Set.Dict.subset(s1, s0, ~cmp=IntCmp.cmp) == false
 ```
 */
 let subset: (t<'value, 'id>, t<'value, 'id>, ~cmp: cmp<'value, 'id>) => bool
@@ -300,7 +300,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.Set.Dict.fromArray([5, 2, 3], ~cmp=IntCmp.cmp)
 let s1 = Belt.Set.Dict.fromArray([3, 2, 5], ~cmp=IntCmp.cmp)
 
-assertEqual(Belt.Set.Dict.eq(s0, s1, ~cmp=IntCmp.cmp), true)
+Belt.Set.Dict.eq(s0, s1, ~cmp=IntCmp.cmp) == true
 ```
 */
 let eq: (t<'value, 'id>, t<'value, 'id>, ~cmp: cmp<'value, 'id>) => bool
@@ -325,7 +325,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.Set.Dict.fromArray([5, 2, 3, 5, 6], ~cmp=IntCmp.cmp)
 let acc = ref(list{})
 s0->Belt.Set.Dict.forEach(x => acc := Belt.List.add(acc.contents, x))
-assertEqual(acc.contents, list{6, 5, 3, 2})
+acc.contents == list{6, 5, 3, 2}
 ```
 */
 let forEach: (t<'value, 'id>, 'value => unit) => unit
@@ -345,10 +345,7 @@ module IntCmp = Belt.Id.MakeComparable({
 })
 
 let s0 = Belt.Set.Dict.fromArray([5, 2, 3, 5, 6], ~cmp=IntCmp.cmp)
-assertEqual(
-  s0->Belt.Set.Dict.reduce(list{}, (acc, element) => acc->Belt.List.add(element)),
-  list{6, 5, 3, 2}
-)
+s0->Belt.Set.Dict.reduce(list{}, (acc, element) => acc->Belt.List.add(element)) == list{6, 5, 3, 2}
 ```
 */
 let reduce: (t<'value, 'id>, 'a, ('a, 'value) => 'a) => 'a
@@ -370,7 +367,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let isEven = x => mod(x, 2) == 0
 
 let s0 = Belt.Set.Dict.fromArray([2, 4, 6, 8], ~cmp=IntCmp.cmp)
-assertEqual(s0->Belt.Set.Dict.every(isEven), true)
+s0->Belt.Set.Dict.every(isEven) == true
 ```
 */
 let every: (t<'value, 'id>, 'value => bool) => bool
@@ -392,7 +389,7 @@ module IntCmp = Belt.Id.MakeComparable({
 let isOdd = x => mod(x, 2) != 0
 
 let s0 = Belt.Set.Dict.fromArray([1, 2, 4, 6, 8], ~cmp=IntCmp.cmp)
-assertEqual(s0->Belt.Set.Dict.some(isOdd), true)
+s0->Belt.Set.Dict.some(isOdd) == true
 ```
 */
 let some: (t<'value, 'id>, 'value => bool) => bool
@@ -416,7 +413,7 @@ let isEven = x => mod(x, 2) == 0
 let s0 = Belt.Set.Dict.fromArray([1, 2, 3, 4, 5], ~cmp=IntCmp.cmp)
 let s1 = s0->Belt.Set.Dict.keep(isEven)
 
-assertEqual(s1->Belt.Set.Dict.toArray, [2,4])
+s1->Belt.Set.Dict.toArray == [2, 4]
 ```
 */
 let keep: (t<'value, 'id>, 'value => bool) => t<'value, 'id>
@@ -440,8 +437,8 @@ let isOdd = x => mod(x, 2) != 0
 let s0 = Belt.Set.Dict.fromArray([1, 2, 3, 4, 5], ~cmp=IntCmp.cmp)
 let (s1, s2) = s0->Belt.Set.Dict.partition(isOdd)
 
-assertEqual(s1->Belt.Set.Dict.toArray, [1,3,5])
-assertEqual(s2->Belt.Set.Dict.toArray, [2,4])
+s1->Belt.Set.Dict.toArray == [1, 3, 5]
+s2->Belt.Set.Dict.toArray == [2, 4]
 ```
 */
 let partition: (t<'value, 'id>, 'value => bool) => (t<'value, 'id>, t<'value, 'id>)
@@ -459,7 +456,7 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let s0 = Belt.Set.Dict.fromArray([1, 2, 3, 4], ~cmp=IntCmp.cmp)
 
-assertEqual(s0->Belt.Set.Dict.size, 4)
+s0->Belt.Set.Dict.size == 4
 ```
 */
 let size: t<'value, 'id> => int
@@ -477,7 +474,7 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let s0 = Belt.Set.Dict.fromArray([3, 2, 1, 5], ~cmp=IntCmp.cmp)
 
-assertEqual(s0->Belt.Set.Dict.toList, list{1, 2, 3, 5})
+s0->Belt.Set.Dict.toList == list{1, 2, 3, 5}
 ```
 */
 let toList: t<'value, 'id> => list<'value>
@@ -495,7 +492,7 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let s0 = Belt.Set.Dict.fromArray([3, 2, 1, 5], ~cmp=IntCmp.cmp)
 
-assertEqual(s0->Belt.Set.Dict.toArray, [1,2,3,5])
+s0->Belt.Set.Dict.toArray == [1, 2, 3, 5]
 ```
 */
 let toArray: t<'value, 'id> => array<'value>
@@ -514,8 +511,8 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.Set.Dict.empty
 let s1 = Belt.Set.Dict.fromArray([3, 2, 1, 5], ~cmp=IntCmp.cmp)
 
-assertEqual(s0->Belt.Set.Dict.minimum, None)
-assertEqual(s1->Belt.Set.Dict.minimum, Some(1))
+s0->Belt.Set.Dict.minimum == None
+s1->Belt.Set.Dict.minimum == Some(1)
 ```
 */
 let minimum: t<'value, 'id> => option<'value>
@@ -534,8 +531,8 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.Set.Dict.empty
 let s1 = Belt.Set.Dict.fromArray([3, 2, 1, 5], ~cmp=IntCmp.cmp)
 
-assertEqual(s0->Belt.Set.Dict.minUndefined, Js.undefined)
-assertEqual(s1->Belt.Set.Dict.minUndefined, Js.Undefined.return(1))
+s0->Belt.Set.Dict.minUndefined == Js.undefined
+s1->Belt.Set.Dict.minUndefined == Js.Undefined.return(1)
 ```
 */
 let minUndefined: t<'value, 'id> => Js.undefined<'value>
@@ -554,8 +551,8 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.Set.Dict.empty
 let s1 = Belt.Set.Dict.fromArray([3, 2, 1, 5], ~cmp=IntCmp.cmp)
 
-assertEqual(s0->Belt.Set.Dict.maximum, None)
-assertEqual(s1->Belt.Set.Dict.maximum, Some(5))
+s0->Belt.Set.Dict.maximum == None
+s1->Belt.Set.Dict.maximum == Some(5)
 ```
 */
 let maximum: t<'value, 'id> => option<'value>
@@ -574,8 +571,8 @@ module IntCmp = Belt.Id.MakeComparable({
 let s0 = Belt.Set.Dict.empty
 let s1 = Belt.Set.Dict.fromArray([3, 2, 1, 5], ~cmp=IntCmp.cmp)
 
-assertEqual(s0->Belt.Set.Dict.maxUndefined, Js.undefined)
-assertEqual(s1->Belt.Set.Dict.maxUndefined, Js.Undefined.return(5))
+s0->Belt.Set.Dict.maxUndefined == Js.undefined
+s1->Belt.Set.Dict.maxUndefined == Js.Undefined.return(5)
 ```
 */
 let maxUndefined: t<'value, 'id> => Js.undefined<'value>
@@ -594,8 +591,8 @@ module IntCmp = Belt.Id.MakeComparable({
 
 let s0 = Belt.Set.Dict.fromArray([1, 2, 3, 4, 5], ~cmp=IntCmp.cmp)
 
-assertEqual(s0->Belt.Set.Dict.get(3, ~cmp=IntCmp.cmp), Some(3))
-assertEqual(s0->Belt.Set.Dict.get(20, ~cmp=IntCmp.cmp), None)
+s0->Belt.Set.Dict.get(3, ~cmp=IntCmp.cmp) == Some(3)
+s0->Belt.Set.Dict.get(20, ~cmp=IntCmp.cmp) == None
 ```
 */
 let get: (t<'value, 'id>, 'value, ~cmp: cmp<'value, 'id>) => option<'value>
@@ -630,9 +627,9 @@ let s0 = Belt.Set.Dict.fromArray([1, 2, 3, 4, 5], ~cmp=IntCmp.cmp)
 
 let ((smaller, larger), present) = s0->Belt.Set.Dict.split(3, ~cmp=IntCmp.cmp)
 
-assertEqual(present, true)
-assertEqual(smaller->Belt.Set.Dict.toArray, [1,2])
-assertEqual(larger->Belt.Set.Dict.toArray, [4,5])
+present == true
+smaller->Belt.Set.Dict.toArray == [1, 2]
+larger->Belt.Set.Dict.toArray == [4, 5]
 ```
 */
 let split: (

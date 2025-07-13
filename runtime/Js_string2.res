@@ -145,7 +145,7 @@ external get: (t, int) => t = ""
 /**
 `charAt(s, n)` gets the character at index `n` within string `s`. If `n` is
 negative or greater than the length of `s`, it returns the empty string. If the
-string contains characters outside the range \u0000-\uffff, it will return the
+string contains characters outside the range \\u0000-\\uffff, it will return the
 first 16-bit value at that position in the string.
 
 See [`String.charAt`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/charAt)
@@ -331,7 +331,7 @@ external indexOf: (t, t) => int = "indexOf"
 /**
 `indexOfFrom(str, searchValue, start)` returns the position at which
 `searchValue` was found within `str` starting at character position `start`, or
--1 if `searchValue` is not found in that portion of `str`. The return value is
+\-1 if `searchValue` is not found in that portion of `str`. The return value is
 relative to the beginning of the string, no matter where the search started
 from.
 
@@ -415,11 +415,11 @@ external localeCompare: (t, t) => float = "localeCompare"
 /**
 `match(str, regexp)` matches a `string` against the given `regexp`. If there is
 no match, it returns `None`. For regular expressions without the g modifier, if
-  there is a match, the return value is `Some(array)` where the array contains:
+there is a match, the return value is `Some(array)` where the array contains:
 - The entire matched string
 - Any capture groups if the regexp had parentheses
-For regular expressions with the g modifier, a matched expression returns
-`Some(array)` with all the matched substrings and no capture groups.
+  For regular expressions with the g modifier, a matched expression returns
+  `Some(array)` with all the matched substrings and no capture groups.
 
 See [`String.match`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/match)
 on MDN.
@@ -956,7 +956,7 @@ on MDN.
 ## Examples
 
 ```rescript
-Js.String2.anchor("Page One", "page1") == "<a name="page1">Page One</a>"
+Js.String2.anchor("Page One", "page1") == "<a name=\"page1\">Page One</a>"
 ```
 */
 @send
@@ -972,7 +972,7 @@ on MDN.
 ## Examples
 
 ```rescript
-Js.String2.link("Go to page two", "page2.html") == "<a href="page2.html">Go to page two</a>"
+Js.String2.link("Go to page two", "page2.html") == "<a href=\"page2.html\">Go to page two</a>"
 ```
 */
 @send

@@ -2,4 +2,4 @@
  (name tools)
  (flags
   (-w "+6+26+27+32+33+39"))
- (libraries analysis))
+ (libraries analysis cmarkit))

@@ -31,11 +31,11 @@ Object.is([1, 2, 3], [1, 2, 3]) // false
 [1, 2, 3] == [1, 2, 3] // true
 [1, 2, 3] === [1, 2, 3] // false
 
-let fruit = {"name": "Apple" }
+let fruit = {"name": "Apple"}
 Object.is(fruit, fruit) // true
-Object.is(fruit, {"name": "Apple" }) // false
-fruit == {"name": "Apple" } // true
-fruit === {"name": "Apple" } // false
+Object.is(fruit, {"name": "Apple"}) // false
+fruit == {"name": "Apple"} // true
+fruit === {"name": "Apple"} // false
 ```
 */
 @val
@@ -143,7 +143,7 @@ external set: ({..}, string, 'a) => unit = ""
 @set_index external setSymbol: ({..}, Stdlib_Symbol.t, 'a) => unit = ""
 
 /**
-`keysToArray` returns an array of an object's own enumerable string-keyed property names. See [ECMAScript Language Specification](https://tc39.es/ecma262/multipage/fundamental-objects.html#sec-object.keys) 
+`keysToArray` returns an array of an object's own enumerable string-keyed property names. See [ECMAScript Language Specification](https://tc39.es/ecma262/multipage/fundamental-objects.html#sec-object.keys)
 or [Object.keys on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys).
 
 ## Examples
@@ -173,9 +173,9 @@ let point = {"x": 1, "y": 2}
 external hasOwnProperty: ({..}, string) => bool = "Object.prototype.hasOwnProperty.call"
 
 /**
-`seal` seals an object. Sealing an object prevents extensions and makes existing properties non-configurable. A sealed object has a fixed set of properties. Unlike `freeze`, values of existing properties can still be changed as long as they are writable. 
+`seal` seals an object. Sealing an object prevents extensions and makes existing properties non-configurable. A sealed object has a fixed set of properties. Unlike `freeze`, values of existing properties can still be changed as long as they are writable.
 
-**Note:** `seal` returns the same object that was passed in; it does not create a copy. Any attempt to delete or add properties to a sealed object will fail, either silently or by throwing an error. 
+**Note:** `seal` returns the same object that was passed in; it does not create a copy. Any attempt to delete or add properties to a sealed object will fail, either silently or by throwing an error.
 
 See [ECMAScript Language Specification](https://tc39.es/ecma262/multipage/fundamental-objects.html#sec-object.seal) and [Object.seal on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/seal)
 
@@ -256,9 +256,9 @@ See [ECMAScript Language Specification](https://tc39.es/ecma262/multipage/fundam
 ```rescript
 let point = {"x": 1, "y": 3}->Object.seal
 let pointIsSealed = point->Object.isSealed // true
-let fruit = {"name": "Apple" }
+let fruit = {"name": "Apple"}
 let fruitIsSealed = fruit->Object.isSealed // false
- ```
+```
 */
 @val
 external isSealed: 'a => bool = "Object.isSealed"
@@ -273,9 +273,9 @@ See [ECMAScript Language Specification](https://tc39.es/ecma262/multipage/fundam
 ```rescript
 let point = {"x": 1, "y": 3}->Object.freeze
 let pointIsFrozen = point->Object.isFrozen // true
-let fruit = {"name": "Apple" }
+let fruit = {"name": "Apple"}
 let fruitIsFrozen = fruit->Object.isFrozen // false
- ```
+```
 */
 @val
 external isFrozen: 'a => bool = "Object.isFrozen"

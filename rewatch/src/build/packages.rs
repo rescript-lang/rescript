@@ -3,10 +3,10 @@ use super::namespaces;
 use super::packages;
 use crate::config;
 use crate::helpers;
-use crate::helpers::emojis::*;
 use crate::helpers::StrippedVerbatimPath;
+use crate::helpers::emojis::*;
 use ahash::{AHashMap, AHashSet};
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use console::style;
 use log::{debug, error};
 use rayon::prelude::*;
@@ -266,16 +266,17 @@ pub fn read_dependency(
         )),
     }?;
 
-    let canonical_path = match path.canonicalize().map(StrippedVerbatimPath::to_stripped_verbatim_path) {
+    let canonical_path = match path
+        .canonicalize()
+        .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+    {
         Ok(canonical_path) => Ok(canonical_path),
-        Err(e) => {
-            Err(format!(
-                "Failed canonicalizing the package \"{}\" path \"{}\" (are node_modules up-to-date?)...\nMore details: {}",
-                package_name,
-                path.to_string_lossy(),
-                e
-            ))
-        }
+        Err(e) => Err(format!(
+            "Failed canonicalizing the package \"{}\" path \"{}\" (are node_modules up-to-date?)...\nMore details: {}",
+            package_name,
+            path.to_string_lossy(),
+            e
+        )),
     }?;
 
     Ok(canonical_path)
@@ -286,7 +287,7 @@ pub fn read_dependency(
 /// Given a config, recursively finds all dependencies.
 /// 1. It starts with registering dependencies and
 ///    prevents the operation for the ones which are already
-///    registerd for the parent packages. Especially relevant for peerDependencies.
+///    registered for the parent packages. Especially relevant for peerDependencies.
 /// 2. In parallel performs IO to read the dependencies config and
 ///    recursively continues operation for their dependencies as well.
 fn read_dependencies(
@@ -328,7 +329,7 @@ fn read_dependencies(
 
                         let parent_path_str = parent_path.to_string_lossy();
                         log::error!(
-                            "We could not build package tree reading depencency '{package_name}', at path '{parent_path_str}'. Error: {error}",
+                            "We could not build package tree reading dependency '{package_name}', at path '{parent_path_str}'. Error: {error}",
                         );
 
                         std::process::exit(2)
@@ -414,7 +415,11 @@ fn make_package(config: config::Config, package_path: &Path, is_pinned_dep: bool
         None => {
             if !is_root {
                 let package_path_str = package_path.to_string_lossy();
-                log::warn!("Package '{}' has not defined any sources, but is not the root package. This is likely a mistake. It is located: {}", config.name, package_path_str);
+                log::warn!(
+                    "Package '{}' has not defined any sources, but is not the root package. This is likely a mistake. It is located: {}",
+                    config.name,
+                    package_path_str
+                );
             }
 
             AHashSet::new()
@@ -422,6 +427,17 @@ fn make_package(config: config::Config, package_path: &Path, is_pinned_dep: bool
     };
 
     let package_name = read_package_name(package_path).expect("Could not read package name");
+    if package_name != config.name {
+        log::warn!(
+            "\nPackage name mismatch for {}:\n\
+The package.json name is \"{}\", while the rescript.json name is \"{}\"\n\
+This inconsistency will cause issues with package resolution.\n",
+            package_path.to_string_lossy(),
+            package_name,
+            config.name,
+        );
+    }
+
     Package {
         name: package_name,
         config: config.to_owned(),
@@ -465,7 +481,7 @@ fn read_packages(
     dependencies.iter().for_each(|d| {
         if !map.contains_key(&d.name) {
             let package = make_package(d.config.to_owned(), &d.path, d.is_pinned, false);
-            map.insert(package.name.to_string(), package);
+            map.insert(d.name.to_string(), package);
         }
     });
 
@@ -842,10 +858,6 @@ impl Package {
     pub fn get_jsx_preserve_args(&self) -> Vec<String> {
         self.config.get_jsx_preserve_args()
     }
-
-    pub fn get_uncurried_args(&self, version: &str, root_package: &packages::Package) -> Vec<String> {
-        root_package.config.get_uncurried_args(version)
-    }
 }
 
 fn get_unallowed_dependents(
@@ -971,10 +983,8 @@ mod test {
                 bs_dev_dependencies: Some(build_dev_deps),
                 ppx_flags: None,
                 bsc_flags: None,
-                reason: None,
                 namespace: None,
                 jsx: None,
-                uncurried: None,
                 gentype_config: None,
                 namespace_entry: None,
                 allowed_dependents,

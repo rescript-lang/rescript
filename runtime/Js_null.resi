@@ -51,7 +51,7 @@ using the given function `'a => 'b`, then wrapped back up and returned as
 
 ```rescript
 let maybeGreetWorld = (maybeGreeting: Js.null<string>) =>
-  Js.Null.bind(maybeGreeting, (. greeting) => greeting ++ " world!")
+  Js.Null.bind(maybeGreeting, greeting => greeting ++ " world!")
 ```
 */
 let bind: (t<'a>, 'a => 'b) => t<'b>
@@ -64,7 +64,7 @@ If `Js.null<'a>` contains a value, that value is unwrapped and applied to the gi
 
 ```rescript
 let maybeSay = (maybeMessage: Js.null<string>) =>
-  Js.Null.iter(maybeMessage, (. message) => Js.log(message))
+  Js.Null.iter(maybeMessage, message => Js.log(message))
 ```
 */
 let iter: (t<'a>, 'a => unit) => unit

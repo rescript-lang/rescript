@@ -54,7 +54,7 @@ type builtin = {
 (***********************************************************)
 
 (** rules are generally composed of built-in rules and customized rules, there are two design choices:
-    1. respect custom rules with the same name, then we need adjust our built-in 
+    1. respect custom rules with the same name, then we need adjust our built-in
     rules dynamically in case the conflict.
     2. respect our built-in rules, then we only need re-load custom rules for each rescript.json
 *)
@@ -79,7 +79,5 @@ val make_custom_rules :
   dpkg_incls:string ->
   lib_incls:string ->
   dev_incls:string ->
-  bs_dependencies:Bsb_config_types.dependencies ->
-  bs_dev_dependencies:Bsb_config_types.dependencies ->
   command Map_string.t ->
   builtin

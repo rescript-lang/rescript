@@ -53,7 +53,7 @@ as `Js.null_undefined<'b>`.
 
 ```rescript
 let maybeGreetWorld = (maybeGreeting: Js.null_undefined<string>) =>
-  Js.Null_undefined.bind(maybeGreeting, (. greeting) => greeting ++ " world!")
+  Js.Null_undefined.bind(maybeGreeting, greeting => greeting ++ " world!")
 ```
 */
 let bind: (t<'a>, 'a => 'b) => t<'b>
@@ -66,7 +66,7 @@ If `Js.null_undefined<'a>` contains a value, that value is unwrapped and applied
 
 ```rescript
 let maybeSay = (maybeMessage: Js.null_undefined<string>) =>
-  Js.Null_undefined.iter(maybeMessage, (. message) => Js.log(message))
+  Js.Null_undefined.iter(maybeMessage, message => Js.log(message))
 ```
 */
 let iter: (t<'a>, 'a => unit) => unit

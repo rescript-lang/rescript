@@ -61,7 +61,7 @@ external make: unit => t = "Date"
 `fromString(dateTimeString)`
 
 Creates a date object from given date time string.
-The string has to be in the ISO 8601 format YYYY-MM-DDTHH:mm:ss.sssZ (https://tc39.es/ecma262/#sec-date-time-string-format).
+The string has to be in the ISO 8601 format YYYY-MM-DDTHH:mm:ss.sssZ (https://tc39.es/ecma262/\#sec-date-time-string-format).
 
 Invalid date time strings will create invalid dates.
 You can use the result like any valid date, but many functions like `toString` will return "Invalid Date" or functions like `Date.getTime` will return NaN.
@@ -105,7 +105,7 @@ external fromTime: msSinceEpoch => t = "Date"
 
 /**
 Creates a date object with the given year and month.
-Be aware of using a value for year < 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#interpretation_of_two-digit_years).
+Be aware of using a value for year \< 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global\_Objects/Date\#interpretation\_of\_two-digit\_years).
 Months are 0-indexed (0 = January, 11 = December).
 Values, which are out of range, will be carried over to the next bigger unit (s. example).
 
@@ -125,7 +125,6 @@ Date.makeWithYM(~year=2023, ~month=-1)
 
 // Note: The output depends on your local time zone.
 // In nodejs you can change it by using the TZ env (`export TZ='Europe/London' && node index.bs.js`)
-
 ```
 */
 @new
@@ -133,7 +132,7 @@ external makeWithYM: (~year: int, ~month: int) => t = "Date"
 
 /**
 Creates a date object with the given year, month and date (day of month).
-Be aware of using a value for year < 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#interpretation_of_two-digit_years).
+Be aware of using a value for year \< 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global\_Objects/Date\#interpretation\_of\_two-digit\_years).
 Months are 0-indexed (0 = January, 11 = December).
 Values, which are out of range, will be carried over to the next bigger unit (s. example).
 
@@ -154,7 +153,7 @@ external makeWithYMD: (~year: int, ~month: int, ~day: int) => t = "Date"
 
 /**
 Creates a date object with the given year, month, date (day of month) and hours.
-Be aware of using a value for year < 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#interpretation_of_two-digit_years).
+Be aware of using a value for year \< 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global\_Objects/Date\#interpretation\_of\_two-digit\_years).
 Months are 0-indexed (0 = January, 11 = December).
 Values, which are out of range, will be carried over to the next bigger unit (s. example).
 
@@ -171,7 +170,6 @@ Date.makeWithYMDH(~year=2023, ~month=1, ~day=20, ~hours=-1)
 
 // Note: The output depends on your local time zone.
 // In nodejs you can change it by using the TZ env (`export TZ='Europe/London' && node index.bs.js`)
-
 ```
 */
 @new
@@ -179,7 +177,7 @@ external makeWithYMDH: (~year: int, ~month: int, ~day: int, ~hours: int) => t = 
 
 /**
 Creates a date object with the given year, month, date (day of month), hours and minutes.
-Be aware of using a value for year < 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#interpretation_of_two-digit_years).
+Be aware of using a value for year \< 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global\_Objects/Date\#interpretation\_of\_two-digit\_years).
 Months are 0-indexed (0 = January, 11 = December).
 Values, which are out of range, will be carried over to the next bigger unit (s. example).
 
@@ -196,7 +194,6 @@ Date.makeWithYMDHM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=-1)
 
 // Note: The output depends on your local time zone.
 // In nodejs you can change it by using the TZ env (`export TZ='Europe/London' && node index.bs.js`)
-
 ```
 */
 @new
@@ -205,7 +202,7 @@ external makeWithYMDHM: (~year: int, ~month: int, ~day: int, ~hours: int, ~minut
 
 /**
 Creates a date object with the given year, month, date (day of month), hours, minutes and seconds.
-Be aware of using a value for year < 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#interpretation_of_two-digit_years).
+Be aware of using a value for year \< 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global\_Objects/Date\#interpretation\_of\_two-digit\_years).
 Months are 0-indexed (0 = January, 11 = December).
 Values, which are out of range, will be carried over to the next bigger unit (s. example).
 
@@ -222,7 +219,6 @@ Date.makeWithYMDHMS(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seco
 
 // Note: The output depends on your local time zone.
 // In nodejs you can change it by using the TZ env (`export TZ='Europe/London' && node index.bs.js`)
-
 ```
 */
 @new
@@ -237,24 +233,47 @@ external makeWithYMDHMS: (
 
 /**
 Creates a date object with the given year, month, date (day of month), hours, minutes, seconds and milliseconds.
-Be aware of using a value for year < 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#interpretation_of_two-digit_years).
+Be aware of using a value for year \< 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global\_Objects/Date\#interpretation\_of\_two-digit\_years).
 Months are 0-indexed (0 = January, 11 = December).
 Values, which are out of range, will be carried over to the next bigger unit (s. example).
 
 ## Examples
 ```rescript
-Date.makeWithYMDHMSM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=0)
+Date.makeWithYMDHMSM(
+  ~year=2023,
+  ~month=1,
+  ~day=20,
+  ~hours=16,
+  ~minutes=40,
+  ~seconds=0,
+  ~milliseconds=0,
+)
 // 2023-02-20T16:40:00.000Z
 
-Date.makeWithYMDHMSM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=1000)
+Date.makeWithYMDHMSM(
+  ~year=2023,
+  ~month=1,
+  ~day=20,
+  ~hours=16,
+  ~minutes=40,
+  ~seconds=0,
+  ~milliseconds=1000,
+)
 // 2023-02-20T16:40:01.000Z
 
-Date.makeWithYMDHMSM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=-1)
+Date.makeWithYMDHMSM(
+  ~year=2023,
+  ~month=1,
+  ~day=20,
+  ~hours=16,
+  ~minutes=40,
+  ~seconds=0,
+  ~milliseconds=-1,
+)
 // 2023-02-20T16:39:59.999Z
 
 // Note: The output depends on your local time zone.
 // In nodejs you can change it by using the TZ env (`export TZ='Europe/London' && node index.bs.js`)
-
 ```
 */
 @new
@@ -270,21 +289,21 @@ external makeWithYMDHMSM: (
 module UTC: {
   /**
   Returns the time, in milliseconds, since UNIX epoch (January 1, 1970 00:00:00 UTC).
-  Be aware of using a value for year < 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#interpretation_of_two-digit_years).
-  Months are 0-indexed (0 = January, 11 = December).
-  Values, which are out of range, will be carried over to the next bigger unit (s. example).
+Be aware of using a value for year \< 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global\_Objects/Date\#interpretation\_of\_two-digit\_years).
+Months are 0-indexed (0 = January, 11 = December).
+Values, which are out of range, will be carried over to the next bigger unit (s. example).
 
   ## Examples
   ```rescript
   Date.UTC.makeWithYM(~year=2023, ~month=0)
   // 1672531200000
-
+  
   Date.UTC.makeWithYM(~year=2023, ~month=11)
   // 1701388800000
-
+  
   Date.UTC.makeWithYM(~year=2023, ~month=12)
   // 1704067200000
-
+  
   Date.UTC.makeWithYM(~year=2023, ~month=-1)
   // 1669852800000
   ```
@@ -294,18 +313,18 @@ module UTC: {
 
   /**
   Returns the time, in milliseconds, since UNIX epoch (January 1, 1970 00:00:00 UTC).
-  Be aware of using a value for year < 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#interpretation_of_two-digit_years).
-  Months are 0-indexed (0 = January, 11 = December).
-  Values, which are out of range, will be carried over to the next bigger unit (s. example).
+Be aware of using a value for year \< 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global\_Objects/Date\#interpretation\_of\_two-digit\_years).
+Months are 0-indexed (0 = January, 11 = December).
+Values, which are out of range, will be carried over to the next bigger unit (s. example).
 
   ## Examples
   ```rescript
   Date.UTC.makeWithYMD(~year=2023, ~month=1, ~day=20)
   // 1676851200000
-
+  
   Date.UTC.makeWithYMD(~year=2023, ~month=1, ~day=-1)
   // 1675036800000
-
+  
   Date.UTC.makeWithYMD(~year=2023, ~month=1, ~day=29)
   // 1677628800000
   ```
@@ -315,18 +334,18 @@ module UTC: {
 
   /**
   Returns the time, in milliseconds, since UNIX epoch (January 1, 1970 00:00:00 UTC).
-  Be aware of using a value for year < 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#interpretation_of_two-digit_years).
-  Months are 0-indexed (0 = January, 11 = December).
-  Values, which are out of range, will be carried over to the next bigger unit (s. example).
+Be aware of using a value for year \< 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global\_Objects/Date\#interpretation\_of\_two-digit\_years).
+Months are 0-indexed (0 = January, 11 = December).
+Values, which are out of range, will be carried over to the next bigger unit (s. example).
 
   ## Examples
   ```rescript
   Date.UTC.makeWithYMDH(~year=2023, ~month=1, ~day=20, ~hours=16)
   // 1676908800000
-
+  
   Date.UTC.makeWithYMDH(~year=2023, ~month=1, ~day=20, ~hours=24)
   // 1676937600000
-
+  
   Date.UTC.makeWithYMDH(~year=2023, ~month=1, ~day=20, ~hours=-1)
   // 1676847600000
   ```
@@ -337,18 +356,18 @@ module UTC: {
 
   /**
   Returns the time, in milliseconds, since UNIX epoch (January 1, 1970 00:00:00 UTC).
-  Be aware of using a value for year < 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#interpretation_of_two-digit_years).
-  Months are 0-indexed (0 = January, 11 = December).
-  Values, which are out of range, will be carried over to the next bigger unit (s. example).
+Be aware of using a value for year \< 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global\_Objects/Date\#interpretation\_of\_two-digit\_years).
+Months are 0-indexed (0 = January, 11 = December).
+Values, which are out of range, will be carried over to the next bigger unit (s. example).
 
   ## Examples
   ```rescript
   Date.UTC.makeWithYMDHM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40)
   // 1676911200000
-
+  
   Date.UTC.makeWithYMDHM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=60)
   // 1676912400000
-
+  
   Date.UTC.makeWithYMDHM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=-1)
   // 1676908740000
   ```
@@ -364,18 +383,18 @@ module UTC: {
 
   /**
   Returns the time, in milliseconds, since UNIX epoch (January 1, 1970 00:00:00 UTC).
-  Be aware of using a value for year < 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#interpretation_of_two-digit_years).
-  Months are 0-indexed (0 = January, 11 = December).
-  Values, which are out of range, will be carried over to the next bigger unit (s. example).
+Be aware of using a value for year \< 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global\_Objects/Date\#interpretation\_of\_two-digit\_years).
+Months are 0-indexed (0 = January, 11 = December).
+Values, which are out of range, will be carried over to the next bigger unit (s. example).
 
   ## Examples
   ```rescript
   Date.UTC.makeWithYMDHMS(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=0)
   // 1676911200000
-
+  
   Date.UTC.makeWithYMDHMS(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=60)
   // 1676911260000
-
+  
   Date.UTC.makeWithYMDHMS(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=-1)
   // 1676911199000
   ```
@@ -392,19 +411,43 @@ module UTC: {
 
   /**
   Returns the time, in milliseconds, since UNIX epoch (January 1, 1970 00:00:00 UTC).
-  Be aware of using a value for year < 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#interpretation_of_two-digit_years).
-  Months are 0-indexed (0 = January, 11 = December).
-  Values, which are out of range, will be carried over to the next bigger unit (s. example).
+Be aware of using a value for year \< 100, because it behaves inconsistent (see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global\_Objects/Date\#interpretation\_of\_two-digit\_years).
+Months are 0-indexed (0 = January, 11 = December).
+Values, which are out of range, will be carried over to the next bigger unit (s. example).
 
   ## Examples
   ```rescript
-  Date.UTC.makeWithYMDHMSM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=0)->Console.log
+  Date.UTC.makeWithYMDHMSM(
+    ~year=2023,
+    ~month=1,
+    ~day=20,
+    ~hours=16,
+    ~minutes=40,
+    ~seconds=0,
+    ~milliseconds=0,
+  )->Console.log
   // 1676911200000
-
-  Date.UTC.makeWithYMDHMSM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=1000)->Console.log
+  
+  Date.UTC.makeWithYMDHMSM(
+    ~year=2023,
+    ~month=1,
+    ~day=20,
+    ~hours=16,
+    ~minutes=40,
+    ~seconds=0,
+    ~milliseconds=1000,
+  )->Console.log
   // 1676911201000
-
-  Date.UTC.makeWithYMDHMSM(~year=2023, ~month=1, ~day=20, ~hours=16, ~minutes=40, ~seconds=0, ~milliseconds=-1)->Console.log
+  
+  Date.UTC.makeWithYMDHMSM(
+    ~year=2023,
+    ~month=1,
+    ~day=20,
+    ~hours=16,
+    ~minutes=40,
+    ~seconds=0,
+    ~milliseconds=-1,
+  )->Console.log
   // 1676911199999
   ```
   */
@@ -718,7 +761,12 @@ Beware this will *mutate* the date.
 
 ## Examples
 ```rescript
-Date.fromString("2023-02-20T16:40:00.00")->Date.setHoursMSMs(~hours=0, ~minutes=0, ~seconds=0, ~milliseconds=0)
+Date.fromString("2023-02-20T16:40:00.00")->Date.setHoursMSMs(
+  ~hours=0,
+  ~minutes=0,
+  ~seconds=0,
+  ~milliseconds=0,
+)
 ```
 */
 @send
@@ -761,7 +809,11 @@ Beware this will *mutate* the date.
 
 ## Examples
 ```rescript
-Date.fromString("2023-02-20T16:40:00.00")->Date.setMinutesSMs(~minutes=0, ~seconds=0, ~milliseconds=0)
+Date.fromString("2023-02-20T16:40:00.00")->Date.setMinutesSMs(
+  ~minutes=0,
+  ~seconds=0,
+  ~milliseconds=0,
+)
 ```
 */
 @send
@@ -1034,7 +1086,12 @@ Beware this will *mutate* the date.
 
 ## Examples
 ```rescript
-Date.fromString("2023-02-20T16:40:00.00")->Date.setUTCHoursMSMs(~hours=0, ~minutes=0, ~seconds=0, ~milliseconds=0)
+Date.fromString("2023-02-20T16:40:00.00")->Date.setUTCHoursMSMs(
+  ~hours=0,
+  ~minutes=0,
+  ~seconds=0,
+  ~milliseconds=0,
+)
 ```
 */
 @send
@@ -1082,7 +1139,11 @@ Beware this will *mutate* the date.
 
 ## Examples
 ```rescript
-Date.fromString("2023-02-20T16:40:00.00")->Date.setUTCMinutesSMs(~minutes=0, ~seconds=0, ~milliseconds=0)
+Date.fromString("2023-02-20T16:40:00.00")->Date.setUTCMinutesSMs(
+  ~minutes=0,
+  ~seconds=0,
+  ~milliseconds=0,
+)
 ```
 */
 @send
@@ -1220,13 +1281,15 @@ Converts a JavaScript date to a localized date string. It will use the specified
 
 ## Examples
 ```rescript
-Date.make()->Date.toLocaleDateStringWithLocaleAndOptions("en-US", { dateStyle: #long })->Console.log
+Date.make()->Date.toLocaleDateStringWithLocaleAndOptions("en-US", {dateStyle: #long})->Console.log
 // February 19, 2023
 
-Date.make()->Date.toLocaleDateStringWithLocaleAndOptions("de", { hour: #"2-digit", minute: #"2-digit" })->Console.log
+Date.make()
+->Date.toLocaleDateStringWithLocaleAndOptions("de", {hour: #"2-digit", minute: #"2-digit"})
+->Console.log
 // 19.2.2023, 15:40
 
-Date.make()->Date.toLocaleDateStringWithLocaleAndOptions("de", { year: #numeric })->Console.log
+Date.make()->Date.toLocaleDateStringWithLocaleAndOptions("de", {year: #numeric})->Console.log
 // 2023
 ```
 */
@@ -1269,10 +1332,24 @@ Converts a JavaScript date to a localized date-time string. It will use the spec
 
 ## Examples
 ```rescript
-Date.make()->Date.toLocaleStringWithLocaleAndOptions("en", { dateStyle: #short, timeStyle: #short })->Console.log
+Date.make()
+->Date.toLocaleStringWithLocaleAndOptions("en", {dateStyle: #short, timeStyle: #short})
+->Console.log
 // 2/19/23, 3:40 PM
 
-Date.make()->Date.toLocaleStringWithLocaleAndOptions("en", { era: #long, year: #numeric, month: #"2-digit", day: #"2-digit", hour: #numeric, timeZoneName: #short })->Console.log
+Date.make()
+->Date.toLocaleStringWithLocaleAndOptions(
+  "en",
+  {
+    era: #long,
+    year: #numeric,
+    month: #"2-digit",
+    day: #"2-digit",
+    hour: #numeric,
+    timeZoneName: #short,
+  },
+)
+->Console.log
 // 02/19/2023 Anno Domini, 3 PM GMT+1
 ```
 */
@@ -1314,10 +1391,12 @@ Converts a JavaScript date to a localized time string. It will use the specified
 
 ## Examples
 ```rescript
-Date.make()->Date.toLocaleTimeStringWithLocaleAndOptions("en-US", { timeStyle: #long })->Console.log
+Date.make()->Date.toLocaleTimeStringWithLocaleAndOptions("en-US", {timeStyle: #long})->Console.log
 // 3:40:00 PM GMT+1
 
-Date.make()->Date.toLocaleTimeStringWithLocaleAndOptions("de", { hour: #"2-digit", minute: #"2-digit" })->Console.log
+Date.make()
+->Date.toLocaleTimeStringWithLocaleAndOptions("de", {hour: #"2-digit", minute: #"2-digit"})
+->Console.log
 // 15:40
 ```
 */

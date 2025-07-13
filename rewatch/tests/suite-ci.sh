@@ -8,13 +8,13 @@ cd $(dirname $0)
 # Get rewatch executable location from the first argument or use default
 if [ -n "$1" ]; then
   REWATCH_EXECUTABLE="$1"
-  BSC_PATH=""
 else
   REWATCH_EXECUTABLE="../target/release/rewatch"
-  BSC_PATH="--bsc-path ../../_build/install/default/bin/bsc"
+  eval $(node ./get_bin_paths.js)
 fi
+
 export REWATCH_EXECUTABLE
-export BSC_PATH
+export RESCRIPT_BSC_EXE
 
 source ./utils.sh
 

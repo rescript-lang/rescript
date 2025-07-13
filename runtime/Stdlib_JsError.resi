@@ -30,7 +30,7 @@ See [`Error.prototype.message`](https://developer.mozilla.org/en-US/docs/Web/Jav
 ## Example
 ```rescript
 let error = JsError.SyntaxError.make("Some message here")
-error->JsError.message->assertEqual("Some message here") 
+error->JsError.message == "Some message here"
 ```
 */
 @get
@@ -44,7 +44,7 @@ See [`Error.prototype.name`](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 ## Example
 ```rescript
 let error = JsError.SyntaxError.make("Some message here")
-error->JsError.name->assertEqual("SyntaxError")
+error->JsError.name == "SyntaxError"
 ```
 */
 @get
@@ -66,9 +66,9 @@ See [`Error`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/
 ## Example
 ```rescript
 let error = JsError.make("Some message here")
-error->JsError.message->assertEqual("Some message here") 
-error->JsError.name->assertEqual("Error") 
-````
+error->JsError.message == "Some message here"
+error->JsError.name == "Error"
+```
 */
 @new
 external make: string => t = "Error"

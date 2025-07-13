@@ -3,8 +3,8 @@ overwrite() { echo -e "\r\033[1A\033[0K$@"; }
 success() { echo -e "- ✅ \033[32m$1\033[0m"; }
 error() { echo -e "- 🛑 \033[31m$1\033[0m"; }
 bold() { echo -e "\033[1m$1\033[0m"; }
-rewatch() { RUST_BACKTRACE=1 $REWATCH_EXECUTABLE $@ $BSC_PATH; }
-rewatch_bg() { RUST_BACKTRACE=1 nohup $REWATCH_EXECUTABLE $@ $BSC_PATH; }
+rewatch() { RUST_BACKTRACE=1 $REWATCH_EXECUTABLE $@; }
+rewatch_bg() { RUST_BACKTRACE=1 nohup $REWATCH_EXECUTABLE $@; }
 
 # Detect if running on Windows
 is_windows() {

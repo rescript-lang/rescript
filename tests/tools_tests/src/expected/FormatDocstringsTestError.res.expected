@@ -1,0 +1,12 @@
+
+  Syntax error in code block in docstring
+  FormatDocstringsTestError.res:5:10-6:3
+
+  3 │ 
+  4 │ 
+  5 │ let name= 
+  6 │ let x=12
+
+  This let-binding misses an expression
+
+

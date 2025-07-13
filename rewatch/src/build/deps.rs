@@ -10,25 +10,47 @@ fn get_dep_modules(
     package_modules: &AHashSet<String>,
     valid_modules: &AHashSet<String>,
     package: &packages::Package,
+    build_state: &BuildState,
 ) -> AHashSet<String> {
     let mut deps = AHashSet::new();
     let ast_file = package.get_build_path().join(ast_file);
-    if let Ok(lines) = helpers::read_lines(&ast_file) {
-        // we skip the first line with is some null characters
-        // the following lines in the AST are the dependency modules
-        // we stop when we hit a line that starts with a "/", this is the path of the file.
-        // this is the point where the dependencies end and the actual AST starts
-        for line in lines.skip(1).flatten() {
-            let line = line.trim().to_string();
-            if line.starts_with('/') {
-                break;
-            } else if !line.is_empty() {
-                deps.insert(line);
+    match helpers::read_lines(&ast_file) {
+        Ok(lines) => {
+            // we skip the first line with is some null characters
+            // the following lines in the AST are the dependency modules
+            // we stop when we hit a line that starts with a "/", this is the path of the file.
+            // this is the point where the dependencies end and the actual AST starts
+            for line in lines.skip(1).flatten() {
+                let line = line.trim().to_string();
+                if line.starts_with('/') {
+                    break;
+                } else if !line.is_empty() {
+                    deps.insert(line);
+                }
             }
         }
-    } else {
-        panic!("Could not read file {}", ast_file.to_string_lossy());
+        _ => {
+            panic!("Could not read file {}", ast_file.to_string_lossy());
+        }
     }
+
+    // Get the list of allowed dependency packages for this package
+    let allowed_dependencies: AHashSet<String> = package
+        .config
+        .bs_dependencies
+        .as_ref()
+        .unwrap_or(&vec![])
+        .iter()
+        .chain(
+            package
+                .config
+                .bs_dev_dependencies
+                .as_ref()
+                .unwrap_or(&vec![])
+                .iter(),
+        )
+        .cloned()
+        .collect();
 
     return deps
         .iter()
@@ -56,11 +78,28 @@ fn get_dep_modules(
             }
         })
         .filter(|dep| {
-            valid_modules.contains(dep)
+            // First check if the module exists
+            let module_exists = valid_modules.contains(dep)
                 && match namespace.to_owned() {
                     Some(namespace) => !dep.eq(&namespace),
                     None => true,
+                };
+
+            if !module_exists {
+                return false;
+            }
+
+            if let Some(dep_module) = build_state.modules.get(dep) {
+                // If the module exists, check if it's in the same package (always allowed)
+                if dep_module.package_name == package.name {
+                    return true;
                 }
+
+                // If it's in a different package, check if that package is a declared dependency
+                return allowed_dependencies.contains(&dep_module.package_name);
+            }
+
+            true
         })
         .collect::<AHashSet<String>>();
 }
@@ -84,6 +123,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                         package.modules.as_ref().unwrap(),
                         all_mod,
                         &package,
+                        build_state,
                     );
 
                     if let Some(interface) = &source_file.interface {
@@ -95,6 +135,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                             package.modules.as_ref().unwrap(),
                             all_mod,
                             &package,
+                            build_state,
                         ))
                     }
                     match &package.namespace {

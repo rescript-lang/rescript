@@ -165,7 +165,6 @@ pub fn compile(
                                         root_package,
                                         &helpers::get_ast_path(&path),
                                         module,
-                                        &build_state.rescript_version,
                                         true,
                                         &build_state.bsc_path,
                                         &build_state.packages,
@@ -182,7 +181,6 @@ pub fn compile(
                                 root_package,
                                 &helpers::get_ast_path(&source_file.implementation.path),
                                 module,
-                                &build_state.rescript_version,
                                 false,
                                 &build_state.bsc_path,
                                 &build_state.packages,
@@ -354,7 +352,6 @@ pub fn compiler_args(
     config: &config::Config,
     root_config: &config::Config,
     ast_path: &Path,
-    version: &str,
     file_path: &Path,
     is_interface: bool,
     has_interface: bool,
@@ -364,6 +361,7 @@ pub fn compiler_args(
     // this saves us a scan to find their paths
     packages: &Option<&AHashMap<String, packages::Package>>,
     build_dev_deps: bool,
+    is_local_dep: bool,
 ) -> Vec<String> {
     let bsc_flags = config::flatten_flags(&config.bsc_flags);
 
@@ -393,36 +391,12 @@ pub fn compiler_args(
         packages::Namespace::NoNamespace => vec![],
     };
 
-    let uncurried_args = root_config.get_uncurried_args(version);
     let jsx_args = root_config.get_jsx_args();
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
     let gentype_arg = config.get_gentype_arg();
-
-    let warning_args: Vec<String> = match config.warnings.to_owned() {
-        None => vec![],
-        Some(warnings) => {
-            let warn_number = match warnings.number {
-                None => vec![],
-                Some(warnings) => {
-                    vec!["-w".to_string(), warnings.to_string()]
-                }
-            };
-
-            let warn_error = match warnings.error {
-                Some(config::Error::Catchall(true)) => {
-                    vec!["-warn-error".to_string(), "A".to_string()]
-                }
-                Some(config::Error::Qualified(errors)) => {
-                    vec!["-warn-error".to_string(), errors.to_string()]
-                }
-                _ => vec![],
-            };
-
-            [warn_number, warn_error].concat()
-        }
-    };
+    let warning_args = config.get_warning_args(is_local_dep);
 
     let read_cmi_args = match has_interface {
         true => {
@@ -484,7 +458,6 @@ pub fn compiler_args(
         jsx_module_args,
         jsx_mode_args,
         jsx_preserve_args,
-        uncurried_args,
         bsc_flags.to_owned(),
         warning_args,
         gentype_arg,
@@ -499,7 +472,6 @@ pub fn compiler_args(
         //     "-I".to_string(),
         //     abs_node_modules_path.to_string() + "/rescript/ocaml",
         // ],
-        vec!["-bs-v".to_string(), format!("{}", version)],
         vec![ast_path.to_string_lossy().to_string()],
     ]
     .concat()
@@ -592,7 +564,6 @@ fn compile_file(
     root_package: &packages::Package,
     ast_path: &Path,
     module: &Module,
-    version: &str,
     is_interface: bool,
     bsc_path: &Path,
     packages: &AHashMap<String, packages::Package>,
@@ -603,7 +574,7 @@ fn compile_file(
     let ocaml_build_path_abs = package.get_ocaml_build_path();
     let build_path_abs = package.get_build_path();
     let implementation_file_path = match &module.source_type {
-        SourceType::SourceFile(ref source_file) => Ok(&source_file.implementation.path),
+        SourceType::SourceFile(source_file) => Ok(&source_file.implementation.path),
         sourcetype => Err(format!(
             "Tried to compile a file that is not a source file ({}). Path to AST: {}. ",
             sourcetype,
@@ -616,7 +587,6 @@ fn compile_file(
         &package.config,
         &root_package.config,
         ast_path,
-        version,
         implementation_file_path,
         is_interface,
         has_interface,
@@ -624,6 +594,7 @@ fn compile_file(
         workspace_root,
         &Some(packages),
         build_dev_deps,
+        package.is_local_dep,
     );
 
     let to_mjs = Command::new(bsc_path)
@@ -778,7 +749,7 @@ fn compile_file(
 
             if helpers::contains_ascii_characters(&err) {
                 if package.is_pinned_dep || package.is_local_dep {
-                    // supress warnings of external deps
+                    // suppress warnings of external deps
                     Ok(Some(err))
                 } else {
                     Ok(None)

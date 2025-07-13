@@ -33,7 +33,7 @@ Mathematical Constants
 module Constants: {
   /**
   `Math.Constants.e` returns Euler's number, ≈ 2.718281828459045.
-  See [`Math.E`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/E) on MDN.
+See [`Math.E`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/E) on MDN.
 
   ## Examples
 
@@ -46,7 +46,7 @@ module Constants: {
 
   /**
   `Math.Constants.ln2` returns Natural logarithm of 2, ≈ 0.6931471805599453.
-  See [`Math.LN2`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/LN2) on MDN.
+See [`Math.LN2`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/LN2) on MDN.
 
   ## Examples
 
@@ -59,7 +59,7 @@ module Constants: {
 
   /**
   `Math.Constants.ln10` returns Natural logarithm of 10, ≈ 2.302585092994046.
-  See [`Math.LN10`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/LN10) on MDN.
+See [`Math.LN10`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/LN10) on MDN.
 
   ## Examples
 
@@ -72,7 +72,7 @@ module Constants: {
 
   /**
   `Math.Constants.log2e` returns Base 2 logarithm of E, ≈ 1.4426950408889634.
-  See [`Math.LOG2E`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/LOG2E) on MDN.
+See [`Math.LOG2E`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/LOG2E) on MDN.
 
   ## Examples
 
@@ -85,7 +85,7 @@ module Constants: {
 
   /**
   `Math.Constants.log10e` returns Base 10 logarithm of E, ≈ 0.4342944819032518.
-  See [`Math.LOG10E`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/LOG10E) on MDN.
+See [`Math.LOG10E`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/LOG10E) on MDN.
 
   ## Examples
 
@@ -97,8 +97,8 @@ module Constants: {
   external log10e: float = "Math.LOG10E"
   /**
   `Math.Constants.pi` returns Pi - ratio of the circumference to the diameter
-  of a circle, ≈ 3.141592653589793.
-  See [`Math.PI`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/PI) on MDN.
+of a circle, ≈ 3.141592653589793.
+See [`Math.PI`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/PI) on MDN.
 
   ## Examples
 
@@ -110,7 +110,7 @@ module Constants: {
   external pi: float = "Math.PI"
   /**
   `Math.Constants.sqrt1_2` returns Square root of 1/2, ≈ 0.7071067811865476.
-  See [`Math.SQRT1_2`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/SQRT1_2) on MDN.
+See [`Math.SQRT1_2`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/SQRT1_2) on MDN.
 
   ## Examples
 
@@ -122,7 +122,7 @@ module Constants: {
   external sqrt1_2: float = "Math.SQRT1_2"
   /**
   `Math.Constants.e` returns Absolute value for integer argument.
-  See [`Math.abs`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/abs) on MDN.
+See [`Math.abs`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/abs) on MDN.
 
   ## Examples
 
@@ -140,13 +140,13 @@ Provide Math utilities for `int`
 module Int: {
   /**
   `abs(v)` returns absolute value of `v`.
-  See [`Math.abs`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/abs) on MDN.
+See [`Math.abs`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/abs) on MDN.
 
   ## Examples
 
   ```rescript
-  assertEqual(Math.Int.abs(-2), 2)
-  assertEqual(Math.Int.abs(3), 3)
+  Math.Int.abs(-2) == 2
+  Math.Int.abs(3) == 3
   ```
   */
   @val
@@ -154,16 +154,16 @@ module Int: {
 
   /**
   `clz32(v)` returns the number of leading zero bits of the argument's 32 bit
-  int representation.
-  See [`Math.clz32`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/clz32) on MDN.
+int representation.
+See [`Math.clz32`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/clz32) on MDN.
 
   ## Examples
 
   ```rescript
   // 00000000000000000000000000000001
-  assertEqual(Math.Int.clz32(1), 31)
+  Math.Int.clz32(1) == 31
   // 00000000000000000000000000000100
-  assertEqual(Math.Int.clz32(4), 29)
+  Math.Int.clz32(4) == 29
   ```
   */
   @val
@@ -171,15 +171,15 @@ module Int: {
 
   /**
   `imul(a, b)` returns 32-bit integer multiplication. Use this only when you
-  need to optimize performance of multiplication of numbers stored as 32-bit
-  integers.
-  See [`Math.imul`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/imul) on MDN.
+need to optimize performance of multiplication of numbers stored as 32-bit
+integers.
+See [`Math.imul`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/imul) on MDN.
 
   ## Examples
 
   ```rescript
-  assertEqual(Math.Int.imul(3, 4), 12)
-  assertEqual(Math.Int.imul(-5, 12), -60)
+  Math.Int.imul(3, 4) == 12
+  Math.Int.imul(-5, 12) == -60
   ```
   */
   @val
@@ -187,13 +187,13 @@ module Int: {
 
   /**
   `min(a, b)` returns the minimum of its two integer arguments.
-  See [`Math.min`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/min) on MDN.
+See [`Math.min`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/min) on MDN.
 
   ## Examples
 
   ```rescript
-  assertEqual(Math.Int.min(1, 2), 1)
-  assertEqual(Math.Int.min(-1, -2), -2)
+  Math.Int.min(1, 2) == 1
+  Math.Int.min(-1, -2) == -2
   ```
   */
   @val
@@ -201,15 +201,15 @@ module Int: {
 
   /**
   `minMany(arr)` returns the minimum of the integers in the given array `arr`.
-  Returns `Infinity` if `arr` is empty.
-  See [`Math.min`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/min) on MDN.
+Returns `Infinity` if `arr` is empty.
+See [`Math.min`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/min) on MDN.
 
   ## Examples
 
   ```rescript
-  assertEqual(Math.Int.minMany([1, 2]), 1)
-  assertEqual(Math.Int.minMany([-1, -2]), -2)
-  assertEqual(Math.Int.minMany([])->Int.toFloat->Float.isFinite, false)
+  Math.Int.minMany([1, 2]) == 1
+  Math.Int.minMany([-1, -2]) == -2
+  Math.Int.minMany([])->Int.toFloat->Float.isFinite == false
   ```
   */
   @variadic @val
@@ -217,13 +217,13 @@ module Int: {
 
   /**
   `max(a, b)` returns the maximum of its two integer arguments.
-  See [`Math.max`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/max) on MDN.
+See [`Math.max`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/max) on MDN.
 
   ## Examples
 
   ```rescript
-  assertEqual(Math.Int.max(1, 2), 2)
-  assertEqual(Math.Int.max(-1, -2), -1)
+  Math.Int.max(1, 2) == 2
+  Math.Int.max(-1, -2) == -1
   ```
   */
   @val
@@ -231,15 +231,15 @@ module Int: {
 
   /**
   `maxMany(arr)` returns the maximum of the integers in the given array `arr`.
-  Returns `Infinity` if `arr` is empty.
-  See [`Math.max`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/max) on MDN.
+Returns `Infinity` if `arr` is empty.
+See [`Math.max`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/max) on MDN.
 
   ## Examples
 
   ```rescript
-  assertEqual(Math.Int.maxMany([1, 2]), 2)
-  assertEqual(Math.Int.maxMany([-1, -2]), -1)
-  assertEqual(Math.Int.maxMany([])->Int.toFloat->Float.isFinite, false)
+  Math.Int.maxMany([1, 2]) == 2
+  Math.Int.maxMany([-1, -2]) == -1
+  Math.Int.maxMany([])->Int.toFloat->Float.isFinite == false
   ```
   */
   @variadic @val
@@ -247,13 +247,13 @@ module Int: {
 
   /**
   `pow(a, ~exp)` raises the given base `a` to the given exponent `exp`.
-  See [`Math.pow`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/pow) on MDN.
+See [`Math.pow`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/pow) on MDN.
 
   ## Examples
 
   ```rescript
-  assertEqual(Math.Int.pow(2, ~exp=4), 16)
-  assertEqual(Math.Int.pow(3, ~exp=4), 81)
+  Math.Int.pow(2, ~exp=4) == 16
+  Math.Int.pow(3, ~exp=4) == 81
   ```
   */
   @val
@@ -261,54 +261,54 @@ module Int: {
 
   /**
   `sign(v)` returns the sign of its integer argument: `-1` if negative, `0` if
-  zero, `1` if positive.
-  See [`Math.sign`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/sign) on MDN.
+zero, `1` if positive.
+See [`Math.sign`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/sign) on MDN.
 
   ## Examples
 
   ```rescript
-  assertEqual(Math.Int.sign(3), 1)
-  assertEqual(Math.Int.sign(-3), -1)
-  assertEqual(Math.Int.sign(0), 0)
+  Math.Int.sign(3) == 1
+  Math.Int.sign(-3) == -1
+  Math.Int.sign(0) == 0
   ```
   */
   @val
   external sign: int => int = "Math.sign"
 
   /**
-  floor(v) returns the largest `int` less than or equal to the argument; 
-  See [`Math.floor`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/floor)
-  on MDN.
+  floor(v) returns the largest `int` less than or equal to the argument;
+See [`Math.floor`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/floor)
+on MDN.
 
   ## Examples
 
   ```rescript
-  assertEqual(Math.Int.floor(3.7), 3)
-  assertEqual(Math.Int.floor(3.0), 3)
-  assertEqual(Math.Int.floor(-3.1), -4)
+  Math.Int.floor(3.7) == 3
+  Math.Int.floor(3.0) == 3
+  Math.Int.floor(-3.1) == -4
   ```
   */
   let floor: float => int
 
   /**
   ceil(v) returns the smallest `int` greater than or equal to the argument;
-  See [`Math.floor`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/floor)
-  on MDN.
+See [`Math.floor`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/floor)
+on MDN.
 
   ## Examples
 
   ```rescript
-  assertEqual(Math.Int.ceil(3.7), 4)
-  assertEqual(Math.Int.ceil(3.0), 3)
-  assertEqual(Math.Int.ceil(-3.1), -3)
+  Math.Int.ceil(3.7) == 4
+  Math.Int.ceil(3.0) == 3
+  Math.Int.ceil(-3.1) == -3
   ```
   */
   let ceil: float => int
 
   /**
-  `random(minVal, maxVal)` returns a random integer number in the half-closed interval [minVal, maxVal).
-   See [`Math.random`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random)
-  on MDN.
+  `random(minVal, maxVal)` returns a random integer number in the half-closed interval \[minVal, maxVal).
+See [`Math.random`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random)
+on MDN.
 
   ## Examples
 
@@ -328,8 +328,8 @@ See [`Math.abs`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-assertEqual(Math.abs(-2.0), 2.0)
-assertEqual(Math.abs(3.0), 3.0)
+Math.abs(-2.0) == 2.0
+Math.abs(3.0) == 3.0
 ```
   */
 @val
@@ -337,14 +337,14 @@ external abs: float => float = "Math.abs"
 
 /**
 `acos(v)` returns arccosine (in radians) of argument `v`, returns `NaN` if the
-argument is outside the range [-1.0, 1.0].
+argument is outside the range \[-1.0, 1.0\].
 See [`Math.acos`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/acos) on MDN.
 
 ## Examples
 
 ```rescript
-assertEqual(Math.acos(-1.0), 3.141592653589793)
-assertEqual(Math.acos(-3.0)->Float.isNaN, true)
+Math.acos(-1.0) == 3.141592653589793
+Math.acos(-3.0)->Float.isNaN == true
 ```
 */
 @val
@@ -358,8 +358,8 @@ See [`Math.acosh`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ## Examples
 
 ```rescript
-assertEqual(Math.acosh(1.0), 0.0)
-assertEqual(Math.acosh(0.5)->Float.isNaN, true)
+Math.acosh(1.0) == 0.0
+Math.acosh(0.5)->Float.isNaN == true
 ```
 */
 @val
@@ -367,14 +367,14 @@ external acosh: float => float = "Math.acosh"
 
 /**
 `asin(v)` returns the inverse sine (in radians) of argument `v`, returns `NaN`
-if the argument `v` is outside the range [-1.0, 1.0].
+if the argument `v` is outside the range \[-1.0, 1.0\].
 See [`Math.asin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/asin) on MDN.
 
 ## Examples
 
 ```rescript
-assertEqual(Math.asin(-1.0), -1.5707963267948966)
-assertEqual(Math.asin(-2.0)->Float.isNaN, true)
+Math.asin(-1.0) == -1.5707963267948966
+Math.asin(-2.0)->Float.isNaN == true
 ```
 */
 @val
@@ -387,8 +387,8 @@ See [`Math.asinh`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ## Examples
 
 ```rescript
-assertEqual(Math.asinh(-1.0), -0.881373587019543)
-assertEqual(Math.asinh(-0.0), -0.0)
+Math.asinh(-1.0) == -0.881373587019543
+Math.asinh(-0.0) == -0.0
 ```
 */
 @val
@@ -401,9 +401,9 @@ See [`Math.atan`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 ## Examples
 
 ```rescript
-assertEqual(Math.atan(-0.0), -0.0)
-assertEqual(Math.atan(0.0), 0.0)
-assertEqual(Math.atan(1.0), 0.7853981633974483)
+Math.atan(-0.0) == -0.0
+Math.atan(0.0) == 0.0
+Math.atan(1.0) == 0.7853981633974483
 ```
 */
 @val
@@ -411,18 +411,18 @@ external atan: float => float = "Math.atan"
 
 /**
 `atanh(v)` returns the invert hyperbolic tangent of argument `v`. Returns `NaN`
-if the argument `v` is is outside the range [-1.0, 1.0] and `Infinity` if `v`
+if the argument `v` is is outside the range \[-1.0, 1.0\] and `Infinity` if `v`
 is `-1.0` or `1.0`.
 See [`Math.atanh`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/atanh) on MDN.
 
 ## Examples
 
 ```rescript
-assertEqual(Math.atanh(-2.0)->Float.isNaN, true)
-assertEqual(Math.atanh(-1.0)->Float.isFinite, false)
-assertEqual(Math.atanh(-0.0), -0.0)
-assertEqual(Math.atanh(0.0), 0.0)
-assertEqual(Math.atanh(0.5), 0.5493061443340548)
+Math.atanh(-2.0)->Float.isNaN == true
+Math.atanh(-1.0)->Float.isFinite == false
+Math.atanh(-0.0) == -0.0
+Math.atanh(0.0) == 0.0
+Math.atanh(0.5) == 0.5493061443340548
 ```
 */
 @val
@@ -430,16 +430,16 @@ external atanh: float => float = "Math.atanh"
 
 /**
 `atan2(~y, ~x)` returns the angle (in radians) of the quotient `y /. x`. It is
-also the angle between the *x*-axis and point (*x*, *y*).
+also the angle between the *x*\-axis and point (*x*, *y*).
 See [`Math.atan2`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/atan2) on MDN.
 
 ## Examples
 
 ```rescript
-assertEqual(Math.atan2(~y=0.0, ~x=10.0), 0.0)
-assertEqual(Math.atan2(~x=5.0, ~y=5.0), Math.Constants.pi /. 4.0)
-assertEqual(Math.atan2(~x=90.0, ~y=15.0),0.16514867741462683)
-assertEqual(Math.atan2(~x=15.0, ~y=90.0), 1.4056476493802699)
+Math.atan2(~y=0.0, ~x=10.0) == 0.0
+Math.atan2(~x=5.0, ~y=5.0) == Math.Constants.pi /. 4.0
+Math.atan2(~x=90.0, ~y=15.0) == 0.16514867741462683
+Math.atan2(~x=15.0, ~y=90.0) == 1.4056476493802699
 ```
 */
 @val
@@ -452,9 +452,9 @@ See [`Math.cbrt`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 ## Examples
 
 ```rescript
-assertEqual(Math.cbrt(-1.0), -1.0)
-assertEqual(Math.cbrt(-0.0), -0.0)
-assertEqual(Math.cbrt(0.0), 0.0)
+Math.cbrt(-1.0) == -1.0
+Math.cbrt(-0.0) == -0.0
+Math.cbrt(0.0) == 0.0
 ```
 */
 @val
@@ -469,10 +469,10 @@ See [`Math.ceil`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 ## Examples
 
 ```rescript
-assertEqual(Math.ceil(3.1), 4.0)
-assertEqual(Math.ceil(3.0), 3.0)
-assertEqual(Math.ceil(-3.1), -3.0)
-assertEqual(Math.ceil(2_150_000_000.3), 2_150_000_001.0)
+Math.ceil(3.1) == 4.0
+Math.ceil(3.0) == 3.0
+Math.ceil(-3.1) == -3.0
+Math.ceil(2_150_000_000.3) == 2_150_000_001.0
 ```
 */
 @val
@@ -485,9 +485,9 @@ See [`Math.cos`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-assertEqual(Math.cos(-0.0), 1.0)
-assertEqual(Math.cos(0.0), 1.0)
-assertEqual(Math.cos(1.0), 0.5403023058681398)
+Math.cos(-0.0) == 1.0
+Math.cos(0.0) == 1.0
+Math.cos(1.0) == 0.5403023058681398
 ```
 */
 @val
@@ -501,9 +501,9 @@ See [`Math.cosh`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 ## Examples
 
 ```rescript
-assertEqual(Math.cosh(-1.0), 1.5430806348152437)
-assertEqual(Math.cosh(-0.0), 1.0)
-assertEqual(Math.cosh(0.0), 1.0)
+Math.cosh(-1.0) == 1.5430806348152437
+Math.cosh(-0.0) == 1.0
+Math.cosh(0.0) == 1.0
 ```
 */
 @val
@@ -517,8 +517,8 @@ See [`Math.exp`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-assertEqual(Math.exp(-1.0), 0.36787944117144233)
-assertEqual(Math.exp(0.0), 1.0)
+Math.exp(-1.0) == 0.36787944117144233
+Math.exp(0.0) == 1.0
 ```
 */
 @val
@@ -532,8 +532,8 @@ See [`Math.expm1`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ## Examples
 
 ```rescript
-assertEqual(Math.expm1(-1.0), -0.6321205588285577)
-assertEqual(Math.expm1(-0.0), -0.0)
+Math.expm1(-1.0) == -0.6321205588285577
+Math.expm1(-0.0) == -0.0
 ```
 */
 @val
@@ -547,9 +547,9 @@ See [`Math.floor`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ## Examples
 
 ```rescript
-assertEqual(Math.floor(-45.95), -46.0)
-assertEqual(Math.floor(-45.05), -46.0)
-assertEqual(Math.floor(-0.0), -0.0)
+Math.floor(-45.95) == -46.0
+Math.floor(-45.05) == -46.0
+Math.floor(-0.0) == -0.0
 ```
 */
 @val
@@ -562,8 +562,8 @@ See [`Math.fround`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 ## Examples
 
 ```rescript
-assertEqual(Math.fround(5.5), 5.5)
-assertEqual(Math.fround(5.05), 5.050000190734863)
+Math.fround(5.5) == 5.5
+Math.fround(5.05) == 5.050000190734863
 ```
 */
 @val
@@ -577,8 +577,8 @@ See [`Math.hypot`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ## Examples
 
 ```rescript
-assertEqual(Math.hypot(3.0, 4.0), 5.0)
-assertEqual(Math.hypot(3.0, 5.0), 5.8309518948453)
+Math.hypot(3.0, 4.0) == 5.0
+Math.hypot(3.0, 5.0) == 5.8309518948453
 ```
 */
 @val
@@ -593,8 +593,8 @@ See [`Math.hypot`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ## Examples
 
 ```rescript
-assertEqual(Math.hypotMany([3.0, 4.0, 5.0]), 7.0710678118654755)
-assertEqual(Math.hypotMany([]), 0.0)
+Math.hypotMany([3.0, 4.0, 5.0]) == 7.0710678118654755
+Math.hypotMany([]) == 0.0
 ```
 */
 @variadic @val
@@ -609,10 +609,10 @@ See [`Math.log`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-assertEqual(Math.log(-1.0)->Float.isNaN, true)
-assertEqual(Math.log(-0.0)->Float.isFinite, false)
-assertEqual(Math.log(0.0)->Float.isFinite, false)
-assertEqual(Math.log(1.0), 0.0)
+Math.log(-1.0)->Float.isNaN == true
+Math.log(-0.0)->Float.isFinite == false
+Math.log(0.0)->Float.isFinite == false
+Math.log(1.0) == 0.0
 ```
 */
 @val
@@ -626,9 +626,9 @@ See [`Math.log1p`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ## Examples
 
 ```rescript
-assertEqual(Math.log1p(-2.0)->Float.isNaN, true)
-assertEqual(Math.log1p(-1.0)->Float.isFinite, false)
-assertEqual(Math.log1p(-0.0), -0.0)
+Math.log1p(-2.0)->Float.isNaN == true
+Math.log1p(-1.0)->Float.isFinite == false
+Math.log1p(-0.0) == -0.0
 ```
 */
 @val
@@ -642,10 +642,10 @@ See [`Math.log10`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ## Examples
 
 ```rescript
-assertEqual(Math.log10(-2.0)->Float.isNaN, true)
-assertEqual(Math.log10(-0.0)->Float.isFinite, false)
-assertEqual(Math.log10(0.0)->Float.isFinite, false)
-assertEqual(Math.log10(1.0), 0.0)
+Math.log10(-2.0)->Float.isNaN == true
+Math.log10(-0.0)->Float.isFinite == false
+Math.log10(0.0)->Float.isFinite == false
+Math.log10(1.0) == 0.0
 ```
 */
 @val
@@ -659,10 +659,10 @@ See [`Math.log2`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 ## Examples
 
 ```rescript
-assertEqual(Math.log2(-2.0)->Float.isNaN, true)
-assertEqual(Math.log2(-0.0)->Float.isFinite, false)
-assertEqual(Math.log2(0.0)->Float.isFinite, false)
-assertEqual(Math.log2(1.0), 0.0)
+Math.log2(-2.0)->Float.isNaN == true
+Math.log2(-0.0)->Float.isFinite == false
+Math.log2(0.0)->Float.isFinite == false
+Math.log2(1.0) == 0.0
 ```
 */
 @val
@@ -675,8 +675,8 @@ See [`Math.min`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-assertEqual(Math.min(1.0, 2.0), 1.0)
-assertEqual(Math.min(-1.0, -2.0), -2.0)
+Math.min(1.0, 2.0) == 1.0
+Math.min(-1.0, -2.0) == -2.0
 ```
 */
 @val
@@ -690,9 +690,9 @@ See [`Math.min`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-assertEqual(Math.minMany([1.0, 2.0]), 1.0)
-assertEqual(Math.minMany([-1.0, -2.0]), -2.0)
-assertEqual(Math.minMany([])->Float.isFinite, false)
+Math.minMany([1.0, 2.0]) == 1.0
+Math.minMany([-1.0, -2.0]) == -2.0
+Math.minMany([])->Float.isFinite == false
 ```
 */
 @variadic @val
@@ -705,8 +705,8 @@ See [`Math.max`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-assertEqual(Math.max(1.0, 2.0), 2.0)
-assertEqual(Math.max(-1.0, -2.0), -1.0)
+Math.max(1.0, 2.0) == 2.0
+Math.max(-1.0, -2.0) == -1.0
 ```
 */
 @val
@@ -720,9 +720,9 @@ See [`Math.max`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-assertEqual(Math.maxMany([1.0, 2.0]), 2.0)
-assertEqual(Math.maxMany([-1.0, -2.0]), -1.0)
-assertEqual(Math.maxMany([])->Float.isFinite, false)
+Math.maxMany([1.0, 2.0]) == 2.0
+Math.maxMany([-1.0, -2.0]) == -1.0
+Math.maxMany([])->Float.isFinite == false
 ```
 */
 @variadic @val
@@ -735,15 +735,15 @@ See [`Math.pow`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-assertEqual(Math.pow(2.0, ~exp=4.0), 16.0)
-assertEqual(Math.pow(3.0, ~exp=4.0), 81.0)
+Math.pow(2.0, ~exp=4.0) == 16.0
+Math.pow(3.0, ~exp=4.0) == 81.0
 ```
 */
 @val
 external pow: (float, ~exp: float) => float = "Math.pow"
 
 /**
-`random()` returns a random number in the half-closed interval [0,1].
+`random()` returns a random number in the half-closed interval \[0,1\].
 See [`Math.random`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random) on MDN.
 
 ## Examples
@@ -765,10 +765,10 @@ See [`Math.round`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ## Examples
 
 ```rescript
-assertEqual(Math.round(-20.5), -20.0)
-assertEqual(Math.round(-0.1), -0.0)
-assertEqual(Math.round(0.0), 0.0)
-assertEqual(Math.round(-0.0), -0.0)
+Math.round(-20.5) == -20.0
+Math.round(-0.1) == -0.0
+Math.round(0.0) == 0.0
+Math.round(-0.0) == -0.0
 ```
 */
 @val
@@ -782,9 +782,9 @@ See [`Math.sign`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 ## Examples
 
 ```rescript
-assertEqual(Math.sign(3.0), 1.0)
-assertEqual(Math.sign(-3.0), -1.0)
-assertEqual(Math.sign(0.0), 0.0)
+Math.sign(3.0) == 1.0
+Math.sign(-3.0) == -1.0
+Math.sign(0.0) == 0.0
 ```
 */
 @val
@@ -797,9 +797,9 @@ See [`Math.sin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-assertEqual(Math.sin(-0.0), -0.0)
-assertEqual(Math.sin(0.0), 0.0)
-assertEqual(Math.sin(1.0), 0.8414709848078965)
+Math.sin(-0.0) == -0.0
+Math.sin(0.0) == 0.0
+Math.sin(1.0) == 0.8414709848078965
 ```
 */
 @val
@@ -813,9 +813,9 @@ See [`Math.sinh`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 ## Examples
 
 ```rescript
-assertEqual(Math.sinh(-0.0), -0.0)
-assertEqual(Math.sinh(0.0), 0.0)
-assertEqual(Math.sinh(1.0), 1.1752011936438014)
+Math.sinh(-0.0) == -0.0
+Math.sinh(0.0) == 0.0
+Math.sinh(1.0) == 1.1752011936438014
 ```
 */
 @val
@@ -828,11 +828,11 @@ See [`Math.sqrt`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 ## Examples
 
 ```rescript
-assertEqual(Math.sqrt(-1.0)->Float.isNaN, true)
-assertEqual(Math.sqrt(-0.0), -0.0)
-assertEqual(Math.sqrt(0.0), 0.0)
-assertEqual(Math.sqrt(1.0), 1.0)
-assertEqual(Math.sqrt(9.0), 3.0)
+Math.sqrt(-1.0)->Float.isNaN == true
+Math.sqrt(-0.0) == -0.0
+Math.sqrt(0.0) == 0.0
+Math.sqrt(1.0) == 1.0
+Math.sqrt(9.0) == 3.0
 ```
 */
 @val
@@ -846,9 +846,9 @@ See [`Math.tan`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-assertEqual(Math.tan(-0.0), -0.0)
-assertEqual(Math.tan(0.0), 0.0)
-assertEqual(Math.tan(1.0), 1.5574077246549023)
+Math.tan(-0.0) == -0.0
+Math.tan(0.0) == 0.0
+Math.tan(1.0) == 1.5574077246549023
 ```
 */
 @val
@@ -862,9 +862,9 @@ See [`Math.tanh`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 ## Examples
 
 ```rescript
-assertEqual(Math.tanh(-0.0), -0.0)
-assertEqual(Math.tanh(0.0), 0.0)
-assertEqual(Math.tanh(1.0), 0.7615941559557649)
+Math.tanh(-0.0) == -0.0
+Math.tanh(0.0) == 0.0
+Math.tanh(1.0) == 0.7615941559557649
 ```
 */
 @val
@@ -877,10 +877,10 @@ See [`Math.trunc`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ## Examples
 
 ```rescript
-assertEqual(Math.trunc(0.123), 0.0)
-assertEqual(Math.trunc(1.999), 1.0)
-assertEqual(Math.trunc(13.37), 13.0)
-assertEqual(Math.trunc(42.84), 42.0)
+Math.trunc(0.123) == 0.0
+Math.trunc(1.999) == 1.0
+Math.trunc(13.37) == 13.0
+Math.trunc(42.84) == 42.0
 ```
 */
 @val

@@ -114,9 +114,7 @@ let panic = JsError.panic
 ## Examples
 
 ```rescript
-list{1, 2}
-->List.tailExn
-->assertEqual(list{2})
+list{1, 2}->List.tailExn == list{2}
 ```
 */
 let assertEqual = (a, b) => {

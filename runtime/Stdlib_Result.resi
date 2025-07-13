@@ -30,20 +30,20 @@
 */
 /**
   The type `Result.t(result, err)` describes a variant of two states:
-  `Ok(someResult)` represents a successful operation, whereby
-  ``Error(someError)` signals an erroneous operation.
+`Ok(someResult)` represents a successful operation, whereby
+\``Error(someError)\` signals an erroneous operation.
 
   In this concrete example, we are defining our own `Result` type to reflect an HTTP like
-  query operation:
+query operation:
 
   ```res example
   type responseError = NotAvailable | NotFound
   type queryResult = result<string, responseError>
-
+  
   let failQueryUser = (username: string): queryResult => {
     Error(NotAvailable)
   }
-```
+  ```
 */
 type t<'res, 'err> = result<'res, 'err> = Ok('res) | Error('err)
 
@@ -52,7 +52,7 @@ type t<'res, 'err> = result<'res, 'err> = Ok('res) | Error('err)
 
   ```res example
   Result.getExn(Result.Ok(42)) == 42
-
+  
   switch Result.getExn(Error("Invalid data")) {
   | exception Not_found => assert(true)
   | _ => assert(false)
@@ -67,7 +67,7 @@ let getExn: result<'a, 'b> => 'a
 
   ```res example
   Result.getOrThrow(Result.Ok(42)) == 42
-
+  
   switch Result.getOrThrow(Error("Invalid data")) {
   | exception Not_found => assert(true)
   | _ => assert(false)
@@ -83,10 +83,10 @@ let getOrThrow: result<'a, 'b> => 'a
 
 ```rescript
 let ok = Ok(42)
-Result.mapOr(ok, 0, (x) => x / 2) == 21
+Result.mapOr(ok, 0, x => x / 2) == 21
 
 let error = Error("Invalid data")
-Result.mapOr(error, 0, (x) => x / 2) == 0
+Result.mapOr(error, 0, x => x / 2) == 0
 ```
 */
 let mapOr: (result<'a, 'c>, 'b, 'a => 'b) => 'b
@@ -102,7 +102,7 @@ ordinary value.
 ## Examples
 
 ```rescript
-let f = (x) => sqrt(Int.toFloat(x))
+let f = x => sqrt(Int.toFloat(x))
 
 Result.map(Ok(64), f) == Ok(8.0)
 
@@ -119,8 +119,8 @@ unchanged. Function `f` takes a value of the same type as `n` and returns a
 ## Examples
 
 ```rescript
-let recip = (x) =>
-  if (x !== 0.0) {
+let recip = x =>
+  if x !== 0.0 {
     Ok(1.0 /. x)
   } else {
     Error("Divide by zero")
@@ -219,11 +219,11 @@ let mod10cmp = (a, b) => Int.compare(mod(a, 10), mod(b, 10))
 
 Result.compare(Ok(39), Ok(57), mod10cmp) == 1.
 
-Result.compare(Ok(57), Ok(39), mod10cmp) == (-1.)
+Result.compare(Ok(57), Ok(39), mod10cmp) == -1.
 
 Result.compare(Ok(39), Error("y"), mod10cmp) == 1.
 
-Result.compare(Error("x"), Ok(57), mod10cmp) == (-1.)
+Result.compare(Error("x"), Ok(57), mod10cmp) == -1.
 
 Result.compare(Error("x"), Error("y"), mod10cmp) == 0.
 ```

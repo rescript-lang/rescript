@@ -37,7 +37,7 @@ Float constants.
 module Constants: {
   /**
   The special value "Not a Number"
-  See [`NaN`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN) on MDN.
+See [`NaN`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN) on MDN.
 
   ## Examples
 
@@ -50,7 +50,7 @@ module Constants: {
 
   /**
   Represents the difference between 1 and the smallest floating point number greater than 1.
-  See [`Number.EPSILON`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/EPSILON) on MDN.
+See [`Number.EPSILON`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/EPSILON) on MDN.
 
   ## Examples
 
@@ -63,7 +63,7 @@ module Constants: {
 
   /**
   The positive Infinity value
-  See [`Number.POSITIVE_INFINITY`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/POSITIVE_INFINITY) on MDN.
+See [`Number.POSITIVE_INFINITY`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/POSITIVE_INFINITY) on MDN.
 
   ## Examples
 
@@ -76,7 +76,7 @@ module Constants: {
 
   /**
   The negative Infinity value
-  See [`Number.NEGATIVE_INFINITY`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/NEGATIVE_INFINITY) on MDN.
+See [`Number.NEGATIVE_INFINITY`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/NEGATIVE_INFINITY) on MDN.
 
   ## Examples
 
@@ -89,7 +89,7 @@ module Constants: {
 
   /**
   The smallest positive numeric value representable in JavaScript.
-  See [`Number.MIN_VALUE`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MIN_VALUE) on MDN.
+See [`Number.MIN_VALUE`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MIN_VALUE) on MDN.
 
   ## Examples
 
@@ -102,7 +102,7 @@ module Constants: {
 
   /**
   The maximum positive numeric value representable in JavaScript.
-  See [`Number.MAX_VALUE`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_VALUE) on MDN.
+See [`Number.MAX_VALUE`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_VALUE) on MDN.
 
   ## Examples
 
@@ -168,7 +168,7 @@ external isFinite: float => bool = "isFinite"
 
 /**
 `parseFloat(v)` parse the given `v` and returns a float. Leading whitespace in
-`v` is ignored. Returns `NaN` if `v` can't be parsed. Use [`fromString`] to
+`v` is ignored. Returns `NaN` if `v` can't be parsed. Use \[`fromString`\] to
 ensure it returns a valid float and not `NaN`.
 See [`parseFloat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/parseFloat) on MDN.
 
@@ -188,7 +188,7 @@ external parseFloat: string => float = "parseFloat"
 /**
 `parseInt(v, ~radix=?)` parse the given `v` and returns a float. Leading
 whitespace in this argument `v`is ignored. `radix` specifies the radix base to
-use for the formatted number. The value must be in the range [2, 36] (inclusive).
+use for the formatted number. The value must be in the range \[2, 36\] (inclusive).
 Returns `NaN` if `v` can't be parsed and `radix` is smaller than 2 or bigger
 than 36.
 See [`parseInt`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/parseInt) on MDN.
@@ -213,7 +213,7 @@ external parseInt: ('a, ~radix: int=?) => float = "parseInt"
 /**
 `parseIntWithRadix(v, ~radix)` parse the given `v` and returns a float. Leading
 whitespace in this argument `v`is ignored. `radix` specifies the radix base to
-use for the formatted number. The value must be in the range [2, 36] (inclusive).
+use for the formatted number. The value must be in the range \[2, 36\] (inclusive).
 Returns `NaN` if `v` can't be parsed and `radix` is smaller than 2 or bigger
 than 36.
 See [`parseInt`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/parseInt) on MDN.
@@ -331,8 +331,8 @@ Float.toPrecision(1.0, ~digits=1) == "1"
 ## Exceptions
 
 - `RangeError`: If `digits` is not between 1 and 100 (inclusive).
-Implementations are allowed to support larger and smaller values as well.
-ECMA-262 only requires a precision of up to 21 significant digits.
+  Implementations are allowed to support larger and smaller values as well.
+  ECMA-262 only requires a precision of up to 21 significant digits.
 */
 @send
 external toPrecision: (float, ~digits: int=?) => string = "toPrecision"
@@ -352,9 +352,9 @@ Float.toPrecisionWithPrecision(1.0, ~digits=1) == "1"
 ## Exceptions
 
 - `RangeError`: If `digits` is not between 1 and 100 (inclusive).
-Implementations are allowed to support larger and smaller values as well.
-ECMA-262 only requires a precision of up to 21 significant digits.
-
+  Implementations are allowed to support larger and smaller values as well.
+  ECMA-262 only requires a precision of up to 21 significant digits.
+  
 */
 @deprecated("Use `toPrecision` instead") @send
 external toPrecisionWithPrecision: (float, ~digits: int) => string = "toPrecision"
@@ -464,7 +464,7 @@ external mod: (float, float) => float = "%modfloat"
 /**
 `clamp(~min=?, ~max=?, value)` returns `value`, optionally bounded by `min` and `max`.
 
-if `max` < `min` returns `min`.
+if `max` \< `min` returns `min`.
 
 ## Examples
 

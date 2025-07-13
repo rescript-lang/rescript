@@ -22,4 +22,9 @@ val message : string -> category
 
 val make : start_pos:Lexing.position -> end_pos:Lexing.position -> category -> t
 
-val print_report : t list -> string -> unit
+val print_report :
+  ?custom_intro:string option ->
+  ?formatter:Format.formatter ->
+  t list ->
+  string ->
+  unit

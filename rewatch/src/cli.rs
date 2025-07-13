@@ -3,9 +3,7 @@ use std::{ffi::OsString, ops::Deref};
 use clap::{Args, Parser, Subcommand};
 use clap_verbosity_flag::InfoLevel;
 
-/// Rewatch is an alternative build system for the Rescript Compiler bsb (which uses Ninja internally). It strives
-/// to deliver consistent and faster builds in monorepo setups with multiple packages, where the
-/// default build system fails to pick up changed interfaces across multiple packages.
+/// ReScript - Fast, Simple, Fully Typed JavaScript from the Future
 #[derive(Parser, Debug)]
 #[command(version)]
 #[command(args_conflicts_with_subcommands = true)]
@@ -79,13 +77,6 @@ pub struct DevArg {
     pub dev: bool,
 }
 
-#[derive(Args, Debug, Clone)]
-pub struct BscPathArg {
-    /// Custom path to bsc
-    #[arg(long)]
-    pub bsc_path: Option<String>,
-}
-
 #[derive(Args, Debug, Clone, Copy)]
 pub struct SnapshotOutputArg {
     /// simple output for snapshot testing
@@ -116,9 +107,6 @@ pub struct BuildArgs {
 
     #[command(flatten)]
     pub snapshot_output: SnapshotOutputArg,
-
-    #[command(flatten)]
-    pub bsc_path: BscPathArg,
 }
 
 #[derive(Args, Clone, Debug)]
@@ -140,14 +128,11 @@ pub struct WatchArgs {
 
     #[command(flatten)]
     pub snapshot_output: SnapshotOutputArg,
-
-    #[command(flatten)]
-    pub bsc_path: BscPathArg,
 }
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
-    /// Build using Rewatch
+    /// Build the project
     Build(BuildArgs),
     /// Build, then start a watcher
     Watch(WatchArgs),
@@ -155,9 +140,6 @@ pub enum Command {
     Clean {
         #[command(flatten)]
         folder: FolderArg,
-
-        #[command(flatten)]
-        bsc_path: BscPathArg,
 
         #[command(flatten)]
         snapshot_output: SnapshotOutputArg,
@@ -182,13 +164,6 @@ pub enum Command {
 
         #[command(flatten)]
         dev: DevArg,
-
-        /// To be used in conjunction with compiler_args
-        #[arg(long)]
-        rescript_version: Option<String>,
-
-        #[command(flatten)]
-        bsc_path: BscPathArg,
     },
     /// Use the legacy build system.
     ///
@@ -237,14 +212,6 @@ impl Deref for DevArg {
 
     fn deref(&self) -> &Self::Target {
         &self.dev
-    }
-}
-
-impl Deref for BscPathArg {
-    type Target = Option<String>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.bsc_path
     }
 }
 

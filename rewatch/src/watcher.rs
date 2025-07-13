@@ -3,14 +3,15 @@ use crate::build::build_types::SourceType;
 use crate::build::clean;
 use crate::cmd;
 use crate::helpers;
-use crate::helpers::emojis::*;
 use crate::helpers::StrippedVerbatimPath;
+use crate::helpers::emojis::*;
+use crate::lock::LOCKFILE;
 use crate::queue::FifoQueue;
 use crate::queue::*;
 use futures_timer::Delay;
 use notify::event::ModifyKind;
 use notify::{Config, Error, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -62,19 +63,11 @@ async fn async_watch(
     after_build: Option<String>,
     create_sourcedirs: bool,
     build_dev_deps: bool,
-    bsc_path: Option<PathBuf>,
     snapshot_output: bool,
 ) -> notify::Result<()> {
-    let mut build_state = build::initialize_build(
-        None,
-        filter,
-        show_progress,
-        path,
-        &bsc_path,
-        build_dev_deps,
-        snapshot_output,
-    )
-    .expect("Can't initialize build");
+    let mut build_state =
+        build::initialize_build(None, filter, show_progress, path, build_dev_deps, snapshot_output)
+            .expect("Can't initialize build");
     let mut needs_compile_type = CompileType::Incremental;
     // create a mutex to capture if ctrl-c was pressed
     let ctrlc_pressed = Arc::new(Mutex::new(false));
@@ -109,8 +102,8 @@ async fn async_watch(
         }
 
         for event in events {
-            // if there is a file named rewatch.lock in the events path, we can quit the watcher
-            if let Some(_) = event.paths.iter().find(|path| path.ends_with("rewatch.lock")) {
+            // if there is a file named rescript.lock in the events path, we can quit the watcher
+            if let Some(_) = event.paths.iter().find(|path| path.ends_with(LOCKFILE)) {
                 match event.kind {
                     EventKind::Remove(_) => {
                         if show_progress {
@@ -258,7 +251,6 @@ async fn async_watch(
                     filter,
                     show_progress,
                     path,
-                    &bsc_path,
                     build_dev_deps,
                     snapshot_output,
                 )
@@ -307,7 +299,6 @@ pub fn start(
     after_build: Option<String>,
     create_sourcedirs: bool,
     build_dev_deps: bool,
-    bsc_path: Option<String>,
     snapshot_output: bool,
 ) {
     futures::executor::block_on(async {
@@ -322,7 +313,6 @@ pub fn start(
             .expect("Could not start watcher");
 
         let path = Path::new(folder);
-        let bsc_path_buf = bsc_path.map(PathBuf::from);
 
         if let Err(e) = async_watch(
             consumer,
@@ -332,7 +322,6 @@ pub fn start(
             after_build,
             create_sourcedirs,
             build_dev_deps,
-            bsc_path_buf,
             snapshot_output,
         )
         .await

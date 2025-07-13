@@ -35,9 +35,7 @@ to match predicate `p`.
 ```rescript
 let mapInt = Belt.Map.Int.fromArray([(1, "one"), (2, "two"), (3, "three")])
 
-mapInt->
-Belt.Map.Int.findFirstBy((k, v) => k == 1 && v == "one")
-->assertEqual(Some(1, "one"))
+mapInt->Belt.Map.Int.findFirstBy((k, v) => k == 1 && v == "one") == Some(1, "one")
 ```
 */
 let findFirstBy: (t<'v>, (key, 'v) => bool) => option<(key, 'v)>

@@ -126,6 +126,7 @@ lib/es6/Primitive_string_extern.js
 lib/es6/Primitive_util.js
 lib/es6/RescriptTools.js
 lib/es6/RescriptTools_Docgen.js
+lib/es6/RescriptTools_ExtractCodeBlocks.js
 lib/es6/Stdlib.js
 lib/es6/Stdlib_Array.js
 lib/es6/Stdlib_ArrayBuffer.js
@@ -300,6 +301,7 @@ lib/js/Primitive_string_extern.js
 lib/js/Primitive_util.js
 lib/js/RescriptTools.js
 lib/js/RescriptTools_Docgen.js
+lib/js/RescriptTools_ExtractCodeBlocks.js
 lib/js/Stdlib.js
 lib/js/Stdlib_Array.js
 lib/js/Stdlib_ArrayBuffer.js
@@ -915,6 +917,10 @@ lib/ocaml/RescriptTools_Docgen.cmt
 lib/ocaml/RescriptTools_Docgen.cmti
 lib/ocaml/RescriptTools_Docgen.res
 lib/ocaml/RescriptTools_Docgen.resi
+lib/ocaml/RescriptTools_ExtractCodeBlocks.cmi
+lib/ocaml/RescriptTools_ExtractCodeBlocks.cmj
+lib/ocaml/RescriptTools_ExtractCodeBlocks.cmt
+lib/ocaml/RescriptTools_ExtractCodeBlocks.res
 lib/ocaml/Stdlib.cmi
 lib/ocaml/Stdlib.cmj
 lib/ocaml/Stdlib.cmt

@@ -145,16 +145,6 @@ pub struct Warnings {
     pub error: Option<Error>,
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq, Hash)]
-#[serde(untagged)]
-pub enum Reason {
-    Versioned {
-        #[serde(rename = "react-jsx")]
-        react_jsx: i32,
-    },
-    Unversioned(bool),
-}
-
 #[derive(Deserialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum NamespaceConfig {
@@ -212,10 +202,8 @@ pub struct Config {
     pub ppx_flags: Option<Vec<OneOrMore<String>>>,
     #[serde(rename = "bsc-flags", alias = "compiler-flags")]
     pub bsc_flags: Option<Vec<OneOrMore<String>>>,
-    pub reason: Option<Reason>,
     pub namespace: Option<NamespaceConfig>,
     pub jsx: Option<JsxSpecs>,
-    pub uncurried: Option<bool>,
     #[serde(rename = "gentypeconfig")]
     pub gentype_config: Option<GenTypeConfig>,
     // this is a new feature of rewatch, and it's not part of the bsconfig.json spec
@@ -308,17 +296,6 @@ pub fn read(path: &Path) -> Result<Config> {
     Ok(parse)
 }
 
-fn check_if_rescript11_or_higher(version: &str) -> Result<bool, String> {
-    version
-        .split('.')
-        .next()
-        .and_then(|s| s.parse::<usize>().ok())
-        .map_or(
-            Err("Could not parse version".to_string()),
-            |major| Ok(major >= 11),
-        )
-}
-
 fn namespace_from_package_name(package_name: &str) -> String {
     let len = package_name.len();
     let mut buf = String::with_capacity(len);
@@ -385,22 +362,15 @@ impl Config {
         }
     }
     pub fn get_jsx_args(&self) -> Vec<String> {
-        match (self.reason.to_owned(), self.jsx.to_owned()) {
-            (_, Some(jsx)) => match jsx.version {
+        match self.jsx.to_owned() {
+            Some(jsx) => match jsx.version {
                 Some(version) if version == 3 || version == 4 => {
                     vec!["-bs-jsx".to_string(), version.to_string()]
                 }
                 Some(_version) => panic!("Unsupported JSX version"),
                 None => vec![],
             },
-            (Some(Reason::Versioned { react_jsx }), None) => {
-                vec!["-bs-jsx".to_string(), format!("{}", react_jsx)]
-            }
-            (Some(Reason::Unversioned(true)), None) => {
-                // If Reason is 'true' - we should default to the latest
-                vec!["-bs-jsx".to_string()]
-            }
-            _ => vec![],
+            None => vec![],
         }
     }
 
@@ -445,25 +415,41 @@ impl Config {
         }
     }
 
-    pub fn get_uncurried_args(&self, version: &str) -> Vec<String> {
-        match check_if_rescript11_or_higher(version) {
-            Ok(true) => match self.uncurried.to_owned() {
-                // v11 is always uncurried except iff explicitly set to false in the root rescript.json
-                Some(false) => vec![],
-                _ => vec!["-uncurried".to_string()],
-            },
-            Ok(false) => vec![],
-            Err(_) => {
-                eprintln!("Could not establish Rescript Version number for uncurried mode. Defaulting to Rescript < 11, disabling uncurried mode. Please specify an exact version if you need > 11 and default uncurried mode. Version: {}", version);
-                vec![]
-            }
-        }
-    }
-
     pub fn get_gentype_arg(&self) -> Vec<String> {
         match &self.gentype_config {
             Some(_) => vec!["-bs-gentype".to_string()],
             None => vec![],
+        }
+    }
+
+    pub fn get_warning_args(&self, is_local_dep: bool) -> Vec<String> {
+        // Ignore warning config for non local dependencies (node_module dependencies)
+        if !is_local_dep {
+            return vec![];
+        }
+
+        match self.warnings {
+            None => vec![],
+            Some(ref warnings) => {
+                let warn_number = match warnings.number {
+                    None => vec![],
+                    Some(ref warnings) => {
+                        vec!["-w".to_string(), warnings.to_string()]
+                    }
+                };
+
+                let warn_error = match warnings.error {
+                    Some(Error::Catchall(true)) => {
+                        vec!["-warn-error".to_string(), "A".to_string()]
+                    }
+                    Some(Error::Qualified(ref errors)) => {
+                        vec!["-warn-error".to_string(), errors.to_string()]
+                    }
+                    _ => vec![],
+                };
+
+                [warn_number, warn_error].concat()
+            }
         }
     }
 
@@ -784,28 +770,5 @@ mod tests {
             config.bs_dev_dependencies,
             Some(vec!["@testrepo/main".to_string()])
         );
-    }
-
-    #[test]
-    fn test_check_if_rescript11_or_higher() {
-        assert_eq!(check_if_rescript11_or_higher("11.0.0"), Ok(true));
-        assert_eq!(check_if_rescript11_or_higher("11.0.1"), Ok(true));
-        assert_eq!(check_if_rescript11_or_higher("11.1.0"), Ok(true));
-
-        assert_eq!(check_if_rescript11_or_higher("12.0.0"), Ok(true));
-
-        assert_eq!(check_if_rescript11_or_higher("10.0.0"), Ok(false));
-        assert_eq!(check_if_rescript11_or_higher("9.0.0"), Ok(false));
-    }
-
-    #[test]
-    fn test_check_if_rescript11_or_higher_misc() {
-        assert_eq!(check_if_rescript11_or_higher("11"), Ok(true));
-        assert_eq!(check_if_rescript11_or_higher("12.0.0-alpha.4"), Ok(true));
-
-        match check_if_rescript11_or_higher("*") {
-            Ok(_) => unreachable!("Should not parse"),
-            Err(_) => assert!(true),
-        }
     }
 }

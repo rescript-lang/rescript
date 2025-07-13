@@ -74,7 +74,7 @@ let forEach: (option<'a>, 'a => unit) => unit
 `getExn(opt, ~message=?)` returns `value` if `opt` is `Some(value)`, otherwise raises an exception with the message provided, or a generic message if no message was provided.
 
 ```rescript
-Option.getExn(Some(3))->assertEqual(3)
+Option.getExn(Some(3)) == 3
 
 switch Option.getExn(None) {
 | exception _ => assert(true)
@@ -98,7 +98,7 @@ let getExn: (option<'a>, ~message: string=?) => 'a
 `getOrThrow(opt, ~message=?)` returns `value` if `opt` is `Some(value)`, otherwise raises an exception with the message provided, or a generic message if no message was provided.
 
 ```rescript
-Option.getOrThrow(Some(3))->assertEqual(3)
+Option.getOrThrow(Some(3)) == 3
 
 switch Option.getOrThrow(None) {
 | exception _ => assert(true)
@@ -124,7 +124,7 @@ let getOrThrow: (option<'a>, ~message: string=?) => 'a
 
 ```rescript
 Option.getUnsafe(Some(3)) == 3
-Option.getUnsafe(None: option<int>) // Returns `undefined`, which is not a valid `int`
+Option.getUnsafe((None: option<int>)) // Returns `undefined`, which is not a valid `int`
 ```
 
 ## Notes
@@ -170,7 +170,7 @@ let map: (option<'a>, 'a => 'b) => option<'b>
 
 ```rescript
 let addIfAboveOne = value =>
-  if (value > 1) {
+  if value > 1 {
     Some(value + 1)
   } else {
     None
@@ -192,8 +192,7 @@ let flatMap: (option<'a>, 'a => option<'b>) => option<'b>
 Option.getOr(None, "Banana") // Banana
 Option.getOr(Some("Apple"), "Banana") // Apple
 
-let greet = (firstName: option<string>) =>
-  "Greetings " ++ firstName->Option.getOr("Anonymous")
+let greet = (firstName: option<string>) => "Greetings " ++ firstName->Option.getOr("Anonymous")
 
 Some("Jane")->greet // "Greetings Jane"
 None->greet // "Greetings Anonymous"

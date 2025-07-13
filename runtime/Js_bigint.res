@@ -26,7 +26,7 @@ Js.BigInt.fromStringExn("0o11")
 try {
   Js.BigInt.fromStringExn("a")
 } catch {
-| _ => ...
+| _ => Console.error("Error parsing bigint")
 }
 ```
 */
