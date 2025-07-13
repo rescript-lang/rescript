@@ -107,7 +107,7 @@ let expandTypes ~file ~package ~supportsMarkdownLinks typ =
   | {decl; path} :: _
     when Res_parsetree_viewer.has_inline_record_definition_attribute
            decl.type_attributes ->
-    (* We print inline record types just with their definition, not the constr pointing 
+    (* We print inline record types just with their definition, not the constr pointing
     to them, since that doesn't make sense to show the user. *)
     ( [
         Markdown.codeBlock
@@ -149,9 +149,49 @@ let expandTypes ~file ~package ~supportsMarkdownLinks typ =
       `Default )
 
 (* Produces a hover with relevant types expanded in the main type being hovered. *)
-let hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks ?constructor
-    typ =
-  let expandedTypes, expansionType =
+let hoverWithExpandedTypes ~(full : SharedTypes.full) ~file ~package
+    ~supportsMarkdownLinks ?constructor typ =
+  let {TypeUtils.ExpandType.mainTypes; relatedTypes} =
+    TypeUtils.ExpandType.expandTypes ~full
+      (TypeUtils.ExpandType.TypeExpr
+         {typeExpr = typ; (* TODO *) name = None; env = QueryEnv.fromFile file})
+  in
+
+  (* TODO: wrap in markdown code blocks and render links if `supportsMarkdownLinks` (but not for inline records) *)
+  let expandedTypesToString
+      (expandedTypes : TypeUtils.ExpandType.expandTypeInput list) =
+    expandedTypes
+    |> List.map (fun input ->
+           match input with
+           | TypeUtils.ExpandType.TypeExpr {typeExpr} ->
+             Shared.typeToString typeExpr
+           | TypeUtils.ExpandType.TypeDecl {name; typeDecl} ->
+             Shared.declToString name.txt typeDecl)
+    |> List.map Markdown.codeBlock
+  in
+
+  let mainTypes =
+    let insert_contructor constructor mainTypes =
+      match mainTypes with
+      | [] -> [constructor]
+      | h :: t -> h :: constructor :: t
+    in
+    match constructor with
+    | Some constructor ->
+      let constructor =
+        (CompletionBackEnd.showConstructor constructor |> Markdown.codeBlock)
+        ^ Markdown.divider
+      in
+      insert_contructor constructor (expandedTypesToString mainTypes)
+    | None -> expandedTypesToString mainTypes
+  in
+
+  (* TODO: docstring? *)
+  (mainTypes |> String.concat "\n")
+  ^ "\n"
+  ^ (expandedTypesToString relatedTypes |> String.concat Markdown.divider)
+
+(* let expandedTypes, expansionType =
     expandTypes ~file ~package ~supportsMarkdownLinks typ
   in
   match expansionType with
@@ -164,7 +204,7 @@ let hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks ?constructor
       | None -> typeString
     in
     Markdown.codeBlock typeString :: expandedTypes |> String.concat "\n"
-  | `InlineType -> expandedTypes |> String.concat "\n"
+  | `InlineType -> expandedTypes |> String.concat "\n" *)
 
 (* Leverages autocomplete functionality to produce a hover for a position. This
    makes it (most often) work with unsaved content. *)
@@ -190,7 +230,7 @@ let getHoverViaCompletions ~debug ~path ~pos ~currentFile ~forHover
       with
       | Some (typ, _env) ->
         let typeString =
-          hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks typ
+          hoverWithExpandedTypes ~full ~file ~package ~supportsMarkdownLinks typ
         in
         let parts = docstring @ [typeString] in
         Some (Protocol.stringifyHover (String.concat "\n\n" parts))
@@ -203,13 +243,14 @@ let getHoverViaCompletions ~debug ~path ~pos ~currentFile ~forHover
       with
       | Some (typ, _env) ->
         let typeString =
-          hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks typ
+          hoverWithExpandedTypes ~full ~file ~package ~supportsMarkdownLinks typ
         in
         Some (Protocol.stringifyHover typeString)
       | None -> None)
     | _ -> None)
 
-let newHover ~full:{file; package} ~supportsMarkdownLinks locItem =
+let newHover ~full ~supportsMarkdownLinks locItem =
+  let {file; package} = full in
   match locItem.locType with
   | TypeDefinition (name, decl, _stamp) -> (
     let typeDef = Markdown.codeBlock (Shared.declToString name decl) in
@@ -277,8 +318,8 @@ let newHover ~full:{file; package} ~supportsMarkdownLinks locItem =
          | Const_bigint _ -> "bigint"))
   | Typed (_, t, locKind) ->
     let fromType ?constructor typ =
-      hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks ?constructor
-        typ
+      hoverWithExpandedTypes ~full ~file ~package ~supportsMarkdownLinks
+        ?constructor typ
     in
     let parts =
       match References.definedForLoc ~file ~package locKind with
