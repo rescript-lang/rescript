@@ -32,6 +32,7 @@
 
 #### :bug: Bug fix
 
+- Fix `typeof` parens on functions. https://github.com/rescript-lang/rescript/pull/7643
 - Don't panic when dev files are not present during clean. https://github.com/rescript-lang/rescript/pull/7622
 
 # 12.0.0-beta.1
