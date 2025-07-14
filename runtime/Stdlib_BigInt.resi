@@ -11,8 +11,8 @@ See [`BigInt.asIntN`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 ## Examples
 
 ```rescript
-BigInt.asIntN(~width=4, 25n)->assertEqual(-7n)
-BigInt.asIntN(~width=4, 3n)->assertEqual(3n)
+BigInt.asIntN(~width=4, 25n) == -7n
+BigInt.asIntN(~width=4, 3n) == 3n
 ```
 */
 @val external asIntN: (~width: int, bigint) => bigint = "BigInt.asIntN"
@@ -25,8 +25,8 @@ See [`BigInt.asUintN`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 ## Examples
 
 ```rescript
-BigInt.asUintN(~width=4, 25n)->assertEqual(9n)
-BigInt.asUintN(~width=4, 3n)->assertEqual(3n)
+BigInt.asUintN(~width=4, 25n) == 9n
+BigInt.asUintN(~width=4, 3n) == 3n
 ```
 */
 @val external asUintN: (~width: int, bigint) => bigint = "BigInt.asUintN"
@@ -38,15 +38,15 @@ number as a `bigint` if successfully parsed. Throws a syntax exception otherwise
 ## Examples
 
 ```rescript
-BigInt.fromStringOrThrow("123")->assertEqual(123n)
+BigInt.fromStringOrThrow("123") == 123n
 
-BigInt.fromStringOrThrow("")->assertEqual(0n)
+BigInt.fromStringOrThrow("") == 0n
 
-BigInt.fromStringOrThrow("0x11")->assertEqual(17n)
+BigInt.fromStringOrThrow("0x11") == 17n
 
-BigInt.fromStringOrThrow("0b11")->assertEqual(3n)
+BigInt.fromStringOrThrow("0b11") == 3n
 
-BigInt.fromStringOrThrow("0o11")->assertEqual(9n)
+BigInt.fromStringOrThrow("0o11") == 9n
 
 /* catch exception */
 switch BigInt.fromStringOrThrow("a") {
@@ -59,23 +59,23 @@ switch BigInt.fromStringOrThrow("a") {
 external fromStringOrThrow: string => bigint = "BigInt"
 
 /**
-Parses the given `string` into a `bigint` using JavaScript semantics. Returns 
+Parses the given `string` into a `bigint` using JavaScript semantics. Returns
 `Some(bigint)` if the string can be parsed, `None` otherwise.
 
 ## Examples
 
 ```rescript
-BigInt.fromString("123")->assertEqual(Some(123n))
+BigInt.fromString("123") == Some(123n)
 
-BigInt.fromString("")->assertEqual(Some(0n))
+BigInt.fromString("") == Some(0n)
 
-BigInt.fromString("0x11")->assertEqual(Some(17n))
+BigInt.fromString("0x11") == Some(17n)
 
-BigInt.fromString("0b11")->assertEqual(Some(3n))
+BigInt.fromString("0b11") == Some(3n)
 
-BigInt.fromString("0o11")->assertEqual(Some(9n))
+BigInt.fromString("0o11") == Some(9n)
 
-BigInt.fromString("invalid")->assertEqual(None)
+BigInt.fromString("invalid") == None
 ```
 */
 let fromString: string => option<bigint>
@@ -89,25 +89,25 @@ external fromStringExn: string => bigint = "BigInt"
 ## Examples
 
 ```rescript
-BigInt.fromInt(123)->assertEqual(123n)
-BigInt.fromInt(0)->assertEqual(0n)
-BigInt.fromInt(-456)->assertEqual(-456n)
+BigInt.fromInt(123) == 123n
+BigInt.fromInt(0) == 0n
+BigInt.fromInt(-456) == -456n
 ```
 */
 @val external fromInt: int => bigint = "BigInt"
 
 /**
-Converts a `float` to a `bigint` using JavaScript semantics. 
+Converts a `float` to a `bigint` using JavaScript semantics.
 Throws an exception if the float is not an integer or is infinite/NaN.
 
 ## Examples
 
 ```rescript
-BigInt.fromFloatOrThrow(123.0)->assertEqual(123n)
+BigInt.fromFloatOrThrow(123.0) == 123n
 
-BigInt.fromFloatOrThrow(0.0)->assertEqual(0n)
+BigInt.fromFloatOrThrow(0.0) == 0n
 
-BigInt.fromFloatOrThrow(-456.0)->assertEqual(-456n)
+BigInt.fromFloatOrThrow(-456.0) == -456n
 
 /* This will throw an exception */
 switch BigInt.fromFloatOrThrow(123.5) {
@@ -126,10 +126,10 @@ Returns `Some(bigint)` if the float is a valid `bigint`, `None` otherwise.
 ## Examples
 
 ```rescript
-BigInt.fromFloat(123.0)->assertEqual(Some(123n))
-BigInt.fromFloat(0.0)->assertEqual(Some(0n))
-BigInt.fromFloat(-456.0)->assertEqual(Some(-456n))
-BigInt.fromFloat(123.5)->assertEqual(None)
+BigInt.fromFloat(123.0) == Some(123n)
+BigInt.fromFloat(0.0) == Some(0n)
+BigInt.fromFloat(-456.0) == Some(-456n)
+BigInt.fromFloat(123.5) == None
 ```
 */
 let fromFloat: float => option<bigint>
@@ -141,7 +141,7 @@ See [`toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-BigInt.toString(123n)->assertEqual("123")
+BigInt.toString(123n) == "123"
 ```
 */
 @send
@@ -156,7 +156,7 @@ Returns a string with a language-sensitive representation of this BigInt value.
 ## Examples
 
 ```rescript
-BigInt.toString(123n)->assertEqual("123")
+BigInt.toString(123n) == "123"
 ```
 */
 @send
@@ -168,9 +168,9 @@ external toLocaleString: bigint => string = "toLocaleString"
 ## Examples
 
 ```rescript
-BigInt.toFloat(123n)->assertEqual(123.0)
-BigInt.toFloat(0n)->assertEqual(0.0)
-BigInt.toFloat(-456n)->assertEqual(-456.0)
+BigInt.toFloat(123n) == 123.0
+BigInt.toFloat(0n) == 0.0
+BigInt.toFloat(-456n) == -456.0
 ```
 */
 @val external toFloat: bigint => float = "Number"
@@ -181,9 +181,9 @@ BigInt.toFloat(-456n)->assertEqual(-456.0)
 ## Examples
 
 ```rescript
-BigInt.toInt(123n)->assertEqual(123)
-BigInt.toInt(0n)->assertEqual(0)
-BigInt.toInt(-456n)->assertEqual(-456)
+BigInt.toInt(123n) == 123
+BigInt.toInt(0n) == 0
+BigInt.toInt(-456n) == -456
 ```
 */
 let toInt: bigint => int
@@ -194,8 +194,8 @@ let toInt: bigint => int
 ## Examples
 
 ```rescript
-BigInt.add(5n, 3n)->assertEqual(8n)
-BigInt.add(-2n, 7n)->assertEqual(5n)
+BigInt.add(5n, 3n) == 8n
+BigInt.add(-2n, 7n) == 5n
 ```
 */
 external add: (bigint, bigint) => bigint = "%addbigint"
@@ -206,8 +206,8 @@ external add: (bigint, bigint) => bigint = "%addbigint"
 ## Examples
 
 ```rescript
-BigInt.sub(8n, 3n)->assertEqual(5n)
-BigInt.sub(2n, 7n)->assertEqual(-5n)
+BigInt.sub(8n, 3n) == 5n
+BigInt.sub(2n, 7n) == -5n
 ```
 */
 external sub: (bigint, bigint) => bigint = "%subbigint"
@@ -218,8 +218,8 @@ external sub: (bigint, bigint) => bigint = "%subbigint"
 ## Examples
 
 ```rescript
-BigInt.mul(5n, 3n)->assertEqual(15n)
-BigInt.mul(-2n, 7n)->assertEqual(-14n)
+BigInt.mul(5n, 3n) == 15n
+BigInt.mul(-2n, 7n) == -14n
 ```
 */
 external mul: (bigint, bigint) => bigint = "%mulbigint"
@@ -230,8 +230,8 @@ external mul: (bigint, bigint) => bigint = "%mulbigint"
 ## Examples
 
 ```rescript
-BigInt.div(15n, 3n)->assertEqual(5n)
-BigInt.div(14n, 3n)->assertEqual(4n)
+BigInt.div(15n, 3n) == 5n
+BigInt.div(14n, 3n) == 4n
 ```
 */
 external div: (bigint, bigint) => bigint = "%divbigint"
@@ -242,8 +242,8 @@ external div: (bigint, bigint) => bigint = "%divbigint"
 ## Examples
 
 ```rescript
-BigInt.mod(15n, 4n)->assertEqual(3n)
-BigInt.mod(14n, 3n)->assertEqual(2n)
+BigInt.mod(15n, 4n) == 3n
+BigInt.mod(14n, 3n) == 2n
 ```
 */
 external mod: (bigint, bigint) => bigint = "%modbigint"
@@ -254,8 +254,8 @@ external mod: (bigint, bigint) => bigint = "%modbigint"
 ## Examples
 
 ```rescript
-BigInt.bitwiseAnd(7n, 4n)->assertEqual(4n)
-BigInt.bitwiseAnd(15n, 8n)->assertEqual(8n)
+BigInt.bitwiseAnd(7n, 4n) == 4n
+BigInt.bitwiseAnd(15n, 8n) == 8n
 ```
 */
 external bitwiseAnd: (bigint, bigint) => bigint = "%andbigint"
@@ -266,8 +266,8 @@ external bitwiseAnd: (bigint, bigint) => bigint = "%andbigint"
 ## Examples
 
 ```rescript
-BigInt.bitwiseOr(7n, 4n)->assertEqual(7n)
-BigInt.bitwiseOr(8n, 4n)->assertEqual(12n)
+BigInt.bitwiseOr(7n, 4n) == 7n
+BigInt.bitwiseOr(8n, 4n) == 12n
 ```
 */
 external bitwiseOr: (bigint, bigint) => bigint = "%orbigint"
@@ -278,8 +278,8 @@ external bitwiseOr: (bigint, bigint) => bigint = "%orbigint"
 ## Examples
 
 ```rescript
-BigInt.bitwiseXor(7n, 4n)->assertEqual(3n)
-BigInt.bitwiseXor(15n, 8n)->assertEqual(7n)
+BigInt.bitwiseXor(7n, 4n) == 3n
+BigInt.bitwiseXor(15n, 8n) == 7n
 ```
 */
 external bitwiseXor: (bigint, bigint) => bigint = "%xorbigint"
@@ -290,8 +290,8 @@ external bitwiseXor: (bigint, bigint) => bigint = "%xorbigint"
 ## Examples
 
 ```rescript
-BigInt.bitwiseNot(2n)->assertEqual(-3n)
-BigInt.bitwiseNot(-1n)->assertEqual(0n)
+BigInt.bitwiseNot(2n) == -3n
+BigInt.bitwiseNot(-1n) == 0n
 ```
 */
 external bitwiseNot: bigint => bigint = "%bitnot_bigint"
@@ -302,8 +302,8 @@ external bitwiseNot: bigint => bigint = "%bitnot_bigint"
 ## Examples
 
 ```rescript
-BigInt.shiftLeft(4n, 1n)->assertEqual(8n)
-BigInt.shiftLeft(1n, 3n)->assertEqual(8n)
+BigInt.shiftLeft(4n, 1n) == 8n
+BigInt.shiftLeft(1n, 3n) == 8n
 ```
 */
 external shiftLeft: (bigint, bigint) => bigint = "%lslbigint"
@@ -314,8 +314,8 @@ external shiftLeft: (bigint, bigint) => bigint = "%lslbigint"
 ## Examples
 
 ```rescript
-BigInt.shiftRight(8n, 1n)->assertEqual(4n)
-BigInt.shiftRight(16n, 2n)->assertEqual(4n)
+BigInt.shiftRight(8n, 1n) == 4n
+BigInt.shiftRight(16n, 2n) == 4n
 ```
 */
 external shiftRight: (bigint, bigint) => bigint = "%asrbigint"
@@ -336,7 +336,7 @@ external ignore: bigint => unit = "%ignore"
 ## Examples
 
 ```rescript
-BigInt.land(7n, 4n)->assertEqual(4n)
+BigInt.land(7n, 4n) == 4n
 ```
 */
 @deprecated("Use `&` operator or `bitwiseAnd` instead.")
@@ -350,7 +350,7 @@ external land: (bigint, bigint) => bigint = "%andbigint"
 ## Examples
 
 ```rescript
-BigInt.lor(7n, 4n)->assertEqual(7n)
+BigInt.lor(7n, 4n) == 7n
 ```
 */
 @deprecated("Use `bitwiseOr` instead.")
@@ -364,7 +364,7 @@ external lor: (bigint, bigint) => bigint = "%orbigint"
 ## Examples
 
 ```rescript
-BigInt.lxor(7n, 4n)->assertEqual(3n)
+BigInt.lxor(7n, 4n) == 3n
 ```
 */
 @deprecated("Use `^` operator or `bitwiseXor` instead.")
@@ -378,7 +378,7 @@ external lxor: (bigint, bigint) => bigint = "%xorbigint"
 ## Examples
 
 ```rescript
-BigInt.lnot(2n)->assertEqual(-3n)
+BigInt.lnot(2n) == -3n
 ```
 */
 @deprecated("Use `~` operator or `bitwiseNot` instead.")
@@ -392,7 +392,7 @@ external lnot: bigint => bigint = "%bitnot_bigint"
 ## Examples
 
 ```rescript
-BigInt.lsl(4n, 1n)->assertEqual(8n)
+BigInt.lsl(4n, 1n) == 8n
 ```
 */
 @deprecated("Use `<<` operator or `shiftLeft` instead.")
@@ -406,7 +406,7 @@ external lsl: (bigint, bigint) => bigint = "%lslbigint"
 ## Examples
 
 ```rescript
-BigInt.asr(8n, 1n)->assertEqual(4n)
+BigInt.asr(8n, 1n) == 4n
 ```
 */
 @deprecated("Use `>>` operator or `shiftRight` instead.")

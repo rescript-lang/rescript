@@ -37,7 +37,7 @@ let forEachU: (int, int, int => unit) => unit
 ## Examples
 
 ```rescript
-Belt.Range.forEach(0, 4, (i) => Js.log(i))
+Belt.Range.forEach(0, 4, i => Js.log(i))
 
 // Prints:
 // 0
@@ -57,9 +57,9 @@ let everyU: (int, int, int => bool) => bool
 ## Examples
 
 ```rescript
-assertEqual(Belt.Range.every(0, 4, (i) => i < 5), true)
+Belt.Range.every(0, 4, i => i < 5) == true
 
-assertEqual(Belt.Range.every(0, 4, (i) => i < 4), false)
+Belt.Range.every(0, 4, i => i < 4) == false
 ```
 */
 let every: (int, int, int => bool) => bool
@@ -74,9 +74,9 @@ let everyByU: (int, int, ~step: int, int => bool) => bool
 ## Examples
 
 ```rescript
-assertEqual(Belt.Range.everyBy(0, 4, ~step=1, (i) => mod(i, 2) === 0), false)
+Belt.Range.everyBy(0, 4, ~step=1, i => mod(i, 2) === 0) == false
 
-assertEqual(Belt.Range.everyBy(0, 4, ~step=2, (i) => mod(i, 2) === 0), true)
+Belt.Range.everyBy(0, 4, ~step=2, i => mod(i, 2) === 0) == true
 ```
 */
 let everyBy: (int, int, ~step: int, int => bool) => bool
@@ -90,9 +90,9 @@ let someU: (int, int, int => bool) => bool
 ## Examples
 
 ```rescript
-assertEqual(Belt.Range.some(0, 4, (i) => i > 5), false)
+Belt.Range.some(0, 4, i => i > 5) == false
 
-assertEqual(Belt.Range.some(0, 4, (i) => i > 2), true)
+Belt.Range.some(0, 4, i => i > 2) == true
 ```
 */
 let some: (int, int, int => bool) => bool
@@ -107,8 +107,8 @@ let someByU: (int, int, ~step: int, int => bool) => bool
 ## Examples
 
 ```rescript
-assertEqual(Belt.Range.someBy(1, 5, ~step=2, (i) => mod(i, 2) === 0), false)
-assertEqual(Belt.Range.someBy(0, 4, ~step=2, (i) => mod(i, 2) === 0), true)
+Belt.Range.someBy(1, 5, ~step=2, i => mod(i, 2) === 0) == false
+Belt.Range.someBy(0, 4, ~step=2, i => mod(i, 2) === 0) == true
 ```
 */
 let someBy: (int, int, ~step: int, int => bool) => bool

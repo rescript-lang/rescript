@@ -69,8 +69,7 @@ let iterator: Iterator.t<string> = %raw(`
 
 iterator
 ->Set.fromIterator
-->Set.size
-->assertEqual(3)
+->Set.size == 3
 ```
 */
 @new
@@ -295,7 +294,7 @@ See [`Set.isSupersetOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript
 let set1 = Set.fromArray(["apple", "banana", "pear"])
 let set2 = Set.fromArray(["apple", "banana"])
 set1->Set.isSupersetOf(set2) // true
- ```
+```
 */
 @send
 external isSupersetOf: (t<'a>, t<'a>) => bool = "isSupersetOf"

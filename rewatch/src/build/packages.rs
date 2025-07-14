@@ -983,7 +983,6 @@ mod test {
                 bs_dev_dependencies: Some(build_dev_deps),
                 ppx_flags: None,
                 bsc_flags: None,
-                reason: None,
                 namespace: None,
                 jsx: None,
                 gentype_config: None,

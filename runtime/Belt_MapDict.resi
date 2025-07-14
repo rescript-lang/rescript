@@ -72,13 +72,13 @@ match predicate `p`.
 
 ```rescript
 module IntCmp = Belt.Id.MakeComparable({
-    type t = int
-    let cmp = Pervasives.compare
+  type t = int
+  let cmp = Pervasives.compare
 })
 
 let s0 = Belt.Map.Dict.fromArray([(4, "4"), (1, "1"), (2, "2"), (3, "3")], ~cmp=IntCmp.cmp)
 
-assertEqual(Belt.Map.Dict.findFirstBy(s0, (k, _) => k == 4), Some((4, "4")))
+Belt.Map.Dict.findFirstBy(s0, (k, _) => k == 4) == Some((4, "4"))
 ```
 */
 let findFirstBy: (t<'k, 'v, 'id>, ('k, 'v) => bool) => option<('k, 'v)>

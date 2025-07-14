@@ -41,5 +41,15 @@ Path Res
       "modulePath": "RescriptTools_Docgen",
       "filePath": "src/RecoveryOnProp.res"
     }
+  }, {
+    "label": "RescriptTools_ExtractCodeBlocks",
+    "kind": 9,
+    "tags": [],
+    "detail": "module RescriptTools_ExtractCodeBlocks",
+    "documentation": null,
+    "data": {
+      "modulePath": "RescriptTools_ExtractCodeBlocks",
+      "filePath": "src/RecoveryOnProp.res"
+    }
   }]
 

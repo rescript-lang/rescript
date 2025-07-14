@@ -18,9 +18,7 @@ Makes a new unique Symbol value.
 ## Examples
 
 ```rescript
-Symbol.make("sym1")
-->Symbol.description
-->assertEqual(Some("sym1"))
+Symbol.make("sym1")->Symbol.description == Some("sym1")
 ```
 */
 @val
@@ -35,7 +33,7 @@ Otherwise a new Symbol gets created and registered with key.
 ## Examples
 
 ```rescript
-Symbol.getFor("sym1")->assertEqual(Symbol.getFor("sym1"))
+Symbol.getFor("sym1") == Symbol.getFor("sym1")
 ```
 */
 @val @scope("Symbol")
@@ -51,7 +49,7 @@ Retrieves a shared Symbol key from the global Symbol registry for the given Symb
 ```rescript
 let globalSym = Symbol.getFor("sym1") // Global symbol
 
-globalSym->Option.flatMap(Symbol.description)->assertEqual(Some("sym1"))
+globalSym->Option.flatMap(Symbol.description) == Some("sym1")
 ```
 */
 @val @scope("Symbol")
@@ -65,7 +63,7 @@ Returns `Some(string)` containing the description of this symbol, or `None` if t
 
 ```rescript
 let sym = Symbol.make("sym1")
-Symbol.description(sym)->assertEqual(Some("sym1"))
+Symbol.description(sym) == Some("sym1")
 ```
 */
 @get
@@ -81,7 +79,7 @@ external description: t => option<string> = "description"
 ```rescript
 let sym = Symbol.make("sym1")
 
-Symbol.toString(sym)->assertEqual("Symbol(sym1)")
+Symbol.toString(sym) == "Symbol(sym1)"
 ```
 */
 @send

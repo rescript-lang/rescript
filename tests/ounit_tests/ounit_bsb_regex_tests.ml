@@ -37,7 +37,6 @@ let suites =
   "sources": [
     "src"
   ],
-  "reason" : { "react-jsx" : true},
   "bs-dependencies" : [
   ]
 }
@@ -49,7 +48,6 @@ let suites =
   "sources": [
     "src"
   ],
-  "reason" : { "react-jsx" : true},
   "bs-dependencies" : [
   ]
 }

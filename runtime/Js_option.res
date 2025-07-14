@@ -61,7 +61,7 @@ calling `eq(v1, v2)`.
 ## Examples
 
 ```rescript
-let clockEqual = (. a, b) => mod(a, 12) == mod(b, 12)
+let clockEqual = (a, b) => mod(a, 12) == mod(b, 12)
 Js.Option.isSomeValue(clockEqual, 3, Some(15)) == true
 Js.Option.isSomeValue(clockEqual, 3, Some(4)) == false
 Js.Option.isSomeValue(clockEqual, 3, None) == false
@@ -105,7 +105,7 @@ If the second and third arguments are of the form:
 ## Examples
 
 ```rescript
-let clockEqual = (. a, b) => mod(a, 12) == mod(b, 12)
+let clockEqual = (a, b) => mod(a, 12) == mod(b, 12)
 Js.Option.equal(clockEqual, Some(3), Some(15)) == true
 Js.Option.equal(clockEqual, Some(3), Some(16)) == false
 Js.Option.equal(clockEqual, Some(3), None) == false
@@ -132,7 +132,7 @@ If the second argument is `Some(v)`, the return value is `f(v)`.
 ## Examples
 
 ```rescript
-let reciprocal = (. x) => x == 0 ? None : Some(1.0 /. Belt.Int.toFloat(x))
+let reciprocal = x => x == 0 ? None : Some(1.0 /. Belt.Int.toFloat(x))
 Js.Option.andThen(reciprocal, Some(5)) == Some(0.2)
 Js.Option.andThen(reciprocal, Some(0)) == None
 Js.Option.andThen(reciprocal, None) == None
@@ -153,7 +153,7 @@ value. If it is of the form `Some(v)`, `map()` returns `Some(f(v))`; if it is
 ## Examples
 
 ```rescript
-let square = (. x) => x * x
+let square = x => x * x
 Js.Option.map(square, Some(3)) == Some(9)
 Js.Option.map(square, None) == None
 ```
@@ -195,7 +195,7 @@ the return value is `Some(v)`. Otherwise, the return value is `None`.
 ## Examples
 
 ```rescript
-let isEven = (. x) => mod(x, 2) == 0
+let isEven = x => mod(x, 2) == 0
 Js.Option.filter(isEven, Some(2)) == Some(2)
 Js.Option.filter(isEven, Some(3)) == None
 Js.Option.filter(isEven, None) == None

@@ -677,6 +677,23 @@ let extractEmbedded ~extensionPoints ~filename =
            ])
   |> List.rev |> array
 
+let readFile path =
+  let ic = open_in path in
+  let n = in_channel_length ic in
+  let s = Bytes.create n in
+  really_input ic s 0 n;
+  close_in ic;
+  Bytes.to_string s
+
+let isResLang lang =
+  match String.lowercase_ascii lang with
+  | "res" | "rescript" | "resi" -> true
+  | lang ->
+    (* Cover ```res example, and similar *)
+    String.starts_with ~prefix:"res " lang
+    || String.starts_with ~prefix:"rescript " lang
+    || String.starts_with ~prefix:"resi " lang
+
 module FormatCodeblocks = struct
   module Transform = struct
     type transform = AssertEqualFnToEquals  (** assertEqual(a, b) -> a == b *)
@@ -702,7 +719,7 @@ module FormatCodeblocks = struct
                               ({txt = Lident "assertEqual"} as identTxt);
                         } as ident;
                       partial = false;
-                      args = [(Nolabel, _arg1); (Nolabel, _arg2)] as args;
+                      args = [(Nolabel, _); (Nolabel, _)] as args;
                     }
                   when hasTransform AssertEqualFnToEquals ->
                   {
@@ -721,20 +738,54 @@ module FormatCodeblocks = struct
                           transformed_jsx = false;
                         };
                   }
+                  (* Piped *)
+                | Pexp_apply
+                    {
+                      funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};
+                      partial = false;
+                      args =
+                        [
+                          (_, lhs);
+                          ( Nolabel,
+                            {
+                              pexp_desc =
+                                Pexp_apply
+                                  {
+                                    funct =
+                                      {
+                                        pexp_desc =
+                                          Pexp_ident
+                                            ({txt = Lident "assertEqual"} as
+                                             identTxt);
+                                      } as ident;
+                                    partial = false;
+                                    args = [rhs];
+                                  };
+                            } );
+                        ];
+                    }
+                  when hasTransform AssertEqualFnToEquals ->
+                  {
+                    exp with
+                    pexp_desc =
+                      Pexp_apply
+                        {
+                          funct =
+                            {
+                              ident with
+                              pexp_desc =
+                                Pexp_ident {identTxt with txt = Lident "=="};
+                            };
+                          args = [(Nolabel, lhs); rhs];
+                          partial = false;
+                          transformed_jsx = false;
+                        };
+                  }
                 | _ -> Ast_mapper.default_mapper.expr mapper exp);
           }
         in
         mapper.structure mapper ast
   end
-
-  let isResLang lang =
-    match String.lowercase_ascii lang with
-    | "res" | "rescript" | "resi" -> true
-    | lang ->
-      (* Cover ```res example, and similar *)
-      String.starts_with ~prefix:"res " lang
-      || String.starts_with ~prefix:"rescript " lang
-      || String.starts_with ~prefix:"resi " lang
 
   let formatRescriptCodeBlocks content ~transformAssertEqual ~displayFilename
       ~addError ~markdownBlockStartLine =
@@ -854,14 +905,7 @@ module FormatCodeblocks = struct
     in
     let content =
       if Filename.check_suffix path ".md" then
-        let content =
-          let ic = open_in path in
-          let n = in_channel_length ic in
-          let s = Bytes.create n in
-          really_input ic s 0 n;
-          close_in ic;
-          Bytes.to_string s
-        in
+        let content = readFile path in
         let displayFilename = Filename.basename path in
         let formattedContents, hadCodeBlocks =
           formatRescriptCodeBlocks ~transformAssertEqual ~addError
@@ -919,4 +963,332 @@ module FormatCodeblocks = struct
           close_out oc;
           Ok (Filename.basename path ^ ": formatted successfully"))
       else Ok (Filename.basename path ^ ": needed no formatting")
+end
+
+module ExtractCodeblocks = struct
+  module Transform = struct
+    type transform =
+      | EqualsToAssertEqualFn
+          (** a == b -> assertEqual(a, b), for structure items only *)
+
+    let transform ~transforms ast =
+      match transforms with
+      | [] -> ast
+      | transforms ->
+        let hasTransform transform = transforms |> List.mem transform in
+        let mapper =
+          {
+            Ast_mapper.default_mapper with
+            structure_item =
+              (fun mapper str_item ->
+                match str_item.pstr_desc with
+                | Pstr_eval
+                    ( ({
+                         pexp_desc =
+                           Pexp_apply
+                             {
+                               funct =
+                                 {
+                                   pexp_desc =
+                                     Pexp_ident
+                                       ({txt = Lident "=="} as identTxt);
+                                 } as ident;
+                               partial = false;
+                               args = [(Nolabel, _); (Nolabel, _)] as args;
+                             };
+                       } as exp),
+                      x1 )
+                  when hasTransform EqualsToAssertEqualFn ->
+                  {
+                    str_item with
+                    pstr_desc =
+                      Pstr_eval
+                        ( {
+                            exp with
+                            pexp_desc =
+                              Pexp_apply
+                                {
+                                  funct =
+                                    {
+                                      ident with
+                                      pexp_desc =
+                                        Pexp_ident
+                                          {
+                                            identTxt with
+                                            txt = Lident "assertEqual";
+                                          };
+                                    };
+                                  args;
+                                  partial = false;
+                                  transformed_jsx = false;
+                                };
+                          },
+                          x1 );
+                  }
+                | _ -> Ast_mapper.default_mapper.structure_item mapper str_item);
+          }
+        in
+        mapper.structure mapper ast
+  end
+
+  type codeBlock = {id: string; code: string; name: string}
+
+  let getDocstring = function
+    | d :: _ -> d
+    | _ -> ""
+
+  let extractCodeBlocks ~entryPointFile
+      ~(processDocstrings : id:string -> name:string -> string -> unit) =
+    let path =
+      match Filename.is_relative entryPointFile with
+      | true -> Unix.realpath entryPointFile
+      | false -> entryPointFile
+    in
+    let result =
+      match
+        FindFiles.isImplementation path = false
+        && FindFiles.isInterface path = false
+      with
+      | false -> (
+        let path =
+          if FindFiles.isImplementation path then
+            let pathAsResi =
+              (path |> Filename.dirname) ^ "/"
+              ^ (path |> Filename.basename |> Filename.chop_extension)
+              ^ ".resi"
+            in
+            if Sys.file_exists pathAsResi then pathAsResi else path
+          else path
+        in
+        match Cmt.loadFullCmtFromPath ~path with
+        | None ->
+          Error
+            (Printf.sprintf
+               "error: failed to generate doc for %s, try to build the project"
+               path)
+        | Some full ->
+          let file = full.file in
+          let structure = file.structure in
+          let open SharedTypes in
+          let env = QueryEnv.fromFile file in
+          let rec extractCodeBlocksForModule
+              ?(modulePath = [env.file.moduleName])
+              (structure : Module.structure) =
+            let id = modulePath |> List.rev |> ident in
+            let name = structure.name in
+            processDocstrings ~id ~name (getDocstring structure.docstring);
+
+            structure.items
+            |> List.iter (fun (item : Module.item) ->
+                   match item.kind with
+                   | Value _typ ->
+                     let id = modulePath |> makeId ~identifier:item.name in
+                     let name = item.name in
+                     processDocstrings ~id ~name (getDocstring item.docstring)
+                   | Type (_typ, _) ->
+                     let id = modulePath |> makeId ~identifier:item.name in
+                     let name = item.name in
+                     processDocstrings ~id ~name (getDocstring item.docstring)
+                   | Module {type_ = Ident _p; isModuleType = false} ->
+                     (* module Whatever = OtherModule *)
+                     let id =
+                       (modulePath |> List.rev |> List.hd) ^ "." ^ item.name
+                     in
+                     let name = item.name in
+                     processDocstrings ~id ~name (getDocstring item.docstring)
+                   | Module {type_ = Structure m; isModuleType = false} ->
+                     (* module Whatever = {} in res or module Whatever: {} in resi. *)
+                     let modulePath = m.name :: modulePath in
+                     let id = modulePath |> List.rev |> ident in
+                     let name = m.name in
+                     processDocstrings ~id ~name (getDocstring m.docstring);
+                     extractCodeBlocksForModule ~modulePath m
+                   | Module {type_ = Structure m; isModuleType = true} ->
+                     (* module type Whatever = {} *)
+                     let modulePath = m.name :: modulePath in
+                     let id = modulePath |> List.rev |> ident in
+                     let name = m.name in
+                     processDocstrings ~id ~name (getDocstring m.docstring);
+                     extractCodeBlocksForModule ~modulePath m
+                   | Module
+                       {
+                         type_ =
+                           Constraint (Structure _impl, Structure interface);
+                       } ->
+                     (* module Whatever: { <interface> } = { <impl> }. Prefer the interface. *)
+                     let modulePath = interface.name :: modulePath in
+                     let id = modulePath |> List.rev |> ident in
+                     let name = interface.name in
+                     processDocstrings ~id ~name
+                       (getDocstring interface.docstring);
+                     extractCodeBlocksForModule ~modulePath interface
+                   | Module {type_ = Constraint (Structure m, Ident _p)} ->
+                     (* module M: T = { <impl> }. Print M *)
+                     let modulePath = m.name :: modulePath in
+                     let id = modulePath |> List.rev |> ident in
+                     let name = m.name in
+                     processDocstrings ~id ~name (getDocstring m.docstring);
+                     extractCodeBlocksForModule ~modulePath m
+                   | Module.Module _ -> ())
+          in
+          extractCodeBlocksForModule structure;
+          Ok ())
+      | true ->
+        Error
+          (Printf.sprintf
+             "error: failed to read %s, expected an .res or .resi file" path)
+    in
+
+    result
+
+  let extractRescriptCodeBlocks content ~transformAssertEqual ~displayFilename
+      ~addError ~markdownBlockStartLine =
+    (* Detect ReScript code blocks. *)
+    let codeBlocks = ref [] in
+    let addCodeBlock codeBlock = codeBlocks := codeBlock :: !codeBlocks in
+    let block _m = function
+      | Cmarkit.Block.Code_block (codeBlock, meta) -> (
+        match Cmarkit.Block.Code_block.info_string codeBlock with
+        | Some (lang, _) when isResLang lang ->
+          let currentLine =
+            meta |> Cmarkit.Meta.textloc |> Cmarkit.Textloc.first_line |> fst
+          in
+          (* Account for 0-based line numbers *)
+          let currentLine = currentLine + 1 in
+          let code = Cmarkit.Block.Code_block.code codeBlock in
+          let codeText =
+            code |> List.map Cmarkit.Block_line.to_string |> String.concat "\n"
+          in
+          let n = List.length code in
+          let newlinesNeeded =
+            max 0 (markdownBlockStartLine + currentLine - n)
+          in
+          let codeWithOffset = String.make newlinesNeeded '\n' ^ codeText in
+          let reportParseError diagnostics =
+            let buf = Buffer.create 1000 in
+            let formatter = Format.formatter_of_buffer buf in
+            Res_diagnostics.print_report ~formatter
+              ~custom_intro:(Some "Syntax error in code block in docstring")
+              diagnostics codeWithOffset;
+            addError (Buffer.contents buf)
+          in
+          let mappedCode =
+            if lang |> String.split_on_char ' ' |> List.hd = "resi" then
+              let {Res_driver.parsetree; comments; invalid; diagnostics} =
+                Res_driver.parse_interface_from_source ~for_printer:true
+                  ~display_filename:displayFilename ~source:codeWithOffset
+              in
+              if invalid then (
+                reportParseError diagnostics;
+                codeText)
+              else
+                Res_printer.print_interface parsetree ~comments |> String.trim
+            else
+              let {Res_driver.parsetree; comments; invalid; diagnostics} =
+                Res_driver.parse_implementation_from_source ~for_printer:true
+                  ~display_filename:displayFilename ~source:codeWithOffset
+              in
+              if invalid then (
+                reportParseError diagnostics;
+                codeText)
+              else
+                let parsetree =
+                  if transformAssertEqual then
+                    Transform.transform ~transforms:[EqualsToAssertEqualFn]
+                      parsetree
+                  else parsetree
+                in
+                Res_printer.print_implementation parsetree ~comments
+                |> String.trim
+          in
+          addCodeBlock mappedCode;
+          Cmarkit.Mapper.default
+        | _ -> Cmarkit.Mapper.default)
+      | _ -> Cmarkit.Mapper.default
+    in
+    let mapper = Cmarkit.Mapper.make ~block () in
+    let _ =
+      content
+      |> Cmarkit.Doc.of_string ~locs:true
+      |> Cmarkit.Mapper.map_doc mapper
+    in
+    !codeBlocks
+
+  let extractCodeblocksFromFile ~transformAssertEqual ~entryPointFile =
+    let path =
+      match Filename.is_relative entryPointFile with
+      | true -> Unix.realpath entryPointFile
+      | false -> entryPointFile
+    in
+    let displayFilename = Filename.basename path in
+    let errors = ref [] in
+    let addError error = errors := error :: !errors in
+
+    let codeBlocks = ref [] in
+    let addCodeBlock codeBlock = codeBlocks := codeBlock :: !codeBlocks in
+
+    let content =
+      if Filename.check_suffix path ".md" then
+        let content = readFile path in
+        let displayFilename = Filename.basename path in
+        let codeBlocks =
+          extractRescriptCodeBlocks ~transformAssertEqual ~addError
+            ~displayFilename ~markdownBlockStartLine:1 content
+        in
+        Ok
+          (codeBlocks
+          |> List.mapi (fun index codeBlock ->
+                 {
+                   id = "codeblock-" ^ string_of_int (index + 1);
+                   name = "codeblock-" ^ string_of_int (index + 1);
+                   code = codeBlock;
+                 }))
+      else
+        let extracted =
+          extractCodeBlocks ~entryPointFile
+            ~processDocstrings:(fun ~id ~name code ->
+              let codeBlocks =
+                code
+                |> extractRescriptCodeBlocks ~transformAssertEqual ~addError
+                     ~displayFilename ~markdownBlockStartLine:1
+              in
+              if List.length codeBlocks > 1 then
+                codeBlocks |> List.rev
+                |> List.iteri (fun index codeBlock ->
+                       addCodeBlock
+                         {
+                           id = id ^ "-" ^ string_of_int (index + 1);
+                           name;
+                           code = codeBlock;
+                         })
+              else
+                codeBlocks
+                |> List.iter (fun codeBlock ->
+                       addCodeBlock {id; name; code = codeBlock}))
+        in
+
+        match extracted with
+        | Ok () -> Ok !codeBlocks
+        | Error e -> Error e
+    in
+    match content with
+    | Error e -> Error e
+    | Ok codeBlocks ->
+      let errors = !errors in
+      if List.length errors > 0 then
+        let errors =
+          errors |> List.rev |> String.concat "\n" |> Protocol.wrapInQuotes
+        in
+        Error errors
+      else
+        Ok
+          (codeBlocks
+          |> List.map (fun codeBlock ->
+                 Protocol.stringifyObject
+                   [
+                     ("id", Some (Protocol.wrapInQuotes codeBlock.id));
+                     ("name", Some (Protocol.wrapInQuotes codeBlock.name));
+                     ("code", Some (Protocol.wrapInQuotes codeBlock.code));
+                   ])
+          |> Protocol.array)
 end

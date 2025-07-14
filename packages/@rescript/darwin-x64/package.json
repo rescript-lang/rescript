@@ -1,6 +1,6 @@
 {
   "name": "@rescript/darwin-x64",
-  "version": "12.0.0-beta.1",
+  "version": "12.0.0-beta.2",
   "description": "ReScript binaries for MacOS x86_64",
   "type": "module",
   "homepage": "https://rescript-lang.org",

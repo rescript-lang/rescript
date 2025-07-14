@@ -68,7 +68,7 @@ external isFinite: float => bool = "isFinite"
 /**
 Formats a `float` using exponential (scientific) notation. Return a
 `string` representing the given value in exponential notation. Raise
-RangeError if digits is not in the range [0, 20] (inclusive). See [`toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.
+RangeError if digits is not in the range \[0, 20\] (inclusive). See [`toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.
 
 ## Examples
 
@@ -86,9 +86,9 @@ external toExponential: float => string = "toExponential"
 /**
 Formats a `float` using exponential (scientific) notation. `digits` specifies
 how many digits should appear after the decimal point. The value must be in
-the range [0, 20] (inclusive). Return a `string` representing the given value
+the range \[0, 20\] (inclusive). Return a `string` representing the given value
 in exponential notation. The output will be rounded or padded with zeroes if
-necessary. Raise RangeError if `digits` is not in the range [0, 20] (inclusive).
+necessary. Raise RangeError if `digits` is not in the range \[0, 20\] (inclusive).
 See [`toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toExponential) on MDN.
 
 ## Examples
@@ -104,7 +104,7 @@ external toExponentialWithPrecision: (float, ~digits: int) => string = "toExpone
 /**
 Formats a `float` using fixed point notation. Return a `string` representing the
 given value in fixed-point notation (usually). Raise RangeError if digits is not
-in the range [0, 20] (inclusive). See [`toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed) on MDN.
+in the range \[0, 20\] (inclusive). See [`toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed) on MDN.
 
 ## Examples
 
@@ -121,13 +121,13 @@ external toFixed: float => string = "toFixed"
 
 /**
 Formats a `float` using fixed point notation. `digits` specifies how many digits
-should appear after the decimal point. The value must be in the range [0, 20]
+should appear after the decimal point. The value must be in the range \[0, 20\]
 (inclusive). Defaults to `0`. Return a `string` representing the given value in
 fixed-point notation (usually). See [`toFixed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toFixed) on MDN.
 
 The output will be rounded or padded with zeroes if necessary.
 
-Raise RangeError if digits is not in the range [0, 20] (inclusive)
+Raise RangeError if digits is not in the range \[0, 20\] (inclusive)
 
 ## Examples
 
@@ -212,10 +212,10 @@ external toString: float => string = "toString"
 
 /**
 Formats a `float` as a string. `radix` specifies the radix base to use for the
-formatted number. The value must be in the range [2, 36] (inclusive). Return a
+formatted number. The value must be in the range \[2, 36\] (inclusive). Return a
 `string` representing the given value in fixed-point (usually). See [`toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toString) on MDN.
 
-Raise RangeError if radix is not in the range [2, 36] (inclusive)
+Raise RangeError if radix is not in the range \[2, 36\] (inclusive)
 
 ## Examples
 

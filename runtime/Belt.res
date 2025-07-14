@@ -130,16 +130,15 @@ let letters = ["a", "b", "c"]
 let a = letters[0]
 
 // Use a switch statement:
-let capitalA =
-  switch a {
-  | Some(a) => Some(Js.String.toUpperCase(a))
-  | None => None
-  }
+let capitalA = switch a {
+| Some(a) => Some(Js.String.toUpperCase(a))
+| None => None
+}
 
 let k = letters[10] // k == None
 ```
 
-With that little bit of tweaking, our code now compiles successfully and is 100% free of runtime errors!
+With that little bit of tweaking, our code now compiles successfully and is 100% free of runtime errors\!
 
 ### A Special Encoding for Collection Safety
 
@@ -150,31 +149,25 @@ We use a phantom type to solve the problem:
 ## Examples
 
 ```rescript
-module Comparable1 =
-  Belt.Id.MakeComparable(
-    {
-      type t = (int, int)
-      let cmp = ((a0, a1), (b0, b1)) =>
-        switch Pervasives.compare(a0, b0) {
-        | 0 => Pervasives.compare(a1, b1)
-        | c => c
-        }
+module Comparable1 = Belt.Id.MakeComparable({
+  type t = (int, int)
+  let cmp = ((a0, a1), (b0, b1)) =>
+    switch Pervasives.compare(a0, b0) {
+    | 0 => Pervasives.compare(a1, b1)
+    | c => c
     }
-  )
+})
 
 let mySet1 = Belt.Set.make(~id=module(Comparable1))
 
-module Comparable2 =
-  Belt.Id.MakeComparable(
-    {
-      type t = (int, int)
-      let cmp = ((a0, a1), (b0, b1)) =>
-        switch Pervasives.compare(a0, b0) {
-        | 0 => Pervasives.compare(a1, b1)
-        | c => c
-        }
+module Comparable2 = Belt.Id.MakeComparable({
+  type t = (int, int)
+  let cmp = ((a0, a1), (b0, b1)) =>
+    switch Pervasives.compare(a0, b0) {
+    | 0 => Pervasives.compare(a1, b1)
+    | c => c
     }
-  )
+})
 
 let mySet2 = Belt.Set.make(~id=module(Comparable2))
 ```
@@ -184,8 +177,8 @@ Here, the compiler would infer `mySet1` and `mySet2` having different type, so e
 ## Examples
 
 ```rescript
-let mySet1: t<(int, int), Comparable1.identity>
-let mySet2: t<(int, int), Comparable2.identity>
+let mySet1: t<(int, int), Comparable1.identity> = %todo
+let mySet2: t<(int, int), Comparable2.identity> = %todo
 ```
 
 `Comparable1.identity` and `Comparable2.identity` are not the same using our encoding scheme.

@@ -32,7 +32,7 @@ Converts a given `int` to a `float`.
 ## Examples
 
 ```rescript
-Belt.Int.toFloat(1)->assertEqual(1.0)
+Belt.Int.toFloat(1) == 1.0
 ```
 */
 external toFloat: int => float = "%identity"
@@ -43,7 +43,7 @@ Converts a given `float` to an `int`.
 ## Examples
 
 ```rescript
-Belt.Int.fromFloat(1.0)->assertEqual(1)
+Belt.Int.fromFloat(1.0) == 1
 ```
 */
 external fromFloat: float => int = "%intoffloat"
@@ -54,7 +54,7 @@ Converts a given `string` to an `int`. Returns `Some(int)` when the input is a n
 ## Examples
 
 ```rescript
-Belt.Int.fromString("1")->assertEqual(Some(1))
+Belt.Int.fromString("1") == Some(1)
 ```
 */
 let fromString: string => option<int>
@@ -65,7 +65,7 @@ Converts a given `int` to a `string`. Uses the JavaScript `String` constructor u
 ## Examples
 
 ```rescript
-Belt.Int.toString(1)->assertEqual("1")
+Belt.Int.toString(1) == "1"
 ```
 */
 @val
@@ -78,7 +78,7 @@ Addition of two `int` values. Same as the addition from `Pervasives`.
 
 ```rescript
 open Belt.Int
-assertEqual(2 + 2, 4)
+2 + 2 == 4
 ```
 */
 external \"+": (int, int) => int = "%addint"
@@ -90,7 +90,7 @@ Subtraction of two `int` values. Same as the subtraction from `Pervasives`.
 
 ```rescript
 open Belt.Int
-assertEqual(2 - 1, 1)
+2 - 1 == 1
 ```
 */
 external \"-": (int, int) => int = "%subint"
@@ -102,7 +102,7 @@ Multiplication of two `int` values. Same as the multiplication from `Pervasives`
 
 ```rescript
 open Belt.Int
-assertEqual(2 * 2, 4)
+2 * 2 == 4
 ```
 */
 external \"*": (int, int) => int = "%mulint"
@@ -114,7 +114,7 @@ Division of two `int` values. Same as the division from `Pervasives`.
 
 ```rescript
 open Belt.Int
-assertEqual(4 / 2, 2)
+4 / 2 == 2
 ```
 */
 external \"/": (int, int) => int = "%divint"

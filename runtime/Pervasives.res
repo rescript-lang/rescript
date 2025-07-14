@@ -17,7 +17,7 @@ let result = try {
 | MyException(message) => "Caught exception: " ++ message
 }
 
-assertEqual(result, "Caught exception: Out of milk")
+result == "Caught exception: Out of milk"
 ```
 */
 external throw: exn => 'a = "%raise"

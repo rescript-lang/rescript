@@ -35,8 +35,8 @@ type t = int
 module Constants: {
   /**
   The smallest positive number represented in JavaScript.
-  See [`Number.MIN_VALUE`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MIN_VALUE)
-  on MDN.
+See [`Number.MIN_VALUE`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MIN_VALUE)
+on MDN.
 
   ## Examples
 
@@ -48,8 +48,8 @@ module Constants: {
   let minValue: int
   /**
   The largest positive number represented in JavaScript.
-  See [`Number.MAX_VALUE`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_VALUE)
-  on MDN.
+See [`Number.MAX_VALUE`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_VALUE)
+on MDN.
 
   ## Examples
 
@@ -164,8 +164,8 @@ Int.toPrecision(1, ~digits=2) // "1.0"
 ## Exceptions
 
 - `RangeError`: If `digits` is not between 1 and 100 (inclusive).
-Implementations are allowed to support larger and smaller values as well.
-ECMA-262 only requires a precision of up to 21 significant digits.
+  Implementations are allowed to support larger and smaller values as well.
+  ECMA-262 only requires a precision of up to 21 significant digits.
 */
 @send
 external toPrecision: (int, ~digits: int=?) => string = "toPrecision"
@@ -184,9 +184,9 @@ Int.toPrecisionWithPrecision(1, ~digits=2) // "1.0"
 ## Exceptions
 
 - `RangeError`: If `digits` is not between 1 and 100 (inclusive).
-Implementations are allowed to support larger and smaller values as well.
-ECMA-262 only requires a precision of up to 21 significant digits.
-
+  Implementations are allowed to support larger and smaller values as well.
+  ECMA-262 only requires a precision of up to 21 significant digits.
+  
 */
 @send @deprecated("Use `toPrecision` instead")
 external toPrecisionWithPrecision: (int, ~digits: int) => string = "toPrecision"
@@ -376,7 +376,7 @@ let rangeWithOptions: (int, int, rangeOptions) => array<int>
 /**
 `clamp(~min=?, ~max=?, value)` returns `value`, optionally bounded by `min` and `max`.
 
-if `max` < `min` returns `min`.
+if `max` \< `min` returns `min`.
 
 ## Examples
 
@@ -490,7 +490,7 @@ module Ref: {
   ```rescript
   let myRef = ref(4)
   Int.Ref.increment(myRef)
-  assertEqual(myRef.contents, 5)
+  myRef.contents == 5
   ```
   */
   external increment: ref<int> => unit = "%incr"
@@ -503,7 +503,7 @@ module Ref: {
   ```rescript
   let myRef = ref(4)
   Int.Ref.decrement(myRef)
-  assertEqual(myRef.contents, 3)
+  myRef.contents == 3
   ```
   */
   external decrement: ref<int> => unit = "%decr"

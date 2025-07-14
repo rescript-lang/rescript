@@ -1,4 +1,5 @@
 module Docgen = RescriptTools_Docgen
+module ExtractCodeBlocks = RescriptTools_ExtractCodeBlocks
 
 /** Returns the full file system path to the `rescript-tools` binary for the current platform, side stepping the JS that wraps the CLI.
  

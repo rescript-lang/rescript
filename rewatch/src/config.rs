@@ -145,16 +145,6 @@ pub struct Warnings {
     pub error: Option<Error>,
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq, Hash)]
-#[serde(untagged)]
-pub enum Reason {
-    Versioned {
-        #[serde(rename = "react-jsx")]
-        react_jsx: i32,
-    },
-    Unversioned(bool),
-}
-
 #[derive(Deserialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum NamespaceConfig {
@@ -212,7 +202,6 @@ pub struct Config {
     pub ppx_flags: Option<Vec<OneOrMore<String>>>,
     #[serde(rename = "bsc-flags", alias = "compiler-flags")]
     pub bsc_flags: Option<Vec<OneOrMore<String>>>,
-    pub reason: Option<Reason>,
     pub namespace: Option<NamespaceConfig>,
     pub jsx: Option<JsxSpecs>,
     #[serde(rename = "gentypeconfig")]
@@ -373,22 +362,15 @@ impl Config {
         }
     }
     pub fn get_jsx_args(&self) -> Vec<String> {
-        match (self.reason.to_owned(), self.jsx.to_owned()) {
-            (_, Some(jsx)) => match jsx.version {
+        match self.jsx.to_owned() {
+            Some(jsx) => match jsx.version {
                 Some(version) if version == 3 || version == 4 => {
                     vec!["-bs-jsx".to_string(), version.to_string()]
                 }
                 Some(_version) => panic!("Unsupported JSX version"),
                 None => vec![],
             },
-            (Some(Reason::Versioned { react_jsx }), None) => {
-                vec!["-bs-jsx".to_string(), format!("{}", react_jsx)]
-            }
-            (Some(Reason::Unversioned(true)), None) => {
-                // If Reason is 'true' - we should default to the latest
-                vec!["-bs-jsx".to_string()]
-            }
-            _ => vec![],
+            None => vec![],
         }
     }
 

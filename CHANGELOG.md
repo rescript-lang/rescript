@@ -7,26 +7,43 @@
 > - :rocket: [New Feature]
 > - :bug: [Bug Fix]
 > - :memo: [Documentation]
-> - :house: [Internal]
 > - :nail_care: [Polish]
+> - :house: [Internal]
 
-# 12.0.0-beta.1 (Unreleased)
-
-#### :rocket: New Feature
-
-- Add experimental command to `rescript-tools` for formatting all ReScript code blocks in markdown. Either in a markdown file directly, or inside of docstrings in ReScript code. https://github.com/rescript-lang/rescript/pull/7598
-
-#### :house: Internal
-
-- Remove uncurried handling from rewatch. https://github.com/rescript-lang/rescript/pull/7625
+# 12.0.0-beta.2 (Unreleased)
 
 #### :nail_care: Polish
 
-- Add a warning if the name in package.json does not match the name in rescript.json. https://github.com/rescript-lang/rescript/pull/7604
+- Add missing backtick and spaces to `Belt.Map.map` doc comment. https://github.com/rescript-lang/rescript/pull/7632
+
+#### :house: Internal
+
+- Remove internal/unused `-bs-v` flag. https://github.com/rescript-lang/rescript/pull/7627
+- Remove unused `-bs-D` and `-bs-list-conditionals` flags. https://github.com/rescript-lang/rescript/pull/7631
+- Remove obsolete jsx options. https://github.com/rescript-lang/rescript/pull/7633
+- Remove obsolete option `-bs-unsafe-empty-array`. https://github.com/rescript-lang/rescript/pull/7635
+- Clean up `config.ml`. https://github.com/rescript-lang/rescript/pull/7636
+- Rewatch: simplify getting bsc path. https://github.com/rescript-lang/rescript/pull/7634
+- Remove uncurried handling from rewatch. https://github.com/rescript-lang/rescript/pull/7625
+
+#### :rocket: New Feature
+
+- Add experimental command to `rescript-tools` for extracting all ReScript code blocks from markdown, either a md-file directly, or inside of docstrings in ReScript code. https://github.com/rescript-lang/rescript/pull/7623
 
 #### :bug: Bug fix
 
 - Don't panic when dev files are not present during clean. https://github.com/rescript-lang/rescript/pull/7622
+
+# 12.0.0-beta.1
+
+#### :rocket: New Feature
+
+- Add experimental command to `rescript-tools` for formatting all ReScript code blocks in markdown. Either in a markdown file directly, or inside of docstrings in ReScript code. https://github.com/rescript-lang/rescript/pull/7598
+- Add `String.getSymbolUnsafe` back to Stdlib. https://github.com/rescript-lang/rescript/pull/7626
+
+#### :nail_care: Polish
+
+- Add a warning if the name in package.json does not match the name in rescript.json. https://github.com/rescript-lang/rescript/pull/7604
 
 # 12.0.0-alpha.15
 

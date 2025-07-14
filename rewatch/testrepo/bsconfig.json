@@ -33,8 +33,5 @@
     "@testrepo/with-dev-deps",
     "@testrepo/compiled-by-legacy",
     "@testrepo/nonexisting-dev-files"
-  ],
-  "reason": {
-    "react-jsx": 3
-  }
+  ]
 }
