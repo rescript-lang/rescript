@@ -515,22 +515,18 @@ pub fn get_source_files(
     };
 
     let path_dir = Path::new(&source.dir);
-    let is_clean = match dev_deps {
-        DevDeps::Clean => true,
-        _ => false,
-    };
     match (dev_deps, type_) {
         (DevDeps::DontBuild, Some(type_)) if type_ == "dev" => (),
+        (DevDeps::Clean, Some(type_)) if type_ == "dev" && !package_dir.join(path_dir).exists() => (),
         _ => match read_folders(filter, package_dir, path_dir, recurse) {
             Ok(files) => map.extend(files),
 
-            Err(_e) if !is_clean => log::error!(
+            Err(_e) => log::error!(
                 "Could not read folder: {:?}. Specified in dependency: {}, located {:?}...",
                 path_dir.to_path_buf().into_os_string(),
                 package_name,
                 package_dir
             ),
-            Err(_) => {}
         },
     };
 
