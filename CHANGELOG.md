@@ -24,7 +24,6 @@
 - Remove obsolete option `-bs-unsafe-empty-array`. https://github.com/rescript-lang/rescript/pull/7635
 - Clean up `config.ml`. https://github.com/rescript-lang/rescript/pull/7636
 - Rewatch: simplify getting bsc path. https://github.com/rescript-lang/rescript/pull/7634
-- Remove uncurried handling from rewatch. https://github.com/rescript-lang/rescript/pull/7625
 
 #### :rocket: New Feature
 
@@ -45,6 +44,10 @@
 #### :nail_care: Polish
 
 - Add a warning if the name in package.json does not match the name in rescript.json. https://github.com/rescript-lang/rescript/pull/7604
+
+#### :house: Internal
+
+- Remove uncurried handling from rewatch. https://github.com/rescript-lang/rescript/pull/7625
 
 # 12.0.0-alpha.15
 
