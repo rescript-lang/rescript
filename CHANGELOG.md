@@ -29,6 +29,11 @@
 
 - Add experimental command to `rescript-tools` for extracting all ReScript code blocks from markdown, either a md-file directly, or inside of docstrings in ReScript code. https://github.com/rescript-lang/rescript/pull/7623
 
+#### :bug: Bug fix
+
+- Fix `typeof` parens on functions. https://github.com/rescript-lang/rescript/pull/7643
+
+
 # 12.0.0-beta.1
 
 #### :rocket: New Feature
