@@ -501,7 +501,7 @@ pub fn get_source_files(
     package_dir: &Path,
     filter: &Option<regex::Regex>,
     source: &config::PackageSource,
-    dev_deps: DevDeps,
+    build_dev_deps: bool,
 ) -> AHashMap<PathBuf, SourceFileMeta> {
     let mut map: AHashMap<PathBuf, SourceFileMeta> = AHashMap::new();
 
@@ -515,9 +515,8 @@ pub fn get_source_files(
     };
 
     let path_dir = Path::new(&source.dir);
-    match (dev_deps, type_) {
-        (DevDeps::DontBuild, Some(type_)) if type_ == "dev" => (),
-        (DevDeps::Clean, Some(type_)) if type_ == "dev" && !package_dir.join(path_dir).exists() => (),
+    match (build_dev_deps, type_) {
+        (false, Some(type_)) if type_ == "dev" => (),
         _ => match read_folders(filter, package_dir, path_dir, recurse) {
             Ok(files) => map.extend(files),
 
@@ -538,14 +537,22 @@ pub fn get_source_files(
 fn extend_with_children(
     filter: &Option<regex::Regex>,
     mut build: AHashMap<String, Package>,
-    dev_deps: DevDeps,
+    build_dev_deps: bool,
 ) -> AHashMap<String, Package> {
     for (_key, package) in build.iter_mut() {
         let mut map: AHashMap<PathBuf, SourceFileMeta> = AHashMap::new();
         package
             .source_folders
             .par_iter()
-            .map(|source| get_source_files(&package.name, Path::new(&package.path), filter, source, dev_deps))
+            .map(|source| {
+                get_source_files(
+                    &package.name,
+                    Path::new(&package.path),
+                    filter,
+                    source,
+                    build_dev_deps,
+                )
+            })
             .collect::<Vec<AHashMap<PathBuf, SourceFileMeta>>>()
             .into_iter()
             .for_each(|source| map.extend(source));
@@ -575,13 +582,6 @@ fn extend_with_children(
     build
 }
 
-#[derive(Clone, Copy)]
-pub enum DevDeps {
-    Build,
-    DontBuild,
-    Clean,
-}
-
 /// Make turns a folder, that should contain a config, into a tree of Packages.
 /// It does so in two steps:
 /// 1. Get all the packages parsed, and take all the source folders from the config
@@ -594,13 +594,13 @@ pub fn make(
     root_folder: &Path,
     workspace_root: &Option<PathBuf>,
     show_progress: bool,
-    dev_deps: DevDeps,
+    build_dev_deps: bool,
 ) -> Result<AHashMap<String, Package>> {
     let map = read_packages(root_folder, workspace_root, show_progress)?;
 
     /* Once we have the deduplicated packages, we can add the source files for each - to minimize
      * the IO */
-    let result = extend_with_children(filter, map, dev_deps);
+    let result = extend_with_children(filter, map, build_dev_deps);
 
     Ok(result)
 }

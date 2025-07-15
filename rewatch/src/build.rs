@@ -8,10 +8,7 @@ pub mod packages;
 pub mod parse;
 pub mod read_compile_state;
 
-use self::compile::compiler_args;
-use self::parse::parser_args;
 use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_with_expired_deps_dirty};
-use crate::build::packages::DevDeps;
 use crate::helpers::emojis::*;
 use crate::helpers::{self, get_workspace_root};
 use crate::sourcedirs;
@@ -28,6 +25,9 @@ use std::io::{Write, stdout};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::{Duration, Instant};
+
+use self::compile::compiler_args;
+use self::parse::parser_args;
 
 fn is_dirty(module: &Module) -> bool {
     match module.source_type {
@@ -133,11 +133,7 @@ pub fn initialize_build(
         &project_root,
         &workspace_root,
         show_progress,
-        if build_dev_deps {
-            DevDeps::Build
-        } else {
-            DevDeps::DontBuild
-        },
+        build_dev_deps,
     )?;
     let timing_package_tree_elapsed = timing_package_tree.elapsed();
 

@@ -1,6 +1,5 @@
 use super::build_types::*;
 use super::packages;
-use crate::build::packages::DevDeps;
 use crate::helpers;
 use crate::helpers::emojis::*;
 use ahash::AHashSet;
@@ -342,7 +341,7 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool) -> Result<
         show_progress,
         // Build the package tree with dev dependencies.
         // They should always be cleaned if they are there.
-        DevDeps::Clean,
+        true,
     )?;
     let root_config_name = packages::read_package_name(&project_root)?;
     let bsc_path = helpers::get_bsc();
