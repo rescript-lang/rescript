@@ -25,6 +25,7 @@
 - Clean up `config.ml`. https://github.com/rescript-lang/rescript/pull/7636
 - Rewatch: simplify getting bsc path. https://github.com/rescript-lang/rescript/pull/7634
 - Rewatch: only get `"type": "dev"` source files for local packages. https://github.com/rescript-lang/rescript/pull/7646
+- Rewatch: add support for `rescript -w` for compatibility. https://github.com/rescript-lang/rescript/pull/7649
 
 #### :rocket: New Feature
 
