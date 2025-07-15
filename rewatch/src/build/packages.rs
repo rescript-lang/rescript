@@ -243,9 +243,9 @@ pub fn read_config(package_dir: &Path) -> Result<config::Config> {
     let bsconfig_json_path = package_dir.join("bsconfig.json");
 
     if Path::new(&rescript_json_path).exists() {
-        config::read(&rescript_json_path)
+        config::Config::new(&rescript_json_path)
     } else {
-        config::read(&bsconfig_json_path)
+        config::Config::new(&bsconfig_json_path)
     }
 }
 
@@ -310,10 +310,10 @@ fn read_dependencies(
     show_progress: bool,
     build_dev_deps: bool,
 ) -> Vec<Dependency> {
-    let mut dependencies = parent_config.bs_dependencies.to_owned().unwrap_or_default();
+    let mut dependencies = parent_config.dependencies.to_owned().unwrap_or_default();
 
     // Concatenate dev dependencies if build_dev_deps is true
-    if build_dev_deps && let Some(dev_deps) = parent_config.bs_dev_dependencies.to_owned() {
+    if build_dev_deps && let Some(dev_deps) = parent_config.dev_dependencies.to_owned() {
         dependencies.extend(dev_deps);
     }
 
@@ -916,9 +916,9 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
     let mut detected_unallowed_dependencies: AHashMap<String, UnallowedDependency> = AHashMap::new();
 
     for (package_name, package) in packages {
-        let bs_dependencies = &package.config.bs_dependencies.to_owned().unwrap_or(vec![]);
+        let bs_dependencies = &package.config.dependencies.to_owned().unwrap_or(vec![]);
         let pinned_dependencies = &package.config.pinned_dependencies.to_owned().unwrap_or(vec![]);
-        let dev_dependencies = &package.config.bs_dev_dependencies.to_owned().unwrap_or(vec![]);
+        let dev_dependencies = &package.config.dev_dependencies.to_owned().unwrap_or(vec![]);
 
         [
             ("bs-dependencies", bs_dependencies),
@@ -984,39 +984,30 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
 
 #[cfg(test)]
 mod test {
+    use crate::config;
+
     use super::{Namespace, Package};
-    use crate::config::Source;
     use ahash::{AHashMap, AHashSet};
     use std::path::PathBuf;
 
-    fn create_package(
+    pub struct CreatePackageArgs {
         name: String,
         bs_deps: Vec<String>,
         pinned_deps: Vec<String>,
         build_dev_deps: Vec<String>,
         allowed_dependents: Option<Vec<String>>,
-    ) -> Package {
+    }
+
+    fn create_package(args: CreatePackageArgs) -> Package {
         Package {
-            name: name.clone(),
-            config: crate::config::Config {
-                name: name.clone(),
-                sources: Some(crate::config::OneOrMore::Single(Source::Shorthand(String::from(
-                    "Source",
-                )))),
-                package_specs: None,
-                warnings: None,
-                suffix: None,
-                pinned_dependencies: Some(pinned_deps),
-                bs_dependencies: Some(bs_deps),
-                bs_dev_dependencies: Some(build_dev_deps),
-                ppx_flags: None,
-                bsc_flags: None,
-                namespace: None,
-                jsx: None,
-                gentype_config: None,
-                namespace_entry: None,
-                allowed_dependents,
-            },
+            name: args.name.clone(),
+            config: config::tests::create_config(config::tests::CreateConfigArgs {
+                name: args.name,
+                bs_deps: args.bs_deps,
+                pinned_deps: args.pinned_deps,
+                build_dev_deps: args.build_dev_deps,
+                allowed_dependents: args.allowed_dependents,
+            }),
             source_folders: AHashSet::new(),
             source_files: None,
             namespace: Namespace::Namespace(String::from("Package1")),
@@ -1033,23 +1024,23 @@ mod test {
         let mut packages: AHashMap<String, Package> = AHashMap::new();
         packages.insert(
             String::from("Package1"),
-            create_package(
-                String::from("Package1"),
-                vec![String::from("Package2")],
-                vec![],
-                vec![],
-                None,
-            ),
+            create_package(CreatePackageArgs {
+                name: String::from("Package1"),
+                bs_deps: vec![String::from("Package2")],
+                pinned_deps: vec![],
+                build_dev_deps: vec![],
+                allowed_dependents: None,
+            }),
         );
         packages.insert(
             String::from("Package2"),
-            create_package(
-                String::from("Package2"),
-                vec![],
-                vec![],
-                vec![],
-                Some(vec![String::from("Package3")]),
-            ),
+            create_package(CreatePackageArgs {
+                name: String::from("Package2"),
+                bs_deps: vec![],
+                pinned_deps: vec![],
+                build_dev_deps: vec![],
+                allowed_dependents: Some(vec![String::from("Package3")]),
+            }),
         );
 
         let is_valid = super::validate_packages_dependencies(&packages);
@@ -1061,23 +1052,23 @@ mod test {
         let mut packages: AHashMap<String, Package> = AHashMap::new();
         packages.insert(
             String::from("Package1"),
-            create_package(
-                String::from("Package1"),
-                vec![],
-                vec![String::from("Package2")],
-                vec![],
-                None,
-            ),
+            create_package(CreatePackageArgs {
+                name: String::from("Package1"),
+                bs_deps: vec![],
+                pinned_deps: vec![String::from("Package2")],
+                build_dev_deps: vec![],
+                allowed_dependents: None,
+            }),
         );
         packages.insert(
             String::from("Package2"),
-            create_package(
-                String::from("Package2"),
-                vec![],
-                vec![],
-                vec![],
-                Some(vec![String::from("Package3")]),
-            ),
+            create_package(CreatePackageArgs {
+                name: String::from("Package2"),
+                bs_deps: vec![],
+                pinned_deps: vec![],
+                build_dev_deps: vec![],
+                allowed_dependents: Some(vec![String::from("Package3")]),
+            }),
         );
 
         let is_valid = super::validate_packages_dependencies(&packages);
@@ -1089,23 +1080,23 @@ mod test {
         let mut packages: AHashMap<String, Package> = AHashMap::new();
         packages.insert(
             String::from("Package1"),
-            create_package(
-                String::from("Package1"),
-                vec![],
-                vec![],
-                vec![String::from("Package2")],
-                None,
-            ),
+            create_package(CreatePackageArgs {
+                name: String::from("Package1"),
+                bs_deps: vec![],
+                pinned_deps: vec![],
+                build_dev_deps: vec![String::from("Package2")],
+                allowed_dependents: None,
+            }),
         );
         packages.insert(
             String::from("Package2"),
-            create_package(
-                String::from("Package2"),
-                vec![],
-                vec![],
-                vec![],
-                Some(vec![String::from("Package3")]),
-            ),
+            create_package(CreatePackageArgs {
+                name: String::from("Package2"),
+                bs_deps: vec![],
+                pinned_deps: vec![],
+                build_dev_deps: vec![],
+                allowed_dependents: Some(vec![String::from("Package3")]),
+            }),
         );
 
         let is_valid = super::validate_packages_dependencies(&packages);
@@ -1117,23 +1108,23 @@ mod test {
         let mut packages: AHashMap<String, Package> = AHashMap::new();
         packages.insert(
             String::from("Package1"),
-            create_package(
-                String::from("Package1"),
-                vec![String::from("Package2")],
-                vec![],
-                vec![],
-                None,
-            ),
+            create_package(CreatePackageArgs {
+                name: String::from("Package1"),
+                bs_deps: vec![String::from("Package2")],
+                pinned_deps: vec![],
+                build_dev_deps: vec![],
+                allowed_dependents: None,
+            }),
         );
         packages.insert(
             String::from("Package2"),
-            create_package(
-                String::from("Package2"),
-                vec![],
-                vec![],
-                vec![],
-                Some(vec![String::from("Package1")]),
-            ),
+            create_package(CreatePackageArgs {
+                name: String::from("Package2"),
+                bs_deps: vec![],
+                pinned_deps: vec![],
+                build_dev_deps: vec![],
+                allowed_dependents: Some(vec![String::from("Package1")]),
+            }),
         );
 
         let is_valid = super::validate_packages_dependencies(&packages);

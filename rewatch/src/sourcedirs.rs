@@ -73,8 +73,8 @@ pub fn print(buildstate: &BuildState) {
             // Extract Pkgs
             let pkgs = [
                 &package.config.pinned_dependencies,
-                &package.config.bs_dependencies,
-                &package.config.bs_dev_dependencies,
+                &package.config.dependencies,
+                &package.config.dev_dependencies,
             ]
             .into_iter()
             .map(|dependencies| deps_to_pkgs(&buildstate.packages, dependencies));

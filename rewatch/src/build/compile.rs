@@ -504,7 +504,7 @@ fn get_dependency_paths(
     is_file_type_dev: bool,
 ) -> Vec<Vec<String>> {
     let normal_deps = config
-        .bs_dependencies
+        .dependencies
         .clone()
         .unwrap_or_default()
         .into_iter()
@@ -514,7 +514,7 @@ fn get_dependency_paths(
     // We can only access dev dependencies for source_files that are marked as "type":"dev"
     let dev_deps = if is_file_type_dev {
         config
-            .bs_dev_dependencies
+            .dev_dependencies
             .clone()
             .unwrap_or_default()
             .into_iter()
