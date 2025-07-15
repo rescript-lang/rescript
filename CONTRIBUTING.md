@@ -54,7 +54,7 @@ opam init
 opam switch create 5.3.0
 
 # Install dev dependencies from OPAM
-opam install . --deps-only --with-test --with-dev-setup -y
+opam install . --deps-only --with-test -y
 ```
 
 #### npm install
