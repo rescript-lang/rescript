@@ -2,6 +2,11 @@ use std::{ffi::OsString, ops::Deref};
 
 use clap::{Args, Parser, Subcommand};
 use clap_verbosity_flag::InfoLevel;
+use regex::Regex;
+
+fn parse_regex(s: &str) -> Result<Regex, regex::Error> {
+    Regex::new(s)
+}
 
 /// ReScript - Fast, Simple, Fully Typed JavaScript from the Future
 #[derive(Parser, Debug)]
@@ -39,8 +44,8 @@ pub struct FilterArg {
     ///
     /// Filter allows for a regex to be supplied which will filter the files to be compiled. For
     /// instance, to filter out test files for compilation while doing feature work.
-    #[arg(short, long)]
-    pub filter: Option<String>,
+    #[arg(short, long, value_parser = parse_regex)]
+    pub filter: Option<Regex>,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -107,6 +112,10 @@ pub struct BuildArgs {
 
     #[command(flatten)]
     pub snapshot_output: SnapshotOutputArg,
+
+    /// Watch mode (deprecated, use `rescript watch` instead)
+    #[arg(short, default_value_t = false, num_args = 0..=1)]
+    pub watch: bool,
 }
 
 #[derive(Args, Clone, Debug)]
@@ -128,6 +137,19 @@ pub struct WatchArgs {
 
     #[command(flatten)]
     pub snapshot_output: SnapshotOutputArg,
+}
+
+impl From<BuildArgs> for WatchArgs {
+    fn from(build_args: BuildArgs) -> Self {
+        Self {
+            folder: build_args.folder,
+            filter: build_args.filter,
+            after_build: build_args.after_build,
+            create_sourcedirs: build_args.create_sourcedirs,
+            dev: build_args.dev,
+            snapshot_output: build_args.snapshot_output,
+        }
+    }
 }
 
 #[derive(Subcommand, Clone, Debug)]
@@ -187,7 +209,7 @@ impl Deref for FolderArg {
 }
 
 impl Deref for FilterArg {
-    type Target = Option<String>;
+    type Target = Option<Regex>;
 
     fn deref(&self) -> &Self::Target {
         &self.filter

@@ -1,7 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
 use log::LevelFilter;
-use regex::Regex;
 use std::{io::Write, path::Path};
 
 use rewatch::{build, cli, cmd, lock, watcher};
@@ -17,13 +16,20 @@ fn main() -> Result<()> {
         .target(env_logger::fmt::Target::Stdout)
         .init();
 
-    let command = args.command.unwrap_or(cli::Command::Build(args.build_args));
+    let mut command = args.command.unwrap_or(cli::Command::Build(args.build_args));
+
+    if let cli::Command::Build(build_args) = &command {
+        if build_args.watch {
+            log::warn!("`rescript build -w` is deprecated. Please use `rescript watch` instead.");
+            command = cli::Command::Watch(build_args.clone().into());
+        }
+    }
 
     // The 'normal run' mode will show the 'pretty' formatted progress. But if we turn off the log
     // level, we should never show that.
     let show_progress = log_level_filter == LevelFilter::Info;
 
-    match command.clone() {
+    match command {
         cli::Command::CompilerArgs { path, dev } => {
             println!("{}", build::get_compiler_args(Path::new(&path), *dev)?);
             std::process::exit(0);
@@ -31,13 +37,8 @@ fn main() -> Result<()> {
         cli::Command::Build(build_args) => {
             let _lock = get_lock(&build_args.folder);
 
-            let filter = build_args
-                .filter
-                .as_ref()
-                .map(|filter| Regex::new(&filter).expect("Could not parse regex"));
-
             match build::build(
-                &filter,
+                &build_args.filter,
                 Path::new(&build_args.folder as &str),
                 show_progress,
                 build_args.no_timing,
@@ -60,12 +61,8 @@ fn main() -> Result<()> {
         cli::Command::Watch(watch_args) => {
             let _lock = get_lock(&watch_args.folder);
 
-            let filter = watch_args
-                .filter
-                .as_ref()
-                .map(|filter| Regex::new(&filter).expect("Could not parse regex"));
             watcher::start(
-                &filter,
+                &watch_args.filter,
                 show_progress,
                 &watch_args.folder,
                 (*watch_args.after_build).clone(),

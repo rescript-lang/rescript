@@ -196,7 +196,7 @@ pub fn get_bsc() -> PathBuf {
 
     bsc_path
         .canonicalize()
-        .expect("Could not get bsc path")
+        .expect("Could not get bsc path, did you set environment variable RESCRIPT_BSC_EXE ?")
         .to_stripped_verbatim_path()
 }
 
