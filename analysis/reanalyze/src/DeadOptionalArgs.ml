@@ -31,8 +31,8 @@ let addFunctionReference ~(locFrom : Location.t) ~(locTo : Location.t) =
 let rec hasOptionalArgs (texpr : Types.type_expr) =
   match texpr.desc with
   | _ when not (active ()) -> false
-  | Tarrow (Optional _, _tFrom, _tTo, _, _) -> true
-  | Tarrow (_, _tFrom, tTo, _, _) -> hasOptionalArgs tTo
+  | Tarrow ({lbl = Optional _}, _tTo, _, _) -> true
+  | Tarrow (_, tTo, _, _) -> hasOptionalArgs tTo
   | Tlink t -> hasOptionalArgs t
   | Tsubst t -> hasOptionalArgs t
   | _ -> false
@@ -40,8 +40,8 @@ let rec hasOptionalArgs (texpr : Types.type_expr) =
 let rec fromTypeExpr (texpr : Types.type_expr) =
   match texpr.desc with
   | _ when not (active ()) -> []
-  | Tarrow (Optional s, _tFrom, tTo, _, _) -> s :: fromTypeExpr tTo
-  | Tarrow (_, _tFrom, tTo, _, _) -> fromTypeExpr tTo
+  | Tarrow ({lbl = Optional s}, tTo, _, _) -> s :: fromTypeExpr tTo
+  | Tarrow (_, tTo, _, _) -> fromTypeExpr tTo
   | Tlink t -> fromTypeExpr t
   | Tsubst t -> fromTypeExpr t
   | _ -> []

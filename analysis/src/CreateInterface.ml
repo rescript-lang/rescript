@@ -124,7 +124,10 @@ let printSignature ~extractor ~signature =
     in
     match typ.desc with
     | Tarrow
-        (_, {desc = Tconstr (Path.Pident propsId, typeArgs, _)}, retType, _, _)
+        ( {typ = {desc = Tconstr (Path.Pident propsId, typeArgs, _)}},
+          retType,
+          _,
+          _ )
       when Ident.name propsId = "props" ->
       Some (typeArgs, retType)
     | Tconstr
@@ -175,7 +178,7 @@ let printSignature ~extractor ~signature =
             in
             {
               retType with
-              desc = Tarrow (lbl, propType, mkFunType rest, Cok, None);
+              desc = Tarrow ({lbl; typ = propType}, mkFunType rest, Cok, None);
             }
         in
         let funType =
@@ -183,7 +186,10 @@ let printSignature ~extractor ~signature =
             let tUnit =
               Ctype.newconstr (Path.Pident (Ident.create "unit")) []
             in
-            {retType with desc = Tarrow (Nolabel, tUnit, retType, Cok, None)}
+            {
+              retType with
+              desc = Tarrow ({lbl = Nolabel; typ = tUnit}, retType, Cok, None);
+            }
           else mkFunType labelDecls
         in
         sigItemToString

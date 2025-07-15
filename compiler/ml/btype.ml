@@ -260,7 +260,7 @@ let rec iter_row f row =
 let iter_type_expr f ty =
   match ty.desc with
   | Tvar _ -> ()
-  | Tarrow (_, ty1, ty2, _, _) ->
+  | Tarrow ({typ = ty1}, ty2, _, _) ->
     f ty1;
     f ty2
   | Ttuple l -> List.iter f l
@@ -428,8 +428,8 @@ let rec norm_univar ty =
 
 let rec copy_type_desc ?(keep_names = false) f = function
   | Tvar _ as ty -> if keep_names then ty else Tvar None
-  | Tarrow (p, ty1, ty2, c, arity) ->
-    Tarrow (p, f ty1, f ty2, copy_commu c, arity)
+  | Tarrow (arg, ret, c, arity) ->
+    Tarrow ({arg with typ = f arg.typ}, f ret, copy_commu c, arity)
   | Ttuple l -> Ttuple (List.map f l)
   | Tconstr (p, l, _) -> Tconstr (p, List.map f l, ref Mnil)
   | Tobject (ty, {contents = Some (p, tl)}) ->

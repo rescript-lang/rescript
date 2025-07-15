@@ -173,10 +173,10 @@ and raw_type_list tl = raw_list raw_type tl
 
 and raw_type_desc ppf = function
   | Tvar name -> fprintf ppf "Tvar %a" print_name name
-  | Tarrow (l, t1, t2, c, a) ->
+  | Tarrow (arg, ret, c, a) ->
     fprintf ppf "@[<hov1>Tarrow(\"%s\",@,%a,@,%a,@,%s,@,%s)@]"
-      (string_of_label l) raw_type t1 raw_type t2 (safe_commu_repr [] c)
-      (string_of_arity a)
+      (string_of_label arg.lbl) raw_type arg.typ raw_type ret
+      (safe_commu_repr [] c) (string_of_arity a)
   | Ttuple tl -> fprintf ppf "@[<1>Ttuple@,%a@]" raw_type_list tl
   | Tconstr (p, tl, abbrev) ->
     fprintf ppf "@[<hov1>Tconstr(@,%a,@,%a,@,%a)@]" path p raw_type_list tl
@@ -516,9 +516,9 @@ let rec mark_loops_rec visited ty =
     let visited = px :: visited in
     match ty.desc with
     | Tvar _ -> add_named_var ty
-    | Tarrow (_, ty1, ty2, _, _) ->
-      mark_loops_rec visited ty1;
-      mark_loops_rec visited ty2
+    | Tarrow (arg, ret, _, _) ->
+      mark_loops_rec visited arg.typ;
+      mark_loops_rec visited ret
     | Ttuple tyl -> List.iter (mark_loops_rec visited) tyl
     | Tconstr (p, tyl, _) ->
       let _p', s = best_type_path p in
@@ -621,22 +621,18 @@ let rec tree_of_typexp ?(printing_context : printing_context option) sch ty =
         let non_gen = is_non_gen sch ty in
         let name_gen = if non_gen then new_weak_name ty else new_name in
         Otyp_var (non_gen, name_of_type name_gen ty)
-      | Tarrow (l, ty1, ty2, _, arity) ->
-        let pr_arrow l ty1 ty2 =
-          let lab = string_of_label l in
-          let t1 =
-            if is_optional l then
-              match (repr ty1).desc with
-              | Tconstr (path, [ty], _) when Path.same path Predef.path_option
-                ->
-                tree_of_typexp ?printing_context sch ty
-              | _ -> Otyp_stuff "<hidden>"
-            else tree_of_typexp ?printing_context sch ty1
-          in
-          (* should pass arity here? *)
-          Otyp_arrow (lab, t1, tree_of_typexp ?printing_context sch ty2, arity)
+      | Tarrow (arg, ret, _, arity) ->
+        let lab = string_of_label arg.lbl in
+        let t1 =
+          if is_optional arg.lbl then
+            match (repr arg.typ).desc with
+            | Tconstr (path, [ty], _) when Path.same path Predef.path_option ->
+              tree_of_typexp ?printing_context sch ty
+            | _ -> Otyp_stuff "<hidden>"
+          else tree_of_typexp ?printing_context sch arg.typ
         in
-        pr_arrow l ty1 ty2
+        (* should pass arity here? *)
+        Otyp_arrow (lab, t1, tree_of_typexp ?printing_context sch ret, arity)
       | Ttuple tyl -> Otyp_tuple (tree_of_typlist ?printing_context sch tyl)
       | Tconstr (p, _tyl, _abbrev)
         when printing_context

@@ -1036,14 +1036,14 @@ let compute_variance env visited vari ty =
       visited := TypeMap.add ty vari !visited;
       let compute_same = compute_variance_rec vari in
       match ty.desc with
-      | Tarrow (_, ty1, ty2, _, _) ->
+      | Tarrow (arg, ret, _, _) ->
         let open Variance in
         let v = conjugate vari in
         let v1 =
           if mem May_pos v || mem May_neg v then set May_weak true v else v
         in
-        compute_variance_rec v1 ty1;
-        compute_same ty2
+        compute_variance_rec v1 arg.typ;
+        compute_same ret
       | Ttuple tl -> List.iter compute_same tl
       | Tconstr (path, tl, _) -> (
         let open Variance in
@@ -1842,8 +1842,8 @@ let transl_exception env sext =
 
 let rec arity_from_arrow_type env core_type ty =
   match (core_type.ptyp_desc, (Ctype.repr ty).desc) with
-  | Ptyp_arrow {ret = ct2}, Tarrow (_, _, t2, _, _) ->
-    1 + arity_from_arrow_type env ct2 t2
+  | Ptyp_arrow {ret = ct2}, Tarrow (_, ret, _, _) ->
+    1 + arity_from_arrow_type env ct2 ret
   | Ptyp_arrow _, _ | _, Tarrow _ -> assert false
   | _ -> 0
 

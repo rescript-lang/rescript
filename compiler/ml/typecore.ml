@@ -722,12 +722,11 @@ let show_extra_help ppf _env trace =
 let rec collect_missing_arguments env type1 type2 =
   match type1 with
   (* why do we use Ctype.matches here? Please see https://github.com/rescript-lang/rescript-compiler/pull/2554 *)
-  | {Types.desc = Tarrow (label, argtype, typ, _, _)}
-    when Ctype.matches env typ type2 ->
-    Some [(label, argtype)]
-  | {desc = Tarrow (label, argtype, typ, _, _)} -> (
-    match collect_missing_arguments env typ type2 with
-    | Some res -> Some ((label, argtype) :: res)
+  | {Types.desc = Tarrow (arg, ret, _, _)} when Ctype.matches env ret type2 ->
+    Some [(arg.lbl, arg.typ)]
+  | {desc = Tarrow (arg, ret, _, _)} -> (
+    match collect_missing_arguments env ret type2 with
+    | Some res -> Some ((arg.lbl, arg.typ) :: res)
     | None -> None)
   | _ -> None
 
@@ -1874,7 +1873,7 @@ let rec approx_type env sty =
   | Ptyp_arrow {arg = {lbl = p}; ret = sty; arity} ->
     let p = Asttypes.to_noloc p in
     let ty1 = if is_optional p then type_option (newvar ()) else newvar () in
-    newty (Tarrow (p, ty1, approx_type env sty, Cok, arity))
+    newty (Tarrow ({lbl = p; typ = ty1}, approx_type env sty, Cok, arity))
   | Ptyp_tuple args -> newty (Ttuple (List.map (approx_type env) args))
   | Ptyp_constr (lid, ctl) -> (
     try
@@ -1893,7 +1892,7 @@ let rec type_approx env sexp =
   | Pexp_fun {arg_label = p; rhs = e; arity} ->
     let p = Asttypes.to_noloc p in
     let ty = if is_optional p then type_option (newvar ()) else newvar () in
-    newty (Tarrow (p, ty, type_approx env e, Cok, arity))
+    newty (Tarrow ({lbl = p; typ = ty}, type_approx env e, Cok, arity))
   | Pexp_match (_, {pc_rhs = e} :: _) -> type_approx env e
   | Pexp_try (e, _) -> type_approx env e
   | Pexp_tuple l -> newty (Ttuple (List.map (type_approx env) l))
@@ -1928,8 +1927,8 @@ let rec list_labels_aux env visited ls ty_fun =
   if List.memq ty visited then (List.rev ls, false)
   else
     match ty.desc with
-    | Tarrow (l, _, ty_res, _, arity) when arity = None || visited = [] ->
-      list_labels_aux env (ty :: visited) (l :: ls) ty_res
+    | Tarrow (arg, ty_res, _, arity) when arity = None || visited = [] ->
+      list_labels_aux env (ty :: visited) (arg.lbl :: ls) ty_res
     | _ -> (List.rev ls, is_Tvar ty)
 
 let list_labels env ty =
@@ -2208,8 +2207,8 @@ let rec lower_args env seen ty_fun =
   if List.memq ty seen then ()
   else
     match ty.desc with
-    | Tarrow (_l, ty_arg, ty_fun, _com, _) ->
-      (try unify_var env (newvar ()) ty_arg with Unify _ -> assert false);
+    | Tarrow (arg, ty_fun, _com, _) ->
+      (try unify_var env (newvar ()) arg.typ with Unify _ -> assert false);
       lower_args env (ty :: seen) ty_fun
     | _ -> ()
 
@@ -3208,7 +3207,9 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
     match arity with
     | None -> ty_expected_
     | Some arity ->
-      let fun_t = newty (Tarrow (l, newvar (), newvar (), Cok, Some arity)) in
+      let fun_t =
+        newty (Tarrow ({lbl = l; typ = newvar ()}, newvar (), Cok, Some arity))
+      in
       unify_exp_types ~context:None loc env fun_t ty_expected_;
       fun_t
   in
@@ -3250,7 +3251,8 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
       Warnings.Unerasable_optional_argument;
   let param = name_pattern "param" cases in
   let exp_type =
-    instance env (newgenty (Tarrow (l, ty_arg, ty_res, Cok, arity)))
+    instance env
+      (newgenty (Tarrow ({lbl = l; typ = ty_arg}, ty_res, Cok, arity)))
   in
   Warnings.restore state;
   re
@@ -3466,7 +3468,8 @@ and type_application ~context total_app env funct (sargs : sargs) :
     targs * Types.type_expr * bool =
   let result_type omitted ty_fun =
     List.fold_left
-      (fun ty_fun (l, ty, lv) -> newty2 lv (Tarrow (l, ty, ty_fun, Cok, None)))
+      (fun ty_fun (l, ty, lv) ->
+        newty2 lv (Tarrow ({lbl = l; typ = ty}, ty_fun, Cok, None)))
       ty_fun omitted
   in
   let has_label l ty_fun =
@@ -3484,7 +3487,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
     if force_tvar then Some (List.length sargs)
     else
       match (expand_head env funct.exp_type).desc with
-      | Tarrow (_, _, _, _, Some arity) -> Some arity
+      | Tarrow (_, _, _, Some arity) -> Some arity
       | _ -> None
   in
   let force_uncurried_type funct =
@@ -3532,8 +3535,8 @@ and type_application ~context total_app env funct (sargs : sargs) :
         if fully_applied then new_t
         else
           match new_t.desc with
-          | Tarrow (l, t1, t2, c, _) ->
-            {new_t with desc = Tarrow (l, t1, t2, c, Some newarity)}
+          | Tarrow (arg, ret, c, _) ->
+            {new_t with desc = Tarrow (arg, ret, c, Some newarity)}
           | _ -> new_t
       in
       (fully_applied, new_t)
@@ -3553,7 +3556,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
       in
       if List.length args < max_arity && total_app then
         match (expand_head env ty_fun).desc with
-        | Tarrow (Optional l, t1, t2, _, _) ->
+        | Tarrow ({lbl = Optional l; typ = t1}, t2, _, _) ->
           ignored := (Noloc.Optional l, t1, ty_fun.level) :: !ignored;
           let arg =
             ( Noloc.Optional l,
@@ -3581,9 +3584,11 @@ and type_application ~context total_app env funct (sargs : sargs) :
           if ty_fun.level >= t1.level && not_identity funct.exp_desc then
             Location.prerr_warning sarg1.pexp_loc Warnings.Unused_argument;
           unify env ty_fun
-            (newty (Tarrow (l1, t1, t2, Clink (ref Cunknown), top_arity)));
+            (newty
+               (Tarrow
+                  ({lbl = l1; typ = t1}, t2, Clink (ref Cunknown), top_arity)));
           (t1, t2)
-        | Tarrow (l, t1, t2, _, _)
+        | Tarrow ({lbl = l; typ = t1}, t2, _, _)
           when Asttypes.Noloc.same_arg_label l l1 && arity_ok ->
           (t1, t2)
         | td -> (
@@ -3622,8 +3627,8 @@ and type_application ~context total_app env funct (sargs : sargs) :
   let rec type_args ~context max_arity args omitted ~ty_fun ty_fun0
       ~(sargs : sargs) ~top_arity =
     match (expand_head env ty_fun, expand_head env ty_fun0) with
-    | ( {desc = Tarrow (l, ty, ty_fun, com, _); level = lv},
-        {desc = Tarrow (_, ty0, ty_fun0, _, _)} )
+    | ( {desc = Tarrow ({lbl = l; typ = ty}, ty_fun, com, _); level = lv},
+        {desc = Tarrow ({typ = ty0}, ty_fun0, _, _)} )
       when sargs <> [] && commu_repr com = Cok && List.length args < max_arity
       ->
       let name = label_name l and optional = is_optional l in
@@ -4278,8 +4283,8 @@ let report_error env loc ppf error =
   | Expr_type_clash
       {
         trace =
-          (_, {desc = Tarrow (_, _, _, _, None)})
-          :: (_, {desc = Tarrow (_, _, _, _, Some _)})
+          (_, {desc = Tarrow (_, _, _, None)})
+          :: (_, {desc = Tarrow (_, _, _, Some _)})
           :: _;
       } ->
     fprintf ppf
@@ -4288,8 +4293,8 @@ let report_error env loc ppf error =
   | Expr_type_clash
       {
         trace =
-          (_, {desc = Tarrow (_, _, _, _, Some arity_a)})
-          :: (_, {desc = Tarrow (_, _, _, _, Some arity_b)})
+          (_, {desc = Tarrow (_, _, _, Some arity_a)})
+          :: (_, {desc = Tarrow (_, _, _, Some arity_b)})
           :: _;
       }
     when arity_a <> arity_b ->
@@ -4304,10 +4309,10 @@ let report_error env loc ppf error =
   | Apply_non_function typ -> (
     (* modified *)
     match (repr typ).desc with
-    | Tarrow (_, _inputType, return_type, _, _) ->
+    | Tarrow (_, return_type, _, _) ->
       let rec count_number_of_args count {Types.desc} =
         match desc with
-        | Tarrow (_, _inputType, return_type, _, _) ->
+        | Tarrow (_, return_type, _, _) ->
           count_number_of_args (count + 1) return_type
         | _ -> count
       in
@@ -4490,7 +4495,7 @@ let report_error env loc ppf error =
     *)
     let rec collect_args ?(acc = []) typ =
       match typ.desc with
-      | Tarrow (arg, _, next, _, _) -> collect_args ~acc:(arg :: acc) next
+      | Tarrow (arg, next, _, _) -> collect_args ~acc:(arg.lbl :: acc) next
       | _ -> acc
     in
     let args_from_type = collect_args typ in

@@ -328,7 +328,7 @@ and transl_type_aux env policy styp =
         newty (Tconstr (Predef.path_option, [ty1], ref Mnil))
       else ty1
     in
-    let ty = newty (Tarrow (lbl, ty1, cty2.ctyp_type, Cok, arity)) in
+    let ty = newty (Tarrow ({lbl; typ = ty1}, cty2.ctyp_type, Cok, arity)) in
     ctyp (Ttyp_arrow ({lbl; typ = cty1}, cty2, arity)) ty
   | Ptyp_tuple stl ->
     assert (List.length stl >= 2);
