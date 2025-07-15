@@ -779,13 +779,7 @@ on MDN.
 
 ```rescript
 let date1 = Js.Date.fromFloat(123456654321.0) // 29 November 1973 21:30:54.321 GMT
-let futureTime = Js.Date.setMinutesSMs(
-  date1,
-  ~minutes=34.0,
-  ~seconds=56.0,
-  ~milliseconds=789.0,
-  (),
-)
+let futureTime = Js.Date.setMinutesSMs(date1, ~minutes=34.0, ~seconds=56.0, ~milliseconds=789.0, ())
 date1 == Js.Date.fromString("1973-11-29T21:34:56.789Z00:00")
 futureTime == Js.Date.getTime(date1)
 ```

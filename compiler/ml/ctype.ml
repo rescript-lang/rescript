@@ -732,9 +732,9 @@ let rec generalize_expansive env var_level visited ty =
           else generalize_expansive env var_level visited t)
         variance tyl
     | Tpackage (_, _, tyl) -> List.iter (generalize_structure var_level) tyl
-    | Tarrow (_, t1, t2, _, _) ->
-      generalize_structure var_level t1;
-      generalize_expansive env var_level visited t2
+    | Tarrow (arg, ret, _, _) ->
+      generalize_structure var_level arg.typ;
+      generalize_expansive env var_level visited ret
     | _ -> iter_type_expr (generalize_expansive env var_level visited) ty)
 
 let generalize_expansive env ty =
@@ -1926,11 +1926,11 @@ let rec mcomp type_pairs env t1 t2 =
             TypePairs.add type_pairs (t1', t2') ();
             match (t1'.desc, t2'.desc) with
             | Tvar _, Tvar _ -> assert false
-            | Tarrow (l1, t1, u1, _, _), Tarrow (l2, t2, u2, _, _)
-              when Asttypes.Noloc.same_arg_label l1 l2
-                   || not (is_optional l1 || is_optional l2) ->
-              mcomp type_pairs env t1 t2;
-              mcomp type_pairs env u1 u2
+            | Tarrow (arg1, ret1, _, _), Tarrow (arg2, ret2, _, _)
+              when Asttypes.Noloc.same_arg_label arg1.lbl arg2.lbl
+                   || not (is_optional arg1.lbl || is_optional arg2.lbl) ->
+              mcomp type_pairs env arg1.typ arg2.typ;
+              mcomp type_pairs env ret1 ret2
             | Ttuple tl1, Ttuple tl2 -> mcomp_list type_pairs env tl1 tl2
             | Tconstr (p1, tl1, _), Tconstr (p2, tl2, _) ->
               mcomp_type_decl type_pairs env p1 p2 tl1 tl2
@@ -2342,13 +2342,13 @@ and unify3 env t1 t1' t2 t2' =
     | Pattern -> add_type_equality t1' t2');
     try
       (match (d1, d2) with
-      | Tarrow (l1, t1, u1, c1, a1), Tarrow (l2, t2, u2, c2, a2)
+      | Tarrow (arg1, ret1, c1, a1), Tarrow (arg2, ret2, c2, a2)
         when a1 = a2
-             && (Asttypes.Noloc.same_arg_label l1 l2
-                || (!umode = Pattern && not (is_optional l1 || is_optional l2))
-                ) -> (
-        unify env t1 t2;
-        unify env u1 u2;
+             && (Asttypes.Noloc.same_arg_label arg1.lbl arg2.lbl
+                || !umode = Pattern
+                   && not (is_optional arg1.lbl || is_optional arg2.lbl)) -> (
+        unify env arg1.typ arg2.typ;
+        unify env ret1 ret2;
         match (commu_repr c1, commu_repr c2) with
         | Clink r, c2 -> set_commu r c2
         | c1, Clink r -> set_commu r c1
@@ -2796,10 +2796,11 @@ let filter_arrow ~env ~arity t l =
   | Tvar _ ->
     let lv = t.level in
     let t1 = newvar2 lv and t2 = newvar2 lv in
-    let t' = newty2 lv (Tarrow (l, t1, t2, Cok, arity)) in
+    let t' = newty2 lv (Tarrow ({lbl = l; typ = t1}, t2, Cok, arity)) in
     link_type t t';
     (t1, t2)
-  | Tarrow (l', t1, t2, _, _) when Asttypes.Noloc.same_arg_label l l' -> (t1, t2)
+  | Tarrow (arg, ret, _, _) when Asttypes.Noloc.same_arg_label l arg.lbl ->
+    (arg.typ, ret)
   | _ -> raise (Unify [])
 
 (* Used by [filter_method]. *)
@@ -2913,10 +2914,10 @@ let rec moregen inst_nongen type_pairs env t1 t2 =
               | Tvar _, _ when may_instantiate inst_nongen t1' ->
                 moregen_occur env t1'.level t2;
                 link_type t1' t2
-              | Tarrow (l1, t1, u1, _, _), Tarrow (l2, t2, u2, _, _)
-                when Asttypes.Noloc.same_arg_label l1 l2 ->
-                moregen inst_nongen type_pairs env t1 t2;
-                moregen inst_nongen type_pairs env u1 u2
+              | Tarrow (arg1, ret1, _, _), Tarrow (arg2, ret2, _, _)
+                when Asttypes.Noloc.same_arg_label arg1.lbl arg2.lbl ->
+                moregen inst_nongen type_pairs env arg1.typ arg2.typ;
+                moregen inst_nongen type_pairs env ret1 ret2
               | Ttuple tl1, Ttuple tl2 ->
                 moregen_list inst_nongen type_pairs env tl1 tl2
               | Tconstr (p1, tl1, _), Tconstr (p2, tl2, _) when Path.same p1 p2
@@ -3183,10 +3184,10 @@ let rec eqtype rename type_pairs subst env t1 t2 =
                   if List.exists (fun (_, t) -> t == t2') !subst then
                     raise (Unify []);
                   subst := (t1', t2') :: !subst)
-              | Tarrow (l1, t1, u1, _, _), Tarrow (l2, t2, u2, _, _)
-                when Asttypes.Noloc.same_arg_label l1 l2 ->
-                eqtype rename type_pairs subst env t1 t2;
-                eqtype rename type_pairs subst env u1 u2
+              | Tarrow (arg1, ret1, _, _), Tarrow (arg2, ret2, _, _)
+                when Asttypes.Noloc.same_arg_label arg1.lbl arg2.lbl ->
+                eqtype rename type_pairs subst env arg1.typ arg2.typ;
+                eqtype rename type_pairs subst env ret1 ret2
               | Ttuple tl1, Ttuple tl2 ->
                 eqtype_list rename type_pairs subst env tl1 tl2
               | Tconstr (p1, tl1, _), Tconstr (p2, tl2, _) when Path.same p1 p2
@@ -3396,14 +3397,14 @@ let rec build_subtype env visited loops posi level t =
         (t', Equiv)
       with Not_found -> (t, Unchanged)
     else (t, Unchanged)
-  | Tarrow (l, t1, t2, _, a) ->
+  | Tarrow (arg, ret, _, a) ->
     if memq_warn t visited then (t, Unchanged)
     else
       let visited = t :: visited in
-      let t1', c1 = build_subtype env visited loops (not posi) level t1 in
-      let t2', c2 = build_subtype env visited loops posi level t2 in
+      let t1, c1 = build_subtype env visited loops (not posi) level arg.typ in
+      let t2, c2 = build_subtype env visited loops posi level ret in
       let c = max c1 c2 in
-      if c > Unchanged then (newty (Tarrow (l, t1', t2', Cok, a)), c)
+      if c > Unchanged then (newty (Tarrow ({arg with typ = t1}, t2, Cok, a)), c)
       else (t, Unchanged)
   | Ttuple tlist ->
     if memq_warn t visited then (t, Unchanged)
@@ -3596,10 +3597,14 @@ let rec subtype_rec env trace t1 t2 cstrs =
       TypePairs.add subtypes (t1, t2) ();
       match (t1.desc, t2.desc) with
       | Tvar _, _ | _, Tvar _ -> (trace, t1, t2, !univar_pairs, None) :: cstrs
-      | Tarrow (l1, t1, u1, _, _), Tarrow (l2, t2, u2, _, _)
-        when Asttypes.Noloc.same_arg_label l1 l2 ->
-        let cstrs = subtype_rec env ((t2, t1) :: trace) t2 t1 cstrs in
-        subtype_rec env ((u1, u2) :: trace) u1 u2 cstrs
+      | Tarrow (arg1, ret1, _, _), Tarrow (arg2, ret2, _, _)
+        when Asttypes.Noloc.same_arg_label arg1.lbl arg2.lbl ->
+        let cstrs =
+          subtype_rec env
+            ((arg2.typ, arg1.typ) :: trace)
+            arg2.typ arg1.typ cstrs
+        in
+        subtype_rec env ((ret1, ret2) :: trace) ret1 ret2 cstrs
       | Ttuple tl1, Ttuple tl2 ->
         (* TODO(subtype-errors) Tuple as context *)
         subtype_list env trace tl1 tl2 cstrs
@@ -4074,7 +4079,7 @@ let unalias ty =
 (* Return the arity (as for curried functions) of the given type. *)
 let rec arity ty =
   match (repr ty).desc with
-  | Tarrow (_, _t1, t2, _, _) -> 1 + arity t2
+  | Tarrow (_, ret, _, _) -> 1 + arity ret
   | _ -> 0
 
 (* Check whether an abbreviation expands to itself. *)
@@ -4440,5 +4445,5 @@ let maybe_pointer_type env typ =
 
 let get_arity env typ =
   match (expand_head env typ).desc with
-  | Tarrow (_, _, _, _, arity) -> arity
+  | Tarrow (_, _, _, arity) -> arity
   | _ -> None

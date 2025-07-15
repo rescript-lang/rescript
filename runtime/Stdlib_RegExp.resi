@@ -23,7 +23,7 @@ module Result: {
   ```rescript
   // Match the first two words separated by a space
   let regexp = RegExp.fromString("(\\w+) (\\w+)")
-
+  
   switch regexp->RegExp.exec("ReScript is pretty cool, right?") {
   | None => Console.log("Nope, no match...")
   | Some(result) => Console.log(result->RegExp.Result.fullMatch) // Prints the full string that matched, "ReScript is"
@@ -40,11 +40,12 @@ module Result: {
   ```rescript
   // Match the first two words separated by a space
   let regexp = RegExp.fromString("(\\w+) (\\w+)")
-
+  
   // This below will log "ReScript" and "is" to the console.
   switch regexp->RegExp.exec("ReScript is pretty cool, right?") {
   | None => Console.log("Nope, no match...")
-  | Some(result) => switch result->RegExp.Result.matches->Array.keepSome {
+  | Some(result) =>
+    switch result->RegExp.Result.matches->Array.keepSome {
     | [firstWord, secondWord] => Console.log2(firstWord, secondWord)
     | _ => Console.log("Didn't find exactly two words...")
     }
@@ -62,7 +63,7 @@ module Result: {
   ```rescript
   // Match the first two words separated by a space
   let regexp = RegExp.fromString("(\\w+) (\\w+)")
-
+  
   // This below will log the full input string "ReScript is pretty cool, right?" to the console.
   switch regexp->RegExp.exec("ReScript is pretty cool, right?") {
   | None => Console.log("Nope, no match...")

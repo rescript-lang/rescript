@@ -478,7 +478,7 @@ extracted params:
   "signatures": [{
     "label": "(array<int>, int => int) => array<int>",
     "parameters": [{"label": [0, 11], "documentation": {"kind": "markdown", "value": ""}}, {"label": [13, 23], "documentation": {"kind": "markdown", "value": ""}}],
-    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nassertEqual(mappedArray, [\"Hello to you\", \"Hi to you\", \"Good bye to you\"])\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`map(array, fn)` returns a new array with all elements from `array`, each element transformed using the provided `fn`.\n\nSee [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) on MDN.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\nlet mappedArray = array->Array.map(greeting => greeting ++ \" to you\")\n\nmappedArray == [\"Hello to you\", \"Hi to you\", \"Good bye to you\"]\n```\n"}
   }],
   "activeSignature": 0,
   "activeParameter": 1

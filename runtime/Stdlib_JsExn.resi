@@ -48,7 +48,7 @@ See [`Error.prototype.message`](https://developer.mozilla.org/en-US/docs/Web/Jav
 ## Example
 ```rescript
 try {JsError.SyntaxError.throwWithMessage("Some message here")} catch {
-| JsExn(e) => e->JsExn.message->Option.getExn->assertEqual("Some message here")
+| JsExn(e) => e->JsExn.message->Option.getExn == "Some message here"
 | _ => assert(false)
 }
 ```
@@ -63,7 +63,7 @@ See [`Error.prototype.name`](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 ## Example
 ```rescript
 try {JsError.SyntaxError.throwWithMessage("Some message here")} catch {
-| JsExn(e) => e->JsExn.name->Option.getExn->assertEqual("SyntaxError")
+| JsExn(e) => e->JsExn.name->Option.getExn == "SyntaxError"
 | _ => assert(false)
 }
 ```

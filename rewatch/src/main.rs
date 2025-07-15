@@ -2,10 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use log::LevelFilter;
 use regex::Regex;
-use std::{
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::{io::Write, path::Path};
 
 use rewatch::{build, cli, cmd, lock, watcher};
 
@@ -27,17 +24,8 @@ fn main() -> Result<()> {
     let show_progress = log_level_filter == LevelFilter::Info;
 
     match command.clone() {
-        cli::Command::CompilerArgs {
-            path,
-            dev,
-        } => {
-            println!(
-                "{}",
-                build::get_compiler_args(
-                    Path::new(&path),
-                    *dev
-                )?
-            );
+        cli::Command::CompilerArgs { path, dev } => {
+            println!("{}", build::get_compiler_args(Path::new(&path), *dev)?);
             std::process::exit(0);
         }
         cli::Command::Build(build_args) => {
@@ -54,7 +42,6 @@ fn main() -> Result<()> {
                 show_progress,
                 build_args.no_timing,
                 *build_args.create_sourcedirs,
-                build_args.bsc_path.as_ref().map(PathBuf::from),
                 *build_args.dev,
                 *build_args.snapshot_output,
             ) {
@@ -84,7 +71,6 @@ fn main() -> Result<()> {
                 (*watch_args.after_build).clone(),
                 *watch_args.create_sourcedirs,
                 *watch_args.dev,
-                (*watch_args.bsc_path).clone(),
                 *watch_args.snapshot_output,
             );
 
@@ -92,16 +78,16 @@ fn main() -> Result<()> {
         }
         cli::Command::Clean {
             folder,
-            bsc_path,
             snapshot_output,
+            dev,
         } => {
             let _lock = get_lock(&folder);
 
             build::clean::clean(
                 Path::new(&folder as &str),
                 show_progress,
-                bsc_path.as_ref().map(PathBuf::from),
                 *snapshot_output,
+                dev.dev,
             )
         }
         cli::Command::Legacy { legacy_args } => {

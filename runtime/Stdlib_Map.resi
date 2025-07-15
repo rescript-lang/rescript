@@ -74,8 +74,7 @@ let iterator: Iterator.t<(string, string)> = %raw(`
 
 iterator
 ->Map.fromIterator
-->Map.size
-->assertEqual(2)
+->Map.size == 2
 ```
 */
 @new

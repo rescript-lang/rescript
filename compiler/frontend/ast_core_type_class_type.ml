@@ -67,17 +67,17 @@ let default_typ_mapper = Bs_ast_mapper.default_mapper.typ
 let typ_mapper (self : Bs_ast_mapper.mapper) (ty : Parsetree.core_type) =
   let loc = ty.ptyp_loc in
   match ty.ptyp_desc with
-  | Ptyp_arrow {lbl = label; arg = args; ret = body}
+  | Ptyp_arrow {arg; ret = body}
   (* let it go without regard label names,
      it will report error later when the label is not empty
   *)
     -> (
     match fst (Ast_attributes.process_attributes_rev ty.ptyp_attributes) with
     | Meth_callback _ ->
-      Ast_typ_uncurry.to_method_callback_type loc self label args body
+      Ast_typ_uncurry.to_method_callback_type loc self arg.lbl arg.typ body
     | Method _ ->
       (* Treat @meth as making the type uncurried, for backwards compatibility *)
-      Ast_typ_uncurry.to_uncurry_type loc self label args body
+      Ast_typ_uncurry.to_uncurry_type loc self arg.lbl arg.typ body
     | Nothing -> Bs_ast_mapper.default_mapper.typ self ty)
   | Ptyp_object (methods, closed_flag) ->
     let ( +> ) attr (typ : Parsetree.core_type) =

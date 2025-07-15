@@ -4039,7 +4039,8 @@ and parse_poly_type_expr ?current_type_name_path ?inline_types_context p =
         let typ = Ast_helper.Typ.var ~loc:var.loc var.txt in
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc typ.Parsetree.ptyp_loc.loc_start p.prev_end_pos in
-        Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Nolabel typ return_type
+        Ast_helper.Typ.arrow ~loc ~arity:(Some 1) {lbl = Nolabel; typ}
+          return_type
       | _ -> Ast_helper.Typ.var ~loc:var.loc var.txt)
     | _ -> assert false)
   | _ -> parse_typ_expr ?current_type_name_path ?inline_types_context p
@@ -4388,7 +4389,7 @@ and parse_es6_arrow_type ~attrs p =
     let name, label_loc = parse_lident p in
     Parser.expect ~grammar:Grammar.TypeExpression Colon p;
     let typ = parse_typ_expr ~alias:false ~es6_arrow:false p in
-    let arg =
+    let lbl =
       match p.Parser.token with
       | Equal ->
         Parser.next p;
@@ -4399,7 +4400,7 @@ and parse_es6_arrow_type ~attrs p =
     Parser.expect EqualGreater p;
     let return_type = parse_typ_expr ~alias:false p in
     let loc = mk_loc start_pos p.prev_end_pos in
-    Ast_helper.Typ.arrow ~loc ~attrs ~arity:None arg typ return_type
+    Ast_helper.Typ.arrow ~loc ~attrs ~arity:None {lbl; typ} return_type
   | DocComment _ -> assert false
   | _ ->
     let parameters = parse_type_parameters p in
@@ -4428,7 +4429,7 @@ and parse_es6_arrow_type ~attrs p =
             | _ -> arity
           in
           let t_arg =
-            Ast_helper.Typ.arrow ~loc ~attrs ~arity:None arg_lbl typ t
+            Ast_helper.Typ.arrow ~loc ~attrs ~arity:None {lbl = arg_lbl; typ} t
           in
           if param_num = 1 then
             (param_num - 1, Ast_uncurried.uncurried_type ~arity t_arg, 1)
@@ -4492,7 +4493,7 @@ and parse_arrow_type_rest ~es6_arrow ~start_pos typ p =
     Parser.next p;
     let return_type = parse_typ_expr ~alias:false p in
     let loc = mk_loc start_pos p.prev_end_pos in
-    Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Nolabel typ return_type
+    Ast_helper.Typ.arrow ~loc ~arity:(Some 1) {lbl = Nolabel; typ} return_type
   | _ -> typ
 
 and parse_typ_expr_region p =
@@ -5150,7 +5151,8 @@ and parse_type_equation_or_constr_decl p =
         let return_type = parse_typ_expr ~alias:false p in
         let loc = mk_loc uident_start_pos p.prev_end_pos in
         let arrow_type =
-          Ast_helper.Typ.arrow ~loc ~arity:(Some 1) Nolabel typ return_type
+          Ast_helper.Typ.arrow ~loc ~arity:(Some 1) {lbl = Nolabel; typ}
+            return_type
         in
         let typ = parse_type_alias p arrow_type in
         (Some typ, Asttypes.Public, Parsetree.Ptype_abstract)

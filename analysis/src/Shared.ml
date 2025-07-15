@@ -5,18 +5,14 @@ let tryReadCmt cmt =
   else
     match Cmt_format.read_cmt cmt with
     | exception Cmi_format.Error err ->
-      Log.log
-        ("Failed to load " ^ cmt ^ " as a cmt w/ ocaml version " ^ "406"
-       ^ ", error: "
-        ^
-        (Cmi_format.report_error Format.str_formatter err;
-         Format.flush_str_formatter ()));
+      let error_message =
+        Cmi_format.report_error Format.str_formatter err;
+        Format.flush_str_formatter ()
+      in
+      Log.log ("Invalid cmt format " ^ cmt ^ ": " ^ error_message);
       None
     | exception err ->
-      Log.log
-        ("Invalid cmt format " ^ cmt
-       ^ " - probably wrong ocaml version, expected " ^ Config.version ^ " : "
-       ^ Printexc.to_string err);
+      Log.log ("Invalid cmt format " ^ cmt ^ ": " ^ Printexc.to_string err);
       None
     | x -> Some x
 
@@ -52,9 +48,9 @@ let findTypeConstructors (tel : Types.type_expr list) =
     | Tconstr (path, args, _) ->
       addPath path;
       args |> List.iter loop
-    | Tarrow (_, te1, te2, _, _) ->
-      loop te1;
-      loop te2
+    | Tarrow (arg, ret, _, _) ->
+      loop arg.typ;
+      loop ret
     | Ttuple tel -> tel |> List.iter loop
     | Tnil | Tvar _ | Tobject _ | Tfield _ | Tvariant _ | Tunivar _ | Tpackage _
       ->

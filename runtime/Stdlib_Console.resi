@@ -54,7 +54,7 @@ external assert3: (bool, 'a, 'b, 'c) => unit = "console.assert"
 ```rescript
 let value = 42
 Console.assert4(false, "Hello", "World", "ReScript", "!!!")
-Console.assert4(value === 42, [1, 2], (3, 4), [#5, #6], #"polyvar")
+Console.assert4(value === 42, [1, 2], (3, 4), [#5, #6], #polyvar)
 ```
 */
 @val
@@ -68,7 +68,7 @@ external assert4: (bool, 'a, 'b, 'c, 'd) => unit = "console.assert"
 ```rescript
 let value = 42
 Console.assert5(false, "Hello", "World", "JS", '!', '!')
-Console.assert5(value === 42, [1, 2], (3, 4), [#5, #6], #"polyvar", {"name": "ReScript"})
+Console.assert5(value === 42, [1, 2], (3, 4), [#5, #6], #polyvar, {"name": "ReScript"})
 ```
 */
 @val
@@ -82,7 +82,7 @@ external assert5: (bool, 'a, 'b, 'c, 'd, 'e) => unit = "console.assert"
 ```rescript
 let value = 42
 Console.assert6(false, "Hello", "World", "JS", '!', '!', '?')
-Console.assert6(value === 42, [1, 2], (3, 4), [#5, #6], #"polyvar", {"name": "ReScript"}, 42)
+Console.assert6(value === 42, [1, 2], (3, 4), [#5, #6], #polyvar, {"name": "ReScript"}, 42)
 ```
 */
 @val
@@ -197,7 +197,7 @@ external debug3: ('a, 'b, 'c) => unit = "console.debug"
 
 ```rescript
 Console.debug4("Hello", "World", "ReScript", "!!!")
-Console.debug4([1, 2], (3, 4), [#5, #6], #"polyvar")
+Console.debug4([1, 2], (3, 4), [#5, #6], #polyvar)
 ```
 */
 @val
@@ -210,7 +210,7 @@ external debug4: ('a, 'b, 'c, 'd) => unit = "console.debug"
 
 ```rescript
 Console.debug5("Hello", "World", "JS", '!', '!')
-Console.debug5([1, 2], (3, 4), [#5, #6], #"polyvar", {"name": "ReScript"})
+Console.debug5([1, 2], (3, 4), [#5, #6], #polyvar, {"name": "ReScript"})
 ```
 */
 @val
@@ -223,7 +223,7 @@ external debug5: ('a, 'b, 'c, 'd, 'e) => unit = "console.debug"
 
 ```rescript
 Console.debug6("Hello", "World", "JS", '!', '!', '?')
-Console.debug6([1, 2], (3, 4), [#5, #6], #"polyvar", {"name": "ReScript"}, 42)
+Console.debug6([1, 2], (3, 4), [#5, #6], #polyvar, {"name": "ReScript"}, 42)
 ```
 */
 @val
@@ -257,7 +257,10 @@ on MDN.
 
 ```rescript
 Console.dir({"language": "rescript", "version": "10.1.2"})
-Console.dir({"language": "rescript", "version": {"major": "10", "minor": "1", "patch": "2"}}, ~options={depth: null})
+Console.dir(
+  {"language": "rescript", "version": {"major": "10", "minor": "1", "patch": "2"}},
+  ~options={depth: null},
+)
 ```
 */
 @val
@@ -321,7 +324,7 @@ external error3: ('a, 'b, 'c) => unit = "console.error"
 
 ```rescript
 Console.error4("Hello", "World", "ReScript", '!')
-Console.error4(#first, #second, #third, ("fourth"))
+Console.error4(#first, #second, #third, "fourth")
 ```
 */
 @val
@@ -334,7 +337,7 @@ external error4: ('a, 'b, 'c, 'd) => unit = "console.error"
 
 ```rescript
 Console.error5('e', 'r', 'r', 'o', 'r')
-Console.error5(1, #second, #third, ("fourth"), 'c')
+Console.error5(1, #second, #third, "fourth", 'c')
 ```
 */
 @val
@@ -347,7 +350,7 @@ external error5: ('a, 'b, 'c, 'd, 'e) => unit = "console.error"
 
 ```rescript
 Console.error6("Hello", "World", "from", "JS", "!!!", '!')
-Console.error6([1, 2], (3, 4), [#5, #6], #"polyvar", {"name": "ReScript"}, 42)
+Console.error6([1, 2], (3, 4), [#5, #6], #polyvar, {"name": "ReScript"}, 42)
 ```
 */
 @val
@@ -466,7 +469,7 @@ external info4: ('a, 'b, 'c, 'd) => unit = "console.info"
 
 ```rescript
 Console.info5("Hello", "World", "from", "JS", "!!!")
-Console.info5([1, 2], (3, 4), [#5, #6], #"polyvar", {"name": "ReScript"})
+Console.info5([1, 2], (3, 4), [#5, #6], #polyvar, {"name": "ReScript"})
 ```
 */
 @val
@@ -479,7 +482,7 @@ external info5: ('a, 'b, 'c, 'd, 'e) => unit = "console.info"
 
 ```rescript
 Console.info6("Hello", "World", "from", "JS", "!!!", '!')
-Console.info6([1, 2], (3, 4), [#5, #6], #"polyvar", {"name": "ReScript"}, 42)
+Console.info6([1, 2], (3, 4), [#5, #6], #polyvar, {"name": "ReScript"}, 42)
 ```
 */
 @val
@@ -548,7 +551,7 @@ external log3: ('a, 'b, 'c) => unit = "console.log"
 
 ```rescript
 Console.log4("Hello", "World", "ReScript", "!!!")
-Console.log4([1, 2], (3, 4), [#5, #6], #"polyvar")
+Console.log4([1, 2], (3, 4), [#5, #6], #polyvar)
 ```
 */
 @val
@@ -561,7 +564,7 @@ external log4: ('a, 'b, 'c, 'd) => unit = "console.log"
 
 ```rescript
 Console.log5("Hello", "World", "JS", '!', '!')
-Console.log5([1, 2], (3, 4), [#5, #6], #"polyvar", {"name": "ReScript"})
+Console.log5([1, 2], (3, 4), [#5, #6], #polyvar, {"name": "ReScript"})
 ```
 */
 @val
@@ -574,7 +577,7 @@ external log5: ('a, 'b, 'c, 'd, 'e) => unit = "console.log"
 
 ```rescript
 Console.log6("Hello", "World", "JS", '!', '!', '?')
-Console.log6([1, 2], (3, 4), [#5, #6], #"polyvar", {"name": "ReScript"}, 42)
+Console.log6([1, 2], (3, 4), [#5, #6], #polyvar, {"name": "ReScript"}, 42)
 ```
 */
 @val
@@ -740,7 +743,7 @@ external warn3: ('a, 'b, 'c) => unit = "console.warn"
 
 ```rescript
 Console.warn4("Hello", "World", "ReScript", "!!!")
-Console.warn4(#first, #second, #third, ("fourth"))
+Console.warn4(#first, #second, #third, "fourth")
 ```
 */
 @val
@@ -753,7 +756,7 @@ external warn4: ('a, 'b, 'c, 'd) => unit = "console.warn"
 
 ```rescript
 Console.warn5("Hello", "World", "from", "JS", "!!!")
-Console.warn5([1, 2], (3, 4), [#5, #6], #"polyvar", {"name": "ReScript"})
+Console.warn5([1, 2], (3, 4), [#5, #6], #polyvar, {"name": "ReScript"})
 ```
 */
 @val
@@ -766,7 +769,7 @@ external warn5: ('a, 'b, 'c, 'd, 'e) => unit = "console.warn"
 
 ```rescript
 Console.warn6("Hello", "World", "from", "JS", "!!!", '!')
-Console.warn6([1, 2], (3, 4), [#5, #6], #"polyvar", {"name": "ReScript"}, 42)
+Console.warn6([1, 2], (3, 4), [#5, #6], #polyvar, {"name": "ReScript"}, 42)
 ```
 */
 @val

@@ -12,13 +12,30 @@
 
 # 12.0.0-beta.2 (Unreleased)
 
-#### :rocket: New Feature
+#### :nail_care: Polish
 
-- Add optional `message` argument to `Result.getOrThrow` and improve default error message. https://github.com/rescript-lang/rescript/pull/7630
+- Add missing backtick and spaces to `Belt.Map.map` doc comment. https://github.com/rescript-lang/rescript/pull/7632
 
 #### :house: Internal
 
 - Remove internal/unused `-bs-v` flag. https://github.com/rescript-lang/rescript/pull/7627
+- Remove unused `-bs-D` and `-bs-list-conditionals` flags. https://github.com/rescript-lang/rescript/pull/7631
+- Remove obsolete jsx options. https://github.com/rescript-lang/rescript/pull/7633
+- Remove obsolete option `-bs-unsafe-empty-array`. https://github.com/rescript-lang/rescript/pull/7635
+- Clean up `config.ml`. https://github.com/rescript-lang/rescript/pull/7636
+- Rewatch: simplify getting bsc path. https://github.com/rescript-lang/rescript/pull/7634
+- Rewatch: only get `"type": "dev"` source files for local packages. https://github.com/rescript-lang/rescript/pull/7646
+
+#### :rocket: New Feature
+
+- Add experimental command to `rescript-tools` for extracting all ReScript code blocks from markdown, either a md-file directly, or inside of docstrings in ReScript code. https://github.com/rescript-lang/rescript/pull/7623
+- Add optional `message` argument to `Result.getOrThrow` and improve default error message. https://github.com/rescript-lang/rescript/pull/7630
+
+#### :bug: Bug fix
+
+- Fix `typeof` parens on functions. https://github.com/rescript-lang/rescript/pull/7643
+- Rewatch: Add --dev flag to clean command. https://github.com/rescript-lang/rescript/pull/7622
+- Rewatch: Use root package suffix in clean log messages. https://github.com/rescript-lang/rescript/pull/7648
 
 # 12.0.0-beta.1
 

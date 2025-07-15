@@ -284,9 +284,9 @@ let typ sub {ctyp_desc; ctyp_env; _} =
   match ctyp_desc with
   | Ttyp_any -> ()
   | Ttyp_var _ -> ()
-  | Ttyp_arrow (_, ct1, ct2, _) ->
-    sub.typ sub ct1;
-    sub.typ sub ct2
+  | Ttyp_arrow (arg, ret, _) ->
+    sub.typ sub arg.typ;
+    sub.typ sub ret
   | Ttyp_tuple list -> List.iter (sub.typ sub) list
   | Ttyp_constr (_, _, list) -> List.iter (sub.typ sub) list
   | Ttyp_object (list, _) -> List.iter (sub.object_field sub) list

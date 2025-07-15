@@ -239,7 +239,7 @@ Path u
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, array<'a>) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`unshiftMany(array, itemsArray)` inserts many new items to the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshiftMany([\"yay\", \"wehoo\"])\nsomeArray->assertEqual([\"yay\", \"wehoo\", \"hi\", \"hello\"])\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`unshiftMany(array, itemsArray)` inserts many new items to the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshiftMany([\"yay\", \"wehoo\"])\nsomeArray == [\"yay\", \"wehoo\", \"hi\", \"hello\"]\n```\n"},
     "sortText": "unshiftMany",
     "insertText": "->Array.unshiftMany",
     "additionalTextEdits": [{
@@ -251,7 +251,7 @@ Path u
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`unshift(array, item)` inserts a new item at the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.unshift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshift(\"yay\")\nsomeArray->assertEqual([\"yay\", \"hi\", \"hello\"])\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`unshift(array, item)` inserts a new item at the start of the array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.unshift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.unshift(\"yay\")\nsomeArray == [\"yay\", \"hi\", \"hello\"]\n```\n"},
     "sortText": "unshift",
     "insertText": "->Array.unshift",
     "additionalTextEdits": [{
@@ -367,7 +367,7 @@ Path filt
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => option<'b>) => array<'b>",
-    "documentation": {"kind": "markdown", "value": "\n`filterMap(array, fn)`\n\nCalls `fn` for each element and returns a new array containing results of the `fn` calls which are not `None`.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]\n->Array.filterMap(item =>\n  switch item {\n  | \"Hello\" => Some(item->String.length)\n  | _ => None\n  }\n)\n->assertEqual([5])\n\n[1, 2, 3, 4, 5, 6]\n->Array.filterMap(n => mod(n, 2) == 0 ? Some(n * n) : None)\n->assertEqual([4, 16, 36])\n\nArray.filterMap([1, 2, 3, 4, 5, 6], _ => None)->assertEqual([])\n\nArray.filterMap([], n => mod(n, 2) == 0 ? Some(n * n) : None)->assertEqual([])\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`filterMap(array, fn)`\n\nCalls `fn` for each element and returns a new array containing results of the `fn` calls which are not `None`.\n\n## Examples\n\n```rescript\n[\"Hello\", \"Hi\", \"Good bye\"]->Array.filterMap(item =>\n  switch item {\n  | \"Hello\" => Some(item->String.length)\n  | _ => None\n  }\n) == [5]\n\n[1, 2, 3, 4, 5, 6]->Array.filterMap(n => mod(n, 2) == 0 ? Some(n * n) : None) == [4, 16, 36]\n\nArray.filterMap([1, 2, 3, 4, 5, 6], _ => None) == []\n\nArray.filterMap([], n => mod(n, 2) == 0 ? Some(n * n) : None) == []\n```\n"},
     "sortText": "filterMap",
     "insertText": "->Array.filterMap",
     "additionalTextEdits": [{
@@ -379,7 +379,7 @@ Path filt
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'a => bool) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`filter(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]\n->Array.filter(num => num > 2)\n->assertEqual([3, 4])\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`filter(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.filter(num => num > 2) == [3, 4]\n```\n"},
     "sortText": "filter",
     "insertText": "->Array.filter",
     "additionalTextEdits": [{
@@ -391,7 +391,7 @@ Path filt
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ('a, int) => bool) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`filterWithIndex(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]\n->Array.filterWithIndex((num, index) => index === 0 || num === 2)\n->assertEqual([1, 2])\n```\n"},
+    "documentation": {"kind": "markdown", "value": "\n`filterWithIndex(array, checker)` returns a new array containing all elements from `array` for which the provided `checker` function returns true.\n\nSee [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.filterWithIndex((num, index) => index === 0 || num === 2) == [1, 2]\n```\n"},
     "sortText": "filterWithIndex",
     "insertText": "->Array.filterWithIndex",
     "additionalTextEdits": [{

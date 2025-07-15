@@ -30,7 +30,7 @@ let debugLogTypeArgContext {env; typeArgs; typeParams} =
 let rec hasTvar (ty : Types.type_expr) : bool =
   match ty.desc with
   | Tvar _ -> true
-  | Tarrow (_, ty1, ty2, _, _) -> hasTvar ty1 || hasTvar ty2
+  | Tarrow (arg, ret, _, _) -> hasTvar arg.typ || hasTvar ret
   | Ttuple tyl -> List.exists hasTvar tyl
   | Tconstr (_, tyl, _) -> List.exists hasTvar tyl
   | Tobject (ty, _) -> hasTvar ty
@@ -135,8 +135,11 @@ let instantiateType ~typeParams ~typeArgs (t : Types.type_expr) =
       | Tsubst t -> loop t
       | Tvariant rd -> {t with desc = Tvariant (rowDesc rd)}
       | Tnil -> t
-      | Tarrow (lbl, t1, t2, c, arity) ->
-        {t with desc = Tarrow (lbl, loop t1, loop t2, c, arity)}
+      | Tarrow (arg, ret, c, arity) ->
+        {
+          t with
+          desc = Tarrow ({arg with typ = loop arg.typ}, loop ret, c, arity);
+        }
       | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
       | Tobject (t, r) -> {t with desc = Tobject (loop t, r)}
       | Tfield (n, k, t1, t2) -> {t with desc = Tfield (n, k, loop t1, loop t2)}
@@ -188,8 +191,11 @@ let instantiateType2 ?(typeArgContext : typeArgContext option)
       | Tsubst t -> loop t
       | Tvariant rd -> {t with desc = Tvariant (rowDesc rd)}
       | Tnil -> t
-      | Tarrow (lbl, t1, t2, c, arity) ->
-        {t with desc = Tarrow (lbl, loop t1, loop t2, c, arity)}
+      | Tarrow (arg, ret, c, arity) ->
+        {
+          t with
+          desc = Tarrow ({arg with typ = loop arg.typ}, loop ret, c, arity);
+        }
       | Ttuple tl -> {t with desc = Ttuple (tl |> List.map loop)}
       | Tobject (t, r) -> {t with desc = Tobject (loop t, r)}
       | Tfield (n, k, t1, t2) -> {t with desc = Tfield (n, k, loop t1, loop t2)}
@@ -261,7 +267,7 @@ let extractFunctionType ~env ~package ?(digInto = true) typ =
   let rec loop ~env acc (t : Types.type_expr) =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ~env acc t1
-    | Tarrow (label, tArg, tRet, _, _) -> loop ~env ((label, tArg) :: acc) tRet
+    | Tarrow (arg, tRet, _, _) -> loop ~env ((arg.lbl, arg.typ) :: acc) tRet
     | Tconstr (path, typeArgs, _) when digInto -> (
       match References.digConstructor ~env ~package path with
       | Some
@@ -280,7 +286,7 @@ let extractFunctionTypeWithEnv ~env ~package typ =
   let rec loop ~env acc (t : Types.type_expr) =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ~env acc t1
-    | Tarrow (label, tArg, tRet, _, _) -> loop ~env ((label, tArg) :: acc) tRet
+    | Tarrow (arg, tRet, _, _) -> loop ~env ((arg.lbl, arg.typ) :: acc) tRet
     | Tconstr (path, typeArgs, _) -> (
       match References.digConstructor ~env ~package path with
       | Some
@@ -318,8 +324,8 @@ let extractFunctionType2 ?typeArgContext ~env ~package typ =
   let rec loop ?typeArgContext ~env acc (t : Types.type_expr) =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) -> loop ?typeArgContext ~env acc t1
-    | Tarrow (label, tArg, tRet, _, _) ->
-      loop ?typeArgContext ~env ((label, tArg) :: acc) tRet
+    | Tarrow (arg, tRet, _, _) ->
+      loop ?typeArgContext ~env ((arg.lbl, arg.typ) :: acc) tRet
     | Tconstr (path, typeArgs, _) -> (
       match References.digConstructor ~env ~package path with
       | Some
@@ -895,12 +901,12 @@ let getArgs ~env (t : Types.type_expr) ~full =
     match t.desc with
     | Tlink t1 | Tsubst t1 | Tpoly (t1, []) ->
       getArgsLoop ~full ~env ~currentArgumentPosition t1
-    | Tarrow (Labelled l, tArg, tRet, _, _) ->
+    | Tarrow ({lbl = Labelled l; typ = tArg}, tRet, _, _) ->
       (SharedTypes.Completable.Labelled l, tArg)
       :: getArgsLoop ~full ~env ~currentArgumentPosition tRet
-    | Tarrow (Optional l, tArg, tRet, _, _) ->
+    | Tarrow ({lbl = Optional l; typ = tArg}, tRet, _, _) ->
       (Optional l, tArg) :: getArgsLoop ~full ~env ~currentArgumentPosition tRet
-    | Tarrow (Nolabel, tArg, tRet, _, _) ->
+    | Tarrow ({lbl = Nolabel; typ = tArg}, tRet, _, _) ->
       (Unlabelled {argumentPosition = currentArgumentPosition}, tArg)
       :: getArgsLoop ~full ~env
            ~currentArgumentPosition:(currentArgumentPosition + 1)

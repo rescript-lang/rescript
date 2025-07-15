@@ -19,8 +19,6 @@ This document contains a list of all bsconfig parameters with remarks, and wheth
 | generators           | array of Rule-Generator |        |     [_]      |
 | cut-generators       | boolean                 |        |     [_]      |
 | jsx                  | JSX                     |        |     [x]      |
-| uncurried            | boolean                 |        |     [x]      |
-| reason               | Reason                  |        |     [x]      |
 | gentypeconfig        | Gentype                 |        |     [_]      |
 | bsc-flags            | array of string         |        |     [x]      |
 | warnings             | Warnings                |        |     [x]      |
@@ -143,12 +141,6 @@ enum: "commonjs" | "es6" | "es6-global"
 ### Suffix
 
 enum: ".js" | ".mjs" | ".cjs" | ".bs.js" | ".bs.mjs" | ".bs.cjs"
-
-### Reason
-
-| Parameter | JSON type | Remark | Implemented? |
-| --------- | --------- | ------ | :----------: |
-| react-jsx | number    |        |     [x]      |
 
 ### Target-Item
 

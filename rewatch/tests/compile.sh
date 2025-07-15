@@ -82,7 +82,7 @@ rewatch build --snapshot-output &> ../tests/snapshots/dependency-cycle.txt
 git checkout -- packages/new-namespace/src/NS_alias.res
 
 # it should compile dev dependencies with the --dev flag
-rewatch clean &> /dev/null
+rewatch clean --dev &> /dev/null
 rewatch build --dev &> /dev/null;
 if [ $? -ne 0 ];
 then
@@ -100,7 +100,7 @@ else
   exit 1
 fi
 
-error_output=$(rewatch clean 2>&1 >/dev/null)
+error_output=$(rewatch clean --dev 2>&1 >/dev/null)
 file_count=$(find ./packages/with-dev-deps -name *.mjs | wc -l)
 if [ "$file_count" -eq 0 ];
 then

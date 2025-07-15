@@ -106,7 +106,7 @@ let rec add_type bv ty =
   | Ptyp_any -> ()
   | Ptyp_var _ -> ()
   | Ptyp_arrow {arg; ret} ->
-    add_type bv arg;
+    add_type bv arg.typ;
     add_type bv ret
   | Ptyp_tuple tl -> List.iter (add_type bv) tl
   | Ptyp_constr (c, tl) ->

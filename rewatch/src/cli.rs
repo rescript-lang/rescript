@@ -77,13 +77,6 @@ pub struct DevArg {
     pub dev: bool,
 }
 
-#[derive(Args, Debug, Clone)]
-pub struct BscPathArg {
-    /// Custom path to bsc
-    #[arg(long)]
-    pub bsc_path: Option<String>,
-}
-
 #[derive(Args, Debug, Clone, Copy)]
 pub struct SnapshotOutputArg {
     /// simple output for snapshot testing
@@ -114,9 +107,6 @@ pub struct BuildArgs {
 
     #[command(flatten)]
     pub snapshot_output: SnapshotOutputArg,
-
-    #[command(flatten)]
-    pub bsc_path: BscPathArg,
 }
 
 #[derive(Args, Clone, Debug)]
@@ -138,9 +128,6 @@ pub struct WatchArgs {
 
     #[command(flatten)]
     pub snapshot_output: SnapshotOutputArg,
-
-    #[command(flatten)]
-    pub bsc_path: BscPathArg,
 }
 
 #[derive(Subcommand, Clone, Debug)]
@@ -155,10 +142,10 @@ pub enum Command {
         folder: FolderArg,
 
         #[command(flatten)]
-        bsc_path: BscPathArg,
+        snapshot_output: SnapshotOutputArg,
 
         #[command(flatten)]
-        snapshot_output: SnapshotOutputArg,
+        dev: DevArg,
     },
     /// Alias to `legacy format`.
     #[command(disable_help_flag = true)]
@@ -228,14 +215,6 @@ impl Deref for DevArg {
 
     fn deref(&self) -> &Self::Target {
         &self.dev
-    }
-}
-
-impl Deref for BscPathArg {
-    type Target = Option<String>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.bsc_path
     }
 }
 

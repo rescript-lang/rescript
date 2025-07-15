@@ -10,17 +10,24 @@ done
 for file in ppx/*.res; do
   output="src/expected/$(basename $file).jsout"
   ../../cli/bsc.js -ppx "../../_build/install/default/bin/rescript-tools ppx" $file > $output
-  # # CI. We use LF, and the CI OCaml fork prints CRLF. Convert.
   if [ "$RUNNER_OS" == "Windows" ]; then
     perl -pi -e 's/\r\n/\n/g' -- $output
   fi
 done
 
-# Test format-docstrings command
+# Test format-codeblocks command
 for file in src/docstrings-format/*.{res,resi,md}; do
   output="src/expected/$(basename $file).expected"
   ../../_build/install/default/bin/rescript-tools format-codeblocks "$file" --stdout > $output
-  # # CI. We use LF, and the CI OCaml fork prints CRLF. Convert.
+  if [ "$RUNNER_OS" == "Windows" ]; then
+    perl -pi -e 's/\r\n/\n/g' -- $output
+  fi
+done
+
+# Test extract-codeblocks command
+for file in src/docstrings-format/*.{res,resi,md}; do
+  output="src/expected/$(basename $file).extracted.json.expected"
+  ../../_build/install/default/bin/rescript-tools extract-codeblocks "$file" --transform-assert-equal > $output
   if [ "$RUNNER_OS" == "Windows" ]; then
     perl -pi -e 's/\r\n/\n/g' -- $output
   fi

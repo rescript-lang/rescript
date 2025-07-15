@@ -18,8 +18,7 @@ type arrayLike<'a>
 ```rescript
 Map.fromArray([("foo", 1), ("bar", 2)])
 ->Map.values
-->Array.fromIterator
-->assertEqual([1, 2])
+->Array.fromIterator == [1, 2]
 ```
 */
 @val
@@ -38,8 +37,8 @@ external fromArrayLikeWithMap: (arrayLike<'a>, 'a => 'b) => array<'b> = "Array.f
 ## Examples
 
 ```rescript
-Array.make(~length=3, #apple)->assertEqual([#apple, #apple, #apple])
-Array.make(~length=6, 7)->assertEqual([7, 7, 7, 7, 7, 7])
+Array.make(~length=3, #apple) == [#apple, #apple, #apple]
+Array.make(~length=6, 7) == [7, 7, 7, 7, 7, 7]
 ```
 */
 let make: (~length: int, 'a) => array<'a>
@@ -52,9 +51,9 @@ Creates an array of length `length` initialized with the value returned from `f 
 ## Examples
 
 ```rescript
-Array.fromInitializer(~length=3, i => i + 3)->assertEqual([3, 4, 5])
+Array.fromInitializer(~length=3, i => i + 3) == [3, 4, 5]
 
-Array.fromInitializer(~length=7, i => i + 3)->assertEqual([3, 4, 5, 6, 7, 8, 9])
+Array.fromInitializer(~length=7, i => i + 3) == [3, 4, 5, 6, 7, 8, 9]
 ```
 */
 let fromInitializer: (~length: int, int => 'a) => array<'a>
@@ -75,9 +74,7 @@ See [`Array.length`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Ref
 ```rescript
 let someArray = ["hi", "hello"]
 
-someArray
-->Array.length
-->assertEqual(2)
+someArray->Array.length == 2
 ```
 */
 @get
@@ -106,7 +103,7 @@ See [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ```rescript
 let myArray = [1, 2, 3, 4]
 myArray->Array.fillAll(9)
-myArray->assertEqual([9, 9, 9, 9])
+myArray == [9, 9, 9, 9]
 ```
 */
 @send
@@ -124,7 +121,7 @@ See [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ```rescript
 let myArray = [1, 2, 3, 4]
 myArray->Array.fillToEnd(9, ~start=1)
-myArray->assertEqual([1, 9, 9, 9])
+myArray == [1, 9, 9, 9]
 ```
 */
 @send
@@ -144,7 +141,7 @@ let myArray = [1, 2, 3, 4]
 
 myArray->Array.fill(9, ~start=1, ~end=3)
 
-myArray->assertEqual([1, 9, 9, 4])
+myArray == [1, 9, 9, 4]
 ```
 */
 @send
@@ -162,11 +159,9 @@ See [`Array.pop`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 ```rescript
 let someArray = ["hi", "hello"]
 
-someArray
-->Array.pop
-->assertEqual(Some("hello"))
+someArray->Array.pop == Some("hello")
 
-someArray->assertEqual(["hi"]) // Notice last item is gone.
+someArray == ["hi"] // Notice last item is gone.
 ```
 */
 @send
@@ -186,7 +181,7 @@ let someArray = ["hi", "hello"]
 
 someArray->Array.push("yay")
 
-someArray->assertEqual(["hi", "hello", "yay"])
+someArray == ["hi", "hello", "yay"]
 ```
 */
 @send
@@ -205,7 +200,7 @@ See [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 let someArray = ["hi", "hello"]
 
 someArray->Array.pushMany(["yay", "wehoo"])
-someArray->assertEqual(["hi", "hello", "yay", "wehoo"])
+someArray == ["hi", "hello", "yay", "wehoo"]
 ```
 */
 @variadic @send
@@ -224,7 +219,7 @@ See [`Array.reverse`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 let someArray = ["hi", "hello"]
 someArray->Array.reverse
 
-someArray->assertEqual(["hello", "hi"])
+someArray == ["hello", "hi"]
 ```
 */
 @send
@@ -242,11 +237,9 @@ See [`Array.shift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 ```rescript
 let someArray = ["hi", "hello"]
 
-someArray
-->Array.shift
-->assertEqual(Some("hi"))
+someArray->Array.shift == Some("hi")
 
-someArray->assertEqual(["hello"]) // Notice first item is gone.
+someArray == ["hello"] // Notice first item is gone.
 ```
 */
 @send
@@ -262,11 +255,9 @@ See [`Array.toSorted`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 ```rescript
 let someArray = [3, 2, 1]
 
-someArray
-->Array.toSorted(Int.compare)
-->assertEqual([1, 2, 3])
+someArray->Array.toSorted(Int.compare) == [1, 2, 3]
 
-someArray->assertEqual([3, 2, 1]) // Original unchanged
+someArray == [3, 2, 1] // Original unchanged
 ```
 */
 @send
@@ -284,7 +275,7 @@ See [`Array.sort`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ```rescript
 let array = [3, 2, 1]
 array->Array.sort((a, b) => float(a - b))
-array->assertEqual([1, 2, 3])
+array == [1, 2, 3]
 ```
 */
 @send
@@ -307,11 +298,11 @@ Beware this will *mutate* the array.
 ```rescript
 let array = []
 array->Array.removeInPlace(0)
-assertEqual(array, []) // Removing from an empty array does nothing
+array == [] // Removing from an empty array does nothing
 
 let array2 = ["Hello", "Hi", "Good bye"]
 array2->Array.removeInPlace(1)
-assertEqual(array2, ["Hello", "Good bye"]) // Removes the item at index 1
+array2 == ["Hello", "Good bye"] // Removes the item at index 1
 ```
  */
 @send
@@ -331,7 +322,7 @@ See [`Array.unshift`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 ```rescript
 let someArray = ["hi", "hello"]
 someArray->Array.unshift("yay")
-someArray->assertEqual(["yay", "hi", "hello"])
+someArray == ["yay", "hi", "hello"]
 ```
 */
 @send
@@ -349,7 +340,7 @@ See [`Array.push`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ```rescript
 let someArray = ["hi", "hello"]
 someArray->Array.unshiftMany(["yay", "wehoo"])
-someArray->assertEqual(["yay", "wehoo", "hi", "hello"])
+someArray == ["yay", "wehoo", "hi", "hello"]
 ```
 */
 @variadic @send
@@ -368,7 +359,7 @@ let array2 = ["yay", "wehoo"]
 
 let someArray = array1->Array.concat(array2)
 
-someArray->assertEqual(["hi", "hello", "yay", "wehoo"])
+someArray == ["hi", "hello", "yay", "wehoo"]
 ```
 */
 @send
@@ -401,9 +392,7 @@ See [`Array.flat`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ## Examples
 
 ```rescript
-[[1], [2], [3, 4]]
-->Array.flat
-->assertEqual([1, 2, 3, 4])
+[[1], [2], [3, 4]]->Array.flat == [1, 2, 3, 4]
 ```
 */
 @send
@@ -417,12 +406,10 @@ See [`Array.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 ## Examples
 
 ```rescript
-[1, 2]->Array.includes(1)->assertEqual(true)
-[1, 2]->Array.includes(3)->assertEqual(false)
+[1, 2]->Array.includes(1) == true
+[1, 2]->Array.includes(3) == false
 
-[{"language": "ReScript"}]
-->Array.includes({"language": "ReScript"})
-->assertEqual(false) // false, because of strict equality
+[{"language": "ReScript"}]->Array.includes({"language": "ReScript"}) == false // false, because of strict equality
 ```
 */
 @send
@@ -438,12 +425,10 @@ See [`Array.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 ## Examples
 
 ```rescript
-[1, 2]->Array.indexOf(2)->assertEqual(1)
-[1, 2]->Array.indexOf(3)->assertEqual(-1)
+[1, 2]->Array.indexOf(2) == 1
+[1, 2]->Array.indexOf(3) == -1
 
-[{"language": "ReScript"}]
-->Array.indexOf({"language": "ReScript"})
-->assertEqual(-1) // -1, because of strict equality
+[{"language": "ReScript"}]->Array.indexOf({"language": "ReScript"}) == -1 // -1, because of strict equality
 ```
 */
 @send
@@ -457,11 +442,9 @@ See [`Array.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 ## Examples
 
 ```rescript
-[1, 2]->Array.indexOfOpt(2)->assertEqual(Some(1))
-[1, 2]->Array.indexOfOpt(3)->assertEqual(None)
-[{"language": "ReScript"}]
-->Array.indexOfOpt({"language": "ReScript"})
-->assertEqual(None) // None, because of strict equality
+[1, 2]->Array.indexOfOpt(2) == Some(1)
+[1, 2]->Array.indexOfOpt(3) == None
+[{"language": "ReScript"}]->Array.indexOfOpt({"language": "ReScript"}) == None // None, because of strict equality
 ```
 */
 let indexOfOpt: (array<'a>, 'a) => option<int>
@@ -475,9 +458,7 @@ See [Array.join](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-["One", "Two", "Three"]
-->Array.join(" -- ")
-->assertEqual("One -- Two -- Three")
+["One", "Two", "Three"]->Array.join(" -- ") == "One -- Two -- Three"
 ```
 */
 @send
@@ -489,9 +470,7 @@ external join: (array<string>, string) => string = "join"
 ## Examples
 
 ```rescript
-["One", "Two", "Three"]
-->Array.joinWith(" -- ")
-->assertEqual("One -- Two -- Three")
+["One", "Two", "Three"]->Array.joinWith(" -- ") == "One -- Two -- Three"
 ```
 */
 @deprecated("Use `join` instead") @send
@@ -505,9 +484,7 @@ See [Array.join](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 ## Examples
 
 ```rescript
-[1, 2, 3]
-->Array.joinUnsafe(" -- ")
-->assertEqual("1 -- 2 -- 3")
+[1, 2, 3]->Array.joinUnsafe(" -- ") == "1 -- 2 -- 3"
 ```
 */
 @send
@@ -519,9 +496,7 @@ external joinUnsafe: (array<'a>, string) => string = "join"
 ## Examples
 
 ```rescript
-[1, 2, 3]
-->Array.joinWithUnsafe(" -- ")
-->assertEqual("1 -- 2 -- 3")
+[1, 2, 3]->Array.joinWithUnsafe(" -- ") == "1 -- 2 -- 3"
 ```
 */
 @deprecated("Use `joinUnsafe` instead") @send
@@ -538,9 +513,7 @@ See [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 ## Examples
 
 ```rescript
-[1, 2, 3, 4]
-->Array.slice(~start=1, ~end=3)
-->assertEqual([2, 3])
+[1, 2, 3, 4]->Array.slice(~start=1, ~end=3) == [2, 3]
 ```
 */
 @send
@@ -554,9 +527,7 @@ See [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 ## Examples
 
 ```rescript
-[1, 2, 3, 4]
-->Array.sliceToEnd(~start=1)
-->assertEqual([2, 3, 4])
+[1, 2, 3, 4]->Array.sliceToEnd(~start=1) == [2, 3, 4]
 ```
 */
 @send
@@ -570,8 +541,8 @@ external sliceToEnd: (array<'a>, ~start: int) => array<'a> = "slice"
 let myArray = [1, 2, 3]
 let copyOfMyArray = myArray->Array.copy
 
-copyOfMyArray->assertEqual([1, 2, 3])
-assertEqual(myArray === copyOfMyArray, false)
+copyOfMyArray == [1, 2, 3]
+(myArray === copyOfMyArray) == false
 ```
 */
 @send
@@ -585,9 +556,7 @@ See [`Array.toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 ## Examples
 
 ```rescript
-[1, 2, 3, 4]
-->Array.toString
-->assertEqual("1,2,3,4")
+[1, 2, 3, 4]->Array.toString == "1,2,3,4"
 ```
 */
 @send
@@ -605,13 +574,9 @@ See [`Array.every`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 ```rescript
 let array = [1, 2, 3, 4]
 
-array
-->Array.every(num => num <= 4)
-->assertEqual(true)
+array->Array.every(num => num <= 4) == true
 
-array
-->Array.every(num => num === 1)
-->assertEqual(false)
+array->Array.every(num => num === 1) == false
 ```
 */
 @send
@@ -627,13 +592,9 @@ See [`Array.every`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 ```rescript
 let array = [1, 2, 3, 4]
 
-array
-->Array.everyWithIndex((num, index) => index < 5 && num <= 4)
-->assertEqual(true)
+array->Array.everyWithIndex((num, index) => index < 5 && num <= 4) == true
 
-array
-->Array.everyWithIndex((num, index) => index < 2 && num >= 2)
-->assertEqual(false)
+array->Array.everyWithIndex((num, index) => index < 2 && num >= 2) == false
 ```
 */
 @send
@@ -647,9 +608,7 @@ See [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Ref
 ## Examples
 
 ```rescript
-[1, 2, 3, 4]
-->Array.filter(num => num > 2)
-->assertEqual([3, 4])
+[1, 2, 3, 4]->Array.filter(num => num > 2) == [3, 4]
 ```
 */
 @send
@@ -663,9 +622,7 @@ See [`Array.filter`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Ref
 ## Examples
 
 ```rescript
-[1, 2, 3, 4]
-->Array.filterWithIndex((num, index) => index === 0 || num === 2)
-->assertEqual([1, 2])
+[1, 2, 3, 4]->Array.filterWithIndex((num, index) => index === 0 || num === 2) == [1, 2]
 ```
 */
 @send
@@ -683,9 +640,7 @@ type languages = ReScript | TypeScript | JavaScript
 
 let array = [ReScript, TypeScript, JavaScript]
 
-array
-->Array.find(item => item == ReScript)
-->assertEqual(Some(ReScript))
+array->Array.find(item => item == ReScript) == Some(ReScript)
 ```
 */
 @send
@@ -703,9 +658,7 @@ type languages = ReScript | TypeScript | JavaScript
 
 let array = [TypeScript, JavaScript, ReScript]
 
-array
-->Array.findWithIndex((item, index) => index > 1 && item == ReScript)
-->assertEqual(Some(ReScript))
+array->Array.findWithIndex((item, index) => index > 1 && item == ReScript) == Some(ReScript)
 ```
 */
 @send
@@ -721,9 +674,7 @@ See [`Array.findLast`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 ```rescript
 let array = [1, 2, 3]
 
-array
-->Array.findLast(item => item > 0)
-->assertEqual(Some(3))
+array->Array.findLast(item => item > 0) == Some(3)
 ```
 */
 @send
@@ -739,9 +690,7 @@ See [`Array.findLast`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 ```rescript
 let array = [1, 2, 3]
 
-array
-->Array.findLastWithIndex((item, index) => index < 2 && item > 0)
-->assertEqual(Some(2))
+array->Array.findLastWithIndex((item, index) => index < 2 && item > 0) == Some(2)
 ```
 */
 @send
@@ -761,12 +710,9 @@ type languages = ReScript | TypeScript | JavaScript
 
 let array = [ReScript, JavaScript]
 
-array
-->Array.findIndex(item => item == ReScript)
-->assertEqual(0)
+array->Array.findIndex(item => item == ReScript) == 0
 
-array->Array.findIndex(item => item == TypeScript)
-->assertEqual(-1)
+array->Array.findIndex(item => item == TypeScript) == -1
 ```
 */
 @send
@@ -786,11 +732,13 @@ type languages = ReScript | TypeScript | JavaScript
 
 let array = [ReScript, JavaScript]
 
-let isReScriptFirst = array->Array.findIndexWithIndex((item, index) => index === 0 && item == ReScript)
-let isTypeScriptFirst = array->Array.findIndexWithIndex((item, index) => index === 0 && item == TypeScript)
+let isReScriptFirst =
+  array->Array.findIndexWithIndex((item, index) => index === 0 && item == ReScript)
+let isTypeScriptFirst =
+  array->Array.findIndexWithIndex((item, index) => index === 0 && item == TypeScript)
 
-assertEqual(isReScriptFirst, 0)
-assertEqual(isTypeScriptFirst, -1)
+isReScriptFirst == 0
+isTypeScriptFirst == -1
 ```
 */
 @send
@@ -810,12 +758,9 @@ type languages = ReScript | TypeScript | JavaScript
 
 let array = [ReScript, JavaScript, ReScript]
 
-array
-->Array.findLastIndex(item => item == ReScript)
-->assertEqual(2)
+array->Array.findLastIndex(item => item == ReScript) == 2
 
-array->Array.findLastIndex(item => item == TypeScript)
-->assertEqual(-1)
+array->Array.findLastIndex(item => item == TypeScript) == -1
 ```
 */
 @send
@@ -835,11 +780,13 @@ type languages = ReScript | TypeScript | JavaScript
 
 let array = [ReScript, JavaScript, JavaScript, ReScript]
 
-let isReScriptLast = array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == ReScript)
-let isTypeScriptLast = array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == TypeScript)
+let isReScriptLast =
+  array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == ReScript)
+let isTypeScriptLast =
+  array->Array.findLastIndexWithIndex((item, index) => index === 3 && item == TypeScript)
 
-assertEqual(isReScriptLast, 3)
-assertEqual(isTypeScriptLast, -1)
+isReScriptLast == 3
+isTypeScriptLast == -1
 ```
 */
 @send
@@ -891,7 +838,7 @@ See [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 let array = ["Hello", "Hi", "Good bye"]
 let mappedArray = array->Array.map(greeting => greeting ++ " to you")
 
-assertEqual(mappedArray, ["Hello to you", "Hi to you", "Good bye to you"])
+mappedArray == ["Hello to you", "Hi to you", "Good bye to you"]
 ```
 */
 @send
@@ -907,11 +854,9 @@ See [`Array.map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refere
 ```rescript
 let array = ["Hello", "Hi", "Good bye"]
 let mappedArray =
-  array->Array.mapWithIndex((greeting, index) =>
-    greeting ++ " at position " ++ Int.toString(index)
-  )
+  array->Array.mapWithIndex((greeting, index) => greeting ++ " at position " ++ Int.toString(index))
 
-assertEqual(mappedArray, ["Hello at position 0", "Hi at position 1", "Good bye at position 2"])
+mappedArray == ["Hello at position 0", "Hi at position 1", "Good bye at position 2"]
 ```
 */
 @send
@@ -925,15 +870,13 @@ Applies `fn` to each element of `xs` from beginning to end. Function `fn` has tw
 ## Examples
 
 ```rescript
-Array.reduce([2, 3, 4], 1, (a, b) => a + b)->assertEqual(10)
+Array.reduce([2, 3, 4], 1, (a, b) => a + b) == 10
 
-Array.reduce(["a", "b", "c", "d"], "", (a, b) => a ++ b)->assertEqual("abcd")
+Array.reduce(["a", "b", "c", "d"], "", (a, b) => a ++ b) == "abcd"
 
-[1, 2, 3]
-->Array.reduce(list{}, List.add)
-->assertEqual(list{3, 2, 1})
+[1, 2, 3]->Array.reduce(list{}, List.add) == list{3, 2, 1}
 
-Array.reduce([], list{}, List.add)->assertEqual(list{})
+Array.reduce([], list{}, List.add) == list{}
 ```
 */
 let reduce: (array<'a>, 'b, ('b, 'a) => 'b) => 'b
@@ -946,11 +889,11 @@ Applies `fn` to each element of `xs` from beginning to end. Function `fn` has th
 ## Examples
 
 ```rescript
-Array.reduceWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i)->assertEqual(16)
+Array.reduceWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i) == 16
 
-Array.reduceWithIndex([1, 2, 3], list{}, (acc, v, i) => list{v + i, ...acc})->assertEqual(list{5, 3, 1})
+Array.reduceWithIndex([1, 2, 3], list{}, (acc, v, i) => list{v + i, ...acc}) == list{5, 3, 1}
 
-Array.reduceWithIndex([], list{}, (acc, v, i) => list{v + i, ...acc})->assertEqual(list{})
+Array.reduceWithIndex([], list{}, (acc, v, i) => list{v + i, ...acc}) == list{}
 ```
 */
 let reduceWithIndex: (array<'a>, 'b, ('b, 'a, int) => 'b) => 'b
@@ -963,11 +906,11 @@ Works like `Array.reduce`; except that function `fn` is applied to each item of 
 ## Examples
 
 ```rescript
-Array.reduceRight(["a", "b", "c", "d"], "", (a, b) => a ++ b)->assertEqual("dcba")
+Array.reduceRight(["a", "b", "c", "d"], "", (a, b) => a ++ b) == "dcba"
 
-Array.reduceRight([1, 2, 3], list{}, List.add)->assertEqual(list{1, 2, 3})
+Array.reduceRight([1, 2, 3], list{}, List.add) == list{1, 2, 3}
 
-Array.reduceRight([], list{}, List.add)->assertEqual(list{})
+Array.reduceRight([], list{}, List.add) == list{}
 ```
 */
 let reduceRight: (array<'a>, 'b, ('b, 'a) => 'b) => 'b
@@ -980,9 +923,9 @@ Like `reduceRight`, but with an additional index argument on the callback functi
 ## Examples
 
 ```rescript
-Array.reduceRightWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i)->assertEqual(16)
+Array.reduceRightWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i) == 16
 
-Array.reduceRightWithIndex([], list{}, (acc, v, i) => list{v + i, ...acc})->assertEqual(list{})
+Array.reduceRightWithIndex([], list{}, (acc, v, i) => list{v + i, ...acc}) == list{}
 ```
 */
 let reduceRightWithIndex: (array<'a>, 'b, ('b, 'a, int) => 'b) => 'b
@@ -997,9 +940,7 @@ See [`Array.some`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ```rescript
 let array = ["Hello", "Hi", "Good bye"]
 
-array
-->Array.some(greeting => greeting === "Hello")
-->assertEqual(true)
+array->Array.some(greeting => greeting === "Hello") == true
 ```
 */
 @send
@@ -1015,9 +956,7 @@ See [`Array.some`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ```rescript
 let array = ["Hello", "Hi", "Good bye"]
 
-array
-->Array.someWithIndex((greeting, index) => greeting === "Hello" && index === 0)
-->assertEqual(true)
+array->Array.someWithIndex((greeting, index) => greeting === "Hello" && index === 0) == true
 ```
 */
 @send
@@ -1033,13 +972,9 @@ Returns `None` if the index does not exist in the array. Equivalent to doing `ar
 ```rescript
 let array = ["Hello", "Hi", "Good bye"]
 
-array
-->Array.get(0)
-->assertEqual(Some("Hello"))
+array->Array.get(0) == Some("Hello")
 
-array
-->Array.get(3)
-->assertEqual(None)
+array->Array.get(3) == None
 ```
 */
 @get_index
@@ -1056,7 +991,7 @@ Beware this will *mutate* the array.
 let array = ["Hello", "Hi", "Good bye"]
 array->Array.set(1, "Hello")
 
-array[1]->assertEqual(Some("Hello"))
+array[1] == Some("Hello")
 ```
 */
 @set_index
@@ -1114,7 +1049,7 @@ Beware this will *mutate* the array, and is *unsafe*.
 let array = ["Hello", "Hi", "Good bye"]
 array->Array.setUnsafe(1, "Hello")
 
-assertEqual(array[1], Some("Hello"))
+array[1] == Some("Hello")
 ```
 */
 external setUnsafe: (array<'a>, int, 'a) => unit = "%array_unsafe_set"
@@ -1133,9 +1068,7 @@ type languages = ReScript | TypeScript | JavaScript
 
 let array = [ReScript, TypeScript, JavaScript]
 
-array
-->Array.findIndexOpt(item => item == ReScript)
-->assertEqual(Some(0))
+array->Array.findIndexOpt(item => item == ReScript) == Some(0)
 ```
 */
 let findIndexOpt: (array<'a>, 'a => bool) => option<int>
@@ -1152,9 +1085,7 @@ See [`Array.findLastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScr
 ```rescript
 let array = ["hello", "world", "!"]
 
-array
-->Array.findLastIndexOpt(item => item->String.includes("o"))
-->assertEqual(Some(1))
+array->Array.findLastIndexOpt(item => item->String.includes("o")) == Some(1)
 ```
 */
 let findLastIndexOpt: (array<'a>, 'a => bool) => option<int>
@@ -1170,8 +1101,8 @@ See [`Array.toReversed`](https://developer.mozilla.org/en-US/docs/Web/JavaScript
 let someArray = ["hi", "hello"]
 let reversed = someArray->Array.toReversed
 
-reversed->assertEqual(["hello", "hi"])
-someArray->assertEqual(["hi", "hello"]) // Original unchanged
+reversed == ["hello", "hi"]
+someArray == ["hi", "hello"] // Original unchanged
 ```
 */
 @send
@@ -1185,22 +1116,18 @@ Calls `fn` for each element and returns a new array containing results of the `f
 ## Examples
 
 ```rescript
-["Hello", "Hi", "Good bye"]
-->Array.filterMap(item =>
+["Hello", "Hi", "Good bye"]->Array.filterMap(item =>
   switch item {
   | "Hello" => Some(item->String.length)
   | _ => None
   }
-)
-->assertEqual([5])
+) == [5]
 
-[1, 2, 3, 4, 5, 6]
-->Array.filterMap(n => mod(n, 2) == 0 ? Some(n * n) : None)
-->assertEqual([4, 16, 36])
+[1, 2, 3, 4, 5, 6]->Array.filterMap(n => mod(n, 2) == 0 ? Some(n * n) : None) == [4, 16, 36]
 
-Array.filterMap([1, 2, 3, 4, 5, 6], _ => None)->assertEqual([])
+Array.filterMap([1, 2, 3, 4, 5, 6], _ => None) == []
 
-Array.filterMap([], n => mod(n, 2) == 0 ? Some(n * n) : None)->assertEqual([])
+Array.filterMap([], n => mod(n, 2) == 0 ? Some(n * n) : None) == []
 ```
 */
 let filterMap: (array<'a>, 'a => option<'b>) => array<'b>
@@ -1214,13 +1141,13 @@ and ignoring every value that is `None`
 ## Examples
 
 ```rescript
-Array.keepSome([Some(1), None, Some(3)])->assertEqual([1, 3])
+Array.keepSome([Some(1), None, Some(3)]) == [1, 3]
 
-Array.keepSome([Some(1), Some(2), Some(3)])->assertEqual([1, 2, 3])
+Array.keepSome([Some(1), Some(2), Some(3)]) == [1, 2, 3]
 
-Array.keepSome([None, None, None])->assertEqual([])
+Array.keepSome([None, None, None]) == []
 
-Array.keepSome([])->assertEqual([])
+Array.keepSome([]) == []
 ```
 */
 let keepSome: array<option<'a>> => array<'a>
@@ -1235,9 +1162,7 @@ let array = ["Hello", "Hi", "Good bye"]
 let shuffledArray = array->Array.toShuffled
 Console.log(shuffledArray)
 
-Array.toShuffled([1, 2, 3])
-->Array.length
-->assertEqual(3)
+Array.toShuffled([1, 2, 3])->Array.length == 3
 ```
 */
 let toShuffled: array<'a> => array<'a>
@@ -1257,9 +1182,7 @@ Console.log(array)
 let array2 = [1, 2, 3]
 array2->Array.shuffle
 
-array2
-->Array.length
-->assertEqual(3)
+array2->Array.length == 3
 ```
 */
 let shuffle: array<'a> => unit
@@ -1274,15 +1197,13 @@ type language = ReScript | TypeScript | JavaScript
 
 let array = [ReScript, TypeScript, JavaScript]
 
-array
-->Array.flatMap(item =>
+array->Array.flatMap(item =>
   switch item {
   | ReScript => [1, 2, 3]
   | TypeScript => [4, 5, 6]
   | JavaScript => [7, 8, 9]
   }
-)
-->assertEqual([1, 2, 3, 4, 5, 6, 7, 8, 9])
+) == [1, 2, 3, 4, 5, 6, 7, 8, 9]
 ```
 */
 @send
@@ -1298,16 +1219,13 @@ type language = ReScript | TypeScript | JavaScript
 
 let array = [ReScript, TypeScript, JavaScript]
 
-
-array
-->Array.flatMapWithIndex((item, index) =>
+array->Array.flatMapWithIndex((item, index) =>
   switch item {
   | ReScript => [index]
   | TypeScript => [index, index + 1]
   | JavaScript => [index, index + 1, index + 2]
   }
-)
-->assertEqual([0, 1, 2, 2, 3, 4])
+) == [0, 1, 2, 2, 3, 4]
 ```
 */
 @send
@@ -1322,13 +1240,13 @@ Otherwise returns `None`
 ## Examples
 
 ```rescript
-Array.findMap([1, 2, 3], n => mod(n, 2) == 0 ? Some(n - 2) : None)->assertEqual(Some(0))
+Array.findMap([1, 2, 3], n => mod(n, 2) == 0 ? Some(n - 2) : None) == Some(0)
 
-Array.findMap([1, 2, 3, 4, 5, 6], n => mod(n, 2) == 0 ? Some(n - 8) : None)->assertEqual(Some(-6))
+Array.findMap([1, 2, 3, 4, 5, 6], n => mod(n, 2) == 0 ? Some(n - 8) : None) == Some(-6)
 
-Array.findMap([1, 2, 3, 4, 5, 6], _ => None)->assertEqual(None)
+Array.findMap([1, 2, 3, 4, 5, 6], _ => None) == None
 
-Array.findMap([], n => mod(n, 2) == 0 ? Some(n * n) : None)->assertEqual(None)
+Array.findMap([], n => mod(n, 2) == 0 ? Some(n * n) : None) == None
 ```
 */
 let findMap: (array<'a>, 'a => option<'b>) => option<'b>
@@ -1341,12 +1259,12 @@ Get an element by its index. Negative indices count backwards from the last item
 ## Examples
 
 ```rescript
-["a", "b", "c"]->Array.at(0)->assertEqual(Some("a"))
-["a", "b", "c"]->Array.at(2)->assertEqual(Some("c"))
-["a", "b", "c"]->Array.at(3)->assertEqual(None)
-["a", "b", "c"]->Array.at(-1)->assertEqual(Some("c"))
-["a", "b", "c"]->Array.at(-3)->assertEqual(Some("a"))
-["a", "b", "c"]->Array.at(-4)->assertEqual(None)
+["a", "b", "c"]->Array.at(0) == Some("a")
+["a", "b", "c"]->Array.at(2) == Some("c")
+["a", "b", "c"]->Array.at(3) == None
+["a", "b", "c"]->Array.at(-1) == Some("c")
+["a", "b", "c"]->Array.at(-3) == Some("a")
+["a", "b", "c"]->Array.at(-4) == None
 ```
 */
 @send
@@ -1360,13 +1278,9 @@ Returns `None` if the array is empty.
 ## Examples
 
 ```rescript
-["Hello", "Hi", "Good bye"]
-->Array.last
-->assertEqual(Some("Good bye"))
+["Hello", "Hi", "Good bye"]->Array.last == Some("Good bye")
 
-[]
-->Array.last
-->assertEqual(None)
+[]->Array.last == None
 ```
 */
 let last: array<'a> => option<'a>
@@ -1388,9 +1302,9 @@ See [Array.prototype.entries](https://developer.mozilla.org/en-US/docs/Web/JavaS
 
 ```rescript
 let array = [5, 6, 7]
-let iterator : Iterator.t<(int, int)> = array->Array.entries
-iterator->Iterator.next->assertEqual({done: false, value: Some((0, 5))})
-iterator->Iterator.next->assertEqual({done: false, value: Some((1, 6))})
+let iterator: Iterator.t<(int, int)> = array->Array.entries
+iterator->Iterator.next == {done: false, value: Some((0, 5))}
+iterator->Iterator.next == {done: false, value: Some((1, 6))}
 ```
 */
 @send
@@ -1405,9 +1319,9 @@ See [Array.prototype.values](https://developer.mozilla.org/en-US/docs/Web/JavaSc
 
 ```rescript
 let array = [5, 6, 7]
-let iterator : Iterator.t<int> = array->Array.values
-iterator->Iterator.next->assertEqual({done: false, value: Some(5)})
-iterator->Iterator.next->assertEqual({done: false, value: Some(6)})
+let iterator: Iterator.t<int> = array->Array.values
+iterator->Iterator.next == {done: false, value: Some(5)}
+iterator->Iterator.next == {done: false, value: Some(6)}
 ```
  */
 @send

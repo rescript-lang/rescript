@@ -57,7 +57,7 @@ If `Js.undefined<'a>` contains a value, that value is unwrapped, mapped to a
 
 ```rescript
 let maybeGreetWorld = (maybeGreeting: Js.undefined<string>) =>
-  Js.Undefined.bind(maybeGreeting, (. greeting) => greeting ++ " world!")
+  Js.Undefined.bind(maybeGreeting, greeting => greeting ++ " world!")
 ```
 */
 let bind: (t<'a>, 'a => 'b) => t<'b>
@@ -71,7 +71,7 @@ given function.
 
 ```rescript
 let maybeSay = (maybeMessage: Js.undefined<string>) =>
-  Js.Undefined.iter(maybeMessage, (. message) => Js.log(message))
+  Js.Undefined.iter(maybeMessage, message => Js.log(message))
 ```
 */
 let iter: (t<'a>, 'a => unit) => unit

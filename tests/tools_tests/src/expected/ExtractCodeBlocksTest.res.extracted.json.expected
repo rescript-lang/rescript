@@ -1,0 +1,8 @@
+{
+    "TAG": "Ok",
+    "_0": [{
+    "id": "ExtractCodeBlocksTest.testFunction1",
+    "name": "testFunction1",
+    "code": "let x = 12\nlet y = 12->Array.filter(x => x == 12)\nassertEqual(x, 12)"
+  }]
+  }

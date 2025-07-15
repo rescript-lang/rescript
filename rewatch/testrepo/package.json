@@ -9,7 +9,8 @@
       "packages/new-namespace",
       "packages/namespace-casing",
       "packages/with-dev-deps",
-      "packages/compiled-by-legacy"
+      "packages/compiled-by-legacy",
+      "packages/nonexisting-dev-files"
     ]
   },
   "dependencies": {

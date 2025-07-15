@@ -205,14 +205,6 @@ let eval (s : string) ~suffix =
 
 (* let (//) = Filename.concat *)
 
-module Pp = Rescript_cpp
-let define_variable s =
-  match Ext_string.split ~keep_empty:true s '=' with
-  | [key; v] ->
-    if not (Pp.define_key_value key v) then
-      Bsc_args.bad_arg ("illegal definition: " ^ s)
-  | _ -> Bsc_args.bad_arg ("illegal definition: " ^ s)
-
 let print_standard_library () =
   let standard_library = Config.standard_library in
   print_string standard_library;
@@ -236,7 +228,7 @@ let[@inline] string_list_add s : Bsc_args.spec = String (String_list_add s)
 
 (* mostly common used to list in the beginning to make search fast
 *)
-let buckle_script_flags : (string * Bsc_args.spec * string) array =
+let command_line_flags : (string * Bsc_args.spec * string) array =
   [|
     ( "-I",
       string_list_add Clflags.include_dirs,
@@ -266,8 +258,7 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
       "*internal* <module>  Opens the module <module> before typing" );
     ( "-bs-jsx",
       string_call (fun i ->
-          if i <> "3" && i <> "4" then
-            Bsc_args.bad_arg (" Not supported jsx version : " ^ i);
+          if i <> "4" then Bsc_args.bad_arg ("Unsupported jsx version: " ^ i);
           Js_config.jsx_version :=
             Js_config.jsx_version_of_int @@ int_of_string i),
       "*internal* Set jsx version" );
@@ -297,11 +288,7 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
     ( "-bs-syntax-only",
       set Js_config.syntax_only,
       "*internal* Only check syntax" );
-    ( "-bs-g",
-      unit_call (fun _ ->
-          Js_config.debug := true;
-          Pp.replace_directive_bool "DEBUG" true),
-      "Debug mode" );
+    ("-bs-g", set Js_config.debug, "Debug mode");
     ( "-bs-package-name",
       string_call Js_packages_state.set_package_name,
       "*internal* Set package name, useful when you want to produce npm \
@@ -323,12 +310,6 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
     ( "-unboxed-types",
       set Clflags.unboxed_types,
       "*internal* Unannotated unboxable types will be unboxed" );
-    ( "-bs-D",
-      string_call define_variable,
-      "Define conditional variable e.g, -D DEBUG=true" );
-    ( "-bs-unsafe-empty-array",
-      set Config.unsafe_empty_array,
-      "*internal* Allow [||] to be polymorphic" );
     ("-nostdlib", set Js_config.no_stdlib, "*internal* Don't use stdlib");
     ( "-color",
       string_call set_color_option,
@@ -341,9 +322,6 @@ let buckle_script_flags : (string * Bsc_args.spec * string) array =
        The current heuristic for 'auto'\n\
        checks that the TERM environment variable exists and is\n\
        not empty or \"dumb\", and that isatty(stderr) holds." );
-    ( "-bs-list-conditionals",
-      unit_call (fun () -> Pp.list_variables Format.err_formatter),
-      "*internal* List existing conditional variables" );
     ( "-e",
       string_call (fun s -> eval s ~suffix:Literals.suffix_res),
       "(experimental) set the string to be evaluated in ReScript syntax" );
@@ -464,7 +442,7 @@ let file_level_flags_handler (e : Parsetree.expression option) =
                Location.raise_errorf ~loc:e.pexp_loc "string literal expected"))
     in
     try
-      Bsc_args.parse_exn ~start:0 ~argv:args buckle_script_flags
+      Bsc_args.parse_exn ~start:0 ~argv:args command_line_flags
         (fun ~rev_args:_ -> ())
         ~usage
     with _ ->
@@ -478,9 +456,7 @@ let _ : unit =
   let flags = "flags" in
   Ast_config.add_structure flags file_level_flags_handler;
   Ast_config.add_signature flags file_level_flags_handler;
-  try
-    Bsc_args.parse_exn ~argv:Sys.argv buckle_script_flags anonymous ~usage
-  with
+  try Bsc_args.parse_exn ~argv:Sys.argv command_line_flags anonymous ~usage with
   | Bsc_args.Bad msg ->
     Format.eprintf "%s@." msg;
     exit 2

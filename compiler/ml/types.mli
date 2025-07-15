@@ -57,11 +57,13 @@ type type_expr = {mutable desc: type_desc; mutable level: int; id: int}
     Note on mutability: TBD.
  *)
 
+and arg = {lbl: Noloc.arg_label; typ: type_expr}
+
 and type_desc =
   | Tvar of string option
       (** [Tvar (Some "a")] ==> ['a] or ['_a]
       [Tvar None]       ==> [_] *)
-  | Tarrow of Noloc.arg_label * type_expr * type_expr * commutable * arity
+  | Tarrow of arg * type_expr * commutable * arity
       (** [Tarrow (Nolabel,      e1, e2, c)] ==> [e1    -> e2]
       [Tarrow (Labelled "l", e1, e2, c)] ==> [l:e1  -> e2]
       [Tarrow (Optional "l", e1, e2, c)] ==> [?l:e1 -> e2]

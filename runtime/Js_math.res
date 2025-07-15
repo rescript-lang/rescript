@@ -164,7 +164,7 @@ external atanh: float => float = "atanh"
 
 /**
 Returns the angle (in radians) of the quotient `y /. x`. It is also the angle
-between the *x*-axis and point (*x*, *y*). See
+between the *x*\-axis and point (*x*, *y*). See
 [`Math.atan2`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/atan2)
 on MDN.
 
@@ -192,9 +192,9 @@ external cbrt: float => float = "cbrt"
 /**
 Returns the smallest integer greater than or equal to the argument. This
 function may return values not representable by `int`, whose range is
--2147483648 to 2147483647. This is because, in JavaScript, there are only
+\-2147483648 to 2147483647. This is because, in JavaScript, there are only
 64-bit floating point numbers, which can represent integers in the range
-±(2<sup>53</sup>-1) exactly. See
+±(2<sup>53</sup>\-1) exactly. See
 [`Math.ceil`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/ceil)
 on MDN.
 
@@ -313,7 +313,7 @@ Returns the largest integer less than or equal to the argument. This function
 may return values not representable by `int`, whose range is -2147483648 to
 2147483647. This is because, in JavaScript, there are only 64-bit floating
 point numbers, which can represent integers in the range
-±(2<sup>53</sup>-1) exactly. See
+±(2<sup>53</sup>\-1) exactly. See
 [`Math.floor`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/floor)
 on MDN.
 
@@ -612,7 +612,7 @@ of exactly 0.5, the argument is rounded to the next integer in the direction
 of positive infinity. This function may return values not representable by
 `int`, whose range is -2147483648 to 2147483647. This is because, in
 JavaScript, there are only 64-bit floating point numbers, which can represent
-integers in the range ±(2<sup>53</sup>-1) exactly. See
+integers in the range ±(2<sup>53</sup>\-1) exactly. See
 [`Math.round`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round)
 on MDN.
 

@@ -49,11 +49,10 @@ let remind = () => {
   punchSleepyGuy()
 }
 
-let snooze = mins =>
-  interval := Js.Nullable.return(Js.Global.setInterval(remind, mins * 60 * 1000))
+let snooze = mins => interval := Js.Nullable.return(Js.Global.setInterval(remind, mins * 60 * 1000))
 
 let cancel = () =>
-  Js.Nullable.iter(interval.contents, (. intervalId) => Js.Global.clearInterval(intervalId))
+  Js.Nullable.iter(interval.contents, intervalId => Js.Global.clearInterval(intervalId))
 ```
 */
 @val
@@ -74,7 +73,7 @@ let timer = ref(Js.Nullable.null)
 let work = () => closeHackerNewsTab()
 
 let procrastinate = mins => {
-  Js.Nullable.iter(timer.contents, (. timer) => Js.Global.clearTimeout(timer))
+  Js.Nullable.iter(timer.contents, timer => Js.Global.clearTimeout(timer))
   timer := Js.Nullable.return(Js.Global.setTimeout(work, mins * 60 * 1000))
 }
 ```

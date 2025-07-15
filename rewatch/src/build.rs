@@ -56,10 +56,7 @@ pub struct CompilerArgs {
     pub parser_args: Vec<String>,
 }
 
-pub fn get_compiler_args(
-    path: &Path,
-    build_dev_deps: bool,
-) -> Result<String> {
+pub fn get_compiler_args(path: &Path, build_dev_deps: bool) -> Result<String> {
     let filename = &helpers::get_abs_path(path);
     let package_root =
         helpers::get_abs_path(&helpers::get_nearest_config(&path).expect("Couldn't find package root"));
@@ -117,16 +114,12 @@ pub fn initialize_build(
     filter: &Option<regex::Regex>,
     show_progress: bool,
     path: &Path,
-    bsc_path: &Option<PathBuf>,
     build_dev_deps: bool,
     snapshot_output: bool,
 ) -> Result<BuildState> {
     let project_root = helpers::get_abs_path(path);
     let workspace_root = helpers::get_workspace_root(&project_root);
-    let bsc_path = match bsc_path {
-        Some(bsc_path) => helpers::get_abs_path(&bsc_path),
-        None => helpers::get_bsc(&project_root, &workspace_root),
-    };
+    let bsc_path = helpers::get_bsc();
     let root_config_name = packages::read_package_name(&project_root)?;
 
     if !snapshot_output && show_progress {
@@ -171,13 +164,7 @@ pub fn initialize_build(
         let _ = stdout().flush();
     }
 
-    let mut build_state = BuildState::new(
-        project_root,
-        root_config_name,
-        packages,
-        workspace_root,
-        bsc_path,
-    );
+    let mut build_state = BuildState::new(project_root, root_config_name, packages, workspace_root, bsc_path);
     packages::parse_packages(&mut build_state);
     let timing_source_files_elapsed = timing_source_files.elapsed();
 
@@ -487,7 +474,6 @@ pub fn build(
     show_progress: bool,
     no_timing: bool,
     create_sourcedirs: bool,
-    bsc_path: Option<PathBuf>,
     build_dev_deps: bool,
     snapshot_output: bool,
 ) -> Result<BuildState> {
@@ -502,7 +488,6 @@ pub fn build(
         filter,
         show_progress,
         path,
-        &bsc_path,
         build_dev_deps,
         snapshot_output,
     )

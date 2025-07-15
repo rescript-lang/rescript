@@ -30,7 +30,7 @@ Converts a given `float` to an `int`.
 ## Examples
 
 ```rescript
-assertEqual(Belt.Float.toInt(1.0), 1)
+Belt.Float.toInt(1.0) == 1
 ```
 */
 external toInt: float => int = "%intoffloat"
@@ -41,7 +41,7 @@ Converts a given `int` to a `float`.
 ## Examples
 
 ```rescript
-assertEqual(Belt.Float.fromInt(1), 1.0)
+Belt.Float.fromInt(1) == 1.0
 ```
 */
 external fromInt: int => float = "%identity"
@@ -52,7 +52,7 @@ Converts a given `string` to a `float`. Returns `Some(float)` when the input is 
 ## Examples
 
 ```rescript
-assertEqual(Belt.Float.fromString("1.0"), Some(1.0))
+Belt.Float.fromString("1.0") == Some(1.0)
 ```
 */
 let fromString: string => option<float>
@@ -63,7 +63,7 @@ Converts a given `float` to a `string`. Uses the JavaScript `String` constructor
 ## Examples
 
 ```rescript
-assertEqual(Belt.Float.toString(1.0), "1")
+Belt.Float.toString(1.0) == "1"
 ```
 */
 @val
@@ -77,7 +77,7 @@ Can be opened in a module to avoid dot-notation (`+.`), however this yields a sh
 
 ```rescript
 open Belt.Float
-assertEqual(2.0 + 2.0, 4.0)
+2.0 + 2.0 == 4.0
 ```
 */
 external \"+": (float, float) => float = "%addfloat"
@@ -90,7 +90,7 @@ Can be opened in a module to avoid dot-notation (`-.`), however this yields a sh
 
 ```rescript
 open Belt.Float
-assertEqual(2.0 - 1.0, 1.0)
+2.0 - 1.0 == 1.0
 ```
 */
 external \"-": (float, float) => float = "%subfloat"
@@ -103,7 +103,7 @@ Can be opened in a module to avoid dot-notation (`*.`), however this yields a sh
 
 ```rescript
 open Belt.Float
-assertEqual(2.0 * 2.0, 4.0)
+2.0 * 2.0 == 4.0
 ```
 */
 external \"*": (float, float) => float = "%mulfloat"
@@ -116,7 +116,7 @@ Can be opened in a module to avoid dot-notation (`/.`), however this yields a sh
 
 ```rescript
 open Belt.Float
-assertEqual(4.0 / 2.0, 2.0)
+4.0 / 2.0 == 2.0
 ```
 */
 external \"/": (float, float) => float = "%divfloat"

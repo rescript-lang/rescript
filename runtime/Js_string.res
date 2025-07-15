@@ -140,7 +140,7 @@ external get: (t, int) => t = ""
 /**
 `charAt(n, s)` gets the character at index `n` within string `s`. If `n` is
 negative or greater than the length of `s`, it returns the empty string. If the
-string contains characters outside the range \u0000-\uffff, it will return the
+string contains characters outside the range \\u0000-\\uffff, it will return the
 first 16-bit value at that position in the string.
 
 See [`String.charAt`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/charAt)
@@ -336,7 +336,7 @@ let indexOf = (arg1, obj) => indexOf(obj, arg1)
 /**
 `indexOfFrom(searchValue, start, str)` returns the position at which
 `searchValue` was found within `str` starting at character position `start`, or
--1 if `searchValue` is not found in that portion of `str`. The return value is
+\-1 if `searchValue` is not found in that portion of `str`. The return value is
 relative to the beginning of the string, no matter where the search started
 from.
 
@@ -424,7 +424,7 @@ let localeCompare = (arg1, obj) => localeCompare(obj, arg1)
 /**
 `match(regexp, str)` matches a `string` against the given `regexp`. If there is
 no match, it returns `None`. For regular expressions without the g modifier, if
-  there is a match, the return value is `Some(array)` where the array contains:
+there is a match, the return value is `Some(array)` where the array contains:
 - The entire matched string
 - Any capture groups if the regexp had parentheses
 
@@ -738,7 +738,7 @@ on MDN.
 ## Examples
 
 ```rescript
-Js.String.splitByRe(%re("/\s*[,;]\s*TODO/"), "art; bed , cog ;dad") == [
+Js.String.splitByRe(/\s*[,;]\s*TODO/, "art; bed , cog ;dad") == [
     Some("art"),
     Some("bed"),
     Some("cog"),
@@ -762,15 +762,15 @@ on MDN.
 ## Examples
 
 ```rescript
-Js.String.splitByReAtMost(%re("/\s*[,;]\s*TODO/"), ~limit=3, "one: two: three: four") == [
+Js.String.splitByReAtMost(/\s*[,;]\s*TODO/, ~limit=3, "one: two: three: four") == [
     Some("one"),
     Some("two"),
     Some("three"),
   ]
 
-Js.String.splitByReAtMost(%re("/\s*[,;]\s*TODO/"), ~limit=0, "one: two: three: four") == []
+Js.String.splitByReAtMost(/\s*[,;]\s*TODO/, ~limit=0, "one: two: three: four") == []
 
-Js.String.splitByReAtMost(%re("/\s*[,;]\s*TODO/"), ~limit=8, "one: two: three: four") == [
+Js.String.splitByReAtMost(/\s*[,;]\s*TODO/, ~limit=8, "one: two: three: four") == [
     Some("one"),
     Some("two"),
     Some("three"),
@@ -1000,7 +1000,7 @@ on MDN.
 ## Examples
 
 ```rescript
-Js.String.anchor("page1", "Page One") == "<a name="page1">Page One</a>"
+Js.String.anchor("page1", "Page One") == "<a name=\"page1\">Page One</a>"
 ```
 */
 @send
@@ -1018,7 +1018,7 @@ on MDN.
 ## Examples
 
 ```rescript
-Js.String.link("page2.html", "Go to page two") == "<a href="page2.html">Go to page two</a>"
+Js.String.link("page2.html", "Go to page two") == "<a href=\"page2.html\">Go to page two</a>"
 ```
 */
 @send

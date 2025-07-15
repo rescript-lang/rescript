@@ -14,6 +14,8 @@ And another code block in the same docstring:
 ```rescript
 type user={name:string,age:int,active:bool}
 let createUser=(name,age)=>{name:name,age:age,active:true}
+let x=12
+x == 12
 ```
 */
 let testFunction1 = () => "test1"

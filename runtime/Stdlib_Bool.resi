@@ -49,7 +49,7 @@ let fromStringOrThrow: string => bool
 
 /**
 Converts a string to a boolean.
-Beware, this function will throw an `Invalid_argument` exception 
+Beware, this function will throw an `Invalid_argument` exception
 if the string is not a valid boolean.
 
 ## Examples

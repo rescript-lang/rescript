@@ -40,7 +40,7 @@ TestError("some rejected value")
 ->Promise.reject
 ->Promise.catch(v => {
   switch v {
-  | TestError(msg) => assertEqual(msg, "some rejected value")
+  | TestError(msg) => msg == "some rejected value"
   | _ => assert(false)
   }
   Promise.resolve()
@@ -62,11 +62,10 @@ open Promise
 
 let n = 4
 Promise.make((resolve, reject) => {
-  if(n < 5) {
-    resolve(. "success")
-  }
-  else {
-    reject(. "failed")
+  if n < 5 {
+    resolve("success")
+  } else {
+    reject("failed")
   }
 })
 ->then(str => {
@@ -99,7 +98,7 @@ open Promise
 let {promise, resolve, _} = Promise.withResolvers()
 
 setTimeout(() => {
-  resolve(. "success")
+  resolve("success")
 }, 1000)->TimeoutId.ignore
 
 promise
@@ -130,14 +129,14 @@ reject(SomeError("this is an error"))
   Ok("This result will never be returned")->resolve
 })
 ->catch(e => {
-  let msg = switch(e) {
-    | SomeError(msg) => "ReScript error occurred: " ++ msg
-    | JsExn(obj) =>
-      switch JsExn.message(obj) {
-        | Some(msg) => "JS exception occurred: " ++ msg
-        | None => "Some other JS value has been thrown"
-      }
-    | _ => "Unexpected error occurred"
+  let msg = switch e {
+  | SomeError(msg) => "ReScript error occurred: " ++ msg
+  | JsExn(obj) =>
+    switch JsExn.message(obj) {
+    | Some(msg) => "JS exception occurred: " ++ msg
+    | None => "Some other JS value has been thrown"
+    }
+  | _ => "Unexpected error occurred"
   }
 
   Error(msg)->resolve
@@ -157,7 +156,7 @@ In case you want to return another promise in your `callback`, consider using
 let catch: (t<'a>, exn => t<'a>) => t<'a>
 
 /**
-`then(promise, callback)` returns a new promise based on the result of `promise`'s 
+`then(promise, callback)` returns a new promise based on the result of `promise`'s
 value. The `callback` needs to explicitly return a new promise via `resolve`.
 It is **not allowed** to resolve a nested promise (like `resolve(resolve(1))`).
 See [`Promise.then`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then) on MDN.
@@ -302,7 +301,7 @@ open Promise
 let promises = [resolve(1), resolve(2), resolve(3)]
 
 all(promises)
-->then((results) => {
+->then(results => {
   results->Array.forEach(num => {
     Console.log2("Number: ", num)
   })
@@ -360,13 +359,11 @@ exception TestError(string)
 let promises = [resolve(1), resolve(2), reject(TestError("some rejected promise"))]
 
 allSettled(promises)
-->then((results) => {
-  results->Array.forEach((result) => {
+->then(results => {
+  results->Array.forEach(result => {
     switch result {
-      | Fulfilled({value: num}) => 
-        Console.log2("Number: ", num)
-      | Rejected({reason}) =>
-        Console.log(reason)
+    | Fulfilled({value: num}) => Console.log2("Number: ", num)
+    | Rejected({reason}) => Console.log(reason)
     }
   })
 

@@ -875,12 +875,12 @@ module SexpAst = struct
       match typexpr.ptyp_desc with
       | Ptyp_any -> Sexp.atom "Ptyp_any"
       | Ptyp_var var -> Sexp.list [Sexp.atom "Ptyp_var"; string var]
-      | Ptyp_arrow {lbl; arg; ret} ->
+      | Ptyp_arrow {arg; ret} ->
         Sexp.list
           [
             Sexp.atom "Ptyp_arrow";
-            arg_label_loc lbl;
-            core_type arg;
+            arg_label_loc arg.lbl;
+            core_type arg.typ;
             core_type ret;
           ]
       | Ptyp_tuple types ->

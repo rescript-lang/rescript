@@ -98,9 +98,11 @@ module T = struct
     match desc with
     | Ptyp_any -> any ~loc ~attrs ()
     | Ptyp_var s -> var ~loc ~attrs s
-    | Ptyp_arrow {lbl; arg; ret; arity} -> (
-      let lbl = Asttypes.to_noloc lbl in
-      let typ0 = arrow ~loc ~attrs lbl (sub.typ sub arg) (sub.typ sub ret) in
+    | Ptyp_arrow {arg; ret; arity} -> (
+      let lbl = Asttypes.to_noloc arg.lbl in
+      let typ0 =
+        arrow ~loc ~attrs lbl (sub.typ sub arg.typ) (sub.typ sub ret)
+      in
       match arity with
       | None -> typ0
       | Some arity ->

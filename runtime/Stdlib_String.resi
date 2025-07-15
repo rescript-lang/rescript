@@ -115,8 +115,8 @@ String.fromCodePointMany([0xd55c, 0xae00, 0x1f63a]) == `한글😺`
 ## Exceptions
 
 - `RangeError`: If one of the number is not a valid code point, like
-`fromCharCode([1, -5])`.
-
+  `fromCharCode([1, -5])`.
+  
 */
 @variadic @val
 external fromCodePointMany: array<int> => string = "String.fromCodePoint"
@@ -194,7 +194,7 @@ external getUnsafe: (string, int) => string = ""
 /**
 `charAt(str, index)` gets the character at `index` within string `str`. If
 `index` is negative or greater than the length of `str`, it returns the empty
-string. If the string contains characters outside the range \u0000-\uffff, it
+string. If the string contains characters outside the range \\u0000-\\uffff, it
 will return the first 16-bit value at that position in the string.
 See [`String.charAt`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/charAt) on MDN.
 
@@ -446,19 +446,20 @@ no match, it returns `None`. For regular expressions without the g modifier, if
 there is a match, the return value is `Some(array)` where the array contains:
 - The entire matched string
 - Any capture groups if the regexp had parentheses
-For regular expressions with the g modifier, a matched expression returns
-`Some(array)` with all the matched substrings and no capture groups.
-See [`String.match`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/match) on MDN.
+  For regular expressions with the g modifier, a matched expression returns
+  `Some(array)` with all the matched substrings and no capture groups.
+  See [`String.match`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/match) on MDN.
 
 ## Examples
 
 ```rescript
-String.match("The better bats", %re("/b[aeiou]t/")) == Some([Some("bet")])
-String.match("The better bats", %re("/b[aeiou]t/g")) == Some([Some("bet"), Some("bat")])
-String.match("Today is 2018-04-05.", %re("/(\d+)-(\d+)-(\d+)/")) ==
+String.match("The better bats", /b[aeiou]t/) == Some([Some("bet")])
+String.match("The better bats", /b[aeiou]t/g) == Some([Some("bet"), Some("bat")])
+String.match("Today is 2018-04-05.", /(\d+)-(\d+)-(\d+)/) ==
   Some([Some("2018-04-05"), Some("2018"), Some("04"), Some("05")])
-String.match("The optional example", %re("/(foo)?(example)/")) == Some([Some("example"), None, Some("example")])
-String.match("The large container.", %re("/b[aeiou]g/")) == None
+String.match("The optional example", /(foo)?(example)/) ==
+  Some([Some("example"), None, Some("example")])
+String.match("The large container.", /b[aeiou]g/) == None
 ```
 */
 @return(nullable) @send
@@ -467,11 +468,11 @@ external match: (string, Stdlib_RegExp.t) => option<Stdlib_RegExp.Result.t> = "m
 /**
 `normalize(str)` returns the normalized Unicode string using Normalization Form
 Canonical (NFC) Composition. Consider the character ã, which can be represented
-as the single codepoint \u00e3 or the combination of a lower case letter A
-\u0061 and a combining tilde \u0303. Normalization ensures that both can be
+as the single codepoint \\u00e3 or the combination of a lower case letter A
+\\u0061 and a combining tilde \\u0303. Normalization ensures that both can be
 stored in an equivalent binary representation.
 See [`String.normalize`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/normalize) on MDN.
-See also [Unicode technical report #15](https://unicode.org/reports/tr15/) for details.
+See also [Unicode technical report \#15](https://unicode.org/reports/tr15/) for details.
 
 ## Examples
 
@@ -480,7 +481,7 @@ let string1 = "\u00F1"
 let string2 = "\u006E\u0303"
 
 assert(string1 != string2) // true
-assertEqual(String.normalize(string1), String.normalize(string2))
+String.normalize(string1) == String.normalize(string2)
 ```
 */
 @send
@@ -493,9 +494,9 @@ specified form of normalization, which may be one of:
 - "NFD" — Normalization Form Canonical Decomposition.
 - "NFKC" — Normalization Form Compatibility Composition.
 - "NFKD" — Normalization Form Compatibility Decomposition.
-See [`String.normalize`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/normalize) on MDN.
-See also [Unicode technical report #15](https://unicode.org/reports/tr15/) for
-details.
+  See [`String.normalize`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/normalize) on MDN.
+  See also [Unicode technical report \#15](https://unicode.org/reports/tr15/) for
+  details.
 
 ## Examples
 
@@ -556,8 +557,8 @@ See [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 ## Examples
 
 ```rescript
-String.replaceRegExp("vowels be gone", %re("/[aeiou]/g"), "x") == "vxwxls bx gxnx"
-String.replaceRegExp("Juan Fulano", %re("/(\w+) (\w+)/"), "$2, $1") == "Fulano, Juan"
+String.replaceRegExp("vowels be gone", /[aeiou]/g, "x") == "vxwxls bx gxnx"
+String.replaceRegExp("Juan Fulano", /(\w+) (\w+)/, "$2, $1") == "Fulano, Juan"
 ```
 */
 @send
@@ -589,8 +590,8 @@ See [`String.replaceAll`](https://developer.mozilla.org/en-US/docs/Web/JavaScrip
 ## Examples
 
 ```rescript
-String.replaceAllRegExp("vowels be gone", %re("/[aeiou]/g"), "x") == "vxwxls bx gxnx"
-String.replaceAllRegExp("aabbcc", %re("/b/g"), ".") == "aa..cc"
+String.replaceAllRegExp("vowels be gone", /[aeiou]/g, "x") == "vxwxls bx gxnx"
+String.replaceAllRegExp("aabbcc", /b/g, ".") == "aa..cc"
 ```
 */
 @send
@@ -608,7 +609,7 @@ See [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 
 ```rescript
 let str = "beautiful vowels"
-let re = %re("/[aeiou]/g")
+let re = /[aeiou]/g
 let matchFn = (~match, ~offset as _, ~input as _) => String.toUpperCase(match)
 String.unsafeReplaceRegExpBy0(str, re, matchFn) == "bEAUtIfUl vOwEls"
 ```
@@ -629,7 +630,7 @@ See [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 
 ```rescript
 let str = "Jony is 40"
-let re = %re("/(Jony is )\d+/g")
+let re = /(Jony is )\d+/g
 let matchFn = (~match as _, ~group1, ~offset as _, ~input as _) => {
   group1 ++ "41"
 }
@@ -652,7 +653,7 @@ See [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 
 ```rescript
 let str = "7 times 6"
-let re = %re("/(\d+) times (\d+)/")
+let re = /(\d+) times (\d+)/
 let matchFn = (~match as _, ~group1, ~group2, ~offset as _, ~input as _) => {
   switch (Int.fromString(group1), Int.fromString(group2)) {
   | (Some(x), Some(y)) => Int.toString(x * y)
@@ -700,7 +701,7 @@ See [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 
 ```rescript
 let str = "beautiful vowels"
-let re = %re("/[aeiou]/g")
+let re = /[aeiou]/g
 let matchFn = (~match, ~offset as _, ~input as _) => String.toUpperCase(match)
 String.replaceRegExpBy0Unsafe(str, re, matchFn) == "bEAUtIfUl vOwEls"
 ```
@@ -721,7 +722,7 @@ See [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 
 ```rescript
 let str = "Jony is 40"
-let re = %re("/(Jony is )\d+/g")
+let re = /(Jony is )\d+/g
 let matchFn = (~match as _, ~group1, ~offset as _, ~input as _) => {
   group1 ++ "41"
 }
@@ -744,7 +745,7 @@ See [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 
 ```rescript
 let str = "7 times 6"
-let re = %re("/(\d+) times (\d+)/")
+let re = /(\d+) times (\d+)/
 let matchFn = (~match as _, ~group1, ~group2, ~offset as _, ~input as _) => {
   switch (Int.fromString(group1), Int.fromString(group2)) {
   | (Some(x), Some(y)) => Int.toString(x * y)
@@ -788,8 +789,8 @@ See [`String.search`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 ## Examples
 
 ```rescript
-String.search("testing 1 2 3", %re("/\d+/")) == 8
-String.search("no numbers", %re("/\d+/")) == -1
+String.search("testing 1 2 3", /\d+/) == 8
+String.search("no numbers", /\d+/) == -1
 ```
 */
 @send
@@ -801,8 +802,8 @@ external search: (string, Stdlib_RegExp.t) => int = "search"
 ## Examples
 
 ```rescript
-String.searchOpt("testing 1 2 3", %re("/\d+/")) == Some(8)
-String.searchOpt("no numbers", %re("/\d+/")) == None
+String.searchOpt("testing 1 2 3", /\d+/) == Some(8)
+String.searchOpt("no numbers", /\d+/) == None
 ```
 */
 let searchOpt: (string, Stdlib_RegExp.t) => option<int>
@@ -811,11 +812,11 @@ let searchOpt: (string, Stdlib_RegExp.t) => option<int>
 `slice(str, ~start, ~end)` returns the substring of `str` starting at
 character `start` up to but not including `end`.
 - If either `start` or `end` is negative, then it is evaluated as
-`length(str - start)` or `length(str - end)`.
+  `length(str - start)` or `length(str - end)`.
 - If `end` is greater than the length of `str`, then it is treated as
-`length(str)`.
+  `length(str)`.
 - If `start` is greater than `end`, slice returns the empty string.
-See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.
+  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.
 
 ## Examples
 
@@ -834,7 +835,7 @@ external slice: (string, ~start: int, ~end: int) => string = "slice"
 `start` to the end of the string.
 - If `start` is negative, then it is evaluated as `length(str - start)`.
 - If `start` is greater than the length of `str`, then sliceToEnd returns the empty string.
-See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.
+  See [`String.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice) on MDN.
 
 ## Examples
 
@@ -889,7 +890,7 @@ See [`String.split`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Ref
 ## Examples
 
 ```rescript
-String.splitByRegExp("Jan,Feb,Mar", %re("/,/")) == [Some("Jan"), Some("Feb"), Some("Mar")]
+String.splitByRegExp("Jan,Feb,Mar", /,/) == [Some("Jan"), Some("Feb"), Some("Mar")]
 ```
 */
 @send
@@ -905,8 +906,11 @@ See [`String.split`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Ref
 ## Examples
 
 ```rescript
-String.splitByRegExpAtMost("Hello World. How are you doing?", / /, ~limit=3) ==
-  [Some("Hello"), Some("World."), Some("How")]
+String.splitByRegExpAtMost("Hello World. How are you doing?", / /, ~limit=3) == [
+    Some("Hello"),
+    Some("World."),
+    Some("How"),
+  ]
 ```
 */
 @send
@@ -952,7 +956,7 @@ including end from `str`.
 - If `start` is less than zero, it is treated as zero.
 - If `end` is zero or negative, the empty string is returned.
 - If `start` is greater than `end`, the `start` and `end` points are swapped.
-See [`String.substring`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/substring) on MDN.
+  See [`String.substring`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/substring) on MDN.
 
 ## Examples
 
@@ -970,8 +974,8 @@ external substring: (string, ~start: int, ~end: int) => string = "substring"
 `start` to the end.
 - If `start` is less than or equal to zero, the entire string is returned.
 - If `start` is greater than or equal to the length of `str`, the empty string
-is returned.
-See [`String.substring`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/substring) on MDN.
+  is returned.
+  See [`String.substring`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/substring) on MDN.
 
 ## Examples
 

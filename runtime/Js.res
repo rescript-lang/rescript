@@ -52,23 +52,6 @@ For more information about these argument orders and the trade-offs between them
 
 _Eventually, all modules in the Js namespace are going to be migrated to data-first though._
 
-In the meantime, there are several options for dealing with the data-last APIs:
-
-## Examples
-
-```rescript
-/* Js.String (data-last API used with pipe last operator) */
-Js.log(\"2019-11-10\" |> Js.String.split(\"-\"))
-Js.log(\"ReScript\" |> Js.String.startsWith(\"Re\"))
-
-/* Js.String (data-last API used with pipe first operator) */
-Js.log(\"2019-11-10\"->Js.String.split(\"-\", _))
-Js.log(\"ReScript\"->Js.String.startsWith(\"Re\", _))
-
-/* Js.String (data-last API used without any piping) */
-Js.log(Js.String.split(\"-\", \"2019-11-10\"))
-Js.log(Js.String.startsWith(\"Re\", \"ReScript\"))
-```
 ## Js.Xxx2 Modules
 
 Prefer `Js.Array2` over `Js.Array`, `Js.String2` over `Js.String`, etc. The latters are old modules.

@@ -58,7 +58,7 @@ pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
     }
 }
 
-pub fn clean_mjs_files(build_state: &BuildState) {
+fn clean_source_files(build_state: &BuildState, root_package: &packages::Package) {
     // get all rescript file locations
     let rescript_file_locations = build_state
         .modules
@@ -66,11 +66,6 @@ pub fn clean_mjs_files(build_state: &BuildState) {
         .filter_map(|module| match &module.source_type {
             SourceType::SourceFile(source_file) => {
                 let package = build_state.packages.get(&module.package_name).unwrap();
-                let root_package = build_state
-                    .packages
-                    .get(&build_state.root_config_name)
-                    .expect("Could not find root package");
-
                 Some(
                     root_package
                         .config
@@ -331,12 +326,7 @@ pub fn cleanup_after_build(build_state: &BuildState) {
     });
 }
 
-pub fn clean(
-    path: &Path,
-    show_progress: bool,
-    bsc_path: Option<PathBuf>,
-    snapshot_output: bool,
-) -> Result<()> {
+pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_deps: bool) -> Result<()> {
     let project_root = helpers::get_abs_path(path);
     let workspace_root = helpers::get_workspace_root(&project_root);
     let packages = packages::make(
@@ -344,16 +334,10 @@ pub fn clean(
         &project_root,
         &workspace_root,
         show_progress,
-        // Build the package tree with dev dependencies.
-        // They should always be cleaned if they are there.
-        true,
+        build_dev_deps,
     )?;
     let root_config_name = packages::read_package_name(&project_root)?;
-    let bsc_path = match bsc_path {
-        Some(bsc_path) => helpers::get_abs_path(&bsc_path),
-        None => helpers::get_bsc(&project_root, &workspace_root),
-    };
-
+    let bsc_path = helpers::get_bsc();
 
     let timing_clean_compiler_assets = Instant::now();
     if !snapshot_output && show_progress {
@@ -402,10 +386,6 @@ pub fn clean(
     }
 
     let timing_clean_mjs = Instant::now();
-    if !snapshot_output && show_progress {
-        println!("{} {}Cleaning mjs files...", style("[2/2]").bold().dim(), SWEEP);
-        let _ = std::io::stdout().flush();
-    }
     let mut build_state = BuildState::new(
         project_root.to_owned(),
         root_config_name,
@@ -414,15 +394,33 @@ pub fn clean(
         bsc_path,
     );
     packages::parse_packages(&mut build_state);
-    clean_mjs_files(&build_state);
+    let root_package = build_state
+        .packages
+        .get(&build_state.root_config_name)
+        .expect("Could not find root package");
+
+    let suffix = root_package.config.suffix.as_deref().unwrap_or(".res.mjs");
+
+    if !snapshot_output && show_progress {
+        println!(
+            "{} {}Cleaning {} files...",
+            style("[2/2]").bold().dim(),
+            SWEEP,
+            suffix
+        );
+        let _ = std::io::stdout().flush();
+    }
+
+    clean_source_files(&build_state, root_package);
     let timing_clean_mjs_elapsed = timing_clean_mjs.elapsed();
 
     if !snapshot_output && show_progress {
         println!(
-            "{}{} {}Cleaned mjs files in {:.2}s",
+            "{}{} {}Cleaned {} files in {:.2}s",
             LINE_CLEAR,
             style("[2/2]").bold().dim(),
             SWEEP,
+            suffix,
             timing_clean_mjs_elapsed.as_secs_f64()
         );
         let _ = std::io::stdout().flush();
