@@ -1,7 +1,7 @@
 open! Ast_helper
 open Ast_mapper
 open Asttypes
-open Parsetree
+open! Parsetree
 open Longident
 
 let module_access_name config value =
@@ -921,14 +921,17 @@ let transform_structure_item ~config item =
       let rec get_prop_types types
           ({ptyp_loc; ptyp_desc; ptyp_attributes} as full_type) =
         match ptyp_desc with
-        | Ptyp_arrow {lbl = name; arg; ret = {ptyp_desc = Ptyp_arrow _} as typ2}
-          when is_labelled name || is_optional name ->
-          get_prop_types ((name, ptyp_attributes, ptyp_loc, arg) :: types) typ2
-        | Ptyp_arrow {lbl = Nolabel; ret} -> get_prop_types types ret
-        | Ptyp_arrow {lbl = name; arg; ret = return_value}
-          when is_labelled name || is_optional name ->
+        | Ptyp_arrow {arg; ret = {ptyp_desc = Ptyp_arrow _} as typ2}
+          when is_labelled arg.lbl || is_optional arg.lbl ->
+          get_prop_types
+            ((arg.lbl, ptyp_attributes, ptyp_loc, arg.typ) :: types)
+            typ2
+        | Ptyp_arrow {arg = {lbl = Nolabel}; ret} -> get_prop_types types ret
+        | Ptyp_arrow {arg; ret = return_value}
+          when is_labelled arg.lbl || is_optional arg.lbl ->
           ( return_value,
-            (name, ptyp_attributes, return_value.ptyp_loc, arg) :: types )
+            (arg.lbl, ptyp_attributes, return_value.ptyp_loc, arg.typ) :: types
+          )
         | _ -> (full_type, types)
       in
       let inner_type, prop_types = get_prop_types [] pval_type in
@@ -1022,30 +1025,28 @@ let transform_signature_item ~config item =
       in
       let rec get_prop_types types ({ptyp_loc; ptyp_desc} as full_type) =
         match ptyp_desc with
+        | Ptyp_arrow {arg; ret = {ptyp_desc = Ptyp_arrow _} as rest}
+          when is_optional arg.lbl || is_labelled arg.lbl ->
+          get_prop_types
+            ((arg.lbl, arg.typ.ptyp_attributes, ptyp_loc, arg.typ) :: types)
+            rest
         | Ptyp_arrow
             {
-              lbl;
-              arg = {ptyp_attributes = attrs} as type_;
-              ret = {ptyp_desc = Ptyp_arrow _} as rest;
-            }
-          when is_optional lbl || is_labelled lbl ->
-          get_prop_types ((lbl, attrs, ptyp_loc, type_) :: types) rest
-        | Ptyp_arrow
-            {
-              lbl = Nolabel;
-              arg = {ptyp_desc = Ptyp_constr ({txt = Lident "unit"}, _)};
+              arg =
+                {
+                  lbl = Nolabel;
+                  typ = {ptyp_desc = Ptyp_constr ({txt = Lident "unit"}, _)};
+                };
               ret = rest;
             } ->
           get_prop_types types rest
-        | Ptyp_arrow {lbl = Nolabel; ret = rest} -> get_prop_types types rest
-        | Ptyp_arrow
-            {
-              lbl = name;
-              arg = {ptyp_attributes = attrs} as type_;
-              ret = return_value;
-            }
-          when is_optional name || is_labelled name ->
-          (return_value, (name, attrs, return_value.ptyp_loc, type_) :: types)
+        | Ptyp_arrow {arg = {lbl = Nolabel}; ret = rest} ->
+          get_prop_types types rest
+        | Ptyp_arrow {arg; ret = return_value}
+          when is_optional arg.lbl || is_labelled arg.lbl ->
+          ( return_value,
+            (arg.lbl, arg.typ.ptyp_attributes, return_value.ptyp_loc, arg.typ)
+            :: types )
         | _ -> (full_type, types)
       in
       let inner_type, prop_types = get_prop_types [] pval_type in

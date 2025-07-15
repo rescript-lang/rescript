@@ -11,24 +11,24 @@ let arrow_type ?(max_arity = max_int) ct =
       when acc <> [] ->
       (attrs_before, List.rev acc, typ)
     | {
-     ptyp_desc = Ptyp_arrow {lbl = Nolabel as lbl; arg; ret};
+     ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel} as arg; ret};
      ptyp_attributes = [];
     } ->
-      let arg = ([], lbl, arg) in
+      let arg = ([], arg.lbl, arg.typ) in
       process attrs_before (arg :: acc) ret (arity - 1)
     | {
-     ptyp_desc = Ptyp_arrow {lbl = Nolabel};
+     ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel}};
      ptyp_attributes = [({txt = "bs"}, _)];
     } ->
       (* stop here, the uncurried attribute always indicates the beginning of an arrow function
        * e.g. `(. int) => (. int)` instead of `(. int, . int)` *)
       (attrs_before, List.rev acc, typ)
-    | {ptyp_desc = Ptyp_arrow {lbl = Nolabel}; ptyp_attributes = _attrs} as
-      return_type ->
+    | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel}}; ptyp_attributes = _attrs}
+      as return_type ->
       let args = List.rev acc in
       (attrs_before, args, return_type)
     | {
-     ptyp_desc = Ptyp_arrow {lbl = (Labelled _ | Optional _) as lbl; arg; ret};
+     ptyp_desc = Ptyp_arrow {arg = {lbl = Labelled _ | Optional _} as arg; ret};
      ptyp_attributes = attrs;
     } ->
       (* Res_core.parse_es6_arrow_type has a workaround that removed an extra arity for the function if the
@@ -37,18 +37,19 @@ let arrow_type ?(max_arity = max_int) ct =
          When this case is encountered we add that missing arity so the arrow is printed properly.
       *)
       let arity =
-        match arg with
+        match arg.typ with
         | {ptyp_desc = Ptyp_any; ptyp_attributes = attrs1}
           when has_as_attr attrs1 ->
           arity
         | _ -> arity - 1
       in
-      let arg = (attrs, lbl, arg) in
+      let arg = (attrs, arg.lbl, arg.typ) in
       process attrs_before (arg :: acc) ret arity
     | typ -> (attrs_before, List.rev acc, typ)
   in
   match ct with
-  | {ptyp_desc = Ptyp_arrow {lbl = Nolabel}; ptyp_attributes = attrs1} as typ ->
+  | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel}}; ptyp_attributes = attrs1}
+    as typ ->
     process attrs1 [] {typ with ptyp_attributes = []} max_arity
   | typ -> process [] [] typ max_arity
 

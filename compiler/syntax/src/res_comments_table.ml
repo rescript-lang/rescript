@@ -319,27 +319,28 @@ let arrow_type ct =
   let rec process attrs_before acc typ =
     match typ with
     | {
-     ptyp_desc = Ptyp_arrow {lbl = Nolabel as lbl; arg; ret};
+     ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel} as arg; ret};
      ptyp_attributes = [];
     } ->
-      let arg = ([], lbl, arg) in
+      let arg = ([], arg.lbl, arg.typ) in
       process attrs_before (arg :: acc) ret
     | {
-     ptyp_desc = Ptyp_arrow {lbl = Nolabel as lbl; arg; ret};
+     ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel} as arg; ret};
      ptyp_attributes = [({txt = "bs"}, _)] as attrs;
     } ->
-      let arg = (attrs, lbl, arg) in
+      let arg = (attrs, arg.lbl, arg.typ) in
       process attrs_before (arg :: acc) ret
-    | {ptyp_desc = Ptyp_arrow {lbl = Nolabel}} as return_type ->
+    | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel}}} as return_type ->
       let args = List.rev acc in
       (attrs_before, args, return_type)
-    | {ptyp_desc = Ptyp_arrow {lbl; arg; ret}; ptyp_attributes = attrs} ->
-      let arg = (attrs, lbl, arg) in
+    | {ptyp_desc = Ptyp_arrow {arg; ret}; ptyp_attributes = attrs} ->
+      let arg = (attrs, arg.lbl, arg.typ) in
       process attrs_before (arg :: acc) ret
     | typ -> (attrs_before, List.rev acc, typ)
   in
   match ct with
-  | {ptyp_desc = Ptyp_arrow {lbl = Nolabel}; ptyp_attributes = attrs} as typ ->
+  | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel}}; ptyp_attributes = attrs} as
+    typ ->
     process attrs [] {typ with ptyp_attributes = []}
   | typ -> process [] [] typ
 

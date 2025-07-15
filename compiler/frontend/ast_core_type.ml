@@ -142,7 +142,8 @@ let mk_fn_type (new_arg_types_ty : param_type list) (result : t) : t =
     Ext_list.fold_right new_arg_types_ty result
       (fun {label; ty; attr; loc} acc ->
         {
-          ptyp_desc = Ptyp_arrow {lbl = label; arg = ty; ret = acc; arity = None};
+          ptyp_desc =
+            Ptyp_arrow {arg = {lbl = label; typ = ty}; ret = acc; arity = None};
           ptyp_loc = loc;
           ptyp_attributes = attr;
         })
@@ -156,9 +157,14 @@ let mk_fn_type (new_arg_types_ty : param_type list) (result : t) : t =
 let list_of_arrow (ty : t) : t * param_type list =
   let rec aux (ty : t) acc =
     match ty.ptyp_desc with
-    | Ptyp_arrow {lbl = label; arg; ret; arity} when arity = None || acc = [] ->
+    | Ptyp_arrow {arg; ret; arity} when arity = None || acc = [] ->
       aux ret
-        (({label; ty = arg; attr = ty.ptyp_attributes; loc = ty.ptyp_loc}
+        (({
+            label = arg.lbl;
+            ty = arg.typ;
+            attr = ty.ptyp_attributes;
+            loc = ty.ptyp_loc;
+          }
            : param_type)
         :: acc)
     | Ptyp_poly (_, ty) ->

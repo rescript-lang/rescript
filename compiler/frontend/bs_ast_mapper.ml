@@ -100,8 +100,10 @@ module T = struct
     match desc with
     | Ptyp_any -> any ~loc ~attrs ()
     | Ptyp_var s -> var ~loc ~attrs s
-    | Ptyp_arrow {lbl; arg; ret; arity} ->
-      arrow ~loc ~attrs ~arity lbl (sub.typ sub arg) (sub.typ sub ret)
+    | Ptyp_arrow {arg; ret; arity} ->
+      arrow ~loc ~attrs ~arity
+        {arg with typ = sub.typ sub arg.typ}
+        (sub.typ sub ret)
     | Ptyp_tuple tyl -> tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) ->
       constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
@@ -151,7 +153,7 @@ module T = struct
     | Ptype_record l -> Ptype_record (List.map (sub.label_declaration sub) l)
     | Ptype_open -> Ptype_open
 
-  let map_constructor_arguments sub = function
+  let map_constructor_arguments (sub : mapper) = function
     | Pcstr_tuple l -> Pcstr_tuple (List.map (sub.typ sub) l)
     | Pcstr_record l -> Pcstr_record (List.map (sub.label_declaration sub) l)
 

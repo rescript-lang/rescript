@@ -97,7 +97,7 @@ module T = struct
     match desc with
     | Ptyp_any | Ptyp_var _ -> ()
     | Ptyp_arrow {arg; ret} ->
-      sub.typ sub arg;
+      sub.typ sub arg.typ;
       sub.typ sub ret
     | Ptyp_tuple tyl -> List.iter (sub.typ sub) tyl
     | Ptyp_constr (lid, tl) ->

@@ -123,15 +123,15 @@ let rec core_type i ppf x =
   match x.ptyp_desc with
   | Ptyp_any -> line i ppf "Ptyp_any\n"
   | Ptyp_var s -> line i ppf "Ptyp_var %s\n" s
-  | Ptyp_arrow {lbl; arg; ret; arity} ->
+  | Ptyp_arrow {arg; ret; arity} ->
     line i ppf "Ptyp_arrow\n";
     let () =
       match arity with
       | None -> ()
       | Some n -> line i ppf "arity = %d\n" n
     in
-    arg_label_loc i ppf lbl;
-    core_type i ppf arg;
+    arg_label_loc i ppf arg.lbl;
+    core_type i ppf arg.typ;
     core_type i ppf ret
   | Ptyp_tuple l ->
     line i ppf "Ptyp_tuple\n";

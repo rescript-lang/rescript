@@ -73,10 +73,12 @@ and core_type = {
   ptyp_attributes: attributes; (* ... [@id1] [@id2] *)
 }
 
+and arg = {lbl: arg_label; typ: core_type}
+
 and core_type_desc =
   | Ptyp_any (*  _ *)
   | Ptyp_var of string (* 'a *)
-  | Ptyp_arrow of {lbl: arg_label; arg: core_type; ret: core_type; arity: arity}
+  | Ptyp_arrow of {arg: arg; ret: core_type; arity: arity}
     (* T1 -> T2       Simple
        ~l:T1 -> T2    Labelled
        ?l:T1 -> T2    Optional
