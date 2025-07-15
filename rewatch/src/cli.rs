@@ -107,6 +107,10 @@ pub struct BuildArgs {
 
     #[command(flatten)]
     pub snapshot_output: SnapshotOutputArg,
+
+    /// Watch mode (deprecated, use `rescript watch` instead)
+    #[arg(short, default_value_t = false, num_args = 0..=1)]
+    pub watch: bool,
 }
 
 #[derive(Args, Clone, Debug)]
@@ -128,6 +132,19 @@ pub struct WatchArgs {
 
     #[command(flatten)]
     pub snapshot_output: SnapshotOutputArg,
+}
+
+impl From<BuildArgs> for WatchArgs {
+    fn from(build_args: BuildArgs) -> Self {
+        Self {
+            folder: build_args.folder,
+            filter: build_args.filter,
+            after_build: build_args.after_build,
+            create_sourcedirs: build_args.create_sourcedirs,
+            dev: build_args.dev,
+            snapshot_output: build_args.snapshot_output,
+        }
+    }
 }
 
 #[derive(Subcommand, Clone, Debug)]

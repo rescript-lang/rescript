@@ -17,13 +17,20 @@ fn main() -> Result<()> {
         .target(env_logger::fmt::Target::Stdout)
         .init();
 
-    let command = args.command.unwrap_or(cli::Command::Build(args.build_args));
+    let mut command = args.command.unwrap_or(cli::Command::Build(args.build_args));
+
+    if let cli::Command::Build(build_args) = &command {
+        if build_args.watch {
+            log::warn!("`rescript build -w` is deprecated. Please use `rescript watch` instead.");
+            command = cli::Command::Watch(build_args.clone().into());
+        }
+    }
 
     // The 'normal run' mode will show the 'pretty' formatted progress. But if we turn off the log
     // level, we should never show that.
     let show_progress = log_level_filter == LevelFilter::Info;
 
-    match command.clone() {
+    match command {
         cli::Command::CompilerArgs { path, dev } => {
             println!("{}", build::get_compiler_args(Path::new(&path), *dev)?);
             std::process::exit(0);
