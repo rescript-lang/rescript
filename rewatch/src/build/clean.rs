@@ -58,7 +58,7 @@ pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
     }
 }
 
-pub fn clean_mjs_files(build_state: &BuildState) {
+fn clean_source_files(build_state: &BuildState, root_package: &packages::Package) {
     // get all rescript file locations
     let rescript_file_locations = build_state
         .modules
@@ -66,11 +66,6 @@ pub fn clean_mjs_files(build_state: &BuildState) {
         .filter_map(|module| match &module.source_type {
             SourceType::SourceFile(source_file) => {
                 let package = build_state.packages.get(&module.package_name).unwrap();
-                let root_package = build_state
-                    .packages
-                    .get(&build_state.root_config_name)
-                    .expect("Could not find root package");
-
                 Some(
                     root_package
                         .config
@@ -391,10 +386,6 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
     }
 
     let timing_clean_mjs = Instant::now();
-    if !snapshot_output && show_progress {
-        println!("{} {}Cleaning mjs files...", style("[2/2]").bold().dim(), SWEEP);
-        let _ = std::io::stdout().flush();
-    }
     let mut build_state = BuildState::new(
         project_root.to_owned(),
         root_config_name,
@@ -403,15 +394,33 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
         bsc_path,
     );
     packages::parse_packages(&mut build_state);
-    clean_mjs_files(&build_state);
+    let root_package = build_state
+        .packages
+        .get(&build_state.root_config_name)
+        .expect("Could not find root package");
+
+    let suffix = root_package.config.suffix.as_deref().unwrap_or(".res.mjs");
+
+    if !snapshot_output && show_progress {
+        println!(
+            "{} {}Cleaning {} files...",
+            style("[2/2]").bold().dim(),
+            SWEEP,
+            suffix
+        );
+        let _ = std::io::stdout().flush();
+    }
+
+    clean_source_files(&build_state, root_package);
     let timing_clean_mjs_elapsed = timing_clean_mjs.elapsed();
 
     if !snapshot_output && show_progress {
         println!(
-            "{}{} {}Cleaned mjs files in {:.2}s",
+            "{}{} {}Cleaned {} files in {:.2}s",
             LINE_CLEAR,
             style("[2/2]").bold().dim(),
             SWEEP,
+            suffix,
             timing_clean_mjs_elapsed.as_secs_f64()
         );
         let _ = std::io::stdout().flush();
