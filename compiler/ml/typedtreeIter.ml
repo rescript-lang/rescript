@@ -375,9 +375,9 @@ end = struct
     (match ct.ctyp_desc with
     | Ttyp_any -> ()
     | Ttyp_var _ -> ()
-    | Ttyp_arrow (_label, ct1, ct2, _) ->
-      iter_core_type ct1;
-      iter_core_type ct2
+    | Ttyp_arrow (arg, ret, _) ->
+      iter_core_type arg.typ;
+      iter_core_type ret
     | Ttyp_tuple list -> List.iter iter_core_type list
     | Ttyp_constr (_path, _, list) -> List.iter iter_core_type list
     | Ttyp_object (list, _o) -> List.iter iter_object_field list

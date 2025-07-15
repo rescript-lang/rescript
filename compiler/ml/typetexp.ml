@@ -329,7 +329,7 @@ and transl_type_aux env policy styp =
       else ty1
     in
     let ty = newty (Tarrow (lbl, ty1, cty2.ctyp_type, Cok, arity)) in
-    ctyp (Ttyp_arrow (lbl, cty1, cty2, arity)) ty
+    ctyp (Ttyp_arrow ({lbl; typ = cty1}, cty2, arity)) ty
   | Ptyp_tuple stl ->
     assert (List.length stl >= 2);
     let ctys = List.map (transl_type env policy) stl in
