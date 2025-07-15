@@ -297,11 +297,16 @@ fn read_dependencies(
     project_root: &Path,
     workspace_root: &Option<PathBuf>,
     show_progress: bool,
+    build_dev_deps: bool,
 ) -> Vec<Dependency> {
-    return parent_config
-        .bs_dependencies
-        .to_owned()
-        .unwrap_or_default()
+    let mut dependencies = parent_config.bs_dependencies.to_owned().unwrap_or_default();
+
+    // Concatenate dev dependencies if build_dev_deps is true
+    if build_dev_deps && let Some(dev_deps) = parent_config.bs_dev_dependencies.to_owned() {
+        dependencies.extend(dev_deps);
+    }
+
+    dependencies
         .iter()
         .filter_map(|package_name| {
             if registered_dependencies_set.contains(package_name) {
@@ -360,7 +365,8 @@ fn read_dependencies(
                 &canonical_path,
                 project_root,
                 workspace_root,
-                show_progress
+                show_progress,
+                build_dev_deps
             );
 
             Dependency {
@@ -371,7 +377,7 @@ fn read_dependencies(
                 dependencies,
             }
         })
-        .collect::<Vec<Dependency>>();
+        .collect()
 }
 
 fn flatten_dependencies(dependencies: Vec<Dependency>) -> Vec<Dependency> {
@@ -461,6 +467,7 @@ fn read_packages(
     project_root: &Path,
     workspace_root: &Option<PathBuf>,
     show_progress: bool,
+    build_dev_deps: bool,
 ) -> Result<AHashMap<String, Package>> {
     let root_config = read_config(project_root)?;
 
@@ -477,6 +484,7 @@ fn read_packages(
         project_root,
         workspace_root,
         show_progress,
+        build_dev_deps,
     ));
     dependencies.iter().for_each(|d| {
         if !map.contains_key(&d.name) {
@@ -596,7 +604,7 @@ pub fn make(
     show_progress: bool,
     build_dev_deps: bool,
 ) -> Result<AHashMap<String, Package>> {
-    let map = read_packages(root_folder, workspace_root, show_progress)?;
+    let map = read_packages(root_folder, workspace_root, show_progress, build_dev_deps)?;
 
     /* Once we have the deduplicated packages, we can add the source files for each - to minimize
      * the IO */
