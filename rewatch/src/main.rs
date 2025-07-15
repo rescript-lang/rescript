@@ -79,10 +79,16 @@ fn main() -> Result<()> {
         cli::Command::Clean {
             folder,
             snapshot_output,
+            dev,
         } => {
             let _lock = get_lock(&folder);
 
-            build::clean::clean(Path::new(&folder as &str), show_progress, *snapshot_output)
+            build::clean::clean(
+                Path::new(&folder as &str),
+                show_progress,
+                *snapshot_output,
+                dev.dev,
+            )
         }
         cli::Command::Legacy { legacy_args } => {
             let code = build::pass_through_legacy(legacy_args);

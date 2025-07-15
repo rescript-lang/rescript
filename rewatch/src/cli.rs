@@ -143,6 +143,9 @@ pub enum Command {
 
         #[command(flatten)]
         snapshot_output: SnapshotOutputArg,
+
+        #[command(flatten)]
+        dev: DevArg,
     },
     /// Alias to `legacy format`.
     #[command(disable_help_flag = true)]
