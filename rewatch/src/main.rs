@@ -1,7 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
 use log::LevelFilter;
-use regex::Regex;
 use std::{io::Write, path::Path};
 
 use rewatch::{build, cli, cmd, lock, watcher};
@@ -31,13 +30,8 @@ fn main() -> Result<()> {
         cli::Command::Build(build_args) => {
             let _lock = get_lock(&build_args.folder);
 
-            let filter = build_args
-                .filter
-                .as_ref()
-                .map(|filter| Regex::new(&filter).expect("Could not parse regex"));
-
             match build::build(
-                &filter,
+                &build_args.filter,
                 Path::new(&build_args.folder as &str),
                 show_progress,
                 build_args.no_timing,
@@ -60,12 +54,8 @@ fn main() -> Result<()> {
         cli::Command::Watch(watch_args) => {
             let _lock = get_lock(&watch_args.folder);
 
-            let filter = watch_args
-                .filter
-                .as_ref()
-                .map(|filter| Regex::new(&filter).expect("Could not parse regex"));
             watcher::start(
-                &filter,
+                &watch_args.filter,
                 show_progress,
                 &watch_args.folder,
                 (*watch_args.after_build).clone(),

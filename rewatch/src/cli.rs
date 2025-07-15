@@ -2,6 +2,11 @@ use std::{ffi::OsString, ops::Deref};
 
 use clap::{Args, Parser, Subcommand};
 use clap_verbosity_flag::InfoLevel;
+use regex::Regex;
+
+fn parse_regex(s: &str) -> Result<Regex, regex::Error> {
+    Regex::new(s)
+}
 
 /// ReScript - Fast, Simple, Fully Typed JavaScript from the Future
 #[derive(Parser, Debug)]
@@ -39,8 +44,8 @@ pub struct FilterArg {
     ///
     /// Filter allows for a regex to be supplied which will filter the files to be compiled. For
     /// instance, to filter out test files for compilation while doing feature work.
-    #[arg(short, long)]
-    pub filter: Option<String>,
+    #[arg(short, long, value_parser = parse_regex)]
+    pub filter: Option<Regex>,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -187,7 +192,7 @@ impl Deref for FolderArg {
 }
 
 impl Deref for FilterArg {
-    type Target = Option<String>;
+    type Target = Option<Regex>;
 
     fn deref(&self) -> &Self::Target {
         &self.filter
