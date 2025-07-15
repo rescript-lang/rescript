@@ -86,30 +86,29 @@ module T = struct
     | Oinherit t -> Oinherit (sub.typ sub t)
 
   let map sub {ptyp_desc = desc; ptyp_loc = loc; ptyp_attributes = attrs} =
-    let open Typ in
     let loc = sub.location sub loc in
     let attrs = sub.attributes sub attrs in
     match desc with
-    | Ptyp_any -> any ~loc ~attrs ()
-    | Ptyp_var s -> var ~loc ~attrs s
+    | Ptyp_any -> Typ.any ~loc ~attrs ()
+    | Ptyp_var s -> Typ.var ~loc ~attrs s
     | Ptyp_arrow {arg; ret; arity} ->
-      arrow ~loc ~attrs ~arity
+      Typ.arrow ~loc ~attrs ~arity
         {arg with typ = sub.typ sub arg.typ}
         (sub.typ sub ret)
-    | Ptyp_tuple tyl -> tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
+    | Ptyp_tuple tyl -> Typ.tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) ->
-      constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
+      Typ.constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
     | Ptyp_object (l, o) ->
-      object_ ~loc ~attrs (List.map (object_field sub) l) o
-    | Ptyp_alias (t, s) -> alias ~loc ~attrs (sub.typ sub t) s
+      Typ.object_ ~loc ~attrs (List.map (object_field sub) l) o
+    | Ptyp_alias (t, s) -> Typ.alias ~loc ~attrs (sub.typ sub t) s
     | Ptyp_variant (rl, b, ll) ->
-      variant ~loc ~attrs (List.map (row_field sub) rl) b ll
+      Typ.variant ~loc ~attrs (List.map (row_field sub) rl) b ll
     | Ptyp_poly (sl, t) ->
-      poly ~loc ~attrs (List.map (map_loc sub) sl) (sub.typ sub t)
+      Typ.poly ~loc ~attrs (List.map (map_loc sub) sl) (sub.typ sub t)
     | Ptyp_package (lid, l) ->
-      package ~loc ~attrs (map_loc sub lid)
+      Typ.package ~loc ~attrs (map_loc sub lid)
         (List.map (map_tuple (map_loc sub) (sub.typ sub)) l)
-    | Ptyp_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Ptyp_extension x -> Typ.extension ~loc ~attrs (sub.extension sub x)
 
   let map_type_declaration sub
       {

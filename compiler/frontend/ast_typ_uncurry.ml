@@ -26,20 +26,18 @@ type typ = Parsetree.core_type
 type 'a cxt = Ast_helper.loc -> Bs_ast_mapper.mapper -> 'a
 type uncurry_type_gen = (Asttypes.arg_label -> typ -> typ -> typ) cxt
 
-module Typ = Ast_helper.Typ
-
 let to_method_callback_type loc (mapper : Bs_ast_mapper.mapper)
     (label : Asttypes.arg_label) (first_arg : Parsetree.core_type)
     (typ : Parsetree.core_type) =
   let first_arg = mapper.typ mapper first_arg in
   let typ = mapper.typ mapper typ in
   let meth_type =
-    Typ.arrow ~loc ~arity:None {lbl = label; typ = first_arg} typ
+    Ast_helper.Typ.arrow ~loc ~arity:None {lbl = label; typ = first_arg} typ
   in
   let arity = Ast_core_type.get_uncurry_arity meth_type in
   match arity with
   | Some n ->
-    Typ.constr
+    Ast_helper.Typ.constr
       {
         txt = Ldot (Ast_literal.Lid.js_meth_callback, "arity" ^ string_of_int n);
         loc;
@@ -59,7 +57,9 @@ let to_uncurry_type loc (mapper : Bs_ast_mapper.mapper)
   let first_arg = mapper.typ mapper first_arg in
   let typ = mapper.typ mapper typ in
 
-  let fn_type = Typ.arrow ~loc ~arity:None {lbl = label; typ = first_arg} typ in
+  let fn_type =
+    Ast_helper.Typ.arrow ~loc ~arity:None {lbl = label; typ = first_arg} typ
+  in
   let arity = Ast_core_type.get_uncurry_arity fn_type in
   let fn_type =
     match fn_type.ptyp_desc with

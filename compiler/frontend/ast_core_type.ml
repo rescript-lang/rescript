@@ -95,8 +95,9 @@ let from_labels ~loc arity labels : t =
   in
   Ext_list.fold_right2 labels tyvars result_type
     (fun label (* {loc ; txt = label }*) tyvar acc ->
-      Ast_compatible.label_arrow ~loc:label.loc ~arity:(Some arity) label.txt
-        tyvar acc)
+      Ast_helper.Typ.arrow ~loc:label.loc ~arity:(Some arity)
+        {lbl = Asttypes.Labelled label; typ = tyvar}
+        acc)
 
 let make_obj ~loc xs = Typ.object_ ~loc xs Closed
 
@@ -141,12 +142,8 @@ let mk_fn_type (new_arg_types_ty : param_type list) (result : t) : t =
   let t =
     Ext_list.fold_right new_arg_types_ty result
       (fun {label; ty; attr; loc} acc ->
-        {
-          ptyp_desc =
-            Ptyp_arrow {arg = {lbl = label; typ = ty}; ret = acc; arity = None};
-          ptyp_loc = loc;
-          ptyp_attributes = attr;
-        })
+        Ast_helper.Typ.arrow ~loc ~attrs:attr ~arity:None
+          {lbl = label; typ = ty} acc)
   in
   match t.ptyp_desc with
   | Ptyp_arrow arr ->
