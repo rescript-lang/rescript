@@ -24,6 +24,7 @@
 - Remove obsolete option `-bs-unsafe-empty-array`. https://github.com/rescript-lang/rescript/pull/7635
 - Clean up `config.ml`. https://github.com/rescript-lang/rescript/pull/7636
 - Rewatch: simplify getting bsc path. https://github.com/rescript-lang/rescript/pull/7634
+- Rewatch: only get `"type": "dev"` source files for local packages. https://github.com/rescript-lang/rescript/pull/7646
 
 #### :rocket: New Feature
 
