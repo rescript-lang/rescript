@@ -37,6 +37,7 @@
 - Rewatch: Add --dev flag to clean command. https://github.com/rescript-lang/rescript/pull/7622
 - Rewatch: Use root package suffix in clean log messages. https://github.com/rescript-lang/rescript/pull/7648
 - Fix inside comment printing for empty dict. https://github.com/rescript-lang/rescript/pull/7654
+- Fix I/O error message when trying to extract extra info from non-existing file. https://github.com/rescript-lang/rescript/pull/7656
 
 # 12.0.0-beta.1
 
