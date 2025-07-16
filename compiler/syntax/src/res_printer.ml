@@ -1512,7 +1512,7 @@ and print_literal_dict_expr ~state (e : Parsetree.expression) cmt_tbl =
          Doc.indent
            (Doc.concat
               [
-                (if List.is_empty rows then Doc.nil else Doc.soft_line);
+                (if rows = [] then Doc.nil else Doc.soft_line);
                 Doc.join
                   ~sep:(Doc.concat [Doc.text ","; Doc.line])
                   (List.map
@@ -1523,7 +1523,7 @@ and print_literal_dict_expr ~state (e : Parsetree.expression) cmt_tbl =
                        print_comments doc cmt_tbl e.pexp_loc)
                      rows);
               ]);
-         (if List.is_empty rows then Doc.nil
+         (if rows = [] then Doc.nil
           else Doc.concat [Doc.trailing_comma; Doc.soft_line]);
        ])
 
