@@ -22,7 +22,6 @@ pub fn compile(
     show_progress: bool,
     inc: impl Fn() + std::marker::Sync,
     set_length: impl Fn(u64),
-    build_dev_deps: bool,
 ) -> anyhow::Result<(String, String, usize)> {
     let mut compiled_modules = AHashSet::<String>::new();
     let dirty_modules = build_state
@@ -170,7 +169,6 @@ pub fn compile(
                                         &build_state.packages,
                                         &build_state.project_root,
                                         &build_state.workspace_root,
-                                        build_dev_deps,
                                     );
                                     Some(result)
                                 }
@@ -186,7 +184,6 @@ pub fn compile(
                                 &build_state.packages,
                                 &build_state.project_root,
                                 &build_state.workspace_root,
-                                build_dev_deps,
                             );
                             let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
 
@@ -360,19 +357,13 @@ pub fn compiler_args(
     // if packages are known, we pass a reference here
     // this saves us a scan to find their paths
     packages: &Option<&AHashMap<String, packages::Package>>,
-    build_dev_deps: bool,
+    // Is the file listed as "type":"dev"?
+    is_type_dev: bool,
     is_local_dep: bool,
 ) -> Vec<String> {
     let bsc_flags = config::flatten_flags(&config.bsc_flags);
 
-    let dependency_paths = get_dependency_paths(
-        config,
-        project_root,
-        workspace_root,
-        packages,
-        build_dev_deps,
-        file_path,
-    );
+    let dependency_paths = get_dependency_paths(config, project_root, workspace_root, packages, is_type_dev);
 
     let module_name = helpers::file_path_to_module_name(file_path, &config.get_namespace());
 
@@ -505,37 +496,12 @@ impl DependentPackage {
     }
 }
 
-fn is_file_type_dev(config: &config::Config, file_path: &Path) -> bool {
-    let Some(sources) = &config.sources else {
-        return false;
-    };
-    match sources {
-        config::OneOrMore::Multiple(multiple) => {
-            for source in multiple.iter() {
-                match source {
-                    config::Source::Qualified(config::PackageSource {
-                        dir: dir,
-                        subdirs: _,
-                        type_: Some(type_),
-                    }) if *type_ == String::from("dev") => {
-                        return Path::new(dir) == file_path.parent().unwrap();
-                    }
-                    _ => {}
-                }
-            }
-            false
-        }
-        _ => todo!(),
-    }
-}
-
 fn get_dependency_paths(
     config: &config::Config,
     project_root: &Path,
     workspace_root: &Option<PathBuf>,
     packages: &Option<&AHashMap<String, packages::Package>>,
-    build_dev_deps: bool,
-    file_path: &Path,
+    is_file_type_dev: bool,
 ) -> Vec<Vec<String>> {
     let normal_deps = config
         .bs_dependencies
@@ -544,10 +510,9 @@ fn get_dependency_paths(
         .into_iter()
         .map(DependentPackage::Normal)
         .collect();
-    // We need to check if the current file is listed as type: "dev"
-    // Only then it has access of using the bs-dev-dependencies
-    let is_file_type_dev = is_file_type_dev(config, file_path);
-    let dev_deps = if build_dev_deps && is_file_type_dev {
+
+    // We can only access dev dependencies for source_files that are marked as "type":"dev"
+    let dev_deps = if is_file_type_dev {
         config
             .bs_dev_dependencies
             .clone()
@@ -603,7 +568,6 @@ fn compile_file(
     packages: &AHashMap<String, packages::Package>,
     project_root: &Path,
     workspace_root: &Option<PathBuf>,
-    build_dev_deps: bool,
 ) -> Result<Option<String>, String> {
     let ocaml_build_path_abs = package.get_ocaml_build_path();
     let build_path_abs = package.get_build_path();
@@ -617,6 +581,7 @@ fn compile_file(
     }?;
     let module_name = helpers::file_path_to_module_name(implementation_file_path, &package.namespace);
     let has_interface = module.get_interface().is_some();
+    let is_type_dev = package.is_source_file_type_dev(implementation_file_path);
     let to_mjs_args = compiler_args(
         &package.config,
         &root_package.config,
@@ -627,7 +592,7 @@ fn compile_file(
         project_root,
         workspace_root,
         &Some(packages),
-        build_dev_deps,
+        is_type_dev,
         package.is_local_dep,
     );
 

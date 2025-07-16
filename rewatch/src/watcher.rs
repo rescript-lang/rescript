@@ -217,7 +217,6 @@ async fn async_watch(
                     show_progress,
                     !initial_build,
                     create_sourcedirs,
-                    build_dev_deps,
                     snapshot_output,
                 )
                 .is_ok()
@@ -262,7 +261,6 @@ async fn async_watch(
                     show_progress,
                     false,
                     create_sourcedirs,
-                    build_dev_deps,
                     snapshot_output,
                 );
                 if let Some(a) = after_build.clone() {

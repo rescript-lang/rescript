@@ -8,10 +8,14 @@ pub mod packages;
 pub mod parse;
 pub mod read_compile_state;
 
+use self::compile::compiler_args;
+use self::parse::parser_args;
 use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_with_expired_deps_dirty};
+use crate::build::packages::Package;
 use crate::helpers::emojis::*;
 use crate::helpers::{self, get_workspace_root};
 use crate::sourcedirs;
+use ahash::AHashMap;
 use anyhow::{Result, anyhow};
 use build_types::*;
 use console::style;
@@ -25,9 +29,6 @@ use std::io::{Write, stdout};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::{Duration, Instant};
-
-use self::compile::compiler_args;
-use self::parse::parser_args;
 
 fn is_dirty(module: &Module) -> bool {
     match module.source_type {
@@ -56,7 +57,7 @@ pub struct CompilerArgs {
     pub parser_args: Vec<String>,
 }
 
-pub fn get_compiler_args(path: &Path, build_dev_deps: bool) -> Result<String> {
+pub fn get_compiler_args(path: &Path) -> Result<String> {
     let filename = &helpers::get_abs_path(path);
     let package_root =
         helpers::get_abs_path(&helpers::get_nearest_config(&path).expect("Couldn't find package root"));
@@ -64,6 +65,24 @@ pub fn get_compiler_args(path: &Path, build_dev_deps: bool) -> Result<String> {
     let root_rescript_config =
         packages::read_config(&workspace_root.to_owned().unwrap_or(package_root.to_owned()))?;
     let rescript_config = packages::read_config(&package_root)?;
+
+    // We need to figure out if the source file is listed as "type":"dev"
+    // To do this, we can construct the Package information for the nearest config.
+    let package = packages::make_package(root_rescript_config.clone(), &package_root, false, true);
+    let mut packages_map: AHashMap<String, Package> = AHashMap::new();
+    let package_name = root_rescript_config.name.clone();
+    packages_map.insert(package_name.clone(), package);
+    // We need to populate the source_files meta data.
+    // TODO: filter with current file
+    let packages_map = packages::extend_with_children(
+        &None,
+        packages_map,
+        /* we assume build_dev_deps so all source_files metadata will be populated */ true,
+    );
+    let is_type_dev = packages_map
+        .get(&package_name)
+        .map(|p| p.is_source_file_type_dev(filename))
+        .unwrap_or(false);
 
     // make PathBuf from package root and get the relative path for filename
     let relative_filename = filename.strip_prefix(PathBuf::from(&package_root)).unwrap();
@@ -97,7 +116,7 @@ pub fn get_compiler_args(path: &Path, build_dev_deps: bool) -> Result<String> {
         &package_root,
         &workspace_root,
         &None,
-        build_dev_deps,
+        is_type_dev,
         true,
     );
 
@@ -281,7 +300,6 @@ pub fn incremental_build(
     show_progress: bool,
     only_incremental: bool,
     create_sourcedirs: bool,
-    build_dev_deps: bool,
     snapshot_output: bool,
 ) -> Result<(), IncrementalBuildError> {
     logs::initialize(&build_state.packages);
@@ -393,7 +411,6 @@ pub fn incremental_build(
         show_progress,
         || pb.inc(1),
         |size| pb.set_length(size),
-        build_dev_deps,
     )
     .map_err(|e| IncrementalBuildError {
         kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
@@ -500,7 +517,6 @@ pub fn build(
         show_progress,
         false,
         create_sourcedirs,
-        build_dev_deps,
         snapshot_output,
     ) {
         Ok(_) => {
