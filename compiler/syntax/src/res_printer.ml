@@ -1506,7 +1506,7 @@ and print_literal_dict_expr ~state (e : Parsetree.expression) cmt_tbl =
       List.filter_map tuple_to_row expressions
     | _ -> []
   in
-  Doc.breakable_group ~force_break
+  let doc = Doc.breakable_group ~force_break
     (Doc.concat
        [
          Doc.indent
@@ -1523,9 +1523,9 @@ and print_literal_dict_expr ~state (e : Parsetree.expression) cmt_tbl =
                        print_comments doc cmt_tbl e.pexp_loc)
                      rows);
               ]);
-         Doc.trailing_comma;
-         Doc.soft_line;
-       ])
+         if List.is_empty rows then Doc.nil else Doc.concat [Doc.trailing_comma; Doc.soft_line];
+       ]) 
+  in doc
 
 and print_constructor_declarations ~state ~private_flag
     (cds : Parsetree.constructor_declaration list) cmt_tbl =
@@ -4222,12 +4222,13 @@ and print_pexp_apply ~state expr cmt_tbl =
         args = [(Nolabel, key_values)];
       }
     when Res_parsetree_viewer.is_tuple_array key_values ->
-    Doc.concat
+      let doc = Doc.concat
       [
         Doc.text "dict{";
+        print_comments_inside cmt_tbl expr.pexp_loc;
         print_literal_dict_expr ~state key_values cmt_tbl;
         Doc.rbrace;
-      ]
+      ] in doc
   | Pexp_apply
       {
         funct =
