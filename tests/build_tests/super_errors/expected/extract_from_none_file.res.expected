@@ -1,0 +1,6 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/extract_from_none_file.res[0m
+
+  This has type: [1;31mRegExp.t[0m
+  But a [1;33mwhile[0m loop condition must always be of type: [1;33mbool[0m
