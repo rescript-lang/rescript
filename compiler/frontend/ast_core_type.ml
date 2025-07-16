@@ -93,11 +93,11 @@ let from_labels ~loc arity labels : t =
       (Ext_list.map2 labels tyvars (fun x y -> Parsetree.Otag (x, [], y)))
       Closed
   in
-  Ext_list.fold_right2 labels tyvars result_type
-    (fun label (* {loc ; txt = label }*) tyvar acc ->
-      Ast_helper.Typ.arrow ~loc:label.loc ~arity:(Some arity)
-        {lbl = Asttypes.Labelled label; typ = tyvar}
-        acc)
+  let args =
+    Ext_list.map2 labels tyvars (fun label tyvar ->
+        {Parsetree.lbl = Asttypes.Labelled label; typ = tyvar})
+  in
+  Typ.arrows ~loc args result_type
 
 let make_obj ~loc xs = Typ.object_ ~loc xs Closed
 
