@@ -365,8 +365,14 @@ pub fn compiler_args(
 ) -> Vec<String> {
     let bsc_flags = config::flatten_flags(&config.bsc_flags);
 
-    let dependency_paths =
-        get_dependency_paths(config, project_root, workspace_root, packages, build_dev_deps);
+    let dependency_paths = get_dependency_paths(
+        config,
+        project_root,
+        workspace_root,
+        packages,
+        build_dev_deps,
+        file_path,
+    );
 
     let module_name = helpers::file_path_to_module_name(file_path, &config.get_namespace());
 
@@ -499,12 +505,37 @@ impl DependentPackage {
     }
 }
 
+fn is_file_type_dev(config: &config::Config, file_path: &Path) -> bool {
+    let Some(sources) = &config.sources else {
+        return false;
+    };
+    match sources {
+        config::OneOrMore::Multiple(multiple) => {
+            for source in multiple.iter() {
+                match source {
+                    config::Source::Qualified(config::PackageSource {
+                        dir: dir,
+                        subdirs: _,
+                        type_: Some(type_),
+                    }) if *type_ == String::from("dev") => {
+                        return Path::new(dir) == file_path.parent().unwrap();
+                    }
+                    _ => {}
+                }
+            }
+            false
+        }
+        _ => todo!(),
+    }
+}
+
 fn get_dependency_paths(
     config: &config::Config,
     project_root: &Path,
     workspace_root: &Option<PathBuf>,
     packages: &Option<&AHashMap<String, packages::Package>>,
     build_dev_deps: bool,
+    file_path: &Path,
 ) -> Vec<Vec<String>> {
     let normal_deps = config
         .bs_dependencies
@@ -513,7 +544,10 @@ fn get_dependency_paths(
         .into_iter()
         .map(DependentPackage::Normal)
         .collect();
-    let dev_deps = if build_dev_deps {
+    // We need to check if the current file is listed as type: "dev"
+    // Only then it has access of using the bs-dev-dependencies
+    let is_file_type_dev = is_file_type_dev(config, file_path);
+    let dev_deps = if build_dev_deps && is_file_type_dev {
         config
             .bs_dev_dependencies
             .clone()
