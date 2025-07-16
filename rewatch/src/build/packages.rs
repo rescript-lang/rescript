@@ -19,6 +19,7 @@ use std::time::SystemTime;
 #[derive(Debug, Clone)]
 pub struct SourceFileMeta {
     pub modified: SystemTime,
+    pub is_type_dev: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -138,6 +139,7 @@ pub fn read_folders(
     package_dir: &Path,
     path: &Path,
     recurse: bool,
+    is_type_dev: bool,
 ) -> Result<AHashMap<PathBuf, SourceFileMeta>, Box<dyn error::Error>> {
     let mut map: AHashMap<PathBuf, SourceFileMeta> = AHashMap::new();
     let path_buf = PathBuf::from(path);
@@ -147,6 +149,7 @@ pub fn read_folders(
             path.to_owned(),
             SourceFileMeta {
                 modified: meta.modified().unwrap(),
+                is_type_dev,
             },
         )
     });
@@ -159,7 +162,7 @@ pub fn read_folders(
         let path_ext = entry_path_buf.extension().and_then(|x| x.to_str());
         let new_path = path_buf.join(&name);
         if metadata.file_type().is_dir() && recurse {
-            match read_folders(filter, package_dir, &new_path, recurse) {
+            match read_folders(filter, package_dir, &new_path, recurse, is_type_dev) {
                 Ok(s) => map.extend(s),
                 Err(e) => log::error!("Could not read directory: {}", e),
             }
@@ -174,6 +177,7 @@ pub fn read_folders(
                         path,
                         SourceFileMeta {
                             modified: metadata.modified().unwrap(),
+                            is_type_dev,
                         },
                     );
                 }
@@ -405,7 +409,12 @@ pub fn read_package_name(package_dir: &Path) -> Result<String> {
         .ok_or_else(|| anyhow!("No name field found in package.json"))
 }
 
-fn make_package(config: config::Config, package_path: &Path, is_pinned_dep: bool, is_root: bool) -> Package {
+pub fn make_package(
+    config: config::Config,
+    package_path: &Path,
+    is_pinned_dep: bool,
+    is_root: bool,
+) -> Package {
     let source_folders = match config.sources.to_owned() {
         Some(config::OneOrMore::Single(source)) => get_source_dirs(source, None),
         Some(config::OneOrMore::Multiple(sources)) => {
@@ -523,9 +532,14 @@ pub fn get_source_files(
     };
 
     let path_dir = Path::new(&source.dir);
+    let is_type_dev = type_
+        .as_ref()
+        .map(|t| t.as_str() == "dev")
+        .unwrap_or(false)
+        .clone();
     match (build_dev_deps, type_) {
         (false, Some(type_)) if type_ == "dev" => (),
-        _ => match read_folders(filter, package_dir, path_dir, recurse) {
+        _ => match read_folders(filter, package_dir, path_dir, recurse, is_type_dev) {
             Ok(files) => map.extend(files),
 
             Err(_e) => log::error!(
@@ -542,7 +556,7 @@ pub fn get_source_files(
 
 /// This takes the tree of packages, and finds all the source files for each, adding them to the
 /// respective packages.
-fn extend_with_children(
+pub fn extend_with_children(
     filter: &Option<regex::Regex>,
     mut build: AHashMap<String, Package>,
     build_dev_deps: bool,
