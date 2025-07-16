@@ -36,6 +36,7 @@
 - Fix `typeof` parens on functions. https://github.com/rescript-lang/rescript/pull/7643
 - Rewatch: Add --dev flag to clean command. https://github.com/rescript-lang/rescript/pull/7622
 - Rewatch: Use root package suffix in clean log messages. https://github.com/rescript-lang/rescript/pull/7648
+- Fix inside comment printing for empty dict. https://github.com/rescript-lang/rescript/pull/7654
 
 # 12.0.0-beta.1
 
