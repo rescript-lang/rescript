@@ -259,6 +259,10 @@ module M = struct
     | Pmod_constraint (m, mty) ->
       constraint_ ~loc ~attrs (sub.module_expr sub m) (sub.module_type sub mty)
     | Pmod_unpack e -> unpack ~loc ~attrs (sub.expr sub e)
+    | Pmod_await m -> 
+      let m1 = sub.module_expr sub m in
+      let attrs = (Location.mknoloc "res.await", PStr []) :: attrs in
+      ident ~loc ~attrs (Location.mknoloc (Longident.Lident "Await"))
     | Pmod_extension x -> extension ~loc ~attrs (sub.extension sub x)
 
   let map_structure_item sub {pstr_loc = loc; pstr_desc = desc} =
@@ -517,22 +521,6 @@ module E = struct
         @ [
             (Asttypes.Noloc.Labelled "children", children_expr);
             (Asttypes.Noloc.Nolabel, unit_expr);
-          ])
-    | Pexp_jsx_element
-        (Jsx_container_element
-           {
-             jsx_container_element_tag_name_start = tag_name;
-             jsx_container_element_props = props;
-             jsx_container_element_children = children;
-           }) ->
-      let tag_ident = map_loc sub tag_name in
-      let props = map_jsx_props sub props in
-      let children_expr = map_jsx_children sub loc children in
-      apply ~loc ~attrs:(jsx_attr sub :: attrs) (ident tag_ident)
-        (props
-        @ [
-            (Asttypes.Noloc.Labelled "children", children_expr);
-            (Asttypes.Noloc.Nolabel, jsx_unit_expr);
           ])
 end
 
