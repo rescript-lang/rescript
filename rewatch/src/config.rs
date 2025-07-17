@@ -29,6 +29,15 @@ pub struct PackageSource {
     pub type_: Option<String>,
 }
 
+impl PackageSource {
+    fn is_type_dev(&self) -> bool {
+        match &self.type_ {
+            Some(type_) => type_ == "dev",
+            None => false,
+        }
+    }
+}
+
 impl Eq for PackageSource {}
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Hash)]
@@ -469,6 +478,25 @@ impl Config {
         spec.get_suffix()
             .or(self.suffix.clone())
             .unwrap_or(".js".to_string())
+    }
+
+    // TODO: needs improving!
+
+    pub fn find_is_type_dev_for_path(&self, relative_path: &Path) -> bool {
+        if let Some(relative_parent) = relative_path.parent().map(|p| Path::new(p)) {
+            if let Some(sources) = &self.sources {
+                match sources {
+                    OneOrMore::Single(Source::Qualified(package_source)) => {
+                        Path::new(&package_source.dir) == relative_parent && package_source.is_type_dev()
+                    }
+                    _ => false,
+                }
+            } else {
+                false
+            }
+        } else {
+            false
+        }
     }
 }
 
