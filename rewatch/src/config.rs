@@ -483,20 +483,27 @@ impl Config {
     // TODO: needs improving!
 
     pub fn find_is_type_dev_for_path(&self, relative_path: &Path) -> bool {
-        if let Some(relative_parent) = relative_path.parent().map(|p| Path::new(p)) {
-            if let Some(sources) = &self.sources {
-                match sources {
-                    OneOrMore::Single(Source::Qualified(package_source)) => {
-                        Path::new(&package_source.dir) == relative_parent && package_source.is_type_dev()
-                    }
-                    _ => false,
-                }
-            } else {
-                false
-            }
-        } else {
-            false
-        }
+        let relative_parent = match relative_path.parent() {
+            None => return false,
+            Some(parent) => Path::new(parent),
+        };
+
+        let package_sources = match self.sources.as_ref() {
+            None => vec![],
+            Some(OneOrMore::Single(Source::Shorthand(_))) => vec![],
+            Some(OneOrMore::Single(Source::Qualified(source))) => vec![source],
+            Some(OneOrMore::Multiple(multiple)) => multiple
+                .iter()
+                .filter_map(|source| match source {
+                    Source::Shorthand(_) => None,
+                    Source::Qualified(package_source) => Some(package_source),
+                })
+                .collect(),
+        };
+
+        package_sources.iter().any(|package_source| {
+            Path::new(&package_source.dir) == relative_parent && package_source.is_type_dev()
+        })
     }
 }
 
