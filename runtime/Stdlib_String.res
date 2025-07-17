@@ -166,6 +166,15 @@ external splitByRegExpAtMost: (string, Stdlib_RegExp.t, ~limit: int) => array<op
 
 @send external localeCompare: (string, string) => float = "localeCompare"
 
+let isEmpty = s => length(s) == 0
+
+let capitalize = s =>
+  if isEmpty(s) {
+    s
+  } else {
+    toUpperCase(getUnsafe(s, 0)) ++ sliceToEnd(s, ~start=1)
+  }
+
 external ignore: string => unit = "%ignore"
 
 @get_index external getSymbolUnsafe: (string, Stdlib_Symbol.t) => 'a = ""
