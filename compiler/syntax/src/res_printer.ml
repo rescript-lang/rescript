@@ -1512,7 +1512,7 @@ and print_literal_dict_expr ~state (e : Parsetree.expression) cmt_tbl =
          Doc.indent
            (Doc.concat
               [
-                Doc.soft_line;
+                (if rows = [] then Doc.nil else Doc.soft_line);
                 Doc.join
                   ~sep:(Doc.concat [Doc.text ","; Doc.line])
                   (List.map
@@ -1523,8 +1523,8 @@ and print_literal_dict_expr ~state (e : Parsetree.expression) cmt_tbl =
                        print_comments doc cmt_tbl e.pexp_loc)
                      rows);
               ]);
-         Doc.trailing_comma;
-         Doc.soft_line;
+         (if rows = [] then Doc.nil
+          else Doc.concat [Doc.trailing_comma; Doc.soft_line]);
        ])
 
 and print_constructor_declarations ~state ~private_flag
@@ -4225,6 +4225,7 @@ and print_pexp_apply ~state expr cmt_tbl =
     Doc.concat
       [
         Doc.text "dict{";
+        print_comments_inside cmt_tbl expr.pexp_loc;
         print_literal_dict_expr ~state key_values cmt_tbl;
         Doc.rbrace;
       ]

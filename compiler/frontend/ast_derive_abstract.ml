@@ -83,7 +83,8 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
       Ext_list.fold_right label_declarations
         ( [],
           (if has_optional_field then
-             Ast_compatible.arrow ~loc ~arity:None (Ast_literal.type_unit ())
+             Ast_helper.Typ.arrow ~loc ~arity:None
+               {lbl = Nolabel; typ = Ast_literal.type_unit ()}
                core_type
            else core_type),
           [] )
@@ -114,18 +115,21 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
             in
             if is_optional then
               let optional_type = Ast_core_type.lift_option_type pld_type in
-              ( Ast_compatible.opt_arrow ~loc:pld_loc ~arity label_name pld_type
+              ( Ast_helper.Typ.arrow ~loc:pld_loc ~arity
+                  {lbl = Asttypes.Optional pld_name; typ = pld_type}
                   maker,
                 Val.mk ~loc:pld_loc
                   (if light then pld_name
                    else {pld_name with txt = pld_name.txt ^ "Get"})
                   ~attrs:get_optional_attrs ~prim
-                  (Ast_compatible.arrow ~loc ~arity:(Some 1) core_type
+                  (Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
+                     {lbl = Nolabel; typ = core_type}
                      optional_type)
                 :: acc )
             else
-              ( Ast_compatible.label_arrow ~loc:pld_loc ~arity label_name
-                  pld_type maker,
+              ( Ast_helper.Typ.arrow ~loc:pld_loc ~arity
+                  {lbl = Asttypes.Labelled pld_name; typ = pld_type}
+                  maker,
                 Val.mk ~loc:pld_loc
                   (if light then pld_name
                    else {pld_name with txt = pld_name.txt ^ "Get"})
@@ -135,15 +139,19 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
                      External_ffi_types.ffi_bs_as_prims
                        [External_arg_spec.dummy] Return_identity
                        (Js_get {js_get_name = prim_as_name; js_get_scopes = []}))
-                  (Ast_compatible.arrow ~loc ~arity:(Some 1) core_type pld_type)
+                  (Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
+                     {lbl = Nolabel; typ = core_type}
+                     pld_type)
                 :: acc )
           in
           let is_current_field_mutable = pld_mutable = Mutable in
           let acc =
             if is_current_field_mutable then
               let setter_type =
-                Ast_compatible.arrow ~arity:(Some 2) core_type
-                  (Ast_compatible.arrow ~arity:None pld_type (* setter *)
+                Ast_helper.Typ.arrow ~arity:(Some 2)
+                  {lbl = Nolabel; typ = core_type}
+                  (Ast_helper.Typ.arrow ~arity:None
+                     {lbl = Nolabel; typ = pld_type} (* setter *)
                      (Ast_literal.type_unit ()))
               in
               Val.mk ~loc:pld_loc

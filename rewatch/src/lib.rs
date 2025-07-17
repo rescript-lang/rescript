@@ -2,6 +2,7 @@ pub mod build;
 pub mod cli;
 pub mod cmd;
 pub mod config;
+pub mod format;
 pub mod helpers;
 pub mod lock;
 pub mod queue;

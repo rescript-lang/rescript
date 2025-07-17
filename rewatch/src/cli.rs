@@ -2,6 +2,21 @@ use std::{ffi::OsString, ops::Deref};
 
 use clap::{Args, Parser, Subcommand};
 use clap_verbosity_flag::InfoLevel;
+use regex::Regex;
+
+fn parse_regex(s: &str) -> Result<Regex, regex::Error> {
+    Regex::new(s)
+}
+
+use clap::ValueEnum;
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum FileExtension {
+    #[value(name = ".res")]
+    Res,
+    #[value(name = ".resi")]
+    Resi,
+}
 
 /// ReScript - Fast, Simple, Fully Typed JavaScript from the Future
 #[derive(Parser, Debug)]
@@ -39,8 +54,8 @@ pub struct FilterArg {
     ///
     /// Filter allows for a regex to be supplied which will filter the files to be compiled. For
     /// instance, to filter out test files for compilation while doing feature work.
-    #[arg(short, long)]
-    pub filter: Option<String>,
+    #[arg(short, long, value_parser = parse_regex)]
+    pub filter: Option<Regex>,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -107,6 +122,10 @@ pub struct BuildArgs {
 
     #[command(flatten)]
     pub snapshot_output: SnapshotOutputArg,
+
+    /// Watch mode (deprecated, use `rescript watch` instead)
+    #[arg(short, default_value_t = false, num_args = 0..=1)]
+    pub watch: bool,
 }
 
 #[derive(Args, Clone, Debug)]
@@ -130,6 +149,19 @@ pub struct WatchArgs {
     pub snapshot_output: SnapshotOutputArg,
 }
 
+impl From<BuildArgs> for WatchArgs {
+    fn from(build_args: BuildArgs) -> Self {
+        Self {
+            folder: build_args.folder,
+            filter: build_args.filter,
+            after_build: build_args.after_build,
+            create_sourcedirs: build_args.create_sourcedirs,
+            dev: build_args.dev,
+            snapshot_output: build_args.snapshot_output,
+        }
+    }
+}
+
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
     /// Build the project
@@ -147,11 +179,29 @@ pub enum Command {
         #[command(flatten)]
         dev: DevArg,
     },
-    /// Alias to `legacy format`.
-    #[command(disable_help_flag = true)]
+    /// Formats ReScript files.
     Format {
-        #[arg(allow_hyphen_values = true, num_args = 0..)]
-        format_args: Vec<OsString>,
+        /// Format the whole project.
+        #[arg(short, long, group = "format_input_mode")]
+        all: bool,
+
+        /// Check formatting status without applying changes.
+        #[arg(short, long)]
+        check: bool,
+
+        /// Read the code from stdin and print the formatted code to stdout.
+        #[arg(
+            short,
+            long,
+            group = "format_input_mode",
+            value_enum,
+            conflicts_with = "check"
+        )]
+        stdin: Option<FileExtension>,
+
+        /// Files to format.
+        #[arg(group = "format_input_mode", required_unless_present_any = ["format_input_mode"])]
+        files: Vec<String>,
     },
     /// Alias to `legacy dump`.
     #[command(disable_help_flag = true)]
@@ -187,7 +237,7 @@ impl Deref for FolderArg {
 }
 
 impl Deref for FilterArg {
-    type Target = Option<String>;
+    type Target = Option<Regex>;
 
     fn deref(&self) -> &Self::Target {
         &self.filter

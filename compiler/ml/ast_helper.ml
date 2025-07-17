@@ -56,6 +56,15 @@ module Typ = struct
   let var ?loc ?attrs a = mk ?loc ?attrs (Ptyp_var a)
   let arrow ?loc ?attrs ~arity arg ret =
     mk ?loc ?attrs (Ptyp_arrow {arg; ret; arity})
+  let arrows ?loc ?attrs args ret =
+    let arity = Some (List.length args) in
+    let rec build_arrows arity_to_use = function
+      | [] -> ret
+      | [arg] -> arrow ?loc ?attrs ~arity:arity_to_use arg ret
+      | arg :: rest ->
+        arrow ?loc ?attrs ~arity:arity_to_use arg (build_arrows None rest)
+    in
+    build_arrows arity args
   let tuple ?loc ?attrs a = mk ?loc ?attrs (Ptyp_tuple a)
   let constr ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_constr (a, b))
   let object_ ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_object (a, b))
