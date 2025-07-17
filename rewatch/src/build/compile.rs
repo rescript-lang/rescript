@@ -581,7 +581,7 @@ fn compile_file(
     }?;
     let module_name = helpers::file_path_to_module_name(implementation_file_path, &package.namespace);
     let has_interface = module.get_interface().is_some();
-    let is_type_dev = package.is_source_file_type_dev(implementation_file_path);
+    let is_type_dev = module.is_type_dev;
     let to_mjs_args = compiler_args(
         &package.config,
         &root_package.config,

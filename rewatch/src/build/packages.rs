@@ -749,6 +749,8 @@ pub fn parse_packages(build_state: &mut BuildState) {
                         compile_dirty: false,
                         last_compiled_cmt: None,
                         last_compiled_cmi: None,
+                        // Not sure if this is correct
+                        is_type_dev: false,
                     },
                 );
             });
@@ -801,6 +803,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
                                 compile_dirty: true,
                                 last_compiled_cmt: None,
                                 last_compiled_cmi: None,
+                                is_type_dev: metadata.is_type_dev,
                             });
                     } else {
                         // remove last character of string: resi -> res, rei -> re, mli -> ml
@@ -862,6 +865,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
                                         compile_dirty: true,
                                         last_compiled_cmt: None,
                                         last_compiled_cmi: None,
+                                        is_type_dev: metadata.is_type_dev,
                                     });
                             }
                         }
