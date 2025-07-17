@@ -364,10 +364,10 @@ impl Config {
     pub fn get_jsx_args(&self) -> Vec<String> {
         match self.jsx.to_owned() {
             Some(jsx) => match jsx.version {
-                Some(version) if version == 3 || version == 4 => {
+                Some(version) if version == 4 => {
                     vec!["-bs-jsx".to_string(), version.to_string()]
                 }
-                Some(_version) => panic!("Unsupported JSX version"),
+                Some(version) => panic!("JSX version {} is unsupported", version),
                 None => vec![],
             },
             None => vec![],
