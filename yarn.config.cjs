@@ -86,7 +86,9 @@ async function enforceCompilerMeta({ Yarn }) {
     );
     await execPromise("cargo check", { cwd: "rewatch" });
   } else {
-    const rewatchVersionMatch = rewatchCargoContent.match(rewatchVersionPattern);
+    const rewatchVersionMatch = rewatchCargoContent.match(
+      rewatchVersionPattern,
+    );
     const foundRewatchVersion = rewatchVersionMatch?.groups?.version;
     if (foundRewatchVersion !== EXPECTED_VERSION) {
       Yarn.workspace().error(
