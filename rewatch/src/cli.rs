@@ -200,7 +200,7 @@ pub enum Command {
         stdin: Option<FileExtension>,
 
         /// Files to format.
-        #[arg(group = "format_input_mode")]
+        #[arg(group = "format_input_mode", required_unless_present_any = ["format_input_mode"])]
         files: Vec<String>,
     },
     /// Alias to `legacy dump`.
