@@ -108,6 +108,35 @@ impl Source {
             },
         }
     }
+
+    fn find_is_type_dev_for_sub_folder(
+        &self,
+        relative_parent_path: &Path,
+        relative_source_file: &Path,
+    ) -> bool {
+        match &self {
+            Source::Shorthand(sub_folder) => {
+                relative_parent_path.join(Path::new(sub_folder)) == *relative_source_file
+            }
+            Source::Qualified(package_source) => {
+                // Note that we no longer check if type_ is dev of the nested subfolder.
+                // A parent was type:dev, so we assume all subfolders are as well.
+                let next_parent_path = relative_parent_path.join(Path::new(&package_source.dir));
+                if next_parent_path == *relative_source_file {
+                    return true;
+                };
+
+                match &package_source.subdirs {
+                    None => false,
+                    Some(Subdirs::Recurse(false)) => false,
+                    Some(Subdirs::Recurse(true)) => relative_source_file.starts_with(&next_parent_path),
+                    Some(Subdirs::Qualified(nested_sources)) => nested_sources.iter().any(|nested_source| {
+                        nested_source.find_is_type_dev_for_sub_folder(&next_parent_path, relative_source_file)
+                    }),
+                }
+            }
+        }
+    }
 }
 
 impl Eq for Source {}
@@ -502,7 +531,23 @@ impl Config {
         };
 
         package_sources.iter().any(|package_source| {
-            Path::new(&package_source.dir) == relative_parent && package_source.is_type_dev()
+            if !package_source.is_type_dev() {
+                false
+            } else {
+                let dir_path = Path::new(&package_source.dir);
+                if dir_path == relative_parent {
+                    return true;
+                };
+
+                match &package_source.subdirs {
+                    None => false,
+                    Some(Subdirs::Recurse(false)) => false,
+                    Some(Subdirs::Recurse(true)) => relative_path.starts_with(dir_path),
+                    Some(Subdirs::Qualified(sub_dirs)) => sub_dirs.iter().any(|sub_dir| {
+                        sub_dir.find_is_type_dev_for_sub_folder(Path::new(relative_path), relative_parent)
+                    }),
+                }
+            }
         })
     }
 }
