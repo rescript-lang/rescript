@@ -15,6 +15,8 @@ let Form = {};
 
 let Mouse = {};
 
+let Pointer = {};
+
 let Selection = {};
 
 let Touch = {};
@@ -39,6 +41,7 @@ export {
   Focus,
   Form,
   Mouse,
+  Pointer,
   Selection,
   Touch,
   UI,
