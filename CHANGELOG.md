@@ -12,6 +12,10 @@
 
 # 12.0.0-beta.2 (Unreleased)
 
+#### :boom: Breaking Change
+
+- `Result.getOrThrow` now throws a JS error instead of a `Not_found` ReScript exception. https://github.com/rescript-lang/rescript/pull/7630
+
 #### :nail_care: Polish
 
 - Add missing backtick and spaces to `Belt.Map.map` doc comment. https://github.com/rescript-lang/rescript/pull/7632
