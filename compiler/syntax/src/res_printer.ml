@@ -1702,7 +1702,7 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
     in
     match args with
     | [] -> Doc.nil
-    | [([], Nolabel, n)] ->
+    | [{attrs = []; lbl = Nolabel; typ}] ->
       let has_attrs_before = not (attrs_before = []) in
       let attrs =
         if has_attrs_before then
@@ -1710,8 +1710,8 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
         else Doc.nil
       in
       let typ_doc =
-        let doc = print_typ_expr ~state n cmt_tbl in
-        match n.ptyp_desc with
+        let doc = print_typ_expr ~state typ cmt_tbl in
+        match typ.ptyp_desc with
         | Ptyp_arrow _ | Ptyp_tuple _ | Ptyp_alias _ -> add_parens doc
         | _ -> doc
       in
@@ -2054,7 +2054,7 @@ and print_object_field ~state (field : Parsetree.object_field) cmt_tbl =
 (* es6 arrow type arg
  * type t = (~foo: string, ~bar: float=?, unit) => unit
  * i.e. ~foo: string, ~bar: float *)
-and print_type_parameter ~state (attrs, lbl, typ) cmt_tbl =
+and print_type_parameter ~state {attrs; lbl; typ} cmt_tbl =
   (* Converting .ml code to .res requires processing uncurried attributes *)
   let attrs = print_attributes ~state attrs cmt_tbl in
   let label =

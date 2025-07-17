@@ -95,7 +95,7 @@ let from_labels ~loc arity labels : t =
   in
   let args =
     Ext_list.map2 labels tyvars (fun label tyvar ->
-        {Parsetree.lbl = Asttypes.Labelled label; typ = tyvar})
+        {Parsetree.attrs = []; lbl = Asttypes.Labelled label; typ = tyvar})
   in
   Typ.arrows ~loc args result_type
 
@@ -143,7 +143,8 @@ let mk_fn_type (new_arg_types_ty : param_type list) (result : t) : t =
     Ext_list.fold_right new_arg_types_ty result
       (fun {label; ty; attr; loc} acc ->
         Ast_helper.Typ.arrow ~loc ~attrs:attr ~arity:None
-          {lbl = label; typ = ty} acc)
+          {attrs = []; lbl = label; typ = ty}
+          acc)
   in
   match t.ptyp_desc with
   | Ptyp_arrow arr ->
@@ -156,12 +157,7 @@ let list_of_arrow (ty : t) : t * param_type list =
     match ty.ptyp_desc with
     | Ptyp_arrow {arg; ret; arity} when arity = None || acc = [] ->
       aux ret
-        (({
-            label = arg.lbl;
-            ty = arg.typ;
-            attr = ty.ptyp_attributes;
-            loc = ty.ptyp_loc;
-          }
+        (({label = arg.lbl; ty = arg.typ; attr = arg.attrs; loc = ty.ptyp_loc}
            : param_type)
         :: acc)
     | Ptyp_poly (_, ty) ->

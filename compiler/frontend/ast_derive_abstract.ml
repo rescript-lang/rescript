@@ -84,7 +84,7 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
         ( [],
           (if has_optional_field then
              Ast_helper.Typ.arrow ~loc ~arity:None
-               {lbl = Nolabel; typ = Ast_literal.type_unit ()}
+               {attrs = []; lbl = Nolabel; typ = Ast_literal.type_unit ()}
                core_type
            else core_type),
           [] )
@@ -116,19 +116,19 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
             if is_optional then
               let optional_type = Ast_core_type.lift_option_type pld_type in
               ( Ast_helper.Typ.arrow ~loc:pld_loc ~arity
-                  {lbl = Asttypes.Optional pld_name; typ = pld_type}
+                  {attrs = []; lbl = Asttypes.Optional pld_name; typ = pld_type}
                   maker,
                 Val.mk ~loc:pld_loc
                   (if light then pld_name
                    else {pld_name with txt = pld_name.txt ^ "Get"})
                   ~attrs:get_optional_attrs ~prim
                   (Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
-                     {lbl = Nolabel; typ = core_type}
+                     {attrs = []; lbl = Nolabel; typ = core_type}
                      optional_type)
                 :: acc )
             else
               ( Ast_helper.Typ.arrow ~loc:pld_loc ~arity
-                  {lbl = Asttypes.Labelled pld_name; typ = pld_type}
+                  {attrs = []; lbl = Asttypes.Labelled pld_name; typ = pld_type}
                   maker,
                 Val.mk ~loc:pld_loc
                   (if light then pld_name
@@ -140,7 +140,7 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
                        [External_arg_spec.dummy] Return_identity
                        (Js_get {js_get_name = prim_as_name; js_get_scopes = []}))
                   (Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
-                     {lbl = Nolabel; typ = core_type}
+                     {attrs = []; lbl = Nolabel; typ = core_type}
                      pld_type)
                 :: acc )
           in
@@ -149,9 +149,9 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
             if is_current_field_mutable then
               let setter_type =
                 Ast_helper.Typ.arrow ~arity:(Some 2)
-                  {lbl = Nolabel; typ = core_type}
+                  {attrs = []; lbl = Nolabel; typ = core_type}
                   (Ast_helper.Typ.arrow ~arity:None
-                     {lbl = Nolabel; typ = pld_type} (* setter *)
+                     {attrs = []; lbl = Nolabel; typ = pld_type} (* setter *)
                      (Ast_literal.type_unit ()))
               in
               Val.mk ~loc:pld_loc

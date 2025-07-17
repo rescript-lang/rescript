@@ -19,6 +19,7 @@
 #### :nail_care: Polish
 
 - Add missing backtick and spaces to `Belt.Map.map` doc comment. https://github.com/rescript-lang/rescript/pull/7632
+- AST: store the attributes directly on function arguments. https://github.com/rescript-lang/rescript/pull/7660
 
 #### :house: Internal
 
