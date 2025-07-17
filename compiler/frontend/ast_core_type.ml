@@ -131,20 +131,10 @@ let get_curry_arity (ty : t) =
 
 let is_arity_one ty = get_curry_arity ty = 1
 
-type param_type = {
-  label: Asttypes.arg_label;
-  ty: Parsetree.core_type;
-  attr: Parsetree.attributes;
-  loc: loc;
-}
-
-let mk_fn_type (new_arg_types_ty : param_type list) (result : t) : t =
+let mk_fn_type ~loc (new_arg_types_ty : Parsetree.arg list) (result : t) : t =
   let t =
-    Ext_list.fold_right new_arg_types_ty result
-      (fun {label; ty; attr; loc} acc ->
-        Ast_helper.Typ.arrow ~loc ~attrs:attr ~arity:None
-          {attrs = []; lbl = label; typ = ty}
-          acc)
+    Ext_list.fold_right new_arg_types_ty result (fun {lbl; typ; attrs} acc ->
+        Ast_helper.Typ.arrow ~loc ~attrs ~arity:None {attrs = []; lbl; typ} acc)
   in
   match t.ptyp_desc with
   | Ptyp_arrow arr ->
@@ -152,14 +142,11 @@ let mk_fn_type (new_arg_types_ty : param_type list) (result : t) : t =
     {t with ptyp_desc = Ptyp_arrow {arr with arity = Some arity}}
   | _ -> t
 
-let list_of_arrow (ty : t) : t * param_type list =
+let list_of_arrow (ty : t) : t * Parsetree.arg list =
   let rec aux (ty : t) acc =
     match ty.ptyp_desc with
     | Ptyp_arrow {arg; ret; arity} when arity = None || acc = [] ->
-      aux ret
-        (({label = arg.lbl; ty = arg.typ; attr = arg.attrs; loc = ty.ptyp_loc}
-           : param_type)
-        :: acc)
+      aux ret (arg :: acc)
     | Ptyp_poly (_, ty) ->
       (* should not happen? *)
       Bs_syntaxerr.err ty.ptyp_loc Unhandled_poly_type
@@ -169,6 +156,6 @@ let list_of_arrow (ty : t) : t * param_type list =
 
 let add_last_obj (ty : t) (obj : t) =
   let result, params = list_of_arrow ty in
-  mk_fn_type
-    (params @ [{label = Nolabel; ty = obj; attr = []; loc = obj.ptyp_loc}])
+  mk_fn_type ~loc:obj.ptyp_loc
+    (params @ [{lbl = Nolabel; typ = obj; attrs = []}])
     result

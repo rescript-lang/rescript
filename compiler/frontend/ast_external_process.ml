@@ -408,8 +408,7 @@ type response = {
 }
 
 let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
-    (arg_types_ty : Ast_core_type.param_type list)
-    (result_type : Ast_core_type.t) :
+    (arg_types_ty : Parsetree.arg list) (result_type : Ast_core_type.t) :
     int * Parsetree.core_type * External_ffi_types.t =
   match st with
   | {
@@ -440,11 +439,10 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
       Ext_list.fold_right arg_types_ty ([], [], [])
         (fun
           param_type
-          (arg_labels, (arg_types : Ast_core_type.param_type list), result_types)
+          (arg_labels, (arg_types : Parsetree.arg list), result_types)
         ->
-          let arg_label = param_type.label in
-          let loc = param_type.loc in
-          let ty = param_type.ty in
+          let arg_label = param_type.lbl in
+          let ty = param_type.typ in
           let new_arg_label, new_arg_types, output_tys =
             match arg_label with
             | Nolabel -> (
@@ -459,7 +457,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
             | Labelled {txt = label} -> (
               let field_name =
                 match
-                  Ast_attributes.iter_process_bs_string_as param_type.attr
+                  Ast_attributes.iter_process_bs_string_as param_type.attrs
                 with
                 | Some alias -> alias
                 | None -> label
@@ -518,7 +516,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
             | Optional {txt = label} -> (
               let field_name =
                 match
-                  Ast_attributes.iter_process_bs_string_as param_type.attr
+                  Ast_attributes.iter_process_bs_string_as param_type.attrs
                 with
                 | Some alias -> alias
                 | None -> label
@@ -594,7 +592,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
     in
 
     ( List.length new_arg_types_ty,
-      Ast_core_type.mk_fn_type new_arg_types_ty result,
+      Ast_core_type.mk_fn_type ~loc new_arg_types_ty result,
       External_ffi_types.ffi_obj_create arg_kinds )
   | _ -> Location.raise_errorf ~loc "Attribute found that conflicts with %@obj"
 
@@ -942,11 +940,10 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
     let splice = external_desc.splice in
     let arg_type_specs, new_arg_types_ty, arg_type_specs_length =
       Ext_list.fold_right arg_types_ty
-        (([], [], 0)
-          : External_arg_spec.params * Ast_core_type.param_type list * int)
+        (([], [], 0) : External_arg_spec.params * Parsetree.arg list * int)
         (fun param_type (arg_type_specs, arg_types, i) ->
-          let arg_label = param_type.label in
-          let ty = param_type.ty in
+          let arg_label = param_type.lbl in
+          let ty = param_type.typ in
           (if i = 0 && splice then
              match arg_label with
              | Optional _ ->
@@ -1008,7 +1005,7 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
     let return_wrapper =
       check_return_wrapper loc external_desc.return_wrapper result_type
     in
-    let fn_type = Ast_core_type.mk_fn_type new_arg_types_ty result_type in
+    let fn_type = Ast_core_type.mk_fn_type ~loc new_arg_types_ty result_type in
     ( build_uncurried_type ~arity:(List.length new_arg_types_ty) fn_type,
       External_ffi_types.ffi_bs arg_type_specs return_wrapper ffi,
       unused_attrs,
