@@ -1028,6 +1028,38 @@ and walk_value_binding vb t comments =
 
 and walk_expression expr t comments =
   let open Location in
+  let walk_apply_expr call_expr arguments t comments =
+    let before, inside, after =
+      partition_by_loc comments call_expr.Parsetree.pexp_loc
+    in
+    let after =
+      if is_block_expr call_expr then (
+        let after_expr, rest =
+          partition_adjacent_trailing call_expr.Parsetree.pexp_loc after
+        in
+        walk_expression call_expr t (List.concat [before; inside; after_expr]);
+        rest)
+      else (
+        attach t.leading call_expr.Parsetree.pexp_loc before;
+        walk_expression call_expr t inside;
+        after)
+    in
+    let after_expr, rest =
+      partition_adjacent_trailing call_expr.Parsetree.pexp_loc after
+    in
+    attach t.trailing call_expr.Parsetree.pexp_loc after_expr;
+    walk_list
+      (arguments
+      |> List.map (fun (lbl, expr) ->
+             let loc =
+               match lbl with
+               | Asttypes.Labelled {loc} | Optional {loc} ->
+                 {loc with loc_end = expr.Parsetree.pexp_loc.loc_end}
+               | _ -> expr.pexp_loc
+             in
+             ExprArgument {expr; loc}))
+      t rest
+  in
   match expr.Parsetree.pexp_desc with
   | _ when comments = [] -> ()
   | Pexp_constant _ ->
@@ -1563,69 +1595,10 @@ and walk_expression expr t comments =
         walk_list (all_exprs |> List.map (fun e -> Expression e)) t comments
       | _ ->
         (* Fallback to regular apply handling *)
-        let before, inside, after =
-          partition_by_loc comments call_expr.pexp_loc
-        in
-        let after =
-          if is_block_expr call_expr then (
-            let after_expr, rest =
-              partition_adjacent_trailing call_expr.pexp_loc after
-            in
-            walk_expression call_expr t
-              (List.concat [before; inside; after_expr]);
-            rest)
-          else (
-            attach t.leading call_expr.pexp_loc before;
-            walk_expression call_expr t inside;
-            after)
-        in
-        let after_expr, rest =
-          partition_adjacent_trailing call_expr.pexp_loc after
-        in
-        attach t.trailing call_expr.pexp_loc after_expr;
-        walk_list
-          (arguments
-          |> List.map (fun (lbl, expr) ->
-                 let loc =
-                   match lbl with
-                   | Asttypes.Labelled {loc} | Optional {loc} ->
-                     {loc with loc_end = expr.Parsetree.pexp_loc.loc_end}
-                   | _ -> expr.pexp_loc
-                 in
-                 ExprArgument {expr; loc}))
-          t rest)
+        walk_apply_expr call_expr arguments t comments)
     | _ ->
       (* Regular apply handling *)
-      let before, inside, after =
-        partition_by_loc comments call_expr.pexp_loc
-      in
-      let after =
-        if is_block_expr call_expr then (
-          let after_expr, rest =
-            partition_adjacent_trailing call_expr.pexp_loc after
-          in
-          walk_expression call_expr t (List.concat [before; inside; after_expr]);
-          rest)
-        else (
-          attach t.leading call_expr.pexp_loc before;
-          walk_expression call_expr t inside;
-          after)
-      in
-      let after_expr, rest =
-        partition_adjacent_trailing call_expr.pexp_loc after
-      in
-      attach t.trailing call_expr.pexp_loc after_expr;
-      walk_list
-        (arguments
-        |> List.map (fun (lbl, expr) ->
-               let loc =
-                 match lbl with
-                 | Asttypes.Labelled {loc} | Optional {loc} ->
-                   {loc with loc_end = expr.Parsetree.pexp_loc.loc_end}
-                 | _ -> expr.pexp_loc
-               in
-               ExprArgument {expr; loc}))
-        t rest)
+      walk_apply_expr call_expr arguments t comments)
   | Pexp_fun _ | Pexp_newtype _ -> (
     let _, parameters, return_expr = fun_expr expr in
     let comments =
