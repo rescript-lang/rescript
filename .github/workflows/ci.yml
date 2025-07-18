@@ -134,7 +134,7 @@ jobs:
       - name: Run rewatch unit tests
         if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
         run: |
-          cargo test --manifest-path rewatch/Cargo.toml
+          cargo test --manifest-path rewatch/Cargo.toml --release
 
       - name: Copy rewatch binary
         run: |
