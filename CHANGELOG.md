@@ -1,3 +1,6 @@
+
+
+
 # Changelog
 
 > **Tags:**
@@ -36,6 +39,7 @@
 - Fix `typeof` parens on functions. https://github.com/rescript-lang/rescript/pull/7643
 - Rewatch: Add --dev flag to clean command. https://github.com/rescript-lang/rescript/pull/7622
 - Rewatch: Use root package suffix in clean log messages. https://github.com/rescript-lang/rescript/pull/7648
+- Rewatch: Only allow access to `"bs-dev-dependencies"` from `"type": "dev"` source files.
 
 # 12.0.0-beta.1
 
