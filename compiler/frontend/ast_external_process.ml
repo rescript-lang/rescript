@@ -592,7 +592,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
     in
 
     ( List.length new_arg_types_ty,
-      Ast_core_type.mk_fn_type ~loc new_arg_types_ty result,
+      Ast_helper.Typ.arrows ~loc new_arg_types_ty result,
       External_ffi_types.ffi_obj_create arg_kinds )
   | _ -> Location.raise_errorf ~loc "Attribute found that conflicts with %@obj"
 
@@ -1005,7 +1005,7 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
     let return_wrapper =
       check_return_wrapper loc external_desc.return_wrapper result_type
     in
-    let fn_type = Ast_core_type.mk_fn_type ~loc new_arg_types_ty result_type in
+    let fn_type = Ast_helper.Typ.arrows ~loc new_arg_types_ty result_type in
     ( build_uncurried_type ~arity:(List.length new_arg_types_ty) fn_type,
       External_ffi_types.ffi_bs arg_type_specs return_wrapper ffi,
       unused_attrs,
