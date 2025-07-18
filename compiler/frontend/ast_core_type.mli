@@ -47,8 +47,6 @@ val get_uncurry_arity : t -> int option
    None -- means not a function
 *)
 
-val mk_fn_type : loc:Location.t -> Parsetree.arg list -> t -> t
-
 val list_of_arrow : t -> t * Parsetree.arg list
 (** fails when Ptyp_poly *)
 
