@@ -125,12 +125,12 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
           let accessor_type =
             if is_optional then
               let optional_type = Ast_core_type.lift_option_type pld_type in
-              Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
-                {attrs = []; lbl = Nolabel; typ = core_type}
+              Ast_helper.Typ.arrows ~loc
+                [{attrs = []; lbl = Nolabel; typ = core_type}]
                 optional_type
             else
-              Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
-                {attrs = []; lbl = Nolabel; typ = core_type}
+              Ast_helper.Typ.arrows ~loc
+                [{attrs = []; lbl = Nolabel; typ = core_type}]
                 pld_type
           in
           let accessor_prim =
