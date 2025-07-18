@@ -81,6 +81,12 @@ echo 'Dep01.log()' >> packages/new-namespace/src/NS_alias.res
 rewatch build --snapshot-output &> ../tests/snapshots/dependency-cycle.txt
 git checkout -- packages/new-namespace/src/NS_alias.res
 
+# this should not compile because  "@rescript/webapi" is part of bs-dev-dependencies
+# and FileToTest.res is not listed as "type":"dev"
+echo 'open WebAPI' >> packages/with-dev-deps/src/FileToTest.res
+rewatch build --snapshot-output &> ../tests/snapshots/bs-dev-dependency-used-by-non-dev-source.txt
+git checkout -- packages/with-dev-deps/src/FileToTest.res
+
 # it should compile dev dependencies with the --dev flag
 rewatch clean --dev &> /dev/null
 rewatch build --dev &> /dev/null;
