@@ -663,6 +663,10 @@ jobs:
         shell: bash
         working-directory: rewatch/testrepo
 
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: runner.os == 'Windows' 
+
       - name: Run rewatch integration tests
         run: ./rewatch/tests/suite-ci.sh node_modules/.bin/rescript
         shell: bash
