@@ -4054,18 +4054,21 @@ and print_belt_array_concat_apply ~state sub_lists cmt_tbl =
       | _ -> Doc.concat [Doc.text ","; Doc.line]
     in
     let spread_doc = make_spread_doc comma_before_spread spread in
+    let expressions_doc = 
+      Doc.join
+        ~sep:(Doc.concat [Doc.text ","; Doc.line])
+        (List.map
+           (fun expr ->
+             let doc = print_expression_with_comments ~state expr cmt_tbl in
+             match Parens.expr expr with
+             | Parens.Parenthesized -> add_parens doc
+             | Braced braces -> print_braces doc expr braces
+             | Nothing -> doc)
+           expressions)
+    in
     Doc.concat
       [
-        Doc.join
-          ~sep:(Doc.concat [Doc.text ","; Doc.line])
-          (List.map
-             (fun expr ->
-               let doc = print_expression_with_comments ~state expr cmt_tbl in
-               match Parens.expr expr with
-               | Parens.Parenthesized -> add_parens doc
-               | Braced braces -> print_braces doc expr braces
-               | Nothing -> doc)
-             expressions);
+        expressions_doc;
         spread_doc;
       ]
   in
