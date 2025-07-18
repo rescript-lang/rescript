@@ -360,10 +360,6 @@ jobs:
         if: runner.os != 'Windows'
         run: make -C tests/gentype_tests/typescript-react-example clean test
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: runner.os == 'Windows'
-
       - name: Run rewatch tests
         run: ./rewatch/tests/suite-ci.sh
         shell: bash
