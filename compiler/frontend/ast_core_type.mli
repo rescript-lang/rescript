@@ -47,16 +47,9 @@ val get_uncurry_arity : t -> int option
    None -- means not a function
 *)
 
-type param_type = {
-  label: Asttypes.arg_label;
-  ty: t;
-  attr: Parsetree.attributes;
-  loc: Location.t;
-}
+val mk_fn_type : loc:Location.t -> Parsetree.arg list -> t -> t
 
-val mk_fn_type : param_type list -> t -> t
-
-val list_of_arrow : t -> t * param_type list
+val list_of_arrow : t -> t * Parsetree.arg list
 (** fails when Ptyp_poly *)
 
 val add_last_obj : t -> t -> t

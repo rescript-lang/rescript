@@ -41,9 +41,13 @@ end = struct
     String.sub src start_offset (end_offset - start_offset)
 
   let extract_text_at_loc loc =
-    (* TODO: Maybe cache later on *)
-    let src = Ext_io.load_file loc.Location.loc_start.pos_fname in
-    extract_location_string ~src loc
+    if loc.Location.loc_start.pos_fname = "_none_" then ""
+    else
+      try
+        (* TODO: Maybe cache later on *)
+        let src = Ext_io.load_file loc.Location.loc_start.pos_fname in
+        extract_location_string ~src loc
+      with _ -> ""
 
   let parse_expr_at_loc loc =
     let sub_src = extract_text_at_loc loc in

@@ -4,9 +4,7 @@
 val arrow_type :
   ?max_arity:int ->
   Parsetree.core_type ->
-  Parsetree.attributes
-  * (Parsetree.attributes * Asttypes.arg_label * Parsetree.core_type) list
-  * Parsetree.core_type
+  Parsetree.attributes * Parsetree.arg list * Parsetree.core_type
 
 val functor_type :
   Parsetree.module_type ->

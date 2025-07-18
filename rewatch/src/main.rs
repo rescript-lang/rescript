@@ -3,7 +3,7 @@ use clap::Parser;
 use log::LevelFilter;
 use std::{io::Write, path::Path};
 
-use rewatch::{build, cli, cmd, lock, watcher};
+use rewatch::{build, cli, cmd, format, lock, watcher};
 
 fn main() -> Result<()> {
     let args = cli::Cli::parse();
@@ -91,11 +91,12 @@ fn main() -> Result<()> {
             let code = build::pass_through_legacy(legacy_args);
             std::process::exit(code);
         }
-        cli::Command::Format { mut format_args } => {
-            format_args.insert(0, "format".into());
-            let code = build::pass_through_legacy(format_args);
-            std::process::exit(code);
-        }
+        cli::Command::Format {
+            stdin,
+            all,
+            check,
+            files,
+        } => format::format(stdin, all, check, files),
         cli::Command::Dump { mut dump_args } => {
             dump_args.insert(0, "dump".into());
             let code = build::pass_through_legacy(dump_args);

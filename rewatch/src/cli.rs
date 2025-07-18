@@ -8,6 +8,16 @@ fn parse_regex(s: &str) -> Result<Regex, regex::Error> {
     Regex::new(s)
 }
 
+use clap::ValueEnum;
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum FileExtension {
+    #[value(name = ".res")]
+    Res,
+    #[value(name = ".resi")]
+    Resi,
+}
+
 /// ReScript - Fast, Simple, Fully Typed JavaScript from the Future
 #[derive(Parser, Debug)]
 #[command(version)]
@@ -169,11 +179,29 @@ pub enum Command {
         #[command(flatten)]
         dev: DevArg,
     },
-    /// Alias to `legacy format`.
-    #[command(disable_help_flag = true)]
+    /// Formats ReScript files.
     Format {
-        #[arg(allow_hyphen_values = true, num_args = 0..)]
-        format_args: Vec<OsString>,
+        /// Format the whole project.
+        #[arg(short, long, group = "format_input_mode")]
+        all: bool,
+
+        /// Check formatting status without applying changes.
+        #[arg(short, long)]
+        check: bool,
+
+        /// Read the code from stdin and print the formatted code to stdout.
+        #[arg(
+            short,
+            long,
+            group = "format_input_mode",
+            value_enum,
+            conflicts_with = "check"
+        )]
+        stdin: Option<FileExtension>,
+
+        /// Files to format.
+        #[arg(group = "format_input_mode", required_unless_present_any = ["format_input_mode"])]
+        files: Vec<String>,
     },
     /// Alias to `legacy dump`.
     #[command(disable_help_flag = true)]

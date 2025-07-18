@@ -1512,7 +1512,7 @@ and print_literal_dict_expr ~state (e : Parsetree.expression) cmt_tbl =
          Doc.indent
            (Doc.concat
               [
-                Doc.soft_line;
+                (if rows = [] then Doc.nil else Doc.soft_line);
                 Doc.join
                   ~sep:(Doc.concat [Doc.text ","; Doc.line])
                   (List.map
@@ -1523,8 +1523,8 @@ and print_literal_dict_expr ~state (e : Parsetree.expression) cmt_tbl =
                        print_comments doc cmt_tbl e.pexp_loc)
                      rows);
               ]);
-         Doc.trailing_comma;
-         Doc.soft_line;
+         (if rows = [] then Doc.nil
+          else Doc.concat [Doc.trailing_comma; Doc.soft_line]);
        ])
 
 and print_constructor_declarations ~state ~private_flag
@@ -1702,7 +1702,7 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
     in
     match args with
     | [] -> Doc.nil
-    | [([], Nolabel, n)] ->
+    | [{attrs = []; lbl = Nolabel; typ}] ->
       let has_attrs_before = not (attrs_before = []) in
       let attrs =
         if has_attrs_before then
@@ -1710,8 +1710,8 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
         else Doc.nil
       in
       let typ_doc =
-        let doc = print_typ_expr ~state n cmt_tbl in
-        match n.ptyp_desc with
+        let doc = print_typ_expr ~state typ cmt_tbl in
+        match typ.ptyp_desc with
         | Ptyp_arrow _ | Ptyp_tuple _ | Ptyp_alias _ -> add_parens doc
         | _ -> doc
       in
@@ -2054,7 +2054,7 @@ and print_object_field ~state (field : Parsetree.object_field) cmt_tbl =
 (* es6 arrow type arg
  * type t = (~foo: string, ~bar: float=?, unit) => unit
  * i.e. ~foo: string, ~bar: float *)
-and print_type_parameter ~state (attrs, lbl, typ) cmt_tbl =
+and print_type_parameter ~state {attrs; lbl; typ} cmt_tbl =
   (* Converting .ml code to .res requires processing uncurried attributes *)
   let attrs = print_attributes ~state attrs cmt_tbl in
   let label =
@@ -4225,6 +4225,7 @@ and print_pexp_apply ~state expr cmt_tbl =
     Doc.concat
       [
         Doc.text "dict{";
+        print_comments_inside cmt_tbl expr.pexp_loc;
         print_literal_dict_expr ~state key_values cmt_tbl;
         Doc.rbrace;
       ]

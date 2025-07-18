@@ -56,6 +56,7 @@ module Typ : sig
   val var : ?loc:loc -> ?attrs:attrs -> string -> core_type
   val arrow :
     ?loc:loc -> ?attrs:attrs -> arity:arity -> arg -> core_type -> core_type
+  val arrows : ?loc:loc -> ?attrs:attrs -> arg list -> core_type -> core_type
   val tuple : ?loc:loc -> ?attrs:attrs -> core_type list -> core_type
   val constr : ?loc:loc -> ?attrs:attrs -> lid -> core_type list -> core_type
   val object_ :

@@ -4,32 +4,22 @@ let arrow_type ?(max_arity = max_int) ct =
   let has_as_attr attrs =
     Ext_list.exists attrs (fun (x, _) -> x.Asttypes.txt = "as")
   in
-  let rec process attrs_before acc typ arity =
+  let rec process attrs_before acc typ max_arity =
     match typ with
-    | _ when arity < 0 -> (attrs_before, List.rev acc, typ)
-    | {ptyp_desc = Ptyp_arrow {arity = Some _}; ptyp_attributes = []}
+    | _ when max_arity < 0 -> (attrs_before, List.rev acc, typ)
+    | {ptyp_desc = Ptyp_arrow {arity = Some _; arg = {attrs = []}}}
       when acc <> [] ->
       (attrs_before, List.rev acc, typ)
-    | {
-     ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel} as arg; ret};
-     ptyp_attributes = [];
-    } ->
-      let arg = ([], arg.lbl, arg.typ) in
-      process attrs_before (arg :: acc) ret (arity - 1)
-    | {
-     ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel}};
-     ptyp_attributes = [({txt = "bs"}, _)];
-    } ->
-      (* stop here, the uncurried attribute always indicates the beginning of an arrow function
-       * e.g. `(. int) => (. int)` instead of `(. int, . int)` *)
-      (attrs_before, List.rev acc, typ)
+    | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel; attrs = []} as arg; ret}}
+      ->
+      process attrs_before (arg :: acc) ret (max_arity - 1)
     | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel}}; ptyp_attributes = _attrs}
       as return_type ->
       let args = List.rev acc in
       (attrs_before, args, return_type)
     | {
      ptyp_desc = Ptyp_arrow {arg = {lbl = Labelled _ | Optional _} as arg; ret};
-     ptyp_attributes = attrs;
+     ptyp_attributes = _attrs;
     } ->
       (* Res_core.parse_es6_arrow_type has a workaround that removed an extra arity for the function if the
          argument is a Ptyp_any with @as attribute i.e. ~x: @as(`{prop: value}`) _.
@@ -40,16 +30,14 @@ let arrow_type ?(max_arity = max_int) ct =
         match arg.typ with
         | {ptyp_desc = Ptyp_any; ptyp_attributes = attrs1}
           when has_as_attr attrs1 ->
-          arity
-        | _ -> arity - 1
+          max_arity
+        | _ -> max_arity - 1
       in
-      let arg = (attrs, arg.lbl, arg.typ) in
       process attrs_before (arg :: acc) ret arity
     | typ -> (attrs_before, List.rev acc, typ)
   in
   match ct with
-  | {ptyp_desc = Ptyp_arrow {arg = {lbl = Nolabel}}; ptyp_attributes = attrs1}
-    as typ ->
+  | {ptyp_desc = Ptyp_arrow _; ptyp_attributes = attrs1} as typ ->
     process attrs1 [] {typ with ptyp_attributes = []} max_arity
   | typ -> process [] [] typ max_arity
 
