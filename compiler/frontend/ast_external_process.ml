@@ -433,9 +433,7 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
     if String.length prim_name <> 0 then
       Location.raise_errorf ~loc
         "%@obj expect external names to be empty string";
-    let ( arg_kinds,
-          new_arg_types_ty,
-          (result_types : Parsetree.object_field list) ) =
+    let arg_kinds, args, (result_types : Parsetree.object_field list) =
       Ext_list.fold_right arg_types_ty ([], [], [])
         (fun
           param_type
@@ -591,8 +589,8 @@ let process_obj (loc : Location.t) (st : external_desc) (prim_name : string)
       (* result type can not be labeled *)
     in
 
-    ( List.length new_arg_types_ty,
-      Ast_helper.Typ.arrows ~loc new_arg_types_ty result,
+    ( List.length args,
+      Ast_helper.Typ.arrows ~loc args result,
       External_ffi_types.ffi_obj_create arg_kinds )
   | _ -> Location.raise_errorf ~loc "Attribute found that conflicts with %@obj"
 
@@ -938,7 +936,7 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
     (build_uncurried_type ~arity new_type, spec, unused_attrs, false)
   else
     let splice = external_desc.splice in
-    let arg_type_specs, new_arg_types_ty, arg_type_specs_length =
+    let arg_type_specs, args, arg_type_specs_length =
       Ext_list.fold_right arg_types_ty
         (([], [], 0) : External_arg_spec.params * Parsetree.arg list * int)
         (fun param_type (arg_type_specs, arg_types, i) ->
@@ -1005,8 +1003,8 @@ let handle_attributes (loc : Bs_loc.t) (type_annotation : Parsetree.core_type)
     let return_wrapper =
       check_return_wrapper loc external_desc.return_wrapper result_type
     in
-    let fn_type = Ast_helper.Typ.arrows ~loc new_arg_types_ty result_type in
-    ( build_uncurried_type ~arity:(List.length new_arg_types_ty) fn_type,
+    let fn_type = Ast_helper.Typ.arrows ~loc args result_type in
+    ( build_uncurried_type ~arity:(List.length args) fn_type,
       External_ffi_types.ffi_bs arg_type_specs return_wrapper ffi,
       unused_attrs,
       relative )
