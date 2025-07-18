@@ -4054,7 +4054,7 @@ and print_belt_array_concat_apply ~state sub_lists cmt_tbl =
       | _ -> Doc.concat [Doc.text ","; Doc.line]
     in
     let spread_doc = make_spread_doc comma_before_spread spread in
-    let expressions_doc = 
+    let expressions_doc =
       Doc.join
         ~sep:(Doc.concat [Doc.text ","; Doc.line])
         (List.map
@@ -4066,11 +4066,7 @@ and print_belt_array_concat_apply ~state sub_lists cmt_tbl =
              | Nothing -> doc)
            expressions)
     in
-    Doc.concat
-      [
-        expressions_doc;
-        spread_doc;
-      ]
+    Doc.concat [expressions_doc; spread_doc]
   in
   Doc.group
     (Doc.concat
