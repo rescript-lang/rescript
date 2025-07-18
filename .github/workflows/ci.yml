@@ -234,6 +234,13 @@ jobs:
           fi
         shell: bash
 
+      - name: Log environment info
+        run: |
+          echo OPAM version: $(opam --version)
+          echo System: $(uname -s)
+          echo Path: $PATH
+        shell: bash
+
       - name: Compiler build state key
         id: compiler-build-state-key
         shell: bash
