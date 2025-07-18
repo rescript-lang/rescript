@@ -160,7 +160,7 @@ else
   for file in $changed_snapshots; do
     bold $file
     # show diff of file vs contents in git
-    git diff $file $file
+    git diff --ignore-all-space $file $file
     printf "\n\n"
   done
 
