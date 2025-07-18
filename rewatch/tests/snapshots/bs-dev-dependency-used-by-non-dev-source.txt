@@ -3,7 +3,7 @@ Parsed 2 source files
 Compiled 2 modules
 
   [1;31mWe've found a bug for you![0m
-  [36m/Users/nojaf/Projects/rescript/rewatch/testrepo/packages/with-dev-deps/src/FileToTest.res[0m:[2m2:6-11[0m
+  [36m/packages/with-dev-deps/src/FileToTest.res[0m:[2m2:6-11[0m
 
   1 [2m│[0m let add = (a, b) => a + b
   [1;31m2[0m [2m│[0m open [1;31mWebAPI[0m
