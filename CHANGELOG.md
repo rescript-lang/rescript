@@ -10,11 +10,25 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-beta.2 (Unreleased)
+# 12.0.0-beta.2
 
 #### :boom: Breaking Change
 
 - Rust implementation of the `rescript format` command. Command line options changed from `-all`, `-check` and `-stdin` to `--all`, `--check` and `--stdin` compared to the legacy implementation. https://github.com/rescript-lang/rescript/pull/7603
+
+#### :rocket: New Feature
+
+- Add experimental command to `rescript-tools` for extracting all ReScript code blocks from markdown, either a md-file directly, or inside of docstrings in ReScript code. https://github.com/rescript-lang/rescript/pull/7623
+
+#### :bug: Bug fix
+
+- Fix `typeof` parens on functions. https://github.com/rescript-lang/rescript/pull/7643
+- Rewatch: Add `--dev` flag to clean command. https://github.com/rescript-lang/rescript/pull/7622
+- Rewatch: Use root package suffix in clean log messages. https://github.com/rescript-lang/rescript/pull/7648
+- Fix inside comment printing for empty dict. https://github.com/rescript-lang/rescript/pull/7654
+- Fix I/O error message when trying to extract extra info from non-existing file. https://github.com/rescript-lang/rescript/pull/7656
+- Fix fatal error when JSX expression used without configuring JSX in `rescript.json`. https://github.com/rescript-lang/rescript/pull/7656
+- Rewatch: Only allow access to `"bs-dev-dependencies"` from `"type": "dev"` source files. https://github.com/rescript-lang/rescript/pull/7650
 
 #### :nail_care: Polish
 
@@ -31,20 +45,6 @@
 - Rewatch: simplify getting bsc path. https://github.com/rescript-lang/rescript/pull/7634
 - Rewatch: only get `"type": "dev"` source files for local packages. https://github.com/rescript-lang/rescript/pull/7646
 - Rewatch: add support for `rescript -w` for compatibility. https://github.com/rescript-lang/rescript/pull/7649
-
-#### :rocket: New Feature
-
-- Add experimental command to `rescript-tools` for extracting all ReScript code blocks from markdown, either a md-file directly, or inside of docstrings in ReScript code. https://github.com/rescript-lang/rescript/pull/7623
-
-#### :bug: Bug fix
-
-- Fix `typeof` parens on functions. https://github.com/rescript-lang/rescript/pull/7643
-- Rewatch: Add --dev flag to clean command. https://github.com/rescript-lang/rescript/pull/7622
-- Rewatch: Use root package suffix in clean log messages. https://github.com/rescript-lang/rescript/pull/7648
-- Fix inside comment printing for empty dict. https://github.com/rescript-lang/rescript/pull/7654
-- Fix I/O error message when trying to extract extra info from non-existing file. https://github.com/rescript-lang/rescript/pull/7656
-- Fix fatal error when JSX expression used without configuring JSX in rescript.json. https://github.com/rescript-lang/rescript/pull/7656
-- Rewatch: Only allow access to `"bs-dev-dependencies"` from `"type": "dev"` source files. https://github.com/rescript-lang/rescript/pull/7650
 
 # 12.0.0-beta.1
 
