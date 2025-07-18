@@ -42,8 +42,8 @@ let handle_external loc (x : string) : Parsetree.expression =
       pexp_desc =
         Ast_external_mk.local_external_apply loc ~pval_prim:["#raw_expr"]
           ~pval_type:
-            (Ast_helper.Typ.arrow ~arity:(Some 1)
-               {attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}
+            (Ast_helper.Typ.arrows
+               [{attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
                (Ast_helper.Typ.any ()))
           [str_exp];
     }
@@ -71,8 +71,8 @@ let handle_debugger loc (payload : Ast_payload.t) =
   | PStr [] ->
     Ast_external_mk.local_external_apply loc ~pval_prim:["%debugger"]
       ~pval_type:
-        (Ast_helper.Typ.arrow ~arity:(Some 1)
-           {attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}
+        (Ast_helper.Typ.arrows
+           [{attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
            (Ast_literal.type_unit ()))
       [Ast_literal.val_unit ~loc ()]
   | _ ->
@@ -98,8 +98,8 @@ let handle_raw ~kind loc payload =
       pexp_desc =
         Ast_external_mk.local_external_apply loc ~pval_prim:["#raw_expr"]
           ~pval_type:
-            (Ast_helper.Typ.arrow ~arity:(Some 1)
-               {attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}
+            (Ast_helper.Typ.arrows
+               [{attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
                (Ast_helper.Typ.any ()))
           [exp];
       pexp_attributes =
@@ -125,20 +125,13 @@ let handle_ffi ~loc ~payload =
     let wrap_type_constraint (e : Parsetree.expression) =
       let loc = e.pexp_loc in
       let any = Ast_helper.Typ.any ~loc:e.pexp_loc () in
-      let unit = Ast_literal.type_unit ~loc () in
-      let rec arrow ~arity =
-        if arity = 0 then
-          Ast_helper.Typ.arrow ~arity:None ~loc
-            {attrs = []; lbl = Nolabel; typ = unit}
-            any
-        else if arity = 1 then
-          Ast_helper.Typ.arrow ~arity:None ~loc
-            {attrs = []; lbl = Nolabel; typ = any}
-            any
-        else
-          Ast_helper.Typ.arrow ~loc ~arity:None
-            {attrs = []; lbl = Nolabel; typ = any}
-            (arrow ~arity:(arity - 1))
+      let arrow ~arity =
+        let effective_arity = if arity = 0 then 1 else arity in
+        let args =
+          Ext_list.init effective_arity (fun _ ->
+              ({attrs = []; lbl = Nolabel; typ = any} : Parsetree.arg))
+        in
+        Ast_helper.Typ.arrows ~loc args any
       in
       match !is_function with
       | Some arity ->
@@ -156,8 +149,8 @@ let handle_ffi ~loc ~payload =
         pexp_desc =
           Ast_external_mk.local_external_apply loc ~pval_prim:["#raw_expr"]
             ~pval_type:
-              (Ast_helper.Typ.arrow ~arity:(Some 1)
-                 {attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}
+              (Ast_helper.Typ.arrows
+                 [{attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
                  (Ast_helper.Typ.any ()))
             [exp];
         pexp_attributes =
@@ -175,8 +168,8 @@ let handle_raw_structure loc payload =
         pexp_desc =
           Ast_external_mk.local_external_apply loc ~pval_prim:["#raw_stmt"]
             ~pval_type:
-              (Ast_helper.Typ.arrow ~arity:(Some 1)
-                 {attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}
+              (Ast_helper.Typ.arrows
+                 [{attrs = []; lbl = Nolabel; typ = Ast_helper.Typ.any ()}]
                  (Ast_helper.Typ.any ()))
             [exp];
       }
