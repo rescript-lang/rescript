@@ -336,14 +336,8 @@ jobs:
         run: ./scripts/test_syntax.sh
         shell: bash
 
-      - name: Build runtime/stdlib with rewatch
-        if: ${{ runner.os != 'Windows' }}
+      - name: Build runtime/stdlib
         run: ./scripts/buildRuntime.sh
-        shell: bash
-
-      - name: Build runtime/stdlib with bsb (Windows)
-        if: ${{ runner.os == 'Windows' }}
-        run: ./scripts/buildRuntimeLegacy.sh
         shell: bash
 
       - name: Check for changes in lib folder

@@ -28,6 +28,8 @@
 
 #### :house: Internal
 
+- Build runtime with rewatch on Windows, too. https://github.com/rescript-lang/rescript/pull/7794
+
 # 12.0.0-beta.7
 
 #### :rocket: New Feature
