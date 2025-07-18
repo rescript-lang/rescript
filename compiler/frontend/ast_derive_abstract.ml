@@ -79,14 +79,16 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
       Ext_list.exists label_declarations (fun x ->
           Ast_attributes.has_bs_optional x.pld_attributes)
     in
-    let setter_accessor, make_type, labels =
+    let setter_accessor, maker_args, labels =
       Ext_list.fold_right label_declarations
         ( [],
           (if has_optional_field then
-             Ast_helper.Typ.arrow ~loc ~arity:None
-               {attrs = []; lbl = Nolabel; typ = Ast_literal.type_unit ()}
-               core_type
-           else core_type),
+             (* start with the implicit unit argument *)
+             [
+               ({attrs = []; lbl = Nolabel; typ = Ast_literal.type_unit ()}
+                 : Parsetree.arg);
+             ]
+           else []),
           [] )
         (fun ({
                 pld_name = {txt = label_name; loc = label_loc} as pld_name;
@@ -106,61 +108,81 @@ let handle_tdcl light (tdcl : Parsetree.type_declaration) :
           let prim = [prim_as_name] in
           let is_optional = Ast_attributes.has_bs_optional pld_attributes in
 
-          let maker, acc =
-            let arity =
-              if List.length labels = List.length label_declarations - 1 then
-                (* toplevel type *)
-                Some ((if has_optional_field then 2 else 1) + List.length labels)
-              else None
-            in
+          (* build the argument representing this field *)
+          let field_arg =
+            if is_optional then
+              ({attrs = []; lbl = Asttypes.Optional pld_name; typ = pld_type}
+                : Parsetree.arg)
+            else
+              ({attrs = []; lbl = Asttypes.Labelled pld_name; typ = pld_type}
+                : Parsetree.arg)
+          in
+
+          (* prepend to the maker argument list *)
+          let maker_args = field_arg :: maker in
+
+          (* build accessor value description for this field *)
+          let accessor_type =
             if is_optional then
               let optional_type = Ast_core_type.lift_option_type pld_type in
-              ( Ast_helper.Typ.arrow ~loc:pld_loc ~arity
-                  {attrs = []; lbl = Asttypes.Optional pld_name; typ = pld_type}
-                  maker,
-                Val.mk ~loc:pld_loc
-                  (if light then pld_name
-                   else {pld_name with txt = pld_name.txt ^ "Get"})
-                  ~attrs:get_optional_attrs ~prim
-                  (Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
-                     {attrs = []; lbl = Nolabel; typ = core_type}
-                     optional_type)
-                :: acc )
+              Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
+                {attrs = []; lbl = Nolabel; typ = core_type}
+                optional_type
             else
-              ( Ast_helper.Typ.arrow ~loc:pld_loc ~arity
-                  {attrs = []; lbl = Asttypes.Labelled pld_name; typ = pld_type}
-                  maker,
-                Val.mk ~loc:pld_loc
-                  (if light then pld_name
-                   else {pld_name with txt = pld_name.txt ^ "Get"})
-                  ~attrs:get_attrs
-                  ~prim:
-                    ((* Not needed actually*)
-                     External_ffi_types.ffi_bs_as_prims
-                       [External_arg_spec.dummy] Return_identity
-                       (Js_get {js_get_name = prim_as_name; js_get_scopes = []}))
-                  (Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
-                     {attrs = []; lbl = Nolabel; typ = core_type}
-                     pld_type)
-                :: acc )
+              Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
+                {attrs = []; lbl = Nolabel; typ = core_type}
+                pld_type
           in
-          let is_current_field_mutable = pld_mutable = Mutable in
+          let accessor_prim =
+            (* Not needed actually *)
+            if is_optional then prim
+            else
+              External_ffi_types.ffi_bs_as_prims [External_arg_spec.dummy]
+                Return_identity
+                (Js_get {js_get_name = prim_as_name; js_get_scopes = []})
+          in
+          let accessor_attrs =
+            if is_optional then get_optional_attrs else get_attrs
+          in
+
+          let accessor =
+            Val.mk ~loc:pld_loc
+              (if light then pld_name
+               else {pld_name with txt = pld_name.txt ^ "Get"})
+              ~attrs:accessor_attrs ~prim:accessor_prim accessor_type
+          in
+
+          (* accumulate *)
+          let acc = accessor :: acc in
+
+          (* add setter for mutable fields *)
           let acc =
-            if is_current_field_mutable then
+            if pld_mutable = Mutable then
               let setter_type =
-                Ast_helper.Typ.arrow ~arity:(Some 2)
-                  {attrs = []; lbl = Nolabel; typ = core_type}
-                  (Ast_helper.Typ.arrow ~arity:None
-                     {attrs = []; lbl = Nolabel; typ = pld_type} (* setter *)
-                     (Ast_literal.type_unit ()))
+                Ast_helper.Typ.arrows ~loc:pld_loc
+                  [
+                    ({attrs = []; lbl = Nolabel; typ = core_type}
+                      : Parsetree.arg);
+                    ({attrs = []; lbl = Nolabel; typ = pld_type}
+                      : Parsetree.arg);
+                  ]
+                  (Ast_literal.type_unit ())
               in
-              Val.mk ~loc:pld_loc
-                {loc = label_loc; txt = label_name ^ "Set"} (* setter *)
-                ~attrs:set_attrs ~prim setter_type
-              :: acc
+              let setter =
+                Val.mk ~loc:pld_loc
+                  {loc = label_loc; txt = label_name ^ "Set"}
+                  ~attrs:set_attrs ~prim setter_type
+              in
+              setter :: acc
             else acc
           in
-          (acc, maker, (is_optional, new_label) :: labels))
+          (acc, maker_args, (is_optional, new_label) :: labels))
+    in
+    (* build the final [make] function type from accumulated arguments *)
+    let make_type =
+      match maker_args with
+      | [] -> core_type
+      | args -> Ast_helper.Typ.arrows ~loc args core_type
     in
     ( new_tdcl,
       if is_private then setter_accessor
