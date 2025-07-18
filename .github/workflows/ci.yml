@@ -18,6 +18,8 @@ concurrency:
 
 env:
   OCAMLRUNPARAM: b
+  RUST_BACKTRACE: "1"
+  RUSTFLAGS: "-Dwarnings"
 
 jobs:
   build-compiler:
@@ -66,14 +68,6 @@ jobs:
             rust-target: x86_64-unknown-linux-musl
 
     runs-on: ${{matrix.os}}
-
-    env:
-      # setup-ocaml opam version cannot be configured
-      # we do track its version manually
-      OPAM_VERSION: 2.3.0
-      DUNE_PROFILE: release
-      RUST_BACKTRACE: "1"
-      RUSTFLAGS: "-Dwarnings"
 
     steps:
       - name: "Windows: Set git config"
@@ -550,8 +544,6 @@ jobs:
           - os: ubuntu-24.04-arm
           - os: windows-2022
     runs-on: ${{ matrix.os }}
-    env:
-      RUST_BACKTRACE: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -601,8 +593,6 @@ jobs:
           - os: ubuntu-24.04-arm
           - os: windows-2022
     runs-on: ${{ matrix.os }}
-    env:
-      RUST_BACKTRACE: "1"
     steps:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -656,8 +646,6 @@ jobs:
           - os: ubuntu-24.04-arm
           - os: windows-2022
     runs-on: ${{ matrix.os }}
-    env:
-      RUST_BACKTRACE: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
