@@ -416,12 +416,7 @@ pub fn read_package_name(package_dir: &Path) -> Result<String> {
         .ok_or_else(|| anyhow!("No name field found in package.json"))
 }
 
-pub fn make_package(
-    config: config::Config,
-    package_path: &Path,
-    is_pinned_dep: bool,
-    is_root: bool,
-) -> Package {
+fn make_package(config: config::Config, package_path: &Path, is_pinned_dep: bool, is_root: bool) -> Package {
     let source_folders = match config.sources.to_owned() {
         Some(config::OneOrMore::Single(source)) => get_source_dirs(source, None),
         Some(config::OneOrMore::Multiple(sources)) => {
@@ -563,7 +558,7 @@ pub fn get_source_files(
 
 /// This takes the tree of packages, and finds all the source files for each, adding them to the
 /// respective packages.
-pub fn extend_with_children(
+fn extend_with_children(
     filter: &Option<regex::Regex>,
     mut build: AHashMap<String, Package>,
     build_dev_deps: bool,
