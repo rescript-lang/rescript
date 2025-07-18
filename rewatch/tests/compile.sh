@@ -149,7 +149,7 @@ fi
 
 # see if the snapshots have changed
 changed_snapshots=$(git ls-files  --modified ../tests/snapshots)
-if git diff --exit-code ../tests/snapshots &> /dev/null;
+if git diff --ignore-cr-at-eol --exit-code ../tests/snapshots &> /dev/null;
 then
   success "Snapshots are correct"
 else
