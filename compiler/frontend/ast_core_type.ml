@@ -132,15 +132,7 @@ let get_curry_arity (ty : t) =
 let is_arity_one ty = get_curry_arity ty = 1
 
 let mk_fn_type ~loc (new_arg_types_ty : Parsetree.arg list) (result : t) : t =
-  let t =
-    Ext_list.fold_right new_arg_types_ty result (fun {lbl; typ; attrs} acc ->
-        Ast_helper.Typ.arrow ~loc ~attrs ~arity:None {attrs = []; lbl; typ} acc)
-  in
-  match t.ptyp_desc with
-  | Ptyp_arrow arr ->
-    let arity = List.length new_arg_types_ty in
-    {t with ptyp_desc = Ptyp_arrow {arr with arity = Some arity}}
-  | _ -> t
+  Typ.arrows ~loc new_arg_types_ty result
 
 let list_of_arrow (ty : t) : t * Parsetree.arg list =
   let rec aux (ty : t) acc =
