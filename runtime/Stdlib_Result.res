@@ -23,10 +23,16 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. */
 type t<'res, 'err> = result<'res, 'err> = Ok('res) | Error('err)
 
-let getOrThrow = x =>
+let getOrThrow = (x, ~message=?) =>
   switch x {
   | Ok(x) => x
-  | Error(_) => throw(Not_found)
+  | Error(_) =>
+    Stdlib_JsError.panic(
+      switch message {
+      | None => "Result.getOrThrow called for Error value"
+      | Some(message) => message
+      },
+    )
   }
 
 let getExn = getOrThrow

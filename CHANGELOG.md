@@ -14,6 +14,7 @@
 
 #### :boom: Breaking Change
 
+- `Result.getOrThrow` now throws a JS error instead of a `Not_found` ReScript exception. https://github.com/rescript-lang/rescript/pull/7630
 - Rust implementation of the `rescript format` command. Command line options changed from `-all`, `-check` and `-stdin` to `--all`, `--check` and `--stdin` compared to the legacy implementation. https://github.com/rescript-lang/rescript/pull/7603
 
 #### :nail_care: Polish
@@ -35,6 +36,7 @@
 #### :rocket: New Feature
 
 - Add experimental command to `rescript-tools` for extracting all ReScript code blocks from markdown, either a md-file directly, or inside of docstrings in ReScript code. https://github.com/rescript-lang/rescript/pull/7623
+- Add optional `message` argument to `Result.getOrThrow` and improve default error message. https://github.com/rescript-lang/rescript/pull/7630
 
 #### :bug: Bug fix
 
