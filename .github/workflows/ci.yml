@@ -75,6 +75,11 @@ jobs:
 
     runs-on: ${{matrix.os}}
 
+    env:
+      # When changing the setup-ocaml version, also adjust it in the setup step further below
+      # and update the comment about the OPAM version if it changed.
+      SETUP_OCAML_VERSION: 3.4.0 # comes with OPAM 2.4.0
+
     steps:
       - name: "Windows: Set git config"
         if: runner.os == 'Windows'
@@ -100,11 +105,12 @@ jobs:
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
-        uses: awalsh128/cache-apt-pkgs-action@v1.4.3
+        uses: awalsh128/cache-apt-pkgs-action@v1.5.1
         with:
-          # See https://github.com/ocaml/setup-ocaml/blob/b2105f9/packages/setup-ocaml/src/unix.ts#L9
-          packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync
-          version: v3
+          # https://github.com/ocaml/setup-ocaml/blob/2f57267f071bc8547dfcb9433ff21d44fffef190/packages/setup-ocaml/src/unix.ts#L48
+          # plus OPAM wants cmake
+          packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync cmake
+          version: v4
 
       - name: Restore rewatch build cache
         id: rewatch-build-cache
@@ -141,7 +147,7 @@ jobs:
       # matrix.ocaml_compiler may contain commas
       - name: Get OPAM cache key
         shell: bash
-        run: echo "opam_cache_key=opam-env-v8-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" | sed 's/,/-/g' >> $GITHUB_ENV
+        run: echo "opam_cache_key=opam-env-v8-${{ matrix.os }}-${{ env.SETUP_OCAML_VERSION }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" | sed 's/,/-/g' >> $GITHUB_ENV
 
       - name: Restore OPAM environment
         id: cache-opam-env
@@ -157,7 +163,7 @@ jobs:
           key: ${{ env.opam_cache_key }}
 
       - name: Use OCaml ${{matrix.ocaml_compiler}}
-        uses: ocaml/setup-ocaml@v3.3.2
+        uses: ocaml/setup-ocaml@v3.4.0
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         with:
           ocaml-compiler: ${{matrix.ocaml_compiler}}
@@ -175,9 +181,13 @@ jobs:
             await fs.writeFile('.opam-path', opamPath, 'utf-8');
             console.log('stored path to .opam-path');
 
+      # With OPAM 2.4, it is not sufficient to have the flow-parser package in `pin-depends` in rescript.opam.template,
+      # we need to pin it explicitly using `opam pin add`.
       - name: Install OPAM dependencies
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
-        run: opam install . --deps-only --with-test
+        run: |
+          opam pin add flow_parser git+https://github.com/rescript-lang/flow.git#9ea4062c0b7e037415c4413a7634c459ebd5c31b --no-action
+          opam install . --deps-only --with-test
 
       - name: Cache OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit != 'true'

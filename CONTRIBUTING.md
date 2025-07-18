@@ -53,7 +53,10 @@ opam init
 # then you need to run `opam update && opam upgrade` first
 opam switch create 5.3.0
 
-# Install dev dependencies from OPAM
+# Pin flow parser
+opam pin add flow_parser git+https://github.com/rescript-lang/flow.git#9ea4062c0b7e037415c4413a7634c459ebd5c31b --no-action
+
+# Install dependencies from OPAM, including dev/test dependencies
 opam install . --deps-only --with-test --with-dev-setup -y
 ```
 
@@ -397,7 +400,7 @@ To build a new version and release it on NPM, follow these steps:
 
 To reproduce issues, it can be helpful to the team to install a specific version of the compiler.
 
-ReScript uses [pkg.pr.new](https://github.com/stackblitz-labs/pkg.pr.new) for continuous releases. Once tests are passed successfully, the bot comment is available. 
+ReScript uses [pkg.pr.new](https://github.com/stackblitz-labs/pkg.pr.new) for continuous releases. Once tests are passed successfully, the bot comment is available.
 
 Follow the instructions from the comment, which are like:
 
