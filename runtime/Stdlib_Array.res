@@ -13,11 +13,12 @@ external unsafe_get: (array<'a>, int) => 'a = "%array_unsafe_get"
 @val
 external fromArrayLikeWithMap: (arrayLike<'a>, 'a => 'b) => array<'b> = "Array.from"
 
-@send external fillAll: (array<'a>, 'a) => unit = "fill"
+@deprecated("Use `fill` instead") @send external fillAll: (array<'a>, 'a) => unit = "fill"
 
-@send external fillToEnd: (array<'a>, 'a, ~start: int) => unit = "fill"
+@deprecated("Use `fill` instead") @send
+external fillToEnd: (array<'a>, 'a, ~start: int) => unit = "fill"
 
-@send external fill: (array<'a>, 'a, ~start: int, ~end: int) => unit = "fill"
+@send external fill: (array<'a>, 'a, ~start: int=?, ~end: int=?) => unit = "fill"
 
 let make = (~length, x) =>
   if length <= 0 {
@@ -83,13 +84,14 @@ let compare = (a, b, cmp) => {
     : compareFromIndex(a, b, 0, cmp, lenA)
 }
 
-@send external copyAllWithin: (array<'a>, ~target: int) => array<'a> = "copyWithin"
+@deprecated("Use `copyWithin` instead") @send
+external copyAllWithin: (array<'a>, ~target: int) => array<'a> = "copyWithin"
 
-@send
+@deprecated("Use `copyWithin` instead") @send
 external copyWithinToEnd: (array<'a>, ~target: int, ~start: int) => array<'a> = "copyWithin"
 
 @send
-external copyWithin: (array<'a>, ~target: int, ~start: int, ~end: int) => array<'a> = "copyWithin"
+external copyWithin: (array<'a>, ~target: int, ~start: int, ~end: int=?) => array<'a> = "copyWithin"
 
 @send external pop: array<'a> => option<'a> = "pop"
 
@@ -124,13 +126,14 @@ external removeInPlace: (array<'a>, int, @as(1) _) => unit = "splice"
 
 @send external includes: (array<'a>, 'a) => bool = "includes"
 
-@send external indexOf: (array<'a>, 'a) => int = "indexOf"
+@send external indexOf: (array<'a>, 'a, ~from: int=?) => int = "indexOf"
 let indexOfOpt = (arr, item) =>
   switch arr->indexOf(item) {
   | -1 => None
   | index => Some(index)
   }
-@send external indexOfFrom: (array<'a>, 'a, int) => int = "indexOf"
+@deprecated("Use `indexOf` instead") @send
+external indexOfFrom: (array<'a>, 'a, int) => int = "indexOf"
 
 @send external join: (array<string>, string) => string = "join"
 
@@ -142,16 +145,19 @@ external joinWith: (array<string>, string) => string = "join"
 @deprecated("Use `joinUnsafe` instead") @send
 external joinWithUnsafe: (array<'a>, string) => string = "join"
 
-@send external lastIndexOf: (array<'a>, 'a) => int = "lastIndexOf"
+@send external lastIndexOf: (array<'a>, 'a, ~from: int=?) => int = "lastIndexOf"
 let lastIndexOfOpt = (arr, item) =>
   switch arr->lastIndexOf(item) {
   | -1 => None
   | index => Some(index)
   }
-@send external lastIndexOfFrom: (array<'a>, 'a, int) => int = "lastIndexOf"
+@deprecated("Use `lastIndexOf` instead") @send
+external lastIndexOfFrom: (array<'a>, 'a, int) => int = "lastIndexOf"
 
-@send external slice: (array<'a>, ~start: int, ~end: int) => array<'a> = "slice"
-@send external sliceToEnd: (array<'a>, ~start: int) => array<'a> = "slice"
+@send external slice: (array<'a>, ~start: int=?, ~end: int=?) => array<'a> = "slice"
+@deprecated("Use `slice` instead") @send
+external sliceToEnd: (array<'a>, ~start: int) => array<'a> = "slice"
+
 @send external copy: array<'a> => array<'a> = "slice"
 
 @send external sort: (array<'a>, ('a, 'a) => Stdlib_Ordering.t) => unit = "sort"

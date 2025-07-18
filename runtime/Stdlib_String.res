@@ -136,8 +136,9 @@ let searchOpt = (s, re) =>
   | index => Some(index)
   }
 
-@send external slice: (string, ~start: int, ~end: int) => string = "slice"
-@send external sliceToEnd: (string, ~start: int) => string = "slice"
+@send external slice: (string, ~start: int, ~end: int=?) => string = "slice"
+@deprecated("Use `slice` instead") @send
+external sliceToEnd: (string, ~start: int) => string = "slice"
 
 @send external split: (string, string) => array<string> = "split"
 @send external splitAtMost: (string, string, ~limit: int) => array<string> = "split"
@@ -149,8 +150,9 @@ external splitByRegExpAtMost: (string, Stdlib_RegExp.t, ~limit: int) => array<op
 @send external startsWith: (string, string) => bool = "startsWith"
 @send external startsWithFrom: (string, string, int) => bool = "startsWith"
 
-@send external substring: (string, ~start: int, ~end: int) => string = "substring"
-@send external substringToEnd: (string, ~start: int) => string = "substring"
+@send external substring: (string, ~start: int, ~end: int=?) => string = "substring"
+@deprecated("Use `substring` instead") @send
+external substringToEnd: (string, ~start: int) => string = "substring"
 
 @send external toLowerCase: string => string = "toLowerCase"
 @send external toLocaleLowerCase: string => string = "toLocaleLowerCase"
