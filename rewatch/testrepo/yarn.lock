@@ -5,24 +5,10 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
-"@rescript/darwin-arm64@npm:12.0.0-alpha.15":
-  version: 12.0.0-alpha.15
-  resolution: "@rescript/darwin-arm64@npm:12.0.0-alpha.15"
-  conditions: os=darwin & cpu=arm64
-  languageName: node
-  linkType: hard
-
 "@rescript/darwin-arm64@npm:12.0.0-beta.1":
   version: 12.0.0-beta.1
   resolution: "@rescript/darwin-arm64@npm:12.0.0-beta.1"
   conditions: os=darwin & cpu=arm64
-  languageName: node
-  linkType: hard
-
-"@rescript/darwin-x64@npm:12.0.0-alpha.15":
-  version: 12.0.0-alpha.15
-  resolution: "@rescript/darwin-x64@npm:12.0.0-alpha.15"
-  conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
@@ -33,24 +19,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rescript/linux-arm64@npm:12.0.0-alpha.15":
-  version: 12.0.0-alpha.15
-  resolution: "@rescript/linux-arm64@npm:12.0.0-alpha.15"
-  conditions: os=linux & cpu=arm64
-  languageName: node
-  linkType: hard
-
 "@rescript/linux-arm64@npm:12.0.0-beta.1":
   version: 12.0.0-beta.1
   resolution: "@rescript/linux-arm64@npm:12.0.0-beta.1"
   conditions: os=linux & cpu=arm64
-  languageName: node
-  linkType: hard
-
-"@rescript/linux-x64@npm:12.0.0-alpha.15":
-  version: 12.0.0-alpha.15
-  resolution: "@rescript/linux-x64@npm:12.0.0-alpha.15"
-  conditions: os=linux & cpu=x64
   languageName: node
   linkType: hard
 
@@ -67,13 +39,6 @@ __metadata:
   dependencies:
     rescript: "npm:^12.0.0-alpha.13"
   checksum: 10c0/71553ebc51fec9c29ef5d1b4a4f6954cd9e29b622629005e29128504cc5a40d26e50308935b5d2e51c653b61674f096b731615c5c8399bd152517e32824554a8
-  languageName: node
-  linkType: hard
-
-"@rescript/win32-x64@npm:12.0.0-alpha.15":
-  version: 12.0.0-alpha.15
-  resolution: "@rescript/win32-x64@npm:12.0.0-alpha.15"
-  conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
 
@@ -139,37 +104,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"rescript@npm:12.0.0-alpha.15":
-  version: 12.0.0-alpha.15
-  resolution: "rescript@npm:12.0.0-alpha.15"
-  dependencies:
-    "@rescript/darwin-arm64": "npm:12.0.0-alpha.15"
-    "@rescript/darwin-x64": "npm:12.0.0-alpha.15"
-    "@rescript/linux-arm64": "npm:12.0.0-alpha.15"
-    "@rescript/linux-x64": "npm:12.0.0-alpha.15"
-    "@rescript/win32-x64": "npm:12.0.0-alpha.15"
-  dependenciesMeta:
-    "@rescript/darwin-arm64":
-      optional: true
-    "@rescript/darwin-x64":
-      optional: true
-    "@rescript/linux-arm64":
-      optional: true
-    "@rescript/linux-x64":
-      optional: true
-    "@rescript/win32-x64":
-      optional: true
-  bin:
-    bsc: cli/bsc.js
-    bstracing: cli/bstracing.js
-    rescript: cli/rescript.js
-    rescript-legacy: cli/rescript-legacy.js
-    rescript-tools: cli/rescript-tools.js
-  checksum: 10c0/dbb5f05e5b28d211809a6aca386da37c25542d03f9ca57927a72bb456a392c1fc0383e9c70035d6b32dcbc62ba5ad8d54b831cf88bd95d674d0174fcc6380da7
-  languageName: node
-  linkType: hard
-
-"rescript@npm:^12.0.0-alpha.13":
+"rescript@npm:12.0.0-beta.1, rescript@npm:^12.0.0-alpha.13":
   version: 12.0.0-beta.1
   resolution: "rescript@npm:12.0.0-beta.1"
   dependencies:
@@ -203,6 +138,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "testrepo@workspace:."
   dependencies:
-    rescript: "npm:12.0.0-alpha.15"
+    rescript: "npm:12.0.0-beta.1"
   languageName: unknown
   linkType: soft
