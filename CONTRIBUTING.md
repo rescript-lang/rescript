@@ -14,12 +14,12 @@ Happy hacking!
 
 > Most of our contributors are working on Apple machines, so all our instructions are currently macOS / Linux centric. Contributions for Windows development welcome!
 
-- [Node.js](https://nodejs.org/) v22.x
+- [Node.js](https://nodejs.org/) v22.x or newer
 - [Yarn CLI](https://yarnpkg.com/getting-started/install) (can be installed with `corepack`, Homebrew, etc)
 - C compiler toolchain (usually installed with `xcode` on Mac)
 - Python <= 3.11 (required to build ninja)
 - Rust toolchain (required to build rewatch; follow the instructions at https://www.rust-lang.org/tools/install)
-- `opam` (OCaml Package Manager) v2.2.0
+- `opam` (OCaml Package Manager) v2.2.0 or newer
 - VSCode (+ [OCaml Platform Extension](https://marketplace.visualstudio.com/items?itemName=ocamllabs.ocaml-platform))
 
 ## Cloning the Git Repo

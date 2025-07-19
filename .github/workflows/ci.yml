@@ -54,7 +54,7 @@ jobs:
             upload_binaries: true
             node-target: darwin-arm64
             rust-target: aarch64-apple-darwin
-          - os: windows-2022
+          - os: windows-2025
             ocaml_compiler: 5.3.0
             upload_binaries: true
             node-target: win32-x64
@@ -68,6 +68,10 @@ jobs:
             rust-target: x86_64-unknown-linux-musl
 
     runs-on: ${{matrix.os}}
+
+    env:
+      # When changing the setup-ocaml version, also adjust it in the setup step further below.
+      SETUP_OCAML_VERSION: 3.4.6 # OPAM <2.6.0
 
     steps:
       - name: "Windows: Set git config"
@@ -96,9 +100,10 @@ jobs:
         if: runner.os == 'Linux'
         uses: awalsh128/cache-apt-pkgs-action@v1.4.3
         with:
-          # See https://github.com/ocaml/setup-ocaml/blob/b2105f9/packages/setup-ocaml/src/unix.ts#L9
-          packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync
-          version: v3
+          # https://github.com/ocaml/setup-ocaml/blob/2f57267f071bc8547dfcb9433ff21d44fffef190/packages/setup-ocaml/src/unix.ts#L48
+          # plus OPAM wants cmake
+          packages: bubblewrap darcs g++-multilib gcc-multilib mercurial musl-tools rsync cmake
+          version: v4
 
       - name: Restore rewatch build cache
         id: rewatch-build-cache
@@ -141,7 +146,7 @@ jobs:
       # matrix.ocaml_compiler may contain commas
       - name: Get OPAM cache key
         shell: bash
-        run: echo "opam_cache_key=opam-env-v8-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" | sed 's/,/-/g' >> $GITHUB_ENV
+        run: echo "opam_cache_key=opam-env-v8-${{ matrix.os }}-${{ env.SETUP_OCAML_VERSION }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" | sed 's/,/-/g' >> $GITHUB_ENV
 
       - name: Restore OPAM environment
         id: cache-opam-env
@@ -152,12 +157,12 @@ jobs:
             ~/.opam
             _opam
             .opam-path
-            D:\cygwin
-            D:\.opam
+            C:\cygwin
+            C:\.opam
           key: ${{ env.opam_cache_key }}
 
       - name: Use OCaml ${{matrix.ocaml_compiler}}
-        uses: ocaml/setup-ocaml@v3.3.2
+        uses: ocaml/setup-ocaml@v3.4.6
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         with:
           ocaml-compiler: ${{matrix.ocaml_compiler}}
@@ -188,25 +193,29 @@ jobs:
             ~/.opam
             _opam
             .opam-path
-            D:\cygwin
-            D:\.opam
+            C:\cygwin
+            C:\.opam
           key: ${{ env.opam_cache_key }}
 
       - name: Use cached OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit == 'true'
         run: |
-          # https://github.com/ocaml/setup-ocaml/blob/b2105f9/packages/setup-ocaml/src/installer.ts#L33
-          echo "OPAMVERBOSE=$RUNNER_DEBUG"   >> "$GITHUB_ENV"
-          echo "OPAMCOLOR=always"            >> "$GITHUB_ENV"
-          echo "OPAMCONFIRMLEVEL=unsafe-yes" >> "$GITHUB_ENV"
-          echo "OPAMERRLOGLEN=0"             >> "$GITHUB_ENV"
-          echo "OPAMPRECISETRACKING=1"       >> "$GITHUB_ENV"
-          echo "OPAMYES=1"                   >> "$GITHUB_ENV"
+          # https://github.com/ocaml/setup-ocaml/blob/v3.4.6/packages/setup-ocaml/src/installer.ts
+          echo "OPAMCOLOR=always"                    >> "$GITHUB_ENV"
+          echo "OPAMCONFIRMLEVEL=unsafe-yes"         >> "$GITHUB_ENV"
+          echo "OPAMDOWNLOADJOBS=4"                  >> "$GITHUB_ENV"
+          echo "OPAMERRLOGLEN=0"                     >> "$GITHUB_ENV"
+          echo "OPAMEXTERNALSOLVER=builtin-0install" >> "$GITHUB_ENV"
+          echo "OPAMPRECISETRACKING=1"               >> "$GITHUB_ENV"
+          echo "OPAMRETRIES=10"                      >> "$GITHUB_ENV"
+          echo "OPAMSOLVERTIMEOUT=600"               >> "$GITHUB_ENV"
+          echo "OPAMYES=1"                           >> "$GITHUB_ENV"
+          echo "CLICOLOR_FORCE=1"                    >> "$GITHUB_ENV"
 
           if [[ "$RUNNER_OS" != "Windows" ]]; then
             echo "OPAMROOT=$HOME/.opam"      >> "$GITHUB_ENV"
           else
-            echo "OPAMROOT=D:\\.opam"        >> "$GITHUB_ENV"
+            echo "OPAMROOT=C:\\.opam"        >> "$GITHUB_ENV"
           fi
 
           OPAM_PATH="$(cat .opam-path)"
@@ -218,19 +227,10 @@ jobs:
             fsutil behavior set symlinkEvaluation R2L:1 R2R:1
             fsutil behavior query SymlinkEvaluation
 
-            CYGWIN="winsymlinks:native"
-            CYGWIN_ROOT="D:\\cygwin"
-            CYGWIN_ROOT_BIN="D:\\cygwin\\bin"
-            CYGWIN_ROOT_WRAPPERBIN="D:\\cygwin\\wrapperbin"
-
             echo "HOME=$USERPROFILE" >> "$GITHUB_ENV"
             echo "MSYS=winsymlinks:native" >> "$GITHUB_ENV"
-            echo "CYGWIN=$CYGWIN" >> "$GITHUB_ENV"
-            echo "CYGWIN_ROOT=$CYGWIN_ROOT" >> "$GITHUB_ENV"
-            echo "CYGWIN_ROOT_BIN=$CYGWIN_ROOT_BIN" >> "$GITHUB_ENV"
-            echo "CYGWIN_ROOT_WRAPPERBIN=$CYGWIN_ROOT_WRAPPERBIN" >> "$GITHUB_ENV"
-
-            echo "$CYGWIN_ROOT_WRAPPERBIN" >> "$GITHUB_PATH"
+            echo "CYGWIN=winsymlinks:native" >> "$GITHUB_ENV"
+            echo "BASH_ENV=C:\\cygwin\\bash_env" >> "$GITHUB_ENV"
           fi
         shell: bash
 
@@ -238,7 +238,7 @@ jobs:
         id: compiler-build-state-key
         shell: bash
         run: |
-          echo "value=compiler-build-state-v1-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" \
+          echo "value=compiler-build-state-v1-${{ matrix.os }}-${{ env.SETUP_OCAML_VERSION }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" \
             | sed 's/,/-/g' >> "$GITHUB_OUTPUT"
 
       - name: Restore compiler build state
@@ -247,7 +247,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: |
-            D:\.cache\dune
+            C:\.cache\dune
             ~/.cache/dune
             _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
@@ -277,7 +277,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: |
-            D:\.cache\dune
+            C:\.cache\dune
             ~/.cache/dune
             _build
           key: ${{ steps.compiler-build-state-key.outputs.value }}
@@ -542,7 +542,7 @@ jobs:
           - os: macos-15
           - os: ubuntu-24.04
           - os: ubuntu-24.04-arm
-          - os: windows-2022
+          - os: windows-2025
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -591,7 +591,7 @@ jobs:
           - os: macos-15
           - os: ubuntu-24.04
           - os: ubuntu-24.04-arm
-          - os: windows-2022
+          - os: windows-2025
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install pnpm
@@ -644,7 +644,7 @@ jobs:
           - os: macos-15
           - os: ubuntu-24.04
           - os: ubuntu-24.04-arm
-          - os: windows-2022
+          - os: windows-2025
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
