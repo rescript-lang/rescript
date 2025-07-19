@@ -103,16 +103,13 @@ async fn async_watch(
 
         for event in events {
             // if there is a file named rescript.lock in the events path, we can quit the watcher
-            if let Some(_) = event.paths.iter().find(|path| path.ends_with(LOCKFILE)) {
-                match event.kind {
-                    EventKind::Remove(_) => {
-                        if show_progress {
-                            println!("\nExiting... (lockfile removed)");
-                        }
-                        clean::cleanup_after_build(&build_state);
-                        return Ok(());
+            if event.paths.iter().any(|path| path.ends_with(LOCKFILE)) {
+                if let EventKind::Remove(_) = event.kind {
+                    if show_progress {
+                        println!("\nExiting... (lockfile removed)");
                     }
-                    _ => (),
+                    clean::cleanup_after_build(&build_state);
+                    return Ok(());
                 }
             }
 
@@ -228,7 +225,7 @@ async fn async_watch(
                     if show_progress {
                         let compilation_type = if initial_build { "initial" } else { "incremental" };
                         if snapshot_output {
-                            println!("Finished {} compilation", compilation_type)
+                            println!("Finished {compilation_type} compilation")
                         } else {
                             println!(
                                 "\n{}{}Finished {} compilation in {:.2}s\n",
