@@ -10,7 +10,8 @@
       "packages/namespace-casing",
       "packages/with-dev-deps",
       "packages/compiled-by-legacy",
-      "packages/nonexisting-dev-files"
+      "packages/nonexisting-dev-files",
+      "packages/deprecated-config"
     ]
   },
   "dependencies": {

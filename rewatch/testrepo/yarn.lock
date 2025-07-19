@@ -69,6 +69,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@testrepo/deprecated-config@workspace:packages/deprecated-config":
+  version: 0.0.0-use.local
+  resolution: "@testrepo/deprecated-config@workspace:packages/deprecated-config"
+  languageName: unknown
+  linkType: soft
+
 "@testrepo/main@workspace:packages/main":
   version: 0.0.0-use.local
   resolution: "@testrepo/main@workspace:packages/main"

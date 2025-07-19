@@ -266,7 +266,7 @@ pub fn parser_args(
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
-    let bsc_flags = config::flatten_flags(&config.bsc_flags);
+    let bsc_flags = config::flatten_flags(&config.compiler_flags);
 
     let file = PathBuf::from("..").join("..").join(file);
 

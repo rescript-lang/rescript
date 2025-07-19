@@ -12,6 +12,7 @@ then
     git restore .
 else
     error "Error formatting test package"
+    echo "Expected 4 files to be changed, got $git_diff_file_count"
     echo $error_output
     exit 1
 fi

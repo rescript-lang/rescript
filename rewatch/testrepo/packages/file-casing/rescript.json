@@ -13,7 +13,7 @@
     }
   ],
   "suffix": ".mjs",
-  "bs-dependencies": [],
+  "dependencies": [],
   "bsc-flags": [],
   "jsx": {
     "version": 4

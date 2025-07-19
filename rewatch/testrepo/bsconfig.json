@@ -22,9 +22,10 @@
     "@testrepo/namespace-casing",
     "@testrepo/with-dev-deps",
     "@testrepo/compiled-by-legacy",
-    "@testrepo/nonexisting-dev-files"
+    "@testrepo/nonexisting-dev-files",
+    "@testrepo/deprecated-config"
   ],
-  "bs-dependencies": [
+  "dependencies": [
     "@testrepo/main",
     "@testrepo/dep01",
     "@testrepo/dep02",
@@ -32,6 +33,7 @@
     "@testrepo/namespace-casing",
     "@testrepo/with-dev-deps",
     "@testrepo/compiled-by-legacy",
-    "@testrepo/nonexisting-dev-files"
+    "@testrepo/nonexisting-dev-files",
+    "@testrepo/deprecated-config"
   ]
 }

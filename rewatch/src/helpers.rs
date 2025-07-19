@@ -9,15 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub type StdErr = String;
 
-pub mod deserialize {
-    pub fn default_false() -> bool {
-        false
-    }
-
-    pub fn default_true() -> bool {
-        true
-    }
-}
+pub mod deserialize;
 
 pub mod emojis {
     use console::Emoji;

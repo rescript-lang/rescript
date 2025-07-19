@@ -13,7 +13,7 @@ use self::parse::parser_args;
 use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_with_expired_deps_dirty};
 use crate::helpers::emojis::*;
 use crate::helpers::{self, get_workspace_root};
-use crate::sourcedirs;
+use crate::{config, sourcedirs};
 use anyhow::{Result, anyhow};
 use build_types::*;
 use console::style;
@@ -280,7 +280,7 @@ impl fmt::Display for IncrementalBuildError {
 pub fn incremental_build(
     build_state: &mut BuildState,
     default_timing: Option<Duration>,
-    _initial_build: bool,
+    initial_build: bool,
     show_progress: bool,
     only_incremental: bool,
     create_sourcedirs: bool,
@@ -426,6 +426,9 @@ pub fn incremental_build(
         if helpers::contains_ascii_characters(&compile_warnings) {
             println!("{}", &compile_warnings);
         }
+        if initial_build {
+            log_deprecations(build_state);
+        }
         if helpers::contains_ascii_characters(&compile_errors) {
             println!("{}", &compile_errors);
         }
@@ -452,8 +455,41 @@ pub fn incremental_build(
         if helpers::contains_ascii_characters(&compile_warnings) {
             println!("{}", &compile_warnings);
         }
+        if initial_build {
+            log_deprecations(build_state);
+        }
+
         Ok(())
     }
+}
+
+fn log_deprecations(build_state: &BuildState) {
+    build_state.packages.iter().for_each(|(_, package)| {
+        package
+            .config
+            .get_deprecations()
+            .iter()
+            .for_each(|deprecation_warning| match deprecation_warning {
+                config::DeprecationWarning::BsDependencies => {
+                    log_deprecated_config_field(&package.name, "bs-dependencies", "dependencies");
+                }
+                config::DeprecationWarning::BsDevDependencies => {
+                    log_deprecated_config_field(&package.name, "bs-dev-dependencies", "dev-dependencies");
+                }
+                config::DeprecationWarning::BscFlags => {
+                    log_deprecated_config_field(&package.name, "bsc-flags", "compiler-flags");
+                }
+            });
+    });
+}
+
+fn log_deprecated_config_field(package_name: &str, field_name: &str, new_field_name: &str) {
+    let warning = format!(
+        "The field '{}' found in the package config of '{}' is deprecated and will be removed in a future version.\n\
+        Use '{}' instead.",
+        field_name, package_name, new_field_name
+    );
+    println!("\n{}", style(warning).yellow());
 }
 
 // write build.ninja files in the packages after a non-incremental build

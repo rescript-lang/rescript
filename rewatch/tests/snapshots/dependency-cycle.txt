@@ -1,6 +1,15 @@
-Cleaned 0/15
+Cleaned 0/16
 Parsed 1 source files
 Compiled 0 modules
+
+The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
+Use 'dependencies' instead.
+
+The field 'bs-dev-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
+Use 'dev-dependencies' instead.
+
+The field 'bsc-flags' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
+Use 'compiler-flags' instead.
 
 Can't continue... Found a circular dependency in your code:
 Dep01
