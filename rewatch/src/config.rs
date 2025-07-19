@@ -30,7 +30,7 @@ pub struct PackageSource {
 }
 
 impl PackageSource {
-    fn is_type_dev(&self) -> bool {
+    pub fn is_type_dev(&self) -> bool {
         match &self.type_ {
             Some(type_) => type_ == "dev",
             None => false,
@@ -159,10 +159,7 @@ impl PackageSpec {
     }
 
     pub fn is_common_js(&self) -> bool {
-        match self.module.as_str() {
-            "commonjs" => true,
-            _ => false,
-        }
+        self.module.as_str() == "commonjs"
     }
 
     pub fn get_suffix(&self) -> Option<String> {
@@ -405,7 +402,7 @@ impl Config {
                 Some(version) if version == 4 => {
                     vec!["-bs-jsx".to_string(), version.to_string()]
                 }
-                Some(version) => panic!("JSX version {} is unsupported", version),
+                Some(version) => panic!("JSX version {version} is unsupported"),
                 None => vec![],
             },
             None => vec![],
@@ -745,7 +742,7 @@ mod tests {
 
         let config = serde_json::from_str::<Config>(json).unwrap();
         assert_eq!(
-            config.get_suffix(&config.get_package_specs().first().unwrap()),
+            config.get_suffix(config.get_package_specs().first().unwrap()),
             ".mjs"
         );
     }

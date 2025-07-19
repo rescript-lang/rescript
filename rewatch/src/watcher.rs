@@ -55,15 +55,28 @@ fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
     filter.as_ref().map(|re| !re.is_match(&name)).unwrap_or(true)
 }
 
-async fn async_watch(
+struct AsyncWatchArgs<'a> {
     q: Arc<FifoQueue<Result<Event, Error>>>,
-    path: &Path,
+    path: &'a Path,
     show_progress: bool,
-    filter: &Option<regex::Regex>,
+    filter: &'a Option<regex::Regex>,
     after_build: Option<String>,
     create_sourcedirs: bool,
     build_dev_deps: bool,
     snapshot_output: bool,
+}
+
+async fn async_watch(
+    AsyncWatchArgs {
+        q,
+        path,
+        show_progress,
+        filter,
+        after_build,
+        create_sourcedirs,
+        build_dev_deps,
+        snapshot_output,
+    }: AsyncWatchArgs<'_>,
 ) -> notify::Result<()> {
     let mut build_state =
         build::initialize_build(None, filter, show_progress, path, build_dev_deps, snapshot_output)
@@ -103,16 +116,13 @@ async fn async_watch(
 
         for event in events {
             // if there is a file named rescript.lock in the events path, we can quit the watcher
-            if let Some(_) = event.paths.iter().find(|path| path.ends_with(LOCKFILE)) {
-                match event.kind {
-                    EventKind::Remove(_) => {
-                        if show_progress {
-                            println!("\nExiting... (lockfile removed)");
-                        }
-                        clean::cleanup_after_build(&build_state);
-                        return Ok(());
+            if event.paths.iter().any(|path| path.ends_with(LOCKFILE)) {
+                if let EventKind::Remove(_) = event.kind {
+                    if show_progress {
+                        println!("\nExiting... (lockfile removed)");
                     }
-                    _ => (),
+                    clean::cleanup_after_build(&build_state);
+                    return Ok(());
                 }
             }
 
@@ -228,7 +238,7 @@ async fn async_watch(
                     if show_progress {
                         let compilation_type = if initial_build { "initial" } else { "incremental" };
                         if snapshot_output {
-                            println!("Finished {} compilation", compilation_type)
+                            println!("Finished {compilation_type} compilation")
                         } else {
                             println!(
                                 "\n{}{}Finished {} compilation in {:.2}s\n",
@@ -312,8 +322,8 @@ pub fn start(
 
         let path = Path::new(folder);
 
-        if let Err(e) = async_watch(
-            consumer,
+        if let Err(e) = async_watch(AsyncWatchArgs {
+            q: consumer,
             path,
             show_progress,
             filter,
@@ -321,10 +331,10 @@ pub fn start(
             create_sourcedirs,
             build_dev_deps,
             snapshot_output,
-        )
+        })
         .await
         {
-            println!("{:?}", e)
+            println!("{e:?}")
         }
     })
 }

@@ -31,7 +31,7 @@ pub fn gen_mlmap(
     // recompile in a different way but we need to put it in the file for it to
     // be readable.
 
-    let path = build_path_abs.join(format!("{}.mlmap", namespace));
+    let path = build_path_abs.join(format!("{namespace}.mlmap"));
     let mut file = File::create(&path).expect("Unable to create mlmap");
 
     file.write_all(b"randjbuildsystem\n")
@@ -53,7 +53,7 @@ pub fn gen_mlmap(
 
 pub fn compile_mlmap(package: &packages::Package, namespace: &str, bsc_path: &Path) {
     let build_path_abs = package.get_build_path();
-    let mlmap_name = format!("{}.mlmap", namespace);
+    let mlmap_name = format!("{namespace}.mlmap");
     let args = vec!["-w", "-49", "-color", "always", "-no-alias-deps", &mlmap_name];
 
     let _ = Command::new(bsc_path)

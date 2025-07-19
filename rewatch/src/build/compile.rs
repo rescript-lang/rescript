@@ -417,8 +417,8 @@ pub fn compiler_args(
 
         specs
             .iter()
-            .map(|spec| {
-                return vec![
+            .flat_map(|spec| {
+                vec![
                     "-bs-package-output".to_string(),
                     format!(
                         "{}:{}:{}",
@@ -437,9 +437,8 @@ pub fn compiler_args(
                         },
                         root_config.get_suffix(spec),
                     ),
-                ];
+                ]
             })
-            .flatten()
             .collect()
     };
 
@@ -614,8 +613,7 @@ fn compile_file(
             Err(stderr.to_string() + &stdout)
         }
         Err(e) => Err(format!(
-            "Could not compile file. Error: {}. Path to AST: {:?}",
-            e, ast_path
+            "Could not compile file. Error: {e}. Path to AST: {ast_path:?}"
         )),
         Ok(x) => {
             let err = std::str::from_utf8(&x.stderr)
@@ -633,15 +631,15 @@ fn compile_file(
                         // because editor tooling doesn't support namespace entries yet
                         // we just remove the @ for now. This makes sure the editor support
                         // doesn't break
-                        .join(format!("{}.cmi", module_name)),
-                    ocaml_build_path_abs.join(format!("{}.cmi", module_name)),
+                        .join(format!("{module_name}.cmi")),
+                    ocaml_build_path_abs.join(format!("{module_name}.cmi")),
                 );
                 let _ = std::fs::copy(
                     package
                         .get_build_path()
                         .join(dir)
-                        .join(format!("{}.cmj", module_name)),
-                    ocaml_build_path_abs.join(format!("{}.cmj", module_name)),
+                        .join(format!("{module_name}.cmj")),
+                    ocaml_build_path_abs.join(format!("{module_name}.cmj")),
                 );
                 let _ = std::fs::copy(
                     package
@@ -650,98 +648,91 @@ fn compile_file(
                         // because editor tooling doesn't support namespace entries yet
                         // we just remove the @ for now. This makes sure the editor support
                         // doesn't break
-                        .join(format!("{}.cmt", module_name)),
-                    ocaml_build_path_abs.join(format!("{}.cmt", module_name)),
+                        .join(format!("{module_name}.cmt")),
+                    ocaml_build_path_abs.join(format!("{module_name}.cmt")),
                 );
             } else {
                 let _ = std::fs::copy(
                     package
                         .get_build_path()
                         .join(dir)
-                        .join(format!("{}.cmti", module_name)),
-                    ocaml_build_path_abs.join(format!("{}.cmti", module_name)),
+                        .join(format!("{module_name}.cmti")),
+                    ocaml_build_path_abs.join(format!("{module_name}.cmti")),
                 );
                 let _ = std::fs::copy(
                     package
                         .get_build_path()
                         .join(dir)
-                        .join(format!("{}.cmi", module_name)),
-                    ocaml_build_path_abs.join(format!("{}.cmi", module_name)),
+                        .join(format!("{module_name}.cmi")),
+                    ocaml_build_path_abs.join(format!("{module_name}.cmi")),
                 );
             }
 
-            match &module.source_type {
-                SourceType::SourceFile(SourceFile {
-                    interface: Some(Interface { path, .. }),
-                    ..
-                }) => {
-                    // we need to copy the source file to the build directory.
-                    // editor tools expects the source file in lib/bs for finding the current package
-                    // and in lib/ocaml when referencing modules in other packages
-                    let _ = std::fs::copy(
-                        Path::new(&package.path).join(path),
-                        package.get_build_path().join(path),
-                    )
-                    .expect("copying source file failed");
+            if let SourceType::SourceFile(SourceFile {
+                interface: Some(Interface { path, .. }),
+                ..
+            }) = &module.source_type
+            {
+                // we need to copy the source file to the build directory.
+                // editor tools expects the source file in lib/bs for finding the current package
+                // and in lib/ocaml when referencing modules in other packages
+                let _ = std::fs::copy(
+                    Path::new(&package.path).join(path),
+                    package.get_build_path().join(path),
+                )
+                .expect("copying source file failed");
 
-                    let _ = std::fs::copy(
-                        Path::new(&package.path).join(path),
-                        package
-                            .get_ocaml_build_path()
-                            .join(std::path::Path::new(path).file_name().unwrap()),
-                    )
-                    .expect("copying source file failed");
-                }
-                _ => (),
+                let _ = std::fs::copy(
+                    Path::new(&package.path).join(path),
+                    package
+                        .get_ocaml_build_path()
+                        .join(std::path::Path::new(path).file_name().unwrap()),
+                )
+                .expect("copying source file failed");
             }
-            match &module.source_type {
-                SourceType::SourceFile(SourceFile {
-                    implementation: Implementation { path, .. },
-                    ..
-                }) => {
-                    // we need to copy the source file to the build directory.
-                    // editor tools expects the source file in lib/bs for finding the current package
-                    // and in lib/ocaml when referencing modules in other packages
-                    let _ = std::fs::copy(
-                        Path::new(&package.path).join(path),
-                        package.get_build_path().join(path),
-                    )
-                    .expect("copying source file failed");
+            if let SourceType::SourceFile(SourceFile {
+                implementation: Implementation { path, .. },
+                ..
+            }) = &module.source_type
+            {
+                // we need to copy the source file to the build directory.
+                // editor tools expects the source file in lib/bs for finding the current package
+                // and in lib/ocaml when referencing modules in other packages
+                let _ = std::fs::copy(
+                    Path::new(&package.path).join(path),
+                    package.get_build_path().join(path),
+                )
+                .expect("copying source file failed");
 
-                    let _ = std::fs::copy(
-                        Path::new(&package.path).join(path),
-                        package
-                            .get_ocaml_build_path()
-                            .join(std::path::Path::new(path).file_name().unwrap()),
-                    )
-                    .expect("copying source file failed");
-                }
-                _ => (),
+                let _ = std::fs::copy(
+                    Path::new(&package.path).join(path),
+                    package
+                        .get_ocaml_build_path()
+                        .join(std::path::Path::new(path).file_name().unwrap()),
+                )
+                .expect("copying source file failed");
             }
 
             // copy js file
             root_package.config.get_package_specs().iter().for_each(|spec| {
                 if spec.in_source {
-                    match &module.source_type {
-                        SourceType::SourceFile(SourceFile {
-                            implementation: Implementation { path, .. },
-                            ..
-                        }) => {
-                            let source = helpers::get_source_file_from_rescript_file(
-                                &Path::new(&package.path).join(path),
-                                &root_package.config.get_suffix(spec),
-                            );
-                            let destination = helpers::get_source_file_from_rescript_file(
-                                &package.get_build_path().join(path),
-                                &root_package.config.get_suffix(spec),
-                            );
+                    if let SourceType::SourceFile(SourceFile {
+                        implementation: Implementation { path, .. },
+                        ..
+                    }) = &module.source_type
+                    {
+                        let source = helpers::get_source_file_from_rescript_file(
+                            &Path::new(&package.path).join(path),
+                            &root_package.config.get_suffix(spec),
+                        );
+                        let destination = helpers::get_source_file_from_rescript_file(
+                            &package.get_build_path().join(path),
+                            &root_package.config.get_suffix(spec),
+                        );
 
-                            if source.exists() {
-                                let _ =
-                                    std::fs::copy(&source, &destination).expect("copying source file failed");
-                            }
+                        if source.exists() {
+                            let _ = std::fs::copy(&source, &destination).expect("copying source file failed");
                         }
-                        _ => (),
                     }
                 }
             });
