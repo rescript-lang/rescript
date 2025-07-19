@@ -476,6 +476,9 @@ fn log_deprecations(build_state: &BuildState) {
                 config::DeprecationWarning::BsDevDependencies => {
                     log_deprecated_config_field(&package.name, "bs-dev-dependencies", "dev-dependencies");
                 }
+                config::DeprecationWarning::BscFlags => {
+                    log_deprecated_config_field(&package.name, "bsc-flags", "compiler-flags");
+                }
             });
     });
 }

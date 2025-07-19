@@ -361,7 +361,7 @@ pub fn compiler_args(
     is_type_dev: bool,
     is_local_dep: bool,
 ) -> Vec<String> {
-    let bsc_flags = config::flatten_flags(&config.bsc_flags);
+    let bsc_flags = config::flatten_flags(&config.compiler_flags);
 
     let dependency_paths = get_dependency_paths(config, project_root, workspace_root, packages, is_type_dev);
 

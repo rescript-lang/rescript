@@ -222,6 +222,7 @@ pub type GenTypeConfig = serde_json::Value;
 pub enum DeprecationWarning {
     BsDependencies,
     BsDevDependencies,
+    BscFlags,
 }
 
 /// # bsconfig.json representation
@@ -247,14 +248,15 @@ pub struct Config {
     // Deprecated field: overwrites dev_dependencies
     #[serde(rename = "bs-dev-dependencies")]
     bs_dev_dependencies: Option<Vec<String>>,
-    // Holds all deprecation warnings for the config struct
-    #[serde(skip)]
-    deprecation_warnings: Vec<DeprecationWarning>,
-
     #[serde(rename = "ppx-flags")]
     pub ppx_flags: Option<Vec<OneOrMore<String>>>,
-    #[serde(rename = "bsc-flags", alias = "compiler-flags")]
-    pub bsc_flags: Option<Vec<OneOrMore<String>>>,
+
+    #[serde(rename = "compiler-flags")]
+    pub compiler_flags: Option<Vec<OneOrMore<String>>>,
+    // Deprecated field: overwrites compiler_flags
+    #[serde(rename = "bsc-flags")]
+    bsc_flags: Option<Vec<OneOrMore<String>>>,
+
     pub namespace: Option<NamespaceConfig>,
     pub jsx: Option<JsxSpecs>,
     #[serde(rename = "gentypeconfig")]
@@ -265,6 +267,10 @@ pub struct Config {
     // this is a new feature of rewatch, and it's not part of the bsconfig.json spec
     #[serde(rename = "allowed-dependents")]
     pub allowed_dependents: Option<Vec<String>>,
+
+    // Holds all deprecation warnings for the config struct
+    #[serde(skip)]
+    deprecation_warnings: Vec<DeprecationWarning>,
 }
 
 /// This flattens string flags
@@ -588,6 +594,10 @@ impl Config {
             );
         }
 
+        if self.compiler_flags.is_some() && self.bsc_flags.is_some() {
+            bail!("compiler-flags and bsc-flags are mutually exclusive. Please use 'compiler-flags'");
+        }
+
         if self.bs_dependencies.is_some() {
             self.dependencies = self.bs_dependencies.take();
             self.deprecation_warnings.push(DeprecationWarning::BsDependencies);
@@ -596,6 +606,10 @@ impl Config {
             self.dev_dependencies = self.bs_dev_dependencies.take();
             self.deprecation_warnings
                 .push(DeprecationWarning::BsDevDependencies);
+        }
+        if self.bsc_flags.is_some() {
+            self.compiler_flags = self.bsc_flags.take();
+            self.deprecation_warnings.push(DeprecationWarning::BscFlags);
         }
 
         Ok(())
@@ -629,6 +643,7 @@ pub mod tests {
             bs_dependencies: None,
             bs_dev_dependencies: None,
             ppx_flags: None,
+            compiler_flags: None,
             bsc_flags: None,
             namespace: None,
             jsx: None,

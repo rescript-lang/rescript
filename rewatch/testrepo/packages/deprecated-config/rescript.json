@@ -11,5 +11,6 @@
   },
   "suffix": ".mjs",
   "bs-dependencies": [],
-  "bs-dev-dependencies": []
+  "bs-dev-dependencies": [],
+  "bsc-flags": []
 }
