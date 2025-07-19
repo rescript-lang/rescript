@@ -16,3 +16,19 @@ let _ = (
       compare(a.createdTime, b.createdTime)
     )
   )[0]
+
+let _ = [
+  // comment 1
+  a,
+  // comment 2
+  b,
+  // comment 3
+  c
+]
+
+let _ = [
+  // comment 1
+  a,
+  // comment 2
+  b, c
+]
