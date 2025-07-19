@@ -948,6 +948,65 @@ pub mod tests {
         assert_eq!(config.get_deprecations().is_empty(), true);
     }
 
+    #[test]
+    fn test_compiler_flags() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "es6",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs",
+            "compiler-flags": [ "-open ABC" ]
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        if let Some(flags) = &config.compiler_flags {
+            if let Some(OneOrMore::Single(flag)) = flags.get(0) {
+                assert_eq!(flag.as_str(), "-open ABC");
+            } else {
+                dbg!(config.compiler_flags);
+                unreachable!("Expected first flag to be OneOrMore::Single");
+            }
+        } else {
+            dbg!(config.compiler_flags);
+            unreachable!("Expected compiler flags to be Some");
+        }
+        assert_eq!(config.get_deprecations().is_empty(), true);
+    }
+
+    #[test]
+    fn test_compiler_flags_deprecation() {
+        let json = r#"
+        {
+            "name": "testrepo",
+            "sources": {
+                "dir": "src",
+                "subdirs": true
+            },
+            "package-specs": [
+                {
+                "module": "es6",
+                "in-source": true
+                }
+            ],
+            "suffix": ".mjs",
+            "bsc-flags": [ "-w" ]
+        }
+        "#;
+
+        let config = Config::new_from_json_string(json).expect("a valid json string");
+        assert_eq!(config.get_deprecations(), [DeprecationWarning::BscFlags]);
+    }
+
     fn test_find_is_type_dev(source: OneOrMore<Source>, path: &Path, expected: bool) {
         let config = Config {
             name: String::from("testrepo"),
