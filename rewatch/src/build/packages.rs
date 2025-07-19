@@ -334,14 +334,14 @@ fn read_dependencies(
             let (config, canonical_path) =
                 match read_dependency(package_name, parent_path, project_root, &workspace_root) {
                     Err(error) => {
-                    if show_progress {
-                        println!(
-                            "{} {} Error building package tree. {}",
-                            style("[1/2]").bold().dim(),
-                            CROSS,
-                            error
-                        );
-                    }
+                        if show_progress {
+                            println!(
+                                "{} {} Error building package tree. {}",
+                                style("[1/2]").bold().dim(),
+                                CROSS,
+                                error
+                            );
+                        }
 
                         let parent_path_str = parent_path.to_string_lossy();
                         log::error!(
@@ -359,9 +359,9 @@ fn read_dependencies(
                                     "We could not build package tree  '{package_name}', at path '{parent_path_str}'. Error: {error}",
                                 );
                                 std::process::exit(2)
-                                    }
-                                }
+                            }
                         }
+                    }
                 };
 
             let is_pinned = parent_config
@@ -377,7 +377,7 @@ fn read_dependencies(
                 project_root,
                 workspace_root,
                 show_progress,
-                build_dev_deps
+                build_dev_deps,
             );
 
             Dependency {
@@ -416,7 +416,13 @@ pub fn read_package_name(package_dir: &Path) -> Result<String> {
         .ok_or_else(|| anyhow!("No name field found in package.json"))
 }
 
-fn make_package(config: config::Config, package_path: &Path, is_pinned_dep: bool, is_root: bool) -> Package {
+fn make_package(
+    config: config::Config,
+    package_path: &Path,
+    is_pinned_dep: bool,
+    is_root: bool,
+    project_root: &Path,
+) -> Package {
     let source_folders = match config.sources.to_owned() {
         Some(config::OneOrMore::Single(source)) => get_source_dirs(source, None),
         Some(config::OneOrMore::Multiple(sources)) => {
@@ -455,6 +461,11 @@ This inconsistency will cause issues with package resolution.\n",
         );
     }
 
+    let is_local_dep = {
+        package_path.starts_with(project_root)
+            && !package_path.components().any(|c| c.as_os_str() == "node_modules")
+    };
+
     Package {
         name: package_name,
         config: config.to_owned(),
@@ -469,7 +480,7 @@ This inconsistency will cause issues with package resolution.\n",
             .expect("Could not canonicalize"),
         dirs: None,
         is_pinned_dep,
-        is_local_dep: !package_path.components().any(|c| c.as_os_str() == "node_modules"),
+        is_local_dep,
         is_root,
     }
 }
@@ -484,7 +495,7 @@ fn read_packages(
 
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
-    let root_package = make_package(root_config.to_owned(), project_root, false, true);
+    let root_package = make_package(root_config.to_owned(), project_root, false, true, project_root);
     map.insert(root_package.name.to_string(), root_package);
 
     let mut registered_dependencies_set: AHashSet<String> = AHashSet::new();
@@ -499,7 +510,7 @@ fn read_packages(
     ));
     dependencies.iter().for_each(|d| {
         if !map.contains_key(&d.name) {
-            let package = make_package(d.config.to_owned(), &d.path, d.is_pinned, false);
+            let package = make_package(d.config.to_owned(), &d.path, d.is_pinned, false, &project_root);
             map.insert(d.name.to_string(), package);
         }
     });
