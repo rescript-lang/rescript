@@ -80,6 +80,7 @@ jobs:
       OPAM_VERSION: 2.3.0
       DUNE_PROFILE: release
       RUST_BACKTRACE: "1"
+      RUSTFLAGS: "-Dwarnings"
 
     steps:
       - name: "Windows: Set git config"
@@ -130,6 +131,11 @@ jobs:
         if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
         run: |
           cargo build --manifest-path rewatch/Cargo.toml --target ${{ matrix.rust-target }} --release
+
+      - name: Lint rewatch
+        if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
+        run: |
+          cargo clippy --manifest-path rewatch/Cargo.toml --all-targets --all-features
 
       - name: Run rewatch unit tests
         if: steps.rewatch-build-cache.outputs.cache-hit != 'true'
