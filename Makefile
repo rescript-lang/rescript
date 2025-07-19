@@ -44,7 +44,7 @@ test-gentype:
 	make -C tests/gentype_tests/typescript-react-example clean test
 
 test-rewatch:
-	./rewatch/tests/suite-ci.sh
+	./rewatch/tests/suite.sh
 
 test-all: test test-gentype test-analysis test-tools test-rewatch
 
