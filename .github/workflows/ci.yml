@@ -18,6 +18,7 @@ concurrency:
 
 env:
   OCAMLRUNPARAM: b
+  RUST_BACKTRACE: "1"
 
 jobs:
   build-compiler:
@@ -75,11 +76,7 @@ jobs:
     runs-on: ${{matrix.os}}
 
     env:
-      # setup-ocaml opam version cannot be configured
-      # we do track its version manually
-      OPAM_VERSION: 2.3.0
-      DUNE_PROFILE: release
-      RUST_BACKTRACE: "1"
+      SETUP_OCAML_VERSION: 3.3.5 # also adjust in `uses:` if changed!
 
     steps:
       - name: "Windows: Set git config"
@@ -147,7 +144,7 @@ jobs:
       # matrix.ocaml_compiler may contain commas
       - name: Get OPAM cache key
         shell: bash
-        run: echo "opam_cache_key=opam-env-v8-${{ matrix.os }}-${{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" | sed 's/,/-/g' >> $GITHUB_ENV
+        run: echo "opam_cache_key=opam-env-v8-${{ matrix.os }}-${{ env.SETUP_OCAML_VERSION }}-{{ matrix.ocaml_compiler }}-${{ hashFiles('*.opam') }}" | sed 's/,/-/g' >> $GITHUB_ENV
 
       - name: Restore OPAM environment
         id: cache-opam-env
@@ -163,7 +160,7 @@ jobs:
           key: ${{ env.opam_cache_key }}
 
       - name: Use OCaml ${{matrix.ocaml_compiler}}
-        uses: ocaml/setup-ocaml@v3.3.2
+        uses: ocaml/setup-ocaml@v3.3.5
         if: steps.cache-opam-env.outputs.cache-hit != 'true'
         with:
           ocaml-compiler: ${{matrix.ocaml_compiler}}
@@ -201,13 +198,17 @@ jobs:
       - name: Use cached OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit == 'true'
         run: |
-          # https://github.com/ocaml/setup-ocaml/blob/b2105f9/packages/setup-ocaml/src/installer.ts#L33
-          echo "OPAMVERBOSE=$RUNNER_DEBUG"   >> "$GITHUB_ENV"
-          echo "OPAMCOLOR=always"            >> "$GITHUB_ENV"
-          echo "OPAMCONFIRMLEVEL=unsafe-yes" >> "$GITHUB_ENV"
-          echo "OPAMERRLOGLEN=0"             >> "$GITHUB_ENV"
-          echo "OPAMPRECISETRACKING=1"       >> "$GITHUB_ENV"
-          echo "OPAMYES=1"                   >> "$GITHUB_ENV"
+          # https://github.com/ocaml/setup-ocaml/blob/1629342/packages/setup-ocaml/src/installer.ts#L36
+          echo "OPAMVERBOSE=$RUNNER_DEBUG"     >> "$GITHUB_ENV"
+          echo "OPAMCOLOR=always"              >> "$GITHUB_ENV"
+          echo "OPAMCONFIRMLEVEL=unsafe-yes"   >> "$GITHUB_ENV"
+          echo "OPAMDOWNLOADJOBS=4"            >> "$GITHUB_ENV"
+          echo "OPAMERRLOGLEN=0"               >> "$GITHUB_ENV"
+          echo "OPAMEXTERNALSOLVER=unsafe-yes" >> "$GITHUB_ENV"
+          echo "OPAMPRECISETRACKING=1"         >> "$GITHUB_ENV"
+          echo "OPAMRETRIES=10"                >> "$GITHUB_ENV"
+          echo "OPAMSOLVERTIMEOUT=600"         >> "$GITHUB_ENV"
+          echo "OPAMYES=1"                     >> "$GITHUB_ENV"
 
           if [[ "$RUNNER_OS" != "Windows" ]]; then
             echo "OPAMROOT=$HOME/.opam"      >> "$GITHUB_ENV"
@@ -224,20 +225,17 @@ jobs:
             fsutil behavior set symlinkEvaluation R2L:1 R2R:1
             fsutil behavior query SymlinkEvaluation
 
-            CYGWIN="winsymlinks:native"
-            CYGWIN_ROOT="D:\\cygwin"
-            CYGWIN_ROOT_BIN="D:\\cygwin\\bin"
-            CYGWIN_ROOT_WRAPPERBIN="D:\\cygwin\\wrapperbin"
-
             echo "HOME=$USERPROFILE" >> "$GITHUB_ENV"
             echo "MSYS=winsymlinks:native" >> "$GITHUB_ENV"
-            echo "CYGWIN=$CYGWIN" >> "$GITHUB_ENV"
-            echo "CYGWIN_ROOT=$CYGWIN_ROOT" >> "$GITHUB_ENV"
-            echo "CYGWIN_ROOT_BIN=$CYGWIN_ROOT_BIN" >> "$GITHUB_ENV"
-            echo "CYGWIN_ROOT_WRAPPERBIN=$CYGWIN_ROOT_WRAPPERBIN" >> "$GITHUB_ENV"
-
-            echo "$CYGWIN_ROOT_WRAPPERBIN" >> "$GITHUB_PATH"
+            echo "CYGWIN=winsymlinks:native" >> "$GITHUB_ENV"
           fi
+        shell: bash
+
+      - name: Log environment info
+        run: |
+          echo OPAM version: $(opam --version)
+          echo System: $(uname -s)
+          echo Path: $PATH
         shell: bash
 
       - name: Compiler build state key
@@ -369,7 +367,7 @@ jobs:
         shell: bash
 
       - name: Run rewatch tests
-        run: ./rewatch/tests/suite-ci.sh
+        run: ./rewatch/tests/suite.sh
         shell: bash
 
       - name: Run syntax benchmarks
@@ -546,8 +544,6 @@ jobs:
           - os: ubuntu-24.04-arm
           - os: windows-latest
     runs-on: ${{ matrix.os }}
-    env:
-      RUST_BACKTRACE: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -597,8 +593,6 @@ jobs:
           - os: ubuntu-24.04-arm
           - os: windows-latest
     runs-on: ${{ matrix.os }}
-    env:
-      RUST_BACKTRACE: "1"
     steps:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -652,8 +646,6 @@ jobs:
           - os: ubuntu-24.04-arm
           - os: windows-latest
     runs-on: ${{ matrix.os }}
-    env:
-      RUST_BACKTRACE: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -672,7 +664,7 @@ jobs:
         working-directory: rewatch/testrepo
 
       - name: Run rewatch integration tests
-        run: ./rewatch/tests/suite-ci.sh node_modules/.bin/rescript
+        run: ./rewatch/tests/suite.sh node_modules/.bin/rescript
         shell: bash
 
   publish:
