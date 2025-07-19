@@ -12,6 +12,10 @@
 
 # 12.0.0-beta.3 (Unreleased)
 
+#### :nail_care: Polish
+
+- Configuration fields `bs-dependencies`, `bs-dev-dependencies` and `bsc-flags` are now deprecated in favor of `dependencies`, `dev-dependencies` and `compiler-flags`. https://github.com/rescript-lang/rescript/pull/7658
+
 # 12.0.0-beta.2
 
 #### :boom: Breaking Change
