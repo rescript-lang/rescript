@@ -324,7 +324,7 @@ pub fn start(
         )
         .await
         {
-            println!("{:?}", e)
+            println!("{e:?}")
         }
     })
 }
