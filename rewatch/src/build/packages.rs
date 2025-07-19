@@ -1,7 +1,6 @@
 use super::build_types::*;
 use super::namespaces;
 use super::packages;
-use crate::build::packages::DependencySymLink::{NoSymlink, Symlink};
 use crate::config;
 use crate::helpers;
 use crate::helpers::StrippedVerbatimPath;
@@ -41,21 +40,12 @@ impl Namespace {
 }
 
 #[derive(Debug, Clone)]
-pub enum DependencySymLink {
-    NoSymlink,
-    Symlink(PathBuf),
-}
-
-#[derive(Debug, Clone)]
 struct Dependency {
     name: String,
     config: config::Config,
     path: PathBuf,
     is_pinned: bool,
     dependencies: Vec<Dependency>,
-    // Track if the original dependency path actually a symbolic link.
-    // We need to know this to later assert if a package is local or not.
-    sym_link: DependencySymLink,
 }
 
 #[derive(Debug, Clone)]
@@ -264,7 +254,7 @@ pub fn read_dependency(
     parent_path: &Path,
     project_root: &Path,
     workspace_root: &Option<PathBuf>,
-) -> Result<(PathBuf, DependencySymLink), String> {
+) -> Result<PathBuf, String> {
     let path_from_parent = PathBuf::from(helpers::package_path(parent_path, package_name));
     let path_from_project_root = PathBuf::from(helpers::package_path(project_root, package_name));
     let maybe_path_from_workspace_root = workspace_root
@@ -287,17 +277,6 @@ pub fn read_dependency(
         )),
     }?;
 
-    // There could be a symbolic link because the package.json has:
-    //   "dependencies": {
-    //     "my-package": "link:my-package",
-    //   }
-    // In this case, there will be a link from node_modules/my-package to a local path.
-    let symlink = match fs::symlink_metadata(&path).map(|m| m.file_type().is_symlink()) {
-        Err(_) => NoSymlink,
-        Ok(false) => NoSymlink,
-        Ok(true) => Symlink(path.clone()),
-    };
-
     let canonical_path = match path
         .canonicalize()
         .map(StrippedVerbatimPath::to_stripped_verbatim_path)
@@ -311,7 +290,7 @@ pub fn read_dependency(
         )),
     }?;
 
-    Ok((canonical_path, symlink))
+    Ok(canonical_path)
 }
 
 /// # Make Package
@@ -352,7 +331,7 @@ fn read_dependencies(
         // Read all config files in parallel instead of blocking
         .par_iter()
         .map(|package_name| {
-            let (config, canonical_path, sym_link) =
+            let (config, canonical_path) =
                 match read_dependency(package_name, parent_path, project_root, &workspace_root) {
                     Err(error) => {
                     if show_progress {
@@ -371,9 +350,9 @@ fn read_dependencies(
 
                         std::process::exit(2)
                     }
-                    Ok((canonical_path, sym_link)) => {
+                    Ok(canonical_path) => {
                         match read_config(&canonical_path) {
-                            Ok(config) => (config, canonical_path, sym_link),
+                            Ok(config) => (config, canonical_path),
                             Err(error) => {
                                 let parent_path_str = parent_path.to_string_lossy();
                                 log::error!(
@@ -407,7 +386,6 @@ fn read_dependencies(
                 path: canonical_path,
                 is_pinned,
                 dependencies,
-                sym_link
             }
         })
         .collect()
@@ -438,13 +416,7 @@ pub fn read_package_name(package_dir: &Path) -> Result<String> {
         .ok_or_else(|| anyhow!("No name field found in package.json"))
 }
 
-fn make_package(
-    config: config::Config,
-    package_path: &Path,
-    is_pinned_dep: bool,
-    is_root: bool,
-    is_local_dep: bool,
-) -> Package {
+fn make_package(config: config::Config, package_path: &Path, is_pinned_dep: bool, is_root: bool) -> Package {
     let source_folders = match config.sources.to_owned() {
         Some(config::OneOrMore::Single(source)) => get_source_dirs(source, None),
         Some(config::OneOrMore::Multiple(sources)) => {
@@ -497,7 +469,7 @@ This inconsistency will cause issues with package resolution.\n",
             .expect("Could not canonicalize"),
         dirs: None,
         is_pinned_dep,
-        is_local_dep,
+        is_local_dep: !package_path.components().any(|c| c.as_os_str() == "node_modules"),
         is_root,
     }
 }
@@ -512,7 +484,7 @@ fn read_packages(
 
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
-    let root_package = make_package(root_config.to_owned(), project_root, false, true, true);
+    let root_package = make_package(root_config.to_owned(), project_root, false, true);
     map.insert(root_package.name.to_string(), root_package);
 
     let mut registered_dependencies_set: AHashSet<String> = AHashSet::new();
@@ -527,13 +499,7 @@ fn read_packages(
     ));
     dependencies.iter().for_each(|d| {
         if !map.contains_key(&d.name) {
-            let is_local_dep = match &d.sym_link {
-                NoSymlink => !d.path.components().any(|c| c.as_os_str() == "node_modules"),
-                Symlink(original_path) => !original_path
-                    .components()
-                    .any(|c| c.as_os_str() == "node_modules"),
-            };
-            let package = make_package(d.config.to_owned(), &d.path, d.is_pinned, false, is_local_dep);
+            let package = make_package(d.config.to_owned(), &d.path, d.is_pinned, false);
             map.insert(d.name.to_string(), package);
         }
     });
