@@ -531,18 +531,20 @@ pub fn get_source_files(
 
     let path_dir = Path::new(&source.dir);
     let is_type_dev = source.is_type_dev();
-    match build_dev_deps {
-        false if is_type_dev => (),
-        _ => match read_folders(filter, package_dir, path_dir, recurse, is_type_dev) {
-            Ok(files) => map.extend(files),
 
-            Err(_e) => log::error!(
-                "Could not read folder: {:?}. Specified in dependency: {}, located {:?}...",
-                path_dir.to_path_buf().into_os_string(),
-                package_name,
-                package_dir
-            ),
-        },
+    if !build_dev_deps && is_type_dev {
+        return map;
+    }
+
+    match read_folders(filter, package_dir, path_dir, recurse, is_type_dev) {
+        Ok(files) => map.extend(files),
+
+        Err(_e) => log::error!(
+            "Could not read folder: {:?}. Specified in dependency: {}, located {:?}...",
+            path_dir.to_path_buf().into_os_string(),
+            package_name,
+            package_dir
+        ),
     };
 
     map
