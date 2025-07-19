@@ -528,12 +528,11 @@ pub fn get_source_files(
         } => *subdirs,
         _ => false,
     };
-    let type_ = source.type_.clone();
 
     let path_dir = Path::new(&source.dir);
-    let is_type_dev = type_.as_ref().map(|t| t.as_str() == "dev").unwrap_or(false);
-    match (build_dev_deps, type_) {
-        (false, Some(type_)) if type_ == "dev" => (),
+    let is_type_dev = source.is_type_dev();
+    match build_dev_deps {
+        false if is_type_dev => (),
         _ => match read_folders(filter, package_dir, path_dir, recurse, is_type_dev) {
             Ok(files) => map.extend(files),
 
