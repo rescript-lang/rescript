@@ -15,7 +15,7 @@
     },
     "exportInterfaces": false
   },
-  "name": "sample-typescript-app",
+  "name": "@tests/gentype-react-example",
   "bsc-flags": [],
   "jsx": { "version": 4 },
   "bs-dependencies": ["@rescript/react"],

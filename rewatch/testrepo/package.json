@@ -22,6 +22,6 @@
     "watch": "../target/release/rewatch watch .",
     "watch:rescript": "rescript legacy watch",
     "clean": "../target/release/rewatch clean .",
-    "clean:rescript": "rescript legacy clean"
+    "clean:rescript": "rescript clean"
   }
 }

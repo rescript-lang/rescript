@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "rescript legacy build",
-    "clean": "rescript legacy clean",
+    "clean": "rescript clean",
     "dev": "rescript legacy -w",
     "apidocs:generate": "yarn build && node GenApiDocs.res.js"
   },

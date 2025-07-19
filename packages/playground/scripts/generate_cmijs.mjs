@@ -23,7 +23,7 @@ import {
   playgroundPackagesDir,
 } from "./common.mjs";
 
-exec("yarn rescript legacy clean");
+exec("yarn rescript clean");
 exec("yarn rescript legacy");
 
 // We need to build the compiler's builtin modules as a separate cmij.

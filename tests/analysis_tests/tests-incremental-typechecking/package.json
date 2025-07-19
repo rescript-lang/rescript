@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "build": "rescript legacy build",
-    "clean": "rescript legacy clean"
+    "clean": "rescript clean"
   },
   "dependencies": {
     "rescript": "workspace:^"
