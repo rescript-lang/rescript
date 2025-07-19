@@ -669,9 +669,10 @@ fn compile_file(
             }
 
             if let SourceType::SourceFile(SourceFile {
-                    interface: Some(Interface { path, .. }),
-                    ..
-                }) = &module.source_type {
+                interface: Some(Interface { path, .. }),
+                ..
+            }) = &module.source_type
+            {
                 // we need to copy the source file to the build directory.
                 // editor tools expects the source file in lib/bs for finding the current package
                 // and in lib/ocaml when referencing modules in other packages
@@ -690,9 +691,10 @@ fn compile_file(
                 .expect("copying source file failed");
             }
             if let SourceType::SourceFile(SourceFile {
-                    implementation: Implementation { path, .. },
-                    ..
-                }) = &module.source_type {
+                implementation: Implementation { path, .. },
+                ..
+            }) = &module.source_type
+            {
                 // we need to copy the source file to the build directory.
                 // editor tools expects the source file in lib/bs for finding the current package
                 // and in lib/ocaml when referencing modules in other packages
@@ -715,9 +717,10 @@ fn compile_file(
             root_package.config.get_package_specs().iter().for_each(|spec| {
                 if spec.in_source {
                     if let SourceType::SourceFile(SourceFile {
-                            implementation: Implementation { path, .. },
-                            ..
-                        }) = &module.source_type {
+                        implementation: Implementation { path, .. },
+                        ..
+                    }) = &module.source_type
+                    {
                         let source = helpers::get_source_file_from_rescript_file(
                             &Path::new(&package.path).join(path),
                             &root_package.config.get_suffix(spec),
@@ -728,8 +731,7 @@ fn compile_file(
                         );
 
                         if source.exists() {
-                            let _ =
-                                std::fs::copy(&source, &destination).expect("copying source file failed");
+                            let _ = std::fs::copy(&source, &destination).expect("copying source file failed");
                         }
                     }
                 }

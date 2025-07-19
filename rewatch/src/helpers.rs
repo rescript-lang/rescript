@@ -111,8 +111,7 @@ pub fn get_abs_path(path: &Path) -> PathBuf {
 }
 
 pub fn get_basename(path: &Path) -> String {
-    path
-        .file_stem()
+    path.file_stem()
         .expect("Could not get basename")
         .to_str()
         .expect("Could not get basename 2")
@@ -327,8 +326,7 @@ pub fn is_non_exotic_module_name(module_name: &str) -> bool {
 }
 
 pub fn get_extension(path: &Path) -> String {
-    path
-        .extension()
+    path.extension()
         .expect("Could not get extension")
         .to_str()
         .expect("Could not get extension 2")

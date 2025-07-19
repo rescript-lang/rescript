@@ -45,8 +45,7 @@ fn get_dep_modules(
         .cloned()
         .collect();
 
-    deps
-        .iter()
+    deps.iter()
         .map(|dep| {
             let dep_first = dep.split('.').next().unwrap();
             let dep_second = dep.split('.').nth(1);
