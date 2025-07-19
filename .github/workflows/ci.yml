@@ -360,6 +360,14 @@ jobs:
         if: runner.os != 'Windows'
         run: make -C tests/gentype_tests/typescript-react-example clean test
 
+      # On Windows, after running setup-ocaml (if it wasn't cached yet or the cache couldn't be restored),
+      # Cygwin bash is used instead of Git Bash for Windows, breaking the rewatch tests.
+      # So we need to adjust the path to bring back Git Bash for Windows.
+      - name: Rewatch tests need Git Bash for Windows
+        if: ${{ runner.os == 'Windows' }}
+        run: echo "C:\Program Files\Git\bin" >> $GITHUB_PATH
+        shell: bash
+
       - name: Run rewatch tests
         run: ./rewatch/tests/suite-ci.sh
         shell: bash
