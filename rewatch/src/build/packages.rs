@@ -521,14 +521,14 @@ pub fn get_source_files(
 ) -> AHashMap<PathBuf, SourceFileMeta> {
     let mut map: AHashMap<PathBuf, SourceFileMeta> = AHashMap::new();
 
-    let (recurse, type_) = match source {
+    let recurse = match source {
         config::PackageSource {
             subdirs: Some(config::Subdirs::Recurse(subdirs)),
-            type_,
             ..
-        } => (subdirs.to_owned(), type_),
-        config::PackageSource { type_, .. } => (false, type_),
+        } => *subdirs,
+        _ => false,
     };
+    let type_ = source.type_.clone();
 
     let path_dir = Path::new(&source.dir);
     let is_type_dev = type_.as_ref().map(|t| t.as_str() == "dev").unwrap_or(false);
