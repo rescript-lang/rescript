@@ -195,13 +195,17 @@ jobs:
       - name: Use cached OPAM environment
         if: steps.cache-opam-env.outputs.cache-hit == 'true'
         run: |
-          # https://github.com/ocaml/setup-ocaml/blob/b2105f9/packages/setup-ocaml/src/installer.ts#L33
-          echo "OPAMVERBOSE=$RUNNER_DEBUG"   >> "$GITHUB_ENV"
-          echo "OPAMCOLOR=always"            >> "$GITHUB_ENV"
-          echo "OPAMCONFIRMLEVEL=unsafe-yes" >> "$GITHUB_ENV"
-          echo "OPAMERRLOGLEN=0"             >> "$GITHUB_ENV"
-          echo "OPAMPRECISETRACKING=1"       >> "$GITHUB_ENV"
-          echo "OPAMYES=1"                   >> "$GITHUB_ENV"
+          # https://github.com/ocaml/setup-ocaml/blob/1629342/packages/setup-ocaml/src/installer.ts#L36
+          echo "OPAMVERBOSE=$RUNNER_DEBUG"     >> "$GITHUB_ENV"
+          echo "OPAMCOLOR=always"              >> "$GITHUB_ENV"
+          echo "OPAMCONFIRMLEVEL=unsafe-yes"   >> "$GITHUB_ENV"
+          echo "OPAMDOWNLOADJOBS=4"            >> "$GITHUB_ENV"
+          echo "OPAMERRLOGLEN=0"               >> "$GITHUB_ENV"
+          echo "OPAMEXTERNALSOLVER=unsafe-yes" >> "$GITHUB_ENV"
+          echo "OPAMPRECISETRACKING=1"         >> "$GITHUB_ENV"
+          echo "OPAMRETRIES=10"                >> "$GITHUB_ENV"
+          echo "OPAMSOLVERTIMEOUT=600"         >> "$GITHUB_ENV"
+          echo "OPAMYES=1"                     >> "$GITHUB_ENV"
 
           if [[ "$RUNNER_OS" != "Windows" ]]; then
             echo "OPAMROOT=$HOME/.opam"      >> "$GITHUB_ENV"
@@ -218,19 +222,9 @@ jobs:
             fsutil behavior set symlinkEvaluation R2L:1 R2R:1
             fsutil behavior query SymlinkEvaluation
 
-            CYGWIN="winsymlinks:native"
-            CYGWIN_ROOT="D:\\cygwin"
-            CYGWIN_ROOT_BIN="D:\\cygwin\\bin"
-            CYGWIN_ROOT_WRAPPERBIN="D:\\cygwin\\wrapperbin"
-
             echo "HOME=$USERPROFILE" >> "$GITHUB_ENV"
             echo "MSYS=winsymlinks:native" >> "$GITHUB_ENV"
-            echo "CYGWIN=$CYGWIN" >> "$GITHUB_ENV"
-            echo "CYGWIN_ROOT=$CYGWIN_ROOT" >> "$GITHUB_ENV"
-            echo "CYGWIN_ROOT_BIN=$CYGWIN_ROOT_BIN" >> "$GITHUB_ENV"
-            echo "CYGWIN_ROOT_WRAPPERBIN=$CYGWIN_ROOT_WRAPPERBIN" >> "$GITHUB_ENV"
-
-            echo "$CYGWIN_ROOT_WRAPPERBIN" >> "$GITHUB_PATH"
+            echo "CYGWIN=winsymlinks:native" >> "$GITHUB_ENV"
           fi
         shell: bash
 
