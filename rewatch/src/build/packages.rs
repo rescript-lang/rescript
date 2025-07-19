@@ -292,8 +292,6 @@ pub fn read_dependency(
     Ok(canonical_path)
 }
 
-/// # Make Package
-
 /// Given a config, recursively finds all dependencies.
 /// 1. It starts with registering dependencies and
 ///    prevents the operation for the ones which are already
@@ -533,10 +531,7 @@ pub fn get_source_files(
     };
 
     let path_dir = Path::new(&source.dir);
-    let is_type_dev = type_
-        .as_ref()
-        .map(|t| t.as_str() == "dev")
-        .unwrap_or(false);
+    let is_type_dev = type_.as_ref().map(|t| t.as_str() == "dev").unwrap_or(false);
     match (build_dev_deps, type_) {
         (false, Some(type_)) if type_ == "dev" => (),
         _ => match read_folders(filter, package_dir, path_dir, recurse, is_type_dev) {
@@ -665,18 +660,12 @@ pub fn parse_packages(build_state: &mut BuildState) {
                     if spec.is_common_js() {
                         helpers::create_path(&package.get_js_path());
                         relative_dirs.iter().for_each(|path_buf| {
-                            helpers::create_path_for_path(&Path::join(
-                                &package.get_js_path(),
-                                path_buf,
-                            ))
+                            helpers::create_path_for_path(&Path::join(&package.get_js_path(), path_buf))
                         })
                     } else {
                         helpers::create_path(&package.get_es6_path());
                         relative_dirs.iter().for_each(|path_buf| {
-                            helpers::create_path_for_path(&Path::join(
-                                &package.get_es6_path(),
-                                path_buf,
-                            ))
+                            helpers::create_path_for_path(&Path::join(&package.get_es6_path(), path_buf))
                         })
                     }
                 }
