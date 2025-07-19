@@ -434,7 +434,7 @@ impl Config {
                 Some(version) if version == 4 => {
                     vec!["-bs-jsx".to_string(), version.to_string()]
                 }
-                Some(version) => panic!("JSX version {} is unsupported", version),
+                Some(version) => panic!("JSX version {version} is unsupported"),
                 None => vec![],
             },
             None => vec![],
@@ -843,7 +843,7 @@ pub mod tests {
 
         let config = serde_json::from_str::<Config>(json).unwrap();
         assert_eq!(
-            config.get_suffix(&config.get_package_specs().first().unwrap()),
+            config.get_suffix(config.get_package_specs().first().unwrap()),
             ".mjs"
         );
     }

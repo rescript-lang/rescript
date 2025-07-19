@@ -103,7 +103,7 @@ impl Package {
             .namespace
             .to_suffix()
             .expect("namespace should be set for mlmap module");
-        self.get_build_path().join(format!("{}.mlmap", suffix))
+        self.get_build_path().join(format!("{suffix}.mlmap"))
     }
 
     pub fn get_mlmap_compile_path(&self) -> PathBuf {
@@ -111,7 +111,7 @@ impl Package {
             .namespace
             .to_suffix()
             .expect("namespace should be set for mlmap module");
-        self.get_build_path().join(format!("{}.cmi", suffix))
+        self.get_build_path().join(format!("{suffix}.cmi"))
     }
 
     pub fn is_source_file_type_dev(&self, path: &Path) -> bool {
@@ -171,7 +171,7 @@ pub fn read_folders(
         if metadata.file_type().is_dir() && recurse {
             match read_folders(filter, package_dir, &new_path, recurse, is_type_dev) {
                 Ok(s) => map.extend(s),
-                Err(e) => log::error!("Could not read directory: {}", e),
+                Err(e) => log::error!("Could not read directory: {e}"),
             }
         }
 
@@ -189,8 +189,8 @@ pub fn read_folders(
                     );
                 }
 
-                Ok(_) => log::info!("Filtered: {:?}", name),
-                Err(ref e) => log::error!("Could not read directory: {}", e),
+                Ok(_) => log::info!("Filtered: {name:?}"),
+                Err(ref e) => log::error!("Could not read directory: {e}"),
             },
             _ => (),
         }
@@ -255,11 +255,11 @@ pub fn read_dependency(
     project_root: &Path,
     workspace_root: &Option<PathBuf>,
 ) -> Result<PathBuf, String> {
-    let path_from_parent = PathBuf::from(helpers::package_path(parent_path, package_name));
-    let path_from_project_root = PathBuf::from(helpers::package_path(project_root, package_name));
+    let path_from_parent = helpers::package_path(parent_path, package_name);
+    let path_from_project_root = helpers::package_path(project_root, package_name);
     let maybe_path_from_workspace_root = workspace_root
         .as_ref()
-        .map(|workspace_root| PathBuf::from(helpers::package_path(workspace_root, package_name)));
+        .map(|workspace_root| helpers::package_path(workspace_root, package_name));
 
     let path = match (
         path_from_parent,
@@ -272,8 +272,7 @@ pub fn read_dependency(
             Ok(path_from_workspace_root)
         }
         _ => Err(format!(
-            "The package \"{}\" is not found (are node_modules up-to-date?)...",
-            package_name
+            "The package \"{package_name}\" is not found (are node_modules up-to-date?)..."
         )),
     }?;
 
@@ -332,7 +331,7 @@ fn read_dependencies(
         .par_iter()
         .map(|package_name| {
             let (config, canonical_path) =
-                match read_dependency(package_name, parent_path, project_root, &workspace_root) {
+                match read_dependency(package_name, parent_path, project_root, workspace_root) {
                     Err(error) => {
                     if show_progress {
                         println!(
@@ -537,8 +536,7 @@ pub fn get_source_files(
     let is_type_dev = type_
         .as_ref()
         .map(|t| t.as_str() == "dev")
-        .unwrap_or(false)
-        .clone();
+        .unwrap_or(false);
     match (build_dev_deps, type_) {
         (false, Some(type_)) if type_ == "dev" => (),
         _ => match read_folders(filter, package_dir, path_dir, recurse, is_type_dev) {
@@ -635,7 +633,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
         .clone()
         .iter()
         .for_each(|(package_name, package)| {
-            debug!("Parsing package: {}", package_name);
+            debug!("Parsing package: {package_name}");
             if let Some(package_modules) = package.modules.to_owned() {
                 build_state.module_names.extend(package_modules)
             }
@@ -668,7 +666,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
                         helpers::create_path(&package.get_js_path());
                         relative_dirs.iter().for_each(|path_buf| {
                             helpers::create_path_for_path(&Path::join(
-                                &PathBuf::from(package.get_js_path()),
+                                &package.get_js_path(),
                                 path_buf,
                             ))
                         })
@@ -676,7 +674,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
                         helpers::create_path(&package.get_es6_path());
                         relative_dirs.iter().for_each(|path_buf| {
                             helpers::create_path_for_path(&Path::join(
-                                &PathBuf::from(package.get_es6_path()),
+                                &package.get_es6_path(),
                                 path_buf,
                             ))
                         })
@@ -757,7 +755,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
                     let namespace = package.namespace.to_owned();
 
                     let extension = file.extension().unwrap().to_str().unwrap();
-                    let module_name = helpers::file_path_to_module_name(&file, &namespace);
+                    let module_name = helpers::file_path_to_module_name(file, &namespace);
 
                     if helpers::is_implementation_file(extension) {
                         build_state
@@ -970,7 +968,7 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
             }
         });
     }
-    let has_any_unallowed_dependent = detected_unallowed_dependencies.len() > 0;
+    let has_any_unallowed_dependent = !detected_unallowed_dependencies.is_empty();
 
     if has_any_unallowed_dependent {
         log::error!(

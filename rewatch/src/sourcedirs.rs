@@ -21,7 +21,7 @@ pub struct SourceDirs<'a> {
 }
 
 fn package_to_dirs(package: &Package, root_package_path: &Path) -> AHashSet<Dir> {
-    let relative_path = package.path.strip_prefix(&root_package_path).unwrap();
+    let relative_path = package.path.strip_prefix(root_package_path).unwrap();
 
     package
         .dirs
