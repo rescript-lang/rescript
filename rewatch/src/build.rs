@@ -14,7 +14,6 @@ use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_w
 use crate::helpers::emojis::*;
 use crate::helpers::{self, get_workspace_root};
 use crate::sourcedirs;
-use ahash::AHashSet;
 use anyhow::{Result, anyhow};
 use build_types::*;
 use console::style;
@@ -22,12 +21,12 @@ use indicatif::{ProgressBar, ProgressStyle};
 use log::log_enabled;
 use serde::Serialize;
 use std::ffi::OsString;
+use std::fmt;
 use std::fs::File;
 use std::io::{Write, stdout};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::{Duration, Instant};
-use std::{fmt, fs};
 
 fn is_dirty(module: &Module) -> bool {
     match module.source_type {
@@ -470,50 +469,6 @@ pub fn write_build_ninja(build_state: &BuildState) {
     }
 }
 
-#[derive(Serialize, Debug)]
-pub struct SourceDirsMeta {
-    pub dirs: Vec<String>,
-    pub pkgs: Vec<(String, String)>,
-    pub generated: Vec<String>,
-}
-
-fn generate_sourcedirs_meta(build_state: &BuildState) {
-    let mut dir_set: AHashSet<String> = AHashSet::new();
-    let mut pkgs: Vec<(String, String)> = vec![];
-    for package in build_state.packages.values() {
-        if package.is_local_dep {
-            if let Some(source_files) = &package.source_files {
-                for source_file in source_files.keys() {
-                    if let Some(parent) = source_file.parent() {
-                        dir_set.insert(parent.to_string_lossy().into_owned());
-                    }
-                }
-            }
-        } else {
-            pkgs.push((package.name.clone(), package.path.to_string_lossy().into_owned()));
-        }
-    }
-
-    let meta = SourceDirsMeta {
-        dirs: dir_set.into_iter().collect(),
-        pkgs,
-        generated: vec![],
-    };
-
-    let json = serde_json::to_string(&meta);
-    match json {
-        Err(err) => {
-            println!("Error serializing .sourcedirs.json: {}", err);
-        }
-        Ok(json) => {
-            let output_path = build_state.project_root.join("lib/bs/.sourcedirs.json");
-            if let Err(e) = fs::write(output_path, json) {
-                println!("Error writing sourcedirs.json: {}", e);
-            }
-        }
-    }
-}
-
 pub fn build(
     filter: &Option<regex::Regex>,
     path: &Path,
@@ -538,8 +493,6 @@ pub fn build(
         snapshot_output,
     )
     .map_err(|e| anyhow!("Could not initialize build. Error: {e}"))?;
-
-    generate_sourcedirs_meta(&build_state);
 
     match incremental_build(
         &mut build_state,
