@@ -535,7 +535,9 @@ fn get_dependency_paths(
                     .as_ref()
                     .map(|package| package.path.clone())
             } else {
-                packages::read_dependency(package_name, project_root, project_root, workspace_root).ok()
+                packages::read_dependency(package_name, project_root, project_root, workspace_root)
+                    .map(|(p, _)| p)
+                    .ok()
             }
             .map(|canonicalized_path| {
                 vec![
