@@ -159,10 +159,7 @@ impl PackageSpec {
     }
 
     pub fn is_common_js(&self) -> bool {
-        match self.module.as_str() {
-            "commonjs" => true,
-            _ => false,
-        }
+        self.module.as_str() == "commonjs"
     }
 
     pub fn get_suffix(&self) -> Option<String> {
