@@ -35,10 +35,7 @@ normalize_paths() {
   else
     if is_windows; then
       sed -i "s#$(pwd_prefix)##g" $1
-      # Then normalize backslashes to forward slashes
       sed -i "s#\\\\#/#g" $1
-      # Finally remove any remaining drive letter paths (like D:/a/rescript/rescript/rewatch/testrepo)
-      sed -i "s#[A-Z]:/\(a/\)\?[^:]*rescript/rescript/rewatch/testrepo##g" $1
     else
       sed -i "s#$(pwd_prefix)##g" $1;
     fi
