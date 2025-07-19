@@ -30,7 +30,7 @@ pub struct PackageSource {
 }
 
 impl PackageSource {
-    fn is_type_dev(&self) -> bool {
+    pub fn is_type_dev(&self) -> bool {
         match &self.type_ {
             Some(type_) => type_ == "dev",
             None => false,
