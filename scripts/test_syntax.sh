@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Note:
 # 1. This was converted from zsh to bash because zsh is not available on Linux and Windows Github action runners.

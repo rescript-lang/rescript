@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 echo Building ninja RPMs..
 GITROOT=$(git rev-parse --show-toplevel)
