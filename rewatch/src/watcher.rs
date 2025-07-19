@@ -55,15 +55,28 @@ fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
     filter.as_ref().map(|re| !re.is_match(&name)).unwrap_or(true)
 }
 
-async fn async_watch(
+struct AsyncWatchArgs<'a> {
     q: Arc<FifoQueue<Result<Event, Error>>>,
-    path: &Path,
+    path: &'a Path,
     show_progress: bool,
-    filter: &Option<regex::Regex>,
+    filter: &'a Option<regex::Regex>,
     after_build: Option<String>,
     create_sourcedirs: bool,
     build_dev_deps: bool,
     snapshot_output: bool,
+}
+
+async fn async_watch(
+    AsyncWatchArgs {
+        q,
+        path,
+        show_progress,
+        filter,
+        after_build,
+        create_sourcedirs,
+        build_dev_deps,
+        snapshot_output,
+    }: AsyncWatchArgs<'_>,
 ) -> notify::Result<()> {
     let mut build_state =
         build::initialize_build(None, filter, show_progress, path, build_dev_deps, snapshot_output)
@@ -309,8 +322,8 @@ pub fn start(
 
         let path = Path::new(folder);
 
-        if let Err(e) = async_watch(
-            consumer,
+        if let Err(e) = async_watch(AsyncWatchArgs {
+            q: consumer,
             path,
             show_progress,
             filter,
@@ -318,7 +331,7 @@ pub fn start(
             create_sourcedirs,
             build_dev_deps,
             snapshot_output,
-        )
+        })
         .await
         {
             println!("{e:?}")
