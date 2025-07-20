@@ -24,6 +24,10 @@
 
 - Configuration fields `bs-dependencies`, `bs-dev-dependencies` and `bsc-flags` are now deprecated in favor of `dependencies`, `dev-dependencies` and `compiler-flags`. https://github.com/rescript-lang/rescript/pull/7658
 
+#### :house: Internal
+
+- Add rust linting to CI with `clippy`. https://github.com/rescript-lang/rescript/pull/7675
+
 # 12.0.0-beta.2
 
 #### :boom: Breaking Change
