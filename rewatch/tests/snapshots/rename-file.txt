@@ -1,3 +1,12 @@
-Cleaned 1/15
+Cleaned 1/16
 Parsed 1 source files
 Compiled 1 modules
+
+The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
+Use 'dependencies' instead.
+
+The field 'bs-dev-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
+Use 'dev-dependencies' instead.
+
+The field 'bsc-flags' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
+Use 'compiler-flags' instead.

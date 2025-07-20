@@ -918,20 +918,16 @@ let transform_structure_item ~config item =
         |> Option.map Jsx_common.typ_vars_of_core_type
         |> Option.value ~default:[]
       in
-      let rec get_prop_types types
-          ({ptyp_loc; ptyp_desc; ptyp_attributes} as full_type) =
+      let rec get_prop_types types ({ptyp_loc; ptyp_desc} as full_type) =
         match ptyp_desc with
         | Ptyp_arrow {arg; ret = {ptyp_desc = Ptyp_arrow _} as typ2}
           when is_labelled arg.lbl || is_optional arg.lbl ->
-          get_prop_types
-            ((arg.lbl, ptyp_attributes, ptyp_loc, arg.typ) :: types)
-            typ2
+          get_prop_types ((arg.lbl, arg.attrs, ptyp_loc, arg.typ) :: types) typ2
         | Ptyp_arrow {arg = {lbl = Nolabel}; ret} -> get_prop_types types ret
         | Ptyp_arrow {arg; ret = return_value}
           when is_labelled arg.lbl || is_optional arg.lbl ->
           ( return_value,
-            (arg.lbl, ptyp_attributes, return_value.ptyp_loc, arg.typ) :: types
-          )
+            (arg.lbl, arg.attrs, return_value.ptyp_loc, arg.typ) :: types )
         | _ -> (full_type, types)
       in
       let inner_type, prop_types = get_prop_types [] pval_type in
@@ -1027,9 +1023,7 @@ let transform_signature_item ~config item =
         match ptyp_desc with
         | Ptyp_arrow {arg; ret = {ptyp_desc = Ptyp_arrow _} as rest}
           when is_optional arg.lbl || is_labelled arg.lbl ->
-          get_prop_types
-            ((arg.lbl, arg.typ.ptyp_attributes, ptyp_loc, arg.typ) :: types)
-            rest
+          get_prop_types ((arg.lbl, arg.attrs, ptyp_loc, arg.typ) :: types) rest
         | Ptyp_arrow
             {
               arg =
@@ -1045,8 +1039,7 @@ let transform_signature_item ~config item =
         | Ptyp_arrow {arg; ret = return_value}
           when is_optional arg.lbl || is_labelled arg.lbl ->
           ( return_value,
-            (arg.lbl, arg.typ.ptyp_attributes, return_value.ptyp_loc, arg.typ)
-            :: types )
+            (arg.lbl, arg.attrs, return_value.ptyp_loc, arg.typ) :: types )
         | _ -> (full_type, types)
       in
       let inner_type, prop_types = get_prop_types [] pval_type in

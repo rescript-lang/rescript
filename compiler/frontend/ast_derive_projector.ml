@@ -137,7 +137,7 @@ let init () =
                 Ext_list.map label_declarations (fun {pld_name; pld_type} ->
                     Ast_comb.single_non_rec_val ?attrs:gentype_attrs pld_name
                       (Ast_helper.Typ.arrow ~arity:(Some 1)
-                         {lbl = Nolabel; typ = core_type}
+                         {attrs = []; lbl = Nolabel; typ = core_type}
                          pld_type
                          (*arity will alwys be 1 since these are single param functions*)))
               | Ptype_variant constructor_declarations ->
@@ -170,7 +170,8 @@ let init () =
                       {loc; txt = Ext_string.uncapitalize_ascii con_name}
                       (Ext_list.fold_right pcd_args annotate_type (fun x acc ->
                            Ast_helper.Typ.arrow ~arity:None
-                             {lbl = Nolabel; typ = x} acc)
+                             {attrs = []; lbl = Nolabel; typ = x}
+                             acc)
                       |> add_arity ~arity))
               | Ptype_open | Ptype_abstract ->
                 Ast_derive_util.not_applicable tdcl.ptype_loc deriving_name;

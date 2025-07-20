@@ -10,11 +10,12 @@
       "packages/namespace-casing",
       "packages/with-dev-deps",
       "packages/compiled-by-legacy",
-      "packages/nonexisting-dev-files"
+      "packages/nonexisting-dev-files",
+      "packages/deprecated-config"
     ]
   },
   "dependencies": {
-    "rescript": "12.0.0-alpha.15"
+    "rescript": "12.0.0-beta.1"
   },
   "scripts": {
     "build": "../target/release/rewatch build .",

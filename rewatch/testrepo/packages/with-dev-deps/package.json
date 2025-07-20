@@ -5,5 +5,8 @@
     "rescript"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@rescript/webapi": "0.1.0-experimental-73e6a0d"
+  }
 }

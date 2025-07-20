@@ -69,7 +69,9 @@ let erase_type_str =
   Str.primitive
     (Val.mk ~prim:["%identity"]
        {loc = noloc; txt = erase_type_lit}
-       (Ast_helper.Typ.arrow ~arity:(Some 1) {lbl = Nolabel; typ = any} any))
+       (Ast_helper.Typ.arrow ~arity:(Some 1)
+          {attrs = []; lbl = Nolabel; typ = any}
+          any))
 
 let unsafe_index = "_index"
 
@@ -79,8 +81,11 @@ let unsafe_index_get =
     (Val.mk ~prim:[""]
        {loc = noloc; txt = unsafe_index}
        ~attrs:[Ast_attributes.get_index]
-       (Ast_helper.Typ.arrow ~arity:None {lbl = Nolabel; typ = any}
-          (Ast_helper.Typ.arrow ~arity:None {lbl = Nolabel; typ = any} any)))
+       (Ast_helper.Typ.arrow ~arity:None
+          {attrs = []; lbl = Nolabel; typ = any}
+          (Ast_helper.Typ.arrow ~arity:None
+             {attrs = []; lbl = Nolabel; typ = any}
+             any)))
 
 let unsafe_index_get_exp = Exp.ident {loc = noloc; txt = Lident unsafe_index}
 
@@ -132,7 +137,7 @@ let app1 = Ast_compatible.app1
 let app2 = Ast_compatible.app2
 
 let ( ->~ ) a b =
-  Ast_helper.Typ.arrow ~arity:(Some 1) {lbl = Nolabel; typ = a} b
+  Ast_helper.Typ.arrow ~arity:(Some 1) {attrs = []; lbl = Nolabel; typ = a} b
 
 let raise_when_not_found_ident =
   Longident.Ldot (Lident Primitive_modules.util, "raiseWhenNotFound")
@@ -305,7 +310,7 @@ let init () =
               let to_js_type result =
                 Ast_comb.single_non_rec_val pat_to_js
                   (Ast_helper.Typ.arrow ~arity:(Some 1)
-                     {lbl = Nolabel; typ = core_type}
+                     {attrs = []; lbl = Nolabel; typ = core_type}
                      result)
               in
               let new_type, new_tdcl =

@@ -152,6 +152,7 @@ let rec core_type i ppf x =
   | Ttyp_arrow (arg, ret, _) ->
     line i ppf "Ttyp_arrow\n";
     arg_label i ppf arg.lbl;
+    attributes i ppf arg.attrs;
     core_type i ppf arg.typ;
     core_type i ppf ret
   | Ttyp_tuple l ->

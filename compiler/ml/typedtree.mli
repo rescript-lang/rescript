@@ -409,7 +409,7 @@ and core_type = {
   ctyp_attributes: attributes;
 }
 
-and arg = {lbl: Noloc.arg_label; typ: core_type}
+and arg = {attrs: attributes; lbl: Noloc.arg_label; typ: core_type}
 
 and core_type_desc =
   | Ttyp_any

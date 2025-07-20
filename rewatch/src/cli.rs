@@ -214,9 +214,6 @@ pub enum Command {
         /// Path to a rescript file (.res or .resi)
         #[command()]
         path: String,
-
-        #[command(flatten)]
-        dev: DevArg,
     },
     /// Use the legacy build system.
     ///

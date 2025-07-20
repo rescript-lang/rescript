@@ -32,7 +32,9 @@ let to_method_callback_type loc (mapper : Bs_ast_mapper.mapper)
   let first_arg = mapper.typ mapper first_arg in
   let typ = mapper.typ mapper typ in
   let meth_type =
-    Ast_helper.Typ.arrow ~loc ~arity:None {lbl = label; typ = first_arg} typ
+    Ast_helper.Typ.arrow ~loc ~arity:None
+      {attrs = []; lbl = label; typ = first_arg}
+      typ
   in
   let arity = Ast_core_type.get_uncurry_arity meth_type in
   match arity with
@@ -58,7 +60,9 @@ let to_uncurry_type loc (mapper : Bs_ast_mapper.mapper)
   let typ = mapper.typ mapper typ in
 
   let fn_type =
-    Ast_helper.Typ.arrow ~loc ~arity:None {lbl = label; typ = first_arg} typ
+    Ast_helper.Typ.arrow ~loc ~arity:None
+      {attrs = []; lbl = label; typ = first_arg}
+      typ
   in
   let arity = Ast_core_type.get_uncurry_arity fn_type in
   let fn_type =

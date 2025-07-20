@@ -73,7 +73,7 @@ and core_type = {
   ptyp_attributes: attributes; (* ... [@id1] [@id2] *)
 }
 
-and arg = {lbl: arg_label; typ: core_type}
+and arg = {attrs: attributes; lbl: arg_label; typ: core_type}
 
 and core_type_desc =
   | Ptyp_any (*  _ *)

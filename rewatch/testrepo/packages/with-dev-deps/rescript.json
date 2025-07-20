@@ -9,6 +9,7 @@
       "type": "dev"
     }
   ],
+  "dev-dependencies": ["@rescript/webapi"],
   "package-specs": {
     "module": "es6",
     "in-source": true

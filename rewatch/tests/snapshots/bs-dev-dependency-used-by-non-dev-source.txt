@@ -1,6 +1,6 @@
-Cleaned 1/16
-Parsed 0 source files
-Compiled 1 modules
+Cleaned 0/16
+Parsed 2 source files
+Compiled 2 modules
 
 The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
 Use 'dependencies' instead.
@@ -12,15 +12,13 @@ The field 'bsc-flags' found in the package config of '@testrepo/deprecated-confi
 Use 'compiler-flags' instead.
 
   [1;31mWe've found a bug for you![0m
-  [36m/packages/dep01/src/Dep01.res[0m:[2m3:9-17[0m
+  [36m/packages/with-dev-deps/src/FileToTest.res[0m:[2m2:6-11[0m
 
-  1 [2m│[0m let log = () => {
-  2 [2m│[0m         Js.log("02")
-  [1;31m3[0m [2m│[0m         [1;31mDep02.log[0m()
-  4 [2m│[0m }
-  5 [2m│[0m 
+  1 [2m│[0m let add = (a, b) => a + b
+  [1;31m2[0m [2m│[0m open [1;31mWebAPI[0m
+  3 [2m│[0m 
 
-  [1;33mThe module or file Dep02 can't be found.[0m
+  [1;33mThe module or file WebAPI can't be found.[0m
   - If it's a third-party dependency:
     - Did you add it to the "bs-dependencies" or "bs-dev-dependencies" in rescript.json?
   - Did you include the file's directory to the "sources" in rescript.json?

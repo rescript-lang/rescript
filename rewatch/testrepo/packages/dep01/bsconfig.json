@@ -9,5 +9,5 @@
     "in-source": true
   },
   "suffix": ".bs.js",
-  "bs-dependencies": ["@testrepo/dep02"]
+  "dependencies": ["@testrepo/dep02"]
 }

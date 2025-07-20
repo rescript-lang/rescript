@@ -10,6 +10,6 @@
     "module": "es6",
     "in-source": true
   },
-  "bs-dependencies": ["@testrepo/dep01"],
+  "dependencies": ["@testrepo/dep01"],
   "suffix": ".bs.js"
 }

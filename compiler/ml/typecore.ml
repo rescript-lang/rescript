@@ -84,6 +84,8 @@ type error =
   | Field_not_optional of string * type_expr
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
+  | Jsx_not_enabled
+
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
 
@@ -184,7 +186,7 @@ let iter_expression f e =
     | Pexp_pack me -> module_expr me
     | Pexp_await _ -> assert false (* should be handled earlier *)
     | Pexp_jsx_element _ ->
-      failwith "Pexp_jsx_element should be transformed at this point."
+      raise (Error (e.pexp_loc, Env.empty, Jsx_not_enabled))
   and case {pc_lhs = _; pc_guard; pc_rhs} =
     may expr pc_guard;
     expr pc_rhs
@@ -3193,7 +3195,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
   | Pexp_await _ -> (* should be handled earlier *) assert false
   | Pexp_jsx_element _ ->
-    failwith "Pexp_jsx_element is expected to be transformed at this point"
+    raise (Error (sexp.pexp_loc, Env.empty, Jsx_not_enabled))
 
 and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
     caselist =
@@ -4608,6 +4610,10 @@ let report_error env loc ppf error =
   | Field_access_on_dict_type ->
     fprintf ppf
       "Direct field access on a dict is not supported. Use Dict.get instead."
+  | Jsx_not_enabled ->
+    fprintf ppf
+      "Cannot compile JSX expression because JSX support is not enabled. Add \
+       \"jsx\" settings to rescript.json to enable JSX support."
 
 let report_error env loc ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error env loc ppf err)

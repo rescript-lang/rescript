@@ -71,6 +71,7 @@ pub struct Module {
     pub last_compiled_cmi: Option<SystemTime>,
     pub last_compiled_cmt: Option<SystemTime>,
     pub deps_dirty: bool,
+    pub is_type_dev: bool,
 }
 
 impl Module {

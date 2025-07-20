@@ -285,11 +285,15 @@ let tyvar f str = pp f "'%s" str
 let tyvar_loc f str = pp f "'%s" str.txt
 let string_quot f x = pp f "`%s" x
 
-let rec type_with_label ctxt f (label, c) =
-  match label with
-  | Nolabel -> core_type1 ctxt f c (* otherwise parenthesize *)
-  | Labelled {txt = s} -> pp f "%s:%a" s (core_type1 ctxt) c
-  | Optional {txt = s} -> pp f "?%s:%a" s (core_type1 ctxt) c
+let rec type_with_label ctxt f arg =
+  match arg.lbl with
+  | Nolabel ->
+    pp f "%a%a" (core_type1 ctxt) arg.typ (attributes ctxt) arg.attrs
+    (* otherwise parenthesize *)
+  | Labelled {txt = s} ->
+    pp f "%s:%a%a" s (core_type1 ctxt) arg.typ (attributes ctxt) arg.attrs
+  | Optional {txt = s} ->
+    pp f "?%s:%a%a" s (core_type1 ctxt) arg.typ (attributes ctxt) arg.attrs
 
 and core_type ctxt f x =
   if x.ptyp_attributes <> [] then
@@ -300,7 +304,7 @@ and core_type ctxt f x =
     match x.ptyp_desc with
     | Ptyp_arrow {arg; ret; arity} ->
       pp f "@[<2>%a@;->@;%a%s@]" (* FIXME remove parens later *)
-        (type_with_label ctxt) (arg.lbl, arg.typ) (core_type ctxt) ret
+        (type_with_label ctxt) arg (core_type ctxt) ret
         (match arity with
         | None -> ""
         | Some n -> " (a:" ^ string_of_int n ^ ")")

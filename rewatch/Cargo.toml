@@ -1,6 +1,6 @@
 [package]
 name = "rewatch"
-version = "12.0.0-beta.2"
+version = "12.0.0-beta.3"
 edition = "2024"
 
 [dependencies]
