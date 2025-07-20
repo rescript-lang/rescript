@@ -1815,7 +1815,15 @@ and parse_constrained_expr_region p =
 and parse_regex p pattern flags =
   let start_pos = p.Parser.start_pos in
   Parser.next p;
-  let loc = mk_loc start_pos p.prev_end_pos in
+  let loc =
+    mk_loc
+      {
+        start_pos with
+        (* Account for the inserted leading `/` *)
+        pos_cnum = start_pos.pos_cnum - 1;
+      }
+      p.prev_end_pos
+  in
   let payload =
     Parsetree.PStr
       [
@@ -1826,7 +1834,7 @@ and parse_regex p pattern flags =
                   if p.mode = ParseForTypeChecker then Some "js" else None )));
       ]
   in
-  Ast_helper.Exp.extension (Location.mknoloc "re", payload)
+  Ast_helper.Exp.extension (Location.mkloc "re" loc, payload)
 
 (* Atomic expressions represent unambiguous expressions.
  * This means that regardless of the context, these expressions
