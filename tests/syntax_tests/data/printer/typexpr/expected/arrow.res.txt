@@ -174,20 +174,15 @@ type t = @attr
   floatWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong,
 ) => unit
 
-external debounce: (int, @meth unit) => unit = "debounce"
+external debounce: (int, unit) => unit = "debounce"
 
-external debounce: int => @meth (unit => unit) = "debounce"
+external debounce: int => unit => unit = "debounce"
 
-external debounce: (int, @meth (unit => unit)) => @meth (unit => unit) = "debounce"
+external debounce: (int, unit => unit) => unit => unit = "debounce"
 
-external debounce: (int, @meth (unit => unit), @meth (unit => unit)) => @meth (unit => unit) =
-  "debounce"
+external debounce: (int, unit => unit, unit => unit) => unit => unit = "debounce"
 
-external debounce: (
-  int,
-  @meth (unit => unit),
-  @meth (unit => @meth (unit => unit)),
-) => @meth (unit => unit) = "debounce"
+external debounce: (int, unit => unit, unit => unit => unit) => unit => unit = "debounce"
 
 type returnTyp = (int, int) => @magic float
 type returnTyp = (
