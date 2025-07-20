@@ -64,7 +64,7 @@ let pp_error fmt err =
     | Illegal_attribute -> "Illegal attributes"
     | Unsupported_predicates -> "unsupported predicates"
     | Conflict_bs_bs_this_bs_meth ->
-      "%@this, %@bs, %@meth can not be applied at the same time"
+      "%@this and %@bs can not be applied at the same time"
     | Duplicated_bs_deriving -> "duplicate @deriving attribute"
     | Conflict_attributes -> "conflicting attributes "
     | Expect_string_literal -> "expect string literal "
