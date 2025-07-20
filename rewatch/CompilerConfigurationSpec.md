@@ -15,7 +15,6 @@ This document contains a list of all bsconfig parameters with remarks, and wheth
 | ignored-dirs         | array of string         |        |     [_]      |
 | bs-dependencies      | array of string         |        |     [x]      |
 | bs-dev-dependencies  | array of string         |        |     [x]      |
-| pinned-dependencies  | array of string         |        |     [x]      |
 | generators           | array of Rule-Generator |        |     [_]      |
 | cut-generators       | boolean                 |        |     [_]      |
 | jsx                  | JSX                     |        |     [x]      |

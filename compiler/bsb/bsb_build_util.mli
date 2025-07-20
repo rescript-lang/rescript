@@ -17,7 +17,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
@@ -82,9 +82,6 @@ type result = {path: string; checked: bool}
 *)
 val resolve_bsb_magic_file : cwd:string -> desc:string -> string -> result
 
-type package_context = {proj_dir: string; top: top; is_pinned: bool}
+type package_context = {proj_dir: string; top: top}
 
-val extract_pinned_dependencies : Ext_json_types.t Map_string.t -> Set_string.t
-
-val walk_all_deps :
-  string -> pinned_dependencies:Set_string.t -> package_context Queue.t
+val walk_all_deps : string -> package_context Queue.t

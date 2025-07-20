@@ -82,7 +82,7 @@ let from_map (m : Ext_json_types.t Map_string.t) =
 
 let to_bsb_string ~(package_kind : Bsb_package_kind.t) warning =
   match package_kind with
-  | Toplevel | Pinned_dependency _ -> (
+  | Toplevel -> (
     match warning with
     | None -> Ext_string.empty
     | Some warning -> (

@@ -74,13 +74,9 @@ pub fn print(buildstate: &BuildState) {
             let dirs = package_to_dirs(package, &root_package.path);
 
             // Extract Pkgs
-            let pkgs = [
-                &package.config.pinned_dependencies,
-                &package.config.dependencies,
-                &package.config.dev_dependencies,
-            ]
-            .into_iter()
-            .map(|dependencies| deps_to_pkgs(&buildstate.packages, dependencies));
+            let pkgs = [&package.config.dependencies, &package.config.dev_dependencies]
+                .into_iter()
+                .map(|dependencies| deps_to_pkgs(&buildstate.packages, dependencies));
 
             // Write sourcedirs.json
             write_sourcedirs_files(

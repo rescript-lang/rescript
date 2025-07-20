@@ -114,18 +114,16 @@ pub fn generate_asts(
                     // We get Err(x) when there is a parse error. When it's Ok(_, Some(
                     // stderr_warnings )), the outputs are warnings
                     match ast_result {
-                        // In case of a pinned (internal) dependency, we want to keep on
+                        // In case of an internal dependency, we want to keep on
                         // propagating the warning with every compile. So we mark it as dirty for
                         // the next round
-                        Ok((_path, Some(stderr_warnings))) if package.is_pinned_dep => {
+                        Ok((_path, Some(stderr_warnings))) if package.is_local_dep => {
                             source_file.implementation.parse_state = ParseState::Warning;
                             source_file.implementation.parse_dirty = true;
                             logs::append(package, &stderr_warnings);
                             stderr.push_str(&stderr_warnings);
                         }
                         Ok((_path, Some(_))) | Ok((_path, None)) => {
-                            // If we do have stderr_warnings here, the file is not a pinned
-                            // dependency (so some external dep). We can ignore those
                             source_file.implementation.parse_state = ParseState::Success;
                             source_file.implementation.parse_dirty = false;
                         }
@@ -142,10 +140,10 @@ pub fn generate_asts(
                     // We get Err(x) when there is a parse error. When it's Ok(_, Some(( _path,
                     // stderr_warnings ))), the outputs are warnings
                     match iast_result {
-                        // In case of a pinned (internal) dependency, we want to keep on
+                        // In case of an internal dependency, we want to keep on
                         // propagating the warning with every compile. So we mark it as dirty for
                         // the next round
-                        Ok(Some((_path, Some(stderr_warnings)))) if package.is_pinned_dep => {
+                        Ok(Some((_path, Some(stderr_warnings)))) if package.is_local_dep => {
                             if let Some(interface) = source_file.interface.as_mut() {
                                 interface.parse_state = ParseState::Warning;
                                 interface.parse_dirty = true;
@@ -154,8 +152,6 @@ pub fn generate_asts(
                             stderr.push_str(&stderr_warnings);
                         }
                         Ok(Some((_, None))) | Ok(Some((_, Some(_)))) => {
-                            // If we do have stderr_warnings here, the file is not a pinned
-                            // dependency (so some external dep). We can ignore those
                             if let Some(interface) = source_file.interface.as_mut() {
                                 interface.parse_state = ParseState::Success;
                                 interface.parse_dirty = false;

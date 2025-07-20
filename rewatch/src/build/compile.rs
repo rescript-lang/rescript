@@ -738,7 +738,7 @@ fn compile_file(
             });
 
             if helpers::contains_ascii_characters(&err) {
-                if package.is_pinned_dep || package.is_local_dep {
+                if package.is_local_dep {
                     // suppress warnings of external deps
                     Ok(Some(err))
                 } else {

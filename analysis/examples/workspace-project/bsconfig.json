@@ -7,6 +7,5 @@
     "in-source": true
   },
   "suffix": ".mjs",
-  "pinned-dependencies": ["common", "myplugin", "app"],
   "bs-dependencies": ["common", "myplugin", "app"]
 }
