@@ -198,10 +198,10 @@ let filter_parsing_attrs attrs =
       match attr with
       | ( {
             Location.txt =
-              ( "res.braces" | "ns.braces" | "res.iflet" | "res.ternary"
-              | "res.await" | "res.template" | "res.taggedTemplate"
-              | "res.patVariantSpread" | "res.dictPattern"
-              | "res.inlineRecordDefinition" );
+              ( "meth" | "res.braces" | "ns.braces" | "res.iflet"
+              | "res.ternary" | "res.await" | "res.template"
+              | "res.taggedTemplate" | "res.patVariantSpread"
+              | "res.dictPattern" | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
