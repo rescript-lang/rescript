@@ -892,7 +892,7 @@ pub mod tests {
 
         let config = Config::new_from_json_string(json).expect("a valid json string");
         assert_eq!(config.dependencies, Some(vec!["@testrepo/main".to_string()]));
-        assert_eq!(config.get_deprecations().is_empty(), true);
+        assert!(config.get_deprecations().is_empty());
     }
 
     #[test]
@@ -942,7 +942,7 @@ pub mod tests {
 
         let config = Config::new_from_json_string(json).expect("a valid json string");
         assert_eq!(config.dev_dependencies, Some(vec!["@testrepo/main".to_string()]));
-        assert_eq!(config.get_deprecations().is_empty(), true);
+        assert!(config.get_deprecations().is_empty());
     }
 
     #[test]
@@ -967,7 +967,7 @@ pub mod tests {
 
         let config = Config::new_from_json_string(json).expect("a valid json string");
         if let Some(flags) = &config.compiler_flags {
-            if let Some(OneOrMore::Single(flag)) = flags.get(0) {
+            if let Some(OneOrMore::Single(flag)) = flags.first() {
                 assert_eq!(flag.as_str(), "-open ABC");
             } else {
                 dbg!(config.compiler_flags);
@@ -977,7 +977,7 @@ pub mod tests {
             dbg!(config.compiler_flags);
             unreachable!("Expected compiler flags to be Some");
         }
-        assert_eq!(config.get_deprecations().is_empty(), true);
+        assert!(config.get_deprecations().is_empty());
     }
 
     #[test]

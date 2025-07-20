@@ -485,9 +485,8 @@ fn log_deprecations(build_state: &BuildState) {
 
 fn log_deprecated_config_field(package_name: &str, field_name: &str, new_field_name: &str) {
     let warning = format!(
-        "The field '{}' found in the package config of '{}' is deprecated and will be removed in a future version.\n\
-        Use '{}' instead.",
-        field_name, package_name, new_field_name
+        "The field '{field_name}' found in the package config of '{package_name}' is deprecated and will be removed in a future version.\n\
+        Use '{new_field_name}' instead."
     );
     println!("\n{}", style(warning).yellow());
 }
