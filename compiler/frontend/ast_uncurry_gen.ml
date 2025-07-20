@@ -48,6 +48,11 @@ let to_method_callback loc (self : Bs_ast_mapper.mapper) label
         Ast_helper.Exp.fun_ ~loc ~attrs ~arity:None ~async label None p e)
   in
   let arity = List.length rev_extra_args in
+  let body =
+    match body.pexp_desc with
+    | Pexp_fun f -> {body with pexp_desc = Pexp_fun {f with arity = Some arity}}
+    | _ -> body
+  in
   let arity_s = string_of_int arity in
   Stack.pop Js_config.self_stack |> ignore;
   Parsetree.Pexp_apply

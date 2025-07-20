@@ -23,20 +23,10 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
 
 type typ = Parsetree.core_type
-type 'a cxt = Ast_helper.loc -> Bs_ast_mapper.mapper -> 'a
-type uncurry_type_gen = (Asttypes.arg_label -> typ -> typ -> typ) cxt
 
-let to_method_callback_type loc (mapper : Bs_ast_mapper.mapper)
-    (label : Asttypes.arg_label) (first_arg : Parsetree.core_type)
-    (typ : Parsetree.core_type) =
-  let first_arg = mapper.typ mapper first_arg in
-  let typ = mapper.typ mapper typ in
-  let meth_type =
-    Ast_helper.Typ.arrow ~loc ~arity:None
-      {attrs = []; lbl = label; typ = first_arg}
-      typ
-  in
-  let arity = Ast_core_type.get_uncurry_arity meth_type in
+let to_method_callback_type loc (mapper : Bs_ast_mapper.mapper) ~arity
+    (meth_type : Parsetree.core_type) =
+  let meth_type = Bs_ast_mapper.default_mapper.typ mapper meth_type in
   match arity with
   | Some n ->
     Ast_helper.Typ.constr
@@ -45,31 +35,4 @@ let to_method_callback_type loc (mapper : Bs_ast_mapper.mapper)
         loc;
       }
       [meth_type]
-  | None -> assert false
-
-let to_uncurry_type loc (mapper : Bs_ast_mapper.mapper)
-    (label : Asttypes.arg_label) (first_arg : Parsetree.core_type)
-    (typ : Parsetree.core_type) =
-  (* no need to error for optional here,
-     since we can not make it
-     TODO: still error out for external?
-     Maybe no need to error on optional at all
-     it just does not make sense
-  *)
-  let first_arg = mapper.typ mapper first_arg in
-  let typ = mapper.typ mapper typ in
-
-  let fn_type =
-    Ast_helper.Typ.arrow ~loc ~arity:None
-      {attrs = []; lbl = label; typ = first_arg}
-      typ
-  in
-  let arity = Ast_core_type.get_uncurry_arity fn_type in
-  let fn_type =
-    match fn_type.ptyp_desc with
-    | Ptyp_arrow arr -> {fn_type with ptyp_desc = Ptyp_arrow {arr with arity}}
-    | _ -> assert false
-  in
-  match arity with
-  | Some arity -> Ast_uncurried.uncurried_type ~arity fn_type
   | None -> assert false
