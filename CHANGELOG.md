@@ -27,6 +27,7 @@
 #### :house: Internal
 
 - Add rust linting to CI with `clippy`. https://github.com/rescript-lang/rescript/pull/7675
+- AST: use `Typ.arrows` for creation, after the refactoring of arrow types. https://github.com/rescript-lang/rescript/pull/7662
 
 #### :bug: Bug fix
 
