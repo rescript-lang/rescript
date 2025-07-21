@@ -16,7 +16,7 @@ else
 fi
 
 # Replace suffix
-replace "s/.mjs/.res.js/g" bsconfig.json
+replace "s/.mjs/.res.js/g" rescript.json
 
 error_output=$(rewatch build 2>&1)
 if [ $? -eq 0 ];
@@ -50,7 +50,7 @@ else
 fi
 
 # Restore Suffix
-replace "s/.res.js/.mjs/g" bsconfig.json
+replace "s/.res.js/.mjs/g" rescript.json
 
 # Restore original build
 error_output=$(rewatch build 2>&1)

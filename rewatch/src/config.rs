@@ -222,7 +222,7 @@ pub enum DeprecationWarning {
     BscFlags,
 }
 
-/// # bsconfig.json representation
+/// # rescript.json representation
 /// This is tricky, there is a lot of ambiguity. This is probably incomplete.
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct Config {
@@ -256,10 +256,10 @@ pub struct Config {
     pub jsx: Option<JsxSpecs>,
     #[serde(rename = "gentypeconfig")]
     pub gentype_config: Option<GenTypeConfig>,
-    // this is a new feature of rewatch, and it's not part of the bsconfig.json spec
+    // this is a new feature of rewatch, and it's not part of the rescript.json spec
     #[serde(rename = "namespace-entry")]
     pub namespace_entry: Option<String>,
-    // this is a new feature of rewatch, and it's not part of the bsconfig.json spec
+    // this is a new feature of rewatch, and it's not part of the rescript.json spec
     #[serde(rename = "allowed-dependents")]
     pub allowed_dependents: Option<Vec<String>>,
 
