@@ -62,7 +62,9 @@ pub fn print(buildstate: &BuildState) {
         .find(|(_name, package)| package.is_root)
         .expect("Could not find root package");
 
-    // Take all packages apart from the root package
+    // Take all local packages with source files.
+    // In the case of a monorepo, the root package typically won't have any source files.
+    // But in the case of a single package, it will be both local, root and have source files.
     let (dirs, pkgs): (Vec<AHashSet<Dir>>, Vec<AHashMap<PackageName, AbsolutePath>>) = buildstate
         .packages
         .par_iter()
