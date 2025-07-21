@@ -46,7 +46,7 @@ if (shouldCopyNinja) {
 }
 
 if (shouldCopyRewatch) {
-  copyExe(path.join(rewatchDir, "target", "release"), "rewatch", "rescript");
+  copyExe(path.join(rewatchDir, "target", "release"), "rescript");
 }
 
 /**

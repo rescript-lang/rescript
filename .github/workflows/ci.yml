@@ -144,9 +144,9 @@ jobs:
 
       - name: Copy rewatch binary
         run: |
-          cp rewatch/target/${{ matrix.rust-target }}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch
+          cp rewatch/target/${{ matrix.rust-target }}/release/rescript{{ runner.os == 'Windows' && '.exe' || '' }} rescript
           mkdir -p rewatch/target/release
-          cp rewatch/target/${{ matrix.rust-target }}/release/rewatch${{ runner.os == 'Windows' && '.exe' || '' }} rewatch/target/release
+          cp rewatch/target/${{ matrix.rust-target }}/release/rescript{{ runner.os == 'Windows' && '.exe' || '' }} rewatch/target/release
           ./scripts/copyExes.js --rewatch
         shell: bash
 
