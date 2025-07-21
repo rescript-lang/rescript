@@ -1812,18 +1812,9 @@ and parse_constrained_expr_region p =
     | _ -> Some expr)
   | _ -> None
 
-and parse_regex p pattern flags =
-  let start_pos = p.Parser.start_pos in
+and parse_regex ~start_pos p pattern flags =
   Parser.next p;
-  let loc =
-    mk_loc
-      {
-        start_pos with
-        (* Account for the inserted leading `/` *)
-        pos_cnum = start_pos.pos_cnum - 1;
-      }
-      p.prev_end_pos
-  in
+  let loc = mk_loc start_pos p.prev_end_pos in
   let payload =
     Parsetree.PStr
       [
@@ -1911,13 +1902,13 @@ and parse_atomic_expr p =
     | Forwardslash -> (
       Parser.next_regex_token p;
       match p.token with
-      | Regex (pattern, flags) -> parse_regex p pattern flags
+      | Regex (pattern, flags) -> parse_regex ~start_pos p pattern flags
       | _ -> Ast_helper.Exp.extension (Location.mknoloc "re", Parsetree.PStr [])
       )
     | ForwardslashDot -> (
       Parser.next_regex_token p;
       match p.token with
-      | Regex (pattern, flags) -> parse_regex p ("." ^ pattern) flags
+      | Regex (pattern, flags) -> parse_regex ~start_pos p ("." ^ pattern) flags
       | _ -> Ast_helper.Exp.extension (Location.mknoloc "re", Parsetree.PStr [])
       )
     | token -> (
