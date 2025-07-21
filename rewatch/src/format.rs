@@ -101,7 +101,7 @@ fn format_files(bsc_exe: &Path, files: Vec<String>, check: bool) -> Result<()> {
                     let original_content = fs::read_to_string(file)?;
                     let formatted_content = String::from_utf8_lossy(&output.stdout);
                     if original_content != formatted_content {
-                        eprintln!("[format check] {}", file);
+                        eprintln!("[format check] {file}");
                         incorrectly_formatted_files.fetch_add(1, Ordering::SeqCst);
                     }
                 }
@@ -118,7 +118,7 @@ fn format_files(bsc_exe: &Path, files: Vec<String>, check: bool) -> Result<()> {
         if count == 1 {
             eprintln!("The file listed above needs formatting");
         } else {
-            eprintln!("The {} files listed above need formatting", count);
+            eprintln!("The {count} files listed above need formatting");
         }
         bail!("Formatting check failed");
     }

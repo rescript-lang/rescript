@@ -103,7 +103,7 @@ impl Package {
             .namespace
             .to_suffix()
             .expect("namespace should be set for mlmap module");
-        self.get_build_path().join(format!("{}.mlmap", suffix))
+        self.get_build_path().join(format!("{suffix}.mlmap"))
     }
 
     pub fn get_mlmap_compile_path(&self) -> PathBuf {
@@ -111,7 +111,7 @@ impl Package {
             .namespace
             .to_suffix()
             .expect("namespace should be set for mlmap module");
-        self.get_build_path().join(format!("{}.cmi", suffix))
+        self.get_build_path().join(format!("{suffix}.cmi"))
     }
 
     pub fn is_source_file_type_dev(&self, path: &Path) -> bool {
@@ -171,7 +171,7 @@ pub fn read_folders(
         if metadata.file_type().is_dir() && recurse {
             match read_folders(filter, package_dir, &new_path, recurse, is_type_dev) {
                 Ok(s) => map.extend(s),
-                Err(e) => log::error!("Could not read directory: {}", e),
+                Err(e) => log::error!("Could not read directory: {e}"),
             }
         }
 
@@ -189,8 +189,8 @@ pub fn read_folders(
                     );
                 }
 
-                Ok(_) => log::info!("Filtered: {:?}", name),
-                Err(ref e) => log::error!("Could not read directory: {}", e),
+                Ok(_) => log::info!("Filtered: {name:?}"),
+                Err(ref e) => log::error!("Could not read directory: {e}"),
             },
             _ => (),
         }
@@ -243,9 +243,9 @@ pub fn read_config(package_dir: &Path) -> Result<config::Config> {
     let bsconfig_json_path = package_dir.join("bsconfig.json");
 
     if Path::new(&rescript_json_path).exists() {
-        config::read(&rescript_json_path)
+        config::Config::new(&rescript_json_path)
     } else {
-        config::read(&bsconfig_json_path)
+        config::Config::new(&bsconfig_json_path)
     }
 }
 
@@ -255,11 +255,11 @@ pub fn read_dependency(
     project_root: &Path,
     workspace_root: &Option<PathBuf>,
 ) -> Result<PathBuf, String> {
-    let path_from_parent = PathBuf::from(helpers::package_path(parent_path, package_name));
-    let path_from_project_root = PathBuf::from(helpers::package_path(project_root, package_name));
+    let path_from_parent = helpers::package_path(parent_path, package_name);
+    let path_from_project_root = helpers::package_path(project_root, package_name);
     let maybe_path_from_workspace_root = workspace_root
         .as_ref()
-        .map(|workspace_root| PathBuf::from(helpers::package_path(workspace_root, package_name)));
+        .map(|workspace_root| helpers::package_path(workspace_root, package_name));
 
     let path = match (
         path_from_parent,
@@ -272,8 +272,7 @@ pub fn read_dependency(
             Ok(path_from_workspace_root)
         }
         _ => Err(format!(
-            "The package \"{}\" is not found (are node_modules up-to-date?)...",
-            package_name
+            "The package \"{package_name}\" is not found (are node_modules up-to-date?)..."
         )),
     }?;
 
@@ -293,8 +292,6 @@ pub fn read_dependency(
     Ok(canonical_path)
 }
 
-/// # Make Package
-
 /// Given a config, recursively finds all dependencies.
 /// 1. It starts with registering dependencies and
 ///    prevents the operation for the ones which are already
@@ -310,10 +307,10 @@ fn read_dependencies(
     show_progress: bool,
     build_dev_deps: bool,
 ) -> Vec<Dependency> {
-    let mut dependencies = parent_config.bs_dependencies.to_owned().unwrap_or_default();
+    let mut dependencies = parent_config.dependencies.to_owned().unwrap_or_default();
 
     // Concatenate dev dependencies if build_dev_deps is true
-    if build_dev_deps && let Some(dev_deps) = parent_config.bs_dev_dependencies.to_owned() {
+    if build_dev_deps && let Some(dev_deps) = parent_config.dev_dependencies.to_owned() {
         dependencies.extend(dev_deps);
     }
 
@@ -332,7 +329,7 @@ fn read_dependencies(
         .par_iter()
         .map(|package_name| {
             let (config, canonical_path) =
-                match read_dependency(package_name, parent_path, project_root, &workspace_root) {
+                match read_dependency(package_name, parent_path, project_root, workspace_root) {
                     Err(error) => {
                         if show_progress {
                             println!(
@@ -510,7 +507,7 @@ fn read_packages(
     ));
     dependencies.iter().for_each(|d| {
         if !map.contains_key(&d.name) {
-            let package = make_package(d.config.to_owned(), &d.path, d.is_pinned, false, &project_root);
+            let package = make_package(d.config.to_owned(), &d.path, d.is_pinned, false, project_root);
             map.insert(d.name.to_string(), package);
         }
     });
@@ -535,33 +532,30 @@ pub fn get_source_files(
 ) -> AHashMap<PathBuf, SourceFileMeta> {
     let mut map: AHashMap<PathBuf, SourceFileMeta> = AHashMap::new();
 
-    let (recurse, type_) = match source {
+    let recurse = match source {
         config::PackageSource {
             subdirs: Some(config::Subdirs::Recurse(subdirs)),
-            type_,
             ..
-        } => (subdirs.to_owned(), type_),
-        config::PackageSource { type_, .. } => (false, type_),
+        } => *subdirs,
+        _ => false,
     };
 
     let path_dir = Path::new(&source.dir);
-    let is_type_dev = type_
-        .as_ref()
-        .map(|t| t.as_str() == "dev")
-        .unwrap_or(false)
-        .clone();
-    match (build_dev_deps, type_) {
-        (false, Some(type_)) if type_ == "dev" => (),
-        _ => match read_folders(filter, package_dir, path_dir, recurse, is_type_dev) {
-            Ok(files) => map.extend(files),
+    let is_type_dev = source.is_type_dev();
 
-            Err(_e) => log::error!(
-                "Could not read folder: {:?}. Specified in dependency: {}, located {:?}...",
-                path_dir.to_path_buf().into_os_string(),
-                package_name,
-                package_dir
-            ),
-        },
+    if !build_dev_deps && is_type_dev {
+        return map;
+    }
+
+    match read_folders(filter, package_dir, path_dir, recurse, is_type_dev) {
+        Ok(files) => map.extend(files),
+
+        Err(_e) => log::error!(
+            "Could not read folder: {:?}. Specified in dependency: {}, located {:?}...",
+            path_dir.to_path_buf().into_os_string(),
+            package_name,
+            package_dir
+        ),
     };
 
     map
@@ -646,7 +640,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
         .clone()
         .iter()
         .for_each(|(package_name, package)| {
-            debug!("Parsing package: {}", package_name);
+            debug!("Parsing package: {package_name}");
             if let Some(package_modules) = package.modules.to_owned() {
                 build_state.module_names.extend(package_modules)
             }
@@ -678,18 +672,12 @@ pub fn parse_packages(build_state: &mut BuildState) {
                     if spec.is_common_js() {
                         helpers::create_path(&package.get_js_path());
                         relative_dirs.iter().for_each(|path_buf| {
-                            helpers::create_path_for_path(&Path::join(
-                                &PathBuf::from(package.get_js_path()),
-                                path_buf,
-                            ))
+                            helpers::create_path_for_path(&Path::join(&package.get_js_path(), path_buf))
                         })
                     } else {
                         helpers::create_path(&package.get_es6_path());
                         relative_dirs.iter().for_each(|path_buf| {
-                            helpers::create_path_for_path(&Path::join(
-                                &PathBuf::from(package.get_es6_path()),
-                                path_buf,
-                            ))
+                            helpers::create_path_for_path(&Path::join(&package.get_es6_path(), path_buf))
                         })
                     }
                 }
@@ -768,7 +756,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
                     let namespace = package.namespace.to_owned();
 
                     let extension = file.extension().unwrap().to_str().unwrap();
-                    let module_name = helpers::file_path_to_module_name(&file, &namespace);
+                    let module_name = helpers::file_path_to_module_name(file, &namespace);
 
                     if helpers::is_implementation_file(extension) {
                         build_state
@@ -927,9 +915,9 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
     let mut detected_unallowed_dependencies: AHashMap<String, UnallowedDependency> = AHashMap::new();
 
     for (package_name, package) in packages {
-        let bs_dependencies = &package.config.bs_dependencies.to_owned().unwrap_or(vec![]);
+        let bs_dependencies = &package.config.dependencies.to_owned().unwrap_or(vec![]);
         let pinned_dependencies = &package.config.pinned_dependencies.to_owned().unwrap_or(vec![]);
-        let dev_dependencies = &package.config.bs_dev_dependencies.to_owned().unwrap_or(vec![]);
+        let dev_dependencies = &package.config.dev_dependencies.to_owned().unwrap_or(vec![]);
 
         [
             ("bs-dependencies", bs_dependencies),
@@ -981,7 +969,7 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
             }
         });
     }
-    let has_any_unallowed_dependent = detected_unallowed_dependencies.len() > 0;
+    let has_any_unallowed_dependent = !detected_unallowed_dependencies.is_empty();
 
     if has_any_unallowed_dependent {
         log::error!(
@@ -995,39 +983,30 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
 
 #[cfg(test)]
 mod test {
+    use crate::config;
+
     use super::{Namespace, Package};
-    use crate::config::Source;
     use ahash::{AHashMap, AHashSet};
     use std::path::PathBuf;
 
-    fn create_package(
+    pub struct CreatePackageArgs {
         name: String,
         bs_deps: Vec<String>,
         pinned_deps: Vec<String>,
         build_dev_deps: Vec<String>,
         allowed_dependents: Option<Vec<String>>,
-    ) -> Package {
+    }
+
+    fn create_package(args: CreatePackageArgs) -> Package {
         Package {
-            name: name.clone(),
-            config: crate::config::Config {
-                name: name.clone(),
-                sources: Some(crate::config::OneOrMore::Single(Source::Shorthand(String::from(
-                    "Source",
-                )))),
-                package_specs: None,
-                warnings: None,
-                suffix: None,
-                pinned_dependencies: Some(pinned_deps),
-                bs_dependencies: Some(bs_deps),
-                bs_dev_dependencies: Some(build_dev_deps),
-                ppx_flags: None,
-                bsc_flags: None,
-                namespace: None,
-                jsx: None,
-                gentype_config: None,
-                namespace_entry: None,
-                allowed_dependents,
-            },
+            name: args.name.clone(),
+            config: config::tests::create_config(config::tests::CreateConfigArgs {
+                name: args.name,
+                bs_deps: args.bs_deps,
+                pinned_deps: args.pinned_deps,
+                build_dev_deps: args.build_dev_deps,
+                allowed_dependents: args.allowed_dependents,
+            }),
             source_folders: AHashSet::new(),
             source_files: None,
             namespace: Namespace::Namespace(String::from("Package1")),
@@ -1044,23 +1023,23 @@ mod test {
         let mut packages: AHashMap<String, Package> = AHashMap::new();
         packages.insert(
             String::from("Package1"),
-            create_package(
-                String::from("Package1"),
-                vec![String::from("Package2")],
-                vec![],
-                vec![],
-                None,
-            ),
+            create_package(CreatePackageArgs {
+                name: String::from("Package1"),
+                bs_deps: vec![String::from("Package2")],
+                pinned_deps: vec![],
+                build_dev_deps: vec![],
+                allowed_dependents: None,
+            }),
         );
         packages.insert(
             String::from("Package2"),
-            create_package(
-                String::from("Package2"),
-                vec![],
-                vec![],
-                vec![],
-                Some(vec![String::from("Package3")]),
-            ),
+            create_package(CreatePackageArgs {
+                name: String::from("Package2"),
+                bs_deps: vec![],
+                pinned_deps: vec![],
+                build_dev_deps: vec![],
+                allowed_dependents: Some(vec![String::from("Package3")]),
+            }),
         );
 
         let is_valid = super::validate_packages_dependencies(&packages);
@@ -1072,23 +1051,23 @@ mod test {
         let mut packages: AHashMap<String, Package> = AHashMap::new();
         packages.insert(
             String::from("Package1"),
-            create_package(
-                String::from("Package1"),
-                vec![],
-                vec![String::from("Package2")],
-                vec![],
-                None,
-            ),
+            create_package(CreatePackageArgs {
+                name: String::from("Package1"),
+                bs_deps: vec![],
+                pinned_deps: vec![String::from("Package2")],
+                build_dev_deps: vec![],
+                allowed_dependents: None,
+            }),
         );
         packages.insert(
             String::from("Package2"),
-            create_package(
-                String::from("Package2"),
-                vec![],
-                vec![],
-                vec![],
-                Some(vec![String::from("Package3")]),
-            ),
+            create_package(CreatePackageArgs {
+                name: String::from("Package2"),
+                bs_deps: vec![],
+                pinned_deps: vec![],
+                build_dev_deps: vec![],
+                allowed_dependents: Some(vec![String::from("Package3")]),
+            }),
         );
 
         let is_valid = super::validate_packages_dependencies(&packages);
@@ -1100,23 +1079,23 @@ mod test {
         let mut packages: AHashMap<String, Package> = AHashMap::new();
         packages.insert(
             String::from("Package1"),
-            create_package(
-                String::from("Package1"),
-                vec![],
-                vec![],
-                vec![String::from("Package2")],
-                None,
-            ),
+            create_package(CreatePackageArgs {
+                name: String::from("Package1"),
+                bs_deps: vec![],
+                pinned_deps: vec![],
+                build_dev_deps: vec![String::from("Package2")],
+                allowed_dependents: None,
+            }),
         );
         packages.insert(
             String::from("Package2"),
-            create_package(
-                String::from("Package2"),
-                vec![],
-                vec![],
-                vec![],
-                Some(vec![String::from("Package3")]),
-            ),
+            create_package(CreatePackageArgs {
+                name: String::from("Package2"),
+                bs_deps: vec![],
+                pinned_deps: vec![],
+                build_dev_deps: vec![],
+                allowed_dependents: Some(vec![String::from("Package3")]),
+            }),
         );
 
         let is_valid = super::validate_packages_dependencies(&packages);
@@ -1128,23 +1107,23 @@ mod test {
         let mut packages: AHashMap<String, Package> = AHashMap::new();
         packages.insert(
             String::from("Package1"),
-            create_package(
-                String::from("Package1"),
-                vec![String::from("Package2")],
-                vec![],
-                vec![],
-                None,
-            ),
+            create_package(CreatePackageArgs {
+                name: String::from("Package1"),
+                bs_deps: vec![String::from("Package2")],
+                pinned_deps: vec![],
+                build_dev_deps: vec![],
+                allowed_dependents: None,
+            }),
         );
         packages.insert(
             String::from("Package2"),
-            create_package(
-                String::from("Package2"),
-                vec![],
-                vec![],
-                vec![],
-                Some(vec![String::from("Package1")]),
-            ),
+            create_package(CreatePackageArgs {
+                name: String::from("Package2"),
+                bs_deps: vec![],
+                pinned_deps: vec![],
+                build_dev_deps: vec![],
+                allowed_dependents: Some(vec![String::from("Package1")]),
+            }),
         );
 
         let is_valid = super::validate_packages_dependencies(&packages);

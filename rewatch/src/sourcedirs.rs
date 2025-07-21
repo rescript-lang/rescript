@@ -21,7 +21,7 @@ pub struct SourceDirs<'a> {
 }
 
 fn package_to_dirs(package: &Package, root_package_path: &Path) -> AHashSet<Dir> {
-    match package.path.strip_prefix(&root_package_path) {
+    match package.path.strip_prefix(root_package_path) {
         Err(_) => AHashSet::new(),
         Ok(relative_path) => package
             .dirs
@@ -74,8 +74,8 @@ pub fn print(buildstate: &BuildState) {
             // Extract Pkgs
             let pkgs = [
                 &package.config.pinned_dependencies,
-                &package.config.bs_dependencies,
-                &package.config.bs_dev_dependencies,
+                &package.config.dependencies,
+                &package.config.dev_dependencies,
             ]
             .into_iter()
             .map(|dependencies| deps_to_pkgs(&buildstate.packages, dependencies));

@@ -13,7 +13,7 @@ use self::parse::parser_args;
 use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_with_expired_deps_dirty};
 use crate::helpers::emojis::*;
 use crate::helpers::{self, get_workspace_root};
-use crate::sourcedirs;
+use crate::{config, sourcedirs};
 use anyhow::{Result, anyhow};
 use build_types::*;
 use console::style;
@@ -58,7 +58,7 @@ pub struct CompilerArgs {
 pub fn get_compiler_args(path: &Path) -> Result<String> {
     let filename = &helpers::get_abs_path(path);
     let package_root =
-        helpers::get_abs_path(&helpers::get_nearest_config(&path).expect("Couldn't find package root"));
+        helpers::get_abs_path(&helpers::get_nearest_config(path).expect("Couldn't find package root"));
     let workspace_root = get_workspace_root(&package_root).map(|p| helpers::get_abs_path(&p));
     let root_rescript_config =
         packages::read_config(&workspace_root.to_owned().unwrap_or(package_root.to_owned()))?;
@@ -77,7 +77,7 @@ pub fn get_compiler_args(path: &Path) -> Result<String> {
     let (ast_path, parser_args) = parser_args(
         &rescript_config,
         &root_rescript_config,
-        &relative_filename,
+        relative_filename,
         &workspace_root,
         workspace_root.as_ref().unwrap_or(&package_root),
         &contents,
@@ -94,7 +94,7 @@ pub fn get_compiler_args(path: &Path) -> Result<String> {
         &rescript_config,
         &root_rescript_config,
         &ast_path,
-        &relative_filename,
+        relative_filename,
         is_interface,
         has_interface,
         &package_root,
@@ -216,7 +216,7 @@ pub fn initialize_build(
 
     if show_progress {
         if snapshot_output {
-            println!("Cleaned {}/{}", diff_cleanup, total_cleanup)
+            println!("Cleaned {diff_cleanup}/{total_cleanup}")
         } else {
             println!(
                 "{}{} {}Cleaned {}/{} {:.2}s",
@@ -234,7 +234,7 @@ pub fn initialize_build(
 }
 
 fn format_step(current: usize, total: usize) -> console::StyledObject<String> {
-    style(format!("[{}/{}]", current, total)).bold().dim()
+    style(format!("[{current}/{total}]")).bold().dim()
 }
 
 #[derive(Debug, Clone)]
@@ -254,23 +254,23 @@ impl fmt::Display for IncrementalBuildError {
         match &self.kind {
             IncrementalBuildErrorKind::SourceFileParseError => {
                 if self.snapshot_output {
-                    write!(f, "{}  Could not parse Source Files", LINE_CLEAR,)
+                    write!(f, "{LINE_CLEAR}  Could not parse Source Files",)
                 } else {
-                    write!(f, "{}  {}Could not parse Source Files", LINE_CLEAR, CROSS,)
+                    write!(f, "{LINE_CLEAR}  {CROSS}Could not parse Source Files",)
                 }
             }
             IncrementalBuildErrorKind::CompileError(Some(e)) => {
                 if self.snapshot_output {
-                    write!(f, "{}  Failed to Compile. Error: {e}", LINE_CLEAR,)
+                    write!(f, "{LINE_CLEAR}  Failed to Compile. Error: {e}",)
                 } else {
-                    write!(f, "{}  {}Failed to Compile. Error: {e}", LINE_CLEAR, CROSS,)
+                    write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. Error: {e}",)
                 }
             }
             IncrementalBuildErrorKind::CompileError(None) => {
                 if self.snapshot_output {
-                    write!(f, "{}  Failed to Compile. See Errors Above", LINE_CLEAR,)
+                    write!(f, "{LINE_CLEAR}  Failed to Compile. See Errors Above",)
                 } else {
-                    write!(f, "{}  {}Failed to Compile. See Errors Above", LINE_CLEAR, CROSS,)
+                    write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. See Errors Above",)
                 }
             }
         }
@@ -280,7 +280,7 @@ impl fmt::Display for IncrementalBuildError {
 pub fn incremental_build(
     build_state: &mut BuildState,
     default_timing: Option<Duration>,
-    _initial_build: bool,
+    initial_build: bool,
     show_progress: bool,
     only_incremental: bool,
     create_sourcedirs: bool,
@@ -312,7 +312,7 @@ pub fn incremental_build(
         Ok(_ast) => {
             if show_progress {
                 if snapshot_output {
-                    println!("Parsed {} source files", num_dirty_modules)
+                    println!("Parsed {num_dirty_modules} source files")
                 } else {
                     println!(
                         "{}{} {}Parsed {} source files in {:.2}s",
@@ -370,7 +370,7 @@ pub fn incremental_build(
     if log_enabled!(log::Level::Trace) {
         for (module_name, module) in build_state.modules.iter() {
             if module.compile_dirty {
-                println!("compile dirty: {}", module_name);
+                println!("compile dirty: {module_name}");
             }
         }
     };
@@ -411,7 +411,7 @@ pub fn incremental_build(
     if !compile_errors.is_empty() {
         if show_progress {
             if snapshot_output {
-                println!("Compiled {} modules", num_compiled_modules)
+                println!("Compiled {num_compiled_modules} modules")
             } else {
                 println!(
                     "{}{} {}Compiled {} modules in {:.2}s",
@@ -426,6 +426,9 @@ pub fn incremental_build(
         if helpers::contains_ascii_characters(&compile_warnings) {
             println!("{}", &compile_warnings);
         }
+        if initial_build {
+            log_deprecations(build_state);
+        }
         if helpers::contains_ascii_characters(&compile_errors) {
             println!("{}", &compile_errors);
         }
@@ -436,7 +439,7 @@ pub fn incremental_build(
     } else {
         if show_progress {
             if snapshot_output {
-                println!("Compiled {} modules", num_compiled_modules)
+                println!("Compiled {num_compiled_modules} modules")
             } else {
                 println!(
                     "{}{} {}Compiled {} modules in {:.2}s",
@@ -452,8 +455,40 @@ pub fn incremental_build(
         if helpers::contains_ascii_characters(&compile_warnings) {
             println!("{}", &compile_warnings);
         }
+        if initial_build {
+            log_deprecations(build_state);
+        }
+
         Ok(())
     }
+}
+
+fn log_deprecations(build_state: &BuildState) {
+    build_state.packages.iter().for_each(|(_, package)| {
+        package
+            .config
+            .get_deprecations()
+            .iter()
+            .for_each(|deprecation_warning| match deprecation_warning {
+                config::DeprecationWarning::BsDependencies => {
+                    log_deprecated_config_field(&package.name, "bs-dependencies", "dependencies");
+                }
+                config::DeprecationWarning::BsDevDependencies => {
+                    log_deprecated_config_field(&package.name, "bs-dev-dependencies", "dev-dependencies");
+                }
+                config::DeprecationWarning::BscFlags => {
+                    log_deprecated_config_field(&package.name, "bsc-flags", "compiler-flags");
+                }
+            });
+    });
+}
+
+fn log_deprecated_config_field(package_name: &str, field_name: &str, new_field_name: &str) {
+    let warning = format!(
+        "The field '{field_name}' found in the package config of '{package_name}' is deprecated and will be removed in a future version.\n\
+        Use '{new_field_name}' instead."
+    );
+    println!("\n{}", style(warning).yellow());
 }
 
 // write build.ninja files in the packages after a non-incremental build

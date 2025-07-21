@@ -45,7 +45,7 @@ pub fn read(build_state: &mut BuildState) -> CompileAssetsState {
         .packages
         .par_iter()
         .map(|(_, package)| {
-            let read_dir = fs::read_dir(&package.get_ocaml_build_path()).unwrap();
+            let read_dir = fs::read_dir(package.get_ocaml_build_path()).unwrap();
             read_dir
                 .filter_map(|entry| match entry {
                     Ok(entry) => {
@@ -83,7 +83,7 @@ pub fn read(build_state: &mut BuildState) -> CompileAssetsState {
                         .packages
                         .get(&build_state.root_config_name)
                         .expect("Could not find root package");
-                    if let Some(res_file_path_buf) = get_res_path_from_ast(&path) {
+                    if let Some(res_file_path_buf) = get_res_path_from_ast(path) {
                         let _ = ast_modules.insert(
                             res_file_path_buf.clone(),
                             AstModule {

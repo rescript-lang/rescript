@@ -48,33 +48,43 @@ query operation:
 type t<'res, 'err> = result<'res, 'err> = Ok('res) | Error('err)
 
 /**
-  `getExn(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, raise an exception
+  `getExn(res, ~message=?)` returns `n` if `res` is `Ok(n)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.
 
   ```res example
   Result.getExn(Result.Ok(42)) == 42
   
   switch Result.getExn(Error("Invalid data")) {
-  | exception Not_found => assert(true)
+  | exception _ => assert(true)
+  | _ => assert(false)
+  }
+
+  switch Result.getExn(Error("Invalid data"), ~message="was Error!") {
+  | exception _ => assert(true) // Throws a JsError with the message "was Error!"
   | _ => assert(false)
   }
   ```
 */
 @deprecated("Use 'getOrThrow' instead")
-let getExn: result<'a, 'b> => 'a
+let getExn: (result<'a, 'b>, ~message: string=?) => 'a
 
 /**
-  `getOrThrow(res)`: when `res` is `Ok(n)`, returns `n` when `res` is `Error(m)`, raise an exception
+  `getOrThrow(res, ~message=?)` returns `n` if `res` is `Ok(n)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.
 
   ```res example
   Result.getOrThrow(Result.Ok(42)) == 42
   
   switch Result.getOrThrow(Error("Invalid data")) {
-  | exception Not_found => assert(true)
+  | exception _ => assert(true)
+  | _ => assert(false)
+  }
+
+  switch Result.getOrThrow(Error("Invalid data"), ~message="was Error!") {
+  | exception _ => assert(true) // Throws a JsError with the message "was Error!"
   | _ => assert(false)
   }
   ```
 */
-let getOrThrow: result<'a, 'b> => 'a
+let getOrThrow: (result<'a, 'b>, ~message: string=?) => 'a
 
 /**
 `mapOr(res, default, f)`: When res is `Ok(n)`, returns `f(n)`, otherwise `default`.

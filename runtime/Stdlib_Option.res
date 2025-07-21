@@ -39,7 +39,7 @@ let getOrThrow = (x, ~message=?) =>
   switch x {
   | Some(x) => x
   | None =>
-    Stdlib_Error.panic(
+    Stdlib_JsError.panic(
       switch message {
       | None => "Option.getOrThrow called for None value"
       | Some(message) => message

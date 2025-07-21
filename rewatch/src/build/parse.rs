@@ -22,7 +22,7 @@ pub fn generate_asts(
         .modules
         .par_iter()
         .map(|(module_name, module)| {
-            debug!("Generating AST for module: {}", module_name);
+            debug!("Generating AST for module: {module_name}");
             let package = build_state
                 .get_package(&module.package_name)
                 .expect("Package not found");
@@ -199,9 +199,9 @@ pub fn generate_asts(
                     // probably better to do this in a different function
                     // specific to compiling mlmaps
                     let compile_path = package.get_mlmap_compile_path();
-                    let mlmap_hash = helpers::compute_file_hash(&Path::new(&compile_path));
+                    let mlmap_hash = helpers::compute_file_hash(Path::new(&compile_path));
                     namespaces::compile_mlmap(package, module_name, &build_state.bsc_path);
-                    let mlmap_hash_after = helpers::compute_file_hash(&Path::new(&compile_path));
+                    let mlmap_hash_after = helpers::compute_file_hash(Path::new(&compile_path));
 
                     let suffix = package
                         .namespace
@@ -266,7 +266,7 @@ pub fn parser_args(
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
-    let bsc_flags = config::flatten_flags(&config.bsc_flags);
+    let bsc_flags = config::flatten_flags(&config.compiler_flags);
 
     let file = PathBuf::from("..").join("..").join(file);
 
@@ -348,7 +348,7 @@ fn generate_ast(
     };
     if let Ok((ast_path, _)) = &result {
         let _ = std::fs::copy(
-            Path::new(&build_path_abs).join(&ast_path),
+            Path::new(&build_path_abs).join(ast_path),
             package.get_ocaml_build_path().join(ast_path.file_name().unwrap()),
         );
     }
