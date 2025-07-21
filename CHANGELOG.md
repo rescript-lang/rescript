@@ -28,6 +28,10 @@
 
 - Add rust linting to CI with `clippy`. https://github.com/rescript-lang/rescript/pull/7675
 
+#### :bug: Bug fix
+
+- Fix `--create-sourcedirs` generation with for a single project. https://github.com/rescript-lang/rescript/pull/7671
+
 # 12.0.0-beta.2
 
 #### :boom: Breaking Change
