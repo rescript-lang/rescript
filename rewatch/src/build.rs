@@ -58,7 +58,7 @@ pub struct CompilerArgs {
 pub fn get_compiler_args(path: &Path) -> Result<String> {
     let filename = &helpers::get_abs_path(path);
     let package_root =
-        helpers::get_abs_path(&helpers::get_nearest_config(&path).expect("Couldn't find package root"));
+        helpers::get_abs_path(&helpers::get_nearest_config(path).expect("Couldn't find package root"));
     let workspace_root = get_workspace_root(&package_root).map(|p| helpers::get_abs_path(&p));
     let root_rescript_config =
         packages::read_config(&workspace_root.to_owned().unwrap_or(package_root.to_owned()))?;
@@ -77,7 +77,7 @@ pub fn get_compiler_args(path: &Path) -> Result<String> {
     let (ast_path, parser_args) = parser_args(
         &rescript_config,
         &root_rescript_config,
-        &relative_filename,
+        relative_filename,
         &workspace_root,
         workspace_root.as_ref().unwrap_or(&package_root),
         &contents,
@@ -94,7 +94,7 @@ pub fn get_compiler_args(path: &Path) -> Result<String> {
         &rescript_config,
         &root_rescript_config,
         &ast_path,
-        &relative_filename,
+        relative_filename,
         is_interface,
         has_interface,
         &package_root,
@@ -216,7 +216,7 @@ pub fn initialize_build(
 
     if show_progress {
         if snapshot_output {
-            println!("Cleaned {}/{}", diff_cleanup, total_cleanup)
+            println!("Cleaned {diff_cleanup}/{total_cleanup}")
         } else {
             println!(
                 "{}{} {}Cleaned {}/{} {:.2}s",
@@ -234,7 +234,7 @@ pub fn initialize_build(
 }
 
 fn format_step(current: usize, total: usize) -> console::StyledObject<String> {
-    style(format!("[{}/{}]", current, total)).bold().dim()
+    style(format!("[{current}/{total}]")).bold().dim()
 }
 
 #[derive(Debug, Clone)]
@@ -254,23 +254,23 @@ impl fmt::Display for IncrementalBuildError {
         match &self.kind {
             IncrementalBuildErrorKind::SourceFileParseError => {
                 if self.snapshot_output {
-                    write!(f, "{}  Could not parse Source Files", LINE_CLEAR,)
+                    write!(f, "{LINE_CLEAR}  Could not parse Source Files",)
                 } else {
-                    write!(f, "{}  {}Could not parse Source Files", LINE_CLEAR, CROSS,)
+                    write!(f, "{LINE_CLEAR}  {CROSS}Could not parse Source Files",)
                 }
             }
             IncrementalBuildErrorKind::CompileError(Some(e)) => {
                 if self.snapshot_output {
-                    write!(f, "{}  Failed to Compile. Error: {e}", LINE_CLEAR,)
+                    write!(f, "{LINE_CLEAR}  Failed to Compile. Error: {e}",)
                 } else {
-                    write!(f, "{}  {}Failed to Compile. Error: {e}", LINE_CLEAR, CROSS,)
+                    write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. Error: {e}",)
                 }
             }
             IncrementalBuildErrorKind::CompileError(None) => {
                 if self.snapshot_output {
-                    write!(f, "{}  Failed to Compile. See Errors Above", LINE_CLEAR,)
+                    write!(f, "{LINE_CLEAR}  Failed to Compile. See Errors Above",)
                 } else {
-                    write!(f, "{}  {}Failed to Compile. See Errors Above", LINE_CLEAR, CROSS,)
+                    write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. See Errors Above",)
                 }
             }
         }
@@ -312,7 +312,7 @@ pub fn incremental_build(
         Ok(_ast) => {
             if show_progress {
                 if snapshot_output {
-                    println!("Parsed {} source files", num_dirty_modules)
+                    println!("Parsed {num_dirty_modules} source files")
                 } else {
                     println!(
                         "{}{} {}Parsed {} source files in {:.2}s",
@@ -370,7 +370,7 @@ pub fn incremental_build(
     if log_enabled!(log::Level::Trace) {
         for (module_name, module) in build_state.modules.iter() {
             if module.compile_dirty {
-                println!("compile dirty: {}", module_name);
+                println!("compile dirty: {module_name}");
             }
         }
     };
@@ -411,7 +411,7 @@ pub fn incremental_build(
     if !compile_errors.is_empty() {
         if show_progress {
             if snapshot_output {
-                println!("Compiled {} modules", num_compiled_modules)
+                println!("Compiled {num_compiled_modules} modules")
             } else {
                 println!(
                     "{}{} {}Compiled {} modules in {:.2}s",
@@ -439,7 +439,7 @@ pub fn incremental_build(
     } else {
         if show_progress {
             if snapshot_output {
-                println!("Compiled {} modules", num_compiled_modules)
+                println!("Compiled {num_compiled_modules} modules")
             } else {
                 println!(
                     "{}{} {}Compiled {} modules in {:.2}s",
@@ -485,9 +485,8 @@ fn log_deprecations(build_state: &BuildState) {
 
 fn log_deprecated_config_field(package_name: &str, field_name: &str, new_field_name: &str) {
     let warning = format!(
-        "The field '{}' found in the package config of '{}' is deprecated and will be removed in a future version.\n\
-        Use '{}' instead.",
-        field_name, package_name, new_field_name
+        "The field '{field_name}' found in the package config of '{package_name}' is deprecated and will be removed in a future version.\n\
+        Use '{new_field_name}' instead."
     );
     println!("\n{}", style(warning).yellow());
 }

@@ -105,18 +105,17 @@ pub fn package_path(root: &Path, package_name: &str) -> PathBuf {
 pub fn get_abs_path(path: &Path) -> PathBuf {
     let abs_path_buf = PathBuf::from(path);
 
-    return abs_path_buf
+    abs_path_buf
         .to_lexical_absolute()
-        .expect("Could not canonicalize");
+        .expect("Could not canonicalize")
 }
 
 pub fn get_basename(path: &Path) -> String {
-    return path
-        .file_stem()
+    path.file_stem()
         .expect("Could not get basename")
         .to_str()
         .expect("Could not get basename 2")
-        .to_string();
+        .to_string()
 }
 
 /// Capitalizes the first character in s.
@@ -234,7 +233,7 @@ pub fn get_ast_path(source_file: &Path) -> PathBuf {
     source_path
         .parent()
         .unwrap()
-        .join(format!("{}{}", basename, extension))
+        .join(format!("{basename}{extension}"))
 }
 
 pub fn get_compiler_asset(
@@ -250,14 +249,14 @@ pub fn get_compiler_asset(
     let basename = file_path_to_compiler_asset_basename(source_file, namespace);
     package
         .get_ocaml_build_path()
-        .join(format!("{}.{}", basename, extension))
+        .join(format!("{basename}.{extension}"))
 }
 
 pub fn canonicalize_string_path(path: &str) -> Option<PathBuf> {
-    return Path::new(path)
+    Path::new(path)
         .canonicalize()
         .map(StrippedVerbatimPath::to_stripped_verbatim_path)
-        .ok();
+        .ok()
 }
 
 pub fn get_bs_compiler_asset(
@@ -277,7 +276,7 @@ pub fn get_bs_compiler_asset(
     package
         .get_build_path()
         .join(dir)
-        .join(format!("{}{}", basename, extension))
+        .join(format!("{basename}{extension}"))
         .to_str()
         .unwrap()
         .to_owned()
@@ -327,12 +326,11 @@ pub fn is_non_exotic_module_name(module_name: &str) -> bool {
 }
 
 pub fn get_extension(path: &Path) -> String {
-    return path
-        .extension()
+    path.extension()
         .expect("Could not get extension")
         .to_str()
         .expect("Could not get extension 2")
-        .to_string();
+        .to_string()
 }
 
 pub fn format_namespaced_module_name(module_name: &str) -> String {

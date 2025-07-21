@@ -1,0 +1,6 @@
+{
+    "name": "rescript",
+    "bs-dependencies": [
+        "@tests/gentype-react-example"
+    ]
+}

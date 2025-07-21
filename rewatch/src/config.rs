@@ -30,7 +30,7 @@ pub struct PackageSource {
 }
 
 impl PackageSource {
-    fn is_type_dev(&self) -> bool {
+    pub fn is_type_dev(&self) -> bool {
         match &self.type_ {
             Some(type_) => type_ == "dev",
             None => false,
@@ -159,10 +159,7 @@ impl PackageSpec {
     }
 
     pub fn is_common_js(&self) -> bool {
-        match self.module.as_str() {
-            "commonjs" => true,
-            _ => false,
-        }
+        self.module.as_str() == "commonjs"
     }
 
     pub fn get_suffix(&self) -> Option<String> {
@@ -434,7 +431,7 @@ impl Config {
                 Some(version) if version == 4 => {
                     vec!["-bs-jsx".to_string(), version.to_string()]
                 }
-                Some(version) => panic!("JSX version {} is unsupported", version),
+                Some(version) => panic!("JSX version {version} is unsupported"),
                 None => vec![],
             },
             None => vec![],
@@ -843,7 +840,7 @@ pub mod tests {
 
         let config = serde_json::from_str::<Config>(json).unwrap();
         assert_eq!(
-            config.get_suffix(&config.get_package_specs().first().unwrap()),
+            config.get_suffix(config.get_package_specs().first().unwrap()),
             ".mjs"
         );
     }
@@ -895,7 +892,7 @@ pub mod tests {
 
         let config = Config::new_from_json_string(json).expect("a valid json string");
         assert_eq!(config.dependencies, Some(vec!["@testrepo/main".to_string()]));
-        assert_eq!(config.get_deprecations().is_empty(), true);
+        assert!(config.get_deprecations().is_empty());
     }
 
     #[test]
@@ -945,7 +942,7 @@ pub mod tests {
 
         let config = Config::new_from_json_string(json).expect("a valid json string");
         assert_eq!(config.dev_dependencies, Some(vec!["@testrepo/main".to_string()]));
-        assert_eq!(config.get_deprecations().is_empty(), true);
+        assert!(config.get_deprecations().is_empty());
     }
 
     #[test]
@@ -970,7 +967,7 @@ pub mod tests {
 
         let config = Config::new_from_json_string(json).expect("a valid json string");
         if let Some(flags) = &config.compiler_flags {
-            if let Some(OneOrMore::Single(flag)) = flags.get(0) {
+            if let Some(OneOrMore::Single(flag)) = flags.first() {
                 assert_eq!(flag.as_str(), "-open ABC");
             } else {
                 dbg!(config.compiler_flags);
@@ -980,7 +977,7 @@ pub mod tests {
             dbg!(config.compiler_flags);
             unreachable!("Expected compiler flags to be Some");
         }
-        assert_eq!(config.get_deprecations().is_empty(), true);
+        assert!(config.get_deprecations().is_empty());
     }
 
     #[test]

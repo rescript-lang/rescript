@@ -45,8 +45,7 @@ fn get_dep_modules(
         .cloned()
         .collect();
 
-    return deps
-        .iter()
+    deps.iter()
         .map(|dep| {
             let dep_first = dep.split('.').next().unwrap();
             let dep_second = dep.split('.').nth(1);
@@ -94,7 +93,7 @@ fn get_dep_modules(
 
             true
         })
-        .collect::<AHashSet<String>>();
+        .collect::<AHashSet<String>>()
 }
 
 pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>) {
@@ -115,7 +114,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                         package.namespace.to_suffix(),
                         package.modules.as_ref().unwrap(),
                         all_mod,
-                        &package,
+                        package,
                         build_state,
                     );
 
@@ -127,7 +126,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                             package.namespace.to_suffix(),
                             package.modules.as_ref().unwrap(),
                             all_mod,
-                            &package,
+                            package,
                             build_state,
                         ))
                     }

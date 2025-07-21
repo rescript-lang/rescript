@@ -3,9 +3,9 @@
   "name": "playground",
   "type": "commonjs",
   "scripts": {
-    "clean": "rescript legacy clean",
+    "clean": "rescript clean",
     "test": "node ./playground_test.cjs",
-    "build": "rescript legacy clean && rescript legacy build && node scripts/generate_cmijs.mjs && rollup -c",
+    "build": "rescript clean && rescript legacy build && node scripts/generate_cmijs.mjs && rollup -c",
     "upload-bundle": "node scripts/upload_bundle.mjs"
   },
   "dependencies": {
