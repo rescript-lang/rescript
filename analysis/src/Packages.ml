@@ -138,15 +138,20 @@ let newBsPackage ~rootPath =
                [path]
            in
            let bind f x = Option.bind x f in
-           let bsc_flags =
-             Json.get "bsc-flags" config
-             |> bind Json.array |> Option.value ~default:[]
+           let compiler_flags =
+             match
+               ( Json.get "compiler-flags" config |> bind Json.array,
+                 Json.get "bsc-flags" config |> bind Json.array )
+             with
+             | Some compiler_flags, None | _, Some compiler_flags ->
+               compiler_flags
+             | None, None -> []
            in
            let no_pervasives =
-             bsc_flags
+             compiler_flags
              |> List.exists (fun s -> Json.string s = Some "-nopervasives")
            in
-           let opens_from_bsc_flags =
+           let opens_from_compiler_flags =
              List.fold_left
                (fun opens item ->
                  match item |> Json.string with
@@ -158,7 +163,7 @@ let newBsPackage ~rootPath =
                      let path = name |> String.split_on_char '.' in
                      path :: opens
                    | _ -> opens))
-               [] bsc_flags
+               [] compiler_flags
            in
            let opens_from_pervasives =
              if no_pervasives then []
@@ -166,7 +171,7 @@ let newBsPackage ~rootPath =
            in
            let opens =
              opens_from_pervasives @ opens_from_namespace
-             |> List.rev_append opens_from_bsc_flags
+             |> List.rev_append opens_from_compiler_flags
              |> List.map (fun path -> path @ ["place holder"])
            in
            {
