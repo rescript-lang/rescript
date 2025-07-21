@@ -630,16 +630,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "notify-debouncer-mini"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e23e9fa24f094b143c1eb61f90ac6457de87be6987bc70746e0179f7dbc9007b"
-dependencies = [
- "crossbeam-channel",
- "notify",
-]
-
-[[package]]
 name = "ntapi"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -794,12 +784,10 @@ dependencies = [
  "indicatif",
  "log",
  "notify",
- "notify-debouncer-mini",
  "num_cpus",
  "rayon",
  "regex",
  "serde",
- "serde_derive",
  "serde_json",
  "sysinfo",
  "tempfile",
