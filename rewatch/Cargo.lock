@@ -777,7 +777,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
-name = "rewatch"
+name = "rescript"
 version = "12.0.0-beta.3"
 dependencies = [
  "ahash",

@@ -3,7 +3,7 @@ use clap::Parser;
 use log::LevelFilter;
 use std::{io::Write, path::Path};
 
-use rewatch::{build, cli, cmd, format, lock, watcher};
+use rescript::{build, cli, cmd, format, lock, watcher};
 
 fn main() -> Result<()> {
     let args = cli::Cli::parse();
