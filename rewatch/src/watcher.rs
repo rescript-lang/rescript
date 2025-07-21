@@ -146,16 +146,20 @@ async fn async_watch(
                     ) => {
                         // if we are going to do a full compile, we don't need to bother marking
                         // files dirty because we do a full scan anyway
+                        log::debug!("received {:?} while needs_compile_type was {needs_compile_type:?} -> full compile", event.kind);
                         needs_compile_type = CompileType::Full;
                     }
 
                     (
                         CompileType::None | CompileType::Incremental,
                         // when we have a data change event, we can do an incremental compile
-                        EventKind::Modify(ModifyKind::Data(_)),
+                        EventKind::Modify(ModifyKind::Data(_)) |
+                        // windows sends ModifyKind::Any on file content changes
+                        EventKind::Modify(ModifyKind::Any),
                     ) => {
                         // if we are going to compile incrementally, we need to mark the exact files
                         // dirty
+                        log::debug!("received {:?} while needs_compile_type was {needs_compile_type:?} -> incremental compile", event.kind);
                         if let Ok(canonicalized_path_buf) = path_buf
                             .canonicalize()
                             .map(StrippedVerbatimPath::to_stripped_verbatim_path)
@@ -208,7 +212,6 @@ async fn async_watch(
                         // these are not relevant events for compilation
                         EventKind::Access(_)
                         | EventKind::Other
-                        | EventKind::Modify(ModifyKind::Any)
                         | EventKind::Modify(ModifyKind::Metadata(_))
                         | EventKind::Modify(ModifyKind::Other),
                     ) => (),
@@ -217,6 +220,11 @@ async fn async_watch(
                 }
             }
         }
+
+        if needs_compile_type != CompileType::None {
+            log::debug!("doing {needs_compile_type:?}");
+        }
+
         match needs_compile_type {
             CompileType::Incremental => {
                 let timing_total = Instant::now();
@@ -316,6 +324,9 @@ pub fn start(
 
         let mut watcher = RecommendedWatcher::new(move |res| producer.push(res), Config::default())
             .expect("Could not create watcher");
+
+        log::debug!("watching {folder}");
+
         watcher
             .watch(folder.as_ref(), RecursiveMode::Recursive)
             .expect("Could not start watcher");
