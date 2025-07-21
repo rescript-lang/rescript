@@ -32,3 +32,23 @@ let _ = [
   // comment 2
   b, c
 ]
+
+let _ = [
+  // comment 0
+  ...xs,
+  // comment 1
+  a,
+  // comment 2
+  b, c
+]
+
+let _ = [
+  // comment 0
+  ...xs,
+  // comment 1
+  a,
+  // comment 2
+  ...ys,
+  // comment 3
+  b, c
+]

@@ -4035,15 +4035,30 @@ and print_binary_expression ~state (expr : Parsetree.expression) cmt_tbl =
 and print_belt_array_concat_apply ~state sub_lists cmt_tbl =
   let make_spread_doc comma_before_spread = function
     | Some expr ->
+      (* Extract leading comments before dotdotdot *)
+      let leading_comments_doc =
+        print_leading_comments Doc.nil cmt_tbl.CommentTable.leading
+          expr.Parsetree.pexp_loc
+      in
+      (* Print expression without leading comments (they're already extracted) *)
+      let expr_doc =
+        let doc = print_expression ~state expr cmt_tbl in
+        match Parens.expr expr with
+        | Parens.Parenthesized -> add_parens doc
+        | Braced braces -> print_braces doc expr braces
+        | Nothing -> doc
+      in
+      (* Print trailing comments with the expression *)
+      let expr_with_trailing_comments =
+        print_trailing_comments expr_doc cmt_tbl.CommentTable.trailing
+          expr.Parsetree.pexp_loc
+      in
       Doc.concat
         [
           comma_before_spread;
+          leading_comments_doc;
           Doc.dotdotdot;
-          (let doc = print_expression_with_comments ~state expr cmt_tbl in
-           match Parens.expr expr with
-           | Parens.Parenthesized -> add_parens doc
-           | Braced braces -> print_braces doc expr braces
-           | Nothing -> doc);
+          expr_with_trailing_comments;
         ]
     | None -> Doc.nil
   in
