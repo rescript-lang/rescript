@@ -9,7 +9,7 @@ cd $(dirname $0)
 if [ -n "$1" ]; then
   REWATCH_EXECUTABLE="$1"
 else
-  REWATCH_EXECUTABLE="../target/release/rewatch"
+  REWATCH_EXECUTABLE="../target/release/rescript"
   eval $(node ./get_bin_paths.js)
 fi
 
