@@ -582,6 +582,9 @@ and module_expr i ppf x =
   | Pmod_unpack e ->
     line i ppf "Pmod_unpack\n";
     expression i ppf e
+  | Pmod_await me ->
+    line i ppf "Pmod_await\n";
+    module_expr i ppf me
   | Pmod_extension (s, arg) ->
     line i ppf "Pmod_extension \"%s\"\n" s.txt;
     payload i ppf arg
