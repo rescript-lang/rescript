@@ -1311,15 +1311,86 @@ module Migrate = struct
   *)
 
   module MapperUtils = struct
-    let get_template_args_to_insert mapper template_args =
+    let get_template_args_to_insert mapper template_args source_args =
+      let labelled_args_that_will_be_mapped = ref [] in
+      let mapped_template_args =
+        template_args
+        |> List.filter_map (fun (label, arg) ->
+               match (label, arg) with
+               | ( Asttypes.Nolabel,
+                   {
+                     Parsetree.pexp_desc =
+                       Pexp_extension
+                         ( {txt = "insert.labelledArgument"},
+                           PStr
+                             [
+                               {
+                                 pstr_desc =
+                                   Pstr_eval
+                                     ( {
+                                         pexp_desc =
+                                           Pexp_constant
+                                             (Pconst_string (arg_name, _));
+                                       },
+                                       _ );
+                               };
+                             ] );
+                   } ) -> (
+                 (* Map unlabelled args *)
+                 let arg_in_source_args =
+                   source_args
+                   |> List.find_map (fun (label, arg) ->
+                          match label with
+                          | Asttypes.Labelled {txt = label}
+                          | Optional {txt = label} ->
+                            if label = arg_name then Some arg else None
+                          | _ -> None)
+                 in
+                 match arg_in_source_args with
+                 | None -> None
+                 | Some arg ->
+                   labelled_args_that_will_be_mapped :=
+                     arg_name :: !labelled_args_that_will_be_mapped;
+                   Some (Asttypes.Nolabel, arg))
+               | ( _,
+                   {
+                     pexp_desc =
+                       Pexp_extension ({txt = "insert.labelledArgument"}, _);
+                   } ) ->
+                 (* Do not add any other instance of insert.labelledArgument. *)
+                 None
+               | _, {pexp_desc = Pexp_construct ({txt = Lident "()"}, None)} ->
+                 None
+               | _ -> Some (label, mapper.Ast_mapper.expr mapper arg))
+      in
+      (mapped_template_args, !labelled_args_that_will_be_mapped)
+
+    let build_labelled_args_map template_args =
       template_args
       |> List.filter_map (fun (label, arg) ->
-             match arg with
-             | {Parsetree.pexp_desc = Pexp_extension ({txt}, _)}
-               when String.starts_with txt ~prefix:"insert." ->
-               None
-             | {pexp_desc = Pexp_construct ({txt = Lident "()"}, None)} -> None
-             | _ -> Some (label, mapper.Ast_mapper.expr mapper arg))
+             match (label, arg) with
+             | ( (Asttypes.Labelled {txt = label} | Optional {txt = label}),
+                 {
+                   Parsetree.pexp_desc =
+                     Pexp_extension
+                       ( {txt = "insert.labelledArgument"},
+                         PStr
+                           [
+                             {
+                               pstr_desc =
+                                 Pstr_eval
+                                   ( {
+                                       pexp_desc =
+                                         Pexp_constant
+                                           (Pconst_string (arg_name, _));
+                                     },
+                                     _ );
+                             };
+                           ] );
+                 } ) ->
+               Some (arg_name, label)
+             | _ -> None)
+      |> StringMap.of_list
   end
 
   let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
@@ -1380,36 +1451,11 @@ module Migrate = struct
                         };
                   } ->
                 let labelled_args_map =
-                  template_args
-                  |> List.filter_map (fun (label, arg) ->
-                         match (label, arg) with
-                         | ( ( Asttypes.Labelled {txt = label}
-                             | Optional {txt = label} ),
-                             {
-                               Parsetree.pexp_desc =
-                                 Pexp_extension
-                                   ( {txt = "insert.labelledArgument"},
-                                     PStr
-                                       [
-                                         {
-                                           pstr_desc =
-                                             Pstr_eval
-                                               ( {
-                                                   pexp_desc =
-                                                     Pexp_constant
-                                                       (Pconst_string
-                                                          (arg_name, _));
-                                                 },
-                                                 _ );
-                                         };
-                                       ] );
-                             } ) ->
-                           Some (arg_name, label)
-                         | _ -> None)
-                  |> StringMap.of_list
+                  MapperUtils.build_labelled_args_map template_args
                 in
-                let template_args_to_insert =
+                let template_args_to_insert, will_be_mapped =
                   MapperUtils.get_template_args_to_insert mapper template_args
+                    source_args
                 in
                 {
                   exp with
@@ -1419,18 +1465,24 @@ module Migrate = struct
                         funct = template_funct;
                         args =
                           (source_args
-                          |> List.map (fun (label, arg) ->
+                          |> List.filter_map (fun (label, arg) ->
                                  match label with
                                  | Asttypes.Labelled {loc; txt = label}
-                                 | Asttypes.Optional {loc; txt = label}
+                                 | Optional {loc; txt = label}
                                    when StringMap.mem label labelled_args_map ->
+                                   (* Map labelled args that has just changed name. *)
                                    let mapped_label_name =
                                      StringMap.find label labelled_args_map
                                    in
-                                   ( Asttypes.Labelled
-                                       {loc; txt = mapped_label_name},
-                                     arg )
-                                 | label -> (label, arg)))
+                                   Some
+                                     ( Asttypes.Labelled
+                                         {loc; txt = mapped_label_name},
+                                       arg )
+                                 | (Labelled {txt} | Optional {txt})
+                                   when List.mem txt will_be_mapped ->
+                                   (* These have been mapped already, do not add. *)
+                                   None
+                                 | label -> Some (label, arg)))
                           @ template_args_to_insert;
                         partial;
                         transformed_jsx;
@@ -1471,8 +1523,9 @@ module Migrate = struct
                           transformed_jsx;
                         };
                   } ->
-                let template_args_to_insert =
+                let template_args_to_insert, _ =
                   MapperUtils.get_template_args_to_insert mapper template_args
+                    []
                 in
                 if List.is_empty template_args_to_insert then
                   {

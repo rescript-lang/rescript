@@ -78,20 +78,20 @@ let everyi2 = Js.Array2.everyi([0, 1, 2], (x, i) => x == i)
 let filter1 = [1, 2, 3, 4]->Js.Array2.filter(x => x > 2)
 let filter2 = Js.Array2.filter([1, 2, 3, 4], x => x > 2)
 
-let filteri1 = [0, 1, 2, 3]->Js.Array2.filteri((x, i) => i > 1)
-let filteri2 = Js.Array2.filteri([0, 1, 2, 3], (x, i) => i > 1)
+let filteri1 = [0, 1, 2, 3]->Js.Array2.filteri((_x, i) => i > 1)
+let filteri2 = Js.Array2.filteri([0, 1, 2, 3], (_x, i) => i > 1)
 
 let find1 = [1, 2, 3, 4]->Js.Array2.find(x => x > 2)
 let find2 = Js.Array2.find([1, 2, 3, 4], x => x > 2)
 
-let findi1 = [0, 1, 2, 3]->Js.Array2.findi((x, i) => i > 1)
-let findi2 = Js.Array2.findi([0, 1, 2, 3], (x, i) => i > 1)
+let findi1 = [0, 1, 2, 3]->Js.Array2.findi((_x, i) => i > 1)
+let findi2 = Js.Array2.findi([0, 1, 2, 3], (_x, i) => i > 1)
 
 let findIndex1 = [1, 2, 3, 4]->Js.Array2.findIndex(x => x > 2)
 let findIndex2 = Js.Array2.findIndex([1, 2, 3, 4], x => x > 2)
 
-let findIndexi1 = [0, 1, 2, 3]->Js.Array2.findIndexi((x, i) => i > 1)
-let findIndexi2 = Js.Array2.findIndexi([0, 1, 2, 3], (x, i) => i > 1)
+let findIndexi1 = [0, 1, 2, 3]->Js.Array2.findIndexi((_x, i) => i > 1)
+let findIndexi2 = Js.Array2.findIndexi([0, 1, 2, 3], (_x, i) => i > 1)
 
 let forEach1 = [1, 2, 3]->Js.Array2.forEach(x => ignore(x))
 let forEach2 = Js.Array2.forEach([1, 2, 3], x => ignore(x))
@@ -108,8 +108,8 @@ let mapi2 = Js.Array2.mapi([1, 2, 3], (x, i) => x + i)
 let some1 = [1, 2, 3, 4]->Js.Array2.some(x => x > 3)
 let some2 = Js.Array2.some([1, 2, 3, 4], x => x > 3)
 
-let somei1 = [0, 1, 2, 3]->Js.Array2.somei((x, i) => i > 2)
-let somei2 = Js.Array2.somei([0, 1, 2, 3], (x, i) => i > 2)
+let somei1 = [0, 1, 2, 3]->Js.Array2.somei((_x, i) => i > 2)
+let somei2 = Js.Array2.somei([0, 1, 2, 3], (_x, i) => i > 2)
 
 let unsafeGet1 = [1, 2, 3]->Js.Array2.unsafe_get(1)
 let unsafeGet2 = Js.Array2.unsafe_get([1, 2, 3], 1)
