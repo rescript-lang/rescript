@@ -1,3 +1,7 @@
+@@config({
+  flags: ["-bs-jsx", "4", "-bs-jsx-module", "GenericJsx"],
+})
+
 // <div
 //      ^com
 
