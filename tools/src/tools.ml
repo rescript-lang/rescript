@@ -1625,7 +1625,7 @@ module Migrate = struct
                   MapperUtils.get_template_args_to_insert mapper template_args
                     []
                 in
-                if List.is_empty template_args_to_insert then
+                if Ext_list.is_empty template_args_to_insert then
                   {
                     exp with
                     pexp_desc =
