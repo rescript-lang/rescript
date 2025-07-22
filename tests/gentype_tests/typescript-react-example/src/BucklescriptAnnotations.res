@@ -11,11 +11,8 @@ type someMutableFields = {
 
 @genType
 type someMethods = {
-  @meth
   "send": string => unit,
-  @meth
   "on": (string, int => unit) => unit,
-  @meth
   "threeargs": (int, string, int) => string,
   "twoArgs": (int, string) => int,
 }

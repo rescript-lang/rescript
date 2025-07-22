@@ -51,85 +51,85 @@
 
 
   Syntax error!
-  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:25:1
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:24:1
 
-  23 │   @meth
-  24 │   "send": string =>
-  25 │ }
-  26 │ 
-  27 │ type state = {
-
-  I'm missing a type here
-
-
-  Syntax error!
-  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:28:10
-
-  26 │ 
-  27 │ type state = {
-  28 │   "age": ,
-  29 │   "name": string
-  30 │ }
+  22 │ type state = {
+  23 │   "send": string =>
+  24 │ }
+  25 │ 
+  26 │ type state = {
 
   I'm missing a type here
 
 
   Syntax error!
-  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:33:15
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:27:10
 
-  31 │ 
-  32 │ type state = {
-  33 │   @set "age": ,
-  34 │   "name": string
-  35 │ }
-
-  I'm missing a type here
-
-
-  Syntax error!
-  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:37:25
-
-  35 │ }
-  36 │ 
-  37 │ type state = {.. "age": }
-  38 │ type state = {
-  39 │   ..
+  25 │ 
+  26 │ type state = {
+  27 │   "age": ,
+  28 │   "name": string
+  29 │ }
 
   I'm missing a type here
 
 
   Syntax error!
-  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:40:8-41:8
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:32:15
 
-  38 │ type state = {
-  39 │   ..
-  40 │   "age" 
-  41 │   "name": string
-  42 │ }
-  43 │ 
+  30 │ 
+  31 │ type state = {
+  32 │   @set "age": ,
+  33 │   "name": string
+  34 │ }
+
+  I'm missing a type here
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:36:25
+
+  34 │ }
+  35 │ 
+  36 │ type state = {.. "age": }
+  37 │ type state = {
+  38 │   ..
+
+  I'm missing a type here
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:39:8-40:8
+
+  37 │ type state = {
+  38 │   ..
+  39 │   "age" 
+  40 │   "name": string
+  41 │ }
+  42 │ 
 
   Did you forget a `:` here? It signals the start of a type
 
 
   Syntax error!
-  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:46:3-11
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:45:3-11
 
-  44 │ type websocket = {
-  45 │   "id":
-  46 │   "channel": channelTyp
-  47 │ }
-  48 │ 
+  43 │ type websocket = {
+  44 │   "id":
+  45 │   "channel": channelTyp
+  46 │ }
+  47 │ 
 
   I'm missing a type here
 
 
   Syntax error!
-  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:50:7-51:0
+  syntax_tests/data/parsing/errors/typexpr/bsObjSugar.res:49:7-50:0
 
-  48 │ 
-  49 │ type websocket = {
-  50 │   "id"
-  51 │ 
+  47 │ 
+  48 │ type websocket = {
+  49 │   "id"
+  50 │ 
 
   Did you forget a `:` here? It signals the start of a type
 
@@ -141,8 +141,7 @@ type nonrec state =
   < url: string  ;protocols: [%rescript.typehole ]  ;websocket: Websocket.t  
     > 
 type nonrec state = < url: string  ;protocols: [%rescript.typehole ]   > 
-type nonrec state =
-  < send: string -> [%rescript.typehole ] (a:1) [@meth ]  > 
+type nonrec state = < send: string -> [%rescript.typehole ] (a:1)   > 
 type nonrec state = < age: [%rescript.typehole ]  ;name: string   > 
 type nonrec state = < age: [%rescript.typehole ] [@set ] ;name: string   > 
 type nonrec state = < age: [%rescript.typehole ]   ;.. > 
