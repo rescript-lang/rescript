@@ -1303,6 +1303,25 @@ module Migrate = struct
   It _cannot_ (among much else) handle:
   - Changing position of unlabelled arguments (would be problematic with pipes etc)
   *)
+
+  (* 
+  TODO:
+  - Migrate unlabelled arguments (Array.reduceXxx)
+  - Migrate type usage (Js.Array2.t -> array, etc)
+  *)
+
+  module MapperUtils = struct
+    let get_template_args_to_insert mapper template_args =
+      template_args
+      |> List.filter_map (fun (label, arg) ->
+             match arg with
+             | {Parsetree.pexp_desc = Pexp_extension ({txt}, _)}
+               when String.starts_with txt ~prefix:"insert." ->
+               None
+             | {pexp_desc = Pexp_construct ({txt = Lident "()"}, None)} -> None
+             | _ -> Some (label, mapper.Ast_mapper.expr mapper arg))
+  end
+
   let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
     let deprecated_function_calls =
       deprecated_used
@@ -1320,6 +1339,14 @@ module Migrate = struct
     let mapper =
       {
         Ast_mapper.default_mapper with
+        extension =
+          (fun mapper ext ->
+            (* Map back %todo_ to %todo, since using %todo directly would result in errors where we don't want them. *)
+            match ext with
+            | ({txt = "todo_"} as e), payload ->
+              Ast_mapper.default_mapper.extension mapper
+                ({e with txt = "todo"}, payload)
+            | e -> Ast_mapper.default_mapper.extension mapper e);
         expr =
           (fun mapper exp ->
             match exp with
@@ -1381,6 +1408,9 @@ module Migrate = struct
                          | _ -> None)
                   |> StringMap.of_list
                 in
+                let template_args_to_insert =
+                  MapperUtils.get_template_args_to_insert mapper template_args
+                in
                 {
                   exp with
                   pexp_desc =
@@ -1388,7 +1418,7 @@ module Migrate = struct
                       {
                         funct = template_funct;
                         args =
-                          source_args
+                          (source_args
                           |> List.map (fun (label, arg) ->
                                  match label with
                                  | Asttypes.Labelled {loc; txt = label}
@@ -1400,7 +1430,8 @@ module Migrate = struct
                                    ( Asttypes.Labelled
                                        {loc; txt = mapped_label_name},
                                      arg )
-                                 | label -> (label, arg));
+                                 | label -> (label, arg)))
+                          @ template_args_to_insert;
                         partial;
                         transformed_jsx;
                       };
@@ -1433,19 +1464,46 @@ module Migrate = struct
                   {
                     pexp_desc =
                       Pexp_apply
-                        {funct = template_funct; partial; transformed_jsx};
+                        {
+                          funct = template_funct;
+                          args = template_args;
+                          partial;
+                          transformed_jsx;
+                        };
                   } ->
-                {
-                  exp with
-                  pexp_desc =
-                    Pexp_apply
-                      {
-                        funct;
-                        args = [lhs; (Nolabel, template_funct)];
-                        partial;
-                        transformed_jsx;
-                      };
-                }
+                let template_args_to_insert =
+                  MapperUtils.get_template_args_to_insert mapper template_args
+                in
+                if List.is_empty template_args_to_insert then
+                  {
+                    exp with
+                    pexp_desc =
+                      Pexp_apply
+                        {
+                          funct;
+                          args = [lhs; (Nolabel, template_funct)];
+                          partial;
+                          transformed_jsx;
+                        };
+                  }
+                else
+                  {
+                    exp with
+                    pexp_desc =
+                      Pexp_apply
+                        {
+                          funct;
+                          args =
+                            [
+                              lhs;
+                              ( Nolabel,
+                                Ast_helper.Exp.apply template_funct
+                                  template_args_to_insert );
+                            ];
+                          partial;
+                          transformed_jsx;
+                        };
+                  }
               | _ ->
                 (* TODO: More elaborate warnings etc *)
                 (* Invalid config. *)

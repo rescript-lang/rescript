@@ -80,14 +80,56 @@ someArray->Array.length == 2
 @get
 external length: array<'a> => int = "length"
 
-// TODO: Docs
+/**
+`copyAllWithin(array, ~target)` copies from the first element in the given array to the designated `target` position, returning the resulting array.
+
+Beware this will *mutate* the array.
+
+See [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.
+
+## Examples
+
+```rescript
+let arr = [100, 101, 102, 103, 104]
+arr->Array.copyAllWithin(~target=2) == [100, 101, 100, 101, 102]
+arr == [100, 101, 100, 101, 102]
+```
+*/
 @send external copyAllWithin: (array<'a>, ~target: int) => array<'a> = "copyWithin"
 
-// TODO: Docs
+/**
+`copyWithinToEnd(array, ~target, ~start)` copies starting at element `start` in the given array to the designated `target` position, returning the resulting array.
+
+Beware this will *mutate* the array.
+
+See [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.
+
+## Examples
+
+```rescript
+let arr = [100, 101, 102, 103, 104]
+arr->Array.copyWithinToEnd(~target=0, ~start=2) == [102, 103, 104, 103, 104]
+arr == [102, 103, 104, 103, 104]
+```
+*/
 @send
 external copyWithinToEnd: (array<'a>, ~target: int, ~start: int) => array<'a> = "copyWithin"
 
-// TODO: Docs
+/**
+`copyWithin(array, ~target, ~start, ~end)` copies starting at element `start` in the given array up to but not including `end` to the designated `target` position, returning the resulting array.
+
+Beware this will *mutate* the array.
+
+See [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.
+
+## Examples
+
+```rescript
+let arr = [100, 101, 102, 103, 104, 105]
+arr->Array.copyWithin(~target=1, ~start=2, ~end=5) == [100, 102, 103, 104, 104, 105]
+arr == [100, 102, 103, 104, 104, 105]
+```
+*/
 @send
 external copyWithin: (array<'a>, ~target: int, ~start: int, ~end: int) => array<'a> = "copyWithin"
 
