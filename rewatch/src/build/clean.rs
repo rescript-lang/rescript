@@ -67,7 +67,7 @@ fn clean_source_files(build_state: &BuildState, root_package: &packages::Package
             SourceType::SourceFile(source_file) => {
                 let package = build_state.packages.get(&module.package_name).unwrap_or_else(|| {
                     panic!(
-                        "Could not find package for \"{}\" in build state",
+                        "Could not find package for \"{}\" in build state.\nMaybe you forgot to add the relative path to your root rescript.config.json file?",
                         &module.package_name
                     )
                 });

@@ -244,8 +244,13 @@ pub fn read_config(package_dir: &Path) -> Result<config::Config> {
 
     if Path::new(&rescript_json_path).exists() {
         config::Config::new(&rescript_json_path)
-    } else {
+    } else if Path::new(&bsconfig_json_path).exists() {
         config::Config::new(&bsconfig_json_path)
+    } else {
+        Err(anyhow!(
+            "Could not find rescript.json or bsconfig.json in package directory: {}",
+            package_dir.to_string_lossy()
+        ))
     }
 }
 
