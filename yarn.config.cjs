@@ -18,7 +18,10 @@ async function enforceCompilerMeta({ Yarn }) {
 
   for (const workspace of Yarn.workspaces()) {
     const { ident } = workspace.pkg;
-    if (ident === "rescript" || ident.startsWith("@rescript/")) {
+    if (
+      workspace.cwd.startsWith("packages") &&
+      (ident === "rescript" || ident.startsWith("@rescript/"))
+    ) {
       workspace.set("version", EXPECTED_VERSION);
       workspace.set("homepage", "https://rescript-lang.org");
       workspace.set("bugs", "https://github.com/rescript-lang/rescript/issues");
@@ -83,7 +86,9 @@ async function enforceCompilerMeta({ Yarn }) {
     );
     await execPromise("cargo check", { cwd: "rewatch" });
   } else {
-    const rewatchVersionMatch = rewatchCargoContent.match(rewatchVersionPattern);
+    const rewatchVersionMatch = rewatchCargoContent.match(
+      rewatchVersionPattern,
+    );
     const foundRewatchVersion = rewatchVersionMatch?.groups?.version;
     if (foundRewatchVersion !== EXPECTED_VERSION) {
       Yarn.workspace().error(
