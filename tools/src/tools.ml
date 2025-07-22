@@ -1468,7 +1468,9 @@ module Migrate = struct
                  } ) ->
                Some (arg_name, label)
              | _ -> None)
-      |> StringMap.of_list
+      |> List.fold_left
+           (fun map (k, v) -> StringMap.add k v map)
+           StringMap.empty
 
     let apply_migration_template ?(is_pipe = false) mapper template_args
         source_args =
