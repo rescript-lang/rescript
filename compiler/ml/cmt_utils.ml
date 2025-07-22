@@ -1,4 +1,4 @@
-type deprecated_used_context = FunctionCall
+type deprecated_used_context = FunctionCall | Reference
 
 type deprecated_used = {
   source_loc: Location.t;

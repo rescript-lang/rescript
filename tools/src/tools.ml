@@ -1486,6 +1486,7 @@ module Migrate = struct
   end
 
   let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
+    (* Function calls *)
     let deprecated_function_calls =
       deprecated_used
       |> List.filter (fun (d : Cmt_utils.deprecated_used) ->
@@ -1499,6 +1500,22 @@ module Migrate = struct
     deprecated_function_calls
     |> List.iter (fun ({Cmt_utils.source_loc} as d) ->
            Hashtbl.replace loc_to_deprecated_fn_call source_loc d);
+
+    (* References *)
+    let deprecated_references =
+      deprecated_used
+      |> List.filter (fun (d : Cmt_utils.deprecated_used) ->
+             match d.context with
+             | Some Reference -> true
+             | _ -> false)
+    in
+    let loc_to_deprecated_reference =
+      Hashtbl.create (List.length deprecated_references)
+    in
+    deprecated_references
+    |> List.iter (fun ({Cmt_utils.source_loc} as d) ->
+           Hashtbl.replace loc_to_deprecated_reference source_loc d);
+
     let mapper =
       {
         Ast_mapper.default_mapper with
@@ -1513,6 +1530,16 @@ module Migrate = struct
         expr =
           (fun mapper exp ->
             match exp with
+            | {pexp_desc = Pexp_ident {loc}}
+              when Hashtbl.mem loc_to_deprecated_reference loc -> (
+              (* Map references to their migration template. *)
+              let deprecated_info =
+                Hashtbl.find loc_to_deprecated_reference loc
+              in
+              Hashtbl.remove loc_to_deprecated_reference loc;
+              match deprecated_info.migration_template with
+              | None -> exp
+              | Some e -> e)
             | {
              pexp_desc =
                Pexp_apply {funct = {pexp_loc = fn_loc}; args = source_args};
