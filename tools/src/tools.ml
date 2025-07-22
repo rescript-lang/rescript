@@ -1414,7 +1414,8 @@ module Migrate = struct
                  };
             }
               when Hashtbl.mem loc_to_deprecated_fn_call fn_loc -> (
-              (* Pipe with no arguments, [1, 2, 3]->someDeprecated *)
+              (* Pipe with no arguments, [1, 2, 3]->someDeprecated 
+              This is the only pipe we need to handle, because the argument one is handled by the transform above. *)
               let deprecated_info =
                 Hashtbl.find loc_to_deprecated_fn_call fn_loc
               in
