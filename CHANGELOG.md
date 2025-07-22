@@ -19,6 +19,7 @@
 #### :rocket: New Feature
 
 - Add optional `message` argument to `Result.getOrThrow` and improve default error message. https://github.com/rescript-lang/rescript/pull/7630
+- Add `RegExp.escape` binding. https://github.com/rescript-lang/rescript/pull/7695
 
 #### :nail_care: Polish
 
