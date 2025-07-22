@@ -678,7 +678,7 @@ Js.Array2.indexOfFrom(["a", "b", "a", "c", "a"], "b", ~from=2) == -1
 */
 @deprecated({
   reason: "Use `Array.indexOfFrom` instead.",
-  migrate: Array.indexOfFrom()
+  migrate: Array.indexOfFrom(%insert.labelledArgument("from"))
 })
 @send
 external indexOfFrom: (t<'a>, 'a, ~from: int) => int = "indexOf"
@@ -742,7 +742,7 @@ Js.Array2.lastIndexOfFrom(["a", "b", "a", "c", "a", "d"], "c", ~from=2) == -1
 */
 @deprecated({
   reason: "Use `Array.lastIndexOfFrom` instead.",
-  migrate: Array.lastIndexOfFrom()
+  migrate: Array.lastIndexOfFrom(%insert.labelledArgument("from"))
 })
 @send
 external lastIndexOfFrom: (t<'a>, 'a, ~from: int) => int = "lastIndexOf"
