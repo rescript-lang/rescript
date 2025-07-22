@@ -65,11 +65,7 @@ let extractExamples = async () => {
   let docFiles = files->Array.filter(f =>
     switch f {
     // Ignore Js modules and RescriptTools for now
-    // Avoid Stdlib modules showing up as both "Stdlib_X" and "Stdlib.X"
-    | f
-      if f->String.startsWith("Js") ||
-      f->String.startsWith("RescriptTools") ||
-      f->String.startsWith("Stdlib_") => false
+    | f if f->String.startsWith("Js") || f->String.startsWith("RescriptTools") => false
     | f if f->String.endsWith(".resi") => true
     | f if f->String.endsWith(".res") && !(files->Array.includes(f ++ "i")) => true
     | _ => false

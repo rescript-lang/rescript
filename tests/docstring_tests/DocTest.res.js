@@ -68,7 +68,7 @@ let batchSize = Nodeos.cpus().length;
 async function extractExamples() {
   let files = Nodefs.readdirSync("runtime");
   let docFiles = files.filter(f => {
-    if (f.startsWith("Js") || f.startsWith("RescriptTools") || f.startsWith("Stdlib_")) {
+    if (f.startsWith("Js") || f.startsWith("RescriptTools")) {
       return false;
     } else if (f.endsWith(".resi")) {
       return true;
