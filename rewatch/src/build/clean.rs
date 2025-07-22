@@ -65,7 +65,12 @@ fn clean_source_files(build_state: &BuildState, root_package: &packages::Package
         .values()
         .filter_map(|module| match &module.source_type {
             SourceType::SourceFile(source_file) => {
-                let package = build_state.packages.get(&module.package_name).unwrap();
+                let package = build_state.packages.get(&module.package_name).unwrap_or_else(|| {
+                    panic!(
+                        "Could not find package for \"{}\" in build state",
+                        &module.package_name
+                    )
+                });
                 Some(
                     root_package
                         .config

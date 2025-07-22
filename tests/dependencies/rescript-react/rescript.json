@@ -1,5 +1,5 @@
 {
-  "name": "@rescript/react",
+  "name": "@tests/rescript-react",
   "jsx": {
     "version": 4,
     "mode": "classic"
