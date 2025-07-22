@@ -4,7 +4,7 @@
     "suppress": [],
     "unsuppress": []
   },
-  "name": "arnold",
+  "name": "@tests/reanalyze-termination",
   "bs-dependencies": [],
   "sources": [
     {

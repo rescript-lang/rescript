@@ -8,5 +8,6 @@
         "@tests/reanalyze-deadcode",
         "@tests/incremental-typechecking",
         "@tests/reanalyze-termination"
-    ]
+    ],
+    "jsx": { "version": 4 }
 }
