@@ -14,3 +14,13 @@ external slice: (string, ~from: int, ~to_: int) => string = "slice"
   migrate: Array.shift(),
 })
 external shift: array<'a> => option<'a> = "shift"
+
+module Constants: {
+  let otherThing: array<int>
+}
+
+@deprecated({
+  reason: "Use `otherThing` instead.",
+  migrate: DeprecatedStuff.Constants.otherThing,
+})
+let deprecatedThing: array<int>

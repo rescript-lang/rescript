@@ -2263,7 +2263,12 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
   match sexp.pexp_desc with
   | Pexp_ident lid ->
     let path, desc =
-      Typetexp.find_value ?deprecated_context env lid.loc lid.txt
+      Typetexp.find_value
+        ?deprecated_context:
+          (match deprecated_context with
+          | None -> Some Reference
+          | v -> v)
+        env lid.loc lid.txt
     in
     (if !Clflags.annotations then
        let dloc = desc.Types.val_loc in
