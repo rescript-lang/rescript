@@ -43,11 +43,11 @@ for file in src/migrate/*.{res,resi}; do
 done
 
 # Move migrated files to expected directory so they can be compiled in the project
-#for file in src/migrate/StdlibMigration_*.res; do
-#  expected_file="src/expected/$(basename $file).expected"
-#  output="src/migrate/migrated/Migrated_$(basename $file)"
-#  cp -f "$expected_file" "$output"
-#done
+for file in src/migrate/StdlibMigration_*.res; do
+  expected_file="src/expected/$(basename $file).expected"
+  output="src/migrate/migrated/Migrated_$(basename $file)"
+  cp -f "$expected_file" "$output"
+done
 
 warningYellow='\033[0;33m'
 successGreen='\033[0;32m'
