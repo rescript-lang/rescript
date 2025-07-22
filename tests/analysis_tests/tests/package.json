@@ -6,7 +6,7 @@
     "clean": "rescript clean ../../.."
   },
   "dependencies": {
-    "@rescript/react": "link:../../dependencies/rescript-react",
+    "@tests/rescript-react": "link:../../dependencies/rescript-react",
     "rescript": "workspace:^"
   }
 }
