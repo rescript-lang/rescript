@@ -11,7 +11,7 @@
     "in-source": true,
     "suffix": ".res.js"
   },
-  "bsc-flags": ["-bs-no-version-header"],
+  "compiler-flags": ["-bs-no-version-header"],
   "warnings": {
     "number": "-40+6+7",
     "error": true

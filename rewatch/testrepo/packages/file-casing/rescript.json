@@ -14,7 +14,7 @@
   ],
   "suffix": ".mjs",
   "dependencies": [],
-  "bsc-flags": [],
+  "compiler-flags": [],
   "jsx": {
     "version": 4
   }

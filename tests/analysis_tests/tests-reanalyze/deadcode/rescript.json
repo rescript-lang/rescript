@@ -7,7 +7,7 @@
   },
   "name": "sample-typescript-app",
   "jsx": { "version": 4 },
-  "bs-dependencies": ["@rescript/react"],
+  "dependencies": ["@rescript/react"],
   "sources": [
     {
       "dir": "src",

@@ -10,7 +10,7 @@
     "in-source": true,
     "suffix": ".res.js"
   },
-  "bs-dependencies": ["c", "z"],
+  "dependencies": ["c", "z"],
   "warnings": { "error": "+101" },
   "namespace": true
 }

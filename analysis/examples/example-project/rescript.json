@@ -1,11 +1,11 @@
 {
   "name": "tryit",
   "sources": "src",
-  "bsc-flags": ["-bs-super-errors", "-open Belt"],
+  "compiler-flags": ["-open Belt"],
   "warnings": {
     "number": "-32-26-27-33"
   },
-  "bs-dependencies": ["reason-react"],
+  "dependencies": ["reason-react"],
   "namespace": "my-namespace",
   "reanalyze": {
     "analysis": ["dce", "exception"]

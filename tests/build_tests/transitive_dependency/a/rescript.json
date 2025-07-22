@@ -18,5 +18,5 @@
   "warnings": {
     "error": true
   },
-  "bs-dependencies": ["b"]
+  "dependencies": ["b"]
 }

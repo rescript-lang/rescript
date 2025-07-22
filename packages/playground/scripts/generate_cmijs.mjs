@@ -30,7 +30,7 @@ exec("yarn rescript legacy");
 // Otherwise we can't use them for compilation within the playground.
 buildCmij(compilerRootDir, "compiler-builtins");
 
-const packages = resConfig["bs-dependencies"];
+const packages = resConfig["dependencies"];
 for (const pkgName of packages) {
   buildCmij(
     path.join(compilerRootDir, "node_modules", pkgName),

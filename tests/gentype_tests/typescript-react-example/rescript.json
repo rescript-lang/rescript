@@ -16,9 +16,9 @@
     "exportInterfaces": false
   },
   "name": "@tests/gentype-react-example",
-  "bsc-flags": [],
+  "compiler-flags": [],
   "jsx": { "version": 4 },
-  "bs-dependencies": ["@rescript/react"],
+  "dependencies": ["@rescript/react"],
   "sources": [
     {
       "dir": "src",

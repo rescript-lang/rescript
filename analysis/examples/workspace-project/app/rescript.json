@@ -1,7 +1,7 @@
 {
   "name": "app",
-  "bsc-flags": ["-open Common"],
-  "bs-dependencies": ["common", "myplugin"],
+  "compiler-flags": ["-open Common"],
+  "dependencies": ["common", "myplugin"],
   "sources": [
     {
       "dir": "src",

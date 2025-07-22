@@ -655,7 +655,7 @@ pub mod tests {
             "sources": [ { "dir": "src/", "subdirs": true } ],
             "package-specs": [ { "module": "es6", "in-source": true } ],
             "suffix": ".mjs",
-            "bs-dependencies": [ "@teamwalnut/app" ]
+            "dependencies": [ "@teamwalnut/app" ]
         }
         "#;
 
@@ -683,7 +683,7 @@ pub mod tests {
             "module": "esmodule",
             "in-source": true
           },
-          "bs-dev-dependencies": ["@rescript/tools"],
+          "dev-dependencies": ["@rescript/tools"],
           "warnings": {
             "error": "+101"
           }
@@ -714,7 +714,7 @@ pub mod tests {
               "module": "esmodule",
               "in-source": true
             },
-            "bs-dev-dependencies": ["@rescript/tools"],
+            "dev-dependencies": ["@rescript/tools"],
             "suffix": ".mjs",
             "warnings": {
               "error": "+101"
@@ -742,7 +742,7 @@ pub mod tests {
             "sources": [ { "dir": "src/", "subdirs": true } ],
             "package-specs": [ { "module": "es6", "in-source": true } ],
             "suffix": ".mjs",
-            "bs-dependencies": [ "@teamwalnut/app" ],
+            "dependencies": [ "@teamwalnut/app" ],
             "gentypeconfig": {
                 "module": "esmodule",
                 "generatedFileExtension": ".gen.tsx"
@@ -763,7 +763,7 @@ pub mod tests {
             "sources": [ { "dir": "src/", "subdirs": true } ],
             "package-specs": [ { "module": "es6", "in-source": true } ],
             "suffix": ".mjs",
-            "bs-dependencies": [ "@teamwalnut/app" ],
+            "dependencies": [ "@teamwalnut/app" ],
             "jsx": {
                 "module": "Voby.JSX"
             }
@@ -792,7 +792,7 @@ pub mod tests {
             "sources": [ { "dir": "src/", "subdirs": true } ],
             "package-specs": [ { "module": "es6", "in-source": true } ],
             "suffix": ".mjs",
-            "bs-dependencies": [ "@teamwalnut/app" ],
+            "dependencies": [ "@teamwalnut/app" ],
             "jsx": { "version": 4, "preserve": true }
         }
         "#;

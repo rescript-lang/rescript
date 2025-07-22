@@ -10,6 +10,6 @@
     "in-source": true
   },
   "suffix": ".res.js",
-  "bs-dependencies": [],
+  "dependencies": [],
   "warnings": { "error": "+101" }
 }

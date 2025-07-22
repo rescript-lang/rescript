@@ -13,13 +13,13 @@ This document contains a list of all bsconfig parameters with remarks, and wheth
 | sources              | Source                  |        |     [x]      |
 | sources              | array of Source         |        |     [x]      |
 | ignored-dirs         | array of string         |        |     [_]      |
-| bs-dependencies      | array of string         |        |     [x]      |
-| bs-dev-dependencies  | array of string         |        |     [x]      |
+| dependencies         | array of string         |        |     [x]      |
+| dev-dependencies     | array of string         |        |     [x]      |
 | generators           | array of Rule-Generator |        |     [_]      |
 | cut-generators       | boolean                 |        |     [_]      |
 | jsx                  | JSX                     |        |     [x]      |
 | gentypeconfig        | Gentype                 |        |     [_]      |
-| bsc-flags            | array of string         |        |     [x]      |
+| compiler-flags       | array of string         |        |     [x]      |
 | warnings             | Warnings                |        |     [x]      |
 | ppx-flags            | array of string         |        |     [x]      |
 | pp-flags             | array of string         |        |     [_]      |
