@@ -113,11 +113,12 @@ let rec deprecated_of_attrs_with_migrate = function
     Some (string_of_opt_payload p, None)
   | _ :: tl -> deprecated_of_attrs_with_migrate tl
 
-let check_deprecated loc attrs s =
+let check_deprecated ?deprecated_context loc attrs s =
   match deprecated_of_attrs_with_migrate attrs with
   | None -> ()
   | Some (txt, migration_template) ->
-    !Cmt_utils.record_deprecated_used loc txt migration_template;
+    !Cmt_utils.record_deprecated_used
+      ?deprecated_context loc txt migration_template;
     Location.deprecated loc (cat s txt)
 
 let check_deprecated_inclusion ~def ~use loc attrs1 attrs2 s =

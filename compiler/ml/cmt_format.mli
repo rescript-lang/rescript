@@ -113,7 +113,11 @@ val record_value_dependency :
   Types.value_description -> Types.value_description -> unit
 
 val record_deprecated_used :
-  Location.t -> string -> Parsetree.expression option -> unit
+  ?deprecated_context:Cmt_utils.deprecated_used_context ->
+  Location.t ->
+  string ->
+  Parsetree.expression option ->
+  unit
 
 (*
 

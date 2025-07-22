@@ -7,3 +7,10 @@
 })
 @send
 external slice: (string, ~from: int, ~to_: int) => string = "slice"
+
+@send
+@deprecated({
+  reason: "Use `Array.shift` instead.",
+  migrate: Array.shift(),
+})
+external shift: array<'a> => option<'a> = "shift"

@@ -7,3 +7,6 @@ let someNiceString2 = DeprecatedStuff.slice(
 )
 
 let someNiceString3 = "abcdefg"->DeprecatedStuff.slice(~from=2, ~to_=5)
+
+let shift1 = DeprecatedStuff.shift([1, 2, 3])
+let shift2 = [1, 2, 3]->DeprecatedStuff.shift
