@@ -59,6 +59,10 @@
 - Rewatch: Only allow access to `"bs-dev-dependencies"` from `"type": "dev"` source files. https://github.com/rescript-lang/rescript/pull/7650
 - Fix comment attached to array element. https://github.com/rescript-lang/rescript/pull/7672
 
+#### :bug: Bug fix
+
+- Reliably determine standard lib dir. This should fix remaining cases where the stdlib is not found when using pnpm. https://github.com/rescript-lang/rescript/pull/7637
+
 #### :nail_care: Polish
 
 - Add missing backtick and spaces to `Belt.Map.map` doc comment. https://github.com/rescript-lang/rescript/pull/7632
