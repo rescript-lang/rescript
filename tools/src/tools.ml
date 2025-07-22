@@ -1296,6 +1296,13 @@ end
 module StringMap = Map.Make (String)
 
 module Migrate = struct
+  (* 
+  Currently, the migrate command can handle:
+  - Function calls, including mapping labelled/optional arguments between calls. Piped and not piped.
+
+  It _cannot_ (among much else) handle:
+  - Changing position of unlabelled arguments (would be problematic with pipes etc)
+  *)
   let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
     let deprecated_function_calls =
       deprecated_used
