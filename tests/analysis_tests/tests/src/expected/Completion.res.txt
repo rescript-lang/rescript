@@ -285,7 +285,7 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(\n  array<'a>,\n  ~target: int,\n  ~start: int,\n  ~end: int,\n) => array<'a>",
-    "documentation": null
+    "documentation": {"kind": "markdown", "value": "\n`copyWithin(array, ~target, ~start, ~end)` copies starting at element `start` in the given array up to but not including `end` to the designated `target` position, returning the resulting array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.\n\n## Examples\n\n```rescript\nlet arr = [100, 101, 102, 103, 104, 105]\narr->Array.copyWithin(~target=1, ~start=2, ~end=5) == [100, 102, 103, 104, 104, 105]\narr == [100, 102, 103, 104, 104, 105]\n```\n"}
   }, {
     "label": "toString",
     "kind": 12,
@@ -477,7 +477,7 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ~target: int, ~start: int) => array<'a>",
-    "documentation": null
+    "documentation": {"kind": "markdown", "value": "\n`copyWithinToEnd(array, ~target, ~start)` copies starting at element `start` in the given array to the designated `target` position, returning the resulting array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.\n\n## Examples\n\n```rescript\nlet arr = [100, 101, 102, 103, 104]\narr->Array.copyWithinToEnd(~target=0, ~start=2) == [102, 103, 104, 103, 104]\narr == [102, 103, 104, 103, 104]\n```\n"}
   }, {
     "label": "unshift",
     "kind": 12,
@@ -525,7 +525,7 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, ~target: int) => array<'a>",
-    "documentation": null
+    "documentation": {"kind": "markdown", "value": "\n`copyAllWithin(array, ~target)` copies from the first element in the given array to the designated `target` position, returning the resulting array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.\n\n## Examples\n\n```rescript\nlet arr = [100, 101, 102, 103, 104]\narr->Array.copyAllWithin(~target=2) == [100, 101, 100, 101, 102]\narr == [100, 101, 100, 101, 102]\n```\n"}
   }, {
     "label": "keepSome",
     "kind": 12,
