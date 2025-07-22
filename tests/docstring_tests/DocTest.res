@@ -30,6 +30,11 @@ let ignoreRuntimeTests = [
       "Stdlib_Set.difference",
     ],
   ),
+  (
+    // Ignore tests that require Node.js v24+
+    24,
+    ["Stdlib_RegExp.escape"],
+  ),
 ]
 
 let getOutput = buffer =>

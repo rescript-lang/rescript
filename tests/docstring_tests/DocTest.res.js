@@ -37,6 +37,10 @@ let ignoreRuntimeTests = [
       "Stdlib_Set.symmetricDifference",
       "Stdlib_Set.difference"
     ]
+  ],
+  [
+    24,
+    ["Stdlib_RegExp.escape"]
   ]
 ];
 
