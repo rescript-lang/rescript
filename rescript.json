@@ -3,6 +3,8 @@
     "bs-dependencies": [
         "@tests/gentype-react-example",
         "@tests/rescript-react",
-        "@tests/analysis"
+        "@tests/analysis",
+        "@tests/generic-jsx-transform",
+        "@tests/reanalyze-deadcode"
     ]
 }
