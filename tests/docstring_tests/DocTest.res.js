@@ -21,21 +21,21 @@ let ignoreRuntimeTests = [
   [
     20,
     [
-      "Stdlib.Array.toReversed",
-      "Stdlib.Array.toSorted"
+      "Stdlib_Array.toReversed",
+      "Stdlib_Array.toSorted"
     ]
   ],
   [
     22,
     [
-      "Stdlib.Promise.withResolvers",
-      "Stdlib.Set.union",
-      "Stdlib.Set.isSupersetOf",
-      "Stdlib.Set.isSubsetOf",
-      "Stdlib.Set.isDisjointFrom",
-      "Stdlib.Set.intersection",
-      "Stdlib.Set.symmetricDifference",
-      "Stdlib.Set.difference"
+      "Stdlib_Promise.withResolvers",
+      "Stdlib_Set.union",
+      "Stdlib_Set.isSupersetOf",
+      "Stdlib_Set.isSubsetOf",
+      "Stdlib_Set.isDisjointFrom",
+      "Stdlib_Set.intersection",
+      "Stdlib_Set.symmetricDifference",
+      "Stdlib_Set.difference"
     ]
   ]
 ];
