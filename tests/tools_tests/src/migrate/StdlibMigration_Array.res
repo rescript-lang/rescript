@@ -1,8 +1,8 @@
 let shift1 = [1, 2, 3]->Js.Array2.shift
 let shift2 = Js.Array2.shift([1, 2, 3])
 
-let slice1 = [1,2,3]->Js.Array2.slice(~start=1, ~end_=2)
-let slice2 = Js.Array2.slice([1,2,3], ~start=1, ~end_=2)
+let slice1 = [1, 2, 3]->Js.Array2.slice(~start=1, ~end_=2)
+let slice2 = Js.Array2.slice([1, 2, 3], ~start=1, ~end_=2)
 
 external someArrayLike: Js_array2.array_like<string> = "whatever"
 
@@ -123,8 +123,14 @@ let copyWithin2 = Js.Array2.copyWithin([1, 2, 3, 4, 5], ~to_=2)
 let copyWithinFrom1 = [1, 2, 3, 4, 5]->Js.Array2.copyWithinFrom(~to_=0, ~from=2)
 let copyWithinFrom2 = Js.Array2.copyWithinFrom([1, 2, 3, 4, 5], ~to_=0, ~from=2)
 
-let copyWithinFromRange1 = [1, 2, 3, 4, 5, 6]->Js.Array2.copyWithinFromRange(~to_=1, ~start=2, ~end_=5)
-let copyWithinFromRange2 = Js.Array2.copyWithinFromRange([1, 2, 3, 4, 5, 6], ~to_=1, ~start=2, ~end_=5)
+let copyWithinFromRange1 =
+  [1, 2, 3, 4, 5, 6]->Js.Array2.copyWithinFromRange(~to_=1, ~start=2, ~end_=5)
+let copyWithinFromRange2 = Js.Array2.copyWithinFromRange(
+  [1, 2, 3, 4, 5, 6],
+  ~to_=1,
+  ~start=2,
+  ~end_=5,
+)
 
 let push1 = [1, 2, 3]->Js.Array2.push(4)
 let push2 = Js.Array2.push([1, 2, 3], 4)
