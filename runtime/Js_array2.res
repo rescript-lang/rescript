@@ -489,7 +489,10 @@ Js.Array2.spliceInPlace(arr3, ~pos=9, ~remove=2, ~add=["x", "y", "z"]) == []
 arr3 == ["a", "b", "c", "d", "e", "f", "x", "y", "z"]
 ```
 */
-@send @variadic
+@send @variadic @deprecated({
+  reason: "Use `Array.splice` instead.",
+  migrate: Array.splice(~start=%insert.labelledArgument("pos"), ~remove=%insert.labelledArgument("remove"), ~insert=%insert.labelledArgument("add"))
+})
 external spliceInPlace: (t<'a>, ~pos: int, ~remove: int, ~add: array<'a>) => t<'a> = "splice"
 
 /**
@@ -507,7 +510,10 @@ Js.Array2.removeFromInPlace(arr, ~pos=4) == ["e", "f"]
 arr == ["a", "b", "c", "d"]
 ```
 */
-@send
+@send @deprecated({
+  reason: "Use `Array.removeInPlace` instead.",
+  migrate: Array.removeInPlace(%insert.labelledArgument("pos"))
+})
 external removeFromInPlace: (t<'a>, ~pos: int) => t<'a> = "splice"
 
 /**
@@ -525,7 +531,10 @@ Js.Array2.removeCountInPlace(arr, ~pos=2, ~count=3) == ["c", "d", "e"]
 arr == ["a", "b", "f"]
 ```
 */
-@send
+@send @deprecated({
+  reason: "Use `Array.splice` instead.",
+  migrate: Array.splice(~start=%insert.labelledArgument("pos"), ~remove=%insert.labelledArgument("count"), ~insert=[])
+})
 external removeCountInPlace: (t<'a>, ~pos: int, ~count: int) => t<'a> = "splice"
 
 /**
@@ -790,7 +799,7 @@ on MDN.
 */
 @deprecated({
   reason: "Use `Array.sliceToEnd` instead.",
-  migrate: Array.sliceToEnd()
+  migrate: Array.sliceToEnd(~start=%insert.unlabelledArgument(1))
 })
 @send
 external sliceFrom: (t<'a>, int) => t<'a> = "slice"
@@ -1163,6 +1172,10 @@ Js.Array2.reduce(
 Js.Array2.reduce([2.0, 4.0], (acc, item) => item /. acc, 1.0) == 2.0 // 4.0 / (2.0 / 1.0)
 ```
 */
+@deprecated({
+  reason: "Use `Array.reduce` instead.",
+  migrate: Array.reduce(%insert.unlabelledArgument(2), %insert.unlabelledArgument(1))
+})
 @send
 external reduce: (t<'a>, ('b, 'a) => 'b, 'b) => 'b = "reduce"
 
@@ -1198,7 +1211,10 @@ let sumOfEvens = (accumulator, item, index) =>
 Js.Array2.reducei([2, 5, 1, 4, 3], sumOfEvens, 0) == 6
 ```
 */
-@send
+@send @deprecated({
+  reason: "Use `Array.reduceWithIndex` instead.",
+  migrate: Array.reduceWithIndex(%insert.unlabelledArgument(2), %insert.unlabelledArgument(1))
+})
 external reducei: (t<'a>, ('b, 'a, int) => 'b, 'b) => 'b = "reduce"
 
 /**
@@ -1230,7 +1246,10 @@ Js.Array2.reduceRight([10, 2, 4], sumOfSquares, 0) == 120
 Js.Array2.reduceRight([2.0, 4.0], (acc, item) => item /. acc, 1.0) == 0.5 // 2.0 / (4.0 / 1.0)
 ```
 */
-@send
+@send @deprecated({
+  reason: "Use `Array.reduceRight` instead.",
+  migrate: Array.reduceRight(%insert.unlabelledArgument(2), %insert.unlabelledArgument(1))
+})
 external reduceRight: (t<'a>, ('b, 'a) => 'b, 'b) => 'b = "reduceRight"
 
 /**
@@ -1267,7 +1286,10 @@ let sumOfEvens = (accumulator, item, index) =>
 Js.Array2.reduceRighti([2, 5, 1, 4, 3], sumOfEvens, 0) == 6
 ```
 */
-@send
+@send @deprecated({
+  reason: "Use `Array.reduceRightWithIndex` instead.",
+  migrate: Array.reduceRightWithIndex(%insert.unlabelledArgument(2), %insert.unlabelledArgument(1))
+})
 external reduceRighti: (t<'a>, ('b, 'a, int) => 'b, 'b) => 'b = "reduceRight"
 
 /**

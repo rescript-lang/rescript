@@ -1311,8 +1311,10 @@ module Migrate = struct
   *)
 
   module MapperUtils = struct
-    let get_template_args_to_insert mapper template_args source_args =
+    let get_template_args_to_insert ?(is_pipe = false) mapper template_args
+        source_args =
       let labelled_args_that_will_be_mapped = ref [] in
+      let unlabelled_positions_that_will_be_mapped = ref [] in
       let mapped_template_args =
         template_args
         |> List.filter_map (fun (label, arg) ->
@@ -1336,7 +1338,7 @@ module Migrate = struct
                                };
                              ] );
                    } ) -> (
-                 (* Map unlabelled args *)
+                 (* Map labelled args *)
                  let arg_in_source_args =
                    source_args
                    |> List.find_map (fun (label, arg) ->
@@ -1352,18 +1354,94 @@ module Migrate = struct
                    labelled_args_that_will_be_mapped :=
                      arg_name :: !labelled_args_that_will_be_mapped;
                    Some (Asttypes.Nolabel, arg))
+               | ( template_label,
+                   {
+                     Parsetree.pexp_desc =
+                       Pexp_extension
+                         ( {txt = "insert.unlabelledArgument"},
+                           PStr
+                             [
+                               {
+                                 pstr_desc =
+                                   Pstr_eval
+                                     ( {
+                                         pexp_desc =
+                                           Pexp_constant
+                                             (Pconst_integer (count_str, _));
+                                       },
+                                       _ );
+                               };
+                             ] );
+                   } ) -> (
+                 (* Map unlabelled args *)
+                 let count = int_of_string count_str in
+                 if count <= 0 then None
+                 else
+                   (* Count unlabelled arguments properly:
+                      - For regular calls: count=1 refers to 2nd unlabelled arg (since 1st can't be remapped due to pipes)
+                      - For pipe calls: count=1 refers to 1st unlabelled arg in pipe_args *)
+                   let target_count = if is_pipe then count else count + 1 in
+                   let unlabelled_count = ref 0 in
+                   let found_arg = ref None in
+                   source_args
+                   |> List.iter (fun (label, arg) ->
+                          match label with
+                          | Asttypes.Nolabel ->
+                            incr unlabelled_count;
+                            if !unlabelled_count = target_count then
+                              found_arg := Some arg
+                          | _ -> ());
+                   match !found_arg with
+                   | None -> None
+                   | Some arg ->
+                     unlabelled_positions_that_will_be_mapped :=
+                       target_count :: !unlabelled_positions_that_will_be_mapped;
+                     Some (template_label, arg))
                | ( _,
                    {
                      pexp_desc =
-                       Pexp_extension ({txt = "insert.labelledArgument"}, _);
+                       Pexp_extension
+                         ( {
+                             txt =
+                               ( "insert.labelledArgument"
+                               | "insert.unlabelledArgument" );
+                           },
+                           _ );
                    } ) ->
-                 (* Do not add any other instance of insert.labelledArgument. *)
+                 (* Do not add any other instance of insert.* *)
                  None
                | _, {pexp_desc = Pexp_construct ({txt = Lident "()"}, None)} ->
                  None
                | _ -> Some (label, mapper.Ast_mapper.expr mapper arg))
       in
-      (mapped_template_args, !labelled_args_that_will_be_mapped)
+      ( mapped_template_args,
+        !labelled_args_that_will_be_mapped,
+        !unlabelled_positions_that_will_be_mapped )
+
+    let filter_and_transform_args source_args ~unlabelled_positions_to_insert
+        ~will_be_mapped ~labelled_args_map =
+      let unlabelled_consumed = ref 0 in
+      source_args
+      |> List.filter_map (fun (label, arg) ->
+             match label with
+             | Asttypes.Nolabel ->
+               incr unlabelled_consumed;
+               if List.mem !unlabelled_consumed unlabelled_positions_to_insert
+               then
+                 (* This unlabelled arg has been mapped already, do not add. *)
+                 None
+               else Some (label, arg)
+             | Asttypes.Labelled {loc; txt = label}
+             | Optional {loc; txt = label}
+               when StringMap.mem label labelled_args_map ->
+               (* Map labelled args that has just changed name. *)
+               let mapped_label_name = StringMap.find label labelled_args_map in
+               Some (Asttypes.Labelled {loc; txt = mapped_label_name}, arg)
+             | (Labelled {txt} | Optional {txt})
+               when List.mem txt will_be_mapped ->
+               (* These have been mapped already, do not add. *)
+               None
+             | label -> Some (label, arg))
 
     let build_labelled_args_map template_args =
       template_args
@@ -1391,6 +1469,20 @@ module Migrate = struct
                Some (arg_name, label)
              | _ -> None)
       |> StringMap.of_list
+
+    let apply_migration_template ?(is_pipe = false) mapper template_args
+        source_args =
+      let labelled_args_map = build_labelled_args_map template_args in
+      let ( template_args_to_insert,
+            will_be_mapped,
+            unlabelled_positions_to_insert ) =
+        get_template_args_to_insert ~is_pipe mapper template_args source_args
+      in
+      let filtered_args =
+        filter_and_transform_args source_args ~unlabelled_positions_to_insert
+          ~will_be_mapped ~labelled_args_map
+      in
+      filtered_args @ template_args_to_insert
   end
 
   let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
@@ -1450,11 +1542,8 @@ module Migrate = struct
                           transformed_jsx;
                         };
                   } ->
-                let labelled_args_map =
-                  MapperUtils.build_labelled_args_map template_args
-                in
-                let template_args_to_insert, will_be_mapped =
-                  MapperUtils.get_template_args_to_insert mapper template_args
+                let migrated_args =
+                  MapperUtils.apply_migration_template mapper template_args
                     source_args
                 in
                 {
@@ -1463,27 +1552,7 @@ module Migrate = struct
                     Pexp_apply
                       {
                         funct = template_funct;
-                        args =
-                          (source_args
-                          |> List.filter_map (fun (label, arg) ->
-                                 match label with
-                                 | Asttypes.Labelled {loc; txt = label}
-                                 | Optional {loc; txt = label}
-                                   when StringMap.mem label labelled_args_map ->
-                                   (* Map labelled args that has just changed name. *)
-                                   let mapped_label_name =
-                                     StringMap.find label labelled_args_map
-                                   in
-                                   Some
-                                     ( Asttypes.Labelled
-                                         {loc; txt = mapped_label_name},
-                                       arg )
-                                 | (Labelled {txt} | Optional {txt})
-                                   when List.mem txt will_be_mapped ->
-                                   (* These have been mapped already, do not add. *)
-                                   None
-                                 | label -> Some (label, arg)))
-                          @ template_args_to_insert;
+                        args = migrated_args;
                         partial;
                         transformed_jsx;
                       };
@@ -1523,7 +1592,7 @@ module Migrate = struct
                           transformed_jsx;
                         };
                   } ->
-                let template_args_to_insert, _ =
+                let template_args_to_insert, _, _ =
                   MapperUtils.get_template_args_to_insert mapper template_args
                     []
                 in
@@ -1557,6 +1626,66 @@ module Migrate = struct
                           transformed_jsx;
                         };
                   }
+              | _ ->
+                (* TODO: More elaborate warnings etc *)
+                (* Invalid config. *)
+                exp)
+            | {
+             pexp_desc =
+               Pexp_apply
+                 {
+                   funct = {pexp_desc = Pexp_ident {txt = Lident "->"}} as funct;
+                   args =
+                     (_ as lhs)
+                     :: ( Nolabel,
+                          {
+                            pexp_desc =
+                              Pexp_apply
+                                {funct = {pexp_loc = fn_loc}; args = pipe_args};
+                          } )
+                     :: _;
+                 };
+            }
+              when Hashtbl.mem loc_to_deprecated_fn_call fn_loc -> (
+              (* Pipe with arguments, [1, 2, 3, 4]->someDeprecated(arg1, arg2) *)
+              let deprecated_info =
+                Hashtbl.find loc_to_deprecated_fn_call fn_loc
+              in
+              Hashtbl.remove loc_to_deprecated_fn_call fn_loc;
+
+              match deprecated_info.migration_template with
+              | Some
+                  {
+                    pexp_desc =
+                      Pexp_apply
+                        {
+                          funct = template_funct;
+                          args = template_args;
+                          partial;
+                          transformed_jsx;
+                        };
+                  } ->
+                let migrated_args =
+                  MapperUtils.apply_migration_template ~is_pipe:true mapper
+                    template_args pipe_args
+                in
+                {
+                  exp with
+                  pexp_desc =
+                    Pexp_apply
+                      {
+                        funct;
+                        args =
+                          [
+                            lhs;
+                            ( Nolabel,
+                              Ast_helper.Exp.apply template_funct migrated_args
+                            );
+                          ];
+                        partial;
+                        transformed_jsx;
+                      };
+                }
               | _ ->
                 (* TODO: More elaborate warnings etc *)
                 (* Invalid config. *)

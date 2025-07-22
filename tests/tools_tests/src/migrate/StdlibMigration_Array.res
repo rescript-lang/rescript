@@ -135,11 +135,29 @@ let pushMany2 = Js.Array2.pushMany([1, 2, 3], [4, 5])
 let sortInPlace1 = ["c", "a", "b"]->Js.Array2.sortInPlace
 let sortInPlace2 = Js.Array2.sortInPlace(["c", "a", "b"])
 
-let sortInPlaceWith1 = [3, 1, 2]->Js.Array2.sortInPlaceWith((a, b) => a - b)
-let sortInPlaceWith2 = Js.Array2.sortInPlaceWith([3, 1, 2], (a, b) => a - b)
-
 let unshift1 = [1, 2, 3]->Js.Array2.unshift(4)
 let unshift2 = Js.Array2.unshift([1, 2, 3], 4)
 
 let unshiftMany1 = [1, 2, 3]->Js.Array2.unshiftMany([4, 5])
 let unshiftMany2 = Js.Array2.unshiftMany([1, 2, 3], [4, 5])
+
+let reduce1 = [1, 2, 3]->Js.Array2.reduce((acc, x) => acc + x, 0)
+let reduce2 = Js.Array2.reduce([1, 2, 3], (acc, x) => acc + x, 0)
+
+let spliceInPlace1 = [1, 2, 3]->Js.Array2.spliceInPlace(~pos=1, ~remove=1, ~add=[4, 5])
+let spliceInPlace2 = Js.Array2.spliceInPlace([1, 2, 3], ~pos=1, ~remove=1, ~add=[4, 5])
+
+let removeFromInPlace1 = [1, 2, 3]->Js.Array2.removeFromInPlace(~pos=1)
+let removeFromInPlace2 = Js.Array2.removeFromInPlace([1, 2, 3], ~pos=1)
+
+let removeCountInPlace1 = [1, 2, 3]->Js.Array2.removeCountInPlace(~pos=1, ~count=1)
+let removeCountInPlace2 = Js.Array2.removeCountInPlace([1, 2, 3], ~pos=1, ~count=1)
+
+let reducei1 = [1, 2, 3]->Js.Array2.reducei((acc, x, i) => acc + x + i, 0)
+let reducei2 = Js.Array2.reducei([1, 2, 3], (acc, x, i) => acc + x + i, 0)
+
+let reduceRight1 = [1, 2, 3]->Js.Array2.reduceRight((acc, x) => acc + x, 0)
+let reduceRight2 = Js.Array2.reduceRight([1, 2, 3], (acc, x) => acc + x, 0)
+
+let reduceRighti1 = [1, 2, 3]->Js.Array2.reduceRighti((acc, x, i) => acc + x + i, 0)
+let reduceRighti2 = Js.Array2.reduceRighti([1, 2, 3], (acc, x, i) => acc + x + i, 0)
