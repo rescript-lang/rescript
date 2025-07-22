@@ -166,8 +166,8 @@ let add_saved_type b = saved_types := b :: !saved_types
 let get_saved_types () = !saved_types
 let set_saved_types l = saved_types := l
 
-let record_deprecated_used source_loc deprecated_text migration_template =
-  deprecated_used := {Cmt_utils.source_loc; deprecated_text; migration_template} :: !deprecated_used
+let record_deprecated_used ?deprecated_context source_loc deprecated_text migration_template =
+  deprecated_used := {Cmt_utils.source_loc; deprecated_text; migration_template; context = deprecated_context} :: !deprecated_used
 
 let _ = Cmt_utils.record_deprecated_used := record_deprecated_used
 

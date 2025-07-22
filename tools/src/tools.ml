@@ -1297,10 +1297,19 @@ module StringMap = Map.Make (String)
 
 module Migrate = struct
   let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
-    let loc_to_deprecated_use = Hashtbl.create (List.length deprecated_used) in
-    deprecated_used
+    let deprecated_function_calls =
+      deprecated_used
+      |> List.filter (fun (d : Cmt_utils.deprecated_used) ->
+             match d.context with
+             | Some FunctionCall -> true
+             | _ -> false)
+    in
+    let loc_to_deprecated_fn_call =
+      Hashtbl.create (List.length deprecated_function_calls)
+    in
+    deprecated_function_calls
     |> List.iter (fun ({Cmt_utils.source_loc} as d) ->
-           Hashtbl.replace loc_to_deprecated_use source_loc d);
+           Hashtbl.replace loc_to_deprecated_fn_call source_loc d);
     let mapper =
       {
         Ast_mapper.default_mapper with
@@ -1311,9 +1320,11 @@ module Migrate = struct
              pexp_desc =
                Pexp_apply {funct = {pexp_loc = fn_loc}; args = source_args};
             }
-              when Hashtbl.mem loc_to_deprecated_use fn_loc -> (
-              let deprecated_info = Hashtbl.find loc_to_deprecated_use fn_loc in
-              Hashtbl.remove loc_to_deprecated_use fn_loc;
+              when Hashtbl.mem loc_to_deprecated_fn_call fn_loc -> (
+              let deprecated_info =
+                Hashtbl.find loc_to_deprecated_fn_call fn_loc
+              in
+              Hashtbl.remove loc_to_deprecated_fn_call fn_loc;
 
               let source_args =
                 source_args
@@ -1383,6 +1394,46 @@ module Migrate = struct
                                        {loc; txt = mapped_label_name},
                                      arg )
                                  | label -> (label, arg));
+                        partial;
+                        transformed_jsx;
+                      };
+                }
+              | _ ->
+                (* TODO: More elaborate warnings etc *)
+                (* Invalid config. *)
+                exp)
+            | {
+             pexp_desc =
+               Pexp_apply
+                 {
+                   funct = {pexp_desc = Pexp_ident {txt = Lident "->"}} as funct;
+                   args =
+                     (_ as lhs)
+                     :: (Nolabel, {pexp_loc = fn_loc; pexp_desc = Pexp_ident _})
+                     :: _;
+                 };
+            }
+              when Hashtbl.mem loc_to_deprecated_fn_call fn_loc -> (
+              (* Pipe with no arguments, [1, 2, 3]->someDeprecated *)
+              let deprecated_info =
+                Hashtbl.find loc_to_deprecated_fn_call fn_loc
+              in
+              Hashtbl.remove loc_to_deprecated_fn_call fn_loc;
+
+              match deprecated_info.migration_template with
+              | Some
+                  {
+                    pexp_desc =
+                      Pexp_apply
+                        {funct = template_funct; partial; transformed_jsx};
+                  } ->
+                {
+                  exp with
+                  pexp_desc =
+                    Pexp_apply
+                      {
+                        funct;
+                        args = [lhs; (Nolabel, template_funct)];
                         partial;
                         transformed_jsx;
                       };
