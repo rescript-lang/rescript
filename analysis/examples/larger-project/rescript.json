@@ -5,8 +5,8 @@
     "unsuppress": []
   },
   "name": "sample-typescript-app",
-  "bsc-flags": ["-bs-super-errors -w a"],
-  "bs-dependencies": ["@rescript/react", "@glennsl/bs-json"],
+  "compiler-flags": ["-w a"],
+  "dependencies": ["@rescript/react", "@glennsl/bs-json"],
   "sources": [
     {
       "dir": "src",

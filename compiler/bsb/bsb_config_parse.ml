@@ -238,13 +238,24 @@ let interpret_json ~(filename : string) ~(json : Ext_json_types.t)
                 .path)
     in
     let bs_dependencies =
-      extract_dependencies map per_proj_dir Bsb_build_schemas.bs_dependencies
+      let dependencies =
+        extract_dependencies map per_proj_dir Bsb_build_schemas.dependencies
+      in
+      if dependencies == [] then
+        extract_dependencies map per_proj_dir Bsb_build_schemas.bs_dependencies
+      else dependencies
     in
     let bs_dev_dependencies =
       match package_kind with
       | Toplevel ->
-        extract_dependencies map per_proj_dir
-          Bsb_build_schemas.bs_dev_dependencies
+        let dev_dependencies =
+          extract_dependencies map per_proj_dir
+            Bsb_build_schemas.dev_dependencies
+        in
+        if dev_dependencies == [] then
+          extract_dependencies map per_proj_dir
+            Bsb_build_schemas.bs_dev_dependencies
+        else dev_dependencies
       | Dependency _ -> []
     in
     match map.?(Bsb_build_schemas.sources) with
@@ -258,7 +269,14 @@ let interpret_json ~(filename : string) ~(json : Ext_json_types.t)
           (* ~namespace *)
           sources
       in
-      let bsc_flags = extract_string_list map Bsb_build_schemas.bsc_flags in
+      let bsc_flags =
+        let compiler_flags =
+          extract_string_list map Bsb_build_schemas.compiler_flags
+        in
+        if compiler_flags == [] then
+          extract_string_list map Bsb_build_schemas.bsc_flags
+        else compiler_flags
+      in
       let jsx = Bsb_jsx.from_map map in
       let jsx, bsc_flags =
         match package_kind with

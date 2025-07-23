@@ -78,7 +78,7 @@ rewatch build --snapshot-output &> ../tests/snapshots/dependency-cycle.txt
 normalize_paths ../tests/snapshots/dependency-cycle.txt
 git checkout -- packages/new-namespace/src/NS_alias.res
 
-# this should not compile because  "@rescript/webapi" is part of bs-dev-dependencies
+# this should not compile because  "@rescript/webapi" is part of dev-dependencies
 # and FileToTest.res is not listed as "type":"dev"
 echo 'open WebAPI' >> packages/with-dev-deps/src/FileToTest.res
 rewatch build --snapshot-output &> ../tests/snapshots/bs-dev-dependency-used-by-non-dev-source.txt

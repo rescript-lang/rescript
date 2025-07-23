@@ -7,5 +7,5 @@
     "in-source": true
   },
   "suffix": ".res.js",
-  "bs-dependencies": []
+  "dependencies": []
 }

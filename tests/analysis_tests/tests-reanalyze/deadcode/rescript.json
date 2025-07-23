@@ -7,7 +7,7 @@
   },
   "name": "@tests/reanalyze-deadcode",
   "jsx": { "version": 4 },
-  "bs-dependencies": ["@tests/rescript-react"],
+  "dependencies": ["@tests/rescript-react"],
   "sources": [
     {
       "dir": "src",

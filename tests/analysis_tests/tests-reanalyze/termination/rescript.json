@@ -5,7 +5,7 @@
     "unsuppress": []
   },
   "name": "@tests/reanalyze-termination",
-  "bs-dependencies": [],
+  "dependencies": [],
   "sources": [
     {
       "dir": "src",

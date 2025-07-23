@@ -16,7 +16,7 @@
     "in-source": true,
     "suffix": ".res.js"
   },
-  "bs-dependencies": [],
-  "bs-dev-dependencies": ["weird"],
+  "dependencies": [],
+  "dev-dependencies": ["weird"],
   "warnings": { "error": "+101" }
 }

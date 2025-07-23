@@ -193,9 +193,12 @@ let rec walk_all_deps_aux (visited : string Hash_string.t) (paths : string list)
            )
         |> ignore
       in
+      explore_deps Bsb_build_schemas.dependencies;
       explore_deps Bsb_build_schemas.bs_dependencies;
       (match top with
-      | Expect_none -> explore_deps Bsb_build_schemas.bs_dev_dependencies
+      | Expect_none ->
+        explore_deps Bsb_build_schemas.dev_dependencies;
+        explore_deps Bsb_build_schemas.bs_dev_dependencies
       | Expect_name _ -> ());
       Queue.add {top; proj_dir = dir} queue;
       Hash_string.add visited cur_package_name dir

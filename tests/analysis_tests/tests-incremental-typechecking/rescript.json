@@ -6,6 +6,6 @@
       "subdirs": true
     }
   ],
-  "bsc-flags": ["-w -33-44-8"],
+  "compiler-flags": ["-w -33-44-8"],
   "jsx": { "module": "GenericJsx" }
 }
