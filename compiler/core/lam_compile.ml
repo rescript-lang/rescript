@@ -1623,9 +1623,9 @@ let compile output_prefix =
     | {primitive = Pjs_unsafe_downgrade _; args} -> assert false
     | {primitive = Pjs_fn_method; args = args_lambda} -> (
       match args_lambda with
-      | [Lfunction {params; body; attr = {return_unit}}] ->
+      | [Lfunction {params; body; attr = {return_unit; async}}] ->
         Js_output.output_of_block_and_expression lambda_cxt.continuation []
-          (E.method_ params ~return_unit
+          (E.method_ ~async ~return_unit params
              (* Invariant:  jmp_table can not across function boundary,
                 here we share env
              *)
