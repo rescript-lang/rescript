@@ -1,19 +1,10 @@
-Complete src/ConstructorCompletion__Own.res 4:24
-posCursor:[4:24] posNoWhite:[4:23] Found expr:[4:8->4:25]
+Complete src/ConstructorCompletion__Own.res 4:27
+posCursor:[4:27] posNoWhite:[4:26] Found expr:[4:11->4:28]
 Pexp_construct WithVariant
-One:[4:8->4:23] [4:23->4:25]
+One:[4:11->4:26] [4:26->4:28]
 Completable: Cexpression CTypeAtPos()->variantPayload::One($0)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 ContextPath CTypeAtPos()
-[{
-    "label": "{}",
-    "kind": 12,
-    "tags": [],
-    "detail": "{miss: bool}",
-    "documentation": {"kind": "markdown", "value": "```rescript\n{miss: bool}\n```"},
-    "sortText": "A",
-    "insertText": "{$0}",
-    "insertTextFormat": 2
-  }]
+[]
 

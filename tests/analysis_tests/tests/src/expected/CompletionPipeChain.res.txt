@@ -470,16 +470,7 @@ Path support
 CPPipe pathFromEnv:CompletionSupport.Nested found:false
 Path CompletionSupport.Nested.root
 Path root
-CPPipe pathFromEnv:ReactDOM.Client.Root found:false
-Path ReactDOM.Client.Root.ren
-Path ren
-[{
-    "label": "ReactDOM.Client.Root.render",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, React.element) => unit",
-    "documentation": null
-  }]
+[]
 
 Complete src/CompletionPipeChain.res 88:16
 posCursor:[88:16] posNoWhite:[88:15] Found expr:[76:15->93:1]
@@ -496,16 +487,7 @@ Resolved opens 1 Stdlib
 ContextPath Value[root]->ren
 ContextPath Value[root]
 Path root
-CPPipe pathFromEnv:ReactDOM.Client.Root found:false
-Path ReactDOM.Client.Root.ren
-Path ren
-[{
-    "label": "ReactDOM.Client.Root.render",
-    "kind": 12,
-    "tags": [],
-    "detail": "(t, React.element) => unit",
-    "documentation": null
-  }]
+[]
 
 Complete src/CompletionPipeChain.res 95:20
 posCursor:[95:20] posNoWhite:[95:19] Found expr:[95:3->95:21]

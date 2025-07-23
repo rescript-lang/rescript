@@ -19,7 +19,7 @@ Completable: CdecoratorPayload(module=)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [{
-    "label": "@rescript/react",
+    "label": "@tests/rescript-react",
     "kind": 4,
     "tags": [],
     "detail": "Package",
@@ -186,7 +186,7 @@ Completable: CdecoratorPayload(module=)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [{
-    "label": "@rescript/react",
+    "label": "@tests/rescript-react",
     "kind": 4,
     "tags": [],
     "detail": "Package",
@@ -211,7 +211,7 @@ Completable: CdecoratorPayload(module=)
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
 [{
-    "label": "@rescript/react",
+    "label": "@tests/rescript-react",
     "kind": 4,
     "tags": [],
     "detail": "Package",
