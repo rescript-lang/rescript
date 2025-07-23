@@ -1,5 +1,6 @@
 {
   "name": "@testrepo/file-casing",
+  "namespace": "FileCasing",
   "sources": [
     {
       "dir": "src",

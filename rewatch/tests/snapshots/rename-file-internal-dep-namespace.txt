@@ -27,4 +27,5 @@ Use 'compiler-flags' instead.
   [1;33mHint: Did you mean Other_module2?[0m
 
 
-Incremental build failed. Error: [2K  Failed to Compile. See Errors Above
+Incremental build failed. Error: [2K
+  Failed to Compile. See Errors Above
