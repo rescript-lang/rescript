@@ -44,7 +44,6 @@ struct Dependency {
     name: String,
     config: config::Config,
     path: PathBuf,
-    is_pinned: bool,
     dependencies: Vec<Dependency>,
 }
 
@@ -60,7 +59,6 @@ pub struct Package {
     // canonicalized dir of the package
     pub path: PathBuf,
     pub dirs: Option<AHashSet<PathBuf>>,
-    pub is_pinned_dep: bool,
     pub is_local_dep: bool,
     pub is_root: bool,
 }
@@ -366,11 +364,6 @@ fn read_dependencies(
                     }
                 };
 
-            let is_pinned = parent_config
-                .pinned_dependencies
-                .as_ref()
-                .map(|p| p.contains(&config.name))
-                .unwrap_or(false);
 
             let dependencies = read_dependencies(
                 &mut registered_dependencies_set.to_owned(),
@@ -386,7 +379,6 @@ fn read_dependencies(
                 name: package_name.to_owned(),
                 config,
                 path: canonical_path,
-                is_pinned,
                 dependencies,
             }
         })
@@ -418,13 +410,7 @@ pub fn read_package_name(package_dir: &Path) -> Result<String> {
         .ok_or_else(|| anyhow!("No name field found in package.json"))
 }
 
-fn make_package(
-    config: config::Config,
-    package_path: &Path,
-    is_pinned_dep: bool,
-    is_root: bool,
-    project_root: &Path,
-) -> Package {
+fn make_package(config: config::Config, package_path: &Path, is_root: bool, project_root: &Path) -> Package {
     let source_folders = match config.sources.to_owned() {
         Some(config::OneOrMore::Single(source)) => get_source_dirs(source, None),
         Some(config::OneOrMore::Multiple(sources)) => {
@@ -481,7 +467,6 @@ This inconsistency will cause issues with package resolution.\n",
             .map(StrippedVerbatimPath::to_stripped_verbatim_path)
             .expect("Could not canonicalize"),
         dirs: None,
-        is_pinned_dep,
         is_local_dep,
         is_root,
     }
@@ -497,7 +482,7 @@ fn read_packages(
 
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
-    let root_package = make_package(root_config.to_owned(), project_root, false, true, project_root);
+    let root_package = make_package(root_config.to_owned(), project_root, true, project_root);
     map.insert(root_package.name.to_string(), root_package);
 
     let mut registered_dependencies_set: AHashSet<String> = AHashSet::new();
@@ -512,7 +497,7 @@ fn read_packages(
     ));
     dependencies.iter().for_each(|d| {
         if !map.contains_key(&d.name) {
-            let package = make_package(d.config.to_owned(), &d.path, d.is_pinned, false, project_root);
+            let package = make_package(d.config.to_owned(), &d.path, false, project_root);
             map.insert(d.name.to_string(), package);
         }
     });
@@ -912,7 +897,6 @@ fn get_unallowed_dependents(
 #[derive(Debug, Clone)]
 struct UnallowedDependency {
     bs_deps: Vec<String>,
-    pinned_deps: Vec<String>,
     bs_build_dev_deps: Vec<String>,
 }
 
@@ -921,12 +905,10 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
 
     for (package_name, package) in packages {
         let bs_dependencies = &package.config.dependencies.to_owned().unwrap_or(vec![]);
-        let pinned_dependencies = &package.config.pinned_dependencies.to_owned().unwrap_or(vec![]);
         let dev_dependencies = &package.config.dev_dependencies.to_owned().unwrap_or(vec![]);
 
         [
             ("bs-dependencies", bs_dependencies),
-            ("pinned-dependencies", pinned_dependencies),
             ("bs-dev-dependencies", dev_dependencies),
         ]
         .iter()
@@ -936,7 +918,6 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
             {
                 let empty_unallowed_deps = UnallowedDependency {
                     bs_deps: vec![],
-                    pinned_deps: vec![],
                     bs_build_dev_deps: vec![],
                 };
 
@@ -944,7 +925,6 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
                 let value = unallowed_dependency.or_insert_with(|| empty_unallowed_deps);
                 match *dependency_type {
                     "bs-dependencies" => value.bs_deps.push(unallowed_dependency_name),
-                    "pinned-dependencies" => value.pinned_deps.push(unallowed_dependency_name),
                     "bs-dev-dependencies" => value.bs_build_dev_deps.push(unallowed_dependency_name),
                     _ => (),
                 }
@@ -960,7 +940,6 @@ pub fn validate_packages_dependencies(packages: &AHashMap<String, Package>) -> b
 
         [
             ("bs-dependencies", unallowed_deps.bs_deps.to_owned()),
-            ("pinned-dependencies", unallowed_deps.pinned_deps.to_owned()),
             ("bs-dev-dependencies", unallowed_deps.bs_build_dev_deps.to_owned()),
         ]
         .iter()
@@ -997,7 +976,6 @@ mod test {
     pub struct CreatePackageArgs {
         name: String,
         bs_deps: Vec<String>,
-        pinned_deps: Vec<String>,
         build_dev_deps: Vec<String>,
         allowed_dependents: Option<Vec<String>>,
     }
@@ -1008,7 +986,6 @@ mod test {
             config: config::tests::create_config(config::tests::CreateConfigArgs {
                 name: args.name,
                 bs_deps: args.bs_deps,
-                pinned_deps: args.pinned_deps,
                 build_dev_deps: args.build_dev_deps,
                 allowed_dependents: args.allowed_dependents,
             }),
@@ -1018,7 +995,6 @@ mod test {
             modules: None,
             path: PathBuf::from("./something"),
             dirs: None,
-            is_pinned_dep: false,
             is_root: false,
             is_local_dep: false,
         }
@@ -1031,7 +1007,6 @@ mod test {
             create_package(CreatePackageArgs {
                 name: String::from("Package1"),
                 bs_deps: vec![String::from("Package2")],
-                pinned_deps: vec![],
                 build_dev_deps: vec![],
                 allowed_dependents: None,
             }),
@@ -1041,35 +1016,6 @@ mod test {
             create_package(CreatePackageArgs {
                 name: String::from("Package2"),
                 bs_deps: vec![],
-                pinned_deps: vec![],
-                build_dev_deps: vec![],
-                allowed_dependents: Some(vec![String::from("Package3")]),
-            }),
-        );
-
-        let is_valid = super::validate_packages_dependencies(&packages);
-        assert!(!is_valid)
-    }
-
-    #[test]
-    fn should_return_false_with_invalid_parents_as_pinned_dependencies() {
-        let mut packages: AHashMap<String, Package> = AHashMap::new();
-        packages.insert(
-            String::from("Package1"),
-            create_package(CreatePackageArgs {
-                name: String::from("Package1"),
-                bs_deps: vec![],
-                pinned_deps: vec![String::from("Package2")],
-                build_dev_deps: vec![],
-                allowed_dependents: None,
-            }),
-        );
-        packages.insert(
-            String::from("Package2"),
-            create_package(CreatePackageArgs {
-                name: String::from("Package2"),
-                bs_deps: vec![],
-                pinned_deps: vec![],
                 build_dev_deps: vec![],
                 allowed_dependents: Some(vec![String::from("Package3")]),
             }),
@@ -1087,7 +1033,6 @@ mod test {
             create_package(CreatePackageArgs {
                 name: String::from("Package1"),
                 bs_deps: vec![],
-                pinned_deps: vec![],
                 build_dev_deps: vec![String::from("Package2")],
                 allowed_dependents: None,
             }),
@@ -1097,7 +1042,6 @@ mod test {
             create_package(CreatePackageArgs {
                 name: String::from("Package2"),
                 bs_deps: vec![],
-                pinned_deps: vec![],
                 build_dev_deps: vec![],
                 allowed_dependents: Some(vec![String::from("Package3")]),
             }),
@@ -1115,7 +1059,6 @@ mod test {
             create_package(CreatePackageArgs {
                 name: String::from("Package1"),
                 bs_deps: vec![String::from("Package2")],
-                pinned_deps: vec![],
                 build_dev_deps: vec![],
                 allowed_dependents: None,
             }),
@@ -1125,7 +1068,6 @@ mod test {
             create_package(CreatePackageArgs {
                 name: String::from("Package2"),
                 bs_deps: vec![],
-                pinned_deps: vec![],
                 build_dev_deps: vec![],
                 allowed_dependents: Some(vec![String::from("Package1")]),
             }),

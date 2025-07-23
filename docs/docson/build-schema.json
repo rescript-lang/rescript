@@ -399,10 +399,6 @@
       "$ref": "#/definitions/dependencies",
       "description": "ReScript dev dependencies of the library, like in package.json. Currently searches in `node_modules`"
     },
-    "pinned-dependencies": {
-      "$ref": "#/definitions/dependencies",
-      "description": "Those dependencies are pinned (since version 8.4)"
-    },
     "generators": {
       "type": "array",
       "items": {

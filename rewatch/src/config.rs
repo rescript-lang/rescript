@@ -222,7 +222,7 @@ pub enum DeprecationWarning {
     BscFlags,
 }
 
-/// # bsconfig.json representation
+/// # rescript.json representation
 /// This is tricky, there is a lot of ambiguity. This is probably incomplete.
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct Config {
@@ -234,8 +234,6 @@ pub struct Config {
     pub package_specs: Option<OneOrMore<PackageSpec>>,
     pub warnings: Option<Warnings>,
     pub suffix: Option<String>,
-    #[serde(rename = "pinned-dependencies")]
-    pub pinned_dependencies: Option<Vec<String>>,
     pub dependencies: Option<Vec<String>>,
     #[serde(rename = "dev-dependencies")]
     pub dev_dependencies: Option<Vec<String>>,
@@ -258,10 +256,10 @@ pub struct Config {
     pub jsx: Option<JsxSpecs>,
     #[serde(rename = "gentypeconfig")]
     pub gentype_config: Option<GenTypeConfig>,
-    // this is a new feature of rewatch, and it's not part of the bsconfig.json spec
+    // this is a new feature of rewatch, and it's not part of the rescript.json spec
     #[serde(rename = "namespace-entry")]
     pub namespace_entry: Option<String>,
-    // this is a new feature of rewatch, and it's not part of the bsconfig.json spec
+    // this is a new feature of rewatch, and it's not part of the rescript.json spec
     #[serde(rename = "allowed-dependents")]
     pub allowed_dependents: Option<Vec<String>>,
 
@@ -620,7 +618,6 @@ pub mod tests {
     pub struct CreateConfigArgs {
         pub name: String,
         pub bs_deps: Vec<String>,
-        pub pinned_deps: Vec<String>,
         pub build_dev_deps: Vec<String>,
         pub allowed_dependents: Option<Vec<String>>,
     }
@@ -634,7 +631,6 @@ pub mod tests {
             package_specs: None,
             warnings: None,
             suffix: None,
-            pinned_dependencies: Some(args.pinned_deps),
             dependencies: Some(args.bs_deps),
             dev_dependencies: Some(args.build_dev_deps),
             bs_dependencies: None,
@@ -659,7 +655,6 @@ pub mod tests {
             "sources": [ { "dir": "src/", "subdirs": true } ],
             "package-specs": [ { "module": "es6", "in-source": true } ],
             "suffix": ".mjs",
-            "pinned-dependencies": [ "@teamwalnut/app" ],
             "bs-dependencies": [ "@teamwalnut/app" ]
         }
         "#;
@@ -747,7 +742,6 @@ pub mod tests {
             "sources": [ { "dir": "src/", "subdirs": true } ],
             "package-specs": [ { "module": "es6", "in-source": true } ],
             "suffix": ".mjs",
-            "pinned-dependencies": [ "@teamwalnut/app" ],
             "bs-dependencies": [ "@teamwalnut/app" ],
             "gentypeconfig": {
                 "module": "esmodule",
@@ -769,7 +763,6 @@ pub mod tests {
             "sources": [ { "dir": "src/", "subdirs": true } ],
             "package-specs": [ { "module": "es6", "in-source": true } ],
             "suffix": ".mjs",
-            "pinned-dependencies": [ "@teamwalnut/app" ],
             "bs-dependencies": [ "@teamwalnut/app" ],
             "jsx": {
                 "module": "Voby.JSX"
@@ -799,7 +792,6 @@ pub mod tests {
             "sources": [ { "dir": "src/", "subdirs": true } ],
             "package-specs": [ { "module": "es6", "in-source": true } ],
             "suffix": ".mjs",
-            "pinned-dependencies": [ "@teamwalnut/app" ],
             "bs-dependencies": [ "@teamwalnut/app" ],
             "jsx": { "version": 4, "preserve": true }
         }

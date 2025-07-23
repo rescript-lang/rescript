@@ -1812,8 +1812,7 @@ and parse_constrained_expr_region p =
     | _ -> Some expr)
   | _ -> None
 
-and parse_regex p pattern flags =
-  let start_pos = p.Parser.start_pos in
+and parse_regex ~start_pos p pattern flags =
   Parser.next p;
   let loc = mk_loc start_pos p.prev_end_pos in
   let payload =
@@ -1826,7 +1825,7 @@ and parse_regex p pattern flags =
                   if p.mode = ParseForTypeChecker then Some "js" else None )));
       ]
   in
-  Ast_helper.Exp.extension (Location.mknoloc "re", payload)
+  Ast_helper.Exp.extension (Location.mkloc "re" loc, payload)
 
 (* Atomic expressions represent unambiguous expressions.
  * This means that regardless of the context, these expressions
@@ -1903,13 +1902,13 @@ and parse_atomic_expr p =
     | Forwardslash -> (
       Parser.next_regex_token p;
       match p.token with
-      | Regex (pattern, flags) -> parse_regex p pattern flags
+      | Regex (pattern, flags) -> parse_regex ~start_pos p pattern flags
       | _ -> Ast_helper.Exp.extension (Location.mknoloc "re", Parsetree.PStr [])
       )
     | ForwardslashDot -> (
       Parser.next_regex_token p;
       match p.token with
-      | Regex (pattern, flags) -> parse_regex p ("." ^ pattern) flags
+      | Regex (pattern, flags) -> parse_regex ~start_pos p ("." ^ pattern) flags
       | _ -> Ast_helper.Exp.extension (Location.mknoloc "re", Parsetree.PStr [])
       )
     | token -> (

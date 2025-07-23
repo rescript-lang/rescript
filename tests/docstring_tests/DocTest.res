@@ -12,23 +12,28 @@ let nodeVersion =
 
 let ignoreRuntimeTests = [
   (
-    // Ignore some tests require Node.js v20+
+    // Ignore tests that require Node.js v20+
     20,
-    ["Stdlib.Array.toReversed", "Stdlib.Array.toSorted"],
+    ["Stdlib_Array.toReversed", "Stdlib_Array.toSorted"],
   ),
   (
-    // Ignore some tests require Node.js v22+
+    // Ignore tests that require Node.js v22+
     22,
     [
-      "Stdlib.Promise.withResolvers",
-      "Stdlib.Set.union",
-      "Stdlib.Set.isSupersetOf",
-      "Stdlib.Set.isSubsetOf",
-      "Stdlib.Set.isDisjointFrom",
-      "Stdlib.Set.intersection",
-      "Stdlib.Set.symmetricDifference",
-      "Stdlib.Set.difference",
+      "Stdlib_Promise.withResolvers",
+      "Stdlib_Set.union",
+      "Stdlib_Set.isSupersetOf",
+      "Stdlib_Set.isSubsetOf",
+      "Stdlib_Set.isDisjointFrom",
+      "Stdlib_Set.intersection",
+      "Stdlib_Set.symmetricDifference",
+      "Stdlib_Set.difference",
     ],
+  ),
+  (
+    // Ignore tests that require Node.js v24+
+    24,
+    ["Stdlib_RegExp.escape"],
   ),
 ]
 
@@ -65,11 +70,7 @@ let extractExamples = async () => {
   let docFiles = files->Array.filter(f =>
     switch f {
     // Ignore Js modules and RescriptTools for now
-    // Avoid Stdlib modules showing up as both "Stdlib_X" and "Stdlib.X"
-    | f
-      if f->String.startsWith("Js") ||
-      f->String.startsWith("RescriptTools") ||
-      f->String.startsWith("Stdlib_") => false
+    | f if f->String.startsWith("Js") || f->String.startsWith("RescriptTools") => false
     | f if f->String.endsWith(".resi") => true
     | f if f->String.endsWith(".res") && !(files->Array.includes(f ++ "i")) => true
     | _ => false

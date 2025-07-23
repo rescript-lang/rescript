@@ -6,11 +6,28 @@
 
 const target = `${process.platform}-${process.arch}`;
 
+const supportedPlatforms = [
+  "darwin-arm64",
+  "darwin-x64",
+  "linux-arm64",
+  "linux-x64",
+  "win32-x64",
+];
+
 /** @type {BinaryModuleExports} */
 let mod;
-try {
-  mod = await import(`@rescript/${target}`);
-} catch {
+
+if (supportedPlatforms.includes(target)) {
+  const binPackageName = `@rescript/${target}`;
+
+  try {
+    mod = await import(binPackageName);
+  } catch {
+    throw new Error(
+      `Package ${binPackageName} not found. Make sure the rescript package is installed correctly.`,
+    );
+  }
+} else {
   throw new Error(`Platform ${target} is not supported!`);
 }
 

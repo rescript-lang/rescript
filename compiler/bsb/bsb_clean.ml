@@ -51,8 +51,8 @@ let clean_bs_garbage proj_dir =
     Bsb_log.warn "@{<warning>Failed@} to clean due to %s" (Printexc.to_string e)
 
 let clean_bs_deps proj_dir =
-  let _, _, pinned_dependencies = Bsb_config_parse.deps_from_bsconfig () in
-  let queue = Bsb_build_util.walk_all_deps proj_dir ~pinned_dependencies in
+  let _, _ = Bsb_config_parse.deps_from_bsconfig () in
+  let queue = Bsb_build_util.walk_all_deps proj_dir in
   Queue.iter
     (fun (pkg_cxt : Bsb_build_util.package_context) ->
       (* whether top or not always do the cleaning *)

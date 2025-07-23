@@ -1,13 +1,4 @@
 {
-    "name": "rescript",
-    "bs-dependencies": [
-        "@tests/gentype-react-example",
-        "@tests/rescript-react",
-        "@tests/analysis",
-        "@tests/generic-jsx-transform",
-        "@tests/reanalyze-deadcode",
-        "@tests/incremental-typechecking",
-        "@tests/reanalyze-termination"
-    ],
-    "jsx": { "version": 4 }
+  "name": "rescript",
+  "bs-dependencies": ["@tests/gentype-react-example"]
 }

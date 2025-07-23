@@ -122,6 +122,25 @@ switch regexp->RegExp.exec("ReScript is pretty cool, right?") {
 external fromStringWithFlags: (string, ~flags: string) => t = "RegExp"
 
 /**
+`escape(string)` escapes any potential regex syntax characters in a string.
+
+See [`RegExp.escape`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/escape) on MDN.
+
+## Examples
+```rescript
+let literal = "foo[bar]"
+let regexp = literal->RegExp.escape->RegExp.fromString
+regexp->RegExp.test("foo[bar]") == true
+```
+
+## Remark
+
+Since May 2025, this feature works across the latest devices and browser versions.
+This feature might not work in older devices or browsers.
+*/
+external escape: string => string = "RegExp.escape"
+
+/**
 `test(regexp, string)` tests whether the provided `regexp` matches on the provided string.
 
 See [`RegExp.test`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/test) on MDN.

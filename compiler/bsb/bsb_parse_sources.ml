@@ -17,7 +17,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. *)
@@ -48,7 +48,7 @@ type cxt = {
   ignored_dirs: Set_string.t;
 }
 
-(** [public] has a list of modules, we do a sanity check to see if all the listed 
+(** [public] has a list of modules, we do a sanity check to see if all the listed
     modules are indeed valid module components
 *)
 let collect_pub_modules (xs : Ext_json_types.t array) (cache : Bsb_db.map) :
@@ -156,9 +156,9 @@ let extract_predicate (m : json_map) : string -> bool =
   | None, _ -> fun name -> not (Ext_list.mem_string excludes name)
 
 (** [parsing_source_dir_map cxt input]
-    Major work done in this function, 
-    assume [not toplevel && not (Bsb_dir_index.is_lib_dir dir_index)]      
-    is already checked, so we don't need check it again    
+    Major work done in this function,
+    assume [not toplevel && not (Bsb_dir_index.is_lib_dir dir_index)]
+    is already checked, so we don't need check it again
 *)
 
 (** This is the only place where we do some removal during scanning,
@@ -174,9 +174,7 @@ let rec parsing_source_dir_map ({cwd = dir} as cxt)
     let cur_globbed_dirs = ref false in
     let has_generators =
       match cxt with
-      | {cut_generators = false; package_kind = Toplevel | Pinned_dependency _}
-        ->
-        true
+      | {cut_generators = false; package_kind = Toplevel} -> true
       | {cut_generators = false; package_kind = Dependency _}
       | {cut_generators = true; _} ->
         false
@@ -274,7 +272,7 @@ and parsing_single_source ({package_kind; is_dev; cwd} as cxt)
   | Str {str = dir} -> (
     match (package_kind, is_dev) with
     | Dependency _, true -> Bsb_file_groups.empty
-    | Dependency _, false | (Toplevel | Pinned_dependency _), _ ->
+    | Dependency _, false | Toplevel, _ ->
       parsing_source_dir_map
         {
           cxt with
@@ -293,7 +291,7 @@ and parsing_single_source ({package_kind; is_dev; cwd} as cxt)
     in
     match (package_kind, current_dir_index) with
     | Dependency _, true -> Bsb_file_groups.empty
-    | Dependency _, false | (Toplevel | Pinned_dependency _), _ ->
+    | Dependency _, false | Toplevel, _ ->
       let dir =
         match map.?(Bsb_build_schemas.dir) with
         | Some (Str {str}) ->

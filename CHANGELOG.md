@@ -19,19 +19,25 @@
 #### :rocket: New Feature
 
 - Add optional `message` argument to `Result.getOrThrow` and improve default error message. https://github.com/rescript-lang/rescript/pull/7630
+- Add `RegExp.escape` binding. https://github.com/rescript-lang/rescript/pull/7695
 
 #### :nail_care: Polish
 
 - Configuration fields `bs-dependencies`, `bs-dev-dependencies` and `bsc-flags` are now deprecated in favor of `dependencies`, `dev-dependencies` and `compiler-flags`. https://github.com/rescript-lang/rescript/pull/7658
+- Better error message if platform binaries package is not found. https://github.com/rescript-lang/rescript/pull/7698
 
 #### :house: Internal
 
 - Add rust linting to CI with `clippy`. https://github.com/rescript-lang/rescript/pull/7675
 - AST: use `Typ.arrows` for creation, after the refactoring of arrow types. https://github.com/rescript-lang/rescript/pull/7662
+- Don't skip Stdlib docstring tests. https://github.com/rescript-lang/rescript/pull/7694
+- Remove all leftovers of pinned-dependencies handling. https://github.com/rescript-lang/rescript/pull/7686
 
 #### :bug: Bug fix
 
 - Fix `--create-sourcedirs` generation with for a single project. https://github.com/rescript-lang/rescript/pull/7671
+- Fix rewatch not recompiling on changes under windows. https://github.com/rescript-lang/rescript/pull/7690
+- Fix locations of regex literals. https://github.com/rescript-lang/rescript/pull/7683
 
 # 12.0.0-beta.2
 

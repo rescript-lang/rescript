@@ -132,7 +132,7 @@ let ( |? ) m (key, cb) = m |> Ext_json.test key cb
 
 type top = Expect_none | Expect_name of string
 
-type package_context = {proj_dir: string; top: top; is_pinned: bool}
+type package_context = {proj_dir: string; top: top}
 
 (**
    TODO: check duplicate package name
@@ -148,15 +148,8 @@ type package_context = {proj_dir: string; top: top; is_pinned: bool}
 let pp_packages_rev ppf lst =
   Ext_list.rev_iter lst (fun s -> Format.fprintf ppf "%s " s)
 
-let extract_pinned_dependencies (map : Ext_json_types.t Map_string.t) :
-    Set_string.t =
-  match Map_string.find_opt map Bsb_build_schemas.pinned_dependencies with
-  | None -> Set_string.empty
-  | Some (Arr {content}) -> Set_string.of_list (get_list_string content)
-  | Some config -> Bsb_exception.config_error config "expect an array of string"
-
 let rec walk_all_deps_aux (visited : string Hash_string.t) (paths : string list)
-    ~(top : top) (dir : string) (queue : _ Queue.t) ~pinned_dependencies =
+    ~(top : top) (dir : string) (queue : _ Queue.t) =
   match
     Bsb_config_load.load_json ~per_proj_dir:dir ~warn_legacy_config:false
   with
@@ -182,7 +175,7 @@ let rec walk_all_deps_aux (visited : string Hash_string.t) (paths : string list)
     if Hash_string.mem visited cur_package_name then
       Bsb_log.info "@{<info>Visited before@} %s@." cur_package_name
     else
-      let explore_deps (deps : string) pinned_dependencies =
+      let explore_deps (deps : string) =
         map
         |? ( deps,
              `Arr
@@ -196,38 +189,20 @@ let rec walk_all_deps_aux (visited : string Hash_string.t) (paths : string list)
                        in
                        walk_all_deps_aux visited package_stacks
                          ~top:(Expect_name new_package) package_dir queue
-                         ~pinned_dependencies
                      | _ -> Bsb_exception.errorf ~loc "%s expect an array" deps))
            )
         |> ignore
       in
-      let is_pinned =
-        match top with
-        | Expect_name n when Set_string.mem pinned_dependencies n -> true
-        | _ -> false
-      in
-      let pinned_dependencies =
-        match is_pinned with
-        | true ->
-          let transitive_pinned_dependencies =
-            extract_pinned_dependencies map
-          in
-          Set_string.union transitive_pinned_dependencies pinned_dependencies
-        | false -> pinned_dependencies
-      in
-      explore_deps Bsb_build_schemas.bs_dependencies pinned_dependencies;
+      explore_deps Bsb_build_schemas.bs_dependencies;
       (match top with
-      | Expect_none ->
-        explore_deps Bsb_build_schemas.bs_dev_dependencies pinned_dependencies
-      | Expect_name _ when is_pinned ->
-        explore_deps Bsb_build_schemas.bs_dev_dependencies pinned_dependencies
+      | Expect_none -> explore_deps Bsb_build_schemas.bs_dev_dependencies
       | Expect_name _ -> ());
-      Queue.add {top; proj_dir = dir; is_pinned} queue;
+      Queue.add {top; proj_dir = dir} queue;
       Hash_string.add visited cur_package_name dir
   | _ -> ()
 
-let walk_all_deps dir ~pinned_dependencies : package_context Queue.t =
+let walk_all_deps dir : package_context Queue.t =
   let visited = Hash_string.create 0 in
   let cb = Queue.create () in
-  walk_all_deps_aux visited [] ~top:Expect_none dir cb ~pinned_dependencies;
+  walk_all_deps_aux visited [] ~top:Expect_none dir cb;
   cb

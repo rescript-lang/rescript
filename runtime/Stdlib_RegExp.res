@@ -12,6 +12,8 @@ module Result = {
 @new external fromString: (string, ~flags: string=?) => t = "RegExp"
 @new external fromStringWithFlags: (string, ~flags: string) => t = "RegExp"
 
+external escape: string => string = "RegExp.escape"
+
 @send external test: (t, string) => bool = "test"
 @return(nullable) @send external exec: (t, string) => option<Result.t> = "exec"
 
