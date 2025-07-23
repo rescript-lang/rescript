@@ -361,6 +361,7 @@ pub fn compiler_args(
     is_type_dev: bool,
     is_local_dep: bool,
 ) -> Vec<String> {
+    let root_bsc_flags = config::flatten_flags(&root_config.compiler_flags);
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
 
     let dependency_paths = get_dependency_paths(config, project_root, workspace_root, packages, is_type_dev);
@@ -389,7 +390,7 @@ pub fn compiler_args(
     };
 
     let jsx_args = root_config.get_jsx_args();
-    let jsx_module_args = root_config.get_jsx_module_args();
+    let jsx_module_args = config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
     let gentype_arg = config.get_gentype_arg();
@@ -454,6 +455,7 @@ pub fn compiler_args(
         jsx_module_args,
         jsx_mode_args,
         jsx_preserve_args,
+        root_bsc_flags.to_owned(),
         bsc_flags.to_owned(),
         warning_args,
         gentype_arg,
