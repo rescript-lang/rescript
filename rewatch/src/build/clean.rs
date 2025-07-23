@@ -375,7 +375,10 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
 
         let path_str = package.get_ocaml_build_path();
         let path = std::path::Path::new(&path_str);
-        let _ = std::fs::remove_dir_all(path);
+        // This is hacky check that the runtime is not cleaned for rescript repository
+        if package.name != "rescript" {
+            let _ = std::fs::remove_dir_all(path);
+        }
     });
     let timing_clean_compiler_assets_elapsed = timing_clean_compiler_assets.elapsed();
 
