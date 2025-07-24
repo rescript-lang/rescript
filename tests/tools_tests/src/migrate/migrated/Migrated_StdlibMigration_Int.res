@@ -7,4 +7,3 @@ let result = Int.shiftLeft(1, 2)
 let result = Int.shiftRightUnsigned(1, 2)
 let result = Int.shiftRight(1, 2)
 let result = Int.bitwiseNot(0)
-

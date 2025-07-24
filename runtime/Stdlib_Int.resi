@@ -470,42 +470,42 @@ Int.shiftRightUnsigned(4, 1) == 2
 */
 external shiftRightUnsigned: (int, int) => int = "%lsrint"
 
-module Bitwise = {
+module Bitwise: {
   @deprecated({
     reason: "Use `Int.bitwiseAnd` instead",
-    migrate: Int.bitwiseAnd()
+    migrate: Int.bitwiseAnd(),
   })
   external land: (int, int) => int = "%andint"
   @deprecated({
     reason: "Use `Int.bitwiseOr` instead",
-    migrate: Int.bitwiseOr()
+    migrate: Int.bitwiseOr(),
   })
   external lor: (int, int) => int = "%orint"
   @deprecated({
     reason: "Use `Int.bitwiseXor` instead",
-    migrate: Int.bitwiseXor()
+    migrate: Int.bitwiseXor(),
   })
   external lxor: (int, int) => int = "%xorint"
 
   @deprecated({
     reason: "Use `Int.shiftLeft` instead",
-    migrate: Int.shiftLeft()
+    migrate: Int.shiftLeft(),
   })
   external lsl: (int, int) => int = "%lslint"
   @deprecated({
     reason: "Use `Int.shiftRightUnsigned` instead",
-    migrate: Int.shiftRightUnsigned()
+    migrate: Int.shiftRightUnsigned(),
   })
   external lsr: (int, int) => int = "%lsrint"
   @deprecated({
     reason: "Use `Int.shiftRight` instead",
-    migrate: Int.shiftRight()
+    migrate: Int.shiftRight(),
   })
   external asr: (int, int) => int = "%asrint"
 
   @deprecated({
     reason: "Use `Int.bitwiseNot` instead",
-    migrate: Int.bitwiseNot()
+    migrate: Int.bitwiseNot(),
   })
   let lnot: int => int
 }
