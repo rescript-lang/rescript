@@ -79,8 +79,13 @@ type error =
   | Unknown_literal of string * char
   | Illegal_letrec_pat
   | Empty_record_literal
-  | Uncurried_arity_mismatch of
-      type_expr * int * int * Asttypes.Noloc.arg_label list
+  | Uncurried_arity_mismatch of {
+      function_type: type_expr;
+      expected_arity: int;
+      provided_arity: int;
+      provided_args: Asttypes.Noloc.arg_label list;
+      function_name: Longident.t option;
+    }
   | Field_not_optional of string * type_expr
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
@@ -2220,6 +2225,11 @@ let not_function env ty =
   let ls, tvar = list_labels env ty in
   ls = [] && not tvar
 
+let extract_function_name funct =
+  match funct.exp_desc with
+  | Texp_ident (path, _, _) -> Some (Longident.parse (Path.name path))
+  | _ -> None
+
 type lazy_args =
   (Asttypes.Noloc.arg_label * (unit -> Typedtree.expression) option) list
 
@@ -3512,10 +3522,13 @@ and type_application ~context total_app env funct (sargs : sargs) :
              ( funct.exp_loc,
                env,
                Uncurried_arity_mismatch
-                 ( funct.exp_type,
-                   arity,
-                   List.length sargs,
-                   sargs |> List.map (fun (a, _) -> to_noloc a) ) ));
+                 {
+                   function_type = funct.exp_type;
+                   expected_arity = arity;
+                   provided_arity = List.length sargs;
+                   provided_args = sargs |> List.map (fun (a, _) -> to_noloc a);
+                   function_name = extract_function_name funct;
+                 } ));
       arity
     | None -> max_int
   in
@@ -3531,10 +3544,13 @@ and type_application ~context total_app env funct (sargs : sargs) :
               ( funct.exp_loc,
                 env,
                 Uncurried_arity_mismatch
-                  ( funct.exp_type,
-                    required_args + newarity,
-                    required_args,
-                    sargs |> List.map (fun (a, _) -> to_noloc a) ) )));
+                  {
+                    function_type = funct.exp_type;
+                    expected_arity = required_args + newarity;
+                    provided_arity = required_args;
+                    provided_args = sargs |> List.map (fun (a, _) -> to_noloc a);
+                    function_name = extract_function_name funct;
+                  } )));
       let new_t =
         if fully_applied then new_t
         else
@@ -4232,6 +4248,40 @@ let spellcheck ppf unbound_name valid_names =
 let spellcheck_idents ppf unbound valid_idents =
   spellcheck ppf (Ident.name unbound) (List.map Ident.name valid_idents)
 
+let strip_arity_suffix name =
+  let len = String.length name in
+  let rec scan_back i =
+    if i < 0 || name.[i] < '0' || name.[i] > '9' then i + 1
+    else scan_back (i - 1)
+  in
+  let start_of_digits = scan_back (len - 1) in
+  if start_of_digits > 0 && start_of_digits < len then
+    String.sub name 0 start_of_digits
+  else name
+
+let find_arity_suggestion env function_name target_arity =
+  let base_name = strip_arity_suffix function_name in
+  let candidate =
+    if target_arity = 1 then base_name
+    else base_name ^ string_of_int target_arity
+  in
+  try
+    let path, desc = Env.lookup_value (Longident.parse candidate) env in
+    if Builtin_attributes.deprecated_of_attrs desc.val_attributes <> None then
+      None
+    else
+      let expanded_type = Ctype.expand_head env desc.val_type in
+      let actual_arity =
+        match Ctype.get_arity env expanded_type with
+        | Some arity -> arity
+        | None -> 0
+      in
+      if actual_arity = target_arity then Some (Printtyp.string_of_path path)
+      else None
+  with
+  | Not_found -> None
+  | _ -> None
+
 open Format
 let longident = Printtyp.longident
 let super_report_unification_error = Printtyp.super_report_unification_error
@@ -4491,7 +4541,14 @@ let report_error env loc ppf error =
     fprintf ppf
       "Empty record literal {} should be type annotated or used in a record \
        context."
-  | Uncurried_arity_mismatch (typ, arity, args, sargs) ->
+  | Uncurried_arity_mismatch
+      {
+        function_type = typ;
+        expected_arity = arity;
+        provided_arity = args;
+        provided_args = sargs;
+        function_name = function_name_opt;
+      } ->
     (* We need:
     - Any arg that's required but isn't passed
     - Any arg that is passed but isn't in the fn definition (optional or labelled)
@@ -4599,6 +4656,26 @@ let report_error env loc ppf error =
         (if args > arity then " just" else "")
         (if args = 1 then "" else "s")
         arity;
+
+    (* Add suggestions for functions with correct arity *)
+    (match function_name_opt with
+    | Some function_name -> (
+      let function_name_str =
+        let buffer = Buffer.create 16 in
+        let formatter = Format.formatter_of_buffer buffer in
+        Printtyp.longident formatter function_name;
+        Format.pp_print_flush formatter ();
+        Buffer.contents buffer
+      in
+      let suggestion = find_arity_suggestion env function_name_str args in
+      match suggestion with
+      | None -> () (* No suggestion found *)
+      | Some suggestion_str ->
+        fprintf ppf
+          "@,@,Hint: Try @{<info>%s@} instead (takes @{<info>%d@} argument%s)."
+          suggestion_str args
+          (if args = 1 then "" else "s"))
+    | None -> () (* Function name not available *));
 
     fprintf ppf "@]"
   | Field_not_optional (name, typ) ->
