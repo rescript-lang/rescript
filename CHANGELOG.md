@@ -15,6 +15,7 @@
 #### :nail_care: Polish
 
 - Apply heuristic to suggest using JSX fragments where we guess that might be what the user wanted. https://github.com/rescript-lang/rescript/pull/7714
+- `Int.Bitwise` functions have been deprecated. https://github.com/rescript-lang/rescript/pull/7705
 
 # 12.0.0-beta.3
 
