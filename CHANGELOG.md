@@ -39,6 +39,7 @@
 - Fix `--create-sourcedirs` generation with for a single project. https://github.com/rescript-lang/rescript/pull/7671
 - Fix rewatch not recompiling on changes under windows. https://github.com/rescript-lang/rescript/pull/7690
 - Fix locations of regex literals. https://github.com/rescript-lang/rescript/pull/7683
+- Fix async React component compilation. https://github.com/rescript-lang/rescript/pull/7704
 
 # 12.0.0-beta.2
 
