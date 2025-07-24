@@ -28,6 +28,7 @@
 - Better error message if platform binaries package is not found. https://github.com/rescript-lang/rescript/pull/7698
 - Hint in error for string constants matching expected variant/polyvariant constructor. https://github.com/rescript-lang/rescript/pull/7711
 - Polish arity mismatch error message a bit. https://github.com/rescript-lang/rescript/pull/7709
+- Suggest related functions with the expected arity in errors when it makes sense. https://github.com/rescript-lang/rescript/pull/7712
 
 #### :house: Internal
 
