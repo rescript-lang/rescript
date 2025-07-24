@@ -25,6 +25,7 @@
 
 - Configuration fields `bs-dependencies`, `bs-dev-dependencies` and `bsc-flags` are now deprecated in favor of `dependencies`, `dev-dependencies` and `compiler-flags`. https://github.com/rescript-lang/rescript/pull/7658
 - Better error message if platform binaries package is not found. https://github.com/rescript-lang/rescript/pull/7698
+- Polish arity mismatch error message a bit. https://github.com/rescript-lang/rescript/pull/7709
 
 #### :house: Internal
 
