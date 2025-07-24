@@ -26,7 +26,12 @@ open Error_message_utils
 
 type error =
   | Polymorphic_label of Longident.t
-  | Constructor_arity_mismatch of Longident.t * int * int
+  | Constructor_arity_mismatch of {
+      name: Longident.t;
+      constuctor: constructor_description;
+      expected: int;
+      provided: int;
+    }
   | Label_mismatch of Longident.t * (type_expr * type_expr) list
   | Pattern_type_clash of (type_expr * type_expr) list
   | Or_pattern_type_clash of Ident.t * (type_expr * type_expr) list
@@ -1395,7 +1400,12 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
            ( loc,
              !env,
              Constructor_arity_mismatch
-               (lid.txt, constr.cstr_arity, List.length sargs) ));
+               {
+                 name = lid.txt;
+                 constuctor = constr;
+                 expected = constr.cstr_arity;
+                 provided = List.length sargs;
+               } ));
     let ty_args, ty_res =
       instance_constructor ~in_pattern:(env, get_newtype_level ()) constr
     in
@@ -3742,7 +3752,12 @@ and type_construct ~context env loc lid sarg ty_expected attrs =
          ( loc,
            env,
            Constructor_arity_mismatch
-             (lid.txt, constr.cstr_arity, List.length sargs) ));
+             {
+               name = lid.txt;
+               constuctor = constr;
+               expected = constr.cstr_arity;
+               provided = List.length sargs;
+             } ));
   let separate = Env.has_local_constraints env in
   if separate then (
     begin_def ();
@@ -4245,14 +4260,24 @@ let report_error env loc ppf error =
   | Polymorphic_label lid ->
     fprintf ppf "@[The record field %a is polymorphic.@ %s@]" longident lid
       "You cannot instantiate it in a pattern."
-  | Constructor_arity_mismatch (lid, expected, provided) ->
+  | Constructor_arity_mismatch {name; constuctor; expected; provided} ->
     (* modified *)
-    fprintf ppf
-      "@[This variant constructor, %a, expects %i %s; here, we've %sfound %i.@]"
-      longident lid expected
-      (if expected == 1 then "argument" else "arguments")
-      (if provided < expected then "only " else "")
-      provided
+    let is_inline_record = Option.is_some constuctor.cstr_inlined in
+    if is_inline_record && expected = 1 then
+      fprintf ppf
+        "@[This variant constructor @{<info>%a@} expects an inline record as \
+         payload%s.@]"
+        longident name
+        (if provided = 0 then ", but it's not being passed any arguments"
+         else "")
+    else
+      fprintf ppf
+        "@[This variant constructor @{<info>%a@} expects %i %s, but it's%s \
+         being passed %i.@]"
+        longident name expected
+        (if expected == 1 then "argument" else "arguments")
+        (if provided < expected then " only" else "")
+        provided
   | Label_mismatch (lid, trace) ->
     (* modified *)
     super_report_unification_error ppf env trace

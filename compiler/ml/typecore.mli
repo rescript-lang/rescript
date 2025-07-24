@@ -58,7 +58,12 @@ val name_pattern : string -> Typedtree.case list -> Ident.t
 
 type error =
   | Polymorphic_label of Longident.t
-  | Constructor_arity_mismatch of Longident.t * int * int
+  | Constructor_arity_mismatch of {
+      name: Longident.t;
+      constuctor: constructor_description;
+      expected: int;
+      provided: int;
+    }
   | Label_mismatch of Longident.t * (type_expr * type_expr) list
   | Pattern_type_clash of (type_expr * type_expr) list
   | Or_pattern_type_clash of Ident.t * (type_expr * type_expr) list
