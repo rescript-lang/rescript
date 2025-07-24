@@ -32,6 +32,17 @@ external fromIterator: Stdlib_Iterator.t<'a> => array<'a> = "Array.from"
 external fromArrayLikeWithMap: (arrayLike<'a>, 'a => 'b) => array<'b> = "Array.from"
 
 /**
+`fromString(str)` creates an array of each character as a separate string from the provided `str`.
+
+## Examples
+
+```rescript
+Array.fromString("abcde") == ["a", "b", "c", "d", "e"]
+```
+*/
+@val external fromString: string => array<string> = "Array.from"
+
+/**
 `make(~length, init)` creates an array of length `length` initialized with the value of `init`.
 
 ## Examples

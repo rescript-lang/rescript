@@ -1,0 +1,126 @@
+let make1 = 1->String.make
+let make2 = String.make(1)
+
+let fromCharCode1 = 65->String.fromCharCode
+let fromCharCode2 = String.fromCharCode(65)
+
+let fromCharCodeMany1 = [65, 66, 67]->String.fromCharCodeMany
+let fromCharCodeMany2 = String.fromCharCodeMany([65, 66, 67])
+
+let fromCodePoint1 = 65->String.fromCodePoint
+let fromCodePoint2 = String.fromCodePoint(65)
+
+let fromCodePointMany1 = [65, 66, 67]->String.fromCodePointMany
+let fromCodePointMany2 = String.fromCodePointMany([65, 66, 67])
+
+let length1 = "abcde"->String.length
+let length2 = String.length("abcde")
+
+let get1 = "abcde"->String.getUnsafe(2)
+let get2 = String.getUnsafe("abcde", 2)
+
+let charAt1 = "abcde"->String.charAt(2)
+let charAt2 = String.charAt("abcde", 2)
+
+let charCodeAt1 = "abcde"->String.charCodeAt(2)
+let charCodeAt2 = String.charCodeAt("abcde", 2)
+
+let codePointAt1 = "abcde"->String.codePointAt(2)
+let codePointAt2 = String.codePointAt("abcde", 2)
+
+let concat1 = "abcde"->String.concat("fghij")
+let concat2 = String.concat("abcde", "fghij")
+
+let concatMany1 = "abcde"->String.concatMany(["fghij", "klmno"])
+let concatMany2 = String.concatMany("abcde", ["fghij", "klmno"])
+
+let endsWith1 = "abcde"->String.endsWith("de")
+let endsWith2 = String.endsWith("abcde", "de")
+
+let endsWithFrom1 = "abcde"->String.endsWithFrom("d", 2)
+let endsWithFrom2 = String.endsWithFrom("abcde", "d", 2)
+
+let includes1 = "abcde"->String.includes("de")
+let includes2 = String.includes("abcde", "de")
+
+let includesFrom1 = "abcde"->String.includesFrom("d", 2)
+let includesFrom2 = String.includesFrom("abcde", "d", 2)
+
+let indexOf1 = "abcde"->String.indexOf("de")
+let indexOf2 = String.indexOf("abcde", "de")
+
+let indexOfFrom1 = "abcde"->String.indexOfFrom("d", 2)
+let indexOfFrom2 = String.indexOfFrom("abcde", "d", 2)
+
+let lastIndexOf1 = "abcde"->String.lastIndexOf("de")
+let lastIndexOf2 = String.lastIndexOf("abcde", "de")
+
+let lastIndexOfFrom1 = "abcde"->String.lastIndexOfFrom("d", 2)
+let lastIndexOfFrom2 = String.lastIndexOfFrom("abcde", "d", 2)
+
+let localeCompare1 = "abcde"->String.localeCompare("fghij")
+let localeCompare2 = String.localeCompare("abcde", "fghij")
+
+let match1 = "abcde"->String.match(/d/)
+let match2 = String.match("abcde", /d/)
+
+let normalize1 = "abcde"->String.normalize
+let normalize2 = String.normalize("abcde")
+
+let repeat1 = "abcde"->String.repeat(2)
+let repeat2 = String.repeat("abcde", 2)
+
+let replace1 = "abcde"->String.replace("d", "f")
+let replace2 = String.replace("abcde", "d", "f")
+
+let replaceByRe1 = "abcde"->String.replaceRegExp(/d/, "f")
+let replaceByRe2 = String.replaceRegExp("abcde", /d/, "f")
+
+let search1 = "abcde"->String.search(/d/)
+let search2 = String.search("abcde", /d/)
+
+let slice1 = "abcde"->String.slice(~start=1, ~end=3)
+let slice2 = String.slice("abcde", ~start=1, ~end=3)
+
+let sliceToEnd1 = "abcde"->String.sliceToEnd(~start=1)
+let sliceToEnd2 = String.sliceToEnd("abcde", ~start=1)
+
+let split1 = "abcde"->String.split("d")
+let split2 = String.split("abcde", "d")
+
+let splitAtMost1 = "abcde"->String.splitAtMost("d", ~limit=2)
+let splitAtMost2 = String.splitAtMost("abcde", "d", ~limit=2)
+
+let splitByRe1 = "abcde"->String.splitByRegExp(/d/)
+let splitByRe2 = String.splitByRegExp("abcde", /d/)
+
+let splitByReAtMost1 = "abcde"->String.splitByRegExpAtMost(/d/, ~limit=2)
+let splitByReAtMost2 = String.splitByRegExpAtMost("abcde", /d/, ~limit=2)
+
+let startsWith1 = "abcde"->String.startsWith("ab")
+let startsWith2 = String.startsWith("abcde", "ab")
+
+let startsWithFrom1 = "abcde"->String.startsWithFrom("b", 1)
+let startsWithFrom2 = String.startsWithFrom("abcde", "b", 1)
+
+let substring1 = "abcde"->String.substring(~start=1, ~end=3)
+let substring2 = String.substring("abcde", ~start=1, ~end=3)
+
+let substringToEnd1 = "abcde"->String.substringToEnd(~start=1)
+let substringToEnd2 = String.substringToEnd("abcde", ~start=1)
+
+let toLowerCase1 = "abcde"->String.toLowerCase
+let toLowerCase2 = String.toLowerCase("abcde")
+
+let toLocaleLowerCase1 = "abcde"->String.toLocaleLowerCase
+let toLocaleLowerCase2 = String.toLocaleLowerCase("abcde")
+
+let toUpperCase1 = "abcde"->String.toUpperCase
+let toUpperCase2 = String.toUpperCase("abcde")
+
+let toLocaleUpperCase1 = "abcde"->String.toLocaleUpperCase
+let toLocaleUpperCase2 = String.toLocaleUpperCase("abcde")
+
+let trim1 = "abcde"->String.trim
+let trim2 = String.trim("abcde")
+
