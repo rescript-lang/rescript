@@ -76,9 +76,9 @@ let test: ('a, Kind.t<'b>) => bool
 @deprecated({
   reason: "Use pattern matching instead.",
   migrate: switch %insert.unlabelledArgument(0) {
-    | JSON.String(str) => Some(str)
-    | _ => None
-  }
+  | JSON.String(str) => Some(str)
+  | _ => None
+  },
 })
 let decodeString: t => option<Js_string.t>
 

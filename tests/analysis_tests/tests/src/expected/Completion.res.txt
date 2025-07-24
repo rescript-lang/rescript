@@ -317,6 +317,12 @@ Path Array.
     "detail": "array<'a> => unit",
     "documentation": {"kind": "markdown", "value": "\n`reverse(array)` reverses the order of the items in `array`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.reverse`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reverse) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.reverse\n\nsomeArray == [\"hello\", \"hi\"]\n```\n"}
   }, {
+    "label": "fromString",
+    "kind": 12,
+    "tags": [],
+    "detail": "string => array<string>",
+    "documentation": {"kind": "markdown", "value": "\n`fromString(str)` creates an array of each character as a separate string from the provided `str`.\n\n## Examples\n\n```rescript\nArray.fromString(\"abcde\") == [\"a\", \"b\", \"c\", \"d\", \"e\"]\n```\n"}
+  }, {
     "label": "findLastIndexWithIndex",
     "kind": 12,
     "tags": [],
