@@ -1779,5 +1779,8 @@ module Migrate = struct
         Printf.fprintf oc "%s" contents;
         close_out oc;
         Ok (Filename.basename path ^ ": File migrated successfully"))
-    | Ok _ -> Ok (Filename.basename path ^ ": File did not need migration")
+    | Ok (contents, _) -> (
+      match outputMode with
+      | `Stdout -> Ok contents
+      | `File -> Ok (Filename.basename path ^ ": File did not need migration"))
 end
