@@ -106,7 +106,26 @@ impl BuildState {
     }
 
     pub fn get_module(&self, module_name: &str) -> Option<&Module> {
-        self.modules.get(module_name)
+        // Try exact match first
+        if let Some(module) = self.modules.get(module_name) {
+            return Some(module);
+        }
+        // Fallback: try with first letter uncapitalized (legacy behavior)
+        // This matches the logic in compiler/gentype/ModuleResolver.ml:
+        // match map |> ModuleNameMap.find module_name with
+        // | resolved_module_dir -> Some (resolved_module_dir, Uppercase, bs_dependencies)
+        // | exception Not_found -> (
+        //   match map |> ModuleNameMap.find (module_name |> ModuleName.uncapitalize)
+        //   with | resolved_module_dir -> Some (resolved_module_dir, Lowercase, bs_dependencies)
+        //   | exception Not_found -> None)
+        if let Some(first_char) = module_name.chars().next() {
+            if first_char.is_ascii_uppercase() {
+                let mut uncapitalized = first_char.to_lowercase().collect::<String>();
+                uncapitalized.push_str(&module_name[1..]);
+                return self.modules.get(&uncapitalized);
+            }
+        }
+        None
     }
     pub fn new(
         project_root: PathBuf,
