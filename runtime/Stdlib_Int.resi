@@ -474,7 +474,7 @@ external shiftRightUnsigned: (int, int) => int = "%lsrint"
 module Bitwise = {
   @deprecated({
     reason: "Use `Int.bitwiseAnd` instead",
-    migrate: Int.bitwiseAnd
+    migrate: Int.bitwiseAnd()
   })
   external land: (int, int) => int = "%andint"
   external lor: (int, int) => int = "%orint"
