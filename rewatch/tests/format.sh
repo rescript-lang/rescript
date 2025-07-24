@@ -6,7 +6,7 @@ bold "Test: It should format all files"
 git diff --name-only ./
 error_output=$("$REWATCH_EXECUTABLE" format --all)
 git_diff_file_count=$(git diff --name-only ./ | wc -l | xargs)
-if [ $? -eq 0 ] && [ $git_diff_file_count -eq 4 ];
+if [ $? -eq 0 ] && [ $git_diff_file_count -eq 6 ];
 then
     success "Test package formatted. Got $git_diff_file_count changed files."
     git restore .
