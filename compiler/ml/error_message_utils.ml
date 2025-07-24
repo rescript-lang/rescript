@@ -198,12 +198,39 @@ let error_expected_type_text ppf type_clash_context =
   | Some MaybeUnwrapOption | None ->
     fprintf ppf "But it's expected to have type:"
 
-let is_record_type ~extract_concrete_typedecl ~env ty =
+let is_record_type ~(extract_concrete_typedecl : extract_concrete_typedecl) ~env
+    ty =
   try
     match extract_concrete_typedecl env ty with
     | _, _, {Types.type_kind = Type_record _; _} -> true
     | _ -> false
   with _ -> false
+
+let is_variant_type ~(extract_concrete_typedecl : extract_concrete_typedecl)
+    ~env ty =
+  try
+    match extract_concrete_typedecl env ty with
+    | _, _, {Types.type_kind = Type_variant _; _} -> true
+    | _ -> false
+  with _ -> false
+
+let get_variant_constructors
+    ~(extract_concrete_typedecl : extract_concrete_typedecl) ~env ty =
+  match extract_concrete_typedecl env ty with
+  | _, _, {Types.type_kind = Type_variant constructors; _} -> constructors
+  | _ -> []
+
+let extract_string_constant text =
+  match !Parser.parse_source text with
+  | ( [
+        {
+          Parsetree.pstr_desc =
+            Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string (s, _))}, _);
+        };
+      ],
+      _ ) ->
+    Some s
+  | _ -> None
 
 let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     (bottom_aliases : (Types.type_expr * Types.type_expr) option)
@@ -496,6 +523,91 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        with @{<info>?@} to show you want to pass the option, like: \
        @{<info>?%s@}"
       (Parser.extract_text_at_loc loc)
+  | _, Some ({Types.desc = Tconstr (p1, _, _)}, {desc = Tvariant row_desc})
+    when Path.same Predef.path_string p1 -> (
+    (* Check if we have a string constant that could be a polymorphic variant constructor *)
+    let target_expr_text = Parser.extract_text_at_loc loc in
+    match extract_string_constant target_expr_text with
+    | Some string_value -> (
+      let variant_constructors = List.map fst row_desc.row_fields in
+      let reprinted =
+        Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
+            match exp.Parsetree.pexp_desc with
+            | Pexp_constant (Pconst_string (s, _)) ->
+              Some {exp with Parsetree.pexp_desc = Pexp_variant (s, None)}
+            | _ -> None)
+      in
+      match (reprinted, List.mem string_value variant_constructors) with
+      | Some reprinted, true ->
+        fprintf ppf
+          "\n\n\
+          \  Possible solutions:\n\
+          \  - The constant passed matches one of the expected polymorphic \
+           variant constructors. Did you mean to pass this as a polymorphic \
+           variant? If so, rewrite @{<info>\"%s\"@} to @{<info>%s@}"
+          string_value reprinted
+      | _ -> ())
+    | None -> ())
+  | _, Some ({Types.desc = Tconstr (p1, _, _)}, ({desc = Tconstr _} as t2))
+    when Path.same Predef.path_string p1
+         && is_variant_type ~extract_concrete_typedecl ~env t2 -> (
+    (* Check if we have a string constant that could be a regular variant constructor *)
+    let target_expr_text = Parser.extract_text_at_loc loc in
+    match extract_string_constant target_expr_text with
+    | Some string_value -> (
+      let constructors =
+        get_variant_constructors ~extract_concrete_typedecl ~env t2
+      in
+      (* Extract runtime representations from constructor declarations *)
+      let constructor_mappings =
+        List.filter_map
+          (fun (cd : Types.constructor_declaration) ->
+            let constructor_name = Ident.name cd.cd_id in
+            let runtime_repr =
+              match Ast_untagged_variants.process_tag_type cd.cd_attributes with
+              | Some (String s) -> Some s (* @as("string_value") *)
+              | Some _ -> None (* @as with non-string values *)
+              | None -> Some constructor_name (* No @as, use constructor name *)
+            in
+            match runtime_repr with
+            | Some repr -> Some (repr, constructor_name)
+            | None -> None)
+          constructors
+      in
+      let matching_constructor =
+        List.find_opt
+          (fun (runtime_repr, _) -> runtime_repr = string_value)
+          constructor_mappings
+      in
+      match matching_constructor with
+      | Some (_, constructor_name) -> (
+        let reprinted =
+          Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
+              match exp.Parsetree.pexp_desc with
+              | Pexp_constant (Pconst_string (_, _)) ->
+                Some
+                  {
+                    exp with
+                    Parsetree.pexp_desc =
+                      Pexp_construct
+                        ( {txt = Lident constructor_name; loc = exp.pexp_loc},
+                          None );
+                  }
+              | _ -> None)
+        in
+        match reprinted with
+        | Some reprinted ->
+          fprintf ppf
+            "\n\n\
+            \  Possible solutions:\n\
+            \  - The constant passed matches the runtime representation of one \
+             of the expected variant constructors. Did you mean to pass this \
+             as a variant constructor? If so, rewrite @{<info>\"%s\"@} to \
+             @{<info>%s@}"
+            string_value reprinted
+        | None -> ())
+      | None -> ())
+    | _ -> ())
   | _, Some (t1, t2) ->
     let can_show_coercion_message =
       match (t1.desc, t2.desc) with
