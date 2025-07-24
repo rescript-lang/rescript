@@ -4657,7 +4657,7 @@ let report_error env loc ppf error =
         (if args = 1 then "" else "s")
         arity;
 
-    (* Add suggestions for functions with correct arity *)
+    (* Add suggestions for related functions with correct arity *)
     (match function_name_opt with
     | Some function_name -> (
       let function_name_str =
@@ -4669,13 +4669,13 @@ let report_error env loc ppf error =
       in
       let suggestion = find_arity_suggestion env function_name_str args in
       match suggestion with
-      | None -> () (* No suggestion found *)
+      | None -> ()
       | Some suggestion_str ->
         fprintf ppf
           "@,@,Hint: Try @{<info>%s@} instead (takes @{<info>%d@} argument%s)."
           suggestion_str args
           (if args = 1 then "" else "s"))
-    | None -> () (* Function name not available *));
+    | None -> ());
 
     fprintf ppf "@]"
   | Field_not_optional (name, typ) ->
