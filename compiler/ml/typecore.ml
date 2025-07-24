@@ -795,9 +795,10 @@ let print_expr_type_clash ~context env loc trace ppf =
 
 let report_arity_mismatch ~arity_a ~arity_b ppf =
   fprintf ppf
-    "This function is expected to have @{<info>%s@} %s, but has @{<error>%s@}"
+    "This function is expected to have @{<info>%s@} %s, but%s has @{<error>%s@}"
     arity_b
     (if arity_b = "1" then "argument" else "arguments")
+    (if int_of_string arity_a < int_of_string arity_b then " only" else "")
     arity_a
 
 (* Records *)
