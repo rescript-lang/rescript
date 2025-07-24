@@ -54,9 +54,6 @@ let async_component ~async expr =
     let open Ast_helper in
     Exp.apply
       (Exp.ident
-         {
-           loc = Location.none;
-           txt = Ldot (Lident "JsxPPXReactSupport", "asyncComponent");
-         })
+         {loc = Location.none; txt = Ldot (Lident "Jsx", "asyncComponent")})
       [(Nolabel, expr)]
   else expr

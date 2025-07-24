@@ -38,3 +38,5 @@ type component<'props> = componentLike<'props, element>
 
 /* this function exists to prepare for making `component` abstract */
 external component: componentLike<'props, element> => component<'props> = "%identity"
+
+external asyncComponent: promise<element> => element = "%identity"
