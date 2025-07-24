@@ -28,6 +28,7 @@
 
 - Add optional `message` argument to `Result.getOrThrow` and improve default error message. https://github.com/rescript-lang/rescript/pull/7630
 - Add `RegExp.escape` binding. https://github.com/rescript-lang/rescript/pull/7695
+- Add `Array.fromString`. https://github.com/rescript-lang/rescript/pull/7693
 
 #### :bug: Bug fix
 
@@ -46,6 +47,7 @@
 - Suggest related functions with the expected arity in errors when it makes sense. https://github.com/rescript-lang/rescript/pull/7712
 - Improve error when a constructor expects an inline record. https://github.com/rescript-lang/rescript/pull/7713
 - Remove `@meth` attribute. https://github.com/rescript-lang/rescript/pull/7684
+  > > > > > > > 00815832f (changelog)
 
 #### :house: Internal
 
