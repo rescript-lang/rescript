@@ -186,7 +186,6 @@ Int.toPrecisionWithPrecision(1, ~digits=2) // "1.0"
 - `RangeError`: If `digits` is not between 1 and 100 (inclusive).
   Implementations are allowed to support larger and smaller values as well.
   ECMA-262 only requires a precision of up to 21 significant digits.
-
 */
 @send @deprecated("Use `toPrecision` instead")
 external toPrecisionWithPrecision: (int, ~digits: int) => string = "toPrecision"
