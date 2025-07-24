@@ -353,11 +353,24 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     ->
     fprintf ppf
       "@,@,Dicts are written like: @{<info>dict{\"a\": 1, \"b\": 2}@}@,"
-  | _, Some ({Types.desc = Tconstr (_p1, _, _)}, {desc = Tconstr (p2, _, _)})
+  | ( _,
+      Some
+        (({Types.desc = Tconstr (_p1, _, _)} as ty), {desc = Tconstr (p2, _, _)})
+    )
     when Path.same Predef.path_unit p2 ->
+    fprintf ppf "\n\n";
+    let is_jsx_element =
+      match Ctype.expand_head env ty with
+      | {desc = Tconstr (Pdot (Pident {name = "Jsx"}, "element", _), _, _)} ->
+        true
+      | _ -> false
+    in
+    if is_jsx_element then
+      fprintf ppf
+        "  - Did you forget to wrap this + adjacent JSX in a JSX fragment \
+         (@{<info><></>@})?\n";
     fprintf ppf
-      "\n\n\
-      \  - Did you mean to assign this to a variable?\n\
+      "  - Did you mean to assign this to a variable?\n\
       \  - If you don't care about the result of this expression, you can \
        assign it to @{<info>_@} via @{<info>let _ = ...@} or pipe it to \
        @{<info>ignore@} via @{<info>expression->ignore@}\n\n"
@@ -714,7 +727,7 @@ let type_clash_context_maybe_option ty_expected ty_res =
 
 let type_clash_context_in_statement sexp =
   match sexp.Parsetree.pexp_desc with
-  | Pexp_apply _ -> Some (Statement FunctionCall)
+  | Pexp_apply {transformed_jsx = false} -> Some (Statement FunctionCall)
   | _ -> None
 
 let print_contextual_unification_error ppf t1 t2 =
