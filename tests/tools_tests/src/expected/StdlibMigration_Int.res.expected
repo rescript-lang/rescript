@@ -1,1 +1,8 @@
-StdlibMigration_Int.res: File did not need migration
+let result = Int.bitwiseAnd(1, 2)
+let result = Int.bitwiseOr(1, 2)
+let result = Int.bitwiseXor(1, 2)
+let result = Int.shiftLeft(1, 2)
+let result = Int.shiftRightUnsigned(1, 2)
+let result = Int.shiftLeft(1, 2)
+let result = Int.bitwiseNot(0)
+

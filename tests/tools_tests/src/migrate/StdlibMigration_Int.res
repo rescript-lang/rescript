@@ -1,1 +1,7 @@
 let result = Int.Bitwise.land(1, 2)
+let result = Int.Bitwise.lor(1, 2)
+let result = Int.Bitwise.lxor(1, 2)
+let result = Int.Bitwise.lsl(1, 2)
+let result = Int.Bitwise.lsr(1, 2)
+let result = Int.Bitwise.asr(1, 2)
+let result = Int.Bitwise.lnot(0)

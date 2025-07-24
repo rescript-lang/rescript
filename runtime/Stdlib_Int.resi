@@ -477,13 +477,37 @@ module Bitwise = {
     migrate: Int.bitwiseAnd()
   })
   external land: (int, int) => int = "%andint"
+  @deprecated({
+    reason: "Use `Int.bitwiseOr` instead",
+    migrate: Int.bitwiseOr()
+  })
   external lor: (int, int) => int = "%orint"
+  @deprecated({
+    reason: "Use `Int.bitwiseXor` instead",
+    migrate: Int.bitwiseXor()
+  })
   external lxor: (int, int) => int = "%xorint"
 
+  @deprecated({
+    reason: "Use `Int.shiftLeft` instead",
+    migrate: Int.shiftLeft()
+  })
   external lsl: (int, int) => int = "%lslint"
+  @deprecated({
+    reason: "Use `Int.shiftRightUnsigned` instead",
+    migrate: Int.shiftRightUnsigned()
+  })
   external lsr: (int, int) => int = "%lsrint"
+  @deprecated({
+    reason: "Use `Int.shiftRight` instead",
+    migrate: Int.shiftRight()
+  })
   external asr: (int, int) => int = "%asrint"
 
+  @deprecated({
+    reason: "Use `Int.bitwiseNot` instead",
+    migrate: Int.bitwiseNot()
+  })
   let lnot: int => int
 }
 
