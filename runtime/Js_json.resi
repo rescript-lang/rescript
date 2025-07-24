@@ -73,6 +73,13 @@ let test: ('a, Kind.t<'b>) => bool
 /**
 `decodeString(json)` returns `Some(s)` if `json` is a `string`, `None` otherwise.
 */
+@deprecated({
+  reason: "Use pattern matching instead.",
+  migrate: switch %insert.unlabelledArgument(0) {
+    | JSON.String(str) => Some(str)
+    | _ => None
+  }
+})
 let decodeString: t => option<Js_string.t>
 
 /**

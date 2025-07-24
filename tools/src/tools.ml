@@ -1306,7 +1306,6 @@ module Migrate = struct
 
   (* 
   TODO:
-  - Migrate unlabelled arguments (Array.reduceXxx)
   - Migrate type usage (Js.Array2.t -> array, etc)
   *)
 
@@ -1487,6 +1486,80 @@ module Migrate = struct
       filtered_args @ template_args_to_insert
   end
 
+  (* Finds a specific argument in a list of arguments. *)
+  let find_arg args (find_this_arg : [`Labelled of string | `Unlabelled of int])
+      =
+    let unlabelled_count = ref 0 in
+    args
+    |> List.find_map (fun (lbl, arg) ->
+           match (find_this_arg, lbl) with
+           | ( `Labelled arg_name,
+               (Asttypes.Labelled {txt = label} | Optional {txt = label}) )
+             when label = arg_name ->
+             Some (lbl, arg)
+           | `Unlabelled count, Nolabel ->
+             let current_count = !unlabelled_count in
+             incr unlabelled_count;
+             if current_count = count then Some (lbl, arg) else None
+           | _, Nolabel ->
+             incr unlabelled_count;
+             None
+           | _ -> None)
+
+  let replace_from_args_in_expr expr source_args =
+    let mapper =
+      {
+        Ast_mapper.default_mapper with
+        expr =
+          (fun mapper exp ->
+            match exp with
+            | {
+             pexp_desc =
+               Pexp_extension
+                 ( {txt = "insert.labelledArgument"},
+                   PStr
+                     [
+                       {
+                         pstr_desc =
+                           Pstr_eval
+                             ( {
+                                 pexp_desc =
+                                   Pexp_constant (Pconst_string (arg_name, _));
+                               },
+                               _ );
+                       };
+                     ] );
+            } -> (
+              match find_arg source_args (`Labelled arg_name) with
+              | Some (_, arg) -> arg
+              | None -> exp)
+            | {
+             pexp_desc =
+               Pexp_extension
+                 ( {txt = "insert.unlabelledArgument"},
+                   PStr
+                     [
+                       {
+                         pstr_desc =
+                           Pstr_eval
+                             ( {
+                                 pexp_desc =
+                                   Pexp_constant (Pconst_integer (count_str, _));
+                               },
+                               _ );
+                       };
+                     ] );
+            } -> (
+              match
+                find_arg source_args (`Unlabelled (int_of_string count_str))
+              with
+              | Some (_, arg) -> arg
+              | None -> exp)
+            | _ -> Ast_mapper.default_mapper.expr mapper exp);
+      }
+    in
+    mapper.expr mapper expr
+
   let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
     (* Function calls *)
     let deprecated_function_calls =
@@ -1560,6 +1633,12 @@ module Migrate = struct
 
               (* TODO: Here we could add strict and partial mode, to control if args are merged or not. *)
               match deprecated_info.migration_template with
+              | Some {pexp_desc = Pexp_match (e, cases)} ->
+                {
+                  exp with
+                  pexp_desc =
+                    Pexp_match (replace_from_args_in_expr e source_args, cases);
+                }
               | Some
                   {
                     pexp_desc =
@@ -1610,6 +1689,12 @@ module Migrate = struct
               Hashtbl.remove loc_to_deprecated_fn_call fn_loc;
 
               match deprecated_info.migration_template with
+              | Some {pexp_desc = Pexp_match (e, cases)} ->
+                {
+                  exp with
+                  pexp_desc =
+                    Pexp_match (replace_from_args_in_expr e [lhs], cases);
+                }
               | Some
                   {
                     pexp_desc =
