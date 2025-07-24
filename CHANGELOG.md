@@ -15,6 +15,7 @@
 #### :boom: Breaking Change
 
 - `Result.getOrThrow` now throws a JS error instead of a `Not_found` ReScript exception. https://github.com/rescript-lang/rescript/pull/7630
+- Remove `rescript dump` command. `bsc` can be used directly to dump the contents of a `.cmi` file instead if needed. https://github.com/rescript-lang/rescript/pull/7710
 
 #### :rocket: New Feature
 
