@@ -97,11 +97,6 @@ fn main() -> Result<()> {
             check,
             files,
         } => format::format(stdin, all, check, files),
-        cli::Command::Dump { mut dump_args } => {
-            dump_args.insert(0, "dump".into());
-            let code = build::pass_through_legacy(dump_args);
-            std::process::exit(code);
-        }
     }
 }
 

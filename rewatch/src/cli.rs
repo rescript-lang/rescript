@@ -203,12 +203,6 @@ pub enum Command {
         #[arg(group = "format_input_mode", required_unless_present_any = ["format_input_mode"])]
         files: Vec<String>,
     },
-    /// Alias to `legacy dump`.
-    #[command(disable_help_flag = true)]
-    Dump {
-        #[arg(allow_hyphen_values = true, num_args = 0..)]
-        dump_args: Vec<OsString>,
-    },
     /// This prints the compiler arguments. It expects the path to a rescript file (.res or .resi).
     CompilerArgs {
         /// Path to a rescript file (.res or .resi)
