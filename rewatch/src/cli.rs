@@ -22,6 +22,7 @@ pub enum FileExtension {
 #[derive(Parser, Debug)]
 #[command(version)]
 #[command(args_conflicts_with_subcommands = true)]
+#[command(after_help = "NOTE: If no subcommand is provided, `build` is run by default.")]
 pub struct Cli {
     /// Verbosity:
     /// -v -> Debug
@@ -35,10 +36,7 @@ pub struct Cli {
 
     /// The command to run. If not provided it will default to build.
     #[command(subcommand)]
-    pub command: Option<Command>,
-
-    #[command(flatten)]
-    pub build_args: BuildArgs,
+    pub command: Command,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -181,7 +179,7 @@ impl From<BuildArgs> for WatchArgs {
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
-    /// Build the project
+    /// Build the project (default command)
     Build(BuildArgs),
     /// Build, then start a watcher
     Watch(WatchArgs),

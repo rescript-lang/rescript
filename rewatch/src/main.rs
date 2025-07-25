@@ -1,14 +1,17 @@
 use anyhow::Result;
 use clap::Parser;
 use log::LevelFilter;
-use std::{io::Write, path::Path};
+use std::{env, io::Write, path::Path};
 
 use rescript::{build, cli, cmd, format, lock, watcher};
 
 fn main() -> Result<()> {
-    let args = cli::Cli::parse();
+    let mut args: Vec<String> = env::args().collect();
+    handle_default_arg(&mut args);
 
-    let log_level_filter = args.verbose.log_level_filter();
+    let cli = cli::Cli::parse_from(args);
+
+    let log_level_filter = cli.verbose.log_level_filter();
 
     env_logger::Builder::new()
         .format(|buf, record| writeln!(buf, "{}:\n{}", record.level(), record.args()))
@@ -16,7 +19,7 @@ fn main() -> Result<()> {
         .target(env_logger::fmt::Target::Stdout)
         .init();
 
-    let mut command = args.command.unwrap_or(cli::Command::Build(args.build_args));
+    let mut command = cli.command;
 
     if let cli::Command::Build(build_args) = &command {
         if build_args.watch {
@@ -109,5 +112,19 @@ fn get_lock(folder: &str) -> lock::Lock {
             std::process::exit(1);
         }
         acquired_lock => acquired_lock,
+    }
+}
+
+fn handle_default_arg(args: &mut Vec<String>) {
+    let first_arg = args.get(1);
+    let global_flags = ["-h", "--help", "-V", "--version"];
+
+    let needs_default_arg = match first_arg {
+        Some(arg) if !arg.starts_with("-") || global_flags.contains(&arg.as_str()) => false,
+        _ => true,
+    };
+
+    if needs_default_arg {
+        args.insert(1, "build".to_string());
     }
 }
