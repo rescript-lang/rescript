@@ -120,8 +120,8 @@ fn handle_default_arg(args: &mut Vec<String>) {
     let global_flags = ["-h", "--help", "-V", "--version"];
 
     let needs_default_arg = match first_arg {
-        Some(arg) if !arg.starts_with("-") || global_flags.contains(&arg.as_str()) => false,
-        _ => true,
+        Some(arg) => arg.starts_with("-") && !global_flags.contains(&arg.as_str()),
+        None => true,
     };
 
     if needs_default_arg {
