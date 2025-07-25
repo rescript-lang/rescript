@@ -11,6 +11,9 @@ type t<'a>
 @send external setArray: (t<'a>, array<'a>) => unit = "set"
 @send external setArrayFrom: (t<'a>, array<'a>, int) => unit = "set"
 
+@send external setTypedArray: (t<'a>, t<'a>) => unit = "set"
+@send external setTypedArrayFrom: (t<'a>, t<'a>, int) => unit = "set"
+
 @get external length: t<'a> => int = "length"
 
 @send external copyAllWithin: (t<'a>, ~target: int) => array<'a> = "copyWithin"
