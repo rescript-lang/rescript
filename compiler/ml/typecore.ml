@@ -800,7 +800,7 @@ let print_expr_type_clash ~context env loc trace ppf =
         | ppf -> error_type_text ppf context)
       (function ppf -> error_expected_type_text ppf context);
     print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
-      bottom_aliases_result context;
+      bottom_aliases_result trace context;
     show_extra_help ppf env trace
 
 let report_arity_mismatch ~arity_a ~arity_b ppf =

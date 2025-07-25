@@ -233,7 +233,7 @@ let extract_string_constant text =
   | _ -> None
 
 let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
-    (bottom_aliases : (Types.type_expr * Types.type_expr) option)
+    (bottom_aliases : (Types.type_expr * Types.type_expr) option) trace
     type_clash_context =
   match (type_clash_context, bottom_aliases) with
   | Some (MathOperator {for_float; operator; is_constant}), _ -> (
@@ -623,10 +623,16 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
         | None -> ())
       | None -> ())
     | _ -> ())
-  | _, Some (t1, t2) ->
+  | _, Some (_supplied_type, target_type) ->
+    (* Coercion should always target the top level types. *)
+    let top_level_types =
+      match trace with
+      | (_, t1_top) :: (_, t2_top) :: _ -> Some (t1_top, t2_top)
+      | _ -> None
+    in
     let can_show_coercion_message =
-      match (t1.desc, t2.desc) with
-      | Tvariant _, Tvariant _ ->
+      match top_level_types with
+      | Some ({Types.desc = Tvariant _}, {Types.desc = Tvariant _}) ->
         (* Subtyping polymorphic variants give some weird messages sometimes,
         so let's turn it off for now. For an example, turn them on again and try:
         ```
@@ -635,13 +641,14 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
         ```
         *)
         false
-      | _ -> (
+      | Some (t1, t2) -> (
         try
           Ctype.subtype env t1 t2 ();
           true
         with _ -> false)
+      | None -> false
     in
-    let target_type_string = Format.asprintf "%a" type_expr t2 in
+    let target_type_string = Format.asprintf "%a" type_expr target_type in
     let target_expr_text = Parser.extract_text_at_loc loc in
     let suggested_rewrite =
       match
