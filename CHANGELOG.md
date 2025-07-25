@@ -10,7 +10,7 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-beta.3 (Unreleased)
+# 12.0.0-beta.3
 
 #### :boom: Breaking Change
 
@@ -22,6 +22,14 @@
 - Add optional `message` argument to `Result.getOrThrow` and improve default error message. https://github.com/rescript-lang/rescript/pull/7630
 - Add `RegExp.escape` binding. https://github.com/rescript-lang/rescript/pull/7695
 
+#### :bug: Bug fix
+
+- Fix `--create-sourcedirs` generation with for a single project. https://github.com/rescript-lang/rescript/pull/7671
+- Fix rewatch not recompiling on changes on Windows. https://github.com/rescript-lang/rescript/pull/7690
+- Fix locations of regex literals. https://github.com/rescript-lang/rescript/pull/7683
+- Fix async React component compilation. https://github.com/rescript-lang/rescript/pull/7704
+- Fix `@this` with `async` keyword. https://github.com/rescript-lang/rescript/pull/7702
+
 #### :nail_care: Polish
 
 - Configuration fields `bs-dependencies`, `bs-dev-dependencies` and `bsc-flags` are now deprecated in favor of `dependencies`, `dev-dependencies` and `compiler-flags`. https://github.com/rescript-lang/rescript/pull/7658
@@ -30,23 +38,16 @@
 - Polish arity mismatch error message a bit. https://github.com/rescript-lang/rescript/pull/7709
 - Suggest related functions with the expected arity in errors when it makes sense. https://github.com/rescript-lang/rescript/pull/7712
 - Improve error when a constructor expects an inline record. https://github.com/rescript-lang/rescript/pull/7713
-- Remove @meth attribute. https://github.com/rescript-lang/rescript/pull/7684
+- Remove `@meth` attribute. https://github.com/rescript-lang/rescript/pull/7684
 
 #### :house: Internal
 
 - Add rust linting to CI with `clippy`. https://github.com/rescript-lang/rescript/pull/7675
 - AST: use `Typ.arrows` for creation, after the refactoring of arrow types. https://github.com/rescript-lang/rescript/pull/7662
 - Don't skip Stdlib docstring tests. https://github.com/rescript-lang/rescript/pull/7694
-- Remove all leftovers of pinned-dependencies handling. https://github.com/rescript-lang/rescript/pull/7686
+- Remove all leftovers of `pinned-dependencies` handling. https://github.com/rescript-lang/rescript/pull/7686
 - Add `rust-version` field to Rewatch's `Cargo.toml`. https://github.com/rescript-lang/rescript/pull/7701
 
-#### :bug: Bug fix
-
-- Fix `--create-sourcedirs` generation with for a single project. https://github.com/rescript-lang/rescript/pull/7671
-- Fix rewatch not recompiling on changes under windows. https://github.com/rescript-lang/rescript/pull/7690
-- Fix locations of regex literals. https://github.com/rescript-lang/rescript/pull/7683
-- Fix async React component compilation. https://github.com/rescript-lang/rescript/pull/7704
-- Fix @this with async keyword. https://github.com/rescript-lang/rescript/pull/7702
 
 # 12.0.0-beta.2
 
