@@ -1,5 +1,7 @@
 // @ts-check
 
+const minimumNodeVersion = "20.11.0";
+
 /**
  * @typedef {import("@rescript/linux-x64")} BinaryModuleExports
  */
@@ -23,6 +25,9 @@ if (supportedPlatforms.includes(target)) {
   try {
     mod = await import(binPackageName);
   } catch {
+    // First check if we are on an unsupported node version, as that may be the cause for the error.
+    checkNodeVersionSupported();
+
     throw new Error(
       `Package ${binPackageName} not found. Make sure the rescript package is installed correctly.`,
     );
@@ -43,3 +48,26 @@ export const {
     rescript_exe,
   },
 } = mod;
+
+function checkNodeVersionSupported() {
+  if (
+    typeof process !== "undefined" &&
+    process.versions != null &&
+    process.versions.node != null
+  ) {
+    const currentVersion = process.versions.node;
+    const required = minimumNodeVersion.split(".").map(Number);
+    const current = currentVersion.split(".").map(Number);
+    if (
+      current[0] < required[0] ||
+      (current[0] === required[0] && current[1] < required[1]) ||
+      (current[0] === required[0] &&
+        current[1] === required[1] &&
+        current[2] < required[2])
+    ) {
+      throw new Error(
+        `ReScript requires Node.js >=${minimumNodeVersion}, but found ${currentVersion}.`,
+      );
+    }
+  }
+}
