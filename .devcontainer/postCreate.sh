@@ -9,5 +9,7 @@ opam install . --deps-only --with-test --with-dev-setup -y
 echo 'eval $(opam env)' >> ~/.zshrc
 echo 'eval $(opam env)' >> ~/.bashrc
 
+nvm install
+
 corepack enable
 printf "\n" | yarn 
