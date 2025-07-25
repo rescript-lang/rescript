@@ -368,12 +368,14 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     if is_jsx_element then
       fprintf ppf
         "  - Did you forget to wrap this + adjacent JSX in a JSX fragment \
-         (@{<info><></>@})?\n";
-    fprintf ppf
-      "  - Did you mean to assign this to a variable?\n\
-      \  - If you don't care about the result of this expression, you can \
-       assign it to @{<info>_@} via @{<info>let _ = ...@} or pipe it to \
-       @{<info>ignore@} via @{<info>expression->ignore@}\n\n"
+         (@{<info><></>@})?\n\
+        \  - Did you mean to assign this to a variable?\n\n"
+    else
+      fprintf ppf
+        "  - Did you mean to assign this to a variable?\n\
+        \  - If you don't care about the result of this expression, you can \
+         assign it to @{<info>_@} via @{<info>let _ = ...@} or pipe it to \
+         @{<info>ignore@} via @{<info>expression->ignore@}\n\n"
   | _, Some ({desc = Tobject _}, ({Types.desc = Tconstr _} as t1))
     when is_record_type ~extract_concrete_typedecl ~env t1 ->
     fprintf ppf

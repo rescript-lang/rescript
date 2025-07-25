@@ -13,4 +13,3 @@
 
   - Did you forget to wrap this + adjacent JSX in a JSX fragment ([1;33m<></>[0m)?
   - Did you mean to assign this to a variable?
-  - If you don't care about the result of this expression, you can assign it to [1;33m_[0m via [1;33mlet _ = ...[0m or pipe it to [1;33mignore[0m via [1;33mexpression->ignore[0m
