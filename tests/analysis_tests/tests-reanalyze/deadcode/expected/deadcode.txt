@@ -9,10 +9,10 @@
   addVariantCaseDeclaration R4 AutoAnnotate.res:15:2 path:+AutoAnnotate.annotatedVariant
   Scanning BootloaderResource.cmt Source:BootloaderResource.res
   Scanning BucklescriptAnnotations.cmt Source:BucklescriptAnnotations.res
-  addValueDeclaration +bar BucklescriptAnnotations.res:25:4 path:+BucklescriptAnnotations
-  addValueDeclaration +f BucklescriptAnnotations.res:26:6 path:+BucklescriptAnnotations
-  addValueReference BucklescriptAnnotations.res:26:6 --> BucklescriptAnnotations.res:25:11
-  addValueReference BucklescriptAnnotations.res:25:4 --> BucklescriptAnnotations.res:26:6
+  addValueDeclaration +bar BucklescriptAnnotations.res:22:4 path:+BucklescriptAnnotations
+  addValueDeclaration +f BucklescriptAnnotations.res:23:6 path:+BucklescriptAnnotations
+  addValueReference BucklescriptAnnotations.res:23:6 --> BucklescriptAnnotations.res:22:11
+  addValueReference BucklescriptAnnotations.res:22:4 --> BucklescriptAnnotations.res:23:6
   Scanning ComponentAsProp.cmt Source:ComponentAsProp.res
   addValueDeclaration +make ComponentAsProp.res:6:4 path:+ComponentAsProp
   addRecordLabelDeclaration title ComponentAsProp.res:6:12 path:+ComponentAsProp.props
@@ -2594,9 +2594,9 @@ File References
   BucklescriptAnnotations is a dead module as all its items are dead.
 
   Warning Dead Value
-  BucklescriptAnnotations.res:25:1-70
+  BucklescriptAnnotations.res:22:1-70
   bar is never used
-  <-- line 25
+  <-- line 22
   @dead("bar") let bar = (x: someMethods) => {
 
   Warning Dead Exception
