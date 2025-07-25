@@ -30,6 +30,7 @@
 - Polish arity mismatch error message a bit. https://github.com/rescript-lang/rescript/pull/7709
 - Suggest related functions with the expected arity in errors when it makes sense. https://github.com/rescript-lang/rescript/pull/7712
 - Improve error when a constructor expects an inline record. https://github.com/rescript-lang/rescript/pull/7713
+- Remove @meth attribute. https://github.com/rescript-lang/rescript/pull/7684
 
 #### :house: Internal
 
