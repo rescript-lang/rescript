@@ -16,6 +16,10 @@
 
 - Apply heuristic to suggest using JSX fragments where we guess that might be what the user wanted. https://github.com/rescript-lang/rescript/pull/7714
 
+#### :bug: Bug fix
+
+- Fix error message that falsely suggested using coercion when it wouldn't work. https://github.com/rescript-lang/rescript/pull/7721
+
 # 12.0.0-beta.3
 
 #### :boom: Breaking Change
