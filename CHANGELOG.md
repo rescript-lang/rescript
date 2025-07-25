@@ -12,6 +12,10 @@
 
 # 12.0.0-beta.4 (Unreleased)
 
+#### :nail_care: Polish
+
+- Apply heuristic to suggest using JSX fragments where we guess that might be what the user wanted. https://github.com/rescript-lang/rescript/pull/7714
+
 # 12.0.0-beta.3
 
 #### :boom: Breaking Change
@@ -41,7 +45,6 @@
 - Suggest related functions with the expected arity in errors when it makes sense. https://github.com/rescript-lang/rescript/pull/7712
 - Improve error when a constructor expects an inline record. https://github.com/rescript-lang/rescript/pull/7713
 - Remove `@meth` attribute. https://github.com/rescript-lang/rescript/pull/7684
-- Apply heuristic to suggest using JSX fragments where we guess that might be what the user wanted. https://github.com/rescript-lang/rescript/pull/7714
 
 #### :house: Internal
 
