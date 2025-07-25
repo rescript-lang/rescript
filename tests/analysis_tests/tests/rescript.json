@@ -1,5 +1,5 @@
 {
-  "name": "test",
+  "name": "@tests/analysis",
   "reanalyze": {
     "analysis": ["dce"]
   },
@@ -9,8 +9,8 @@
       "subdirs": true
     }
   ],
-  "compiler-flags": ["-w -33-44-8"],
-  "dependencies": ["@rescript/react"],
+  "bsc-flags": ["-w -33-44-8"],
+  "dependencies": ["@tests/rescript-react"],
   "jsx": { "version": 4 },
   "suffix": ".res.js",
   "editor": {

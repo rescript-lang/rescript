@@ -242,8 +242,8 @@ pub fn get_compiler_asset(
     source_file: &Path,
     extension: &str,
 ) -> PathBuf {
-    let namespace = match extension {
-        "ast" | "iast" => &packages::Namespace::NoNamespace,
+    let namespace = match namespace {
+        packages::Namespace::NoNamespace => &packages::Namespace::NoNamespace,
         _ => namespace,
     };
     let basename = file_path_to_compiler_asset_basename(source_file, namespace);

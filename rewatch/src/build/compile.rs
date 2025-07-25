@@ -159,10 +159,24 @@ pub fn compile(
 
                             let interface_result = match source_file.interface.to_owned() {
                                 Some(Interface { path, .. }) => {
+                                    // FIX: Use absolute paths for interface AST files (same issue as implementation files)
+                                    let ast_path = &helpers::get_compiler_asset(
+                                        package,
+                                        &packages::Namespace::NoNamespace,
+                                        &path,
+                                        "iast",
+                                    );
+
+                                    log::debug!(
+                                        "compile: interface ast_path={:?} exists={}",
+                                        ast_path,
+                                        ast_path.exists()
+                                    );
+
                                     let result = compile_file(
                                         package,
                                         root_package,
-                                        &helpers::get_ast_path(&path),
+                                        ast_path,
                                         module,
                                         true,
                                         &build_state.bsc_path,
@@ -174,10 +188,27 @@ pub fn compile(
                                 }
                                 _ => None,
                             };
+                            // FIX: Use absolute paths for AST files to resolve cross-package dependencies correctly
+                            // Same issue as in deps.rs: relative paths fail in workspace builds where AST files
+                            // are created in lib/bs/ and copied to lib/ocaml/. Using get_compiler_asset()
+                            // ensures we get the correct absolute paths.
+                            let impl_ast_path = &helpers::get_compiler_asset(
+                                package,
+                                &packages::Namespace::NoNamespace,
+                                &source_file.implementation.path,
+                                "ast",
+                            );
+
+                            log::debug!(
+                                "compile: implementation ast_path={:?} exists={}",
+                                impl_ast_path,
+                                impl_ast_path.exists()
+                            );
+
                             let result = compile_file(
                                 package,
                                 root_package,
-                                &helpers::get_ast_path(&source_file.implementation.path),
+                                impl_ast_path,
                                 module,
                                 false,
                                 &build_state.bsc_path,
@@ -361,6 +392,7 @@ pub fn compiler_args(
     is_type_dev: bool,
     is_local_dep: bool,
 ) -> Vec<String> {
+    let root_bsc_flags = config::flatten_flags(&root_config.compiler_flags);
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
 
     let dependency_paths = get_dependency_paths(config, project_root, workspace_root, packages, is_type_dev);
@@ -389,7 +421,7 @@ pub fn compiler_args(
     };
 
     let jsx_args = root_config.get_jsx_args();
-    let jsx_module_args = root_config.get_jsx_module_args();
+    let jsx_module_args = config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
     let gentype_arg = config.get_gentype_arg();
@@ -454,6 +486,7 @@ pub fn compiler_args(
         jsx_module_args,
         jsx_mode_args,
         jsx_preserve_args,
+        root_bsc_flags.to_owned(),
         bsc_flags.to_owned(),
         warning_args,
         gentype_arg,
