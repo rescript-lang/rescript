@@ -1,4 +1,8 @@
-use std::{ffi::OsString, ops::Deref};
+use std::{
+    ffi::OsString,
+    ops::Deref,
+    path::{Path, PathBuf},
+};
 
 use clap::{Args, Parser, Subcommand};
 use clap_verbosity_flag::InfoLevel;
@@ -45,7 +49,7 @@ pub struct Cli {
 pub struct FolderArg {
     /// The relative path to where the main rescript.json resides. IE - the root of your project.
     #[arg(default_value = ".")]
-    pub folder: String,
+    pub folder: PathBuf,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -219,7 +223,7 @@ pub enum Command {
 }
 
 impl Deref for FolderArg {
-    type Target = str;
+    type Target = Path;
 
     fn deref(&self) -> &Self::Target {
         &self.folder

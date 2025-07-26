@@ -59,8 +59,8 @@ fn create(lockfile_location: &Path, pid: u32) -> Lock {
         .unwrap_or_else(|e| Lock::Error(Error::WritingLockfile(e)))
 }
 
-pub fn get(folder: &str) -> Lock {
-    let location = Path::new(folder).join("lib").join(LOCKFILE);
+pub fn get(folder: &Path) -> Lock {
+    let location = folder.join("lib").join(LOCKFILE);
     let pid = process::id();
 
     match fs::read_to_string(&location) {
