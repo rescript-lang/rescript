@@ -657,6 +657,15 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       in
       match (reprinted, List.mem string_value variant_constructors) with
       | Some reprinted, true ->
+        Cmt_utils.add_possible_action
+          {
+            loc;
+            action =
+              ReplaceWithPolymorphicVariantConstructor
+                {constructor_name = string_value};
+            description =
+              "Replace with polymorphic variant constructor " ^ string_value;
+          };
         fprintf ppf
           "\n\n\
           \  Possible solutions:\n\
@@ -715,6 +724,15 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
         in
         match reprinted with
         | Some reprinted ->
+          Cmt_utils.add_possible_action
+            {
+              loc;
+              action =
+                ReplaceWithVariantConstructor
+                  {constructor_name = Longident.parse constructor_name};
+              description =
+                "Replace with variant constructor " ^ constructor_name;
+            };
           fprintf ppf
             "\n\n\
             \  Possible solutions:\n\
@@ -772,6 +790,14 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     in
 
     if can_show_coercion_message && not is_constant then (
+      Cmt_utils.add_possible_action
+        {
+          loc;
+          action =
+            ApplyCoercion
+              {coerce_to_name = target_type_string |> Longident.parse};
+          description = "Coerce to " ^ target_type_string;
+        };
       fprintf ppf
         "@,\
          @,\
