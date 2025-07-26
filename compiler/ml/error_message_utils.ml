@@ -538,6 +538,12 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     in
 
     let print_jsx_msg ?(extra = "") name target_fn =
+      Cmt_utils.add_possible_action
+        {
+          loc;
+          action = ApplyFunction {function_name = Longident.parse target_fn};
+          description = Printf.sprintf "Convert to %s with %s" name target_fn;
+        };
       fprintf ppf
         "@,\
          @,\
@@ -554,6 +560,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     | _ when Path.same p Predef.path_float ->
       print_jsx_msg "float" (with_configured_jsx_module "float")
     | [_] when Path.same p Predef.path_option ->
+      (* TODO(actions) Unwrap action? *)
       fprintf ppf
         "@,\
          @,\

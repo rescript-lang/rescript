@@ -1340,6 +1340,7 @@ module Actions = struct
             Ast_mapper.default_mapper.cases mapper cases);
         expr =
           (fun mapper expr ->
+            (* TODO: Must account for pipe chains *)
             let mapped_expr =
               actions
               |> List.find_map (fun (action : Cmt_utils.cmt_action) ->
@@ -1398,7 +1399,21 @@ module Actions = struct
                                    funct =
                                      Ast_helper.Exp.ident
                                        (Location.mknoloc function_name);
-                                   args = [(Nolabel, expr)];
+                                   args =
+                                     [
+                                       (* Remove any existing braces. Makes the output prettier. *)
+                                       ( Nolabel,
+                                         {
+                                           expr with
+                                           pexp_attributes =
+                                             expr.pexp_attributes
+                                             |> List.filter
+                                                  (fun
+                                                    (({txt}, _) :
+                                                      Parsetree.attribute)
+                                                  -> txt <> "res.braces");
+                                         } );
+                                     ];
                                    partial = false;
                                    transformed_jsx = false;
                                  };
