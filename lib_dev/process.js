@@ -184,7 +184,7 @@ export function setup(cwd = process.cwd()) {
     rescriptTools(command, args = [], options = {}) {
       const cliPath = path.join(
         import.meta.dirname,
-        "../cli/rescript-tools.js"
+        "../cli/rescript-tools.js",
       );
       return exec("node", [cliPath, command, ...args].filter(Boolean), options);
     },
