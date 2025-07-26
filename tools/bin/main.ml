@@ -109,6 +109,15 @@ let main () =
     done;
     Sys.argv.(len - 1) <- "";
     Reanalyze.cli ()
+  | "actions" :: file :: opts ->
+    let run_all_on_file = List.mem "--runAll" opts in
+    let cmtPath =
+      match opts with
+      | path :: _ when String.ends_with ~suffix:".cmt" path -> Some path
+      | _ -> None
+    in
+    if run_all_on_file then Tools.Actions.runActionsOnFile ?cmtPath file
+    else Tools.Actions.extractActionsFromFile ?cmtPath file
   | "extract-embedded" :: extPointNames :: filename :: _ ->
     logAndExit
       (Ok

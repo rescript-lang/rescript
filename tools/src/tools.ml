@@ -1292,3 +1292,240 @@ module ExtractCodeblocks = struct
                    ])
           |> Protocol.array)
 end
+
+module Actions = struct
+  let applyActionsToFile path actions =
+    let mapper =
+      {
+        Ast_mapper.default_mapper with
+        structure =
+          (fun mapper items ->
+            let items =
+              items
+              |> List.filter_map (fun (str_item : Parsetree.structure_item) ->
+                     match str_item.pstr_desc with
+                     | Pstr_open _ -> (
+                       let remove_open_action =
+                         actions
+                         |> List.find_opt
+                              (fun (action : Cmt_utils.cmt_action) ->
+                                match action.action with
+                                | RemoveOpen -> action.loc = str_item.pstr_loc
+                                | _ -> false)
+                       in
+                       match remove_open_action with
+                       | Some _ -> None
+                       | None -> Some str_item)
+                     | _ -> Some str_item)
+            in
+            Ast_mapper.default_mapper.structure mapper items);
+        cases =
+          (fun mapper cases ->
+            let cases =
+              cases
+              |> List.filter_map (fun (case : Parsetree.case) ->
+                     let remove_case_action =
+                       actions
+                       |> List.find_opt (fun (action : Cmt_utils.cmt_action) ->
+                              match action.action with
+                              | RemoveSwitchCase ->
+                                action.loc = case.pc_lhs.ppat_loc
+                              | _ -> false)
+                     in
+                     match remove_case_action with
+                     | Some _ -> None
+                     | None -> Some case)
+            in
+            Ast_mapper.default_mapper.cases mapper cases);
+        expr =
+          (fun mapper expr ->
+            (* TODO: Must account for pipe chains *)
+            let mapped_expr =
+              actions
+              |> List.find_map (fun (action : Cmt_utils.cmt_action) ->
+                     (* When the loc is the expr itself *)
+                     if action.loc = expr.pexp_loc then
+                       let expr = Ast_mapper.default_mapper.expr mapper expr in
+                       match action.action with
+                       | RewriteIdent {new_ident} -> (
+                         match expr with
+                         | {pexp_desc = Pexp_ident ident} ->
+                           Some
+                             {
+                               expr with
+                               pexp_desc =
+                                 Pexp_ident {ident with txt = new_ident};
+                             }
+                         | _ -> None)
+                       | RewriteArrayToTuple -> (
+                         match expr with
+                         | {pexp_desc = Pexp_array items} ->
+                           Some {expr with pexp_desc = Pexp_tuple items}
+                         | _ -> None)
+                       | RewriteObjectToRecord -> (
+                         match expr with
+                         | {
+                          pexp_desc =
+                            Pexp_extension
+                              ( {txt = "obj"},
+                                PStr
+                                  [
+                                    {
+                                      pstr_desc =
+                                        Pstr_eval
+                                          ( ({pexp_desc = Pexp_record _} as
+                                             record),
+                                            _ );
+                                    };
+                                  ] );
+                         } ->
+                           Some record
+                         | _ -> None)
+                       | AddAwait ->
+                         Some {expr with pexp_desc = Pexp_await expr}
+                       | ReplaceWithVariantConstructor {constructor_name} ->
+                         Some
+                           {
+                             expr with
+                             pexp_desc =
+                               Pexp_construct
+                                 (Location.mknoloc constructor_name, None);
+                           }
+                       | ReplaceWithPolymorphicVariantConstructor
+                           {constructor_name} ->
+                         Some
+                           {
+                             expr with
+                             pexp_desc = Pexp_variant (constructor_name, None);
+                           }
+                       | ApplyFunction {function_name} ->
+                         Some
+                           {
+                             expr with
+                             pexp_desc =
+                               Pexp_apply
+                                 {
+                                   funct =
+                                     Ast_helper.Exp.ident
+                                       (Location.mknoloc function_name);
+                                   args =
+                                     [
+                                       (* Remove any existing braces. Makes the output prettier. *)
+                                       ( Nolabel,
+                                         {
+                                           expr with
+                                           pexp_attributes =
+                                             expr.pexp_attributes
+                                             |> List.filter
+                                                  (fun
+                                                    (({txt}, _) :
+                                                      Parsetree.attribute)
+                                                  -> txt <> "res.braces");
+                                         } );
+                                     ];
+                                   partial = false;
+                                   transformed_jsx = false;
+                                 };
+                           }
+                       | ApplyCoercion {coerce_to_name} ->
+                         Some
+                           {
+                             expr with
+                             pexp_desc =
+                               Pexp_coerce
+                                 ( expr,
+                                   (),
+                                   Ast_helper.Typ.constr
+                                     (Location.mknoloc coerce_to_name)
+                                     [] );
+                           }
+                       | _ -> None
+                     else
+                       (* Other cases when the loc is on something else in the expr *)
+                       match (expr.pexp_desc, action.action) with
+                       | Pexp_await inner, RemoveAwait
+                         when inner.pexp_loc = action.loc ->
+                         Some (Ast_mapper.default_mapper.expr mapper inner)
+                       | Pexp_array items, RewriteArrayToTuple
+                         when items
+                              |> List.find_opt
+                                   (fun (item : Parsetree.expression) ->
+                                     item.pexp_loc = action.loc)
+                              |> Option.is_some ->
+                         (* When the loc is on an item in the array *)
+                         Some
+                           {
+                             expr with
+                             pexp_desc =
+                               Pexp_tuple
+                                 (items
+                                 |> List.map (fun item ->
+                                        Ast_mapper.default_mapper.expr mapper
+                                          item));
+                           }
+                       | _ -> None)
+            in
+            match mapped_expr with
+            | None -> Ast_mapper.default_mapper.expr mapper expr
+            | Some expr -> expr);
+      }
+    in
+    if Filename.check_suffix path ".res" then
+      let parser =
+        Res_driver.parsing_engine.parse_implementation ~for_printer:true
+      in
+      let {Res_driver.parsetree; comments} = parser ~filename:path in
+      let ast_mapped = mapper.structure mapper parsetree in
+      Ok (Res_printer.print_implementation ast_mapped ~comments)
+    else
+      (* TODO: Handle .resi? *)
+      Error
+        (Printf.sprintf
+           "error: failed to apply actions to %s because it is not a .res file"
+           path)
+
+  let runActionsOnFile ?cmtPath entryPointFile =
+    let path =
+      match Filename.is_relative entryPointFile with
+      | true -> Unix.realpath entryPointFile
+      | false -> entryPointFile
+    in
+    let loadedCmt =
+      match cmtPath with
+      | None -> Cmt.loadCmtInfosFromPath ~path
+      | Some path -> Shared.tryReadCmt path
+    in
+    match loadedCmt with
+    | None ->
+      Printf.printf
+        "error: failed to run actions on %s because build artifacts could not \
+         be found. try to build the project"
+        path
+    | Some {cmt_possible_actions} -> (
+      match applyActionsToFile path cmt_possible_actions with
+      | Ok applied -> print_endline applied
+      | Error e ->
+        print_endline e;
+        exit 1)
+
+  let extractActionsFromFile ?cmtPath entryPointFile =
+    let path =
+      match Filename.is_relative entryPointFile with
+      | true -> Unix.realpath entryPointFile
+      | false -> entryPointFile
+    in
+    let loadedCmt =
+      match cmtPath with
+      | None -> Cmt.loadCmtInfosFromPath ~path
+      | Some path -> Shared.tryReadCmt path
+    in
+    match loadedCmt with
+    | None ->
+      Printf.printf
+        "error: failed to extract actions for %s because build artifacts could \
+         not be found. try to build the project"
+        path
+    | Some _ ->
+      (* TODO *)
+      ()
+end
