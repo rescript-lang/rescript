@@ -402,7 +402,7 @@ BigInt.lnot(2n) == -3n
 */
 @deprecated({
   reason: "Use `~` operator or `bitwiseNot` instead.",
-  migrate: ~%insert.unlabelledArgument(0),
+  migrate: ~(%insert.unlabelledArgument(0)),
   migratePiped: BigInt.bitwiseNot(),
 })
 external lnot: bigint => bigint = "%bitnot_bigint"
