@@ -29,14 +29,19 @@ let toLocaleString2 = Js.BigInt.toLocaleString(123n)
 let stdlib_fromStringExn1 = "123"->BigInt.fromStringExn
 let stdlib_fromStringExn2 = BigInt.fromStringExn("123")
 
-let stdlib_land1 = BigInt.land(7n, 4n)
+let stdlib_land1 = 7n->BigInt.land(4n)
+let stdlib_land2 = BigInt.land(7n, 4n)
 
 let stdlib_lor1 = BigInt.lor(7n, 4n)
 
-let stdlib_lxor1 = BigInt.lxor(7n, 4n)
+let stdlib_lxor1 = 7n->BigInt.lxor(4n)
+let stdlib_lxor2 = BigInt.lxor(7n, 4n)
 
-let stdlib_lnot1 = BigInt.lnot(2n)
+let stdlib_lnot1 = 2n->BigInt.lnot
+let stdlib_lnot2 = BigInt.lnot(2n)
 
-let stdlib_lsl1 = BigInt.lsl(4n, 1n)
+let stdlib_lsl1 = 4n->BigInt.lsl(1n)
+let stdlib_lsl2 = BigInt.lsl(4n, 1n)
 
-let stdlib_asr1 = BigInt.asr(8n, 1n)
+let stdlib_asr1 = 8n->BigInt.asr(1n)
+let stdlib_asr2 = BigInt.asr(8n, 1n)

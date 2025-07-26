@@ -1689,7 +1689,12 @@ module Migrate = struct
               in
               Hashtbl.remove loc_to_deprecated_fn_call fn_loc;
 
-              match deprecated_info.migration_template with
+              let migration_template_to_use =
+                match deprecated_info.migration_piped_template with
+                | Some template -> Some template
+                | None -> deprecated_info.migration_template
+              in
+              match migration_template_to_use with
               | Some {pexp_desc = Pexp_match (e, cases)} ->
                 {
                   exp with
@@ -1768,7 +1773,12 @@ module Migrate = struct
               in
               Hashtbl.remove loc_to_deprecated_fn_call fn_loc;
 
-              match deprecated_info.migration_template with
+              let migration_template_to_use =
+                match deprecated_info.migration_piped_template with
+                | Some template -> Some template
+                | None -> deprecated_info.migration_template
+              in
+              match migration_template_to_use with
               | Some
                   {
                     pexp_desc =

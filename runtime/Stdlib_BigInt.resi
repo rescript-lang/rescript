@@ -350,6 +350,7 @@ BigInt.land(7n, 4n) == 4n
 @deprecated({
   reason: "Use `&` operator or `bitwiseAnd` instead.",
   migrate: %insert.unlabelledArgument(0) & %insert.unlabelledArgument(1),
+  migratePiped: BigInt.bitwiseAnd(),
 })
 external land: (bigint, bigint) => bigint = "%andbigint"
 
@@ -384,6 +385,7 @@ BigInt.lxor(7n, 4n) == 3n
 @deprecated({
   reason: "Use `^` operator or `bitwiseXor` instead.",
   migrate: %insert.unlabelledArgument(0) ^ %insert.unlabelledArgument(1),
+  migratePiped: BigInt.bitwiseXor(),
 })
 external lxor: (bigint, bigint) => bigint = "%xorbigint"
 
@@ -401,6 +403,7 @@ BigInt.lnot(2n) == -3n
 @deprecated({
   reason: "Use `~` operator or `bitwiseNot` instead.",
   migrate: ~%insert.unlabelledArgument(0),
+  migratePiped: BigInt.bitwiseNot(),
 })
 external lnot: bigint => bigint = "%bitnot_bigint"
 
@@ -418,6 +421,7 @@ BigInt.lsl(4n, 1n) == 8n
 @deprecated({
   reason: "Use `<<` operator or `shiftLeft` instead.",
   migrate: %insert.unlabelledArgument(0) << %insert.unlabelledArgument(1),
+  migratePiped: BigInt.shiftLeft(),
 })
 external lsl: (bigint, bigint) => bigint = "%lslbigint"
 
@@ -435,5 +439,6 @@ BigInt.asr(8n, 1n) == 4n
 @deprecated({
   reason: "Use `>>` operator or `shiftRight` instead.",
   migrate: %insert.unlabelledArgument(0) >> %insert.unlabelledArgument(1),
+  migratePiped: BigInt.shiftRight(),
 })
 external asr: (bigint, bigint) => bigint = "%asrbigint"

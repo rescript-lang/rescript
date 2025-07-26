@@ -104,21 +104,32 @@ let rec deprecated_of_attrs_with_migrate = function
                Some migration_template
              | _ -> None)
     in
+    let migration_piped_template =
+      fields
+      |> List.find_map (fun field ->
+             match field with
+             | {
+              lid = {txt = Lident "migratePiped"};
+              x = migration_piped_template;
+             } ->
+               Some migration_piped_template
+             | _ -> None)
+    in
 
     (* TODO: Validate and error if expected shape mismatches *)
     match reason with
-    | Some reason -> Some (reason, migration_template)
+    | Some reason -> Some (reason, migration_template, migration_piped_template)
     | None -> None)
   | ({txt = "ocaml.deprecated" | "deprecated"; _}, p) :: _ ->
-    Some (string_of_opt_payload p, None)
+    Some (string_of_opt_payload p, None, None)
   | _ :: tl -> deprecated_of_attrs_with_migrate tl
 
 let check_deprecated ?deprecated_context loc attrs s =
   match deprecated_of_attrs_with_migrate attrs with
   | None -> ()
-  | Some (txt, migration_template) ->
+  | Some (txt, migration_template, migration_piped_template) ->
     !Cmt_utils.record_deprecated_used
-      ?deprecated_context loc txt migration_template;
+      ?deprecated_context ?migration_template ?migration_piped_template loc txt;
     Location.deprecated loc (cat s txt)
 
 let check_deprecated_inclusion ~def ~use loc attrs1 attrs2 s =

@@ -29,15 +29,20 @@ let toLocaleString2 = BigInt.toLocaleString(123n)
 let stdlib_fromStringExn1 = "123"->BigInt.fromStringOrThrow
 let stdlib_fromStringExn2 = BigInt.fromStringOrThrow("123")
 
-let stdlib_land1 = 7n & 4n
+let stdlib_land1 = 7n->BigInt.bitwiseAnd(4n)
+let stdlib_land2 = 7n & 4n
 
 let stdlib_lor1 = BigInt.bitwiseOr(7n, 4n)
 
-let stdlib_lxor1 = 7n ^ 4n
+let stdlib_lxor1 = 7n->BigInt.bitwiseXor(4n)
+let stdlib_lxor2 = 7n ^ 4n
 
-let stdlib_lnot1 = ~2n
+let stdlib_lnot1 = 2n->BigInt.bitwiseNot
+let stdlib_lnot2 = ~2n
 
-let stdlib_lsl1 = 4n << 1n
+let stdlib_lsl1 = 4n->BigInt.shiftLeft(1n)
+let stdlib_lsl2 = 4n << 1n
 
-let stdlib_asr1 = 8n >> 1n
+let stdlib_asr1 = 8n->BigInt.shiftRight(1n)
+let stdlib_asr2 = 8n >> 1n
 
