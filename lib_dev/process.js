@@ -177,6 +177,19 @@ export function setup(cwd = process.cwd()) {
     },
 
     /**
+     * `rescript-tools` CLI
+     *
+     * @return {Promise<ExecResult>}
+     */
+    rescriptTools(command, args = [], options = {}) {
+      const cliPath = path.join(
+        import.meta.dirname,
+        "../cli/rescript-tools.js"
+      );
+      return exec("node", [cliPath, command, ...args].filter(Boolean), options);
+    },
+
+    /**
      * Execute ReScript `build` command directly
      *
      * @param {string[]} [args]
