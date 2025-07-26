@@ -70,7 +70,7 @@ external lxor: (bigint, bigint) => bigint = "%xorbigint"
 
 @deprecated({
   reason: "Use `~` operator or `BigInt.bitwiseNot` instead.",
-  migrate: ~%insert.unlabelledArgument(0),
+  migrate: ~(%insert.unlabelledArgument(0)),
   migratePiped: BigInt.bitwiseNot(),
 })
 let lnot = x => lxor(x, -1n)
