@@ -39,7 +39,7 @@ fn main() -> Result<()> {
 
             match build::build(
                 &build_args.filter,
-                Path::new(&build_args.folder as &str),
+                &build_args.folder,
                 show_progress,
                 build_args.no_timing,
                 *build_args.create_sourcedirs,
@@ -80,12 +80,7 @@ fn main() -> Result<()> {
         } => {
             let _lock = get_lock(&folder);
 
-            build::clean::clean(
-                Path::new(&folder as &str),
-                show_progress,
-                *snapshot_output,
-                dev.dev,
-            )
+            build::clean::clean(&folder, show_progress, *snapshot_output, dev.dev)
         }
         cli::Command::Legacy { legacy_args } => {
             let code = build::pass_through_legacy(legacy_args);
@@ -100,7 +95,7 @@ fn main() -> Result<()> {
     }
 }
 
-fn get_lock(folder: &str) -> lock::Lock {
+fn get_lock(folder: &Path) -> lock::Lock {
     match lock::get(folder) {
         lock::Lock::Error(error) => {
             println!("Could not start ReScript build: {error}");

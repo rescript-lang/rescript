@@ -311,7 +311,7 @@ async fn async_watch(
 pub fn start(
     filter: &Option<regex::Regex>,
     show_progress: bool,
-    folder: &str,
+    folder: &Path,
     after_build: Option<String>,
     create_sourcedirs: bool,
     build_dev_deps: bool,
@@ -325,17 +325,15 @@ pub fn start(
         let mut watcher = RecommendedWatcher::new(move |res| producer.push(res), Config::default())
             .expect("Could not create watcher");
 
-        log::debug!("watching {folder}");
+        log::debug!("watching {}", folder.display());
 
         watcher
             .watch(folder.as_ref(), RecursiveMode::Recursive)
             .expect("Could not start watcher");
 
-        let path = Path::new(folder);
-
         if let Err(e) = async_watch(AsyncWatchArgs {
             q: consumer,
-            path,
+            path: folder,
             show_progress,
             filter,
             after_build,
