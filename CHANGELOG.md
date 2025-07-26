@@ -15,6 +15,7 @@
 #### :nail_care: Polish
 
 - Apply heuristic to suggest using JSX fragments where we guess that might be what the user wanted. https://github.com/rescript-lang/rescript/pull/7714
+- Show deprecation warnings for `bs-dependencies` etc. for local dependencies only. https://github.com/rescript-lang/rescript/pull/7724
 
 #### :bug: Bug fix
 
