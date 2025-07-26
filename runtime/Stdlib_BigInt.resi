@@ -80,7 +80,11 @@ BigInt.fromString("invalid") == None
 */
 let fromString: string => option<bigint>
 
-@deprecated("Use `fromStringOrThrow` instead") @val
+@deprecated({
+  reason: "Use `fromStringOrThrow` instead",
+  migrate: BigInt.fromStringOrThrow(),
+})
+@val
 external fromStringExn: string => bigint = "BigInt"
 
 /**
@@ -147,7 +151,11 @@ BigInt.toString(123n) == "123"
 @send
 external toString: (bigint, ~radix: int=?) => string = "toString"
 
-@deprecated("Use `toString` with `~radix` instead") @send
+@deprecated({
+  reason: "Use `toString` with `~radix` instead",
+  migrate: BigInt.toString(),
+})
+@send
 external toStringWithRadix: (bigint, ~radix: int) => string = "toString"
 
 /**
@@ -339,7 +347,10 @@ external ignore: bigint => unit = "%ignore"
 BigInt.land(7n, 4n) == 4n
 ```
 */
-@deprecated("Use `&` operator or `bitwiseAnd` instead.")
+@deprecated({
+  reason: "Use `&` operator or `bitwiseAnd` instead.",
+  migrate: %insert.unlabelledArgument(0) & %insert.unlabelledArgument(1),
+})
 external land: (bigint, bigint) => bigint = "%andbigint"
 
 /**
@@ -353,7 +364,10 @@ external land: (bigint, bigint) => bigint = "%andbigint"
 BigInt.lor(7n, 4n) == 7n
 ```
 */
-@deprecated("Use `bitwiseOr` instead.")
+@deprecated({
+  reason: "Use `bitwiseOr` instead.",
+  migrate: BigInt.bitwiseOr(),
+})
 external lor: (bigint, bigint) => bigint = "%orbigint"
 
 /**
@@ -367,7 +381,10 @@ external lor: (bigint, bigint) => bigint = "%orbigint"
 BigInt.lxor(7n, 4n) == 3n
 ```
 */
-@deprecated("Use `^` operator or `bitwiseXor` instead.")
+@deprecated({
+  reason: "Use `^` operator or `bitwiseXor` instead.",
+  migrate: %insert.unlabelledArgument(0) ^ %insert.unlabelledArgument(1),
+})
 external lxor: (bigint, bigint) => bigint = "%xorbigint"
 
 /**
@@ -381,7 +398,10 @@ external lxor: (bigint, bigint) => bigint = "%xorbigint"
 BigInt.lnot(2n) == -3n
 ```
 */
-@deprecated("Use `~` operator or `bitwiseNot` instead.")
+@deprecated({
+  reason: "Use `~` operator or `bitwiseNot` instead.",
+  migrate: ~%insert.unlabelledArgument(0),
+})
 external lnot: bigint => bigint = "%bitnot_bigint"
 
 /**
@@ -395,7 +415,10 @@ external lnot: bigint => bigint = "%bitnot_bigint"
 BigInt.lsl(4n, 1n) == 8n
 ```
 */
-@deprecated("Use `<<` operator or `shiftLeft` instead.")
+@deprecated({
+  reason: "Use `<<` operator or `shiftLeft` instead.",
+  migrate: %insert.unlabelledArgument(0) << %insert.unlabelledArgument(1),
+})
 external lsl: (bigint, bigint) => bigint = "%lslbigint"
 
 /**
@@ -409,5 +432,8 @@ external lsl: (bigint, bigint) => bigint = "%lslbigint"
 BigInt.asr(8n, 1n) == 4n
 ```
 */
-@deprecated("Use `>>` operator or `shiftRight` instead.")
+@deprecated({
+  reason: "Use `>>` operator or `shiftRight` instead.",
+  migrate: %insert.unlabelledArgument(0) >> %insert.unlabelledArgument(1),
+})
 external asr: (bigint, bigint) => bigint = "%asrbigint"

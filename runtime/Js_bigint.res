@@ -30,6 +30,10 @@ try {
 }
 ```
 */
+@deprecated({
+  reason: "Use `fromStringOrThrow` instead",
+  migrate: BigInt.fromStringOrThrow(),
+})
 @val
 external fromStringExn: string => bigint = "BigInt"
 
@@ -44,13 +48,40 @@ external \"/": (bigint, bigint) => bigint = "%divbigint"
 external mod: (bigint, bigint) => bigint = "%modbigint"
 external \"**": (bigint, bigint) => bigint = "%powbigint"
 
+@deprecated({
+  reason: "Use `&` operator or `BigInt.bitwiseAnd` instead.",
+  migrate: %insert.unlabelledArgument(0) & %insert.unlabelledArgument(1),
+})
 external land: (bigint, bigint) => bigint = "%andbigint"
+
+@deprecated({
+  reason: "Use `bitwiseOr` instead.",
+  migrate: BigInt.bitwiseOr(),
+})
 external lor: (bigint, bigint) => bigint = "%orbigint"
+
+@deprecated({
+  reason: "Use `^` operator or `BigInt.bitwiseXor` instead.",
+  migrate: %insert.unlabelledArgument(0) ^ %insert.unlabelledArgument(1),
+})
 external lxor: (bigint, bigint) => bigint = "%xorbigint"
 
+@deprecated({
+  reason: "Use `~` operator or `BigInt.bitwiseNot` instead.",
+  migrate: BigInt.bitwiseNot(),
+})
 let lnot = x => lxor(x, -1n)
 
+@deprecated({
+  reason: "Use `<<` operator or `BigInt.shiftLeft` instead.",
+  migrate: %insert.unlabelledArgument(0) << %insert.unlabelledArgument(1),
+})
 external lsl: (bigint, bigint) => bigint = "%lslbigint"
+
+@deprecated({
+  reason: "Use `>>` operator or `BigInt.shiftRight` instead.",
+  migrate: %insert.unlabelledArgument(0) >> %insert.unlabelledArgument(1),
+})
 external asr: (bigint, bigint) => bigint = "%asrbigint"
 
 /**
@@ -64,6 +95,10 @@ See [`toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 Js.BigInt.toString(123n)->Js.log
 ```
 */
+@deprecated({
+  reason: "Use `BigInt.toString` instead.",
+  migrate: BigInt.toString(),
+})
 @send
 external toString: bigint => string = "toString"
 
@@ -77,5 +112,9 @@ Returns a string with a language-sensitive representation of this BigInt value.
 Js.BigInt.toString(123n)->Js.log
 ```
 */
+@deprecated({
+  reason: "Use `BigInt.toLocaleString` instead.",
+  migrate: BigInt.toLocaleString(),
+})
 @send
 external toLocaleString: bigint => string = "toLocaleString"

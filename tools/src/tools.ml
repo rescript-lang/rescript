@@ -1307,6 +1307,7 @@ module Migrate = struct
   (* 
   TODO:
   - Migrate type usage (Js.Array2.t -> array, etc)
+  - Add "migratePipe" for specific migrations of pipe calls, like `BigInt.land` that can be `&` when not piped, but needs to be `BigInt.bitwiseAnd` when piped.
   *)
 
   module MapperUtils = struct
