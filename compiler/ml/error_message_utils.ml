@@ -507,6 +507,12 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
           match exp.Parsetree.pexp_desc with
           | Pexp_array items ->
+            Cmt_utils.add_possible_action
+              {
+                loc;
+                action = RewriteArrayToTuple;
+                description = "Rewrite to tuple";
+              };
             Some {exp with Parsetree.pexp_desc = Pexp_tuple items}
           | _ -> None)
     in
