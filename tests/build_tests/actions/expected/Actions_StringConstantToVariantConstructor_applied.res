@@ -1,5 +1,11 @@
-[{
-    "loc": {"start": {"line": 10, "character": 27}, "end": {"line": 10, "character": 35}},
-    "description": "Replace with variant constructor Active",
-    "action": ReplaceWithVariantConstructor Active
-  }]
+type status = Active | Inactive | Pending
+
+let processStatus = (s: status) => {
+  switch s {
+  | Active => "active"
+  | Inactive => "inactive"
+  | Pending => "pending"
+  }
+}
+
+let result = processStatus(Active)
