@@ -51,6 +51,7 @@ external \"**": (bigint, bigint) => bigint = "%powbigint"
 @deprecated({
   reason: "Use `&` operator or `BigInt.bitwiseAnd` instead.",
   migrate: %insert.unlabelledArgument(0) & %insert.unlabelledArgument(1),
+  migratePiped: BigInt.bitwiseAnd(),
 })
 external land: (bigint, bigint) => bigint = "%andbigint"
 
@@ -63,24 +64,28 @@ external lor: (bigint, bigint) => bigint = "%orbigint"
 @deprecated({
   reason: "Use `^` operator or `BigInt.bitwiseXor` instead.",
   migrate: %insert.unlabelledArgument(0) ^ %insert.unlabelledArgument(1),
+  migratePiped: BigInt.bitwiseXor(),
 })
 external lxor: (bigint, bigint) => bigint = "%xorbigint"
 
 @deprecated({
   reason: "Use `~` operator or `BigInt.bitwiseNot` instead.",
-  migrate: BigInt.bitwiseNot(),
+  migrate: ~%insert.unlabelledArgument(0),
+  migratePiped: BigInt.bitwiseNot(),
 })
 let lnot = x => lxor(x, -1n)
 
 @deprecated({
   reason: "Use `<<` operator or `BigInt.shiftLeft` instead.",
   migrate: %insert.unlabelledArgument(0) << %insert.unlabelledArgument(1),
+  migratePiped: BigInt.shiftLeft(),
 })
 external lsl: (bigint, bigint) => bigint = "%lslbigint"
 
 @deprecated({
   reason: "Use `>>` operator or `BigInt.shiftRight` instead.",
   migrate: %insert.unlabelledArgument(0) >> %insert.unlabelledArgument(1),
+  migratePiped: BigInt.shiftRight(),
 })
 external asr: (bigint, bigint) => bigint = "%asrbigint"
 

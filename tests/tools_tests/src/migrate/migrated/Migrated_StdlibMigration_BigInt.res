@@ -3,22 +3,22 @@
 let fromStringExn1 = "123"->BigInt.fromStringOrThrow
 let fromStringExn2 = BigInt.fromStringOrThrow("123")
 
-let land1 = 7n->\"&"(4n)
+let land1 = 7n->BigInt.bitwiseAnd(4n)
 let land2 = 7n & 4n
 
 let lor1 = 7n->BigInt.bitwiseOr(4n)
 let lor2 = BigInt.bitwiseOr(7n, 4n)
 
-let lxor1 = 7n->\"^"(4n)
+let lxor1 = 7n->BigInt.bitwiseXor(4n)
 let lxor2 = 7n ^ 4n
 
 let lnot1 = 2n->Js.BigInt.lnot
 let lnot2 = Js.BigInt.lnot(2n)
 
-let lsl1 = 4n->\"<<"(1n)
+let lsl1 = 4n->BigInt.shiftLeft(1n)
 let lsl2 = 4n << 1n
 
-let asr1 = 8n->\">>"(1n)
+let asr1 = 8n->BigInt.shiftRight(1n)
 let asr2 = 8n >> 1n
 
 let toString1 = 123n->BigInt.toString
