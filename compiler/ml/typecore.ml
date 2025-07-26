@@ -698,9 +698,16 @@ let simple_conversions =
     (("string", "int"), "Int.fromString");
   ]
 
-let print_simple_conversion ppf (actual, expected) =
+let print_simple_conversion ~loc ppf (actual, expected) =
   try
     let converter = List.assoc (actual, expected) simple_conversions in
+    Cmt_utils.add_possible_action
+      {
+        loc;
+        action = ApplyFunction {function_name = Longident.parse converter};
+        description = Printf.sprintf "Convert to %s with %s" expected converter;
+      };
+
     fprintf ppf
       "@,\
        @,\
@@ -719,14 +726,14 @@ let print_simple_message ppf = function
        @{<info>20.@})."
   | _ -> ()
 
-let show_extra_help ppf _env trace =
+let show_extra_help ~loc ppf _env trace =
   match bottom_aliases trace with
   | Some
       ( {Types.desc = Tconstr (actual_path, actual_args, _)},
         {desc = Tconstr (expected_path, expexted_args, _)} ) -> (
     match (actual_path, actual_args, expected_path, expexted_args) with
     | Pident {name = actual_name}, [], Pident {name = expected_name}, [] ->
-      print_simple_conversion ppf (actual_name, expected_name);
+      print_simple_conversion ~loc ppf (actual_name, expected_name);
       print_simple_message ppf (actual_name, expected_name)
     | _ -> ())
   | _ -> ()
@@ -800,7 +807,7 @@ let print_expr_type_clash ~context env loc trace ppf =
       (function ppf -> error_expected_type_text ppf context);
     print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       bottom_aliases_result trace context;
-    show_extra_help ppf env trace
+    show_extra_help ~loc ppf env trace
 
 let report_arity_mismatch ~arity_a ~arity_b ppf =
   fprintf ppf

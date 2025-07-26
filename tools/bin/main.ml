@@ -177,6 +177,13 @@ let main () =
     done;
     Sys.argv.(len - 1) <- "";
     Reanalyze.cli ()
+  | "actions" :: file :: opts ->
+    let cmtPath =
+      match opts with
+      | path :: _ when String.ends_with ~suffix:".cmt" path -> Some path
+      | _ -> None
+    in
+    Tools.Actions.extractActionsFromFile ?cmtPath file
   | "extract-embedded" :: extPointNames :: filename :: _ ->
     logAndExit
       (Ok

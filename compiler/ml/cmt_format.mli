@@ -64,6 +64,7 @@ type cmt_infos = {
   cmt_interface_digest: Digest.t option;
   cmt_use_summaries: bool;
   cmt_extra_info: Cmt_utils.cmt_extra_info;
+  cmt_possible_actions: Cmt_utils.cmt_action list;
 }
 
 type error = Not_a_typedtree of string
@@ -119,6 +120,7 @@ val record_deprecated_used :
   Location.t ->
   string ->
   unit
+val resave_cmt_with_possible_actions : unit -> unit
 
 (*
 

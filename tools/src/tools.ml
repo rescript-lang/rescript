@@ -1294,3 +1294,55 @@ module ExtractCodeblocks = struct
 end
 
 module Migrate = Migrate
+module Actions = struct
+  let extractActionsFromFile ?cmtPath entryPointFile =
+    let path =
+      match Filename.is_relative entryPointFile with
+      | true -> Unix.realpath entryPointFile
+      | false -> entryPointFile
+    in
+    let loadedCmt =
+      match cmtPath with
+      | None -> Cmt.loadCmtInfosFromPath ~path
+      | Some path -> Shared.tryReadCmt path
+    in
+    match loadedCmt with
+    | None ->
+      Printf.printf
+        "error: failed to extract actions for %s because build artifacts could \
+         not be found. try to build the project"
+        path
+    | Some {cmt_possible_actions} ->
+      cmt_possible_actions
+      |> List.map (fun (action : Cmt_utils.cmt_action) ->
+             let range = Loc.rangeOfLoc action.loc in
+             Protocol.stringifyObject
+               [
+                 ("loc", Some (Protocol.stringifyRange range));
+                 ("description", Some (Protocol.wrapInQuotes action.description));
+                 ( "action",
+                   Some
+                     (match action.action with
+                     | ApplyFunction {function_name} ->
+                       Protocol.wrapInQuotes
+                         ("ApplyFunction "
+                         ^ (function_name |> Longident.flatten
+                          |> String.concat "."))
+                     | ApplyCoercion {coerce_to_name} ->
+                       "ApplyCoercion "
+                       ^ (coerce_to_name |> Longident.flatten
+                        |> String.concat ".")
+                     | RemoveSwitchCase ->
+                       Protocol.wrapInQuotes "RemoveSwitchCase"
+                     | RemoveOpen -> Protocol.wrapInQuotes "RemoveOpen"
+                     | ReplaceWithVariantConstructor {constructor_name} ->
+                       "ReplaceWithVariantConstructor "
+                       ^ (constructor_name |> Longident.flatten
+                        |> String.concat ".")
+                     | ReplaceWithPolymorphicVariantConstructor
+                         {constructor_name} ->
+                       "ReplaceWithPolymorphicVariantConstructor "
+                       ^ constructor_name) );
+               ])
+      |> Protocol.array |> print_endline
+end
