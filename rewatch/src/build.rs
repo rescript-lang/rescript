@@ -465,21 +465,22 @@ pub fn incremental_build(
 
 fn log_deprecations(build_state: &BuildState) {
     build_state.packages.iter().for_each(|(_, package)| {
-        package
-            .config
-            .get_deprecations()
-            .iter()
-            .for_each(|deprecation_warning| match deprecation_warning {
-                config::DeprecationWarning::BsDependencies => {
-                    log_deprecated_config_field(&package.name, "bs-dependencies", "dependencies");
-                }
-                config::DeprecationWarning::BsDevDependencies => {
-                    log_deprecated_config_field(&package.name, "bs-dev-dependencies", "dev-dependencies");
-                }
-                config::DeprecationWarning::BscFlags => {
-                    log_deprecated_config_field(&package.name, "bsc-flags", "compiler-flags");
-                }
-            });
+        // Only warn for local dependencies, not external packages
+        if package.is_local_dep {
+            package.config.get_deprecations().iter().for_each(
+                |deprecation_warning| match deprecation_warning {
+                    config::DeprecationWarning::BsDependencies => {
+                        log_deprecated_config_field(&package.name, "bs-dependencies", "dependencies");
+                    }
+                    config::DeprecationWarning::BsDevDependencies => {
+                        log_deprecated_config_field(&package.name, "bs-dev-dependencies", "dev-dependencies");
+                    }
+                    config::DeprecationWarning::BscFlags => {
+                        log_deprecated_config_field(&package.name, "bsc-flags", "compiler-flags");
+                    }
+                },
+            );
+        }
     });
 }
 
