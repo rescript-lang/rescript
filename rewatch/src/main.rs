@@ -1,11 +1,12 @@
 use anyhow::Result;
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use log::LevelFilter;
 use std::{io::Write, path::Path};
 
-use rescript::{build, cli, cmd, format, lock, watcher};
+use rescript::{build, build_metadata, cli, cmd, format, lock, watcher};
 
 fn main() -> Result<()> {
+    let cli_as_command = cli::Cli::command();
     let args = cli::Cli::parse();
 
     let log_level_filter = args.verbose.log_level_filter();
@@ -36,6 +37,9 @@ fn main() -> Result<()> {
         }
         cli::Command::Build(build_args) => {
             let _lock = get_lock(&build_args.folder);
+
+            let current_build_metadata = build_metadata::read_build_metadata(&build_args.folder);
+            println!("{:?}", cli_as_command.get_version());
 
             match build::build(
                 &build_args.filter,
