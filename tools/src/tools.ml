@@ -1347,6 +1347,25 @@ module Actions = struct
                      if action.loc = expr.pexp_loc then
                        let expr = Ast_mapper.default_mapper.expr mapper expr in
                        match action.action with
+                       | RewriteObjectToRecord -> (
+                         match expr with
+                         | {
+                          pexp_desc =
+                            Pexp_extension
+                              ( {txt = "obj"},
+                                PStr
+                                  [
+                                    {
+                                      pstr_desc =
+                                        Pstr_eval
+                                          ( ({pexp_desc = Pexp_record _} as
+                                             record),
+                                            _ );
+                                    };
+                                  ] );
+                         } ->
+                           Some record
+                         | _ -> None)
                        | AddAwait ->
                          Some {expr with pexp_desc = Pexp_await expr}
                        | ReplaceWithVariantConstructor {constructor_name} ->
