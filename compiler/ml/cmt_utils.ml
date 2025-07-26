@@ -38,6 +38,7 @@ type action_type =
   | AddAwait
   | ReplaceWithVariantConstructor of {constructor_name: Longident.t}
   | ReplaceWithPolymorphicVariantConstructor of {constructor_name: string}
+  | RewriteObjectToRecord
 
 type cmt_action = {loc: Location.t; action: action_type; description: string}
 
