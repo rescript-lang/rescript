@@ -1346,6 +1346,11 @@ module Actions = struct
                      if action.loc = expr.pexp_loc then
                        let expr = Ast_mapper.default_mapper.expr mapper expr in
                        match action.action with
+                       | RewriteArrayToTuple -> (
+                         match expr with
+                         | {pexp_desc = Pexp_array items} ->
+                           Some {expr with pexp_desc = Pexp_tuple items}
+                         | _ -> None)
                        | RewriteObjectToRecord -> (
                          match expr with
                          | {
@@ -1422,6 +1427,7 @@ module Actions = struct
                                    (fun (item : Parsetree.expression) ->
                                      item.pexp_loc = action.loc)
                               |> Option.is_some ->
+                         (* When the loc is on an item in the array *)
                          Some
                            {
                              expr with
