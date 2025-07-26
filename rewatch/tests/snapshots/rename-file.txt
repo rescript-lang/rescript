@@ -1,6 +1,59 @@
-Cleaned 1/16
-Parsed 1 source files
-Compiled 1 modules
+Cleaned 1/15
+Parsed 2 source files
+Compiled 2 modules
+
+  [1;33mWarning number 3[0m
+  [36m/packages/dep02/src/Array.res[0m:[2m6:16-33[0m
+
+  4 [2m│[0m let at = get
+  5 [2m│[0m 
+  [1;33m6[0m [2m│[0m let includes = [1;33mJs.Array2.includes[0m
+  7 [2m│[0m 
+  8 [2m│[0m let head = t => t->get(0)
+
+  deprecated: Js.Array2.includes
+  Use `Array.includes` instead.
+
+
+  [1;33mWarning number 3[0m
+  [36m/packages/dep02/src/Array.res[0m:[2m24:12-25[0m
+
+  22 [2m│[0m let flatMap = (t, fn) => t->map(fn)->concatMany
+  23 [2m│[0m 
+  [1;33m24[0m [2m│[0m let mapi = [1;33mJs.Array2.mapi[0m
+  25 [2m│[0m 
+  26 [2m│[0m let flatten = t => t->flatMap(x => x)
+
+  deprecated: Js.Array2.mapi
+  Use `Array.mapWithIndex` instead.
+
+
+  [1;33mWarning number 3[0m
+  [36m/packages/dep02/src/Array.res[0m:[2m32:14-29[0m
+
+  30 [2m│[0m let findIndex = (t, fn) => Js.Array.findIndex(fn, t)
+  31 [2m│[0m 
+  [1;33m32[0m [2m│[0m let filter = [1;33mJs.Array2.filter[0m
+  33 [2m│[0m 
+  34 [2m│[0m let reject = (t, fn) => t->filter(el => !fn(el))
+
+  deprecated: Js.Array2.filter
+  Use `Array.filter` instead.
+
+
+  [1;33mWarning number 3[0m
+  [36m/packages/dep02/src/Array.res[0m:[2m48:18-35[0m
+
+  46 [2m│[0m 
+  47 [2m│[0m module String = {
+  [1;33m48[0m [2m│[0m   let joinWith = [1;33mJs.Array2.joinWith[0m
+  49 [2m│[0m   let join = joinWith(_, "")
+  50 [2m│[0m }
+
+  deprecated: Js.Array2.joinWith
+  Use `Array.joinUnsafe` instead.
+
+
 
 The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
 Use 'dependencies' instead.

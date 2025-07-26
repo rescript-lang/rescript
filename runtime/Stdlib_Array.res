@@ -13,6 +13,8 @@ external unsafe_get: (array<'a>, int) => 'a = "%array_unsafe_get"
 @val
 external fromArrayLikeWithMap: (arrayLike<'a>, 'a => 'b) => array<'b> = "Array.from"
 
+@val external fromString: string => array<string> = "Array.from"
+
 @send external fillAll: (array<'a>, 'a) => unit = "fill"
 
 @send external fillToEnd: (array<'a>, 'a, ~start: int) => unit = "fill"

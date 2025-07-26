@@ -1,0 +1,169 @@
+let shift1 = [1, 2, 3]->Array.shift
+let shift2 = Array.shift([1, 2, 3])
+
+let slice1 = [1, 2, 3]->Array.slice(~start=1, ~end=2)
+let slice2 = Array.slice([1, 2, 3], ~start=1, ~end=2)
+
+external someArrayLike: Js_array2.array_like<string> = "whatever"
+
+let from1 = someArrayLike->Array.fromArrayLike
+let from2 = Array.fromArrayLike(someArrayLike)
+
+let fromMap1 = someArrayLike->Array.fromArrayLikeWithMap(s => s ++ "!")
+let fromMap2 = Array.fromArrayLikeWithMap(someArrayLike, s => s ++ "!")
+
+let isArray1 = [1, 2, 3]->Array.isArray
+let isArray2 = Array.isArray([1, 2, 3])
+
+let length1 = [1, 2, 3]->Array.length
+let length2 = Array.length([1, 2, 3])
+
+let fillInPlace1 = [1, 2, 3]->Array.fillAll(0)
+let fillInPlace2 = Array.fillAll([1, 2, 3], 0)
+
+let fillFromInPlace1 = [1, 2, 3, 4]->Array.fillToEnd(0, ~start=2)
+let fillFromInPlace2 = Array.fillToEnd([1, 2, 3, 4], 0, ~start=2)
+
+let fillRangeInPlace1 = [1, 2, 3, 4]->Array.fill(0, ~start=1, ~end=3)
+let fillRangeInPlace2 = Array.fill([1, 2, 3, 4], 0, ~start=1, ~end=3)
+
+let pop1 = [1, 2, 3]->Array.pop
+let pop2 = Array.pop([1, 2, 3])
+
+let reverseInPlace1 = [1, 2, 3]->Array.reverse
+let reverseInPlace2 = Array.reverse([1, 2, 3])
+
+let concat1 = [1, 2]->Array.concat([3, 4])
+let concat2 = Array.concat([1, 2], [3, 4])
+
+let concatMany1 = [1, 2]->Array.concatMany([[3, 4], [5, 6]])
+let concatMany2 = Array.concatMany([1, 2], [[3, 4], [5, 6]])
+
+let includes1 = [1, 2, 3]->Array.includes(2)
+let includes2 = Array.includes([1, 2, 3], 2)
+
+let indexOf1 = [1, 2, 3]->Array.indexOf(2)
+let indexOf2 = Array.indexOf([1, 2, 3], 2)
+
+let indexOfFrom1 = [1, 2, 1, 3]->Array.indexOfFrom(1, 2)
+let indexOfFrom2 = Array.indexOfFrom([1, 2, 1, 3], 1, 2)
+
+let joinWith1 = [1, 2, 3]->Array.joinUnsafe(",")
+let joinWith2 = Array.joinUnsafe([1, 2, 3], ",")
+
+let lastIndexOf1 = [1, 2, 1, 3]->Array.lastIndexOf(1)
+let lastIndexOf2 = Array.lastIndexOf([1, 2, 1, 3], 1)
+
+let lastIndexOfFrom1 = [1, 2, 1, 3, 1]->Array.lastIndexOfFrom(1, 3)
+let lastIndexOfFrom2 = Array.lastIndexOfFrom([1, 2, 1, 3, 1], 1, 3)
+
+let copy1 = [1, 2, 3]->Array.copy
+let copy2 = Array.copy([1, 2, 3])
+
+let sliceFrom1 = [1, 2, 3, 4]->Array.sliceToEnd(~start=2)
+let sliceFrom2 = Array.sliceToEnd([1, 2, 3, 4], ~start=2)
+
+let toString1 = [1, 2, 3]->Array.toString
+let toString2 = Array.toString([1, 2, 3])
+
+let toLocaleString1 = [1, 2, 3]->Array.toLocaleString
+let toLocaleString2 = Array.toLocaleString([1, 2, 3])
+
+let every1 = [2, 4, 6]->Array.every(x => mod(x, 2) == 0)
+let every2 = Array.every([2, 4, 6], x => mod(x, 2) == 0)
+
+let everyi1 = [0, 1, 2]->Array.everyWithIndex((x, i) => x == i)
+let everyi2 = Array.everyWithIndex([0, 1, 2], (x, i) => x == i)
+
+let filter1 = [1, 2, 3, 4]->Array.filter(x => x > 2)
+let filter2 = Array.filter([1, 2, 3, 4], x => x > 2)
+
+let filteri1 = [0, 1, 2, 3]->Array.filterWithIndex((_x, i) => i > 1)
+let filteri2 = Array.filterWithIndex([0, 1, 2, 3], (_x, i) => i > 1)
+
+let find1 = [1, 2, 3, 4]->Array.find(x => x > 2)
+let find2 = Array.find([1, 2, 3, 4], x => x > 2)
+
+let findi1 = [0, 1, 2, 3]->Array.findWithIndex((_x, i) => i > 1)
+let findi2 = Array.findWithIndex([0, 1, 2, 3], (_x, i) => i > 1)
+
+let findIndex1 = [1, 2, 3, 4]->Array.findIndex(x => x > 2)
+let findIndex2 = Array.findIndex([1, 2, 3, 4], x => x > 2)
+
+let findIndexi1 = [0, 1, 2, 3]->Array.findIndexWithIndex((_x, i) => i > 1)
+let findIndexi2 = Array.findIndexWithIndex([0, 1, 2, 3], (_x, i) => i > 1)
+
+let forEach1 = [1, 2, 3]->Array.forEach(x => ignore(x))
+let forEach2 = Array.forEach([1, 2, 3], x => ignore(x))
+
+let forEachi1 = [1, 2, 3]->Array.forEachWithIndex((x, i) => ignore(x + i))
+let forEachi2 = Array.forEachWithIndex([1, 2, 3], (x, i) => ignore(x + i))
+
+let map1 = [1, 2, 3]->Array.map(x => x * 2)
+let map2 = Array.map([1, 2, 3], x => x * 2)
+
+let mapi1 = [1, 2, 3]->Array.mapWithIndex((x, i) => x + i)
+let mapi2 = Array.mapWithIndex([1, 2, 3], (x, i) => x + i)
+
+let some1 = [1, 2, 3, 4]->Array.some(x => x > 3)
+let some2 = Array.some([1, 2, 3, 4], x => x > 3)
+
+let somei1 = [0, 1, 2, 3]->Array.someWithIndex((_x, i) => i > 2)
+let somei2 = Array.someWithIndex([0, 1, 2, 3], (_x, i) => i > 2)
+
+let unsafeGet1 = [1, 2, 3]->Array.getUnsafe(1)
+let unsafeGet2 = Array.getUnsafe([1, 2, 3], 1)
+
+let unsafeSet1 = [1, 2, 3]->Array.setUnsafe(1, 5)
+let unsafeSet2 = Array.setUnsafe([1, 2, 3], 1, 5)
+
+let copyWithin1 = [1, 2, 3, 4, 5]->Array.copyAllWithin(~target=2)
+let copyWithin2 = Array.copyAllWithin([1, 2, 3, 4, 5], ~target=2)
+
+let copyWithinFrom1 = [1, 2, 3, 4, 5]->Array.copyWithinToEnd(~target=0, ~start=2)
+let copyWithinFrom2 = Array.copyWithinToEnd([1, 2, 3, 4, 5], ~target=0, ~start=2)
+
+let copyWithinFromRange1 = [1, 2, 3, 4, 5, 6]->Array.copyWithin(~target=1, ~start=2, ~end=5)
+let copyWithinFromRange2 = Array.copyWithin([1, 2, 3, 4, 5, 6], ~target=1, ~start=2, ~end=5)
+
+let push1 = [1, 2, 3]->Array.push(4)
+let push2 = Array.push([1, 2, 3], 4)
+
+let pushMany1 = [1, 2, 3]->Array.pushMany([4, 5])
+let pushMany2 = Array.pushMany([1, 2, 3], [4, 5])
+
+let sortInPlace1 =
+  ["c", "a", "b"]->Array.toSorted((a, b) =>
+    %todo("This needs a comparator function. Use `String.compare` for strings, etc.")
+  )
+let sortInPlace2 = Array.toSorted(["c", "a", "b"], (a, b) =>
+  %todo("This needs a comparator function. Use `String.compare` for strings, etc.")
+)
+
+let unshift1 = [1, 2, 3]->Array.unshift(4)
+let unshift2 = Array.unshift([1, 2, 3], 4)
+
+let unshiftMany1 = [1, 2, 3]->Array.unshiftMany([4, 5])
+let unshiftMany2 = Array.unshiftMany([1, 2, 3], [4, 5])
+
+let reduce1 = [1, 2, 3]->Array.reduce(0, (acc, x) => acc + x)
+let reduce2 = Array.reduce([1, 2, 3], 0, (acc, x) => acc + x)
+
+let spliceInPlace1 = [1, 2, 3]->Array.splice(~start=1, ~remove=1, ~insert=[4, 5])
+let spliceInPlace2 = Array.splice([1, 2, 3], ~start=1, ~remove=1, ~insert=[4, 5])
+
+let removeFromInPlace1 = [1, 2, 3]->Array.removeInPlace(1)
+let removeFromInPlace2 = Array.removeInPlace([1, 2, 3], 1)
+
+let removeCountInPlace1 = [1, 2, 3]->Array.splice(~start=1, ~remove=1, ~insert=[])
+let removeCountInPlace2 = Array.splice([1, 2, 3], ~start=1, ~remove=1, ~insert=[])
+
+let reducei1 = [1, 2, 3]->Array.reduceWithIndex(0, (acc, x, i) => acc + x + i)
+let reducei2 = Array.reduceWithIndex([1, 2, 3], 0, (acc, x, i) => acc + x + i)
+
+let reduceRight1 = [1, 2, 3]->Array.reduceRight(0, (acc, x) => acc + x)
+let reduceRight2 = Array.reduceRight([1, 2, 3], 0, (acc, x) => acc + x)
+
+let reduceRighti1 = [1, 2, 3]->Array.reduceRightWithIndex(0, (acc, x, i) => acc + x + i)
+let reduceRighti2 = Array.reduceRightWithIndex([1, 2, 3], 0, (acc, x, i) => acc + x + i)
+
