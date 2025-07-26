@@ -446,4 +446,6 @@ let _ : unit =
     exit 2
   | x ->
     Location.report_exception ppf x;
+    (* Re-save cmt so we can get the possible actions *)
+    Cmt_format.resave_cmt_with_possible_actions ();
     exit 2

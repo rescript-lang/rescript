@@ -2202,7 +2202,15 @@ let check_unused pred casel =
                  | _ -> r
            in
            match r with
-           | Unused -> Location.prerr_warning q.pat_loc Warnings.Unused_match
+           | Unused ->
+             Location.prerr_warning q.pat_loc Warnings.Unused_match;
+             (* TODO: Maybe move this into prerr_warning? *)
+             Cmt_utils.add_possible_action
+               {
+                 loc = q.pat_loc;
+                 action = RemoveSwitchCase;
+                 description = "Remove switch case";
+               }
            | Upartial ps ->
              ps
              |> List.filter (fun p ->
