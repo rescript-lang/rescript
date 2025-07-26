@@ -71,3 +71,5 @@ for (const fileName of fixtures) {
     }
   }
 }
+
+// TODO: Check that the emitted files compile.

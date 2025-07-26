@@ -1343,9 +1343,12 @@ module Actions = struct
             let mapped_expr =
               actions
               |> List.find_map (fun (action : Cmt_utils.cmt_action) ->
+                     (* When the loc is the expr itself *)
                      if action.loc = expr.pexp_loc then
                        let expr = Ast_mapper.default_mapper.expr mapper expr in
                        match action.action with
+                       | AddAwait ->
+                         Some {expr with pexp_desc = Pexp_await expr}
                        | ReplaceWithVariantConstructor {constructor_name} ->
                          Some
                            {
@@ -1389,7 +1392,12 @@ module Actions = struct
                                      [] );
                            }
                        | _ -> None
-                     else None)
+                     else
+                       (* Other cases when the loc is on something else in the expr *)
+                       match expr.pexp_desc with
+                       | Pexp_await inner when inner.pexp_loc = action.loc ->
+                         Some inner
+                       | _ -> None)
             in
             match mapped_expr with
             | None -> Ast_mapper.default_mapper.expr mapper expr
@@ -1451,37 +1459,7 @@ module Actions = struct
         "error: failed to extract actions for %s because build artifacts could \
          not be found. try to build the project"
         path
-    | Some {cmt_possible_actions} ->
-      cmt_possible_actions
-      |> List.map (fun (action : Cmt_utils.cmt_action) ->
-             let range = Loc.rangeOfLoc action.loc in
-             Protocol.stringifyObject
-               [
-                 ("loc", Some (Protocol.stringifyRange range));
-                 ("description", Some (Protocol.wrapInQuotes action.description));
-                 ( "action",
-                   Some
-                     (match action.action with
-                     | ApplyFunction {function_name} ->
-                       Protocol.wrapInQuotes
-                         ("ApplyFunction "
-                         ^ (function_name |> Longident.flatten
-                          |> String.concat "."))
-                     | ApplyCoercion {coerce_to_name} ->
-                       "ApplyCoercion "
-                       ^ (coerce_to_name |> Longident.flatten
-                        |> String.concat ".")
-                     | RemoveSwitchCase ->
-                       Protocol.wrapInQuotes "RemoveSwitchCase"
-                     | RemoveOpen -> Protocol.wrapInQuotes "RemoveOpen"
-                     | ReplaceWithVariantConstructor {constructor_name} ->
-                       "ReplaceWithVariantConstructor "
-                       ^ (constructor_name |> Longident.flatten
-                        |> String.concat ".")
-                     | ReplaceWithPolymorphicVariantConstructor
-                         {constructor_name} ->
-                       "ReplaceWithPolymorphicVariantConstructor "
-                       ^ constructor_name) );
-               ])
-      |> Protocol.array |> print_endline
+    | Some _ ->
+      (* TODO *)
+      ()
 end
