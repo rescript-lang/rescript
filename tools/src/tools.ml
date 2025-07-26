@@ -1348,6 +1348,16 @@ module Actions = struct
                      if action.loc = expr.pexp_loc then
                        let expr = Ast_mapper.default_mapper.expr mapper expr in
                        match action.action with
+                       | RewriteIdent {new_ident} -> (
+                         match expr with
+                         | {pexp_desc = Pexp_ident ident} ->
+                           Some
+                             {
+                               expr with
+                               pexp_desc =
+                                 Pexp_ident {ident with txt = new_ident};
+                             }
+                         | _ -> None)
                        | RewriteArrayToTuple -> (
                          match expr with
                          | {pexp_desc = Pexp_array items} ->
