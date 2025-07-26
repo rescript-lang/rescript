@@ -1343,6 +1343,7 @@ module Actions = struct
               actions
               |> List.find_map (fun (action : Cmt_utils.cmt_action) ->
                      if action.loc = expr.pexp_loc then
+                       let expr = Ast_mapper.default_mapper.expr mapper expr in
                        match action.action with
                        | ReplaceWithVariantConstructor {constructor_name} ->
                          Some
