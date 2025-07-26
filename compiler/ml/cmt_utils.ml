@@ -40,6 +40,7 @@ type action_type =
   | ReplaceWithPolymorphicVariantConstructor of {constructor_name: string}
   | RewriteObjectToRecord
   | RewriteArrayToTuple
+  | RewriteIdent of {new_ident: Longident.t}
 
 type cmt_action = {loc: Location.t; action: action_type; description: string}
 

@@ -589,6 +589,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
   | ( Some (RecordField {optional = true; field_name; jsx = None}),
       Some ({desc = Tconstr (p, _, _)}, _) )
     when Path.same Predef.path_option p ->
+    (* TODO(actions) Prepend with `?` *)
     fprintf ppf
       "@,\
        @,\
@@ -607,6 +608,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
   | ( Some (RecordField {optional = true; field_name; jsx = Some _}),
       Some ({desc = Tconstr (p, _, _)}, _) )
     when Path.same Predef.path_option p ->
+    (* TODO(actions) Prepend with `?` *)
     fprintf ppf
       "@,\
        @,\
@@ -625,6 +627,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
   | ( Some (FunctionArgument {optional = true}),
       Some ({desc = Tconstr (p, _, _)}, _) )
     when Path.same Predef.path_option p ->
+    (* TODO(actions) Prepend with `?` *)
     fprintf ppf
       "@,\
        @,\
@@ -901,6 +904,7 @@ let print_contextual_unification_error ppf t1 t2 =
   | Tconstr (p1, _, _), Tconstr (p2, _, _)
     when Path.same p1 Predef.path_option
          && Path.same p2 Predef.path_option <> true ->
+    (* TODO(actions) Remove `Some`/`None` *)
     fprintf ppf
       "@,\
        @\n\
@@ -911,6 +915,7 @@ let print_contextual_unification_error ppf t1 t2 =
   | Tconstr (p1, _, _), Tconstr (p2, _, _)
     when Path.same p2 Predef.path_option
          && Path.same p1 Predef.path_option <> true ->
+    (* TODO(actions) Add `Some` *)
     fprintf ppf
       "@,\
        @\n\

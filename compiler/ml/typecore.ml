@@ -4381,6 +4381,7 @@ let report_error env loc ppf error =
     (* modified *)
     let is_inline_record = Option.is_some constuctor.cstr_inlined in
     if is_inline_record && expected = 1 then
+      (* TODO(actions) Add empty inline record argument, or change to inline record *)
       fprintf ppf
         "@[This variant constructor @{<info>%a@} expects an inline record as \
          payload%s.@]"
@@ -4388,6 +4389,7 @@ let report_error env loc ppf error =
         (if provided = 0 then ", but it's not being passed any arguments"
          else "")
     else
+      (* TODO(actions) Add missing arguments *)
       fprintf ppf
         "@[This variant constructor @{<info>%a@} expects %i %s, but it's%s \
          being passed %i.@]"
@@ -4477,6 +4479,7 @@ let report_error env loc ppf error =
   | Apply_wrong_label (l, ty) ->
     let print_message ppf = function
       | Nolabel ->
+        (* ?TODO(actions) Make labelled *)
         fprintf ppf "The argument at this position should be labelled."
       | l ->
         fprintf ppf "This function does not take the argument @{<info>%s@}."
@@ -4493,6 +4496,7 @@ let report_error env loc ppf error =
   | Label_multiply_defined {label} ->
     fprintf ppf "The record field label %s is defined several times" label
   | Labels_missing {labels; jsx_component_info = Some jsx_component_info} ->
+    (* TODO(actions) Add missing JSX props *)
     print_component_labels_missing_error ppf labels jsx_component_info
   | Labels_missing {labels} ->
     let print_labels ppf = List.iter (fun lbl -> fprintf ppf "@ %s" lbl) in
@@ -4715,6 +4719,7 @@ let report_error env loc ppf error =
     if not is_fallback then fprintf ppf "@,";
 
     if List.length missing_required_args > 0 then (
+      (* TODO(actions) Add missing arguments *)
       fprintf ppf "@,- Missing arguments that must be provided: %s"
         (missing_required_args
         |> List.map (fun v -> "~" ^ v)
@@ -4727,6 +4732,7 @@ let report_error env loc ppf error =
          Example: @{<info>yourFn(~arg1=someVar, ...)@}");
 
     if List.length superfluous_args > 0 then
+      (* TODO(actions) Remove arguments *)
       fprintf ppf "@,- Called with arguments it does not take: %s"
         (superfluous_args |> String.concat ", ");
 
@@ -4773,25 +4779,34 @@ let report_error env loc ppf error =
       match suggestion with
       | None -> ()
       | Some suggestion_str ->
+        Cmt_utils.add_possible_action
+          {
+            loc;
+            action = RewriteIdent {new_ident = Longident.parse suggestion_str};
+            description = Printf.sprintf "Rewrite to use %s" suggestion_str;
+          };
         fprintf ppf
           "@,@,Hint: Try @{<info>%s@} instead (takes @{<info>%d@} argument%s)."
           suggestion_str args
           (if args = 1 then "" else "s"))
     | None -> ());
-
     fprintf ppf "@]"
   | Field_not_optional (name, typ) ->
+    (* TODO(actions) Remove `?` *)
     fprintf ppf "Field @{<info>%s@} is not optional in type %a. Use without ?"
       name type_expr typ
   | Type_params_not_supported lid ->
+    (* TODO(actions) Remove type parameters *)
     fprintf ppf
       "The type %a@ has type parameters, but type parameters is not supported \
        here."
       longident lid
   | Field_access_on_dict_type ->
+    (* TODO(actions) Rewrite to Dict.get *)
     fprintf ppf
       "Direct field access on a dict is not supported. Use Dict.get instead."
   | Jsx_not_enabled ->
+    (* ?TODO(actions) Add JSX config to rescript.json...? *)
     fprintf ppf
       "Cannot compile JSX expression because JSX support is not enabled. Add \
        \"jsx\" settings to rescript.json to enable JSX support."
