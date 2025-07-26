@@ -1,5 +1,5 @@
-[{
-    "loc": {"start": {"line": 4, "character": 13}, "end": {"line": 4, "character": 15}},
-    "description": "Coerce to x2",
-    "action": ApplyCoercion x2
-  }]
+type x1 = One
+type x2 = | ...x1 | Two
+
+let x1: x1 = One
+let x2: x2 = (x1 :> x2)

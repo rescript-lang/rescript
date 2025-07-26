@@ -11,7 +11,7 @@ const { bsc, rescriptTools } = setup(import.meta.dirname);
 const expectedDir = path.join(import.meta.dirname, "expected");
 
 const fixtures = readdirSync(path.join(import.meta.dirname, "fixtures")).filter(
-  (fileName) => path.extname(fileName) === ".res"
+  fileName => path.extname(fileName) === ".res",
 );
 
 const prefix = ["-w", "+A", "-bs-jsx", "4"];
@@ -24,7 +24,7 @@ const updateTests = process.argv[2] === "update";
  */
 function postProcessErrorOutput(output) {
   let result = output;
-  result = result.trimEnd();
+  result = result.trimEnd() + "\n";
   return normalizeNewlines(result);
 }
 
@@ -38,6 +38,7 @@ for (const fileName of fixtures) {
   const { stdout, stderr } = await rescriptTools("actions", [
     fullFilePath,
     cmtPath,
+    "--runAll",
   ]);
   if (stderr.length > 0) {
     console.error(stderr.toString());
@@ -45,18 +46,18 @@ for (const fileName of fixtures) {
   doneTasksCount++;
   const expectedFilePath = path.join(
     expectedDir,
-    `${fileName.replace(".res", "")}_applied.res`
+    `${fileName.replace(".res", "")}_applied.res`,
   );
   const actualActions = postProcessErrorOutput(stdout.toString());
   if (updateTests) {
     await fs.writeFile(expectedFilePath, actualActions);
   } else {
     const expectedActions = postProcessErrorOutput(
-      await fs.readFile(expectedFilePath, "utf-8")
+      await fs.readFile(expectedFilePath, "utf-8"),
     );
     if (expectedActions !== actualActions) {
       console.error(
-        `The old and new actions for the test ${fullFilePath} aren't the same`
+        `The old and new actions for the test ${fullFilePath} aren't the same`,
       );
       console.error("\n=== Old:");
       console.error(expectedActions);
