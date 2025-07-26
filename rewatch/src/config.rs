@@ -6,7 +6,7 @@ use serde::Deserialize;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Hash)]
 #[serde(untagged)]
 pub enum OneOrMore<T> {
     Multiple(Vec<T>),
@@ -141,7 +141,7 @@ impl Source {
 
 impl Eq for Source {}
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Hash)]
 pub struct PackageSpec {
     pub module: String,
     #[serde(rename = "in-source", default = "default_true")]
@@ -167,34 +167,34 @@ impl PackageSpec {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Hash)]
 #[serde(untagged)]
 pub enum Error {
     Catchall(bool),
     Qualified(String),
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Hash)]
 pub struct Warnings {
     pub number: Option<String>,
     pub error: Option<Error>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Hash)]
 #[serde(untagged)]
 pub enum NamespaceConfig {
     Bool(bool),
     String(String),
 }
 
-#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub enum JsxMode {
     Classic,
     Automatic,
 }
 
-#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
 pub enum JsxModule {
@@ -202,7 +202,7 @@ pub enum JsxModule {
     Other(String),
 }
 
-#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq, Hash)]
 pub struct JsxSpecs {
     pub version: Option<i32>,
     pub module: Option<JsxModule>,
@@ -215,7 +215,7 @@ pub struct JsxSpecs {
 /// We do not care about the internal structure because the gentype config is loaded by bsc.
 pub type GenTypeConfig = serde_json::Value;
 
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Hash)]
 pub enum DeprecationWarning {
     BsDependencies,
     BsDevDependencies,
@@ -224,7 +224,7 @@ pub enum DeprecationWarning {
 
 /// # rescript.json representation
 /// This is tricky, there is a lot of ambiguity. This is probably incomplete.
-#[derive(Deserialize, Debug, Clone, Default)]
+#[derive(Deserialize, Debug, Clone, Hash, Default)]
 pub struct Config {
     pub name: String,
     // In the case of monorepos, the root source won't necessarily have to have sources. It can

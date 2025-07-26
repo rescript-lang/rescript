@@ -1,4 +1,5 @@
 pub mod build;
+pub mod build_metadata;
 pub mod cli;
 pub mod cmd;
 pub mod config;

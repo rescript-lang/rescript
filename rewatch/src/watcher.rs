@@ -316,7 +316,7 @@ pub fn start(
     create_sourcedirs: bool,
     build_dev_deps: bool,
     snapshot_output: bool,
-) {
+) -> Result<(), Error> {
     futures::executor::block_on(async {
         let queue = Arc::new(FifoQueue::<Result<Event, Error>>::new());
         let producer = queue.clone();
@@ -331,7 +331,7 @@ pub fn start(
             .watch(folder.as_ref(), RecursiveMode::Recursive)
             .expect("Could not start watcher");
 
-        if let Err(e) = async_watch(AsyncWatchArgs {
+        async_watch(AsyncWatchArgs {
             q: consumer,
             path: folder,
             show_progress,
@@ -342,8 +342,5 @@ pub fn start(
             snapshot_output,
         })
         .await
-        {
-            println!("{e:?}")
-        }
     })
 }

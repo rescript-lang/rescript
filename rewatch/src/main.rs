@@ -1,11 +1,13 @@
 use anyhow::Result;
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use log::LevelFilter;
 use std::{io::Write, path::Path};
 
-use rescript::{build, cli, cmd, format, lock, watcher};
+use rescript::{build, build_metadata, cli, cmd, format, lock, watcher};
 
 fn main() -> Result<()> {
+    let cli_as_command = cli::Cli::command();
+    let version = cli_as_command.get_version().expect("version is set");
     let args = cli::Cli::parse();
 
     let log_level_filter = args.verbose.log_level_filter();
@@ -37,6 +39,21 @@ fn main() -> Result<()> {
         cli::Command::Build(build_args) => {
             let _lock = get_lock(&build_args.folder);
 
+            if is_clean_build_needed(&build_args.folder, version) {
+                match build::clean::clean(
+                    &build_args.folder,
+                    show_progress,
+                    *build_args.snapshot_output,
+                    *build_args.dev,
+                ) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("{e}");
+                        std::process::exit(1);
+                    }
+                }
+            }
+
             match build::build(
                 &build_args.filter,
                 &build_args.folder,
@@ -54,6 +71,10 @@ fn main() -> Result<()> {
                     if let Some(args_after_build) = (*build_args.after_build).clone() {
                         cmd::run(args_after_build)
                     }
+                    build_metadata::write_build_metadata(
+                        &build_args.folder.join("lib"),
+                        &build_metadata::current_build_metadata(&build_args.folder, version),
+                    );
                     std::process::exit(0)
                 }
             };
@@ -61,7 +82,22 @@ fn main() -> Result<()> {
         cli::Command::Watch(watch_args) => {
             let _lock = get_lock(&watch_args.folder);
 
-            watcher::start(
+            if is_clean_build_needed(&watch_args.folder, version) {
+                match build::clean::clean(
+                    &watch_args.folder,
+                    show_progress,
+                    *watch_args.snapshot_output,
+                    *watch_args.dev,
+                ) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("{e}");
+                        std::process::exit(1);
+                    }
+                }
+            }
+
+            match watcher::start(
                 &watch_args.filter,
                 show_progress,
                 &watch_args.folder,
@@ -69,9 +105,19 @@ fn main() -> Result<()> {
                 *watch_args.create_sourcedirs,
                 *watch_args.dev,
                 *watch_args.snapshot_output,
-            );
-
-            Ok(())
+            ) {
+                Ok(_) => {
+                    build_metadata::write_build_metadata(
+                        &watch_args.folder.join("lib"),
+                        &build_metadata::current_build_metadata(&watch_args.folder, version),
+                    );
+                    std::process::exit(0)
+                }
+                Err(e) => {
+                    println!("{e:?}");
+                    std::process::exit(1)
+                }
+            }
         }
         cli::Command::Clean {
             folder,
@@ -93,6 +139,12 @@ fn main() -> Result<()> {
             dev,
         } => format::format(stdin, check, files, dev.dev),
     }
+}
+
+fn is_clean_build_needed(path: &Path, version: &str) -> bool {
+    let last_build_metadata = build_metadata::read_build_metadata(path);
+    let current_build_metadata = build_metadata::current_build_metadata(path, version);
+    build_metadata::is_build_metadata_different(last_build_metadata.as_ref(), &current_build_metadata)
 }
 
 fn get_lock(folder: &Path) -> lock::Lock {
