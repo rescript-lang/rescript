@@ -1295,6 +1295,144 @@ end
 
 module Migrate = Migrate
 module Actions = struct
+  let applyActionsToFile path actions =
+    let mapper =
+      {
+        Ast_mapper.default_mapper with
+        structure =
+          (fun mapper items ->
+            let items =
+              items
+              |> List.filter_map (fun (str_item : Parsetree.structure_item) ->
+                     match str_item.pstr_desc with
+                     | Pstr_open _ -> (
+                       let remove_open_action =
+                         actions
+                         |> List.find_opt
+                              (fun (action : Cmt_utils.cmt_action) ->
+                                match action.action with
+                                | RemoveOpen -> action.loc = str_item.pstr_loc
+                                | _ -> false)
+                       in
+                       match remove_open_action with
+                       | Some _ -> None
+                       | None -> Some str_item)
+                     | _ -> Some str_item)
+            in
+            Ast_mapper.default_mapper.structure mapper items);
+        cases =
+          (fun mapper cases ->
+            let cases =
+              cases
+              |> List.filter_map (fun (case : Parsetree.case) ->
+                     let remove_case_action =
+                       actions
+                       |> List.find_opt (fun (action : Cmt_utils.cmt_action) ->
+                              match action.action with
+                              | RemoveSwitchCase ->
+                                action.loc = case.pc_lhs.ppat_loc
+                              | _ -> false)
+                     in
+                     match remove_case_action with
+                     | Some _ -> None
+                     | None -> Some case)
+            in
+            Ast_mapper.default_mapper.cases mapper cases);
+        expr =
+          (fun mapper expr ->
+            let mapped_expr =
+              actions
+              |> List.find_map (fun (action : Cmt_utils.cmt_action) ->
+                     if action.loc = expr.pexp_loc then
+                       match action.action with
+                       | ReplaceWithVariantConstructor {constructor_name} ->
+                         Some
+                           {
+                             expr with
+                             pexp_desc =
+                               Pexp_construct
+                                 (Location.mknoloc constructor_name, None);
+                           }
+                       | ReplaceWithPolymorphicVariantConstructor
+                           {constructor_name} ->
+                         Some
+                           {
+                             expr with
+                             pexp_desc = Pexp_variant (constructor_name, None);
+                           }
+                       | ApplyFunction {function_name} ->
+                         Some
+                           {
+                             expr with
+                             pexp_desc =
+                               Pexp_apply
+                                 {
+                                   funct =
+                                     Ast_helper.Exp.ident
+                                       (Location.mknoloc function_name);
+                                   args = [(Nolabel, expr)];
+                                   partial = false;
+                                   transformed_jsx = false;
+                                 };
+                           }
+                       | ApplyCoercion {coerce_to_name} ->
+                         Some
+                           {
+                             expr with
+                             pexp_desc =
+                               Pexp_coerce
+                                 ( expr,
+                                   (),
+                                   Ast_helper.Typ.constr
+                                     (Location.mknoloc coerce_to_name)
+                                     [] );
+                           }
+                       | _ -> None
+                     else None)
+            in
+            match mapped_expr with
+            | None -> Ast_mapper.default_mapper.expr mapper expr
+            | Some expr -> expr);
+      }
+    in
+    if Filename.check_suffix path ".res" then
+      let parser =
+        Res_driver.parsing_engine.parse_implementation ~for_printer:true
+      in
+      let {Res_driver.parsetree; comments} = parser ~filename:path in
+      let ast_mapped = mapper.structure mapper parsetree in
+      Ok (Res_printer.print_implementation ast_mapped ~comments)
+    else
+      (* TODO: Handle .resi? *)
+      Error
+        (Printf.sprintf
+           "error: failed to apply actions to %s because it is not a .res file"
+           path)
+
+  let runActionsOnFile ?cmtPath entryPointFile =
+    let path =
+      match Filename.is_relative entryPointFile with
+      | true -> Unix.realpath entryPointFile
+      | false -> entryPointFile
+    in
+    let loadedCmt =
+      match cmtPath with
+      | None -> Cmt.loadCmtInfosFromPath ~path
+      | Some path -> Shared.tryReadCmt path
+    in
+    match loadedCmt with
+    | None ->
+      Printf.printf
+        "error: failed to run actions on %s because build artifacts could not \
+         be found. try to build the project"
+        path
+    | Some {cmt_possible_actions} -> (
+      match applyActionsToFile path cmt_possible_actions with
+      | Ok applied -> print_endline applied
+      | Error e ->
+        print_endline e;
+        exit 1)
+
   let extractActionsFromFile ?cmtPath entryPointFile =
     let path =
       match Filename.is_relative entryPointFile with

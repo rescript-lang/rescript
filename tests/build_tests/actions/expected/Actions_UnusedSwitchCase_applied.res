@@ -1,5 +1,5 @@
-[{
-    "loc": {"start": {"line": 4, "character": 2}, "end": {"line": 4, "character": 3}},
-    "description": "Remove switch case",
-    "action": "RemoveSwitchCase"
-  }]
+let x1 = switch Some(true) {
+| Some(true) => 1
+| Some(false) => 2
+| None => 3
+}
