@@ -476,6 +476,12 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
             Some record
           | _ -> None)
     in
+    Cmt_utils.add_possible_action
+      {
+        loc;
+        action = RewriteObjectToRecord;
+        description = "Rewrite object to record";
+      };
     fprintf ppf
       "@,\
        @,\
