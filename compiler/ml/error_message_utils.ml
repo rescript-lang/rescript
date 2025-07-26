@@ -417,6 +417,8 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
   | Some ComparisonOperator, _ ->
     fprintf ppf "\n\n  You can only compare things of the same type."
   | Some ArrayValue, _ ->
+    Cmt_utils.add_possible_action
+      {loc; action = RewriteArrayToTuple; description = "Rewrite to tuple"};
     fprintf ppf
       "\n\n\
       \  Arrays can only contain items of the same type.\n\n\

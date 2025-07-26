@@ -1413,9 +1413,26 @@ module Actions = struct
                        | _ -> None
                      else
                        (* Other cases when the loc is on something else in the expr *)
-                       match expr.pexp_desc with
-                       | Pexp_await inner when inner.pexp_loc = action.loc ->
-                         Some inner
+                       match (expr.pexp_desc, action.action) with
+                       | Pexp_await inner, RemoveAwait
+                         when inner.pexp_loc = action.loc ->
+                         Some (Ast_mapper.default_mapper.expr mapper inner)
+                       | Pexp_array items, RewriteArrayToTuple
+                         when items
+                              |> List.find_opt
+                                   (fun (item : Parsetree.expression) ->
+                                     item.pexp_loc = action.loc)
+                              |> Option.is_some ->
+                         Some
+                           {
+                             expr with
+                             pexp_desc =
+                               Pexp_tuple
+                                 (items
+                                 |> List.map (fun item ->
+                                        Ast_mapper.default_mapper.expr mapper
+                                          item));
+                           }
                        | _ -> None)
             in
             match mapped_expr with
