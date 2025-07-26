@@ -34,6 +34,8 @@ type action_type =
   | ApplyCoercion of {coerce_to_name: Longident.t}
   | RemoveSwitchCase
   | RemoveOpen
+  | RemoveAwait
+  | AddAwait
   | ReplaceWithVariantConstructor of {constructor_name: Longident.t}
   | ReplaceWithPolymorphicVariantConstructor of {constructor_name: string}
 

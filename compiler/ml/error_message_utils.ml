@@ -389,6 +389,8 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       \  To fix this, change the highlighted code so it evaluates to a \
        @{<info>bool@}."
   | Some Await, _ ->
+    Cmt_utils.add_possible_action
+      {loc; action = RemoveAwait; description = "Remove await"};
     fprintf ppf
       "\n\n\
       \  You're trying to await something that is not a promise.\n\n\
@@ -487,6 +489,9 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       | None -> "")
   | _, Some ({Types.desc = Tconstr (p1, _, _)}, _)
     when Path.same p1 Predef.path_promise ->
+    (* TODO: This should be aware of if we're in an async context or not? *)
+    Cmt_utils.add_possible_action
+      {loc; action = AddAwait; description = "Await promise"};
     fprintf ppf "\n\n  - Did you mean to await this promise before using it?\n"
   | _, Some ({Types.desc = Tconstr (p1, _, _)}, {Types.desc = Ttuple _})
     when Path.same p1 Predef.path_array ->
