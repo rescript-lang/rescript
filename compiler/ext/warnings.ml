@@ -707,3 +707,6 @@ let loc_to_string (loc : loc) : string =
     (loc.loc_start.pos_cnum - loc.loc_start.pos_bol)
     loc.loc_end.pos_lnum
     (loc.loc_end.pos_cnum - loc.loc_end.pos_bol)
+
+let emit_possible_actions_from_warning : (loc -> t -> unit) ref =
+  ref (fun _ _ -> ())
