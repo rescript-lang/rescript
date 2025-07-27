@@ -41,6 +41,8 @@ type action_type =
   | RewriteObjectToRecord
   | RewriteArrayToTuple
   | RewriteIdent of {new_ident: Longident.t}
+  | PrefixVariableWithUnderscore
+  | RemoveUnusedVariable
 
 type cmt_action = {loc: Location.t; action: action_type; description: string}
 
@@ -54,6 +56,19 @@ let emit_possible_actions_from_warning loc w =
   | Unused_match | Unreachable_case ->
     add_possible_action
       {loc; action = RemoveSwitchCase; description = "Remove switch case"}
+  | Unused_var _ | Unused_var_strict _ ->
+    add_possible_action
+      {
+        loc;
+        action = PrefixVariableWithUnderscore;
+        description = "Prefix with `_`";
+      };
+    add_possible_action
+      {
+        loc;
+        action = RemoveUnusedVariable;
+        description = "Remove unused variable";
+      }
   | _ -> ()
 
 let _ =
