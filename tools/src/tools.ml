@@ -1320,6 +1320,33 @@ module Actions = struct
                      | _ -> Some str_item)
             in
             Ast_mapper.default_mapper.structure mapper items);
+        value_bindings =
+          (fun mapper bindings ->
+            (* TODO: Implement removing binding action *)
+            Ast_mapper.default_mapper.value_bindings mapper bindings);
+        pat =
+          (fun mapper pattern ->
+            let pattern =
+              match pattern.ppat_desc with
+              | Ppat_var var -> (
+                let prefix_underscore_action =
+                  actions
+                  |> List.find_opt (fun (action : Cmt_utils.cmt_action) ->
+                         match action.action with
+                         | PrefixVariableWithUnderscore ->
+                           action.loc = pattern.ppat_loc
+                         | _ -> false)
+                in
+                match prefix_underscore_action with
+                | Some _ ->
+                  {
+                    pattern with
+                    ppat_desc = Ppat_var {var with txt = "_" ^ var.txt};
+                  }
+                | None -> pattern)
+              | _ -> pattern
+            in
+            Ast_mapper.default_mapper.pat mapper pattern);
         cases =
           (fun mapper cases ->
             let cases =
