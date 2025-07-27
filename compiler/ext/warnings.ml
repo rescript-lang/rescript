@@ -388,6 +388,8 @@ let message = function
     "this pattern-matching is not exhaustive.\n\
      All clauses in this pattern-matching are guarded."
   | Unused_var v | Unused_var_strict v ->
+    (* TODO(actions) Prefix with `_` *)
+    (* TODO(actions) Remove variable *)
     Format.sprintf
       "unused variable %s.\n\n\
        Fix this by:\n\
@@ -403,11 +405,17 @@ let message = function
   | Duplicate_definitions (kind, cname, tc1, tc2) ->
     Printf.sprintf "the %s %s is defined in both types %s and %s." kind cname
       tc1 tc2
-  | Unused_value_declaration v -> "unused value " ^ v ^ "."
+  | Unused_value_declaration v ->
+    (* TODO(actions) Remove value declaration *)
+    "unused value " ^ v ^ "."
   | Unused_open s -> "unused open " ^ s ^ "."
-  | Unused_type_declaration s -> "unused type " ^ s ^ "."
+  | Unused_type_declaration s ->
+    (* TODO(actions) Remove type declaration *)
+    "unused type " ^ s ^ "."
   | Unused_for_index s -> "unused for-loop index " ^ s ^ "."
-  | Unused_constructor (s, false, false) -> "unused constructor " ^ s ^ "."
+  | Unused_constructor (s, false, false) ->
+    (* TODO(actions) Remove constructor *)
+    "unused constructor " ^ s ^ "."
   | Unused_constructor (s, true, _) ->
     "constructor " ^ s
     ^ " is never used to build values.\n\
@@ -428,7 +436,9 @@ let message = function
       name
       ^ " is never used to build values.\n\
          It is exported or rebound as a private extension.")
-  | Unused_rec_flag -> "unused rec flag."
+  | Unused_rec_flag ->
+    (* TODO(actions) Remove rec flag *)
+    "unused rec flag."
   | Ambiguous_name ([s], tl, false) ->
     s ^ " belongs to several types: " ^ String.concat " " tl
     ^ "\nThe first one was selected. Disambiguate if this is wrong."
@@ -438,10 +448,12 @@ let message = function
     ^ "\nThe first one was selected. Disambiguate if this is wrong."
   | Nonoptional_label s -> "the label " ^ s ^ " is not optional."
   | Open_shadow_identifier (kind, s) ->
+    (* TODO(actions) Force open *)
     Printf.sprintf
       "this open statement shadows the %s identifier %s (which is later used)"
       kind s
   | Open_shadow_label_constructor (kind, s) ->
+    (* TODO(actions) Force open *)
     Printf.sprintf "this open statement shadows the %s %s (which is later used)"
       kind s
   | Attribute_payload (a, s) ->
@@ -483,10 +495,13 @@ let message = function
       "Ambiguous or-pattern variables under guard;\n\
        %s may match different arguments. (See manual section 8.5)"
       msg
-  | Unused_module s -> "unused module " ^ s ^ "."
+  | Unused_module s ->
+    (* TODO(actions) Remove module *)
+    "unused module " ^ s ^ "."
   | Constraint_on_gadt ->
     "Type constraints do not apply to GADT cases of variant types."
   | Bs_unused_attribute s ->
+    (* TODO(actions) Remove attribute *)
     "Unused attribute: @" ^ s
     ^ "\n\
        This attribute has no effect here.\n\
@@ -505,6 +520,8 @@ let message = function
     "Integer literal exceeds the range of representable integers of type int"
   | Bs_uninterpreted_delimiters s -> "Uninterpreted delimiters " ^ s
   | Bs_toplevel_expression_unit help ->
+    (* TODO(actions) Assign to `let _ =` *)
+    (* TODO(actions) Ignore *)
     Printf.sprintf
       "This%sis at the top level and is expected to return `unit`. But it's \
        returning %s.\n\n\
