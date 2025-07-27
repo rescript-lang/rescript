@@ -731,6 +731,7 @@ let did_you_mean ppf choices : bool =
   match choices () with
   | [] -> false
   | last :: rev_rest ->
+    (* TODO(actions) Rewrite ident *)
     Format.fprintf ppf "@[<v 2>@,@,@{<info>Hint: Did you mean %s%s%s?@}@]"
       (String.concat ", " (List.rev rev_rest))
       (if rev_rest = [] then "" else " or ")
@@ -777,6 +778,7 @@ let report_error env ppf = function
       Printtyp.longident lid;
     let has_candidate = super_spellcheck ppf Env.fold_types env lid in
     if not has_candidate then
+      (* TODO(actions) Add rec flag *)
       Format.fprintf ppf
         "If you wanted to write a recursive type, don't forget the `rec` in \
          `type rec`@]"
@@ -784,6 +786,7 @@ let report_error env ppf = function
     fprintf ppf "The type constructor@ %a@ is not yet completely defined" path p
   | Type_arity_mismatch (lid, expected, provided) ->
     if expected == 0 then
+      (* TODO(actions) Remove type parameters *)
       fprintf ppf
         "@[The type %a is not generic so expects no arguments,@ but is here \
          applied to %i argument(s).@ Have you tried removing the angular \
@@ -874,6 +877,7 @@ let report_error env ppf = function
     match as_module with
     | None -> ()
     | Some module_path ->
+      (* TODO(actions) Rewrite ident *)
       Format.fprintf ppf "@,@[<v 2>@,@[%s to use the module @{<info>%a@}?@]@]"
         (if did_spellcheck then "Or did you mean" else "Maybe you meant")
         Printtyp.path module_path)

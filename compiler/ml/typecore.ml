@@ -1404,6 +1404,7 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     (match sargs with
     | [({ppat_desc = Ppat_constant _} as sp)]
       when Builtin_attributes.warn_on_literal_pattern constr.cstr_attributes ->
+      (* TODO(actions) Use explicit pattern matching instead of literal *)
       Location.prerr_warning sp.ppat_loc Warnings.Fragile_literal_pattern
     | _ -> ());
     if List.length sargs <> constr.cstr_arity then
@@ -1768,8 +1769,12 @@ let type_pattern ~lev env spat scope expected_ty =
   let pat = type_pat ~allow_existentials:true ~lev new_env spat expected_ty in
   let new_env, unpacks =
     add_pattern_variables !new_env
-      ~check:(fun s -> Warnings.Unused_var_strict s)
-      ~check_as:(fun s -> Warnings.Unused_var s)
+      ~check:(fun s ->
+        (* TODO(actions) Remove unused variable or prefix with underscore *)
+        Warnings.Unused_var_strict s)
+      ~check_as:(fun s ->
+        (* TODO(actions) Remove unused variable or prefix with underscore *)
+        Warnings.Unused_var s)
   in
   (pat, new_env, get_ref pattern_force, unpacks)
 
@@ -2949,7 +2954,9 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
             Types.val_loc = loc;
           }
           env
-          ~check:(fun s -> Warnings.Unused_for_index s)
+          ~check:(fun s ->
+            (* TODO(actions) Remove unused for-loop index or prefix with underscore *)
+            Warnings.Unused_for_index s)
       | _ -> raise (Error (param.ppat_loc, env, Invalid_for_loop_index))
     in
     let body = type_statement ~context:None new_env sbody in
@@ -3661,6 +3668,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
           so the function type including arity can be inferred. *)
           let t1 = newvar () and t2 = newvar () in
           if ty_fun.level >= t1.level && not_identity funct.exp_desc then
+            (* TODO(actions) Remove unused argument or prefix with underscore *)
             Location.prerr_warning sarg1.pexp_loc Warnings.Unused_argument;
           unify env ty_fun
             (newty
@@ -3722,6 +3730,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
           else (sargs, (l, ty, lv) :: omitted, None)
         | Some (l', sarg0, sargs) ->
           if (not optional) && is_optional l' then
+            (* TODO(actions) Add ? to make argument optional *)
             Location.prerr_warning sarg0.pexp_loc
               (Warnings.Nonoptional_label (Printtyp.string_of_label l));
           ( sargs,
@@ -4225,6 +4234,7 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
      let {pvb_pat; pvb_attributes} = List.hd spat_sexp_list in
      (* See PR#6677 *)
      Builtin_attributes.warning_scope ~ppwarning:false pvb_attributes (fun () ->
+         (* TODO(actions) Remove unused rec flag *)
          Location.prerr_warning pvb_pat.ppat_loc Warnings.Unused_rec_flag));
   List.iter2
     (fun pat (attrs, exp) ->
@@ -4312,6 +4322,7 @@ let type_expression ~context env sexp =
             | Pexp_apply _ -> Some (return_type, FunctionCall)
             | _ -> Some (return_type, Other)))
      | Tags _ ->
+       (* TODO(actions) Assign to let _ = or pipe to ignore() *)
        Location.prerr_warning sexp.pexp_loc (Bs_toplevel_expression_unit None));
   end_def ();
   if not (is_nonexpansive exp) then generalize_expansive env exp.exp_type;

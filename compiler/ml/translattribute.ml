@@ -32,6 +32,7 @@ let find_attribute p (attributes : t list) =
     | [] -> None
     | [attr] -> Some attr
     | _ :: ({txt; loc}, _) :: _ ->
+      (* TODO(actions) Remove duplicate attribute *)
       Location.prerr_warning loc (Warnings.Duplicated_attribute txt);
       None
   in

@@ -1638,7 +1638,9 @@ and store_type ~check id info env =
   let loc = info.type_loc in
   if check then
     check_usage loc id
-      (fun s -> Warnings.Unused_type_declaration s)
+      (fun s ->
+        (* TODO(actions) Remove unused type *)
+        Warnings.Unused_type_declaration s)
       type_declarations;
   let path = Pident id in
   let constructors = Datarepr.constructors_of_type path info in
@@ -1660,6 +1662,7 @@ and store_type ~check id info env =
            if not (ty = "" || ty.[0] = '_') then
              Delayed_checks.add_delayed_check (fun () ->
                  if (not (is_in_signature env)) && not used.cu_positive then
+                   (* TODO(actions) Remove unused constructor *)
                    Location.prerr_warning loc
                      (Warnings.Unused_constructor
                         (c, used.cu_pattern, used.cu_privatize)))))
@@ -1705,6 +1708,7 @@ and store_extension ~check id ext env =
        Hashtbl.add used_constructors k (add_constructor_usage used);
        Delayed_checks.add_delayed_check (fun () ->
            if (not (is_in_signature env)) && not used.cu_positive then
+             (* TODO(actions) Remove unused extension *)
              Location.prerr_warning loc
                (Warnings.Unused_extension
                   (n, ext.ext_is_exception, used.cu_pattern, used.cu_privatize)))));
@@ -1718,7 +1722,11 @@ and store_extension ~check id ext env =
 and store_module ~check id md env =
   let loc = md.md_loc in
   if check then
-    check_usage loc id (fun s -> Warnings.Unused_module s) module_declarations;
+    check_usage loc id
+      (fun s ->
+        (* TODO(actions) Remove unused module *)
+        Warnings.Unused_module s)
+      module_declarations;
 
   let deprecated = Builtin_attributes.deprecated_of_attrs md.md_attributes in
   {
