@@ -51,6 +51,9 @@ let emit_possible_actions_from_warning loc w =
   match w with
   | Warnings.Unused_open _ ->
     add_possible_action {loc; action = RemoveOpen; description = "Remove open"}
+  | Unused_match | Unreachable_case ->
+    add_possible_action
+      {loc; action = RemoveSwitchCase; description = "Remove switch case"}
   | _ -> ()
 
 let _ =
