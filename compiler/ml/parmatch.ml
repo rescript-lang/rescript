@@ -2028,6 +2028,7 @@ let do_check_partial ?pred exhaust loc casel pss =
     | [] -> ()
     | _ ->
       if Warnings.is_active Warnings.All_clauses_guarded then
+        (* TODO(actions) Add catch-all clause with %todo *)
         Location.prerr_warning loc Warnings.All_clauses_guarded);
     Partial
   | ps :: _ -> (
@@ -2146,6 +2147,7 @@ let do_check_fragile_param exhaust loc casel pss =
         (fun ext ->
           match exhaust (Some ext) pss (List.length ps) with
           | Rnone ->
+            (* TODO(actions) Add explicit pattern for all variant constructors *)
             Location.prerr_warning loc (Warnings.Fragile_match (Path.name ext))
           | Rsome _ -> ())
         exts)
@@ -2193,6 +2195,12 @@ let check_unused pred casel =
                  let pattern = {pattern with Parsetree.ppat_loc = q.pat_loc} in
                  match pred constrs labels pattern with
                  | None ->
+                   Cmt_utils.add_possible_action
+                     {
+                       loc = q.pat_loc;
+                       action = RemoveSwitchCase;
+                       description = "Remove switch case";
+                     };
                    Location.prerr_warning q.pat_loc Warnings.Unreachable_case;
                    Used
                  | _ -> r
@@ -2200,7 +2208,6 @@ let check_unused pred casel =
            match r with
            | Unused ->
              Location.prerr_warning q.pat_loc Warnings.Unused_match;
-             (* TODO: Maybe move this into prerr_warning? *)
              Cmt_utils.add_possible_action
                {
                  loc = q.pat_loc;
@@ -2212,7 +2219,7 @@ let check_unused pred casel =
              |> List.filter (fun p ->
                     not (Variant_type_spread.is_pat_from_variant_spread_attr p))
              |> List.iter (fun p ->
-                    (* TODO(actions) Remove unused pattern *)
+                    (* TODO(actions) Remove unused pattern or replace with _ *)
                     Location.prerr_warning p.pat_loc Warnings.Unused_pat)
            | Used -> ()
          with Empty | Not_found | NoGuard -> assert false);
