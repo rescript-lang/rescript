@@ -2051,6 +2051,7 @@ let do_check_partial ?partial_match_warning_hint ?pred exhaust loc casel pss =
       | None -> Total
       | Some v ->
         (if Warnings.is_active (Warnings.Partial_match "") then
+           (* TODO(actions) Add missing cases *)
            let errmsg =
              try
                let buf = Buffer.create 16 in
@@ -2216,6 +2217,7 @@ let check_unused pred casel =
              |> List.filter (fun p ->
                     not (Variant_type_spread.is_pat_from_variant_spread_attr p))
              |> List.iter (fun p ->
+                    (* TODO(actions) Remove unused pattern *)
                     Location.prerr_warning p.pat_loc Warnings.Unused_pat)
            | Used -> ()
          with Empty | Not_found | NoGuard -> assert false);

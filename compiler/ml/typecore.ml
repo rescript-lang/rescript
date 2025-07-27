@@ -2784,6 +2784,7 @@ and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
     in
     let opt_exp =
       if List.length lid_sexp_list = num_fields then (
+        (* TODO(actions) Remove `...` spread *)
         Location.prerr_warning loc Warnings.Useless_record_with;
         None)
       else opt_exp
@@ -4720,6 +4721,7 @@ let report_error env loc ppf error =
 
     if List.length missing_required_args > 0 then (
       (* TODO(actions) Add missing arguments *)
+      (* TODO(actions) Partially apply *)
       fprintf ppf "@,- Missing arguments that must be provided: %s"
         (missing_required_args
         |> List.map (fun v -> "~" ^ v)
