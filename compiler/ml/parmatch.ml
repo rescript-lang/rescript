@@ -2200,25 +2200,12 @@ let check_unused pred casel =
                  let pattern = {pattern with Parsetree.ppat_loc = q.pat_loc} in
                  match pred constrs labels pattern with
                  | None ->
-                   Cmt_utils.add_possible_action
-                     {
-                       loc = q.pat_loc;
-                       action = RemoveSwitchCase;
-                       description = "Remove switch case";
-                     };
                    Location.prerr_warning q.pat_loc Warnings.Unreachable_case;
                    Used
                  | _ -> r
            in
            match r with
-           | Unused ->
-             Location.prerr_warning q.pat_loc Warnings.Unused_match;
-             Cmt_utils.add_possible_action
-               {
-                 loc = q.pat_loc;
-                 action = RemoveSwitchCase;
-                 description = "Remove switch case";
-               }
+           | Unused -> Location.prerr_warning q.pat_loc Warnings.Unused_match
            | Upartial ps ->
              ps
              |> List.filter (fun p ->
