@@ -1899,9 +1899,7 @@ let open_signature ?(used_slot = ref false) ?(loc = Location.none)
     Delayed_checks.add_delayed_check (fun () ->
         if not !used then (
           used := true;
-          Location.prerr_warning loc (Warnings.Unused_open (Path.name root));
-          Cmt_utils.add_possible_action
-            {loc; action = RemoveOpen; description = "Remove open"}));
+          Location.prerr_warning loc (Warnings.Unused_open (Path.name root))));
     let shadowed = ref [] in
     let slot s b =
       (match check_shadowing env b with

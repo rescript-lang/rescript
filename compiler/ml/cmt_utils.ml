@@ -46,3 +46,13 @@ type cmt_action = {loc: Location.t; action: action_type; description: string}
 
 let _add_possible_action : (cmt_action -> unit) ref = ref (fun _ -> ())
 let add_possible_action action = !_add_possible_action action
+
+let emit_possible_actions_from_warning loc w =
+  match w with
+  | Warnings.Unused_open _ ->
+    add_possible_action {loc; action = RemoveOpen; description = "Remove open"}
+  | _ -> ()
+
+let _ =
+  Warnings.emit_possible_actions_from_warning :=
+    emit_possible_actions_from_warning
