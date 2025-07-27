@@ -53,6 +53,7 @@ type iterator = {
   type_extension: iterator -> type_extension -> unit;
   type_kind: iterator -> type_kind -> unit;
   value_binding: iterator -> value_binding -> unit;
+  value_bindings: iterator -> value_binding list -> unit;
   value_description: iterator -> value_description -> unit;
   with_constraint: iterator -> with_constraint -> unit;
 }
@@ -250,7 +251,7 @@ module M = struct
     | Pstr_eval (x, attrs) ->
       sub.expr sub x;
       sub.attributes sub attrs
-    | Pstr_value (_r, vbs) -> List.iter (sub.value_binding sub) vbs
+    | Pstr_value (_r, vbs) -> sub.value_bindings sub vbs
     | Pstr_primitive vd -> sub.value_description sub vd
     | Pstr_type (_rf, l) -> List.iter (sub.type_declaration sub) l
     | Pstr_typext te -> sub.type_extension sub te
@@ -287,7 +288,7 @@ module E = struct
     | Pexp_ident x -> iter_loc sub x
     | Pexp_constant _ -> ()
     | Pexp_let (_r, vbs, e) ->
-      List.iter (sub.value_binding sub) vbs;
+      sub.value_bindings sub vbs;
       sub.expr sub e
     | Pexp_fun {default = def; lhs = p; rhs = e} ->
       iter_opt (sub.expr sub) def;
@@ -487,6 +488,7 @@ let default_iterator =
         this.expr this pvb_expr;
         this.location this pvb_loc;
         this.attributes this pvb_attributes);
+    value_bindings = (fun this l -> List.iter (this.value_binding this) l);
     constructor_declaration =
       (fun this {pcd_name; pcd_args; pcd_res; pcd_loc; pcd_attributes} ->
         iter_loc this pcd_name;
