@@ -526,7 +526,7 @@ let rec digToRelevantTemplateNameType ~env ~package ?(suffix = "")
     | _ -> (t, suffix, env))
   | _ -> (t, suffix, env)
 
-let rec resolveTypeForPipeCompletion ~env ~package ~lhsLoc ~full
+let rec resolveTypeForPipeCompletion ~env ~package ~lhsLoc ~full ?(depth = 0)
     (t : Types.type_expr) =
   (* If the type we're completing on is a type parameter, we won't be able to
      do completion unless we know what that type parameter is compiled as.
@@ -540,7 +540,11 @@ let rec resolveTypeForPipeCompletion ~env ~package ~lhsLoc ~full
   in
   match typFromLoc with
   | Some typFromLoc ->
-    typFromLoc |> resolveTypeForPipeCompletion ~lhsLoc ~env ~package ~full
+    if depth > 10 then (env, typFromLoc)
+    else
+      typFromLoc
+      |> resolveTypeForPipeCompletion ~lhsLoc ~env ~package ~full
+           ~depth:(depth + 1)
   | None ->
     let rec digToRelevantType ~env ~package (t : Types.type_expr) =
       match t.desc with
