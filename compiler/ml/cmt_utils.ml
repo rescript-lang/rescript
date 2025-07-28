@@ -42,6 +42,7 @@ type action_type =
   | RewriteArrayToTuple
   | RewriteIdentToModule of {module_name: string}
   | RewriteIdent of {new_ident: Longident.t}
+  | RewriteArgType of {to_type: [`Labelled | `Optional | `Unlabelled]}
   | PrefixVariableWithUnderscore
   | RemoveUnusedVariable
   | RemoveUnusedType
@@ -90,6 +91,11 @@ let action_to_string = function
   | RemoveRecordSpread -> "RemoveRecordSpread"
   | AssignToUnderscore -> "AssignToUnderscore"
   | PipeToIgnore -> "PipeToIgnore"
+  | RewriteArgType {to_type} -> (
+    match to_type with
+    | `Labelled -> "RewriteArgType(Labelled)"
+    | `Optional -> "RewriteArgType(Optional)"
+    | `Unlabelled -> "RewriteArgType(Unlabelled)")
 
 let _add_possible_action : (cmt_action -> unit) ref = ref (fun _ -> ())
 let add_possible_action action = !_add_possible_action action
@@ -133,6 +139,13 @@ let emit_possible_actions_from_warning loc w =
       {loc; action = PipeToIgnore; description = "Pipe to ignore()"};
     add_possible_action
       {loc; action = AssignToUnderscore; description = "Assign to let _ ="}
+  | Nonoptional_label _ ->
+    add_possible_action
+      {
+        loc;
+        action = RewriteArgType {to_type = `Labelled};
+        description = "Make argument optional";
+      }
     (* 
     
     === TODO === 
@@ -141,7 +154,6 @@ let emit_possible_actions_from_warning loc w =
   | Unused_pat -> (* Remove pattern *) ()
   | Unused_argument -> (* Remove unused argument or prefix with underscore *) ()
   | Unused_constructor _ -> (* Remove unused constructor *) ()
-  | Nonoptional_label _ -> (* Add `?` to make argument optional *) ()
   | Bs_unused_attribute _ -> (* Remove unused attribute *) ()
   | _ -> ()
 
