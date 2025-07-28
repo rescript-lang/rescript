@@ -4722,7 +4722,18 @@ let report_error env loc ppf error =
     if not is_fallback then fprintf ppf "@,";
 
     if List.length missing_required_args > 0 then (
-      (* TODO(actions) Add missing arguments *)
+      Cmt_utils.add_possible_action
+        {
+          loc;
+          action =
+            InsertMissingArguments
+              {
+                missing_args =
+                  missing_required_args
+                  |> List.map (fun arg -> Noloc.Labelled arg);
+              };
+          description = "Insert missing arguments";
+        };
       Cmt_utils.add_possible_action
         {
           loc;

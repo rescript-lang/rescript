@@ -53,6 +53,7 @@ type action_type =
   | AssignToUnderscore
   | PipeToIgnore
   | PartiallyApplyFunction
+  | InsertMissingArguments of {missing_args: Asttypes.Noloc.arg_label list}
 
 (* TODO: 
 - Unused var in patterns (and aliases )*)
@@ -98,6 +99,15 @@ let action_to_string = function
     | `Optional -> "RewriteArgType(Optional)"
     | `Unlabelled -> "RewriteArgType(Unlabelled)")
   | PartiallyApplyFunction -> "PartiallyApplyFunction"
+  | InsertMissingArguments {missing_args} ->
+    Printf.sprintf "InsertMissingArguments(%s)"
+      (missing_args
+      |> List.map (fun arg ->
+             match arg with
+             | Asttypes.Noloc.Labelled txt -> "~" ^ txt
+             | Asttypes.Noloc.Optional txt -> "?" ^ txt
+             | Asttypes.Noloc.Nolabel -> "<unlabelled>")
+      |> String.concat ", ")
 
 let _add_possible_action : (cmt_action -> unit) ref = ref (fun _ -> ())
 let add_possible_action action = !_add_possible_action action
