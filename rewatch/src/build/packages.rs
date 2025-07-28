@@ -599,7 +599,7 @@ fn extend_with_children(
 /// Make turns a folder, that should contain a config, into a tree of Packages.
 /// It does so in two steps:
 /// 1. Get all the packages parsed, and take all the source folders from the config
-/// 2. Take the (by then deduplicated) packages, and find all the '.re', '.res', '.ml' and
+/// 2. Take the (by then deduplicated) packages, and find all the '.res' and
 ///    interface files.
 ///
 /// The two step process is there to reduce IO overhead
@@ -785,13 +785,11 @@ pub fn parse_packages(build_state: &mut BuildState) {
                                 is_type_dev: metadata.is_type_dev,
                             });
                     } else {
-                        // remove last character of string: resi -> res, rei -> re, mli -> ml
+                        // remove last character of string: resi -> res
                         let mut implementation_filename = file.to_owned();
                         let extension = implementation_filename.extension().unwrap().to_str().unwrap();
                         implementation_filename = match extension {
                             "resi" => implementation_filename.with_extension("res"),
-                            "rei" => implementation_filename.with_extension("re"),
-                            "mli" => implementation_filename.with_extension("ml"),
                             _ => implementation_filename,
                         };
                         match source_files.get(&implementation_filename) {

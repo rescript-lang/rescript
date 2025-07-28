@@ -81,15 +81,32 @@ someArray->Array.length == 2
 external length: array<'a> => int = "length"
 
 // TODO: Docs
-@send external copyAllWithin: (array<'a>, ~target: int) => array<'a> = "copyWithin"
+@deprecated("Use `copyWithin` instead") @send
+external copyAllWithin: (array<'a>, ~target: int) => array<'a> = "copyWithin"
 
 // TODO: Docs
-@send
+@deprecated("Use `copyWithin` instead") @send
 external copyWithinToEnd: (array<'a>, ~target: int, ~start: int) => array<'a> = "copyWithin"
 
-// TODO: Docs
+/**
+`copyWithin(array, ~target, ~start, ~end)` copies the sequence of array elements within the array to the position starting at `target`. The copy is taken from the index positions `start` to `end`.
+
+Beware this will *mutate* the array.
+
+See [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.
+
+## Examples
+
+```rescript
+let myArray = [1, 2, 3, 4, 5]
+myArray->Array.copyWithin(~target=0, ~start=3) == [4, 5, 3, 4, 5]
+
+let myArray = [1, 2, 3, 4, 5]
+myArray->Array.copyWithin(~target=1, ~start=3, ~end=4) == [1, 4, 3, 4, 5]
+```
+*/
 @send
-external copyWithin: (array<'a>, ~target: int, ~start: int, ~end: int) => array<'a> = "copyWithin"
+external copyWithin: (array<'a>, ~target: int, ~start: int, ~end: int=?) => array<'a> = "copyWithin"
 
 /**
 `fillAll(array, value)` fills the entire `array` with `value`.
@@ -106,7 +123,7 @@ myArray->Array.fillAll(9)
 myArray == [9, 9, 9, 9]
 ```
 */
-@send
+@deprecated("Use `fill` instead") @send
 external fillAll: (array<'a>, 'a) => unit = "fill"
 
 /**
@@ -124,7 +141,7 @@ myArray->Array.fillToEnd(9, ~start=1)
 myArray == [1, 9, 9, 9]
 ```
 */
-@send
+@deprecated("Use `fill` instead") @send
 external fillToEnd: (array<'a>, 'a, ~start: int) => unit = "fill"
 
 /**
@@ -139,13 +156,18 @@ See [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refer
 ```rescript
 let myArray = [1, 2, 3, 4]
 
-myArray->Array.fill(9, ~start=1, ~end=3)
+myArray->Array.fill(9)
+myArray == [9, 9, 9, 9]
 
-myArray == [1, 9, 9, 4]
+myArray->Array.fill(0, ~start=1)
+myArray == [9, 0, 0, 0]
+
+myArray->Array.fill(5, ~start=1, ~end=3)
+myArray == [9, 5, 5, 0]
 ```
 */
 @send
-external fill: (array<'a>, 'a, ~start: int, ~end: int) => unit = "fill"
+external fill: (array<'a>, 'a, ~start: int=?, ~end: int=?) => unit = "fill"
 
 /**
 `pop(array)` removes the last item from `array` and returns it.
@@ -416,9 +438,9 @@ See [`Array.includes`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/R
 external includes: (array<'a>, 'a) => bool = "includes"
 
 /**
-`indexOf(array, item)` returns the index of the provided `item` in `array`. Uses [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality) when comparing items.
+`indexOf(array, item, ~from)` returns the index of the provided `item` in `array`, starting the search at `from`. Uses [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality) when comparing items.
 
-Returns `-1` if the item doesn not exist. Check out `Array.indexOfOpt` for a version that returns `None` instead of `-1` if the item does not exist.
+Returns `-1` if the item isn't found. Check out `Array.indexOfOpt` for a version that returns `None` instead of `-1` if the item does not exist.
 
 See [`Array.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf) on MDN.
 
@@ -427,12 +449,13 @@ See [`Array.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 ```rescript
 [1, 2]->Array.indexOf(2) == 1
 [1, 2]->Array.indexOf(3) == -1
+[1, 2, 1, 2]->Array.indexOf(2, ~from=2) == 3
 
 [{"language": "ReScript"}]->Array.indexOf({"language": "ReScript"}) == -1 // -1, because of strict equality
 ```
 */
 @send
-external indexOf: (array<'a>, 'a) => int = "indexOf"
+external indexOf: (array<'a>, 'a, ~from: int=?) => int = "indexOf"
 
 /**
 `indexOfOpt(array, item)` returns an option of the index of the provided `item` in `array`. Uses [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality) when comparing items.
@@ -448,7 +471,8 @@ See [`Array.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 ```
 */
 let indexOfOpt: (array<'a>, 'a) => option<int>
-@send external indexOfFrom: (array<'a>, 'a, int) => int = "indexOf"
+@deprecated("Use `indexOf` instead") @send
+external indexOfFrom: (array<'a>, 'a, int) => int = "indexOf"
 
 /**
 `join(array, separator)` produces a string where all items of `array` are printed, separated by `separator`. Array items must be strings, to join number or other arrays, use `joinUnsafe`. Under the hood this will run JavaScript's `toString` on all the array items.
@@ -501,9 +525,27 @@ external joinUnsafe: (array<'a>, string) => string = "join"
 */
 @deprecated("Use `joinUnsafe` instead") @send
 external joinWithUnsafe: (array<'a>, string) => string = "join"
-@send external lastIndexOf: (array<'a>, 'a) => int = "lastIndexOf"
+/**
+`lastIndexOf(array, item, ~from)` returns the last index of the provided `item` in `array`, searching backwards from `from`. Uses [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality) when comparing items.
+
+Returns `-1` if the item isn't found. Check out `Array.lastIndexOfOpt` for a version that returns `None` instead of `-1` if the item does not exist.
+
+See [`Array.lastIndexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/lastIndexOf) on MDN.
+
+## Examples
+
+```rescript
+[1, 2, 1, 2]->Array.lastIndexOf(2) == 3
+[1, 2]->Array.lastIndexOf(3) == -1
+[1, 2, 1, 2]->Array.lastIndexOf(2, ~from=2) == 1
+
+[{"language": "ReScript"}]->Array.lastIndexOf({"language": "ReScript"}) == -1 // -1, because of strict equality
+```
+*/
+@send external lastIndexOf: (array<'a>, 'a, ~from: int=?) => int = "lastIndexOf"
 let lastIndexOfOpt: (array<'a>, 'a) => option<int>
-@send external lastIndexOfFrom: (array<'a>, 'a, int) => int = "lastIndexOf"
+@deprecated("Use `lastIndexOf` instead") @send
+external lastIndexOfFrom: (array<'a>, 'a, int) => int = "lastIndexOf"
 
 /**
 `slice(array, ~start, ~end)` creates a new array of items copied from `array` from `start` until (but not including) `end`.
@@ -514,10 +556,12 @@ See [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 
 ```rescript
 [1, 2, 3, 4]->Array.slice(~start=1, ~end=3) == [2, 3]
+[1, 2, 3, 4]->Array.slice(~start=1) == [2, 3, 4]
+[1, 2, 3, 4]->Array.slice == [1, 2, 3, 4]
 ```
 */
 @send
-external slice: (array<'a>, ~start: int, ~end: int) => array<'a> = "slice"
+external slice: (array<'a>, ~start: int=?, ~end: int=?) => array<'a> = "slice"
 
 /**
 `sliceToEnd(array, start)` creates a new array from `array`, with all items from `array` starting from `start`.
@@ -530,7 +574,7 @@ See [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 [1, 2, 3, 4]->Array.sliceToEnd(~start=1) == [2, 3, 4]
 ```
 */
-@send
+@deprecated("Use `slice` instead") @send
 external sliceToEnd: (array<'a>, ~start: int) => array<'a> = "slice"
 /**
 `copy(array)` makes a copy of the array with the items in it, but does not make copies of the items themselves.

@@ -17,6 +17,7 @@
 - Apply heuristic to suggest using JSX fragments where we guess that might be what the user wanted. https://github.com/rescript-lang/rescript/pull/7714
 - Show deprecation warnings for `bs-dependencies` etc. for local dependencies only. https://github.com/rescript-lang/rescript/pull/7724
 - Add check for minimum required node version. https://github.com/rescript-lang/rescript/pull/7723
+- Use more optional args in stdlib and deprecate some functions. https://github.com/rescript-lang/rescript/pull/7730
 
 #### :bug: Bug fix
 
@@ -59,6 +60,7 @@
 - Don't skip Stdlib docstring tests. https://github.com/rescript-lang/rescript/pull/7694
 - Remove all leftovers of `pinned-dependencies` handling. https://github.com/rescript-lang/rescript/pull/7686
 - Add `rust-version` field to Rewatch's `Cargo.toml`. https://github.com/rescript-lang/rescript/pull/7701
+- Rewatch: remove support for .ml(i) and .re(i). https://github.com/rescript-lang/rescript/pull/7727
 
 # 12.0.0-beta.2
 

@@ -176,14 +176,14 @@ Path Array.
     "label": "slice",
     "kind": 12,
     "tags": [],
-    "detail": "(array<'a>, ~start: int, ~end: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`slice(array, ~start, ~end)` creates a new array of items copied from `array` from `start` until (but not including) `end`.\n\nSee [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.slice(~start=1, ~end=3) == [2, 3]\n```\n"}
+    "detail": "(array<'a>, ~start: int=?, ~end: int=?) => array<'a>",
+    "documentation": {"kind": "markdown", "value": "\n`slice(array, ~start, ~end)` creates a new array of items copied from `array` from `start` until (but not including) `end`.\n\nSee [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.slice(~start=1, ~end=3) == [2, 3]\n[1, 2, 3, 4]->Array.slice(~start=1) == [2, 3, 4]\n[1, 2, 3, 4]->Array.slice == [1, 2, 3, 4]\n```\n"}
   }, {
     "label": "fillToEnd",
     "kind": 12,
-    "tags": [],
+    "tags": [1],
     "detail": "(array<'a>, 'a, ~start: int) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`fillToEnd(array, value, ~start)` fills `array` with `value` from the `start` index.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\nmyArray->Array.fillToEnd(9, ~start=1)\nmyArray == [1, 9, 9, 9]\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `fill` instead\n\n\n`fillToEnd(array, value, ~start)` fills `array` with `value` from the `start` index.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\nmyArray->Array.fillToEnd(9, ~start=1)\nmyArray == [1, 9, 9, 9]\n```\n"}
   }, {
     "label": "includes",
     "kind": 12,
@@ -217,9 +217,9 @@ Path Array.
   }, {
     "label": "lastIndexOfFrom",
     "kind": 12,
-    "tags": [],
+    "tags": [1],
     "detail": "(array<'a>, 'a, int) => int",
-    "documentation": null
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `lastIndexOf` instead\n\n"}
   }, {
     "label": "toLocaleString",
     "kind": 12,
@@ -284,8 +284,8 @@ Path Array.
     "label": "copyWithin",
     "kind": 12,
     "tags": [],
-    "detail": "(\n  array<'a>,\n  ~target: int,\n  ~start: int,\n  ~end: int,\n) => array<'a>",
-    "documentation": null
+    "detail": "(\n  array<'a>,\n  ~target: int,\n  ~start: int,\n  ~end: int=?,\n) => array<'a>",
+    "documentation": {"kind": "markdown", "value": "\n`copyWithin(array, ~target, ~start, ~end)` copies the sequence of array elements within the array to the position starting at `target`. The copy is taken from the index positions `start` to `end`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4, 5]\nmyArray->Array.copyWithin(~target=0, ~start=3) == [4, 5, 3, 4, 5]\n\nlet myArray = [1, 2, 3, 4, 5]\nmyArray->Array.copyWithin(~target=1, ~start=3, ~end=4) == [1, 4, 3, 4, 5]\n```\n"}
   }, {
     "label": "toString",
     "kind": 12,
@@ -302,8 +302,8 @@ Path Array.
     "label": "fill",
     "kind": 12,
     "tags": [],
-    "detail": "(array<'a>, 'a, ~start: int, ~end: int) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`fill(array, value, ~start, ~end)` fills `array` with `value` from `start` to `end`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\n\nmyArray->Array.fill(9, ~start=1, ~end=3)\n\nmyArray == [1, 9, 9, 4]\n```\n"}
+    "detail": "(array<'a>, 'a, ~start: int=?, ~end: int=?) => unit",
+    "documentation": {"kind": "markdown", "value": "\n`fill(array, value, ~start, ~end)` fills `array` with `value` from `start` to `end`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\n\nmyArray->Array.fill(9)\nmyArray == [9, 9, 9, 9]\n\nmyArray->Array.fill(0, ~start=1)\nmyArray == [9, 0, 0, 0]\n\nmyArray->Array.fill(5, ~start=1, ~end=3)\nmyArray == [9, 5, 5, 0]\n```\n"}
   }, {
     "label": "findWithIndex",
     "kind": 12,
@@ -344,8 +344,8 @@ Path Array.
     "label": "lastIndexOf",
     "kind": 12,
     "tags": [],
-    "detail": "(array<'a>, 'a) => int",
-    "documentation": null
+    "detail": "(array<'a>, 'a, ~from: int=?) => int",
+    "documentation": {"kind": "markdown", "value": "\n`lastIndexOf(array, item, ~from)` returns the last index of the provided `item` in `array`, searching backwards from `from`. Uses [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality) when comparing items.\n\nReturns `-1` if the item isn't found. Check out `Array.lastIndexOfOpt` for a version that returns `None` instead of `-1` if the item does not exist.\n\nSee [`Array.lastIndexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/lastIndexOf) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 1, 2]->Array.lastIndexOf(2) == 3\n[1, 2]->Array.lastIndexOf(3) == -1\n[1, 2, 1, 2]->Array.lastIndexOf(2, ~from=2) == 1\n\n[{\"language\": \"ReScript\"}]->Array.lastIndexOf({\"language\": \"ReScript\"}) == -1 // -1, because of strict equality\n```\n"}
   }, {
     "label": "filter",
     "kind": 12,
@@ -409,9 +409,9 @@ Path Array.
   }, {
     "label": "sliceToEnd",
     "kind": 12,
-    "tags": [],
+    "tags": [1],
     "detail": "(array<'a>, ~start: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`sliceToEnd(array, start)` creates a new array from `array`, with all items from `array` starting from `start`.\n\nSee [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.sliceToEnd(~start=1) == [2, 3, 4]\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `slice` instead\n\n\n`sliceToEnd(array, start)` creates a new array from `array`, with all items from `array` starting from `start`.\n\nSee [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice) on MDN.\n\n## Examples\n\n```rescript\n[1, 2, 3, 4]->Array.sliceToEnd(~start=1) == [2, 3, 4]\n```\n"}
   }, {
     "label": "fromArrayLikeWithMap",
     "kind": 12,
@@ -421,9 +421,9 @@ Path Array.
   }, {
     "label": "fillAll",
     "kind": 12,
-    "tags": [],
+    "tags": [1],
     "detail": "(array<'a>, 'a) => unit",
-    "documentation": {"kind": "markdown", "value": "\n`fillAll(array, value)` fills the entire `array` with `value`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\nmyArray->Array.fillAll(9)\nmyArray == [9, 9, 9, 9]\n```\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `fill` instead\n\n\n`fillAll(array, value)` fills the entire `array` with `value`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.fill`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/fill) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4]\nmyArray->Array.fillAll(9)\nmyArray == [9, 9, 9, 9]\n```\n"}
   }, {
     "label": "set",
     "kind": 12,
@@ -475,9 +475,9 @@ Path Array.
   }, {
     "label": "copyWithinToEnd",
     "kind": 12,
-    "tags": [],
+    "tags": [1],
     "detail": "(array<'a>, ~target: int, ~start: int) => array<'a>",
-    "documentation": null
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n"}
   }, {
     "label": "unshift",
     "kind": 12,
@@ -488,8 +488,8 @@ Path Array.
     "label": "indexOf",
     "kind": 12,
     "tags": [],
-    "detail": "(array<'a>, 'a) => int",
-    "documentation": {"kind": "markdown", "value": "\n`indexOf(array, item)` returns the index of the provided `item` in `array`. Uses [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality) when comparing items.\n\nReturns `-1` if the item doesn not exist. Check out `Array.indexOfOpt` for a version that returns `None` instead of `-1` if the item does not exist.\n\nSee [`Array.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf) on MDN.\n\n## Examples\n\n```rescript\n[1, 2]->Array.indexOf(2) == 1\n[1, 2]->Array.indexOf(3) == -1\n\n[{\"language\": \"ReScript\"}]->Array.indexOf({\"language\": \"ReScript\"}) == -1 // -1, because of strict equality\n```\n"}
+    "detail": "(array<'a>, 'a, ~from: int=?) => int",
+    "documentation": {"kind": "markdown", "value": "\n`indexOf(array, item, ~from)` returns the index of the provided `item` in `array`, starting the search at `from`. Uses [strict check for equality](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality) when comparing items.\n\nReturns `-1` if the item isn't found. Check out `Array.indexOfOpt` for a version that returns `None` instead of `-1` if the item does not exist.\n\nSee [`Array.indexOf`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf) on MDN.\n\n## Examples\n\n```rescript\n[1, 2]->Array.indexOf(2) == 1\n[1, 2]->Array.indexOf(3) == -1\n[1, 2, 1, 2]->Array.indexOf(2, ~from=2) == 3\n\n[{\"language\": \"ReScript\"}]->Array.indexOf({\"language\": \"ReScript\"}) == -1 // -1, because of strict equality\n```\n"}
   }, {
     "label": "push",
     "kind": 12,
@@ -523,9 +523,9 @@ Path Array.
   }, {
     "label": "copyAllWithin",
     "kind": 12,
-    "tags": [],
+    "tags": [1],
     "detail": "(array<'a>, ~target: int) => array<'a>",
-    "documentation": null
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n"}
   }, {
     "label": "keepSome",
     "kind": 12,
@@ -595,9 +595,9 @@ Path Array.
   }, {
     "label": "indexOfFrom",
     "kind": 12,
-    "tags": [],
+    "tags": [1],
     "detail": "(array<'a>, 'a, int) => int",
-    "documentation": null
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `indexOf` instead\n\n"}
   }]
 
 Complete src/Completion.res 5:10

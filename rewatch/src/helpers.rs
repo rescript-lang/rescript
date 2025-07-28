@@ -306,11 +306,11 @@ pub fn get_system_time() -> u128 {
 }
 
 pub fn is_interface_file(extension: &str) -> bool {
-    matches!(extension, "resi" | "mli" | "rei")
+    extension == "resi"
 }
 
 pub fn is_implementation_file(extension: &str) -> bool {
-    matches!(extension, "res" | "ml" | "re")
+    extension == "res"
 }
 
 pub fn is_source_file(extension: &str) -> bool {
