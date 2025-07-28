@@ -2211,7 +2211,6 @@ let check_unused pred casel =
              |> List.filter (fun p ->
                     not (Variant_type_spread.is_pat_from_variant_spread_attr p))
              |> List.iter (fun p ->
-                    (* TODO(actions) Remove unused pattern or replace with _ *)
                     Location.prerr_warning p.pat_loc Warnings.Unused_pat)
            | Used -> ()
          with Empty | Not_found | NoGuard -> assert false);
