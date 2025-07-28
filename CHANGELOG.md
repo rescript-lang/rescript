@@ -59,6 +59,7 @@
 - Don't skip Stdlib docstring tests. https://github.com/rescript-lang/rescript/pull/7694
 - Remove all leftovers of `pinned-dependencies` handling. https://github.com/rescript-lang/rescript/pull/7686
 - Add `rust-version` field to Rewatch's `Cargo.toml`. https://github.com/rescript-lang/rescript/pull/7701
+- Rewatch: remove support for .ml(i) and .re(i). https://github.com/rescript-lang/rescript/pull/7727
 
 # 12.0.0-beta.2
 
