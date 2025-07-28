@@ -434,12 +434,10 @@ let message = function
     (* TODO(actions) When does this happen? *)
     "the label " ^ s ^ " is not optional."
   | Open_shadow_identifier (kind, s) ->
-    (* TODO(actions) Force open *)
     Printf.sprintf
       "this open statement shadows the %s identifier %s (which is later used)"
       kind s
   | Open_shadow_label_constructor (kind, s) ->
-    (* TODO(actions) Force open *)
     Printf.sprintf "this open statement shadows the %s %s (which is later used)"
       kind s
   | Attribute_payload (a, s) ->
