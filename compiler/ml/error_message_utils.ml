@@ -627,7 +627,12 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
   | ( Some (FunctionArgument {optional = true}),
       Some ({desc = Tconstr (p, _, _)}, _) )
     when Path.same Predef.path_option p ->
-    (* TODO(actions) Prepend with `?` *)
+    Cmt_utils.add_possible_action
+      {
+        loc;
+        action = RewriteArgType {to_type = `Optional};
+        description = "Make argument optional";
+      };
     fprintf ppf
       "@,\
        @,\
