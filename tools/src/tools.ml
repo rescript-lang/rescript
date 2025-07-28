@@ -1487,6 +1487,22 @@ module Actions = struct
                      else
                        (* Other cases when the loc is on something else in the expr *)
                        match (expr.pexp_desc, action.action) with
+                       | ( Pexp_field
+                             ( {pexp_desc = Pexp_ident e},
+                               {txt = Lident inner; loc} ),
+                           RewriteIdentToModule {module_name} )
+                         when e.loc = action.loc ->
+                         Some
+                           {
+                             expr with
+                             pexp_desc =
+                               Pexp_ident
+                                 {
+                                   loc;
+                                   txt =
+                                     Longident.Ldot (Lident module_name, inner);
+                                 };
+                           }
                        | Pexp_await inner, RemoveAwait
                          when inner.pexp_loc = action.loc ->
                          Some (Ast_mapper.default_mapper.expr mapper inner)
@@ -1579,6 +1595,8 @@ module Actions = struct
                    List.mem "RewriteObjectToRecord" filter
                  | RewriteArrayToTuple -> List.mem "RewriteArrayToTuple" filter
                  | RewriteIdent _ -> List.mem "RewriteIdent" filter
+                 | RewriteIdentToModule _ ->
+                   List.mem "RewriteIdentToModule" filter
                  | PrefixVariableWithUnderscore ->
                    List.mem "PrefixVariableWithUnderscore" filter
                  | RemoveUnusedVariable ->
