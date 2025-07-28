@@ -9,3 +9,7 @@ let processStatus = (s: status) => {
 }
 
 let result = processStatus(Active)
+
+/* === AVAILABLE ACTIONS:
+- ReplaceWithVariantConstructor(Active) - Replace with variant constructor Active
+*/

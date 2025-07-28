@@ -1585,7 +1585,15 @@ module Actions = struct
                    List.mem "RemoveUnusedVariable" filter)
       in
       match applyActionsToFile path possible_actions with
-      | Ok applied -> print_endline applied
+      | Ok applied ->
+        print_endline applied;
+        print_endline "/* === AVAILABLE ACTIONS:";
+        possible_actions
+        |> List.iter (fun (action : Cmt_utils.cmt_action) ->
+               Printf.printf "- %s - %s\n"
+                 (Cmt_utils.action_to_string action.action)
+                 action.description);
+        print_endline "*/"
       | Error e ->
         print_endline e;
         exit 1)
