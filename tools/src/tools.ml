@@ -1607,6 +1607,23 @@ module Actions = struct
                      else
                        (* Other cases when the loc is on something else in the expr *)
                        match (expr.pexp_desc, action.action) with
+                       | ( Pexp_apply ({funct; args} as apply),
+                           InsertMissingArguments {missing_args} )
+                         when funct.pexp_loc = action.loc ->
+                         let args_to_insert =
+                           missing_args
+                           |> List.map (fun (lbl : Asttypes.Noloc.arg_label) ->
+                                  ( Asttypes.to_arg_label lbl,
+                                    Ast_helper.Exp.extension
+                                      (Location.mknoloc "todo", PStr []) ))
+                         in
+                         Some
+                           {
+                             expr with
+                             pexp_desc =
+                               Pexp_apply
+                                 {apply with args = args @ args_to_insert};
+                           }
                        | ( Pexp_apply ({funct} as apply_args),
                            PartiallyApplyFunction )
                          when funct.pexp_loc = action.loc ->
@@ -1784,7 +1801,9 @@ module Actions = struct
                  | PipeToIgnore -> List.mem "PipeToIgnore" filter
                  | PartiallyApplyFunction ->
                    List.mem "PartiallyApplyFunction" filter
-                 | RewriteArgType _ -> List.mem "RewriteArgType" filter)
+                 | RewriteArgType _ -> List.mem "RewriteArgType" filter
+                 | InsertMissingArguments _ ->
+                   List.mem "InsertMissingArguments" filter)
       in
       match applyActionsToFile path possible_actions with
       | Ok applied ->
