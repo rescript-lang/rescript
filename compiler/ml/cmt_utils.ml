@@ -46,6 +46,7 @@ type action_type =
   | RemoveUnusedVariable
   | RemoveUnusedType
   | RemoveUnusedModule
+  | RemoveRecFlag
 
 (* TODO: 
 - Unused var in patterns (and aliases )*)
@@ -80,6 +81,7 @@ let action_to_string = function
   | RewriteIdent {new_ident} ->
     Printf.sprintf "RewriteIdent(%s)"
       (Longident.flatten new_ident |> String.concat ".")
+  | RemoveRecFlag -> "RemoveRecFlag"
 
 let _add_possible_action : (cmt_action -> unit) ref = ref (fun _ -> ())
 let add_possible_action action = !_add_possible_action action
@@ -113,7 +115,9 @@ let emit_possible_actions_from_warning loc w =
   | Unused_pat -> (* TODO: Remove full pattern. *) ()
   | Unused_argument ->
     (* TODO(actions) Remove unused argument or prefix with underscore *) ()
-  | Unused_rec_flag -> (* TODO(actions) Remove unused rec flag *) ()
+  | Unused_rec_flag ->
+    add_possible_action
+      {loc; action = RemoveRecFlag; description = "Remove rec flag"}
   | _ -> ()
 
 let _ =

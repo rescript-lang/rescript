@@ -1299,6 +1299,24 @@ module Actions = struct
     let mapper =
       {
         Ast_mapper.default_mapper with
+        structure_item =
+          (fun mapper str_item ->
+            let remove_rec_flag_action_locs =
+              List.filter_map
+                (fun (action : Cmt_utils.cmt_action) ->
+                  match action.action with
+                  | RemoveRecFlag -> Some action.loc
+                  | _ -> None)
+                actions
+            in
+            match str_item.pstr_desc with
+            | Pstr_value (Recursive, ({pvb_pat = {ppat_loc}} :: _ as bindings))
+              when List.mem ppat_loc remove_rec_flag_action_locs ->
+              let str_item =
+                Ast_mapper.default_mapper.structure_item mapper str_item
+              in
+              {str_item with pstr_desc = Pstr_value (Nonrecursive, bindings)}
+            | _ -> Ast_mapper.default_mapper.structure_item mapper str_item);
         structure =
           (fun mapper items ->
             let items =
@@ -1519,6 +1537,17 @@ module Actions = struct
                      else
                        (* Other cases when the loc is on something else in the expr *)
                        match (expr.pexp_desc, action.action) with
+                       | ( Pexp_let
+                             ( Recursive,
+                               ({pvb_pat = {ppat_loc}} :: _ as bindings),
+                               cont ),
+                           RemoveRecFlag )
+                         when action.loc = ppat_loc ->
+                         Some
+                           {
+                             expr with
+                             pexp_desc = Pexp_let (Nonrecursive, bindings, cont);
+                           }
                        | ( Pexp_field
                              ( {pexp_desc = Pexp_ident e},
                                {txt = Lident inner; loc} ),
@@ -1634,7 +1663,8 @@ module Actions = struct
                  | RemoveUnusedVariable ->
                    List.mem "RemoveUnusedVariable" filter
                  | RemoveUnusedType -> List.mem "RemoveUnusedType" filter
-                 | RemoveUnusedModule -> List.mem "RemoveUnusedModule" filter)
+                 | RemoveUnusedModule -> List.mem "RemoveUnusedModule" filter
+                 | RemoveRecFlag -> List.mem "RemoveRecFlag" filter)
       in
       match applyActionsToFile path possible_actions with
       | Ok applied ->
