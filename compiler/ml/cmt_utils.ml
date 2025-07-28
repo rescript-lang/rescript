@@ -46,6 +46,31 @@ type action_type =
 
 type cmt_action = {loc: Location.t; action: action_type; description: string}
 
+let action_to_string = function
+  | ApplyFunction {function_name} ->
+    Printf.sprintf "ApplyFunction(%s)"
+      (Longident.flatten function_name |> String.concat ".")
+  | ApplyCoercion {coerce_to_name} ->
+    Printf.sprintf "ApplyCoercion(%s)"
+      (Longident.flatten coerce_to_name |> String.concat ".")
+  | RemoveSwitchCase -> "RemoveSwitchCase"
+  | RemoveOpen -> "RemoveOpen"
+  | RemoveAwait -> "RemoveAwait"
+  | AddAwait -> "AddAwait"
+  | RewriteObjectToRecord -> "RewriteObjectToRecord"
+  | RewriteArrayToTuple -> "RewriteArrayToTuple"
+  | PrefixVariableWithUnderscore -> "PrefixVariableWithUnderscore"
+  | RemoveUnusedVariable -> "RemoveUnusedVariable"
+  | ReplaceWithVariantConstructor {constructor_name} ->
+    Printf.sprintf "ReplaceWithVariantConstructor(%s)"
+      (constructor_name |> Longident.flatten |> String.concat ".")
+  | ReplaceWithPolymorphicVariantConstructor {constructor_name} ->
+    Printf.sprintf "ReplaceWithPolymorphicVariantConstructor(%s)"
+      constructor_name
+  | RewriteIdent {new_ident} ->
+    Printf.sprintf "RewriteIdent(%s)"
+      (Longident.flatten new_ident |> String.concat ".")
+
 let _add_possible_action : (cmt_action -> unit) ref = ref (fun _ -> ())
 let add_possible_action action = !_add_possible_action action
 

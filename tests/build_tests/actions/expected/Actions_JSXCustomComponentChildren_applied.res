@@ -22,3 +22,7 @@ module CustomComponent = {
 }
 
 let x = <CustomComponent> {React.float(1.)} </CustomComponent>
+
+/* === AVAILABLE ACTIONS:
+- ApplyFunction(React.float) - Convert to float with React.float
+*/

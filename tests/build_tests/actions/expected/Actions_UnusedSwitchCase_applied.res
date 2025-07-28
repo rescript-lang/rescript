@@ -3,3 +3,7 @@ let x1 = switch Some(true) {
 | Some(false) => 2
 | None => 3
 }
+
+/* === AVAILABLE ACTIONS:
+- RemoveSwitchCase - Remove switch case
+*/
