@@ -4474,7 +4474,6 @@ let report_error env loc ppf error =
   | Apply_wrong_label (l, ty) ->
     let print_message ppf = function
       | Noloc.Nolabel ->
-        (* ?TODO(actions) Make labelled *)
         fprintf ppf "The argument at this position should be labelled."
       | l ->
         fprintf ppf "This function does not take the argument @{<info>%s@}."
