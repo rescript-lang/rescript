@@ -1744,7 +1744,7 @@ module Actions = struct
       | Ok applied ->
         print_endline applied;
         print_endline "/* === AVAILABLE ACTIONS:";
-        possible_actions
+        cmt_possible_actions
         |> List.iter (fun (action : Cmt_utils.cmt_action) ->
                Printf.printf "- %s - %s\n"
                  (Cmt_utils.action_to_string action.action)
