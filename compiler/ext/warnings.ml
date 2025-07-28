@@ -399,9 +399,7 @@ let message = function
   | Unused_open s -> "unused open " ^ s ^ "."
   | Unused_type_declaration s -> "unused type " ^ s ^ "."
   | Unused_for_index s -> "unused for-loop index " ^ s ^ "."
-  | Unused_constructor (s, false, false) ->
-    (* TODO(actions) Remove constructor *)
-    "unused constructor " ^ s ^ "."
+  | Unused_constructor (s, false, false) -> "unused constructor " ^ s ^ "."
   | Unused_constructor (s, true, _) ->
     "constructor " ^ s
     ^ " is never used to build values.\n\
@@ -481,7 +479,6 @@ let message = function
   | Constraint_on_gadt ->
     "Type constraints do not apply to GADT cases of variant types."
   | Bs_unused_attribute s ->
-    (* TODO(actions) Remove attribute *)
     "Unused attribute: @" ^ s
     ^ "\n\
        This attribute has no effect here.\n\
