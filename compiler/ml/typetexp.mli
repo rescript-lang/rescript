@@ -52,7 +52,7 @@ type error =
   | Method_mismatch of string * type_expr * type_expr
   | Unbound_value of Longident.t
   | Unbound_constructor of Longident.t
-  | Unbound_label of Longident.t
+  | Unbound_label of Longident.t * type_expr option
   | Unbound_module of Longident.t
   | Unbound_modtype of Longident.t
   | Ill_typed_functor_application of Longident.t
@@ -96,5 +96,7 @@ val lookup_module : ?load:bool -> Env.t -> Location.t -> Longident.t -> Path.t
 val find_modtype :
   Env.t -> Location.t -> Longident.t -> Path.t * modtype_declaration
 
-val unbound_constructor_error : Env.t -> Longident.t Location.loc -> 'a
-val unbound_label_error : Env.t -> Longident.t Location.loc -> 'a
+val unbound_constructor_error :
+  ?from_type:type_expr -> Env.t -> Longident.t Location.loc -> 'a
+val unbound_label_error :
+  ?from_type:type_expr -> Env.t -> Longident.t Location.loc -> 'a

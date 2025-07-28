@@ -822,7 +822,8 @@ module NameChoice (Name : sig
   val get_descrs : Env.type_descriptions -> t list
 
   val unsafe_do_not_use__add_with_name : t -> string -> t
-  val unbound_name_error : Env.t -> Longident.t loc -> 'a
+  val unbound_name_error :
+    ?from_type:type_expr -> Env.t -> Longident.t loc -> 'a
 end) =
 struct
   open Name
@@ -881,7 +882,7 @@ struct
     List.find check_type lbls
 
   let disambiguate ?(warn = Location.prerr_warning) ?(check_lk = fun _ _ -> ())
-      ?scope lid env opath lbls =
+      ?(from_type : Types.type_expr option) ?scope lid env opath lbls =
     let scope =
       match scope with
       | None -> lbls
@@ -891,7 +892,7 @@ struct
       match opath with
       | None -> (
         match lbls with
-        | [] -> unbound_name_error env lid
+        | [] -> unbound_name_error ?from_type env lid
         | (lbl, use) :: rest ->
           use ();
           let paths = ambiguous_types env lbl rest in
@@ -910,7 +911,7 @@ struct
             check_lk tpath lbl;
             lbl
           with Not_found ->
-            if lbls = [] then unbound_name_error env lid
+            if lbls = [] then unbound_name_error ?from_type env lid
             else
               let tp = (tpath0, expand_path env tpath) in
               let tpl =
@@ -3311,7 +3312,7 @@ and type_label_access env srecord lid =
   let labels = Typetexp.find_all_labels env lid.loc lid.txt in
   let label =
     wrap_disambiguate "This expression has" ty_exp
-      (Label.disambiguate lid env opath)
+      (Label.disambiguate ~from_type:ty_exp lid env opath)
       labels
   in
   (record, label, opath)
