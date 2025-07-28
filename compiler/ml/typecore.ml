@@ -4656,13 +4656,18 @@ let report_error env loc ppf error =
 
     if not is_fallback then fprintf ppf "@,";
 
-    if List.length missing_required_args > 0 then
+    if List.length missing_required_args > 0 then (
       (* TODO(actions) Add missing arguments *)
-      (* TODO(actions) Partially apply *)
+      Cmt_utils.add_possible_action
+        {
+          loc;
+          action = PartiallyApplyFunction;
+          description = "Partially apply function";
+        };
       fprintf ppf "@,- Missing arguments that must be provided: %s"
         (missing_required_args
         |> List.map (fun v -> "~" ^ v)
-        |> String.concat ", ");
+        |> String.concat ", "));
 
     if List.length superfluous_args > 0 then
       (* TODO(actions) Remove arguments *)
