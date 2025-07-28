@@ -1309,7 +1309,24 @@ module Actions = struct
                   | _ -> None)
                 actions
             in
+            let force_open_action_locs =
+              List.filter_map
+                (fun (action : Cmt_utils.cmt_action) ->
+                  match action.action with
+                  | ForceOpen -> Some action.loc
+                  | _ -> None)
+                actions
+            in
             match str_item.pstr_desc with
+            | Pstr_open ({popen_override = Fresh} as open_desc)
+              when List.mem str_item.pstr_loc force_open_action_locs ->
+              let str_item =
+                Ast_mapper.default_mapper.structure_item mapper str_item
+              in
+              {
+                str_item with
+                pstr_desc = Pstr_open {open_desc with popen_override = Override};
+              }
             | Pstr_value (Recursive, ({pvb_pat = {ppat_loc}} :: _ as bindings))
               when List.mem ppat_loc remove_rec_flag_action_locs ->
               let str_item =
@@ -1664,7 +1681,8 @@ module Actions = struct
                    List.mem "RemoveUnusedVariable" filter
                  | RemoveUnusedType -> List.mem "RemoveUnusedType" filter
                  | RemoveUnusedModule -> List.mem "RemoveUnusedModule" filter
-                 | RemoveRecFlag -> List.mem "RemoveRecFlag" filter)
+                 | RemoveRecFlag -> List.mem "RemoveRecFlag" filter
+                 | ForceOpen -> List.mem "ForceOpen" filter)
       in
       match applyActionsToFile path possible_actions with
       | Ok applied ->
