@@ -16,6 +16,7 @@ type action_type =
   | RemoveUnusedType
   | RemoveUnusedModule
   | RemoveRecFlag
+  | ForceOpen
 
 (* TODO: 
 - Unused var in patterns (and aliases )*)
@@ -51,6 +52,7 @@ let action_to_string = function
     Printf.sprintf "RewriteIdent(%s)"
       (Longident.flatten new_ident |> String.concat ".")
   | RemoveRecFlag -> "RemoveRecFlag"
+  | ForceOpen -> "ForceOpen"
 
 let _add_possible_action : (cmt_action -> unit) ref = ref (fun _ -> ())
 let add_possible_action action = !_add_possible_action action
@@ -87,6 +89,8 @@ let emit_possible_actions_from_warning loc w =
   | Unused_rec_flag ->
     add_possible_action
       {loc; action = RemoveRecFlag; description = "Remove rec flag"}
+  | Open_shadow_identifier _ | Open_shadow_label_constructor _ ->
+    add_possible_action {loc; action = ForceOpen; description = "Force open"}
   | _ -> ()
 
 let _ =
