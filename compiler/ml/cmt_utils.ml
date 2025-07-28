@@ -47,6 +47,7 @@ type action_type =
   | RemoveUnusedType
   | RemoveUnusedModule
   | RemoveRecFlag
+  | RemoveRecordSpread
   | ForceOpen
 
 (* TODO: 
@@ -84,6 +85,7 @@ let action_to_string = function
       (Longident.flatten new_ident |> String.concat ".")
   | RemoveRecFlag -> "RemoveRecFlag"
   | ForceOpen -> "ForceOpen"
+  | RemoveRecordSpread -> "RemoveRecordSpread"
 
 let _add_possible_action : (cmt_action -> unit) ref = ref (fun _ -> ())
 let add_possible_action action = !_add_possible_action action
@@ -119,6 +121,9 @@ let emit_possible_actions_from_warning loc w =
       {loc; action = RemoveRecFlag; description = "Remove rec flag"}
   | Open_shadow_identifier _ | Open_shadow_label_constructor _ ->
     add_possible_action {loc; action = ForceOpen; description = "Force open"}
+  | Useless_record_with ->
+    add_possible_action
+      {loc; action = RemoveRecordSpread; description = "Remove `...` spread"}
     (* 
     
     === TODO === 
@@ -128,7 +133,6 @@ let emit_possible_actions_from_warning loc w =
     (* Use explicit pattern matching instead of literal *) ()
   | Unused_pat -> (* Remove pattern *) ()
   | Unused_argument -> (* Remove unused argument or prefix with underscore *) ()
-  | Useless_record_with -> (* Remove `...` spread *) ()
   | Nonoptional_label _ -> (* Add `?` to make argument optional *) ()
   | Bs_toplevel_expression_unit _ ->
     (* Assign to let _ = or pipe to ignore() *) ()
