@@ -52,6 +52,7 @@ type action_type =
   | ForceOpen
   | AssignToUnderscore
   | PipeToIgnore
+  | PartiallyApplyFunction
 
 (* TODO: 
 - Unused var in patterns (and aliases )*)
@@ -96,6 +97,7 @@ let action_to_string = function
     | `Labelled -> "RewriteArgType(Labelled)"
     | `Optional -> "RewriteArgType(Optional)"
     | `Unlabelled -> "RewriteArgType(Unlabelled)")
+  | PartiallyApplyFunction -> "PartiallyApplyFunction"
 
 let _add_possible_action : (cmt_action -> unit) ref = ref (fun _ -> ())
 let add_possible_action action = !_add_possible_action action
