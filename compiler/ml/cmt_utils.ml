@@ -54,6 +54,7 @@ type action_type =
   | PipeToIgnore
   | PartiallyApplyFunction
   | InsertMissingArguments of {missing_args: Asttypes.Noloc.arg_label list}
+  | ChangeRecordFieldOptional of {optional: bool}
 
 (* TODO: 
 - Unused var in patterns (and aliases )*)
@@ -108,6 +109,9 @@ let action_to_string = function
              | Asttypes.Noloc.Optional txt -> "?" ^ txt
              | Asttypes.Noloc.Nolabel -> "<unlabelled>")
       |> String.concat ", ")
+  | ChangeRecordFieldOptional {optional} ->
+    Printf.sprintf "ChangeRecordFieldOptional(%s)"
+      (if optional then "true" else "false")
 
 let _add_possible_action : (cmt_action -> unit) ref = ref (fun _ -> ())
 let add_possible_action action = !_add_possible_action action

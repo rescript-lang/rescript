@@ -76,6 +76,9 @@ type mapper = {
   open_description: mapper -> open_description -> open_description;
   pat: mapper -> pattern -> pattern;
   payload: mapper -> payload -> payload;
+  record_field:
+    mapper -> expression record_element -> expression record_element;
+  record_field_pat: mapper -> pattern record_element -> pattern record_element;
   signature: mapper -> signature -> signature;
   signature_item: mapper -> signature_item -> signature_item;
   structure: mapper -> structure -> structure;
