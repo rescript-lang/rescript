@@ -128,6 +128,11 @@ let emit_possible_actions_from_warning loc w =
   | Useless_record_with ->
     add_possible_action
       {loc; action = RemoveRecordSpread; description = "Remove `...` spread"}
+  | Bs_toplevel_expression_unit _ ->
+    add_possible_action
+      {loc; action = PipeToIgnore; description = "Pipe to ignore()"};
+    add_possible_action
+      {loc; action = AssignToUnderscore; description = "Assign to let _ ="}
     (* 
     
     === TODO === 
@@ -135,12 +140,9 @@ let emit_possible_actions_from_warning loc w =
     *)
   | Unused_pat -> (* Remove pattern *) ()
   | Unused_argument -> (* Remove unused argument or prefix with underscore *) ()
+  | Unused_constructor _ -> (* Remove unused constructor *) ()
   | Nonoptional_label _ -> (* Add `?` to make argument optional *) ()
-  | Bs_toplevel_expression_unit _ ->
-    add_possible_action
-      {loc; action = PipeToIgnore; description = "Pipe to ignore()"};
-    add_possible_action
-      {loc; action = AssignToUnderscore; description = "Assign to let _ ="}
+  | Bs_unused_attribute _ -> (* Remove unused attribute *) ()
   | _ -> ()
 
 let _ =
