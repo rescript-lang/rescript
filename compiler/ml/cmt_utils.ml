@@ -49,6 +49,8 @@ type action_type =
   | RemoveRecFlag
   | RemoveRecordSpread
   | ForceOpen
+  | AssignToUnderscore
+  | PipeToIgnore
 
 (* TODO: 
 - Unused var in patterns (and aliases )*)
@@ -86,6 +88,8 @@ let action_to_string = function
   | RemoveRecFlag -> "RemoveRecFlag"
   | ForceOpen -> "ForceOpen"
   | RemoveRecordSpread -> "RemoveRecordSpread"
+  | AssignToUnderscore -> "AssignToUnderscore"
+  | PipeToIgnore -> "PipeToIgnore"
 
 let _add_possible_action : (cmt_action -> unit) ref = ref (fun _ -> ())
 let add_possible_action action = !_add_possible_action action
@@ -133,7 +137,10 @@ let emit_possible_actions_from_warning loc w =
   | Unused_argument -> (* Remove unused argument or prefix with underscore *) ()
   | Nonoptional_label _ -> (* Add `?` to make argument optional *) ()
   | Bs_toplevel_expression_unit _ ->
-    (* Assign to let _ = or pipe to ignore() *) ()
+    add_possible_action
+      {loc; action = PipeToIgnore; description = "Pipe to ignore()"};
+    add_possible_action
+      {loc; action = AssignToUnderscore; description = "Assign to let _ ="}
   | _ -> ()
 
 let _ =

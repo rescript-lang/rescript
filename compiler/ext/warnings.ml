@@ -508,8 +508,6 @@ let message = function
     "Integer literal exceeds the range of representable integers of type int"
   | Bs_uninterpreted_delimiters s -> "Uninterpreted delimiters " ^ s
   | Bs_toplevel_expression_unit help ->
-    (* TODO(actions) Assign to `let _ =` *)
-    (* TODO(actions) Ignore *)
     Printf.sprintf
       "This%sis at the top level and is expected to return `unit`. But it's \
        returning %s.\n\n\

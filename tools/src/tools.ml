@@ -1317,7 +1317,32 @@ module Actions = struct
                   | _ -> None)
                 actions
             in
+            let assign_to_underscore_action_locs =
+              List.filter_map
+                (fun (action : Cmt_utils.cmt_action) ->
+                  match action.action with
+                  | AssignToUnderscore -> Some action.loc
+                  | _ -> None)
+                actions
+            in
             match str_item.pstr_desc with
+            | Pstr_eval (({pexp_loc} as e), attrs)
+              when List.mem pexp_loc assign_to_underscore_action_locs ->
+              let str_item =
+                Ast_mapper.default_mapper.structure_item mapper str_item
+              in
+              let loc = str_item.pstr_loc in
+              {
+                str_item with
+                pstr_desc =
+                  Pstr_value
+                    ( Nonrecursive,
+                      [
+                        Ast_helper.Vb.mk ~loc ~attrs
+                          (Ast_helper.Pat.var ~loc (Location.mkloc "_" loc))
+                          e;
+                      ] );
+              }
             | Pstr_open ({popen_override = Fresh} as open_desc)
               when List.mem str_item.pstr_loc force_open_action_locs ->
               let str_item =
@@ -1458,6 +1483,28 @@ module Actions = struct
                      if action.loc = expr.pexp_loc then
                        let expr = Ast_mapper.default_mapper.expr mapper expr in
                        match action.action with
+                       | PipeToIgnore ->
+                         Some
+                           {
+                             expr with
+                             pexp_desc =
+                               Pexp_apply
+                                 {
+                                   funct =
+                                     Ast_helper.Exp.ident
+                                       (Location.mknoloc (Longident.Lident "->"));
+                                   partial = false;
+                                   transformed_jsx = false;
+                                   args =
+                                     [
+                                       (Nolabel, expr);
+                                       ( Nolabel,
+                                         Ast_helper.Exp.ident
+                                           (Location.mknoloc
+                                              (Longident.Lident "ignore")) );
+                                     ];
+                                 };
+                           }
                        | RemoveRecordSpread -> (
                          match expr with
                          | {pexp_desc = Pexp_record (fields, Some _)} ->
@@ -1689,7 +1736,9 @@ module Actions = struct
                  | RemoveUnusedModule -> List.mem "RemoveUnusedModule" filter
                  | RemoveRecFlag -> List.mem "RemoveRecFlag" filter
                  | ForceOpen -> List.mem "ForceOpen" filter
-                 | RemoveRecordSpread -> List.mem "RemoveRecordSpread" filter)
+                 | RemoveRecordSpread -> List.mem "RemoveRecordSpread" filter
+                 | AssignToUnderscore -> List.mem "AssignToUnderscore" filter
+                 | PipeToIgnore -> List.mem "PipeToIgnore" filter)
       in
       match applyActionsToFile path possible_actions with
       | Ok applied ->
