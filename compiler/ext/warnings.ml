@@ -405,9 +405,7 @@ let message = function
       tc1 tc2
   | Unused_value_declaration v -> "unused value " ^ v ^ "."
   | Unused_open s -> "unused open " ^ s ^ "."
-  | Unused_type_declaration s ->
-    (* TODO(actions) Remove type declaration *)
-    "unused type " ^ s ^ "."
+  | Unused_type_declaration s -> "unused type " ^ s ^ "."
   | Unused_for_index s -> "unused for-loop index " ^ s ^ "."
   | Unused_constructor (s, false, false) ->
     (* TODO(actions) Remove constructor *)
@@ -432,9 +430,7 @@ let message = function
       name
       ^ " is never used to build values.\n\
          It is exported or rebound as a private extension.")
-  | Unused_rec_flag ->
-    (* TODO(actions) Remove rec flag *)
-    "unused rec flag."
+  | Unused_rec_flag -> "unused rec flag."
   | Ambiguous_name ([s], tl, false) ->
     s ^ " belongs to several types: " ^ String.concat " " tl
     ^ "\nThe first one was selected. Disambiguate if this is wrong."
