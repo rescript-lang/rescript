@@ -1660,7 +1660,6 @@ and store_type ~check id info env =
            if not (ty = "" || ty.[0] = '_') then
              Delayed_checks.add_delayed_check (fun () ->
                  if (not (is_in_signature env)) && not used.cu_positive then
-                   (* TODO(actions) Remove unused constructor *)
                    Location.prerr_warning loc
                      (Warnings.Unused_constructor
                         (c, used.cu_pattern, used.cu_privatize)))))
@@ -1706,7 +1705,6 @@ and store_extension ~check id ext env =
        Hashtbl.add used_constructors k (add_constructor_usage used);
        Delayed_checks.add_delayed_check (fun () ->
            if (not (is_in_signature env)) && not used.cu_positive then
-             (* TODO(actions) Remove unused extension *)
              Location.prerr_warning loc
                (Warnings.Unused_extension
                   (n, ext.ext_is_exception, used.cu_pattern, used.cu_privatize)))));
