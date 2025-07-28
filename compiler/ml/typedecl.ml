@@ -1906,7 +1906,6 @@ let transl_value_decl env loc valdecl =
   in
   let id, newenv =
     Env.enter_value valdecl.pval_name.txt v env ~check:(fun s ->
-        (* TODO(actions) Remove unused value or prefix with underscore *)
         Warnings.Unused_value_declaration s)
   in
   let desc =
