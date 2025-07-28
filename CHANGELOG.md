@@ -18,6 +18,7 @@
 - Show deprecation warnings for `bs-dependencies` etc. for local dependencies only. https://github.com/rescript-lang/rescript/pull/7724
 - Add check for minimum required node version. https://github.com/rescript-lang/rescript/pull/7723
 - Use more optional args in stdlib and deprecate some functions. https://github.com/rescript-lang/rescript/pull/7730
+- Improve error message for when trying to do dot access on an option/array. https://github.com/rescript-lang/rescript/pull/7732
 
 #### :bug: Bug fix
 
