@@ -1607,6 +1607,40 @@ module Actions = struct
                      else
                        (* Other cases when the loc is on something else in the expr *)
                        match (expr.pexp_desc, action.action) with
+                       | Pexp_apply ({args} as apply), RewriteArgType {to_type}
+                         ->
+                         let arg_locs =
+                           args
+                           |> List.filter_map (fun (lbl, _e) ->
+                                  match lbl with
+                                  | Asttypes.Labelled {loc} | Optional {loc} ->
+                                    Some loc
+                                  | Nolabel -> None)
+                         in
+                         if List.mem action.loc arg_locs then
+                           Some
+                             {
+                               expr with
+                               pexp_desc =
+                                 Pexp_apply
+                                   {
+                                     apply with
+                                     args =
+                                       args
+                                       |> List.map (fun (lbl, e) ->
+                                              ( (match (lbl, to_type) with
+                                                | ( Asttypes.Optional {txt; loc},
+                                                    `Labelled ) ->
+                                                  Asttypes.Labelled {txt; loc}
+                                                | ( Asttypes.Labelled {txt; loc},
+                                                    `Optional ) ->
+                                                  Asttypes.Optional {txt; loc}
+                                                | _ -> lbl),
+                                                Ast_mapper.default_mapper.expr
+                                                  mapper e ));
+                                   };
+                             }
+                         else None
                        | ( Pexp_let
                              ( Recursive,
                                ({pvb_pat = {ppat_loc}} :: _ as bindings),
@@ -1738,7 +1772,8 @@ module Actions = struct
                  | ForceOpen -> List.mem "ForceOpen" filter
                  | RemoveRecordSpread -> List.mem "RemoveRecordSpread" filter
                  | AssignToUnderscore -> List.mem "AssignToUnderscore" filter
-                 | PipeToIgnore -> List.mem "PipeToIgnore" filter)
+                 | PipeToIgnore -> List.mem "PipeToIgnore" filter
+                 | RewriteArgType _ -> List.mem "RewriteArgType" filter)
       in
       match applyActionsToFile path possible_actions with
       | Ok applied ->
