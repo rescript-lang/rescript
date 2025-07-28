@@ -1,5 +1,5 @@
-\"Console".log(123)
+Console.log(123)
 
 /* === AVAILABLE ACTIONS:
-- RewriteIdent(Console) - Change to `Console`
+- RewriteIdentToModule(Console) - Change to `Console`
 */
