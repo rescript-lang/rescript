@@ -875,35 +875,34 @@ let report_error env ppf = function
       a lowercase identifier in JS but a module in ReScript.
       
       'Console' is a typical example, where JS is `console.log` and ReScript is `Console.log`. *)
-    let as_module =
+    let as_module_name =
       match lid with
-      | Lident name -> (
+      | Lident name -> Some (String.capitalize_ascii name)
+      | _ -> None
+    in
+    let as_module =
+      match as_module_name with
+      | Some name -> (
         try
           Some
             (env
             |> Env.lookup_module ~load:false
                  (Lident (String.capitalize_ascii name)))
         with _ -> None)
-      | _ -> None
+      | None -> None
     in
-    match as_module with
-    | None -> ()
-    | Some module_path ->
-      let new_ident =
-        module_path |> Printtyp.string_of_path |> Longident.parse
-      in
+    match (as_module, as_module_name) with
+    | Some module_path, Some as_module_name ->
       Cmt_utils.add_possible_action
         {
           loc;
-          action = Cmt_utils.RewriteIdent {new_ident};
-          description =
-            "Change to `"
-            ^ (new_ident |> Longident.flatten |> String.concat ".")
-            ^ "`";
+          action = Cmt_utils.RewriteIdentToModule {module_name = as_module_name};
+          description = "Change to `" ^ as_module_name ^ "`";
         };
       Format.fprintf ppf "@,@[<v 2>@,@[%s to use the module @{<info>%a@}?@]@]"
         (if did_spellcheck then "Or did you mean" else "Maybe you meant")
-        Printtyp.path module_path)
+        Printtyp.path module_path
+    | _ -> ())
   | Unbound_module lid ->
     (* modified *)
     (match lid with

@@ -40,6 +40,7 @@ type action_type =
   | ReplaceWithPolymorphicVariantConstructor of {constructor_name: string}
   | RewriteObjectToRecord
   | RewriteArrayToTuple
+  | RewriteIdentToModule of {module_name: string}
   | RewriteIdent of {new_ident: Longident.t}
   | PrefixVariableWithUnderscore
   | RemoveUnusedVariable
@@ -59,6 +60,8 @@ let action_to_string = function
   | AddAwait -> "AddAwait"
   | RewriteObjectToRecord -> "RewriteObjectToRecord"
   | RewriteArrayToTuple -> "RewriteArrayToTuple"
+  | RewriteIdentToModule {module_name} ->
+    Printf.sprintf "RewriteIdentToModule(%s)" module_name
   | PrefixVariableWithUnderscore -> "PrefixVariableWithUnderscore"
   | RemoveUnusedVariable -> "RemoveUnusedVariable"
   | ReplaceWithVariantConstructor {constructor_name} ->
