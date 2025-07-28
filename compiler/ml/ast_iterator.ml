@@ -44,6 +44,8 @@ type iterator = {
   open_description: iterator -> open_description -> unit;
   pat: iterator -> pattern -> unit;
   payload: iterator -> payload -> unit;
+  record_field: iterator -> expression record_element -> unit;
+  record_field_pat: iterator -> pattern record_element -> unit;
   signature: iterator -> signature -> unit;
   signature_item: iterator -> signature_item -> unit;
   structure: iterator -> structure -> unit;
@@ -309,11 +311,7 @@ module E = struct
       iter_opt (sub.expr sub) arg
     | Pexp_variant (_lab, eo) -> iter_opt (sub.expr sub) eo
     | Pexp_record (l, eo) ->
-      List.iter
-        (fun {lid; x = exp} ->
-          iter_loc sub lid;
-          sub.expr sub exp)
-        l;
+      List.iter (sub.record_field sub) l;
       iter_opt (sub.expr sub) eo
     | Pexp_field (e, lid) ->
       sub.expr sub e;
@@ -399,12 +397,7 @@ module P = struct
       iter_loc sub l;
       iter_opt (sub.pat sub) p
     | Ppat_variant (_l, p) -> iter_opt (sub.pat sub) p
-    | Ppat_record (lpl, _cf) ->
-      List.iter
-        (fun {lid; x = pat} ->
-          iter_loc sub lid;
-          sub.pat sub pat)
-        lpl
+    | Ppat_record (lpl, _cf) -> List.iter (sub.record_field_pat sub) lpl
     | Ppat_array pl -> List.iter (sub.pat sub) pl
     | Ppat_or (p1, p2) ->
       sub.pat sub p1;
@@ -528,4 +521,12 @@ let default_iterator =
         | PPat (x, g) ->
           this.pat this x;
           iter_opt (this.expr this) g);
+    record_field =
+      (fun this {lid; x; opt = _} ->
+        iter_loc this lid;
+        this.expr this x);
+    record_field_pat =
+      (fun this {lid; x; opt = _} ->
+        iter_loc this lid;
+        this.pat this x);
   }

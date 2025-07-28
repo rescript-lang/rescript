@@ -48,6 +48,9 @@ type mapper = {
   open_description: mapper -> open_description -> open_description;
   pat: mapper -> pattern -> pattern;
   payload: mapper -> payload -> payload;
+  record_field:
+    mapper -> expression record_element -> expression record_element;
+  record_field_pat: mapper -> pattern record_element -> pattern record_element;
   signature: mapper -> signature -> signature;
   signature_item: mapper -> signature_item -> signature_item;
   structure: mapper -> structure -> structure;
@@ -305,10 +308,7 @@ module E = struct
       variant ~loc ~attrs lab (map_opt (sub.expr sub) eo)
     | Pexp_record (l, eo) ->
       record ~loc ~attrs
-        (List.map
-           (fun {lid; x = exp; opt} ->
-             {lid = map_loc sub lid; x = sub.expr sub exp; opt})
-           l)
+        (List.map (sub.record_field sub) l)
         (map_opt (sub.expr sub) eo)
     | Pexp_field (e, lid) ->
       field ~loc ~attrs (sub.expr sub e) (map_loc sub lid)
@@ -391,12 +391,7 @@ module P = struct
       construct ~loc ~attrs (map_loc sub l) (map_opt (sub.pat sub) p)
     | Ppat_variant (l, p) -> variant ~loc ~attrs l (map_opt (sub.pat sub) p)
     | Ppat_record (lpl, cf) ->
-      record ~loc ~attrs
-        (List.map
-           (fun {lid; x = pat; opt} ->
-             {lid = map_loc sub lid; x = sub.pat sub pat; opt})
-           lpl)
-        cf
+      record ~loc ~attrs (List.map (sub.record_field_pat sub) lpl) cf
     | Ppat_array pl -> array ~loc ~attrs (List.map (sub.pat sub) pl)
     | Ppat_or (p1, p2) -> or_ ~loc ~attrs (sub.pat sub p1) (sub.pat sub p2)
     | Ppat_constraint (p, t) ->
@@ -509,6 +504,12 @@ let default_mapper =
         | PSig x -> PSig (this.signature this x)
         | PTyp x -> PTyp (this.typ this x)
         | PPat (x, g) -> PPat (this.pat this x, map_opt (this.expr this) g));
+    record_field =
+      (fun this {lid; x; opt} ->
+        {lid = map_loc this lid; x = this.expr this x; opt});
+    record_field_pat =
+      (fun this {lid; x; opt} ->
+        {lid = map_loc this lid; x = this.pat this x; opt});
   }
 
 let rec extension_of_error {loc; msg; if_highlight; sub} =
