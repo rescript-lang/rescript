@@ -5,6 +5,8 @@ let fn = () => {
 }
 
 /* === AVAILABLE ACTIONS:
+- RemoveUnusedVariable - Remove unused variable
+- PrefixVariableWithUnderscore - Prefix with `_`
 - RemoveRecFlag - Remove rec flag
 - RemoveRecFlag - Remove rec flag
 */
