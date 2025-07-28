@@ -41,7 +41,7 @@ type error =
   | Cannot_quantify of string * type_expr
   | Multiple_constraints_on_type of Longident.t
   | Method_mismatch of string * type_expr * type_expr
-  | Unbound_value of Longident.t
+  | Unbound_value of Longident.t * Location.t
   | Unbound_constructor of Longident.t
   | Unbound_label of Longident.t * type_expr option
   | Unbound_module of Longident.t
@@ -135,7 +135,9 @@ let find_all_labels =
 let find_value ?deprecated_context env loc lid =
   Env.check_value_name (Longident.last lid) loc;
   let ((path, decl) as r) =
-    find_component Env.lookup_value (fun lid -> Unbound_value lid) env loc lid
+    find_component Env.lookup_value
+      (fun lid -> Unbound_value (lid, loc))
+      env loc lid
   in
   Builtin_attributes.check_deprecated ?deprecated_context loc
     decl.val_attributes (Path.name path);
@@ -722,21 +724,21 @@ let transl_type_scheme env styp =
 open Format
 open Printtyp
 
-let did_you_mean ppf choices : bool =
+let did_you_mean ppf choices : bool * string list =
   (* flush now to get the error report early, in the (unheard of) case
      where the linear search would take a bit of time; in the worst
      case, the user has seen the error, she can interrupt the process
      before the spell-checking terminates. *)
   Format.fprintf ppf "@?";
   match choices () with
-  | [] -> false
-  | last :: rev_rest ->
+  | [] -> (false, [])
+  | last :: rev_rest as choices ->
     (* TODO(actions) Rewrite ident *)
     Format.fprintf ppf "@[<v 2>@,@,@{<info>Hint: Did you mean %s%s%s?@}@]"
       (String.concat ", " (List.rev rev_rest))
       (if rev_rest = [] then "" else " or ")
       last;
-    true
+    (true, choices)
 
 let super_spellcheck ppf fold env lid =
   let choices path name : string list =
@@ -744,7 +746,7 @@ let super_spellcheck ppf fold env lid =
     Misc.spellcheck env name
   in
   match lid with
-  | Longident.Lapply _ -> false
+  | Longident.Lapply _ -> (false, [])
   | Longident.Lident s -> did_you_mean ppf (fun _ -> choices None s)
   | Longident.Ldot (r, s) -> did_you_mean ppf (fun _ -> choices (Some r) s)
 
@@ -776,7 +778,7 @@ let report_error env ppf = function
     (* modified *)
     Format.fprintf ppf "@[<v>This type constructor, `%a`, can't be found.@ "
       Printtyp.longident lid;
-    let has_candidate = super_spellcheck ppf Env.fold_types env lid in
+    let has_candidate, _ = super_spellcheck ppf Env.fold_types env lid in
     if not has_candidate then
       (* TODO(actions) Add rec flag *)
       Format.fprintf ppf
@@ -848,7 +850,7 @@ let report_error env ppf = function
         Printtyp.reset_and_mark_loops_list [ty; ty'];
         fprintf ppf "@[<hov>Method '%s' has type %a,@ which should be %a@]" l
           Printtyp.type_expr ty Printtyp.type_expr ty')
-  | Unbound_value lid -> (
+  | Unbound_value (lid, loc) -> (
     (* modified *)
     (match lid with
     | Ldot (outer, inner) ->
@@ -857,12 +859,22 @@ let report_error env ppf = function
     | other_ident ->
       Format.fprintf ppf "The value %a can't be found" Printtyp.longident
         other_ident);
-    let did_spellcheck = super_spellcheck ppf Env.fold_values env lid in
+    let did_spellcheck, choices =
+      super_spellcheck ppf Env.fold_values env lid
+    in
+    if did_spellcheck then
+      choices
+      |> List.iter (fun choice ->
+             Cmt_utils.add_possible_action
+               {
+                 loc;
+                 action = Cmt_utils.RewriteIdent {new_ident = Lident choice};
+                 description = "Change to `" ^ choice ^ "`";
+               });
     (* For cases such as when the user refers to something that's a value with 
       a lowercase identifier in JS but a module in ReScript.
       
       'Console' is a typical example, where JS is `console.log` and ReScript is `Console.log`. *)
-    (* TODO(codemods) Add codemod for refering to the module instead. *)
     let as_module =
       match lid with
       | Lident name -> (
@@ -877,7 +889,18 @@ let report_error env ppf = function
     match as_module with
     | None -> ()
     | Some module_path ->
-      (* TODO(actions) Rewrite ident *)
+      let new_ident =
+        module_path |> Printtyp.string_of_path |> Longident.parse
+      in
+      Cmt_utils.add_possible_action
+        {
+          loc;
+          action = Cmt_utils.RewriteIdent {new_ident};
+          description =
+            "Change to `"
+            ^ (new_ident |> Longident.flatten |> String.concat ".")
+            ^ "`";
+        };
       Format.fprintf ppf "@,@[<v 2>@,@[%s to use the module @{<info>%a@}?@]@]"
         (if did_spellcheck then "Or did you mean" else "Maybe you meant")
         Printtyp.path module_path)

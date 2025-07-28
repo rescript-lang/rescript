@@ -50,7 +50,7 @@ type error =
   | Cannot_quantify of string * type_expr
   | Multiple_constraints_on_type of Longident.t
   | Method_mismatch of string * type_expr * type_expr
-  | Unbound_value of Longident.t
+  | Unbound_value of Longident.t * Location.t
   | Unbound_constructor of Longident.t
   | Unbound_label of Longident.t * type_expr option
   | Unbound_module of Longident.t
