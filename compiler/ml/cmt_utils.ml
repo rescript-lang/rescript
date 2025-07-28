@@ -44,6 +44,8 @@ type action_type =
   | RewriteIdent of {new_ident: Longident.t}
   | PrefixVariableWithUnderscore
   | RemoveUnusedVariable
+  | RemoveUnusedType
+  | RemoveUnusedModule
 
 (* TODO: 
 - Unused var in patterns (and aliases )*)
@@ -67,6 +69,8 @@ let action_to_string = function
     Printf.sprintf "RewriteIdentToModule(%s)" module_name
   | PrefixVariableWithUnderscore -> "PrefixVariableWithUnderscore"
   | RemoveUnusedVariable -> "RemoveUnusedVariable"
+  | RemoveUnusedType -> "RemoveUnusedType"
+  | RemoveUnusedModule -> "RemoveUnusedModule"
   | ReplaceWithVariantConstructor {constructor_name} ->
     Printf.sprintf "ReplaceWithVariantConstructor(%s)"
       (constructor_name |> Longident.flatten |> String.concat ".")
@@ -100,6 +104,16 @@ let emit_possible_actions_from_warning loc w =
         action = RemoveUnusedVariable;
         description = "Remove unused variable";
       }
+  | Unused_type_declaration _ ->
+    add_possible_action
+      {loc; action = RemoveUnusedType; description = "Remove unused type"}
+  | Unused_module _ ->
+    add_possible_action
+      {loc; action = RemoveUnusedModule; description = "Remove unused module"}
+  | Unused_pat -> (* TODO: Remove full pattern. *) ()
+  | Unused_argument ->
+    (* TODO(actions) Remove unused argument or prefix with underscore *) ()
+  | Unused_rec_flag -> (* TODO(actions) Remove unused rec flag *) ()
   | _ -> ()
 
 let _ =

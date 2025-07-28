@@ -1317,6 +1317,31 @@ module Actions = struct
                        match remove_open_action with
                        | Some _ -> None
                        | None -> Some str_item)
+                     | Pstr_type (_, _type_declarations) -> (
+                       let remove_unused_type_action =
+                         actions
+                         |> List.find_opt
+                              (fun (action : Cmt_utils.cmt_action) ->
+                                match action.action with
+                                | RemoveUnusedType ->
+                                  action.loc = str_item.pstr_loc
+                                | _ -> false)
+                       in
+                       match remove_unused_type_action with
+                       | Some _ -> None
+                       | None -> Some str_item)
+                     | Pstr_module {pmb_loc} ->
+                       let remove_unused_module_action_locs =
+                         List.filter_map
+                           (fun (action : Cmt_utils.cmt_action) ->
+                             match action.action with
+                             | RemoveUnusedModule -> Some action.loc
+                             | _ -> None)
+                           actions
+                       in
+                       if List.mem pmb_loc remove_unused_module_action_locs then
+                         None
+                       else Some str_item
                      | _ -> Some str_item)
             in
             let items = Ast_mapper.default_mapper.structure mapper items in
@@ -1607,7 +1632,9 @@ module Actions = struct
                  | PrefixVariableWithUnderscore ->
                    List.mem "PrefixVariableWithUnderscore" filter
                  | RemoveUnusedVariable ->
-                   List.mem "RemoveUnusedVariable" filter)
+                   List.mem "RemoveUnusedVariable" filter
+                 | RemoveUnusedType -> List.mem "RemoveUnusedType" filter
+                 | RemoveUnusedModule -> List.mem "RemoveUnusedModule" filter)
       in
       match applyActionsToFile path possible_actions with
       | Ok applied ->

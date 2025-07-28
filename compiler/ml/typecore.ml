@@ -1769,12 +1769,8 @@ let type_pattern ~lev env spat scope expected_ty =
   let pat = type_pat ~allow_existentials:true ~lev new_env spat expected_ty in
   let new_env, unpacks =
     add_pattern_variables !new_env
-      ~check:(fun s ->
-        (* TODO(actions) Remove unused variable or prefix with underscore *)
-        Warnings.Unused_var_strict s)
-      ~check_as:(fun s ->
-        (* TODO(actions) Remove unused variable or prefix with underscore *)
-        Warnings.Unused_var s)
+      ~check:(fun s -> Warnings.Unused_var_strict s)
+      ~check_as:(fun s -> Warnings.Unused_var s)
   in
   (pat, new_env, get_ref pattern_force, unpacks)
 
@@ -3668,7 +3664,6 @@ and type_application ~context total_app env funct (sargs : sargs) :
           so the function type including arity can be inferred. *)
           let t1 = newvar () and t2 = newvar () in
           if ty_fun.level >= t1.level && not_identity funct.exp_desc then
-            (* TODO(actions) Remove unused argument or prefix with underscore *)
             Location.prerr_warning sarg1.pexp_loc Warnings.Unused_argument;
           unify env ty_fun
             (newty
@@ -4234,7 +4229,6 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
      let {pvb_pat; pvb_attributes} = List.hd spat_sexp_list in
      (* See PR#6677 *)
      Builtin_attributes.warning_scope ~ppwarning:false pvb_attributes (fun () ->
-         (* TODO(actions) Remove unused rec flag *)
          Location.prerr_warning pvb_pat.ppat_loc Warnings.Unused_rec_flag));
   List.iter2
     (fun pat (attrs, exp) ->
