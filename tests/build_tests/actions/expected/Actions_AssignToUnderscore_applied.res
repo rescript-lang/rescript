@@ -5,4 +5,5 @@ switch 1 {
 
 /* === AVAILABLE ACTIONS:
 - AssignToUnderscore - Assign to let _ =
+- PipeToIgnore - Pipe to ignore()
 */
