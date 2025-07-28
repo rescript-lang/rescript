@@ -35,11 +35,14 @@ for (const fileName of fixtures) {
   const fullFilePath = path.join(import.meta.dirname, "fixtures", fileName);
   const cmtPath = fullFilePath.replace(".res", ".cmt");
   await bsc([...prefix, "-color", "always", fullFilePath]);
-  const { stdout, stderr } = await rescriptTools("actions", [
-    fullFilePath,
-    cmtPath,
-    "--runAll",
-  ]);
+  const firstLine =
+    (await fs.readFile(fullFilePath, "utf-8")).split("\n")[0] ?? "";
+  const actionFilter = firstLine.split("actionFilter=")[1];
+  const callArgs = [fullFilePath, cmtPath, "--runAll"];
+  if (actionFilter != null) {
+    callArgs.push("--actionFilter", actionFilter);
+  }
+  const { stdout, stderr } = await rescriptTools("actions", callArgs);
   if (stderr.length > 0) {
     console.error(stderr.toString());
   }
