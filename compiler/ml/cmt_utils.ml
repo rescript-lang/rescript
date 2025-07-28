@@ -129,8 +129,6 @@ let emit_possible_actions_from_warning loc w =
     === TODO === 
     
     *)
-  | Fragile_literal_pattern ->
-    (* Use explicit pattern matching instead of literal *) ()
   | Unused_pat -> (* Remove pattern *) ()
   | Unused_argument -> (* Remove unused argument or prefix with underscore *) ()
   | Nonoptional_label _ -> (* Add `?` to make argument optional *) ()
