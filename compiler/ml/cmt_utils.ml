@@ -45,6 +45,9 @@ type action_type =
   | PrefixVariableWithUnderscore
   | RemoveUnusedVariable
 
+(* TODO: 
+- Unused var in patterns (and aliases )*)
+
 type cmt_action = {loc: Location.t; action: action_type; description: string}
 
 let action_to_string = function
@@ -84,7 +87,7 @@ let emit_possible_actions_from_warning loc w =
   | Unused_match | Unreachable_case ->
     add_possible_action
       {loc; action = RemoveSwitchCase; description = "Remove switch case"}
-  | Unused_var _ | Unused_var_strict _ ->
+  | Unused_var _ | Unused_var_strict _ | Unused_value_declaration _ ->
     add_possible_action
       {
         loc;

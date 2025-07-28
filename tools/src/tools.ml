@@ -1319,7 +1319,14 @@ module Actions = struct
                        | None -> Some str_item)
                      | _ -> Some str_item)
             in
-            Ast_mapper.default_mapper.structure mapper items);
+            let items = Ast_mapper.default_mapper.structure mapper items in
+
+            (* Cleanup if needed *)
+            items
+            |> List.filter_map (fun (str_item : Parsetree.structure_item) ->
+                   match str_item.pstr_desc with
+                   | Pstr_value (_, []) -> None
+                   | _ -> Some str_item));
         value_bindings =
           (fun mapper bindings ->
             let remove_unused_variables_action_locs =

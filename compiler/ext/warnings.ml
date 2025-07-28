@@ -388,8 +388,6 @@ let message = function
     "this pattern-matching is not exhaustive.\n\
      All clauses in this pattern-matching are guarded."
   | Unused_var v | Unused_var_strict v ->
-    (* TODO(actions) Prefix with `_` *)
-    (* TODO(actions) Remove variable *)
     Format.sprintf
       "unused variable %s.\n\n\
        Fix this by:\n\
@@ -405,9 +403,7 @@ let message = function
   | Duplicate_definitions (kind, cname, tc1, tc2) ->
     Printf.sprintf "the %s %s is defined in both types %s and %s." kind cname
       tc1 tc2
-  | Unused_value_declaration v ->
-    (* TODO(actions) Remove value declaration *)
-    "unused value " ^ v ^ "."
+  | Unused_value_declaration v -> "unused value " ^ v ^ "."
   | Unused_open s -> "unused open " ^ s ^ "."
   | Unused_type_declaration s ->
     (* TODO(actions) Remove type declaration *)
