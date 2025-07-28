@@ -1606,6 +1606,15 @@ module Actions = struct
                      else
                        (* Other cases when the loc is on something else in the expr *)
                        match (expr.pexp_desc, action.action) with
+                       | ( Pexp_apply ({funct} as apply_args),
+                           PartiallyApplyFunction )
+                         when funct.pexp_loc = action.loc ->
+                         Some
+                           {
+                             expr with
+                             pexp_desc =
+                               Pexp_apply {apply_args with partial = true};
+                           }
                        | Pexp_apply ({args} as apply), RewriteArgType {to_type}
                          ->
                          let arg_locs =
@@ -1772,6 +1781,8 @@ module Actions = struct
                  | RemoveRecordSpread -> List.mem "RemoveRecordSpread" filter
                  | AssignToUnderscore -> List.mem "AssignToUnderscore" filter
                  | PipeToIgnore -> List.mem "PipeToIgnore" filter
+                 | PartiallyApplyFunction ->
+                   List.mem "PartiallyApplyFunction" filter
                  | RewriteArgType _ -> List.mem "RewriteArgType" filter)
       in
       match applyActionsToFile path possible_actions with
