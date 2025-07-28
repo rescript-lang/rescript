@@ -114,14 +114,24 @@ let emit_possible_actions_from_warning loc w =
   | Unused_module _ ->
     add_possible_action
       {loc; action = RemoveUnusedModule; description = "Remove unused module"}
-  | Unused_pat -> (* TODO: Remove full pattern. *) ()
-  | Unused_argument ->
-    (* TODO(actions) Remove unused argument or prefix with underscore *) ()
   | Unused_rec_flag ->
     add_possible_action
       {loc; action = RemoveRecFlag; description = "Remove rec flag"}
   | Open_shadow_identifier _ | Open_shadow_label_constructor _ ->
     add_possible_action {loc; action = ForceOpen; description = "Force open"}
+    (* 
+    
+    === TODO === 
+    
+    *)
+  | Fragile_literal_pattern ->
+    (* Use explicit pattern matching instead of literal *) ()
+  | Unused_pat -> (* Remove pattern *) ()
+  | Unused_argument -> (* Remove unused argument or prefix with underscore *) ()
+  | Useless_record_with -> (* Remove `...` spread *) ()
+  | Nonoptional_label _ -> (* Add `?` to make argument optional *) ()
+  | Bs_toplevel_expression_unit _ ->
+    (* Assign to let _ = or pipe to ignore() *) ()
   | _ -> ()
 
 let _ =

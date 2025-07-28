@@ -733,7 +733,6 @@ let did_you_mean ppf choices : bool * string list =
   match choices () with
   | [] -> (false, [])
   | last :: rev_rest as choices ->
-    (* TODO(actions) Rewrite ident *)
     Format.fprintf ppf "@[<v 2>@,@,@{<info>Hint: Did you mean %s%s%s?@}@]"
       (String.concat ", " (List.rev rev_rest))
       (if rev_rest = [] then "" else " or ")
@@ -780,7 +779,7 @@ let report_error env ppf = function
       Printtyp.longident lid;
     let has_candidate, _ = super_spellcheck ppf Env.fold_types env lid in
     if not has_candidate then
-      (* TODO(actions) Add rec flag *)
+      (* TODO(actions) Add rec flag by first checking the let bindings for matching name *)
       Format.fprintf ppf
         "If you wanted to write a recursive type, don't forget the `rec` in \
          `type rec`@]"
