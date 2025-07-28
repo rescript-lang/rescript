@@ -1322,7 +1322,23 @@ module Actions = struct
             Ast_mapper.default_mapper.structure mapper items);
         value_bindings =
           (fun mapper bindings ->
-            (* TODO: Implement removing binding action *)
+            let remove_unused_variables_action_locs =
+              List.filter_map
+                (fun (action : Cmt_utils.cmt_action) ->
+                  match action.action with
+                  | RemoveUnusedVariable -> Some action.loc
+                  | _ -> None)
+                actions
+            in
+            let bindings =
+              bindings
+              |> List.filter_map (fun (binding : Parsetree.value_binding) ->
+                     if
+                       List.mem binding.pvb_pat.ppat_loc
+                         remove_unused_variables_action_locs
+                     then None
+                     else Some binding)
+            in
             Ast_mapper.default_mapper.value_bindings mapper bindings);
         pat =
           (fun mapper pattern ->
@@ -1493,9 +1509,20 @@ module Actions = struct
                            }
                        | _ -> None)
             in
+            let mapped_expr =
+              match mapped_expr with
+              | None -> Ast_mapper.default_mapper.expr mapper expr
+              | Some expr -> expr
+            in
+            (* We sometimes need to do some post-transformation cleanup. 
+            E.g if all let bindings was removed from `Pexp_let`, we need to remove the entire Pexp_let.*)
             match mapped_expr with
-            | None -> Ast_mapper.default_mapper.expr mapper expr
-            | Some expr -> expr);
+            | {pexp_desc = Pexp_let (_, [], cont); pexp_attributes} ->
+              {
+                cont with
+                pexp_attributes = cont.pexp_attributes @ pexp_attributes;
+              }
+            | _ -> mapped_expr);
       }
     in
     if Filename.check_suffix path ".res" then
@@ -1512,7 +1539,8 @@ module Actions = struct
            "error: failed to apply actions to %s because it is not a .res file"
            path)
 
-  let runActionsOnFile ?cmtPath entryPointFile =
+  let runActionsOnFile ?(actionFilter : string list option) ?cmtPath
+      entryPointFile =
     let path =
       match Filename.is_relative entryPointFile with
       | true -> Unix.realpath entryPointFile
@@ -1530,7 +1558,33 @@ module Actions = struct
          be found. try to build the project"
         path
     | Some {cmt_possible_actions} -> (
-      match applyActionsToFile path cmt_possible_actions with
+      let possible_actions =
+        match actionFilter with
+        | None -> cmt_possible_actions
+        | Some filter ->
+          cmt_possible_actions
+          |> List.filter (fun (action : Cmt_utils.cmt_action) ->
+                 match action.action with
+                 | Cmt_utils.ApplyFunction _ -> List.mem "ApplyFunction" filter
+                 | ApplyCoercion _ -> List.mem "ApplyCoercion" filter
+                 | RemoveSwitchCase -> List.mem "RemoveSwitchCase" filter
+                 | RemoveOpen -> List.mem "RemoveOpen" filter
+                 | RemoveAwait -> List.mem "RemoveAwait" filter
+                 | AddAwait -> List.mem "AddAwait" filter
+                 | ReplaceWithVariantConstructor _ ->
+                   List.mem "ReplaceWithVariantConstructor" filter
+                 | ReplaceWithPolymorphicVariantConstructor _ ->
+                   List.mem "ReplaceWithPolymorphicVariantConstructor" filter
+                 | RewriteObjectToRecord ->
+                   List.mem "RewriteObjectToRecord" filter
+                 | RewriteArrayToTuple -> List.mem "RewriteArrayToTuple" filter
+                 | RewriteIdent _ -> List.mem "RewriteIdent" filter
+                 | PrefixVariableWithUnderscore ->
+                   List.mem "PrefixVariableWithUnderscore" filter
+                 | RemoveUnusedVariable ->
+                   List.mem "RemoveUnusedVariable" filter)
+      in
+      match applyActionsToFile path possible_actions with
       | Ok applied -> print_endline applied
       | Error e ->
         print_endline e;

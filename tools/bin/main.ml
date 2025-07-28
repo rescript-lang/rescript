@@ -179,12 +179,25 @@ let main () =
     Reanalyze.cli ()
   | "actions" :: file :: opts ->
     let run_all_on_file = List.mem "--runAll" opts in
+    let rec extract_arg_with_value target_arg opts =
+      match opts with
+      | arg :: value :: _ when arg = target_arg -> Some value
+      | _ :: rest -> extract_arg_with_value target_arg rest
+      | [] -> None
+    in
     let cmtPath =
       match opts with
       | path :: _ when String.ends_with ~suffix:".cmt" path -> Some path
       | _ -> None
     in
-    if run_all_on_file then Tools.Actions.runActionsOnFile ?cmtPath file
+    let actionFilter =
+      match extract_arg_with_value "--actionFilter" opts with
+      | Some filter ->
+        Some (String.split_on_char ',' filter |> List.map String.trim)
+      | None -> None
+    in
+    if run_all_on_file then
+      Tools.Actions.runActionsOnFile ?actionFilter ?cmtPath file
     else Tools.Actions.extractActionsFromFile ?cmtPath file
   | "extract-embedded" :: extPointNames :: filename :: _ ->
     logAndExit
