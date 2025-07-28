@@ -1405,7 +1405,6 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
     (match sargs with
     | [({ppat_desc = Ppat_constant _} as sp)]
       when Builtin_attributes.warn_on_literal_pattern constr.cstr_attributes ->
-      (* TODO(actions) Use explicit pattern matching instead of literal *)
       Location.prerr_warning sp.ppat_loc Warnings.Fragile_literal_pattern
     | _ -> ());
     if List.length sargs <> constr.cstr_arity then
@@ -2758,7 +2757,6 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
     in
     let opt_exp =
       if List.length lid_sexp_list = num_fields then (
-        (* TODO(actions) Remove `...` spread *)
         Location.prerr_warning loc Warnings.Useless_record_with;
         None)
       else opt_exp
@@ -3685,7 +3683,6 @@ and type_application ~context total_app env funct (sargs : sargs) :
           else (sargs, (l, ty, lv) :: omitted, None)
         | Some (l', sarg0, sargs) ->
           if (not optional) && is_optional_loc l' then
-            (* TODO(actions) Add ? to make argument optional *)
             Location.prerr_warning sarg0.pexp_loc
               (Warnings.Nonoptional_label (Printtyp.string_of_label l));
           ( sargs,
@@ -4257,7 +4254,6 @@ let type_expression ~context env sexp =
             | Pexp_apply _ -> Some (return_type, FunctionCall)
             | _ -> Some (return_type, Other)))
      | Tags _ ->
-       (* TODO(actions) Assign to let _ = or pipe to ignore() *)
        Location.prerr_warning sexp.pexp_loc (Bs_toplevel_expression_unit None));
   end_def ();
   if not (is_nonexpansive exp) then generalize_expansive env exp.exp_type;
