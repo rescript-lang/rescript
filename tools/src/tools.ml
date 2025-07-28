@@ -1458,6 +1458,12 @@ module Actions = struct
                      if action.loc = expr.pexp_loc then
                        let expr = Ast_mapper.default_mapper.expr mapper expr in
                        match action.action with
+                       | RemoveRecordSpread -> (
+                         match expr with
+                         | {pexp_desc = Pexp_record (fields, Some _)} ->
+                           Some
+                             {expr with pexp_desc = Pexp_record (fields, None)}
+                         | _ -> None)
                        | RewriteIdent {new_ident} -> (
                          match expr with
                          | {pexp_desc = Pexp_ident ident} ->
@@ -1682,7 +1688,8 @@ module Actions = struct
                  | RemoveUnusedType -> List.mem "RemoveUnusedType" filter
                  | RemoveUnusedModule -> List.mem "RemoveUnusedModule" filter
                  | RemoveRecFlag -> List.mem "RemoveRecFlag" filter
-                 | ForceOpen -> List.mem "ForceOpen" filter)
+                 | ForceOpen -> List.mem "ForceOpen" filter
+                 | RemoveRecordSpread -> List.mem "RemoveRecordSpread" filter)
       in
       match applyActionsToFile path possible_actions with
       | Ok applied ->
