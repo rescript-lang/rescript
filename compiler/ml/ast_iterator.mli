@@ -42,6 +42,8 @@ type iterator = {
   open_description: iterator -> open_description -> unit;
   pat: iterator -> pattern -> unit;
   payload: iterator -> payload -> unit;
+  record_field: iterator -> expression record_element -> unit;
+  record_field_pat: iterator -> pattern record_element -> unit;
   signature: iterator -> signature -> unit;
   signature_item: iterator -> signature_item -> unit;
   structure: iterator -> structure -> unit;

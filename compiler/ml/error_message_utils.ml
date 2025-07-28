@@ -589,7 +589,12 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
   | ( Some (RecordField {optional = true; field_name; jsx = None}),
       Some ({desc = Tconstr (p, _, _)}, _) )
     when Path.same Predef.path_option p ->
-    (* TODO(actions) Prepend with `?` *)
+    Cmt_utils.add_possible_action
+      {
+        loc;
+        action = ChangeRecordFieldOptional {optional = true};
+        description = "Pass field as optional";
+      };
     fprintf ppf
       "@,\
        @,\
@@ -608,7 +613,7 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
   | ( Some (RecordField {optional = true; field_name; jsx = Some _}),
       Some ({desc = Tconstr (p, _, _)}, _) )
     when Path.same Predef.path_option p ->
-    (* TODO(actions) Prepend with `?` *)
+    (* TODO(actions) JSX: Prepend with `?` *)
     fprintf ppf
       "@,\
        @,\

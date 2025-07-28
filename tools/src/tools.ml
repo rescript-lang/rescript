@@ -1295,10 +1295,39 @@ end
 
 module Migrate = Migrate
 module Actions = struct
+  let change_record_field_optional (record_el : _ Parsetree.record_element)
+      target_loc actions =
+    let change_record_field_optional_action =
+      actions
+      |> List.find_map (fun (action : Cmt_utils.cmt_action) ->
+             match action.action with
+             | ChangeRecordFieldOptional {optional} when target_loc = action.loc
+               ->
+               Some optional
+             | _ -> None)
+    in
+    match change_record_field_optional_action with
+    | Some opt -> {record_el with opt}
+    | None -> record_el
+
   let applyActionsToFile path actions =
     let mapper =
       {
         Ast_mapper.default_mapper with
+        record_field =
+          (fun mapper record_el ->
+            let record_el =
+              change_record_field_optional record_el record_el.x.pexp_loc
+                actions
+            in
+            Ast_mapper.default_mapper.record_field mapper record_el);
+        record_field_pat =
+          (fun mapper record_el ->
+            let record_el =
+              change_record_field_optional record_el record_el.x.ppat_loc
+                actions
+            in
+            Ast_mapper.default_mapper.record_field_pat mapper record_el);
         structure_item =
           (fun mapper str_item ->
             let remove_rec_flag_action_locs =
@@ -1803,7 +1832,9 @@ module Actions = struct
                    List.mem "PartiallyApplyFunction" filter
                  | RewriteArgType _ -> List.mem "RewriteArgType" filter
                  | InsertMissingArguments _ ->
-                   List.mem "InsertMissingArguments" filter)
+                   List.mem "InsertMissingArguments" filter
+                 | ChangeRecordFieldOptional _ ->
+                   List.mem "ChangeRecordFieldOptional" filter)
       in
       match applyActionsToFile path possible_actions with
       | Ok applied ->
