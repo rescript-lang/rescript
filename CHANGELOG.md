@@ -22,6 +22,7 @@
 #### :bug: Bug fix
 
 - Fix error message that falsely suggested using coercion when it wouldn't work. https://github.com/rescript-lang/rescript/pull/7721
+- Fix formatter removes () from functor type. https://github.com/rescript-lang/rescript/pull/7735
 
 # 12.0.0-beta.3
 
