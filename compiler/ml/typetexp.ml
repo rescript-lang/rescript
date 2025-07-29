@@ -918,7 +918,7 @@ let report_error env ppf = function
       (* TODO: Extend for nullable/null? *)
       Format.fprintf ppf
         "@[<v>You're trying to access the record field @{<info>%a@}, but the \
-         thing you're trying to access it on is an @{<info>option@}.@ You need \
+         value you're trying to access it on is an @{<info>option@}.@ You need \
          to unwrap the option first before accessing the record field.@,\
          @\n\
          Possible solutions:@,\
@@ -930,7 +930,7 @@ let report_error env ppf = function
     | Some {desc = Tconstr (p, _, _)} when Path.same p Predef.path_array ->
       Format.fprintf ppf
         "@[<v>You're trying to access the record field @{<info>%a@}, but the \
-         thing you're trying to access it on is an @{<info>array@}.@ You need \
+         value you're trying to access it on is an @{<info>array@}.@ You need \
          to access an individual element of the array if you want to access an \
          individual record field.@]"
         Printtyp.longident lid

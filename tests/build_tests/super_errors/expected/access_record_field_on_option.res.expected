@@ -7,7 +7,7 @@
   [1;31m12[0m [2m│[0m let f = X.x.c.[1;31md[0m
   13 [2m│[0m 
 
-  You're trying to access the record field [1;33md[0m, but the thing you're trying to access it on is an [1;33moption[0m.
+  You're trying to access the record field [1;33md[0m, but the value you're trying to access it on is an [1;33moption[0m.
   You need to unwrap the option first before accessing the record field.
   
   Possible solutions:
