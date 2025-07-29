@@ -22,6 +22,7 @@
 #### :bug: Bug fix
 
 - Fix error message that falsely suggested using coercion when it wouldn't work. https://github.com/rescript-lang/rescript/pull/7721
+- Rewatch: don't compile dev-dependencies of non local dependencies with `--dev`. https://github.com/rescript-lang/rescript/pull/7736
 
 # 12.0.0-beta.3
 
