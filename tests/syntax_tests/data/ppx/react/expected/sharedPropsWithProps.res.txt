@@ -6,7 +6,7 @@ module V4A1 = {
   type props = sharedProps
   let make = props => React.string(props.x ++ props.y)
   let make = {
-    let \"SharedPropsWithProps$V4A1" = props => make(props)
+    let \"SharedPropsWithProps$V4A1" = (props): React.element => make(props)
     \"SharedPropsWithProps$V4A1"
   }
 }
@@ -15,7 +15,7 @@ module V4A2 = {
   type props = sharedProps
   let make = (props: props) => React.string(props.x ++ props.y)
   let make = {
-    let \"SharedPropsWithProps$V4A2" = (props: props) => make(props)
+    let \"SharedPropsWithProps$V4A2" = (props: props): React.element => make(props)
     \"SharedPropsWithProps$V4A2"
   }
 }
@@ -24,7 +24,7 @@ module V4A3 = {
   type props<'a> = sharedProps<'a>
   let make = ({x, y}: props<_>) => React.string(x ++ y)
   let make = {
-    let \"SharedPropsWithProps$V4A3" = (props: props<_>) => make(props)
+    let \"SharedPropsWithProps$V4A3" = (props: props<_>): React.element => make(props)
     \"SharedPropsWithProps$V4A3"
   }
 }
@@ -33,7 +33,7 @@ module V4A4 = {
   type props<'a> = sharedProps<string, 'a>
   let make = ({x, y}: props<_>) => React.string(x ++ y)
   let make = {
-    let \"SharedPropsWithProps$V4A4" = (props: props<_>) => make(props)
+    let \"SharedPropsWithProps$V4A4" = (props: props<_>): React.element => make(props)
     \"SharedPropsWithProps$V4A4"
   }
 }
@@ -45,7 +45,7 @@ module V4A5 = {
     ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})})
   }
   let make = {
-    let \"SharedPropsWithProps$V4A5" = (props: props<_>) => Jsx.promise(make(props))
+    let \"SharedPropsWithProps$V4A5" = (props: props<_>): React.element => Jsx.promise(make(props))
     \"SharedPropsWithProps$V4A5"
   }
 }
@@ -59,7 +59,7 @@ module V4A6 = {
     }
   }
   let make = {
-    let \"SharedPropsWithProps$V4A6" = (props: props<_>) => Jsx.promise(make(props))
+    let \"SharedPropsWithProps$V4A6" = (props: props<_>): React.element => Jsx.promise(make(props))
     \"SharedPropsWithProps$V4A6"
   }
 }
@@ -71,7 +71,8 @@ module V4A7 = {
     React.int(props.count)
   }
   let make = {
-    let \"SharedPropsWithProps$V4A7" = @directive("'use memo'") props => make(props)
+    let \"SharedPropsWithProps$V4A7" =
+      @directive("'use memo'") (props): React.element => make(props)
     \"SharedPropsWithProps$V4A7"
   }
 }

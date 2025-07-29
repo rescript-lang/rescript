@@ -4,7 +4,7 @@ module V4CA = {
   @res.jsxComponentProps
   type props = {}
 
-  let make = (_: props) => ReactDOM.jsx("div", {})
+  let make = (_: props): React.element => ReactDOM.jsx("div", {})
   let make = {
     let \"NoPropsWithKey$V4CA" = props => make(props)
 
@@ -24,7 +24,7 @@ module V4C = {
   @res.jsxComponentProps
   type props = {}
 
-  let make = (_: props) =>
+  let make = (_: props): React.element =>
     React.jsxs(
       React.jsxFragment,
       {

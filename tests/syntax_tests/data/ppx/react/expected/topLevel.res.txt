@@ -4,7 +4,7 @@ module V4A = {
   @res.jsxComponentProps
   type props<'a, 'b> = {a: 'a, b: 'b}
 
-  let make = ({a, b, _}: props<_, _>) => {
+  let make = ({a, b, _}: props<_, _>): React.element => {
     Js.log("This function should be named 'TopLevel.react'")
     ReactDOM.jsx("div", {})
   }
