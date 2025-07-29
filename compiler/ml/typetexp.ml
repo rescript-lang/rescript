@@ -43,7 +43,11 @@ type error =
   | Method_mismatch of string * type_expr * type_expr
   | Unbound_value of Longident.t * Location.t
   | Unbound_constructor of Longident.t
-  | Unbound_label of Longident.t * type_expr option
+  | Unbound_label of {
+      loc: Location.t;
+      field_name: Longident.t;
+      from_type: type_expr option;
+    }
   | Unbound_module of Longident.t
   | Unbound_modtype of Longident.t
   | Ill_typed_functor_application of Longident.t
@@ -129,8 +133,10 @@ let find_constructor =
 let find_all_constructors =
   find_component Env.lookup_all_constructors (fun lid ->
       Unbound_constructor lid)
-let find_all_labels =
-  find_component Env.lookup_all_labels (fun lid -> Unbound_label (lid, None))
+let find_all_labels env loc =
+  find_component Env.lookup_all_labels
+    (fun lid -> Unbound_label {loc; field_name = lid; from_type = None})
+    env loc
 
 let find_value ?deprecated_context env loc lid =
   Env.check_value_name (Longident.last lid) loc;
@@ -170,8 +176,9 @@ let unbound_constructor_error ?from_type env lid =
       Unbound_constructor lid)
 
 let unbound_label_error ?from_type env lid =
+  let lid_with_loc = lid in
   narrow_unbound_lid_error env lid.loc lid.txt (fun lid ->
-      Unbound_label (lid, from_type))
+      Unbound_label {loc = lid_with_loc.loc; field_name = lid; from_type})
 
 (* Support for first-class modules. *)
 
@@ -938,10 +945,17 @@ let report_error env ppf = function
        = Bar@}.@]@]"
       Printtyp.longident lid Printtyp.longident lid Printtyp.longident lid;
     spellcheck ppf fold_constructors env lid
-  | Unbound_label (lid, from_type) ->
+  | Unbound_label {loc; field_name; from_type} ->
     (* modified *)
     (match from_type with
     | Some {desc = Tconstr (p, _, _)} when Path.same p Predef.path_option ->
+      Cmt_utils.add_possible_action
+        {
+          loc;
+          action = UnwrapOptionMapRecordField {field_name};
+          description =
+            "Unwrap the option first before accessing the record field";
+        };
       (* TODO: Extend for nullable/null? *)
       Format.fprintf ppf
         "@[<v>You're trying to access the record field @{<info>%a@}, but the \
@@ -953,14 +967,15 @@ let report_error env ppf = function
          @{<info>xx->Option.map(field => field.%a)@}@]@,\
          @[- Or use @{<info>Option.getOr@} with a default: \
          @{<info>xx->Option.getOr(defaultRecord).%a@}@]@]"
-        Printtyp.longident lid Printtyp.longident lid Printtyp.longident lid
+        Printtyp.longident field_name Printtyp.longident field_name
+        Printtyp.longident field_name
     | Some {desc = Tconstr (p, _, _)} when Path.same p Predef.path_array ->
       Format.fprintf ppf
         "@[<v>You're trying to access the record field @{<info>%a@}, but the \
          value you're trying to access it on is an @{<info>array@}.@ You need \
          to access an individual element of the array if you want to access an \
          individual record field.@]"
-        Printtyp.longident lid
+        Printtyp.longident field_name
     | Some ({desc = Tconstr (_p, _, _)} as t1) ->
       Format.fprintf ppf
         "@[<v>You're trying to access the record field @{<info>%a@}, but the \
@@ -969,7 +984,7 @@ let report_error env ppf = function
          %a@,\n\
          @,\
          Only records have fields that can be accessed with dot notation.@]"
-        Printtyp.longident lid Error_message_utils.type_expr t1
+        Printtyp.longident field_name Error_message_utils.type_expr t1
     | None | Some _ ->
       Format.fprintf ppf
         "@[<v>@{<info>%a@} refers to a record field, but no corresponding \
@@ -980,8 +995,9 @@ let report_error env ppf = function
          @{<info>TheModule.%a@}@]@,\
          @[- Or specifying the record type explicitly:@ @{<info>let theValue: \
          TheModule.theType = {%a: VALUE}@}@]@]"
-        Printtyp.longident lid Printtyp.longident lid Printtyp.longident lid);
-    spellcheck ppf fold_labels env lid
+        Printtyp.longident field_name Printtyp.longident field_name
+        Printtyp.longident field_name);
+    spellcheck ppf fold_labels env field_name
   | Unbound_modtype lid ->
     fprintf ppf "Unbound module type %a" longident lid;
     spellcheck ppf fold_modtypes env lid
