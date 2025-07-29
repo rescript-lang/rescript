@@ -1294,6 +1294,24 @@ module ExtractCodeblocks = struct
 end
 
 module Migrate = Migrate
+module TemplateUtils = struct
+  let get_expr source =
+    let {Res_driver.parsetree; invalid} =
+      Res_driver.parse_implementation_from_source ~for_printer:true
+        ~display_filename:"<generated>" ~source
+    in
+    if invalid then Error "Could not parse expression"
+    else
+      match parsetree with
+      | [{pstr_desc = Pstr_eval (e, _)}] -> Ok e
+      | _ -> Error "Expected a record expression"
+
+  let get_expr_exn source =
+    match get_expr source with
+    | Ok e -> e
+    | Error e -> failwith e
+end
+
 module Actions = struct
   let change_record_field_optional (record_el : _ Parsetree.record_element)
       target_loc actions =
@@ -1636,6 +1654,32 @@ module Actions = struct
                      else
                        (* Other cases when the loc is on something else in the expr *)
                        match (expr.pexp_desc, action.action) with
+                       | ( Pexp_field (e, {loc}),
+                           UnwrapOptionMapRecordField {field_name} )
+                         when action.loc = loc ->
+                         Some
+                           {
+                             expr with
+                             pexp_desc =
+                               Pexp_apply
+                                 {
+                                   funct =
+                                     Ast_helper.Exp.ident
+                                       (Location.mknoloc (Longident.Lident "->"));
+                                   partial = false;
+                                   transformed_jsx = false;
+                                   args =
+                                     [
+                                       (Nolabel, e);
+                                       ( Nolabel,
+                                         TemplateUtils.get_expr_exn
+                                           (Printf.sprintf
+                                              "Option.map(v => v.%s)"
+                                              (Longident.flatten field_name
+                                              |> String.concat ".")) );
+                                     ];
+                                 };
+                           }
                        | ( Pexp_apply ({funct; args} as apply),
                            InsertMissingArguments {missing_args} )
                          when funct.pexp_loc = action.loc ->
@@ -1834,7 +1878,9 @@ module Actions = struct
                  | InsertMissingArguments _ ->
                    List.mem "InsertMissingArguments" filter
                  | ChangeRecordFieldOptional _ ->
-                   List.mem "ChangeRecordFieldOptional" filter)
+                   List.mem "ChangeRecordFieldOptional" filter
+                 | UnwrapOptionMapRecordField _ ->
+                   List.mem "UnwrapOptionMapRecordField" filter)
       in
       match applyActionsToFile path possible_actions with
       | Ok applied ->

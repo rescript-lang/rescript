@@ -52,7 +52,11 @@ type error =
   | Method_mismatch of string * type_expr * type_expr
   | Unbound_value of Longident.t * Location.t
   | Unbound_constructor of Longident.t
-  | Unbound_label of Longident.t * type_expr option
+  | Unbound_label of {
+      loc: Location.t;
+      field_name: Longident.t;
+      from_type: type_expr option;
+    }
   | Unbound_module of Longident.t
   | Unbound_modtype of Longident.t
   | Ill_typed_functor_application of Longident.t

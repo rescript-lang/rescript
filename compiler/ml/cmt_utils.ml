@@ -55,6 +55,7 @@ type action_type =
   | PartiallyApplyFunction
   | InsertMissingArguments of {missing_args: Asttypes.Noloc.arg_label list}
   | ChangeRecordFieldOptional of {optional: bool}
+  | UnwrapOptionMapRecordField of {field_name: Longident.t}
 
 (* TODO: 
 - Unused var in patterns (and aliases )*)
@@ -112,6 +113,9 @@ let action_to_string = function
   | ChangeRecordFieldOptional {optional} ->
     Printf.sprintf "ChangeRecordFieldOptional(%s)"
       (if optional then "true" else "false")
+  | UnwrapOptionMapRecordField {field_name} ->
+    Printf.sprintf "UnwrapOptionMapRecordField(%s)"
+      (Longident.flatten field_name |> String.concat ".")
 
 let _add_possible_action : (cmt_action -> unit) ref = ref (fun _ -> ())
 let add_possible_action action = !_add_possible_action action
