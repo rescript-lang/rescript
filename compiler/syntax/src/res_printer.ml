@@ -807,6 +807,10 @@ and print_mod_type ~state mod_type cmt_tbl =
             Doc.concat [attrs; print_mod_type ~state mod_type cmt_tbl]
           in
           print_comments doc cmt_tbl cmt_loc
+        | [(attrs, {Location.txt = "*"; loc}, None)] ->
+          let attrs = print_attributes ~state attrs cmt_tbl in
+          let doc = Doc.concat [attrs; Doc.text "()"] in
+          print_comments doc cmt_tbl loc
         | params ->
           Doc.group
             (Doc.concat
