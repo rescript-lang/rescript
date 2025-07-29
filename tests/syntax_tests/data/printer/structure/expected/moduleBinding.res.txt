@@ -3,3 +3,6 @@ module React = {
 
   let render = () => Js.log("foo")
 }
+
+module Make: () => S = (_: Config, ()) => {}
+module rec Make: (Config, ()) => S = (Config: Config, ()): S => {}
