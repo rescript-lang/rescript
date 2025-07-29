@@ -4675,11 +4675,11 @@ let report_error env loc ppf error =
       fprintf ppf
         "@,\
          @,\
-         It is called with @{<error>%d@} argument%s but requires%s \
+         It is called with @{<error>%d@} argument%s but%s requires \
          @{<info>%d@}."
         args
-        (if args > arity then " just" else "")
         (if args = 1 then "" else "s")
+        (if args > arity then " just" else "")
         arity;
 
     (* Add suggestions for related functions with correct arity *)
