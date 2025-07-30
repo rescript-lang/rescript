@@ -12,6 +12,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@testrepo/dep02": "*"
+    "@testrepo/dep02": "workspace:*"
   }
 }

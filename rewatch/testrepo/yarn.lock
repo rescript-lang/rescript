@@ -49,21 +49,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@testrepo/compiled-by-legacy@npm:*, @testrepo/compiled-by-legacy@workspace:packages/compiled-by-legacy":
+"@testrepo/compiled-by-legacy@workspace:*, @testrepo/compiled-by-legacy@workspace:packages/compiled-by-legacy":
   version: 0.0.0-use.local
   resolution: "@testrepo/compiled-by-legacy@workspace:packages/compiled-by-legacy"
   languageName: unknown
   linkType: soft
 
-"@testrepo/dep01@npm:*, @testrepo/dep01@workspace:packages/dep01":
+"@testrepo/dep01@workspace:*, @testrepo/dep01@workspace:packages/dep01":
   version: 0.0.0-use.local
   resolution: "@testrepo/dep01@workspace:packages/dep01"
   dependencies:
-    "@testrepo/dep02": "npm:*"
+    "@testrepo/dep02": "workspace:*"
   languageName: unknown
   linkType: soft
 
-"@testrepo/dep02@npm:*, @testrepo/dep02@workspace:packages/dep02":
+"@testrepo/dep02@workspace:*, @testrepo/dep02@workspace:packages/dep02":
   version: 0.0.0-use.local
   resolution: "@testrepo/dep02@workspace:packages/dep02"
   languageName: unknown
@@ -91,8 +91,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@testrepo/main@workspace:packages/main"
   dependencies:
-    "@testrepo/compiled-by-legacy": "npm:*"
-    "@testrepo/dep01": "npm:*"
+    "@testrepo/compiled-by-legacy": "workspace:*"
+    "@testrepo/dep01": "workspace:*"
   languageName: unknown
   linkType: soft
 
@@ -123,10 +123,41 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@testrepo/with-ppx@workspace:packages/with-ppx":
+  version: 0.0.0-use.local
+  resolution: "@testrepo/with-ppx@workspace:packages/with-ppx"
+  dependencies:
+    rescript-nodejs: "npm:16.1.0"
+    rescript-schema: "npm:9.3.0-rescript12.0"
+    rescript-schema-ppx: "npm:9.0.1"
+  languageName: unknown
+  linkType: soft
+
 "rescript-nodejs@npm:16.1.0":
   version: 16.1.0
   resolution: "rescript-nodejs@npm:16.1.0"
   checksum: 10c0/2ea271dbddebdceec79bf5ee6089c15474f2c014cb22c1cc39d43ef27fd363fcb1cd8e1244d0cb998cd6b426d7474e3055e41277951fb01ee1eeecf68bbe01ab
+  languageName: node
+  linkType: hard
+
+"rescript-schema-ppx@npm:9.0.1":
+  version: 9.0.1
+  resolution: "rescript-schema-ppx@npm:9.0.1"
+  peerDependencies:
+    rescript-schema: 9.x
+  checksum: 10c0/c6f95183d3c138f1b1c1110314480c3601366010bbd406f6ab8876e1eef9ab64f87109bda1467801f9905ff30b81c3bf1c6c11ea8bb1ca5ceb801012b0bab39e
+  languageName: node
+  linkType: hard
+
+"rescript-schema@npm:9.3.0-rescript12.0":
+  version: 9.3.0-rescript12.0
+  resolution: "rescript-schema@npm:9.3.0-rescript12.0"
+  peerDependencies:
+    rescript: ^12.0.0-alpha.8
+  peerDependenciesMeta:
+    rescript:
+      optional: true
+  checksum: 10c0/61dc401034ea310233c531d91ab2ce688644bd255f6dc98c42d632a082639fd5501ac4a97ab53982c56845b0296da2c7d4ff07542878a5eef8a90db2451b4c2e
   languageName: node
   linkType: hard
 
