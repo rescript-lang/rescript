@@ -639,7 +639,6 @@ fn compile_file(
                     package.get_build_path().join(dir).join(format!("{basename}.cmj")),
                     ocaml_build_path_abs.join(format!("{basename}.cmj")),
                 );
-                println!("[rewatch] Copying file {basename} to ocaml build path");
                 let _ = std::fs::copy(
                     package
                         .get_build_path()
