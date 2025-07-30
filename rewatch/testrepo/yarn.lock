@@ -75,6 +75,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@testrepo/file-casing-no-namespace@workspace:packages/file-casing-no-namespace":
+  version: 0.0.0-use.local
+  resolution: "@testrepo/file-casing-no-namespace@workspace:packages/file-casing-no-namespace"
+  languageName: unknown
+  linkType: soft
+
 "@testrepo/file-casing@workspace:packages/file-casing":
   version: 0.0.0-use.local
   resolution: "@testrepo/file-casing@workspace:packages/file-casing"
