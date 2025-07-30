@@ -1,4 +1,4 @@
-Cleaned 1/56
+Cleaned 1/60
 Parsed 0 source files
 Compiled 1 modules
 
@@ -27,5 +27,4 @@ Use 'compiler-flags' instead.
   
 
 
-Incremental build failed. Error: [2K
-  Failed to Compile. See Errors Above
+Incremental build failed. Error: [2K  Failed to Compile. See Errors Above
