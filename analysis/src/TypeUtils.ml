@@ -540,6 +540,10 @@ let rec resolveTypeForPipeCompletion ~env ~package ~lhsLoc ~full ?(depth = 0)
   in
   match typFromLoc with
   | Some typFromLoc ->
+    (* Prevent infinite loops when `typFromLoc` is a type variable by bailing out after
+       10 iterations.
+       TODO: fix the root of the issue (probably in `findReturnTypeOfFunctionAtLoc`)
+       instead of enforcing a maximum number of iterations. *)
     if depth > 10 then (env, typFromLoc)
     else
       typFromLoc
