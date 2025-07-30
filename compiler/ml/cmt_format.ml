@@ -63,6 +63,7 @@ type cmt_infos = {
   cmt_imports : (string * Digest.t option) list;
   cmt_interface_digest : Digest.t option;
   cmt_use_summaries : bool;
+  cmt_possible_actions : Cmt_utils.cmt_action list;
 }
 
 type error =
@@ -154,14 +155,21 @@ let read_cmi filename =
 
 let saved_types = ref []
 let value_deps = ref []
+let possible_actions = ref []
 
 let clear () =
   saved_types := [];
-  value_deps := []
+  value_deps := [];
+  possible_actions := []
 
 let add_saved_type b = saved_types := b :: !saved_types
 let get_saved_types () = !saved_types
 let set_saved_types l = saved_types := l
+
+let add_possible_action action =
+  possible_actions := action :: !possible_actions
+
+let _ = Cmt_utils._add_possible_action := add_possible_action
 
 let record_value_dependency vd1 vd2 =
   if vd1.Types.val_loc <> vd2.Types.val_loc then
@@ -172,8 +180,30 @@ let save_cmt _filename _modname _binary_annots _sourcefile _initial_env _cmi = (
 #else
 open Cmi_format
 
+let current_cmt_filename = ref None
+
+(* TODO: Terrible hack. Figure out way to do this without saving the cmt file twice. 
+  Probably change how/where we save the cmt, and delay it to after writing errors, if possible.
+*)
+let resave_cmt_with_possible_actions () =
+  if List.length !possible_actions > 0 then begin
+    match !current_cmt_filename with
+    | None -> ()
+    | Some filename ->
+      let current_cmt = read_cmt filename in
+      Misc.output_to_bin_file_directly filename
+       (fun _temp_file_name oc ->
+         let cmt = {
+          current_cmt with
+           cmt_possible_actions = current_cmt.cmt_possible_actions @ !possible_actions;
+         } in
+         output_cmt oc cmt)
+  end;
+  clear ()
+
 let save_cmt filename modname binary_annots sourcefile initial_env cmi =
   if !Clflags.binary_annotations then begin
+    current_cmt_filename := Some filename;
     Misc.output_to_bin_file_directly filename
        (fun temp_file_name oc ->
          let this_crc =
@@ -197,6 +227,7 @@ let save_cmt filename modname binary_annots sourcefile initial_env cmi =
            cmt_imports = List.sort compare (Env.imports ());
            cmt_interface_digest = this_crc;
            cmt_use_summaries = need_to_clear_env;
+           cmt_possible_actions = !possible_actions;
          } in
          output_cmt oc cmt)
   end;
