@@ -1,7 +1,5 @@
 Cleaned 2/60
 Parsed 2 source files
-[rewatch] Copying file InternalDep to ocaml build path
-[rewatch] Copying file Other_module2-@NewNamespace to ocaml build path
 Compiled 3 modules
 
 The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.

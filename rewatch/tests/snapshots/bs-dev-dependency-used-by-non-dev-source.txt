@@ -1,6 +1,5 @@
 Cleaned 0/60
 Parsed 2 source files
-[rewatch] Copying file NS_alias-@NewNamespace to ocaml build path
 Compiled 2 modules
 
 The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
