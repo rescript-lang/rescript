@@ -19,7 +19,7 @@ export RESCRIPT_BSC_EXE
 source ./utils.sh
 
 bold "Rescript version"
-(cd ../testrepo && ./node_modules/.bin/rescript -v)
+rewatch --version
 
 # we need to reset the yarn.lock and package.json to the original state
 # so there is not diff in git. The CI will install new ReScript package
