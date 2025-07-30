@@ -578,7 +578,8 @@ fn compile_file(
             ast_path.to_string_lossy()
         )),
     }?;
-    let module_name = helpers::file_path_to_module_name(implementation_file_path, &package.namespace);
+    let basename =
+        helpers::file_path_to_compiler_asset_basename(implementation_file_path, &package.namespace);
     let has_interface = module.get_interface().is_some();
     let is_type_dev = module.is_type_dev;
     let to_mjs_args = compiler_args(
@@ -631,16 +632,14 @@ fn compile_file(
                         // because editor tooling doesn't support namespace entries yet
                         // we just remove the @ for now. This makes sure the editor support
                         // doesn't break
-                        .join(format!("{module_name}.cmi")),
-                    ocaml_build_path_abs.join(format!("{module_name}.cmi")),
+                        .join(format!("{basename}.cmi")),
+                    ocaml_build_path_abs.join(format!("{basename}.cmi")),
                 );
                 let _ = std::fs::copy(
-                    package
-                        .get_build_path()
-                        .join(dir)
-                        .join(format!("{module_name}.cmj")),
-                    ocaml_build_path_abs.join(format!("{module_name}.cmj")),
+                    package.get_build_path().join(dir).join(format!("{basename}.cmj")),
+                    ocaml_build_path_abs.join(format!("{basename}.cmj")),
                 );
+                println!("[rewatch] Copying file {basename} to ocaml build path");
                 let _ = std::fs::copy(
                     package
                         .get_build_path()
@@ -648,23 +647,20 @@ fn compile_file(
                         // because editor tooling doesn't support namespace entries yet
                         // we just remove the @ for now. This makes sure the editor support
                         // doesn't break
-                        .join(format!("{module_name}.cmt")),
-                    ocaml_build_path_abs.join(format!("{module_name}.cmt")),
+                        .join(format!("{basename}.cmt")),
+                    ocaml_build_path_abs.join(format!("{basename}.cmt")),
                 );
             } else {
                 let _ = std::fs::copy(
                     package
                         .get_build_path()
                         .join(dir)
-                        .join(format!("{module_name}.cmti")),
-                    ocaml_build_path_abs.join(format!("{module_name}.cmti")),
+                        .join(format!("{basename}.cmti")),
+                    ocaml_build_path_abs.join(format!("{basename}.cmti")),
                 );
                 let _ = std::fs::copy(
-                    package
-                        .get_build_path()
-                        .join(dir)
-                        .join(format!("{module_name}.cmi")),
-                    ocaml_build_path_abs.join(format!("{module_name}.cmi")),
+                    package.get_build_path().join(dir).join(format!("{basename}.cmi")),
+                    ocaml_build_path_abs.join(format!("{basename}.cmi")),
                 );
             }
 

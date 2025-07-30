@@ -11,7 +11,9 @@
       "packages/with-dev-deps",
       "packages/compiled-by-legacy",
       "packages/nonexisting-dev-files",
-      "packages/deprecated-config"
+      "packages/deprecated-config",
+      "packages/file-casing",
+      "packages/file-casing-no-namespace"
     ]
   },
   "dependencies": {

@@ -45,6 +45,7 @@ struct Dependency {
     config: config::Config,
     path: PathBuf,
     dependencies: Vec<Dependency>,
+    is_local_dep: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -359,6 +360,10 @@ fn read_dependencies(
                     }
                 };
 
+            let is_local_dep = {
+                canonical_path.starts_with(project_root)
+                    && !canonical_path.components().any(|c| c.as_os_str() == "node_modules")
+            };
 
             let dependencies = read_dependencies(
                 &mut registered_dependencies_set.to_owned(),
@@ -367,7 +372,7 @@ fn read_dependencies(
                 project_root,
                 workspace_root,
                 show_progress,
-                build_dev_deps,
+                is_local_dep && build_dev_deps,
             );
 
             Dependency {
@@ -375,6 +380,7 @@ fn read_dependencies(
                 config,
                 path: canonical_path,
                 dependencies,
+                is_local_dep
             }
         })
         .collect()
@@ -405,7 +411,7 @@ pub fn read_package_name(package_dir: &Path) -> Result<String> {
         .ok_or_else(|| anyhow!("No name field found in package.json"))
 }
 
-fn make_package(config: config::Config, package_path: &Path, is_root: bool, project_root: &Path) -> Package {
+fn make_package(config: config::Config, package_path: &Path, is_root: bool, is_local_dep: bool) -> Package {
     let source_folders = match config.sources.to_owned() {
         Some(config::OneOrMore::Single(source)) => get_source_dirs(source, None),
         Some(config::OneOrMore::Multiple(sources)) => {
@@ -444,11 +450,6 @@ This inconsistency will cause issues with package resolution.\n",
         );
     }
 
-    let is_local_dep = {
-        package_path.starts_with(project_root)
-            && !package_path.components().any(|c| c.as_os_str() == "node_modules")
-    };
-
     Package {
         name: package_name,
         config: config.to_owned(),
@@ -477,7 +478,7 @@ fn read_packages(
 
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
-    let root_package = make_package(root_config.to_owned(), project_root, true, project_root);
+    let root_package = make_package(root_config.to_owned(), project_root, true, true);
     map.insert(root_package.name.to_string(), root_package);
 
     let mut registered_dependencies_set: AHashSet<String> = AHashSet::new();
@@ -492,7 +493,7 @@ fn read_packages(
     ));
     dependencies.iter().for_each(|d| {
         if !map.contains_key(&d.name) {
-            let package = make_package(d.config.to_owned(), &d.path, false, project_root);
+            let package = make_package(d.config.to_owned(), &d.path, false, d.is_local_dep);
             map.insert(d.name.to_string(), package);
         }
     });

@@ -23,6 +23,8 @@
     "@testrepo/with-dev-deps",
     "@testrepo/compiled-by-legacy",
     "@testrepo/nonexisting-dev-files",
-    "@testrepo/deprecated-config"
+    "@testrepo/deprecated-config",
+    "@testrepo/file-casing",
+    "@testrepo/file-casing-no-namespace"
   ]
 }

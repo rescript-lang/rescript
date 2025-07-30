@@ -75,6 +75,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@testrepo/file-casing-no-namespace@workspace:packages/file-casing-no-namespace":
+  version: 0.0.0-use.local
+  resolution: "@testrepo/file-casing-no-namespace@workspace:packages/file-casing-no-namespace"
+  languageName: unknown
+  linkType: soft
+
+"@testrepo/file-casing@workspace:packages/file-casing":
+  version: 0.0.0-use.local
+  resolution: "@testrepo/file-casing@workspace:packages/file-casing"
+  languageName: unknown
+  linkType: soft
+
 "@testrepo/main@workspace:packages/main":
   version: 0.0.0-use.local
   resolution: "@testrepo/main@workspace:packages/main"
@@ -107,8 +119,16 @@ __metadata:
   resolution: "@testrepo/with-dev-deps@workspace:packages/with-dev-deps"
   dependencies:
     "@rescript/webapi": "npm:0.1.0-experimental-73e6a0d"
+    rescript-nodejs: "npm:16.1.0"
   languageName: unknown
   linkType: soft
+
+"rescript-nodejs@npm:16.1.0":
+  version: 16.1.0
+  resolution: "rescript-nodejs@npm:16.1.0"
+  checksum: 10c0/2ea271dbddebdceec79bf5ee6089c15474f2c014cb22c1cc39d43ef27fd363fcb1cd8e1244d0cb998cd6b426d7474e3055e41277951fb01ee1eeecf68bbe01ab
+  languageName: node
+  linkType: hard
 
 "rescript@npm:12.0.0-beta.1, rescript@npm:^12.0.0-alpha.13":
   version: 12.0.0-beta.1
