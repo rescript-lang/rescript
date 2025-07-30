@@ -85,6 +85,7 @@
 - Fix fatal error when JSX expression used without configuring JSX in `rescript.json`. https://github.com/rescript-lang/rescript/pull/7656
 - Rewatch: Only allow access to `"bs-dev-dependencies"` from `"type": "dev"` source files. https://github.com/rescript-lang/rescript/pull/7650
 - Fix comment attached to array element. https://github.com/rescript-lang/rescript/pull/7672
+- Fix compilation of files starting with a lowercase letter. https://github.com/rescript-lang/rescript/pull/7700
 
 #### :nail_care: Polish
 
