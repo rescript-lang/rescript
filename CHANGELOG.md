@@ -18,10 +18,12 @@
 - Show deprecation warnings for `bs-dependencies` etc. for local dependencies only. https://github.com/rescript-lang/rescript/pull/7724
 - Add check for minimum required node version. https://github.com/rescript-lang/rescript/pull/7723
 - Use more optional args in stdlib and deprecate some functions. https://github.com/rescript-lang/rescript/pull/7730
+- Improve error message for when trying to do dot access on an option/array. https://github.com/rescript-lang/rescript/pull/7732
 
 #### :bug: Bug fix
 
 - Fix error message that falsely suggested using coercion when it wouldn't work. https://github.com/rescript-lang/rescript/pull/7721
+- Fix formatter removes () from functor type. https://github.com/rescript-lang/rescript/pull/7735
 - Rewatch: don't compile dev-dependencies of non local dependencies with `--dev`. https://github.com/rescript-lang/rescript/pull/7736
 
 # 12.0.0-beta.3
