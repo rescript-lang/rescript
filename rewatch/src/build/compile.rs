@@ -578,7 +578,8 @@ fn compile_file(
             ast_path.to_string_lossy()
         )),
     }?;
-    let basename = helpers::file_path_to_compiler_asset_basename(implementation_file_path, &package.namespace);
+    let basename =
+        helpers::file_path_to_compiler_asset_basename(implementation_file_path, &package.namespace);
     let has_interface = module.get_interface().is_some();
     let is_type_dev = module.is_type_dev;
     let to_mjs_args = compiler_args(
@@ -635,10 +636,7 @@ fn compile_file(
                     ocaml_build_path_abs.join(format!("{basename}.cmi")),
                 );
                 let _ = std::fs::copy(
-                    package
-                        .get_build_path()
-                        .join(dir)
-                        .join(format!("{basename}.cmj")),
+                    package.get_build_path().join(dir).join(format!("{basename}.cmj")),
                     ocaml_build_path_abs.join(format!("{basename}.cmj")),
                 );
                 println!("[rewatch] Copying file {basename} to ocaml build path");
@@ -661,10 +659,7 @@ fn compile_file(
                     ocaml_build_path_abs.join(format!("{basename}.cmti")),
                 );
                 let _ = std::fs::copy(
-                    package
-                        .get_build_path()
-                        .join(dir)
-                        .join(format!("{basename}.cmi")),
+                    package.get_build_path().join(dir).join(format!("{basename}.cmi")),
                     ocaml_build_path_abs.join(format!("{basename}.cmi")),
                 );
             }
