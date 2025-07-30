@@ -526,7 +526,7 @@ let rec digToRelevantTemplateNameType ~env ~package ?(suffix = "")
     | _ -> (t, suffix, env))
   | _ -> (t, suffix, env)
 
-let rec resolveTypeForPipeCompletion ~env ~package ~lhsLoc ~full ?(depth = 0)
+let rec resolveTypeForPipeCompletion ~env ~package ~lhsLoc ~full
     (t : Types.type_expr) =
   (* If the type we're completing on is a type parameter, we won't be able to
      do completion unless we know what that type parameter is compiled as.
@@ -539,16 +539,9 @@ let rec resolveTypeForPipeCompletion ~env ~package ~lhsLoc ~full ?(depth = 0)
     | _ -> None
   in
   match typFromLoc with
+  | Some ({desc = Tvar _} as t) -> (env, t)
   | Some typFromLoc ->
-    (* Prevent infinite loops when `typFromLoc` is a type variable by bailing out after
-       10 iterations.
-       TODO: fix the root of the issue (probably in `findReturnTypeOfFunctionAtLoc`)
-       instead of enforcing a maximum number of iterations. *)
-    if depth > 10 then (env, typFromLoc)
-    else
-      typFromLoc
-      |> resolveTypeForPipeCompletion ~lhsLoc ~env ~package ~full
-           ~depth:(depth + 1)
+    typFromLoc |> resolveTypeForPipeCompletion ~lhsLoc ~env ~package ~full
   | None ->
     let rec digToRelevantType ~env ~package (t : Types.type_expr) =
       match t.desc with
