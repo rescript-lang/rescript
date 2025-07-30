@@ -528,8 +528,16 @@ let vb_match_expr named_arg_list expr =
   in
   aux (List.rev named_arg_list)
 
+(* https://github.com/rescript-lang/rescript/issues/7722 *)
+let add_jsx_element_return_constraint config expression =
+  Exp.constraint_ expression
+    (Typ.constr
+       {txt = module_access_name config "element"; loc = expression.pexp_loc}
+       [])
+
 let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
   if Jsx_common.has_attr_on_binding Jsx_common.has_attr binding then (
+    (* @react.component *)
     check_multiple_components ~config ~loc:pstr_loc;
     let core_type_of_attr =
       Jsx_common.core_type_of_attrs binding.pvb_attributes
@@ -732,6 +740,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
       | [] -> Pat.any ()
       | _ -> Pat.record (List.rev patterns_with_label) Open
     in
+    let expression = add_jsx_element_return_constraint config expression in
     let expression =
       Exp.fun_ ~arity:(Some 1) ~async:is_async Nolabel None
         (Pat.constraint_ record_pattern
@@ -779,6 +788,7 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
     (Some props_record_type, binding, new_binding))
   else if Jsx_common.has_attr_on_binding Jsx_common.has_attr_with_props binding
   then
+    (* @react.componentWithProps *)
     let modified_binding =
       {
         binding with
@@ -835,21 +845,24 @@ let map_binding ~config ~empty_loc ~pstr_loc ~file_name ~rec_flag binding =
         | _ -> Pat.var {txt = "props"; loc}
       in
 
+      let expression =
+        Jsx_common.async_component ~async:is_async
+          (Exp.apply
+             (Exp.ident
+                {
+                  txt =
+                    Lident
+                      (match rec_flag with
+                      | Recursive -> internal_fn_name
+                      | Nonrecursive -> fn_name);
+                  loc;
+                })
+             [(Nolabel, Exp.ident {txt = Lident "props"; loc})])
+      in
+      let expression = add_jsx_element_return_constraint config expression in
       let wrapper_expr =
         Exp.fun_ ~arity:None Nolabel None props_pattern
-          ~attrs:binding.pvb_expr.pexp_attributes
-          (Jsx_common.async_component ~async:is_async
-             (Exp.apply
-                (Exp.ident
-                   {
-                     txt =
-                       Lident
-                         (match rec_flag with
-                         | Recursive -> internal_fn_name
-                         | Nonrecursive -> fn_name);
-                     loc;
-                   })
-                [(Nolabel, Exp.ident {txt = Lident "props"; loc})]))
+          ~attrs:binding.pvb_expr.pexp_attributes expression
       in
 
       let wrapper_expr = Ast_uncurried.uncurried_fun ~arity:1 wrapper_expr in
@@ -1282,7 +1295,7 @@ let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
   let args = [(nolabel, elementTag); (nolabel, props_record)] @ key_and_unit in
   Exp.apply ~loc ~attrs ~transformed_jsx:true jsx_expr args
 
-(* In most situations, the component name is the make function from a module. 
+(* In most situations, the component name is the make function from a module.
     However, if the name contains a lowercase letter, it means it probably an external component.
     In this case, we use the name as is.
     See tests/syntax_tests/data/ppx/react/externalWithCustomName.res
