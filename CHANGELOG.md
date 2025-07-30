@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Fix formatting of nested records in `.resi` files. https://github.com/rescript-lang/rescript/pull/7741
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
