@@ -278,7 +278,7 @@ yarn workspace playground test
 
 ### Publishing the Playground Bundle on Cloudflare R2
 
-Our `compiler.js` and third-party packages bundles are hosted on [Cloudflare R2](https://www.cloudflare.com/developer-platform/products/r2/) and uploaded via Rclone.
+Our `compiler.js` and third-party packages bundles are hosted on [Cloudflare R2](https://developers.cloudflare.com/r2/) and uploaded via Rclone.
 
 The full release can be executed with the following make script:
 
