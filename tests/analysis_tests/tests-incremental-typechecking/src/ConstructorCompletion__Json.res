@@ -1,2 +1,2 @@
-let x = Js.Json.Array()
-//                    ^com
+// let x = Js.Json.Array()
+//                       ^com

@@ -13,7 +13,16 @@ fn get_dep_modules(
     build_state: &BuildState,
 ) -> AHashSet<String> {
     let mut deps = AHashSet::new();
-    let ast_file = package.get_build_path().join(ast_file);
+
+    // FIX: Handle both absolute and relative paths for AST files
+    // This is needed because we now pass absolute paths from get_compiler_asset()
+    // but the function was originally designed for relative paths
+    let ast_file = if std::path::Path::new(ast_file).is_absolute() {
+        std::path::PathBuf::from(ast_file)
+    } else {
+        package.get_build_path().join(ast_file)
+    };
+
     match helpers::read_lines(&ast_file) {
         Ok(lines) => {
             // we skip the first line with is some null characters
@@ -107,7 +116,19 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                 let package = build_state
                     .get_package(&module.package_name)
                     .expect("Package not found");
-                let ast_path = helpers::get_ast_path(&source_file.implementation.path);
+
+                // FIX: Use absolute paths for AST files to resolve cross-package dependencies correctly
+                // The issue: get_ast_path() returns relative paths like "src/Types.ast" which work for
+                // single-package builds but fail in workspace builds where BSC creates AST files in
+                // lib/bs/ and they're later copied to lib/ocaml/. Using get_compiler_asset() ensures
+                // we get absolute paths to the correct lib/ocaml/ location where AST files are stored.
+                let ast_path = helpers::get_compiler_asset(
+                    package,
+                    &packages::Namespace::NoNamespace,
+                    &source_file.implementation.path,
+                    "ast",
+                );
+
                 if module.deps_dirty || !build_state.deps_initialized {
                     let mut deps = get_dep_modules(
                         &ast_path.to_string_lossy(),
@@ -119,16 +140,23 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                     );
 
                     if let Some(interface) = &source_file.interface {
-                        let iast_path = helpers::get_ast_path(&interface.path);
+                        // FIX: Use absolute paths for interface AST files (same issue as implementation files)
+                        let iast_path = helpers::get_compiler_asset(
+                            package,
+                            &packages::Namespace::NoNamespace,
+                            &interface.path,
+                            "iast",
+                        );
 
-                        deps.extend(get_dep_modules(
+                        let interface_deps = get_dep_modules(
                             &iast_path.to_string_lossy(),
                             package.namespace.to_suffix(),
                             package.modules.as_ref().unwrap(),
                             all_mod,
                             package,
                             build_state,
-                        ))
+                        );
+                        deps.extend(interface_deps)
                     }
                     match &package.namespace {
                         packages::Namespace::NamespaceWithEntry { namespace: _, entry }

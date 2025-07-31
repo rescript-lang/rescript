@@ -65,7 +65,12 @@ fn clean_source_files(build_state: &BuildState, root_package: &packages::Package
         .values()
         .filter_map(|module| match &module.source_type {
             SourceType::SourceFile(source_file) => {
-                let package = build_state.packages.get(&module.package_name).unwrap();
+                let package = build_state.packages.get(&module.package_name).unwrap_or_else(|| {
+                    panic!(
+                        "Could not find package for \"{}\" in build state.\nMaybe you forgot to add the relative path to your root rescript.config.json file?",
+                        &module.package_name
+                    )
+                });
                 Some(
                     root_package
                         .config
@@ -370,7 +375,10 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
 
         let path_str = package.get_ocaml_build_path();
         let path = std::path::Path::new(&path_str);
-        let _ = std::fs::remove_dir_all(path);
+        // This is hacky check that the runtime is not cleaned for rescript repository
+        if package.name != "rescript" {
+            let _ = std::fs::remove_dir_all(path);
+        }
     });
     let timing_clean_compiler_assets_elapsed = timing_clean_compiler_assets.elapsed();
 

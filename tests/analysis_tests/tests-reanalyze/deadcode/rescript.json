@@ -5,9 +5,9 @@
     "unsuppress": [],
     "transitive": true
   },
-  "name": "sample-typescript-app",
+  "name": "@tests/reanalyze-deadcode",
   "jsx": { "version": 4 },
-  "dependencies": ["@rescript/react"],
+  "dependencies": ["@tests/rescript-react", "@tests/gentype-react-example"],
   "sources": [
     {
       "dir": "src",

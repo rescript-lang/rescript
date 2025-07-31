@@ -18,7 +18,7 @@
   "name": "@tests/gentype-react-example",
   "compiler-flags": [],
   "jsx": { "version": 4 },
-  "dependencies": ["@rescript/react"],
+  "dependencies": ["@tests/rescript-react"],
   "sources": [
     {
       "dir": "src",
