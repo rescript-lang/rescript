@@ -88,6 +88,10 @@
 - Fix comment attached to array element. https://github.com/rescript-lang/rescript/pull/7672
 - Rewatch: fix compilation of files starting with a lowercase letter. https://github.com/rescript-lang/rescript/pull/7700
 
+#### :bug: Bug fix
+
+- Reliably determine standard lib dir. This should fix remaining cases where the stdlib is not found when using pnpm. https://github.com/rescript-lang/rescript/pull/7637
+
 #### :nail_care: Polish
 
 - Add missing backtick and spaces to `Belt.Map.map` doc comment. https://github.com/rescript-lang/rescript/pull/7632
