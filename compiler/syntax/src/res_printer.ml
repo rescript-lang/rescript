@@ -1464,13 +1464,14 @@ and print_type_param ~state (param : Parsetree.core_type * Asttypes.variance)
   in
   Doc.concat [printed_variance; print_typ_expr ~state typ cmt_tbl]
 
-and print_record_declaration ?inline_record_definitions ~state
-    (lds : Parsetree.label_declaration list) cmt_tbl =
+and print_record_declaration ?check_break_from_loc ?inline_record_definitions
+    ~state (lds : Parsetree.label_declaration list) cmt_tbl =
   let force_break =
-    match (lds, List.rev lds) with
-    | first :: _, last :: _ ->
+    match (check_break_from_loc, lds, List.rev lds) with
+    | Some loc, _, _ -> loc.Location.loc_start.pos_lnum < loc.loc_end.pos_lnum
+    | _, first :: _, last :: _ ->
       first.pld_loc.loc_start.pos_lnum < last.pld_loc.loc_end.pos_lnum
-    | _ -> false
+    | _, _, _ -> false
   in
   Doc.breakable_group ~force_break
     (Doc.concat
@@ -1805,8 +1806,8 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
         inline_record_definitions
         |> find_inline_record_definition inline_record_name
       with
-      | Some {ptype_kind = Ptype_record lds} ->
-        print_record_declaration
+      | Some {ptype_kind = Ptype_record lds; ptype_loc} ->
+        print_record_declaration ~check_break_from_loc:ptype_loc
           ~inline_record_definitions:(inline_record_definitions |> Option.get)
           ~state lds cmt_tbl
       | _ -> assert false)

@@ -9,6 +9,8 @@ type color =
 
 type options = {
   permissions: {
-    all: bool
+    all: {
+      stuff: bool
+    }
   }
 }

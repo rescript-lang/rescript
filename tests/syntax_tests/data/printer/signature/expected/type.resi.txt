@@ -8,5 +8,9 @@ type color =
   | Black
 
 type options = {
-  permissions: {all: bool},
+  permissions: {
+    all: {
+      stuff: bool,
+    },
+  },
 }
