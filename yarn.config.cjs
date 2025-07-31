@@ -14,7 +14,7 @@ const execPromise = util.promisify(exec);
  * @param {Yarn.Constraints.Context} ctx
  */
 async function enforceCompilerMeta({ Yarn }) {
-  const EXPECTED_VERSION = "12.0.0-beta.4";
+  const EXPECTED_VERSION = "12.0.0-beta.5";
 
   for (const workspace of Yarn.workspaces()) {
     const { ident } = workspace.pkg;
@@ -83,7 +83,9 @@ async function enforceCompilerMeta({ Yarn }) {
     );
     await execPromise("cargo check", { cwd: "rewatch" });
   } else {
-    const rewatchVersionMatch = rewatchCargoContent.match(rewatchVersionPattern);
+    const rewatchVersionMatch = rewatchCargoContent.match(
+      rewatchVersionPattern,
+    );
     const foundRewatchVersion = rewatchVersionMatch?.groups?.version;
     if (foundRewatchVersion !== EXPECTED_VERSION) {
       Yarn.workspace().error(
