@@ -21,6 +21,7 @@
 #### :bug: Bug fix
 
 - Fix formatting of nested records in `.resi` files. https://github.com/rescript-lang/rescript/pull/7741
+- Don't format and don't check formatting of dependencies. https://github.com/rescript-lang/rescript/pull/7748
 
 #### :memo: Documentation
 
