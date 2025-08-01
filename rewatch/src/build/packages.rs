@@ -399,8 +399,12 @@ fn flatten_dependencies(dependencies: Vec<Dependency>) -> Vec<Dependency> {
 pub fn read_package_name(package_dir: &Path) -> Result<String> {
     let package_json_path = package_dir.join("package.json");
 
-    let package_json_contents =
-        fs::read_to_string(&package_json_path).map_err(|e| anyhow!("Could not read package.json: {}", e))?;
+    let package_json_contents = if Path::exists(&package_json_path) {
+        fs::read_to_string(&package_json_path).map_err(|e| anyhow!("Could not read package.json: {}", e))?
+    } else {
+        let rescript_json_path = package_dir.join("rescript.json");
+        fs::read_to_string(&rescript_json_path).map_err(|e| anyhow!("Could not read rescript.json: {}", e))?
+    };
 
     let package_json: serde_json::Value = serde_json::from_str(&package_json_contents)
         .map_err(|e| anyhow!("Could not parse package.json: {}", e))?;
