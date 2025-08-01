@@ -42,7 +42,9 @@ fn get_all_files() -> Result<Vec<String>> {
     let mut files: Vec<String> = Vec::new();
 
     for (_package_name, package) in build_state {
-        if let Some(source_files) = package.source_files {
+        if package.is_local_dep
+            && let Some(source_files) = package.source_files
+        {
             for (path, _metadata) in source_files {
                 if let Some(extension) = path.extension() {
                     if extension == "res" || extension == "resi" {
