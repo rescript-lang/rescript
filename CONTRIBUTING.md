@@ -126,10 +126,22 @@ make lib # Build compiler and standard library
 ./cli/bsc.js myTestFile.res
 ```
 
+To view the tokens of a file run:
+
+```sh
+dune exec res_parser -- -print tokens myTestFile.res
+```
+
 To view the untyped tree of the file run:
 
 ```sh
 ./cli/bsc.js -dparsetree myTestFile.res
+```
+
+or
+
+```sh
+dune exec res_parser -- -print ast -recover myTestFile.res
 ```
 
 To view the typed tree of the file run:
@@ -147,6 +159,16 @@ cd myProject
 npm install
 npm link rescript
 ```
+
+#### Use Local BSC with Existing ReScript Installation
+
+Alternatively, you can set the `RESCRIPT_BSC_EXE` environment variable to point to your locally compiled `bsc.exe`.
+
+```sh
+RESCRIPT_BSC_EXE=your-rescript-repo/packages/@rescript/darwin-arm64/bin/bsc.exe npx rescript
+```
+
+This will test the local compiler while still using the build system from the installed Node module.
 
 ### Running Automatic Tests
 

@@ -2,7 +2,7 @@ module Diagnostics = Res_diagnostics
 module Token = Res_token
 module Comment = Res_comment
 
-type mode = Jsx | Diamond
+type mode = Diamond
 
 (* We hide the implementation detail of the scanner reading character. Our char
    will also contain the special -1 value to indicate end-of-file. This isn't
@@ -29,8 +29,6 @@ type t = {
 
 let set_diamond_mode scanner = scanner.mode <- Diamond :: scanner.mode
 
-let set_jsx_mode scanner = scanner.mode <- Jsx :: scanner.mode
-
 let pop_mode scanner mode =
   match scanner.mode with
   | m :: ms when m = mode -> scanner.mode <- ms
@@ -39,11 +37,6 @@ let pop_mode scanner mode =
 let in_diamond_mode scanner =
   match scanner.mode with
   | Diamond :: _ -> true
-  | _ -> false
-
-let in_jsx_mode scanner =
-  match scanner.mode with
-  | Jsx :: _ -> true
   | _ -> false
 
 let position scanner =
@@ -145,6 +138,20 @@ let peek3 scanner =
     String.unsafe_get scanner.src (scanner.offset + 3)
   else hacky_eof_char
 
+let peekChar scanner target_char =
+  let rec skip_whitespace_and_check offset =
+    if offset < String.length scanner.src then
+      let ch = String.unsafe_get scanner.src offset in
+      match ch with
+      | ' ' | '\t' | '\n' | '\r' -> skip_whitespace_and_check (offset + 1)
+      | c -> c = target_char
+    else false
+  in
+  skip_whitespace_and_check scanner.offset
+
+let peekMinus scanner = peekChar scanner '-'
+let peekSlash scanner = peekChar scanner '/'
+
 let make ~filename src =
   {
     filename;
@@ -182,11 +189,8 @@ let digit_value ch =
 let scan_identifier scanner =
   let start_off = scanner.offset in
   let rec skip_good_chars scanner =
-    match (scanner.ch, in_jsx_mode scanner) with
-    | ('A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '\''), false ->
-      next scanner;
-      skip_good_chars scanner
-    | ('A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '\'' | '-'), true ->
+    match scanner.ch with
+    | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '\'' ->
       next scanner;
       skip_good_chars scanner
     | _ -> ()
@@ -902,7 +906,7 @@ let rec scan scanner =
     | '>' ->
       next scanner;
       Token.GreaterThan
-    | '<' when not (in_jsx_mode scanner) -> (
+    | '<' -> (
       match peek scanner with
       | '<' when not (in_diamond_mode scanner) ->
         next2 scanner;
@@ -913,25 +917,6 @@ let rec scan scanner =
       | _ ->
         next scanner;
         Token.LessThan)
-    (* special handling for JSX < *)
-    | '<' -> (
-      (* Imagine the following: <div><
-       * < indicates the start of a new jsx-element, the parser expects
-       * the name of a new element after the <
-       * Example: <div> <div
-       * But what if we have a / here: example </ in  <div></div>
-       * This signals a closing element. To simulate the two-token lookahead,
-       * the </ is emitted as a single new token LessThanSlash *)
-      next scanner;
-      skip_whitespace scanner;
-      match scanner.ch with
-      | '/' ->
-        next scanner;
-        Token.LessThanSlash
-      | '=' ->
-        next scanner;
-        Token.LessEqual
-      | _ -> Token.LessThan)
     (* peeking 2 chars *)
     | '.' -> (
       match (peek scanner, peek2 scanner) with
@@ -1027,19 +1012,6 @@ let rec scan scanner =
   (start_pos, end_pos, token)
 
 (* misc helpers used elsewhere *)
-
-(* Imagine: <div> <Navbar /> <
- * is `<` the start of a jsx-child? <div …
- * or is it the start of a closing tag?  </div>
- * reconsiderLessThan peeks at the next token and
- * determines the correct token to disambiguate *)
-let reconsider_less_than scanner =
-  (* < consumed *)
-  skip_whitespace scanner;
-  if scanner.ch == '/' then
-    let () = next scanner in
-    Token.LessThanSlash
-  else Token.LessThan
 
 (* If an operator has whitespace around both sides, it's a binary operator *)
 (* TODO: this helper seems out of place *)

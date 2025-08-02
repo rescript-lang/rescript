@@ -560,8 +560,8 @@ posCursor:[30:12] posNoWhite:[30:11] Found expr:[11:4->32:10]
 posCursor:[30:12] posNoWhite:[30:11] Found expr:[12:4->32:10]
 posCursor:[30:12] posNoWhite:[30:11] Found expr:[15:4->32:10]
 JSX <div:[15:5->15:8] > _children:16:7
-posCursor:[30:12] posNoWhite:[30:11] Found expr:[30:9->32:10]
-JSX <di:[30:10->30:12] div[32:6->32:9]=...[32:6->32:9]> _children:None
+posCursor:[30:12] posNoWhite:[30:11] Found expr:[30:9->30:12]
+JSX <di:[30:10->30:12] > _children:None
 Completable: ChtmlElement <di
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib

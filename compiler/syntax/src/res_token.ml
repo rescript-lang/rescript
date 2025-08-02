@@ -52,7 +52,6 @@ type t =
   | ColonGreaterThan
   | GreaterThan
   | LessThan
-  | LessThanSlash
   | Hash
   | HashEqual
   | Assert
@@ -169,7 +168,6 @@ let to_string = function
   | HashEqual -> "#="
   | GreaterThan -> ">"
   | LessThan -> "<"
-  | LessThanSlash -> "</"
   | Asterisk -> "*"
   | AsteriskDot -> "*."
   | Exponentiation -> "**"
