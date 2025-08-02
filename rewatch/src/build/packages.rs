@@ -611,7 +611,15 @@ pub fn make(
     show_progress: bool,
     build_dev_deps: bool,
 ) -> Result<AHashMap<String, Package>> {
-    let map = read_packages(root_folder, workspace_root, show_progress, build_dev_deps)?;
+    let map = match &workspace_root {
+        Some(wr) => {
+            let root_folder_str = root_folder.to_string_lossy();
+            let workspace_root_str = wr.to_string_lossy();
+            log::debug!("Building workspace: {workspace_root_str} for {root_folder_str}",);
+            read_packages(wr, workspace_root, show_progress, build_dev_deps)?
+        }
+        None => read_packages(root_folder, workspace_root, show_progress, build_dev_deps)?,
+    };
 
     /* Once we have the deduplicated packages, we can add the source files for each - to minimize
      * the IO */

@@ -1,5 +1,6 @@
 use super::build_types::*;
 use super::packages;
+use crate::build::packages::Package;
 use crate::helpers;
 use crate::helpers::emojis::*;
 use ahash::AHashSet;
@@ -329,6 +330,9 @@ pub fn cleanup_after_build(build_state: &BuildState) {
 pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_deps: bool) -> Result<()> {
     let project_root = helpers::get_abs_path(path);
     let workspace_root = helpers::get_workspace_root(&project_root);
+    let workspace_config_name = &workspace_root
+        .as_ref()
+        .and_then(|wr| packages::read_package_name(wr).ok());
     let packages = packages::make(
         &None,
         &project_root,
@@ -348,30 +352,21 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
         );
         let _ = std::io::stdout().flush();
     };
-    packages.iter().for_each(|(_, package)| {
-        if show_progress {
-            if snapshot_output {
-                println!("Cleaning {}", package.name)
-            } else {
-                print!(
-                    "{}{} {}Cleaning {}...",
-                    LINE_CLEAR,
-                    style("[1/2]").bold().dim(),
-                    SWEEP,
-                    package.name
-                );
-            }
-            let _ = std::io::stdout().flush();
+    match &workspace_root {
+        Some(_) => {
+            // There is a workspace detected, so will only clean the current package
+            let package = packages
+                .get(&root_config_name)
+                .expect("Could not find package during clean");
+            clean_package(show_progress, snapshot_output, package);
         }
+        None => {
+            packages.iter().for_each(|(_, package)| {
+                clean_package(show_progress, snapshot_output, package);
+            });
+        }
+    }
 
-        let path_str = package.get_build_path();
-        let path = std::path::Path::new(&path_str);
-        let _ = std::fs::remove_dir_all(path);
-
-        let path_str = package.get_ocaml_build_path();
-        let path = std::path::Path::new(&path_str);
-        let _ = std::fs::remove_dir_all(path);
-    });
     let timing_clean_compiler_assets_elapsed = timing_clean_compiler_assets.elapsed();
 
     if !snapshot_output && show_progress {
@@ -399,7 +394,22 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
         .get(&build_state.root_config_name)
         .expect("Could not find root package");
 
-    let suffix = root_package.config.suffix.as_deref().unwrap_or(".res.mjs");
+    // Use the current package suffix if present.
+    // Otherwise, use the parent suffix if present.
+    // Fall back to .res.mjs
+    let suffix = match root_package.config.suffix.as_deref() {
+        Some(suffix) => suffix,
+        None => match &workspace_config_name {
+            None => ".res.mjs",
+            Some(workspace_config_name) => {
+                if let Some(package) = build_state.packages.get(workspace_config_name) {
+                    package.config.suffix.as_deref().unwrap_or(".res.mjs")
+                } else {
+                    ".res.mjs"
+                }
+            }
+        },
+    };
 
     if !snapshot_output && show_progress {
         println!(
@@ -427,4 +437,29 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
     }
 
     Ok(())
+}
+
+fn clean_package(show_progress: bool, snapshot_output: bool, package: &Package) {
+    if show_progress {
+        if snapshot_output {
+            println!("Cleaning {}", package.name)
+        } else {
+            print!(
+                "{}{} {}Cleaning {}...",
+                LINE_CLEAR,
+                style("[1/2]").bold().dim(),
+                SWEEP,
+                package.name
+            );
+        }
+        let _ = std::io::stdout().flush();
+    }
+
+    let path_str = package.get_build_path();
+    let path = std::path::Path::new(&path_str);
+    let _ = std::fs::remove_dir_all(path);
+
+    let path_str = package.get_ocaml_build_path();
+    let path = std::path::Path::new(&path_str);
+    let _ = std::fs::remove_dir_all(path);
 }
