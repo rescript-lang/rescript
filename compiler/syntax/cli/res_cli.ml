@@ -194,7 +194,7 @@ end = struct
       ("-recover", Arg.Unit (fun () -> recover := true), "Emit partial ast");
       ( "-print",
         Arg.String (fun txt -> print := txt),
-        "Print either binary, ml, ast, sexp, comments or res. Default: res" );
+        "Print either binary, ml, ast, sexp, comments, tokens or res. Default: res" );
       ( "-width",
         Arg.Int (fun w -> width := w),
         "Specify the line length for the printer (formatter)" );

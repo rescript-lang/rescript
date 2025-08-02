@@ -126,10 +126,22 @@ make lib # Build compiler and standard library
 ./cli/bsc.js myTestFile.res
 ```
 
+To view the tokens of a file run:
+
+```sh
+dune exec res_parser -- -print tokens myTestFile.res
+```
+
 To view the untyped tree of the file run:
 
 ```sh
 ./cli/bsc.js -dparsetree myTestFile.res
+```
+
+or
+
+```sh
+dune exec res_parser -- -print ast -recover myTestFile.res
 ```
 
 To view the typed tree of the file run:
