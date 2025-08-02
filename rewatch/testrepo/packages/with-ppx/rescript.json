@@ -1,0 +1,16 @@
+{
+  "name": "@testrepo/with-ppx",
+  "sources": [
+    {
+      "dir": "src"
+    }
+  ],
+  "dependencies": ["rescript-nodejs", "rescript-schema"],
+  "package-specs": {
+    "module": "es6",
+    "in-source": true
+  },
+  "suffix": ".res.js",
+  "compiler-flags": ["-open RescriptSchema"],
+  "ppx-flags": ["rescript-schema-ppx/bin"]
+}

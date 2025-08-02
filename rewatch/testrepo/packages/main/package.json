@@ -12,7 +12,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@testrepo/compiled-by-legacy": "*",
-    "@testrepo/dep01": "*"
+    "@testrepo/compiled-by-legacy": "workspace:*",
+    "@testrepo/dep01": "workspace:*"
   }
 }
