@@ -69,7 +69,6 @@ let dump_tokens filename =
       | Res_token.ColonGreaterThan -> "ColonGreaterThan"
       | Res_token.GreaterThan -> "GreaterThan"
       | Res_token.LessThan -> "LessThan"
-      | Res_token.LessThanSlash -> "LessThanSlash"
       | Res_token.Hash -> "Hash"
       | Res_token.HashEqual -> "HashEqual"
       | Res_token.Assert -> "Assert"
