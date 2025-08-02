@@ -18,6 +18,10 @@ let delete = (dict, string) => {
 
 @val external keysToArray: dict<'a> => array<string> = "Object.keys"
 
+let size = dict => dict->keysToArray->Stdlib_Array.length
+
+let isEmpty = dict => dict->size === 0
+
 @val external valuesToArray: dict<'a> => array<'a> = "Object.values"
 
 @val external assign: (dict<'a>, dict<'a>) => dict<'a> = "Object.assign"
