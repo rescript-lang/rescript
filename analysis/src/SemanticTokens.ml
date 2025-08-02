@@ -79,6 +79,11 @@ module Token = struct
        ^ string_of_int length ^ "," ^ tokenTypeToString type_ ^ ","
        ^ tokenModifiersString)
 
+  let remove_trailing_comma buffer =
+    let len = Buffer.length buffer in
+    if len > 0 && Buffer.nth buffer (len - 1) = ',' then
+      Buffer.truncate buffer (len - 1)
+
   let emit e =
     let sortedTokens =
       e.tokens
@@ -87,6 +92,10 @@ module Token = struct
     in
     let buf = Buffer.create 1 in
     sortedTokens |> List.iter (fun t -> e |> emitToken buf t);
+
+    (* Valid JSON arrays cannot have trailing commas *)
+    remove_trailing_comma buf;
+
     Buffer.contents buf
 end
 
