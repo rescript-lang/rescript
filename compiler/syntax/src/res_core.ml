@@ -2711,8 +2711,8 @@ and parse_jsx_fragment start_pos p =
   let children = parse_jsx_children p in
   let children_end_pos = p.Parser.start_pos in
   Parser.expect LessThan p;
-  let end_pos = p.Parser.end_pos in
   Parser.expect Forwardslash p;
+  let end_pos = p.Parser.end_pos in
   Parser.expect GreaterThan p;
   (* location is from starting < till closing >  *)
   let loc = mk_loc start_pos end_pos in
