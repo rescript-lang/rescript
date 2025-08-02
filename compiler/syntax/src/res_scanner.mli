@@ -39,6 +39,3 @@ val peekMinus : t -> bool
 
 (* Look ahead to see if the next non-whitespace character is a slash *)
 val peekSlash : t -> bool
-(**
-Checks if the next token is a minus
-*)

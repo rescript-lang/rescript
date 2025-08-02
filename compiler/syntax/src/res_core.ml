@@ -2573,8 +2573,6 @@ and parse_let_bindings ~attrs ~start_pos p =
   in
   (rec_flag, loop p [first])
 
-(* jsx allows for `-` token in the name, we need to combine some tokens into a single ident *)
-
 and parse_jsx_name p : Longident.t Location.loc =
   (* jsx allows for `-` token in the name, we need to combine some tokens *)
   parse_jsx_ident p;
@@ -2780,17 +2778,10 @@ and parse_jsx_children p : Parsetree.jsx_children =
        * or is it the start of a closing tag?  </div>
        * reconsiderLessThan peeks at the next token and
        * determines the correct token to disambiguate *)
-      (* let token = Scanner.reconsider_less_than p.scanner in *)
-      (* let token = p.Parser.token in *)
-      (* if token = LessThan then *)
       let child =
         parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p
       in
       loop p (child :: children)
-      (* else *)
-      (* LessThanSlash *)
-      (* let () = p.token <- token in *)
-      (* children *)
     | token when Grammar.is_jsx_child_start token ->
       let child =
         parse_primary_expr ~operand:(parse_atomic_expr p) ~no_call:true p

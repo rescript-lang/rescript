@@ -189,7 +189,6 @@ let digit_value ch =
 let scan_identifier scanner =
   let start_off = scanner.offset in
   let rec skip_good_chars scanner =
-    (* TODO: figure out what to replace the parser with here *)
     match scanner.ch with
     | 'A' .. 'Z' | 'a' .. 'z' | '0' .. '9' | '_' | '\'' ->
       next scanner;
@@ -908,7 +907,6 @@ let rec scan scanner =
       next scanner;
       Token.GreaterThan
     | '<' -> (
-      (* skip_whitespace scanner; *)
       match peek scanner with
       | '<' when not (in_diamond_mode scanner) ->
         next2 scanner;
