@@ -148,6 +148,16 @@ npm install
 npm link rescript
 ```
 
+#### Use Local BSC with Existing ReScript Installation
+
+Alternatively, you can set the `RESCRIPT_BSC_EXE` environment variable to point to your locally compiled `bsc.exe`.
+
+```sh
+RESCRIPT_BSC_EXE=your-rescript-repo/packages/@rescript/darwin-arm64/bin/bsc.exe npx rescript
+```
+
+This will test the local compiler while still using the build system from the installed Node module.
+
 ### Running Automatic Tests
 
 We provide different test suites for different levels of the compiler and build system infrastructure. Always make sure to locally build your compiler before running any tests.
