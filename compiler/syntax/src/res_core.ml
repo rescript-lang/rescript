@@ -715,10 +715,42 @@ let parse_module_long_ident_tail ~lowercase p start_pos ident =
   in
   loop p ident
 
+(* jsx allows for `-` token in the name, we need to combine some tokens into a single ident *)
+let parse_jsx_ident (p : Parser.t) : unit =
+  (* check if the next tokens are minus and ident, if so, add them to the buffer *)
+  let rec visit buffer =
+    match p.Parser.token with
+    | Minus -> (
+      Parser.next p;
+      match p.Parser.token with
+      | Lident txt | Uident txt ->
+        Buffer.add_char buffer '-';
+        Buffer.add_string buffer txt;
+        if Scanner.peekMinus p.scanner then visit buffer else buffer
+      | _ -> buffer)
+    | _ -> buffer
+  in
+  match p.Parser.token with
+  | Lident txt when Scanner.peekMinus p.scanner ->
+    let buffer = Buffer.create (String.length txt) in
+    Buffer.add_string buffer txt;
+    Parser.next p;
+    let name = visit buffer |> Buffer.contents in
+    let token = Token.Lident name in
+    p.token <- token
+  | Uident txt when Scanner.peekMinus p.scanner ->
+    let buffer = Buffer.create (String.length txt) in
+    Buffer.add_string buffer txt;
+    Parser.next p;
+    let name = visit buffer |> Buffer.contents in
+    let token = Token.Uident name in
+    p.token <- token
+  | _ -> ()
+
 (* Parses module identifiers:
      Foo
      Foo.Bar *)
-let parse_module_long_ident ~lowercase p =
+let parse_module_long_ident ~lowercase ?(is_jsx_name : bool = false) p =
   (* Parser.leaveBreadcrumb p Reporting.ModuleLongIdent; *)
   let start_pos = p.Parser.start_pos in
   let module_ident =
@@ -735,6 +767,7 @@ let parse_module_long_ident ~lowercase p =
       match p.Parser.token with
       | Dot ->
         Parser.next p;
+        if is_jsx_name then parse_jsx_ident p;
         parse_module_long_ident_tail ~lowercase p start_pos lident
       | _ -> Location.mkloc lident (mk_loc start_pos end_pos))
     | t ->
@@ -751,7 +784,8 @@ let verify_jsx_opening_closing_name p
     | Lident lident ->
       Parser.next p;
       Longident.Lident lident
-    | Uident _ -> (parse_module_long_ident ~lowercase:true p).txt
+    | Uident _ ->
+      (parse_module_long_ident ~lowercase:true ~is_jsx_name:true p).txt
     | _ -> Longident.Lident ""
   in
   let opening = name_longident.txt in
@@ -2540,36 +2574,6 @@ and parse_let_bindings ~attrs ~start_pos p =
   (rec_flag, loop p [first])
 
 (* jsx allows for `-` token in the name, we need to combine some tokens into a single ident *)
-and parse_jsx_ident p =
-  (* check if the next tokens are minus and ident, if so, add them to the buffer *)
-  let rec visit buffer =
-    match p.Parser.token with
-    | Minus -> (
-      Parser.next p;
-      match p.Parser.token with
-      | Lident txt | Uident txt ->
-        Buffer.add_char buffer '-';
-        Buffer.add_string buffer txt;
-        if Scanner.peekMinus p.scanner then visit buffer else buffer
-      | _ -> buffer)
-    | _ -> buffer
-  in
-  match p.Parser.token with
-  | Lident txt when Scanner.peekMinus p.scanner ->
-    let buffer = Buffer.create (String.length txt) in
-    Buffer.add_string buffer txt;
-    Parser.next p;
-    let name = visit buffer |> Buffer.contents in
-    let token = Token.Lident name in
-    p.token <- token
-  | Uident txt when Scanner.peekMinus p.scanner ->
-    let buffer = Buffer.create (String.length txt) in
-    Buffer.add_string buffer txt;
-    Parser.next p;
-    let name = visit buffer |> Buffer.contents in
-    let token = Token.Uident name in
-    p.token <- token
-  | _ -> ()
 
 and parse_jsx_name p : Longident.t Location.loc =
   (* jsx allows for `-` token in the name, we need to combine some tokens *)
@@ -2582,7 +2586,9 @@ and parse_jsx_name p : Longident.t Location.loc =
     let loc = mk_loc ident_start ident_end in
     Location.mkloc (Longident.Lident ident) loc
   | Uident _ ->
-    let longident = parse_module_long_ident ~lowercase:true p in
+    let longident =
+      parse_module_long_ident ~lowercase:true ~is_jsx_name:true p
+    in
     longident
   | _ ->
     let msg =
