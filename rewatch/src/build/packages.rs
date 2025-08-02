@@ -613,10 +613,32 @@ pub fn make(
 ) -> Result<AHashMap<String, Package>> {
     let map = match &workspace_root {
         Some(wr) => {
-            let root_folder_str = root_folder.to_string_lossy();
-            let workspace_root_str = wr.to_string_lossy();
-            log::debug!("Building workspace: {workspace_root_str} for {root_folder_str}",);
-            read_packages(wr, workspace_root, show_progress, build_dev_deps)?
+            // If the workspace root contains the root_folder as a dependency,
+            // it should be considered as related, and we read the workspace.
+            let root_name = read_package_name(root_folder)?;
+            let workspace_config = read_config(wr)?;
+
+            let is_child = workspace_config
+                .dependencies
+                .to_owned()
+                .unwrap_or_default()
+                .iter()
+                .any(|dep| dep == &root_name)
+                || workspace_config
+                    .dev_dependencies
+                    .to_owned()
+                    .unwrap_or_default()
+                    .iter()
+                    .any(|dep| dep == &root_name);
+
+            if is_child {
+                let root_folder_str = root_folder.to_string_lossy();
+                let workspace_root_str = wr.to_string_lossy();
+                log::info!("Building workspace: {workspace_root_str} for {root_folder_str}",);
+                read_packages(wr, workspace_root, show_progress, build_dev_deps)?
+            } else {
+                read_packages(root_folder, workspace_root, show_progress, build_dev_deps)?
+            }
         }
         None => read_packages(root_folder, workspace_root, show_progress, build_dev_deps)?,
     };

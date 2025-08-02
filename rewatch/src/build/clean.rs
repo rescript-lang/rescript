@@ -29,7 +29,7 @@ fn remove_iast(package: &packages::Package, source_file: &Path) {
     ));
 }
 
-fn remove_mjs_file(source_file: &Path, suffix: &String) {
+fn remove_mjs_file(source_file: &Path, suffix: &str) {
     let _ = std::fs::remove_file(source_file.with_extension(
         // suffix.to_string includes the ., so we need to remove it
         &suffix.to_string()[1..],
@@ -59,36 +59,51 @@ pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
     }
 }
 
-fn clean_source_files(build_state: &BuildState, root_package: &packages::Package) {
+fn clean_source_files(
+    build_state: &BuildState,
+    // If the root_package is part of a workspace, we only want to clean that package,
+    // not the entire build_state modules.
+    workspace_has_root_config: bool,
+    root_package: &Package,
+    suffix: &str,
+) {
     // get all rescript file locations
     let rescript_file_locations = build_state
         .modules
         .values()
         .filter_map(|module| match &module.source_type {
             SourceType::SourceFile(source_file) => {
-                let package = build_state.packages.get(&module.package_name).unwrap();
-                Some(
-                    root_package
-                        .config
-                        .get_package_specs()
-                        .iter()
-                        .filter_map(|spec| {
-                            if spec.in_source {
-                                Some((
-                                    package.path.join(&source_file.implementation.path),
-                                    root_package.config.get_suffix(spec),
-                                ))
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<Vec<(PathBuf, String)>>(),
-                )
+                if !workspace_has_root_config || module.package_name == root_package.name
+                {
+                    let package = build_state.packages.get(&module.package_name).unwrap();
+                    Some(
+                        root_package
+                            .config
+                            .get_package_specs()
+                            .iter()
+                            .filter_map(|spec| {
+                                if spec.in_source {
+                                    Some((
+                                        package.path.join(&source_file.implementation.path),
+                                        match &root_package.config.suffix {
+                                            None => suffix,
+                                            Some(sfx) => sfx,
+                                        },
+                                    ))
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect::<Vec<(PathBuf, &str)>>(),
+                    )
+                } else {
+                    None
+                }
             }
             _ => None,
         })
         .flatten()
-        .collect::<Vec<(PathBuf, String)>>();
+        .collect::<Vec<(PathBuf, &str)>>();
 
     rescript_file_locations
         .par_iter()
@@ -352,15 +367,20 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
         );
         let _ = std::io::stdout().flush();
     };
-    match &workspace_root {
-        Some(_) => {
-            // There is a workspace detected, so will only clean the current package
+
+    let mut workspace_has_root_config = false;
+    match &workspace_config_name {
+        Some(workspace_config_name) if packages.contains_key(workspace_config_name) => {
+            // The workspace package was found in the packages.
+            // This means that the root_config and workspace_config have a parent/child relationship.
+            // So we only want to clean the root package in this case.
             let package = packages
                 .get(&root_config_name)
                 .expect("Could not find package during clean");
             clean_package(show_progress, snapshot_output, package);
+            workspace_has_root_config = true;
         }
-        None => {
+        _ => {
             packages.iter().for_each(|(_, package)| {
                 clean_package(show_progress, snapshot_output, package);
             });
@@ -421,7 +441,7 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
         let _ = std::io::stdout().flush();
     }
 
-    clean_source_files(&build_state, root_package);
+    clean_source_files(&build_state, workspace_has_root_config, root_package, suffix);
     let timing_clean_mjs_elapsed = timing_clean_mjs.elapsed();
 
     if !snapshot_output && show_progress {
