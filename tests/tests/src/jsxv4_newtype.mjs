@@ -26,7 +26,7 @@ let V4A2 = {
 };
 
 function Jsxv4_newtype$V4A3(props) {
-  return props.foo;
+  return null;
 }
 
 let V4A3 = {
