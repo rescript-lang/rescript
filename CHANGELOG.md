@@ -26,6 +26,8 @@
 
 #### :memo: Documentation
 
+- Update jsx schema configuration. https://github.com/rescript-lang/rescript/pull/7755
+
 #### :nail_care: Polish
 
 #### :house: Internal
