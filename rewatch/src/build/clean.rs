@@ -1,6 +1,6 @@
 use super::build_types::*;
 use super::packages;
-use crate::build::packages::Package;
+use crate::build::packages::{Package, PackageMap};
 use crate::helpers;
 use crate::helpers::emojis::*;
 use ahash::AHashSet;
@@ -349,7 +349,10 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
     let workspace_config_name = &workspace_root
         .as_ref()
         .and_then(|wr| packages::read_package_name(wr).ok());
-    let (packages, workspace_has_root_config) = packages::make(
+    let PackageMap {
+        packages,
+        root_is_child_of_workspace: workspace_has_root_config,
+    } = packages::make(
         &None,
         &project_root,
         &workspace_root,

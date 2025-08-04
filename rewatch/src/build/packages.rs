@@ -597,6 +597,14 @@ fn extend_with_children(
     build
 }
 
+pub struct PackageMap {
+    pub packages: AHashMap<String, Package>,
+    /// When packages::make is invoked with a workspace_root,
+    /// this flag determines if there is a parent/child relation
+    /// between root_folder and workspace_root.
+    pub root_is_child_of_workspace: bool,
+}
+
 /// Make turns a folder, that should contain a config, into a tree of Packages.
 /// It does so in two steps:
 /// 1. Get all the packages parsed, and take all the source folders from the config
@@ -611,8 +619,8 @@ pub fn make(
     workspace_root: &Option<PathBuf>,
     show_progress: bool,
     build_dev_deps: bool,
-) -> Result<(AHashMap<String, Package>, bool)> {
-    let mut is_child = false;
+) -> Result<PackageMap> {
+    let mut root_is_child_of_workspace = false;
     let map = match &workspace_root {
         Some(wr) => {
             // If the workspace root contains the root_folder as a dependency,
@@ -620,7 +628,7 @@ pub fn make(
             let root_name = read_package_name(root_folder)?;
             let workspace_config = read_config(wr)?;
 
-            is_child = workspace_config
+            root_is_child_of_workspace = workspace_config
                 .dependencies
                 .to_owned()
                 .unwrap_or_default()
@@ -633,7 +641,7 @@ pub fn make(
                     .iter()
                     .any(|dep| dep == &root_name);
 
-            if is_child {
+            if root_is_child_of_workspace {
                 let root_folder_str = root_folder.to_string_lossy();
                 let workspace_root_str = wr.to_string_lossy();
                 log::info!("Building workspace: {workspace_root_str} for {root_folder_str}",);
@@ -649,7 +657,10 @@ pub fn make(
      * the IO */
     let result = extend_with_children(filter, map, build_dev_deps);
 
-    Ok((result, is_child))
+    Ok(PackageMap {
+        packages: result,
+        root_is_child_of_workspace,
+    })
 }
 
 pub fn parse_packages(build_state: &mut BuildState) {

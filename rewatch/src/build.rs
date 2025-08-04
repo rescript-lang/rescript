@@ -11,6 +11,7 @@ pub mod read_compile_state;
 use self::compile::compiler_args;
 use self::parse::parser_args;
 use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_with_expired_deps_dirty};
+use crate::build::packages::PackageMap;
 use crate::helpers::emojis::*;
 use crate::helpers::{self, get_workspace_root};
 use crate::{config, sourcedirs};
@@ -131,7 +132,7 @@ pub fn initialize_build(
     }
 
     let timing_package_tree = Instant::now();
-    let (packages, _is_child) = packages::make(
+    let PackageMap { packages, .. } = packages::make(
         filter,
         &project_root,
         &workspace_root,

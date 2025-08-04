@@ -38,11 +38,11 @@ fn get_all_files() -> Result<Vec<String>> {
     let project_root = helpers::get_abs_path(&current_dir);
     let workspace_root_option = helpers::get_workspace_root(&project_root);
 
-    let (build_state, _is_child) =
+    let packages::PackageMap { packages, .. } =
         packages::make(&None, &project_root, &workspace_root_option, false, false)?;
     let mut files: Vec<String> = Vec::new();
 
-    for (_package_name, package) in build_state {
+    for (_package_name, package) in packages {
         if package.is_local_dep
             && let Some(source_files) = package.source_files
         {
