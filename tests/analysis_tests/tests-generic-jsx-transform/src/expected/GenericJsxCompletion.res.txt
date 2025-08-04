@@ -1,6 +1,6 @@
-Complete src/GenericJsxCompletion.res 0:8
-posCursor:[0:8] posNoWhite:[0:6] Found expr:[0:3->0:7]
-JSX <div:[0:4->0:7] > _children:None
+Complete src/GenericJsxCompletion.res 4:8
+posCursor:[4:8] posNoWhite:[4:6] Found expr:[4:3->4:7]
+JSX <div:[4:4->4:7] > _children:None
 Completable: Cjsx([div], "", [])
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -25,9 +25,9 @@ Path GenericJsx.Elements.props
     "documentation": null
   }]
 
-Complete src/GenericJsxCompletion.res 3:17
-posCursor:[3:17] posNoWhite:[3:16] Found expr:[3:3->3:18]
-JSX <div:[3:4->3:7] testing[3:8->3:15]=...[3:16->3:18]> _children:None
+Complete src/GenericJsxCompletion.res 7:17
+posCursor:[7:17] posNoWhite:[7:16] Found expr:[7:3->7:18]
+JSX <div:[7:4->7:7] testing[7:8->7:15]=...[7:16->7:18]> _children:None
 Completable: Cexpression CJsxPropValue [div] testing->recordBody
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -47,15 +47,15 @@ Path GenericJsx.Elements.props
     "documentation": null
   }]
 
-Complete src/GenericJsxCompletion.res 14:21
-posCursor:[14:21] posNoWhite:[14:20] Found expr:[8:13->23:3]
-posCursor:[14:21] posNoWhite:[14:20] Found expr:[9:4->22:10]
-posCursor:[14:21] posNoWhite:[14:20] Found expr:[10:4->22:10]
-posCursor:[14:21] posNoWhite:[14:20] Found expr:[11:4->22:10]
-posCursor:[14:21] posNoWhite:[14:20] Found expr:[12:4->22:10]
-posCursor:[14:21] posNoWhite:[14:20] Found expr:[13:4->22:10]
-posCursor:[14:21] posNoWhite:[14:20] Found expr:[14:7->22:10]
-posCursor:[14:21] posNoWhite:[14:20] Found expr:[14:7->14:21]
+Complete src/GenericJsxCompletion.res 18:21
+posCursor:[18:21] posNoWhite:[18:20] Found expr:[12:13->27:3]
+posCursor:[18:21] posNoWhite:[18:20] Found expr:[13:4->26:10]
+posCursor:[18:21] posNoWhite:[18:20] Found expr:[14:4->26:10]
+posCursor:[18:21] posNoWhite:[18:20] Found expr:[15:4->26:10]
+posCursor:[18:21] posNoWhite:[18:20] Found expr:[16:4->26:10]
+posCursor:[18:21] posNoWhite:[18:20] Found expr:[17:4->26:10]
+posCursor:[18:21] posNoWhite:[18:20] Found expr:[18:7->26:10]
+posCursor:[18:21] posNoWhite:[18:20] Found expr:[18:7->18:21]
 Completable: Cpath Value[someString]->st <<jsx>>
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
@@ -86,17 +86,17 @@ Path st
     "documentation": {"kind": "markdown", "value": "\n`startsWithFrom(str, substr, n)` returns `true` if the `str` starts\nwith `substr` starting at position `n`, `false` otherwise. If `n` is negative,\nthe search starts at the beginning of `str`.\nSee [`String.startsWith`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/startsWith) on MDN.\n\n## Examples\n\n```rescript\nString.startsWithFrom(\"BuckleScript\", \"kle\", 3) == true\nString.startsWithFrom(\"BuckleScript\", \"\", 3) == true\nString.startsWithFrom(\"JavaScript\", \"Buckle\", 2) == false\n```\n"}
   }]
 
-Complete src/GenericJsxCompletion.res 20:24
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[8:13->23:3]
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[9:4->22:10]
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[10:4->22:10]
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[11:4->22:10]
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[12:4->22:10]
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[13:4->22:10]
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[16:4->22:10]
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[17:4->22:10]
-JSX <div:[17:5->17:8] > _children:18:7
-posCursor:[20:24] posNoWhite:[20:23] Found expr:[20:10->20:24]
+Complete src/GenericJsxCompletion.res 24:24
+posCursor:[24:24] posNoWhite:[24:23] Found expr:[12:13->27:3]
+posCursor:[24:24] posNoWhite:[24:23] Found expr:[13:4->26:10]
+posCursor:[24:24] posNoWhite:[24:23] Found expr:[14:4->26:10]
+posCursor:[24:24] posNoWhite:[24:23] Found expr:[15:4->26:10]
+posCursor:[24:24] posNoWhite:[24:23] Found expr:[16:4->26:10]
+posCursor:[24:24] posNoWhite:[24:23] Found expr:[17:4->26:10]
+posCursor:[24:24] posNoWhite:[24:23] Found expr:[20:4->26:10]
+posCursor:[24:24] posNoWhite:[24:23] Found expr:[21:4->26:10]
+JSX <div:[21:5->21:8] > _children:22:7
+posCursor:[24:24] posNoWhite:[24:23] Found expr:[24:10->24:24]
 Completable: Cpath Value[someString]->st <<jsx>>
 Raw opens: 1 GenericJsx.place holder
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder

@@ -1,5 +1,5 @@
 {
-  "name": "test-generic-jsx-transform",
+  "name": "@tests/generic-jsx-transform",
   "sources": [
     {
       "dir": "src",

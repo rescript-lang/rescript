@@ -1,5 +1,5 @@
 {
-  "name": "test-generic-jsx-transform",
+  "name": "@tests/incremental-typechecking",
   "sources": [
     {
       "dir": "src",
