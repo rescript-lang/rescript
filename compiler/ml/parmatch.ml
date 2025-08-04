@@ -2028,6 +2028,7 @@ let do_check_partial ?pred exhaust loc casel pss =
     | [] -> ()
     | _ ->
       if Warnings.is_active Warnings.All_clauses_guarded then
+        (* TODO(actions) Add catch-all clause with %todo *)
         Location.prerr_warning loc Warnings.All_clauses_guarded);
     Partial
   | ps :: _ -> (
@@ -2051,6 +2052,7 @@ let do_check_partial ?pred exhaust loc casel pss =
       | None -> Total
       | Some v ->
         (if Warnings.is_active (Warnings.Partial_match "") then
+           (* TODO(actions) Add missing cases *)
            let errmsg =
              try
                let buf = Buffer.create 16 in
@@ -2145,6 +2147,7 @@ let do_check_fragile_param exhaust loc casel pss =
         (fun ext ->
           match exhaust (Some ext) pss (List.length ps) with
           | Rnone ->
+            (* TODO(actions) Add explicit pattern for all variant constructors *)
             Location.prerr_warning loc (Warnings.Fragile_match (Path.name ext))
           | Rsome _ -> ())
         exts)
