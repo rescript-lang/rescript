@@ -239,6 +239,10 @@ module M = struct
     | Pmod_constraint (m, mty) ->
       constraint_ ~loc ~attrs (sub.module_expr sub m) (sub.module_type sub mty)
     | Pmod_unpack e -> unpack ~loc ~attrs (sub.expr sub e)
+    | Pmod_await m -> 
+      { pmod_desc = Pmod_await (sub.module_expr sub m);
+        pmod_loc = sub.location sub loc;
+        pmod_attributes = sub.attributes sub attrs }
     | Pmod_extension x -> extension ~loc ~attrs (sub.extension sub x)
 
   let map_structure_item sub {pstr_loc = loc; pstr_desc = desc} =

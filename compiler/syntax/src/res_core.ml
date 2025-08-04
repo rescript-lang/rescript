@@ -158,7 +158,6 @@ end
 
 let ternary_attr = (Location.mknoloc "res.ternary", Parsetree.PStr [])
 let if_let_attr = (Location.mknoloc "res.iflet", Parsetree.PStr [])
-let make_await_attr loc = (Location.mkloc "res.await" loc, Parsetree.PStr [])
 let suppress_fragile_match_warning_attr =
   ( Location.mknoloc "warning",
     Parsetree.PStr
@@ -6071,10 +6070,16 @@ and parse_module_expr p =
     if is_es6_arrow_functor p then parse_functor_module_expr p
     else parse_primary_mod_expr p
   in
-  {
-    mod_expr with
-    pmod_attributes = List.concat [mod_expr.pmod_attributes; attrs];
-  }
+  let mod_expr = 
+    if has_await then
+      { pmod_desc = Pmod_await mod_expr;
+        pmod_loc = loc_await;
+        pmod_attributes = attrs }
+    else
+      { mod_expr with
+        pmod_attributes = List.concat [mod_expr.pmod_attributes; attrs] }
+  in
+  mod_expr
 
 and parse_constrained_mod_expr p =
   let mod_expr = parse_module_expr p in
