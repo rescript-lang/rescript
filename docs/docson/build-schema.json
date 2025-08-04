@@ -311,10 +311,9 @@
           "type": "string",
           "description": "JSX module. Either \"react\" for React, or (since v11.1) any valid module name to apply a generic JSX transform."
         },
-        "mode": {
-          "type": "string",
-          "enum": ["classic", "automatic"],
-          "description": "JSX transformation mode"
+        "preserve": {
+          "type": "boolean",
+          "description": "Whether to preserve the JSX in the output. Requires `version` to be set."
         }
       },
       "additionalProperties": false
