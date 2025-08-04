@@ -73,7 +73,11 @@ fn clean_source_files(
         .values()
         .filter_map(|module| match &module.source_type {
             SourceType::SourceFile(source_file) => {
-                if !workspace_has_root_config || module.package_name == root_package.name {
+                if workspace_has_root_config && module.package_name != root_package.name {
+                    // Skip this package as we only want to clean the root_package
+                    // if is the child of the workspace.
+                    None
+                } else {
                     let package = build_state.packages.get(&module.package_name).unwrap();
                     Some(
                         root_package
@@ -95,8 +99,6 @@ fn clean_source_files(
                             })
                             .collect::<Vec<(PathBuf, &str)>>(),
                     )
-                } else {
-                    None
                 }
             }
             _ => None,
