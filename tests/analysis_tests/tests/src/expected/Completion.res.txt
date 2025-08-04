@@ -405,7 +405,7 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'b, ('b, 'a) => 'b) => 'b",
-    "documentation": {"kind": "markdown", "value": "\n`reduce(xs, init, fn)`\n\nApplies `fn` to each element of `xs` from beginning to end. Function `fn` has two parameters: the item from the list and an “accumulator”; which starts with a value of `init`. `reduce` returns the final value of the accumulator.\n\n## Examples\n\n```rescript\nArray.reduce([2, 3, 4], 1, (a, b) => a + b) == 10\n\nArray.reduce([\"a\", \"b\", \"c\", \"d\"], \"\", (a, b) => a ++ b) == \"abcd\"\n\n[1, 2, 3]->Array.reduce(list{}, List.add) == list{3, 2, 1}\n\nArray.reduce([], list{}, List.add) == list{}\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`reduce(xs, init, fn)`\n\nApplies `fn` to each element of `xs` from beginning to end. Function `fn` has two parameters: the item from the list and an \"accumulator\"; which starts with a value of `init`. `reduce` returns the final value of the accumulator.\n\n## Examples\n\n```rescript\nArray.reduce([2, 3, 4], 1, (a, b) => a + b) == 10\n\nArray.reduce([\"a\", \"b\", \"c\", \"d\"], \"\", (a, b) => a ++ b) == \"abcd\"\n\n[1, 2, 3]->Array.reduce(list{}, List.add) == list{3, 2, 1}\n\nArray.reduce([], list{}, List.add) == list{}\n```\n"}
   }, {
     "label": "sliceToEnd",
     "kind": 12,
@@ -430,6 +430,12 @@ Path Array.
     "tags": [],
     "detail": "(array<'a>, int, 'a) => unit",
     "documentation": {"kind": "markdown", "value": "\n`set(array, index, item)` sets the provided `item` at `index` of `array`.\n\nBeware this will *mutate* the array.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\narray->Array.set(1, \"Hello\")\n\narray[1] == Some(\"Hello\")\n```\n"}
+  }, {
+    "label": "isEmpty",
+    "kind": 12,
+    "tags": [],
+    "detail": "array<'a> => bool",
+    "documentation": {"kind": "markdown", "value": "\n`isEmpty(array)` returns `true` if the array is empty (has length 0), `false` otherwise.\n\n## Examples\n\n```rescript\n[]->Array.isEmpty->assertEqual(true)\n[1, 2, 3]->Array.isEmpty->assertEqual(false)\n\nlet emptyArray = []\nemptyArray->Array.isEmpty->assertEqual(true)\n\nlet nonEmptyArray = [\"hello\"]\nnonEmptyArray->Array.isEmpty->assertEqual(false)\n```\n"}
   }, {
     "label": "filterWithIndex",
     "kind": 12,
@@ -507,7 +513,7 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(array<'a>, 'b, ('b, 'a, int) => 'b) => 'b",
-    "documentation": {"kind": "markdown", "value": "\n`reduceWithIndex(x, init, fn)`\n\nApplies `fn` to each element of `xs` from beginning to end. Function `fn` has three parameters: the item from the array and an “accumulator”, which starts with a value of `init` and the index of each element. `reduceWithIndex` returns the final value of the accumulator.\n\n## Examples\n\n```rescript\nArray.reduceWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i) == 16\n\nArray.reduceWithIndex([1, 2, 3], list{}, (acc, v, i) => list{v + i, ...acc}) == list{5, 3, 1}\n\nArray.reduceWithIndex([], list{}, (acc, v, i) => list{v + i, ...acc}) == list{}\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`reduceWithIndex(x, init, fn)`\n\nApplies `fn` to each element of `xs` from beginning to end. Function `fn` has three parameters: the item from the array and an \"accumulator\", which starts with a value of `init` and the index of each element. `reduceWithIndex` returns the final value of the accumulator.\n\n## Examples\n\n```rescript\nArray.reduceWithIndex([1, 2, 3, 4], 0, (acc, x, i) => acc + x + i) == 16\n\nArray.reduceWithIndex([1, 2, 3], list{}, (acc, v, i) => list{v + i, ...acc}) == list{5, 3, 1}\n\nArray.reduceWithIndex([], list{}, (acc, v, i) => list{v + i, ...acc}) == list{}\n```\n"}
   }, {
     "label": "some",
     "kind": 12,
