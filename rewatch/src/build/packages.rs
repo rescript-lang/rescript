@@ -603,14 +603,16 @@ fn extend_with_children(
 /// 2. Take the (by then deduplicated) packages, and find all the '.res' and
 ///    interface files.
 ///
-/// The two step process is there to reduce IO overhead
+/// The two step process is there to reduce IO overhead.
+/// `is_child` is true when the workspace_root rescript.json has the name of the root_folder rescript.json
 pub fn make(
     filter: &Option<regex::Regex>,
     root_folder: &Path,
     workspace_root: &Option<PathBuf>,
     show_progress: bool,
     build_dev_deps: bool,
-) -> Result<AHashMap<String, Package>> {
+) -> Result<(AHashMap<String, Package>, bool)> {
+    let mut is_child = false;
     let map = match &workspace_root {
         Some(wr) => {
             // If the workspace root contains the root_folder as a dependency,
@@ -618,7 +620,7 @@ pub fn make(
             let root_name = read_package_name(root_folder)?;
             let workspace_config = read_config(wr)?;
 
-            let is_child = workspace_config
+            is_child = workspace_config
                 .dependencies
                 .to_owned()
                 .unwrap_or_default()
@@ -647,7 +649,7 @@ pub fn make(
      * the IO */
     let result = extend_with_children(filter, map, build_dev_deps);
 
-    Ok(result)
+    Ok((result, is_child))
 }
 
 pub fn parse_packages(build_state: &mut BuildState) {

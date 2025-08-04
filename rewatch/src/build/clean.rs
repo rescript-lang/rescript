@@ -347,7 +347,7 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
     let workspace_config_name = &workspace_root
         .as_ref()
         .and_then(|wr| packages::read_package_name(wr).ok());
-    let packages = packages::make(
+    let (packages, workspace_has_root_config) = packages::make(
         &None,
         &project_root,
         &workspace_root,
@@ -367,23 +367,18 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
         let _ = std::io::stdout().flush();
     };
 
-    let mut workspace_has_root_config = false;
-    match &workspace_config_name {
-        Some(workspace_config_name) if packages.contains_key(workspace_config_name) => {
-            // The workspace package was found in the packages.
-            // This means that the root_config and workspace_config have a parent/child relationship.
-            // So we only want to clean the root package in this case.
-            let package = packages
-                .get(&root_config_name)
-                .expect("Could not find package during clean");
+    if workspace_has_root_config {
+        // The workspace package was found in the packages.
+        // This means that the root_config and workspace_config have a parent/child relationship.
+        // So we only want to clean the root package in this case.
+        let package = packages
+            .get(&root_config_name)
+            .expect("Could not find package during clean");
+        clean_package(show_progress, snapshot_output, package);
+    } else {
+        packages.iter().for_each(|(_, package)| {
             clean_package(show_progress, snapshot_output, package);
-            workspace_has_root_config = true;
-        }
-        _ => {
-            packages.iter().for_each(|(_, package)| {
-                clean_package(show_progress, snapshot_output, package);
-            });
-        }
+        });
     }
 
     let timing_clean_compiler_assets_elapsed = timing_clean_compiler_assets.elapsed();

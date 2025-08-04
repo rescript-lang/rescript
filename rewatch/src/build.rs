@@ -131,7 +131,7 @@ pub fn initialize_build(
     }
 
     let timing_package_tree = Instant::now();
-    let packages = packages::make(
+    let (packages, _is_child) = packages::make(
         filter,
         &project_root,
         &workspace_root,
