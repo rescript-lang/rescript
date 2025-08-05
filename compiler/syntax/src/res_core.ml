@@ -726,7 +726,10 @@ let parse_jsx_ident (p : Parser.t) : unit =
       | Lident txt | Uident txt ->
         Buffer.add_char buffer '-';
         Buffer.add_string buffer txt;
-        if Scanner.peekMinus p.scanner then visit buffer else buffer
+        if Scanner.peekMinus p.scanner then (
+          Parser.next p;
+          visit buffer)
+        else buffer
       | _ -> buffer)
     | _ -> buffer
   in
