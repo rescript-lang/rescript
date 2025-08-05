@@ -7,7 +7,7 @@
   3 │ let x = <Foo.Bar></Free.Will>;
   4 │ let x = <Foo.Bar.Baz></Foo.Bar.Boo>
 
-  Did you forget a `<` here?
+  Did you forget a `</` here?
 
 
   Syntax error!

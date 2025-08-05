@@ -2627,8 +2627,8 @@ and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
         Some pos
       | token when Grammar.is_structure_item_start token -> None
       | _ ->
-        Parser.expect LessThan p;
-        Parser.expect Forwardslash p;
+        Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+          (Diagnostics.message "Did you forget a `</` here?");
         None
     in
     (* Again, the ident in the closing tag can have a minus.
