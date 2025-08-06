@@ -28,6 +28,9 @@
 
 #### :house: Internal
 
+- Add token viewer to `res_parser`. https://github.com/rescript-lang/rescript/pull/7751
+- Refactor jsx mode in Scanner. https://github.com/rescript-lang/rescript/pull/7751
+
 # 12.0.0-beta.4
 
 #### :bug: Bug fix
