@@ -716,6 +716,11 @@ let parse_module_long_ident_tail ~lowercase p start_pos ident =
   loop p ident
 
 (* jsx allows for `-` token in the name, we need to combine some tokens into a single ident *)
+(* After this function completes:
+   - All immediately following ("-" IDENT) chunks have been consumed from the scanner
+   - No hyphen that belongs to the JSX name remains unconsumed
+   - The current token is the last IDENT that was appended to the buffer
+   - p.token is replaced with a single combined Lident/Uident for the full name *)
 let parse_jsx_ident (p : Parser.t) : unit =
   (* check if the next tokens are minus and ident, if so, add them to the buffer *)
   let rec visit buffer =
@@ -730,7 +735,11 @@ let parse_jsx_ident (p : Parser.t) : unit =
           Parser.next p;
           visit buffer)
         else buffer
-      | _ -> buffer)
+      | _ ->
+        (* Error: hyphen must be followed by an identifier *)
+        Parser.err p
+          (Diagnostics.message "JSX identifier cannot end with a hyphen");
+        buffer)
     | _ -> buffer
   in
   match p.Parser.token with
