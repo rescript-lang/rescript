@@ -716,12 +716,12 @@ let parse_module_long_ident_tail ~lowercase p start_pos ident =
   loop p ident
 
 (* jsx allows for `-` token in the name, we need to combine some tokens into a single ident *)
-(* After this function completes:
+(* This function returns Some token when a combined token is created, None when no change is needed.
+   When it returns Some token:
    - All immediately following ("-" IDENT) chunks have been consumed from the scanner
    - No hyphen that belongs to the JSX name remains unconsumed
-   - The current token is the last IDENT that was appended to the buffer
-   - p.token is replaced with a single combined Lident/Uident for the full name *)
-let parse_jsx_ident (p : Parser.t) : unit =
+   - The returned token is the combined Lident/Uident for the full name *)
+let parse_jsx_ident (p : Parser.t) : Token.t option =
   (* check if the next tokens are minus and ident, if so, add them to the buffer *)
   let rec visit buffer =
     match p.Parser.token with
@@ -748,16 +748,14 @@ let parse_jsx_ident (p : Parser.t) : unit =
     Buffer.add_string buffer txt;
     Parser.next p;
     let name = visit buffer |> Buffer.contents in
-    let token = Token.Lident name in
-    p.token <- token
+    Some (Token.Lident name)
   | Uident txt when Scanner.peekMinus p.scanner ->
     let buffer = Buffer.create (String.length txt) in
     Buffer.add_string buffer txt;
     Parser.next p;
     let name = visit buffer |> Buffer.contents in
-    let token = Token.Uident name in
-    p.token <- token
-  | _ -> ()
+    Some (Token.Uident name)
+  | _ -> None
 
 (* Parses module identifiers:
      Foo
@@ -779,7 +777,8 @@ let parse_module_long_ident ~lowercase ?(is_jsx_name : bool = false) p =
       match p.Parser.token with
       | Dot ->
         Parser.next p;
-        if is_jsx_name then parse_jsx_ident p;
+        if is_jsx_name then
+          parse_jsx_ident p |> Option.iter (fun t -> p.Parser.token <- t);
         parse_module_long_ident_tail ~lowercase p start_pos lident
       | _ -> Location.mkloc lident (mk_loc start_pos end_pos))
     | t ->
@@ -2587,7 +2586,7 @@ and parse_let_bindings ~attrs ~start_pos p =
 
 and parse_jsx_name p : Longident.t Location.loc =
   (* jsx allows for `-` token in the name, we need to combine some tokens *)
-  parse_jsx_ident p;
+  parse_jsx_ident p |> Option.iter (fun t -> p.Parser.token <- t);
   match p.Parser.token with
   | Lident ident ->
     let ident_start = p.start_pos in
@@ -2642,7 +2641,7 @@ and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
     in
     (* Again, the ident in the closing tag can have a minus.
       We combine these tokens into a single ident *)
-    parse_jsx_ident p;
+    parse_jsx_ident p |> Option.iter (fun t -> p.Parser.token <- t);
     match p.Parser.token with
     | (Lident _ | Uident _) when verify_jsx_opening_closing_name p name ->
       let end_tag_name = {name with loc = mk_loc p.start_pos p.end_pos} in
@@ -2741,7 +2740,7 @@ and parse_jsx_fragment start_pos p =
  *)
 and parse_jsx_prop p : Parsetree.jsx_prop option =
   (* prop can have `-`, we need to combine some tokens into a single ident *)
-  parse_jsx_ident p;
+  parse_jsx_ident p |> Option.iter (fun t -> p.Parser.token <- t);
   match p.Parser.token with
   | Question | Lident _ -> (
     let optional = Parser.optional p Question in
