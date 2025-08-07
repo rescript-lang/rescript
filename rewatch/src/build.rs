@@ -78,7 +78,6 @@ pub fn get_compiler_args(path: &Path) -> Result<String> {
         &rescript_config,
         &root_rescript_config,
         relative_filename,
-        &workspace_root,
         workspace_root.as_ref().unwrap_or(&package_root),
         &contents,
     );
