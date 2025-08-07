@@ -18,6 +18,8 @@
 
 #### :rocket: New Feature
 
+- Add new Stdlib helpers: `String.capitalize`, `String.isEmpty`, `Dict.size`, `Dict.isEmpty`, `Array.isEmpty`, `Map.isEmpty`, `Set.isEmpty`. https://github.com/rescript-lang/rescript/pull/7516
+
 #### :bug: Bug fix
 
 - Fix formatting of nested records in `.resi` files. https://github.com/rescript-lang/rescript/pull/7741
