@@ -413,21 +413,25 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
         .get(&build_state.root_config_name)
         .expect("Could not find root package");
 
-    // Use the current package suffix if present.
-    // Otherwise, use the parent suffix if present.
+    // Use the workspace extension if the link is present.
+    // Otherwise, use the current suffix if present.
     // Fall back to .res.mjs
-    let suffix = match root_package.config.suffix.as_deref() {
-        Some(suffix) => suffix,
-        None => match &workspace_config_name {
-            None => ".res.mjs",
-            Some(workspace_config_name) => {
-                if let Some(package) = build_state.packages.get(workspace_config_name) {
-                    package.config.suffix.as_deref().unwrap_or(".res.mjs")
-                } else {
-                    ".res.mjs"
-                }
-            }
-        },
+    let fallback_extension = ".res.mjs";
+    let suffix = if workspace_has_root_config {
+        match &workspace_config_name {
+            None => fallback_extension,
+            Some(workspace_config_name) => build_state
+                .packages
+                .get(workspace_config_name)
+                .and_then(|workspace_package| workspace_package.config.suffix.as_deref())
+                .unwrap_or(fallback_extension),
+        }
+    } else {
+        root_package
+            .config
+            .suffix
+            .as_deref()
+            .unwrap_or(fallback_extension)
     };
 
     if !snapshot_output && show_progress {
