@@ -61,6 +61,8 @@ pub fn get_compiler_args(path: &Path) -> Result<String> {
     let package_root =
         helpers::get_abs_path(&helpers::get_nearest_config(path).expect("Couldn't find package root"));
     let workspace_root = get_workspace_root(&package_root).map(|p| helpers::get_abs_path(&p));
+    // TODO: we load the workspace_root (if present) and call it root config
+    // This is all very confusing and we should introduce an Enum to represent the top level thing
     let root_rescript_config =
         packages::read_config(&workspace_root.to_owned().unwrap_or(package_root.to_owned()))?;
     let rescript_config = packages::read_config(&package_root)?;
