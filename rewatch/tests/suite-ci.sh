@@ -15,11 +15,9 @@ fi
 
 export REWATCH_EXECUTABLE
 export RESCRIPT_BSC_EXE
+export RESCRIPT_STDLIB=$(realpath ../../lib/ocaml)
 
 source ./utils.sh
-
-bold "Rescript version"
-(cd ../testrepo && ./node_modules/.bin/rescript -v)
 
 # we need to reset the yarn.lock and package.json to the original state
 # so there is not diff in git. The CI will install new ReScript package

@@ -10,7 +10,7 @@ import * as fs from "node:fs";
 import * as tty from "node:tty";
 
 import { bsc_exe, rescript_legacy_exe } from "./common/bins.js";
-import * as bsb from "./common/bsb.js";
+import * as bsb from "./rescript-legacy/bsb.js";
 
 const cwd = process.cwd();
 process.env.BSB_PROJECT_ROOT = cwd;
