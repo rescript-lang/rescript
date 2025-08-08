@@ -30,6 +30,8 @@
 
 #### :nail_care: Polish
 
+- Read package name from rescript.json if package.json is absent. https://github.com/rescript-lang/rescript/pull/7746
+
 #### :house: Internal
 
 - Add token viewer to `res_parser`. https://github.com/rescript-lang/rescript/pull/7751
