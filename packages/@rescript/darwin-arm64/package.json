@@ -1,6 +1,6 @@
 {
   "name": "@rescript/darwin-arm64",
-  "version": "12.0.0-beta.5",
+  "version": "12.0.0-beta.6",
   "description": "ReScript binaries for MacOS ARM64",
   "type": "module",
   "homepage": "https://rescript-lang.org",
