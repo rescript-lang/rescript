@@ -8,12 +8,13 @@ use super::packages;
 use crate::config;
 use crate::helpers;
 use crate::helpers::StrippedVerbatimPath;
+use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
 use anyhow::anyhow;
 use console::style;
 use log::{debug, trace};
 use rayon::prelude::*;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 use std::time::SystemTime;
 
@@ -154,21 +155,14 @@ pub fn compile(
                                 .get_package(&module.package_name)
                                 .expect("Package not found");
 
-                            let root_package =
-                                build_state.get_package(&build_state.root_config_name).unwrap();
-
                             let interface_result = match source_file.interface.to_owned() {
                                 Some(Interface { path, .. }) => {
                                     let result = compile_file(
                                         package,
-                                        root_package,
                                         &helpers::get_ast_path(&path),
                                         module,
                                         true,
-                                        &build_state.bsc_path,
-                                        &build_state.packages,
-                                        &build_state.project_root,
-                                        &build_state.workspace_root,
+                                        build_state,
                                     );
                                     Some(result)
                                 }
@@ -176,14 +170,10 @@ pub fn compile(
                             };
                             let result = compile_file(
                                 package,
-                                root_package,
                                 &helpers::get_ast_path(&source_file.implementation.path),
                                 module,
                                 false,
-                                &build_state.bsc_path,
-                                &build_state.packages,
-                                &build_state.project_root,
-                                &build_state.workspace_root,
+                                build_state,
                             );
                             let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
 
@@ -347,24 +337,21 @@ pub fn compile(
 
 pub fn compiler_args(
     config: &config::Config,
-    root_config: &config::Config,
     ast_path: &Path,
     file_path: &Path,
     is_interface: bool,
     has_interface: bool,
-    project_root: &Path,
-    workspace_root: &Option<PathBuf>,
+    project_context: &ProjectContext,
     // if packages are known, we pass a reference here
-    // this saves us a scan to find their paths
+    // this saves us a scan to find their paths.
+    // This is None when called by build::get_compiler_args
     packages: &Option<&AHashMap<String, packages::Package>>,
     // Is the file listed as "type":"dev"?
     is_type_dev: bool,
     is_local_dep: bool,
 ) -> Vec<String> {
     let bsc_flags = config::flatten_flags(&config.compiler_flags);
-
-    let dependency_paths = get_dependency_paths(config, project_root, workspace_root, packages, is_type_dev);
-
+    let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
     let module_name = helpers::file_path_to_module_name(file_path, &config.get_namespace());
 
     let namespace_args = match &config.get_namespace() {
@@ -388,6 +375,7 @@ pub fn compiler_args(
         packages::Namespace::NoNamespace => vec![],
     };
 
+    let root_config = project_context.get_root_config();
     let jsx_args = root_config.get_jsx_args();
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
@@ -449,7 +437,7 @@ pub fn compiler_args(
             "-I".to_string(),
             Path::new("..").join("ocaml").to_string_lossy().to_string(),
         ],
-        dependency_paths.concat(),
+        dependency_paths,
         jsx_args,
         jsx_module_args,
         jsx_mode_args,
@@ -497,11 +485,10 @@ impl DependentPackage {
 
 fn get_dependency_paths(
     config: &config::Config,
-    project_root: &Path,
-    workspace_root: &Option<PathBuf>,
+    project_context: &ProjectContext,
     packages: &Option<&AHashMap<String, packages::Package>>,
     is_file_type_dev: bool,
-) -> Vec<Vec<String>> {
+) -> Vec<String> {
     let normal_deps = config
         .dependencies
         .clone()
@@ -534,7 +521,7 @@ fn get_dependency_paths(
                     .as_ref()
                     .map(|package| package.path.clone())
             } else {
-                packages::read_dependency(package_name, project_root, project_root, workspace_root).ok()
+                packages::read_dependency(package_name, project_context).ok()
             }
             .map(|canonicalized_path| {
                 vec![
@@ -555,19 +542,23 @@ fn get_dependency_paths(
             dependency_path
         })
         .collect::<Vec<Vec<String>>>()
+        .concat()
 }
 
 fn compile_file(
     package: &packages::Package,
-    root_package: &packages::Package,
     ast_path: &Path,
     module: &Module,
     is_interface: bool,
-    bsc_path: &Path,
-    packages: &AHashMap<String, packages::Package>,
-    project_root: &Path,
-    workspace_root: &Option<PathBuf>,
+    build_state: &BuildState,
 ) -> Result<Option<String>, String> {
+    let BuildState {
+        packages,
+        project_context,
+        bsc_path,
+        ..
+    } = build_state;
+    let root_package = build_state.get_root_package();
     let ocaml_build_path_abs = package.get_ocaml_build_path();
     let build_path_abs = package.get_build_path();
     let implementation_file_path = match &module.source_type {
@@ -584,13 +575,11 @@ fn compile_file(
     let is_type_dev = module.is_type_dev;
     let to_mjs_args = compiler_args(
         &package.config,
-        &root_package.config,
         ast_path,
         implementation_file_path,
         is_interface,
         has_interface,
-        project_root,
-        workspace_root,
+        project_context,
         &Some(packages),
         is_type_dev,
         package.is_local_dep,

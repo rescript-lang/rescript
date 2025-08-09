@@ -1,4 +1,5 @@
 use crate::build::packages;
+use crate::project_context::ProjectContext;
 use std::ffi::OsString;
 use std::fs;
 use std::fs::File;
@@ -191,27 +192,26 @@ pub fn get_bsc() -> PathBuf {
         .to_stripped_verbatim_path()
 }
 
-pub fn get_rescript_legacy(root_path: &Path, workspace_root: Option<PathBuf>) -> PathBuf {
-    let bin_dir = Path::new("node_modules").join("rescript").join("cli");
-
-    match (
-        root_path
-            .join(&bin_dir)
+pub fn get_rescript_legacy(project_context: &ProjectContext) -> PathBuf {
+    let root_path = project_context.get_root_path();
+    let node_modules_rescript = root_path.join("node_modules").join("rescript");
+    let rescript_legacy_path = if node_modules_rescript.exists() {
+        node_modules_rescript
+            .join("cli")
             .join("rescript-legacy.js")
             .canonicalize()
-            .map(StrippedVerbatimPath::to_stripped_verbatim_path),
-        workspace_root.map(|workspace_root| {
-            workspace_root
-                .join(&bin_dir)
-                .join("rescript-legacy.js")
-                .canonicalize()
-                .map(StrippedVerbatimPath::to_stripped_verbatim_path)
-        }),
-    ) {
-        (Ok(path), _) => path,
-        (_, Some(Ok(path))) => path,
-        _ => panic!("Could not find rescript-legacy.exe"),
-    }
+            .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+    } else {
+        // If the root folder / node_modules doesn't exist, something is wrong.
+        // The only way this can happen is if we are inside the rescript repository.
+        root_path
+            .join("cli")
+            .join("rescript-legacy.js")
+            .canonicalize()
+            .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+    };
+
+    rescript_legacy_path.unwrap_or_else(|_| panic!("Could not find rescript-legacy.exe"))
 }
 
 pub fn string_ends_with_any(s: &Path, suffixes: &[&str]) -> bool {
@@ -357,12 +357,6 @@ fn has_rescript_config(path: &Path) -> bool {
     path.join("bsconfig.json").exists() || path.join("rescript.json").exists()
 }
 
-pub fn get_workspace_root(package_root: &Path) -> Option<PathBuf> {
-    std::path::PathBuf::from(&package_root)
-        .parent()
-        .and_then(get_nearest_config)
-}
-
 // traverse up the directory tree until we find a config.json, if not return None
 pub fn get_nearest_config(path_buf: &Path) -> Option<PathBuf> {
     let mut current_dir = path_buf.to_owned();
@@ -389,4 +383,11 @@ pub fn get_source_file_from_rescript_file(path: &Path, suffix: &str) -> PathBuf 
         // suffix.to_string includes the ., so we need to remove it
         &suffix.to_string()[1..],
     )
+}
+
+pub fn is_local_package(workspace_path: &Path, canonical_package_path: &Path) -> bool {
+    canonical_package_path.starts_with(workspace_path)
+        && !canonical_package_path
+            .components()
+            .any(|c| c.as_os_str() == "node_modules")
 }

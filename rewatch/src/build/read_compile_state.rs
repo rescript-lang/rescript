@@ -79,10 +79,7 @@ pub fn read(build_state: &mut BuildState) -> CompileAssetsState {
                 "iast" | "ast" => {
                     let module_name = helpers::file_path_to_module_name(path, package_namespace);
 
-                    let root_package = build_state
-                        .packages
-                        .get(&build_state.root_config_name)
-                        .expect("Could not find root package");
+                    let root_package = build_state.get_root_package();
                     if let Some(res_file_path_buf) = get_res_path_from_ast(path) {
                         let _ = ast_modules.insert(
                             res_file_path_buf.clone(),
