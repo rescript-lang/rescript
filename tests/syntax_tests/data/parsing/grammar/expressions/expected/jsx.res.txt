@@ -343,3 +343,7 @@ let _ =
 ;;<>(1, 2)</>
 ;;<>((array -> f)[@res.braces ])</>
 let _ = <A x={js|y|js} {...str} />
+let _ = <p-x-y></p-x-y>
+let _ = <V.x-y></V.x-y>
+let _ = <a-b-c />
+let _ = <V.x-y-z></V.x-y-z>

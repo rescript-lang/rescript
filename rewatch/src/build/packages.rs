@@ -417,13 +417,27 @@ fn flatten_dependencies(dependencies: Vec<Dependency>) -> Vec<Dependency> {
 }
 
 pub fn read_package_name(package_dir: &Path) -> Result<String> {
-    let package_json_path = package_dir.join("package.json");
+    let mut file_name = "package.json";
+    let package_json_path = package_dir.join(file_name);
 
-    let package_json_contents =
-        fs::read_to_string(&package_json_path).map_err(|e| anyhow!("Could not read package.json: {}", e))?;
+    let package_json_contents = if Path::exists(&package_json_path) {
+        fs::read_to_string(&package_json_path).map_err(|e| anyhow!("Could not read package.json: {}", e))?
+    } else {
+        let rescript_json_path = package_dir.join("rescript.json");
+        if Path::exists(&rescript_json_path) {
+            file_name = "rescript.json";
+            fs::read_to_string(&rescript_json_path)
+                .map_err(|e| anyhow!("Could not read rescript.json: {}", e))?
+        } else {
+            return Err(anyhow!(
+                "There is no package.json or rescript.json file in {}",
+                package_dir.to_string_lossy()
+            ));
+        }
+    };
 
     let package_json: serde_json::Value = serde_json::from_str(&package_json_contents)
-        .map_err(|e| anyhow!("Could not parse package.json: {}", e))?;
+        .map_err(|e| anyhow!("Could not parse {}: {}", file_name, e))?;
 
     package_json["name"]
         .as_str()

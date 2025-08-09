@@ -10,7 +10,7 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-beta.5 (Unreleased)
+# 12.0.0-beta.6 (Unreleased)
 
 #### :boom: Breaking Change
 
@@ -20,15 +20,32 @@
 
 #### :bug: Bug fix
 
+#### :memo: Documentation
+
+#### :nail_care: Polish
+
+#### :house: Internal
+
+# 12.0.0-beta.5
+
+#### :bug: Bug fix
+
 - Fix formatting of nested records in `.resi` files. https://github.com/rescript-lang/rescript/pull/7741
 - Don't format and don't check formatting of dependencies. https://github.com/rescript-lang/rescript/pull/7748
 - Fix `rescript-editor-analysis semanticTokens` returning invalid JSON in certain cases. https://github.com/rescript-lang/rescript/pull/7750
 
 #### :memo: Documentation
 
+- Update jsx schema configuration. https://github.com/rescript-lang/rescript/pull/7755
+
 #### :nail_care: Polish
 
+- Read package name from rescript.json if package.json is absent. https://github.com/rescript-lang/rescript/pull/7746
+
 #### :house: Internal
+
+- Add token viewer to `res_parser`. https://github.com/rescript-lang/rescript/pull/7751
+- Refactor jsx mode in Scanner. https://github.com/rescript-lang/rescript/pull/7751
 
 # 12.0.0-beta.4
 

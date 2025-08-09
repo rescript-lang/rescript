@@ -53,8 +53,44 @@
   5 │ let x = <Foo.bar> </Foo.baz>
   6 │ let x = <Foo.bar.baz />
   7 │ 
+  8 │ // Trailing hyphen errors
 
   I'm not sure what to parse here when looking at ".".
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/jsx.res:9:13
+
+   7 │ 
+   8 │ // Trailing hyphen errors
+   9 │ let x = <a- />
+  10 │ let x = <a-b- />
+  11 │ let x = <V.a- />
+
+  JSX identifier cannot end with a hyphen
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/jsx.res:10:15
+
+   8 │ // Trailing hyphen errors
+   9 │ let x = <a- />
+  10 │ let x = <a-b- />
+  11 │ let x = <V.a- />
+  12 │ 
+
+  JSX identifier cannot end with a hyphen
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/jsx.res:11:15
+
+   9 │ let x = <a- />
+  10 │ let x = <a-b- />
+  11 │ let x = <V.a- />
+  12 │ 
+
+  JSX identifier cannot end with a hyphen
 
 let x = <di-v />
 let x = <Unclosed></Unclosed>
@@ -62,3 +98,6 @@ let x = <Foo.Bar></Foo.Bar> > ([%rescript.exprhole ])
 let x = <Foo.Bar.Baz></Foo.Bar.Baz> > ([%rescript.exprhole ])
 let x = <Foo.bar></Foo.bar> > ([%rescript.exprhole ])
 let x = <Foo.bar baz />
+let x = <a></a>
+let x = <a-b></a-b>
+let x = <V.a></V.a>

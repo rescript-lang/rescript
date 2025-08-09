@@ -194,7 +194,8 @@ end = struct
       ("-recover", Arg.Unit (fun () -> recover := true), "Emit partial ast");
       ( "-print",
         Arg.String (fun txt -> print := txt),
-        "Print either binary, ml, ast, sexp, comments or res. Default: res" );
+        "Print either binary, ml, ast, sexp, comments, tokens or res. Default: \
+         res" );
       ( "-width",
         Arg.Int (fun w -> width := w),
         "Specify the line length for the printer (formatter)" );
@@ -239,11 +240,12 @@ module CliArgProcessor = struct
       | "ast" -> Res_ast_debugger.print_engine
       | "sexp" -> Res_ast_debugger.sexp_print_engine
       | "comments" -> Res_ast_debugger.comments_print_engine
+      | "tokens" -> Res_token_debugger.token_print_engine
       | "res" -> Res_driver.print_engine
       | target ->
         print_endline
-          ("-print needs to be either binary, ml, ast, sexp, comments or res. \
-            You provided " ^ target);
+          ("-print needs to be either binary, ml, ast, sexp, comments, tokens \
+            or res. You provided " ^ target);
         exit 1
     in
 
@@ -256,7 +258,11 @@ module CliArgProcessor = struct
     let (Parser backend) = parsing_engine in
     (* This is the whole purpose of the Color module above *)
     Color.setup None;
-    if process_interface then
+
+    (* Special case for tokens - bypass parsing entirely *)
+    if target = "tokens" then
+      print_engine.print_implementation ~width ~filename ~comments:[] []
+    else if process_interface then
       let parse_result = backend.parse_interface ~for_printer ~filename in
       if parse_result.invalid then (
         backend.string_of_diagnostics ~source:parse_result.source
