@@ -2,6 +2,7 @@ use crate::build::packages;
 use crate::helpers::deserialize::*;
 use anyhow::{Result, bail};
 use convert_case::{Case, Casing};
+use oxc_resolver::{ResolveOptions, Resolver};
 use serde::Deserialize;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -288,46 +289,30 @@ pub fn flatten_flags(flags: &Option<Vec<OneOrMore<String>>>) -> Vec<String> {
 
 /// Since ppx-flags could be one or more, and could potentially be nested, this function takes the
 /// flags and flattens them.
-pub fn flatten_ppx_flags(
-    node_modules_dir: &Path,
-    flags: &Option<Vec<OneOrMore<String>>>,
-    package_name: &String,
-) -> Vec<String> {
+pub fn flatten_ppx_flags(root_path: &Path, flags: &Option<Vec<OneOrMore<String>>>) -> Vec<String> {
+    let oxc_resolver = Resolver::new(ResolveOptions::default());
     match flags {
         None => vec![],
         Some(flags) => flags
             .iter()
             .flat_map(|x| match x {
-                OneOrMore::Single(y) => {
-                    let first_character = y.chars().next();
-                    match first_character {
-                        Some('.') => {
-                            vec![
-                                "-ppx".to_string(),
-                                node_modules_dir
-                                    .join(package_name)
-                                    .join(y)
-                                    .to_string_lossy()
-                                    .to_string(),
-                            ]
-                        }
-                        _ => vec![
-                            "-ppx".to_string(),
-                            node_modules_dir.join(y).to_string_lossy().to_string(),
-                        ],
-                    }
-                }
+                OneOrMore::Single(y) => vec![
+                    "-ppx".to_string(),
+                    oxc_resolver
+                        .resolve(root_path, y)
+                        .unwrap()
+                        .full_path()
+                        .to_string_lossy()
+                        .to_string(),
+                ],
                 OneOrMore::Multiple(ys) if ys.is_empty() => vec![],
                 OneOrMore::Multiple(ys) => {
-                    let first_character = ys[0].chars().next();
-                    let ppx = match first_character {
-                        Some('.') => node_modules_dir
-                            .join(package_name)
-                            .join(&ys[0])
-                            .to_string_lossy()
-                            .to_string(),
-                        _ => node_modules_dir.join(&ys[0]).to_string_lossy().to_string(),
-                    };
+                    let ppx = oxc_resolver
+                        .resolve(root_path, &ys[0])
+                        .unwrap()
+                        .full_path()
+                        .to_string_lossy()
+                        .to_string();
                     vec![
                         "-ppx".to_string(),
                         vec![ppx]
