@@ -91,12 +91,7 @@ fn main() -> Result<()> {
             let code = build::pass_through_legacy(legacy_args);
             std::process::exit(code);
         }
-        cli::Command::Format {
-            stdin,
-            all,
-            check,
-            files,
-        } => format::format(stdin, all, check, files),
+        cli::Command::Format { stdin, check, files } => format::format(stdin, check, files),
     }
 }
 

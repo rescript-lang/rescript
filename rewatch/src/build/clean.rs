@@ -1,10 +1,11 @@
 use super::build_types::*;
 use super::packages;
-use crate::build::packages::{Package, PackageMap};
+use crate::build::packages::Package;
 use crate::helpers;
 use crate::helpers::emojis::*;
-use ahash::AHashSet;
-use anyhow::Result;
+use crate::project_context::ProjectContext;
+use ahash::{AHashMap, AHashSet};
+use anyhow::{Result, anyhow};
 use console::style;
 use rayon::prelude::*;
 use std::io::Write;
@@ -59,23 +60,16 @@ pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
     }
 }
 
-fn clean_source_files(
-    build_state: &BuildState,
-    // If the root_package is part of a workspace, we only want to clean that package,
-    // not the entire build_state modules.
-    workspace_has_root_config: bool,
-    root_package: &Package,
-    suffix: &str,
-) {
+fn clean_source_files(build_state: &BuildState, root_package: &Package, suffix: &String) {
+    let packages_to_clean = build_state.project_context.get_scoped_local_packages();
+
     // get all rescript file locations
     let rescript_file_locations = build_state
         .modules
         .values()
         .filter_map(|module| match &module.source_type {
             SourceType::SourceFile(source_file) => {
-                if workspace_has_root_config && module.package_name != root_package.name {
-                    // Skip this package as we only want to clean the root_package
-                    // if is the child of the workspace.
+                if !packages_to_clean.contains(&module.package_name) {
                     None
                 } else {
                     let package = build_state.packages.get(&module.package_name).unwrap();
@@ -88,23 +82,23 @@ fn clean_source_files(
                                 if spec.in_source {
                                     Some((
                                         package.path.join(&source_file.implementation.path),
-                                        match &root_package.config.suffix {
-                                            None => suffix,
-                                            Some(sfx) => sfx,
+                                        match &spec.suffix {
+                                            None => suffix.to_owned(),
+                                            Some(suffix) => suffix.clone(),
                                         },
                                     ))
                                 } else {
                                     None
                                 }
                             })
-                            .collect::<Vec<(PathBuf, &str)>>(),
+                            .collect::<Vec<(PathBuf, String)>>(),
                     )
                 }
             }
             _ => None,
         })
         .flatten()
-        .collect::<Vec<(PathBuf, &str)>>();
+        .collect::<Vec<(PathBuf, String)>>();
 
     rescript_file_locations
         .par_iter()
@@ -343,23 +337,25 @@ pub fn cleanup_after_build(build_state: &BuildState) {
     });
 }
 
+fn find_and_clean_package(
+    packages: &AHashMap<String, Package>,
+    name: &String,
+    show_progress: bool,
+    snapshot_output: bool,
+) -> Result<()> {
+    if let Some(package) = packages.get(name) {
+        clean_package(show_progress, snapshot_output, package);
+        Ok(())
+    } else {
+        Err(anyhow!("Could not find package \"{}\" during clean", &name))
+    }
+}
+
 pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_deps: bool) -> Result<()> {
-    let project_root = helpers::get_abs_path(path);
-    let workspace_root = helpers::get_workspace_root(&project_root);
-    let workspace_config_name = &workspace_root
-        .as_ref()
-        .and_then(|wr| packages::read_package_name(wr).ok());
-    let PackageMap {
-        packages,
-        root_is_child_of_workspace: workspace_has_root_config,
-    } = packages::make(
-        &None,
-        &project_root,
-        &workspace_root,
-        show_progress,
-        build_dev_deps,
-    )?;
-    let root_config_name = packages::read_package_name(&project_root)?;
+    let project_context = ProjectContext::new(path)?;
+
+    let packages = packages::make(&None, &project_context, show_progress, build_dev_deps)?;
+    // let root_config_name = packages::read_package_name(&project_root)?;
     let bsc_path = helpers::get_bsc();
 
     let timing_clean_compiler_assets = Instant::now();
@@ -372,19 +368,30 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
         let _ = std::io::stdout().flush();
     };
 
-    if workspace_has_root_config {
-        // The workspace package was found in the packages.
-        // This means that the root_config and workspace_config have a parent/child relationship.
-        // So we only want to clean the root package in this case.
-        let package = packages
-            .get(&root_config_name)
-            .expect("Could not find package during clean");
-        clean_package(show_progress, snapshot_output, package);
-    } else {
-        packages.iter().for_each(|(_, package)| {
+    match &project_context {
+        ProjectContext::SingleProject { config, .. } => {
+            find_and_clean_package(&packages, &config.name, show_progress, snapshot_output)?;
+        }
+        ProjectContext::MonorepoRoot {
+            config,
+            local_dependencies,
+            ..
+        } => {
+            find_and_clean_package(&packages, &config.name, show_progress, snapshot_output)?;
+            // TODO: this does the local dependencies and dev-dependencies.
+            // I guess the dev deps should be cleaned if flag is set?
+            for dep in local_dependencies {
+                find_and_clean_package(&packages, dep, show_progress, snapshot_output)?;
+            }
+        }
+        ProjectContext::MonorepoPackage { config, .. } => {
+            // We know we are in a monorepo, but we only clean the package that is being targeted.
+            let package = packages
+                .get(&config.name)
+                .expect("Could not find package during clean");
             clean_package(show_progress, snapshot_output, package);
-        });
-    }
+        }
+    };
 
     let timing_clean_compiler_assets_elapsed = timing_clean_compiler_assets.elapsed();
 
@@ -400,39 +407,10 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
     }
 
     let timing_clean_mjs = Instant::now();
-    let mut build_state = BuildState::new(
-        project_root.to_owned(),
-        root_config_name,
-        packages,
-        workspace_root,
-        bsc_path,
-    );
+    let mut build_state = BuildState::new(project_context, packages, bsc_path);
     packages::parse_packages(&mut build_state);
-    let root_package = build_state
-        .packages
-        .get(&build_state.root_config_name)
-        .expect("Could not find root package");
-
-    // Use the workspace extension if the link is present.
-    // Otherwise, use the current suffix if present.
-    // Fall back to .res.mjs
-    let fallback_extension = ".res.mjs";
-    let suffix = if workspace_has_root_config {
-        match &workspace_config_name {
-            None => fallback_extension,
-            Some(workspace_config_name) => build_state
-                .packages
-                .get(workspace_config_name)
-                .and_then(|workspace_package| workspace_package.config.suffix.as_deref())
-                .unwrap_or(fallback_extension),
-        }
-    } else {
-        root_package
-            .config
-            .suffix
-            .as_deref()
-            .unwrap_or(fallback_extension)
-    };
+    let root_package = build_state.get_root_package();
+    let suffix = build_state.project_context.get_suffix();
 
     if !snapshot_output && show_progress {
         println!(
@@ -444,7 +422,7 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
         let _ = std::io::stdout().flush();
     }
 
-    clean_source_files(&build_state, workspace_has_root_config, root_package, suffix);
+    clean_source_files(&build_state, root_package, &suffix);
     let timing_clean_mjs_elapsed = timing_clean_mjs.elapsed();
 
     if !snapshot_output && show_progress {

@@ -181,10 +181,6 @@ pub enum Command {
     },
     /// Formats ReScript files.
     Format {
-        /// Format the whole project.
-        #[arg(short, long, group = "format_input_mode")]
-        all: bool,
-
         /// Check formatting status without applying changes.
         #[arg(short, long)]
         check: bool,
@@ -199,8 +195,8 @@ pub enum Command {
         )]
         stdin: Option<FileExtension>,
 
-        /// Files to format.
-        #[arg(group = "format_input_mode", required_unless_present_any = ["format_input_mode"])]
+        /// Files to format. If no files are provided, all files are formatted.
+        #[arg(group = "format_input_mode")]
         files: Vec<String>,
     },
     /// This prints the compiler arguments. It expects the path to a rescript file (.res or .resi).

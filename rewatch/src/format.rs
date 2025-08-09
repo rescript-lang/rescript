@@ -1,4 +1,4 @@
-use crate::helpers;
+use crate::{helpers, project_context};
 use anyhow::{Result, bail};
 use num_cpus;
 use rayon::prelude::*;
@@ -12,12 +12,7 @@ use crate::build::packages;
 use crate::cli::FileExtension;
 use clap::ValueEnum;
 
-pub fn format(
-    stdin_extension: Option<FileExtension>,
-    all: bool,
-    check: bool,
-    files: Vec<String>,
-) -> Result<()> {
+pub fn format(stdin_extension: Option<FileExtension>, check: bool, files: Vec<String>) -> Result<()> {
     let bsc_path = helpers::get_bsc();
 
     match stdin_extension {
@@ -25,7 +20,11 @@ pub fn format(
             format_stdin(&bsc_path, extension)?;
         }
         None => {
-            let files = if all { get_all_files()? } else { files };
+            let files = if files.is_empty() {
+                get_files_in_scope()?
+            } else {
+                files
+            };
             format_files(&bsc_path, files, check)?;
         }
     }
@@ -33,18 +32,17 @@ pub fn format(
     Ok(())
 }
 
-fn get_all_files() -> Result<Vec<String>> {
+fn get_files_in_scope() -> Result<Vec<String>> {
     let current_dir = std::env::current_dir()?;
-    let project_root = helpers::get_abs_path(&current_dir);
-    let workspace_root_option = helpers::get_workspace_root(&project_root);
+    let project_context = project_context::ProjectContext::new(&current_dir)?;
 
-    let packages::PackageMap { packages, .. } =
-        packages::make(&None, &project_root, &workspace_root_option, false, false)?;
+    let packages = packages::make(&None, &project_context, false, false)?;
     let mut files: Vec<String> = Vec::new();
+    let packages_to_format = project_context.get_scoped_local_packages();
 
     for (_package_name, package) in packages {
-        if package.is_local_dep
-            && let Some(source_files) = package.source_files
+        if packages_to_format.contains(&package.name)
+            && let Some(source_files) = &package.source_files
         {
             for (path, _metadata) in source_files {
                 if let Some(extension) = path.extension() {

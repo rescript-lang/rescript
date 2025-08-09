@@ -1,4 +1,5 @@
 use crate::build::packages::{Namespace, Package};
+use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
 use std::{fmt::Display, path::PathBuf, time::SystemTime};
 
@@ -89,14 +90,12 @@ impl Module {
 
 #[derive(Debug)]
 pub struct BuildState {
+    pub project_context: ProjectContext,
     pub modules: AHashMap<String, Module>,
     pub packages: AHashMap<String, Package>,
     pub module_names: AHashSet<String>,
-    pub project_root: PathBuf,
-    pub root_config_name: String,
     pub deleted_modules: AHashSet<String>,
     pub bsc_path: PathBuf,
-    pub workspace_root: Option<PathBuf>,
     pub deps_initialized: bool,
 }
 
@@ -109,20 +108,16 @@ impl BuildState {
         self.modules.get(module_name)
     }
     pub fn new(
-        project_root: PathBuf,
-        root_config_name: String,
+        project_context: ProjectContext,
         packages: AHashMap<String, Package>,
-        workspace_root: Option<PathBuf>,
         bsc_path: PathBuf,
     ) -> Self {
         Self {
+            project_context,
             module_names: AHashSet::new(),
             modules: AHashMap::new(),
             packages,
-            project_root,
-            root_config_name,
             deleted_modules: AHashSet::new(),
-            workspace_root,
             bsc_path,
             deps_initialized: false,
         }
@@ -131,6 +126,26 @@ impl BuildState {
     pub fn insert_module(&mut self, module_name: &str, module: Module) {
         self.modules.insert(module_name.to_owned(), module);
         self.module_names.insert(module_name.to_owned());
+    }
+
+    // TODO: Consider returing a result?
+    // At the same time, the packages have been processed in packages::make
+    // It would have already failed if the root is absent
+    pub fn get_root_package(&self) -> &Package {
+        match &self.project_context {
+            ProjectContext::SingleProject { config, .. }
+            | ProjectContext::MonorepoRoot { config, .. }
+            | ProjectContext::MonorepoPackage {
+                parent_config: config,
+                ..
+            } => self
+                .packages
+                .get(&config.name)
+                // You will be tempted to point this out as "don't panic" during code review.
+                // Please don't and see https://rust-lang.github.io/rust-clippy/master/index.html#expect_fun_call
+                // cargo clippy pointed this out.
+                .unwrap_or_else(|| panic!("Root package \"{}\" not found", &config.name)),
+        }
     }
 }
 

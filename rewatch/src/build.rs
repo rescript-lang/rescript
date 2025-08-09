@@ -8,12 +8,11 @@ pub mod packages;
 pub mod parse;
 pub mod read_compile_state;
 
-use self::compile::compiler_args;
 use self::parse::parser_args;
 use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_with_expired_deps_dirty};
-use crate::build::packages::PackageMap;
 use crate::helpers::emojis::*;
-use crate::helpers::{self, get_workspace_root};
+use crate::helpers::{self};
+use crate::project_context::ProjectContext;
 use crate::{config, sourcedirs};
 use anyhow::{Result, anyhow};
 use build_types::*;
@@ -56,35 +55,27 @@ pub struct CompilerArgs {
     pub parser_args: Vec<String>,
 }
 
-pub fn get_compiler_args(path: &Path) -> Result<String> {
-    let filename = &helpers::get_abs_path(path);
-    let package_root =
-        helpers::get_abs_path(&helpers::get_nearest_config(path).expect("Couldn't find package root"));
-    let workspace_root = get_workspace_root(&package_root).map(|p| helpers::get_abs_path(&p));
-    // TODO: we load the workspace_root (if present) and call it root config
-    // This is all very confusing and we should introduce an Enum to represent the top level thing
-    let root_rescript_config =
-        packages::read_config(&workspace_root.to_owned().unwrap_or(package_root.to_owned()))?;
-    let rescript_config = packages::read_config(&package_root)?;
-    let is_type_dev = match filename.strip_prefix(&package_root) {
+pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
+    let filename = &helpers::get_abs_path(rescript_file_path);
+    let current_package = helpers::get_abs_path(
+        &helpers::get_nearest_config(rescript_file_path).expect("Couldn't find package root"),
+    );
+    let project_context = ProjectContext::new(&current_package)?;
+
+    let is_type_dev = match filename.strip_prefix(&current_package) {
         Err(_) => false,
-        Ok(relative_path) => root_rescript_config.find_is_type_dev_for_path(relative_path),
+        Ok(relative_path) => project_context
+            .get_current_rescript_config()
+            .find_is_type_dev_for_path(relative_path),
     };
 
     // make PathBuf from package root and get the relative path for filename
-    let relative_filename = filename.strip_prefix(PathBuf::from(&package_root)).unwrap();
+    let relative_filename = filename.strip_prefix(PathBuf::from(&current_package)).unwrap();
 
-    let file_path = PathBuf::from(&package_root).join(filename);
+    let file_path = PathBuf::from(&current_package).join(filename);
     let contents = helpers::read_file(&file_path).expect("Error reading file");
 
-    let (ast_path, parser_args) = parser_args(
-        &rescript_config,
-        &root_rescript_config,
-        relative_filename,
-        &workspace_root,
-        workspace_root.as_ref().unwrap_or(&package_root),
-        &contents,
-    );
+    let (ast_path, parser_args) = parser_args(&project_context, relative_filename, &contents);
     let is_interface = filename.to_string_lossy().ends_with('i');
     let has_interface = if is_interface {
         true
@@ -93,15 +84,13 @@ pub fn get_compiler_args(path: &Path) -> Result<String> {
         interface_filename.push('i');
         PathBuf::from(&interface_filename).exists()
     };
-    let compiler_args = compiler_args(
-        &rescript_config,
-        &root_rescript_config,
+    let compiler_args = compile::compiler_args(
+        project_context.get_current_rescript_config(),
         &ast_path,
         relative_filename,
         is_interface,
         has_interface,
-        &package_root,
-        &workspace_root,
+        &project_context,
         &None,
         is_type_dev,
         true,
@@ -123,10 +112,8 @@ pub fn initialize_build(
     build_dev_deps: bool,
     snapshot_output: bool,
 ) -> Result<BuildState> {
-    let project_root = helpers::get_abs_path(path);
-    let workspace_root = helpers::get_workspace_root(&project_root);
     let bsc_path = helpers::get_bsc();
-    let root_config_name = packages::read_package_name(&project_root)?;
+    let project_context = ProjectContext::new(path)?;
 
     if !snapshot_output && show_progress {
         print!("{} {}Building package tree...", style("[1/7]").bold().dim(), TREE);
@@ -134,13 +121,7 @@ pub fn initialize_build(
     }
 
     let timing_package_tree = Instant::now();
-    let PackageMap { packages, .. } = packages::make(
-        filter,
-        &project_root,
-        &workspace_root,
-        show_progress,
-        build_dev_deps,
-    )?;
+    let packages = packages::make(filter, &project_context, show_progress, build_dev_deps)?;
     let timing_package_tree_elapsed = timing_package_tree.elapsed();
 
     if !snapshot_output && show_progress {
@@ -170,7 +151,7 @@ pub fn initialize_build(
         let _ = stdout().flush();
     }
 
-    let mut build_state = BuildState::new(project_root, root_config_name, packages, workspace_root, bsc_path);
+    let mut build_state = BuildState::new(project_context, packages, bsc_path);
     packages::parse_packages(&mut build_state);
     let timing_source_files_elapsed = timing_source_files.elapsed();
 
@@ -566,9 +547,8 @@ pub fn build(
 
 pub fn pass_through_legacy(mut args: Vec<OsString>) -> i32 {
     let project_root = helpers::get_abs_path(Path::new("."));
-    let workspace_root = helpers::get_workspace_root(&project_root);
-
-    let rescript_legacy_path = helpers::get_rescript_legacy(&project_root, workspace_root);
+    let project_context = ProjectContext::new(&project_root).unwrap();
+    let rescript_legacy_path = helpers::get_rescript_legacy(&project_context);
 
     args.insert(0, rescript_legacy_path.into());
     let status = std::process::Command::new("node")
