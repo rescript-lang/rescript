@@ -432,14 +432,24 @@ end
 (* Helpers for JSX *)
 let string_of_jsx_tag_name (tag_name : Parsetree.jsx_tag_name) : string =
   match tag_name with
-  | Parsetree.Lower {name; _} -> name
-  | Parsetree.QualifiedLower {path; name; _} ->
+  | Parsetree.JsxLowerTag {name; _} -> name
+  | Parsetree.JsxQualifiedLowerTag {path; name; _} ->
     String.concat "." (Longident.flatten path) ^ "." ^ name
-  | Parsetree.Upper {path; _} -> String.concat "." (Longident.flatten path)
+  | Parsetree.JsxUpperTag {path; _} ->
+    String.concat "." (Longident.flatten path)
+  | Parsetree.JsxTagInvalid _ -> "_"
 
 let longident_of_jsx_tag_name (tag_name : Parsetree.jsx_tag_name) : Longident.t
     =
   match tag_name with
-  | Parsetree.Lower {name; _} -> Longident.Lident name
-  | Parsetree.QualifiedLower {path; name; _} -> Longident.Ldot (path, name)
-  | Parsetree.Upper {path; _} -> path
+  | Parsetree.JsxLowerTag {name; _} -> Longident.Lident name
+  | Parsetree.JsxQualifiedLowerTag {path; name; _} -> Longident.Ldot (path, name)
+  | Parsetree.JsxUpperTag {path; _} -> path
+  | Parsetree.JsxTagInvalid _ -> Longident.Lident "_"
+
+let loc_of_jsx_tag_name (tag_name : Parsetree.jsx_tag_name) : Location.t =
+  match tag_name with
+  | Parsetree.JsxLowerTag {loc; _} -> loc
+  | Parsetree.JsxQualifiedLowerTag {loc; _} -> loc
+  | Parsetree.JsxUpperTag {loc; _} -> loc
+  | Parsetree.JsxTagInvalid {loc; _} -> loc

@@ -1684,9 +1684,10 @@ and walk_expression expr t comments =
       in
       let name_loc =
         match tag_name with
-        | Parsetree.Lower {loc; _}
-        | Parsetree.QualifiedLower {loc; _}
-        | Parsetree.Upper {loc; _} ->
+        | Parsetree.JsxLowerTag {loc; _}
+        | Parsetree.JsxQualifiedLowerTag {loc; _}
+        | Parsetree.JsxUpperTag {loc; _}
+        | Parsetree.JsxTagInvalid {loc} ->
           loc
       in
       partition_adjacent_trailing_before_next_token_on_same_line name_loc
@@ -1696,9 +1697,10 @@ and walk_expression expr t comments =
     (* Only attach comments to the element name if they are on the same line *)
     let name_loc =
       match tag_name with
-      | Parsetree.Lower {loc; _}
-      | Parsetree.QualifiedLower {loc; _}
-      | Parsetree.Upper {loc; _} ->
+      | Parsetree.JsxLowerTag {loc; _}
+      | Parsetree.JsxQualifiedLowerTag {loc; _}
+      | Parsetree.JsxUpperTag {loc; _}
+      | Parsetree.JsxTagInvalid {loc} ->
         loc
     in
     attach t.trailing name_loc after_opening_tag_name;
@@ -1742,9 +1744,10 @@ and walk_expression expr t comments =
       in
       let name_loc =
         match tag_name_start with
-        | Parsetree.Lower {loc; _}
-        | Parsetree.QualifiedLower {loc; _}
-        | Parsetree.Upper {loc; _} ->
+        | Parsetree.JsxLowerTag {loc; _}
+        | Parsetree.JsxQualifiedLowerTag {loc; _}
+        | Parsetree.JsxUpperTag {loc; _}
+        | Parsetree.JsxTagInvalid {loc} ->
           loc
       in
       partition_adjacent_trailing_before_next_token_on_same_line name_loc
@@ -1753,9 +1756,10 @@ and walk_expression expr t comments =
     (* Only attach comments to the element name if they are on the same line *)
     let name_loc =
       match tag_name_start with
-      | Parsetree.Lower {loc; _}
-      | Parsetree.QualifiedLower {loc; _}
-      | Parsetree.Upper {loc; _} ->
+      | Parsetree.JsxLowerTag {loc; _}
+      | Parsetree.JsxQualifiedLowerTag {loc; _}
+      | Parsetree.JsxUpperTag {loc; _}
+      | Parsetree.JsxTagInvalid {loc} ->
         loc
     in
     attach t.trailing name_loc after_opening_tag_name;

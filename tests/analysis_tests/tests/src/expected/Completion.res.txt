@@ -1065,7 +1065,7 @@ Path Objects.object
 
 Complete src/Completion.res 151:6
 posCursor:[151:6] posNoWhite:[151:5] Found expr:[151:3->151:6]
-JSX <_:__ghost__[0:-1->0:-1]> (no props due to invalid tag)
+JSX <_:__ghost__[0:-1->0:-1] > _children:None
 []
 
 Complete src/Completion.res 157:8

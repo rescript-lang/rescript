@@ -326,9 +326,10 @@ and jsx_element =
   | Jsx_container_element of jsx_container_element
 
 and jsx_tag_name =
-  | Lower of {name: string; loc: Location.t}
-  | QualifiedLower of {path: Longident.t; name: string; loc: Location.t}
-  | Upper of {path: Longident.t; loc: Location.t}
+  | JsxLowerTag of {name: string; loc: Location.t}
+  | JsxQualifiedLowerTag of {path: Longident.t; name: string; loc: Location.t}
+  | JsxUpperTag of {path: Longident.t; loc: Location.t}
+  | JsxTagInvalid of {loc: Location.t}
 
 and jsx_fragment = {
   (* > *) jsx_fragment_opening: Lexing.position;

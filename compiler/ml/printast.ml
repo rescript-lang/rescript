@@ -44,11 +44,12 @@ let fmt_longident_loc f (x : Longident.t loc) =
 
 let fmt_jsx_tag_name f (x : jsx_tag_name) =
   match x with
-  | Lower {name; loc} -> fprintf f "\"%s\" %a" name fmt_location loc
-  | QualifiedLower {path; name; loc} ->
+  | JsxLowerTag {name; loc} -> fprintf f "\"%s\" %a" name fmt_location loc
+  | JsxQualifiedLowerTag {path; name; loc} ->
     fprintf f "\"%a.%s\" %a" fmt_longident_aux path name fmt_location loc
-  | Upper {path; loc} ->
+  | JsxUpperTag {path; loc} ->
     fprintf f "\"%a\" %a" fmt_longident_aux path fmt_location loc
+  | JsxTagInvalid {loc} -> fprintf f "\"_\" %a" fmt_location loc
 
 let fmt_string_loc f (x : string loc) =
   fprintf f "\"%s\" %a" x.txt fmt_location x.loc

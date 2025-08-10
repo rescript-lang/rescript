@@ -303,6 +303,7 @@ end
 
 val string_of_jsx_tag_name : Parsetree.jsx_tag_name -> string
 val longident_of_jsx_tag_name : Parsetree.jsx_tag_name -> Longident.t
+val loc_of_jsx_tag_name : Parsetree.jsx_tag_name -> Location.t
 
 (** {1 Module language} *)
 

@@ -296,8 +296,8 @@ let rec add_expr bv exp =
     ->
     (* Conservatively add all module path segments referenced by the tag name *)
     (match name with
-    | Lower _ -> ()
-    | QualifiedLower {path; _} | Upper {path; _} -> add_path bv path);
+    | JsxLowerTag _ | JsxTagInvalid _ -> ()
+    | JsxQualifiedLowerTag {path; _} | JsxUpperTag {path; _} -> add_path bv path);
     and_jsx_props bv props
   | Pexp_jsx_element
       (Jsx_container_element
@@ -307,8 +307,8 @@ let rec add_expr bv exp =
            jsx_container_element_children = children;
          }) ->
     (match name with
-    | Lower _ -> ()
-    | QualifiedLower {path; _} | Upper {path; _} -> add_path bv path);
+    | JsxLowerTag _ | JsxTagInvalid _ -> ()
+    | JsxQualifiedLowerTag {path; _} | JsxUpperTag {path; _} -> add_path bv path);
     and_jsx_props bv props;
     add_jsx_children bv children
 

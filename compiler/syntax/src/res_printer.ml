@@ -4442,13 +4442,7 @@ and print_pexp_apply ~state expr cmt_tbl =
 and print_jsx_unary_tag ~state tag_name props expr_loc cmt_tbl =
   let name = print_jsx_name tag_name in
   let formatted_props = print_jsx_props ~state props cmt_tbl in
-  let tag_loc =
-    match tag_name with
-    | Parsetree.Lower {loc; _}
-    | Parsetree.QualifiedLower {loc; _}
-    | Parsetree.Upper {loc; _} ->
-      loc
-  in
+  let tag_loc = Ast_helper.loc_of_jsx_tag_name tag_name in
   let tag_has_trailing_comment = has_trailing_comments cmt_tbl tag_loc in
   let tag_has_no_props = List.length props == 0 in
   let closing_token_loc =
@@ -4559,13 +4553,8 @@ and print_jsx_container_tag ~state tag_name
            (Doc.concat
               [
                 (* Opening tag name and props *)
-                (let tag_loc =
-                   match tag_name with
-                   | Parsetree.Lower {loc; _}
-                   | Parsetree.QualifiedLower {loc; _}
-                   | Parsetree.Upper {loc; _} ->
-                     loc
-                 in
+                (let tag_loc = Ast_helper.loc_of_jsx_tag_name tag_name in
+
                  let opening_tag_name_doc =
                    print_comments
                      (Doc.concat [Doc.less_than; name])

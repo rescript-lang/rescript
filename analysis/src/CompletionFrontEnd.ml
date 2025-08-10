@@ -1350,9 +1350,11 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
               || (oc >= Char.code 'A' && oc <= Char.code 'Z')
             in
             match compName with
-            | Parsetree.Lower {name; _} | Parsetree.QualifiedLower {name; _} ->
+            | Parsetree.JsxLowerTag {name; _}
+            | Parsetree.JsxQualifiedLowerTag {name; _} ->
               String.length name > 0 && is_alpha name.[0]
-            | Parsetree.Upper _ -> true
+            | Parsetree.JsxUpperTag _ -> true
+            | Parsetree.JsxTagInvalid _ -> false
           in
           let children =
             match expr.pexp_desc with
@@ -1362,13 +1364,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
               children
             | _ -> JSXChildrenItems []
           in
-          let compName_loc =
-            match compName with
-            | Parsetree.Lower {loc; _}
-            | Parsetree.QualifiedLower {loc; _}
-            | Parsetree.Upper {loc; _} ->
-              loc
-          in
+          let compName_loc = Ast_helper.loc_of_jsx_tag_name compName in
           let compName_lid = Ast_helper.longident_of_jsx_tag_name compName in
           let jsxPropsOpt =
             if is_valid_tag_for_props then
@@ -1406,7 +1402,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
           (* If the tag name is an uppercase path and the cursor is right after a dot (e.g., <O.|),
              prefer module member completion over JSX prop suggestions. *)
           (match compName with
-          | Parsetree.Upper _ when blankAfterCursor = Some '.' ->
+          | Parsetree.JsxUpperTag _ when blankAfterCursor = Some '.' ->
             setResult
               (Cpath
                  (CPId

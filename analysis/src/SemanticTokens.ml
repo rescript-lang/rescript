@@ -268,9 +268,10 @@ let command ~debug ~emitter ~path =
       let lid = Ast_helper.longident_of_jsx_tag_name lident in
       let loc =
         match lident with
-        | Parsetree.Lower {loc; _}
-        | Parsetree.QualifiedLower {loc; _}
-        | Parsetree.Upper {loc; _} ->
+        | Parsetree.JsxLowerTag {loc; _}
+        | Parsetree.JsxQualifiedLowerTag {loc; _}
+        | Parsetree.JsxUpperTag {loc; _}
+        | Parsetree.JsxTagInvalid {loc} ->
           loc
       in
       emitter |> emitJsxOpen ~lid ~debug ~loc;
@@ -292,9 +293,10 @@ let command ~debug ~emitter ~path =
       let lid = Ast_helper.longident_of_jsx_tag_name lident in
       let loc =
         match lident with
-        | Parsetree.Lower {loc; _}
-        | Parsetree.QualifiedLower {loc; _}
-        | Parsetree.Upper {loc; _} ->
+        | Parsetree.JsxLowerTag {loc; _}
+        | Parsetree.JsxQualifiedLowerTag {loc; _}
+        | Parsetree.JsxUpperTag {loc; _}
+        | Parsetree.JsxTagInvalid {loc} ->
           loc
       in
       emitter |> emitJsxOpen ~lid ~debug ~loc;
@@ -327,9 +329,10 @@ let command ~debug ~emitter ~path =
              let lid = Ast_helper.longident_of_jsx_tag_name tag_name_end in
              let loc =
                match tag_name_end with
-               | Parsetree.Lower {loc; _}
-               | Parsetree.QualifiedLower {loc; _}
-               | Parsetree.Upper {loc; _} ->
+               | Parsetree.JsxLowerTag {loc; _}
+               | Parsetree.JsxQualifiedLowerTag {loc; _}
+               | Parsetree.JsxUpperTag {loc; _}
+               | Parsetree.JsxTagInvalid {loc} ->
                  loc
              in
              emitter |> emitJsxClose ~debug ~lid ~pos:(Loc.end_ loc);

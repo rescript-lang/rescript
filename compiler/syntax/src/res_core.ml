@@ -791,7 +791,7 @@ let read_jsx_tag_name (p : Parser.t) : Parsetree.jsx_tag_name option =
   | None -> None
   | Some (_, _, `Lower) ->
     read_local_jsx_name p
-    |> Option.map (fun (name, loc, _) -> Parsetree.Lower {name; loc})
+    |> Option.map (fun (name, loc, _) -> Parsetree.JsxLowerTag {name; loc})
   | Some (seg, seg_loc, `Upper) ->
     let start_pos = seg_loc.Location.loc_start in
     let rev_segs = ref [seg] in
@@ -820,13 +820,13 @@ let read_jsx_tag_name (p : Parser.t) : Parsetree.jsx_tag_name option =
           | Some (lname, l_loc, _) ->
             let path = longident_of_segments (List.rev !rev_segs) in
             let loc = mk_loc start_pos l_loc.Location.loc_end in
-            Some (Parsetree.QualifiedLower {path; name = lname; loc})
+            Some (Parsetree.JsxQualifiedLowerTag {path; name = lname; loc})
           | None -> None))
       | _ ->
         (* pure Upper path *)
         let path = longident_of_segments (List.rev !rev_segs) in
         let loc = mk_loc start_pos !last_end in
-        Some (Parsetree.Upper {path; loc})
+        Some (Parsetree.JsxUpperTag {path; loc})
     in
     loop ()
 
@@ -2645,7 +2645,7 @@ and parse_jsx_name p : Parsetree.jsx_tag_name =
        or Navbar in <Navbar />"
     in
     Parser.err p (Diagnostics.message msg);
-    Parsetree.Lower {name = "_"; loc = Location.none}
+    Parsetree.JsxTagInvalid {loc = Location.none}
 
 and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
     ~start_pos p : Parsetree.expression =
@@ -2776,13 +2776,8 @@ and parse_jsx p =
       parse_jsx_fragment start_pos p
     | _ ->
       let tag_name = parse_jsx_name p in
-      let (loc : Location.t) =
-        match tag_name with
-        | Parsetree.Lower {loc; _}
-        | Parsetree.QualifiedLower {loc; _}
-        | Parsetree.Upper {loc; _} ->
-          loc
-      in
+      let (loc : Location.t) = Ast_helper.loc_of_jsx_tag_name tag_name in
+
       let lid = Ast_helper.longident_of_jsx_tag_name tag_name in
       Ast_helper.Exp.ident ~loc (Location.mkloc lid loc)
   in
