@@ -1341,8 +1341,19 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                 {
                   jsx_container_element_tag_name_start = compName;
                   jsx_container_element_props = props;
-                } ) ->
+                } ) -> (
           inJsxContext := true;
+          let is_valid_tag_for_props =
+            let is_alpha c =
+              let oc = Char.code c in
+              (oc >= Char.code 'a' && oc <= Char.code 'z')
+              || (oc >= Char.code 'A' && oc <= Char.code 'Z')
+            in
+            match compName with
+            | Parsetree.Lower {name; _} | Parsetree.QualifiedLower {name; _} ->
+              String.length name > 0 && is_alpha name.[0]
+            | Parsetree.Upper _ -> true
+          in
           let children =
             match expr.pexp_desc with
             | Pexp_jsx_element
@@ -1359,29 +1370,39 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
               loc
           in
           let compName_lid = Ast_helper.longident_of_jsx_tag_name compName in
-          let jsxProps =
-            CompletionJsx.extractJsxProps
-              ~compName:(Location.mkloc compName_lid compName_loc)
-              ~props ~children
+          let jsxPropsOpt =
+            if is_valid_tag_for_props then
+              Some
+                (CompletionJsx.extractJsxProps
+                   ~compName:(Location.mkloc compName_lid compName_loc)
+                   ~props ~children)
+            else None
           in
           let compNamePath =
             flattenLidCheckDot ~jsx:true
               {txt = compName_lid; loc = compName_loc}
           in
-          if debug then
-            Printf.printf "JSX <%s:%s %s> _children:%s\n"
-              (compNamePath |> String.concat ".")
-              (Loc.toString compName_loc)
-              (jsxProps.props
-              |> List.map
-                   (fun ({name; posStart; posEnd; exp} : CompletionJsx.prop) ->
-                     Printf.sprintf "%s[%s->%s]=...%s" name
-                       (Pos.toString posStart) (Pos.toString posEnd)
-                       (Loc.toString exp.pexp_loc))
-              |> String.concat " ")
-              (match jsxProps.childrenStart with
-              | None -> "None"
-              | Some childrenPosStart -> Pos.toString childrenPosStart);
+          (if debug then
+             match jsxPropsOpt with
+             | Some jsxProps ->
+               Printf.printf "JSX <%s:%s %s> _children:%s\n"
+                 (compNamePath |> String.concat ".")
+                 (Loc.toString compName_loc)
+                 (jsxProps.props
+                 |> List.map
+                      (fun
+                        ({name; posStart; posEnd; exp} : CompletionJsx.prop) ->
+                        Printf.sprintf "%s[%s->%s]=...%s" name
+                          (Pos.toString posStart) (Pos.toString posEnd)
+                          (Loc.toString exp.pexp_loc))
+                 |> String.concat " ")
+                 (match jsxProps.childrenStart with
+                 | None -> "None"
+                 | Some childrenPosStart -> Pos.toString childrenPosStart)
+             | None ->
+               Printf.printf "JSX <%s:%s > _children:None\n"
+                 (compNamePath |> String.concat ".")
+                 (Loc.toString compName_loc));
           (* If the tag name is an uppercase path and the cursor is right after a dot (e.g., <O.|),
              prefer module member completion over JSX prop suggestions. *)
           (match compName with
@@ -1396,24 +1417,30 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                     }))
           | _ -> ());
           let jsxCompletable =
-            match expr.pexp_desc with
-            | Pexp_jsx_element
-                (Jsx_container_element
-                   {
-                     jsx_container_element_closing_tag = None;
-                     jsx_container_element_children =
-                       JSXChildrenSpreading _ | JSXChildrenItems (_ :: _);
-                   }) ->
-              (* This is a weird edge case where there is no closing tag but there are children *)
+            match (jsxPropsOpt, expr.pexp_desc) with
+            | ( Some _,
+                Pexp_jsx_element
+                  (Jsx_container_element
+                     {
+                       jsx_container_element_closing_tag = None;
+                       jsx_container_element_children =
+                         JSXChildrenSpreading _ | JSXChildrenItems (_ :: _);
+                     }) ) ->
               None
-            | _ ->
+            | Some jsxProps, _ ->
               CompletionJsx.findJsxPropsCompletable ~jsxProps
                 ~endPos:(Loc.end_ expr.pexp_loc) ~posBeforeCursor
                 ~posAfterCompName:(Loc.end_ compName_loc)
                 ~firstCharBeforeCursorNoWhite ~charAtCursor
+            | None, _ -> None
           in
-          if jsxCompletable <> None then setResultOpt jsxCompletable
-          else if compName_loc |> Loc.hasPos ~pos:posBeforeCursor then
+          (match jsxCompletable with
+          | Some _ as res -> setResultOpt res
+          | None -> ());
+          if
+            jsxCompletable = None
+            && compName_loc |> Loc.hasPos ~pos:posBeforeCursor
+          then
             setResult
               (match compNamePath with
               | [prefix] when Char.lowercase_ascii prefix.[0] = prefix.[0] ->
@@ -1426,7 +1453,10 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                        path = compNamePath;
                        completionContext = Module;
                      }))
-          else iterateJsxProps ~iterator jsxProps
+          else
+            match jsxPropsOpt with
+            | Some jsxProps -> iterateJsxProps ~iterator jsxProps
+            | None -> ())
         | Pexp_apply
             {
               funct = {pexp_desc = Pexp_ident {txt = Lident "->"}};

@@ -1065,12 +1065,7 @@ Path Objects.object
 
 Complete src/Completion.res 151:6
 posCursor:[151:6] posNoWhite:[151:5] Found expr:[151:3->151:6]
-JSX <_:__ghost__[0:-1->0:-1] > _children:None
-Completable: Cpath Module[_]
-Package opens Stdlib.place holder Pervasives.JsxModules.place holder
-Resolved opens 1 Stdlib
-ContextPath Module[_]
-Path _
+JSX <_:__ghost__[0:-1->0:-1]> (no props due to invalid tag)
 []
 
 Complete src/Completion.res 157:8
