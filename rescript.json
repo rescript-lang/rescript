@@ -1,4 +1,4 @@
 {
   "name": "rescript",
-  "dependencies": ["@tests/gentype-react-example"]
+  "dependencies": ["@tests/gentype-react-example", "playground"]
 }
