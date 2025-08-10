@@ -104,10 +104,20 @@ fn read_local_packages(folder_path: &Path, config: &Config) -> Result<AHashSet<S
 
     for dep in dependencies {
         // Monorepo packages are expected to be symlinked in node_modules.
-        if let Ok(dep_path) = folder_path.join("node_modules").join(&dep).canonicalize()
-            && helpers::is_local_package(folder_path, &dep_path)
+        if let Ok(dep_path) = folder_path
+            .join("node_modules")
+            .join(&dep)
+            .canonicalize()
+            .map(helpers::StrippedVerbatimPath::to_stripped_verbatim_path)
         {
-            local_dependencies.insert(dep.to_string());
+            debug!(
+                "Checking if dependency \"{}\" is a local package at \"{}\"",
+                dep,
+                dep_path.display()
+            );
+            if helpers::is_local_package(folder_path, &dep_path) {
+                local_dependencies.insert(dep.to_string());
+            }
         }
     }
 
