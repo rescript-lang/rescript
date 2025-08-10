@@ -358,7 +358,8 @@ module E = struct
         (Jsx_unary_element
            {jsx_unary_element_tag_name = name; jsx_unary_element_props = props})
       ->
-      jsx_unary_element ~loc ~attrs (map_loc sub name) (map_jsx_props sub props)
+      (* pass through jsx_tag_name unchanged; it is not a loc *)
+      jsx_unary_element ~loc ~attrs name (map_jsx_props sub props)
     | Pexp_jsx_element
         (Jsx_container_element
            {
@@ -368,8 +369,7 @@ module E = struct
              jsx_container_element_children = children;
              jsx_container_element_closing_tag = closing_tag;
            }) ->
-      jsx_container_element ~loc ~attrs (map_loc sub name)
-        (map_jsx_props sub props) ote
+      jsx_container_element ~loc ~attrs name (map_jsx_props sub props) ote
         (map_jsx_children sub children)
         closing_tag
 end

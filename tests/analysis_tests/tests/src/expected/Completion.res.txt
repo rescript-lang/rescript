@@ -1065,19 +1065,13 @@ Path Objects.object
 
 Complete src/Completion.res 151:6
 posCursor:[151:6] posNoWhite:[151:5] Found expr:[151:3->151:6]
-JSX <O.:[151:4->151:6] > _children:None
-Completable: Cpath Module[O, ""]
+JSX <_:__ghost__[0:-1->0:-1] > _children:None
+Completable: Cpath Module[_]
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
-ContextPath Module[O, ""]
-Path O.
-[{
-    "label": "Comp",
-    "kind": 9,
-    "tags": [],
-    "detail": "module Comp",
-    "documentation": null
-  }]
+ContextPath Module[_]
+Path _
+[]
 
 Complete src/Completion.res 157:8
 posCursor:[157:8] posNoWhite:[157:7] Found expr:[157:3->157:8]

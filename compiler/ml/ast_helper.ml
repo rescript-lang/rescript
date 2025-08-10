@@ -428,3 +428,18 @@ module Te = struct
       pext_attributes = attrs;
     }
 end
+
+(* Helpers for JSX *)
+let string_of_jsx_tag_name (tag_name : Parsetree.jsx_tag_name) : string =
+  match tag_name with
+  | Parsetree.Lower {name; _} -> name
+  | Parsetree.QualifiedLower {path; name; _} ->
+    String.concat "." (Longident.flatten path) ^ "." ^ name
+  | Parsetree.Upper {path; _} -> String.concat "." (Longident.flatten path)
+
+let longident_of_jsx_tag_name (tag_name : Parsetree.jsx_tag_name) : Longident.t
+    =
+  match tag_name with
+  | Parsetree.Lower {name; _} -> Longident.Lident name
+  | Parsetree.QualifiedLower {path; name; _} -> Longident.Ldot (path, name)
+  | Parsetree.Upper {path; _} -> path

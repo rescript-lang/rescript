@@ -396,10 +396,23 @@ module E = struct
       when has_jsx_attribute () -> (
       let attrs = attrs |> List.filter (fun ({txt}, _) -> txt <> "JSX") in
       let props, children = extract_props_and_children sub args in
+      let jsx_tag : Pt.jsx_tag_name =
+        match tag_name.txt with
+        | Longident.Lident s
+          when String.length s > 0 && Char.lowercase_ascii s.[0] = s.[0] ->
+          Pt.Lower {name = s; loc = tag_name.loc}
+        | Longident.Lident _ ->
+          Pt.Upper {path = tag_name.txt; loc = tag_name.loc}
+        | Longident.Ldot (path, last)
+          when String.length last > 0
+               && Char.lowercase_ascii last.[0] = last.[0] ->
+          Pt.QualifiedLower {path; name = last; loc = tag_name.loc}
+        | _ -> Pt.Upper {path = tag_name.txt; loc = tag_name.loc}
+      in
       match children with
-      | None -> jsx_unary_element ~loc ~attrs tag_name props
+      | None -> jsx_unary_element ~loc ~attrs jsx_tag props
       | Some children ->
-        jsx_container_element ~loc ~attrs tag_name props Lexing.dummy_pos
+        jsx_container_element ~loc ~attrs jsx_tag props Lexing.dummy_pos
           children None)
     | Pexp_apply (e, l) ->
       let e =

@@ -212,13 +212,13 @@ module Exp : sig
   val jsx_unary_element :
     ?loc:loc ->
     ?attrs:attrs ->
-    Longident.t Location.loc ->
+    Parsetree.jsx_tag_name ->
     Parsetree.jsx_props ->
     expression
   val jsx_container_element :
     ?loc:loc ->
     ?attrs:attrs ->
-    Longident.t Location.loc ->
+    Parsetree.jsx_tag_name ->
     Parsetree.jsx_props ->
     Lexing.position ->
     Parsetree.jsx_children ->
@@ -300,6 +300,9 @@ module Te : sig
     extension_constructor
   val rebind : ?loc:loc -> ?attrs:attrs -> str -> lid -> extension_constructor
 end
+
+val string_of_jsx_tag_name : Parsetree.jsx_tag_name -> string
+val longident_of_jsx_tag_name : Parsetree.jsx_tag_name -> Longident.t
 
 (** {1 Module language} *)
 

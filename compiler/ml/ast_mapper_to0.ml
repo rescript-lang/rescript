@@ -495,7 +495,16 @@ module E = struct
              jsx_unary_element_tag_name = tag_name;
              jsx_unary_element_props = props;
            }) ->
-      let tag_ident = map_loc sub tag_name in
+      let tag_ident : Longident.t Location.loc =
+        let txt, loc =
+          match tag_name with
+          | Lower {name; loc} -> (Longident.Lident name, loc)
+          | QualifiedLower {path; name; loc} ->
+            (Longident.Ldot (path, name), loc)
+          | Upper {path; loc} -> (path, loc)
+        in
+        {txt; loc}
+      in
       let props = map_jsx_props sub props in
       let children_expr =
         let loc =
@@ -525,7 +534,16 @@ module E = struct
              jsx_container_element_props = props;
              jsx_container_element_children = children;
            }) ->
-      let tag_ident = map_loc sub tag_name in
+      let tag_ident : Longident.t Location.loc =
+        let txt, loc =
+          match tag_name with
+          | Lower {name; loc} -> (Longident.Lident name, loc)
+          | QualifiedLower {path; name; loc} ->
+            (Longident.Ldot (path, name), loc)
+          | Upper {path; loc} -> (path, loc)
+        in
+        {txt; loc}
+      in
       let props = map_jsx_props sub props in
       let children_expr = map_jsx_children sub loc children in
       apply ~loc ~attrs:(jsx_attr sub :: attrs) (ident tag_ident)

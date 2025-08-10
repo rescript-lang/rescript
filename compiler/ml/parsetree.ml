@@ -325,6 +325,11 @@ and jsx_element =
   | Jsx_unary_element of jsx_unary_element
   | Jsx_container_element of jsx_container_element
 
+and jsx_tag_name =
+  | Lower of {name: string; loc: Location.t}
+  | QualifiedLower of {path: Longident.t; name: string; loc: Location.t}
+  | Upper of {path: Longident.t; loc: Location.t}
+
 and jsx_fragment = {
   (* > *) jsx_fragment_opening: Lexing.position;
   (* children *) jsx_fragment_children: jsx_children;
@@ -332,13 +337,13 @@ and jsx_fragment = {
 }
 
 and jsx_unary_element = {
-  jsx_unary_element_tag_name: Longident.t loc;
+  jsx_unary_element_tag_name: jsx_tag_name;
   jsx_unary_element_props: jsx_props;
 }
 
 and jsx_container_element = {
   (* jsx_container_element_opening_tag_start: Lexing.position; *)
-  jsx_container_element_tag_name_start: Longident.t loc;
+  jsx_container_element_tag_name_start: jsx_tag_name;
   (* > *)
   jsx_container_element_opening_tag_end: Lexing.position;
   jsx_container_element_props: jsx_props;
@@ -376,7 +381,7 @@ and jsx_closing_container_tag = {
   (* </ *)
   jsx_closing_container_tag_start: Lexing.position;
   (* name *)
-  jsx_closing_container_tag_name: Longident.t loc;
+  jsx_closing_container_tag_name: jsx_tag_name;
   (* > *)
   jsx_closing_container_tag_end: Lexing.position;
 }

@@ -1351,14 +1351,27 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
               children
             | _ -> JSXChildrenItems []
           in
-          let jsxProps =
-            CompletionJsx.extractJsxProps ~compName ~props ~children
+          let compName_loc =
+            match compName with
+            | Parsetree.Lower {loc; _}
+            | Parsetree.QualifiedLower {loc; _}
+            | Parsetree.Upper {loc; _} ->
+              loc
           in
-          let compNamePath = flattenLidCheckDot ~jsx:true compName in
+          let compName_lid = Ast_helper.longident_of_jsx_tag_name compName in
+          let jsxProps =
+            CompletionJsx.extractJsxProps
+              ~compName:(Location.mkloc compName_lid compName_loc)
+              ~props ~children
+          in
+          let compNamePath =
+            flattenLidCheckDot ~jsx:true
+              {txt = compName_lid; loc = compName_loc}
+          in
           if debug then
             Printf.printf "JSX <%s:%s %s> _children:%s\n"
               (compNamePath |> String.concat ".")
-              (Loc.toString compName.loc)
+              (Loc.toString compName_loc)
               (jsxProps.props
               |> List.map
                    (fun ({name; posStart; posEnd; exp} : CompletionJsx.prop) ->
@@ -1369,6 +1382,19 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
               (match jsxProps.childrenStart with
               | None -> "None"
               | Some childrenPosStart -> Pos.toString childrenPosStart);
+          (* If the tag name is an uppercase path and the cursor is right after a dot (e.g., <O.|),
+             prefer module member completion over JSX prop suggestions. *)
+          (match compName with
+          | Parsetree.Upper _ when blankAfterCursor = Some '.' ->
+            setResult
+              (Cpath
+                 (CPId
+                    {
+                      loc = compName_loc;
+                      path = compNamePath;
+                      completionContext = Module;
+                    }))
+          | _ -> ());
           let jsxCompletable =
             match expr.pexp_desc with
             | Pexp_jsx_element
@@ -1383,11 +1409,11 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
             | _ ->
               CompletionJsx.findJsxPropsCompletable ~jsxProps
                 ~endPos:(Loc.end_ expr.pexp_loc) ~posBeforeCursor
-                ~posAfterCompName:(Loc.end_ compName.loc)
+                ~posAfterCompName:(Loc.end_ compName_loc)
                 ~firstCharBeforeCursorNoWhite ~charAtCursor
           in
           if jsxCompletable <> None then setResultOpt jsxCompletable
-          else if compName.loc |> Loc.hasPos ~pos:posBeforeCursor then
+          else if compName_loc |> Loc.hasPos ~pos:posBeforeCursor then
             setResult
               (match compNamePath with
               | [prefix] when Char.lowercase_ascii prefix.[0] = prefix.[0] ->
@@ -1396,7 +1422,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                 Cpath
                   (CPId
                      {
-                       loc = compName.loc;
+                       loc = compName_loc;
                        path = compNamePath;
                        completionContext = Module;
                      }))

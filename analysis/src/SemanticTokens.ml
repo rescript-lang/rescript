@@ -265,7 +265,15 @@ let command ~debug ~emitter ~path =
       *)
       emitter (* --> <div... *)
       |> emitJsxTag ~debug ~name:"<" ~pos:(Loc.start e.pexp_loc);
-      emitter |> emitJsxOpen ~lid:lident.txt ~debug ~loc:lident.loc;
+      let lid = Ast_helper.longident_of_jsx_tag_name lident in
+      let loc =
+        match lident with
+        | Parsetree.Lower {loc; _}
+        | Parsetree.QualifiedLower {loc; _}
+        | Parsetree.Upper {loc; _} ->
+          loc
+      in
+      emitter |> emitJsxOpen ~lid ~debug ~loc;
       let closing_line, closing_column = Loc.end_ e.pexp_loc in
       emitter (* <foo ...props /> <-- *)
       |> emitJsxTag ~debug ~name:"/>" ~pos:(closing_line, closing_column - 2)
@@ -281,7 +289,15 @@ let command ~debug ~emitter ~path =
       (* opening tag *)
       emitter (* --> <div... *)
       |> emitJsxTag ~debug ~name:"<" ~pos:(Loc.start e.pexp_loc);
-      emitter |> emitJsxOpen ~lid:lident.txt ~debug ~loc:lident.loc;
+      let lid = Ast_helper.longident_of_jsx_tag_name lident in
+      let loc =
+        match lident with
+        | Parsetree.Lower {loc; _}
+        | Parsetree.QualifiedLower {loc; _}
+        | Parsetree.Upper {loc; _} ->
+          loc
+      in
+      emitter |> emitJsxOpen ~lid ~debug ~loc;
       emitter (* <foo ...props > <-- *)
       |> emitJsxTag ~debug ~name:">"
            ~pos:(Pos.ofLexing posOfGreatherthanAfterProps);
@@ -308,9 +324,15 @@ let command ~debug ~emitter ~path =
              emitter
              |> emitJsxTag ~debug ~name:"</"
                   ~pos:(Pos.ofLexing closing_less_than);
-             emitter
-             |> emitJsxClose ~debug ~lid:lident.txt
-                  ~pos:(Loc.start tag_name_end.loc);
+             let lid = Ast_helper.longident_of_jsx_tag_name tag_name_end in
+             let loc =
+               match tag_name_end with
+               | Parsetree.Lower {loc; _}
+               | Parsetree.QualifiedLower {loc; _}
+               | Parsetree.Upper {loc; _} ->
+                 loc
+             in
+             emitter |> emitJsxClose ~debug ~lid ~pos:(Loc.end_ loc);
              emitter (* <foo> ... </foo> <-- *)
              |> emitJsxTag ~debug ~name:">"
                   ~pos:(Pos.ofLexing final_greather_than))

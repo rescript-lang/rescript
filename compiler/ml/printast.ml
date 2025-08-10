@@ -42,6 +42,14 @@ let rec fmt_longident_aux f x =
 let fmt_longident_loc f (x : Longident.t loc) =
   fprintf f "\"%a\" %a" fmt_longident_aux x.txt fmt_location x.loc
 
+let fmt_jsx_tag_name f (x : jsx_tag_name) =
+  match x with
+  | Lower {name; loc} -> fprintf f "\"%s\" %a" name fmt_location loc
+  | QualifiedLower {path; name; loc} ->
+    fprintf f "\"%a.%s\" %a" fmt_longident_aux path name fmt_location loc
+  | Upper {path; loc} ->
+    fprintf f "\"%a\" %a" fmt_longident_aux path fmt_location loc
+
 let fmt_string_loc f (x : string loc) =
   fprintf f "\"%s\" %a" x.txt fmt_location x.loc
 
@@ -350,7 +358,7 @@ and expression i ppf x =
       (Jsx_unary_element
          {jsx_unary_element_tag_name = name; jsx_unary_element_props = props})
     ->
-    line i ppf "Pexp_jsx_unary_element %a\n" fmt_longident_loc name;
+    line i ppf "Pexp_jsx_unary_element %a\n" fmt_jsx_tag_name name;
     jsx_props i ppf props
   | Pexp_jsx_element
       (Jsx_container_element
@@ -360,7 +368,7 @@ and expression i ppf x =
            jsx_container_element_opening_tag_end = gt;
            jsx_container_element_children = children;
          }) ->
-    line i ppf "Pexp_jsx_container_element %a\n" fmt_longident_loc name;
+    line i ppf "Pexp_jsx_container_element %a\n" fmt_jsx_tag_name name;
     jsx_props i ppf props;
     if !Clflags.dump_location then line i ppf "> %a\n" (fmt_position false) gt;
     jsx_children i ppf children
