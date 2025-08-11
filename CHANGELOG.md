@@ -19,6 +19,7 @@
 #### :rocket: New Feature
 
 #### :bug: Bug fix
+- Fix issue with ast conversion (for ppx use) on functions with attributes on first argument. https://github.com/rescript-lang/rescript/pull/7761
 
 #### :memo: Documentation
 
