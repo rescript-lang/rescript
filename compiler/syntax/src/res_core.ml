@@ -2666,7 +2666,7 @@ and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
     Parser.expect GreaterThan p;
     let loc = mk_loc start_pos jsx_end_pos in
     Ast_helper.Exp.jsx_unary_element ~loc name jsx_props
-  | GreaterThan ->
+  | GreaterThan -> (
     (* <foo a=b> bar </foo> *)
     let opening_tag_end = p.Parser.start_pos in
     Parser.next p;
@@ -2688,57 +2688,31 @@ and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
     in
     (* Read the closing tag name and verify it matches the opening name *)
     let token0 = p.Parser.token in
-    let expr_after_closing =
-      match token0 with
-      | Lident _ | Uident _ -> (
-        (* Consume the closing name without mutating tokens beforehand *)
-        match read_jsx_tag_name p with
-        | Some closing_name
-          when Ast_helper.Jsx.longident_of_jsx_tag_name closing_name.txt
-               = Ast_helper.Jsx.longident_of_jsx_tag_name name.txt ->
-          let end_tag_name = closing_name in
-          let closing_tag_end = p.start_pos in
-          Parser.expect GreaterThan p;
-          let loc = mk_loc start_pos p.prev_end_pos in
-          let closing_tag =
-            closing_tag_start
-            |> Option.map (fun closing_tag_start ->
-                   {
-                     Parsetree.jsx_closing_container_tag_start =
-                       closing_tag_start;
-                     jsx_closing_container_tag_name = end_tag_name;
-                     jsx_closing_container_tag_end = closing_tag_end;
-                   })
-          in
-          Ast_helper.Exp.jsx_container_element ~loc name jsx_props
-            opening_tag_end children closing_tag
-        | _ ->
-          let () =
-            if Grammar.is_structure_item_start token0 then
-              let closing =
-                "</" ^ Ast_helper.Jsx.string_of_jsx_tag_name name.txt ^ ">"
-              in
-              let msg = Diagnostics.message ("Missing " ^ closing) in
-              Parser.err ~start_pos ~end_pos:p.prev_end_pos p msg
-            else
-              let opening =
-                "</" ^ Ast_helper.Jsx.string_of_jsx_tag_name name.txt ^ ">"
-              in
-              let msg =
-                "Closing jsx name should be the same as the opening name. Did \
-                 you mean " ^ opening ^ " ?"
-              in
-              Parser.err ~start_pos ~end_pos:p.prev_end_pos p
-                (Diagnostics.message msg);
-              (* read_jsx_tag_name already consumed the name; expect the '>') *)
-              Parser.expect GreaterThan p
-          in
-          Ast_helper.Exp.jsx_container_element
-            ~loc:(mk_loc start_pos p.prev_end_pos)
-            name jsx_props opening_tag_end children None)
-      | token ->
+    match token0 with
+    | Lident _ | Uident _ -> (
+      (* Consume the closing name without mutating tokens beforehand *)
+      match read_jsx_tag_name p with
+      | Some closing_name
+        when Ast_helper.Jsx.longident_of_jsx_tag_name closing_name.txt
+             = Ast_helper.Jsx.longident_of_jsx_tag_name name.txt ->
+        let end_tag_name = closing_name in
+        let closing_tag_end = p.start_pos in
+        Parser.expect GreaterThan p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        let closing_tag =
+          closing_tag_start
+          |> Option.map (fun closing_tag_start ->
+                 {
+                   Parsetree.jsx_closing_container_tag_start = closing_tag_start;
+                   jsx_closing_container_tag_name = end_tag_name;
+                   jsx_closing_container_tag_end = closing_tag_end;
+                 })
+        in
+        Ast_helper.Exp.jsx_container_element ~loc name jsx_props opening_tag_end
+          children closing_tag
+      | _ ->
         let () =
-          if Grammar.is_structure_item_start token then
+          if Grammar.is_structure_item_start token0 then
             let closing =
               "</" ^ Ast_helper.Jsx.string_of_jsx_tag_name name.txt ^ ">"
             in
@@ -2753,13 +2727,35 @@ and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
                you mean " ^ opening ^ " ?"
             in
             Parser.err ~start_pos ~end_pos:p.prev_end_pos p
-              (Diagnostics.message msg)
+              (Diagnostics.message msg);
+            (* read_jsx_tag_name already consumed the name; expect the '>') *)
+            Parser.expect GreaterThan p
         in
         Ast_helper.Exp.jsx_container_element
           ~loc:(mk_loc start_pos p.prev_end_pos)
-          name jsx_props opening_tag_end children None
-    in
-    expr_after_closing
+          name jsx_props opening_tag_end children None)
+    | token ->
+      let () =
+        if Grammar.is_structure_item_start token then
+          let closing =
+            "</" ^ Ast_helper.Jsx.string_of_jsx_tag_name name.txt ^ ">"
+          in
+          let msg = Diagnostics.message ("Missing " ^ closing) in
+          Parser.err ~start_pos ~end_pos:p.prev_end_pos p msg
+        else
+          let opening =
+            "</" ^ Ast_helper.Jsx.string_of_jsx_tag_name name.txt ^ ">"
+          in
+          let msg =
+            "Closing jsx name should be the same as the opening name. Did you \
+             mean " ^ opening ^ " ?"
+          in
+          Parser.err ~start_pos ~end_pos:p.prev_end_pos p
+            (Diagnostics.message msg)
+      in
+      Ast_helper.Exp.jsx_container_element
+        ~loc:(mk_loc start_pos p.prev_end_pos)
+        name jsx_props opening_tag_end children None)
   | token ->
     Parser.err p (Diagnostics.unexpected token p.breadcrumbs);
     Ast_helper.Exp.jsx_unary_element
