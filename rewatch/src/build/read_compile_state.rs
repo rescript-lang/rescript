@@ -7,7 +7,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-pub fn read(build_state: &mut BuildState) -> CompileAssetsState {
+pub fn read(build_state: &mut BuildState) -> anyhow::Result<CompileAssetsState> {
     let mut ast_modules: AHashMap<PathBuf, AstModule> = AHashMap::new();
     let mut cmi_modules: AHashMap<String, SystemTime> = AHashMap::new();
     let mut cmt_modules: AHashMap<String, SystemTime> = AHashMap::new();
@@ -73,13 +73,14 @@ pub fn read(build_state: &mut BuildState) -> CompileAssetsState {
         .flatten()
         .collect::<Vec<(PathBuf, SystemTime, String, String, packages::Namespace, bool)>>();
 
+    let root_package = build_state.get_root_package()?;
+
     compile_assets.iter().for_each(
         |(path, last_modified, extension, package_name, package_namespace, package_is_root)| {
             match extension.as_str() {
                 "iast" | "ast" => {
                     let module_name = helpers::file_path_to_module_name(path, package_namespace);
 
-                    let root_package = build_state.get_root_package();
                     if let Some(res_file_path_buf) = get_res_path_from_ast(path) {
                         let _ = ast_modules.insert(
                             res_file_path_buf.clone(),
@@ -123,13 +124,13 @@ pub fn read(build_state: &mut BuildState) -> CompileAssetsState {
         },
     );
 
-    CompileAssetsState {
+    Ok(CompileAssetsState {
         ast_modules,
         cmi_modules,
         cmt_modules,
         ast_rescript_file_locations,
         rescript_file_locations,
-    }
+    })
 }
 
 fn get_res_path_from_ast(ast_file: &Path) -> Option<PathBuf> {

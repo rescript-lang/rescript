@@ -10,7 +10,7 @@ use crate::helpers;
 use crate::helpers::StrippedVerbatimPath;
 use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
-use anyhow::anyhow;
+use anyhow::{Result, anyhow};
 use console::style;
 use log::{debug, trace};
 use rayon::prelude::*;
@@ -551,14 +551,14 @@ fn compile_file(
     module: &Module,
     is_interface: bool,
     build_state: &BuildState,
-) -> Result<Option<String>, String> {
+) -> Result<Option<String>> {
     let BuildState {
         packages,
         project_context,
         bsc_path,
         ..
     } = build_state;
-    let root_package = build_state.get_root_package();
+    let root_package = build_state.get_root_package()?;
     let ocaml_build_path_abs = package.get_ocaml_build_path();
     let build_path_abs = package.get_build_path();
     let implementation_file_path = match &module.source_type {
@@ -568,7 +568,8 @@ fn compile_file(
             sourcetype,
             ast_path.to_string_lossy()
         )),
-    }?;
+    }
+    .map_err(|e| anyhow!(e))?;
     let basename =
         helpers::file_path_to_compiler_asset_basename(implementation_file_path, &package.namespace);
     let has_interface = module.get_interface().is_some();
@@ -600,9 +601,9 @@ fn compile_file(
         Ok(x) if !x.status.success() => {
             let stderr = String::from_utf8_lossy(&x.stderr);
             let stdout = String::from_utf8_lossy(&x.stdout);
-            Err(stderr.to_string() + &stdout)
+            Err(anyhow!(stderr.to_string() + &stdout))
         }
-        Err(e) => Err(format!(
+        Err(e) => Err(anyhow!(
             "Could not compile file. Error: {e}. Path to AST: {ast_path:?}"
         )),
         Ok(x) => {
@@ -610,7 +611,7 @@ fn compile_file(
                 .expect("stdout should be non-null")
                 .to_string();
 
-            let dir = std::path::Path::new(implementation_file_path).parent().unwrap();
+            let dir = Path::new(implementation_file_path).parent().unwrap();
 
             // perhaps we can do this copying somewhere else
             if !is_interface {

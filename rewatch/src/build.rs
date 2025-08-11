@@ -174,7 +174,7 @@ pub fn initialize_build(
         let _ = stdout().flush();
     }
     let timing_compile_state = Instant::now();
-    let compile_assets_state = read_compile_state::read(&mut build_state);
+    let compile_assets_state = read_compile_state::read(&mut build_state)?;
     let timing_compile_state_elapsed = timing_compile_state.elapsed();
 
     if !snapshot_output && show_progress {

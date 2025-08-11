@@ -1,6 +1,7 @@
 use crate::build::packages::{Namespace, Package};
 use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
+use anyhow::{Result, anyhow};
 use std::{fmt::Display, path::PathBuf, time::SystemTime};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -128,10 +129,7 @@ impl BuildState {
         self.module_names.insert(module_name.to_owned());
     }
 
-    // TODO: Consider returing a result?
-    // At the same time, the packages have been processed in packages::make
-    // It would have already failed if the root is absent
-    pub fn get_root_package(&self) -> &Package {
+    pub fn get_root_package(&self) -> Result<&Package> {
         match &self.project_context {
             ProjectContext::SingleProject { config, .. }
             | ProjectContext::MonorepoRoot { config, .. }
@@ -141,10 +139,7 @@ impl BuildState {
             } => self
                 .packages
                 .get(&config.name)
-                // You will be tempted to point this out as "don't panic" during code review.
-                // Please don't and see https://rust-lang.github.io/rust-clippy/master/index.html#expect_fun_call
-                // cargo clippy pointed this out.
-                .unwrap_or_else(|| panic!("Root package \"{}\" not found", &config.name)),
+                .ok_or_else(|| anyhow!("Root package \"{}\" not found", &config.name)),
         }
     }
 }

@@ -409,7 +409,7 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
     let timing_clean_mjs = Instant::now();
     let mut build_state = BuildState::new(project_context, packages, bsc_path);
     packages::parse_packages(&mut build_state);
-    let root_package = build_state.get_root_package();
+    let root_package = build_state.get_root_package()?;
     let suffix = build_state.project_context.get_suffix();
 
     if !snapshot_output && show_progress {
