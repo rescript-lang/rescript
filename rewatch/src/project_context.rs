@@ -195,7 +195,7 @@ impl ProjectContext {
                             // There is a parent rescript.json, and it has a reference to the current package.
                             Ok(ProjectContext::MonorepoPackage {
                                 config: current_config,
-                                path: path.join("rescript.json"),
+                                path: current_rescript_json,
                                 parent_config: workspace_config,
                                 parent_path: workspace_rescript_json.clone(),
                             })
