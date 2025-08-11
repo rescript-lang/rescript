@@ -253,27 +253,6 @@ pub fn read_config(package_dir: &Path) -> Result<(Config, PathBuf)> {
 pub fn read_dependency(package_name: &str, project_context: &ProjectContext) -> Result<PathBuf, String> {
     // root folder + node_modules + package_name
     let path_from_root = helpers::package_path(project_context.get_root_path(), package_name);
-
-    // let path_from_project_root = helpers::package_path(project_root, package_name);
-    // let maybe_path_from_workspace_root = workspace_root
-    //     .as_ref()
-    //     .map(|workspace_root| helpers::package_path(workspace_root, package_name));
-
-    // let path = match (
-    //     path_from_parent,
-    //     path_from_project_root,
-    //     maybe_path_from_workspace_root,
-    // ) {
-    //     (path_from_parent, _, _) if path_from_parent.exists() => Ok(path_from_parent),
-    //     (_, path_from_project_root, _) if path_from_project_root.exists() => Ok(path_from_project_root),
-    //     (_, _, Some(path_from_workspace_root)) if path_from_workspace_root.exists() => {
-    //         Ok(path_from_workspace_root)
-    //     }
-    //     _ => Err(format!(
-    //         "The package \"{package_name}\" is not found (are node_modules up-to-date?)..."
-    //     )),
-    // }?;
-
     let path = (if path_from_root.exists() {
         Ok(path_from_root)
     } else {
@@ -332,7 +311,7 @@ fn read_dependencies(
         // Read all config files in parallel instead of blocking
         .par_iter()
         .map(|package_name| {
-            let ((config, _), canonical_path) =
+            let ((config, _config_path), canonical_path) =
                 match read_dependency(package_name, project_context) {
                     Err(error) => {
                         if show_progress {

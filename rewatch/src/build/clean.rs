@@ -33,7 +33,7 @@ fn remove_iast(package: &packages::Package, source_file: &Path) {
 fn remove_mjs_file(source_file: &Path, suffix: &str) {
     let _ = std::fs::remove_file(source_file.with_extension(
         // suffix.to_string includes the ., so we need to remove it
-        &suffix.to_string()[1..],
+        &suffix[1..],
     ));
 }
 
@@ -60,7 +60,7 @@ pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
     }
 }
 
-fn clean_source_files(build_state: &BuildState, root_package: &Package, suffix: &String) {
+fn clean_source_files(build_state: &BuildState, root_package: &Package, suffix: &str) {
     let packages_to_clean = build_state.project_context.get_scoped_local_packages();
 
     // get all rescript file locations

@@ -93,7 +93,7 @@ impl fmt::Debug for ProjectContext {
     }
 }
 fn read_local_packages(folder_path: &Path, config: &Config) -> Result<AHashSet<String>> {
-    let mut local_dependencies: AHashSet<String> = AHashSet::<String>::new();
+    let mut local_dependencies = AHashSet::<String>::new();
     let mut dependencies = AHashSet::<String>::new();
     for dep in config.dependencies.as_ref().unwrap_or(&vec![]) {
         dependencies.insert(dep.clone());
