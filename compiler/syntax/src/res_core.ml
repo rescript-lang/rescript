@@ -779,7 +779,7 @@ let read_local_jsx_name (p : Parser.t) :
 (* Build a Longident from a non-empty list of segments *)
 let longident_of_segments (segs : string list) : Longident.t =
   match segs with
-  | [] -> Longident.Lident "_"
+  | [] -> invalid_arg "longident_of_segments: empty list"
   | hd :: tl ->
     List.fold_left
       (fun acc s -> Longident.Ldot (acc, s))
@@ -794,13 +794,11 @@ let read_jsx_tag_name (p : Parser.t) :
     read_local_jsx_name p
     |> Option.map (fun (name, loc, _) ->
            {Location.txt = Parsetree.JsxLowerTag name; loc})
-  | Some (seg, seg_loc, `Upper) ->
-    let start_pos = seg_loc.Location.loc_start in
-    let rev_segs = ref [seg] in
-    let last_end = ref seg_loc.Location.loc_end in
+  | Some (first_seg, first_loc, `Upper) ->
+    let start_pos = first_loc.Location.loc_start in
     (* consume first Uident *)
     Parser.next p;
-    let rec loop () =
+    let rec loop rev_segs last_end =
       match p.Parser.token with
       | Dot -> (
         Parser.next p;
@@ -812,30 +810,35 @@ let read_jsx_tag_name (p : Parser.t) :
           None
         | Some (txt, _loc, `Upper) ->
           (* another path segment *)
-          rev_segs := txt :: !rev_segs;
           Parser.next p;
-          last_end := p.prev_end_pos;
-          loop ()
+          loop (txt :: rev_segs) p.prev_end_pos
         | Some (_, _, `Lower) -> (
           (* final lowercase with optional hyphens *)
           match read_local_jsx_name p with
-          | Some (lname, l_loc, _) ->
-            let path = longident_of_segments (List.rev !rev_segs) in
-            let loc = mk_loc start_pos l_loc.Location.loc_end in
-            Some
-              {
-                Location.txt =
-                  Parsetree.JsxQualifiedLowerTag {path; name = lname};
-                loc;
-              }
+          | Some (lname, l_loc, _) -> (
+            match rev_segs with
+            | [] -> None
+            | _ ->
+              let path = longident_of_segments (List.rev rev_segs) in
+              let loc = mk_loc start_pos l_loc.Location.loc_end in
+              Some
+                {
+                  Location.txt =
+                    Parsetree.JsxQualifiedLowerTag {path; name = lname};
+                  loc;
+                })
           | None -> None))
-      | _ ->
+      | _ -> (
         (* pure Upper path *)
-        let path = longident_of_segments (List.rev !rev_segs) in
-        let loc = mk_loc start_pos !last_end in
-        Some {txt = Parsetree.JsxUpperTag path; loc}
+        match rev_segs with
+        | [] -> None
+        | _ ->
+          let path = longident_of_segments (List.rev rev_segs) in
+          let loc = mk_loc start_pos last_end in
+          Some {txt = Parsetree.JsxUpperTag path; loc})
     in
-    loop ()
+    (* seed with the first segment already consumed *)
+    loop [first_seg] first_loc.Location.loc_end
 
 (* Parses module identifiers:
      Foo
