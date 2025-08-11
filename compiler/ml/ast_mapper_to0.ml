@@ -101,7 +101,9 @@ module T = struct
     | Ptyp_arrow {arg; ret; arity} -> (
       let lbl = Asttypes.to_noloc arg.lbl in
       let typ0 =
-        arrow ~loc ~attrs lbl (sub.typ sub arg.typ) (sub.typ sub ret)
+        arrow ~loc
+          ~attrs:(attrs @ sub.attributes sub arg.attrs)
+          lbl (sub.typ sub arg.typ) (sub.typ sub ret)
       in
       match arity with
       | None -> typ0
