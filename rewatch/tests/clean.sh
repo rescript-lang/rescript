@@ -47,3 +47,38 @@ else
   error "Expected files from new-namespace not to be cleaned"
   exit 1
 fi
+
+bold "--dev should clean dev-dependencies of monorepo"
+
+# First we build the entire monorepo (including --dev)
+error_output=$(rewatch build --dev 2>&1)
+if [ $? -eq 0 ];
+then
+  success "Built monorepo"
+else
+  error "Error building monorepo"
+  printf "%s\n" "$error_output" >&2
+  exit 1
+fi
+
+# Clean entire monorepo (including --dev)
+error_output=$(rewatch clean --dev 2>&1)
+clean_status=$?
+if [ $clean_status -ne 0 ];
+then
+  error "Error cleaning current project file-casing"
+  printf "%s\n" "$error_output" >&2
+  exit 1
+fi
+
+# Count compiled files in dev-dependency project "pure-dev"
+project_compiled_files=$(find packages/pure-dev -type f -name '*.mjs' | wc -l | tr -d '[:space:]')
+if [ "$project_compiled_files" -eq 0 ];
+then
+  success "pure-dev cleaned"
+  git restore .
+else
+  error "Expected 0 .mjs files in pure-dev after clean, got $project_compiled_files"
+  printf "%s\n" "$error_output"
+  exit 1
+fi

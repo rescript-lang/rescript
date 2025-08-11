@@ -60,11 +60,12 @@ pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
     }
 }
 
-fn clean_source_files(build_state: &BuildState, root_package: &Package, suffix: &str, clean_dev_deps: bool) {
-    let packages_to_clean = build_state
-        .project_context
-        .get_scoped_local_packages(clean_dev_deps);
-
+fn clean_source_files(
+    build_state: &BuildState,
+    root_package: &Package,
+    suffix: &str,
+    packages_to_clean: &AHashSet<String>,
+) {
     // get all rescript file locations
     let rescript_file_locations = build_state
         .modules
@@ -369,30 +370,10 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, clean_dev_
         let _ = std::io::stdout().flush();
     };
 
-    match &project_context {
-        ProjectContext::SingleProject { config, .. } => {
-            find_and_clean_package(&packages, &config.name, show_progress, snapshot_output)?;
-        }
-        ProjectContext::MonorepoRoot {
-            config,
-            local_dependencies,
-            ..
-        } => {
-            find_and_clean_package(&packages, &config.name, show_progress, snapshot_output)?;
-            // TODO: this does the local dependencies and dev-dependencies.
-            // I guess the dev deps should be cleaned if flag is set?
-            for dep in local_dependencies {
-                find_and_clean_package(&packages, dep, show_progress, snapshot_output)?;
-            }
-        }
-        ProjectContext::MonorepoPackage { config, .. } => {
-            // We know we are in a monorepo, but we only clean the package that is being targeted.
-            let package = packages
-                .get(&config.name)
-                .expect("Could not find package during clean");
-            clean_package(show_progress, snapshot_output, package);
-        }
-    };
+    let packages_to_clean = project_context.get_scoped_local_packages(clean_dev_deps);
+    for package in &packages_to_clean {
+        find_and_clean_package(&packages, package, show_progress, snapshot_output)?;
+    }
 
     let timing_clean_compiler_assets_elapsed = timing_clean_compiler_assets.elapsed();
 
@@ -423,7 +404,7 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, clean_dev_
         let _ = std::io::stdout().flush();
     }
 
-    clean_source_files(&build_state, root_package, &suffix, clean_dev_deps);
+    clean_source_files(&build_state, root_package, &suffix, &packages_to_clean);
     let timing_clean_mjs_elapsed = timing_clean_mjs.elapsed();
 
     if !snapshot_output && show_progress {
