@@ -329,7 +329,7 @@ and jsx_tag_name =
   | JsxLowerTag of string
   | JsxQualifiedLowerTag of {path: Longident.t; name: string}
   | JsxUpperTag of Longident.t
-  | JsxTagInvalid
+  | JsxTagInvalid of string
 
 and jsx_fragment = {
   (* > *) jsx_fragment_opening: Lexing.position;

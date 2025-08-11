@@ -4542,8 +4542,11 @@ and print_jsx_container_tag ~state tag_name
       let closing_tag_loc =
         ParsetreeViewer.container_element_closing_tag_loc closing_tag
       in
+      let closing_name =
+        print_jsx_name closing_tag.jsx_closing_container_tag_name.txt
+      in
       print_comments
-        (Doc.concat [Doc.text "</"; name; Doc.greater_than])
+        (Doc.concat [Doc.text "</"; closing_name; Doc.greater_than])
         cmt_tbl closing_tag_loc
   in
   Doc.group
@@ -4771,11 +4774,25 @@ and print_jsx_props ~state props cmt_tbl : Doc.t list =
   props |> List.map (fun prop -> print_jsx_prop ~state prop cmt_tbl)
 
 and print_jsx_name (tag_name : Parsetree.jsx_tag_name) =
-  let print_ident = print_ident_like ~allow_uident:true ~allow_hyphen:true in
-  let name = Ast_helper.Jsx.string_of_jsx_tag_name tag_name in
-  (* Split by '.' to print each segment with ident rules *)
-  let segments = Ext_string.split name '.' |> List.map print_ident in
-  Doc.join ~sep:Doc.dot segments
+  match tag_name with
+  | Parsetree.JsxTagInvalid invalid ->
+    (* Preserve exactly what the parser recorded as invalid *)
+    Doc.text invalid
+  | Parsetree.JsxLowerTag name ->
+    print_ident_like ~allow_uident:true ~allow_hyphen:true name
+  | Parsetree.JsxQualifiedLowerTag {path; name} ->
+    let upper_segs = Longident.flatten path in
+    let printed_upper =
+      upper_segs |> List.map (print_ident_like ~allow_uident:true)
+    in
+    let printed_lower =
+      print_ident_like ~allow_uident:true ~allow_hyphen:true name
+    in
+    Doc.join ~sep:Doc.dot (printed_upper @ [printed_lower])
+  | Parsetree.JsxUpperTag path ->
+    let segs = Longident.flatten path in
+    let printed = segs |> List.map (print_ident_like ~allow_uident:true) in
+    Doc.join ~sep:Doc.dot printed
 
 and print_arguments_with_callback_in_first_position ~state ~partial args cmt_tbl
     =

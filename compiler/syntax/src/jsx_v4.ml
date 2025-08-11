@@ -1278,7 +1278,7 @@ let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
 let mk_uppercase_tag_name_expr tag_name =
   let tag_identifier : Longident.t =
     match tag_name.txt with
-    | JsxTagInvalid | JsxLowerTag _ ->
+    | JsxTagInvalid _ | JsxLowerTag _ ->
       failwith "Unreachable code at mk_uppercase_tag_name_expr"
     | JsxQualifiedLowerTag {path; name} -> Longident.Ldot (path, name)
     | JsxUpperTag path -> Longident.Ldot (path, "make")
@@ -1316,7 +1316,7 @@ let expr ~(config : Jsx_common.jsx_config) mapper expression =
         let make_id = mk_uppercase_tag_name_expr tag_name in
         mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
           (JSXChildrenItems [])
-      | JsxTagInvalid ->
+      | JsxTagInvalid name ->
         Jsx_common.raise_error ~loc
           "JSX: element name is neither upper- or lowercase, got \"%s\"" name)
     | Jsx_container_element
@@ -1341,7 +1341,7 @@ let expr ~(config : Jsx_common.jsx_config) mapper expression =
         let make_id = mk_uppercase_tag_name_expr tag_name in
         mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
           children
-      | JsxTagInvalid ->
+      | JsxTagInvalid name ->
         Jsx_common.raise_error ~loc
           "JSX: element name is neither upper- or lowercase, got \"%s\"" name))
   | e -> default_mapper.expr mapper e

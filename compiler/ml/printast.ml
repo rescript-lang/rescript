@@ -50,7 +50,7 @@ let fmt_jsx_tag_name f (x : jsx_tag_name loc) =
     fprintf f "\"%a.%s\" %a" fmt_longident_aux path name fmt_location loc
   | JsxUpperTag path ->
     fprintf f "\"%a\" %a" fmt_longident_aux path fmt_location loc
-  | JsxTagInvalid -> fprintf f "\"_\" %a" fmt_location loc
+  | JsxTagInvalid name -> fprintf f "\"%s\" %a" name fmt_location loc
 
 let fmt_string_loc f (x : string loc) =
   fprintf f "\"%s\" %a" x.txt fmt_location x.loc
@@ -369,11 +369,17 @@ and expression i ppf x =
            jsx_container_element_props = props;
            jsx_container_element_opening_tag_end = gt;
            jsx_container_element_children = children;
-         }) ->
+           jsx_container_element_closing_tag = closing_tag;
+         }) -> (
     line i ppf "Pexp_jsx_container_element %a\n" fmt_jsx_tag_name name;
     jsx_props i ppf props;
     if !Clflags.dump_location then line i ppf "> %a\n" (fmt_position false) gt;
-    jsx_children i ppf children
+    jsx_children i ppf children;
+    match closing_tag with
+    | None -> ()
+    | Some closing_tag ->
+      line i ppf "closing_tag =%a\n" fmt_jsx_tag_name
+        closing_tag.jsx_closing_container_tag_name)
 
 and jsx_children i ppf children =
   line i ppf "jsx_children =\n";

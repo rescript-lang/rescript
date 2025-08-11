@@ -436,7 +436,7 @@ module Jsx = struct
     | Parsetree.JsxQualifiedLowerTag {path; name} ->
       String.concat "." (Longident.flatten path) ^ "." ^ name
     | Parsetree.JsxUpperTag path -> String.concat "." (Longident.flatten path)
-    | Parsetree.JsxTagInvalid -> "_"
+    | Parsetree.JsxTagInvalid name -> name
 
   let longident_of_jsx_tag_name (tag_name : Parsetree.jsx_tag_name) :
       Longident.t =
@@ -444,5 +444,5 @@ module Jsx = struct
     | Parsetree.JsxLowerTag name -> Longident.Lident name
     | Parsetree.JsxQualifiedLowerTag {path; name} -> Longident.Ldot (path, name)
     | Parsetree.JsxUpperTag path -> path
-    | Parsetree.JsxTagInvalid -> Longident.Lident "_"
+    | Parsetree.JsxTagInvalid name -> Longident.Lident name
 end

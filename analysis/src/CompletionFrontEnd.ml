@@ -1345,7 +1345,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
           inJsxContext := true;
           let is_valid_tag_for_props =
             match compName.txt with
-            | Parsetree.JsxTagInvalid -> false
+            | Parsetree.JsxTagInvalid _ -> false
             | _ -> true
           in
           let children =
