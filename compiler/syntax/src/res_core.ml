@@ -799,8 +799,8 @@ let read_jsx_tag_name (p : Parser.t) :
     let start_pos = first_loc.Location.loc_start in
     (* consume first Uident *)
     Parser.next p;
+    let string_of_rev_segments segs = String.concat "." (List.rev segs) in
     let rec loop rev_segs last_end =
-      let string_of_rev_segments segs = String.concat "." (List.rev segs) in
       match p.Parser.token with
       | Dot -> (
         Parser.next p;
