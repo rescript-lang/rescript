@@ -365,18 +365,18 @@ module E = struct
       iter_jsx_children sub children
     | Pexp_jsx_element
         (Jsx_unary_element
-           {jsx_unary_element_tag_name = _name; jsx_unary_element_props = props})
+           {jsx_unary_element_tag_name = name; jsx_unary_element_props = props})
       ->
-      (* jsx_tag_name contains a Location.t inside; attributes and visitors can
-         visit props and children as before *)
+      iter_loc sub name;
       iter_jsx_props sub props
     | Pexp_jsx_element
         (Jsx_container_element
            {
-             jsx_container_element_tag_name_start = _name;
+             jsx_container_element_tag_name_start = name;
              jsx_container_element_props = props;
              jsx_container_element_children = children;
            }) ->
+      iter_loc sub name;
       iter_jsx_props sub props;
       iter_jsx_children sub children
 end
