@@ -41,7 +41,7 @@ fn get_files_in_scope(format_dev_deps: bool) -> Result<Vec<String>> {
     let current_dir = std::env::current_dir()?;
     let project_context = project_context::ProjectContext::new(&current_dir)?;
 
-    let packages = packages::make(&None, &project_context, false, false)?;
+    let packages = packages::make(&None, &project_context, false, format_dev_deps)?;
     let mut files: Vec<String> = Vec::new();
     let packages_to_format = project_context.get_scoped_local_packages(format_dev_deps);
 
