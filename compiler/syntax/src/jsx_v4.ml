@@ -1083,19 +1083,6 @@ let transform_signature_item ~config item =
         "Only one JSX component call can exist on a component at one time")
   | _ -> [item]
 
-(* TODO: refactor *)
-let starts_with_lowercase s =
-  if String.length s = 0 then false
-  else
-    let c = s.[0] in
-    Char.lowercase_ascii c = c
-
-let starts_with_uppercase s =
-  if String.length s = 0 then false
-  else
-    let c = s.[0] in
-    Char.uppercase_ascii c = c
-
 (* There appear to be slightly different rules of transformation whether the component is upper-, lowercase or a fragment *)
 type componentDescription =
   | LowercasedComponent
@@ -1291,13 +1278,10 @@ let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
 let mk_uppercase_tag_name_expr tag_name =
   let tag_identifier : Longident.t =
     match tag_name.txt with
-    | JsxTagInvalid -> Longident.Lident "_"
-    | JsxLowerTag name -> Longident.Lident name
+    | JsxTagInvalid | JsxLowerTag _ ->
+      failwith "Unreachable code at mk_uppercase_tag_name_expr"
     | JsxQualifiedLowerTag {path; name} -> Longident.Ldot (path, name)
-    | JsxUpperTag path ->
-      if Longident.flatten path |> List.for_all starts_with_uppercase then
-        Longident.Ldot (path, "make")
-      else path
+    | JsxUpperTag path -> Longident.Ldot (path, "make")
   in
   let loc = tag_name.loc in
   Exp.ident ~loc {txt = tag_identifier; loc}
@@ -1318,46 +1302,48 @@ let expr ~(config : Jsx_common.jsx_config) mapper expression =
         children
     | Jsx_unary_element
         {jsx_unary_element_tag_name = tag_name; jsx_unary_element_props = props}
-      ->
+      -> (
       let name = Ast_helper.Jsx.string_of_jsx_tag_name tag_name.txt in
       let tag_loc = tag_name.loc in
-      if starts_with_lowercase name then
+      match tag_name.txt with
+      | JsxLowerTag _ ->
         (* For example 'input' *)
         let component_name_expr = constant_string ~loc:tag_loc name in
         mk_react_jsx config mapper loc attrs LowercasedComponent
           component_name_expr props (JSXChildrenItems [])
-      else if starts_with_uppercase name then
+      | JsxUpperTag _ | JsxQualifiedLowerTag _ ->
         (* MyModule.make *)
         let make_id = mk_uppercase_tag_name_expr tag_name in
         mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
           (JSXChildrenItems [])
-      else
+      | JsxTagInvalid ->
         Jsx_common.raise_error ~loc
-          "JSX: element name is neither upper- or lowercase, got \"%s\"" name
+          "JSX: element name is neither upper- or lowercase, got \"%s\"" name)
     | Jsx_container_element
         {
           jsx_container_element_tag_name_start = tag_name;
           jsx_container_element_props = props;
           jsx_container_element_children = children;
-        } ->
+        } -> (
       let name, tag_loc =
         (Ast_helper.Jsx.string_of_jsx_tag_name tag_name.txt, tag_name.loc)
       in
       (* For example: <div> <h1></h1> <br /> </div>
          This has an impact if we want to use ReactDOM.jsx or ReactDOM.jsxs
            *)
-      if starts_with_lowercase name then
+      match tag_name.txt with
+      | JsxLowerTag _ ->
         let component_name_expr = constant_string ~loc:tag_loc name in
         mk_react_jsx config mapper loc attrs LowercasedComponent
           component_name_expr props children
-      else if starts_with_uppercase name then
+      | JsxQualifiedLowerTag _ | JsxUpperTag _ ->
         (* MyModule.make *)
         let make_id = mk_uppercase_tag_name_expr tag_name in
         mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
           children
-      else
+      | JsxTagInvalid ->
         Jsx_common.raise_error ~loc
-          "JSX: element name is neither upper- or lowercase, got \"%s\"" name)
+          "JSX: element name is neither upper- or lowercase, got \"%s\"" name))
   | e -> default_mapper.expr mapper e
 
 let module_binding ~(config : Jsx_common.jsx_config) mapper module_binding =
