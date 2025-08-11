@@ -4440,9 +4440,9 @@ and print_pexp_apply ~state expr cmt_tbl =
   | _ -> assert false
 
 and print_jsx_unary_tag ~state tag_name props expr_loc cmt_tbl =
-  let name = print_jsx_name tag_name in
+  let name = print_jsx_name tag_name.txt in
   let formatted_props = print_jsx_props ~state props cmt_tbl in
-  let tag_loc = Ast_helper.loc_of_jsx_tag_name tag_name in
+  let tag_loc = tag_name.loc in
   let tag_has_trailing_comment = has_trailing_comments cmt_tbl tag_loc in
   let tag_has_no_props = List.length props == 0 in
   let closing_token_loc =
@@ -4488,7 +4488,7 @@ and print_jsx_container_tag ~state tag_name
     (children : Parsetree.jsx_children)
     (closing_tag : Parsetree.jsx_closing_container_tag option)
     (pexp_loc : Location.t) cmt_tbl =
-  let name = print_jsx_name tag_name in
+  let name = print_jsx_name tag_name.txt in
   let last_prop_has_comment_after =
     let rec visit props =
       match props with
@@ -4553,7 +4553,7 @@ and print_jsx_container_tag ~state tag_name
            (Doc.concat
               [
                 (* Opening tag name and props *)
-                (let tag_loc = Ast_helper.loc_of_jsx_tag_name tag_name in
+                (let tag_loc = tag_name.loc in
 
                  let opening_tag_name_doc =
                    print_comments
@@ -4772,7 +4772,7 @@ and print_jsx_props ~state props cmt_tbl : Doc.t list =
 
 and print_jsx_name (tag_name : Parsetree.jsx_tag_name) =
   let print_ident = print_ident_like ~allow_uident:true ~allow_hyphen:true in
-  let name = Ast_helper.string_of_jsx_tag_name tag_name in
+  let name = Ast_helper.Jsx.string_of_jsx_tag_name tag_name in
   (* Split by '.' to print each segment with ident rules *)
   let segments = Ext_string.split name '.' |> List.map print_ident in
   Doc.join ~sep:Doc.dot segments

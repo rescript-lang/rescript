@@ -1344,17 +1344,9 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                 } ) -> (
           inJsxContext := true;
           let is_valid_tag_for_props =
-            let is_alpha c =
-              let oc = Char.code c in
-              (oc >= Char.code 'a' && oc <= Char.code 'z')
-              || (oc >= Char.code 'A' && oc <= Char.code 'Z')
-            in
-            match compName with
-            | Parsetree.JsxLowerTag {name; _}
-            | Parsetree.JsxQualifiedLowerTag {name; _} ->
-              String.length name > 0 && is_alpha name.[0]
-            | Parsetree.JsxUpperTag _ -> true
-            | Parsetree.JsxTagInvalid _ -> false
+            match compName.txt with
+            | Parsetree.JsxTagInvalid -> false
+            | _ -> true
           in
           let children =
             match expr.pexp_desc with
@@ -1364,8 +1356,10 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
               children
             | _ -> JSXChildrenItems []
           in
-          let compName_loc = Ast_helper.loc_of_jsx_tag_name compName in
-          let compName_lid = Ast_helper.longident_of_jsx_tag_name compName in
+          let compName_loc = compName.loc in
+          let compName_lid =
+            Ast_helper.Jsx.longident_of_jsx_tag_name compName.txt
+          in
           let jsxPropsOpt =
             if is_valid_tag_for_props then
               Some
@@ -1401,7 +1395,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
                  (Loc.toString compName_loc));
           (* If the tag name is an uppercase path and the cursor is right after a dot (e.g., <O.|),
              prefer module member completion over JSX prop suggestions. *)
-          (match compName with
+          (match compName.txt with
           | Parsetree.JsxUpperTag _ when blankAfterCursor = Some '.' ->
             setResult
               (Cpath

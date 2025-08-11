@@ -1083,6 +1083,7 @@ let transform_signature_item ~config item =
         "Only one JSX component call can exist on a component at one time")
   | _ -> [item]
 
+(* TODO: refactor *)
 let starts_with_lowercase s =
   if String.length s = 0 then false
   else
@@ -1094,12 +1095,6 @@ let starts_with_uppercase s =
   else
     let c = s.[0] in
     Char.uppercase_ascii c = c
-
-let jsx_tag_name_to_string_and_loc (tag_name : jsx_tag_name) :
-    string * Location.t =
-  let name = Ast_helper.string_of_jsx_tag_name tag_name in
-  let loc = Ast_helper.loc_of_jsx_tag_name tag_name in
-  (name, loc)
 
 (* There appear to be slightly different rules of transformation whether the component is upper-, lowercase or a fragment *)
 type componentDescription =
@@ -1295,16 +1290,16 @@ let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
 *)
 let mk_uppercase_tag_name_expr tag_name =
   let tag_identifier : Longident.t =
-    match tag_name with
-    | JsxTagInvalid _ -> Longident.Lident "_"
-    | JsxLowerTag {name; _} -> Longident.Lident name
-    | JsxQualifiedLowerTag {path; name; _} -> Longident.Ldot (path, name)
-    | JsxUpperTag {path; _} ->
+    match tag_name.txt with
+    | JsxTagInvalid -> Longident.Lident "_"
+    | JsxLowerTag name -> Longident.Lident name
+    | JsxQualifiedLowerTag {path; name} -> Longident.Ldot (path, name)
+    | JsxUpperTag path ->
       if Longident.flatten path |> List.for_all starts_with_uppercase then
         Longident.Ldot (path, "make")
       else path
   in
-  let loc = Ast_helper.loc_of_jsx_tag_name tag_name in
+  let loc = tag_name.loc in
   Exp.ident ~loc {txt = tag_identifier; loc}
 
 let expr ~(config : Jsx_common.jsx_config) mapper expression =
@@ -1324,7 +1319,8 @@ let expr ~(config : Jsx_common.jsx_config) mapper expression =
     | Jsx_unary_element
         {jsx_unary_element_tag_name = tag_name; jsx_unary_element_props = props}
       ->
-      let name, tag_loc = jsx_tag_name_to_string_and_loc tag_name in
+      let name = Ast_helper.Jsx.string_of_jsx_tag_name tag_name.txt in
+      let tag_loc = tag_name.loc in
       if starts_with_lowercase name then
         (* For example 'input' *)
         let component_name_expr = constant_string ~loc:tag_loc name in
@@ -1344,7 +1340,9 @@ let expr ~(config : Jsx_common.jsx_config) mapper expression =
           jsx_container_element_props = props;
           jsx_container_element_children = children;
         } ->
-      let name, tag_loc = jsx_tag_name_to_string_and_loc tag_name in
+      let name, tag_loc =
+        (Ast_helper.Jsx.string_of_jsx_tag_name tag_name.txt, tag_name.loc)
+      in
       (* For example: <div> <h1></h1> <br /> </div>
          This has an impact if we want to use ReactDOM.jsx or ReactDOM.jsxs
            *)

@@ -265,15 +265,8 @@ let command ~debug ~emitter ~path =
       *)
       emitter (* --> <div... *)
       |> emitJsxTag ~debug ~name:"<" ~pos:(Loc.start e.pexp_loc);
-      let lid = Ast_helper.longident_of_jsx_tag_name lident in
-      let loc =
-        match lident with
-        | Parsetree.JsxLowerTag {loc; _}
-        | Parsetree.JsxQualifiedLowerTag {loc; _}
-        | Parsetree.JsxUpperTag {loc; _}
-        | Parsetree.JsxTagInvalid {loc} ->
-          loc
-      in
+      let lid = Ast_helper.Jsx.longident_of_jsx_tag_name lident.txt in
+      let loc = lident.loc in
       emitter |> emitJsxOpen ~lid ~debug ~loc;
       let closing_line, closing_column = Loc.end_ e.pexp_loc in
       emitter (* <foo ...props /> <-- *)
@@ -290,15 +283,8 @@ let command ~debug ~emitter ~path =
       (* opening tag *)
       emitter (* --> <div... *)
       |> emitJsxTag ~debug ~name:"<" ~pos:(Loc.start e.pexp_loc);
-      let lid = Ast_helper.longident_of_jsx_tag_name lident in
-      let loc =
-        match lident with
-        | Parsetree.JsxLowerTag {loc; _}
-        | Parsetree.JsxQualifiedLowerTag {loc; _}
-        | Parsetree.JsxUpperTag {loc; _}
-        | Parsetree.JsxTagInvalid {loc} ->
-          loc
-      in
+      let lid = Ast_helper.Jsx.longident_of_jsx_tag_name lident.txt in
+      let loc = lident.loc in
       emitter |> emitJsxOpen ~lid ~debug ~loc;
       emitter (* <foo ...props > <-- *)
       |> emitJsxTag ~debug ~name:">"
@@ -326,15 +312,10 @@ let command ~debug ~emitter ~path =
              emitter
              |> emitJsxTag ~debug ~name:"</"
                   ~pos:(Pos.ofLexing closing_less_than);
-             let lid = Ast_helper.longident_of_jsx_tag_name tag_name_end in
-             let loc =
-               match tag_name_end with
-               | Parsetree.JsxLowerTag {loc; _}
-               | Parsetree.JsxQualifiedLowerTag {loc; _}
-               | Parsetree.JsxUpperTag {loc; _}
-               | Parsetree.JsxTagInvalid {loc} ->
-                 loc
+             let lid =
+               Ast_helper.Jsx.longident_of_jsx_tag_name tag_name_end.txt
              in
+             let loc = tag_name_end.loc in
              emitter |> emitJsxClose ~debug ~lid ~pos:(Loc.end_ loc);
              emitter (* <foo> ... </foo> <-- *)
              |> emitJsxTag ~debug ~name:">"

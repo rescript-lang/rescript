@@ -1682,27 +1682,13 @@ and walk_expression expr t comments =
         | [] -> closing_token_loc
         | head :: _ -> ParsetreeViewer.get_jsx_prop_loc head
       in
-      let name_loc =
-        match tag_name with
-        | Parsetree.JsxLowerTag {loc; _}
-        | Parsetree.JsxQualifiedLowerTag {loc; _}
-        | Parsetree.JsxUpperTag {loc; _}
-        | Parsetree.JsxTagInvalid {loc} ->
-          loc
-      in
+      let name_loc = tag_name.loc in
       partition_adjacent_trailing_before_next_token_on_same_line name_loc
         next_token comments
     in
 
     (* Only attach comments to the element name if they are on the same line *)
-    let name_loc =
-      match tag_name with
-      | Parsetree.JsxLowerTag {loc; _}
-      | Parsetree.JsxQualifiedLowerTag {loc; _}
-      | Parsetree.JsxUpperTag {loc; _}
-      | Parsetree.JsxTagInvalid {loc} ->
-        loc
-    in
+    let name_loc = tag_name.loc in
     attach t.trailing name_loc after_opening_tag_name;
     match props with
     | [] ->
@@ -1742,26 +1728,12 @@ and walk_expression expr t comments =
         | [] -> opening_greater_than_loc
         | head :: _ -> ParsetreeViewer.get_jsx_prop_loc head
       in
-      let name_loc =
-        match tag_name_start with
-        | Parsetree.JsxLowerTag {loc; _}
-        | Parsetree.JsxQualifiedLowerTag {loc; _}
-        | Parsetree.JsxUpperTag {loc; _}
-        | Parsetree.JsxTagInvalid {loc} ->
-          loc
-      in
+      let name_loc = tag_name_start.loc in
       partition_adjacent_trailing_before_next_token_on_same_line name_loc
         next_token comments
     in
     (* Only attach comments to the element name if they are on the same line *)
-    let name_loc =
-      match tag_name_start with
-      | Parsetree.JsxLowerTag {loc; _}
-      | Parsetree.JsxQualifiedLowerTag {loc; _}
-      | Parsetree.JsxUpperTag {loc; _}
-      | Parsetree.JsxTagInvalid {loc} ->
-        loc
-    in
+    let name_loc = tag_name_start.loc in
     attach t.trailing name_loc after_opening_tag_name;
     let rest =
       match props with

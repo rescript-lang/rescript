@@ -496,10 +496,7 @@ module E = struct
              jsx_unary_element_props = props;
            }) ->
       let tag_ident : Longident.t Location.loc =
-        {
-          txt = Ast_helper.longident_of_jsx_tag_name tag_name;
-          loc = Ast_helper.loc_of_jsx_tag_name tag_name;
-        }
+        tag_name |> Location.map_loc Ast_helper.Jsx.longident_of_jsx_tag_name
       in
       let props = map_jsx_props sub props in
       let children_expr =
@@ -531,10 +528,7 @@ module E = struct
              jsx_container_element_children = children;
            }) ->
       let tag_ident : Longident.t Location.loc =
-        {
-          txt = Ast_helper.longident_of_jsx_tag_name tag_name;
-          loc = Ast_helper.loc_of_jsx_tag_name tag_name;
-        }
+        tag_name |> Location.map_loc Ast_helper.Jsx.longident_of_jsx_tag_name
       in
       let props = map_jsx_props sub props in
       let children_expr = map_jsx_children sub loc children in

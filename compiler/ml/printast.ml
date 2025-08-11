@@ -42,14 +42,15 @@ let rec fmt_longident_aux f x =
 let fmt_longident_loc f (x : Longident.t loc) =
   fprintf f "\"%a\" %a" fmt_longident_aux x.txt fmt_location x.loc
 
-let fmt_jsx_tag_name f (x : jsx_tag_name) =
-  match x with
-  | JsxLowerTag {name; loc} -> fprintf f "\"%s\" %a" name fmt_location loc
-  | JsxQualifiedLowerTag {path; name; loc} ->
+let fmt_jsx_tag_name f (x : jsx_tag_name loc) =
+  let loc = x.loc in
+  match x.txt with
+  | JsxLowerTag name -> fprintf f "\"%s\" %a" name fmt_location loc
+  | JsxQualifiedLowerTag {path; name} ->
     fprintf f "\"%a.%s\" %a" fmt_longident_aux path name fmt_location loc
-  | JsxUpperTag {path; loc} ->
+  | JsxUpperTag path ->
     fprintf f "\"%a\" %a" fmt_longident_aux path fmt_location loc
-  | JsxTagInvalid {loc} -> fprintf f "\"_\" %a" fmt_location loc
+  | JsxTagInvalid -> fprintf f "\"_\" %a" fmt_location loc
 
 let fmt_string_loc f (x : string loc) =
   fprintf f "\"%s\" %a" x.txt fmt_location x.loc

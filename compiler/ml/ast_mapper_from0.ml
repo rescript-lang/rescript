@@ -400,19 +400,19 @@ module E = struct
         match tag_name.txt with
         | Longident.Lident s
           when String.length s > 0 && Char.lowercase_ascii s.[0] = s.[0] ->
-          Pt.JsxLowerTag {name = s; loc = tag_name.loc}
-        | Longident.Lident _ ->
-          Pt.JsxUpperTag {path = tag_name.txt; loc = tag_name.loc}
+          Pt.JsxLowerTag s
+        | Longident.Lident _ -> Pt.JsxUpperTag tag_name.txt
         | Longident.Ldot (path, last)
           when String.length last > 0
                && Char.lowercase_ascii last.[0] = last.[0] ->
-          Pt.JsxQualifiedLowerTag {path; name = last; loc = tag_name.loc}
-        | _ -> Pt.JsxUpperTag {path = tag_name.txt; loc = tag_name.loc}
+          Pt.JsxQualifiedLowerTag {path; name = last}
+        | _ -> Pt.JsxUpperTag tag_name.txt
       in
+      let jsx_tag_name = {txt = jsx_tag; loc = tag_name.loc} in
       match children with
-      | None -> jsx_unary_element ~loc ~attrs jsx_tag props
+      | None -> jsx_unary_element ~loc ~attrs jsx_tag_name props
       | Some children ->
-        jsx_container_element ~loc ~attrs jsx_tag props Lexing.dummy_pos
+        jsx_container_element ~loc ~attrs jsx_tag_name props Lexing.dummy_pos
           children None)
     | Pexp_apply (e, l) ->
       let e =

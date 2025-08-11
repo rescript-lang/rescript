@@ -773,7 +773,7 @@ let get_jsx_prop_loc = function
 let container_element_closing_tag_loc
     (tag : Parsetree.jsx_closing_container_tag) =
   {
-    (Ast_helper.loc_of_jsx_tag_name tag.jsx_closing_container_tag_name) with
+    tag.jsx_closing_container_tag_name.loc with
     loc_start = tag.jsx_closing_container_tag_start;
     loc_end = tag.jsx_closing_container_tag_end;
   }

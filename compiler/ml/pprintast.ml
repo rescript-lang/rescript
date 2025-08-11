@@ -805,7 +805,7 @@ and simple_expr ctxt f x =
              jsx_unary_element_tag_name = tag_name;
              jsx_unary_element_props = props;
            }) -> (
-      let name = Ast_helper.string_of_jsx_tag_name tag_name in
+      let name = Ast_helper.Jsx.string_of_jsx_tag_name tag_name.txt in
       match props with
       | [] -> pp f "<%s />" name
       | _ -> pp f "<%s %a />" name (print_jsx_props ctxt) props)
@@ -816,7 +816,7 @@ and simple_expr ctxt f x =
              jsx_container_element_props = props;
              jsx_container_element_children = children;
            }) -> (
-      let name = Ast_helper.string_of_jsx_tag_name tag_name in
+      let name = Ast_helper.Jsx.string_of_jsx_tag_name tag_name.txt in
       match props with
       | [] ->
         pp f "<%s>%a</%s>" name
