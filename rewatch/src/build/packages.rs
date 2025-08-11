@@ -655,11 +655,9 @@ pub fn parse_packages(build_state: &mut BuildState) {
             let bs_build_path = package.get_ocaml_build_path();
             helpers::create_path(&build_path_abs);
             helpers::create_path(&bs_build_path);
-            let root_config = build_state
-                .get_package(&build_state.get_root_package().name)
-                .expect("cannot find root config");
+            let root_config = build_state.project_context.get_root_config();
 
-            root_config.config.get_package_specs().iter().for_each(|spec| {
+            root_config.get_package_specs().iter().for_each(|spec| {
                 if !spec.in_source {
                     // we don't want to calculate this if we don't have out of source specs
                     // we do this twice, but we almost never have multiple package specs
