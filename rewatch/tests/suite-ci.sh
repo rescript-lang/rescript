@@ -43,4 +43,4 @@ else
   exit 1
 fi
 
-./compile.sh && ./watch.sh && ./lock.sh && ./suffix.sh && ./legacy.sh && ./format.sh
+./compile.sh && ./watch.sh && ./lock.sh && ./suffix.sh && ./legacy.sh && ./format.sh && ./clean.sh
