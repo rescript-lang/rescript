@@ -26,6 +26,8 @@
 
 #### :house: Internal
 
+- AST: Use jsx_tag_name instead of Longindent.t to store jsx tag name. https://github.com/rescript-lang/rescript/pull/7760
+
 # 12.0.0-beta.5
 
 #### :bug: Bug fix
