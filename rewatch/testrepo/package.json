@@ -13,7 +13,8 @@
       "packages/nonexisting-dev-files",
       "packages/deprecated-config",
       "packages/file-casing",
-      "packages/file-casing-no-namespace"
+      "packages/file-casing-no-namespace",
+      "packages/pure-dev"
     ]
   },
   "dependencies": {
