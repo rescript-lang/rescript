@@ -64,7 +64,7 @@ error_output=$("$REWATCH_EXECUTABLE" format --dev)
 git_diff_file_count=$(git diff --name-only ./ | wc -l | xargs)
 if [ $? -eq 0 ] && [ $git_diff_file_count -eq 9 ];
 then
-    success "Test package formatted. Got $git_diff_file_count changed files."
+    success "All packages (including dev) were formatted. Got $git_diff_file_count changed files."
     git restore .
 else
     error "Error formatting test package"
