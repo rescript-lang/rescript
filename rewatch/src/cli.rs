@@ -198,6 +198,9 @@ pub enum Command {
         /// Files to format. If no files are provided, all files are formatted.
         #[arg(group = "format_input_mode")]
         files: Vec<String>,
+
+        #[command(flatten)]
+        dev: DevArg,
     },
     /// This prints the compiler arguments. It expects the path to a rescript file (.res or .resi).
     CompilerArgs {

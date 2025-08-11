@@ -60,8 +60,10 @@ pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
     }
 }
 
-fn clean_source_files(build_state: &BuildState, root_package: &Package, suffix: &str) {
-    let packages_to_clean = build_state.project_context.get_scoped_local_packages();
+fn clean_source_files(build_state: &BuildState, root_package: &Package, suffix: &str, clean_dev_deps: bool) {
+    let packages_to_clean = build_state
+        .project_context
+        .get_scoped_local_packages(clean_dev_deps);
 
     // get all rescript file locations
     let rescript_file_locations = build_state
@@ -351,11 +353,10 @@ fn find_and_clean_package(
     }
 }
 
-pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_deps: bool) -> Result<()> {
+pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, clean_dev_deps: bool) -> Result<()> {
     let project_context = ProjectContext::new(path)?;
 
-    let packages = packages::make(&None, &project_context, show_progress, build_dev_deps)?;
-    // let root_config_name = packages::read_package_name(&project_root)?;
+    let packages = packages::make(&None, &project_context, show_progress, clean_dev_deps)?;
     let bsc_path = helpers::get_bsc();
 
     let timing_clean_compiler_assets = Instant::now();
@@ -422,7 +423,7 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, build_dev_
         let _ = std::io::stdout().flush();
     }
 
-    clean_source_files(&build_state, root_package, &suffix);
+    clean_source_files(&build_state, root_package, &suffix, clean_dev_deps);
     let timing_clean_mjs_elapsed = timing_clean_mjs.elapsed();
 
     if !snapshot_output && show_progress {

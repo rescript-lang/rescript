@@ -26,6 +26,7 @@ pub enum ProjectContext {
         config: Config,
         path: RescriptJsonPath,
         local_dependencies: AHashSet<String>, // names of local deps
+        local_dev_dependencies: AHashSet<String>,
     },
     /// Package within a monorepo - has a parent workspace
     MonorepoPackage {
@@ -35,6 +36,21 @@ pub enum ProjectContext {
         parent_config: Config,
         parent_path: RescriptJsonPath,
     },
+}
+
+fn format_dependencies(dependencies: &AHashSet<String>) -> String {
+    if dependencies.is_empty() {
+        String::from("[]")
+    } else {
+        format!(
+            "[\n{}\n]",
+            dependencies
+                .iter()
+                .map(|dep| format!("  \"{dep}\""))
+                .collect::<Vec<String>>()
+                .join(",\n")
+        )
+    }
 }
 
 impl fmt::Debug for ProjectContext {
@@ -52,26 +68,18 @@ impl fmt::Debug for ProjectContext {
                 config,
                 path,
                 local_dependencies,
+                local_dev_dependencies,
             } => {
-                let deps = if local_dependencies.is_empty() {
-                    String::from("[]")
-                } else {
-                    format!(
-                        "[\n{}\n]",
-                        local_dependencies
-                            .iter()
-                            .map(|dep| format!("  \"{dep}\""))
-                            .collect::<Vec<String>>()
-                            .join(",\n")
-                    )
-                };
+                let deps = format_dependencies(local_dependencies);
+                let dev_deps = format_dependencies(local_dev_dependencies);
 
                 write!(
                     f,
-                    "MonorepoRoot: \"{}\" at \"{}\" with {}",
+                    "MonorepoRoot: \"{}\" at \"{}\" with dependencies:\n  {}\n  and devDependencies:\n {}",
                     config.name,
                     path.to_string_lossy(),
-                    deps
+                    deps,
+                    dev_deps
                 )
             }
             ProjectContext::MonorepoPackage {
@@ -92,21 +100,17 @@ impl fmt::Debug for ProjectContext {
         }
     }
 }
-fn read_local_packages(folder_path: &Path, config: &Config) -> Result<AHashSet<String>> {
+fn read_local_packages(
+    folder_path: &Path,
+    dependencies_from_config: &Vec<String>,
+) -> Result<AHashSet<String>> {
     let mut local_dependencies = AHashSet::<String>::new();
-    let mut dependencies = AHashSet::<String>::new();
-    for dep in config.dependencies.as_ref().unwrap_or(&vec![]) {
-        dependencies.insert(dep.clone());
-    }
-    for dev_dep in config.dev_dependencies.as_ref().unwrap_or(&vec![]) {
-        dependencies.insert(dev_dep.clone());
-    }
 
-    for dep in dependencies {
+    for dep in dependencies_from_config {
         // Monorepo packages are expected to be symlinked in node_modules.
         if let Ok(dep_path) = folder_path
             .join("node_modules")
-            .join(&dep)
+            .join(dep)
             .canonicalize()
             .map(helpers::StrippedVerbatimPath::to_stripped_verbatim_path)
         {
@@ -129,8 +133,15 @@ fn monorepo_or_single_project(
     current_rescript_json: RescriptJsonPath,
     current_config: Config,
 ) -> Result<ProjectContext> {
-    let local_dependencies = read_local_packages(path, &current_config)?;
-    if local_dependencies.is_empty() {
+    let local_dependencies = match &current_config.dependencies {
+        None => AHashSet::<String>::new(),
+        Some(deps) => read_local_packages(path, deps)?,
+    };
+    let local_dev_dependencies = match &current_config.dev_dependencies {
+        None => AHashSet::<String>::new(),
+        Some(deps) => read_local_packages(path, deps)?,
+    };
+    if local_dependencies.is_empty() && local_dev_dependencies.is_empty() {
         Ok(ProjectContext::SingleProject {
             config: current_config,
             path: current_rescript_json.clone(),
@@ -140,6 +151,7 @@ fn monorepo_or_single_project(
             config: current_config,
             path: current_rescript_json.clone(),
             local_dependencies,
+            local_dev_dependencies,
         })
     }
 }
@@ -237,7 +249,7 @@ impl ProjectContext {
 
     /// Returns the local packages relevant for the current context.
     /// Either a single project, all projects from a monorepo or a single package inside a monorepo.
-    pub fn get_scoped_local_packages(&self) -> AHashSet<String> {
+    pub fn get_scoped_local_packages(&self, include_dev_deps: bool) -> AHashSet<String> {
         let mut local_packages = AHashSet::<String>::new();
         match &self {
             ProjectContext::SingleProject { config, .. } => {
@@ -246,11 +258,17 @@ impl ProjectContext {
             ProjectContext::MonorepoRoot {
                 config,
                 local_dependencies,
+                local_dev_dependencies,
                 ..
             } => {
                 local_packages.insert(config.name.clone());
                 for dep in local_dependencies {
                     local_packages.insert(dep.clone());
+                }
+                if include_dev_deps {
+                    for dep in local_dev_dependencies {
+                        local_packages.insert(dep.clone());
+                    }
                 }
             }
             ProjectContext::MonorepoPackage { config, .. } => {

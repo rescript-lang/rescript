@@ -353,9 +353,10 @@ fn read_dependencies(
                     ,
                     ProjectContext::MonorepoRoot {
                         local_dependencies,
+                        local_dev_dependencies,
                         ..
                     } => {
-                        local_dependencies.contains(package_name)
+                        local_dependencies.contains(package_name) || local_dev_dependencies.contains(package_name)
                     }
                     ProjectContext::MonorepoPackage {
                         parent_path,
