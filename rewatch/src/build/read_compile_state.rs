@@ -73,7 +73,7 @@ pub fn read(build_state: &mut BuildState) -> anyhow::Result<CompileAssetsState> 
         .flatten()
         .collect::<Vec<(PathBuf, SystemTime, String, String, packages::Namespace, bool)>>();
 
-    let root_package = build_state.get_root_package()?;
+    let root_config = build_state.get_root_config();
 
     compile_assets.iter().for_each(
         |(path, last_modified, extension, package_name, package_namespace, package_is_root)| {
@@ -91,9 +91,8 @@ pub fn read(build_state: &mut BuildState) -> anyhow::Result<CompileAssetsState> 
                                 last_modified: last_modified.to_owned(),
                                 ast_file_path: path.to_path_buf(),
                                 is_root: *package_is_root,
-                                suffix: root_package
-                                    .config
-                                    .get_suffix(root_package.config.get_package_specs().first().unwrap()),
+                                suffix: root_config
+                                    .get_suffix(root_config.get_package_specs().first().unwrap()),
                             },
                         );
                         let _ = ast_rescript_file_locations.insert(res_file_path_buf);

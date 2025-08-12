@@ -1,7 +1,7 @@
 use crate::build::packages::{Namespace, Package};
+use crate::config::Config;
 use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
-use anyhow::{Result, anyhow};
 use std::{fmt::Display, path::PathBuf, time::SystemTime};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -129,18 +129,8 @@ impl BuildState {
         self.module_names.insert(module_name.to_owned());
     }
 
-    pub fn get_root_package(&self) -> Result<&Package> {
-        match &self.project_context {
-            ProjectContext::SingleProject { config, .. }
-            | ProjectContext::MonorepoRoot { config, .. }
-            | ProjectContext::MonorepoPackage {
-                parent_config: config,
-                ..
-            } => self
-                .packages
-                .get(&config.name)
-                .ok_or_else(|| anyhow!("Root package \"{}\" not found", &config.name)),
-        }
+    pub fn get_root_config(&self) -> &Config {
+        self.project_context.get_root_config()
     }
 }
 

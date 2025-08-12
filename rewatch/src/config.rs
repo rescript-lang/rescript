@@ -533,8 +533,6 @@ impl Config {
             .unwrap_or(".js".to_string())
     }
 
-    // TODO: needs improving!
-
     pub fn find_is_type_dev_for_path(&self, relative_path: &Path) -> bool {
         let relative_parent = match relative_path.parent() {
             None => return false,

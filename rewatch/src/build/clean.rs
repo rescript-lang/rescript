@@ -1,11 +1,12 @@
 use super::build_types::*;
 use super::packages;
 use crate::build::packages::Package;
+use crate::config::Config;
 use crate::helpers;
 use crate::helpers::emojis::*;
 use crate::project_context::ProjectContext;
-use ahash::{AHashMap, AHashSet};
-use anyhow::{Result, anyhow};
+use ahash::AHashSet;
+use anyhow::Result;
 use console::style;
 use rayon::prelude::*;
 use std::io::Write;
@@ -60,25 +61,19 @@ pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
     }
 }
 
-fn clean_source_files(
-    build_state: &BuildState,
-    root_package: &Package,
-    suffix: &str,
-    packages_to_clean: &AHashSet<String>,
-) {
+fn clean_source_files(build_state: &BuildState, root_config: &Config, suffix: &str) {
     // get all rescript file locations
     let rescript_file_locations = build_state
         .modules
         .values()
         .filter_map(|module| match &module.source_type {
             SourceType::SourceFile(source_file) => {
-                if !packages_to_clean.contains(&module.package_name) {
+                if !build_state.packages.contains_key(&module.package_name) {
                     None
                 } else {
                     let package = build_state.packages.get(&module.package_name).unwrap();
                     Some(
-                        root_package
-                            .config
+                        root_config
                             .get_package_specs()
                             .iter()
                             .filter_map(|spec| {
@@ -340,20 +335,6 @@ pub fn cleanup_after_build(build_state: &BuildState) {
     });
 }
 
-fn find_and_clean_package(
-    packages: &AHashMap<String, Package>,
-    name: &String,
-    show_progress: bool,
-    snapshot_output: bool,
-) -> Result<()> {
-    if let Some(package) = packages.get(name) {
-        clean_package(show_progress, snapshot_output, package);
-        Ok(())
-    } else {
-        Err(anyhow!("Could not find package \"{}\" during clean", &name))
-    }
-}
-
 pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, clean_dev_deps: bool) -> Result<()> {
     let project_context = ProjectContext::new(path)?;
 
@@ -370,9 +351,8 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, clean_dev_
         let _ = std::io::stdout().flush();
     };
 
-    let packages_to_clean = project_context.get_scoped_local_packages(clean_dev_deps);
-    for package in &packages_to_clean {
-        find_and_clean_package(&packages, package, show_progress, snapshot_output)?;
+    for (_, package) in &packages {
+        clean_package(show_progress, snapshot_output, package)
     }
 
     let timing_clean_compiler_assets_elapsed = timing_clean_compiler_assets.elapsed();
@@ -391,7 +371,7 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, clean_dev_
     let timing_clean_mjs = Instant::now();
     let mut build_state = BuildState::new(project_context, packages, bsc_path);
     packages::parse_packages(&mut build_state);
-    let root_package = build_state.get_root_package()?;
+    let root_config = build_state.get_root_config();
     let suffix = build_state.project_context.get_suffix();
 
     if !snapshot_output && show_progress {
@@ -404,7 +384,7 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, clean_dev_
         let _ = std::io::stdout().flush();
     }
 
-    clean_source_files(&build_state, root_package, &suffix, &packages_to_clean);
+    clean_source_files(&build_state, root_config, &suffix);
     let timing_clean_mjs_elapsed = timing_clean_mjs.elapsed();
 
     if !snapshot_output && show_progress {

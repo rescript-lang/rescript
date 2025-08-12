@@ -489,14 +489,10 @@ fn read_packages(
 ) -> Result<AHashMap<String, Package>> {
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
-    let root_package = match project_context {
+    let current_package = match project_context {
         ProjectContext::SingleProject { config, path }
         | ProjectContext::MonorepoRoot { config, path, .. }
-        | ProjectContext::MonorepoPackage {
-            parent_config: config,
-            parent_path: path,
-            ..
-        } => {
+        | ProjectContext::MonorepoPackage { config, path, .. } => {
             let folder = path
                 .parent()
                 .ok_or_else(|| anyhow!("Could not the read parent folder or a rescript.json file"))?;
@@ -504,13 +500,13 @@ fn read_packages(
         }
     };
 
-    map.insert(root_package.name.to_string(), root_package);
+    map.insert(current_package.name.to_string(), current_package);
 
     let mut registered_dependencies_set: AHashSet<String> = AHashSet::new();
     let dependencies = flatten_dependencies(read_dependencies(
         &mut registered_dependencies_set,
         project_context,
-        project_context.get_root_config(),
+        project_context.get_current_rescript_config(),
         show_progress,
         build_dev_deps,
     ));
@@ -656,7 +652,7 @@ pub fn parse_packages(build_state: &mut BuildState) {
             let bs_build_path = package.get_ocaml_build_path();
             helpers::create_path(&build_path_abs);
             helpers::create_path(&bs_build_path);
-            let root_config = build_state.project_context.get_root_config();
+            let root_config = build_state.get_root_config();
 
             root_config.get_package_specs().iter().for_each(|spec| {
                 if !spec.in_source {

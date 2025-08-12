@@ -558,7 +558,7 @@ fn compile_file(
         bsc_path,
         ..
     } = build_state;
-    let root_package = build_state.get_root_package()?;
+    let root_config = build_state.get_root_config();
     let ocaml_build_path_abs = package.get_ocaml_build_path();
     let build_path_abs = package.get_build_path();
     let implementation_file_path = match &module.source_type {
@@ -699,7 +699,7 @@ fn compile_file(
             }
 
             // copy js file
-            root_package.config.get_package_specs().iter().for_each(|spec| {
+            root_config.get_package_specs().iter().for_each(|spec| {
                 if spec.in_source {
                     if let SourceType::SourceFile(SourceFile {
                         implementation: Implementation { path, .. },
@@ -708,11 +708,11 @@ fn compile_file(
                     {
                         let source = helpers::get_source_file_from_rescript_file(
                             &Path::new(&package.path).join(path),
-                            &root_package.config.get_suffix(spec),
+                            &root_config.get_suffix(spec),
                         );
                         let destination = helpers::get_source_file_from_rescript_file(
                             &package.get_build_path().join(path),
-                            &root_package.config.get_suffix(spec),
+                            &root_config.get_suffix(spec),
                         );
 
                         if source.exists() {
