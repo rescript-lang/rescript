@@ -53,7 +53,6 @@ pub fn generate_asts(
                             root_package.to_owned(),
                             &source_file.implementation.path.to_owned(),
                             &build_state.bsc_path,
-                            &build_state.workspace_root,
                         );
 
                         let iast_result = match source_file.interface.as_ref().map(|i| i.path.to_owned()) {
@@ -62,7 +61,6 @@ pub fn generate_asts(
                                 root_package.to_owned(),
                                 &interface_file_path.to_owned(),
                                 &build_state.bsc_path,
-                                &build_state.workspace_root,
                             )
                             .map(Some),
                             _ => Ok(None),
@@ -243,21 +241,12 @@ pub fn parser_args(
     config: &config::Config,
     root_config: &config::Config,
     filename: &Path,
-    workspace_root: &Option<PathBuf>,
     root_path: &Path,
     contents: &str,
 ) -> (PathBuf, Vec<String>) {
     let file = &filename;
     let ast_path = helpers::get_ast_path(file);
-    let ppx_flags = config::flatten_ppx_flags(
-        &if let Some(workspace_root) = workspace_root {
-            workspace_root.join("node_modules")
-        } else {
-            root_path.join("node_modules")
-        },
-        &filter_ppx_flags(&config.ppx_flags, contents),
-        &config.name,
-    );
+    let ppx_flags = config::flatten_ppx_flags(root_path, &filter_ppx_flags(&config.ppx_flags, contents));
     let jsx_args = root_config.get_jsx_args();
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
@@ -292,7 +281,6 @@ fn generate_ast(
     root_package: packages::Package,
     filename: &Path,
     bsc_path: &PathBuf,
-    workspace_root: &Option<PathBuf>,
 ) -> Result<(PathBuf, Option<helpers::StdErr>), String> {
     let file_path = PathBuf::from(&package.path).join(filename);
     let contents = helpers::read_file(&file_path).expect("Error reading file");
@@ -302,7 +290,6 @@ fn generate_ast(
         &package.config,
         &root_package.config,
         filename,
-        workspace_root,
         &root_package.path,
         &contents,
     );

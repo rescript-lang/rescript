@@ -38,6 +38,7 @@
 - Fix formatting of nested records in `.resi` files. https://github.com/rescript-lang/rescript/pull/7741
 - Don't format and don't check formatting of dependencies. https://github.com/rescript-lang/rescript/pull/7748
 - Fix `rescript-editor-analysis semanticTokens` returning invalid JSON in certain cases. https://github.com/rescript-lang/rescript/pull/7750
+- Rewatch: fix ppx resolution in yarn modern / pnpm monorepo. https://github.com/rescript-lang/rescript/pull/7740
 
 #### :memo: Documentation
 
