@@ -288,10 +288,6 @@ fn generate_ast(
     let (ast_path, parser_args) =
         parser_args(&build_state.project_context, &package.config, filename, &contents);
 
-    if file_path.ends_with("FileWithPpx.res") {
-        println!("\nFileWithPpx.res {}\n", parser_args.join(","));
-    }
-
     // generate the dir of the ast_path (it mirrors the source file dir)
     let ast_parent_path = package.get_build_path().join(ast_path.parent().unwrap());
     helpers::create_path(&ast_parent_path);
