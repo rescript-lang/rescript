@@ -31,16 +31,24 @@ pub enum ProjectContext {
 
 fn format_dependencies(dependencies: &AHashSet<String>) -> String {
     if dependencies.is_empty() {
-        String::from("[]")
+        "[]".to_string()
     } else {
-        format!(
-            "[\n{}\n]",
-            dependencies
-                .iter()
-                .map(|dep| format!("  \"{dep}\""))
-                .collect::<Vec<String>>()
-                .join(",\n")
-        )
+        let mut out = String::from("[\n");
+        let mut first = true;
+
+        for dep in dependencies {
+            if !first {
+                out.push_str(",\n");
+            } else {
+                first = false;
+            }
+            out.push_str("  \"");
+            out.push_str(dep);
+            out.push('"');
+        }
+
+        out.push_str("\n]");
+        out
     }
 }
 
@@ -138,6 +146,21 @@ fn monorepo_or_single_project(path: &Path, current_config: Config) -> Result<Pro
     }
 }
 
+fn is_config_listed_in_workspace(current_config: &Config, workspace_config: &Config) -> bool {
+    workspace_config
+        .dependencies
+        .to_owned()
+        .unwrap_or_default()
+        .iter()
+        .any(|dep| dep == &current_config.name)
+        || workspace_config
+            .dev_dependencies
+            .to_owned()
+            .unwrap_or_default()
+            .iter()
+            .any(|dep| dep == &current_config.name)
+}
+
 impl ProjectContext {
     pub fn new(path: &Path) -> Result<ProjectContext> {
         let path = helpers::get_abs_path(path);
@@ -159,31 +182,19 @@ impl ProjectContext {
                         parent_config_path.to_string_lossy(),
                         e
                     )),
-                    Ok(workspace_config) => {
-                        let is_current_config_listed_in_workspace = workspace_config
-                            .dependencies
-                            .to_owned()
-                            .unwrap_or_default()
-                            .iter()
-                            .any(|dep| dep == &current_config.name)
-                            || workspace_config
-                                .dev_dependencies
-                                .to_owned()
-                                .unwrap_or_default()
-                                .iter()
-                                .any(|dep| dep == &current_config.name);
-
-                        if is_current_config_listed_in_workspace {
-                            // There is a parent rescript.json, and it has a reference to the current package.
-                            Ok(ProjectContext::MonorepoPackage {
-                                config: current_config,
-                                parent_config: workspace_config,
-                            })
-                        } else {
-                            // There is a parent rescript.json, but it has no reference to the current package.
-                            // However, the current package could still be a monorepo root!
-                            monorepo_or_single_project(&path, current_config)
-                        }
+                    Ok(workspace_config)
+                        if is_config_listed_in_workspace(&current_config, &workspace_config) =>
+                    {
+                        // There is a parent rescript.json, and it has a reference to the current package.
+                        Ok(ProjectContext::MonorepoPackage {
+                            config: current_config,
+                            parent_config: workspace_config,
+                        })
+                    }
+                    Ok(_) => {
+                        // There is a parent rescript.json, but it has no reference to the current package.
+                        // However, the current package could still be a monorepo root!
+                        monorepo_or_single_project(&path, current_config)
                     }
                 }
             }
@@ -243,13 +254,9 @@ impl ProjectContext {
                 ..
             } => {
                 local_packages.insert(config.name.clone());
-                for dep in local_dependencies {
-                    local_packages.insert(dep.clone());
-                }
+                local_packages.extend(local_dependencies.iter().cloned());
                 if include_dev_deps {
-                    for dep in local_dev_dependencies {
-                        local_packages.insert(dep.clone());
-                    }
+                    local_packages.extend(local_dev_dependencies.iter().cloned());
                 }
             }
             ProjectContext::MonorepoPackage { config, .. } => {
