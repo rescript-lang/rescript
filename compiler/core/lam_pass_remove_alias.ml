@@ -24,10 +24,19 @@
 
 type outcome = Eval_false | Eval_true | Eval_unknown
 
-let id_is_for_sure_true_in_boolean (tbl : Lam_stats.ident_tbl) id =
+let rec id_is_for_sure_true_in_boolean (tbl : Lam_stats.ident_tbl) id =
   match Hash_ident.find_opt tbl id with
-  | Some (ImmutableBlock _)
+  | Some
+      (Normal_optional
+         ( Lprim {loc = _; primitive = Psome_not_nest; args = [Lvar id']}
+         | Lvar id' )) ->
+    id_is_for_sure_true_in_boolean tbl id'
+  | Some
+      (Normal_optional
+         (Lconst (Const_js_false | Const_js_null | Const_js_undefined _))) ->
+    Eval_false
   | Some (Normal_optional _)
+  | Some (ImmutableBlock _)
   | Some (MutableBlock _)
   | Some (Constant (Const_block _ | Const_js_true)) ->
     Eval_true
