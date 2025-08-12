@@ -68,30 +68,25 @@ fn clean_source_files(build_state: &BuildState, root_config: &Config, suffix: &s
         .values()
         .filter_map(|module| match &module.source_type {
             SourceType::SourceFile(source_file) => {
-                if !build_state.packages.contains_key(&module.package_name) {
-                    None
-                } else {
-                    let package = build_state.packages.get(&module.package_name).unwrap();
-                    Some(
-                        root_config
-                            .get_package_specs()
-                            .iter()
-                            .filter_map(|spec| {
-                                if spec.in_source {
-                                    Some((
-                                        package.path.join(&source_file.implementation.path),
-                                        match &spec.suffix {
-                                            None => suffix.to_owned(),
-                                            Some(suffix) => suffix.clone(),
-                                        },
-                                    ))
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect::<Vec<(PathBuf, String)>>(),
-                    )
-                }
+                build_state.packages.get(&module.package_name).map(|package| {
+                    root_config
+                        .get_package_specs()
+                        .into_iter()
+                        .filter_map(|spec| {
+                            if spec.in_source {
+                                Some((
+                                    package.path.join(&source_file.implementation.path),
+                                    match spec.suffix {
+                                        None => suffix.to_owned(),
+                                        Some(suffix) => suffix,
+                                    },
+                                ))
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<Vec<(PathBuf, String)>>()
+                })
             }
             _ => None,
         })
