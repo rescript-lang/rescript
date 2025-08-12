@@ -6,7 +6,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use log::debug;
 use std::fmt;
-use std::path::{Path};
+use std::path::Path;
 
 /// Represents the context of a command, categorizing in various ways:
 /// - SingleProject: one rescript.json with no parent or children.
