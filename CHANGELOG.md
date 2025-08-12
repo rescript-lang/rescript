@@ -20,6 +20,7 @@
 
 #### :bug: Bug fix
 
+- Fix option optimisation that resulted in incorrect JS output. https://github.com/rescript-lang/rescript/pull/7766
 - Fix formatting of nested records in `.resi` files. https://github.com/rescript-lang/rescript/pull/7741
 - Don't format and don't check formatting of dependencies. https://github.com/rescript-lang/rescript/pull/7748
 - Fix `rescript-editor-analysis semanticTokens` returning invalid JSON in certain cases. https://github.com/rescript-lang/rescript/pull/7750
