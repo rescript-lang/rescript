@@ -110,14 +110,17 @@ fn read_local_packages(
             .canonicalize()
             .map(helpers::StrippedVerbatimPath::to_stripped_verbatim_path)
         {
-            debug!(
-                "Checking if dependency \"{}\" is a local package at \"{}\"",
-                dep,
-                dep_path.display()
-            );
-            if helpers::is_local_package(folder_path, &dep_path) {
+            let is_local = helpers::is_local_package(folder_path, &dep_path);
+            if is_local {
                 local_dependencies.insert(dep.to_string());
             }
+
+            debug!(
+                "Dependency \"{}\" is a {}local package at \"{}\"",
+                dep,
+                (if is_local { "" } else { "non-" }),
+                dep_path.display()
+            );
         }
     }
 
