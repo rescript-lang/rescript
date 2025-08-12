@@ -18,11 +18,11 @@ fn get_dep_modules(
         Ok(lines) => {
             // we skip the first line with is some null characters
             // the following lines in the AST are the dependency modules
-            // we stop when we hit a line that starts with a "/", this is the path of the file.
+            // we stop when we hit a line that is an absolute path, this is the path of the file.
             // this is the point where the dependencies end and the actual AST starts
             for line in lines.skip(1).flatten() {
                 let line = line.trim().to_string();
-                if line.starts_with('/') {
+                if std::path::Path::new(&line).is_absolute() {
                     break;
                 } else if !line.is_empty() {
                     deps.insert(line);
