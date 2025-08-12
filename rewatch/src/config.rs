@@ -266,6 +266,13 @@ pub struct Config {
     // Holds all deprecation warnings for the config struct
     #[serde(skip)]
     deprecation_warnings: Vec<DeprecationWarning>,
+
+    #[serde(default = "default_path")]
+    pub path: PathBuf,
+}
+
+fn default_path() -> PathBuf {
+    PathBuf::from("./rescript.json")
 }
 
 /// This flattens string flags
@@ -375,7 +382,9 @@ impl Config {
     /// Try to convert a bsconfig from a certain path to a bsconfig struct
     pub fn new(path: &Path) -> Result<Self> {
         let read = fs::read_to_string(path)?;
-        Config::new_from_json_string(&read)
+        let mut config = Config::new_from_json_string(&read)?;
+        config.set_path(path.to_path_buf())?;
+        Ok(config)
     }
 
     /// Try to convert a bsconfig from a string to a bsconfig struct
@@ -385,6 +394,11 @@ impl Config {
         config.handle_deprecations()?;
 
         Ok(config)
+    }
+
+    fn set_path(&mut self, path: PathBuf) -> Result<()> {
+        self.path = path;
+        Ok(())
     }
 
     pub fn get_namespace(&self) -> packages::Namespace {
@@ -618,6 +632,7 @@ pub mod tests {
         pub bs_deps: Vec<String>,
         pub build_dev_deps: Vec<String>,
         pub allowed_dependents: Option<Vec<String>>,
+        pub path: PathBuf,
     }
 
     pub fn create_config(args: CreateConfigArgs) -> Config {
@@ -642,6 +657,7 @@ pub mod tests {
             namespace_entry: None,
             deprecation_warnings: vec![],
             allowed_dependents: args.allowed_dependents,
+            path: args.path,
         }
     }
 

@@ -239,14 +239,14 @@ fn get_source_dirs(source: config::Source, sub_path: Option<PathBuf>) -> AHashSe
     source_folders
 }
 
-pub fn read_config(package_dir: &Path) -> Result<(Config, PathBuf)> {
+pub fn read_config(package_dir: &Path) -> Result<Config> {
     let rescript_json_path = package_dir.join("rescript.json");
     let bsconfig_json_path = package_dir.join("bsconfig.json");
 
     if Path::new(&rescript_json_path).exists() {
-        Config::new(&rescript_json_path).map(|c| (c, rescript_json_path))
+        Config::new(&rescript_json_path)
     } else {
-        Config::new(&bsconfig_json_path).map(|c| (c, bsconfig_json_path))
+        Config::new(&bsconfig_json_path)
     }
 }
 
@@ -311,7 +311,7 @@ fn read_dependencies(
         // Read all config files in parallel instead of blocking
         .par_iter()
         .map(|package_name| {
-            let ((config, _config_path), canonical_path) =
+            let (config, canonical_path) =
                 match read_dependency(package_name, project_context) {
                     Err(error) => {
                         if show_progress {
@@ -359,10 +359,10 @@ fn read_dependencies(
                         local_dependencies.contains(package_name) || local_dev_dependencies.contains(package_name)
                     }
                     ProjectContext::MonorepoPackage {
-                        parent_path,
+                        parent_config,
                         ..
                     } => {
-                        helpers::is_local_package(parent_path, &canonical_path)
+                        helpers::is_local_package(&parent_config.path, &canonical_path)
                     }
                 }
             };
@@ -490,10 +490,11 @@ fn read_packages(
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
     let current_package = match project_context {
-        ProjectContext::SingleProject { config, path }
-        | ProjectContext::MonorepoRoot { config, path, .. }
-        | ProjectContext::MonorepoPackage { config, path, .. } => {
-            let folder = path
+        ProjectContext::SingleProject { config }
+        | ProjectContext::MonorepoRoot { config, .. }
+        | ProjectContext::MonorepoPackage { config, .. } => {
+            let folder = config
+                .path
                 .parent()
                 .ok_or_else(|| anyhow!("Could not the read parent folder or a rescript.json file"))?;
             make_package(config.to_owned(), folder, true, true)
@@ -998,6 +999,7 @@ mod test {
                 bs_deps: args.bs_deps,
                 build_dev_deps: args.build_dev_deps,
                 allowed_dependents: args.allowed_dependents,
+                path: PathBuf::from("./something/rescript.json"),
             }),
             source_folders: AHashSet::new(),
             source_files: None,

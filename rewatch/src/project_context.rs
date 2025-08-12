@@ -6,9 +6,7 @@ use anyhow::Result;
 use anyhow::anyhow;
 use log::debug;
 use std::fmt;
-use std::path::{Path, PathBuf};
-
-type RescriptJsonPath = PathBuf;
+use std::path::{Path};
 
 /// Represents the context of a command, categorizing in various ways:
 /// - SingleProject: one rescript.json with no parent or children.
@@ -20,22 +18,15 @@ type RescriptJsonPath = PathBuf;
 #[allow(clippy::large_enum_variant)]
 pub enum ProjectContext {
     /// Single project - no workspace relationship
-    SingleProject { config: Config, path: RescriptJsonPath },
+    SingleProject { config: Config },
     /// Monorepo root - contains local dependencies (symlinked in node_modules)
     MonorepoRoot {
         config: Config,
-        path: RescriptJsonPath,
         local_dependencies: AHashSet<String>, // names of local deps
         local_dev_dependencies: AHashSet<String>,
     },
     /// Package within a monorepo - has a parent workspace
-    MonorepoPackage {
-        config: Config,
-        // This field is only used for debugging purposes, maybe it could be removed in the future.
-        path: RescriptJsonPath,
-        parent_config: Config,
-        parent_path: RescriptJsonPath,
-    },
+    MonorepoPackage { config: Config, parent_config: Config },
 }
 
 fn format_dependencies(dependencies: &AHashSet<String>) -> String {
@@ -56,17 +47,16 @@ fn format_dependencies(dependencies: &AHashSet<String>) -> String {
 impl fmt::Debug for ProjectContext {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
-            ProjectContext::SingleProject { config, path } => {
+            ProjectContext::SingleProject { config } => {
                 write!(
                     f,
                     "SingleProject: \"{}\" at \"{}\"",
                     config.name,
-                    path.to_string_lossy()
+                    config.path.to_string_lossy()
                 )
             }
             ProjectContext::MonorepoRoot {
                 config,
-                path,
                 local_dependencies,
                 local_dev_dependencies,
             } => {
@@ -77,24 +67,22 @@ impl fmt::Debug for ProjectContext {
                     f,
                     "MonorepoRoot: \"{}\" at \"{}\" with dependencies:\n  {}\n  and devDependencies:\n {}",
                     config.name,
-                    path.to_string_lossy(),
+                    config.path.to_string_lossy(),
                     deps,
                     dev_deps
                 )
             }
             ProjectContext::MonorepoPackage {
                 config,
-                path,
                 parent_config,
-                parent_path,
             } => {
                 write!(
                     f,
                     "MonorepoPackage:\n  \"{}\" at \"{}\"\n  with parent \"{}\" at \"{}\"",
                     config.name,
-                    path.to_string_lossy(),
+                    config.path.to_string_lossy(),
                     parent_config.name,
-                    parent_path.to_string_lossy()
+                    parent_config.path.to_string_lossy()
                 )
             }
         }
@@ -128,11 +116,7 @@ fn read_local_packages(
     Ok(local_dependencies)
 }
 
-fn monorepo_or_single_project(
-    path: &Path,
-    current_rescript_json: RescriptJsonPath,
-    current_config: Config,
-) -> Result<ProjectContext> {
+fn monorepo_or_single_project(path: &Path, current_config: Config) -> Result<ProjectContext> {
     let local_dependencies = match &current_config.dependencies {
         None => AHashSet::<String>::new(),
         Some(deps) => read_local_packages(path, deps)?,
@@ -144,12 +128,10 @@ fn monorepo_or_single_project(
     if local_dependencies.is_empty() && local_dev_dependencies.is_empty() {
         Ok(ProjectContext::SingleProject {
             config: current_config,
-            path: current_rescript_json.clone(),
         })
     } else {
         Ok(ProjectContext::MonorepoRoot {
             config: current_config,
-            path: current_rescript_json.clone(),
             local_dependencies,
             local_dev_dependencies,
         })
@@ -159,7 +141,7 @@ fn monorepo_or_single_project(
 impl ProjectContext {
     pub fn new(path: &Path) -> Result<ProjectContext> {
         let path = helpers::get_abs_path(path);
-        let (current_config, current_rescript_json) = packages::read_config(&path)
+        let current_config = packages::read_config(&path)
             .map_err(|_| anyhow!("Could not read rescript.json at {}", path.to_string_lossy()))?;
         let nearest_parent_config_path = match path.parent() {
             None => Err(anyhow!(
@@ -169,7 +151,7 @@ impl ProjectContext {
             Some(parent) => Ok(helpers::get_nearest_config(parent)),
         }?;
         let context = match nearest_parent_config_path {
-            None => monorepo_or_single_project(&path, current_rescript_json, current_config),
+            None => monorepo_or_single_project(&path, current_config),
             Some(parent_config_path) => {
                 match packages::read_config(parent_config_path.as_path()) {
                     Err(e) => Err(anyhow!(
@@ -177,7 +159,7 @@ impl ProjectContext {
                         parent_config_path.to_string_lossy(),
                         e
                     )),
-                    Ok((workspace_config, workspace_rescript_json)) => {
+                    Ok(workspace_config) => {
                         let is_current_config_listed_in_workspace = workspace_config
                             .dependencies
                             .to_owned()
@@ -195,14 +177,12 @@ impl ProjectContext {
                             // There is a parent rescript.json, and it has a reference to the current package.
                             Ok(ProjectContext::MonorepoPackage {
                                 config: current_config,
-                                path: current_rescript_json,
                                 parent_config: workspace_config,
-                                parent_path: workspace_rescript_json.clone(),
                             })
                         } else {
                             // There is a parent rescript.json, but it has no reference to the current package.
                             // However, the current package could still be a monorepo root!
-                            monorepo_or_single_project(&path, current_rescript_json, current_config)
+                            monorepo_or_single_project(&path, current_config)
                         }
                     }
                 }
@@ -227,11 +207,12 @@ impl ProjectContext {
 
     pub fn get_root_path(&self) -> &Path {
         let rescript_json = match self {
-            ProjectContext::SingleProject { path, .. } => path,
-            ProjectContext::MonorepoRoot { path, .. } => path,
-            ProjectContext::MonorepoPackage {
-                parent_path: path, ..
-            } => path,
+            ProjectContext::SingleProject { config, .. }
+            | ProjectContext::MonorepoRoot { config, .. }
+            | ProjectContext::MonorepoPackage {
+                parent_config: config,
+                ..
+            } => &config.path,
         };
         rescript_json.parent().unwrap()
     }
