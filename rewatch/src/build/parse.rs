@@ -1,9 +1,9 @@
 use super::build_types::*;
 use super::logs;
 use super::namespaces;
-use super::packages;
+use crate::build::packages::Package;
 use crate::config;
-use crate::config::OneOrMore;
+use crate::config::{Config, OneOrMore};
 use crate::helpers;
 use crate::project_context::ProjectContext;
 use ahash::AHashSet;
@@ -234,24 +234,24 @@ pub fn generate_asts(
 
 pub fn parser_args(
     project_context: &ProjectContext,
+    package_config: &Config,
     filename: &Path,
     contents: &str,
 ) -> (PathBuf, Vec<String>) {
-    let current_config = project_context.get_current_rescript_config();
     let root_config = project_context.get_root_config();
     let file = &filename;
     let ast_path = helpers::get_ast_path(file);
     let node_modules_path = project_context.get_root_path().join("node_modules");
     let ppx_flags = config::flatten_ppx_flags(
         node_modules_path.as_path(),
-        &filter_ppx_flags(&current_config.ppx_flags, contents),
-        &current_config.name,
+        &filter_ppx_flags(&package_config.ppx_flags, contents),
+        &package_config.name,
     );
     let jsx_args = root_config.get_jsx_args();
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
-    let bsc_flags = config::flatten_flags(&current_config.compiler_flags);
+    let bsc_flags = config::flatten_flags(&package_config.compiler_flags);
 
     let file = PathBuf::from("..").join("..").join(file);
 
@@ -277,7 +277,7 @@ pub fn parser_args(
 }
 
 fn generate_ast(
-    package: packages::Package,
+    package: Package,
     filename: &Path,
     build_state: &BuildState,
 ) -> Result<(PathBuf, Option<helpers::StdErr>), String> {
@@ -285,7 +285,12 @@ fn generate_ast(
     let contents = helpers::read_file(&file_path).expect("Error reading file");
 
     let build_path_abs = package.get_build_path();
-    let (ast_path, parser_args) = parser_args(&build_state.project_context, filename, &contents);
+    let (ast_path, parser_args) =
+        parser_args(&build_state.project_context, &package.config, filename, &contents);
+
+    if file_path.ends_with("FileWithPpx.res") {
+        println!("\nFileWithPpx.res {}\n", parser_args.join(","));
+    }
 
     // generate the dir of the ast_path (it mirrors the source file dir)
     let ast_parent_path = package.get_build_path().join(ast_path.parent().unwrap());

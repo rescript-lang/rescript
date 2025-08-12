@@ -14,7 +14,8 @@
       "packages/deprecated-config",
       "packages/file-casing",
       "packages/file-casing-no-namespace",
-      "packages/pure-dev"
+      "packages/pure-dev",
+      "packages/with-ppx"
     ]
   },
   "dependencies": {

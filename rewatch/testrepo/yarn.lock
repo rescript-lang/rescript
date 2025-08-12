@@ -129,6 +129,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@testrepo/with-ppx@workspace:packages/with-ppx":
+  version: 0.0.0-use.local
+  resolution: "@testrepo/with-ppx@workspace:packages/with-ppx"
+  dependencies:
+    rescript-nodejs: "npm:16.1.0"
+    sury: "npm:^11.0.0-alpha.2"
+    sury-ppx: "npm:^11.0.0-alpha.2"
+  languageName: unknown
+  linkType: soft
+
 "rescript-nodejs@npm:16.1.0":
   version: 16.1.0
   resolution: "rescript-nodejs@npm:16.1.0"
@@ -163,6 +173,27 @@ __metadata:
     rescript-legacy: cli/rescript-legacy.js
     rescript-tools: cli/rescript-tools.js
   checksum: 10c0/ec18e0ccd0791dec7b2bfaa44e0a011e1f171025d0743e06b51f7f4d81c8333bdf3b02f47b72f5b9a5cfa409bdf51e64998833696314e77b6f51afe376a4c3ad
+  languageName: node
+  linkType: hard
+
+"sury-ppx@npm:^11.0.0-alpha.2":
+  version: 11.0.0-alpha.2
+  resolution: "sury-ppx@npm:11.0.0-alpha.2"
+  peerDependencies:
+    sury: ^11.0.0-alpha.2
+  checksum: 10c0/ae9190fa4e406de46e88b67db233e757db36f5377301227cf5b084b5b81d360725d6fc4781e24c56cb87476cd3a42af5acc0cfc49f0c7ea17435caf065ba22ab
+  languageName: node
+  linkType: hard
+
+"sury@npm:^11.0.0-alpha.2":
+  version: 11.0.0-alpha.2
+  resolution: "sury@npm:11.0.0-alpha.2"
+  peerDependencies:
+    rescript: 11.x
+  peerDependenciesMeta:
+    rescript:
+      optional: true
+  checksum: 10c0/254dd708608b125defc6b4be0f038df0f6704290df60504b70b7cd613f1e840d150ff65a3f23dbc7213f2b18b86fdc60400b4361ca46f5c86bbe7360eff9c84a
   languageName: node
   linkType: hard
 

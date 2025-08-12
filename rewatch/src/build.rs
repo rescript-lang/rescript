@@ -75,7 +75,12 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
     let file_path = PathBuf::from(&current_package).join(filename);
     let contents = helpers::read_file(&file_path).expect("Error reading file");
 
-    let (ast_path, parser_args) = parser_args(&project_context, relative_filename, &contents);
+    let (ast_path, parser_args) = parser_args(
+        &project_context,
+        project_context.get_current_rescript_config(),
+        relative_filename,
+        &contents,
+    );
     let is_interface = filename.to_string_lossy().ends_with('i');
     let has_interface = if is_interface {
         true

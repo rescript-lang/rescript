@@ -25,7 +25,8 @@
     "@testrepo/nonexisting-dev-files",
     "@testrepo/deprecated-config",
     "@testrepo/file-casing",
-    "@testrepo/file-casing-no-namespace"
+    "@testrepo/file-casing-no-namespace",
+    "@testrepo/with-ppx"
   ],
   "dev-dependencies": [
     "@testrepo/pure-dev"
