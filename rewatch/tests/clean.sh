@@ -111,7 +111,7 @@ compiler_assets=$(find node_modules/rescript-nodejs/lib/ocaml -type f -name '*.*
 if [ $compiler_assets -eq 0 ];
 then
   success "compiler assets from node_modules cleaned"
-  git checkout .
+  git restore .
 else
   error "Expected 0 files in node_modules/rescript-nodejs/lib/ocaml after clean, got $compiler_assets"
   printf "%s\n" "$error_output"
