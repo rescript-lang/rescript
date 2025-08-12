@@ -145,6 +145,44 @@ Console.log(keys) // Logs `["someKey", "someKey2"]` to the console
 external keysToArray: dict<'a> => array<string> = "Object.keys"
 
 /**
+`size(dictionary)` returns the number of key/value pairs in the dictionary.
+
+## Examples
+```rescript
+let dict = Dict.make()
+dict->Dict.size->assertEqual(0)
+
+dict->Dict.set("someKey", 1)
+dict->Dict.set("someKey2", 2)
+dict->Dict.size->assertEqual(2)
+
+// After deleting a key
+dict->Dict.delete("someKey")
+dict->Dict.size->assertEqual(1)
+```
+*/
+let size: dict<'a> => int
+
+/**
+`isEmpty(dictionary)` returns `true` if the dictionary is empty (has no key/value pairs), `false` otherwise.
+
+## Examples
+```rescript
+let emptyDict = Dict.make()
+emptyDict->Dict.isEmpty->assertEqual(true)
+
+let dict = Dict.make()
+dict->Dict.set("someKey", 1)
+dict->Dict.isEmpty->assertEqual(false)
+
+// After clearing all keys
+dict->Dict.delete("someKey")
+dict->Dict.isEmpty->assertEqual(true)
+```
+*/
+let isEmpty: dict<'a> => bool
+
+/**
 `valuesToArray(dictionary)` returns an array of all the values of the dictionary.
 
 ## Examples

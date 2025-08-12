@@ -805,7 +805,7 @@ and simple_expr ctxt f x =
              jsx_unary_element_tag_name = tag_name;
              jsx_unary_element_props = props;
            }) -> (
-      let name = Longident.flatten tag_name.txt |> String.concat "." in
+      let name = Ast_helper.Jsx.string_of_jsx_tag_name tag_name.txt in
       match props with
       | [] -> pp f "<%s />" name
       | _ -> pp f "<%s %a />" name (print_jsx_props ctxt) props)
@@ -815,19 +815,28 @@ and simple_expr ctxt f x =
              jsx_container_element_tag_name_start = tag_name;
              jsx_container_element_props = props;
              jsx_container_element_children = children;
+             jsx_container_element_closing_tag = closing_tag;
            }) -> (
-      let name = Longident.flatten tag_name.txt |> String.concat "." in
+      let name = Ast_helper.Jsx.string_of_jsx_tag_name tag_name.txt in
+      let closing_name =
+        match closing_tag with
+        | None -> ""
+        | Some closing_tag ->
+          Format.sprintf "</%s>"
+            (Ast_helper.Jsx.string_of_jsx_tag_name
+               closing_tag.jsx_closing_container_tag_name.txt)
+      in
       match props with
       | [] ->
-        pp f "<%s>%a</%s>" name
+        pp f "<%s>%a%s" name
           (list (simple_expr ctxt))
           (collect_jsx_children children)
-          name
+          closing_name
       | _ ->
-        pp f "<%s %a>%a</%s>" name (print_jsx_props ctxt) props
+        pp f "<%s %a>%a%s" name (print_jsx_props ctxt) props
           (list (simple_expr ctxt))
           (collect_jsx_children children)
-          name)
+          closing_name)
     | _ -> paren true (expression ctxt) f x
 
 and collect_jsx_children = function

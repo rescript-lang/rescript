@@ -294,7 +294,10 @@ let rec add_expr bv exp =
       (Jsx_unary_element
          {jsx_unary_element_tag_name = name; jsx_unary_element_props = props})
     ->
-    add bv name;
+    (* Conservatively add all module path segments referenced by the tag name *)
+    (match name.txt with
+    | JsxLowerTag _ | JsxTagInvalid _ -> ()
+    | JsxQualifiedLowerTag {path; _} | JsxUpperTag path -> add_path bv path);
     and_jsx_props bv props
   | Pexp_jsx_element
       (Jsx_container_element
@@ -303,7 +306,9 @@ let rec add_expr bv exp =
            jsx_container_element_props = props;
            jsx_container_element_children = children;
          }) ->
-    add bv name;
+    (match name.txt with
+    | JsxLowerTag _ | JsxTagInvalid _ -> ()
+    | JsxQualifiedLowerTag {path; _} | JsxUpperTag path -> add_path bv path);
     and_jsx_props bv props;
     add_jsx_children bv children
 

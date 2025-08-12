@@ -1682,12 +1682,14 @@ and walk_expression expr t comments =
         | [] -> closing_token_loc
         | head :: _ -> ParsetreeViewer.get_jsx_prop_loc head
       in
-      partition_adjacent_trailing_before_next_token_on_same_line tag_name.loc
+      let name_loc = tag_name.loc in
+      partition_adjacent_trailing_before_next_token_on_same_line name_loc
         next_token comments
     in
 
     (* Only attach comments to the element name if they are on the same line *)
-    attach t.trailing tag_name.loc after_opening_tag_name;
+    let name_loc = tag_name.loc in
+    attach t.trailing name_loc after_opening_tag_name;
     match props with
     | [] ->
       let before_closing_token, _rest =
@@ -1726,11 +1728,13 @@ and walk_expression expr t comments =
         | [] -> opening_greater_than_loc
         | head :: _ -> ParsetreeViewer.get_jsx_prop_loc head
       in
-      partition_adjacent_trailing_before_next_token_on_same_line
-        tag_name_start.loc next_token comments
+      let name_loc = tag_name_start.loc in
+      partition_adjacent_trailing_before_next_token_on_same_line name_loc
+        next_token comments
     in
     (* Only attach comments to the element name if they are on the same line *)
-    attach t.trailing tag_name_start.loc after_opening_tag_name;
+    let name_loc = tag_name_start.loc in
+    attach t.trailing name_loc after_opening_tag_name;
     let rest =
       match props with
       | [] ->

@@ -44,6 +44,8 @@ let fromInitializer = (~length, f) =>
 
 @get external length: array<'a> => int = "length"
 
+let isEmpty = arr => arr->length === 0
+
 let rec equalFromIndex = (a, b, i, eq, len) =>
   if i === len {
     true

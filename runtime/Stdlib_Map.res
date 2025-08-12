@@ -7,6 +7,8 @@ type t<'k, 'v>
 
 @get external size: t<'k, 'v> => int = "size"
 
+let isEmpty = map => map->size === 0
+
 @send external clear: t<'k, 'v> => unit = "clear"
 
 @send external forEach: (t<'k, 'v>, 'v => unit) => unit = "forEach"

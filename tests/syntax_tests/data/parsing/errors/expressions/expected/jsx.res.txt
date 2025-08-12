@@ -89,15 +89,39 @@
   10 │ let x = <a-b- />
   11 │ let x = <V.a- />
   12 │ 
+  13 │ // Trailing dots in tag names
 
   JSX identifier cannot end with a hyphen
 
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/jsx.res:14:15
+
+  12 │ 
+  13 │ // Trailing dots in tag names
+  14 │ let x = <Foo. />
+  15 │ let x = <Foo></Foo.>
+
+  expected identifier after '.' in JSX tag name
+
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/expressions/jsx.res:15:20
+
+  13 │ // Trailing dots in tag names
+  14 │ let x = <Foo. />
+  15 │ let x = <Foo></Foo.>
+
+  expected identifier after '.' in JSX tag name
+
 let x = <di-v />
-let x = <Unclosed></Unclosed>
-let x = <Foo.Bar></Foo.Bar> > ([%rescript.exprhole ])
-let x = <Foo.Bar.Baz></Foo.Bar.Baz> > ([%rescript.exprhole ])
-let x = <Foo.bar></Foo.bar> > ([%rescript.exprhole ])
+let x = <Unclosed>
+let x = <Foo.Bar></Free.Will>
+let x = <Foo.Bar.Baz></Foo.Bar.Boo>
+let x = <Foo.bar></Foo.baz>
 let x = <Foo.bar baz />
-let x = <a></a>
-let x = <a-b></a-b>
-let x = <V.a></V.a>
+let x = <a />
+let x = <a-b />
+let x = <V.a />
+let x = <Foo. />
+let x = <Foo></Foo.>

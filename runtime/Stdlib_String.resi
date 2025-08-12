@@ -809,6 +809,36 @@ String.searchOpt("no numbers", /\d+/) == None
 let searchOpt: (string, Stdlib_RegExp.t) => option<int>
 
 /**
+`isEmpty(str)` returns `true` if the string is empty (has zero length), 
+`false` otherwise.
+
+## Examples
+
+```rescript
+String.isEmpty("") == true
+String.isEmpty("hello") == false
+String.isEmpty("  ") == false
+```
+*/
+let isEmpty: string => bool
+
+/**
+`capitalize(str)` returns a new string with the first character converted to 
+uppercase and the remaining characters unchanged. If the string is empty, 
+returns the empty string.
+
+## Examples
+
+```rescript
+String.capitalize("hello") == "Hello"
+String.capitalize("HELLO") == "HELLO"
+String.capitalize("hello world") == "Hello world"
+String.capitalize("") == ""
+```
+*/
+let capitalize: string => string
+
+/**
 `slice(str, ~start, ~end)` returns the substring of `str` starting at
 character `start` up to but not including `end`.
 - If either `start` or `end` is negative, then it is evaluated as

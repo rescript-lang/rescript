@@ -4440,9 +4440,10 @@ and print_pexp_apply ~state expr cmt_tbl =
   | _ -> assert false
 
 and print_jsx_unary_tag ~state tag_name props expr_loc cmt_tbl =
-  let name = print_jsx_name tag_name in
+  let name = print_jsx_name tag_name.txt in
   let formatted_props = print_jsx_props ~state props cmt_tbl in
-  let tag_has_trailing_comment = has_trailing_comments cmt_tbl tag_name.loc in
+  let tag_loc = tag_name.loc in
+  let tag_has_trailing_comment = has_trailing_comments cmt_tbl tag_loc in
   let tag_has_no_props = List.length props == 0 in
   let closing_token_loc =
     ParsetreeViewer.unary_element_closing_token expr_loc
@@ -4462,9 +4463,7 @@ and print_jsx_unary_tag ~state tag_name props expr_loc cmt_tbl =
         ]
   in
   let opening_tag =
-    print_comments
-      (Doc.concat [Doc.less_than; name])
-      cmt_tbl tag_name.Asttypes.loc
+    print_comments (Doc.concat [Doc.less_than; name]) cmt_tbl tag_loc
   in
   let opening_tag_doc =
     if tag_has_trailing_comment && not tag_has_no_props then
@@ -4489,7 +4488,7 @@ and print_jsx_container_tag ~state tag_name
     (children : Parsetree.jsx_children)
     (closing_tag : Parsetree.jsx_closing_container_tag option)
     (pexp_loc : Location.t) cmt_tbl =
-  let name = print_jsx_name tag_name in
+  let name = print_jsx_name tag_name.txt in
   let last_prop_has_comment_after =
     let rec visit props =
       match props with
@@ -4543,8 +4542,11 @@ and print_jsx_container_tag ~state tag_name
       let closing_tag_loc =
         ParsetreeViewer.container_element_closing_tag_loc closing_tag
       in
+      let closing_name =
+        print_jsx_name closing_tag.jsx_closing_container_tag_name.txt
+      in
       print_comments
-        (Doc.concat [Doc.text "</"; name; Doc.greater_than])
+        (Doc.concat [Doc.text "</"; closing_name; Doc.greater_than])
         cmt_tbl closing_tag_loc
   in
   Doc.group
@@ -4553,52 +4555,40 @@ and print_jsx_container_tag ~state tag_name
          Doc.group
            (Doc.concat
               [
-                print_comments
-                  (Doc.concat [Doc.less_than; name])
-                  cmt_tbl tag_name.Asttypes.loc;
-                (if List.length formatted_props == 0 then Doc.nil
-                 else
-                   Doc.indent
-                     (Doc.concat
-                        [
-                          Doc.line;
-                          Doc.group (Doc.join formatted_props ~sep:Doc.line);
-                        ]));
-                (* 
-                if the element name has a single comment on the same line
+                (* Opening tag name and props *)
+                (let tag_loc = tag_name.loc in
 
-                <A // foo
-                >
-                </A>
-
-                We need to force a newline.
-               *)
-                (if
-                   has_trailing_single_line_comment cmt_tbl
-                     tag_name.Asttypes.loc
-                 then Doc.concat [Doc.hard_line; opening_greater_than_doc]
-                   (*
-                  if the last prop has trailing comment
-
-                  <A
-                    prop=value
-                    // comments
-                  >
-                  </A>
-
-                  or there are leading comments before `>`
-
-                  <A
-                    // comments
-                  >
-
-                  then put > on the next line
-                 *)
-                 else if
-                   last_prop_has_comment_after
-                   || opening_greater_than_has_leading_comments
-                 then Doc.concat [Doc.soft_line; opening_greater_than_doc]
-                 else opening_greater_than_doc);
+                 let opening_tag_name_doc =
+                   print_comments
+                     (Doc.concat [Doc.less_than; name])
+                     cmt_tbl tag_loc
+                 in
+                 let props_block_doc =
+                   if List.length formatted_props == 0 then Doc.nil
+                   else
+                     Doc.indent
+                       (Doc.concat
+                          [
+                            Doc.line;
+                            Doc.group (Doc.join formatted_props ~sep:Doc.line);
+                          ])
+                 in
+                 let after_name_and_props_doc =
+                   (* if the element name has a single comment on the same line, force newline before '>' *)
+                   if has_trailing_single_line_comment cmt_tbl tag_loc then
+                     Doc.concat [Doc.hard_line; opening_greater_than_doc]
+                   else if
+                     last_prop_has_comment_after
+                     || opening_greater_than_has_leading_comments
+                   then Doc.concat [Doc.soft_line; opening_greater_than_doc]
+                   else opening_greater_than_doc
+                 in
+                 Doc.concat
+                   [
+                     opening_tag_name_doc;
+                     props_block_doc;
+                     after_name_and_props_doc;
+                   ]);
               ]);
          Doc.concat
            [
@@ -4783,19 +4773,26 @@ and print_jsx_prop ~state prop cmt_tbl =
 and print_jsx_props ~state props cmt_tbl : Doc.t list =
   props |> List.map (fun prop -> print_jsx_prop ~state prop cmt_tbl)
 
-and print_jsx_name {txt = lident} =
-  let print_ident = print_ident_like ~allow_uident:true ~allow_hyphen:true in
-  let rec flatten acc lident =
-    match lident with
-    | Longident.Lident txt -> print_ident txt :: acc
-    | Ldot (lident, txt) -> flatten (print_ident txt :: acc) lident
-    | _ -> acc
-  in
-  match lident with
-  | Longident.Lident txt -> print_ident txt
-  | _ as lident ->
-    let segments = flatten [] lident in
-    Doc.join ~sep:Doc.dot segments
+and print_jsx_name (tag_name : Parsetree.jsx_tag_name) =
+  match tag_name with
+  | Parsetree.JsxTagInvalid invalid ->
+    (* Preserve exactly what the parser recorded as invalid *)
+    Doc.text invalid
+  | Parsetree.JsxLowerTag name ->
+    print_ident_like ~allow_uident:true ~allow_hyphen:true name
+  | Parsetree.JsxQualifiedLowerTag {path; name} ->
+    let upper_segs = Longident.flatten path in
+    let printed_upper =
+      upper_segs |> List.map (print_ident_like ~allow_uident:true)
+    in
+    let printed_lower =
+      print_ident_like ~allow_uident:true ~allow_hyphen:true name
+    in
+    Doc.join ~sep:Doc.dot (printed_upper @ [printed_lower])
+  | Parsetree.JsxUpperTag path ->
+    let segs = Longident.flatten path in
+    let printed = segs |> List.map (print_ident_like ~allow_uident:true) in
+    Doc.join ~sep:Doc.dot printed
 
 and print_arguments_with_callback_in_first_position ~state ~partial args cmt_tbl
     =

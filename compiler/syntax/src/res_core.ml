@@ -721,46 +721,131 @@ let parse_module_long_ident_tail ~lowercase p start_pos ident =
    - All immediately following ("-" IDENT) chunks have been consumed from the scanner
    - No hyphen that belongs to the JSX name remains unconsumed
    - The returned token is the combined Lident/Uident for the full name *)
-let parse_jsx_ident (p : Parser.t) : Token.t option =
-  (* check if the next tokens are minus and ident, if so, add them to the buffer *)
-  let rec visit buffer =
-    match p.Parser.token with
-    | Minus -> (
-      Parser.next p;
-      match p.Parser.token with
-      | Lident txt | Uident txt ->
-        Buffer.add_char buffer '-';
-        Buffer.add_string buffer txt;
-        if Scanner.peekMinus p.scanner then (
-          Parser.next p;
-          visit buffer)
-        else buffer
-      | _ ->
-        (* Error: hyphen must be followed by an identifier *)
-        Parser.err p
-          (Diagnostics.message "JSX identifier cannot end with a hyphen");
-        buffer)
-    | _ -> buffer
-  in
+(* Non-mutating helpers to parse JSX identifiers with optional hyphen chains *)
+type jsx_ident_kind = [`Lower | `Upper]
+
+(* Inspect current token; do not advance *)
+let peek_ident (p : Parser.t) : (string * Location.t * jsx_ident_kind) option =
   match p.Parser.token with
-  | Lident txt when Scanner.peekMinus p.scanner ->
-    let buffer = Buffer.create (String.length txt) in
-    Buffer.add_string buffer txt;
-    Parser.next p;
-    let name = visit buffer |> Buffer.contents in
-    Some (Token.Lident name)
-  | Uident txt when Scanner.peekMinus p.scanner ->
-    let buffer = Buffer.create (String.length txt) in
-    Buffer.add_string buffer txt;
-    Parser.next p;
-    let name = visit buffer |> Buffer.contents in
-    Some (Token.Uident name)
+  | Lident txt -> Some (txt, mk_loc p.start_pos p.end_pos, `Lower)
+  | Uident txt -> Some (txt, mk_loc p.start_pos p.end_pos, `Upper)
   | _ -> None
+
+(* Consume one Lident/Uident if present *)
+let expect_ident (p : Parser.t) : (string * Location.t * jsx_ident_kind) option
+    =
+  match peek_ident p with
+  | None -> None
+  | Some (txt, loc, k) ->
+    Parser.next p;
+    Some (txt, loc, k)
+
+(* Consume ("-" IDENT)*, appending to buffer; update last_end; diagnose trailing '-' *)
+let rec read_hyphen_chain (p : Parser.t) (buf : Buffer.t)
+    (last_end : Lexing.position ref) : unit =
+  match p.Parser.token with
+  | Minus -> (
+    Parser.next p;
+    (* after '-' *)
+    match peek_ident p with
+    | Some (txt, _loc, _) ->
+      Buffer.add_char buf '-';
+      Buffer.add_string buf txt;
+      (* consume ident *)
+      Parser.next p;
+      last_end := p.prev_end_pos;
+      read_hyphen_chain p buf last_end
+    | None ->
+      (* Match previous behavior: rely on parser's current location *)
+      Parser.err p
+        (Diagnostics.message "JSX identifier cannot end with a hyphen"))
+  | _ -> ()
+
+(* Read local jsx name: returns combined name + loc + kind of head ident *)
+let read_local_jsx_name (p : Parser.t) :
+    (string * Location.t * jsx_ident_kind) option =
+  match expect_ident p with
+  | None -> None
+  | Some (head, head_loc, kind) ->
+    let buf = Buffer.create (String.length head + 8) in
+    Buffer.add_string buf head;
+    let start_pos = head_loc.Location.loc_start in
+    let last_end = ref head_loc.Location.loc_end in
+    read_hyphen_chain p buf last_end;
+    let name = Buffer.contents buf in
+    let loc = mk_loc start_pos !last_end in
+    Some (name, loc, kind)
+
+(* Build a Longident from a non-empty list of segments *)
+let longident_of_segments (segs : string list) : Longident.t =
+  match segs with
+  | [] -> invalid_arg "longident_of_segments: empty list"
+  | hd :: tl ->
+    List.fold_left
+      (fun acc s -> Longident.Ldot (acc, s))
+      (Longident.Lident hd) tl
+
+(* Read a JSX tag name and return a jsx_tag_name; does not mutate tokens beyond what it consumes *)
+let read_jsx_tag_name (p : Parser.t) :
+    (Parsetree.jsx_tag_name Location.loc, string) result =
+  match peek_ident p with
+  | None -> Error ""
+  | Some (_, _, `Lower) ->
+    read_local_jsx_name p
+    |> Option.map (fun (name, loc, _) ->
+           {Location.txt = Parsetree.JsxLowerTag name; loc})
+    |> Option.to_result ~none:""
+  | Some (first_seg, first_loc, `Upper) ->
+    let start_pos = first_loc.Location.loc_start in
+    (* consume first Uident *)
+    Parser.next p;
+    let string_of_rev_segments segs = String.concat "." (List.rev segs) in
+    let rec loop rev_segs last_end =
+      match p.Parser.token with
+      | Dot -> (
+        Parser.next p;
+        (* after '.' *)
+        match peek_ident p with
+        | None ->
+          Parser.err p
+            (Diagnostics.message "expected identifier after '.' in JSX tag name");
+          Error (string_of_rev_segments rev_segs ^ ".")
+        | Some (txt, _loc, `Upper) ->
+          (* another path segment *)
+          Parser.next p;
+          loop (txt :: rev_segs) p.prev_end_pos
+        | Some (_, _, `Lower) -> (
+          (* final lowercase with optional hyphens *)
+          match read_local_jsx_name p with
+          | Some (lname, l_loc, _) -> (
+            match rev_segs with
+            | [] -> Error ""
+            | _ ->
+              let path = longident_of_segments (List.rev rev_segs) in
+              let loc = mk_loc start_pos l_loc.Location.loc_end in
+              Ok
+                {
+                  Location.txt =
+                    Parsetree.JsxQualifiedLowerTag {path; name = lname};
+                  loc;
+                })
+          | None -> Error ""))
+      | _ -> (
+        (* pure Upper path *)
+        match rev_segs with
+        | [] -> Error ""
+        | _ ->
+          let path = longident_of_segments (List.rev rev_segs) in
+          let loc = mk_loc start_pos last_end in
+          Ok {txt = Parsetree.JsxUpperTag path; loc})
+    in
+    (* seed with the first segment already consumed *)
+    loop [first_seg] first_loc.Location.loc_end
 
 (* Parses module identifiers:
      Foo
      Foo.Bar *)
-let parse_module_long_ident ~lowercase ?(is_jsx_name : bool = false) p =
+let parse_module_long_ident ~lowercase p =
   (* Parser.leaveBreadcrumb p Reporting.ModuleLongIdent; *)
   let start_pos = p.Parser.start_pos in
   let module_ident =
@@ -777,8 +862,6 @@ let parse_module_long_ident ~lowercase ?(is_jsx_name : bool = false) p =
       match p.Parser.token with
       | Dot ->
         Parser.next p;
-        if is_jsx_name then
-          parse_jsx_ident p |> Option.iter (fun t -> p.Parser.token <- t);
         parse_module_long_ident_tail ~lowercase p start_pos lident
       | _ -> Location.mkloc lident (mk_loc start_pos end_pos))
     | t ->
@@ -787,25 +870,6 @@ let parse_module_long_ident ~lowercase ?(is_jsx_name : bool = false) p =
   in
   (* Parser.eatBreadcrumb p; *)
   module_ident
-
-let verify_jsx_opening_closing_name p
-    (name_longident : Longident.t Location.loc) : bool =
-  let closing =
-    match p.Parser.token with
-    | Lident lident ->
-      Parser.next p;
-      Longident.Lident lident
-    | Uident _ ->
-      (parse_module_long_ident ~lowercase:true ~is_jsx_name:true p).txt
-    | _ -> Longident.Lident ""
-  in
-  let opening = name_longident.txt in
-  opening = closing
-
-let string_of_longident (longindent : Longident.t Location.loc) =
-  Longident.flatten longindent.txt
-  (* |> List.filter (fun s -> s <> "createElement") *)
-  |> String.concat "."
 
 (* open-def ::=
  *   | open module-path
@@ -2584,28 +2648,16 @@ and parse_let_bindings ~attrs ~start_pos p =
   in
   (rec_flag, loop p [first])
 
-and parse_jsx_name p : Longident.t Location.loc =
-  (* jsx allows for `-` token in the name, we need to combine some tokens *)
-  parse_jsx_ident p |> Option.iter (fun t -> p.Parser.token <- t);
-  match p.Parser.token with
-  | Lident ident ->
-    let ident_start = p.start_pos in
-    let ident_end = p.end_pos in
-    Parser.next p;
-    let loc = mk_loc ident_start ident_end in
-    Location.mkloc (Longident.Lident ident) loc
-  | Uident _ ->
-    let longident =
-      parse_module_long_ident ~lowercase:true ~is_jsx_name:true p
-    in
-    longident
-  | _ ->
+and parse_jsx_name p : Parsetree.jsx_tag_name Location.loc =
+  match read_jsx_tag_name p with
+  | Ok name -> name
+  | Error invalid_str ->
     let msg =
       "A jsx name must be a lowercase or uppercase name, like: div in <div /> \
        or Navbar in <Navbar />"
     in
     Parser.err p (Diagnostics.message msg);
-    Location.mknoloc (Longident.Lident "_")
+    {txt = Parsetree.JsxTagInvalid invalid_str; loc = Location.none}
 
 and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
     ~start_pos p : Parsetree.expression =
@@ -2639,42 +2691,91 @@ and parse_jsx_opening_or_self_closing_element (* start of the opening < *)
           (Diagnostics.message "Did you forget a `</` here?");
         None
     in
-    (* Again, the ident in the closing tag can have a minus.
-      We combine these tokens into a single ident *)
-    parse_jsx_ident p |> Option.iter (fun t -> p.Parser.token <- t);
-    match p.Parser.token with
-    | (Lident _ | Uident _) when verify_jsx_opening_closing_name p name ->
-      let end_tag_name = {name with loc = mk_loc p.start_pos p.end_pos} in
-      let closing_tag_end = p.start_pos in
-      Parser.expect GreaterThan p;
-      let loc = mk_loc start_pos p.prev_end_pos in
-      let closing_tag =
-        closing_tag_start
-        |> Option.map (fun closing_tag_start ->
-               {
-                 Parsetree.jsx_closing_container_tag_start = closing_tag_start;
-                 jsx_closing_container_tag_name = end_tag_name;
-                 jsx_closing_container_tag_end = closing_tag_end;
-               })
-      in
-
-      Ast_helper.Exp.jsx_container_element ~loc name jsx_props opening_tag_end
-        children closing_tag
+    (* Read the closing tag name and verify it matches the opening name *)
+    let token0 = p.Parser.token in
+    match token0 with
+    | Lident _ | Uident _ -> (
+      (* Consume the closing name without mutating tokens beforehand *)
+      let closing_name_res = read_jsx_tag_name p in
+      match closing_name_res with
+      | Ok closing_name
+        when Ast_helper.Jsx.longident_of_jsx_tag_name closing_name.txt
+             = Ast_helper.Jsx.longident_of_jsx_tag_name name.txt ->
+        let end_tag_name = closing_name in
+        let closing_tag_end = p.start_pos in
+        Parser.expect GreaterThan p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        let closing_tag =
+          closing_tag_start
+          |> Option.map (fun closing_tag_start ->
+                 {
+                   Parsetree.jsx_closing_container_tag_start = closing_tag_start;
+                   jsx_closing_container_tag_name = end_tag_name;
+                   jsx_closing_container_tag_end = closing_tag_end;
+                 })
+        in
+        Ast_helper.Exp.jsx_container_element ~loc name jsx_props opening_tag_end
+          children closing_tag
+      | _ ->
+        let () =
+          if Grammar.is_structure_item_start token0 then (
+            let closing =
+              "</" ^ Ast_helper.Jsx.string_of_jsx_tag_name name.txt ^ ">"
+            in
+            let msg = Diagnostics.message ("Missing " ^ closing) in
+            Parser.err ~start_pos ~end_pos:p.prev_end_pos p msg;
+            (* We attempted to read a closing name; consume the '>' to keep AST shape stable *)
+            Parser.expect GreaterThan p)
+          else
+            let opening =
+              "</" ^ Ast_helper.Jsx.string_of_jsx_tag_name name.txt ^ ">"
+            in
+            let msg =
+              "Closing jsx name should be the same as the opening name. Did \
+               you mean " ^ opening ^ " ?"
+            in
+            Parser.err ~start_pos ~end_pos:p.prev_end_pos p
+              (Diagnostics.message msg);
+            (* read_jsx_tag_name already consumed the name; expect the '>') *)
+            Parser.expect GreaterThan p
+        in
+        let end_tag_name =
+          match closing_name_res with
+          | Ok closing_name -> closing_name
+          | Error invalid_str ->
+            {txt = Parsetree.JsxTagInvalid invalid_str; loc = Location.none}
+        in
+        let closing_tag_end = p.prev_end_pos in
+        let closing_tag =
+          closing_tag_start
+          |> Option.map (fun closing_tag_start ->
+                 {
+                   Parsetree.jsx_closing_container_tag_start = closing_tag_start;
+                   jsx_closing_container_tag_name = end_tag_name;
+                   jsx_closing_container_tag_end = closing_tag_end;
+                 })
+        in
+        Ast_helper.Exp.jsx_container_element
+          ~loc:(mk_loc start_pos p.prev_end_pos)
+          name jsx_props opening_tag_end children closing_tag)
     | token ->
       let () =
         if Grammar.is_structure_item_start token then
-          let closing = "</" ^ string_of_longident name ^ ">" in
+          let closing =
+            "</" ^ Ast_helper.Jsx.string_of_jsx_tag_name name.txt ^ ">"
+          in
           let msg = Diagnostics.message ("Missing " ^ closing) in
           Parser.err ~start_pos ~end_pos:p.prev_end_pos p msg
         else
-          let opening = "</" ^ string_of_longident name ^ ">" in
+          let opening =
+            "</" ^ Ast_helper.Jsx.string_of_jsx_tag_name name.txt ^ ">"
+          in
           let msg =
             "Closing jsx name should be the same as the opening name. Did you \
              mean " ^ opening ^ " ?"
           in
           Parser.err ~start_pos ~end_pos:p.prev_end_pos p
-            (Diagnostics.message msg);
-          Parser.expect GreaterThan p
+            (Diagnostics.message msg)
       in
       Ast_helper.Exp.jsx_container_element
         ~loc:(mk_loc start_pos p.prev_end_pos)
@@ -2705,8 +2806,10 @@ and parse_jsx p =
       (* fragment: <> foo </> *)
       parse_jsx_fragment start_pos p
     | _ ->
-      let longident = parse_jsx_name p in
-      Ast_helper.Exp.ident ~loc:longident.loc longident
+      let tag_name = parse_jsx_name p in
+      let (loc : Location.t) = tag_name.loc in
+      let lid = Ast_helper.Jsx.longident_of_jsx_tag_name tag_name.txt in
+      Ast_helper.Exp.ident ~loc (Location.mkloc lid loc)
   in
   Parser.eat_breadcrumb p;
   jsx_expr
@@ -2739,23 +2842,25 @@ and parse_jsx_fragment start_pos p =
  *   |  {...jsx_expr}
  *)
 and parse_jsx_prop p : Parsetree.jsx_prop option =
-  (* prop can have `-`, we need to combine some tokens into a single ident *)
-  parse_jsx_ident p |> Option.iter (fun t -> p.Parser.token <- t);
   match p.Parser.token with
   | Question | Lident _ -> (
     let optional = Parser.optional p Question in
-    let name, loc = parse_lident p in
-    (* optional punning: <foo ?a /> *)
-    if optional then Some (Parsetree.JSXPropPunning (true, {txt = name; loc}))
-    else
-      match p.Parser.token with
-      | Equal ->
-        Parser.next p;
-        (* no punning *)
-        let optional = Parser.optional p Question in
-        let attr_expr = parse_primary_expr ~operand:(parse_atomic_expr p) p in
-        Some (Parsetree.JSXPropValue ({txt = name; loc}, optional, attr_expr))
-      | _ -> Some (Parsetree.JSXPropPunning (false, {txt = name; loc})))
+    (* allow hyphens inside prop names by reading a local jsx name *)
+    match read_local_jsx_name p with
+    | Some (name, loc, `Lower) -> (
+      if optional then Some (Parsetree.JSXPropPunning (true, {txt = name; loc}))
+      else
+        match p.Parser.token with
+        | Equal ->
+          Parser.next p;
+          let optional = Parser.optional p Question in
+          let attr_expr = parse_primary_expr ~operand:(parse_atomic_expr p) p in
+          Some (Parsetree.JSXPropValue ({txt = name; loc}, optional, attr_expr))
+        | _ -> Some (Parsetree.JSXPropPunning (false, {txt = name; loc})))
+    | Some (_name, _loc, `Upper) ->
+      Parser.err p (Diagnostics.message "JSX prop names must be lowercase");
+      None
+    | None -> None)
   (* {...props} *)
   | Lbrace -> (
     let spread_start = p.Parser.start_pos in

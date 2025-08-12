@@ -101,7 +101,9 @@ module T = struct
     | Ptyp_arrow {arg; ret; arity} -> (
       let lbl = Asttypes.to_noloc arg.lbl in
       let typ0 =
-        arrow ~loc ~attrs lbl (sub.typ sub arg.typ) (sub.typ sub ret)
+        arrow ~loc
+          ~attrs:(attrs @ sub.attributes sub arg.attrs)
+          lbl (sub.typ sub arg.typ) (sub.typ sub ret)
       in
       match arity with
       | None -> typ0
@@ -495,7 +497,9 @@ module E = struct
              jsx_unary_element_tag_name = tag_name;
              jsx_unary_element_props = props;
            }) ->
-      let tag_ident = map_loc sub tag_name in
+      let tag_ident : Longident.t Location.loc =
+        tag_name |> Location.map_loc Ast_helper.Jsx.longident_of_jsx_tag_name
+      in
       let props = map_jsx_props sub props in
       let children_expr =
         let loc =
@@ -525,7 +529,9 @@ module E = struct
              jsx_container_element_props = props;
              jsx_container_element_children = children;
            }) ->
-      let tag_ident = map_loc sub tag_name in
+      let tag_ident : Longident.t Location.loc =
+        tag_name |> Location.map_loc Ast_helper.Jsx.longident_of_jsx_tag_name
+      in
       let props = map_jsx_props sub props in
       let children_expr = map_jsx_children sub loc children in
       apply ~loc ~attrs:(jsx_attr sub :: attrs) (ident tag_ident)

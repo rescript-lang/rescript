@@ -18,13 +18,18 @@
 
 #### :rocket: New Feature
 
+- Add new Stdlib helpers: `String.capitalize`, `String.isEmpty`, `Dict.size`, `Dict.isEmpty`, `Array.isEmpty`, `Map.isEmpty`, `Set.isEmpty`. https://github.com/rescript-lang/rescript/pull/7516
+
 #### :bug: Bug fix
+- Fix issue with ast conversion (for ppx use) on functions with attributes on first argument. https://github.com/rescript-lang/rescript/pull/7761
 
 #### :memo: Documentation
 
 #### :nail_care: Polish
 
 #### :house: Internal
+
+- AST: Use jsx_tag_name instead of Longindent.t to store jsx tag name. https://github.com/rescript-lang/rescript/pull/7760
 
 # 12.0.0-beta.5
 

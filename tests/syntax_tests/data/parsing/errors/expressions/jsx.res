@@ -9,3 +9,7 @@ let x = <Foo.bar.baz />
 let x = <a- />
 let x = <a-b- />
 let x = <V.a- />
+
+// Trailing dots in tag names
+let x = <Foo. />
+let x = <Foo></Foo.>
