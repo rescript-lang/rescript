@@ -2,6 +2,7 @@ import * as child_process from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { bsc_exe, rescript_legacy_exe } from "#cli/bins";
+import { stdlibDir } from "#cli/stdlib";
 
 /**
  * @typedef {{
@@ -54,6 +55,7 @@ export function setup(cwd = process.cwd()) {
       cwd,
       shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, RESCRIPT_STDLIB: stdlibDir },
       ...options,
     });
 
