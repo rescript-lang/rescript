@@ -5,11 +5,6 @@
     "dir": "src",
     "subdirs": true
   },
-  "package-specs": {
-    "module": "esmodule",
-    "in-source": false,
-    "suffix": ".res.js"
-  },
   "dependencies": [
     "@rescript/react"
   ]
