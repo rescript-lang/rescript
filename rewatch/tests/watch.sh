@@ -18,12 +18,33 @@ exit_watcher() {
   rm lib/rescript.lock
 }
 
-rewatch_bg watch > /dev/null 2>&1 &
+# Wait until a file exists (with timeout in seconds, default 30)
+wait_for_file() {
+  local file="$1"; local timeout="${2:-30}"
+  while [ "$timeout" -gt 0 ]; do
+    [ -f "$file" ] && return 0
+    sleep 1
+    timeout=$((timeout - 1))
+  done
+  return 1
+}
+
+# Start watcher and capture logs for debugging
+rewatch_bg watch > rewatch.log 2>&1 &
 success "Watcher Started"
 
+# Trigger a recompilation
 echo 'Js.log("added-by-test")' >> ./packages/main/src/Main.res
 
-sleep 2
+# Wait for the compiled JS to show up (Windows CI can be slower)
+target=./packages/main/src/Main.mjs
+if ! wait_for_file "$target" 10; then
+  error "Expected output not found: $target"
+  ls -la ./packages/main/src || true
+  tail -n 200 rewatch.log || true
+  exit_watcher
+  exit 1
+fi
 
 if node ./packages/main/src/Main.mjs | grep 'added-by-test' &> /dev/null;
 then
