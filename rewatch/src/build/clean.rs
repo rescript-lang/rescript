@@ -61,7 +61,7 @@ pub fn remove_compile_assets(package: &packages::Package, source_file: &Path) {
     }
 }
 
-fn clean_source_files(build_state: &BuildState, root_config: &Config, suffix: &str) {
+fn clean_source_files(build_state: &BuildState, root_config: &Config) {
     // get all rescript file locations
     let rescript_file_locations = build_state
         .modules
@@ -77,7 +77,7 @@ fn clean_source_files(build_state: &BuildState, root_config: &Config, suffix: &s
                                 Some((
                                     package.path.join(&source_file.implementation.path),
                                     match spec.suffix {
-                                        None => suffix.to_owned(),
+                                        None => root_config.get_suffix(&spec),
                                         Some(suffix) => suffix,
                                     },
                                 ))
@@ -367,19 +367,40 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, clean_dev_
     let mut build_state = BuildState::new(project_context, packages, bsc_path);
     packages::parse_packages(&mut build_state);
     let root_config = build_state.get_root_config();
-    let suffix = build_state.project_context.get_suffix();
+    let suffix_for_print = if snapshot_output || !show_progress {
+        String::new()
+    } else {
+        match root_config.package_specs {
+            None => match &root_config.suffix {
+                None => String::from(".js"),
+                Some(suffix) => suffix.clone(),
+            },
+            Some(_) => root_config
+                .get_package_specs()
+                .into_iter()
+                .filter_map(|spec| {
+                    if spec.in_source {
+                        spec.suffix.or_else(|| root_config.suffix.clone())
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<String>>()
+                .join(", "),
+        }
+    };
 
     if !snapshot_output && show_progress {
         println!(
             "{} {}Cleaning {} files...",
             style("[2/2]").bold().dim(),
             SWEEP,
-            suffix
+            suffix_for_print
         );
         let _ = std::io::stdout().flush();
     }
 
-    clean_source_files(&build_state, root_config, &suffix);
+    clean_source_files(&build_state, root_config);
     let timing_clean_mjs_elapsed = timing_clean_mjs.elapsed();
 
     if !snapshot_output && show_progress {
@@ -388,7 +409,7 @@ pub fn clean(path: &Path, show_progress: bool, snapshot_output: bool, clean_dev_
             LINE_CLEAR,
             style("[2/2]").bold().dim(),
             SWEEP,
-            suffix,
+            suffix_for_print,
             timing_clean_mjs_elapsed.as_secs_f64()
         );
         let _ = std::io::stdout().flush();

@@ -215,13 +215,6 @@ impl ProjectContext {
         self.get_root_config().path.parent().unwrap()
     }
 
-    pub fn get_suffix(&self) -> String {
-        self.get_root_config()
-            .suffix
-            .clone()
-            .unwrap_or(String::from(".res.mjs"))
-    }
-
     /// Returns the local packages relevant for the current context.
     /// Either a single project, all projects from a monorepo or a single package inside a monorepo.
     pub fn get_scoped_local_packages(&self, include_dev_deps: bool) -> AHashSet<String> {
