@@ -6,7 +6,7 @@ use crate::config::Config;
 use crate::helpers;
 use crate::helpers::StrippedVerbatimPath;
 use crate::helpers::emojis::*;
-use crate::project_context::ProjectContext;
+use crate::project_context::{MonoRepoContext, ProjectContext};
 use ahash::{AHashMap, AHashSet};
 use anyhow::{Result, anyhow};
 use console::style;
@@ -345,23 +345,18 @@ fn read_dependencies(
                 };
 
             let is_local_dep = {
-                match project_context {
-                    ProjectContext::SingleProject {
-                        config,
-                        ..
-                    } => config.name.as_str() == package_name
+                match &project_context.monorepo_context {
+                    None => project_context.current_config.name.as_str() == package_name
                     ,
-                    ProjectContext::MonorepoRoot {
-                        local_dependencies,
-                        local_dev_dependencies,
-                        ..
-                    } => {
+                    Some(MonoRepoContext::MonorepoRoot {
+                             local_dependencies,
+                             local_dev_dependencies,
+                         }) => {
                         local_dependencies.contains(package_name) || local_dev_dependencies.contains(package_name)
-                    }
-                    ProjectContext::MonorepoPackage {
-                        parent_config,
-                        ..
-                    } => {
+                    },
+                    Some(MonoRepoContext::MonorepoPackage {
+                             parent_config,
+                         }) => {
                         helpers::is_local_package(&parent_config.path, &canonical_path)
                     }
                 }
@@ -489,16 +484,13 @@ fn read_packages(
 ) -> Result<AHashMap<String, Package>> {
     // Store all packages and completely deduplicate them
     let mut map: AHashMap<String, Package> = AHashMap::new();
-    let current_package = match project_context {
-        ProjectContext::SingleProject { config }
-        | ProjectContext::MonorepoRoot { config, .. }
-        | ProjectContext::MonorepoPackage { config, .. } => {
-            let folder = config
-                .path
-                .parent()
-                .ok_or_else(|| anyhow!("Could not the read parent folder or a rescript.json file"))?;
-            make_package(config.to_owned(), folder, true, true)
-        }
+    let current_package = {
+        let config = &project_context.current_config;
+        let folder = config
+            .path
+            .parent()
+            .ok_or_else(|| anyhow!("Could not the read parent folder or a rescript.json file"))?;
+        make_package(config.to_owned(), folder, true, true)
     };
 
     map.insert(current_package.name.to_string(), current_package);
@@ -507,7 +499,7 @@ fn read_packages(
     let dependencies = flatten_dependencies(read_dependencies(
         &mut registered_dependencies_set,
         project_context,
-        project_context.get_current_rescript_config(),
+        &project_context.current_config,
         show_progress,
         build_dev_deps,
     ));

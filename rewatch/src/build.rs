@@ -65,7 +65,7 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
     let is_type_dev = match filename.strip_prefix(&current_package) {
         Err(_) => false,
         Ok(relative_path) => project_context
-            .get_current_rescript_config()
+            .current_config
             .find_is_type_dev_for_path(relative_path),
     };
 
@@ -77,7 +77,7 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
 
     let (ast_path, parser_args) = parser_args(
         &project_context,
-        project_context.get_current_rescript_config(),
+        &project_context.current_config,
         relative_filename,
         &contents,
     );
@@ -90,7 +90,7 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         PathBuf::from(&interface_filename).exists()
     };
     let compiler_args = compile::compiler_args(
-        project_context.get_current_rescript_config(),
+        &project_context.current_config,
         &ast_path,
         relative_filename,
         is_interface,

@@ -8,25 +8,19 @@ use log::debug;
 use std::fmt;
 use std::path::Path;
 
-/// Represents the context of a command, categorizing in various ways:
-/// - SingleProject: one rescript.json with no parent or children.
-/// - MonorepoRoot: a rescript.json with (dev-)dependencies found in subfolders.
-/// - MonorepoPackage: a rescript.json with a parent rescript.json.
-///   The current package name is listed in the parent (dev-)dependencies.
-// I don't think this linting rule matters very much as we only create a single instance of this enum.
-// See https://rust-lang.github.io/rust-clippy/master/index.html#large_enum_variant
-#[allow(clippy::large_enum_variant)]
-pub enum ProjectContext {
-    /// Single project - no workspace relationship
-    SingleProject { config: Config },
+pub enum MonoRepoContext {
     /// Monorepo root - contains local dependencies (symlinked in node_modules)
     MonorepoRoot {
-        config: Config,
         local_dependencies: AHashSet<String>, // names of local deps
         local_dev_dependencies: AHashSet<String>,
     },
     /// Package within a monorepo - has a parent workspace
-    MonorepoPackage { config: Config, parent_config: Config },
+    MonorepoPackage { parent_config: Box<Config> },
+}
+
+pub struct ProjectContext {
+    pub current_config: Config,
+    pub monorepo_context: Option<MonoRepoContext>,
 }
 
 fn format_dependencies(dependencies: &AHashSet<String>) -> String {
@@ -54,41 +48,37 @@ fn format_dependencies(dependencies: &AHashSet<String>) -> String {
 
 impl fmt::Debug for ProjectContext {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self {
-            ProjectContext::SingleProject { config } => {
+        match &self.monorepo_context {
+            None => {
                 write!(
                     f,
-                    "SingleProject: \"{}\" at \"{}\"",
-                    config.name,
-                    config.path.to_string_lossy()
+                    "Single project: \"{}\" at \"{}\"",
+                    &self.current_config.name,
+                    &self.current_config.path.to_string_lossy()
                 )
             }
-            ProjectContext::MonorepoRoot {
-                config,
+            Some(MonoRepoContext::MonorepoRoot {
                 local_dependencies,
                 local_dev_dependencies,
-            } => {
+            }) => {
                 let deps = format_dependencies(local_dependencies);
                 let dev_deps = format_dependencies(local_dev_dependencies);
 
                 write!(
                     f,
-                    "MonorepoRoot: \"{}\" at \"{}\" with dependencies:\n  {}\n  and devDependencies:\n {}",
-                    config.name,
-                    config.path.to_string_lossy(),
+                    "Monorepo root: \"{}\" at \"{}\" with dependencies:\n  {}\n  and devDependencies:\n {}",
+                    &self.current_config.name,
+                    &self.current_config.path.to_string_lossy(),
                     deps,
                     dev_deps
                 )
             }
-            ProjectContext::MonorepoPackage {
-                config,
-                parent_config,
-            } => {
+            Some(MonoRepoContext::MonorepoPackage { parent_config }) => {
                 write!(
                     f,
                     "MonorepoPackage:\n  \"{}\" at \"{}\"\n  with parent \"{}\" at \"{}\"",
-                    config.name,
-                    config.path.to_string_lossy(),
+                    &self.current_config.name,
+                    &self.current_config.path.to_string_lossy(),
                     parent_config.name,
                     parent_config.path.to_string_lossy()
                 )
@@ -118,7 +108,7 @@ fn read_local_packages(
             debug!(
                 "Dependency \"{}\" is a {}local package at \"{}\"",
                 dep,
-                (if is_local { "" } else { "non-" }),
+                if is_local { "" } else { "non-" },
                 dep_path.display()
             );
         }
@@ -137,14 +127,17 @@ fn monorepo_or_single_project(path: &Path, current_config: Config) -> Result<Pro
         Some(deps) => read_local_packages(path, deps)?,
     };
     if local_dependencies.is_empty() && local_dev_dependencies.is_empty() {
-        Ok(ProjectContext::SingleProject {
-            config: current_config,
+        Ok(ProjectContext {
+            current_config,
+            monorepo_context: None,
         })
     } else {
-        Ok(ProjectContext::MonorepoRoot {
-            config: current_config,
-            local_dependencies,
-            local_dev_dependencies,
+        Ok(ProjectContext {
+            current_config,
+            monorepo_context: Some(MonoRepoContext::MonorepoRoot {
+                local_dependencies,
+                local_dev_dependencies,
+            }),
         })
     }
 }
@@ -189,9 +182,11 @@ impl ProjectContext {
                         if is_config_listed_in_workspace(&current_config, &workspace_config) =>
                     {
                         // There is a parent rescript.json, and it has a reference to the current package.
-                        Ok(ProjectContext::MonorepoPackage {
-                            config: current_config,
-                            parent_config: workspace_config,
+                        Ok(ProjectContext {
+                            current_config,
+                            monorepo_context: Some(MonoRepoContext::MonorepoPackage {
+                                parent_config: Box::new(workspace_config),
+                            }),
                         })
                     }
                     Ok(_) => {
@@ -209,71 +204,46 @@ impl ProjectContext {
     }
 
     pub fn get_root_config(&self) -> &Config {
-        match self {
-            ProjectContext::SingleProject { config, .. } => config,
-            ProjectContext::MonorepoRoot { config, .. } => config,
-            ProjectContext::MonorepoPackage {
-                parent_config: config,
-                ..
-            } => config,
+        match &self.monorepo_context {
+            None => &self.current_config,
+            Some(MonoRepoContext::MonorepoRoot { .. }) => &self.current_config,
+            Some(MonoRepoContext::MonorepoPackage { parent_config }) => parent_config,
         }
     }
 
     pub fn get_root_path(&self) -> &Path {
-        let rescript_json = match self {
-            ProjectContext::SingleProject { config, .. }
-            | ProjectContext::MonorepoRoot { config, .. }
-            | ProjectContext::MonorepoPackage {
-                parent_config: config,
-                ..
-            } => &config.path,
-        };
-        rescript_json.parent().unwrap()
+        self.get_root_config().path.parent().unwrap()
     }
 
     pub fn get_suffix(&self) -> String {
-        match self {
-            ProjectContext::SingleProject { config, .. }
-            | ProjectContext::MonorepoRoot { config, .. }
-            | ProjectContext::MonorepoPackage {
-                parent_config: config,
-                ..
-            } => config.suffix.clone().unwrap_or(String::from(".res.mjs")),
-        }
+        self.get_root_config()
+            .suffix
+            .clone()
+            .unwrap_or(String::from(".res.mjs"))
     }
 
     /// Returns the local packages relevant for the current context.
     /// Either a single project, all projects from a monorepo or a single package inside a monorepo.
     pub fn get_scoped_local_packages(&self, include_dev_deps: bool) -> AHashSet<String> {
         let mut local_packages = AHashSet::<String>::new();
-        match &self {
-            ProjectContext::SingleProject { config, .. } => {
-                local_packages.insert(config.name.clone());
+        match &self.monorepo_context {
+            None => {
+                local_packages.insert(self.current_config.name.clone());
             }
-            ProjectContext::MonorepoRoot {
-                config,
+            Some(MonoRepoContext::MonorepoRoot {
                 local_dependencies,
                 local_dev_dependencies,
-                ..
-            } => {
-                local_packages.insert(config.name.clone());
+            }) => {
+                local_packages.insert(self.current_config.name.clone());
                 local_packages.extend(local_dependencies.iter().cloned());
                 if include_dev_deps {
                     local_packages.extend(local_dev_dependencies.iter().cloned());
                 }
             }
-            ProjectContext::MonorepoPackage { config, .. } => {
-                local_packages.insert(config.name.clone());
+            Some(MonoRepoContext::MonorepoPackage { .. }) => {
+                local_packages.insert(self.current_config.name.clone());
             }
         };
         local_packages
-    }
-
-    pub fn get_current_rescript_config(&self) -> &Config {
-        match &self {
-            ProjectContext::SingleProject { config, .. }
-            | ProjectContext::MonorepoRoot { config, .. }
-            | ProjectContext::MonorepoPackage { config, .. } => config,
-        }
     }
 }
