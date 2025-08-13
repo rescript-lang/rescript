@@ -14,6 +14,8 @@
 
 #### :boom: Breaking Change
 
+- `rescript format` no longer accepts `--all`. All (non-dev) files of the current rescript.json are now formatted by default. https://github.com/rescript-lang/rescript/pull/7752
+
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
@@ -21,11 +23,15 @@
 - Add new Stdlib helpers: `String.capitalize`, `String.isEmpty`, `Dict.size`, `Dict.isEmpty`, `Array.isEmpty`, `Map.isEmpty`, `Set.isEmpty`. https://github.com/rescript-lang/rescript/pull/7516
 
 #### :bug: Bug fix
+
 - Fix issue with ast conversion (for ppx use) on functions with attributes on first argument. https://github.com/rescript-lang/rescript/pull/7761
 
 #### :memo: Documentation
 
 #### :nail_care: Polish
+
+- `rescript format` now has a `--dev` flag that works similar to `rescript clean`. https://github.com/rescript-lang/rescript/pull/7752
+- `rescript clean` now will clean an individual project (see [#7707](https://github.com/rescript-lang/rescript/issues/7707)). https://github.com/rescript-lang/rescript/pull/7752
 
 #### :house: Internal
 
