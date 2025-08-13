@@ -32,6 +32,7 @@
 
 - `rescript format` now has a `--dev` flag that works similar to `rescript clean`. https://github.com/rescript-lang/rescript/pull/7752
 - `rescript clean` now will clean an individual project (see [#7707](https://github.com/rescript-lang/rescript/issues/7707)). https://github.com/rescript-lang/rescript/pull/7752
+- `rescript clean` will log multiple `in-source` extensions if present. https://github.com/rescript-lang/rescript/pull/7769
 
 #### :house: Internal
 
