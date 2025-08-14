@@ -521,7 +521,9 @@ fn get_dependency_paths(
                     .as_ref()
                     .map(|package| package.path.clone())
             } else {
-                packages::read_dependency(package_name, project_context).ok()
+                // packages will only be None when called by build::get_compiler_args
+                // in that case we can safely pass config as the package config.
+                packages::read_dependency(package_name, config, project_context).ok()
             }
             .map(|canonicalized_path| {
                 vec![
