@@ -12,9 +12,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rescript/darwin-arm64@npm:12.0.0-beta.3":
+  version: 12.0.0-beta.3
+  resolution: "@rescript/darwin-arm64@npm:12.0.0-beta.3"
+  conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
 "@rescript/darwin-x64@npm:12.0.0-beta.1":
   version: 12.0.0-beta.1
   resolution: "@rescript/darwin-x64@npm:12.0.0-beta.1"
+  conditions: os=darwin & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@rescript/darwin-x64@npm:12.0.0-beta.3":
+  version: 12.0.0-beta.3
+  resolution: "@rescript/darwin-x64@npm:12.0.0-beta.3"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
@@ -26,9 +40,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rescript/linux-arm64@npm:12.0.0-beta.3":
+  version: 12.0.0-beta.3
+  resolution: "@rescript/linux-arm64@npm:12.0.0-beta.3"
+  conditions: os=linux & cpu=arm64
+  languageName: node
+  linkType: hard
+
 "@rescript/linux-x64@npm:12.0.0-beta.1":
   version: 12.0.0-beta.1
   resolution: "@rescript/linux-x64@npm:12.0.0-beta.1"
+  conditions: os=linux & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@rescript/linux-x64@npm:12.0.0-beta.3":
+  version: 12.0.0-beta.3
+  resolution: "@rescript/linux-x64@npm:12.0.0-beta.3"
   conditions: os=linux & cpu=x64
   languageName: node
   linkType: hard
@@ -45,6 +73,13 @@ __metadata:
 "@rescript/win32-x64@npm:12.0.0-beta.1":
   version: 12.0.0-beta.1
   resolution: "@rescript/win32-x64@npm:12.0.0-beta.1"
+  conditions: os=win32 & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@rescript/win32-x64@npm:12.0.0-beta.3":
+  version: 12.0.0-beta.3
+  resolution: "@rescript/win32-x64@npm:12.0.0-beta.3"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
@@ -108,6 +143,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@testrepo/nohoist@workspace:packages/nohoist":
+  version: 0.0.0-use.local
+  resolution: "@testrepo/nohoist@workspace:packages/nohoist"
+  dependencies:
+    rescript: "npm:12.0.0-beta.3"
+    rescript-bun: "npm:2.0.1"
+  languageName: unknown
+  linkType: soft
+
 "@testrepo/nonexisting-dev-files@workspace:packages/nonexisting-dev-files":
   version: 0.0.0-use.local
   resolution: "@testrepo/nonexisting-dev-files@workspace:packages/nonexisting-dev-files"
@@ -138,6 +182,15 @@ __metadata:
     sury-ppx: "npm:^11.0.0-alpha.2"
   languageName: unknown
   linkType: soft
+
+"rescript-bun@npm:2.0.1":
+  version: 2.0.1
+  resolution: "rescript-bun@npm:2.0.1"
+  peerDependencies:
+    rescript: 12.0.0-beta.3
+  checksum: 10c0/97fedd71f2706dca0a13084c76cf0f61f7d910cf2e2dfb8dbe33e19d8ad8c5c67aeb25cdf7ab935264fb26e6dda911f1451a370fd7ae10766023c629810d0e36
+  languageName: node
+  linkType: hard
 
 "rescript-nodejs@npm:16.1.0":
   version: 16.1.0
@@ -173,6 +226,36 @@ __metadata:
     rescript-legacy: cli/rescript-legacy.js
     rescript-tools: cli/rescript-tools.js
   checksum: 10c0/ec18e0ccd0791dec7b2bfaa44e0a011e1f171025d0743e06b51f7f4d81c8333bdf3b02f47b72f5b9a5cfa409bdf51e64998833696314e77b6f51afe376a4c3ad
+  languageName: node
+  linkType: hard
+
+"rescript@npm:12.0.0-beta.3":
+  version: 12.0.0-beta.3
+  resolution: "rescript@npm:12.0.0-beta.3"
+  dependencies:
+    "@rescript/darwin-arm64": "npm:12.0.0-beta.3"
+    "@rescript/darwin-x64": "npm:12.0.0-beta.3"
+    "@rescript/linux-arm64": "npm:12.0.0-beta.3"
+    "@rescript/linux-x64": "npm:12.0.0-beta.3"
+    "@rescript/win32-x64": "npm:12.0.0-beta.3"
+  dependenciesMeta:
+    "@rescript/darwin-arm64":
+      optional: true
+    "@rescript/darwin-x64":
+      optional: true
+    "@rescript/linux-arm64":
+      optional: true
+    "@rescript/linux-x64":
+      optional: true
+    "@rescript/win32-x64":
+      optional: true
+  bin:
+    bsc: cli/bsc.js
+    bstracing: cli/bstracing.js
+    rescript: cli/rescript.js
+    rescript-legacy: cli/rescript-legacy.js
+    rescript-tools: cli/rescript-tools.js
+  checksum: 10c0/da264d99199f600dcaf78d8907b70200333dc1cc3a45a52f2fa2c72e2f5f393a8dedd01ebbcf46de94cbbe59a997a4685d6e20648739cd2234560cfb94cd7832
   languageName: node
   linkType: hard
 
