@@ -1,4 +1,1 @@
-open RescriptBun
-open RescriptBun.Globals
-
-Console.log(import.meta.dir)
+Console.log(RescriptBun.Globals.import.meta.dir)
