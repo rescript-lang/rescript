@@ -15,7 +15,11 @@
       "packages/file-casing",
       "packages/file-casing-no-namespace",
       "packages/pure-dev",
-      "packages/with-ppx"
+      "packages/with-ppx",
+      "packages/nohoist"
+    ],
+    "nohoist": [
+      "rescript-bun"
     ]
   },
   "dependencies": {
