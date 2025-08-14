@@ -250,13 +250,25 @@ pub fn read_config(package_dir: &Path) -> Result<Config> {
     }
 }
 
-pub fn read_dependency(package_name: &str, project_context: &ProjectContext) -> Result<PathBuf, String> {
+pub fn read_dependency(package_name: &str, project_context: &ProjectContext) -> Result<PathBuf> {
+    // current folder + node_modules + package_name
+    let path_from_current_config = {
+        match project_context.current_config.path.parent() {
+            None => Err(anyhow!(
+                "Expected {} to have a parent folder",
+                project_context.current_config.path.to_string_lossy()
+            )),
+            Some(parent_path) => Ok(helpers::package_path(parent_path, package_name)),
+        }
+    }?;
     // root folder + node_modules + package_name
     let path_from_root = helpers::package_path(project_context.get_root_path(), package_name);
-    let path = (if path_from_root.exists() {
+    let path = (if path_from_current_config.exists() {
+        Ok(path_from_current_config)
+    } else if path_from_root.exists() {
         Ok(path_from_root)
     } else {
-        Err(format!(
+        Err(anyhow!(
             "The package \"{package_name}\" is not found (are node_modules up-to-date?)..."
         ))
     })?;
@@ -266,7 +278,7 @@ pub fn read_dependency(package_name: &str, project_context: &ProjectContext) -> 
         .map(StrippedVerbatimPath::to_stripped_verbatim_path)
     {
         Ok(canonical_path) => Ok(canonical_path),
-        Err(e) => Err(format!(
+        Err(e) => Err(anyhow!(
             "Failed canonicalizing the package \"{}\" path \"{}\" (are node_modules up-to-date?)...\nMore details: {}",
             package_name,
             path.to_string_lossy(),
