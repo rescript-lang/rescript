@@ -645,6 +645,55 @@ jobs:
         shell: bash
         working-directory: ${{ steps.tmp-dir.outputs.path }}
 
+  test-installation-deno:
+    needs:
+      - pkg-pr-new
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-13
+          - os: macos-14
+          - os: ubuntu-24.04
+          - os: ubuntu-24.04-arm
+          - os: windows-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      RUST_BACKTRACE: "1"
+    steps:
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make test directory
+        id: tmp-dir
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            dir=$(powershell -Command "[System.IO.Path]::GetTempPath() + [System.Guid]::NewGuid().ToString()" | tr -d '\r')
+            mkdir -p "$dir"
+          else
+            dir=$(mktemp -d)
+          fi
+          echo "path=$dir" >> "$GITHUB_OUTPUT"
+          cp -r tests/package_tests/installation_test/* "$dir"
+
+      - name: Install ReScript package
+        run: |
+          COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+          deno add "https://pkg.pr.new/rescript-lang/rescript@${COMMIT_SHA::7}"
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.path }}
+
+      - name: Test installation
+        run: deno run -A npm:rescript && deno run -A npm:rescript legacy build && cat src/Test.res.js
+        shell: bash
+        working-directory: ${{ steps.tmp-dir.outputs.path }}
+
   test-integration-rewatch:
     needs:
       - pkg-pr-new
