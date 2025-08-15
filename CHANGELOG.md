@@ -10,13 +10,11 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-beta.6 (Unreleased)
+# 12.0.0-beta.6
 
 #### :boom: Breaking Change
 
 - `rescript format` no longer accepts `--all`. All (non-dev) files of the current rescript.json are now formatted by default. https://github.com/rescript-lang/rescript/pull/7752
-
-#### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
 
@@ -25,8 +23,6 @@
 #### :bug: Bug fix
 
 - Fix issue with ast conversion (for ppx use) on functions with attributes on first argument. https://github.com/rescript-lang/rescript/pull/7761
-
-#### :memo: Documentation
 
 #### :nail_care: Polish
 
