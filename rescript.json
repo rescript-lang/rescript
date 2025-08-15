@@ -1,4 +1,24 @@
 {
   "name": "rescript",
-  "dependencies": ["@tests/gentype-react-example", "playground"]
+  "package-specs": [
+    {
+      "module": "esmodule",
+      "in-source": true,
+      "suffix": ".res.js"
+    },
+    {
+      "module": "esmodule",
+      "in-source": false,
+      "suffix": ".res.js"
+    }
+  ],
+  "jsx": {
+    "version": 4
+  },
+  "dependencies": [
+    "@tests/gentype-react-example",
+    "@tests/docstring-tests",
+    "playground",
+    "@utils/scripts"
+  ]
 }

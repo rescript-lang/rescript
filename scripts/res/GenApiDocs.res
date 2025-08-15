@@ -12,16 +12,15 @@ module Docgen = RescriptTools.Docgen
 
 let packagePath = Path.join([Node.dirname, "..", "..", "package.json"])
 let version = switch Fs.readFileSync(packagePath, ~encoding="utf8")->JSON.parseOrThrow {
-  | Object(dict{"version": JSON.String(version)}) => version
-  | _ => JsError.panic("Invalid package.json format")
+| Object(dict{"version": JSON.String(version)}) => version
+| _ => JsError.panic("Invalid package.json format")
 }
-let version = Semver.parse(version)->Option.getExn 
+let version = Semver.parse(version)->Option.getOrThrow
 let version = Semver.toString({...version, preRelease: None}) // Remove pre-release identifiers for API docs
 let dirVersion = Path.join([Node.dirname, "apiDocs", version])
 if !Fs.existsSync(dirVersion) {
   Fs.mkdirSync(dirVersion)
 }
-
 
 let entryPointFiles = ["Belt.res", "Dom.res", "Js.res", "Stdlib.res"]
 
@@ -56,9 +55,10 @@ let docsDecoded = entryPointFiles->Array.map(libFile =>
       },
     )->Buffer.toString
 
-    let docs = output
-    ->JSON.parseOrThrow
-    ->Docgen.decodeFromJson
+    let docs =
+      output
+      ->JSON.parseOrThrow
+      ->Docgen.decodeFromJson
     Console.log(`Generated docs from ${libFile}`)
     docs
   } catch {
@@ -257,7 +257,7 @@ let () = {
     tocTree
     ->Dict.fromArray
     ->JSON.stringifyAny
-    ->Option.getExn,
+    ->Option.getOrThrow,
   )
   Console.log("Generated toc_tree.json")
   Console.log(`API docs generated successfully in ${dirVersion}`)

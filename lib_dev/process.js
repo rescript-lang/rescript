@@ -160,7 +160,7 @@ export function setup(cwd = process.cwd()) {
     rescript(command, args = [], options = {}) {
       const cliPath = path.join(
         import.meta.dirname,
-        "../cli/rescript-legacy.js",
+        "../cli/rescript.js",
       );
       return exec("node", [cliPath, command, ...args].filter(Boolean), options);
     },
