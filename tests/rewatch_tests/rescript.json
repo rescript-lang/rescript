@@ -1,0 +1,6 @@
+{
+  "name": "@tests/rewatch-tests",
+  "sources": [
+    "src"
+  ]
+}

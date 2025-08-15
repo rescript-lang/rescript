@@ -1,0 +1,15 @@
+{
+  "name": "@tests/rewatch-tests",
+  "type": "module",
+  "packageManager": "yarn@4.9.1",
+  "dependencies": {
+    "dax-sh": "0.43.2",
+    "rescript": "workspace:^"
+  },
+  "scripts": {
+    "build": "rescript build",
+    "clean": "rescript clean",
+    "dev": "rescript -w",
+    "test": "npx mocha src/*_test.js"
+  }
+}
