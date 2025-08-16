@@ -348,3 +348,6 @@ Hover src/Hover.res 278:8
 Hover src/Hover.res 281:6
 {"contents": {"kind": "markdown", "value": "```rescript\ntype aliased = variant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n"}}
 
+Hover src/Hover.res 286:6
+{"contents": {"kind": "markdown", "value": "```rescript\ntype fnType = (string, int) => string\n```"}}
+
