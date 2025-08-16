@@ -2093,11 +2093,20 @@ and print_type_parameter ~state {attrs; lbl; typ} cmt_tbl =
 
 and print_value_binding ~state ~rec_flag (vb : Parsetree.value_binding) cmt_tbl
     i =
+  let has_unwrap = ref false in
   let attrs =
-    print_attributes ~state ~loc:vb.pvb_pat.ppat_loc vb.pvb_attributes cmt_tbl
+    vb.pvb_attributes
+    |> List.filter_map (function
+         | {Asttypes.txt = "let.unwrap"}, _ ->
+           has_unwrap := true;
+           None
+         | attr -> Some attr)
   in
+  let attrs = print_attributes ~state ~loc:vb.pvb_pat.ppat_loc attrs cmt_tbl in
   let header =
-    if i == 0 then Doc.concat [Doc.text "let "; rec_flag] else Doc.text "and "
+    if i == 0 then
+      Doc.concat [Doc.text (if !has_unwrap then "let? " else "let "); rec_flag]
+    else Doc.text "and "
   in
   match vb with
   | {

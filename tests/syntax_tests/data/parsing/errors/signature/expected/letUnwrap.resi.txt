@@ -1,0 +1,9 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/signature/letUnwrap.resi:1:1-4
+
+  1 │ let? foo: string
+
+  let? is not allowed in signatures. Use a regular `let` instead.
+
+val foo : string
