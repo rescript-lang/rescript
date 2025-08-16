@@ -18,6 +18,8 @@
 
 #### :rocket: New Feature
 
+- Show docstrings before type expansions on hover. https://github.com/rescript-lang/rescript/pull/7774
+
 #### :bug: Bug fix
 
 #### :memo: Documentation

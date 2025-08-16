@@ -295,13 +295,13 @@ Path Hover.someField
 Path someField
 Package opens Stdlib.place holder Pervasives.JsxModules.place holder
 Resolved opens 1 Stdlib
-{"contents": {"kind": "markdown", "value": " Mighty fine field here. \n\n```rescript\nbool\n```"}}
+{"contents": {"kind": "markdown", "value": "```rescript\nbool\n```\n---\n Mighty fine field here. "}}
 
 Hover src/Hover.res 248:19
 {"contents": {"kind": "markdown", "value": "```rescript\nbool\n```\n---\n Mighty fine field here. "}}
 
 Hover src/Hover.res 253:20
-{"contents": {"kind": "markdown", "value": "```rescript\nvariant\nCoolVariant\n```\n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n\n---\n Cool variant! "}}
+{"contents": {"kind": "markdown", "value": "```rescript\nvariant\nCoolVariant\n```\n---\n Cool variant! \n\n---\n\n```\n \n```\n```rescript\ntype variant = CoolVariant | OtherCoolVariant\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C251%2C0%5D)\n"}}
 
 Hover src/Hover.res 258:22
 {"contents": {"kind": "markdown", "value": "```rescript\npayloadVariants\nInlineRecord({field1: int, field2: bool})\n```\n\n---\n\n```\n \n```\n```rescript\ntype payloadVariants =\n  | InlineRecord({field1: int, field2: bool})\n  | Args(int, bool)\n```\nGo to: [Type definition](command:rescript-vscode.go_to_location?%5B%22Hover.res%22%2C256%2C0%5D)\n"}}
