@@ -171,7 +171,7 @@ let hoverWithExpandedTypes ~(full : SharedTypes.full) ~file ~package
   in
 
   let mainTypes =
-    let insert_contructor constructor mainTypes =
+    let insert_constructor constructor mainTypes =
       match mainTypes with
       | [] -> [constructor]
       | h :: t -> h :: constructor :: t
@@ -182,7 +182,7 @@ let hoverWithExpandedTypes ~(full : SharedTypes.full) ~file ~package
         (CompletionBackEnd.showConstructor constructor |> Markdown.codeBlock)
         ^ Markdown.divider
       in
-      insert_contructor constructor (expandedTypesToString mainTypes)
+      insert_constructor constructor (expandedTypesToString mainTypes)
     | None -> expandedTypesToString mainTypes
   in
 
