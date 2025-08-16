@@ -74,15 +74,12 @@ let process_method_attributes_rev (attrs : t) =
         ({st with set = Some result}, acc)
       | _ -> (st, attr :: acc))
 
-type attr_kind = Nothing | Meth_callback of attr | Method of attr
+type attr_kind = Nothing | Meth_callback of attr
 
 let process_attributes_rev (attrs : t) : attr_kind * t =
-  Ext_list.fold_left attrs (Nothing, [])
-    (fun (st, acc) (({txt; loc}, _) as attr) ->
+  Ext_list.fold_left attrs (Nothing, []) (fun (st, acc) (({txt}, _) as attr) ->
       match (txt, st) with
       | "this", (Nothing | Meth_callback _) -> (Meth_callback attr, acc)
-      | "meth", (Nothing | Method _) -> (Method attr, acc)
-      | "this", _ -> Bs_syntaxerr.err loc Conflict_bs_bs_this_bs_meth
       | _, _ -> (st, attr :: acc))
 
 let external_attrs =

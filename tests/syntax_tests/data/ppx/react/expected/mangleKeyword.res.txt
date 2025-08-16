@@ -15,7 +15,7 @@ module C4A1 = {
   @res.jsxComponentProps @live
   type props<'T_open, 'T_type> = {@as("open") _open: 'T_open, @as("type") _type: 'T_type}
 
-  external make: @as("open") React.componentLike<props<string, string>, React.element> = "default"
+  external make: React.componentLike<props<string, string>, React.element> = "default"
 }
 
 let c4a0 = React.jsx(C4A0.make, {_open: "x", _type: "t"})

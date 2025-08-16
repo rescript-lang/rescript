@@ -102,16 +102,14 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
       async_context := (old_in_function_def && !async_context) || async;
       in_function_def := true;
       Ast_async.make_function_async ~async (default_expr_mapper self e)
-    | Method _, _ ->
-      Location.raise_errorf ~loc:e.pexp_loc
-        "%@meth is not supported in function expression"
     | Meth_callback _, pexp_attributes ->
       (* FIXME: does it make sense to have a label for [this] ? *)
       async_context := false;
       {
         e with
         pexp_desc =
-          Ast_uncurry_gen.to_method_callback e.pexp_loc self label pat body;
+          Ast_uncurry_gen.to_method_callback ~async e.pexp_loc self label pat
+            body;
         pexp_attributes;
       })
   | Pexp_apply _ -> Ast_exp_apply.app_exp_mapper e self

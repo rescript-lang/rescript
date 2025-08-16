@@ -7,4 +7,4 @@
   [1;31m3[0m [2m│[0m [1;31mX(10)[0m->ignore
   4 [2m│[0m 
 
-  This variant constructor, X, expects 2 arguments; here, we've only found 1.
+  This variant constructor [1;33mX[0m expects 2 arguments, but it's only being passed 1.

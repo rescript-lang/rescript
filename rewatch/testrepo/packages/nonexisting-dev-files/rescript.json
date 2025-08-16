@@ -1,0 +1,8 @@
+{
+  "name": "@testrepo/nonexisting-dev-files",
+  "sources": {
+    "dir": "dev",
+    "subdirs": true,
+    "type": "dev"
+  }
+}

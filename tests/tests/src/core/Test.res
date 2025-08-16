@@ -48,3 +48,9 @@ ${codeFrame}
     ->Console.log
   }
 }
+
+module TypeofParensOnFun = {
+  @val external require: string => {..} = "require"
+
+  Console.log(Type.typeof(require))
+}

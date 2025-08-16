@@ -1,4 +1,4 @@
-(* Copyright (C) 2020 - Hongbo Zhang, Authors of ReScript 
+(* Copyright (C) 2020 - Hongbo Zhang, Authors of ReScript
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -24,10 +24,7 @@
 
 type dep_payload = {package_specs: Bsb_package_specs.t; jsx: Bsb_jsx.t}
 
-type t =
-  | Toplevel
-  | Dependency of dep_payload
-  | Pinned_dependency of dep_payload
+type t = Toplevel | Dependency of dep_payload
 (* This package specs comes from the toplevel to
    override the current settings
 *)
@@ -37,11 +34,6 @@ let encode_no_nl (x : t) =
   | Toplevel -> "0"
   | Dependency x ->
     "1"
-    ^ Bsb_package_specs.package_flag_of_package_specs x.package_specs
-        ~dirname:"."
-    ^ Bsb_jsx.encode_no_nl x.jsx
-  | Pinned_dependency x ->
-    "2"
     ^ Bsb_package_specs.package_flag_of_package_specs x.package_specs
         ~dirname:"."
     ^ Bsb_jsx.encode_no_nl x.jsx

@@ -5,7 +5,7 @@
     "unsuppress": []
   },
   "name": "arnold",
-  "bs-dependencies": [],
+  "dependencies": [],
   "sources": [
     {
       "dir": "src",

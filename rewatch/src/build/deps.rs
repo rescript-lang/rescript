@@ -18,11 +18,11 @@ fn get_dep_modules(
         Ok(lines) => {
             // we skip the first line with is some null characters
             // the following lines in the AST are the dependency modules
-            // we stop when we hit a line that starts with a "/", this is the path of the file.
+            // we stop when we hit a line that is an absolute path, this is the path of the file.
             // this is the point where the dependencies end and the actual AST starts
             for line in lines.skip(1).flatten() {
                 let line = line.trim().to_string();
-                if line.starts_with('/') {
+                if std::path::Path::new(&line).is_absolute() {
                     break;
                 } else if !line.is_empty() {
                     deps.insert(line);
@@ -37,23 +37,15 @@ fn get_dep_modules(
     // Get the list of allowed dependency packages for this package
     let allowed_dependencies: AHashSet<String> = package
         .config
-        .bs_dependencies
+        .dependencies
         .as_ref()
         .unwrap_or(&vec![])
         .iter()
-        .chain(
-            package
-                .config
-                .bs_dev_dependencies
-                .as_ref()
-                .unwrap_or(&vec![])
-                .iter(),
-        )
+        .chain(package.config.dev_dependencies.as_ref().unwrap_or(&vec![]).iter())
         .cloned()
         .collect();
 
-    return deps
-        .iter()
+    deps.iter()
         .map(|dep| {
             let dep_first = dep.split('.').next().unwrap();
             let dep_second = dep.split('.').nth(1);
@@ -101,7 +93,7 @@ fn get_dep_modules(
 
             true
         })
-        .collect::<AHashSet<String>>();
+        .collect::<AHashSet<String>>()
 }
 
 pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>) {
@@ -122,7 +114,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                         package.namespace.to_suffix(),
                         package.modules.as_ref().unwrap(),
                         all_mod,
-                        &package,
+                        package,
                         build_state,
                     );
 
@@ -134,7 +126,7 @@ pub fn get_deps(build_state: &mut BuildState, deleted_modules: &AHashSet<String>
                             package.namespace.to_suffix(),
                             package.modules.as_ref().unwrap(),
                             all_mod,
-                            &package,
+                            package,
                             build_state,
                         ))
                     }

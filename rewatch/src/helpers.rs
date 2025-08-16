@@ -1,4 +1,5 @@
 use crate::build::packages;
+use crate::project_context::ProjectContext;
 use std::ffi::OsString;
 use std::fs;
 use std::fs::File;
@@ -9,15 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 pub type StdErr = String;
 
-pub mod deserialize {
-    pub fn default_false() -> bool {
-        false
-    }
-
-    pub fn default_true() -> bool {
-        true
-    }
-}
+pub mod deserialize;
 
 pub mod emojis {
     use console::Emoji;
@@ -113,18 +106,17 @@ pub fn package_path(root: &Path, package_name: &str) -> PathBuf {
 pub fn get_abs_path(path: &Path) -> PathBuf {
     let abs_path_buf = PathBuf::from(path);
 
-    return abs_path_buf
+    abs_path_buf
         .to_lexical_absolute()
-        .expect("Could not canonicalize");
+        .expect("Could not canonicalize")
 }
 
 pub fn get_basename(path: &Path) -> String {
-    return path
-        .file_stem()
+    path.file_stem()
         .expect("Could not get basename")
         .to_str()
         .expect("Could not get basename 2")
-        .to_string();
+        .to_string()
 }
 
 /// Capitalizes the first character in s.
@@ -196,31 +188,30 @@ pub fn get_bsc() -> PathBuf {
 
     bsc_path
         .canonicalize()
-        .expect("Could not get bsc path")
+        .expect("Could not get bsc path, did you set environment variable RESCRIPT_BSC_EXE ?")
         .to_stripped_verbatim_path()
 }
 
-pub fn get_rescript_legacy(root_path: &Path, workspace_root: Option<PathBuf>) -> PathBuf {
-    let bin_dir = Path::new("node_modules").join("rescript").join("cli");
-
-    match (
-        root_path
-            .join(&bin_dir)
+pub fn get_rescript_legacy(project_context: &ProjectContext) -> PathBuf {
+    let root_path = project_context.get_root_path();
+    let node_modules_rescript = root_path.join("node_modules").join("rescript");
+    let rescript_legacy_path = if node_modules_rescript.exists() {
+        node_modules_rescript
+            .join("cli")
             .join("rescript-legacy.js")
             .canonicalize()
-            .map(StrippedVerbatimPath::to_stripped_verbatim_path),
-        workspace_root.map(|workspace_root| {
-            workspace_root
-                .join(&bin_dir)
-                .join("rescript-legacy.js")
-                .canonicalize()
-                .map(StrippedVerbatimPath::to_stripped_verbatim_path)
-        }),
-    ) {
-        (Ok(path), _) => path,
-        (_, Some(Ok(path))) => path,
-        _ => panic!("Could not find rescript-legacy.exe"),
-    }
+            .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+    } else {
+        // If the root folder / node_modules doesn't exist, something is wrong.
+        // The only way this can happen is if we are inside the rescript repository.
+        root_path
+            .join("cli")
+            .join("rescript-legacy.js")
+            .canonicalize()
+            .map(StrippedVerbatimPath::to_stripped_verbatim_path)
+    };
+
+    rescript_legacy_path.unwrap_or_else(|_| panic!("Could not find rescript-legacy.exe"))
 }
 
 pub fn string_ends_with_any(s: &Path, suffixes: &[&str]) -> bool {
@@ -242,7 +233,7 @@ pub fn get_ast_path(source_file: &Path) -> PathBuf {
     source_path
         .parent()
         .unwrap()
-        .join(format!("{}{}", basename, extension))
+        .join(format!("{basename}{extension}"))
 }
 
 pub fn get_compiler_asset(
@@ -258,14 +249,14 @@ pub fn get_compiler_asset(
     let basename = file_path_to_compiler_asset_basename(source_file, namespace);
     package
         .get_ocaml_build_path()
-        .join(format!("{}.{}", basename, extension))
+        .join(format!("{basename}.{extension}"))
 }
 
 pub fn canonicalize_string_path(path: &str) -> Option<PathBuf> {
-    return Path::new(path)
+    Path::new(path)
         .canonicalize()
         .map(StrippedVerbatimPath::to_stripped_verbatim_path)
-        .ok();
+        .ok()
 }
 
 pub fn get_bs_compiler_asset(
@@ -285,7 +276,7 @@ pub fn get_bs_compiler_asset(
     package
         .get_build_path()
         .join(dir)
-        .join(format!("{}{}", basename, extension))
+        .join(format!("{basename}{extension}"))
         .to_str()
         .unwrap()
         .to_owned()
@@ -315,11 +306,11 @@ pub fn get_system_time() -> u128 {
 }
 
 pub fn is_interface_file(extension: &str) -> bool {
-    matches!(extension, "resi" | "mli" | "rei")
+    extension == "resi"
 }
 
 pub fn is_implementation_file(extension: &str) -> bool {
-    matches!(extension, "res" | "ml" | "re")
+    extension == "res"
 }
 
 pub fn is_source_file(extension: &str) -> bool {
@@ -335,12 +326,11 @@ pub fn is_non_exotic_module_name(module_name: &str) -> bool {
 }
 
 pub fn get_extension(path: &Path) -> String {
-    return path
-        .extension()
+    path.extension()
         .expect("Could not get extension")
         .to_str()
         .expect("Could not get extension 2")
-        .to_string();
+        .to_string()
 }
 
 pub fn format_namespaced_module_name(module_name: &str) -> String {
@@ -365,12 +355,6 @@ pub fn compute_file_hash(path: &Path) -> Option<blake3::Hash> {
 
 fn has_rescript_config(path: &Path) -> bool {
     path.join("bsconfig.json").exists() || path.join("rescript.json").exists()
-}
-
-pub fn get_workspace_root(package_root: &Path) -> Option<PathBuf> {
-    std::path::PathBuf::from(&package_root)
-        .parent()
-        .and_then(get_nearest_config)
 }
 
 // traverse up the directory tree until we find a config.json, if not return None
@@ -399,4 +383,11 @@ pub fn get_source_file_from_rescript_file(path: &Path, suffix: &str) -> PathBuf 
         // suffix.to_string includes the ., so we need to remove it
         &suffix.to_string()[1..],
     )
+}
+
+pub fn is_local_package(workspace_path: &Path, canonical_package_path: &Path) -> bool {
+    canonical_package_path.starts_with(workspace_path)
+        && !canonical_package_path
+            .components()
+            .any(|c| c.as_os_str() == "node_modules")
 }

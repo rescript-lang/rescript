@@ -8,10 +8,12 @@ pub mod packages;
 pub mod parse;
 pub mod read_compile_state;
 
+use self::parse::parser_args;
 use crate::build::compile::{mark_modules_with_deleted_deps_dirty, mark_modules_with_expired_deps_dirty};
 use crate::helpers::emojis::*;
-use crate::helpers::{self, get_workspace_root};
-use crate::sourcedirs;
+use crate::helpers::{self};
+use crate::project_context::ProjectContext;
+use crate::{config, sourcedirs};
 use anyhow::{Result, anyhow};
 use build_types::*;
 use console::style;
@@ -25,9 +27,6 @@ use std::io::{Write, stdout};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::{Duration, Instant};
-
-use self::compile::compiler_args;
-use self::parse::parser_args;
 
 fn is_dirty(module: &Module) -> bool {
     match module.source_type {
@@ -56,27 +55,30 @@ pub struct CompilerArgs {
     pub parser_args: Vec<String>,
 }
 
-pub fn get_compiler_args(path: &Path, build_dev_deps: bool) -> Result<String> {
-    let filename = &helpers::get_abs_path(path);
-    let package_root =
-        helpers::get_abs_path(&helpers::get_nearest_config(&path).expect("Couldn't find package root"));
-    let workspace_root = get_workspace_root(&package_root).map(|p| helpers::get_abs_path(&p));
-    let root_rescript_config =
-        packages::read_config(&workspace_root.to_owned().unwrap_or(package_root.to_owned()))?;
-    let rescript_config = packages::read_config(&package_root)?;
+pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
+    let filename = &helpers::get_abs_path(rescript_file_path);
+    let current_package = helpers::get_abs_path(
+        &helpers::get_nearest_config(rescript_file_path).expect("Couldn't find package root"),
+    );
+    let project_context = ProjectContext::new(&current_package)?;
+
+    let is_type_dev = match filename.strip_prefix(&current_package) {
+        Err(_) => false,
+        Ok(relative_path) => project_context
+            .current_config
+            .find_is_type_dev_for_path(relative_path),
+    };
 
     // make PathBuf from package root and get the relative path for filename
-    let relative_filename = filename.strip_prefix(PathBuf::from(&package_root)).unwrap();
+    let relative_filename = filename.strip_prefix(PathBuf::from(&current_package)).unwrap();
 
-    let file_path = PathBuf::from(&package_root).join(filename);
+    let file_path = PathBuf::from(&current_package).join(filename);
     let contents = helpers::read_file(&file_path).expect("Error reading file");
 
     let (ast_path, parser_args) = parser_args(
-        &rescript_config,
-        &root_rescript_config,
-        &relative_filename,
-        &workspace_root,
-        workspace_root.as_ref().unwrap_or(&package_root),
+        &project_context,
+        &project_context.current_config,
+        relative_filename,
         &contents,
     );
     let is_interface = filename.to_string_lossy().ends_with('i');
@@ -87,17 +89,15 @@ pub fn get_compiler_args(path: &Path, build_dev_deps: bool) -> Result<String> {
         interface_filename.push('i');
         PathBuf::from(&interface_filename).exists()
     };
-    let compiler_args = compiler_args(
-        &rescript_config,
-        &root_rescript_config,
+    let compiler_args = compile::compiler_args(
+        &project_context.current_config,
         &ast_path,
-        &relative_filename,
+        relative_filename,
         is_interface,
         has_interface,
-        &package_root,
-        &workspace_root,
+        &project_context,
         &None,
-        build_dev_deps,
+        is_type_dev,
         true,
     );
 
@@ -117,10 +117,8 @@ pub fn initialize_build(
     build_dev_deps: bool,
     snapshot_output: bool,
 ) -> Result<BuildState> {
-    let project_root = helpers::get_abs_path(path);
-    let workspace_root = helpers::get_workspace_root(&project_root);
     let bsc_path = helpers::get_bsc();
-    let root_config_name = packages::read_package_name(&project_root)?;
+    let project_context = ProjectContext::new(path)?;
 
     if !snapshot_output && show_progress {
         print!("{} {}Building package tree...", style("[1/7]").bold().dim(), TREE);
@@ -128,13 +126,7 @@ pub fn initialize_build(
     }
 
     let timing_package_tree = Instant::now();
-    let packages = packages::make(
-        filter,
-        &project_root,
-        &workspace_root,
-        show_progress,
-        build_dev_deps,
-    )?;
+    let packages = packages::make(filter, &project_context, show_progress, build_dev_deps)?;
     let timing_package_tree_elapsed = timing_package_tree.elapsed();
 
     if !snapshot_output && show_progress {
@@ -164,7 +156,7 @@ pub fn initialize_build(
         let _ = stdout().flush();
     }
 
-    let mut build_state = BuildState::new(project_root, root_config_name, packages, workspace_root, bsc_path);
+    let mut build_state = BuildState::new(project_context, packages, bsc_path);
     packages::parse_packages(&mut build_state);
     let timing_source_files_elapsed = timing_source_files.elapsed();
 
@@ -187,7 +179,7 @@ pub fn initialize_build(
         let _ = stdout().flush();
     }
     let timing_compile_state = Instant::now();
-    let compile_assets_state = read_compile_state::read(&mut build_state);
+    let compile_assets_state = read_compile_state::read(&mut build_state)?;
     let timing_compile_state_elapsed = timing_compile_state.elapsed();
 
     if !snapshot_output && show_progress {
@@ -213,7 +205,7 @@ pub fn initialize_build(
 
     if show_progress {
         if snapshot_output {
-            println!("Cleaned {}/{}", diff_cleanup, total_cleanup)
+            println!("Cleaned {diff_cleanup}/{total_cleanup}")
         } else {
             println!(
                 "{}{} {}Cleaned {}/{} {:.2}s",
@@ -231,7 +223,7 @@ pub fn initialize_build(
 }
 
 fn format_step(current: usize, total: usize) -> console::StyledObject<String> {
-    style(format!("[{}/{}]", current, total)).bold().dim()
+    style(format!("[{current}/{total}]")).bold().dim()
 }
 
 #[derive(Debug, Clone)]
@@ -251,23 +243,23 @@ impl fmt::Display for IncrementalBuildError {
         match &self.kind {
             IncrementalBuildErrorKind::SourceFileParseError => {
                 if self.snapshot_output {
-                    write!(f, "{}  Could not parse Source Files", LINE_CLEAR,)
+                    write!(f, "{LINE_CLEAR}  Could not parse Source Files",)
                 } else {
-                    write!(f, "{}  {}Could not parse Source Files", LINE_CLEAR, CROSS,)
+                    write!(f, "{LINE_CLEAR}  {CROSS}Could not parse Source Files",)
                 }
             }
             IncrementalBuildErrorKind::CompileError(Some(e)) => {
                 if self.snapshot_output {
-                    write!(f, "{}  Failed to Compile. Error: {e}", LINE_CLEAR,)
+                    write!(f, "{LINE_CLEAR}  Failed to Compile. Error: {e}",)
                 } else {
-                    write!(f, "{}  {}Failed to Compile. Error: {e}", LINE_CLEAR, CROSS,)
+                    write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. Error: {e}",)
                 }
             }
             IncrementalBuildErrorKind::CompileError(None) => {
                 if self.snapshot_output {
-                    write!(f, "{}  Failed to Compile. See Errors Above", LINE_CLEAR,)
+                    write!(f, "{LINE_CLEAR}  Failed to Compile. See Errors Above",)
                 } else {
-                    write!(f, "{}  {}Failed to Compile. See Errors Above", LINE_CLEAR, CROSS,)
+                    write!(f, "{LINE_CLEAR}  {CROSS}Failed to Compile. See Errors Above",)
                 }
             }
         }
@@ -277,11 +269,10 @@ impl fmt::Display for IncrementalBuildError {
 pub fn incremental_build(
     build_state: &mut BuildState,
     default_timing: Option<Duration>,
-    _initial_build: bool,
+    initial_build: bool,
     show_progress: bool,
     only_incremental: bool,
     create_sourcedirs: bool,
-    build_dev_deps: bool,
     snapshot_output: bool,
 ) -> Result<(), IncrementalBuildError> {
     logs::initialize(&build_state.packages);
@@ -310,7 +301,7 @@ pub fn incremental_build(
         Ok(_ast) => {
             if show_progress {
                 if snapshot_output {
-                    println!("Parsed {} source files", num_dirty_modules)
+                    println!("Parsed {num_dirty_modules} source files")
                 } else {
                     println!(
                         "{}{} {}Parsed {} source files in {:.2}s",
@@ -368,7 +359,7 @@ pub fn incremental_build(
     if log_enabled!(log::Level::Trace) {
         for (module_name, module) in build_state.modules.iter() {
             if module.compile_dirty {
-                println!("compile dirty: {}", module_name);
+                println!("compile dirty: {module_name}");
             }
         }
     };
@@ -393,7 +384,6 @@ pub fn incremental_build(
         show_progress,
         || pb.inc(1),
         |size| pb.set_length(size),
-        build_dev_deps,
     )
     .map_err(|e| IncrementalBuildError {
         kind: IncrementalBuildErrorKind::CompileError(Some(e.to_string())),
@@ -410,7 +400,7 @@ pub fn incremental_build(
     if !compile_errors.is_empty() {
         if show_progress {
             if snapshot_output {
-                println!("Compiled {} modules", num_compiled_modules)
+                println!("Compiled {num_compiled_modules} modules")
             } else {
                 println!(
                     "{}{} {}Compiled {} modules in {:.2}s",
@@ -425,6 +415,9 @@ pub fn incremental_build(
         if helpers::contains_ascii_characters(&compile_warnings) {
             println!("{}", &compile_warnings);
         }
+        if initial_build {
+            log_deprecations(build_state);
+        }
         if helpers::contains_ascii_characters(&compile_errors) {
             println!("{}", &compile_errors);
         }
@@ -435,7 +428,7 @@ pub fn incremental_build(
     } else {
         if show_progress {
             if snapshot_output {
-                println!("Compiled {} modules", num_compiled_modules)
+                println!("Compiled {num_compiled_modules} modules")
             } else {
                 println!(
                     "{}{} {}Compiled {} modules in {:.2}s",
@@ -451,8 +444,41 @@ pub fn incremental_build(
         if helpers::contains_ascii_characters(&compile_warnings) {
             println!("{}", &compile_warnings);
         }
+        if initial_build {
+            log_deprecations(build_state);
+        }
+
         Ok(())
     }
+}
+
+fn log_deprecations(build_state: &BuildState) {
+    build_state.packages.iter().for_each(|(_, package)| {
+        // Only warn for local dependencies, not external packages
+        if package.is_local_dep {
+            package.config.get_deprecations().iter().for_each(
+                |deprecation_warning| match deprecation_warning {
+                    config::DeprecationWarning::BsDependencies => {
+                        log_deprecated_config_field(&package.name, "bs-dependencies", "dependencies");
+                    }
+                    config::DeprecationWarning::BsDevDependencies => {
+                        log_deprecated_config_field(&package.name, "bs-dev-dependencies", "dev-dependencies");
+                    }
+                    config::DeprecationWarning::BscFlags => {
+                        log_deprecated_config_field(&package.name, "bsc-flags", "compiler-flags");
+                    }
+                },
+            );
+        }
+    });
+}
+
+fn log_deprecated_config_field(package_name: &str, field_name: &str, new_field_name: &str) {
+    let warning = format!(
+        "The field '{field_name}' found in the package config of '{package_name}' is deprecated and will be removed in a future version.\n\
+        Use '{new_field_name}' instead."
+    );
+    println!("\n{}", style(warning).yellow());
 }
 
 // write build.ninja files in the packages after a non-incremental build
@@ -500,7 +526,6 @@ pub fn build(
         show_progress,
         false,
         create_sourcedirs,
-        build_dev_deps,
         snapshot_output,
     ) {
         Ok(_) => {
@@ -527,9 +552,8 @@ pub fn build(
 
 pub fn pass_through_legacy(mut args: Vec<OsString>) -> i32 {
     let project_root = helpers::get_abs_path(Path::new("."));
-    let workspace_root = helpers::get_workspace_root(&project_root);
-
-    let rescript_legacy_path = helpers::get_rescript_legacy(&project_root, workspace_root);
+    let project_context = ProjectContext::new(&project_root).unwrap();
+    let rescript_legacy_path = helpers::get_rescript_legacy(&project_context);
 
     args.insert(0, rescript_legacy_path.into());
     let status = std::process::Command::new("node")

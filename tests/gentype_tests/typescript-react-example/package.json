@@ -4,7 +4,7 @@
   "scripts": {
     "start": "rescript legacy build -w",
     "build": "rescript legacy build",
-    "clean": "rescript legacy clean",
+    "clean": "rescript clean",
     "typecheck": "tsc",
     "check": "biome check --changed --no-errors-on-unmatched ."
   },

@@ -1,0 +1,22 @@
+{
+  "name": "a",
+  "namespace": true,
+  "sources": [
+    {
+      "dir": "src"
+    },
+    {
+      "dir": "tests",
+      "type": "dev"
+    }
+  ],
+  "package-specs": {
+    "module": "esmodule",
+    "in-source": false,
+    "suffix": ".res.js"
+  },
+  "warnings": {
+    "error": true
+  },
+  "dependencies": ["b"]
+}

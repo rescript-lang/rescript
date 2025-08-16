@@ -92,19 +92,20 @@ module T = struct
     | Oinherit t -> Oinherit (sub.typ sub t)
 
   let map sub {ptyp_desc = desc; ptyp_loc = loc; ptyp_attributes = attrs} =
-    let open Typ in
     let loc = sub.location sub loc in
     let attrs = sub.attributes sub attrs in
     match desc with
-    | Ptyp_any -> any ~loc ~attrs ()
-    | Ptyp_var s -> var ~loc ~attrs s
-    | Ptyp_arrow (lab, t1, t2) ->
-      let lab = Asttypes.to_arg_label lab in
-      arrow ~loc ~attrs ~arity:None lab (sub.typ sub t1) (sub.typ sub t2)
-    | Ptyp_tuple tyl -> tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
+    | Ptyp_any -> Typ.any ~loc ~attrs ()
+    | Ptyp_var s -> Typ.var ~loc ~attrs s
+    | Ptyp_arrow (lbl, t1, t2) ->
+      let lbl = Asttypes.to_arg_label lbl in
+      Typ.arrow ~loc ~arity:None
+        {attrs; lbl; typ = sub.typ sub t1}
+        (sub.typ sub t2)
+    | Ptyp_tuple tyl -> Typ.tuple ~loc ~attrs (List.map (sub.typ sub) tyl)
     | Ptyp_constr (lid, tl) -> (
       let typ0 =
-        constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
+        Typ.constr ~loc ~attrs (map_loc sub lid) (List.map (sub.typ sub) tl)
       in
       match typ0.ptyp_desc with
       | Ptyp_constr (lid, [({ptyp_desc = Ptyp_arrow arr} as fun_t); t_arity])
@@ -123,17 +124,17 @@ module T = struct
         {fun_t with ptyp_desc = Ptyp_arrow {arr with arity = Some arity}}
       | _ -> typ0)
     | Ptyp_object (l, o) ->
-      object_ ~loc ~attrs (List.map (object_field sub) l) o
+      Typ.object_ ~loc ~attrs (List.map (object_field sub) l) o
     | Ptyp_class () -> assert false
-    | Ptyp_alias (t, s) -> alias ~loc ~attrs (sub.typ sub t) s
+    | Ptyp_alias (t, s) -> Typ.alias ~loc ~attrs (sub.typ sub t) s
     | Ptyp_variant (rl, b, ll) ->
-      variant ~loc ~attrs (List.map (row_field sub) rl) b ll
+      Typ.variant ~loc ~attrs (List.map (row_field sub) rl) b ll
     | Ptyp_poly (sl, t) ->
-      poly ~loc ~attrs (List.map (map_loc sub) sl) (sub.typ sub t)
+      Typ.poly ~loc ~attrs (List.map (map_loc sub) sl) (sub.typ sub t)
     | Ptyp_package (lid, l) ->
-      package ~loc ~attrs (map_loc sub lid)
+      Typ.package ~loc ~attrs (map_loc sub lid)
         (List.map (map_tuple (map_loc sub) (sub.typ sub)) l)
-    | Ptyp_extension x -> extension ~loc ~attrs (sub.extension sub x)
+    | Ptyp_extension x -> Typ.extension ~loc ~attrs (sub.extension sub x)
 
   let map_type_declaration sub
       {
@@ -395,10 +396,23 @@ module E = struct
       when has_jsx_attribute () -> (
       let attrs = attrs |> List.filter (fun ({txt}, _) -> txt <> "JSX") in
       let props, children = extract_props_and_children sub args in
+      let jsx_tag : Pt.jsx_tag_name =
+        match tag_name.txt with
+        | Longident.Lident s
+          when String.length s > 0 && Char.lowercase_ascii s.[0] = s.[0] ->
+          Pt.JsxLowerTag s
+        | Longident.Lident _ -> Pt.JsxUpperTag tag_name.txt
+        | Longident.Ldot (path, last)
+          when String.length last > 0
+               && Char.lowercase_ascii last.[0] = last.[0] ->
+          Pt.JsxQualifiedLowerTag {path; name = last}
+        | _ -> Pt.JsxUpperTag tag_name.txt
+      in
+      let jsx_tag_name = {txt = jsx_tag; loc = tag_name.loc} in
       match children with
-      | None -> jsx_unary_element ~loc ~attrs tag_name props
+      | None -> jsx_unary_element ~loc ~attrs jsx_tag_name props
       | Some children ->
-        jsx_container_element ~loc ~attrs tag_name props Lexing.dummy_pos
+        jsx_container_element ~loc ~attrs jsx_tag_name props Lexing.dummy_pos
           children None)
     | Pexp_apply (e, l) ->
       let e =

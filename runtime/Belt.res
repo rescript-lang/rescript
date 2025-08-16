@@ -52,7 +52,7 @@ If you want to open Belt globally for all files in your project instead, you can
 
 ```json
 {
-  "bsc-flags": ["-open Belt"]
+  "compiler-flags": ["-open Belt"]
 }
 ```
 

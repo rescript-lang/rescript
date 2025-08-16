@@ -131,3 +131,5 @@ val report_exception : formatter -> exn -> unit
 (** Reraise the exception if it is unknown. *)
 
 val deprecated : ?def:t -> ?use:t -> t -> string -> unit
+
+val map_loc : ('a -> 'b) -> 'a loc -> 'b loc

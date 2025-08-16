@@ -96,6 +96,25 @@ let size = map->Map.size // 1
 external size: t<'k, 'v> => int = "size"
 
 /**
+`isEmpty(map)` returns `true` if the map has no key/value pairs, `false` otherwise.
+
+## Examples
+```rescript
+let emptyMap = Map.make()
+emptyMap->Map.isEmpty->assertEqual(true)
+
+let map = Map.make()
+map->Map.set("someKey", "someValue")
+map->Map.isEmpty->assertEqual(false)
+
+// After clearing the map
+map->Map.clear
+map->Map.isEmpty->assertEqual(true)
+```
+*/
+let isEmpty: t<'k, 'v> => bool
+
+/**
 Clears all entries in the map.
 
 ## Examples

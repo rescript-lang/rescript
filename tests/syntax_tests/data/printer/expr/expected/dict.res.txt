@@ -1,6 +1,11 @@
 // empty dict
 let x = dict{}
 
+// empty dict with inside comment
+let x = dict{
+  // inside comment
+}
+
 // one value
 let x = dict{"foo": "bar"}
 

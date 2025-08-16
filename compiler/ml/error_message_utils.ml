@@ -41,9 +41,13 @@ end = struct
     String.sub src start_offset (end_offset - start_offset)
 
   let extract_text_at_loc loc =
-    (* TODO: Maybe cache later on *)
-    let src = Ext_io.load_file loc.Location.loc_start.pos_fname in
-    extract_location_string ~src loc
+    if loc.Location.loc_start.pos_fname = "_none_" then ""
+    else
+      try
+        (* TODO: Maybe cache later on *)
+        let src = Ext_io.load_file loc.Location.loc_start.pos_fname in
+        extract_location_string ~src loc
+      with _ -> ""
 
   let parse_expr_at_loc loc =
     let sub_src = extract_text_at_loc loc in
@@ -194,15 +198,42 @@ let error_expected_type_text ppf type_clash_context =
   | Some MaybeUnwrapOption | None ->
     fprintf ppf "But it's expected to have type:"
 
-let is_record_type ~extract_concrete_typedecl ~env ty =
+let is_record_type ~(extract_concrete_typedecl : extract_concrete_typedecl) ~env
+    ty =
   try
     match extract_concrete_typedecl env ty with
     | _, _, {Types.type_kind = Type_record _; _} -> true
     | _ -> false
   with _ -> false
 
+let is_variant_type ~(extract_concrete_typedecl : extract_concrete_typedecl)
+    ~env ty =
+  try
+    match extract_concrete_typedecl env ty with
+    | _, _, {Types.type_kind = Type_variant _; _} -> true
+    | _ -> false
+  with _ -> false
+
+let get_variant_constructors
+    ~(extract_concrete_typedecl : extract_concrete_typedecl) ~env ty =
+  match extract_concrete_typedecl env ty with
+  | _, _, {Types.type_kind = Type_variant constructors; _} -> constructors
+  | _ -> []
+
+let extract_string_constant text =
+  match !Parser.parse_source text with
+  | ( [
+        {
+          Parsetree.pstr_desc =
+            Pstr_eval ({pexp_desc = Pexp_constant (Pconst_string (s, _))}, _);
+        };
+      ],
+      _ ) ->
+    Some s
+  | _ -> None
+
 let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
-    (bottom_aliases : (Types.type_expr * Types.type_expr) option)
+    (bottom_aliases : (Types.type_expr * Types.type_expr) option) trace
     type_clash_context =
   match (type_clash_context, bottom_aliases) with
   | Some (MathOperator {for_float; operator; is_constant}), _ -> (
@@ -322,14 +353,29 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
     ->
     fprintf ppf
       "@,@,Dicts are written like: @{<info>dict{\"a\": 1, \"b\": 2}@}@,"
-  | _, Some ({Types.desc = Tconstr (_p1, _, _)}, {desc = Tconstr (p2, _, _)})
+  | ( _,
+      Some
+        (({Types.desc = Tconstr (_p1, _, _)} as ty), {desc = Tconstr (p2, _, _)})
+    )
     when Path.same Predef.path_unit p2 ->
-    fprintf ppf
-      "\n\n\
-      \  - Did you mean to assign this to a variable?\n\
-      \  - If you don't care about the result of this expression, you can \
-       assign it to @{<info>_@} via @{<info>let _ = ...@} or pipe it to \
-       @{<info>ignore@} via @{<info>expression->ignore@}\n\n"
+    fprintf ppf "\n\n";
+    let is_jsx_element =
+      match Ctype.expand_head env ty with
+      | {desc = Tconstr (Pdot (Pident {name = "Jsx"}, "element", _), _, _)} ->
+        true
+      | _ -> false
+    in
+    if is_jsx_element then
+      fprintf ppf
+        "  - Did you forget to wrap this + adjacent JSX in a JSX fragment \
+         (@{<info><></>@})?\n\
+        \  - Did you mean to assign this to a variable?\n\n"
+    else
+      fprintf ppf
+        "  - Did you mean to assign this to a variable?\n\
+        \  - If you don't care about the result of this expression, you can \
+         assign it to @{<info>_@} via @{<info>let _ = ...@} or pipe it to \
+         @{<info>ignore@} via @{<info>expression->ignore@}\n\n"
   | _, Some ({desc = Tobject _}, ({Types.desc = Tconstr _} as t1))
     when is_record_type ~extract_concrete_typedecl ~env t1 ->
     fprintf ppf
@@ -492,10 +538,101 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        with @{<info>?@} to show you want to pass the option, like: \
        @{<info>?%s@}"
       (Parser.extract_text_at_loc loc)
-  | _, Some (t1, t2) ->
+  | _, Some ({Types.desc = Tconstr (p1, _, _)}, {desc = Tvariant row_desc})
+    when Path.same Predef.path_string p1 -> (
+    (* Check if we have a string constant that could be a polymorphic variant constructor *)
+    let target_expr_text = Parser.extract_text_at_loc loc in
+    match extract_string_constant target_expr_text with
+    | Some string_value -> (
+      let variant_constructors = List.map fst row_desc.row_fields in
+      let reprinted =
+        Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
+            match exp.Parsetree.pexp_desc with
+            | Pexp_constant (Pconst_string (s, _)) ->
+              Some {exp with Parsetree.pexp_desc = Pexp_variant (s, None)}
+            | _ -> None)
+      in
+      match (reprinted, List.mem string_value variant_constructors) with
+      | Some reprinted, true ->
+        fprintf ppf
+          "\n\n\
+          \  Possible solutions:\n\
+          \  - The constant passed matches one of the expected polymorphic \
+           variant constructors. Did you mean to pass this as a polymorphic \
+           variant? If so, rewrite @{<info>\"%s\"@} to @{<info>%s@}"
+          string_value reprinted
+      | _ -> ())
+    | None -> ())
+  | _, Some ({Types.desc = Tconstr (p1, _, _)}, ({desc = Tconstr _} as t2))
+    when Path.same Predef.path_string p1
+         && is_variant_type ~extract_concrete_typedecl ~env t2 -> (
+    (* Check if we have a string constant that could be a regular variant constructor *)
+    let target_expr_text = Parser.extract_text_at_loc loc in
+    match extract_string_constant target_expr_text with
+    | Some string_value -> (
+      let constructors =
+        get_variant_constructors ~extract_concrete_typedecl ~env t2
+      in
+      (* Extract runtime representations from constructor declarations *)
+      let constructor_mappings =
+        List.filter_map
+          (fun (cd : Types.constructor_declaration) ->
+            let constructor_name = Ident.name cd.cd_id in
+            let runtime_repr =
+              match Ast_untagged_variants.process_tag_type cd.cd_attributes with
+              | Some (String s) -> Some s (* @as("string_value") *)
+              | Some _ -> None (* @as with non-string values *)
+              | None -> Some constructor_name (* No @as, use constructor name *)
+            in
+            match runtime_repr with
+            | Some repr -> Some (repr, constructor_name)
+            | None -> None)
+          constructors
+      in
+      let matching_constructor =
+        List.find_opt
+          (fun (runtime_repr, _) -> runtime_repr = string_value)
+          constructor_mappings
+      in
+      match matching_constructor with
+      | Some (_, constructor_name) -> (
+        let reprinted =
+          Parser.reprint_expr_at_loc loc ~mapper:(fun exp ->
+              match exp.Parsetree.pexp_desc with
+              | Pexp_constant (Pconst_string (_, _)) ->
+                Some
+                  {
+                    exp with
+                    Parsetree.pexp_desc =
+                      Pexp_construct
+                        ( {txt = Lident constructor_name; loc = exp.pexp_loc},
+                          None );
+                  }
+              | _ -> None)
+        in
+        match reprinted with
+        | Some reprinted ->
+          fprintf ppf
+            "\n\n\
+            \  Possible solutions:\n\
+            \  - The constant passed matches the runtime representation of one \
+             of the expected variant constructors. Did you mean to pass this \
+             as a variant constructor? If so, rewrite @{<info>\"%s\"@} to \
+             @{<info>%s@}"
+            string_value reprinted
+        | None -> ())
+      | None -> ())
+    | _ -> ())
+  | _, Some (_supplied_type, target_type) ->
+    (* Coercion should always target the top level types. *)
+    let top_level_types =
+      match trace with
+      | (_, t1_top) :: (_, t2_top) :: _ -> Some (t1_top, t2_top)
+      | _ -> None
+    in
     let can_show_coercion_message =
-      match (t1.desc, t2.desc) with
-      | Tvariant _, Tvariant _ ->
+      match top_level_types with
+      | Some ({Types.desc = Tvariant _}, {Types.desc = Tvariant _}) ->
         (* Subtyping polymorphic variants give some weird messages sometimes,
         so let's turn it off for now. For an example, turn them on again and try:
         ```
@@ -504,13 +641,14 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
         ```
         *)
         false
-      | _ -> (
+      | Some (t1, t2) -> (
         try
           Ctype.subtype env t1 t2 ();
           true
         with _ -> false)
+      | None -> false
     in
-    let target_type_string = Format.asprintf "%a" type_expr t2 in
+    let target_type_string = Format.asprintf "%a" type_expr target_type in
     let target_expr_text = Parser.extract_text_at_loc loc in
     let suggested_rewrite =
       match
@@ -598,7 +736,7 @@ let type_clash_context_maybe_option ty_expected ty_res =
 
 let type_clash_context_in_statement sexp =
   match sexp.Parsetree.pexp_desc with
-  | Pexp_apply _ -> Some (Statement FunctionCall)
+  | Pexp_apply {transformed_jsx = false} -> Some (Statement FunctionCall)
   | _ -> None
 
 let print_contextual_unification_error ppf t1 t2 =

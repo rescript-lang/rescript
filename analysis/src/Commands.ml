@@ -498,6 +498,7 @@ let test ~path =
             let currentFile = createCurrentFile () in
             DumpAst.dump ~pos:(line, col) ~currentFile;
             Sys.remove currentFile
+          | "sem" -> SemanticTokens.semanticTokens ~currentFile:path
           | _ -> ());
           print_newline ())
     in

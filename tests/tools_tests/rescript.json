@@ -9,5 +9,5 @@
     "in-source": true
   },
   "suffix": ".res.js",
-  "bs-dependencies": ["@rescript/react"]
+  "dependencies": ["@rescript/react"]
 }

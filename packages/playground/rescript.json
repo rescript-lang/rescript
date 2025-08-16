@@ -10,7 +10,7 @@
     "in-source": false,
     "suffix": ".res.js"
   },
-  "bs-dependencies": [
+  "dependencies": [
     "@rescript/react"
   ]
 }

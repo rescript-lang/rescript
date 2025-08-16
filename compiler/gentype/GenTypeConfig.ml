@@ -203,8 +203,10 @@ let read_config ~get_config_file ~namespace =
       | _ -> default.suffix
     in
     let bs_dependencies =
-      match bsconf |> get_opt "bs-dependencies" with
-      | Some (Arr {content}) ->
+      match
+        (bsconf |> get_opt "dependencies", bsconf |> get_opt "bs-dependencies")
+      with
+      | Some (Arr {content}), None | None, Some (Arr {content}) ->
         let strings = ref [] in
         content
         |> Array.iter (fun x ->

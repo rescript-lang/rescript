@@ -55,15 +55,28 @@ fn matches_filter(path_buf: &Path, filter: &Option<regex::Regex>) -> bool {
     filter.as_ref().map(|re| !re.is_match(&name)).unwrap_or(true)
 }
 
-async fn async_watch(
+struct AsyncWatchArgs<'a> {
     q: Arc<FifoQueue<Result<Event, Error>>>,
-    path: &Path,
+    path: &'a Path,
     show_progress: bool,
-    filter: &Option<regex::Regex>,
+    filter: &'a Option<regex::Regex>,
     after_build: Option<String>,
     create_sourcedirs: bool,
     build_dev_deps: bool,
     snapshot_output: bool,
+}
+
+async fn async_watch(
+    AsyncWatchArgs {
+        q,
+        path,
+        show_progress,
+        filter,
+        after_build,
+        create_sourcedirs,
+        build_dev_deps,
+        snapshot_output,
+    }: AsyncWatchArgs<'_>,
 ) -> notify::Result<()> {
     let mut build_state =
         build::initialize_build(None, filter, show_progress, path, build_dev_deps, snapshot_output)
@@ -103,16 +116,13 @@ async fn async_watch(
 
         for event in events {
             // if there is a file named rescript.lock in the events path, we can quit the watcher
-            if let Some(_) = event.paths.iter().find(|path| path.ends_with(LOCKFILE)) {
-                match event.kind {
-                    EventKind::Remove(_) => {
-                        if show_progress {
-                            println!("\nExiting... (lockfile removed)");
-                        }
-                        clean::cleanup_after_build(&build_state);
-                        return Ok(());
+            if event.paths.iter().any(|path| path.ends_with(LOCKFILE)) {
+                if let EventKind::Remove(_) = event.kind {
+                    if show_progress {
+                        println!("\nExiting... (lockfile removed)");
                     }
-                    _ => (),
+                    clean::cleanup_after_build(&build_state);
+                    return Ok(());
                 }
             }
 
@@ -136,16 +146,20 @@ async fn async_watch(
                     ) => {
                         // if we are going to do a full compile, we don't need to bother marking
                         // files dirty because we do a full scan anyway
+                        log::debug!("received {:?} while needs_compile_type was {needs_compile_type:?} -> full compile", event.kind);
                         needs_compile_type = CompileType::Full;
                     }
 
                     (
                         CompileType::None | CompileType::Incremental,
                         // when we have a data change event, we can do an incremental compile
-                        EventKind::Modify(ModifyKind::Data(_)),
+                        EventKind::Modify(ModifyKind::Data(_)) |
+                        // windows sends ModifyKind::Any on file content changes
+                        EventKind::Modify(ModifyKind::Any),
                     ) => {
                         // if we are going to compile incrementally, we need to mark the exact files
                         // dirty
+                        log::debug!("received {:?} while needs_compile_type was {needs_compile_type:?} -> incremental compile", event.kind);
                         if let Ok(canonicalized_path_buf) = path_buf
                             .canonicalize()
                             .map(StrippedVerbatimPath::to_stripped_verbatim_path)
@@ -198,7 +212,6 @@ async fn async_watch(
                         // these are not relevant events for compilation
                         EventKind::Access(_)
                         | EventKind::Other
-                        | EventKind::Modify(ModifyKind::Any)
                         | EventKind::Modify(ModifyKind::Metadata(_))
                         | EventKind::Modify(ModifyKind::Other),
                     ) => (),
@@ -207,6 +220,11 @@ async fn async_watch(
                 }
             }
         }
+
+        if needs_compile_type != CompileType::None {
+            log::debug!("doing {needs_compile_type:?}");
+        }
+
         match needs_compile_type {
             CompileType::Incremental => {
                 let timing_total = Instant::now();
@@ -217,7 +235,6 @@ async fn async_watch(
                     show_progress,
                     !initial_build,
                     create_sourcedirs,
-                    build_dev_deps,
                     snapshot_output,
                 )
                 .is_ok()
@@ -229,7 +246,7 @@ async fn async_watch(
                     if show_progress {
                         let compilation_type = if initial_build { "initial" } else { "incremental" };
                         if snapshot_output {
-                            println!("Finished {} compilation", compilation_type)
+                            println!("Finished {compilation_type} compilation")
                         } else {
                             println!(
                                 "\n{}{}Finished {} compilation in {:.2}s\n",
@@ -262,7 +279,6 @@ async fn async_watch(
                     show_progress,
                     false,
                     create_sourcedirs,
-                    build_dev_deps,
                     snapshot_output,
                 );
                 if let Some(a) = after_build.clone() {
@@ -308,14 +324,17 @@ pub fn start(
 
         let mut watcher = RecommendedWatcher::new(move |res| producer.push(res), Config::default())
             .expect("Could not create watcher");
+
+        log::debug!("watching {folder}");
+
         watcher
             .watch(folder.as_ref(), RecursiveMode::Recursive)
             .expect("Could not start watcher");
 
         let path = Path::new(folder);
 
-        if let Err(e) = async_watch(
-            consumer,
+        if let Err(e) = async_watch(AsyncWatchArgs {
+            q: consumer,
             path,
             show_progress,
             filter,
@@ -323,10 +342,10 @@ pub fn start(
             create_sourcedirs,
             build_dev_deps,
             snapshot_output,
-        )
+        })
         .await
         {
-            println!("{:?}", e)
+            println!("{e:?}")
         }
     })
 }

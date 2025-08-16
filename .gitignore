@@ -99,3 +99,6 @@ tests/analysis_tests/**/*.bs.js
 # package tarballs
 package.tgz
 *.exe
+
+# AI Agents
+.claude/settings.local.json

@@ -30,8 +30,8 @@ type element
 external float: float => element = "%identity"
 external int: int => element = "%identity"
 external string: string => element = "%identity"
-
 external array: array<element> => element = "%identity"
+external promise: promise<element> => element = "%identity"
 
 type componentLike<'props, 'return> = 'props => 'return
 type component<'props> = componentLike<'props, element>

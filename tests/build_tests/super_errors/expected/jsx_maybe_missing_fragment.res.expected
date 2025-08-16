@@ -1,0 +1,15 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/jsx_maybe_missing_fragment.res[0m:[2m18:3-8[0m
+
+  16 [2m│[0m 
+  17 [2m│[0m let x = {
+  [1;31m18[0m [2m│[0m   [1;31m<> </>[0m
+  19 [2m│[0m   <> </>
+  20 [2m│[0m }
+
+  This has type: [1;31mReact.element[0m [2m(defined as[0m [1;31mJsx.element[0m[2m)[0m
+  But it's expected to have type: [1;33munit[0m
+
+  - Did you forget to wrap this + adjacent JSX in a JSX fragment ([1;33m<></>[0m)?
+  - Did you mean to assign this to a variable?

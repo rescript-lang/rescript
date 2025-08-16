@@ -54,8 +54,17 @@ module Typ = struct
 
   let any ?loc ?attrs () = mk ?loc ?attrs Ptyp_any
   let var ?loc ?attrs a = mk ?loc ?attrs (Ptyp_var a)
-  let arrow ?loc ?attrs ~arity lbl arg ret =
-    mk ?loc ?attrs (Ptyp_arrow {lbl; arg; ret; arity})
+  let arrow ?loc ?attrs ~arity arg ret =
+    mk ?loc ?attrs (Ptyp_arrow {arg; ret; arity})
+  let arrows ?loc ?attrs args ret =
+    let arity = Some (List.length args) in
+    let rec build_arrows arity_to_use = function
+      | [] -> ret
+      | [arg] -> arrow ?loc ?attrs ~arity:arity_to_use arg ret
+      | arg :: rest ->
+        arrow ?loc ?attrs ~arity:arity_to_use arg (build_arrows None rest)
+    in
+    build_arrows arity args
   let tuple ?loc ?attrs a = mk ?loc ?attrs (Ptyp_tuple a)
   let constr ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_constr (a, b))
   let object_ ?loc ?attrs a b = mk ?loc ?attrs (Ptyp_object (a, b))
@@ -83,7 +92,8 @@ module Typ = struct
           check_variable var_names t.ptyp_loc x;
           Ptyp_var x
         | Ptyp_arrow ({arg; ret} as arr) ->
-          Ptyp_arrow {arr with arg = loop arg; ret = loop ret}
+          Ptyp_arrow
+            {arr with arg = {arr.arg with typ = loop arg.typ}; ret = loop ret}
         | Ptyp_tuple lst -> Ptyp_tuple (List.map loop lst)
         | Ptyp_constr ({txt = Longident.Lident s}, []) when List.mem s var_names
           ->
@@ -417,4 +427,22 @@ module Te = struct
       pext_loc = loc;
       pext_attributes = attrs;
     }
+end
+
+module Jsx = struct
+  let string_of_jsx_tag_name (tag_name : Parsetree.jsx_tag_name) : string =
+    match tag_name with
+    | Parsetree.JsxLowerTag name -> name
+    | Parsetree.JsxQualifiedLowerTag {path; name} ->
+      String.concat "." (Longident.flatten path) ^ "." ^ name
+    | Parsetree.JsxUpperTag path -> String.concat "." (Longident.flatten path)
+    | Parsetree.JsxTagInvalid name -> name
+
+  let longident_of_jsx_tag_name (tag_name : Parsetree.jsx_tag_name) :
+      Longident.t =
+    match tag_name with
+    | Parsetree.JsxLowerTag name -> Longident.Lident name
+    | Parsetree.JsxQualifiedLowerTag {path; name} -> Longident.Ldot (path, name)
+    | Parsetree.JsxUpperTag path -> path
+    | Parsetree.JsxTagInvalid name -> Longident.Lident name
 end

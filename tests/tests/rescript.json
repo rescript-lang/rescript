@@ -11,7 +11,7 @@
     "in-source": true,
     "suffix": ".mjs"
   },
-  "bsc-flags": [
+  "compiler-flags": [
     "-w -3-6-26-27-29-30-32..40-44-45-52-60-9-106+104",
     "-warn-error A"
   ]

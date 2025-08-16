@@ -21,15 +21,16 @@ pub struct SourceDirs<'a> {
 }
 
 fn package_to_dirs(package: &Package, root_package_path: &Path) -> AHashSet<Dir> {
-    let relative_path = package.path.strip_prefix(&root_package_path).unwrap();
-
-    package
-        .dirs
-        .as_ref()
-        .unwrap_or(&AHashSet::new())
-        .iter()
-        .map(|path| relative_path.join(path))
-        .collect::<AHashSet<PathBuf>>()
+    match package.path.strip_prefix(root_package_path) {
+        Err(_) => AHashSet::new(),
+        Ok(relative_path) => package
+            .dirs
+            .as_ref()
+            .unwrap_or(&AHashSet::new())
+            .iter()
+            .map(|path| relative_path.join(path))
+            .collect::<AHashSet<PathBuf>>(),
+    }
 }
 
 fn deps_to_pkgs<'a>(
@@ -61,23 +62,21 @@ pub fn print(buildstate: &BuildState) {
         .find(|(_name, package)| package.is_root)
         .expect("Could not find root package");
 
-    // Take all packages apart from the root package
+    // Take all local packages with source files.
+    // In the case of a monorepo, the root package typically won't have any source files.
+    // But in the case of a single package, it will be both local, root and have source files.
     let (dirs, pkgs): (Vec<AHashSet<Dir>>, Vec<AHashMap<PackageName, AbsolutePath>>) = buildstate
         .packages
         .par_iter()
-        .filter(|(_name, package)| !package.is_root)
+        .filter(|(_name, package)| package.is_local_dep && package.source_files.is_some())
         .map(|(_name, package)| {
             // Extract Directories
             let dirs = package_to_dirs(package, &root_package.path);
 
             // Extract Pkgs
-            let pkgs = [
-                &package.config.pinned_dependencies,
-                &package.config.bs_dependencies,
-                &package.config.bs_dev_dependencies,
-            ]
-            .into_iter()
-            .map(|dependencies| deps_to_pkgs(&buildstate.packages, dependencies));
+            let pkgs = [&package.config.dependencies, &package.config.dev_dependencies]
+                .into_iter()
+                .map(|dependencies| deps_to_pkgs(&buildstate.packages, dependencies));
 
             // Write sourcedirs.json
             write_sourcedirs_files(

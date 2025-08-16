@@ -24,22 +24,45 @@ let delete = (dict, string) => {
 
 @val external copy: (@as(json`{}`) _, dict<'a>) => dict<'a> = "Object.assign"
 
-let forEach = (dict, f) => {
-  dict->valuesToArray->Stdlib_Array.forEach(value => f(value))
-}
+// Use %raw to support for..in which is a ~10% faster than .forEach
+let forEach: (dict<'a>, 'a => unit) => unit = %raw(`(dict, f) => {
+  for (var i in dict) {
+    f(dict[i]);
+  }
+}`)
 
-@inline
-let forEachWithKey = (dict, f) => {
-  dict->keysToArray->Stdlib_Array.forEach(key => f(dict->getUnsafe(key), key))
-}
+// Use %raw to support for..in which is a ~10% faster than .forEach
+let forEachWithKey: (dict<'a>, ('a, string) => unit) => unit = %raw(`(dict, f) => {
+  for (var i in dict) {
+    f(dict[i], i);
+  }
+}`)
 
-let mapValues = (dict, f) => {
-  let target = make()
-  dict->forEachWithKey((value, key) => {
-    target->set(key, f(value))
-  })
-  target
-}
+// Use %raw to support for..in which is a ~10% faster than .forEach
+let mapValues: (dict<'a>, 'a => 'b) => dict<'b> = %raw(`(dict, f) => {
+  var target = {}, i;
+  for (i in dict) {
+    target[i] = f(dict[i]);
+  }
+  return target;
+}`)
+
+// Use %raw to support for..in which is a ~10% faster than Object.keys
+let size: dict<'a> => int = %raw(`(dict) => {
+  var size = 0, i;
+  for (i in dict) {
+    size++;
+  }
+  return size;
+}`)
+
+// Use %raw to support for..in which is a 2x faster than Object.keys
+let isEmpty: dict<'a> => bool = %raw(`(dict) => {
+  for (var _ in dict) {
+    return false
+  }
+  return true
+}`)
 
 external has: (dict<'a>, string) => bool = "%dict_has"
 

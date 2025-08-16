@@ -8,12 +8,13 @@ use super::packages;
 use crate::config;
 use crate::helpers;
 use crate::helpers::StrippedVerbatimPath;
+use crate::project_context::ProjectContext;
 use ahash::{AHashMap, AHashSet};
-use anyhow::anyhow;
+use anyhow::{Result, anyhow};
 use console::style;
 use log::{debug, trace};
 use rayon::prelude::*;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 use std::time::SystemTime;
 
@@ -22,7 +23,6 @@ pub fn compile(
     show_progress: bool,
     inc: impl Fn() + std::marker::Sync,
     set_length: impl Fn(u64),
-    build_dev_deps: bool,
 ) -> anyhow::Result<(String, String, usize)> {
     let mut compiled_modules = AHashSet::<String>::new();
     let dirty_modules = build_state
@@ -155,22 +155,14 @@ pub fn compile(
                                 .get_package(&module.package_name)
                                 .expect("Package not found");
 
-                            let root_package =
-                                build_state.get_package(&build_state.root_config_name).unwrap();
-
                             let interface_result = match source_file.interface.to_owned() {
                                 Some(Interface { path, .. }) => {
                                     let result = compile_file(
                                         package,
-                                        root_package,
                                         &helpers::get_ast_path(&path),
                                         module,
                                         true,
-                                        &build_state.bsc_path,
-                                        &build_state.packages,
-                                        &build_state.project_root,
-                                        &build_state.workspace_root,
-                                        build_dev_deps,
+                                        build_state,
                                     );
                                     Some(result)
                                 }
@@ -178,15 +170,10 @@ pub fn compile(
                             };
                             let result = compile_file(
                                 package,
-                                root_package,
                                 &helpers::get_ast_path(&source_file.implementation.path),
                                 module,
                                 false,
-                                &build_state.bsc_path,
-                                &build_state.packages,
-                                &build_state.project_root,
-                                &build_state.workspace_root,
-                                build_dev_deps,
+                                build_state,
                             );
                             let cmi_digest_after = helpers::compute_file_hash(Path::new(&cmi_path));
 
@@ -350,24 +337,21 @@ pub fn compile(
 
 pub fn compiler_args(
     config: &config::Config,
-    root_config: &config::Config,
     ast_path: &Path,
     file_path: &Path,
     is_interface: bool,
     has_interface: bool,
-    project_root: &Path,
-    workspace_root: &Option<PathBuf>,
+    project_context: &ProjectContext,
     // if packages are known, we pass a reference here
-    // this saves us a scan to find their paths
+    // this saves us a scan to find their paths.
+    // This is None when called by build::get_compiler_args
     packages: &Option<&AHashMap<String, packages::Package>>,
-    build_dev_deps: bool,
+    // Is the file listed as "type":"dev"?
+    is_type_dev: bool,
     is_local_dep: bool,
 ) -> Vec<String> {
-    let bsc_flags = config::flatten_flags(&config.bsc_flags);
-
-    let dependency_paths =
-        get_dependency_paths(config, project_root, workspace_root, packages, build_dev_deps);
-
+    let bsc_flags = config::flatten_flags(&config.compiler_flags);
+    let dependency_paths = get_dependency_paths(config, project_context, packages, is_type_dev);
     let module_name = helpers::file_path_to_module_name(file_path, &config.get_namespace());
 
     let namespace_args = match &config.get_namespace() {
@@ -391,6 +375,7 @@ pub fn compiler_args(
         packages::Namespace::NoNamespace => vec![],
     };
 
+    let root_config = project_context.get_root_config();
     let jsx_args = root_config.get_jsx_args();
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
@@ -420,8 +405,8 @@ pub fn compiler_args(
 
         specs
             .iter()
-            .map(|spec| {
-                return vec![
+            .flat_map(|spec| {
+                vec![
                     "-bs-package-output".to_string(),
                     format!(
                         "{}:{}:{}",
@@ -440,9 +425,8 @@ pub fn compiler_args(
                         },
                         root_config.get_suffix(spec),
                     ),
-                ];
+                ]
             })
-            .flatten()
             .collect()
     };
 
@@ -453,7 +437,7 @@ pub fn compiler_args(
             "-I".to_string(),
             Path::new("..").join("ocaml").to_string_lossy().to_string(),
         ],
-        dependency_paths.concat(),
+        dependency_paths,
         jsx_args,
         jsx_module_args,
         jsx_mode_args,
@@ -501,21 +485,22 @@ impl DependentPackage {
 
 fn get_dependency_paths(
     config: &config::Config,
-    project_root: &Path,
-    workspace_root: &Option<PathBuf>,
+    project_context: &ProjectContext,
     packages: &Option<&AHashMap<String, packages::Package>>,
-    build_dev_deps: bool,
-) -> Vec<Vec<String>> {
+    is_file_type_dev: bool,
+) -> Vec<String> {
     let normal_deps = config
-        .bs_dependencies
+        .dependencies
         .clone()
         .unwrap_or_default()
         .into_iter()
         .map(DependentPackage::Normal)
         .collect();
-    let dev_deps = if build_dev_deps {
+
+    // We can only access dev dependencies for source_files that are marked as "type":"dev"
+    let dev_deps = if is_file_type_dev {
         config
-            .bs_dev_dependencies
+            .dev_dependencies
             .clone()
             .unwrap_or_default()
             .into_iter()
@@ -536,7 +521,9 @@ fn get_dependency_paths(
                     .as_ref()
                     .map(|package| package.path.clone())
             } else {
-                packages::read_dependency(package_name, project_root, project_root, workspace_root).ok()
+                // packages will only be None when called by build::get_compiler_args
+                // in that case we can safely pass config as the package config.
+                packages::read_dependency(package_name, config, project_context).ok()
             }
             .map(|canonicalized_path| {
                 vec![
@@ -557,20 +544,23 @@ fn get_dependency_paths(
             dependency_path
         })
         .collect::<Vec<Vec<String>>>()
+        .concat()
 }
 
 fn compile_file(
     package: &packages::Package,
-    root_package: &packages::Package,
     ast_path: &Path,
     module: &Module,
     is_interface: bool,
-    bsc_path: &Path,
-    packages: &AHashMap<String, packages::Package>,
-    project_root: &Path,
-    workspace_root: &Option<PathBuf>,
-    build_dev_deps: bool,
-) -> Result<Option<String>, String> {
+    build_state: &BuildState,
+) -> Result<Option<String>> {
+    let BuildState {
+        packages,
+        project_context,
+        bsc_path,
+        ..
+    } = build_state;
+    let root_config = build_state.get_root_config();
     let ocaml_build_path_abs = package.get_ocaml_build_path();
     let build_path_abs = package.get_build_path();
     let implementation_file_path = match &module.source_type {
@@ -580,20 +570,21 @@ fn compile_file(
             sourcetype,
             ast_path.to_string_lossy()
         )),
-    }?;
-    let module_name = helpers::file_path_to_module_name(implementation_file_path, &package.namespace);
+    }
+    .map_err(|e| anyhow!(e))?;
+    let basename =
+        helpers::file_path_to_compiler_asset_basename(implementation_file_path, &package.namespace);
     let has_interface = module.get_interface().is_some();
+    let is_type_dev = module.is_type_dev;
     let to_mjs_args = compiler_args(
         &package.config,
-        &root_package.config,
         ast_path,
         implementation_file_path,
         is_interface,
         has_interface,
-        project_root,
-        workspace_root,
+        project_context,
         &Some(packages),
-        build_dev_deps,
+        is_type_dev,
         package.is_local_dep,
     );
 
@@ -612,18 +603,17 @@ fn compile_file(
         Ok(x) if !x.status.success() => {
             let stderr = String::from_utf8_lossy(&x.stderr);
             let stdout = String::from_utf8_lossy(&x.stdout);
-            Err(stderr.to_string() + &stdout)
+            Err(anyhow!(stderr.to_string() + &stdout))
         }
-        Err(e) => Err(format!(
-            "Could not compile file. Error: {}. Path to AST: {:?}",
-            e, ast_path
+        Err(e) => Err(anyhow!(
+            "Could not compile file. Error: {e}. Path to AST: {ast_path:?}"
         )),
         Ok(x) => {
             let err = std::str::from_utf8(&x.stderr)
                 .expect("stdout should be non-null")
                 .to_string();
 
-            let dir = std::path::Path::new(implementation_file_path).parent().unwrap();
+            let dir = Path::new(implementation_file_path).parent().unwrap();
 
             // perhaps we can do this copying somewhere else
             if !is_interface {
@@ -634,15 +624,12 @@ fn compile_file(
                         // because editor tooling doesn't support namespace entries yet
                         // we just remove the @ for now. This makes sure the editor support
                         // doesn't break
-                        .join(format!("{}.cmi", module_name)),
-                    ocaml_build_path_abs.join(format!("{}.cmi", module_name)),
+                        .join(format!("{basename}.cmi")),
+                    ocaml_build_path_abs.join(format!("{basename}.cmi")),
                 );
                 let _ = std::fs::copy(
-                    package
-                        .get_build_path()
-                        .join(dir)
-                        .join(format!("{}.cmj", module_name)),
-                    ocaml_build_path_abs.join(format!("{}.cmj", module_name)),
+                    package.get_build_path().join(dir).join(format!("{basename}.cmj")),
+                    ocaml_build_path_abs.join(format!("{basename}.cmj")),
                 );
                 let _ = std::fs::copy(
                     package
@@ -651,104 +638,94 @@ fn compile_file(
                         // because editor tooling doesn't support namespace entries yet
                         // we just remove the @ for now. This makes sure the editor support
                         // doesn't break
-                        .join(format!("{}.cmt", module_name)),
-                    ocaml_build_path_abs.join(format!("{}.cmt", module_name)),
+                        .join(format!("{basename}.cmt")),
+                    ocaml_build_path_abs.join(format!("{basename}.cmt")),
                 );
             } else {
                 let _ = std::fs::copy(
                     package
                         .get_build_path()
                         .join(dir)
-                        .join(format!("{}.cmti", module_name)),
-                    ocaml_build_path_abs.join(format!("{}.cmti", module_name)),
+                        .join(format!("{basename}.cmti")),
+                    ocaml_build_path_abs.join(format!("{basename}.cmti")),
                 );
                 let _ = std::fs::copy(
-                    package
-                        .get_build_path()
-                        .join(dir)
-                        .join(format!("{}.cmi", module_name)),
-                    ocaml_build_path_abs.join(format!("{}.cmi", module_name)),
+                    package.get_build_path().join(dir).join(format!("{basename}.cmi")),
+                    ocaml_build_path_abs.join(format!("{basename}.cmi")),
                 );
             }
 
-            match &module.source_type {
-                SourceType::SourceFile(SourceFile {
-                    interface: Some(Interface { path, .. }),
-                    ..
-                }) => {
-                    // we need to copy the source file to the build directory.
-                    // editor tools expects the source file in lib/bs for finding the current package
-                    // and in lib/ocaml when referencing modules in other packages
-                    let _ = std::fs::copy(
-                        Path::new(&package.path).join(path),
-                        package.get_build_path().join(path),
-                    )
-                    .expect("copying source file failed");
+            if let SourceType::SourceFile(SourceFile {
+                interface: Some(Interface { path, .. }),
+                ..
+            }) = &module.source_type
+            {
+                // we need to copy the source file to the build directory.
+                // editor tools expects the source file in lib/bs for finding the current package
+                // and in lib/ocaml when referencing modules in other packages
+                let _ = std::fs::copy(
+                    Path::new(&package.path).join(path),
+                    package.get_build_path().join(path),
+                )
+                .expect("copying source file failed");
 
-                    let _ = std::fs::copy(
-                        Path::new(&package.path).join(path),
-                        package
-                            .get_ocaml_build_path()
-                            .join(std::path::Path::new(path).file_name().unwrap()),
-                    )
-                    .expect("copying source file failed");
-                }
-                _ => (),
+                let _ = std::fs::copy(
+                    Path::new(&package.path).join(path),
+                    package
+                        .get_ocaml_build_path()
+                        .join(std::path::Path::new(path).file_name().unwrap()),
+                )
+                .expect("copying source file failed");
             }
-            match &module.source_type {
-                SourceType::SourceFile(SourceFile {
-                    implementation: Implementation { path, .. },
-                    ..
-                }) => {
-                    // we need to copy the source file to the build directory.
-                    // editor tools expects the source file in lib/bs for finding the current package
-                    // and in lib/ocaml when referencing modules in other packages
-                    let _ = std::fs::copy(
-                        Path::new(&package.path).join(path),
-                        package.get_build_path().join(path),
-                    )
-                    .expect("copying source file failed");
+            if let SourceType::SourceFile(SourceFile {
+                implementation: Implementation { path, .. },
+                ..
+            }) = &module.source_type
+            {
+                // we need to copy the source file to the build directory.
+                // editor tools expects the source file in lib/bs for finding the current package
+                // and in lib/ocaml when referencing modules in other packages
+                let _ = std::fs::copy(
+                    Path::new(&package.path).join(path),
+                    package.get_build_path().join(path),
+                )
+                .expect("copying source file failed");
 
-                    let _ = std::fs::copy(
-                        Path::new(&package.path).join(path),
-                        package
-                            .get_ocaml_build_path()
-                            .join(std::path::Path::new(path).file_name().unwrap()),
-                    )
-                    .expect("copying source file failed");
-                }
-                _ => (),
+                let _ = std::fs::copy(
+                    Path::new(&package.path).join(path),
+                    package
+                        .get_ocaml_build_path()
+                        .join(std::path::Path::new(path).file_name().unwrap()),
+                )
+                .expect("copying source file failed");
             }
 
             // copy js file
-            root_package.config.get_package_specs().iter().for_each(|spec| {
+            root_config.get_package_specs().iter().for_each(|spec| {
                 if spec.in_source {
-                    match &module.source_type {
-                        SourceType::SourceFile(SourceFile {
-                            implementation: Implementation { path, .. },
-                            ..
-                        }) => {
-                            let source = helpers::get_source_file_from_rescript_file(
-                                &Path::new(&package.path).join(path),
-                                &root_package.config.get_suffix(spec),
-                            );
-                            let destination = helpers::get_source_file_from_rescript_file(
-                                &package.get_build_path().join(path),
-                                &root_package.config.get_suffix(spec),
-                            );
+                    if let SourceType::SourceFile(SourceFile {
+                        implementation: Implementation { path, .. },
+                        ..
+                    }) = &module.source_type
+                    {
+                        let source = helpers::get_source_file_from_rescript_file(
+                            &Path::new(&package.path).join(path),
+                            &root_config.get_suffix(spec),
+                        );
+                        let destination = helpers::get_source_file_from_rescript_file(
+                            &package.get_build_path().join(path),
+                            &root_config.get_suffix(spec),
+                        );
 
-                            if source.exists() {
-                                let _ =
-                                    std::fs::copy(&source, &destination).expect("copying source file failed");
-                            }
+                        if source.exists() {
+                            let _ = std::fs::copy(&source, &destination).expect("copying source file failed");
                         }
-                        _ => (),
                     }
                 }
             });
 
             if helpers::contains_ascii_characters(&err) {
-                if package.is_pinned_dep || package.is_local_dep {
+                if package.is_local_dep {
                     // suppress warnings of external deps
                     Ok(Some(err))
                 } else {

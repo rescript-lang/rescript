@@ -43,7 +43,7 @@ type error =
   | Method_mismatch of string * type_expr * type_expr
   | Unbound_value of Longident.t
   | Unbound_constructor of Longident.t
-  | Unbound_label of Longident.t
+  | Unbound_label of Longident.t * type_expr option
   | Unbound_module of Longident.t
   | Unbound_modtype of Longident.t
   | Ill_typed_functor_application of Longident.t
@@ -129,7 +129,7 @@ let find_all_constructors =
   find_component Env.lookup_all_constructors (fun lid ->
       Unbound_constructor lid)
 let find_all_labels =
-  find_component Env.lookup_all_labels (fun lid -> Unbound_label lid)
+  find_component Env.lookup_all_labels (fun lid -> Unbound_label (lid, None))
 
 let find_value env loc lid =
   Env.check_value_name (Longident.last lid) loc;
@@ -160,12 +160,14 @@ let find_modtype env loc lid =
   Builtin_attributes.check_deprecated loc decl.mtd_attributes (Path.name path);
   r
 
-let unbound_constructor_error env lid =
+let unbound_constructor_error ?from_type env lid =
+  ignore from_type;
   narrow_unbound_lid_error env lid.loc lid.txt (fun lid ->
       Unbound_constructor lid)
 
-let unbound_label_error env lid =
-  narrow_unbound_lid_error env lid.loc lid.txt (fun lid -> Unbound_label lid)
+let unbound_label_error ?from_type env lid =
+  narrow_unbound_lid_error env lid.loc lid.txt (fun lid ->
+      Unbound_label (lid, from_type))
 
 (* Support for first-class modules. *)
 
@@ -318,18 +320,18 @@ and transl_type_aux env policy styp =
           v)
     in
     ctyp (Ttyp_var name) ty
-  | Ptyp_arrow {lbl; arg = st1; ret = st2; arity} ->
-    let lbl = Asttypes.to_noloc lbl in
-    let cty1 = transl_type env policy st1 in
-    let cty2 = transl_type env policy st2 in
+  | Ptyp_arrow {arg; ret; arity} ->
+    let lbl = Asttypes.to_noloc arg.lbl in
+    let cty1 = transl_type env policy arg.typ in
+    let cty2 = transl_type env policy ret in
     let ty1 = cty1.ctyp_type in
     let ty1 =
       if Btype.is_optional lbl then
         newty (Tconstr (Predef.path_option, [ty1], ref Mnil))
       else ty1
     in
-    let ty = newty (Tarrow (lbl, ty1, cty2.ctyp_type, Cok, arity)) in
-    ctyp (Ttyp_arrow (lbl, cty1, cty2, arity)) ty
+    let ty = newty (Tarrow ({lbl; typ = ty1}, cty2.ctyp_type, Cok, arity)) in
+    ctyp (Ttyp_arrow ({attrs = arg.attrs; lbl; typ = cty1}, cty2, arity)) ty
   | Ptyp_tuple stl ->
     assert (List.length stl >= 2);
     let ctys = List.map (transl_type env policy) stl in
@@ -888,8 +890,8 @@ let report_error env ppf = function
       Format.fprintf ppf
         "@[<v>@{<info>The module or file %a can't be found.@}@,\
          @[<v 2>- If it's a third-party dependency:@,\
-         - Did you add it to the \"bs-dependencies\" or \
-         \"bs-dev-dependencies\" in rescript.json?@]@,\
+         - Did you add it to the \"dependencies\" or \"dev-dependencies\" in \
+         rescript.json?@]@,\
          - Did you include the file's directory to the \"sources\" in \
          rescript.json?@,"
         Printtyp.longident lid);
@@ -909,18 +911,49 @@ let report_error env ppf = function
        = Bar@}.@]@]"
       Printtyp.longident lid Printtyp.longident lid Printtyp.longident lid;
     spellcheck ppf fold_constructors env lid
-  | Unbound_label lid ->
+  | Unbound_label (lid, from_type) ->
     (* modified *)
-    Format.fprintf ppf
-      "@[<v>@{<info>%a@} refers to a record field, but no corresponding record \
-       type is in scope.@,\
-       @,\
-       If it's defined in another module or file, bring it into scope by:@,\
-       @[- Prefixing the field name with the module name:@ \
-       @{<info>TheModule.%a@}@]@,\
-       @[- Or specifying the record type explicitly:@ @{<info>let theValue: \
-       TheModule.theType = {%a: VALUE}@}@]@]"
-      Printtyp.longident lid Printtyp.longident lid Printtyp.longident lid;
+    (match from_type with
+    | Some {desc = Tconstr (p, _, _)} when Path.same p Predef.path_option ->
+      (* TODO: Extend for nullable/null? *)
+      Format.fprintf ppf
+        "@[<v>You're trying to access the record field @{<info>%a@}, but the \
+         value you're trying to access it on is an @{<info>option@}.@ You need \
+         to unwrap the option first before accessing the record field.@,\
+         @\n\
+         Possible solutions:@,\
+         @[- Use @{<info>Option.map@} to transform the option: \
+         @{<info>xx->Option.map(field => field.%a)@}@]@,\
+         @[- Or use @{<info>Option.getOr@} with a default: \
+         @{<info>xx->Option.getOr(defaultRecord).%a@}@]@]"
+        Printtyp.longident lid Printtyp.longident lid Printtyp.longident lid
+    | Some {desc = Tconstr (p, _, _)} when Path.same p Predef.path_array ->
+      Format.fprintf ppf
+        "@[<v>You're trying to access the record field @{<info>%a@}, but the \
+         value you're trying to access it on is an @{<info>array@}.@ You need \
+         to access an individual element of the array if you want to access an \
+         individual record field.@]"
+        Printtyp.longident lid
+    | Some ({desc = Tconstr (_p, _, _)} as t1) ->
+      Format.fprintf ppf
+        "@[<v>You're trying to access the record field @{<info>%a@}, but the \
+         thing you're trying to access it on is not a record. @,\n\
+         The type of the thing you're trying to access it on is:@,\n\
+         %a@,\n\
+         @,\
+         Only records have fields that can be accessed with dot notation.@]"
+        Printtyp.longident lid Error_message_utils.type_expr t1
+    | None | Some _ ->
+      Format.fprintf ppf
+        "@[<v>@{<info>%a@} refers to a record field, but no corresponding \
+         record type is in scope.@,\
+         @,\
+         If it's defined in another module or file, bring it into scope by:@,\
+         @[- Prefixing the field name with the module name:@ \
+         @{<info>TheModule.%a@}@]@,\
+         @[- Or specifying the record type explicitly:@ @{<info>let theValue: \
+         TheModule.theType = {%a: VALUE}@}@]@]"
+        Printtyp.longident lid Printtyp.longident lid Printtyp.longident lid);
     spellcheck ppf fold_labels env lid
   | Unbound_modtype lid ->
     fprintf ppf "Unbound module type %a" longident lid;

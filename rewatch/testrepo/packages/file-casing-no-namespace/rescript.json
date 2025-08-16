@@ -1,0 +1,21 @@
+{
+  "name": "@testrepo/file-casing-no-namespace",
+  "sources": [
+    {
+      "dir": "src",
+      "subdirs": true
+    }
+  ],
+  "package-specs": [
+    {
+      "module": "es6",
+      "in-source": true
+    }
+  ],
+  "suffix": ".mjs",
+  "dependencies": [],
+  "compiler-flags": [],
+  "jsx": {
+    "version": 4
+  }
+}

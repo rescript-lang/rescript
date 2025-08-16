@@ -53,10 +53,6 @@ let async_component ~async expr =
   if async then
     let open Ast_helper in
     Exp.apply
-      (Exp.ident
-         {
-           loc = Location.none;
-           txt = Ldot (Lident "JsxPPXReactSupport", "asyncComponent");
-         })
+      (Exp.ident {loc = Location.none; txt = Ldot (Lident "Jsx", "promise")})
       [(Nolabel, expr)]
   else expr

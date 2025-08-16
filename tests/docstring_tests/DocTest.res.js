@@ -21,22 +21,26 @@ let ignoreRuntimeTests = [
   [
     20,
     [
-      "Stdlib.Array.toReversed",
-      "Stdlib.Array.toSorted"
+      "Stdlib_Array.toReversed",
+      "Stdlib_Array.toSorted"
     ]
   ],
   [
     22,
     [
-      "Stdlib.Promise.withResolvers",
-      "Stdlib.Set.union",
-      "Stdlib.Set.isSupersetOf",
-      "Stdlib.Set.isSubsetOf",
-      "Stdlib.Set.isDisjointFrom",
-      "Stdlib.Set.intersection",
-      "Stdlib.Set.symmetricDifference",
-      "Stdlib.Set.difference"
+      "Stdlib_Promise.withResolvers",
+      "Stdlib_Set.union",
+      "Stdlib_Set.isSupersetOf",
+      "Stdlib_Set.isSubsetOf",
+      "Stdlib_Set.isDisjointFrom",
+      "Stdlib_Set.intersection",
+      "Stdlib_Set.symmetricDifference",
+      "Stdlib_Set.difference"
     ]
+  ],
+  [
+    24,
+    ["Stdlib_RegExp.escape"]
   ]
 ];
 
@@ -68,7 +72,7 @@ let batchSize = Nodeos.cpus().length;
 async function extractExamples() {
   let files = Nodefs.readdirSync("runtime");
   let docFiles = files.filter(f => {
-    if (f.startsWith("Js") || f.startsWith("RescriptTools") || f.startsWith("Stdlib_")) {
+    if (f.startsWith("Js") || f.startsWith("RescriptTools")) {
       return false;
     } else if (f.endsWith(".resi")) {
       return true;

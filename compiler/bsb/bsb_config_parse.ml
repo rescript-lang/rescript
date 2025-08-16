@@ -238,16 +238,26 @@ let interpret_json ~(filename : string) ~(json : Ext_json_types.t)
                 .path)
     in
     let bs_dependencies =
-      extract_dependencies map per_proj_dir Bsb_build_schemas.bs_dependencies
+      let dependencies =
+        extract_dependencies map per_proj_dir Bsb_build_schemas.dependencies
+      in
+      if dependencies == [] then
+        extract_dependencies map per_proj_dir Bsb_build_schemas.bs_dependencies
+      else dependencies
     in
     let bs_dev_dependencies =
       match package_kind with
-      | Toplevel | Pinned_dependency _ ->
-        extract_dependencies map per_proj_dir
-          Bsb_build_schemas.bs_dev_dependencies
+      | Toplevel ->
+        let dev_dependencies =
+          extract_dependencies map per_proj_dir
+            Bsb_build_schemas.dev_dependencies
+        in
+        if dev_dependencies == [] then
+          extract_dependencies map per_proj_dir
+            Bsb_build_schemas.bs_dev_dependencies
+        else dev_dependencies
       | Dependency _ -> []
     in
-    let pinned_dependencies = Bsb_build_util.extract_pinned_dependencies map in
     match map.?(Bsb_build_schemas.sources) with
     | Some sources ->
       let cut_generators =
@@ -259,16 +269,21 @@ let interpret_json ~(filename : string) ~(json : Ext_json_types.t)
           (* ~namespace *)
           sources
       in
-      let bsc_flags = extract_string_list map Bsb_build_schemas.bsc_flags in
+      let bsc_flags =
+        let compiler_flags =
+          extract_string_list map Bsb_build_schemas.compiler_flags
+        in
+        if compiler_flags == [] then
+          extract_string_list map Bsb_build_schemas.bsc_flags
+        else compiler_flags
+      in
       let jsx = Bsb_jsx.from_map map in
       let jsx, bsc_flags =
         match package_kind with
-        | Pinned_dependency x | Dependency x ->
-          ({jsx with version = x.jsx.version}, bsc_flags)
+        | Dependency x -> ({jsx with version = x.jsx.version}, bsc_flags)
         | Toplevel -> (jsx, bsc_flags)
       in
       {
-        pinned_dependencies;
         gentype_config;
         package_name;
         namespace;
@@ -294,7 +309,7 @@ let interpret_json ~(filename : string) ~(json : Ext_json_types.t)
         package_specs =
           (match package_kind with
           | Toplevel -> Bsb_package_specs.from_map ~cwd:per_proj_dir map
-          | Pinned_dependency x | Dependency x -> x.package_specs);
+          | Dependency x -> x.package_specs);
         file_groups = groups;
         files_to_install = Queue.create ();
         jsx;
@@ -311,8 +326,5 @@ let deps_from_bsconfig () =
   match
     Bsb_config_load.load_json ~per_proj_dir:cwd ~warn_legacy_config:false
   with
-  | _, Obj {map} ->
-    ( Bsb_package_specs.from_map ~cwd map,
-      Bsb_jsx.from_map map,
-      Bsb_build_util.extract_pinned_dependencies map )
+  | _, Obj {map} -> (Bsb_package_specs.from_map ~cwd map, Bsb_jsx.from_map map)
   | _, _ -> assert false

@@ -1,7 +1,7 @@
 open! Ast_helper
 open Ast_mapper
 open Asttypes
-open Parsetree
+open! Parsetree
 open Longident
 
 let module_access_name config value =
@@ -918,17 +918,16 @@ let transform_structure_item ~config item =
         |> Option.map Jsx_common.typ_vars_of_core_type
         |> Option.value ~default:[]
       in
-      let rec get_prop_types types
-          ({ptyp_loc; ptyp_desc; ptyp_attributes} as full_type) =
+      let rec get_prop_types types ({ptyp_loc; ptyp_desc} as full_type) =
         match ptyp_desc with
-        | Ptyp_arrow {lbl = name; arg; ret = {ptyp_desc = Ptyp_arrow _} as typ2}
-          when is_labelled name || is_optional name ->
-          get_prop_types ((name, ptyp_attributes, ptyp_loc, arg) :: types) typ2
-        | Ptyp_arrow {lbl = Nolabel; ret} -> get_prop_types types ret
-        | Ptyp_arrow {lbl = name; arg; ret = return_value}
-          when is_labelled name || is_optional name ->
+        | Ptyp_arrow {arg; ret = {ptyp_desc = Ptyp_arrow _} as typ2}
+          when is_labelled arg.lbl || is_optional arg.lbl ->
+          get_prop_types ((arg.lbl, arg.attrs, ptyp_loc, arg.typ) :: types) typ2
+        | Ptyp_arrow {arg = {lbl = Nolabel}; ret} -> get_prop_types types ret
+        | Ptyp_arrow {arg; ret = return_value}
+          when is_labelled arg.lbl || is_optional arg.lbl ->
           ( return_value,
-            (name, ptyp_attributes, return_value.ptyp_loc, arg) :: types )
+            (arg.lbl, arg.attrs, return_value.ptyp_loc, arg.typ) :: types )
         | _ -> (full_type, types)
       in
       let inner_type, prop_types = get_prop_types [] pval_type in
@@ -1022,30 +1021,25 @@ let transform_signature_item ~config item =
       in
       let rec get_prop_types types ({ptyp_loc; ptyp_desc} as full_type) =
         match ptyp_desc with
+        | Ptyp_arrow {arg; ret = {ptyp_desc = Ptyp_arrow _} as rest}
+          when is_optional arg.lbl || is_labelled arg.lbl ->
+          get_prop_types ((arg.lbl, arg.attrs, ptyp_loc, arg.typ) :: types) rest
         | Ptyp_arrow
             {
-              lbl;
-              arg = {ptyp_attributes = attrs} as type_;
-              ret = {ptyp_desc = Ptyp_arrow _} as rest;
-            }
-          when is_optional lbl || is_labelled lbl ->
-          get_prop_types ((lbl, attrs, ptyp_loc, type_) :: types) rest
-        | Ptyp_arrow
-            {
-              lbl = Nolabel;
-              arg = {ptyp_desc = Ptyp_constr ({txt = Lident "unit"}, _)};
+              arg =
+                {
+                  lbl = Nolabel;
+                  typ = {ptyp_desc = Ptyp_constr ({txt = Lident "unit"}, _)};
+                };
               ret = rest;
             } ->
           get_prop_types types rest
-        | Ptyp_arrow {lbl = Nolabel; ret = rest} -> get_prop_types types rest
-        | Ptyp_arrow
-            {
-              lbl = name;
-              arg = {ptyp_attributes = attrs} as type_;
-              ret = return_value;
-            }
-          when is_optional name || is_labelled name ->
-          (return_value, (name, attrs, return_value.ptyp_loc, type_) :: types)
+        | Ptyp_arrow {arg = {lbl = Nolabel}; ret = rest} ->
+          get_prop_types types rest
+        | Ptyp_arrow {arg; ret = return_value}
+          when is_optional arg.lbl || is_labelled arg.lbl ->
+          ( return_value,
+            (arg.lbl, arg.attrs, return_value.ptyp_loc, arg.typ) :: types )
         | _ -> (full_type, types)
       in
       let inner_type, prop_types = get_prop_types [] pval_type in
@@ -1088,18 +1082,6 @@ let transform_signature_item ~config item =
       Jsx_common.raise_error ~loc:psig_loc
         "Only one JSX component call can exist on a component at one time")
   | _ -> [item]
-
-let starts_with_lowercase s =
-  if String.length s = 0 then false
-  else
-    let c = s.[0] in
-    Char.lowercase_ascii c = c
-
-let starts_with_uppercase s =
-  if String.length s = 0 then false
-  else
-    let c = s.[0] in
-    Char.uppercase_ascii c = c
 
 (* There appear to be slightly different rules of transformation whether the component is upper-, lowercase or a fragment *)
 type componentDescription =
@@ -1295,12 +1277,14 @@ let mk_react_jsx (config : Jsx_common.jsx_config) mapper loc attrs
 *)
 let mk_uppercase_tag_name_expr tag_name =
   let tag_identifier : Longident.t =
-    if Longident.flatten tag_name.txt |> List.for_all starts_with_uppercase then
-      (* All parts are uppercase, so we append .make *)
-      Ldot (tag_name.txt, "make")
-    else tag_name.txt
+    match tag_name.txt with
+    | JsxTagInvalid _ | JsxLowerTag _ ->
+      failwith "Unreachable code at mk_uppercase_tag_name_expr"
+    | JsxQualifiedLowerTag {path; name} -> Longident.Ldot (path, name)
+    | JsxUpperTag path -> Longident.Ldot (path, "make")
   in
-  Exp.ident ~loc:tag_name.loc {txt = tag_identifier; loc = tag_name.loc}
+  let loc = tag_name.loc in
+  Exp.ident ~loc {txt = tag_identifier; loc}
 
 let expr ~(config : Jsx_common.jsx_config) mapper expression =
   match expression with
@@ -1318,45 +1302,48 @@ let expr ~(config : Jsx_common.jsx_config) mapper expression =
         children
     | Jsx_unary_element
         {jsx_unary_element_tag_name = tag_name; jsx_unary_element_props = props}
-      ->
-      let name = Longident.flatten tag_name.txt |> String.concat "." in
-      if starts_with_lowercase name then
+      -> (
+      let name = Ast_helper.Jsx.string_of_jsx_tag_name tag_name.txt in
+      let tag_loc = tag_name.loc in
+      match tag_name.txt with
+      | JsxLowerTag _ ->
         (* For example 'input' *)
-        let component_name_expr = constant_string ~loc:tag_name.loc name in
+        let component_name_expr = constant_string ~loc:tag_loc name in
         mk_react_jsx config mapper loc attrs LowercasedComponent
           component_name_expr props (JSXChildrenItems [])
-      else if starts_with_uppercase name then
+      | JsxUpperTag _ | JsxQualifiedLowerTag _ ->
         (* MyModule.make *)
         let make_id = mk_uppercase_tag_name_expr tag_name in
         mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
           (JSXChildrenItems [])
-      else
+      | JsxTagInvalid name ->
         Jsx_common.raise_error ~loc
-          "JSX: element name is neither upper- or lowercase, got \"%s\""
-          (Longident.flatten tag_name.txt |> String.concat ".")
+          "JSX: element name is neither upper- or lowercase, got \"%s\"" name)
     | Jsx_container_element
         {
           jsx_container_element_tag_name_start = tag_name;
           jsx_container_element_props = props;
           jsx_container_element_children = children;
-        } ->
-      let name = Longident.flatten tag_name.txt |> String.concat "." in
+        } -> (
+      let name, tag_loc =
+        (Ast_helper.Jsx.string_of_jsx_tag_name tag_name.txt, tag_name.loc)
+      in
       (* For example: <div> <h1></h1> <br /> </div>
          This has an impact if we want to use ReactDOM.jsx or ReactDOM.jsxs
            *)
-      if starts_with_lowercase name then
-        let component_name_expr = constant_string ~loc:tag_name.loc name in
+      match tag_name.txt with
+      | JsxLowerTag _ ->
+        let component_name_expr = constant_string ~loc:tag_loc name in
         mk_react_jsx config mapper loc attrs LowercasedComponent
           component_name_expr props children
-      else if starts_with_uppercase name then
+      | JsxQualifiedLowerTag _ | JsxUpperTag _ ->
         (* MyModule.make *)
         let make_id = mk_uppercase_tag_name_expr tag_name in
         mk_react_jsx config mapper loc attrs UppercasedComponent make_id props
           children
-      else
+      | JsxTagInvalid name ->
         Jsx_common.raise_error ~loc
-          "JSX: element name is neither upper- or lowercase, got \"%s\""
-          (Longident.flatten tag_name.txt |> String.concat "."))
+          "JSX: element name is neither upper- or lowercase, got \"%s\"" name))
   | e -> default_mapper.expr mapper e
 
 let module_binding ~(config : Jsx_common.jsx_config) mapper module_binding =

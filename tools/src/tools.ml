@@ -395,8 +395,8 @@ let valueDetail (typ : Types.type_expr) =
                  collectSignatureTypes t)
         in
         [{path = p; genericParameters = ts}])
-    | Tarrow (_, t1, t2, _, _) ->
-      collectSignatureTypes t1 @ collectSignatureTypes t2
+    | Tarrow (arg, ret, _, _) ->
+      collectSignatureTypes arg.typ @ collectSignatureTypes ret
     | Tvar None -> [{path = "_"; genericParameters = []}]
     | _ -> []
   in

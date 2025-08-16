@@ -26,7 +26,12 @@ open Error_message_utils
 
 type error =
   | Polymorphic_label of Longident.t
-  | Constructor_arity_mismatch of Longident.t * int * int
+  | Constructor_arity_mismatch of {
+      name: Longident.t;
+      constuctor: constructor_description;
+      expected: int;
+      provided: int;
+    }
   | Label_mismatch of Longident.t * (type_expr * type_expr) list
   | Pattern_type_clash of (type_expr * type_expr) list
   | Or_pattern_type_clash of Ident.t * (type_expr * type_expr) list
@@ -79,11 +84,18 @@ type error =
   | Unknown_literal of string * char
   | Illegal_letrec_pat
   | Empty_record_literal
-  | Uncurried_arity_mismatch of
-      type_expr * int * int * Asttypes.Noloc.arg_label list
+  | Uncurried_arity_mismatch of {
+      function_type: type_expr;
+      expected_arity: int;
+      provided_arity: int;
+      provided_args: Asttypes.Noloc.arg_label list;
+      function_name: Longident.t option;
+    }
   | Field_not_optional of string * type_expr
   | Type_params_not_supported of Longident.t
   | Field_access_on_dict_type
+  | Jsx_not_enabled
+
 exception Error of Location.t * Env.t * error
 exception Error_forward of Location.error
 
@@ -184,7 +196,7 @@ let iter_expression f e =
     | Pexp_pack me -> module_expr me
     | Pexp_await _ -> assert false (* should be handled earlier *)
     | Pexp_jsx_element _ ->
-      failwith "Pexp_jsx_element should be transformed at this point."
+      raise (Error (e.pexp_loc, Env.empty, Jsx_not_enabled))
   and case {pc_lhs = _; pc_guard; pc_rhs} =
     may expr pc_guard;
     expr pc_rhs
@@ -722,12 +734,11 @@ let show_extra_help ppf _env trace =
 let rec collect_missing_arguments env type1 type2 =
   match type1 with
   (* why do we use Ctype.matches here? Please see https://github.com/rescript-lang/rescript-compiler/pull/2554 *)
-  | {Types.desc = Tarrow (label, argtype, typ, _, _)}
-    when Ctype.matches env typ type2 ->
-    Some [(label, argtype)]
-  | {desc = Tarrow (label, argtype, typ, _, _)} -> (
-    match collect_missing_arguments env typ type2 with
-    | Some res -> Some ((label, argtype) :: res)
+  | {Types.desc = Tarrow (arg, ret, _, _)} when Ctype.matches env ret type2 ->
+    Some [(arg.lbl, arg.typ)]
+  | {desc = Tarrow (arg, ret, _, _)} -> (
+    match collect_missing_arguments env ret type2 with
+    | Some res -> Some ((arg.lbl, arg.typ) :: res)
     | None -> None)
   | _ -> None
 
@@ -789,13 +800,15 @@ let print_expr_type_clash ~context env loc trace ppf =
         | ppf -> error_type_text ppf context)
       (function ppf -> error_expected_type_text ppf context);
     print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
-      bottom_aliases_result context;
+      bottom_aliases_result trace context;
     show_extra_help ppf env trace
 
 let report_arity_mismatch ~arity_a ~arity_b ppf =
-  fprintf ppf "This function expected @{<info>%s@} %s, but got @{<error>%s@}"
+  fprintf ppf
+    "This function is expected to have @{<info>%s@} %s, but%s has @{<error>%s@}"
     arity_b
     (if arity_b = "1" then "argument" else "arguments")
+    (if int_of_string arity_a < int_of_string arity_b then " only" else "")
     arity_a
 
 (* Records *)
@@ -809,7 +822,8 @@ module NameChoice (Name : sig
   val get_descrs : Env.type_descriptions -> t list
 
   val unsafe_do_not_use__add_with_name : t -> string -> t
-  val unbound_name_error : Env.t -> Longident.t loc -> 'a
+  val unbound_name_error :
+    ?from_type:type_expr -> Env.t -> Longident.t loc -> 'a
 end) =
 struct
   open Name
@@ -868,7 +882,7 @@ struct
     List.find check_type lbls
 
   let disambiguate ?(warn = Location.prerr_warning) ?(check_lk = fun _ _ -> ())
-      ?scope lid env opath lbls =
+      ?(from_type : Types.type_expr option) ?scope lid env opath lbls =
     let scope =
       match scope with
       | None -> lbls
@@ -878,7 +892,7 @@ struct
       match opath with
       | None -> (
         match lbls with
-        | [] -> unbound_name_error env lid
+        | [] -> unbound_name_error ?from_type env lid
         | (lbl, use) :: rest ->
           use ();
           let paths = ambiguous_types env lbl rest in
@@ -897,7 +911,7 @@ struct
             check_lk tpath lbl;
             lbl
           with Not_found ->
-            if lbls = [] then unbound_name_error env lid
+            if lbls = [] then unbound_name_error ?from_type env lid
             else
               let tp = (tpath0, expand_path env tpath) in
               let tpl =
@@ -1392,7 +1406,12 @@ and type_pat_aux ~constrs ~labels ~no_existentials ~mode ~explode ~env sp
            ( loc,
              !env,
              Constructor_arity_mismatch
-               (lid.txt, constr.cstr_arity, List.length sargs) ));
+               {
+                 name = lid.txt;
+                 constuctor = constr;
+                 expected = constr.cstr_arity;
+                 provided = List.length sargs;
+               } ));
     let ty_args, ty_res =
       instance_constructor ~in_pattern:(env, get_newtype_level ()) constr
     in
@@ -1871,10 +1890,10 @@ and is_nonexpansive_opt = function
 
 let rec approx_type env sty =
   match sty.ptyp_desc with
-  | Ptyp_arrow {lbl = p; ret = sty; arity} ->
+  | Ptyp_arrow {arg = {lbl = p}; ret = sty; arity} ->
     let p = Asttypes.to_noloc p in
     let ty1 = if is_optional p then type_option (newvar ()) else newvar () in
-    newty (Tarrow (p, ty1, approx_type env sty, Cok, arity))
+    newty (Tarrow ({lbl = p; typ = ty1}, approx_type env sty, Cok, arity))
   | Ptyp_tuple args -> newty (Ttuple (List.map (approx_type env) args))
   | Ptyp_constr (lid, ctl) -> (
     try
@@ -1893,7 +1912,7 @@ let rec type_approx env sexp =
   | Pexp_fun {arg_label = p; rhs = e; arity} ->
     let p = Asttypes.to_noloc p in
     let ty = if is_optional p then type_option (newvar ()) else newvar () in
-    newty (Tarrow (p, ty, type_approx env e, Cok, arity))
+    newty (Tarrow ({lbl = p; typ = ty}, type_approx env e, Cok, arity))
   | Pexp_match (_, {pc_rhs = e} :: _) -> type_approx env e
   | Pexp_try (e, _) -> type_approx env e
   | Pexp_tuple l -> newty (Ttuple (List.map (type_approx env) l))
@@ -1928,8 +1947,8 @@ let rec list_labels_aux env visited ls ty_fun =
   if List.memq ty visited then (List.rev ls, false)
   else
     match ty.desc with
-    | Tarrow (l, _, ty_res, _, arity) when arity = None || visited = [] ->
-      list_labels_aux env (ty :: visited) (l :: ls) ty_res
+    | Tarrow (arg, ty_res, _, arity) when arity = None || visited = [] ->
+      list_labels_aux env (ty :: visited) (arg.lbl :: ls) ty_res
     | _ -> (List.rev ls, is_Tvar ty)
 
 let list_labels env ty =
@@ -2208,14 +2227,19 @@ let rec lower_args env seen ty_fun =
   if List.memq ty seen then ()
   else
     match ty.desc with
-    | Tarrow (_l, ty_arg, ty_fun, _com, _) ->
-      (try unify_var env (newvar ()) ty_arg with Unify _ -> assert false);
+    | Tarrow (arg, ty_fun, _com, _) ->
+      (try unify_var env (newvar ()) arg.typ with Unify _ -> assert false);
       lower_args env (ty :: seen) ty_fun
     | _ -> ()
 
 let not_function env ty =
   let ls, tvar = list_labels env ty in
   ls = [] && not tvar
+
+let extract_function_name funct =
+  match funct.exp_desc with
+  | Texp_ident (path, _, _) -> Some (Longident.parse (Path.name path))
+  | _ -> None
 
 type lazy_args =
   (Asttypes.Noloc.arg_label * (unit -> Typedtree.expression) option) list
@@ -3194,7 +3218,7 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
     raise (Error_forward (Builtin_attributes.error_of_extension ext))
   | Pexp_await _ -> (* should be handled earlier *) assert false
   | Pexp_jsx_element _ ->
-    failwith "Pexp_jsx_element is expected to be transformed at this point"
+    raise (Error (sexp.pexp_loc, Env.empty, Jsx_not_enabled))
 
 and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
     caselist =
@@ -3208,7 +3232,9 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
     match arity with
     | None -> ty_expected_
     | Some arity ->
-      let fun_t = newty (Tarrow (l, newvar (), newvar (), Cok, Some arity)) in
+      let fun_t =
+        newty (Tarrow ({lbl = l; typ = newvar ()}, newvar (), Cok, Some arity))
+      in
       unify_exp_types ~context:None loc env fun_t ty_expected_;
       fun_t
   in
@@ -3250,7 +3276,8 @@ and type_function ?in_function ~arity ~async loc attrs env ty_expected_ l
       Warnings.Unerasable_optional_argument;
   let param = name_pattern "param" cases in
   let exp_type =
-    instance env (newgenty (Tarrow (l, ty_arg, ty_res, Cok, arity)))
+    instance env
+      (newgenty (Tarrow ({lbl = l; typ = ty_arg}, ty_res, Cok, arity)))
   in
   Warnings.restore state;
   re
@@ -3285,7 +3312,7 @@ and type_label_access env srecord lid =
   let labels = Typetexp.find_all_labels env lid.loc lid.txt in
   let label =
     wrap_disambiguate "This expression has" ty_exp
-      (Label.disambiguate lid env opath)
+      (Label.disambiguate ~from_type:ty_exp lid env opath)
       labels
   in
   (record, label, opath)
@@ -3466,7 +3493,8 @@ and type_application ~context total_app env funct (sargs : sargs) :
     targs * Types.type_expr * bool =
   let result_type omitted ty_fun =
     List.fold_left
-      (fun ty_fun (l, ty, lv) -> newty2 lv (Tarrow (l, ty, ty_fun, Cok, None)))
+      (fun ty_fun (l, ty, lv) ->
+        newty2 lv (Tarrow ({lbl = l; typ = ty}, ty_fun, Cok, None)))
       ty_fun omitted
   in
   let has_label l ty_fun =
@@ -3484,7 +3512,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
     if force_tvar then Some (List.length sargs)
     else
       match (expand_head env funct.exp_type).desc with
-      | Tarrow (_, _, _, _, Some arity) -> Some arity
+      | Tarrow (_, _, _, Some arity) -> Some arity
       | _ -> None
   in
   let force_uncurried_type funct =
@@ -3505,10 +3533,13 @@ and type_application ~context total_app env funct (sargs : sargs) :
              ( funct.exp_loc,
                env,
                Uncurried_arity_mismatch
-                 ( funct.exp_type,
-                   arity,
-                   List.length sargs,
-                   sargs |> List.map (fun (a, _) -> to_noloc a) ) ));
+                 {
+                   function_type = funct.exp_type;
+                   expected_arity = arity;
+                   provided_arity = List.length sargs;
+                   provided_args = sargs |> List.map (fun (a, _) -> to_noloc a);
+                   function_name = extract_function_name funct;
+                 } ));
       arity
     | None -> max_int
   in
@@ -3524,16 +3555,19 @@ and type_application ~context total_app env funct (sargs : sargs) :
               ( funct.exp_loc,
                 env,
                 Uncurried_arity_mismatch
-                  ( funct.exp_type,
-                    required_args + newarity,
-                    required_args,
-                    sargs |> List.map (fun (a, _) -> to_noloc a) ) )));
+                  {
+                    function_type = funct.exp_type;
+                    expected_arity = required_args + newarity;
+                    provided_arity = required_args;
+                    provided_args = sargs |> List.map (fun (a, _) -> to_noloc a);
+                    function_name = extract_function_name funct;
+                  } )));
       let new_t =
         if fully_applied then new_t
         else
           match new_t.desc with
-          | Tarrow (l, t1, t2, c, _) ->
-            {new_t with desc = Tarrow (l, t1, t2, c, Some newarity)}
+          | Tarrow (arg, ret, c, _) ->
+            {new_t with desc = Tarrow (arg, ret, c, Some newarity)}
           | _ -> new_t
       in
       (fully_applied, new_t)
@@ -3553,7 +3587,7 @@ and type_application ~context total_app env funct (sargs : sargs) :
       in
       if List.length args < max_arity && total_app then
         match (expand_head env ty_fun).desc with
-        | Tarrow (Optional l, t1, t2, _, _) ->
+        | Tarrow ({lbl = Optional l; typ = t1}, t2, _, _) ->
           ignored := (Noloc.Optional l, t1, ty_fun.level) :: !ignored;
           let arg =
             ( Noloc.Optional l,
@@ -3581,9 +3615,11 @@ and type_application ~context total_app env funct (sargs : sargs) :
           if ty_fun.level >= t1.level && not_identity funct.exp_desc then
             Location.prerr_warning sarg1.pexp_loc Warnings.Unused_argument;
           unify env ty_fun
-            (newty (Tarrow (l1, t1, t2, Clink (ref Cunknown), top_arity)));
+            (newty
+               (Tarrow
+                  ({lbl = l1; typ = t1}, t2, Clink (ref Cunknown), top_arity)));
           (t1, t2)
-        | Tarrow (l, t1, t2, _, _)
+        | Tarrow ({lbl = l; typ = t1}, t2, _, _)
           when Asttypes.Noloc.same_arg_label l l1 && arity_ok ->
           (t1, t2)
         | td -> (
@@ -3622,8 +3658,8 @@ and type_application ~context total_app env funct (sargs : sargs) :
   let rec type_args ~context max_arity args omitted ~ty_fun ty_fun0
       ~(sargs : sargs) ~top_arity =
     match (expand_head env ty_fun, expand_head env ty_fun0) with
-    | ( {desc = Tarrow (l, ty, ty_fun, com, _); level = lv},
-        {desc = Tarrow (_, ty0, ty_fun0, _, _)} )
+    | ( {desc = Tarrow ({lbl = l; typ = ty}, ty_fun, com, _); level = lv},
+        {desc = Tarrow ({typ = ty0}, ty_fun0, _, _)} )
       when sargs <> [] && commu_repr com = Cok && List.length args < max_arity
       ->
       let name = label_name l and optional = is_optional l in
@@ -3733,7 +3769,12 @@ and type_construct ~context env loc lid sarg ty_expected attrs =
          ( loc,
            env,
            Constructor_arity_mismatch
-             (lid.txt, constr.cstr_arity, List.length sargs) ));
+             {
+               name = lid.txt;
+               constuctor = constr;
+               expected = constr.cstr_arity;
+               provided = List.length sargs;
+             } ));
   let separate = Env.has_local_constraints env in
   if separate then (
     begin_def ();
@@ -4223,6 +4264,40 @@ let spellcheck ppf unbound_name valid_names =
 let spellcheck_idents ppf unbound valid_idents =
   spellcheck ppf (Ident.name unbound) (List.map Ident.name valid_idents)
 
+let strip_arity_suffix name =
+  let len = String.length name in
+  let rec scan_back i =
+    if i < 0 || name.[i] < '0' || name.[i] > '9' then i + 1
+    else scan_back (i - 1)
+  in
+  let start_of_digits = scan_back (len - 1) in
+  if start_of_digits > 0 && start_of_digits < len then
+    String.sub name 0 start_of_digits
+  else name
+
+let find_arity_suggestion env function_name target_arity =
+  let base_name = strip_arity_suffix function_name in
+  let candidate =
+    if target_arity = 1 then base_name
+    else base_name ^ string_of_int target_arity
+  in
+  try
+    let path, desc = Env.lookup_value (Longident.parse candidate) env in
+    if Builtin_attributes.deprecated_of_attrs desc.val_attributes <> None then
+      None
+    else
+      let expanded_type = Ctype.expand_head env desc.val_type in
+      let actual_arity =
+        match Ctype.get_arity env expanded_type with
+        | Some arity -> arity
+        | None -> 0
+      in
+      if actual_arity = target_arity then Some (Printtyp.string_of_path path)
+      else None
+  with
+  | Not_found -> None
+  | _ -> None
+
 open Format
 let longident = Printtyp.longident
 let super_report_unification_error = Printtyp.super_report_unification_error
@@ -4236,14 +4311,24 @@ let report_error env loc ppf error =
   | Polymorphic_label lid ->
     fprintf ppf "@[The record field %a is polymorphic.@ %s@]" longident lid
       "You cannot instantiate it in a pattern."
-  | Constructor_arity_mismatch (lid, expected, provided) ->
+  | Constructor_arity_mismatch {name; constuctor; expected; provided} ->
     (* modified *)
-    fprintf ppf
-      "@[This variant constructor, %a, expects %i %s; here, we've %sfound %i.@]"
-      longident lid expected
-      (if expected == 1 then "argument" else "arguments")
-      (if provided < expected then "only " else "")
-      provided
+    let is_inline_record = Option.is_some constuctor.cstr_inlined in
+    if is_inline_record && expected = 1 then
+      fprintf ppf
+        "@[This variant constructor @{<info>%a@} expects an inline record as \
+         payload%s.@]"
+        longident name
+        (if provided = 0 then ", but it's not being passed any arguments"
+         else "")
+    else
+      fprintf ppf
+        "@[This variant constructor @{<info>%a@} expects %i %s, but it's%s \
+         being passed %i.@]"
+        longident name expected
+        (if expected == 1 then "argument" else "arguments")
+        (if provided < expected then " only" else "")
+        provided
   | Label_mismatch (lid, trace) ->
     (* modified *)
     super_report_unification_error ppf env trace
@@ -4278,8 +4363,8 @@ let report_error env loc ppf error =
   | Expr_type_clash
       {
         trace =
-          (_, {desc = Tarrow (_, _, _, _, None)})
-          :: (_, {desc = Tarrow (_, _, _, _, Some _)})
+          (_, {desc = Tarrow (_, _, _, None)})
+          :: (_, {desc = Tarrow (_, _, _, Some _)})
           :: _;
       } ->
     fprintf ppf
@@ -4288,8 +4373,8 @@ let report_error env loc ppf error =
   | Expr_type_clash
       {
         trace =
-          (_, {desc = Tarrow (_, _, _, _, Some arity_a)})
-          :: (_, {desc = Tarrow (_, _, _, _, Some arity_b)})
+          (_, {desc = Tarrow (_, _, _, Some arity_a)})
+          :: (_, {desc = Tarrow (_, _, _, Some arity_b)})
           :: _;
       }
     when arity_a <> arity_b ->
@@ -4304,10 +4389,10 @@ let report_error env loc ppf error =
   | Apply_non_function typ -> (
     (* modified *)
     match (repr typ).desc with
-    | Tarrow (_, _inputType, return_type, _, _) ->
+    | Tarrow (_, return_type, _, _) ->
       let rec count_number_of_args count {Types.desc} =
         match desc with
-        | Tarrow (_, _inputType, return_type, _, _) ->
+        | Tarrow (_, return_type, _, _) ->
           count_number_of_args (count + 1) return_type
         | _ -> count
       in
@@ -4482,7 +4567,14 @@ let report_error env loc ppf error =
     fprintf ppf
       "Empty record literal {} should be type annotated or used in a record \
        context."
-  | Uncurried_arity_mismatch (typ, arity, args, sargs) ->
+  | Uncurried_arity_mismatch
+      {
+        function_type = typ;
+        expected_arity = arity;
+        provided_arity = args;
+        provided_args = sargs;
+        function_name = function_name_opt;
+      } ->
     (* We need:
     - Any arg that's required but isn't passed
     - Any arg that is passed but isn't in the fn definition (optional or labelled)
@@ -4490,7 +4582,7 @@ let report_error env loc ppf error =
     *)
     let rec collect_args ?(acc = []) typ =
       match typ.desc with
-      | Tarrow (arg, _, next, _, _) -> collect_args ~acc:(arg :: acc) next
+      | Tarrow (arg, next, _, _) -> collect_args ~acc:(arg.lbl :: acc) next
       | _ -> acc
     in
     let args_from_type = collect_args typ in
@@ -4584,12 +4676,32 @@ let report_error env loc ppf error =
       fprintf ppf
         "@,\
          @,\
-         It is called with @{<error>%d@} argument%s but requires%s \
+         It is called with @{<error>%d@} argument%s but%s requires \
          @{<info>%d@}."
         args
-        (if args > arity then " just" else "")
         (if args = 1 then "" else "s")
+        (if args > arity then " just" else "")
         arity;
+
+    (* Add suggestions for related functions with correct arity *)
+    (match function_name_opt with
+    | Some function_name -> (
+      let function_name_str =
+        let buffer = Buffer.create 16 in
+        let formatter = Format.formatter_of_buffer buffer in
+        Printtyp.longident formatter function_name;
+        Format.pp_print_flush formatter ();
+        Buffer.contents buffer
+      in
+      let suggestion = find_arity_suggestion env function_name_str args in
+      match suggestion with
+      | None -> ()
+      | Some suggestion_str ->
+        fprintf ppf
+          "@,@,Hint: Try @{<info>%s@} instead (takes @{<info>%d@} argument%s)."
+          suggestion_str args
+          (if args = 1 then "" else "s"))
+    | None -> ());
 
     fprintf ppf "@]"
   | Field_not_optional (name, typ) ->
@@ -4603,6 +4715,10 @@ let report_error env loc ppf error =
   | Field_access_on_dict_type ->
     fprintf ppf
       "Direct field access on a dict is not supported. Use Dict.get instead."
+  | Jsx_not_enabled ->
+    fprintf ppf
+      "Cannot compile JSX expression because JSX support is not enabled. Add \
+       \"jsx\" settings to rescript.json to enable JSX support."
 
 let report_error env loc ppf err =
   Printtyp.wrap_printing_env env (fun () -> report_error env loc ppf err)

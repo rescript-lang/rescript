@@ -1,5 +1,6 @@
 {
   "name": "@testrepo/file-casing",
+  "namespace": "FileCasing",
   "sources": [
     {
       "dir": "src",
@@ -13,8 +14,8 @@
     }
   ],
   "suffix": ".mjs",
-  "bs-dependencies": [],
-  "bsc-flags": [],
+  "dependencies": [],
+  "compiler-flags": [],
   "jsx": {
     "version": 4
   }

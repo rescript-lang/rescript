@@ -809,6 +809,36 @@ String.searchOpt("no numbers", /\d+/) == None
 let searchOpt: (string, Stdlib_RegExp.t) => option<int>
 
 /**
+`isEmpty(str)` returns `true` if the string is empty (has zero length), 
+`false` otherwise.
+
+## Examples
+
+```rescript
+String.isEmpty("") == true
+String.isEmpty("hello") == false
+String.isEmpty("  ") == false
+```
+*/
+let isEmpty: string => bool
+
+/**
+`capitalize(str)` returns a new string with the first character converted to 
+uppercase and the remaining characters unchanged. If the string is empty, 
+returns the empty string.
+
+## Examples
+
+```rescript
+String.capitalize("hello") == "Hello"
+String.capitalize("HELLO") == "HELLO"
+String.capitalize("hello world") == "Hello world"
+String.capitalize("") == ""
+```
+*/
+let capitalize: string => string
+
+/**
 `slice(str, ~start, ~end)` returns the substring of `str` starting at
 character `start` up to but not including `end`.
 - If either `start` or `end` is negative, then it is evaluated as
@@ -825,10 +855,12 @@ String.slice("abcdefg", ~start=2, ~end=5) == "cde"
 String.slice("abcdefg", ~start=2, ~end=9) == "cdefg"
 String.slice("abcdefg", ~start=-4, ~end=-2) == "de"
 String.slice("abcdefg", ~start=5, ~end=1) == ""
+String.slice("abcdefg", ~start=2) == "cdefg"
+String.slice("Hello World", ~start=6) == "World"
 ```
 */
 @send
-external slice: (string, ~start: int, ~end: int) => string = "slice"
+external slice: (string, ~start: int, ~end: int=?) => string = "slice"
 
 /**
 `sliceToEnd(str, ~start)` returns the substring of `str` starting at character
@@ -845,7 +877,7 @@ String.sliceToEnd("abcdefg", ~start=-2) == "fg"
 String.sliceToEnd("abcdefg", ~start=7) == ""
 ```
 */
-@send
+@deprecated("Use `slice` instead") @send
 external sliceToEnd: (string, ~start: int) => string = "slice"
 
 /**
@@ -964,10 +996,12 @@ including end from `str`.
 String.substring("playground", ~start=3, ~end=6) == "ygr"
 String.substring("playground", ~start=6, ~end=3) == "ygr"
 String.substring("playground", ~start=4, ~end=12) == "ground"
+String.substring("playground", ~start=4) == "ground"
+String.substring("Hello World", ~start=6) == "World"
 ```
 */
 @send
-external substring: (string, ~start: int, ~end: int) => string = "substring"
+external substring: (string, ~start: int, ~end: int=?) => string = "substring"
 
 /**
 `substringToEnd(str, ~start)` returns the substring of `str` from position
@@ -985,7 +1019,7 @@ String.substringToEnd("playground", ~start=-3) == "playground"
 String.substringToEnd("playground", ~start=12) == ""
 ```
 */
-@send
+@deprecated("Use `substring` instead") @send
 external substringToEnd: (string, ~start: int) => string = "substring"
 
 /**

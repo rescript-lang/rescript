@@ -60,12 +60,12 @@ fn find_shortest_cycle(modules: &Vec<(&String, &Module)>) -> Vec<String> {
         }
 
         // Skip nodes with no incoming edges
-        if in_degrees.get(&start_node).map_or(true, |&d| d == 0) {
+        if in_degrees.get(&start_node).is_none_or(|&d| d == 0) {
             no_cycle_cache.insert(start_node.clone());
             continue;
         }
 
-        if let Some(cycle) = find_cycle_bfs(&start_node, &graph, current_shortest_length) {
+        if let Some(cycle) = find_cycle_bfs(start_node, &graph, current_shortest_length) {
             if shortest_cycle.is_empty() || cycle.len() < shortest_cycle.len() {
                 shortest_cycle = cycle.clone();
                 current_shortest_length = cycle.len();

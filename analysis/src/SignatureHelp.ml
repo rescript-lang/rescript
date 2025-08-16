@@ -112,9 +112,7 @@ let extractParameters ~signature ~typeStrForParser ~labelPrefixLen =
       match expr with
       | {
        (* Gotcha: functions with multiple arugments are modelled as a series of single argument functions. *)
-       Parsetree.ptyp_desc =
-         Ptyp_arrow
-           {lbl = argumentLabel; arg = argumentTypeExpr; ret = nextFunctionExpr};
+       Parsetree.ptyp_desc = Ptyp_arrow {arg; ret = nextFunctionExpr};
        ptyp_loc;
       } ->
         let startOffset =
@@ -123,20 +121,20 @@ let extractParameters ~signature ~typeStrForParser ~labelPrefixLen =
           |> Option.get
         in
         let endOffset =
-          argumentTypeExpr.ptyp_loc |> Loc.end_
+          arg.typ.ptyp_loc |> Loc.end_
           |> Pos.positionToOffset typeStrForParser
           |> Option.get
         in
         (* The AST locations does not account for "=?" of optional arguments, so add that to the offset here if needed. *)
         let endOffset =
-          match argumentLabel with
+          match arg.lbl with
           | Asttypes.Optional _ -> endOffset + 2
           | _ -> endOffset
         in
         extractParams nextFunctionExpr
           (params
           @ [
-              ( argumentLabel,
+              ( arg.lbl,
                 (* Remove the label prefix offset here, since we're not showing
                    that to the end user. *)
                 startOffset - labelPrefixLen,

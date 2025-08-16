@@ -798,9 +798,14 @@ and expression_desc cxt ~(level : int) f x : cxt =
         P.string f " in ";
         expression ~level:0 cxt f obj)
   | Typeof e ->
+    let is_fun =
+      match e.expression_desc with
+      | Fun _ -> true
+      | _ -> false
+    in
     P.string f "typeof";
     P.space f;
-    expression ~level:13 cxt f e
+    P.cond_paren_group f is_fun (fun _ -> expression ~level:13 cxt f e)
   | Bin
       ( Minus,
         {

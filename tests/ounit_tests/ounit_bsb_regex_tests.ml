@@ -37,7 +37,7 @@ let suites =
   "sources": [
     "src"
   ],
-  "bs-dependencies" : [
+  "dependencies": [
   ]
 }
 |}
@@ -48,7 +48,7 @@ let suites =
   "sources": [
     "src"
   ],
-  "bs-dependencies" : [
+  "dependencies": [
   ]
 }
 |}

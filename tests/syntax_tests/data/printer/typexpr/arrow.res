@@ -67,15 +67,15 @@ type t = @attr (fooWithSuperLongIdentifierNameLooooooooooooooooooooooooooooooooo
 type t = @attr @attrWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong @attrWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong (fooWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong, barWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong, bazWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong) => @attr2 @attrWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong @attrWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong (stringWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong, floatWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong) => unit
 
 
-external debounce: (int, @meth unit) => unit = "debounce";
+external debounce: (int, unit) => unit = "debounce";
 
-external debounce: int => @meth (unit => unit) = "debounce";
+external debounce: int => (unit => unit) = "debounce";
 
-external debounce: (int, @meth (unit => unit)) => @meth (unit => unit) = "debounce";
+external debounce: (int, (unit => unit)) => (unit => unit) = "debounce";
 
-external debounce: (int, @meth (unit => unit), @meth (unit => unit)) => @meth (unit => unit) = "debounce";
+external debounce: (int, (unit => unit), (unit => unit)) => (unit => unit) = "debounce";
 
-external debounce: (int, @meth (unit => unit), @meth ( unit => @meth (unit => unit))) => @meth (unit => unit) = "debounce";
+external debounce: (int, (unit => unit), ( unit => (unit => unit))) => (unit => unit) = "debounce";
 
 type returnTyp = (int, int) => @magic float
 type returnTyp = (intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong, intWithSuperLongIdentifierNameLoooooooooooooooooooooooooooooooooooooooooooooong) => @magic float

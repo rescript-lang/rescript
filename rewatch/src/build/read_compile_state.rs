@@ -7,7 +7,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-pub fn read(build_state: &mut BuildState) -> CompileAssetsState {
+pub fn read(build_state: &mut BuildState) -> anyhow::Result<CompileAssetsState> {
     let mut ast_modules: AHashMap<PathBuf, AstModule> = AHashMap::new();
     let mut cmi_modules: AHashMap<String, SystemTime> = AHashMap::new();
     let mut cmt_modules: AHashMap<String, SystemTime> = AHashMap::new();
@@ -45,7 +45,7 @@ pub fn read(build_state: &mut BuildState) -> CompileAssetsState {
         .packages
         .par_iter()
         .map(|(_, package)| {
-            let read_dir = fs::read_dir(&package.get_ocaml_build_path()).unwrap();
+            let read_dir = fs::read_dir(package.get_ocaml_build_path()).unwrap();
             read_dir
                 .filter_map(|entry| match entry {
                     Ok(entry) => {
@@ -73,17 +73,15 @@ pub fn read(build_state: &mut BuildState) -> CompileAssetsState {
         .flatten()
         .collect::<Vec<(PathBuf, SystemTime, String, String, packages::Namespace, bool)>>();
 
+    let root_config = build_state.get_root_config();
+
     compile_assets.iter().for_each(
         |(path, last_modified, extension, package_name, package_namespace, package_is_root)| {
             match extension.as_str() {
                 "iast" | "ast" => {
                     let module_name = helpers::file_path_to_module_name(path, package_namespace);
 
-                    let root_package = build_state
-                        .packages
-                        .get(&build_state.root_config_name)
-                        .expect("Could not find root package");
-                    if let Some(res_file_path_buf) = get_res_path_from_ast(&path) {
+                    if let Some(res_file_path_buf) = get_res_path_from_ast(path) {
                         let _ = ast_modules.insert(
                             res_file_path_buf.clone(),
                             AstModule {
@@ -93,9 +91,8 @@ pub fn read(build_state: &mut BuildState) -> CompileAssetsState {
                                 last_modified: last_modified.to_owned(),
                                 ast_file_path: path.to_path_buf(),
                                 is_root: *package_is_root,
-                                suffix: root_package
-                                    .config
-                                    .get_suffix(root_package.config.get_package_specs().first().unwrap()),
+                                suffix: root_config
+                                    .get_suffix(root_config.get_package_specs().first().unwrap()),
                             },
                         );
                         let _ = ast_rescript_file_locations.insert(res_file_path_buf);
@@ -126,13 +123,13 @@ pub fn read(build_state: &mut BuildState) -> CompileAssetsState {
         },
     );
 
-    CompileAssetsState {
+    Ok(CompileAssetsState {
         ast_modules,
         cmi_modules,
         cmt_modules,
         ast_rescript_file_locations,
         rescript_file_locations,
-    }
+    })
 }
 
 fn get_res_path_from_ast(ast_file: &Path) -> Option<PathBuf> {

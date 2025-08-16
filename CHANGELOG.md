@@ -10,11 +10,150 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-beta.2 (Unreleased)
+# 12.0.0-beta.7 (Unreleased)
+
+#### :boom: Breaking Change
+
+#### :eyeglasses: Spec Compliance
+
+#### :rocket: New Feature
+
+#### :bug: Bug fix
+
+#### :memo: Documentation
+
+#### :nail_care: Polish
+
+#### :house: Internal
+
+# 12.0.0-beta.6
+
+#### :boom: Breaking Change
+
+- `rescript format` no longer accepts `--all`. All (non-dev) files of the current rescript.json are now formatted by default. https://github.com/rescript-lang/rescript/pull/7752
+
+#### :rocket: New Feature
+
+- Add new Stdlib helpers: `String.capitalize`, `String.isEmpty`, `Dict.size`, `Dict.isEmpty`, `Array.isEmpty`, `Map.isEmpty`, `Set.isEmpty`. https://github.com/rescript-lang/rescript/pull/7516
+
+#### :bug: Bug fix
+
+- Fix issue with ast conversion (for ppx use) on functions with attributes on first argument. https://github.com/rescript-lang/rescript/pull/7761
+
+#### :nail_care: Polish
+
+- `rescript format` now has a `--dev` flag that works similar to `rescript clean`. https://github.com/rescript-lang/rescript/pull/7752
+- `rescript clean` now will clean an individual project (see [#7707](https://github.com/rescript-lang/rescript/issues/7707)). https://github.com/rescript-lang/rescript/pull/7752
+- `rescript clean` will log multiple `in-source` extensions if present. https://github.com/rescript-lang/rescript/pull/7769
+
+#### :house: Internal
+
+- AST: Use jsx_tag_name instead of Longindent.t to store jsx tag name. https://github.com/rescript-lang/rescript/pull/7760
+
+# 12.0.0-beta.5
+
+#### :bug: Bug fix
+
+- Fix option optimisation that resulted in incorrect JS output. https://github.com/rescript-lang/rescript/pull/7766
+- Fix formatting of nested records in `.resi` files. https://github.com/rescript-lang/rescript/pull/7741
+- Don't format and don't check formatting of dependencies. https://github.com/rescript-lang/rescript/pull/7748
+- Fix `rescript-editor-analysis semanticTokens` returning invalid JSON in certain cases. https://github.com/rescript-lang/rescript/pull/7750
+
+#### :memo: Documentation
+
+- Update jsx schema configuration. https://github.com/rescript-lang/rescript/pull/7755
+
+#### :nail_care: Polish
+
+- Read package name from rescript.json if package.json is absent. https://github.com/rescript-lang/rescript/pull/7746
+
+#### :house: Internal
+
+- Add token viewer to `res_parser`. https://github.com/rescript-lang/rescript/pull/7751
+- Refactor jsx mode in Scanner. https://github.com/rescript-lang/rescript/pull/7751
+
+# 12.0.0-beta.4
+
+#### :bug: Bug fix
+
+- Fix error message that falsely suggested using coercion when it wouldn't work. https://github.com/rescript-lang/rescript/pull/7721
+- Fix hang in `rescript-editor-analysis.exe codeAction` that sometimes prevented ReScript files from being saved in VS Code. https://github.com/rescript-lang/rescript/pull/7731
+- Fix formatter removing () from functor type. https://github.com/rescript-lang/rescript/pull/7735
+- Rewatch: don't compile dev-dependencies of non local dependencies with `--dev`. https://github.com/rescript-lang/rescript/pull/7736
+
+#### :nail_care: Polish
+
+- Apply heuristic to suggest using JSX fragments where we guess that might be what the user wanted. https://github.com/rescript-lang/rescript/pull/7714
+- Show deprecation warnings for `bs-dependencies` etc. for local dependencies only. https://github.com/rescript-lang/rescript/pull/7724
+- Add check for minimum required node version. https://github.com/rescript-lang/rescript/pull/7723
+- Use more optional args in stdlib and deprecate some functions. https://github.com/rescript-lang/rescript/pull/7730
+- Improve error message for when trying to do dot access on an option/array. https://github.com/rescript-lang/rescript/pull/7732
+
+# 12.0.0-beta.3
+
+#### :boom: Breaking Change
+
+- `Result.getOrThrow` now throws a JS error instead of a `Not_found` ReScript exception. https://github.com/rescript-lang/rescript/pull/7630
+- Remove `rescript dump` command. `bsc` can be used directly to dump the contents of a `.cmi` file instead if needed. https://github.com/rescript-lang/rescript/pull/7710
+
+#### :rocket: New Feature
+
+- Add optional `message` argument to `Result.getOrThrow` and improve default error message. https://github.com/rescript-lang/rescript/pull/7630
+- Add `RegExp.escape` binding. https://github.com/rescript-lang/rescript/pull/7695
+
+#### :bug: Bug fix
+
+- Fix `--create-sourcedirs` generation with for a single project. https://github.com/rescript-lang/rescript/pull/7671
+- Fix rewatch not recompiling on changes on Windows. https://github.com/rescript-lang/rescript/pull/7690
+- Fix locations of regex literals. https://github.com/rescript-lang/rescript/pull/7683
+- Fix async React component compilation. https://github.com/rescript-lang/rescript/pull/7704
+- Fix `@this` with `async` keyword. https://github.com/rescript-lang/rescript/pull/7702
+
+#### :nail_care: Polish
+
+- Configuration fields `bs-dependencies`, `bs-dev-dependencies` and `bsc-flags` are now deprecated in favor of `dependencies`, `dev-dependencies` and `compiler-flags`. https://github.com/rescript-lang/rescript/pull/7658
+- Better error message if platform binaries package is not found. https://github.com/rescript-lang/rescript/pull/7698
+- Hint in error for string constants matching expected variant/polyvariant constructor. https://github.com/rescript-lang/rescript/pull/7711
+- Polish arity mismatch error message a bit. https://github.com/rescript-lang/rescript/pull/7709
+- Suggest related functions with the expected arity in errors when it makes sense. https://github.com/rescript-lang/rescript/pull/7712
+- Improve error when a constructor expects an inline record. https://github.com/rescript-lang/rescript/pull/7713
+- Remove `@meth` attribute. https://github.com/rescript-lang/rescript/pull/7684
+
+#### :house: Internal
+
+- Add rust linting to CI with `clippy`. https://github.com/rescript-lang/rescript/pull/7675
+- AST: use `Typ.arrows` for creation, after the refactoring of arrow types. https://github.com/rescript-lang/rescript/pull/7662
+- Don't skip Stdlib docstring tests. https://github.com/rescript-lang/rescript/pull/7694
+- Remove all leftovers of `pinned-dependencies` handling. https://github.com/rescript-lang/rescript/pull/7686
+- Add `rust-version` field to Rewatch's `Cargo.toml`. https://github.com/rescript-lang/rescript/pull/7701
+- Rewatch: remove support for .ml(i) and .re(i). https://github.com/rescript-lang/rescript/pull/7727
+
+# 12.0.0-beta.2
+
+#### :boom: Breaking Change
+
+- Rust implementation of the `rescript format` command. Command line options changed from `-all`, `-check` and `-stdin` to `--all`, `--check` and `--stdin` compared to the legacy implementation. https://github.com/rescript-lang/rescript/pull/7603
+
+#### :rocket: New Feature
+
+- Add experimental command to `rescript-tools` for extracting all ReScript code blocks from markdown, either a md-file directly, or inside of docstrings in ReScript code. https://github.com/rescript-lang/rescript/pull/7623
+
+#### :bug: Bug fix
+
+- Fix `typeof` parens on functions. https://github.com/rescript-lang/rescript/pull/7643
+- Rewatch: Add `--dev` flag to clean command. https://github.com/rescript-lang/rescript/pull/7622
+- Rewatch: Use root package suffix in clean log messages. https://github.com/rescript-lang/rescript/pull/7648
+- Fix inside comment printing for empty dict. https://github.com/rescript-lang/rescript/pull/7654
+- Fix I/O error message when trying to extract extra info from non-existing file. https://github.com/rescript-lang/rescript/pull/7656
+- Fix fatal error when JSX expression used without configuring JSX in `rescript.json`. https://github.com/rescript-lang/rescript/pull/7656
+- Rewatch: Only allow access to `"bs-dev-dependencies"` from `"type": "dev"` source files. https://github.com/rescript-lang/rescript/pull/7650
+- Fix comment attached to array element. https://github.com/rescript-lang/rescript/pull/7672
+- Rewatch: fix compilation of files starting with a lowercase letter. https://github.com/rescript-lang/rescript/pull/7700
 
 #### :nail_care: Polish
 
 - Add missing backtick and spaces to `Belt.Map.map` doc comment. https://github.com/rescript-lang/rescript/pull/7632
+- AST: store the attributes directly on function arguments. https://github.com/rescript-lang/rescript/pull/7660
 
 #### :house: Internal
 
@@ -24,10 +163,9 @@
 - Remove obsolete option `-bs-unsafe-empty-array`. https://github.com/rescript-lang/rescript/pull/7635
 - Clean up `config.ml`. https://github.com/rescript-lang/rescript/pull/7636
 - Rewatch: simplify getting bsc path. https://github.com/rescript-lang/rescript/pull/7634
-
-#### :rocket: New Feature
-
-- Add experimental command to `rescript-tools` for extracting all ReScript code blocks from markdown, either a md-file directly, or inside of docstrings in ReScript code. https://github.com/rescript-lang/rescript/pull/7623
+- Rewatch: only get `"type": "dev"` source files for local packages. https://github.com/rescript-lang/rescript/pull/7646
+- Rewatch: add support for `rescript -w` for compatibility. https://github.com/rescript-lang/rescript/pull/7649
+- Fix dev container. https://github.com/rescript-lang/rescript/pull/7700
 
 # 12.0.0-beta.1
 

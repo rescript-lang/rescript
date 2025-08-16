@@ -36,3 +36,17 @@ module StandardNotation = {
 }
 
 let methodWithAsync = @this this => async arg => this + arg
+
+module AsyncMethod = {
+  type pluginContext
+  type changeEvent
+
+  type p = {watch: @this (pluginContext, string, changeEvent) => promise<unit>}
+
+  let p1 = {
+    watch: @this
+    async (pc, name, ev) => {
+      Console.log(pc)
+    },
+  }
+}

@@ -45,8 +45,7 @@ module V4A5 = {
     ReactDOM.jsx("div", {children: ?ReactDOM.someElement({React.int(a)})})
   }
   let make = {
-    let \"SharedPropsWithProps$V4A5" = (props: props<_>) =>
-      JsxPPXReactSupport.asyncComponent(make(props))
+    let \"SharedPropsWithProps$V4A5" = (props: props<_>) => Jsx.promise(make(props))
     \"SharedPropsWithProps$V4A5"
   }
 }
@@ -60,8 +59,7 @@ module V4A6 = {
     }
   }
   let make = {
-    let \"SharedPropsWithProps$V4A6" = (props: props<_>) =>
-      JsxPPXReactSupport.asyncComponent(make(props))
+    let \"SharedPropsWithProps$V4A6" = (props: props<_>) => Jsx.promise(make(props))
     \"SharedPropsWithProps$V4A6"
   }
 }

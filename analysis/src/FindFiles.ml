@@ -213,16 +213,21 @@ let findProjectFiles ~public ~namespace ~path ~sourceDirectories ~libBs =
 
 let findDependencyFiles base config =
   let deps =
-    config |> Json.get "bs-dependencies" |> bind Json.array
-    |> Option.value ~default:[]
-    |> List.filter_map Json.string
+    match
+      ( config |> Json.get "dependencies" |> bind Json.array,
+        config |> Json.get "bs-dependencies" |> bind Json.array )
+    with
+    | None, None -> []
+    | Some deps, None | _, Some deps -> deps |> List.filter_map Json.string
   in
   let devDeps =
-    config
-    |> Json.get "bs-dev-dependencies"
-    |> bind Json.array
-    |> Option.map (List.filter_map Json.string)
-    |> Option.value ~default:[]
+    match
+      ( config |> Json.get "dev-dependencies" |> bind Json.array,
+        config |> Json.get "bs-dev-dependencies" |> bind Json.array )
+    with
+    | None, None -> []
+    | Some devDeps, None | _, Some devDeps ->
+      devDeps |> List.filter_map Json.string
   in
   let deps = deps @ devDeps in
   Log.log ("Dependencies: " ^ String.concat " " deps);

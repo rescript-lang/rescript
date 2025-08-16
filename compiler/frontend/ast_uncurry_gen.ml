@@ -25,7 +25,7 @@
 open Ast_helper
 
 (* Handling `fun [@this]` used in `object [@bs] end` *)
-let to_method_callback loc (self : Bs_ast_mapper.mapper) label
+let to_method_callback ~async loc (self : Bs_ast_mapper.mapper) label
     (self_pat : Parsetree.pattern) body : Parsetree.expression_desc =
   let self_pat = self.pat self self_pat in
   (match Ast_pat.is_single_variable_pattern_conservative self_pat with
@@ -48,6 +48,13 @@ let to_method_callback loc (self : Bs_ast_mapper.mapper) label
         Ast_helper.Exp.fun_ ~loc ~attrs ~arity:None ~async label None p e)
   in
   let arity = List.length rev_extra_args in
+  let body =
+    match body.pexp_desc with
+    | Pexp_fun f ->
+      Ast_async.make_function_async ~async
+        {body with pexp_desc = Pexp_fun {f with arity = Some arity; async}}
+    | _ -> body
+  in
   let arity_s = string_of_int arity in
   Stack.pop Js_config.self_stack |> ignore;
   Parsetree.Pexp_apply

@@ -27,7 +27,7 @@ For example, suppose a V3 project uses rescript-react 0.11, which requires compa
   "version": 3,
   "v3-dependencies": ["rescript-react-native", "rescript-react-navigation"]
 },
-"bsc-flags": ["-open ReactV3"]
+"compiler-flags": ["-open ReactV3"]
 ```
 
 Another example is a V4 project that also uses `"rescript-react-native", "rescript-react-navigation"`. Then the setting will be:

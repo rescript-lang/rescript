@@ -9,7 +9,7 @@ cd $(dirname $0)
 if [ -n "$1" ]; then
   REWATCH_EXECUTABLE="$1"
 else
-  REWATCH_EXECUTABLE="../target/release/rewatch"
+  REWATCH_EXECUTABLE="../target/release/rescript"
   eval $(node ./get_bin_paths.js)
 fi
 
@@ -18,8 +18,11 @@ export RESCRIPT_BSC_EXE
 
 source ./utils.sh
 
+bold "Yarn install"
+(cd ../testrepo && yarn)
+
 bold "Rescript version"
-(cd ../testrepo && ./node_modules/.bin/rescript -v)
+(cd ../testrepo && ./node_modules/.bin/rescript --version)
 
 # we need to reset the yarn.lock and package.json to the original state
 # so there is not diff in git. The CI will install new ReScript package
@@ -40,4 +43,4 @@ else
   exit 1
 fi
 
-./compile.sh && ./watch.sh && ./lock.sh && ./suffix.sh && ./legacy.sh
+./compile.sh && ./watch.sh && ./lock.sh && ./suffix.sh && ./legacy.sh && ./format.sh && ./clean.sh && ./compiler-args.sh

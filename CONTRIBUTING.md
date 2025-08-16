@@ -126,10 +126,22 @@ make lib # Build compiler and standard library
 ./cli/bsc.js myTestFile.res
 ```
 
+To view the tokens of a file run:
+
+```sh
+dune exec res_parser -- -print tokens myTestFile.res
+```
+
 To view the untyped tree of the file run:
 
 ```sh
 ./cli/bsc.js -dparsetree myTestFile.res
+```
+
+or
+
+```sh
+dune exec res_parser -- -print ast -recover myTestFile.res
 ```
 
 To view the typed tree of the file run:
@@ -147,6 +159,16 @@ cd myProject
 npm install
 npm link rescript
 ```
+
+#### Use Local BSC with Existing ReScript Installation
+
+Alternatively, you can set the `RESCRIPT_BSC_EXE` environment variable to point to your locally compiled `bsc.exe`.
+
+```sh
+RESCRIPT_BSC_EXE=your-rescript-repo/packages/@rescript/darwin-arm64/bin/bsc.exe npx rescript
+```
+
+This will test the local compiler while still using the build system from the installed Node module.
 
 ### Running Automatic Tests
 
@@ -276,11 +298,9 @@ yarn workspace playground build
 yarn workspace playground test
 ```
 
-### Publishing the Playground Bundle on our KeyCDN
+### Publishing the Playground Bundle on Cloudflare R2
 
-> Note: If you want to publish from your local machine, make sure to set the `KEYCDN_USER` and `KEYCDN_PASSWORD` environment variables accordingly (credentials currently managed by @ryyppy). Our CI servers / GH Action servers are already pre-configured with the right env variable values.
-
-Our `compiler.js` and third-party packages bundles are hosted on [KeyCDN](https://www.keycdn.com) and uploaded via FTPS.
+Our `compiler.js` and third-party packages bundles are hosted on [Cloudflare R2](https://developers.cloudflare.com/r2/) and uploaded via Rclone.
 
 The full release can be executed with the following make script:
 
@@ -379,8 +399,8 @@ To build a new version and release it on NPM, follow these steps:
 1. Verify that the version number is already set correctly for the release. (It should have been incremented after releasing the previous version.)
 1. Create a PR to update `CHANGELOG.md`, removing the "(Unreleased)" for the version to be released.
 1. Once that PR is merged and built successfully, tag the commit with the version number (e.g., "v10.0.0", or "v10.0.0-beta.1") and push the tag.
-1. This triggers a tag build that will upload the playground bundle to KeyCDN and publish the `rescript` and `@rescript/std` npm packages with the tag "ci".
-1. Verify that the playground bundle for the new version is now present on https://cdn.rescript-lang.org/.
+1. This triggers a tag build that will upload the playground bundle to Cloudflare R2 and publish the `rescript` and `@rescript/std` npm packages with the tag "ci".
+1. Verify that the playground bundle for the new version is now present on the settings tab in https://rescript-lang.org/try.
 1. Run `npm info rescript` to verify that the new version is now present with tag "ci".
 1. Test the new version.
 1. Tag the new version as appropriate (`latest` or `next`):
@@ -391,7 +411,6 @@ To build a new version and release it on NPM, follow these steps:
    - Increment the `EXPECTED_VERSION` number in `yarn.config.cjs` for the next version.
    - Run `yarn constraints --fix` to take that version number over into other files.
    - Update `CHANGELOG.md` and add an entry for the next version, e.g., "10.0.0-beta.2 (Unreleased)"
-1. Coordinate any forum/blog posts with [@ryyppy](https://github.com/ryyppy).
 
 ## Debugging issues from CI builds
 

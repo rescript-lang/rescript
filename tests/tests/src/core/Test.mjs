@@ -45,9 +45,14 @@ function run(loc, left, comparator, right) {
   console.log(obj.stack.replace(/\n    /g, "\n  ").replace(/^Error\n/, "").replace(/^.+\n/, "").replace(/\n  at .+\(node:internal.+\n?/g, ""));
 }
 
+console.log(typeof (prim => require(prim)));
+
+let TypeofParensOnFun = {};
+
 export {
   dirname,
   print,
   run,
+  TypeofParensOnFun,
 }
 /* dirname Not a pure module */

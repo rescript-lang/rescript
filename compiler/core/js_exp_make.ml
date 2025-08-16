@@ -254,7 +254,7 @@ let ocaml_fun ?comment ?immutable_mask ?directive ~return_unit ~async
     comment;
   }
 
-let method_ ?comment ?immutable_mask ~return_unit params body : t =
+let method_ ?comment ?immutable_mask ~async ~return_unit params body : t =
   let len = List.length params in
   {
     expression_desc =
@@ -265,7 +265,7 @@ let method_ ?comment ?immutable_mask ~return_unit params body : t =
           body;
           env = Js_fun_env.make ?immutable_mask len;
           return_unit;
-          async = false;
+          async;
           directive = None;
         };
     comment;

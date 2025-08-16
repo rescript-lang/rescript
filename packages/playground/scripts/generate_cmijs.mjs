@@ -23,14 +23,14 @@ import {
   playgroundPackagesDir,
 } from "./common.mjs";
 
-exec("yarn rescript legacy clean");
+exec("yarn rescript clean");
 exec("yarn rescript legacy");
 
 // We need to build the compiler's builtin modules as a separate cmij.
 // Otherwise we can't use them for compilation within the playground.
 buildCmij(compilerRootDir, "compiler-builtins");
 
-const packages = resConfig["bs-dependencies"];
+const packages = resConfig["dependencies"];
 for (const pkgName of packages) {
   buildCmij(
     path.join(compilerRootDir, "node_modules", pkgName),

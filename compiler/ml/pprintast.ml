@@ -285,11 +285,15 @@ let tyvar f str = pp f "'%s" str
 let tyvar_loc f str = pp f "'%s" str.txt
 let string_quot f x = pp f "`%s" x
 
-let rec type_with_label ctxt f (label, c) =
-  match label with
-  | Nolabel -> core_type1 ctxt f c (* otherwise parenthesize *)
-  | Labelled {txt = s} -> pp f "%s:%a" s (core_type1 ctxt) c
-  | Optional {txt = s} -> pp f "?%s:%a" s (core_type1 ctxt) c
+let rec type_with_label ctxt f arg =
+  match arg.lbl with
+  | Nolabel ->
+    pp f "%a%a" (core_type1 ctxt) arg.typ (attributes ctxt) arg.attrs
+    (* otherwise parenthesize *)
+  | Labelled {txt = s} ->
+    pp f "%s:%a%a" s (core_type1 ctxt) arg.typ (attributes ctxt) arg.attrs
+  | Optional {txt = s} ->
+    pp f "?%s:%a%a" s (core_type1 ctxt) arg.typ (attributes ctxt) arg.attrs
 
 and core_type ctxt f x =
   if x.ptyp_attributes <> [] then
@@ -298,9 +302,9 @@ and core_type ctxt f x =
       (attributes ctxt) x.ptyp_attributes
   else
     match x.ptyp_desc with
-    | Ptyp_arrow {lbl = l; arg; ret; arity} ->
+    | Ptyp_arrow {arg; ret; arity} ->
       pp f "@[<2>%a@;->@;%a%s@]" (* FIXME remove parens later *)
-        (type_with_label ctxt) (l, arg) (core_type ctxt) ret
+        (type_with_label ctxt) arg (core_type ctxt) ret
         (match arity with
         | None -> ""
         | Some n -> " (a:" ^ string_of_int n ^ ")")
@@ -801,7 +805,7 @@ and simple_expr ctxt f x =
              jsx_unary_element_tag_name = tag_name;
              jsx_unary_element_props = props;
            }) -> (
-      let name = Longident.flatten tag_name.txt |> String.concat "." in
+      let name = Ast_helper.Jsx.string_of_jsx_tag_name tag_name.txt in
       match props with
       | [] -> pp f "<%s />" name
       | _ -> pp f "<%s %a />" name (print_jsx_props ctxt) props)
@@ -811,19 +815,28 @@ and simple_expr ctxt f x =
              jsx_container_element_tag_name_start = tag_name;
              jsx_container_element_props = props;
              jsx_container_element_children = children;
+             jsx_container_element_closing_tag = closing_tag;
            }) -> (
-      let name = Longident.flatten tag_name.txt |> String.concat "." in
+      let name = Ast_helper.Jsx.string_of_jsx_tag_name tag_name.txt in
+      let closing_name =
+        match closing_tag with
+        | None -> ""
+        | Some closing_tag ->
+          Format.sprintf "</%s>"
+            (Ast_helper.Jsx.string_of_jsx_tag_name
+               closing_tag.jsx_closing_container_tag_name.txt)
+      in
       match props with
       | [] ->
-        pp f "<%s>%a</%s>" name
+        pp f "<%s>%a%s" name
           (list (simple_expr ctxt))
           (collect_jsx_children children)
-          name
+          closing_name
       | _ ->
-        pp f "<%s %a>%a</%s>" name (print_jsx_props ctxt) props
+        pp f "<%s %a>%a%s" name (print_jsx_props ctxt) props
           (list (simple_expr ctxt))
           (collect_jsx_children children)
-          name)
+          closing_name)
     | _ -> paren true (expression ctxt) f x
 
 and collect_jsx_children = function

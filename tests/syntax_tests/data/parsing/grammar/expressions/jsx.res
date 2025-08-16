@@ -517,3 +517,8 @@ let _ = <View style=styles["backgroundImageWrapper"]>
 <> ...{array->f} </>
 
 let _ = <A x="y" {...str} />
+
+let _ = <p-x-y></p-x-y>
+let _ = <V.x-y> </V.x-y>
+let _ = <a-b-c />
+let _ = <V.x-y-z></V.x-y-z>

@@ -55,13 +55,8 @@ module Typ : sig
   val any : ?loc:loc -> ?attrs:attrs -> unit -> core_type
   val var : ?loc:loc -> ?attrs:attrs -> string -> core_type
   val arrow :
-    ?loc:loc ->
-    ?attrs:attrs ->
-    arity:arity ->
-    arg_label ->
-    core_type ->
-    core_type ->
-    core_type
+    ?loc:loc -> ?attrs:attrs -> arity:arity -> arg -> core_type -> core_type
+  val arrows : ?loc:loc -> ?attrs:attrs -> arg list -> core_type -> core_type
   val tuple : ?loc:loc -> ?attrs:attrs -> core_type list -> core_type
   val constr : ?loc:loc -> ?attrs:attrs -> lid -> core_type list -> core_type
   val object_ :
@@ -217,13 +212,13 @@ module Exp : sig
   val jsx_unary_element :
     ?loc:loc ->
     ?attrs:attrs ->
-    Longident.t Location.loc ->
+    Parsetree.jsx_tag_name Location.loc ->
     Parsetree.jsx_props ->
     expression
   val jsx_container_element :
     ?loc:loc ->
     ?attrs:attrs ->
-    Longident.t Location.loc ->
+    Parsetree.jsx_tag_name Location.loc ->
     Parsetree.jsx_props ->
     Lexing.position ->
     Parsetree.jsx_children ->
@@ -304,6 +299,11 @@ module Te : sig
     str ->
     extension_constructor
   val rebind : ?loc:loc -> ?attrs:attrs -> str -> lid -> extension_constructor
+end
+
+module Jsx : sig
+  val string_of_jsx_tag_name : Parsetree.jsx_tag_name -> string
+  val longident_of_jsx_tag_name : Parsetree.jsx_tag_name -> Longident.t
 end
 
 (** {1 Module language} *)
