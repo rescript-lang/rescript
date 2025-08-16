@@ -565,8 +565,26 @@ and transl_type_aux env policy styp =
            pack_txt = p;
          })
       ty
-  | Ptyp_extension ext ->
-    raise (Error_forward (Builtin_attributes.error_of_extension ext))
+  | Ptyp_extension ext -> (
+    match ext with
+    | ({txt = "typeof"; loc = ext_loc}, payload) -> (
+      (* %typeof payload must be a single identifier *)
+      match Ast_payload.as_ident payload with
+      | Some ({txt = lid; loc = lid_loc} as _ident) -> (
+        (* Lookup the value and embed a generic instance of its type.
+           Using a generic instance avoids capturing weak (non-generalized)
+           type variables from the value into a type position. *)
+        let (_path, desc) = find_value env lid_loc lid in
+        let ty = Ctype.generic_instance env desc.val_type in
+        (* Build a core_type node carrying the looked up type; we mark the
+           desc as any since downstream only consults ctyp_type for typing. *)
+        ctyp Ttyp_any ty)
+      | None ->
+        let msg =
+          "%%typeof expects an identifier. Example: type t = %typeof(x)"
+        in
+        raise (Error_forward (Location.error ~loc:ext_loc msg)))
+    | _ -> raise (Error_forward (Builtin_attributes.error_of_extension ext)))
 
 and transl_poly_type env policy t =
   transl_type env policy (Ast_helper.Typ.force_poly t)
