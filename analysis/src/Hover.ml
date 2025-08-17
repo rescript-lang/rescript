@@ -26,8 +26,7 @@ let showModuleTopLevel ~docstring ~isType ~name (topLevel : Module.item list) =
   let doc =
     match docstring with
     | [] -> ""
-    | _ :: _ ->
-      "\n" ^ (docstring |> String.concat "\n") ^ Markdown.divider
+    | _ :: _ -> "\n" ^ (docstring |> String.concat "\n") ^ Markdown.divider
   in
   Some (doc ^ full)
 
