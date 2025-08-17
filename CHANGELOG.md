@@ -18,6 +18,8 @@
 
 #### :rocket: New Feature
 
+- Add markdown divider between module doc and module type in hover information. https://github.com/rescript-lang/rescript/pull/7775
+
 #### :bug: Bug fix
 
 #### :memo: Documentation
