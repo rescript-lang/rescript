@@ -7,6 +7,7 @@ use crate::config::{Config, OneOrMore};
 use crate::helpers;
 use crate::project_context::ProjectContext;
 use ahash::AHashSet;
+use anyhow::anyhow;
 use log::debug;
 use rayon::prelude::*;
 use std::path::{Path, PathBuf};
@@ -51,11 +52,13 @@ pub fn generate_asts(
                             package.to_owned(),
                             &source_file.implementation.path.to_owned(),
                             build_state,
-                        );
+                        )
+                        .map_err(|e| e.to_string());
 
                         let iast_result = match source_file.interface.as_ref().map(|i| i.path.to_owned()) {
                             Some(interface_file_path) => {
                                 generate_ast(package.to_owned(), &interface_file_path.to_owned(), build_state)
+                                    .map_err(|e| e.to_string())
                                     .map(Some)
                             }
                             _ => Ok(None),
@@ -237,16 +240,15 @@ pub fn parser_args(
     package_config: &Config,
     filename: &Path,
     contents: &str,
-) -> (PathBuf, Vec<String>) {
+) -> anyhow::Result<(PathBuf, Vec<String>)> {
     let root_config = project_context.get_root_config();
     let file = &filename;
     let ast_path = helpers::get_ast_path(file);
-    let node_modules_path = project_context.get_root_path().join("node_modules");
     let ppx_flags = config::flatten_ppx_flags(
-        node_modules_path.as_path(),
+        project_context,
+        package_config,
         &filter_ppx_flags(&package_config.ppx_flags, contents),
-        &package_config.name,
-    );
+    )?;
     let jsx_args = root_config.get_jsx_args();
     let jsx_module_args = root_config.get_jsx_module_args();
     let jsx_mode_args = root_config.get_jsx_mode_args();
@@ -255,7 +257,7 @@ pub fn parser_args(
 
     let file = PathBuf::from("..").join("..").join(file);
 
-    (
+    Ok((
         ast_path.to_owned(),
         [
             ppx_flags,
@@ -273,20 +275,20 @@ pub fn parser_args(
             ],
         ]
         .concat(),
-    )
+    ))
 }
 
 fn generate_ast(
     package: Package,
     filename: &Path,
     build_state: &BuildState,
-) -> Result<(PathBuf, Option<helpers::StdErr>), String> {
+) -> anyhow::Result<(PathBuf, Option<helpers::StdErr>)> {
     let file_path = PathBuf::from(&package.path).join(filename);
     let contents = helpers::read_file(&file_path).expect("Error reading file");
 
     let build_path_abs = package.get_build_path();
     let (ast_path, parser_args) =
-        parser_args(&build_state.project_context, &package.config, filename, &contents);
+        parser_args(&build_state.project_context, &package.config, filename, &contents)?;
 
     // generate the dir of the ast_path (it mirrors the source file dir)
     let ast_parent_path = package.get_build_path().join(ast_path.parent().unwrap());
@@ -298,7 +300,13 @@ fn generate_ast(
             .current_dir(&build_path_abs)
             .args(parser_args)
             .output()
-            .expect("Error converting .res to .ast"),
+            .map_err(|e| {
+                anyhow!(
+                    "Error running bsc for parsing {}: {}",
+                    filename.to_string_lossy(),
+                    e
+                )
+            })?,
     ) {
         Some(res_to_ast) => {
             let stderr = String::from_utf8_lossy(&res_to_ast.stderr).to_string();
@@ -307,7 +315,7 @@ fn generate_ast(
                 if res_to_ast.status.success() {
                     Ok((ast_path, Some(stderr.to_string())))
                 } else {
-                    Err(format!("Error in {}:\n{}", package.name, stderr))
+                    Err(anyhow!("Error in {}:\n{}", package.name, stderr))
                 }
             } else {
                 Ok((ast_path, None))
@@ -316,7 +324,7 @@ fn generate_ast(
         _ => {
             log::info!("Parsing file {}...", filename.display());
 
-            Err(format!(
+            Err(anyhow!(
                 "Could not find canonicalize_string_path for file {} in package {}",
                 filename.display(),
                 package.name

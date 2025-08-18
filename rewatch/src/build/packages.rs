@@ -255,48 +255,7 @@ pub fn read_dependency(
     package_config: &Config,
     project_context: &ProjectContext,
 ) -> Result<PathBuf> {
-    // package folder + node_modules + package_name
-    // This can happen in the following scenario:
-    // The ProjectContext has a MonoRepoContext::MonorepoRoot.
-    // We are reading a dependency from the root package.
-    // And that local dependency has a hoisted dependency.
-    let path_from_current_package = package_config
-        .path
-        .parent()
-        .ok_or_else(|| {
-            anyhow!(
-                "Expected {} to have a parent folder",
-                package_config.path.to_string_lossy()
-            )
-        })
-        .map(|parent_path| helpers::package_path(parent_path, package_name))?;
-
-    // current folder + node_modules + package_name
-    let path_from_current_config = project_context
-        .current_config
-        .path
-        .parent()
-        .ok_or_else(|| {
-            anyhow!(
-                "Expected {} to have a parent folder",
-                project_context.current_config.path.to_string_lossy()
-            )
-        })
-        .map(|parent_path| helpers::package_path(parent_path, package_name))?;
-
-    // root folder + node_modules + package_name
-    let path_from_root = helpers::package_path(project_context.get_root_path(), package_name);
-    let path = (if path_from_current_package.exists() {
-        Ok(path_from_current_package)
-    } else if path_from_current_config.exists() {
-        Ok(path_from_current_config)
-    } else if path_from_root.exists() {
-        Ok(path_from_root)
-    } else {
-        Err(anyhow!(
-            "The package \"{package_name}\" is not found (are node_modules up-to-date?)..."
-        ))
-    })?;
+    let path = helpers::try_package_path(package_config, project_context, package_name)?;
 
     let canonical_path = match path
         .canonicalize()

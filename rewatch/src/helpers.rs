@@ -1,5 +1,8 @@
 use crate::build::packages;
+use crate::config::Config;
+use crate::helpers;
 use crate::project_context::ProjectContext;
+use anyhow::anyhow;
 use std::ffi::OsString;
 use std::fs;
 use std::fs::File;
@@ -101,6 +104,60 @@ impl LexicalAbsolute for Path {
 
 pub fn package_path(root: &Path, package_name: &str) -> PathBuf {
     root.join("node_modules").join(package_name)
+}
+
+/// Tries to find a path for input package_name.
+/// The node_modules folder may be found at different levels in the case of a monorepo.
+/// This helper tries a variety of paths.
+pub fn try_package_path(
+    package_config: &Config,
+    project_context: &ProjectContext,
+    package_name: &str,
+) -> anyhow::Result<PathBuf> {
+    // package folder + node_modules + package_name
+    // This can happen in the following scenario:
+    // The ProjectContext has a MonoRepoContext::MonorepoRoot.
+    // We are reading a dependency from the root package.
+    // And that local dependency has a hoisted dependency.
+    // Example, we need to find package_name `foo` in the following scenario:
+    // root/packages/a/node_modules/foo
+    let path_from_current_package = package_config
+        .path
+        .parent()
+        .ok_or_else(|| {
+            anyhow!(
+                "Expected {} to have a parent folder",
+                package_config.path.to_string_lossy()
+            )
+        })
+        .map(|parent_path| helpers::package_path(parent_path, package_name))?;
+
+    // current folder + node_modules + package_name
+    let path_from_current_config = project_context
+        .current_config
+        .path
+        .parent()
+        .ok_or_else(|| {
+            anyhow!(
+                "Expected {} to have a parent folder",
+                project_context.current_config.path.to_string_lossy()
+            )
+        })
+        .map(|parent_path| package_path(parent_path, package_name))?;
+
+    // root folder + node_modules + package_name
+    let path_from_root = package_path(project_context.get_root_path(), package_name);
+    if path_from_current_package.exists() {
+        Ok(path_from_current_package)
+    } else if path_from_current_config.exists() {
+        Ok(path_from_current_config)
+    } else if path_from_root.exists() {
+        Ok(path_from_root)
+    } else {
+        Err(anyhow!(
+            "The package \"{package_name}\" is not found (are node_modules up-to-date?)..."
+        ))
+    }
 }
 
 pub fn get_abs_path(path: &Path) -> PathBuf {
