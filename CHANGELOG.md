@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Fix ppx resolution with package inside monorepo. https://github.com/rescript-lang/rescript/pull/7776
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
