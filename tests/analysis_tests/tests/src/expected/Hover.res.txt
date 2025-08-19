@@ -351,3 +351,6 @@ Hover src/Hover.res 281:6
 Hover src/Hover.res 286:6
 {"contents": {"kind": "markdown", "value": "```rescript\ntype fnType = (string, int) => string\n```"}}
 
+Hover src/Hover.res 291:6
+{"contents": {"kind": "markdown", "value": "```rescript\ntype fnTypePartial = int => string\n```"}}
+
