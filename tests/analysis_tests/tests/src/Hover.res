@@ -211,7 +211,6 @@ let usr: useR = {
 // let f = usr
 //           ^hov
 
-
 module NotShadowed = {
   /** Stuff */
   let xx_ = 10
@@ -249,7 +248,11 @@ let x: recordWithDocstringField = {
 let someField = x.someField
 //                 ^hov
 
-type variant = | /** Cool variant! */ CoolVariant | /** Other cool variant */ OtherCoolVariant
+type variant =
+  /** Cool variant! */
+  | CoolVariant
+  /** Other cool variant */
+  | OtherCoolVariant
 
 let coolVariant = CoolVariant
 //                  ^hov
@@ -285,4 +288,9 @@ type aliased = variant
 let myFn = (a, b) => a ++ b->Int.toString
 
 type fnType = %typeof(myFn)
+//    ^hov
+
+let myFnPartial = myFn("hello", ...)
+
+type fnTypePartial = %typeof(myFnPartial)
 //    ^hov
