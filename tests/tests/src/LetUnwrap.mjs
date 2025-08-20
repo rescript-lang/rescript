@@ -32,10 +32,7 @@ function doNextStuffWithResult(s) {
 function getXWithResult(s) {
   let e = doStuffWithResult(s);
   if (e.TAG !== "Ok") {
-    return {
-      TAG: "Error",
-      _0: e._0
-    };
+    return e;
   }
   let y = e._0;
   let e$1 = doNextStuffWithResult(y);
@@ -45,10 +42,7 @@ function getXWithResult(s) {
       _0: e$1._0 + y
     };
   } else {
-    return {
-      TAG: "Error",
-      _0: e$1._0
-    };
+    return e$1;
   }
 }
 
@@ -75,15 +69,16 @@ function doNextStuffWithOption(s) {
 }
 
 function getXWithOption(s) {
-  let y = doStuffWithOption(s);
-  if (y === undefined) {
-    return;
+  let x = doStuffWithOption(s);
+  if (x === undefined) {
+    return x;
   }
-  let x = doNextStuffWithOption(y);
-  if (x !== undefined) {
-    return x + y;
+  let x$1 = doNextStuffWithOption(x);
+  if (x$1 !== undefined) {
+    return x$1 + x;
+  } else {
+    return x$1;
   }
-  
 }
 
 let x$1 = getXWithOption("s");
@@ -124,10 +119,7 @@ async function decodeResAsync(res) {
 async function getXWithResultAsync(s) {
   let e = await doStuffResultAsync(s);
   if (e.TAG !== "Ok") {
-    return {
-      TAG: "Error",
-      _0: e._0
-    };
+    return e;
   }
   let res = e._0;
   console.log(res.s);
@@ -138,9 +130,46 @@ async function getXWithResultAsync(s) {
       _0: e$1._0
     };
   } else {
+    return e$1;
+  }
+}
+
+function returnsAliasOnFirstError(s) {
+  let e = doStuffWithResult(s);
+  if (e.TAG === "Ok") {
+    return {
+      TAG: "Ok",
+      _0: "ok"
+    };
+  } else {
+    return e;
+  }
+}
+
+function returnsAliasOnSecondError(s) {
+  let e = doStuffWithResult(s);
+  if (e.TAG !== "Ok") {
+    return e;
+  }
+  let e$1 = doNextStuffWithResult(e._0);
+  if (e$1.TAG === "Ok") {
+    return {
+      TAG: "Ok",
+      _0: "ok"
+    };
+  } else {
+    return e$1;
+  }
+}
+
+function returnsAliasOnOk(s) {
+  let x = doStuffWithResult(s);
+  if (x.TAG === "Ok") {
+    return x;
+  } else {
     return {
       TAG: "Error",
-      _0: e$1._0
+      _0: "GotError"
     };
   }
 }
@@ -157,5 +186,8 @@ export {
   doStuffResultAsync,
   decodeResAsync,
   getXWithResultAsync,
+  returnsAliasOnFirstError,
+  returnsAliasOnSecondError,
+  returnsAliasOnOk,
 }
 /* x Not a pure module */

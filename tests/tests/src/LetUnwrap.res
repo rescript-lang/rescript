@@ -67,3 +67,19 @@ let getXWithResultAsync = async s => {
   let? Ok(x) = await decodeResAsync(res)
   Ok(x)
 }
+
+let returnsAliasOnFirstError = s => {
+  let? Ok(_y) = doStuffWithResult(s)
+  Ok("ok")
+}
+
+let returnsAliasOnSecondError = s => {
+  let? Ok(y) = doStuffWithResult(s)
+  let? Ok(_x) = doNextStuffWithResult(y)
+  Ok("ok")
+}
+
+let returnsAliasOnOk = s => {
+  let? Error(_e) = doStuffWithResult(s)
+  Error(#GotError)
+}
