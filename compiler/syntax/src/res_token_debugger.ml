@@ -33,7 +33,7 @@ let dump_tokens filename =
       | Res_token.DotDotDot -> "DotDotDot"
       | Res_token.Bang -> "Bang"
       | Res_token.Semicolon -> "Semicolon"
-      | Res_token.Let -> "Let"
+      | Res_token.Let {unwrap} -> "Let" ^ if unwrap then "?" else ""
       | Res_token.And -> "And"
       | Res_token.Rec -> "Rec"
       | Res_token.Underscore -> "Underscore"
