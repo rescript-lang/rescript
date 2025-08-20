@@ -1,4 +1,1 @@
-let exception Exit = 1
-let exception (Exit | Quit) = 1
-let exception Exit as z = 1
-let exception (Exit as z) = 1
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

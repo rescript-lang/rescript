@@ -1,7 +1,1 @@
-let x = []
-let x = [1; 2; 3]
-let x = [1; 2; 3]
-let x = [(1 : int); (2 : int); (3 : int)]
-let x = 4 :: 5 :: y
-let x = ((Belt.List.concatMany)[@res.spread ]) [|(1 :: x);(2 :: 3 :: x)|]
-let x = 1 :: 2 :: (y : int list)
+./scripts/test_syntax.sh: line 36: /home/runner/work/rescript/rescript/res_parser: No such file or directory

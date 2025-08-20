@@ -1,17 +1,1 @@
-
-  Syntax error!
-  syntax_tests/data/parsing/errors/expressions/implementation.res:7:1
-
-  5 │   }
-  6 │ }
-  7 │ }
-  8 │ module LicenseList = {
-  9 │ 
-
-  I'm not sure what to parse here when looking at "}".
-
-module InstallerDownload =
-  struct
-    let make [arity:1]() = ((<div />)[@res.braces ])[@@react.component ]
-  end
-module LicenseList = struct  end
+./scripts/test_syntax.sh: line 32: /home/runner/work/rescript/rescript/res_parser: No such file or directory

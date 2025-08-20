@@ -1,11 +1,1 @@
-
-  Syntax error!
-  syntax_tests/data/parsing/errors/expressions/array.res:2:44
-
-  1 │ // missing ] before )
-  2 │ let xs = x.map(key => [key, predicates[key])
-  3 │ 
-
-  Did you forget a `]` here?
-
-let xs = x.map (fun [arity:1]key -> [|key;(predicates.(key))|])
+./scripts/test_syntax.sh: line 32: /home/runner/work/rescript/rescript/res_parser: No such file or directory

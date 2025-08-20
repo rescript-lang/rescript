@@ -1,11 +1,1 @@
-external getLogger: unit => {
-  "log": 'a => unit,
-  "log2": 'a. int => int,
-  "log3": 'a 'b. ('a, 'b) => int,
-} = "./src/logger.mock.js"
-
-// polytype in label_declaration doesn't have attributes
-type reducer<'state> = {
-  state: @attr 'state,
-  send: 'action. @attr ('state, 'action) => 'action,
-}
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

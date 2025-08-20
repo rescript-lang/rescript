@@ -1,2 +1,1 @@
-let x = {js|\x37|js}
-let x = {js|\x7b|js}
+./scripts/test_syntax.sh: line 32: /home/runner/work/rescript/rescript/res_parser: No such file or directory

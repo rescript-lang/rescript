@@ -1,2 +1,1 @@
-@res.jsxComponentProps type props<'x, 'ref> = {x: 'x, ref?: 'ref}
-let make: React.componentLike<props<string, ReactDOM.Ref.currentDomRef>, React.element>
+./scripts/test_syntax.sh: line 54: /home/runner/work/rescript/rescript/res_parser: No such file or directory

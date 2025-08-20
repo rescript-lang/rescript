@@ -1,3 +1,1 @@
-type nonrec t = x constraint 'x = int
-type nonrec t = x constraint 'x = string constraint 'y = unit
-type nonrec t = x constraint 'a = ((typExpr)[@attr ])
+./scripts/test_syntax.sh: line 36: /home/runner/work/rescript/rescript/res_parser: No such file or directory

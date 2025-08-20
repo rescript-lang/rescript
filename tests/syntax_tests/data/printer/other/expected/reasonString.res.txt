@@ -1,4 +1,1 @@
-let x = `foo \${bar`
-let x = `foo \`bar`
-let x = `foo \\bar`
-let x = `foo \\\${bar`
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

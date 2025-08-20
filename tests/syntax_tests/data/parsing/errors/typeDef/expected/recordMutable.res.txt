@@ -1,13 +1,1 @@
-
-  Syntax error!
-  syntax_tests/data/parsing/errors/typeDef/recordMutable.res:2:16-3:1
-
-  1 │ type d = {
-  2 │   foo: string, mutable
-  3 │ }
-  4 │ 
-
-  The `mutable` qualifier can only be used at the beginning of a field declaration
-
-type nonrec d = {
-  foo: string }
+./scripts/test_syntax.sh: line 32: /home/runner/work/rescript/rescript/res_parser: No such file or directory

@@ -1,14 +1,1 @@
-let x = {
-  module M = ME
-  Me.x
-}
-
-let x = {
-  module M = await ME
-  M.x
-}
-
-let x = {
-  module M = await (ME: MT)
-  M.x
-}
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

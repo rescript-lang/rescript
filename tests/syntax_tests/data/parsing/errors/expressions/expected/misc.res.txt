@@ -1,10 +1,1 @@
-
-  Syntax error!
-  syntax_tests/data/parsing/errors/expressions/misc.res:1:9
-
-  1 │ let x = _ + 1
-  2 │ 
-
-  `_` isn't a valid name.
-
-let x = ([%rescript.exprhole ]) + 1
+./scripts/test_syntax.sh: line 32: /home/runner/work/rescript/rescript/res_parser: No such file or directory

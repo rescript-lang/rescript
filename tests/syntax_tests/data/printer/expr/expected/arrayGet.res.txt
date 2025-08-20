@@ -1,13 +1,1 @@
-let street = streets[0]
-
-let streetWithAVeryVeryVerrrrrrryVeeeeeeeeeryLongName = streetsAddressBookThisIsALongName[0]
-
-let streetWithAVeryVeryVerrrrrrryVeeeeeeeeeryLongName =
-  streetsAddressBookThisIsALongName[streets->Belt.Array.length - 1]
-
-let streetWithAVeryVeryVerrrrrrryVeeeeeeeeeryLongName =
-  streetsAddressBookThisIsALongName[
-    streetsAddressBookThisIsALongName.streets->Belt.Array.length - 1
-  ]
-
-let street = @attr streets[0]
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

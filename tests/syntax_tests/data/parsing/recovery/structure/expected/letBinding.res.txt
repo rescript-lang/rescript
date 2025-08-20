@@ -1,10 +1,1 @@
-
-  Syntax error!
-  syntax_tests/data/parsing/recovery/structure/letBinding.res:1:8-9
-
-  1 │ let x = = doStuff(y)
-  2 │ 
-
-  This let-binding misses an expression
-
-let x = doStuff y
+./scripts/test_syntax.sh: line 32: /home/runner/work/rescript/rescript/res_parser: No such file or directory

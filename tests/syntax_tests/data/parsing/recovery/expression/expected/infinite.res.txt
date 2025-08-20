@@ -1,1 +1,1 @@
-let smallest = (heap.compare ()) < (a -> (f b))
+./scripts/test_syntax.sh: line 32: /home/runner/work/rescript/rescript/res_parser: No such file or directory

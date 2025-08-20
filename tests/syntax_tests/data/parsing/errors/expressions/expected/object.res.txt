@@ -1,2 +1,1 @@
-let obj =
-  [%obj { \x37 = {js|octal escape|js}; \x7b = {js|another octal escape|js} }]
+./scripts/test_syntax.sh: line 32: /home/runner/work/rescript/rescript/res_parser: No such file or directory

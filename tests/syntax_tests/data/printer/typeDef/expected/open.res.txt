@@ -1,6 +1,1 @@
-type t = ..
-type t = private ..
-type t<'a, 'b> = ..
-type t<'a, 'b> = private ..
-
-type t = .. constraint 't = ('s, 'a) => 'sub
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

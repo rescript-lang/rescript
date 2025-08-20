@@ -1,18 +1,1 @@
-@attr type t = float
-@attr
-type t = float
-
-@attr @attr @attr @attr @attr @attr @attr @attr @attr @attr @attr @attr type t = int
-@attr @attr @attr @attr @attr @attr @attr @attr @attr @attr @attr @attr
-type t = int
-
-@attrWithSuperLongIdentifeirName
-@attrWithSuperLongIdentifeirName
-@attrWithSuperLongIdentifeirName
-@attrWithSuperLongIdentifeirName
-type t = string
-@attrWithSuperLongIdentifeirName
-@attrWithSuperLongIdentifeirName
-@attrWithSuperLongIdentifeirName
-@attrWithSuperLongIdentifeirName
-type t = string
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

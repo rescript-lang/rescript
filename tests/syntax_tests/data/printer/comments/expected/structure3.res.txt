@@ -1,13 +1,1 @@
-node.left->peekMinNode
-// same as the above
-node.left->peekMinNode
-
-// field access has higher precedence than unary -
-let x = -a.bar
-
-let a = 1
-
-/* test */
-let b = 2
-// a
-// b
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

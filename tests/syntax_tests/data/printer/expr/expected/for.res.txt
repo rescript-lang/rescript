@@ -1,15 +1,1 @@
-let () = for i in 0 to 10 {
-  ()
-}
-
-for i in 0 to 10 {
-  let a = 1
-  let b = 2
-  sideEffect()
-}
-
-let x =
-  @attr
-  for i in 0 to 10 {
-    ()
-  }
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

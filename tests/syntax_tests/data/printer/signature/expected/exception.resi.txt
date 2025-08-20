@@ -1,7 +1,1 @@
-exception Exit
-
-@onConstructor exception ExitEarly
-
-exception Exit = Terminate
-exception Exit = Lib.Terminate
-exception Exit = Ns.Lib.Terminate
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

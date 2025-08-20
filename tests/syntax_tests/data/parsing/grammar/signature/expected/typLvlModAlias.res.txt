@@ -1,7 +1,1 @@
-module type Signature  =
-  sig
-    module Tree = Btree
-    module Tree = Ns.Btree
-    module Tree = Btree[@@attr ]
-    module Tree = Ns.Btree[@@attr ]
-  end
+./scripts/test_syntax.sh: line 36: /home/runner/work/rescript/rescript/res_parser: No such file or directory

@@ -1,11 +1,1 @@
-module type Signature  =
-  sig
-    open Belt
-    open! Belt
-    open Belt.Array
-    open! Belt.Array
-    open Belt[@@attr ]
-    open! Belt[@@attr ]
-    open Belt.List[@@attr ]
-    open! Belt.List[@@attr ]
-  end
+./scripts/test_syntax.sh: line 36: /home/runner/work/rescript/rescript/res_parser: No such file or directory

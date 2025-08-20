@@ -1,12 +1,1 @@
-module A: {
-  @res.jsxComponentProps
-  type props<'x> = {x: 'x}
-  let make: React.componentLike<props<string>, React.element>
-}
-
-module NoProps: {
-  @res.jsxComponentProps
-  type props = {}
-
-  let make: React.componentLike<props, React.element>
-}
+./scripts/test_syntax.sh: line 54: /home/runner/work/rescript/rescript/res_parser: No such file or directory

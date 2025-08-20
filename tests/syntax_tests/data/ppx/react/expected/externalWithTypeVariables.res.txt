@@ -1,12 +1,1 @@
-@@jsxConfig({version: 4})
-
-module V4C = {
-  @res.jsxComponentProps @live
-  type props<'x, 'children> = {
-    x: 'x,
-    children: 'children,
-  }
-
-  @module("c")
-  external make: React.componentLike<props<t<'a>, React.element>, React.element> = "component"
-}
+./scripts/test_syntax.sh: line 54: /home/runner/work/rescript/rescript/res_parser: No such file or directory

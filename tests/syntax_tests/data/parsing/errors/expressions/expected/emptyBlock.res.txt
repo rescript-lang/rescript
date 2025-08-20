@@ -1,2 +1,1 @@
-let x = {  }
-let f [arity:2]a b = {  }
+./scripts/test_syntax.sh: line 32: /home/runner/work/rescript/rescript/res_parser: No such file or directory

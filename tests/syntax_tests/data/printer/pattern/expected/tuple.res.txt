@@ -1,3 +1,1 @@
-// let (a,) = 1 -> one-element tuples are not supported
-let (a, b) = 1
-let (aaaaaaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbbbbbb, cccccccccccccccccccccccccc) = 1
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

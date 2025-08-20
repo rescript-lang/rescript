@@ -1,14 +1,1 @@
-
-  Syntax error!
-  syntax_tests/data/parsing/errors/signature/closingBraces.resi:3:1
-
-  1 │ let x: int
-  2 │ 
-  3 │ }}}
-  4 │ 
-  5 │ let y: int
-
-  I'm not sure what to parse here when looking at "}".
-
-val x : int
-val y : int
+./scripts/test_syntax.sh: line 32: /home/runner/work/rescript/rescript/res_parser: No such file or directory

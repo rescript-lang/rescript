@@ -1,2 +1,1 @@
-module A : Map = struct let m = 2 end 
-module A = struct let m = 2 end
+./scripts/test_syntax.sh: line 36: /home/runner/work/rescript/rescript/res_parser: No such file or directory

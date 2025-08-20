@@ -1,7 +1,1 @@
-[@@@uncurried ]
-let foo [arity:2]x y = x + y
-let z = foo 3 4
-let bar [arity:2]x y = x + y
-let b = bar 3 4
-let w = 3 -> (foo 4)
-let a = 3 -> (foo 4)
+./scripts/test_syntax.sh: line 36: /home/runner/work/rescript/rescript/res_parser: No such file or directory

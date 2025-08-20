@@ -1,18 +1,1 @@
-type nonrec t = {
-  mutable field: float -> int -> bool -> unit (a:3) }
-type nonrec t = float -> int -> bool -> unit (a:3)
-type nonrec t =
-  ((float)[@attr ]) ->
-    ((int)[@attr2 ]) -> ((bool)[@attr3 ]) -> ((string)[@attr4 ]) -> unit (a:4)
-type nonrec t =
-  ((float ->
-      ((int)[@attr2 ]) ->
-        ((bool -> ((string)[@attr4 ]) -> unit (a:1) (a:1))[@attr3 ]) (a:1) (a:1))
-  [@attr ])
-type nonrec t =
-  ((float)[@attr ]) ->
-    ((int)[@attr2 ]) -> ((bool)[@attr3 ]) -> ((string)[@attr4 ]) -> unit (a:4)
-external setTimeout :
-  (unit -> unit (a:1)) -> int -> timerId (a:2) = "setTimeout"[@@val ]
-external setTimeout :
-  (unit -> unit (a:1)) -> int -> timerId (a:2) = "setTimeout"
+./scripts/test_syntax.sh: line 36: /home/runner/work/rescript/rescript/res_parser: No such file or directory

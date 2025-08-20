@@ -1,15 +1,1 @@
-let f [arity:2]a b = a + b
-let f [arity:2]a b = a + b
-let f [arity:4]a b c d = ((a + b) + c) + d
-let f =
-  ((fun [arity:1]a ->
-      ((fun [arity:1]b ->
-          ((fun [arity:1]c -> ((fun [arity:1]d -> ())[@attr4 ]))[@attr3 ]))
-      [@attr2 ]))
-  [@attr ])
-let f [arity:4]((a)[@attr ]) ((b)[@attr2 ]) ((c)[@attr3 ]) ((d)[@attr4 ]) =
-  ()
-let f [arity:4]((a)[@attr ]) ((b)[@attr2 ]) ((c)[@attr3 ]) ((d)[@attr4 ]) =
-  ()
-;;add 1 2
-;;add 2 3 4 5 6 7 8 9 10
+./scripts/test_syntax.sh: line 36: /home/runner/work/rescript/rescript/res_parser: No such file or directory

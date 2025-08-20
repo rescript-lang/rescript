@@ -1,15 +1,1 @@
-type nonrec animation = [ `ease-in  | `ease-out  | `never ease ✍️ ]
-module type Conjunctive  =
-  sig
-    type nonrec u1 = [ `A  | `B ]
-    type nonrec u2 = [ `A  | `B  | `C ]
-    val f : [< `T of [< u2]&[< u2]&[< u1] ] -> unit (a:1)
-    val g : [< `S of [< u2]&[< u2]&[< u1] ] -> unit (a:1)
-    val g :
-      [< `Exotic-S+ of [< `Exotic-u2+ ]&[< `Exotic-u2- ]&[< `Exotic-u1+++ ] ]
-        -> unit (a:1)
-  end
-type nonrec t = [ s]
-type nonrec t = [ ListStyleType.t]
-type nonrec number = [ `1  | `42  | `4244 ]
-type nonrec complexNumbericPolyVar = [ `1 of string  | `2 of (int * string) ]
+./scripts/test_syntax.sh: line 36: /home/runner/work/rescript/rescript/res_parser: No such file or directory

@@ -1,6 +1,1 @@
-address["street"] = "Brusselsestraat"
-address["street"] = newYork->getExpensiveStreet
-
-let () = @attr address["street"] = "Brusselsestraat"
-let () = node["left"] = value->process->node["right"] = value->process
-let () = (node["left"] = value->process)->node["right"] = value->process
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

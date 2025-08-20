@@ -1,14 +1,1 @@
-type t<'a, 'b>
-type t<+'a, -'b>
-
-type t<'superlongthing, 'superlongthing, 'superlongthing, 'superlongthing, 'superlongthing>
-
-type t<+'superlongthing, -'superlongthing, +'superlongthing, -'superlongthing, +'superlongthing>
-
-type t<+'superlongthing, -'superlongthing, +'superlongthing, -'superlongthing, +'superlongthing>
-  constraint 't = ('state, 'action) => 'nextSubtree
-
-module Test = {
-  type x<'A> = 'A
-  type y = x<string>
-}
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

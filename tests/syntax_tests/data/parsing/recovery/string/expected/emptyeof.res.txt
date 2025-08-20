@@ -1,11 +1,1 @@
-
-  Syntax error!
-  syntax_tests/data/parsing/recovery/string/emptyeof.res:1:9-2:0
-
-  1 │ let x = "
-  2 │ 
-
-  This string is missing a double quote at the end
-
-let x = {js|
-|js}
+./scripts/test_syntax.sh: line 32: /home/runner/work/rescript/rescript/res_parser: No such file or directory

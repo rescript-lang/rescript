@@ -1,14 +1,1 @@
-let _ = Constructor(a, b)
-let _ = Constructor((a, b))
-let _ = #Constructor(a, b)
-let _ = #Constructor(a, b)
-
-switch a {
-| C(c, d) => 1
-| C((c, d)) => 1
-}
-
-switch a {
-| #C(c, d) => 1
-| #C(c, d) => 1
-}
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

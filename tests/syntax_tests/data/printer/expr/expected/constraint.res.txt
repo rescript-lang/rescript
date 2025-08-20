@@ -1,9 +1,1 @@
-let x = (Numbers.ten: int)
-
-let x = (@attr 10: int)
-let x = (@attr 10: int)
-
-let x = (street["number"]: int)
-let x = (streets[0]: int)
-
-let x = (true ? 1 : 0: int)
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

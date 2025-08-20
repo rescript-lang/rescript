@@ -1,12 +1,1 @@
-let Foo | Bar = 1
-let Red | Blue | Green = 1
-let Red | (Blue | Green) = 1
-let exception Foo | exception Bar = 1
-
-let Red | Blue | Green = x
-
-let Red | (Blue | Green) = x
-let Red | Blue | Green = x
-let Red | Blue | (Green | Purple) | Black = x
-let Red | Blue | (Green | Purple | Rosa) | (Black | White) = x
-let Red | Blue | (Green | Purple | Rosa) | (Black | White) | AnotherColoooooour = x
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

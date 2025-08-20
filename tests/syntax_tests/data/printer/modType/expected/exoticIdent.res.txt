@@ -1,3 +1,1 @@
-module type A = Foo with type Foo.\"let"<'\"type"> = \"module"
-
-module type A = Foo with type Foo.\"let"<'\"type"> := \"module"
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

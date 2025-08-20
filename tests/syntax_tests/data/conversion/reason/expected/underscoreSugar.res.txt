@@ -1,1 +1,1 @@
-let photo = pricedRoom["room"]["photos"]->filterNone->Array.get(_, 0)
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

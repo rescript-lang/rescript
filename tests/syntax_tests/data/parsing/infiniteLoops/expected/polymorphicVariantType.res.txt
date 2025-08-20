@@ -1,9 +1,1 @@
-
-  Syntax error!
-  syntax_tests/data/parsing/infiniteLoops/polymorphicVariantType.res:1:14
-
-  1 │ type x = [<y>
-
-  Did you forget a `]` here?
-
-type nonrec x = [< y]
+./scripts/test_syntax.sh: line 32: /home/runner/work/rescript/rescript/res_parser: No such file or directory

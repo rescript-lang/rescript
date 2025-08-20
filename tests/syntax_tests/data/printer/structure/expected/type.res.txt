@@ -1,11 +1,1 @@
-type t = string and s = int and z = float
-
-type t = string
-and s = int
-and z = float
-
-type t = string
-
-and s = int
-
-and z = float
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

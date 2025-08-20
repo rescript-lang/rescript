@@ -1,5 +1,1 @@
-module rec A:Map = struct let m = 2 end  and B:Set = struct let s = 1 end
-module rec A:Map = struct let m = 2 end[@@onFirstBinding ]
- and B:Set = struct let s = 1 end[@@onSecondBinding ]
-module rec A:Map = struct let m = 2 end[@@onFirstBindingOfNext ]
- and B:Set = struct let s = 1 end[@@onSecondBindingOfNext ]
+./scripts/test_syntax.sh: line 36: /home/runner/work/rescript/rescript/res_parser: No such file or directory

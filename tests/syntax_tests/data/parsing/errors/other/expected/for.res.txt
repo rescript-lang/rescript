@@ -1,12 +1,1 @@
-
-  Syntax error!
-  syntax_tests/data/parsing/errors/other/for.res:1:6-2:0
-
-  1 │ for x
-  2 │ 
-
-  Did you forget a `in` here?
-
-;;for x = [%rescript.exprhole ] to [%rescript.exprhole ] do
-    [%rescript.exprhole ]
-  done
+./scripts/test_syntax.sh: line 32: /home/runner/work/rescript/rescript/res_parser: No such file or directory

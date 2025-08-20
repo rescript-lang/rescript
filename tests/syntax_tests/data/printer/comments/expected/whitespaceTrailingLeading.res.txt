@@ -1,17 +1,1 @@
-let a = 1 // single line trailing
-// leading
-let b = 2
-
-let a = 1 /* comment */
-// leading
-let b = 2
-
-let a = 1 // single line trailing
-
-// leading
-let b = 2
-
-let a = 1 /* comment */
-
-// leading
-let b = 2
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

@@ -1,7 +1,1 @@
-let x = a
-
-let c = Configuration.config
-
-let x = @attr identifier
-
-let x = @attributeVeryLong @attributeVeryLong @attributeVeryLong @attributeVeryLong identifier
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

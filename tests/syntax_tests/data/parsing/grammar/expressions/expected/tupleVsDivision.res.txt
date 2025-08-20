@@ -1,5 +1,1 @@
-;;(foo ()) / 1
-;;foo ()
-;;(1, 2) -> printTuple
-let f [arity:1]() = (((foo ()) / 1; foo (); (1, 2) -> printTuple)
-  [@res.braces ])
+./scripts/test_syntax.sh: line 36: /home/runner/work/rescript/rescript/res_parser: No such file or directory

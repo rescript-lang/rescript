@@ -1,16 +1,1 @@
-
-  Syntax error!
-  syntax_tests/data/parsing/errors/expressions/setField.res:4:30-5:1
-
-  2 │   let a = 1
-  3 │ 	// notice missing expression after = 
-  4 │   m.left.compatibleTypeArgs =
-  5 │ } else {
-  6 │   sideEffect()
-  7 │ }
-
-  It seems that this record field mutation misses an expression
-
-;;if match
-  then let a = 1 in (m.left).compatibleTypeArgs <- ([%rescript.exprhole ])
-  else sideEffect ()
+./scripts/test_syntax.sh: line 32: /home/runner/work/rescript/rescript/res_parser: No such file or directory

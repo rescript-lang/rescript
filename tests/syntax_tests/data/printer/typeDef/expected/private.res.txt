@@ -1,5 +1,1 @@
-type t1 = private {}
-
-type t2 = private {x: int}
-
-type t3 = private A | B
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

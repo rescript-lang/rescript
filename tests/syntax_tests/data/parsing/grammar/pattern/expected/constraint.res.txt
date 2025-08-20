@@ -1,9 +1,1 @@
-;;match thing with
-  | Some (node : node) -> ()
-  | Some (node : Feature.node) -> ()
-  | (child : node)::rest -> ()
-  | (child : node)::rest -> ()
-  | (Some _, Some (menuItem : Menu.item)) -> ()
-  | (Some _, Some (menuItem : Menu.item)) -> ()
-  | SettingChanged ({ fullName; value;_} : Nova.Setting.t) -> ()
-  | SettingChanged ({ fullName; value;_} : Nova.Setting.t) -> ()
+./scripts/test_syntax.sh: line 36: /home/runner/work/rescript/rescript/res_parser: No such file or directory

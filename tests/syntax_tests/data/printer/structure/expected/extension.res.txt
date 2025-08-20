@@ -1,12 +1,1 @@
-%%raw("__eval__gc()")
-
-@attr
-%%raw("__eval__gc()")
-
-@attrStructureLvl @attrStructureLvl2 @attrStructureLvl3
-%%raw("__eval__gc()")
-
-@attrStructureLvl @attrStructureLvl2 @attrStructureLvl3 @attrStructureLvl4 @attrStructureLvl5
-%%raw("__eval__gc()")
-
-%%private(@module("./logo.svg") external logo: string = "default")
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

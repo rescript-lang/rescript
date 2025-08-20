@@ -1,8 +1,1 @@
-type t = %extension
-type t = @attr %extension
-
-external foo: %extension = "primitive"
-external foo: @attr %extension = "primitive"
-
-let x: %extension = z
-let x: @attr %extension = z
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

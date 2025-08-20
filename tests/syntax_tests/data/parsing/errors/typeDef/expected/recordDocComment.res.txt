@@ -1,13 +1,1 @@
-
-  Syntax error!
-  syntax_tests/data/parsing/errors/typeDef/recordDocComment.res:2:16-3:1
-
-  1 │ type a = {
-  2 │   foo: string, /** here */
-  3 │ }
-  4 │ 
-
-  Attributes and doc comments can only be used at the beginning of a field declaration
-
-type nonrec a = {
-  foo: string }
+./scripts/test_syntax.sh: line 32: /home/runner/work/rescript/rescript/res_parser: No such file or directory

@@ -1,13 +1,1 @@
-;;foo ()
-;;bar ()
-let () = ((foo (); bar ())[@res.braces ])
-let () =
-  ((let x = 1 in
-    sideEffect ();
-    (let y = 2 in sideEffect2 (); (let z = 3 in sideEffect3 ())))
-  [@res.braces ])
-;;while true do
-    sideEffect1 ();
-    (let x = 1 in sideEffect2 (); (let y = 2 in sideEffect3 ())) done
-;;match color with
-  | Blue -> (getResult (); sideEffect (); (let x = 1 in sideEffect2 ()))
+./scripts/test_syntax.sh: line 36: /home/runner/work/rescript/rescript/res_parser: No such file or directory

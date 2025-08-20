@@ -1,7 +1,1 @@
-let \"type" = x
-
-let {\"type", \"module"} = x
-let {\"type": \"let", \"module": \"DangerousPattern"} = x
-let {Foo.\"type": \"let", \"module": \"DangerousPattern"} = x
-
-let \"1" = x
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory

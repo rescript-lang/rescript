@@ -1,10 +1,1 @@
-
-  Syntax error!
-  syntax_tests/data/parsing/errors/typeDef/namedParameters.res:1:15-20
-
-  1 │ type  draw = (stroke: pencil) => unit
-  2 │ 
-
-  A labeled parameter starts with a `~`. Did you mean: `~stroke`?
-
-type nonrec draw = stroke:pencil -> unit (a:1)
+./scripts/test_syntax.sh: line 32: /home/runner/work/rescript/rescript/res_parser: No such file or directory

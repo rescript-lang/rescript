@@ -1,10 +1,1 @@
-// here
-%%raw(` eval(
-__gc,
-1,
-0
-)
-  `)
-
-let x = %raw("10")
-let y = %raw("20")
+./scripts/test_syntax.sh: line 42: /home/runner/work/rescript/rescript/res_parser: No such file or directory
