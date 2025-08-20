@@ -318,8 +318,8 @@ let rec recursively_transform_named_args_for_make expr args newtypes core_type =
         | {ppat_desc = Ppat_constraint (_, type_)} -> Some type_
         | _ -> None
       in
-      (* The ref arguement of forwardRef should be optional *)
-      ( ( Optional {txt = "ref"; loc = Location.none},
+      (* The ref argument of forwardRef should be a positional argument, not optional *)
+      ( ( Nolabel,
           None,
           pattern,
           txt,
