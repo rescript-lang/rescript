@@ -719,6 +719,7 @@ pub mod tests {
             gentype_config: None,
             namespace_entry: None,
             deprecation_warnings: vec![],
+            experimental_features: None,
             allowed_dependents: args.allowed_dependents,
             path: args.path,
         }
