@@ -16,6 +16,11 @@ type inline_types_context = {
   params: (Parsetree.core_type * Asttypes.variance) list;
 }
 
+let extend_current_type_name_path current_type_name_path field_name =
+  match current_type_name_path with
+  | None -> None
+  | Some path -> Some (path @ [field_name])
+
 module Recover = struct
   let default_expr () =
     let id = Location.mknoloc "rescript.exprhole" in
@@ -4667,7 +4672,7 @@ and parse_string_field_declaration p =
 (* field-decl	::=
  *  | [mutable] field-name : poly-typexpr
  *  | attributes field-decl *)
-and parse_field_declaration p =
+and parse_field_declaration ?current_type_name_path ?inline_types_context p =
   let start_pos = p.Parser.start_pos in
   let attrs = parse_attributes p in
   let mut =
@@ -4684,7 +4689,10 @@ and parse_field_declaration p =
     match p.Parser.token with
     | Colon ->
       Parser.next p;
-      parse_poly_type_expr p
+      let current_type_name_path =
+        extend_current_type_name_path current_type_name_path name.txt
+      in
+      parse_poly_type_expr ?current_type_name_path ?inline_types_context p
     | _ ->
       Ast_helper.Typ.constr ~loc:name.loc {name with txt = Lident name.txt} []
   in
@@ -4718,9 +4726,7 @@ and parse_field_declaration_region ?current_type_name_path ?inline_types_context
     let lident, loc = parse_lident p in
     let name = Location.mkloc lident loc in
     let current_type_name_path =
-      match current_type_name_path with
-      | None -> None
-      | Some current_type_name_path -> Some (current_type_name_path @ [name.txt])
+      extend_current_type_name_path current_type_name_path name.txt
     in
     let optional = parse_optional_label p in
     let typ =
@@ -5379,7 +5385,10 @@ and parse_record_or_object_decl ?current_type_name_path ?inline_types_context p
             p
         | attr :: _ as attrs ->
           let first =
-            let field = parse_field_declaration p in
+            let field =
+              parse_field_declaration ?current_type_name_path
+                ?inline_types_context p
+            in
             Parser.optional p Comma |> ignore;
             {
               field with
