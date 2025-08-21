@@ -8,4 +8,3 @@ let unique_items (structure : Module.structure) : Module.item list =
          else (
            Hashtbl.add namesUsed it.name ();
            true))
-
