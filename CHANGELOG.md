@@ -23,6 +23,8 @@
 
 #### :bug: Bug fix
 
+- Preserve `@as(...)` decorator on record fields when creating interface. https://github.com/rescript-lang/rescript/pull/7779
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
