@@ -29,6 +29,8 @@
 
 #### :nail_care: Polish
 
+- Allow skipping the leading pipe in variant definition with a leading constructor with an attribute. https://github.com/rescript-lang/rescript/pull/7782
+
 #### :house: Internal
 
 # 12.0.0-beta.6
