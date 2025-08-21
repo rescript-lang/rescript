@@ -24,6 +24,7 @@
 #### :bug: Bug fix
 
 - Preserve `@as(...)` decorator on record fields when creating interface. https://github.com/rescript-lang/rescript/pull/7779
+- Fix parse error with nested record types and attributes on the field name that has the nested record type. https://github.com/rescript-lang/rescript/pull/7781
 
 #### :memo: Documentation
 
