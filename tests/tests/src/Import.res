@@ -90,3 +90,8 @@ let f7 = async () => {
     0
   }
 }
+
+let f8 = async (): int => {
+  module MQ = await Belt.MutableQueue
+  1
+}

@@ -120,6 +120,11 @@ async function f7() {
   return 1;
 }
 
+async function f8() {
+  await import("rescript/lib/es6/Belt_MutableQueue.js");
+  return 1;
+}
+
 let each = M1.forEach;
 
 let M2;
@@ -145,5 +150,6 @@ export {
   f5,
   f6,
   f7,
+  f8,
 }
 /*  Not a pure module */

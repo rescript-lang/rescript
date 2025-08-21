@@ -568,6 +568,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
               aux then_expr @ aux else_expr
             | Pexp_construct (_, Some expr) -> aux expr
             | Pexp_fun {rhs = expr} | Pexp_newtype (_, expr) -> aux expr
+            | Pexp_constraint (expr, _) -> aux expr
             | _ -> acc
           in
           aux pvb_expr @ spelunk_vbs acc tl
