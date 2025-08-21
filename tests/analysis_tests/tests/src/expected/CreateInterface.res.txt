@@ -109,4 +109,9 @@ module Memo: {
   @react.component
   let make: (~name: string) => React.element
 }
+external x: (@as("bar") ~foo: int) => unit = "myexternal"
+type record = {
+  @as("foo_bar")
+  fooBar: int
+}
 

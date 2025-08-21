@@ -38,6 +38,8 @@ module AttributesUtils : sig
 
   val contains : string -> t -> bool
 
+  val isEmpty : t -> bool
+
   val toString : t -> string
 end = struct
   type attribute = {line: int; offset: int; name: string}
@@ -75,6 +77,8 @@ end = struct
 
   let contains attributeForSearch t =
     t |> List.exists (fun {name} -> name = attributeForSearch)
+
+  let isEmpty t = t = []
 
   let toString t =
     match t with
@@ -250,11 +254,22 @@ let printSignature ~extractor ~signature =
       Buffer.add_string buf (indent ^ newItemStr ^ "\n");
       processSignature ~indent items
     | Sig_type (id, typeDecl, resStatus) :: items ->
-      let newItemStr =
-        sigItemToString
-          (Printtyp.tree_of_type_declaration id typeDecl resStatus)
+      let lines =
+        let posStart, posEnd = Loc.range typeDecl.type_loc in
+        extractor |> SourceFileExtractor.extract ~posStart ~posEnd
       in
-      Buffer.add_string buf (indent ^ newItemStr ^ "\n");
+      let attributes = AttributesUtils.make lines in
+
+      (if not (AttributesUtils.isEmpty attributes) then
+         (* Copy the type declaration verbatim to preserve attributes *)
+         Buffer.add_string buf ((lines |> String.concat "\n") ^ "\n")
+       else
+         let newItemStr =
+           sigItemToString
+             (Printtyp.tree_of_type_declaration id typeDecl resStatus)
+         in
+         Buffer.add_string buf (indent ^ newItemStr ^ "\n"));
+
       processSignature ~indent items
     | Sig_typext (id, extConstr, extStatus) :: items ->
       let newItemStr =

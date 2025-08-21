@@ -143,3 +143,10 @@ module Memo = {
 
   let make = React.memo(make)
 }
+
+external x: (@as("bar") ~foo: int) => unit = "myexternal"
+
+type record = {
+  @as("foo_bar")
+  fooBar: int
+}
