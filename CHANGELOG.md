@@ -20,6 +20,7 @@
 
 - Add markdown divider between module doc and module type in hover information. https://github.com/rescript-lang/rescript/pull/7775
 - Show docstrings before type expansions on hover. https://github.com/rescript-lang/rescript/pull/7774
+- Autocomplete (and improved hovers) for first-class module unpacks. https://github.com/rescript-lang/rescript/pull/7780
 
 #### :bug: Bug fix
 
