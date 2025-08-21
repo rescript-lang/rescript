@@ -393,6 +393,10 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
     ( "-absname",
       set absname,
       "*internal* Show absolute filenames in error messages" );
+    ( "-enable-experimental",
+      string_call Experimental_features.enable_from_string,
+      "Enable experimental features: repeatable, e.g. -enable-experimental \
+       LetUnwrap" );
     (* Not used, the build system did the expansion *)
     ( "-bs-no-bin-annot",
       clear Clflags.binary_annotations,

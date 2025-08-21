@@ -171,6 +171,10 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
         ],
         body )
     when Ast_attributes.has_unwrap_attr pvb_attributes -> (
+    if not (Experimental_features.is_enabled Experimental_features.LetUnwrap)
+    then
+      Bs_syntaxerr.err pvb_pat.ppat_loc
+        (Experimental_feature_not_enabled LetUnwrap);
     let variant : [`Result_Ok | `Result_Error | `Option_Some | `Option_None] =
       match variant_name with
       | "Ok" -> `Result_Ok

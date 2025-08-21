@@ -1,3 +1,5 @@
+@@config({flags: ["-enable-experimental", "LetUnwrap"]})
+
 let doStuffWithResult = s =>
   switch s {
   | "s" => Ok("hello")
