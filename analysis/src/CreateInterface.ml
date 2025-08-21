@@ -38,8 +38,6 @@ module AttributesUtils : sig
 
   val contains : string -> t -> bool
 
-  val isEmpty : t -> bool
-
   val toString : t -> string
 end = struct
   type attribute = {line: int; offset: int; name: string}
@@ -77,8 +75,6 @@ end = struct
 
   let contains attributeForSearch t =
     t |> List.exists (fun {name} -> name = attributeForSearch)
-
-  let isEmpty t = t = []
 
   let toString t =
     match t with
