@@ -95,3 +95,12 @@ let f8 = async (): int => {
   module MQ = await Belt.MutableQueue
   1
 }
+
+let f9 = async value => {
+  switch value {
+  | Some(_) =>
+    module HashMapInt = await Belt.HashMap.Int
+    ()
+  | None => ()
+  }
+}
