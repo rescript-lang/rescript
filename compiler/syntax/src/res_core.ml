@@ -5044,7 +5044,7 @@ and parse_type_representation ?current_type_name_path ?inline_types_context p =
   in
   let kind =
     match p.Parser.token with
-    | Bar | Uident _ | DocComment _ ->
+    | Bar | Uident _ | DocComment _ | At ->
       Parsetree.Ptype_variant (parse_type_constructor_declarations p)
     | Lbrace ->
       Parsetree.Ptype_record
@@ -5602,6 +5602,36 @@ and parse_type_equation_and_representation ?current_type_name_path
     | Bar | DotDot | DocComment _ ->
       let priv, kind = parse_type_representation p in
       (None, priv, kind)
+    | At -> (
+      (* Attribute can start a variant constructor or a type manifest.
+         Look ahead past attributes; if a constructor-like token follows (Uident not immediately
+         followed by a Dot, or DotDotDot/Bar/DocComment), treat as variant; otherwise manifest *)
+      let is_variant_after_attrs =
+        Parser.lookahead p (fun state ->
+            ignore (parse_attributes state);
+            match state.Parser.token with
+            | Uident _ -> (
+              Parser.next state;
+              match state.Parser.token with
+              | Dot -> false
+              | _ -> true)
+            | DotDotDot | Bar | DocComment _ -> true
+            | _ -> false)
+      in
+      if is_variant_after_attrs then
+        let priv, kind = parse_type_representation p in
+        (None, priv, kind)
+      else
+        let manifest = Some (parse_typ_expr p) in
+        match p.Parser.token with
+        | Equal ->
+          Parser.next p;
+          let priv, kind =
+            parse_type_representation ?current_type_name_path
+              ?inline_types_context p
+          in
+          (manifest, priv, kind)
+        | _ -> (manifest, Public, Parsetree.Ptype_abstract))
     | _ -> (
       let manifest = Some (parse_typ_expr p) in
       match p.Parser.token with
