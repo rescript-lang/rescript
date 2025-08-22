@@ -1,0 +1,49 @@
+Hover src/FirstClassModules.res 11:16
+{"contents": {"kind": "markdown", "value": "```rescript\nmodule type SomeModule = {\n  module Inner\n  type t = {x: int}\n  let foo: t => int\n  let doStuff: string => unit\n  let doOtherStuff: string => unit\n}\n```"}}
+
+Complete src/FirstClassModules.res 13:15
+posCursor:[13:15] posNoWhite:[13:14] Found expr:[10:13->18:1]
+posCursor:[13:15] posNoWhite:[13:14] Found expr:[11:2->16:30]
+posCursor:[13:15] posNoWhite:[13:14] Found expr:[13:4->16:30]
+posCursor:[13:15] posNoWhite:[13:14] Found expr:[13:4->13:15]
+Pexp_ident SomeModule.:[13:4->13:15]
+Completable: Cpath Value[SomeModule, ""]
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[SomeModule, ""]
+Path SomeModule.
+[{
+    "label": "Inner",
+    "kind": 9,
+    "tags": [],
+    "detail": "module Inner",
+    "documentation": null
+  }, {
+    "label": "t",
+    "kind": 22,
+    "tags": [],
+    "detail": "type t",
+    "documentation": {"kind": "markdown", "value": "```rescript\ntype t = {x: int}\n```"}
+  }, {
+    "label": "foo",
+    "kind": 12,
+    "tags": [],
+    "detail": "t => int",
+    "documentation": null
+  }, {
+    "label": "doStuff",
+    "kind": 12,
+    "tags": [],
+    "detail": "string => unit",
+    "documentation": null
+  }, {
+    "label": "doOtherStuff",
+    "kind": 12,
+    "tags": [],
+    "detail": "string => unit",
+    "documentation": null
+  }]
+
+Hover src/FirstClassModules.res 16:8
+{"contents": {"kind": "markdown", "value": "```rescript\nstring => unit\n```"}}
+

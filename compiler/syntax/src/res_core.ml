@@ -16,6 +16,11 @@ type inline_types_context = {
   params: (Parsetree.core_type * Asttypes.variance) list;
 }
 
+let extend_current_type_name_path current_type_name_path field_name =
+  match current_type_name_path with
+  | None -> None
+  | Some path -> Some (path @ [field_name])
+
 module Recover = struct
   let default_expr () =
     let id = Location.mknoloc "rescript.exprhole" in
@@ -4667,7 +4672,7 @@ and parse_string_field_declaration p =
 (* field-decl	::=
  *  | [mutable] field-name : poly-typexpr
  *  | attributes field-decl *)
-and parse_field_declaration p =
+and parse_field_declaration ?current_type_name_path ?inline_types_context p =
   let start_pos = p.Parser.start_pos in
   let attrs = parse_attributes p in
   let mut =
@@ -4684,7 +4689,10 @@ and parse_field_declaration p =
     match p.Parser.token with
     | Colon ->
       Parser.next p;
-      parse_poly_type_expr p
+      let current_type_name_path =
+        extend_current_type_name_path current_type_name_path name.txt
+      in
+      parse_poly_type_expr ?current_type_name_path ?inline_types_context p
     | _ ->
       Ast_helper.Typ.constr ~loc:name.loc {name with txt = Lident name.txt} []
   in
@@ -4718,9 +4726,7 @@ and parse_field_declaration_region ?current_type_name_path ?inline_types_context
     let lident, loc = parse_lident p in
     let name = Location.mkloc lident loc in
     let current_type_name_path =
-      match current_type_name_path with
-      | None -> None
-      | Some current_type_name_path -> Some (current_type_name_path @ [name.txt])
+      extend_current_type_name_path current_type_name_path name.txt
     in
     let optional = parse_optional_label p in
     let typ =
@@ -5044,7 +5050,7 @@ and parse_type_representation ?current_type_name_path ?inline_types_context p =
   in
   let kind =
     match p.Parser.token with
-    | Bar | Uident _ | DocComment _ ->
+    | Bar | Uident _ | DocComment _ | At ->
       Parsetree.Ptype_variant (parse_type_constructor_declarations p)
     | Lbrace ->
       Parsetree.Ptype_record
@@ -5379,7 +5385,10 @@ and parse_record_or_object_decl ?current_type_name_path ?inline_types_context p
             p
         | attr :: _ as attrs ->
           let first =
-            let field = parse_field_declaration p in
+            let field =
+              parse_field_declaration ?current_type_name_path
+                ?inline_types_context p
+            in
             Parser.optional p Comma |> ignore;
             {
               field with
@@ -5602,6 +5611,36 @@ and parse_type_equation_and_representation ?current_type_name_path
     | Bar | DotDot | DocComment _ ->
       let priv, kind = parse_type_representation p in
       (None, priv, kind)
+    | At -> (
+      (* Attribute can start a variant constructor or a type manifest.
+         Look ahead past attributes; if a constructor-like token follows (Uident not immediately
+         followed by a Dot, or DotDotDot/Bar/DocComment), treat as variant; otherwise manifest *)
+      let is_variant_after_attrs =
+        Parser.lookahead p (fun state ->
+            ignore (parse_attributes state);
+            match state.Parser.token with
+            | Uident _ -> (
+              Parser.next state;
+              match state.Parser.token with
+              | Dot -> false
+              | _ -> true)
+            | DotDotDot | Bar | DocComment _ -> true
+            | _ -> false)
+      in
+      if is_variant_after_attrs then
+        let priv, kind = parse_type_representation p in
+        (None, priv, kind)
+      else
+        let manifest = Some (parse_typ_expr p) in
+        match p.Parser.token with
+        | Equal ->
+          Parser.next p;
+          let priv, kind =
+            parse_type_representation ?current_type_name_path
+              ?inline_types_context p
+          in
+          (manifest, priv, kind)
+        | _ -> (manifest, Public, Parsetree.Ptype_abstract))
     | _ -> (
       let manifest = Some (parse_typ_expr p) in
       match p.Parser.token with

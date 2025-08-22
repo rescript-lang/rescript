@@ -173,6 +173,46 @@ let findModuleInScope ~env ~moduleName ~scope =
   scope |> Scope.iterModulesAfterFirstOpen processModule;
   !result
 
+let rec moduleItemToStructureEnv ~(env : QueryEnv.t) ~package (item : Module.t)
+    =
+  match item with
+  | Module.Structure structure -> Some (env, structure)
+  | Module.Constraint (_, moduleType) ->
+    moduleItemToStructureEnv ~env ~package moduleType
+  | Module.Ident p -> (
+    match ResolvePath.resolveModuleFromCompilerPath ~env ~package p with
+    | Some (env2, Some declared2) ->
+      moduleItemToStructureEnv ~env:env2 ~package declared2.item
+    | _ -> None)
+
+(* Given a declared module, return the env entered into its concrete structure
+   and the structure itself. Follows constraints and aliases *)
+let enterStructureFromDeclared ~(env : QueryEnv.t) ~package
+    (declared : Module.t Declared.t) =
+  match moduleItemToStructureEnv ~env ~package declared.item with
+  | Some (env, s) -> Some (QueryEnv.enterStructure env s, s)
+  | None -> None
+
+let completionsFromStructureItems ~(env : QueryEnv.t)
+    (structure : Module.structure) =
+  StructureUtils.unique_items structure
+  |> List.filter_map (fun (it : Module.item) ->
+         match it.kind with
+         | Module.Value typ ->
+           Some
+             (Completion.create ~env ~docstring:it.docstring
+                ~kind:(Completion.Value typ) it.name)
+         | Module.Module {type_ = m} ->
+           Some
+             (Completion.create ~env ~docstring:it.docstring
+                ~kind:
+                  (Completion.Module {docstring = it.docstring; module_ = m})
+                it.name)
+         | Module.Type (t, _recStatus) ->
+           Some
+             (Completion.create ~env ~docstring:it.docstring
+                ~kind:(Completion.Type t) it.name))
+
 let resolvePathFromStamps ~(env : QueryEnv.t) ~package ~scope ~moduleName ~path
     =
   (* Log.log("Finding from stamps " ++ name); *)
@@ -180,17 +220,24 @@ let resolvePathFromStamps ~(env : QueryEnv.t) ~package ~scope ~moduleName ~path
   | None -> None
   | Some declared -> (
     (* Log.log("found it"); *)
-    match ResolvePath.findInModule ~env declared.item path with
-    | None -> None
-    | Some res -> (
-      match res with
-      | `Local (env, name) -> Some (env, name)
-      | `Global (moduleName, fullPath) -> (
-        match ProcessCmt.fileForModule ~package moduleName with
-        | None -> None
-        | Some file ->
-          ResolvePath.resolvePath ~env:(QueryEnv.fromFile file) ~path:fullPath
-            ~package)))
+    (* [""] means completion after `ModuleName.` (trailing dot). *)
+    match path with
+    | [""] -> (
+      match moduleItemToStructureEnv ~env ~package declared.item with
+      | Some (env, structure) -> Some (QueryEnv.enterStructure env structure, "")
+      | None -> None)
+    | _ -> (
+      match ResolvePath.findInModule ~env declared.item path with
+      | None -> None
+      | Some res -> (
+        match res with
+        | `Local (env, name) -> Some (env, name)
+        | `Global (moduleName, fullPath) -> (
+          match ProcessCmt.fileForModule ~package moduleName with
+          | None -> None
+          | Some file ->
+            ResolvePath.resolvePath ~env:(QueryEnv.fromFile file) ~path:fullPath
+              ~package))))
 
 let resolveModuleWithOpens ~opens ~package ~moduleName =
   let rec loop opens =
@@ -219,12 +266,17 @@ let getEnvWithOpens ~scope ~(env : QueryEnv.t) ~package
   match resolvePathFromStamps ~env ~scope ~moduleName ~path ~package with
   | Some x -> Some x
   | None -> (
-    match resolveModuleWithOpens ~opens ~package ~moduleName with
-    | Some env -> ResolvePath.resolvePath ~env ~package ~path
-    | None -> (
-      match resolveFileModule ~moduleName ~package with
-      | None -> None
-      | Some env -> ResolvePath.resolvePath ~env ~package ~path))
+    let env_opt =
+      match resolveModuleWithOpens ~opens ~package ~moduleName with
+      | Some envOpens -> Some envOpens
+      | None -> resolveFileModule ~moduleName ~package
+    in
+    match env_opt with
+    | None -> None
+    | Some env -> (
+      match path with
+      | [""] -> Some (env, "")
+      | _ -> ResolvePath.resolvePath ~env ~package ~path))
 
 let rec expandTypeExpr ~env ~package typeExpr =
   match typeExpr |> Shared.digConstructor with
@@ -662,14 +714,47 @@ let getCompletionsForPath ~debug ~opens ~full ~pos ~exact ~scope
     localCompletionsWithOpens @ fileModules
   | moduleName :: path -> (
     Log.log ("Path " ^ pathToString path);
-    match
-      getEnvWithOpens ~scope ~env ~package:full.package ~opens ~moduleName path
-    with
-    | Some (env, prefix) ->
-      Log.log "Got the env";
-      let namesUsed = Hashtbl.create 10 in
-      findAllCompletions ~env ~prefix ~exact ~namesUsed ~completionContext
-    | None -> [])
+    (* [""] is trailing dot completion (`ModuleName.<com>`). *)
+    match path with
+    | [""] -> (
+      let envFile = env in
+      let declaredOpt =
+        match findModuleInScope ~env:envFile ~moduleName ~scope with
+        | Some d -> Some d
+        | None -> (
+          match Exported.find envFile.exported Exported.Module moduleName with
+          | Some stamp -> Stamps.findModule envFile.file.stamps stamp
+          | None -> None)
+      in
+      match declaredOpt with
+      | Some (declared : Module.t Declared.t) when declared.isExported = false
+        -> (
+        match
+          enterStructureFromDeclared ~env:envFile ~package:full.package declared
+        with
+        | None -> []
+        | Some (envInModule, structure) ->
+          completionsFromStructureItems ~env:envInModule structure)
+      | _ -> (
+        match
+          getEnvWithOpens ~scope ~env ~package:full.package ~opens ~moduleName
+            path
+        with
+        | Some (env, prefix) ->
+          Log.log "Got the env";
+          let namesUsed = Hashtbl.create 10 in
+          findAllCompletions ~env ~prefix ~exact ~namesUsed ~completionContext
+        | None -> []))
+    | _ -> (
+      match
+        getEnvWithOpens ~scope ~env ~package:full.package ~opens ~moduleName
+          path
+      with
+      | Some (env, prefix) ->
+        Log.log "Got the env";
+        let namesUsed = Hashtbl.create 10 in
+        findAllCompletions ~env ~prefix ~exact ~namesUsed ~completionContext
+      | None -> []))
 
 (** Completions intended for piping, from a completion path. *)
 let completionsForPipeFromCompletionPath ~envCompletionIsMadeFrom ~opens ~pos

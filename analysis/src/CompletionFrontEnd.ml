@@ -538,8 +538,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
         p
     | Ppat_type _ -> ()
     | Ppat_unpack {txt; loc} ->
-      scope :=
-        !scope |> Scope.addValue ~name:txt ~loc ?contextPath:contextPathToSave
+      scope := !scope |> Scope.addModule ~name:txt ~loc
     | Ppat_exception p -> scopePattern ~patternPath ?contextPath p
     | Ppat_extension _ -> ()
     | Ppat_open (_, p) -> scopePattern ~patternPath ?contextPath p
