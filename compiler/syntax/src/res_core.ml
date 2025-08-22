@@ -157,24 +157,20 @@ module ErrorMessages = struct
      defines more than one inline record."
 
   let keyword_field_in_expr keyword_txt =
-    "Cannot use keyword `"
-    ^ keyword_txt
-    ^ "` as a record field name. Suggestion: rename it (e.g. `"
-    ^ keyword_txt ^ "_`)"
+    "Cannot use keyword `" ^ keyword_txt
+    ^ "` as a record field name. Suggestion: rename it (e.g. `" ^ keyword_txt
+    ^ "_`)"
 
   let keyword_field_in_pattern keyword_txt =
-    "Cannot use keyword `"
-    ^ keyword_txt
+    "Cannot use keyword `" ^ keyword_txt
     ^ "` here. Keywords are not allowed as record field names."
 
   let keyword_field_in_type keyword_txt =
-    "Cannot use keyword `"
-    ^ keyword_txt
-    ^ "` as a record field name. Suggestion: rename it (e.g. `"
-    ^ keyword_txt
-    ^ "_`)\n  If you need the field to be \""
-    ^ keyword_txt ^ "\" at runtime, annotate the field: `@as(\""
-    ^ keyword_txt ^ "\") " ^ keyword_txt ^ "_ : ...`"
+    "Cannot use keyword `" ^ keyword_txt
+    ^ "` as a record field name. Suggestion: rename it (e.g. `" ^ keyword_txt
+    ^ "_`)\n  If you need the field to be \"" ^ keyword_txt
+    ^ "\" at runtime, annotate the field: `@as(\"" ^ keyword_txt ^ "\") "
+    ^ keyword_txt ^ "_ : ...`"
 end
 
 module InExternal = struct
@@ -1438,10 +1434,13 @@ and parse_record_pattern_row p =
         Parser.expect Colon p;
         let optional = parse_optional_label p in
         let pat = parse_pattern p in
-        let field = Location.mkloc (Longident.Lident recovered_field_name) loc in
+        let field =
+          Location.mkloc (Longident.Lident recovered_field_name) loc
+        in
         Some (false, PatField {lid = field; x = pat; opt = optional})
       | None ->
-        emit_keyword_field_error p ~mk_message:ErrorMessages.keyword_field_in_pattern;
+        emit_keyword_field_error p
+          ~mk_message:ErrorMessages.keyword_field_in_pattern;
         None)
     else None
 
@@ -3335,10 +3334,13 @@ and parse_record_expr_row p :
         Parser.expect Colon p;
         let optional = parse_optional_label p in
         let field_expr = parse_expr p in
-        let field = Location.mkloc (Longident.Lident recovered_field_name) loc in
+        let field =
+          Location.mkloc (Longident.Lident recovered_field_name) loc
+        in
         Some {lid = field; x = field_expr; opt = optional}
       | None ->
-        emit_keyword_field_error p ~mk_message:ErrorMessages.keyword_field_in_expr;
+        emit_keyword_field_error p
+          ~mk_message:ErrorMessages.keyword_field_in_expr;
         None)
     else None
 
@@ -4853,7 +4855,8 @@ and parse_field_declaration_region ?current_type_name_path ?inline_types_context
         let name = Location.mkloc recovered_field_name name_loc in
         Some (Ast_helper.Type.field ~attrs ~loc ~mut ~optional name typ)
       | None ->
-        emit_keyword_field_error p ~mk_message:ErrorMessages.keyword_field_in_type;
+        emit_keyword_field_error p
+          ~mk_message:ErrorMessages.keyword_field_in_type;
         None)
     else (
       if attrs <> [] then
