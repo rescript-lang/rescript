@@ -11,31 +11,6 @@
   Cannot use keyword `type` as a record field name. Suggestion: rename it (e.g. `type_`)
   If you need the field to be "type" at runtime, annotate the field: `@as("type") type_ : ...`
 
-
-  Syntax error!
-  syntax_tests/data/parsing/errors/structure/recordFieldKeywordInType.res:3:7
-
-  1 │ type r = {
-  2 │   id: string,
-  3 │   type: int,
-  4 │ }
-  5 │ 
-
-  I'm not sure what to parse here when looking at ":".
-
-
-  Syntax error!
-  syntax_tests/data/parsing/errors/structure/recordFieldKeywordInType.res:3:12
-
-  1 │ type r = {
-  2 │   id: string,
-  3 │   type: int,
-  4 │ }
-  5 │ 
-
-  I'm not sure what to parse here when looking at ",".
-
 type nonrec r = {
-  id: string }
-type nonrec _
-;;int
+  id: string ;
+  type: int }
