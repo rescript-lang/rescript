@@ -252,6 +252,9 @@ let command ~debug ~emitter ~path =
             match lid with
             (* Array spreads (`...`) are converted to `Belt.Array.concatMany` *)
             | Ldot (Ldot (Lident "Belt", "Array"), "concatMany") -> false
+            (* Dict syntax (`dict{...}`) is converted to `Primitive_dict.make` *)
+            | Ldot (Lident "Primitive_dict", "make") -> false
+            | Lident "Primitive_dict" -> false
             | _ -> true
           in
           if should_emit then
