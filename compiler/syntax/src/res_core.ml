@@ -1382,7 +1382,19 @@ and parse_record_pattern_row p =
   | Underscore ->
     Parser.next p;
     Some (false, PatUnderscore)
-  | _ -> None
+  | _ ->
+    if Token.is_keyword p.token then (
+      let keyword_txt = Token.to_string p.token in
+      let keyword_start = p.Parser.start_pos in
+      let keyword_end = p.Parser.end_pos in
+      let message =
+        "Cannot use keyword `" ^ keyword_txt
+        ^ "` here. Keywords are not allowed as record field names."
+      in
+      Parser.err ~start_pos:keyword_start ~end_pos:keyword_end p
+        (Diagnostics.message message);
+      None)
+    else None
 
 and parse_record_pattern ~attrs p =
   let start_pos = p.start_pos in
@@ -2928,6 +2940,25 @@ and parse_braced_or_record_expr p =
   let start_pos = p.Parser.start_pos in
   Parser.expect Lbrace p;
   match p.Parser.token with
+  | token when Token.is_keyword token ->
+    let colon_follows =
+      Parser.lookahead p (fun st ->
+          Parser.next st;
+          st.Parser.token = Colon)
+    in
+    (* If a colon follows then this is likely to be a record field. *)
+    (if colon_follows then
+       let keyword_txt = Token.to_string token in
+       Parser.err ~start_pos:p.start_pos ~end_pos:p.end_pos p
+         (Diagnostics.message
+            ("Cannot use keyword `" ^ keyword_txt
+           ^ "` as a record field name. Suggestion: rename it (e.g. `"
+           ^ keyword_txt ^ "_`)")));
+    let expr = parse_expr_block p in
+    Parser.expect Rbrace p;
+    let loc = mk_loc start_pos p.prev_end_pos in
+    let braces = make_braces_attr loc in
+    {expr with pexp_attributes = braces :: expr.pexp_attributes}
   | Rbrace ->
     Parser.next p;
     let loc = mk_loc start_pos p.prev_end_pos in
@@ -3244,7 +3275,20 @@ and parse_record_expr_row p :
       in
       Some {lid = field; x = value; opt = true}
     | _ -> None)
-  | _ -> None
+  | _ ->
+    if Token.is_keyword p.token then (
+      let keyword_txt = Token.to_string p.token in
+      let keyword_start = p.Parser.start_pos in
+      let keyword_end = p.Parser.end_pos in
+      let message =
+        "Cannot use keyword `" ^ keyword_txt
+        ^ "` as a record field name. Suggestion: rename it (e.g. `"
+        ^ keyword_txt ^ "_`)"
+      in
+      Parser.err ~start_pos:keyword_start ~end_pos:keyword_end p
+        (Diagnostics.message message);
+      None)
+    else None
 
 and parse_dict_expr_row p =
   match p.Parser.token with
@@ -4742,17 +4786,32 @@ and parse_field_declaration_region ?current_type_name_path ?inline_types_context
     let loc = mk_loc start_pos typ.ptyp_loc.loc_end in
     Some (Ast_helper.Type.field ~attrs ~loc ~mut ~optional name typ)
   | _ ->
-    if attrs <> [] then
-      Parser.err ~start_pos p
-        (Diagnostics.message
-           "Attributes and doc comments can only be used at the beginning of a \
-            field declaration");
-    if mut = Mutable then
-      Parser.err ~start_pos p
-        (Diagnostics.message
-           "The `mutable` qualifier can only be used at the beginning of a \
-            field declaration");
-    None
+    if Token.is_keyword p.token then (
+      let keyword_txt = Token.to_string p.token in
+      let keyword_start = p.Parser.start_pos in
+      let keyword_end = p.Parser.end_pos in
+      let message =
+        "Cannot use keyword `" ^ keyword_txt
+        ^ "` as a record field name. Suggestion: rename it (e.g. `"
+        ^ keyword_txt ^ "_`)\n" ^ "  If you need the field to be \""
+        ^ keyword_txt ^ "\" at runtime, annotate the field: `@as(\""
+        ^ keyword_txt ^ "\") " ^ keyword_txt ^ "_ : ...`"
+      in
+      Parser.err ~start_pos:keyword_start ~end_pos:keyword_end p
+        (Diagnostics.message message);
+      None)
+    else (
+      if attrs <> [] then
+        Parser.err ~start_pos p
+          (Diagnostics.message
+             "Attributes and doc comments can only be used at the beginning of \
+              a field declaration");
+      if mut = Mutable then
+        Parser.err ~start_pos p
+          (Diagnostics.message
+             "The `mutable` qualifier can only be used at the beginning of a \
+              field declaration");
+      None)
 
 (* record-decl ::=
  *  | { field-decl }
