@@ -7,4 +7,4 @@
 
   Cannot use keyword `type` as a record field name. Suggestion: rename it (e.g. `type_`)
 
-let r = { type = 1 }
+let r = { type_ = 1 }

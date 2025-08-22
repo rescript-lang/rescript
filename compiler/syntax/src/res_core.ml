@@ -155,6 +155,26 @@ module ErrorMessages = struct
   let multiple_inline_record_definitions_at_same_path =
     "Only one inline record definition is allowed per record field. This \
      defines more than one inline record."
+
+  let keyword_field_in_expr keyword_txt =
+    "Cannot use keyword `"
+    ^ keyword_txt
+    ^ "` as a record field name. Suggestion: rename it (e.g. `"
+    ^ keyword_txt ^ "_`)"
+
+  let keyword_field_in_pattern keyword_txt =
+    "Cannot use keyword `"
+    ^ keyword_txt
+    ^ "` here. Keywords are not allowed as record field names."
+
+  let keyword_field_in_type keyword_txt =
+    "Cannot use keyword `"
+    ^ keyword_txt
+    ^ "` as a record field name. Suggestion: rename it (e.g. `"
+    ^ keyword_txt
+    ^ "_`)\n  If you need the field to be \""
+    ^ keyword_txt ^ "\" at runtime, annotate the field: `@as(\""
+    ^ keyword_txt ^ "\") " ^ keyword_txt ^ "_ : ...`"
 end
 
 module InExternal = struct
@@ -403,8 +423,17 @@ let build_longident words =
   | [] -> assert false
   | hd :: tl -> List.fold_left (fun p s -> Longident.Ldot (p, s)) (Lident hd) tl
 
-(* Recovers a keyword used as field name if it's probable that it's a full 
-  field name (not punning etc), by checking if there's a colon after it. *)
+(* Emit a keyword-as-field diagnostic for the current token using a context-specific
+   message builder. *)
+let emit_keyword_field_error (p : Parser.t) ~mk_message =
+  let keyword_txt = Token.to_string p.token in
+  let keyword_start = p.Parser.start_pos in
+  let keyword_end = p.Parser.end_pos in
+  Parser.err ~start_pos:keyword_start ~end_pos:keyword_end p
+    (Diagnostics.message (mk_message keyword_txt))
+
+(* Recovers a keyword used as field name if it's probable that it's a full
+   field name (not punning etc), by checking if there's a colon after it. *)
 let recover_keyword_field_name_if_probably_field p ~mk_message :
     (string * Location.t) option =
   if
@@ -413,13 +442,9 @@ let recover_keyword_field_name_if_probably_field p ~mk_message :
            Parser.next st;
            st.Parser.token = Colon)
   then (
-    let keyword_txt = Token.to_string p.token in
-    let keyword_start = p.Parser.start_pos in
-    let keyword_end = p.Parser.end_pos in
-    Parser.err ~start_pos:keyword_start ~end_pos:keyword_end p
-      (Diagnostics.message (mk_message keyword_txt));
-    let loc = mk_loc keyword_start keyword_end in
-    let recovered_field_name = keyword_txt ^ "_" in
+    emit_keyword_field_error p ~mk_message;
+    let loc = mk_loc p.Parser.start_pos p.Parser.end_pos in
+    let recovered_field_name = Token.to_string p.token ^ "_" in
     Parser.next p;
     Some (recovered_field_name, loc))
   else None
@@ -1407,28 +1432,16 @@ and parse_record_pattern_row p =
     if Token.is_keyword p.token then (
       match
         recover_keyword_field_name_if_probably_field p
-          ~mk_message:(fun keyword_txt ->
-            "Cannot use keyword `" ^ keyword_txt
-            ^ "` here. Keywords are not allowed as record field names.")
+          ~mk_message:ErrorMessages.keyword_field_in_pattern
       with
       | Some (recovered_field_name, loc) ->
         Parser.expect Colon p;
         let optional = parse_optional_label p in
         let pat = parse_pattern p in
-        let field =
-          Location.mkloc (Longident.Lident recovered_field_name) loc
-        in
+        let field = Location.mkloc (Longident.Lident recovered_field_name) loc in
         Some (false, PatField {lid = field; x = pat; opt = optional})
       | None ->
-        let keyword_txt = Token.to_string p.token in
-        let keyword_start = p.Parser.start_pos in
-        let keyword_end = p.Parser.end_pos in
-        let message =
-          "Cannot use keyword `" ^ keyword_txt
-          ^ "` here. Keywords are not allowed as record field names."
-        in
-        Parser.err ~start_pos:keyword_start ~end_pos:keyword_end p
-          (Diagnostics.message message);
+        emit_keyword_field_error p ~mk_message:ErrorMessages.keyword_field_in_pattern;
         None)
     else None
 
@@ -2979,10 +2992,7 @@ and parse_braced_or_record_expr p =
   | token when Token.is_keyword token -> (
     match
       recover_keyword_field_name_if_probably_field p
-        ~mk_message:(fun keyword_txt ->
-          "Cannot use keyword `" ^ keyword_txt
-          ^ "` as a record field name. Suggestion: rename it (e.g. `"
-          ^ keyword_txt ^ "_`)")
+        ~mk_message:ErrorMessages.keyword_field_in_expr
     with
     | Some (recovered_field_name, loc) ->
       Parser.expect Colon p;
@@ -3319,30 +3329,16 @@ and parse_record_expr_row p :
     if Token.is_keyword p.token then (
       match
         recover_keyword_field_name_if_probably_field p
-          ~mk_message:(fun keyword_txt ->
-            "Cannot use keyword `" ^ keyword_txt
-            ^ "` as a record field name. Suggestion: rename it (e.g. `"
-            ^ keyword_txt ^ "_`)")
+          ~mk_message:ErrorMessages.keyword_field_in_expr
       with
       | Some (recovered_field_name, loc) ->
         Parser.expect Colon p;
         let optional = parse_optional_label p in
         let field_expr = parse_expr p in
-        let field =
-          Location.mkloc (Longident.Lident recovered_field_name) loc
-        in
+        let field = Location.mkloc (Longident.Lident recovered_field_name) loc in
         Some {lid = field; x = field_expr; opt = optional}
       | None ->
-        let keyword_txt = Token.to_string p.token in
-        let keyword_start = p.Parser.start_pos in
-        let keyword_end = p.Parser.end_pos in
-        let message =
-          "Cannot use keyword `" ^ keyword_txt
-          ^ "` as a record field name. Suggestion: rename it (e.g. `"
-          ^ keyword_txt ^ "_`)"
-        in
-        Parser.err ~start_pos:keyword_start ~end_pos:keyword_end p
-          (Diagnostics.message message);
+        emit_keyword_field_error p ~mk_message:ErrorMessages.keyword_field_in_expr;
         None)
     else None
 
@@ -4845,12 +4841,7 @@ and parse_field_declaration_region ?current_type_name_path ?inline_types_context
     if Token.is_keyword p.token then (
       match
         recover_keyword_field_name_if_probably_field p
-          ~mk_message:(fun keyword_txt ->
-            "Cannot use keyword `" ^ keyword_txt
-            ^ "` as a record field name. Suggestion: rename it (e.g. `"
-            ^ keyword_txt ^ "_`)\n" ^ "  If you need the field to be \""
-            ^ keyword_txt ^ "\" at runtime, annotate the field: `@as(\""
-            ^ keyword_txt ^ "\") " ^ keyword_txt ^ "_ : ...`")
+          ~mk_message:ErrorMessages.keyword_field_in_type
       with
       | Some (recovered_field_name, name_loc) ->
         let optional = parse_optional_label p in
@@ -4862,18 +4853,7 @@ and parse_field_declaration_region ?current_type_name_path ?inline_types_context
         let name = Location.mkloc recovered_field_name name_loc in
         Some (Ast_helper.Type.field ~attrs ~loc ~mut ~optional name typ)
       | None ->
-        let keyword_txt = Token.to_string p.token in
-        let keyword_start = p.Parser.start_pos in
-        let keyword_end = p.Parser.end_pos in
-        let message =
-          "Cannot use keyword `" ^ keyword_txt
-          ^ "` as a record field name. Suggestion: rename it (e.g. `"
-          ^ keyword_txt ^ "_`)\n" ^ "  If you need the field to be \""
-          ^ keyword_txt ^ "\" at runtime, annotate the field: `@as(\""
-          ^ keyword_txt ^ "\") " ^ keyword_txt ^ "_ : ...`"
-        in
-        Parser.err ~start_pos:keyword_start ~end_pos:keyword_end p
-          (Diagnostics.message message);
+        emit_keyword_field_error p ~mk_message:ErrorMessages.keyword_field_in_type;
         None)
     else (
       if attrs <> [] then
