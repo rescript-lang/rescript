@@ -255,6 +255,8 @@ let command ~debug ~emitter ~path =
             (* Dict syntax (`dict{...}`) is converted to `Primitive_dict.make` *)
             | Ldot (Lident "Primitive_dict", "make") -> false
             | Lident "Primitive_dict" -> false
+            (* Array access (`arr[index]`) is converted to `Array.get` *)
+            | Ldot (Lident "Array", "get") -> false
             | _ -> true
           in
           if should_emit then
