@@ -1,0 +1,10 @@
+
+  Syntax error!
+  syntax_tests/data/parsing/errors/structure/recordFieldKeywordInExpr2.res:1:16-19
+
+  1 │ let r = {a: 1, type: 2}
+  2 │ 
+
+  Cannot use keyword `type` as a record field name. Suggestion: rename it (e.g. `type_`)
+
+let r = { a = 1; type_ = 2 }

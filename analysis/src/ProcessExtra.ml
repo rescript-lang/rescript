@@ -358,6 +358,25 @@ let typ ~env ~extra (iter : Tast_iterator.iterator) (item : Typedtree.core_type)
 
 let pat ~(file : File.t) ~env ~extra (iter : Tast_iterator.iterator)
     (pattern : Typedtree.pattern) =
+  (* Detect first-class module unpack in a pattern and return the module path
+     if present. Used to register a synthetic module declaration *)
+  let unpacked_module_path_opt () =
+    let has_unpack =
+      match
+        pattern.pat_extra
+        |> List.filter_map (function
+             | Typedtree.Tpat_unpack, _, _ -> Some ()
+             | _ -> None)
+      with
+      | _ :: _ -> true
+      | [] -> false
+    in
+    if not has_unpack then None
+    else
+      match (Shared.dig pattern.pat_type).desc with
+      | Tpackage (path, _, _) -> Some path
+      | _ -> None
+  in
   let addForPattern stamp name =
     if Stamps.findValue file.stamps stamp = None then (
       let declared =
@@ -376,13 +395,27 @@ let pat ~(file : File.t) ~env ~extra (iter : Tast_iterator.iterator)
     addForRecord ~env ~extra ~recordType:pattern.pat_type items
   | Tpat_construct (lident, constructor, _) ->
     addForConstructor ~env ~extra pattern.pat_type lident constructor
-  | Tpat_alias (_inner, ident, name) ->
+  | Tpat_alias (_inner, ident, name) -> (
     let stamp = Ident.binding_time ident in
-    addForPattern stamp name
-  | Tpat_var (ident, name) ->
+    match unpacked_module_path_opt () with
+    | Some path ->
+      let declared =
+        ProcessAttributes.newDeclared ~item:(Module.Ident path) ~extent:name.loc
+          ~name ~stamp ~modulePath:NotVisible false pattern.pat_attributes
+      in
+      Stamps.addModule file.stamps stamp declared
+    | None -> addForPattern stamp name)
+  | Tpat_var (ident, name) -> (
     (* Log.log("Pattern " ++ name.txt); *)
     let stamp = Ident.binding_time ident in
-    addForPattern stamp name
+    match unpacked_module_path_opt () with
+    | Some path ->
+      let declared =
+        ProcessAttributes.newDeclared ~item:(Module.Ident path) ~extent:name.loc
+          ~name ~stamp ~modulePath:NotVisible false pattern.pat_attributes
+      in
+      Stamps.addModule file.stamps stamp declared
+    | None -> addForPattern stamp name)
   | _ -> ());
   Tast_iterator.default_iterator.pat iter pattern
 

@@ -20,14 +20,20 @@
 
 - Add markdown divider between module doc and module type in hover information. https://github.com/rescript-lang/rescript/pull/7775
 - Show docstrings before type expansions on hover. https://github.com/rescript-lang/rescript/pull/7774
+- Autocomplete (and improved hovers) for first-class module unpacks. https://github.com/rescript-lang/rescript/pull/7780
 
 #### :bug: Bug fix
 
 - Preserve `@as(...)` decorator on record fields when creating interface. https://github.com/rescript-lang/rescript/pull/7779
+- Fix parse error with nested record types and attributes on the field name that has the nested record type. https://github.com/rescript-lang/rescript/pull/7781
+- Fix ppx resolution with package inside monorepo. https://github.com/rescript-lang/rescript/pull/7776
 
 #### :memo: Documentation
 
 #### :nail_care: Polish
+
+- Allow skipping the leading pipe in variant definition with a leading constructor with an attribute. https://github.com/rescript-lang/rescript/pull/7782
+- Better error message (and recovery) when using a keyword as a record field name. https://github.com/rescript-lang/rescript/pull/7784
 
 #### :house: Internal
 

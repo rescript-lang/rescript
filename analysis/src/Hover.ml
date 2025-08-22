@@ -287,16 +287,29 @@ let newHover ~full:{file; package} ~supportsMarkdownLinks locItem =
          | Const_int32 _ -> "int32"
          | Const_int64 _ -> "int64"
          | Const_bigint _ -> "bigint"))
-  | Typed (_, t, locKind) ->
+  | Typed (_, t, locKind) -> (
     let fromType ?docstring ?constructor typ =
       hoverWithExpandedTypes ~file ~package ~supportsMarkdownLinks ?docstring
         ?constructor typ
     in
-    Some
-      (match References.definedForLoc ~file ~package locKind with
-      | None -> t |> fromType
-      | Some (docstring, res) -> (
-        match res with
-        | `Declared | `Field -> t |> fromType ~docstring
-        | `Constructor constructor ->
-          t |> fromType ~docstring:constructor.docstring ~constructor))
+    (* Expand first-class modules to the underlying module type signature. *)
+    let t = Shared.dig t in
+    match t.desc with
+    | Tpackage (path, _lids, _tys) -> (
+      let env = QueryEnv.fromFile file in
+      match ResolvePath.resolveModuleFromCompilerPath ~env ~package path with
+      | None -> Some (fromType t)
+      | Some (envForModule, Some declared) ->
+        let name = Path.name path in
+        showModule ~docstring:declared.docstring ~name ~file:envForModule.file
+          ~package (Some declared)
+      | Some (_, None) -> Some (fromType t))
+    | _ ->
+      Some
+        (match References.definedForLoc ~file ~package locKind with
+        | None -> t |> fromType
+        | Some (docstring, res) -> (
+          match res with
+          | `Declared | `Field -> t |> fromType ~docstring
+          | `Constructor constructor ->
+            t |> fromType ~docstring:constructor.docstring ~constructor)))
