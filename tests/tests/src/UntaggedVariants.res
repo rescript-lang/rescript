@@ -1,5 +1,3 @@
-module Array = Ocaml_Array
-
 @unboxed
 type t = A | I(int) | S(string)
 @unboxed
@@ -182,7 +180,7 @@ let classify  (x : t) : tagged_t =
   else if Js_array2.isArray x  then
     JSONArray (Obj.magic x)
   else
-    JSONObject (Obj.magic x)  
+    JSONObject (Obj.magic x)
  */
 }
 
@@ -249,7 +247,7 @@ module RecordIsObject = {
   let classify = v =>
     switch v {
     | Record({x}) => x
-    | Array(a) => a[0]
+    | Array(a) => a->Array.getUnsafe(0)
     }
 }
 
@@ -260,7 +258,7 @@ module ArrayAndObject = {
   let classify = v =>
     switch v {
     | Record({x}) => x
-    | Array(a) => a[0]
+    | Array(a) => a->Array.getUnsafe(0)
     }
 }
 
@@ -303,7 +301,7 @@ module TestFunctionCase = {
   let classify = v =>
     switch v {
     | Record({x}) => x
-    | Array(a) => a[0]
+    | Array(a) => a->Array.getUnsafe(0)
     | Function(f) => f(3)
     }
 
@@ -402,6 +400,19 @@ module AllInstanceofTypes = {
     | RegExp(Stdlib_RegExp.t)
     | File(Js.File.t)
     | Blob(Js.Blob.t)
+    | ArrayBuffer(ArrayBuffer.t)
+    | Int8Array(Int8Array.t)
+    | Int16Array(Int16Array.t)
+    | Int32Array(Int32Array.t)
+    | Uint8Array(Uint8Array.t)
+    | Uint8ClampedArray(Uint8ClampedArray.t)
+    | Uint16Array(Uint16Array.t)
+    | Uint32Array(Uint32Array.t)
+    | Float32Array(Float32Array.t)
+    | Float64Array(Float64Array.t)
+    | BigInt64Array(BigInt64Array.t)
+    | BigUint64Array(BigUint64Array.t)
+    | DataView(DataView.t)
 
   let classifyAll = async (t: t) =>
     switch t {
@@ -413,6 +424,19 @@ module AllInstanceofTypes = {
     | Array(arr) => Js.log(arr->Belt.Array.joinWith("-", x => x))
     | File(file) => Js.log(file->fileName)
     | Blob(blob) => Js.log(blob->blobSize)
+    | ArrayBuffer(_) => Js.log("ArrayBuffer")
+    | Int8Array(_) => Js.log("Int8Array")
+    | Int16Array(_) => Js.log("Int16Array")
+    | Int32Array(_) => Js.log("Int32Array")
+    | Uint8Array(_) => Js.log("Uint8Array")
+    | Uint8ClampedArray(_) => Js.log("Uint8ClampedArray")
+    | Uint16Array(_) => Js.log("Uint16Array")
+    | Uint32Array(_) => Js.log("Uint32Array")
+    | Float32Array(_) => Js.log("Float32Array")
+    | Float64Array(_) => Js.log("Float64Array")
+    | BigInt64Array(_) => Js.log("BigInt64Array")
+    | BigUint64Array(_) => Js.log("BigUint64Array")
+    | DataView(_) => Js.log("DataView")
     }
 }
 
