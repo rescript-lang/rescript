@@ -46,3 +46,7 @@ type domProps = {
   @optional
   loop: bool,
 }
+
+// attribute allowed before record representation
+type t = @attr {x: int}
+type t = @attr /**doc before record*/ {x: int}
