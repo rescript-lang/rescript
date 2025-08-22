@@ -248,10 +248,16 @@ let command ~debug ~emitter ~path =
     | Pexp_ident {txt = lid; loc} ->
       if lid <> Lident "not" then
         if not loc.loc_ghost then (
+          (* Don't emit semantic tokens for identifiers not present in source code *)
           let should_emit =
             match lid with
-            (* Array spreads (`...`) are converted to `Belt.Array.concatMany` *)
-            | Ldot (Ldot (Lident "Belt", "Array"), "concatMany") -> false
+            (* Array spread (`...`) is converted to `Belt.Array.concatMany` with `@res.spread` decorator *)
+            | Ldot (Ldot (Lident "Belt", "Array"), "concatMany") ->
+              let has_spread_attr =
+                e.pexp_attributes
+                |> List.exists (fun ({Location.txt}, _) -> txt = "res.spread")
+              in
+              not has_spread_attr
             (* Dict syntax (`dict{...}`) is converted to `Primitive_dict.make` *)
             | Ldot (Lident "Primitive_dict", "make") -> false
             | Lident "Primitive_dict" -> false
