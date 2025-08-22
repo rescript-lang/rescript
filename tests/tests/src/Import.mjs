@@ -120,6 +120,19 @@ async function f7() {
   return 1;
 }
 
+async function f8() {
+  await import("rescript/lib/es6/Belt_MutableQueue.js");
+  return 1;
+}
+
+async function f9(value) {
+  if (value !== undefined) {
+    await import("rescript/lib/es6/Belt_HashMapInt.js");
+    return;
+  }
+  
+}
+
 let each = M1.forEach;
 
 let M2;
@@ -145,5 +158,7 @@ export {
   f5,
   f6,
   f7,
+  f8,
+  f9,
 }
 /*  Not a pure module */

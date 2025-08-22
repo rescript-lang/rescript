@@ -568,6 +568,14 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
               aux then_expr @ aux else_expr
             | Pexp_construct (_, Some expr) -> aux expr
             | Pexp_fun {rhs = expr} | Pexp_newtype (_, expr) -> aux expr
+            | Pexp_constraint (expr, _) -> aux expr
+            | Pexp_match (expr, cases) ->
+              let case_results =
+                List.fold_left
+                  (fun acc (case : Parsetree.case) -> aux case.pc_rhs @ acc)
+                  [] cases
+              in
+              aux expr @ case_results
             | _ -> acc
           in
           aux pvb_expr @ spelunk_vbs acc tl
