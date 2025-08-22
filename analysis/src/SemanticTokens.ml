@@ -263,6 +263,8 @@ let command ~debug ~emitter ~path =
             | Lident "Primitive_dict" -> false
             (* Array access (`arr[index]`) is converted to `Array.get` *)
             | Ldot (Lident "Array", "get") -> false
+            (* Array mutation (`arr[index]`) is converted to `Array.set` *)
+            | Ldot (Lident "Array", "set") -> false
             | _ -> true
           in
           if should_emit then
