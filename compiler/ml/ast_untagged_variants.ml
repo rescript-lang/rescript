@@ -1,7 +1,8 @@
 module Instance = struct
-  type t = Array | Blob | Date | File | Promise | RegExp
+  type t = Array | ArrayBuffer | Blob | Date | File | Promise | RegExp
   let to_string = function
     | Array -> "Array"
+    | ArrayBuffer -> "ArrayBuffer"
     | Blob -> "Blob"
     | Date -> "Date"
     | File -> "File"
@@ -200,6 +201,7 @@ let type_to_instanceof_backed_obj (t : Types.type_expr) =
   | Tconstr (path, _, _) when Path.same path Predef.path_array -> Some Array
   | Tconstr (path, _, _) -> (
     match Path.name path with
+    | "Stdlib_ArrayBuffer.t" -> Some ArrayBuffer
     | "Stdlib_Date.t" -> Some Date
     | "Stdlib_RegExp.t" -> Some RegExp
     | "Js_file.t" -> Some File
