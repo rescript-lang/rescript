@@ -607,3 +607,16 @@ let re = /^((a)c)?(ab)$/
 let re = /^([ab]*?)(?=(b)?)c/
 let re = /^([ab]*?)(?!(b))c/
 let re = /^([ab]*?)(?<!(a))c/
+
+let re = /\.[^/.]+$/
+
+// Leading ']' is literal; '/' inside class must not terminate
+let re = /[]/]/
+let re = /[^]]/
+let re = /[/]/
+
+// Additional leading ']' edge cases
+let re = /[]]/
+let re = /[\]]/
+let re = /[[]]/
+let re = /[^]/]/
