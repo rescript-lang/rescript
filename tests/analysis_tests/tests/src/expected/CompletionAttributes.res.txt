@@ -25,12 +25,6 @@ Resolved opens 1 Stdlib
     "detail": "Package",
     "documentation": null
   }, {
-    "label": "./CreateInterface.cmt",
-    "kind": 4,
-    "tags": [],
-    "detail": "Local file",
-    "documentation": null
-  }, {
     "label": "./test.json",
     "kind": 4,
     "tags": [],
@@ -198,12 +192,6 @@ Resolved opens 1 Stdlib
     "detail": "Package",
     "documentation": null
   }, {
-    "label": "./CreateInterface.cmt",
-    "kind": 4,
-    "tags": [],
-    "detail": "Local file",
-    "documentation": null
-  }, {
     "label": "./test.json",
     "kind": 4,
     "tags": [],
@@ -227,12 +215,6 @@ Resolved opens 1 Stdlib
     "kind": 4,
     "tags": [],
     "detail": "Package",
-    "documentation": null
-  }, {
-    "label": "./CreateInterface.cmt",
-    "kind": 4,
-    "tags": [],
-    "detail": "Local file",
     "documentation": null
   }, {
     "label": "./test.json",
