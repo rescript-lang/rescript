@@ -16,6 +16,11 @@ type inline_types_context = {
   params: (Parsetree.core_type * Asttypes.variance) list;
 }
 
+let extend_current_type_name_path current_type_name_path field_name =
+  match current_type_name_path with
+  | None -> None
+  | Some path -> Some (path @ [field_name])
+
 module Recover = struct
   let default_expr () =
     let id = Location.mknoloc "rescript.exprhole" in
@@ -150,6 +155,22 @@ module ErrorMessages = struct
   let multiple_inline_record_definitions_at_same_path =
     "Only one inline record definition is allowed per record field. This \
      defines more than one inline record."
+
+  let keyword_field_in_expr keyword_txt =
+    "Cannot use keyword `" ^ keyword_txt
+    ^ "` as a record field name. Suggestion: rename it (e.g. `" ^ keyword_txt
+    ^ "_`)"
+
+  let keyword_field_in_pattern keyword_txt =
+    "Cannot use keyword `" ^ keyword_txt
+    ^ "` here. Keywords are not allowed as record field names."
+
+  let keyword_field_in_type keyword_txt =
+    "Cannot use keyword `" ^ keyword_txt
+    ^ "` as a record field name. Suggestion: rename it (e.g. `" ^ keyword_txt
+    ^ "_`)\n  If you need the field to be \"" ^ keyword_txt
+    ^ "\" at runtime, annotate the field: `@as(\"" ^ keyword_txt ^ "\") "
+    ^ keyword_txt ^ "_ : ...`"
 end
 
 module InExternal = struct
@@ -397,6 +418,30 @@ let build_longident words =
   match List.rev words with
   | [] -> assert false
   | hd :: tl -> List.fold_left (fun p s -> Longident.Ldot (p, s)) (Lident hd) tl
+
+let emit_keyword_field_error (p : Parser.t) ~mk_message =
+  let keyword_txt = Token.to_string p.token in
+  let keyword_start = p.Parser.start_pos in
+  let keyword_end = p.Parser.end_pos in
+  Parser.err ~start_pos:keyword_start ~end_pos:keyword_end p
+    (Diagnostics.message (mk_message keyword_txt))
+
+(* Recovers a keyword used as field name if it's probable that it's a full
+   field name (not punning etc), by checking if there's a colon after it. *)
+let recover_keyword_field_name_if_probably_field p ~mk_message :
+    (string * Location.t) option =
+  if
+    Token.is_keyword p.Parser.token
+    && Parser.lookahead p (fun st ->
+           Parser.next st;
+           st.Parser.token = Colon)
+  then (
+    emit_keyword_field_error p ~mk_message;
+    let loc = mk_loc p.Parser.start_pos p.Parser.end_pos in
+    let recovered_field_name = Token.to_string p.token ^ "_" in
+    Parser.next p;
+    Some (recovered_field_name, loc))
+  else None
 
 let make_infix_operator (p : Parser.t) token start_pos end_pos =
   let stringified_token =
@@ -1377,7 +1422,25 @@ and parse_record_pattern_row p =
   | Underscore ->
     Parser.next p;
     Some (false, PatUnderscore)
-  | _ -> None
+  | _ ->
+    if Token.is_keyword p.token then (
+      match
+        recover_keyword_field_name_if_probably_field p
+          ~mk_message:ErrorMessages.keyword_field_in_pattern
+      with
+      | Some (recovered_field_name, loc) ->
+        Parser.expect Colon p;
+        let optional = parse_optional_label p in
+        let pat = parse_pattern p in
+        let field =
+          Location.mkloc (Longident.Lident recovered_field_name) loc
+        in
+        Some (false, PatField {lid = field; x = pat; opt = optional})
+      | None ->
+        emit_keyword_field_error p
+          ~mk_message:ErrorMessages.keyword_field_in_pattern;
+        None)
+    else None
 
 and parse_record_pattern ~attrs p =
   let start_pos = p.start_pos in
@@ -2923,6 +2986,26 @@ and parse_braced_or_record_expr p =
   let start_pos = p.Parser.start_pos in
   Parser.expect Lbrace p;
   match p.Parser.token with
+  | token when Token.is_keyword token -> (
+    match
+      recover_keyword_field_name_if_probably_field p
+        ~mk_message:ErrorMessages.keyword_field_in_expr
+    with
+    | Some (recovered_field_name, loc) ->
+      Parser.expect Colon p;
+      let optional = parse_optional_label p in
+      let field_expr = parse_expr p in
+      let field = Location.mkloc (Longident.Lident recovered_field_name) loc in
+      let first_row = {Parsetree.lid = field; x = field_expr; opt = optional} in
+      let expr = parse_record_expr ~start_pos [first_row] p in
+      Parser.expect Rbrace p;
+      expr
+    | None ->
+      let expr = parse_expr_block p in
+      Parser.expect Rbrace p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      let braces = make_braces_attr loc in
+      {expr with pexp_attributes = braces :: expr.pexp_attributes})
   | Rbrace ->
     Parser.next p;
     let loc = mk_loc start_pos p.prev_end_pos in
@@ -3239,7 +3322,25 @@ and parse_record_expr_row p :
       in
       Some {lid = field; x = value; opt = true}
     | _ -> None)
-  | _ -> None
+  | _ ->
+    if Token.is_keyword p.token then (
+      match
+        recover_keyword_field_name_if_probably_field p
+          ~mk_message:ErrorMessages.keyword_field_in_expr
+      with
+      | Some (recovered_field_name, loc) ->
+        Parser.expect Colon p;
+        let optional = parse_optional_label p in
+        let field_expr = parse_expr p in
+        let field =
+          Location.mkloc (Longident.Lident recovered_field_name) loc
+        in
+        Some {lid = field; x = field_expr; opt = optional}
+      | None ->
+        emit_keyword_field_error p
+          ~mk_message:ErrorMessages.keyword_field_in_expr;
+        None)
+    else None
 
 and parse_dict_expr_row p =
   match p.Parser.token with
@@ -4667,7 +4768,7 @@ and parse_string_field_declaration p =
 (* field-decl	::=
  *  | [mutable] field-name : poly-typexpr
  *  | attributes field-decl *)
-and parse_field_declaration p =
+and parse_field_declaration ?current_type_name_path ?inline_types_context p =
   let start_pos = p.Parser.start_pos in
   let attrs = parse_attributes p in
   let mut =
@@ -4684,7 +4785,10 @@ and parse_field_declaration p =
     match p.Parser.token with
     | Colon ->
       Parser.next p;
-      parse_poly_type_expr p
+      let current_type_name_path =
+        extend_current_type_name_path current_type_name_path name.txt
+      in
+      parse_poly_type_expr ?current_type_name_path ?inline_types_context p
     | _ ->
       Ast_helper.Typ.constr ~loc:name.loc {name with txt = Lident name.txt} []
   in
@@ -4718,9 +4822,7 @@ and parse_field_declaration_region ?current_type_name_path ?inline_types_context
     let lident, loc = parse_lident p in
     let name = Location.mkloc lident loc in
     let current_type_name_path =
-      match current_type_name_path with
-      | None -> None
-      | Some current_type_name_path -> Some (current_type_name_path @ [name.txt])
+      extend_current_type_name_path current_type_name_path name.txt
     in
     let optional = parse_optional_label p in
     let typ =
@@ -4736,17 +4838,36 @@ and parse_field_declaration_region ?current_type_name_path ?inline_types_context
     let loc = mk_loc start_pos typ.ptyp_loc.loc_end in
     Some (Ast_helper.Type.field ~attrs ~loc ~mut ~optional name typ)
   | _ ->
-    if attrs <> [] then
-      Parser.err ~start_pos p
-        (Diagnostics.message
-           "Attributes and doc comments can only be used at the beginning of a \
-            field declaration");
-    if mut = Mutable then
-      Parser.err ~start_pos p
-        (Diagnostics.message
-           "The `mutable` qualifier can only be used at the beginning of a \
-            field declaration");
-    None
+    if Token.is_keyword p.token then (
+      match
+        recover_keyword_field_name_if_probably_field p
+          ~mk_message:ErrorMessages.keyword_field_in_type
+      with
+      | Some (recovered_field_name, name_loc) ->
+        let optional = parse_optional_label p in
+        Parser.expect Colon p;
+        let typ =
+          parse_poly_type_expr ?current_type_name_path ?inline_types_context p
+        in
+        let loc = mk_loc start_pos typ.ptyp_loc.loc_end in
+        let name = Location.mkloc recovered_field_name name_loc in
+        Some (Ast_helper.Type.field ~attrs ~loc ~mut ~optional name typ)
+      | None ->
+        emit_keyword_field_error p
+          ~mk_message:ErrorMessages.keyword_field_in_type;
+        None)
+    else (
+      if attrs <> [] then
+        Parser.err ~start_pos p
+          (Diagnostics.message
+             "Attributes and doc comments can only be used at the beginning of \
+              a field declaration");
+      if mut = Mutable then
+        Parser.err ~start_pos p
+          (Diagnostics.message
+             "The `mutable` qualifier can only be used at the beginning of a \
+              field declaration");
+      None)
 
 (* record-decl ::=
  *  | { field-decl }
@@ -5044,7 +5165,7 @@ and parse_type_representation ?current_type_name_path ?inline_types_context p =
   in
   let kind =
     match p.Parser.token with
-    | Bar | Uident _ | DocComment _ ->
+    | Bar | Uident _ | DocComment _ | At ->
       Parsetree.Ptype_variant (parse_type_constructor_declarations p)
     | Lbrace ->
       Parsetree.Ptype_record
@@ -5379,7 +5500,10 @@ and parse_record_or_object_decl ?current_type_name_path ?inline_types_context p
             p
         | attr :: _ as attrs ->
           let first =
-            let field = parse_field_declaration p in
+            let field =
+              parse_field_declaration ?current_type_name_path
+                ?inline_types_context p
+            in
             Parser.optional p Comma |> ignore;
             {
               field with
@@ -5602,6 +5726,36 @@ and parse_type_equation_and_representation ?current_type_name_path
     | Bar | DotDot | DocComment _ ->
       let priv, kind = parse_type_representation p in
       (None, priv, kind)
+    | At -> (
+      (* Attribute can start a variant constructor or a type manifest.
+         Look ahead past attributes; if a constructor-like token follows (Uident not immediately
+         followed by a Dot, or DotDotDot/Bar/DocComment), treat as variant; otherwise manifest *)
+      let is_variant_after_attrs =
+        Parser.lookahead p (fun state ->
+            ignore (parse_attributes state);
+            match state.Parser.token with
+            | Uident _ -> (
+              Parser.next state;
+              match state.Parser.token with
+              | Dot -> false
+              | _ -> true)
+            | DotDotDot | Bar | DocComment _ -> true
+            | _ -> false)
+      in
+      if is_variant_after_attrs then
+        let priv, kind = parse_type_representation p in
+        (None, priv, kind)
+      else
+        let manifest = Some (parse_typ_expr p) in
+        match p.Parser.token with
+        | Equal ->
+          Parser.next p;
+          let priv, kind =
+            parse_type_representation ?current_type_name_path
+              ?inline_types_context p
+          in
+          (manifest, priv, kind)
+        | _ -> (manifest, Public, Parsetree.Ptype_abstract))
     | _ -> (
       let manifest = Some (parse_typ_expr p) in
       match p.Parser.token with

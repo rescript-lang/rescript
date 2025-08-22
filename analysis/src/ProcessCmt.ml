@@ -431,7 +431,8 @@ let rec getModulePath mod_desc =
   | Tmod_constraint (expr, _typ, _constraint, _coercion) ->
     getModulePath expr.mod_desc
 
-let rec forStructureItem ~env ~(exported : Exported.t) item =
+let rec forStructureItem ~(env : SharedTypes.Env.t) ~(exported : Exported.t)
+    item =
   match item.Typedtree.str_desc with
   | Tstr_value (_isRec, bindings) ->
     let items = ref [] in
@@ -439,22 +440,75 @@ let rec forStructureItem ~env ~(exported : Exported.t) item =
       match pat.Typedtree.pat_desc with
       | Tpat_var (ident, name)
       | Tpat_alias (_, ident, name) (* let x : t = ... *) ->
-        let item = pat.pat_type in
-        let declared =
-          addDeclared ~name ~stamp:(Ident.binding_time ident) ~env
-            ~extent:pat.pat_loc ~item attributes
-            (Exported.add exported Exported.Value)
-            Stamps.addValue
+        (* Detect first-class module unpack patterns and register them as modules. *)
+        let unpack_loc_opt =
+          match
+            pat.pat_extra
+            |> Utils.filterMap (function
+                 | Typedtree.Tpat_unpack, loc, _ -> Some loc
+                 | _ -> None)
+          with
+          | loc :: _ -> Some loc
+          | [] -> None
         in
-        items :=
-          {
-            Module.kind = Module.Value declared.item;
-            name = declared.name.txt;
-            docstring = declared.docstring;
-            deprecated = declared.deprecated;
-            loc = declared.extentLoc;
-          }
-          :: !items
+        if unpack_loc_opt <> None then
+          match (Shared.dig pat.pat_type).desc with
+          | Tpackage (path, _, _) ->
+            let declared =
+              ProcessAttributes.newDeclared ~item:(Module.Ident path)
+                ~extent:(Option.get unpack_loc_opt)
+                ~name ~stamp:(Ident.binding_time ident) ~modulePath:NotVisible
+                false attributes
+            in
+            Stamps.addModule env.stamps (Ident.binding_time ident) declared;
+            items :=
+              {
+                Module.kind =
+                  Module
+                    {
+                      type_ = declared.item;
+                      isModuleType = isModuleType declared;
+                    };
+                name = declared.name.txt;
+                docstring = declared.docstring;
+                deprecated = declared.deprecated;
+                loc = declared.extentLoc;
+              }
+              :: !items
+          | _ ->
+            let item = pat.pat_type in
+            let declared =
+              addDeclared ~name ~stamp:(Ident.binding_time ident) ~env
+                ~extent:pat.pat_loc ~item attributes
+                (Exported.add exported Exported.Value)
+                Stamps.addValue
+            in
+            items :=
+              {
+                Module.kind = Module.Value declared.item;
+                name = declared.name.txt;
+                docstring = declared.docstring;
+                deprecated = declared.deprecated;
+                loc = declared.extentLoc;
+              }
+              :: !items
+        else
+          let item = pat.pat_type in
+          let declared =
+            addDeclared ~name ~stamp:(Ident.binding_time ident) ~env
+              ~extent:pat.pat_loc ~item attributes
+              (Exported.add exported Exported.Value)
+              Stamps.addValue
+          in
+          items :=
+            {
+              Module.kind = Module.Value declared.item;
+              name = declared.name.txt;
+              docstring = declared.docstring;
+              deprecated = declared.deprecated;
+              loc = declared.extentLoc;
+            }
+            :: !items
       | Tpat_tuple pats | Tpat_array pats | Tpat_construct (_, _, pats) ->
         pats |> List.iter (fun p -> handlePattern [] p)
       | Tpat_or (p, _, _) -> handlePattern [] p

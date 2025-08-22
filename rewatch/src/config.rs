@@ -1,10 +1,12 @@
 use crate::build::packages;
+use crate::helpers;
 use crate::helpers::deserialize::*;
+use crate::project_context::ProjectContext;
 use anyhow::{Result, bail};
 use convert_case::{Case, Casing};
 use serde::Deserialize;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(untagged)]
@@ -296,56 +298,61 @@ pub fn flatten_flags(flags: &Option<Vec<OneOrMore<String>>>) -> Vec<String> {
 /// Since ppx-flags could be one or more, and could potentially be nested, this function takes the
 /// flags and flattens them.
 pub fn flatten_ppx_flags(
-    node_modules_dir: &Path,
+    project_context: &ProjectContext,
+    package_config: &Config,
     flags: &Option<Vec<OneOrMore<String>>>,
-    package_name: &String,
-) -> Vec<String> {
+) -> Result<Vec<String>> {
     match flags {
-        None => vec![],
-        Some(flags) => flags
-            .iter()
-            .flat_map(|x| match x {
+        None => Ok(vec![]),
+        Some(flags) => flags.iter().try_fold(Vec::new(), |mut acc, x| {
+            match x {
                 OneOrMore::Single(y) => {
                     let first_character = y.chars().next();
                     match first_character {
                         Some('.') => {
-                            vec![
-                                "-ppx".to_string(),
-                                node_modules_dir
-                                    .join(package_name)
-                                    .join(y)
-                                    .to_string_lossy()
-                                    .to_string(),
-                            ]
+                            let path = helpers::try_package_path(
+                                package_config,
+                                project_context,
+                                format!("{}{}{}", &package_config.name, MAIN_SEPARATOR, y).as_str(),
+                            )
+                            .map(|p| p.to_string_lossy().to_string())?;
+
+                            acc.push(String::from("-ppx"));
+                            acc.push(path);
                         }
-                        _ => vec![
-                            "-ppx".to_string(),
-                            node_modules_dir.join(y).to_string_lossy().to_string(),
-                        ],
+                        _ => {
+                            acc.push(String::from("-ppx"));
+                            let path = helpers::try_package_path(package_config, project_context, y)
+                                .map(|p| p.to_string_lossy().to_string())?;
+                            acc.push(path);
+                        }
                     }
                 }
-                OneOrMore::Multiple(ys) if ys.is_empty() => vec![],
+                OneOrMore::Multiple(ys) if ys.is_empty() => (),
                 OneOrMore::Multiple(ys) => {
                     let first_character = ys[0].chars().next();
                     let ppx = match first_character {
-                        Some('.') => node_modules_dir
-                            .join(package_name)
-                            .join(&ys[0])
-                            .to_string_lossy()
-                            .to_string(),
-                        _ => node_modules_dir.join(&ys[0]).to_string_lossy().to_string(),
+                        Some('.') => helpers::try_package_path(
+                            package_config,
+                            project_context,
+                            format!("{}{}{}", package_config.name, MAIN_SEPARATOR, &ys[0]).as_str(),
+                        )
+                        .map(|p| p.to_string_lossy().to_string())?,
+                        _ => helpers::try_package_path(package_config, project_context, &ys[0])
+                            .map(|p| p.to_string_lossy().to_string())?,
                     };
-                    vec![
-                        "-ppx".to_string(),
+                    acc.push(String::from("-ppx"));
+                    acc.push(
                         vec![ppx]
                             .into_iter()
                             .chain(ys[1..].to_owned())
                             .collect::<Vec<String>>()
                             .join(" "),
-                    ]
+                    );
                 }
-            })
-            .collect::<Vec<String>>(),
+            };
+            Ok(acc)
+        }),
     }
 }
 
