@@ -419,8 +419,6 @@ let build_longident words =
   | [] -> assert false
   | hd :: tl -> List.fold_left (fun p s -> Longident.Ldot (p, s)) (Lident hd) tl
 
-(* Emit a keyword-as-field diagnostic for the current token using a context-specific
-   message builder. *)
 let emit_keyword_field_error (p : Parser.t) ~mk_message =
   let keyword_txt = Token.to_string p.token in
   let keyword_start = p.Parser.start_pos in
