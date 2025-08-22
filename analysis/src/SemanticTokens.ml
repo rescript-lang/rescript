@@ -247,12 +247,19 @@ let command ~debug ~emitter ~path =
     match e.pexp_desc with
     | Pexp_ident {txt = lid; loc} ->
       if lid <> Lident "not" then
-        if not loc.loc_ghost then
-          emitter
-          |> emitLongident ~pos:(Loc.start loc)
-               ~posEnd:(Some (Loc.end_ loc))
-               ~lid ~debug;
-      Ast_iterator.default_iterator.expr iterator e
+        if not loc.loc_ghost then (
+          let should_emit =
+            match lid with
+            (* Array spreads (`...`) are converted to `Belt.Array.concatMany` *)
+            | Ldot (Ldot (Lident "Belt", "Array"), "concatMany") -> false
+            | _ -> true
+          in
+          if should_emit then
+            emitter
+            |> emitLongident ~pos:(Loc.start loc)
+                 ~posEnd:(Some (Loc.end_ loc))
+                 ~lid ~debug;
+          Ast_iterator.default_iterator.expr iterator e)
     | Pexp_jsx_element (Jsx_unary_element {jsx_unary_element_tag_name = lident})
       ->
       (*
