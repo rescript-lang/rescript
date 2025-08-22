@@ -572,7 +572,7 @@ let rec structure_mapper ~await_context (self : mapper) (stru : Ast_structure.t)
             | Pexp_match (expr, cases) ->
               let case_results =
                 List.fold_left
-                  (fun acc case -> aux case.Parsetree.pc_rhs @ acc)
+                  (fun acc (case : Parsetree.case) -> aux case.pc_rhs @ acc)
                   [] cases
               in
               aux expr @ case_results
