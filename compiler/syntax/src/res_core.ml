@@ -5167,7 +5167,7 @@ and parse_type_representation ?current_type_name_path ?inline_types_context p =
     match p.Parser.token with
     | Bar | Uident _ | DocComment _ ->
       Parsetree.Ptype_variant (parse_type_constructor_declarations p)
-    | At ->
+    | At -> (
       (* Attributes can prefix either a variant (constructor list), a record, or an
          open/extensible variant marker (`..`). Peek past attributes and any doc
          comments to decide which kind it is. *)
@@ -5176,39 +5176,47 @@ and parse_type_representation ?current_type_name_path ?inline_types_context p =
             ignore (parse_attributes state);
             let rec skip_docs () =
               match state.Parser.token with
-              | DocComment _ -> Parser.next state; skip_docs ()
+              | DocComment _ ->
+                Parser.next state;
+                skip_docs ()
               | _ -> ()
             in
             skip_docs ();
             state.Parser.token)
       in
-      (match after_attrs with
+      match after_attrs with
       | Lbrace ->
-          (* consume the attributes and any doc comments before the record *)
-          ignore (parse_attributes p);
-          let rec skip_docs () =
-            match p.Parser.token with
-            | DocComment _ -> Parser.next p; skip_docs ()
-            | _ -> ()
-          in
-          skip_docs ();
-          Parsetree.Ptype_record
-            (parse_record_declaration ?current_type_name_path ?inline_types_context p)
+        (* consume the attributes and any doc comments before the record *)
+        ignore (parse_attributes p);
+        let rec skip_docs () =
+          match p.Parser.token with
+          | DocComment _ ->
+            Parser.next p;
+            skip_docs ()
+          | _ -> ()
+        in
+        skip_docs ();
+        Parsetree.Ptype_record
+          (parse_record_declaration ?current_type_name_path
+             ?inline_types_context p)
       | DotDot ->
-          (* attributes before an open variant marker; consume attrs/docs then handle `..` *)
-          ignore (parse_attributes p);
-          let rec skip_docs () =
-            match p.Parser.token with
-            | DocComment _ -> Parser.next p; skip_docs ()
-            | _ -> ()
-          in
-          skip_docs ();
-          Parser.next p; (* consume DotDot *)
-          Ptype_open
+        (* attributes before an open variant marker; consume attrs/docs then handle `..` *)
+        ignore (parse_attributes p);
+        let rec skip_docs () =
+          match p.Parser.token with
+          | DocComment _ ->
+            Parser.next p;
+            skip_docs ()
+          | _ -> ()
+        in
+        skip_docs ();
+        Parser.next p;
+        (* consume DotDot *)
+        Ptype_open
       | _ ->
-          (* fall back to variant constructor declarations; leave attributes for the
+        (* fall back to variant constructor declarations; leave attributes for the
              constructor parsing so they attach to the first constructor. *)
-          Parsetree.Ptype_variant (parse_type_constructor_declarations p))
+        Parsetree.Ptype_variant (parse_type_constructor_declarations p))
     | Lbrace ->
       Parsetree.Ptype_record
         (parse_record_declaration ?current_type_name_path ?inline_types_context
@@ -5778,30 +5786,37 @@ and parse_type_equation_and_representation ?current_type_name_path
             (* optionally skip a run of doc comments before deciding *)
             let rec skip_docs () =
               match state.Parser.token with
-              | DocComment _ -> Parser.next state; skip_docs ()
+              | DocComment _ ->
+                Parser.next state;
+                skip_docs ()
               | _ -> ()
             in
             skip_docs ();
             match state.Parser.token with
-            | Lbrace ->
+            | Lbrace -> (
               (* Disambiguate record declaration vs object type.
                  Peek inside the braces; if it looks like an object (String/Dot/DotDot/DotDotDot),
                  then this is a manifest type expression, not a representation. If it looks like
                  a record field (e.g. Lident or attributes before one), treat as representation. *)
-              Parser.next state; (* consume Lbrace *)
+              Parser.next state;
+              (* consume Lbrace *)
               ignore (parse_attributes state);
               skip_docs ();
-              (match state.Parser.token with
-               | String _ | Dot | DotDot | DotDotDot -> false  (* object type => manifest *)
-               | _ -> true)                                    (* record decl => representation *)
-            | Bar -> true               (* variant constructor list *)
-            | DotDot -> true            (* extensible/open variant ".." *)
-            | Uident _ ->               (* constructor vs module-qualified manifest *)
+              match state.Parser.token with
+              | String _ | Dot | DotDot | DotDotDot ->
+                false (* object type => manifest *)
+              | _ -> true
+              (* record decl => representation *))
+            | Bar -> true (* variant constructor list *)
+            | DotDot -> true (* extensible/open variant ".." *)
+            | Uident _ -> (
+              (* constructor vs module-qualified manifest *)
               Parser.next state;
-              (match state.Parser.token with
-               | Dot -> false           (* M.t => manifest *)
-               | _ -> true)             (* Uident starting a constructor *)
-            | DocComment _ -> true      (* doc before constructor list *)
+              match state.Parser.token with
+              | Dot -> false (* M.t => manifest *)
+              | _ -> true
+              (* Uident starting a constructor *))
+            | DocComment _ -> true (* doc before constructor list *)
             | _ -> false)
       in
       if is_representation_after_attrs then
