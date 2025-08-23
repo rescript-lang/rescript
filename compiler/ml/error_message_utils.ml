@@ -96,6 +96,7 @@ type type_clash_context =
   | IfReturn
   | TernaryReturn
   | SwitchReturn
+  | LetUnwrapReturn
   | TryReturn
   | StringConcat
   | ComparisonOperator
@@ -131,6 +132,7 @@ let context_to_string = function
   | Some TernaryReturn -> "TernaryReturn"
   | Some Await -> "Await"
   | Some BracedIdent -> "BracedIdent"
+  | Some LetUnwrapReturn -> "LetUnwrapReturn"
   | None -> "None"
 
 let fprintf = Format.fprintf
@@ -163,6 +165,9 @@ let error_expected_type_text ppf type_clash_context =
   | Some ComparisonOperator ->
     fprintf ppf "But it's being compared to something of type:"
   | Some SwitchReturn -> fprintf ppf "But this switch is expected to return:"
+  | Some LetUnwrapReturn ->
+    fprintf ppf
+      "But this @{<info>let?@} is used in a context expecting the type:"
   | Some TryReturn -> fprintf ppf "But this try/catch is expected to return:"
   | Some WhileCondition ->
     fprintf ppf "But a @{<info>while@} loop condition must always be of type:"
@@ -314,6 +319,11 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       "\n\n\
       \  All branches in a @{<info>switch@} must return the same type.@,\
        To fix this, change your branch to return the expected type."
+  | Some LetUnwrapReturn, _ ->
+    fprintf ppf
+      "\n\n\
+      \  @{<info>let?@} can only be used in a context that expects \
+       @{<info>option@} or @{<info>result@}."
   | Some TryReturn, _ ->
     fprintf ppf
       "\n\n\
