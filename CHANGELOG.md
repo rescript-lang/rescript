@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Fix creating interface for functions with upper bounded polymorphic args. https://github.com/rescript-lang/rescript/pull/7786
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
@@ -40,7 +42,6 @@
 - Fix parse error with nested record types and attributes on the field name that has the nested record type. https://github.com/rescript-lang/rescript/pull/7781
 - Fix ppx resolution with package inside monorepo. https://github.com/rescript-lang/rescript/pull/7776
 - Fix 'Unbound module type' errors that occurred when trying to async import modules. https://github.com/rescript-lang/rescript/pull/7783
-- Fix creating interface for functions with upper bounded polymorphic args. https://github.com/rescript-lang/rescript/pull/7786
 
 #### :nail_care: Polish
 
