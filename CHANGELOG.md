@@ -26,6 +26,8 @@
 
 #### :nail_care: Polish
 
+- Make parser less strict around leading attributes. https://github.com/rescript-lang/rescript/pull/7787
+
 #### :house: Internal
 
 - Build runtime with rewatch on Windows, too. https://github.com/rescript-lang/rescript/pull/7794
@@ -49,7 +51,6 @@
 
 - Allow skipping the leading pipe in variant definition with a leading constructor with an attribute. https://github.com/rescript-lang/rescript/pull/7782
 - Better error message (and recovery) when using a keyword as a record field name. https://github.com/rescript-lang/rescript/pull/7784
-- Make parser less strict around leading attributes. https://github.com/rescript-lang/rescript/pull/7787
 
 # 12.0.0-beta.6
 
