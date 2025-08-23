@@ -10,6 +10,13 @@ module Parser = Res_parser
 let mk_loc start_loc end_loc =
   Location.{loc_start = start_loc; loc_end = end_loc; loc_ghost = false}
 
+let rec skip_doc_comments p =
+  match p.Parser.token with
+  | DocComment _ ->
+    Parser.next p;
+    skip_doc_comments p
+  | _ -> ()
+
 type inline_types_context = {
   mutable found_inline_types:
     (string * Warnings.loc * Parsetree.type_kind) list;
@@ -5174,42 +5181,21 @@ and parse_type_representation ?current_type_name_path ?inline_types_context p =
       let after_attrs =
         Parser.lookahead p (fun state ->
             ignore (parse_attributes state);
-            let rec skip_docs () =
-              match state.Parser.token with
-              | DocComment _ ->
-                Parser.next state;
-                skip_docs ()
-              | _ -> ()
-            in
-            skip_docs ();
+            skip_doc_comments state;
             state.Parser.token)
       in
       match after_attrs with
       | Lbrace ->
         (* consume the attributes and any doc comments before the record *)
         ignore (parse_attributes p);
-        let rec skip_docs () =
-          match p.Parser.token with
-          | DocComment _ ->
-            Parser.next p;
-            skip_docs ()
-          | _ -> ()
-        in
-        skip_docs ();
+        skip_doc_comments p;
         Parsetree.Ptype_record
           (parse_record_declaration ?current_type_name_path
              ?inline_types_context p)
       | DotDot ->
         (* attributes before an open variant marker; consume attrs/docs then handle `..` *)
         ignore (parse_attributes p);
-        let rec skip_docs () =
-          match p.Parser.token with
-          | DocComment _ ->
-            Parser.next p;
-            skip_docs ()
-          | _ -> ()
-        in
-        skip_docs ();
+        skip_doc_comments p;
         Parser.next p;
         (* consume DotDot *)
         Ptype_open
@@ -5784,14 +5770,7 @@ and parse_type_equation_and_representation ?current_type_name_path
         Parser.lookahead p (fun state ->
             ignore (parse_attributes state);
             (* optionally skip a run of doc comments before deciding *)
-            let rec skip_docs () =
-              match state.Parser.token with
-              | DocComment _ ->
-                Parser.next state;
-                skip_docs ()
-              | _ -> ()
-            in
-            skip_docs ();
+            skip_doc_comments state;
             match state.Parser.token with
             | Lbrace -> (
               (* Disambiguate record declaration vs object type.
@@ -5801,7 +5780,7 @@ and parse_type_equation_and_representation ?current_type_name_path
               Parser.next state;
               (* consume Lbrace *)
               ignore (parse_attributes state);
-              skip_docs ();
+              skip_doc_comments state;
               match state.Parser.token with
               | String _ | Dot | DotDot | DotDotDot ->
                 false (* object type => manifest *)
