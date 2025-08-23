@@ -248,10 +248,13 @@ impl<'de> serde::Deserialize<'de> for ExperimentalFeature {
             {
                 match v {
                     "LetUnwrap" => Ok(ExperimentalFeature::LetUnwrap),
-                    other => Err(DeError::custom(format!(
-                        "Unknown experimental feature '{}'. Available features: LetUnwrap",
-                        other
-                    ))),
+                    other => {
+                        let available = ExperimentalFeature::all_names().join(", ");
+                        Err(DeError::custom(format!(
+                            "Unknown experimental feature '{}'. Available features: {}",
+                            other, available
+                        )))
+                    }
                 }
             }
         }
