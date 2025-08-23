@@ -253,6 +253,7 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
         })
   | Pexp_let (_, [{pvb_pat; pvb_attributes}], _)
     when Ast_attributes.has_unwrap_attr pvb_attributes ->
+    (* Catch all unsupported cases for `let?` *)
     if not (Experimental_features.is_enabled Experimental_features.LetUnwrap)
     then
       Bs_syntaxerr.err pvb_pat.ppat_loc
