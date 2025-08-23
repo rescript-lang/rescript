@@ -121,7 +121,7 @@ An object of feature flags to enable experimental compiler behavior. Only suppor
 
 Currently supported features:
 
-- LetUnwrap: Enable the `let?` transformation.
+- LetUnwrap: Enable `let?` syntax.
 
 ### Warnings
 

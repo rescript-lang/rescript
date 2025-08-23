@@ -88,7 +88,7 @@ let pp_error fmt err =
     | Experimental_feature_not_enabled feature ->
       Printf.sprintf
         "Experimental feature not enabled: %s. Enable it by setting \"%s\" to \
-         true under \"experimentalFeatures\" in rescript.json"
+         true under \"experimentalFeatures\" in rescript.json."
         (Experimental_features.to_string feature)
         (Experimental_features.to_string feature)
     | LetUnwrap_not_supported_in_position hint -> (

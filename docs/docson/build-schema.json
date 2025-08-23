@@ -491,7 +491,7 @@
       "properties": {
         "LetUnwrap": {
           "type": "boolean",
-          "description": "Enable let? syntax."
+          "description": "Enable `let?` syntax."
         }
       },
       "additionalProperties": false

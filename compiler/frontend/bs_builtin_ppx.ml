@@ -462,8 +462,13 @@ let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
           Ast_attributes.has_unwrap_attr vb.pvb_attributes)
         vbs
     in
-    Bs_syntaxerr.err vb.pvb_pat.ppat_loc
-      (LetUnwrap_not_supported_in_position `Toplevel)
+    if not (Experimental_features.is_enabled Experimental_features.LetUnwrap)
+    then
+      Bs_syntaxerr.err vb.pvb_pat.ppat_loc
+        (Experimental_feature_not_enabled LetUnwrap)
+    else
+      Bs_syntaxerr.err vb.pvb_pat.ppat_loc
+        (LetUnwrap_not_supported_in_position `Toplevel)
   | Pstr_type (rf, tdcls) (* [ {ptype_attributes} as tdcl ] *) ->
     Ast_tdcls.handle_tdcls_in_stru self str rf tdcls
   | Pstr_primitive prim
