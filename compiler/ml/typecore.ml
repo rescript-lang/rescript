@@ -1722,13 +1722,14 @@ let partial_pred ~lev ?mode ?explode env expected_ty constrs labels p =
     set_state state env;
     None
 
-let check_partial ?(lev = get_current_level ()) env expected_ty loc cases =
+let check_partial ?(lev = get_current_level ()) ?partial_match_warning_hint env
+    expected_ty loc cases =
   let explode =
     match cases with
     | [_] -> 5
     | _ -> 0
   in
-  Parmatch.check_partial_gadt
+  Parmatch.check_partial_gadt ?partial_match_warning_hint
     (partial_pred ~lev ~explode env expected_ty)
     loc cases
 
@@ -4202,7 +4203,24 @@ and type_let ~context ?(check = fun s -> Warnings.Unused_var s)
   List.iter2
     (fun pat (attrs, exp) ->
       Builtin_attributes.warning_scope ~ppwarning:false attrs (fun () ->
-          ignore (check_partial env pat.pat_type pat.pat_loc [case pat exp])))
+          let partial_match_warning_hint =
+            if Experimental_features.is_enabled Experimental_features.LetUnwrap
+            then
+              let ty = repr (Ctype.expand_head env pat.pat_type) in
+              match ty.desc with
+              | Tconstr (path, _, _)
+                when Path.same path Predef.path_option
+                     || Path.same path Predef.path_result ->
+                Some
+                  "Hint: You can use `let?` to automatically unwrap this \
+                   expression."
+              | _ -> None
+            else None
+          in
+          ignore
+            (check_partial ?partial_match_warning_hint env pat.pat_type
+               pat.pat_loc
+               [case pat exp])))
     pat_list
     (List.map2 (fun (attrs, _) e -> (attrs, e)) spatl exp_list);
   end_def ();
