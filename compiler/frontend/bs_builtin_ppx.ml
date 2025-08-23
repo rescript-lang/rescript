@@ -149,6 +149,15 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
      - `@let.unwrap let Some(inner_pat) = expr`
      - `@let.unwrap let None = expr`
      ...into switches *)
+  | Pexp_let (_, [{pvb_pat; pvb_attributes}], _)
+    when Ast_attributes.has_unwrap_attr pvb_attributes ->
+    if not (Experimental_features.is_enabled Experimental_features.LetUnwrap)
+    then
+      Bs_syntaxerr.err pvb_pat.ppat_loc
+        (Experimental_feature_not_enabled LetUnwrap)
+    else
+      Bs_syntaxerr.err pvb_pat.ppat_loc
+        (LetUnwrap_not_supported_in_position `Unsupported_type)
   | Pexp_let
       ( Nonrecursive,
         [
@@ -441,6 +450,19 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
 let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
     Parsetree.structure_item =
   match str.pstr_desc with
+  | Pstr_value (_, vbs)
+    when List.exists
+           (fun (vb : Parsetree.value_binding) ->
+             Ast_attributes.has_unwrap_attr vb.pvb_attributes)
+           vbs ->
+    let vb =
+      List.find
+        (fun (vb : Parsetree.value_binding) ->
+          Ast_attributes.has_unwrap_attr vb.pvb_attributes)
+        vbs
+    in
+    Bs_syntaxerr.err vb.pvb_pat.ppat_loc
+      (LetUnwrap_not_supported_in_position `Toplevel)
   | Pstr_type (rf, tdcls) (* [ {ptype_attributes} as tdcl ] *) ->
     Ast_tdcls.handle_tdcls_in_stru self str rf tdcls
   | Pstr_primitive prim
