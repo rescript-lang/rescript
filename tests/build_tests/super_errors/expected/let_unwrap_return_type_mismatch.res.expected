@@ -1,0 +1,15 @@
+
+  [1;31mWe've found a bug for you![0m
+  [36m/.../fixtures/let_unwrap_return_type_mismatch.res[0m:[2m4:8-14[0m
+
+  2 [2m│[0m 
+  3 [2m│[0m let fn = (): int => {
+  [1;31m4[0m [2m│[0m   let? [1;31mSome(x)[0m = None
+  5 [2m│[0m   42
+  6 [2m│[0m }
+
+  This has type: [1;31moption<'a>[0m
+  But this switch is expected to return: [1;33mint[0m
+
+  All branches in a [1;33mswitch[0m must return the same type.
+  To fix this, change your branch to return the expected type.
