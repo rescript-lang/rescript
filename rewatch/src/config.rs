@@ -249,7 +249,7 @@ impl<'de> serde::Deserialize<'de> for ExperimentalFeature {
                 match v {
                     "LetUnwrap" => Ok(ExperimentalFeature::LetUnwrap),
                     other => {
-                        let available = ExperimentalFeature::all_names().join(", ");
+                        let available = vec!["LetUnwrap"].join(", ");
                         Err(DeError::custom(format!(
                             "Unknown experimental feature '{}'. Available features: {}",
                             other, available
