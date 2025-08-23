@@ -166,8 +166,7 @@ let error_expected_type_text ppf type_clash_context =
     fprintf ppf "But it's being compared to something of type:"
   | Some SwitchReturn -> fprintf ppf "But this switch is expected to return:"
   | Some LetUnwrapReturn ->
-    fprintf ppf
-      "But this @{<info>let?@} is used in a context expecting the type:"
+    fprintf ppf "But this @{<info>let?@} is used where this type is expected:"
   | Some TryReturn -> fprintf ppf "But this try/catch is expected to return:"
   | Some WhileCondition ->
     fprintf ppf "But a @{<info>while@} loop condition must always be of type:"
@@ -319,11 +318,65 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       "\n\n\
       \  All branches in a @{<info>switch@} must return the same type.@,\
        To fix this, change your branch to return the expected type."
-  | Some LetUnwrapReturn, _ ->
-    fprintf ppf
-      "\n\n\
-      \  @{<info>let?@} can only be used in a context that expects \
-       @{<info>option@} or @{<info>result@}."
+  | Some LetUnwrapReturn, bottom_aliases -> (
+    let kind =
+      match bottom_aliases with
+      | Some ({Types.desc = Tconstr (p, _, _)}, _)
+        when Path.same p Predef.path_option ->
+        `Option
+      | Some (_, {Types.desc = Tconstr (p, _, _)})
+        when Path.same p Predef.path_option ->
+        `Option
+      | Some ({Types.desc = Tconstr (p, _, _)}, _)
+        when Path.same p Predef.path_result ->
+        `Result
+      | Some (_, {Types.desc = Tconstr (p, _, _)})
+        when Path.same p Predef.path_result ->
+        `Result
+      | _ -> `Unknown
+    in
+    match kind with
+    | `Option ->
+      fprintf ppf
+        "\n\n\
+        \  This @{<info>let?@} unwraps an @{<info>option@}; use it where the \
+         enclosing function or let binding returns an @{<info>option@} so \
+         @{<info>None@} can propagate.\n\n\
+        \  Possible solutions:\n\
+        \  - Change the enclosing function or let binding to return \
+         @{<info>option<'t>@} and use @{<info>Some@} for success; \
+         @{<info>let?@} will propagate @{<info>None@}.\n\
+        \  - Replace @{<info>let?@} with a @{<info>switch@} and handle the \
+         @{<info>None@} case explicitly.\n\
+        \  - If you want a default value instead of early return, unwrap using \
+         @{<info>Option.getOr(default)@}."
+    | `Result ->
+      fprintf ppf
+        "\n\n\
+        \  This @{<info>let?@} unwraps a @{<info>result@}; use it where the \
+         enclosing function or let binding returns a @{<info>result@} so \
+         @{<info>Error@} can propagate.\n\n\
+        \  Possible solutions:\n\
+        \  - Change the enclosing function or let binding to return \
+         @{<info>result<'ok, 'error>@}; use @{<info>Ok@} for success, and \
+         @{<info>let?@} will propagate @{<info>Error@}.\n\
+        \  - Replace @{<info>let?@} with a @{<info>switch@} and handle the \
+         @{<info>Error@} case explicitly.\n\
+        \  - If you want a default value instead of early return, unwrap using \
+         @{<info>Result.getOr(default)@}."
+    | `Unknown ->
+      fprintf ppf
+        "\n\n\
+        \  @{<info>let?@} can only be used in a context that expects \
+         @{<info>option@} or @{<info>result@}.\n\n\
+        \  Possible solutions:\n\
+        \  - Change the enclosing function or let binding to return an \
+         @{<info>option<'t>@} or @{<info>result<'ok, 'error>@} and propagate \
+         with @{<info>Some/Ok@}.\n\
+        \  - Replace @{<info>let?@} with a @{<info>switch@} and handle the \
+         @{<info>None/Error@} case explicitly.\n\
+        \  - If you want a default value instead of early return, unwrap using \
+         @{<info>Option.getOr(default)@} or @{<info>Result.getOr(default)@}.")
   | Some TryReturn, _ ->
     fprintf ppf
       "\n\n\
