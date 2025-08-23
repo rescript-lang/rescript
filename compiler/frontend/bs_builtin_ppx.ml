@@ -143,21 +143,12 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
         ] ) ->
     default_expr_mapper self
       {e with pexp_desc = Pexp_ifthenelse (b, t_exp, Some f_exp)}
-  (* Transform:
+    (* Transform:
      - `@let.unwrap let Ok(inner_pat) = expr`
      - `@let.unwrap let Error(inner_pat) = expr`
      - `@let.unwrap let Some(inner_pat) = expr`
      - `@let.unwrap let None = expr`
      ...into switches *)
-  | Pexp_let (_, [{pvb_pat; pvb_attributes}], _)
-    when Ast_attributes.has_unwrap_attr pvb_attributes ->
-    if not (Experimental_features.is_enabled Experimental_features.LetUnwrap)
-    then
-      Bs_syntaxerr.err pvb_pat.ppat_loc
-        (Experimental_feature_not_enabled LetUnwrap)
-    else
-      Bs_syntaxerr.err pvb_pat.ppat_loc
-        (LetUnwrap_not_supported_in_position `Unsupported_type)
   | Pexp_let
       ( Nonrecursive,
         [
@@ -260,6 +251,15 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
           pexp_desc = Pexp_match (pvb_expr, [early_case; cont_case]);
           pexp_attributes = e.pexp_attributes @ pvb_attributes;
         })
+  | Pexp_let (_, [{pvb_pat; pvb_attributes}], _)
+    when Ast_attributes.has_unwrap_attr pvb_attributes ->
+    if not (Experimental_features.is_enabled Experimental_features.LetUnwrap)
+    then
+      Bs_syntaxerr.err pvb_pat.ppat_loc
+        (Experimental_feature_not_enabled LetUnwrap)
+    else
+      Bs_syntaxerr.err pvb_pat.ppat_loc
+        (LetUnwrap_not_supported_in_position `Unsupported_type)
   | Pexp_let
       ( Nonrecursive,
         [
