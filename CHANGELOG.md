@@ -10,11 +10,29 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-beta.7 (Unreleased)
+# 12.0.0-beta.8 (Unreleased)
 
 #### :boom: Breaking Change
 
 #### :eyeglasses: Spec Compliance
+
+#### :rocket: New Feature
+
+#### :bug: Bug fix
+
+- Fix creating interface for functions with upper bounded polymorphic args. https://github.com/rescript-lang/rescript/pull/7786
+
+#### :memo: Documentation
+
+#### :nail_care: Polish
+
+- Make parser less strict around leading attributes. https://github.com/rescript-lang/rescript/pull/7787
+
+#### :house: Internal
+
+- Build runtime with rewatch on Windows, too. https://github.com/rescript-lang/rescript/pull/7794
+
+# 12.0.0-beta.7
 
 #### :rocket: New Feature
 
@@ -30,14 +48,10 @@
 - Fix ppx resolution with package inside monorepo. https://github.com/rescript-lang/rescript/pull/7776
 - Fix 'Unbound module type' errors that occurred when trying to async import modules. https://github.com/rescript-lang/rescript/pull/7783
 
-#### :memo: Documentation
-
 #### :nail_care: Polish
 
 - Allow skipping the leading pipe in variant definition with a leading constructor with an attribute. https://github.com/rescript-lang/rescript/pull/7782
 - Better error message (and recovery) when using a keyword as a record field name. https://github.com/rescript-lang/rescript/pull/7784
-
-#### :house: Internal
 
 # 12.0.0-beta.6
 

@@ -10,6 +10,13 @@ module Parser = Res_parser
 let mk_loc start_loc end_loc =
   Location.{loc_start = start_loc; loc_end = end_loc; loc_ghost = false}
 
+let rec skip_doc_comments p =
+  match p.Parser.token with
+  | DocComment _ ->
+    Parser.next p;
+    skip_doc_comments p
+  | _ -> ()
+
 type inline_types_context = {
   mutable found_inline_types:
     (string * Warnings.loc * Parsetree.type_kind) list;
@@ -5165,8 +5172,37 @@ and parse_type_representation ?current_type_name_path ?inline_types_context p =
   in
   let kind =
     match p.Parser.token with
-    | Bar | Uident _ | DocComment _ | At ->
+    | Bar | Uident _ | DocComment _ ->
       Parsetree.Ptype_variant (parse_type_constructor_declarations p)
+    | At -> (
+      (* Attributes can prefix either a variant (constructor list), a record, or an
+         open/extensible variant marker (`..`). Peek past attributes and any doc
+         comments to decide which kind it is. *)
+      let after_attrs =
+        Parser.lookahead p (fun state ->
+            ignore (parse_attributes state);
+            skip_doc_comments state;
+            state.Parser.token)
+      in
+      match after_attrs with
+      | Lbrace ->
+        (* consume the attributes and any doc comments before the record *)
+        ignore (parse_attributes p);
+        skip_doc_comments p;
+        Parsetree.Ptype_record
+          (parse_record_declaration ?current_type_name_path
+             ?inline_types_context p)
+      | DotDot ->
+        (* attributes before an open variant marker; consume attrs/docs then handle `..` *)
+        ignore (parse_attributes p);
+        skip_doc_comments p;
+        Parser.next p;
+        (* consume DotDot *)
+        Ptype_open
+      | _ ->
+        (* fall back to variant constructor declarations; leave attributes for the
+             constructor parsing so they attach to the first constructor. *)
+        Parsetree.Ptype_variant (parse_type_constructor_declarations p))
     | Lbrace ->
       Parsetree.Ptype_record
         (parse_record_declaration ?current_type_name_path ?inline_types_context
@@ -5727,22 +5763,42 @@ and parse_type_equation_and_representation ?current_type_name_path
       let priv, kind = parse_type_representation p in
       (None, priv, kind)
     | At -> (
-      (* Attribute can start a variant constructor or a type manifest.
-         Look ahead past attributes; if a constructor-like token follows (Uident not immediately
-         followed by a Dot, or DotDotDot/Bar/DocComment), treat as variant; otherwise manifest *)
-      let is_variant_after_attrs =
+      (* Attributes can start a representation (variant/record/open variant) or a manifest.
+         Look ahead past attributes (and doc comments). If a representation-like token follows,
+         parse it as a representation; otherwise treat as a manifest. *)
+      let is_representation_after_attrs =
         Parser.lookahead p (fun state ->
             ignore (parse_attributes state);
+            (* optionally skip a run of doc comments before deciding *)
+            skip_doc_comments state;
             match state.Parser.token with
+            | Lbrace -> (
+              (* Disambiguate record declaration vs object type.
+                 Peek inside the braces; if it looks like an object (String/Dot/DotDot/DotDotDot),
+                 then this is a manifest type expression, not a representation. If it looks like
+                 a record field (e.g. Lident or attributes before one), treat as representation. *)
+              Parser.next state;
+              (* consume Lbrace *)
+              ignore (parse_attributes state);
+              skip_doc_comments state;
+              match state.Parser.token with
+              | String _ | Dot | DotDot | DotDotDot ->
+                false (* object type => manifest *)
+              | _ -> true
+              (* record decl => representation *))
+            | Bar -> true (* variant constructor list *)
+            | DotDot -> true (* extensible/open variant ".." *)
             | Uident _ -> (
+              (* constructor vs module-qualified manifest *)
               Parser.next state;
               match state.Parser.token with
-              | Dot -> false
-              | _ -> true)
-            | DotDotDot | Bar | DocComment _ -> true
+              | Dot -> false (* M.t => manifest *)
+              | _ -> true
+              (* Uident starting a constructor *))
+            | DocComment _ -> true (* doc before constructor list *)
             | _ -> false)
       in
-      if is_variant_after_attrs then
+      if is_representation_after_attrs then
         let priv, kind = parse_type_representation p in
         (None, priv, kind)
       else

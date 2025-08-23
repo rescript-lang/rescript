@@ -150,3 +150,24 @@ type record = {
   @as("foo_bar")
   fooBar: int
 }
+
+type poly = [#a(int) | #b(string) | #c(float)]
+
+type red = [#Ruby | #Redwood | #Rust]
+type blue = [#Sapphire | #Neon | #Navy]
+type color = [red | blue | #Papayawhip]
+
+external upperBound: ([< #d | #e | #f]) => unit = "myexternal"
+external lowerBound: ([> #d | #e | #f]) => unit = "myexternal"
+
+module ComponentWithPolyProp = {
+  @react.component
+  let make = (~size=#large) => {
+    let className = switch size {
+    | #large => "text-lg"
+    | #small => "text-sm"
+    }
+
+    <div className />
+  }
+}

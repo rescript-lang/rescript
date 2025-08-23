@@ -1,12 +1,44 @@
 module Instance = struct
-  type t = Array | Blob | Date | File | Promise | RegExp
+  type t =
+    | Array
+    | ArrayBuffer
+    | BigInt64Array
+    | BigUint64Array
+    | Blob
+    | DataView
+    | Date
+    | File
+    | Float32Array
+    | Float64Array
+    | Int16Array
+    | Int32Array
+    | Int8Array
+    | Promise
+    | RegExp
+    | Uint16Array
+    | Uint32Array
+    | Uint8Array
+    | Uint8ClampedArray
   let to_string = function
     | Array -> "Array"
+    | ArrayBuffer -> "ArrayBuffer"
+    | BigInt64Array -> "BigInt64Array"
+    | BigUint64Array -> "BigUint64Array"
     | Blob -> "Blob"
+    | DataView -> "DataView"
     | Date -> "Date"
     | File -> "File"
+    | Float32Array -> "Float32Array"
+    | Float64Array -> "Float64Array"
+    | Int16Array -> "Int16Array"
+    | Int32Array -> "Int32Array"
+    | Int8Array -> "Int8Array"
     | Promise -> "Promise"
     | RegExp -> "RegExp"
+    | Uint16Array -> "Uint16Array"
+    | Uint32Array -> "Uint32Array"
+    | Uint8Array -> "Uint8Array"
+    | Uint8ClampedArray -> "Uint8ClampedArray"
 end
 
 type untagged_error =
@@ -200,37 +232,54 @@ let type_to_instanceof_backed_obj (t : Types.type_expr) =
   | Tconstr (path, _, _) when Path.same path Predef.path_array -> Some Array
   | Tconstr (path, _, _) -> (
     match Path.name path with
+    | "Stdlib_ArrayBuffer.t" -> Some ArrayBuffer
+    | "Stdlib.BigInt64Array.t" -> Some BigInt64Array
+    | "Stdlib.BigUint64Array.t" -> Some BigUint64Array
+    | "Stdlib.DataView.t" -> Some DataView
     | "Stdlib_Date.t" -> Some Date
+    | "Stdlib.Float32Array.t" -> Some Float32Array
+    | "Stdlib.Float64Array.t" -> Some Float64Array
+    | "Stdlib.Int16Array.t" -> Some Int16Array
+    | "Stdlib.Int32Array.t" -> Some Int32Array
+    | "Stdlib.Int8Array.t" -> Some Int8Array
     | "Stdlib_RegExp.t" -> Some RegExp
+    | "Stdlib.Uint16Array.t" -> Some Uint16Array
+    | "Stdlib.Uint32Array.t" -> Some Uint32Array
+    | "Stdlib.Uint8Array.t" -> Some Uint8Array
+    | "Stdlib.Uint8ClampedArray.t" -> Some Uint8ClampedArray
     | "Js_file.t" -> Some File
     | "Js_blob.t" -> Some Blob
     | _ -> None)
   | _ -> None
 
 let get_block_type_from_typ ~env (t : Types.type_expr) : block_type option =
-  let t = !expand_head env t in
-  match t with
-  | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_string ->
-    Some StringType
-  | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_int ->
-    Some IntType
-  | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_float ->
-    Some FloatType
-  | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bigint ->
-    Some BigintType
-  | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bool ->
-    Some BooleanType
-  | {desc = Tarrow _} -> Some FunctionType
-  | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_string ->
-    Some StringType
-  | {desc = Tconstr _} as t when type_is_builtin_object t -> Some ObjectType
-  | {desc = Tconstr _} as t
-    when type_to_instanceof_backed_obj t |> Option.is_some -> (
-    match type_to_instanceof_backed_obj t with
-    | None -> None
-    | Some instance_type -> Some (InstanceType instance_type))
-  | {desc = Ttuple _} -> Some (InstanceType Array)
-  | _ -> None
+  (* First check the original (unexpanded) type for typed arrays and other instance types *)
+  match type_to_instanceof_backed_obj t with
+  | Some instance_type -> Some (InstanceType instance_type)
+  | None -> (
+    (* If original type didn't match, expand and try standard checks *)
+    let expanded_t = !expand_head env t in
+    match expanded_t with
+    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_string ->
+      Some StringType
+    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_int ->
+      Some IntType
+    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_float ->
+      Some FloatType
+    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bigint ->
+      Some BigintType
+    | {desc = Tconstr (path, _, _)} when Path.same path Predef.path_bool ->
+      Some BooleanType
+    | {desc = Tarrow _} -> Some FunctionType
+    | {desc = Tconstr _} as expanded_t when type_is_builtin_object expanded_t ->
+      Some ObjectType
+    | {desc = Tconstr _} as expanded_t
+      when type_to_instanceof_backed_obj expanded_t |> Option.is_some -> (
+      match type_to_instanceof_backed_obj expanded_t with
+      | None -> None
+      | Some instance_type -> Some (InstanceType instance_type))
+    | {desc = Ttuple _} -> Some (InstanceType Array)
+    | _ -> None)
 
 let get_block_type ~env (cstr : Types.constructor_declaration) :
     block_type option =

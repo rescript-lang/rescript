@@ -2,7 +2,6 @@
 
 import * as Js_dict from "rescript/lib/es6/Js_dict.js";
 import * as Belt_Array from "rescript/lib/es6/Belt_Array.js";
-import * as Primitive_array from "rescript/lib/es6/Primitive_array.js";
 import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
 
 function classify(x) {
@@ -289,7 +288,7 @@ let OverlapObject = {
 
 function classify$7(v) {
   if (Array.isArray(v)) {
-    return Primitive_array.get(v, 0);
+    return v[0];
   } else {
     return v.x;
   }
@@ -303,7 +302,7 @@ function classify$8(v) {
   if (typeof v === "object" && !Array.isArray(v)) {
     return v.x;
   } else {
-    return Primitive_array.get(v, 0);
+    return v[0];
   }
 }
 
@@ -356,7 +355,7 @@ let OptionUnboxingHeuristic = {
 
 function classify$9(v) {
   if (Array.isArray(v)) {
-    return Primitive_array.get(v, 0);
+    return v[0];
   }
   switch (typeof v) {
     case "object" :
@@ -522,6 +521,58 @@ async function classifyAll(t) {
     console.log(t.size);
     return;
   }
+  if (t instanceof ArrayBuffer) {
+    console.log("ArrayBuffer");
+    return;
+  }
+  if (t instanceof Int8Array) {
+    console.log("Int8Array");
+    return;
+  }
+  if (t instanceof Int16Array) {
+    console.log("Int16Array");
+    return;
+  }
+  if (t instanceof Int32Array) {
+    console.log("Int32Array");
+    return;
+  }
+  if (t instanceof Uint8Array) {
+    console.log("Uint8Array");
+    return;
+  }
+  if (t instanceof Uint8ClampedArray) {
+    console.log("Uint8ClampedArray");
+    return;
+  }
+  if (t instanceof Uint16Array) {
+    console.log("Uint16Array");
+    return;
+  }
+  if (t instanceof Uint32Array) {
+    console.log("Uint32Array");
+    return;
+  }
+  if (t instanceof Float32Array) {
+    console.log("Float32Array");
+    return;
+  }
+  if (t instanceof Float64Array) {
+    console.log("Float64Array");
+    return;
+  }
+  if (t instanceof BigInt64Array) {
+    console.log("BigInt64Array");
+    return;
+  }
+  if (t instanceof BigUint64Array) {
+    console.log("BigUint64Array");
+    return;
+  }
+  if (t instanceof DataView) {
+    console.log("DataView");
+    return;
+  }
   switch (typeof t) {
     case "string" :
       console.log(t);
@@ -606,8 +657,6 @@ let RecursiveType = {
   }
 };
 
-let $$Array;
-
 let i = 42;
 
 let i2 = 42.5;
@@ -622,7 +671,6 @@ let w = {
 };
 
 export {
-  $$Array,
   i,
   i2,
   s,
