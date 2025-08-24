@@ -77,6 +77,10 @@ let strArr = Js.String.castToArrayLike("abcd")
 Js.Array2.from(strArr) == ["a", "b", "c", "d"]
 ```
 */
+@deprecated({
+  reason: "Use `Array.fromArrayLike` instead.",
+  migrate: Array.fromArrayLike(),
+})
 @val
 external from: array_like<'a> => array<'a> = "Array.from"
 
@@ -96,6 +100,10 @@ let code = s => Js.String.charCodeAt(0, s)
 Js.Array2.fromMap(strArr, code) == [97.0, 98.0, 99.0, 100.0]
 ```
 */
+@deprecated({
+  reason: "Use `Array.fromArrayLikeWithMap` instead.",
+  migrate: Array.fromArrayLikeWithMap(),
+})
 @val
 external fromMap: (array_like<'a>, 'a => 'b) => array<'b> = "Array.from"
 
@@ -112,6 +120,10 @@ Js.Array2.isArray(list{5, 2, 3, 1, 4}) == true
 Js.Array2.isArray("abcd") == false
 ```
 */
+@deprecated({
+  reason: "Use `Array.isArray` instead.",
+  migrate: Array.isArray(),
+})
 @val
 external isArray: 'a => bool = "Array.isArray"
 
@@ -120,6 +132,10 @@ Returns the number of elements in the array. See
 [`Array.length`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/length)
 on MDN.
 */
+@deprecated({
+  reason: "Use `Array.length` instead.",
+  migrate: Array.length(),
+})
 external length: array<'a> => int = "%array_length"
 
 /* Mutator functions */
@@ -139,6 +155,10 @@ Js.Array2.copyWithin(arr, ~to_=2) == [100, 101, 100, 101, 102]
 arr == [100, 101, 100, 101, 102]
 ```
 */
+@deprecated({
+  reason: "Use `Array.copyAllWithin` instead.",
+  migrate: Array.copyAllWithin(~target=%insert.labelledArgument("to_")),
+})
 @send
 external copyWithin: (t<'a>, ~to_: int) => t<'a> = "copyWithin"
 
@@ -159,6 +179,13 @@ Js.Array2.copyWithinFrom(arr, ~from=2, ~to_=0) == [102, 103, 104, 103, 104]
 arr == [102, 103, 104, 103, 104]
 ```
 */
+@deprecated({
+  reason: "Use `Array.copyWithinToEnd` instead.",
+  migrate: Array.copyWithinToEnd(
+    ~target=%insert.labelledArgument("to_"),
+    ~start=%insert.labelledArgument("from"),
+  ),
+})
 @send
 external copyWithinFrom: (t<'a>, ~to_: int, ~from: int) => t<'a> = "copyWithin"
 
@@ -179,6 +206,13 @@ Js.Array2.copyWithinFromRange(arr, ~start=2, ~end_=5, ~to_=1) == [100, 102, 103,
 arr == [100, 102, 103, 104, 104, 105]
 ```
 */
+@deprecated({
+  reason: "Use `Array.copyWithin` instead.",
+  migrate: Array.copyWithin(
+    ~target=%insert.labelledArgument("to_"),
+    ~end=%insert.labelledArgument("end_"),
+  ),
+})
 @send
 external copyWithinFromRange: (t<'a>, ~to_: int, ~start: int, ~end_: int) => t<'a> = "copyWithin"
 
@@ -201,6 +235,10 @@ Js.Array2.fillInPlace(arr, 99) == [99, 99, 99, 99, 99]
 arr == [99, 99, 99, 99, 99]
 ```
 */
+@deprecated({
+  reason: "Use `Array.fillAll` instead.",
+  migrate: Array.fillAll(),
+})
 @send
 external fillInPlace: (t<'a>, 'a) => t<'a> = "fill"
 
@@ -221,6 +259,10 @@ Js.Array2.fillFromInPlace(arr, 99, ~from=2) == [100, 101, 99, 99, 99]
 arr == [100, 101, 99, 99, 99]
 ```
 */
+@deprecated({
+  reason: "Use `Array.fillToEnd` instead.",
+  migrate: Array.fillToEnd(~start=%insert.labelledArgument("from")),
+})
 @send
 external fillFromInPlace: (t<'a>, 'a, ~from: int) => t<'a> = "fill"
 
@@ -242,6 +284,10 @@ Js.Array2.fillRangeInPlace(arr, 99, ~start=1, ~end_=4) == [100, 99, 99, 99, 104]
 arr == [100, 99, 99, 99, 104]
 ```
 */
+@deprecated({
+  reason: "Use `Array.fill` instead.",
+  migrate: Array.fill(~end=%insert.labelledArgument("end_")),
+})
 @send
 external fillRangeInPlace: (t<'a>, 'a, ~start: int, ~end_: int) => t<'a> = "fill"
 
@@ -265,6 +311,10 @@ let empty: array<int> = []
 Js.Array2.pop(empty) == None
 ```
 */
+@deprecated({
+  reason: "Use `Array.pop` instead.",
+  migrate: Array.pop(),
+})
 @send
 external pop: t<'a> => option<'a> = "pop"
 
@@ -282,6 +332,10 @@ Js.Array2.push(arr, "dog") == 4
 arr == ["ant", "bee", "cat", "dog"]
 ```
 */
+@deprecated({
+  reason: "Use `Array.push` instead. Note: `Array.push` returns `unit`, not the array length.",
+  migrate: Array.push(),
+})
 @send
 external push: (t<'a>, 'a) => int = "push"
 
@@ -300,7 +354,12 @@ Js.Array2.pushMany(arr, ["dog", "elk"]) == 5
 arr == ["ant", "bee", "cat", "dog", "elk"]
 ```
 */
-@send @variadic
+@deprecated({
+  reason: "Use `Array.pushMany` instead. Note: `Array.pushMany` returns `unit`, not the array length.",
+  migrate: Array.pushMany(),
+})
+@send
+@variadic
 external pushMany: (t<'a>, array<'a>) => int = "push"
 
 /**
@@ -317,6 +376,10 @@ Js.Array2.reverseInPlace(arr) == ["cat", "bee", "ant"]
 arr == ["cat", "bee", "ant"]
 ```
 */
+@deprecated({
+  reason: "Use `Array.reverse` instead.",
+  migrate: Array.reverse(),
+})
 @send
 external reverseInPlace: t<'a> => t<'a> = "reverse"
 
@@ -338,6 +401,10 @@ let empty: array<int> = []
 Js.Array2.shift(empty) == None
 ```
 */
+@deprecated({
+  reason: "Use `Array.shift` instead.",
+  migrate: Array.shift(),
+})
 @send
 external shift: t<'a> => option<'a> = "shift"
 
@@ -361,6 +428,12 @@ Js.Array2.sortInPlace(numbers) == [1, 10, 2, 20, 3, 30]
 numbers == [1, 10, 2, 20, 3, 30]
 ```
 */
+@deprecated({
+  reason: "Use `Array.toSorted` instead.",
+  migrate: Array.toSorted((a, b) =>
+    %todo_("This needs a comparator function. Use `String.compare` for strings, etc.")
+  ),
+})
 @send
 external sortInPlace: t<'a> => t<'a> = "sort"
 
@@ -394,6 +467,10 @@ let reverseNumeric = (n1, n2) => n2 - n1
 Js.Array2.sortInPlaceWith(numbers, reverseNumeric) == [30, 20, 10, 3, 2, 1]
 ```
 */
+@deprecated({
+  reason: "Use `Array.sort` instead.",
+  migrate: Array.sort(),
+})
 @send
 external sortInPlaceWith: (t<'a>, ('a, 'a) => int) => t<'a> = "sort"
 
@@ -420,7 +497,16 @@ Js.Array2.spliceInPlace(arr3, ~pos=9, ~remove=2, ~add=["x", "y", "z"]) == []
 arr3 == ["a", "b", "c", "d", "e", "f", "x", "y", "z"]
 ```
 */
-@send @variadic
+@send
+@variadic
+@deprecated({
+  reason: "Use `Array.splice` instead.",
+  migrate: Array.splice(
+    ~start=%insert.labelledArgument("pos"),
+    ~remove=%insert.labelledArgument("remove"),
+    ~insert=%insert.labelledArgument("add"),
+  ),
+})
 external spliceInPlace: (t<'a>, ~pos: int, ~remove: int, ~add: array<'a>) => t<'a> = "splice"
 
 /**
@@ -439,6 +525,10 @@ arr == ["a", "b", "c", "d"]
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Array.removeInPlace` instead.",
+  migrate: Array.removeInPlace(%insert.labelledArgument("pos")),
+})
 external removeFromInPlace: (t<'a>, ~pos: int) => t<'a> = "splice"
 
 /**
@@ -457,6 +547,14 @@ arr == ["a", "b", "f"]
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Array.splice` instead.",
+  migrate: Array.splice(
+    ~start=%insert.labelledArgument("pos"),
+    ~remove=%insert.labelledArgument("count"),
+    ~insert=[],
+  ),
+})
 external removeCountInPlace: (t<'a>, ~pos: int, ~count: int) => t<'a> = "splice"
 
 /**
@@ -473,6 +571,10 @@ Js.Array2.unshift(arr, "a") == 4
 arr == ["a", "b", "c", "d"]
 ```
 */
+@deprecated({
+  reason: "Use `Array.unshift` instead.",
+  migrate: Array.unshift(),
+})
 @send
 external unshift: (t<'a>, 'a) => int = "unshift"
 
@@ -491,7 +593,12 @@ Js.Array2.unshiftMany(arr, ["a", "b", "c"]) == 5
 arr == ["a", "b", "c", "d", "e"]
 ```
 */
-@send @variadic
+@deprecated({
+  reason: "Use `Array.unshiftMany` instead.",
+  migrate: Array.unshiftMany(),
+})
+@send
+@variadic
 external unshiftMany: (t<'a>, array<'a>) => int = "unshift"
 
 /* Accessor functions
@@ -511,6 +618,10 @@ on MDN.
 Js.Array2.concat(["a", "b"], ["c", "d", "e"]) == ["a", "b", "c", "d", "e"]
 ```
 */
+@deprecated({
+  reason: "Use `Array.concat` instead.",
+  migrate: Array.concat(),
+})
 @send
 external concat: (t<'a>, t<'a>) => t<'a> = "concat"
 
@@ -535,7 +646,12 @@ Js.Array2.concatMany(["a", "b", "c"], [["d", "e"], ["f", "g", "h"]]) == [
   ]
 ```
 */
-@send @variadic
+@deprecated({
+  reason: "Use `Array.concatMany` instead.",
+  migrate: Array.concatMany(),
+})
+@send
+@variadic
 external concatMany: (t<'a>, array<t<'a>>) => t<'a> = "concat"
 
 /**
@@ -550,6 +666,10 @@ Js.Array2.includes(["a", "b", "c"], "b") == true
 Js.Array2.includes(["a", "b", "c"], "x") == false
 ```
 */
+@deprecated({
+  reason: "Use `Array.includes` instead.",
+  migrate: Array.includes(),
+})
 @send
 external includes: (t<'a>, 'a) => bool = "includes"
 
@@ -566,6 +686,10 @@ Js.Array2.indexOf([100, 101, 102, 103], 102) == 2
 Js.Array2.indexOf([100, 101, 102, 103], 999) == -1
 ```
 */
+@deprecated({
+  reason: "Use `Array.indexOf` instead.",
+  migrate: Array.indexOf(),
+})
 @send
 external indexOf: (t<'a>, 'a) => int = "indexOf"
 
@@ -583,6 +707,10 @@ Js.Array2.indexOfFrom(["a", "b", "a", "c", "a"], "a", ~from=3) == 4
 Js.Array2.indexOfFrom(["a", "b", "a", "c", "a"], "b", ~from=2) == -1
 ```
 */
+@deprecated({
+  reason: "Use `Array.indexOfFrom` instead.",
+  migrate: Array.indexOfFrom(%insert.labelledArgument("from")),
+})
 @send
 external indexOfFrom: (t<'a>, 'a, ~from: int) => int = "indexOf"
 
@@ -602,6 +730,10 @@ Js.Array2.joinWith([2020, 9, 4], "/") == "2020/9/4"
 Js.Array2.joinWith([2.5, 3.6, 3e-2], ";") == "2.5;3.6;0.03"
 ```
 */
+@deprecated({
+  reason: "Use `Array.joinUnsafe` instead.",
+  migrate: Array.joinUnsafe(),
+})
 @send
 external joinWith: (t<'a>, string) => string = "join"
 
@@ -618,6 +750,10 @@ Js.Array2.lastIndexOf(["a", "b", "a", "c"], "a") == 2
 Js.Array2.lastIndexOf(["a", "b", "a", "c"], "x") == -1
 ```
 */
+@deprecated({
+  reason: "Use `Array.lastIndexOf` instead.",
+  migrate: Array.lastIndexOf(),
+})
 @send
 external lastIndexOf: (t<'a>, 'a) => int = "lastIndexOf"
 
@@ -635,6 +771,10 @@ Js.Array2.lastIndexOfFrom(["a", "b", "a", "c", "a", "d"], "a", ~from=3) == 2
 Js.Array2.lastIndexOfFrom(["a", "b", "a", "c", "a", "d"], "c", ~from=2) == -1
 ```
 */
+@deprecated({
+  reason: "Use `Array.lastIndexOfFrom` instead.",
+  migrate: Array.lastIndexOfFrom(%insert.labelledArgument("from")),
+})
 @send
 external lastIndexOfFrom: (t<'a>, 'a, ~from: int) => int = "lastIndexOf"
 
@@ -654,6 +794,10 @@ Js.Array2.slice(arr, ~start=-3, ~end_=-1) == [104, 105]
 Js.Array2.slice(arr, ~start=9, ~end_=10) == []
 ```
 */
+@deprecated({
+  reason: "Use `Array.slice` instead.",
+  migrate: Array.slice(~end=%insert.labelledArgument("end_")),
+})
 @send
 external slice: (t<'a>, ~start: int, ~end_: int) => t<'a> = "slice"
 
@@ -663,6 +807,10 @@ Returns a copy of the entire array. Same as `Js.Array2.Slice(arr, ~start=0,
 [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice)
 on MDN.
 */
+@deprecated({
+  reason: "Use `Array.copy` instead.",
+  migrate: Array.copy(),
+})
 @send
 external copy: t<'a> => t<'a> = "slice"
 
@@ -671,6 +819,10 @@ Returns a shallow copy of the given array from the given index to the end. See
 [`Array.slice`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice)
 on MDN.
 */
+@deprecated({
+  reason: "Use `Array.sliceToEnd` instead.",
+  migrate: Array.sliceToEnd(~start=%insert.unlabelledArgument(1)),
+})
 @send
 external sliceFrom: (t<'a>, int) => t<'a> = "slice"
 
@@ -688,6 +840,10 @@ Js.Array2.toString([3.5, 4.6, 7.8]) == "3.5,4.6,7.8"
 Js.Array2.toString(["a", "b", "c"]) == "a,b,c"
 ```
 */
+@deprecated({
+  reason: "Use `Array.toString` instead.",
+  migrate: Array.toString(),
+})
 @send
 external toString: t<'a> => string = "toString"
 
@@ -707,6 +863,10 @@ Js.Array2.toLocaleString([Js.Date.make()])
 // returns "2020-3-19 10:52:11" for locale de_DE.utf8
 ```
 */
+@deprecated({
+  reason: "Use `Array.toLocaleString` instead.",
+  migrate: Array.toLocaleString(),
+})
 @send
 external toLocaleString: t<'a> => string = "toLocaleString"
 
@@ -732,6 +892,10 @@ Js.Array2.every([6, 22, 8, 4], isEven) == true
 Js.Array2.every([6, 22, 7, 4], isEven) == false
 ```
 */
+@deprecated({
+  reason: "Use `Array.every` instead.",
+  migrate: Array.every(),
+})
 @send
 external every: (t<'a>, 'a => bool) => bool = "every"
 
@@ -754,6 +918,10 @@ Js.Array2.everyi([6, -3, 5, 8], evenIndexPositive) == true
 Js.Array2.everyi([6, 3, -5, 8], evenIndexPositive) == false
 ```
 */
+@deprecated({
+  reason: "Use `Array.everyWithIndex` instead.",
+  migrate: Array.everyWithIndex(),
+})
 @send
 external everyi: (t<'a>, ('a, int) => bool) => bool = "every"
 
@@ -771,6 +939,10 @@ let nonEmpty = s => s != ""
 Js.Array2.filter(["abc", "", "", "def", "ghi"], nonEmpty) == ["abc", "def", "ghi"]
 ```
 */
+@deprecated({
+  reason: "Use `Array.filter` instead.",
+  migrate: Array.filter(),
+})
 @send
 external filter: (t<'a>, 'a => bool) => t<'a> = "filter"
 
@@ -792,6 +964,10 @@ let positiveOddElement = (item, index) => mod(index, 2) == 1 && item > 0
 Js.Array2.filteri([6, 3, 5, 8, 7, -4, 1], positiveOddElement) == [3, 8]
 ```
 */
+@deprecated({
+  reason: "Use `Array.filterWithIndex` instead.",
+  migrate: Array.filterWithIndex(),
+})
 @send
 external filteri: (t<'a>, ('a, int) => bool) => t<'a> = "filter"
 
@@ -809,6 +985,10 @@ Js.Array2.find([33, 22, -55, 77, -44], x => x < 0) == Some(-55)
 Js.Array2.find([33, 22, 55, 77, 44], x => x < 0) == None
 ```
 */
+@deprecated({
+  reason: "Use `Array.find` instead.",
+  migrate: Array.find(),
+})
 @send
 external find: (t<'a>, 'a => bool) => option<'a> = "find"
 
@@ -831,6 +1011,10 @@ Js.Array2.findi([66, -33, 55, 88, 22], positiveOddElement) == Some(88)
 Js.Array2.findi([66, -33, 55, -88, 22], positiveOddElement) == None
 ```
 */
+@deprecated({
+  reason: "Use `Array.findWithIndex` instead.",
+  migrate: Array.findWithIndex(),
+})
 @send
 external findi: (t<'a>, ('a, int) => bool) => option<'a> = "find"
 
@@ -849,6 +1033,10 @@ Js.Array2.findIndex([33, 22, -55, 77, -44], x => x < 0) == 2
 Js.Array2.findIndex([33, 22, 55, 77, 44], x => x < 0) == -1
 ```
 */
+@deprecated({
+  reason: "Use `Array.findIndex` instead.",
+  migrate: Array.findIndex(),
+})
 @send
 external findIndex: (t<'a>, 'a => bool) => int = "findIndex"
 
@@ -871,6 +1059,10 @@ Js.Array2.findIndexi([66, -33, 55, 88, 22], positiveOddElement) == 3
 Js.Array2.findIndexi([66, -33, 55, -88, 22], positiveOddElement) == -1
 ```
 */
+@deprecated({
+  reason: "Use `Array.findIndexWithIndex` instead.",
+  migrate: Array.findIndexWithIndex(),
+})
 @send
 external findIndexi: (t<'a>, ('a, int) => bool) => int = "findIndex"
 
@@ -892,6 +1084,10 @@ on MDN.
 Js.Array2.forEach(["a", "b", "c"], x => Js.log(x)) == ()
 ```
 */
+@deprecated({
+  reason: "Use `Array.forEach` instead.",
+  migrate: Array.forEach(),
+})
 @send
 external forEach: (t<'a>, 'a => unit) => unit = "forEach"
 
@@ -912,6 +1108,10 @@ on MDN.
 Js.Array2.forEachi(["a", "b", "c"], (item, index) => Js.log2(index + 1, item)) == ()
 ```
 */
+@deprecated({
+  reason: "Use `Array.forEachWithIndex` instead.",
+  migrate: Array.forEachWithIndex(),
+})
 @send
 external forEachi: (t<'a>, ('a, int) => unit) => unit = "forEach"
 
@@ -933,6 +1133,10 @@ Js.Array2.map([12, 4, 8], x => x * x) == [144, 16, 64]
 Js.Array2.map(["animal", "vegetable", "mineral"], Js.String.length) == [6, 9, 7]
 ```
 */
+@deprecated({
+  reason: "Use `Array.map` instead.",
+  migrate: Array.map(),
+})
 @send
 external map: (t<'a>, 'a => 'b) => t<'b> = "map"
 
@@ -952,6 +1156,10 @@ let product = (item, index) => item * index
 Js.Array2.mapi([10, 11, 12], product) == [0, 11, 24]
 ```
 */
+@deprecated({
+  reason: "Use `Array.mapWithIndex` instead.",
+  migrate: Array.mapWithIndex(),
+})
 @send
 external mapi: (t<'a>, ('a, int) => 'b) => t<'b> = "map"
 
@@ -986,6 +1194,10 @@ Js.Array2.reduce(
 Js.Array2.reduce([2.0, 4.0], (acc, item) => item /. acc, 1.0) == 2.0 // 4.0 / (2.0 / 1.0)
 ```
 */
+@deprecated({
+  reason: "Use `Array.reduce` instead.",
+  migrate: Array.reduce(%insert.unlabelledArgument(2), %insert.unlabelledArgument(1)),
+})
 @send
 external reduce: (t<'a>, ('b, 'a) => 'b, 'b) => 'b = "reduce"
 
@@ -1022,6 +1234,10 @@ Js.Array2.reducei([2, 5, 1, 4, 3], sumOfEvens, 0) == 6
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Array.reduceWithIndex` instead.",
+  migrate: Array.reduceWithIndex(%insert.unlabelledArgument(2), %insert.unlabelledArgument(1)),
+})
 external reducei: (t<'a>, ('b, 'a, int) => 'b, 'b) => 'b = "reduce"
 
 /**
@@ -1054,6 +1270,10 @@ Js.Array2.reduceRight([2.0, 4.0], (acc, item) => item /. acc, 1.0) == 0.5 // 2.0
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Array.reduceRight` instead.",
+  migrate: Array.reduceRight(%insert.unlabelledArgument(2), %insert.unlabelledArgument(1)),
+})
 external reduceRight: (t<'a>, ('b, 'a) => 'b, 'b) => 'b = "reduceRight"
 
 /**
@@ -1091,6 +1311,10 @@ Js.Array2.reduceRighti([2, 5, 1, 4, 3], sumOfEvens, 0) == 6
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Array.reduceRightWithIndex` instead.",
+  migrate: Array.reduceRightWithIndex(%insert.unlabelledArgument(2), %insert.unlabelledArgument(1)),
+})
 external reduceRighti: (t<'a>, ('b, 'a, int) => 'b, 'b) => 'b = "reduceRight"
 
 /**
@@ -1106,6 +1330,10 @@ Js.Array2.some([3, 7, 5, 2, 9], isEven) == true
 Js.Array2.some([3, 7, 5, 1, 9], isEven) == false
 ```
 */
+@deprecated({
+  reason: "Use `Array.some` instead.",
+  migrate: Array.some(),
+})
 @send
 external some: (t<'a>, 'a => bool) => bool = "some"
 
@@ -1129,6 +1357,10 @@ Js.Array2.somei(["ab", "cd", "ef", "gh"], sameLength) == true
 Js.Array2.somei(["a", "bc", "def", "gh"], sameLength) == false
 ```
 */
+@deprecated({
+  reason: "Use `Array.someWithIndex` instead.",
+  migrate: Array.someWithIndex(),
+})
 @send
 external somei: (t<'a>, ('a, int) => bool) => bool = "some"
 
@@ -1148,6 +1380,10 @@ Js.Array2.unsafe_get(arr, 3) == 103
 Js.Array2.unsafe_get(arr, 4) // returns undefined
 ```
 */
+@deprecated({
+  reason: "Use `Array.getUnsafe` instead.",
+  migrate: Array.getUnsafe(),
+})
 external unsafe_get: (array<'a>, int) => 'a = "%array_unsafe_get"
 
 /**
@@ -1173,4 +1409,8 @@ Js.Array2.unsafe_set(arr, -1, 66)
 // you don't want to know.
 ```
 */
+@deprecated({
+  reason: "Use `Array.setUnsafe` instead.",
+  migrate: Array.setUnsafe(),
+})
 external unsafe_set: (array<'a>, int, 'a) => unit = "%array_unsafe_set"

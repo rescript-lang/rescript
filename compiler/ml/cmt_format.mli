@@ -63,6 +63,7 @@ type cmt_infos = {
   cmt_imports: (string * Digest.t option) list;
   cmt_interface_digest: Digest.t option;
   cmt_use_summaries: bool;
+  cmt_extra_info: Cmt_utils.cmt_extra_info;
 }
 
 type error = Not_a_typedtree of string
@@ -110,6 +111,14 @@ val set_saved_types : binary_part list -> unit
 
 val record_value_dependency :
   Types.value_description -> Types.value_description -> unit
+
+val record_deprecated_used :
+  ?deprecated_context:Cmt_utils.deprecated_used_context ->
+  ?migration_template:Parsetree.expression ->
+  ?migration_piped_template:Parsetree.expression ->
+  Location.t ->
+  string ->
+  unit
 
 (*
 
