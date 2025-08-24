@@ -1121,7 +1121,7 @@ String.trimStart("   Hello   world!   ") == "Hello   world!   "
 external trimStart: string => string = "trimStart"
 
 /**
-`trinEnd(str)` returns a string that is `str` with whitespace stripped from the
+`trimEnd(str)` returns a string that is `str` with whitespace stripped from the
 end of a string. Internal whitespace is not removed.
 See [`String.trimEnd`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/trimEnd) on MDN.
 

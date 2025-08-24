@@ -291,7 +291,7 @@ Path Array.
     "kind": 12,
     "tags": [],
     "detail": "(\n  array<'a>,\n  ~target: int,\n  ~start: int,\n  ~end: int=?,\n) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "\n`copyWithin(array, ~target, ~start, ~end)` copies the sequence of array elements within the array to the position starting at `target`. The copy is taken from the index positions `start` to `end`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.\n\n## Examples\n\n```rescript\nlet myArray = [1, 2, 3, 4, 5]\nmyArray->Array.copyWithin(~target=0, ~start=3) == [4, 5, 3, 4, 5]\n\nlet myArray = [1, 2, 3, 4, 5]\nmyArray->Array.copyWithin(~target=1, ~start=3, ~end=4) == [1, 4, 3, 4, 5]\n```\n"}
+    "documentation": {"kind": "markdown", "value": "\n`copyWithin(array, ~target, ~start, ~end)` copies starting at element `start` in the given array up to but not including `end` to the designated `target` position, returning the resulting array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.\n\n## Examples\n\n```rescript\nlet arr = [100, 101, 102, 103, 104, 105]\narr->Array.copyWithin(~target=1, ~start=2, ~end=5) == [100, 102, 103, 104, 104, 105]\narr == [100, 102, 103, 104, 104, 105]\n```\n"}
   }, {
     "label": "toString",
     "kind": 12,
@@ -322,6 +322,12 @@ Path Array.
     "tags": [],
     "detail": "array<'a> => unit",
     "documentation": {"kind": "markdown", "value": "\n`reverse(array)` reverses the order of the items in `array`.\n\nBeware this will *mutate* the array.\n\nSee [`Array.reverse`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reverse) on MDN.\n\n## Examples\n\n```rescript\nlet someArray = [\"hi\", \"hello\"]\nsomeArray->Array.reverse\n\nsomeArray == [\"hello\", \"hi\"]\n```\n"}
+  }, {
+    "label": "fromString",
+    "kind": 12,
+    "tags": [],
+    "detail": "string => array<string>",
+    "documentation": {"kind": "markdown", "value": "\n`fromString(str)` creates an array of each character as a separate string from the provided `str`.\n\n## Examples\n\n```rescript\nArray.fromString(\"abcde\") == [\"a\", \"b\", \"c\", \"d\", \"e\"]\n```\n"}
   }, {
     "label": "findLastIndexWithIndex",
     "kind": 12,
@@ -437,12 +443,6 @@ Path Array.
     "detail": "(array<'a>, int, 'a) => unit",
     "documentation": {"kind": "markdown", "value": "\n`set(array, index, item)` sets the provided `item` at `index` of `array`.\n\nBeware this will *mutate* the array.\n\n## Examples\n\n```rescript\nlet array = [\"Hello\", \"Hi\", \"Good bye\"]\narray->Array.set(1, \"Hello\")\n\narray[1] == Some(\"Hello\")\n```\n"}
   }, {
-    "label": "isEmpty",
-    "kind": 12,
-    "tags": [],
-    "detail": "array<'a> => bool",
-    "documentation": {"kind": "markdown", "value": "\n`isEmpty(array)` returns `true` if the array is empty (has length 0), `false` otherwise.\n\n## Examples\n\n```rescript\n[]->Array.isEmpty->assertEqual(true)\n[1, 2, 3]->Array.isEmpty->assertEqual(false)\n\nlet emptyArray = []\nemptyArray->Array.isEmpty->assertEqual(true)\n\nlet nonEmptyArray = [\"hello\"]\nnonEmptyArray->Array.isEmpty->assertEqual(false)\n```\n"}
-  }, {
     "label": "filterWithIndex",
     "kind": 12,
     "tags": [],
@@ -489,7 +489,7 @@ Path Array.
     "kind": 12,
     "tags": [1],
     "detail": "(array<'a>, ~target: int, ~start: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n\n`copyWithinToEnd(array, ~target, ~start)` copies starting at element `start` in the given array to the designated `target` position, returning the resulting array.\n\nBeware this will *mutate* the array.\n\nSee [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.\n\n## Examples\n\n```rescript\nlet arr = [100, 101, 102, 103, 104]\narr->Array.copyWithinToEnd(~target=0, ~start=2) == [102, 103, 104, 103, 104]\narr == [102, 103, 104, 103, 104]\n```\n"}
   }, {
     "label": "unshift",
     "kind": 12,
@@ -537,7 +537,7 @@ Path Array.
     "kind": 12,
     "tags": [1],
     "detail": "(array<'a>, ~target: int) => array<'a>",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `copyWithin` instead\n\n\n`isEmpty(array)` returns `true` if the array is empty (has length 0), `false` otherwise.\n\n## Examples\n\n```rescript\nlet arr = [100, 101, 102, 103, 104]\narr->Array.copyAllWithin(~target=2) == [100, 101, 100, 101, 102]\narr == [100, 101, 100, 101, 102]\n```\n"}
   }, {
     "label": "keepSome",
     "kind": 12,
@@ -2486,7 +2486,7 @@ Path t
     "kind": 12,
     "tags": [1],
     "detail": "(int, ~digits: int) => string",
-    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n  \n"}
+    "documentation": {"kind": "markdown", "value": "Deprecated: Use `toPrecision` instead\n\n\n`toPrecisionWithPrecision(n, ~digits)` return a `string` representing the giver value with\nprecision. `digits` specifies the number of significant digits. See [`Number.toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toPrecision) on MDN.\n\n## Examples\n\n```rescript\nInt.toPrecisionWithPrecision(100, ~digits=2) // \"1.0e+2\"\nInt.toPrecisionWithPrecision(1, ~digits=2) // \"1.0\"\n```\n\n## Exceptions\n\n- `RangeError`: If `digits` is not between 1 and 100 (inclusive).\n  Implementations are allowed to support larger and smaller values as well.\n  ECMA-262 only requires a precision of up to 21 significant digits.\n"}
   }, {
     "label": "Int.toPrecision",
     "kind": 12,

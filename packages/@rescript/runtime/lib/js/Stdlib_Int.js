@@ -62,6 +62,14 @@ function clamp(min, max, value) {
   }
 }
 
+function lnot(x) {
+  return x ^ -1;
+}
+
+let Bitwise = {
+  lnot: lnot
+};
+
 let Ref = {};
 
 let Constants = {
@@ -74,5 +82,6 @@ exports.fromString = fromString;
 exports.range = range;
 exports.rangeWithOptions = rangeWithOptions;
 exports.clamp = clamp;
+exports.Bitwise = Bitwise;
 exports.Ref = Ref;
 /* No side effect */

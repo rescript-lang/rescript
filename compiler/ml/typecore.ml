@@ -2243,9 +2243,9 @@ type lazy_args =
   (Asttypes.arg_label * (unit -> Typedtree.expression) option) list
 
 type targs = (Asttypes.arg_label * Typedtree.expression option) list
-let rec type_exp ~context ?recarg env sexp =
+let rec type_exp ?deprecated_context ~context ?recarg env sexp =
   (* We now delegate everything to type_expect *)
-  type_expect ~context ?recarg env sexp (newvar ())
+  type_expect ?deprecated_context ~context ?recarg env sexp (newvar ())
 
 (* Typing of an expression with an expected type.
    This provide better error messages, and allows controlled
@@ -2253,7 +2253,8 @@ let rec type_exp ~context ?recarg env sexp =
    In the principal case, [type_expected'] may be at generic_level.
 *)
 
-and type_expect ~context ?in_function ?recarg env sexp ty_expected =
+and type_expect ~context ?deprecated_context ?in_function ?recarg env sexp
+    ty_expected =
   (* Special errors for braced identifiers passed to records *)
   let context =
     match sexp.pexp_desc with
@@ -2268,14 +2269,15 @@ and type_expect ~context ?in_function ?recarg env sexp ty_expected =
   let previous_saved_types = Cmt_format.get_saved_types () in
   let exp =
     Builtin_attributes.warning_scope sexp.pexp_attributes (fun () ->
-        type_expect_ ~context ?in_function ?recarg env sexp ty_expected)
+        type_expect_ ?deprecated_context ~context ?in_function ?recarg env sexp
+          ty_expected)
   in
   Cmt_format.set_saved_types
     (Cmt_format.Partial_expression exp :: previous_saved_types);
   exp
 
-and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
-    =
+and type_expect_ ?deprecated_context ~context ?in_function ?(recarg = Rejected)
+    env sexp ty_expected =
   let loc = sexp.pexp_loc in
   (* Record the expression type before unifying it with the expected type *)
   let rue exp =
@@ -2292,7 +2294,14 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
   in
   match sexp.pexp_desc with
   | Pexp_ident lid ->
-    let path, desc = Typetexp.find_value env lid.loc lid.txt in
+    let path, desc =
+      Typetexp.find_value
+        ?deprecated_context:
+          (match deprecated_context with
+          | None -> Some Reference
+          | v -> v)
+        env lid.loc lid.txt
+    in
     (if !Clflags.annotations then
        let dloc = desc.Types.val_loc in
        let annot =
@@ -2428,7 +2437,9 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
     assert (sargs <> []);
     begin_def ();
     (* one more level for non-returning functions *)
-    let funct = type_exp ~context:None env sfunct in
+    let funct =
+      type_exp ~deprecated_context:FunctionCall ~context:None env sfunct
+    in
     let ty = instance env funct.exp_type in
     end_def ();
     wrap_trace_gadt_instances env (lower_args env []) ty;

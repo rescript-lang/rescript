@@ -203,16 +203,46 @@ external undefined: undefined<'a> = "%undefined"
 external typeof: 'a => string = "%typeof"
 
 /** Equivalent to console.log any value. */
-@val @scope("console")
+@deprecated({
+  reason: "Use `Console.log` instead.",
+  migrate: Console.log(),
+})
+@val
+@scope("console")
 external log: 'a => unit = "log"
 
-@val @scope("console") external log2: ('a, 'b) => unit = "log"
-@val @scope("console") external log3: ('a, 'b, 'c) => unit = "log"
+@deprecated({
+  reason: "Use `Console.log2` instead.",
+  migrate: Console.log2(),
+})
+@val
+@scope("console")
+external log2: ('a, 'b) => unit = "log"
 
-@val @scope("console") external log4: ('a, 'b, 'c, 'd) => unit = "log"
+@deprecated({
+  reason: "Use `Console.log3` instead.",
+  migrate: Console.log3(),
+})
+@val
+@scope("console")
+external log3: ('a, 'b, 'c) => unit = "log"
+
+@deprecated({
+  reason: "Use `Console.log4` instead.",
+  migrate: Console.log4(),
+})
+@val
+@scope("console")
+external log4: ('a, 'b, 'c, 'd) => unit = "log"
 
 /** A convenience function to console.log more than 4 arguments */
-@val @scope("console") @variadic
+@deprecated({
+  reason: "Use `Console.logMany` instead.",
+  migrate: Console.logMany(),
+})
+@val
+@scope("console")
+@variadic
 external logMany: array<'a> => unit = "log"
 
 external eqNull: ('a, null<'a>) => bool = "%equal_null"
