@@ -2611,18 +2611,24 @@ and print_pattern ~state (p : Parsetree.pattern) cmt_tbl =
         (Doc.concat docs)
     | Ppat_extension ext ->
       print_extension ~state ~at_module_lvl:false ext cmt_tbl
-    | Ppat_alias (p, alias_loc) ->
+    | Ppat_alias (inner_p, alias_loc) ->
       let needs_parens =
-        match p.ppat_desc with
+        match inner_p.ppat_desc with
         | Ppat_or (_, _) | Ppat_alias (_, _) -> true
         | _ -> false
       in
       let rendered_pattern =
-        let p = print_pattern ~state p cmt_tbl in
+        let p = print_pattern ~state inner_p cmt_tbl in
         if needs_parens then Doc.concat [Doc.text "("; p; Doc.text ")"] else p
       in
-      Doc.concat
-        [rendered_pattern; Doc.text " as "; print_string_loc alias_loc cmt_tbl]
+      let alias_doc =
+        if
+          ParsetreeViewer.has_attribute_with_name
+            ~name:"res.asPolyVariantFromLiterals" p.ppat_attributes
+        then Doc.concat [Doc.text "#..."; print_string_loc alias_loc cmt_tbl]
+        else print_string_loc alias_loc cmt_tbl
+      in
+      Doc.concat [rendered_pattern; Doc.text " as "; alias_doc]
     (* Note: module(P : S) is represented as *)
     (* Ppat_constraint(Ppat_unpack, Ptyp_package) *)
     | Ppat_constraint

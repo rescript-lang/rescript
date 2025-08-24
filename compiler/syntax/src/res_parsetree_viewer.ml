@@ -80,6 +80,13 @@ let has_res_pat_variant_spread_attribute attrs =
       | _ -> false)
     attrs
 
+let has_attribute_with_name ~name attrs =
+  List.exists
+    (function
+      | {Location.txt}, _ when txt = name -> true
+      | _ -> false)
+    attrs
+
 let has_dict_pattern_attribute attrs =
   attrs
   |> List.find_opt (fun (({txt}, _) : Parsetree.attribute) ->
@@ -201,7 +208,8 @@ let filter_parsing_attrs attrs =
               ( "meth" | "res.braces" | "ns.braces" | "res.iflet"
               | "res.ternary" | "res.await" | "res.template"
               | "res.taggedTemplate" | "res.patVariantSpread"
-              | "res.dictPattern" | "res.inlineRecordDefinition" );
+              | "res.asPolyVariantFromLiterals" | "res.dictPattern"
+              | "res.inlineRecordDefinition" );
           },
           _ ) ->
         false
@@ -543,7 +551,8 @@ let is_printable_attribute attr =
   | ( {
         Location.txt =
           ( "res.iflet" | "res.braces" | "ns.braces" | "JSX" | "res.await"
-          | "res.template" | "res.ternary" | "res.inlineRecordDefinition" );
+          | "res.template" | "res.ternary" | "res.inlineRecordDefinition"
+          | "res.asPolyVariantFromLiterals" );
       },
       _ ) ->
     false
