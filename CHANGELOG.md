@@ -14,6 +14,8 @@
 
 #### :boom: Breaking Change
 
+- Extract ReScript runtime files from main `rescript` package to separate `@rescript/runtime` package. https://github.com/rescript-lang/rescript/pull/7796
+
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
