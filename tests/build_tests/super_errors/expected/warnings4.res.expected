@@ -5,7 +5,7 @@
    9 [2m│[0m @val external x: myType = "myVariable"
   10 [2m│[0m 
   [1;33m11[0m [2m│[0m [1;33mswitch x {[0m
-  [1;33m12[0m [2m│[0m [1;33m| #first => Js.log("first")[0m
+  [1;33m12[0m [2m│[0m [1;33m| #first => Console.log("first")[0m
   [1;33m13[0m [2m│[0m [1;33m}[0m
   14 [2m│[0m 
 

@@ -63,6 +63,7 @@ type cmt_infos = {
   cmt_imports : (string * Digest.t option) list;
   cmt_interface_digest : Digest.t option;
   cmt_use_summaries : bool;
+  cmt_extra_info: Cmt_utils.cmt_extra_info;
 }
 
 type error =
@@ -154,14 +155,21 @@ let read_cmi filename =
 
 let saved_types = ref []
 let value_deps = ref []
+let deprecated_used = ref []
 
 let clear () =
   saved_types := [];
-  value_deps := []
+  value_deps := [];
+  deprecated_used := []
 
 let add_saved_type b = saved_types := b :: !saved_types
 let get_saved_types () = !saved_types
 let set_saved_types l = saved_types := l
+
+let record_deprecated_used ?deprecated_context ?migration_template ?migration_piped_template source_loc deprecated_text =
+  deprecated_used := {Cmt_utils.source_loc; deprecated_text; migration_template; migration_piped_template; context = deprecated_context} :: !deprecated_used
+
+let _ = Cmt_utils.record_deprecated_used := record_deprecated_used
 
 let record_value_dependency vd1 vd2 =
   if vd1.Types.val_loc <> vd2.Types.val_loc then
@@ -197,6 +205,7 @@ let save_cmt filename modname binary_annots sourcefile initial_env cmi =
            cmt_imports = List.sort compare (Env.imports ());
            cmt_interface_digest = this_crc;
            cmt_use_summaries = need_to_clear_env;
+           cmt_extra_info = {deprecated_used = !deprecated_used};
          } in
          output_cmt oc cmt)
   end;

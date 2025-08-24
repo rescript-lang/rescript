@@ -32,6 +32,17 @@ external fromIterator: Stdlib_Iterator.t<'a> => array<'a> = "Array.from"
 external fromArrayLikeWithMap: (arrayLike<'a>, 'a => 'b) => array<'b> = "Array.from"
 
 /**
+`fromString(str)` creates an array of each character as a separate string from the provided `str`.
+
+## Examples
+
+```rescript
+Array.fromString("abcde") == ["a", "b", "c", "d", "e"]
+```
+*/
+@val external fromString: string => array<string> = "Array.from"
+
+/**
 `make(~length, init)` creates an array of length `length` initialized with the value of `init`.
 
 ## Examples
@@ -85,28 +96,16 @@ external length: array<'a> => int = "%array_length"
 ## Examples
 
 ```rescript
-[]->Array.isEmpty->assertEqual(true)
-[1, 2, 3]->Array.isEmpty->assertEqual(false)
-
-let emptyArray = []
-emptyArray->Array.isEmpty->assertEqual(true)
-
-let nonEmptyArray = ["hello"]
-nonEmptyArray->Array.isEmpty->assertEqual(false)
+let arr = [100, 101, 102, 103, 104]
+arr->Array.copyAllWithin(~target=2) == [100, 101, 100, 101, 102]
+arr == [100, 101, 100, 101, 102]
 ```
 */
-let isEmpty: array<'a> => bool
-
-// TODO: Docs
-@deprecated("Use `copyWithin` instead") @send
-external copyAllWithin: (array<'a>, ~target: int) => array<'a> = "copyWithin"
-
-// TODO: Docs
-@deprecated("Use `copyWithin` instead") @send
-external copyWithinToEnd: (array<'a>, ~target: int, ~start: int) => array<'a> = "copyWithin"
+@deprecated("Use `copyWithin` instead")
+@send external copyAllWithin: (array<'a>, ~target: int) => array<'a> = "copyWithin"
 
 /**
-`copyWithin(array, ~target, ~start, ~end)` copies the sequence of array elements within the array to the position starting at `target`. The copy is taken from the index positions `start` to `end`.
+`copyWithinToEnd(array, ~target, ~start)` copies starting at element `start` in the given array to the designated `target` position, returning the resulting array.
 
 Beware this will *mutate* the array.
 
@@ -115,11 +114,28 @@ See [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript
 ## Examples
 
 ```rescript
-let myArray = [1, 2, 3, 4, 5]
-myArray->Array.copyWithin(~target=0, ~start=3) == [4, 5, 3, 4, 5]
+let arr = [100, 101, 102, 103, 104]
+arr->Array.copyWithinToEnd(~target=0, ~start=2) == [102, 103, 104, 103, 104]
+arr == [102, 103, 104, 103, 104]
+```
+*/
+@deprecated("Use `copyWithin` instead")
+@send
+external copyWithinToEnd: (array<'a>, ~target: int, ~start: int) => array<'a> = "copyWithin"
 
-let myArray = [1, 2, 3, 4, 5]
-myArray->Array.copyWithin(~target=1, ~start=3, ~end=4) == [1, 4, 3, 4, 5]
+/**
+`copyWithin(array, ~target, ~start, ~end)` copies starting at element `start` in the given array up to but not including `end` to the designated `target` position, returning the resulting array.
+
+Beware this will *mutate* the array.
+
+See [`Array.copyWithin`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/copyWithin) on MDN.
+
+## Examples
+
+```rescript
+let arr = [100, 101, 102, 103, 104, 105]
+arr->Array.copyWithin(~target=1, ~start=2, ~end=5) == [100, 102, 103, 104, 104, 105]
+arr == [100, 102, 103, 104, 104, 105]
 ```
 */
 @send

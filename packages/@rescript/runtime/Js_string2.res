@@ -36,6 +36,10 @@ Js.String2.make(3.5) == "3.5"
 Js.String2.make([1, 2, 3]) == "1,2,3"
 ```
 */
+@deprecated({
+  reason: "Use `String.make` instead",
+  migrate: String.make(),
+})
 @val
 external make: 'a => t = "String"
 
@@ -57,6 +61,10 @@ Js.String2.fromCharCode(0xd55c) == `한`
 Js.String2.fromCharCode(-64568) == `ψ`
 ```
 */
+@deprecated({
+  reason: "Use `String.fromCharCode` instead",
+  migrate: String.fromCharCode(),
+})
 @val
 external fromCharCode: int => t = "String.fromCharCode"
 
@@ -67,7 +75,12 @@ corresponding to the given numbers, using the same rules as `fromCharCode`.
 See [`String.fromCharCode`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/fromCharCode)
 on MDN.
 */
-@val @variadic
+@deprecated({
+  reason: "Use `String.fromCharCodeMany` instead",
+  migrate: String.fromCharCodeMany(),
+})
+@val
+@variadic
 external fromCharCodeMany: array<int> => t = "String.fromCharCode"
 
 /**
@@ -89,6 +102,10 @@ Js.String2.fromCodePoint(0xd55c) == `한`
 Js.String2.fromCodePoint(0x1f63a) == `😺`
 ```
 */
+@deprecated({
+  reason: "Use `String.fromCodePoint` instead",
+  migrate: String.fromCodePoint(),
+})
 @val
 external fromCodePoint: int => t = "String.fromCodePoint"
 
@@ -106,7 +123,12 @@ on MDN.
 Js.String2.fromCodePointMany([0xd55c, 0xae00, 0x1f63a]) == `한글😺`
 ```
 */
-@val @variadic
+@deprecated({
+  reason: "Use `String.fromCodePointMany` instead",
+  migrate: String.fromCodePointMany(),
+})
+@val
+@variadic
 external fromCodePointMany: array<int> => t = "String.fromCodePoint"
 
 /* String.raw: ES2015, meant to be used with template strings, not directly */
@@ -123,6 +145,10 @@ on MDN.
 Js.String2.length("abcd") == 4
 ```
 */
+@deprecated({
+  reason: "Use `String.length` instead",
+  migrate: String.length(),
+})
 @get
 external length: t => int = "length"
 
@@ -139,6 +165,10 @@ Js.String2.get("Reason", 4) == "o"
 Js.String2.get(`Rẽasöń`, 5) == `ń`
 ```
 */
+@deprecated({
+  reason: "Use `String.getUnsafe` instead. Or use `String.get` for a safe version that returns an option.",
+  migrate: String.getUnsafe(),
+})
 @get_index
 external get: (t, int) => t = ""
 
@@ -159,6 +189,10 @@ Js.String2.charAt("Reason", 12) == ""
 Js.String2.charAt(`Rẽasöń`, 5) == `ń`
 ```
 */
+@deprecated({
+  reason: "Use `String.charAt` instead",
+  migrate: String.charAt(),
+})
 @send
 external charAt: (t, int) => t = "charAt"
 
@@ -179,6 +213,10 @@ Js.String2.charCodeAt(`😺`, 0) == 0xd83d->Belt.Int.toFloat
 Js.String2.codePointAt(`😺`, 0) == Some(0x1f63a)
 ```
 */
+@deprecated({
+  reason: "Use `String.charCodeAt` instead",
+  migrate: String.charCodeAt(),
+})
 @send
 external charCodeAt: (t, int) => float = "charCodeAt"
 
@@ -198,6 +236,10 @@ Js.String2.codePointAt(`¿😺?`, 1) == Some(0x1f63a)
 Js.String2.codePointAt("abc", 5) == None
 ```
 */
+@deprecated({
+  reason: "Use `String.codePointAt` instead",
+  migrate: String.codePointAt(),
+})
 @send
 external codePointAt: (t, int) => option<int> = "codePointAt"
 
@@ -214,6 +256,10 @@ on MDN.
 Js.String2.concat("cow", "bell") == "cowbell"
 ```
 */
+@deprecated({
+  reason: "Use `String.concat` instead",
+  migrate: String.concat(),
+})
 @send
 external concat: (t, t) => t = "concat"
 
@@ -230,7 +276,12 @@ on MDN.
 Js.String2.concatMany("1st", ["2nd", "3rd", "4th"]) == "1st2nd3rd4th"
 ```
 */
-@send @variadic
+@deprecated({
+  reason: "Use `String.concatMany` instead",
+  migrate: String.concatMany(),
+})
+@send
+@variadic
 external concatMany: (t, array<t>) => t = "concat"
 
 /**
@@ -247,6 +298,10 @@ Js.String2.endsWith("ReScript", "Script") == true
 Js.String2.endsWith("C++", "Script") == false
 ```
 */
+@deprecated({
+  reason: "Use `String.endsWith` instead",
+  migrate: String.endsWith(),
+})
 @send
 external endsWith: (t, t) => bool = "endsWith"
 
@@ -268,6 +323,10 @@ Js.String2.endsWithFrom("abcde", "cde", 99) == true
 Js.String2.endsWithFrom("example.dat", "ple", 7) == true
 ```
 */
+@deprecated({
+  reason: "Use `String.endsWithFrom` instead",
+  migrate: String.endsWithFrom(),
+})
 @send
 external endsWithFrom: (t, t, int) => bool = "endsWith"
 
@@ -287,6 +346,10 @@ Js.String2.includes("programmer", "pro") == true
 Js.String2.includes("programmer.dat", "xyz") == false
 ```
 */
+@deprecated({
+  reason: "Use `String.includes` instead",
+  migrate: String.includes(),
+})
 @send
 external includes: (t, t) => bool = "includes"
 
@@ -306,6 +369,10 @@ Js.String2.includesFrom("programmer", "gram", 4) == false
 Js.String2.includesFrom(`대한민국`, `한`, 1) == true
 ```
 */
+@deprecated({
+  reason: "Use `String.includesFrom` instead",
+  migrate: String.includesFrom(),
+})
 @send
 external includesFrom: (t, t, int) => bool = "includes"
 
@@ -325,6 +392,10 @@ Js.String2.indexOf("beekeeper", "ee") == 1
 Js.String2.indexOf("bookseller", "xyz") == -1
 ```
 */
+@deprecated({
+  reason: "Use `String.indexOf` instead",
+  migrate: String.indexOf(),
+})
 @send
 external indexOf: (t, t) => int = "indexOf"
 
@@ -346,6 +417,10 @@ Js.String2.indexOfFrom("bookseller", "sell", 2) == 4
 Js.String2.indexOfFrom("bookseller", "sell", 5) == -1
 ```
 */
+@deprecated({
+  reason: "Use `String.indexOfFrom` instead",
+  migrate: String.indexOfFrom(),
+})
 @send
 external indexOfFrom: (t, t, int) => int = "indexOf"
 
@@ -366,6 +441,10 @@ Js.String2.lastIndexOf("beekeeper", "ee") == 4
 Js.String2.lastIndexOf("abcdefg", "xyz") == -1
 ```
 */
+@deprecated({
+  reason: "Use `String.lastIndexOf` instead",
+  migrate: String.lastIndexOf(),
+})
 @send
 external lastIndexOf: (t, t) => int = "lastIndexOf"
 
@@ -387,6 +466,10 @@ Js.String2.lastIndexOfFrom("beekeeper", "ee", 3) == 1
 Js.String2.lastIndexOfFrom("abcdefg", "xyz", 4) == -1
 ```
 */
+@deprecated({
+  reason: "Use `String.lastIndexOfFrom` instead",
+  migrate: String.lastIndexOfFrom(),
+})
 @send
 external lastIndexOfFrom: (t, t, int) => int = "lastIndexOf"
 
@@ -409,6 +492,10 @@ Js.String2.localeCompare("cat", "cat") == 0.0
 Js.String2.localeCompare("CAT", "cat") > 0.0
 ```
 */
+@deprecated({
+  reason: "Use `String.localeCompare` instead",
+  migrate: String.localeCompare(),
+})
 @send
 external localeCompare: (t, t) => float = "localeCompare"
 
@@ -434,7 +521,12 @@ Js.String2.match_("Today is 2018-04-05.", /(\d+)-(\d+)-(\d+)/) ==
 Js.String2.match_("The large container.", /b[aeiou]g/) == None
 ```
 */
-@send @return({null_to_opt: null_to_opt})
+@deprecated({
+  reason: "Use `String.match` instead",
+  migrate: String.match(),
+})
+@send
+@return({null_to_opt: null_to_opt})
 external match_: (t, Js_re.t) => option<array<option<t>>> = "match"
 
 /**
@@ -448,6 +540,10 @@ See [`String.normalize`](https://developer.mozilla.org/en-US/docs/Web/JavaScript
 on MDN. See also [Unicode technical report
 #15](https://unicode.org/reports/tr15/) for details.
 */
+@deprecated({
+  reason: "Use `String.normalize` instead",
+  migrate: String.normalize(),
+})
 @send
 external normalize: t => t = "normalize"
 
@@ -462,6 +558,10 @@ specified form of normalization, which may be one of:
 See [`String.normalize`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/normalize) on MDN.
 See also [Unicode technical report #15](https://unicode.org/reports/tr15/) for details.
 */
+@deprecated({
+  reason: "Use `String.normalizeByForm` instead",
+  migrate: String.normalizeByForm(),
+})
 @send
 external normalizeByForm: (t, t) => t = "normalize"
 
@@ -479,6 +579,10 @@ Js.String2.repeat("ha", 3) == "hahaha"
 Js.String2.repeat("empty", 0) == ""
 ```
 */
+@deprecated({
+  reason: "Use `String.repeat` instead",
+  migrate: String.repeat(),
+})
 @send
 external repeat: (t, int) => t = "repeat"
 
@@ -498,6 +602,10 @@ Js.String2.replace("old string", "old", "new") == "new string"
 Js.String2.replace("the cat and the dog", "the", "this") == "this cat and the dog"
 ```
 */
+@deprecated({
+  reason: "Use `String.replace` instead",
+  migrate: String.replace(),
+})
 @send
 external replace: (t, t, t) => t = "replace"
 
@@ -515,6 +623,10 @@ Js.String2.replaceByRe("vowels be gone", /[aeiou]/g, "x") == "vxwxls bx gxnx"
 Js.String2.replaceByRe("Juan Fulano", /(\w+) (\w+)/, "$2, $1") == "Fulano, Juan"
 ```
 */
+@deprecated({
+  reason: "Use `String.replaceRegExp` instead",
+  migrate: String.replaceRegExp(),
+})
 @send
 external replaceByRe: (t, Js_re.t, t) => t = "replace"
 
@@ -537,6 +649,10 @@ let matchFn = (matchPart, _offset, _wholeString) => Js.String2.toUpperCase(match
 Js.String2.unsafeReplaceBy0(str, re, matchFn) == "bEAUtIfUl vOwEls"
 ```
 */
+@deprecated({
+  reason: "Use `String.replaceRegExpBy0Unsafe` instead",
+  migrate: String.replaceRegExpBy0Unsafe(),
+})
 @send
 external unsafeReplaceBy0: (t, Js_re.t, (t, int, t) => t) => t = "replace"
 
@@ -562,6 +678,10 @@ let matchFn = (_match, part1, _offset, _wholeString) => {
 Js.String2.unsafeReplaceBy1(str, re, matchFn) == "Jony is 41"
 ```
 */
+@deprecated({
+  reason: "Use `String.replaceRegExpBy1Unsafe` instead",
+  migrate: String.replaceRegExpBy1Unsafe(),
+})
 @send
 external unsafeReplaceBy1: (t, Js_re.t, (t, t, int, t) => t) => t = "replace"
 
@@ -590,6 +710,10 @@ let matchFn = (_match, p1, p2, _offset, _wholeString) => {
 Js.String2.unsafeReplaceBy2(str, re, matchFn) == "42"
 ```
 */
+@deprecated({
+  reason: "Use `String.replaceRegExpBy2Unsafe` instead",
+  migrate: String.replaceRegExpBy2Unsafe(),
+})
 @send
 external unsafeReplaceBy2: (t, Js_re.t, (t, t, t, int, t) => t) => t = "replace"
 
@@ -603,6 +727,10 @@ matched.
 See [`String.replace`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace)
 on MDN.
 */
+@deprecated({
+  reason: "Use `String.replaceRegExpBy3Unsafe` instead",
+  migrate: String.replaceRegExpBy3Unsafe(),
+})
 @send
 external unsafeReplaceBy3: (t, Js_re.t, (t, t, t, t, int, t) => t) => t = "replace"
 
@@ -620,6 +748,10 @@ Js.String2.search("testing 1 2 3", /\d+/) == 8
 Js.String2.search("no numbers", /\d+/) == -1
 ```
 */
+@deprecated({
+  reason: "Use `String.search` instead",
+  migrate: String.search(),
+})
 @send
 external search: (t, Js_re.t) => int = "search"
 
@@ -641,6 +773,13 @@ Js.String2.slice("abcdefg", ~from=-4, ~to_=-2) == "de"
 Js.String2.slice("abcdefg", ~from=5, ~to_=1) == ""
 ```
 */
+@deprecated({
+  reason: "Use `String.slice` instead",
+  migrate: String.slice(
+    ~start=%insert.labelledArgument("from"),
+    ~end=%insert.labelledArgument("to_"),
+  ),
+})
 @send
 external slice: (t, ~from: int, ~to_: int) => t = "slice"
 
@@ -660,6 +799,10 @@ Js.String2.sliceToEnd("abcdefg", ~from=-2) == "fg"
 Js.String2.sliceToEnd("abcdefg", ~from=7) == ""
 ```
 */
+@deprecated({
+  reason: "Use `String.sliceToEnd` instead",
+  migrate: String.sliceToEnd(~start=%insert.labelledArgument("from")),
+})
 @send
 external sliceToEnd: (t, ~from: int) => t = "slice"
 
@@ -679,6 +822,10 @@ Js.String2.split("good::bad as great::awful", "::") == ["good", "bad as great", 
 Js.String2.split("has-no-delimiter", ";") == ["has-no-delimiter"]
 ```
 */
+@deprecated({
+  reason: "Use `String.split` instead",
+  migrate: String.split(),
+})
 @send
 external split: (t, t) => array<t> = "split"
 
@@ -691,6 +838,10 @@ splitAtMost "ant/bee/cat/dog/elk" "/" ~limit: 0 = [| |];;
 splitAtMost "ant/bee/cat/dog/elk" "/" ~limit: 9 = [|"ant"; "bee"; "cat"; "dog"; "elk"|];;
 ```
 */
+@deprecated({
+  reason: "Use `String.splitAtMost` instead",
+  migrate: String.splitAtMost(),
+})
 @send
 external splitAtMost: (t, t, ~limit: int) => array<t> = "split"
 
@@ -712,6 +863,10 @@ Js.String2.splitByRe("art; bed , cog ;dad", /\s*[,;]\s*TODO/) == [
   ]
 ```
 */
+@deprecated({
+  reason: "Use `String.splitByRegExp` instead",
+  migrate: String.splitByRegExp(),
+})
 @send
 external splitByRe: (t, Js_re.t) => array<option<t>> = "split"
 
@@ -743,6 +898,10 @@ Js.String2.splitByReAtMost("one: two: three: four", /\s*:\s*TODO/, ~limit=8) == 
   ]
 ```
 */
+@deprecated({
+  reason: "Use `String.splitByRegExpAtMost` instead",
+  migrate: String.splitByRegExpAtMost(),
+})
 @send
 external splitByReAtMost: (t, Js_re.t, ~limit: int) => array<option<t>> = "split"
 
@@ -761,6 +920,10 @@ Js.String2.startsWith("ReScript", "") == true
 Js.String2.startsWith("JavaScript", "Re") == false
 ```
 */
+@deprecated({
+  reason: "Use `String.startsWith` instead",
+  migrate: String.startsWith(),
+})
 @send
 external startsWith: (t, t) => bool = "startsWith"
 
@@ -780,6 +943,10 @@ Js.String2.startsWithFrom("ReScript", "", 2) == true
 Js.String2.startsWithFrom("JavaScript", "Scri", 2) == false
 ```
 */
+@deprecated({
+  reason: "Use `String.startsWithFrom` instead",
+  migrate: String.startsWithFrom(),
+})
 @send
 external startsWithFrom: (t, t, int) => bool = "startsWith"
 
@@ -803,7 +970,7 @@ Js.String2.substr("abcdefghij", ~from=-3) == "hij"
 Js.String2.substr("abcdefghij", ~from=12) == ""
 ```
 */
-@send
+@deprecated("Use `String.substring` instead") @send
 external substr: (t, ~from: int) => t = "substr"
 
 /**
@@ -827,7 +994,7 @@ Js.String2.substrAtMost("abcdefghij", ~from=-3, ~length=4) == "hij"
 Js.String2.substrAtMost("abcdefghij", ~from=12, ~length=2) == ""
 ```
 */
-@send
+@deprecated("Use `String.substringAtMost` instead") @send
 external substrAtMost: (t, ~from: int, ~length: int) => t = "substr"
 
 /**
@@ -847,6 +1014,13 @@ Js.String2.substring("playground", ~from=6, ~to_=3) == "ygr"
 Js.String2.substring("playground", ~from=4, ~to_=12) == "ground"
 ```
 */
+@deprecated({
+  reason: "Use `String.substring` instead",
+  migrate: String.substring(
+    ~start=%insert.labelledArgument("from"),
+    ~end=%insert.labelledArgument("to_"),
+  ),
+})
 @send
 external substring: (t, ~from: int, ~to_: int) => t = "substring"
 
@@ -866,6 +1040,10 @@ Js.String2.substringToEnd("playground", ~from=-3) == "playground"
 Js.String2.substringToEnd("playground", ~from=12) == ""
 ```
 */
+@deprecated({
+  reason: "Use `String.substringToEnd` instead",
+  migrate: String.substringToEnd(~start=%insert.labelledArgument("from")),
+})
 @send
 external substringToEnd: (t, ~from: int) => t = "substring"
 
@@ -887,6 +1065,10 @@ Js.String2.toLowerCase(`ΣΠ`) == `σπ`
 Js.String2.toLowerCase(`ΠΣ`) == `πς`
 ```
 */
+@deprecated({
+  reason: "Use `String.toLowerCase` instead",
+  migrate: String.toLowerCase(),
+})
 @send
 external toLowerCase: t => t = "toLowerCase"
 
@@ -895,6 +1077,10 @@ external toLowerCase: t => t = "toLowerCase"
 See [`String.toLocaleLowerCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLocaleLowerCase)
 on MDN.
 */
+@deprecated({
+  reason: "Use `String.toLocaleLowerCase` instead",
+  migrate: String.toLocaleLowerCase(),
+})
 @send
 external toLocaleLowerCase: t => t = "toLocaleLowerCase"
 
@@ -915,6 +1101,10 @@ Js.String2.toUpperCase(`Straße`) == `STRASSE`
 Js.String2.toUpperCase(`πς`) == `ΠΣ`
 ```
 */
+@deprecated({
+  reason: "Use `String.toUpperCase` instead",
+  migrate: String.toUpperCase(),
+})
 @send
 external toUpperCase: t => t = "toUpperCase"
 
@@ -923,6 +1113,10 @@ external toUpperCase: t => t = "toUpperCase"
 See [`String.to:LocaleUpperCase`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLocaleUpperCase)
 on MDN.
 */
+@deprecated({
+  reason: "Use `String.toLocaleUpperCase` instead",
+  migrate: String.toLocaleUpperCase(),
+})
 @send
 external toLocaleUpperCase: t => t = "toLocaleUpperCase"
 
@@ -940,6 +1134,10 @@ Js.String2.trim("   abc def   ") == "abc def"
 Js.String2.trim("\n\r\t abc def \n\n\t\r ") == "abc def"
 ```
 */
+@deprecated({
+  reason: "Use `String.trim` instead",
+  migrate: String.trim(),
+})
 @send
 external trim: t => t = "trim"
 
@@ -959,7 +1157,7 @@ on MDN.
 Js.String2.anchor("Page One", "page1") == "<a name=\"page1\">Page One</a>"
 ```
 */
-@send
+@deprecated("This function has been removed from the relevant web standards.") @send
 external anchor: (t, t) => t = "anchor"
 
 /**
@@ -975,7 +1173,7 @@ on MDN.
 Js.String2.link("Go to page two", "page2.html") == "<a href=\"page2.html\">Go to page two</a>"
 ```
 */
-@send
+@deprecated("This function has been removed from the relevant web standards.") @send
 external link: (t, t) => t = "link"
 
 /* FIXME: we should not encourage people to use [%identity], better
@@ -994,4 +1192,8 @@ let arr = Js.Array2.fromMap(Js.String2.castToArrayLike(s), x => x)
 arr == ["a", "b", "c", "d", "e"]
 ```
 */
+@deprecated({
+  reason: "Use `Array.fromString` instead",
+  migrate: Array.fromString(),
+})
 external castToArrayLike: t => Js_array2.array_like<t> = "%identity"
