@@ -28,7 +28,7 @@ exec("yarn rescript legacy");
 
 // We need to build the compiler's builtin modules as a separate cmij.
 // Otherwise we can't use them for compilation within the playground.
-buildCmij(compilerRootDir, "compiler-builtins");
+buildCmij(path.join(compilerRootDir, "packages", "@rescript", "runtime"), "compiler-builtins");
 
 const packages = resConfig["dependencies"];
 for (const pkgName of packages) {
