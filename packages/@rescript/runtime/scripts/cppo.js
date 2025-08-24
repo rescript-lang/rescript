@@ -1,7 +1,7 @@
 // @ts-check
 
-import * as path from "node:path";
 import { execFileSync } from "node:child_process";
+import * as path from "node:path";
 
 const targets = [
   ["Belt_HashSetString.res", "hashset.res.cppo", "TYPE_STRING"],
