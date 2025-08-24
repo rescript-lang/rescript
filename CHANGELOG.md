@@ -18,6 +18,8 @@
 
 #### :rocket: New Feature
 
+- Add support for ArrayBuffer and typed arrays to `@unboxed`. https://github.com/rescript-lang/rescript/pull/7788
+
 #### :bug: Bug fix
 
 - Fix creating interface for functions with upper bounded polymorphic args. https://github.com/rescript-lang/rescript/pull/7786
