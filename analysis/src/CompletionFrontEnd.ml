@@ -1699,6 +1699,7 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
   in
   let module_expr (iterator : Ast_iterator.iterator)
       (me : Parsetree.module_expr) =
+    let processed = ref false in
     (match me.pmod_desc with
     | Pmod_ident lid when lid.loc |> Loc.hasPos ~pos:posBeforeCursor ->
       let lidPath = flattenLidCheckDot lid in
@@ -1710,8 +1711,17 @@ let completionWithParser1 ~currentFile ~debug ~offset ~path ~posCursor
       setResult
         (Cpath
            (CPId {loc = lid.loc; path = lidPath; completionContext = Module}))
+    | Pmod_functor (name, maybeType, body) ->
+      let oldScope = !scope in
+      scope := !scope |> Scope.addModule ~name:name.txt ~loc:name.loc;
+      (match maybeType with
+      | None -> ()
+      | Some mt -> iterator.module_type iterator mt);
+      iterator.module_expr iterator body;
+      scope := oldScope;
+      processed := true
     | _ -> ());
-    Ast_iterator.default_iterator.module_expr iterator me
+    if not !processed then Ast_iterator.default_iterator.module_expr iterator me
   in
   let module_type (iterator : Ast_iterator.iterator)
       (mt : Parsetree.module_type) =
