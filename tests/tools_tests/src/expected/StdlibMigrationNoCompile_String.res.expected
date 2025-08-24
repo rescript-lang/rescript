@@ -1,0 +1,12 @@
+let normalizeByForm1 = "abcde"->String.normalizeByForm("a")
+let normalizeByForm2 = String.normalizeByForm("abcde", "a")
+
+let unsafeReplaceBy01 = "abcde"->String.replaceRegExpBy0Unsafe(/d/, (_, _, _) => "f")
+let unsafeReplaceBy02 = String.replaceRegExpBy0Unsafe("abcde", /d/, (_, _, _) => "f")
+
+let unsafeReplaceBy11 = "abcde"->String.replaceRegExpBy1Unsafe(/d/, (_, _, _, _) => "f")
+let unsafeReplaceBy12 = String.replaceRegExpBy1Unsafe("abcde", /d/, (_, _, _, _) => "f")
+
+let unsafeReplaceBy21 = "abcde"->String.replaceRegExpBy2Unsafe(/d/, (_, _, _, _, _) => "f")
+let unsafeReplaceBy22 = String.replaceRegExpBy2Unsafe("abcde", /d/, (_, _, _, _, _) => "f")
+

@@ -774,3 +774,7 @@ let filter lst p =
     | x :: l -> if p x then find (x :: accu) l ~p else find accu l ~p
   in
   find [] lst ~p
+
+let is_empty = function
+  | [] -> true
+  | _ :: _ -> false
