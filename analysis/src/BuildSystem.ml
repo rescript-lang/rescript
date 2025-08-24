@@ -6,18 +6,21 @@ let namespacedName namespace name =
 let ( /+ ) = Filename.concat
 
 let getRuntimeDir rootPath =
-  let result =
-    ModuleResolution.resolveNodeModulePath ~startPath:rootPath
-      "@rescript/runtime"
-  in
-  match result with
-  | Some path -> Some path
-  | None ->
-    let message = "@rescript/runtime could not be found" in
-    Log.log message;
-    None
+  match !Cfg.isDocGenFromCompiler with
+  | false -> (
+    let result =
+      ModuleResolution.resolveNodeModulePath ~startPath:rootPath
+        "@rescript/runtime"
+    in
+    match result with
+    | Some path -> Some path
+    | None ->
+      let message = "@rescript/runtime could not be found" in
+      Log.log message;
+      None)
+  | true -> Some rootPath
 
-let getLibBs root = Files.ifExists (root /+ "lib" /+ "bs")
+let getLibBs path = Files.ifExists (path /+ "lib" /+ "bs")
 
 let getStdlib base =
   match getRuntimeDir base with
