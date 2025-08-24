@@ -166,6 +166,7 @@ type t =
   | Pis_not_none
   | Pval_from_option
   | Pval_from_option_not_nest
+  | Poption_for_each
   | Psome
   | Psome_not_nest
   | Phash

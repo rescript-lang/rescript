@@ -50,3 +50,5 @@ val null_to_opt : J.expression -> J.expression
 val undef_to_opt : J.expression -> J.expression
 
 val null_undef_to_opt : J.expression -> J.expression
+
+val option_for_each : J.expression -> J.expression -> J.expression

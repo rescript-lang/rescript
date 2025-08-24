@@ -68,7 +68,7 @@ Option.forEach(Some("thing"), x => Console.log(x)) // logs "thing"
 Option.forEach(None, x => Console.log(x)) // returns ()
 ```
 */
-let forEach: (option<'a>, 'a => unit) => unit
+external forEach: (option<'a>, 'a => unit) => unit = "%option_for_each"
 
 /**
 `getExn(opt, ~message=?)` returns `value` if `opt` is `Some(value)`, otherwise throws an exception with the message provided, or a generic message if no message was provided.
