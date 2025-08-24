@@ -26,7 +26,7 @@ check_statically_linked() {
 }
 
 # rescript
-mv lib-ocaml lib/ocaml
+mv lib-ocaml packages/@rescript/runtime/lib/ocaml
 
 # @rescript/{target}
 chmod +x binaries-*/*.exe
@@ -40,4 +40,4 @@ check_statically_linked "packages/@rescript/linux-arm64/bin"
 
 # @rescript/std
 mkdir -p packages/std/lib
-cp -R lib/es6 lib/js packages/std/lib
+cp -R packages/@rescript/runtime/lib/es6 packages/@rescript/runtime/lib/js packages/std/lib

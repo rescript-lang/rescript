@@ -32,6 +32,7 @@
   "files": [
     "lib/es6",
     "lib/js",
+    "lib/ocaml",
     "*.res",
     "*.resi"
   ],
