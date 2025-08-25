@@ -32,9 +32,7 @@
   "files": [
     "lib/es6",
     "lib/js",
-    "lib/ocaml",
-    "*.res",
-    "*.resi"
+    "lib/ocaml"
   ],
   "exports": {
     "./lib/es6/*": "./lib/es6/*",
