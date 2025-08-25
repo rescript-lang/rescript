@@ -93,6 +93,7 @@ type type_clash_context =
   | IfCondition
   | AssertCondition
   | IfReturn
+  | TernaryReturn
   | SwitchReturn
   | TryReturn
   | StringConcat
@@ -125,6 +126,7 @@ let context_to_string = function
   | Some (FunctionArgument _) -> "FunctionArgument"
   | Some ComparisonOperator -> "ComparisonOperator"
   | Some IfReturn -> "IfReturn"
+  | Some TernaryReturn -> "TernaryReturn"
   | Some Await -> "Await"
   | None -> "None"
 
@@ -168,6 +170,7 @@ let error_expected_type_text ppf type_clash_context =
   | Some AssertCondition -> fprintf ppf "But assertions must always be of type:"
   | Some IfReturn ->
     fprintf ppf "But this @{<info>if@} statement is expected to return:"
+  | Some TernaryReturn -> fprintf ppf "But this ternary is expected to return:"
   | Some ArrayValue ->
     fprintf ppf "But this array is expected to have items of type:"
   | Some (SetRecordField _) -> fprintf ppf "But the record field is of type:"
@@ -332,6 +335,11 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       "\n\n\
       \  @{<info>if@} expressions must return the same type in all branches \
        (@{<info>if@}, @{<info>else if@}, @{<info>else@})."
+  | Some TernaryReturn, _ ->
+    fprintf ppf
+      "\n\n\
+      \  Ternaries (@{<info>?@} and @{<info>:@}) must return the same type in \
+       both branches."
   | Some MaybeUnwrapOption, _ ->
     fprintf ppf
       "\n\n\

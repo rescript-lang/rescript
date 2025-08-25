@@ -2826,13 +2826,25 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
         exp_env = env;
       }
   | Pexp_ifthenelse (scond, sifso, sifnot) -> (
+    (* TODO(attributes) Unify the attribute handling in the parser and rest of the compiler. *)
+    let is_ternary =
+      let rec has_ternary = function
+        | [] -> false
+        | ({Location.txt = "res.ternary"}, _) :: _ -> true
+        | _ :: rest -> has_ternary rest
+      in
+      has_ternary sexp.pexp_attributes
+    in
+    let return_context =
+      if is_ternary then Some TernaryReturn else Some IfReturn
+    in
     let cond =
       type_expect ~context:(Some IfCondition) env scond Predef.type_bool
     in
     match sifnot with
     | None ->
       let ifso =
-        type_expect ~context:(Some IfReturn) env sifso Predef.type_unit
+        type_expect ~context:return_context env sifso Predef.type_unit
       in
       rue
         {
@@ -2844,10 +2856,10 @@ and type_expect_ ~context ?in_function ?(recarg = Rejected) env sexp ty_expected
           exp_env = env;
         }
     | Some sifnot ->
-      let ifso = type_expect ~context:(Some IfReturn) env sifso ty_expected in
-      let ifnot = type_expect ~context:(Some IfReturn) env sifnot ty_expected in
+      let ifso = type_expect ~context:return_context env sifso ty_expected in
+      let ifnot = type_expect ~context:return_context env sifnot ty_expected in
       (* Keep sharing *)
-      unify_exp ~context:(Some IfReturn) env ifnot ifso.exp_type;
+      unify_exp ~context:return_context env ifnot ifso.exp_type;
       re
         {
           exp_desc = Texp_ifthenelse (cond, ifso, Some ifnot);
