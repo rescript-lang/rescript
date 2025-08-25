@@ -105,6 +105,7 @@ type type_clash_context =
       is_constant: string option;
     }
   | FunctionArgument of {optional: bool; name: string option}
+  | BracedIdent
   | Statement of type_clash_statement
   | ForLoopCondition
   | Await
@@ -128,6 +129,7 @@ let context_to_string = function
   | Some IfReturn -> "IfReturn"
   | Some TernaryReturn -> "TernaryReturn"
   | Some Await -> "Await"
+  | Some BracedIdent -> "BracedIdent"
   | None -> "None"
 
 let fprintf = Format.fprintf
@@ -198,7 +200,7 @@ let error_expected_type_text ppf type_clash_context =
     fprintf ppf
       "But you're using @{<info>await@} on this expression, so it is expected \
        to be of type:"
-  | Some MaybeUnwrapOption | None ->
+  | Some MaybeUnwrapOption | Some BracedIdent | None ->
     fprintf ppf "But it's expected to have type:"
 
 let is_record_type ~(extract_concrete_typedecl : extract_concrete_typedecl) ~env
@@ -546,6 +548,35 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        with @{<info>?@} to show you want to pass the option, like: \
        @{<info>?%s@}"
       (Parser.extract_text_at_loc loc)
+  | Some BracedIdent, Some (_, ({desc = Tconstr (_, _, _)} as t))
+    when is_record_type ~extract_concrete_typedecl ~env t ->
+    fprintf ppf
+      "@,\
+       @,\
+       You might have meant to pass this as a record, but wrote it as a block.@,\
+       Braces with a single identifier counts as a block, not a record with a \
+       single (punned) field.@,\
+       @,\
+       Possible solutions: @,\
+       - Return the expected record from the block@,\
+       - Write out the full record with field and value, like: @{<info>%s@}"
+      (match
+         Parser.reprint_expr_at_loc
+           ~mapper:(fun e ->
+             match e.pexp_desc with
+             | Pexp_ident {txt} ->
+               Some
+                 {
+                   e with
+                   pexp_desc =
+                     Pexp_record
+                       ([{lid = Location.mknoloc txt; opt = false; x = e}], None);
+                 }
+             | _ -> None)
+           loc
+       with
+      | None -> ""
+      | Some s -> s)
   | _, Some ({Types.desc = Tconstr (p1, _, _)}, {desc = Tvariant row_desc})
     when Path.same Predef.path_string p1 -> (
     (* Check if we have a string constant that could be a polymorphic variant constructor *)
