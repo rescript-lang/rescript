@@ -1,0 +1,40 @@
+module Target = {
+  let a = x => x + 1
+  let b = x => x + 2
+}
+
+@deprecated({
+  reason: "test piped vs non-piped",
+  migrate: PipeAndRecursive.Target.a(),
+  migratePiped: PipeAndRecursive.Target.b(),
+})
+external dep: int => int = "dep"
+
+let id = x => x
+
+/* Should use migrate (Target.a), since lhs has 0 pipes */
+let onePipe = PipeAndRecursive.Target.a(1)
+
+/* Still migrate (Target.a), since lhs has 1 pipe (< 2) */
+let twoPipes = 1->id->PipeAndRecursive.Target.b
+
+/* Should use migratePiped (Target.b), since lhs has 2 pipes */
+let threePipes = 1->id->id->PipeAndRecursive.Target.b
+
+/* Recursion: all dep steps should migrate */
+let many = PipeAndRecursive.Target.a(
+  PipeAndRecursive.Target.a(
+    PipeAndRecursive.Target.a(
+      PipeAndRecursive.Target.a(
+        PipeAndRecursive.Target.a(
+          PipeAndRecursive.Target.a(
+            PipeAndRecursive.Target.a(
+              PipeAndRecursive.Target.a(PipeAndRecursive.Target.a(PipeAndRecursive.Target.a(1))),
+            ),
+          ),
+        ),
+      ),
+    ),
+  ),
+)
+
