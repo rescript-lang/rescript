@@ -1,11 +1,11 @@
 
   [1;31mWe've found a bug for you![0m
-  [36m/.../fixtures/pass_braced_identifier_to_record.res[0m:[2m4:15-25[0m
+  [36m/.../fixtures/pass_braced_identifier_to_record_fn_argument.res[0m:[2m8:15-25[0m
 
-  2 [2m│[0m let householdId = "12"
-  3 [2m│[0m 
-  [1;31m4[0m [2m│[0m let ff: xx = {[1;31mhouseholdId[0m}
-  5 [2m│[0m 
+  6 [2m│[0m 
+  7 [2m│[0m let householdId = "12"
+  [1;31m8[0m [2m│[0m let ff = doX({[1;31mhouseholdId[0m})
+  9 [2m│[0m 
 
   This has type: [1;31mstring[0m
   But it's expected to have type: [1;33mxx[0m
