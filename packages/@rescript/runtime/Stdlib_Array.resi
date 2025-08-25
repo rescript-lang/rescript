@@ -101,8 +101,10 @@ arr->Array.copyAllWithin(~target=2) == [100, 101, 100, 101, 102]
 arr == [100, 101, 100, 101, 102]
 ```
 */
-@deprecated("Use `copyWithin` instead")
-@send external copyAllWithin: (array<'a>, ~target: int) => array<'a> = "copyWithin"
+@deprecated("Use `copyWithin` instead") @send external copyAllWithin: (
+  array<'a>,
+  ~target: int,
+) => array<'a> = "copyWithin"
 
 /**
 `copyWithinToEnd(array, ~target, ~start)` copies starting at element `start` in the given array to the designated `target` position, returning the resulting array.
@@ -119,8 +121,7 @@ arr->Array.copyWithinToEnd(~target=0, ~start=2) == [102, 103, 104, 103, 104]
 arr == [102, 103, 104, 103, 104]
 ```
 */
-@deprecated("Use `copyWithin` instead")
-@send
+@deprecated("Use `copyWithin` instead") @send
 external copyWithinToEnd: (array<'a>, ~target: int, ~start: int) => array<'a> = "copyWithin"
 
 /**
