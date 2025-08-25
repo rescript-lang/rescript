@@ -168,3 +168,6 @@ let reduceRight2 = Array.reduceRight([1, 2, 3], 0, (acc, x) => acc + x)
 
 let reduceRighti1 = [1, 2, 3]->Array.reduceRightWithIndex(0, (acc, x, i) => acc + x + i)
 let reduceRighti2 = Array.reduceRightWithIndex([1, 2, 3], 0, (acc, x, i) => acc + x + i)
+
+let pipeChain =
+  [1, 2, 3]->Array.map(x => x * 2)->Array.filter(x => x > 2)->Array.reduce(0, (acc, x) => acc + x)
