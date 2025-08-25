@@ -428,7 +428,9 @@ let message = function
   | Ambiguous_name (_slist, tl, true) ->
     "these field labels belong to several types: " ^ String.concat " " tl
     ^ "\nThe first one was selected. Please disambiguate if this is wrong."
-  | Nonoptional_label s -> "the label " ^ s ^ " is not optional."
+  | Nonoptional_label s ->
+    (* TODO(actions) When does this happen? *)
+    "the label " ^ s ^ " is not optional."
   | Open_shadow_identifier (kind, s) ->
     Printf.sprintf
       "this open statement shadows the %s identifier %s (which is later used)"
@@ -682,3 +684,6 @@ let loc_to_string (loc : loc) : string =
     (loc.loc_start.pos_cnum - loc.loc_start.pos_bol)
     loc.loc_end.pos_lnum
     (loc.loc_end.pos_cnum - loc.loc_end.pos_bol)
+
+let emit_possible_actions_from_warning : (loc -> t -> unit) ref =
+  ref (fun _ _ -> ())
