@@ -167,3 +167,9 @@ let reduceRight2 = Js.Array2.reduceRight([1, 2, 3], (acc, x) => acc + x, 0)
 
 let reduceRighti1 = [1, 2, 3]->Js.Array2.reduceRighti((acc, x, i) => acc + x + i, 0)
 let reduceRighti2 = Js.Array2.reduceRighti([1, 2, 3], (acc, x, i) => acc + x + i, 0)
+
+let pipeChain =
+  [1, 2, 3]
+  ->Js.Array2.map(x => x * 2)
+  ->Js.Array2.filter(x => x > 2)
+  ->Js.Array2.reduce((acc, x) => acc + x, 0)
