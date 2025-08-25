@@ -547,3 +547,10 @@ let arrow_with_container_tag = el => <div>
   el
   {t(")")}
 </div>
+
+<Component
+  prop1
+  // 
+  prop2>
+  {React.string("yow")}
+</Component>

@@ -116,7 +116,8 @@ let avatarSection =
           onMouseLeave={_ => setHoveringAdmin(false)}
           onClick={_e => {
             stopImpersonating(csrfToken)
-          }}>
+          }}
+        >
           <Avatar user={viewer} size={45} />
         </div>
       : React.nullElement}
@@ -497,7 +498,8 @@ let x =
       className="sdf sdfdsf sdfs sdf asdf dsf"
       onClick={() => {
         ()
-      }}>
+      }}
+    >
       <span
         id="2-1"
         className="sdf sdfdsf sdfs sdf asdf dsf"
@@ -566,3 +568,11 @@ let arrow_with_container_tag = el =>
     el
     {t(")")}
   </div>
+
+<Component
+  prop1
+  //
+  prop2
+>
+  {React.string("yow")}
+</Component>

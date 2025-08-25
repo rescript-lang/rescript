@@ -4489,19 +4489,6 @@ and print_jsx_container_tag ~state tag_name
     (closing_tag : Parsetree.jsx_closing_container_tag option)
     (pexp_loc : Location.t) cmt_tbl =
   let name = print_jsx_name tag_name.txt in
-  let last_prop_has_comment_after =
-    let rec visit props =
-      match props with
-      | [] -> None
-      | [x] -> Some x
-      | _ :: xs -> visit xs
-    in
-    let last_prop = visit props in
-    match last_prop with
-    | None -> false
-    | Some last_prop ->
-      has_trailing_comments cmt_tbl (ParsetreeViewer.get_jsx_prop_loc last_prop)
-  in
   let opening_greater_than_loc =
     {
       Warnings.loc_start = opening_greater_than;
@@ -4509,7 +4496,7 @@ and print_jsx_container_tag ~state tag_name
       loc_ghost = false;
     }
   in
-  let opening_greater_than_has_leading_comments, opening_greater_than_doc =
+  let _opening_greater_than_has_leading_comments, opening_greater_than_doc =
     let has_leading_comments =
       has_leading_comments cmt_tbl opening_greater_than_loc
     in
@@ -4577,11 +4564,7 @@ and print_jsx_container_tag ~state tag_name
                    (* if the element name has a single comment on the same line, force newline before '>' *)
                    if has_trailing_single_line_comment cmt_tbl tag_loc then
                      Doc.concat [Doc.hard_line; opening_greater_than_doc]
-                   else if
-                     last_prop_has_comment_after
-                     || opening_greater_than_has_leading_comments
-                   then Doc.concat [Doc.soft_line; opening_greater_than_doc]
-                   else opening_greater_than_doc
+                   else Doc.concat [Doc.soft_line; opening_greater_than_doc]
                  in
                  Doc.concat
                    [
