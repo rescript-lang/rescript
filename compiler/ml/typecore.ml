@@ -4667,11 +4667,16 @@ let report_error env loc ppf error =
 
     if not is_fallback then fprintf ppf "@,";
 
-    if List.length missing_required_args > 0 then
+    if List.length missing_required_args > 0 then (
       fprintf ppf "@,- Missing arguments that must be provided: %s"
         (missing_required_args
         |> List.map (fun v -> "~" ^ v)
         |> String.concat ", ");
+
+      fprintf ppf
+        "@,\
+         - Hint: Did you want to partially apply the function? You can do that \
+         by putting `...` just before the closing parens of the function call");
 
     if List.length superfluous_args > 0 then
       fprintf ppf "@,- Called with arguments it does not take: %s"
