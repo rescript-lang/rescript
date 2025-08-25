@@ -63,7 +63,8 @@ end = struct
     match parse_expr_at_loc loc with
     | Some (exp, comments) -> (
       match mapper exp with
-      | Some exp -> Some (!reprint_source (wrap_in_structure exp) comments)
+      | Some exp ->
+        Some (!reprint_source (wrap_in_structure exp) comments |> String.trim)
       | None -> None)
     | None -> None
 end
@@ -558,8 +559,8 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        single (punned) field.@,\
        @,\
        Possible solutions: @,\
-       - Return the expected record from the block@,\
-       - Write out the full record with field and value, like: @{<info>%s@}"
+       - Write out the full record with field and value, like: @{<info>%s@}@,\
+       - Return the expected record from the block"
       (match
          Parser.reprint_expr_at_loc
            ~mapper:(fun e ->

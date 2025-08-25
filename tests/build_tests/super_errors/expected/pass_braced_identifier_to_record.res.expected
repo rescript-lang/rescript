@@ -14,6 +14,5 @@
   Braces with a single identifier counts as a block, not a record with a single (punned) field.
   
   Possible solutions: 
+  - Write out the full record with field and value, like: [1;33m{householdId: householdId}[0m
   - Return the expected record from the block
-  - Write out the full record with field and value, like: [1;33m{householdId: householdId}
-[0m
