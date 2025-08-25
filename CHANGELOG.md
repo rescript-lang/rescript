@@ -29,6 +29,7 @@
 #### :nail_care: Polish
 
 - Make parser less strict around leading attributes. https://github.com/rescript-lang/rescript/pull/7787
+- Dedicated error message for ternary type mismatch. https://github.com/rescript-lang/rescript/pull/7804
 
 #### :house: Internal
 
