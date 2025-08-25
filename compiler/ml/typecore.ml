@@ -4598,8 +4598,14 @@ let report_error env loc ppf error =
       "@[Exception patterns must be at the top level of a match case.@]"
   | Inlined_record_escape ->
     fprintf ppf
-      "@[This form is not allowed as the type of the inlined record could \
-       escape.@]"
+      "@[This use of an inlined record is not allowed: its anonymous type \
+       would escape its constructor scope.@,\
+       @,\
+       Possible solutions: @,\
+       - Destructure the fields you're interested in from the inline record@,\
+       - Change the underlying type to use a defined record as payload instead \
+       of an inline record. That will let you use the payload without \
+       destructuring it first"
   | Inlined_record_expected ->
     fprintf ppf "@[This constructor expects an inlined record argument.@]"
   | Invalid_extension_constructor_payload ->
