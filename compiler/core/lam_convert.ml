@@ -201,6 +201,7 @@ let lam_prim ~primitive:(p : Lambda.primitive) ~args loc : Lam.t =
   | Pval_from_option -> prim ~primitive:Pval_from_option ~args loc
   | Pval_from_option_not_nest ->
     prim ~primitive:Pval_from_option_not_nest ~args loc
+  | Poption_for_each -> prim ~primitive:Poption_for_each ~args loc
   | Pjscomp x -> prim ~primitive:(Pjscomp x) ~args loc
   | Pfield (id, info) -> prim ~primitive:(Pfield (id, info)) ~args loc
   | Psetfield (id, info) -> prim ~primitive:(Psetfield (id, info)) ~args loc

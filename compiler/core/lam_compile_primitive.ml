@@ -167,6 +167,10 @@ let translate output_prefix loc (cxt : Lam_compile_context.t)
   | Pval_from_option ->
     Js_of_lam_option.val_from_option (Ext_list.singleton_exn args)
   | Pval_from_option_not_nest -> Ext_list.singleton_exn args
+  | Poption_for_each -> (
+    match args with
+    | [opt; f] -> Js_of_lam_option.option_for_each opt f
+    | _ -> assert false)
   | Pfield (i, fld_info) ->
     Js_of_lam_block.field fld_info
       (Ext_list.singleton_exn args)

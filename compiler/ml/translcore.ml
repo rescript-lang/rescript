@@ -376,6 +376,7 @@ let primitives_table =
       ("%nullable_to_opt", Pnullable_to_opt);
       ("%function_arity", Pfn_arity);
       ("%wrap_exn", Pwrap_exn);
+      ("%option_for_each", Poption_for_each);
       ("%curry_apply1", Pcurry_apply 1);
       ("%curry_apply2", Pcurry_apply 2);
       ("%curry_apply3", Pcurry_apply 3);

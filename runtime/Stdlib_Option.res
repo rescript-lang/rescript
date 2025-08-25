@@ -29,11 +29,7 @@ let filter = (opt, p) =>
   | _ => None
   }
 
-let forEach = (opt, f) =>
-  switch opt {
-  | Some(x) => f(x)
-  | None => ()
-  }
+external forEach: (option<'a>, 'a => unit) => unit = "%option_for_each"
 
 let getOrThrow = (x, ~message=?) =>
   switch x {

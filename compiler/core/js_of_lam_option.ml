@@ -106,3 +106,12 @@ let null_to_opt e = E.econd (E.is_null e) none (some e)
 let undef_to_opt e = E.econd (E.is_undef e) none (some e)
 
 let null_undef_to_opt e = E.econd (E.is_null_undefined e) none (some e)
+
+let option_for_each opt f =
+  destruct_optional opt ~for_sure_none:E.unit
+    ~for_sure_some:(fun x ->
+      E.call ~info:(Js_call_info.na_full_call false) f [x])
+    ~not_sure:(fun () ->
+      E.econd (is_not_none opt)
+        (E.call ~info:(Js_call_info.na_full_call false) f [opt])
+        E.unit)

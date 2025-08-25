@@ -269,6 +269,7 @@ type primitive =
   | Pis_not_none
   | Pval_from_option
   | Pval_from_option_not_nest
+  | Poption_for_each
   | Pis_poly_var_block
   | Pjs_raw_expr
   | Pjs_raw_stmt

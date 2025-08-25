@@ -257,6 +257,7 @@ let primitive ppf = function
   | Pis_not_none -> fprintf ppf "#is_not_none"
   | Pval_from_option -> fprintf ppf "#val_from_option"
   | Pval_from_option_not_nest -> fprintf ppf "#val_from_option_not_nest"
+  | Poption_for_each -> fprintf ppf "#option_for_each"
   | Pis_poly_var_block -> fprintf ppf "#is_poly_var_block"
   | Pjs_raw_expr -> fprintf ppf "#raw_expr"
   | Pjs_raw_stmt -> fprintf ppf "#raw_stmt"

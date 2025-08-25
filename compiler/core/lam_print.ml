@@ -68,6 +68,7 @@ let primitive ppf (prim : Lam_primitive.t) =
   | Psome_not_nest -> fprintf ppf "[some-not-nest]"
   | Pval_from_option -> fprintf ppf "[?unbox]"
   | Pval_from_option_not_nest -> fprintf ppf "[?unbox-not-nest]"
+  | Poption_for_each -> fprintf ppf "[option_for_each]"
   | Pis_undefined -> fprintf ppf "[?undefined]"
   | Pis_null_undefined -> fprintf ppf "[?null?undefined]"
   | Pimport -> fprintf ppf "[import]"
