@@ -3406,9 +3406,7 @@ and type_label_exp ~call_context create env loc ty_expected
   (lid, label, {arg with exp_type = instance env arg.exp_type}, opt)
 
 and type_argument ~context ?recarg env sarg ty_expected' ty_expected =
-  print_endline "hey1";
   let texp = type_expect ~context ?recarg env sarg ty_expected' in
-  print_endline "hey";
   unify_exp ~context env texp ty_expected;
   texp
 
