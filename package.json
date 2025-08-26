@@ -94,7 +94,7 @@
     "typescript": "5.8.2"
   },
   "workspaces": [
-    "packages/*",
+    "packages/playground",
     "packages/@rescript/*",
     "tests/dependencies/**",
     "tests/analysis_tests/**",

@@ -95,12 +95,7 @@ let get_runtime_module_path
           (*Invariant: the package path to rescript, it is used to 
             calculate relative js path
           *)
-          (match !Js_config.customize_runtime with 
-           | None ->
-             ((Filename.dirname (Filename.dirname Sys.executable_name)) // dep_path // js_file)
-           | Some path -> 
-             path //dep_path // js_file 
-          )  
+          (Config.runtime_module_path // dep_path // js_file)
 
 (* [output_dir] is decided by the command line argument *)
 let string_of_module_id 

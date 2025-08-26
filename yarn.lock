@@ -454,12 +454,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@rescript/std@workspace:packages/std":
-  version: 0.0.0-use.local
-  resolution: "@rescript/std@workspace:packages/std"
-  languageName: unknown
-  linkType: soft
-
 "@rescript/win32-x64@workspace:packages/@rescript/win32-x64":
   version: 0.0.0-use.local
   resolution: "@rescript/win32-x64@workspace:packages/@rescript/win32-x64"

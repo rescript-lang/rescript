@@ -37,7 +37,3 @@ mv -f binaries-linux-arm64/* "packages/@rescript/linux-arm64/bin"
 mv -f binaries-win32-x64/* "packages/@rescript/win32-x64/bin"
 check_statically_linked "packages/@rescript/linux-x64/bin"
 check_statically_linked "packages/@rescript/linux-arm64/bin"
-
-# @rescript/std
-mkdir -p packages/std/lib
-cp -R packages/@rescript/runtime/lib/es6 packages/@rescript/runtime/lib/js packages/std/lib
