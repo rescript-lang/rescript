@@ -9,23 +9,24 @@ module V4A = {
       ref?: 'ref,
     }
 
-    let make = ({?className, children, _}: props<_, _, 'ref>, ref: Js.Nullable.t<'ref>) =>
-      ReactDOM.jsxs(
-        "div",
-        {
-          children: React.array([
-            ReactDOM.jsx(
-              "input",
-              {
-                type_: "text",
-                ?className,
-                ref: ?{Js.Nullable.toOption(ref)->Belt.Option.map(ReactDOM.Ref.domRef)},
-              },
-            ),
-            children,
-          ]),
-        },
-      )
+    let make = ({?className, children, _}: props<_, _, 'ref>): React.element =>
+      (ref: Js.Nullable.t<'ref>) =>
+        ReactDOM.jsxs(
+          "div",
+          {
+            children: React.array([
+              ReactDOM.jsx(
+                "input",
+                {
+                  type_: "text",
+                  ?className,
+                  ref: ?{Js.Nullable.toOption(ref)->Belt.Option.map(ReactDOM.Ref.domRef)},
+                },
+              ),
+              children,
+            ]),
+          },
+        )
     let make = React.forwardRef({
       let \"ForwardRef$V4A$FancyInput" = (props: props<_>, ref) => make(props, ref)
 
@@ -35,7 +36,7 @@ module V4A = {
   @res.jsxComponentProps
   type props = {}
 
-  let make = (_: props) => {
+  let make = (_: props): React.element => {
     let input = React.useRef(Js.Nullable.null)
 
     ReactDOM.jsx(
@@ -63,23 +64,24 @@ module V4AUncurried = {
       ref?: 'ref,
     }
 
-    let make = ({?className, children, _}: props<_, _, 'ref>, ref: Js.Nullable.t<'ref>) =>
-      ReactDOM.jsxs(
-        "div",
-        {
-          children: React.array([
-            ReactDOM.jsx(
-              "input",
-              {
-                type_: "text",
-                ?className,
-                ref: ?{Js.Nullable.toOption(ref)->Belt.Option.map(ReactDOM.Ref.domRef)},
-              },
-            ),
-            children,
-          ]),
-        },
-      )
+    let make = ({?className, children, _}: props<_, _, 'ref>): React.element =>
+      (ref: Js.Nullable.t<'ref>) =>
+        ReactDOM.jsxs(
+          "div",
+          {
+            children: React.array([
+              ReactDOM.jsx(
+                "input",
+                {
+                  type_: "text",
+                  ?className,
+                  ref: ?{Js.Nullable.toOption(ref)->Belt.Option.map(ReactDOM.Ref.domRef)},
+                },
+              ),
+              children,
+            ]),
+          },
+        )
     let make = React.forwardRef({
       let \"ForwardRef$V4AUncurried$FancyInput" = (props: props<_>, ref) => make(props, ref)
 
@@ -89,7 +91,7 @@ module V4AUncurried = {
   @res.jsxComponentProps
   type props = {}
 
-  let make = (_: props) => {
+  let make = (_: props): React.element => {
     let input = React.useRef(Js.Nullable.null)
 
     ReactDOM.jsx(
