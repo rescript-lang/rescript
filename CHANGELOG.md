@@ -33,6 +33,7 @@
 - Make parser less strict around leading attributes. https://github.com/rescript-lang/rescript/pull/7787
 - Dedicated error message for ternary type mismatch. https://github.com/rescript-lang/rescript/pull/7804
 - Dedicated error message for passing a braced ident to something expected to be a record. https://github.com/rescript-lang/rescript/pull/7806
+- Hint about partial application when missing required argument in function call. https://github.com/rescript-lang/rescript/pull/7807
 
 #### :house: Internal
 
