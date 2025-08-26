@@ -2263,7 +2263,6 @@ and type_expect ~context ?in_function ?recarg env sexp ty_expected =
       if
         sexp.pexp_attributes
         |> List.exists (fun (attr, _) -> attr.txt = "res.braces")
-        && is_record_type ~extract_concrete_typedecl ~env ty_expected
       then Some Error_message_utils.BracedIdent
       else context
     | _ -> context
