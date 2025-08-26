@@ -28,6 +28,21 @@ let extend_current_type_name_path current_type_name_path field_name =
   | None -> None
   | Some path -> Some (path @ [field_name])
 
+let make_inline_record_return_type_name current_type_name_path
+    inline_types_context =
+  let base = "return.type" in
+  let extend name = extend_current_type_name_path current_type_name_path name in
+  match (current_type_name_path, inline_types_context) with
+  | Some prefix, Some ctx ->
+    let full = String.concat "." (prefix @ [base]) in
+    if List.exists (fun (n, _, _) -> n = full) ctx.found_inline_types then
+      extend "return.type$"
+    else extend base
+  | _ -> extend base
+
+let pending_structure_items : Parsetree.structure_item list ref = ref []
+let pending_signature_items : Parsetree.signature_item list ref = ref []
+
 module Recover = struct
   let default_expr () =
     let id = Location.mknoloc "rescript.exprhole" in
@@ -4401,7 +4416,7 @@ and parse_record_or_object_type ?current_type_name_path ?inline_types_context
   in
   match (inline_types_context, current_type_name_path) with
   | Some inline_types_context, Some current_type_name_path
-    when Grammar.is_record_decl_start p.token ->
+    when Grammar.is_field_decl_start p.token ->
     let labels =
       parse_comma_delimited_region ~grammar:Grammar.RecordDecl ~closing:Rbrace
         ~f:
@@ -4462,7 +4477,7 @@ and parse_type_alias p typ =
  * dotted_type_parameter ::=
  *  | . type_parameter
  *)
-and parse_type_parameter p =
+and parse_type_parameter ?current_type_name_path ?inline_types_context p =
   let doc_attr : Parsetree.attributes =
     match p.Parser.token with
     | DocComment (loc, s) ->
@@ -4486,7 +4501,12 @@ and parse_type_parameter p =
       Parser.next p;
       let name, loc = parse_lident p in
       Parser.expect ~grammar:Grammar.TypeExpression Colon p;
-      let typ = parse_typ_expr p in
+      let arg_path =
+        extend_current_type_name_path current_type_name_path name
+      in
+      let typ =
+        parse_typ_expr ?current_type_name_path:arg_path ?inline_types_context p
+      in
       match p.Parser.token with
       | Equal ->
         Parser.next p;
@@ -4505,7 +4525,13 @@ and parse_type_parameter p =
           Parser.err ~start_pos:loc.loc_start ~end_pos:loc.loc_end p error
         in
         Parser.next p;
-        let typ = parse_typ_expr p in
+        let arg_path =
+          extend_current_type_name_path current_type_name_path name
+        in
+        let typ =
+          parse_typ_expr ?current_type_name_path:arg_path ?inline_types_context
+            p
+        in
         match p.Parser.token with
         | Equal ->
           Parser.next p;
@@ -4525,7 +4551,10 @@ and parse_type_parameter p =
         let typ = parse_type_alias p typ in
         Some {attrs = []; label = Nolabel; typ; start_pos})
     | _ ->
-      let typ = parse_typ_expr p in
+      let typ =
+        if !InExternal.status then parse_typ_expr p
+        else parse_typ_expr ?current_type_name_path ?inline_types_context p
+      in
       let typ_with_attributes =
         {typ with ptyp_attributes = List.concat [attrs; typ.ptyp_attributes]}
       in
@@ -4533,7 +4562,7 @@ and parse_type_parameter p =
   else None
 
 (* (int, ~x:string, float) *)
-and parse_type_parameters p =
+and parse_type_parameters ?current_type_name_path ?inline_types_context p =
   let start_pos = p.Parser.start_pos in
   Parser.expect Lparen p;
   match p.Parser.token with
@@ -4546,19 +4575,26 @@ and parse_type_parameters p =
   | _ ->
     let params =
       parse_comma_delimited_region ~grammar:Grammar.TypeParameters
-        ~closing:Rparen ~f:parse_type_parameter p
+        ~closing:Rparen
+        ~f:(parse_type_parameter ?current_type_name_path ?inline_types_context)
+        p
     in
     Parser.expect Rparen p;
     params
 
-and parse_es6_arrow_type ~attrs p =
+and parse_es6_arrow_type ?current_type_name_path ?inline_types_context ~attrs p
+    =
   let start_pos = p.Parser.start_pos in
   match p.Parser.token with
   | Tilde ->
     Parser.next p;
     let name, label_loc = parse_lident p in
     Parser.expect ~grammar:Grammar.TypeExpression Colon p;
-    let typ = parse_typ_expr ~alias:false ~es6_arrow:false p in
+    let arg_path = extend_current_type_name_path current_type_name_path name in
+    let typ =
+      parse_typ_expr ~alias:false ~es6_arrow:false
+        ?current_type_name_path:arg_path ?inline_types_context p
+    in
     let lbl =
       match p.Parser.token with
       | Equal ->
@@ -4568,14 +4604,30 @@ and parse_es6_arrow_type ~attrs p =
       | _ -> Asttypes.Labelled {txt = name; loc = label_loc}
     in
     Parser.expect EqualGreater p;
-    let return_type = parse_typ_expr ~alias:false p in
+    let return_path =
+      make_inline_record_return_type_name current_type_name_path
+        inline_types_context
+    in
+    let return_type =
+      parse_typ_expr ~alias:false ?current_type_name_path:return_path
+        ?inline_types_context p
+    in
     let loc = mk_loc start_pos p.prev_end_pos in
     Ast_helper.Typ.arrow ~loc ~arity:None {attrs; lbl; typ} return_type
   | DocComment _ -> assert false
   | _ ->
-    let parameters = parse_type_parameters p in
+    let parameters =
+      parse_type_parameters ?current_type_name_path ?inline_types_context p
+    in
     Parser.expect EqualGreater p;
-    let return_type = parse_typ_expr ~alias:false p in
+    let return_path =
+      make_inline_record_return_type_name current_type_name_path
+        inline_types_context
+    in
+    let return_type =
+      parse_typ_expr ~alias:false ?current_type_name_path:return_path
+        ?inline_types_context p
+    in
     let end_pos = p.prev_end_pos in
     let return_type_arity = 0 in
     let _paramNum, typ, _arity =
@@ -4643,25 +4695,36 @@ and parse_typ_expr ?current_type_name_path ?inline_types_context ?attrs
     | None -> parse_attributes p
   in
   let typ =
-    if es6_arrow && is_es6_arrow_type p then parse_es6_arrow_type ~attrs p
+    if es6_arrow && is_es6_arrow_type p then
+      parse_es6_arrow_type ~attrs ?current_type_name_path ?inline_types_context
+        p
     else
       let typ =
         parse_atomic_typ_expr ?current_type_name_path ?inline_types_context
           ~attrs p
       in
-      parse_arrow_type_rest ~es6_arrow ~start_pos typ p
+      parse_arrow_type_rest ?current_type_name_path ?inline_types_context
+        ~es6_arrow ~start_pos typ p
   in
   let typ = if alias then parse_type_alias p typ else typ in
   (* Parser.eatBreadcrumb p; *)
   typ
 
-and parse_arrow_type_rest ~es6_arrow ~start_pos typ p =
+and parse_arrow_type_rest ?current_type_name_path ?inline_types_context
+    ~es6_arrow ~start_pos typ p =
   match p.Parser.token with
   | (EqualGreater | MinusGreater) as token when es6_arrow == true ->
     (* error recovery *)
     if token = MinusGreater then Parser.expect EqualGreater p;
     Parser.next p;
-    let return_type = parse_typ_expr ~alias:false p in
+    let return_path =
+      make_inline_record_return_type_name current_type_name_path
+        inline_types_context
+    in
+    let return_type =
+      parse_typ_expr ~alias:false ?current_type_name_path:return_path
+        ?inline_types_context p
+    in
     let loc = mk_loc start_pos p.prev_end_pos in
     Ast_helper.Typ.arrow ~loc ~arity:(Some 1)
       {attrs = []; lbl = Nolabel; typ}
@@ -5971,7 +6034,11 @@ and parse_external_def ~attrs ~start_pos p =
   let name, loc = parse_lident p in
   let name = Location.mkloc name loc in
   Parser.expect ~grammar:Grammar.TypeExpression Colon p;
-  let typ_expr = parse_typ_expr p in
+  let current_type_name_path = Some [name.txt] in
+  let inline_types_context = {found_inline_types = []; params = []} in
+  let typ_expr =
+    parse_typ_expr ?current_type_name_path ~inline_types_context p
+  in
   let equal_start = p.start_pos in
   let equal_end = p.end_pos in
   Parser.expect Equal p;
@@ -5991,7 +6058,15 @@ and parse_external_def ~attrs ~start_pos p =
   let vb = Ast_helper.Val.mk ~loc ~attrs ~prim name typ_expr in
   Parser.eat_breadcrumb p;
   InExternal.status := in_external;
-  vb
+  let inline_types =
+    inline_types_context.found_inline_types
+    |> List.map (fun (inline_type_name, loc, kind) ->
+           Ast_helper.Type.mk
+             ~attrs:[(Location.mknoloc "res.inlineRecordDefinition", PStr [])]
+             ~loc ~kind
+             {name with txt = inline_type_name})
+  in
+  (vb, inline_types)
 
 (* constr-def ::=
  *  | constr-decl
@@ -6057,94 +6132,110 @@ and parse_newline_or_semicolon_structure p =
 
 and parse_structure_item_region p =
   let start_pos = p.Parser.start_pos in
-  let attrs = parse_attributes p in
-  match p.Parser.token with
-  | Open ->
-    let open_description = parse_open_description ~attrs p in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Str.open_ ~loc open_description)
-  | Let ->
-    let rec_flag, let_bindings = parse_let_bindings ~attrs ~start_pos p in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Str.value ~loc rec_flag let_bindings)
-  | Typ -> (
-    Parser.begin_region p;
-    match parse_type_definition_or_extension ~attrs p with
-    | TypeDef {rec_flag; types} ->
+  (* If we have any synthesized items to emit, output them first, without
+     consuming attributes for the next real item. *)
+  match !pending_structure_items with
+  | item :: rest ->
+    pending_structure_items := rest;
+    Some item
+  | [] -> (
+    let attrs = parse_attributes p in
+    match p.Parser.token with
+    | Open ->
+      let open_description = parse_open_description ~attrs p in
+      parse_newline_or_semicolon_structure p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Str.open_ ~loc open_description)
+    | Let ->
+      let rec_flag, let_bindings = parse_let_bindings ~attrs ~start_pos p in
+      parse_newline_or_semicolon_structure p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Str.value ~loc rec_flag let_bindings)
+    | Typ -> (
+      Parser.begin_region p;
+      match parse_type_definition_or_extension ~attrs p with
+      | TypeDef {rec_flag; types} ->
+        parse_newline_or_semicolon_structure p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        Parser.end_region p;
+        Some (Ast_helper.Str.type_ ~loc rec_flag types)
+      | TypeExt ext ->
+        parse_newline_or_semicolon_structure p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        Parser.end_region p;
+        Some (Ast_helper.Str.type_extension ~loc ext))
+    | External -> (
+      let external_def, inline_types = parse_external_def ~attrs ~start_pos p in
+      parse_newline_or_semicolon_structure p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      match inline_types with
+      | [] -> Some (Ast_helper.Str.primitive ~loc external_def)
+      | _ ->
+        (* Emit the inline types first, then queue the primitive. *)
+        let type_item =
+          Ast_helper.Str.type_ ~loc Asttypes.Recursive inline_types
+        in
+        let prim_item = Ast_helper.Str.primitive ~loc external_def in
+        pending_structure_items := prim_item :: !pending_structure_items;
+        Some type_item)
+    | Exception ->
+      let exception_def = parse_exception_def ~attrs p in
+      parse_newline_or_semicolon_structure p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Str.exception_ ~loc exception_def)
+    | Include ->
+      let include_statement = parse_include_statement ~attrs p in
+      parse_newline_or_semicolon_structure p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Str.include_ ~loc include_statement)
+    | Module ->
+      Parser.begin_region p;
+      let structure_item =
+        parse_module_or_module_type_impl_or_pack_expr ~attrs p
+      in
       parse_newline_or_semicolon_structure p;
       let loc = mk_loc start_pos p.prev_end_pos in
       Parser.end_region p;
-      Some (Ast_helper.Str.type_ ~loc rec_flag types)
-    | TypeExt ext ->
-      parse_newline_or_semicolon_structure p;
-      let loc = mk_loc start_pos p.prev_end_pos in
-      Parser.end_region p;
-      Some (Ast_helper.Str.type_extension ~loc ext))
-  | External ->
-    let external_def = parse_external_def ~attrs ~start_pos p in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Str.primitive ~loc external_def)
-  | Exception ->
-    let exception_def = parse_exception_def ~attrs p in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Str.exception_ ~loc exception_def)
-  | Include ->
-    let include_statement = parse_include_statement ~attrs p in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Str.include_ ~loc include_statement)
-  | Module ->
-    Parser.begin_region p;
-    let structure_item =
-      parse_module_or_module_type_impl_or_pack_expr ~attrs p
-    in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Parser.end_region p;
-    Some {structure_item with pstr_loc = loc}
-  | ModuleComment (loc, s) ->
-    Parser.next p;
-    Some
-      (Ast_helper.Str.attribute ~loc
-         ( {txt = "res.doc"; loc},
-           PStr
-             [
-               Ast_helper.Str.eval ~loc
-                 (Ast_helper.Exp.constant ~loc (Pconst_string (s, None)));
-             ] ))
-  | AtAt ->
-    let attr = parse_standalone_attribute p in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Str.attribute ~loc attr)
-  | PercentPercent ->
-    let extension = parse_extension ~module_language:true p in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Str.extension ~attrs ~loc extension)
-  | token when Grammar.is_expr_start token ->
-    let prev_end_pos = p.Parser.end_pos in
-    let exp = parse_expr p in
-    parse_newline_or_semicolon_structure p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Parser.check_progress ~prev_end_pos
-      ~result:(Ast_helper.Str.eval ~loc ~attrs exp)
-      p
-  | _ -> (
-    match attrs with
-    | (({Asttypes.loc = attr_loc}, _) as attr) :: _ ->
-      Parser.err ~start_pos:attr_loc.loc_start ~end_pos:attr_loc.loc_end p
-        (Diagnostics.message (ErrorMessages.attribute_without_node attr));
-      let expr = parse_expr p in
+      Some {structure_item with pstr_loc = loc}
+    | ModuleComment (loc, s) ->
+      Parser.next p;
       Some
-        (Ast_helper.Str.eval
-           ~loc:(mk_loc p.start_pos p.prev_end_pos)
-           ~attrs expr)
-    | _ -> None)
+        (Ast_helper.Str.attribute ~loc
+           ( {txt = "res.doc"; loc},
+             PStr
+               [
+                 Ast_helper.Str.eval ~loc
+                   (Ast_helper.Exp.constant ~loc (Pconst_string (s, None)));
+               ] ))
+    | AtAt ->
+      let attr = parse_standalone_attribute p in
+      parse_newline_or_semicolon_structure p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Str.attribute ~loc attr)
+    | PercentPercent ->
+      let extension = parse_extension ~module_language:true p in
+      parse_newline_or_semicolon_structure p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Str.extension ~attrs ~loc extension)
+    | token when Grammar.is_expr_start token ->
+      let prev_end_pos = p.Parser.end_pos in
+      let exp = parse_expr p in
+      parse_newline_or_semicolon_structure p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Parser.check_progress ~prev_end_pos
+        ~result:(Ast_helper.Str.eval ~loc ~attrs exp)
+        p
+    | _ -> (
+      match attrs with
+      | (({Asttypes.loc = attr_loc}, _) as attr) :: _ ->
+        Parser.err ~start_pos:attr_loc.loc_start ~end_pos:attr_loc.loc_end p
+          (Diagnostics.message (ErrorMessages.attribute_without_node attr));
+        let expr = parse_expr p in
+        Some
+          (Ast_helper.Str.eval
+             ~loc:(mk_loc p.start_pos p.prev_end_pos)
+             ~attrs expr)
+      | _ -> None))
 [@@progress Parser.next, Parser.expect]
 
 (* include-statement ::= include module-expr *)
@@ -6692,107 +6783,121 @@ and parse_newline_or_semicolon_signature p =
 
 and parse_signature_item_region p =
   let start_pos = p.Parser.start_pos in
-  let attrs = parse_attributes p in
-  match p.Parser.token with
-  | Let ->
-    Parser.begin_region p;
-    let value_desc = parse_sign_let_desc ~attrs p in
-    parse_newline_or_semicolon_signature p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Parser.end_region p;
-    Some (Ast_helper.Sig.value ~loc value_desc)
-  | Typ -> (
-    Parser.begin_region p;
-    match parse_type_definition_or_extension ~attrs p with
-    | TypeDef {rec_flag; types} ->
-      parse_newline_or_semicolon_signature p;
-      let loc = mk_loc start_pos p.prev_end_pos in
-      Parser.end_region p;
-      Some (Ast_helper.Sig.type_ ~loc rec_flag types)
-    | TypeExt ext ->
-      parse_newline_or_semicolon_signature p;
-      let loc = mk_loc start_pos p.prev_end_pos in
-      Parser.end_region p;
-      Some (Ast_helper.Sig.type_extension ~loc ext))
-  | External ->
-    let external_def = parse_external_def ~attrs ~start_pos p in
-    parse_newline_or_semicolon_signature p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Sig.value ~loc external_def)
-  | Exception ->
-    let exception_def = parse_exception_def ~attrs p in
-    parse_newline_or_semicolon_signature p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Sig.exception_ ~loc exception_def)
-  | Open ->
-    let open_description = parse_open_description ~attrs p in
-    parse_newline_or_semicolon_signature p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Sig.open_ ~loc open_description)
-  | Include ->
-    Parser.next p;
-    let module_type = parse_module_type p in
-    let include_description =
-      Ast_helper.Incl.mk
-        ~loc:(mk_loc start_pos p.prev_end_pos)
-        ~attrs module_type
-    in
-    parse_newline_or_semicolon_signature p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Sig.include_ ~loc include_description)
-  | Module -> (
-    Parser.begin_region p;
-    Parser.next p;
+  (* Flush any synthesized items first, before consuming attributes. *)
+  match !pending_signature_items with
+  | item :: rest ->
+    pending_signature_items := rest;
+    Some item
+  | [] -> (
+    let attrs = parse_attributes p in
     match p.Parser.token with
-    | Uident _ ->
-      let mod_decl = parse_module_declaration_or_alias ~attrs p in
+    | Let ->
+      Parser.begin_region p;
+      let value_desc = parse_sign_let_desc ~attrs p in
       parse_newline_or_semicolon_signature p;
       let loc = mk_loc start_pos p.prev_end_pos in
       Parser.end_region p;
-      Some (Ast_helper.Sig.module_ ~loc mod_decl)
-    | Rec ->
-      let rec_module = parse_rec_module_spec ~attrs ~start_pos p in
+      Some (Ast_helper.Sig.value ~loc value_desc)
+    | Typ -> (
+      Parser.begin_region p;
+      match parse_type_definition_or_extension ~attrs p with
+      | TypeDef {rec_flag; types} ->
+        parse_newline_or_semicolon_signature p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        Parser.end_region p;
+        Some (Ast_helper.Sig.type_ ~loc rec_flag types)
+      | TypeExt ext ->
+        parse_newline_or_semicolon_signature p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        Parser.end_region p;
+        Some (Ast_helper.Sig.type_extension ~loc ext))
+    | External -> (
+      let external_def, inline_types = parse_external_def ~attrs ~start_pos p in
       parse_newline_or_semicolon_signature p;
       let loc = mk_loc start_pos p.prev_end_pos in
-      Parser.end_region p;
-      Some (Ast_helper.Sig.rec_module ~loc rec_module)
-    | Typ ->
-      let mod_type_decl = parse_module_type_declaration ~attrs ~start_pos p in
-      Parser.end_region p;
-      Some mod_type_decl
-    | _t ->
-      let mod_decl = parse_module_declaration_or_alias ~attrs p in
+      match inline_types with
+      | [] -> Some (Ast_helper.Sig.value ~loc external_def)
+      | _ ->
+        let type_item =
+          Ast_helper.Sig.type_ ~loc Asttypes.Recursive inline_types
+        in
+        let val_item = Ast_helper.Sig.value ~loc external_def in
+        pending_signature_items := val_item :: !pending_signature_items;
+        Some type_item)
+    | Exception ->
+      let exception_def = parse_exception_def ~attrs p in
       parse_newline_or_semicolon_signature p;
       let loc = mk_loc start_pos p.prev_end_pos in
-      Parser.end_region p;
-      Some (Ast_helper.Sig.module_ ~loc mod_decl))
-  | AtAt ->
-    let attr = parse_standalone_attribute p in
-    parse_newline_or_semicolon_signature p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Sig.attribute ~loc attr)
-  | ModuleComment (loc, s) ->
-    Parser.next p;
-    Some
-      (Ast_helper.Sig.attribute ~loc
-         ( {txt = "res.doc"; loc},
-           PStr
-             [
-               Ast_helper.Str.eval ~loc
-                 (Ast_helper.Exp.constant ~loc (Pconst_string (s, None)));
-             ] ))
-  | PercentPercent ->
-    let extension = parse_extension ~module_language:true p in
-    parse_newline_or_semicolon_signature p;
-    let loc = mk_loc start_pos p.prev_end_pos in
-    Some (Ast_helper.Sig.extension ~attrs ~loc extension)
-  | _ -> (
-    match attrs with
-    | (({Asttypes.loc = attr_loc}, _) as attr) :: _ ->
-      Parser.err ~start_pos:attr_loc.loc_start ~end_pos:attr_loc.loc_end p
-        (Diagnostics.message (ErrorMessages.attribute_without_node attr));
-      Some Recover.default_signature_item
-    | _ -> None)
+      Some (Ast_helper.Sig.exception_ ~loc exception_def)
+    | Open ->
+      let open_description = parse_open_description ~attrs p in
+      parse_newline_or_semicolon_signature p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Sig.open_ ~loc open_description)
+    | Include ->
+      Parser.next p;
+      let module_type = parse_module_type p in
+      let include_description =
+        Ast_helper.Incl.mk
+          ~loc:(mk_loc start_pos p.prev_end_pos)
+          ~attrs module_type
+      in
+      parse_newline_or_semicolon_signature p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Sig.include_ ~loc include_description)
+    | Module -> (
+      Parser.begin_region p;
+      Parser.next p;
+      match p.Parser.token with
+      | Uident _ ->
+        let mod_decl = parse_module_declaration_or_alias ~attrs p in
+        parse_newline_or_semicolon_signature p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        Parser.end_region p;
+        Some (Ast_helper.Sig.module_ ~loc mod_decl)
+      | Rec ->
+        let rec_module = parse_rec_module_spec ~attrs ~start_pos p in
+        parse_newline_or_semicolon_signature p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        Parser.end_region p;
+        Some (Ast_helper.Sig.rec_module ~loc rec_module)
+      | Typ ->
+        let mod_type_decl = parse_module_type_declaration ~attrs ~start_pos p in
+        Parser.end_region p;
+        Some mod_type_decl
+      | _t ->
+        let mod_decl = parse_module_declaration_or_alias ~attrs p in
+        parse_newline_or_semicolon_signature p;
+        let loc = mk_loc start_pos p.prev_end_pos in
+        Parser.end_region p;
+        Some (Ast_helper.Sig.module_ ~loc mod_decl))
+    | AtAt ->
+      let attr = parse_standalone_attribute p in
+      parse_newline_or_semicolon_signature p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Sig.attribute ~loc attr)
+    | ModuleComment (loc, s) ->
+      Parser.next p;
+      Some
+        (Ast_helper.Sig.attribute ~loc
+           ( {txt = "res.doc"; loc},
+             PStr
+               [
+                 Ast_helper.Str.eval ~loc
+                   (Ast_helper.Exp.constant ~loc (Pconst_string (s, None)));
+               ] ))
+    | PercentPercent ->
+      let extension = parse_extension ~module_language:true p in
+      parse_newline_or_semicolon_signature p;
+      let loc = mk_loc start_pos p.prev_end_pos in
+      Some (Ast_helper.Sig.extension ~attrs ~loc extension)
+    | _ -> (
+      match attrs with
+      | (({Asttypes.loc = attr_loc}, _) as attr) :: _ ->
+        Parser.err ~start_pos:attr_loc.loc_start ~end_pos:attr_loc.loc_end p
+          (Diagnostics.message (ErrorMessages.attribute_without_node attr));
+        Some Recover.default_signature_item
+      | _ -> None))
 [@@progress Parser.next, Parser.expect]
 
 (* module rec module-name :  module-type  { and module-name:  module-type } *)

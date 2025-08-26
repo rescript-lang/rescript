@@ -566,11 +566,21 @@ let print_constant ?(template_literal = false) c =
 module State = struct
   let custom_layout_threshold = 2
 
-  type t = {custom_layout: int}
+  type t = {
+    custom_layout: int;
+    mutable pending_inline_record_defs_for_external:
+      Parsetree.type_declaration list option;
+  }
 
-  let init () = {custom_layout = 0}
+  let init () =
+    {custom_layout = 0; pending_inline_record_defs_for_external = None}
 
-  let next_custom_layout t = {custom_layout = t.custom_layout + 1}
+  let next_custom_layout t =
+    {
+      custom_layout = t.custom_layout + 1;
+      pending_inline_record_defs_for_external =
+        t.pending_inline_record_defs_for_external;
+    }
 
   let should_break_callback t = t.custom_layout > custom_layout_threshold
 end
@@ -1141,6 +1151,16 @@ and print_value_description ~state value_description cmt_tbl =
       value_description.pval_attributes cmt_tbl
   in
   let header = if is_external then "external " else "let " in
+  let inline_record_definitions =
+    match
+      (state.State.pending_inline_record_defs_for_external, is_external)
+    with
+    | Some defs, true ->
+      (* consume the pending inline record defs for this external *)
+      state.State.pending_inline_record_defs_for_external <- None;
+      Some defs
+    | _ -> None
+  in
   Doc.group
     (Doc.concat
        [
@@ -1150,7 +1170,8 @@ and print_value_description ~state value_description cmt_tbl =
            (print_ident_like value_description.pval_name.txt)
            cmt_tbl value_description.pval_name.loc;
          Doc.text ": ";
-         print_typ_expr ~state value_description.pval_type cmt_tbl;
+         print_typ_expr ?inline_record_definitions ~state
+           value_description.pval_type cmt_tbl;
          (if is_external then
             Doc.group
               (Doc.concat
@@ -1179,20 +1200,28 @@ and print_type_declarations ~state ~rec_flag type_declarations cmt_tbl =
              Res_parsetree_viewer.has_inline_record_definition_attribute
                td.ptype_attributes)
     in
-    let adjusted_rec_flag =
-      match rec_flag with
-      | Recursive ->
-        if List.length regular_declarations > 1 then Doc.text "rec "
-        else Doc.nil
-      | Nonrecursive -> Doc.nil
-    in
-    print_listi
-      ~get_loc:(fun n -> n.Parsetree.ptype_loc)
-      ~nodes:regular_declarations
-      ~print:
-        (print_type_declaration2 ~inline_record_definitions ~state
-           ~rec_flag:adjusted_rec_flag)
-      cmt_tbl
+    match regular_declarations with
+    | [] ->
+      (* No regular declarations; only inline-record defs produced by the
+         parser for an external. Capture them and skip printing this type item. *)
+      state.State.pending_inline_record_defs_for_external <-
+        Some inline_record_definitions;
+      Doc.nil
+    | _ ->
+      let adjusted_rec_flag =
+        match rec_flag with
+        | Recursive ->
+          if List.length regular_declarations > 1 then Doc.text "rec "
+          else Doc.nil
+        | Nonrecursive -> Doc.nil
+      in
+      print_listi
+        ~get_loc:(fun n -> n.Parsetree.ptype_loc)
+        ~nodes:regular_declarations
+        ~print:
+          (print_type_declaration2 ~inline_record_definitions ~state
+             ~rec_flag:adjusted_rec_flag)
+        cmt_tbl
   else
     print_listi
       ~get_loc:(fun n -> n.Parsetree.ptype_loc)
@@ -1709,7 +1738,9 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
       | _ -> false
     in
     let return_doc =
-      let doc = print_typ_expr ~state return_type cmt_tbl in
+      let doc =
+        print_typ_expr ?inline_record_definitions ~state return_type cmt_tbl
+      in
       if return_type_needs_parens then Doc.concat [Doc.lparen; doc; Doc.rparen]
       else doc
     in
@@ -1723,7 +1754,9 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
         else Doc.nil
       in
       let typ_doc =
-        let doc = print_typ_expr ~state typ cmt_tbl in
+        let doc =
+          print_typ_expr ?inline_record_definitions ~state typ cmt_tbl
+        in
         match typ.ptyp_desc with
         | Ptyp_arrow _ | Ptyp_tuple _ | Ptyp_alias _ -> add_parens doc
         | _ -> doc
@@ -1759,7 +1792,9 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
                    Doc.join
                      ~sep:(Doc.concat [Doc.comma; Doc.line])
                      (List.map
-                        (fun tp -> print_type_parameter ~state tp cmt_tbl)
+                        (fun tp ->
+                          print_type_parameter ?inline_record_definitions ~state
+                            tp cmt_tbl)
                         args);
                  ]);
             Doc.trailing_comma;
@@ -1787,7 +1822,9 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
           | Ptyp_arrow _ -> true
           | _ -> false
         in
-        let doc = print_typ_expr ~state typ cmt_tbl in
+        let doc =
+          print_typ_expr ?inline_record_definitions ~state typ cmt_tbl
+        in
         if needs_parens then Doc.concat [Doc.lparen; doc; Doc.rparen] else doc
       in
       Doc.concat
@@ -1830,7 +1867,8 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
            [
              constr_name;
              Doc.less_than;
-             print_tuple_type ~state ~inline:true tuple cmt_tbl;
+             print_tuple_type ?inline_record_definitions ~state ~inline:true
+               tuple cmt_tbl;
              Doc.greater_than;
            ])
     | Ptyp_constr (longident_loc, constr_args) -> (
@@ -1859,7 +1897,9 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
                Doc.soft_line;
                Doc.greater_than;
              ]))
-    | Ptyp_tuple types -> print_tuple_type ~state ~inline:false types cmt_tbl
+    | Ptyp_tuple types ->
+      print_tuple_type ?inline_record_definitions ~state ~inline:false types
+        cmt_tbl
     | Ptyp_poly ([], typ) ->
       print_typ_expr ?inline_record_definitions ~state typ cmt_tbl
     | Ptyp_poly (string_locs, typ) ->
@@ -1873,7 +1913,7 @@ and print_typ_expr ?inline_record_definitions ~(state : State.t)
                string_locs);
           Doc.dot;
           Doc.space;
-          print_typ_expr ~state typ cmt_tbl;
+          print_typ_expr ?inline_record_definitions ~state typ cmt_tbl;
         ]
     | Ptyp_package package_type ->
       print_package_type ~state ~print_module_keyword_and_parens:true
@@ -2021,7 +2061,8 @@ and print_object ~state ~inline fields open_flag cmt_tbl =
   in
   if inline then doc else Doc.group doc
 
-and print_tuple_type ~state ~inline (types : Parsetree.core_type list) cmt_tbl =
+and print_tuple_type ?inline_record_definitions ~state ~inline
+    (types : Parsetree.core_type list) cmt_tbl =
   let tuple =
     Doc.concat
       [
@@ -2033,7 +2074,9 @@ and print_tuple_type ~state ~inline (types : Parsetree.core_type list) cmt_tbl =
                Doc.join
                  ~sep:(Doc.concat [Doc.comma; Doc.line])
                  (List.map
-                    (fun typexpr -> print_typ_expr ~state typexpr cmt_tbl)
+                    (fun typexpr ->
+                      print_typ_expr ?inline_record_definitions ~state typexpr
+                        cmt_tbl)
                     types);
              ]);
         Doc.trailing_comma;
@@ -2067,7 +2110,8 @@ and print_object_field ~state (field : Parsetree.object_field) cmt_tbl =
 (* es6 arrow type arg
  * type t = (~foo: string, ~bar: float=?, unit) => unit
  * i.e. ~foo: string, ~bar: float *)
-and print_type_parameter ~state {attrs; lbl; typ} cmt_tbl =
+and print_type_parameter ?inline_record_definitions ~state {attrs; lbl; typ}
+    cmt_tbl =
   (* Converting .ml code to .res requires processing uncurried attributes *)
   let attrs = print_attributes ~state attrs cmt_tbl in
   let label =
@@ -2087,7 +2131,12 @@ and print_type_parameter ~state {attrs; lbl; typ} cmt_tbl =
   let doc =
     Doc.group
       (Doc.concat
-         [attrs; label; print_typ_expr ~state typ cmt_tbl; optional_indicator])
+         [
+           attrs;
+           label;
+           print_typ_expr ?inline_record_definitions ~state typ cmt_tbl;
+           optional_indicator;
+         ])
   in
   print_comments doc cmt_tbl loc
 
