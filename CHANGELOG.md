@@ -15,6 +15,7 @@
 #### :boom: Breaking Change
 
 - Extract ReScript runtime files from main `rescript` package to separate `@rescript/runtime` package. https://github.com/rescript-lang/rescript/pull/7796
+- Remove `@rescript/std` (in favor of `@rescript/runtime`). https://github.com/rescript-lang/rescript/pull/7811
 
 #### :eyeglasses: Spec Compliance
 
