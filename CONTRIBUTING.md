@@ -111,11 +111,11 @@ make artifacts
 - OCaml Code: snake case format is used, e.g, `to_string`
 - ReScript Code: the camel case format is used, e.g `toString`
 
-## Adding new Files to the Npm Package
+## Adding new Files to the Npm Packages
 
-To make sure that no files are added to or removed from the npm package inadvertently, an artifact list is kept at `packages/artifacts.txt`. During CI build, it is verified that only the files that are listed there are actually included in the npm package.
+To make sure that no files are added to or removed from the `rescript` or `@rescript/runtime` npm package inadvertently, an artifact list is kept at `packages/artifacts.json`. During CI build, it is verified that only the files that are listed there are actually included in the npm packages.
 
-After adding a new file to the repository that should go into the npm package - e.g., a new stdlib module -, run `make artifacts`.
+After adding a new file to the repository that should go into one of the npm packages - e.g., a new stdlib module -, run `make artifacts`.
 
 ## Test the compiler
 

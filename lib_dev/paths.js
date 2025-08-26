@@ -67,12 +67,12 @@ export const compilerVersionFile = path.resolve(
 );
 
 /**
- * path: `<projectDir>/packages/artifacts.txt`
+ * path: `<projectDir>/packages/artifacts.json`
  */
 export const artifactListFile = path.resolve(
   projectDir,
   "packages",
-  "artifacts.txt",
+  "artifacts.json",
 );
 
 /**

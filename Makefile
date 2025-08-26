@@ -55,7 +55,7 @@ lib:
 	yarn workspace @rescript/runtime build
 
 artifacts: lib
-	./scripts/npmPack.js --updateArtifactList
+	./scripts/updateArtifactList.js
 
 # Builds the core playground bundle (without the relevant cmijs files for the runtime)
 playground:

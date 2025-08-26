@@ -478,7 +478,9 @@ jobs:
         shell: bash
 
       - name: Check artifact list
-        run: node ./scripts/npmPack.js
+        run: |
+          node ./scripts/updateArtifactList.js
+          git diff --exit-code packages/artifacts.json
 
       - name: Publish packages to pkg.pr.new
         run: |
