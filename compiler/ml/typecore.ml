@@ -4676,7 +4676,8 @@ let report_error env loc ppf error =
       fprintf ppf
         "@,\
          - Hint: Did you want to partially apply the function? You can do that \
-         by putting `...` just before the closing parens of the function call");
+         by putting `...` just before the closing parens of the function call. \
+         Example: @{<info>yourFn(~arg1=someVar, ...)@}");
 
     if List.length superfluous_args > 0 then
       fprintf ppf "@,- Called with arguments it does not take: %s"
