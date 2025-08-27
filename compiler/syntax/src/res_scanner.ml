@@ -209,6 +209,10 @@ let scan_identifier scanner =
     next scanner;
     (* TODO: this isn't great *)
     Token.lookup_keyword "dict{"
+  | {ch = '?'}, "let" ->
+    next scanner;
+    (* TODO: this isn't great *)
+    Token.lookup_keyword "let?"
   | _ -> Token.lookup_keyword str
 
 let scan_digits scanner ~base =

@@ -2013,7 +2013,7 @@ let ppat_of_type env ty =
     (Conv.mkpat Parsetree.Ppat_any, Hashtbl.create 0, Hashtbl.create 0)
   | pats -> Conv.conv (orify_many pats)
 
-let do_check_partial ?pred exhaust loc casel pss =
+let do_check_partial ?partial_match_warning_hint ?pred exhaust loc casel pss =
   match pss with
   | [] ->
     (*
@@ -2071,6 +2071,11 @@ let do_check_partial ?pred exhaust loc casel pss =
                     Matching over values of extensible variant types (the \
                     *extension* above)\n\
                     must include a wild card pattern in order to be exhaustive.";
+               (match partial_match_warning_hint with
+               | None -> ()
+               | Some h when String.length h > 0 ->
+                 Buffer.add_string buf ("\n\n  " ^ h)
+               | Some _ -> ());
                Buffer.contents buf
              with _ -> ""
            in
@@ -2083,8 +2088,8 @@ let do_check_partial_normal loc casel pss =
   do_check_partial exhaust loc casel pss
  *)
 
-let do_check_partial_gadt pred loc casel pss =
-  do_check_partial ~pred exhaust_gadt loc casel pss
+let do_check_partial_gadt ?partial_match_warning_hint pred loc casel pss =
+  do_check_partial ?partial_match_warning_hint ~pred exhaust_gadt loc casel pss
 
 (*****************)
 (* Fragile check *)
@@ -2265,9 +2270,9 @@ let check_partial_param do_check_partial do_check_fragile loc casel =
       do_check_partial_normal
       do_check_fragile_normal*)
 
-let check_partial_gadt pred loc casel =
+let check_partial_gadt ?partial_match_warning_hint pred loc casel =
   check_partial_param
-    (do_check_partial_gadt pred)
+    (do_check_partial_gadt ?partial_match_warning_hint pred)
     do_check_fragile_gadt loc casel
 
 (*************************************)

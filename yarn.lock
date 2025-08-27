@@ -446,6 +446,14 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rescript/runtime@workspace:packages/@rescript/runtime":
+  version: 0.0.0-use.local
+  resolution: "@rescript/runtime@workspace:packages/@rescript/runtime"
+  dependencies:
+    rescript: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "@rescript/std@workspace:packages/std":
   version: 0.0.0-use.local
   resolution: "@rescript/std@workspace:packages/std"
@@ -2512,6 +2520,7 @@ __metadata:
     "@rescript/darwin-x64": "workspace:packages/@rescript/darwin-x64"
     "@rescript/linux-arm64": "workspace:packages/@rescript/linux-arm64"
     "@rescript/linux-x64": "workspace:packages/@rescript/linux-x64"
+    "@rescript/runtime": "workspace:packages/@rescript/runtime"
     "@rescript/win32-x64": "workspace:packages/@rescript/win32-x64"
     "@types/node": "npm:^20.14.9"
     "@types/semver": "npm:^7.7.0"

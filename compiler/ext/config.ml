@@ -1,6 +1,6 @@
-(* This resolves the location of the standard library starting from the location of bsc.exe,
-  handling different supported package layouts. *)
-let standard_library =
+(* This resolves the location of the standard library starting from the location of bsc.exe
+   (@rescript/{platform}/bin/bsc.exe), handling different supported package layouts. *)
+let runtime_module_path =
   let build_path rest path =
     String.concat Filename.dir_sep (List.rev_append rest path)
   in
@@ -10,24 +10,30 @@ let standard_library =
     |> List.rev
   with
   (* 1. Packages installed via pnpm
-     - bin:    node_modules/.pnpm/@rescript+darwin-arm64@12.0.0-alpha.13/node_modules/@rescript/darwin-arm64/bin
-     - stdlib: node_modules/rescript/lib/ocaml (symlink)
+     - bin:     node_modules/.pnpm/@rescript+darwin-arm64@12.0.0-alpha.13/node_modules/@rescript/darwin-arm64/bin
+     - runtime: node_modules/.pnpm/node_modules/@rescript/runtime (symlink)
   *)
   | "bin" :: _platform :: "@rescript" :: "node_modules" :: _package :: ".pnpm"
     :: "node_modules" :: rest ->
-    build_path rest ["node_modules"; "rescript"; "lib"; "ocaml"]
+    build_path rest
+      ["node_modules"; ".pnpm"; "node_modules"; "@rescript"; "runtime"]
   (* 2. Packages installed via npm
-     - bin:    node_modules/@rescript/{platform}/bin
-     - stdlib: node_modules/rescript/lib/ocaml
+     - bin:     node_modules/@rescript/{platform}/bin
+     - runtime: node_modules/@rescript/runtime
   *)
   | "bin" :: _platform :: "@rescript" :: "node_modules" :: rest ->
-    build_path rest ["node_modules"; "rescript"; "lib"; "ocaml"]
+    build_path rest ["node_modules"; "@rescript"; "runtime"]
   (* 3. Several other cases that can occur in local development, e.g.
-     - bin:    <repo>/packages/@rescript/{platform}/bin, <repo>/_build/install/default/bin
-     - stdlib: <repo>/lib/ocaml
+     - bin:     <repo>/packages/@rescript/{platform}/bin, <repo>/_build/install/default/bin
+     - runtime: <repo>/packages/@rescript/runtime
   *)
-  | _ :: _ :: _ :: _ :: rest -> build_path rest ["lib"; "ocaml"]
+  | _ :: _ :: _ :: _ :: rest ->
+    build_path rest ["packages"; "@rescript"; "runtime"]
   | _ -> ""
+
+let standard_library =
+  let ( // ) = Filename.concat in
+  runtime_module_path // "lib" // "ocaml"
 
 let cmi_magic_number = "Caml1999I022"
 

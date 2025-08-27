@@ -214,6 +214,16 @@ let _fragment = <Fragment>
   {"Hello, world!"}
 </Fragment>;
 
+let _youtube_iframe = <iframe
+  allow={"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"}
+  allowFullScreen={true}
+  frameBorder={0}
+  height={"1075"}
+  src={"https://www.youtube.com/embed/dQw4w9WgXcQ"}
+  width={"1911"}
+  referrerPolicy={"strict-origin-when-cross-origin"}
+/>;
+
 export {
   Icon,
   _single_element_child,
@@ -242,5 +252,6 @@ export {
   _props_with_hyphen,
   React,
   _fragment,
+  _youtube_iframe,
 }
 /* _single_element_child Not a pure module */

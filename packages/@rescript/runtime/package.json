@@ -1,0 +1,51 @@
+{
+  "name": "@rescript/runtime",
+  "version": "12.0.0-beta.8",
+  "description": "ReScript runtime modules",
+  "type": "module",
+  "homepage": "https://rescript-lang.org",
+  "bugs": "https://github.com/rescript-lang/rescript/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rescript-lang/rescript.git"
+  },
+  "author": {
+    "name": "Hongbo Zhang",
+    "email": "bobzhang1988@gmail.com"
+  },
+  "maintainers": [
+    "Christoph Knittel (https://github.com/cknitt)",
+    "Cristiano Calcagno (https://github.com/cristianoc)",
+    "Dmitry Zakharov (https://github.com/DZakh)",
+    "Florian Hammerschmidt (https://github.com/fhammerschmidt)",
+    "Gabriel Nordeborn (https://github.com/zth)",
+    "Hyeseong Kim (https://github.com/cometkim)",
+    "Jaap Frolich (https://github.com/jfrolich)",
+    "Matthias Le Brun (https://github.com/bloodyowl)",
+    "Patrick Ecker (https://github.com/ryyppy)",
+    "Paul Tsnobiladzé (https://github.com/tsnobip)",
+    "Woonki Moon (https://github.com/mununki)"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "lib/es6",
+    "lib/js",
+    "lib/ocaml"
+  ],
+  "exports": {
+    "./lib/es6/*": "./lib/es6/*",
+    "./lib/js/*": "./lib/js/*",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "clean": "rescript clean",
+    "build": "rescript build",
+    "cppo": "node scripts/cppo.js"
+  },
+  "devDependencies": {
+    "rescript": "workspace:^"
+  },
+  "preferUnplugged": true
+}

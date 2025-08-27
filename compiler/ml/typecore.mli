@@ -35,6 +35,7 @@ val type_expression :
   Typedtree.expression
 val check_partial :
   ?lev:int ->
+  ?partial_match_warning_hint:string ->
   Env.t ->
   type_expr ->
   Location.t ->

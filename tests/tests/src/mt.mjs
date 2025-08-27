@@ -3,8 +3,8 @@
 import * as Path from "path";
 import * as Assert from "assert";
 import * as Process from "process";
-import * as Belt_List from "rescript/lib/es6/Belt_List.js";
-import * as Js_promise from "rescript/lib/es6/Js_promise.js";
+import * as Belt_List from "@rescript/runtime/lib/es6/Belt_List.js";
+import * as Js_promise from "@rescript/runtime/lib/es6/Js_promise.js";
 
 function assert_fail(msg) {
   Assert.fail(undefined, undefined, msg, "");

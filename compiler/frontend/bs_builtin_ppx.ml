@@ -143,6 +143,124 @@ let expr_mapper ~async_context ~in_function_def (self : mapper)
         ] ) ->
     default_expr_mapper self
       {e with pexp_desc = Pexp_ifthenelse (b, t_exp, Some f_exp)}
+    (* Transform:
+     - `@let.unwrap let Ok(inner_pat) = expr`
+     - `@let.unwrap let Error(inner_pat) = expr`
+     - `@let.unwrap let Some(inner_pat) = expr`
+     - `@let.unwrap let None = expr`
+     ...into switches *)
+  | Pexp_let
+      ( Nonrecursive,
+        [
+          {
+            pvb_pat =
+              {
+                ppat_desc =
+                  ( Ppat_construct
+                      ({txt = Lident ("Ok" as variant_name)}, Some _)
+                  | Ppat_construct
+                      ({txt = Lident ("Error" as variant_name)}, Some _)
+                  | Ppat_construct
+                      ({txt = Lident ("Some" as variant_name)}, Some _)
+                  | Ppat_construct
+                      ({txt = Lident ("None" as variant_name)}, None) );
+              } as pvb_pat;
+            pvb_expr;
+            pvb_attributes;
+          };
+        ],
+        body )
+    when Ast_attributes.has_unwrap_attr pvb_attributes -> (
+    if not (Experimental_features.is_enabled Experimental_features.LetUnwrap)
+    then
+      Bs_syntaxerr.err pvb_pat.ppat_loc
+        (Experimental_feature_not_enabled LetUnwrap);
+    let variant : [`Result_Ok | `Result_Error | `Option_Some | `Option_None] =
+      match variant_name with
+      | "Ok" -> `Result_Ok
+      | "Error" -> `Result_Error
+      | "Some" -> `Option_Some
+      | _ -> `Option_None
+    in
+    match pvb_expr.pexp_desc with
+    | Pexp_pack _ -> default_expr_mapper self e
+    | _ ->
+      let cont_case =
+        {
+          Parsetree.pc_bar = None;
+          pc_lhs = pvb_pat;
+          pc_guard = None;
+          pc_rhs = body;
+        }
+      in
+      let loc = {pvb_pat.ppat_loc with loc_ghost = true} in
+      let early_case =
+        match variant with
+        (* Result: continue on Ok(_), early-return on Error(e) *)
+        | `Result_Ok ->
+          {
+            Parsetree.pc_bar = None;
+            pc_lhs =
+              Ast_helper.Pat.alias
+                (Ast_helper.Pat.construct ~loc
+                   {txt = Lident "Error"; loc}
+                   (Some (Ast_helper.Pat.any ~loc ())))
+                {txt = "e"; loc};
+            pc_guard = None;
+            pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident "e"; loc};
+          }
+        (* Result: continue on Error(_), early-return on Ok(x) *)
+        | `Result_Error ->
+          {
+            Parsetree.pc_bar = None;
+            pc_lhs =
+              Ast_helper.Pat.alias
+                (Ast_helper.Pat.construct ~loc {txt = Lident "Ok"; loc}
+                   (Some (Ast_helper.Pat.any ~loc ())))
+                {txt = "x"; loc};
+            pc_guard = None;
+            pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident "x"; loc};
+          }
+        (* Option: continue on Some(_), early-return on None *)
+        | `Option_Some ->
+          {
+            Parsetree.pc_bar = None;
+            pc_lhs =
+              Ast_helper.Pat.alias
+                (Ast_helper.Pat.construct ~loc {txt = Lident "None"; loc} None)
+                {txt = "x"; loc};
+            pc_guard = None;
+            pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident "x"; loc};
+          }
+        (* Option: continue on None, early-return on Some(x) *)
+        | `Option_None ->
+          {
+            Parsetree.pc_bar = None;
+            pc_lhs =
+              Ast_helper.Pat.alias
+                (Ast_helper.Pat.construct ~loc {txt = Lident "Some"; loc}
+                   (Some (Ast_helper.Pat.any ~loc ())))
+                {txt = "x"; loc};
+            pc_guard = None;
+            pc_rhs = Ast_helper.Exp.ident ~loc {txt = Lident "x"; loc};
+          }
+      in
+      default_expr_mapper self
+        {
+          e with
+          pexp_desc = Pexp_match (pvb_expr, [early_case; cont_case]);
+          pexp_attributes = e.pexp_attributes @ pvb_attributes;
+        })
+  | Pexp_let (_, [{pvb_pat; pvb_attributes}], _)
+    when Ast_attributes.has_unwrap_attr pvb_attributes ->
+    (* Catch all unsupported cases for `let?` *)
+    if not (Experimental_features.is_enabled Experimental_features.LetUnwrap)
+    then
+      Bs_syntaxerr.err pvb_pat.ppat_loc
+        (Experimental_feature_not_enabled LetUnwrap)
+    else
+      Bs_syntaxerr.err pvb_pat.ppat_loc
+        (LetUnwrap_not_supported_in_position `Unsupported_type)
   | Pexp_let
       ( Nonrecursive,
         [
@@ -333,6 +451,24 @@ let signature_item_mapper (self : mapper) (sigi : Parsetree.signature_item) :
 let structure_item_mapper (self : mapper) (str : Parsetree.structure_item) :
     Parsetree.structure_item =
   match str.pstr_desc with
+  | Pstr_value (_, vbs)
+    when List.exists
+           (fun (vb : Parsetree.value_binding) ->
+             Ast_attributes.has_unwrap_attr vb.pvb_attributes)
+           vbs ->
+    let vb =
+      List.find
+        (fun (vb : Parsetree.value_binding) ->
+          Ast_attributes.has_unwrap_attr vb.pvb_attributes)
+        vbs
+    in
+    if not (Experimental_features.is_enabled Experimental_features.LetUnwrap)
+    then
+      Bs_syntaxerr.err vb.pvb_pat.ppat_loc
+        (Experimental_feature_not_enabled LetUnwrap)
+    else
+      Bs_syntaxerr.err vb.pvb_pat.ppat_loc
+        (LetUnwrap_not_supported_in_position `Toplevel)
   | Pstr_type (rf, tdcls) (* [ {ptype_attributes} as tdcl ] *) ->
     Ast_tdcls.handle_tdcls_in_stru self str rf tdcls
   | Pstr_primitive prim

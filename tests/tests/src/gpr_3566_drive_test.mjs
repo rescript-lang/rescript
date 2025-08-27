@@ -2,7 +2,7 @@
 
 import * as Mt from "./mt.mjs";
 import * as Gpr_3566_test from "./gpr_3566_test.mjs";
-import * as Primitive_option from "rescript/lib/es6/Primitive_option.js";
+import * as Primitive_option from "@rescript/runtime/lib/es6/Primitive_option.js";
 
 let suites = {
   contents: /* [] */0

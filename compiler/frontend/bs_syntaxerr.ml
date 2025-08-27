@@ -47,6 +47,8 @@ type error =
   | Misplaced_label_syntax
   | Optional_in_uncurried_bs_attribute
   | Bs_this_simple_pattern
+  | Experimental_feature_not_enabled of Experimental_features.feature
+  | LetUnwrap_not_supported_in_position of [`Toplevel | `Unsupported_type]
 
 let pp_error fmt err =
   Format.pp_print_string fmt
@@ -82,7 +84,19 @@ let pp_error fmt err =
        each constructor must have an argument."
     | Conflict_ffi_attribute str -> "Conflicting attributes: " ^ str
     | Bs_this_simple_pattern ->
-      "%@this expect its pattern variable to be simple form")
+      "%@this expect its pattern variable to be simple form"
+    | Experimental_feature_not_enabled feature ->
+      Printf.sprintf
+        "Experimental feature not enabled: %s. Enable it by setting \"%s\" to \
+         true under \"experimentalFeatures\" in rescript.json."
+        (Experimental_features.to_string feature)
+        (Experimental_features.to_string feature)
+    | LetUnwrap_not_supported_in_position hint -> (
+      match hint with
+      | `Toplevel -> "`let?` is not allowed for top-level bindings."
+      | `Unsupported_type ->
+        "`let?` is only supported in let bindings targeting the `result` or \
+         `option` type."))
 
 type exn += Error of Location.t * error
 

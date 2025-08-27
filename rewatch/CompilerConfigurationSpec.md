@@ -32,6 +32,7 @@ This document contains a list of all bsconfig parameters with remarks, and wheth
 | bs-external-includes | array of string         |        |     [_]      |
 | suffix               | Suffix                  |        |     [x]      |
 | reanalyze            | Reanalyze               |        |     [_]      |
+| experimentalFeatures | ExperimentalFeatures    |        |     [x]      |
 
 ### Source
 
@@ -110,6 +111,17 @@ enum: "classic" | "automatic"
 ### Reanalyze-Analysis
 
 enum: | "dce" | "exception" | "termination"
+
+### ExperimentalFeatures
+
+An object of feature flags to enable experimental compiler behavior. Only supported by Rewatch.
+
+- Keys: feature identifiers (PascalCase)
+- Values: boolean (true to enable)
+
+Currently supported features:
+
+- LetUnwrap: Enable `let?` syntax.
 
 ### Warnings
 

@@ -52,7 +52,7 @@ reanalyze:
 	reanalyze.exe -set-exit-code -all-cmt _build/default/compiler _build/default/tests -exclude-paths compiler/outcome_printer,compiler/ml,compiler/frontend,compiler/ext,compiler/depends,compiler/core,compiler/common,compiler/cmij,compiler/bsb_helper,compiler/bsb
 
 lib:
-	./scripts/buildRuntime.sh
+	yarn workspace @rescript/runtime build
 
 artifacts: lib
 	./scripts/npmPack.js --updateArtifactList
@@ -84,8 +84,10 @@ clean-gentype:
 clean-rewatch:
 	cargo clean --manifest-path rewatch/Cargo.toml && rm -f rewatch/rewatch
 
-clean:
-	(cd runtime && ../cli/rescript.js clean)
+clean-lib:
+	yarn workspace @rescript/runtime rescript clean
+
+clean: clean-lib
 	dune clean
 
 clean-all: clean clean-gentype clean-rewatch

@@ -2,7 +2,7 @@
 
 import * as Mt from "./mt.mjs";
 import * as Mt_global from "./mt_global.mjs";
-import * as Belt_Array from "rescript/lib/es6/Belt_Array.js";
+import * as Belt_Array from "@rescript/runtime/lib/es6/Belt_Array.js";
 import * as Ocaml_Hashtbl from "./ocaml_compat/Ocaml_Hashtbl.mjs";
 
 let suites = {

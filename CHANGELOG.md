@@ -14,11 +14,15 @@
 
 #### :boom: Breaking Change
 
+- Extract ReScript runtime files from main `rescript` package to separate `@rescript/runtime` package. https://github.com/rescript-lang/rescript/pull/7796
+
 #### :eyeglasses: Spec Compliance
 
 #### :rocket: New Feature
 
 - Add support for ArrayBuffer and typed arrays to `@unboxed`. https://github.com/rescript-lang/rescript/pull/7788
+- Experimental: Add `let?` syntax for unwrapping and propagating errors/none as early returns for option/result types. https://github.com/rescript-lang/rescript/pull/7582
+- Add support for shipping features as experimental, including configuring what experimental features are enabled in `rescript.json`. https://github.com/rescript-lang/rescript/pull/7582
 
 #### :bug: Bug fix
 
@@ -30,6 +34,11 @@
 
 - Make parser less strict around leading attributes. https://github.com/rescript-lang/rescript/pull/7787
 - Dedicated error message for ternary type mismatch. https://github.com/rescript-lang/rescript/pull/7804
+- Dedicated error message for passing a braced ident to something expected to be a record. https://github.com/rescript-lang/rescript/pull/7806
+- Hint about partial application when missing required argument in function call. https://github.com/rescript-lang/rescript/pull/7807
+- More autocomplete improvements involving modules and module types. https://github.com/rescript-lang/rescript/pull/7795
+- Autocomplete `@react.componentWithProps` attribute. https://github.com/rescript-lang/rescript/pull/7812
+- Add some missing iframe attributes to `domProps`. https://github.com/rescript-lang/rescript/pull/7813
 
 #### :house: Internal
 
