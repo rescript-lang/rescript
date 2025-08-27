@@ -584,53 +584,9 @@ let scan_regex scanner =
       bring_buf_up_to_date ~start_offset:last_char_offset;
       Buffer.contents buf)
   in
-  (* Look ahead from a given absolute offset to see if a valid class closer
-     exists on the same line.
-     Semantics:
-       - Applies BOS rules: an initial '^' does not count as content; the
-         very first ']' after '[' or after '[^' is treated as literal.
-       - Skips escaped characters (\\.) while scanning.
-       - Returns true only if a subsequent unescaped ']' (after some content)
-         is found before a line break or EOF. *)
-  let has_valid_class_closer_ahead ~from_offset =
-    let src = scanner.src in
-    let len = String.length src in
-    let i = ref (from_offset + 1) in
-    (* start scanning after current '[' *)
-    let bos = ref true in
-    let rec loop () =
-      if !i >= len then false
-      else
-        match String.unsafe_get src !i with
-        | '\n' | '\r' -> false
-        | '\\' ->
-          if !i + 1 < len then (
-            i := !i + 2;
-            loop ())
-          else false
-        | '^' when !bos ->
-          incr i;
-          loop ()
-        | ']' when !bos ->
-          (* Leading ']' is literal content; after that, we're no longer at BOS. *)
-          bos := false;
-          incr i;
-          loop ()
-        | ']' -> true
-        | _ ->
-          bos := false;
-          incr i;
-          loop ()
-    in
-    loop ()
-  in
-
-  (* Scan until closing '/' that is not inside a character class. Only enter
-     character-class mode when a valid ']' is present ahead (same line).
-     Track beginning-of-class to allow a leading ']' (or leading '^' then ']'). *)
-  let rec scan ~in_class ~class_at_bos =
+  let rec scan ?(in_char_class = false) () =
     match scanner.ch with
-    | '/' when not in_class ->
+    | '/' when not in_char_class ->
       let last_char_offset = scanner.offset in
       next scanner;
       let pattern = result ~first_char_offset ~last_char_offset in
@@ -654,34 +610,18 @@ let scan_regex scanner =
     | '\\' ->
       next scanner;
       next scanner;
-      (* Escapes count as content when inside a class; clear BOS. *)
-      scan ~in_class ~class_at_bos:(if in_class then false else class_at_bos)
-    | '[' when not in_class ->
-      (* Only enter a character class if a closing ']' exists ahead on the
-         same line. Otherwise treat '[' as a normal char. *)
-      if has_valid_class_closer_ahead ~from_offset:scanner.offset then (
-        next scanner;
-        scan ~in_class:true ~class_at_bos:true)
-      else (
-        next scanner;
-        scan ~in_class ~class_at_bos)
-    | '^' when in_class && class_at_bos ->
-      (* Leading caret does not count as content. *)
+      scan ~in_char_class ()
+    | '[' when not in_char_class ->
       next scanner;
-      scan ~in_class ~class_at_bos:true
-    | ']' when in_class && class_at_bos ->
-      (* First ']' after '[' or '[^' is literal, not a closer. *)
+      scan ~in_char_class:true ()
+    | ']' when in_char_class ->
       next scanner;
-      scan ~in_class ~class_at_bos:false
-    | ']' when in_class ->
-      (* Leave character class. *)
-      next scanner;
-      scan ~in_class:false ~class_at_bos:false
+      scan ~in_char_class:false ()
     | _ ->
       next scanner;
-      scan ~in_class ~class_at_bos:(if in_class then false else class_at_bos)
+      scan ~in_char_class ()
   in
-  let pattern, flags = scan ~in_class:false ~class_at_bos:false in
+  let pattern, flags = scan () in
   let end_pos = position scanner in
   (start_pos, end_pos, Token.Regex (pattern, flags))
 
