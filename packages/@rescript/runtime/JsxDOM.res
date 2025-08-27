@@ -40,6 +40,8 @@ type domProps = {
   key?: string,
   children?: Jsx.element,
   ref?: domRef,
+  // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe#allow
+  allow?: string,
   /* accessibility */
   /* https://www.w3.org/TR/wai-aria-1.1/ */
   /* https://accessibilityresources.org/<aria-tag> is a great resource for these */
@@ -203,6 +205,8 @@ type domProps = {
   formAction?: string /* uri */,
   formTarget?: string /* "_blank", "_self", etc. */,
   formMethod?: string /* "post", "get", "put" */,
+  // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe#frameborder
+  frameBorder?: int /* "0", "1" */,
   headers?: string,
   height?: string /* in html5 this can only be a number, but in html4 it can ba a percentage as well */,
   high?: int,
@@ -517,6 +521,8 @@ type domProps = {
   primitiveUnits?: string,
   r?: string,
   radius?: string,
+  // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe#referrerpolicy
+  referrerPolicy?: string,
   refX?: string,
   refY?: string,
   renderingIntent?: string,
