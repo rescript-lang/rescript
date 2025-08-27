@@ -806,6 +806,13 @@ Resolved opens 1 Stdlib
     "detail": "",
     "documentation": {"kind": "markdown", "value": "The `@react.component` decorator is used to annotate functions that are RescriptReact components.\n\nYou will need this decorator whenever you want to use a ReScript / React component in ReScript JSX expressions.\n\nNote: The `@react.component` decorator requires the `jsx` config to be set in your `rescript.json` to enable the required React transformations.\n\n[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#react-component-decorator)."},
     "insertTextFormat": 2
+  }, {
+    "label": "react.componentWithProps",
+    "kind": 4,
+    "tags": [],
+    "detail": "",
+    "documentation": {"kind": "markdown", "value": "The `@react.componentWithProps` decorator is used to annotate functions that are RescriptReact components.\n\nYou will need this decorator whenever you want to use a ReScript / React component in ReScript JSX expressions.\n\nNote: The `@react.componentWithProps` decorator requires the `jsx` config to be set in your `rescript.json` to enable the required React transformations.\n\n[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#react-component-with-props-decorator)."},
+    "insertTextFormat": 2
   }]
 
 Complete src/Completion.res 68:10
@@ -821,6 +828,13 @@ Resolved opens 1 Stdlib
     "tags": [],
     "detail": "",
     "documentation": {"kind": "markdown", "value": "The `@react.component` decorator is used to annotate functions that are RescriptReact components.\n\nYou will need this decorator whenever you want to use a ReScript / React component in ReScript JSX expressions.\n\nNote: The `@react.component` decorator requires the `jsx` config to be set in your `rescript.json` to enable the required React transformations.\n\n[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#react-component-decorator)."},
+    "insertTextFormat": 2
+  }, {
+    "label": "componentWithProps",
+    "kind": 4,
+    "tags": [],
+    "detail": "",
+    "documentation": {"kind": "markdown", "value": "The `@react.componentWithProps` decorator is used to annotate functions that are RescriptReact components.\n\nYou will need this decorator whenever you want to use a ReScript / React component in ReScript JSX expressions.\n\nNote: The `@react.componentWithProps` decorator requires the `jsx` config to be set in your `rescript.json` to enable the required React transformations.\n\n[Read more and see examples in the documentation](https://rescript-lang.org/syntax-lookup#react-component-with-props-decorator)."},
     "insertTextFormat": 2
   }]
 
