@@ -26,6 +26,7 @@
 
 #### :bug: Bug fix
 
+- Fix JS regex literal parsing in character classes. https://github.com/rescript-lang/rescript/pull/7790
 - Fix creating interface for functions with upper bounded polymorphic args. https://github.com/rescript-lang/rescript/pull/7786
 
 #### :memo: Documentation
