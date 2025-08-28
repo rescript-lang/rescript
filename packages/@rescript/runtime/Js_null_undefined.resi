@@ -109,7 +109,8 @@ let fromOption: option<'a> => t<'a>
 @deprecated({
   reason: "Use `Nullable.fromOption` instead.",
   migrate: Nullable.fromOption(),
-}) let from_opt: option<'a> => t<'a>
+})
+let from_opt: option<'a> => t<'a>
 
 /**
 Maps `Js.null_undefined<'a>` to `option<'a>`.

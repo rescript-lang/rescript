@@ -32,4 +32,3 @@ let toStringWithRadix2 = Js.Float.toStringWithRadix(6.0, ~radix=2)
 
 let parse1 = "123"->Js.Float.fromString
 let parse2 = Js.Float.fromString("123")
-

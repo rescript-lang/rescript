@@ -24,4 +24,3 @@ let toOption2 = Js.Null_undefined.toOption(Js.Null_undefined.return(3))
 
 let to_opt1 = Js.Null_undefined.return(4)->Js.Null_undefined.to_opt
 let to_opt2 = Js.Null_undefined.to_opt(Js.Null_undefined.return(4))
-
