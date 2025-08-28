@@ -1,0 +1,31 @@
+let someCall = Js.Option.some(3)
+let somePiped = 3->Js.Option.some
+
+let isSome1 = Some(1)->Option.isSome
+let isSome2 = Option.isSome(None)
+
+let isNone1 = None->Option.isNone
+let isNone2 = Option.isNone(Some(2))
+
+let eq = (a: int, b: int) => a == b
+// let isSomeValue1 = Js.Option.isSomeValue(eq, 2, Some(2))
+
+let getExn1 = Option.getOrThrow(Some(3))
+let getExn2 = Some(3)->Option.getOrThrow
+
+let equal1 = Option.equal(Some(2), Some(2), eq)
+
+let f = (x: int) => x > 0 ? Some(x + 1) : None
+let andThen1 = Option.flatMap(Some(2), f)
+
+let map1 = Option.map(Some(2), x => x * 2)
+
+let getWithDefault1 = Option.getOr(Some(2), 0)
+
+let default1 = Option.getOr(Some(2), 0)
+
+let filter1 = Option.filter(Some(1), x => x > 0)
+
+let firstSome1 = Option.orElse(Some(1), None)
+let firstSome2 = Option.orElse(Some(1), None)
+
