@@ -29,6 +29,10 @@ Provide utilities for JS float.
 /**
 The special value "Not a Number". See [`NaN`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/NaN) on MDN.
 */
+@deprecated({
+  reason: "Use `Float.Constants.nan` instead.",
+  migrate: Float.Constants.nan,
+})
 @val
 external _NaN: float = "NaN"
 
@@ -39,6 +43,10 @@ Note that both `_NaN = _NaN` and `_NaN == _NaN` will return `false`. `isNaN` is
 therefore necessary to test for `_NaN`. Return `true` if the given value is
 `_NaN`, `false` otherwise. See [`isNaN`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isNaN) on MDN.
 */
+@deprecated({
+  reason: "Use `Float.isNaN` instead.",
+  migrate: Float.isNaN(),
+})
 @val @scope("Number")
 external isNaN: float => bool = "isNaN"
 
@@ -62,6 +70,10 @@ Js.Float.isFinite(Js.Float._NaN)
 Js.Float.isFinite(1234.)
 ```
 */
+@deprecated({
+  reason: "Use `Float.isFinite` instead.",
+  migrate: Float.isFinite(),
+})
 @val @scope("Number")
 external isFinite: float => bool = "isFinite"
 
@@ -80,6 +92,10 @@ Js.Float.toExponential(77.1234)->Js.log
 Js.Float.toExponential(77.)->Js.log
 ```
 */
+@deprecated({
+  reason: "Use `Float.toExponential` instead.",
+  migrate: Float.toExponential(),
+})
 @send
 external toExponential: float => string = "toExponential"
 
@@ -98,6 +114,10 @@ See [`toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 Js.Float.toExponentialWithPrecision(77.1234, ~digits=2)->Js.log
 ```
 */
+@deprecated({
+  reason: "Use `Float.toExponential` instead.",
+  migrate: Float.toExponential(~digits=%insert.labelledArgument("digits")),
+})
 @send
 external toExponentialWithPrecision: (float, ~digits: int) => string = "toExponential"
 
@@ -116,6 +136,10 @@ Js.Float.toFixed(12345.6789)->Js.log
 Js.Float.toFixed(1.2e21)->Js.log
 ```
 */
+@deprecated({
+  reason: "Use `Float.toFixed` instead.",
+  migrate: Float.toFixed(),
+})
 @send
 external toFixed: float => string = "toFixed"
 
@@ -139,6 +163,10 @@ Js.Float.toFixedWithPrecision(12345.6789, ~digits=1)->Js.log
 Js.Float.toFixedWithPrecision(0., ~digits=2)->Js.log
 ```
 */
+@deprecated({
+  reason: "Use `Float.toFixed` instead.",
+  migrate: Float.toFixed(~digits=%insert.labelledArgument("digits")),
+})
 @send
 external toFixedWithPrecision: (float, ~digits: int) => string = "toFixed"
 
@@ -161,6 +189,10 @@ Js.Float.toPrecision(12345.6789)->Js.log
 Js.Float.toPrecision(1.2e21)->Js.log
 ```
 */
+@deprecated({
+  reason: "Use `Float.toPrecision` instead.",
+  migrate: Float.toPrecision(),
+})
 @send
 external toPrecision: float => string = "toPrecision"
 
@@ -193,6 +225,10 @@ Js.Float.toPrecisionWithPrecision(12345.6789, ~digits=1)->Js.log
 Js.Float.toPrecisionWithPrecision(0., ~digits=2)->Js.log
 ```
 */
+@deprecated({
+  reason: "Use `Float.toPrecision` instead.",
+  migrate: Float.toPrecision(~digits=%insert.labelledArgument("digits")),
+})
 @send
 external toPrecisionWithPrecision: (float, ~digits: int) => string = "toPrecision"
 
@@ -207,6 +243,10 @@ fixed-point (usually). See [`toString`](https://developer.mozilla.org/en-US/docs
 Js.Float.toString(12345.6789)->Js.log
 ```
 */
+@deprecated({
+  reason: "Use `Float.toString` instead.",
+  migrate: Float.toString(),
+})
 @send
 external toString: float => string = "toString"
 
@@ -233,6 +273,10 @@ Js.Float.toStringWithRadix(3735928559., ~radix=16)->Js.log
 Js.Float.toStringWithRadix(123.456, ~radix=36)->Js.log
 ```
 */
+@deprecated({
+  reason: "Use `Float.toString` instead.",
+  migrate: Float.toString(~radix=%insert.labelledArgument("radix")),
+})
 @send
 external toStringWithRadix: (float, ~radix: int) => string = "toString"
 
@@ -268,5 +312,9 @@ Js.Float.fromString("hello")
 Js.Float.fromString("100a")
 ```
 */
+@deprecated({
+  reason: "Use `Float.parseFloat` instead.",
+  migrate: Float.parseFloat(),
+})
 @val
 external fromString: string => float = "Number"
