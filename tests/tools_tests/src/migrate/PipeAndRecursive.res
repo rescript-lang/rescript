@@ -6,7 +6,7 @@ module Target = {
 @deprecated({
   reason: "test piped vs non-piped",
   migrate: PipeAndRecursive.Target.a(),
-  migratePiped: PipeAndRecursive.Target.b(),
+  migrateInPipeChain: PipeAndRecursive.Target.b(),
 })
 external dep: int => int = "dep"
 
@@ -18,7 +18,7 @@ let onePipe = 1->dep
 /* Still migrate (Target.a), since lhs has 1 pipe (< 2) */
 let twoPipes = 1->id->dep
 
-/* Should use migratePiped (Target.b), since lhs has 2 pipes */
+/* Should use migrateInPipeChain (Target.b), since lhs has 2 pipes */
 let threePipes = 1->id->id->dep
 
 /* Recursion: all dep steps should migrate */

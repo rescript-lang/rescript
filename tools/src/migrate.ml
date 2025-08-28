@@ -410,7 +410,7 @@ let apply_template_direct mapper template_expr call_args exp =
    template when available and valid; otherwise fall back to the direct
    template. *)
 let choose_template_for_piped (deprecated_info : Cmt_utils.deprecated_used) =
-  match deprecated_info.migration_piped_template with
+  match deprecated_info.migration_in_pipe_chain_template with
   | Some e -> (
     match Template.of_expr e with
     | Some t -> Some t
@@ -431,7 +431,7 @@ let apply_single_step_or_piped ~mapper
   let is_single_pipe_step = not (ExprUtils.is_pipe_apply lhs_exp) in
   if
     is_single_pipe_step
-    && Option.is_some deprecated_info.migration_piped_template
+    && Option.is_some deprecated_info.migration_in_pipe_chain_template
   then
     match deprecated_info.migration_template with
     | Some e -> (
@@ -440,7 +440,7 @@ let apply_single_step_or_piped ~mapper
         Template.apply_single_pipe_collapse ~mapper ~template:t ~lhs_exp
           ~pipe_args exp
       | None -> (
-        match deprecated_info.migration_piped_template with
+        match deprecated_info.migration_in_pipe_chain_template with
         | Some e2 -> (
           match Template.of_expr e2 with
           | Some t ->
@@ -448,7 +448,7 @@ let apply_single_step_or_piped ~mapper
           | None -> exp)
         | None -> exp))
     | None -> (
-      match deprecated_info.migration_piped_template with
+      match deprecated_info.migration_in_pipe_chain_template with
       | Some e2 -> (
         match Template.of_expr e2 with
         | Some t ->
