@@ -69,7 +69,7 @@ let equal: (('a, 'b) => bool, option<'a>, option<'b>) => bool
     %insert.unlabelledArgument(1),
     %insert.unlabelledArgument(0),
   ),
-  migratePiped: Option.flatMap(%insert.unlabelledArgument(0)),
+  migrateInPipeChain: Option.flatMap(%insert.unlabelledArgument(0)),
 })
 let andThen: ('a => option<'b>, option<'a>) => option<'b>
 
@@ -79,7 +79,7 @@ let andThen: ('a => option<'b>, option<'a>) => option<'b>
     %insert.unlabelledArgument(1),
     %insert.unlabelledArgument(0),
   ),
-  migratePiped: Option.map(%insert.unlabelledArgument(0)),
+  migrateInPipeChain: Option.map(%insert.unlabelledArgument(0)),
 })
 let map: ('a => 'b, option<'a>) => option<'b>
 
@@ -89,7 +89,7 @@ let map: ('a => 'b, option<'a>) => option<'b>
     %insert.unlabelledArgument(1),
     %insert.unlabelledArgument(0),
   ),
-  migratePiped: Option.getOr(%insert.unlabelledArgument(0)),
+  migrateInPipeChain: Option.getOr(%insert.unlabelledArgument(0)),
 })
 let getWithDefault: ('a, option<'a>) => 'a
 
@@ -100,7 +100,7 @@ let getWithDefault: ('a, option<'a>) => 'a
     %insert.unlabelledArgument(1),
     %insert.unlabelledArgument(0),
   ),
-  migratePiped: Option.getOr(%insert.unlabelledArgument(0)),
+  migrateInPipeChain: Option.getOr(%insert.unlabelledArgument(0)),
 })
 let default: ('a, option<'a>) => 'a
 
@@ -110,13 +110,13 @@ let default: ('a, option<'a>) => 'a
     %insert.unlabelledArgument(1),
     %insert.unlabelledArgument(0),
   ),
-  migratePiped: Option.filter(%insert.unlabelledArgument(0)),
+  migrateInPipeChain: Option.filter(%insert.unlabelledArgument(0)),
 })
 let filter: ('a => bool, option<'a>) => option<'a>
 
 @deprecated({
   reason: "Use `Option.orElse` instead.",
   migrate: Option.orElse(),
-  migratePiped: Option.orElse(%insert.unlabelledArgument(0)),
+  migrateInPipeChain: Option.orElse(%insert.unlabelledArgument(0)),
 })
 let firstSome: (option<'a>, option<'a>) => option<'a>

@@ -115,7 +115,7 @@ val record_value_dependency :
 val record_deprecated_used :
   ?deprecated_context:Cmt_utils.deprecated_used_context ->
   ?migration_template:Parsetree.expression ->
-  ?migration_piped_template:Parsetree.expression ->
+  ?migration_in_pipe_chain_template:Parsetree.expression ->
   Location.t ->
   string ->
   unit
