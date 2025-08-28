@@ -28,16 +28,37 @@
 type t<+'a> = Primitive_js_extern.null<'a> = Value('a) | @as(null) Null
 
 /** Constructs a value of `Js.null<'a>` containing a value of `'a`. */
+@deprecated({
+  reason: "Use `Null.make` instead.",
+  migrate: Null.make(),
+})
 external return: 'a => t<'a> = "%identity"
 
 /** Returns `true` if the given value is empty (`null`), `false` otherwise. */
-@deprecated("Use = Js.null directly ")
+@deprecated({
+  reason: "Use `== Js.null` directly.",
+  migrate: %insert.unlabelledArgument(0) === Null.null,
+  migratePiped: Null.equal(Null, (a, b) => a === b),
+})
 let test: t<'a> => bool
 
 /** The empty value, `null` */
+@deprecated({
+  reason: "Use `Null.null` instead.",
+  migrate: Null.null,
+})
 external empty: t<'a> = "%null"
 
+@deprecated({
+  reason: "Use `Null.getUnsafe` instead.",
+  migrate: Null.getUnsafe(),
+})
 external getUnsafe: t<'a> => 'a = "%identity"
+
+@deprecated({
+  reason: "Use `Null.getOrThrow` instead.",
+  migrate: Null.getOrThrow(),
+})
 let getExn: t<'a> => 'a
 
 /**
@@ -54,6 +75,10 @@ let maybeGreetWorld = (maybeGreeting: Js.null<string>) =>
   Js.Null.bind(maybeGreeting, greeting => greeting ++ " world!")
 ```
 */
+@deprecated({
+  reason: "Use `Null.map` instead.",
+  migrate: Null.map(),
+})
 let bind: (t<'a>, 'a => 'b) => t<'b>
 
 /**
@@ -67,6 +92,10 @@ let maybeSay = (maybeMessage: Js.null<string>) =>
   Js.Null.iter(maybeMessage, message => Js.log(message))
 ```
 */
+@deprecated({
+  reason: "Use `Null.forEach` instead.",
+  migrate: Null.forEach(),
+})
 let iter: (t<'a>, 'a => unit) => unit
 
 /**
@@ -74,15 +103,31 @@ Maps `option<'a>` to `Js.null<'a>`.
 `Some(a)` => `a`
 `None` => `empty`
 */
+@deprecated({
+  reason: "Use `Null.fromOption` instead.",
+  migrate: Null.fromOption(),
+})
 let fromOption: option<'a> => t<'a>
 
-@deprecated("Use fromOption instead") let from_opt: option<'a> => t<'a>
+@deprecated({
+  reason: "Use `Null.fromOption` instead.",
+  migrate: Null.fromOption(),
+})
+let from_opt: option<'a> => t<'a>
 
 /**
 Maps `Js.null<'a>` to `option<'a>`.
 `a` => `Some(a)`
 `empty` => `None`
 */
+@deprecated({
+  reason: "Use `Null.toOption` instead.",
+  migrate: Null.toOption(),
+})
 external toOption: t<'a> => option<'a> = "%null_to_opt"
 
-@deprecated("Use toOption instead") external to_opt: t<'a> => option<'a> = "%null_to_opt"
+@deprecated({
+  reason: "Use `Null.toOption` instead.",
+  migrate: Null.toOption(),
+})
+external to_opt: t<'a> => option<'a> = "%null_to_opt"
