@@ -123,8 +123,8 @@ let copyWithin2 = Array.copyAllWithin([1, 2, 3, 4, 5], ~target=2)
 let copyWithinFrom1 = [1, 2, 3, 4, 5]->Array.copyWithinToEnd(~target=0, ~start=2)
 let copyWithinFrom2 = Array.copyWithinToEnd([1, 2, 3, 4, 5], ~target=0, ~start=2)
 
-let copyWithinFromRange1 = [1, 2, 3, 4, 5, 6]->Array.copyWithin(~target=1, ~start=2, ~end=5)
-let copyWithinFromRange2 = Array.copyWithin([1, 2, 3, 4, 5, 6], ~target=1, ~start=2, ~end=5)
+let copyWithinFromRange1 = [1, 2, 3, 4, 5, 6]->Array.copyWithin(~start=2, ~target=1, ~end=5)
+let copyWithinFromRange2 = Array.copyWithin([1, 2, 3, 4, 5, 6], ~start=2, ~target=1, ~end=5)
 
 let push1 = [1, 2, 3]->Array.push(4)
 let push2 = Array.push([1, 2, 3], 4)
