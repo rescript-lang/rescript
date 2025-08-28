@@ -40,6 +40,7 @@
 - More autocomplete improvements involving modules and module types. https://github.com/rescript-lang/rescript/pull/7795
 - Autocomplete `@react.componentWithProps` attribute. https://github.com/rescript-lang/rescript/pull/7812
 - Add some missing iframe attributes to `domProps`. https://github.com/rescript-lang/rescript/pull/7813
+- Polish error message for inline record escaping scope. https://github.com/rescript-lang/rescript/pull/7808
 
 #### :house: Internal
 
