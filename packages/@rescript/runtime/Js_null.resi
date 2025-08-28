@@ -38,7 +38,7 @@ external return: 'a => t<'a> = "%identity"
 @deprecated({
   reason: "Use `== Js.null` directly.",
   migrate: %insert.unlabelledArgument(0) === Null.null,
-  migratePiped: Null.equal(Null, (a, b) => a === b),
+  migrateInPipeChain: Null.equal(Null, (a, b) => a === b),
 })
 let test: t<'a> => bool
 
