@@ -47,7 +47,8 @@ therefore necessary to test for `_NaN`. Return `true` if the given value is
   reason: "Use `Float.isNaN` instead.",
   migrate: Float.isNaN(),
 })
-@val @scope("Number")
+@val
+@scope("Number")
 external isNaN: float => bool = "isNaN"
 
 /**
@@ -74,7 +75,8 @@ Js.Float.isFinite(1234.)
   reason: "Use `Float.isFinite` instead.",
   migrate: Float.isFinite(),
 })
-@val @scope("Number")
+@val
+@scope("Number")
 external isFinite: float => bool = "isFinite"
 
 /**
