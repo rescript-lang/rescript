@@ -57,6 +57,10 @@ Js.Dict.get(ages, "Vinh") == Some(22)
 Js.Dict.get(ages, "Paul") == None
 ```
 */
+@deprecated({
+  reason: "Use `Dict.get` instead.",
+  migrate: Dict.get(),
+})
 let get: (t<'a>, key) => option<'a>
 
 /**
@@ -69,6 +73,10 @@ Js.Dict.unsafeGet(ages, "Fred") == 49
 Js.Dict.unsafeGet(ages, "Paul") // returns undefined
 ```
 */
+@deprecated({
+  reason: "Use `Dict.getUnsafe` instead.",
+  migrate: Dict.getUnsafe(),
+})
 @get_index
 external unsafeGet: (t<'a>, key) => 'a = ""
 
@@ -88,6 +96,10 @@ Js.Dict.set(ages, "David", 66)
 Js.log(ages == Js.Dict.fromList(list{("Maria", 31), ("Vinh", 22), ("Fred", 49), ("David", 66)}))
 ```
 */
+@deprecated({
+  reason: "Use `Dict.set` instead.",
+  migrate: Dict.set(),
+})
 @set_index
 external set: (t<'a>, key, 'a) => unit = ""
 
@@ -100,14 +112,26 @@ Returns all the keys in the dictionary `dict`.
 Js.Dict.keys(ages) == ["Maria", "Vinh", "Fred"]
 ```
 */
+@deprecated({
+  reason: "Use `Dict.keysToArray` instead.",
+  migrate: Dict.keysToArray(),
+})
 @val
 external keys: t<'a> => array<string> = "Object.keys"
 
 /** Returns an empty dictionary. */
+@deprecated({
+  reason: "Use `Dict.make` instead.",
+  migrate: Dict.make(),
+})
 @obj
 external empty: unit => t<'a> = ""
 
 /** Experimental internal function */
+@deprecated({
+  reason: "Use `Dict.delete` instead.",
+  migrate: Dict.delete(),
+})
 let unsafeDeleteKey: (t<string>, string) => unit
 
 /**
@@ -119,6 +143,10 @@ Returns an array of key/value pairs in the given dictionary (ES2017).
 Js.Dict.entries(ages) == [("Maria", 30), ("Vinh", 22), ("Fred", 49)]
 ```
 */
+@deprecated({
+  reason: "Use `Dict.toArray` instead.",
+  migrate: Dict.toArray(),
+})
 let entries: t<'a> => array<(key, 'a)>
 
 /**
@@ -130,6 +158,10 @@ Returns the values in the given dictionary (ES2017).
 Js.Dict.values(ages) == [30, 22, 49]
 ```
 */
+@deprecated({
+  reason: "Use `Dict.valuesToArray` instead.",
+  migrate: Dict.valuesToArray(),
+})
 let values: t<'a> => array<'a>
 
 /**
@@ -142,6 +174,7 @@ argument.
 let capitals = Js.Dict.fromList(list{("Japan", "Tokyo"), ("France", "Paris"), ("Egypt", "Cairo")})
 ```
 */
+@deprecated("Use `Dict.fromArray(List.toArray(...))` instead.")
 let fromList: list<(key, 'a)> => t<'a>
 
 /**
@@ -154,6 +187,10 @@ argument.
 let capitals2 = Js.Dict.fromArray([("Germany", "Berlin"), ("Burkina Faso", "Ouagadougou")])
 ```
 */
+@deprecated({
+  reason: "Use `Dict.fromArray` instead.",
+  migrate: Dict.fromArray(),
+})
 let fromArray: array<(key, 'a)> => t<'a>
 
 /**
@@ -171,4 +208,9 @@ let salePrices = Js.Dict.map(discount, prices)
 salePrices == Js.Dict.fromList(list{("pen", 0.90), ("book", 4.50), ("stapler", 6.30)})
 ```
 */
+@deprecated({
+  reason: "Use `Dict.mapValues` instead.",
+  migrate: Dict.mapValues(%insert.unlabelledArgument(1), %insert.unlabelledArgument(0)),
+  migrateInPipeChain: Dict.mapValues(),
+})
 let map: ('a => 'b, t<'a>) => t<'b>
