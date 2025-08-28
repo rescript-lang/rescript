@@ -49,6 +49,10 @@ See [`toExponential`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Re
 Js.log(Js.Int.toExponential(77))
 ```
 */
+@deprecated({
+  reason: "Use `Int.toExponential` instead.",
+  migrate: Int.toExponential(),
+})
 @send
 external toExponential: int => string = "toExponential"
 
@@ -73,6 +77,10 @@ Js.log(Js.Int.toExponentialWithPrecision(77, ~digits=2))
 Js.log(Js.Int.toExponentialWithPrecision(5678, ~digits=2))
 ```
 */
+@deprecated({
+  reason: "Use `Int.toExponential` instead.",
+  migrate: Int.toExponential(~digits=%insert.labelledArgument("digits")),
+})
 @send
 external toExponentialWithPrecision: (int, ~digits: int) => string = "toExponential"
 
@@ -92,6 +100,10 @@ See [`toPrecision`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Refe
 Js.log(Js.Int.toPrecision(123456789))
 ```
 */
+@deprecated({
+  reason: "Use `Int.toPrecision` instead.",
+  migrate: Int.toPrecision(),
+})
 @send
 external toPrecision: int => string = "toPrecision"
 
@@ -120,6 +132,10 @@ Js.log(Js.Int.toPrecisionWithPrecision(123456789, ~digits=2))
 Js.log(Js.Int.toPrecisionWithPrecision(0, ~digits=2))
 ```
 */
+@deprecated({
+  reason: "Use `Int.toPrecision` instead.",
+  migrate: Int.toPrecision(~digits=%insert.labelledArgument("digits")),
+})
 @send
 external toPrecisionWithPrecision: (int, ~digits: int) => string = "toPrecision"
 
@@ -136,6 +152,10 @@ See [`toString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Referen
 Js.log(Js.Int.toString(123456789))
 ```
 */
+@deprecated({
+  reason: "Use `Int.toString` instead.",
+  migrate: Int.toString(),
+})
 @send
 external toString: int => string = "toString"
 
@@ -161,11 +181,23 @@ Js.log(Js.Int.toStringWithRadix(3735928559, ~radix=16))
 Js.log(Js.Int.toStringWithRadix(123456, ~radix=36))
 ```
 */
+@deprecated({
+  reason: "Use `Int.toString` instead.",
+  migrate: Int.toString(~radix=%insert.labelledArgument("radix")),
+})
 @send
 external toStringWithRadix: (int, ~radix: int) => string = "toString"
 
+@deprecated({
+  reason: "Use `Int.toFloat` instead.",
+  migrate: Int.toFloat(),
+})
 external toFloat: int => float = "%floatofint"
 
+@deprecated({
+  reason: "Use `Int.equal` instead.",
+  migrate: Int.equal(),
+})
 let equal = (x: int, y) => x == y
 let max: int = 2147483647
 let min: int = -2147483648
