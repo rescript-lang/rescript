@@ -64,6 +64,66 @@ module ExprUtils = struct
 end
 
 module MapperUtils = struct
+  (* Collect placeholder usages anywhere inside an expression. *)
+  let collect_placeholders (expr : Parsetree.expression) =
+    let labelled = ref StringSet.empty in
+    let unlabelled = ref IntSet.empty in
+    let open Ast_iterator in
+    let iter =
+      {
+        default_iterator with
+        expr =
+          (fun self e ->
+            (match InsertExt.placeholder_of_expr e with
+            | Some (InsertExt.Labelled name) ->
+              labelled := StringSet.add name !labelled
+            | Some (InsertExt.Unlabelled i) when i >= 0 ->
+              unlabelled := IntSet.add i !unlabelled
+            | _ -> ());
+            default_iterator.expr self e);
+      }
+    in
+    iter.expr iter expr;
+    (!labelled, !unlabelled)
+
+  (* Replace placeholders anywhere inside an expression using the given
+     source arguments. *)
+  let replace_placeholders_in_expr (expr : Parsetree.expression)
+      (source_args : (Asttypes.arg_label * Parsetree.expression) list) =
+    let labelled = Hashtbl.create 8 in
+    let unlabelled = Hashtbl.create 8 in
+    let idx = ref 0 in
+    source_args
+    |> List.iter (fun (lbl, arg) ->
+           match lbl with
+           | Asttypes.Nolabel ->
+             Hashtbl.replace unlabelled !idx arg;
+             incr idx
+           | Asttypes.Labelled {txt} | Optional {txt} ->
+             Hashtbl.replace labelled txt arg);
+    let find = function
+      | `Labelled name -> Hashtbl.find_opt labelled name
+      | `Unlabelled i -> Hashtbl.find_opt unlabelled i
+    in
+    let mapper =
+      {
+        Ast_mapper.default_mapper with
+        expr =
+          (fun mapper exp ->
+            match InsertExt.placeholder_of_expr exp with
+            | Some (InsertExt.Labelled name) -> (
+              match find (`Labelled name) with
+              | Some arg -> arg
+              | None -> exp)
+            | Some (InsertExt.Unlabelled i) -> (
+              match find (`Unlabelled i) with
+              | Some arg -> arg
+              | None -> exp)
+            | None -> Ast_mapper.default_mapper.expr mapper exp);
+      }
+    in
+    mapper.expr mapper expr
+
   let build_labelled_args_map template_args =
     template_args
     |> List.filter_map (fun (label, arg) ->
@@ -89,23 +149,6 @@ module MapperUtils = struct
      - unlabelled_positions_to_insert: 0-based indices of unlabelled source args to drop
   *)
   let get_template_args_to_insert mapper template_args source_args =
-    let find_source_labelled name =
-      source_args
-      |> List.find_map (fun (label, arg) ->
-             match label with
-             | Asttypes.Labelled {txt = l} | Optional {txt = l} ->
-               if l = name then Some arg else None
-             | _ -> None)
-    in
-    let find_source_unlabelled target =
-      let rec loop i = function
-        | [] -> None
-        | (Asttypes.Nolabel, arg) :: rest ->
-          if i = target then Some arg else loop (i + 1) rest
-        | _ :: rest -> loop i rest
-      in
-      loop 0 source_args
-    in
     let is_unit_expr (e : Parsetree.expression) =
       match e.pexp_desc with
       | Pexp_construct ({txt = Lident "()"}, None) -> true
@@ -121,31 +164,17 @@ module MapperUtils = struct
        - used_unlabelled: 0-based positions of unlabelled args consumed. *)
     let accumulate_template_arg (rev_args, used_labelled, used_unlabelled)
         (label, arg) =
-      match InsertExt.placeholder_of_expr arg with
-      | Some (InsertExt.Labelled name) -> (
-        match label with
-        | Asttypes.Nolabel -> (
-          match find_source_labelled name with
-          | Some arg' ->
-            ( (Asttypes.Nolabel, arg') :: rev_args,
-              StringSet.add name used_labelled,
-              used_unlabelled )
-          | None -> (rev_args, used_labelled, used_unlabelled))
-        | _ -> (rev_args, used_labelled, used_unlabelled))
-      | Some (InsertExt.Unlabelled target) when target >= 0 -> (
-        match find_source_unlabelled target with
-        | Some arg' ->
-          ( (label, arg') :: rev_args,
-            used_labelled,
-            IntSet.add target used_unlabelled )
-        | None -> (rev_args, used_labelled, used_unlabelled))
-      | Some _ -> (rev_args, used_labelled, used_unlabelled)
-      | None ->
-        if is_unit_expr arg then (rev_args, used_labelled, used_unlabelled)
-        else
-          ( (label, mapper.Ast_mapper.expr mapper arg) :: rev_args,
-            used_labelled,
-            used_unlabelled )
+      (* Always perform nested replacement inside the argument expression,
+         and collect which placeholders were used so we can drop them from the
+         original call's arguments. *)
+      let labelled_used_here, unlabelled_used_here = collect_placeholders arg in
+      let arg_replaced = replace_placeholders_in_expr arg source_args in
+      if is_unit_expr arg_replaced then
+        (rev_args, used_labelled, used_unlabelled)
+      else
+        ( (label, mapper.Ast_mapper.expr mapper arg_replaced) :: rev_args,
+          StringSet.union used_labelled labelled_used_here,
+          IntSet.union used_unlabelled unlabelled_used_here )
     in
     let rev_args, labelled_set, unlabelled_set =
       List.fold_left accumulate_template_arg

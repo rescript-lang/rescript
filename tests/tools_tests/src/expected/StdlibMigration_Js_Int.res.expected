@@ -1,0 +1,24 @@
+let toExponential1 = 77->Int.toExponential
+let toExponential2 = Int.toExponential(77)
+
+let toExponentialWithPrecision1 = 77->Int.toExponential(~digits=2)
+let toExponentialWithPrecision2 = Int.toExponential(77, ~digits=2)
+
+let toPrecision1 = 123456789->Int.toPrecision
+let toPrecision2 = Int.toPrecision(123456789)
+
+let toPrecisionWithPrecision1 = 123456789->Int.toPrecision(~digits=2)
+let toPrecisionWithPrecision2 = Int.toPrecision(123456789, ~digits=2)
+
+let toString1 = 123456789->Int.toString
+let toString2 = Int.toString(123456789)
+
+let toStringWithRadix1 = 373592855->Int.toString(~radix=16)
+let toStringWithRadix2 = Int.toString(373592855, ~radix=16)
+
+let toFloat1 = 42->Int.toFloat
+let toFloat2 = Int.toFloat(42)
+
+let equal1 = Js.Int.equal(1, 1)
+let equal2 = 1->Js.Int.equal(2)
+
