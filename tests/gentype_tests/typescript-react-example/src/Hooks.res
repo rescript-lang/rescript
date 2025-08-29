@@ -20,7 +20,8 @@ let make = (~vehicle) => {
       {React.string("child2")}
     </ImportHooks>
     <ImportHookDefault
-      person={name: "DefaultImport", age: 42} renderMe={x => React.string(x["randomString"])}>
+      person={name: "DefaultImport", age: 42} renderMe={x => React.string(x["randomString"])}
+    >
       {React.string("child1")}
       {React.string("child2")}
     </ImportHookDefault>

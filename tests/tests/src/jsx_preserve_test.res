@@ -150,5 +150,6 @@ let _youtube_iframe =
     frameBorder={0}
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
     referrerPolicy="strict-origin-when-cross-origin"
-    allowFullScreen={true}>
+    allowFullScreen={true}
+  >
   </iframe>
