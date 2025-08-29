@@ -30,9 +30,7 @@
     "access": "public"
   },
   "files": [
-    "lib/es6",
-    "lib/js",
-    "lib/ocaml"
+    "lib"
   ],
   "exports": {
     "./lib/es6/*": "./lib/es6/*",
