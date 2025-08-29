@@ -10,7 +10,7 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-beta.8
+# 12.0.0-beta.9
 
 #### :boom: Breaking Change
 
@@ -43,6 +43,10 @@
 #### :house: Internal
 
 - Build runtime with rewatch on Windows, too. https://github.com/rescript-lang/rescript/pull/7794
+
+# 12.0.0-beta.8
+
+Do not use, npm package broken.
 
 # 12.0.0-beta.7
 
