@@ -33,6 +33,11 @@ let exec2 = RegExp.exec(re2, "Foo bar")
 let test1 = re2->RegExp.test("Foo bar")
 let test2 = RegExp.test(re2, "Foo bar")
 
+let matches_access = switch re2->RegExp.exec("Foo bar") {
+| None => 0
+| Some(r) => RegExp.Result.matches(r)->Array.length
+}
+
 let result_index = switch re2->RegExp.exec("Foo bar") {
 | None => 0
 | Some(r) => RegExp.Result.index(r)

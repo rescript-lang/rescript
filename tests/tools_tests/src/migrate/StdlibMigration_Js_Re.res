@@ -31,6 +31,11 @@ let exec2 = Js.Re.exec_(re2, "Foo bar")
 let test1 = re2->Js.Re.test_("Foo bar")
 let test2 = Js.Re.test_(re2, "Foo bar")
 
+let matches_access = switch re2->Js.Re.exec_("Foo bar") {
+| None => 0
+| Some(r) => Js.Re.matches(r)->Array.length
+}
+
 let result_index = switch re2->Js.Re.exec_("Foo bar") {
 | None => 0
 | Some(r) => Js.Re.index(r)
