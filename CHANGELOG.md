@@ -10,6 +10,12 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
+# 12.0.0-beta.9
+
+#### :bug: Bug fix
+
+- Fix publishing of `@rescript/runtime` to npm ("Pervasives not found" error). https://github.com/rescript-lang/rescript/pull/7819
+
 # 12.0.0-beta.8
 
 #### :boom: Breaking Change
