@@ -40,16 +40,31 @@ type result
 An `array` of the match and captures, the first is the full match and the
 remaining are the substring captures.
 */
+@deprecated({
+  reason: "Use `RegExp.Result.matches` instead.",
+  migrate: RegExp.Result.matches(),
+})
 external captures: result => array<Js_null_undefined.t<string>> = "%identity"
 
-@deprecated("Use Js.Re.captures instead")
+@deprecated({
+  reason: "Use `RegExp.Result.matches` instead.",
+  migrate: RegExp.Result.matches(),
+})
 external matches: result => array<string> = "%identity"
 
 /** 0-based index of the match in the input string. */
+@deprecated({
+  reason: "Use `RegExp.Result.index` instead.",
+  migrate: RegExp.Result.index(),
+})
 @get
 external index: result => int = "index"
 
 /** The original input string. */
+@deprecated({
+  reason: "Use `RegExp.Result.input` instead.",
+  migrate: RegExp.Result.input(),
+})
 @get
 external input: result => string = "input"
 
@@ -74,6 +89,10 @@ let firstReScriptFileExtension = (filename, content) => {
 firstReScriptFileExtension("School", "School.res School.resi Main.js School.bs.js")
 ```
 */
+@deprecated({
+  reason: "Use `RegExp.fromString` instead.",
+  migrate: RegExp.fromString(),
+})
 @new
 external fromString: string => t = "RegExp"
 
@@ -89,18 +108,34 @@ Valid flags:
 - **u** unicode (es2015)
 - **y** sticky (es2015)
 */
+@deprecated({
+  reason: "Use `RegExp.fromString` instead.",
+  migrate: RegExp.fromString(),
+})
 @new
 external fromStringWithFlags: (string, ~flags: string) => t = "RegExp"
 
 /** Returns the enabled flags as a string. */
+@deprecated({
+  reason: "Use `RegExp.flags` instead.",
+  migrate: RegExp.flags(),
+})
 @get
 external flags: t => string = "flags"
 
 /** Returns a `bool` indicating whether the global flag is set. */
+@deprecated({
+  reason: "Use `RegExp.global` instead.",
+  migrate: RegExp.global(),
+})
 @get
 external global: t => bool = "global"
 
 /** Returns a `bool` indicating whether the ignoreCase flag is set. */
+@deprecated({
+  reason: "Use `RegExp.ignoreCase` instead.",
+  migrate: RegExp.ignoreCase(),
+})
 @get
 external ignoreCase: t => bool = "ignoreCase"
 
@@ -132,26 +167,50 @@ See
 [`RegExp: lastIndex`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/lastIndex)
 on MDN.
 */
+@deprecated({
+  reason: "Use `RegExp.lastIndex` instead.",
+  migrate: RegExp.lastIndex(),
+})
 @get
 external lastIndex: t => int = "lastIndex"
 
 /** Sets the index at which the next match will start its search from. */
+@deprecated({
+  reason: "Use `RegExp.setLastIndex` instead.",
+  migrate: RegExp.setLastIndex(),
+})
 @set
 external setLastIndex: (t, int) => unit = "lastIndex"
 
 /** Returns a `bool` indicating whether the multiline flag is set. */
+@deprecated({
+  reason: "Use `RegExp.multiline` instead.",
+  migrate: RegExp.multiline(),
+})
 @get
 external multiline: t => bool = "multiline"
 
 /** Returns the pattern as a `string`. */
+@deprecated({
+  reason: "Use `RegExp.source` instead.",
+  migrate: RegExp.source(),
+})
 @get
 external source: t => string = "source"
 
 /** Returns a `bool` indicating whether the sticky flag is set. */
+@deprecated({
+  reason: "Use `RegExp.sticky` instead.",
+  migrate: RegExp.sticky(),
+})
 @get
 external sticky: t => bool = "sticky"
 
 /** Returns a `bool` indicating whether the unicode flag is set. */
+@deprecated({
+  reason: "Use `RegExp.unicode` instead.",
+  migrate: RegExp.unicode(),
+})
 @get
 external unicode: t => bool = "unicode"
 
@@ -174,7 +233,12 @@ let result = Js.Re.exec_(re, "The Quick Brown Fox Jumps Over The Lazy Dog")
 See [`RegExp.prototype.exec()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/exec)
 on MDN.
 */
-@send @return(null_to_opt)
+@deprecated({
+  reason: "Use `RegExp.exec` instead.",
+  migrate: RegExp.exec(),
+})
+@send
+@return(null_to_opt)
 external exec_: (t, string) => option<result> = "exec"
 
 /**
@@ -196,5 +260,9 @@ Js.log(str->startsWith("hello")) /* prints "true" */
 See [`RegExp.prototype.test()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/test)
 on MDN.
 */
+@deprecated({
+  reason: "Use `RegExp.test` instead.",
+  migrate: RegExp.test(),
+})
 @send
 external test_: (t, string) => bool = "test"
