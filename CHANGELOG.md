@@ -10,18 +10,16 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
-# 12.0.0-beta.8 (Unreleased)
+# 12.0.0-beta.8
 
 #### :boom: Breaking Change
 
 - Extract ReScript runtime files from main `rescript` package to separate `@rescript/runtime` package. https://github.com/rescript-lang/rescript/pull/7796
 - Remove `@rescript/std` (in favor of `@rescript/runtime`). https://github.com/rescript-lang/rescript/pull/7811
 
-#### :eyeglasses: Spec Compliance
-
 #### :rocket: New Feature
 
-- Add support for ArrayBuffer and typed arrays to `@unboxed`. https://github.com/rescript-lang/rescript/pull/7788
+- Add support for `ArrayBuffer` and typed arrays to `@unboxed`. https://github.com/rescript-lang/rescript/pull/7788
 - Experimental: Add `let?` syntax for unwrapping and propagating errors/none as early returns for option/result types. https://github.com/rescript-lang/rescript/pull/7582
 - Add support for shipping features as experimental, including configuring what experimental features are enabled in `rescript.json`. https://github.com/rescript-lang/rescript/pull/7582
 
@@ -29,8 +27,6 @@
 
 - Fix JS regex literal parsing in character classes. https://github.com/rescript-lang/rescript/pull/7790
 - Fix creating interface for functions with upper bounded polymorphic args. https://github.com/rescript-lang/rescript/pull/7786
-
-#### :memo: Documentation
 
 #### :nail_care: Polish
 
