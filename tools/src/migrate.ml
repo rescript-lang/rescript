@@ -224,6 +224,20 @@ module MapperUtils = struct
     let dropped =
       drop_args source_args ~unlabelled_positions_to_insert ~will_be_mapped
     in
+    (* Also drop any unit arguments that remain from the source call. *)
+    let is_unit_expr (e : Parsetree.expression) =
+      match e.pexp_desc with
+      | Pexp_construct ({txt = Lident "()"}, None) -> true
+      | _ -> false
+    in
+    let dropped =
+      List.filter
+        (fun (label, arg) ->
+          match label with
+          | Asttypes.Nolabel -> not (is_unit_expr arg)
+          | _ -> true)
+        dropped
+    in
     let renamed = rename_labels dropped ~labelled_args_map in
     renamed @ template_args_to_insert
 
@@ -243,6 +257,20 @@ module MapperUtils = struct
       drop_args pipe_args
         ~unlabelled_positions_to_insert:adjusted_unlabelled_to_drop
         ~will_be_mapped
+    in
+    (* Drop any unit arguments that remain from the source call. *)
+    let is_unit_expr (e : Parsetree.expression) =
+      match e.pexp_desc with
+      | Pexp_construct ({txt = Lident "()"}, None) -> true
+      | _ -> false
+    in
+    let dropped =
+      List.filter
+        (fun (label, arg) ->
+          match label with
+          | Asttypes.Nolabel -> not (is_unit_expr arg)
+          | _ -> true)
+        dropped
     in
     let renamed = rename_labels dropped ~labelled_args_map in
     renamed @ template_args_to_insert
