@@ -673,7 +673,7 @@ jobs:
       - test-installation-npm
       - test-installation-pnpm
       - test-integration-rewatch
-    if: startsWith(github.ref, 'refs/tags/v')
+    # if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout
@@ -699,8 +699,7 @@ jobs:
         env:
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
         run: |
-          yarn workspaces foreach -W --no-private \
-            npm publish --tolerate-republish --tag ci
+          yarn workspaces foreach -W --no-private pack --dry-run
 
       - name: Update Website Playground
         run: curl -X POST "${{ secrets.CLOUDFLARE_PAGES_DEPLOYMENT_HOOK }}"
