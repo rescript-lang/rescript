@@ -15,7 +15,7 @@ let version = switch Fs.readFileSync(packagePath, ~encoding="utf8")->JSON.parseO
   | Object(dict{"version": JSON.String(version)}) => version
   | _ => JsError.panic("Invalid package.json format")
 }
-let version = Semver.parse(version)->Option.getExn 
+let version = Semver.parse(version)->Option.getExn
 let version = Semver.toString({...version, preRelease: None}) // Remove pre-release identifiers for API docs
 let dirVersion = Path.join([Node.dirname, "apiDocs", version])
 if !Fs.existsSync(dirVersion) {
@@ -46,7 +46,7 @@ let env = Process.env
 
 let docsDecoded = entryPointFiles->Array.map(libFile =>
   try {
-    let entryPointFile = Path.join([Node.dirname, "..", "..", "runtime", libFile])
+    let entryPointFile = Path.join([Node.dirname, "..", "..", "packages", "@rescript", "runtime", libFile])
 
     let rescriptToolsPath = Path.join([Node.dirname, "..", "..", "cli", "rescript-tools.js"])
     let output = ChildProcess.execSync(

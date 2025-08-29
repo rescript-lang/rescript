@@ -4,7 +4,7 @@ import * as List from "List";
 import * as List$1 from "reactV";
 import * as List$2 from "reactX";
 import * as Local from "./local";
-import * as Belt_List from "rescript/lib/es6/Belt_List.js";
+import * as Belt_List from "@rescript/runtime/lib/es6/Belt_List.js";
 import * as WebpackConfigJs from "../../../webpack.config.js";
 import * as WebpackMiddlewareConfigJs from "../../../webpack.middleware.config.js";
 

@@ -484,6 +484,17 @@
     "editor": {
       "$ref": "#/definitions/editor",
       "description": "Configure editor functionality, like modules that should be included in autocompletions for given (built-in) types."
+    },
+    "experimentalFeatures": {
+      "type": "object",
+      "description": "Enable experimental compiler features.",
+      "properties": {
+        "LetUnwrap": {
+          "type": "boolean",
+          "description": "Enable `let?` syntax."
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false,

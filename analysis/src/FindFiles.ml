@@ -141,8 +141,10 @@ let findProjectFiles ~public ~namespace ~path ~sourceDirectories ~libBs =
     sourceDirectories |> List.map (Filename.concat path) |> StringSet.of_list
   in
   let files =
+    (* Use maxDepth to prevent infinite recursion where `rescript` depends on `@rescript/runtime`,
+       but `@rescript/runtime` also has `rescript` as a dev dependency *)
     dirs |> StringSet.elements
-    |> List.map (fun name -> Files.collect name isSourceFile)
+    |> List.map (fun name -> Files.collect ~maxDepth:2 name isSourceFile)
     |> List.concat |> StringSet.of_list
   in
   dirs

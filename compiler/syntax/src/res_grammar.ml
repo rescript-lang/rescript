@@ -124,8 +124,8 @@ let to_string = function
   | DictRows -> "rows of a dict"
 
 let is_signature_item_start = function
-  | Token.At | Let | Typ | External | Exception | Open | Include | Module | AtAt
-  | PercentPercent ->
+  | Token.At | Let _ | Typ | External | Exception | Open | Include | Module
+  | AtAt | PercentPercent ->
     true
   | _ -> false
 
@@ -162,7 +162,7 @@ let is_jsx_attribute_start = function
   | _ -> false
 
 let is_structure_item_start = function
-  | Token.Open | Let | Typ | External | Exception | Include | Module | AtAt
+  | Token.Open | Let _ | Typ | External | Exception | Include | Module | AtAt
   | PercentPercent | At ->
     true
   | t when is_expr_start t -> true
@@ -265,7 +265,7 @@ let is_jsx_child_start = is_atomic_expr_start
 let is_block_expr_start = function
   | Token.Assert | At | Await | Backtick | Bang | Codepoint _ | Exception
   | False | Float _ | For | Forwardslash | ForwardslashDot | Hash | If | Int _
-  | Lbrace | Lbracket | LessThan | Let | Lident _ | List | Lparen | Minus
+  | Lbrace | Lbracket | LessThan | Let _ | Lident _ | List | Lparen | Minus
   | MinusDot | Module | Open | Percent | Plus | PlusDot | String _ | Switch
   | True | Try | Uident _ | Underscore | While | Dict ->
     true

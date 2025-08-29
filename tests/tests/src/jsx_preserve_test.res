@@ -141,3 +141,14 @@ module React = {
 }
 
 let _fragment = <> {Jsx.string("Hello, world!")} </>
+
+let _youtube_iframe =
+  <iframe
+    width="1911"
+    height="1075"
+    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+    frameBorder={0}
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    referrerPolicy="strict-origin-when-cross-origin"
+    allowFullScreen={true}>
+  </iframe>

@@ -3,7 +3,7 @@ import nodeResolve from "@rollup/plugin-node-resolve";
 import { glob } from "glob";
 
 const RESCRIPT_COMPILER_ROOT_DIR = path.join(import.meta.dirname, "..", "..");
-const LIB_DIR = path.join(RESCRIPT_COMPILER_ROOT_DIR, "lib");
+const LIB_DIR = path.join(RESCRIPT_COMPILER_ROOT_DIR, "packages", "@rescript", "runtime", "lib");
 
 // Final target output directory where all the cmijs will be stored
 const PACKAGES_DIR = path.join(import.meta.dirname, "packages");

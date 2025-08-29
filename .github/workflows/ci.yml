@@ -328,12 +328,13 @@ jobs:
         run: ./scripts/test_syntax.sh
         shell: bash
 
-      - name: Build runtime/stdlib
-        run: ./scripts/buildRuntime.sh
+      - name: Build @rescript/runtime
+        run: yarn workspace @rescript/runtime rescript build
         shell: bash
 
-      - name: Check for changes in lib folder
+      - name: Check for changes in @rescript/runtime/lib
         run: git diff --exit-code lib/js lib/es6
+        working-directory: packages/@rescript/runtime
 
       - name: Version Check
         run: yarn constraints
@@ -439,7 +440,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lib-ocaml
-          path: lib/ocaml
+          path: packages/@rescript/runtime/lib/ocaml
 
       - name: Generate API Docs
         if: ${{ matrix.generate_api_docs }}

@@ -381,6 +381,7 @@ pub fn compiler_args(
     let jsx_mode_args = root_config.get_jsx_mode_args();
     let jsx_preserve_args = root_config.get_jsx_preserve_args();
     let gentype_arg = config.get_gentype_arg();
+    let experimental_args = root_config.get_experimental_features_args();
     let warning_args = config.get_warning_args(is_local_dep);
 
     let read_cmi_args = match has_interface {
@@ -445,6 +446,7 @@ pub fn compiler_args(
         bsc_flags.to_owned(),
         warning_args,
         gentype_arg,
+        experimental_args,
         // vec!["-warn-error".to_string(), "A".to_string()],
         // ^^ this one fails for bisect-ppx
         // this is the default

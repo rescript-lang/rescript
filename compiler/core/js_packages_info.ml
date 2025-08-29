@@ -48,9 +48,7 @@ let runtime_dir_of_module_system (ms : module_system) =
   | Esmodule | Es6_global -> "es6"
 
 let runtime_package_path (ms : module_system) js_file =
-  !Bs_version.package_name // "lib"
-  // runtime_dir_of_module_system ms
-  // js_file
+  Bs_version.package_name // "lib" // runtime_dir_of_module_system ms // js_file
 
 type t = {name: package_name; module_systems: package_info list}
 
@@ -165,7 +163,7 @@ let query_package_infos ({name; module_systems} : t)
     with
     | Some k ->
       let rel_path = k.path in
-      let pkg_rel_path = !Bs_version.package_name // rel_path in
+      let pkg_rel_path = Bs_version.package_name // rel_path in
       Package_found {rel_path; pkg_rel_path; suffix = k.suffix}
     | None -> Package_not_found)
 

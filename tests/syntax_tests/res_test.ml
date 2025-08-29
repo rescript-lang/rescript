@@ -94,7 +94,7 @@ module ParserApiTest = struct
     assert (parser.scanner.lnum == 1);
     assert (parser.scanner.line_offset == 0);
     assert (parser.scanner.offset == 6);
-    assert (parser.token = Res_token.Let);
+    assert (parser.token = Res_token.Let {unwrap = false});
     print_endline "✅ Parser make: initializes parser and checking offsets"
 
   let unix_lf () =

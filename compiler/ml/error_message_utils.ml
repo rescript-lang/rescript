@@ -63,7 +63,8 @@ end = struct
     match parse_expr_at_loc loc with
     | Some (exp, comments) -> (
       match mapper exp with
-      | Some exp -> Some (!reprint_source (wrap_in_structure exp) comments)
+      | Some exp ->
+        Some (!reprint_source (wrap_in_structure exp) comments |> String.trim)
       | None -> None)
     | None -> None
 end
@@ -93,7 +94,9 @@ type type_clash_context =
   | IfCondition
   | AssertCondition
   | IfReturn
+  | TernaryReturn
   | SwitchReturn
+  | LetUnwrapReturn
   | TryReturn
   | StringConcat
   | ComparisonOperator
@@ -104,6 +107,7 @@ type type_clash_context =
       is_constant: string option;
     }
   | FunctionArgument of {optional: bool; name: string option}
+  | BracedIdent
   | Statement of type_clash_statement
   | ForLoopCondition
   | Await
@@ -125,7 +129,10 @@ let context_to_string = function
   | Some (FunctionArgument _) -> "FunctionArgument"
   | Some ComparisonOperator -> "ComparisonOperator"
   | Some IfReturn -> "IfReturn"
+  | Some TernaryReturn -> "TernaryReturn"
   | Some Await -> "Await"
+  | Some BracedIdent -> "BracedIdent"
+  | Some LetUnwrapReturn -> "LetUnwrapReturn"
   | None -> "None"
 
 let fprintf = Format.fprintf
@@ -158,6 +165,8 @@ let error_expected_type_text ppf type_clash_context =
   | Some ComparisonOperator ->
     fprintf ppf "But it's being compared to something of type:"
   | Some SwitchReturn -> fprintf ppf "But this switch is expected to return:"
+  | Some LetUnwrapReturn ->
+    fprintf ppf "But this @{<info>let?@} is used where this type is expected:"
   | Some TryReturn -> fprintf ppf "But this try/catch is expected to return:"
   | Some WhileCondition ->
     fprintf ppf "But a @{<info>while@} loop condition must always be of type:"
@@ -168,6 +177,7 @@ let error_expected_type_text ppf type_clash_context =
   | Some AssertCondition -> fprintf ppf "But assertions must always be of type:"
   | Some IfReturn ->
     fprintf ppf "But this @{<info>if@} statement is expected to return:"
+  | Some TernaryReturn -> fprintf ppf "But this ternary is expected to return:"
   | Some ArrayValue ->
     fprintf ppf "But this array is expected to have items of type:"
   | Some (SetRecordField _) -> fprintf ppf "But the record field is of type:"
@@ -195,7 +205,7 @@ let error_expected_type_text ppf type_clash_context =
     fprintf ppf
       "But you're using @{<info>await@} on this expression, so it is expected \
        to be of type:"
-  | Some MaybeUnwrapOption | None ->
+  | Some MaybeUnwrapOption | Some BracedIdent | None ->
     fprintf ppf "But it's expected to have type:"
 
 let is_record_type ~(extract_concrete_typedecl : extract_concrete_typedecl) ~env
@@ -308,6 +318,65 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       "\n\n\
       \  All branches in a @{<info>switch@} must return the same type.@,\
        To fix this, change your branch to return the expected type."
+  | Some LetUnwrapReturn, bottom_aliases -> (
+    let kind =
+      match bottom_aliases with
+      | Some ({Types.desc = Tconstr (p, _, _)}, _)
+        when Path.same p Predef.path_option ->
+        `Option
+      | Some (_, {Types.desc = Tconstr (p, _, _)})
+        when Path.same p Predef.path_option ->
+        `Option
+      | Some ({Types.desc = Tconstr (p, _, _)}, _)
+        when Path.same p Predef.path_result ->
+        `Result
+      | Some (_, {Types.desc = Tconstr (p, _, _)})
+        when Path.same p Predef.path_result ->
+        `Result
+      | _ -> `Unknown
+    in
+    match kind with
+    | `Option ->
+      fprintf ppf
+        "\n\n\
+        \  This @{<info>let?@} unwraps an @{<info>option@}; use it where the \
+         enclosing function or let binding returns an @{<info>option@} so \
+         @{<info>None@} can propagate.\n\n\
+        \  Possible solutions:\n\
+        \  - Change the enclosing function or let binding to return \
+         @{<info>option<'t>@} and use @{<info>Some@} for success; \
+         @{<info>let?@} will propagate @{<info>None@}.\n\
+        \  - Replace @{<info>let?@} with a @{<info>switch@} and handle the \
+         @{<info>None@} case explicitly.\n\
+        \  - If you want a default value instead of early return, unwrap using \
+         @{<info>Option.getOr(default)@}."
+    | `Result ->
+      fprintf ppf
+        "\n\n\
+        \  This @{<info>let?@} unwraps a @{<info>result@}; use it where the \
+         enclosing function or let binding returns a @{<info>result@} so \
+         @{<info>Error@} can propagate.\n\n\
+        \  Possible solutions:\n\
+        \  - Change the enclosing function or let binding to return \
+         @{<info>result<'ok, 'error>@}; use @{<info>Ok@} for success, and \
+         @{<info>let?@} will propagate @{<info>Error@}.\n\
+        \  - Replace @{<info>let?@} with a @{<info>switch@} and handle the \
+         @{<info>Error@} case explicitly.\n\
+        \  - If you want a default value instead of early return, unwrap using \
+         @{<info>Result.getOr(default)@}."
+    | `Unknown ->
+      fprintf ppf
+        "\n\n\
+        \  @{<info>let?@} can only be used in a context that expects \
+         @{<info>option@} or @{<info>result@}.\n\n\
+        \  Possible solutions:\n\
+        \  - Change the enclosing function or let binding to return an \
+         @{<info>option<'t>@} or @{<info>result<'ok, 'error>@} and propagate \
+         with @{<info>Some/Ok@}.\n\
+        \  - Replace @{<info>let?@} with a @{<info>switch@} and handle the \
+         @{<info>None/Error@} case explicitly.\n\
+        \  - If you want a default value instead of early return, unwrap using \
+         @{<info>Option.getOr(default)@} or @{<info>Result.getOr(default)@}.")
   | Some TryReturn, _ ->
     fprintf ppf
       "\n\n\
@@ -332,6 +401,11 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
       "\n\n\
       \  @{<info>if@} expressions must return the same type in all branches \
        (@{<info>if@}, @{<info>else if@}, @{<info>else@})."
+  | Some TernaryReturn, _ ->
+    fprintf ppf
+      "\n\n\
+      \  Ternaries (@{<info>?@} and @{<info>:@}) must return the same type in \
+       both branches."
   | Some MaybeUnwrapOption, _ ->
     fprintf ppf
       "\n\n\
@@ -538,6 +612,35 @@ let print_extra_type_clash_help ~extract_concrete_typedecl ~env loc ppf
        with @{<info>?@} to show you want to pass the option, like: \
        @{<info>?%s@}"
       (Parser.extract_text_at_loc loc)
+  | Some BracedIdent, Some (_, ({desc = Tconstr (_, _, _)} as t))
+    when is_record_type ~extract_concrete_typedecl ~env t ->
+    fprintf ppf
+      "@,\
+       @,\
+       You might have meant to pass this as a record, but wrote it as a block.@,\
+       Braces with a single identifier counts as a block, not a record with a \
+       single (punned) field.@,\
+       @,\
+       Possible solutions: @,\
+       - Write out the full record with field and value, like: @{<info>%s@}@,\
+       - Return the expected record from the block"
+      (match
+         Parser.reprint_expr_at_loc
+           ~mapper:(fun e ->
+             match e.pexp_desc with
+             | Pexp_ident {txt} ->
+               Some
+                 {
+                   e with
+                   pexp_desc =
+                     Pexp_record
+                       ([{lid = Location.mknoloc txt; opt = false; x = e}], None);
+                 }
+             | _ -> None)
+           loc
+       with
+      | None -> ""
+      | Some s -> s)
   | _, Some ({Types.desc = Tconstr (p1, _, _)}, {desc = Tvariant row_desc})
     when Path.same Predef.path_string p1 -> (
     (* Check if we have a string constant that could be a polymorphic variant constructor *)

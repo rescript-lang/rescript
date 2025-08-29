@@ -399,13 +399,11 @@ To build a new version and release it on NPM, follow these steps:
 1. Verify that the version number is already set correctly for the release. (It should have been incremented after releasing the previous version.)
 1. Create a PR to update `CHANGELOG.md`, removing the "(Unreleased)" for the version to be released.
 1. Once that PR is merged and built successfully, tag the commit with the version number (e.g., "v10.0.0", or "v10.0.0-beta.1") and push the tag.
-1. This triggers a tag build that will upload the playground bundle to Cloudflare R2 and publish the `rescript` and `@rescript/std` npm packages with the tag "ci".
+1. This triggers a tag build that will upload the playground bundle to Cloudflare R2 and publish the `rescript` npm package with the tag "ci".
 1. Verify that the playground bundle for the new version is now present on the settings tab in https://rescript-lang.org/try.
 1. Run `npm info rescript` to verify that the new version is now present with tag "ci".
 1. Test the new version.
-1. Tag the new version as appropriate (`latest` or `next`):
-   - `npm dist-tag add rescript@<version> <tag>`
-   - `npm dist-tag add @rescript/std@<version> <tag>`
+1. Tag the new version as appropriate (`latest` or `next`): `npm dist-tag add rescript@<version> <tag>`
 1. Create a release entry for the version tag on the [Github Releases page](https://github.com/rescript-lang/rescript-compiler/releases), copying the changes from `CHANGELOG.md`.
 1. Create a PR with the following changes to prepare for development of the next version:
    - Increment the `EXPECTED_VERSION` number in `yarn.config.cjs` for the next version.
@@ -416,7 +414,7 @@ To build a new version and release it on NPM, follow these steps:
 
 To reproduce issues, it can be helpful to the team to install a specific version of the compiler.
 
-ReScript uses [pkg.pr.new](https://github.com/stackblitz-labs/pkg.pr.new) for continuous releases. Once tests are passed successfully, the bot comment is available. 
+ReScript uses [pkg.pr.new](https://github.com/stackblitz-labs/pkg.pr.new) for continuous releases. Once tests are passed successfully, the bot comment is available.
 
 Follow the instructions from the comment, which are like:
 

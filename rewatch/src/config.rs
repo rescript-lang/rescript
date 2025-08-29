@@ -4,7 +4,9 @@ use crate::helpers::deserialize::*;
 use crate::project_context::ProjectContext;
 use anyhow::{Result, bail};
 use convert_case::{Case, Casing};
-use serde::Deserialize;
+use serde::de::{Error as DeError, Visitor};
+use serde::{Deserialize, Deserializer};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 
@@ -224,6 +226,42 @@ pub enum DeprecationWarning {
     BscFlags,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum ExperimentalFeature {
+    LetUnwrap,
+}
+
+impl<'de> serde::Deserialize<'de> for ExperimentalFeature {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct EFVisitor;
+        impl<'de> Visitor<'de> for EFVisitor {
+            type Value = ExperimentalFeature;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(f, "a valid experimental feature id (e.g. LetUnwrap)")
+            }
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: DeError,
+            {
+                match v {
+                    "LetUnwrap" => Ok(ExperimentalFeature::LetUnwrap),
+                    other => {
+                        let available = ["LetUnwrap"].join(", ");
+                        Err(DeError::custom(format!(
+                            "Unknown experimental feature '{}'. Available features: {}",
+                            other, available
+                        )))
+                    }
+                }
+            }
+        }
+        deserializer.deserialize_any(EFVisitor)
+    }
+}
+
 /// # rescript.json representation
 /// This is tricky, there is a lot of ambiguity. This is probably incomplete.
 #[derive(Deserialize, Debug, Clone, Default)]
@@ -256,6 +294,8 @@ pub struct Config {
 
     pub namespace: Option<NamespaceConfig>,
     pub jsx: Option<JsxSpecs>,
+    #[serde(rename = "experimentalFeatures")]
+    pub experimental_features: Option<HashMap<ExperimentalFeature, bool>>,
     #[serde(rename = "gentypeconfig")]
     pub gentype_config: Option<GenTypeConfig>,
     // this is a new feature of rewatch, and it's not part of the rescript.json spec
@@ -498,6 +538,25 @@ impl Config {
         }
     }
 
+    pub fn get_experimental_features_args(&self) -> Vec<String> {
+        match &self.experimental_features {
+            None => vec![],
+            Some(map) => map
+                .iter()
+                .filter_map(|(k, v)| if *v { Some(k) } else { None })
+                .flat_map(|feature| {
+                    vec![
+                        "-enable-experimental".to_string(),
+                        match feature {
+                            ExperimentalFeature::LetUnwrap => "LetUnwrap",
+                        }
+                        .to_string(),
+                    ]
+                })
+                .collect(),
+        }
+    }
+
     pub fn get_gentype_arg(&self) -> Vec<String> {
         match &self.gentype_config {
             Some(_) => vec!["-bs-gentype".to_string()],
@@ -663,6 +722,7 @@ pub mod tests {
             gentype_config: None,
             namespace_entry: None,
             deprecation_warnings: vec![],
+            experimental_features: None,
             allowed_dependents: args.allowed_dependents,
             path: args.path,
         }
