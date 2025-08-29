@@ -42,6 +42,10 @@ on MDN.)
 Js.Date.valueOf(exampleDate) == 123456654321.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getTime` instead.",
+  migrate: Date.getTime(),
+})
 @send
 external valueOf: t => float = "valueOf"
 
@@ -56,6 +60,10 @@ on MDN.
 let now = Js.Date.make()
 ```
 */
+@deprecated({
+  reason: "Use `Date.make` instead.",
+  migrate: Date.make(),
+})
 @new
 external make: unit => t = "Date"
 
@@ -71,6 +79,10 @@ on MDN.
 Js.Date.fromFloat(123456654321.0) == exampleDate
 ```
 */
+@deprecated({
+  reason: "Use `Date.fromTime` instead.",
+  migrate: Date.fromTime(),
+})
 @new
 external fromFloat: float => t = "Date"
 
@@ -89,6 +101,10 @@ Js.Date.fromString("1973-11-29T21:30:54.321Z00:00") == exampleDate
 Js.Date.fromString("Thor, 32 Lok -19 60:70:80 XYZ") // returns NaN
 ```
 */
+@deprecated({
+  reason: "Use `Date.fromString` instead.",
+  migrate: Date.fromString(),
+})
 @new
 external fromString: string => t = "Date"
 
@@ -105,6 +121,13 @@ on MDN.
 let november1 = Js.Date.makeWithYM(~year=2020.0, ~month=10.0, ())
 ```
 */
+@deprecated({
+  reason: "Use `Date.makeWithYM` instead.",
+  migrate: Date.makeWithYM(
+    ~year=Float.toInt(%insert.labelledArgument("year")),
+    ~month=Float.toInt(%insert.labelledArgument("month")),
+  ),
+})
 @new
 external makeWithYM: (~year: float, ~month: float, unit) => t = "Date"
 
@@ -115,6 +138,14 @@ year in the current time zone. Fractional parts of arguments are ignored. See
 Constructor](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/Date)
 on MDN.
 */
+@deprecated({
+  reason: "Use `Date.makeWithYMD` instead.",
+  migrate: Date.makeWithYMD(
+    ~year=Float.toInt(%insert.labelledArgument("year")),
+    ~month=Float.toInt(%insert.labelledArgument("month")),
+    ~day=Float.toInt(%insert.labelledArgument("date")),
+  ),
+})
 @new
 external makeWithYMD: (~year: float, ~month: float, ~date: float, unit) => t = "Date"
 
@@ -125,6 +156,15 @@ Fractional parts of arguments are ignored. See [`Date()`
 Constructor](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/Date)
 on MDN. Fractional parts of the arguments are ignored.
 */
+@deprecated({
+  reason: "Use `Date.makeWithYMDH` instead.",
+  migrate: Date.makeWithYMDH(
+    ~year=Float.toInt(%insert.labelledArgument("year")),
+    ~month=Float.toInt(%insert.labelledArgument("month")),
+    ~day=Float.toInt(%insert.labelledArgument("date")),
+    ~hours=Float.toInt(%insert.labelledArgument("hours")),
+  ),
+})
 @new
 external makeWithYMDH: (~year: float, ~month: float, ~date: float, ~hours: float, unit) => t =
   "Date"
@@ -136,6 +176,16 @@ Fractional parts of arguments are ignored. See [`Date()`
 Constructor](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/Date)
 on MDN.
 */
+@deprecated({
+  reason: "Use `Date.makeWithYMDHM` instead.",
+  migrate: Date.makeWithYMDHM(
+    ~year=Float.toInt(%insert.labelledArgument("year")),
+    ~month=Float.toInt(%insert.labelledArgument("month")),
+    ~day=Float.toInt(%insert.labelledArgument("date")),
+    ~hours=Float.toInt(%insert.labelledArgument("hours")),
+    ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
+  ),
+})
 @new
 external makeWithYMDHM: (
   ~year: float,
@@ -167,6 +217,17 @@ Js.Date.makeWithYMDHMS(
 ) == exampleDate
 ```
 */
+@deprecated({
+  reason: "Use `Date.makeWithYMDHMS` instead.",
+  migrate: Date.makeWithYMDHMS(
+    ~year=Float.toInt(%insert.labelledArgument("year")),
+    ~month=Float.toInt(%insert.labelledArgument("month")),
+    ~day=Float.toInt(%insert.labelledArgument("date")),
+    ~hours=Float.toInt(%insert.labelledArgument("hours")),
+    ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
+    ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
+  ),
+})
 @new
 external makeWithYMDHMS: (
   ~year: float,
@@ -191,6 +252,13 @@ on MDN.
 let november1 = Js.Date.utcWithYM(~year=2020.0, ~month=10.0, ())
 ```
 */
+@deprecated({
+  reason: "Use `Date.UTC.makeWithYM` instead.",
+  migrate: Date.UTC.makeWithYM(
+    ~year=Float.toInt(%insert.labelledArgument("year")),
+    ~month=Float.toInt(%insert.labelledArgument("month")),
+  ),
+})
 @val("Date.UTC")
 external utcWithYM: (~year: float, ~month: float, unit) => float = ""
 
@@ -201,6 +269,14 @@ of arguments are ignored. See
 [`Date.UTC`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/UTC)
 on MDN.
 */
+@deprecated({
+  reason: "Use `Date.UTC.makeWithYMD` instead.",
+  migrate: Date.UTC.makeWithYMD(
+    ~year=Float.toInt(%insert.labelledArgument("year")),
+    ~month=Float.toInt(%insert.labelledArgument("month")),
+    ~day=Float.toInt(%insert.labelledArgument("date")),
+  ),
+})
 @val("Date.UTC")
 external utcWithYMD: (~year: float, ~month: float, ~date: float, unit) => float = ""
 
@@ -212,6 +288,15 @@ See
 [`Date.UTC`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/UTC)
 on MDN.
 */
+@deprecated({
+  reason: "Use `Date.UTC.makeWithYMDH` instead.",
+  migrate: Date.UTC.makeWithYMDH(
+    ~year=Float.toInt(%insert.labelledArgument("year")),
+    ~month=Float.toInt(%insert.labelledArgument("month")),
+    ~day=Float.toInt(%insert.labelledArgument("date")),
+    ~hours=Float.toInt(%insert.labelledArgument("hours")),
+  ),
+})
 @val("Date.UTC")
 external utcWithYMDH: (~year: float, ~month: float, ~date: float, ~hours: float, unit) => float = ""
 
@@ -223,6 +308,16 @@ arguments are ignored. See
 [`Date.UTC`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/UTC)
 on MDN.
 */
+@deprecated({
+  reason: "Use `Date.UTC.makeWithYMDHM` instead.",
+  migrate: Date.UTC.makeWithYMDHM(
+    ~year=Float.toInt(%insert.labelledArgument("year")),
+    ~month=Float.toInt(%insert.labelledArgument("month")),
+    ~day=Float.toInt(%insert.labelledArgument("date")),
+    ~hours=Float.toInt(%insert.labelledArgument("hours")),
+    ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
+  ),
+})
 @val("Date.UTC")
 external utcWithYMDHM: (
   ~year: float,
@@ -242,6 +337,17 @@ See
 [`Date.UTC`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/UTC)
 on MDN.
 */
+@deprecated({
+  reason: "Use `Date.UTC.makeWithYMDHMS` instead.",
+  migrate: Date.UTC.makeWithYMDHMS(
+    ~year=Float.toInt(%insert.labelledArgument("year")),
+    ~month=Float.toInt(%insert.labelledArgument("month")),
+    ~day=Float.toInt(%insert.labelledArgument("date")),
+    ~hours=Float.toInt(%insert.labelledArgument("hours")),
+    ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
+    ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
+  ),
+})
 @val("Date.UTC")
 external utcWithYMDHMS: (
   ~year: float,
@@ -254,10 +360,19 @@ external utcWithYMDHMS: (
 ) => float = ""
 
 /** Returns the current time as number of milliseconds since Unix epoch. */
+@deprecated({
+  reason: "Use `Date.now` instead.",
+  migrate: Date.now(),
+})
 @val("Date.now")
 external now: unit => float = ""
 
-@new @deprecated("Please use `fromString` instead") external parse: string => t = "Date"
+@new
+@deprecated({
+  reason: "Use `Date.fromString` instead.",
+  migrate: Date.fromString(),
+})
+external parse: string => t = "Date"
 
 /**
 Returns a float with the number of milliseconds past the epoch represented by
@@ -268,7 +383,12 @@ string. According to the
 documentation on MDN, its use is discouraged. Returns `NaN` if passed invalid
 date string.
 */
-@val("parse") @scope("Date")
+@deprecated({
+  reason: "Use `Date.fromString` + `Date.getTime` instead.",
+  migrate: Date.getTime(Date.fromString(%insert.unlabelledArgument(0))),
+})
+@val("parse")
+@scope("Date")
 external parseAsFloat: string => float = ""
 
 /**
@@ -283,6 +403,10 @@ on MDN.
 Js.Date.getDate(exampleDate) == 29.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getDate` instead.",
+  migrate: Date.getDate(),
+})
 @send
 external getDate: t => float = "getDate"
 
@@ -298,6 +422,10 @@ on MDN.
 Js.Date.getDay(exampleDate) == 4.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getDay` instead.",
+  migrate: Date.getDay(),
+})
 @send
 external getDay: t => float = "getDay"
 
@@ -313,6 +441,10 @@ on MDN.
 Js.Date.getFullYear(exampleDate) == 1973.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getFullYear` instead.",
+  migrate: Date.getFullYear(),
+})
 @send
 external getFullYear: t => float = "getFullYear"
 
@@ -327,6 +459,10 @@ on MDN.
 Js.Date.getHours(exampleDate) == 22.0 // Vienna is in GMT+01:00
 ```
 */
+@deprecated({
+  reason: "Use `Date.getHours` instead.",
+  migrate: Date.getHours(),
+})
 @send
 external getHours: t => float = "getHours"
 
@@ -342,6 +478,10 @@ on MDN.
 Js.Date.getMilliseconds(exampleDate) == 321.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getMilliseconds` instead.",
+  migrate: Date.getMilliseconds(),
+})
 @send
 external getMilliseconds: t => float = "getMilliseconds"
 
@@ -357,6 +497,10 @@ on MDN.
 Js.Date.getMinutes(exampleDate) == 30.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getMinutes` instead.",
+  migrate: Date.getMinutes(),
+})
 @send
 external getMinutes: t => float = "getMinutes"
 
@@ -372,6 +516,10 @@ on MDN.
 Js.Date.getMonth(exampleDate) == 10.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getMonth` instead.",
+  migrate: Date.getMonth(),
+})
 @send
 external getMonth: t => float = "getMonth"
 
@@ -386,6 +534,10 @@ on MDN.
 Js.Date.getSeconds(exampleDate) == 54.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getSeconds` instead.",
+  migrate: Date.getSeconds(),
+})
 @send
 external getSeconds: t => float = "getSeconds"
 
@@ -400,6 +552,10 @@ on MDN.
 Js.Date.getTime(exampleDate) == 123456654321.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getTime` instead.",
+  migrate: Date.getTime(),
+})
 @send
 external getTime: t => float = "getTime"
 
@@ -414,6 +570,10 @@ on MDN.
 Js.Date.getTimezoneOffset(exampleDate) == -60.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getTimezoneOffset` instead.",
+  migrate: Date.getTimezoneOffset(),
+})
 @send
 external getTimezoneOffset: t => float = "getTimezoneOffset"
 
@@ -428,6 +588,10 @@ on MDN.
 Js.Date.getUTCDate(exampleDate) == 29.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getUTCDate` instead.",
+  migrate: Date.getUTCDate(),
+})
 @send
 external getUTCDate: t => float = "getUTCDate"
 
@@ -443,6 +607,10 @@ on MDN.
 Js.Date.getUTCDay(exampleDate) == 4.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getUTCDay` instead.",
+  migrate: Date.getUTCDay(),
+})
 @send
 external getUTCDay: t => float = "getUTCDay"
 
@@ -458,6 +626,10 @@ on MDN.
 Js.Date.getUTCFullYear(exampleDate) == 1973.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getUTCFullYear` instead.",
+  migrate: Date.getUTCFullYear(),
+})
 @send
 external getUTCFullYear: t => float = "getUTCFullYear"
 
@@ -472,6 +644,10 @@ on MDN.
 Js.Date.getUTCHours(exampleDate) == 21.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getUTCHours` instead.",
+  migrate: Date.getUTCHours(),
+})
 @send
 external getUTCHours: t => float = "getUTCHours"
 
@@ -486,6 +662,10 @@ on MDN.
 Js.Date.getUTCMilliseconds(exampleDate) == 321.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getUTCMilliseconds` instead.",
+  migrate: Date.getUTCMilliseconds(),
+})
 @send
 external getUTCMilliseconds: t => float = "getUTCMilliseconds"
 
@@ -500,6 +680,10 @@ on MDN.
 Js.Date.getUTCMinutes(exampleDate) == 30.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getUTCMinutes` instead.",
+  migrate: Date.getUTCMinutes(),
+})
 @send
 external getUTCMinutes: t => float = "getUTCMinutes"
 
@@ -515,6 +699,10 @@ on MDN.
 Js.Date.getUTCMonth(exampleDate) == 10.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getUTCMonth` instead.",
+  migrate: Date.getUTCMonth(),
+})
 @send
 external getUTCMonth: t => float = "getUTCMonth"
 
@@ -529,10 +717,15 @@ on MDN.
 Js.Date.getUTCSeconds(exampleDate) == 54.0
 ```
 */
+@deprecated({
+  reason: "Use `Date.getUTCSeconds` instead.",
+  migrate: Date.getUTCSeconds(),
+})
 @send
 external getUTCSeconds: t => float = "getUTCSeconds"
 
-@send @deprecated("Use `getFullYear` instead.") external getYear: t => float = "getYear"
+@send @deprecated({reason: "Use `getFullYear` instead.", migrate: Date.getFullYear()})
+external getYear: t => float = "getYear"
 
 /**
 Sets the given `Date`’s day of month to the value in the second argument
@@ -551,6 +744,10 @@ date1 == Js.Date.fromString("1973-11-15T21:30:54.321Z00:00")
 twoWeeksBefore == Js.Date.getTime(date1)
 ```
 */
+@deprecated({
+  reason: "Use `Date.setDate` instead.",
+  migrate: Date.setDate(Float.toInt(%insert.unlabelledArgument(1))),
+})
 @send
 external setDate: (t, float) => float = "setDate"
 
@@ -570,6 +767,10 @@ date1 == Js.Date.fromString("1974-11-15T21:30:54.321Z00:00")
 nextYear == Js.Date.getTime(date1)
 ```
 */
+@deprecated({
+  reason: "Use `Date.setFullYear` instead.",
+  migrate: Date.setFullYear(Float.toInt(%insert.unlabelledArgument(1))),
+})
 @send
 external setFullYear: (t, float) => float = "setFullYear"
 
@@ -590,6 +791,13 @@ date1 == Js.Date.fromString("1974-01-22T21:30:54.321Z00:00")
 future == Js.Date.getTime(date1)
 ```
 */
+@deprecated({
+  reason: "Use `Date.setFullYearM` instead.",
+  migrate: Date.setFullYearM(
+    ~year=Float.toInt(%insert.labelledArgument("year")),
+    ~month=Float.toInt(%insert.labelledArgument("month")),
+  ),
+})
 @send
 external setFullYearM: (t, ~year: float, ~month: float, unit) => float = "setFullYear"
 
@@ -611,6 +819,14 @@ future == Js.Date.getTime(date1)
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Date.setFullYearMD` instead.",
+  migrate: Date.setFullYearMD(
+    ~year=Float.toInt(%insert.labelledArgument("year")),
+    ~month=Float.toInt(%insert.labelledArgument("month")),
+    ~day=Float.toInt(%insert.labelledArgument("date")),
+  ),
+})
 external setFullYearMD: (t, ~year: float, ~month: float, ~date: float, unit) => float =
   "setFullYear"
 
@@ -630,6 +846,10 @@ date1 == Js.Date.fromString("1973-11-29T22:30:54.321Z00:00")
 nextHour == Js.Date.getTime(date1)
 ```
 */
+@deprecated({
+  reason: "Use `Date.setHours` instead.",
+  migrate: Date.setHours(Float.toInt(%insert.unlabelledArgument(1))),
+})
 @send
 external setHours: (t, float) => float = "setHours"
 
@@ -650,6 +870,13 @@ date1 == Js.Date.fromString("1973-11-29T22:46:54.321Z00:00")
 futureTime == Js.Date.getTime(date1)
 ```
 */
+@deprecated({
+  reason: "Use `Date.setHoursM` instead.",
+  migrate: Date.setHoursM(
+    ~hours=Float.toInt(%insert.labelledArgument("hours")),
+    ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
+  ),
+})
 @send
 external setHoursM: (t, ~hours: float, ~minutes: float, unit) => float = "setHours"
 
@@ -671,6 +898,14 @@ futureTime == Js.Date.getTime(date1)
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Date.setHoursMS` instead.",
+  migrate: Date.setHoursMS(
+    ~hours=Float.toInt(%insert.labelledArgument("hours")),
+    ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
+    ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
+  ),
+})
 external setHoursMS: (t, ~hours: float, ~minutes: float, ~seconds: float, unit) => float =
   "setHours"
 
@@ -699,6 +934,15 @@ futureTime == Js.Date.getTime(date1)
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Date.setHoursMSMs` instead.",
+  migrate: Date.setHoursMSMs(
+    ~hours=Float.toInt(%insert.labelledArgument("hours")),
+    ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
+    ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
+    ~milliseconds=Float.toInt(%insert.labelledArgument("milliseconds")),
+  ),
+})
 external setHoursMSMs: (
   t,
   ~hours: float,
@@ -725,6 +969,10 @@ date1 == Js.Date.fromString("1973-11-29T21:30:54.494Z00:00")
 futureTime == Js.Date.getTime(date1)
 ```
 */
+@deprecated({
+  reason: "Use `Date.setMilliseconds` instead.",
+  migrate: Date.setMilliseconds(Float.toInt(%insert.unlabelledArgument(1))),
+})
 @send
 external setMilliseconds: (t, float) => float = "setMilliseconds"
 
@@ -744,6 +992,10 @@ date1 == Js.Date.fromString("1973-11-29T21:34:54.494Z00:00")
 futureTime == Js.Date.getTime(date1)
 ```
 */
+@deprecated({
+  reason: "Use `Date.setMinutes` instead.",
+  migrate: Date.setMinutes(Float.toInt(%insert.unlabelledArgument(1))),
+})
 @send
 external setMinutes: (t, float) => float = "setMinutes"
 
@@ -765,6 +1017,13 @@ futureTime == Js.Date.getTime(date1)
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Date.setMinutesS` instead.",
+  migrate: Date.setMinutesS(
+    ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
+    ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
+  ),
+})
 external setMinutesS: (t, ~minutes: float, ~seconds: float, unit) => float = "setMinutes"
 
 /**
@@ -785,6 +1044,14 @@ futureTime == Js.Date.getTime(date1)
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Date.setMinutesSMs` instead.",
+  migrate: Date.setMinutesSMs(
+    ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
+    ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
+    ~milliseconds=Float.toInt(%insert.labelledArgument("milliseconds")),
+  ),
+})
 external setMinutesSMs: (t, ~minutes: float, ~seconds: float, ~milliseconds: float, unit) => float =
   "setMinutes"
 
@@ -804,6 +1071,10 @@ date1 == Js.Date.fromString("1973-12-29T21:34:56.789Z00:00")
 futureTime == Js.Date.getTime(date1)
 ```
 */
+@deprecated({
+  reason: "Use `Date.setMonth` instead.",
+  migrate: Date.setMonth(Float.toInt(%insert.unlabelledArgument(1))),
+})
 @send
 external setMonth: (t, float) => float = "setMonth"
 
@@ -824,7 +1095,7 @@ date1 == Js.Date.fromString("1973-12-08T21:34:56.789Z00:00")
 futureTime == Js.Date.getTime(date1)
 ```
 */
-@send
+@deprecated("Use `Date.setMonth` then `Date.setDate`. No direct 1:1 migration available.") @send
 external setMonthD: (t, ~month: float, ~date: float, unit) => float = "setMonth"
 
 /**
@@ -843,6 +1114,10 @@ date1 == Js.Date.fromString("1973-12-29T21:30:56.321Z00:00")
 futureTime == Js.Date.getTime(date1)
 ```
 */
+@deprecated({
+  reason: "Use `Date.setSeconds` instead.",
+  migrate: Date.setSeconds(Float.toInt(%insert.unlabelledArgument(1))),
+})
 @send
 external setSeconds: (t, float) => float = "setSeconds"
 
@@ -864,6 +1139,13 @@ futureTime == Js.Date.getTime(date1)
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Date.setSecondsMs` instead.",
+  migrate: Date.setSecondsMs(
+    ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
+    ~milliseconds=Float.toInt(%insert.labelledArgument("milliseconds")),
+  ),
+})
 external setSecondsMs: (t, ~seconds: float, ~milliseconds: float, unit) => float = "setSeconds"
 
 /**
@@ -883,7 +1165,7 @@ date1 == Js.Date.fromString("1976-04-19T12:37:12.101Z00:00")
 futureTime == Js.Date.getTime(date1)
 ```
 */
-@send
+@send @deprecated
 external setTime: (t, float) => float = "setTime"
 
 /**
@@ -902,6 +1184,10 @@ date1 == Js.Date.fromString("1973-11-15T21:30:54.321Z00:00")
 twoWeeksBefore == Js.Date.getTime(date1)
 ```
 */
+@deprecated({
+  reason: "Use `Date.setUTCDate` instead.",
+  migrate: Date.setUTCDate(Float.toInt(%insert.unlabelledArgument(1))),
+})
 @send
 external setUTCDate: (t, float) => float = "setUTCDate"
 
@@ -921,6 +1207,10 @@ date1 == Js.Date.fromString("1974-11-15T21:30:54.321Z00:00")
 nextYear == Js.Date.getTime(date1)
 ```
 */
+@deprecated({
+  reason: "Use `Date.setUTCFullYear` instead.",
+  migrate: Date.setUTCFullYear(Float.toInt(%insert.unlabelledArgument(1))),
+})
 @send
 external setUTCFullYear: (t, float) => float = "setUTCFullYear"
 
@@ -941,6 +1231,13 @@ future == Js.Date.getTime(date1)
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Date.setUTCFullYearM` instead.",
+  migrate: Date.setUTCFullYearM(
+    ~year=Float.toInt(%insert.labelledArgument("year")),
+    ~month=Float.toInt(%insert.labelledArgument("month")),
+  ),
+})
 external setUTCFullYearM: (t, ~year: float, ~month: float, unit) => float = "setUTCFullYear"
 
 /**
@@ -961,6 +1258,14 @@ future == Js.Date.getTime(date1)
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Date.setUTCFullYearMD` instead.",
+  migrate: Date.setUTCFullYearMD(
+    ~year=Float.toInt(%insert.labelledArgument("year")),
+    ~month=Float.toInt(%insert.labelledArgument("month")),
+    ~day=Float.toInt(%insert.labelledArgument("date")),
+  ),
+})
 external setUTCFullYearMD: (t, ~year: float, ~month: float, ~date: float, unit) => float =
   "setUTCFullYear"
 
@@ -980,6 +1285,10 @@ date1 == Js.Date.fromString("1973-11-29T22:30:54.321Z00:00")
 nextHour == Js.Date.getTime(date1)
 ```
 */
+@deprecated({
+  reason: "Use `Date.setUTCHours` instead.",
+  migrate: Date.setUTCHours(Float.toInt(%insert.unlabelledArgument(1))),
+})
 @send
 external setUTCHours: (t, float) => float = "setUTCHours"
 
@@ -1000,6 +1309,13 @@ futureTime == Js.Date.getTime(date1)
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Date.setUTCHoursM` instead.",
+  migrate: Date.setUTCHoursM(
+    ~hours=Float.toInt(%insert.labelledArgument("hours")),
+    ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
+  ),
+})
 external setUTCHoursM: (t, ~hours: float, ~minutes: float, unit) => float = "setUTCHours"
 
 /**
@@ -1021,6 +1337,14 @@ futureTime == Js.Date.getTime(date1)
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Date.setUTCHoursMS` instead.",
+  migrate: Date.setUTCHoursMS(
+    ~hours=Float.toInt(%insert.labelledArgument("hours")),
+    ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
+    ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
+  ),
+})
 external setUTCHoursMS: (t, ~hours: float, ~minutes: float, ~seconds: float, unit) => float =
   "setUTCHours"
 
@@ -1049,6 +1373,15 @@ futureTime == Js.Date.getTime(date1)
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Date.setUTCHoursMSMs` instead.",
+  migrate: Date.setUTCHoursMSMs(
+    ~hours=Float.toInt(%insert.labelledArgument("hours")),
+    ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
+    ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
+    ~milliseconds=Float.toInt(%insert.labelledArgument("milliseconds")),
+  ),
+})
 external setUTCHoursMSMs: (
   t,
   ~hours: float,
@@ -1074,6 +1407,10 @@ date1 == Js.Date.fromString("1973-11-29T21:30:54.494Z00:00")
 futureTime == Js.Date.getTime(date1)
 ```
 */
+@deprecated({
+  reason: "Use `Date.setUTCMilliseconds` instead.",
+  migrate: Date.setUTCMilliseconds(Float.toInt(%insert.unlabelledArgument(1))),
+})
 @send
 external setUTCMilliseconds: (t, float) => float = "setUTCMilliseconds"
 
@@ -1093,6 +1430,10 @@ date1 == Js.Date.fromString("1973-11-29T21:34:54.494Z00:00")
 futureTime == Js.Date.getTime(date1)
 ```
 */
+@deprecated({
+  reason: "Use `Date.setUTCMinutes` instead.",
+  migrate: Date.setUTCMinutes(Float.toInt(%insert.unlabelledArgument(1))),
+})
 @send
 external setUTCMinutes: (t, float) => float = "setUTCMinutes"
 
@@ -1113,6 +1454,13 @@ futureTime == Js.Date.getTime(date1)
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Date.setUTCMinutesS` instead.",
+  migrate: Date.setUTCMinutesS(
+    ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
+    ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
+  ),
+})
 external setUTCMinutesS: (t, ~minutes: float, ~seconds: float, unit) => float = "setUTCMinutes"
 
 /**
@@ -1139,6 +1487,14 @@ futureTime == Js.Date.getTime(date1)
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Date.setUTCMinutesSMs` instead.",
+  migrate: Date.setUTCMinutesSMs(
+    ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
+    ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
+    ~milliseconds=Float.toInt(%insert.labelledArgument("milliseconds")),
+  ),
+})
 external setUTCMinutesSMs: (
   t,
   ~minutes: float,
@@ -1163,6 +1519,10 @@ date1 == Js.Date.fromString("1973-12-29T21:34:56.789Z00:00")
 futureTime == Js.Date.getTime(date1)
 ```
 */
+@deprecated({
+  reason: "Use `Date.setUTCMonth` instead.",
+  migrate: Date.setUTCMonth(Float.toInt(%insert.unlabelledArgument(1))),
+})
 @send
 external setUTCMonth: (t, float) => float = "setUTCMonth"
 
@@ -1182,6 +1542,7 @@ date1 == Js.Date.fromString("1973-12-08T21:34:56.789Z00:00")
 futureTime == Js.Date.getTime(date1)
 ```
 */
+@deprecated("Use `Date.setUTCMonth` then `Date.setUTCDate`. No direct 1:1 migration available.")
 @send
 external setUTCMonthD: (t, ~month: float, ~date: float, unit) => float = "setUTCMonth"
 
@@ -1201,6 +1562,10 @@ date1 == Js.Date.fromString("1973-12-29T21:30:56.321Z00:00")
 futureTime == Js.Date.getTime(date1)
 ```
 */
+@deprecated({
+  reason: "Use `Date.setUTCSeconds` instead.",
+  migrate: Date.setUTCSeconds(Float.toInt(%insert.unlabelledArgument(1))),
+})
 @send
 external setUTCSeconds: (t, float) => float = "setUTCSeconds"
 
@@ -1221,11 +1586,18 @@ futureTime == Js.Date.getTime(date1)
 ```
 */
 @send
+@deprecated({
+  reason: "Use `Date.setUTCSecondsMs` instead.",
+  migrate: Date.setUTCSecondsMs(
+    ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
+    ~milliseconds=Float.toInt(%insert.labelledArgument("milliseconds")),
+  ),
+})
 external setUTCSecondsMs: (t, ~seconds: float, ~milliseconds: float, unit) => float =
   "setUTCSeconds"
 
 /** Same as [`setTime()`](#settime). */
-@send
+@deprecated @send
 external setUTCTime: (t, float) => float = "setTime"
 
 @send @deprecated("Use `setFullYear` instead") external setYear: (t, float) => float = "setYear"
@@ -1242,10 +1614,19 @@ on MDN.
 Js.Date.toDateString(exampleDate) == "Thu Nov 29 1973"
 ```
 */
+@deprecated({
+  reason: "Use `Date.toDateString` instead.",
+  migrate: Date.toDateString(),
+})
 @send
 external toDateString: t => string = "toDateString"
 
-@send @deprecated("Use `toUTCString` instead") external toGMTString: t => string = "toGMTString"
+@send
+@deprecated({
+  reason: "Use `Date.toUTCString` instead.",
+  migrate: Date.toUTCString(),
+})
+external toGMTString: t => string = "toGMTString"
 
 /**
 Returns a simplified version of the ISO 8601 format for the date. See
@@ -1258,14 +1639,18 @@ on MDN.
 Js.Date.toISOString(exampleDate) == "1973-11-29T21:30:54.321Z"
 ```
 */
+@deprecated({
+  reason: "Use `Date.toISOString` instead.",
+  migrate: Date.toISOString(),
+})
 @send
 external toISOString: t => string = "toISOString"
 
+@deprecated({
+  reason: "This method is unsafe. It will be changed to return option in a future release. Please use toJSONUnsafe instead.",
+  migrate: Date.toJSON(),
+})
 @send
-@deprecated(
-  "This method is unsafe. It will be changed to return option in a future \
-     release. Please use toJSONUnsafe instead."
-)
 external toJSON: t => string = "toJSON"
 
 /**
@@ -1273,6 +1658,10 @@ Returns a string representation of the given date. See
 [`Date.toJSON`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toJSON)
 on MDN.
 */
+@deprecated({
+  reason: "Use `Date.toJSON` instead.",
+  migrate: Date.toJSON(),
+})
 @send
 external toJSONUnsafe: t => string = "toJSON"
 
@@ -1289,6 +1678,10 @@ Js.Date.toLocaleDateString(exampleDate) == "11/29/1973" // for en_US.utf8
 Js.Date.toLocaleDateString(exampleDate) == "29.11.73" // for de_DE.utf8
 ```
 */
+@deprecated({
+  reason: "Use `Date.toLocaleDateString` instead.",
+  migrate: Date.toLocaleDateString(),
+})
 @send
 external toLocaleDateString: t => string = "toLocaleDateString"
 
@@ -1307,6 +1700,10 @@ Js.Date.toLocaleString(exampleDate) == "11/29/1973, 10:30:54 PM" // for en_US.ut
 Js.Date.toLocaleString(exampleDate) == "29.11.1973, 22:30:54" // for de_DE.utf8
 ```
 */
+@deprecated({
+  reason: "Use `Date.toLocaleString` instead.",
+  migrate: Date.toLocaleString(),
+})
 @send
 external toLocaleString: t => string = "toLocaleString"
 
@@ -1324,6 +1721,10 @@ Js.Date.toLocaleString(exampleDate) == "10:30:54 PM" // for en_US.utf8
 Js.Date.toLocaleString(exampleDate) == "22:30:54" // for de_DE.utf8
 ```
 */
+@deprecated({
+  reason: "Use `Date.toLocaleTimeString` instead.",
+  migrate: Date.toLocaleTimeString(),
+})
 @send
 external toLocaleTimeString: t => string = "toLocaleTimeString"
 
@@ -1343,6 +1744,10 @@ Js.Date.toString(
 ) == "Thu Nov 29 1973 22:30:54 GMT+0100 (Central European Standard Time)"
 ```
 */
+@deprecated({
+  reason: "Use `Date.toString` instead.",
+  migrate: Date.toString(),
+})
 @send
 external toString: t => string = "toString"
 
@@ -1358,6 +1763,10 @@ on MDN.
 Js.Date.toTimeString(exampleDate) == "22:30:54 GMT+0100 (Central European Standard Time)"
 ```
 */
+@deprecated({
+  reason: "Use `Date.toTimeString` instead.",
+  migrate: Date.toTimeString(),
+})
 @send
 external toTimeString: t => string = "toTimeString"
 
@@ -1373,5 +1782,9 @@ on MDN.
 Js.Date.toUTCString(exampleDate) == "Thu, 29 Nov 1973 21:30:54 GMT"
 ```
 */
+@deprecated({
+  reason: "Use `Date.toUTCString` instead.",
+  migrate: Date.toUTCString(),
+})
 @send
 external toUTCString: t => string = "toUTCString"
