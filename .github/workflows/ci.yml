@@ -518,7 +518,7 @@ jobs:
           npm run build
 
       - name: Commit and push
-        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ steps.diffcheck.outputs.clean == 'false' && startsWith(github.ref, 'refs/tags/v') }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions@rescript-lang.org"
