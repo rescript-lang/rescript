@@ -130,6 +130,6 @@ module OrderedSet: {
     set: Belt.Set.t<'a, 'identity>,
     array: array<'a>,
   }
-  let make: (~id: module(Belt.Id.Comparable with type identity = 'a with type t = 'b)) => t<'b, 'a>
+  let make: (~id: module(Belt.Id.Comparable with type identity = 'a and type t = 'b)) => t<'b, 'a>
 }
 
