@@ -339,6 +339,36 @@ To generate the html:
 ../scripts/ninja docs
 ```
 
+## Contribute to JSX `domProps`
+
+The `domProps` type, defined in [packages/@rescript/runtime/JsxDOM.res](packages/@rescript/runtime/JsxDOM.res), dictates which properties can be used on DOM elements. This list isn't exhaustive, so you might want to contribute a missing prop.
+
+Adding a new entry there requires re-running the analysis tests. Follow these steps:
+
+1.  Compile your changes:
+    ```bash
+    make lib
+    ```
+2.  (Optional) If your local compiler is outdated, rebuild:
+    ```bash
+    make build
+    ```
+3.  Run the analysis tests. This will likely fail due to an outdated autocomplete test snapshot:
+    ```bash
+    make test-analysis
+    ```
+4.  Add the updated snapshot to Git:
+    ```bash
+    git add tests/analysis_tests
+    ```
+5.  Re-run the analysis tests. They should now pass:
+    ```bash
+    make test-analysis
+    ```
+
+(If a `make` command fails, consider using the [DevContainer](#b-devcontainer).)
+
+Finally, add a line to [CHANGELOG.md](CHANGELOG.md), using the `#### :nail_care: Polish` section.
 ## Code structure
 
 The highlevel architecture is illustrated as below:
