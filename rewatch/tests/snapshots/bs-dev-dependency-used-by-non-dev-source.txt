@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 Cleaned 0/428
 Parsed 2 source files
 Compiled 2 modules
@@ -70,6 +71,11 @@ Compiled 3 modules
 
 
 >>>>>>> 434a19184 (migrate wip)
+=======
+Cleaned 0/115
+Parsed 2 source files
+Compiled 2 modules
+>>>>>>> d746a071c (make parsing of @deprecated with migration info an experimental feature)
 
 The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
 Use 'dependencies' instead.
@@ -94,4 +100,5 @@ Use 'compiler-flags' instead.
   
 
 
-Incremental build failed. Error: [2K  Failed to Compile. See Errors Above
+Incremental build failed. Error: [2K
+  Failed to Compile. See Errors Above

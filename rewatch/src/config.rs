@@ -229,6 +229,7 @@ pub enum DeprecationWarning {
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum ExperimentalFeature {
     LetUnwrap,
+    DeprecatedMigrations,
 }
 
 impl<'de> serde::Deserialize<'de> for ExperimentalFeature {
@@ -248,8 +249,9 @@ impl<'de> serde::Deserialize<'de> for ExperimentalFeature {
             {
                 match v {
                     "LetUnwrap" => Ok(ExperimentalFeature::LetUnwrap),
+                    "DeprecatedMigrations" => Ok(ExperimentalFeature::DeprecatedMigrations),
                     other => {
-                        let available = ["LetUnwrap"].join(", ");
+                        let available = ["LetUnwrap", "DeprecatedMigrations"].join(", ");
                         Err(DeError::custom(format!(
                             "Unknown experimental feature '{other}'. Available features: {available}",
                         )))
@@ -548,6 +550,7 @@ impl Config {
                         "-enable-experimental".to_string(),
                         match feature {
                             ExperimentalFeature::LetUnwrap => "LetUnwrap",
+                            ExperimentalFeature::DeprecatedMigrations => "DeprecatedMigrations",
                         }
                         .to_string(),
                     ]

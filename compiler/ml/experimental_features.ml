@@ -1,12 +1,14 @@
-type feature = LetUnwrap
+type feature = LetUnwrap | DeprecatedMigrations
 
 let to_string (f : feature) : string =
   match f with
   | LetUnwrap -> "LetUnwrap"
+  | DeprecatedMigrations -> "DeprecatedMigrations"
 
 let from_string (s : string) : feature option =
   match s with
   | "LetUnwrap" -> Some LetUnwrap
+  | "DeprecatedMigrations" -> Some DeprecatedMigrations
   | _ -> None
 
 module FeatureSet = Set.Make (struct
