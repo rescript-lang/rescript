@@ -1,7 +1,8 @@
 {
   "name": "@rescript/react",
-  "version": "0.14.0-rc.1",
+  "version": "0.14.0",
   "private": true,
+  "description": "React bindings for ReScript",
   "dependencies": {
     "rescript": "workspace:^"
   }
