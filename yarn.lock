@@ -418,9 +418,9 @@ __metadata:
   languageName: node
   linkType: soft
 
-"@rescript/react@workspace:^, @rescript/react@workspace:tests/dependencies/rescript-react":
+"@rescript/react@workspace:^, @rescript/react@workspace:packages/@rescript/react":
   version: 0.0.0-use.local
-  resolution: "@rescript/react@workspace:tests/dependencies/rescript-react"
+  resolution: "@rescript/react@workspace:packages/@rescript/react"
   dependencies:
     rescript: "workspace:^"
   languageName: unknown
