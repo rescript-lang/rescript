@@ -75,6 +75,12 @@ let cat s1 s2 =
 
 let rec deprecated_of_attrs = function
   | [] -> None
+  | ( {txt = "deprecated"; _},
+      PStr [{pstr_desc = Pstr_eval ({pexp_desc = Pexp_record _}, _)}] )
+    :: _ ->
+    (* Skip record payloads here. `deprecated_of_attrs_with_migrate` should be used if we want to 
+      parse record payloads. *)
+    None
   | ({txt = "ocaml.deprecated" | "deprecated"; _}, p) :: _ ->
     Some (string_of_opt_payload p)
   | _ :: tl -> deprecated_of_attrs tl
@@ -126,13 +132,18 @@ let rec deprecated_of_attrs_with_migrate = function
   | _ :: tl -> deprecated_of_attrs_with_migrate tl
 
 let check_deprecated ?deprecated_context loc attrs s =
-  match deprecated_of_attrs_with_migrate attrs with
-  | None -> ()
-  | Some (txt, migration_template, migration_in_pipe_chain_template) ->
-    !Cmt_utils.record_deprecated_used
-      ?deprecated_context ?migration_template ?migration_in_pipe_chain_template
-      loc txt;
-    Location.deprecated loc (cat s txt)
+  if Experimental_features.is_enabled DeprecatedMigrations then (
+    match deprecated_of_attrs_with_migrate attrs with
+    | None -> ()
+    | Some (txt, migration_template, migration_in_pipe_chain_template) ->
+      !Cmt_utils.record_deprecated_used
+        ?deprecated_context ?migration_template
+        ?migration_in_pipe_chain_template loc txt;
+      Location.deprecated loc (cat s txt))
+  else
+    match deprecated_of_attrs attrs with
+    | None -> ()
+    | Some txt -> Location.deprecated loc (cat s txt)
 
 let check_deprecated_inclusion ~def ~use loc attrs1 attrs2 s =
   match (deprecated_of_attrs attrs1, deprecated_of_attrs attrs2) with
