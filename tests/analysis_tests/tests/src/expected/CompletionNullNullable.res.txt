@@ -1,0 +1,46 @@
+Complete src/CompletionNullNullable.res 2:5
+posCursor:[2:5] posNoWhite:[2:4] Found expr:[2:3->2:5]
+Pexp_field [2:3->2:4] _:[5:0->2:5]
+Completable: Cpath Value[x].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[x].""
+ContextPath Value[x]
+Path x
+ContextPath Value[x]->
+ContextPath Value[x]
+Path x
+CPPipe pathFromEnv:Primitive_js_extern found:false
+Path Primitive_js_extern.
+Path 
+[]
+
+Complete src/CompletionNullNullable.res 7:5
+posCursor:[7:5] posNoWhite:[7:4] Found expr:[7:3->7:5]
+Pexp_field [7:3->7:4] _:[10:0->7:5]
+Completable: Cpath Value[y].""
+Package opens Stdlib.place holder Pervasives.JsxModules.place holder
+Resolved opens 1 Stdlib
+ContextPath Value[y].""
+ContextPath Value[y]
+Path y
+ContextPath Value[y]->
+ContextPath Value[y]
+Path y
+CPPipe pathFromEnv:Primitive_js_extern found:false
+Path Primitive_js_extern.
+Path 
+[{
+    "label": "->Primitive_js_extern.isNullable",
+    "kind": 12,
+    "tags": [],
+    "detail": "nullable<'a> => bool",
+    "documentation": null,
+    "sortText": "isNullable",
+    "insertText": "->Primitive_js_extern.isNullable",
+    "additionalTextEdits": [{
+      "range": {"start": {"line": 7, "character": 4}, "end": {"line": 7, "character": 5}},
+      "newText": ""
+      }]
+  }]
+
