@@ -1,0 +1,36 @@
+let make1 = "hello"->Nullable.make
+let make2 = Nullable.make("hello")
+
+let empty1 = Nullable.undefined
+
+let getUnsafe1 = Nullable.make(1)->Nullable.getUnsafe
+let getUnsafe2 = Nullable.getUnsafe(Nullable.make(1))
+
+let getExn1 = Nullable.make(1)->Nullable.getOrThrow
+let getExn2 = Nullable.getOrThrow(Nullable.make(1))
+
+let map1 = Nullable.make(2)->Nullable.map(x => x + 1)
+let map2 = Nullable.map(Nullable.make(2), x => x + 1)
+
+let forEach1 = Nullable.make(2)->Nullable.forEach(x => ignore(x))
+let forEach2 = Nullable.forEach(Nullable.make(2), x => ignore(x))
+
+let fromOption1 = Some("x")->Nullable.fromOption
+let fromOption2 = Nullable.fromOption(None)
+
+let from_opt1 = Some("y")->Nullable.fromOption
+let from_opt2 = Nullable.fromOption(None)
+
+let toOption1 = Nullable.make(3)->Nullable.toOption
+let toOption2 = Nullable.toOption(Nullable.make(3))
+
+let to_opt1 = Nullable.make(4)->Nullable.toOption
+let to_opt2 = Nullable.toOption(Nullable.make(4))
+
+let test1 = Js.Undefined.empty->Js.Undefined.test
+let test2 = Js.Undefined.test(Js.Undefined.empty)
+let test3 = Js.Undefined.return(5)->Js.Undefined.bind(v => v)->Js.Undefined.test
+
+let testAny1 = Js.Undefined.testAny(Js.Undefined.empty)
+let testAny2 = Js.Undefined.empty->Js.Undefined.testAny
+
