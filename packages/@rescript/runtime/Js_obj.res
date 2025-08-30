@@ -27,6 +27,10 @@ Provides functions for inspecting and manipulating native JavaScript objects
 */
 
 /** `empty()` returns the empty object `{}` */
+@deprecated({
+  reason: "Use `Object.make` instead.",
+  migrate: Object.make(),
+})
 @obj
 external empty: unit => {..} = ""
 
@@ -63,6 +67,10 @@ Js.log(obj)
 Js.log(target)
 ```
 */
+@deprecated({
+  reason: "Use `Object.assign` instead.",
+  migrate: Object.assign(),
+})
 @val
 external assign: ({..}, {..}) => {..} = "Object.assign"
 
@@ -100,5 +108,9 @@ external assign: ({..}, {..}) => {..} = "Object.assign"
 */
 
 /** `keys(obj)` returns an `array` of the keys of `obj`'s own enumerable properties. */
+@deprecated({
+  reason: "Use `Object.keysToArray` instead.",
+  migrate: Object.keysToArray(),
+})
 @val
 external keys: {..} => array<string> = "Object.keys"
