@@ -55,6 +55,10 @@ let cancel = () =>
   Js.Nullable.iter(interval.contents, intervalId => Js.Global.clearInterval(intervalId))
 ```
 */
+@deprecated({
+  reason: "Use `clearInterval` instead.",
+  migrate: clearInterval(),
+})
 @val
 external clearInterval: intervalId => unit = "clearInterval"
 
@@ -78,6 +82,10 @@ let procrastinate = mins => {
 }
 ```
 */
+@deprecated({
+  reason: "Use `clearTimeout` instead.",
+  migrate: clearTimeout(),
+})
 @val
 external clearTimeout: timeoutId => unit = "clearTimeout"
 
@@ -101,6 +109,10 @@ let tick = () => {
 Js.Global.setInterval(tick, 1000)
 ```
 */
+@deprecated({
+  reason: "Use `setInterval` instead.",
+  migrate: setInterval(),
+})
 @val
 external setInterval: (unit => unit, int) => intervalId = "setInterval"
 
@@ -124,6 +136,10 @@ let tick = () => {
 Js.Global.setIntervalFloat(tick, 1000.0)
 ```
 */
+@deprecated({
+  reason: "Use `setIntervalFloat` instead.",
+  migrate: setIntervalFloat(),
+})
 @val
 external setIntervalFloat: (unit => unit, float) => intervalId = "setInterval"
 
@@ -142,6 +158,10 @@ let message = "Timed out!"
 Js.Global.setTimeout(() => Js.log(message), 1000)
 ```
 */
+@deprecated({
+  reason: "Use `setTimeout` instead.",
+  migrate: setTimeout(),
+})
 @val
 external setTimeout: (unit => unit, int) => timeoutId = "setTimeout"
 
@@ -160,6 +180,10 @@ let message = "Timed out!"
 Js.Global.setTimeoutFloat(() => Js.log(message), 1000.0)
 ```
 */
+@deprecated({
+  reason: "Use `setTimeoutFloat` instead.",
+  migrate: setTimeoutFloat(),
+})
 @val
 external setTimeoutFloat: (unit => unit, float) => timeoutId = "setTimeout"
 
@@ -168,6 +192,10 @@ URL-encodes a string.
 
 See [`encodeURI`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURI) on MDN.
 */
+@deprecated({
+  reason: "Use `encodeURI` instead.",
+  migrate: encodeURI(),
+})
 @val
 external encodeURI: string => string = "encodeURI"
 
@@ -176,6 +204,10 @@ Decodes a URL-enmcoded string produced by `encodeURI`
 
 See [`decodeURI`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/decodeURI) on MDN.
 */
+@deprecated({
+  reason: "Use `decodeURI` instead.",
+  migrate: decodeURI(),
+})
 @val
 external decodeURI: string => string = "decodeURI"
 
@@ -184,6 +216,10 @@ URL-encodes a string, including characters with special meaning in a URI.
 
 See [`encodeURIComponent`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent) on MDN.
 */
+@deprecated({
+  reason: "Use `encodeURIComponent` instead.",
+  migrate: encodeURIComponent(),
+})
 @val
 external encodeURIComponent: string => string = "encodeURIComponent"
 
@@ -192,5 +228,9 @@ Decodes a URL-enmcoded string produced by `encodeURIComponent`
 
 See [`decodeURIComponent`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/decodeURIComponent) on MDN.
 */
+@deprecated({
+  reason: "Use `decodeURIComponent` instead.",
+  migrate: decodeURIComponent(),
+})
 @val
 external decodeURIComponent: string => string = "decodeURIComponent"
