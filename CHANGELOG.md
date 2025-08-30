@@ -10,6 +10,22 @@
 > - :nail_care: [Polish]
 > - :house: [Internal]
 
+# 12.0.0-beta.10 (Unreleased)
+
+#### :boom: Breaking Change
+
+#### :eyeglasses: Spec Compliance
+
+#### :rocket: New Feature
+
+#### :bug: Bug fix
+
+#### :memo: Documentation
+
+#### :nail_care: Polish
+
+#### :house: Internal
+
 # 12.0.0-beta.9
 
 #### :boom: Breaking Change
