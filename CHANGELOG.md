@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Show `Stdlib.Null` and `Stdlib.Nullable` completions for `Stdlib.null<'a>` and `Stdlib.nullable<'a>` types, respectively. https://github.com/rescript-lang/rescript/pull/7826
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
