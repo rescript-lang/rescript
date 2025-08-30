@@ -1,0 +1,8 @@
+let empty1 = Object.make()
+
+let assign1 = Object.make()->Object.assign({"a": 1})
+let assign2 = Object.assign(Object.make(), {"a": 1})
+
+let keys1 = {"a": 1, "b": 2}->Object.keysToArray
+let keys2 = Object.keysToArray({"a": 1, "b": 2})
+
