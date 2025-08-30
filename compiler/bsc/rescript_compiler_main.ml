@@ -50,6 +50,8 @@ let set_abs_input_name sourcefile =
   sourcefile
 let setup_outcome_printer () = Lazy.force Res_outcome_printer.setup
 
+let setup_runtime_path path = Runtime_package.path := path
+
 let process_file sourcefile ?kind ppf =
   (* This is a better default then "", it will be changed later
      The {!Location.input_name} relies on that we write the binary ast
@@ -402,6 +404,9 @@ let command_line_flags : (string * Bsc_args.spec * string) array =
       "<list>  Enable or disable error status for warnings according\n\
        to <list>.  See option -w for the syntax of <list>.\n\
        Default setting is " ^ Bsc_warnings.defaults_warn_error );
+    ( "-runtime-path",
+      string_call setup_runtime_path,
+      "*internal* Set the path of the runtime package (@rescript/runtime)" );
     ( "-make-runtime",
       unit_call Js_packages_state.make_runtime,
       "*internal* make runtime library" );
