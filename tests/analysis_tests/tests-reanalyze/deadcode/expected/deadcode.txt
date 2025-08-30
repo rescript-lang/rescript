@@ -1765,7 +1765,7 @@ File References
   DeadExn.resi -->> 
   DeadRT.res -->> 
   DeadRT.resi -->> 
-  DeadTest.res -->> DeadValueTest.resi, DynamicallyLoadedComponent.res, ImmutableArray.resi, React.res
+  DeadTest.res -->> React.res, DeadValueTest.resi, DynamicallyLoadedComponent.res, ImmutableArray.resi
   DeadTestBlacklist.res -->> 
   DeadTestWithInterface.res -->> 
   DeadTypeTest.res -->> 
@@ -1781,7 +1781,7 @@ File References
   FirstClassModules.res -->> 
   FirstClassModulesInterface.res -->> 
   FirstClassModulesInterface.resi -->> FirstClassModulesInterface.res
-  Hooks.res -->> ImportHookDefault.res, ImportHooks.res, React.res
+  Hooks.res -->> React.res, ImportHookDefault.res, ImportHooks.res
   IgnoreInterface.res -->> 
   IgnoreInterface.resi -->> 
   ImmutableArray.res -->> 
