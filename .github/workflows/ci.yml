@@ -440,7 +440,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lib-ocaml
-          path: packages/@rescript/runtime/lib/ocaml
+          path: |
+            packages/@rescript/runtime/lib/ocaml
+            !packages/@rescript/runtime/lib/ocaml/*.ast
+            !packages/@rescript/runtime/lib/ocaml/*.iast
 
       - name: Generate API Docs
         if: ${{ matrix.generate_api_docs }}
