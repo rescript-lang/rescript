@@ -20,6 +20,8 @@
 
 #### :bug: Bug fix
 
+- Fix generation of interfaces for module types containing multiple type constraints. https://github.com/rescript-lang/rescript/pull/7825
+
 #### :memo: Documentation
 
 #### :nail_care: Polish
