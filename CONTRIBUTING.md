@@ -366,7 +366,7 @@ Adding a new entry there requires re-running the analysis tests. Follow these st
     make test-analysis
     ```
 
-(If a `make` command fail, consider using the [DevContainer](#b-devcontainer).)
+(If a `make` command fails, consider using the [DevContainer](#b-devcontainer).)
 
 Finally, add a line to [CHANGELOG.md](CHANGELOG.md), using the `#### :nail_care: Polish` section.
 ## Code structure
