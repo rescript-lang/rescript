@@ -1291,4 +1291,6 @@ let completionPathFromMaybeBuiltin path =
     | [mainModule; "t"] when String.starts_with ~prefix:"Stdlib_" mainModule ->
       (* Route Stdlib_X to Stdlib.X for proper completions without the Stdlib_ prefix *)
       Some (String.split_on_char '_' mainModule)
+    | ["Primitive_js_extern"; "null"] -> Some ["Stdlib"; "Null"]
+    | ["Primitive_js_extern"; "nullable"] -> Some ["Stdlib"; "Nullable"]
     | _ -> None)
