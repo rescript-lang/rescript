@@ -120,7 +120,8 @@ let find_type env loc lid =
       env loc lid
   in
   let decl = Env.find_type path env in
-  Builtin_attributes.check_deprecated loc decl.type_attributes (Path.name path);
+  Builtin_attributes.check_deprecated ~deprecated_context:Cmt_utils.Reference
+    loc decl.type_attributes (Path.name path);
   (path, decl)
 
 let find_constructor =
