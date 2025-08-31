@@ -52,8 +52,18 @@ module ArrayBuffer = {
 
   @get external byteLength: t => int = "byteLength"
 
-  @send external slice: (t, ~start: int, ~end_: int) => array_buffer = "slice"
-  @send external sliceFrom: (t, int) => array_buffer = "slice"
+  @deprecated({
+    reason: "Use `ArrayBuffer.slice` instead.",
+    migrate: ArrayBuffer.slice(~end=%insert.labelledArgument("end_")),
+  })
+  @send
+  external slice: (t, ~start: int, ~end_: int) => array_buffer = "slice"
+  @deprecated({
+    reason: "Use `ArrayBuffer.sliceToEnd` instead.",
+    migrate: ArrayBuffer.sliceToEnd(~start=%insert.unlabelledArgument(1)),
+  })
+  @send
+  external sliceFrom: (t, int) => array_buffer = "slice"
 }
 
 /* commented out until bs has a plan for iterators
@@ -73,93 +83,337 @@ module Int8Array = {
   @get external byteLength: t => int = "byteLength"
   @get external byteOffset: t => int = "byteOffset"
 
-  @send external setArray: (t, array<elt>) => unit = "set"
-  @send external setArrayOffset: (t, array<elt>, int) => unit = "set"
+  @deprecated({
+    reason: "Use `TypedArray.setArray` instead.",
+    migrate: TypedArray.setArray(),
+  })
+  @send
+  external setArray: (t, array<elt>) => unit = "set"
+  @deprecated({
+    reason: "Use `TypedArray.setArrayFrom` instead.",
+    migrate: TypedArray.setArrayFrom(%insert.unlabelledArgument(2)),
+  })
+  @send
+  external setArrayOffset: (t, array<elt>, int) => unit = "set"
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({
+    reason: "Use `TypedArray.length` instead.",
+    migrate: TypedArray.length(),
+  })
+  @get
+  external length: t => int = "length"
 
   /* Mutator functions */
-  @send external copyWithin: (t, ~to_: int) => t = "copyWithin"
-  @send external copyWithinFrom: (t, ~to_: int, ~from: int) => t = "copyWithin"
-  @send external copyWithinFromRange: (t, ~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyAllWithin` instead.",
+    migrate: TypedArray.copyAllWithin(~target=%insert.labelledArgument("to_")),
+  })
+  @send
+  external copyWithin: (t, ~to_: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyWithinToEnd` instead.",
+    migrate: TypedArray.copyWithinToEnd(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("from"),
+    ),
+  })
+  @send
+  external copyWithinFrom: (t, ~to_: int, ~from: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin` instead.",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
+  @send
+  external copyWithinFromRange: (t, ~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
-  @send external fillInPlace: (t, elt) => t = "fill"
-  @send external fillFromInPlace: (t, elt, ~from: int) => t = "fill"
-  @send external fillRangeInPlace: (t, elt, ~start: int, ~end_: int) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fillAll` instead.",
+    migrate: TypedArray.fillAll(),
+  })
+  @send
+  external fillInPlace: (t, elt) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fillToEnd` instead.",
+    migrate: TypedArray.fillToEnd(~start=%insert.labelledArgument("from")),
+  })
+  @send
+  external fillFromInPlace: (t, elt, ~from: int) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fill` instead.",
+    migrate: TypedArray.fill(
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
+  @send
+  external fillRangeInPlace: (t, elt, ~start: int, ~end_: int) => t = "fill"
 
-  @send external reverseInPlace: t => t = "reverse"
+  @deprecated({
+    reason: "Use `TypedArray.reverse` instead.",
+    migrate: TypedArray.reverse(),
+  })
+  @send
+  external reverseInPlace: t => t = "reverse"
 
-  @send external sortInPlace: t => t = "sort"
-  @send external sortInPlaceWith: (t, (elt, elt) => int) => t = "sort"
+  @deprecated({
+    reason: "Use `TypedArray.toSorted` instead.",
+    migrate: TypedArray.toSorted((a, b) =>
+      %todo_("This needs a comparator function. Use `Int.compare` for ints, etc.")
+    ),
+  })
+  @send
+  external sortInPlace: t => t = "sort"
+  @deprecated({
+    reason: "Use `TypedArray.sort` instead.",
+    migrate: TypedArray.sort(),
+  })
+  @deprecated({
+    reason: "Use `TypedArray.sort` instead.",
+    migrate: TypedArray.sort(),
+  })
+  @send
+  external sortInPlaceWith: (t, (elt, elt) => int) => t = "sort"
 
   /* Accessor functions */
-  @send external includes: (t, elt) => bool = "includes" /* ES2016 */
+  @deprecated({
+    reason: "Use `TypedArray.includes` instead.",
+    migrate: TypedArray.includes(),
+  })
+  @send
+  external includes: (t, elt) => bool = "includes" /* ES2016 */
 
-  @send external indexOf: (t, elt) => int = "indexOf"
-  @send external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
+  @deprecated({
+    reason: "Use `TypedArray.indexOf` instead.",
+    migrate: TypedArray.indexOf(),
+  })
+  @send
+  external indexOf: (t, elt) => int = "indexOf"
+  @deprecated({
+    reason: "Use `TypedArray.indexOfFrom` instead.",
+    migrate: TypedArray.indexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
 
-  @send external join: t => string = "join"
-  @send external joinWith: (t, string) => string = "join"
+  @deprecated({
+    reason: "Use `TypedArray.joinWith` instead.",
+    migrate: TypedArray.joinWith(","),
+  })
+  @send
+  external join: t => string = "join"
+  @deprecated({
+    reason: "Use `TypedArray.joinWith` instead.",
+    migrate: TypedArray.joinWith(),
+  })
+  @send
+  external joinWith: (t, string) => string = "join"
 
-  @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
-  @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
+  @deprecated({
+    reason: "Use `TypedArray.lastIndexOf` instead.",
+    migrate: TypedArray.lastIndexOf(),
+  })
+  @send
+  external lastIndexOf: (t, elt) => int = "lastIndexOf"
+  @deprecated({
+    reason: "Use `TypedArray.lastIndexOfFrom` instead.",
+    migrate: TypedArray.lastIndexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
   /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
   @send
   external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
-  @send external copy: t => t = "slice"
-  @send external sliceFrom: (t, int) => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.copy` instead.",
+    migrate: TypedArray.copy(),
+  })
+  @send
+  external copy: t => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.sliceToEnd` instead.",
+    migrate: TypedArray.sliceToEnd(~start=%insert.unlabelledArgument(1)),
+  })
+  @send
+  external sliceFrom: (t, int) => t = "slice"
 
   /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
   @send
   external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
 
-  @send external subarrayFrom: (t, int) => t = "subarray"
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~start=%insert.unlabelledArgument(1)),
+  })
+  @send
+  external subarrayFrom: (t, int) => t = "subarray"
 
-  @send external toString: t => string = "toString"
-  @send external toLocaleString: t => string = "toLocaleString"
+  @deprecated({
+    reason: "Use `TypedArray.toString` instead.",
+    migrate: TypedArray.toString(),
+  })
+  @send
+  external toString: t => string = "toString"
+  @deprecated({
+    reason: "Use `TypedArray.toLocaleString` instead.",
+    migrate: TypedArray.toLocaleString(),
+  })
+  @send
+  external toLocaleString: t => string = "toLocaleString"
 
   /* Iteration functions */
   /* commented out until bs has a plan for iterators
   external entries : t -> (int * elt) array_iter = "" [@@send]
  */
-  @send external every: (t, elt => bool) => bool = "every"
-  @send external everyi: (t, (elt, int) => bool) => bool = "every"
+  @deprecated({
+    reason: "Use `TypedArray.every` instead.",
+    migrate: TypedArray.every(),
+  })
+  @send
+  external every: (t, elt => bool) => bool = "every"
+  @deprecated({
+    reason: "Use `TypedArray.everyWithIndex` instead.",
+    migrate: TypedArray.everyWithIndex(),
+  })
+  @send
+  external everyi: (t, (elt, int) => bool) => bool = "every"
 
-  @send external filter: (t, elt => bool) => t = "filter"
-  @send external filteri: (t, (elt, int) => bool) => t = "filter"
+  @deprecated({
+    reason: "Use `TypedArray.filter` instead.",
+    migrate: TypedArray.filter(),
+  })
+  @send
+  external filter: (t, elt => bool) => t = "filter"
+  @deprecated({
+    reason: "Use `TypedArray.filterWithIndex` instead.",
+    migrate: TypedArray.filterWithIndex(),
+  })
+  @send
+  external filteri: (t, (elt, int) => bool) => t = "filter"
 
-  @send external find: (t, elt => bool) => Js_undefined.t<elt> = "find"
-  @send external findi: (t, (elt, int) => bool) => Js_undefined.t<elt> = "find"
+  @deprecated({
+    reason: "Use `TypedArray.find` instead.",
+    migrate: TypedArray.find(),
+  })
+  @send
+  external find: (t, elt => bool) => Js_undefined.t<elt> = "find"
+  @deprecated({
+    reason: "Use `TypedArray.findWithIndex` instead.",
+    migrate: TypedArray.findWithIndex(),
+  })
+  @send
+  external findi: (t, (elt, int) => bool) => Js_undefined.t<elt> = "find"
 
-  @send external findIndex: (t, elt => bool) => int = "findIndex"
-  @send external findIndexi: (t, (elt, int) => bool) => int = "findIndex"
+  @deprecated({
+    reason: "Use `TypedArray.findIndex` instead.",
+    migrate: TypedArray.findIndex(),
+  })
+  @send
+  external findIndex: (t, elt => bool) => int = "findIndex"
+  @deprecated({
+    reason: "Use `TypedArray.findIndexWithIndex` instead.",
+    migrate: TypedArray.findIndexWithIndex(),
+  })
+  @send
+  external findIndexi: (t, (elt, int) => bool) => int = "findIndex"
 
-  @send external forEach: (t, elt => unit) => unit = "forEach"
-  @send external forEachi: (t, (elt, int) => unit) => unit = "forEach"
+  @deprecated({
+    reason: "Use `TypedArray.forEach` instead.",
+    migrate: TypedArray.forEach(),
+  })
+  @send
+  external forEach: (t, elt => unit) => unit = "forEach"
+  @deprecated({
+    reason: "Use `TypedArray.forEachWithIndex` instead.",
+    migrate: TypedArray.forEachWithIndex(),
+  })
+  @send
+  external forEachi: (t, (elt, int) => unit) => unit = "forEach"
 
   /* commented out until bs has a plan for iterators
   external keys : t -> int array_iter = "" [@@send]
  */
 
-  @send external map: (t, elt => 'b) => typed_array<'b> = "map"
-  @send external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
+  @deprecated({
+    reason: "Use `TypedArray.map` instead.",
+    migrate: TypedArray.map(),
+  })
+  @send
+  external map: (t, elt => 'b) => typed_array<'b> = "map"
+  @deprecated({
+    reason: "Use `TypedArray.mapWithIndex` instead.",
+    migrate: TypedArray.mapWithIndex(),
+  })
+  @send
+  external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
 
-  @send external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
-  @send external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
+  @deprecated({
+    reason: "Use `TypedArray.reduce` instead.",
+    migrate: TypedArray.reduce(),
+  })
+  @send
+  external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
+  @deprecated({
+    reason: "Use `TypedArray.reduceWithIndex` instead.",
+    migrate: TypedArray.reduceWithIndex(),
+  })
+  @send
+  external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
 
-  @send external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"
-  @send external reduceRighti: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduceRight"
+  @deprecated({
+    reason: "Use `TypedArray.reduceRight` instead.",
+    migrate: TypedArray.reduceRight(),
+  })
+  @send
+  external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"
+  @deprecated({
+    reason: "Use `TypedArray.reduceRightWithIndex` instead.",
+    migrate: TypedArray.reduceRightWithIndex(),
+  })
+  @send
+  external reduceRighti: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduceRight"
 
-  @send external some: (t, elt => bool) => bool = "some"
-  @send external somei: (t, (elt, int) => bool) => bool = "some"
+  @deprecated({
+    reason: "Use `TypedArray.some` instead.",
+    migrate: TypedArray.some(),
+  })
+  @send
+  external some: (t, elt => bool) => bool = "some"
+  @deprecated({
+    reason: "Use `TypedArray.someWithIndex` instead.",
+    migrate: TypedArray.someWithIndex(),
+  })
+  @send
+  external somei: (t, (elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Int8Array.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Int8Array.Constants.bytesPerElement` instead.",
+    migrate: Int8Array.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Int8Array.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Int8Array"
+  @deprecated({
+    reason: "Use `Int8Array.fromArray` instead.",
+    migrate: Int8Array.fromArray(),
+  })
+  @new
+  external make: array<elt> => t = "Int8Array"
   /** can throw */
   @new
   external fromBuffer: array_buffer => t = "Int8Array"
@@ -169,19 +423,39 @@ module Int8Array = {
 
   **param** offset is in bytes
   */
-  @new
-  external fromBufferOffset: (array_buffer, int) => t = "Int8Array"
+  @deprecated({
+    reason: "Use `Int8Array.fromBufferToEnd` instead.",
+    migrate: Int8Array.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
+  @new external fromBufferOffset: (array_buffer, int) => t = "Int8Array"
 
   /**
   **throw** Js.Exn.Error throws Js exception
 
   **param** offset is in bytes, length in elements
   */
+  @deprecated({
+    reason: "Use `Int8Array.fromBufferWithRange` instead.",
+    migrate: Int8Array.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   @new
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Int8Array"
 
-  @new external fromLength: int => t = "Int8Array"
-  @val external from: array_like<elt> => t = "Int8Array.from"
+  @deprecated({
+    reason: "Use `Int8Array.fromLength` instead.",
+    migrate: Int8Array.fromLength(),
+  })
+  @new
+  external fromLength: int => t = "Int8Array"
+  @deprecated({
+    reason: "Use `Int8Array.fromArrayLikeOrIterable` instead.",
+    migrate: Int8Array.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Int8Array.from"
   /* *Array.of is redundant, use make */
 }
 
@@ -198,93 +472,326 @@ module Uint8Array = {
   @get external byteLength: t => int = "byteLength"
   @get external byteOffset: t => int = "byteOffset"
 
-  @send external setArray: (t, array<elt>) => unit = "set"
-  @send external setArrayOffset: (t, array<elt>, int) => unit = "set"
+  @deprecated({
+    reason: "Use `TypedArray.setArray` instead.",
+    migrate: TypedArray.setArray(),
+  })
+  @send
+  external setArray: (t, array<elt>) => unit = "set"
+  @deprecated({
+    reason: "Use `TypedArray.setArrayFrom` instead.",
+    migrate: TypedArray.setArrayFrom(%insert.unlabelledArgument(2)),
+  })
+  @send
+  external setArrayOffset: (t, array<elt>, int) => unit = "set"
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({
+    reason: "Use `TypedArray.length` instead.",
+    migrate: TypedArray.length(),
+  })
+  @get
+  external length: t => int = "length"
 
   /* Mutator functions */
-  @send external copyWithin: (t, ~to_: int) => t = "copyWithin"
-  @send external copyWithinFrom: (t, ~to_: int, ~from: int) => t = "copyWithin"
-  @send external copyWithinFromRange: (t, ~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyAllWithin` instead.",
+    migrate: TypedArray.copyAllWithin(~target=%insert.labelledArgument("to_")),
+  })
+  @send
+  external copyWithin: (t, ~to_: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyWithinToEnd` instead.",
+    migrate: TypedArray.copyWithinToEnd(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("from"),
+    ),
+  })
+  @send
+  external copyWithinFrom: (t, ~to_: int, ~from: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin` instead.",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
+  @send
+  external copyWithinFromRange: (t, ~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
-  @send external fillInPlace: (t, elt) => t = "fill"
-  @send external fillFromInPlace: (t, elt, ~from: int) => t = "fill"
-  @send external fillRangeInPlace: (t, elt, ~start: int, ~end_: int) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fillAll` instead.",
+    migrate: TypedArray.fillAll(),
+  })
+  @send
+  external fillInPlace: (t, elt) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fillToEnd` instead.",
+    migrate: TypedArray.fillToEnd(~start=%insert.labelledArgument("from")),
+  })
+  @send
+  external fillFromInPlace: (t, elt, ~from: int) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fill` instead.",
+    migrate: TypedArray.fill(
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
+  @send
+  external fillRangeInPlace: (t, elt, ~start: int, ~end_: int) => t = "fill"
 
-  @send external reverseInPlace: t => t = "reverse"
+  @deprecated({
+    reason: "Use `TypedArray.reverse` instead.",
+    migrate: TypedArray.reverse(),
+  })
+  @send
+  external reverseInPlace: t => t = "reverse"
 
-  @send external sortInPlace: t => t = "sort"
+  @deprecated({
+    reason: "Use `TypedArray.toSorted` instead.",
+    migrate: TypedArray.toSorted((a, b) =>
+      %todo_("This needs a comparator function. Use an appropriate comparator (e.g. Int.compare).")
+    ),
+  })
+  @send
+  external sortInPlace: t => t = "sort"
   @send external sortInPlaceWith: (t, (elt, elt) => int) => t = "sort"
 
   /* Accessor functions */
-  @send external includes: (t, elt) => bool = "includes" /* ES2016 */
+  @deprecated({
+    reason: "Use `TypedArray.includes` instead.",
+    migrate: TypedArray.includes(),
+  })
+  @send
+  external includes: (t, elt) => bool = "includes" /* ES2016 */
 
-  @send external indexOf: (t, elt) => int = "indexOf"
-  @send external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
+  @deprecated({
+    reason: "Use `TypedArray.indexOf` instead.",
+    migrate: TypedArray.indexOf(),
+  })
+  @send
+  external indexOf: (t, elt) => int = "indexOf"
+  @deprecated({
+    reason: "Use `TypedArray.indexOfFrom` instead.",
+    migrate: TypedArray.indexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
 
-  @send external join: t => string = "join"
-  @send external joinWith: (t, string) => string = "join"
+  @deprecated({
+    reason: "Use `TypedArray.joinWith` instead.",
+    migrate: TypedArray.joinWith(","),
+  })
+  @send
+  external join: t => string = "join"
+  @deprecated({
+    reason: "Use `TypedArray.joinWith` instead.",
+    migrate: TypedArray.joinWith(),
+  })
+  @send
+  external joinWith: (t, string) => string = "join"
 
-  @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
-  @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
+  @deprecated({
+    reason: "Use `TypedArray.lastIndexOf` instead.",
+    migrate: TypedArray.lastIndexOf(),
+  })
+  @send
+  external lastIndexOf: (t, elt) => int = "lastIndexOf"
+  @deprecated({
+    reason: "Use `TypedArray.lastIndexOfFrom` instead.",
+    migrate: TypedArray.lastIndexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
   /** `start` is inclusive, `end_` exclusive */
-  @send
-  external slice: (t, ~start: int, ~end_: int) => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
+  @send external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
-  @send external copy: t => t = "slice"
-  @send external sliceFrom: (t, int) => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.copy` instead.",
+    migrate: TypedArray.copy(),
+  })
+  @send
+  external copy: t => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.sliceToEnd` instead.",
+    migrate: TypedArray.sliceToEnd(~start=%insert.unlabelledArgument(1)),
+  })
+  @send
+  external sliceFrom: (t, int) => t = "slice"
 
   /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
+  @send external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
+
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~start=%insert.unlabelledArgument(1)),
+  })
   @send
-  external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
+  external subarrayFrom: (t, int) => t = "subarray"
 
-  @send external subarrayFrom: (t, int) => t = "subarray"
-
-  @send external toString: t => string = "toString"
-  @send external toLocaleString: t => string = "toLocaleString"
+  @deprecated({
+    reason: "Use `TypedArray.toString` instead.",
+    migrate: TypedArray.toString(),
+  })
+  @send
+  external toString: t => string = "toString"
+  @deprecated({
+    reason: "Use `TypedArray.toLocaleString` instead.",
+    migrate: TypedArray.toLocaleString(),
+  })
+  @send
+  external toLocaleString: t => string = "toLocaleString"
 
   /* Iteration functions */
   /* commented out until bs has a plan for iterators
   external entries : t -> (int * elt) array_iter = "" [@@send]
  */
-  @send external every: (t, elt => bool) => bool = "every"
-  @send external everyi: (t, (elt, int) => bool) => bool = "every"
+  @deprecated({
+    reason: "Use `TypedArray.every` instead.",
+    migrate: TypedArray.every(),
+  })
+  @send
+  external every: (t, elt => bool) => bool = "every"
+  @deprecated({
+    reason: "Use `TypedArray.everyWithIndex` instead.",
+    migrate: TypedArray.everyWithIndex(),
+  })
+  @send
+  external everyi: (t, (elt, int) => bool) => bool = "every"
 
-  @send external filter: (t, elt => bool) => t = "filter"
-  @send external filteri: (t, (elt, int) => bool) => t = "filter"
+  @deprecated({
+    reason: "Use `TypedArray.filter` instead.",
+    migrate: TypedArray.filter(),
+  })
+  @send
+  external filter: (t, elt => bool) => t = "filter"
+  @deprecated({
+    reason: "Use `TypedArray.filterWithIndex` instead.",
+    migrate: TypedArray.filterWithIndex(),
+  })
+  @send
+  external filteri: (t, (elt, int) => bool) => t = "filter"
 
-  @send external find: (t, elt => bool) => Js_undefined.t<elt> = "find"
-  @send external findi: (t, (elt, int) => bool) => Js_undefined.t<elt> = "find"
+  @deprecated({
+    reason: "Use `TypedArray.find` instead.",
+    migrate: TypedArray.find(),
+  })
+  @send
+  external find: (t, elt => bool) => Js_undefined.t<elt> = "find"
+  @deprecated({
+    reason: "Use `TypedArray.findWithIndex` instead.",
+    migrate: TypedArray.findWithIndex(),
+  })
+  @send
+  external findi: (t, (elt, int) => bool) => Js_undefined.t<elt> = "find"
 
-  @send external findIndex: (t, elt => bool) => int = "findIndex"
-  @send external findIndexi: (t, (elt, int) => bool) => int = "findIndex"
+  @deprecated({
+    reason: "Use `TypedArray.findIndex` instead.",
+    migrate: TypedArray.findIndex(),
+  })
+  @send
+  external findIndex: (t, elt => bool) => int = "findIndex"
+  @deprecated({
+    reason: "Use `TypedArray.findIndexWithIndex` instead.",
+    migrate: TypedArray.findIndexWithIndex(),
+  })
+  @send
+  external findIndexi: (t, (elt, int) => bool) => int = "findIndex"
 
-  @send external forEach: (t, elt => unit) => unit = "forEach"
-  @send external forEachi: (t, (elt, int) => unit) => unit = "forEach"
+  @deprecated({
+    reason: "Use `TypedArray.forEach` instead.",
+    migrate: TypedArray.forEach(),
+  })
+  @send
+  external forEach: (t, elt => unit) => unit = "forEach"
+  @deprecated({
+    reason: "Use `TypedArray.forEachWithIndex` instead.",
+    migrate: TypedArray.forEachWithIndex(),
+  })
+  @send
+  external forEachi: (t, (elt, int) => unit) => unit = "forEach"
 
   /* commented out until bs has a plan for iterators
   external keys : t -> int array_iter = "" [@@send]
  */
 
-  @send external map: (t, elt => 'b) => typed_array<'b> = "map"
-  @send external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
+  @deprecated({
+    reason: "Use `TypedArray.map` instead.",
+    migrate: TypedArray.map(),
+  })
+  @send
+  external map: (t, elt => 'b) => typed_array<'b> = "map"
+  @deprecated({
+    reason: "Use `TypedArray.mapWithIndex` instead.",
+    migrate: TypedArray.mapWithIndex(),
+  })
+  @send
+  external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
 
-  @send external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
-  @send external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
+  @deprecated({
+    reason: "Use `TypedArray.reduce` instead.",
+    migrate: TypedArray.reduce(),
+  })
+  @send
+  external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
+  @deprecated({
+    reason: "Use `TypedArray.reduceWithIndex` instead.",
+    migrate: TypedArray.reduceWithIndex(),
+  })
+  @send
+  external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
 
-  @send external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"
-  @send external reduceRighti: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduceRight"
+  @deprecated({
+    reason: "Use `TypedArray.reduceRight` instead.",
+    migrate: TypedArray.reduceRight(),
+  })
+  @send
+  external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"
+  @deprecated({
+    reason: "Use `TypedArray.reduceRightWithIndex` instead.",
+    migrate: TypedArray.reduceRightWithIndex(),
+  })
+  @send
+  external reduceRighti: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduceRight"
 
-  @send external some: (t, elt => bool) => bool = "some"
-  @send external somei: (t, (elt, int) => bool) => bool = "some"
+  @deprecated({
+    reason: "Use `TypedArray.some` instead.",
+    migrate: TypedArray.some(),
+  })
+  @send
+  external some: (t, elt => bool) => bool = "some"
+  @deprecated({
+    reason: "Use `TypedArray.someWithIndex` instead.",
+    migrate: TypedArray.someWithIndex(),
+  })
+  @send
+  external somei: (t, (elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Uint8Array.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Uint8Array.Constants.bytesPerElement` instead.",
+    migrate: Uint8Array.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Uint8Array.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Uint8Array"
+  @deprecated({
+    reason: "Use `Uint8Array.fromArray` instead.",
+    migrate: Uint8Array.fromArray(),
+  })
+  @new
+  external make: array<elt> => t = "Uint8Array"
   /** can throw */
   @new
   external fromBuffer: array_buffer => t = "Uint8Array"
@@ -294,19 +801,39 @@ module Uint8Array = {
 
   **param** offset is in bytes
   */
-  @new
-  external fromBufferOffset: (array_buffer, int) => t = "Uint8Array"
+  @deprecated({
+    reason: "Use `Uint8Array.fromBufferToEnd` instead.",
+    migrate: Uint8Array.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
+  @new external fromBufferOffset: (array_buffer, int) => t = "Uint8Array"
 
   /**
   **throw** Js.Exn.Error throws Js exception
 
   **param** offset is in bytes, length in elements
   */
+  @deprecated({
+    reason: "Use `Uint8Array.fromBufferWithRange` instead.",
+    migrate: Uint8Array.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   @new
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Uint8Array"
 
-  @new external fromLength: int => t = "Uint8Array"
-  @val external from: array_like<elt> => t = "Uint8Array.from"
+  @deprecated({
+    reason: "Use `Uint8Array.fromLength` instead.",
+    migrate: Uint8Array.fromLength(),
+  })
+  @new
+  external fromLength: int => t = "Uint8Array"
+  @deprecated({
+    reason: "Use `Uint8Array.fromArrayLikeOrIterable` instead.",
+    migrate: Uint8Array.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Uint8Array.from"
   /* *Array.of is redundant, use make */
 }
 
@@ -323,93 +850,326 @@ module Uint8ClampedArray = {
   @get external byteLength: t => int = "byteLength"
   @get external byteOffset: t => int = "byteOffset"
 
-  @send external setArray: (t, array<elt>) => unit = "set"
-  @send external setArrayOffset: (t, array<elt>, int) => unit = "set"
+  @deprecated({
+    reason: "Use `TypedArray.setArray` instead.",
+    migrate: TypedArray.setArray(),
+  })
+  @send
+  external setArray: (t, array<elt>) => unit = "set"
+  @deprecated({
+    reason: "Use `TypedArray.setArrayFrom` instead.",
+    migrate: TypedArray.setArrayFrom(%insert.unlabelledArgument(2)),
+  })
+  @send
+  external setArrayOffset: (t, array<elt>, int) => unit = "set"
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({
+    reason: "Use `TypedArray.length` instead.",
+    migrate: TypedArray.length(),
+  })
+  @get
+  external length: t => int = "length"
 
   /* Mutator functions */
-  @send external copyWithin: (t, ~to_: int) => t = "copyWithin"
-  @send external copyWithinFrom: (t, ~to_: int, ~from: int) => t = "copyWithin"
-  @send external copyWithinFromRange: (t, ~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyAllWithin` instead.",
+    migrate: TypedArray.copyAllWithin(~target=%insert.labelledArgument("to_")),
+  })
+  @send
+  external copyWithin: (t, ~to_: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyWithinToEnd` instead.",
+    migrate: TypedArray.copyWithinToEnd(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("from"),
+    ),
+  })
+  @send
+  external copyWithinFrom: (t, ~to_: int, ~from: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin` instead.",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
+  @send
+  external copyWithinFromRange: (t, ~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
-  @send external fillInPlace: (t, elt) => t = "fill"
-  @send external fillFromInPlace: (t, elt, ~from: int) => t = "fill"
-  @send external fillRangeInPlace: (t, elt, ~start: int, ~end_: int) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fillAll` instead.",
+    migrate: TypedArray.fillAll(),
+  })
+  @send
+  external fillInPlace: (t, elt) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fillToEnd` instead.",
+    migrate: TypedArray.fillToEnd(~start=%insert.labelledArgument("from")),
+  })
+  @send
+  external fillFromInPlace: (t, elt, ~from: int) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fill` instead.",
+    migrate: TypedArray.fill(
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
+  @send
+  external fillRangeInPlace: (t, elt, ~start: int, ~end_: int) => t = "fill"
 
-  @send external reverseInPlace: t => t = "reverse"
+  @deprecated({
+    reason: "Use `TypedArray.reverse` instead.",
+    migrate: TypedArray.reverse(),
+  })
+  @send
+  external reverseInPlace: t => t = "reverse"
 
-  @send external sortInPlace: t => t = "sort"
+  @deprecated({
+    reason: "Use `TypedArray.toSorted` instead.",
+    migrate: TypedArray.toSorted((a, b) =>
+      %todo_("This needs a comparator function. Use an appropriate comparator (e.g. Int.compare).")
+    ),
+  })
+  @send
+  external sortInPlace: t => t = "sort"
   @send external sortInPlaceWith: (t, (elt, elt) => int) => t = "sort"
 
   /* Accessor functions */
-  @send external includes: (t, elt) => bool = "includes" /* ES2016 */
+  @deprecated({
+    reason: "Use `TypedArray.includes` instead.",
+    migrate: TypedArray.includes(),
+  })
+  @send
+  external includes: (t, elt) => bool = "includes" /* ES2016 */
 
-  @send external indexOf: (t, elt) => int = "indexOf"
-  @send external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
+  @deprecated({
+    reason: "Use `TypedArray.indexOf` instead.",
+    migrate: TypedArray.indexOf(),
+  })
+  @send
+  external indexOf: (t, elt) => int = "indexOf"
+  @deprecated({
+    reason: "Use `TypedArray.indexOfFrom` instead.",
+    migrate: TypedArray.indexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
 
-  @send external join: t => string = "join"
-  @send external joinWith: (t, string) => string = "join"
+  @deprecated({
+    reason: "Use `TypedArray.joinWith` instead.",
+    migrate: TypedArray.joinWith(","),
+  })
+  @send
+  external join: t => string = "join"
+  @deprecated({
+    reason: "Use `TypedArray.joinWith` instead.",
+    migrate: TypedArray.joinWith(),
+  })
+  @send
+  external joinWith: (t, string) => string = "join"
 
-  @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
-  @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
+  @deprecated({
+    reason: "Use `TypedArray.lastIndexOf` instead.",
+    migrate: TypedArray.lastIndexOf(),
+  })
+  @send
+  external lastIndexOf: (t, elt) => int = "lastIndexOf"
+  @deprecated({
+    reason: "Use `TypedArray.lastIndexOfFrom` instead.",
+    migrate: TypedArray.lastIndexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
   /** `start` is inclusive, `end_` exclusive */
-  @send
-  external slice: (t, ~start: int, ~end_: int) => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
+  @send external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
-  @send external copy: t => t = "slice"
-  @send external sliceFrom: (t, int) => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.copy` instead.",
+    migrate: TypedArray.copy(),
+  })
+  @send
+  external copy: t => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.sliceToEnd` instead.",
+    migrate: TypedArray.sliceToEnd(~start=%insert.unlabelledArgument(1)),
+  })
+  @send
+  external sliceFrom: (t, int) => t = "slice"
 
   /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
+  @send external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
+
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~start=%insert.unlabelledArgument(1)),
+  })
   @send
-  external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
+  external subarrayFrom: (t, int) => t = "subarray"
 
-  @send external subarrayFrom: (t, int) => t = "subarray"
-
-  @send external toString: t => string = "toString"
-  @send external toLocaleString: t => string = "toLocaleString"
+  @deprecated({
+    reason: "Use `TypedArray.toString` instead.",
+    migrate: TypedArray.toString(),
+  })
+  @send
+  external toString: t => string = "toString"
+  @deprecated({
+    reason: "Use `TypedArray.toLocaleString` instead.",
+    migrate: TypedArray.toLocaleString(),
+  })
+  @send
+  external toLocaleString: t => string = "toLocaleString"
 
   /* Iteration functions */
   /* commented out until bs has a plan for iterators
   external entries : t -> (int * elt) array_iter = "" [@@send]
  */
-  @send external every: (t, elt => bool) => bool = "every"
-  @send external everyi: (t, (elt, int) => bool) => bool = "every"
+  @deprecated({
+    reason: "Use `TypedArray.every` instead.",
+    migrate: TypedArray.every(),
+  })
+  @send
+  external every: (t, elt => bool) => bool = "every"
+  @deprecated({
+    reason: "Use `TypedArray.everyWithIndex` instead.",
+    migrate: TypedArray.everyWithIndex(),
+  })
+  @send
+  external everyi: (t, (elt, int) => bool) => bool = "every"
 
-  @send external filter: (t, elt => bool) => t = "filter"
-  @send external filteri: (t, (elt, int) => bool) => t = "filter"
+  @deprecated({
+    reason: "Use `TypedArray.filter` instead.",
+    migrate: TypedArray.filter(),
+  })
+  @send
+  external filter: (t, elt => bool) => t = "filter"
+  @deprecated({
+    reason: "Use `TypedArray.filterWithIndex` instead.",
+    migrate: TypedArray.filterWithIndex(),
+  })
+  @send
+  external filteri: (t, (elt, int) => bool) => t = "filter"
 
-  @send external find: (t, elt => bool) => Js_undefined.t<elt> = "find"
-  @send external findi: (t, (elt, int) => bool) => Js_undefined.t<elt> = "find"
+  @deprecated({
+    reason: "Use `TypedArray.find` instead.",
+    migrate: TypedArray.find(),
+  })
+  @send
+  external find: (t, elt => bool) => Js_undefined.t<elt> = "find"
+  @deprecated({
+    reason: "Use `TypedArray.findWithIndex` instead.",
+    migrate: TypedArray.findWithIndex(),
+  })
+  @send
+  external findi: (t, (elt, int) => bool) => Js_undefined.t<elt> = "find"
 
-  @send external findIndex: (t, elt => bool) => int = "findIndex"
-  @send external findIndexi: (t, (elt, int) => bool) => int = "findIndex"
+  @deprecated({
+    reason: "Use `TypedArray.findIndex` instead.",
+    migrate: TypedArray.findIndex(),
+  })
+  @send
+  external findIndex: (t, elt => bool) => int = "findIndex"
+  @deprecated({
+    reason: "Use `TypedArray.findIndexWithIndex` instead.",
+    migrate: TypedArray.findIndexWithIndex(),
+  })
+  @send
+  external findIndexi: (t, (elt, int) => bool) => int = "findIndex"
 
-  @send external forEach: (t, elt => unit) => unit = "forEach"
-  @send external forEachi: (t, (elt, int) => unit) => unit = "forEach"
+  @deprecated({
+    reason: "Use `TypedArray.forEach` instead.",
+    migrate: TypedArray.forEach(),
+  })
+  @send
+  external forEach: (t, elt => unit) => unit = "forEach"
+  @deprecated({
+    reason: "Use `TypedArray.forEachWithIndex` instead.",
+    migrate: TypedArray.forEachWithIndex(),
+  })
+  @send
+  external forEachi: (t, (elt, int) => unit) => unit = "forEach"
 
   /* commented out until bs has a plan for iterators
   external keys : t -> int array_iter = "" [@@send]
  */
 
-  @send external map: (t, elt => 'b) => typed_array<'b> = "map"
-  @send external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
+  @deprecated({
+    reason: "Use `TypedArray.map` instead.",
+    migrate: TypedArray.map(),
+  })
+  @send
+  external map: (t, elt => 'b) => typed_array<'b> = "map"
+  @deprecated({
+    reason: "Use `TypedArray.mapWithIndex` instead.",
+    migrate: TypedArray.mapWithIndex(),
+  })
+  @send
+  external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
 
-  @send external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
-  @send external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
+  @deprecated({
+    reason: "Use `TypedArray.reduce` instead.",
+    migrate: TypedArray.reduce(),
+  })
+  @send
+  external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
+  @deprecated({
+    reason: "Use `TypedArray.reduceWithIndex` instead.",
+    migrate: TypedArray.reduceWithIndex(),
+  })
+  @send
+  external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
 
-  @send external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"
-  @send external reduceRighti: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduceRight"
+  @deprecated({
+    reason: "Use `TypedArray.reduceRight` instead.",
+    migrate: TypedArray.reduceRight(),
+  })
+  @send
+  external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"
+  @deprecated({
+    reason: "Use `TypedArray.reduceRightWithIndex` instead.",
+    migrate: TypedArray.reduceRightWithIndex(),
+  })
+  @send
+  external reduceRighti: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduceRight"
 
-  @send external some: (t, elt => bool) => bool = "some"
-  @send external somei: (t, (elt, int) => bool) => bool = "some"
+  @deprecated({
+    reason: "Use `TypedArray.some` instead.",
+    migrate: TypedArray.some(),
+  })
+  @send
+  external some: (t, elt => bool) => bool = "some"
+  @deprecated({
+    reason: "Use `TypedArray.someWithIndex` instead.",
+    migrate: TypedArray.someWithIndex(),
+  })
+  @send
+  external somei: (t, (elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Uint8ClampedArray.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Uint8ClampedArray.Constants.bytesPerElement` instead.",
+    migrate: Uint8ClampedArray.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Uint8ClampedArray.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Uint8ClampedArray"
+  @deprecated({
+    reason: "Use `Uint8ClampedArray.fromArray` instead.",
+    migrate: Uint8ClampedArray.fromArray(),
+  })
+  @new
+  external make: array<elt> => t = "Uint8ClampedArray"
   /** can throw */
   @new
   external fromBuffer: array_buffer => t = "Uint8ClampedArray"
@@ -419,19 +1179,39 @@ module Uint8ClampedArray = {
 
   **param** offset is in bytes
   */
-  @new
-  external fromBufferOffset: (array_buffer, int) => t = "Uint8ClampedArray"
+  @deprecated({
+    reason: "Use `Uint8ClampedArray.fromBufferToEnd` instead.",
+    migrate: Uint8ClampedArray.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
+  @new external fromBufferOffset: (array_buffer, int) => t = "Uint8ClampedArray"
 
   /**
   **throw** Js.Exn.Error throws Js exception
 
   **param** offset is in bytes, length in elements
   */
+  @deprecated({
+    reason: "Use `Uint8ClampedArray.fromBufferWithRange` instead.",
+    migrate: Uint8ClampedArray.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   @new
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Uint8ClampedArray"
 
-  @new external fromLength: int => t = "Uint8ClampedArray"
-  @val external from: array_like<elt> => t = "Uint8ClampedArray.from"
+  @deprecated({
+    reason: "Use `Uint8ClampedArray.fromLength` instead.",
+    migrate: Uint8ClampedArray.fromLength(),
+  })
+  @new
+  external fromLength: int => t = "Uint8ClampedArray"
+  @deprecated({
+    reason: "Use `Uint8ClampedArray.fromArrayLikeOrIterable` instead.",
+    migrate: Uint8ClampedArray.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Uint8ClampedArray.from"
   /* *Array.of is redundant, use make */
 }
 
@@ -448,89 +1228,239 @@ module Int16Array = {
   @get external byteLength: t => int = "byteLength"
   @get external byteOffset: t => int = "byteOffset"
 
-  @send external setArray: (t, array<elt>) => unit = "set"
-  @send external setArrayOffset: (t, array<elt>, int) => unit = "set"
+  @deprecated({reason: "Use `TypedArray.setArray` instead.", migrate: TypedArray.setArray()}) @send
+  external setArray: (t, array<elt>) => unit = "set"
+  @deprecated({
+    reason: "Use `TypedArray.setArrayFrom` instead.",
+    migrate: TypedArray.setArrayFrom(%insert.unlabelledArgument(2)),
+  })
+  @send
+  external setArrayOffset: (t, array<elt>, int) => unit = "set"
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({reason: "Use `TypedArray.length` instead.", migrate: TypedArray.length()}) @get
+  external length: t => int = "length"
 
   /* Mutator functions */
-  @send external copyWithin: (t, ~to_: int) => t = "copyWithin"
-  @send external copyWithinFrom: (t, ~to_: int, ~from: int) => t = "copyWithin"
-  @send external copyWithinFromRange: (t, ~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyAllWithin` instead.",
+    migrate: TypedArray.copyAllWithin(~target=%insert.labelledArgument("to_")),
+  })
+  @send
+  external copyWithin: (t, ~to_: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyWithinToEnd` instead.",
+    migrate: TypedArray.copyWithinToEnd(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("from"),
+    ),
+  })
+  @send
+  external copyWithinFrom: (t, ~to_: int, ~from: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
+  @send
+  external /* end mapped below */
 
-  @send external fillInPlace: (t, elt) => t = "fill"
-  @send external fillFromInPlace: (t, elt, ~from: int) => t = "fill"
-  @send external fillRangeInPlace: (t, elt, ~start: int, ~end_: int) => t = "fill"
+  copyWithinFromRange: (t, ~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
-  @send external reverseInPlace: t => t = "reverse"
+  @deprecated({reason: "Use `TypedArray.fillAll` instead.", migrate: TypedArray.fillAll()}) @send
+  external fillInPlace: (t, elt) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fillToEnd` instead.",
+    migrate: TypedArray.fillToEnd(~start=%insert.labelledArgument("from")),
+  })
+  @send
+  external fillFromInPlace: (t, elt, ~from: int) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fill` instead.",
+    migrate: TypedArray.fill(
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
+  @send
+  external fillRangeInPlace: (t, elt, ~start: int, ~end_: int) => t = "fill"
 
-  @send external sortInPlace: t => t = "sort"
-  @send external sortInPlaceWith: (t, (elt, elt) => int) => t = "sort"
+  @deprecated({reason: "Use `TypedArray.reverse` instead.", migrate: TypedArray.reverse()}) @send
+  external reverseInPlace: t => t = "reverse"
+
+  @deprecated({
+    reason: "Use `TypedArray.toSorted` instead.",
+    migrate: TypedArray.toSorted((a, b) =>
+      %todo_("This needs a comparator function. Use an appropriate comparator (e.g. Int.compare).")
+    ),
+  })
+  @send
+  external sortInPlace: t => t = "sort"
+  @deprecated({reason: "Use `TypedArray.sort` instead.", migrate: TypedArray.sort()}) @send
+  external sortInPlaceWith: (t, (elt, elt) => int) => t = "sort"
 
   /* Accessor functions */
-  @send external includes: (t, elt) => bool = "includes" /* ES2016 */
+  @deprecated({reason: "Use `TypedArray.includes` instead.", migrate: TypedArray.includes()}) @send
+  external includes: (t, elt) => bool = "includes" /* ES2016 */
 
-  @send external indexOf: (t, elt) => int = "indexOf"
-  @send external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
+  @deprecated({reason: "Use `TypedArray.indexOf` instead.", migrate: TypedArray.indexOf()}) @send
+  external indexOf: (t, elt) => int = "indexOf"
+  @deprecated({
+    reason: "Use `TypedArray.indexOfFrom` instead.",
+    migrate: TypedArray.indexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
 
-  @send external join: t => string = "join"
-  @send external joinWith: (t, string) => string = "join"
+  @deprecated({reason: "Use `TypedArray.joinWith` instead.", migrate: TypedArray.joinWith(",")})
+  @send
+  external join: t => string = "join"
+  @deprecated({reason: "Use `TypedArray.joinWith` instead.", migrate: TypedArray.joinWith()}) @send
+  external joinWith: (t, string) => string = "join"
 
-  @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
-  @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
+  @deprecated({reason: "Use `TypedArray.lastIndexOf` instead.", migrate: TypedArray.lastIndexOf()})
+  @send
+  external lastIndexOf: (t, elt) => int = "lastIndexOf"
+  @deprecated({
+    reason: "Use `TypedArray.lastIndexOfFrom` instead.",
+    migrate: TypedArray.lastIndexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
   /** `start` is inclusive, `end_` exclusive */
-  @send
-  external slice: (t, ~start: int, ~end_: int) => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
+  @send external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
-  @send external copy: t => t = "slice"
-  @send external sliceFrom: (t, int) => t = "slice"
+  @deprecated({reason: "Use `TypedArray.copy` instead.", migrate: TypedArray.copy()}) @send
+  external copy: t => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.sliceToEnd` instead.",
+    migrate: TypedArray.sliceToEnd(~start=%insert.unlabelledArgument(1)),
+  })
+  @send
+  external sliceFrom: (t, int) => t = "slice"
 
   /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
+  @send external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
+
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~start=%insert.unlabelledArgument(1)),
+  })
   @send
-  external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
+  external subarrayFrom: (t, int) => t = "subarray"
 
-  @send external subarrayFrom: (t, int) => t = "subarray"
-
-  @send external toString: t => string = "toString"
-  @send external toLocaleString: t => string = "toLocaleString"
+  @deprecated({reason: "Use `TypedArray.toString` instead.", migrate: TypedArray.toString()}) @send
+  external toString: t => string = "toString"
+  @deprecated({
+    reason: "Use `TypedArray.toLocaleString` instead.",
+    migrate: TypedArray.toLocaleString(),
+  })
+  @send
+  external toLocaleString: t => string = "toLocaleString"
 
   /* Iteration functions */
   /* commented out until bs has a plan for iterators
   external entries : t -> (int * elt) array_iter = "" [@@send]
  */
-  @send external every: (t, elt => bool) => bool = "every"
-  @send external everyi: (t, (elt, int) => bool) => bool = "every"
+  @deprecated({reason: "Use `TypedArray.every` instead.", migrate: TypedArray.every()}) @send
+  external every: (t, elt => bool) => bool = "every"
+  @deprecated({
+    reason: "Use `TypedArray.everyWithIndex` instead.",
+    migrate: TypedArray.everyWithIndex(),
+  })
+  @send
+  external everyi: (t, (elt, int) => bool) => bool = "every"
 
-  @send external filter: (t, elt => bool) => t = "filter"
-  @send external filteri: (t, (elt, int) => bool) => t = "filter"
+  @deprecated({reason: "Use `TypedArray.filter` instead.", migrate: TypedArray.filter()}) @send
+  external filter: (t, elt => bool) => t = "filter"
+  @deprecated({
+    reason: "Use `TypedArray.filterWithIndex` instead.",
+    migrate: TypedArray.filterWithIndex(),
+  })
+  @send
+  external filteri: (t, (elt, int) => bool) => t = "filter"
 
-  @send external find: (t, elt => bool) => Js_undefined.t<elt> = "find"
-  @send external findi: (t, (elt, int) => bool) => Js_undefined.t<elt> = "find"
+  @deprecated({reason: "Use `TypedArray.find` instead.", migrate: TypedArray.find()}) @send
+  external find: (t, elt => bool) => Js_undefined.t<elt> = "find"
+  @deprecated({
+    reason: "Use `TypedArray.findWithIndex` instead.",
+    migrate: TypedArray.findWithIndex(),
+  })
+  @send
+  external findi: (t, (elt, int) => bool) => Js_undefined.t<elt> = "find"
 
-  @send external findIndex: (t, elt => bool) => int = "findIndex"
-  @send external findIndexi: (t, (elt, int) => bool) => int = "findIndex"
+  @deprecated({reason: "Use `TypedArray.findIndex` instead.", migrate: TypedArray.findIndex()})
+  @send
+  external findIndex: (t, elt => bool) => int = "findIndex"
+  @deprecated({
+    reason: "Use `TypedArray.findIndexWithIndex` instead.",
+    migrate: TypedArray.findIndexWithIndex(),
+  })
+  @send
+  external findIndexi: (t, (elt, int) => bool) => int = "findIndex"
 
-  @send external forEach: (t, elt => unit) => unit = "forEach"
-  @send external forEachi: (t, (elt, int) => unit) => unit = "forEach"
+  @deprecated({reason: "Use `TypedArray.forEach` instead.", migrate: TypedArray.forEach()}) @send
+  external forEach: (t, elt => unit) => unit = "forEach"
+  @deprecated({
+    reason: "Use `TypedArray.forEachWithIndex` instead.",
+    migrate: TypedArray.forEachWithIndex(),
+  })
+  @send
+  external forEachi: (t, (elt, int) => unit) => unit = "forEach"
 
   /* commented out until bs has a plan for iterators
   external keys : t -> int array_iter = "" [@@send]
  */
 
-  @send external map: (t, elt => 'b) => typed_array<'b> = "map"
-  @send external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
+  @deprecated({reason: "Use `TypedArray.map` instead.", migrate: TypedArray.map()}) @send
+  external map: (t, elt => 'b) => typed_array<'b> = "map"
+  @deprecated({
+    reason: "Use `TypedArray.mapWithIndex` instead.",
+    migrate: TypedArray.mapWithIndex(),
+  })
+  @send
+  external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
 
-  @send external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
-  @send external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
+  @deprecated({reason: "Use `TypedArray.reduce` instead.", migrate: TypedArray.reduce()}) @send
+  external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
+  @deprecated({
+    reason: "Use `TypedArray.reduceWithIndex` instead.",
+    migrate: TypedArray.reduceWithIndex(),
+  })
+  @send
+  external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
 
-  @send external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"
-  @send external reduceRighti: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduceRight"
+  @deprecated({reason: "Use `TypedArray.reduceRight` instead.", migrate: TypedArray.reduceRight()})
+  @send
+  external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"
+  @deprecated({
+    reason: "Use `TypedArray.reduceRightWithIndex` instead.",
+    migrate: TypedArray.reduceRightWithIndex(),
+  })
+  @send
+  external reduceRighti: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduceRight"
 
-  @send external some: (t, elt => bool) => bool = "some"
-  @send external somei: (t, (elt, int) => bool) => bool = "some"
+  @deprecated({reason: "Use `TypedArray.some` instead.", migrate: TypedArray.some()}) @send
+  external some: (t, elt => bool) => bool = "some"
+  @deprecated({
+    reason: "Use `TypedArray.someWithIndex` instead.",
+    migrate: TypedArray.someWithIndex(),
+  })
+  @send
+  external somei: (t, (elt, int) => bool) => bool = "some"
 
   @val external _BYTES_PER_ELEMENT: int = "Int16Array.BYTES_PER_ELEMENT"
 
@@ -657,11 +1587,19 @@ module Uint16Array = {
   @send external some: (t, elt => bool) => bool = "some"
   @send external somei: (t, (elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Uint16Array.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Uint16Array.Constants.bytesPerElement` instead.",
+    migrate: Uint16Array.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Uint16Array.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Uint16Array"
+  @deprecated({reason: "Use `Uint16Array.fromArray` instead.", migrate: Uint16Array.fromArray()})
+  @new
+  external make: array<elt> => t = "Uint16Array"
   /** can throw */
   @new
+  @deprecated({reason: "Use `Uint16Array.fromBuffer` instead.", migrate: Uint16Array.fromBuffer()})
   external fromBuffer: array_buffer => t = "Uint16Array"
 
   /**
@@ -670,6 +1608,10 @@ module Uint16Array = {
   **param** offset is in bytes
   */
   @new
+  @deprecated({
+    reason: "Use `Uint16Array.fromBufferToEnd` instead.",
+    migrate: Uint16Array.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
   external fromBufferOffset: (array_buffer, int) => t = "Uint16Array"
 
   /**
@@ -678,10 +1620,24 @@ module Uint16Array = {
   **param** offset is in bytes, length in elements
   */
   @new
+  @deprecated({
+    reason: "Use `Uint16Array.fromBufferWithRange",
+    migrate: Uint16Array.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Uint16Array"
 
-  @new external fromLength: int => t = "Uint16Array"
-  @val external from: array_like<elt> => t = "Uint16Array.from"
+  @deprecated({reason: "Use `Uint16Array.fromLength` instead.", migrate: Uint16Array.fromLength()})
+  @new
+  external fromLength: int => t = "Uint16Array"
+  @deprecated({
+    reason: "Use `Uint16Array.fromArrayLikeOrIterable` instead.",
+    migrate: Uint16Array.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Uint16Array.from"
   /* *Array.of is redundant, use make */
 }
 
@@ -698,95 +1654,249 @@ module Int32Array = {
   @get external byteLength: t => int = "byteLength"
   @get external byteOffset: t => int = "byteOffset"
 
-  @send external setArray: (t, array<elt>) => unit = "set"
-  @send external setArrayOffset: (t, array<elt>, int) => unit = "set"
+  @deprecated({reason: "Use `TypedArray.setArray` instead.", migrate: TypedArray.setArray()}) @send
+  external setArray: (t, array<elt>) => unit = "set"
+  @deprecated({
+    reason: "Use `TypedArray.setArrayFrom` instead.",
+    migrate: TypedArray.setArrayFrom(%insert.unlabelledArgument(2)),
+  })
+  @send
+  external setArrayOffset: (t, array<elt>, int) => unit = "set"
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({reason: "Use `TypedArray.length` instead.", migrate: TypedArray.length()}) @get
+  external length: t => int = "length"
 
   /* Mutator functions */
-  @send external copyWithin: (t, ~to_: int) => t = "copyWithin"
-  @send external copyWithinFrom: (t, ~to_: int, ~from: int) => t = "copyWithin"
-  @send external copyWithinFromRange: (t, ~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyAllWithin` instead.",
+    migrate: TypedArray.copyAllWithin(~target=%insert.labelledArgument("to_")),
+  })
+  @send
+  external copyWithin: (t, ~to_: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyWithinToEnd` instead.",
+    migrate: TypedArray.copyWithinToEnd(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("from"),
+    ),
+  })
+  @send
+  external copyWithinFrom: (t, ~to_: int, ~from: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin` instead.",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
+  @send
+  external copyWithinFromRange: (t, ~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
-  @send external fillInPlace: (t, elt) => t = "fill"
-  @send external fillFromInPlace: (t, elt, ~from: int) => t = "fill"
-  @send external fillRangeInPlace: (t, elt, ~start: int, ~end_: int) => t = "fill"
+  @deprecated({reason: "Use `TypedArray.fillAll` instead.", migrate: TypedArray.fillAll()}) @send
+  external fillInPlace: (t, elt) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fillToEnd` instead.",
+    migrate: TypedArray.fillToEnd(~start=%insert.labelledArgument("from")),
+  })
+  @send
+  external fillFromInPlace: (t, elt, ~from: int) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fill` instead.",
+    migrate: TypedArray.fill(
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
+  @send
+  external fillRangeInPlace: (t, elt, ~start: int, ~end_: int) => t = "fill"
 
-  @send external reverseInPlace: t => t = "reverse"
+  @deprecated({reason: "Use `TypedArray.reverse` instead.", migrate: TypedArray.reverse()}) @send
+  external reverseInPlace: t => t = "reverse"
 
-  @send external sortInPlace: t => t = "sort"
-  @send external sortInPlaceWith: (t, (elt, elt) => int) => t = "sort"
+  @deprecated({
+    reason: "Use `TypedArray.toSorted` instead.",
+    migrate: TypedArray.toSorted((a, b) =>
+      %todo_("This needs a comparator function. Use an appropriate comparator (e.g. Int.compare).")
+    ),
+  })
+  @send
+  external sortInPlace: t => t = "sort"
+  @deprecated({reason: "Use `TypedArray.sort` instead.", migrate: TypedArray.sort()}) @send
+  external sortInPlaceWith: (t, (elt, elt) => int) => t = "sort"
 
   /* Accessor functions */
-  @send external includes: (t, elt) => bool = "includes" /* ES2016 */
+  @deprecated({reason: "Use `TypedArray.includes` instead.", migrate: TypedArray.includes()}) @send
+  external includes: (t, elt) => bool = "includes" /* ES2016 */
 
-  @send external indexOf: (t, elt) => int = "indexOf"
-  @send external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
+  @deprecated({reason: "Use `TypedArray.indexOf` instead.", migrate: TypedArray.indexOf()}) @send
+  external indexOf: (t, elt) => int = "indexOf"
+  @deprecated({
+    reason: "Use `TypedArray.indexOfFrom` instead.",
+    migrate: TypedArray.indexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
 
-  @send external join: t => string = "join"
-  @send external joinWith: (t, string) => string = "join"
+  @deprecated({reason: "Use `TypedArray.joinWith` instead.", migrate: TypedArray.joinWith(",")})
+  @send
+  external join: t => string = "join"
+  @deprecated({reason: "Use `TypedArray.joinWith` instead.", migrate: TypedArray.joinWith()}) @send
+  external joinWith: (t, string) => string = "join"
 
-  @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
-  @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
+  @deprecated({reason: "Use `TypedArray.lastIndexOf` instead.", migrate: TypedArray.lastIndexOf()})
+  @send
+  external lastIndexOf: (t, elt) => int = "lastIndexOf"
+  @deprecated({
+    reason: "Use `TypedArray.lastIndexOfFrom` instead.",
+    migrate: TypedArray.lastIndexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
   /** `start` is inclusive, `end_` exclusive */
-  @send
-  external slice: (t, ~start: int, ~end_: int) => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
+  @send external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
-  @send external copy: t => t = "slice"
-  @send external sliceFrom: (t, int) => t = "slice"
+  @deprecated({reason: "Use `TypedArray.copy` instead.", migrate: TypedArray.copy()}) @send
+  external copy: t => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.sliceToEnd` instead.",
+    migrate: TypedArray.sliceToEnd(~start=%insert.unlabelledArgument(1)),
+  })
+  @send
+  external sliceFrom: (t, int) => t = "slice"
 
   /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
+  @send external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
+
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~start=%insert.unlabelledArgument(1)),
+  })
   @send
-  external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
+  external subarrayFrom: (t, int) => t = "subarray"
 
-  @send external subarrayFrom: (t, int) => t = "subarray"
-
-  @send external toString: t => string = "toString"
-  @send external toLocaleString: t => string = "toLocaleString"
+  @deprecated({reason: "Use `TypedArray.toString` instead.", migrate: TypedArray.toString()}) @send
+  external toString: t => string = "toString"
+  @deprecated({
+    reason: "Use `TypedArray.toLocaleString` instead.",
+    migrate: TypedArray.toLocaleString(),
+  })
+  @send
+  external toLocaleString: t => string = "toLocaleString"
 
   /* Iteration functions */
   /* commented out until bs has a plan for iterators
   external entries : t -> (int * elt) array_iter = "" [@@send]
  */
-  @send external every: (t, elt => bool) => bool = "every"
-  @send external everyi: (t, (elt, int) => bool) => bool = "every"
+  @deprecated({reason: "Use `TypedArray.every` instead.", migrate: TypedArray.every()}) @send
+  external every: (t, elt => bool) => bool = "every"
+  @deprecated({
+    reason: "Use `TypedArray.everyWithIndex` instead.",
+    migrate: TypedArray.everyWithIndex(),
+  })
+  @send
+  external everyi: (t, (elt, int) => bool) => bool = "every"
 
-  @send external filter: (t, elt => bool) => t = "filter"
-  @send external filteri: (t, (elt, int) => bool) => t = "filter"
+  @deprecated({reason: "Use `TypedArray.filter` instead.", migrate: TypedArray.filter()}) @send
+  external filter: (t, elt => bool) => t = "filter"
+  @deprecated({
+    reason: "Use `TypedArray.filterWithIndex` instead.",
+    migrate: TypedArray.filterWithIndex(),
+  })
+  @send
+  external filteri: (t, (elt, int) => bool) => t = "filter"
 
-  @send external find: (t, elt => bool) => Js_undefined.t<elt> = "find"
-  @send external findi: (t, (elt, int) => bool) => Js_undefined.t<elt> = "find"
+  @deprecated({reason: "Use `TypedArray.find` instead.", migrate: TypedArray.find()}) @send
+  external find: (t, elt => bool) => Js_undefined.t<elt> = "find"
+  @deprecated({
+    reason: "Use `TypedArray.findWithIndex` instead.",
+    migrate: TypedArray.findWithIndex(),
+  })
+  @send
+  external findi: (t, (elt, int) => bool) => Js_undefined.t<elt> = "find"
 
-  @send external findIndex: (t, elt => bool) => int = "findIndex"
-  @send external findIndexi: (t, (elt, int) => bool) => int = "findIndex"
+  @deprecated({reason: "Use `TypedArray.findIndex` instead.", migrate: TypedArray.findIndex()})
+  @send
+  external findIndex: (t, elt => bool) => int = "findIndex"
+  @deprecated({
+    reason: "Use `TypedArray.findIndexWithIndex` instead.",
+    migrate: TypedArray.findIndexWithIndex(),
+  })
+  @send
+  external findIndexi: (t, (elt, int) => bool) => int = "findIndex"
 
-  @send external forEach: (t, elt => unit) => unit = "forEach"
-  @send external forEachi: (t, (elt, int) => unit) => unit = "forEach"
+  @deprecated({reason: "Use `TypedArray.forEach` instead.", migrate: TypedArray.forEach()}) @send
+  external forEach: (t, elt => unit) => unit = "forEach"
+  @deprecated({
+    reason: "Use `TypedArray.forEachWithIndex` instead.",
+    migrate: TypedArray.forEachWithIndex(),
+  })
+  @send
+  external forEachi: (t, (elt, int) => unit) => unit = "forEach"
 
   /* commented out until bs has a plan for iterators
   external keys : t -> int array_iter = "" [@@send]
  */
 
-  @send external map: (t, elt => 'b) => typed_array<'b> = "map"
-  @send external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
+  @deprecated({reason: "Use `TypedArray.map` instead.", migrate: TypedArray.map()}) @send
+  external map: (t, elt => 'b) => typed_array<'b> = "map"
+  @deprecated({
+    reason: "Use `TypedArray.mapWithIndex` instead.",
+    migrate: TypedArray.mapWithIndex(),
+  })
+  @send
+  external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
 
-  @send external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
-  @send external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
+  @deprecated({reason: "Use `TypedArray.reduce` instead.", migrate: TypedArray.reduce()}) @send
+  external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
+  @deprecated({
+    reason: "Use `TypedArray.reduceWithIndex` instead.",
+    migrate: TypedArray.reduceWithIndex(),
+  })
+  @send
+  external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
 
-  @send external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"
-  @send external reduceRighti: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduceRight"
+  @deprecated({reason: "Use `TypedArray.reduceRight` instead.", migrate: TypedArray.reduceRight()})
+  @send
+  external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"
+  @deprecated({
+    reason: "Use `TypedArray.reduceRightWithIndex` instead.",
+    migrate: TypedArray.reduceRightWithIndex(),
+  })
+  @send
+  external reduceRighti: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduceRight"
 
-  @send external some: (t, elt => bool) => bool = "some"
-  @send external somei: (t, (elt, int) => bool) => bool = "some"
+  @deprecated({reason: "Use `TypedArray.some` instead.", migrate: TypedArray.some()}) @send
+  external some: (t, elt => bool) => bool = "some"
+  @deprecated({
+    reason: "Use `TypedArray.someWithIndex` instead.",
+    migrate: TypedArray.someWithIndex(),
+  })
+  @send
+  external somei: (t, (elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Int32Array.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Int32Array.Constants.bytesPerElement` instead.",
+    migrate: Int32Array.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Int32Array.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Int32Array"
+  @deprecated({reason: "Use `Int32Array.fromArray` instead.", migrate: Int32Array.fromArray()}) @new
+  external make: array<elt> => t = "Int32Array"
   /** can throw */
-  @new
+  @new @deprecated({reason: "Use `Int32Array.fromBuffer", migrate: Int32Array.fromBuffer()})
   external fromBuffer: array_buffer => t = "Int32Array"
 
   /**
@@ -795,6 +1905,10 @@ module Int32Array = {
   **param** offset is in bytes
   */
   @new
+  @deprecated({
+    reason: "Use `Int32Array.fromBufferToEnd` instead.",
+    migrate: Int32Array.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
   external fromBufferOffset: (array_buffer, int) => t = "Int32Array"
 
   /**
@@ -803,10 +1917,24 @@ module Int32Array = {
   **param** offset is in bytes, length in elements
   */
   @new
+  @deprecated({
+    reason: "Use `Int32Array.fromBufferWithRange",
+    migrate: Int32Array.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Int32Array"
 
-  @new external fromLength: int => t = "Int32Array"
-  @val external from: array_like<elt> => t = "Int32Array.from"
+  @deprecated({reason: "Use `Int32Array.fromLength` instead.", migrate: Int32Array.fromLength()})
+  @new
+  external fromLength: int => t = "Int32Array"
+  @deprecated({
+    reason: "Use `Int32Array.fromArrayLikeOrIterable` instead.",
+    migrate: Int32Array.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Int32Array.from"
   /* *Array.of is redundant, use make */
 }
 
@@ -823,95 +1951,251 @@ module Uint32Array = {
   @get external byteLength: t => int = "byteLength"
   @get external byteOffset: t => int = "byteOffset"
 
-  @send external setArray: (t, array<elt>) => unit = "set"
-  @send external setArrayOffset: (t, array<elt>, int) => unit = "set"
+  @deprecated({reason: "Use `TypedArray.setArray` instead.", migrate: TypedArray.setArray()}) @send
+  external setArray: (t, array<elt>) => unit = "set"
+  @deprecated({
+    reason: "Use `TypedArray.setArrayFrom` instead.",
+    migrate: TypedArray.setArrayFrom(%insert.unlabelledArgument(2)),
+  })
+  @send
+  external setArrayOffset: (t, array<elt>, int) => unit = "set"
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({reason: "Use `TypedArray.length` instead.", migrate: TypedArray.length()}) @get
+  external length: t => int = "length"
 
   /* Mutator functions */
-  @send external copyWithin: (t, ~to_: int) => t = "copyWithin"
-  @send external copyWithinFrom: (t, ~to_: int, ~from: int) => t = "copyWithin"
-  @send external copyWithinFromRange: (t, ~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyAllWithin` instead.",
+    migrate: TypedArray.copyAllWithin(~target=%insert.labelledArgument("to_")),
+  })
+  @send
+  external copyWithin: (t, ~to_: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyWithinToEnd` instead.",
+    migrate: TypedArray.copyWithinToEnd(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("from"),
+    ),
+  })
+  @send
+  external copyWithinFrom: (t, ~to_: int, ~from: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin` instead.",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
+  @send
+  external copyWithinFromRange: (t, ~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
-  @send external fillInPlace: (t, elt) => t = "fill"
-  @send external fillFromInPlace: (t, elt, ~from: int) => t = "fill"
-  @send external fillRangeInPlace: (t, elt, ~start: int, ~end_: int) => t = "fill"
+  @deprecated({reason: "Use `TypedArray.fillAll` instead.", migrate: TypedArray.fillAll()}) @send
+  external fillInPlace: (t, elt) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fillToEnd` instead.",
+    migrate: TypedArray.fillToEnd(~start=%insert.labelledArgument("from")),
+  })
+  @send
+  external fillFromInPlace: (t, elt, ~from: int) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fill` instead.",
+    migrate: TypedArray.fill(
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
+  @send
+  external fillRangeInPlace: (t, elt, ~start: int, ~end_: int) => t = "fill"
 
-  @send external reverseInPlace: t => t = "reverse"
+  @deprecated({reason: "Use `TypedArray.reverse` instead.", migrate: TypedArray.reverse()}) @send
+  external reverseInPlace: t => t = "reverse"
 
-  @send external sortInPlace: t => t = "sort"
-  @send external sortInPlaceWith: (t, (elt, elt) => int) => t = "sort"
+  @deprecated({
+    reason: "Use `TypedArray.toSorted` instead.",
+    migrate: TypedArray.toSorted((a, b) =>
+      %todo_("This needs a comparator function. Use an appropriate comparator (e.g. Int.compare).")
+    ),
+  })
+  @send
+  external sortInPlace: t => t = "sort"
+  @deprecated({reason: "Use `TypedArray.sort` instead.", migrate: TypedArray.sort()}) @send
+  external sortInPlaceWith: (t, (elt, elt) => int) => t = "sort"
 
   /* Accessor functions */
-  @send external includes: (t, elt) => bool = "includes" /* ES2016 */
+  @deprecated({reason: "Use `TypedArray.includes` instead.", migrate: TypedArray.includes()}) @send
+  external includes: (t, elt) => bool = "includes" /* ES2016 */
 
-  @send external indexOf: (t, elt) => int = "indexOf"
-  @send external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
+  @deprecated({reason: "Use `TypedArray.indexOf` instead.", migrate: TypedArray.indexOf()}) @send
+  external indexOf: (t, elt) => int = "indexOf"
+  @deprecated({
+    reason: "Use `TypedArray.indexOfFrom` instead.",
+    migrate: TypedArray.indexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
 
-  @send external join: t => string = "join"
-  @send external joinWith: (t, string) => string = "join"
+  @deprecated({reason: "Use `TypedArray.joinWith` instead.", migrate: TypedArray.joinWith(",")})
+  @send
+  external join: t => string = "join"
+  @deprecated({reason: "Use `TypedArray.joinWith` instead.", migrate: TypedArray.joinWith()}) @send
+  external joinWith: (t, string) => string = "join"
 
-  @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
-  @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
+  @deprecated({reason: "Use `TypedArray.lastIndexOf` instead.", migrate: TypedArray.lastIndexOf()})
+  @send
+  external lastIndexOf: (t, elt) => int = "lastIndexOf"
+  @deprecated({
+    reason: "Use `TypedArray.lastIndexOfFrom` instead.",
+    migrate: TypedArray.lastIndexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
   /** `start` is inclusive, `end_` exclusive */
-  @send
-  external slice: (t, ~start: int, ~end_: int) => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
+  @send external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
-  @send external copy: t => t = "slice"
-  @send external sliceFrom: (t, int) => t = "slice"
+  @deprecated({reason: "Use `TypedArray.copy` instead.", migrate: TypedArray.copy()}) @send
+  external copy: t => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.sliceToEnd` instead.",
+    migrate: TypedArray.sliceToEnd(~start=%insert.unlabelledArgument(1)),
+  })
+  @send
+  external sliceFrom: (t, int) => t = "slice"
 
   /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
+  @send external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
+
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~start=%insert.unlabelledArgument(1)),
+  })
   @send
-  external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
+  external subarrayFrom: (t, int) => t = "subarray"
 
-  @send external subarrayFrom: (t, int) => t = "subarray"
-
-  @send external toString: t => string = "toString"
-  @send external toLocaleString: t => string = "toLocaleString"
+  @deprecated({reason: "Use `TypedArray.toString` instead.", migrate: TypedArray.toString()}) @send
+  external toString: t => string = "toString"
+  @deprecated({
+    reason: "Use `TypedArray.toLocaleString` instead.",
+    migrate: TypedArray.toLocaleString(),
+  })
+  @send
+  external toLocaleString: t => string = "toLocaleString"
 
   /* Iteration functions */
   /* commented out until bs has a plan for iterators
   external entries : t -> (int * elt) array_iter = "" [@@send]
  */
-  @send external every: (t, elt => bool) => bool = "every"
-  @send external everyi: (t, (elt, int) => bool) => bool = "every"
+  @deprecated({reason: "Use `TypedArray.every` instead.", migrate: TypedArray.every()}) @send
+  external every: (t, elt => bool) => bool = "every"
+  @deprecated({
+    reason: "Use `TypedArray.everyWithIndex` instead.",
+    migrate: TypedArray.everyWithIndex(),
+  })
+  @send
+  external everyi: (t, (elt, int) => bool) => bool = "every"
 
-  @send external filter: (t, elt => bool) => t = "filter"
-  @send external filteri: (t, (elt, int) => bool) => t = "filter"
+  @deprecated({reason: "Use `TypedArray.filter` instead.", migrate: TypedArray.filter()}) @send
+  external filter: (t, elt => bool) => t = "filter"
+  @deprecated({
+    reason: "Use `TypedArray.filterWithIndex` instead.",
+    migrate: TypedArray.filterWithIndex(),
+  })
+  @send
+  external filteri: (t, (elt, int) => bool) => t = "filter"
 
-  @send external find: (t, elt => bool) => Js_undefined.t<elt> = "find"
-  @send external findi: (t, (elt, int) => bool) => Js_undefined.t<elt> = "find"
+  @deprecated({reason: "Use `TypedArray.find` instead.", migrate: TypedArray.find()}) @send
+  external find: (t, elt => bool) => Js_undefined.t<elt> = "find"
+  @deprecated({
+    reason: "Use `TypedArray.findWithIndex` instead.",
+    migrate: TypedArray.findWithIndex(),
+  })
+  @send
+  external findi: (t, (elt, int) => bool) => Js_undefined.t<elt> = "find"
 
-  @send external findIndex: (t, elt => bool) => int = "findIndex"
-  @send external findIndexi: (t, (elt, int) => bool) => int = "findIndex"
+  @deprecated({reason: "Use `TypedArray.findIndex` instead.", migrate: TypedArray.findIndex()})
+  @send
+  external findIndex: (t, elt => bool) => int = "findIndex"
+  @deprecated({
+    reason: "Use `TypedArray.findIndexWithIndex` instead.",
+    migrate: TypedArray.findIndexWithIndex(),
+  })
+  @send
+  external findIndexi: (t, (elt, int) => bool) => int = "findIndex"
 
-  @send external forEach: (t, elt => unit) => unit = "forEach"
-  @send external forEachi: (t, (elt, int) => unit) => unit = "forEach"
+  @deprecated({reason: "Use `TypedArray.forEach` instead.", migrate: TypedArray.forEach()}) @send
+  external forEach: (t, elt => unit) => unit = "forEach"
+  @deprecated({
+    reason: "Use `TypedArray.forEachWithIndex` instead.",
+    migrate: TypedArray.forEachWithIndex(),
+  })
+  @send
+  external forEachi: (t, (elt, int) => unit) => unit = "forEach"
 
   /* commented out until bs has a plan for iterators
   external keys : t -> int array_iter = "" [@@send]
  */
 
-  @send external map: (t, elt => 'b) => typed_array<'b> = "map"
-  @send external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
+  @deprecated({reason: "Use `TypedArray.map` instead.", migrate: TypedArray.map()}) @send
+  external map: (t, elt => 'b) => typed_array<'b> = "map"
+  @deprecated({
+    reason: "Use `TypedArray.mapWithIndex` instead.",
+    migrate: TypedArray.mapWithIndex(),
+  })
+  @send
+  external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
 
-  @send external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
-  @send external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
+  @deprecated({reason: "Use `TypedArray.reduce` instead.", migrate: TypedArray.reduce()}) @send
+  external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
+  @deprecated({
+    reason: "Use `TypedArray.reduceWithIndex` instead.",
+    migrate: TypedArray.reduceWithIndex(),
+  })
+  @send
+  external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
 
-  @send external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"
-  @send external reduceRighti: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduceRight"
+  @deprecated({reason: "Use `TypedArray.reduceRight` instead.", migrate: TypedArray.reduceRight()})
+  @send
+  external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"
+  @deprecated({
+    reason: "Use `TypedArray.reduceRightWithIndex` instead.",
+    migrate: TypedArray.reduceRightWithIndex(),
+  })
+  @send
+  external reduceRighti: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduceRight"
 
-  @send external some: (t, elt => bool) => bool = "some"
-  @send external somei: (t, (elt, int) => bool) => bool = "some"
+  @deprecated({reason: "Use `TypedArray.some` instead.", migrate: TypedArray.some()}) @send
+  external some: (t, elt => bool) => bool = "some"
+  @deprecated({
+    reason: "Use `TypedArray.someWithIndex` instead.",
+    migrate: TypedArray.someWithIndex(),
+  })
+  @send
+  external somei: (t, (elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Uint32Array.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Uint32Array.Constants.bytesPerElement` instead.",
+    migrate: Uint32Array.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Uint32Array.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Uint32Array"
+  @deprecated({reason: "Use `Uint32Array.fromArray` instead.", migrate: Uint32Array.fromArray()})
+  @new
+  external make: array<elt> => t = "Uint32Array"
   /** can throw */
   @new
+  @deprecated({reason: "Use `Uint32Array.fromBuffer` instead.", migrate: Uint32Array.fromBuffer()})
   external fromBuffer: array_buffer => t = "Uint32Array"
 
   /**
@@ -920,6 +2204,10 @@ module Uint32Array = {
   **param** offset is in bytes
   */
   @new
+  @deprecated({
+    reason: "Use `Uint32Array.fromBufferToEnd` instead.",
+    migrate: Uint32Array.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
   external fromBufferOffset: (array_buffer, int) => t = "Uint32Array"
 
   /**
@@ -928,10 +2216,24 @@ module Uint32Array = {
   **param** offset is in bytes, length in elements
   */
   @new
+  @deprecated({
+    reason: "Use `Uint32Array.fromBufferWithRange` instead.",
+    migrate: Uint32Array.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Uint32Array"
 
-  @new external fromLength: int => t = "Uint32Array"
-  @val external from: array_like<elt> => t = "Uint32Array.from"
+  @deprecated({reason: "Use `Uint32Array.fromLength` instead.", migrate: Uint32Array.fromLength()})
+  @new
+  external fromLength: int => t = "Uint32Array"
+  @deprecated({
+    reason: "Use `Uint32Array.fromArrayLikeOrIterable` instead.",
+    migrate: Uint32Array.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Uint32Array.from"
   /* *Array.of is redundant, use make */
 }
 
@@ -951,95 +2253,256 @@ module Float32Array = {
   @get external byteLength: t => int = "byteLength"
   @get external byteOffset: t => int = "byteOffset"
 
-  @send external setArray: (t, array<elt>) => unit = "set"
-  @send external setArrayOffset: (t, array<elt>, int) => unit = "set"
+  @deprecated({reason: "Use `TypedArray.setArray` instead.", migrate: TypedArray.setArray()}) @send
+  external setArray: (t, array<elt>) => unit = "set"
+  @deprecated({
+    reason: "Use `TypedArray.setArrayFrom` instead.",
+    migrate: TypedArray.setArrayFrom(%insert.unlabelledArgument(2)),
+  })
+  @send
+  external setArrayOffset: (t, array<elt>, int) => unit = "set"
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({reason: "Use `TypedArray.length` instead.", migrate: TypedArray.length()}) @get
+  external length: t => int = "length"
 
   /* Mutator functions */
-  @send external copyWithin: (t, ~to_: int) => t = "copyWithin"
-  @send external copyWithinFrom: (t, ~to_: int, ~from: int) => t = "copyWithin"
-  @send external copyWithinFromRange: (t, ~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyAllWithin` instead.",
+    migrate: TypedArray.copyAllWithin(~target=%insert.labelledArgument("to_")),
+  })
+  @send
+  external copyWithin: (t, ~to_: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyWithinToEnd` instead.",
+    migrate: TypedArray.copyWithinToEnd(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("from"),
+    ),
+  })
+  @send
+  external copyWithinFrom: (t, ~to_: int, ~from: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin` instead.",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
+  @send
+  external copyWithinFromRange: (t, ~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
-  @send external fillInPlace: (t, elt) => t = "fill"
-  @send external fillFromInPlace: (t, elt, ~from: int) => t = "fill"
-  @send external fillRangeInPlace: (t, elt, ~start: int, ~end_: int) => t = "fill"
+  @deprecated({reason: "Use `TypedArray.fillAll` instead.", migrate: TypedArray.fillAll()}) @send
+  external fillInPlace: (t, elt) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fillToEnd` instead.",
+    migrate: TypedArray.fillToEnd(~start=%insert.labelledArgument("from")),
+  })
+  @send
+  external fillFromInPlace: (t, elt, ~from: int) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fill` instead.",
+    migrate: TypedArray.fill(
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
+  @send
+  external fillRangeInPlace: (t, elt, ~start: int, ~end_: int) => t = "fill"
 
-  @send external reverseInPlace: t => t = "reverse"
+  @deprecated({reason: "Use `TypedArray.reverse` instead.", migrate: TypedArray.reverse()}) @send
+  external reverseInPlace: t => t = "reverse"
 
-  @send external sortInPlace: t => t = "sort"
-  @send external sortInPlaceWith: (t, (elt, elt) => int) => t = "sort"
+  @deprecated({
+    reason: "Use `TypedArray.toSorted` instead.",
+    migrate: TypedArray.toSorted((a, b) =>
+      %todo_(
+        "This needs a comparator function. Use an appropriate comparator (e.g. Float.compare)."
+      )
+    ),
+  })
+  @send
+  external sortInPlace: t => t = "sort"
+  @deprecated({reason: "Use `TypedArray.sort` instead.", migrate: TypedArray.sort()}) @send
+  external sortInPlaceWith: (t, (elt, elt) => int) => t = "sort"
 
   /* Accessor functions */
-  @send external includes: (t, elt) => bool = "includes" /* ES2016 */
+  @deprecated({reason: "Use `TypedArray.includes` instead.", migrate: TypedArray.includes()}) @send
+  external includes: (t, elt) => bool = "includes" /* ES2016 */
 
-  @send external indexOf: (t, elt) => int = "indexOf"
-  @send external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
+  @deprecated({reason: "Use `TypedArray.indexOf` instead.", migrate: TypedArray.indexOf()}) @send
+  external indexOf: (t, elt) => int = "indexOf"
+  @deprecated({
+    reason: "Use `TypedArray.indexOfFrom` instead.",
+    migrate: TypedArray.indexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
 
-  @send external join: t => string = "join"
-  @send external joinWith: (t, string) => string = "join"
+  @deprecated({reason: "Use `TypedArray.joinWith` instead.", migrate: TypedArray.joinWith(",")})
+  @send
+  external join: t => string = "join"
+  @deprecated({reason: "Use `TypedArray.joinWith` instead.", migrate: TypedArray.joinWith()}) @send
+  external joinWith: (t, string) => string = "join"
 
-  @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
-  @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
+  @deprecated({reason: "Use `TypedArray.lastIndexOf` instead.", migrate: TypedArray.lastIndexOf()})
+  @send
+  external lastIndexOf: (t, elt) => int = "lastIndexOf"
+  @deprecated({
+    reason: "Use `TypedArray.lastIndexOfFrom` instead.",
+    migrate: TypedArray.lastIndexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
   /** `start` is inclusive, `end_` exclusive */
-  @send
-  external slice: (t, ~start: int, ~end_: int) => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
+  @send external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
-  @send external copy: t => t = "slice"
-  @send external sliceFrom: (t, int) => t = "slice"
+  @deprecated({reason: "Use `TypedArray.copy` instead.", migrate: TypedArray.copy()}) @send
+  external copy: t => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.sliceToEnd` instead.",
+    migrate: TypedArray.sliceToEnd(~start=%insert.unlabelledArgument(1)),
+  })
+  @send
+  external sliceFrom: (t, int) => t = "slice"
 
   /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
+  @send external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
+
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~start=%insert.unlabelledArgument(1)),
+  })
   @send
-  external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
+  external subarrayFrom: (t, int) => t = "subarray"
 
-  @send external subarrayFrom: (t, int) => t = "subarray"
-
-  @send external toString: t => string = "toString"
-  @send external toLocaleString: t => string = "toLocaleString"
+  @deprecated({reason: "Use `TypedArray.toString` instead.", migrate: TypedArray.toString()}) @send
+  external toString: t => string = "toString"
+  @deprecated({
+    reason: "Use `TypedArray.toLocaleString` instead.",
+    migrate: TypedArray.toLocaleString(),
+  })
+  @send
+  external toLocaleString: t => string = "toLocaleString"
 
   /* Iteration functions */
   /* commented out until bs has a plan for iterators
   external entries : t -> (int * elt) array_iter = "" [@@send]
  */
-  @send external every: (t, elt => bool) => bool = "every"
-  @send external everyi: (t, (elt, int) => bool) => bool = "every"
+  @deprecated({reason: "Use `TypedArray.every` instead.", migrate: TypedArray.every()}) @send
+  external every: (t, elt => bool) => bool = "every"
+  @deprecated({
+    reason: "Use `TypedArray.everyWithIndex` instead.",
+    migrate: TypedArray.everyWithIndex(),
+  })
+  @send
+  external everyi: (t, (elt, int) => bool) => bool = "every"
 
-  @send external filter: (t, elt => bool) => t = "filter"
-  @send external filteri: (t, (elt, int) => bool) => t = "filter"
+  @deprecated({reason: "Use `TypedArray.filter` instead.", migrate: TypedArray.filter()}) @send
+  external filter: (t, elt => bool) => t = "filter"
+  @deprecated({
+    reason: "Use `TypedArray.filterWithIndex` instead.",
+    migrate: TypedArray.filterWithIndex(),
+  })
+  @send
+  external filteri: (t, (elt, int) => bool) => t = "filter"
 
-  @send external find: (t, elt => bool) => Js_undefined.t<elt> = "find"
-  @send external findi: (t, (elt, int) => bool) => Js_undefined.t<elt> = "find"
+  @deprecated({reason: "Use `TypedArray.find` instead.", migrate: TypedArray.find()}) @send
+  external find: (t, elt => bool) => Js_undefined.t<elt> = "find"
+  @deprecated({
+    reason: "Use `TypedArray.findWithIndex` instead.",
+    migrate: TypedArray.findWithIndex(),
+  })
+  @send
+  external findi: (t, (elt, int) => bool) => Js_undefined.t<elt> = "find"
 
-  @send external findIndex: (t, elt => bool) => int = "findIndex"
-  @send external findIndexi: (t, (elt, int) => bool) => int = "findIndex"
+  @deprecated({reason: "Use `TypedArray.findIndex` instead.", migrate: TypedArray.findIndex()})
+  @send
+  external findIndex: (t, elt => bool) => int = "findIndex"
+  @deprecated({
+    reason: "Use `TypedArray.findIndexWithIndex` instead.",
+    migrate: TypedArray.findIndexWithIndex(),
+  })
+  @send
+  external findIndexi: (t, (elt, int) => bool) => int = "findIndex"
 
-  @send external forEach: (t, elt => unit) => unit = "forEach"
-  @send external forEachi: (t, (elt, int) => unit) => unit = "forEach"
+  @deprecated({reason: "Use `TypedArray.forEach` instead.", migrate: TypedArray.forEach()}) @send
+  external forEach: (t, elt => unit) => unit = "forEach"
+  @deprecated({
+    reason: "Use `TypedArray.forEachWithIndex` instead.",
+    migrate: TypedArray.forEachWithIndex(),
+  })
+  @send
+  external forEachi: (t, (elt, int) => unit) => unit = "forEach"
 
   /* commented out until bs has a plan for iterators
   external keys : t -> int array_iter = "" [@@send]
  */
 
-  @send external map: (t, elt => 'b) => typed_array<'b> = "map"
-  @send external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
+  @deprecated({reason: "Use `TypedArray.map` instead.", migrate: TypedArray.map()}) @send
+  external map: (t, elt => 'b) => typed_array<'b> = "map"
+  @deprecated({
+    reason: "Use `TypedArray.mapWithIndex` instead.",
+    migrate: TypedArray.mapWithIndex(),
+  })
+  @send
+  external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
 
-  @send external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
-  @send external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
+  @deprecated({reason: "Use `TypedArray.reduce` instead.", migrate: TypedArray.reduce()}) @send
+  external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
+  @deprecated({
+    reason: "Use `TypedArray.reduceWithIndex` instead.",
+    migrate: TypedArray.reduceWithIndex(),
+  })
+  @send
+  external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
 
-  @send external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"
-  @send external reduceRighti: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduceRight"
+  @deprecated({reason: "Use `TypedArray.reduceRight` instead.", migrate: TypedArray.reduceRight()})
+  @send
+  external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"
+  @deprecated({
+    reason: "Use `TypedArray.reduceRightWithIndex` instead.",
+    migrate: TypedArray.reduceRightWithIndex(),
+  })
+  @send
+  external reduceRighti: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduceRight"
 
-  @send external some: (t, elt => bool) => bool = "some"
-  @send external somei: (t, (elt, int) => bool) => bool = "some"
+  @deprecated({reason: "Use `TypedArray.some` instead.", migrate: TypedArray.some()}) @send
+  external some: (t, elt => bool) => bool = "some"
+  @deprecated({
+    reason: "Use `TypedArray.someWithIndex` instead.",
+    migrate: TypedArray.someWithIndex(),
+  })
+  @send
+  external somei: (t, (elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Float32Array.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Float32Array.Constants.bytesPerElement` instead.",
+    migrate: Float32Array.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Float32Array.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Float32Array"
+  @deprecated({reason: "Use `Float32Array.fromArray` instead.", migrate: Float32Array.fromArray()})
+  @new
+  external make: array<elt> => t = "Float32Array"
   /** can throw */
   @new
+  @deprecated({
+    reason: "Use `Float32Array.fromBuffer` instead.",
+    migrate: Float32Array.fromBuffer(),
+  })
   external fromBuffer: array_buffer => t = "Float32Array"
 
   /**
@@ -1048,6 +2511,10 @@ module Float32Array = {
   **param** offset is in bytes
   */
   @new
+  @deprecated({
+    reason: "Use `Float32Array.fromBufferToEnd` instead.",
+    migrate: Float32Array.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
   external fromBufferOffset: (array_buffer, int) => t = "Float32Array"
 
   /**
@@ -1056,10 +2523,27 @@ module Float32Array = {
   **param** offset is in bytes, length in elements
   */
   @new
+  @deprecated({
+    reason: "Use `Float32Array.fromBufferWithRange` instead.",
+    migrate: Float32Array.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Float32Array"
 
-  @new external fromLength: int => t = "Float32Array"
-  @val external from: array_like<elt> => t = "Float32Array.from"
+  @deprecated({
+    reason: "Use `Float32Array.fromLength` instead.",
+    migrate: Float32Array.fromLength(),
+  })
+  @new
+  external fromLength: int => t = "Float32Array"
+  @deprecated({
+    reason: "Use `Float32Array.fromArrayLikeOrIterable` instead.",
+    migrate: Float32Array.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Float32Array.from"
   /* *Array.of is redundant, use make */
 }
 
@@ -1076,95 +2560,256 @@ module Float64Array = {
   @get external byteLength: t => int = "byteLength"
   @get external byteOffset: t => int = "byteOffset"
 
-  @send external setArray: (t, array<elt>) => unit = "set"
-  @send external setArrayOffset: (t, array<elt>, int) => unit = "set"
+  @deprecated({reason: "Use `TypedArray.setArray` instead.", migrate: TypedArray.setArray()}) @send
+  external setArray: (t, array<elt>) => unit = "set"
+  @deprecated({
+    reason: "Use `TypedArray.setArrayFrom` instead.",
+    migrate: TypedArray.setArrayFrom(%insert.unlabelledArgument(2)),
+  })
+  @send
+  external setArrayOffset: (t, array<elt>, int) => unit = "set"
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({reason: "Use `TypedArray.length` instead.", migrate: TypedArray.length()}) @get
+  external length: t => int = "length"
 
   /* Mutator functions */
-  @send external copyWithin: (t, ~to_: int) => t = "copyWithin"
-  @send external copyWithinFrom: (t, ~to_: int, ~from: int) => t = "copyWithin"
-  @send external copyWithinFromRange: (t, ~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyAllWithin` instead.",
+    migrate: TypedArray.copyAllWithin(~target=%insert.labelledArgument("to_")),
+  })
+  @send
+  external copyWithin: (t, ~to_: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyWithinToEnd` instead.",
+    migrate: TypedArray.copyWithinToEnd(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("from"),
+    ),
+  })
+  @send
+  external copyWithinFrom: (t, ~to_: int, ~from: int) => t = "copyWithin"
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin` instead.",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
+  @send
+  external copyWithinFromRange: (t, ~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
-  @send external fillInPlace: (t, elt) => t = "fill"
-  @send external fillFromInPlace: (t, elt, ~from: int) => t = "fill"
-  @send external fillRangeInPlace: (t, elt, ~start: int, ~end_: int) => t = "fill"
+  @deprecated({reason: "Use `TypedArray.fillAll` instead.", migrate: TypedArray.fillAll()}) @send
+  external fillInPlace: (t, elt) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fillToEnd` instead.",
+    migrate: TypedArray.fillToEnd(~start=%insert.labelledArgument("from")),
+  })
+  @send
+  external fillFromInPlace: (t, elt, ~from: int) => t = "fill"
+  @deprecated({
+    reason: "Use `TypedArray.fill` instead.",
+    migrate: TypedArray.fill(
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
+  @send
+  external fillRangeInPlace: (t, elt, ~start: int, ~end_: int) => t = "fill"
 
-  @send external reverseInPlace: t => t = "reverse"
+  @deprecated({reason: "Use `TypedArray.reverse` instead.", migrate: TypedArray.reverse()}) @send
+  external reverseInPlace: t => t = "reverse"
 
-  @send external sortInPlace: t => t = "sort"
-  @send external sortInPlaceWith: (t, (elt, elt) => int) => t = "sort"
+  @deprecated({
+    reason: "Use `TypedArray.toSorted` instead.",
+    migrate: TypedArray.toSorted((a, b) =>
+      %todo_(
+        "This needs a comparator function. Use an appropriate comparator (e.g. Float.compare)."
+      )
+    ),
+  })
+  @send
+  external sortInPlace: t => t = "sort"
+  @deprecated({reason: "Use `TypedArray.sort` instead.", migrate: TypedArray.sort()}) @send
+  external sortInPlaceWith: (t, (elt, elt) => int) => t = "sort"
 
   /* Accessor functions */
-  @send external includes: (t, elt) => bool = "includes" /* ES2016 */
+  @deprecated({reason: "Use `TypedArray.includes` instead.", migrate: TypedArray.includes()}) @send
+  external includes: (t, elt) => bool = "includes" /* ES2016 */
 
-  @send external indexOf: (t, elt) => int = "indexOf"
-  @send external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
+  @deprecated({reason: "Use `TypedArray.indexOf` instead.", migrate: TypedArray.indexOf()}) @send
+  external indexOf: (t, elt) => int = "indexOf"
+  @deprecated({
+    reason: "Use `TypedArray.indexOfFrom` instead.",
+    migrate: TypedArray.indexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external indexOfFrom: (t, elt, ~from: int) => int = "indexOf"
 
-  @send external join: t => string = "join"
-  @send external joinWith: (t, string) => string = "join"
+  @deprecated({reason: "Use `TypedArray.joinWith` instead.", migrate: TypedArray.joinWith(",")})
+  @send
+  external join: t => string = "join"
+  @deprecated({reason: "Use `TypedArray.joinWith` instead.", migrate: TypedArray.joinWith()}) @send
+  external joinWith: (t, string) => string = "join"
 
-  @send external lastIndexOf: (t, elt) => int = "lastIndexOf"
-  @send external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
+  @deprecated({reason: "Use `TypedArray.lastIndexOf` instead.", migrate: TypedArray.lastIndexOf()})
+  @send
+  external lastIndexOf: (t, elt) => int = "lastIndexOf"
+  @deprecated({
+    reason: "Use `TypedArray.lastIndexOfFrom` instead.",
+    migrate: TypedArray.lastIndexOfFrom(%insert.labelledArgument("from")),
+  })
+  @send
+  external lastIndexOfFrom: (t, elt, ~from: int) => int = "lastIndexOf"
 
   /** `start` is inclusive, `end_` exclusive */
-  @send
-  external slice: (t, ~start: int, ~end_: int) => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
+  @send external slice: (t, ~start: int, ~end_: int) => t = "slice"
 
-  @send external copy: t => t = "slice"
-  @send external sliceFrom: (t, int) => t = "slice"
+  @deprecated({reason: "Use `TypedArray.copy` instead.", migrate: TypedArray.copy()}) @send
+  external copy: t => t = "slice"
+  @deprecated({
+    reason: "Use `TypedArray.sliceToEnd` instead.",
+    migrate: TypedArray.sliceToEnd(~start=%insert.unlabelledArgument(1)),
+  })
+  @send
+  external sliceFrom: (t, int) => t = "slice"
 
   /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
+  @send external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
+
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~start=%insert.unlabelledArgument(1)),
+  })
   @send
-  external subarray: (t, ~start: int, ~end_: int) => t = "subarray"
+  external subarrayFrom: (t, int) => t = "subarray"
 
-  @send external subarrayFrom: (t, int) => t = "subarray"
-
-  @send external toString: t => string = "toString"
-  @send external toLocaleString: t => string = "toLocaleString"
+  @deprecated({reason: "Use `TypedArray.toString` instead.", migrate: TypedArray.toString()}) @send
+  external toString: t => string = "toString"
+  @deprecated({
+    reason: "Use `TypedArray.toLocaleString` instead.",
+    migrate: TypedArray.toLocaleString(),
+  })
+  @send
+  external toLocaleString: t => string = "toLocaleString"
 
   /* Iteration functions */
   /* commented out until bs has a plan for iterators
   external entries : t -> (int * elt) array_iter = "" [@@send]
  */
-  @send external every: (t, elt => bool) => bool = "every"
-  @send external everyi: (t, (elt, int) => bool) => bool = "every"
+  @deprecated({reason: "Use `TypedArray.every` instead.", migrate: TypedArray.every()}) @send
+  external every: (t, elt => bool) => bool = "every"
+  @deprecated({
+    reason: "Use `TypedArray.everyWithIndex` instead.",
+    migrate: TypedArray.everyWithIndex(),
+  })
+  @send
+  external everyi: (t, (elt, int) => bool) => bool = "every"
 
-  @send external filter: (t, elt => bool) => t = "filter"
-  @send external filteri: (t, (elt, int) => bool) => t = "filter"
+  @deprecated({reason: "Use `TypedArray.filter` instead.", migrate: TypedArray.filter()}) @send
+  external filter: (t, elt => bool) => t = "filter"
+  @deprecated({
+    reason: "Use `TypedArray.filterWithIndex` instead.",
+    migrate: TypedArray.filterWithIndex(),
+  })
+  @send
+  external filteri: (t, (elt, int) => bool) => t = "filter"
 
-  @send external find: (t, elt => bool) => Js_undefined.t<elt> = "find"
-  @send external findi: (t, (elt, int) => bool) => Js_undefined.t<elt> = "find"
+  @deprecated({reason: "Use `TypedArray.find` instead.", migrate: TypedArray.find()}) @send
+  external find: (t, elt => bool) => Js_undefined.t<elt> = "find"
+  @deprecated({
+    reason: "Use `TypedArray.findWithIndex` instead.",
+    migrate: TypedArray.findWithIndex(),
+  })
+  @send
+  external findi: (t, (elt, int) => bool) => Js_undefined.t<elt> = "find"
 
-  @send external findIndex: (t, elt => bool) => int = "findIndex"
-  @send external findIndexi: (t, (elt, int) => bool) => int = "findIndex"
+  @deprecated({reason: "Use `TypedArray.findIndex` instead.", migrate: TypedArray.findIndex()})
+  @send
+  external findIndex: (t, elt => bool) => int = "findIndex"
+  @deprecated({
+    reason: "Use `TypedArray.findIndexWithIndex` instead.",
+    migrate: TypedArray.findIndexWithIndex(),
+  })
+  @send
+  external findIndexi: (t, (elt, int) => bool) => int = "findIndex"
 
-  @send external forEach: (t, elt => unit) => unit = "forEach"
-  @send external forEachi: (t, (elt, int) => unit) => unit = "forEach"
+  @deprecated({reason: "Use `TypedArray.forEach` instead.", migrate: TypedArray.forEach()}) @send
+  external forEach: (t, elt => unit) => unit = "forEach"
+  @deprecated({
+    reason: "Use `TypedArray.forEachWithIndex` instead.",
+    migrate: TypedArray.forEachWithIndex(),
+  })
+  @send
+  external forEachi: (t, (elt, int) => unit) => unit = "forEach"
 
   /* commented out until bs has a plan for iterators
   external keys : t -> int array_iter = "" [@@send]
  */
 
-  @send external map: (t, elt => 'b) => typed_array<'b> = "map"
-  @send external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
+  @deprecated({reason: "Use `TypedArray.map` instead.", migrate: TypedArray.map()}) @send
+  external map: (t, elt => 'b) => typed_array<'b> = "map"
+  @deprecated({
+    reason: "Use `TypedArray.mapWithIndex` instead.",
+    migrate: TypedArray.mapWithIndex(),
+  })
+  @send
+  external mapi: (t, (elt, int) => 'b) => typed_array<'b> = "map"
 
-  @send external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
-  @send external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
+  @deprecated({reason: "Use `TypedArray.reduce` instead.", migrate: TypedArray.reduce()}) @send
+  external reduce: (t, ('b, elt) => 'b, 'b) => 'b = "reduce"
+  @deprecated({
+    reason: "Use `TypedArray.reduceWithIndex` instead.",
+    migrate: TypedArray.reduceWithIndex(),
+  })
+  @send
+  external reducei: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduce"
 
-  @send external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"
-  @send external reduceRighti: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduceRight"
+  @deprecated({reason: "Use `TypedArray.reduceRight` instead.", migrate: TypedArray.reduceRight()})
+  @send
+  external reduceRight: (t, ('b, elt) => 'b, 'b) => 'b = "reduceRight"
+  @deprecated({
+    reason: "Use `TypedArray.reduceRightWithIndex` instead.",
+    migrate: TypedArray.reduceRightWithIndex(),
+  })
+  @send
+  external reduceRighti: (t, ('b, elt, int) => 'b, 'b) => 'b = "reduceRight"
 
-  @send external some: (t, elt => bool) => bool = "some"
-  @send external somei: (t, (elt, int) => bool) => bool = "some"
+  @deprecated({reason: "Use `TypedArray.some` instead.", migrate: TypedArray.some()}) @send
+  external some: (t, elt => bool) => bool = "some"
+  @deprecated({
+    reason: "Use `TypedArray.someWithIndex` instead.",
+    migrate: TypedArray.someWithIndex(),
+  })
+  @send
+  external somei: (t, (elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Float64Array.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Float64Array.Constants.bytesPerElement` instead.",
+    migrate: Float64Array.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Float64Array.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Float64Array"
+  @deprecated({reason: "Use `Float64Array.fromArray` instead.", migrate: Float64Array.fromArray()})
+  @new
+  external make: array<elt> => t = "Float64Array"
   /** can throw */
   @new
+  @deprecated({
+    reason: "Use `Float64Array.fromBuffer` instead.",
+    migrate: Float64Array.fromBuffer(),
+  })
   external fromBuffer: array_buffer => t = "Float64Array"
 
   /**
@@ -1173,6 +2818,10 @@ module Float64Array = {
   **param** offset is in bytes
   */
   @new
+  @deprecated({
+    reason: "Use `Float64Array.fromBufferToEnd` instead.",
+    migrate: Float64Array.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
   external fromBufferOffset: (array_buffer, int) => t = "Float64Array"
 
   /**
@@ -1181,10 +2830,27 @@ module Float64Array = {
   **param** offset is in bytes, length in elements
   */
   @new
+  @deprecated({
+    reason: "Use `Float64Array.fromBufferWithRange` instead.",
+    migrate: Float64Array.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Float64Array"
 
-  @new external fromLength: int => t = "Float64Array"
-  @val external from: array_like<elt> => t = "Float64Array.from"
+  @deprecated({
+    reason: "Use `Float64Array.fromLength` instead.",
+    migrate: Float64Array.fromLength(),
+  })
+  @new
+  external fromLength: int => t = "Float64Array"
+  @deprecated({
+    reason: "Use `Float64Array.fromArrayLikeOrIterable` instead.",
+    migrate: Float64Array.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Float64Array.from"
   /* *Array.of is redundant, use make */
 }
 

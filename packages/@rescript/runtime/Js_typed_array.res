@@ -102,6 +102,10 @@ module type S = {
   /* Accessor functions
    */
   // @bs.send.pipe(: t) /** ES2016 */
+  @deprecated({
+    reason: "Use `TypedArray.includes` instead.",
+    migrate: TypedArray.includes(),
+  })
   external includes: elt => bool = "includes"
 
   // @bs.send.pipe(: t) external indexOf: elt => int = "indexOf"
@@ -189,12 +193,25 @@ module Int8Array = {
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({
+    reason: "Use `TypedArray.length` instead.",
+    migrate: TypedArray.length(),
+  })
+  @get
+  external length: t => int = "length"
 
   /* Mutator functions */
   // @bs.send.pipe(: t) external copyWithin: (~to_: int) => t = "copyWithin"
   // @bs.send.pipe(: t) external copyWithinFrom: (~to_: int, ~from: int) => t = "copyWithin"
   // @bs.send.pipe(: t)
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin` instead.",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
   external copyWithinFromRange: (~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
   // @bs.send.pipe(: t) external fillInPlace: elt => t = "fill"
@@ -218,14 +235,16 @@ module Int8Array = {
   // @bs.send.pipe(: t) external lastIndexOf: elt => int = "lastIndexOf"
   // @bs.send.pipe(: t) external lastIndexOfFrom: (elt, ~from: int) => int = "lastIndexOf"
 
-  // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
-  external slice: (~start: int, ~end_: int) => t = "slice"
+  @deprecated("Use `TypedArray.slice` instead.")
+  external // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  slice: (~start: int, ~end_: int) => t = "slice"
 
   // @bs.send.pipe(: t) external copy: t = "slice"
-  // @bs.send.pipe(: t) external sliceFrom: int => t = "slice"
+  @deprecated("Use `TypedArray.sliceToEnd` instead.")
+  external // @bs.send.pipe(: t) external sliceFrom: int => t = "slice"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
-  external subarray: (~start: int, ~end_: int) => t = "subarray"
+  subarray: (~start: int, ~end_: int) => t = "subarray"
 
   // @bs.send.pipe(: t) external subarrayFrom: int => t = "subarray"
 
@@ -267,9 +286,19 @@ module Int8Array = {
   // @bs.send.pipe(: t) external some: ((. elt) => bool) => bool = "some"
   // @bs.send.pipe(: t) external somei: ((. elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Int8Array.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Int8Array.Constants.bytesPerElement` instead.",
+    migrate: Int8Array.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Int8Array.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Int8Array"
+  @deprecated({
+    reason: "Use `Int8Array.fromArray` instead.",
+    migrate: Int8Array.fromArray(),
+  })
+  @new
+  external make: array<elt> => t = "Int8Array"
   /** can throw */
   @new
   external fromBuffer: array_buffer => t = "Int8Array"
@@ -279,19 +308,39 @@ module Int8Array = {
 
   param offset is in bytes
   */
-  @new
-  external fromBufferOffset: (array_buffer, int) => t = "Int8Array"
+  @deprecated({
+    reason: "Use `Int8Array.fromBufferToEnd` instead.",
+    migrate: Int8Array.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
+  @new external fromBufferOffset: (array_buffer, int) => t = "Int8Array"
 
   /**
   throw Js.Exn.Error throws Js exception
 
   param offset is in bytes, length in elements
   */
+  @deprecated({
+    reason: "Use `Int8Array.fromBufferWithRange` instead.",
+    migrate: Int8Array.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   @new
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Int8Array"
 
-  @new external fromLength: int => t = "Int8Array"
-  @val external from: array_like<elt> => t = "Int8Array.from"
+  @deprecated({
+    reason: "Use `Int8Array.fromLength` instead.",
+    migrate: Int8Array.fromLength(),
+  })
+  @new
+  external fromLength: int => t = "Int8Array"
+  @deprecated({
+    reason: "Use `Int8Array.fromArrayLikeOrIterable` instead.",
+    migrate: Int8Array.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Int8Array.from"
   /* *Array.of is redundant, use make */
 }
 
@@ -313,12 +362,25 @@ module Uint8Array = {
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({
+    reason: "Use `TypedArray.length` instead.",
+    migrate: TypedArray.length(),
+  })
+  @get
+  external length: t => int = "length"
 
   /* Mutator functions */
   // @bs.send.pipe(: t) external copyWithin: (~to_: int) => t = "copyWithin"
   // @bs.send.pipe(: t) external copyWithinFrom: (~to_: int, ~from: int) => t = "copyWithin"
   // @bs.send.pipe(: t)
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin` instead.",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
   external copyWithinFromRange: (~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
   // @bs.send.pipe(: t) external fillInPlace: elt => t = "fill"
@@ -343,12 +405,28 @@ module Uint8Array = {
   // @bs.send.pipe(: t) external lastIndexOfFrom: (elt, ~from: int) => int = "lastIndexOf"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
   external slice: (~start: int, ~end_: int) => t = "slice"
 
   // @bs.send.pipe(: t) external copy: t = "slice"
   // @bs.send.pipe(: t) external sliceFrom: int => t = "slice"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
   external subarray: (~start: int, ~end_: int) => t = "subarray"
 
   // @bs.send.pipe(: t) external subarrayFrom: int => t = "subarray"
@@ -391,9 +469,19 @@ module Uint8Array = {
   // @bs.send.pipe(: t) external some: ((. elt) => bool) => bool = "some"
   // @bs.send.pipe(: t) external somei: ((. elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Uint8Array.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Uint8Array.Constants.bytesPerElement` instead.",
+    migrate: Uint8Array.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Uint8Array.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Uint8Array"
+  @deprecated({
+    reason: "Use `Uint8Array.fromArray` instead.",
+    migrate: Uint8Array.fromArray(),
+  })
+  @new
+  external make: array<elt> => t = "Uint8Array"
   /** can throw */
   @new
   external fromBuffer: array_buffer => t = "Uint8Array"
@@ -403,19 +491,39 @@ module Uint8Array = {
 
   **param** offset is in bytes
   */
-  @new
-  external fromBufferOffset: (array_buffer, int) => t = "Uint8Array"
+  @deprecated({
+    reason: "Use `Uint8Array.fromBufferToEnd` instead.",
+    migrate: Uint8Array.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
+  @new external fromBufferOffset: (array_buffer, int) => t = "Uint8Array"
 
   /**
   **throw** Js.Exn.Error throws Js exception
 
   **param** offset is in bytes, length in elements
   */
+  @deprecated({
+    reason: "Use `Uint8Array.fromBufferWithRange` instead.",
+    migrate: Uint8Array.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   @new
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Uint8Array"
 
-  @new external fromLength: int => t = "Uint8Array"
-  @val external from: array_like<elt> => t = "Uint8Array.from"
+  @deprecated({
+    reason: "Use `Uint8Array.fromLength` instead.",
+    migrate: Uint8Array.fromLength(),
+  })
+  @new
+  external fromLength: int => t = "Uint8Array"
+  @deprecated({
+    reason: "Use `Uint8Array.fromArrayLikeOrIterable` instead.",
+    migrate: Uint8Array.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Uint8Array.from"
   /* *Array.of is redundant, use make */
 }
 
@@ -437,12 +545,25 @@ module Uint8ClampedArray = {
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({
+    reason: "Use `TypedArray.length` instead.",
+    migrate: TypedArray.length(),
+  })
+  @get
+  external length: t => int = "length"
 
   /* Mutator functions */
   // @bs.send.pipe(: t) external copyWithin: (~to_: int) => t = "copyWithin"
   // @bs.send.pipe(: t) external copyWithinFrom: (~to_: int, ~from: int) => t = "copyWithin"
   // @bs.send.pipe(: t)
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin` instead.",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
   external copyWithinFromRange: (~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
   // @bs.send.pipe(: t) external fillInPlace: elt => t = "fill"
@@ -467,12 +588,20 @@ module Uint8ClampedArray = {
   // @bs.send.pipe(: t) external lastIndexOfFrom: (elt, ~from: int) => int = "lastIndexOf"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
   external slice: (~start: int, ~end_: int) => t = "slice"
 
   // @bs.send.pipe(: t) external copy: t = "slice"
   // @bs.send.pipe(: t) external sliceFrom: int => t = "slice"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
   external subarray: (~start: int, ~end_: int) => t = "subarray"
 
   // @bs.send.pipe(: t) external subarrayFrom: int => t = "subarray"
@@ -515,9 +644,19 @@ module Uint8ClampedArray = {
   // @bs.send.pipe(: t) external some: ((. elt) => bool) => bool = "some"
   // @bs.send.pipe(: t) external somei: ((. elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Uint8ClampedArray.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Uint8ClampedArray.Constants.bytesPerElement` instead.",
+    migrate: Uint8ClampedArray.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Uint8ClampedArray.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Uint8ClampedArray"
+  @deprecated({
+    reason: "Use `Uint8ClampedArray.fromArray` instead.",
+    migrate: Uint8ClampedArray.fromArray(),
+  })
+  @new
+  external make: array<elt> => t = "Uint8ClampedArray"
   /** can throw */
   @new
   external fromBuffer: array_buffer => t = "Uint8ClampedArray"
@@ -527,19 +666,39 @@ module Uint8ClampedArray = {
 
   **param** offset is in bytes
   */
-  @new
-  external fromBufferOffset: (array_buffer, int) => t = "Uint8ClampedArray"
+  @deprecated({
+    reason: "Use `Uint8ClampedArray.fromBufferToEnd` instead.",
+    migrate: Uint8ClampedArray.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
+  @new external fromBufferOffset: (array_buffer, int) => t = "Uint8ClampedArray"
 
   /**
   **throw** Js.Exn.Error throws Js exception
 
   **param** offset is in bytes, length in elements
   */
+  @deprecated({
+    reason: "Use `Uint8ClampedArray.fromBufferWithRange` instead.",
+    migrate: Uint8ClampedArray.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   @new
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Uint8ClampedArray"
 
-  @new external fromLength: int => t = "Uint8ClampedArray"
-  @val external from: array_like<elt> => t = "Uint8ClampedArray.from"
+  @deprecated({
+    reason: "Use `Uint8ClampedArray.fromLength` instead.",
+    migrate: Uint8ClampedArray.fromLength(),
+  })
+  @new
+  external fromLength: int => t = "Uint8ClampedArray"
+  @deprecated({
+    reason: "Use `Uint8ClampedArray.fromArrayLikeOrIterable` instead.",
+    migrate: Uint8ClampedArray.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Uint8ClampedArray.from"
   /* *Array.of is redundant, use make */
 }
 
@@ -561,12 +720,25 @@ module Int16Array = {
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({
+    reason: "Use `TypedArray.length` instead.",
+    migrate: TypedArray.length(),
+  })
+  @get
+  external length: t => int = "length"
 
   /* Mutator functions */
   // @bs.send.pipe(: t) external copyWithin: (~to_: int) => t = "copyWithin"
   // @bs.send.pipe(: t) external copyWithinFrom: (~to_: int, ~from: int) => t = "copyWithin"
   // @bs.send.pipe(: t)
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin` instead.",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
   external copyWithinFromRange: (~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
   // @bs.send.pipe(: t) external fillInPlace: elt => t = "fill"
@@ -591,12 +763,20 @@ module Int16Array = {
   // @bs.send.pipe(: t) external lastIndexOfFrom: (elt, ~from: int) => int = "lastIndexOf"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
   external slice: (~start: int, ~end_: int) => t = "slice"
 
   // @bs.send.pipe(: t) external copy: t = "slice"
   // @bs.send.pipe(: t) external sliceFrom: int => t = "slice"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
   external subarray: (~start: int, ~end_: int) => t = "subarray"
 
   // @bs.send.pipe(: t) external subarrayFrom: int => t = "subarray"
@@ -639,11 +819,25 @@ module Int16Array = {
   // @bs.send.pipe(: t) external some: ((. elt) => bool) => bool = "some"
   // @bs.send.pipe(: t) external somei: ((. elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Int16Array.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Int16Array.Constants.bytesPerElement` instead.",
+    migrate: Int16Array.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Int16Array.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Int16Array"
+  @deprecated({
+    reason: "Use `Int16Array.fromArray` instead.",
+    migrate: Int16Array.fromArray(),
+  })
+  @new
+  external make: array<elt> => t = "Int16Array"
   /** can throw */
   @new
+  @deprecated({
+    reason: "Use `Int16Array.fromBuffer` instead.",
+    migrate: Int16Array.fromBuffer(),
+  })
   external fromBuffer: array_buffer => t = "Int16Array"
 
   /**
@@ -652,6 +846,10 @@ module Int16Array = {
   **param** offset is in bytes
   */
   @new
+  @deprecated({
+    reason: "Use `Int16Array.fromBufferToEnd` instead.",
+    migrate: Int16Array.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
   external fromBufferOffset: (array_buffer, int) => t = "Int16Array"
 
   /**
@@ -660,10 +858,27 @@ module Int16Array = {
   **param** offset is in bytes, length in elements
   */
   @new
+  @deprecated({
+    reason: "Use `Int16Array.fromBufferWithRange` instead.",
+    migrate: Int16Array.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Int16Array"
 
-  @new external fromLength: int => t = "Int16Array"
-  @val external from: array_like<elt> => t = "Int16Array.from"
+  @deprecated({
+    reason: "Use `Int16Array.fromLength` instead.",
+    migrate: Int16Array.fromLength(),
+  })
+  @new
+  external fromLength: int => t = "Int16Array"
+  @deprecated({
+    reason: "Use `Int16Array.fromArrayLikeOrIterable` instead.",
+    migrate: Int16Array.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Int16Array.from"
   /* *Array.of is redundant, use make */
 }
 
@@ -685,12 +900,25 @@ module Uint16Array = {
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({
+    reason: "Use `TypedArray.length` instead.",
+    migrate: TypedArray.length(),
+  })
+  @get
+  external length: t => int = "length"
 
   /* Mutator functions */
   // @bs.send.pipe(: t) external copyWithin: (~to_: int) => t = "copyWithin"
   // @bs.send.pipe(: t) external copyWithinFrom: (~to_: int, ~from: int) => t = "copyWithin"
   // @bs.send.pipe(: t)
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin` instead.",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
   external copyWithinFromRange: (~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
   // @bs.send.pipe(: t) external fillInPlace: elt => t = "fill"
@@ -715,12 +943,20 @@ module Uint16Array = {
   // @bs.send.pipe(: t) external lastIndexOfFrom: (elt, ~from: int) => int = "lastIndexOf"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
   external slice: (~start: int, ~end_: int) => t = "slice"
 
   // @bs.send.pipe(: t) external copy: t = "slice"
   // @bs.send.pipe(: t) external sliceFrom: int => t = "slice"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
   external subarray: (~start: int, ~end_: int) => t = "subarray"
 
   // @bs.send.pipe(: t) external subarrayFrom: int => t = "subarray"
@@ -763,11 +999,25 @@ module Uint16Array = {
   // @bs.send.pipe(: t) external some: ((. elt) => bool) => bool = "some"
   // @bs.send.pipe(: t) external somei: ((. elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Uint16Array.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Uint16Array.Constants.bytesPerElement` instead.",
+    migrate: Uint16Array.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Uint16Array.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Uint16Array"
+  @deprecated({
+    reason: "Use `Uint16Array.fromArray` instead.",
+    migrate: Uint16Array.fromArray(),
+  })
+  @new
+  external make: array<elt> => t = "Uint16Array"
   /** can throw */
   @new
+  @deprecated({
+    reason: "Use `Uint16Array.fromBuffer` instead.",
+    migrate: Uint16Array.fromBuffer(),
+  })
   external fromBuffer: array_buffer => t = "Uint16Array"
 
   /**
@@ -776,6 +1026,10 @@ module Uint16Array = {
   **param** offset is in bytes
   */
   @new
+  @deprecated({
+    reason: "Use `Uint16Array.fromBufferToEnd` instead.",
+    migrate: Uint16Array.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
   external fromBufferOffset: (array_buffer, int) => t = "Uint16Array"
 
   /**
@@ -784,10 +1038,27 @@ module Uint16Array = {
   **param** offset is in bytes, length in elements
   */
   @new
+  @deprecated({
+    reason: "Use `Uint16Array.fromBufferWithRange` instead.",
+    migrate: Uint16Array.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Uint16Array"
 
-  @new external fromLength: int => t = "Uint16Array"
-  @val external from: array_like<elt> => t = "Uint16Array.from"
+  @deprecated({
+    reason: "Use `Uint16Array.fromLength` instead.",
+    migrate: Uint16Array.fromLength(),
+  })
+  @new
+  external fromLength: int => t = "Uint16Array"
+  @deprecated({
+    reason: "Use `Uint16Array.fromArrayLikeOrIterable` instead.",
+    migrate: Uint16Array.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Uint16Array.from"
   /* *Array.of is redundant, use make */
 }
 
@@ -809,12 +1080,25 @@ module Int32Array = {
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({
+    reason: "Use `TypedArray.length` instead.",
+    migrate: TypedArray.length(),
+  })
+  @get
+  external length: t => int = "length"
 
   /* Mutator functions */
   // @bs.send.pipe(: t) external copyWithin: (~to_: int) => t = "copyWithin"
   // @bs.send.pipe(: t) external copyWithinFrom: (~to_: int, ~from: int) => t = "copyWithin"
   // @bs.send.pipe(: t)
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin` instead.",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
   external copyWithinFromRange: (~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
   // @bs.send.pipe(: t) external fillInPlace: elt => t = "fill"
@@ -839,12 +1123,20 @@ module Int32Array = {
   // @bs.send.pipe(: t) external lastIndexOfFrom: (elt, ~from: int) => int = "lastIndexOf"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
   external slice: (~start: int, ~end_: int) => t = "slice"
 
   // @bs.send.pipe(: t) external copy: t = "slice"
   // @bs.send.pipe(: t) external sliceFrom: int => t = "slice"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
   external subarray: (~start: int, ~end_: int) => t = "subarray"
 
   // @bs.send.pipe(: t) external subarrayFrom: int => t = "subarray"
@@ -887,11 +1179,25 @@ module Int32Array = {
   // @bs.send.pipe(: t) external some: ((. elt) => bool) => bool = "some"
   // @bs.send.pipe(: t) external somei: ((. elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Int32Array.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Int32Array.Constants.bytesPerElement` instead.",
+    migrate: Int32Array.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Int32Array.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Int32Array"
+  @deprecated({
+    reason: "Use `Int32Array.fromArray` instead.",
+    migrate: Int32Array.fromArray(),
+  })
+  @new
+  external make: array<elt> => t = "Int32Array"
   /** can throw */
   @new
+  @deprecated({
+    reason: "Use `Int32Array.fromBuffer` instead.",
+    migrate: Int32Array.fromBuffer(),
+  })
   external fromBuffer: array_buffer => t = "Int32Array"
 
   /**
@@ -900,6 +1206,10 @@ module Int32Array = {
   **param** offset is in bytes
   */
   @new
+  @deprecated({
+    reason: "Use `Int32Array.fromBufferToEnd",
+    migrate: Int32Array.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
   external fromBufferOffset: (array_buffer, int) => t = "Int32Array"
 
   /**
@@ -908,10 +1218,27 @@ module Int32Array = {
   **param** offset is in bytes, length in elements
   */
   @new
+  @deprecated({
+    reason: "Use `Int32Array.fromBufferWithRange` instead.",
+    migrate: Int32Array.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Int32Array"
 
-  @new external fromLength: int => t = "Int32Array"
-  @val external from: array_like<elt> => t = "Int32Array.from"
+  @deprecated({
+    reason: "Use `Int32Array.fromLength` instead.",
+    migrate: Int32Array.fromLength(),
+  })
+  @new
+  external fromLength: int => t = "Int32Array"
+  @deprecated({
+    reason: "Use `Int32Array.fromArrayLikeOrIterable` instead.",
+    migrate: Int32Array.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Int32Array.from"
   /* *Array.of is redundant, use make */
   @new @deprecated("use `make` instead") external create: array<int> => t = "Int32Array"
   @new @deprecated("use `fromBuffer` instead") external of_buffer: array_buffer => t = "Int32Array"
@@ -936,12 +1263,25 @@ module Uint32Array = {
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({
+    reason: "Use `TypedArray.length` instead.",
+    migrate: TypedArray.length(),
+  })
+  @get
+  external length: t => int = "length"
 
   /* Mutator functions */
   // @bs.send.pipe(: t) external copyWithin: (~to_: int) => t = "copyWithin"
   // @bs.send.pipe(: t) external copyWithinFrom: (~to_: int, ~from: int) => t = "copyWithin"
   // @bs.send.pipe(: t)
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin` instead.",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
   external copyWithinFromRange: (~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
   // @bs.send.pipe(: t) external fillInPlace: elt => t = "fill"
@@ -966,12 +1306,20 @@ module Uint32Array = {
   // @bs.send.pipe(: t) external lastIndexOfFrom: (elt, ~from: int) => int = "lastIndexOf"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
   external slice: (~start: int, ~end_: int) => t = "slice"
 
   // @bs.send.pipe(: t) external copy: t = "slice"
   // @bs.send.pipe(: t) external sliceFrom: int => t = "slice"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
   external subarray: (~start: int, ~end_: int) => t = "subarray"
 
   // @bs.send.pipe(: t) external subarrayFrom: int => t = "subarray"
@@ -1014,11 +1362,25 @@ module Uint32Array = {
   // @bs.send.pipe(: t) external some: ((. elt) => bool) => bool = "some"
   // @bs.send.pipe(: t) external somei: ((. elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Uint32Array.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Uint32Array.Constants.bytesPerElement` instead.",
+    migrate: Uint32Array.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Uint32Array.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Uint32Array"
+  @deprecated({
+    reason: "Use `Uint32Array.fromArray` instead.",
+    migrate: Uint32Array.fromArray(),
+  })
+  @new
+  external make: array<elt> => t = "Uint32Array"
   /** can throw */
   @new
+  @deprecated({
+    reason: "Use `Uint32Array.fromBuffer` instead.",
+    migrate: Uint32Array.fromBuffer(),
+  })
   external fromBuffer: array_buffer => t = "Uint32Array"
 
   /**
@@ -1027,6 +1389,10 @@ module Uint32Array = {
   **param** offset is in bytes
   */
   @new
+  @deprecated({
+    reason: "Use `Uint32Array.fromBufferToEnd` instead.",
+    migrate: Uint32Array.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
   external fromBufferOffset: (array_buffer, int) => t = "Uint32Array"
 
   /**
@@ -1035,10 +1401,27 @@ module Uint32Array = {
   **param** offset is in bytes, length in elements
   */
   @new
+  @deprecated({
+    reason: "Use `Uint32Array.fromBufferWithRange` instead.",
+    migrate: Uint32Array.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Uint32Array"
 
-  @new external fromLength: int => t = "Uint32Array"
-  @val external from: array_like<elt> => t = "Uint32Array.from"
+  @deprecated({
+    reason: "Use `Uint32Array.fromLength` instead.",
+    migrate: Uint32Array.fromLength(),
+  })
+  @new
+  external fromLength: int => t = "Uint32Array"
+  @deprecated({
+    reason: "Use `Uint32Array.fromArrayLikeOrIterable` instead.",
+    migrate: Uint32Array.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Uint32Array.from"
   /* *Array.of is redundant, use make */
 }
 
@@ -1063,12 +1446,25 @@ module Float32Array = {
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({
+    reason: "Use `TypedArray.length` instead.",
+    migrate: TypedArray.length(),
+  })
+  @get
+  external length: t => int = "length"
 
   /* Mutator functions */
   // @bs.send.pipe(: t) external copyWithin: (~to_: int) => t = "copyWithin"
   // @bs.send.pipe(: t) external copyWithinFrom: (~to_: int, ~from: int) => t = "copyWithin"
   // @bs.send.pipe(: t)
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin` instead.",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
   external copyWithinFromRange: (~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
   // @bs.send.pipe(: t) external fillInPlace: elt => t = "fill"
@@ -1141,11 +1537,25 @@ module Float32Array = {
   // @bs.send.pipe(: t) external some: ((. elt) => bool) => bool = "some"
   // @bs.send.pipe(: t) external somei: ((. elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Float32Array.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Float32Array.Constants.bytesPerElement` instead.",
+    migrate: Float32Array.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Float32Array.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Float32Array"
+  @deprecated({
+    reason: "Use `Float32Array.fromArray` instead.",
+    migrate: Float32Array.fromArray(),
+  })
+  @new
+  external make: array<elt> => t = "Float32Array"
   /** can throw */
   @new
+  @deprecated({
+    reason: "Use `Float32Array.fromBuffer` instead.",
+    migrate: Float32Array.fromBuffer(),
+  })
   external fromBuffer: array_buffer => t = "Float32Array"
 
   /**
@@ -1154,6 +1564,10 @@ module Float32Array = {
   **param** offset is in bytes
   */
   @new
+  @deprecated({
+    reason: "Use `Float32Array.fromBufferToEnd` instead.",
+    migrate: Float32Array.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
   external fromBufferOffset: (array_buffer, int) => t = "Float32Array"
 
   /**
@@ -1162,10 +1576,27 @@ module Float32Array = {
   **param** offset is in bytes, length in elements
   */
   @new
+  @deprecated({
+    reason: "Use `Float32Array.fromBufferWithRange` instead.",
+    migrate: Float32Array.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Float32Array"
 
-  @new external fromLength: int => t = "Float32Array"
-  @val external from: array_like<elt> => t = "Float32Array.from"
+  @deprecated({
+    reason: "Use `Float32Array.fromLength` instead.",
+    migrate: Float32Array.fromLength(),
+  })
+  @new
+  external fromLength: int => t = "Float32Array"
+  @deprecated({
+    reason: "Use `Float32Array.fromArrayLikeOrIterable` instead.",
+    migrate: Float32Array.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Float32Array.from"
   /* *Array.of is redundant, use make */
   @new @deprecated("use `make` instead") external create: array<float> => t = "Float32Array"
   @new @deprecated("use `fromBuffer` instead")
@@ -1191,12 +1622,25 @@ module Float64Array = {
   /* There's also an overload for typed arrays, but don't know how to model that without subtyping */
 
   /* Array interface(-ish) */
-  @get external length: t => int = "length"
+  @deprecated({
+    reason: "Use `TypedArray.length` instead.",
+    migrate: TypedArray.length(),
+  })
+  @get
+  external length: t => int = "length"
 
   /* Mutator functions */
   // @bs.send.pipe(: t) external copyWithin: (~to_: int) => t = "copyWithin"
   // @bs.send.pipe(: t) external copyWithinFrom: (~to_: int, ~from: int) => t = "copyWithin"
   // @bs.send.pipe(: t)
+  @deprecated({
+    reason: "Use `TypedArray.copyWithin` instead.",
+    migrate: TypedArray.copyWithin(
+      ~target=%insert.labelledArgument("to_"),
+      ~start=%insert.labelledArgument("start"),
+      ~end=%insert.labelledArgument("end_"),
+    ),
+  })
   external copyWithinFromRange: (~to_: int, ~start: int, ~end_: int) => t = "copyWithin"
 
   // @bs.send.pipe(: t) external fillInPlace: elt => t = "fill"
@@ -1221,12 +1665,20 @@ module Float64Array = {
   // @bs.send.pipe(: t) external lastIndexOfFrom: (elt, ~from: int) => int = "lastIndexOf"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.slice` instead.",
+    migrate: TypedArray.slice(~end=%insert.labelledArgument("end_")),
+  })
   external slice: (~start: int, ~end_: int) => t = "slice"
 
   // @bs.send.pipe(: t) external copy: t = "slice"
   // @bs.send.pipe(: t) external sliceFrom: int => t = "slice"
 
   // @bs.send.pipe(: t) /** `start` is inclusive, `end_` exclusive */
+  @deprecated({
+    reason: "Use `TypedArray.subarray` instead.",
+    migrate: TypedArray.subarray(~end=%insert.labelledArgument("end_")),
+  })
   external subarray: (~start: int, ~end_: int) => t = "subarray"
 
   // @bs.send.pipe(: t) external subarrayFrom: int => t = "subarray"
@@ -1269,11 +1721,25 @@ module Float64Array = {
   // @bs.send.pipe(: t) external some: ((. elt) => bool) => bool = "some"
   // @bs.send.pipe(: t) external somei: ((. elt, int) => bool) => bool = "some"
 
-  @val external _BYTES_PER_ELEMENT: int = "Float64Array.BYTES_PER_ELEMENT"
+  @deprecated({
+    reason: "Use `Float64Array.Constants.bytesPerElement` instead.",
+    migrate: Float64Array.Constants.bytesPerElement,
+  })
+  @val
+  external _BYTES_PER_ELEMENT: int = "Float64Array.BYTES_PER_ELEMENT"
 
-  @new external make: array<elt> => t = "Float64Array"
+  @deprecated({
+    reason: "Use `Float64Array.fromArray` instead.",
+    migrate: Float64Array.fromArray(),
+  })
+  @new
+  external make: array<elt> => t = "Float64Array"
   /** can throw */
   @new
+  @deprecated({
+    reason: "Use `Float64Array.fromBuffer` instead.",
+    migrate: Float64Array.fromBuffer(),
+  })
   external fromBuffer: array_buffer => t = "Float64Array"
 
   /**
@@ -1282,6 +1748,10 @@ module Float64Array = {
   **param** offset is in bytes
   */
   @new
+  @deprecated({
+    reason: "Use `Float64Array.fromBufferToEnd` instead.",
+    migrate: Float64Array.fromBufferToEnd(~byteOffset=%insert.unlabelledArgument(1)),
+  })
   external fromBufferOffset: (array_buffer, int) => t = "Float64Array"
 
   /**
@@ -1290,10 +1760,27 @@ module Float64Array = {
   **param** offset is in bytes, length in elements
   */
   @new
+  @deprecated({
+    reason: "Use `Float64Array.fromBufferWithRange` instead.",
+    migrate: Float64Array.fromBufferWithRange(
+      ~byteOffset=%insert.labelledArgument("offset"),
+      ~length=%insert.labelledArgument("length"),
+    ),
+  })
   external fromBufferRange: (array_buffer, ~offset: int, ~length: int) => t = "Float64Array"
 
-  @new external fromLength: int => t = "Float64Array"
-  @val external from: array_like<elt> => t = "Float64Array.from"
+  @deprecated({
+    reason: "Use `Float64Array.fromLength` instead.",
+    migrate: Float64Array.fromLength(),
+  })
+  @new
+  external fromLength: int => t = "Float64Array"
+  @deprecated({
+    reason: "Use `Float64Array.fromArrayLikeOrIterable` instead.",
+    migrate: Float64Array.fromArrayLikeOrIterable(),
+  })
+  @val
+  external from: array_like<elt> => t = "Float64Array.from"
   /* *Array.of is redundant, use make */
   @new @deprecated("use `make` instead") external create: array<float> => t = "Float64Array"
   @new @deprecated("use `fromBuffer` instead")
