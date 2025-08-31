@@ -20,6 +20,7 @@
 
 #### :bug: Bug fix
 
+- Show `Stdlib.TypedArray` completions for typed arrays. https://github.com/rescript-lang/rescript/pull/7827
 - Show `Stdlib.Null` and `Stdlib.Nullable` completions for `Stdlib.null<'a>` and `Stdlib.nullable<'a>` types, respectively. https://github.com/rescript-lang/rescript/pull/7826
 - Fix generation of interfaces for module types containing multiple type constraints. https://github.com/rescript-lang/rescript/pull/7825
 
