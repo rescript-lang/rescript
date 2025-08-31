@@ -3,6 +3,7 @@ use crate::config::Config;
 use crate::helpers;
 use crate::project_context::ProjectContext;
 use anyhow::anyhow;
+use oxc_resolver::{ResolveOptions, Resolver};
 use std::ffi::OsString;
 use std::fs;
 use std::fs::File;
@@ -247,6 +248,28 @@ pub fn get_bsc() -> PathBuf {
         .canonicalize()
         .expect("Could not get bsc path, did you set environment variable RESCRIPT_BSC_EXE ?")
         .to_stripped_verbatim_path()
+}
+
+pub fn get_runtime_path(project_context: &ProjectContext) -> anyhow::Result<PathBuf> {
+    let resolver = Resolver::new(ResolveOptions::default());
+    let root_path = project_context.get_root_path();
+
+    // Resolve <project> -> rescript
+    let rescript_resolved = resolver.resolve(root_path, "rescript/package.json")?;
+    let rescript_package_json_path = rescript_resolved.full_path();
+    let rescript_path = rescript_package_json_path
+        .parent()
+        .ok_or_else(|| anyhow!("Failed to get parent directory of rescript package.json"))?;
+
+    // Resolve rescript -> @rescript/runtime
+    let runtime_resolved = resolver.resolve(rescript_path, "@rescript/runtime/package.json")?;
+    let runtime_package_json_path = runtime_resolved.full_path();
+    let runtime_path = runtime_package_json_path
+        .parent()
+        .ok_or_else(|| anyhow!("Failed to get parent directory of @rescript/runtime package.json"))?;
+
+    let canonicalized = runtime_path.to_path_buf().canonicalize()?;
+    Ok(canonicalized.to_stripped_verbatim_path())
 }
 
 pub fn get_rescript_legacy(project_context: &ProjectContext) -> PathBuf {

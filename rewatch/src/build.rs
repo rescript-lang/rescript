@@ -89,6 +89,9 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         interface_filename.push('i');
         PathBuf::from(&interface_filename).exists()
     };
+
+    let runtime_path = helpers::get_runtime_path(&project_context).ok();
+
     let compiler_args = compile::compiler_args(
         &project_context.current_config,
         &ast_path,
@@ -99,6 +102,7 @@ pub fn get_compiler_args(rescript_file_path: &Path) -> Result<String> {
         &None,
         is_type_dev,
         true,
+        &runtime_path,
     );
 
     let result = serde_json::to_string_pretty(&CompilerArgs {
@@ -156,7 +160,9 @@ pub fn initialize_build(
         let _ = stdout().flush();
     }
 
-    let mut build_state = BuildState::new(project_context, packages, bsc_path);
+    let runtime_path = helpers::get_runtime_path(&project_context).ok();
+
+    let mut build_state = BuildState::new(project_context, packages, bsc_path, runtime_path);
     packages::parse_packages(&mut build_state);
     let timing_source_files_elapsed = timing_source_files.elapsed();
 
