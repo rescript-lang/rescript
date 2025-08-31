@@ -122,7 +122,6 @@ An object of feature flags to enable experimental compiler behavior. Only suppor
 Currently supported features:
 
 - LetUnwrap: Enable `let?` syntax.
-- DeprecatedMigrations: Enable parsing of the `@deprecated` attribute with migration information.
 
 ### Warnings
 

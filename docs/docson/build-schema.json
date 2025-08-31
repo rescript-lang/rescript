@@ -489,10 +489,6 @@
         "LetUnwrap": {
           "type": "boolean",
           "description": "Enable `let?` syntax."
-        },
-        "DeprecatedMigrations": {
-          "type": "boolean",
-          "description": "Enable parsing of the `@deprecated` attribute with migration information."
         }
       },
       "additionalProperties": false

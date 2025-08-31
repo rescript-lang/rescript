@@ -1,9 +1,12 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 Cleaned 0/428
 Parsed 2 source files
 Compiled 2 modules
 =======
+=======
+>>>>>>> 91e157ad8 (Revert "make parsing of @deprecated with migration info an experimental feature")
 Cleaned 0/113
 Parsed 4 source files
 Compiled 3 modules
@@ -70,12 +73,15 @@ Compiled 3 modules
   Use `Array.joinUnsafe` instead.
 
 
+<<<<<<< HEAD
 >>>>>>> 434a19184 (migrate wip)
 =======
 Cleaned 0/115
 Parsed 2 source files
 Compiled 2 modules
 >>>>>>> d746a071c (make parsing of @deprecated with migration info an experimental feature)
+=======
+>>>>>>> 91e157ad8 (Revert "make parsing of @deprecated with migration info an experimental feature")
 
 The field 'bs-dependencies' found in the package config of '@testrepo/deprecated-config' is deprecated and will be removed in a future version.
 Use 'dependencies' instead.

@@ -1,4 +1,4 @@
-type feature = LetUnwrap | DeprecatedMigrations
+type feature = LetUnwrap
 
 val enable_from_string : string -> unit
 val is_enabled : feature -> bool
