@@ -39,6 +39,10 @@ Dictionary type (ie an '{ }' JS object). However it is restricted to hold a
 single type; therefore values must have the same type. This Dictionary type is
 mostly used with the Js_json.t type.
 */
+@deprecated({
+  reason: "Use `dict` directly instead.",
+  migrate: %replace.type(: dict),
+})
 type t<'a> = dict<'a>
 
 /**
