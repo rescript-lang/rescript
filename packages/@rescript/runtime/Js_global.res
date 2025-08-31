@@ -27,9 +27,17 @@ Contains functions available in the global scope (`window` in a browser context)
 */
 
 /** Identify an interval started by `Js.Global.setInterval`. */
+@deprecated({
+  reason: "Use `intervalId` directly instead.",
+  migrate: %replace.type(: intervalId),
+})
 type intervalId = Stdlib_Global.intervalId
 
 /** Identify timeout started by `Js.Global.setTimeout`. */
+@deprecated({
+  reason: "Use `timeoutId` directly instead.",
+  migrate: %replace.type(: timeoutId),
+})
 type timeoutId = Stdlib_Global.timeoutId
 
 /**

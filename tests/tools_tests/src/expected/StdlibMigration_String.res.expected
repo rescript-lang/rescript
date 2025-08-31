@@ -124,3 +124,7 @@ let toLocaleUpperCase2 = String.toLocaleUpperCase("abcde")
 let trim1 = "abcde"->String.trim
 let trim2 = String.trim("abcde")
 
+// Type alias migrations
+let sT: string = "abc"
+let s2T: string = "def"
+

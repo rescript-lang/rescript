@@ -173,3 +173,7 @@ let pipeChain =
   ->Js.Array2.map(x => x * 2)
   ->Js.Array2.filter(x => x > 2)
   ->Js.Array2.reduce((acc, x) => acc + x, 0)
+
+// Type alias migrations
+let arrT: Js.Array.t<int> = [1, 2, 3]
+let arr2T: Js.Array2.t<int> = [1, 2, 3]

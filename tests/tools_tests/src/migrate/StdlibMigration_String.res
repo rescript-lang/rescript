@@ -123,3 +123,7 @@ let toLocaleUpperCase2 = Js.String2.toLocaleUpperCase("abcde")
 
 let trim1 = "abcde"->Js.String2.trim
 let trim2 = Js.String2.trim("abcde")
+
+// Type alias migrations
+let sT: Js.String.t = "abc"
+let s2T: Js.String2.t = "def"
