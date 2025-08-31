@@ -26,6 +26,10 @@
 Contains functionality for dealing with values that can be both `null` and `undefined`
 */
 
+@deprecated({
+  reason: "Use `nullable` directly instead.",
+  migrate: %replace.type(: nullable),
+})
 @unboxed
 type t<+'a> = Primitive_js_extern.nullable<'a> =
   Value('a) | @as(null) Null | @as(undefined) Undefined

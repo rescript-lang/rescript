@@ -32,3 +32,6 @@ let to_opt2 = Null.toOption(Null.make(4))
 let test1 = Null.null === Null.null
 let test2 = Null.null === Null.null
 let test3 = Null.make(5)->Null.map(v => v)->Null.equal(Null, (a, b) => a === b)
+
+// Type alias migration
+let nullT: null<int> = Null.make(1)

@@ -1,10 +1,10 @@
-let t1: Js.Global.timeoutId = setTimeout(() => (), 1000)
-let t2: Js.Global.timeoutId = setTimeoutFloat(() => (), 1000.0)
+let t1: timeoutId = setTimeout(() => (), 1000)
+let t2: timeoutId = setTimeoutFloat(() => (), 1000.0)
 
 clearTimeout(t1)
 
-let i1: Js.Global.intervalId = setInterval(() => (), 2000)
-let i2: Js.Global.intervalId = setIntervalFloat(() => (), 2000.0)
+let i1: intervalId = setInterval(() => (), 2000)
+let i2: intervalId = setIntervalFloat(() => (), 2000.0)
 
 clearInterval(i1)
 

@@ -29,6 +29,10 @@ on MDN.) JavaScript stores dates as the number of milliseconds since the UNIX
 *epoch*, midnight 1 January 1970, UTC.
 */
 
+@deprecated({
+  reason: "Use `Date.t` instead.",
+  migrate: %replace.type(: Date.t),
+})
 type t = Stdlib_Date.t
 
 /**

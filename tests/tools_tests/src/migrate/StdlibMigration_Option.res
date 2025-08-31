@@ -28,3 +28,6 @@ let filter1 = Js.Option.filter(x => x > 0, Some(1))
 
 let firstSome1 = Js.Option.firstSome(Some(1), None)
 let firstSome2 = Some(1)->Js.Option.firstSome(None)
+
+// Type alias migration
+let optT: Js.Option.t<int> = Some(1)

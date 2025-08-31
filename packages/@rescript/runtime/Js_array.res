@@ -33,6 +33,10 @@ parameter in the function.
 /**
 The type used to describe a JavaScript array.
 */
+@deprecated({
+  reason: "Use `array` directly instead.",
+  migrate: %replace.type(: array),
+})
 type t<'a> = array<'a>
 
 /**

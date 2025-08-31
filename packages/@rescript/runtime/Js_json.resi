@@ -31,6 +31,10 @@ Efficient JSON encoding using JavaScript API
 /* ## Types */
 
 /** The JSON data structure */
+@deprecated({
+  reason: "Use `JSON.t` instead.",
+  migrate: %replace.type(: JSON.t),
+})
 @unboxed
 type rec t = Stdlib_JSON.t =
   | Boolean(bool)
