@@ -1,0 +1,3 @@
+// Type alias migration for Js.Set.t
+external s: Set.t<int> = "s"
+

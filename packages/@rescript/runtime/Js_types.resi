@@ -25,6 +25,10 @@
 /*** Provide utilities for manipulating JS types. */
 
 /** Js symbol type (only available in ES6) */
+@deprecated({
+  reason: "Use `Symbol.t` instead.",
+  migrate: %replace.type(: Symbol.t),
+})
 type symbol = Stdlib_Symbol.t
 
 type obj_val = Stdlib_Type.Classify.object

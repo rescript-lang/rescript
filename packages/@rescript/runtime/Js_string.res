@@ -26,6 +26,10 @@
 
 @@warning("-103")
 
+@deprecated({
+  reason: "Use `string` directly instead.",
+  migrate: %replace.type(: string),
+})
 type t = string
 
 /**

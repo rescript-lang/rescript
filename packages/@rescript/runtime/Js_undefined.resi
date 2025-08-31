@@ -25,6 +25,10 @@
 /*** Provides functionality for dealing with the `Js.undefined<'a>` type */
 
 /** Local alias for `Js.undefined<'a>` */
+@deprecated({
+  reason: "Use `undefined` directly instead.",
+  migrate: %replace.type(: undefined),
+})
 type t<+'a> = Primitive_js_extern.undefined<'a>
 
 /** Constructs a value of `Js.undefined<'a>` containing a value of `'a`. */

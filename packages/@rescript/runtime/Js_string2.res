@@ -24,6 +24,10 @@
 
 /*** Provide bindings to JS string. Optimized for pipe-first. */
 
+@deprecated({
+  reason: "Use `string` directly instead.",
+  migrate: %replace.type(: string),
+})
 type t = string
 
 /**

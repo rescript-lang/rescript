@@ -1,5 +1,5 @@
-external someJson: Js_json.t = "someJson"
-external strToJson: string => Js_json.t = "strToJson"
+external someJson: JSON.t = "someJson"
+external strToJson: string => JSON.t = "strToJson"
 
 let decodeString1 = switch someJson {
 | JSON.String(str) => Some(str)

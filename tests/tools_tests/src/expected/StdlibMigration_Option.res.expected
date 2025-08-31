@@ -29,3 +29,6 @@ let filter1 = Option.filter(Some(1), x => x > 0)
 let firstSome1 = Option.orElse(Some(1), None)
 let firstSome2 = Option.orElse(Some(1), None)
 
+// Type alias migration
+let optT: option<int> = Some(1)
+

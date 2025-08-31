@@ -187,3 +187,6 @@ let setYr = d2->Js.Date.setYear(1999.0)
 let s9 = d2->Date.toUTCString
 let j1 = d2->Date.toJSON
 let j2 = d2->Date.toJSON
+
+// Type alias migration
+external someDate: Date.t = "someDate"

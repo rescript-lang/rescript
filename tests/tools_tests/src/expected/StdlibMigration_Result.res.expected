@@ -1,0 +1,2 @@
+let res: result<int, string> = Ok(1)
+
