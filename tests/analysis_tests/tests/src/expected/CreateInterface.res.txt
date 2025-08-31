@@ -124,4 +124,12 @@ module ComponentWithPolyProp: {
   @react.component
   let make: (~size: [< #large | #small]=?) => Jsx.element
 }
+module OrderedSet: {
+  type t<'a, 'identity> = {
+    cmp: ('a, 'a) => int,
+    set: Belt.Set.t<'a, 'identity>,
+    array: array<'a>,
+  }
+  let make: (~id: module(Belt.Id.Comparable with type identity = 'a and type t = 'b)) => t<'b, 'a>
+}
 

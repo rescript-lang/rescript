@@ -171,3 +171,24 @@ module ComponentWithPolyProp = {
     <div className />
   }
 }
+
+module OrderedSet = {
+  type t<'a, 'identity> = {
+    cmp: ('a, 'a) => int,
+    set: Belt.Set.t<'a, 'identity>,
+    array: array<'a>,
+  }
+
+  let make = (
+    type value identity,
+    ~id: module(Belt.Id.Comparable with type t = value and type identity = identity),
+  ): t<value, identity> => {
+    let module(M) = id
+
+    {
+      cmp: M.cmp->Belt.Id.getCmpInternal,
+      set: Belt.Set.make(~id),
+      array: [],
+    }
+  }
+}
