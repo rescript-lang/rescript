@@ -44,6 +44,29 @@ let convertedLiteralToPureLiteral (e : Parsetree.expression) :
   (* `Float.fromInt(1)` to `1.`,  *)
   e
 
+let dropUnitArgumentsInApply (e : Parsetree.expression) : Parsetree.expression =
+  (* Drop only unlabelled unit arguments from an application expression. *)
+  let is_unit_expr (e : Parsetree.expression) =
+    match e.pexp_desc with
+    | Pexp_construct ({txt = Lident "()"}, None) -> true
+    | _ -> false
+  in
+  match e.pexp_desc with
+  | Pexp_apply {funct; args; partial; transformed_jsx} ->
+    let args' =
+      List.filter
+        (fun (label, arg) ->
+          match label with
+          | Asttypes.Nolabel -> not (is_unit_expr arg)
+          | _ -> true)
+        args
+    in
+    {
+      e with
+      pexp_desc = Pexp_apply {funct; args = args'; partial; transformed_jsx};
+    }
+  | _ -> e
+
 (* Registry of available transforms *)
 type transform = Parsetree.expression -> Parsetree.expression
 
@@ -54,6 +77,7 @@ let registry : (string * transform) list =
     ("makerFnToRecord", makerFnToRecord);
     ("dictFromArrayToDictLiteralSyntax", dictFromArrayToDictLiteralSyntax);
     ("convertedLiteralToPureLiteral", convertedLiteralToPureLiteral);
+    ("dropUnitArgumentsInApply", dropUnitArgumentsInApply);
   ]
 
 let get (id : string) : transform option = List.assoc_opt id registry

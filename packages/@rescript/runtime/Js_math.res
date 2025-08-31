@@ -260,7 +260,8 @@ Js.Math.atan2(~x=-0.0, ~y=-5.0, ()) == -.Js.Math._PI /. 2.0
 */
 @deprecated({
   reason: "Use `Math.atan2` instead.",
-  migrate: Math.atan2(~y=%insert.labelledArgument("y"), ~x=%insert.labelledArgument("x")),
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Math.atan2(~y=%insert.labelledArgument("y"), ~x=%insert.labelledArgument("x")),
 })
 @val
 @scope("Math")
