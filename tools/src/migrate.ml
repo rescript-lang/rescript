@@ -6,6 +6,11 @@ module IntSet = Set.Make (Int)
 
 (* Public API: migrate ~entryPointFile ~outputMode *)
 
+let is_unit_expr (e : Parsetree.expression) =
+  match e.pexp_desc with
+  | Pexp_construct ({txt = Lident "()"}, None) -> true
+  | _ -> false
+
 module InsertExt = struct
   type placeholder = Labelled of string | Unlabelled of int
 
@@ -92,23 +97,10 @@ module MapperUtils = struct
           | None -> acc)
         e names
 
-    (* Apply transforms found on a separate attribute set to a replacement
-       expression, preserving non-transform attributes by attaching them to the
-       replacement. *)
-    let apply_to_replacement ~(attrs : Parsetree.attributes)
+    let attach_to_replacement ~(attrs : Parsetree.attributes)
         (e : Parsetree.expression) : Parsetree.expression =
-      let transform_attrs, other_attrs = split_attrs attrs in
-      if Ext_list.is_empty transform_attrs then
-        if Ext_list.is_empty attrs then e
-        else {e with pexp_attributes = attrs @ e.pexp_attributes}
-      else
-        let names =
-          transform_attrs
-          |> List.concat_map (fun (_id, payload) -> names_of_payload payload)
-        in
-        let e' = apply_names names e in
-        if Ext_list.is_empty other_attrs then e'
-        else {e' with pexp_attributes = other_attrs @ e'.pexp_attributes}
+      if Ext_list.is_empty attrs then e
+      else {e with pexp_attributes = attrs @ e.pexp_attributes}
 
     (* Apply transforms attached to an expression itself and drop the
        transform attributes afterwards. *)
@@ -174,13 +166,13 @@ module MapperUtils = struct
             | Some (InsertExt.Labelled name) -> (
               match find (`Labelled name) with
               | Some arg ->
-                ApplyTransforms.apply_to_replacement ~attrs:exp.pexp_attributes
+                ApplyTransforms.attach_to_replacement ~attrs:exp.pexp_attributes
                   arg
               | None -> exp)
             | Some (InsertExt.Unlabelled i) -> (
               match find (`Unlabelled i) with
               | Some arg ->
-                ApplyTransforms.apply_to_replacement ~attrs:exp.pexp_attributes
+                ApplyTransforms.attach_to_replacement ~attrs:exp.pexp_attributes
                   arg
               | None -> exp)
             | None -> Ast_mapper.default_mapper.expr mapper exp);
@@ -213,12 +205,6 @@ module MapperUtils = struct
      - unlabelled_positions_to_insert: 0-based indices of unlabelled source args to drop
   *)
   let get_template_args_to_insert mapper template_args source_args =
-    let is_unit_expr (e : Parsetree.expression) =
-      match e.pexp_desc with
-      | Pexp_construct ({txt = Lident "()"}, None) -> true
-      | _ -> false
-    in
-
     (* For each template argument, decide whether it is a placeholder that
        should be substituted from the source call, or a concrete argument which
        should be preserved (after mapping through the mapper).
@@ -233,12 +219,9 @@ module MapperUtils = struct
          original call's arguments. *)
       let labelled_used_here, unlabelled_used_here = collect_placeholders arg in
       let arg_replaced = replace_placeholders_in_expr arg source_args in
-      if is_unit_expr arg_replaced then
-        (rev_args, used_labelled, used_unlabelled)
-      else
-        ( (label, mapper.Ast_mapper.expr mapper arg_replaced) :: rev_args,
-          StringSet.union used_labelled labelled_used_here,
-          IntSet.union used_unlabelled unlabelled_used_here )
+      ( (label, mapper.Ast_mapper.expr mapper arg_replaced) :: rev_args,
+        StringSet.union used_labelled labelled_used_here,
+        IntSet.union used_unlabelled unlabelled_used_here )
     in
     let rev_args, labelled_set, unlabelled_set =
       List.fold_left accumulate_template_arg
@@ -288,20 +271,6 @@ module MapperUtils = struct
     let dropped =
       drop_args source_args ~unlabelled_positions_to_insert ~will_be_mapped
     in
-    (* Also drop any unit arguments that remain from the source call. *)
-    let is_unit_expr (e : Parsetree.expression) =
-      match e.pexp_desc with
-      | Pexp_construct ({txt = Lident "()"}, None) -> true
-      | _ -> false
-    in
-    let dropped =
-      List.filter
-        (fun (label, arg) ->
-          match label with
-          | Asttypes.Nolabel -> not (is_unit_expr arg)
-          | _ -> true)
-        dropped
-    in
     let renamed = rename_labels dropped ~labelled_args_map in
     renamed @ template_args_to_insert
 
@@ -321,20 +290,6 @@ module MapperUtils = struct
       drop_args pipe_args
         ~unlabelled_positions_to_insert:adjusted_unlabelled_to_drop
         ~will_be_mapped
-    in
-    (* Drop any unit arguments that remain from the source call. *)
-    let is_unit_expr (e : Parsetree.expression) =
-      match e.pexp_desc with
-      | Pexp_construct ({txt = Lident "()"}, None) -> true
-      | _ -> false
-    in
-    let dropped =
-      List.filter
-        (fun (label, arg) ->
-          match label with
-          | Asttypes.Nolabel -> not (is_unit_expr arg)
-          | _ -> true)
-        dropped
     in
     let renamed = rename_labels dropped ~labelled_args_map in
     renamed @ template_args_to_insert
@@ -389,13 +344,13 @@ let replace_from_args_ctx_in_expr expr args_ctx =
           | Some (InsertExt.Labelled name) -> (
             match find_in_args_ctx args_ctx (`Labelled name) with
             | Some arg ->
-              MapperUtils.ApplyTransforms.apply_to_replacement
+              MapperUtils.ApplyTransforms.attach_to_replacement
                 ~attrs:exp.pexp_attributes arg
             | None -> exp)
           | Some (InsertExt.Unlabelled i) -> (
             match find_in_args_ctx args_ctx (`Unlabelled i) with
             | Some arg ->
-              MapperUtils.ApplyTransforms.apply_to_replacement
+              MapperUtils.ApplyTransforms.attach_to_replacement
                 ~attrs:exp.pexp_attributes arg
             | None -> exp)
           | None -> Ast_mapper.default_mapper.expr mapper exp);
@@ -432,7 +387,15 @@ module Template = struct
   let of_expr = function
     | {Parsetree.pexp_desc = Pexp_apply {funct; args; partial; transformed_jsx}}
       ->
-      Some (Apply {funct; args; partial; transformed_jsx})
+      (* Normalize templates like `f()` to just `f` by dropping a single unit
+         argument. This treats `String.concat()` as the function reference
+         `String.concat`, not a call with a unit argument. *)
+      let args' =
+        match args with
+        | [(_lbl, e)] when is_unit_expr e -> []
+        | _ -> args
+      in
+      Some (Apply {funct; args = args'; partial; transformed_jsx})
     | {Parsetree.pexp_desc = Pexp_match (expr, cases)} ->
       Some (Match {expr; cases})
     | _ -> None
@@ -441,33 +404,44 @@ module Template = struct
       ~transformed_jsx =
     {exp with pexp_desc = Pexp_apply {funct; args; partial; transformed_jsx}}
 
-  (* Apply a non-piped migration template to a direct call. *)
-  let apply_direct ~mapper ~template ~call_args (exp : Parsetree.expression) =
+  let apply_direct ~mapper ~template ~template_attrs ~call_args
+      (exp : Parsetree.expression) =
     match template with
     | Match {expr; cases} ->
-      {
-        exp with
-        pexp_desc = Pexp_match (replace_from_args_in_expr expr call_args, cases);
-      }
+      let res =
+        {
+          exp with
+          pexp_desc =
+            Pexp_match (replace_from_args_in_expr expr call_args, cases);
+        }
+      in
+      MapperUtils.ApplyTransforms.attach_to_replacement ~attrs:template_attrs
+        res
     | Apply
         {funct = template_funct; args = template_args; partial; transformed_jsx}
       ->
       let migrated_args =
         MapperUtils.apply_migration_template mapper template_args call_args
       in
-      mk_apply exp ~funct:template_funct ~args:migrated_args ~partial
-        ~transformed_jsx
+      let res =
+        mk_apply exp ~funct:template_funct ~args:migrated_args ~partial
+          ~transformed_jsx
+      in
+      MapperUtils.ApplyTransforms.attach_to_replacement ~attrs:template_attrs
+        res
 
-  (* Apply a piped migration template. The `lhs` is the value being piped and
-     `pipe_args` are the arguments in the right-hand call (if any). *)
-  let apply_piped ~mapper ~template ~lhs ~pipe_args ~funct
+  let apply_piped ~mapper ~template ~template_attrs ~lhs ~pipe_args ~funct
       (exp : Parsetree.expression) =
     match template with
     | Match {expr; cases} ->
-      {
-        exp with
-        pexp_desc = Pexp_match (replace_from_args_in_expr expr [lhs], cases);
-      }
+      let res =
+        {
+          exp with
+          pexp_desc = Pexp_match (replace_from_args_in_expr expr [lhs], cases);
+        }
+      in
+      MapperUtils.ApplyTransforms.attach_to_replacement ~attrs:template_attrs
+        res
     | Apply
         {funct = template_funct; args = template_args; partial; transformed_jsx}
       ->
@@ -476,20 +450,20 @@ module Template = struct
         MapperUtils.migrate_piped_args mapper ~template_args ~lhs
           ~pipe_args:pipe_args_mapped
       in
+      let inner = Ast_helper.Exp.apply template_funct migrated_args in
+      let inner_with_attrs =
+        MapperUtils.ApplyTransforms.attach_to_replacement ~attrs:template_attrs
+          inner
+      in
       mk_apply exp ~funct
-        ~args:
-          [
-            lhs;
-            (Asttypes.Nolabel, Ast_helper.Exp.apply template_funct migrated_args);
-          ]
+        ~args:[lhs; (Asttypes.Nolabel, inner_with_attrs)]
         ~partial ~transformed_jsx
 
-  (* Like apply_piped, but when there are no pipe args and the template has no
-     arguments to insert, collapse to `funct lhs template_funct`. *)
-  let apply_piped_maybe_empty ~mapper ~template ~lhs ~pipe_args ~funct
-      (exp : Parsetree.expression) =
+  let apply_piped_maybe_empty ~mapper ~template ~template_attrs ~lhs ~pipe_args
+      ~funct (exp : Parsetree.expression) =
     match template with
-    | Match _ -> apply_piped ~mapper ~template ~lhs ~pipe_args ~funct exp
+    | Match _ ->
+      apply_piped ~mapper ~template ~template_attrs ~lhs ~pipe_args ~funct exp
     | Apply
         {funct = template_funct; args = template_args; partial; transformed_jsx}
       ->
@@ -498,31 +472,45 @@ module Template = struct
           MapperUtils.get_template_args_to_insert mapper template_args []
         in
         if Ext_list.is_empty template_args_to_insert then
-          mk_apply exp ~funct
-            ~args:[lhs; (Asttypes.Nolabel, template_funct)]
-            ~partial ~transformed_jsx
+          let res =
+            mk_apply exp ~funct
+              ~args:
+                [
+                  lhs;
+                  ( Asttypes.Nolabel,
+                    MapperUtils.ApplyTransforms.attach_to_replacement
+                      ~attrs:template_attrs template_funct );
+                ]
+              ~partial ~transformed_jsx
+          in
+          res
         else
+          let inner =
+            Ast_helper.Exp.apply template_funct template_args_to_insert
+          in
+          let inner_with_attrs =
+            MapperUtils.ApplyTransforms.attach_to_replacement
+              ~attrs:template_attrs inner
+          in
           mk_apply exp ~funct
-            ~args:
-              [
-                lhs;
-                ( Asttypes.Nolabel,
-                  Ast_helper.Exp.apply template_funct template_args_to_insert );
-              ]
+            ~args:[lhs; (Asttypes.Nolabel, inner_with_attrs)]
             ~partial ~transformed_jsx
-      else apply_piped ~mapper ~template ~lhs ~pipe_args ~funct exp
+      else
+        apply_piped ~mapper ~template ~template_attrs ~lhs ~pipe_args ~funct exp
 
-  (* Handle the special case of a single-step pipe where we are allowed to
-     collapse the pipe into a direct call. *)
-  let apply_single_pipe_collapse ~mapper ~template ~lhs_exp ~pipe_args
-      (exp : Parsetree.expression) =
+  let apply_single_pipe_collapse ~mapper ~template ~template_attrs ~lhs_exp
+      ~pipe_args (exp : Parsetree.expression) =
     match template with
     | Match {expr; cases} ->
-      Ast_helper.Exp.match_
-        (replace_from_args_in_expr expr
-           ((Asttypes.Nolabel, lhs_exp)
-           :: ArgUtils.map_expr_args mapper pipe_args))
-        cases
+      let res =
+        Ast_helper.Exp.match_
+          (replace_from_args_in_expr expr
+             ((Asttypes.Nolabel, lhs_exp)
+             :: ArgUtils.map_expr_args mapper pipe_args))
+          cases
+      in
+      MapperUtils.ApplyTransforms.attach_to_replacement ~attrs:template_attrs
+        res
     | Apply
         {
           funct = templ_f;
@@ -535,30 +523,33 @@ module Template = struct
         MapperUtils.apply_migration_template mapper templ_args
           ((Asttypes.Nolabel, lhs_exp) :: pipe_args_mapped)
       in
-      mk_apply exp ~funct:templ_f ~args:migrated_args ~partial:tpartial
-        ~transformed_jsx:tjsx
+      let res =
+        mk_apply exp ~funct:templ_f ~args:migrated_args ~partial:tpartial
+          ~transformed_jsx:tjsx
+      in
+      MapperUtils.ApplyTransforms.attach_to_replacement ~attrs:template_attrs
+        res
 end
 
 (* Apply a direct-call migration template to a call site. *)
 let apply_template_direct mapper template_expr call_args exp =
   match Template.of_expr template_expr with
-  | Some template -> Template.apply_direct ~mapper ~template ~call_args exp
+  | Some template ->
+    Template.apply_direct ~mapper ~template
+      ~template_attrs:template_expr.pexp_attributes ~call_args exp
   | None -> exp
 
-(* Choose a template to use for piped forms, preferring a specific piped
-   template when available and valid; otherwise fall back to the direct
-   template. *)
 let choose_template_for_piped (deprecated_info : Cmt_utils.deprecated_used) =
   match deprecated_info.migration_in_pipe_chain_template with
   | Some e -> (
     match Template.of_expr e with
-    | Some t -> Some t
+    | Some t -> Some (t, e.pexp_attributes)
     | None -> None)
   | None -> (
     match deprecated_info.migration_template with
     | Some e2 -> (
       match Template.of_expr e2 with
-      | Some t -> Some t
+      | Some t -> Some (t, e2.pexp_attributes)
       | None -> None)
     | None -> None)
 
@@ -576,14 +567,15 @@ let apply_single_step_or_piped ~mapper
     | Some e -> (
       match Template.of_expr e with
       | Some t ->
-        Template.apply_single_pipe_collapse ~mapper ~template:t ~lhs_exp
-          ~pipe_args exp
+        Template.apply_single_pipe_collapse ~mapper ~template:t
+          ~template_attrs:e.pexp_attributes ~lhs_exp ~pipe_args exp
       | None -> (
         match deprecated_info.migration_in_pipe_chain_template with
         | Some e2 -> (
           match Template.of_expr e2 with
           | Some t ->
-            Template.apply_piped ~mapper ~template:t ~lhs ~pipe_args ~funct exp
+            Template.apply_piped ~mapper ~template:t
+              ~template_attrs:e2.pexp_attributes ~lhs ~pipe_args ~funct exp
           | None -> exp)
         | None -> exp))
     | None -> (
@@ -591,14 +583,15 @@ let apply_single_step_or_piped ~mapper
       | Some e2 -> (
         match Template.of_expr e2 with
         | Some t ->
-          Template.apply_piped ~mapper ~template:t ~lhs ~pipe_args ~funct exp
+          Template.apply_piped ~mapper ~template:t
+            ~template_attrs:e2.pexp_attributes ~lhs ~pipe_args ~funct exp
         | None -> exp)
       | None -> exp)
   else
     match choose_template_for_piped deprecated_info with
-    | Some t ->
-      Template.apply_piped_maybe_empty ~mapper ~template:t ~lhs ~pipe_args
-        ~funct exp
+    | Some (t, attrs) ->
+      Template.apply_piped_maybe_empty ~mapper ~template:t ~template_attrs:attrs
+        ~lhs ~pipe_args ~funct exp
     | None -> exp
 
 let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =

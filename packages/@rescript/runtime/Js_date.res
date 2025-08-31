@@ -127,7 +127,8 @@ let november1 = Js.Date.makeWithYM(~year=2020.0, ~month=10.0, ())
 */
 @deprecated({
   reason: "Use `Date.makeWithYM` instead.",
-  migrate: Date.makeWithYM(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.makeWithYM(
     ~year=Float.toInt(%insert.labelledArgument("year")),
     ~month=Float.toInt(%insert.labelledArgument("month")),
   ),
@@ -144,7 +145,8 @@ on MDN.
 */
 @deprecated({
   reason: "Use `Date.makeWithYMD` instead.",
-  migrate: Date.makeWithYMD(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.makeWithYMD(
     ~year=Float.toInt(%insert.labelledArgument("year")),
     ~month=Float.toInt(%insert.labelledArgument("month")),
     ~day=Float.toInt(%insert.labelledArgument("date")),
@@ -162,7 +164,8 @@ on MDN. Fractional parts of the arguments are ignored.
 */
 @deprecated({
   reason: "Use `Date.makeWithYMDH` instead.",
-  migrate: Date.makeWithYMDH(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.makeWithYMDH(
     ~year=Float.toInt(%insert.labelledArgument("year")),
     ~month=Float.toInt(%insert.labelledArgument("month")),
     ~day=Float.toInt(%insert.labelledArgument("date")),
@@ -182,7 +185,8 @@ on MDN.
 */
 @deprecated({
   reason: "Use `Date.makeWithYMDHM` instead.",
-  migrate: Date.makeWithYMDHM(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.makeWithYMDHM(
     ~year=Float.toInt(%insert.labelledArgument("year")),
     ~month=Float.toInt(%insert.labelledArgument("month")),
     ~day=Float.toInt(%insert.labelledArgument("date")),
@@ -223,7 +227,8 @@ Js.Date.makeWithYMDHMS(
 */
 @deprecated({
   reason: "Use `Date.makeWithYMDHMS` instead.",
-  migrate: Date.makeWithYMDHMS(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.makeWithYMDHMS(
     ~year=Float.toInt(%insert.labelledArgument("year")),
     ~month=Float.toInt(%insert.labelledArgument("month")),
     ~day=Float.toInt(%insert.labelledArgument("date")),
@@ -258,7 +263,8 @@ let november1 = Js.Date.utcWithYM(~year=2020.0, ~month=10.0, ())
 */
 @deprecated({
   reason: "Use `Date.UTC.makeWithYM` instead.",
-  migrate: Date.UTC.makeWithYM(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.UTC.makeWithYM(
     ~year=Float.toInt(%insert.labelledArgument("year")),
     ~month=Float.toInt(%insert.labelledArgument("month")),
   ),
@@ -275,7 +281,8 @@ on MDN.
 */
 @deprecated({
   reason: "Use `Date.UTC.makeWithYMD` instead.",
-  migrate: Date.UTC.makeWithYMD(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.UTC.makeWithYMD(
     ~year=Float.toInt(%insert.labelledArgument("year")),
     ~month=Float.toInt(%insert.labelledArgument("month")),
     ~day=Float.toInt(%insert.labelledArgument("date")),
@@ -294,7 +301,8 @@ on MDN.
 */
 @deprecated({
   reason: "Use `Date.UTC.makeWithYMDH` instead.",
-  migrate: Date.UTC.makeWithYMDH(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.UTC.makeWithYMDH(
     ~year=Float.toInt(%insert.labelledArgument("year")),
     ~month=Float.toInt(%insert.labelledArgument("month")),
     ~day=Float.toInt(%insert.labelledArgument("date")),
@@ -314,7 +322,8 @@ on MDN.
 */
 @deprecated({
   reason: "Use `Date.UTC.makeWithYMDHM` instead.",
-  migrate: Date.UTC.makeWithYMDHM(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.UTC.makeWithYMDHM(
     ~year=Float.toInt(%insert.labelledArgument("year")),
     ~month=Float.toInt(%insert.labelledArgument("month")),
     ~day=Float.toInt(%insert.labelledArgument("date")),
@@ -343,7 +352,8 @@ on MDN.
 */
 @deprecated({
   reason: "Use `Date.UTC.makeWithYMDHMS` instead.",
-  migrate: Date.UTC.makeWithYMDHMS(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.UTC.makeWithYMDHMS(
     ~year=Float.toInt(%insert.labelledArgument("year")),
     ~month=Float.toInt(%insert.labelledArgument("month")),
     ~day=Float.toInt(%insert.labelledArgument("date")),
@@ -797,7 +807,8 @@ future == Js.Date.getTime(date1)
 */
 @deprecated({
   reason: "Use `Date.setFullYearM` instead.",
-  migrate: Date.setFullYearM(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.setFullYearM(
     ~year=Float.toInt(%insert.labelledArgument("year")),
     ~month=Float.toInt(%insert.labelledArgument("month")),
   ),
@@ -825,7 +836,8 @@ future == Js.Date.getTime(date1)
 @send
 @deprecated({
   reason: "Use `Date.setFullYearMD` instead.",
-  migrate: Date.setFullYearMD(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.setFullYearMD(
     ~year=Float.toInt(%insert.labelledArgument("year")),
     ~month=Float.toInt(%insert.labelledArgument("month")),
     ~day=Float.toInt(%insert.labelledArgument("date")),
@@ -876,7 +888,8 @@ futureTime == Js.Date.getTime(date1)
 */
 @deprecated({
   reason: "Use `Date.setHoursM` instead.",
-  migrate: Date.setHoursM(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.setHoursM(
     ~hours=Float.toInt(%insert.labelledArgument("hours")),
     ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
   ),
@@ -904,7 +917,8 @@ futureTime == Js.Date.getTime(date1)
 @send
 @deprecated({
   reason: "Use `Date.setHoursMS` instead.",
-  migrate: Date.setHoursMS(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.setHoursMS(
     ~hours=Float.toInt(%insert.labelledArgument("hours")),
     ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
     ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
@@ -940,7 +954,8 @@ futureTime == Js.Date.getTime(date1)
 @send
 @deprecated({
   reason: "Use `Date.setHoursMSMs` instead.",
-  migrate: Date.setHoursMSMs(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.setHoursMSMs(
     ~hours=Float.toInt(%insert.labelledArgument("hours")),
     ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
     ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
@@ -1023,7 +1038,8 @@ futureTime == Js.Date.getTime(date1)
 @send
 @deprecated({
   reason: "Use `Date.setMinutesS` instead.",
-  migrate: Date.setMinutesS(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.setMinutesS(
     ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
     ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
   ),
@@ -1050,7 +1066,8 @@ futureTime == Js.Date.getTime(date1)
 @send
 @deprecated({
   reason: "Use `Date.setMinutesSMs` instead.",
-  migrate: Date.setMinutesSMs(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.setMinutesSMs(
     ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
     ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
     ~milliseconds=Float.toInt(%insert.labelledArgument("milliseconds")),
@@ -1145,7 +1162,8 @@ futureTime == Js.Date.getTime(date1)
 @send
 @deprecated({
   reason: "Use `Date.setSecondsMs` instead.",
-  migrate: Date.setSecondsMs(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.setSecondsMs(
     ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
     ~milliseconds=Float.toInt(%insert.labelledArgument("milliseconds")),
   ),
@@ -1237,7 +1255,8 @@ future == Js.Date.getTime(date1)
 @send
 @deprecated({
   reason: "Use `Date.setUTCFullYearM` instead.",
-  migrate: Date.setUTCFullYearM(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.setUTCFullYearM(
     ~year=Float.toInt(%insert.labelledArgument("year")),
     ~month=Float.toInt(%insert.labelledArgument("month")),
   ),
@@ -1264,7 +1283,8 @@ future == Js.Date.getTime(date1)
 @send
 @deprecated({
   reason: "Use `Date.setUTCFullYearMD` instead.",
-  migrate: Date.setUTCFullYearMD(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.setUTCFullYearMD(
     ~year=Float.toInt(%insert.labelledArgument("year")),
     ~month=Float.toInt(%insert.labelledArgument("month")),
     ~day=Float.toInt(%insert.labelledArgument("date")),
@@ -1315,7 +1335,8 @@ futureTime == Js.Date.getTime(date1)
 @send
 @deprecated({
   reason: "Use `Date.setUTCHoursM` instead.",
-  migrate: Date.setUTCHoursM(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.setUTCHoursM(
     ~hours=Float.toInt(%insert.labelledArgument("hours")),
     ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
   ),
@@ -1343,7 +1364,8 @@ futureTime == Js.Date.getTime(date1)
 @send
 @deprecated({
   reason: "Use `Date.setUTCHoursMS` instead.",
-  migrate: Date.setUTCHoursMS(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.setUTCHoursMS(
     ~hours=Float.toInt(%insert.labelledArgument("hours")),
     ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
     ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
@@ -1379,7 +1401,8 @@ futureTime == Js.Date.getTime(date1)
 @send
 @deprecated({
   reason: "Use `Date.setUTCHoursMSMs` instead.",
-  migrate: Date.setUTCHoursMSMs(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.setUTCHoursMSMs(
     ~hours=Float.toInt(%insert.labelledArgument("hours")),
     ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
     ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
@@ -1460,7 +1483,8 @@ futureTime == Js.Date.getTime(date1)
 @send
 @deprecated({
   reason: "Use `Date.setUTCMinutesS` instead.",
-  migrate: Date.setUTCMinutesS(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.setUTCMinutesS(
     ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
     ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
   ),
@@ -1493,7 +1517,8 @@ futureTime == Js.Date.getTime(date1)
 @send
 @deprecated({
   reason: "Use `Date.setUTCMinutesSMs` instead.",
-  migrate: Date.setUTCMinutesSMs(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.setUTCMinutesSMs(
     ~minutes=Float.toInt(%insert.labelledArgument("minutes")),
     ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
     ~milliseconds=Float.toInt(%insert.labelledArgument("milliseconds")),
@@ -1592,7 +1617,8 @@ futureTime == Js.Date.getTime(date1)
 @send
 @deprecated({
   reason: "Use `Date.setUTCSecondsMs` instead.",
-  migrate: Date.setUTCSecondsMs(
+  migrate: @apply.transforms(["dropUnitArgumentsInApply"])
+  Date.setUTCSecondsMs(
     ~seconds=Float.toInt(%insert.labelledArgument("seconds")),
     ~milliseconds=Float.toInt(%insert.labelledArgument("milliseconds")),
   ),
