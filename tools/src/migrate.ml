@@ -64,6 +64,66 @@ module ExprUtils = struct
 end
 
 module MapperUtils = struct
+  module ApplyTransforms = struct
+    let attr_name = "apply.transforms"
+
+    let split_attrs (attrs : Parsetree.attributes) =
+      List.partition (fun ({Location.txt}, _) -> txt = attr_name) attrs
+
+    let names_of_payload (payload : Parsetree.payload) : string list =
+      match payload with
+      | Parsetree.PStr
+          [
+            {pstr_desc = Parsetree.Pstr_eval ({pexp_desc = Pexp_array elems}, _)};
+          ] ->
+        elems
+        |> List.filter_map (fun (e : Parsetree.expression) ->
+               match e.pexp_desc with
+               | Pexp_constant (Pconst_string (s, _)) -> Some s
+               | _ -> None)
+      | _ -> []
+
+    let apply_names (names : string list) (e : Parsetree.expression) :
+        Parsetree.expression =
+      List.fold_left
+        (fun acc name ->
+          match Transforms.get name with
+          | Some f -> f acc
+          | None -> acc)
+        e names
+
+    (* Apply transforms found on a separate attribute set to a replacement
+       expression, preserving non-transform attributes by attaching them to the
+       replacement. *)
+    let apply_to_replacement ~(attrs : Parsetree.attributes)
+        (e : Parsetree.expression) : Parsetree.expression =
+      let transform_attrs, other_attrs = split_attrs attrs in
+      if Ext_list.is_empty transform_attrs then
+        if Ext_list.is_empty attrs then e
+        else {e with pexp_attributes = attrs @ e.pexp_attributes}
+      else
+        let names =
+          transform_attrs
+          |> List.concat_map (fun (_id, payload) -> names_of_payload payload)
+        in
+        let e' = apply_names names e in
+        if Ext_list.is_empty other_attrs then e'
+        else {e' with pexp_attributes = other_attrs @ e'.pexp_attributes}
+
+    (* Apply transforms attached to an expression itself and drop the
+       transform attributes afterwards. *)
+    let apply_on_self (e : Parsetree.expression) : Parsetree.expression =
+      let transform_attrs, other_attrs = split_attrs e.pexp_attributes in
+      if Ext_list.is_empty transform_attrs then e
+      else
+        let names =
+          transform_attrs
+          |> List.concat_map (fun (_id, payload) -> names_of_payload payload)
+        in
+        let e' = {e with pexp_attributes = other_attrs} in
+        apply_names names e'
+  end
+
   (* Collect placeholder usages anywhere inside an expression. *)
   let collect_placeholders (expr : Parsetree.expression) =
     let labelled = ref StringSet.empty in
@@ -87,7 +147,7 @@ module MapperUtils = struct
     (!labelled, !unlabelled)
 
   (* Replace placeholders anywhere inside an expression using the given
-     source arguments. *)
+     source arguments. Use the generic replacement transform applier. *)
   let replace_placeholders_in_expr (expr : Parsetree.expression)
       (source_args : (Asttypes.arg_label * Parsetree.expression) list) =
     let labelled = Hashtbl.create 8 in
@@ -113,11 +173,15 @@ module MapperUtils = struct
             match InsertExt.placeholder_of_expr exp with
             | Some (InsertExt.Labelled name) -> (
               match find (`Labelled name) with
-              | Some arg -> arg
+              | Some arg ->
+                ApplyTransforms.apply_to_replacement ~attrs:exp.pexp_attributes
+                  arg
               | None -> exp)
             | Some (InsertExt.Unlabelled i) -> (
               match find (`Unlabelled i) with
-              | Some arg -> arg
+              | Some arg ->
+                ApplyTransforms.apply_to_replacement ~attrs:exp.pexp_attributes
+                  arg
               | None -> exp)
             | None -> Ast_mapper.default_mapper.expr mapper exp);
       }
@@ -324,11 +388,15 @@ let replace_from_args_ctx_in_expr expr args_ctx =
           match InsertExt.placeholder_of_expr exp with
           | Some (InsertExt.Labelled name) -> (
             match find_in_args_ctx args_ctx (`Labelled name) with
-            | Some arg -> arg
+            | Some arg ->
+              MapperUtils.ApplyTransforms.apply_to_replacement
+                ~attrs:exp.pexp_attributes arg
             | None -> exp)
           | Some (InsertExt.Unlabelled i) -> (
             match find_in_args_ctx args_ctx (`Unlabelled i) with
-            | Some arg -> arg
+            | Some arg ->
+              MapperUtils.ApplyTransforms.apply_to_replacement
+                ~attrs:exp.pexp_attributes arg
             | None -> exp)
           | None -> Ast_mapper.default_mapper.expr mapper exp);
     }
@@ -697,9 +765,20 @@ let migrate ~entryPointFile ~outputMode =
       | Some {cmt_extra_info = {deprecated_used}} ->
         let mapper = makeMapper deprecated_used in
         let astMapped = mapper.structure mapper parsetree in
+        (* Second pass: apply any post-migration transforms signaled via @apply.transforms *)
+        let apply_transforms =
+          let expr mapper (e : Parsetree.expression) =
+            let e = Ast_mapper.default_mapper.expr mapper e in
+            MapperUtils.ApplyTransforms.apply_on_self e
+          in
+          {Ast_mapper.default_mapper with expr}
+        in
+        let astTransformed =
+          apply_transforms.structure apply_transforms astMapped
+        in
         Ok
           ( Res_printer.print_implementation
-              ~width:Res_printer.default_print_width astMapped ~comments,
+              ~width:Res_printer.default_print_width astTransformed ~comments,
             source )
     else if Filename.check_suffix path ".resi" then
       let parser =
