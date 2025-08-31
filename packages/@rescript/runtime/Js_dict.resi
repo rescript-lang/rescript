@@ -48,6 +48,10 @@ type t<'a> = dict<'a>
 /**
   The type for dictionary keys. This means that dictionaries *must* use `string`s as their keys.
 */
+@deprecated({
+  reason: "Use `string` directly instead.",
+  migrate: %replace.type(: string),
+})
 type key = string
 
 /**

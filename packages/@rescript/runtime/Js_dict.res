@@ -25,10 +25,6 @@
 /*** Provides a simple key-value dictionary abstraction over native JavaScript objects */
 
 /** The dict type */
-@deprecated({
-  reason: "Use `dict` directly instead.",
-  migrate: %replace.type(: dict),
-})
 type t<'a> = dict<'a>
 
 /** The key type, an alias of string */

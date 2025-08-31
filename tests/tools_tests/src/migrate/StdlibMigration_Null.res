@@ -30,3 +30,6 @@ let to_opt2 = Js.Null.to_opt(Js.Null.return(4))
 let test1 = Js.Null.empty->Js.Null.test
 let test2 = Js.Null.test(Js.Null.empty)
 let test3 = Js.Null.return(5)->Js.Null.bind(v => v)->Js.Null.test
+
+// Type alias migration
+let nullT: Js.Null.t<int> = Js.Null.return(1)

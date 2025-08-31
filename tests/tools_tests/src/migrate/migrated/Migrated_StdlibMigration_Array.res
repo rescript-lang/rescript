@@ -171,3 +171,7 @@ let reduceRighti2 = Array.reduceRightWithIndex([1, 2, 3], 0, (acc, x, i) => acc 
 
 let pipeChain =
   [1, 2, 3]->Array.map(x => x * 2)->Array.filter(x => x > 2)->Array.reduce(0, (acc, x) => acc + x)
+
+// Type alias migrations
+let arrT: array<int> = [1, 2, 3]
+let arr2T: array<int> = [1, 2, 3]
