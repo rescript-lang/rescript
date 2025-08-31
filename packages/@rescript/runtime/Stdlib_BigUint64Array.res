@@ -1,5 +1,6 @@
 /** The `BigUint64Array` typed array represents an array of 64-bit unsigned integers in platform byte order. See [BigUint64Array on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigUint64Array)
 */
+@editor.completeFrom(Stdlib.TypedArray)
 type t = Stdlib_TypedArray.t<bigint>
 
 module Constants = {

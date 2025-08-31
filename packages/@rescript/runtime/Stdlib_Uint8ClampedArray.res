@@ -1,5 +1,6 @@
 /** The `Uint8ClampedArray` typed array represents an array of 8-bit unsigned integers clamped to 0-255. See [Uint8ClampedArray on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8ClampedArray)
 */
+@editor.completeFrom(Stdlib.TypedArray)
 type t = Stdlib_TypedArray.t<int>
 
 module Constants = {

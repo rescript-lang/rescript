@@ -1,5 +1,6 @@
 /** The `Float64Array` typed array represents an array of 64-bit floating point numbers in platform byte order. See [Float64Array on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float64Array)
 */
+@editor.completeFrom(Stdlib.TypedArray)
 type t = Stdlib_TypedArray.t<float>
 
 module Constants = {

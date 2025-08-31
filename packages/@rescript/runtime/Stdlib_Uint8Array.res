@@ -1,5 +1,6 @@
 /** The `Uint8Array` typed array represents an array of 8-bit unsigned integers. See [Uint8Array on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array)
 */
+@editor.completeFrom(Stdlib.TypedArray)
 type t = Stdlib_TypedArray.t<int>
 
 module Constants = {
