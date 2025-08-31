@@ -276,6 +276,20 @@ module MapperUtils = struct
     renamed @ template_args_to_insert
 end
 
+module TypeReplace = struct
+  let ext_replace_type = "replace.type"
+
+  (* Extract a core_type payload from an expression extension of the form
+     %replace.type(: <core_type>) *)
+  let core_type_of_expr_extension (expr : Parsetree.expression) =
+    match expr.pexp_desc with
+    | Pexp_extension ({txt}, payload) when txt = ext_replace_type -> (
+      match payload with
+      | PTyp ct -> Some ct
+      | _ -> None)
+    | _ -> None
+end
+
 type args_ctx = {
   labelled: (string, Parsetree.expression) Hashtbl.t;
   unlabelled: (int, Parsetree.expression) Hashtbl.t;
@@ -552,6 +566,55 @@ let makeMapper (deprecated_used : Cmt_utils.deprecated_used list) =
     {
       Ast_mapper.default_mapper with
       extension = remap_needed_extensions;
+      (* Replace deprecated type references when a %replace.type(: ...) template
+         is provided. *)
+      typ =
+        (fun mapper (ct : Parsetree.core_type) ->
+          match ct.ptyp_desc with
+          | Ptyp_constr ({loc}, args) -> (
+            (* Build a lookup of deprecated type references (by source loc) ->
+               core_type template. *)
+            let loc_contains (a : Location.t) (b : Location.t) =
+              let a_start = a.Location.loc_start.pos_cnum in
+              let a_end = a.Location.loc_end.pos_cnum in
+              let b_start = b.Location.loc_start.pos_cnum in
+              let b_end = b.Location.loc_end.pos_cnum in
+              a_start <= b_start && a_end >= b_end
+            in
+            let replace_template_opt =
+              (* We expect the cmt to have recorded deprecations for type
+                  references without a specific context; we also only consider
+                  entries whose migration_template is a %replace.type(: ...). *)
+              deprecated_used
+              |> List.find_map (fun (d : Cmt_utils.deprecated_used) ->
+                     match d.migration_template with
+                     | Some e -> (
+                       match TypeReplace.core_type_of_expr_extension e with
+                       | Some ct
+                         when loc_contains loc d.source_loc
+                              || loc_contains d.source_loc loc ->
+                         Some ct
+                       | _ -> None)
+                     | None -> None)
+            in
+            match replace_template_opt with
+            | Some template_ct -> (
+              (* Transfer all source type arguments as-is. *)
+              let mapped_args = List.map (mapper.Ast_mapper.typ mapper) args in
+              match template_ct.ptyp_desc with
+              | Ptyp_constr (new_lid, templ_args) ->
+                let new_args = templ_args @ mapped_args in
+                let ct' =
+                  {ct with ptyp_desc = Ptyp_constr (new_lid, new_args)}
+                in
+                mapper.Ast_mapper.typ mapper ct'
+              | _ ->
+                (* If the template isn't a constructor, fall back to the
+                   template itself and drop the original args. *)
+                let ct' = {template_ct with ptyp_loc = ct.ptyp_loc} in
+                mapper.Ast_mapper.typ mapper ct')
+            | None -> Ast_mapper.default_mapper.typ mapper ct)
+          | _ -> Ast_mapper.default_mapper.typ mapper ct);
       expr =
         (fun mapper exp ->
           match exp with

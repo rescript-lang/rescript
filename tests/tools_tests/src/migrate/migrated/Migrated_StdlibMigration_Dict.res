@@ -20,11 +20,11 @@ let values2 = Dict.valuesToArray(d)
 let entries1 = d->Dict.toArray
 let entries2 = Dict.toArray(d)
 
-let dStr: Js.Dict.t<string> = Dict.make()
+let dStr: dict<string> = Dict.make()
 let del1 = dStr->Dict.delete("k")
 let del2 = Dict.delete(dStr, "k")
 
-let empty1: Js.Dict.t<int> = Dict.make()
+let empty1: dict<int> = Dict.make()
 
 let fromArray1 = [("a", 1), ("b", 2)]->Dict.fromArray
 let fromArray2 = Dict.fromArray([("a", 1), ("b", 2)])
