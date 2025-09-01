@@ -353,7 +353,6 @@ module Template = struct
         partial: bool;
         transformed_jsx: bool;
       }
-    | Match of {expr: Parsetree.expression; cases: Parsetree.case list}
 
   let attach attrs e =
     MapperUtils.ApplyTransforms.attach_to_replacement ~attrs e
@@ -370,8 +369,6 @@ module Template = struct
         | _ -> args
       in
       Some (Apply {funct; args = args'; partial; transformed_jsx})
-    | {Parsetree.pexp_desc = Pexp_match (expr, cases)} ->
-      Some (Match {expr; cases})
     | _ -> None
 
   let of_expr_with_attrs (e : Parsetree.expression) :
@@ -387,16 +384,6 @@ module Template = struct
   let apply_direct ~mapper ~template ~template_attrs ~call_args
       (exp : Parsetree.expression) =
     match template with
-    | Match {expr; cases} ->
-      let res =
-        {
-          exp with
-          pexp_desc =
-            Pexp_match
-              (MapperUtils.replace_placeholders_in_expr expr call_args, cases);
-        }
-      in
-      attach template_attrs res
     | Apply
         {funct = template_funct; args = template_args; partial; transformed_jsx}
       ->
@@ -412,16 +399,6 @@ module Template = struct
   let apply_piped ~mapper ~template ~template_attrs ~lhs ~pipe_args ~funct
       (exp : Parsetree.expression) =
     match template with
-    | Match {expr; cases} ->
-      let res =
-        {
-          exp with
-          pexp_desc =
-            Pexp_match
-              (MapperUtils.replace_placeholders_in_expr expr [lhs], cases);
-        }
-      in
-      attach template_attrs res
     | Apply
         {funct = template_funct; args = template_args; partial; transformed_jsx}
       ->
@@ -439,8 +416,6 @@ module Template = struct
   let apply_piped_maybe_empty ~mapper ~template ~template_attrs ~lhs ~pipe_args
       ~funct (exp : Parsetree.expression) =
     match template with
-    | Match _ ->
-      apply_piped ~mapper ~template ~template_attrs ~lhs ~pipe_args ~funct exp
     | Apply
         {funct = template_funct; args = template_args; partial; transformed_jsx}
       ->
@@ -470,15 +445,6 @@ module Template = struct
   let apply_single_pipe_collapse ~mapper ~template ~template_attrs ~lhs_exp
       ~pipe_args (exp : Parsetree.expression) =
     match template with
-    | Match {expr; cases} ->
-      let res =
-        Ast_helper.Exp.match_
-          (MapperUtils.replace_placeholders_in_expr expr
-             ((Asttypes.Nolabel, lhs_exp)
-             :: ArgUtils.map_expr_args mapper pipe_args))
-          cases
-      in
-      attach template_attrs res
     | Apply
         {
           funct = templ_f;
