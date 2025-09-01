@@ -272,26 +272,19 @@ pub fn get_runtime_path(project_context: &ProjectContext) -> anyhow::Result<Path
     Ok(canonicalized.to_stripped_verbatim_path())
 }
 
-pub fn get_rescript_legacy(project_context: &ProjectContext) -> PathBuf {
+pub fn get_rescript_legacy_path(project_context: &ProjectContext) -> anyhow::Result<PathBuf> {
+    let resolver = Resolver::new(ResolveOptions::default());
     let root_path = project_context.get_root_path();
-    let node_modules_rescript = root_path.join("node_modules").join("rescript");
-    let rescript_legacy_path = if node_modules_rescript.exists() {
-        node_modules_rescript
-            .join("cli")
-            .join("rescript-legacy.js")
-            .canonicalize()
-            .map(StrippedVerbatimPath::to_stripped_verbatim_path)
-    } else {
-        // If the root folder / node_modules doesn't exist, something is wrong.
-        // The only way this can happen is if we are inside the rescript repository.
-        root_path
-            .join("cli")
-            .join("rescript-legacy.js")
-            .canonicalize()
-            .map(StrippedVerbatimPath::to_stripped_verbatim_path)
-    };
 
-    rescript_legacy_path.unwrap_or_else(|_| panic!("Could not find rescript-legacy.exe"))
+    let rescript_resolved: oxc_resolver::Resolution = resolver.resolve(root_path, "rescript/package.json")?;
+    let rescript_package_json_path = rescript_resolved.full_path();
+    let rescript_path = rescript_package_json_path
+        .parent()
+        .ok_or_else(|| anyhow!("Failed to get parent directory of rescript package.json"))?;
+    let rescript_legacy_path = rescript_path.join("cli").join("rescript-legacy.js");
+
+    let canonicalized = rescript_legacy_path.to_path_buf().canonicalize()?;
+    Ok(canonicalized.to_stripped_verbatim_path())
 }
 
 pub fn string_ends_with_any(s: &Path, suffixes: &[&str]) -> bool {
