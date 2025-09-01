@@ -82,6 +82,12 @@ module Encode = {
   external float: float => t = "%identity"
   external object: dict<t> => t = "%identity"
   external array: array<t> => t = "%identity"
+
+  external stringArray: array<string> => t = "%identity"
+  external floatArray: array<float> => t = "%identity"
+  external intArray: array<int> => t = "%identity"
+  external boolArray: array<bool> => t = "%identity"
+  external objectArray: array<dict<t>> => t = "%identity"
 }
 
 module Decode = {
