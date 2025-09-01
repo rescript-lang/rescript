@@ -1,0 +1,3 @@
+let ys = Array.concat([1], [2])
+let zs = [1]->Array.concat([1], [2])
+
