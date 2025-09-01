@@ -27,14 +27,29 @@ external fromBuffer: (Stdlib_ArrayBuffer.t, ~byteOffset: int=?, ~length: int=?) 
 
 **Note:** This is a potentially unsafe operation. Ensure the buffer is large enough and only accessed within its bounds.
 */
-@deprecated("Use `fromBuffer` instead") @new
+@deprecated({
+  reason: "Use `fromBuffer` instead",
+  migrate: Float64Array.fromBuffer(
+    %insert.unlabelledArgument(0),
+    ~byteOffset=%insert.labelledArgument("byteOffset"),
+  ),
+})
+@new
 external fromBufferToEnd: (Stdlib_ArrayBuffer.t, ~byteOffset: int) => t = "Float64Array"
 
 /** `fromBufferWithRange` creates a `Float64Array` from an `ArrayBuffer.t`, starting at a particular offset and consuming `length` **bytes**. See [TypedArray constructor on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Float64Array/Float64Array)
 
 **Note:** This is a potentially unsafe operation. Ensure the buffer is large enough and only accessed within its bounds.
 */
-@deprecated("Use `fromBuffer` instead") @new
+@deprecated({
+  reason: "Use `fromBuffer` instead",
+  migrate: Float64Array.fromBuffer(
+    %insert.unlabelledArgument(0),
+    ~byteOffset=%insert.labelledArgument("byteOffset"),
+    ~length=%insert.labelledArgument("length"),
+  ),
+})
+@new
 external fromBufferWithRange: (Stdlib_ArrayBuffer.t, ~byteOffset: int, ~length: int) => t =
   "Float64Array"
 
@@ -52,7 +67,14 @@ external fromArrayLikeOrIterable: ('a, ~map: ('b, int) => float=?) => t = "Float
 
 /** `fromArrayLikeOrIterableWithMap` creates a `Float64Array` from an array-like or iterable object and applies the mapping function to each item. The mapping function expects (value, index). See [TypedArray.from on MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/TypedArray/from)
 */
-@deprecated("Use `fromArrayLikeOrIterable` instead") @val
+@deprecated({
+  reason: "Use `fromArrayLikeOrIterable` instead",
+  migrate: Float64Array.fromArrayLikeOrIterable(
+    %insert.unlabelledArgument(0),
+    ~map=%insert.unlabelledArgument(1),
+  ),
+})
+@val
 external fromArrayLikeOrIterableWithMap: ('a, ('b, int) => float) => t = "Float64Array.from"
 
 /**
