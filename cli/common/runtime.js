@@ -1,9 +1,10 @@
 // @ts-check
-import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import * as path from "node:path";
 
-const require = createRequire(import.meta.url);
+const runtimePackageJsonUrl = await import.meta.resolve(
+  "@rescript/runtime/package.json",
+);
+const runtimePackageJsonPath = fileURLToPath(runtimePackageJsonUrl);
 
-const runtimePackageJson = require.resolve("@rescript/runtime/package.json");
-
-export const runtimePath = path.dirname(runtimePackageJson);
+export const runtimePath = path.dirname(runtimePackageJsonPath);
