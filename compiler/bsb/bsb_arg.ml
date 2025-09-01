@@ -48,8 +48,11 @@ let usage_b (buf : Ext_buffer.t) ~usage (speclist : t) =
   else (
     buf +> "\nOptions:\n";
     let max_col = ref 0 in
-    Ext_array.iter speclist (fun (key, _, _) ->
-        if String.length key > !max_col then max_col := String.length key);
+    Ext_array.iter speclist (fun (key, _, doc) ->
+        if
+          (not (Ext_string.starts_with doc "*internal*"))
+          && String.length key > !max_col
+        then max_col := String.length key);
     Ext_array.iter speclist (fun (key, _, doc) ->
         if not (Ext_string.starts_with doc "*internal*") then (
           buf +> "  ";

@@ -107,6 +107,7 @@ let make_custom_rules ~(gentype_config : Bsb_config_types.gentype_config)
       string =
     Ext_buffer.clear buf;
     Ext_buffer.add_string buf bsc;
+    Ext_buffer.add_string buf (" -runtime-path " ^ !Runtime_package.path);
     Ext_buffer.add_string buf ns_flag;
     if read_cmi = `yes then Ext_buffer.add_string buf " -bs-read-cmi";
     (* The include order matters below *)
@@ -139,6 +140,7 @@ let make_custom_rules ~(gentype_config : Bsb_config_types.gentype_config)
   let mk_ast =
     Ext_buffer.clear buf;
     Ext_buffer.add_string buf bsc;
+    Ext_buffer.add_string buf (" -runtime-path " ^ !Runtime_package.path);
     Ext_buffer.add_char_string buf ' ' warnings;
     (match ppx_files with
     | [] -> ()
