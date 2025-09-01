@@ -22,7 +22,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA. */
 
-@deprecated("Please use `Belt.Result.t` instead")
+@deprecated({
+  reason: "Use `result` directly instead",
+  migrate: %replace.type(: result),
+})
 type t<+'good, +'bad> =
   | Ok('good)
   | Error('bad)

@@ -12,37 +12,120 @@ type replacer = Keys(array<string>) | Replacer((string, t) => t)
 
 @throws @val external parseOrThrow: (string, ~reviver: (string, t) => t=?) => t = "JSON.parse"
 
-@deprecated("Use `parseOrThrow` instead") @throws @val
+@deprecated({
+  reason: "Use `JSON.parseOrThrow` instead",
+  migrate: JSON.parseOrThrow(),
+})
+@raises
+@val
 external parseExn: (string, ~reviver: (string, t) => t=?) => t = "JSON.parse"
 
-@deprecated("Use `parseOrThrow` with optional parameter instead") @throws @val
+@deprecated({
+  reason: "Use `JSON.parseOrThrow` with optional parameter instead",
+  migrate: JSON.parseOrThrow(%insert.unlabelledArgument(0), ~reviver=%insert.unlabelledArgument(1)),
+})
+@raises
+@val
 external parseExnWithReviver: (string, (string, t) => t) => t = "JSON.parse"
 
 @val external stringify: (t, ~replacer: replacer=?, ~space: int=?) => string = "JSON.stringify"
-@deprecated("Use `stringify` with optional parameter instead") @val
+@deprecated({
+  reason: "Use `JSON.stringify` with optional parameter instead",
+  migrate: JSON.stringify(%insert.unlabelledArgument(0), ~space=%insert.unlabelledArgument(2)),
+})
+@val
 external stringifyWithIndent: (t, @as(json`null`) _, int) => string = "JSON.stringify"
-@deprecated("Use `stringify` with optional parameter instead") @val
+@deprecated({
+  reason: "Use `JSON.stringify` with optional parameter instead",
+  migrate: JSON.stringify(
+    %insert.unlabelledArgument(0),
+    ~replacer=Replacer(%insert.unlabelledArgument(1)),
+  ),
+})
+@val
 external stringifyWithReplacer: (t, (string, t) => t) => string = "JSON.stringify"
-@deprecated("Use `stringify` with optional parameters instead") @val
+@deprecated({
+  reason: "Use `JSON.stringify` with optional parameters instead",
+  migrate: JSON.stringify(
+    %insert.unlabelledArgument(0),
+    ~replacer=Replacer(%insert.unlabelledArgument(1)),
+    ~space=%insert.unlabelledArgument(2),
+  ),
+})
+@val
 external stringifyWithReplacerAndIndent: (t, (string, t) => t, int) => string = "JSON.stringify"
-@deprecated("Use `stringify` with optional parameter instead") @val
+@deprecated({
+  reason: "Use `JSON.stringify` with optional parameter instead",
+  migrate: JSON.stringify(
+    %insert.unlabelledArgument(0),
+    ~replacer=Keys(%insert.unlabelledArgument(1)),
+  ),
+})
+@val
 external stringifyWithFilter: (t, array<string>) => string = "JSON.stringify"
-@deprecated("Use `stringify` with optional parameters instead") @val
+@deprecated({
+  reason: "Use `JSON.stringify` with optional parameters instead",
+  migrate: JSON.stringify(
+    %insert.unlabelledArgument(0),
+    ~replacer=Keys(%insert.unlabelledArgument(1)),
+    ~space=%insert.unlabelledArgument(2),
+  ),
+})
+@val
 external stringifyWithFilterAndIndent: (t, array<string>, int) => string = "JSON.stringify"
 
 @throws @val
 external stringifyAny: ('a, ~replacer: replacer=?, ~space: int=?) => option<string> =
   "JSON.stringify"
-@deprecated("Use `stringifyAny` with optional parameter instead") @throws @val
+@deprecated({
+  reason: "Use `JSON.stringifyAny` with optional parameter instead",
+  migrate: JSON.stringifyAny(%insert.unlabelledArgument(0), ~space=%insert.unlabelledArgument(2)),
+})
+@raises
+@val
 external stringifyAnyWithIndent: ('a, @as(json`null`) _, int) => option<string> = "JSON.stringify"
-@deprecated("Use `stringifyAny` with optional parameter instead") @throws @val
+@deprecated({
+  reason: "Use `JSON.stringifyAny` with optional parameter instead",
+  migrate: JSON.stringifyAny(
+    %insert.unlabelledArgument(0),
+    ~replacer=Replacer(%insert.unlabelledArgument(1)),
+  ),
+})
+@raises
+@val
 external stringifyAnyWithReplacer: ('a, (string, t) => t) => option<string> = "JSON.stringify"
-@deprecated("Use `stringifyAny` with optional parameters instead") @throws @val
+@deprecated({
+  reason: "Use `JSON.stringifyAny` with optional parameters instead",
+  migrate: JSON.stringifyAny(
+    %insert.unlabelledArgument(0),
+    ~replacer=Replacer(%insert.unlabelledArgument(1)),
+    ~space=%insert.unlabelledArgument(2),
+  ),
+})
+@raises
+@val
 external stringifyAnyWithReplacerAndIndent: ('a, (string, t) => t, int) => option<string> =
   "JSON.stringify"
-@deprecated("Use `stringifyAny` with optional parameter instead") @throws @val
+@deprecated({
+  reason: "Use `JSON.stringifyAny` with optional parameter instead",
+  migrate: JSON.stringifyAny(
+    %insert.unlabelledArgument(0),
+    ~replacer=Keys(%insert.unlabelledArgument(1)),
+  ),
+})
+@raises
+@val
 external stringifyAnyWithFilter: ('a, array<string>) => string = "JSON.stringify"
-@deprecated("Use `stringifyAny` with optional parameters instead") @throws @val
+@deprecated({
+  reason: "Use `JSON.stringifyAny` with optional parameters instead",
+  migrate: JSON.stringifyAny(
+    %insert.unlabelledArgument(0),
+    ~replacer=Keys(%insert.unlabelledArgument(1)),
+    ~space=%insert.unlabelledArgument(2),
+  ),
+})
+@raises
+@val
 external stringifyAnyWithFilterAndIndent: ('a, array<string>, int) => string = "JSON.stringify"
 
 module Classify = {
